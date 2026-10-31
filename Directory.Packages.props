@@ -8,6 +8,9 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
+  <ItemGroup Label="Application">
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.13" />
+  </ItemGroup>
   <ItemGroup Label="Tests">
     <PackageVersion Include="coverlet.MTP" Version="10.1.0" />
     <PackageVersion Include="CsCheck" Version="4.9.1" />

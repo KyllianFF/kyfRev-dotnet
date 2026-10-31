@@ -143,7 +143,7 @@ internal sealed partial class ScenarioRunner
                 Vault.DefineExam(Raw(operation, "dossier") ?? string.Empty, Raw(operation, "nom_examen") ?? string.Empty, Day(Raw(operation, "jour")!));
                 return string.Empty;
             case "retirer_examen":
-                Vault.RemoveExam(Raw(operation, "dossier") ?? string.Empty);
+                Vault.WithdrawExam(Raw(operation, "dossier") ?? string.Empty);
                 return string.Empty;
             case "examens_a_venir":
                 return string.Join(';', Vault.UpcomingExams(now.Day).Select(e =>

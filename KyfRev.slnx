@@ -11,15 +11,18 @@
     <File Path="CONTRIBUTING.md" />
     <File Path="README.md" />
     <File Path="SECURITY.md" />
+    <File Path="docs/correspondance-commandes.md" />
     <File Path="docs/glossaire.md" />
     <File Path="docs/plan-de-refonte.md" />
   </Folder>
   <Folder Name="/src/">
+    <Project Path="src/KyfRev.Application/KyfRev.Application.csproj" />
     <Project Path="src/KyfRev.Cli/KyfRev.Cli.csproj" />
     <Project Path="src/KyfRev.Domain/KyfRev.Domain.csproj" />
     <Project Path="src/KyfRev.Infrastructure.Vault/KyfRev.Infrastructure.Vault.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/KyfRev.Application.Tests/KyfRev.Application.Tests.csproj" />
     <Project Path="tests/KyfRev.Domain.Tests/KyfRev.Domain.Tests.csproj" />
     <Project Path="tests/KyfRev.Infrastructure.Vault.Tests/KyfRev.Infrastructure.Vault.Tests.csproj" />
   </Folder>

@@ -1,0 +1,49 @@
+{
+  "format": 1,
+  "id": "f_01M69X4VB2B30K9QG9AD5PK6WH",
+  "chemin": "fiches/Racine.md",
+  "titre": "Racine",
+  "empreinte": "sha256:a0cd187b88746cad27af917c95a7b5760fc9f5310861bb7da6403e24e9eb0f24",
+  "modifieeLe": "2026-09-01T12:00:00Z",
+  "statut": "active",
+  "cycle": {
+    "numero": 1,
+    "sequence": [
+      0,
+      1,
+      3,
+      7,
+      14,
+      30
+    ],
+    "demarreLe": "2026-09-01",
+    "etape": 1,
+    "echeance": "2026-09-20",
+    "derniereRevision": "2026-09-01"
+  },
+  "compteurs": {
+    "cyclesCommences": 1,
+    "cyclesTermines": 0,
+    "cyclesInterrompus": 0
+  },
+  "historique": [
+    {
+      "evt": "revision",
+      "le": "2026-09-01T12:00:00Z",
+      "jour": "2026-09-01",
+      "cycle": 1,
+      "etape": "J0",
+      "prevuLe": "2026-09-01",
+      "retardJours": 0,
+      "origine": "creation"
+    },
+    {
+      "evt": "report",
+      "le": "2026-09-03T12:00:00Z",
+      "cycle": 1,
+      "etape": "J1",
+      "de": "2026-09-02",
+      "vers": "2026-09-20"
+    }
+  ]
+}

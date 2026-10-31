@@ -1,0 +1,49 @@
+0 initialiser ok
+1 creer_fiche ok
+2 creer_fiche ok
+3 creer_fiche ok
+4 creer_fiche ok
+5 ecrire ok
+6 suivre_fichier ok
+7 ecrire ok
+8 suivre_fichier ok
+9 ouvrir_fiche ok f_01M69X4VAN2SJEZHNN9K4HQX3E "Mitose" fiches/Biologie/Mitose.md "Biologie" [] "\n# Mitose\n\nLa prophase précède la métaphase.\n" 6 sha256:9794d7831d5373494da5d84bcbf79c0fb2f870c2236ae99e47501793eac0559e 2026-09-01 2026-09-01T12:00:00Z <Active [J0:2026-09-01:0,J1:-:0,J3:-:0,J7:-:0,J14:-:0,J30:-:0] J1 2026-09-02 1 2026-09-01 0 true - false false - true 1 0> []
+10 ouvrir_fiche ok f_01M69X4VB2B30K9QG9AD5PK6WH "Racine" fiches/Racine.md "" [] "\nSans titre répété.\n" 6 sha256:a0cd187b88746cad27af917c95a7b5760fc9f5310861bb7da6403e24e9eb0f24 2026-09-01 2026-09-01T12:00:00Z <Active [J0:2026-09-01:0,J1:-:0,J3:-:0,J7:-:0,J14:-:0,J30:-:0] J1 2026-09-02 1 2026-09-01 0 true - false false - true 1 0> []
+11 ouvrir_fiche ok f_01M69X4VCE4KQ5GZXJYC1B485D "Adoptée" fiches/Adoptée.md "" ["a","b"] "\nCorps adopté.\n" 7 sha256:f644cd341cb8256ea39165b1ff74f2a50a0706c32923fa7eceac99634efa75c8 2026-08-15 2026-09-01T12:00:00Z <Active [J0:2026-09-01:0,J1:-:0,J3:-:0,J7:-:0,J14:-:0,J30:-:0] J1 2026-09-02 1 2026-09-01 0 true - false false - true 1 0> []
+12 ouvrir_fiche ok f_01M69X4VD1C28D6RRTTSXFHGNP "Fenêtres" fiches/Fenêtres.md "" [] "Ligne 1\r\nLigne 2\r\n" 6 sha256:ef3f95b91cd1ffb04f42e932e0f8ae95ff6953390b699e5085fa471788cc315c - 2026-09-01T12:00:00Z <Active [J0:2026-09-01:0,J1:-:0,J3:-:0,J7:-:0,J14:-:0,J30:-:0] J1 2026-09-02 1 2026-09-01 0 false - false false - false 1 0> []
+13 etat_de ok Active [J0:2026-09-01:0,J1:-:0,J3:-:0,J7:-:0,J14:-:0,J30:-:0] J1 2026-09-02 1 2026-09-01 0 true - false false - true 1 0
+14 reviser ok
+15 etat_de ok Active [J0:2026-09-01:0,J1:2026-09-02:0,J3:-:0,J7:-:0,J14:-:0,J30:-:0] J3 2026-09-05 1 2026-09-02 0 true - false false - false 1 0
+16 etat_de ok Active [J0:2026-09-01:0,J1:2026-09-02:0,J3:-:0,J7:-:0,J14:-:0,J30:-:0] J3 2026-09-05 1 2026-09-02 5 false - false false - false 1 0
+17 reviser ok
+18 etat_de ok Active [J0:2026-09-01:0,J1:2026-09-02:0,J3:2026-09-10:5,J7:-:0,J14:-:0,J30:-:0] J7 2026-09-17 1 2026-09-10 0 false - false false - false 1 0
+19 reporter ok
+20 etat_de ok Active [J0:2026-09-01:0,J1:-:0,J3:-:0,J7:-:0,J14:-:0,J30:-:0] J1 2026-09-20 1 2026-09-01 5 false - false false - false 1 0
+21 archiver ok
+22 etat_de ok Archivee [J0:2026-09-01:0] - - - - 0 false 2026-09-04 false true 2026-11-04 false 1 0
+23 ouvrir_fiche ok f_01M69X4VBG75Q3GC23T79GS6K5 "Révolution" fiches/Histoire/Moderne/Révolution.md "Histoire/Moderne" [] "\nTexte.\n" 6 sha256:ca33dde015d07b355edcf7de914c5bb16cfb48ec7079d4313ab0c3a10950bcd5 2026-09-01 2026-09-01T12:00:00Z <Archivee [J0:2026-09-01:0] - - - - 0 false 2026-09-04 false true 2026-11-04 false 1 0> []
+24 creer_annotation ok
+25 creer_definition ok
+26 reviser_annotation ok
+27 reancrer ok
+28 corbeille_annotation ok
+29 etat_de ok Active [J0:2026-09-02:0,J1:2026-09-03:0,J3:-:0,J7:-:0,J14:-:0,J30:-:0] J3 2026-09-06 1 2026-09-03 0 false - false false - false 1 0
+30 etat_de ok Active [J0:2026-09-02:0,J1:-:0,J3:-:0,J7:-:0,J14:-:0,J30:-:0] J1 2026-09-03 1 2026-09-02 2 false - false false - false 1 0
+31 ouvrir_fiche ok f_01M69X4VAN2SJEZHNN9K4HQX3E "Mitose" fiches/Biologie/Mitose.md "Biologie" [] "\n# Mitose\n\nLa prophase précède la métaphase.\n" 6 sha256:9794d7831d5373494da5d84bcbf79c0fb2f870c2236ae99e47501793eac0559e 2026-09-01 2026-09-01T12:00:00Z <Active [J0:2026-09-01:0,J1:2026-09-02:0,J3:2026-09-10:5,J7:-:0,J14:-:0,J30:-:0] J7 2026-09-17 1 2026-09-10 0 false - false false - false 1 0> [a_01M69X4VFMZ6VBS7QDGRJMP0YF "Première phase" null Ancree false <Active [J0:2026-09-02:0,J1:2026-09-03:0,J3:-:0,J7:-:0,J14:-:0,J30:-:0] J3 2026-09-06 1 2026-09-03 0 false - false false - false 1 0>;a_01M69X4VFVYFZW6ZN20VPFNR6S null "Métaphase" AVerifier true <Active [J0:2026-09-02:0,J1:-:0,J3:-:0,J7:-:0,J14:-:0,J30:-:0] J1 2026-09-03 1 2026-09-02 2 false - false false - false 1 0>]
+32 reviser ok
+33 reviser ok
+34 reviser ok
+35 reviser ok
+36 reviser ok
+37 etat_de ok Archivee [J0:2026-09-01:0,J1:2026-09-02:0,J3:2026-09-05:0,J7:2026-09-12:0,J14:2026-09-26:0,J30:2026-10-26:0] - - - - 0 false 2026-10-26 false true 2026-12-26 false 1 1
+38 preparer_journee ok [f_01M69X4VBG75Q3GC23T79GS6K5;f_01M69X4VBX3997GC9NMBX9HEWW] 0
+39 etat_de ok Archivee [J0:2026-09-01:0,J1:2026-09-02:0,J3:2026-09-05:0,J7:2026-09-12:0,J14:2026-09-26:0,J30:2026-10-26:0] - - - - 0 false 2026-10-26 true true 2026-12-26 false 1 1
+40 traiter_rappel ok
+41 etat_de ok Active [J0:2026-12-27:0,J1:-:0,J3:-:0,J7:-:0,J14:-:0,J30:-:0] J1 2026-12-28 2 2026-12-27 0 true - false false - true 2 1
+42 ouvrir_fiche ok f_01M69X4VBX3997GC9NMBX9HEWW "Newton" fiches/Physique/Newton.md "Physique" [] "\nF = m·a\n" 6 sha256:03962738befa2b190de2e777e1a026b353333bb80339f1cf851a78b3507ac6a3 2026-09-01 2026-09-01T12:00:00Z <Active [J0:2026-12-27:0,J1:-:0,J3:-:0,J7:-:0,J14:-:0,J30:-:0] J1 2026-12-28 2 2026-12-27 0 false - false false - false 2 1> []
+43 supprimer ok
+44 analyser ok
+45 ouvrir_fiche erreur FicheManquante : Le fichier de la fiche « Racine » est introuvable ; consultez « Santé du coffre ».
+46 etat_de ok Active [J0:2026-09-01:0,J1:-:0,J3:-:0,J7:-:0,J14:-:0,J30:-:0] J1 2026-09-20 1 2026-09-01 99 false - false false - false 1 0
+47 ouvrir_fiche erreur FicheInconnue : Aucune fiche ne porte l'identifiant f_01JQZ8S7ZK4V3H2N8M6X5W9PQR.
+48 etat_de erreur AnnotationInconnue : Aucune annotation ne porte l'identifiant a_01JQZ8S7ZK4V3H2N8M6X5W9PQR.

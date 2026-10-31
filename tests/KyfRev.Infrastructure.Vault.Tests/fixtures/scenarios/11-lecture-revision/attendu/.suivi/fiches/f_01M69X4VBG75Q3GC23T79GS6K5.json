@@ -1,0 +1,46 @@
+{
+  "format": 1,
+  "id": "f_01M69X4VBG75Q3GC23T79GS6K5",
+  "chemin": "fiches/Histoire/Moderne/Révolution.md",
+  "titre": "Révolution",
+  "empreinte": "sha256:ca33dde015d07b355edcf7de914c5bb16cfb48ec7079d4313ab0c3a10950bcd5",
+  "modifieeLe": "2026-09-01T12:00:00Z",
+  "statut": "archivee",
+  "archive": {
+    "archiveeLe": "2026-09-04",
+    "raison": "manuelle",
+    "inclureDansRappels": true,
+    "niveauRepos": 0,
+    "eligibleLe": "2026-11-04",
+    "rappelTireLe": "2026-12-27"
+  },
+  "compteurs": {
+    "cyclesCommences": 1,
+    "cyclesTermines": 0,
+    "cyclesInterrompus": 1
+  },
+  "historique": [
+    {
+      "evt": "revision",
+      "le": "2026-09-01T12:00:00Z",
+      "jour": "2026-09-01",
+      "cycle": 1,
+      "etape": "J0",
+      "prevuLe": "2026-09-01",
+      "retardJours": 0,
+      "origine": "creation"
+    },
+    {
+      "evt": "interruption",
+      "le": "2026-09-04T12:00:00Z",
+      "jour": "2026-09-04",
+      "cycle": 1
+    },
+    {
+      "evt": "archivage",
+      "le": "2026-09-04T12:00:00Z",
+      "jour": "2026-09-04",
+      "raison": "manuelle"
+    }
+  ]
+}

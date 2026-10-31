@@ -8,22 +8,6 @@ using KyfRev.Infrastructure.Vault.Text;
 
 namespace KyfRev.Infrastructure.Vault;
 
-/// <summary>Ce que l'on exporte.</summary>
-public enum ExportKind
-{
-    /// <summary>Suivi des révisions et historique complet (deux fichiers CSV).</summary>
-    Tracking,
-
-    /// <summary>Passages annotés et commentaires, fiche par fiche (Markdown).</summary>
-    Annotations,
-
-    /// <summary>Tout le coffre (<c>.zip</c>, comme une sauvegarde).</summary>
-    Vault,
-
-    /// <summary>Citations hors corbeille (Markdown et CSV).</summary>
-    Quotes,
-}
-
 /// <remarks>
 /// Exports : suivi des révisions en CSV (pour Excel : UTF-8 avec BOM, séparateur « ; », fins de
 /// ligne CRLF), annotations et citations en Markdown, coffre complet en <c>.zip</c>. Les fichiers

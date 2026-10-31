@@ -1,0 +1,145 @@
+using System.Reflection;
+using System.Text.RegularExpressions;
+
+namespace KyfRev.Application.Tests.Architecture;
+
+/// <summary>
+/// Règles d'architecture et garde-fous, vérifiés sur les assemblys et le code source : couches,
+/// dépendances, et la règle « rien ne s'efface » reprise de la 0.x (<c>garde_fous.rs</c>).
+/// </summary>
+[TestClass]
+public sealed partial class ArchitectureTests
+{
+    private const string Domain = "KyfRev.Domain";
+    private const string Application = "KyfRev.Application";
+
+    /// <summary>Morceaux de nom interdits pour une opération publique (français et anglais).</summary>
+    private static readonly string[] DeletionWords = ["supprim", "effac", "detrui", "delete", "remove", "purge", "erase", "destroy"];
+
+    private static readonly string[] Layers = [Domain, Application, "KyfRev.Infrastructure.Vault", "kyfrev-coffre"];
+
+    /// <summary>Assemblys de kyfRev présents à côté des tests (les tests eux-mêmes exceptés).</summary>
+    private static readonly Lazy<IReadOnlyList<Assembly>> Ours = new(() =>
+    [
+        .. Directory.GetFiles(AppContext.BaseDirectory, "*.dll")
+            .Select(Path.GetFileNameWithoutExtension)
+            .Where(name => IsOurs(name!) && !name!.EndsWith(".Tests", StringComparison.Ordinal))
+            .Select(name => Assembly.Load(name!)),
+    ]);
+
+    [TestMethod]
+    public void Each_layer_depends_only_on_the_layers_below_it()
+    {
+        CollectionAssert.IsSubsetOf(Layers, Ours.Value.Select(a => a.GetName().Name).ToList());
+        foreach (var assembly in Ours.Value)
+        {
+            var name = assembly.GetName().Name!;
+            var forbidden = assembly.GetReferencedAssemblies()
+                .Select(reference => reference.Name!)
+                .Where(reference => IsOurs(reference) && !MayReference(name, reference))
+                .ToList();
+            Assert.IsEmpty(forbidden, $"{name} ne doit pas dépendre de {string.Join(", ", forbidden)}");
+        }
+    }
+
+    [TestMethod]
+    public void The_domain_and_the_use_cases_rely_only_on_the_framework()
+    {
+        foreach (var (assembly, packages) in new[] { (Domain, Array.Empty<string>()), (Application, ["Microsoft.Extensions.Logging.Abstractions"]) })
+        {
+            var outside = Assembly.Load(assembly).GetReferencedAssemblies()
+                .Select(reference => reference.Name!)
+                .Where(reference => !IsFramework(reference) && !IsOurs(reference) && !packages.Contains(reference))
+                .ToList();
+            Assert.IsEmpty(outside, $"{assembly} dépend de {string.Join(", ", outside)}");
+        }
+    }
+
+    /// <summary>T1 : aucune opération publique ne porte un nom de suppression.</summary>
+    [TestMethod]
+    public void No_public_operation_is_named_after_a_deletion()
+    {
+        var checkedMethods = 0;
+        foreach (var type in Ours.Value.SelectMany(assembly => assembly.GetExportedTypes()))
+        {
+            foreach (var method in type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly).Where(m => !m.IsSpecialName))
+            {
+                Assert.IsFalse(
+                    DeletionWords.Any(word => method.Name.Contains(word, StringComparison.OrdinalIgnoreCase)),
+                    $"Opération suspecte : {type.FullName}.{method.Name}");
+                checkedMethods++;
+            }
+        }
+        Assert.IsGreaterThan(300, checkedMethods);
+    }
+
+    /// <summary>
+    /// T1 : rien n'est effacé, sauf trois exceptions : la rotation des copies de sauvegarde (le
+    /// nom et le dossier de la copie vérifiés) et les deux fichiers temporaires de l'écriture
+    /// atomique et de la sauvegarde.
+    /// </summary>
+    [TestMethod]
+    public void Files_are_deleted_only_where_allowed()
+    {
+        var src = Path.Combine(RepositoryRoot(), "src");
+        var allowed = new Dictionary<string, int>(StringComparer.Ordinal)
+        {
+            ["KyfRev.Infrastructure.Vault/Backups/VaultBackups.cs"] = 1,
+            ["KyfRev.Infrastructure.Vault/Files/AtomicFile.cs"] = 1,
+            ["KyfRev.Infrastructure.Vault/VaultSession.Backups.cs"] = 1,
+        };
+        var files = Directory.EnumerateFiles(src, "*.cs", SearchOption.AllDirectories)
+            .Select(file => Path.GetRelativePath(src, file).Replace('\\', '/'))
+            .Where(file => !file.Contains("/obj/", StringComparison.Ordinal) && !file.Contains("/bin/", StringComparison.Ordinal))
+            .ToList();
+        Assert.IsGreaterThan(50, files.Count);
+        foreach (var file in files)
+        {
+            var count = DeletionCall().Count(File.ReadAllText(Path.Combine(src, file)));
+            Assert.AreEqual(allowed.GetValueOrDefault(file), count, $"Effacement dans {file}");
+        }
+
+        var rotation = File.ReadAllText(Path.Combine(src, "KyfRev.Infrastructure.Vault/Backups/VaultBackups.cs"));
+        var copy = rotation[rotation.IndexOf("private static void RemoveOutdatedCopy", StringComparison.Ordinal)..rotation.IndexOf("File.Delete(path)", StringComparison.Ordinal)];
+        Assert.Contains("TimestampOf(name) is null", copy, "le nom de la copie doit être vérifié");
+        Assert.Contains("Path.GetDirectoryName(path)", copy, "le dossier de la copie doit être vérifié");
+        foreach (var file in new[] { "KyfRev.Infrastructure.Vault/Files/AtomicFile.cs", "KyfRev.Infrastructure.Vault/VaultSession.Backups.cs" })
+        {
+            Assert.Contains("File.Delete(temporary)", File.ReadAllText(Path.Combine(src, file)), file);
+        }
+    }
+
+    /// <summary>Racine du dépôt : le dossier qui contient la solution.</summary>
+    internal static string RepositoryRoot()
+    {
+        for (var folder = new DirectoryInfo(AppContext.BaseDirectory); folder is not null; folder = folder.Parent)
+        {
+            if (File.Exists(Path.Combine(folder.FullName, "KyfRev.slnx")))
+            {
+                return folder.FullName;
+            }
+        }
+        throw new InvalidOperationException("Solution introuvable.");
+    }
+
+    /// <summary>Ce qu'un assembly de kyfRev peut référencer parmi les autres.</summary>
+    private static bool MayReference(string assembly, string reference) => assembly switch
+    {
+        Domain => false,
+        Application => reference == Domain,
+        _ when assembly.StartsWith("KyfRev.Infrastructure.", StringComparison.Ordinal) => reference is Domain or Application,
+        // Aucun module ne référence un autre module, ni l'infrastructure.
+        _ when assembly.StartsWith("KyfRev.Modules.", StringComparison.Ordinal) => reference is Domain or Application,
+        // La présentation ne référence aucune infrastructure concrète : seule la racine de composition les relie.
+        _ when assembly.StartsWith("KyfRev.Presentation.", StringComparison.Ordinal) => !reference.StartsWith("KyfRev.Infrastructure.", StringComparison.Ordinal),
+        _ => true,
+    };
+
+    private static bool IsOurs(string name) => name.StartsWith("KyfRev.", StringComparison.Ordinal) || name == "kyfrev-coffre";
+
+    private static bool IsFramework(string name) =>
+        name is "netstandard" or "mscorlib" || name.StartsWith("System.", StringComparison.Ordinal) || name.StartsWith("Microsoft.Win32.", StringComparison.Ordinal);
+
+    [GeneratedRegex(@"\.Delete\(|DeleteFile|DeleteDirectory|RemoveDirectory|FileSystem\.Delete|SendToRecycleBin")]
+    private static partial Regex DeletionCall();
+}

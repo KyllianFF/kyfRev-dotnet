@@ -6,7 +6,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\KyfRev.Application\KyfRev.Application.csproj" />
     <ProjectReference Include="..\KyfRev.Domain\KyfRev.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Données échangées avec les cas d'usage, définies par les ports de KyfRev.Application. -->
+    <Using Include="KyfRev.Application.Model" />
   </ItemGroup>
 
   <ItemGroup>

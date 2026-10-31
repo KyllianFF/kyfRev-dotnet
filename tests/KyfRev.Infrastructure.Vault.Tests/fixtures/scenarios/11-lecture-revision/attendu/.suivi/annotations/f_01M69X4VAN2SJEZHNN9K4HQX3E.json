@@ -1,0 +1,122 @@
+{
+  "format": 1,
+  "ficheId": "f_01M69X4VAN2SJEZHNN9K4HQX3E",
+  "annotations": [
+    {
+      "id": "a_01M69X4VFMZ6VBS7QDGRJMP0YF",
+      "ficheId": "f_01M69X4VAN2SJEZHNN9K4HQX3E",
+      "creeeLe": "2026-09-02T12:00:00Z",
+      "modifieeLe": "2026-09-02T12:00:00Z",
+      "commentaire": "Première phase",
+      "ancre": {
+        "exact": "prophase",
+        "avant": "La ",
+        "apres": " précède",
+        "debut": 10,
+        "fin": 18,
+        "section": [
+          "Mitose"
+        ],
+        "ligneSource": 6,
+        "empreinteFiche": "sha256:aa"
+      },
+      "etatAncrage": "ancree",
+      "statut": "active",
+      "cycle": {
+        "numero": 1,
+        "sequence": [
+          0,
+          1,
+          3,
+          7,
+          14,
+          30
+        ],
+        "demarreLe": "2026-09-02",
+        "etape": 2,
+        "echeance": "2026-09-06",
+        "derniereRevision": "2026-09-03"
+      },
+      "compteurs": {
+        "cyclesCommences": 1,
+        "cyclesTermines": 0,
+        "cyclesInterrompus": 0
+      },
+      "historique": [
+        {
+          "evt": "revision",
+          "le": "2026-09-02T12:00:00Z",
+          "jour": "2026-09-02",
+          "cycle": 1,
+          "etape": "J0",
+          "prevuLe": "2026-09-02",
+          "retardJours": 0,
+          "origine": "creation"
+        },
+        {
+          "evt": "revision",
+          "le": "2026-09-03T12:00:00Z",
+          "jour": "2026-09-03",
+          "cycle": 1,
+          "etape": "J1",
+          "prevuLe": "2026-09-03",
+          "retardJours": 0
+        }
+      ]
+    },
+    {
+      "id": "a_01M69X4VFVYFZW6ZN20VPFNR6S",
+      "ficheId": "f_01M69X4VAN2SJEZHNN9K4HQX3E",
+      "creeeLe": "2026-09-02T12:00:00Z",
+      "modifieeLe": "2026-09-04T12:00:00Z",
+      "definition": {
+        "terme": "Métaphase",
+        "explication": "Alignement des chromosomes."
+      },
+      "ancre": {
+        "exact": "métaphase",
+        "avant": "",
+        "apres": "",
+        "debut": 29,
+        "fin": 38,
+        "section": [],
+        "empreinteFiche": "sha256:bb"
+      },
+      "etatAncrage": "a_verifier",
+      "corbeilleLe": "2026-09-05T12:00:00Z",
+      "statut": "active",
+      "cycle": {
+        "numero": 1,
+        "sequence": [
+          0,
+          1,
+          3,
+          7,
+          14,
+          30
+        ],
+        "demarreLe": "2026-09-02",
+        "etape": 1,
+        "echeance": "2026-09-03",
+        "derniereRevision": "2026-09-02"
+      },
+      "compteurs": {
+        "cyclesCommences": 1,
+        "cyclesTermines": 0,
+        "cyclesInterrompus": 0
+      },
+      "historique": [
+        {
+          "evt": "revision",
+          "le": "2026-09-02T12:00:00Z",
+          "jour": "2026-09-02",
+          "cycle": 1,
+          "etape": "J0",
+          "prevuLe": "2026-09-02",
+          "retardJours": 0,
+          "origine": "creation"
+        }
+      ]
+    }
+  ]
+}

@@ -4,7 +4,6 @@ using System.Text;
 using System.Text.Json;
 using KyfRev.Domain.Calendar;
 using KyfRev.Infrastructure.Vault.Backups;
-using KyfRev.Infrastructure.Vault.Format;
 using KyfRev.Infrastructure.Vault.Json;
 using KyfRev.Infrastructure.Vault.Paths;
 using KyfRev.Infrastructure.Vault.Text;
@@ -110,7 +109,7 @@ internal sealed partial class ScenarioRunner
                 return string.Join(';', Vault.TrashedAnnotations().Select(a =>
                     $"{a.Id} {a.SheetId} {Json(a.Title)} {Json(a.Exact)} {Optional(a.Comment)} {InstantText.Format(a.TrashedAt)}"));
             default:
-                throw new InvalidOperationException($"Opération inconnue : {op}");
+                return ExecuteReading(op, operation, now);
         }
     }
 

@@ -1,3 +1,4 @@
+using KyfRev.Application;
 using KyfRev.Domain.Reviews;
 
 namespace KyfRev.Infrastructure.Vault;
@@ -128,7 +129,7 @@ public enum VaultErrorKind
 /// celui de la version 0.x, mot pour mot. Une opération qui échoue ne laisse jamais de fichier
 /// à moitié écrit.
 /// </summary>
-public sealed class VaultException : Exception
+public sealed class VaultException : OperationException
 {
     /// <summary>Échec d'accès sans précision.</summary>
     public VaultException()
