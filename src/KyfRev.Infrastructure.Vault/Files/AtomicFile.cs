@@ -41,6 +41,14 @@ public static class AtomicFile
     internal static void Replace(string path, ReadOnlySpan<byte> content, Action beforeCommit) =>
         Write(path, content, overwrite: true, beforeCommit);
 
+    /// <summary>
+    /// Version de <see cref="TryCreateNew(string, ReadOnlySpan{byte})"/> qui appelle
+    /// <paramref name="beforeCommit"/> avant la mise en place (pour simuler, dans les tests, un
+    /// fichier créé entre-temps par un autre processus).
+    /// </summary>
+    internal static bool TryCreateNew(string path, ReadOnlySpan<byte> content, Action beforeCommit) =>
+        !File.Exists(path) && Write(path, content, overwrite: false, beforeCommit);
+
     private static bool Write(string path, ReadOnlySpan<byte> content, bool overwrite, Action? beforeCommit)
     {
         var directory = Path.GetDirectoryName(Path.GetFullPath(path)) ?? throw new ArgumentException("Chemin sans dossier.", nameof(path));

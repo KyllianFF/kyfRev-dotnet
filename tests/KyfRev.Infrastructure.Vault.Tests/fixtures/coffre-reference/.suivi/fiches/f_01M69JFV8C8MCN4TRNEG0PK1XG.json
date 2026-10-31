@@ -1,0 +1,58 @@
+{
+  "format": 1,
+  "id": "f_01M69JFV8C8MCN4TRNEG0PK1XG",
+  "chemin": "fiches/Biologie/Photosynthèse.md",
+  "titre": "Photosynthèse",
+  "empreinte": "sha256:9a0e6d68a3a3ed7f9d97e14b9ca52ac8b0806f1e5293536eab29d1d8ce74d1a6",
+  "modifieeLe": "2026-09-01T12:00:00Z",
+  "statut": "archivee",
+  "archive": {
+    "archiveeLe": "2026-09-02",
+    "raison": "manuelle",
+    "inclureDansRappels": false,
+    "niveauRepos": 0,
+    "eligibleLe": "2027-01-10",
+    "rappelTireLe": null
+  },
+  "compteurs": {
+    "cyclesCommences": 1,
+    "cyclesTermines": 0,
+    "cyclesInterrompus": 1
+  },
+  "historique": [
+    {
+      "evt": "revision",
+      "le": "2026-09-01T12:00:00Z",
+      "jour": "2026-09-01",
+      "cycle": 1,
+      "etape": "J0",
+      "prevuLe": "2026-09-01",
+      "retardJours": 0,
+      "origine": "creation"
+    },
+    {
+      "evt": "interruption",
+      "le": "2026-09-02T12:00:00Z",
+      "jour": "2026-09-02",
+      "cycle": 1
+    },
+    {
+      "evt": "archivage",
+      "le": "2026-09-02T12:00:00Z",
+      "jour": "2026-09-02",
+      "raison": "manuelle"
+    },
+    {
+      "evt": "rappel",
+      "le": "2026-11-10T12:00:00Z",
+      "jour": "2026-11-10",
+      "tireLe": "2026-11-10",
+      "resultat": "certains_points_a_revoir"
+    },
+    {
+      "evt": "inclusion_rappels",
+      "le": "2026-11-11T12:00:00Z",
+      "inclure": false
+    }
+  ]
+}

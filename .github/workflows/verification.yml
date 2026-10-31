@@ -96,10 +96,12 @@ jobs:
       - name: Compilation
         run: dotnet build KyfRev.slnx --configuration Release --no-restore
 
+      # Chaque projet de tests mesure les modules qu'il teste (testconfig.json du projet) ; le
+      # seuil s'applique à chacun de ces modules.
       - name: Tests et couverture (95 % des lignes au minimum)
         run: >-
           dotnet test --solution KyfRev.slnx --configuration Release --no-build
-          --coverlet --coverlet-output-format cobertura --coverlet-include "[KyfRev.*]*"
+          --coverlet --coverlet-output-format cobertura
           --coverlet-threshold 95 --coverlet-threshold-type line
           --results-directory artifacts/coverage
 

@@ -35,8 +35,10 @@ comportement de référence, lui, est figé.
 
 `--coffre <dossier>` construit, avec le crate `coffre` de la 0.x, un coffre synthétique au
 contenu fictif. Il contient chaque sorte de fichier du format 1 : suivis actifs et archivés,
-passages et définitions, corbeilles, versions, journal d'opération, tirage, citations, examen,
-schéma et données d'extension. Il est versionné dans
+passages et définitions, corbeilles (annotations d'une fiche supprimée comprises), versions,
+journal d'opération, tirage, citations, examen, schéma et données d'extension. Ses suivis
+réunissent chaque sorte d'événement, d'origine de J0, de résultat de rappel et d'état
+d'ancrage. Il est versionné dans
 `tests/KyfRev.Infrastructure.Vault.Tests/fixtures/coffre-reference`, où les tests vérifient que
 chaque fichier JSON est relu puis réécrit à l'octet près.
 

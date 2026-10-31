@@ -21,9 +21,6 @@ public sealed class UnknownProperties
     /// <summary>Propriétés conservées, dans l'ordre où elles ont été lues.</summary>
     public ImmutableArray<KeyValuePair<string, JsonNode?>> Properties { get; }
 
-    /// <summary>Vrai si aucune propriété inconnue n'a été lue.</summary>
-    public bool IsEmpty => Properties.IsEmpty;
-
     internal static UnknownProperties From(ImmutableArray<KeyValuePair<string, JsonNode?>> properties) =>
         properties.IsEmpty ? None : new(properties);
 }

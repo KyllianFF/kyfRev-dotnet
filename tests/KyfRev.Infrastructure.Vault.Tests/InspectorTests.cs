@@ -8,7 +8,8 @@ namespace KyfRev.Infrastructure.Vault.Tests;
 [TestClass]
 public sealed class InspectorTests
 {
-    private const string Revolution = "f_01M69GHG4NJ7P3M0J2ZMPHF7YG";
+    private const string Revolution = "f_01M69JFV2X5VM53EY3DR1BY61M";
+    private const string Mitose = "f_01M69JFV54D3MA7W49Z91KQBM7";
 
     [TestMethod]
     public void The_reference_vault_is_healthy()
@@ -19,9 +20,9 @@ public sealed class InspectorTests
         Assert.IsFalse(inspection.HasErrors);
         Assert.IsEmpty(inspection.Findings.Where(f => f.Severity != FindingSeverity.Information));
         var s = inspection.Summary;
-        Assert.AreEqual("v_01M69GHG41N8QHVEVEPY13FDPX", s.VaultId);
-        Assert.AreEqual((4, 2, 2, 0), (s.TrackedSheets, s.ActiveSheets, s.ArchivedSheets, s.UntrackedFiles));
-        Assert.AreEqual((2, 1, 1, 1), (s.Annotations, s.Definitions, s.TrashedAnnotations, s.TrashedSheets));
+        Assert.AreEqual("v_01M69JFV2A3WD8KH55EHWC1G7N", s.VaultId);
+        Assert.AreEqual((6, 3, 3, 0), (s.TrackedSheets, s.ActiveSheets, s.ArchivedSheets, s.UntrackedFiles));
+        Assert.AreEqual((5, 1, 1, 1), (s.Annotations, s.Definitions, s.TrashedAnnotations, s.TrashedSheets));
         Assert.AreEqual((2, 2, 1, 1), (s.Versions, s.Quotes, s.Schemas, s.ExtensionData));
     }
 
@@ -58,7 +59,7 @@ public sealed class InspectorTests
         File.AppendAllText(vault.PathOf("fiches/Biologie/Mitose.md"), "\nAjout fait ailleurs.\n");
         File.Delete(vault.PathOf("fiches/Mathématiques/Théorème de Pythagore.md"));
         File.Copy(vault.PathOf("fiches/Nouveau titre.md"), vault.PathOf("fiches/Copie.md"));
-        vault.Write("fiches/Sans suivi.md", text.Replace(Revolution, "f_01M69GHG4NJ7P3M0J2ZMPHF7YZ", StringComparison.Ordinal));
+        vault.Write("fiches/Sans suivi.md", text.Replace(Revolution, "f_01M69JFV2X5VM53EY3DR1BY61Z", StringComparison.Ordinal));
         vault.Write("fiches/Libre.md", "# Note libre\n");
 
         var codes = Codes(VaultInspector.Inspect(vault.Root));
@@ -123,7 +124,7 @@ public sealed class InspectorTests
         vault.Write("schemas/s_11111111111111111111111111.json", "{ \"format\": 2, \"id\": \"s_22222222222222222222222222\" }");
         vault.Write(".suivi/extensions/vocabulaire.json", "pas du JSON");
         vault.Write(".suivi/extensions/Majuscule.json", "{}");
-        vault.Write(".suivi/versions/f_01M69GHG5QARE6JHS9156AWPN7/notes.txt", "?");
+        vault.Write($".suivi/versions/{Mitose}/notes.txt", "?");
 
         var inspection = VaultInspector.Inspect(vault.Root);
         var codes = Codes(inspection);
@@ -136,19 +137,67 @@ public sealed class InspectorTests
     }
 
     [TestMethod]
+    public void A_vault_reduced_to_its_settings_is_healthy()
+    {
+        using var vault = TemporaryVault.Empty();
+        vault.Write(".suivi/coffre.json", """{ "format": 1, "id": "v_01M69JFV2A3WD8KH55EHWC1G7N", "creeLe": "2026-10-09" }""");
+        vault.Write(".suivi/citation-en-ligne.json", """{ "format": 1 }""");
+
+        var inspection = VaultInspector.Inspect(vault.Root);
+
+        Assert.IsTrue(inspection.IsVault);
+        Assert.IsEmpty(inspection.Findings);
+        var s = inspection.Summary;
+        Assert.AreEqual((0, 0, 0, 0), (s.TrackedSheets, s.Annotations, s.Versions, s.Schemas));
+    }
+
+    [TestMethod]
+    public void Files_under_a_wrong_name_or_too_large_are_reported()
+    {
+        using var vault = TemporaryVault.CopyOfReference();
+        File.Copy(vault.PathOf($".suivi/fiches/{Revolution}.json"), vault.PathOf(".suivi/fiches/f_01M69JFV2X5VM53EY3DR1BY61Z.json"));
+        File.Copy(vault.PathOf($".suivi/fiches/{Revolution}.json"), vault.PathOf(".suivi/fiches/f_01M69JFV2X5VM53EY3DR1BY6-M.json"));
+        File.Copy(vault.PathOf($".suivi/annotations/{Revolution}.json"), vault.PathOf($".suivi/annotations/{Mitose}.json"));
+        vault.Write($"fiches/{new string('é', 130)}.md", "# Nom de plus de 255 octets\n");
+        vault.Write("schemas/s_00000000000000000000000000.json", new string(' ', (8 * 1024 * 1024) + 1));
+        vault.Write(".suivi/extensions/lourde.json", new string(' ', (1024 * 1024) + 1));
+
+        var findings = VaultInspector.Inspect(vault.Root).Findings;
+
+        Assert.Contains(f => f.Code == "nom-refuse" && f.Message.Contains("trop long", StringComparison.Ordinal), findings);
+        Assert.Contains(f => f.Code == "suivi-illisible" && f.Message.Contains("ne correspond pas au nom", StringComparison.Ordinal), findings);
+        Assert.Contains(f => f.Code == "fichier-inattendu" && f.Path == ".suivi/fiches/f_01M69JFV2X5VM53EY3DR1BY6-M.json", findings);
+        Assert.Contains(f => f.Code == "annotations-illisibles" && f.Path == $".suivi/annotations/{Mitose}.json", findings);
+        Assert.Contains(f => f.Code == "schema-illisible" && f.Message.Contains("8 Mio", StringComparison.Ordinal), findings);
+        Assert.Contains(f => f.Code == "donnees-extension-illisibles" && f.Message.Contains("1 Mio", StringComparison.Ordinal), findings);
+    }
+
+    [TestMethod]
+    public void A_file_locked_by_another_program_is_reported_and_the_rest_is_inspected()
+    {
+        using var vault = TemporaryVault.CopyOfReference();
+        using var locked = new FileStream(vault.PathOf(".suivi/rappels.json"), FileMode.Open, FileAccess.Read, FileShare.None);
+
+        var inspection = VaultInspector.Inspect(vault.Root);
+
+        Assert.AreEqual(".suivi/rappels.json", inspection.Findings.Single(f => f.Code == "lecture-impossible").Path);
+        Assert.AreEqual(6, inspection.Summary.TrackedSheets);
+    }
+
+    [TestMethod]
     public void The_command_line_report_is_readable_and_machine_readable()
     {
         var (exitCode, text) = Run("verifier", TemporaryVault.Reference);
         Assert.AreEqual(VaultCommands.Success, exitCode);
         Assert.Contains("Aucun problème.", text);
-        Assert.Contains("Fiches : 4 suivie(s) présente(s)", text);
+        Assert.Contains("Fiches : 6 suivie(s) présente(s)", text);
         Assert.Contains("rien n'a été écrit dans le coffre", text);
 
         var (_, json) = Run("verifier", TemporaryVault.Reference, "--json");
         var report = System.Text.Json.Nodes.JsonNode.Parse(json)!;
         Assert.IsTrue((bool?)report["estUnCoffre"]);
         Assert.IsFalse((bool?)report["erreurs"]);
-        Assert.AreEqual(4, (int?)report["resume"]!["fichesSuivies"]);
+        Assert.AreEqual(6, (int?)report["resume"]!["fichesSuivies"]);
         Assert.AreEqual("info", (string?)report["constats"]![0]!["gravite"]);
     }
 

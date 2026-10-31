@@ -34,6 +34,52 @@ public sealed class FileSafetyTests
         Assert.HasCount(1, Directory.GetFiles(vault.Root));
     }
 
+    [TestMethod]
+    public void A_file_created_meanwhile_by_another_program_is_never_overwritten()
+    {
+        using var vault = TemporaryVault.Empty();
+        var path = vault.PathOf("fiche.md");
+
+        Assert.IsFalse(AtomicFile.TryCreateNew(path, "nouveau"u8, () => File.WriteAllText(path, "créé ailleurs")));
+
+        Assert.AreEqual("créé ailleurs", File.ReadAllText(path));
+        Assert.HasCount(1, Directory.GetFiles(vault.Root), "le temporaire est retiré");
+    }
+
+    [TestMethod]
+    public void A_file_held_open_for_a_moment_is_replaced_once_released()
+    {
+        using var vault = TemporaryVault.Empty();
+        var path = vault.PathOf("fiche.md");
+        AtomicFile.Replace(path, "ancienne version"u8);
+        // Comme un antivirus ou un indexeur : le fichier est ouvert un instant, sans partage en suppression.
+        using var holder = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+        using var release = new Timer(_ => holder.Dispose(), state: null, dueTime: 100, period: Timeout.Infinite);
+
+        AtomicFile.Replace(path, "nouvelle version"u8);
+
+        Assert.AreEqual("nouvelle version", File.ReadAllText(path));
+        Assert.HasCount(1, Directory.GetFiles(vault.Root));
+    }
+
+    [TestMethod]
+    public void A_file_that_stays_held_is_left_unchanged_and_no_temporary_remains()
+    {
+        using var vault = TemporaryVault.Empty();
+        var path = vault.PathOf("fiche.md");
+        AtomicFile.Replace(path, "ancienne version"u8);
+
+        Exception error;
+        using (new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+        {
+            error = Assert.Throws<Exception>(() => AtomicFile.Replace(path, "nouvelle version"u8));
+        }
+
+        Assert.IsTrue(error is IOException or UnauthorizedAccessException, error.GetType().Name);
+        Assert.AreEqual("ancienne version", File.ReadAllText(path));
+        Assert.HasCount(1, Directory.GetFiles(vault.Root), "le temporaire est retiré");
+    }
+
     /// <summary>T15 : une coupure pendant l'écriture laisse l'ancienne version, jamais un fichier tronqué.</summary>
     [TestMethod]
     public void A_crash_during_a_write_leaves_the_previous_version_intact()
@@ -82,5 +128,21 @@ public sealed class FileSafetyTests
         using var again = VaultLock.TryAcquire(vault.Root, since, out _);
         Assert.IsNotNull(again, "le verrou est libéré à la fermeture");
         Assert.IsFalse(File.ReadAllText(vault.PathOf(".suivi/verrou-info.json")).EndsWith('\n'));
+    }
+
+    [TestMethod]
+    public void An_unreadable_lock_info_does_not_hide_that_the_vault_is_held()
+    {
+        using var vault = TemporaryVault.Empty();
+        Directory.CreateDirectory(vault.PathOf(".suivi"));
+        var since = new DateTimeOffset(2026, 10, 9, 12, 0, 0, TimeSpan.Zero);
+        using var first = VaultLock.TryAcquire(vault.Root, since, out _);
+        Assert.IsNotNull(first);
+        vault.Write(".suivi/verrou-info.json", "{ illisible");
+
+        using var second = VaultLock.TryAcquire(vault.Root, since, out var holder);
+
+        Assert.IsNull(second);
+        Assert.IsNull(holder, "détenteur inconnu, mais le coffre reste refusé");
     }
 }

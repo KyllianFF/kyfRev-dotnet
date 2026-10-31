@@ -20,7 +20,8 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 - Outil `kyfrev-coffre verifier` : analyse un coffre en lecture seule (fiches déplacées,
   modifiées, manquantes, en double ou sans suivi, fichiers illisibles, format plus récent,
   opération interrompue, annotations orphelines) et produit un rapport en texte ou en JSON.
-- Coffre de référence produit par la version 0.x et script d'interopération du verrou
+- Coffre de référence produit par la version 0.x (chaque sorte de fichier, d'événement de
+  suivi, de résultat de rappel et d'état d'ancrage) et script d'interopération du verrou
   (`tools/interop/verrou.ps1`).
 - Domaine (`KyfRev.Domain`) : méthode des J (séquence, cycles, échéances depuis la révision
   réellement faite, report, antidatation, redémarrage), archivage, rappels de consolidation
@@ -31,7 +32,7 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   aléatoires, et comparaison avec le cœur de la version 0.x sur 10 000 suites d'opérations,
   3 000 tirages, des flux ChaCha8 et 5 000 calculs de dates (`tools/reference-vectors`).
 - Tests sous MSTest et Microsoft Testing Platform ; couverture minimale de 95 % des lignes
-  exigée par l'intégration continue ; tests de mutation (Stryker.NET, score minimal de 80 %)
+  exigée par l'intégration continue pour chaque module, mesurée par ses propres tests ; tests de mutation (Stryker.NET, score minimal de 80 %)
   par `tools/mutation.ps1` ou par le workflow « Mutation » lancé à la demande.
 - Socle du dépôt : solution .NET 10 (`KyfRev.slnx`), SDK figé, configuration commune de
   compilation et d'analyse (avertissements bloquants, style imposé), gestion centralisée des

@@ -1,21 +1,28 @@
 {
   "format": 1,
-  "id": "f_01M69GHG8073ZK7GNBE1GRXPHP",
-  "chemin": "fiches/Mathématiques/Théorème de Pythagore.md",
-  "titre": "Théorème de Pythagore",
-  "empreinte": "sha256:5fa658756813bcc11d97ca542fafa79dc415dde96068656b9909c6c959f26d13",
+  "id": "f_01M69JFV9D2RVDT3P3MGQQYVER",
+  "chemin": "fiches/Philosophie/Cogito.md",
+  "titre": "Cogito",
+  "empreinte": "sha256:85a8c19a0ad5e1b0b8f5153c9d99c2a18337e95114623104bfb51598f111ccf9",
   "modifieeLe": "2026-09-01T12:00:00Z",
-  "statut": "archivee",
-  "archive": {
-    "archiveeLe": "2026-10-26",
-    "raison": "fin_de_cycle",
-    "inclureDansRappels": true,
-    "niveauRepos": 1,
-    "eligibleLe": "2027-05-26",
-    "rappelTireLe": null
+  "statut": "active",
+  "cycle": {
+    "numero": 2,
+    "sequence": [
+      0,
+      1,
+      3,
+      7,
+      14,
+      30
+    ],
+    "demarreLe": "2027-01-05",
+    "etape": 1,
+    "echeance": "2027-01-06",
+    "derniereRevision": "2027-01-05"
   },
   "compteurs": {
-    "cyclesCommences": 1,
+    "cyclesCommences": 2,
     "cyclesTermines": 1,
     "cyclesInterrompus": 0
   },
@@ -28,7 +35,7 @@
       "etape": "J0",
       "prevuLe": "2026-09-01",
       "retardJours": 0,
-      "origine": "creation"
+      "origine": "adoption"
     },
     {
       "evt": "revision",
@@ -83,10 +90,25 @@
     },
     {
       "evt": "rappel",
-      "le": "2027-01-26T12:00:00Z",
-      "jour": "2027-01-26",
-      "tireLe": "2027-01-26",
-      "resultat": "connue"
+      "le": "2027-01-05T12:00:00Z",
+      "jour": "2027-01-05",
+      "tireLe": "2027-01-05",
+      "resultat": "a_revoir_entierement"
+    },
+    {
+      "evt": "reactivation",
+      "le": "2027-01-05T12:00:00Z",
+      "jour": "2027-01-05"
+    },
+    {
+      "evt": "revision",
+      "le": "2027-01-05T12:00:00Z",
+      "jour": "2027-01-05",
+      "cycle": 2,
+      "etape": "J0",
+      "prevuLe": "2027-01-05",
+      "retardJours": 0,
+      "origine": "rappel"
     }
   ]
 }

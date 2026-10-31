@@ -3,6 +3,7 @@ using System.Text.Json.Nodes;
 using KyfRev.Domain.Reviews;
 using KyfRev.Infrastructure.Vault.Format;
 using KyfRev.Infrastructure.Vault.Json;
+using KyfRev.Infrastructure.Vault.Tests.Support;
 
 namespace KyfRev.Infrastructure.Vault.Tests;
 
@@ -137,9 +138,39 @@ public sealed class FormatTests
     [TestMethod]
     public void An_annotation_of_another_sheet_is_refused()
     {
-        const string json = """{ "format": 1, "ficheId": "f_A", "annotations": [ { "id": "a_1", "ficheId": "f_B" } ] }""";
-        Assert.ThrowsExactly<VaultFormatException>(() => AnnotationsFile.Read(Encoding.UTF8.GetBytes(json)));
+        var json = JsonNode.Parse(File.ReadAllBytes(ReferenceFiles(".suivi/annotations")[0]))!.AsObject();
+        json["ficheId"] = "f_00000000000000000000000000";
+        var error = Assert.ThrowsExactly<VaultFormatException>(() => AnnotationsFile.Read(Encoding.UTF8.GetBytes(json.ToJsonString())));
+        Assert.Contains("appartient à la fiche", error.Message);
     }
+
+    /// <summary>Valeurs qu'une version plus récente pourrait écrire : le fichier est refusé, donc jamais réécrit.</summary>
+    [TestMethod]
+    [DataRow(".suivi/fiches", "\"origine\": \"adoption\"", "\"origine\": \"import\"", "origine « import »")]
+    [DataRow(".suivi/fiches", "\"raison\": \"manuelle\"", "\"raison\": \"oubli\"", "raison d'archivage")]
+    [DataRow(".suivi/fiches", "\"resultat\": \"connue\"", "\"resultat\": \"bof\"", "résultat de rappel")]
+    [DataRow(".suivi/fiches", "\"inclure\": false", "\"inclure\": \"non\"", "vrai ou faux")]
+    [DataRow(".suivi/fiches", "\"historique\": [", "\"historique\": [\n    1,", "doit être un objet")]
+    [DataRow(".suivi/annotations", "\"objet\": \"commentaire\"", "\"objet\": \"couleur\"", "objet modifié")]
+    [DataRow(".suivi/annotations", "\"etatAncrage\": \"a_verifier\"", "\"etatAncrage\": \"perdue\"", "état d'ancrage")]
+    [DataRow(".suivi", "\"etat\": \"terminee\"", "\"etat\": \"annulee\"", "état d'opération")]
+    public void Values_unknown_to_this_version_are_refused(string folder, string original, string replacement, string expected)
+    {
+        var file = ReferenceFiles(folder).First(f => File.ReadAllText(f).Contains(original, StringComparison.Ordinal));
+        var json = Encoding.UTF8.GetBytes(File.ReadAllText(file).Replace(original, replacement, StringComparison.Ordinal));
+        Action read = folder switch
+        {
+            ".suivi/fiches" => () => TrackedSheetFile.Read(json),
+            ".suivi/annotations" => () => AnnotationsFile.Read(json),
+            _ => () => OperationJournalFile.Read(json),
+        };
+        var error = Assert.ThrowsExactly<VaultFormatException>(read);
+        Assert.Contains(expected, error.Message);
+    }
+
+    [TestMethod]
+    public void A_format_error_without_details_still_has_a_message() =>
+        Assert.AreEqual("Fichier du coffre illisible.", new VaultFormatException().Message);
 
     [TestMethod]
     public void Online_quote_writes_explicit_nulls_and_lock_info_has_no_final_newline()
@@ -186,4 +217,7 @@ public sealed class FormatTests
     [DataRow("2026-10-09T12:00:00.1234567890Z")]
     public void Malformed_timestamps_are_refused(string text) =>
         Assert.ThrowsExactly<VaultFormatException>(() => InstantText.Parse(text, "le"));
+
+    private static string[] ReferenceFiles(string folder) =>
+        Directory.GetFiles(Path.Combine([TemporaryVault.Reference, .. folder.Split('/')]), "*.json");
 }

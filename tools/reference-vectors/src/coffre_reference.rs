@@ -1,16 +1,19 @@
 //! Coffre de référence : un coffre synthétique construit par le crate `coffre` de kyfRev 0.x,
 //! qui contient chaque sorte de fichier du format 1 (suivis actifs et archivés, annotations et
 //! définitions, corbeilles, versions, journal d'opération, tirages, citations, examens,
-//! schéma, données d'extension). Il sert de corpus aux tests de compatibilité de
-//! KyfRev.Infrastructure.Vault ; son contenu est fictif.
+//! schéma, données d'extension). Les suivis réunis contiennent chaque sorte d'événement,
+//! d'origine de J0, de résultat de rappel et d'état d'ancrage. Il sert de corpus aux tests de
+//! compatibilité de KyfRev.Infrastructure.Vault ; son contenu est fictif.
 //!
 //! Les horodatages des actions sont fixés (midi UTC) ; les identifiants et quelques dates
 //! d'enregistrement viennent de l'horloge : le corpus est généré une fois puis versionné.
 
+use std::fs;
 use std::path::Path;
 
 use coffre::{
-    Ancre, ChoixRappel, Coffre, ContenuCitation, Definition, Examen, SourceCitation, TypeDeSource,
+    Ancre, CheminRelatif, ChoixRappel, Coffre, ContenuCitation, Definition, EtatAncrage, Examen,
+    SourceCitation, TypeDeSource,
 };
 use jiff::civil::date;
 use jiff::tz::TimeZone;
@@ -69,6 +72,20 @@ const PYTHAGORE: &str = "\
 Dans un triangle rectangle, $a^2 + b^2 = c^2$, où $c$ est l'hypoténuse.
 ";
 
+const PHOTOSYNTHESE: &str = "\
+# Photosynthèse
+
+Grâce à la **chlorophylle**, la plante produit du glucose à partir d'eau, de dioxyde de
+carbone et de lumière.
+";
+
+/// Fichier écrit hors de kyfRev, sans en-tête, puis suivi (« Suivre cette fiche »).
+const COGITO: &str = "\
+# Cogito
+
+« Je pense, donc je suis » : Descartes, Discours de la méthode, 1637.
+";
+
 /// Construit le coffre de référence dans `dossier` (qui doit être absent ou vide).
 pub fn construire(dossier: &Path) {
     let debut = date(2026, 9, 1);
@@ -105,7 +122,7 @@ pub fn construire(dossier: &Path) {
     coffre
         .appliquer_au_suivi_annotation(&passage, |s| s.valider_revision(&le(date(2026, 9, 4)), None, None))
         .expect("révision du passage");
-    coffre
+    let definition = coffre
         .creer_definition(
             &revolution,
             ancre("Ancien Régime", "La société d'", " est divisée", 59, &["Révolution française : les causes", "Causes sociales"], &empreinte),
@@ -122,6 +139,42 @@ pub fn construire(dossier: &Path) {
         )
         .expect("surlignage");
     coffre.mettre_annotation_a_la_corbeille(&jetee, &le(date(2026, 9, 6))).expect("corbeille d'annotation");
+
+    // Modifications inscrites dans l'historique : commentaire, définition, puis passage remis à J0.
+    coffre
+        .modifier_commentaire(&passage, Some("Clergé, noblesse et tiers état"), &le(date(2026, 9, 7)))
+        .expect("commentaire modifié");
+    coffre
+        .modifier_definition(
+            &definition,
+            Definition { terme: "Ancien Régime".into(), explication: "La France d'avant 1789, organisée en trois ordres.".into() },
+            &le(date(2026, 9, 7)),
+        )
+        .expect("définition modifiée");
+    coffre
+        .modifier_passage(
+            &passage,
+            ancre("trois ordres", "est divisée en ", " : le clergé, la", 83, &["Révolution française : les causes", "Causes sociales"], &empreinte),
+            true,
+            &le(date(2026, 9, 8)),
+        )
+        .expect("passage modifié");
+
+    // Passages dont la position est à vérifier, ou introuvable, après une modification de la fiche.
+    let section_sociale = ["Révolution française : les causes", "Causes sociales"];
+    let incertain = coffre
+        .creer_annotation(&revolution, ancre("tiers état", "et le ", ". Le **", 128, &section_sociale, &empreinte), None, &le(date(2026, 9, 3)))
+        .expect("passage");
+    coffre
+        .reancrer_annotation(&incertain, ancre("tiers état", "Le **", "** paie", 141, &section_sociale, &empreinte), EtatAncrage::AVerifier, &le(date(2026, 9, 9)))
+        .expect("position à vérifier");
+    let section_financiere = ["Révolution française : les causes", "Causes financières"];
+    let perdu = coffre
+        .creer_annotation(&revolution, ancre("Dette publique", "financières\n\n- ", " très élevée", 205, &section_financiere, &empreinte), Some("Dette de l'État"), &le(date(2026, 9, 3)))
+        .expect("passage");
+    coffre
+        .reancrer_annotation(&perdu, ancre("Dette publique", "financières\n\n- ", " très élevée", 205, &section_financiere, &empreinte), EtatAncrage::Introuvable, &le(date(2026, 9, 9)))
+        .expect("passage introuvable");
 
     // Fiche modifiée deux fois dans deux sessions (versions), étiquetée, déplacée, reportée
     // puis archivée manuellement.
@@ -155,9 +208,57 @@ pub fn construire(dossier: &Path) {
             .appliquer_au_suivi(&pythagore, |s| s.valider_revision(&le(echeance), None, Some(&regles)))
             .expect("révision");
     }
+
+    // Fiche archivée à la main, tirée, dont certains points sont à revoir (un passage marqué le
+    // jour du rappel), puis exclue des rappels.
+    let photosynthese = coffre
+        .creer_fiche(Some("Biologie"), "Photosynthèse", PHOTOSYNTHESE, &le(debut))
+        .expect("fiche");
+    coffre
+        .appliquer_au_suivi(&photosynthese, |s| s.archiver(&le(date(2026, 9, 2)), Some(&regles)))
+        .expect("archivage manuel");
+    let rappel = date(2026, 11, 10);
+    coffre.appliquer_au_suivi(&photosynthese, |s| s.marquer_tire(rappel)).expect("tirage");
+    let empreinte = coffre.lire_fiche(&photosynthese).expect("lecture").empreinte;
+    coffre
+        .creer_annotation(&photosynthese, ancre("chlorophylle", "Grâce à la **", "**, la plante", 26, &["Photosynthèse"], &empreinte), None, &le(rappel))
+        .expect("passage marqué");
+    coffre
+        .traiter_rappel(&photosynthese, ChoixRappel::CertainsPointsARevoir, &le(rappel))
+        .expect("rappel");
+    coffre
+        .inclure_dans_rappels(&photosynthese, false, &le(date(2026, 11, 11)))
+        .expect("exclusion des rappels");
+
+    // Fichier existant suivi après coup (J0 « adoption »), révisé jusqu'à la fin de son cycle,
+    // tiré puis à revoir entièrement : réactivé, avec un J0 « rappel ».
+    let chemin = "fiches/Philosophie/Cogito.md";
+    fs::create_dir_all(dossier.join("fiches/Philosophie")).expect("dossier");
+    fs::write(dossier.join(chemin), COGITO).expect("fichier");
+    let cogito = coffre
+        .suivre_fichier(&CheminRelatif::nouveau(chemin).expect("chemin"), &le(debut))
+        .expect("adoption");
+    while let Some(echeance) = coffre.fiche(&cogito).expect("fiche").suivie.suivi.cycle().map(|c| c.echeance) {
+        coffre
+            .appliquer_au_suivi(&cogito, |s| s.valider_revision(&le(echeance), None, Some(&regles)))
+            .expect("révision");
+    }
+    let rappel = date(2027, 1, 5);
+    coffre.appliquer_au_suivi(&cogito, |s| s.marquer_tire(rappel)).expect("tirage");
+    coffre
+        .traiter_rappel(&cogito, ChoixRappel::ARevoirEntierement, &le(rappel))
+        .expect("rappel");
+
+    // Tirage du jour : Mitose et Pythagore sont les seules fiches éligibles (deux places).
     let tirage = date(2027, 1, 26);
     coffre.preparer_journee(&le(tirage)).expect("tirage du jour");
     coffre.traiter_rappel(&pythagore, ChoixRappel::Connue, &le(tirage)).expect("rappel");
+    coffre
+        .inclure_dans_rappels(&pythagore, false, &le(date(2027, 2, 1)))
+        .expect("exclusion des rappels");
+    coffre
+        .inclure_dans_rappels(&pythagore, true, &le(date(2027, 2, 2)))
+        .expect("réinclusion dans les rappels");
 
     // Fiche renommée (journal d'opération) et fiche mise à la corbeille.
     let renommee = coffre
@@ -165,8 +266,12 @@ pub fn construire(dossier: &Path) {
         .expect("fiche");
     coffre.changer_titre(&renommee, "Nouveau titre", &le(date(2026, 9, 2))).expect("renommage");
     let corbeille = coffre
-        .creer_fiche(Some("Brouillons"), "Fiche abandonnée", "# Fiche abandonnée\n", &le(debut))
+        .creer_fiche(Some("Brouillons"), "Fiche abandonnée", "# Fiche abandonnée\n\nUn passage annoté.\n", &le(debut))
         .expect("fiche");
+    let empreinte = coffre.lire_fiche(&corbeille).expect("lecture").empreinte;
+    coffre
+        .creer_annotation(&corbeille, ancre("passage annoté", "Un ", ".", 21, &["Fiche abandonnée"], &empreinte), None, &le(debut))
+        .expect("passage");
     coffre.mettre_fiche_a_la_corbeille(&corbeille, &le(date(2026, 9, 3))).expect("corbeille");
 
     // Citations : une complète, une réduite à son texte.

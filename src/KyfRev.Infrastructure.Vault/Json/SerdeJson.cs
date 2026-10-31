@@ -141,9 +141,6 @@ internal static class SerdeJson
             case JsonValueKind.False:
                 builder.Append("false");
                 break;
-            case JsonValueKind.Null:
-                builder.Append("null");
-                break;
             default:
                 // Nombre : tel qu'il a été lu, ou écrit par .NET sans exposant pour un entier.
                 builder.Append(value.ToJsonString());

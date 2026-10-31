@@ -1,5 +1,5 @@
 ---
-id: f_01M69GHG8073ZK7GNBE1GRXPHP
+id: f_01M69JFV7EWHH4KMYSWEWWGC34
 titre: "Théorème de Pythagore"
 creee: 2026-09-01
 ---
