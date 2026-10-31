@@ -1,0 +1,31 @@
+#!/bin/sh
+# Avant chaque envoi : identité et messages des commits, nom de la branche,
+# et, pour main, uniquement des fusions --no-ff de branches conformes.
+set -eu
+
+racine=$(git rev-parse --show-toplevel)
+zero=0000000000000000000000000000000000000000
+
+while read -r ref_local sha_local ref_distant sha_distant; do
+    if [ "$sha_local" = "$zero" ]; then
+        continue
+    fi
+    case "$ref_distant" in
+        refs/heads/*) ;;
+        *) continue ;;
+    esac
+
+    branche=${ref_distant#refs/heads/}
+    if [ "$sha_distant" = "$zero" ]; then
+        plage=$sha_local
+    else
+        plage="$sha_distant..$sha_local"
+    fi
+
+    sh "$racine/tools/git/check-commits.sh" "$plage"
+    if [ "$branche" = "main" ]; then
+        sh "$racine/tools/git/check-main-merges.sh" "$plage"
+    else
+        sh "$racine/tools/git/check-branch-name.sh" "$branche"
+    fi
+done

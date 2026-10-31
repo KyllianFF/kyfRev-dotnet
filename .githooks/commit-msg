@@ -1,0 +1,21 @@
+#!/bin/sh
+# Refuse un commit dont l'auteur ou le committer n'est pas KyllianFF, ou dont le message
+# mentionne un co-auteur ou porte une adresse web en ligne finale.
+set -eu
+
+racine=$(git rev-parse --show-toplevel)
+. "$racine/tools/git/rules.sh"
+
+identite_nom() {
+    printf '%s\n' "$1" | sed 's/ <.*//'
+}
+identite_courriel() {
+    printf '%s\n' "$1" | sed -n 's/.*<\(.*\)>.*/\1/p'
+}
+
+auteur=$(git var GIT_AUTHOR_IDENT)
+committer=$(git var GIT_COMMITTER_IDENT)
+verifier_identite "$(identite_nom "$auteur")" "$(identite_courriel "$auteur")" "Auteur"
+verifier_identite "$(identite_nom "$committer")" "$(identite_courriel "$committer")" "Committer"
+
+grep -v '^#' "$1" | verifier_message

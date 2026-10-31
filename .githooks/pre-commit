@@ -1,0 +1,17 @@
+#!/bin/sh
+# Bloque tout commit dont les modifications indexées contiennent un secret (gitleaks).
+set -eu
+
+racine=$(git rev-parse --show-toplevel)
+. "$racine/tools/git/rules.sh"
+
+gitleaks="$racine/.tools/gitleaks/gitleaks.exe"
+if [ ! -f "$gitleaks" ]; then
+    gitleaks=$(command -v gitleaks || true)
+fi
+if [ -z "$gitleaks" ]; then
+    erreur "gitleaks est introuvable : lancez « pwsh tools/setup.ps1 » pour l'installer dans .tools/."
+    exit 1
+fi
+
+"$gitleaks" git --pre-commit --staged --redact --no-banner "$racine"
