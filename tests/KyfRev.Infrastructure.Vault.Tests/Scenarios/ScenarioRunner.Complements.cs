@@ -230,7 +230,7 @@ internal sealed partial class ScenarioRunner
             case "enregistrer_modele":
                 return Json(Vault.SaveAsTemplate(Ref(operation, "fiche"), Raw(operation, "nom_modele") ?? string.Empty));
             default:
-                throw new InvalidOperationException($"Opération inconnue : {op}");
+                return ExecuteBackups(op, operation, now);
         }
     }
 

@@ -106,6 +106,21 @@ public enum VaultErrorKind
 
     /// <summary>Schéma réseau refusé.</summary>
     InvalidSchema,
+
+    /// <summary>Les sauvegardes doivent être rangées hors du coffre.</summary>
+    BackupInsideVault,
+
+    /// <summary>Les exports doivent être rangés hors du coffre.</summary>
+    ExportInsideVault,
+
+    /// <summary>Sauvegarde inutilisable (archive abîmée, piégée ou d'un autre logiciel).</summary>
+    InvalidBackup,
+
+    /// <summary>La fiche n'est pas manquante : rien à restaurer.</summary>
+    SheetNotMissing,
+
+    /// <summary>La fiche ne figure pas dans la sauvegarde.</summary>
+    NotInBackup,
 }
 
 /// <summary>
@@ -250,4 +265,19 @@ public sealed class VaultException : Exception
 
     internal static VaultException InvalidSchema(string reason) =>
         new(VaultErrorKind.InvalidSchema, $"Schéma réseau refusé : {reason}.");
+
+    internal static VaultException BackupInsideVault(string folder) =>
+        new(VaultErrorKind.BackupInsideVault, $"Les sauvegardes doivent être rangées hors du coffre (« {folder} » est à l'intérieur).");
+
+    internal static VaultException ExportInsideVault(string folder) =>
+        new(VaultErrorKind.ExportInsideVault, $"Les exports doivent être rangés hors du coffre (« {folder} » est à l'intérieur).");
+
+    internal static VaultException InvalidBackup(string path, string reason) =>
+        new(VaultErrorKind.InvalidBackup, $"Sauvegarde « {path} » inutilisable : {reason}");
+
+    internal static VaultException SheetNotMissing(string title) =>
+        new(VaultErrorKind.SheetNotMissing, $"« {title} » n'est pas manquante : rien à restaurer.");
+
+    internal static VaultException NotInBackup(string title) =>
+        new(VaultErrorKind.NotInBackup, $"« {title} » ne figure pas dans cette sauvegarde.");
 }

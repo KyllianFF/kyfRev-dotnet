@@ -1,0 +1,109 @@
+{
+  "format": 1,
+  "ficheId": "f_01M69SX2HEMTS5VMYNYN5DRQXF",
+  "annotations": [
+    {
+      "id": "a_01M69SX2J5XSJNKB5VZSE6ZF64",
+      "ficheId": "f_01M69SX2HEMTS5VMYNYN5DRQXF",
+      "creeeLe": "2026-10-02T12:00:00Z",
+      "modifieeLe": "2026-10-02T12:00:00Z",
+      "definition": {
+        "terme": "Texte",
+        "explication": "Suite de mots."
+      },
+      "ancre": {
+        "exact": "Texte",
+        "avant": "",
+        "apres": "",
+        "debut": 0,
+        "fin": 5,
+        "section": [],
+        "empreinteFiche": "sha256:aa"
+      },
+      "etatAncrage": "ancree",
+      "corbeilleLe": "2026-10-04T12:00:00Z",
+      "statut": "active",
+      "cycle": {
+        "numero": 1,
+        "sequence": [
+          0,
+          1,
+          3,
+          7,
+          14,
+          30
+        ],
+        "demarreLe": "2026-10-02",
+        "etape": 1,
+        "echeance": "2026-10-03",
+        "derniereRevision": "2026-10-02"
+      },
+      "compteurs": {
+        "cyclesCommences": 1,
+        "cyclesTermines": 0,
+        "cyclesInterrompus": 0
+      },
+      "historique": [
+        {
+          "evt": "revision",
+          "le": "2026-10-02T12:00:00Z",
+          "jour": "2026-10-02",
+          "cycle": 1,
+          "etape": "J0",
+          "prevuLe": "2026-10-02",
+          "retardJours": 0,
+          "origine": "creation"
+        }
+      ]
+    },
+    {
+      "id": "a_01M69SX2JE82KDQYA8ZKQ3FG4E",
+      "ficheId": "f_01M69SX2HEMTS5VMYNYN5DRQXF",
+      "creeeLe": "2026-10-02T12:00:00Z",
+      "modifieeLe": "2026-10-03T12:00:00Z",
+      "ancre": {
+        "exact": "guillemets",
+        "avant": "",
+        "apres": "",
+        "debut": 21,
+        "fin": 31,
+        "section": [],
+        "empreinteFiche": "sha256:bb"
+      },
+      "etatAncrage": "a_verifier",
+      "statut": "active",
+      "cycle": {
+        "numero": 1,
+        "sequence": [
+          0,
+          1,
+          3,
+          7,
+          14,
+          30
+        ],
+        "demarreLe": "2026-10-02",
+        "etape": 1,
+        "echeance": "2026-10-03",
+        "derniereRevision": "2026-10-02"
+      },
+      "compteurs": {
+        "cyclesCommences": 1,
+        "cyclesTermines": 0,
+        "cyclesInterrompus": 0
+      },
+      "historique": [
+        {
+          "evt": "revision",
+          "le": "2026-10-02T12:00:00Z",
+          "jour": "2026-10-02",
+          "cycle": 1,
+          "etape": "J0",
+          "prevuLe": "2026-10-02",
+          "retardJours": 0,
+          "origine": "creation"
+        }
+      ]
+    }
+  ]
+}

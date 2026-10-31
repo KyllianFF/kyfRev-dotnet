@@ -18,6 +18,7 @@ use noyau::Moment;
 use serde_json::Value;
 
 mod complements;
+mod sauvegardes;
 
 fn le(texte: &str) -> Moment {
     let jour: Date = texte.parse().expect("date AAAA-MM-JJ");
@@ -39,6 +40,9 @@ fn erreur(erreur: &ErreurCoffre) -> String {
             | ErreurCoffre::EnteteInvalide { .. }
             | ErreurCoffre::SuiviIllisible { .. }
             | ErreurCoffre::ParametresIllisibles(_)
+            | ErreurCoffre::SauvegardeDansLeCoffre(_)
+            | ErreurCoffre::ExportDansLeCoffre(_)
+            | ErreurCoffre::SauvegardeInvalide { .. }
     );
     if comparable { format!("{variante} : {erreur}") } else { variante }
 }
@@ -152,7 +156,7 @@ impl Partie {
     fn jouer(&mut self, operation: &Value) -> Result<String, ErreurCoffre> {
         let op = operation["op"].as_str().expect("« op » attendu");
         let moment = operation.get("le").and_then(Value::as_str).map(le);
-        let maintenant = || moment.clone().expect("« le » attendu");
+        let maintenant = || moment.expect("« le » attendu");
         match op {
             "initialiser" => {
                 let coffre = Coffre::initialiser(&self.racine, &maintenant())?;
@@ -340,7 +344,7 @@ impl Partie {
                 fs::rename(&de, &vers).expect("déplacement");
                 Ok(String::new())
             }
-            autre => self.jouer_complements(autre, operation, moment.clone()),
+            autre => self.jouer_complements(autre, operation, moment),
         }
     }
 }
@@ -350,8 +354,10 @@ pub fn jouer(dossier: &Path) {
     let scenario: Value =
         serde_json::from_slice(&fs::read(dossier.join("scenario.json")).expect("scenario.json")).expect("JSON du scénario");
     let racine = dossier.join("attendu");
-    if racine.exists() {
-        fs::remove_dir_all(&racine).expect("nettoyage de attendu/");
+    for ancien in [racine.clone(), racine.with_extension("dehors")] {
+        if ancien.exists() {
+            fs::remove_dir_all(&ancien).expect("nettoyage de attendu/");
+        }
     }
     let mut partie = Partie {
         racine: racine.clone(),
@@ -375,6 +381,10 @@ pub fn jouer(dossier: &Path) {
         writeln!(resultats, "{ligne}").expect("écriture en mémoire");
     }
     partie.coffre = None;
+    // Ce qui a été écrit hors du coffre est décrit dans les résultats.
+    if partie.dehors().exists() {
+        fs::remove_dir_all(partie.dehors()).expect("nettoyage de attendu.dehors/");
+    }
     // Qui tenait le verrou (poste, processus) : propre à chaque exécution.
     let _ = fs::remove_file(racine.join(".suivi/verrou-info.json"));
     fs::write(dossier.join("resultats.txt"), resultats).expect("resultats.txt");
@@ -400,8 +410,16 @@ fn lister_dossiers(racine: &Path, courant: &Path, dossiers: &mut Vec<String>) {
     }
 }
 
-/// Joue chaque scénario (sous-dossier) de `dossier`.
+/// Joue chaque scénario (sous-dossier) de `dossier`, ou le scénario `dossier` lui-même.
 pub fn jouer_tous(dossier: &Path) {
+    // Les exports datent les événements dans le fuseau du système : UTC, comme côté C#.
+    // SAFETY : le programme n'a qu'un fil d'exécution à ce stade.
+    unsafe { std::env::set_var("TZ", "UTC0") };
+    // Un seul scénario : les autres gardent leurs identifiants.
+    if dossier.join("scenario.json").is_file() {
+        jouer(dossier);
+        return;
+    }
     let mut scenarios: Vec<PathBuf> = fs::read_dir(dossier)
         .expect("dossier des scénarios")
         .flatten()

@@ -139,7 +139,7 @@ impl Partie {
 
     #[allow(clippy::too_many_lines)]
     pub(super) fn jouer_complements(&mut self, op: &str, operation: &Value, moment: Option<Moment>) -> Result<String, ErreurCoffre> {
-        let maintenant = || moment.clone().expect("« le » attendu");
+        let maintenant = || moment.expect("« le » attendu");
         match op {
             "creer_annotation" => {
                 let fiche = self.reference(operation, "fiche");
@@ -424,7 +424,7 @@ impl Partie {
                 let (fiche, nom) = (self.reference(operation, "fiche"), chaine(operation, "nom_modele").unwrap_or_default());
                 self.coffre().enregistrer_modele(&fiche, &nom).map(|n| json(&n))
             }
-            autre => panic!("opération inconnue : {autre}"),
+            autre => self.jouer_sauvegardes(autre, operation, moment),
         }
     }
 }
