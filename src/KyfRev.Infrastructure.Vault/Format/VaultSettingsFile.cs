@@ -1,8 +1,8 @@
 using System.Collections.Immutable;
 using System.Text.Json.Nodes;
+using KyfRev.Application.Text;
 using KyfRev.Domain.Reviews;
 using KyfRev.Infrastructure.Vault.Json;
-using KyfRev.Infrastructure.Vault.Text;
 
 namespace KyfRev.Infrastructure.Vault.Format;
 

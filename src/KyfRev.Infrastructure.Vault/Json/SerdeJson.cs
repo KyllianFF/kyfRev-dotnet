@@ -41,7 +41,7 @@ internal static class SerdeJson
     public static JsonNode? Canonical(JsonNode? node) => node switch
     {
         JsonObject obj => new JsonObject(obj
-            .OrderBy(pair => pair.Key, Text.Utf8Order.Instance)
+            .OrderBy(pair => pair.Key, KyfRev.Application.Text.Utf8Order.Instance)
             .Select(pair => KeyValuePair.Create(pair.Key, Canonical(pair.Value)))),
         JsonArray array => new JsonArray([.. array.Select(Canonical)]),
         JsonValue value when value.GetValueKind() == JsonValueKind.Number && value.ToJsonString() is var raw && raw.AsSpan().IndexOfAny(".eE") >= 0 =>

@@ -1,7 +1,7 @@
 using System.Collections.Immutable;
 using System.Text.Json.Nodes;
+using KyfRev.Application.Text;
 using KyfRev.Infrastructure.Vault.Json;
-using KyfRev.Infrastructure.Vault.Text;
 using YamlDotNet.Core;
 using YamlDotNet.RepresentationModel;
 

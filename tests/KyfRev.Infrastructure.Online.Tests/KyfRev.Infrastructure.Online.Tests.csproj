@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+
+  <!-- Le lecteur est essayé sans réseau : un faux gestionnaire HTTP joue le serveur. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\KyfRev.Infrastructure.Online\KyfRev.Infrastructure.Online.csproj" />
+  </ItemGroup>
+
+</Project>

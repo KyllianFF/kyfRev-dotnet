@@ -1,9 +1,9 @@
+using KyfRev.Application.Text;
 using KyfRev.Domain.Calendar;
 using KyfRev.Infrastructure.Vault.Format;
 using KyfRev.Infrastructure.Vault.Json;
 using KyfRev.Infrastructure.Vault.Quotes;
 using KyfRev.Infrastructure.Vault.Tests.Support;
-using KyfRev.Infrastructure.Vault.Text;
 
 namespace KyfRev.Infrastructure.Vault.Tests;
 
@@ -139,12 +139,12 @@ public sealed class VaultComplementsTests
     [DataRow("IVe siècle avant J.-C.", -350)]
     [DataRow("12/05/68", 12)]
     [DataRow("30 juillet 1903", 1903)]
-    public void The_year_of_a_free_date_is_found(string date, int year) => Assert.AreEqual(year, QuoteFile.Year(date));
+    public void The_year_of_a_free_date_is_found(string date, int year) => Assert.AreEqual(year, QuoteDates.YearOf(date));
 
     [TestMethod]
     [DataRow("sans date")]
     [DataRow("")]
-    public void A_date_without_year_has_none(string date) => Assert.IsNull(QuoteFile.Year(date));
+    public void A_date_without_year_has_none(string date) => Assert.IsNull(QuoteDates.YearOf(date));
 
     [TestMethod]
     [DataRow(0.0, "0.0")]

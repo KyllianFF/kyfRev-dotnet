@@ -3,8 +3,8 @@ using KyfRev.Application.Ports;
 namespace KyfRev.Application.UseCases;
 
 /// <summary>
-/// Le coffre ouvert, partagé par tous les cas d'usage. Une seule opération à la fois : l'écran,
-/// les tâches de fond et les modules passent par lui.
+/// Le coffre ouvert, partagé par tous les cas d'usage, ceux des modules compris. Une seule
+/// opération à la fois : l'écran, les tâches de fond et les modules passent par lui.
 /// </summary>
 public sealed class VaultHost : IDisposable
 {
@@ -40,7 +40,7 @@ public sealed class VaultHost : IDisposable
     /// Exécute <paramref name="action"/> sur le coffre ouvert. Un refus du coffre devient un
     /// <see cref="Outcome{T}"/> refusé, avec son message.
     /// </summary>
-    internal Outcome<T> Use<T>(Func<IVault, T> action)
+    public Outcome<T> Use<T>(Func<IVault, T> action)
     {
         lock (_gate)
         {
@@ -60,7 +60,7 @@ public sealed class VaultHost : IDisposable
     }
 
     /// <summary>Comme <see cref="Use{T}"/>, pour une opération sans valeur.</summary>
-    internal Outcome<Done> Use(Action<IVault> action) => Use(vault =>
+    public Outcome<Done> Use(Action<IVault> action) => Use(vault =>
     {
         action(vault);
         return default(Done);

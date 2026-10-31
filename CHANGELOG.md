@@ -9,6 +9,24 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- Modularité : contrat `IKyfRevModule` et catalogue des modules (`ModuleCatalog`). Un module est
+  compilé avec l'application, sans aucun chargement dynamique ; ses services ne sont déclarés
+  que si le coffre l'active, et son absence ne touche pas au cœur. Points d'extension : entrée
+  du menu, encart du tableau de bord, remarque de « Santé du coffre », recherche, format
+  d'export, rendu d'un bloc.
+- Module Citations (`KyfRev.Modules.Citations`) : citations du coffre (liste, ajout,
+  modification, corbeille), citation du jour, encart « Citation du jour » et signalement des
+  fichiers de citation illisibles. Citation du jour, pages à lire et réglages identiques à la
+  version 0.x (douzième scénario comparé, 82 opérations).
+- Citation du jour sur le Wikiquote francophone, comme en 0.x : seulement si le module et la
+  recherche en ligne sont actifs, trois pages au plus par jour, nouvel essai une heure après un
+  échec, rien de plus une fois la journée sans nouveauté. Lecture des pages comparée à la 0.x
+  sur 806 wikitextes (modèles, liens, notes, entités, références incomplètes) et 6 080 tirages
+  de pages du jour. Là où la 0.x s'arrêtait sur un caractère accentué placé juste après un
+  « & », la génération .NET garde le « & » tel quel.
+- Lecteur HTTPS durci (`KyfRev.Infrastructure.Online`), seul accès au réseau : adresse en HTTPS
+  seulement, ni redirection ni cookie, réponse limitée à 2 Mo et 20 secondes, UTF-8 strict,
+  agent identifié (politique de Wikimedia). Seul le titre de la page demandée part.
 - Couche Application (`KyfRev.Application`) : 56 cas d'usage, un par commande de la version 0.x,
   regroupés par domaine (coffre, fiches, édition, dossiers, corbeille, révision, rappels,
   annotations, examens, réglages, modèles, santé, sauvegardes, exports). Ils passent par des ports
@@ -116,6 +134,8 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Modifié
 
+- Le texte aux règles de Rust (minuscules, ordre des octets UTF-8) et le modèle des citations
+  passent dans `KyfRev.Application`, partagés par le coffre et les modules.
 - L'examen d'un dossier se « retire » (`WithdrawExam`) : plus aucun nom de suppression dans les
   opérations publiques.
 

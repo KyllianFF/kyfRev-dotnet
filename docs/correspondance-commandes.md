@@ -1,9 +1,9 @@
 # Correspondance des commandes de kyfRev 0.x
 
 Les 97 commandes que l'interface de kyfRev 0.x peut appeler (`src-tauri/src/lib.rs`), et ce qui
-les reprend dans la génération .NET : un cas d'usage de `KyfRev.Application`, ou le jalon qui
-l'apportera. Chaque cas d'usage porte l'attribut `[ZeroXCommand]` de sa commande ; un test
-(`CommandMapTests`) vérifie que ce tableau et le code restent d'accord.
+les reprend dans la génération .NET : un cas d'usage de `KyfRev.Application` ou d'un module, ou
+le jalon qui l'apportera. Chaque cas d'usage porte l'attribut `[ZeroXCommand]` de sa commande ;
+un test (`CommandMapTests`) vérifie que ce tableau et le code restent d'accord.
 
 ## Reprises par les cas d'usage (J4.1)
 
@@ -66,16 +66,23 @@ l'apportera. Chaque cas d'usage porte l'attribut `[ZeroXCommand]` de sa commande
 | `restaurer_sauvegarde` | `BackupUseCases.Restore` | J4.1 | |
 | `exporter` | `ExportUseCases.Export` | J4.1 | |
 
+## Reprises par le module Citations (J4.2)
+
+Ces cas d'usage ne sont chargés que si le coffre active le module Citations.
+
+| Commande 0.x | Cas d'usage | Jalon | Remarque |
+|---|---|---|---|
+| `citations` | `QuoteUseCases.Quotes` | J4.2 | |
+| `ajouter_citation` | `QuoteUseCases.Add` | J4.2 | |
+| `modifier_citation` | `QuoteUseCases.Modify` | J4.2 | |
+| `mettre_citation_a_la_corbeille` | `QuoteUseCases.Trash` | J4.2 | |
+| `restaurer_citation` | `QuoteUseCases.Restore` | J4.2 | |
+| `chercher_citation_du_jour` | `QuoteUseCases.SearchQuoteOfTheDayAsync` | J4.2 | Par le lecteur HTTPS durci de `KyfRev.Infrastructure.Online`. |
+
 ## Apportées par les jalons suivants
 
 | Commande 0.x | Cas d'usage | Jalon | Remarque |
 |---|---|---|---|
-| `citations` | — | J4.2 | Module Citations. |
-| `ajouter_citation` | — | J4.2 | Module Citations. |
-| `modifier_citation` | — | J4.2 | Module Citations. |
-| `mettre_citation_a_la_corbeille` | — | J4.2 | Module Citations. |
-| `restaurer_citation` | — | J4.2 | Module Citations. |
-| `chercher_citation_du_jour` | — | J4.2 | Module Citations et Wikiquote. |
 | `appliquer_theme` | — | J5 | Barre de titre de Windows : coquille WPF. |
 | `appliquer_zoom` | — | J5 | Taille de l'interface : coquille WPF. |
 | `journaliser_erreur_interface` | — | J5 | Journal de diagnostic. |

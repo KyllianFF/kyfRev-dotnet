@@ -32,7 +32,7 @@ public sealed partial class VaultSession
         return new QuoteList(Sorted(quotes), Sorted(trash), unreadable);
 
         static List<Quote> Sorted(List<Quote> list) =>
-            [.. list.OrderByDescending(q => q.AddedOn ?? DateOnly.MinValue).ThenBy(q => q.AddedOn is null).ThenBy(q => q.Path, Text.Utf8Order.Instance)];
+            [.. list.OrderByDescending(q => q.AddedOn ?? DateOnly.MinValue).ThenBy(q => q.AddedOn is null).ThenBy(q => q.Path, KyfRev.Application.Text.Utf8Order.Instance)];
     }
 
     /// <summary>Ajoute une citation ; seul le texte est obligatoire.</summary>
@@ -143,22 +143,9 @@ public sealed partial class VaultSession
     }
 
     /// <summary>La citation trouvée en ligne ce jour-là, si elle est toujours là (hors corbeille).</summary>
-    private Quote? OnlineQuoteOf(DateOnly day)
+    public Quote? OnlineQuoteOf(DateOnly day)
     {
-        if (TryReadAllBytes(Confine(OnlineQuotePath)) is not { } bytes)
-        {
-            return null;
-        }
-        OnlineQuoteFile kept;
-        try
-        {
-            kept = OnlineQuoteFile.Read(bytes);
-        }
-        catch (VaultFormatException)
-        {
-            return null;
-        }
-        if (kept.Day != day || kept.Path is not { } path)
+        if (OnlineQuoteKept() is not { } kept || kept.Day != day || kept.Path is not { } path)
         {
             return null;
         }
@@ -172,6 +159,28 @@ public sealed partial class VaultSession
             return QuoteFile.Read(text, quote.Value, inTrash: false);
         }
         catch (Exception exception) when (exception is VaultException or FormatException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Jour où une citation a été trouvée en ligne pour la dernière fois
+    /// (<c>.suivi/citation-en-ligne.json</c>) ; rien si le fichier manque ou est illisible.
+    /// </summary>
+    public DateOnly? OnlineQuoteDay() => OnlineQuoteKept()?.Day;
+
+    private OnlineQuoteFile? OnlineQuoteKept()
+    {
+        if (TryReadAllBytes(Confine(OnlineQuotePath)) is not { } bytes)
+        {
+            return null;
+        }
+        try
+        {
+            return OnlineQuoteFile.Read(bytes);
+        }
+        catch (VaultFormatException)
         {
             return null;
         }

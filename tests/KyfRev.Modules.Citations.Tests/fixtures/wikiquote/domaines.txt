@@ -1,0 +1,400 @@
+["SCIENCE","philosophie","philosophie","sciences","sciences"]	philosophie,science
+["SCIENCE","cuisine","science"]	science
+["ART","science","Philosophie","Informatique\t"]	philosophie,art,science,informatique
+["SCIENCE","science"]	science
+["cuisine","science","cuisine"," art ","Philosophie","philosophie"]	philosophie,art,science
+["Philosophie","art"," art "]	philosophie,art
+[]	
+["sciences","philosophie","art","sciences","science"]	philosophie,art,science
+["informatique","informatique"]	informatique
+["Informatique\t","ART","sciences","cuisine","science","cuisine"]	art,science,informatique
+["","science"]	science
+["cuisine"," art "]	art
+["art","informatique","cuisine"," art "]	art,informatique
+["cuisine"]	
+["science","","SCIENCE","SCIENCE","science"," art "]	art,science
+[]	
+[]	
+[]	
+["philosophie","art"," art ","philosophie","cuisine"]	philosophie,art
+["sciences","Informatique\t","","sciences","Informatique\t"]	informatique
+["SCIENCE"]	science
+["philosophie","","","Philosophie"," art ","SCIENCE"]	philosophie,art,science
+["SCIENCE","Informatique\t","science"," art ","philosophie","Informatique\t"]	philosophie,art,science,informatique
+["cuisine","Philosophie"]	philosophie
+["art","cuisine","Philosophie","Informatique\t","cuisine"," art "]	philosophie,art,informatique
+["philosophie","science","sciences","philosophie"]	philosophie,science
+["ART","Informatique\t","sciences","sciences","philosophie",""]	philosophie,art,informatique
+["art","science","ART","Philosophie","ART"]	philosophie,art,science
+["Informatique\t","ART","cuisine"]	art,informatique
+[]	
+["Philosophie","sciences"]	philosophie
+[]	
+["art","SCIENCE","ART","Philosophie"]	philosophie,art,science
+["ART","ART","SCIENCE"]	art,science
+[]	
+[" art ","sciences","Philosophie","","cuisine","science"]	philosophie,art,science
+["art","philosophie","science","SCIENCE","Philosophie","science"]	philosophie,art,science
+["Informatique\t","ART","philosophie","philosophie"," art "]	philosophie,art,informatique
+["","ART"]	art
+["Philosophie",""]	philosophie
+["","SCIENCE","sciences"," art ","science"]	art,science
+["sciences","Philosophie","cuisine","Informatique\t"]	philosophie,informatique
+["informatique","sciences"," art ","philosophie","ART"]	philosophie,art,informatique
+[]	
+[]	
+["Informatique\t","SCIENCE","ART","SCIENCE","SCIENCE"]	art,science,informatique
+["SCIENCE","sciences","ART","philosophie"]	philosophie,art,science
+[" art ","cuisine","SCIENCE","SCIENCE","cuisine","SCIENCE"]	art,science
+["SCIENCE","art"]	art,science
+[" art "]	art
+["informatique"]	informatique
+["art","SCIENCE","philosophie"]	philosophie,art,science
+["art","art","cuisine"]	art
+["","sciences","science"]	science
+["ART"]	art
+["SCIENCE"," art "," art ","","science"]	art,science
+["science","sciences","Informatique\t","cuisine","science"]	science,informatique
+["science","science","Philosophie","science","cuisine"]	philosophie,science
+["sciences","art","cuisine","informatique"]	art,informatique
+["cuisine","","","Philosophie","informatique"]	philosophie,informatique
+["sciences","Informatique\t"]	informatique
+["art"]	art
+["SCIENCE","cuisine","SCIENCE"]	science
+["philosophie","science"]	philosophie,science
+[]	
+["cuisine","art","philosophie"]	philosophie,art
+[]	
+["Informatique\t","Informatique\t"]	informatique
+[" art ","ART","informatique"," art ","SCIENCE","sciences"]	art,science,informatique
+[]	
+[]	
+["sciences","informatique"]	informatique
+["Informatique\t","SCIENCE","cuisine"]	science,informatique
+["sciences","art","science"]	art,science
+["sciences","Informatique\t","SCIENCE","Informatique\t"]	science,informatique
+[]	
+[" art ","sciences","philosophie","ART"]	philosophie,art
+[]	
+["philosophie","Informatique\t"," art ","art","philosophie"]	philosophie,art,informatique
+["SCIENCE"]	science
+["","philosophie"]	philosophie
+["ART","sciences","sciences","Philosophie","Philosophie"]	philosophie,art
+["","Philosophie","Philosophie"," art ","philosophie","sciences"]	philosophie,art
+[]	
+["Informatique\t","Philosophie","sciences","SCIENCE","ART"]	philosophie,art,science,informatique
+["SCIENCE",""]	science
+[]	
+["","SCIENCE","Informatique\t"]	science,informatique
+[" art ","science","science","sciences","art"]	art,science
+[" art ","ART","SCIENCE","ART"]	art,science
+["ART"]	art
+[""]	
+[]	
+["cuisine","","informatique","","philosophie"]	philosophie,informatique
+[]	
+["cuisine"]	
+[]	
+["ART","sciences","art"]	art
+["Informatique\t","philosophie","sciences","science","sciences","ART"]	philosophie,art,science,informatique
+["science"]	science
+["Philosophie","Philosophie","informatique"," art ","art"]	philosophie,art,informatique
+[]	
+[]	
+["philosophie","philosophie","Philosophie"]	philosophie
+["philosophie","sciences"]	philosophie
+["science","art","Informatique\t","science","SCIENCE"]	art,science,informatique
+["Philosophie","sciences"]	philosophie
+["ART","science"]	art,science
+["science","science"]	science
+["art","philosophie","ART"," art "]	philosophie,art
+["informatique","","sciences"]	informatique
+["cuisine","sciences","Philosophie","cuisine"]	philosophie
+["Informatique\t"," art ","informatique","informatique","informatique","informatique"]	art,informatique
+["SCIENCE","cuisine","Philosophie","Philosophie"]	philosophie,science
+["ART","ART","sciences"]	art
+[]	
+["ART","ART","art","science"]	art,science
+["","science","art","sciences","art"]	art,science
+["philosophie","ART","","sciences"," art "]	philosophie,art
+["philosophie","SCIENCE"]	philosophie,science
+["informatique","sciences","ART"]	art,informatique
+["ART","sciences","Philosophie","","science","sciences"]	philosophie,art,science
+["art","cuisine"," art ","Informatique\t","Philosophie"]	philosophie,art,informatique
+["ART"]	art
+["ART"," art ","science","science","informatique","philosophie"]	philosophie,art,science,informatique
+["science"]	science
+["SCIENCE","Philosophie"]	philosophie,science
+["ART","art","SCIENCE","ART","Informatique\t"]	art,science,informatique
+["science","science",""]	science
+["science","cuisine"]	science
+["cuisine","ART","art","ART"]	art
+["art"]	art
+["informatique","art","Philosophie"]	philosophie,art,informatique
+["ART","ART","Philosophie","cuisine","sciences"]	philosophie,art
+["Philosophie","SCIENCE","","art"]	philosophie,art,science
+["SCIENCE","","ART"]	art,science
+["sciences","ART","ART","sciences","SCIENCE"]	art,science
+["SCIENCE","informatique"]	science,informatique
+["informatique","","Philosophie",""]	philosophie,informatique
+["sciences","art","SCIENCE"," art ","Informatique\t","Informatique\t"]	art,science,informatique
+["ART",""]	art
+["sciences","science","Philosophie","sciences","cuisine",""]	philosophie,science
+["SCIENCE","SCIENCE","science"," art ","ART","sciences"]	art,science
+["sciences","Informatique\t","art","SCIENCE"," art ",""]	art,science,informatique
+[""," art ","ART"]	art
+["cuisine","science"," art ","art"]	art,science
+[""]	
+["Informatique\t","ART","art","philosophie","SCIENCE","art"]	philosophie,art,science,informatique
+["science","sciences","philosophie"]	philosophie,science
+["Philosophie"," art ","philosophie"]	philosophie,art
+["cuisine","ART","art","SCIENCE","informatique"," art "]	art,science,informatique
+["Philosophie","cuisine","informatique","Informatique\t"," art "]	philosophie,art,informatique
+[""]	
+["informatique","informatique"," art "," art "]	art,informatique
+["ART","philosophie","philosophie"]	philosophie,art
+["Philosophie","cuisine","philosophie"]	philosophie
+["Philosophie","Philosophie","SCIENCE"]	philosophie,science
+["philosophie","","Informatique\t","Informatique\t","science","SCIENCE"]	philosophie,science,informatique
+[]	
+["cuisine","philosophie","ART","science"]	philosophie,art,science
+["cuisine","Philosophie","","SCIENCE"]	philosophie,science
+[]	
+["Informatique\t","science","sciences"]	science,informatique
+[]	
+["Informatique\t","","cuisine","philosophie"," art ","Philosophie"]	philosophie,art,informatique
+["sciences"]	
+["Informatique\t","Philosophie","philosophie","SCIENCE","art"]	philosophie,art,science,informatique
+["SCIENCE"]	science
+["ART","science","cuisine","sciences","sciences","ART"]	art,science
+["art"," art ","Informatique\t","","informatique"]	art,informatique
+[" art "," art ","art","Philosophie"]	philosophie,art
+[]	
+["","philosophie","philosophie","ART"]	philosophie,art
+["Informatique\t"," art "]	art,informatique
+[" art ","cuisine"," art ","SCIENCE"]	art,science
+[" art ","","informatique","ART"]	art,informatique
+[]	
+["ART","art","Informatique\t","SCIENCE"," art "]	art,science,informatique
+["informatique"]	informatique
+["science","SCIENCE","Informatique\t","sciences"]	science,informatique
+["cuisine","cuisine"]	
+["ART"]	art
+[]	
+["Informatique\t","SCIENCE"]	science,informatique
+["Informatique\t","SCIENCE"]	science,informatique
+[]	
+["cuisine"]	
+["Philosophie","Informatique\t","","Informatique\t"," art "]	philosophie,art,informatique
+["ART","cuisine","science","philosophie"]	philosophie,art,science
+["cuisine","ART","science","philosophie","informatique","SCIENCE"]	philosophie,art,science,informatique
+["ART",""," art ","Informatique\t","science","cuisine"]	art,science,informatique
+[]	
+["SCIENCE","science"]	science
+["sciences"]	
+[" art ","Philosophie"]	philosophie,art
+["cuisine","science","informatique","cuisine","art","Informatique\t"]	art,science,informatique
+["","art","",""]	art
+["informatique","SCIENCE","science","cuisine"]	science,informatique
+["cuisine","ART","science"]	art,science
+["","","sciences"]	
+["science","sciences","SCIENCE","","art"]	art,science
+["SCIENCE"," art "]	art,science
+["science","informatique"," art ","art"]	art,science,informatique
+["ART","art","","SCIENCE"]	art,science
+["sciences","SCIENCE"," art "]	art,science
+["informatique","sciences","","Informatique\t"," art "]	art,informatique
+["informatique"," art ","ART","SCIENCE","cuisine","SCIENCE"]	art,science,informatique
+["cuisine"]	
+["science","SCIENCE","philosophie"]	philosophie,science
+["informatique"]	informatique
+["Philosophie","Informatique\t","ART","science","","Informatique\t"]	philosophie,art,science,informatique
+["informatique","ART","sciences"]	art,informatique
+["philosophie","art","Philosophie"]	philosophie,art
+["informatique","art","SCIENCE"]	art,science,informatique
+["ART","","art"," art ","philosophie","philosophie"]	philosophie,art
+["Informatique\t"]	informatique
+["Informatique\t","ART"," art ","sciences"]	art,informatique
+["science","ART","","informatique","SCIENCE"]	art,science,informatique
+["sciences","SCIENCE",""," art ","cuisine","Informatique\t"]	art,science,informatique
+[""]	
+[" art "," art ","ART","SCIENCE","SCIENCE"]	art,science
+["SCIENCE","sciences","ART","cuisine"]	art,science
+["sciences","philosophie"," art "]	philosophie,art
+["cuisine","informatique"]	informatique
+["Philosophie",""]	philosophie
+["ART"]	art
+["sciences","informatique"]	informatique
+["ART","art","art","science","science",""]	art,science
+["philosophie","art","Informatique\t","ART","science","cuisine"]	philosophie,art,science,informatique
+["SCIENCE","cuisine","informatique","Informatique\t"]	science,informatique
+["informatique","Philosophie","cuisine"]	philosophie,informatique
+[" art ","informatique"]	art,informatique
+["philosophie","science"]	philosophie,science
+["","Informatique\t","ART","SCIENCE","Philosophie","ART"]	philosophie,art,science,informatique
+["Philosophie"," art ","Informatique\t","philosophie","cuisine"]	philosophie,art,informatique
+["","philosophie","Informatique\t"]	philosophie,informatique
+[]	
+["art","ART"]	art
+[" art ","art","cuisine"]	art
+["Philosophie","","SCIENCE","sciences"," art "]	philosophie,art,science
+["cuisine","SCIENCE"]	science
+["science","Philosophie","Informatique\t"]	philosophie,science,informatique
+["Informatique\t","","Informatique\t"]	informatique
+["philosophie","ART","cuisine","Informatique\t","ART","informatique"]	philosophie,art,informatique
+["Philosophie","Informatique\t","philosophie","science","ART"]	philosophie,art,science,informatique
+["sciences","","SCIENCE","informatique","sciences"]	science,informatique
+["sciences","philosophie","SCIENCE","cuisine","science"]	philosophie,science
+["science","ART","science"]	art,science
+["informatique","SCIENCE","cuisine","SCIENCE"," art "]	art,science,informatique
+["Informatique\t","sciences","cuisine","science","art"," art "]	art,science,informatique
+[]	
+["Informatique\t","informatique","philosophie","Philosophie","philosophie","art"]	philosophie,art,informatique
+[" art ","Philosophie","Informatique\t"]	philosophie,art,informatique
+["Philosophie","SCIENCE"]	philosophie,science
+["ART","SCIENCE","SCIENCE","ART"]	art,science
+["","art","science"]	art,science
+["art","philosophie","sciences"]	philosophie,art
+["ART"," art ","science","Philosophie","philosophie"]	philosophie,art,science
+["cuisine"]	
+["Informatique\t","art","cuisine","Philosophie","ART"]	philosophie,art,informatique
+["Philosophie","Philosophie","art","Informatique\t","art","ART"]	philosophie,art,informatique
+["SCIENCE","","sciences"]	science
+["sciences","informatique","SCIENCE","SCIENCE"]	science,informatique
+["SCIENCE","Informatique\t","informatique"]	science,informatique
+["informatique","Informatique\t"]	informatique
+["informatique","Informatique\t"," art "]	art,informatique
+["Informatique\t","cuisine","informatique","cuisine"," art "]	art,informatique
+["philosophie","informatique"]	philosophie,informatique
+[]	
+["SCIENCE"," art "," art ","art"]	art,science
+["SCIENCE","SCIENCE","sciences","SCIENCE","SCIENCE"]	science
+["Informatique\t"]	informatique
+["SCIENCE","Philosophie","Philosophie","ART"]	philosophie,art,science
+[]	
+[" art "]	art
+["","science","informatique","art","art","cuisine"]	art,science,informatique
+["Philosophie","science"]	philosophie,science
+["science","Philosophie","SCIENCE"]	philosophie,science
+[" art ","Philosophie","Informatique\t","art"]	philosophie,art,informatique
+[]	
+["informatique","Informatique\t","philosophie","sciences"]	philosophie,informatique
+[]	
+["cuisine"]	
+[]	
+["Philosophie"]	philosophie
+["Informatique\t"]	informatique
+["art","ART","cuisine","philosophie","Informatique\t"]	philosophie,art,informatique
+["ART","informatique","philosophie"]	philosophie,art,informatique
+["SCIENCE"]	science
+[]	
+["SCIENCE"]	science
+["Informatique\t","philosophie","Philosophie","Informatique\t"]	philosophie,informatique
+["Informatique\t","ART","sciences"]	art,informatique
+[]	
+[]	
+[]	
+["SCIENCE"]	science
+["informatique","Philosophie"," art "," art "]	philosophie,art,informatique
+[" art "," art ","Philosophie","cuisine"]	philosophie,art
+[" art ","ART"]	art
+["Philosophie"]	philosophie
+["philosophie","cuisine","ART"]	philosophie,art
+["art","ART",""]	art
+["Informatique\t","Philosophie","informatique"]	philosophie,informatique
+["art","Philosophie","cuisine"]	philosophie,art
+["","Informatique\t","Philosophie"," art ","science","SCIENCE"]	philosophie,art,science,informatique
+[" art ","ART"]	art
+["cuisine","art","Informatique\t","cuisine"]	art,informatique
+["philosophie","ART"," art ","ART"]	philosophie,art
+["science"]	science
+["art"," art ","informatique","philosophie","science","cuisine"]	philosophie,art,science,informatique
+["Philosophie","Informatique\t","Philosophie","cuisine","SCIENCE"]	philosophie,science,informatique
+["philosophie","Philosophie","science","cuisine","Philosophie"]	philosophie,science
+["SCIENCE","art","SCIENCE","science"]	art,science
+["","","informatique"," art ",""]	art,informatique
+["","Philosophie","philosophie"]	philosophie
+["philosophie"," art ","Philosophie"]	philosophie,art
+["Philosophie",""]	philosophie
+["cuisine","philosophie","SCIENCE",""]	philosophie,science
+["science"," art "]	art,science
+["Informatique\t","informatique","philosophie","science",""]	philosophie,science,informatique
+["informatique"]	informatique
+["Informatique\t","philosophie","ART"]	philosophie,art,informatique
+["","philosophie"," art "]	philosophie,art
+["philosophie","Philosophie","philosophie"," art ","philosophie","ART"]	philosophie,art
+["Philosophie","sciences","art","science","ART"]	philosophie,art,science
+["cuisine","art"]	art
+[]	
+[""]	
+[]	
+["science"]	science
+[" art ","Philosophie"]	philosophie,art
+["art","science","informatique"]	art,science,informatique
+["art","SCIENCE"," art ","art","art"]	art,science
+["philosophie","informatique","sciences","ART","cuisine","art"]	philosophie,art,informatique
+["Philosophie","cuisine","","science","sciences"]	philosophie,science
+["art","cuisine"]	art
+["philosophie","cuisine"]	philosophie
+["sciences","philosophie","Philosophie","","ART","informatique"]	philosophie,art,informatique
+["","philosophie",""]	philosophie
+["","SCIENCE"]	science
+["Informatique\t","SCIENCE"]	science,informatique
+[" art ","sciences","Philosophie"]	philosophie,art
+[]	
+["SCIENCE","art",""]	art,science
+["philosophie","Informatique\t","science","sciences","cuisine"]	philosophie,science,informatique
+["Philosophie","Informatique\t","philosophie","Informatique\t"]	philosophie,informatique
+["philosophie","Philosophie"," art "]	philosophie,art
+[""]	
+["sciences"]	
+["SCIENCE"]	science
+["Informatique\t"]	informatique
+["art","ART","Informatique\t","Informatique\t"]	art,informatique
+["Philosophie","science","sciences","ART"]	philosophie,art,science
+["Informatique\t","philosophie","philosophie"]	philosophie,informatique
+["Philosophie"," art ","sciences"]	philosophie,art
+["Philosophie","Philosophie"]	philosophie
+["ART"]	art
+["art","ART"]	art
+["Informatique\t","","science","philosophie"]	philosophie,science,informatique
+["SCIENCE"]	science
+["science"]	science
+["science","science","science","","sciences"]	science
+["Philosophie","SCIENCE","Philosophie"]	philosophie,science
+["ART","science","ART"]	art,science
+["Philosophie","science","SCIENCE","philosophie"]	philosophie,science
+["art","science",""]	art,science
+["informatique","Informatique\t","SCIENCE","science","sciences"]	science,informatique
+["Informatique\t","informatique","informatique","SCIENCE","cuisine","Informatique\t"]	science,informatique
+["philosophie","art","informatique"]	philosophie,art,informatique
+["Informatique\t"," art ","sciences"]	art,informatique
+["Informatique\t","art","SCIENCE","science","Informatique\t"]	art,science,informatique
+["art"]	art
+["SCIENCE"]	science
+["Philosophie","sciences","Informatique\t","SCIENCE"]	philosophie,science,informatique
+["SCIENCE",""]	science
+["SCIENCE"," art ","Informatique\t","Informatique\t"," art ","science"]	art,science,informatique
+[" art ","art","","informatique"]	art,informatique
+["cuisine","ART","sciences"]	art
+["ART","sciences","Informatique\t","ART"]	art,informatique
+["cuisine"," art ","sciences"]	art
+["SCIENCE","cuisine","philosophie"]	philosophie,science
+["ART","Philosophie","art"]	philosophie,art
+["art","SCIENCE","","sciences"]	art,science
+["SCIENCE","SCIENCE"]	science
+["philosophie","philosophie"]	philosophie
+["science","Philosophie","science","science","Informatique\t"]	philosophie,science,informatique
+[" art ","sciences","informatique","art"," art ","Informatique\t"]	art,informatique
+["cuisine"]	
+["informatique"]	informatique
+[""," art ","ART"]	art
+["informatique","ART"]	art,informatique
+["art","cuisine",""," art "]	art
+["cuisine","Philosophie"]	philosophie
+[]	
+[]	
+["Philosophie","cuisine","SCIENCE","sciences","SCIENCE","Philosophie"]	philosophie,science
+["Informatique\t"," art ","science"]	art,science,informatique
+["SCIENCE","informatique"]	science,informatique
+["philosophie","cuisine","philosophie"]	philosophie

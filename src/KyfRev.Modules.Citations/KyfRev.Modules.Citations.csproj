@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Description>Module Citations de kyfRev : citations du coffre, citation du jour et sa recherche sur le Wikiquote francophone.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\KyfRev.Application\KyfRev.Application.csproj" />
+    <ProjectReference Include="..\KyfRev.Domain\KyfRev.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="KyfRev.Modules.Citations.Tests" />
+    <InternalsVisibleTo Include="KyfRev.Infrastructure.Vault.Tests" />
+  </ItemGroup>
+
+</Project>

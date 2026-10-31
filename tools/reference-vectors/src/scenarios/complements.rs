@@ -380,6 +380,16 @@ impl Partie {
                     None => Ok("aucune".to_owned()),
                 }
             }
+            "citation_du_jour" => {
+                Ok(self.coffre().citation_du_jour(maintenant().jour).map_or_else(|| "aucune".to_owned(), |c| citation(&c)))
+            }
+            "pages_a_lire" => Ok(self
+                .coffre()
+                .pages_a_lire(maintenant().jour)
+                .iter()
+                .map(|p| format!("{}:{}", p.domaine, p.titre))
+                .collect::<Vec<_>>()
+                .join(",")),
             "creer_schema" => {
                 let texte = self.texte(operation, "texte");
                 let lu = self.coffre().creer_schema(&texte)?;

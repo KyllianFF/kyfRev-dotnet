@@ -1,12 +1,13 @@
 using System.Reflection;
 using System.Text.RegularExpressions;
 using KyfRev.Application.UseCases;
+using KyfRev.Modules.Citations;
 
 namespace KyfRev.Application.Tests.Architecture;
 
 /// <summary>
 /// Les 97 commandes de kyfRev 0.x (<c>docs/correspondance-commandes.md</c>) : chacune est reprise
-/// par un cas d'usage marqué de son nom, ou attribuée au jalon qui l'apportera.
+/// par un cas d'usage (du cœur ou d'un module) marqué de son nom, ou attribuée au jalon qui l'apportera.
 /// </summary>
 [TestClass]
 public sealed partial class CommandMapTests
@@ -24,7 +25,8 @@ public sealed partial class CommandMapTests
         Assert.HasCount(ZeroXCommands, table);
         Assert.HasCount(ZeroXCommands, table.Select(row => row.Command).Distinct());
 
-        var useCases = typeof(VaultHost).Assembly.GetExportedTypes()
+        var useCases = new[] { typeof(VaultHost).Assembly, typeof(CitationsModule).Assembly }
+            .SelectMany(assembly => assembly.GetExportedTypes())
             .SelectMany(type => type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly))
             .Select(method => (Method: method, Attribute: method.GetCustomAttribute<ZeroXCommandAttribute>()))
             .Where(pair => pair.Attribute is not null)
@@ -32,7 +34,7 @@ public sealed partial class CommandMapTests
 
         foreach (var (command, useCase, milestone) in table)
         {
-            if (milestone == "J4.1")
+            if (milestone is "J4.1" or "J4.2")
             {
                 Assert.AreEqual(useCase, useCases.GetValueOrDefault(command), command);
             }
@@ -42,7 +44,7 @@ public sealed partial class CommandMapTests
                 Assert.IsFalse(useCases.ContainsKey(command), $"{command} est déjà repris : le tableau doit le dire.");
             }
         }
-        Assert.AreEqual(table.Count(row => row.Milestone == "J4.1"), useCases.Count);
+        Assert.AreEqual(table.Count(row => row.Milestone is "J4.1" or "J4.2"), useCases.Count);
     }
 
     [GeneratedRegex(@"^\| `(?<commande>[a-z_]+)` \| (?<cas>[^|]+) \| (?<jalon>J[0-9.]+) \|")]

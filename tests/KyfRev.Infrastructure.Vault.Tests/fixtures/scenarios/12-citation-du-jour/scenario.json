@@ -1,0 +1,383 @@
+{
+  "description": "Citation du jour (tirage du jour parmi les citations, ordre des chemins en octets UTF-8), citation trouvée en ligne prioritaire puis écartée par la corbeille, fichier citation-en-ligne.json illisible ou incomplet, et pages de Wikiquote à lire selon les réglages (module, recherche en ligne, domaines).",
+  "operations": [
+    {
+      "op": "initialiser",
+      "le": "2026-09-01"
+    },
+    {
+      "op": "reglages"
+    },
+    {
+      "op": "citation_du_jour",
+      "le": "2026-09-01"
+    },
+    {
+      "op": "pages_a_lire",
+      "le": "2026-09-01"
+    },
+    {
+      "op": "modifier_reglages",
+      "citations_actives": true,
+      "citations_en_ligne": true
+    },
+    {
+      "op": "pages_a_lire",
+      "le": "2026-09-01"
+    },
+    {
+      "op": "pages_a_lire",
+      "le": "2026-09-02"
+    },
+    {
+      "op": "pages_a_lire",
+      "le": "2027-02-28"
+    },
+    {
+      "op": "modifier_reglages",
+      "domaines_citations": [
+        "art"
+      ]
+    },
+    {
+      "op": "reglages"
+    },
+    {
+      "op": "pages_a_lire",
+      "le": "2026-09-01"
+    },
+    {
+      "op": "modifier_reglages",
+      "domaines_citations": [
+        "Science",
+        "informatique",
+        "cuisine",
+        "science"
+      ]
+    },
+    {
+      "op": "reglages"
+    },
+    {
+      "op": "pages_a_lire",
+      "le": "2026-09-01"
+    },
+    {
+      "op": "pages_a_lire",
+      "le": "2026-09-03"
+    },
+    {
+      "op": "modifier_reglages",
+      "domaines_citations": [
+        "cuisine"
+      ]
+    },
+    {
+      "op": "modifier_reglages",
+      "domaines_citations": []
+    },
+    {
+      "op": "reglages"
+    },
+    {
+      "op": "ajouter_citation",
+      "nom": "q1",
+      "texte": "Le cœur a ses raisons que la raison ne connaît point.",
+      "auteur": "Blaise Pascal",
+      "date": "1670",
+      "le": "2026-09-01"
+    },
+    {
+      "op": "ajouter_citation",
+      "nom": "q2",
+      "texte": "Zèbre rayé, zèbre zébré.",
+      "le": "2026-09-01"
+    },
+    {
+      "op": "ajouter_citation",
+      "nom": "q3",
+      "texte": "Écrire, c'est hurler sans bruit.",
+      "auteur": "Marguerite Duras",
+      "le": "2026-09-01"
+    },
+    {
+      "op": "ajouter_citation",
+      "nom": "q4",
+      "texte": "abc : les premières lettres.",
+      "le": "2026-09-01"
+    },
+    {
+      "op": "ajouter_citation",
+      "nom": "q5",
+      "texte": "😀 Sourire d'abord.",
+      "le": "2026-09-01"
+    },
+    {
+      "op": "ajouter_citation",
+      "nom": "q6",
+      "texte": "ﬁn de partie, ligature en tête.",
+      "le": "2026-09-01"
+    },
+    {
+      "op": "citations"
+    },
+    {
+      "op": "citation_du_jour",
+      "le": "2026-09-01"
+    },
+    {
+      "op": "citation_du_jour",
+      "le": "2026-09-02"
+    },
+    {
+      "op": "citation_du_jour",
+      "le": "2026-09-03"
+    },
+    {
+      "op": "citation_du_jour",
+      "le": "2026-09-04"
+    },
+    {
+      "op": "citation_du_jour",
+      "le": "2026-12-31"
+    },
+    {
+      "op": "citation_du_jour",
+      "le": "2027-01-01"
+    },
+    {
+      "op": "citation_du_jour",
+      "le": "2030-06-15"
+    },
+    {
+      "op": "retenir_citation_en_ligne",
+      "nom": "enligne",
+      "page": "Sagesse",
+      "trouvees": [
+        {
+          "texte": "Le cœur a ses raisons, que la raison ne connaît point !"
+        },
+        {
+          "texte": "La sagesse est la fille de l'expérience.",
+          "auteur": "Léonard de Vinci",
+          "etiquettes": [
+            "philosophie"
+          ]
+        },
+        {
+          "texte": "Nul n'est sage tout le temps."
+        }
+      ],
+      "le": "2026-09-05"
+    },
+    {
+      "op": "citation_du_jour",
+      "le": "2026-09-05"
+    },
+    {
+      "op": "pages_a_lire",
+      "le": "2026-09-05"
+    },
+    {
+      "op": "pages_a_lire",
+      "le": "2026-09-06"
+    },
+    {
+      "op": "citation_du_jour",
+      "le": "2026-09-06"
+    },
+    {
+      "op": "corbeille_citation",
+      "citation": "enligne"
+    },
+    {
+      "op": "citation_du_jour",
+      "le": "2026-09-05"
+    },
+    {
+      "op": "pages_a_lire",
+      "le": "2026-09-05"
+    },
+    {
+      "op": "restaurer_citation",
+      "citation": "enligne"
+    },
+    {
+      "op": "citation_du_jour",
+      "le": "2026-09-05"
+    },
+    {
+      "op": "ouvrir",
+      "le": "2026-09-05"
+    },
+    {
+      "op": "citation_du_jour",
+      "le": "2026-09-05"
+    },
+    {
+      "op": "modifier_reglages",
+      "citations_en_ligne": false
+    },
+    {
+      "op": "pages_a_lire",
+      "le": "2026-09-06"
+    },
+    {
+      "op": "modifier_reglages",
+      "citations_en_ligne": true,
+      "citations_actives": false
+    },
+    {
+      "op": "pages_a_lire",
+      "le": "2026-09-06"
+    },
+    {
+      "op": "citation_du_jour",
+      "le": "2026-09-05"
+    },
+    {
+      "op": "modifier_reglages",
+      "citations_actives": true
+    },
+    {
+      "op": "ecrire",
+      "chemin": ".suivi/citation-en-ligne.json",
+      "contenu": "{ pas du JSON"
+    },
+    {
+      "op": "citation_du_jour",
+      "le": "2026-09-05"
+    },
+    {
+      "op": "pages_a_lire",
+      "le": "2026-09-05"
+    },
+    {
+      "op": "ecrire",
+      "chemin": ".suivi/citation-en-ligne.json",
+      "contenu": "{\"format\":1,\"jour\":\"2026-09-07\",\"chemin\":\"citations/absente.md\",\"page\":\"Sagesse\"}"
+    },
+    {
+      "op": "citation_du_jour",
+      "le": "2026-09-07"
+    },
+    {
+      "op": "pages_a_lire",
+      "le": "2026-09-07"
+    },
+    {
+      "op": "ecrire",
+      "chemin": ".suivi/citation-en-ligne.json",
+      "contenu": "{\"format\":1,\"jour\":\"2026-09-08\",\"chemin\":\"../dehors.md\"}"
+    },
+    {
+      "op": "citation_du_jour",
+      "le": "2026-09-08"
+    },
+    {
+      "op": "ecrire",
+      "chemin": ".suivi/citation-en-ligne.json",
+      "contenu": "{\"format\":1,\"jour\":\"2026-09-08\"}"
+    },
+    {
+      "op": "citation_du_jour",
+      "le": "2026-09-08"
+    },
+    {
+      "op": "pages_a_lire",
+      "le": "2026-09-08"
+    },
+    {
+      "op": "retenir_citation_en_ligne",
+      "nom": "enligne2",
+      "page": "Science",
+      "trouvees": [
+        {
+          "texte": "Rien ne se perd, rien ne se crée, tout se transforme.",
+          "auteur": "Antoine Lavoisier"
+        }
+      ],
+      "le": "2026-09-09"
+    },
+    {
+      "op": "citation_du_jour",
+      "le": "2026-09-09"
+    },
+    {
+      "op": "ecrire",
+      "chemin": "citations/Manuelle.md",
+      "contenu": "---\nauteur: Montaigne\n---\n\nQue sais-je ?\n"
+    },
+    {
+      "op": "ecrire",
+      "chemin": "citations/Illisible.md",
+      "contenu": "---\nauteur: [\n---\nTexte.\n"
+    },
+    {
+      "op": "corbeille_citation",
+      "citation": "q1"
+    },
+    {
+      "op": "citations"
+    },
+    {
+      "op": "citation_du_jour",
+      "le": "2026-09-10"
+    },
+    {
+      "op": "citation_du_jour",
+      "le": "2026-09-11"
+    },
+    {
+      "op": "citation_du_jour",
+      "le": "2026-09-12"
+    },
+    {
+      "op": "citation_du_jour",
+      "le": "2026-09-13"
+    },
+    {
+      "op": "corbeille_citation",
+      "citation": "q2"
+    },
+    {
+      "op": "corbeille_citation",
+      "citation": "q3"
+    },
+    {
+      "op": "corbeille_citation",
+      "citation": "q4"
+    },
+    {
+      "op": "corbeille_citation",
+      "citation": "q5"
+    },
+    {
+      "op": "corbeille_citation",
+      "citation": "q6"
+    },
+    {
+      "op": "corbeille_citation",
+      "citation": "enligne"
+    },
+    {
+      "op": "corbeille_citation",
+      "citation": "enligne2"
+    },
+    {
+      "op": "corbeille_citation",
+      "citation": "citations/Manuelle.md"
+    },
+    {
+      "op": "citations"
+    },
+    {
+      "op": "citation_du_jour",
+      "le": "2026-09-14"
+    },
+    {
+      "op": "citation_du_jour",
+      "le": "2026-09-09"
+    }
+  ]
+}

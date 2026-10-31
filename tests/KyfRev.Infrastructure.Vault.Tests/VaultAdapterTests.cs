@@ -118,6 +118,27 @@ public sealed class VaultAdapterTests
     }
 
     [TestMethod]
+    public void Quotes_reach_the_session()
+    {
+        using var folder = TemporaryVault.Empty();
+        using var vault = new VaultStore().Initialize(folder.Root, Now);
+        Assert.StartsWith("v_", vault.Id);
+
+        var quote = vault.AddQuote(new QuoteContent("Que sais-je ?", "Montaigne", "1580", QuoteSource.None, null, []), Now);
+        Assert.AreEqual("Que sais-je ?", vault.ModifyQuote(quote.Path, quote.Content with { Context = "Essais" }, Now).Content.Text);
+        var trashed = vault.TrashQuote(quote.Path);
+        Assert.AreEqual(trashed, vault.Quotes().Trash.Single().Path);
+        Assert.AreEqual(quote.Path, vault.RestoreQuote(trashed));
+
+        Assert.IsNull(vault.OnlineQuoteDay());
+        var online = vault.KeepOnlineQuote("Sagesse", [new QuoteContent("La sagesse vient avec l'âge.", null, null, QuoteSource.None, null, [])], Now);
+        Assert.AreEqual("wikiquote", online!.Origin);
+        Assert.AreEqual(Now.Day, vault.OnlineQuoteDay());
+        Assert.AreEqual(online.Path, vault.OnlineQuoteOf(Now.Day)!.Path);
+        Assert.IsNull(vault.OnlineQuoteOf(Tomorrow.Day));
+    }
+
+    [TestMethod]
     public void Health_backups_exports_sharing_and_import_reach_the_session()
     {
         using var folder = TemporaryVault.Empty();

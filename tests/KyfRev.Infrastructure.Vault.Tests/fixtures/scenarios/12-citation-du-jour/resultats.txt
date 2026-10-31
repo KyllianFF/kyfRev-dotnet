@@ -1,0 +1,82 @@
+0 initialiser ok
+1 reglages ok etapes=[1, 3, 7, 14, 30] rappel_actif=true max_par_jour=2 attente=30 repos=[2, 4, 8, 12] inclure=true rotation=true citations=false en_ligne=true domaines=["philosophie","art","science","informatique"] schemas=false
+2 citation_du_jour ok aucune
+3 pages_a_lire ok
+4 modifier_reglages ok
+5 pages_a_lire ok philosophie:Sagesse,philosophie:Connaissance,philosophie:Liberté
+6 pages_a_lire ok art:Poésie,art:Littérature,art:Art
+7 pages_a_lire ok philosophie:Philosophie,philosophie:Sagesse,philosophie:Connaissance
+8 modifier_reglages ok
+9 reglages ok etapes=[1, 3, 7, 14, 30] rappel_actif=true max_par_jour=2 attente=30 repos=[2, 4, 8, 12] inclure=true rotation=true citations=true en_ligne=true domaines=["art"] schemas=false
+10 pages_a_lire ok art:Peinture,art:Musique,art:Poésie
+11 modifier_reglages ok
+12 reglages ok etapes=[1, 3, 7, 14, 30] rappel_actif=true max_par_jour=2 attente=30 repos=[2, 4, 8, 12] inclure=true rotation=true citations=true en_ligne=true domaines=["science","informatique"] schemas=false
+13 pages_a_lire ok science:Mathématiques,science:Science,informatique:Technique
+14 pages_a_lire ok science:Mathématiques,science:Science,informatique:Ordinateur
+15 modifier_reglages erreur ReglagesInvalides : Réglages refusés : choisissez au moins un domaine pour la citation du jour.
+16 modifier_reglages erreur ReglagesInvalides : Réglages refusés : choisissez au moins un domaine pour la citation du jour.
+17 reglages ok etapes=[1, 3, 7, 14, 30] rappel_actif=true max_par_jour=2 attente=30 repos=[2, 4, 8, 12] inclure=true rotation=true citations=true en_ligne=true domaines=["science","informatique"] schemas=false
+18 ajouter_citation ok citations/Blaise Pascal - Le cœur a ses raisons que.md c_01M6A1BJ52F214YJ664YPYMWQ6 1670 2026-09-01 - "Le cœur a ses raisons que la raison ne connaît point." "Blaise Pascal" "1670" - null null null null []
+19 ajouter_citation ok citations/Auteur inconnu - Zèbre rayé, zèbre zébré.md c_01M6A1BJ5B1MAEBTAZY0W6P4XW - 2026-09-01 - "Zèbre rayé, zèbre zébré." null null - null null null null []
+20 ajouter_citation ok citations/Marguerite Duras - Écrire, c'est hurler sans bruit.md c_01M6A1BJ5MGQ59X8TVETVTDX1G - 2026-09-01 - "Écrire, c'est hurler sans bruit." "Marguerite Duras" null - null null null null []
+21 ajouter_citation ok citations/Auteur inconnu - abc - les premières lettres.md c_01M6A1BJ5Y2RB3XAA6TETK0HYX - 2026-09-01 - "abc : les premières lettres." null null - null null null null []
+22 ajouter_citation ok citations/Auteur inconnu - 😀 Sourire d'abord.md c_01M6A1BJ68HNFSN8T4NS94PKK6 - 2026-09-01 - "😀 Sourire d'abord." null null - null null null null []
+23 ajouter_citation ok citations/Auteur inconnu - ﬁn de partie, ligature en tête.md c_01M6A1BJ6H97ZY2X7JJGZQM24F - 2026-09-01 - "ﬁn de partie, ligature en tête." null null - null null null null []
+24 citations ok citations=[citations/Auteur inconnu - Zèbre rayé, zèbre zébré.md;citations/Auteur inconnu - abc - les premières lettres.md;citations/Auteur inconnu - ﬁn de partie, ligature en tête.md;citations/Auteur inconnu - 😀 Sourire d'abord.md;citations/Blaise Pascal - Le cœur a ses raisons que.md;citations/Marguerite Duras - Écrire, c'est hurler sans bruit.md] corbeille=[] illisibles=[]
+25 citation_du_jour ok citations/Marguerite Duras - Écrire, c'est hurler sans bruit.md c_01M6A1BJ5MGQ59X8TVETVTDX1G - 2026-09-01 - "Écrire, c'est hurler sans bruit." "Marguerite Duras" null - null null null null []
+26 citation_du_jour ok citations/Auteur inconnu - ﬁn de partie, ligature en tête.md c_01M6A1BJ6H97ZY2X7JJGZQM24F - 2026-09-01 - "ﬁn de partie, ligature en tête." null null - null null null null []
+27 citation_du_jour ok citations/Auteur inconnu - 😀 Sourire d'abord.md c_01M6A1BJ68HNFSN8T4NS94PKK6 - 2026-09-01 - "😀 Sourire d'abord." null null - null null null null []
+28 citation_du_jour ok citations/Auteur inconnu - Zèbre rayé, zèbre zébré.md c_01M6A1BJ5B1MAEBTAZY0W6P4XW - 2026-09-01 - "Zèbre rayé, zèbre zébré." null null - null null null null []
+29 citation_du_jour ok citations/Auteur inconnu - Zèbre rayé, zèbre zébré.md c_01M6A1BJ5B1MAEBTAZY0W6P4XW - 2026-09-01 - "Zèbre rayé, zèbre zébré." null null - null null null null []
+30 citation_du_jour ok citations/Blaise Pascal - Le cœur a ses raisons que.md c_01M6A1BJ52F214YJ664YPYMWQ6 1670 2026-09-01 - "Le cœur a ses raisons que la raison ne connaît point." "Blaise Pascal" "1670" - null null null null []
+31 citation_du_jour ok citations/Auteur inconnu - ﬁn de partie, ligature en tête.md c_01M6A1BJ6H97ZY2X7JJGZQM24F - 2026-09-01 - "ﬁn de partie, ligature en tête." null null - null null null null []
+32 retenir_citation_en_ligne ok citations/Auteur inconnu - Nul n'est sage tout le temps.md c_01M6A1BJ84AWSFF60J34HTE7XK - 2026-09-05 wikiquote "Nul n'est sage tout le temps." null null - null null null null []
+33 citation_du_jour ok citations/Auteur inconnu - Nul n'est sage tout le temps.md c_01M6A1BJ84AWSFF60J34HTE7XK - 2026-09-05 wikiquote "Nul n'est sage tout le temps." null null - null null null null []
+34 pages_a_lire ok
+35 pages_a_lire ok informatique:Internet,informatique:Technique,informatique:Ordinateur
+36 citation_du_jour ok citations/Auteur inconnu - Zèbre rayé, zèbre zébré.md c_01M6A1BJ5B1MAEBTAZY0W6P4XW - 2026-09-01 - "Zèbre rayé, zèbre zébré." null null - null null null null []
+37 corbeille_citation ok citations/.supprimees/Auteur inconnu - Nul n'est sage tout le temps.md
+38 citation_du_jour ok citations/Auteur inconnu - abc - les premières lettres.md c_01M6A1BJ5Y2RB3XAA6TETK0HYX - 2026-09-01 - "abc : les premières lettres." null null - null null null null []
+39 pages_a_lire ok
+40 restaurer_citation ok citations/Auteur inconnu - Nul n'est sage tout le temps.md
+41 citation_du_jour ok citations/Auteur inconnu - Nul n'est sage tout le temps.md c_01M6A1BJ84AWSFF60J34HTE7XK - 2026-09-05 wikiquote "Nul n'est sage tout le temps." null null - null null null null []
+42 ouvrir ok
+43 citation_du_jour ok citations/Auteur inconnu - Nul n'est sage tout le temps.md c_01M6A1BJ84AWSFF60J34HTE7XK - 2026-09-05 wikiquote "Nul n'est sage tout le temps." null null - null null null null []
+44 modifier_reglages ok
+45 pages_a_lire ok
+46 modifier_reglages ok
+47 pages_a_lire ok
+48 citation_du_jour ok citations/Auteur inconnu - Nul n'est sage tout le temps.md c_01M6A1BJ84AWSFF60J34HTE7XK - 2026-09-05 wikiquote "Nul n'est sage tout le temps." null null - null null null null []
+49 modifier_reglages ok
+50 ecrire ok
+51 citation_du_jour ok citations/Auteur inconnu - ﬁn de partie, ligature en tête.md c_01M6A1BJ6H97ZY2X7JJGZQM24F - 2026-09-01 - "ﬁn de partie, ligature en tête." null null - null null null null []
+52 pages_a_lire ok science:Mathématiques,science:Science,informatique:Internet
+53 ecrire ok
+54 citation_du_jour ok citations/Auteur inconnu - 😀 Sourire d'abord.md c_01M6A1BJ68HNFSN8T4NS94PKK6 - 2026-09-01 - "😀 Sourire d'abord." null null - null null null null []
+55 pages_a_lire ok
+56 ecrire ok
+57 citation_du_jour ok citations/Auteur inconnu - Zèbre rayé, zèbre zébré.md c_01M6A1BJ5B1MAEBTAZY0W6P4XW - 2026-09-01 - "Zèbre rayé, zèbre zébré." null null - null null null null []
+58 ecrire ok
+59 citation_du_jour ok citations/Auteur inconnu - Zèbre rayé, zèbre zébré.md c_01M6A1BJ5B1MAEBTAZY0W6P4XW - 2026-09-01 - "Zèbre rayé, zèbre zébré." null null - null null null null []
+60 pages_a_lire ok
+61 retenir_citation_en_ligne ok citations/Antoine Lavoisier - Rien ne se perd, rien ne.md c_01M6A1BJCMY3Q47SPCGQ304S8S - 2026-09-09 wikiquote "Rien ne se perd, rien ne se crée, tout se transforme." "Antoine Lavoisier" null - null null null null []
+62 citation_du_jour ok citations/Antoine Lavoisier - Rien ne se perd, rien ne.md c_01M6A1BJCMY3Q47SPCGQ304S8S - 2026-09-09 wikiquote "Rien ne se perd, rien ne se crée, tout se transforme." "Antoine Lavoisier" null - null null null null []
+63 ecrire ok
+64 ecrire ok
+65 corbeille_citation ok citations/.supprimees/Blaise Pascal - Le cœur a ses raisons que.md
+66 citations ok citations=[citations/Antoine Lavoisier - Rien ne se perd, rien ne.md;citations/Auteur inconnu - Nul n'est sage tout le temps.md;citations/Auteur inconnu - Zèbre rayé, zèbre zébré.md;citations/Auteur inconnu - abc - les premières lettres.md;citations/Auteur inconnu - ﬁn de partie, ligature en tête.md;citations/Auteur inconnu - 😀 Sourire d'abord.md;citations/Marguerite Duras - Écrire, c'est hurler sans bruit.md;citations/Manuelle.md] corbeille=[citations/.supprimees/Blaise Pascal - Le cœur a ses raisons que.md] illisibles=[citations/Illisible.md]
+67 citation_du_jour ok citations/Auteur inconnu - abc - les premières lettres.md c_01M6A1BJ5Y2RB3XAA6TETK0HYX - 2026-09-01 - "abc : les premières lettres." null null - null null null null []
+68 citation_du_jour ok citations/Antoine Lavoisier - Rien ne se perd, rien ne.md c_01M6A1BJCMY3Q47SPCGQ304S8S - 2026-09-09 wikiquote "Rien ne se perd, rien ne se crée, tout se transforme." "Antoine Lavoisier" null - null null null null []
+69 citation_du_jour ok citations/Auteur inconnu - Nul n'est sage tout le temps.md c_01M6A1BJ84AWSFF60J34HTE7XK - 2026-09-05 wikiquote "Nul n'est sage tout le temps." null null - null null null null []
+70 citation_du_jour ok citations/Manuelle.md - - - - "Que sais-je ?" "Montaigne" null - null null null null []
+71 corbeille_citation ok citations/.supprimees/Auteur inconnu - Zèbre rayé, zèbre zébré.md
+72 corbeille_citation ok citations/.supprimees/Marguerite Duras - Écrire, c'est hurler sans bruit.md
+73 corbeille_citation ok citations/.supprimees/Auteur inconnu - abc - les premières lettres.md
+74 corbeille_citation ok citations/.supprimees/Auteur inconnu - 😀 Sourire d'abord.md
+75 corbeille_citation ok citations/.supprimees/Auteur inconnu - ﬁn de partie, ligature en tête.md
+76 corbeille_citation ok citations/.supprimees/Auteur inconnu - Nul n'est sage tout le temps.md
+77 corbeille_citation ok citations/.supprimees/Antoine Lavoisier - Rien ne se perd, rien ne.md
+78 corbeille_citation ok citations/.supprimees/Manuelle.md
+79 citations ok citations=[] corbeille=[citations/.supprimees/Antoine Lavoisier - Rien ne se perd, rien ne.md;citations/.supprimees/Auteur inconnu - Nul n'est sage tout le temps.md;citations/.supprimees/Auteur inconnu - Zèbre rayé, zèbre zébré.md;citations/.supprimees/Auteur inconnu - abc - les premières lettres.md;citations/.supprimees/Auteur inconnu - ﬁn de partie, ligature en tête.md;citations/.supprimees/Auteur inconnu - 😀 Sourire d'abord.md;citations/.supprimees/Blaise Pascal - Le cœur a ses raisons que.md;citations/.supprimees/Marguerite Duras - Écrire, c'est hurler sans bruit.md;citations/.supprimees/Manuelle.md] illisibles=[citations/Illisible.md]
+80 citation_du_jour ok aucune
+81 citation_du_jour ok aucune

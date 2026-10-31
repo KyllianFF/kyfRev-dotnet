@@ -1,6 +1,6 @@
 using System.Globalization;
 using System.Text;
-using KyfRev.Infrastructure.Vault.Text;
+using KyfRev.Application.Text;
 
 namespace KyfRev.Infrastructure.Vault.Paths;
 

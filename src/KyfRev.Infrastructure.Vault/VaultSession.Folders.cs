@@ -1,10 +1,10 @@
 using System.Text;
+using KyfRev.Application.Text;
 using KyfRev.Domain.Calendar;
 using KyfRev.Infrastructure.Vault.Files;
 using KyfRev.Infrastructure.Vault.Format;
 using KyfRev.Infrastructure.Vault.Links;
 using KyfRev.Infrastructure.Vault.Paths;
-using KyfRev.Infrastructure.Vault.Text;
 
 namespace KyfRev.Infrastructure.Vault;
 

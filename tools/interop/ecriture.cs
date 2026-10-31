@@ -6,10 +6,10 @@
 //   ecrire  : ouvre le coffre et y fait une série d'écritures (fiches, annotations, rappels,
 //             réglages, citations, schémas, modèle) dans « Essai interop .NET ».
 using System.Text;
+using KyfRev.Application.Model;
 using KyfRev.Domain.Calendar;
 using KyfRev.Infrastructure.Vault;
 using KyfRev.Infrastructure.Vault.Format;
-using KyfRev.Infrastructure.Vault.Quotes;
 
 Console.OutputEncoding = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
 var root = args[0];

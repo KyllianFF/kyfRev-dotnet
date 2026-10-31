@@ -16,10 +16,12 @@
 //!   cargo run --release -- --sauvegarder <coffre> <dossier>   sauvegarde un coffre comme la 0.x
 //!   cargo run --release -- --restaurer <archive> <dossier>    restaure une sauvegarde comme la 0.x
 //!   cargo run --release -- --exports <coffre> <dossier>       exports (suivi, annotations, citations) en UTC
+//!   cargo run --release -- --wikiquote <dossier>      pages du jour, domaines et citations de Wikiquote
 
 mod coffre_reference;
 mod fonctions_coffre;
 mod scenarios;
+mod wikiquote;
 
 use std::fmt::Write as _;
 use std::fs;
@@ -417,6 +419,9 @@ fn main() {
                     std::process::exit(3);
                 }
             }
+        }
+        [option, dossier] if option == "--wikiquote" => {
+            wikiquote::ecrire(Path::new(dossier));
         }
         [option, dossier] if option == "--scenarios" => {
             scenarios::jouer_tous(Path::new(dossier));

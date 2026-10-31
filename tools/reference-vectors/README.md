@@ -68,7 +68,7 @@ affiche le détail du cas `n` (familles `noms`, `entetes`, `liens`).
 cargo run --release --manifest-path tools/reference-vectors/Cargo.toml -- --vecteurs-coffre tests/KyfRev.Infrastructure.Vault.Tests/fixtures/reference
 ```
 
-`--scenarios <dossier>` joue chaque scénario (fiches, organisation, corbeille, analyse et journal, annotations, rappels et réglages, citations, schémas et modèles, sauvegardes, exports, partage, import et réparations, fiche ouverte et état de révision) de `tests/KyfRev.Infrastructure.Vault.Tests/fixtures/scenarios`, ou le seul scénario `<dossier>`
+`--scenarios <dossier>` joue chaque scénario (fiches, organisation, corbeille, analyse et journal, annotations, rappels et réglages, citations, schémas et modèles, sauvegardes, exports, partage, import et réparations, fiche ouverte et état de révision, citation du jour) de `tests/KyfRev.Infrastructure.Vault.Tests/fixtures/scenarios`, ou le seul scénario `<dossier>`
 (une suite d'opérations décrite dans `scenario.json`) avec le crate `coffre`, et écrit à côté le
 coffre obtenu (`attendu/`), le résultat de chaque opération, les identifiants créés dans l'ordre
 et la liste des dossiers. Les tests C# rejouent le scénario avec les mêmes identifiants et
@@ -93,3 +93,21 @@ chaque version restaure à l'identique les sauvegardes de l'autre.
 annotations, citations, en UTC) ; appliqué à une copie du coffre de référence, il produit
 `tests/KyfRev.Infrastructure.Vault.Tests/fixtures/exports-reference`, que les tests C#
 reproduisent à l'octet.
+
+## Citation du jour en ligne
+
+`--wikiquote <dossier>` écrit, avec le module `wikiquote` du crate `coffre` :
+
+| Fichier | Contenu |
+|---|---|
+| `pages.txt` | 6 080 tirages des pages du jour : identifiant de coffre, jour, domaines choisis (valides ou non), pages rendues |
+| `domaines.txt` | 400 listes de domaines saisis, et les domaines reconnus |
+| `citations.json` | 806 wikitextes (ceux des tests de la 0.x, puis des pages tirées au hasard de morceaux typiques de Wikiquote) et les citations retenues, telles que serde les écrit |
+
+Ils sont versionnés dans `tests/KyfRev.Modules.Citations.Tests/fixtures/wikiquote`. Un wikitexte
+sur lequel la 0.x panique est marqué `"panique": true` (un seul : un caractère accentué qui
+chevauche la fenêtre de 12 octets d'une entité) ; la suite C# vérifie qu'il passe.
+
+```powershell
+cargo run --release --manifest-path tools/reference-vectors/Cargo.toml -- --wikiquote tests/KyfRev.Modules.Citations.Tests/fixtures/wikiquote
+```

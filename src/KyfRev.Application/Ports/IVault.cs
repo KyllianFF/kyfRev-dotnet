@@ -23,10 +23,14 @@ public interface IVault :
     IHealthStore,
     IBackupWriter,
     IExporter,
-    ITemplateStore
+    ITemplateStore,
+    IQuoteStore
 {
     /// <summary>Dossier du coffre.</summary>
     string Root { get; }
+
+    /// <summary>Identifiant du coffre (<c>coffre.json</c>) : graine des tirages du jour.</summary>
+    string Id { get; }
 }
 
 /// <summary>Fiches : création, lecture, titre, étiquettes, rangement, adoption, import et partage.</summary>
@@ -243,4 +247,36 @@ public interface ITemplateStore
 
     /// <summary>Enregistre le corps d'une fiche comme modèle du coffre ; rend le nom retenu.</summary>
     string SaveAsTemplate(string id, string name);
+}
+
+/// <summary>Citations du coffre (module Citations).</summary>
+public interface IQuoteStore
+{
+    /// <summary>Toutes les citations, celles de la corbeille à part, et les fichiers illisibles.</summary>
+    QuoteList Quotes();
+
+    /// <summary>Ajoute une citation ; seul le texte est obligatoire.</summary>
+    Quote AddQuote(QuoteContent content, Moment now);
+
+    /// <summary>Modifie la citation <paramref name="path"/> ; les champs d'autres outils sont conservés.</summary>
+    Quote ModifyQuote(string path, QuoteContent content, Moment now);
+
+    /// <summary>Range la citation dans la corbeille ; rend son nouveau chemin.</summary>
+    string TrashQuote(string path);
+
+    /// <summary>Remet une citation de la corbeille ; rend son nouveau chemin.</summary>
+    string RestoreQuote(string path);
+
+    /// <summary>
+    /// Retient la citation du jour parmi celles trouvées sur la page <paramref name="page"/> : une
+    /// citation pas encore dans le coffre, tirée au hasard du jour. Rien si la page n'apporte
+    /// rien de nouveau.
+    /// </summary>
+    Quote? KeepOnlineQuote(string page, IReadOnlyList<QuoteContent> found, Moment now);
+
+    /// <summary>La citation trouvée en ligne ce jour-là, si elle est toujours là (hors corbeille).</summary>
+    Quote? OnlineQuoteOf(DateOnly day);
+
+    /// <summary>Jour où une citation a été trouvée en ligne pour la dernière fois ; rien si aucune.</summary>
+    DateOnly? OnlineQuoteDay();
 }

@@ -1,14 +1,14 @@
 using System.Globalization;
 using System.Text;
 
-namespace KyfRev.Infrastructure.Vault.Text;
+namespace KyfRev.Application.Text;
 
 /// <summary>
 /// Opérations de texte aux règles exactes de Rust, celles de la version 0.x : les caractères y
 /// sont des scalaires Unicode (et non des unités UTF-16), et la mise en minuscules suit les
 /// correspondances complètes d'Unicode, sigma final compris.
 /// </summary>
-internal static class RustText
+public static class RustText
 {
     /// <summary>Nombre de caractères (<c>chars().count()</c>).</summary>
     public static int CharCount(string text) => text.EnumerateRunes().Count();
