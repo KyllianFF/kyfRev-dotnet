@@ -1,10 +1,10 @@
 using System.Collections.Immutable;
+using KyfRev.Application.Text;
 using KyfRev.Domain.Calendar;
 using KyfRev.Domain.Reviews;
 using KyfRev.Infrastructure.Vault.Format;
 using KyfRev.Infrastructure.Vault.Json;
 using KyfRev.Infrastructure.Vault.Paths;
-using KyfRev.Infrastructure.Vault.Text;
 
 namespace KyfRev.Infrastructure.Vault;
 

@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+
+  <!-- Le module est essayé sur de vrais coffres, assemblé comme le fera l'application (injection de dépendances). -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\KyfRev.Infrastructure.Vault\KyfRev.Infrastructure.Vault.csproj" />
+    <ProjectReference Include="..\..\src\KyfRev.Modules.Citations\KyfRev.Modules.Citations.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+  </ItemGroup>
+
+  <!-- Horloge, journal et dossiers d'essai, partagés avec la suite de KyfRev.Application. -->
+  <ItemGroup>
+    <Compile Include="..\KyfRev.Application.Tests\Support\TestDoubles.cs" Link="Support\TestDoubles.cs" />
+  </ItemGroup>
+
+</Project>

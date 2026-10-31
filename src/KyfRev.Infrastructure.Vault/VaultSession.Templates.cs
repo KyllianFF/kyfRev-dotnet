@@ -1,8 +1,8 @@
 using System.Globalization;
 using System.Text;
+using KyfRev.Application.Text;
 using KyfRev.Infrastructure.Vault.Paths;
 using KyfRev.Infrastructure.Vault.Sheets;
-using KyfRev.Infrastructure.Vault.Text;
 
 namespace KyfRev.Infrastructure.Vault;
 

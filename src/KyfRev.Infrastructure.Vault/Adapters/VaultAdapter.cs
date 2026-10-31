@@ -21,6 +21,9 @@ public sealed class VaultAdapter(VaultSession inner) : IVault
     /// <inheritdoc/>
     public VaultPreferences Preferences => inner.Preferences;
 
+    /// <inheritdoc/>
+    public string Id => inner.Settings.Id;
+
     /// <summary>Ferme la session : son verrou est libéré.</summary>
     public void Dispose() => inner.Dispose();
 
@@ -223,6 +226,30 @@ public sealed class VaultAdapter(VaultSession inner) : IVault
 
     /// <inheritdoc/>
     public string SaveAsTemplate(string id, string name) => inner.SaveAsTemplate(id, name);
+
+    /// <inheritdoc/>
+    public QuoteList Quotes() => inner.Quotes();
+
+    /// <inheritdoc/>
+    public Quote AddQuote(QuoteContent content, Moment now) => inner.AddQuote(content, now);
+
+    /// <inheritdoc/>
+    public Quote ModifyQuote(string path, QuoteContent content, Moment now) => inner.ModifyQuote(path, content, now);
+
+    /// <inheritdoc/>
+    public string TrashQuote(string path) => inner.TrashQuote(path);
+
+    /// <inheritdoc/>
+    public string RestoreQuote(string path) => inner.RestoreQuote(path);
+
+    /// <inheritdoc/>
+    public Quote? KeepOnlineQuote(string page, IReadOnlyList<QuoteContent> found, Moment now) => inner.KeepOnlineQuote(page, found, now);
+
+    /// <inheritdoc/>
+    public Quote? OnlineQuoteOf(DateOnly day) => inner.OnlineQuoteOf(day);
+
+    /// <inheritdoc/>
+    public DateOnly? OnlineQuoteDay() => inner.OnlineQuoteDay();
 
     private static Anchor ToAnchor(StoredAnchor anchor) =>
         new(anchor.Exact, anchor.Before, anchor.After, anchor.Start, anchor.End, anchor.Section, anchor.SourceLine, anchor.SheetFingerprint);

@@ -47,3 +47,14 @@ public interface IRecentVaults
     /// <summary>Retient le coffre qui vient d'être ouvert.</summary>
     void Remember(string root);
 }
+
+/// <summary>
+/// Lecture d'une adresse en ligne, durcie : HTTPS seulement, ni redirection ni cookie, réponse
+/// limitée en taille et en durée. Seule l'adresse demandée part ; un échec est une
+/// <see cref="OperationException"/>.
+/// </summary>
+public interface IOnlineReader
+{
+    /// <summary>Texte de la réponse à <paramref name="address"/>.</summary>
+    Task<string> ReadTextAsync(Uri address, CancellationToken cancellationToken);
+}

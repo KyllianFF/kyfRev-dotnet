@@ -59,6 +59,8 @@ Ce glossaire fixe la correspondance. Les **clés JSON du coffre restent celles d
 | Empreinte | `Fingerprint` | `empreinte` | `sha256:` des octets bruts d'un fichier. |
 | Modèle de fiche | `SheetTemplate` | dossier `modeles/` | Gabarit proposé à la création d'une fiche. |
 | Citation | `Quote` | dossier `citations/` | Citation culturelle (module facultatif). |
+| Citation du jour | `DailyQuote` | — | Celle trouvée en ligne ce jour-là, sinon une citation du coffre tirée au hasard du jour. |
+| Citation trouvée en ligne | `OnlineQuoteSearch` | `.suivi/citation-en-ligne.json` | Citation du jour retenue sur le Wikiquote francophone, rangée dans `citations/` (`origine: wikiquote`). |
 | Schéma réseau | `NetworkDiagram` | dossier `schemas/` | Topologie réseau citée par les fiches (module facultatif). |
 
 ## Coffre et fichiers
@@ -89,9 +91,12 @@ Ce glossaire fixe la correspondance. Les **clés JSON du coffre restent celles d
 | Terme | Code | Clé JSON (format 1) | Définition |
 |---|---|---|---|
 | Cas d'usage | `*UseCases` (`ReviewUseCases.Validate`…) | — | Une opération de l'application, reprise d'une commande de la 0.x (`[ZeroXCommand]`). |
-| Port | `IVault`, `IVaultStore`, `IBackupFiles`, `IRecentVaults` | — | Ce dont les cas d'usage ont besoin, fourni par l'infrastructure. |
+| Port | `IVault`, `IQuoteStore`, `IVaultStore`, `IBackupFiles`, `IRecentVaults`, `IOnlineReader` | — | Ce dont les cas d'usage ont besoin, fourni par l'infrastructure. |
 | Issue | `Outcome<T>` | — | Valeur rendue, ou refus avec un message prêt à afficher. |
 | Refus | `OperationException` | — | Opération refusée par un port, avec le message de la 0.x. |
 | Présent | `Present` | — | Jour local, instant exact et heure locale, lus sur l'horloge injectée. |
 | Fiche ouverte | `OpenedSheet` | — | Fiche lue pour la lecture ou la révision ; l'ouvrir ne valide rien. |
 | État de révision | `ReviewState` | — | Où en est une fiche ou un passage dans son calendrier, un jour donné. |
+| Module | `IKyfRevModule`, `ModuleCatalog` | réglages du coffre (`citations.active`…) | Fonction facultative compilée avec l'application : ses services ne sont déclarés que si le coffre l'active. |
+| Point d'extension | `INavigationContributor`, `IDashboardWidget`, `IVaultHealthCheck`, `ISearchProvider`, `IExportFormat`, `IBlockRenderer` | — | Ce qu'un module peut apporter : entrée du menu, encart du tableau de bord, remarque de santé, résultats de recherche, export, rendu d'un bloc. |
+| Lecteur en ligne | `IOnlineReader`, `OnlineReader` | — | Seul accès au réseau : HTTPS, ni redirection ni cookie, réponse bornée en taille et en durée. |

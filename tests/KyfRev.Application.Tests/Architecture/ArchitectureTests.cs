@@ -16,7 +16,10 @@ public sealed partial class ArchitectureTests
     /// <summary>Morceaux de nom interdits pour une opération publique (français et anglais).</summary>
     private static readonly string[] DeletionWords = ["supprim", "effac", "detrui", "delete", "remove", "purge", "erase", "destroy"];
 
-    private static readonly string[] Layers = [Domain, Application, "KyfRev.Infrastructure.Vault", "kyfrev-coffre"];
+    private static readonly string[] Layers = [Domain, Application, "KyfRev.Infrastructure.Online", "KyfRev.Infrastructure.Vault", "KyfRev.Modules.Citations", "kyfrev-coffre"];
+
+    /// <summary>Paquets permis au domaine, aux cas d'usage et aux modules, en plus du framework.</summary>
+    private static readonly string[] Abstractions = ["Microsoft.Extensions.DependencyInjection.Abstractions", "Microsoft.Extensions.Logging.Abstractions"];
 
     /// <summary>Assemblys de kyfRev présents à côté des tests (les tests eux-mêmes exceptés).</summary>
     private static readonly Lazy<IReadOnlyList<Assembly>> Ours = new(() =>
@@ -43,9 +46,11 @@ public sealed partial class ArchitectureTests
     }
 
     [TestMethod]
-    public void The_domain_and_the_use_cases_rely_only_on_the_framework()
+    public void The_domain_the_use_cases_and_the_modules_rely_only_on_the_framework()
     {
-        foreach (var (assembly, packages) in new[] { (Domain, Array.Empty<string>()), (Application, ["Microsoft.Extensions.Logging.Abstractions"]) })
+        var modules = Ours.Value.Select(a => a.GetName().Name!).Where(name => name.StartsWith("KyfRev.Modules.", StringComparison.Ordinal)).ToList();
+        Assert.IsNotEmpty(modules);
+        foreach (var (assembly, packages) in new[] { (Domain, Array.Empty<string>()), (Application, Abstractions) }.Concat(modules.Select(module => (module, Abstractions))))
         {
             var outside = Assembly.Load(assembly).GetReferencedAssemblies()
                 .Select(reference => reference.Name!)
@@ -53,6 +58,41 @@ public sealed partial class ArchitectureTests
                 .ToList();
             Assert.IsEmpty(outside, $"{assembly} dépend de {string.Join(", ", outside)}");
         }
+    }
+
+    /// <summary>
+    /// Les modules sont compilés avec l'application et déclarés à la racine de composition :
+    /// aucun code n'est chargé dynamiquement (ni assembly lu sur disque, ni contexte de chargement).
+    /// </summary>
+    [TestMethod]
+    public void No_code_is_loaded_dynamically()
+    {
+        foreach (var assembly in Ours.Value)
+        {
+            Assert.DoesNotContain("System.Runtime.Loader", assembly.GetReferencedAssemblies().Select(reference => reference.Name), assembly.GetName().Name);
+        }
+        var src = Path.Combine(RepositoryRoot(), "src");
+        foreach (var file in Directory.EnumerateFiles(src, "*.cs", SearchOption.AllDirectories).Where(file => !file.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal)))
+        {
+            Assert.IsFalse(DynamicLoading().IsMatch(File.ReadAllText(file)), $"Chargement dynamique dans {Path.GetRelativePath(src, file)}");
+        }
+    }
+
+    /// <summary>Chaque module vit dans son assembly <c>KyfRev.Modules.*</c>, sous un identifiant unique.</summary>
+    [TestMethod]
+    public void Each_module_lives_in_its_own_assembly()
+    {
+        var modules = Ours.Value
+            .SelectMany(assembly => assembly.GetTypes())
+            .Where(type => type.IsClass && !type.IsAbstract && typeof(Modules.IKyfRevModule).IsAssignableFrom(type))
+            .ToList();
+        Assert.IsNotEmpty(modules);
+        foreach (var type in modules)
+        {
+            Assert.StartsWith("KyfRev.Modules.", type.Assembly.GetName().Name!, type.FullName);
+        }
+        var ids = modules.Select(type => ((Modules.IKyfRevModule)Activator.CreateInstance(type)!).Id).ToList();
+        Assert.HasCount(ids.Count, ids.Distinct(StringComparer.Ordinal));
     }
 
     /// <summary>T1 : aucune opération publique ne porte un nom de suppression.</summary>
@@ -142,4 +182,7 @@ public sealed partial class ArchitectureTests
 
     [GeneratedRegex(@"\.Delete\(|DeleteFile|DeleteDirectory|RemoveDirectory|FileSystem\.Delete|SendToRecycleBin")]
     private static partial Regex DeletionCall();
+
+    [GeneratedRegex(@"Assembly\.(Load|LoadFrom|LoadFile|UnsafeLoadFrom)\(|AssemblyLoadContext|AppDomain\.CurrentDomain\.Load|Type\.GetType\(")]
+    private static partial Regex DynamicLoading();
 }

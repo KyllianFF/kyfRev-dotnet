@@ -38,6 +38,9 @@ public sealed class KyfRevApplication : IDisposable
         Exports = new ExportUseCases(_host, time);
     }
 
+    /// <summary>Le coffre ouvert, que les modules partagent avec les cas d'usage du cœur.</summary>
+    public VaultHost Host => _host;
+
     /// <summary>Ouverture et création du coffre.</summary>
     public VaultUseCases Vaults { get; }
 

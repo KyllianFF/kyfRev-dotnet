@@ -7,6 +7,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\KyfRev.Cli\KyfRev.Cli.csproj" />
     <ProjectReference Include="..\..\src\KyfRev.Infrastructure.Vault\KyfRev.Infrastructure.Vault.csproj" />
+    <!-- Citation du jour et pages à lire, rejouées dans les scénarios. -->
+    <ProjectReference Include="..\..\src\KyfRev.Modules.Citations\KyfRev.Modules.Citations.csproj" />
   </ItemGroup>
 
   <ItemGroup>

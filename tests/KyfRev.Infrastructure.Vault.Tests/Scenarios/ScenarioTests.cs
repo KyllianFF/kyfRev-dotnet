@@ -66,7 +66,7 @@ public sealed class ScenarioTests
     }
 
     private static List<string> Directories(string root) =>
-        [.. Directory.EnumerateDirectories(root, "*", SearchOption.AllDirectories).Select(path => Relative(root, path)).Order(KyfRev.Infrastructure.Vault.Text.Utf8Order.Instance)];
+        [.. Directory.EnumerateDirectories(root, "*", SearchOption.AllDirectories).Select(path => Relative(root, path)).Order(KyfRev.Application.Text.Utf8Order.Instance)];
 
     private static string Relative(string root, string path) => Path.GetRelativePath(root, path).Replace('\\', '/');
 

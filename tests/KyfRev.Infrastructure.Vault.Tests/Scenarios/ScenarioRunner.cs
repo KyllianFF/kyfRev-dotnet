@@ -2,11 +2,11 @@ using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using KyfRev.Application.Text;
 using KyfRev.Domain.Calendar;
 using KyfRev.Infrastructure.Vault.Ids;
 using KyfRev.Infrastructure.Vault.Json;
 using KyfRev.Infrastructure.Vault.Paths;
-using KyfRev.Infrastructure.Vault.Text;
 
 namespace KyfRev.Infrastructure.Vault.Tests.Scenarios;
 

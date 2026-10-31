@@ -5,7 +5,7 @@ using KyfRev.Domain.Calendar;
 using KyfRev.Domain.Reviews;
 using KyfRev.Infrastructure.Vault.Format;
 using KyfRev.Infrastructure.Vault.Json;
-using KyfRev.Infrastructure.Vault.Quotes;
+using KyfRev.Modules.Citations;
 
 namespace KyfRev.Infrastructure.Vault.Tests.Scenarios;
 
@@ -200,6 +200,10 @@ internal sealed partial class ScenarioRunner
                     }
                     return Describe(quote);
                 }
+            case "citation_du_jour":
+                return DailyQuote.Of(Port, now.Day) is { } daily ? Describe(daily) : "aucune";
+            case "pages_a_lire":
+                return string.Join(',', DailyQuote.PagesToRead(Port, now.Day).Select(page => $"{page.Domain}:{page.Title}"));
             case "creer_schema":
                 {
                     var schema = Vault.CreateSchema(Text(operation, "texte"));

@@ -24,7 +24,7 @@ public sealed class UseCaseTests
     {
         using var test = new TestApplication(FakeTime.AtLocal(2026, 10, 1, 9, 0));
         var tried = 0;
-        foreach (var group in typeof(KyfRevApplication).GetProperties().Select(p => p.GetValue(test.App)!).Where(g => g is not VaultUseCases))
+        foreach (var group in typeof(KyfRevApplication).GetProperties().Select(p => p.GetValue(test.App)!).Where(g => g is not VaultUseCases and not VaultHost))
         {
             foreach (var method in group.GetType().GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly))
             {
