@@ -9,6 +9,13 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- Corpus d'ancrage « Markdown → texte affiché → positions » (`tests/fixtures/ancrage`), calculé
+  par les sources mêmes de la version 0.x dans Microsoft Edge : 230 documents (fiches de
+  démonstration, cas ciblés, documents tirés au hasard), 2 355 passages ancrés et 1 024
+  ré-ancrages après modification. La lecture native (J7) devra le reproduire à l'identique ;
+  l'outil `tools/anchoring-corpus` le régénère, à l'octet près.
+- Les exports du coffre de référence (suivi, historique, annotations, citations) sont comparés à
+  l'octet à ceux de la 0.x : chaque sorte d'événement de suivi y figure.
 - Coffre, sauvegardes, exports et santé, identiques à la version 0.x :
   - sauvegardes `.zip` vérifiées après écriture, hors du coffre, sans le verrou ; sauvegarde
     quotidienne ; rotation (14 jours, 8 semaines, 24 mois) qui ne touche que les copies nommées

@@ -205,6 +205,36 @@ public sealed class VaultBackupsTests
         Assert.StartsWith("Type;", File.ReadAllText(files[1]));
     }
 
+    /// <summary>
+    /// Le coffre de référence contient chaque sorte d'événement de suivi, de rappel et d'état
+    /// d'ancrage : ses exports par la 0.x (<c>reference-vectors --exports</c>, en UTC) sont
+    /// reproduits à l'octet.
+    /// </summary>
+    [TestMethod]
+    public void Exports_of_the_reference_vault_are_those_of_version_0x()
+    {
+        using var folder = TemporaryVault.CopyOfReference();
+        using var outside = TemporaryVault.Empty();
+        var day = new DateOnly(2026, 10, 31);
+        using var vault = VaultSession.Open(folder.Root, new Moment(day, new DateTimeOffset(2026, 10, 31, 12, 0, 0, TimeSpan.Zero)));
+        var stamp = day.ToDateTime(new TimeOnly(12, 0));
+
+        foreach (var kind in new[] { ExportKind.Tracking, ExportKind.Annotations, ExportKind.Quotes })
+        {
+            vault.Export(kind, outside.Root, stamp, TimeZoneInfo.Utc);
+        }
+
+        var expected = Path.Combine(AppContext.BaseDirectory, "fixtures", "exports-reference");
+        CollectionAssert.AreEqual(
+            Directory.GetFiles(expected).Select(Path.GetFileName).Order(StringComparer.Ordinal).ToArray(),
+            Directory.GetFiles(outside.Root).Select(Path.GetFileName).Order(StringComparer.Ordinal).ToArray());
+        foreach (var file in Directory.GetFiles(expected))
+        {
+            Assert.AreEqual(File.ReadAllText(file), File.ReadAllText(outside.PathOf(Path.GetFileName(file))), Path.GetFileName(file));
+            CollectionAssert.AreEqual(File.ReadAllBytes(file), File.ReadAllBytes(outside.PathOf(Path.GetFileName(file))), Path.GetFileName(file));
+        }
+    }
+
     [TestMethod]
     public void A_shared_archive_holds_only_the_files_the_sheet_shows()
     {

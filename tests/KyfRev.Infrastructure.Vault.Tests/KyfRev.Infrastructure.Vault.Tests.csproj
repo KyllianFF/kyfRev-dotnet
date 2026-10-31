@@ -9,4 +9,9 @@
     <ProjectReference Include="..\..\src\KyfRev.Infrastructure.Vault\KyfRev.Infrastructure.Vault.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Corpus d'ancrage, partagé avec la future suite de KyfRev.Rendering (J7). -->
+    <None Include="../fixtures/ancrage/*.json" Link="fixtures/ancrage/%(Filename)%(Extension)" CopyToOutputDirectory="Always" />
+  </ItemGroup>
+
 </Project>

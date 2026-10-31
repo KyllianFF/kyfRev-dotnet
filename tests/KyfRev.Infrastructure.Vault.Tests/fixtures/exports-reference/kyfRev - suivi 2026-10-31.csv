@@ -1,0 +1,12 @@
+﻿Type;Identifiant;Fiche;Dossier;Passage;Statut;Étape attendue;Échéance;Cycle en cours;Dernière révision;Cycles commencés;Cycles terminés;Archivée le;Rappel possible le
+Fiche;f_01M69JFV9D2RVDT3P3MGQQYVER;Cogito;fiches/Philosophie;;active;J1;2027-01-06;2;2027-01-05;2;1;;
+Fiche;f_01M69JFV54D3MA7W49Z91KQBM7;Mitose;fiches/Biologie;;archivée;;;;;1;0;2026-09-10;2026-11-10
+Fiche;f_01M69JFVBEBN8XM9GAB7KKJNVK;Nouveau titre;fiches;;active;J1;2026-09-02;1;2026-09-01;1;0;;
+Fiche;f_01M69JFV8C8MCN4TRNEG0PK1XG;Photosynthèse;fiches/Biologie;;archivée;;;;;1;0;2026-09-02;
+Passage;a_01M69JFV901MGTRT2BVHDTQCQY;Photosynthèse;fiches/Biologie;chlorophylle;active;J1;2026-11-11;1;2026-11-10;1;0;;
+Fiche;f_01M69JFV2X5VM53EY3DR1BY61M;Révolution française : les causes;fiches/Histoire;;active;J7;2026-09-12;1;2026-09-05;1;0;;
+Passage;a_01M69JFV3MQG1Z9NP3WBJ0KFPR;Révolution française : les causes;fiches/Histoire;Ancien Régime;active;J1;2026-09-04;1;2026-09-03;1;0;;
+Passage;a_01M69JFV3DC0785R75CKBW66P4;Révolution française : les causes;fiches/Histoire;trois ordres;active;J1;2026-09-09;2;2026-09-08;2;0;;
+Passage;a_01M69JFV4KD0AV7XXX0PW2JKDM;Révolution française : les causes;fiches/Histoire;tiers état;active;J1;2026-09-04;1;2026-09-03;1;0;;
+Passage;a_01M69JFV4VV4FEXEB7CQRD4VDC;Révolution française : les causes;fiches/Histoire;Dette publique;active;J1;2026-09-04;1;2026-09-03;1;0;;
+Fiche;f_01M69JFV7EWHH4KMYSWEWWGC34;Théorème de Pythagore;fiches/Mathématiques;;archivée;;;;;1;1;2026-10-26;2027-05-26

@@ -86,3 +86,8 @@ dans la 0.x sans aucun signalement.
 `--sauvegarder <coffre> <dossier>` et `--restaurer <archive> <dossier>` sauvegardent et
 restaurent comme kyfRev 0.x ; ils servent à `tools/interop/sauvegardes.ps1`, qui vérifie que
 chaque version restaure à l'identique les sauvegardes de l'autre.
+
+`--exports <coffre> <dossier>` exporte un coffre comme kyfRev 0.x (suivi, historique,
+annotations, citations, en UTC) ; appliqué à une copie du coffre de référence, il produit
+`tests/KyfRev.Infrastructure.Vault.Tests/fixtures/exports-reference`, que les tests C#
+reproduisent à l'octet.
