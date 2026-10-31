@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Date** | 31 octobre 2026 |
-| **Statut** | Plan validé le 31 octobre 2026 : les 13 décisions du §7 sont arrêtées sur l'option recommandée (décision 2 : option C, §2.6). J1, J2 et J3 validés et fusionnés le 31 octobre 2026 (J3 en cinq demandes de fusion : lecture fidèle, écriture des fiches, écritures complémentaires, sauvegardes et exports, corpus d'ancrage). Jalon en cours : J4, en deux demandes de fusion : J4.1 couche Application, cas d'usage et garde-fous (fusionnée le 31 octobre 2026) ; J4.2 modularité et module Citations. |
+| **Statut** | Plan validé le 31 octobre 2026 : les 13 décisions du §7 sont arrêtées sur l'option recommandée (décision 2 : option C, §2.6). J1, J2, J3 et J4 validés et fusionnés le 31 octobre 2026 (J3 en cinq demandes de fusion : lecture fidèle, écriture des fiches, écritures complémentaires, sauvegardes et exports, corpus d'ancrage ; J4 en deux : couche Application et garde-fous, modularité et module Citations). Jalon en cours : J5, en deux demandes de fusion : J5.1 design system (jetons, thèmes, composants, contrastes) ; J5.2 coquille WPF et galerie de composants. |
 | **Périmètre audité** | Dépôt `KyllianFF/kyfRev` à `87f291c` (v0.8.0, 133 commits) ; application installée `C:\Program Files\kyfRev` (0.7.0) ; coffre `Documents\kyfRev\Coffre` et ses sauvegardes. |
 | **Méthode** | Lecture intégrale du cœur métier (`crates/noyau`), lecture du dossier de conception (64 décisions D1 à D64), analyse du crate `coffre` (persistance), de `src-tauri` (commandes, extensions, sécurité, livraison) et de l'interface Svelte. Aucune modification de l'existant. |
 
