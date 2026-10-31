@@ -44,10 +44,10 @@ csharp_space_after_cast = false
 csharp_preserve_single_line_statements = false
 csharp_preserve_single_line_blocks = true
 
-# var : seulement quand le type est évident
-csharp_style_var_for_built_in_types = false:warning
+# var partout : le nom de la variable porte le sens, l'IDE montre le type
+csharp_style_var_for_built_in_types = true:warning
 csharp_style_var_when_type_is_apparent = true:warning
-csharp_style_var_elsewhere = false:warning
+csharp_style_var_elsewhere = true:warning
 
 # Langage moderne
 csharp_style_expression_bodied_methods = when_on_single_line:suggestion
@@ -88,6 +88,9 @@ dotnet_naming_symbols.membres.applicable_accessibilities = public, internal, pro
 dotnet_naming_symbols.interfaces.applicable_kinds = interface
 dotnet_naming_symbols.champs_prives.applicable_kinds = field
 dotnet_naming_symbols.champs_prives.applicable_accessibilities = private
+dotnet_naming_symbols.statiques_lecture_seule.applicable_kinds = field
+dotnet_naming_symbols.statiques_lecture_seule.applicable_accessibilities = private
+dotnet_naming_symbols.statiques_lecture_seule.required_modifiers = static, readonly
 dotnet_naming_symbols.constantes.applicable_kinds = field
 dotnet_naming_symbols.constantes.required_modifiers = const
 dotnet_naming_symbols.parametres_et_locales.applicable_kinds = parameter, local
@@ -105,6 +108,9 @@ dotnet_naming_rule.interfaces_prefixe_i.severity = error
 dotnet_naming_rule.constantes_pascal.symbols = constantes
 dotnet_naming_rule.constantes_pascal.style = pascal
 dotnet_naming_rule.constantes_pascal.severity = error
+dotnet_naming_rule.statiques_lecture_seule_pascal.symbols = statiques_lecture_seule
+dotnet_naming_rule.statiques_lecture_seule_pascal.style = pascal
+dotnet_naming_rule.statiques_lecture_seule_pascal.severity = error
 dotnet_naming_rule.champs_prives_souligne.symbols = champs_prives
 dotnet_naming_rule.champs_prives_souligne.style = souligne_camel
 dotnet_naming_rule.champs_prives_souligne.severity = error
@@ -139,6 +145,8 @@ dotnet_diagnostic.CA5394.severity = error
 # Tests : noms de méthodes descriptifs (avec soulignés) admis
 # ---------------------------------------------------------------------------
 [tests/**.cs]
+# MSTest exige des classes de test publiques, alors que le projet de tests est un exécutable.
+dotnet_diagnostic.CA1515.severity = none
 dotnet_diagnostic.CA1707.severity = none
 dotnet_diagnostic.CA2007.severity = none
 dotnet_diagnostic.CS1591.severity = none

@@ -1,0 +1,432 @@
+using System.Collections.Immutable;
+using System.Diagnostics.CodeAnalysis;
+using KyfRev.Domain.Calendar;
+
+namespace KyfRev.Domain.Reviews;
+
+/// <summary>
+/// Suivi d'un élément révisable : fiche entière, passage annoté ou définition.
+/// </summary>
+/// <remarks>
+/// Un suivi est immuable : chaque opération vérifie toutes ses conditions et calcule toutes ses
+/// dates, puis rend un nouveau suivi. Une opération refusée laisse donc le suivi d'origine
+/// strictement inchangé. Règles appliquées : un Jn est dû n jours après la révision précédente
+/// réellement validée (D2, D7) ; la création vaut J0 (D3) ; les délais de rappel se comptent en
+/// mois calendaires (D5) ; l'historique ne fait que grandir et les compteurs se recalculent
+/// toujours à partir de lui.
+/// </remarks>
+public sealed class Tracking
+{
+    private Tracking(ItemState state, CycleCounters counters, ImmutableArray<TrackingEvent> history)
+    {
+        State = state;
+        Counters = counters;
+        History = history;
+    }
+
+    /// <summary>État actif (avec son cycle) ou archivé.</summary>
+    public ItemState State { get; }
+
+    /// <summary>Cycles commencés, terminés et interrompus.</summary>
+    public CycleCounters Counters { get; }
+
+    /// <summary>Historique complet, en ajout seul.</summary>
+    public ImmutableArray<TrackingEvent> History { get; }
+
+    /// <summary>Statut de l'élément.</summary>
+    public TrackingStatus Status => State is ActiveState ? TrackingStatus.Active : TrackingStatus.Archived;
+
+    /// <summary>Cycle en cours, si l'élément est actif.</summary>
+    public Cycle? Cycle => (State as ActiveState)?.Cycle;
+
+    /// <summary>Informations d'archivage, si l'élément est archivé.</summary>
+    public ArchiveInfo? Archive => (State as ArchivedState)?.Archive;
+
+    /// <summary>Ouvre le suivi d'une fiche ou d'un passage. Le jour même vaut J0 (D3).</summary>
+    public static TrackingResult Start(Moment now, ReviewSequence sequence, StartOrigin origin)
+    {
+        ArgumentNullException.ThrowIfNull(sequence);
+        if (!TryOpenCycle(1, sequence, now.Day, out var cycle, out var error))
+        {
+            return TrackingResult.Failure(error);
+        }
+        return TrackingResult.Success(new Tracking(
+            new ActiveState(cycle),
+            new CycleCounters(Started: 1, Completed: 0, Interrupted: 0),
+            [StartReview(now, cycle, origin)]));
+    }
+
+    /// <summary>
+    /// Reconstitue un suivi relu depuis le disque, après contrôle d'intégrité (voir
+    /// <see cref="Verify"/>).
+    /// </summary>
+    public static TrackingResult Restore(ItemState state, CycleCounters counters, IEnumerable<TrackingEvent> history)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        ArgumentNullException.ThrowIfNull(history);
+        var tracking = new Tracking(state, counters, [.. history]);
+        return tracking.Verify() is { } error ? TrackingResult.Failure(error) : TrackingResult.Success(tracking);
+    }
+
+    /// <summary>
+    /// Valide la révision de l'étape attendue. L'étape suivante est due n jours après la date de
+    /// révision (D7) ; valider la dernière étape termine le cycle et archive l'élément.
+    /// </summary>
+    /// <param name="now">Moment présent.</param>
+    /// <param name="reviewDate">Date de la révision, pour antidater (« je l'ai révisée hier ») ; aujourd'hui par défaut.</param>
+    /// <param name="rules">Règles des rappels ; <see langword="null"/> pour un passage, qui n'a pas de rappels.</param>
+    public ReviewResult ValidateReview(Moment now, DateOnly? reviewDate, ReminderRules? rules)
+    {
+        var day = reviewDate ?? now.Day;
+        if (day > now.Day)
+        {
+            return ReviewResult.Failure(TrackingError.FutureDate(day));
+        }
+        if (State is not ActiveState { Cycle: var cycle })
+        {
+            return ReviewResult.Failure(TrackingError.NotActive());
+        }
+        if (day == cycle.LastReview)
+        {
+            return ReviewResult.Failure(TrackingError.AlreadyReviewed(day));
+        }
+        if (day < cycle.LastReview)
+        {
+            return ReviewResult.Failure(TrackingError.BeforeLastReview(day, cycle.LastReview));
+        }
+
+        var review = new ReviewEvent(
+            now.Instant,
+            day,
+            cycle.Number,
+            cycle.StepLabel,
+            cycle.DueDate,
+            CivilCalendar.DaysBetween(cycle.DueDate, day),
+            Origin: null);
+
+        if (cycle.Step >= cycle.Sequence.LastStep)
+        {
+            if (!TryCreateArchive(day, ArchiveReason.EndOfCycle, rules, include: true, out var archive, out var archiveError))
+            {
+                return ReviewResult.Failure(archiveError);
+            }
+            var archived = new Tracking(
+                new ArchivedState(archive),
+                Counters with { Completed = Counters.Completed + 1 },
+                History.AddRange(review, new ArchivingEvent(now.Instant, day, ArchiveReason.EndOfCycle)));
+            return ReviewResult.Success(archived, new CycleCompleted(day));
+        }
+
+        var next = cycle.Step + 1;
+        if (!CivilCalendar.TryAddDays(day, cycle.Sequence.IntervalBefore(next), out var dueDate))
+        {
+            return ReviewResult.Failure(TrackingError.DateOutOfRange());
+        }
+        var advanced = new Tracking(
+            new ActiveState(cycle with { Step = next, LastReview = day, DueDate = dueDate }),
+            Counters,
+            History.Add(review));
+        return ReviewResult.Success(advanced, new NextStepScheduled(cycle.Sequence.Label(next), dueDate));
+    }
+
+    /// <summary>Déplace l'échéance de l'étape attendue. Ne compte pas comme une révision.</summary>
+    public TrackingResult Postpone(Moment now, DateOnly to)
+    {
+        if (State is not ActiveState { Cycle: var cycle })
+        {
+            return TrackingResult.Failure(TrackingError.NotActive());
+        }
+        if (to <= now.Day)
+        {
+            return TrackingResult.Failure(TrackingError.PostponeInPast(now.Day));
+        }
+        if (to == cycle.DueDate)
+        {
+            return TrackingResult.Failure(TrackingError.PostponeUnchanged(to));
+        }
+        return TrackingResult.Success(new Tracking(
+            new ActiveState(cycle with { DueDate = to }),
+            Counters,
+            History.Add(new PostponementEvent(now.Instant, cycle.Number, cycle.StepLabel, cycle.DueDate, to))));
+    }
+
+    /// <summary>
+    /// « Recommencer à J0 » (élément actif) ou « Remettre en révision » (élément archivé). Le jour
+    /// même vaut J0 ; l'historique est conservé.
+    /// </summary>
+    public TrackingResult Restart(Moment now, ReviewSequence sequence)
+    {
+        ArgumentNullException.ThrowIfNull(sequence);
+        if (!TryOpenCycle(Counters.Started + 1, sequence, now.Day, out var cycle, out var error))
+        {
+            return TrackingResult.Failure(error);
+        }
+        return TrackingResult.Success(WithNewCycle(now, cycle, StartOrigin.Restart, History));
+    }
+
+    /// <summary>Archivage manuel avant la fin du cycle : le cycle est interrompu.</summary>
+    /// <param name="now">Moment présent.</param>
+    /// <param name="rules">Règles des rappels ; <see langword="null"/> pour un passage, qui n'a pas de rappels.</param>
+    public TrackingResult ArchiveManually(Moment now, ReminderRules? rules)
+    {
+        if (State is not ActiveState { Cycle: var cycle })
+        {
+            return TrackingResult.Failure(TrackingError.NotActive());
+        }
+        var include = rules is { IncludeManualArchiving: true };
+        if (!TryCreateArchive(now.Day, ArchiveReason.Manual, rules, include, out var archive, out var error))
+        {
+            return TrackingResult.Failure(error);
+        }
+        return TrackingResult.Success(new Tracking(
+            new ArchivedState(archive),
+            Counters with { Interrupted = Counters.Interrupted + 1 },
+            History.AddRange(
+                new InterruptionEvent(now.Instant, now.Day, cycle.Number),
+                new ArchivingEvent(now.Instant, now.Day, ArchiveReason.Manual))));
+    }
+
+    /// <summary>Vrai si la fiche peut être tirée au sort le jour donné.</summary>
+    public bool IsEligibleOn(DateOnly day) =>
+        Archive is { IncludedInReminders: true, ReminderDrawnOn: null } archive && archive.EligibleOn <= day;
+
+    /// <summary>Enregistre que la fiche a été tirée pour un rappel de consolidation.</summary>
+    public TrackingResult MarkDrawn(DateOnly day)
+    {
+        if (State is not ArchivedState { Archive: var archive })
+        {
+            return TrackingResult.Failure(TrackingError.NotArchived());
+        }
+        if (!archive.IncludedInReminders)
+        {
+            return TrackingResult.Failure(TrackingError.ExcludedFromReminders());
+        }
+        if (archive.ReminderDrawnOn is not null)
+        {
+            return TrackingResult.Failure(TrackingError.ReminderAlreadyPending());
+        }
+        if (day < archive.EligibleOn)
+        {
+            return TrackingResult.Failure(TrackingError.NotYetEligible(archive.EligibleOn));
+        }
+        return TrackingResult.Success(new Tracking(
+            new ArchivedState(archive with { ReminderDrawnOn = day }),
+            Counters,
+            History));
+    }
+
+    /// <summary>
+    /// Enregistre le résultat d'un rappel de consolidation.
+    /// <list type="bullet">
+    /// <item>« Fiche connue » : la fiche reste archivée et se repose plus longtemps.</item>
+    /// <item>« Certains points sont à revoir » : la fiche reste archivée, le repos repart au
+    /// premier niveau ; les passages sont gérés par l'appelant.</item>
+    /// <item>« Fiche à revoir entièrement » : nouveau cycle, le rappel vaut J0.</item>
+    /// </list>
+    /// </summary>
+    public TrackingResult HandleReminder(Moment now, ReminderAnswer answer, ReminderRules rules, ReviewSequence sequence)
+    {
+        ArgumentNullException.ThrowIfNull(rules);
+        ArgumentNullException.ThrowIfNull(sequence);
+        if (rules.Validate() is { } rulesError)
+        {
+            return TrackingResult.Failure(rulesError);
+        }
+        if (State is not ArchivedState { Archive: var archive })
+        {
+            return TrackingResult.Failure(TrackingError.NotArchived());
+        }
+        if (archive.ReminderDrawnOn is not DateOnly drawnOn)
+        {
+            return TrackingResult.Failure(TrackingError.NoPendingReminder());
+        }
+
+        var day = now.Day;
+        var reminder = new ReminderEvent(now.Instant, day, drawnOn, answer.Outcome);
+        switch (answer.Outcome)
+        {
+            case ReminderOutcome.Known:
+                {
+                    var level = Math.Min(archive.RestLevel + 1, rules.RestSequenceMonths.Length - 1);
+                    return Rest(level, rules, day, archive, reminder);
+                }
+            case ReminderOutcome.SomePointsToReview:
+                return answer.MarkedPassages == 0
+                    ? TrackingResult.Failure(TrackingError.NoPassageMarked())
+                    : Rest(0, rules, day, archive, reminder);
+            default:
+                if (!TryOpenCycle(Counters.Started + 1, sequence, day, out var cycle, out var error))
+                {
+                    return TrackingResult.Failure(error);
+                }
+                return TrackingResult.Success(WithNewCycle(now, cycle, StartOrigin.Reminder, History.Add(reminder)));
+        }
+    }
+
+    /// <summary>Inclut la fiche archivée dans les rappels de consolidation, ou l'en exclut.</summary>
+    public TrackingResult IncludeInReminders(Moment now, bool include)
+    {
+        if (State is not ArchivedState { Archive: var archive })
+        {
+            return TrackingResult.Failure(TrackingError.NotArchived());
+        }
+        if (archive.IncludedInReminders == include)
+        {
+            return TrackingResult.Success(this);
+        }
+        var updated = archive with
+        {
+            IncludedInReminders = include,
+            ReminderDrawnOn = include ? archive.ReminderDrawnOn : null,
+        };
+        return TrackingResult.Success(new Tracking(
+            new ArchivedState(updated),
+            Counters,
+            History.Add(new ReminderInclusionEvent(now.Instant, include))));
+    }
+
+    /// <summary>
+    /// Inscrit dans l'historique la modification d'un passage annoté ; ni l'état ni le calendrier
+    /// ne changent.
+    /// </summary>
+    public Tracking RecordModification(Moment now, ModifiedObject changed) =>
+        new(State, Counters, History.Add(new ModificationEvent(now.Instant, changed)));
+
+    /// <summary>
+    /// Contrôle d'intégrité d'un suivi relu depuis le disque : les compteurs doivent correspondre
+    /// à l'historique et à l'état.
+    /// </summary>
+    /// <returns><see langword="null"/> si le suivi est cohérent, sinon la raison.</returns>
+    public TrackingError? Verify()
+    {
+        if (History.IsDefaultOrEmpty || History[0] is not ReviewEvent { Origin: not null })
+        {
+            return TrackingError.Inconsistent("l'historique doit commencer par un J0");
+        }
+
+        var recount = new CycleCounters(
+            Started: History.Count(e => e is ReviewEvent { Origin: not null }),
+            Completed: History.Count(e => e is ArchivingEvent { Reason: ArchiveReason.EndOfCycle }),
+            Interrupted: History.Count(e => e is InterruptionEvent));
+        if (recount != Counters)
+        {
+            return TrackingError.Inconsistent("les compteurs ne correspondent pas à l'historique");
+        }
+
+        var active = Status == TrackingStatus.Active ? 1 : 0;
+        if (Counters.Started != Counters.Completed + Counters.Interrupted + active)
+        {
+            return TrackingError.Inconsistent("nombre de cycles commencés incohérent");
+        }
+
+        return State switch
+        {
+            ActiveState { Cycle: var cycle } when cycle.Number != Counters.Started =>
+                TrackingError.Inconsistent("numéro de cycle incohérent"),
+            ActiveState { Cycle: var cycle } when cycle.Step == 0 || cycle.Step > cycle.Sequence.LastStep =>
+                TrackingError.Inconsistent("étape hors de la séquence"),
+            ActiveState { Cycle: var cycle } when cycle.StartedOn > cycle.LastReview || cycle.DueDate <= cycle.LastReview =>
+                TrackingError.Inconsistent("dates du cycle incohérentes"),
+            ArchivedState { Archive: var archive } when archive.EligibleOn < archive.ArchivedOn =>
+                TrackingError.Inconsistent("date d'éligibilité antérieure à l'archivage"),
+            _ => null,
+        };
+    }
+
+    private TrackingResult Rest(int level, ReminderRules rules, DateOnly day, ArchiveInfo archive, ReminderEvent reminder)
+    {
+        if (!CivilCalendar.TryAddMonths(day, rules.RestSequenceMonths[level], out var eligibleOn))
+        {
+            return TrackingResult.Failure(TrackingError.DateOutOfRange());
+        }
+        return TrackingResult.Success(new Tracking(
+            new ArchivedState(archive with { RestLevel = level, EligibleOn = eligibleOn, ReminderDrawnOn = null }),
+            Counters,
+            History.Add(reminder)));
+    }
+
+    /// <summary>Applique un nouveau cycle déjà construit (et ses dates déjà calculées).</summary>
+    private Tracking WithNewCycle(Moment now, Cycle cycle, StartOrigin origin, ImmutableArray<TrackingEvent> history)
+    {
+        var counters = Counters;
+        TrackingEvent closing;
+        if (State is ActiveState { Cycle: var previous })
+        {
+            closing = new InterruptionEvent(now.Instant, now.Day, previous.Number);
+            counters = counters with { Interrupted = counters.Interrupted + 1 };
+        }
+        else
+        {
+            closing = new ReactivationEvent(now.Instant, now.Day);
+        }
+        return new Tracking(
+            new ActiveState(cycle),
+            counters with { Started = counters.Started + 1 },
+            history.AddRange(closing, StartReview(now, cycle, origin)));
+    }
+
+    /// <summary>
+    /// Cycle dont le J0 est validé le jour donné : J1 est attendu le lendemain avec la séquence par
+    /// défaut. Une séquence compte toujours au moins deux étapes : J1 existe.
+    /// </summary>
+    private static bool TryOpenCycle(
+        int number,
+        ReviewSequence sequence,
+        DateOnly day,
+        [NotNullWhen(true)] out Cycle? cycle,
+        [NotNullWhen(false)] out TrackingError? error)
+    {
+        cycle = null;
+        if (!CivilCalendar.TryAddDays(day, sequence.IntervalBefore(1), out var dueDate))
+        {
+            error = TrackingError.DateOutOfRange();
+            return false;
+        }
+        cycle = new Cycle(number, sequence, day, Step: 1, dueDate, LastReview: day);
+        error = null;
+        return true;
+    }
+
+    /// <param name="day">Jour de l'archivage.</param>
+    /// <param name="reason">Fin de cycle ou archivage manuel.</param>
+    /// <param name="rules">Règles des rappels ; <see langword="null"/> pour un élément sans rappels (passage).</param>
+    /// <param name="include">Vrai si l'élément doit recevoir des rappels.</param>
+    /// <param name="archive">Informations d'archivage créées.</param>
+    /// <param name="error">Raison du refus.</param>
+    private static bool TryCreateArchive(
+        DateOnly day,
+        ArchiveReason reason,
+        ReminderRules? rules,
+        bool include,
+        [NotNullWhen(true)] out ArchiveInfo? archive,
+        [NotNullWhen(false)] out TrackingError? error)
+    {
+        archive = null;
+        var eligibleOn = day;
+        if (rules is not null)
+        {
+            if (rules.Validate() is { } rulesError)
+            {
+                error = rulesError;
+                return false;
+            }
+            if (!CivilCalendar.TryAddMonths(day, rules.MinimumDelayMonths, out eligibleOn))
+            {
+                error = TrackingError.DateOutOfRange();
+                return false;
+            }
+        }
+        archive = new ArchiveInfo(
+            day,
+            reason,
+            IncludedInReminders: include && rules is not null,
+            RestLevel: 0,
+            eligibleOn,
+            ReminderDrawnOn: null);
+        error = null;
+        return true;
+    }
+
+    private static ReviewEvent StartReview(Moment now, Cycle cycle, StartOrigin origin) =>
+        new(now.Instant, now.Day, cycle.Number, cycle.Sequence.Label(0), now.Day, DaysLate: 0, origin);
+}

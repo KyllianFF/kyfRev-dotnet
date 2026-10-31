@@ -14,6 +14,10 @@
     <File Path="docs/glossaire.md" />
     <File Path="docs/plan-de-refonte.md" />
   </Folder>
-  <Folder Name="/src/" />
-  <Folder Name="/tests/" />
+  <Folder Name="/src/">
+    <Project Path="src/KyfRev.Domain/KyfRev.Domain.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/KyfRev.Domain.Tests/KyfRev.Domain.Tests.csproj" />
+  </Folder>
 </Solution>

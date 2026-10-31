@@ -1,0 +1,12 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Description>Règles métier pures de kyfRev : méthode des J, cycles, archivage et rappels de consolidation.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="KyfRev.Domain.Tests" />
+  </ItemGroup>
+
+</Project>

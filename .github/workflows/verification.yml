@@ -96,8 +96,21 @@ jobs:
       - name: Compilation
         run: dotnet build KyfRev.slnx --configuration Release --no-restore
 
-      - name: Tests
-        run: dotnet test KyfRev.slnx --configuration Release --no-build
+      - name: Tests et couverture (95 % des lignes au minimum)
+        run: >-
+          dotnet test --solution KyfRev.slnx --configuration Release --no-build
+          --coverlet --coverlet-output-format cobertura --coverlet-include "[KyfRev.*]*"
+          --coverlet-threshold 95 --coverlet-threshold-type line
+          --results-directory artifacts/coverage
+
+      - name: Rapport de couverture
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: couverture
+          path: artifacts/coverage/*.xml
+          if-no-files-found: ignore
+          retention-days: 30
 
       - name: Mise en forme
         run: dotnet format KyfRev.slnx --verify-no-changes --no-restore

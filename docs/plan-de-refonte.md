@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Date** | 31 octobre 2026 |
-| **Statut** | Plan validé le 31 octobre 2026 : les 13 décisions du §7 sont arrêtées sur l'option recommandée (décision 2 : option C, §2.6). Jalon en cours : J1. |
+| **Statut** | Plan validé le 31 octobre 2026 : les 13 décisions du §7 sont arrêtées sur l'option recommandée (décision 2 : option C, §2.6). J1 validé et fusionné le 31 octobre 2026. Jalon en cours : J2. |
 | **Périmètre audité** | Dépôt `KyllianFF/kyfRev` à `87f291c` (v0.8.0, 133 commits) ; application installée `C:\Program Files\kyfRev` (0.7.0) ; coffre `Documents\kyfRev\Coffre` et ses sauvegardes. |
 | **Méthode** | Lecture intégrale du cœur métier (`crates/noyau`), lecture du dossier de conception (64 décisions D1 à D64), analyse du crate `coffre` (persistance), de `src-tauri` (commandes, extensions, sécurité, livraison) et de l'interface Svelte. Aucune modification de l'existant. |
 
@@ -426,7 +426,7 @@ kyfRev-dotnet/
 | Rendu et données | Markdig, XAML-Math, Svg.Skia, TextMateSharp, AvalonEdit, Microsoft.Web.WebView2, System.Text.Json (avec convertisseurs dédiés), YamlDotNet (lecture seule, aligné sur YAML 1.2) |
 | Comparaison de texte | DiffPlex |
 | Cryptographie | AesGcm et Rfc2898DeriveBytes (bibliothèque standard), NSec ou libsodium (Argon2id), ProtectedData |
-| Tests | xUnit v3, CsCheck (propriétés), Verify (instantanés), Stryker.NET (mutations), FlaUI, ArchUnitNET |
+| Tests | MSTest sur Microsoft Testing Platform, CsCheck (propriétés), Verify (instantanés), Stryker.NET (mutations), FlaUI, ArchUnitNET. MSTest remplace xUnit v3, envisagé d'abord : Stryker.NET ne sait pas encore activer ses mutants dans les tests xUnit v3, exécutés hors du processus de test (constaté au jalon J2). |
 
 Chaque bibliothèque sera validée au jalon qui l'introduit.
 

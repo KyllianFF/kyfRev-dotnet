@@ -1,0 +1,45 @@
+name: Mutation
+
+# Tests de mutation du domaine (Stryker.NET), lancés à la demande : ils sont trop longs pour
+# chaque envoi. Le score minimal exigé (80 %) est fixé dans tests/KyfRev.Domain.Tests/stryker-config.json.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+
+jobs:
+  mutation:
+    name: Tests de mutation du domaine
+    runs-on: windows-2025
+    timeout-minutes: 60
+    steps:
+      - name: Récupération du dépôt
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: SDK .NET (global.json)
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+
+      - name: Outils .NET locaux
+        run: dotnet tool restore
+
+      - name: Stryker.NET
+        run: pwsh tools/mutation.ps1
+
+      - name: Rapport de mutation
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: mutation
+          path: tests/KyfRev.Domain.Tests/StrykerOutput/**/reports/*
+          if-no-files-found: ignore
+          retention-days: 30

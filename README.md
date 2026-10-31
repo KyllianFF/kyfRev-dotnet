@@ -10,8 +10,8 @@ les coffres de la version 0.x et vise la parité fonctionnelle en version 1.0.0.
 
 ## État
 
-Refonte en cours, jalon **J1 : socle du dépôt**. Le plan complet, les décisions et les
-critères de validation de chaque jalon sont dans [docs/plan-de-refonte.md](docs/plan-de-refonte.md).
+Refonte en cours, jalon **J2 : domaine de la méthode des J**. Le plan complet, les décisions
+et les critères de validation de chaque jalon sont dans [docs/plan-de-refonte.md](docs/plan-de-refonte.md).
 
 ## Principes
 
@@ -36,10 +36,20 @@ Compiler, tester, vérifier :
 
 ```powershell
 dotnet build KyfRev.slnx
-dotnet test KyfRev.slnx
+dotnet test --solution KyfRev.slnx
 dotnet format KyfRev.slnx --verify-no-changes
 dotnet slopwatch analyze --no-baseline --fail-on warning
 ```
+
+Tests de mutation du domaine (quelques minutes ; aussi disponibles à la demande dans
+l'onglet Actions, workflow « Mutation ») :
+
+```powershell
+pwsh tools/mutation.ps1
+```
+
+Les tests du domaine comparent aussi l'implémentation C# au cœur Rust de la version 0.x, à
+partir de vecteurs de référence versionnés : voir [tools/reference-vectors](tools/reference-vectors/README.md).
 
 Les règles de contribution (branches, commits, fusions, versions) sont dans
 [CONTRIBUTING.md](CONTRIBUTING.md), les changements de chaque version dans le
