@@ -119,4 +119,10 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 - L'examen d'un dossier se « retire » (`WithdrawExam`) : plus aucun nom de suppression dans les
   opérations publiques.
 
+### Sécurité
+
+- Outil de référence (`tools/reference-vectors`, jamais livré) : bibliothèque `zip` passée en
+  9.0.5, qui corrige une faille critique de lecture des archives (GHSA-m665-v7pm-7grj), comme
+  dans la version 0.x.
+
 [Non publié]: https://github.com/KyllianFF/kyfRev-dotnet/commits/main

@@ -89,7 +89,7 @@ dependencies = [
 
 [[package]]
 name = "coffre"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "jiff",
  "noyau",
@@ -432,7 +432,7 @@ checksum = "2bf50223579dc7cdcfb3bfcacf7069ff68243f8c363f62ffa99cf000a6b9c451"
 
 [[package]]
 name = "noyau"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "jiff",
  "rand_chacha",
@@ -901,9 +901,9 @@ dependencies = [
 
 [[package]]
 name = "zip"
-version = "9.0.4"
+version = "9.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a954114b47a54df49f83d2722814e86b23d4bb1b54a1b90fb7d92b41619ddc22"
+checksum = "6e04976da629d3b04204ba8105b396a193af8ad2583b2c79bfb3ab8af580a11e"
 dependencies = [
  "crc32fast",
  "flate2",
