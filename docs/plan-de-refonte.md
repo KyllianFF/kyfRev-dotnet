@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Date** | 31 octobre 2026 |
-| **Statut** | Plan validé le 31 octobre 2026 : les 13 décisions du §7 sont arrêtées sur l'option recommandée (décision 2 : option C, §2.6). J1 et J2 validés et fusionnés le 31 octobre 2026. Jalon en cours : J3, livré en trois parties (J3.1 lecture fidèle, J3.2 opérations d'écriture, J3.3 sauvegardes, exports, santé et contrôle croisé). |
+| **Statut** | Plan validé le 31 octobre 2026 : les 13 décisions du §7 sont arrêtées sur l'option recommandée (décision 2 : option C, §2.6). J1, J2 et J3.1 validés et fusionnés le 31 octobre 2026. Jalon en cours : J3, livré en parties validées une à une (J3.1 lecture fidèle ; J3.2 opérations d'écriture, en deux demandes de fusion : J3.2a fiches, J3.2b annotations, rappels, réglages, citations, schémas, modèles et données d'extension ; J3.3 sauvegardes, exports, santé et contrôle croisé). |
 | **Périmètre audité** | Dépôt `KyllianFF/kyfRev` à `87f291c` (v0.8.0, 133 commits) ; application installée `C:\Program Files\kyfRev` (0.7.0) ; coffre `Documents\kyfRev\Coffre` et ses sauvegardes. |
 | **Méthode** | Lecture intégrale du cœur métier (`crates/noyau`), lecture du dossier de conception (64 décisions D1 à D64), analyse du crate `coffre` (persistance), de `src-tauri` (commandes, extensions, sécurité, livraison) et de l'interface Svelte. Aucune modification de l'existant. |
 

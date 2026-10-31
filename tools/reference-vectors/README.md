@@ -53,3 +53,30 @@ pour couvrir un nouveau cas, puis relu en entier.
 `--ouvrir <dossier> <secondes>` ouvre un coffre comme kyfRev 0.x (verrou compris) et le garde
 ouvert ; il sert à `tools/interop/verrou.ps1`, qui vérifie que le verrou est respecté dans les
 deux sens entre les deux versions.
+
+## Fonctions pures et scénarios du coffre
+
+`--vecteurs-coffre <dossier>` écrit `noms.txt`, `entetes.txt` et `liens.txt` : 9 000 cas tirés au
+hasard (Unicode, CRLF, BOM, crochets, chevrons, pourcentages, blocs de code) sur les noms de
+fichiers, les éditions d'en-tête et les liens Markdown du crate `coffre`. Ils sont versionnés dans
+`tests/KyfRev.Infrastructure.Vault.Tests/fixtures/reference` ; `--fonctions <famille> <n>`
+affiche le détail du cas `n` (familles `noms`, `entetes`, `liens`).
+
+```powershell
+cargo run --release --manifest-path tools/reference-vectors/Cargo.toml -- --vecteurs-coffre tests/KyfRev.Infrastructure.Vault.Tests/fixtures/reference
+```
+
+`--scenarios <dossier>` joue chaque scénario de `tests/KyfRev.Infrastructure.Vault.Tests/fixtures/scenarios`
+(une suite d'opérations décrite dans `scenario.json`) avec le crate `coffre`, et écrit à côté le
+coffre obtenu (`attendu/`), le résultat de chaque opération, les identifiants créés dans l'ordre
+et la liste des dossiers. Les tests C# rejouent le scénario avec les mêmes identifiants et
+exigent un coffre identique à l'octet près.
+
+```powershell
+$env:COMPUTERNAME = 'POSTE-ESSAI'
+cargo run --release --manifest-path tools/reference-vectors/Cargo.toml -- --scenarios tests/KyfRev.Infrastructure.Vault.Tests/fixtures/scenarios
+```
+
+`--sante <dossier>` ouvre un coffre comme kyfRev 0.x et résume « Santé du coffre » ; il sert à
+`tools/interop/ecriture.ps1`, qui vérifie qu'un coffre écrit par la génération .NET se rouvre
+dans la 0.x sans aucun signalement.

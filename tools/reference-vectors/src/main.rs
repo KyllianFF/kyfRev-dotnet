@@ -11,6 +11,7 @@
 //!   cargo run --release -- --vecteurs-coffre <dossier>   vecteurs des fonctions pures du coffre
 //!   cargo run --release -- --fonctions <famille> <n>     détail d'un cas (noms, entetes, liens)
 //!   cargo run --release -- --scenarios <dossier>         joue les scénarios d'opérations sur un coffre
+//!   cargo run --release -- --sante <dossier>             ouvre un coffre comme la 0.x et résume sa santé
 
 mod coffre_reference;
 mod fonctions_coffre;
@@ -370,6 +371,19 @@ fn main() {
         [option, dossier] if option == "--vecteurs-coffre" => {
             fs::create_dir_all(dossier).expect("dossier de sortie");
             fonctions_coffre::ecrire(Path::new(dossier));
+        }
+        [option, dossier] if option == "--sante" => {
+            // Ouvre le coffre comme kyfRev 0.x (analyse comprise) et résume « Santé du coffre ».
+            match coffre::Coffre::ouvrir(Path::new(dossier), &moment(date(2026, 10, 31))) {
+                Ok(coffre) => {
+                    println!("{}", scenarios::rapport(&coffre));
+                    println!("problèmes : {}", coffre.sante().problemes());
+                }
+                Err(erreur) => {
+                    println!("refus : {erreur}");
+                    std::process::exit(3);
+                }
+            }
         }
         [option, dossier] if option == "--scenarios" => {
             scenarios::jouer_tous(Path::new(dossier));

@@ -116,7 +116,14 @@ impl Partie {
     }
 
     fn sante(&self) -> String {
-        let sante = self.coffre.as_ref().expect("coffre ouvert").sante();
+        rapport(self.coffre.as_ref().expect("coffre ouvert"))
+    }
+}
+
+/// Résumé de « Santé du coffre », listes triées (même format côté C#).
+pub fn rapport(coffre: &Coffre) -> String {
+    {
+        let sante = coffre.sante();
         let trier = |mut v: Vec<String>| {
             v.sort();
             v.join(";")
@@ -133,7 +140,9 @@ impl Partie {
             trier(sante.liens_a_verifier.iter().map(ToString::to_string).collect()),
         )
     }
+}
 
+impl Partie {
     fn jouer(&mut self, operation: &Value) -> Result<String, ErreurCoffre> {
         let op = operation["op"].as_str().expect("« op » attendu");
         let moment = operation.get("le").and_then(Value::as_str).map(le);

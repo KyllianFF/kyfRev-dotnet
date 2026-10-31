@@ -9,6 +9,20 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- Coffre, écriture des fiches (`VaultSession`), identique à la version 0.x :
+  - ouverture : verrou, reprise d'une opération interrompue, analyse qui suit les fiches
+    déplacées, modifiées, renommées ou étiquetées hors de l'application ;
+  - fiches : création, adoption d'un fichier existant, enregistrement avec versions une fois
+    par session et conflits, corps seul avec en-tête conservé, versions gardées et restaurées,
+    étiquettes, opérations de la méthode des J ;
+  - organisation : changement de titre, déplacement, ressources, dossiers, avec réécriture des
+    liens sous la protection du journal d'opération ;
+  - corbeille : fiche ou dossier entier, restauration à côté d'une place reprise ;
+  - confinement au coffre, y compris face aux liens symboliques et aux jonctions.
+- Noms de fichiers, éditions d'en-tête et liens Markdown comparés à la 0.x sur 9 000 cas, et six
+  scénarios (195 opérations) rejoués avec les mêmes identifiants : coffres identiques à l'octet près.
+- Script `tools/interop/ecriture.ps1` : un coffre écrit par cette version se rouvre dans la 0.x
+  sans aucun signalement.
 - Coffre (`KyfRev.Infrastructure.Vault`), lecture fidèle du format 1 :
   - chemins validés selon les mêmes règles que la version 0.x ;
   - empreintes SHA-256 des octets bruts ;
@@ -17,6 +31,7 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   - lecture et réécriture à l'octet près de tous les fichiers JSON du coffre ;
   - lecture de l'en-tête YAML des fiches.
 - Les champs inconnus sont désormais conservés à tous les niveaux des fichiers.
+- Un en-tête YAML qui contient plusieurs documents est refusé, comme en 0.x.
 - Outil `kyfrev-coffre verifier` : analyse un coffre en lecture seule (fiches déplacées,
   modifiées, manquantes, en double ou sans suivi, fichiers illisibles, format plus récent,
   opération interrompue, annotations orphelines) et produit un rapport en texte ou en JSON.
