@@ -8,16 +8,6 @@ using KyfRev.Infrastructure.Vault.Text;
 
 namespace KyfRev.Infrastructure.Vault;
 
-/// <summary>Une fiche ou un passage annoté : les deux ont leur propre calendrier des J.</summary>
-public enum ItemKind
-{
-    /// <summary>Une fiche.</summary>
-    Sheet,
-
-    /// <summary>Un passage annoté ou une définition.</summary>
-    Passage,
-}
-
 /// <remarks>
 /// Annotations : passages surlignés et définitions, chacun avec son propre calendrier des J,
 /// rangés dans <c>.suivi/annotations/&lt;idFiche&gt;.json</c>. Le fichier Markdown n'est jamais

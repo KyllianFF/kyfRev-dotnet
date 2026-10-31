@@ -32,9 +32,6 @@ public sealed record SheetMove(string Id, VaultPath From, VaultPath To);
 /// <summary>Plusieurs fichiers portent le même identifiant.</summary>
 public sealed record DuplicateSheet(string Id, IReadOnlyList<VaultPath> Paths);
 
-/// <summary>Un fichier impossible à lire, laissé intact.</summary>
-public sealed record UnreadableFile(string Path, string Message);
-
 /// <summary>Un fichier qui porte un identifiant de fiche sans fichier de suivi.</summary>
 public sealed record UntrackedId(string Id, VaultPath Path);
 
@@ -92,31 +89,3 @@ public sealed class HealthReport
 
     internal List<string> OrphanAnnotationsList { get; } = [];
 }
-
-/// <summary>Issue d'un enregistrement du corps d'une fiche : <see cref="SheetSaved"/> ou <see cref="SaveConflict"/>.</summary>
-public abstract record SaveResult
-{
-    private protected SaveResult()
-    {
-    }
-}
-
-/// <summary>Enregistré.</summary>
-/// <param name="Fingerprint">Empreinte du nouveau contenu.</param>
-public sealed record SheetSaved(string Fingerprint) : SaveResult;
-
-/// <summary>Refusé : la fiche a changé sur le disque depuis sa lecture. Rien n'a été écrit.</summary>
-/// <param name="DiskFingerprint">Empreinte du contenu actuel.</param>
-/// <param name="DiskBody">Corps actuel, pour comparer.</param>
-public sealed record SaveConflict(string DiskFingerprint, string DiskBody) : SaveResult;
-
-/// <summary>Version antérieure d'une fiche, dans <c>.suivi/versions/&lt;id&gt;/</c>.</summary>
-public sealed record SheetVersion(string Name, DateTimeOffset SavedAt, long Size);
-
-/// <summary>Une fiche à la corbeille.</summary>
-/// <param name="Id">Identifiant de la fiche.</param>
-/// <param name="Title">Titre.</param>
-/// <param name="Folder">Dossier d'origine, relatif à <c>fiches/</c>.</param>
-/// <param name="TrashedAt">Mise à la corbeille.</param>
-/// <param name="Annotations">Annotations et définitions rangées avec elle.</param>
-public sealed record TrashedSheet(string Id, string Title, string Folder, DateTimeOffset TrashedAt, int Annotations);

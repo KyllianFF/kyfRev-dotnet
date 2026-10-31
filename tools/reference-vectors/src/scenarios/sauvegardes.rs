@@ -255,7 +255,7 @@ impl Partie {
                 })
                 .collect::<Vec<_>>()
                 .join(";")),
-            autre => panic!("opération inconnue : {autre}"),
+            autre => self.jouer_lecture(autre, operation, moment),
         }
     }
 }

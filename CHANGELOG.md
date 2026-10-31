@@ -9,6 +9,22 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- Couche Application (`KyfRev.Application`) : 56 cas d'usage, un par commande de la version 0.x,
+  regroupés par domaine (coffre, fiches, édition, dossiers, corbeille, révision, rappels,
+  annotations, examens, réglages, modèles, santé, sauvegardes, exports). Ils passent par des ports
+  (le coffre, les sauvegardes, la mémoire des coffres) et prennent la date du jour d'une horloge
+  injectée (`TimeProvider`), dans le fuseau local. Un refus rend le message de la 0.x.
+- À l'ouverture d'un coffre, comme en 0.x : la journée est préparée, une sauvegarde est faite si
+  aucune ne l'a été ce jour-là, puis la rotation ; un échec est journalisé sans bloquer
+  l'ouverture. Le coffre précédent n'est fermé qu'une fois le nouveau ouvert.
+- Vue d'une fiche ouverte et état de révision d'une fiche ou d'un passage, identiques à la 0.x
+  (onzième scénario comparé, 49 opérations).
+- Tableau de correspondance des 97 commandes de la 0.x (`docs/correspondance-commandes.md`),
+  vérifié par les tests.
+- Tests d'architecture : dépendances entre couches, aucune opération publique au nom de
+  suppression, effacement de fichiers limité aux trois cas prévus (rotation des sauvegardes,
+  fichiers temporaires).
+
 - Corpus d'ancrage « Markdown → texte affiché → positions » (`tests/fixtures/ancrage`), calculé
   par les sources mêmes de la version 0.x dans Microsoft Edge : 230 documents (fiches de
   démonstration, cas ciblés, documents tirés au hasard), 2 355 passages ancrés et 1 024
@@ -97,5 +113,10 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   interdits (tests désactivés, avertissements masqués, exceptions avalées).
 - Documentation : plan de refonte validé, glossaire du domaine, règles de contribution,
   politique de sécurité.
+
+### Modifié
+
+- L'examen d'un dossier se « retire » (`WithdrawExam`) : plus aucun nom de suppression dans les
+  opérations publiques.
 
 [Non publié]: https://github.com/KyllianFF/kyfRev-dotnet/commits/main

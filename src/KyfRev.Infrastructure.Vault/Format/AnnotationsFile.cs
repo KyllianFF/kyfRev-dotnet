@@ -5,19 +5,6 @@ using KyfRev.Infrastructure.Vault.Json;
 
 namespace KyfRev.Infrastructure.Vault.Format;
 
-/// <summary>État d'ancrage d'une annotation.</summary>
-public enum AnchorState
-{
-    /// <summary>Position retrouvée sans ambiguïté.</summary>
-    Anchored,
-
-    /// <summary>Position incertaine : l'utilisateur doit confirmer.</summary>
-    NeedsReview,
-
-    /// <summary>Passage introuvable : signalé, jamais rattaché ailleurs en silence.</summary>
-    NotFound,
-}
-
 /// <summary><c>.suivi/annotations/&lt;idFiche&gt;.json</c> : les passages annotés et définitions d'une fiche.</summary>
 public sealed record AnnotationsFile(long Format, string SheetId, ImmutableArray<StoredAnnotation> Annotations, UnknownProperties Unknown)
 {

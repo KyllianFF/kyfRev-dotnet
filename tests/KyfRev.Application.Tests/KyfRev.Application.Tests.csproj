@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+
+  <!-- Les cas d'usage sont essayés sur de vrais coffres ; les tests d'architecture inspectent tous les assemblys. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\KyfRev.Application\KyfRev.Application.csproj" />
+    <ProjectReference Include="..\..\src\KyfRev.Cli\KyfRev.Cli.csproj" />
+    <ProjectReference Include="..\..\src\KyfRev.Domain\KyfRev.Domain.csproj" />
+    <ProjectReference Include="..\..\src\KyfRev.Infrastructure.Vault\KyfRev.Infrastructure.Vault.csproj" />
+  </ItemGroup>
+
+</Project>

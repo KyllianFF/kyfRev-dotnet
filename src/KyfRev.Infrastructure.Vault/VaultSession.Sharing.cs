@@ -7,22 +7,6 @@ using KyfRev.Infrastructure.Vault.Text;
 
 namespace KyfRev.Infrastructure.Vault;
 
-/// <summary>Format d'une fiche partagée.</summary>
-public enum ShareFormat
-{
-    /// <summary>Le texte Markdown, sans l'en-tête technique de kyfRev.</summary>
-    Markdown,
-
-    /// <summary>Une archive <c>.zip</c> : la fiche et ses images.</summary>
-    MarkdownWithImages,
-
-    /// <summary>Texte brut préparé par l'interface.</summary>
-    Text,
-
-    /// <summary>Page web préparée par l'interface ; les images du coffre y sont intégrées.</summary>
-    Html,
-}
-
 /// <remarks>
 /// Partage d'une fiche : un fichier à envoyer, écrit hors du coffre, sans jamais écraser un fichier
 /// existant. Le texte et la page web sont préparés par l'interface (qui sait rendre la fiche).

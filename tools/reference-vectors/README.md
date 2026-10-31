@@ -66,7 +66,7 @@ affiche le détail du cas `n` (familles `noms`, `entetes`, `liens`).
 cargo run --release --manifest-path tools/reference-vectors/Cargo.toml -- --vecteurs-coffre tests/KyfRev.Infrastructure.Vault.Tests/fixtures/reference
 ```
 
-`--scenarios <dossier>` joue chaque scénario (fiches, organisation, corbeille, analyse et journal, annotations, rappels et réglages, citations, schémas et modèles, sauvegardes, exports, partage, import et réparations) de `tests/KyfRev.Infrastructure.Vault.Tests/fixtures/scenarios`, ou le seul scénario `<dossier>`
+`--scenarios <dossier>` joue chaque scénario (fiches, organisation, corbeille, analyse et journal, annotations, rappels et réglages, citations, schémas et modèles, sauvegardes, exports, partage, import et réparations, fiche ouverte et état de révision) de `tests/KyfRev.Infrastructure.Vault.Tests/fixtures/scenarios`, ou le seul scénario `<dossier>`
 (une suite d'opérations décrite dans `scenario.json`) avec le crate `coffre`, et écrit à côté le
 coffre obtenu (`attendu/`), le résultat de chaque opération, les identifiants créés dans l'ordre
 et la liste des dossiers. Les tests C# rejouent le scénario avec les mêmes identifiants et

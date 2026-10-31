@@ -5,19 +5,6 @@ using KyfRev.Infrastructure.Vault.Paths;
 
 namespace KyfRev.Infrastructure.Vault.Backups;
 
-/// <summary>Durées de conservation des sauvegardes : 14 quotidiennes, 8 hebdomadaires, 24 mensuelles.</summary>
-public sealed record RotationPolicy(int Days = 14, int Weeks = 8, int Months = 24)
-{
-    /// <summary>La politique par défaut.</summary>
-    public static RotationPolicy Default { get; } = new();
-}
-
-/// <summary>Une sauvegarde écrite et vérifiée.</summary>
-/// <param name="Path">Fichier <c>.zip</c>.</param>
-/// <param name="Timestamp">Heure locale inscrite dans son nom.</param>
-/// <param name="FileCount">Fichiers du coffre qu'elle contient.</param>
-public sealed record BackupFile(string Path, DateTime Timestamp, int FileCount);
-
 /// <summary>
 /// Sauvegardes <c>.zip</c> du coffre, rotation et restauration, comme dans la version 0.x.
 /// La rotation est la seule suppression automatique : elle ne vise que des copies

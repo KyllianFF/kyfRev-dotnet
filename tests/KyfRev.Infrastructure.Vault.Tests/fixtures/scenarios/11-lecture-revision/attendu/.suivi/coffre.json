@@ -1,0 +1,41 @@
+{
+  "format": 1,
+  "id": "v_01M69X4VA4464P9P3Q65HAATAR",
+  "creeLe": "2026-09-01",
+  "revision": {
+    "sequence": [
+      0,
+      1,
+      3,
+      7,
+      14,
+      30
+    ],
+    "rappelActif": true
+  },
+  "rappels": {
+    "delaiMinimalMois": 2,
+    "sequenceReposMois": [
+      2,
+      4,
+      8,
+      12
+    ],
+    "maxParJour": 2,
+    "attenteMaxJours": 30,
+    "inclureArchivageManuel": true
+  },
+  "citations": {
+    "active": false,
+    "enLigne": true,
+    "domaines": [
+      "philosophie",
+      "art",
+      "science",
+      "informatique"
+    ]
+  },
+  "sauvegardes": {
+    "rotation": true
+  }
+}
