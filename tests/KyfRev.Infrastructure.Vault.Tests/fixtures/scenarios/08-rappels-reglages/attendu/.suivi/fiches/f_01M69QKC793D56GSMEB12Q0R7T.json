@@ -1,0 +1,74 @@
+{
+  "format": 1,
+  "id": "f_01M69QKC793D56GSMEB12Q0R7T",
+  "chemin": "fiches/Cours/Partie/Gamma.md",
+  "titre": "Gamma",
+  "empreinte": "sha256:f2b806c281a7eb5e839c0e0843312cc0031b3092676d6d16ee87781eaca84c0d",
+  "modifieeLe": "2026-09-01T12:00:00Z",
+  "statut": "active",
+  "cycle": {
+    "numero": 2,
+    "sequence": [
+      0,
+      1
+    ],
+    "demarreLe": "2026-11-05",
+    "etape": 1,
+    "echeance": "2026-11-06",
+    "derniereRevision": "2026-11-05"
+  },
+  "compteurs": {
+    "cyclesCommences": 2,
+    "cyclesTermines": 1,
+    "cyclesInterrompus": 0
+  },
+  "historique": [
+    {
+      "evt": "revision",
+      "le": "2026-09-01T12:00:00Z",
+      "jour": "2026-09-01",
+      "cycle": 1,
+      "etape": "J0",
+      "prevuLe": "2026-09-01",
+      "retardJours": 0,
+      "origine": "creation"
+    },
+    {
+      "evt": "revision",
+      "le": "2026-09-03T12:00:00Z",
+      "jour": "2026-09-03",
+      "cycle": 1,
+      "etape": "J1",
+      "prevuLe": "2026-09-02",
+      "retardJours": 1
+    },
+    {
+      "evt": "archivage",
+      "le": "2026-09-03T12:00:00Z",
+      "jour": "2026-09-03",
+      "raison": "fin_de_cycle"
+    },
+    {
+      "evt": "rappel",
+      "le": "2026-11-05T12:00:00Z",
+      "jour": "2026-11-05",
+      "tireLe": "2026-11-05",
+      "resultat": "a_revoir_entierement"
+    },
+    {
+      "evt": "reactivation",
+      "le": "2026-11-05T12:00:00Z",
+      "jour": "2026-11-05"
+    },
+    {
+      "evt": "revision",
+      "le": "2026-11-05T12:00:00Z",
+      "jour": "2026-11-05",
+      "cycle": 2,
+      "etape": "J0",
+      "prevuLe": "2026-11-05",
+      "retardJours": 0,
+      "origine": "rappel"
+    }
+  ]
+}

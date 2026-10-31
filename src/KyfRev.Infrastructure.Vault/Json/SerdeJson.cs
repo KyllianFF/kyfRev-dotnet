@@ -34,6 +34,65 @@ internal static class SerdeJson
         return builder.ToString();
     }
 
+    /// <summary>
+    /// Copie d'un JSON telle que <c>serde_json::Value</c> la réécrit : clés des objets triées par
+    /// octets UTF-8 (à tous les niveaux), nombres réels au format de Rust.
+    /// </summary>
+    public static JsonNode? Canonical(JsonNode? node) => node switch
+    {
+        JsonObject obj => new JsonObject(obj
+            .OrderBy(pair => pair.Key, Text.Utf8Order.Instance)
+            .Select(pair => KeyValuePair.Create(pair.Key, Canonical(pair.Value)))),
+        JsonArray array => new JsonArray([.. array.Select(Canonical)]),
+        JsonValue value when value.GetValueKind() == JsonValueKind.Number && value.ToJsonString() is var raw && raw.AsSpan().IndexOfAny(".eE") >= 0 =>
+            JsonValue.Create(JsonDocument.Parse(Float(double.Parse(raw, CultureInfo.InvariantCulture))).RootElement.Clone()),
+        null => null,
+        _ => node.DeepClone(),
+    };
+
+    /// <summary>
+    /// Un <c>f64</c> écrit comme <c>serde_json</c> (algorithme Ryū) : le plus court qui se relit à
+    /// l'identique, « .0 » pour une valeur entière, exposant au-delà de 16 chiffres ou en deçà de 10⁻⁵.
+    /// </summary>
+    public static string Float(double value)
+    {
+        if (value == 0)
+        {
+            return double.IsNegative(value) ? "-0.0" : "0.0";
+        }
+        var roundTrip = Math.Abs(value).ToString("R", CultureInfo.InvariantCulture);
+        // Chiffres significatifs (sans point ni zéros de tête) et exposant de la représentation la plus courte.
+        var mantissa = roundTrip;
+        var exponent = 0;
+        if (roundTrip.IndexOf('E', StringComparison.Ordinal) is var e and >= 0)
+        {
+            mantissa = roundTrip[..e];
+            exponent = int.Parse(roundTrip[(e + 1)..], CultureInfo.InvariantCulture);
+        }
+        var dot = mantissa.IndexOf('.', StringComparison.Ordinal);
+        var digits = mantissa.Replace(".", string.Empty, StringComparison.Ordinal).TrimStart('0');
+        var integerDigits = dot < 0 ? mantissa.Length : dot;
+        var leadingZeros = mantissa.Replace(".", string.Empty, StringComparison.Ordinal).Length - digits.Length;
+        digits = digits.TrimEnd('0');
+        if (digits.Length == 0)
+        {
+            digits = "0";
+        }
+        // Position du point décimal après le premier chiffre significatif.
+        var point = integerDigits - leadingZeros + exponent;
+        var length = digits.Length;
+        var k = point - length;
+        var text = k switch
+        {
+            _ when k >= 0 && point <= 16 => digits + new string('0', k) + ".0",
+            _ when point is > 0 and <= 16 => $"{digits[..point]}.{digits[point..]}",
+            _ when point is > -5 and <= 0 => "0." + new string('0', -point) + digits,
+            _ when length == 1 => $"{digits}e{point - 1}",
+            _ => $"{digits[..1]}.{digits[1..]}e{point - 1}",
+        };
+        return value < 0 ? "-" + text : text;
+    }
+
     private static void WritePretty(StringBuilder builder, JsonNode? node, int depth)
     {
         switch (node)

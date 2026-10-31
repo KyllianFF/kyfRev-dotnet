@@ -16,11 +16,11 @@
 15 ecrire ok
 16 ecrire ok
 17 analyser ok
-18 sante ok deplacees=[f_01M69NJ8789889XPCH0JKZ3WQ9 fiches/A/Un.md fiches/B/Un renommé.md] modifiees=[f_01M69NJ87TZM73SXVJR3B03WJ9] manquantes=[f_01M69NJ88BB57SAFCKR5VK668P] doublons=[f_01M69NJ88V4WHT4PZ49J6NZ2YD fiches/A/Copie.md,fiches/A/Quatre.md] non_suivies=[fiches/A/Libre.md;fiches/A/texte.MD] sans_suivi=[f_01M69JFV2X5VM53EY3DR1BY61M fiches/A/Orpheline.md] illisibles=[fiches/A/Court.md;fiches/A/Entete.md;fiches/A/Latin1.md] liens=[]
-19 fiche ok fiches/B/Un renommé.md "Un" [] present sha256:0053b9dde3b2082c72ca717c4af49e7c82cdb0356b7502f600f15c0d5954d960
-20 fiche ok fiches/A/Deux.md "Deux (modifiée)" ["ailleurs"] present sha256:b94c49f05229e2ecaed221d7dd26b3bd88aa2bb411bb4a6fbe00d3de63c1c919
-21 fiche ok fiches/A/Trois.md "Trois" [] manquant sha256:68c4d2797c57b5182351d9b67bd173e17408d179952e0ee940cf8f460d73a93f
-22 fiche ok fiches/A/Quatre.md "Quatre" [] doublon sha256:68ff634c3bf9096ddcaf4bedf309c3d7a0a76aecad54ebd2151c766e51c811e2
+18 sante ok deplacees=[f_01M69QKBGDFCN903Q4E0VSAPAT fiches/A/Un.md fiches/B/Un renommé.md] modifiees=[f_01M69QKBGVKEZ47QE7ABA9WWYQ] manquantes=[f_01M69QKBH8R7VSBXF3Z5HABHDS] doublons=[f_01M69QKBHP4MC91T6MX52NGD28 fiches/A/Copie.md,fiches/A/Quatre.md] non_suivies=[fiches/A/Libre.md;fiches/A/texte.MD] sans_suivi=[f_01M69JFV2X5VM53EY3DR1BY61M fiches/A/Orpheline.md] illisibles=[fiches/A/Court.md;fiches/A/Entete.md;fiches/A/Latin1.md] liens=[] orphelines=[]
+19 fiche ok fiches/B/Un renommé.md "Un" [] present sha256:1e93f1426a12cb51a1f36c6d9abec29ef1d2f4ffd5cfa1128ea066837cfbc34c
+20 fiche ok fiches/A/Deux.md "Deux (modifiée)" ["ailleurs"] present sha256:75852379e860490a2b12fac91cbfefb3430678940d6a5fc29a0b429a6907627c
+21 fiche ok fiches/A/Trois.md "Trois" [] manquant sha256:b3a73c16960b74a4db25c59e1c9f65e367a8f316f174550c44a0cf1d8d1e29cf
+22 fiche ok fiches/A/Quatre.md "Quatre" [] doublon sha256:42f238e643994e26477fa8a30519b72d86f7887769de504307963420c6074221
 23 lire_fiche erreur FicheManquante : Le fichier de la fiche « Trois » est introuvable ; consultez « Santé du coffre ».
 24 lire_fiche erreur DoublonNonResolu : Plusieurs fichiers portent l'identifiant de « Quatre » ; consultez « Santé du coffre ».
 25 reviser ok
@@ -28,13 +28,13 @@
 27 suivre_fichier erreur DejaSuivie : « fiches/A/Libre.md » est déjà suivi (son en-tête contient un identifiant).
 28 suivre_fichier erreur CheminInvalide : Chemin refusé « citations/x.md » : une fiche doit se trouver dans le dossier « fiches ».
 29 suivre_fichier erreur NonUtf8 : « fiches/A/Latin1.md » n'est pas encodé en UTF-8 : l'application ne le modifiera pas.
-30 fiche ok fiches/A/Libre.md "Libre" [] present sha256:31bb3d4eb0ae7a2fe1f5b04aef91ab3c4face689d140c096ca253eb1466beb26
-31 lire_fiche ok sha256:31bb3d4eb0ae7a2fe1f5b04aef91ab3c4face689d140c096ca253eb1466beb26
-32 sante ok deplacees=[f_01M69NJ8789889XPCH0JKZ3WQ9 fiches/A/Un.md fiches/B/Un renommé.md] modifiees=[f_01M69NJ87TZM73SXVJR3B03WJ9] manquantes=[f_01M69NJ88BB57SAFCKR5VK668P] doublons=[f_01M69NJ88V4WHT4PZ49J6NZ2YD fiches/A/Copie.md,fiches/A/Quatre.md] non_suivies=[fiches/A/texte.MD] sans_suivi=[f_01M69JFV2X5VM53EY3DR1BY61M fiches/A/Orpheline.md] illisibles=[fiches/A/Court.md;fiches/A/Entete.md;fiches/A/Latin1.md] liens=[]
+30 fiche ok fiches/A/Libre.md "Libre" [] present sha256:f774d880df2263cd03bda985fdcaee8d56177c04c2b107d4b3da9fdca91f469b
+31 lire_fiche ok sha256:f774d880df2263cd03bda985fdcaee8d56177c04c2b107d4b3da9fdca91f469b
+32 sante ok deplacees=[f_01M69QKBGDFCN903Q4E0VSAPAT fiches/A/Un.md fiches/B/Un renommé.md] modifiees=[f_01M69QKBGVKEZ47QE7ABA9WWYQ] manquantes=[f_01M69QKBH8R7VSBXF3Z5HABHDS] doublons=[f_01M69QKBHP4MC91T6MX52NGD28 fiches/A/Copie.md,fiches/A/Quatre.md] non_suivies=[fiches/A/texte.MD] sans_suivi=[f_01M69JFV2X5VM53EY3DR1BY61M fiches/A/Orpheline.md] illisibles=[fiches/A/Court.md;fiches/A/Entete.md;fiches/A/Latin1.md] liens=[] orphelines=[]
 33 ecrire ok
 34 ouvrir ok
-35 sante ok deplacees=[f_01M69NJ8789889XPCH0JKZ3WQ9 fiches/B/Un renommé.md fiches/C/Un.md] modifiees=[] manquantes=[f_01M69NJ88BB57SAFCKR5VK668P] doublons=[f_01M69NJ88V4WHT4PZ49J6NZ2YD fiches/A/Copie.md,fiches/A/Quatre.md] non_suivies=[fiches/A/texte.MD] sans_suivi=[f_01M69JFV2X5VM53EY3DR1BY61M fiches/A/Orpheline.md] illisibles=[fiches/A/Court.md;fiches/A/Entete.md;fiches/A/Latin1.md] liens=[fiches/A/Deux.md;fiches/B/Absent.md]
-36 fiche ok fiches/C/Un.md "Un" [] present sha256:0053b9dde3b2082c72ca717c4af49e7c82cdb0356b7502f600f15c0d5954d960
+35 sante ok deplacees=[f_01M69QKBGDFCN903Q4E0VSAPAT fiches/B/Un renommé.md fiches/C/Un.md] modifiees=[] manquantes=[f_01M69QKBH8R7VSBXF3Z5HABHDS] doublons=[f_01M69QKBHP4MC91T6MX52NGD28 fiches/A/Copie.md,fiches/A/Quatre.md] non_suivies=[fiches/A/texte.MD] sans_suivi=[f_01M69JFV2X5VM53EY3DR1BY61M fiches/A/Orpheline.md] illisibles=[fiches/A/Court.md;fiches/A/Entete.md;fiches/A/Latin1.md] liens=[fiches/A/Deux.md;fiches/B/Absent.md] orphelines=[]
+36 fiche ok fiches/C/Un.md "Un" [] present sha256:1e93f1426a12cb51a1f36c6d9abec29ef1d2f4ffd5cfa1128ea066837cfbc34c
 37 ecrire ok
 38 ouvrir ok
-39 sante ok deplacees=[] modifiees=[] manquantes=[f_01M69NJ88BB57SAFCKR5VK668P] doublons=[f_01M69NJ88V4WHT4PZ49J6NZ2YD fiches/A/Copie.md,fiches/A/Quatre.md] non_suivies=[fiches/A/texte.MD] sans_suivi=[f_01M69JFV2X5VM53EY3DR1BY61M fiches/A/Orpheline.md] illisibles=[fiches/A/Court.md;fiches/A/Entete.md;fiches/A/Latin1.md] liens=[.suivi/operation.json]
+39 sante ok deplacees=[] modifiees=[] manquantes=[f_01M69QKBH8R7VSBXF3Z5HABHDS] doublons=[f_01M69QKBHP4MC91T6MX52NGD28 fiches/A/Copie.md,fiches/A/Quatre.md] non_suivies=[fiches/A/texte.MD] sans_suivi=[f_01M69JFV2X5VM53EY3DR1BY61M fiches/A/Orpheline.md] illisibles=[fiches/A/Court.md;fiches/A/Entete.md;fiches/A/Latin1.md] liens=[.suivi/operation.json] orphelines=[]

@@ -9,6 +9,21 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- Coffre, écritures complémentaires, identiques à la version 0.x :
+  - annotations : passages et définitions, commentaire et définition modifiés, ré-ancrage,
+    passage changé (avec ou sans retour à J0), corbeille, méthode des J propre à chaque passage ;
+    l'analyse signale les fichiers d'annotations illisibles (jamais réécrits) et les annotations
+    orphelines ;
+  - rappels : tirage du jour (une seule fois par jour), réponses aux rappels, exclusion et
+    réinclusion ;
+  - réglages et examens : réglages vérifiés, module Schémas, examens par dossier, échéances
+    ramenées avant l'examen ;
+  - citations : ajout, modification qui garde les champs d'autres outils, corbeille, citation du
+    jour trouvée en ligne retenue dans le coffre ;
+  - schémas réseau : création, enregistrement avec détection de conflit, copie ;
+  - modèles de fiche (intégrés et du coffre) et données d'extension.
+- Trois scénarios de plus (178 opérations) comparés à la 0.x : les neuf scénarios donnent des
+  coffres identiques à l'octet près.
 - Coffre, écriture des fiches (`VaultSession`), identique à la version 0.x :
   - ouverture : verrou, reprise d'une opération interrompue, analyse qui suit les fiches
     déplacées, modifiées, renommées ou étiquetées hors de l'application ;

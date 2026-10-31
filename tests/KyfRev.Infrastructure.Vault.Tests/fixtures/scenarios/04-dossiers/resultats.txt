@@ -13,19 +13,19 @@
 12 analyser ok
 13 dossiers ok ["Réseau","Réseau/Cisco"]
 14 deplacer_dossier ok "Équipements/Cisco"
-15 fiche ok fiches/Équipements/Cisco/VLAN.md "VLAN" [] present sha256:fe21610dc08210de2a63dcfc848fd39b7967138832f9110a3f696d82f4066516
-16 lire_fiche ok sha256:79f916e8cf38149bfcc7fc968689d78784cea1819e78c6ef82dac8d7455bd9c4
-17 lire_fiche ok sha256:3dd1c2daaf740f16461088341d3be04a4fb733265d75769323b6ce6de54dc5c2
-18 lire_fiche ok sha256:fe21610dc08210de2a63dcfc848fd39b7967138832f9110a3f696d82f4066516
-19 sante ok deplacees=[] modifiees=[] manquantes=[] doublons=[] non_suivies=[fiches/Équipements/Cisco/Libre.md] sans_suivi=[] illisibles=[] liens=[]
+15 fiche ok fiches/Équipements/Cisco/VLAN.md "VLAN" [] present sha256:0142e4711273ddaae289a4dcb78d29450802219317da380a6cb29964e8e52dc1
+16 lire_fiche ok sha256:99c06121383cb0eecfda3eae21026ce10259d2a2b8b38104af67174c20335cfc
+17 lire_fiche ok sha256:ec4f06c2f19b5d9a5296171d7a65c8cc60a6cf760086ef0df6a29f9bf428e818
+18 lire_fiche ok sha256:0142e4711273ddaae289a4dcb78d29450802219317da380a6cb29964e8e52dc1
+19 sante ok deplacees=[] modifiees=[] manquantes=[] doublons=[] non_suivies=[fiches/Équipements/Cisco/Libre.md] sans_suivi=[] illisibles=[] liens=[] orphelines=[]
 20 deplacer_dossier erreur CheminInvalide : Chemin refusé « équipements/Sous » : un dossier ne peut pas aller dans l'un de ses propres sous-dossiers.
 21 deplacer_dossier erreur DossierInconnu : Le dossier « Inexistant » est introuvable.
 22 creer_dossier ok "Vide"
 23 deplacer_dossier erreur DejaExistant
 24 deplacer_dossier ok "Vide"
 25 deplacer_dossier ok "réseau"
-26 fiche ok fiches/réseau/OSPF.md "OSPF" [] present sha256:79f916e8cf38149bfcc7fc968689d78784cea1819e78c6ef82dac8d7455bd9c4
-27 lire_fiche ok sha256:bd3624f500e561068b5c680d88d181a132f012f9978c622794b6addb42ab2518
+26 fiche ok fiches/réseau/OSPF.md "OSPF" [] present sha256:99c06121383cb0eecfda3eae21026ce10259d2a2b8b38104af67174c20335cfc
+27 lire_fiche ok sha256:5ee4589d1ea64d7568b1f86160a36255e5add67b190bf36d49dd635ef09fae0b
 28 dossiers ok ["réseau","Vide","Équipements","Équipements/Cisco"]
 29 ouvrir ok
-30 sante ok deplacees=[] modifiees=[] manquantes=[] doublons=[] non_suivies=[fiches/Équipements/Cisco/Libre.md] sans_suivi=[] illisibles=[] liens=[]
+30 sante ok deplacees=[] modifiees=[] manquantes=[] doublons=[] non_suivies=[fiches/Équipements/Cisco/Libre.md] sans_suivi=[] illisibles=[] liens=[] orphelines=[]

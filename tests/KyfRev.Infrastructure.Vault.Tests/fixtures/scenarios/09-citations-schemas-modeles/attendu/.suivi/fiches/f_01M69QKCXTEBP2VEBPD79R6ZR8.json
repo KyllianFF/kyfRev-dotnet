@@ -1,0 +1,41 @@
+{
+  "format": 1,
+  "id": "f_01M69QKCXTEBP2VEBPD79R6ZR8",
+  "chemin": "fiches/Lettres/Source.md",
+  "titre": "Source",
+  "empreinte": "sha256:96e596c7112823d7f062c17cb8813f0b0409f0cfc4b23b31047d3664e8e4f64d",
+  "modifieeLe": "2026-09-10T12:00:00Z",
+  "statut": "active",
+  "cycle": {
+    "numero": 1,
+    "sequence": [
+      0,
+      1,
+      3,
+      7,
+      14,
+      30
+    ],
+    "demarreLe": "2026-09-10",
+    "etape": 1,
+    "echeance": "2026-09-11",
+    "derniereRevision": "2026-09-10"
+  },
+  "compteurs": {
+    "cyclesCommences": 1,
+    "cyclesTermines": 0,
+    "cyclesInterrompus": 0
+  },
+  "historique": [
+    {
+      "evt": "revision",
+      "le": "2026-09-10T12:00:00Z",
+      "jour": "2026-09-10",
+      "cycle": 1,
+      "etape": "J0",
+      "prevuLe": "2026-09-10",
+      "retardJours": 0,
+      "origine": "creation"
+    }
+  ]
+}

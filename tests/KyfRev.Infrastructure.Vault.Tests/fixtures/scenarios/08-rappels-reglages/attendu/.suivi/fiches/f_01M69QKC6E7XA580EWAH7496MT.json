@@ -1,0 +1,59 @@
+{
+  "format": 1,
+  "id": "f_01M69QKC6E7XA580EWAH7496MT",
+  "chemin": "fiches/Cours/Alpha.md",
+  "titre": "Alpha",
+  "empreinte": "sha256:be8dbf5f16583c3c0a30fcdf878c1cbc2bd5f6e9a5584aa08800136a61004fc9",
+  "modifieeLe": "2026-09-01T12:00:00Z",
+  "statut": "archivee",
+  "archive": {
+    "archiveeLe": "2026-09-02",
+    "raison": "fin_de_cycle",
+    "inclureDansRappels": true,
+    "niveauRepos": 0,
+    "eligibleLe": "2026-11-02",
+    "rappelTireLe": "2026-11-08"
+  },
+  "compteurs": {
+    "cyclesCommences": 1,
+    "cyclesTermines": 1,
+    "cyclesInterrompus": 0
+  },
+  "historique": [
+    {
+      "evt": "revision",
+      "le": "2026-09-01T12:00:00Z",
+      "jour": "2026-09-01",
+      "cycle": 1,
+      "etape": "J0",
+      "prevuLe": "2026-09-01",
+      "retardJours": 0,
+      "origine": "creation"
+    },
+    {
+      "evt": "revision",
+      "le": "2026-09-02T12:00:00Z",
+      "jour": "2026-09-02",
+      "cycle": 1,
+      "etape": "J1",
+      "prevuLe": "2026-09-02",
+      "retardJours": 0
+    },
+    {
+      "evt": "archivage",
+      "le": "2026-09-02T12:00:00Z",
+      "jour": "2026-09-02",
+      "raison": "fin_de_cycle"
+    },
+    {
+      "evt": "inclusion_rappels",
+      "le": "2026-11-06T12:00:00Z",
+      "inclure": false
+    },
+    {
+      "evt": "inclusion_rappels",
+      "le": "2026-11-07T12:00:00Z",
+      "inclure": true
+    }
+  ]
+}

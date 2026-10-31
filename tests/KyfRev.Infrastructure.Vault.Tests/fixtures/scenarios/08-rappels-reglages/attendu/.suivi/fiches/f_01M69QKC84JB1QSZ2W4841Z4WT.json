@@ -1,0 +1,53 @@
+{
+  "format": 1,
+  "id": "f_01M69QKC84JB1QSZ2W4841Z4WT",
+  "chemin": "fiches/Cours/Epsilon.md",
+  "titre": "Epsilon",
+  "empreinte": "sha256:b40982fdaf388e4225c1520228ed40c22457269a6cc657b05432ff4b9e8e97f1",
+  "modifieeLe": "2026-09-01T12:00:00Z",
+  "statut": "active",
+  "cycle": {
+    "numero": 1,
+    "sequence": [
+      0,
+      1
+    ],
+    "demarreLe": "2026-09-01",
+    "etape": 1,
+    "echeance": "2026-11-07",
+    "derniereRevision": "2026-09-01"
+  },
+  "compteurs": {
+    "cyclesCommences": 1,
+    "cyclesTermines": 0,
+    "cyclesInterrompus": 0
+  },
+  "historique": [
+    {
+      "evt": "revision",
+      "le": "2026-09-01T12:00:00Z",
+      "jour": "2026-09-01",
+      "cycle": 1,
+      "etape": "J0",
+      "prevuLe": "2026-09-01",
+      "retardJours": 0,
+      "origine": "creation"
+    },
+    {
+      "evt": "report",
+      "le": "2026-11-06T12:00:00Z",
+      "cycle": 1,
+      "etape": "J1",
+      "de": "2026-09-02",
+      "vers": "2026-12-01"
+    },
+    {
+      "evt": "report",
+      "le": "2026-11-06T12:00:00Z",
+      "cycle": 1,
+      "etape": "J1",
+      "de": "2026-12-01",
+      "vers": "2026-11-07"
+    }
+  ]
+}

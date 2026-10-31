@@ -285,6 +285,7 @@ public sealed partial class VaultSession : IDisposable
         }
 
         _sheets = sheets;
+        LoadAnnotations(report);
         Health = report;
     }
 

@@ -1,0 +1,41 @@
+{
+  "format": 1,
+  "id": "f_01M69QKAMZ2T0WV413XQ7912VP",
+  "chemin": "fiches/Biologie/Division/la cellule.md",
+  "titre": "la cellule",
+  "empreinte": "sha256:86cf8b7ef4fae4ea048685371d727c2fb6bb48c75454ce0ad9bd3b824179ece5",
+  "modifieeLe": "2026-09-05T12:00:00Z",
+  "statut": "active",
+  "cycle": {
+    "numero": 1,
+    "sequence": [
+      0,
+      1,
+      3,
+      7,
+      14,
+      30
+    ],
+    "demarreLe": "2026-09-05",
+    "etape": 1,
+    "echeance": "2026-09-06",
+    "derniereRevision": "2026-09-05"
+  },
+  "compteurs": {
+    "cyclesCommences": 1,
+    "cyclesTermines": 0,
+    "cyclesInterrompus": 0
+  },
+  "historique": [
+    {
+      "evt": "revision",
+      "le": "2026-09-05T12:00:00Z",
+      "jour": "2026-09-05",
+      "cycle": 1,
+      "etape": "J0",
+      "prevuLe": "2026-09-05",
+      "retardJours": 0,
+      "origine": "creation"
+    }
+  ]
+}

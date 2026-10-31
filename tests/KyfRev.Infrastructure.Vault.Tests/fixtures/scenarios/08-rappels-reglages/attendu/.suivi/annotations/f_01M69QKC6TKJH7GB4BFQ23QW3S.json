@@ -1,0 +1,67 @@
+{
+  "format": 1,
+  "ficheId": "f_01M69QKC6TKJH7GB4BFQ23QW3S",
+  "annotations": [
+    {
+      "id": "a_01M69QKCAQQW2ZTTEPTN5S7NAQ",
+      "ficheId": "f_01M69QKC6TKJH7GB4BFQ23QW3S",
+      "creeeLe": "2026-11-05T12:00:00Z",
+      "modifieeLe": "2026-11-05T12:00:00Z",
+      "ancre": {
+        "exact": "Beta",
+        "avant": "",
+        "apres": "",
+        "debut": 0,
+        "fin": 4,
+        "section": [],
+        "empreinteFiche": "sha256:aa"
+      },
+      "etatAncrage": "ancree",
+      "statut": "active",
+      "cycle": {
+        "numero": 1,
+        "sequence": [
+          0,
+          1
+        ],
+        "demarreLe": "2026-11-05",
+        "etape": 1,
+        "echeance": "2026-11-13",
+        "derniereRevision": "2026-11-05"
+      },
+      "compteurs": {
+        "cyclesCommences": 1,
+        "cyclesTermines": 0,
+        "cyclesInterrompus": 0
+      },
+      "historique": [
+        {
+          "evt": "revision",
+          "le": "2026-11-05T12:00:00Z",
+          "jour": "2026-11-05",
+          "cycle": 1,
+          "etape": "J0",
+          "prevuLe": "2026-11-05",
+          "retardJours": 0,
+          "origine": "creation"
+        },
+        {
+          "evt": "report",
+          "le": "2026-11-06T12:00:00Z",
+          "cycle": 1,
+          "etape": "J1",
+          "de": "2026-11-06",
+          "vers": "2026-12-15"
+        },
+        {
+          "evt": "report",
+          "le": "2026-11-06T12:00:00Z",
+          "cycle": 1,
+          "etape": "J1",
+          "de": "2026-12-15",
+          "vers": "2026-11-13"
+        }
+      ]
+    }
+  ]
+}

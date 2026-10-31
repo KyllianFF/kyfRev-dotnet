@@ -68,8 +68,11 @@ public sealed class HealthReport
     /// <summary>Fichiers dont les liens n'ont pas pu être mis à jour après un renommage : à vérifier.</summary>
     public IReadOnlyList<VaultPath> LinksToCheck => LinksToCheckList;
 
+    /// <summary>Annotations hors corbeille dont la fiche est introuvable ; elles restent révisables.</summary>
+    public IReadOnlyList<string> OrphanAnnotations => OrphanAnnotationsList;
+
     /// <summary>Nombre de problèmes qui attendent une décision.</summary>
-    public int Problems => Missing.Count + Duplicates.Count + Untracked.Count + WithoutTracking.Count + Unreadable.Count + LinksToCheck.Count;
+    public int Problems => Missing.Count + Duplicates.Count + Untracked.Count + WithoutTracking.Count + Unreadable.Count + LinksToCheck.Count + OrphanAnnotations.Count;
 
     internal List<SheetMove> MovedList { get; } = [];
 
@@ -86,6 +89,8 @@ public sealed class HealthReport
     internal List<UnreadableFile> UnreadableList { get; } = [];
 
     internal List<VaultPath> LinksToCheckList { get; } = [];
+
+    internal List<string> OrphanAnnotationsList { get; } = [];
 }
 
 /// <summary>Issue d'un enregistrement du corps d'une fiche : <see cref="SheetSaved"/> ou <see cref="SaveConflict"/>.</summary>

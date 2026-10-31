@@ -1,0 +1,10 @@
+.suivi
+.suivi/annotations
+.suivi/corbeille
+.suivi/fiches
+.suivi/versions
+citations
+fiches
+fiches/.supprimees
+fiches/.supprimees/f_01M69QKBSER7R6XY97QJXAA0T1
+fiches/Histoire

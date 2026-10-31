@@ -70,6 +70,42 @@ public enum VaultErrorKind
 
     /// <summary>Opération refusée par les règles de la méthode des J.</summary>
     Tracking,
+
+    /// <summary>Aucune annotation ne porte cet identifiant.</summary>
+    UnknownAnnotation,
+
+    /// <summary>L'annotation est à la corbeille : à restaurer d'abord.</summary>
+    AnnotationInTrash,
+
+    /// <summary>Le fichier d'annotations de la fiche est illisible : il n'est jamais réécrit.</summary>
+    UnreadableAnnotations,
+
+    /// <summary>Annotation refusée (passage vide ou trop long, commentaire trop long).</summary>
+    InvalidAnchor,
+
+    /// <summary>L'annotation est un passage, pas une définition.</summary>
+    NotADefinition,
+
+    /// <summary>Définition refusée (terme ou explication vide ou trop long).</summary>
+    InvalidDefinition,
+
+    /// <summary>Réglages refusés.</summary>
+    InvalidSettings,
+
+    /// <summary>Citation refusée.</summary>
+    InvalidQuote,
+
+    /// <summary>La citation est introuvable.</summary>
+    UnknownQuote,
+
+    /// <summary>La citation est à la corbeille : à restaurer d'abord.</summary>
+    QuoteInTrash,
+
+    /// <summary>Le schéma réseau est introuvable.</summary>
+    UnknownSchema,
+
+    /// <summary>Schéma réseau refusé.</summary>
+    InvalidSchema,
 }
 
 /// <summary>
@@ -178,4 +214,40 @@ public sealed class VaultException : Exception
 
     internal static VaultException Refused(TrackingError error) =>
         new(VaultErrorKind.Tracking, error.Message) { TrackingError = error };
+
+    internal static VaultException UnknownAnnotation(string id) =>
+        new(VaultErrorKind.UnknownAnnotation, $"Aucune annotation ne porte l'identifiant {id}.");
+
+    internal static VaultException AnnotationInTrash() =>
+        new(VaultErrorKind.AnnotationInTrash, "Cette annotation est dans la corbeille : restaurez-la d'abord.");
+
+    internal static VaultException UnreadableAnnotations(string sheetId) =>
+        new(VaultErrorKind.UnreadableAnnotations, $"Le fichier d'annotations de la fiche {sheetId} est illisible ; consultez « Santé du coffre ».");
+
+    internal static VaultException InvalidAnchor(string reason) =>
+        new(VaultErrorKind.InvalidAnchor, $"Annotation refusée : {reason}.");
+
+    internal static VaultException NotADefinition() =>
+        new(VaultErrorKind.NotADefinition, "Cette annotation est un passage, pas une définition.");
+
+    internal static VaultException InvalidDefinition(string reason) =>
+        new(VaultErrorKind.InvalidDefinition, $"Définition refusée : {reason}.");
+
+    internal static VaultException InvalidSettings(string message) =>
+        new(VaultErrorKind.InvalidSettings, $"Réglages refusés : {message}");
+
+    internal static VaultException InvalidQuote(string reason) =>
+        new(VaultErrorKind.InvalidQuote, $"Citation refusée : {reason}.");
+
+    internal static VaultException UnknownQuote(string path) =>
+        new(VaultErrorKind.UnknownQuote, $"La citation « {path} » est introuvable.");
+
+    internal static VaultException QuoteInTrash() =>
+        new(VaultErrorKind.QuoteInTrash, "Cette citation est dans la corbeille : restaurez-la d'abord.");
+
+    internal static VaultException UnknownSchema(string id) =>
+        new(VaultErrorKind.UnknownSchema, $"Le schéma réseau « {id} » est introuvable dans le coffre.");
+
+    internal static VaultException InvalidSchema(string reason) =>
+        new(VaultErrorKind.InvalidSchema, $"Schéma réseau refusé : {reason}.");
 }

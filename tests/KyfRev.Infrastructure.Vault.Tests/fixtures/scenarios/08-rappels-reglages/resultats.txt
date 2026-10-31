@@ -1,0 +1,61 @@
+0 initialiser ok
+1 reglages ok etapes=[1, 3, 7, 14, 30] rappel_actif=true max_par_jour=2 attente=30 repos=[2, 4, 8, 12] inclure=true rotation=true citations=false en_ligne=true domaines=["philosophie","art","science","informatique"] schemas=false
+2 modifier_reglages erreur ReglagesInvalides : Réglages refusés : Les étapes doivent être strictement croissantes (étape 2).
+3 modifier_reglages erreur ReglagesInvalides : Réglages refusés : il faut au moins un rappel par jour.
+4 modifier_reglages erreur ReglagesInvalides : Réglages refusés : choisissez au moins un domaine pour la citation du jour.
+5 modifier_reglages erreur Suivi : Réglages des rappels invalides : chaque durée de repos doit être d'au moins un mois
+6 modifier_reglages ok
+7 reglages ok etapes=[1] rappel_actif=true max_par_jour=2 attente=30 repos=[2, 4, 8, 12] inclure=true rotation=false citations=true en_ligne=true domaines=["art","science"] schemas=true
+8 modifier_reglages ok
+9 creer_fiche ok
+10 creer_fiche ok
+11 creer_fiche ok
+12 creer_fiche ok
+13 creer_fiche ok
+14 reviser ok
+15 reviser ok
+16 reviser ok
+17 preparer_journee ok [] 0
+18 preparer_journee ok deja
+19 preparer_journee ok [f_01M69QKC6TKJH7GB4BFQ23QW3S;f_01M69QKC793D56GSMEB12Q0R7T] 0
+20 fiche ok fiches/Cours/Alpha.md "Alpha" [] present sha256:be8dbf5f16583c3c0a30fcdf878c1cbc2bd5f6e9a5584aa08800136a61004fc9
+21 traiter_rappel erreur Suivi : Aucun rappel de consolidation n'est en attente pour cette fiche.
+22 traiter_rappel erreur Suivi : Marquez au moins un passage à revoir, ou choisissez « Fiche connue ».
+23 creer_annotation ok
+24 passages_marques ok 1
+25 passages_marques ok 0
+26 traiter_rappel ok
+27 traiter_rappel ok
+28 preparer_journee ok [f_01M69QKC6E7XA580EWAH7496MT] 0
+29 traiter_rappel erreur Suivi : Cet élément n'est pas archivé.
+30 inclure_dans_rappels ok
+31 inclure_dans_rappels ok
+32 inclure_dans_rappels ok
+33 inclure_dans_rappels erreur Suivi : Cet élément n'est pas archivé.
+34 fiche ok fiches/Cours/Alpha.md "Alpha" [] present sha256:be8dbf5f16583c3c0a30fcdf878c1cbc2bd5f6e9a5584aa08800136a61004fc9
+35 fiche ok fiches/Cours/Beta.md "Beta" [] present sha256:45a513a59368a3493ea10f122fa1b2dcaaeb5d0fed84e9e15a0b9cc6ee366242
+36 fiche ok fiches/Cours/Partie/Gamma.md "Gamma" [] present sha256:f2b806c281a7eb5e839c0e0843312cc0031b3092676d6d16ee87781eaca84c0d
+37 definir_examen ok
+38 definir_examen ok
+39 definir_examen erreur ReglagesInvalides : Réglages refusés : donnez un nom à l'examen.
+40 definir_examen ok
+41 examens_a_venir ok "" "Partiel" 2026-11-10 4 4 0;"Cours" "Bac blanc" 2026-11-20 14 3 0
+42 reporter ok
+43 reporter_annotation ok
+44 examens_a_venir ok "" "Partiel" 2026-11-10 4 4 2;"Cours" "Bac blanc" 2026-11-20 14 3 2
+45 resserrer ok 2
+46 fiche ok fiches/Cours/Epsilon.md "Epsilon" [] present sha256:b40982fdaf388e4225c1520228ed40c22457269a6cc657b05432ff4b9e8e97f1
+47 annotation ok f_01M69QKC6TKJH7GB4BFQ23QW3S "Beta" Ancree null null null - 0 4 cycle 1 1 2026-11-13
+48 resserrer erreur ReglagesInvalides : Réglages refusés : aucun examen pour ce dossier.
+49 resserrer ok 0
+50 retirer_examen ok
+51 examens_a_venir ok "" "Partiel" 2026-11-10 4 4 1
+52 donnees_extension ok null
+53 enregistrer_donnees_extension ok
+54 donnees_extension ok "{\"scores\": {\"alpha\": 3}}"
+55 enregistrer_donnees_extension erreur CheminInvalide : Chemin refusé « Quiz » : identifiant d'extension invalide.
+56 donnees_extension erreur CheminInvalide : Chemin refusé « -x » : identifiant d'extension invalide.
+57 ouvrir ok
+58 sante ok deplacees=[] modifiees=[] manquantes=[] doublons=[] non_suivies=[] sans_suivi=[] illisibles=[] liens=[] orphelines=[]
+59 reglages ok etapes=[1] rappel_actif=true max_par_jour=2 attente=30 repos=[2, 4, 8, 12] inclure=true rotation=false citations=true en_ligne=true domaines=["art","science"] schemas=true
+60 preparer_journee ok [f_01M69QKC6E7XA580EWAH7496MT] 0
