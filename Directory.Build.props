@@ -10,12 +10,6 @@
     <Version>1.0.0-alpha.0</Version>
   </PropertyGroup>
 
-  <!-- Cibles réutilisées par les projets. -->
-  <PropertyGroup Label="Cibles">
-    <KyfRevTargetFramework>net10.0</KyfRevTargetFramework>
-    <KyfRevWindowsTargetFramework>net10.0-windows10.0.19041.0</KyfRevWindowsTargetFramework>
-  </PropertyGroup>
-
   <PropertyGroup Label="Langage et analyse">
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>

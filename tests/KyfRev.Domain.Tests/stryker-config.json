@@ -1,0 +1,13 @@
+{
+  "stryker-config": {
+    "project": "KyfRev.Domain.csproj",
+    "configuration": "Release",
+    "coverage-analysis": "perTest",
+    "reporters": [ "progress", "html", "json", "cleartext" ],
+    "thresholds": {
+      "high": 90,
+      "low": 80,
+      "break": 80
+    }
+  }
+}

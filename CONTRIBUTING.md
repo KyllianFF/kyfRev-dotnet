@@ -54,7 +54,12 @@ la relecture est marquée fusionnée automatiquement après l'envoi.
 
 ## Avant chaque envoi
 
-- `dotnet build`, `dotnet test` et `dotnet format --verify-no-changes` passent ;
+- `dotnet build`, `dotnet test --solution KyfRev.slnx` et `dotnet format --verify-no-changes`
+  passent ; la couverture reste d'au moins 95 % des lignes (contrôlée par l'intégration
+  continue : sur un poste où Smart App Control est actif, Windows refuse de charger les
+  assemblys instrumentées par coverlet, la mesure se lit alors dans l'artefact « couverture ») ;
+- une modification du domaine garde un score de mutation d'au moins 80 %
+  (`pwsh tools/mutation.ps1`, ou le workflow « Mutation ») ;
 - `dotnet slopwatch analyze --no-baseline --fail-on warning` ne signale rien : aucun test
   désactivé, aucun avertissement masqué, aucune exception avalée, aucune version de paquet
   hors de `Directory.Packages.props` ;

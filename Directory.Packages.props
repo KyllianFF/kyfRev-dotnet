@@ -1,5 +1,4 @@
 <Project>
-
   <!--
     Versions de tous les paquets NuGet, définies ici seulement.
     Règle d'adoption : une version publiée depuis au moins 14 jours, licence permissive,
@@ -9,5 +8,15 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
-
+  <ItemGroup Label="Tests">
+    <PackageVersion Include="coverlet.MTP" Version="10.1.0" />
+    <PackageVersion Include="CsCheck" Version="4.9.1" />
+    <PackageVersion Include="MSTest.Analyzers" Version="4.5.1" />
+    <PackageVersion Include="MSTest.TestAdapter" Version="4.5.1" />
+    <PackageVersion Include="MSTest.TestFramework" Version="4.5.1" />
+  </ItemGroup>
+  <!-- Mode mutation seulement (voir tools/mutation.ps1) : Stryker.NET pilote les tests par VSTest. -->
+  <ItemGroup Label="Tests de mutation">
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
+  </ItemGroup>
 </Project>
