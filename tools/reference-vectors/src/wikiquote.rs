@@ -6,7 +6,6 @@
 
 use std::fmt::Write as _;
 use std::fs;
-use std::panic;
 use std::path::Path;
 
 use coffre::wikiquote::{DOMAINES, PageWikiquote, citations_de_la_page, domaines_valides, pages_du_jour};
@@ -97,7 +96,8 @@ fn exemples_de_la_0x() -> Vec<String> {
             "{{{{citation|citation=''Être'' ou ne pas [[être (philosophie)|être]],<br />c'est la {{{{w|question}}}}.<ref>Note retirée.</ref> Au {{{{Siècle|XVII}}}}, {{{{Personnage|Hamlet}}}}&nbsp;!|précisions=Acte III}}}}\n{{{{Choisie citation du jour|année=2007|mois=mai|jour=3}}}}\n{{{{Réf Livre|titre=Hamlet{}|auteur=[[William Shakespeare]]|année=1603}}}}",
             c(0x200e)
         ),
-        // Le « é » chevauche le 12e octet après « & » : la 0.x panique.
+        // Le « é » chevauche le 12e octet après « & » : la 0.x paniquait avant son correctif
+        // (fenêtre des entités coupée au milieu d'un caractère).
         "{{citation|Laurel & ses amis été là, tous ensemble.}}\n{{Réf Livre|titre=Souvenirs|auteur=Quelqu'un|année=1950}}\n".to_owned(),
     ]
 }
@@ -203,35 +203,21 @@ pub fn ecrire(dossier: &Path) {
     for _ in 0..800 {
         wikitextes.push(page_au_hasard(&mut hasard));
     }
-    let crochet = panic::take_hook();
-    panic::set_hook(Box::new(|_| {}));
     let cas: Vec<Value> = wikitextes
         .iter()
         .enumerate()
         .map(|(n, wikitexte)| {
             let domaine = DOMAINES[n % DOMAINES.len()];
             let page = PageWikiquote { domaine: domaine.nom, titre: domaine.pages[n % domaine.pages.len()] };
-            // La 0.x panique quand un caractère de plus d'un octet chevauche la fenêtre de
-            // 12 octets d'une entité : le cas est noté, la suite C# vérifie qu'il passe.
-            match panic::catch_unwind(|| citations_de_la_page(wikitexte, &page)) {
-                Ok(citations) => json!({
-                    "domaine": page.domaine,
-                    "titre": page.titre,
-                    "wikitexte": wikitexte,
-                    "citations": citations.iter().map(citation_en_json).collect::<Vec<_>>(),
-                }),
-                Err(_) => json!({
-                    "domaine": page.domaine,
-                    "titre": page.titre,
-                    "wikitexte": wikitexte,
-                    "panique": true,
-                }),
-            }
+            json!({
+                "domaine": page.domaine,
+                "titre": page.titre,
+                "wikitexte": wikitexte,
+                "citations": citations_de_la_page(wikitexte, &page).iter().map(citation_en_json).collect::<Vec<_>>(),
+            })
         })
         .collect();
-    panic::set_hook(crochet);
-    let paniques = cas.iter().filter(|c| c.get("panique").is_some()).count();
     let trouvees: usize = cas.iter().map(|c| c["citations"].as_array().map_or(0, Vec::len)).sum();
     fs::write(dossier.join("citations.json"), serde_json::to_string_pretty(&cas).expect("JSON") + "\n").expect("citations.json");
-    println!("{} wikitextes, {trouvees} citations retenues, {paniques} paniques de la 0.x", cas.len());
+    println!("{} wikitextes, {trouvees} citations retenues", cas.len());
 }

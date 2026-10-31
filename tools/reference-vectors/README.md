@@ -18,7 +18,8 @@ rejoue `KyfRev.Domain` et compare.
 Prérequis : Rust stable, et le dépôt kyfRev 0.x cloné **à côté** de ce dépôt
 (`../kyfRev`, version 0.8.0 ; le crate `noyau` n'a pas changé depuis la 0.7.0). Le clone doit
 inclure le passage de `zip` en 9.0.5 (correctif de sécurité GHSA-m665-v7pm-7grj) : l'outil
-épingle la même version que le crate `coffre`, qu'il compile.
+épingle la même version que le crate `coffre`, qu'il compile. Les vecteurs Wikiquote supposent
+aussi le correctif des entités (`fix/wikiquote-entites`, fusionné le 1er novembre 2026).
 
 ```powershell
 cargo run --release --manifest-path tools/reference-vectors/Cargo.toml -- tests/KyfRev.Domain.Tests/fixtures/reference
@@ -104,9 +105,9 @@ reproduisent à l'octet.
 | `domaines.txt` | 400 listes de domaines saisis, et les domaines reconnus |
 | `citations.json` | 806 wikitextes (ceux des tests de la 0.x, puis des pages tirées au hasard de morceaux typiques de Wikiquote) et les citations retenues, telles que serde les écrit |
 
-Ils sont versionnés dans `tests/KyfRev.Modules.Citations.Tests/fixtures/wikiquote`. Un wikitexte
-sur lequel la 0.x panique est marqué `"panique": true` (un seul : un caractère accentué qui
-chevauche la fenêtre de 12 octets d'une entité) ; la suite C# vérifie qu'il passe.
+Ils sont versionnés dans `tests/KyfRev.Modules.Citations.Tests/fixtures/wikiquote`. Sans le
+correctif des entités (voir « Régénérer »), la 0.x panique sur l'un des wikitextes : une lettre
+accentuée y chevauche la fenêtre de 12 octets qui suit un « & ».
 
 ```powershell
 cargo run --release --manifest-path tools/reference-vectors/Cargo.toml -- --wikiquote tests/KyfRev.Modules.Citations.Tests/fixtures/wikiquote

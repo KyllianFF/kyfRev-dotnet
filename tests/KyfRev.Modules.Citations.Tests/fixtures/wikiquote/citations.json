@@ -124,8 +124,24 @@
     "wikitexte": "{{citation|citation=''Être'' ou ne pas [[être (philosophie)|être]],<br />c'est la {{w|question}}.<ref>Note retirée.</ref> Au {{Siècle|XVII}}, {{Personnage|Hamlet}}&nbsp;!|précisions=Acte III}}\n{{Choisie citation du jour|année=2007|mois=mai|jour=3}}\n{{Réf Livre|titre=Hamlet‎|auteur=[[William Shakespeare]]|année=1603}}"
   },
   {
+    "citations": [
+      {
+        "auteur": "Quelqu'un",
+        "contexte": null,
+        "date": "1950",
+        "etiquettes": [
+          "art"
+        ],
+        "source": {
+          "genre": "livre",
+          "page": null,
+          "titre": "Souvenirs",
+          "url": "https://fr.wikiquote.org/wiki/Art"
+        },
+        "texte": "Laurel & ses amis été là, tous ensemble."
+      }
+    ],
     "domaine": "art",
-    "panique": true,
     "titre": "Art",
     "wikitexte": "{{citation|Laurel & ses amis été là, tous ensemble.}}\n{{Réf Livre|titre=Souvenirs|auteur=Quelqu'un|année=1950}}\n"
   },

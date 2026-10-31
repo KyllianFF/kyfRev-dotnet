@@ -47,30 +47,23 @@ public sealed class WikiquoteTests
         var cases = JsonNode.Parse(File.ReadAllText(Path.Combine(Folder, "citations.json")))!.AsArray();
         Assert.HasCount(806, cases);
         var found = 0;
-        var panics = new List<string>();
         foreach (var (item, n) in cases.Select((item, n) => (item!, n)))
         {
             var page = new WikiquotePage(item["domaine"]!.GetValue<string>(), item["titre"]!.GetValue<string>());
             var wikitext = item["wikitexte"]!.GetValue<string>();
             var quotes = Wikiquote.QuotesOfPage(wikitext, page);
-            if (item["panique"] is not null)
-            {
-                panics.Add(wikitext);
-                continue;
-            }
             var actual = new JsonArray([.. quotes.Select(Serde)]);
             Assert.IsTrue(JsonNode.DeepEquals(item["citations"], actual), $"cas {n} :\n{wikitext}\nattendu {item["citations"]!.ToJsonString()}\nobtenu {actual.ToJsonString()}");
             found += quotes.Count;
         }
-        Assert.AreEqual(283, found);
-        Assert.HasCount(1, panics);
+        Assert.AreEqual(284, found);
     }
 
     [TestMethod]
-    public void A_character_across_the_entity_window_is_kept_where_version_0x_panicked()
+    public void A_character_across_the_entity_window_is_never_cut()
     {
-        // La 0.x coupait la fenêtre de 12 octets au milieu du « é » et paniquait : la recherche du
-        // jour restait bloquée. Ici, le « & » sans « ; » proche reste tel quel.
+        // Avant son correctif, la 0.x coupait la fenêtre de 12 octets au milieu du « é » et
+        // paniquait : la recherche du jour restait bloquée. Le « & » sans « ; » proche reste tel quel.
         var page = new WikiquotePage("philosophie", "Sagesse");
         var quotes = Wikiquote.QuotesOfPage("{{citation|Laurel & ses amis été là, tous ensemble.}}\n{{Réf Livre|titre=Souvenirs|auteur=Quelqu'un|année=1950}}\n", page);
 
