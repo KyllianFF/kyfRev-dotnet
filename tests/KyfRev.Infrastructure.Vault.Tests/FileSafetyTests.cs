@@ -40,7 +40,7 @@ public sealed class FileSafetyTests
         using var vault = TemporaryVault.Empty();
         var path = vault.PathOf("fiche.md");
 
-        Assert.IsFalse(AtomicFile.TryCreateNew(path, "nouveau"u8, () => File.WriteAllText(path, "créé ailleurs")));
+        Assert.IsFalse(AtomicFile.TryCreateNew(path, "nouveau"u8, new(BeforeCommit: () => File.WriteAllText(path, "créé ailleurs"))));
 
         Assert.AreEqual("créé ailleurs", File.ReadAllText(path));
         Assert.HasCount(1, Directory.GetFiles(vault.Root), "le temporaire est retiré");
@@ -52,12 +52,18 @@ public sealed class FileSafetyTests
         using var vault = TemporaryVault.Empty();
         var path = vault.PathOf("fiche.md");
         AtomicFile.Replace(path, "ancienne version"u8);
-        // Comme un antivirus ou un indexeur : le fichier est ouvert un instant, sans partage en suppression.
+        // Comme un antivirus ou un indexeur : le fichier est ouvert, sans partage en suppression,
+        // puis libéré pendant l'attente qui précède la nouvelle tentative.
         using var holder = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
-        using var release = new Timer(_ => holder.Dispose(), state: null, dueTime: 100, period: Timeout.Infinite);
+        var retries = 0;
 
-        AtomicFile.Replace(path, "nouvelle version"u8);
+        AtomicFile.Replace(path, "nouvelle version"u8, new(BeforeRetry: () =>
+        {
+            retries++;
+            holder.Dispose();
+        }));
 
+        Assert.AreEqual(1, retries);
         Assert.AreEqual("nouvelle version", File.ReadAllText(path));
         Assert.HasCount(1, Directory.GetFiles(vault.Root));
     }
@@ -89,7 +95,7 @@ public sealed class FileSafetyTests
         AtomicFile.Replace(path, "ancienne version"u8);
         var bigger = Encoding.UTF8.GetBytes(new string('x', 1_000_000));
 
-        Assert.ThrowsExactly<IOException>(() => AtomicFile.Replace(path, bigger, () => throw new IOException("coupure simulée")));
+        Assert.ThrowsExactly<IOException>(() => AtomicFile.Replace(path, bigger, new(BeforeCommit: () => throw new IOException("coupure simulée"))));
 
         Assert.AreEqual("ancienne version", File.ReadAllText(path));
         Assert.HasCount(1, Directory.GetFiles(vault.Root), "le temporaire est retiré");

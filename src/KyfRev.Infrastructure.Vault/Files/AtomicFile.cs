@@ -25,38 +25,32 @@ public static class AtomicFile
     private const int ErrorAlreadyExists = 183;
     private const string Alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
 
+    private static readonly Hooks NoHooks = new();
+
     /// <summary>Remplace le fichier (ou le crée) de façon atomique.</summary>
-    public static void Replace(string path, ReadOnlySpan<byte> content) => Write(path, content, overwrite: true, beforeCommit: null);
+    public static void Replace(string path, ReadOnlySpan<byte> content) => Write(path, content, overwrite: true, NoHooks);
 
     /// <summary>Crée le fichier de façon atomique, sans jamais écraser un fichier existant.</summary>
     /// <returns><see langword="false"/> si le fichier existe déjà ; rien n'est alors modifié.</returns>
     public static bool TryCreateNew(string path, ReadOnlySpan<byte> content) =>
-        !File.Exists(path) && Write(path, content, overwrite: false, beforeCommit: null);
+        !File.Exists(path) && Write(path, content, overwrite: false, NoHooks);
 
-    /// <summary>
-    /// Version de <see cref="Replace(string, ReadOnlySpan{byte})"/> qui appelle
-    /// <paramref name="beforeCommit"/> entre l'écriture du temporaire et sa mise en place (pour
-    /// simuler une coupure dans les tests).
-    /// </summary>
-    internal static void Replace(string path, ReadOnlySpan<byte> content, Action beforeCommit) =>
-        Write(path, content, overwrite: true, beforeCommit);
+    /// <summary>Version de <see cref="Replace(string, ReadOnlySpan{byte})"/> avec des points d'appel pour les tests.</summary>
+    internal static void Replace(string path, ReadOnlySpan<byte> content, Hooks hooks) =>
+        Write(path, content, overwrite: true, hooks);
 
-    /// <summary>
-    /// Version de <see cref="TryCreateNew(string, ReadOnlySpan{byte})"/> qui appelle
-    /// <paramref name="beforeCommit"/> avant la mise en place (pour simuler, dans les tests, un
-    /// fichier créé entre-temps par un autre processus).
-    /// </summary>
-    internal static bool TryCreateNew(string path, ReadOnlySpan<byte> content, Action beforeCommit) =>
-        !File.Exists(path) && Write(path, content, overwrite: false, beforeCommit);
+    /// <summary>Version de <see cref="TryCreateNew(string, ReadOnlySpan{byte})"/> avec des points d'appel pour les tests.</summary>
+    internal static bool TryCreateNew(string path, ReadOnlySpan<byte> content, Hooks hooks) =>
+        !File.Exists(path) && Write(path, content, overwrite: false, hooks);
 
-    private static bool Write(string path, ReadOnlySpan<byte> content, bool overwrite, Action? beforeCommit)
+    private static bool Write(string path, ReadOnlySpan<byte> content, bool overwrite, Hooks hooks)
     {
         var directory = Path.GetDirectoryName(Path.GetFullPath(path)) ?? throw new ArgumentException("Chemin sans dossier.", nameof(path));
         var temporary = CreateTemporary(directory, content);
         try
         {
-            beforeCommit?.Invoke();
-            return Commit(temporary, path, overwrite);
+            hooks.BeforeCommit?.Invoke();
+            return Commit(temporary, path, overwrite, hooks);
         }
         catch
         {
@@ -91,7 +85,7 @@ public static class AtomicFile
         }
     }
 
-    private static bool Commit(string temporary, string target, bool overwrite)
+    private static bool Commit(string temporary, string target, bool overwrite, Hooks hooks)
     {
         for (var attempt = 1; ; attempt++)
         {
@@ -114,6 +108,7 @@ public static class AtomicFile
             catch (Exception exception) when (attempt < Attempts && IsTransient(exception))
             {
                 // Antivirus ou indexeur qui garde le fichier ouvert un instant.
+                hooks.BeforeRetry?.Invoke();
                 Thread.Sleep(20 * attempt);
             }
         }
@@ -125,6 +120,13 @@ public static class AtomicFile
         IOException io => (io.HResult & 0xFFFF) is ErrorAccessDenied or ErrorSharingViolation or ErrorLockViolation,
         _ => false,
     };
+
+    /// <summary>
+    /// Points d'appel pour simuler, dans les tests, ce qui arrive entre deux instructions : une
+    /// coupure ou un fichier créé ailleurs avant la mise en place, un fichier libéré avant une
+    /// nouvelle tentative.
+    /// </summary>
+    internal sealed record Hooks(Action? BeforeCommit = null, Action? BeforeRetry = null);
 
     /// <summary>Seule suppression permise ici : un temporaire créé par cette classe.</summary>
     /// <returns><see langword="false"/> si le temporaire n'a pas pu être retiré.</returns>

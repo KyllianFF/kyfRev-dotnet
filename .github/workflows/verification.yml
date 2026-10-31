@@ -97,7 +97,8 @@ jobs:
         run: dotnet build KyfRev.slnx --configuration Release --no-restore
 
       # Chaque projet de tests mesure les modules qu'il teste (testconfig.json du projet) ; le
-      # seuil s'applique à chacun de ces modules.
+      # seuil s'applique à chacun de ces modules. Coverlet ignore sans le dire un filtre qui
+      # contient un tiret : « [kyfrev*coffre]* » désigne l'assembly kyfrev-coffre.
       - name: Tests et couverture (95 % des lignes au minimum)
         run: >-
           dotnet test --solution KyfRev.slnx --configuration Release --no-build

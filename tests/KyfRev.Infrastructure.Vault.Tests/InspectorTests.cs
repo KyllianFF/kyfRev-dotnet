@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.Text;
 using KyfRev.Cli;
 using KyfRev.Infrastructure.Vault.Analysis;
 using KyfRev.Infrastructure.Vault.Tests.Support;
@@ -199,6 +201,40 @@ public sealed class InspectorTests
         Assert.IsFalse((bool?)report["erreurs"]);
         Assert.AreEqual(6, (int?)report["resume"]!["fichesSuivies"]);
         Assert.AreEqual("info", (string?)report["constats"]![0]!["gravite"]);
+    }
+
+    [TestMethod]
+    public void The_json_report_names_each_severity()
+    {
+        using var vault = TemporaryVault.CopyOfReference();
+        vault.Write(".suivi/rappels.json", "[]");
+        File.Move(vault.PathOf($".suivi/fiches/{Mitose}.json"), vault.PathOf($".suivi/{Mitose}.json.bak"));
+
+        var (exitCode, json) = Run("verifier", vault.Root, "--json");
+
+        Assert.AreEqual(VaultCommands.ErrorsFound, exitCode);
+        var severities = System.Text.Json.Nodes.JsonNode.Parse(json)!["constats"]!.AsArray().Select(f => (string?)f!["gravite"]).ToHashSet();
+        Assert.IsTrue(severities.SetEquals(["erreur", "attention", "info"]), string.Join(", ", severities));
+    }
+
+    [TestMethod]
+    public void The_tool_run_as_a_program_prints_accents_and_returns_its_exit_code()
+    {
+        var start = new ProcessStartInfo(Path.Combine(AppContext.BaseDirectory, "kyfrev-coffre.exe"))
+        {
+            RedirectStandardOutput = true,
+            StandardOutputEncoding = Encoding.UTF8,
+            UseShellExecute = false,
+        };
+        start.ArgumentList.Add("verifier");
+        start.ArgumentList.Add(TemporaryVault.Reference);
+
+        using var process = Process.Start(start)!;
+        var output = process.StandardOutput.ReadToEnd();
+        process.WaitForExit();
+
+        Assert.AreEqual(VaultCommands.Success, process.ExitCode);
+        Assert.Contains("rien n'a été écrit dans le coffre", output);
     }
 
     private static List<string> Codes(VaultInspection inspection) => [.. inspection.Findings.Select(f => f.Code)];
