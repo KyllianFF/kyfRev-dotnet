@@ -6,7 +6,7 @@
 //! identifiants créés, dans l'ordre, dans `identifiants.txt`. La suite de tests C# rejoue le
 //! scénario avec les mêmes identifiants et exige un coffre identique à l'octet près.
 
-use std::collections::{BTreeSet, HashMap};
+use std::collections::{BTreeSet, HashMap, HashSet};
 use std::fmt::Write as _;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -16,6 +16,8 @@ use jiff::civil::Date;
 use jiff::{Timestamp, tz::TimeZone};
 use noyau::Moment;
 use serde_json::Value;
+
+mod complements;
 
 fn le(texte: &str) -> Moment {
     let jour: Date = texte.parse().expect("date AAAA-MM-JJ");
@@ -56,6 +58,7 @@ struct Partie {
     identifiants: Vec<String>,
     lectures: HashMap<String, String>,
     dossiers_ranges: BTreeSet<String>,
+    vus: HashSet<String>,
 }
 
 impl Partie {
@@ -90,7 +93,9 @@ impl Partie {
 
     fn nouvel_identifiant(&mut self, id: &str) {
         let ulid = id.split_once('_').map_or(id, |(_, ulid)| ulid);
-        self.identifiants.push(ulid.to_owned());
+        if self.vus.insert(ulid.to_owned()) {
+            self.identifiants.push(ulid.to_owned());
+        }
     }
 
     /// Les dossiers rangés par une mise à la corbeille de dossier portent un ULID.
@@ -129,7 +134,7 @@ pub fn rapport(coffre: &Coffre) -> String {
             v.join(";")
         };
         format!(
-            "deplacees=[{}] modifiees=[{}] manquantes=[{}] doublons=[{}] non_suivies=[{}] sans_suivi=[{}] illisibles=[{}] liens=[{}]",
+            "deplacees=[{}] modifiees=[{}] manquantes=[{}] doublons=[{}] non_suivies=[{}] sans_suivi=[{}] illisibles=[{}] liens=[{}] orphelines=[{}]",
             trier(sante.deplacees.iter().map(|d| format!("{} {} {}", d.id, d.de, d.vers)).collect()),
             trier(sante.modifiees_hors_application.clone()),
             trier(sante.manquantes.clone()),
@@ -138,6 +143,7 @@ pub fn rapport(coffre: &Coffre) -> String {
             trier(sante.sans_suivi.iter().map(|(id, c)| format!("{id} {c}")).collect()),
             trier(sante.fichiers_illisibles.iter().map(|(c, _)| c.clone()).collect()),
             trier(sante.liens_a_verifier.iter().map(ToString::to_string).collect()),
+            trier(sante.annotations_orphelines.clone()),
         )
     }
 }
@@ -334,7 +340,7 @@ impl Partie {
                 fs::rename(&de, &vers).expect("déplacement");
                 Ok(String::new())
             }
-            autre => panic!("opération inconnue : {autre}"),
+            autre => self.jouer_complements(autre, operation, moment.clone()),
         }
     }
 }
@@ -354,6 +360,7 @@ pub fn jouer(dossier: &Path) {
         identifiants: Vec::new(),
         lectures: HashMap::new(),
         dossiers_ranges: BTreeSet::new(),
+        vus: HashSet::new(),
     };
     let mut resultats = String::new();
     for (n, operation) in scenario["operations"].as_array().expect("« operations »").iter().enumerate() {

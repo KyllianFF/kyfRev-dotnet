@@ -6,31 +6,31 @@
 5 ajouter_ressource erreur RessourceRefusee : Ressource « virus.exe » refusée : type de fichier exécutable ou actif.
 6 ajouter_ressource erreur RessourceRefusee : Ressource « sans-extension » refusée : extension absente.
 7 changer_titre ok
-8 fiche ok fiches/Biologie/Mitose - les phases.md "Mitose : les phases" [] present sha256:04b0dd3903dbcf981ff1af6a4ac50ff7da43e34453a1a81f420651a9262ef49d
-9 fiche ok fiches/Biologie/La cellule.md "La cellule" [] present sha256:330685d65d76442a16558cf82133c6559e1f01d72f514a6fd9c927c71503fb9d
-10 lire_fiche ok sha256:04b0dd3903dbcf981ff1af6a4ac50ff7da43e34453a1a81f420651a9262ef49d
-11 lire_fiche ok sha256:330685d65d76442a16558cf82133c6559e1f01d72f514a6fd9c927c71503fb9d
+8 fiche ok fiches/Biologie/Mitose - les phases.md "Mitose : les phases" [] present sha256:428b7a51afd7bc2426a8bd9494b72637e631bed2f0cee975a12b1c15d6e8c53c
+9 fiche ok fiches/Biologie/La cellule.md "La cellule" [] present sha256:ae983021e7b2a531485e4091544e281bd258d75105fc32145bc157e4fa7986c7
+10 lire_fiche ok sha256:428b7a51afd7bc2426a8bd9494b72637e631bed2f0cee975a12b1c15d6e8c53c
+11 lire_fiche ok sha256:ae983021e7b2a531485e4091544e281bd258d75105fc32145bc157e4fa7986c7
 12 deplacer_fiche ok
-13 fiche ok fiches/Biologie/Division/Mitose - les phases.md "Mitose : les phases" [] present sha256:4ea96284c85ef9a05387b3dfc54513270f2f4a9e36783c8440beb257d821e103
-14 lire_fiche ok sha256:062bc92ee3372d705f78b0d02b26abe5c720e5af25100408fad109a881deadf4
+13 fiche ok fiches/Biologie/Division/Mitose - les phases.md "Mitose : les phases" [] present sha256:2bfe0c659ced5a55c7c72edad560d76e41a494a2c34414a3e72b82b7ffc803e3
+14 lire_fiche ok sha256:ab231c941f38a041b6726f1eda9e1c89a0cb1c54cd8e76e28671f361966f863e
 15 changer_titre ok
-16 fiche ok fiches/Biologie/la cellule.md "la cellule" [] present sha256:6bba4dbb250382e9d4f5267c659881c6e55e493d7c2a7a3d2c5542f4571369fa
-17 lire_fiche ok sha256:c7b02c35e43f57772cc91e24c88a4884984d218849b285fbaaca715b65d5e108
+16 fiche ok fiches/Biologie/la cellule.md "la cellule" [] present sha256:c21d2e63807ef52d93e8991806afdcfac3d306d21108d85b3e54d76e6612b5b6
+17 lire_fiche ok sha256:61f76457563f45cecb7a80bfacb74a49513045dc66ff48fcce34978f084c9b34
 18 changer_titre erreur TitreVide : Titre vide : une fiche doit avoir un titre.
 19 creer_fiche ok
 20 deplacer_fiche ok
-21 fiche ok fiches/Biologie/Division/la cellule (2).md "la cellule" [] present sha256:8d27106dcf7f88061f36d5a1f6d5a70a1516873fe460ce0e06a4af86bad7b29e
+21 fiche ok fiches/Biologie/Division/la cellule (2).md "la cellule" [] present sha256:84c238e19fc4482669e852951ee3d54c1bca10fd9d112ae801a18181e7d4e1c9
 22 deplacer_fiche ok
-23 fiche ok fiches/la cellule (2).md "la cellule" [] present sha256:841fc114d9ee4427a6b6ae0c85ba4256c0ed95d6f6486add125288b8d71498b1
+23 fiche ok fiches/la cellule (2).md "la cellule" [] present sha256:0ace3155af081cc5fd9897c0f3170c9eabf2fcc4d531ba784d6dbb1335e3d661
 24 modifier_etiquettes ok ["Biologie","cellule","examen blanc"]
 25 ecrire ok
 26 suivre_fichier ok
 27 modifier_etiquettes ok ["vrac","Révision"]
-28 lire_fiche ok sha256:abf8052dfa4700c43ae62793ff0a286e09d2df71596c7391623df66167c7e6b9
+28 lire_fiche ok sha256:d8e3e60d36b681f914c7414b6bbf2ee3836141947517d44175a9e957694aa5de
 29 etiquettes ok ["Biologie","cellule","examen blanc","Révision","vrac"]
-30 fiche ok fiches/Biologie/Notes.md "Notes" ["vrac","Révision"] present sha256:abf8052dfa4700c43ae62793ff0a286e09d2df71596c7391623df66167c7e6b9
+30 fiche ok fiches/Biologie/Notes.md "Notes" ["vrac","Révision"] present sha256:d8e3e60d36b681f914c7414b6bbf2ee3836141947517d44175a9e957694aa5de
 31 ecrire ok
 32 modifier_etiquettes erreur Conflit : La fiche a été modifiée en dehors de l'application depuis son ouverture.
 33 ouvrir ok
-34 sante ok deplacees=[] modifiees=[f_01M69NJ7EE38D746YAMK34NWZM] manquantes=[] doublons=[] non_suivies=[] sans_suivi=[] illisibles=[] liens=[]
-35 fiche ok fiches/Biologie/Notes.md "Notes" [] present sha256:1c6ab1f9c684db6bfad7b9541c3b686139e854f9f082294b13b88f044a76390a
+34 sante ok deplacees=[] modifiees=[f_01M69QKARNHEDKPDVM7M3MBGD6] manquantes=[] doublons=[] non_suivies=[] sans_suivi=[] illisibles=[] liens=[] orphelines=[]
+35 fiche ok fiches/Biologie/Notes.md "Notes" [] present sha256:47e1da83da263aefaa100797a6d5fbf7ef2dfe2e77c86f5c88f423d865497c0e

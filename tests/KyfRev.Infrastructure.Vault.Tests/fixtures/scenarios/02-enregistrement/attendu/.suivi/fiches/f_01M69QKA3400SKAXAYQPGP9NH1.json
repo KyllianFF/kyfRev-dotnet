@@ -1,0 +1,41 @@
+{
+  "format": 1,
+  "id": "f_01M69QKA3400SKAXAYQPGP9NH1",
+  "chemin": "fiches/Physique/Ondes.md",
+  "titre": "Ondes et vibrations",
+  "empreinte": "sha256:acf5a6b5d5c01346e022487d142fbedde5e1e94f99ff916ab14187f3d00b9ec6",
+  "modifieeLe": "2026-09-08T12:00:00Z",
+  "statut": "active",
+  "cycle": {
+    "numero": 1,
+    "sequence": [
+      0,
+      1,
+      3,
+      7,
+      14,
+      30
+    ],
+    "demarreLe": "2026-09-01",
+    "etape": 1,
+    "echeance": "2026-09-02",
+    "derniereRevision": "2026-09-01"
+  },
+  "compteurs": {
+    "cyclesCommences": 1,
+    "cyclesTermines": 0,
+    "cyclesInterrompus": 0
+  },
+  "historique": [
+    {
+      "evt": "revision",
+      "le": "2026-09-01T12:00:00Z",
+      "jour": "2026-09-01",
+      "cycle": 1,
+      "etape": "J0",
+      "prevuLe": "2026-09-01",
+      "retardJours": 0,
+      "origine": "creation"
+    }
+  ]
+}

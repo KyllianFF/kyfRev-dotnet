@@ -1,0 +1,20 @@
+{
+  "format": 1,
+  "etat": "terminee",
+  "description": "restauration de fiches/Histoire/Empire.md",
+  "deplacements": [
+    {
+      "de": "fiches/.supprimees/f_01M69QKBSER7R6XY97QJXAA0T1/Empire.md",
+      "vers": "fiches/Histoire/Empire.md"
+    },
+    {
+      "de": ".suivi/corbeille/f_01M69QKBSER7R6XY97QJXAA0T1.annotations.json",
+      "vers": ".suivi/annotations/f_01M69QKBSER7R6XY97QJXAA0T1.json"
+    },
+    {
+      "de": ".suivi/corbeille/f_01M69QKBSER7R6XY97QJXAA0T1.json",
+      "vers": ".suivi/fiches/f_01M69QKBSER7R6XY97QJXAA0T1.json"
+    }
+  ],
+  "ecritures": []
+}

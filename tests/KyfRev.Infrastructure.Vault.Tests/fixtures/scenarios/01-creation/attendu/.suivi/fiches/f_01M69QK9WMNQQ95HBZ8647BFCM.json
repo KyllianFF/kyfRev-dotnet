@@ -1,0 +1,41 @@
+{
+  "format": 1,
+  "id": "f_01M69QK9WMNQQ95HBZ8647BFCM",
+  "chemin": "fiches/Histoire/Le 'tiers état' - les ordres.md",
+  "titre": "Le \"tiers état\" / les <ordres> ?",
+  "empreinte": "sha256:a1bd5951e5bb708ac34a6df5a709bd74a8b667d682f76700b115f6982d63f395",
+  "modifieeLe": "2026-09-03T12:00:00Z",
+  "statut": "active",
+  "cycle": {
+    "numero": 1,
+    "sequence": [
+      0,
+      1,
+      3,
+      7,
+      14,
+      30
+    ],
+    "demarreLe": "2026-09-03",
+    "etape": 1,
+    "echeance": "2026-09-04",
+    "derniereRevision": "2026-09-03"
+  },
+  "compteurs": {
+    "cyclesCommences": 1,
+    "cyclesTermines": 0,
+    "cyclesInterrompus": 0
+  },
+  "historique": [
+    {
+      "evt": "revision",
+      "le": "2026-09-03T12:00:00Z",
+      "jour": "2026-09-03",
+      "cycle": 1,
+      "etape": "J0",
+      "prevuLe": "2026-09-03",
+      "retardJours": 0,
+      "origine": "creation"
+    }
+  ]
+}

@@ -7,8 +7,9 @@
     Sur une copie du coffre (jamais sur le coffre lui-même) :
     1. kyfRev 0.x (crate coffre) l'ouvre et résume sa santé : c'est le point de départ ;
     2. cette version l'ouvre : même résumé, et rien n'est écrit ;
-    3. cette version y fait une série d'écritures (création, enregistrement, étiquettes,
-       ressource, titre, dossiers, déplacements, corbeille et restauration) ;
+    3. cette version y fait une série d'écritures (fiches : création, enregistrement, étiquettes,
+       ressource, titre, dossiers, déplacements, corbeille et restauration ; puis annotations,
+       tirage du jour, examen, données d'extension, citations, schémas et modèle) ;
     4. kyfRev 0.x le rouvre : même résumé qu'au départ, et rien n'est réécrit.
     Prérequis : Rust et le dépôt kyfRev 0.x cloné à côté de ce dépôt (voir tools/reference-vectors).
 

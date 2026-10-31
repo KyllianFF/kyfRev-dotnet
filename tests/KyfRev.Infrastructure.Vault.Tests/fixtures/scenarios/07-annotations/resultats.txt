@@ -1,0 +1,55 @@
+0 initialiser ok
+1 creer_fiche ok
+2 creer_fiche ok
+3 creer_annotation ok
+4 creer_annotation ok
+5 creer_definition ok
+6 creer_annotation erreur AncreInvalide : Annotation refusée : passage vide.
+7 creer_annotation erreur AncreInvalide : Annotation refusée : passage vide.
+8 creer_definition erreur DefinitionInvalide : Définition refusée : le terme est vide.
+9 creer_definition erreur DefinitionInvalide : Définition refusée : l'explication est vide.
+10 creer_annotation erreur FicheInconnue : Aucune fiche ne porte l'identifiant f_01M69JFV2X5VM53EY3DR1BY61M.
+11 annotation ok f_01M69QKBRZ8PDH38P74D44Q3WT "trois ordres" Ancree "Clergé, noblesse, tiers état" null null - 52 64 cycle 1 1 2026-09-02
+12 annotation ok f_01M69QKBRZ8PDH38P74D44Q3WT "société" Ancree null "Société" "Ensemble des personnes." - 15 22 cycle 1 1 2026-09-03
+13 modifier_commentaire ok
+14 modifier_commentaire ok
+15 modifier_commentaire ok
+16 modifier_commentaire ok
+17 modifier_definition erreur PasUneDefinition : Cette annotation est un passage, pas une définition.
+18 modifier_definition ok
+19 modifier_definition ok
+20 reancrer erreur AncreInvalide : Annotation refusée : le passage ne change que sur demande explicite.
+21 reancrer ok
+22 annotations_a_verifier ok 1
+23 modifier_passage ok
+24 modifier_passage ok
+25 annotation ok f_01M69QKBRZ8PDH38P74D44Q3WT "Ancien Régime est divisée" Ancree "Ajouté" null null - 27 52 cycle 2 1 2026-09-06
+26 reviser_annotation ok
+27 reporter_annotation ok
+28 corbeille_annotation ok
+29 corbeille_annotation ok
+30 reviser_annotation erreur AnnotationALaCorbeille : Cette annotation est dans la corbeille : restaurez-la d'abord.
+31 modifier_passage erreur AnnotationALaCorbeille : Cette annotation est dans la corbeille : restaurez-la d'abord.
+32 annotations_a_verifier ok 0
+33 restaurer_annotation ok
+34 annotation ok f_01M69QKBRZ8PDH38P74D44Q3WT "Ancien Régime est divisée" Ancree "Ajouté" null null - 27 52 cycle 2 1 2026-09-06
+35 annotation erreur AnnotationInconnue : Aucune annotation ne porte l'identifiant inconnue.
+36 ecrire ok
+37 analyser ok
+38 sante ok deplacees=[] modifiees=[] manquantes=[] doublons=[] non_suivies=[] sans_suivi=[] illisibles=[.suivi/annotations/f_01M69QKBSER7R6XY97QJXAA0T1.json] liens=[] orphelines=[]
+39 creer_annotation erreur AnnotationsIllisibles : Le fichier d'annotations de la fiche f_01M69QKBSER7R6XY97QJXAA0T1 est illisible ; consultez « Santé du coffre ».
+40 supprimer ok
+41 supprimer ok
+42 analyser ok
+43 sante ok deplacees=[] modifiees=[] manquantes=[f_01M69QKBRZ8PDH38P74D44Q3WT] doublons=[] non_suivies=[] sans_suivi=[] illisibles=[] liens=[] orphelines=[a_01M69QKBSW3RCA7MQXBWCYJEKQ;a_01M69QKBT4720967NQ5ZM8AJBG;a_01M69QKBTB5HEP185G8ZA0ZRZR]
+44 reviser_annotation ok
+45 creer_annotation erreur FicheManquante : Le fichier de la fiche « Révolution » est introuvable ; consultez « Santé du coffre ».
+46 creer_annotation ok
+47 corbeille_fiche ok
+48 fiches_a_la_corbeille ok f_01M69QKBSER7R6XY97QJXAA0T1 "Empire" "Histoire" 2026-09-13T12:00:00Z 1
+49 annotation erreur AnnotationInconnue : Aucune annotation ne porte l'identifiant a_01M69QKC17WWWN8MQWEPHZCZP4.
+50 restaurer_fiche ok
+51 annotation ok f_01M69QKBSER7R6XY97QJXAA0T1 "Texte" Ancree null null null - 1 6 cycle 1 1 2026-09-13
+52 ouvrir ok
+53 sante ok deplacees=[] modifiees=[] manquantes=[f_01M69QKBRZ8PDH38P74D44Q3WT] doublons=[] non_suivies=[] sans_suivi=[] illisibles=[] liens=[] orphelines=[a_01M69QKBSW3RCA7MQXBWCYJEKQ;a_01M69QKBT4720967NQ5ZM8AJBG;a_01M69QKBTB5HEP185G8ZA0ZRZR]
+54 annotations_a_verifier ok 0

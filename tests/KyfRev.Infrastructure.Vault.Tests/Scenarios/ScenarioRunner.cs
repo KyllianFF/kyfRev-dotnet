@@ -15,7 +15,7 @@ namespace KyfRev.Infrastructure.Vault.Tests.Scenarios;
 /// <c>tools/reference-vectors/src/scenarios.rs</c> le joue sur le crate <c>coffre</c> de la 0.x :
 /// même vocabulaire, mêmes lignes de résultat.
 /// </summary>
-internal sealed class ScenarioRunner(string root, UlidGenerator ids) : IDisposable
+internal sealed partial class ScenarioRunner(string root, UlidGenerator ids) : IDisposable
 {
     private readonly Dictionary<string, string> _names = new(StringComparer.Ordinal);
     private readonly Dictionary<string, string> _reads = new(StringComparer.Ordinal);
@@ -197,7 +197,7 @@ internal sealed class ScenarioRunner(string root, UlidGenerator ids) : IDisposab
                     return string.Empty;
                 }
             default:
-                throw new InvalidOperationException($"Opération inconnue : {op}");
+                return ExecuteComplements(op, operation, now);
         }
     }
 
@@ -212,7 +212,8 @@ internal sealed class ScenarioRunner(string root, UlidGenerator ids) : IDisposab
             + $" non_suivies=[{Sorted(health.Untracked.Select(p => p.Value))}]"
             + $" sans_suivi=[{Sorted(health.WithoutTracking.Select(w => $"{w.Id} {w.Path}"))}]"
             + $" illisibles=[{Sorted(health.Unreadable.Select(u => u.Path))}]"
-            + $" liens=[{Sorted(health.LinksToCheck.Select(p => p.Value))}]";
+            + $" liens=[{Sorted(health.LinksToCheck.Select(p => p.Value))}]"
+            + $" orphelines=[{Sorted(health.OrphanAnnotations)}]";
     }
 
     /// <summary>Nom de variante Rust d'une erreur, et son message s'il ne contient pas de chemin absolu.</summary>
@@ -242,6 +243,18 @@ internal sealed class ScenarioRunner(string root, UlidGenerator ids) : IDisposab
             VaultErrorKind.UnreadableTracking => ("SuiviIllisible", false),
             VaultErrorKind.UnreadableSettings => ("ParametresIllisibles", false),
             VaultErrorKind.Tracking => ("Suivi", true),
+            VaultErrorKind.UnknownAnnotation => ("AnnotationInconnue", true),
+            VaultErrorKind.AnnotationInTrash => ("AnnotationALaCorbeille", true),
+            VaultErrorKind.UnreadableAnnotations => ("AnnotationsIllisibles", true),
+            VaultErrorKind.InvalidAnchor => ("AncreInvalide", true),
+            VaultErrorKind.NotADefinition => ("PasUneDefinition", true),
+            VaultErrorKind.InvalidDefinition => ("DefinitionInvalide", true),
+            VaultErrorKind.InvalidSettings => ("ReglagesInvalides", true),
+            VaultErrorKind.InvalidQuote => ("CitationInvalide", true),
+            VaultErrorKind.UnknownQuote => ("CitationInconnue", true),
+            VaultErrorKind.QuoteInTrash => ("CitationALaCorbeille", true),
+            VaultErrorKind.UnknownSchema => ("SchemaInconnu", true),
+            VaultErrorKind.InvalidSchema => ("SchemaInvalide", true),
             _ => (exception.Kind.ToString(), true),
         };
         return comparable ? $"{variant} : {exception.Message}" : variant;

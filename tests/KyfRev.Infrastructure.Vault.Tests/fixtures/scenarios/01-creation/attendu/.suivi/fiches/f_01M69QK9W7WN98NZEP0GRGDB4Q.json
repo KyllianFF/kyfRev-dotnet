@@ -1,0 +1,46 @@
+{
+  "format": 1,
+  "id": "f_01M69QK9W7WN98NZEP0GRGDB4Q",
+  "chemin": "fiches/CON_.md",
+  "titre": "CON",
+  "empreinte": "sha256:d715c3f332189e32fb48d324b72cd316d3651cb8315a6619992d6a3411ab8a37",
+  "modifieeLe": "2026-09-03T12:00:00Z",
+  "statut": "archivee",
+  "archive": {
+    "archiveeLe": "2026-09-04",
+    "raison": "manuelle",
+    "inclureDansRappels": true,
+    "niveauRepos": 0,
+    "eligibleLe": "2026-11-04",
+    "rappelTireLe": null
+  },
+  "compteurs": {
+    "cyclesCommences": 1,
+    "cyclesTermines": 0,
+    "cyclesInterrompus": 1
+  },
+  "historique": [
+    {
+      "evt": "revision",
+      "le": "2026-09-03T12:00:00Z",
+      "jour": "2026-09-03",
+      "cycle": 1,
+      "etape": "J0",
+      "prevuLe": "2026-09-03",
+      "retardJours": 0,
+      "origine": "creation"
+    },
+    {
+      "evt": "interruption",
+      "le": "2026-09-04T12:00:00Z",
+      "jour": "2026-09-04",
+      "cycle": 1
+    },
+    {
+      "evt": "archivage",
+      "le": "2026-09-04T12:00:00Z",
+      "jour": "2026-09-04",
+      "raison": "manuelle"
+    }
+  ]
+}

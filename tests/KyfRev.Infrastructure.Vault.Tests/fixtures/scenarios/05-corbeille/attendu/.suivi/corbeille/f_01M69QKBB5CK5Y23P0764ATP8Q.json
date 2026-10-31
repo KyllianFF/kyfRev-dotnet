@@ -1,0 +1,46 @@
+{
+  "format": 1,
+  "id": "f_01M69QKBB5CK5Y23P0764ATP8Q",
+  "chemin": "fiches/Archives/Delta.md",
+  "titre": "Delta",
+  "empreinte": "sha256:cd1aaeafc143281585be219015292732a185e6327aa0044f6a72356ad04455d9",
+  "modifieeLe": "2026-09-05T12:00:00Z",
+  "statut": "archivee",
+  "archive": {
+    "archiveeLe": "2026-09-05",
+    "raison": "manuelle",
+    "inclureDansRappels": true,
+    "niveauRepos": 0,
+    "eligibleLe": "2026-11-05",
+    "rappelTireLe": null
+  },
+  "compteurs": {
+    "cyclesCommences": 1,
+    "cyclesTermines": 0,
+    "cyclesInterrompus": 1
+  },
+  "historique": [
+    {
+      "evt": "revision",
+      "le": "2026-09-05T12:00:00Z",
+      "jour": "2026-09-05",
+      "cycle": 1,
+      "etape": "J0",
+      "prevuLe": "2026-09-05",
+      "retardJours": 0,
+      "origine": "creation"
+    },
+    {
+      "evt": "interruption",
+      "le": "2026-09-05T12:00:00Z",
+      "jour": "2026-09-05",
+      "cycle": 1
+    },
+    {
+      "evt": "archivage",
+      "le": "2026-09-05T12:00:00Z",
+      "jour": "2026-09-05",
+      "raison": "manuelle"
+    }
+  ]
+}

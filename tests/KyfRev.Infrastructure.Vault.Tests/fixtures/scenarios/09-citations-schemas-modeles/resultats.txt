@@ -1,0 +1,62 @@
+0 initialiser ok
+1 ajouter_citation ok citations/Blaise Pascal - Le cœur a ses raisons que.md c_01M69QKCM08960GQ2HZ3QB5M55 1670 2026-09-01 - "Le cœur a ses raisons que la raison ne connaît point." "Blaise Pascal" "1670" Livre "Pensées" "12" null "Fragment 277" ["philosophie","Pascal"]
+2 ajouter_citation ok citations/Auteur inconnu - Rien ne se perd, rien ne.md c_01M69QKCM7Z355RXCVVPB61JQB - 2026-09-02 - "Rien ne se perd, rien ne se crée, tout se transforme." null null - null null null null []
+3 ajouter_citation ok citations/Auteur inconnu - Rien ne se perd, rien ne (2).md c_01M69QKCMH7ETQXME5SS5H87HX - 2026-09-02 - "Rien ne se perd, rien ne se crée, tout se transforme." null null - null null null null []
+4 ajouter_citation erreur CitationInvalide : Citation refusée : le texte de la citation est obligatoire.
+5 ajouter_citation ok citations/Auteur inconnu - Paris vaut bien une messe.md c_01M69QKCMZ3BVXQ2FG5QTRS350 1650 2026-09-03 - "Paris vaut bien une messe." null "XVIIe siècle" Emission null null "https://exemple.org/a b" null []
+6 ajouter_citation ok citations/Socrate - Connais-toi toi-même.md c_01M69QKCN9E3B4YDF2HAK91AM8 -350 2026-09-03 - "Connais-toi toi-même." "Socrate" "IVe siècle av. J.-C." Inconnue null null null null []
+7 ajouter_citation ok citations/Auteur inconnu - Sous les pavés, la plage.md c_01M69QKCNJGEJS4X4P5YTDTGT6 1968 2026-09-04 - "Sous les pavés, la plage." null "mai 1968" - null null null null []
+8 ecrire ok
+9 ecrire ok
+10 ecrire ok
+11 ecrire ok
+12 citations ok citations=[citations/Auteur inconnu - Sous les pavés, la plage.md;citations/Auteur inconnu - Paris vaut bien une messe.md;citations/Socrate - Connais-toi toi-même.md;citations/Auteur inconnu - Rien ne se perd, rien ne (2).md;citations/Auteur inconnu - Rien ne se perd, rien ne.md;citations/Blaise Pascal - Le cœur a ses raisons que.md;citations/Nombres.md;citations/Manuelle.md] corbeille=[] illisibles=[citations/Sans texte.md]
+13 lire_citation ok citations/Manuelle.md - 1580 - - "Que sais-je ?" "Montaigne" "1580" Livre "Essais" "12" null null []
+14 lire_citation ok citations/Nombres.md c_01M69JFV2X5VM53EY3DR1BY61M 1670 2026-08-15 - "Texte." null "1670.5" - "12" "7" null null ["a","b"]
+15 modifier_citation ok citations/Manuelle.md c_01M69QKCQ2NAE59R7E9FYXFWDS 1580 2026-09-05 - "Que sais-je ?" "Michel de Montaigne" "1580" Livre "Essais" null null null ["doute"]
+16 modifier_citation ok citations/Nombres.md c_01M69JFV2X5VM53EY3DR1BY61M - 2026-08-15 - "Texte modifié." null null - null null null null []
+17 modifier_citation erreur CitationInvalide : Citation refusée : le texte de la citation est obligatoire.
+18 corbeille_citation ok citations/.supprimees/Auteur inconnu - Rien ne se perd, rien ne.md
+19 corbeille_citation ok citations/.supprimees/Auteur inconnu - Rien ne se perd, rien ne.md
+20 modifier_citation erreur CitationALaCorbeille : Cette citation est dans la corbeille : restaurez-la d'abord.
+21 ajouter_citation ok citations/Auteur inconnu - Rien ne se perd, rien ne.md c_01M69QKCRDJEJDRX2ZRSXX1GAM - 2026-09-06 - "Rien ne se perd, rien ne se crée, tout se transforme." null null - null null null null []
+22 corbeille_citation ok citations/.supprimees/Auteur inconnu - Rien ne se perd, rien ne (2).md
+23 restaurer_citation ok citations/Auteur inconnu - Rien ne se perd, rien ne.md
+24 restaurer_citation ok citations/Auteur inconnu - Rien ne se perd, rien ne.md
+25 corbeille_citation erreur CitationInconnue : La citation « citations/inexistante.md » est introuvable.
+26 corbeille_citation erreur CitationInconnue : La citation « fiches/x.md » est introuvable.
+27 corbeille_citation erreur CheminInvalide : Chemin refusé « ../x.md » : « . » et « .. » sont interdits.
+28 retenir_citation_en_ligne ok citations/Aristote - Le doute est le commencement de.md c_01M69QKCSJV05RW3JWM4V224J1 - 2026-09-07 wikiquote "Le doute est le commencement de la sagesse." "Aristote" null - null null null null []
+29 retenir_citation_en_ligne ok citations/Aristote - Le doute est le commencement de.md c_01M69QKCSJV05RW3JWM4V224J1 - 2026-09-07 wikiquote "Le doute est le commencement de la sagesse." "Aristote" null - null null null null []
+30 retenir_citation_en_ligne ok aucune
+31 citations ok citations=[citations/Aristote - Le doute est le commencement de.md;citations/Manuelle.md;citations/Auteur inconnu - Sous les pavés, la plage.md;citations/Auteur inconnu - Paris vaut bien une messe.md;citations/Socrate - Connais-toi toi-même.md;citations/Auteur inconnu - Rien ne se perd, rien ne (2).md;citations/Auteur inconnu - Rien ne se perd, rien ne.md;citations/Blaise Pascal - Le cœur a ses raisons que.md;citations/Nombres.md] corbeille=[citations/.supprimees/Auteur inconnu - Rien ne se perd, rien ne (2).md] illisibles=[citations/Sans texte.md]
+32 creer_schema ok sha256:d644ae839af140f2597f337571402ec5c4920269522a48099b20a8dd221b36b9
+33 creer_schema erreur SchemaInvalide : Schéma réseau refusé : format 3 inconnu (cette version de kyfRev lit jusqu'au format 2).
+34 creer_schema erreur SchemaInvalide : Schéma réseau refusé : numéro de format absent.
+35 creer_schema erreur SchemaInvalide : Schéma réseau refusé : numéro de format absent.
+36 creer_schema erreur SchemaInvalide : Schéma réseau refusé : un objet JSON est attendu.
+37 lire_schema ok sha256:d644ae839af140f2597f337571402ec5c4920269522a48099b20a8dd221b36b9 "{\n  \"equipements\": [\n    {\n      \"nom\": \"R1\",\n      \"poids\": 1000.0,\n      \"x\": 120.5,\n      \"zeta\": {\n        \"a\": 2,\n        \"b\": 1\n      }\n    }\n  ],\n  \"format\": 2,\n  \"id\": \"s_01M69QKCTJSDVMB6ZFQHN40ZK3\",\n  \"liens\": [],\n  \"titre\": \"Réseau\"\n}\n"
+38 enregistrer_schema ok sha256:fece0b9f22fa04a9a60e4f20edcddbe958acff9c064e4be355727daec44cd83c
+39 enregistrer_schema erreur SchemaInvalide : Schéma réseau refusé : l'identifiant ne correspond pas au fichier.
+40 enregistrer_schema erreur Conflit : La fiche a été modifiée en dehors de l'application depuis son ouverture.
+41 dupliquer_schema ok sha256:5549f42cc6ee39951ab6cb95762089d3d57fad3671e59b9c087802e3862a6ec0
+42 lire_schema ok sha256:5549f42cc6ee39951ab6cb95762089d3d57fad3671e59b9c087802e3862a6ec0 "{\n  \"format\": 2,\n  \"id\": \"s_01M69QKCW21QAKF3S9F623VQ5Y\",\n  \"titre\": \"Réseau modifié (copie)\"\n}\n"
+43 lire_schema erreur SchemaInconnu : Le schéma réseau « s_inconnu » est introuvable dans le coffre.
+44 lire_schema erreur SchemaInconnu : Le schéma réseau « s_01M69JFV2X5VM53EY3DR1BY61M » est introuvable dans le coffre.
+45 modeles ok "Cours" true "Objectifs, notions clés en gras (texte à trous), à retenir, questions pour réviser.";"Chronologie" true "Un tableau de repères datés, puis l'essentiel à retenir.";"Fiche de lecture" true "Auteur, thèse, arguments, citations, avis personnel.";"Définitions" true "Une liste de termes en gras à définir : chacun devient un trou en révision."
+46 ecrire ok
+47 ecrire ok
+48 ecrire ok
+49 modeles ok "Plan" false "Intro, Détail, Fin ({{dossier}}).";"Vide" false "Modèle du coffre.";"cours" false "Mon cours à moi";"Chronologie" true "Un tableau de repères datés, puis l'essentiel à retenir.";"Fiche de lecture" true "Auteur, thèse, arguments, citations, avis personnel.";"Définitions" true "Une liste de termes en gras à définir : chacun devient un trou en révision."
+50 corps_du_modele ok "# Candide\n\n**Auteur** : \n**Lu le** : 1er octobre 2026\n\n## Thèse\n\n\n## Arguments\n\n1. \n\n## Citations\n\n> \n\n## Mon avis\n\n"
+51 corps_du_modele ok "# Plan\n\n## Intro\n\n### Détail\n\n## \n\n## Fin (Cours/Maths)\n"
+52 corps_du_modele ok ""
+53 creer_fiche ok
+54 creer_fiche ok
+55 enregistrer_modele ok "Mon modèle - test"
+56 enregistrer_modele ok "Titre seul"
+57 enregistrer_modele erreur CheminInvalide : Chemin refusé «     » : donnez un nom au modèle.
+58 modeles ok "Mon modèle - test" false "Modèle du coffre.";"Plan" false "Intro, Détail, Fin ({{dossier}}).";"Titre seul" false "Modèle du coffre.";"Vide" false "Modèle du coffre.";"cours" false "Mon cours à moi";"Chronologie" true "Un tableau de repères datés, puis l'essentiel à retenir.";"Fiche de lecture" true "Auteur, thèse, arguments, citations, avis personnel.";"Définitions" true "Une liste de termes en gras à définir : chacun devient un trou en révision."
+59 ouvrir ok
+60 sante ok deplacees=[] modifiees=[] manquantes=[] doublons=[] non_suivies=[] sans_suivi=[] illisibles=[] liens=[] orphelines=[]
+61 citations ok citations=[citations/Aristote - Le doute est le commencement de.md;citations/Manuelle.md;citations/Auteur inconnu - Sous les pavés, la plage.md;citations/Auteur inconnu - Paris vaut bien une messe.md;citations/Socrate - Connais-toi toi-même.md;citations/Auteur inconnu - Rien ne se perd, rien ne (2).md;citations/Auteur inconnu - Rien ne se perd, rien ne.md;citations/Blaise Pascal - Le cœur a ses raisons que.md;citations/Nombres.md] corbeille=[citations/.supprimees/Auteur inconnu - Rien ne se perd, rien ne (2).md] illisibles=[citations/Sans texte.md]

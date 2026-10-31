@@ -1,0 +1,10 @@
+.suivi
+.suivi/annotations
+.suivi/extensions
+.suivi/fiches
+.suivi/versions
+citations
+fiches
+fiches/Autre
+fiches/Cours
+fiches/Cours/Partie

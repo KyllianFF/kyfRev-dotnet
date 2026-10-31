@@ -11,13 +11,13 @@
   "ecritures": [
     {
       "chemin": "fiches/Équipements/Cisco/VLAN.md",
-      "empreinteAvant": "sha256:fe21610dc08210de2a63dcfc848fd39b7967138832f9110a3f696d82f4066516",
-      "contenu": "---\nid: f_01M69NJ7JX3D05SDFGSVQXJ42Y\ntitre: \"VLAN\"\ncreee: 2026-09-02\n---\n\nVoir [OSPF](../../réseau/OSPF.md) et [routage](../../Routage.md).\n"
+      "empreinteAvant": "sha256:0142e4711273ddaae289a4dcb78d29450802219317da380a6cb29964e8e52dc1",
+      "contenu": "---\nid: f_01M69QKAWRCNXFBNNH43S0SPP2\ntitre: \"VLAN\"\ncreee: 2026-09-02\n---\n\nVoir [OSPF](../../réseau/OSPF.md) et [routage](../../Routage.md).\n"
     },
     {
       "chemin": "fiches/Routage.md",
-      "empreinteAvant": "sha256:3dd1c2daaf740f16461088341d3be04a4fb733265d75769323b6ce6de54dc5c2",
-      "contenu": "---\nid: f_01M69NJ7KYQ9WG4ZMREMW4QDTY\ntitre: \"Routage\"\ncreee: 2026-09-02\n---\n\nVoir [VLAN](Équipements/Cisco/VLAN.md) et [OSPF](<réseau/OSPF.md>).\n"
+      "empreinteAvant": "sha256:ec4f06c2f19b5d9a5296171d7a65c8cc60a6cf760086ef0df6a29f9bf428e818",
+      "contenu": "---\nid: f_01M69QKAXKJT1VWYCF4RVY9S9H\ntitre: \"Routage\"\ncreee: 2026-09-02\n---\n\nVoir [VLAN](Équipements/Cisco/VLAN.md) et [OSPF](<réseau/OSPF.md>).\n"
     },
     {
       "chemin": "fiches/Équipements/Cisco/Libre.md",

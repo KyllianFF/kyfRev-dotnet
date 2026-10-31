@@ -1,0 +1,50 @@
+{
+  "format": 1,
+  "id": "v_01M69QKC4S1AWY9WRQV7K3CVSA",
+  "creeLe": "2026-09-01",
+  "revision": {
+    "sequence": [
+      0,
+      1
+    ],
+    "rappelActif": true
+  },
+  "rappels": {
+    "delaiMinimalMois": 2,
+    "sequenceReposMois": [
+      2,
+      4,
+      8,
+      12
+    ],
+    "maxParJour": 2,
+    "attenteMaxJours": 30,
+    "inclureArchivageManuel": true
+  },
+  "citations": {
+    "active": true,
+    "enLigne": true,
+    "domaines": [
+      "art",
+      "science"
+    ]
+  },
+  "sauvegardes": {
+    "rotation": false
+  },
+  "modules": {
+    "schemas": true
+  },
+  "examens": [
+    {
+      "dossier": "Autre",
+      "nom": "Oral",
+      "jour": "2026-10-01"
+    },
+    {
+      "dossier": "",
+      "nom": "Partiel",
+      "jour": "2026-11-10"
+    }
+  ]
+}
