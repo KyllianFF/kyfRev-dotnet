@@ -1,0 +1,41 @@
+{
+  "format": 1,
+  "id": "f_01M69SX3EQHFG96RD5E7E7WF9N",
+  "chemin": "fiches/Une note/Note unique.md",
+  "titre": "Note importée",
+  "empreinte": "sha256:ade39e87188e322e3a1836b3b7bbefe78a541cf39736dabfe8a484c5c33069a4",
+  "modifieeLe": "2026-10-08T09:00:00Z",
+  "statut": "active",
+  "cycle": {
+    "numero": 1,
+    "sequence": [
+      0,
+      1,
+      3,
+      7,
+      14,
+      30
+    ],
+    "demarreLe": "2026-10-07",
+    "etape": 1,
+    "echeance": "2026-10-08",
+    "derniereRevision": "2026-10-07"
+  },
+  "compteurs": {
+    "cyclesCommences": 1,
+    "cyclesTermines": 0,
+    "cyclesInterrompus": 0
+  },
+  "historique": [
+    {
+      "evt": "revision",
+      "le": "2026-10-07T12:00:00Z",
+      "jour": "2026-10-07",
+      "cycle": 1,
+      "etape": "J0",
+      "prevuLe": "2026-10-07",
+      "retardJours": 0,
+      "origine": "adoption"
+    }
+  ]
+}

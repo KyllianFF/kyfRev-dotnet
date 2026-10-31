@@ -1,0 +1,49 @@
+{
+  "format": 1,
+  "id": "f_01M69SX2HEMTS5VMYNYN5DRQXF",
+  "chemin": "fiches/Histoire/Révolution.md",
+  "titre": "Révolution",
+  "empreinte": "sha256:cad817fe0bcbc450960c81f5dba484fbb5100bc3a1fb63124e87e5ad994177b9",
+  "modifieeLe": "2026-10-01T12:00:00Z",
+  "statut": "active",
+  "cycle": {
+    "numero": 1,
+    "sequence": [
+      0,
+      1,
+      3,
+      7,
+      14,
+      30
+    ],
+    "demarreLe": "2026-10-01",
+    "etape": 1,
+    "echeance": "2026-10-09",
+    "derniereRevision": "2026-10-01"
+  },
+  "compteurs": {
+    "cyclesCommences": 1,
+    "cyclesTermines": 0,
+    "cyclesInterrompus": 0
+  },
+  "historique": [
+    {
+      "evt": "revision",
+      "le": "2026-10-01T12:00:00Z",
+      "jour": "2026-10-01",
+      "cycle": 1,
+      "etape": "J0",
+      "prevuLe": "2026-10-01",
+      "retardJours": 0,
+      "origine": "creation"
+    },
+    {
+      "evt": "report",
+      "le": "2026-10-03T12:00:00Z",
+      "cycle": 1,
+      "etape": "J1",
+      "de": "2026-10-02",
+      "vers": "2026-10-09"
+    }
+  ]
+}

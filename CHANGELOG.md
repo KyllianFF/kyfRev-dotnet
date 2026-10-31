@@ -9,6 +9,24 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- Coffre, sauvegardes, exports et santé, identiques à la version 0.x :
+  - sauvegardes `.zip` vérifiées après écriture, hors du coffre, sans le verrou ; sauvegarde
+    quotidienne ; rotation (14 jours, 8 semaines, 24 mois) qui ne touche que les copies nommées
+    exactement comme des sauvegardes, jamais un dossier de coffre ;
+  - restauration du coffre entier dans un nouveau dossier, ou d'une fiche manquante avec ses
+    ressources, sans jamais écraser ; archive refusée avant toute écriture si un nom sort du
+    coffre, si la taille annoncée est démesurée ou si une entrée ment sur sa taille ou son
+    contenu (CRC-32) ;
+  - exports : suivi et historique en CSV pour Excel (protégés contre l'injection de formules),
+    annotations en Markdown, citations en Markdown et CSV, coffre entier ;
+  - partage d'une fiche : Markdown, archive avec ses images, texte, page web aux images intégrées ;
+  - import d'un dossier de notes (Obsidian, Typora…) : liens `[[…]]` convertis, pièces jointes
+    copiées sous un nom sûr, dossiers cachés et types exécutables écartés, rien d'écrasé ;
+  - « Santé du coffre » détaillée (liens cassés, passages à vérifier), doublon résolu en gardant
+    l'original, suivi recréé, annotations supprimées.
+- Un dixième scénario (114 opérations) comparé à la 0.x, et le script
+  `tools/interop/sauvegardes.ps1` : chaque version restaure à l'identique les sauvegardes de
+  l'autre.
 - Coffre, écritures complémentaires, identiques à la version 0.x :
   - annotations : passages et définitions, commentaire et définition modifiés, ré-ancrage,
     passage changé (avec ou sans retour à J0), corbeille, méthode des J propre à chaque passage ;

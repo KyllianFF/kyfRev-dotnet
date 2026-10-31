@@ -1,0 +1,50 @@
+{
+  "format": 1,
+  "id": "f_01M69SX2GF7G72T69Z2E4A3EFF",
+  "chemin": "fiches/Biologie/Mitose (restaurée).md",
+  "titre": "Mitose",
+  "empreinte": "sha256:60547ce7d57897268841bf2013deafbc170d04399956613c388efd11db796fc4",
+  "modifieeLe": "2026-10-01T12:00:00Z",
+  "statut": "active",
+  "cycle": {
+    "numero": 1,
+    "sequence": [
+      0,
+      1,
+      3,
+      7,
+      14,
+      30
+    ],
+    "demarreLe": "2026-10-01",
+    "etape": 2,
+    "echeance": "2026-10-05",
+    "derniereRevision": "2026-10-02"
+  },
+  "compteurs": {
+    "cyclesCommences": 1,
+    "cyclesTermines": 0,
+    "cyclesInterrompus": 0
+  },
+  "historique": [
+    {
+      "evt": "revision",
+      "le": "2026-10-01T12:00:00Z",
+      "jour": "2026-10-01",
+      "cycle": 1,
+      "etape": "J0",
+      "prevuLe": "2026-10-01",
+      "retardJours": 0,
+      "origine": "creation"
+    },
+    {
+      "evt": "revision",
+      "le": "2026-10-02T12:00:00Z",
+      "jour": "2026-10-02",
+      "cycle": 1,
+      "etape": "J1",
+      "prevuLe": "2026-10-02",
+      "retardJours": 0
+    }
+  ]
+}

@@ -66,11 +66,13 @@ affiche le détail du cas `n` (familles `noms`, `entetes`, `liens`).
 cargo run --release --manifest-path tools/reference-vectors/Cargo.toml -- --vecteurs-coffre tests/KyfRev.Infrastructure.Vault.Tests/fixtures/reference
 ```
 
-`--scenarios <dossier>` joue chaque scénario (fiches, organisation, corbeille, analyse et journal, annotations, rappels et réglages, citations, schémas et modèles) de `tests/KyfRev.Infrastructure.Vault.Tests/fixtures/scenarios`
+`--scenarios <dossier>` joue chaque scénario (fiches, organisation, corbeille, analyse et journal, annotations, rappels et réglages, citations, schémas et modèles, sauvegardes, exports, partage, import et réparations) de `tests/KyfRev.Infrastructure.Vault.Tests/fixtures/scenarios`, ou le seul scénario `<dossier>`
 (une suite d'opérations décrite dans `scenario.json`) avec le crate `coffre`, et écrit à côté le
 coffre obtenu (`attendu/`), le résultat de chaque opération, les identifiants créés dans l'ordre
 et la liste des dossiers. Les tests C# rejouent le scénario avec les mêmes identifiants et
-exigent un coffre identique à l'octet près.
+exigent un coffre identique à l'octet près. Ce qui est écrit hors du coffre (sauvegardes,
+exports, partages, dossier importé) l'est dans `attendu.dehors/`, effacé à la fin : les résultats
+en donnent le contenu. Les exports datent les événements en UTC, comme les tests C#.
 
 ```powershell
 $env:COMPUTERNAME = 'POSTE-ESSAI'
@@ -80,3 +82,7 @@ cargo run --release --manifest-path tools/reference-vectors/Cargo.toml -- --scen
 `--sante <dossier>` ouvre un coffre comme kyfRev 0.x et résume « Santé du coffre » ; il sert à
 `tools/interop/ecriture.ps1`, qui vérifie qu'un coffre écrit par la génération .NET se rouvre
 dans la 0.x sans aucun signalement.
+
+`--sauvegarder <coffre> <dossier>` et `--restaurer <archive> <dossier>` sauvegardent et
+restaurent comme kyfRev 0.x ; ils servent à `tools/interop/sauvegardes.ps1`, qui vérifie que
+chaque version restaure à l'identique les sauvegardes de l'autre.

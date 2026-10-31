@@ -23,7 +23,14 @@ internal sealed partial class ScenarioRunner(string root, UlidGenerator ids) : I
 
     private VaultSession Vault => _vault ?? throw new InvalidOperationException("Coffre fermé.");
 
-    public void Dispose() => _vault?.Dispose();
+    public void Dispose()
+    {
+        _vault?.Dispose();
+        if (Directory.Exists(Outside))
+        {
+            Directory.Delete(Outside, recursive: true);
+        }
+    }
 
     /// <summary>Ligne de résultat de l'opération <paramref name="n"/>, au format de la 0.x.</summary>
     public string Play(int n, JsonElement operation)
@@ -255,6 +262,11 @@ internal sealed partial class ScenarioRunner(string root, UlidGenerator ids) : I
             VaultErrorKind.QuoteInTrash => ("CitationALaCorbeille", true),
             VaultErrorKind.UnknownSchema => ("SchemaInconnu", true),
             VaultErrorKind.InvalidSchema => ("SchemaInvalide", true),
+            VaultErrorKind.BackupInsideVault => ("SauvegardeDansLeCoffre", false),
+            VaultErrorKind.ExportInsideVault => ("ExportDansLeCoffre", false),
+            VaultErrorKind.InvalidBackup => ("SauvegardeInvalide", false),
+            VaultErrorKind.SheetNotMissing => ("FicheNonManquante", true),
+            VaultErrorKind.NotInBackup => ("AbsenteDeLaSauvegarde", true),
             _ => (exception.Kind.ToString(), true),
         };
         return comparable ? $"{variant} : {exception.Message}" : variant;

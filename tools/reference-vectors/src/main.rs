@@ -11,7 +11,10 @@
 //!   cargo run --release -- --vecteurs-coffre <dossier>   vecteurs des fonctions pures du coffre
 //!   cargo run --release -- --fonctions <famille> <n>     détail d'un cas (noms, entetes, liens)
 //!   cargo run --release -- --scenarios <dossier>         joue les scénarios d'opérations sur un coffre
+//!                                                       (ou le seul scénario <dossier>)
 //!   cargo run --release -- --sante <dossier>             ouvre un coffre comme la 0.x et résume sa santé
+//!   cargo run --release -- --sauvegarder <coffre> <dossier>   sauvegarde un coffre comme la 0.x
+//!   cargo run --release -- --restaurer <archive> <dossier>    restaure une sauvegarde comme la 0.x
 
 mod coffre_reference;
 mod fonctions_coffre;
@@ -379,6 +382,22 @@ fn main() {
                     println!("{}", scenarios::rapport(&coffre));
                     println!("problèmes : {}", coffre.sante().problemes());
                 }
+                Err(erreur) => {
+                    println!("refus : {erreur}");
+                    std::process::exit(3);
+                }
+            }
+        }
+        [option, racine, dossier] if option == "--sauvegarder" => {
+            // Contrôle croisé des archives (tools/interop/sauvegardes.ps1).
+            let jour = date(2026, 10, 31);
+            let coffre = coffre::Coffre::ouvrir(Path::new(racine), &moment(jour)).expect("ouverture du coffre");
+            let sauvegarde = coffre.sauvegarder(Path::new(dossier), jour.at(12, 0, 0, 0)).expect("sauvegarde");
+            println!("{}", sauvegarde.chemin.display());
+        }
+        [option, archive, dossier] if option == "--restaurer" => {
+            match coffre::sauvegardes::restaurer(Path::new(archive), Path::new(dossier), date(2026, 10, 31)) {
+                Ok(chemin) => println!("{}", chemin.display()),
                 Err(erreur) => {
                     println!("refus : {erreur}");
                     std::process::exit(3);

@@ -1,0 +1,114 @@
+0 initialiser ok
+1 creer_fiche ok
+2 ajouter_ressource ok Mitose.ressources/cellule.png
+3 ecrire ok
+4 creer_fiche ok
+5 creer_annotation ok
+6 creer_definition ok
+7 creer_annotation ok
+8 creer_annotation ok
+9 reancrer ok
+10 corbeille_annotation ok
+11 corbeille_annotation ok
+12 annotations_corbeille ok a_01M69SX2J5XSJNKB5VZSE6ZF64 f_01M69SX2HEMTS5VMYNYN5DRQXF "Révolution" "Texte" null 2026-10-04T12:00:00Z;a_01M69SX2JP2HQGNBQVXM6YEWFR f_01M69SX2GF7G72T69Z2E4A3EFF "Mitose" "Lien" "à jeter" 2026-10-03T12:00:00Z
+13 reviser ok
+14 reporter ok
+15 ajouter_citation ok citations/Lavoisier - Rien ne se perd, rien ne.md c_01M69SX2MD8XK383BDF23VKTQC 1789 2026-10-03 - "Rien ne se perd, rien ne se crée." "Lavoisier" "1789" Livre "Traité élémentaire de chimie" "101" null "Chimie ; masse" ["chimie","sciences"]
+16 ajouter_citation ok citations/Auteur inconnu - =1+1.md c_01M69SX2MP9PHTT814H8DWJW4A - 2026-10-04 - "=1+1" null null - null null null null []
+17 rapport_sante ok problemes=3 deplacees=[] modifiees=[] manquantes=[] doublons=[] non_suivies=[] sans_suivi=[] illisibles=[] liens=[] liens_casses=[f_01M69SX2GF7G72T69Z2E4A3EFF "Mitose" "Absent.md";f_01M69SX2GF7G72T69Z2E4A3EFF "Mitose" "Mitose.ressources/perdue.png"] orphelines=[] a_verifier=[a_01M69SX2JE82KDQYA8ZKQ3FG4E f_01M69SX2HEMTS5VMYNYN5DRQXF "Révolution" "guillemets" AVerifier]
+18 exporter ok kyfRev - suivi 2026-10-05.csv "﻿Type;Identifiant;Fiche;Dossier;Passage;Statut;Étape attendue;Échéance;Cycle en cours;Dernière révision;Cycles commencés;Cycles terminés;Archivée le;Rappel possible le\r\nFiche;f_01M69SX2GF7G72T69Z2E4A3EFF;Mitose;fiches/Biologie;;active;J3;2026-10-05;1;2026-10-02;1;0;;\r\nPassage;a_01M69SX2HXG99YGQ6EETYM0XFC;Mitose;fiches/Biologie;schéma;active;J1;2026-10-03;1;2026-10-02;1;0;;\r\nFiche;f_01M69SX2HEMTS5VMYNYN5DRQXF;Révolution;fiches/Histoire;;active;J1;2026-10-09;1;2026-10-01;1;0;;\r\nPassage;a_01M69SX2JE82KDQYA8ZKQ3FG4E;Révolution;fiches/Histoire;guillemets;active;J1;2026-10-03;1;2026-10-02;1;0;;\r\n";kyfRev - historique 2026-10-05.csv "﻿Type;Identifiant;Fiche;Passage;Événement;Date;Cycle;Étape;Prévue le;Retard (jours);Détail\r\nFiche;f_01M69SX2GF7G72T69Z2E4A3EFF;Mitose;;J0 : création;2026-10-01;1;J0;2026-10-01;0;\r\nFiche;f_01M69SX2GF7G72T69Z2E4A3EFF;Mitose;;Révision;2026-10-02;1;J1;2026-10-02;0;\r\nPassage;a_01M69SX2HXG99YGQ6EETYM0XFC;Mitose;schéma;J0 : création;2026-10-02;1;J0;2026-10-02;0;\r\nFiche;f_01M69SX2HEMTS5VMYNYN5DRQXF;Révolution;;J0 : création;2026-10-01;1;J0;2026-10-01;0;\r\nFiche;f_01M69SX2HEMTS5VMYNYN5DRQXF;Révolution;;Report;2026-10-03;1;J1;2026-10-02;;reportée au 2026-10-09\r\nPassage;a_01M69SX2JE82KDQYA8ZKQ3FG4E;Révolution;guillemets;J0 : création;2026-10-02;1;J0;2026-10-02;0;\r\n"
+19 exporter ok kyfRev - suivi 2026-10-05 (2).csv "﻿Type;Identifiant;Fiche;Dossier;Passage;Statut;Étape attendue;Échéance;Cycle en cours;Dernière révision;Cycles commencés;Cycles terminés;Archivée le;Rappel possible le\r\nFiche;f_01M69SX2GF7G72T69Z2E4A3EFF;Mitose;fiches/Biologie;;active;J3;2026-10-05;1;2026-10-02;1;0;;\r\nPassage;a_01M69SX2HXG99YGQ6EETYM0XFC;Mitose;fiches/Biologie;schéma;active;J1;2026-10-03;1;2026-10-02;1;0;;\r\nFiche;f_01M69SX2HEMTS5VMYNYN5DRQXF;Révolution;fiches/Histoire;;active;J1;2026-10-09;1;2026-10-01;1;0;;\r\nPassage;a_01M69SX2JE82KDQYA8ZKQ3FG4E;Révolution;fiches/Histoire;guillemets;active;J1;2026-10-03;1;2026-10-02;1;0;;\r\n";kyfRev - historique 2026-10-05 (2).csv "﻿Type;Identifiant;Fiche;Passage;Événement;Date;Cycle;Étape;Prévue le;Retard (jours);Détail\r\nFiche;f_01M69SX2GF7G72T69Z2E4A3EFF;Mitose;;J0 : création;2026-10-01;1;J0;2026-10-01;0;\r\nFiche;f_01M69SX2GF7G72T69Z2E4A3EFF;Mitose;;Révision;2026-10-02;1;J1;2026-10-02;0;\r\nPassage;a_01M69SX2HXG99YGQ6EETYM0XFC;Mitose;schéma;J0 : création;2026-10-02;1;J0;2026-10-02;0;\r\nFiche;f_01M69SX2HEMTS5VMYNYN5DRQXF;Révolution;;J0 : création;2026-10-01;1;J0;2026-10-01;0;\r\nFiche;f_01M69SX2HEMTS5VMYNYN5DRQXF;Révolution;;Report;2026-10-03;1;J1;2026-10-02;;reportée au 2026-10-09\r\nPassage;a_01M69SX2JE82KDQYA8ZKQ3FG4E;Révolution;guillemets;J0 : création;2026-10-02;1;J0;2026-10-02;0;\r\n"
+20 exporter ok kyfRev - annotations 2026-10-05.md "# Annotations\n\nExport de kyfRev du 2026-10-05.\n\n## Mitose\n\n*fiches/Biologie*\n\n> schéma\n\n=SOMME(A1) ; \"cité\"\nsur deux lignes\n\n*J1 le 2026-10-03*\n\n## Révolution\n\n*fiches/Histoire*\n\n> guillemets\n\n*J1 le 2026-10-03 · position à vérifier*\n"
+21 exporter ok kyfRev - citations 2026-10-05.md "# Citations\n\nExport de kyfRev du 2026-10-05.\n\n> =1+1\n\n— Auteur inconnu\n\n> Rien ne se perd, rien ne se crée.\n\n— Lavoisier, *Traité élémentaire de chimie* (1789)\n";kyfRev - citations 2026-10-05.csv "﻿Texte;Auteur;Date;Source;Type;Page;Adresse;Contexte;Étiquettes;Ajoutée le\r\n'=1+1;;;;;;;;;2026-10-04\r\nRien ne se perd, rien ne se crée.;Lavoisier;1789;Traité élémentaire de chimie;livre;101;;\"Chimie ; masse\";chimie, sciences;2026-10-03\r\n"
+22 exporter ok coffre-2026-10-05T09-30-00.zip [.suivi/LISEZMOI.txt:sha256:00a3a050d6f4de78d44f0af818c8da6e5e5fe36f180dcd8c33894ba36e363e28;.suivi/annotations/f_01M69SX2GF7G72T69Z2E4A3EFF.json:sha256:c6408105e58dcd1c9a3861fa435e134b185f1af5a36c113ab2c7c12f362950d3;.suivi/annotations/f_01M69SX2HEMTS5VMYNYN5DRQXF.json:sha256:5bece51b3f26c04597c243371366fe41136616423a33ebfd174206f3541dcd3b;.suivi/coffre.json:sha256:5fd51bfbf5990b542ad450772acfa8567a0c75c8370eeb2706cb4f10115f1cc5;.suivi/fiches/f_01M69SX2GF7G72T69Z2E4A3EFF.json:sha256:b200669939fbb5e17f7718164bccf1fd5be7580a6a8064a33c920661c6ce51a5;.suivi/fiches/f_01M69SX2HEMTS5VMYNYN5DRQXF.json:sha256:c2aed93a0c0a2e7aa74d9a79f7beb41c3853636b3d1a923506557485dec41293;citations/Auteur inconnu - =1+1.md:sha256:cfea181953ef4cb0639db2d12e91a1a489a8c91c227e34c589f9aad017b1d223;citations/Lavoisier - Rien ne se perd, rien ne.md:sha256:e065cc329f062bcca99bb41fcb9d3853a2aa38a6a417b7e39160c60fea9615cd;fiches/Biologie/Mitose.md:sha256:60547ce7d57897268841bf2013deafbc170d04399956613c388efd11db796fc4;fiches/Biologie/Mitose.ressources/cellule.png:sha256:796120837694d3f3f29259cfeb25091698c2a0aa87873658d840b4993ee889b3;fiches/Commun/légende.svg:sha256:d4dc56669143034f31aa309635d4113d9ad76a02b1739da22c965ed2049be9e6;fiches/Histoire/Révolution.md:sha256:cad817fe0bcbc450960c81f5dba484fbb5100bc3a1fb63124e87e5ad994177b9]
+23 exporter erreur ExportDansLeCoffre
+24 partager ok Mitose.md "# Mitose\n\nVoir le [schéma](Mitose.ressources/cellule.png), la ![légende](../Commun/l%C3%A9gende.svg) et [le site](https://exemple.org/page).\n\nLien cassé : [absent](Absent.md#partie) et ![image](<Mitose.ressources/perdue.png>).\n"
+25 partager ok Mitose.zip [Mitose.md:sha256:cfd999afeffd6983c7f7d6035f061887b2ee3f4e93823f1c2895a176c321f8d0;Mitose.ressources/cellule.png:sha256:796120837694d3f3f29259cfeb25091698c2a0aa87873658d840b4993ee889b3;images/légende.svg:sha256:d4dc56669143034f31aa309635d4113d9ad76a02b1739da22c965ed2049be9e6]
+26 partager ok Révolution.md "# Révolution\n\n# Autre titre\n\nTexte ; avec \"guillemets\".\n"
+27 partager ok Mitose.txt "Mitose\n\nTexte brut."
+28 partager ok Mitose (2).txt "Deuxième."
+29 partager ok Mitose.html "<p><img src=\"data:image/png;base64,UE5H\"> <img data-introuvable=\"fiches/Commun/l&#39;absente.png\"> <img src=\"data:image/svg+xml;base64,PHN2Zy8+\"> <img data-introuvable=\"../dehors.png\"> <img data-introuvable=\"fiches/Biologie/Mitose.md\"></p> <img data-coffre=\"sans-fin"
+30 partager erreur CheminInvalide : Chemin refusé « Texte » : contenu à partager absent ou trop volumineux.
+31 partager erreur ExportDansLeCoffre
+32 sauvegarde_necessaire ok true
+33 sauvegarder ok coffre-2026-10-05T10-00-00.zip 2026-10-05T10:00:00 12
+34 sauvegarder ok coffre-2026-10-05T10-00-00-2.zip 2026-10-05T10:00:00 12
+35 archive ok .suivi/LISEZMOI.txt:sha256:00a3a050d6f4de78d44f0af818c8da6e5e5fe36f180dcd8c33894ba36e363e28;.suivi/annotations/f_01M69SX2GF7G72T69Z2E4A3EFF.json:sha256:c6408105e58dcd1c9a3861fa435e134b185f1af5a36c113ab2c7c12f362950d3;.suivi/annotations/f_01M69SX2HEMTS5VMYNYN5DRQXF.json:sha256:5bece51b3f26c04597c243371366fe41136616423a33ebfd174206f3541dcd3b;.suivi/coffre.json:sha256:5fd51bfbf5990b542ad450772acfa8567a0c75c8370eeb2706cb4f10115f1cc5;.suivi/fiches/f_01M69SX2GF7G72T69Z2E4A3EFF.json:sha256:b200669939fbb5e17f7718164bccf1fd5be7580a6a8064a33c920661c6ce51a5;.suivi/fiches/f_01M69SX2HEMTS5VMYNYN5DRQXF.json:sha256:c2aed93a0c0a2e7aa74d9a79f7beb41c3853636b3d1a923506557485dec41293;citations/Auteur inconnu - =1+1.md:sha256:cfea181953ef4cb0639db2d12e91a1a489a8c91c227e34c589f9aad017b1d223;citations/Lavoisier - Rien ne se perd, rien ne.md:sha256:e065cc329f062bcca99bb41fcb9d3853a2aa38a6a417b7e39160c60fea9615cd;fiches/Biologie/Mitose.md:sha256:60547ce7d57897268841bf2013deafbc170d04399956613c388efd11db796fc4;fiches/Biologie/Mitose.ressources/cellule.png:sha256:796120837694d3f3f29259cfeb25091698c2a0aa87873658d840b4993ee889b3;fiches/Commun/légende.svg:sha256:d4dc56669143034f31aa309635d4113d9ad76a02b1739da22c965ed2049be9e6;fiches/Histoire/Révolution.md:sha256:cad817fe0bcbc450960c81f5dba484fbb5100bc3a1fb63124e87e5ad994177b9
+36 sauvegardes ok 2026-10-05T10:00:00 coffre-2026-10-05T10-00-00.zip;2026-10-05T10:00:00 coffre-2026-10-05T10-00-00-2.zip
+37 sauvegarde_necessaire ok false
+38 sauvegarde_necessaire ok true
+39 sauvegarder erreur SauvegardeDansLeCoffre
+40 ecrire_dehors ok
+41 ecrire_dehors ok
+42 ecrire_dehors ok
+43 ecrire_dehors ok
+44 ecrire_dehors ok
+45 ecrire_dehors ok
+46 ecrire_dehors ok
+47 ecrire_dehors ok
+48 ecrire_dehors ok
+49 ecrire_dehors ok
+50 ecrire_dehors ok
+51 ecrire_dehors ok
+52 sauvegardes ok 2026-03-03T07:00:00 coffre-2026-03-03T07-00-00.zip;2026-03-02T09:00:00 coffre-2026-03-02T09-00-00.zip;2026-03-02T09:00:00 coffre-2026-03-02T09-00-00-2.zip;2026-02-28T08:00:00 coffre-2026-02-28T08-00-00.zip;2026-02-03T20:00:00 coffre-2026-02-03T20-00-00.zip;2026-02-03T08:00:00 coffre-2026-02-03T08-00-00.zip;2026-01-20T08:00:00 coffre-2026-01-20T08-00-00.zip;2026-01-10T08:00:00 coffre-2026-01-10T08-00-00.zip
+53 rotation ok coffre-2026-03-02T09-00-00-2.zip;coffre-2026-02-03T20-00-00.zip;coffre-2026-02-03T08-00-00.zip;coffre-2026-01-20T08-00-00.zip;coffre-2026-01-10T08-00-00.zip
+54 sauvegardes ok 2026-03-03T07:00:00 coffre-2026-03-03T07-00-00.zip;2026-03-02T09:00:00 coffre-2026-03-02T09-00-00.zip;2026-02-28T08:00:00 coffre-2026-02-28T08-00-00.zip
+55 rotation ok coffre-2026-03-02T09-00-00.zip;coffre-2026-02-28T08-00-00.zip
+56 sauvegardes ok 2026-03-03T07:00:00 coffre-2026-03-03T07-00-00.zip
+57 ecrire_dehors ok
+58 rotation erreur SauvegardeDansLeCoffre
+59 sauvegardes ok
+60 restaurer_coffre ok "Coffre (restauré le 2026-10-06)" .suivi/LISEZMOI.txt:sha256:00a3a050d6f4de78d44f0af818c8da6e5e5fe36f180dcd8c33894ba36e363e28;.suivi/annotations/f_01M69SX2GF7G72T69Z2E4A3EFF.json:sha256:c6408105e58dcd1c9a3861fa435e134b185f1af5a36c113ab2c7c12f362950d3;.suivi/annotations/f_01M69SX2HEMTS5VMYNYN5DRQXF.json:sha256:5bece51b3f26c04597c243371366fe41136616423a33ebfd174206f3541dcd3b;.suivi/coffre.json:sha256:5fd51bfbf5990b542ad450772acfa8567a0c75c8370eeb2706cb4f10115f1cc5;.suivi/fiches/f_01M69SX2GF7G72T69Z2E4A3EFF.json:sha256:b200669939fbb5e17f7718164bccf1fd5be7580a6a8064a33c920661c6ce51a5;.suivi/fiches/f_01M69SX2HEMTS5VMYNYN5DRQXF.json:sha256:c2aed93a0c0a2e7aa74d9a79f7beb41c3853636b3d1a923506557485dec41293;citations/Auteur inconnu - =1+1.md:sha256:cfea181953ef4cb0639db2d12e91a1a489a8c91c227e34c589f9aad017b1d223;citations/Lavoisier - Rien ne se perd, rien ne.md:sha256:e065cc329f062bcca99bb41fcb9d3853a2aa38a6a417b7e39160c60fea9615cd;fiches/Biologie/Mitose.md:sha256:60547ce7d57897268841bf2013deafbc170d04399956613c388efd11db796fc4;fiches/Biologie/Mitose.ressources/cellule.png:sha256:796120837694d3f3f29259cfeb25091698c2a0aa87873658d840b4993ee889b3;fiches/Commun/légende.svg:sha256:d4dc56669143034f31aa309635d4113d9ad76a02b1739da22c965ed2049be9e6;fiches/Histoire/Révolution.md:sha256:cad817fe0bcbc450960c81f5dba484fbb5100bc3a1fb63124e87e5ad994177b9
+61 restaurer_coffre ok "Coffre (restauré le 2026-10-06) (2)" .suivi/LISEZMOI.txt:sha256:00a3a050d6f4de78d44f0af818c8da6e5e5fe36f180dcd8c33894ba36e363e28;.suivi/annotations/f_01M69SX2GF7G72T69Z2E4A3EFF.json:sha256:c6408105e58dcd1c9a3861fa435e134b185f1af5a36c113ab2c7c12f362950d3;.suivi/annotations/f_01M69SX2HEMTS5VMYNYN5DRQXF.json:sha256:5bece51b3f26c04597c243371366fe41136616423a33ebfd174206f3541dcd3b;.suivi/coffre.json:sha256:5fd51bfbf5990b542ad450772acfa8567a0c75c8370eeb2706cb4f10115f1cc5;.suivi/fiches/f_01M69SX2GF7G72T69Z2E4A3EFF.json:sha256:b200669939fbb5e17f7718164bccf1fd5be7580a6a8064a33c920661c6ce51a5;.suivi/fiches/f_01M69SX2HEMTS5VMYNYN5DRQXF.json:sha256:c2aed93a0c0a2e7aa74d9a79f7beb41c3853636b3d1a923506557485dec41293;citations/Auteur inconnu - =1+1.md:sha256:cfea181953ef4cb0639db2d12e91a1a489a8c91c227e34c589f9aad017b1d223;citations/Lavoisier - Rien ne se perd, rien ne.md:sha256:e065cc329f062bcca99bb41fcb9d3853a2aa38a6a417b7e39160c60fea9615cd;fiches/Biologie/Mitose.md:sha256:60547ce7d57897268841bf2013deafbc170d04399956613c388efd11db796fc4;fiches/Biologie/Mitose.ressources/cellule.png:sha256:796120837694d3f3f29259cfeb25091698c2a0aa87873658d840b4993ee889b3;fiches/Commun/légende.svg:sha256:d4dc56669143034f31aa309635d4113d9ad76a02b1739da22c965ed2049be9e6;fiches/Histoire/Révolution.md:sha256:cad817fe0bcbc450960c81f5dba484fbb5100bc3a1fb63124e87e5ad994177b9
+62 ecrire_dehors ok
+63 restaurer_coffre erreur SauvegardeInvalide
+64 restaurer_coffre erreur SauvegardeInvalide
+65 restaurer_fiche_sauvegarde erreur FicheNonManquante : « Révolution » n'est pas manquante : rien à restaurer.
+66 supprimer ok
+67 supprimer ok
+68 ecrire ok
+69 analyser ok
+70 rapport_sante ok problemes=4 deplacees=[] modifiees=[] manquantes=[f_01M69SX2GF7G72T69Z2E4A3EFF "Mitose" fiches/Biologie/Mitose.md] doublons=[] non_suivies=[fiches/Biologie/Mitose.md] sans_suivi=[] illisibles=[] liens=[] liens_casses=[] orphelines=[a_01M69SX2HXG99YGQ6EETYM0XFC f_01M69SX2GF7G72T69Z2E4A3EFF "Mitose" "schéma" Ancree] a_verifier=[a_01M69SX2JE82KDQYA8ZKQ3FG4E f_01M69SX2HEMTS5VMYNYN5DRQXF "Révolution" "guillemets" AVerifier]
+71 restaurer_fiche_sauvegarde ok fiches/Biologie/Mitose (restaurée).md
+72 fiche ok fiches/Biologie/Mitose (restaurée).md "Mitose" [] present sha256:60547ce7d57897268841bf2013deafbc170d04399956613c388efd11db796fc4
+73 restaurer_fiche_sauvegarde erreur FicheNonManquante : « Mitose » n'est pas manquante : rien à restaurer.
+74 creer_fiche ok
+75 supprimer ok
+76 analyser ok
+77 restaurer_fiche_sauvegarde erreur AbsenteDeLaSauvegarde : « Tardive » ne figure pas dans cette sauvegarde.
+78 ecrire_dehors ok
+79 ecrire_dehors ok
+80 ecrire_dehors ok
+81 ecrire_dehors ok
+82 ecrire_dehors ok
+83 ecrire_dehors ok
+84 ecrire_dehors ok
+85 ecrire_dehors ok
+86 ecrire_dehors ok
+87 ecrire_dehors ok
+88 importer ok "Obsidian" 2 0 5 8 ["Accueil.md : Ressource « outil.exe » refusée : type de fichier exécutable ou actif.","Latin.md : pas en UTF-8 (réenregistrez-le en UTF-8)"]
+89 importer ok "Obsidian (2)" 2 0 5 8 ["Accueil.md : Ressource « outil.exe » refusée : type de fichier exécutable ou actif.","Latin.md : pas en UTF-8 (réenregistrez-le en UTF-8)"]
+90 ecrire_dehors ok
+91 importer ok "Une note" 1 1 0 0 []
+92 fiche ok fiches/Une note/Note unique.md "Note importée" ["import"] present sha256:71050eb9b29dfcff6ec2f8188660f637cf411f09f9edecba7666f5d9884476a5
+93 ecrire ok
+94 analyser ok
+95 rapport_sante ok problemes=10 deplacees=[] modifiees=[] manquantes=[f_01M69SX37R4MET4GZ1TXVPF73F "Tardive" fiches/Tardive.md] doublons=[f_01M69SX2HEMTS5VMYNYN5DRQXF "Révolution" fiches/Histoire/Copie.md,fiches/Histoire/Révolution.md] non_suivies=[fiches/Biologie/Mitose.md;fiches/Obsidian (2)/Accueil.md;fiches/Obsidian (2)/Bio/Mitose.md;fiches/Obsidian/Accueil.md;fiches/Obsidian/Bio/Mitose.md] sans_suivi=[] illisibles=[] liens=[] liens_casses=[f_01M69SX2GF7G72T69Z2E4A3EFF "Mitose" "Absent.md";f_01M69SX2GF7G72T69Z2E4A3EFF "Mitose" "Mitose.ressources/perdue.png"] orphelines=[] a_verifier=[a_01M69SX2JE82KDQYA8ZKQ3FG4E f_01M69SX2HEMTS5VMYNYN5DRQXF "Révolution" "guillemets" AVerifier]
+96 garder_original erreur CheminInvalide : Chemin refusé « fiches/Ailleurs.md » : ce fichier ne fait pas partie du doublon.
+97 garder_original erreur FicheInconnue : Aucune fiche ne porte l'identifiant f_01M69SX2GF7G72T69Z2E4A3EFF.
+98 garder_original ok f_01M69SX3GY6N8YNPK5B90A6WTM
+99 fiche ok fiches/Histoire/Copie.md "Copie" [] present sha256:447af5e891b0dec0486c06c679caeee74a0893876a641460737cb11b0a41bc2b
+100 fiche ok fiches/Histoire/Révolution.md "Révolution" [] present sha256:cad817fe0bcbc450960c81f5dba484fbb5100bc3a1fb63124e87e5ad994177b9
+101 versions ok 20261008T120000Z.md 2026-10-08T12:00:00Z 79
+102 deplacer ok
+103 ecrire ok
+104 ecrire ok
+105 ecrire ok
+106 analyser ok
+107 rapport_sante ok problemes=11 deplacees=["Copie" fiches/Histoire/Copie.md fiches/Rangées/Copie.md] modifiees=[f_01M69SX3EQHFG96RD5E7E7WF9N "Note importée" fiches/Une note/Note unique.md] manquantes=[f_01M69SX37R4MET4GZ1TXVPF73F "Tardive" fiches/Tardive.md] doublons=[] non_suivies=[fiches/Biologie/Mitose.md;fiches/Obsidian (2)/Accueil.md;fiches/Obsidian (2)/Bio/Mitose.md;fiches/Obsidian/Accueil.md;fiches/Obsidian/Bio/Mitose.md] sans_suivi=[f_01JQZ8S7ZK4V3H2N8M6X5W9PQR "Sans suivi" fiches/Sans suivi.md] illisibles=[fiches/Cassée.md] liens=[] liens_casses=[f_01M69SX2GF7G72T69Z2E4A3EFF "Mitose" "Absent.md";f_01M69SX2GF7G72T69Z2E4A3EFF "Mitose" "Mitose.ressources/perdue.png"] orphelines=[] a_verifier=[a_01M69SX2JE82KDQYA8ZKQ3FG4E f_01M69SX2HEMTS5VMYNYN5DRQXF "Révolution" "guillemets" AVerifier]
+108 recreer_suivi ok f_01JQZ8S7ZK4V3H2N8M6X5W9PQR
+109 recreer_suivi erreur CheminInvalide : Chemin refusé « fiches/Sans suivi.md » : ce fichier n'attend pas de suivi.
+110 fiche ok fiches/Sans suivi.md "Sans suivi" [] present sha256:b5f3303510fd081d75429b767946730bd2d7b8c633d2a2a6f7505f0c873f0ef0
+111 annotations_corbeille ok a_01M69SX2J5XSJNKB5VZSE6ZF64 f_01M69SX2HEMTS5VMYNYN5DRQXF "Révolution" "Texte" null 2026-10-04T12:00:00Z;a_01M69SX2JP2HQGNBQVXM6YEWFR f_01M69SX2GF7G72T69Z2E4A3EFF "Mitose" "Lien" "à jeter" 2026-10-03T12:00:00Z
+112 rapport_sante ok problemes=10 deplacees=[] modifiees=[] manquantes=[f_01M69SX37R4MET4GZ1TXVPF73F "Tardive" fiches/Tardive.md] doublons=[] non_suivies=[fiches/Biologie/Mitose.md;fiches/Obsidian (2)/Accueil.md;fiches/Obsidian (2)/Bio/Mitose.md;fiches/Obsidian/Accueil.md;fiches/Obsidian/Bio/Mitose.md] sans_suivi=[] illisibles=[fiches/Cassée.md] liens=[] liens_casses=[f_01M69SX2GF7G72T69Z2E4A3EFF "Mitose" "Absent.md";f_01M69SX2GF7G72T69Z2E4A3EFF "Mitose" "Mitose.ressources/perdue.png"] orphelines=[] a_verifier=[a_01M69SX2JE82KDQYA8ZKQ3FG4E f_01M69SX2HEMTS5VMYNYN5DRQXF "Révolution" "guillemets" AVerifier]
+113 sante ok deplacees=[] modifiees=[] manquantes=[f_01M69SX37R4MET4GZ1TXVPF73F] doublons=[] non_suivies=[fiches/Biologie/Mitose.md;fiches/Obsidian (2)/Accueil.md;fiches/Obsidian (2)/Bio/Mitose.md;fiches/Obsidian/Accueil.md;fiches/Obsidian/Bio/Mitose.md] sans_suivi=[] illisibles=[fiches/Cassée.md] liens=[] orphelines=[]

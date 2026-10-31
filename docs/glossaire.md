@@ -71,6 +71,13 @@ Ce glossaire fixe la correspondance. Les **clés JSON du coffre restent celles d
 | Corbeille | `Trash` | `fiches/.supprimees/` | Éléments supprimés, restaurables, jamais purgés. |
 | Sauvegarde | `Backup` | `Sauvegardes/coffre-*.zip` | Copie zip vérifiée du coffre, hors du coffre. |
 | Santé du coffre | `VaultHealth` | — | Diagnostic sans réparation silencieuse. |
+| Rotation | `RotationPolicy` | — | Copies conservées : 14 quotidiennes, 8 hebdomadaires, 24 mensuelles. |
+| Restauration | `Restore` | `Coffre (restauré le AAAA-MM-JJ)` | Sauvegarde remise dans un nouveau dossier, jamais par-dessus le coffre. |
+| Export | `Export` | `kyfRev - suivi AAAA-MM-JJ.csv`… | Fichier écrit hors du coffre, sans jamais écraser. |
+| Partage | `ShareSheet` | — | Une fiche en Markdown, archive avec images, texte ou page web. |
+| Import | `ImportFolder` | `fiches/<nom>` | Copie d'un dossier de notes (Obsidian…), liens `[[…]]` convertis. |
+| Lien cassé | `BrokenLink` | — | Lien d'une fiche vers un fichier absent du coffre. |
+| Garder l'original | `KeepOriginal` | — | Doublon résolu : les copies reçoivent un identifiant neuf. |
 | Examen | `Exam` | `examens` | Date d'examen d'un dossier. |
 | Resserrer | `Tighten` | — | Ramener les échéances avant la date d'examen. |
 | Réglages | `VaultSettings` | `.suivi/coffre.json` | Paramètres propres au coffre. |
