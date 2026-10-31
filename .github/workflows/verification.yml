@@ -117,9 +117,14 @@ jobs:
 
       - name: Paquets vulnérables
         run: |
-          $sortie = dotnet list KyfRev.slnx package --vulnerable --include-transitive 2>&1 | Out-String
-          Write-Output $sortie
-          if ($LASTEXITCODE -ne 0 -or $sortie -match 'vulnerable packages') { exit 1 }
+          $json = dotnet list KyfRev.slnx package --vulnerable --include-transitive --format json
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          $vulnerables = @(($json | ConvertFrom-Json).projects.frameworks |
+            ForEach-Object { @($_.topLevelPackages) + @($_.transitivePackages) } |
+            Where-Object { $_ -and $_.vulnerabilities })
+          $vulnerables | ForEach-Object { Write-Output "Vulnérable : $($_.id) $($_.resolvedVersion)" }
+          if ($vulnerables.Count -gt 0) { exit 1 }
+          Write-Output 'Aucun paquet vulnérable connu.'
 
       - name: Raccourcis interdits (tests désactivés, avertissements masqués, exceptions avalées)
         run: dotnet slopwatch analyze --no-baseline --fail-on warning
