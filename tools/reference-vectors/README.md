@@ -16,7 +16,9 @@ rejoue `KyfRev.Domain` et compare.
 ## Régénérer
 
 Prérequis : Rust stable, et le dépôt kyfRev 0.x cloné **à côté** de ce dépôt
-(`../kyfRev`, version 0.8.0 ; le crate `noyau` n'a pas changé depuis la 0.7.0).
+(`../kyfRev`, version 0.8.0 ; le crate `noyau` n'a pas changé depuis la 0.7.0). Le clone doit
+inclure le passage de `zip` en 9.0.5 (correctif de sécurité GHSA-m665-v7pm-7grj) : l'outil
+épingle la même version que le crate `coffre`, qu'il compile.
 
 ```powershell
 cargo run --release --manifest-path tools/reference-vectors/Cargo.toml -- tests/KyfRev.Domain.Tests/fixtures/reference
