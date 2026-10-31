@@ -1,0 +1,20 @@
+.suivi
+.suivi/annotations
+.suivi/corbeille
+.suivi/fiches
+.suivi/versions
+citations
+fiches
+fiches/.supprimees
+fiches/.supprimees/dossiers
+fiches/.supprimees/dossiers/01M69NJ832W3XA553JSCDJ3SCP
+fiches/.supprimees/dossiers/01M69NJ832W3XA553JSCDJ3SCP/Archives
+fiches/.supprimees/dossiers/01M69NJ832W3XA553JSCDJ3SCP/Archives/2025
+fiches/.supprimees/dossiers/01M69NJ832W3XA553JSCDJ3SCP/Archives/Vide
+fiches/.supprimees/f_01M69NJ7WZBR2BQ6Q4AMQPZVEC
+fiches/.supprimees/f_01M69NJ80YQPDZ9KCWH0T98WJ7
+fiches/.supprimees/f_01M69NJ81E1M6VJ6R0J61C5H2W
+fiches/Archives
+fiches/Archives/2025
+fiches/Cours
+fiches/Cours/Beta (2).ressources

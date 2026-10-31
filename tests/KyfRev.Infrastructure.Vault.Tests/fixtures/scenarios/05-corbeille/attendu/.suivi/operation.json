@@ -1,0 +1,16 @@
+{
+  "format": 1,
+  "etat": "terminee",
+  "description": "restauration de fiches/Archives/2025/Gamma.md",
+  "deplacements": [
+    {
+      "de": "fiches/.supprimees/f_01M69NJ80YQPDZ9KCWH0T98WJ7/Gamma.md",
+      "vers": "fiches/Archives/2025/Gamma.md"
+    },
+    {
+      "de": ".suivi/corbeille/f_01M69NJ80YQPDZ9KCWH0T98WJ7.json",
+      "vers": ".suivi/fiches/f_01M69NJ80YQPDZ9KCWH0T98WJ7.json"
+    }
+  ],
+  "ecritures": []
+}

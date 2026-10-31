@@ -39,8 +39,12 @@
     <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting" />
   </ItemGroup>
 
+  <!--
+    Copiés à chaque compilation : des fichiers de référence portent volontairement une date de
+    modification ancienne, qu'une copie « si plus récent » prendrait pour à jour.
+  -->
   <ItemGroup>
-    <None Include="fixtures\**\*" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="fixtures\**\*" CopyToOutputDirectory="Always" />
   </ItemGroup>
 
 </Project>

@@ -1,0 +1,29 @@
+{
+  "description": "Création de fiches : noms tirés du titre, homonymes, titre vide ou réservé, dossiers imbriqués, chemin refusé, opérations de la méthode des J, réouverture.",
+  "operations": [
+    { "op": "initialiser", "le": "2026-09-01" },
+    { "op": "creer_fiche", "nom": "mitose", "dossier": "Biologie/Cellule", "titre": "Chapitre 3 : la mitose", "corps": "# La mitose\n\nDivision cellulaire.\n", "le": "2026-09-01" },
+    { "op": "creer_fiche", "nom": "mitose2", "dossier": "Biologie/Cellule", "titre": "  Chapitre 3 : la mitose  ", "corps": "Deuxième fiche du même titre.\n", "le": "2026-09-02" },
+    { "op": "creer_fiche", "nom": "vide", "dossier": null, "titre": "   ", "corps": "", "le": "2026-09-02" },
+    { "op": "creer_fiche", "nom": "con", "titre": "CON", "corps": "Nom réservé par Windows.\n", "le": "2026-09-03" },
+    { "op": "creer_fiche", "nom": "guillemets", "dossier": "Histoire", "titre": "Le \"tiers état\" / les <ordres> ?", "corps": "Texte en CRLF\r\nsuite\r\n", "le": "2026-09-03" },
+    { "op": "creer_fiche", "nom": "refus", "dossier": "../dehors", "titre": "Hors du coffre", "corps": "", "le": "2026-09-03" },
+    { "op": "creer_fiche", "nom": "points", "dossier": "Notes", "titre": "Fin de phrase...", "corps": "Points retirés.\n", "le": "2026-09-03" },
+    { "op": "lire_fiche", "fiche": "mitose" },
+    { "op": "fiche", "fiche": "mitose2" },
+    { "op": "fiche", "fiche": "vide" },
+    { "op": "fiche", "fiche": "con" },
+    { "op": "fiche", "fiche": "guillemets" },
+    { "op": "fiche", "fiche": "points" },
+    { "op": "dossiers" },
+    { "op": "reviser", "fiche": "mitose", "le": "2026-09-02" },
+    { "op": "reporter", "fiche": "mitose2", "vers": "2026-09-10", "le": "2026-09-03" },
+    { "op": "archiver", "fiche": "con", "le": "2026-09-04" },
+    { "op": "reviser", "fiche": "con", "le": "2026-09-05" },
+    { "op": "fiche", "fiche": "inconnue" },
+    { "op": "sante" },
+    { "op": "ouvrir", "le": "2026-09-06" },
+    { "op": "sante" },
+    { "op": "fiche", "fiche": "mitose" }
+  ]
+}

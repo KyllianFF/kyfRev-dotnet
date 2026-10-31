@@ -1,0 +1,28 @@
+{
+  "format": 1,
+  "etat": "terminee",
+  "description": "déplacement du dossier fiches/Réseau vers fiches/réseau",
+  "deplacements": [
+    {
+      "de": "fiches/Réseau",
+      "vers": "fiches/réseau"
+    }
+  ],
+  "ecritures": [
+    {
+      "chemin": "fiches/Équipements/Cisco/VLAN.md",
+      "empreinteAvant": "sha256:fe21610dc08210de2a63dcfc848fd39b7967138832f9110a3f696d82f4066516",
+      "contenu": "---\nid: f_01M69NJ7JX3D05SDFGSVQXJ42Y\ntitre: \"VLAN\"\ncreee: 2026-09-02\n---\n\nVoir [OSPF](../../réseau/OSPF.md) et [routage](../../Routage.md).\n"
+    },
+    {
+      "chemin": "fiches/Routage.md",
+      "empreinteAvant": "sha256:3dd1c2daaf740f16461088341d3be04a4fb733265d75769323b6ce6de54dc5c2",
+      "contenu": "---\nid: f_01M69NJ7KYQ9WG4ZMREMW4QDTY\ntitre: \"Routage\"\ncreee: 2026-09-02\n---\n\nVoir [VLAN](Équipements/Cisco/VLAN.md) et [OSPF](<réseau/OSPF.md>).\n"
+    },
+    {
+      "chemin": "fiches/Équipements/Cisco/Libre.md",
+      "empreinteAvant": "sha256:75b748cd5222ec2f49c37c85f1ce5fd44e3c9dabdacfc6c2d7ef1e99037216c1",
+      "contenu": "Note non suivie vers [OSPF](../../réseau/OSPF.md) et [VLAN](VLAN.md).\n"
+    }
+  ]
+}

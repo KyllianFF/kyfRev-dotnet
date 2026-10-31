@@ -1,5 +1,7 @@
 using System.Collections.Immutable;
-using System.Text;
+using System.Text.Json.Nodes;
+using KyfRev.Infrastructure.Vault.Json;
+using KyfRev.Infrastructure.Vault.Text;
 using YamlDotNet.Core;
 using YamlDotNet.RepresentationModel;
 
@@ -108,6 +110,87 @@ public static class FrontMatter
     }
 
     /// <summary>
+    /// En-tête d'une nouvelle fiche. Les textes sont écrits entre guillemets avec les échappements
+    /// JSON, qui sont aussi du YAML valide.
+    /// </summary>
+    public static string Compose(string id, string title, DateOnly created) =>
+        $"---\nid: {id}\ntitre: {TextValue(title)}\ncreee: {created:yyyy-MM-dd}\n---\n\n";
+
+    /// <summary>
+    /// Ajoute <c>id</c> en tête de l'en-tête existant, ou crée un en-tête minimal, sans toucher au
+    /// reste du fichier. Respecte le style de fin de ligne du fichier.
+    /// </summary>
+    public static string AddId(string text, string id)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+        var newline = NewlineOf(text);
+        var split = Split(text);
+        if (split.Yaml is not null)
+        {
+            return $"{text[..split.YamlStart]}id: {id}{newline}{text[split.YamlStart..]}";
+        }
+        var (bom, body) = WithoutByteOrderMark(text);
+        return $"{bom}---{newline}id: {id}{newline}---{newline}{newline}{body}";
+    }
+
+    /// <summary>Valeur YAML d'un texte : entre guillemets, avec les échappements JSON.</summary>
+    public static string TextValue(string text) => SerdeJson.Compact(JsonValue.Create(text));
+
+    /// <summary>Valeur YAML d'une liste de textes : <c>["a", "b"]</c>.</summary>
+    public static string ListValue(IEnumerable<string> texts) =>
+        SerdeJson.Compact(Fields.StringArray(texts)).Replace("\",\"", "\", \"", StringComparison.Ordinal);
+
+    /// <summary>
+    /// Remplace la valeur d'un champ de premier niveau de l'en-tête (y compris une liste écrite
+    /// sur plusieurs lignes), ou l'ajoute à la fin de l'en-tête. Le reste du fichier n'est pas
+    /// touché. <paramref name="value"/> est déjà du YAML valide.
+    /// </summary>
+    public static string ReplaceField(string text, string key, string value)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+        var newline = NewlineOf(text);
+        var split = Split(text);
+        if (split.Yaml is not { } yaml)
+        {
+            var (bom, body) = WithoutByteOrderMark(text);
+            return $"{bom}---{newline}{key}: {value}{newline}---{newline}{newline}{body}";
+        }
+
+        var yamlEnd = split.YamlStart + yaml.Length;
+        var position = split.YamlStart;
+        var fieldStart = -1;
+        var fieldEnd = -1;
+        foreach (var line in LinesWithEndings(yaml))
+        {
+            var content = line.TrimEnd('\r', '\n');
+            if (fieldStart < 0)
+            {
+                if (content.StartsWith(key, StringComparison.Ordinal) && content.Length > key.Length && content[key.Length] == ':')
+                {
+                    (fieldStart, fieldEnd) = (position, position + line.Length);
+                }
+            }
+            else if (content.StartsWith(' ') || content.StartsWith('\t') || content.StartsWith('-'))
+            {
+                // Suite d'une valeur sur plusieurs lignes : ligne indentée ou élément « - ».
+                fieldEnd = position + line.Length;
+            }
+            else
+            {
+                break;
+            }
+            position += line.Length;
+        }
+
+        if (fieldStart >= 0)
+        {
+            return $"{text[..fieldStart]}{key}: {value}{newline}{text[fieldEnd..]}";
+        }
+        var separator = yaml.Length == 0 || yaml.EndsWith('\n') ? string.Empty : newline;
+        return $"{text[..yamlEnd]}{separator}{key}: {value}{newline}{text[yamlEnd..]}";
+    }
+
+    /// <summary>
     /// Espaces réduits, « # » de tête retirés, vides retirés, 50 caractères au plus, doublons
     /// retirés sans tenir compte de la casse, 30 étiquettes au plus ; l'ordre est conservé.
     /// </summary>
@@ -117,9 +200,8 @@ public static class FrontMatter
         var result = ImmutableArray.CreateBuilder<string>();
         foreach (var tag in tags)
         {
-            var words = tag.Trim().TrimStart('#').Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
-            var clean = Truncate(string.Join(' ', words), MaxTagLength);
-            if (clean.Length > 0 && !result.Contains(clean, StringComparer.OrdinalIgnoreCase))
+            var clean = RustText.Take(RustText.CollapseWhitespace(tag.Trim().TrimStart('#')), MaxTagLength);
+            if (clean.Length > 0 && !result.Any(existing => RustText.EqualsIgnoringCase(existing, clean)))
             {
                 result.Add(clean);
             }
@@ -135,6 +217,11 @@ public static class FrontMatter
     {
         var stream = new YamlStream();
         stream.Load(new StringReader(yaml));
+        if (stream.Documents.Count > 1)
+        {
+            // Une ligne « --- » suivie d'une espace ouvre un second document : refusé, comme en 0.x.
+            throw new FormatException("l'en-tête contient plusieurs documents YAML");
+        }
         if (stream.Documents.Count == 0 || IsNull(stream.Documents[0].RootNode))
         {
             return SheetHeader.Empty;
@@ -193,19 +280,22 @@ public static class FrontMatter
     private static bool IsNull(YamlNode node) =>
         node is YamlScalarNode { Style: ScalarStyle.Plain or ScalarStyle.Any, Value: null or "" or "~" or "null" or "Null" or "NULL" };
 
-    /// <summary>Les <paramref name="max"/> premiers caractères (scalaires Unicode, comme en Rust).</summary>
-    private static string Truncate(string text, int max)
+    private static string NewlineOf(string text) => text.Contains("\r\n", StringComparison.Ordinal) ? "\r\n" : "\n";
+
+    /// <summary>Un éventuel BOM UTF-8 reste en tout début de fichier.</summary>
+    private static (string Bom, string Body) WithoutByteOrderMark(string text) =>
+        text.StartsWith(ByteOrderMark) ? (ByteOrderMark.ToString(), text[1..]) : (string.Empty, text);
+
+    /// <summary>Lignes avec leur fin de ligne (<c>split_inclusive('\n')</c>).</summary>
+    private static IEnumerable<string> LinesWithEndings(string text)
     {
-        var builder = new StringBuilder();
-        var count = 0;
-        foreach (var rune in text.EnumerateRunes())
+        var start = 0;
+        while (start < text.Length)
         {
-            if (count++ == max)
-            {
-                break;
-            }
-            builder.Append(rune.ToString());
+            var end = text.IndexOf('\n', start);
+            var next = end < 0 ? text.Length : end + 1;
+            yield return text[start..next];
+            start = next;
         }
-        return builder.ToString();
     }
 }

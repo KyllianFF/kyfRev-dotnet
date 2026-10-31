@@ -1,0 +1,8 @@
+.suivi
+.suivi/annotations
+.suivi/fiches
+.suivi/versions
+.suivi/versions/f_01M69NJ6P86CPPMESV0AS4W1RX
+citations
+fiches
+fiches/Physique

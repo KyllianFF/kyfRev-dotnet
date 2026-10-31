@@ -1,0 +1,37 @@
+0 initialiser ok
+1 creer_fiche ok
+2 lire_fiche ok sha256:cf425d6425653e266bf55bb5115771dd6f9c6c463c6e2f0a8064fb07d53e46b9
+3 enregistrer_corps ok enregistre sha256:2c156b730416e85543e2da89dbdb4a44ce2d2f84a2553210053eaad5525a90b2
+4 enregistrer_corps ok enregistre sha256:5805f79b524869c9c23a5be9c3dbb98b1931cb160349ab70e4859acebcfdbe49
+5 enregistrer_corps ok enregistre sha256:a441e2eb95fb636983dad27a44d0ae0b498aaff12b7b30180fce76556a29dbe2
+6 versions ok 20260902T120000Z-2.md 2026-09-02T12:00:00Z 103;20260902T120000Z.md 2026-09-02T12:00:00Z 103
+7 lire_fiche ok sha256:a441e2eb95fb636983dad27a44d0ae0b498aaff12b7b30180fce76556a29dbe2
+8 ecrire ok
+9 enregistrer_corps ok conflit sha256:285c0d1c5ec0f63775a0917250473e21cb1b72e2f8543735d159ccabd31c6b4f "\nModifiée ailleurs.\n"
+10 analyser ok
+11 sante ok deplacees=[] modifiees=[f_01M69NJ6P86CPPMESV0AS4W1RX] manquantes=[] doublons=[] non_suivies=[] sans_suivi=[] illisibles=[] liens=[]
+12 fiche ok fiches/Physique/Ondes.md "Ondes" [] present sha256:285c0d1c5ec0f63775a0917250473e21cb1b72e2f8543735d159ccabd31c6b4f
+13 ecrire ok
+14 enregistrer_corps ok enregistre sha256:8a70eea6f112373893fe80ed012c4dc92c04dbeaf20a060e5801330040f4002c
+15 enregistrer_fiche ok sha256:718ff9ae6b2fb610a57d4c5e86918cfc9dc3aeddd963d6e6d61cfcb8c553e3b0
+16 fiche ok fiches/Physique/Ondes.md "Ondes et vibrations" [] present sha256:718ff9ae6b2fb610a57d4c5e86918cfc9dc3aeddd963d6e6d61cfcb8c553e3b0
+17 enregistrer_fiche erreur IdentifiantModifie : L'identifiant d'une fiche (champ « id » de l'en-tête) ne peut pas être modifié ni retiré.
+18 enregistrer_fiche erreur EnteteInvalide
+19 enregistrer_fiche erreur Conflit : La fiche a été modifiée en dehors de l'application depuis son ouverture.
+20 enregistrer_fiche ok sha256:2c3c440ee163923fb08e7b3f3360cc53f59dea240d8de159c1ba03ee1b077edb
+21 fiche ok fiches/Physique/Ondes.md "Ondes et vibrations" [] present sha256:2c3c440ee163923fb08e7b3f3360cc53f59dea240d8de159c1ba03ee1b077edb
+22 garder_en_version ok
+23 versions ok 20260906T120000Z.md 2026-09-06T12:00:00Z 90;20260905T120000Z.md 2026-09-05T12:00:00Z 98;20260904T120000Z.md 2026-09-04T12:00:00Z 116;20260902T120000Z-2.md 2026-09-02T12:00:00Z 103;20260902T120000Z.md 2026-09-02T12:00:00Z 103
+24 lire_version ok "\n# Ondes\n\nPremière version.\n"
+25 lire_version ok "# Ondes\n\nTroisième version.\n"
+26 lire_version erreur VersionInconnue : La version « pas-une-version.md » est introuvable.
+27 lire_version erreur VersionInconnue : La version « 20260230T120000Z.md » est introuvable.
+28 lire_version erreur VersionInconnue : La version « 20261231T120000Z.md » est introuvable.
+29 restaurer_version ok enregistre sha256:b2b32e6e0dba8abe9bb0c51a441e023474a3ee3729155952b5cc284c710b2eda
+30 restaurer_version ok conflit sha256:b2b32e6e0dba8abe9bb0c51a441e023474a3ee3729155952b5cc284c710b2eda "\n# Ondes\n\nPremière version.\n"
+31 enregistrer_corps ok enregistre sha256:fa1278ac81c1073fc38333b32ad7961af00e6318d4f47e95b78313d737595d16
+32 enregistrer_corps ok enregistre sha256:fa1278ac81c1073fc38333b32ad7961af00e6318d4f47e95b78313d737595d16
+33 versions ok 20260908T120000Z.md 2026-09-08T12:00:00Z 101;20260907T120000Z.md 2026-09-07T12:00:00Z 107;20260906T120000Z.md 2026-09-06T12:00:00Z 90;20260905T120000Z.md 2026-09-05T12:00:00Z 98;20260904T120000Z.md 2026-09-04T12:00:00Z 116;20260902T120000Z-2.md 2026-09-02T12:00:00Z 103;20260902T120000Z.md 2026-09-02T12:00:00Z 103
+34 ouvrir ok
+35 sante ok deplacees=[] modifiees=[] manquantes=[] doublons=[] non_suivies=[] sans_suivi=[] illisibles=[] liens=[]
+36 fiche ok fiches/Physique/Ondes.md "Ondes et vibrations" [] present sha256:fa1278ac81c1073fc38333b32ad7961af00e6318d4f47e95b78313d737595d16

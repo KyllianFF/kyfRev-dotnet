@@ -1,0 +1,41 @@
+{
+  "format": 1,
+  "id": "f_01M69NJ7WZBR2BQ6Q4AMQPZVEC",
+  "chemin": "fiches/Cours/Beta (2).md",
+  "titre": "Beta",
+  "empreinte": "sha256:25d1eb557fe6d547861ccac8c35df41aca9243c12993ca6c2a49204158ef2aee",
+  "modifieeLe": "2026-09-01T12:00:00Z",
+  "statut": "active",
+  "cycle": {
+    "numero": 1,
+    "sequence": [
+      0,
+      1,
+      3,
+      7,
+      14,
+      30
+    ],
+    "demarreLe": "2026-09-01",
+    "etape": 1,
+    "echeance": "2026-09-02",
+    "derniereRevision": "2026-09-01"
+  },
+  "compteurs": {
+    "cyclesCommences": 1,
+    "cyclesTermines": 0,
+    "cyclesInterrompus": 0
+  },
+  "historique": [
+    {
+      "evt": "revision",
+      "le": "2026-09-01T12:00:00Z",
+      "jour": "2026-09-01",
+      "cycle": 1,
+      "etape": "J0",
+      "prevuLe": "2026-09-01",
+      "retardJours": 0,
+      "origine": "creation"
+    }
+  ]
+}

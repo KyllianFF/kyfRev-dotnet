@@ -1,0 +1,27 @@
+0 initialiser ok
+1 creer_fiche ok
+2 creer_fiche ok
+3 ajouter_ressource ok Beta.ressources/figure.svg
+4 corbeille_fiche ok
+5 fiches_a_la_corbeille ok f_01M69NJ7WZBR2BQ6Q4AMQPZVEC "Beta" "Cours" 2026-09-02T12:00:00Z 0
+6 fiche erreur FicheInconnue : Aucune fiche ne porte l'identifiant f_01M69NJ7WZBR2BQ6Q4AMQPZVEC.
+7 sante ok deplacees=[] modifiees=[] manquantes=[] doublons=[] non_suivies=[] sans_suivi=[] illisibles=[] liens=[]
+8 creer_fiche ok
+9 restaurer_fiche ok
+10 fiche ok fiches/Cours/Beta (2).md "Beta" [] present sha256:25d1eb557fe6d547861ccac8c35df41aca9243c12993ca6c2a49204158ef2aee
+11 restaurer_fiche erreur FicheInconnue : Aucune fiche ne porte l'identifiant f_01M69NJ7WZBR2BQ6Q4AMQPZVEC.
+12 creer_fiche ok
+13 creer_fiche ok
+14 archiver ok
+15 ecrire ok
+16 creer_dossier ok "Archives/Vide"
+17 corbeille_dossier ok 2
+18 fiches_a_la_corbeille ok f_01M69NJ80YQPDZ9KCWH0T98WJ7 "Gamma" "Archives/2025" 2026-09-06T12:00:00Z 0;f_01M69NJ81E1M6VJ6R0J61C5H2W "Delta" "Archives" 2026-09-06T12:00:00Z 0
+19 dossiers ok ["Cours"]
+20 restaurer_fiche ok
+21 dossiers ok ["Archives","Archives/2025","Cours"]
+22 corbeille_dossier erreur DossierInconnu : Le dossier « Inexistant » est introuvable.
+23 ouvrir ok
+24 sante ok deplacees=[] modifiees=[] manquantes=[] doublons=[] non_suivies=[] sans_suivi=[] illisibles=[] liens=[]
+25 fiches_a_la_corbeille ok f_01M69NJ81E1M6VJ6R0J61C5H2W "Delta" "Archives" 2026-09-06T12:00:00Z 0
+26 fiche ok fiches/Archives/2025/Gamma.md "Gamma" [] present sha256:d7448cf731ac64b5970ca8d0754e43a23284d139816bee988ba2ab21fe3f7b02
