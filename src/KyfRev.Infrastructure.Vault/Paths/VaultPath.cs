@@ -68,6 +68,15 @@ public sealed class VaultPath : IEquatable<VaultPath>, IComparable<VaultPath>
             ? path
             : throw new ArgumentException($"Chemin « {text} » refusé : {reason}.", nameof(text));
 
+    /// <summary>Valide un chemin ; refusé avec le message de la version 0.x.</summary>
+    /// <exception cref="VaultException">Le chemin est refusé (<see cref="VaultErrorKind.InvalidPath"/>).</exception>
+    internal static VaultPath Create(string text) =>
+        TryParse(text, out var path, out var reason) ? path : throw VaultException.InvalidPath(text, reason);
+
+    /// <summary>Ajoute un composant ; refusé avec le message de la version 0.x.</summary>
+    /// <exception cref="VaultException">Le chemin obtenu est refusé (<see cref="VaultErrorKind.InvalidPath"/>).</exception>
+    internal VaultPath Join(string name) => Create(Value + "/" + name);
+
     /// <summary>Chemin relatif d'un fichier situé sous <paramref name="root"/>.</summary>
     public static bool TryFromAbsolute(string root, string absolute, [NotNullWhen(true)] out VaultPath? path, [NotNullWhen(false)] out string? reason)
     {
@@ -159,11 +168,14 @@ public sealed class VaultPath : IEquatable<VaultPath>, IComparable<VaultPath>
         return null;
     }
 
-    /// <summary>Noms réservés par Windows, quelle que soit l'extension (« CON.md » compris).</summary>
-    private static bool IsReserved(string name)
+    /// <summary>
+    /// Noms réservés par Windows, quelle que soit l'extension (« CON.md » compris). Comme en Rust,
+    /// seule la casse des lettres ASCII est ignorée.
+    /// </summary>
+    internal static bool IsReserved(string name)
     {
         var dot = name.IndexOf('.', StringComparison.Ordinal);
         var stem = (dot >= 0 ? name[..dot] : name).TrimEnd();
-        return Reserved.Any(reserved => string.Equals(reserved, stem, StringComparison.OrdinalIgnoreCase));
+        return Reserved.Any(reserved => Ascii.EqualsIgnoreCase(reserved, stem));
     }
 }

@@ -8,8 +8,11 @@
 //!   cargo run --release -- <dossier de sortie>      écrit tous les fichiers
 //!   cargo run --release -- --transcript <n>         affiche la transcription du suivi n
 //!   cargo run --release -- --coffre <dossier>       construit le coffre de référence
+//!   cargo run --release -- --vecteurs-coffre <dossier>   vecteurs des fonctions pures du coffre
+//!   cargo run --release -- --fonctions <famille> <n>     détail d'un cas (noms, entetes, liens)
 
 mod coffre_reference;
+mod fonctions_coffre;
 
 use std::fmt::Write as _;
 use std::fs;
@@ -361,6 +364,13 @@ fn main() {
         }
         [option, dossier] if option == "--coffre" => {
             coffre_reference::construire(Path::new(dossier));
+        }
+        [option, dossier] if option == "--vecteurs-coffre" => {
+            fs::create_dir_all(dossier).expect("dossier de sortie");
+            fonctions_coffre::ecrire(Path::new(dossier));
+        }
+        [option, famille, n] if option == "--fonctions" => {
+            fonctions_coffre::afficher(famille, n.parse().expect("numéro de cas"));
         }
         [option, dossier, secondes] if option == "--ouvrir" => {
             // Ouvre le coffre comme kyfRev 0.x (verrou compris) et le garde ouvert un moment.
