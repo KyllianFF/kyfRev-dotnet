@@ -1,0 +1,45 @@
+﻿Type;Identifiant;Fiche;Passage;Événement;Date;Cycle;Étape;Prévue le;Retard (jours);Détail
+Fiche;f_01M69JFV9D2RVDT3P3MGQQYVER;Cogito;;J0 : fiche suivie;2026-09-01;1;J0;2026-09-01;0;
+Fiche;f_01M69JFV9D2RVDT3P3MGQQYVER;Cogito;;Révision;2026-09-02;1;J1;2026-09-02;0;
+Fiche;f_01M69JFV9D2RVDT3P3MGQQYVER;Cogito;;Révision;2026-09-05;1;J3;2026-09-05;0;
+Fiche;f_01M69JFV9D2RVDT3P3MGQQYVER;Cogito;;Révision;2026-09-12;1;J7;2026-09-12;0;
+Fiche;f_01M69JFV9D2RVDT3P3MGQQYVER;Cogito;;Révision;2026-09-26;1;J14;2026-09-26;0;
+Fiche;f_01M69JFV9D2RVDT3P3MGQQYVER;Cogito;;Révision;2026-10-26;1;J30;2026-10-26;0;
+Fiche;f_01M69JFV9D2RVDT3P3MGQQYVER;Cogito;;Archivage;2026-10-26;;;;;fin de cycle
+Fiche;f_01M69JFV9D2RVDT3P3MGQQYVER;Cogito;;Rappel de consolidation;2027-01-05;;;;;à revoir entièrement (tiré le 2027-01-05)
+Fiche;f_01M69JFV9D2RVDT3P3MGQQYVER;Cogito;;Remise en révision;2027-01-05;;;;;
+Fiche;f_01M69JFV9D2RVDT3P3MGQQYVER;Cogito;;J0 : rappel « à revoir entièrement »;2027-01-05;2;J0;2027-01-05;0;
+Fiche;f_01M69JFV54D3MA7W49Z91KQBM7;Mitose;;J0 : création;2026-09-01;1;J0;2026-09-01;0;
+Fiche;f_01M69JFV54D3MA7W49Z91KQBM7;Mitose;;Report;2026-09-02;1;J1;2026-09-02;;reportée au 2026-09-04
+Fiche;f_01M69JFV54D3MA7W49Z91KQBM7;Mitose;;Cycle interrompu;2026-09-10;1;;;;
+Fiche;f_01M69JFV54D3MA7W49Z91KQBM7;Mitose;;Archivage;2026-09-10;;;;;à la main
+Fiche;f_01M69JFVBEBN8XM9GAB7KKJNVK;Nouveau titre;;J0 : création;2026-09-01;1;J0;2026-09-01;0;
+Fiche;f_01M69JFV8C8MCN4TRNEG0PK1XG;Photosynthèse;;J0 : création;2026-09-01;1;J0;2026-09-01;0;
+Fiche;f_01M69JFV8C8MCN4TRNEG0PK1XG;Photosynthèse;;Cycle interrompu;2026-09-02;1;;;;
+Fiche;f_01M69JFV8C8MCN4TRNEG0PK1XG;Photosynthèse;;Archivage;2026-09-02;;;;;à la main
+Fiche;f_01M69JFV8C8MCN4TRNEG0PK1XG;Photosynthèse;;Rappel de consolidation;2026-11-10;;;;;certains points à revoir (tiré le 2026-11-10)
+Fiche;f_01M69JFV8C8MCN4TRNEG0PK1XG;Photosynthèse;;Exclusion des rappels;2026-11-11;;;;;
+Passage;a_01M69JFV901MGTRT2BVHDTQCQY;Photosynthèse;chlorophylle;J0 : création;2026-11-10;1;J0;2026-11-10;0;
+Fiche;f_01M69JFV2X5VM53EY3DR1BY61M;Révolution française : les causes;;J0 : création;2026-09-01;1;J0;2026-09-01;0;
+Fiche;f_01M69JFV2X5VM53EY3DR1BY61M;Révolution française : les causes;;Révision;2026-09-02;1;J1;2026-09-02;0;
+Fiche;f_01M69JFV2X5VM53EY3DR1BY61M;Révolution française : les causes;;Révision;2026-09-05;1;J3;2026-09-05;0;
+Passage;a_01M69JFV3MQG1Z9NP3WBJ0KFPR;Révolution française : les causes;Ancien Régime;J0 : création;2026-09-03;1;J0;2026-09-03;0;
+Passage;a_01M69JFV3MQG1Z9NP3WBJ0KFPR;Révolution française : les causes;Ancien Régime;Définition modifiée;2026-09-07;;;;;
+Passage;a_01M69JFV3DC0785R75CKBW66P4;Révolution française : les causes;trois ordres;J0 : création;2026-09-03;1;J0;2026-09-03;0;
+Passage;a_01M69JFV3DC0785R75CKBW66P4;Révolution française : les causes;trois ordres;Révision;2026-09-04;1;J1;2026-09-04;0;
+Passage;a_01M69JFV3DC0785R75CKBW66P4;Révolution française : les causes;trois ordres;Commentaire modifié;2026-09-07;;;;;
+Passage;a_01M69JFV3DC0785R75CKBW66P4;Révolution française : les causes;trois ordres;Passage modifié;2026-09-08;;;;;
+Passage;a_01M69JFV3DC0785R75CKBW66P4;Révolution française : les causes;trois ordres;Cycle interrompu;2026-09-08;1;;;;
+Passage;a_01M69JFV3DC0785R75CKBW66P4;Révolution française : les causes;trois ordres;J0 : recommencé;2026-09-08;2;J0;2026-09-08;0;
+Passage;a_01M69JFV4KD0AV7XXX0PW2JKDM;Révolution française : les causes;tiers état;J0 : création;2026-09-03;1;J0;2026-09-03;0;
+Passage;a_01M69JFV4VV4FEXEB7CQRD4VDC;Révolution française : les causes;Dette publique;J0 : création;2026-09-03;1;J0;2026-09-03;0;
+Fiche;f_01M69JFV7EWHH4KMYSWEWWGC34;Théorème de Pythagore;;J0 : création;2026-09-01;1;J0;2026-09-01;0;
+Fiche;f_01M69JFV7EWHH4KMYSWEWWGC34;Théorème de Pythagore;;Révision;2026-09-02;1;J1;2026-09-02;0;
+Fiche;f_01M69JFV7EWHH4KMYSWEWWGC34;Théorème de Pythagore;;Révision;2026-09-05;1;J3;2026-09-05;0;
+Fiche;f_01M69JFV7EWHH4KMYSWEWWGC34;Théorème de Pythagore;;Révision;2026-09-12;1;J7;2026-09-12;0;
+Fiche;f_01M69JFV7EWHH4KMYSWEWWGC34;Théorème de Pythagore;;Révision;2026-09-26;1;J14;2026-09-26;0;
+Fiche;f_01M69JFV7EWHH4KMYSWEWWGC34;Théorème de Pythagore;;Révision;2026-10-26;1;J30;2026-10-26;0;
+Fiche;f_01M69JFV7EWHH4KMYSWEWWGC34;Théorème de Pythagore;;Archivage;2026-10-26;;;;;fin de cycle
+Fiche;f_01M69JFV7EWHH4KMYSWEWWGC34;Théorème de Pythagore;;Rappel de consolidation;2027-01-26;;;;;fiche connue (tiré le 2027-01-26)
+Fiche;f_01M69JFV7EWHH4KMYSWEWWGC34;Théorème de Pythagore;;Exclusion des rappels;2027-02-01;;;;;
+Fiche;f_01M69JFV7EWHH4KMYSWEWWGC34;Théorème de Pythagore;;Réinclusion dans les rappels;2027-02-02;;;;;

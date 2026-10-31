@@ -15,6 +15,7 @@
 //!   cargo run --release -- --sante <dossier>             ouvre un coffre comme la 0.x et résume sa santé
 //!   cargo run --release -- --sauvegarder <coffre> <dossier>   sauvegarde un coffre comme la 0.x
 //!   cargo run --release -- --restaurer <archive> <dossier>    restaure une sauvegarde comme la 0.x
+//!   cargo run --release -- --exports <coffre> <dossier>       exports (suivi, annotations, citations) en UTC
 
 mod coffre_reference;
 mod fonctions_coffre;
@@ -394,6 +395,19 @@ fn main() {
             let coffre = coffre::Coffre::ouvrir(Path::new(racine), &moment(jour)).expect("ouverture du coffre");
             let sauvegarde = coffre.sauvegarder(Path::new(dossier), jour.at(12, 0, 0, 0)).expect("sauvegarde");
             println!("{}", sauvegarde.chemin.display());
+        }
+        [option, racine, dossier] if option == "--exports" => {
+            // Exports du coffre de référence, comparés à l'octet par les tests C#.
+            // SAFETY : le programme n'a qu'un fil d'exécution à ce stade.
+            unsafe { std::env::set_var("TZ", "UTC0") };
+            let jour = date(2026, 10, 31);
+            let coffre = coffre::Coffre::ouvrir(Path::new(racine), &moment(jour)).expect("ouverture du coffre");
+            fs::create_dir_all(dossier).expect("dossier de sortie");
+            for genre in [coffre::Export::Suivi, coffre::Export::Annotations, coffre::Export::Citations] {
+                for fichier in coffre.exporter(genre, Path::new(dossier), jour.at(12, 0, 0, 0)).expect("export") {
+                    println!("{}", fichier.display());
+                }
+            }
         }
         [option, archive, dossier] if option == "--restaurer" => {
             match coffre::sauvegardes::restaurer(Path::new(archive), Path::new(dossier), date(2026, 10, 31)) {
