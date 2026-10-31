@@ -1,0 +1,58 @@
+{
+  "format": 1,
+  "id": "f_01M69GHG5QARE6JHS9156AWPN7",
+  "chemin": "fiches/Biologie/Mitose.md",
+  "titre": "Mitose",
+  "etiquettes": [
+    "biologie",
+    "examen"
+  ],
+  "empreinte": "sha256:3b0b5dd04b4b66a0b89039a8e430ea7c71ba9e9a2b3eee2e4a4c719b851bf632",
+  "modifieeLe": "2026-09-02T12:00:00Z",
+  "statut": "archivee",
+  "archive": {
+    "archiveeLe": "2026-09-10",
+    "raison": "manuelle",
+    "inclureDansRappels": true,
+    "niveauRepos": 0,
+    "eligibleLe": "2026-11-10",
+    "rappelTireLe": "2027-01-26"
+  },
+  "compteurs": {
+    "cyclesCommences": 1,
+    "cyclesTermines": 0,
+    "cyclesInterrompus": 1
+  },
+  "historique": [
+    {
+      "evt": "revision",
+      "le": "2026-09-01T12:00:00Z",
+      "jour": "2026-09-01",
+      "cycle": 1,
+      "etape": "J0",
+      "prevuLe": "2026-09-01",
+      "retardJours": 0,
+      "origine": "creation"
+    },
+    {
+      "evt": "report",
+      "le": "2026-09-02T12:00:00Z",
+      "cycle": 1,
+      "etape": "J1",
+      "de": "2026-09-02",
+      "vers": "2026-09-04"
+    },
+    {
+      "evt": "interruption",
+      "le": "2026-09-10T12:00:00Z",
+      "jour": "2026-09-10",
+      "cycle": 1
+    },
+    {
+      "evt": "archivage",
+      "le": "2026-09-10T12:00:00Z",
+      "jour": "2026-09-10",
+      "raison": "manuelle"
+    }
+  ]
+}

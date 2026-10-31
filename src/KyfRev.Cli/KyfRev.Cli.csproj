@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>kyfrev-coffre</AssemblyName>
+    <RootNamespace>KyfRev.Cli</RootNamespace>
+    <Description>Outil en ligne de commande du coffre kyfRev : vérification, et bientôt conversion et export.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\KyfRev.Infrastructure.Vault\KyfRev.Infrastructure.Vault.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.CommandLine" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="KyfRev.Infrastructure.Vault.Tests" />
+  </ItemGroup>
+
+</Project>

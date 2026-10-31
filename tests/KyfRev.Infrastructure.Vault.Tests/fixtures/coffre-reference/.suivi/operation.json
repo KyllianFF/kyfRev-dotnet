@@ -1,0 +1,16 @@
+{
+  "format": 1,
+  "etat": "terminee",
+  "description": "mise à la corbeille de fiches/Brouillons/Fiche abandonnée.md",
+  "deplacements": [
+    {
+      "de": "fiches/Brouillons/Fiche abandonnée.md",
+      "vers": "fiches/.supprimees/f_01M69GHGABZBA4J3R9A3BHD3WV/Fiche abandonnée.md"
+    },
+    {
+      "de": ".suivi/fiches/f_01M69GHGABZBA4J3R9A3BHD3WV.json",
+      "vers": ".suivi/corbeille/f_01M69GHGABZBA4J3R9A3BHD3WV.json"
+    }
+  ],
+  "ecritures": []
+}

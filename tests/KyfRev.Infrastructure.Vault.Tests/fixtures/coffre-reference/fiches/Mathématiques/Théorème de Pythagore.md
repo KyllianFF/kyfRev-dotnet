@@ -1,0 +1,9 @@
+---
+id: f_01M69GHG8073ZK7GNBE1GRXPHP
+titre: "Théorème de Pythagore"
+creee: 2026-09-01
+---
+
+# Théorème de Pythagore
+
+Dans un triangle rectangle, $a^2 + b^2 = c^2$, où $c$ est l'hypoténuse.

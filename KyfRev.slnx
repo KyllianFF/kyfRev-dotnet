@@ -15,9 +15,12 @@
     <File Path="docs/plan-de-refonte.md" />
   </Folder>
   <Folder Name="/src/">
+    <Project Path="src/KyfRev.Cli/KyfRev.Cli.csproj" />
     <Project Path="src/KyfRev.Domain/KyfRev.Domain.csproj" />
+    <Project Path="src/KyfRev.Infrastructure.Vault/KyfRev.Infrastructure.Vault.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/KyfRev.Domain.Tests/KyfRev.Domain.Tests.csproj" />
+    <Project Path="tests/KyfRev.Infrastructure.Vault.Tests/KyfRev.Infrastructure.Vault.Tests.csproj" />
   </Folder>
 </Solution>

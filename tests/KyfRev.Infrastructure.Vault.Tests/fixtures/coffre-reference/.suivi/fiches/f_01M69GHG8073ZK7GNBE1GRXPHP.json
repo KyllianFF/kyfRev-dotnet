@@ -1,0 +1,92 @@
+{
+  "format": 1,
+  "id": "f_01M69GHG8073ZK7GNBE1GRXPHP",
+  "chemin": "fiches/Mathématiques/Théorème de Pythagore.md",
+  "titre": "Théorème de Pythagore",
+  "empreinte": "sha256:5fa658756813bcc11d97ca542fafa79dc415dde96068656b9909c6c959f26d13",
+  "modifieeLe": "2026-09-01T12:00:00Z",
+  "statut": "archivee",
+  "archive": {
+    "archiveeLe": "2026-10-26",
+    "raison": "fin_de_cycle",
+    "inclureDansRappels": true,
+    "niveauRepos": 1,
+    "eligibleLe": "2027-05-26",
+    "rappelTireLe": null
+  },
+  "compteurs": {
+    "cyclesCommences": 1,
+    "cyclesTermines": 1,
+    "cyclesInterrompus": 0
+  },
+  "historique": [
+    {
+      "evt": "revision",
+      "le": "2026-09-01T12:00:00Z",
+      "jour": "2026-09-01",
+      "cycle": 1,
+      "etape": "J0",
+      "prevuLe": "2026-09-01",
+      "retardJours": 0,
+      "origine": "creation"
+    },
+    {
+      "evt": "revision",
+      "le": "2026-09-02T12:00:00Z",
+      "jour": "2026-09-02",
+      "cycle": 1,
+      "etape": "J1",
+      "prevuLe": "2026-09-02",
+      "retardJours": 0
+    },
+    {
+      "evt": "revision",
+      "le": "2026-09-05T12:00:00Z",
+      "jour": "2026-09-05",
+      "cycle": 1,
+      "etape": "J3",
+      "prevuLe": "2026-09-05",
+      "retardJours": 0
+    },
+    {
+      "evt": "revision",
+      "le": "2026-09-12T12:00:00Z",
+      "jour": "2026-09-12",
+      "cycle": 1,
+      "etape": "J7",
+      "prevuLe": "2026-09-12",
+      "retardJours": 0
+    },
+    {
+      "evt": "revision",
+      "le": "2026-09-26T12:00:00Z",
+      "jour": "2026-09-26",
+      "cycle": 1,
+      "etape": "J14",
+      "prevuLe": "2026-09-26",
+      "retardJours": 0
+    },
+    {
+      "evt": "revision",
+      "le": "2026-10-26T12:00:00Z",
+      "jour": "2026-10-26",
+      "cycle": 1,
+      "etape": "J30",
+      "prevuLe": "2026-10-26",
+      "retardJours": 0
+    },
+    {
+      "evt": "archivage",
+      "le": "2026-10-26T12:00:00Z",
+      "jour": "2026-10-26",
+      "raison": "fin_de_cycle"
+    },
+    {
+      "evt": "rappel",
+      "le": "2027-01-26T12:00:00Z",
+      "jour": "2027-01-26",
+      "tireLe": "2027-01-26",
+      "resultat": "connue"
+    }
+  ]
+}

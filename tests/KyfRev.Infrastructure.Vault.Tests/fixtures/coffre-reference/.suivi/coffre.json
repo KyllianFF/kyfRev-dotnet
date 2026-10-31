@@ -1,0 +1,51 @@
+{
+  "format": 1,
+  "id": "v_01M69GHG41N8QHVEVEPY13FDPX",
+  "creeLe": "2026-09-01",
+  "revision": {
+    "sequence": [
+      0,
+      1,
+      3,
+      7,
+      14,
+      30
+    ],
+    "rappelActif": true
+  },
+  "rappels": {
+    "delaiMinimalMois": 2,
+    "sequenceReposMois": [
+      2,
+      4,
+      8,
+      12
+    ],
+    "maxParJour": 2,
+    "attenteMaxJours": 30,
+    "inclureArchivageManuel": true
+  },
+  "citations": {
+    "active": true,
+    "enLigne": true,
+    "domaines": [
+      "philosophie",
+      "art",
+      "science",
+      "informatique"
+    ]
+  },
+  "sauvegardes": {
+    "rotation": true
+  },
+  "modules": {
+    "schemas": true
+  },
+  "examens": [
+    {
+      "dossier": "Histoire",
+      "nom": "Bac blanc",
+      "jour": "2026-12-15"
+    }
+  ]
+}

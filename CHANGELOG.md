@@ -9,6 +9,19 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- Coffre (`KyfRev.Infrastructure.Vault`), lecture fidèle du format 1 :
+  - chemins validés selon les mêmes règles que la version 0.x ;
+  - empreintes SHA-256 des octets bruts ;
+  - écriture atomique (temporaire, écriture forcée sur le disque, mise en place sans écrasement) ;
+  - verrou du coffre compatible avec la version 0.x, dans les deux sens ;
+  - lecture et réécriture à l'octet près de tous les fichiers JSON du coffre ;
+  - lecture de l'en-tête YAML des fiches.
+- Les champs inconnus sont désormais conservés à tous les niveaux des fichiers.
+- Outil `kyfrev-coffre verifier` : analyse un coffre en lecture seule (fiches déplacées,
+  modifiées, manquantes, en double ou sans suivi, fichiers illisibles, format plus récent,
+  opération interrompue, annotations orphelines) et produit un rapport en texte ou en JSON.
+- Coffre de référence produit par la version 0.x et script d'interopération du verrou
+  (`tools/interop/verrou.ps1`).
 - Domaine (`KyfRev.Domain`) : méthode des J (séquence, cycles, échéances depuis la révision
   réellement faite, report, antidatation, redémarrage), archivage, rappels de consolidation
   (éligibilité en mois calendaires, repos progressif, tirage quotidien reproductible avec

@@ -10,8 +10,14 @@ les coffres de la version 0.x et vise la parité fonctionnelle en version 1.0.0.
 
 ## État
 
-Refonte en cours, jalon **J2 : domaine de la méthode des J**. Le plan complet, les décisions
-et les critères de validation de chaque jalon sont dans [docs/plan-de-refonte.md](docs/plan-de-refonte.md).
+Refonte en cours, jalon **J3 : compatibilité du coffre au format 1**. Le plan complet, les
+décisions et les critères de validation de chaque jalon sont dans [docs/plan-de-refonte.md](docs/plan-de-refonte.md).
+
+Vérifier un coffre existant, sans rien y écrire :
+
+```powershell
+dotnet run --project src/KyfRev.Cli -- verifier "$env:USERPROFILE\Documents\kyfRev\Coffre"
+```
 
 ## Principes
 
