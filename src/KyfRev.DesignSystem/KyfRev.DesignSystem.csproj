@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Description>Design system de kyfRev : jetons (gammes, rôles, échelles), thèmes clair, sombre et contraste élevé, styles et composants WPF.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="KyfRev.DesignSystem.Tests" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,166 @@
+#:project ../../src/KyfRev.DesignSystem/KyfRev.DesignSystem.csproj
+#:property TargetFramework=net10.0-windows
+#:property UseWPF=true
+#:property ImplicitUsings=enable
+#:property PublishAot=false
+
+// Captures du design system pour la revue visuelle (voir tools/design-captures/README.md).
+// Usage : dotnet run tools/design-captures/captures.cs -- <dossier>
+// Écrit galerie-clair.png, galerie-sombre.png et galerie-contraste-eleve.png (couleurs système
+// actuelles du poste), et affiche le contraste de chaque paire de rôles.
+using System.Globalization;
+using System.IO;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using KyfRev.DesignSystem;
+using KyfRev.DesignSystem.Controls;
+using KyfRev.DesignSystem.Tokens;
+
+var folder = args.Length > 0 ? args[0] : ".";
+Directory.CreateDirectory(folder);
+var thread = new Thread(() =>
+{
+    foreach (var (theme, name) in new[] { (ThemeKind.Light, "clair"), (ThemeKind.Dark, "sombre"), (ThemeKind.HighContrast, "contraste-eleve") })
+    {
+        var design = new DesignResources(theme, reducedMotion: true);
+        Save(Gallery(design, name), Path.Combine(folder, $"galerie-{name}.png"));
+    }
+});
+thread.SetApartmentState(ApartmentState.STA);
+thread.Start();
+thread.Join();
+
+foreach (var theme in new[] { ThemeKind.Light, ThemeKind.Dark })
+{
+    var colors = ThemeColors.For(theme);
+    Console.WriteLine($"## {theme}");
+    foreach (var pair in ContrastRequirements.All)
+    {
+        var ratio = colors[pair.Foreground].ContrastWith(colors[pair.Background]);
+        Console.WriteLine(string.Create(CultureInfo.InvariantCulture, $"{pair.Foreground} sur {pair.Background} : {ratio:0.00} (≥ {pair.Minimum})"));
+    }
+}
+
+static FrameworkElement Gallery(DesignResources design, string name)
+{
+    var page = new StackPanel { Margin = new Thickness(32) };
+    page.Children.Add(Text("Kyf.Text.Display", $"kyfRev · design system ({name})"));
+    page.Children.Add(Text("Kyf.Text.Secondary", "Jetons de la conception §12, contrastes vérifiés par les tests, composants de J5."));
+
+    page.Children.Add(Section("Typographie"));
+    foreach (var style in new[] { "Display", "Title", "Subtitle", "BodyLarge", "Body", "BodyStrong", "Caption" })
+    {
+        page.Children.Add(Text($"Kyf.Text.{style}", $"{style} — Le cœur a ses raisons que la raison ne connaît point."));
+    }
+
+    page.Children.Add(Section("Boutons et champs"));
+    var buttons = Row();
+    buttons.Children.Add(new Button { Content = "Valider la révision", Style = (Style)design.Dictionary["Kyf.Button.Primary"] });
+    buttons.Children.Add(new Button { Content = "Reporter" });
+    buttons.Children.Add(new Button { Content = "Plus tard", Style = (Style)design.Dictionary["Kyf.Button.Subtle"] });
+    buttons.Children.Add(new Button { Content = Icons.Close, Style = (Style)design.Dictionary["Kyf.Button.Icon"] });
+    buttons.Children.Add(new Button { Content = "Indisponible", IsEnabled = false });
+    page.Children.Add(buttons);
+    var fields = Row();
+    var empty = new TextBox { Width = 240 };
+    Field.SetPlaceholder(empty, "Rechercher une fiche");
+    fields.Children.Add(empty);
+    fields.Children.Add(new TextBox { Width = 240, Text = "Mitose et méiose" });
+    page.Children.Add(fields);
+
+    page.Children.Add(Section("Pastilles"));
+    var pills = Row();
+    foreach (var (kind, text) in new[] { (PillKind.Sheet, "Fiche · J7"), (PillKind.Passage, "Passage · J1"), (PillKind.Reminder, "Rappel"), (PillKind.Overdue, "Retard 4 j"), (PillKind.Archived, "Archivée"), (PillKind.NeedsReview, "À vérifier") })
+    {
+        pills.Children.Add(new Pill { Kind = kind, Text = text });
+    }
+    page.Children.Add(pills);
+
+    page.Children.Add(Section("Cartes"));
+    var cards = Row();
+    foreach (var (marker, title) in new[] { (ItemMarker.Sheet, "Mitose"), (ItemMarker.Passage, "« La prophase précède… »"), (ItemMarker.Reminder, "Rappel : Méiose") })
+    {
+        cards.Children.Add(new Card { Marker = marker, Width = 220, Content = Text("Kyf.Text.BodyStrong", title) });
+    }
+    page.Children.Add(cards);
+
+    page.Children.Add(Section("Notifications"));
+    foreach (var (severity, title, message) in new[]
+    {
+        (NotificationSeverity.Info, "Nouvelle version", "kyfRev 1.0.0-alpha.2 est disponible."),
+        (NotificationSeverity.Success, "Sauvegarde faite", "Le coffre est sauvegardé."),
+        (NotificationSeverity.Warning, "Passage à vérifier", "Le texte de la fiche a changé autour de cette annotation."),
+        (NotificationSeverity.Critical, "Sauvegarde impossible", "Le dossier des sauvegardes est introuvable."),
+    })
+    {
+        page.Children.Add(new Notification { Severity = severity, Title = title, Message = message, Margin = new Thickness(0, 0, 0, 8), Width = 560, HorizontalAlignment = HorizontalAlignment.Left });
+    }
+
+    page.Children.Add(Section("Chargement, état vide, menu et dialogue"));
+    var last = Row();
+    var skeletons = new StackPanel { Width = 200 };
+    foreach (var width in new[] { 200.0, 160, 180 })
+    {
+        skeletons.Children.Add(new Skeleton { Width = width, Height = 16, Margin = new Thickness(0, 0, 0, 8), HorizontalAlignment = HorizontalAlignment.Left });
+    }
+    last.Children.Add(skeletons);
+    last.Children.Add(new Card { Width = 280, Content = new EmptyState { Title = "Rien à réviser", Description = "Toutes les fiches du jour sont faites.", Glyph = Icons.Success, Action = new Button { Content = "Voir demain" } } });
+    var menu = new ContextMenu { Resources = design.Dictionary, Placement = System.Windows.Controls.Primitives.PlacementMode.Relative };
+    menu.Items.Add(new MenuItem { Header = "Ouvrir", InputGestureText = "Entrée" });
+    menu.Items.Add(new MenuItem { Header = "Renommer", InputGestureText = "F2" });
+    menu.Items.Add(new Separator());
+    menu.Items.Add(new MenuItem { Header = "Mettre à la corbeille", InputGestureText = "Suppr" });
+    last.Children.Add(new Image { Source = Render(menu, 260, 190), Width = 260, Height = 190, VerticalAlignment = VerticalAlignment.Top });
+    var dialogArea = new Grid { Width = 420, Height = 240 };
+    dialogArea.Children.Add(new Card { Content = Text("Kyf.Text.Body", "Fiche « Mitose »") });
+    dialogArea.Children.Add(new Dialog { Title = "Mettre à la corbeille ?", Content = Text("Kyf.Text.Body", "La fiche reste récupérable dans la corbeille."), PrimaryButtonText = "Mettre à la corbeille", IsOpen = true });
+    last.Children.Add(dialogArea);
+    page.Children.Add(last);
+
+    var root = new Border { Resources = design.Dictionary, Child = page, Width = 1280 };
+    root.SetResourceReference(Border.BackgroundProperty, DesignKeys.Brush(ColorRole.Background));
+    return root;
+
+    TextBlock Text(string style, string text) => new() { Style = (Style)design.Dictionary[style], Text = text, Margin = new Thickness(0, 0, 0, 4) };
+
+    TextBlock Section(string title)
+    {
+        var block = Text("Kyf.Text.Subtitle", title);
+        block.Margin = new Thickness(0, 24, 0, 12);
+        return block;
+    }
+
+    static WrapPanel Row() => new() { Margin = new Thickness(0, 0, 0, 8), ItemWidth = double.NaN };
+}
+
+static BitmapSource Render(FrameworkElement element, double width, double height)
+{
+    element.Measure(new Size(width, height));
+    element.Arrange(new Rect(0, 0, width, height));
+    element.UpdateLayout();
+    var bitmap = new RenderTargetBitmap((int)width, (int)height, 96, 96, PixelFormats.Pbgra32);
+    bitmap.Render(element);
+    bitmap.Freeze();
+    return bitmap;
+}
+
+static void Save(FrameworkElement gallery, string path)
+{
+    foreach (var panel in ((StackPanel)((Border)gallery).Child).Children.OfType<WrapPanel>())
+    {
+        foreach (FrameworkElement child in panel.Children)
+        {
+            child.Margin = new Thickness(0, 0, 12, 12);
+            child.VerticalAlignment = VerticalAlignment.Top;
+        }
+    }
+    gallery.Measure(new Size(gallery.Width, double.PositiveInfinity));
+    var bitmap = Render(gallery, gallery.Width, Math.Ceiling(gallery.DesiredSize.Height));
+    var encoder = new PngBitmapEncoder();
+    encoder.Frames.Add(BitmapFrame.Create(bitmap));
+    using var file = File.Create(path);
+    encoder.Save(file);
+    Console.WriteLine($"{path} : {bitmap.PixelWidth} × {bitmap.PixelHeight}");
+}

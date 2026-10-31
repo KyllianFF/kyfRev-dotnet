@@ -100,3 +100,18 @@ Ce glossaire fixe la correspondance. Les **clés JSON du coffre restent celles d
 | Module | `IKyfRevModule`, `ModuleCatalog` | réglages du coffre (`citations.active`…) | Fonction facultative compilée avec l'application : ses services ne sont déclarés que si le coffre l'active. |
 | Point d'extension | `INavigationContributor`, `IDashboardWidget`, `IVaultHealthCheck`, `ISearchProvider`, `IExportFormat`, `IBlockRenderer` | — | Ce qu'un module peut apporter : entrée du menu, encart du tableau de bord, remarque de santé, résultats de recherche, export, rendu d'un bloc. |
 | Lecteur en ligne | `IOnlineReader`, `OnlineReader` | — | Seul accès au réseau : HTTPS, ni redirection ni cookie, réponse bornée en taille et en durée. |
+
+## Design system
+
+| Terme | Code | Clé JSON (format 1) | Définition |
+|---|---|---|---|
+| Gamme | `ColorRamp` (`Palette.Violet`, `Palette.Periwinkle`, `Palette.Mauve`) | — | Dix nuances (50 à 900) d'une couleur : violet, pervenche, mauve. |
+| Jeton | `Palette`, `Typography`, `Spacing`, `Radii`, `Elevation`, `Motion` | — | Valeur de référence de l'identité visuelle, écrite à un seul endroit. |
+| Rôle | `ColorRole` | — | Usage d'une couleur (texte, fond, bouton principal…), traduit par chaque thème. |
+| Thème | `ThemeKind` (`Light`, `Dark`, `HighContrast`) | — | Clair, sombre, ou contraste élevé de Windows. |
+| Contour de contrôle | `ColorRole.ControlBorder` | — | Bord d'un champ ou d'un bouton, au moins 3:1 sur tous les fonds. |
+| Séparateur | `ColorRole.Divider` | — | Trait décoratif, jamais seul porteur d'une information. |
+| Pastille | `Pill`, `PillKind` | — | Icône et court libellé : fiche, passage, rappel, retard, archivée, à vérifier. |
+| Carte | `Card`, `ItemMarker` | — | Contenu posé sur la surface, avec un repère latéral selon ce qu'il présente. |
+| Squelette | `Skeleton` | — | Place d'un contenu en cours de chargement. |
+| État vide | `EmptyState` | — | Ce qu'affiche une vue sans contenu, avec l'action qui la remplit. |
