@@ -1,0 +1,50 @@
+{
+  "format": 1,
+  "id": "f_01M69NJ6DVBPHF65S8C1MWR669",
+  "chemin": "fiches/Biologie/Cellule/Chapitre 3 - la mitose.md",
+  "titre": "Chapitre 3 : la mitose",
+  "empreinte": "sha256:a7b807daa927c10037d8d77862b281376804429885a4d5d7eff9acfdd2ae527d",
+  "modifieeLe": "2026-09-01T12:00:00Z",
+  "statut": "active",
+  "cycle": {
+    "numero": 1,
+    "sequence": [
+      0,
+      1,
+      3,
+      7,
+      14,
+      30
+    ],
+    "demarreLe": "2026-09-01",
+    "etape": 2,
+    "echeance": "2026-09-05",
+    "derniereRevision": "2026-09-02"
+  },
+  "compteurs": {
+    "cyclesCommences": 1,
+    "cyclesTermines": 0,
+    "cyclesInterrompus": 0
+  },
+  "historique": [
+    {
+      "evt": "revision",
+      "le": "2026-09-01T12:00:00Z",
+      "jour": "2026-09-01",
+      "cycle": 1,
+      "etape": "J0",
+      "prevuLe": "2026-09-01",
+      "retardJours": 0,
+      "origine": "creation"
+    },
+    {
+      "evt": "revision",
+      "le": "2026-09-02T12:00:00Z",
+      "jour": "2026-09-02",
+      "cycle": 1,
+      "etape": "J1",
+      "prevuLe": "2026-09-02",
+      "retardJours": 0
+    }
+  ]
+}

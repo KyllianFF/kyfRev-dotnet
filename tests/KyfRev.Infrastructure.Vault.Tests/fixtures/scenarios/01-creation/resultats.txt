@@ -1,0 +1,24 @@
+0 initialiser ok
+1 creer_fiche ok
+2 creer_fiche ok
+3 creer_fiche ok
+4 creer_fiche ok
+5 creer_fiche ok
+6 creer_fiche erreur CheminInvalide : Chemin refusé « fiches/../dehors » : « . » et « .. » sont interdits.
+7 creer_fiche ok
+8 lire_fiche ok sha256:a7b807daa927c10037d8d77862b281376804429885a4d5d7eff9acfdd2ae527d
+9 fiche ok fiches/Biologie/Cellule/Chapitre 3 - la mitose (2).md "Chapitre 3 : la mitose" [] present sha256:e46e8ac85ab65f0634f01321c6a3a027f4498f0b668dc17b80121ec8e605c0c4
+10 fiche ok fiches/Sans titre.md "Sans titre" [] present sha256:7dd429578d8e335a62165ab670d74357e199b90aa8559a59b989100ab8726d97
+11 fiche ok fiches/CON_.md "CON" [] present sha256:5280e1a010e7a5d123f7b9ed71f450c437d33ead49764c5cef2b59f9ccfb559f
+12 fiche ok fiches/Histoire/Le 'tiers état' - les ordres.md "Le \"tiers état\" / les <ordres> ?" [] present sha256:90adcba4bbbb6845a8aedbb0edf51828b6753cc8461f52ad8298d15fdc8f3c4e
+13 fiche ok fiches/Notes/Fin de phrase.md "Fin de phrase..." [] present sha256:304745472ae64285ac5505a67b3f0d2f9e93083fe5a08152a23492afbf2c1702
+14 dossiers ok ["Biologie","Biologie/Cellule","Histoire","Notes"]
+15 reviser ok
+16 reporter ok
+17 archiver ok
+18 reviser erreur Suivi : Cet élément n'est pas en révision active.
+19 fiche erreur FicheInconnue : Aucune fiche ne porte l'identifiant inconnue.
+20 sante ok deplacees=[] modifiees=[] manquantes=[] doublons=[] non_suivies=[] sans_suivi=[] illisibles=[] liens=[]
+21 ouvrir ok
+22 sante ok deplacees=[] modifiees=[] manquantes=[] doublons=[] non_suivies=[] sans_suivi=[] illisibles=[] liens=[]
+23 fiche ok fiches/Biologie/Cellule/Chapitre 3 - la mitose.md "Chapitre 3 : la mitose" [] present sha256:a7b807daa927c10037d8d77862b281376804429885a4d5d7eff9acfdd2ae527d

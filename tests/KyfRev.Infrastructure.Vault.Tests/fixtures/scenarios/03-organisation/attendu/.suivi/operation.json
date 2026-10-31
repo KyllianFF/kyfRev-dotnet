@@ -1,0 +1,23 @@
+{
+  "format": 1,
+  "etat": "terminee",
+  "description": "déplacement de fiches/Biologie/Division/la cellule (2).md vers fiches/la cellule (2).md",
+  "deplacements": [
+    {
+      "de": "fiches/Biologie/Division/la cellule (2).md",
+      "vers": "fiches/la cellule (2).md"
+    }
+  ],
+  "ecritures": [
+    {
+      "chemin": "fiches/la cellule (2).md",
+      "empreinteAvant": "sha256:8d27106dcf7f88061f36d5a1f6d5a70a1516873fe460ce0e06a4af86bad7b29e",
+      "contenu": "---\nid: f_01M69NJ72QWXYVYVY92X7Y6TQ9\ntitre: \"la cellule\"\ncreee: 2026-09-01\n---\n\n# La cellule\n\nVoir [la mitose](Biologie/Division/Mitose%20-%20les%20phases.md), [la méiose](<Biologie/Méiose.md>) et ![schéma](Biologie/Division/Mitose%20-%20les%20phases.ressources/schema.png).\nEt [un site](https://exemple.org/Mitose.md), [une ancre](#haut).\n\n```\n[pas un lien](Mitose.md)\n```\n\nDu `code [x](Mitose.md)` en ligne.\n\n[ref]: Biologie/Division/Mitose%20-%20les%20phases.md#phases \"Les phases\"\n"
+    },
+    {
+      "chemin": "fiches/Biologie/Division/Mitose - les phases.md",
+      "empreinteAvant": "sha256:19e912fc22645f8083c19813c7b604deba9caf6bac7b20e2d2f0cde201cd9eca",
+      "contenu": "---\nid: f_01M69NJ7360HKTT7STA8YH268E\ntitre: \"Mitose : les phases\"\ncreee: 2026-09-01\n---\n\n# Mitose\n\nRetour à [la cellule](../../la%20cellule%20%282%29.md) et à [l'image](Mitose%20-%20les%20phases.ressources/schema-mitose-1.png).\n"
+    }
+  ]
+}

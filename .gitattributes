@@ -24,3 +24,6 @@
 *.woff binary
 *.woff2 binary
 *.ttf binary
+
+# Fichiers de référence des tests : comparés à l'octet près, jamais convertis (CRLF, BOM).
+tests/**/fixtures/** -text

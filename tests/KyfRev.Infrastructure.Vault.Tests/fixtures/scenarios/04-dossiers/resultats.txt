@@ -1,0 +1,31 @@
+0 initialiser ok
+1 creer_dossier ok "Réseau/Cisco"
+2 creer_dossier erreur DejaExistant
+3 creer_dossier erreur CheminInvalide : Chemin refusé « .cache » : un nom de dossier ne peut pas commencer par un point.
+4 creer_dossier erreur CheminInvalide : Chemin refusé « Images.RESSOURCES » : « .ressources » est réservé aux images d'une fiche.
+5 creer_dossier erreur CheminInvalide : Chemin refusé «  /  » : un dossier doit avoir un nom.
+6 creer_dossier erreur CheminInvalide : Chemin refusé « fiches/Mauvais:nom » : caractère interdit par Windows.
+7 creer_fiche ok
+8 creer_fiche ok
+9 creer_fiche ok
+10 ajouter_ressource ok VLAN.ressources/topologie.svg
+11 ecrire ok
+12 analyser ok
+13 dossiers ok ["Réseau","Réseau/Cisco"]
+14 deplacer_dossier ok "Équipements/Cisco"
+15 fiche ok fiches/Équipements/Cisco/VLAN.md "VLAN" [] present sha256:fe21610dc08210de2a63dcfc848fd39b7967138832f9110a3f696d82f4066516
+16 lire_fiche ok sha256:79f916e8cf38149bfcc7fc968689d78784cea1819e78c6ef82dac8d7455bd9c4
+17 lire_fiche ok sha256:3dd1c2daaf740f16461088341d3be04a4fb733265d75769323b6ce6de54dc5c2
+18 lire_fiche ok sha256:fe21610dc08210de2a63dcfc848fd39b7967138832f9110a3f696d82f4066516
+19 sante ok deplacees=[] modifiees=[] manquantes=[] doublons=[] non_suivies=[fiches/Équipements/Cisco/Libre.md] sans_suivi=[] illisibles=[] liens=[]
+20 deplacer_dossier erreur CheminInvalide : Chemin refusé « équipements/Sous » : un dossier ne peut pas aller dans l'un de ses propres sous-dossiers.
+21 deplacer_dossier erreur DossierInconnu : Le dossier « Inexistant » est introuvable.
+22 creer_dossier ok "Vide"
+23 deplacer_dossier erreur DejaExistant
+24 deplacer_dossier ok "Vide"
+25 deplacer_dossier ok "réseau"
+26 fiche ok fiches/réseau/OSPF.md "OSPF" [] present sha256:79f916e8cf38149bfcc7fc968689d78784cea1819e78c6ef82dac8d7455bd9c4
+27 lire_fiche ok sha256:bd3624f500e561068b5c680d88d181a132f012f9978c622794b6addb42ab2518
+28 dossiers ok ["réseau","Vide","Équipements","Équipements/Cisco"]
+29 ouvrir ok
+30 sante ok deplacees=[] modifiees=[] manquantes=[] doublons=[] non_suivies=[fiches/Équipements/Cisco/Libre.md] sans_suivi=[] illisibles=[] liens=[]

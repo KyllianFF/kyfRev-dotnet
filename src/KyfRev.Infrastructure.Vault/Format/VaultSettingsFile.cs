@@ -1,8 +1,8 @@
 using System.Collections.Immutable;
-using System.Text;
 using System.Text.Json.Nodes;
 using KyfRev.Domain.Reviews;
 using KyfRev.Infrastructure.Vault.Json;
+using KyfRev.Infrastructure.Vault.Text;
 
 namespace KyfRev.Infrastructure.Vault.Format;
 
@@ -129,6 +129,23 @@ public sealed record VaultSettingsFile(
             UnknownProperties.From(Fields.Unknown(obj, Known)));
     }
 
+    /// <summary>Réglages d'un nouveau coffre : les défauts de la version 0.x.</summary>
+    /// <param name="id">Identifiant du coffre (<c>v_</c> + ULID).</param>
+    /// <param name="createdOn">Jour de création.</param>
+    public static VaultSettingsFile New(string id, DateOnly createdOn) => new(
+        1,
+        id,
+        createdOn,
+        ReviewSequence.Default,
+        ActiveRecall: true,
+        ReminderRules.Default,
+        new QuoteSettings(Active: false, Online: true, QuoteSettings.AllDomains),
+        BackupRotation: true,
+        SchemasModule: null,
+        Exams: [],
+        ImmutableDictionary.Create<string, UnknownProperties>(StringComparer.Ordinal),
+        UnknownProperties.None);
+
     /// <summary>Contenu du fichier, octet pour octet comme la version 0.x l'écrirait.</summary>
     public byte[] Write()
     {
@@ -198,13 +215,5 @@ public sealed record VaultSettingsFile(
             Fields.AddUnknown(section, unknown.Properties);
         }
         return section;
-    }
-
-    private sealed class Utf8Order : IComparer<string>
-    {
-        public static readonly Utf8Order Instance = new();
-
-        public int Compare(string? x, string? y) =>
-            Encoding.UTF8.GetBytes(x ?? string.Empty).AsSpan().SequenceCompareTo(Encoding.UTF8.GetBytes(y ?? string.Empty));
     }
 }

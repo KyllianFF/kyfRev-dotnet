@@ -1,0 +1,41 @@
+{
+  "format": 1,
+  "id": "f_01M69NJ7EE38D746YAMK34NWZM",
+  "chemin": "fiches/Biologie/Notes.md",
+  "titre": "Notes",
+  "empreinte": "sha256:1c6ab1f9c684db6bfad7b9541c3b686139e854f9f082294b13b88f044a76390a",
+  "modifieeLe": "2026-09-07T07:15:00Z",
+  "statut": "active",
+  "cycle": {
+    "numero": 1,
+    "sequence": [
+      0,
+      1,
+      3,
+      7,
+      14,
+      30
+    ],
+    "demarreLe": "2026-09-06",
+    "etape": 1,
+    "echeance": "2026-09-07",
+    "derniereRevision": "2026-09-06"
+  },
+  "compteurs": {
+    "cyclesCommences": 1,
+    "cyclesTermines": 0,
+    "cyclesInterrompus": 0
+  },
+  "historique": [
+    {
+      "evt": "revision",
+      "le": "2026-09-06T12:00:00Z",
+      "jour": "2026-09-06",
+      "cycle": 1,
+      "etape": "J0",
+      "prevuLe": "2026-09-06",
+      "retardJours": 0,
+      "origine": "adoption"
+    }
+  ]
+}

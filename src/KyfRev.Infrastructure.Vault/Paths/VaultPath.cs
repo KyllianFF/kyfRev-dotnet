@@ -116,7 +116,7 @@ public sealed class VaultPath : IEquatable<VaultPath>, IComparable<VaultPath>
 
     /// <summary>Ordre des octets UTF-8, comme la version 0.x (ordre des listes et des archives).</summary>
     public int CompareTo(VaultPath? other) =>
-        other is null ? 1 : Encoding.UTF8.GetBytes(Value).AsSpan().SequenceCompareTo(Encoding.UTF8.GetBytes(other.Value));
+        other is null ? 1 : Text.Utf8Order.Instance.Compare(Value, other.Value);
 
     /// <inheritdoc/>
     public override string ToString() => Value;

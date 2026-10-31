@@ -1,0 +1,32 @@
+{
+  "description": "Corbeille : une fiche avec ses images, restaurée à côté de sa place reprise ; un dossier entier avec une fiche archivée, un fichier non suivi et un sous-dossier vide ; restauration qui recrée le dossier.",
+  "operations": [
+    { "op": "initialiser", "le": "2026-09-01" },
+    { "op": "creer_fiche", "nom": "a", "dossier": "Cours", "titre": "Alpha", "corps": "Lien vers [Beta](Beta.md).\n", "le": "2026-09-01" },
+    { "op": "creer_fiche", "nom": "b", "dossier": "Cours", "titre": "Beta", "corps": "Texte.\n", "le": "2026-09-01" },
+    { "op": "ajouter_ressource", "fiche": "b", "nom_fichier": "figure.svg", "contenu": "<svg/>" },
+    { "op": "corbeille_fiche", "fiche": "b", "le": "2026-09-02" },
+    { "op": "fiches_a_la_corbeille" },
+    { "op": "fiche", "fiche": "b" },
+    { "op": "sante" },
+    { "op": "creer_fiche", "nom": "b2", "dossier": "Cours", "titre": "Beta", "corps": "Nouvelle Beta.\n", "le": "2026-09-03" },
+    { "op": "restaurer_fiche", "fiche": "b", "le": "2026-09-04" },
+    { "op": "fiche", "fiche": "b" },
+    { "op": "restaurer_fiche", "fiche": "b", "le": "2026-09-04" },
+    { "op": "creer_fiche", "nom": "c", "dossier": "Archives/2025", "titre": "Gamma", "corps": "Gamma.\n", "le": "2026-09-05" },
+    { "op": "creer_fiche", "nom": "d", "dossier": "Archives", "titre": "Delta", "corps": "Delta.\n", "le": "2026-09-05" },
+    { "op": "archiver", "fiche": "d", "le": "2026-09-05" },
+    { "op": "ecrire", "chemin": "fiches/Archives/notes.txt", "contenu": "fichier non suivi" },
+    { "op": "creer_dossier", "dossier": "Archives/Vide" },
+    { "op": "corbeille_dossier", "dossier": "Archives", "le": "2026-09-06" },
+    { "op": "fiches_a_la_corbeille" },
+    { "op": "dossiers" },
+    { "op": "restaurer_fiche", "fiche": "c", "le": "2026-09-07" },
+    { "op": "dossiers" },
+    { "op": "corbeille_dossier", "dossier": "Inexistant", "le": "2026-09-07" },
+    { "op": "ouvrir", "le": "2026-09-08" },
+    { "op": "sante" },
+    { "op": "fiches_a_la_corbeille" },
+    { "op": "fiche", "fiche": "c" }
+  ]
+}

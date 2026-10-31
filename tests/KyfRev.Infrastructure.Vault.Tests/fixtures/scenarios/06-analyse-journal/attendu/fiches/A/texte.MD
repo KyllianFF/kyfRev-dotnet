@@ -1,0 +1,1 @@
+Extension en majuscules.

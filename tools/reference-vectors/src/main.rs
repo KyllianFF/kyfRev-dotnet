@@ -10,9 +10,11 @@
 //!   cargo run --release -- --coffre <dossier>       construit le coffre de référence
 //!   cargo run --release -- --vecteurs-coffre <dossier>   vecteurs des fonctions pures du coffre
 //!   cargo run --release -- --fonctions <famille> <n>     détail d'un cas (noms, entetes, liens)
+//!   cargo run --release -- --scenarios <dossier>         joue les scénarios d'opérations sur un coffre
 
 mod coffre_reference;
 mod fonctions_coffre;
+mod scenarios;
 
 use std::fmt::Write as _;
 use std::fs;
@@ -368,6 +370,9 @@ fn main() {
         [option, dossier] if option == "--vecteurs-coffre" => {
             fs::create_dir_all(dossier).expect("dossier de sortie");
             fonctions_coffre::ecrire(Path::new(dossier));
+        }
+        [option, dossier] if option == "--scenarios" => {
+            scenarios::jouer_tous(Path::new(dossier));
         }
         [option, famille, n] if option == "--fonctions" => {
             fonctions_coffre::afficher(famille, n.parse().expect("numéro de cas"));
