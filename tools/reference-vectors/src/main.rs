@@ -7,6 +7,9 @@
 //! Usage :
 //!   cargo run --release -- <dossier de sortie>      écrit tous les fichiers
 //!   cargo run --release -- --transcript <n>         affiche la transcription du suivi n
+//!   cargo run --release -- --coffre <dossier>       construit le coffre de référence
+
+mod coffre_reference;
 
 use std::fmt::Write as _;
 use std::fs;
@@ -355,6 +358,23 @@ fn main() {
         [option, n] if option == "--transcript" => {
             let n: u64 = n.parse().expect("numéro de suivi");
             print!("{}", transcrire_suivi(n).texte);
+        }
+        [option, dossier] if option == "--coffre" => {
+            coffre_reference::construire(Path::new(dossier));
+        }
+        [option, dossier, secondes] if option == "--ouvrir" => {
+            // Ouvre le coffre comme kyfRev 0.x (verrou compris) et le garde ouvert un moment.
+            let secondes: u64 = secondes.parse().expect("durée en secondes");
+            match coffre::Coffre::ouvrir(Path::new(dossier), &moment(date(2026, 10, 31))) {
+                Ok(_coffre) => {
+                    println!("ouvert : verrou tenu {secondes} s");
+                    std::thread::sleep(std::time::Duration::from_secs(secondes));
+                }
+                Err(erreur) => {
+                    println!("refus : {erreur}");
+                    std::process::exit(3);
+                }
+            }
         }
         [dossier] => {
             let dossier = Path::new(dossier);

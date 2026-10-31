@@ -12,6 +12,7 @@ license = "MIT"
 [dependencies]
 # Clone du dépôt kyfRev 0.x à côté de ce dépôt (voir README.md).
 noyau = { path = "../../../kyfRev/crates/noyau" }
+coffre = { path = "../../../kyfRev/crates/coffre" }
 jiff = "=0.2.38"
 rand_chacha = "=0.10.0"
 rand_core = "=0.10.1"

@@ -1,48 +1,11 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <OutputType>Exe</OutputType>
-    <IsPackable>false</IsPackable>
-    <IsTestProject>true</IsTestProject>
-    <EnableMSTestRunner>true</EnableMSTestRunner>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\KyfRev.Domain\KyfRev.Domain.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="CsCheck" />
-    <PackageReference Include="MSTest.Analyzers" />
-    <PackageReference Include="MSTest.TestAdapter" />
-    <PackageReference Include="MSTest.TestFramework" />
-  </ItemGroup>
-
-  <ItemGroup Condition="'$(KYFREV_MUTATION)' != '1'">
-    <PackageReference Include="coverlet.MTP" />
-  </ItemGroup>
-
-  <!--
-    Stryker.NET ne sait pas encore piloter Microsoft Testing Platform : en mode mutation
-    (KYFREV_MUTATION=1, posé par tools/mutation.ps1), les tests passent par VSTest, avec un
-    fichier de verrouillage à part pour ne pas toucher à celui de la compilation ordinaire.
-  -->
-  <PropertyGroup Condition="'$(KYFREV_MUTATION)' == '1'">
-    <EnableMSTestRunner>false</EnableMSTestRunner>
-    <IsTestingPlatformApplication>false</IsTestingPlatformApplication>
-    <NuGetLockFilePath>$(MSBuildProjectDirectory)\obj\packages.mutation.lock.json</NuGetLockFilePath>
-  </PropertyGroup>
-  <ItemGroup Condition="'$(KYFREV_MUTATION)' == '1'">
-    <PackageReference Include="Microsoft.NET.Test.Sdk" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Using Include="Microsoft.VisualStudio.TestTools.UnitTesting" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Include="fixtures\**\*" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

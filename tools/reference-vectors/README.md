@@ -30,3 +30,26 @@ cargo run --release --manifest-path tools/reference-vectors/Cargo.toml -- --tran
 
 Les vecteurs ne se régénèrent que si l'on change volontairement les cas couverts : le
 comportement de référence, lui, est figé.
+
+## Coffre de référence
+
+`--coffre <dossier>` construit, avec le crate `coffre` de la 0.x, un coffre synthétique au
+contenu fictif. Il contient chaque sorte de fichier du format 1 : suivis actifs et archivés,
+passages et définitions, corbeilles (annotations d'une fiche supprimée comprises), versions,
+journal d'opération, tirage, citations, examen, schéma et données d'extension. Ses suivis
+réunissent chaque sorte d'événement, d'origine de J0, de résultat de rappel et d'état
+d'ancrage. Il est versionné dans
+`tests/KyfRev.Infrastructure.Vault.Tests/fixtures/coffre-reference`, où les tests vérifient que
+chaque fichier JSON est relu puis réécrit à l'octet près.
+
+```powershell
+$env:COMPUTERNAME = 'POSTE-ESSAI'   # nom de poste fictif inscrit dans verrou-info.json
+cargo run --release --manifest-path tools/reference-vectors/Cargo.toml -- --coffre tests/KyfRev.Infrastructure.Vault.Tests/fixtures/coffre-reference
+```
+
+Les identifiants (ULID) et certaines dates viennent de l'horloge : le coffre n'est régénéré que
+pour couvrir un nouveau cas, puis relu en entier.
+
+`--ouvrir <dossier> <secondes>` ouvre un coffre comme kyfRev 0.x (verrou compris) et le garde
+ouvert ; il sert à `tools/interop/verrou.ps1`, qui vérifie que le verrou est respecté dans les
+deux sens entre les deux versions.

@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\KyfRev.Cli\KyfRev.Cli.csproj" />
+    <ProjectReference Include="..\..\src\KyfRev.Infrastructure.Vault\KyfRev.Infrastructure.Vault.csproj" />
+  </ItemGroup>
+
+</Project>

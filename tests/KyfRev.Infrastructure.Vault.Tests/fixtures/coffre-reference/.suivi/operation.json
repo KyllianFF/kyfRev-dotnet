@@ -1,0 +1,20 @@
+{
+  "format": 1,
+  "etat": "terminee",
+  "description": "mise à la corbeille de fiches/Brouillons/Fiche abandonnée.md",
+  "deplacements": [
+    {
+      "de": "fiches/Brouillons/Fiche abandonnée.md",
+      "vers": "fiches/.supprimees/f_01M69JFVCF7T57EH6CAANH4BA1/Fiche abandonnée.md"
+    },
+    {
+      "de": ".suivi/fiches/f_01M69JFVCF7T57EH6CAANH4BA1.json",
+      "vers": ".suivi/corbeille/f_01M69JFVCF7T57EH6CAANH4BA1.json"
+    },
+    {
+      "de": ".suivi/annotations/f_01M69JFVCF7T57EH6CAANH4BA1.json",
+      "vers": ".suivi/corbeille/f_01M69JFVCF7T57EH6CAANH4BA1.annotations.json"
+    }
+  ],
+  "ecritures": []
+}
