@@ -9,6 +9,16 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- Design system (`KyfRev.DesignSystem`, `docs/design-system.md`) : les trois gammes de la 0.x
+  (violet, pervenche, mauve) et 38 rôles de couleur, en thèmes clair, sombre et contraste élevé
+  de Windows ; échelles régulières (typographie et espacements sur une grille de 4 px, rayons,
+  élévations, durées de 150 ms au plus, aucune si Windows demande de réduire les animations).
+  Les 51 paires de couleurs employées ensemble atteignent 4,5:1 (texte) ou 3:1 (contours et
+  repères) dans chaque thème, vérifiées par les tests : le contour des champs et boutons passe
+  de 1,29:1 à plus de 3:1. Aucune couleur n'est écrite hors des jetons.
+- Composants : boutons, champ avec indication, carte, pastille (icône et libellé), menu,
+  dialogue, notification, état vide et squelette de chargement. Focus clavier toujours visible,
+  textes dans des ressources traduisibles. Captures des trois thèmes dans `docs/captures/j5`.
 - Modularité : contrat `IKyfRevModule` et catalogue des modules (`ModuleCatalog`). Un module est
   compilé avec l'application, sans aucun chargement dynamique ; ses services ne sont déclarés
   que si le coffre l'active, et son absence ne touche pas au cœur. Points d'extension : entrée

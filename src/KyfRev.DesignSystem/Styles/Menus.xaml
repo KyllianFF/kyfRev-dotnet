@@ -1,0 +1,120 @@
+<ResourceDictionary x:Class="KyfRev.DesignSystem.Styles.Menus"
+                    x:ClassModifier="internal"
+                    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <!-- Menu contextuel : une carte flottante, ombre de l'élévation « Flyout ». -->
+  <Style TargetType="ContextMenu">
+    <Setter Property="Background" Value="{DynamicResource Kyf.Brush.Surface}" />
+    <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Text}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Kyf.Brush.Divider}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="FontFamily" Value="{DynamicResource Kyf.Font.Ui}" />
+    <Setter Property="FontSize" Value="{DynamicResource Kyf.FontSize.Body}" />
+    <Setter Property="Padding" Value="4" />
+    <Setter Property="HasDropShadow" Value="False" />
+    <Setter Property="Grid.IsSharedSizeScope" Value="True" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="ContextMenu">
+          <!-- La marge laisse la place de l'ombre, dessinée sous le contenu pour garder un texte net. -->
+          <Grid Margin="8,4,8,12">
+            <Border Background="{TemplateBinding Background}" CornerRadius="{DynamicResource Kyf.Radius.Card}"
+                    Effect="{DynamicResource Kyf.Elevation.Flyout}" />
+            <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{DynamicResource Kyf.Radius.Card}"
+                    Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
+              <ScrollViewer CanContentScroll="True">
+                <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle" />
+              </ScrollViewer>
+            </Border>
+          </Grid>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <Style TargetType="Menu">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Text}" />
+    <Setter Property="FontFamily" Value="{DynamicResource Kyf.Font.Ui}" />
+    <Setter Property="FontSize" Value="{DynamicResource Kyf.FontSize.Body}" />
+  </Style>
+
+  <!-- Entrée de menu : icône (ou coche), libellé, raccourci, flèche de sous-menu. -->
+  <ControlTemplate x:Key="Kyf.Template.MenuItem" TargetType="MenuItem">
+    <Border x:Name="Row" Background="Transparent" CornerRadius="{DynamicResource Kyf.Radius.Control}"
+            Padding="8,0" MinHeight="32" SnapsToDevicePixels="True">
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto" SharedSizeGroup="KyfMenuIcon" />
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="Auto" SharedSizeGroup="KyfMenuGesture" />
+          <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <ContentPresenter x:Name="Icon" ContentSource="Icon" Width="16" Height="16" Margin="0,0,12,0"
+                          VerticalAlignment="Center" />
+        <TextBlock x:Name="Check" Text="&#xE73E;" Style="{DynamicResource Kyf.Text.Icon}" Margin="0,0,12,0"
+                   Visibility="Collapsed" />
+        <ContentPresenter Grid.Column="1" ContentSource="Header" RecognizesAccessKey="True" VerticalAlignment="Center" />
+        <TextBlock x:Name="Gesture" Grid.Column="2" Margin="24,0,0,0" VerticalAlignment="Center"
+                   Text="{TemplateBinding InputGestureText}" Foreground="{DynamicResource Kyf.Brush.TextSecondary}" />
+        <TextBlock x:Name="Arrow" Grid.Column="3" Text="&#xE76C;" Style="{DynamicResource Kyf.Text.Icon}"
+                   FontSize="12" Margin="12,0,0,0" Visibility="Collapsed" />
+        <Popup x:Name="PART_Popup" Placement="Right" HorizontalOffset="-4" AllowsTransparency="True" Focusable="False"
+               PopupAnimation="None" IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}">
+          <Grid Margin="8,4,8,12">
+            <Border Background="{DynamicResource Kyf.Brush.Surface}" CornerRadius="{DynamicResource Kyf.Radius.Card}"
+                    Effect="{DynamicResource Kyf.Elevation.Flyout}" />
+            <Border Background="{DynamicResource Kyf.Brush.Surface}" BorderBrush="{DynamicResource Kyf.Brush.Divider}"
+                    BorderThickness="1" CornerRadius="{DynamicResource Kyf.Radius.Card}" Padding="4">
+              <ScrollViewer CanContentScroll="True">
+                <ItemsPresenter Grid.IsSharedSizeScope="True" KeyboardNavigation.DirectionalNavigation="Cycle" />
+              </ScrollViewer>
+            </Border>
+          </Grid>
+        </Popup>
+      </Grid>
+    </Border>
+    <ControlTemplate.Triggers>
+      <Trigger Property="Role" Value="SubmenuHeader">
+        <Setter TargetName="Arrow" Property="Visibility" Value="Visible" />
+      </Trigger>
+      <Trigger Property="Role" Value="TopLevelHeader">
+        <Setter TargetName="PART_Popup" Property="Placement" Value="Bottom" />
+        <Setter TargetName="PART_Popup" Property="HorizontalOffset" Value="0" />
+        <Setter TargetName="Gesture" Property="Visibility" Value="Collapsed" />
+      </Trigger>
+      <Trigger Property="Icon" Value="{x:Null}">
+        <Setter TargetName="Icon" Property="Visibility" Value="Collapsed" />
+      </Trigger>
+      <Trigger Property="IsChecked" Value="True">
+        <Setter TargetName="Check" Property="Visibility" Value="Visible" />
+        <Setter TargetName="Icon" Property="Visibility" Value="Collapsed" />
+      </Trigger>
+      <Trigger Property="IsHighlighted" Value="True">
+        <Setter TargetName="Row" Property="Background" Value="{DynamicResource Kyf.Brush.SurfaceAlt}" />
+      </Trigger>
+      <Trigger Property="IsEnabled" Value="False">
+        <Setter TargetName="Row" Property="Opacity" Value="0.5" />
+      </Trigger>
+    </ControlTemplate.Triggers>
+  </ControlTemplate>
+
+  <Style TargetType="MenuItem">
+    <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Text}" />
+    <Setter Property="FocusVisualStyle" Value="{DynamicResource Kyf.FocusVisual}" />
+    <Setter Property="Template" Value="{StaticResource Kyf.Template.MenuItem}" />
+  </Style>
+
+  <Style x:Key="{x:Static MenuItem.SeparatorStyleKey}" TargetType="Separator">
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="Separator">
+          <Border Height="1" Margin="-4,4" Background="{DynamicResource Kyf.Brush.Divider}" SnapsToDevicePixels="True" />
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+</ResourceDictionary>

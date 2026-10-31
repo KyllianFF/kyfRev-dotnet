@@ -1,0 +1,92 @@
+<ResourceDictionary x:Class="KyfRev.DesignSystem.Styles.Buttons"
+                    x:ClassModifier="internal"
+                    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+  <ControlTemplate x:Key="Kyf.Template.Button" TargetType="ButtonBase">
+    <Border x:Name="Chrome" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+            BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{DynamicResource Kyf.Radius.Control}"
+            SnapsToDevicePixels="True">
+      <ContentPresenter Margin="{TemplateBinding Padding}" Focusable="False" RecognizesAccessKey="True"
+                        HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                        VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+    </Border>
+    <ControlTemplate.Triggers>
+      <!-- Désactivé : atténué de moitié ; l'infobulle dit pourquoi. -->
+      <Trigger Property="IsEnabled" Value="False">
+        <Setter TargetName="Chrome" Property="Opacity" Value="0.5" />
+      </Trigger>
+    </ControlTemplate.Triggers>
+  </ControlTemplate>
+
+  <!-- Bouton secondaire : le bouton par défaut. -->
+  <Style x:Key="Kyf.Button" TargetType="ButtonBase">
+    <Setter Property="FontFamily" Value="{DynamicResource Kyf.Font.Ui}" />
+    <Setter Property="FontSize" Value="{DynamicResource Kyf.FontSize.Body}" />
+    <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Text}" />
+    <Setter Property="Background" Value="{DynamicResource Kyf.Brush.Surface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Kyf.Brush.ControlBorder}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Padding" Value="12,0" />
+    <Setter Property="MinHeight" Value="32" />
+    <Setter Property="MinWidth" Value="32" />
+    <Setter Property="HorizontalContentAlignment" Value="Center" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="FocusVisualStyle" Value="{DynamicResource Kyf.FocusVisual}" />
+    <Setter Property="Template" Value="{StaticResource Kyf.Template.Button}" />
+    <Style.Triggers>
+      <Trigger Property="IsMouseOver" Value="True">
+        <Setter Property="Background" Value="{DynamicResource Kyf.Brush.SurfaceAlt}" />
+      </Trigger>
+      <Trigger Property="IsPressed" Value="True">
+        <Setter Property="Background" Value="{DynamicResource Kyf.Brush.Divider}" />
+      </Trigger>
+    </Style.Triggers>
+  </Style>
+
+  <Style TargetType="Button" BasedOn="{StaticResource Kyf.Button}" />
+
+  <Style TargetType="RepeatButton" BasedOn="{StaticResource Kyf.Button}" />
+
+  <Style TargetType="ToggleButton" BasedOn="{StaticResource Kyf.Button}">
+    <Style.Triggers>
+      <Trigger Property="IsChecked" Value="True">
+        <Setter Property="Background" Value="{DynamicResource Kyf.Brush.NavigationActiveBackground}" />
+        <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.NavigationActiveText}" />
+      </Trigger>
+    </Style.Triggers>
+  </Style>
+
+  <!-- Bouton principal : une seule action principale par vue. -->
+  <Style x:Key="Kyf.Button.Primary" TargetType="ButtonBase" BasedOn="{StaticResource Kyf.Button}">
+    <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.OnPrimary}" />
+    <Setter Property="Background" Value="{DynamicResource Kyf.Brush.Primary}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Kyf.Brush.Primary}" />
+    <Style.Triggers>
+      <Trigger Property="IsMouseOver" Value="True">
+        <Setter Property="Background" Value="{DynamicResource Kyf.Brush.PrimaryHover}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Kyf.Brush.PrimaryHover}" />
+      </Trigger>
+      <Trigger Property="IsPressed" Value="True">
+        <Setter Property="Background" Value="{DynamicResource Kyf.Brush.PrimaryPressed}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Kyf.Brush.PrimaryPressed}" />
+      </Trigger>
+    </Style.Triggers>
+  </Style>
+
+  <!-- Bouton discret : sans fond ni contour au repos (barres d'outils, actions secondaires). -->
+  <Style x:Key="Kyf.Button.Subtle" TargetType="ButtonBase" BasedOn="{StaticResource Kyf.Button}">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderBrush" Value="Transparent" />
+  </Style>
+
+  <!-- Icône seule : son nom vient de AutomationProperties.Name et de l'infobulle. -->
+  <Style x:Key="Kyf.Button.Icon" TargetType="ButtonBase" BasedOn="{StaticResource Kyf.Button.Subtle}">
+    <Setter Property="FontFamily" Value="{DynamicResource Kyf.Font.Icons}" />
+    <Setter Property="FontSize" Value="16" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Width" Value="32" />
+    <Setter Property="Height" Value="32" />
+  </Style>
+
+</ResourceDictionary>
