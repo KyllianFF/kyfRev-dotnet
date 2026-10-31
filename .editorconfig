@@ -1,0 +1,144 @@
+root = true
+
+# ---------------------------------------------------------------------------
+# Tous les fichiers
+# ---------------------------------------------------------------------------
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.{json,jsonc,yml,yaml,xml,props,targets,csproj,slnx,config,resx,xaml,svg,html,css,ts,js,mjs}]
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false
+
+[*.{cmd,bat,ps1,psm1,iss}]
+end_of_line = crlf
+
+# ---------------------------------------------------------------------------
+# C#
+# ---------------------------------------------------------------------------
+[*.cs]
+
+# Organisation des fichiers
+csharp_style_namespace_declarations = file_scoped:error
+csharp_using_directive_placement = outside_namespace:error
+dotnet_sort_system_directives_first = true
+dotnet_separate_import_directive_groups = false
+file_header_template = unset
+
+# Accolades et mise en forme
+csharp_prefer_braces = true:error
+csharp_new_line_before_open_brace = all
+csharp_new_line_before_else = true
+csharp_new_line_before_catch = true
+csharp_new_line_before_finally = true
+csharp_indent_case_contents = true
+csharp_indent_switch_labels = true
+csharp_space_after_cast = false
+csharp_preserve_single_line_statements = false
+csharp_preserve_single_line_blocks = true
+
+# var : seulement quand le type est évident
+csharp_style_var_for_built_in_types = false:warning
+csharp_style_var_when_type_is_apparent = true:warning
+csharp_style_var_elsewhere = false:warning
+
+# Langage moderne
+csharp_style_expression_bodied_methods = when_on_single_line:suggestion
+csharp_style_expression_bodied_properties = true:warning
+csharp_style_expression_bodied_accessors = true:warning
+csharp_style_expression_bodied_constructors = false:warning
+csharp_style_prefer_pattern_matching = true:warning
+csharp_style_prefer_switch_expression = true:warning
+csharp_style_prefer_not_pattern = true:warning
+csharp_style_prefer_primary_constructors = true:suggestion
+csharp_style_prefer_readonly_struct = true:warning
+csharp_prefer_static_local_function = true:warning
+csharp_style_prefer_collection_expression = when_types_loosely_match:warning
+dotnet_style_prefer_collection_expression = when_types_loosely_match:warning
+dotnet_style_coalesce_expression = true:warning
+dotnet_style_null_propagation = true:warning
+dotnet_style_prefer_is_null_check_over_reference_equality_method = true:warning
+dotnet_style_readonly_field = true:warning
+dotnet_style_require_accessibility_modifiers = for_non_interface_members:error
+dotnet_style_qualification_for_field = false:warning
+dotnet_style_qualification_for_property = false:warning
+dotnet_style_qualification_for_method = false:warning
+dotnet_style_qualification_for_event = false:warning
+dotnet_style_predefined_type_for_locals_parameters_members = true:warning
+dotnet_style_predefined_type_for_member_access = true:warning
+
+# Diagnostics de style imposés à la compilation
+dotnet_diagnostic.IDE0005.severity = error   # using inutile
+dotnet_diagnostic.IDE0011.severity = error   # accolades obligatoires
+dotnet_diagnostic.IDE0040.severity = error   # modificateurs d'accès explicites
+dotnet_diagnostic.IDE0055.severity = warning # mise en forme
+dotnet_diagnostic.IDE0161.severity = error   # espaces de noms déclarés au niveau du fichier
+
+# Nommage
+dotnet_naming_symbols.types.applicable_kinds = class, struct, interface, enum, delegate, record
+dotnet_naming_symbols.membres.applicable_kinds = property, method, event, field
+dotnet_naming_symbols.membres.applicable_accessibilities = public, internal, protected, protected_internal, private_protected
+dotnet_naming_symbols.interfaces.applicable_kinds = interface
+dotnet_naming_symbols.champs_prives.applicable_kinds = field
+dotnet_naming_symbols.champs_prives.applicable_accessibilities = private
+dotnet_naming_symbols.constantes.applicable_kinds = field
+dotnet_naming_symbols.constantes.required_modifiers = const
+dotnet_naming_symbols.parametres_et_locales.applicable_kinds = parameter, local
+
+dotnet_naming_style.pascal.capitalization = pascal_case
+dotnet_naming_style.camel.capitalization = camel_case
+dotnet_naming_style.prefixe_i.capitalization = pascal_case
+dotnet_naming_style.prefixe_i.required_prefix = I
+dotnet_naming_style.souligne_camel.capitalization = camel_case
+dotnet_naming_style.souligne_camel.required_prefix = _
+
+dotnet_naming_rule.interfaces_prefixe_i.symbols = interfaces
+dotnet_naming_rule.interfaces_prefixe_i.style = prefixe_i
+dotnet_naming_rule.interfaces_prefixe_i.severity = error
+dotnet_naming_rule.constantes_pascal.symbols = constantes
+dotnet_naming_rule.constantes_pascal.style = pascal
+dotnet_naming_rule.constantes_pascal.severity = error
+dotnet_naming_rule.champs_prives_souligne.symbols = champs_prives
+dotnet_naming_rule.champs_prives_souligne.style = souligne_camel
+dotnet_naming_rule.champs_prives_souligne.severity = error
+dotnet_naming_rule.types_pascal.symbols = types
+dotnet_naming_rule.types_pascal.style = pascal
+dotnet_naming_rule.types_pascal.severity = error
+dotnet_naming_rule.membres_pascal.symbols = membres
+dotnet_naming_rule.membres_pascal.style = pascal
+dotnet_naming_rule.membres_pascal.severity = error
+dotnet_naming_rule.parametres_camel.symbols = parametres_et_locales
+dotnet_naming_rule.parametres_camel.style = camel
+dotnet_naming_rule.parametres_camel.severity = error
+dotnet_diagnostic.IDE1006.severity = error
+
+# Règles d'analyse : écarts justifiés au réglage latest-all
+# Les types référence non nullables rendent la validation manuelle des arguments redondante.
+dotnet_diagnostic.CA1062.severity = none
+# Les textes de l'interface passent par les ressources ; cette règle vise les chaînes passées
+# aux API dites « localisables », ce qui inclut les journaux et les exceptions techniques.
+dotnet_diagnostic.CA1303.severity = none
+
+# Sécurité : toujours bloquant
+dotnet_diagnostic.CA2100.severity = error
+dotnet_diagnostic.CA2300.severity = error
+dotnet_diagnostic.CA2301.severity = error
+dotnet_diagnostic.CA3075.severity = error
+dotnet_diagnostic.CA5350.severity = error
+dotnet_diagnostic.CA5351.severity = error
+dotnet_diagnostic.CA5394.severity = error
+
+# ---------------------------------------------------------------------------
+# Tests : noms de méthodes descriptifs (avec soulignés) admis
+# ---------------------------------------------------------------------------
+[tests/**.cs]
+dotnet_diagnostic.CA1707.severity = none
+dotnet_diagnostic.CA2007.severity = none
+dotnet_diagnostic.CS1591.severity = none

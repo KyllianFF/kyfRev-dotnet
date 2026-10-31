@@ -1,0 +1,112 @@
+# ---------------------------------------------------------------------------
+# Compilation .NET
+# ---------------------------------------------------------------------------
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Aa][Rr][Mm]64/
+artifacts/
+publish/
+*.nupkg
+*.snupkg
+*.binlog
+*.dll.config
+project.fragment.lock.json
+
+# ---------------------------------------------------------------------------
+# Tests, couverture, mesures
+# ---------------------------------------------------------------------------
+[Tt]est[Rr]esults/
+coverage*/
+*.coverage
+*.coveragexml
+coverage*.json
+coverage*.xml
+coverage*.info
+StrykerOutput/
+BenchmarkDotNet.Artifacts/
+*.received.*
+
+# ---------------------------------------------------------------------------
+# Interface web embarquée (moteur caché, éditeur visuel)
+# ---------------------------------------------------------------------------
+node_modules/
+dist/
+.pnpm-store/
+
+# ---------------------------------------------------------------------------
+# Livraison
+# ---------------------------------------------------------------------------
+installer/Output/
+installer/generated/
+*.exe
+*.msi
+*.zip
+*.sha256
+
+# ---------------------------------------------------------------------------
+# Secrets, certificats, configuration locale
+# ---------------------------------------------------------------------------
+.env
+.env.*
+*.pfx
+*.p12
+*.pem
+*.key
+*.snk
+*.publishsettings
+appsettings.*.local.json
+*.local.json
+secrets.json
+
+# ---------------------------------------------------------------------------
+# Coffres d'essai et données utilisateur (jamais dans le dépôt)
+# ---------------------------------------------------------------------------
+/coffres-essai/
+/MesRévisions/
+/Coffre/
+/Sauvegardes/
+
+# Les corpus de référence synthétiques, eux, sont versionnés.
+!tests/**/fixtures/**
+
+# ---------------------------------------------------------------------------
+# Outils téléchargés localement par tools/setup.ps1
+# ---------------------------------------------------------------------------
+/.tools/
+
+# ---------------------------------------------------------------------------
+# Éditeurs, environnements de développement et outils d'assistance locaux
+# ---------------------------------------------------------------------------
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.userprefs
+*.sln.docstates
+*.DotSettings.user
+*.swp
+*~
+.claude/
+CLAUDE.md
+CLAUDE.local.md
+
+# ---------------------------------------------------------------------------
+# Fichiers système
+# ---------------------------------------------------------------------------
+Thumbs.db
+ehthumbs.db
+desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+
+# ---------------------------------------------------------------------------
+# Journaux et temporaires
+# ---------------------------------------------------------------------------
+*.log
+*.tmp
+*.temp

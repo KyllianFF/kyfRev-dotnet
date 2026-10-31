@@ -1,0 +1,13 @@
+<Project>
+
+  <!--
+    Versions de tous les paquets NuGet, définies ici seulement.
+    Règle d'adoption : une version publiée depuis au moins 14 jours, licence permissive,
+    ajoutée par `dotnet add package` puis vérifiée par la compilation (audit NuGet).
+  -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+  </PropertyGroup>
+
+</Project>
