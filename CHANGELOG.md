@@ -22,8 +22,8 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   recherche en ligne sont actifs, trois pages au plus par jour, nouvel essai une heure après un
   échec, rien de plus une fois la journée sans nouveauté. Lecture des pages comparée à la 0.x
   sur 806 wikitextes (modèles, liens, notes, entités, références incomplètes) et 6 080 tirages
-  de pages du jour. Là où la 0.x s'arrêtait sur un caractère accentué placé juste après un
-  « & », la génération .NET garde le « & » tel quel.
+  de pages du jour. Ces comparaisons ont révélé un défaut de la 0.x, corrigé depuis : une
+  lettre accentuée placée peu après un « & » y arrêtait la lecture de la page.
 - Lecteur HTTPS durci (`KyfRev.Infrastructure.Online`), seul accès au réseau : adresse en HTTPS
   seulement, ni redirection ni cookie, réponse limitée à 2 Mo et 20 secondes, UTF-8 strict,
   agent identifié (politique de Wikimedia). Seul le titre de la page demandée part.
