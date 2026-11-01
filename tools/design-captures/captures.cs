@@ -13,7 +13,8 @@
 // recherche-sombre.png, aide-clair.png), le menu selon la largeur de la fenêtre
 // (coquille-etroite-clair.png, coquille-etroite-plus-sombre.png, coquille-moyenne-sombre.png,
 // coquille-large-clair.png, aide-etroite-sombre.png), l'accueil sans coffre (accueil-clair.png,
-// accueil-sombre.png), le tableau de bord (aujourdhui-clair.png, aujourdhui-sombre.png), une fiche
+// accueil-sombre.png), le tableau de bord (aujourdhui-clair.png, aujourdhui-sombre.png,
+// aujourdhui-etroit-clair.png, aujourdhui-tablette-sombre.png, aujourdhui-ecran-clair.png), une fiche
 // et un passage en révision (fiche-clair.png, passage-sombre.png, sur un coffre d'essai jetable),
 // la séance d'étude et son bilan (seance-clair.png, bilan-sombre.png), et affiche le contraste de
 // chaque paire de rôles.
@@ -71,12 +72,24 @@ var thread = new Thread(() =>
             _ => { })));
     }
     // Le tableau de bord d'une journée chargée : retards, passage caché par le rappel actif,
-    // définition, rappel de consolidation, « À venir » replié, un point de santé à vérifier.
+    // définition, rappel de consolidation, « À venir », un point de santé à vérifier, et un exemple
+    // d'encart de module (les modules ne sont pas encore branchés dans l'application).
     foreach (var (theme, name) in new[] { (ThemePreference.Light, "clair"), (ThemePreference.Dark, "sombre") })
     {
         var today = new DashboardPageViewModel(app.Reminders, new ReviewNavigation(app.Sheets, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System));
-        today.Show(SampleDashboard());
+        today.Show(SampleDashboard(), SampleCards);
         Shell(folder, $"aujourdhui-{name}.png", theme, _ => { }, new Dictionary<string, object> { [CorePages.Today] = today });
+    }
+    foreach (var (file, theme, width, height) in new[]
+    {
+        ("aujourdhui-etroit-clair.png", ThemePreference.Light, 390.0, 844.0),
+        ("aujourdhui-tablette-sombre.png", ThemePreference.Dark, 834.0, 1000.0),
+        ("aujourdhui-ecran-clair.png", ThemePreference.Light, 1600.0, 1000.0),
+    })
+    {
+        var today = new DashboardPageViewModel(app.Reminders, new ReviewNavigation(app.Sheets, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System));
+        today.Show(SampleDashboard(), SampleCards);
+        Shell(folder, file, theme, _ => { }, new Dictionary<string, object> { [CorePages.Today] = today }, width, height);
     }
     ReviewCaptures(folder);
 });
@@ -373,6 +386,12 @@ internal static partial class Program
 {
     private static readonly DateOnly Monday = new(2026, 11, 2);
 
+    private static readonly int[] SampleWorkload = [2, 3, 1, 0, 2, 0, 0, 1];
+
+    private static readonly int[] SampleReviews = [4, 3, 5, 0, 6, 2, 0];
+
+    private static readonly DashboardCard[] SampleCards = [new("Citation du jour", "« Le cœur a ses raisons que la raison ne connaît point. »", "Blaise Pascal")];
+
     // Une journée de révision vraisemblable, sans donnée personnelle.
     private static Dashboard SampleDashboard()
     {
@@ -391,7 +410,8 @@ internal static partial class Program
             ],
             [new PendingReminder("fiche-revolution", "La Révolution française", "Histoire", [], new DateOnly(2026, 5, 4), Monday, 0)],
             [.. Enumerable.Range(1, 6).Select(n => Item(ItemKind.Sheet, $"Chapitre {n}", "Chimie", "J3", 0, 1) with { DueDate = Monday.AddDays(n), DaysLate = 0 })],
-            [],
+            [.. SampleWorkload.Select((count, offset) => new WorkloadDay(Monday.AddDays(offset), [.. Enumerable.Range(0, count).Select(n => Item(ItemKind.Sheet, $"Jour {offset}-{n}", "Chimie", "J3", 0, 1))], []))],
+            [.. SampleReviews.Select((reviews, index) => new ReviewDay(Monday.AddDays(index - 6), reviews))],
             2,
             true,
             [],

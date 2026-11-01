@@ -193,7 +193,7 @@ public sealed class SessionTests
         var dashboard = new DashboardPageViewModel(vault.App.Reminders, opener);
         var overdue = Item("Mitose", ItemKind.Sheet);
         var today = Item("Méiose", ItemKind.Passage);
-        var day = new Dashboard(new DateOnly(2026, 10, 3), [overdue], [today], [], [], [], 2, true, [], null, 2, 0, 0, 0, false, false);
+        var day = new Dashboard(new DateOnly(2026, 10, 3), [overdue], [today], [], [], [], [], 2, true, [], null, 2, 0, 0, 0, false, false);
 
         dashboard.Show(day);
         Assert.IsTrue(dashboard.CanStart);

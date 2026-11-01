@@ -315,7 +315,7 @@ public sealed class ReviewTests
         sheet.BackCommand.Execute(null);
         Assert.AreSame(shell.Home, shell.Current);
         await Waiting.UntilAsync(() => !ReferenceEquals(before, dashboard.Dashboard));
-        Assert.IsFalse(dashboard.Rows.OfType<DueItemRow>().Any(row => row.Item.Id == vault.SheetId), "la fiche révisée a quitté la liste du jour");
+        Assert.IsFalse(dashboard.Dashboard!.Overdue.Concat(dashboard.Dashboard.Today).Any(item => item.Id == vault.SheetId), "la fiche révisée a quitté la liste du jour");
 
         // Un passage, « Voir dans la fiche », puis deux fois Retour.
         var passageRow = dashboard.Rows.OfType<DueItemRow>().First(row => row.Item.Id == vault.PassageId);
@@ -448,7 +448,7 @@ public sealed class ReviewTests
         using var vault = new ReviewVault();
         var dashboard = new DashboardPageViewModel(vault.App.Reminders, opener);
         var item = new DueItem(ItemKind.Sheet, "id", "id", "Mitose", null, null, [], null, "Biologie", [], "J1", new DateOnly(2026, 10, 2), 1, new DateOnly(2026, 10, 1), 1, true);
-        dashboard.Show(new Dashboard(new DateOnly(2026, 10, 3), [item], [], [], [], [], 2, true, [], null, 1, 0, 0, 0, false, false));
+        dashboard.Show(new Dashboard(new DateOnly(2026, 10, 3), [item], [], [], [], [], [], 2, true, [], null, 1, 0, 0, 0, false, false));
         var shell = new ShellViewModel(CorePages.All(new Dictionary<string, object> { [CorePages.Today] = dashboard }), test.Appearance, test.Gallery);
         var window = new ShellWindow(shell) { ShowActivated = true, Left = -10000, Top = -10000, WindowStartupLocation = WindowStartupLocation.Manual };
         window.Resources.MergedDictionaries.Add(test.Design.Dictionary);

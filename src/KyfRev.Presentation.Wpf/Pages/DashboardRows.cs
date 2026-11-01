@@ -18,6 +18,9 @@ internal static class Dates
     /// <summary>« ven. 9 oct. ».</summary>
     public static string Short(DateOnly day) => day.ToString("ddd d MMM", French);
 
+    /// <summary>« ven » : le jour, pour une petite colonne.</summary>
+    public static string DayName(DateOnly day) => day.ToString("ddd", French).TrimEnd('.');
+
     /// <summary>« Vendredi 9 octobre ».</summary>
     public static string Capitalized(string text) => text.Length == 0 ? text : char.ToUpper(text[0], French) + text[1..];
 
@@ -108,7 +111,6 @@ public sealed class DueItemRow
         var sheet = item.Kind == ItemKind.Sheet;
         // Rappel actif : le texte d'un passage n'est pas montré (une définition, si : son terme ne donne pas la réponse).
         var hidden = activeRecall && !sheet && item.Term is null;
-        PillKind = sheet ? PillKind.Sheet : PillKind.Passage;
         KindLabel = sheet ? DashboardText.Sheet : item.Term is not null ? DashboardText.Definition : DashboardText.Passage;
         (Heading, HeadingText, Source) = (item.Term, item.Excerpt) switch
         {
@@ -140,9 +142,6 @@ public sealed class DueItemRow
     /// <summary>Rappel actif du coffre : le passage reste caché jusqu'à ce qu'on le demande.</summary>
     public bool ActiveRecall { get; }
 
-    /// <summary>Pastille : fiche ou passage.</summary>
-    public PillKind PillKind { get; }
-
     /// <summary>« Fiche », « Définition » ou « Passage ».</summary>
     public string KindLabel { get; }
 
@@ -157,6 +156,9 @@ public sealed class DueItemRow
 
     /// <summary>Dossier, étiquettes, cycle, dernière révision (et l'indice d'un passage caché).</summary>
     public ImmutableArray<string> Details { get; }
+
+    /// <summary>« Fiche · Biologie · #partiel · cycle 1 · … » : sous le titre.</summary>
+    public string Meta => string.Join(" · ", [KindLabel, .. Details]);
 
     /// <summary>Le fichier de la fiche est introuvable.</summary>
     public bool FileMissing => !Item.FilePresent;
@@ -200,6 +202,12 @@ public sealed class ReminderRow
     /// <summary>« Archivée le ven. 9 oct. ».</summary>
     public string Archived { get; }
 
+    /// <summary>« Histoire · 1er rappel · Archivée le ven. 9 oct. » : sous le titre.</summary>
+    public string Meta => string.Join(" · ", new[] { Folder, Rank, Archived }.Where(part => part.Length > 0));
+
+    /// <summary>Le nom lu par le lecteur d'écran, pour un bouton.</summary>
+    public string Spoken => ToString();
+
     /// <summary>Le nom lu par le lecteur d'écran.</summary>
     public override string ToString() => string.Join(", ", DashboardText.Reminder, Title, Rank, Archived);
 }
@@ -213,6 +221,97 @@ public sealed record EmptyDashboardRow(string Description)
 
     /// <summary>Le nom lu par le lecteur d'écran.</summary>
     public override string ToString() => $"{Title}. {Description}";
+}
+
+/// <summary>Une pastille du résumé du jour (« 2 en retard »).</summary>
+/// <param name="Kind">Ce qu'elle signale.</param>
+/// <param name="Text">Son libellé.</param>
+public sealed record HeroChip(PillKind Kind, string Text);
+
+/// <summary>Combien d'éléments tombent un jour à venir : le remplissage de sa pastille.</summary>
+public enum ForecastLevel
+{
+    /// <summary>Rien ce jour-là.</summary>
+    None,
+
+    /// <summary>Un ou deux éléments.</summary>
+    Some,
+
+    /// <summary>Trois éléments ou plus.</summary>
+    Many,
+}
+
+/// <summary>Un des sept prochains jours et ses échéances.</summary>
+public sealed class ForecastDay
+{
+    private const int Many = 3;
+
+    internal ForecastDay(DateOnly day, int count)
+    {
+        Label = Dates.DayName(day);
+        Count = count;
+        Level = count == 0 ? ForecastLevel.None : count < Many ? ForecastLevel.Some : ForecastLevel.Many;
+        var name = Dates.Long(day);
+        Name = Dates.Plural(count, number => DashboardText.ForecastDayOneOf(name, number), number => DashboardText.ForecastDayManyOf(name, number));
+    }
+
+    /// <summary>« mar ».</summary>
+    public string Label { get; }
+
+    /// <summary>Échéances ce jour-là.</summary>
+    public int Count { get; }
+
+    /// <summary>Remplissage de la pastille.</summary>
+    public ForecastLevel Level { get; }
+
+    /// <summary>« mardi 3 novembre : 3 éléments » : l'infobulle et le nom lu par le lecteur d'écran.</summary>
+    public string Name { get; }
+}
+
+/// <summary>Une barre de « Cette semaine » : les révisions validées un jour donné.</summary>
+public sealed class WeekBar
+{
+    /// <summary>Hauteur de la barre du jour le plus chargé.</summary>
+    public const double TallestBar = 48;
+
+    /// <summary>Hauteur du trait d'un jour sans révision, et minimum d'une barre.</summary>
+    public const double EmptyBar = 4;
+
+    internal WeekBar(ReviewDay day, int most, bool isToday)
+    {
+        Label = Dates.DayName(day.Day);
+        Count = day.Reviews;
+        IsToday = isToday;
+        Height = Count == 0 ? EmptyBar : Math.Max(EmptyBar, TallestBar * Count / most);
+        var name = Dates.Long(day.Day);
+        Name = Dates.Plural(Count, number => DashboardText.WeekDayOneOf(name, number), number => DashboardText.WeekDayManyOf(name, number));
+    }
+
+    /// <summary>« mar ».</summary>
+    public string Label { get; }
+
+    /// <summary>Révisions validées ce jour-là.</summary>
+    public int Count { get; }
+
+    /// <summary>C'est aujourd'hui.</summary>
+    public bool IsToday { get; }
+
+    /// <summary>Hauteur de la barre.</summary>
+    public double Height { get; }
+
+    /// <summary>« mardi 27 octobre : 4 révisions validées » : l'infobulle et le nom lu par le lecteur d'écran.</summary>
+    public string Name { get; }
+}
+
+/// <summary>
+/// Dernière ligne de la liste quand la page n'a pas la place d'une colonne latérale : les jours à
+/// venir, la semaine et les encarts défilent avec la liste, qui reste virtualisée.
+/// </summary>
+/// <param name="Page">La vue, qui porte leur contenu.</param>
+public sealed record DashboardExtras(DashboardPageViewModel Page)
+{
+    /// <summary>Le nom lu par le lecteur d'écran.</summary>
+    public override string ToString() => $"{DashboardText.ThisWeek} : {Page.WeekTotal} {Page.WeekNoun}";
 }
 
 /// <summary>Un choix de la vue (filtre, tri) et son libellé.</summary>

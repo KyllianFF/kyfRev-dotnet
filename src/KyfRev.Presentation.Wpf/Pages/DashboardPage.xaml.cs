@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 
@@ -13,6 +14,9 @@ internal sealed partial class DashboardPage : UserControl
         InitializeComponent();
         // Un clic sur une ligne l'ouvre, même si la liste a déjà traité le clic pour la sélectionner.
         Items.AddHandler(MouseUpEvent, new MouseButtonEventHandler(OnItemsMouseUp), handledEventsToo: true);
+        SortMenu.AddHandler(MenuItem.ClickEvent, new RoutedEventHandler(OnSortChosen));
+        // La disposition suit la largeur de la page, zoom et menu déjà comptés.
+        SizeChanged += (_, e) => Page.PageWidth = e.NewSize.Width;
     }
 
     private DashboardPageViewModel Page => (DashboardPageViewModel)DataContext;
@@ -39,6 +43,31 @@ internal sealed partial class DashboardPage : UserControl
         {
             Page.OpenCommand.Execute(row);
             e.Handled = true;
+        }
+    }
+
+    /// <summary>La suite de la liste (les jours à venir, la semaine, les encarts) se lit mais ne se choisit pas.</summary>
+    private void OnItemsSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (Items.SelectedItem is DashboardExtras)
+        {
+            Items.SelectedItem = null;
+        }
+    }
+
+    /// <summary>« Trier » : les tris proposés, dans un menu ouvert sous le bouton.</summary>
+    private void OnSortClick(object sender, RoutedEventArgs e)
+    {
+        SortMenu.PlacementTarget = SortButton;
+        SortMenu.Placement = PlacementMode.Bottom;
+        SortMenu.IsOpen = true;
+    }
+
+    private void OnSortChosen(object sender, RoutedEventArgs e)
+    {
+        if (e.OriginalSource is MenuItem { DataContext: Choice<DashboardSort> choice })
+        {
+            Page.SelectedSort = choice;
         }
     }
 

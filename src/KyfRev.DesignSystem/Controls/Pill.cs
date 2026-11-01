@@ -24,6 +24,9 @@ public enum PillKind
 
     /// <summary>Annotation à vérifier (triangle, orange fonctionnel).</summary>
     NeedsReview,
+
+    /// <summary>Dû aujourd'hui (calendrier, vert pâle).</summary>
+    Today,
 }
 
 /// <summary>Pastille : une icône et un court libellé (« Fiche · J7 », « Retard 4 j »).</summary>

@@ -104,6 +104,7 @@ public static class Icons
         PillKind.Reminder => Sync,
         PillKind.Overdue => Clock,
         PillKind.Archived => Archive,
+        PillKind.Today => Calendar,
         _ => Warning,
     };
 

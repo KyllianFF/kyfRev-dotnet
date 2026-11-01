@@ -18,10 +18,15 @@ Fichiers écrits : `galerie-clair.png`, `galerie-sombre.png`, `galerie-contraste
 `coquille-etroite-clair.png` (390 px), `coquille-etroite-plus-sombre.png` (une vue rangée sous
 « Plus »), `aide-etroite-sombre.png`, `coquille-moyenne-sombre.png` (1 024 px),
 `coquille-large-clair.png` (1 460 px), `accueil-clair.png`, `accueil-sombre.png`, `aujourdhui-clair.png`, `aujourdhui-sombre.png`,
+`aujourdhui-etroit-clair.png` (390 px), `aujourdhui-tablette-sombre.png` (834 px),
+`aujourdhui-ecran-clair.png` (1 600 px),
 `fiche-clair.png`, `passage-sombre.png`, `seance-clair.png` et `bilan-sombre.png`. Les
 captures de chaque jalon sont rangées dans `docs/captures/<jalon>` (`j5` : design system et
 coquille ; `j6` : accueil, tableau de bord, fiche et passage en révision, séance d'étude). Le
 contraste élevé prend les couleurs système du poste qui lance l'outil : sur un poste sans
 contraste élevé, la capture montre la correspondance des rôles, pas un thème réel de Windows.
+
+Les captures de la vue « Aujourd'hui » montrent un exemple d'encart de module : les modules ne
+sont pas encore branchés dans l'application.
 
 Le rendu se fait hors écran (`RenderTargetBitmap`, 96 ppp), animations arrêtées.

@@ -28,7 +28,7 @@
     <value>cycle {0}</value>
   </data>
   <data name="DaysLate" xml:space="preserve">
-    <value>Retard {0} j</value>
+    <value>{0} j de retard</value>
   </data>
   <data name="Definition" xml:space="preserve">
     <value>Définition</value>
@@ -149,5 +149,47 @@
   </data>
   <data name="Upcoming" xml:space="preserve">
     <value>À venir — 7 jours</value>
+  </data>
+  <data name="Forecast" xml:space="preserve">
+    <value>À venir</value>
+  </data>
+  <data name="ForecastDayOne" xml:space="preserve">
+    <value>{0} : {1} élément</value>
+  </data>
+  <data name="ForecastDayMany" xml:space="preserve">
+    <value>{0} : {1} éléments</value>
+  </data>
+  <data name="OverdueChip" xml:space="preserve">
+    <value>{0} en retard</value>
+  </data>
+  <data name="ReminderChipOne" xml:space="preserve">
+    <value>{0} rappel</value>
+  </data>
+  <data name="ReminderChipMany" xml:space="preserve">
+    <value>{0} rappels</value>
+  </data>
+  <data name="ReviewNounOne" xml:space="preserve">
+    <value>élément à réviser</value>
+  </data>
+  <data name="ReviewNounMany" xml:space="preserve">
+    <value>éléments à réviser</value>
+  </data>
+  <data name="ThisWeek" xml:space="preserve">
+    <value>Cette semaine</value>
+  </data>
+  <data name="TodayChip" xml:space="preserve">
+    <value>{0} aujourd'hui</value>
+  </data>
+  <data name="WeekDayOne" xml:space="preserve">
+    <value>{0} : {1} révision validée</value>
+  </data>
+  <data name="WeekDayMany" xml:space="preserve">
+    <value>{0} : {1} révisions validées</value>
+  </data>
+  <data name="WeekNounOne" xml:space="preserve">
+    <value>révision validée</value>
+  </data>
+  <data name="WeekNounMany" xml:space="preserve">
+    <value>révisions validées</value>
   </data>
 </root>
