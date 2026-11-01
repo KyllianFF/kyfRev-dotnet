@@ -11,8 +11,8 @@ namespace KyfRev.Acceptance.Tests;
 /// Les scénarios d'acceptation du jalon J6 (conception, section des tests), aux dates qu'elle donne :
 /// l'application réelle tourne, et ses gestes s'enregistrent dans un vrai coffre.
 ///
-/// Ce que l'application ne sait pas encore faire passe par les cas d'usage : créer une fiche (J8),
-/// surligner un passage (J7), lire les archives (J8).
+/// Ce que l'application ne sait pas encore faire passe par les cas d'usage : créer une fiche,
+/// surligner un passage (J7), lire les archives, changer les réglages.
 /// </summary>
 [TestClass]
 public sealed class Scenarios
