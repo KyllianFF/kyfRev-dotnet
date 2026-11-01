@@ -2,6 +2,7 @@ using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using KyfRev.Application.Model;
+using KyfRev.Application.Modules;
 using KyfRev.Application.UseCases;
 using KyfRev.DesignSystem.Controls;
 using KyfRev.Presentation.Wpf.Shell;
@@ -40,13 +41,24 @@ public enum DashboardSort
     Title,
 }
 
+/// <summary>Disposition de la vue « Aujourd'hui », selon la largeur de la page.</summary>
+public enum TodayLayout
+{
+    /// <summary>Une colonne : les encarts défilent à la suite de la liste.</summary>
+    OneColumn,
+
+    /// <summary>La liste et une colonne latérale.</summary>
+    WithSide,
+}
+
 /// <summary>
-/// La vue « Aujourd'hui », comme dans la 0.x (<c>Aujourdhui.svelte</c>) : la liste à réviser
-/// toujours en premier (en retard, puis aujourd'hui), les rappels de consolidation, puis les sept
-/// jours à venir, replié. Filtre (tout, fiches, passages) et tri (échéance, étape J, cycles,
-/// dernière révision, titre) ; avertissements de « Santé du coffre » et de rappels en souffrance ;
-/// état vide. Le tableau de bord est relu chaque fois que la vue s'ouvre ; une seule liste
-/// virtualisée porte en-têtes et lignes, pour qu'un grand coffre s'affiche vite.
+/// La vue « Aujourd'hui » : ce qu'il y a à réviser et de quoi commencer, puis la liste (en retard,
+/// aujourd'hui, rappels de consolidation, sept jours à venir) ; à côté si la place le permet, à la
+/// suite sinon, les jours à venir, les révisions de la semaine et les encarts des modules. Filtre
+/// (tout, fiches, passages) et tri (échéance, étape J, cycles, dernière révision, titre) ;
+/// avertissements de « Santé du coffre » et de rappels en souffrance ; état vide. Le tableau de bord
+/// est relu chaque fois que la vue s'ouvre ; une seule liste virtualisée porte en-têtes et lignes,
+/// pour qu'un grand coffre s'affiche vite.
 /// </summary>
 public sealed partial class DashboardPageViewModel : ObservableObject, INavigationAware
 {
@@ -58,21 +70,27 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
     private readonly DashboardGroup _today;
     private readonly DashboardGroup _reminderGroup;
     private readonly DashboardGroup _upcoming;
+    private readonly DashboardExtras _extras;
+    private readonly IReadOnlyList<IDashboardWidget> _widgets;
     private Dashboard? _dashboard;
     private IReadOnlyList<DueItem> _toStart = [];
 
-    /// <summary>La vue, sur les cas d'usage des rappels (qui rendent le tableau de bord) ; <paramref name="opener"/> ouvre ses lignes.</summary>
-    public DashboardPageViewModel(ReminderUseCases reminders, IReviewOpener opener)
+    /// <summary>
+    /// La vue, sur les cas d'usage des rappels (qui rendent le tableau de bord) ; <paramref name="opener"/>
+    /// ouvre ses lignes, <paramref name="widgets"/> sont les encarts apportés par les modules.
+    /// </summary>
+    public DashboardPageViewModel(ReminderUseCases reminders, IReviewOpener opener, IEnumerable<IDashboardWidget>? widgets = null)
     {
         ArgumentNullException.ThrowIfNull(reminders);
         ArgumentNullException.ThrowIfNull(opener);
         _reminders = reminders;
         _opener = opener;
+        _widgets = [.. (widgets ?? []).OrderBy(widget => widget.Order)];
+        _extras = new DashboardExtras(this);
         _overdue = new DashboardGroup(DashboardText.Overdue, Icons.Clock, DashboardTone.Overdue, expanded: true, BuildRows);
         _today = new DashboardGroup(DashboardText.Today, Icons.Calendar, DashboardTone.Normal, expanded: true, BuildRows);
         _reminderGroup = new DashboardGroup(DashboardText.Reminders, Icons.Sync, DashboardTone.Reminder, expanded: true, BuildRows);
-        // Comme dans la 0.x, « À venir » est replié d'emblée : la liste du jour d'abord.
-        _upcoming = new DashboardGroup(DashboardText.Upcoming, Icons.Calendar, DashboardTone.Normal, expanded: false, BuildRows);
+        _upcoming = new DashboardGroup(DashboardText.Upcoming, Icons.Calendar, DashboardTone.Normal, expanded: true, BuildRows);
         Filters = [new(DashboardFilter.All, DashboardText.All), new(DashboardFilter.Sheets, DashboardText.Sheets), new(DashboardFilter.Passages, DashboardText.Passages)];
         Sorts =
         [
@@ -86,6 +104,14 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
         SelectedSort = Sorts[0];
         Rows = [];
         Subtitle = string.Empty;
+        DayLabel = string.Empty;
+        ReviewNoun = string.Empty;
+        WeekNoun = string.Empty;
+        Chips = [];
+        SideReminders = [];
+        Forecast = [];
+        Week = [];
+        Cards = [];
         Footer = string.Empty;
         StartLabel = string.Empty;
         ResumeLabel = string.Empty;
@@ -106,6 +132,7 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
 
     /// <summary>Tri choisi.</summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SortName))]
     public partial Choice<DashboardSort> SelectedSort { get; set; }
 
     /// <summary>
@@ -114,6 +141,89 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
     /// </summary>
     [ObservableProperty]
     public partial IReadOnlyList<object> Rows { get; private set; }
+
+    /// <summary>Largeur à partir de laquelle la colonne latérale tient à côté de la liste.</summary>
+    public const double SideColumnMinimum = 880;
+
+    /// <summary>Largeur à partir de laquelle les boutons et le retard tiennent sur la ligne.</summary>
+    public const double RoomyMinimum = 600;
+
+    /// <summary>Largeur de la page, en pixels indépendants, zoom déjà compté.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Layout), nameof(HasRoom))]
+    public partial double PageWidth { get; set; }
+
+    /// <summary>Disposition de la vue.</summary>
+    public TodayLayout Layout => PageWidth >= SideColumnMinimum ? TodayLayout.WithSide : TodayLayout.OneColumn;
+
+    /// <summary>
+    /// La page est assez large pour tout garder sur une ligne ; sinon, la liste passe avant le reste :
+    /// le tri se réduit à son icône, le pied de liste disparaît.
+    /// </summary>
+    public bool HasRoom => PageWidth >= RoomyMinimum;
+
+    /// <summary>« Samedi 1 novembre ».</summary>
+    [ObservableProperty]
+    public partial string DayLabel { get; private set; }
+
+    /// <summary>Éléments à réviser, rappels compris.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasReviews))]
+    public partial int ReviewCount { get; private set; }
+
+    /// <summary>Il y a quelque chose à réviser.</summary>
+    public bool HasReviews => ReviewCount > 0;
+
+    /// <summary>« éléments à réviser » ; « Rien à réviser aujourd'hui » s'il n'y a rien.</summary>
+    [ObservableProperty]
+    public partial string ReviewNoun { get; private set; }
+
+    /// <summary>Le détail : en retard, aujourd'hui, rappels ; rien pour ce qui est à zéro.</summary>
+    [ObservableProperty]
+    public partial IReadOnlyList<HeroChip> Chips { get; private set; }
+
+    /// <summary>Rappels à montrer dans la colonne latérale ; sans elle, ils restent dans la liste.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSideReminders))]
+    public partial IReadOnlyList<ReminderRow> SideReminders { get; private set; }
+
+    /// <summary>La colonne latérale montre des rappels.</summary>
+    public bool HasSideReminders => SideReminders.Count > 0;
+
+    /// <summary>Les sept prochains jours.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasForecast))]
+    public partial IReadOnlyList<ForecastDay> Forecast { get; private set; }
+
+    /// <summary>Une échéance tombe dans les sept prochains jours.</summary>
+    public bool HasForecast => Forecast.Any(day => day.Count > 0);
+
+    /// <summary>Les sept derniers jours, aujourd'hui compris.</summary>
+    [ObservableProperty]
+    public partial IReadOnlyList<WeekBar> Week { get; private set; }
+
+    /// <summary>Révisions validées ces sept derniers jours.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasWeek))]
+    public partial int WeekTotal { get; private set; }
+
+    /// <summary>Au moins une révision validée ces sept derniers jours.</summary>
+    public bool HasWeek => WeekTotal > 0;
+
+    /// <summary>« révisions validées ».</summary>
+    [ObservableProperty]
+    public partial string WeekNoun { get; private set; }
+
+    /// <summary>Encarts des modules, ceux qui ont quelque chose à montrer aujourd'hui.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCards))]
+    public partial IReadOnlyList<DashboardCard> Cards { get; private set; }
+
+    /// <summary>Un encart est à montrer.</summary>
+    public bool HasCards => Cards.Count > 0;
+
+    /// <summary>« Trier par échéance ».</summary>
+    public string SortName => $"{DashboardText.SortBy} {SelectedSort.Label}";
 
     /// <summary>« Samedi 1 novembre · 3 éléments à réviser ».</summary>
     [ObservableProperty]
@@ -183,10 +293,10 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
         try
         {
             // Le calcul lit tout le coffre : hors du fil de l'interface.
-            var outcome = await Task.Run(_reminders.Dashboard).ConfigureAwait(true);
+            var (outcome, cards) = await Task.Run(() => (_reminders.Dashboard(), ReadCards())).ConfigureAwait(true);
             if (outcome.Succeeded)
             {
-                Show(outcome.Value);
+                Show(outcome.Value, cards);
             }
             else
             {
@@ -222,11 +332,12 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
     [RelayCommand(CanExecute = nameof(CanResume))]
     private void Resume() => _opener.ResumeSession();
 
-    /// <summary>Affiche un tableau de bord déjà lu.</summary>
-    public void Show(Dashboard dashboard)
+    /// <summary>Affiche un tableau de bord déjà lu, et les encarts <paramref name="cards"/> s'ils sont donnés.</summary>
+    public void Show(Dashboard dashboard, IReadOnlyList<DashboardCard>? cards = null)
     {
         ArgumentNullException.ThrowIfNull(dashboard);
         Error = null;
+        Cards = cards ?? Cards;
         var resumable = _opener.ResumableItems();
         CanResume = resumable is > 0;
         ResumeLabel = resumable is { } remaining ? Dates.Plural(remaining, SessionText.ResumeOneOf, SessionText.ResumeManyOf) : string.Empty;
@@ -239,6 +350,17 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
     partial void OnSelectedFilterChanged(Choice<DashboardFilter> value) => BuildRows();
 
     partial void OnSelectedSortChanged(Choice<DashboardSort> value) => BuildRows();
+
+    partial void OnPageWidthChanged(double oldValue, double newValue)
+    {
+        // Les rappels et les encarts changent de place : la liste n'est refaite que si la disposition change.
+        if (oldValue >= SideColumnMinimum != newValue >= SideColumnMinimum)
+        {
+            BuildRows();
+        }
+    }
+
+    private List<DashboardCard> ReadCards() => [.. _widgets.Select(widget => widget.Card()).OfType<DashboardCard>()];
 
     private void BuildRows()
     {
@@ -269,10 +391,38 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
         }
         Add(rows, _overdue, overdue.Select(item => new DueItemRow(item, dashboard.ActiveRecall, showDueDate: false)));
         Add(rows, _today, today.Select(item => new DueItemRow(item, dashboard.ActiveRecall, showDueDate: false)));
-        Add(rows, _reminderGroup, reminders.Select(reminder => new ReminderRow(reminder)));
+        var hasSide = Layout == TodayLayout.WithSide;
+        Add(rows, _reminderGroup, (hasSide ? [] : reminders).Select(reminder => new ReminderRow(reminder)));
         Add(rows, _upcoming, upcoming.Select(item => new DueItemRow(item, dashboard.ActiveRecall, showDueDate: true)));
+        SideReminders = hasSide ? [.. reminders.Select(reminder => new ReminderRow(reminder))] : [];
+        Forecast = [.. dashboard.Workload.Skip(1).Take(Application.Model.Dashboard.UpcomingDays).Select(day => new ForecastDay(day.Day, day.Due.Length))];
+        var most = dashboard.RecentReviews.Select(day => day.Reviews).DefaultIfEmpty().Max();
+        Week = [.. dashboard.RecentReviews.Select(day => new WeekBar(day, most, day.Day == dashboard.Day))];
+        WeekTotal = dashboard.RecentReviews.Sum(day => day.Reviews);
+        WeekNoun = WeekTotal > 1 ? DashboardText.WeekNounMany : DashboardText.WeekNounOne;
+        if (!hasSide && (HasForecast || HasWeek || HasCards))
+        {
+            rows.Add(_extras);
+        }
         Rows = rows;
 
+        DayLabel = Dates.Capitalized(Dates.Long(dashboard.Day));
+        ReviewCount = total;
+        ReviewNoun = total == 0 ? DashboardText.EmptyTitle : total > 1 ? DashboardText.ReviewNounMany : DashboardText.ReviewNounOne;
+        List<HeroChip> chips = [];
+        if (overdue.Count > 0)
+        {
+            chips.Add(new(PillKind.Overdue, DashboardText.OverdueChipOf(overdue.Count)));
+        }
+        if (today.Count > 0)
+        {
+            chips.Add(new(PillKind.Today, DashboardText.TodayChipOf(today.Count)));
+        }
+        if (reminders.Length > 0)
+        {
+            chips.Add(new(PillKind.Reminder, Dates.Plural(reminders.Length, DashboardText.ReminderChipOneOf, DashboardText.ReminderChipManyOf)));
+        }
+        Chips = chips;
         Subtitle = $"{Dates.Capitalized(Dates.Long(dashboard.Day))} · {(total == 0 ? DashboardText.NothingToReview : Dates.Plural(total, DashboardText.ItemsToReviewOneOf, DashboardText.ItemsToReviewManyOf))}";
         HealthWarning = dashboard.HealthProblems > 0 ? Dates.Plural(dashboard.HealthProblems, DashboardText.HealthWarningOneOf, DashboardText.HealthWarningManyOf) : null;
         PriorityWarning = dashboard.UnservedPriorities > 0 ? Dates.Plural(dashboard.UnservedPriorities, DashboardText.PriorityWarningOneOf, DashboardText.PriorityWarningManyOf) : null;

@@ -42,14 +42,19 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   trou dans le texte qui l'entoure, son commentaire servant d'indice. « Voir dans la fiche » et
   « Retour » ramènent d'où l'on vient. Le texte d'une fiche est encore montré tel qu'il est
   écrit : son rendu natif vient avec la lecture native.
-- Vue « Aujourd'hui » : le tableau de bord, présenté comme dans la version 0.x. La liste à
-  réviser vient toujours en premier (en retard, puis aujourd'hui), puis les rappels de
-  consolidation et les sept jours à venir, replié d'emblée. Chaque ligne montre la nature de
-  l'élément (fiche, passage, définition), son dossier, ses étiquettes, son cycle, sa dernière
-  révision, son étape et son retard ; avec le rappel actif, un passage reste caché et seul son
-  commentaire sert d'indice. Filtre (tout, fiches, passages), tri (échéance, étape J, nombre de
-  cycles, dernière révision, titre), avertissements de « Santé du coffre » et de rappels en
-  souffrance, états vides. Les groupes se replient à la souris ou au clavier (Entrée, Espace),
+- Vue « Aujourd'hui », au style Veillée : le résumé du jour (ce qu'il y a à réviser, en retard,
+  aujourd'hui, en rappel, et de quoi commencer la séance) puis la liste, en retard d'abord, puis
+  aujourd'hui, les rappels de consolidation et les sept jours à venir, qui ne sont plus repliés
+  d'emblée. À côté de la liste si la page fait au moins 880 px, à sa suite sinon : les échéances
+  des sept prochains jours, les révisions validées ces sept derniers jours et les encarts des
+  modules, ancrés en bas. Ces cartes n'apparaissent que si elles ont quelque chose à montrer.
+  Chaque ligne montre la nature de l'élément (fiche, passage, définition), son dossier, ses
+  étiquettes, son cycle, sa dernière révision, son étape et son retard ; avec le rappel actif, un
+  passage reste caché et seul son commentaire sert d'indice. Filtre (tout, fiches, passages), tri
+  (échéance, étape J, nombre de cycles, dernière révision, titre) dans un menu, avertissements de
+  « Santé du coffre » et de rappels en souffrance, états vides. Sous 600 px, la liste passe avant
+  le reste : le tri se réduit à son icône, le pied de liste disparaît, le retard passe sous le
+  titre. Les groupes se replient à la souris ou au clavier (Entrée, Espace),
   le focus restant sur l'en-tête. La vue est relue à chaque ouverture ; sa liste est
   virtualisée : 2 000 fiches en retard s'affichent en moins de 150 ms, calcul non compris.
 - Ouverture du coffre au démarrage et accueil, comme dans la version 0.x : le coffre du mode

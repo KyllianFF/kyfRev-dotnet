@@ -23,7 +23,7 @@ public static class DashboardText
     /// <summary>« cycle … ».</summary>
     public static string CycleOf(object cycle) => Format("Cycle", cycle);
 
-    /// <summary>« Retard … j ».</summary>
+    /// <summary>« … j de retard ».</summary>
     public static string DaysLateOf(object days) => Format("DaysLate", days);
 
     /// <summary>« Définition ».</summary>
@@ -146,7 +146,49 @@ public static class DashboardText
     /// <summary>« À venir — 7 jours ».</summary>
     public static string Upcoming => Text(nameof(Upcoming));
 
-    private static string Format(string name, object value) => string.Format(CultureInfo.CurrentCulture, Text(name), value);
+    /// <summary>« À venir ».</summary>
+    public static string Forecast => Text(nameof(Forecast));
+
+    /// <summary>« mardi 3 novembre : 1 élément ».</summary>
+    public static string ForecastDayOneOf(object day, object count) => Format("ForecastDayOne", day, count);
+
+    /// <summary>« mardi 3 novembre : 3 éléments ».</summary>
+    public static string ForecastDayManyOf(object day, object count) => Format("ForecastDayMany", day, count);
+
+    /// <summary>« 2 en retard ».</summary>
+    public static string OverdueChipOf(object count) => Format("OverdueChip", count);
+
+    /// <summary>« 1 rappel ».</summary>
+    public static string ReminderChipOneOf(object count) => Format("ReminderChipOne", count);
+
+    /// <summary>« 2 rappels ».</summary>
+    public static string ReminderChipManyOf(object count) => Format("ReminderChipMany", count);
+
+    /// <summary>« élément à réviser ».</summary>
+    public static string ReviewNounOne => Text(nameof(ReviewNounOne));
+
+    /// <summary>« éléments à réviser ».</summary>
+    public static string ReviewNounMany => Text(nameof(ReviewNounMany));
+
+    /// <summary>« 3 aujourd'hui ».</summary>
+    public static string TodayChipOf(object count) => Format("TodayChip", count);
+
+    /// <summary>« Cette semaine ».</summary>
+    public static string ThisWeek => Text(nameof(ThisWeek));
+
+    /// <summary>« mardi 27 octobre : 1 révision validée ».</summary>
+    public static string WeekDayOneOf(object day, object count) => Format("WeekDayOne", day, count);
+
+    /// <summary>« mardi 27 octobre : 4 révisions validées ».</summary>
+    public static string WeekDayManyOf(object day, object count) => Format("WeekDayMany", day, count);
+
+    /// <summary>« révision validée ».</summary>
+    public static string WeekNounOne => Text(nameof(WeekNounOne));
+
+    /// <summary>« révisions validées ».</summary>
+    public static string WeekNounMany => Text(nameof(WeekNounMany));
+
+    private static string Format(string name, params object[] values) => string.Format(CultureInfo.CurrentCulture, Text(name), values);
 
     private static string Text(string name) =>
         Resources.GetString(name, CultureInfo.CurrentUICulture) ?? throw new MissingManifestResourceException($"Texte « {name} » absent des ressources.");

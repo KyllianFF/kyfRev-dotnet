@@ -55,6 +55,39 @@ public sealed class DashboardTests
     }
 
     [TestMethod]
+    public void Recent_reviews_count_the_validated_steps_of_the_last_seven_days()
+    {
+        using var folder = TemporaryVault.Empty();
+        static Moment On(DateOnly day) => new(day, new DateTimeOffset(day, new TimeOnly(8, 0), TimeSpan.Zero));
+        var start = new DateOnly(2026, 9, 1);
+        using var vault = VaultSession.Initialize(folder.Root, On(start));
+        var id = vault.CreateSheet("Biologie", "Mitose", "# Mitose\n", On(start));
+        var other = vault.CreateSheet("Biologie", "Méiose", "# Méiose\n", On(start));
+        var created = vault.Dashboard(start).RecentReviews;
+        Assert.HasCount(7, created);
+        Assert.AreEqual(start.AddDays(-6), created[0].Day);
+        Assert.AreEqual(start, created[^1].Day);
+        Assert.AreEqual(0, created.Sum(day => day.Reviews), "ouvrir un cycle n'est pas réviser");
+
+        // J1 le lendemain, puis J3 deux jours plus tard.
+        var second = start.AddDays(1);
+        vault.ApplyReview(id, tracking => tracking.ValidateReview(On(second), null, vault.Settings.Reminders));
+        vault.ApplyReview(other, tracking => tracking.ValidateReview(On(second), null, vault.Settings.Reminders));
+        var fourth = start.AddDays(3);
+        vault.ApplyReview(id, tracking => tracking.ValidateReview(On(fourth), null, vault.Settings.Reminders));
+
+        var recent = vault.Dashboard(fourth).RecentReviews;
+        Assert.AreEqual(1, recent.Single(day => day.Day == fourth).Reviews);
+        Assert.AreEqual(2, recent.Single(day => day.Day == second).Reviews);
+        Assert.AreEqual(3, recent.Sum(day => day.Reviews));
+
+        // Une semaine plus tard, ces révisions sortent de la fenêtre ; aucune révision future n'y entre.
+        Assert.AreEqual(1, vault.Dashboard(second.AddDays(7)).RecentReviews.Sum(day => day.Reviews));
+        Assert.AreEqual(0, vault.Dashboard(fourth.AddDays(7)).RecentReviews.Sum(day => day.Reviews));
+        Assert.AreEqual(0, vault.Dashboard(start).RecentReviews.Sum(day => day.Reviews));
+    }
+
+    [TestMethod]
     public void Broken_links_follow_the_files_changed_outside_the_application()
     {
         using var folder = TemporaryVault.Empty();

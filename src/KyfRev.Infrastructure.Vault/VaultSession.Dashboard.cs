@@ -129,6 +129,7 @@ public sealed partial class VaultSession
                 slot.Day,
                 [.. slot.Due.OrderBy(item => item.Kind == ItemKind.Passage).ThenBy(item => item, TitleOrder.Instance)],
                 [.. slot.Projected.OrderBy(item => item.Kind == ItemKind.Passage).ThenBy(item => RustText.ToLowercase(item.Title), Utf8Order.Instance)]))],
+            RecentReviews(day),
             Settings.Reminders.MaxPerDay,
             Settings.ActiveRecall,
             UpcomingExams(day),
@@ -139,6 +140,35 @@ public sealed partial class VaultSession
             ReadDraws().Draws is { Length: > 0 } draws ? (int)draws[^1].UnservedPriority : 0,
             Settings.Quotes.Active,
             SchemasActive);
+    }
+
+    /// <summary>
+    /// Révisions validées chacun des sept derniers jours, sur les fiches (archivées comprises) et
+    /// leurs passages. Le J0 ouvre un cycle : il ne compte pas comme une révision.
+    /// </summary>
+    private ImmutableArray<ReviewDay> RecentReviews(DateOnly day)
+    {
+        var counts = new int[Application.Model.Dashboard.RecentDays];
+        void Count(Tracking tracking)
+        {
+            foreach (var entry in tracking.History)
+            {
+                if (entry is ReviewEvent { Origin: null } review
+                    && CivilCalendar.DaysBetween(review.Day, day) is >= 0 and < Application.Model.Dashboard.RecentDays and var age)
+                {
+                    counts[age]++;
+                }
+            }
+        }
+        foreach (var entry in _sheets.Values)
+        {
+            Count(entry.Sheet.Tracking);
+        }
+        foreach (var annotation in AllAnnotations.Where(a => a.TrashedAt is null))
+        {
+            Count(annotation.Tracking);
+        }
+        return [.. Enumerable.Range(0, counts.Length).Reverse().Select(age => new ReviewDay(day.AddDays(-age), counts[age]))];
     }
 
     /// <summary>Fiches archivées, les plus récemment archivées d'abord.</summary>

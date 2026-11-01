@@ -63,6 +63,11 @@ public sealed record ProjectedItem(
 /// <param name="Projected">Étapes attendues ce jour-là si chaque révision est faite à son échéance.</param>
 public sealed record WorkloadDay(DateOnly Day, ImmutableArray<DueItem> Due, ImmutableArray<ProjectedItem> Projected);
 
+/// <summary>Ce qui a été révisé un jour donné.</summary>
+/// <param name="Day">Jour.</param>
+/// <param name="Reviews">Révisions validées ce jour-là ; ouvrir un cycle (J0) n'en est pas une.</param>
+public sealed record ReviewDay(DateOnly Day, int Reviews);
+
 /// <summary>Un rappel de consolidation tiré, en attente de réponse.</summary>
 /// <param name="SheetId">Fiche.</param>
 /// <param name="Title">Titre.</param>
@@ -84,6 +89,7 @@ public sealed record PendingReminder(string SheetId, string Title, string Folder
 /// <param name="Reminders">Rappels en attente, du plus ancien tirage au plus récent.</param>
 /// <param name="Upcoming">Les sept prochains jours, par échéance.</param>
 /// <param name="Workload">Aujourd'hui puis les 30 jours suivants.</param>
+/// <param name="RecentReviews">Les sept derniers jours, aujourd'hui compris, du plus ancien au plus récent.</param>
 /// <param name="RemindersPerDay">Rappels tirés au plus chaque jour.</param>
 /// <param name="ActiveRecall">Rappel actif des passages : masqués jusqu'au clic.</param>
 /// <param name="Exams">Examens à venir, du plus proche au plus lointain.</param>
@@ -101,6 +107,7 @@ public sealed record Dashboard(
     ImmutableArray<PendingReminder> Reminders,
     ImmutableArray<DueItem> Upcoming,
     ImmutableArray<WorkloadDay> Workload,
+    ImmutableArray<ReviewDay> RecentReviews,
     int RemindersPerDay,
     bool ActiveRecall,
     IReadOnlyList<UpcomingExam> Exams,
@@ -117,6 +124,9 @@ public sealed record Dashboard(
 
     /// <summary>Jours de la charge à venir, après aujourd'hui.</summary>
     public const int WorkloadDays = 30;
+
+    /// <summary>Jours de l'activité récente, aujourd'hui compris.</summary>
+    public const int RecentDays = 7;
 }
 
 /// <summary>Où en est une fiche archivée vis-à-vis des rappels de consolidation.</summary>

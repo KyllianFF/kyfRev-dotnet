@@ -4,9 +4,11 @@ using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using KyfRev.Application.Model;
+using KyfRev.Application.Modules;
 using KyfRev.DesignSystem.Controls;
 using KyfRev.Presentation.Wpf.Pages;
 using KyfRev.Presentation.Wpf.Shell;
@@ -14,9 +16,10 @@ using KyfRev.Presentation.Wpf.Shell;
 namespace KyfRev.Presentation.Wpf.Tests;
 
 /// <summary>
-/// La vue « Aujourd'hui », comme dans la 0.x : la liste à réviser d'abord, les rappels, puis les
-/// sept jours à venir (replié) ; filtre, tri, états vides, avertissements ; relue à chaque
-/// ouverture ; une liste virtualisée, rapide sur 2 000 fiches.
+/// La vue « Aujourd'hui » : le résumé du jour, la liste à réviser d'abord, les rappels, les sept
+/// jours à venir ; à côté ou à la suite, les prochains jours, la semaine et les encarts ; filtre,
+/// tri, états vides, avertissements ; relue à chaque ouverture ; une liste virtualisée, rapide sur
+/// 2 000 fiches.
 /// </summary>
 [TestClass]
 public sealed class DashboardTests
@@ -37,7 +40,7 @@ public sealed class DashboardTests
     }
 
     [TestMethod]
-    public async Task The_list_to_review_comes_first_and_upcoming_is_folded()
+    public async Task The_list_to_review_comes_first_and_upcoming_follows()
     {
         var time = new FakeTime(new DateTimeOffset(2026, 10, 1, 8, 0, 0, TimeSpan.Zero));
         using var test = new TestVaults(AppMode.Development, time);
@@ -61,10 +64,10 @@ public sealed class DashboardTests
         Assert.AreEqual("3 fiches actives · 0 fiche archivée", page.Footer, "aucune échéance après aujourd'hui");
         var rows = page.Rows;
         Assert.AreEqual("En retard, 3", rows[0].ToString());
-        Assert.AreEqual("Fiche, Mitose, J1, Retard 2 j", rows[1].ToString());
+        Assert.AreEqual("Fiche, Mitose, J1, 2 j de retard", rows[1].ToString());
         // Rappel actif (réglage par défaut) : le passage est caché, son commentaire sert d'indice.
-        Assert.AreEqual("Passage, Passage à retrouver · Mitose › Étapes, J1, Retard 2 j", rows[2].ToString());
-        Assert.AreEqual("Fiche, Atome, J1, Retard 1 j", rows[3].ToString());
+        Assert.AreEqual("Passage, Passage à retrouver · Mitose › Étapes, J1, 2 j de retard", rows[2].ToString());
+        Assert.AreEqual("Fiche, Atome, J1, 1 j de retard", rows[3].ToString());
         Assert.AreEqual("Aujourd'hui, 2", rows[4].ToString());
         Assert.AreEqual("Fiche, Méiose, J1", rows[5].ToString());
         Assert.AreEqual("Définition, Prophase · Méiose, J1", rows[6].ToString());
@@ -72,9 +75,15 @@ public sealed class DashboardTests
         Assert.IsFalse(page.HasHealthWarning);
         Assert.IsFalse(page.HasPriorityWarning);
         Assert.IsFalse(page.IsLoading);
+        Assert.AreEqual("Dimanche 4 octobre", page.DayLabel);
+        Assert.AreEqual(5, page.ReviewCount);
+        Assert.AreEqual("éléments à réviser", page.ReviewNoun);
+        Same("3 en retard | 2 aujourd'hui", page.Chips.Select(chip => chip.Text));
+        Assert.IsFalse(page.HasWeek, "créer une fiche n'est pas la réviser");
+        Assert.IsFalse(page.HasForecast);
 
         var mitosisRow = (DueItemRow)rows[1];
-        Assert.AreEqual(PillKind.Sheet, mitosisRow.PillKind);
+        Assert.AreEqual("Fiche · Biologie · cycle 1 · dernière révision jeu. 1 oct.", mitosisRow.Meta);
         Assert.AreEqual(DueItemHeading.Title, mitosisRow.Heading);
         Same("Biologie | cycle 1 | dernière révision jeu. 1 oct.", mitosisRow.Details);
         Assert.IsFalse(mitosisRow.FileMissing);
@@ -83,7 +92,7 @@ public sealed class DashboardTests
         Assert.AreEqual("Commentaire : Avant la métaphase", ((DueItemRow)rows[2]).Details[0]);
         Assert.AreEqual(DueItemHeading.Term, ((DueItemRow)rows[6]).Heading);
 
-        // Les révisions faites, il ne reste que « À venir », replié ; il se déplie à la demande.
+        // Les révisions faites, il ne reste que « À venir », déplié ; il se replie à la demande.
         foreach (var item in page.Dashboard!.Overdue.Concat(page.Dashboard.Today))
         {
             Assert.IsTrue(app.Reviews.Validate(item.Kind, item.Id).Succeeded);
@@ -92,15 +101,29 @@ public sealed class DashboardTests
         Assert.AreEqual("Dimanche 4 octobre · rien à réviser", page.Subtitle);
         Assert.AreEqual("3 fiches actives · 0 fiche archivée", page.Footer);
         Assert.AreEqual("Rien à réviser aujourd'hui. Prochaine révision : mercredi 7 octobre.", page.Rows[0].ToString());
+        Assert.AreEqual(0, page.ReviewCount);
+        Assert.IsFalse(page.HasReviews);
+        Assert.AreEqual("Rien à réviser aujourd'hui", page.ReviewNoun);
+        Assert.IsEmpty(page.Chips);
         var upcoming = (DashboardGroup)page.Rows[1];
         Assert.AreEqual("À venir — 7 jours, 5", upcoming.ToString());
-        Assert.IsFalse(upcoming.IsExpanded);
-        Assert.HasCount(2, page.Rows);
-        upcoming.ToggleCommand.Execute(null);
-        Assert.HasCount(7, page.Rows);
+        Assert.IsTrue(upcoming.IsExpanded);
         Assert.AreEqual("mer. 7 oct.", ((DueItemRow)page.Rows[2]).DueDate);
+        // Sans la place d'une colonne, les prochains jours et la semaine suivent la liste.
+        Assert.HasCount(8, page.Rows);
+        Assert.AreEqual("Cette semaine : 5 révisions validées", page.Rows[^1].ToString());
+        Assert.AreEqual(5, page.WeekTotal);
+        Assert.AreEqual("révisions validées", page.WeekNoun);
+        Assert.IsTrue(page.HasWeek);
+        Assert.HasCount(7, page.Week);
+        Assert.IsTrue(page.Week[^1].IsToday);
+        Assert.AreEqual(5, page.Week[^1].Count);
+        Assert.IsTrue(page.HasForecast);
+        Assert.AreEqual(5, page.Forecast.Sum(day => day.Count));
         upcoming.ToggleCommand.Execute(null);
-        Assert.HasCount(2, page.Rows);
+        Assert.HasCount(3, page.Rows);
+        upcoming.ToggleCommand.Execute(null);
+        Assert.HasCount(8, page.Rows);
     }
 
     [TestMethod]
@@ -193,7 +216,7 @@ public sealed class DashboardTests
 
         var missing = new DueItemRow(Item("Disparue", ItemKind.Sheet, "J7", daysLate: 4) with { FilePresent = false, Tags = ["bio", "examen"], Folder = string.Empty }, activeRecall: false, showDueDate: true);
         Assert.IsTrue(missing.FileMissing);
-        Assert.AreEqual("Retard 4 j", missing.Late);
+        Assert.AreEqual("4 j de retard", missing.Late);
         Assert.IsNull(missing.DueDate);
         Same("#bio | #examen | cycle 1 | dernière révision jeu. 1 oct.", missing.Details);
     }
@@ -251,16 +274,18 @@ public sealed class DashboardTests
         {
             var list = Named<ListBox>(window, "Items");
             Assert.AreEqual("Éléments à réviser", AutomationProperties.GetName(list));
-            Assert.AreEqual("Vendredi 9 octobre · 5 éléments à réviser", Named<TextBlock>(window, "Subtitle").Text);
+            Assert.AreEqual("Vendredi 9 octobre", Named<TextBlock>(window, "Subtitle").Text);
+            Assert.AreEqual("Vendredi 9 octobre · 5 éléments à réviser", AutomationProperties.GetName(Named<Card>(window, "Hero")));
             Assert.AreEqual(AutomationHeadingLevel.Level1, AutomationProperties.GetHeadingLevel(Named<TextBlock>(window, "Heading")));
             Assert.IsTrue(Named<Notification>(window, "HealthWarning").IsOpen);
             Assert.IsFalse(Named<Notification>(window, "PriorityWarning").IsOpen);
             Assert.IsFalse(Named<Notification>(window, "ErrorMessage").IsOpen);
             Assert.AreEqual(Visibility.Collapsed, Named<StackPanel>(window, "Loading").Visibility);
             var headers = Descendants(list).OfType<ToggleButton>().Where(button => button.Name == "Header").ToList();
-            Same("En retard | Aujourd'hui | Rappels de consolidation", headers.Select(AutomationProperties.GetName));
+            Same("En retard | Aujourd'hui", headers.Select(AutomationProperties.GetName));
             Assert.AreEqual(AutomationHeadingLevel.Level2, AutomationProperties.GetHeadingLevel(headers[0]));
-            Assert.IsGreaterThanOrEqualTo(4, Descendants(list).OfType<Pill>().Count(pill => pill.Kind is PillKind.Sheet or PillKind.Passage));
+            Assert.IsGreaterThanOrEqualTo(4, Descendants(list).OfType<TextBlock>().Count(text => text.Name == "Meta"));
+            Same("2 en retard | 2 aujourd'hui | 1 rappel", Descendants(Named<ItemsControl>(window, "Chips")).OfType<Pill>().Select(pill => pill.Text));
 
             // Entrée sur l'en-tête replie le groupe, Espace le déplie, le focus restant sur l'en-tête ;
             // une autre touche ne fait rien.
@@ -276,6 +301,157 @@ public sealed class DashboardTests
             Assert.AreSame(overdue, ((FrameworkElement)Keyboard.FocusedElement).DataContext);
             Press((UIElement)Keyboard.FocusedElement, Key.Down);
             Assert.HasCount(count, page.Rows);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [TestMethod]
+    public void The_side_column_takes_the_reminders_when_the_page_is_wide_enough()
+    {
+        var page = Page();
+        page.Show(Sample(reminders: [Reminder("Cellule", previous: 0), Reminder("Atome", previous: 1)]) with { RecentReviews = [new ReviewDay(Day, 2)] });
+        Assert.AreEqual(TodayLayout.OneColumn, page.Layout);
+        Assert.IsFalse(page.HasSideReminders);
+        Assert.IsTrue(page.Rows.OfType<ReminderRow>().Any());
+        Assert.IsInstanceOfType<DashboardExtras>(page.Rows[^1]);
+        Same("2 en retard | 2 aujourd'hui | 2 rappels", page.Chips.Select(chip => chip.Text));
+        var row = page.Rows.OfType<ReminderRow>().First();
+        Assert.AreEqual("Biologie · 1er rappel · Archivée le mar. 1 sept.", row.Meta);
+        Assert.AreEqual(row.ToString(), row.Spoken);
+
+        // La liste n'est refaite que si la disposition change.
+        var rows = page.Rows;
+        page.PageWidth = DashboardPageViewModel.SideColumnMinimum - 1;
+        Assert.AreSame(rows, page.Rows);
+
+        page.PageWidth = DashboardPageViewModel.SideColumnMinimum;
+        Assert.AreEqual(TodayLayout.WithSide, page.Layout);
+        Assert.IsTrue(page.HasSideReminders);
+        Assert.HasCount(2, page.SideReminders);
+        Assert.IsFalse(page.Rows.OfType<ReminderRow>().Any());
+        Assert.IsFalse(page.Rows.OfType<DashboardExtras>().Any());
+        Assert.AreEqual(6, page.ReviewCount, "les rappels comptent, où qu'ils soient");
+
+        page.SelectedFilter = page.Filters[2];
+        Assert.IsFalse(page.HasSideReminders, "les rappels portent sur des fiches");
+        Same("1 en retard | 1 aujourd'hui", page.Chips.Select(chip => chip.Text));
+        Assert.AreEqual("Trier par échéance", page.SortName);
+        page.SelectedSort = page.Sorts[4];
+        Assert.AreEqual("Trier par titre", page.SortName);
+    }
+
+    [TestMethod]
+    public void Coming_days_and_the_week_say_what_they_show()
+    {
+        var tuesday = new DateOnly(2026, 10, 13);
+        Assert.AreEqual("mar", Dates.DayName(tuesday));
+        Assert.AreEqual(ForecastLevel.None, new ForecastDay(tuesday, 0).Level);
+        Assert.AreEqual(ForecastLevel.Some, new ForecastDay(tuesday, 2).Level);
+        Assert.AreEqual(ForecastLevel.Many, new ForecastDay(tuesday, 3).Level);
+        Assert.AreEqual("mardi 13 octobre : 1 élément", new ForecastDay(tuesday, 1).Name);
+        Assert.AreEqual("mardi 13 octobre : 3 éléments", new ForecastDay(tuesday, 3).Name);
+        Assert.AreEqual("mar", new ForecastDay(tuesday, 3).Label);
+
+        var quiet = new WeekBar(new ReviewDay(tuesday, 0), most: 8, isToday: false);
+        Assert.AreEqual(WeekBar.EmptyBar, quiet.Height);
+        Assert.AreEqual("mardi 13 octobre : 0 révision validée", quiet.Name);
+        var tallest = new WeekBar(new ReviewDay(tuesday, 8), most: 8, isToday: true);
+        Assert.AreEqual(WeekBar.TallestBar, tallest.Height);
+        Assert.AreEqual("mardi 13 octobre : 8 révisions validées", tallest.Name);
+        Assert.AreEqual("mar", tallest.Label);
+        Assert.AreEqual(WeekBar.EmptyBar, new WeekBar(new ReviewDay(tuesday, 1), most: 1000, isToday: false).Height, "une révision reste visible");
+    }
+
+    [TestMethod]
+    public async Task Modules_bring_their_cards_in_order_when_they_have_something_to_show()
+    {
+        var time = new FakeTime(new DateTimeOffset(2026, 10, 1, 8, 0, 0, TimeSpan.Zero));
+        using var test = new TestVaults(AppMode.Development, time);
+        Assert.IsNotNull(test.App.Vaults.Create(test.PathOf("Coffre")).Vault);
+        var page = new DashboardPageViewModel(test.App.Reminders, new FakeOpener(), [new Widget(20, "Second"), new Widget(5, null), new Widget(10, "Premier")]);
+
+        await page.RefreshCommand.ExecuteAsync(null);
+
+        Same("Premier | Second", page.Cards.Select(card => card.Title));
+        Assert.IsInstanceOfType<DashboardExtras>(page.Rows[^1], "sans colonne, les encarts suivent la liste");
+        page.Show(Empty());
+        Same("Premier | Second", page.Cards.Select(card => card.Title));
+    }
+
+    [STATestMethod]
+    public void The_view_keeps_within_the_width_of_the_window()
+    {
+        var test = new TestShell();
+        var opener = new FakeOpener();
+        using var vaults = new TestVaults(AppMode.Development);
+        var page = new DashboardPageViewModel(vaults.App.Reminders, opener, [new Widget(1, "Citation du jour")]);
+        var forecast = Enumerable.Range(0, 8).Select(offset => new WorkloadDay(Day.AddDays(offset), [Item($"Fiche {offset}", ItemKind.Sheet, "J3")], []));
+        page.Show(
+            Sample(reminders: [Reminder("Cellule", previous: 0)]) with { Workload = [.. forecast], RecentReviews = [.. Enumerable.Range(0, 7).Select(age => new ReviewDay(Day.AddDays(-age), age))] },
+            [new DashboardCard("Citation du jour", "Le cœur a ses raisons", "Blaise Pascal"), new DashboardCard("Sans auteur", "Un texte", null)]);
+        var shell = new ShellViewModel(CorePages.All(new Dictionary<string, object> { [CorePages.Today] = page }), test.Appearance, test.Gallery);
+        var window = Show(test, shell);
+        try
+        {
+            // Assez large : la colonne latérale, et le rappel s'y ouvre.
+            var side = Named<DockPanel>(window, "Side");
+            Assert.AreEqual(TodayLayout.WithSide, page.Layout);
+            Assert.AreEqual(Visibility.Visible, side.Visibility);
+            var reminder = Descendants(Named<ItemsControl>(window, "SideReminders")).OfType<Button>().Single();
+            Assert.StartsWith("Rappel, Cellule", AutomationProperties.GetName(reminder));
+            reminder.Command.Execute(reminder.CommandParameter);
+            Assert.IsInstanceOfType<PendingReminder>(opener.Opened.Single());
+            Assert.HasCount(7, Descendants(Named<ItemsControl>(window, "Forecast")).OfType<Border>().Where(border => border.Name == "Dot").ToList());
+            Assert.HasCount(7, Descendants(Named<ItemsControl>(window, "Week")).OfType<Border>().Where(border => border.Name == "Bar").ToList());
+            var credits = Descendants(Named<ItemsControl>(window, "Cards")).OfType<TextBlock>().Where(text => text.Name == "Credit");
+            Same("Blaise Pascal · Citation du jour | Sans auteur", credits.Select(credit => string.Concat(credit.Inlines.OfType<Run>().Select(run => run.Text))));
+
+            // Le tri : le menu s'ouvre sous le bouton ; un clic hors d'un tri ne change rien.
+            var sort = Named<Button>(window, "SortButton");
+            var menu = sort.ContextMenu;
+            sort.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+            TestShell.Flush();
+            Assert.IsTrue(menu.IsOpen);
+            Assert.AreSame(sort, menu.PlacementTarget);
+            Assert.AreEqual(PlacementMode.Bottom, menu.Placement);
+            menu.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+            Assert.AreSame(page.Sorts[0], page.SelectedSort);
+            ((MenuItem)menu.ItemContainerGenerator.ContainerFromItem(page.Sorts[4])).RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+            Assert.AreSame(page.Sorts[4], page.SelectedSort);
+            menu.IsOpen = false;
+
+            // Étroite : une colonne, le résumé sous le titre, jamais de défilement horizontal.
+            window.Width = 420;
+            window.UpdateLayout();
+            TestShell.Flush();
+            Assert.AreEqual(TodayLayout.OneColumn, page.Layout);
+            Assert.AreEqual(Visibility.Collapsed, side.Visibility);
+            var list = Named<ListBox>(window, "Items");
+            Assert.AreEqual(0, Descendants(list).OfType<ScrollViewer>().First().ScrollableWidth);
+            var hero = Named<Card>(window, "Hero");
+            Assert.IsGreaterThan(Named<TextBlock>(window, "Heading").TranslatePoint(new Point(), window).Y, hero.TranslatePoint(new Point(), window).Y, "le résumé passe sous le titre");
+            Assert.IsLessThanOrEqualTo(window.ActualWidth, hero.TranslatePoint(new Point(hero.ActualWidth, 0), window).X);
+            Assert.IsGreaterThan(window.ActualWidth / 2, Named<Button>(window, "StartButton").ActualWidth, "le bouton prend toute la largeur");
+            // La liste d'abord : le tri se réduit à son icône, le pied de liste disparaît, le retard passe sous le titre.
+            Assert.IsFalse(page.HasRoom);
+            Assert.AreEqual(Visibility.Collapsed, Named<TextBlock>(window, "Footer").Visibility);
+            Assert.AreEqual(Visibility.Collapsed, Named<StackPanel>(window, "SortChoice").Visibility);
+            Assert.AreEqual(0, Grid.GetColumn(Named<StackPanel>(list, "Timing")));
+            Assert.AreEqual(1, Grid.GetRow(Named<StackPanel>(list, "Timing")));
+
+            // La suite de la liste se lit, mais ne se choisit pas.
+            var extras = page.Rows.OfType<DashboardExtras>().Single();
+            list.ScrollIntoView(extras);
+            list.UpdateLayout();
+            TestShell.Flush();
+            list.SelectedItem = extras;
+            Assert.IsNull(list.SelectedItem);
+            Assert.IsNotNull(Named<ItemsControl>(list, "Week"));
+            list.SelectedItem = page.Rows[1];
+            Assert.AreSame(page.Rows[1], list.SelectedItem);
         }
         finally
         {
@@ -321,6 +497,16 @@ public sealed class DashboardTests
         {
             window.Close();
         }
+    }
+
+    /// <summary>Un encart de module : quelque chose à montrer, ou rien aujourd'hui.</summary>
+    private sealed class Widget(int order, string? title) : IDashboardWidget
+    {
+        public string Id => $"encart-{order}";
+
+        public int Order => order;
+
+        public DashboardCard? Card() => title is null ? null : new DashboardCard(title, "Un texte", null);
     }
 
     private static void Same(string expected, IEnumerable<string> actual, string message = "") =>
@@ -380,7 +566,7 @@ public sealed class DashboardTests
         new($"fiche-{title}", title, "Biologie", [], new DateOnly(2026, 9, 1), Day, previous);
 
     private static Dashboard Empty() =>
-        new(Day, [], [], [], [], [], 2, false, [], new DateOnly(2026, 10, 12), 3, 0, 0, 0, false, false);
+        new(Day, [], [], [], [], [], [], 2, false, [], new DateOnly(2026, 10, 12), 3, 0, 0, 0, false, false);
 
     /// <summary>
     /// Deux retards et deux éléments du jour, dans l'ordre du coffre ; chaque tri change l'ordre

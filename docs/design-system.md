@@ -113,7 +113,7 @@ commit figé :
 | Boutons | styles `Kyf.Button` (secondaire, par défaut), `Kyf.Button.Primary`, `Kyf.Button.Subtle`, `Kyf.Button.Icon` | une seule action principale par vue |
 | Champ | style de `TextBox`, indication `Field.Placeholder` | contour à 3:1, contour épaissi au focus, indication lue comme aide |
 | Carte | `Card`, repère `Marker` (fiche, passage, rappel) | ombre douce ; le repère est un court trait en haut |
-| Pastille | `Pill`, sorte `Kind` | icône et libellé : fiche, passage, rappel, retard, archivée, à vérifier |
+| Pastille | `Pill`, sorte `Kind` | icône et libellé : fiche, passage, rappel, retard, archivée, à vérifier, aujourd'hui |
 | Menu | styles de `ContextMenu`, `Menu`, `MenuItem` | coche, raccourci, sous-menus |
 | Listes | styles de `ListBox`, `ListBoxItem` | survol, élément choisi : fond vert pâle et texte en gras (menu de la coquille) |
 | Icône | `Icon` | décorative : police d'icônes de Windows, ignorée par le lecteur d'écran |
@@ -166,6 +166,27 @@ l'application lancée pour de vrai : chaque vue, l'aide et la recherche, en clai
 sans aucune erreur (`tests/KyfRev.Presentation.Wpf.Tests`).
 
 ![Coquille, thème sombre, recherche ouverte](captures/j5/recherche-sombre.png)
+
+## Aujourd'hui
+
+La vue d'ouverture suit la largeur de sa page, zoom et menu déjà comptés :
+
+| Largeur de la page | Disposition |
+|---|---|
+| moins de 600 px | une colonne ; le résumé sous le titre, le bouton de séance sur toute la largeur ; le tri réduit à son icône, le retard sous le titre de la ligne, pas de pied de liste |
+| de 600 à 879 px | une colonne ; les boutons de séance dans le résumé |
+| 880 px et plus | le résumé à côté du titre ; la liste et une colonne latérale de 340 px |
+
+La colonne latérale montre les rappels de consolidation, les échéances des sept prochains jours,
+les révisions validées ces sept derniers jours et, ancrés en bas, les encarts des modules. Sans
+elle, les rappels restent dans la liste et le reste défile à sa suite : la liste reste
+virtualisée. Une carte sans rien à montrer n'apparaît pas : aucun contenu de remplissage.
+
+Le graphique de la semaine n'a qu'une série : une couleur, des barres fines ancrées en bas, un
+trait discret pour un jour sans révision, les jours écrits dessous. Chaque jour donne sa valeur
+au survol et au lecteur d'écran.
+
+![Aujourd'hui, 1 600 px, thème clair](captures/j6/aujourdhui-ecran-clair.png)
 
 ## Emploi
 
