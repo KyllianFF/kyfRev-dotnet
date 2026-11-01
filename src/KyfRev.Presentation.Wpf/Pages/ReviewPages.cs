@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using KyfRev.Application;
 using KyfRev.Application.Model;
 using KyfRev.Application.Ports;
 using KyfRev.Application.UseCases;
@@ -266,16 +267,29 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
     /// <summary>En dessous, le plan ne tient plus à côté du reste.</summary>
     public const double OutlineMinimum = 1120;
 
+    /// <summary>Longueur maximale d'un passage, comme dans la 0.x.</summary>
+    public const int PassageMaximum = 10_000;
+
+    /// <summary>Longueur maximale d'un terme, comme dans la 0.x.</summary>
+    public const int TermMaximum = 200;
+
+    /// <summary>Longueur maximale d'un commentaire ou d'une explication, comme dans la 0.x.</summary>
+    public const int CommentMaximum = 10_000;
+
     private readonly SheetUseCases _sheets;
     private readonly Func<ItemKind, string, ReviewState, ReviewBarViewModel> _reviewBar;
     private readonly Action _back;
     private readonly Action<string> _openSheet;
     private readonly IExternalLinks _links;
+    private readonly AnnotationUseCases _annotations;
+    private TextPosition? _editedPosition;
+    private PassageEntry? _editedPassage;
 
     /// <summary>La fiche <paramref name="sheetId"/>.</summary>
-    public SheetPageViewModel(SheetUseCases sheets, Func<ItemKind, string, ReviewState, ReviewBarViewModel> reviewBar, string sheetId, Action back, Action<string> openSheet, IExternalLinks links)
+    public SheetPageViewModel(SheetUseCases sheets, AnnotationUseCases annotations, Func<ItemKind, string, ReviewState, ReviewBarViewModel> reviewBar, string sheetId, Action back, Action<string> openSheet, IExternalLinks links)
     {
         ArgumentNullException.ThrowIfNull(sheets);
+        ArgumentNullException.ThrowIfNull(annotations);
         ArgumentNullException.ThrowIfNull(reviewBar);
         ArgumentNullException.ThrowIfNull(sheetId);
         ArgumentNullException.ThrowIfNull(back);
@@ -287,6 +301,10 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
         _back = back;
         _openSheet = openSheet;
         _links = links;
+        _annotations = annotations;
+        EditorComment = string.Empty;
+        EditorTerm = string.Empty;
+        EditorExplanation = string.Empty;
         WantsOutline = true;
         WantsPassages = true;
         PageWidth = double.PositiveInfinity;
@@ -308,18 +326,76 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
     /// <summary>Un refus est affiché.</summary>
     public bool HasError => Error is not null;
 
-    /// <summary>Un lien de la fiche n'a pas pu être suivi.</summary>
+    /// <summary>Un lien n'a pas pu être suivi, ou un passage enregistré.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasLinkProblem))]
-    public partial string? LinkProblem { get; private set; }
+    [NotifyPropertyChangedFor(nameof(HasProblem))]
+    public partial string? Problem { get; private set; }
 
-    /// <summary>Un lien n'a pas pu être suivi.</summary>
-    public bool HasLinkProblem => LinkProblem is not null;
+    /// <summary>Un problème est affiché.</summary>
+    public bool HasProblem => Problem is not null;
+
+    /// <summary>Ce qui vient d'être fait, dit discrètement.</summary>
+    [ObservableProperty]
+    public partial string? Notice { get; private set; }
 
     /// <summary>La fiche prête à lire.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Outline), nameof(Passages), nameof(HasOutline), nameof(HasPassages), nameof(PassagesLabel), nameof(ShowsOutline), nameof(ShowsPassages), nameof(IsOutlineOn), nameof(IsPassagesOn))]
+    [NotifyPropertyChangedFor(nameof(Outline))]
     public partial SheetReading? Reading { get; private set; }
+
+    /// <summary>Ce qui se surligne dans le texte.</summary>
+    [ObservableProperty]
+    public partial IReadOnlyList<Highlight>? Highlights { get; private set; }
+
+    /// <summary>L'annotation qui ressort.</summary>
+    [ObservableProperty]
+    public partial string? ActivePassage { get; private set; }
+
+    /// <summary>Une saisie est ouverte : un commentaire ou une définition.</summary>
+    [ObservableProperty]
+    public partial bool IsEditing { get; private set; }
+
+    /// <summary>La saisie porte sur une définition.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(EditsComment), nameof(EditorTitle))]
+    public partial bool EditsDefinition { get; private set; }
+
+    /// <summary>La saisie porte sur un commentaire.</summary>
+    public bool EditsComment => !EditsDefinition;
+
+    /// <summary>Le titre de la saisie.</summary>
+    public string EditorTitle => EditsDefinition ? ReadingText.DefinitionTitle : ReadingText.CommentTitle;
+
+    /// <summary>Le commentaire écrit.</summary>
+    [ObservableProperty]
+    public partial string EditorComment { get; set; }
+
+    /// <summary>Le terme écrit.</summary>
+    [ObservableProperty]
+    public partial string EditorTerm { get; set; }
+
+    /// <summary>L'explication écrite.</summary>
+    [ObservableProperty]
+    public partial string EditorExplanation { get; set; }
+
+    /// <summary>Ce qui empêche d'enregistrer la saisie.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasEditorProblem))]
+    public partial string? EditorProblem { get; private set; }
+
+    /// <summary>La saisie ne peut pas être enregistrée.</summary>
+    public bool HasEditorProblem => EditorProblem is not null;
+
+    /// <summary>L'annotation dont la suppression est demandée.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsDeleting), nameof(DeleteTitle))]
+    public partial PassageEntry? Deleting { get; private set; }
+
+    /// <summary>Une suppression attend sa confirmation.</summary>
+    public bool IsDeleting => Deleting is not null;
+
+    /// <summary>Le titre de la confirmation.</summary>
+    public string DeleteTitle => Deleting is { IsDefinition: true } ? ReadingText.DeleteDefinitionTitle : ReadingText.DeletePassageTitle;
 
     /// <summary>Le plan de la fiche.</summary>
     public IReadOnlyList<OutlineEntry> Outline => Reading?.Outline ?? [];
@@ -437,11 +513,130 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
                 return;
             }
             Reading = reading;
+            ShowPassages();
+            await SavePlacementsAsync().ConfigureAwait(true);
             Review = _reviewBar(ItemKind.Sheet, SheetId, outcome.Value.Review);
         }
         finally
         {
             IsLoading = false;
+        }
+    }
+
+    /// <summary>Surligne une position du texte, sans commentaire.</summary>
+    [RelayCommand]
+    private async Task HighlightAsync(TextPosition position) => await CreatePassageAsync(position, null).ConfigureAwait(true);
+
+    /// <summary>Demande le commentaire d'un nouveau passage.</summary>
+    [RelayCommand]
+    private void StartAnnotating(TextPosition position)
+    {
+        _editedPosition = position;
+        _editedPassage = null;
+        EditsDefinition = false;
+        EditorComment = string.Empty;
+        OpenEditor();
+    }
+
+    /// <summary>Demande l'explication d'une nouvelle définition ; la sélection propose le terme.</summary>
+    [RelayCommand]
+    private void StartDefining(TextPosition position)
+    {
+        _editedPosition = position;
+        _editedPassage = null;
+        EditsDefinition = true;
+        var term = string.Join(' ', Reading!.Map.Text[position.Start..position.End].Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+        EditorTerm = term.Length > TermMaximum ? term[..TermMaximum] : term;
+        EditorExplanation = string.Empty;
+        OpenEditor();
+    }
+
+    /// <summary>Demande le nouveau commentaire d'un passage, ou la nouvelle définition.</summary>
+    [RelayCommand]
+    private void StartEditing(PassageEntry passage)
+    {
+        _editedPosition = null;
+        _editedPassage = passage;
+        EditsDefinition = passage.IsDefinition;
+        EditorComment = passage.Annotation.Comment ?? string.Empty;
+        EditorTerm = passage.Annotation.Definition?.Term ?? string.Empty;
+        EditorExplanation = passage.Annotation.Definition?.Explanation ?? string.Empty;
+        OpenEditor();
+    }
+
+    /// <summary>Enregistre la saisie ; une définition incomplète la laisse ouverte.</summary>
+    [RelayCommand]
+    private async Task AnswerEditorAsync(bool confirmed)
+    {
+        IsEditing = false;
+        if (!confirmed)
+        {
+            return;
+        }
+        var definition = new Definition(EditorTerm.Trim(), EditorExplanation.Trim());
+        if (EditsDefinition && (definition.Term.Length == 0 || definition.Explanation.Length == 0))
+        {
+            EditorProblem = ReadingText.DefinitionIncomplete;
+            IsEditing = true;
+            return;
+        }
+        var comment = EditorComment.Trim() is { Length: > 0 } written ? written : null;
+        var problem = (_editedPassage, _editedPosition) switch
+        {
+            ({ } passage, _) when EditsDefinition => await RunAsync(() => _annotations.ModifyDefinition(passage.Annotation.Id, definition), ReadingText.Saved).ConfigureAwait(true),
+            ({ } passage, _) => await RunAsync(() => _annotations.ModifyComment(passage.Annotation.Id, comment), ReadingText.Saved).ConfigureAwait(true),
+            (_, { } position) when EditsDefinition => await CreateDefinitionAsync(position, definition).ConfigureAwait(true),
+            (_, { } position) => await CreatePassageAsync(position, comment).ConfigureAwait(true),
+            _ => null,
+        };
+        if (problem is not null)
+        {
+            EditorProblem = problem;
+            IsEditing = true;
+        }
+    }
+
+    /// <summary>Demande confirmation avant de mettre une annotation à la corbeille.</summary>
+    [RelayCommand]
+    private void RequestDelete(PassageEntry passage) => Deleting = passage;
+
+    /// <summary>Met l'annotation à la corbeille, si c'est confirmé.</summary>
+    [RelayCommand]
+    private async Task AnswerDeleteAsync(bool confirmed)
+    {
+        var passage = Deleting;
+        Deleting = null;
+        if (confirmed && passage is not null)
+        {
+            await RunAsync(() => _annotations.Trash(passage.Annotation.Id), ReadingText.Deleted).ConfigureAwait(true);
+        }
+    }
+
+    /// <summary>Accepte la position proposée pour un passage dont le texte a changé.</summary>
+    [RelayCommand]
+    private async Task ConfirmPositionAsync(PassageEntry passage)
+    {
+        var anchor = Reading!.AnchorAt(passage.Position!.Value);
+        await RunAsync(
+            () => anchor.Exact == passage.Annotation.Anchor.Exact
+                ? _annotations.Reanchor(passage.Annotation.Id, anchor, AnchorState.Anchored)
+                : _annotations.ModifyPassage(passage.Annotation.Id, anchor, restart: false),
+            ReadingText.PositionConfirmed).ConfigureAwait(true);
+    }
+
+    /// <summary>Refuse la position proposée : le passage reste, sans place dans le texte.</summary>
+    [RelayCommand]
+    private async Task KeepWithoutPositionAsync(PassageEntry passage) =>
+        await RunAsync(() => _annotations.Reanchor(passage.Annotation.Id, passage.Annotation.Anchor, AnchorState.NotFound), ReadingText.Saved).ConfigureAwait(true);
+
+    /// <summary>Fait ressortir une annotation, dans le texte et dans le panneau.</summary>
+    [RelayCommand]
+    private void Activate(string? id)
+    {
+        ActivePassage = id;
+        foreach (var passage in Passages)
+        {
+            passage.IsActive = passage.Annotation.Id == id;
         }
     }
 
@@ -457,11 +652,11 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
     [RelayCommand]
     private void OpenLink(LinkTarget? target)
     {
-        LinkProblem = null;
+        Problem = null;
         switch (target)
         {
             case ExternalLink external when !_links.Open(external.Address):
-                LinkProblem = ReadingText.CannotOpenAddress;
+                Problem = ReadingText.CannotOpenAddress;
                 break;
             case SheetLink sheet:
                 var found = _sheets.IdAt(sheet.Path);
@@ -471,7 +666,7 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
                 }
                 else
                 {
-                    LinkProblem = ReadingText.MissingLinkedSheet;
+                    Problem = ReadingText.MissingLinkedSheet;
                 }
                 break;
         }
@@ -480,4 +675,107 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
     /// <summary>Revient à la vue d'où la fiche a été ouverte.</summary>
     [RelayCommand]
     private void Back() => _back();
+
+    private void OpenEditor()
+    {
+        EditorProblem = null;
+        IsEditing = true;
+    }
+
+    private Task<string?> CreatePassageAsync(TextPosition position, string? comment)
+    {
+        var anchor = Reading!.AnchorAt(position);
+        return RunAsync(() => _annotations.Create(SheetId, anchor, comment), ReadingText.PassageCreated);
+    }
+
+    private Task<string?> CreateDefinitionAsync(TextPosition position, Definition definition)
+    {
+        var anchor = Reading!.AnchorAt(position);
+        return RunAsync(() => _annotations.CreateDefinition(SheetId, anchor, definition), ReadingText.DefinitionCreated);
+    }
+
+    /// <summary>Fait une action sur une annotation, puis relit les passages ; rend le refus, s'il y en a un.</summary>
+    private async Task<string?> RunAsync(Func<Outcome<Done>> action, string notice)
+    {
+        Problem = null;
+        var outcome = await Task.Run(action).ConfigureAwait(true);
+        if (!outcome.Succeeded)
+        {
+            Problem = outcome.Error;
+            return outcome.Error;
+        }
+        await RefreshAsync().ConfigureAwait(true);
+        Notice = notice;
+        return null;
+    }
+
+    /// <summary>Crée une annotation, la fait ressortir, puis relit les passages ; rend le refus, s'il y en a un.</summary>
+    private async Task<string?> RunAsync(Func<Outcome<string>> create, string notice)
+    {
+        Problem = null;
+        var outcome = await Task.Run(create).ConfigureAwait(true);
+        if (!outcome.Succeeded)
+        {
+            Problem = outcome.Error;
+            return outcome.Error;
+        }
+        await RefreshAsync().ConfigureAwait(true);
+        Activate(outcome.Value);
+        Notice = notice;
+        return null;
+    }
+
+    /// <summary>Relit les passages après une modification, sans refaire le document.</summary>
+    private async Task RefreshAsync()
+    {
+        var opened = await Task.Run(() => _sheets.Open(SheetId)).ConfigureAwait(true);
+        if (!opened.Succeeded)
+        {
+            Problem = opened.Error;
+            return;
+        }
+        if (opened.Value.Fingerprint != Reading!.Fingerprint)
+        {
+            await LoadAsync().ConfigureAwait(true);
+            return;
+        }
+        Reading.Update(opened.Value.Annotations);
+        ShowPassages();
+        await SavePlacementsAsync().ConfigureAwait(true);
+        if (Review is { } review)
+        {
+            await review.RefreshPassagesAsync().ConfigureAwait(true);
+        }
+    }
+
+    private void ShowPassages()
+    {
+        Highlights = Reading!.Highlights;
+        Activate(Reading.Passages.Any(passage => passage.Annotation.Id == ActivePassage) ? ActivePassage : null);
+        OnPropertyChanged(nameof(Passages));
+        OnPropertyChanged(nameof(HasPassages));
+        OnPropertyChanged(nameof(PassagesLabel));
+        OnPropertyChanged(nameof(ShowsPassages));
+        OnPropertyChanged(nameof(IsPassagesOn));
+        OnPropertyChanged(nameof(HasOutline));
+        OnPropertyChanged(nameof(ShowsOutline));
+        OnPropertyChanged(nameof(IsOutlineOn));
+    }
+
+    /// <summary>Enregistre les ancrages qui ont changé : une nouvelle place du même texte, ou un nouvel état.</summary>
+    private async Task SavePlacementsAsync()
+    {
+        var changes = Reading!.PlacementChanges().ToList();
+        if (changes.Count == 0)
+        {
+            return;
+        }
+        var problem = await Task.Run(() => changes
+            .Select(change => _annotations.Reanchor(change.Id, change.Anchor, change.State))
+            .FirstOrDefault(outcome => !outcome.Succeeded)?.Error).ConfigureAwait(true);
+        if (problem is not null)
+        {
+            Problem = problem;
+        }
+    }
 }

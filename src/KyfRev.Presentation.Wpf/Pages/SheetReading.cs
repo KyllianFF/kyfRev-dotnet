@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using CommunityToolkit.Mvvm.ComponentModel;
 using KyfRev.Application;
 using KyfRev.Application.Model;
@@ -30,12 +31,23 @@ public sealed partial class OutlineEntry : ObservableObject
     public partial bool IsActive { get; set; }
 }
 
+/// <summary>Un passage surligné dans le texte affiché.</summary>
+/// <param name="Id">Son annotation.</param>
+/// <param name="Start">Son début.</param>
+/// <param name="End">Sa fin.</param>
+/// <param name="IsDefinition">Une définition, et non un passage.</param>
+/// <param name="IsCandidate">Une position approchée, à vérifier.</param>
+public sealed record Highlight(string Id, int Start, int End, bool IsDefinition, bool IsCandidate);
+
 /// <summary>Un passage ou une définition de la fiche, dans son panneau.</summary>
-public sealed class PassageEntry
+public sealed partial class PassageEntry : ObservableObject
 {
-    internal PassageEntry(AnnotationView annotation)
+    private readonly AnchorResult _place;
+
+    internal PassageEntry(AnnotationView annotation, AnchorResult place)
     {
         Annotation = annotation;
+        _place = place;
     }
 
     /// <summary>L'annotation.</summary>
@@ -56,8 +68,21 @@ public sealed class PassageEntry
     /// <summary>Une explication ou un commentaire est écrit.</summary>
     public bool HasDetail => !string.IsNullOrEmpty(Detail);
 
+    /// <summary>Où il se trouve dans le texte affiché ; rien s'il n'y est plus.</summary>
+    public TextPosition? Position => _place.Position;
+
+    /// <summary>État de son ancrage dans le texte actuel.</summary>
+    public AnchorState State => _place.State;
+
     /// <summary>Son texte a disparu de la fiche.</summary>
-    public bool IsLost => Annotation.AnchorState == AnchorState.NotFound;
+    public bool IsLost => State == AnchorState.NotFound;
+
+    /// <summary>Sa position n'est qu'approchée : elle est à confirmer.</summary>
+    public bool IsCandidate => State == AnchorState.NeedsReview;
+
+    /// <summary>Il ressort, dans le panneau comme dans le texte.</summary>
+    [ObservableProperty]
+    public partial bool IsActive { get; set; }
 }
 
 /// <summary>
@@ -67,10 +92,13 @@ public sealed class PassageEntry
 public sealed class SheetReading
 {
     private readonly Func<string, Outcome<byte[]>> _readImage;
+    private readonly int _firstBodyLine;
 
     private SheetReading(OpenedSheet sheet, Func<string, Outcome<byte[]>> readImage)
     {
         _readImage = readImage;
+        _firstBodyLine = sheet.FirstBodyLine;
+        Fingerprint = sheet.Fingerprint;
         Title = sheet.Title;
         Details = string.Join("  ·  ", (sheet.Folder.Length > 0 ? [sheet.Folder] : Array.Empty<string>()).Concat(sheet.Tags.Select(tag => $"#{tag}")));
         Folder = ContentTargets.FolderOf(sheet.Path);
@@ -79,8 +107,11 @@ public sealed class SheetReading
         var headings = Map.Headings.Where(heading => heading.TextContent().Trim().Length > 0).ToList();
         var top = headings.Count > 0 ? headings.Min(heading => heading.HeadingLevel) : 0;
         Outline = [.. headings.Select(heading => new OutlineEntry(heading, heading.HeadingLevel - top))];
-        Passages = [.. sheet.Annotations.Where(annotation => !annotation.InTrash).Select(annotation => new PassageEntry(annotation))];
+        Passages = Place(sheet.Annotations);
     }
+
+    /// <summary>L'empreinte de la fiche lue.</summary>
+    public string Fingerprint { get; }
 
     /// <summary>Le titre de la fiche.</summary>
     public string Title { get; }
@@ -100,8 +131,13 @@ public sealed class SheetReading
     /// <summary>Son plan, sans le titre répété.</summary>
     public IReadOnlyList<OutlineEntry> Outline { get; }
 
-    /// <summary>Ses passages et définitions, hors corbeille.</summary>
-    public IReadOnlyList<PassageEntry> Passages { get; }
+    /// <summary>Ses passages et définitions, hors corbeille, chacun à sa place dans le texte actuel.</summary>
+    public IReadOnlyList<PassageEntry> Passages { get; private set; }
+
+    /// <summary>Ce qui se surligne dans le texte.</summary>
+    public IReadOnlyList<Highlight> Highlights => [.. Passages
+        .Where(passage => passage.Position is not null)
+        .Select(passage => new Highlight(passage.Annotation.Id, passage.Position!.Value.Start, passage.Position.Value.End, passage.IsDefinition, passage.IsCandidate))];
 
     /// <summary>Tire de la fiche ouverte ce qu'il faut pour la lire.</summary>
     public static SheetReading Of(OpenedSheet sheet, SheetUseCases sheets)
@@ -114,13 +150,37 @@ public sealed class SheetReading
     /// <summary>Tire d'une fiche ce qu'il faut pour la lire, ses images venant de <paramref name="readImage"/>.</summary>
     internal static SheetReading Of(OpenedSheet sheet, Func<string, Outcome<byte[]>> readImage) => new(sheet, readImage);
 
-    /// <summary>Où se trouve un passage dans le texte affiché ; rien s'il n'y est plus.</summary>
-    public TextPosition? PositionOf(AnnotationView annotation)
+    /// <summary>Replace les annotations relues, le texte n'ayant pas changé.</summary>
+    public void Update(ImmutableArray<AnnotationView> annotations) => Passages = Place(annotations);
+
+    /// <summary>L'ancre d'une position du texte affiché, avec son contexte et ses repères.</summary>
+    public Anchor AnchorAt(TextPosition position) =>
+        Anchoring.AnchorOf(Map.Text, position, Map.SectionAt(position.Start), Map.SourceLineAt(position.Start, _firstBodyLine), Fingerprint);
+
+    /// <summary>
+    /// Les ancrages à enregistrer : une nouvelle position du même texte, ou un nouvel état. Rien d'autre :
+    /// lire une fiche ne réécrit pas ce qui n'a pas changé, et jamais un passage n'est rattaché à un autre texte.
+    /// Le repère de section seul ne compte pas : celui d'un titre à formule diffère de la 0.x, pas sa place.
+    /// </summary>
+    public IEnumerable<(string Id, Anchor Anchor, AnchorState State)> PlacementChanges()
     {
-        ArgumentNullException.ThrowIfNull(annotation);
-        return Anchoring.Locate(Map.Text, annotation.Anchor, annotation.AnchorState).Position;
+        foreach (var passage in Passages)
+        {
+            var saved = passage.Annotation.Anchor;
+            var anchor = passage is { State: AnchorState.Anchored, Position: { } position } ? AnchorAt(position) : saved;
+            if (passage.State != passage.Annotation.AnchorState || !Anchoring.SameAnchor(anchor with { Section = saved.Section }, saved))
+            {
+                yield return (passage.Annotation.Id, anchor, passage.State);
+            }
+        }
     }
 
     /// <summary>Le contenu d'une image du coffre.</summary>
     internal Outcome<byte[]> ReadImage(string path) => _readImage(path);
+
+    private List<PassageEntry> Place(ImmutableArray<AnnotationView> annotations) =>
+    [
+        .. annotations.Where(annotation => !annotation.InTrash)
+            .Select(annotation => new PassageEntry(annotation, Anchoring.Locate(Map.Text, annotation.Anchor, annotation.AnchorState))),
+    ];
 }

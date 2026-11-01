@@ -13,6 +13,7 @@
   -->
   <ItemGroup>
     <ProjectReference Include="..\..\src\KyfRev.Application\KyfRev.Application.csproj" />
+    <ProjectReference Include="..\..\src\KyfRev.Rendering\KyfRev.Rendering.csproj" />
     <ProjectReference Include="..\..\src\KyfRev.Infrastructure.Vault\KyfRev.Infrastructure.Vault.csproj" />
     <!-- Compilé avant les scénarios, qui le lancent sans jamais le charger. -->
     <ProjectReference Include="..\..\tools\acceptance-host\KyfRev.Acceptance.Host.csproj" ReferenceOutputAssembly="false" Private="false" SetRuntimeIdentifier="RuntimeIdentifier=win-x64" />

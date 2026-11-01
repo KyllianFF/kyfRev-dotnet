@@ -82,11 +82,11 @@ var thread = new Thread(() =>
     // d'encart de module (les modules ne sont pas encore branchés dans l'application).
     foreach (var (theme, name) in new[] { (ThemePreference.Light, "clair"), (ThemePreference.Dark, "sombre") })
     {
-        var today = new DashboardPageViewModel(app.Reminders, app.Sheets, new ReviewNavigation(app.Sheets, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System, new NoLinks()));
+        var today = new DashboardPageViewModel(app.Reminders, app.Sheets, new ReviewNavigation(app.Sheets, app.Annotations, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System, new NoLinks()));
         today.Show(SampleDashboard(), SampleCards);
         Shell(folder, $"aujourdhui-{name}.png", theme, _ => { }, new Dictionary<string, object> { [CorePages.Today] = today });
     }
-    var contrast = new DashboardPageViewModel(app.Reminders, app.Sheets, new ReviewNavigation(app.Sheets, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System, new NoLinks()));
+    var contrast = new DashboardPageViewModel(app.Reminders, app.Sheets, new ReviewNavigation(app.Sheets, app.Annotations, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System, new NoLinks()));
     contrast.Show(SampleDashboard(), SampleCards);
     Shell(folder, "aujourdhui-contraste-eleve.png", ThemePreference.System, _ => { }, new Dictionary<string, object> { [CorePages.Today] = contrast }, highContrast: true);
     foreach (var (file, theme, width, height) in new[]
@@ -96,7 +96,7 @@ var thread = new Thread(() =>
         ("aujourdhui-ecran-clair.png", ThemePreference.Light, 1600.0, 1000.0),
     })
     {
-        var today = new DashboardPageViewModel(app.Reminders, app.Sheets, new ReviewNavigation(app.Sheets, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System, new NoLinks()));
+        var today = new DashboardPageViewModel(app.Reminders, app.Sheets, new ReviewNavigation(app.Sheets, app.Annotations, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System, new NoLinks()));
         today.Show(SampleDashboard(), SampleCards);
         Shell(folder, file, theme, _ => { }, new Dictionary<string, object> { [CorePages.Today] = today }, width, height);
     }
@@ -109,7 +109,7 @@ var thread = new Thread(() =>
         ("archives-contraste-eleve.png", ThemePreference.System, 1280.0, 800.0, true),
     })
     {
-        var archives = new ArchivesPageViewModel(app.Reminders, app.Reviews, new ReviewNavigation(app.Sheets, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System, new NoLinks()), TimeProvider.System);
+        var archives = new ArchivesPageViewModel(app.Reminders, app.Reviews, new ReviewNavigation(app.Sheets, app.Annotations, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System, new NoLinks()), TimeProvider.System);
         archives.Show(SampleArchives());
         Shell(
             folder,
@@ -122,7 +122,7 @@ var thread = new Thread(() =>
             highContrast: highContrast);
     }
     // Les filtres dépliés sur petit écran, l'un d'eux choisi.
-    var filtered = new ArchivesPageViewModel(app.Reminders, app.Reviews, new ReviewNavigation(app.Sheets, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System, new NoLinks()), TimeProvider.System);
+    var filtered = new ArchivesPageViewModel(app.Reminders, app.Reviews, new ReviewNavigation(app.Sheets, app.Annotations, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System, new NoLinks()), TimeProvider.System);
     filtered.Show(SampleArchives());
     filtered.Bar.Filters[0].Selected = filtered.Bar.Filters[0].Choices[1];
     filtered.Bar.AreOpen = true;
@@ -238,10 +238,11 @@ static void ReviewCaptures(string folder)
         var anchor = new Anchor("trois ordres", "ciété d'Ancien Régime est divisée en ", " : le clergé, la noblesse et le tie", 50, 62, ["La Révolution française", "Les causes"], 5, opened.Fingerprint);
         var passage = app.Annotations.Create(sheet, anchor, "Qui paie l'impôt ?").Value;
         app.Annotations.Create(sheet, new Anchor("Bastille", "14 juillet : prise de la ", " ;", 400, 408, ["Les étapes"], null, app.Sheets.Open(sheet).Value.Fingerprint), "Le symbole de la Révolution.");
+        app.Annotations.CreateDefinition(sheet, new Anchor("tiers état", "le clergé, la noblesse et le ", ".", 95, 105, ["Les causes"], null, app.Sheets.Open(sheet).Value.Fingerprint), new Definition("Tiers état", "Ceux qui ne sont ni nobles ni clercs."));
         time.Now = time.Now.AddDays(2);
 
         ReviewBarViewModel Bar(ItemKind kind, string id, ReviewState state) => new(app.Reviews, app.Reminders, app.Sheets, time, kind, id, state);
-        var sheetPage = new SheetPageViewModel(app.Sheets, Bar, sheet, () => { }, _ => { }, new NoLinks());
+        var sheetPage = new SheetPageViewModel(app.Sheets, app.Annotations, Bar, sheet, () => { }, _ => { }, new NoLinks());
         sheetPage.LoadCommand.Execute(null);
         Pump(() => !sheetPage.IsLoading);
         void Reading(string file, ThemePreference theme, double width = 1600, double height = 1000) =>
@@ -263,7 +264,7 @@ static void ReviewCaptures(string folder)
         // La séance : la fiche en cours, puis le bilan d'une séance de douze éléments.
         object Item(SessionItem item, bool activeRecall)
         {
-            var page = new SheetPageViewModel(app.Sheets, Bar, item.Id, () => { }, _ => { }, new NoLinks());
+            var page = new SheetPageViewModel(app.Sheets, app.Annotations, Bar, item.Id, () => { }, _ => { }, new NoLinks());
             page.LoadCommand.Execute(null);
             Pump(() => !page.IsLoading);
             return page;
@@ -301,7 +302,7 @@ static void ReviewCaptures(string folder)
         {
             var sample = SampleDashboard();
             DueItem Real(DueItem item) => item with { SheetId = sheet };
-            var today = new DashboardPageViewModel(app.Reminders, app.Sheets, new ReviewNavigation(app.Sheets, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System, new NoLinks()));
+            var today = new DashboardPageViewModel(app.Reminders, app.Sheets, new ReviewNavigation(app.Sheets, app.Annotations, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System, new NoLinks()));
             today.Show(
                 sample with
                 {
@@ -320,7 +321,7 @@ static void ReviewCaptures(string folder)
             time.Now = time.Now.AddDays(1);
             app.Reminders.PrepareDay().Value.ToString();
         }
-        var reminderPage = new SheetPageViewModel(app.Sheets, Bar, sheet, () => { }, _ => { }, new NoLinks());
+        var reminderPage = new SheetPageViewModel(app.Sheets, app.Annotations, Bar, sheet, () => { }, _ => { }, new NoLinks());
         reminderPage.LoadCommand.Execute(null);
         Pump(() => !reminderPage.IsLoading);
         Shell(folder, "rappel-clair.png", ThemePreference.Light, shell => shell.Navigate(new NavigationItem("fiche", "Fiche", Icons.Document, int.MaxValue, reminderPage)));
@@ -350,7 +351,7 @@ static void ReviewCaptures(string folder)
         }
         SheetsPageViewModel SheetsPage()
         {
-            var navigation = new ReviewNavigation(app.Sheets, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), time, new NoLinks());
+            var navigation = new ReviewNavigation(app.Sheets, app.Annotations, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), time, new NoLinks());
             var sheets = new SheetsPageViewModel(app.Sheets, app.Folders, app.Templates, navigation, time);
             sheets.RefreshCommand.Execute(null);
             Pump(() => !sheets.IsLoading && sheets.HasRows && sheets.Preview is not null);

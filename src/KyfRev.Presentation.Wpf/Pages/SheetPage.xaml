@@ -53,7 +53,10 @@
               <ItemsControl.ItemTemplate>
                 <DataTemplate DataType="{x:Type pages:PassageEntry}">
                   <Button Style="{DynamicResource Kyf.Button.Subtle}" HorizontalContentAlignment="Stretch" HorizontalAlignment="Stretch" Click="OnPassageEntryClick"
-                          AutomationProperties.Name="{Binding Title}" Padding="4,6">
+                          ContextMenuOpening="OnPassageEntryMenu" AutomationProperties.Name="{Binding Title}" Padding="4,6">
+                    <Button.ContextMenu>
+                      <ContextMenu />
+                    </Button.ContextMenu>
                     <StackPanel>
                       <Border x:Name="Quote" HorizontalAlignment="Left" Padding="4,1" Background="{DynamicResource Kyf.Brush.PillPassageBackground}"
                               Visibility="{Binding IsPassage, Converter={StaticResource Visible}}">
@@ -64,6 +67,9 @@
                                  Visibility="{Binding HasDetail, Converter={StaticResource Visible}}" />
                       <TextBlock Text="{x:Static pages:ReadingText.LostPassage}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,2,0,0"
                                  Foreground="{DynamicResource Kyf.Brush.Warning}" Visibility="{Binding IsLost, Converter={StaticResource Visible}}" />
+                      <TextBlock Text="{x:Static pages:ReadingText.CandidatePassage}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,2,0,0"
+                                 Foreground="{DynamicResource Kyf.Brush.Warning}" Visibility="{Binding IsCandidate, Converter={StaticResource Visible}}" />
+                      <Rectangle Height="2" Margin="0,4,0,0" Fill="{DynamicResource Kyf.Brush.MarkerPassage}" Visibility="{Binding IsActive, Converter={StaticResource Visible}}" />
                     </StackPanel>
                   </Button>
                 </DataTemplate>
@@ -96,12 +102,14 @@
             <TextBlock Text="{x:Static pages:ReviewText.Back}" VerticalAlignment="Center" />
           </StackPanel>
         </Button>
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right">
           <ToggleButton x:Name="OutlineToggle" Content="{x:Static pages:ReadingText.Outline}" IsChecked="{Binding IsOutlineOn}" Margin="0,0,8,0"
                         Visibility="{Binding HasOutline, Converter={StaticResource Visible}}" />
           <ToggleButton x:Name="PassagesToggle" Content="{Binding PassagesLabel}" IsChecked="{Binding IsPassagesOn}"
                         Visibility="{Binding HasPassages, Converter={StaticResource Visible}}" />
         </StackPanel>
+        <TextBlock x:Name="Notice" Text="{Binding Notice}" Style="{DynamicResource Kyf.Text.Secondary}" VerticalAlignment="Center" Margin="16,0" TextTrimming="CharacterEllipsis"
+                   AutomationProperties.LiveSetting="Polite" />
       </DockPanel>
 
       <Grid Grid.Row="1" Margin="16,0,16,0">
@@ -122,12 +130,18 @@
                          Visibility="{Binding IsLoading, Converter={StaticResource Visible}}" />
               <kyf:Notification x:Name="ErrorMessage" Severity="Critical" Message="{Binding Error}" IsOpen="{Binding HasError, Mode=OneWay}"
                                 IsClosable="False" Margin="0,0,0,12" />
-              <kyf:Notification x:Name="LinkMessage" Severity="Warning" Message="{Binding LinkProblem}" IsOpen="{Binding HasLinkProblem, Mode=OneWay}"
+              <kyf:Notification x:Name="ProblemMessage" Severity="Warning" Message="{Binding Problem}" IsOpen="{Binding HasProblem, Mode=OneWay}"
                                 IsClosable="False" Margin="0,0,0,12" />
             </StackPanel>
             <reading:SheetDocumentViewer x:Name="SheetText" Grid.Row="1" Reading="{Binding Reading}" OpenLinkCommand="{Binding OpenLinkCommand}"
-                                         PreviewMouseLeftButtonDown="OnTextPressed"
-                                         AutomationProperties.Name="{x:Static pages:ReadingText.Document}" />
+                                         Highlights="{Binding Highlights}" ActiveHighlight="{Binding ActivePassage}"
+                                         PreviewMouseLeftButtonDown="OnTextPressed" PreviewMouseLeftButtonUp="OnTextReleased" PreviewKeyDown="OnTextKey"
+                                         ContextMenuOpening="OnTextMenu"
+                                         AutomationProperties.Name="{x:Static pages:ReadingText.Document}">
+              <reading:SheetDocumentViewer.ContextMenu>
+                <ContextMenu x:Name="TextMenu" />
+              </reading:SheetDocumentViewer.ContextMenu>
+            </reading:SheetDocumentViewer>
           </Grid>
         </DockPanel>
 
@@ -145,6 +159,29 @@
     <kyf:Dialog x:Name="Confirmation" Title="{Binding Review.ConfirmTitle}" IsOpen="{Binding Review.IsConfirming, Mode=OneWay}"
                 PrimaryButtonText="{Binding Review.ConfirmLabel}" Closed="OnConfirmationClosed">
       <TextBlock Text="{Binding Review.ConfirmMessage}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" />
+    </kyf:Dialog>
+
+    <kyf:Dialog x:Name="PassageEditor" Title="{Binding EditorTitle}" IsOpen="{Binding IsEditing, Mode=OneWay}"
+                PrimaryButtonText="{x:Static pages:ReadingText.Save}" Closed="OnEditorClosed">
+      <StackPanel>
+        <kyf:Notification x:Name="EditorMessage" Severity="Critical" Message="{Binding EditorProblem}" IsOpen="{Binding HasEditorProblem, Mode=OneWay}" IsClosable="False" Margin="0,0,0,8" />
+        <TextBox x:Name="CommentBox" Text="{Binding EditorComment, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap" MinLines="3" VerticalContentAlignment="Top"
+                 MaxLength="{x:Static pages:SheetPageViewModel.CommentMaximum}" AutomationProperties.Name="{x:Static pages:ReadingText.CommentTitle}"
+                 Visibility="{Binding EditsComment, Converter={StaticResource Visible}}" />
+        <StackPanel Visibility="{Binding EditsDefinition, Converter={StaticResource Visible}}">
+          <TextBlock Text="{x:Static pages:ReadingText.TermLabel}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,0,0,4" />
+          <TextBox x:Name="TermBox" Text="{Binding EditorTerm, UpdateSourceTrigger=PropertyChanged}" MaxLength="{x:Static pages:SheetPageViewModel.TermMaximum}"
+                   AutomationProperties.Name="{x:Static pages:ReadingText.TermLabel}" />
+          <TextBlock Text="{x:Static pages:ReadingText.ExplanationLabel}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,8,0,4" />
+          <TextBox x:Name="ExplanationBox" Text="{Binding EditorExplanation, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap" MinLines="3" VerticalContentAlignment="Top"
+                   MaxLength="{x:Static pages:SheetPageViewModel.CommentMaximum}" AutomationProperties.Name="{x:Static pages:ReadingText.ExplanationLabel}" />
+        </StackPanel>
+      </StackPanel>
+    </kyf:Dialog>
+
+    <kyf:Dialog x:Name="PassageDelete" Title="{Binding DeleteTitle}" IsOpen="{Binding IsDeleting, Mode=OneWay}"
+                PrimaryButtonText="{x:Static pages:ReadingText.DeleteLabel}" Closed="OnDeleteClosed">
+      <TextBlock Text="{x:Static pages:ReadingText.DeleteMessage}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" />
     </kyf:Dialog>
   </Grid>
 </UserControl>

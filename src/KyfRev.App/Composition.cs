@@ -58,6 +58,7 @@ internal static class Composition
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Vaults);
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Reminders);
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Sheets);
+        services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Annotations);
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Folders);
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Templates);
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Reviews);

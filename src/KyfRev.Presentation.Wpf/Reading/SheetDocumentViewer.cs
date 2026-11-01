@@ -26,6 +26,12 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
     public static readonly DependencyProperty OpenLinkCommandProperty = DependencyProperty.Register(
         nameof(OpenLinkCommand), typeof(ICommand), typeof(SheetDocumentViewer), new PropertyMetadata(null, OnContentChanged));
 
+    public static readonly DependencyProperty HighlightsProperty = DependencyProperty.Register(
+        nameof(Highlights), typeof(IReadOnlyList<Highlight>), typeof(SheetDocumentViewer), new PropertyMetadata(null, OnHighlightsChanged));
+
+    public static readonly DependencyProperty ActiveHighlightProperty = DependencyProperty.Register(
+        nameof(ActiveHighlight), typeof(string), typeof(SheetDocumentViewer), new PropertyMetadata(null, OnHighlightsChanged));
+
     private DocumentBuilder? _built;
     private ScrollViewer? _scroller;
 
@@ -37,6 +43,8 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
         VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
         HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled;
         SetResourceReference(SelectionBrushProperty, "Kyf.Brush.Selection");
+        // Les traits sous le texte prennent leur couleur du thème, connu une fois la vue en place.
+        Loaded += (_, _) => ApplyHighlights();
     }
 
     /// <summary>La fiche à montrer.</summary>
@@ -58,6 +66,20 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
     {
         get => (ICommand?)GetValue(OpenLinkCommandProperty);
         set => SetValue(OpenLinkCommandProperty, value);
+    }
+
+    /// <summary>Les passages à surligner dans le texte.</summary>
+    public IReadOnlyList<Highlight>? Highlights
+    {
+        get => (IReadOnlyList<Highlight>?)GetValue(HighlightsProperty);
+        set => SetValue(HighlightsProperty, value);
+    }
+
+    /// <summary>L'annotation qui ressort.</summary>
+    public string? ActiveHighlight
+    {
+        get => (string?)GetValue(ActiveHighlightProperty);
+        set => SetValue(ActiveHighlightProperty, value);
     }
 
     /// <summary>Se termine quand les images du document sont chargées.</summary>
@@ -92,21 +114,40 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
             return;
         }
         _built.Complete();
-        var piece = Reading.Map.Pieces.FirstOrDefault(candidate => candidate.End > position);
-        if (piece?.Node is RenderText text && _built.Runs.TryGetValue(text, out var run))
+        if (_built.Layer.ElementAt(position) is { } element)
         {
-            ShowAtTop(run);
+            ShowAtTop(element);
         }
     }
 
+    /// <summary>La sélection dans le texte affiché, sans ses espaces de bord ; rien si elle n'y mène à rien.</summary>
+    public TextPosition? CurrentSelection()
+    {
+        if (_built is null || Reading is null || Selection is not { IsEmpty: false } selection)
+        {
+            return null;
+        }
+        var start = _built.Layer.PositionOf(selection.Start, isStart: true);
+        var end = _built.Layer.PositionOf(selection.End, isStart: false);
+        return start is { } from && end is { } to ? Anchoring.Trim(Reading.Map.Text, from, to) : null;
+    }
+
+    /// <summary>Les annotations surlignées à l'endroit visé par la souris.</summary>
+    public IReadOnlyList<string> AnnotationsAt(object? source) => _built?.Layer.IdsAt(source) ?? [];
+
     private static void OnContentChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e) => ((SheetDocumentViewer)sender).Rebuild();
+
+    private static void OnHighlightsChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e) => ((SheetDocumentViewer)sender).ApplyHighlights();
+
+    private void ApplyHighlights() => _built?.Layer.Set(Highlights ?? [], ActiveHighlight);
 
     private void Rebuild()
     {
         _built?.Cancel();
         if (Reading is { } reading)
         {
-            _built = new DocumentBuilder(reading, Follow, OpenLinkCommand is not null, ShowsHeader);
+            _built = new DocumentBuilder(reading, Follow, OpenLinkCommand is not null, ShowsHeader, key => TryFindResource(key) as System.Windows.Media.Brush);
+            ApplyHighlights();
             Document = _built.Build();
         }
         else

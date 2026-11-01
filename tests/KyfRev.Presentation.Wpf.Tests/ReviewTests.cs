@@ -291,11 +291,28 @@ public sealed class ReviewTests
     }
 
     [TestMethod]
+    public async Task A_passage_highlighted_during_a_reminder_is_already_marked()
+    {
+        using var vault = new ReviewVault();
+        Assert.IsTrue(vault.App.Editing.Save(vault.SheetId, "Un mot.", vault.App.Sheets.Open(vault.SheetId).Value.Fingerprint, 1).Succeeded);
+        vault.PrepareReminder();
+        var page = vault.SheetPage(vault.SheetId);
+        await page.LoadCommand.ExecuteAsync(null);
+        await page.Review!.StartMarkingCommand.ExecuteAsync(null);
+        var before = page.Review.Passages.Count;
+
+        await page.HighlightCommand.ExecuteAsync(new KyfRev.Rendering.TextPosition(0, 3));
+
+        Assert.HasCount(before + 1, page.Review.Passages);
+        Assert.AreEqual(1, page.Review.MarkedCount);
+    }
+
+    [TestMethod]
     public async Task Rows_of_the_dashboard_open_their_item_and_back_returns_to_it()
     {
         using var vault = new ReviewVault();
         var test = new TestShell();
-        var navigation = new ReviewNavigation(vault.App.Sheets, vault.App.Reviews, vault.App.Reminders, vault.App.Vaults, new MemorySessions(), vault.Time, new RecordingLinks());
+        var navigation = new ReviewNavigation(vault.App.Sheets, vault.App.Annotations, vault.App.Reviews, vault.App.Reminders, vault.App.Vaults, new MemorySessions(), vault.Time, new RecordingLinks());
         var dashboard = new DashboardPageViewModel(vault.App.Reminders, vault.App.Sheets, navigation);
         var shell = new ShellViewModel(CorePages.All(new Dictionary<string, object> { [CorePages.Today] = dashboard }), test.Appearance, test.Gallery);
         Assert.ThrowsExactly<InvalidOperationException>(() => navigation.OpenSheet(vault.SheetId));
@@ -842,7 +859,7 @@ public sealed class ReviewTests
             return page.Review!;
         }
 
-        public SheetPageViewModel SheetPage(string id) => new(App.Sheets, Bar, id, () => Calls.Add("retour"), sheet => Calls.Add($"fiche {sheet}"), new RecordingLinks());
+        public SheetPageViewModel SheetPage(string id) => new(App.Sheets, App.Annotations, Bar, id, () => Calls.Add("retour"), sheet => Calls.Add($"fiche {sheet}"), new RecordingLinks());
 
         public PassagePageViewModel PassagePage(string passageId, string sheetId, bool activeRecall) =>
             new(App.Sheets, Bar, passageId, sheetId, activeRecall, () => Calls.Add("retour"), sheet => Calls.Add($"fiche {sheet}"));

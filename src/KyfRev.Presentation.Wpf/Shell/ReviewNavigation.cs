@@ -43,10 +43,11 @@ public sealed class ReviewNavigation : IReviewOpener
     private readonly VaultUseCases _vaults;
     private readonly IStudySessionStore _sessions;
     private readonly IExternalLinks _links;
+    private readonly AnnotationUseCases _annotations;
     private ShellViewModel? _shell;
 
     /// <summary>La navigation, sur les cas d'usage des fiches, des révisions et des rappels, et la séance gardée sur ce poste.</summary>
-    public ReviewNavigation(SheetUseCases sheets, ReviewUseCases reviews, ReminderUseCases reminders, VaultUseCases vaults, IStudySessionStore sessions, TimeProvider time, IExternalLinks links)
+    public ReviewNavigation(SheetUseCases sheets, AnnotationUseCases annotations, ReviewUseCases reviews, ReminderUseCases reminders, VaultUseCases vaults, IStudySessionStore sessions, TimeProvider time, IExternalLinks links)
     {
         ArgumentNullException.ThrowIfNull(sheets);
         ArgumentNullException.ThrowIfNull(reviews);
@@ -55,7 +56,9 @@ public sealed class ReviewNavigation : IReviewOpener
         ArgumentNullException.ThrowIfNull(sessions);
         ArgumentNullException.ThrowIfNull(time);
         ArgumentNullException.ThrowIfNull(links);
+        ArgumentNullException.ThrowIfNull(annotations);
         _links = links;
+        _annotations = annotations;
         _sheets = sheets;
         _reviews = reviews;
         _reminders = reminders;
@@ -102,7 +105,7 @@ public sealed class ReviewNavigation : IReviewOpener
     {
         var shell = Shell;
         var from = shell.Current;
-        var page = new SheetPageViewModel(_sheets, Bar, sheetId, () => shell.Navigate(from), OpenSheet, _links);
+        var page = new SheetPageViewModel(_sheets, _annotations, Bar, sheetId, () => shell.Navigate(from), OpenSheet, _links);
         shell.Navigate(new NavigationItem("fiche", ReviewText.SheetPage, Icons.Document, int.MaxValue, page));
         page.LoadCommand.Execute(null);
     }
@@ -162,7 +165,7 @@ public sealed class ReviewNavigation : IReviewOpener
     {
         if (item.Kind == ItemKind.Sheet)
         {
-            var sheet = new SheetPageViewModel(_sheets, Bar, item.Id, leave, OpenSheet, _links);
+            var sheet = new SheetPageViewModel(_sheets, _annotations, Bar, item.Id, leave, OpenSheet, _links);
             sheet.LoadCommand.Execute(null);
             return sheet;
         }
