@@ -514,7 +514,7 @@
           </StackPanel>
 
           <!-- La liste : une seule liste virtualisée, pour qu'un grand coffre s'affiche vite. -->
-          <ListBox x:Name="Items" Grid.Row="1" ItemsSource="{Binding Rows}" SelectedItem="{Binding SelectedRow, Mode=OneWay}"
+          <pages:DashboardList x:Name="Items" Grid.Row="1" ItemsSource="{Binding Rows}" OpenCommand="{Binding OpenCommand}" SelectedItem="{Binding SelectedRow, Mode=OneWay}"
                    AutomationProperties.Name="{x:Static pages:DashboardText.Items}"
                    ScrollViewer.CanContentScroll="True" VirtualizingPanel.IsVirtualizing="True"
                    VirtualizingPanel.VirtualizationMode="Recycling" VirtualizingPanel.ScrollUnit="Pixel"
@@ -527,7 +527,7 @@
 
       <ContentControl Style="{StaticResource SecondList}">
         <kyf:Card Padding="8">
-          <ListBox x:Name="SecondItems" ItemsSource="{Binding SecondRows}" SelectedItem="{Binding SelectedRow, Mode=OneWay}"
+          <pages:DashboardList x:Name="SecondItems" ItemsSource="{Binding SecondRows}" OpenCommand="{Binding OpenCommand}" SelectedItem="{Binding SelectedRow, Mode=OneWay}"
                    AutomationProperties.Name="{x:Static pages:DashboardText.Items}"
                    ScrollViewer.CanContentScroll="True" VirtualizingPanel.IsVirtualizing="True"
                    VirtualizingPanel.VirtualizationMode="Recycling" VirtualizingPanel.ScrollUnit="Pixel"

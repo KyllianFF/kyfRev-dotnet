@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    L'application telle quelle (ses services, sa fenêtre, ses coffres), avec une date simulée et un
+    dossier à elle : ce que lancent les scénarios d'acceptation. L'exécutable livré n'a pas ce pouvoir.
+  -->
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <ApplicationManifest>..\..\src\KyfRev.App\app.manifest</ApplicationManifest>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\KyfRev.App\KyfRev.App.csproj" />
+    <ProjectReference Include="..\..\src\KyfRev.Infrastructure.Windows\KyfRev.Infrastructure.Windows.csproj" />
+  </ItemGroup>
+
+</Project>

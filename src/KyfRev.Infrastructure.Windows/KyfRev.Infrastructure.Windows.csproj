@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="KyfRev.Infrastructure.Windows.Tests" />
+    <InternalsVisibleTo Include="KyfRev.Acceptance.Host" />
   </ItemGroup>
 
 </Project>

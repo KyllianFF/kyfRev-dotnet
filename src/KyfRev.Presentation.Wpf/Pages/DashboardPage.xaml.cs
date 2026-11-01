@@ -54,6 +54,11 @@ internal sealed partial class DashboardPage : UserControl
     /// </summary>
     private void OnItemsSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+        // La page qu'on quitte perd son contexte, puis sa liste se vide : il n'y a plus rien à choisir.
+        if (DataContext is not DashboardPageViewModel)
+        {
+            return;
+        }
         // SetCurrentValue : la liaison de SelectedItem à la ligne choisie doit survivre.
         var list = (ListBox)sender;
         if (list.SelectedItem is DashboardExtras)

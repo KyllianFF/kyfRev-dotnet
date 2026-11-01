@@ -20,6 +20,7 @@
     <PackageVersion Include="Axe.Windows" Version="2.4.2" />
     <PackageVersion Include="coverlet.MTP" Version="10.1.0" />
     <PackageVersion Include="CsCheck" Version="4.9.1" />
+    <PackageVersion Include="FlaUI.UIA3" Version="5.0.0" />
     <PackageVersion Include="MSTest.Analyzers" Version="4.5.1" />
     <PackageVersion Include="MSTest.TestAdapter" Version="4.5.1" />
     <PackageVersion Include="MSTest.TestFramework" Version="4.5.1" />

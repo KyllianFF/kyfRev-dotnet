@@ -28,6 +28,7 @@
     <Project Path="src/KyfRev.Presentation.Wpf/KyfRev.Presentation.Wpf.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/KyfRev.Acceptance.Tests/KyfRev.Acceptance.Tests.csproj" />
     <Project Path="tests/KyfRev.Application.Tests/KyfRev.Application.Tests.csproj" />
     <Project Path="tests/KyfRev.DesignSystem.Tests/KyfRev.DesignSystem.Tests.csproj" />
     <Project Path="tests/KyfRev.Domain.Tests/KyfRev.Domain.Tests.csproj" />
@@ -36,5 +37,8 @@
     <Project Path="tests/KyfRev.Infrastructure.Windows.Tests/KyfRev.Infrastructure.Windows.Tests.csproj" />
     <Project Path="tests/KyfRev.Modules.Citations.Tests/KyfRev.Modules.Citations.Tests.csproj" />
     <Project Path="tests/KyfRev.Presentation.Wpf.Tests/KyfRev.Presentation.Wpf.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/acceptance-host/KyfRev.Acceptance.Host.csproj" />
   </Folder>
 </Solution>
