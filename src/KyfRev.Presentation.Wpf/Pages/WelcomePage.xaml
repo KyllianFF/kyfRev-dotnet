@@ -1,0 +1,48 @@
+<UserControl x:Class="KyfRev.Presentation.Wpf.Pages.WelcomePage"
+             x:ClassModifier="internal"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:kyf="clr-namespace:KyfRev.DesignSystem.Controls;assembly=KyfRev.DesignSystem"
+             xmlns:p="clr-namespace:KyfRev.Presentation.Wpf">
+  <UserControl.Resources>
+    <BooleanToVisibilityConverter x:Key="Visible" />
+  </UserControl.Resources>
+
+  <ScrollViewer VerticalScrollBarVisibility="Auto" Focusable="False">
+    <StackPanel MaxWidth="560" Margin="32" HorizontalAlignment="Center" VerticalAlignment="Center">
+      <TextBlock x:Name="Heading" Text="{x:Static p:ShellText.Welcome}" Style="{DynamicResource Kyf.Text.Display}"
+                 HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" AutomationProperties.HeadingLevel="Level1" />
+      <TextBlock Text="{x:Static p:ShellText.WelcomeIntro}" Style="{DynamicResource Kyf.Text.Secondary}"
+                 FontSize="{DynamicResource Kyf.FontSize.BodyLarge}" Margin="0,16,0,0" TextAlignment="Center" TextWrapping="Wrap" />
+
+      <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,24,0,0">
+        <Button x:Name="CreateButton" Command="{Binding CreateCommand}" Style="{DynamicResource Kyf.Button.Primary}"
+                AutomationProperties.Name="{Binding CreateLabel}">
+          <StackPanel Orientation="Horizontal">
+            <kyf:Icon Text="{x:Static kyf:Icons.NewFolder}" Margin="0,0,8,0" />
+            <TextBlock Text="{Binding CreateLabel}" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+        <Button x:Name="OpenButton" Command="{Binding OpenCommand}" Margin="12,0,0,0"
+                Visibility="{Binding CanOpenExisting, Converter={StaticResource Visible}}"
+                AutomationProperties.Name="{x:Static p:ShellText.OpenExistingVault}">
+          <StackPanel Orientation="Horizontal">
+            <kyf:Icon Text="{x:Static kyf:Icons.FolderOpen}" Margin="0,0,8,0" />
+            <TextBlock Text="{x:Static p:ShellText.OpenExistingVault}" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+      </StackPanel>
+
+      <!-- Le coffre prévu, ou comment en créer un. -->
+      <TextBlock x:Name="PlannedVault" Text="{Binding VaultToCreate}" FontFamily="{DynamicResource Kyf.Font.Code}"
+                 Style="{DynamicResource Kyf.Text.Caption}" Margin="0,16,0,0" TextAlignment="Center" TextWrapping="Wrap"
+                 Visibility="{Binding HasVaultToCreate, Converter={StaticResource Visible}}" />
+      <TextBlock x:Name="NewVaultHelp" Text="{x:Static p:ShellText.NewVaultHelp}" Style="{DynamicResource Kyf.Text.Caption}"
+                 Margin="0,16,0,0" TextAlignment="Center" TextWrapping="Wrap"
+                 Visibility="{Binding ExplainsNewVault, Converter={StaticResource Visible}}" />
+
+      <kyf:Notification x:Name="ErrorMessage" Severity="Critical" Message="{Binding Error}" IsOpen="{Binding HasError, Mode=OneWay}"
+                        IsClosable="False" Margin="0,16,0,0" />
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

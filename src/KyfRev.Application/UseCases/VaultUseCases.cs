@@ -6,9 +6,11 @@ namespace KyfRev.Application.UseCases;
 
 /// <summary>État de l'application vu par l'accueil.</summary>
 /// <param name="Version">Version de kyfRev.</param>
+/// <param name="Mode">Mode de l'application.</param>
 /// <param name="Vault">Dossier du coffre ouvert.</param>
+/// <param name="VaultToCreate">Coffre prévu (mode portable ou installé) mais pas encore créé, quand aucun n'est ouvert.</param>
 /// <param name="OpenError">Message si le coffre demandé n'a pas pu être ouvert.</param>
-public sealed record AppState(string Version, string? Vault, string? OpenError);
+public sealed record AppState(string Version, AppMode Mode, string? Vault, string? VaultToCreate, string? OpenError);
 
 /// <summary>
 /// Ouverture et création du coffre. À chaque ouverture : la journée est préparée (tirage des
@@ -20,14 +22,28 @@ public sealed partial class VaultUseCases(
     VaultHost host,
     IVaultStore store,
     IBackupFiles backups,
-    IRecentVaults recent,
+    IVaultLocations locations,
     TimeProvider time,
     ILogger<VaultUseCases> logger,
     string version)
 {
     /// <summary>Ce que montre l'accueil.</summary>
     [ZeroXCommand("etat_application")]
-    public AppState State() => new(version, host.Root, null);
+    public AppState State() => StateWith(null);
+
+    /// <summary>
+    /// Ouvre le coffre prévu au démarrage : celui du mode portable, le dernier ouvert, ou celui du
+    /// profil en mode installé. Un coffre prévu mais pas encore créé reste à l'accueil, qui
+    /// propose de le créer.
+    /// </summary>
+    public AppState OpenAtStartup()
+    {
+        if (locations.VaultToOpen() is not { } root || root == locations.VaultToCreate())
+        {
+            return State();
+        }
+        return Open(root);
+    }
 
     /// <summary>
     /// Ouvre un coffre ; il remplace celui qui était ouvert, fermé seulement une fois le nouveau
@@ -55,13 +71,16 @@ public sealed partial class VaultUseCases(
         }
         catch (OperationException exception)
         {
-            return new AppState(version, host.Root, exception.Message);
+            return StateWith(exception.Message);
         }
         try
         {
             PrepareDay(vault, present);
             BackupOfTheDay(vault, present);
-            recent.Remember(vault.Root);
+            if (!locations.Remember(vault.Root))
+            {
+                LogVaultNotRemembered(logger, vault.Root);
+            }
         }
         catch
         {
@@ -71,6 +90,12 @@ public sealed partial class VaultUseCases(
         }
         host.Replace(vault);
         return State();
+    }
+
+    private AppState StateWith(string? openError)
+    {
+        var open = host.Root;
+        return new AppState(version, locations.Mode, open, open is null ? locations.VaultToCreate() : null, openError);
     }
 
     private void PrepareDay(IVault vault, Present present)
@@ -131,6 +156,9 @@ public sealed partial class VaultUseCases(
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Journée du {Day:yyyy-MM-dd} préparée : {Reminders} rappel(s) tiré(s), déjà préparée : {Already}.")]
     private static partial void LogDayPrepared(ILogger logger, DateOnly day, int reminders, bool already);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Coffre {Root} ouvert mais pas retenu : il ne sera pas rouvert au prochain démarrage.")]
+    private static partial void LogVaultNotRemembered(ILogger logger, string root);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Préparation de la journée impossible : {Reason}")]
     private static partial void LogDayNotPrepared(ILogger logger, string reason);

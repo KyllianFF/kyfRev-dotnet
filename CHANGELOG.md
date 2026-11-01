@@ -9,6 +9,15 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- Ouverture du coffre au démarrage et accueil, comme dans la version 0.x : le coffre du mode
+  portable (`portable.json`), sinon le dernier ouvert, sinon celui que prévoit le mode installé
+  (`installation.json` : Documents ou données d'application). Sans coffre ouvert, l'accueil
+  propose de créer le coffre prévu (ou, en mode installé, d'en reprendre un existant), ou de
+  choisir un dossier pour créer ou ouvrir un coffre ; un coffre qui n'a pas pu être ouvert y est
+  signalé. Le menu et les vues n'apparaissent qu'avec un coffre ouvert.
+- Reprise de la version 0.x installée : son dernier coffre ouvert
+  (`%LOCALAPPDATA%\kyfRev\config-locale.json`) est rouvert au premier lancement, sans que ce
+  fichier soit jamais modifié ; kyfRev retient désormais le sien dans `%LOCALAPPDATA%\kyfRev\v1`.
 - Tableau de bord et archives, identiques à la version 0.x (treizième scénario comparé,
   50 opérations) : retards du plus ancien au plus récent, révisions du jour (fiches d'abord),
   rappels en attente, les sept jours à venir, charge des 30 jours (échéances connues et étapes

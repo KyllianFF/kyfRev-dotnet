@@ -18,6 +18,9 @@
     <DataTemplate DataType="{x:Type pages:GalleryPageViewModel}">
       <pages:GalleryPage />
     </DataTemplate>
+    <DataTemplate DataType="{x:Type pages:WelcomePageViewModel}">
+      <pages:WelcomePage />
+    </DataTemplate>
     <DataTemplate x:Key="NavigationItemTemplate">
       <StackPanel Orientation="Horizontal">
         <kyf:Icon Text="{Binding Glyph}" Margin="0,0,12,0" />
@@ -63,7 +66,7 @@
         <Border.Style>
           <Style TargetType="Border">
             <Style.Triggers>
-              <DataTrigger Binding="{Binding IsFocusMode}" Value="True">
+              <DataTrigger Binding="{Binding IsMenuVisible}" Value="False">
                 <Setter Property="Visibility" Value="Collapsed" />
               </DataTrigger>
             </Style.Triggers>

@@ -35,14 +35,14 @@ public sealed class ApplicationScenarioTests
             Assert.IsNull(state.OpenError);
             Assert.AreEqual(folder.Vault, state.Vault);
             Assert.AreEqual("1.0.0-essai", state.Version);
-            Assert.AreEqual(folder.Vault, first.Recent.Remembered.Single());
+            Assert.AreEqual(folder.Vault, first.Locations.Remembered.Single());
             Assert.AreEqual("coffre-2026-10-01T09-00-00.zip", BackupNames(folder).Single());
             Assert.IsTrue(first.Logs.Entries.Any(e => e.Message.StartsWith("Journée du 2026-10-01 préparée", StringComparison.Ordinal)));
 
             // Rouvrir le coffre ouvert ne fait rien : son verrou est le nôtre.
             first.Time.Advance(TimeSpan.FromHours(2));
             Assert.IsNull(first.App.Vaults.Open(folder.Vault).OpenError);
-            Assert.HasCount(1, first.Recent.Remembered);
+            Assert.HasCount(1, first.Locations.Remembered);
         }
 
         using (var sameDay = new TestApplication(FakeTime.AtLocal(2026, 10, 1, 18, 0)))
@@ -103,7 +103,71 @@ public sealed class ApplicationScenarioTests
         var again = test.App.Vaults.Open(folder.PathOf("Pas un coffre"));
         Assert.AreEqual(refused.OpenError, again.OpenError);
         Assert.AreEqual(folder.Vault, again.Vault);
-        Assert.AreEqual(new AppState("1.0.0-essai", folder.Vault, null), test.App.Vaults.State());
+        Assert.AreEqual(new AppState("1.0.0-essai", AppMode.Development, folder.Vault, null, null), test.App.Vaults.State());
+    }
+
+    [TestMethod]
+    public void A_vault_that_cannot_be_remembered_stays_open_and_is_logged()
+    {
+        using var folder = new TestFolder();
+        using var test = new TestApplication(FakeTime.AtLocal(2026, 10, 1, 9, 0));
+        test.Locations.Unwritable = true;
+
+        var state = test.App.Vaults.Create(folder.Vault);
+
+        Assert.AreEqual(folder.Vault, state.Vault);
+        Assert.IsTrue(test.Logs.Warnings.Any(message => message.Contains("pas retenu", StringComparison.Ordinal)));
+    }
+
+    [TestMethod]
+    public void At_startup_the_last_vault_is_reopened()
+    {
+        using var folder = new TestFolder();
+        using (var first = new TestApplication(FakeTime.AtLocal(2026, 10, 1, 9, 0)))
+        {
+            Assert.AreEqual(new AppState("1.0.0-essai", AppMode.Development, null, null, null), first.App.Vaults.OpenAtStartup());
+            first.App.Vaults.Create(folder.Vault);
+        }
+        using var test = new TestApplication(FakeTime.AtLocal(2026, 10, 2, 9, 0));
+        test.Locations.Remembered.Add(folder.Vault);
+
+        Assert.AreEqual(new AppState("1.0.0-essai", AppMode.Development, folder.Vault, null, null), test.App.Vaults.OpenAtStartup());
+    }
+
+    [TestMethod]
+    public void At_startup_a_planned_vault_still_to_create_is_left_to_the_welcome_page()
+    {
+        using var folder = new TestFolder();
+        using var test = new TestApplication(FakeTime.AtLocal(2026, 10, 1, 9, 0));
+        test.Locations.Mode = AppMode.Installed;
+        test.Locations.Planned = folder.Vault;
+
+        var state = test.App.Vaults.OpenAtStartup();
+
+        Assert.AreEqual(new AppState("1.0.0-essai", AppMode.Installed, null, folder.Vault, null), state);
+        Assert.IsFalse(Directory.Exists(folder.Vault), "rien n'est créé sans action de l'utilisateur");
+
+        var created = test.App.Vaults.Create(folder.Vault);
+        test.Locations.PlannedExists = true;
+        Assert.AreEqual(new AppState("1.0.0-essai", AppMode.Installed, folder.Vault, null, null), created);
+    }
+
+    [TestMethod]
+    public void At_startup_a_vault_that_cannot_be_opened_is_reported_to_the_welcome_page()
+    {
+        using var folder = new TestFolder();
+        using var test = new TestApplication(FakeTime.AtLocal(2026, 10, 1, 9, 0));
+        test.Locations.Mode = AppMode.Portable;
+        test.Locations.Planned = folder.Vault;
+        test.Locations.PlannedExists = true;
+        Directory.CreateDirectory(folder.Vault);
+
+        var state = test.App.Vaults.OpenAtStartup();
+
+        Assert.IsNull(state.Vault);
+        Assert.IsNull(state.VaultToCreate);
+        Assert.IsNotNull(state.OpenError);
+        Assert.AreEqual(AppMode.Portable, state.Mode);
     }
 
     [TestMethod]
@@ -125,7 +189,7 @@ public sealed class ApplicationScenarioTests
     {
         using var folder = new TestFolder();
         using var test = new TestApplication(FakeTime.AtLocal(2026, 10, 1, 9, 0));
-        test.Recent.Failure = new InvalidOperationException("mémoire indisponible");
+        test.Locations.Failure = new InvalidOperationException("mémoire indisponible");
 
         Assert.ThrowsExactly<InvalidOperationException>(() => test.App.Vaults.Create(folder.Vault));
 

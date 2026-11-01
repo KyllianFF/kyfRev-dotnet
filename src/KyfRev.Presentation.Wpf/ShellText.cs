@@ -14,8 +14,20 @@ public static class ShellText
     /// <summary>« Archives ».</summary>
     public static string Archives => Text(nameof(Archives));
 
+    /// <summary>« Choisissez un dossier vide pour le nouveau coffre ».</summary>
+    public static string ChooseEmptyFolder => Text(nameof(ChooseEmptyFolder));
+
+    /// <summary>« Choisissez le dossier du coffre ».</summary>
+    public static string ChooseVaultFolder => Text(nameof(ChooseVaultFolder));
+
     /// <summary>Explication des vues à venir.</summary>
     public static string ComingSoon => Text(nameof(ComingSoon));
+
+    /// <summary>« Créer un coffre ».</summary>
+    public static string CreateVault => Text(nameof(CreateVault));
+
+    /// <summary>« Créer le coffre ici ».</summary>
+    public static string CreateVaultHere => Text(nameof(CreateVaultHere));
 
     /// <summary>« Définitions ».</summary>
     public static string Definitions => Text(nameof(Definitions));
@@ -38,8 +50,14 @@ public static class ShellText
     /// <summary>« Navigation principale ».</summary>
     public static string MainNavigation => Text(nameof(MainNavigation));
 
+    /// <summary>« Un nouveau coffre se crée dans un dossier vide. »</summary>
+    public static string NewVaultHelp => Text(nameof(NewVaultHelp));
+
     /// <summary>« Aucune commande ne correspond. ».</summary>
     public static string NoCommand => Text(nameof(NoCommand));
+
+    /// <summary>« Ouvrir un coffre existant ».</summary>
+    public static string OpenExistingVault => Text(nameof(OpenExistingVault));
 
     /// <summary>« Rechercher ».</summary>
     public static string Search => Text(nameof(Search));
@@ -52,6 +70,9 @@ public static class ShellText
 
     /// <summary>« Paramètres ».</summary>
     public static string Settings => Text(nameof(Settings));
+
+    /// <summary>« Fiches ».</summary>
+    public static string Sheets => Text(nameof(Sheets));
 
     /// <summary>Raccourci du mode concentration.</summary>
     public static string ShortcutFocusMode => Text(nameof(ShortcutFocusMode));
@@ -74,9 +95,6 @@ public static class ShellText
     /// <summary>Raccourci de la taille normale.</summary>
     public static string ShortcutZoomReset => Text(nameof(ShortcutZoomReset));
 
-    /// <summary>« Fiches ».</summary>
-    public static string Sheets => Text(nameof(Sheets));
-
     /// <summary>« Statistiques ».</summary>
     public static string Statistics => Text(nameof(Statistics));
 
@@ -94,6 +112,15 @@ public static class ShellText
 
     /// <summary>« Aujourd'hui ».</summary>
     public static string Today => Text(nameof(Today));
+
+    /// <summary>« Le coffre n'a pas pu être ouvert. »</summary>
+    public static string VaultNotOpened => Text(nameof(VaultNotOpened));
+
+    /// <summary>« Bienvenue dans kyfRev ».</summary>
+    public static string Welcome => Text(nameof(Welcome));
+
+    /// <summary>Présentation du coffre, sur l'accueil.</summary>
+    public static string WelcomeIntro => Text(nameof(WelcomeIntro));
 
     /// <summary>« Aller à : … ».</summary>
     public static string GoTo(string view) => Format(nameof(GoTo), view);

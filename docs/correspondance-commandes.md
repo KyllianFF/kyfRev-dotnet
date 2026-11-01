@@ -9,7 +9,7 @@ un test (`CommandMapTests`) vérifie que ce tableau et le code restent d'accord.
 
 | Commande 0.x | Cas d'usage | Jalon | Remarque |
 |---|---|---|---|
-| `etat_application` | `VaultUseCases.State` | J4.1 | Le mode (portable ou installé) et le coffre prévu viennent avec l'installateur (J6). |
+| `etat_application` | `VaultUseCases.State` | J4.1 | Mode (portable, installé, développement) et coffre prévu lus par `IVaultLocations` (J6.2). Au démarrage, `VaultUseCases.OpenAtStartup` reprend `ouvrir_au_demarrage`. |
 | `ouvrir_coffre` | `VaultUseCases.Open` | J4.1 | Prépare la journée, fait la sauvegarde du jour et la rotation, retient le coffre. |
 | `creer_coffre` | `VaultUseCases.Create` | J4.1 | |
 | `definir_examen` | `ExamUseCases.Define` | J4.1 | |
