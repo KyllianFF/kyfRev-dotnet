@@ -16,7 +16,7 @@
 // accueil-sombre.png), le tableau de bord (aujourdhui-clair.png, aujourdhui-sombre.png,
 // aujourdhui-etroit-clair.png, aujourdhui-tablette-sombre.png, aujourdhui-ecran-clair.png), une fiche
 // et un passage en révision (fiche-clair.png, passage-sombre.png, sur un coffre d'essai jetable),
-// la séance d'étude et son bilan (seance-clair.png, bilan-sombre.png), et affiche le contraste de
+// la séance d'étude et son bilan (seance-clair.png, seance-etroite-sombre.png, bilan-sombre.png), et affiche le contraste de
 // chaque paire de rôles.
 using System.Collections.Immutable;
 using System.Globalization;
@@ -196,6 +196,17 @@ static void ReviewCaptures(string folder)
             shell.ToggleFocusMode();
             shell.Navigate(new NavigationItem("seance", "Séance", Icons.Calendar, int.MaxValue, running));
         });
+        Shell(
+            folder,
+            "seance-etroite-sombre.png",
+            ThemePreference.Dark,
+            shell =>
+            {
+                shell.ToggleFocusMode();
+                shell.Navigate(new NavigationItem("seance", "Séance", Icons.Calendar, int.MaxValue, running));
+            },
+            width: 390,
+            height: 844);
         var finished = new StudySessionViewModel(new StudySession(root, new DateOnly(2026, 10, 3), items, 11, 9, 2, 0, TimeSpan.FromSeconds(754), true), new NoSessions(), time, Item, () => { }, () => { });
         finished.EndCommand.Execute(null);
         Shell(folder, "bilan-sombre.png", ThemePreference.Dark, shell => shell.Navigate(new NavigationItem("seance", "Séance", Icons.Calendar, int.MaxValue, finished)));

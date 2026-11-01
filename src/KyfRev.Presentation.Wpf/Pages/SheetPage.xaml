@@ -12,51 +12,46 @@
   </UserControl.InputBindings>
 
   <Grid>
-    <Grid Margin="32,16,32,16">
+    <Grid>
       <Grid.RowDefinitions>
-        <RowDefinition Height="Auto" />
-        <RowDefinition Height="Auto" />
         <RowDefinition Height="*" />
         <RowDefinition Height="Auto" />
       </Grid.RowDefinitions>
 
-      <Button x:Name="BackButton" Command="{Binding BackCommand}" Style="{DynamicResource Kyf.Button.Subtle}" HorizontalAlignment="Left"
-              AutomationProperties.Name="{x:Static pages:ReviewText.Back}">
-        <StackPanel Orientation="Horizontal">
-          <kyf:Icon Text="{x:Static kyf:Icons.Back}" Margin="0,0,8,0" />
-          <TextBlock Text="{x:Static pages:ReviewText.Back}" VerticalAlignment="Center" />
+      <!-- La fiche, au centre et à largeur de lecture ; elle défile seule. -->
+      <ScrollViewer VerticalScrollBarVisibility="Auto" Focusable="False">
+        <StackPanel MaxWidth="720" Margin="16">
+          <Button x:Name="BackButton" Command="{Binding BackCommand}" Style="{DynamicResource Kyf.Button.Subtle}" HorizontalAlignment="Left" Margin="-16,0,0,0"
+                  AutomationProperties.Name="{x:Static pages:ReviewText.Back}">
+            <StackPanel Orientation="Horizontal">
+              <kyf:Icon Text="{x:Static kyf:Icons.Back}" Margin="0,0,8,0" />
+              <TextBlock Text="{x:Static pages:ReviewText.Back}" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+          <ItemsControl ItemsSource="{Binding Details}" Focusable="False" Margin="0,8,0,0">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <WrapPanel />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <TextBlock Text="{Binding}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,0,12,0" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <TextBlock x:Name="Heading" Text="{Binding Title}" Style="{DynamicResource Kyf.Text.Title}" TextWrapping="Wrap" Margin="0,4,0,0"
+                     AutomationProperties.HeadingLevel="Level1" />
+          <TextBlock x:Name="Loading" Text="{x:Static pages:ReviewText.OpeningSheet}" Style="{DynamicResource Kyf.Text.Secondary}"
+                     Visibility="{Binding IsLoading, Converter={StaticResource Visible}}" />
+          <kyf:Notification x:Name="ErrorMessage" Severity="Critical" Message="{Binding Error}" IsOpen="{Binding HasError, Mode=OneWay}"
+                            IsClosable="False" Margin="0,12,0,0" />
+          <TextBlock x:Name="Body" Text="{Binding Body}" Style="{DynamicResource Kyf.Text.BodyLarge}" TextWrapping="Wrap" Margin="0,16,0,0" />
         </StackPanel>
-      </Button>
-
-      <StackPanel Grid.Row="1" Margin="0,12,0,0">
-        <TextBlock x:Name="Heading" Text="{Binding Title}" Style="{DynamicResource Kyf.Text.Title}" TextWrapping="Wrap"
-                   AutomationProperties.HeadingLevel="Level1" />
-        <ItemsControl ItemsSource="{Binding Details}" Focusable="False" Margin="0,4,0,0">
-          <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate>
-              <WrapPanel />
-            </ItemsPanelTemplate>
-          </ItemsControl.ItemsPanel>
-          <ItemsControl.ItemTemplate>
-            <DataTemplate>
-              <TextBlock Text="{Binding}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,0,12,0" />
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
-        <TextBlock x:Name="Loading" Text="{x:Static pages:ReviewText.OpeningSheet}" Style="{DynamicResource Kyf.Text.Secondary}"
-                   Visibility="{Binding IsLoading, Converter={StaticResource Visible}}" />
-        <kyf:Notification x:Name="ErrorMessage" Severity="Critical" Message="{Binding Error}" IsOpen="{Binding HasError, Mode=OneWay}"
-                          IsClosable="False" Margin="0,12,0,0" />
-      </StackPanel>
-
-      <!-- Le texte de la fiche, à largeur de lecture. -->
-      <ScrollViewer Grid.Row="2" Margin="0,16,0,0" VerticalScrollBarVisibility="Auto" Focusable="False">
-        <TextBlock x:Name="Body" Text="{Binding Body}" Style="{DynamicResource Kyf.Text.BodyLarge}" TextWrapping="Wrap"
-                   MaxWidth="760" HorizontalAlignment="Left" Margin="0,0,16,16" />
       </ScrollViewer>
 
       <!-- Toujours visible, même la fiche défilée. -->
-      <ContentControl Grid.Row="3" Content="{Binding Review}" Focusable="False" IsTabStop="False" Margin="0,8,0,0" />
+      <ContentControl Grid.Row="1" Content="{Binding Review}" Focusable="False" IsTabStop="False" Margin="16,8,16,16" />
     </Grid>
 
     <kyf:Dialog x:Name="Confirmation" Title="{Binding Review.ConfirmTitle}" IsOpen="{Binding Review.IsConfirming, Mode=OneWay}"

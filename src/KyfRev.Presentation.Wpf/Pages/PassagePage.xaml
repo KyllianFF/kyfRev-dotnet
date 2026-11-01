@@ -23,9 +23,14 @@
   </UserControl.InputBindings>
 
   <Grid>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="*" />
+      <RowDefinition Height="Auto" />
+    </Grid.RowDefinitions>
+
     <ScrollViewer VerticalScrollBarVisibility="Auto" Focusable="False">
-      <StackPanel Margin="32,16,32,16" MaxWidth="760" HorizontalAlignment="Left">
-        <Button x:Name="BackButton" Command="{Binding BackCommand}" Style="{DynamicResource Kyf.Button.Subtle}" HorizontalAlignment="Left"
+      <StackPanel Margin="16" MaxWidth="720">
+        <Button x:Name="BackButton" Command="{Binding BackCommand}" Style="{DynamicResource Kyf.Button.Subtle}" HorizontalAlignment="Left" Margin="-16,0,0,0"
                 AutomationProperties.Name="{x:Static pages:ReviewText.Back}">
           <StackPanel Orientation="Horizontal">
             <kyf:Icon Text="{x:Static kyf:Icons.Back}" Margin="0,0,8,0" />
@@ -109,12 +114,13 @@
             </Button>
           </StackPanel>
         </kyf:Card>
-
-        <ContentControl Content="{Binding Review}" Focusable="False" IsTabStop="False" Margin="0,16,0,0" />
       </StackPanel>
     </ScrollViewer>
 
-    <kyf:Dialog x:Name="Confirmation" Title="{Binding Review.ConfirmTitle}" IsOpen="{Binding Review.IsConfirming, Mode=OneWay}"
+    <!-- Toujours visible, même la carte défilée. -->
+    <ContentControl Grid.Row="1" Content="{Binding Review}" Focusable="False" IsTabStop="False" Margin="16,8,16,16" />
+
+    <kyf:Dialog x:Name="Confirmation" Grid.RowSpan="2" Title="{Binding Review.ConfirmTitle}" IsOpen="{Binding Review.IsConfirming, Mode=OneWay}"
                 PrimaryButtonText="{Binding Review.ConfirmLabel}" Closed="OnConfirmationClosed">
       <TextBlock Text="{Binding Review.ConfirmMessage}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" />
     </kyf:Dialog>

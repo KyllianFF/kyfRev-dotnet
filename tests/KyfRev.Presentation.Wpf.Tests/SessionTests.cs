@@ -288,6 +288,13 @@ public sealed class SessionTests
             Assert.IsFalse(Named<Button>(window, "NextButton").IsVisible);
             Assert.AreEqual("Ctrl+→", AutomationProperties.GetAcceleratorKey(Named<Button>(window, "SkipButton")));
             Assert.AreEqual("Progression de la séance : élément 1 sur 1", AutomationProperties.GetName(Named<TextBlock>(window, "ProgressLabel").Parent));
+            // Les boutons passent sous la progression quand la place manque.
+            var actions = (WrapPanel)VisualTreeHelper.GetParent(Named<Button>(window, "EndButton"));
+            Assert.AreEqual(Dock.Right, DockPanel.GetDock(actions));
+            window.Width = 420;
+            window.UpdateLayout();
+            TestShell.Flush();
+            Assert.AreEqual(Dock.Bottom, DockPanel.GetDock(actions));
 
             session.NextCommand.Execute(null);
             TestShell.Flush();
