@@ -195,6 +195,12 @@
           "KyfRev.Domain": "[1.0.0-alpha.0, )"
         }
       },
+      "kyfrev.rendering": {
+        "type": "Project",
+        "dependencies": {
+          "KyfRev.Application": "[1.0.0-alpha.0, )"
+        }
+      },
       "Microsoft.Extensions.DependencyInjection": {
         "type": "CentralTransitive",
         "requested": "[10.0.13, )",

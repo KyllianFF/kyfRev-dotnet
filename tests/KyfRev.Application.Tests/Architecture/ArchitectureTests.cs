@@ -13,10 +13,12 @@ public sealed partial class ArchitectureTests
     private const string Domain = "KyfRev.Domain";
     private const string Application = "KyfRev.Application";
 
+    private const string Rendering = "KyfRev.Rendering";
+
     /// <summary>Morceaux de nom interdits pour une opération publique (français et anglais).</summary>
     private static readonly string[] DeletionWords = ["supprim", "effac", "detrui", "delete", "remove", "purge", "erase", "destroy"];
 
-    private static readonly string[] Layers = [Domain, Application, "KyfRev.Infrastructure.Online", "KyfRev.Infrastructure.Vault", "KyfRev.Modules.Citations", "kyfrev-coffre"];
+    private static readonly string[] Layers = [Domain, Application, "KyfRev.Infrastructure.Online", "KyfRev.Infrastructure.Vault", "KyfRev.Modules.Citations", Rendering, "kyfrev-coffre"];
 
     /// <summary>Paquets permis au domaine, aux cas d'usage et aux modules, en plus du framework.</summary>
     private static readonly string[] Abstractions = ["Microsoft.Extensions.DependencyInjection.Abstractions", "Microsoft.Extensions.Logging.Abstractions"];
@@ -46,11 +48,11 @@ public sealed partial class ArchitectureTests
     }
 
     [TestMethod]
-    public void The_domain_the_use_cases_and_the_modules_rely_only_on_the_framework()
+    public void The_domain_the_use_cases_the_rendering_and_the_modules_rely_only_on_the_framework()
     {
         var modules = Ours.Value.Select(a => a.GetName().Name!).Where(name => name.StartsWith("KyfRev.Modules.", StringComparison.Ordinal)).ToList();
         Assert.IsNotEmpty(modules);
-        foreach (var (assembly, packages) in new[] { (Domain, Array.Empty<string>()), (Application, Abstractions) }.Concat(modules.Select(module => (module, Abstractions))))
+        foreach (var (assembly, packages) in new[] { (Domain, Array.Empty<string>()), (Application, Abstractions), (Rendering, Array.Empty<string>()) }.Concat(modules.Select(module => (module, Abstractions))))
         {
             var outside = Assembly.Load(assembly).GetReferencedAssemblies()
                 .Select(reference => reference.Name!)
@@ -167,6 +169,8 @@ public sealed partial class ArchitectureTests
     {
         Domain => false,
         Application => reference == Domain,
+        // Le moteur de rendu lit le modèle de l'application, et rien d'autre.
+        Rendering => reference is Domain or Application,
         _ when assembly.StartsWith("KyfRev.Infrastructure.", StringComparison.Ordinal) => reference is Domain or Application,
         // Aucun module ne référence un autre module, ni l'infrastructure.
         _ when assembly.StartsWith("KyfRev.Modules.", StringComparison.Ordinal) => reference is Domain or Application,

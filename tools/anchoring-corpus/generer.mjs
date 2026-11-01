@@ -7,6 +7,7 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { analyse } from "./analyse.mjs";
 import { documents, documentsAuHasard, modifications, modificationsAuHasard } from "./cas.mjs";
 
 const ici = path.dirname(fileURLToPath(import.meta.url));
@@ -55,6 +56,12 @@ const reancrages = [];
 for (const modification of [...modifications, ...modificationsAuHasard(tires.slice(0, 100), 1789)]) {
   reancrages.push({ nom: modification.nom, titre: modification.titre, avant: modification.avant, apres: modification.apres, ...(await reancrer(modification)) });
 }
+const analyses = [];
+for (const document of analyse) {
+  // Le HTML n'apprend rien ici, et prendrait la moitié du fichier.
+  const { html, ...projection } = await projeter(document);
+  analyses.push({ nom: document.nom, titre: document.titre, premiereLigneCorps: document.premiereLigneCorps, corps: document.corps, ...projection });
+}
 const moteur = `Microsoft Edge ${navigateur.version()}`;
 await navigateur.close();
 
@@ -81,6 +88,11 @@ ecrire("reancrage.json", {
   source,
   cas: reancrages,
 });
+ecrire("analyse.json", {
+  description: "Cas limites de l'analyse Markdown → texte affiché → passages, calculés par kyfRev 0.x (branche par branche du moteur natif).",
+  source,
+  cas: analyses,
+});
 const passages = cas.reduce((n, c) => n + c.passages.length, 0);
 const retrouves = reancrages.reduce((n, c) => n + c.passages.length, 0);
-console.log(`${cas.length} documents, ${passages} passages ; ${reancrages.length} modifications, ${retrouves} ré-ancrages (${moteur}).`);
+console.log(`${cas.length} documents, ${passages} passages ; ${reancrages.length} modifications, ${retrouves} ré-ancrages ; ${analyses.length} cas limites (${moteur}).`);

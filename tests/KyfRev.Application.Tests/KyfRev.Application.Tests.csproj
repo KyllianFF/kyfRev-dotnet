@@ -12,6 +12,7 @@
     <ProjectReference Include="..\..\src\KyfRev.Infrastructure.Online\KyfRev.Infrastructure.Online.csproj" />
     <ProjectReference Include="..\..\src\KyfRev.Infrastructure.Vault\KyfRev.Infrastructure.Vault.csproj" />
     <ProjectReference Include="..\..\src\KyfRev.Modules.Citations\KyfRev.Modules.Citations.csproj" />
+    <ProjectReference Include="..\..\src\KyfRev.Rendering\KyfRev.Rendering.csproj" />
   </ItemGroup>
 
 </Project>

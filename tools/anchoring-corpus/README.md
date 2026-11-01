@@ -20,6 +20,10 @@ celui de la 0.x.
 - `tests/fixtures/ancrage/reancrage.json` : des passages ancrés dans un document, puis retrouvés
   après sa modification, depuis l'état « ancrée » et depuis l'état « introuvable ».
 
+- `tests/fixtures/ancrage/analyse.json` : les mêmes projections, sans le HTML, pour plus de mille cas
+  limites de l'analyse Markdown (`analyse.mjs`, un groupe par construction). Le critère T12 reste le
+  corpus d'origine ; ces cas confrontent chaque branche de `KyfRev.Rendering` à la 0.x.
+
 Les documents (`cas.mjs`) : les quatre fiches de démonstration de la 0.x, une trentaine de cas
 ciblés (chaque construction Markdown reconnue, Unicode, CRLF, caractères nuls…) et 200 documents
 tirés au hasard ; les modifications : seize cas ciblés (déplacement, doublon, faute corrigée, mots
@@ -46,6 +50,7 @@ Prérequis : le dépôt kyfRev 0.x cloné à côté de ce dépôt (ou désigné 
 node tools/anchoring-corpus/generer.mjs
 ```
 
-Le commit de la 0.x, la version d'Edge et celles des bibliothèques de rendu sont inscrits dans
+Seul le champ `source` change quand la 0.x avance : le corpus d'origine n'a pas à être réécrit pour
+autant. Le commit de la 0.x, la version d'Edge et celles des bibliothèques de rendu sont inscrits dans
 chaque fichier (`source`). Les tests `AnchoringCorpusTests` vérifient que le corpus reste cohérent
 (morceaux, contexte, sélections rognées, ré-ancrages qui ne rattachent jamais un autre texte).

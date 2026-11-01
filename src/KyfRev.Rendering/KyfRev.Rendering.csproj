@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Description>Rendu des fiches : Markdown vers un arbre de contenu, texte affiché, positions et ancrage des passages, à l'identique de kyfRev 0.x.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\KyfRev.Application\KyfRev.Application.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="Markdown\html5-entities.txt" LogicalName="KyfRev.Rendering.Markdown.html5-entities.txt" />
+  </ItemGroup>
+
+</Project>
