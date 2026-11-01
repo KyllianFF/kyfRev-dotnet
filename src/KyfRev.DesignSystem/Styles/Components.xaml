@@ -187,22 +187,25 @@
         <ControlTemplate TargetType="kyf:Dialog">
           <Grid>
             <Rectangle Fill="{DynamicResource Kyf.Brush.Scrim}" />
-            <Grid HorizontalAlignment="Center" VerticalAlignment="Center" MinWidth="320" MaxWidth="560" Margin="24">
+            <Grid HorizontalAlignment="Center" VerticalAlignment="Center" MinWidth="280" MaxWidth="560" Margin="16">
               <Border Background="{TemplateBinding Background}" CornerRadius="{DynamicResource Kyf.Radius.Dialog}"
                       Effect="{DynamicResource Kyf.Elevation.Dialog}" />
               <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
                       BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{DynamicResource Kyf.Radius.Dialog}"
                       Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
-                <StackPanel>
-                  <TextBlock Text="{TemplateBinding Title}" Style="{DynamicResource Kyf.Text.Subtitle}" Margin="0,0,0,12" />
-                  <ContentPresenter />
-                  <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,24,0,0">
+                <DockPanel>
+                  <TextBlock DockPanel.Dock="Top" Text="{TemplateBinding Title}" Style="{DynamicResource Kyf.Text.Subtitle}" Margin="0,0,0,12" />
+                  <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,24,0,0">
                     <Button x:Name="PART_SecondaryButton" Content="{TemplateBinding SecondaryButtonText}" MinWidth="96"
                             Margin="0,0,8,0" IsCancel="True" />
                     <Button x:Name="PART_PrimaryButton" Content="{TemplateBinding PrimaryButtonText}" MinWidth="96"
                             Style="{DynamicResource Kyf.Button.Primary}" IsDefault="True" />
                   </StackPanel>
-                </StackPanel>
+                  <!-- Trop haut pour la fenêtre : le contenu défile, le titre et les boutons restent. -->
+                  <ScrollViewer x:Name="PART_Content" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
+                    <ContentPresenter />
+                  </ScrollViewer>
+                </DockPanel>
               </Border>
             </Grid>
           </Grid>

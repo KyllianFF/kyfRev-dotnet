@@ -50,6 +50,12 @@ public static class ShellText
     /// <summary>« Navigation principale ».</summary>
     public static string MainNavigation => Text(nameof(MainNavigation));
 
+    /// <summary>« Plus » : l'onglet des autres vues.</summary>
+    public static string More => Text(nameof(More));
+
+    /// <summary>« Autres vues » : le menu de l'onglet « Plus ».</summary>
+    public static string MoreViews => Text(nameof(MoreViews));
+
     /// <summary>« Un nouveau coffre se crée dans un dossier vide. »</summary>
     public static string NewVaultHelp => Text(nameof(NewVaultHelp));
 

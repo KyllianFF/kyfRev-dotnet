@@ -93,6 +93,9 @@ public static class Icons
     /// <summary>Soleil : le thème.</summary>
     public static string Theme { get; } = Glyph(0xE706);
 
+    /// <summary>Trois points : les autres vues, les autres actions.</summary>
+    public static string More { get; } = Glyph(0xE712);
+
     /// <summary>Icône d'une sorte de pastille.</summary>
     public static string Of(PillKind kind) => kind switch
     {

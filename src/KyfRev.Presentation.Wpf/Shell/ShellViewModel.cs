@@ -7,9 +7,11 @@ using KyfRev.DesignSystem.Controls;
 namespace KyfRev.Presentation.Wpf.Shell;
 
 /// <summary>
-/// La coquille : menu latéral, recherche de commandes (Ctrl+K), aide des raccourcis (F1), mode
-/// concentration (Ctrl+Maj+F) et zoom de l'interface (Ctrl+plus, Ctrl+moins, Ctrl+0). Sans coffre
-/// ouvert, elle montre l'accueil : le menu est masqué et les vues ne s'ouvrent pas.
+/// La coquille : menu, recherche de commandes (Ctrl+K), aide des raccourcis (F1), mode
+/// concentration (Ctrl+Maj+F) et zoom de l'interface (Ctrl+plus, Ctrl+moins, Ctrl+0). Le menu
+/// s'adapte à la largeur de la fenêtre (<see cref="ShellLayout"/>) : barre latérale, colonne
+/// d'icônes, ou onglets en bas avec « Plus » pour les autres vues. Sans coffre ouvert, elle montre
+/// l'accueil : le menu est masqué et les vues ne s'ouvrent pas.
 /// </summary>
 public sealed partial class ShellViewModel : ObservableObject
 {
@@ -51,7 +53,10 @@ public sealed partial class ShellViewModel : ObservableObject
             new("Ctrl+moins", ShellText.ShortcutZoomOut),
             new("Ctrl+0", ShellText.ShortcutZoomReset),
         ];
+        TabNavigation = [.. MainNavigation.Take(ShellLayout.TabCount)];
+        OverflowNavigation = [.. MainNavigation.Skip(ShellLayout.TabCount), .. SecondaryNavigation];
         Zoom = 1.0;
+        WindowWidth = ShellLayout.SidebarMinimum;
         var navigationCommands = NavigationCommands();
         _commandsWithoutVault = OtherCommands();
         _commands = [.. navigationCommands, .. _commandsWithoutVault];
@@ -67,6 +72,27 @@ public sealed partial class ShellViewModel : ObservableObject
 
     /// <summary>Entrées du bas du menu.</summary>
     public IReadOnlyList<NavigationItem> SecondaryNavigation { get; }
+
+    /// <summary>Les premières vues, en onglets quand la fenêtre est étroite.</summary>
+    public IReadOnlyList<NavigationItem> TabNavigation { get; }
+
+    /// <summary>Les autres vues, sous « Plus » quand la fenêtre est étroite.</summary>
+    public IReadOnlyList<NavigationItem> OverflowNavigation { get; }
+
+    /// <summary>Largeur de la fenêtre, en pixels indépendants, avant zoom.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Layout))]
+    public partial double WindowWidth { get; set; }
+
+    /// <summary>Disposition de la navigation : onglets, colonne d'icônes ou barre latérale.</summary>
+    public NavigationLayout Layout => ShellLayout.For(WindowWidth, Zoom);
+
+    /// <summary>Onglet choisi ; rien quand la vue ouverte est rangée sous « Plus ».</summary>
+    [ObservableProperty]
+    public partial NavigationItem? SelectedTab { get; set; }
+
+    /// <summary>La vue ouverte est rangée sous « Plus ».</summary>
+    public bool IsOverflowActive => OverflowNavigation.Contains(Current);
 
     /// <summary>La galerie des composants, ouverte depuis la recherche.</summary>
     public NavigationItem Gallery { get; }
@@ -113,6 +139,7 @@ public sealed partial class ShellViewModel : ObservableObject
     /// <summary>Zoom de l'interface (1 : taille normale).</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ZoomLabel))]
+    [NotifyPropertyChangedFor(nameof(Layout))]
     public partial double Zoom { get; private set; }
 
     /// <summary>« Zoom : 120 % ».</summary>
@@ -287,9 +314,19 @@ public sealed partial class ShellViewModel : ObservableObject
 
     partial void OnCurrentChanged(NavigationItem value)
     {
+        SelectedTab = TabNavigation.Contains(value) ? value : null;
+        OnPropertyChanged(nameof(IsOverflowActive));
         if (_workspace)
         {
             Activate(value);
+        }
+    }
+
+    partial void OnSelectedTabChanged(NavigationItem? value)
+    {
+        if (value is not null)
+        {
+            Navigate(value);
         }
     }
 

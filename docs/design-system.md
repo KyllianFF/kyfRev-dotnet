@@ -16,7 +16,12 @@ Les captures sont dans [`captures/j5`](captures/j5) : la galerie des composants 
 [contraste élevé](captures/j5/galerie-contraste-eleve.png) (avec les couleurs système du poste
 qui les a produites), et la coquille ([claire](captures/j5/coquille-clair.png),
 [sombre](captures/j5/coquille-sombre.png), [recherche](captures/j5/recherche-sombre.png),
-[aide](captures/j5/aide-clair.png)). `tools/design-captures` les régénère ; la galerie
+[aide](captures/j5/aide-clair.png)) à chaque largeur de fenêtre
+([étroite](captures/j5/coquille-etroite-clair.png),
+[étroite avec « Plus »](captures/j5/coquille-etroite-plus-sombre.png),
+[aide étroite](captures/j5/aide-etroite-sombre.png),
+[moyenne](captures/j5/coquille-moyenne-sombre.png), [large](captures/j5/coquille-large-clair.png)).
+`tools/design-captures` les régénère ; la galerie
 s'ouvre aussi dans l'application (`kyfRev --galerie`).
 
 ## Jetons
@@ -112,7 +117,7 @@ commit figé :
 | Menu | styles de `ContextMenu`, `Menu`, `MenuItem` | coche, raccourci, sous-menus |
 | Listes | styles de `ListBox`, `ListBoxItem` | survol, élément choisi : fond vert pâle et texte en gras (menu de la coquille) |
 | Icône | `Icon` | décorative : police d'icônes de Windows, ignorée par le lecteur d'écran |
-| Dialogue | `Dialog` | voile, focus tenu à l'intérieur, Échap ferme, Entrée valide |
+| Dialogue | `Dialog` | voile, focus tenu à l'intérieur, Échap ferme, Entrée valide ; trop haut pour la fenêtre, son contenu défile entre le titre et les boutons |
 | Notification | `Notification`, gravité `Severity` | annoncée par le lecteur d'écran (tout de suite pour une erreur) |
 | État vide | `EmptyState` | icône, titre, explication, action |
 | Squelette | `Skeleton` | chargement, immobile si les animations sont réduites |
@@ -134,12 +139,22 @@ ne prennent pas le focus.
 
 | Élément | Clavier | Rôle |
 |---|---|---|
-| Menu latéral | flèches, Tab | les vues de la 0.x dans le même ordre, celles des modules actifs à leur rang, Santé du coffre et Paramètres en bas |
+| Menu | flèches, Tab | les vues de la 0.x dans le même ordre, celles des modules actifs à leur rang, Santé du coffre et Paramètres en bas |
 | Recherche de commandes | Ctrl+K | aller à une vue, changer de thème, de zoom ou de mode ; sans tenir compte des accents ni de la casse |
 | Aide | F1 | les raccourcis clavier |
 | Mode concentration | Ctrl+Maj+F | masque le menu |
 | Zoom | Ctrl+plus, Ctrl+moins, Ctrl+0 | de 80 à 200 %, par pas de 10 % |
 | Vues du menu | Ctrl+1 à Ctrl+9 | les neuf premières vues |
+
+Le menu suit la largeur de la fenêtre, divisée par le zoom (`ShellLayout`) : agrandir
+l'interface revient à rétrécir la fenêtre. Le contenu ne défile jamais horizontalement, seulement
+verticalement.
+
+| Largeur | Menu |
+|---|---|
+| moins de 600 px (téléphone, fenêtre ancrée sur un tiers d'écran) | le nom, la recherche et l'aide en haut ; les trois premières vues en onglets en bas, les autres (et Santé du coffre, Paramètres) sous « Plus » |
+| de 600 à 1 399 px (tablette, portable, demi-écran) | une colonne d'icônes de 112 px, chaque libellé sous son icône |
+| 1 400 px et plus (écran, écran large) | la barre latérale de 248 px : nom, recherche avec Ctrl+K, libellés à côté des icônes |
 
 Le thème suit Windows (clair ou sombre, barre de titre comprise) ou le choix fait dans la
 recherche ou dans la galerie ; le contraste élevé de Windows passe avant tout choix, et un

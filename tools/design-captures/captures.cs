@@ -10,7 +10,9 @@
 // Usage : dotnet run tools/design-captures/captures.cs -- <dossier>
 // Écrit galerie-clair.png, galerie-sombre.png et galerie-contraste-eleve.png (couleurs système
 // actuelles du poste), les vues de la coquille (coquille-clair.png, coquille-sombre.png,
-// recherche-sombre.png, aide-clair.png), l'accueil sans coffre (accueil-clair.png,
+// recherche-sombre.png, aide-clair.png), le menu selon la largeur de la fenêtre
+// (coquille-etroite-clair.png, coquille-etroite-plus-sombre.png, coquille-moyenne-sombre.png,
+// coquille-large-clair.png, aide-etroite-sombre.png), l'accueil sans coffre (accueil-clair.png,
 // accueil-sombre.png), le tableau de bord (aujourdhui-clair.png, aujourdhui-sombre.png), une fiche
 // et un passage en révision (fiche-clair.png, passage-sombre.png, sur un coffre d'essai jetable),
 // la séance d'étude et son bilan (seance-clair.png, bilan-sombre.png), et affiche le contraste de
@@ -52,6 +54,12 @@ var thread = new Thread(() =>
         shell.PaletteQuery = "aller";
     });
     Shell(folder, "aide-clair.png", ThemePreference.Light, shell => shell.ShowHelp());
+    // Le menu selon la largeur : onglets (fenêtre étroite), colonne d'icônes, barre latérale.
+    Shell(folder, "coquille-etroite-clair.png", ThemePreference.Light, _ => { }, width: 390, height: 760);
+    Shell(folder, "coquille-etroite-plus-sombre.png", ThemePreference.Dark, shell => shell.Navigate(shell.SecondaryNavigation[1]), width: 390, height: 760);
+    Shell(folder, "coquille-moyenne-sombre.png", ThemePreference.Dark, _ => { }, width: 1024, height: 700);
+    Shell(folder, "coquille-large-clair.png", ThemePreference.Light, _ => { }, width: 1460, height: 860);
+    Shell(folder, "aide-etroite-sombre.png", ThemePreference.Dark, shell => shell.ShowHelp(), width: 390, height: 760);
     // L'accueil d'une installation dont le coffre prévu reste à créer, avec un refus affiché.
     using var app = new KyfRevApplication(new VaultStore(), new BackupFiles(), new PlannedVault(), TimeProvider.System, Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, "1.0.0");
     foreach (var (theme, name) in new[] { (ThemePreference.Light, "clair"), (ThemePreference.Dark, "sombre") })
@@ -88,12 +96,12 @@ foreach (var theme in new[] { ThemeKind.Light, ThemeKind.Dark })
 }
 
 // La fenêtre de la coquille, hors de l'écran, dans un état donné ; seul son contenu est rendu.
-static void Shell(string folder, string file, ThemePreference theme, Action<ShellViewModel> prepare, IReadOnlyDictionary<string, object>? pages = null)
+static void Shell(string folder, string file, ThemePreference theme, Action<ShellViewModel> prepare, IReadOnlyDictionary<string, object>? pages = null, double width = 1280, double height = 800)
 {
     var design = new DesignResources(ThemeKind.Light, reducedMotion: true);
     var appearance = new AppearanceController(design, new StillAppearance(), new NoChrome()) { Preference = theme };
     var shell = new ShellViewModel(CorePages.All(pages ?? new Dictionary<string, object>()).Append(CorePages.FromModule(new NavigationEntry("citations", "Citations", 60))), appearance, new GalleryPageViewModel(appearance));
-    var window = new ShellWindow(shell) { Width = 1280, Height = 800, Left = -20000, Top = -20000, WindowStartupLocation = WindowStartupLocation.Manual, ShowActivated = false, ShowInTaskbar = false };
+    var window = new ShellWindow(shell) { Width = width, Height = height, Left = -20000, Top = -20000, WindowStartupLocation = WindowStartupLocation.Manual, ShowActivated = false, ShowInTaskbar = false };
     window.Resources.MergedDictionaries.Add(design.Dictionary);
     window.Show();
     prepare(shell);

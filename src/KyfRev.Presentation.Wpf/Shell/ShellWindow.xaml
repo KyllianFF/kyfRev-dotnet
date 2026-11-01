@@ -5,7 +5,8 @@
         xmlns:ds="clr-namespace:KyfRev.DesignSystem;assembly=KyfRev.DesignSystem"
         xmlns:p="clr-namespace:KyfRev.Presentation.Wpf"
         xmlns:pages="clr-namespace:KyfRev.Presentation.Wpf.Pages"
-        Title="{x:Static p:ShellText.AppName}" Width="1200" Height="780" MinWidth="720" MinHeight="480"
+        xmlns:shell="clr-namespace:KyfRev.Presentation.Wpf.Shell"
+        Title="{x:Static p:ShellText.AppName}" Width="1200" Height="780" MinWidth="360" MinHeight="400"
         WindowStartupLocation="CenterScreen" UseLayoutRounding="True"
         Background="{DynamicResource Kyf.Brush.Background}" Foreground="{DynamicResource Kyf.Brush.Text}"
         FontFamily="{DynamicResource Kyf.Font.Ui}" FontSize="{DynamicResource Kyf.FontSize.Body}">
@@ -36,12 +37,48 @@
     <DataTemplate DataType="{x:Type pages:StudySessionViewModel}">
       <pages:StudySessionPage />
     </DataTemplate>
+    <shell:LayoutVisibilityConverter x:Key="ShownIn" />
+    <shell:LayoutAlignmentConverter x:Key="AlignedIn" />
+    <!-- Entrée du menu : icône et libellé côte à côte dans la barre latérale, l'un sous l'autre
+         dans la colonne d'icônes. -->
     <DataTemplate x:Key="NavigationItemTemplate">
-      <StackPanel Orientation="Horizontal">
-        <kyf:Icon Text="{Binding Glyph}" Margin="0,0,12,0" />
-        <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
+      <Grid>
+        <StackPanel x:Name="Row" Orientation="Horizontal">
+          <kyf:Icon Text="{Binding Glyph}" Margin="0,0,12,0" />
+          <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
+        </StackPanel>
+        <StackPanel x:Name="Stacked" Margin="-8,6" Visibility="Collapsed">
+          <kyf:Icon Text="{Binding Glyph}" HorizontalAlignment="Center" />
+          <TextBlock Text="{Binding Label}" FontSize="12" TextAlignment="Center" TextWrapping="Wrap" Margin="0,2,0,0" />
+        </StackPanel>
+      </Grid>
+      <DataTemplate.Triggers>
+        <DataTrigger Binding="{Binding DataContext.Layout, RelativeSource={RelativeSource AncestorType=ListBox}}" Value="Rail">
+          <Setter TargetName="Row" Property="Visibility" Value="Collapsed" />
+          <Setter TargetName="Stacked" Property="Visibility" Value="Visible" />
+        </DataTrigger>
+      </DataTemplate.Triggers>
+    </DataTemplate>
+    <!-- Onglet : l'icône, le libellé dessous. -->
+    <DataTemplate x:Key="TabItemTemplate">
+      <StackPanel Margin="-8,6">
+        <kyf:Icon Text="{Binding Glyph}" HorizontalAlignment="Center" />
+        <TextBlock Text="{Binding Label}" FontSize="12" TextAlignment="Center" TextWrapping="Wrap" Margin="0,2,0,0" />
       </StackPanel>
     </DataTemplate>
+    <!-- Barre du haut et onglets : seulement en fenêtre étroite, menu affiché. -->
+    <Style x:Key="TabsOnly" TargetType="Border">
+      <Setter Property="Visibility" Value="Collapsed" />
+      <Style.Triggers>
+        <MultiDataTrigger>
+          <MultiDataTrigger.Conditions>
+            <Condition Binding="{Binding IsMenuVisible}" Value="True" />
+            <Condition Binding="{Binding Layout}" Value="Tabs" />
+          </MultiDataTrigger.Conditions>
+          <Setter Property="Visibility" Value="Visible" />
+        </MultiDataTrigger>
+      </Style.Triggers>
+    </Style>
   </Window.Resources>
 
   <Window.InputBindings>
@@ -67,22 +104,50 @@
     <KeyBinding Key="D9" Modifiers="Control" Command="{Binding NavigateToPositionCommand}" CommandParameter="9" />
   </Window.InputBindings>
 
-  <Grid>
-    <!-- Espace de travail, agrandi ou réduit par le zoom. -->
+  <Grid x:Name="Root">
+    <!-- Espace de travail, agrandi ou réduit par le zoom. Le menu suit la largeur de la fenêtre
+         (ShellLayout) : barre latérale, colonne d'icônes, ou onglets en bas ; le contenu ne défile
+         jamais horizontalement. -->
     <Grid x:Name="Workspace">
       <Grid.LayoutTransform>
         <ScaleTransform ScaleX="{Binding Zoom}" ScaleY="{Binding Zoom}" />
       </Grid.LayoutTransform>
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="*" />
+        <RowDefinition Height="Auto" />
+      </Grid.RowDefinitions>
       <Grid.ColumnDefinitions>
         <ColumnDefinition Width="Auto" />
         <ColumnDefinition Width="*" />
       </Grid.ColumnDefinitions>
 
-      <Border x:Name="Sidebar" Width="248" Background="{DynamicResource Kyf.Brush.Surface}"
+      <!-- Fenêtre étroite : le nom, la recherche et l'aide en haut. -->
+      <Border x:Name="TopBar" Grid.ColumnSpan="2" Padding="20,8,8,0" Style="{StaticResource TabsOnly}">
+        <DockPanel>
+          <Button x:Name="CompactHelpButton" DockPanel.Dock="Right" Command="{Binding ShowHelpCommand}" Style="{DynamicResource Kyf.Button.Icon}"
+                  Content="&#xE897;" ToolTip="{x:Static p:ShellText.Help}" AutomationProperties.Name="{x:Static p:ShellText.Help}"
+                  AutomationProperties.AcceleratorKey="F1" />
+          <Button x:Name="CompactSearchButton" DockPanel.Dock="Right" Command="{Binding OpenPaletteCommand}" Style="{DynamicResource Kyf.Button.Icon}"
+                  Content="&#xE721;" ToolTip="{x:Static p:ShellText.SearchPlaceholder}" AutomationProperties.Name="{x:Static p:ShellText.SearchPlaceholder}"
+                  AutomationProperties.AcceleratorKey="Ctrl+K" />
+          <TextBlock Text="{x:Static p:ShellText.AppName}" Style="{DynamicResource Kyf.Text.Subtitle}" VerticalAlignment="Center" />
+        </DockPanel>
+      </Border>
+
+      <!-- Barre latérale (fenêtre large) ou colonne d'icônes (fenêtre moyenne). -->
+      <Border x:Name="Sidebar" Grid.Row="1" Background="{DynamicResource Kyf.Brush.Surface}"
               BorderBrush="{DynamicResource Kyf.Brush.Divider}" BorderThickness="0,0,1,0">
         <Border.Style>
           <Style TargetType="Border">
+            <Setter Property="Width" Value="248" />
             <Style.Triggers>
+              <DataTrigger Binding="{Binding Layout}" Value="Rail">
+                <Setter Property="Width" Value="112" />
+              </DataTrigger>
+              <DataTrigger Binding="{Binding Layout}" Value="Tabs">
+                <Setter Property="Visibility" Value="Collapsed" />
+              </DataTrigger>
               <DataTrigger Binding="{Binding IsMenuVisible}" Value="False">
                 <Setter Property="Visibility" Value="Collapsed" />
               </DataTrigger>
@@ -91,14 +156,17 @@
         </Border.Style>
         <DockPanel Margin="12,16,12,12">
           <TextBlock DockPanel.Dock="Top" Text="{x:Static p:ShellText.AppName}" Style="{DynamicResource Kyf.Text.Subtitle}"
-                     Margin="12,0,0,16" />
+                     Margin="12,0,0,16" Visibility="{Binding Layout, Converter={StaticResource ShownIn}, ConverterParameter=Sidebar}" />
           <Button x:Name="SearchButton" DockPanel.Dock="Top" Command="{Binding OpenPaletteCommand}" Margin="0,0,0,12"
-                  HorizontalContentAlignment="Stretch" AutomationProperties.Name="{x:Static p:ShellText.SearchPlaceholder}"
-                  AutomationProperties.AcceleratorKey="Ctrl+K">
+                  HorizontalContentAlignment="{Binding Layout, Converter={StaticResource AlignedIn}, ConverterParameter=Stretch}"
+                  AutomationProperties.Name="{x:Static p:ShellText.SearchPlaceholder}"
+                  AutomationProperties.AcceleratorKey="Ctrl+K" ToolTip="{x:Static p:ShellText.SearchPlaceholder}">
             <DockPanel>
-              <TextBlock DockPanel.Dock="Right" Text="Ctrl+K" Style="{DynamicResource Kyf.Text.Caption}" VerticalAlignment="Center" />
+              <TextBlock DockPanel.Dock="Right" Text="Ctrl+K" Style="{DynamicResource Kyf.Text.Caption}" VerticalAlignment="Center"
+                         Visibility="{Binding Layout, Converter={StaticResource ShownIn}, ConverterParameter=Sidebar}" />
               <kyf:Icon Text="&#xE721;" Margin="0,0,8,0" />
-              <TextBlock Text="{x:Static p:ShellText.Search}" VerticalAlignment="Center" />
+              <TextBlock Text="{x:Static p:ShellText.Search}" VerticalAlignment="Center"
+                         Visibility="{Binding Layout, Converter={StaticResource ShownIn}, ConverterParameter=Sidebar}" />
             </DockPanel>
           </Button>
           <StackPanel DockPanel.Dock="Bottom">
@@ -106,11 +174,13 @@
             <ListBox x:Name="SecondaryNavigation" ItemsSource="{Binding SecondaryNavigation}" SelectedItem="{Binding SelectedSecondary}"
                      ItemTemplate="{StaticResource NavigationItemTemplate}" AutomationProperties.Name="{x:Static p:ShellText.SecondaryNavigation}" />
             <Button x:Name="HelpButton" Command="{Binding ShowHelpCommand}" Style="{DynamicResource Kyf.Button.Subtle}"
-                    HorizontalContentAlignment="Left" Padding="12,0" AutomationProperties.Name="{x:Static p:ShellText.Help}"
-                    AutomationProperties.AcceleratorKey="F1">
+                    HorizontalContentAlignment="{Binding Layout, Converter={StaticResource AlignedIn}, ConverterParameter=Left}"
+                    Padding="12,0" AutomationProperties.Name="{x:Static p:ShellText.Help}"
+                    AutomationProperties.AcceleratorKey="F1" ToolTip="{x:Static p:ShellText.Help}">
               <StackPanel Orientation="Horizontal">
                 <kyf:Icon Text="&#xE897;" Margin="0,0,12,0" />
-                <TextBlock Text="{x:Static p:ShellText.Help}" VerticalAlignment="Center" />
+                <TextBlock Text="{x:Static p:ShellText.Help}" VerticalAlignment="Center"
+                           Visibility="{Binding Layout, Converter={StaticResource ShownIn}, ConverterParameter=Sidebar}" />
               </StackPanel>
             </Button>
           </StackPanel>
@@ -119,25 +189,68 @@
         </DockPanel>
       </Border>
 
-      <ContentControl x:Name="Page" Grid.Column="1" Content="{Binding Current.Page}" Focusable="False" IsTabStop="False" />
+      <ContentControl x:Name="Page" Grid.Row="1" Grid.Column="1" Content="{Binding Current.Page}" Focusable="False" IsTabStop="False" />
+
+      <!-- Fenêtre étroite : les premières vues en onglets, les autres sous « Plus ». -->
+      <Border x:Name="TabBar" Grid.Row="2" Grid.ColumnSpan="2" Padding="8,6,8,8" Style="{StaticResource TabsOnly}"
+              Background="{DynamicResource Kyf.Brush.Surface}" BorderBrush="{DynamicResource Kyf.Brush.Divider}" BorderThickness="0,1,0,0">
+        <Grid>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="3*" />
+            <ColumnDefinition Width="*" />
+          </Grid.ColumnDefinitions>
+          <ListBox x:Name="TabNavigation" ItemsSource="{Binding TabNavigation}" SelectedItem="{Binding SelectedTab}"
+                   ItemTemplate="{StaticResource TabItemTemplate}" AutomationProperties.Name="{x:Static p:ShellText.MainNavigation}">
+            <ListBox.ItemsPanel>
+              <ItemsPanelTemplate>
+                <UniformGrid Rows="1" />
+              </ItemsPanelTemplate>
+            </ListBox.ItemsPanel>
+          </ListBox>
+          <Button x:Name="MoreButton" Grid.Column="1" Margin="4,4,4,8" Style="{DynamicResource Kyf.Button.Subtle}" Click="OnMoreClick"
+                  Padding="0" AutomationProperties.Name="{x:Static p:ShellText.MoreViews}" ToolTip="{x:Static p:ShellText.MoreViews}">
+            <Button.ContextMenu>
+              <ContextMenu x:Name="MoreMenu" ItemsSource="{Binding OverflowNavigation}" DisplayMemberPath="Label"
+                           AutomationProperties.Name="{x:Static p:ShellText.MoreViews}" />
+            </Button.ContextMenu>
+            <Border x:Name="MoreBackground" CornerRadius="{DynamicResource Kyf.Radius.Control}" Padding="8,6">
+              <Border.Style>
+                <Style TargetType="Border">
+                  <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsOverflowActive}" Value="True">
+                      <Setter Property="Background" Value="{DynamicResource Kyf.Brush.NavigationActiveBackground}" />
+                      <Setter Property="TextElement.FontWeight" Value="SemiBold" />
+                    </DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </Border.Style>
+              <StackPanel>
+                <kyf:Icon Text="{x:Static kyf:Icons.More}" HorizontalAlignment="Center" />
+                <TextBlock Text="{x:Static p:ShellText.More}" FontSize="12" TextAlignment="Center" Margin="0,2,0,0" />
+              </StackPanel>
+            </Border>
+          </Button>
+        </Grid>
+      </Border>
     </Grid>
 
     <!-- Aide des raccourcis (F1). -->
     <kyf:Dialog x:Name="HelpDialog" Title="{x:Static p:ShellText.Help}" IsOpen="{Binding IsHelpOpen}"
                 PrimaryButtonText="{x:Static ds:DesignText.Close}" SecondaryButtonText="">
-      <ItemsControl ItemsSource="{Binding Shortcuts}" Focusable="False">
+      <!-- La colonne des touches prend la largeur de la plus longue : la description garde le reste. -->
+      <ItemsControl ItemsSource="{Binding Shortcuts}" Focusable="False" Grid.IsSharedSizeScope="True">
         <ItemsControl.ItemTemplate>
           <DataTemplate>
             <Grid Margin="0,4">
               <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="160" />
+                <ColumnDefinition Width="Auto" SharedSizeGroup="Keys" />
                 <ColumnDefinition Width="*" />
               </Grid.ColumnDefinitions>
-              <Border HorizontalAlignment="Left" Padding="8,2" CornerRadius="{DynamicResource Kyf.Radius.Control}"
+              <Border HorizontalAlignment="Left" VerticalAlignment="Top" Padding="8,2" Margin="0,0,16,0" CornerRadius="{DynamicResource Kyf.Radius.Control}"
                       Background="{DynamicResource Kyf.Brush.SurfaceAlt}" BorderBrush="{DynamicResource Kyf.Brush.ControlBorder}" BorderThickness="1">
                 <TextBlock Text="{Binding Keys}" FontFamily="{DynamicResource Kyf.Font.Code}" />
               </Border>
-              <TextBlock Grid.Column="1" Text="{Binding Description}" Style="{DynamicResource Kyf.Text.Body}" VerticalAlignment="Center" />
+              <TextBlock Grid.Column="1" Text="{Binding Description}" Style="{DynamicResource Kyf.Text.Body}" VerticalAlignment="Top" Margin="0,3,0,0" />
             </Grid>
           </DataTemplate>
         </ItemsControl.ItemTemplate>
@@ -151,7 +264,7 @@
           <MouseBinding MouseAction="LeftClick" Command="{Binding ClosePaletteCommand}" />
         </Rectangle.InputBindings>
       </Rectangle>
-      <Grid VerticalAlignment="Top" HorizontalAlignment="Center" Width="560" Margin="24,80,24,24">
+      <Grid VerticalAlignment="Top" HorizontalAlignment="Stretch" MaxWidth="560" Margin="16,64,16,16">
         <Border Background="{DynamicResource Kyf.Brush.Surface}" CornerRadius="{DynamicResource Kyf.Radius.Card}"
                 Effect="{DynamicResource Kyf.Elevation.Dialog}" />
         <Border Background="{DynamicResource Kyf.Brush.Surface}" BorderBrush="{DynamicResource Kyf.Brush.Divider}" BorderThickness="1"
