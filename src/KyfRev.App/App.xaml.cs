@@ -1,7 +1,9 @@
 using System.Windows;
 using KyfRev.Application.UseCases;
+using KyfRev.Infrastructure.Windows;
 using KyfRev.Presentation.Wpf.Shell;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace KyfRev.App;
 
@@ -19,6 +21,7 @@ internal sealed partial class App : System.Windows.Application
     {
         base.OnStartup(e);
         _services = Composition.Build();
+        WatchUnexpectedErrors(_services.GetRequiredService<ILoggerFactory>().CreateLogger("kyfRev"));
         Resources.MergedDictionaries.Add(_services.GetRequiredService<AppearanceController>().Resources);
         var shell = _services.GetRequiredService<ShellViewModel>();
         if (e.Args.Contains("--galerie", StringComparer.Ordinal))
@@ -33,6 +36,17 @@ internal sealed partial class App : System.Windows.Application
         var window = _services.GetRequiredService<ShellWindow>();
         MainWindow = window;
         window.Show();
+    }
+
+    /// <summary>
+    /// Un arrêt inattendu est consigné dans le journal avant le message habituel de Windows, comme
+    /// dans la 0.x ; rien n'est masqué ni rattrapé.
+    /// </summary>
+    private void WatchUnexpectedErrors(ILogger log)
+    {
+        DispatcherUnhandledException += (_, args) => DiagnosticLog.UnexpectedStop(log, args.Exception);
+        AppDomain.CurrentDomain.UnhandledException += (_, args) => DiagnosticLog.UnexpectedStop(log, args.ExceptionObject as Exception);
+        TaskScheduler.UnobservedTaskException += (_, args) => DiagnosticLog.UnobservedTask(log, args.Exception);
     }
 
     /// <inheritdoc/>

@@ -71,6 +71,7 @@ Ce glossaire fixe la correspondance. Les **clés JSON du coffre restent celles d
 | Mode portable | `AppMode.Portable` | `portable.json` (`coffre`, chemin relatif) | Tout reste dans le dossier transportable : `MesRévisions\Application`, `Coffre`, `Sauvegardes`. |
 | Mode installé | `AppMode.Installed` | `installation.json` (`coffre` : `documents` ou `donnees`) | Programme installé ; chaque utilisateur a son coffre dans ses Documents ou ses données d'application. |
 | Dernier coffre | `IVaultLocations.Remember` | `config-locale.json` (`dernierCoffre`) | Coffre rouvert au démarrage ; jamais retenu en mode portable. |
+| Journal de diagnostic | `DiagnosticLog` | `kyfRev.log`, `kyfRev.precedent.log` | Ce qui s'est passé d'un démarrage à l'autre, arrêts inattendus compris ; 1 Mo au plus par fichier, profil masqué. |
 | Accueil | `WelcomePageViewModel` | — | Écran sans coffre ouvert : créer le coffre prévu, créer ou ouvrir un coffre choisi. |
 | Vue « Aujourd'hui » | `DashboardPageViewModel` | — | Le tableau de bord à l'écran : groupes repliables, filtre, tri, avertissements. |
 | Rappel actif | `Dashboard.ActiveRecall` | `revision.rappelActif` | Le texte d'un passage à réviser reste caché ; son commentaire sert d'indice. |

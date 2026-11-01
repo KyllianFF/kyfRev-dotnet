@@ -9,6 +9,12 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- Journal de diagnostic `kyfRev.log`, comme celui de la version 0.x : il s'allonge d'un démarrage
+  à l'autre (chaque démarrage marqué, avec la version, le mode et le système), consigne les
+  arrêts inattendus et les erreurs des tâches de fond, et devient `kyfRev.precedent.log`
+  au-delà de 1 Mo : deux fichiers au plus. Comme le prévoit le plan, la rotation se fait aussi en
+  cours d'exécution, et le dossier du profil de l'utilisateur y est masqué (`%USERPROFILE%`).
+  Installé, il est rangé dans `%LOCALAPPDATA%\kyfRev\v1`, à part de celui de la 0.x.
 - Fiche et passage en révision, ouverts d'un clic (ou d'Entrée) depuis la vue « Aujourd'hui »,
   comme dans la version 0.x. La barre de révision montre l'étape attendue et son échéance, la
   frise des étapes du cycle, « Valider la révision » (Ctrl+Entrée), une confirmation avant une

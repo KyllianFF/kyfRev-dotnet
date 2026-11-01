@@ -1,9 +1,11 @@
+using System.IO;
 using KyfRev.Application.Model;
 using KyfRev.Application.Ports;
 using KyfRev.Application.UseCases;
 using KyfRev.Infrastructure.Windows;
 using KyfRev.Presentation.Wpf.Shell;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace KyfRev.Presentation.Wpf.Tests;
 
@@ -42,6 +44,19 @@ public sealed class CompositionTests
         Assert.AreEqual(KyfRev.App.Composition.Version, state.Version);
         Assert.DoesNotContain("+", state.Version);
         Assert.StartsWith("1.0.0", state.Version);
+    }
+
+    [TestMethod]
+    public void The_application_writes_its_diagnostic_log_next_to_its_local_data()
+    {
+        using var services = KyfRev.App.Composition.Build();
+
+        var log = (DiagnosticLog)services.GetRequiredService<ILoggerFactory>();
+        Assert.AreEqual(Path.Combine(services.GetRequiredService<VaultLocations>().LocalData, "kyfRev.log"), log.LogFile);
+        StringAssert.Contains(File.ReadAllText(log.LogFile), "(développement)", StringComparison.Ordinal);
+        Assert.AreEqual("portable", KyfRev.App.Composition.ModeName(AppMode.Portable));
+        Assert.AreEqual("installée", KyfRev.App.Composition.ModeName(AppMode.Installed));
+        Assert.AreEqual("développement", KyfRev.App.Composition.ModeName(AppMode.Development));
     }
 
     [TestMethod]
