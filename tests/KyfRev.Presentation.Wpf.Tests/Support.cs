@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using System.IO;
 using System.Windows.Threading;
 using KyfRev.Application.Model;
@@ -251,6 +252,41 @@ internal sealed class UiThread : IDisposable
     }
 
     public void Dispose() => SynchronizationContext.SetSynchronizationContext(_previous);
+}
+
+/// <summary>
+/// Un essai qui emploie le vrai moteur web : toujours sur le même fil, qui dure autant que le processus. Un fil qui se
+/// termine en laissant des objets du moteur ferait planter tout le processus : leur fermeture rappelle du code .NET,
+/// alors que le fil n'existe plus pour lui. L'application n'a pas ce problème : son fil dure autant qu'elle.
+/// </summary>
+internal sealed class EngineTestAttribute([CallerFilePath] string callerFilePath = "", [CallerLineNumber] int callerLineNumber = -1)
+    : TestMethodAttribute(callerFilePath, callerLineNumber)
+{
+    private static readonly Dispatcher Engine = Start();
+
+    public string CallerFilePath { get; } = callerFilePath;
+
+    public int CallerLineNumber { get; } = callerLineNumber;
+
+    public override Task<TestResult[]> ExecuteAsync(ITestMethod testMethod) =>
+        Engine.InvokeAsync(() => base.ExecuteAsync(testMethod)).Task.Unwrap();
+
+    private static Dispatcher Start()
+    {
+        var started = new TaskCompletionSource<Dispatcher>();
+        var thread = new Thread(() =>
+        {
+            started.SetResult(Dispatcher.CurrentDispatcher);
+            Dispatcher.Run();
+        })
+        {
+            IsBackground = true,
+            Name = "Moteur web",
+        };
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        return started.Task.GetAwaiter().GetResult();
+    }
 }
 
 /// <summary>L'environnement de l'écriture dans les essais : un seul dossier WebView2 par machine de test.</summary>

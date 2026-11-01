@@ -124,7 +124,7 @@ public sealed class VisualEditorTests
         }
     }
 
-    [STATestMethod]
+    [EngineTest]
     public void Writing_opens_on_the_formatted_text_alone_and_the_button_shows_the_code()
     {
         using var scene = new Scene();
@@ -149,7 +149,7 @@ public sealed class VisualEditorTests
         Assert.IsTrue(scene.SheetPage.Ribbon.MarkdownToggle.IsChecked);
     }
 
-    [STATestMethod]
+    [EngineTest]
     public void Typing_in_the_text_saves_markdown_and_nothing_else_changes()
     {
         var body = "# Mitose\n\nUn   paragraphe  aux   espaces   gardés.\n\n* une puce\n* une autre\n\n| a | b |\n|:--|--:|\n| 1 | 2 |\n\nFin";
@@ -163,7 +163,7 @@ public sealed class VisualEditorTests
         Assert.AreEqual(SaveState.Saved, scene.Editor.State);
     }
 
-    [STATestMethod]
+    [EngineTest]
     public void The_ribbon_formats_the_selected_text_and_shows_what_is_active()
     {
         using var scene = new Scene("un mot ici\n");
@@ -189,7 +189,7 @@ public sealed class VisualEditorTests
         UiThread.Until(() => scene.OnDisk == "un **mot** ici\n");
     }
 
-    [STATestMethod]
+    [EngineTest]
     public void Inserting_from_the_ribbon_writes_ordinary_markdown()
     {
         using var scene = new Scene("Texte\n");
@@ -211,7 +211,7 @@ public sealed class VisualEditorTests
         Assert.DoesNotContain("```python", scene.OnDisk);
     }
 
-    [STATestMethod]
+    [EngineTest]
     public void A_link_and_a_formula_are_asked_then_inserted()
     {
         using var scene = new Scene("Texte\n");
@@ -233,7 +233,7 @@ public sealed class VisualEditorTests
         Assert.AreEqual("true", scene.Script("document.querySelector('.ProseMirror .katex') !== null"));
     }
 
-    [STATestMethod]
+    [EngineTest]
     public void Coming_and_going_with_the_code_loses_nothing()
     {
         using var scene = new Scene();
@@ -252,7 +252,7 @@ public sealed class VisualEditorTests
         UiThread.Until(() => scene.Shown.Contains("Avant.", StringComparison.Ordinal) && scene.Shown.Contains("Suite.", StringComparison.Ordinal));
     }
 
-    [STATestMethod]
+    [EngineTest]
     public void Double_brackets_propose_the_sheets_in_the_text_too()
     {
         using var scene = new Scene("Voir ");
@@ -268,7 +268,7 @@ public sealed class VisualEditorTests
         Assert.IsFalse(scene.Editor.HasProposals);
     }
 
-    [STATestMethod]
+    [EngineTest]
     public void A_trapped_sheet_runs_nothing_and_goes_nowhere()
     {
         var body = """
@@ -298,7 +298,7 @@ public sealed class VisualEditorTests
         Assert.AreEqual("\"undefined\"", scene.Script("typeof chrome.webview.hostObjects === 'object' ? 'undefined' : 'undefined'"));
     }
 
-    [STATestMethod]
+    [EngineTest]
     public void The_engine_is_closed_to_the_outside()
     {
         using var scene = new Scene();
@@ -314,7 +314,7 @@ public sealed class VisualEditorTests
         Assert.IsNull(Environment.GetEnvironmentVariable("WEBVIEW2_BROWSER_EXECUTABLE_FOLDER"));
     }
 
-    [STATestMethod]
+    [EngineTest]
     [DataRow(ThemeKind.Light)]
     [DataRow(ThemeKind.Dark)]
     public void The_text_takes_the_colors_of_the_theme(ThemeKind theme)
@@ -350,7 +350,7 @@ public sealed class VisualEditorTests
         Assert.Contains(theme == ThemeKind.Dark ? "dark" : "light", scene.Script("getComputedStyle(document.documentElement).colorScheme"), "La barre de défilement suit le thème.");
     }
 
-    [STATestMethod]
+    [EngineTest]
     public void A_dialog_over_the_text_replaces_it_with_its_picture()
     {
         using var scene = new Scene();
@@ -366,7 +366,7 @@ public sealed class VisualEditorTests
         Assert.IsFalse(visual.IsCovered);
     }
 
-    [STATestMethod]
+    [EngineTest]
     public void A_panel_over_the_text_closes_on_a_click_on_its_picture()
     {
         using var scene = new Scene("# Mitose\n\n## Une partie\n\nUn premier paragraphe.\n", width: 800);
@@ -382,7 +382,7 @@ public sealed class VisualEditorTests
         UiThread.Until(() => visual.View.Visibility == Visibility.Visible);
     }
 
-    [STATestMethod]
+    [EngineTest]
     public void Without_the_engine_the_sheet_is_written_in_markdown()
     {
         using var scene = new Scene();
@@ -398,7 +398,7 @@ public sealed class VisualEditorTests
         Assert.IsFalse(scene.SheetPage.Ribbon.MarkdownToggle.IsEnabled);
     }
 
-    [STATestMethod]
+    [EngineTest]
     public void Leaving_the_view_saves_then_closes_the_engine_and_coming_back_reopens_it()
     {
         using var scene = new Scene();
@@ -414,7 +414,7 @@ public sealed class VisualEditorTests
         UiThread.Until(() => scene.Shown.Contains("Suite.", StringComparison.Ordinal));
     }
 
-    [STATestMethod]
+    [EngineTest]
     public void A_theme_change_after_the_engine_closed_goes_nowhere()
     {
         using var scene = new Scene();
@@ -434,7 +434,7 @@ public sealed class VisualEditorTests
         Assert.IsFalse(visual.IsReady);
     }
 
-    [STATestMethod]
+    [EngineTest]
     public void Closing_the_window_saves_the_last_stroke_from_the_text()
     {
         using var scene = new Scene();
@@ -447,7 +447,7 @@ public sealed class VisualEditorTests
         Assert.Contains("Suite.", scene.OnDisk);
     }
 
-    [STATestMethod]
+    [EngineTest]
     public void The_plan_of_the_text_follows_the_writing()
     {
         using var scene = new Scene("# Un\n\nTexte\n\n## Deux\n\nFin\n");
@@ -458,7 +458,7 @@ public sealed class VisualEditorTests
         UiThread.Until(() => scene.Editor.Tools?.Heading == 2);
     }
 
-    [STATestMethod]
+    [EngineTest]
     public void An_image_of_the_vault_shows_in_the_text()
     {
         using var scene = new Scene("Une image.\n");
@@ -473,7 +473,7 @@ public sealed class VisualEditorTests
         UiThread.Until(() => scene.Script("(() => { const i = document.querySelector('.ProseMirror .image img'); return i !== null && i.complete && i.naturalWidth === 1; })()") == "true");
     }
 
-    [STATestMethod]
+    [EngineTest]
     public void A_menu_offers_the_replacements_of_a_wrong_word()
     {
         using var scene = new Scene("Une ékole ici.\n");

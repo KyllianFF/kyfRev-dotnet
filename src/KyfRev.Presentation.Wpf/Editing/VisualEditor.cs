@@ -637,9 +637,11 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
                 variables[variable] = string.Create(CultureInfo.InvariantCulture, $"#{brush.Color.R:X2}{brush.Color.G:X2}{brush.Color.B:X2}");
             }
         }
-        var ground = (TryFindResource("Kyf.Brush.Background") as SolidColorBrush)?.Color ?? Colors.White;
-        variables["--schema"] = (0.2126 * ground.R) + (0.7152 * ground.G) + (0.0722 * ground.B) < 128 ? "dark" : "light";
-        _view.DefaultBackgroundColor = System.Drawing.Color.FromArgb(ground.R, ground.G, ground.B);
+        if (TryFindResource("Kyf.Brush.Background") is SolidColorBrush { Color: var ground })
+        {
+            variables["--schema"] = (0.2126 * ground.R) + (0.7152 * ground.G) + (0.0722 * ground.B) < 128 ? "dark" : "light";
+            _view.DefaultBackgroundColor = new TokenColor(ground.A, ground.R, ground.G, ground.B).ToDrawingColor();
+        }
         Send(new ThemeRequest(variables));
     }
 }
