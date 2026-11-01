@@ -16,13 +16,16 @@
     <File Path="docs/plan-de-refonte.md" />
   </Folder>
   <Folder Name="/src/">
+    <Project Path="src/KyfRev.App/KyfRev.App.csproj" />
     <Project Path="src/KyfRev.Application/KyfRev.Application.csproj" />
     <Project Path="src/KyfRev.Cli/KyfRev.Cli.csproj" />
     <Project Path="src/KyfRev.DesignSystem/KyfRev.DesignSystem.csproj" />
     <Project Path="src/KyfRev.Domain/KyfRev.Domain.csproj" />
     <Project Path="src/KyfRev.Infrastructure.Online/KyfRev.Infrastructure.Online.csproj" />
     <Project Path="src/KyfRev.Infrastructure.Vault/KyfRev.Infrastructure.Vault.csproj" />
+    <Project Path="src/KyfRev.Infrastructure.Windows/KyfRev.Infrastructure.Windows.csproj" />
     <Project Path="src/KyfRev.Modules.Citations/KyfRev.Modules.Citations.csproj" />
+    <Project Path="src/KyfRev.Presentation.Wpf/KyfRev.Presentation.Wpf.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/KyfRev.Application.Tests/KyfRev.Application.Tests.csproj" />
@@ -30,6 +33,8 @@
     <Project Path="tests/KyfRev.Domain.Tests/KyfRev.Domain.Tests.csproj" />
     <Project Path="tests/KyfRev.Infrastructure.Online.Tests/KyfRev.Infrastructure.Online.Tests.csproj" />
     <Project Path="tests/KyfRev.Infrastructure.Vault.Tests/KyfRev.Infrastructure.Vault.Tests.csproj" />
+    <Project Path="tests/KyfRev.Infrastructure.Windows.Tests/KyfRev.Infrastructure.Windows.Tests.csproj" />
     <Project Path="tests/KyfRev.Modules.Citations.Tests/KyfRev.Modules.Citations.Tests.csproj" />
+    <Project Path="tests/KyfRev.Presentation.Wpf.Tests/KyfRev.Presentation.Wpf.Tests.csproj" />
   </Folder>
 </Solution>

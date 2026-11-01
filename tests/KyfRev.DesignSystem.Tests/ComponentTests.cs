@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Automation;
+using System.Windows.Automation.Peers;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
@@ -22,7 +23,9 @@ public sealed class ComponentTests
         Host.Of(design, pill);
 
         Assert.AreEqual(Icons.Clock, pill.Glyph);
-        Assert.AreEqual("Retard 4 j", AutomationProperties.GetName(pill));
+        Assert.AreEqual("Retard 4 j", Peer(pill).GetName());
+        Assert.AreEqual(AutomationControlType.Text, Peer(pill).GetAutomationControlType());
+        Assert.AreEqual(nameof(Pill), Peer(pill).GetClassName());
         Assert.AreEqual(ThemeColors.For(ThemeKind.Light)[ColorRole.Critical].ToColor(), ((SolidColorBrush)pill.Foreground).Color);
         var glyphs = Enum.GetValues<PillKind>().Select(kind =>
         {
@@ -60,7 +63,10 @@ public sealed class ComponentTests
         Host.Of(design, notification);
         Assert.AreEqual(Icons.Info, notification.Glyph);
         Assert.AreEqual(AutomationLiveSetting.Polite, AutomationProperties.GetLiveSetting(notification));
-        Assert.AreEqual("Sauvegarde faite", AutomationProperties.GetName(notification));
+        Assert.AreEqual("Sauvegarde faite", Peer(notification).GetName());
+        Assert.AreEqual("Le coffre est sauvegardé.", Peer(notification).GetHelpText());
+        Assert.AreEqual(AutomationControlType.Group, Peer(notification).GetAutomationControlType());
+        Assert.AreEqual(nameof(Notification), Peer(notification).GetClassName());
 
         notification.Severity = NotificationSeverity.Critical;
         Assert.AreEqual(Icons.Error, notification.Glyph);
@@ -85,6 +91,10 @@ public sealed class ComponentTests
         Assert.AreEqual(Visibility.Collapsed, close.Visibility);
         Assert.IsFalse(notification.IsClosable);
         Assert.AreEqual("Le coffre est sauvegardé.", notification.Message);
+        notification.Title = string.Empty;
+        Assert.AreEqual("Le coffre est sauvegardé.", Peer(notification).GetName());
+        AutomationProperties.SetName(notification, "Alerte");
+        Assert.AreEqual("Alerte", Peer(notification).GetName());
     }
 
     [STATestMethod]
@@ -95,6 +105,10 @@ public sealed class ComponentTests
         Host.Of(design, dialog);
         Assert.AreEqual(Visibility.Collapsed, dialog.Visibility);
         Assert.AreEqual(DesignText.Cancel, dialog.SecondaryButtonText);
+        Assert.AreEqual("Mettre à la corbeille ?", Peer(dialog).GetName());
+        Assert.AreEqual(AutomationControlType.Pane, Peer(dialog).GetAutomationControlType());
+        Assert.AreEqual(nameof(Dialog), Peer(dialog).GetClassName());
+        Assert.IsTrue(Peer(dialog).IsDialog());
 
         var choices = new List<DialogChoice>();
         dialog.Closed += (_, e) => choices.Add(e.Choice);
@@ -129,6 +143,10 @@ public sealed class ComponentTests
         Host.Of(new DesignResources(ThemeKind.Light, reducedMotion: false), empty);
 
         Assert.AreSame(action, empty.Action);
+        Assert.AreEqual("Aucune fiche", Peer(empty).GetName());
+        Assert.AreEqual("Créez votre première fiche.", Peer(empty).GetHelpText());
+        Assert.AreEqual(AutomationControlType.Group, Peer(empty).GetAutomationControlType());
+        Assert.AreEqual(nameof(EmptyState), Peer(empty).GetClassName());
         Assert.IsTrue(action.IsVisible || action.ActualWidth > 0);
         Assert.AreEqual("Aucune fiche", empty.Title);
         Assert.AreEqual("Créez votre première fiche.", empty.Description);
@@ -142,7 +160,9 @@ public sealed class ComponentTests
         var skeleton = new Skeleton { Height = 16 };
         Host.Of(design, skeleton);
         Assert.IsTrue(skeleton.IsAnimated);
-        Assert.AreEqual(DesignText.Loading, AutomationProperties.GetName(skeleton));
+        Assert.AreEqual(DesignText.Loading, Peer(skeleton).GetName());
+        Assert.AreEqual(AutomationControlType.Text, Peer(skeleton).GetAutomationControlType());
+        Assert.AreEqual(nameof(Skeleton), Peer(skeleton).GetClassName());
 
         design.ReducedMotion = true;
 
@@ -165,6 +185,36 @@ public sealed class ComponentTests
         Assert.AreEqual("Rechercher une fiche", Field.GetPlaceholder(field));
         Assert.ThrowsExactly<ArgumentNullException>(() => Field.GetPlaceholder(null!));
         Assert.ThrowsExactly<ArgumentNullException>(() => Field.SetPlaceholder(null!, "x"));
+    }
+
+    private static AutomationPeer Peer(UIElement element) => UIElementAutomationPeer.CreatePeerForElement(element);
+
+    [STATestMethod]
+    public void A_selected_list_item_shows_its_bar_and_the_active_colors()
+    {
+        var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
+        var list = new ListBox { ItemsSource = new[] { "Aujourd'hui", "Fiches" } };
+        Host.Of(design, list);
+        var item = (ListBoxItem)list.ItemContainerGenerator.ContainerFromIndex(1);
+        var bar = Host.Part<Border>(item, "Bar");
+        Assert.AreEqual(Visibility.Collapsed, bar.Visibility);
+
+        list.SelectedIndex = 1;
+
+        Assert.AreEqual(Visibility.Visible, bar.Visibility);
+        Assert.AreEqual(ThemeColors.For(ThemeKind.Light)[ColorRole.NavigationActiveText].ToColor(), ((SolidColorBrush)item.Foreground).Color);
+        Assert.AreSame(design.Dictionary["Kyf.FocusVisual"], item.FocusVisualStyle);
+    }
+
+    [STATestMethod]
+    public void A_decorative_icon_stays_out_of_the_screen_reader()
+    {
+        var icon = new Icon { Text = Icons.Search };
+        Host.Of(new DesignResources(ThemeKind.Light, reducedMotion: false), icon);
+
+        Assert.IsFalse(Peer(icon).IsControlElement());
+        Assert.IsFalse(Peer(icon).IsContentElement());
+        Assert.AreEqual(16.0, icon.FontSize);
     }
 
     [STATestMethod]

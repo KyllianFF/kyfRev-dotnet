@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Description>Services de Windows pour kyfRev : préférences d'affichage (thème, contraste élevé, animations) et barre de titre.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\KyfRev.Application\KyfRev.Application.csproj" />
+  </ItemGroup>
+
+  <!-- SystemEvents (changement des paramètres de Windows) vient du runtime de bureau, celui de l'application. -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.WindowsDesktop.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="KyfRev.Infrastructure.Windows.Tests" />
+  </ItemGroup>
+
+</Project>

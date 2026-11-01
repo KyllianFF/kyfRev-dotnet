@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Automation.Peers;
 using System.Windows.Controls;
 
 namespace KyfRev.DesignSystem.Controls;
@@ -65,4 +66,7 @@ public class Pill : Control
     public string Glyph => (string)GetValue(GlyphProperty);
 
     private void UpdateGlyph() => SetValue(GlyphPropertyKey, Icons.Of(Kind));
+
+    /// <inheritdoc/>
+    protected override AutomationPeer OnCreateAutomationPeer() => new AutomationPeers.PillPeer(this);
 }

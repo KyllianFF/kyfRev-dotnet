@@ -6,9 +6,13 @@ l'emploie, jamais l'inverse.
 
 ![Galerie, thème clair](captures/j5/galerie-clair.png)
 
-Les captures des trois thèmes sont dans [`captures/j5`](captures/j5) : [clair](captures/j5/galerie-clair.png),
-[sombre](captures/j5/galerie-sombre.png) et [contraste élevé](captures/j5/galerie-contraste-eleve.png)
-(avec les couleurs système du poste qui les a produites). `tools/design-captures` les régénère.
+Les captures sont dans [`captures/j5`](captures/j5) : la galerie des composants en
+[clair](captures/j5/galerie-clair.png), [sombre](captures/j5/galerie-sombre.png) et
+[contraste élevé](captures/j5/galerie-contraste-eleve.png) (avec les couleurs système du poste
+qui les a produites), et la coquille ([claire](captures/j5/coquille-clair.png),
+[sombre](captures/j5/coquille-sombre.png), [recherche](captures/j5/recherche-sombre.png),
+[aide](captures/j5/aide-clair.png)). `tools/design-captures` les régénère ; la galerie
+s'ouvre aussi dans l'application (`kyfRev --galerie`).
 
 ## Jetons
 
@@ -88,6 +92,8 @@ vérifient toutes, dans chaque thème :
 | Carte | `Card`, repère `Marker` (fiche, passage, rappel) | barre latérale de 3 px |
 | Pastille | `Pill`, sorte `Kind` | icône et libellé : fiche, passage, rappel, retard, archivée, à vérifier |
 | Menu | styles de `ContextMenu`, `Menu`, `MenuItem` | coche, raccourci, sous-menus |
+| Listes | styles de `ListBox`, `ListBoxItem` | survol, élément choisi : fond 100 et barre latérale de 3 px (menu de la coquille) |
+| Icône | `Icon` | décorative : police d'icônes de Windows, ignorée par le lecteur d'écran |
 | Dialogue | `Dialog` | voile, focus tenu à l'intérieur, Échap ferme, Entrée valide |
 | Notification | `Notification`, gravité `Severity` | annoncée par le lecteur d'écran (tout de suite pour une erreur) |
 | État vide | `EmptyState` | icône, titre, explication, action |
@@ -97,6 +103,36 @@ vérifient toutes, dans chaque thème :
 Le focus clavier est toujours visible : un anneau de 2 px décalé de 2 px (`Kyf.FocusVisual`), ou
 le contour épaissi des champs. Les textes des composants (« Fermer », « Annuler »…) sont lus
 dans `Resources/DesignText.resx`.
+
+Chaque composant se présente à UI Automation (lecteurs d'écran, Accessibility Insights) : le
+dialogue comme un volet marqué « dialogue » et nommé par son titre, la notification comme un
+groupe annoncé dès qu'il paraît, la pastille et le squelette comme un texte, l'état vide comme un
+groupe nommé par son titre et décrit par son explication. Les composants qui ne s'actionnent pas
+ne prennent pas le focus.
+
+## Coquille
+
+`KyfRev.Presentation.Wpf` assemble ces composants dans la fenêtre de l'application :
+
+| Élément | Clavier | Rôle |
+|---|---|---|
+| Menu latéral | flèches, Tab | les vues de la 0.x dans le même ordre, celles des modules actifs à leur rang, Santé du coffre et Paramètres en bas |
+| Recherche de commandes | Ctrl+K | aller à une vue, changer de thème, de zoom ou de mode ; sans tenir compte des accents ni de la casse |
+| Aide | F1 | les raccourcis clavier |
+| Mode concentration | Ctrl+Maj+F | masque le menu |
+| Zoom | Ctrl+plus, Ctrl+moins, Ctrl+0 | de 80 à 200 %, par pas de 10 % |
+| Vues du menu | Ctrl+1 à Ctrl+9 | les neuf premières vues |
+
+Le thème suit Windows (clair ou sombre, barre de titre comprise) ou le choix fait dans la
+recherche ou dans la galerie ; le contraste élevé de Windows passe avant tout choix, et un
+changement dans Windows s'applique sans redémarrage. Les vues encore à porter présentent ce
+qu'elles feront.
+
+Les règles automatiques d'Accessibility Insights (FastPass) sont appliquées par Axe.Windows à
+l'application lancée pour de vrai : chaque vue, l'aide et la recherche, en clair et en sombre,
+sans aucune erreur (`tests/KyfRev.Presentation.Wpf.Tests`).
+
+![Coquille, thème sombre, recherche ouverte](captures/j5/recherche-sombre.png)
 
 ## Emploi
 

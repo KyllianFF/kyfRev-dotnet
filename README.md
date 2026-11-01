@@ -10,13 +10,21 @@ les coffres de la version 0.x et vise la parité fonctionnelle en version 1.0.0.
 
 ## État
 
-Refonte en cours, jalon **J3 : compatibilité du coffre au format 1**. Le plan complet, les
+Refonte en cours, jalon **J5 : design system et coquille WPF**. Le plan complet, les
 décisions et les critères de validation de chaque jalon sont dans [docs/plan-de-refonte.md](docs/plan-de-refonte.md).
 
 Vérifier un coffre existant, sans rien y écrire :
 
 ```powershell
 dotnet run --project src/KyfRev.Cli -- verifier "$env:USERPROFILE\Documents\kyfRev\Coffre"
+```
+
+Ouvrir la coquille de l'application (menu, recherche Ctrl+K, aide F1, mode concentration,
+zoom), ou directement la galerie des composants ([design system](docs/design-system.md)) :
+
+```powershell
+dotnet run --project src/KyfRev.App
+dotnet run --project src/KyfRev.App -- --galerie
 ```
 
 ## Principes

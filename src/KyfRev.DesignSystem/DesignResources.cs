@@ -32,6 +32,7 @@ public sealed class DesignResources
         Dictionary.MergedDictionaries.Add(new Foundations());
         Dictionary.MergedDictionaries.Add(new Buttons());
         Dictionary.MergedDictionaries.Add(new Fields());
+        Dictionary.MergedDictionaries.Add(new Lists());
         Dictionary.MergedDictionaries.Add(new Menus());
         Dictionary.MergedDictionaries.Add(new ScrollBars());
         Dictionary.MergedDictionaries.Add(new Components());

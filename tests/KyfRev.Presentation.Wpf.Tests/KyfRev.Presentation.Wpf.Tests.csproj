@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+
+  <!-- La coquille est essayée dans une vraie fenêtre ; Axe.Windows applique les règles d'Accessibility Insights. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\KyfRev.App\KyfRev.App.csproj" />
+    <ProjectReference Include="..\..\src\KyfRev.Presentation.Wpf\KyfRev.Presentation.Wpf.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Axe.Windows" />
+  </ItemGroup>
+
+</Project>

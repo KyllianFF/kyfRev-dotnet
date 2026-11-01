@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Automation.Peers;
 using System.Windows.Controls;
 
 namespace KyfRev.DesignSystem.Controls;
@@ -24,4 +25,7 @@ public class Skeleton : Control
         get => (bool)GetValue(IsAnimatedProperty);
         set => SetValue(IsAnimatedProperty, value);
     }
+
+    /// <inheritdoc/>
+    protected override AutomationPeer OnCreateAutomationPeer() => new AutomationPeers.SkeletonPeer(this);
 }

@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+  </PropertyGroup>
+
+  <!-- WPF lit les mêmes réglages de Windows : il sert de référence aux essais. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\KyfRev.Infrastructure.Windows\KyfRev.Infrastructure.Windows.csproj" />
+  </ItemGroup>
+
+</Project>

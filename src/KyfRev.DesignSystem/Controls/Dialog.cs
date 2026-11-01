@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Automation.Peers;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
@@ -146,4 +147,7 @@ public class Dialog : ContentControl
     private void OnPrimary(object sender, RoutedEventArgs e) => Close(DialogChoice.Primary);
 
     private void OnSecondary(object sender, RoutedEventArgs e) => Close(DialogChoice.Secondary);
+
+    /// <inheritdoc/>
+    protected override AutomationPeer OnCreateAutomationPeer() => new AutomationPeers.DialogPeer(this);
 }

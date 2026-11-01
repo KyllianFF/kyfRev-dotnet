@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Automation.Peers;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 
@@ -48,7 +49,7 @@ public class Notification : Control
 
     /// <summary>Propriété <see cref="IsOpen"/>.</summary>
     public static readonly DependencyProperty IsOpenProperty =
-        DependencyProperty.Register(nameof(IsOpen), typeof(bool), typeof(Notification), new FrameworkPropertyMetadata(true, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
+        DependencyProperty.Register(nameof(IsOpen), typeof(bool), typeof(Notification), new FrameworkPropertyMetadata(true, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, (notification, e) => ((Notification)notification).OnIsOpenChanged((bool)e.NewValue)));
 
     private static readonly DependencyPropertyKey GlyphPropertyKey =
         DependencyProperty.RegisterReadOnly(nameof(Glyph), typeof(string), typeof(Notification), new PropertyMetadata(Icons.Of(NotificationSeverity.Info)));
@@ -61,6 +62,12 @@ public class Notification : Control
         EventManager.RegisterRoutedEvent(nameof(Closed), RoutingStrategy.Bubble, typeof(RoutedEventHandler), typeof(Notification));
 
     private ButtonBase? _closeButton;
+
+    /// <summary>Une notification ; le lecteur d'écran l'annonce dès qu'elle paraît.</summary>
+    public Notification()
+    {
+        Loaded += (_, _) => Announce();
+    }
 
     static Notification()
     {
@@ -130,5 +137,25 @@ public class Notification : Control
 
     private void OnClose(object sender, RoutedEventArgs e) => Close();
 
+    private void OnIsOpenChanged(bool isOpen)
+    {
+        if (isOpen)
+        {
+            Announce();
+        }
+    }
+
+    /// <summary>Annonce la notification comme une région active, si un client d'UI Automation écoute.</summary>
+    private void Announce()
+    {
+        if (IsOpen && AutomationPeer.ListenerExists(AutomationEvents.LiveRegionChanged))
+        {
+            UIElementAutomationPeer.CreatePeerForElement(this).RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
+        }
+    }
+
     private void UpdateGlyph() => SetValue(GlyphPropertyKey, Icons.Of(Severity));
+
+    /// <inheritdoc/>
+    protected override AutomationPeer OnCreateAutomationPeer() => new AutomationPeers.NotificationPeer(this);
 }

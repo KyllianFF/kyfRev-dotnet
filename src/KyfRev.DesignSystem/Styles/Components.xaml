@@ -13,6 +13,7 @@
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="Padding" Value="16" />
     <Setter Property="IsTabStop" Value="False" />
+    <Setter Property="Focusable" Value="False" />
     <Setter Property="Template">
       <Setter.Value>
         <ControlTemplate TargetType="kyf:Card">
@@ -53,8 +54,8 @@
     <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.PillSheetText}" />
     <Setter Property="Padding" Value="8,0" />
     <Setter Property="IsTabStop" Value="False" />
+    <Setter Property="Focusable" Value="False" />
     <Setter Property="HorizontalAlignment" Value="Left" />
-    <Setter Property="AutomationProperties.Name" Value="{Binding Text, RelativeSource={RelativeSource Self}}" />
     <Setter Property="Template">
       <Setter.Value>
         <ControlTemplate TargetType="kyf:Pill">
@@ -103,9 +104,8 @@
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="Padding" Value="12" />
     <Setter Property="IsTabStop" Value="False" />
+    <Setter Property="Focusable" Value="False" />
     <Setter Property="AutomationProperties.LiveSetting" Value="Polite" />
-    <Setter Property="AutomationProperties.Name" Value="{Binding Title, RelativeSource={RelativeSource Self}}" />
-    <Setter Property="AutomationProperties.HelpText" Value="{Binding Message, RelativeSource={RelativeSource Self}}" />
     <Setter Property="Template">
       <Setter.Value>
         <ControlTemplate TargetType="kyf:Notification">
@@ -170,10 +170,12 @@
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="Padding" Value="24" />
     <Setter Property="IsTabStop" Value="False" />
+    <Setter Property="Focusable" Value="False" />
     <Setter Property="Visibility" Value="Collapsed" />
     <Setter Property="KeyboardNavigation.TabNavigation" Value="Cycle" />
     <Setter Property="KeyboardNavigation.ControlTabNavigation" Value="Cycle" />
     <Setter Property="KeyboardNavigation.DirectionalNavigation" Value="Contained" />
+    <Setter Property="AutomationProperties.IsDialog" Value="True" />
     <Setter Property="Template">
       <Setter.Value>
         <ControlTemplate TargetType="kyf:Dialog">
@@ -184,8 +186,7 @@
                       Effect="{DynamicResource Kyf.Elevation.Dialog}" />
               <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
                       BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{DynamicResource Kyf.Radius.Dialog}"
-                      Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True"
-                      AutomationProperties.Name="{TemplateBinding Title}" AutomationProperties.IsDialog="True">
+                      Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
                 <StackPanel>
                   <TextBlock Text="{TemplateBinding Title}" Style="{DynamicResource Kyf.Text.Subtitle}" Margin="0,0,0,12" />
                   <ContentPresenter />
@@ -218,6 +219,7 @@
   <Style TargetType="kyf:EmptyState">
     <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Text}" />
     <Setter Property="IsTabStop" Value="False" />
+    <Setter Property="Focusable" Value="False" />
     <Setter Property="HorizontalAlignment" Value="Center" />
     <Setter Property="VerticalAlignment" Value="Center" />
     <Setter Property="Template">
@@ -243,8 +245,8 @@
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="MinHeight" Value="16" />
     <Setter Property="IsTabStop" Value="False" />
+    <Setter Property="Focusable" Value="False" />
     <Setter Property="IsAnimated" Value="{DynamicResource Kyf.Motion.Enabled}" />
-    <Setter Property="AutomationProperties.Name" Value="{x:Static ds:DesignText.Loading}" />
     <Setter Property="Template">
       <Setter.Value>
         <ControlTemplate TargetType="kyf:Skeleton">
