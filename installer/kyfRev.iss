@@ -66,6 +66,10 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 MinVersion=10.0
 WizardStyle=modern dynamic
+; Générées depuis assets/icon/kyfrev.svg par tools/icon/icon.cs ; Setup prend celles de l'échelle d'affichage.
+SetupIconFile=..\assets\icon\kyfrev.ico
+WizardImageFile=images\assistant-*.png
+WizardSmallImageFile=images\petit-*.png
 ShowLanguageDialog=no
 AppMutex=kyfRev,Global\kyfRev
 CloseApplications=yes

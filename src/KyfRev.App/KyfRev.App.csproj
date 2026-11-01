@@ -7,6 +7,8 @@
     <AssemblyName>kyfRev</AssemblyName>
     <RootNamespace>KyfRev.App</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- L'exécutable, ses raccourcis et ses fenêtres prennent cette icône. -->
+    <ApplicationIcon>..\..\assets\icon\kyfrev.ico</ApplicationIcon>
     <!-- Windows x64 seulement ; les bibliothèques restent indépendantes de la plateforme. -->
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <Description>kyfRev : l'application de bureau. Racine de composition : relie la présentation, le design system et l'infrastructure.</Description>

@@ -9,6 +9,9 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- Icône de kyfRev : un éventail de fiches du vert à l'ambre, sur l'exécutable, ses fenêtres et
+  raccourcis, et l'installateur, dont l'assistant a aussi ses images. Elle reste nette de 16 à
+  256 px et sur les fonds clairs comme sombres.
 - Installateur Inno Setup 6 (`tools/installer.ps1`), avec l'application autonome : rien à
   installer d'autre, pas même le runtime .NET. Sans droits administrateur, il installe kyfRev
   pour l'utilisateur en cours (`%LOCALAPPDATA%\Programs\kyfRev`) ou, au choix, pour tous. Il

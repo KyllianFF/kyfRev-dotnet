@@ -65,6 +65,21 @@ function Invoke-Silencieux([string] $Programme, [string[]] $Options = @()) {
 
 function Get-Inscription { Get-ItemProperty $cle -ErrorAction SilentlyContinue }
 
+# Vrai si le programme porte l'icône de kyfRev : à cet endroit, elle montre le vert de la fiche.
+function Test-Icone([string] $Programme) {
+    Add-Type -AssemblyName System.Drawing
+    $icone = [Drawing.Icon]::ExtractAssociatedIcon($Programme)
+    $image = $icone.ToBitmap()
+    try {
+        $point = $image.GetPixel([int]($image.Width / 4), [int]($image.Height * 19 / 32))
+        return $point.A -eq 255 -and $point.G -gt $point.R -and $point.G -gt $point.B
+    }
+    finally {
+        $image.Dispose()
+        $icone.Dispose()
+    }
+}
+
 # Désinstalle l'installation d'essai ; rend le code de sortie du désinstallateur.
 function Invoke-Desinstallation {
     $code = Invoke-Silencieux ((Get-Inscription).UninstallString.Trim('"'))
@@ -100,6 +115,8 @@ try {
     $code = Invoke-Silencieux $Installateur @('/CURRENTUSER', "/DIR=`"$dossier`"", '/NOICONS', '/COFFRE=donnees')
     Assert-Vrai ($code -eq 0) "installation terminée (code $code)"
     Assert-Vrai (Test-Path (Join-Path $dossier 'kyfRev.exe')) 'kyfRev.exe installé'
+    Assert-Vrai (Test-Icone (Join-Path $dossier 'kyfRev.exe')) 'kyfRev.exe porte l''icône de kyfRev'
+    Assert-Vrai (Test-Icone $Installateur) 'l''installateur porte l''icône de kyfRev'
     Assert-Vrai (-not (Get-ChildItem $dossier -Filter *.pdb)) 'aucun fichier de symboles'
     Assert-Vrai ((Get-Installation) -eq "{`"coffre`":`"donnees`"}`n") 'installation.json : fiches dans AppData'
     $inscription = Get-Inscription
