@@ -115,7 +115,11 @@ jobs:
           if-no-files-found: ignore
           retention-days: 30
 
+      # Le format analyse les projets compilés plus haut, en Release : le code que WPF génère
+      # depuis le XAML (InitializeComponent, éléments nommés) y existe déjà.
       - name: Mise en forme
+        env:
+          Configuration: Release
         run: dotnet format KyfRev.slnx --verify-no-changes --no-restore
 
       - name: Paquets vulnérables
