@@ -171,6 +171,24 @@ public sealed partial class VaultSession
         return [.. Enumerable.Range(0, counts.Length).Reverse().Select(age => new ReviewDay(day.AddDays(-age), counts[age]))];
     }
 
+    /// <summary>Toutes les fiches, par dossier puis par titre, sans tenir compte des majuscules.</summary>
+    public IReadOnlyList<VaultSheet> SheetList() =>
+    [
+        .. _sheets.Values
+            .Select(entry => new VaultSheet(
+                entry.Sheet.Id,
+                entry.Sheet.Title,
+                entry.Sheet.Path.ToString(),
+                DisplayFolder(entry.Sheet.Path),
+                entry.Sheet.Tags,
+                entry.Sheet.Tracking.Archive is not null,
+                entry.Presence == FilePresence.Present,
+                entry.Sheet.Tracking.Cycle?.StepLabel,
+                entry.Sheet.Tracking.Cycle?.DueDate))
+            .OrderBy(sheet => RustText.ToLowercase(sheet.Folder), Utf8Order.Instance)
+            .ThenBy(sheet => RustText.ToLowercase(sheet.Title), Utf8Order.Instance),
+    ];
+
     /// <summary>Fiches archivées, les plus récemment archivées d'abord.</summary>
     public IReadOnlyList<ArchivedSheetEntry> Archives(DateOnly day) =>
     [

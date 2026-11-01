@@ -159,6 +159,27 @@ public sealed record AnnotationView(
     bool InTrash,
     ReviewState Review);
 
+/// <summary>Une fiche du coffre, active ou archivée.</summary>
+/// <param name="Id">Identifiant.</param>
+/// <param name="Title">Titre.</param>
+/// <param name="Path">Chemin dans le coffre (« fiches/Histoire/Révolution.md »).</param>
+/// <param name="Folder">Dossier relatif à <c>fiches/</c> (« Histoire »), vide à la racine.</param>
+/// <param name="Tags">Étiquettes.</param>
+/// <param name="Archived">Archivée.</param>
+/// <param name="FilePresent">Faux si le fichier est introuvable ou en double.</param>
+/// <param name="Step">Prochaine étape d'une fiche active.</param>
+/// <param name="DueDate">Son échéance.</param>
+public sealed record VaultSheet(
+    string Id,
+    string Title,
+    string Path,
+    string Folder,
+    ImmutableArray<string> Tags,
+    bool Archived,
+    bool FilePresent,
+    string? Step,
+    DateOnly? DueDate);
+
 /// <summary>Une fiche ouverte pour la lire ou la réviser. Ouvrir ne valide rien.</summary>
 /// <param name="Id">Identifiant.</param>
 /// <param name="Title">Titre.</param>

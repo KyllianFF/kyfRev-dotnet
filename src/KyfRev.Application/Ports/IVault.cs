@@ -46,6 +46,9 @@ public interface ISheetStore
     /// <summary>Identifiant de la fiche située à <paramref name="path"/> (chemin dans le coffre) ; rien s'il n'y en a pas.</summary>
     string? SheetIdAt(string path);
 
+    /// <summary>Toutes les fiches, par dossier puis par titre.</summary>
+    IReadOnlyList<VaultSheet> SheetList();
+
     /// <summary>Change le titre : en-tête mis à jour, fichier renommé, liens réécrits.</summary>
     void ChangeTitle(string id, string title, Moment now);
 

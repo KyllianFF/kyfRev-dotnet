@@ -59,6 +59,10 @@ internal sealed class RunningApplication : IDisposable
     /// <summary>La ligne du groupe qui parle de ce titre, ou rien.</summary>
     public string? Row(string group, string title) => Rows(group).FirstOrDefault(row => row.Contains(title, StringComparison.Ordinal));
 
+    /// <summary>Attend qu'une ligne apparaisse dans un groupe : la liste se relit au retour sur la vue.</summary>
+    public string WaitRow(string group, string title) =>
+        Retry.WhileNull(() => Row(group, title), Patience, Interval, throwOnTimeout: true, timeoutMessage: $"« {title} » n'est pas dans « {group} ».").Result!;
+
     /// <summary>Attend qu'une ligne disparaisse d'un groupe : la liste se relit au retour d'une fiche.</summary>
     public void WaitWithoutRow(string group, string title) =>
         Assert.IsTrue(
@@ -181,6 +185,34 @@ internal sealed class RunningApplication : IDisposable
         Retry.WhileFalse(() => Find("Heading")?.Name == name, Patience, Interval, throwOnTimeout: true, timeoutMessage: $"La vue « {name} » ne s'est pas ouverte.");
     }
 
+    /// <summary>« Nouvelle fiche » : écrit le titre et confirme ; la fiche créée s'ouvre.</summary>
+    public void CreateSheet(string title)
+    {
+        Press("NewSheetButton");
+        Wait("NewTitleBox").AsTextBox().Text = title;
+        Confirm();
+        Wait("BackButton");
+    }
+
+    /// <summary>Cherche dans la vue ouverte.</summary>
+    public void Search(string text) => Wait("SearchBox").AsTextBox().Text = text;
+
+    /// <summary>La ligne d'une fiche dans la vue « Fiches », une fois lue.</summary>
+    public string WaitSheetRow(string title) => WaitListRow(title).Name;
+
+    /// <summary>Attend qu'une fiche quitte la liste de la vue « Fiches ».</summary>
+    public void WaitWithoutSheetRow(string title) =>
+        Retry.WhileTrue(() => FindListRow(title) is not null, Patience, Interval, throwOnTimeout: true, timeoutMessage: $"« {title} » est restée dans la liste.");
+
+    /// <summary>Ouvre une fiche de la vue « Fiches », comme d'un clic.</summary>
+    public void OpenSheetRow(string title)
+    {
+        var row = WaitListRow(title);
+        row.Patterns.SelectionItem.Pattern.Select();
+        row.Patterns.Invoke.Pattern.Invoke();
+        Wait("BackButton");
+    }
+
     /// <summary>La ligne d'une fiche dans la vue « Archives », une fois lue.</summary>
     public string ArchivedRow(string title) => WaitArchive("OpenRow", title).Name;
 
@@ -248,6 +280,12 @@ internal sealed class RunningApplication : IDisposable
         Retry.WhileEmpty(() => List().FindAllChildren().Select(child => child.Name).ToArray(), Patience, Interval, throwOnTimeout: true, timeoutMessage: "Le tableau de bord ne s'est pas affiché.").Result!;
 
     private AutomationElement List() => Wait("Items");
+
+    private AutomationElement? FindListRow(string title) =>
+        List().FindAllChildren().FirstOrDefault(child => child.Name.StartsWith(title + ",", StringComparison.Ordinal));
+
+    private AutomationElement WaitListRow(string title) =>
+        Retry.WhileNull(() => FindListRow(title), Patience, Interval, throwOnTimeout: true, timeoutMessage: $"« {title} » n'est pas dans la liste.").Result!;
 
     private AutomationElement? FindArchive(string id, string title) =>
         _window.FindAllDescendants(condition => condition.ByAutomationId(id)).FirstOrDefault(button => button.Name.Contains(title, StringComparison.Ordinal));

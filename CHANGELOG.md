@@ -9,6 +9,10 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- Vue « Fiches » : toutes les fiches du coffre, par dossier, à chercher par titre ou étiquette, à filtrer
+  par dossier et par état, et à trier. La fiche choisie s'affiche à côté de la liste quand la place le
+  permet ; sinon, un clic l'ouvre. « Nouvelle fiche » la crée dans un dossier, existant ou nouveau, vide
+  ou d'après un modèle, puis l'ouvre.
 - Vue « Archives », comme dans la version 0.x : les fiches archivées, avec leur état de rappel, leurs
   cycles terminés et leur dernier rappel. On les cherche par titre ou étiquette, on les filtre par
   dossier, état de rappel, date d'archivage et nombre de cycles, et on les trie. Une fiche peut y être

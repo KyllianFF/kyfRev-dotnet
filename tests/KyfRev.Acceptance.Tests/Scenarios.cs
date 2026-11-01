@@ -11,8 +11,8 @@ namespace KyfRev.Acceptance.Tests;
 /// Les scénarios d'acceptation du jalon J6 (conception, section des tests), aux dates qu'elle donne :
 /// l'application réelle tourne, et ses gestes s'enregistrent dans un vrai coffre.
 ///
-/// Ce que l'application ne sait pas encore faire passe par les cas d'usage : créer une fiche,
-/// surligner un passage (J7), changer les réglages.
+/// Ce que l'application ne sait pas encore faire passe par les cas d'usage : écrire le texte d'une fiche
+/// et surligner un passage (J7), changer les réglages.
 /// </summary>
 [TestClass]
 public sealed class Scenarios
@@ -367,28 +367,67 @@ public sealed class Scenarios
     public void T11_a_new_sheet_and_a_new_passage_are_due_the_next_day()
     {
         using var trial = new Trial();
-        var sheet = trial.On(Day(10, 9), app => NewSheet(app, Title));
+        trial.On(Day(10, 9), _ => true);
+
+        using (var running = trial.Launch(Day(10, 9)))
+        {
+            running.OpenView("Fiches");
+            running.CreateSheet(Title);
+            running.Back();
+            Assert.Contains("J1", running.WaitSheetRow(Title));
+            running.OpenView("Aujourd'hui");
+            running.WaitRow(Upcoming, Title);
+            Assert.IsNull(running.Row(Today, Title), "Rien à réviser le jour de la création.");
+        }
+        var sheet = trial.On(Day(10, 9), app => app.Sheets.List().Value.Single().Id);
         var first = Reviews(trial.SheetTracking(sheet)).Single();
         Assert.AreEqual("J0", first.GetProperty("etape").GetString());
         Assert.AreEqual("creation", first.GetProperty("origine").GetString());
         Assert.AreEqual("2026-10-10", Due(trial, sheet));
 
-        using (var running = trial.Launch(Day(10, 9)))
-        {
-            Assert.IsNull(running.Row(Today, Title), "Rien à réviser le jour de la création.");
-            Assert.IsNotNull(running.Row(Upcoming, Title), "La fiche est prévue pour le lendemain.");
-        }
         using (var running = trial.Launch(Day(10, 10)))
         {
             Assert.Contains("J1", running.Row(Today, Title) ?? "");
         }
 
-        var passage = trial.On(Day(10, 14), app => NewPassage(app, sheet, "trois ordres"));
+        // Écrire le texte et surligner n'existent pas encore dans l'application.
+        var passage = trial.On(Day(10, 14), app =>
+        {
+            Assert.IsTrue(app.Editing.Save(sheet, Body, app.Sheets.Open(sheet).Value.Fingerprint, 1).Succeeded);
+            return NewPassage(app, sheet, "trois ordres");
+        });
         Assert.AreEqual("2026-10-15", trial.AnnotationTracking(sheet, passage).GetProperty("cycle").GetProperty("echeance").GetString());
         using (var running = trial.Launch(Day(10, 15)))
         {
             Assert.Contains("J1", running.Rows(Today).Single(row => row.StartsWith("Passage", StringComparison.Ordinal)) ?? "");
         }
+    }
+
+    [TestMethod]
+    public void The_sheets_view_finds_and_opens_a_sheet_without_changing_it()
+    {
+        using var trial = new Trial();
+        var sheet = trial.On(Day(10, 9), app =>
+        {
+            NewSheet(app, "Mitose");
+            return NewSheet(app, Title);
+        });
+        var before = trial.SheetFile(sheet);
+
+        using (var running = trial.Launch(Day(10, 11)))
+        {
+            running.OpenView("Fiches");
+            Assert.Contains("1 j de retard", running.WaitSheetRow(Title));
+            running.WaitSheetRow("Mitose");
+
+            running.Search("revolution");
+            running.WaitWithoutSheetRow("Mitose");
+            running.OpenSheetRow(Title);
+            running.Back();
+            running.WaitSheetRow(Title);
+        }
+
+        Assert.AreEqual(before, trial.SheetFile(sheet), "Consulter une fiche ne la révise pas.");
     }
 
     [TestMethod]

@@ -131,12 +131,6 @@ public static class ArchivesText
     /// <summary>« Au repos jusqu'au … ».</summary>
     public static string RestingUntilOf(object day) => Format("RestingUntil", day);
 
-    /// <summary>« Rechercher ».</summary>
-    public static string SearchName => Text(nameof(SearchName));
-
-    /// <summary>« Titre ou étiquette… ».</summary>
-    public static string SearchPlaceholder => Text(nameof(SearchPlaceholder));
-
     /// <summary>« Archivage récent ».</summary>
     public static string SortArchiving => Text(nameof(SortArchiving));
 
@@ -157,15 +151,6 @@ public static class ArchivesText
 
     /// <summary>« 3 ou plus ».</summary>
     public static string ThreeOrMoreCycles => Text(nameof(ThreeOrMoreCycles));
-
-    /// <summary>« Filtres ».</summary>
-    public static string Filters => Text(nameof(Filters));
-
-    /// <summary>« Filtres · … ».</summary>
-    public static string FiltersWithCountOf(object count) => Format("FiltersWithCount", count);
-
-    /// <summary>« Retirer le filtre … ».</summary>
-    public static string RemoveFilterOf(object filter) => Format("RemoveFilter", filter);
 
     private static string Format(string name, params object[] values) => string.Format(CultureInfo.CurrentCulture, Text(name), values);
 

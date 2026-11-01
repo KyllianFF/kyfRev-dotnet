@@ -1,0 +1,136 @@
+<UserControl x:Class="KyfRev.Presentation.Wpf.Pages.SheetsPage"
+             x:ClassModifier="internal"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:kyf="clr-namespace:KyfRev.DesignSystem.Controls;assembly=KyfRev.DesignSystem"
+             xmlns:pages="clr-namespace:KyfRev.Presentation.Wpf.Pages">
+  <UserControl.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="ItemPreview.xaml" />
+      </ResourceDictionary.MergedDictionaries>
+      <BooleanToVisibilityConverter x:Key="Visible" />
+
+      <!-- L'en-tête d'un dossier. -->
+      <DataTemplate DataType="{x:Type pages:SheetFolderRow}">
+        <TextBlock Text="{Binding}" Style="{DynamicResource Kyf.Text.BodyStrong}" Margin="0,8,0,2" />
+      </DataTemplate>
+
+      <!-- Une fiche. -->
+      <DataTemplate DataType="{x:Type pages:SheetRow}">
+        <StackPanel Margin="0,6">
+          <TextBlock Text="{Binding Title}" FontSize="{DynamicResource Kyf.FontSize.BodyLarge}" FontWeight="SemiBold" TextWrapping="Wrap" />
+          <TextBlock x:Name="Meta" Text="{Binding Meta}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,2,0,0" />
+          <StackPanel Orientation="Horizontal" Margin="0,2,0,0" Visibility="{Binding FileMissing, Converter={StaticResource Visible}}">
+            <kyf:Icon Text="{x:Static kyf:Icons.Warning}" Foreground="{DynamicResource Kyf.Brush.Warning}" FontSize="12" Margin="0,0,4,0" />
+            <TextBlock Text="{x:Static pages:DashboardText.FileMissing}" Style="{DynamicResource Kyf.Text.Caption}" Foreground="{DynamicResource Kyf.Brush.Warning}" />
+          </StackPanel>
+        </StackPanel>
+        <DataTemplate.Triggers>
+          <DataTrigger Binding="{Binding IsLate}" Value="True">
+            <Setter TargetName="Meta" Property="Foreground" Value="{DynamicResource Kyf.Brush.Warning}" />
+          </DataTrigger>
+        </DataTemplate.Triggers>
+      </DataTemplate>
+    </ResourceDictionary>
+  </UserControl.Resources>
+
+  <Grid>
+    <Grid Margin="16">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="*" />
+      </Grid.RowDefinitions>
+
+      <DockPanel>
+        <Button x:Name="NewSheetButton" DockPanel.Dock="Right" Content="{x:Static pages:SheetsText.NewSheet}" Style="{DynamicResource Kyf.Button.Primary}"
+                VerticalAlignment="Top" Margin="12,0,0,0" Command="{Binding RequestCreateCommand}" />
+        <StackPanel>
+          <TextBlock x:Name="Heading" Text="{Binding Title}" Style="{DynamicResource Kyf.Text.Title}" AutomationProperties.HeadingLevel="Level1" />
+          <TextBlock x:Name="Summary" Text="{Binding Summary}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="0,4,0,0" />
+        </StackPanel>
+      </DockPanel>
+
+      <kyf:Notification x:Name="ErrorMessage" Grid.Row="1" Severity="Critical" Message="{Binding Error}" IsOpen="{Binding HasError, Mode=OneWay}" IsClosable="False" Margin="0,12,0,0" />
+
+      <Grid Grid.Row="2" Margin="0,12,0,8" Visibility="{Binding HasSheets, Converter={StaticResource Visible}}">
+        <pages:FilterBar x:Name="FilterBar" DataContext="{Binding Bar}" />
+      </Grid>
+
+      <Grid Grid.Row="3">
+        <!-- Squelettes pendant la première lecture. -->
+        <StackPanel x:Name="Loading" Margin="0,12,0,0" Visibility="{Binding IsLoading, Converter={StaticResource Visible}}"
+                    AutomationProperties.Name="{x:Static pages:SheetsText.Loading}">
+          <kyf:Skeleton Height="44" Margin="0,0,0,8" />
+          <kyf:Skeleton Height="44" Margin="0,0,0,8" />
+          <kyf:Skeleton Height="44" Margin="0,0,0,8" />
+        </StackPanel>
+
+        <kyf:EmptyState x:Name="Empty" Glyph="{x:Static kyf:Icons.Document}" Title="{x:Static pages:SheetsText.EmptyTitle}"
+                        Description="{x:Static pages:SheetsText.EmptyDescription}" Visibility="{Binding IsEmpty, Converter={StaticResource Visible}}" />
+
+        <TextBlock x:Name="NoMatch" Text="{x:Static pages:SheetsText.NoMatch}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="0,12,0,0"
+                   Visibility="{Binding HasNoMatch, Converter={StaticResource Visible}}" />
+
+        <Grid x:Name="Lists" Visibility="{Binding HasRows, Converter={StaticResource Visible}}">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition>
+              <ColumnDefinition.Style>
+                <Style TargetType="ColumnDefinition">
+                  <Setter Property="Width" Value="*" />
+                  <Style.Triggers>
+                    <DataTrigger Binding="{Binding HasPreview}" Value="True">
+                      <Setter Property="Width" Value="360" />
+                    </DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </ColumnDefinition.Style>
+            </ColumnDefinition>
+            <ColumnDefinition>
+              <ColumnDefinition.Style>
+                <Style TargetType="ColumnDefinition">
+                  <Setter Property="Width" Value="0" />
+                  <Style.Triggers>
+                    <DataTrigger Binding="{Binding HasPreview}" Value="True">
+                      <Setter Property="Width" Value="*" />
+                    </DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </ColumnDefinition.Style>
+            </ColumnDefinition>
+          </Grid.ColumnDefinitions>
+
+          <!-- La liste : virtualisée, pour qu'un grand coffre reste fluide. -->
+          <kyf:Card x:Name="ListCard" Padding="8">
+            <pages:OpenableList x:Name="Items" ItemsSource="{Binding Rows}" SelectedItem="{Binding SelectedRow}" OpenCommand="{Binding OpenCommand}"
+                                AutomationProperties.Name="{x:Static pages:SheetsText.ListName}"
+                                ScrollViewer.CanContentScroll="True" VirtualizingPanel.IsVirtualizing="True"
+                                VirtualizingPanel.VirtualizationMode="Recycling" VirtualizingPanel.ScrollUnit="Pixel"
+                                PreviewKeyDown="OnItemsKeyDown" SelectionChanged="OnItemsSelectionChanged" MouseDoubleClick="OnItemsDoubleClick" />
+          </kyf:Card>
+
+          <!-- L'aperçu de la fiche choisie, quand il y a la place. -->
+          <kyf:Card x:Name="PreviewCard" Grid.Column="1" Margin="12,0,0,0" Visibility="{Binding ShowsPreview, Converter={StaticResource Visible}}">
+            <ContentControl Content="{Binding Preview}" Focusable="False" IsTabStop="False" />
+          </kyf:Card>
+        </Grid>
+      </Grid>
+    </Grid>
+
+    <kyf:Dialog x:Name="NewSheet" Title="{x:Static pages:SheetsText.NewSheet}" IsOpen="{Binding IsCreating, Mode=OneWay}"
+                PrimaryButtonText="{x:Static pages:SheetsText.CreateSheet}" Closed="OnCreateClosed">
+      <StackPanel>
+        <kyf:Notification x:Name="CreateError" Severity="Critical" Message="{Binding CreateError}" IsOpen="{Binding HasCreateError, Mode=OneWay}" IsClosable="False" Margin="0,0,0,12" />
+        <TextBlock Text="{x:Static pages:SheetsText.TitleLabel}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,0,0,4" />
+        <TextBox x:Name="NewTitleBox" Text="{Binding NewTitle, UpdateSourceTrigger=PropertyChanged}" kyf:Field.Placeholder="{x:Static pages:SheetsText.TitlePlaceholder}"
+                 AutomationProperties.Name="{x:Static pages:SheetsText.TitleLabel}" />
+        <pages:ListFilterButton x:Name="NewFolderMenu" DataContext="{Binding NewFolder}" HorizontalAlignment="Left" Margin="-16,8,0,0" />
+        <TextBox x:Name="NewFolderBox" Text="{Binding NewFolderName, UpdateSourceTrigger=PropertyChanged}" kyf:Field.Placeholder="{x:Static pages:SheetsText.NewFolderPlaceholder}"
+                 AutomationProperties.Name="{x:Static pages:SheetsText.NewFolderName}" Margin="0,4,0,0" Visibility="{Binding IsNewFolder, Converter={StaticResource Visible}}" />
+        <pages:ListFilterButton x:Name="NewTemplateMenu" DataContext="{Binding NewTemplate}" HorizontalAlignment="Left" Margin="-16,4,0,0" />
+      </StackPanel>
+    </kyf:Dialog>
+  </Grid>
+</UserControl>

@@ -25,6 +25,10 @@ public sealed partial class SheetUseCases(VaultHost host, TimeProvider time, ILo
         });
     }
 
+    /// <summary>Toutes les fiches, par dossier puis par titre.</summary>
+    [ZeroXCommand("liste_des_fiches")]
+    public Outcome<IReadOnlyList<VaultSheet>> List() => host.Use(vault => vault.SheetList());
+
     /// <summary>Ouvre une fiche pour la lire ou la réviser.</summary>
     [ZeroXCommand("ouvrir_fiche")]
     public Outcome<OpenedSheet> Open(string id)
