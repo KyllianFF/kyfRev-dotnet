@@ -3,6 +3,7 @@ using KyfRev.Application.Model;
 using KyfRev.Application.Ports;
 using KyfRev.Application.UseCases;
 using KyfRev.Infrastructure.Windows;
+using KyfRev.Presentation.Wpf.Pages;
 using KyfRev.Presentation.Wpf.Shell;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -24,6 +25,7 @@ public sealed class CompositionTests
         var shell = (ShellViewModel)window.DataContext;
         Assert.AreSame(services.GetRequiredService<ShellViewModel>(), shell);
         Assert.HasCount(5, shell.MainNavigation);
+        Assert.IsInstanceOfType<ArchivesPageViewModel>(shell.MainNavigation.Single(item => item.Id == CorePages.Archives).Page);
         Assert.HasCount(2, shell.SecondaryNavigation);
         window.Close();
     }

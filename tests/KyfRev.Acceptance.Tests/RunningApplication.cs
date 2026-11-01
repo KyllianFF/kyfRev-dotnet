@@ -168,6 +168,45 @@ internal sealed class RunningApplication : IDisposable
     /// <summary>La position du bouton « Retour » à l'écran : une fiche défilée ne doit pas l'emporter.</summary>
     public int BackPosition() => Wait("BackButton").BoundingRectangle.Top;
 
+    /// <summary>Ouvre une vue du menu, comme d'un clic sur son entrée, et attend son titre.</summary>
+    public void OpenView(string name)
+    {
+        var entry = Retry.WhileNull(
+            () => Wait("MainNavigation").FindAllChildren().FirstOrDefault(child => child.Name == name),
+            Patience,
+            Interval,
+            throwOnTimeout: true,
+            timeoutMessage: $"« {name} » n'est pas dans le menu.").Result!;
+        entry.Patterns.SelectionItem.Pattern.Select();
+        Retry.WhileFalse(() => Find("Heading")?.Name == name, Patience, Interval, throwOnTimeout: true, timeoutMessage: $"La vue « {name} » ne s'est pas ouverte.");
+    }
+
+    /// <summary>La ligne d'une fiche dans la vue « Archives », une fois lue.</summary>
+    public string ArchivedRow(string title) => WaitArchive("OpenRow", title).Name;
+
+    /// <summary>Ouvre une fiche depuis la vue « Archives ».</summary>
+    public void OpenArchived(string title)
+    {
+        WaitArchive("OpenRow", title).Patterns.Invoke.Pattern.Invoke();
+        Wait("BackButton");
+    }
+
+    /// <summary>« Exclure des rappels » ou « Réinclure » : attend que la ligne ait changé.</summary>
+    public void ToggleArchived(string title)
+    {
+        var before = WaitArchive("ToggleRow", title).Name;
+        WaitArchive("ToggleRow", title).Patterns.Invoke.Pattern.Invoke();
+        Retry.WhileTrue(() => WaitArchive("ToggleRow", title).Name == before, Patience, Interval, throwOnTimeout: true, timeoutMessage: "Le choix des rappels n'a pas changé.");
+    }
+
+    /// <summary>« Remettre en révision… », confirmé : attend que la fiche ait quitté la liste.</summary>
+    public void RestartArchived(string title)
+    {
+        WaitArchive("RestartRow", title).Patterns.Invoke.Pattern.Invoke();
+        Confirm();
+        Retry.WhileTrue(() => FindArchive("OpenRow", title) is not null, Patience, Interval, throwOnTimeout: true, timeoutMessage: "La fiche est restée dans les archives.");
+    }
+
     /// <summary>Le texte de l'alerte de saturation des rappels ; rien sans alerte.</summary>
     public string? PriorityWarning()
     {
@@ -209,6 +248,12 @@ internal sealed class RunningApplication : IDisposable
         Retry.WhileEmpty(() => List().FindAllChildren().Select(child => child.Name).ToArray(), Patience, Interval, throwOnTimeout: true, timeoutMessage: "Le tableau de bord ne s'est pas affiché.").Result!;
 
     private AutomationElement List() => Wait("Items");
+
+    private AutomationElement? FindArchive(string id, string title) =>
+        _window.FindAllDescendants(condition => condition.ByAutomationId(id)).FirstOrDefault(button => button.Name.Contains(title, StringComparison.Ordinal));
+
+    private AutomationElement WaitArchive(string id, string title) =>
+        Retry.WhileNull(() => FindArchive(id, title), Patience, Interval, throwOnTimeout: true, timeoutMessage: $"« {title} » n'est pas dans les archives.").Result!;
 
     private AutomationElement? Find(string id) => _window.FindFirstDescendant(condition => condition.ByAutomationId(id));
 

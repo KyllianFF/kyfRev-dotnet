@@ -15,6 +15,9 @@ public interface IReviewOpener
     /// <summary>Ouvre la fiche d'un rappel de consolidation.</summary>
     void OpenReminder(PendingReminder reminder);
 
+    /// <summary>Ouvre une fiche, pour la relire.</summary>
+    void OpenSheet(string sheetId);
+
     /// <summary>Lance une séance d'étude sur ces éléments, dans cet ordre.</summary>
     void StartSession(IReadOnlyList<DueItem> items, bool activeRecall);
 
@@ -90,7 +93,8 @@ public sealed class ReviewNavigation : IReviewOpener
         OpenSheet(reminder.SheetId);
     }
 
-    /// <summary>Ouvre une fiche ; « Retour » ramène à la page courante.</summary>
+    /// <inheritdoc/>
+    /// <remarks>« Retour » ramène à la page courante.</remarks>
     public void OpenSheet(string sheetId)
     {
         var shell = Shell;

@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="ActionOn" xml:space="preserve">
+    <value>{0} : {1}</value>
+  </data>
+  <data name="AllCycles" xml:space="preserve">
+    <value>Tous</value>
+  </data>
+  <data name="AllFolders" xml:space="preserve">
+    <value>Tous</value>
+  </data>
+  <data name="AllStatuses" xml:space="preserve">
+    <value>Tous</value>
+  </data>
+  <data name="ArchivedByHand" xml:space="preserve">
+    <value>archivée le {0} (à la main)</value>
+  </data>
+  <data name="ArchivedOn" xml:space="preserve">
+    <value>archivée le {0}</value>
+  </data>
+  <data name="CompletedCyclesMany" xml:space="preserve">
+    <value>{0} cycles terminés</value>
+  </data>
+  <data name="CompletedCyclesOne" xml:space="preserve">
+    <value>{0} cycle terminé</value>
+  </data>
+  <data name="CountMany" xml:space="preserve">
+    <value>{0} fiches archivées</value>
+  </data>
+  <data name="CountOne" xml:space="preserve">
+    <value>{0} fiche archivée</value>
+  </data>
+  <data name="Eligible" xml:space="preserve">
+    <value>Éligible à un rappel</value>
+  </data>
+  <data name="EmptyDescription" xml:space="preserve">
+    <value>Une fiche est archivée à la fin de son dernier cycle, ou à la main depuis sa page de révision.</value>
+  </data>
+  <data name="EmptyTitle" xml:space="preserve">
+    <value>Aucune fiche archivée pour l'instant</value>
+  </data>
+  <data name="Exclude" xml:space="preserve">
+    <value>Exclure des rappels</value>
+  </data>
+  <data name="Excluded" xml:space="preserve">
+    <value>Exclue des rappels</value>
+  </data>
+  <data name="ExcludedMessage" xml:space="preserve">
+    <value>« {0} » est exclue des rappels de consolidation.</value>
+  </data>
+  <data name="FilterCycles" xml:space="preserve">
+    <value>Cycles</value>
+  </data>
+  <data name="FilterFolder" xml:space="preserve">
+    <value>Dossier</value>
+  </data>
+  <data name="FilterPeriod" xml:space="preserve">
+    <value>Archivée</value>
+  </data>
+  <data name="FilterReminders" xml:space="preserve">
+    <value>Rappels</value>
+  </data>
+  <data name="FilterSort" xml:space="preserve">
+    <value>Tri</value>
+  </data>
+  <data name="Include" xml:space="preserve">
+    <value>Réinclure</value>
+  </data>
+  <data name="IncludedMessage" xml:space="preserve">
+    <value>« {0} » est réincluse dans les rappels de consolidation.</value>
+  </data>
+  <data name="LastReminder" xml:space="preserve">
+    <value>dernier rappel le {0} : {1}</value>
+  </data>
+  <data name="Loading" xml:space="preserve">
+    <value>Chargement des archives…</value>
+  </data>
+  <data name="NoMatch" xml:space="preserve">
+    <value>Aucune fiche archivée ne correspond à ces filtres.</value>
+  </data>
+  <data name="OutcomeEntirely" xml:space="preserve">
+    <value>à revoir entièrement</value>
+  </data>
+  <data name="OutcomeKnown" xml:space="preserve">
+    <value>connue</value>
+  </data>
+  <data name="OutcomeSomePoints" xml:space="preserve">
+    <value>certains points à revoir</value>
+  </data>
+  <data name="Pending" xml:space="preserve">
+    <value>Rappel en attente</value>
+  </data>
+  <data name="PeriodAll" xml:space="preserve">
+    <value>N'importe quand</value>
+  </data>
+  <data name="PeriodLastMonth" xml:space="preserve">
+    <value>Ce dernier mois</value>
+  </data>
+  <data name="PeriodLastSixMonths" xml:space="preserve">
+    <value>Ces six derniers mois</value>
+  </data>
+  <data name="PeriodOlder" xml:space="preserve">
+    <value>Il y a plus de six mois</value>
+  </data>
+  <data name="Promise" xml:space="preserve">
+    <value>rien n'est jamais supprimé ; les fiches reviennent de temps en temps en rappel de consolidation.</value>
+  </data>
+  <data name="Restart" xml:space="preserve">
+    <value>Remettre en révision…</value>
+  </data>
+  <data name="RestartConfirm" xml:space="preserve">
+    <value>Remettre en révision</value>
+  </data>
+  <data name="RestartMessage" xml:space="preserve">
+    <value>« {0} » redevient active : un nouveau cycle commence aujourd'hui (J0) et J1 sera dû demain. Son historique est conservé.</value>
+  </data>
+  <data name="RestartTitle" xml:space="preserve">
+    <value>Remettre en révision ?</value>
+  </data>
+  <data name="RestartedMessage" xml:space="preserve">
+    <value>« {0} » est de nouveau en révision : J1 demain.</value>
+  </data>
+  <data name="RestingUntil" xml:space="preserve">
+    <value>Au repos jusqu'au {0}</value>
+  </data>
+  <data name="SearchName" xml:space="preserve">
+    <value>Rechercher</value>
+  </data>
+  <data name="SearchPlaceholder" xml:space="preserve">
+    <value>Titre ou étiquette…</value>
+  </data>
+  <data name="SortArchiving" xml:space="preserve">
+    <value>Archivage récent</value>
+  </data>
+  <data name="SortCycles" xml:space="preserve">
+    <value>Nombre de cycles</value>
+  </data>
+  <data name="SortTitle" xml:space="preserve">
+    <value>Titre</value>
+  </data>
+  <data name="StatusEligible" xml:space="preserve">
+    <value>Éligibles</value>
+  </data>
+  <data name="StatusExcluded" xml:space="preserve">
+    <value>Exclues des rappels</value>
+  </data>
+  <data name="StatusResting" xml:space="preserve">
+    <value>Au repos</value>
+  </data>
+  <data name="ThreeOrMoreCycles" xml:space="preserve">
+    <value>3 ou plus</value>
+  </data>
+</root>
