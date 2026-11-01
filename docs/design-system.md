@@ -204,6 +204,20 @@ les boutons de la séance passent sous elle.
 
 ![Séance, thème clair](captures/j6/seance-clair.png)
 
+## Icône
+
+Un éventail de fiches, du vert à l'ambre ; la fiche du dessus est écrite, surlignée, et porte sa
+frise. Pour Windows, l'icône a les couleurs du thème clair, sans fond : les fiches occupent toute
+sa surface, et un liseré ivoire les détache sur les fonds clairs comme sombres. Elle se simplifie
+à mesure qu'elle rapetisse : la frise se réduit à trois ronds à 48 px (l'étape validée, celle à
+réviser, la prochaine), les lignes s'épaississent à 32 px, la frise disparaît à 16 px.
+
+`assets/icon/kyfrev.svg` en est la source unique : `tools/icon/icon.cs` en génère le `.ico` et les
+images de l'installateur (voir `assets/icon/README.md`). Une version avec fond, ivoire ou forêt, est
+gardée pour une éventuelle application mobile ou macOS.
+
+![Icône de kyfRev](../assets/icon/kyfrev.svg)
+
 ## Emploi
 
 ```csharp
