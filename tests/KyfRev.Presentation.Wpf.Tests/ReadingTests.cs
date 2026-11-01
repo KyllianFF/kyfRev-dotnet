@@ -421,7 +421,7 @@ public sealed class ReadingTests
         var page = vault.Page();
         page.LoadCommand.Execute(null);
         UiThread.Until(() => !page.IsLoading);
-        var window = Show(test, page, 1700, 900);
+        var window = ShowWide(test, page);
         try
         {
             Assert.AreEqual(Visibility.Visible, Named<ContentControl>(window, "OutlinePane").Visibility);
@@ -453,7 +453,7 @@ public sealed class ReadingTests
         var page = vault.Page();
         page.LoadCommand.Execute(null);
         UiThread.Until(() => !page.IsLoading);
-        var window = Show(test, page, 1700, 900);
+        var window = ShowWide(test, page);
         try
         {
             var viewer = Named<SheetDocumentViewer>(window, "SheetText");
@@ -489,7 +489,7 @@ public sealed class ReadingTests
         var page = vault.Page();
         page.LoadCommand.Execute(null);
         UiThread.Until(() => !page.IsLoading);
-        var window = Show(test, page, 1700, 900);
+        var window = ShowWide(test, page);
         try
         {
             var viewer = Named<SheetDocumentViewer>(window, "SheetText");
@@ -740,6 +740,21 @@ public sealed class ReadingTests
         var shell = test.Shell;
         shell.Navigate(new NavigationItem("revision", "Révision", Icons.Document, int.MaxValue, page));
         var window = new ShellWindow(shell) { ShowActivated = true, Left = -10000, Top = -10000, Width = width, Height = height };
+        window.Resources.MergedDictionaries.Add(test.Design.Dictionary);
+        window.Show();
+        TestShell.Flush();
+        return window;
+    }
+
+    /// <summary>
+    /// La page assez large pour ses trois volets, quel que soit l'écran : Windows refuse une fenêtre plus
+    /// large que lui, et celui de la CI est bien plus petit qu'un poste de travail. La fenêtre reste donc
+    /// étroite, et la page garde sa largeur dans un panneau qui ne la contraint pas.
+    /// </summary>
+    private static Window ShowWide(TestShell test, object page)
+    {
+        var sheet = new SheetPage { DataContext = page, Width = 1700, Height = 900 };
+        var window = new Window { Content = new Canvas { Children = { sheet } }, Left = -10000, Top = -10000, Width = 800, Height = 600, ShowActivated = false, ShowInTaskbar = false };
         window.Resources.MergedDictionaries.Add(test.Design.Dictionary);
         window.Show();
         TestShell.Flush();
