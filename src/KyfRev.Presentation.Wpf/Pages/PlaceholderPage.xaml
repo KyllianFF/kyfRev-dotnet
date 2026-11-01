@@ -1,0 +1,11 @@
+<UserControl x:Class="KyfRev.Presentation.Wpf.Pages.PlaceholderPage"
+             x:ClassModifier="internal"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:kyf="clr-namespace:KyfRev.DesignSystem.Controls;assembly=KyfRev.DesignSystem">
+  <DockPanel Margin="32,24">
+    <TextBlock DockPanel.Dock="Top" Text="{Binding Title}" Style="{DynamicResource Kyf.Text.Title}"
+               AutomationProperties.HeadingLevel="Level1" />
+    <kyf:EmptyState Glyph="{Binding Glyph}" Title="{Binding Title}" Description="{Binding Description}" />
+  </DockPanel>
+</UserControl>

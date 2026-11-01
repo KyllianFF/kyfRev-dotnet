@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Description>Présentation WPF de kyfRev : coquille (navigation, recherche de commandes, aide, mode concentration, zoom), vues et modèles de vue.</Description>
+  </PropertyGroup>
+
+  <!-- Aucune infrastructure concrète : la racine de composition (KyfRev.App) les relie. -->
+  <ItemGroup>
+    <ProjectReference Include="..\KyfRev.Application\KyfRev.Application.csproj" />
+    <ProjectReference Include="..\KyfRev.DesignSystem\KyfRev.DesignSystem.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="KyfRev.Presentation.Wpf.Tests" />
+  </ItemGroup>
+
+</Project>

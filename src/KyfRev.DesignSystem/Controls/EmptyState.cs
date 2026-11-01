@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Automation.Peers;
 using System.Windows.Controls;
 
 namespace KyfRev.DesignSystem.Controls;
@@ -54,4 +55,7 @@ public class EmptyState : Control
         get => GetValue(ActionProperty);
         set => SetValue(ActionProperty, value);
     }
+
+    /// <inheritdoc/>
+    protected override AutomationPeer OnCreateAutomationPeer() => new AutomationPeers.EmptyStatePeer(this);
 }

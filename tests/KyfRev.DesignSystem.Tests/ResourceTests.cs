@@ -19,7 +19,7 @@ public sealed partial class ResourceTests
     {
         var resources = new DesignResources(ThemeKind.Light, reducedMotion: false).Dictionary;
         var xaml = Directory.GetFiles(Path.Combine(Repository.Root, "src", "KyfRev.DesignSystem", "Styles"), "*.xaml");
-        Assert.HasCount(6, xaml);
+        Assert.HasCount(7, xaml);
         var keys = xaml.SelectMany(file => ResourceReference().Matches(File.ReadAllText(file)).Select(match => match.Groups["key"].Value)).ToHashSet(StringComparer.Ordinal);
         Assert.IsGreaterThan(40, keys.Count);
         var missing = keys.Where(key => !resources.Contains(key)).ToList();

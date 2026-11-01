@@ -9,6 +9,21 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- Coquille de l'application (`KyfRev.Presentation.Wpf`, `KyfRev.App`) : menu latéral dans
+  l'ordre de la 0.x (Aujourd'hui, Fiches, Définitions, Archives, Statistiques, modules actifs ;
+  Santé du coffre et Paramètres en bas), recherche de commandes (Ctrl+K, sans tenir compte des
+  accents), aide des raccourcis (F1), mode concentration (Ctrl+Maj+F), zoom de 80 à 200 %
+  (Ctrl+plus, Ctrl+moins, Ctrl+0), Ctrl+1 à Ctrl+9 pour les vues. Navigation complète au
+  clavier, focus toujours visible, focus rendu à sa place à la fermeture de la recherche. Les
+  vues encore à porter présentent ce qu'elles feront.
+- Apparence : le thème suit Windows (barre de titre comprise) ou le choix de l'utilisateur ; le
+  contraste élevé et la réduction des animations de Windows s'appliquent sans redémarrage
+  (`KyfRev.Infrastructure.Windows`).
+- Galerie des composants dans l'application (`kyfRev --galerie`), et captures de la coquille.
+- Accessibilité vérifiée par les règles automatiques d'Accessibility Insights (Axe.Windows) sur
+  l'application lancée : chaque vue, l'aide et la recherche, en clair et en sombre, sans erreur.
+  Les composants se présentent aux lecteurs d'écran (dialogue, notification annoncée, pastille,
+  état vide, squelette) ; les icônes décoratives sont ignorées.
 - Design system (`KyfRev.DesignSystem`, `docs/design-system.md`) : les trois gammes de la 0.x
   (violet, pervenche, mauve) et 38 rôles de couleur, en thèmes clair, sombre et contraste élevé
   de Windows ; échelles régulières (typographie et espacements sur une grille de 4 px, rayons,

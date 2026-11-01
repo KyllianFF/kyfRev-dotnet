@@ -1,0 +1,92 @@
+<UserControl x:Class="KyfRev.Presentation.Wpf.Pages.GalleryPage"
+             x:ClassModifier="internal"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:kyf="clr-namespace:KyfRev.DesignSystem.Controls;assembly=KyfRev.DesignSystem"
+             xmlns:p="clr-namespace:KyfRev.Presentation.Wpf">
+  <ScrollViewer VerticalScrollBarVisibility="Auto" Focusable="False">
+    <StackPanel Margin="32,24" MaxWidth="1100" HorizontalAlignment="Left">
+      <TextBlock Text="{x:Static p:ShellText.Gallery}" Style="{DynamicResource Kyf.Text.Title}" AutomationProperties.HeadingLevel="Level1" />
+      <TextBlock Text="{x:Static p:ShellText.GalleryDescription}" Style="{DynamicResource Kyf.Text.Secondary}" Margin="0,4,0,16" />
+
+      <TextBlock Text="{x:Static p:ShellText.Theme}" Style="{DynamicResource Kyf.Text.BodyStrong}" />
+      <ListBox x:Name="ThemeChoices" ItemsSource="{Binding Themes}" SelectedItem="{Binding SelectedTheme}" Margin="-4,4,0,0"
+               HorizontalAlignment="Left" AutomationProperties.Name="{x:Static p:ShellText.Theme}">
+        <ListBox.ItemsPanel>
+          <ItemsPanelTemplate>
+            <StackPanel Orientation="Horizontal" />
+          </ItemsPanelTemplate>
+        </ListBox.ItemsPanel>
+      </ListBox>
+
+      <TextBlock Text="Typographie" Style="{DynamicResource Kyf.Text.Subtitle}" Margin="0,24,0,12" AutomationProperties.HeadingLevel="Level2" />
+      <TextBlock Style="{DynamicResource Kyf.Text.Display}" Text="Display — Le cœur a ses raisons." />
+      <TextBlock Style="{DynamicResource Kyf.Text.Title}" Text="Title — Le cœur a ses raisons que la raison ne connaît point." />
+      <TextBlock Style="{DynamicResource Kyf.Text.Subtitle}" Text="Subtitle — Le cœur a ses raisons que la raison ne connaît point." />
+      <TextBlock Style="{DynamicResource Kyf.Text.BodyLarge}" Text="BodyLarge — Le cœur a ses raisons que la raison ne connaît point." />
+      <TextBlock Style="{DynamicResource Kyf.Text.Body}" Text="Body — Le cœur a ses raisons que la raison ne connaît point." />
+      <TextBlock Style="{DynamicResource Kyf.Text.BodyStrong}" Text="BodyStrong — Le cœur a ses raisons que la raison ne connaît point." />
+      <TextBlock Style="{DynamicResource Kyf.Text.Caption}" Text="Caption — Le cœur a ses raisons que la raison ne connaît point." />
+
+      <TextBlock Text="Boutons et champs" Style="{DynamicResource Kyf.Text.Subtitle}" Margin="0,24,0,12" AutomationProperties.HeadingLevel="Level2" />
+      <WrapPanel>
+        <Button Content="Valider la révision" Style="{DynamicResource Kyf.Button.Primary}" Margin="0,0,12,12" />
+        <Button Content="Reporter" Margin="0,0,12,12" />
+        <Button Content="Plus tard" Style="{DynamicResource Kyf.Button.Subtle}" Margin="0,0,12,12" />
+        <Button Content="&#xE711;" Style="{DynamicResource Kyf.Button.Icon}" Margin="0,0,12,12" AutomationProperties.Name="Fermer" ToolTip="Fermer" />
+        <Button Content="Indisponible" IsEnabled="False" Margin="0,0,12,12" />
+      </WrapPanel>
+      <WrapPanel>
+        <TextBox Width="240" Margin="0,0,12,12" kyf:Field.Placeholder="Rechercher une fiche" AutomationProperties.Name="Recherche" />
+        <TextBox Width="240" Margin="0,0,12,12" Text="Mitose et méiose" AutomationProperties.Name="Titre" />
+      </WrapPanel>
+
+      <TextBlock Text="Pastilles" Style="{DynamicResource Kyf.Text.Subtitle}" Margin="0,24,0,12" AutomationProperties.HeadingLevel="Level2" />
+      <WrapPanel>
+        <kyf:Pill Kind="Sheet" Text="Fiche · J7" Margin="0,0,8,8" />
+        <kyf:Pill Kind="Passage" Text="Passage · J1" Margin="0,0,8,8" />
+        <kyf:Pill Kind="Reminder" Text="Rappel" Margin="0,0,8,8" />
+        <kyf:Pill Kind="Overdue" Text="Retard 4 j" Margin="0,0,8,8" />
+        <kyf:Pill Kind="Archived" Text="Archivée" Margin="0,0,8,8" />
+        <kyf:Pill Kind="NeedsReview" Text="À vérifier" Margin="0,0,8,8" />
+      </WrapPanel>
+
+      <TextBlock Text="Cartes" Style="{DynamicResource Kyf.Text.Subtitle}" Margin="0,24,0,12" AutomationProperties.HeadingLevel="Level2" />
+      <WrapPanel>
+        <kyf:Card Marker="Sheet" Width="240" Margin="0,0,12,12">
+          <TextBlock Text="Mitose" Style="{DynamicResource Kyf.Text.BodyStrong}" />
+        </kyf:Card>
+        <kyf:Card Marker="Passage" Width="240" Margin="0,0,12,12">
+          <TextBlock Text="« La prophase précède… »" Style="{DynamicResource Kyf.Text.BodyStrong}" />
+        </kyf:Card>
+        <kyf:Card Marker="Reminder" Width="240" Margin="0,0,12,12">
+          <TextBlock Text="Rappel : Méiose" Style="{DynamicResource Kyf.Text.BodyStrong}" />
+        </kyf:Card>
+      </WrapPanel>
+
+      <TextBlock Text="Notifications" Style="{DynamicResource Kyf.Text.Subtitle}" Margin="0,24,0,12" AutomationProperties.HeadingLevel="Level2" />
+      <StackPanel Width="560" HorizontalAlignment="Left">
+        <kyf:Notification Severity="Info" Title="Nouvelle version" Message="kyfRev 1.0.0-alpha.2 est disponible." Margin="0,0,0,8" />
+        <kyf:Notification Severity="Success" Title="Sauvegarde faite" Message="Le coffre est sauvegardé." Margin="0,0,0,8" />
+        <kyf:Notification Severity="Warning" Title="Passage à vérifier" Message="Le texte de la fiche a changé autour de cette annotation." Margin="0,0,0,8" />
+        <kyf:Notification Severity="Critical" Title="Sauvegarde impossible" Message="Le dossier des sauvegardes est introuvable." Margin="0,0,0,8" />
+      </StackPanel>
+
+      <TextBlock Text="Chargement et état vide" Style="{DynamicResource Kyf.Text.Subtitle}" Margin="0,24,0,12" AutomationProperties.HeadingLevel="Level2" />
+      <WrapPanel>
+        <StackPanel Width="200" Margin="0,0,24,12" VerticalAlignment="Top">
+          <kyf:Skeleton Width="200" Height="16" HorizontalAlignment="Left" Margin="0,0,0,8" />
+          <kyf:Skeleton Width="160" Height="16" HorizontalAlignment="Left" Margin="0,0,0,8" />
+          <kyf:Skeleton Width="180" Height="16" HorizontalAlignment="Left" />
+        </StackPanel>
+        <kyf:Card Width="300" Margin="0,0,12,12">
+          <kyf:EmptyState Glyph="&#xE930;" Title="Rien à réviser" Description="Toutes les fiches du jour sont faites.">
+            <kyf:EmptyState.Action>
+              <Button Content="Voir demain" />
+            </kyf:EmptyState.Action>
+          </kyf:EmptyState>
+        </kyf:Card>
+      </WrapPanel>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

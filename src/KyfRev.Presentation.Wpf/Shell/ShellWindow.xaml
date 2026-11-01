@@ -1,0 +1,177 @@
+<Window x:Class="KyfRev.Presentation.Wpf.Shell.ShellWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:kyf="clr-namespace:KyfRev.DesignSystem.Controls;assembly=KyfRev.DesignSystem"
+        xmlns:ds="clr-namespace:KyfRev.DesignSystem;assembly=KyfRev.DesignSystem"
+        xmlns:p="clr-namespace:KyfRev.Presentation.Wpf"
+        xmlns:pages="clr-namespace:KyfRev.Presentation.Wpf.Pages"
+        Title="{x:Static p:ShellText.AppName}" Width="1200" Height="780" MinWidth="720" MinHeight="480"
+        WindowStartupLocation="CenterScreen" UseLayoutRounding="True"
+        Background="{DynamicResource Kyf.Brush.Background}" Foreground="{DynamicResource Kyf.Brush.Text}"
+        FontFamily="{DynamicResource Kyf.Font.Ui}" FontSize="{DynamicResource Kyf.FontSize.Body}">
+
+  <Window.Resources>
+    <BooleanToVisibilityConverter x:Key="Visible" />
+    <DataTemplate DataType="{x:Type pages:PlaceholderPageViewModel}">
+      <pages:PlaceholderPage />
+    </DataTemplate>
+    <DataTemplate DataType="{x:Type pages:GalleryPageViewModel}">
+      <pages:GalleryPage />
+    </DataTemplate>
+    <DataTemplate x:Key="NavigationItemTemplate">
+      <StackPanel Orientation="Horizontal">
+        <kyf:Icon Text="{Binding Glyph}" Margin="0,0,12,0" />
+        <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
+      </StackPanel>
+    </DataTemplate>
+  </Window.Resources>
+
+  <Window.InputBindings>
+    <KeyBinding Key="K" Modifiers="Control" Command="{Binding OpenPaletteCommand}" />
+    <KeyBinding Key="F1" Command="{Binding ShowHelpCommand}" />
+    <KeyBinding Key="F" Modifiers="Control+Shift" Command="{Binding ToggleFocusModeCommand}" />
+    <KeyBinding Key="OemPlus" Modifiers="Control" Command="{Binding ZoomInCommand}" />
+    <KeyBinding Key="Add" Modifiers="Control" Command="{Binding ZoomInCommand}" />
+    <KeyBinding Key="OemMinus" Modifiers="Control" Command="{Binding ZoomOutCommand}" />
+    <KeyBinding Key="Subtract" Modifiers="Control" Command="{Binding ZoomOutCommand}" />
+    <KeyBinding Key="D0" Modifiers="Control" Command="{Binding ResetZoomCommand}" />
+    <KeyBinding Key="NumPad0" Modifiers="Control" Command="{Binding ResetZoomCommand}" />
+    <KeyBinding Key="D1" Modifiers="Control" Command="{Binding NavigateToPositionCommand}" CommandParameter="1" />
+    <KeyBinding Key="D2" Modifiers="Control" Command="{Binding NavigateToPositionCommand}" CommandParameter="2" />
+    <KeyBinding Key="D3" Modifiers="Control" Command="{Binding NavigateToPositionCommand}" CommandParameter="3" />
+    <KeyBinding Key="D4" Modifiers="Control" Command="{Binding NavigateToPositionCommand}" CommandParameter="4" />
+    <KeyBinding Key="D5" Modifiers="Control" Command="{Binding NavigateToPositionCommand}" CommandParameter="5" />
+    <KeyBinding Key="D6" Modifiers="Control" Command="{Binding NavigateToPositionCommand}" CommandParameter="6" />
+    <KeyBinding Key="D7" Modifiers="Control" Command="{Binding NavigateToPositionCommand}" CommandParameter="7" />
+    <KeyBinding Key="D8" Modifiers="Control" Command="{Binding NavigateToPositionCommand}" CommandParameter="8" />
+    <KeyBinding Key="D9" Modifiers="Control" Command="{Binding NavigateToPositionCommand}" CommandParameter="9" />
+  </Window.InputBindings>
+
+  <Grid>
+    <!-- Espace de travail, agrandi ou réduit par le zoom. -->
+    <Grid x:Name="Workspace">
+      <Grid.LayoutTransform>
+        <ScaleTransform ScaleX="{Binding Zoom}" ScaleY="{Binding Zoom}" />
+      </Grid.LayoutTransform>
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="Auto" />
+        <ColumnDefinition Width="*" />
+      </Grid.ColumnDefinitions>
+
+      <Border x:Name="Sidebar" Width="248" Background="{DynamicResource Kyf.Brush.Surface}"
+              BorderBrush="{DynamicResource Kyf.Brush.Divider}" BorderThickness="0,0,1,0">
+        <Border.Style>
+          <Style TargetType="Border">
+            <Style.Triggers>
+              <DataTrigger Binding="{Binding IsFocusMode}" Value="True">
+                <Setter Property="Visibility" Value="Collapsed" />
+              </DataTrigger>
+            </Style.Triggers>
+          </Style>
+        </Border.Style>
+        <DockPanel Margin="12,16,12,12">
+          <TextBlock DockPanel.Dock="Top" Text="{x:Static p:ShellText.AppName}" Style="{DynamicResource Kyf.Text.Subtitle}"
+                     Margin="12,0,0,16" />
+          <Button x:Name="SearchButton" DockPanel.Dock="Top" Command="{Binding OpenPaletteCommand}" Margin="0,0,0,12"
+                  HorizontalContentAlignment="Stretch" AutomationProperties.Name="{x:Static p:ShellText.SearchPlaceholder}"
+                  AutomationProperties.AcceleratorKey="Ctrl+K">
+            <DockPanel>
+              <TextBlock DockPanel.Dock="Right" Text="Ctrl+K" Style="{DynamicResource Kyf.Text.Caption}" VerticalAlignment="Center" />
+              <kyf:Icon Text="&#xE721;" Margin="0,0,8,0" />
+              <TextBlock Text="{x:Static p:ShellText.Search}" VerticalAlignment="Center" />
+            </DockPanel>
+          </Button>
+          <StackPanel DockPanel.Dock="Bottom">
+            <Separator Margin="0,8" />
+            <ListBox x:Name="SecondaryNavigation" ItemsSource="{Binding SecondaryNavigation}" SelectedItem="{Binding SelectedSecondary}"
+                     ItemTemplate="{StaticResource NavigationItemTemplate}" AutomationProperties.Name="{x:Static p:ShellText.SecondaryNavigation}" />
+            <Button x:Name="HelpButton" Command="{Binding ShowHelpCommand}" Style="{DynamicResource Kyf.Button.Subtle}"
+                    HorizontalContentAlignment="Left" Padding="12,0" AutomationProperties.Name="{x:Static p:ShellText.Help}"
+                    AutomationProperties.AcceleratorKey="F1">
+              <StackPanel Orientation="Horizontal">
+                <kyf:Icon Text="&#xE897;" Margin="0,0,12,0" />
+                <TextBlock Text="{x:Static p:ShellText.Help}" VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
+          </StackPanel>
+          <ListBox x:Name="MainNavigation" ItemsSource="{Binding MainNavigation}" SelectedItem="{Binding SelectedMain}"
+                   ItemTemplate="{StaticResource NavigationItemTemplate}" AutomationProperties.Name="{x:Static p:ShellText.MainNavigation}" />
+        </DockPanel>
+      </Border>
+
+      <ContentControl x:Name="Page" Grid.Column="1" Content="{Binding Current.Page}" Focusable="False" IsTabStop="False" />
+    </Grid>
+
+    <!-- Aide des raccourcis (F1). -->
+    <kyf:Dialog x:Name="HelpDialog" Title="{x:Static p:ShellText.Help}" IsOpen="{Binding IsHelpOpen}"
+                PrimaryButtonText="{x:Static ds:DesignText.Close}" SecondaryButtonText="">
+      <ItemsControl ItemsSource="{Binding Shortcuts}" Focusable="False">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate>
+            <Grid Margin="0,4">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="160" />
+                <ColumnDefinition Width="*" />
+              </Grid.ColumnDefinitions>
+              <Border HorizontalAlignment="Left" Padding="8,2" CornerRadius="{DynamicResource Kyf.Radius.Control}"
+                      Background="{DynamicResource Kyf.Brush.SurfaceAlt}" BorderBrush="{DynamicResource Kyf.Brush.ControlBorder}" BorderThickness="1">
+                <TextBlock Text="{Binding Keys}" FontFamily="{DynamicResource Kyf.Font.Code}" />
+              </Border>
+              <TextBlock Grid.Column="1" Text="{Binding Description}" Style="{DynamicResource Kyf.Text.Body}" VerticalAlignment="Center" />
+            </Grid>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </kyf:Dialog>
+
+    <!-- Recherche de commandes (Ctrl+K). -->
+    <Grid x:Name="Palette" Visibility="{Binding IsPaletteOpen, Converter={StaticResource Visible}}" KeyboardNavigation.TabNavigation="Cycle">
+      <Rectangle x:Name="PaletteScrim" Fill="{DynamicResource Kyf.Brush.Scrim}">
+        <Rectangle.InputBindings>
+          <MouseBinding MouseAction="LeftClick" Command="{Binding ClosePaletteCommand}" />
+        </Rectangle.InputBindings>
+      </Rectangle>
+      <Grid VerticalAlignment="Top" HorizontalAlignment="Center" Width="560" Margin="24,80,24,24">
+        <Border Background="{DynamicResource Kyf.Brush.Surface}" CornerRadius="{DynamicResource Kyf.Radius.Card}"
+                Effect="{DynamicResource Kyf.Elevation.Dialog}" />
+        <Border Background="{DynamicResource Kyf.Brush.Surface}" BorderBrush="{DynamicResource Kyf.Brush.Divider}" BorderThickness="1"
+                CornerRadius="{DynamicResource Kyf.Radius.Card}" Padding="8" AutomationProperties.Name="{x:Static p:ShellText.SearchPlaceholder}">
+          <DockPanel>
+            <TextBox x:Name="PaletteQuery" DockPanel.Dock="Top" Text="{Binding PaletteQuery, UpdateSourceTrigger=PropertyChanged}"
+                     kyf:Field.Placeholder="{x:Static p:ShellText.SearchPlaceholder}" AutomationProperties.Name="{x:Static p:ShellText.SearchPlaceholder}">
+              <TextBox.InputBindings>
+                <KeyBinding Key="Down" Command="{Binding MoveSelectionCommand}" CommandParameter="1" />
+                <KeyBinding Key="Up" Command="{Binding MoveSelectionCommand}" CommandParameter="-1" />
+                <KeyBinding Key="Enter" Command="{Binding RunSelectedCommand}" />
+                <KeyBinding Key="Escape" Command="{Binding ClosePaletteCommand}" />
+              </TextBox.InputBindings>
+            </TextBox>
+            <TextBlock x:Name="NoResult" DockPanel.Dock="Top" Text="{x:Static p:ShellText.NoCommand}" Style="{DynamicResource Kyf.Text.Secondary}"
+                       Margin="12,12,12,4" Visibility="{Binding HasNoResult, Converter={StaticResource Visible}}" />
+            <ListBox x:Name="PaletteResults" ItemsSource="{Binding PaletteResults}" SelectedItem="{Binding SelectedResult}"
+                     MaxHeight="360" Margin="0,8,0,0" AutomationProperties.Name="{x:Static p:ShellText.SearchPlaceholder}">
+              <ListBox.InputBindings>
+                <KeyBinding Key="Enter" Command="{Binding RunSelectedCommand}" />
+                <KeyBinding Key="Escape" Command="{Binding ClosePaletteCommand}" />
+              </ListBox.InputBindings>
+              <ListBox.ItemTemplate>
+                <DataTemplate>
+                  <DockPanel>
+                    <TextBlock x:Name="Detail" DockPanel.Dock="Right" Text="{Binding Detail}" Style="{DynamicResource Kyf.Text.Caption}" VerticalAlignment="Center" Margin="12,0,0,0" />
+                    <kyf:Icon Text="{Binding Glyph}" Margin="0,0,12,0" />
+                    <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
+                  </DockPanel>
+                  <DataTemplate.Triggers>
+                    <DataTrigger Binding="{Binding Detail}" Value="{x:Null}">
+                      <Setter TargetName="Detail" Property="Visibility" Value="Collapsed" />
+                    </DataTrigger>
+                  </DataTemplate.Triggers>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </DockPanel>
+        </Border>
+      </Grid>
+    </Grid>
+  </Grid>
+</Window>

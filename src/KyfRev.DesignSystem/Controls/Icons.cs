@@ -36,6 +36,48 @@ public static class Icons
     /// <summary>Croix : fermer.</summary>
     public static string Close { get; } = Glyph(0xE711);
 
+    /// <summary>Calendrier : le jour.</summary>
+    public static string Calendar { get; } = Glyph(0xE787);
+
+    /// <summary>Dictionnaire : les définitions.</summary>
+    public static string Dictionary { get; } = Glyph(0xE82D);
+
+    /// <summary>Graphique : les statistiques.</summary>
+    public static string Chart { get; } = Glyph(0xE9D2);
+
+    /// <summary>Bulles : les citations.</summary>
+    public static string Quote { get; } = Glyph(0xE8F2);
+
+    /// <summary>Cœur : la santé du coffre.</summary>
+    public static string Health { get; } = Glyph(0xEB51);
+
+    /// <summary>Engrenage : les paramètres.</summary>
+    public static string Settings { get; } = Glyph(0xE713);
+
+    /// <summary>Palette : la galerie des composants.</summary>
+    public static string Palette { get; } = Glyph(0xE790);
+
+    /// <summary>Pièce de puzzle : une vue apportée par un module.</summary>
+    public static string Puzzle { get; } = Glyph(0xEA86);
+
+    /// <summary>Loupe : rechercher.</summary>
+    public static string Search { get; } = Glyph(0xE721);
+
+    /// <summary>Point d'interrogation : l'aide.</summary>
+    public static string Help { get; } = Glyph(0xE897);
+
+    /// <summary>Plein écran : le mode concentration.</summary>
+    public static string FocusMode { get; } = Glyph(0xE740);
+
+    /// <summary>Loupe plus : agrandir.</summary>
+    public static string ZoomIn { get; } = Glyph(0xE8A3);
+
+    /// <summary>Loupe moins : réduire.</summary>
+    public static string ZoomOut { get; } = Glyph(0xE71F);
+
+    /// <summary>Soleil : le thème.</summary>
+    public static string Theme { get; } = Glyph(0xE706);
+
     /// <summary>Icône d'une sorte de pastille.</summary>
     public static string Of(PillKind kind) => kind switch
     {

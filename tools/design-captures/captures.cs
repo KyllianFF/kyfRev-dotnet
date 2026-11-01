@@ -1,4 +1,5 @@
 #:project ../../src/KyfRev.DesignSystem/KyfRev.DesignSystem.csproj
+#:project ../../src/KyfRev.Presentation.Wpf/KyfRev.Presentation.Wpf.csproj
 #:property TargetFramework=net10.0-windows
 #:property UseWPF=true
 #:property ImplicitUsings=enable
@@ -7,16 +8,21 @@
 // Captures du design system pour la revue visuelle (voir tools/design-captures/README.md).
 // Usage : dotnet run tools/design-captures/captures.cs -- <dossier>
 // Écrit galerie-clair.png, galerie-sombre.png et galerie-contraste-eleve.png (couleurs système
-// actuelles du poste), et affiche le contraste de chaque paire de rôles.
+// actuelles du poste), les vues de la coquille (coquille-clair.png, coquille-sombre.png,
+// recherche-sombre.png, aide-clair.png), et affiche le contraste de chaque paire de rôles.
 using System.Globalization;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using KyfRev.Application.Modules;
+using KyfRev.Application.Ports;
 using KyfRev.DesignSystem;
 using KyfRev.DesignSystem.Controls;
 using KyfRev.DesignSystem.Tokens;
+using KyfRev.Presentation.Wpf.Pages;
+using KyfRev.Presentation.Wpf.Shell;
 
 var folder = args.Length > 0 ? args[0] : ".";
 Directory.CreateDirectory(folder);
@@ -27,6 +33,14 @@ var thread = new Thread(() =>
         var design = new DesignResources(theme, reducedMotion: true);
         Save(Gallery(design, name), Path.Combine(folder, $"galerie-{name}.png"));
     }
+    Shell(folder, "coquille-clair.png", ThemePreference.Light, _ => { });
+    Shell(folder, "coquille-sombre.png", ThemePreference.Dark, _ => { });
+    Shell(folder, "recherche-sombre.png", ThemePreference.Dark, shell =>
+    {
+        shell.OpenPalette();
+        shell.PaletteQuery = "aller";
+    });
+    Shell(folder, "aide-clair.png", ThemePreference.Light, shell => shell.ShowHelp());
 });
 thread.SetApartmentState(ApartmentState.STA);
 thread.Start();
@@ -41,6 +55,34 @@ foreach (var theme in new[] { ThemeKind.Light, ThemeKind.Dark })
         var ratio = colors[pair.Foreground].ContrastWith(colors[pair.Background]);
         Console.WriteLine(string.Create(CultureInfo.InvariantCulture, $"{pair.Foreground} sur {pair.Background} : {ratio:0.00} (≥ {pair.Minimum})"));
     }
+}
+
+// La fenêtre de la coquille, hors de l'écran, dans un état donné ; seul son contenu est rendu.
+static void Shell(string folder, string file, ThemePreference theme, Action<ShellViewModel> prepare)
+{
+    var design = new DesignResources(ThemeKind.Light, reducedMotion: true);
+    var appearance = new AppearanceController(design, new StillAppearance(), new NoChrome()) { Preference = theme };
+    var shell = new ShellViewModel(CorePages.All().Append(CorePages.FromModule(new NavigationEntry("citations", "Citations", 60))), appearance, new GalleryPageViewModel(appearance));
+    var window = new ShellWindow(shell) { Width = 1280, Height = 800, Left = -20000, Top = -20000, WindowStartupLocation = WindowStartupLocation.Manual, ShowActivated = false, ShowInTaskbar = false };
+    window.Resources.MergedDictionaries.Add(design.Dictionary);
+    window.Show();
+    prepare(shell);
+    window.Dispatcher.Invoke(System.Windows.Threading.DispatcherPriority.ApplicationIdle, () => { });
+    var content = (Panel)window.Content;
+    // Le fond de la fenêtre n'appartient pas à son contenu : il est repeint dessous pour la capture.
+    content.Background = window.Background;
+    content.UpdateLayout();
+    var bitmap = new RenderTargetBitmap((int)content.ActualWidth, (int)content.ActualHeight, 96, 96, PixelFormats.Pbgra32);
+    bitmap.Render(content);
+    var encoder = new PngBitmapEncoder();
+    encoder.Frames.Add(BitmapFrame.Create(bitmap));
+    var path = Path.Combine(folder, file);
+    using (var stream = File.Create(path))
+    {
+        encoder.Save(stream);
+    }
+    window.Close();
+    Console.WriteLine($"{path} : {bitmap.PixelWidth} × {bitmap.PixelHeight}");
 }
 
 static FrameworkElement Gallery(DesignResources design, string name)
@@ -163,4 +205,25 @@ static void Save(FrameworkElement gallery, string path)
     using var file = File.Create(path);
     encoder.Save(file);
     Console.WriteLine($"{path} : {bitmap.PixelWidth} × {bitmap.PixelHeight}");
+}
+
+// Windows tel qu'il est : ni sombre ni contraste élevé ; le thème vient du choix fait ici.
+internal sealed class StillAppearance : ISystemAppearance
+{
+    public event EventHandler? Changed
+    {
+        add { }
+        remove { }
+    }
+
+    public bool PrefersDarkTheme => false;
+
+    public bool HighContrast => false;
+
+    public bool ReducedMotion => true;
+}
+
+internal sealed class NoChrome : IWindowChrome
+{
+    public bool UseDarkTitleBar(nint windowHandle, bool dark) => false;
 }

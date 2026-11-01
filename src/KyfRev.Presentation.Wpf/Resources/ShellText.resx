@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="AppName" xml:space="preserve">
+    <value>kyfRev</value>
+  </data>
+  <data name="Archives" xml:space="preserve">
+    <value>Archives</value>
+  </data>
+  <data name="ComingSoon" xml:space="preserve">
+    <value>Cette vue arrive dans une prochaine version de kyfRev. Vos fiches restent dans le coffre, lisibles par la version 0.x en attendant.</value>
+  </data>
+  <data name="Definitions" xml:space="preserve">
+    <value>Définitions</value>
+  </data>
+  <data name="FocusMode" xml:space="preserve">
+    <value>Mode concentration</value>
+  </data>
+  <data name="Gallery" xml:space="preserve">
+    <value>Galerie des composants</value>
+  </data>
+  <data name="GalleryDescription" xml:space="preserve">
+    <value>Chaque composant du design system, dans le thème choisi, pour la revue visuelle.</value>
+  </data>
+  <data name="GoTo" xml:space="preserve">
+    <value>Aller à : {0}</value>
+  </data>
+  <data name="Health" xml:space="preserve">
+    <value>Santé du coffre</value>
+  </data>
+  <data name="Help" xml:space="preserve">
+    <value>Raccourcis clavier</value>
+  </data>
+  <data name="MainNavigation" xml:space="preserve">
+    <value>Navigation principale</value>
+  </data>
+  <data name="NoCommand" xml:space="preserve">
+    <value>Aucune commande ne correspond.</value>
+  </data>
+  <data name="Search" xml:space="preserve">
+    <value>Rechercher</value>
+  </data>
+  <data name="SearchPlaceholder" xml:space="preserve">
+    <value>Rechercher une commande ou une vue</value>
+  </data>
+  <data name="SecondaryNavigation" xml:space="preserve">
+    <value>Navigation secondaire</value>
+  </data>
+  <data name="Settings" xml:space="preserve">
+    <value>Paramètres</value>
+  </data>
+  <data name="ShortcutFocusMode" xml:space="preserve">
+    <value>Afficher ou masquer le menu (mode concentration)</value>
+  </data>
+  <data name="ShortcutGoTo" xml:space="preserve">
+    <value>Aller à la vue 1 à 9 du menu</value>
+  </data>
+  <data name="ShortcutHelp" xml:space="preserve">
+    <value>Afficher les raccourcis clavier</value>
+  </data>
+  <data name="ShortcutSearch" xml:space="preserve">
+    <value>Rechercher une commande ou une vue</value>
+  </data>
+  <data name="ShortcutZoomIn" xml:space="preserve">
+    <value>Agrandir l'interface</value>
+  </data>
+  <data name="ShortcutZoomOut" xml:space="preserve">
+    <value>Réduire l'interface</value>
+  </data>
+  <data name="ShortcutZoomReset" xml:space="preserve">
+    <value>Revenir à la taille normale</value>
+  </data>
+  <data name="Sheets" xml:space="preserve">
+    <value>Fiches</value>
+  </data>
+  <data name="Statistics" xml:space="preserve">
+    <value>Statistiques</value>
+  </data>
+  <data name="Theme" xml:space="preserve">
+    <value>Thème</value>
+  </data>
+  <data name="ThemeDark" xml:space="preserve">
+    <value>Sombre</value>
+  </data>
+  <data name="ThemeLight" xml:space="preserve">
+    <value>Clair</value>
+  </data>
+  <data name="ThemeSystem" xml:space="preserve">
+    <value>Comme Windows</value>
+  </data>
+  <data name="ThemeTo" xml:space="preserve">
+    <value>Thème : {0}</value>
+  </data>
+  <data name="Today" xml:space="preserve">
+    <value>Aujourd'hui</value>
+  </data>
+  <data name="Zoom" xml:space="preserve">
+    <value>Zoom : {0} %</value>
+  </data>
+</root>
