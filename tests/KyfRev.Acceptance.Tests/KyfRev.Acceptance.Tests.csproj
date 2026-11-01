@@ -2,6 +2,9 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0-windows</TargetFramework>
+    <!-- L'application tourne dans un autre processus : ce projet ne mesure aucun module, et le seuil de
+         couverture échouerait sur un rapport vide (code de sortie 14). -->
+    <TestingPlatformCommandLineArguments>$(TestingPlatformCommandLineArguments) --ignore-exit-code 14</TestingPlatformCommandLineArguments>
   </PropertyGroup>
 
   <!--
