@@ -9,6 +9,10 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- Moteur de rendu des fiches (`KyfRev.Rendering`), sans effet visible pour l'instant : il transforme le
+  Markdown en un arbre de contenu, en tire le texte affiché et y retrouve les passages. Il reproduit à
+  l'identique le texte, les positions et le ré-ancrage de la version 0.x sur les 230 documents et les
+  116 modifications du corpus d'ancrage, et sur 1 149 cas limites calculés par la 0.x elle-même.
 - Vue « Fiches » : toutes les fiches du coffre, par dossier, à chercher par titre ou étiquette, à filtrer
   par dossier et par état, et à trier. La fiche choisie s'affiche à côté de la liste quand la place le
   permet ; sinon, un clic l'ouvre. « Nouvelle fiche » la crée dans un dossier, existant ou nouveau, vide
