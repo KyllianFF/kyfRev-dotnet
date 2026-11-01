@@ -62,6 +62,15 @@ l'onglet Actions, workflow « Mutation ») :
 pwsh tools/mutation.ps1
 ```
 
+Construire l'installateur (avec [Inno Setup 6](https://jrsoftware.org/isinfo.php), la 6.7.3
+comme dans l'intégration continue), puis l'essayer sans droits administrateur : installation,
+mise à jour, retour en arrière refusé, désinstallation, dans un dossier temporaire :
+
+```powershell
+$installateur = pwsh tools/installer.ps1
+pwsh tools/installer-tests.ps1 -Installateur $installateur
+```
+
 Les tests du domaine comparent aussi l'implémentation C# au cœur Rust de la version 0.x, à
 partir de vecteurs de référence versionnés : voir [tools/reference-vectors](tools/reference-vectors/README.md).
 

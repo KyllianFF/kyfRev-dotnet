@@ -135,3 +135,58 @@ jobs:
 
       - name: Raccourcis interdits (tests désactivés, avertissements masqués, exceptions avalées)
         run: dotnet slopwatch analyze --no-baseline --fail-on warning
+
+  installateur:
+    name: Installateur
+    runs-on: windows-2025
+    timeout-minutes: 20
+    env:
+      INNO_SETUP_VERSION: 6.7.3
+      INNO_SETUP_SHA256: 9c73c3bae7ed48d44112a0f48e66742c00090bdb5bef71d9d3c056c66e97b732
+    steps:
+      - name: Récupération du dépôt
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: SDK .NET (global.json)
+        uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+
+      - name: Inno Setup (version figée, empreinte vérifiée, pour l'utilisateur)
+        run: |
+          $nom = "innosetup-$env:INNO_SETUP_VERSION.exe"
+          $etiquette = 'is-' + $env:INNO_SETUP_VERSION.Replace('.', '_')
+          $programme = Join-Path $env:RUNNER_TEMP $nom
+          Invoke-WebRequest "https://github.com/jrsoftware/issrc/releases/download/$etiquette/$nom" -OutFile $programme
+          if ((Get-FileHash $programme -Algorithm SHA256).Hash -ne $env:INNO_SETUP_SHA256) { throw 'Empreinte d''Inno Setup inattendue.' }
+          $dossier = Join-Path $env:RUNNER_TEMP 'inno-setup'
+          $installation = Start-Process $programme -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/CURRENTUSER', "/DIR=`"$dossier`"" -Wait -PassThru
+          if ($installation.ExitCode -ne 0) { throw "Installation d'Inno Setup impossible (code $($installation.ExitCode))." }
+          "ISCC=$(Join-Path $dossier 'ISCC.exe')" >> $env:GITHUB_ENV
+
+      - name: Construction de l'installateur
+        run: |
+          $installateur = ./tools/installer.ps1 -Iscc $env:ISCC
+          "INSTALLATEUR=$installateur" >> $env:GITHUB_ENV
+
+      - name: Installateur
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: installateur
+          path: ${{ env.INSTALLATEUR }}
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Installation, mise à jour et désinstallation sans droits administrateur
+        run: ./tools/installer-tests.ps1 -Installateur $env:INSTALLATEUR -PosteVierge
+
+      - name: Journaux d'Inno Setup
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: journaux-installateur
+          path: artifacts/installer/essais
+          if-no-files-found: ignore
+          retention-days: 30

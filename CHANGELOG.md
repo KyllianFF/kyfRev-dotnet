@@ -9,6 +9,17 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- Installateur Inno Setup 6 (`tools/installer.ps1`), avec l'application autonome : rien à
+  installer d'autre, pas même le runtime .NET. Sans droits administrateur, il installe kyfRev
+  pour l'utilisateur en cours (`%LOCALAPPDATA%\Programs\kyfRev`) ou, au choix, pour tous. Il
+  propose les raccourcis dans le menu Démarrer et sur le Bureau, et l'emplacement des fiches de
+  chaque personne (Documents ou AppData). Son accueil donne la version et sa date de
+  publication. Comme celui de la version 0.x, il met à jour sur place en gardant les choix de la
+  première installation et refuse de remplacer une version plus récente (code de sortie 7). Il
+  attend que kyfRev soit fermé, et sa désinstallation ne touche à aucun coffre ni réglage. En
+  installation silencieuse, `/COFFRE=documents|donnees` et `/NOICONS` fixent ces choix.
+  L'intégration continue construit l'installateur et l'essaie à chaque envoi : installation,
+  lancement, mise à jour, retour en arrière refusé, désinstallation.
 - Séance d'étude, repensée : « Commencer (N) » sur la liste du jour (en retard, puis
   aujourd'hui, filtrée et triée), la progression visible (« Séance : 5 / 12 »), « Passer » tant
   que rien n'a été fait puis « Suivant » (Ctrl+→), « Terminer la séance », et le mode révision
@@ -207,6 +218,8 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Modifié
 
+- L'application est compilée pour Windows x64 (`win-x64`), comme elle est livrée ; les
+  bibliothèques restent indépendantes de la plateforme.
 - Un dialogue ou une notification qui se ferme de lui-même garde la liaison de son ouverture :
   il peut se rouvrir quand le modèle de vue le demande.
 - Grands coffres plus rapides : les liens cassés sont relevés sans relire les fiches qui n'ont
