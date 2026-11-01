@@ -10,4 +10,10 @@
     <InternalsVisibleTo Include="KyfRev.DesignSystem.Tests" />
   </ItemGroup>
 
+  <!-- Polices Atkinson Hyperlegible Next et Mono, livrées avec leur licence (SIL OFL 1.1). -->
+  <ItemGroup>
+    <Resource Include="Fonts\*.ttf" />
+    <None Include="Fonts\OFL-*.txt" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

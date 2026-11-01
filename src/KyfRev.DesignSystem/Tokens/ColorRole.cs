@@ -73,13 +73,13 @@ public enum ColorRole
     /// <summary>Texte de la pastille « Rappel ».</summary>
     PillReminderText,
 
-    /// <summary>Sélection de texte en cours (pervenche).</summary>
+    /// <summary>Sélection de texte en cours (vert pâle).</summary>
     Selection,
 
     /// <summary>Texte sélectionné.</summary>
     OnSelection,
 
-    /// <summary>Surlignage enregistré (mauve) : distinct de la sélection.</summary>
+    /// <summary>Surlignage enregistré (ambre) : distinct de la sélection.</summary>
     Highlight,
 
     /// <summary>Surlignage de l'annotation ouverte.</summary>
@@ -94,16 +94,16 @@ public enum ColorRole
     /// <summary>Texte de l'entrée active du menu latéral.</summary>
     NavigationActiveText,
 
-    /// <summary>Retard et erreur : hors de la famille violette, pour ne jamais se confondre avec la marque.</summary>
+    /// <summary>Erreur : brique, hors des deux gammes, pour ne jamais se confondre avec un retard ou une action.</summary>
     Critical,
 
-    /// <summary>Fond des erreurs et des retards.</summary>
+    /// <summary>Fond des erreurs.</summary>
     CriticalBackground,
 
-    /// <summary>Avertissement (annotation à vérifier).</summary>
+    /// <summary>Retard et avertissement (annotation à vérifier) : ambre.</summary>
     Warning,
 
-    /// <summary>Fond des avertissements.</summary>
+    /// <summary>Fond des retards et des avertissements.</summary>
     WarningBackground,
 
     /// <summary>Réussite.</summary>

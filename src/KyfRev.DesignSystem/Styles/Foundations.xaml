@@ -8,7 +8,7 @@
     <Setter Property="Control.Template">
       <Setter.Value>
         <ControlTemplate>
-          <Rectangle Margin="-4" RadiusX="8" RadiusY="8" SnapsToDevicePixels="True"
+          <Rectangle Margin="-4" RadiusX="16" RadiusY="16" SnapsToDevicePixels="True"
                      Stroke="{DynamicResource Kyf.Brush.Focus}" StrokeThickness="2" />
         </ControlTemplate>
       </Setter.Value>

@@ -27,9 +27,9 @@
     <Setter Property="Background" Value="{DynamicResource Kyf.Brush.Surface}" />
     <Setter Property="BorderBrush" Value="{DynamicResource Kyf.Brush.ControlBorder}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="Padding" Value="12,0" />
-    <Setter Property="MinHeight" Value="32" />
-    <Setter Property="MinWidth" Value="32" />
+    <Setter Property="Padding" Value="16,0" />
+    <Setter Property="MinHeight" Value="40" />
+    <Setter Property="MinWidth" Value="40" />
     <Setter Property="HorizontalContentAlignment" Value="Center" />
     <Setter Property="VerticalContentAlignment" Value="Center" />
     <Setter Property="FocusVisualStyle" Value="{DynamicResource Kyf.FocusVisual}" />
@@ -57,8 +57,10 @@
     </Style.Triggers>
   </Style>
 
-  <!-- Bouton principal : une seule action principale par vue. -->
+  <!-- Bouton principal : une seule action principale par vue, en gras. -->
   <Style x:Key="Kyf.Button.Primary" TargetType="ButtonBase" BasedOn="{StaticResource Kyf.Button}">
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="MinHeight" Value="44" />
     <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.OnPrimary}" />
     <Setter Property="Background" Value="{DynamicResource Kyf.Brush.Primary}" />
     <Setter Property="BorderBrush" Value="{DynamicResource Kyf.Brush.Primary}" />
@@ -85,8 +87,8 @@
     <Setter Property="FontFamily" Value="{DynamicResource Kyf.Font.Icons}" />
     <Setter Property="FontSize" Value="16" />
     <Setter Property="Padding" Value="0" />
-    <Setter Property="Width" Value="32" />
-    <Setter Property="Height" Value="32" />
+    <Setter Property="Width" Value="40" />
+    <Setter Property="Height" Value="40" />
   </Style>
 
 </ResourceDictionary>

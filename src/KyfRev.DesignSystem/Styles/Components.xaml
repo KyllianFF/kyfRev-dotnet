@@ -5,27 +5,33 @@
                     xmlns:kyf="clr-namespace:KyfRev.DesignSystem.Controls"
                     xmlns:ds="clr-namespace:KyfRev.DesignSystem">
 
-  <!-- Carte : surface bordée d'un trait, repère latéral de 3 px selon ce qu'elle présente. -->
+  <!-- Carte : surface posée sur le fond par une ombre douce (derrière, pour garder le texte net),
+       bordée d'un trait discret qui devient le seul repère en contraste élevé. Un court trait en
+       haut dit ce qu'elle présente. -->
   <Style TargetType="kyf:Card">
     <Setter Property="Background" Value="{DynamicResource Kyf.Brush.Surface}" />
     <Setter Property="BorderBrush" Value="{DynamicResource Kyf.Brush.Divider}" />
     <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Text}" />
     <Setter Property="BorderThickness" Value="1" />
-    <Setter Property="Padding" Value="16" />
+    <Setter Property="Padding" Value="20" />
     <Setter Property="IsTabStop" Value="False" />
     <Setter Property="Focusable" Value="False" />
     <Setter Property="Template">
       <Setter.Value>
         <ControlTemplate TargetType="kyf:Card">
-          <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
-                  BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{DynamicResource Kyf.Radius.Card}"
-                  SnapsToDevicePixels="True">
-            <Grid>
-              <Border x:Name="Marker" Width="3" HorizontalAlignment="Left" Margin="0,8" CornerRadius="0,2,2,0"
-                      Visibility="Collapsed" />
-              <ContentPresenter Margin="{TemplateBinding Padding}" />
-            </Grid>
-          </Border>
+          <Grid>
+            <Border Background="{TemplateBinding Background}" CornerRadius="{DynamicResource Kyf.Radius.Card}"
+                    Effect="{DynamicResource Kyf.Elevation.Card}" />
+            <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{DynamicResource Kyf.Radius.Card}"
+                    SnapsToDevicePixels="True">
+              <Grid>
+                <Border x:Name="Marker" Width="28" Height="4" HorizontalAlignment="Left" VerticalAlignment="Top"
+                        Margin="20,12,0,0" CornerRadius="2" Visibility="Collapsed" />
+                <ContentPresenter Margin="{TemplateBinding Padding}" />
+              </Grid>
+            </Border>
+          </Grid>
           <ControlTemplate.Triggers>
             <Trigger Property="Marker" Value="Sheet">
               <Setter TargetName="Marker" Property="Visibility" Value="Visible" />
@@ -59,8 +65,8 @@
     <Setter Property="Template">
       <Setter.Value>
         <ControlTemplate TargetType="kyf:Pill">
-          <Border Background="{TemplateBinding Background}" CornerRadius="12" Padding="{TemplateBinding Padding}"
-                  MinHeight="24" SnapsToDevicePixels="True">
+          <Border Background="{TemplateBinding Background}" CornerRadius="13" Padding="{TemplateBinding Padding}"
+                  MinHeight="26" SnapsToDevicePixels="True">
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
               <TextBlock Text="{TemplateBinding Glyph}" Style="{DynamicResource Kyf.Text.Icon}" FontSize="12"
                          Foreground="{TemplateBinding Foreground}" Margin="0,0,4,0" />
@@ -80,8 +86,8 @@
         <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.PillReminderText}" />
       </Trigger>
       <Trigger Property="Kind" Value="Overdue">
-        <Setter Property="Background" Value="{DynamicResource Kyf.Brush.CriticalBackground}" />
-        <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Critical}" />
+        <Setter Property="Background" Value="{DynamicResource Kyf.Brush.WarningBackground}" />
+        <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Warning}" />
       </Trigger>
       <Trigger Property="Kind" Value="Archived">
         <Setter Property="Background" Value="{DynamicResource Kyf.Brush.SurfaceAlt}" />

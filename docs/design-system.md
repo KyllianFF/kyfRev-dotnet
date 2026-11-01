@@ -1,8 +1,13 @@
 # Design system de kyfRev
 
-`src/KyfRev.DesignSystem` réunit l'identité visuelle de kyfRev (conception de la 0.x, §12) et
-les composants WPF qui l'appliquent. Il ne dépend d'aucune autre couche ; la présentation
-l'emploie, jamais l'inverse.
+`src/KyfRev.DesignSystem` réunit l'identité visuelle de kyfRev, « Veillée », et les composants
+WPF qui l'appliquent. Il ne dépend d'aucune autre couche ; la présentation l'emploie, jamais
+l'inverse.
+
+Veillée a été choisie en novembre 2026 parmi plusieurs propositions : une interface pensée pour
+les longues séances de révision, lisible avant tout (Atkinson Hyperlegible), douce le jour (vert
+sauge et forêt) et chaude le soir (un sombre brun plutôt que bleuté), aux formes arrondies sans
+être enfantines.
 
 ![Galerie, thème clair](captures/j5/galerie-clair.png)
 
@@ -18,38 +23,39 @@ s'ouvre aussi dans l'application (`kyfRev --galerie`).
 
 ### Gammes
 
-Trois gammes de dix nuances (50 à 900), construites dans l'espace OKLCH autour des quatre
-couleurs fournies, conservées telles quelles (`Tokens/Palette.cs`) :
+Deux gammes de dix nuances (50 à 900), de la plus claire à la plus foncée (`Tokens/Palette.cs`) :
 
-| Gamme | Code | Couleurs fournies |
-|---|---|---|
-| Violet (principale) | `Palette.Violet` | 600 `#7f4ea8` |
-| Pervenche (secondaire : passages, sélection) | `Palette.Periwinkle` | 400 `#9c93e5` |
-| Mauve (accent : rappels, surlignage) | `Palette.Mauve` | 400 `#ba8cbe`, 300 `#c7a3d2` |
+| Gamme | Code | Emploi | Nuances clés |
+|---|---|---|---|
+| Forêt | `Palette.Forest` | l'action, ce qui est fait, la sélection | 700 `#2e6a4e` (clair), 300 `#86c7a1` (sombre) |
+| Ambre | `Palette.Amber` | le retard, l'avertissement, les passages surlignés | 700 `#93540f` (clair), 300 `#eba458` (sombre) |
 
-S'y ajoutent, pour chaque thème, les neutres teintés de violet et les couleurs fonctionnelles
-(retard, avertissement, réussite), volontairement hors de la famille violette. `Palette.cs` est le
-seul fichier où une couleur s'écrit : un test refuse toute couleur écrite ailleurs dans
-l'interface (code ou XAML, valeur hexadécimale ou couleur nommée).
+S'y ajoutent, pour chaque thème, les neutres et les couleurs fonctionnelles : « Jour », clair,
+teinté de sauge (fond `#edefe9`, cartes `#fafbf7`), et « Veillée », sombre et chaud (fond
+`#191714`, cartes `#24211c`). L'erreur est brique (`#a33a2b`, `#f0a090`), hors des deux gammes,
+pour ne jamais se confondre avec un retard. `Palette.cs` est le seul fichier où une couleur
+s'écrit : un test refuse toute couleur écrite ailleurs dans l'interface (code ou XAML, valeur
+hexadécimale ou couleur nommée).
 
 ### Rôles
 
 Les composants n'emploient que des rôles (`ColorRole`, 38 rôles), traduits en couleur par le
 thème (`ThemeColors`) :
 
-| Rôle | Clair | Sombre | Contraste élevé |
+| Rôle | Clair (Jour) | Sombre (Veillée) | Contraste élevé |
 |---|---|---|---|
-| `Background`, `Surface`, `SurfaceAlt` | `#f8f7fb`, `#ffffff`, `#f1eff6` | `#15121c`, `#1e1a28`, `#2a2536` | fenêtre |
-| `Text`, `TextSecondary` | `#221d2e`, `#5d566d` | `#ece8f4`, `#a9a1bb` | texte de fenêtre |
-| `Primary` / survol / enfoncé | violet 600 / 700 / 800 | violet 400 / 300 / 200 | mise en évidence |
-| `OnPrimary` | blanc | `#15121c` | texte mis en évidence |
-| `Link`, `Focus` | violet 600 | violet 300, violet 400 | lien, texte de fenêtre |
-| `ControlBorder` | `#8a8498` | `#777087` | texte de fenêtre |
-| `Divider` (décoratif) | `#dedae8` | `#3a3448` | texte de fenêtre |
-| Repères Fiche, Passage, Rappel | nuances 600 | nuances 400 | texte de fenêtre |
-| Pastilles Fiche, Passage, Rappel | texte 800 sur fond 100 | texte 100 sur fond 800 | texte sur fenêtre |
-| `Selection`, `Highlight`, `HighlightActive` | pervenche 200, mauve 200, mauve 300 | pervenche 800, mauve 800, mauve 700 | mise en évidence |
-| `Critical`, `Warning`, `Success`, `Info` | `#b3261e`, `#8a5300`, `#1e7a46`, pervenche 800 | `#ff8a80`, `#f0b45a`, `#6fcf97`, pervenche 100 | texte de fenêtre |
+| `Background`, `Surface`, `SurfaceAlt` | `#edefe9`, `#fafbf7`, `#e3e8e0` | `#191714`, `#24211c`, `#2e2a24` | fenêtre |
+| `Text`, `TextSecondary` | `#1d2822`, `#4f5c54` | `#efe9dc`, `#b4ab9b` | texte de fenêtre |
+| `Primary` / survol / enfoncé | forêt 700 / 800 / 900 | forêt 300 / 200 / 100 | mise en évidence |
+| `OnPrimary` | blanc | `#13201a` | texte mis en évidence |
+| `Link`, `Focus` | forêt 700 | forêt 300 | lien, texte de fenêtre |
+| `ControlBorder` | `#77837a` | `#877e70` | texte de fenêtre |
+| `Divider` (décoratif) | `#d3d9d0` | `#38332b` | texte de fenêtre |
+| Repères Fiche, Passage, Rappel | forêt 700, ambre 700, texte secondaire | forêt 300, ambre 300, texte secondaire | texte de fenêtre |
+| Pastilles Fiche, Passage | texte 800 sur fond 100 | texte 100 sur fond 900 | texte sur fenêtre |
+| `Selection`, `Highlight`, `HighlightActive` | forêt 200, ambre 200, ambre 300 | forêt 800, ambre 800, ambre 700 | mise en évidence |
+| `NavigationActiveBackground` | forêt 100 | forêt 900 | mise en évidence |
+| `Critical`, `Warning`, `Success`, `Info` | `#a33a2b`, ambre 700, forêt 700, forêt 800 | `#f0a090`, ambre 300, forêt 300, forêt 100 | texte de fenêtre |
 
 ### Contrastes
 
@@ -59,29 +65,41 @@ vérifient toutes, dans chaque thème :
 
 | Thème | Textes (33 paires) | Contours et repères (18 paires) |
 |---|---|---|
-| Clair | 4,75:1 au moins (réussite sur son fond) | 3,16:1 au moins (contour sur `SurfaceAlt`) |
-| Sombre | 6,00:1 au moins (texte secondaire sur `SurfaceAlt`) | 3,14:1 au moins (contour sur `SurfaceAlt`) |
+| Clair (Jour) | 4,94:1 au moins (retard sur son fond) | 3,18:1 au moins (contour sur `SurfaceAlt`) |
+| Sombre (Veillée) | 4,94:1 au moins (texte sur le surlignage actif) | 3,56:1 au moins (contour sur `SurfaceAlt`) |
 
-- Le contour des contrôles (`ControlBorder`) remplace la bordure à 1,29:1 de la 0.x, qui
-  rendait les champs difficiles à repérer. Le trait clair d'autrefois reste celui des séparateurs
-  et des cartes (`Divider`), décoratif : il ne porte jamais seul une information.
+- Le contour des contrôles (`ControlBorder`) atteint 3:1 sur tous les fonds. Le trait clair des
+  séparateurs et des cartes (`Divider`) reste décoratif : il ne porte jamais seul une information.
 - En contraste élevé, chaque paire tombe sur une paire de couleurs de Windows dont Windows
   garantit le contraste (texte sur fenêtre, texte mis en évidence sur mise en évidence, lien sur
-  fenêtre) ; les ombres disparaissent.
+  fenêtre) ; les ombres disparaissent, les contours restent.
 - Un état ne dépend jamais de la seule couleur : chaque pastille et chaque notification porte
-  une icône et un libellé.
+  une icône et un libellé, l'élément choisi d'une liste passe en gras.
 
 ### Échelles
 
 | Échelle | Valeurs |
 |---|---|
-| Typographie (taille / interligne) | `Caption` 12/16, `Body` 14/20 (et `BodyStrong`), `BodyLarge` 16/24, `Subtitle` 20/28, `Title` 24/32, `Display` 32/40 |
+| Typographie (taille / interligne) | `Caption` 13/20, `Body` 15/24 (et `BodyStrong`), `BodyLarge` 17/24, `Subtitle` 21/28, `Title` 34/40, `Display` 48/56 |
 | Lecture des fiches | 17, 19 ou 21 px, interligne 1,65 (réglage de la 0.x) |
-| Polices | Segoe UI Variable (interface et titres), Cascadia Mono ou Consolas (code), Segoe Fluent Icons ou Segoe MDL2 Assets (icônes) |
+| Polices | Atkinson Hyperlegible Next (interface, titres, fiches) et Atkinson Hyperlegible Mono (étapes, dates, compteurs, code), livrées avec kyfRev ; Segoe Fluent Icons ou Segoe MDL2 Assets (icônes) |
 | Espacements | grille de 4 px : 4, 8, 12, 16, 20, 24, 32, 40, 48 |
-| Rayons | 4 (contrôles), 8 (cartes, menus), 12 (dialogues) |
-| Élévations | « Flyout » (menus) et « Dialog » ; tout le reste est à plat, bordé d'un trait de 1 px |
-| Durées | 100 et 150 ms ; nulles, et squelettes immobiles, si Windows demande de réduire les animations |
+| Rayons | 12 (contrôles), 20 (cartes, menus), 24 (dialogues) ; pastilles en arrondi complet |
+| Élévations | « Card » (ombre douce des cartes), « Flyout » (menus) et « Dialog » ; aucune en contraste élevé |
+| Tailles | contrôles de 40 px de haut au moins, 44 pour le bouton principal et les éléments de liste |
+| Durées | 120 et 220 ms, décélération douce ; nulles, et squelettes immobiles, si Windows demande de réduire les animations |
+
+### Polices
+
+Les deux familles Atkinson sont livrées dans `src/KyfRev.DesignSystem/Fonts`, en fichiers
+statiques (WPF ne choisit pas la graisse d'une police variable), avec leur licence SIL Open
+Font License 1.1, copiée à côté de l'exécutable. Elles viennent des dépôts officiels, à un
+commit figé :
+
+| Famille | Fichiers | Source |
+|---|---|---|
+| Atkinson Hyperlegible Next | Regular, Italic, SemiBold, SemiBoldItalic, Bold, BoldItalic | `googlefonts/atkinson-hyperlegible-next` à `7925f50f` |
+| Atkinson Hyperlegible Mono | Regular, SemiBold | `googlefonts/atkinson-hyperlegible-next-mono` à `154d5036` |
 
 ## Composants
 
@@ -89,10 +107,10 @@ vérifient toutes, dans chaque thème :
 |---|---|---|
 | Boutons | styles `Kyf.Button` (secondaire, par défaut), `Kyf.Button.Primary`, `Kyf.Button.Subtle`, `Kyf.Button.Icon` | une seule action principale par vue |
 | Champ | style de `TextBox`, indication `Field.Placeholder` | contour à 3:1, contour épaissi au focus, indication lue comme aide |
-| Carte | `Card`, repère `Marker` (fiche, passage, rappel) | barre latérale de 3 px |
+| Carte | `Card`, repère `Marker` (fiche, passage, rappel) | ombre douce ; le repère est un court trait en haut |
 | Pastille | `Pill`, sorte `Kind` | icône et libellé : fiche, passage, rappel, retard, archivée, à vérifier |
 | Menu | styles de `ContextMenu`, `Menu`, `MenuItem` | coche, raccourci, sous-menus |
-| Listes | styles de `ListBox`, `ListBoxItem` | survol, élément choisi : fond 100 et barre latérale de 3 px (menu de la coquille) |
+| Listes | styles de `ListBox`, `ListBoxItem` | survol, élément choisi : fond vert pâle et texte en gras (menu de la coquille) |
 | Icône | `Icon` | décorative : police d'icônes de Windows, ignorée par le lecteur d'écran |
 | Dialogue | `Dialog` | voile, focus tenu à l'intérieur, Échap ferme, Entrée valide |
 | Notification | `Notification`, gravité `Severity` | annoncée par le lecteur d'écran (tout de suite pour une erreur) |

@@ -1,4 +1,5 @@
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Controls;
@@ -14,6 +15,10 @@ namespace KyfRev.DesignSystem.Tests;
 [TestClass]
 public sealed partial class ResourceTests
 {
+    private static readonly string[] UiFaces = ["Bold Italic", "Bold Normal", "Normal Italic", "Normal Normal", "SemiBold Italic", "SemiBold Normal"];
+    private static readonly string[] CodeFaces = ["Normal Normal", "SemiBold Normal"];
+    private static readonly string[] Licences = ["OFL-AtkinsonHyperlegibleNext.txt", "OFL-AtkinsonHyperlegibleMono.txt"];
+
     [STATestMethod]
     public void Every_key_named_by_the_styles_exists()
     {
@@ -50,14 +55,39 @@ public sealed partial class ResourceTests
         var button = new Button { Content = "Valider", Style = (Style)design.Dictionary["Kyf.Button.Primary"] };
         var host = Host.Of(design, button);
 
-        Assert.AreEqual(Palette.Violet[600].ToColor(), ((SolidColorBrush)button.Background).Color);
+        Assert.AreEqual(Palette.Forest[700].ToColor(), ((SolidColorBrush)button.Background).Color);
         design.Theme = ThemeKind.Dark;
         Assert.AreEqual(ThemeKind.Dark, design.Theme);
-        Assert.AreEqual(Palette.Violet[400].ToColor(), ((SolidColorBrush)button.Background).Color);
+        Assert.AreEqual(Palette.Forest[300].ToColor(), ((SolidColorBrush)button.Background).Color);
         design.Theme = ThemeKind.HighContrast;
         Assert.AreEqual(SystemColors.HighlightColor, ((SolidColorBrush)button.Background).Color);
         Assert.IsNull(design.Dictionary[DesignKeys.Shadow(Elevation.Flyout)]);
         Assert.AreSame(design.Dictionary, host.Resources);
+    }
+
+    [STATestMethod]
+    public void The_atkinson_fonts_ship_with_their_licence()
+    {
+        // Les ressources « pack://application » se lisent une fois WPF initialisé, comme dans l'application.
+        RuntimeHelpers.RunClassConstructor(typeof(Application).TypeHandle);
+        var resources = new DesignResources(ThemeKind.Light, reducedMotion: false).Dictionary;
+        Assert.AreEqual(Typography.UiFamily, ((FontFamily)resources[DesignKeys.UiFont]).Source);
+        Assert.AreEqual(Typography.CodeFamily, ((FontFamily)resources[DesignKeys.CodeFont]).Source);
+
+        // Les obliques sont simulées par WPF : seuls comptent les fichiers livrés.
+        static List<string> Faces(string family) =>
+        [
+            .. new FontFamily(Typography.FontsBase, $"./#{family}").GetTypefaces()
+                .Where(typeface => typeface.Style != FontStyles.Oblique && typeface.TryGetGlyphTypeface(out _))
+                .Select(typeface => $"{typeface.Weight} {typeface.Style}")
+                .Order(StringComparer.Ordinal),
+        ];
+        CollectionAssert.AreEqual(UiFaces, Faces("Atkinson Hyperlegible Next"));
+        CollectionAssert.AreEqual(CodeFaces, Faces("Atkinson Hyperlegible Mono"));
+        foreach (var licence in Licences)
+        {
+            StringAssert.Contains(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fonts", licence)), "SIL Open Font License, Version 1.1", StringComparison.Ordinal);
+        }
     }
 
     [STATestMethod]

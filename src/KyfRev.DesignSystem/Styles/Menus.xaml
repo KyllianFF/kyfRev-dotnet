@@ -44,7 +44,7 @@
   <!-- Entrée de menu : icône (ou coche), libellé, raccourci, flèche de sous-menu. -->
   <ControlTemplate x:Key="Kyf.Template.MenuItem" TargetType="MenuItem">
     <Border x:Name="Row" Background="Transparent" CornerRadius="{DynamicResource Kyf.Radius.Control}"
-            Padding="8,0" MinHeight="32" SnapsToDevicePixels="True">
+            Padding="12,0" MinHeight="40" SnapsToDevicePixels="True">
       <Grid>
         <Grid.ColumnDefinitions>
           <ColumnDefinition Width="Auto" SharedSizeGroup="KyfMenuIcon" />

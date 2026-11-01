@@ -3,12 +3,13 @@
                     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-  <!-- Élément de liste : survol sur la surface secondaire ; sélectionné, fond 100 et barre latérale de 3 px. -->
+  <!-- Élément de liste : survol sur la surface secondaire ; sélectionné, fond vert pâle et texte
+       en gras, pour que l'état ne tienne pas qu'à la couleur. -->
   <Style TargetType="ListBoxItem">
     <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Text}" />
     <Setter Property="Padding" Value="12,0" />
-    <Setter Property="MinHeight" Value="36" />
-    <Setter Property="Margin" Value="0,0,0,2" />
+    <Setter Property="MinHeight" Value="44" />
+    <Setter Property="Margin" Value="0,0,0,4" />
     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
     <Setter Property="FocusVisualStyle" Value="{DynamicResource Kyf.FocusVisual}" />
     <Setter Property="Template">
@@ -16,11 +17,7 @@
         <ControlTemplate TargetType="ListBoxItem">
           <Border x:Name="Row" Background="Transparent" CornerRadius="{DynamicResource Kyf.Radius.Control}"
                   Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
-            <Grid>
-              <Border x:Name="Bar" Width="3" HorizontalAlignment="Left" Margin="-12,8,0,8" CornerRadius="0,2,2,0"
-                      Background="{DynamicResource Kyf.Brush.Primary}" Visibility="Collapsed" />
-              <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" />
-            </Grid>
+            <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" />
           </Border>
           <ControlTemplate.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
@@ -28,8 +25,8 @@
             </Trigger>
             <Trigger Property="IsSelected" Value="True">
               <Setter TargetName="Row" Property="Background" Value="{DynamicResource Kyf.Brush.NavigationActiveBackground}" />
-              <Setter TargetName="Bar" Property="Visibility" Value="Visible" />
               <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.NavigationActiveText}" />
+              <Setter Property="FontWeight" Value="SemiBold" />
             </Trigger>
             <Trigger Property="IsEnabled" Value="False">
               <Setter TargetName="Row" Property="Opacity" Value="0.5" />

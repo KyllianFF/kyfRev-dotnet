@@ -38,8 +38,8 @@
           <Setter TargetName="Chevron" Property="Text" Value="&#xE76C;" />
         </DataTrigger>
         <DataTrigger Binding="{Binding Tone}" Value="Overdue">
-          <Setter TargetName="Glyph" Property="Foreground" Value="{DynamicResource Kyf.Brush.Critical}" />
-          <Setter TargetName="Title" Property="Foreground" Value="{DynamicResource Kyf.Brush.Critical}" />
+          <Setter TargetName="Glyph" Property="Foreground" Value="{DynamicResource Kyf.Brush.Warning}" />
+          <Setter TargetName="Title" Property="Foreground" Value="{DynamicResource Kyf.Brush.Warning}" />
         </DataTrigger>
         <DataTrigger Binding="{Binding Tone}" Value="Reminder">
           <Setter TargetName="Glyph" Property="Foreground" Value="{DynamicResource Kyf.Brush.MarkerReminder}" />

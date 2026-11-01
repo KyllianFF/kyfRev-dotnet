@@ -26,7 +26,8 @@ public sealed class ComponentTests
         Assert.AreEqual("Retard 4 j", Peer(pill).GetName());
         Assert.AreEqual(AutomationControlType.Text, Peer(pill).GetAutomationControlType());
         Assert.AreEqual(nameof(Pill), Peer(pill).GetClassName());
-        Assert.AreEqual(ThemeColors.For(ThemeKind.Light)[ColorRole.Critical].ToColor(), ((SolidColorBrush)pill.Foreground).Color);
+        // Un retard est ambre (avertissement) : le rouge brique est réservé aux erreurs.
+        Assert.AreEqual(ThemeColors.For(ThemeKind.Light)[ColorRole.Warning].ToColor(), ((SolidColorBrush)pill.Foreground).Color);
         var glyphs = Enum.GetValues<PillKind>().Select(kind =>
         {
             pill.Kind = kind;
@@ -216,20 +217,22 @@ public sealed class ComponentTests
     private static AutomationPeer Peer(UIElement element) => UIElementAutomationPeer.CreatePeerForElement(element);
 
     [STATestMethod]
-    public void A_selected_list_item_shows_its_bar_and_the_active_colors()
+    public void A_selected_list_item_is_filled_and_bold_never_the_color_alone()
     {
         var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
         var list = new ListBox { ItemsSource = new[] { "Aujourd'hui", "Fiches" } };
         Host.Of(design, list);
         var item = (ListBoxItem)list.ItemContainerGenerator.ContainerFromIndex(1);
-        var bar = Host.Part<Border>(item, "Bar");
-        Assert.AreEqual(Visibility.Collapsed, bar.Visibility);
+        var row = Host.Part<Border>(item, "Row");
+        Assert.AreEqual(FontWeights.Normal, item.FontWeight);
 
         list.SelectedIndex = 1;
 
-        Assert.AreEqual(Visibility.Visible, bar.Visibility);
+        Assert.AreEqual(FontWeights.SemiBold, item.FontWeight);
+        Assert.AreEqual(ThemeColors.For(ThemeKind.Light)[ColorRole.NavigationActiveBackground].ToColor(), ((SolidColorBrush)row.Background).Color);
         Assert.AreEqual(ThemeColors.For(ThemeKind.Light)[ColorRole.NavigationActiveText].ToColor(), ((SolidColorBrush)item.Foreground).Color);
         Assert.AreSame(design.Dictionary["Kyf.FocusVisual"], item.FocusVisualStyle);
+        Assert.IsGreaterThanOrEqualTo(44.0, item.MinHeight);
     }
 
     [STATestMethod]
@@ -255,7 +258,7 @@ public sealed class ComponentTests
 
         Assert.AreSame(ring, button.FocusVisualStyle);
         Assert.AreSame(ring, item.FocusVisualStyle);
-        Assert.AreEqual(32.0, button.MinHeight);
+        Assert.AreEqual(40.0, button.MinHeight);
     }
 }
 

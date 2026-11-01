@@ -3,30 +3,34 @@ using KyfRev.DesignSystem.Tokens;
 namespace KyfRev.DesignSystem.Tests;
 
 /// <summary>
-/// Les jetons : gammes construites autour des quatre couleurs fournies, contraste de chaque paire
-/// de rôles employée dans chaque thème (WCAG 2.1), échelles régulières.
+/// Les jetons : les couleurs validées de l'identité Veillée, contraste de chaque paire de rôles
+/// employée dans chaque thème (WCAG 2.1), échelles régulières.
 /// </summary>
 [TestClass]
 public sealed class TokenTests
 {
     [TestMethod]
-    public void The_four_provided_colors_keep_their_place()
+    public void The_validated_veillee_colors_keep_their_place()
     {
-        Assert.AreEqual("#7f4ea8", Palette.Violet[600].ToString());
-        Assert.AreEqual("#9c93e5", Palette.Periwinkle[400].ToString());
-        Assert.AreEqual("#ba8cbe", Palette.Mauve[400].ToString());
-        Assert.AreEqual("#c7a3d2", Palette.Mauve[300].ToString());
+        Assert.AreEqual("#2e6a4e", Palette.Forest[700].ToString());
+        Assert.AreEqual("#86c7a1", Palette.Forest[300].ToString());
+        Assert.AreEqual("#93540f", Palette.Amber[700].ToString());
+        Assert.AreEqual("#eba458", Palette.Amber[300].ToString());
+        Assert.AreEqual("#edefe9", Palette.Light.Background.ToString());
+        Assert.AreEqual("#191714", Palette.Dark.Background.ToString());
+        Assert.AreEqual(Palette.Forest[700], ThemeColors.For(ThemeKind.Light)[ColorRole.Primary]);
+        Assert.AreEqual(Palette.Forest[300], ThemeColors.For(ThemeKind.Dark)[ColorRole.Primary]);
     }
 
     [TestMethod]
     public void Each_ramp_goes_from_light_to_dark()
     {
-        foreach (var ramp in new[] { Palette.Violet, Palette.Periwinkle, Palette.Mauve })
+        foreach (var ramp in new[] { Palette.Forest, Palette.Amber })
         {
             var luminances = ColorRamp.Shades.Select(shade => ramp[shade].RelativeLuminance).ToList();
             CollectionAssert.AreEqual(luminances.OrderDescending().ToList(), luminances, ramp.Name);
         }
-        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => Palette.Violet[650]);
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => Palette.Forest[650]);
     }
 
     [TestMethod]
@@ -54,12 +58,12 @@ public sealed class TokenTests
     }
 
     [TestMethod]
-    public void Control_borders_fix_the_former_1_29_to_1()
+    public void Control_borders_stay_visible_and_dividers_stay_discreet()
     {
         var light = ThemeColors.For(ThemeKind.Light);
         Assert.IsLessThan(1.5, light[ColorRole.Divider].ContrastWith(light[ColorRole.Surface]));
         Assert.IsGreaterThanOrEqualTo(3.0, light[ColorRole.ControlBorder].ContrastWith(light[ColorRole.SurfaceAlt]));
-        Assert.AreEqual(5.90, Math.Round(Palette.Violet[600].ContrastWith(light[ColorRole.OnPrimary]), 2));
+        Assert.AreEqual(6.39, Math.Round(Palette.Forest[700].ContrastWith(light[ColorRole.OnPrimary]), 2));
     }
 
     [TestMethod]
@@ -91,7 +95,7 @@ public sealed class TokenTests
         Assert.AreEqual(new TokenColor(0x73, 0x22, 0x1d, 0x2e), TokenColor.FromHex("#73221d2e"));
         Assert.AreEqual("#73221d2e", TokenColor.FromHex("#73221d2e").ToString());
         Assert.AreEqual(21.0, TokenColor.FromHex("#000000").ContrastWith(TokenColor.FromHex("#ffffff")), 1e-9);
-        Assert.AreEqual(1.0, Palette.Violet[600].ContrastWith(Palette.Violet[600]), 1e-9);
+        Assert.AreEqual(1.0, Palette.Forest[700].ContrastWith(Palette.Forest[700]), 1e-9);
         Assert.AreEqual(System.Windows.Media.Color.FromArgb(0x73, 0x22, 0x1d, 0x2e), TokenColor.FromHex("#73221d2e").ToColor());
         foreach (var wrong in new[] { "7f4ea8", "#7f4ea", "#7f4ea8z", "#gggggg", "" })
         {
@@ -116,9 +120,9 @@ public sealed class TokenTests
     }
 
     [TestMethod]
-    public void Animations_last_150_ms_at_most_and_none_when_reduced()
+    public void Animations_last_260_ms_at_most_and_none_when_reduced()
     {
-        Assert.IsLessThanOrEqualTo(TimeSpan.FromMilliseconds(150), Motion.Normal);
+        Assert.IsLessThanOrEqualTo(TimeSpan.FromMilliseconds(260), Motion.Normal);
         Assert.IsLessThan(Motion.Normal, Motion.Fast);
         Assert.AreEqual(TimeSpan.Zero, Motion.Effective(Motion.Normal, reducedMotion: true));
         Assert.AreEqual(Motion.Fast, Motion.Effective(Motion.Fast, reducedMotion: false));

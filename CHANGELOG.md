@@ -83,13 +83,17 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   l'application lancée : chaque vue, l'aide et la recherche, en clair et en sombre, sans erreur.
   Les composants se présentent aux lecteurs d'écran (dialogue, notification annoncée, pastille,
   état vide, squelette) ; les icônes décoratives sont ignorées.
-- Design system (`KyfRev.DesignSystem`, `docs/design-system.md`) : les trois gammes de la 0.x
-  (violet, pervenche, mauve) et 38 rôles de couleur, en thèmes clair, sombre et contraste élevé
-  de Windows ; échelles régulières (typographie et espacements sur une grille de 4 px, rayons,
-  élévations, durées de 150 ms au plus, aucune si Windows demande de réduire les animations).
+- Design system (`KyfRev.DesignSystem`, `docs/design-system.md`) à l'identité « Veillée »,
+  choisie parmi plusieurs propositions : vert forêt et ambre, thème clair « Jour » teinté de
+  sauge, thème sombre « Veillée » chaud, et contraste élevé de Windows ; 38 rôles de couleur.
+  Polices Atkinson Hyperlegible Next et Mono, conçues pour se lire sans effort, livrées avec
+  l'application et leur licence (SIL OFL 1.1). Échelles régulières (typographie et espacements
+  sur une grille de 4 px, rayons doux de 12 à 24 px, ombres légères, contrôles de 40 px de haut
+  au moins, durées de 220 ms au plus, aucune si Windows demande de réduire les animations).
   Les 51 paires de couleurs employées ensemble atteignent 4,5:1 (texte) ou 3:1 (contours et
-  repères) dans chaque thème, vérifiées par les tests : le contour des champs et boutons passe
-  de 1,29:1 à plus de 3:1. Aucune couleur n'est écrite hors des jetons.
+  repères) dans chaque thème, vérifiées par les tests ; le contour des champs et boutons dépasse
+  3:1, contre 1,29:1 dans la 0.x. Un retard est ambre, une erreur brique. Aucune couleur n'est
+  écrite hors des jetons.
 - Composants : boutons, champ avec indication, carte, pastille (icône et libellé), menu,
   dialogue, notification, état vide et squelette de chargement. Focus clavier toujours visible,
   textes dans des ressources traduisibles. Captures des trois thèmes dans `docs/captures/j5`.

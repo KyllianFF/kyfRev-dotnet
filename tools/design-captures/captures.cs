@@ -37,6 +37,8 @@ var folder = args.Length > 0 ? args[0] : ".";
 Directory.CreateDirectory(folder);
 var thread = new Thread(() =>
 {
+    // Comme dans l'application : les polices livrées (pack://application) se lisent une fois WPF initialisé.
+    _ = new System.Windows.Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
     foreach (var (theme, name) in new[] { (ThemeKind.Light, "clair"), (ThemeKind.Dark, "sombre"), (ThemeKind.HighContrast, "contraste-eleve") })
     {
         var design = new DesignResources(theme, reducedMotion: true);
@@ -201,7 +203,7 @@ static FrameworkElement Gallery(DesignResources design, string name)
 {
     var page = new StackPanel { Margin = new Thickness(32) };
     page.Children.Add(Text("Kyf.Text.Display", $"kyfRev · design system ({name})"));
-    page.Children.Add(Text("Kyf.Text.Secondary", "Jetons de la conception §12, contrastes vérifiés par les tests, composants de J5."));
+    page.Children.Add(Text("Kyf.Text.Secondary", "Identité Veillée : jetons, polices Atkinson, contrastes vérifiés par les tests, composants."));
 
     page.Children.Add(Section("Typographie"));
     foreach (var style in new[] { "Display", "Title", "Subtitle", "BodyLarge", "Body", "BodyStrong", "Caption" })
