@@ -77,11 +77,14 @@ public sealed partial class ArchiveFilter : ObservableObject
 
     /// <summary>Le choix retenu.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Name))]
+    [NotifyPropertyChangedFor(nameof(Name), nameof(RemoveName))]
     public partial Choice<object?> Selected { get; set; }
 
     /// <summary>« Dossier : Tous » : ce que dit le bouton, au lecteur d'écran aussi.</summary>
     public string Name => $"{Label} : {Selected.Label}";
+
+    /// <summary>« Retirer le filtre Dossier : Tous » : le nom de son étiquette, en fenêtre étroite.</summary>
+    public string RemoveName => ArchivesText.RemoveFilterOf(Name);
 
     /// <summary>La valeur retenue.</summary>
     internal object? Value => Selected.Value;
@@ -94,6 +97,10 @@ public sealed partial class ArchiveFilter : ObservableObject
     }
 
     partial void OnSelectedChanged(Choice<object?> value) => _changed();
+
+    /// <summary>Retire le filtre : il revient à son premier choix.</summary>
+    [RelayCommand]
+    private void Clear() => Selected = Choices[0];
 }
 
 /// <summary>Une fiche archivée, telle que la liste la montre.</summary>
@@ -242,7 +249,7 @@ public sealed partial class ArchivesPageViewModel : ObservableObject, INavigatio
             BuildRows);
         Filters = [_folder, _status, _period, _cycles, _sort];
         Rows = [];
-        Summary = string.Empty;
+        ActiveFilters = [];
         Search = string.Empty;
         ConfirmMessage = string.Empty;
     }
@@ -253,9 +260,47 @@ public sealed partial class ArchivesPageViewModel : ObservableObject, INavigatio
     /// <summary>Les filtres, dans l'ordre de la barre.</summary>
     public IReadOnlyList<ArchiveFilter> Filters { get; }
 
-    /// <summary>« 5 fiches archivées · rien n'est jamais supprimé… » ; rien avant la première lecture.</summary>
+    /// <summary>
+    /// « 5 fiches archivées · rien n'est jamais supprimé… » ; le nombre seul en fenêtre étroite ; rien
+    /// avant la première lecture.
+    /// </summary>
+    public string Summary
+    {
+        get
+        {
+            if (_entries is not { } entries)
+            {
+                return string.Empty;
+            }
+            var count = Dates.Plural(entries.Count, ArchivesText.CountOneOf, ArchivesText.CountManyOf);
+            return HasRoom ? $"{count} · {ArchivesText.Promise}" : count;
+        }
+    }
+
+    /// <summary>Les filtres choisis, sans le tri, qui ne retire aucune fiche.</summary>
     [ObservableProperty]
-    public partial string Summary { get; private set; }
+    [NotifyPropertyChangedFor(nameof(HasActiveFilters), nameof(ShowsActiveFilters), nameof(FiltersLabel))]
+    public partial IReadOnlyList<ArchiveFilter> ActiveFilters { get; private set; }
+
+    /// <summary>Au moins un filtre est choisi.</summary>
+    public bool HasActiveFilters => ActiveFilters.Count > 0;
+
+    /// <summary>« Filtres » ou « Filtres · 2 ».</summary>
+    public string FiltersLabel => HasActiveFilters ? ArchivesText.FiltersWithCountOf(ActiveFilters.Count) : ArchivesText.Filters;
+
+    /// <summary>En fenêtre étroite, le panneau des filtres est ouvert.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsFilters), nameof(ShowsActiveFilters))]
+    public partial bool AreFiltersOpen { get; set; }
+
+    /// <summary>Le bouton « Filtres » : seulement en fenêtre étroite, où les filtres se replient.</summary>
+    public bool ShowsFilterToggle => !HasRoom;
+
+    /// <summary>Les filtres sont affichés : toujours avec de la place, sinon à la demande.</summary>
+    public bool ShowsFilters => HasRoom || AreFiltersOpen;
+
+    /// <summary>Les étiquettes des filtres choisis : ce qui filtre la liste reste visible, panneau replié.</summary>
+    public bool ShowsActiveFilters => !HasRoom && !AreFiltersOpen && HasActiveFilters;
 
     /// <summary>Le titre ou l'étiquette cherchés.</summary>
     [ObservableProperty]
@@ -311,7 +356,7 @@ public sealed partial class ArchivesPageViewModel : ObservableObject, INavigatio
 
     /// <summary>Largeur de la page.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasRoom))]
+    [NotifyPropertyChangedFor(nameof(HasRoom), nameof(Summary), nameof(ShowsFilterToggle), nameof(ShowsFilters), nameof(ShowsActiveFilters))]
     public partial double PageWidth { get; set; } = double.PositiveInfinity;
 
     /// <summary>Assez de largeur pour montrer les actions à droite du titre.</summary>
@@ -331,7 +376,7 @@ public sealed partial class ArchivesPageViewModel : ObservableObject, INavigatio
         _entries = entries;
         Error = null;
         HasArchives = entries.Count > 0;
-        Summary = $"{Dates.Plural(entries.Count, ArchivesText.CountOneOf, ArchivesText.CountManyOf)} · {ArchivesText.Promise}";
+        OnPropertyChanged(nameof(Summary));
         _folder.Replace(
         [
             new(string.Empty, ArchivesText.AllFolders),
@@ -422,6 +467,7 @@ public sealed partial class ArchivesPageViewModel : ObservableObject, INavigatio
         {
             return;
         }
+        ActiveFilters = [.. Filters.Where(filter => !ReferenceEquals(filter, _sort) && !Equals(filter.Value, filter.Choices[0].Value))];
         var wanted = ShellViewModel.Fold(Search.Trim());
         var day = Present.Of(_time).Now.Day;
         var kept = entries.Where(entry => Matches(entry, wanted, day));

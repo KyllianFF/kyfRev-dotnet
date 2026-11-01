@@ -162,4 +162,13 @@
   <data name="ThreeOrMoreCycles" xml:space="preserve">
     <value>3 ou plus</value>
   </data>
+  <data name="Filters" xml:space="preserve">
+    <value>Filtres</value>
+  </data>
+  <data name="FiltersWithCount" xml:space="preserve">
+    <value>Filtres · {0}</value>
+  </data>
+  <data name="RemoveFilter" xml:space="preserve">
+    <value>Retirer le filtre {0}</value>
+  </data>
 </root>

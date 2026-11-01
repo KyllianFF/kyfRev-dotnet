@@ -19,7 +19,8 @@
 // et un passage en révision (fiche-clair.png, passage-sombre.png, sur un coffre d'essai jetable),
 // la réponse à un rappel (rappel-clair.png, rappel-marquage-sombre.png), la séance d'étude et son
 // bilan (seance-clair.png, seance-contraste-eleve.png, seance-etroite-sombre.png, bilan-sombre.png), les archives
-// (archives-clair.png, archives-sombre.png, archives-etroit-clair.png, archives-contraste-eleve.png), et affiche le contraste de
+// (archives-clair.png, archives-sombre.png, archives-etroit-clair.png, archives-etroit-filtres-sombre.png,
+// archives-contraste-eleve.png), et affiche le contraste de
 // chaque paire de rôles.
 using System.Collections.Immutable;
 using System.Globalization;
@@ -118,6 +119,19 @@ var thread = new Thread(() =>
             height,
             highContrast: highContrast);
     }
+    // Les filtres dépliés sur petit écran, l'un d'eux choisi.
+    var filtered = new ArchivesPageViewModel(app.Reminders, app.Reviews, new ReviewNavigation(app.Sheets, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System), TimeProvider.System);
+    filtered.Show(SampleArchives());
+    filtered.Filters[0].Selected = filtered.Filters[0].Choices[1];
+    filtered.AreFiltersOpen = true;
+    Shell(
+        folder,
+        "archives-etroit-filtres-sombre.png",
+        ThemePreference.Dark,
+        shell => shell.Navigate(shell.MainNavigation.Single(item => item.Id == CorePages.Archives)),
+        new Dictionary<string, object> { [CorePages.Archives] = filtered },
+        390,
+        844);
     ReviewCaptures(folder);
 });
 thread.SetApartmentState(ApartmentState.STA);

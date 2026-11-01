@@ -337,7 +337,7 @@ public sealed class ArchivesTests
             TestShell.Flush();
             Assert.IsTrue(Named<TextBlock>(window, "NoMatch").IsVisible);
             Assert.IsFalse(Named<Card>(window, "ListCard").IsVisible);
-            Assert.IsTrue(Named<WrapPanel>(window, "FilterBar").IsVisible);
+            Assert.IsTrue(Named<StackPanel>(window, "FilterBar").IsVisible);
             page.Search = string.Empty;
             TestShell.Flush();
 
@@ -371,6 +371,104 @@ public sealed class ArchivesTests
         }
     }
 
+    [TestMethod]
+    public void On_a_small_screen_the_filters_fold_and_the_chosen_ones_stay_visible()
+    {
+        using var vaults = new TestVaults(AppMode.Development);
+        var page = Page(vaults, new FakeOpener());
+        page.Show([Entry("Mitose", folder: "Biologie", cycles: 2), Entry("Révolution", folder: "Histoire", cycles: 1)]);
+
+        // Avec de la place : tout est là, sans bouton ni étiquette.
+        Assert.IsTrue(page.ShowsFilters);
+        Assert.IsFalse(page.ShowsFilterToggle);
+        Assert.IsFalse(page.ShowsActiveFilters);
+        StringAssert.Contains(page.Summary, "rien n'est jamais supprimé", StringComparison.Ordinal);
+
+        page.PageWidth = ArchivesPageViewModel.RoomMinimum - 1;
+        Assert.IsFalse(page.ShowsFilters);
+        Assert.IsTrue(page.ShowsFilterToggle);
+        Assert.AreEqual("2 fiches archivées", page.Summary);
+        Assert.AreEqual("Filtres", page.FiltersLabel);
+        Assert.IsFalse(page.ShowsActiveFilters);
+
+        page.AreFiltersOpen = true;
+        Assert.IsTrue(page.ShowsFilters);
+        var folder = page.Filters[0];
+        var cycles = page.Filters[3];
+        folder.Selected = folder.Choices.Single(choice => choice.Label == "Biologie");
+        cycles.Selected = cycles.Choices[2];
+        Assert.AreEqual("Filtres · 2", page.FiltersLabel);
+        Assert.IsFalse(page.ShowsActiveFilters, "panneau ouvert, les filtres se lisent déjà");
+        CollectionAssert.AreEqual(new[] { folder, cycles }, page.ActiveFilters.ToArray());
+        Assert.AreEqual("Retirer le filtre Dossier : Biologie", folder.RemoveName);
+
+        // Le tri ne retire aucune fiche : ce n'est pas un filtre à signaler.
+        var sort = page.Filters[4];
+        sort.Selected = sort.Choices[1];
+        Assert.HasCount(2, page.ActiveFilters);
+
+        // Replier le panneau garde les filtres, et les étiquettes les retirent.
+        page.AreFiltersOpen = false;
+        Assert.IsFalse(page.ShowsFilters);
+        Assert.IsTrue(page.ShowsActiveFilters);
+        ExpectTitles(page, "Mitose");
+        folder.ClearCommand.Execute(null);
+        Assert.AreEqual("Filtres · 1", page.FiltersLabel);
+        Assert.AreEqual("Tous", folder.Selected.Label);
+        cycles.ClearCommand.Execute(null);
+        Assert.AreEqual("Filtres", page.FiltersLabel);
+        Assert.IsFalse(page.ShowsActiveFilters);
+        Assert.HasCount(2, page.Rows);
+    }
+
+    [STATestMethod]
+    public void On_a_small_screen_the_search_fills_the_line_next_to_the_filters_button()
+    {
+        using var ui = new UiThread();
+        using var vaults = new TestVaults(AppMode.Development);
+        var page = Page(vaults, new FakeOpener());
+        page.Show([Entry("Mitose", folder: "Biologie"), Entry("Révolution", folder: "Histoire")]);
+        var window = Show(new TestShell(), page);
+        try
+        {
+            var search = Named<TextBox>(window, "SearchBox");
+            var toggle = Named<ToggleButton>(window, "FiltersToggle");
+            Assert.AreEqual(260, search.ActualWidth, 1);
+            Assert.IsFalse(toggle.IsVisible);
+            Assert.IsTrue(Named<ItemsControl>(window, "Filters").IsVisible);
+
+            page.PageWidth = 358;
+            TestShell.Flush();
+            window.UpdateLayout();
+            Assert.IsTrue(toggle.IsVisible);
+            Assert.IsGreaterThan(260, search.ActualWidth, "la recherche prend la ligne");
+            Assert.AreEqual(search.TranslatePoint(default, window).Y, toggle.TranslatePoint(default, window).Y, 0.5, "sur la même ligne");
+            Assert.IsFalse(Named<ItemsControl>(window, "Filters").IsVisible);
+            Assert.IsFalse(Named<ItemsControl>(window, "ActiveFilters").IsVisible);
+
+            toggle.IsChecked = true;
+            TestShell.Flush();
+            Assert.IsTrue(page.AreFiltersOpen);
+            Assert.IsTrue(Named<ItemsControl>(window, "Filters").IsVisible);
+
+            page.Filters[0].Selected = page.Filters[0].Choices[1];
+            toggle.IsChecked = false;
+            TestShell.Flush();
+            Assert.IsFalse(Named<ItemsControl>(window, "Filters").IsVisible);
+            Assert.IsTrue(Named<ItemsControl>(window, "ActiveFilters").IsVisible);
+            var chip = Descendants(window).OfType<Button>().Single(button => button.Name == "RemoveFilter");
+            Assert.AreEqual(page.Filters[0].RemoveName, System.Windows.Automation.AutomationProperties.GetName(chip));
+            chip.Command.Execute(null);
+            TestShell.Flush();
+            Assert.IsFalse(page.HasActiveFilters);
+            Assert.IsFalse(Named<ItemsControl>(window, "ActiveFilters").IsVisible);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
     [STATestMethod]
     public void An_empty_vault_says_so_without_filters()
     {
@@ -382,7 +480,7 @@ public sealed class ArchivesTests
         try
         {
             Assert.IsTrue(Named<EmptyState>(window, "Empty").IsVisible);
-            Assert.IsFalse(Named<WrapPanel>(window, "FilterBar").IsVisible);
+            Assert.IsFalse(Named<StackPanel>(window, "FilterBar").IsVisible);
             Assert.IsFalse(Named<Card>(window, "ListCard").IsVisible);
             StringAssert.StartsWith(page.Summary, "0 fiche archivée", StringComparison.Ordinal);
         }

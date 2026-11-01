@@ -158,6 +158,15 @@ public static class ArchivesText
     /// <summary>« 3 ou plus ».</summary>
     public static string ThreeOrMoreCycles => Text(nameof(ThreeOrMoreCycles));
 
+    /// <summary>« Filtres ».</summary>
+    public static string Filters => Text(nameof(Filters));
+
+    /// <summary>« Filtres · … ».</summary>
+    public static string FiltersWithCountOf(object count) => Format("FiltersWithCount", count);
+
+    /// <summary>« Retirer le filtre … ».</summary>
+    public static string RemoveFilterOf(object filter) => Format("RemoveFilter", filter);
+
     private static string Format(string name, params object[] values) => string.Format(CultureInfo.CurrentCulture, Text(name), values);
 
     private static string Text(string name) =>
