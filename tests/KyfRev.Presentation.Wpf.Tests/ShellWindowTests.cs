@@ -241,6 +241,11 @@ public sealed class ShellWindowTests
             Assert.AreEqual("Paramètres", shell.Current.Label);
             Assert.AreEqual(FontWeights.SemiBold, TextElement.GetFontWeight(background));
 
+            // L'état actif couvre tout le bouton, comme son survol.
+            window.UpdateLayout();
+            Assert.AreEqual(more.ActualWidth - more.BorderThickness.Left - more.BorderThickness.Right, background.ActualWidth, 0.5);
+            Assert.AreEqual(more.ActualHeight - more.BorderThickness.Top - more.BorderThickness.Bottom, background.ActualHeight, 0.5);
+
             var tabs = (ListBox)window.FindName("TabNavigation");
             Assert.AreEqual(-1, tabs.SelectedIndex);
             tabs.SelectedIndex = 1;
