@@ -1,15 +1,17 @@
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Threading;
 
 namespace KyfRev.Presentation.Wpf.Shell;
 
 /// <summary>
-/// Fenêtre principale. Le focus suit l'utilisateur : il entre dans la recherche quand elle
-/// s'ouvre et revient d'où il venait quand elle se ferme ; au démarrage, il est sur le menu. En
-/// plein écran, la fenêtre perd son cadre et couvre tout l'écran ; elle retrouve ensuite son état.
+/// Fenêtre principale. Sa largeur décide de la disposition du menu (<see cref="ShellLayout"/>).
+/// Le focus suit l'utilisateur : il entre dans la recherche quand elle s'ouvre et revient d'où il
+/// venait quand elle se ferme ; au démarrage, il est sur le menu. En plein écran, la fenêtre perd
+/// son cadre et couvre tout l'écran ; elle retrouve ensuite son état.
 /// </summary>
 public sealed partial class ShellWindow : Window
 {
@@ -28,13 +30,16 @@ public sealed partial class ShellWindow : Window
         shell.PropertyChanged += OnShellChanged;
         // MouseUp remonte jusqu'à la liste, même quand l'élément cliqué l'a déjà traité.
         PaletteResults.AddHandler(MouseUpEvent, new MouseButtonEventHandler(OnPaletteClick), handledEventsToo: true);
+        MoreMenu.AddHandler(MenuItem.ClickEvent, new RoutedEventHandler(OnOverflowClick));
+        Root.SizeChanged += (_, e) => shell.WindowWidth = e.NewSize.Width;
         Loaded += (_, _) => FocusNavigation();
     }
 
-    /// <summary>Met le focus sur l'entrée choisie du menu.</summary>
+    /// <summary>Met le focus sur l'entrée choisie du menu (sur les onglets en fenêtre étroite).</summary>
     internal void FocusNavigation()
     {
-        var list = _shell.SelectedSecondary is not null ? SecondaryNavigation : MainNavigation;
+        var list = _shell.Layout == NavigationLayout.Tabs ? TabNavigation
+            : _shell.SelectedSecondary is not null ? SecondaryNavigation : MainNavigation;
         if (list.ItemContainerGenerator.ContainerFromItem(list.SelectedItem) is ListBoxItem item)
         {
             item.Focus();
@@ -85,6 +90,22 @@ public sealed partial class ShellWindow : Window
         {
             WindowStyle = WindowStyle.SingleBorderWindow;
             WindowState = _windowedState;
+        }
+    }
+
+    /// <summary>« Plus » : les autres vues, dans un menu ouvert au-dessus de l'onglet.</summary>
+    private void OnMoreClick(object sender, RoutedEventArgs e)
+    {
+        MoreMenu.PlacementTarget = MoreButton;
+        MoreMenu.Placement = PlacementMode.Top;
+        MoreMenu.IsOpen = true;
+    }
+
+    private void OnOverflowClick(object sender, RoutedEventArgs e)
+    {
+        if (e.OriginalSource is MenuItem { DataContext: NavigationItem item })
+        {
+            _shell.Navigate(item);
         }
     }
 

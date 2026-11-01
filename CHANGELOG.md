@@ -75,6 +75,12 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   (Ctrl+plus, Ctrl+moins, Ctrl+0), Ctrl+1 à Ctrl+9 pour les vues. Navigation complète au
   clavier, focus toujours visible, focus rendu à sa place à la fermeture de la recherche. Les
   vues encore à porter présentent ce qu'elles feront.
+- Coquille adaptative, du téléphone à l'écran large : le menu suit la largeur de la fenêtre
+  (divisée par le zoom). Sous 600 px, les trois premières vues en onglets en bas et les autres
+  sous « Plus », la recherche et l'aide en haut ; de 600 à 1 399 px, une colonne d'icônes
+  libellées ; à partir de 1 400 px, la barre latérale. Rien ne défile horizontalement : les
+  largeurs fixes des vues deviennent des maximums, et un dialogue trop haut fait défiler son
+  contenu entre son titre et ses boutons.
 - Apparence : le thème suit Windows (barre de titre comprise) ou le choix de l'utilisateur ; le
   contraste élevé et la réduction des animations de Windows s'appliquent sans redémarrage
   (`KyfRev.Infrastructure.Windows`).

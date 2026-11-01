@@ -1,5 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -160,6 +162,98 @@ public sealed class ShellWindowTests
         }
     }
 
+    [STATestMethod]
+    public void The_menu_follows_the_width_of_the_window()
+    {
+        var test = new TestShell();
+        var window = Open(test);
+        try
+        {
+            var shell = test.Shell;
+            var sidebar = (Border)window.FindName("Sidebar");
+            var search = (Button)window.FindName("SearchButton");
+            var main = (ListBox)window.FindName("MainNavigation");
+            var tabBar = (Border)window.FindName("TabBar");
+            var topBar = (Border)window.FindName("TopBar");
+
+            // La largeur vue par la coquille, sans dépendre de la taille de l'écran.
+            shell.WindowWidth = 1600;
+            window.UpdateLayout();
+            Assert.AreEqual(248, sidebar.ActualWidth);
+            Assert.AreEqual(HorizontalAlignment.Stretch, search.HorizontalContentAlignment);
+            Assert.IsTrue(Named<StackPanel>(main, "Row").All(row => row.Visibility == Visibility.Visible));
+            Assert.AreEqual(Visibility.Collapsed, tabBar.Visibility);
+            Assert.AreEqual(Visibility.Collapsed, topBar.Visibility);
+
+            shell.WindowWidth = 1024;
+            window.UpdateLayout();
+            Assert.AreEqual(112, sidebar.ActualWidth);
+            Assert.AreEqual(HorizontalAlignment.Center, search.HorizontalContentAlignment);
+            Assert.IsTrue(Named<StackPanel>(main, "Stacked").All(stacked => stacked.Visibility == Visibility.Visible));
+
+            // La vraie fenêtre, rétrécie : la coquille suit.
+            window.Width = 420;
+            window.UpdateLayout();
+            TestShell.Flush();
+            Assert.AreEqual(NavigationLayout.Tabs, shell.Layout);
+            Assert.AreEqual(Visibility.Collapsed, sidebar.Visibility);
+            Assert.AreEqual(Visibility.Visible, tabBar.Visibility);
+            Assert.AreEqual(Visibility.Visible, topBar.Visibility);
+            window.FocusNavigation();
+            Assert.AreSame(window.FindName("TabNavigation"), ItemsControl.ItemsControlFromItemContainer((DependencyObject)FocusManager.GetFocusedElement(window)));
+
+            shell.ToggleFocusMode();
+            Assert.AreEqual(Visibility.Collapsed, tabBar.Visibility);
+            Assert.AreEqual(Visibility.Collapsed, topBar.Visibility);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
+    public void More_opens_the_other_views()
+    {
+        var test = new TestShell();
+        var window = Open(test);
+        try
+        {
+            var shell = test.Shell;
+            window.Width = 420;
+            window.UpdateLayout();
+            TestShell.Flush();
+            var more = (Button)window.FindName("MoreButton");
+            var menu = more.ContextMenu;
+            var background = (Border)window.FindName("MoreBackground");
+
+            more.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+            TestShell.Flush();
+            Assert.IsTrue(menu.IsOpen);
+            Assert.AreSame(more, menu.PlacementTarget);
+            Assert.AreEqual(PlacementMode.Top, menu.Placement);
+            Assert.AreEqual(shell.OverflowNavigation.Count, menu.Items.Count);
+
+            menu.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+            Assert.AreSame(shell.Home, shell.Current, "un clic hors d'une vue ne fait rien");
+            var settings = (MenuItem)menu.ItemContainerGenerator.ContainerFromItem(shell.OverflowNavigation[^1]);
+            settings.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+            Assert.AreEqual("Paramètres", shell.Current.Label);
+            Assert.AreEqual(FontWeights.SemiBold, TextElement.GetFontWeight(background));
+
+            var tabs = (ListBox)window.FindName("TabNavigation");
+            Assert.AreEqual(-1, tabs.SelectedIndex);
+            tabs.SelectedIndex = 1;
+            Assert.AreEqual("Fiches", shell.Current.Label);
+            Assert.AreEqual(FontWeights.Normal, TextElement.GetFontWeight(background));
+            menu.IsOpen = false;
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
     private static ShellWindow Open(TestShell test)
     {
         var window = new ShellWindow(test.Shell) { ShowActivated = true, Left = -10000, Top = -10000, WindowStartupLocation = WindowStartupLocation.Manual };
@@ -176,6 +270,9 @@ public sealed class ShellWindowTests
 
     private static void Press(Window window, Key key) =>
         window.RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(window), 0, key) { RoutedEvent = Keyboard.KeyDownEvent });
+
+    private static IEnumerable<T> Named<T>(DependencyObject root, string name)
+        where T : FrameworkElement => Descendants<T>(root).Where(element => element.Name == name);
 
     private static IEnumerable<T> Descendants<T>(DependencyObject root)
         where T : DependencyObject
