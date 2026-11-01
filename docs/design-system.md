@@ -202,6 +202,11 @@ visible en bas, centrée, sur 980 px au plus : la frise des étapes, l'étape at
 sous l'autre. En séance, la progression occupe toute la largeur en haut de la page ; sous 560 px,
 les boutons de la séance passent sous elle.
 
+Quand un rappel de consolidation attend sa réponse, la barre propose les trois réponses à la place
+de la frise : « Fiche connue » en bouton principal, « Certains points sont à revoir » et « Fiche à
+revoir entièrement… ». Pour les points à revoir, les passages de la fiche s'affichent dans la
+barre, chacun avec « Remettre à J0 », le compte des passages marqués, « Annuler » et « Terminer ».
+
 ![Séance, thème clair](captures/j6/seance-clair.png)
 
 ## Icône

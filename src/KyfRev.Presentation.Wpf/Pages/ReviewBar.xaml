@@ -77,6 +77,7 @@
 
       <!-- Frise des étapes du cycle : J0 ✓ J1 ✓ J3 ● J7 J14 J30. -->
       <ItemsControl x:Name="Steps" ItemsSource="{Binding Steps}" Style="{StaticResource StepsSlot}"
+                    Visibility="{Binding ShowsSteps, Converter={StaticResource Visible}}"
                     AutomationProperties.Name="{x:Static pages:ReviewText.Steps}">
         <ItemsControl.ItemsPanel>
           <ItemsPanelTemplate>
@@ -135,7 +136,15 @@
           <TextBlock x:Name="Due" Text="{Binding DueText}" Style="{StaticResource DueStyle}" />
         </StackPanel>
         <TextBlock x:Name="ArchivedStatus" Text="{Binding ArchivedStatus}" TextWrapping="Wrap"
-                   Visibility="{Binding IsArchived, Converter={StaticResource Visible}}" />
+                   Visibility="{Binding ShowsArchivedActions, Converter={StaticResource Visible}}" />
+        <!-- Un rappel attend sa réponse : quitter la fiche ne vaut pas réponse. -->
+        <StackPanel x:Name="ReminderStatus" Visibility="{Binding IsReminder, Converter={StaticResource Visible}}">
+          <TextBlock Text="{x:Static pages:ReviewText.ReminderTitle}" Style="{DynamicResource Kyf.Text.BodyStrong}" AutomationProperties.HeadingLevel="Level2" />
+          <TextBlock x:Name="ReminderIntro" Text="{Binding ReminderIntro}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap"
+                     Visibility="{Binding ShowsReminderChoices, Converter={StaticResource Visible}}" />
+          <TextBlock x:Name="MarkingHelp" Text="{x:Static pages:ReviewText.ReminderMarking}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap"
+                     Visibility="{Binding IsMarking, Converter={StaticResource Visible}}" />
+        </StackPanel>
       </StackPanel>
 
       <Grid Style="{StaticResource ActionsSlot}">
@@ -175,8 +184,23 @@
           </Button>
         </WrapPanel>
 
+        <!-- Le rappel : les trois réponses. -->
+        <WrapPanel x:Name="ReminderChoices" Visibility="{Binding ShowsReminderChoices, Converter={StaticResource Visible}}">
+          <Button x:Name="ReviewEntirely" Content="{x:Static pages:ReviewText.ReminderEntirely}" Command="{Binding RequestReviewEntirelyCommand}" Margin="0,0,8,0" />
+          <Button x:Name="SomePoints" Content="{x:Static pages:ReviewText.ReminderSomePoints}" Command="{Binding StartMarkingCommand}" Margin="0,0,8,0" />
+          <Button x:Name="Known" Content="{x:Static pages:ReviewText.ReminderKnown}" Command="{Binding AnswerKnownCommand}" Style="{DynamicResource Kyf.Button.Primary}" />
+        </WrapPanel>
+
+        <!-- Le marquage : combien de passages, annuler, terminer. -->
+        <WrapPanel x:Name="MarkingActions" Visibility="{Binding IsMarking, Converter={StaticResource Visible}}">
+          <TextBlock x:Name="MarkedLabel" Text="{Binding MarkedLabel}" Style="{DynamicResource Kyf.Text.BodyStrong}" VerticalAlignment="Center" Margin="0,0,12,0"
+                     AutomationProperties.LiveSetting="Polite" />
+          <Button x:Name="CancelMarking" Content="{x:Static pages:ReviewText.CancelMarking}" Command="{Binding CancelMarkingCommand}" Margin="0,0,8,0" />
+          <Button x:Name="FinishMarking" Content="{x:Static pages:ReviewText.FinishMarking}" Command="{Binding FinishMarkingCommand}" Style="{DynamicResource Kyf.Button.Primary}" />
+        </WrapPanel>
+
         <!-- Archivé : la remise en révision. -->
-        <WrapPanel Visibility="{Binding IsArchived, Converter={StaticResource Visible}}">
+        <WrapPanel Visibility="{Binding ShowsArchivedActions, Converter={StaticResource Visible}}">
           <Button x:Name="ToggleReminders" Content="{Binding ReminderToggleLabel}" Command="{Binding ToggleRemindersCommand}" Margin="0,0,8,0"
                   Visibility="{Binding IsSheet, Converter={StaticResource Visible}}" />
           <Button x:Name="RestartArchived" Content="{x:Static pages:ReviewText.RestartArchived}" Command="{Binding RestartArchivedCommand}"
@@ -185,6 +209,30 @@
       </Grid>
 
       <StackPanel Grid.Row="3" Grid.ColumnSpan="3">
+        <!-- Les passages de la fiche, à remettre à J0. -->
+        <StackPanel x:Name="Marking" Margin="0,12,0,0" Visibility="{Binding IsMarking, Converter={StaticResource Visible}}">
+          <TextBlock x:Name="NoPassage" Text="{x:Static pages:ReviewText.ReminderNoPassage}" Style="{DynamicResource Kyf.Text.Secondary}"
+                     Visibility="{Binding HasNoPassage, Converter={StaticResource Visible}}" />
+          <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto" Focusable="False" Visibility="{Binding HasPassages, Converter={StaticResource Visible}}">
+            <ItemsControl x:Name="Passages" ItemsSource="{Binding Passages}" Focusable="False">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate DataType="{x:Type pages:PassageMark}">
+                  <DockPanel Margin="0,2">
+                    <Button DockPanel.Dock="Right" Content="{x:Static pages:ReviewText.MarkPassage}" Margin="12,0,0,0" AutomationProperties.Name="{Binding MarkName}"
+                            Command="{Binding DataContext.MarkPassageCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"
+                            Visibility="{Binding CanMark, Converter={StaticResource Visible}}" />
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="12,0,0,0" VerticalAlignment="Center"
+                                Visibility="{Binding IsMarked, Converter={StaticResource Visible}}">
+                      <kyf:Icon Text="{x:Static kyf:Icons.Success}" Foreground="{DynamicResource Kyf.Brush.Success}" Margin="0,0,8,0" />
+                      <TextBlock Text="{x:Static pages:ReviewText.Marked}" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <TextBlock Text="{Binding Label}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                  </DockPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </StackPanel>
         <kyf:Notification x:Name="Message" Severity="Success" Message="{Binding Message}" IsOpen="{Binding HasMessage, Mode=OneWay}"
                           IsClosable="False" Margin="0,12,0,0" />
         <kyf:Notification x:Name="Error" Severity="Critical" Message="{Binding Error}" IsOpen="{Binding HasError, Mode=OneWay}"

@@ -215,6 +215,78 @@ public static class ReviewText
     /// <summary>« … validée : cycle terminé. La fiche est archivée ; un rappel de consolidation viendra dans deux mois. ».</summary>
     public static string ValidatedLastSheetOf(object done) => Format("ValidatedLastSheet", done);
 
+    /// <summary>« Revoir toute la fiche ? ».</summary>
+    public static string EntirelyTitle => Text(nameof(EntirelyTitle));
+
+    /// <summary>« Elle redevient active : … ».</summary>
+    public static string EntirelyMessage => Text(nameof(EntirelyMessage));
+
+    /// <summary>« Remettre en révision ».</summary>
+    public static string EntirelyConfirm => Text(nameof(EntirelyConfirm));
+
+    /// <summary>« La fiche est de nouveau en révision : J1 …. ».</summary>
+    public static string EntirelyDoneOf(object day) => Format("EntirelyDone", day);
+
+    /// <summary>« Annuler ».</summary>
+    public static string CancelMarking => Text(nameof(CancelMarking));
+
+    /// <summary>« Terminer ».</summary>
+    public static string FinishMarking => Text(nameof(FinishMarking));
+
+    /// <summary>« Fiche connue : elle reste archivée. ».</summary>
+    public static string KnownDone => Text(nameof(KnownDone));
+
+    /// <summary>« Remis à J0 ».</summary>
+    public static string Marked => Text(nameof(Marked));
+
+    /// <summary>« 1 passage marqué ».</summary>
+    public static string MarkedOneOf(object count) => Format("MarkedOne", count);
+
+    /// <summary>« 2 passages marqués ».</summary>
+    public static string MarkedManyOf(object count) => Format("MarkedMany", count);
+
+    /// <summary>« Remettre à J0 ».</summary>
+    public static string MarkPassage => Text(nameof(MarkPassage));
+
+    /// <summary>« Prochain rappel possible à partir du …. ».</summary>
+    public static string NextReminderOf(object day) => Format("NextReminder", day);
+
+    /// <summary>« Aucun passage marqué ».</summary>
+    public static string NoMarkTitle => Text(nameof(NoMarkTitle));
+
+    /// <summary>« « Certains points sont à revoir » demande … ».</summary>
+    public static string NoMarkMessage => Text(nameof(NoMarkMessage));
+
+    /// <summary>« Passage remis à J0 : à revoir dès demain. ».</summary>
+    public static string PassageMarked => Text(nameof(PassageMarked));
+
+    /// <summary>« Fiche à revoir entièrement… ».</summary>
+    public static string ReminderEntirely => Text(nameof(ReminderEntirely));
+
+    /// <summary>« Fiche archivée le …. Relisez-la, puis dites ce qu'il en reste. ».</summary>
+    public static string ReminderIntroOf(object day) => Format("ReminderIntro", day);
+
+    /// <summary>« Fiche connue ».</summary>
+    public static string ReminderKnown => Text(nameof(ReminderKnown));
+
+    /// <summary>« Remettez à J0 les passages à revoir… ».</summary>
+    public static string ReminderMarking => Text(nameof(ReminderMarking));
+
+    /// <summary>« Cette fiche n'a aucun passage annoté. ».</summary>
+    public static string ReminderNoPassage => Text(nameof(ReminderNoPassage));
+
+    /// <summary>« Certains points sont à revoir ».</summary>
+    public static string ReminderSomePoints => Text(nameof(ReminderSomePoints));
+
+    /// <summary>« Rappel de consolidation ».</summary>
+    public static string ReminderTitle => Text(nameof(ReminderTitle));
+
+    /// <summary>« 1 passage à revoir dès demain (J1). La fiche reste archivée. ».</summary>
+    public static string SomeDoneOneOf(object count) => Format("SomeDoneOne", count);
+
+    /// <summary>« 2 passages à revoir dès demain (J1). La fiche reste archivée. ».</summary>
+    public static string SomeDoneManyOf(object count) => Format("SomeDoneMany", count);
+
     private static string Format(string name, params object[] values) => string.Format(CultureInfo.CurrentCulture, Text(name), values);
 
     private static string Text(string name) =>

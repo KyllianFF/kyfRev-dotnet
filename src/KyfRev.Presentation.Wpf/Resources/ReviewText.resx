@@ -219,4 +219,76 @@
   <data name="ValidatedLastSheet" xml:space="preserve">
     <value>{0} validée : cycle terminé. La fiche est archivée ; un rappel de consolidation viendra dans deux mois.</value>
   </data>
+  <data name="EntirelyTitle" xml:space="preserve">
+    <value>Revoir toute la fiche ?</value>
+  </data>
+  <data name="EntirelyMessage" xml:space="preserve">
+    <value>Elle redevient active : un nouveau cycle commence aujourd'hui (J0) et J1 sera dû demain. Ses cycles précédents restent dans l'historique.</value>
+  </data>
+  <data name="EntirelyConfirm" xml:space="preserve">
+    <value>Remettre en révision</value>
+  </data>
+  <data name="EntirelyDone" xml:space="preserve">
+    <value>La fiche est de nouveau en révision : J1 {0}.</value>
+  </data>
+  <data name="CancelMarking" xml:space="preserve">
+    <value>Annuler</value>
+  </data>
+  <data name="FinishMarking" xml:space="preserve">
+    <value>Terminer</value>
+  </data>
+  <data name="KnownDone" xml:space="preserve">
+    <value>Fiche connue : elle reste archivée.</value>
+  </data>
+  <data name="Marked" xml:space="preserve">
+    <value>Remis à J0</value>
+  </data>
+  <data name="MarkedOne" xml:space="preserve">
+    <value>{0} passage marqué</value>
+  </data>
+  <data name="MarkedMany" xml:space="preserve">
+    <value>{0} passages marqués</value>
+  </data>
+  <data name="MarkPassage" xml:space="preserve">
+    <value>Remettre à J0</value>
+  </data>
+  <data name="NextReminder" xml:space="preserve">
+    <value>Prochain rappel possible à partir du {0}.</value>
+  </data>
+  <data name="NoMarkTitle" xml:space="preserve">
+    <value>Aucun passage marqué</value>
+  </data>
+  <data name="NoMarkMessage" xml:space="preserve">
+    <value>« Certains points sont à revoir » demande au moins un passage remis à J0. Enregistrer plutôt « Fiche connue » ?</value>
+  </data>
+  <data name="PassageMarked" xml:space="preserve">
+    <value>Passage remis à J0 : à revoir dès demain.</value>
+  </data>
+  <data name="ReminderEntirely" xml:space="preserve">
+    <value>Fiche à revoir entièrement…</value>
+  </data>
+  <data name="ReminderIntro" xml:space="preserve">
+    <value>Fiche archivée le {0}. Relisez-la, puis dites ce qu'il en reste.</value>
+  </data>
+  <data name="ReminderKnown" xml:space="preserve">
+    <value>Fiche connue</value>
+  </data>
+  <data name="ReminderMarking" xml:space="preserve">
+    <value>Remettez à J0 les passages à revoir : ils repartent aujourd'hui, et la fiche reste archivée.</value>
+  </data>
+  <data name="ReminderNoPassage" xml:space="preserve">
+    <value>Cette fiche n'a aucun passage annoté.</value>
+  </data>
+  <data name="ReminderSomePoints" xml:space="preserve">
+    <value>Certains points sont à revoir</value>
+  </data>
+  <data name="ReminderTitle" xml:space="preserve">
+    <value>Rappel de consolidation</value>
+  </data>
+  <data name="SomeDoneOne" xml:space="preserve">
+    <value>{0} passage à revoir dès demain (J1). La fiche reste archivée.</value>
+  </data>
+  <data name="SomeDoneMany" xml:space="preserve">
+    <value>{0} passages à revoir dès demain (J1). La fiche reste archivée.</value>
+  </data>
 </root>
