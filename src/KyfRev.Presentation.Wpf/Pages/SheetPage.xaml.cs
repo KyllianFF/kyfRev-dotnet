@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
 using KyfRev.DesignSystem.Controls;
+using KyfRev.Presentation.Wpf.Editing;
 using KyfRev.Rendering;
 
 namespace KyfRev.Presentation.Wpf.Pages;
@@ -145,11 +146,16 @@ internal sealed partial class SheetPage : UserControl
                 Item(ReadingText.Highlight, () => page.HighlightCommand.Execute(position), ReadingText.HighlightKey),
                 Item(ReadingText.Annotate, () => page.StartAnnotatingCommand.Execute(position)),
                 Item(ReadingText.Define, () => page.StartDefiningCommand.Execute(position)),
+                new Separator(),
+                EditSheetItem(page),
             ];
         }
         var entry = page.Passages.FirstOrDefault(candidate => SheetText.AnnotationsAt(source).Contains(candidate.Annotation.Id));
-        return entry is null ? [] : PassageMenuItems(page, entry);
+        return entry is null ? [EditSheetItem(page)] : [.. PassageMenuItems(page, entry), new Separator(), EditSheetItem(page)];
     }
+
+    private static MenuItem EditSheetItem(SheetPageViewModel page) =>
+        Item(EditingText.EditSheet, () => page.StartWritingCommand.Execute(null), EditingText.WriteKey);
 
     internal IReadOnlyList<Control> PassageMenuItems(SheetPageViewModel page, PassageEntry entry)
     {

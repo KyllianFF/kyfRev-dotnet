@@ -62,6 +62,8 @@ internal static class Composition
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Folders);
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Templates);
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Reviews);
+        services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Editing);
+        services.AddSingleton<ISpelling, WindowsSpelling>();
         services.AddSingleton(clock);
         services.AddSingleton<ReviewNavigation>();
         services.AddSingleton<IReviewOpener>(provider => provider.GetRequiredService<ReviewNavigation>());

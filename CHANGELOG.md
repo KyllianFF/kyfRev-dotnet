@@ -9,6 +9,14 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- Écriture d'une fiche : le bouton « Écrire » ou Ctrl+E ouvre le Markdown à gauche et son rendu à droite,
+  sous un ruban à la manière d'Office. L'onglet Accueil met en forme (gras, italique, souligné, barré,
+  exposant, indice, casse, titres, listes), l'onglet Insertion ajoute un tableau à la taille choisie, un bloc
+  de code avec son langage, un lien, des images, une formule ou une ligne. Le texte s'enregistre 1,5 s après
+  la dernière frappe, et aussi en quittant l'écriture ou en fermant la fenêtre. Si la fiche change sur le
+  disque, rien n'est écrit et aucune version n'est perdue : on choisit celle à garder, l'autre va dans
+  l'historique. `[[` propose les autres fiches et écrit un lien ordinaire. Les images se collent, se déposent
+  ou se choisissent. Le correcteur de Windows souligne les fautes et propose ses corrections au clic droit.
 - Surlignage dans le texte : les passages paraissent en ambre et les définitions en pointillé vert, à leur
   place, même si la fiche a changé. On sélectionne du texte, puis la touche H surligne, et le clic droit
   propose Annoter et Définir. Un passage dont le texte a changé se confirme ou se garde sans position.

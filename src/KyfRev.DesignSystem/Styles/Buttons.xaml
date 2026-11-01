@@ -82,6 +82,44 @@
     <Setter Property="BorderBrush" Value="Transparent" />
   </Style>
 
+  <!-- Outil d'un ruban : compact, sans fond au repos ; s'il est à bascule, le choix se voit. -->
+  <Style x:Key="Kyf.Button.Tool" TargetType="ButtonBase" BasedOn="{StaticResource Kyf.Button.Subtle}">
+    <Setter Property="Padding" Value="6,0" />
+    <Setter Property="MinHeight" Value="28" />
+    <Setter Property="MinWidth" Value="28" />
+    <Style.Triggers>
+      <Trigger Property="ToggleButton.IsChecked" Value="True">
+        <Setter Property="Background" Value="{DynamicResource Kyf.Brush.NavigationActiveBackground}" />
+        <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.NavigationActiveText}" />
+      </Trigger>
+    </Style.Triggers>
+  </Style>
+
+  <!-- Grand outil d'un ruban : l'icône au-dessus de son nom. -->
+  <Style x:Key="Kyf.Button.ToolLarge" TargetType="ButtonBase" BasedOn="{StaticResource Kyf.Button.Subtle}">
+    <Setter Property="Padding" Value="6,2" />
+    <Setter Property="MinHeight" Value="48" />
+    <Setter Property="MinWidth" Value="56" />
+  </Style>
+
+  <!-- Onglet d'un ruban : un trait sous celui qui est choisi. -->
+  <Style x:Key="Kyf.Button.Tab" TargetType="ToggleButton" BasedOn="{StaticResource Kyf.Button.Subtle}">
+    <Style.Resources>
+      <CornerRadius x:Key="Kyf.Radius.Control">0</CornerRadius>
+    </Style.Resources>
+    <Setter Property="Padding" Value="12,0" />
+    <Setter Property="MinHeight" Value="30" />
+    <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.TextSecondary}" />
+    <Setter Property="BorderThickness" Value="0,0,0,2" />
+    <Style.Triggers>
+      <Trigger Property="IsChecked" Value="True">
+        <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Text}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Kyf.Brush.Primary}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+      </Trigger>
+    </Style.Triggers>
+  </Style>
+
   <!-- Icône seule : son nom vient de AutomationProperties.Name et de l'infobulle. -->
   <Style x:Key="Kyf.Button.Icon" TargetType="ButtonBase" BasedOn="{StaticResource Kyf.Button.Subtle}">
     <Setter Property="FontFamily" Value="{DynamicResource Kyf.Font.Icons}" />

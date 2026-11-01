@@ -41,6 +41,15 @@ internal sealed class Trial : IDisposable
     public RunningApplication Launch(DateOnly day) => new(_folder, day);
 
     /// <summary>Le suivi d'une fiche, tel qu'il est écrit dans le coffre.</summary>
+    public string SheetPath(string relative) => Path.Combine(Vault, relative);
+
+    /// <summary>Les versions gardées d'une fiche.</summary>
+    public IReadOnlyList<string> Versions(string sheet)
+    {
+        var folder = Path.Combine(Vault, ".suivi", "versions", sheet);
+        return Directory.Exists(folder) ? [.. Directory.GetFiles(folder).Select(File.ReadAllText)] : [];
+    }
+
     public string SheetFile(string sheet) => File.ReadAllText(Path.Combine(Vault, ".suivi", "fiches", $"{sheet}.json"));
 
     /// <summary>Le suivi d'une fiche, à interroger.</summary>

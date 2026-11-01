@@ -22,7 +22,8 @@
 // (archives-clair.png, archives-sombre.png, archives-etroit-clair.png, archives-etroit-filtres-sombre.png,
 // archives-contraste-eleve.png), les fiches (fiches-clair.png, fiches-sombre.png, fiches-etroit-clair.png,
 // fiches-nouvelle-sombre.png, fiches-contraste-eleve.png), la lecture d'une fiche (fiche-clair.png,
-// lecture-sombre.png, lecture-moyenne-clair.png, lecture-etroite-sombre.png, lecture-volet-clair.png, lecture-contraste-eleve.png), et affiche le contraste de
+// lecture-sombre.png, lecture-moyenne-clair.png, lecture-etroite-sombre.png, lecture-volet-clair.png, lecture-contraste-eleve.png), l'écriture (ecriture-clair.png,
+// ecriture-sombre.png, ecriture-insertion-sombre.png, ecriture-moyenne-clair.png, ecriture-etroite-sombre.png, ecriture-contraste-eleve.png), et affiche le contraste de
 // chaque paire de rôles.
 using System.Collections.Immutable;
 using System.Globalization;
@@ -39,6 +40,7 @@ using KyfRev.DesignSystem;
 using KyfRev.DesignSystem.Controls;
 using KyfRev.DesignSystem.Tokens;
 using KyfRev.Infrastructure.Vault.Adapters;
+using KyfRev.Presentation.Wpf.Editing;
 using KyfRev.Presentation.Wpf.Pages;
 using KyfRev.Presentation.Wpf.Shell;
 
@@ -82,11 +84,11 @@ var thread = new Thread(() =>
     // d'encart de module (les modules ne sont pas encore branchés dans l'application).
     foreach (var (theme, name) in new[] { (ThemePreference.Light, "clair"), (ThemePreference.Dark, "sombre") })
     {
-        var today = new DashboardPageViewModel(app.Reminders, app.Sheets, new ReviewNavigation(app.Sheets, app.Annotations, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System, new NoLinks()));
+        var today = new DashboardPageViewModel(app.Reminders, app.Sheets, new ReviewNavigation(app.Sheets, app.Annotations, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System, new NoLinks(), app.Editing, new OneMistake()));
         today.Show(SampleDashboard(), SampleCards);
         Shell(folder, $"aujourdhui-{name}.png", theme, _ => { }, new Dictionary<string, object> { [CorePages.Today] = today });
     }
-    var contrast = new DashboardPageViewModel(app.Reminders, app.Sheets, new ReviewNavigation(app.Sheets, app.Annotations, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System, new NoLinks()));
+    var contrast = new DashboardPageViewModel(app.Reminders, app.Sheets, new ReviewNavigation(app.Sheets, app.Annotations, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System, new NoLinks(), app.Editing, new OneMistake()));
     contrast.Show(SampleDashboard(), SampleCards);
     Shell(folder, "aujourdhui-contraste-eleve.png", ThemePreference.System, _ => { }, new Dictionary<string, object> { [CorePages.Today] = contrast }, highContrast: true);
     foreach (var (file, theme, width, height) in new[]
@@ -96,7 +98,7 @@ var thread = new Thread(() =>
         ("aujourdhui-ecran-clair.png", ThemePreference.Light, 1600.0, 1000.0),
     })
     {
-        var today = new DashboardPageViewModel(app.Reminders, app.Sheets, new ReviewNavigation(app.Sheets, app.Annotations, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System, new NoLinks()));
+        var today = new DashboardPageViewModel(app.Reminders, app.Sheets, new ReviewNavigation(app.Sheets, app.Annotations, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System, new NoLinks(), app.Editing, new OneMistake()));
         today.Show(SampleDashboard(), SampleCards);
         Shell(folder, file, theme, _ => { }, new Dictionary<string, object> { [CorePages.Today] = today }, width, height);
     }
@@ -109,7 +111,7 @@ var thread = new Thread(() =>
         ("archives-contraste-eleve.png", ThemePreference.System, 1280.0, 800.0, true),
     })
     {
-        var archives = new ArchivesPageViewModel(app.Reminders, app.Reviews, new ReviewNavigation(app.Sheets, app.Annotations, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System, new NoLinks()), TimeProvider.System);
+        var archives = new ArchivesPageViewModel(app.Reminders, app.Reviews, new ReviewNavigation(app.Sheets, app.Annotations, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System, new NoLinks(), app.Editing, new OneMistake()), TimeProvider.System);
         archives.Show(SampleArchives());
         Shell(
             folder,
@@ -122,7 +124,7 @@ var thread = new Thread(() =>
             highContrast: highContrast);
     }
     // Les filtres dépliés sur petit écran, l'un d'eux choisi.
-    var filtered = new ArchivesPageViewModel(app.Reminders, app.Reviews, new ReviewNavigation(app.Sheets, app.Annotations, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System, new NoLinks()), TimeProvider.System);
+    var filtered = new ArchivesPageViewModel(app.Reminders, app.Reviews, new ReviewNavigation(app.Sheets, app.Annotations, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System, new NoLinks(), app.Editing, new OneMistake()), TimeProvider.System);
     filtered.Show(SampleArchives());
     filtered.Bar.Filters[0].Selected = filtered.Bar.Filters[0].Choices[1];
     filtered.Bar.AreOpen = true;
@@ -152,7 +154,20 @@ foreach (var theme in new[] { ThemeKind.Light, ThemeKind.Dark })
 }
 
 // La fenêtre de la coquille, hors de l'écran, dans un état donné ; seul son contenu est rendu.
-static void Shell(string folder, string file, ThemePreference theme, Action<ShellViewModel> prepare, IReadOnlyDictionary<string, object>? pages = null, double width = 1280, double height = 800, Func<bool>? ready = null, bool highContrast = false)
+static IEnumerable<DependencyObject> Descendants(DependencyObject root)
+{
+    for (var i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)
+    {
+        var child = VisualTreeHelper.GetChild(root, i);
+        yield return child;
+        foreach (var deeper in Descendants(child))
+        {
+            yield return deeper;
+        }
+    }
+}
+
+static void Shell(string folder, string file, ThemePreference theme, Action<ShellViewModel> prepare, IReadOnlyDictionary<string, object>? pages = null, double width = 1280, double height = 800, Func<bool>? ready = null, bool highContrast = false, Action<DependencyObject>? adjust = null)
 {
     var design = new DesignResources(ThemeKind.Light, reducedMotion: true);
     var appearance = new AppearanceController(design, new StillAppearance(highContrast), new NoChrome()) { Preference = theme };
@@ -163,6 +178,11 @@ static void Shell(string folder, string file, ThemePreference theme, Action<Shel
     prepare(shell);
     Pump(ready ?? (() => true));
     window.Dispatcher.Invoke(System.Windows.Threading.DispatcherPriority.ApplicationIdle, () => { });
+    if (adjust is not null)
+    {
+        adjust(window);
+        window.Dispatcher.Invoke(System.Windows.Threading.DispatcherPriority.ApplicationIdle, () => { });
+    }
     var content = (Panel)window.Content;
     // Le fond de la fenêtre n'appartient pas à son contenu : il est repeint dessous pour la capture.
     content.Background = window.Background;
@@ -242,7 +262,8 @@ static void ReviewCaptures(string folder)
         time.Now = time.Now.AddDays(2);
 
         ReviewBarViewModel Bar(ItemKind kind, string id, ReviewState state) => new(app.Reviews, app.Reminders, app.Sheets, time, kind, id, state);
-        var sheetPage = new SheetPageViewModel(app.Sheets, app.Annotations, Bar, sheet, () => { }, _ => { }, new NoLinks());
+        SheetEditorViewModel Editor(OpenedSheet opened) => new(opened, app.Editing, app.Sheets, new OneMistake());
+        var sheetPage = new SheetPageViewModel(app.Sheets, app.Annotations, Bar, sheet, () => { }, _ => { }, new NoLinks(), Editor);
         sheetPage.LoadCommand.Execute(null);
         Pump(() => !sheetPage.IsLoading);
         void Reading(string file, ThemePreference theme, double width = 1600, double height = 1000) =>
@@ -256,6 +277,34 @@ static void ReviewCaptures(string folder)
         sheetPage.CloseOverlayCommand.Execute(null);
         Shell(folder, "lecture-contraste-eleve.png", ThemePreference.Light, shell => shell.Navigate(new NavigationItem("fiche", "Fiche", Icons.Document, int.MaxValue, sheetPage)), null, 1600, 1000, highContrast: true);
 
+        // L'écriture : le code à gauche, son rendu à droite, le ruban et ses deux onglets.
+        sheetPage.StartWritingCommand.Execute(null);
+        Pump(() => sheetPage.Editor is not null);
+        void Writing(string file, ThemePreference theme, double width = 1600, double height = 1000, bool highContrast = false, bool insert = false)
+        {
+            void ShowTab(DependencyObject root)
+            {
+                if (insert)
+                {
+                    var tab = Descendants(root).OfType<System.Windows.Controls.Primitives.ToggleButton>().First(button => button.Name == "InsertTab");
+                    tab.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+                }
+            }
+            Shell(folder, file, theme, shell => shell.Navigate(new NavigationItem("fiche", "Fiche", Icons.Document, int.MaxValue, sheetPage)), null, width, height, () =>
+            {
+                var editor = sheetPage.Editor!;
+                return editor.Preview is not null;
+            }, highContrast, ShowTab);
+        }
+        Writing("ecriture-clair.png", ThemePreference.Light);
+        Writing("ecriture-sombre.png", ThemePreference.Dark);
+        Writing("ecriture-insertion-sombre.png", ThemePreference.Dark, insert: true);
+        Writing("ecriture-moyenne-clair.png", ThemePreference.Light, 1100, 800);
+        Writing("ecriture-etroite-sombre.png", ThemePreference.Dark, 640, 800);
+        Writing("ecriture-contraste-eleve.png", ThemePreference.Light, highContrast: true);
+        sheetPage.StopWritingCommand.Execute(null);
+        Pump(() => sheetPage.Editor is null);
+
         var passagePage = new PassagePageViewModel(app.Sheets, Bar, passage, sheet, activeRecall: true, () => { }, _ => { });
         passagePage.LoadCommand.Execute(null);
         Pump(() => !passagePage.IsLoading);
@@ -264,7 +313,7 @@ static void ReviewCaptures(string folder)
         // La séance : la fiche en cours, puis le bilan d'une séance de douze éléments.
         object Item(SessionItem item, bool activeRecall)
         {
-            var page = new SheetPageViewModel(app.Sheets, app.Annotations, Bar, item.Id, () => { }, _ => { }, new NoLinks());
+            var page = new SheetPageViewModel(app.Sheets, app.Annotations, Bar, item.Id, () => { }, _ => { }, new NoLinks(), Editor);
             page.LoadCommand.Execute(null);
             Pump(() => !page.IsLoading);
             return page;
@@ -302,7 +351,7 @@ static void ReviewCaptures(string folder)
         {
             var sample = SampleDashboard();
             DueItem Real(DueItem item) => item with { SheetId = sheet };
-            var today = new DashboardPageViewModel(app.Reminders, app.Sheets, new ReviewNavigation(app.Sheets, app.Annotations, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System, new NoLinks()));
+            var today = new DashboardPageViewModel(app.Reminders, app.Sheets, new ReviewNavigation(app.Sheets, app.Annotations, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System, new NoLinks(), app.Editing, new OneMistake()));
             today.Show(
                 sample with
                 {
@@ -321,7 +370,7 @@ static void ReviewCaptures(string folder)
             time.Now = time.Now.AddDays(1);
             app.Reminders.PrepareDay().Value.ToString();
         }
-        var reminderPage = new SheetPageViewModel(app.Sheets, app.Annotations, Bar, sheet, () => { }, _ => { }, new NoLinks());
+        var reminderPage = new SheetPageViewModel(app.Sheets, app.Annotations, Bar, sheet, () => { }, _ => { }, new NoLinks(), Editor);
         reminderPage.LoadCommand.Execute(null);
         Pump(() => !reminderPage.IsLoading);
         Shell(folder, "rappel-clair.png", ThemePreference.Light, shell => shell.Navigate(new NavigationItem("fiche", "Fiche", Icons.Document, int.MaxValue, reminderPage)));
@@ -351,7 +400,7 @@ static void ReviewCaptures(string folder)
         }
         SheetsPageViewModel SheetsPage()
         {
-            var navigation = new ReviewNavigation(app.Sheets, app.Annotations, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), time, new NoLinks());
+            var navigation = new ReviewNavigation(app.Sheets, app.Annotations, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), time, new NoLinks(), app.Editing, new OneMistake());
             var sheets = new SheetsPageViewModel(app.Sheets, app.Folders, app.Templates, navigation, time);
             sheets.RefreshCommand.Execute(null);
             Pump(() => !sheets.IsLoading && sheets.HasRows && sheets.Preview is not null);
@@ -630,6 +679,21 @@ internal sealed class FixedTime(DateTimeOffset now) : TimeProvider
     public override TimeZoneInfo LocalTimeZone => TimeZoneInfo.Utc;
 
     public override DateTimeOffset GetUtcNow() => Now;
+}
+
+internal sealed class OneMistake : KyfRev.Application.Ports.ISpelling
+{
+    private const string Wrong = "Bastille";
+
+    public IReadOnlyList<KyfRev.Application.Ports.SpellingMistake> Check(string text)
+    {
+        var at = text.IndexOf(Wrong, StringComparison.Ordinal);
+        return at < 0 ? [] : [new KyfRev.Application.Ports.SpellingMistake(at, Wrong.Length)];
+    }
+
+    public KyfRev.Application.Ports.SpellingCorrection? Correct(string word) => null;
+
+    public bool Add(string word) => false;
 }
 
 internal sealed class NoLinks : KyfRev.Application.Ports.IExternalLinks

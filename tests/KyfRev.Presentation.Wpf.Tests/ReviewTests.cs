@@ -7,6 +7,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using KyfRev.Application.Model;
 using KyfRev.DesignSystem.Controls;
+using KyfRev.Presentation.Wpf.Editing;
 using KyfRev.Presentation.Wpf.Pages;
 using KyfRev.Presentation.Wpf.Shell;
 
@@ -312,7 +313,7 @@ public sealed class ReviewTests
     {
         using var vault = new ReviewVault();
         var test = new TestShell();
-        var navigation = new ReviewNavigation(vault.App.Sheets, vault.App.Annotations, vault.App.Reviews, vault.App.Reminders, vault.App.Vaults, new MemorySessions(), vault.Time, new RecordingLinks());
+        var navigation = new ReviewNavigation(vault.App.Sheets, vault.App.Annotations, vault.App.Reviews, vault.App.Reminders, vault.App.Vaults, new MemorySessions(), vault.Time, new RecordingLinks(), vault.App.Editing, new FakeSpelling());
         var dashboard = new DashboardPageViewModel(vault.App.Reminders, vault.App.Sheets, navigation);
         var shell = new ShellViewModel(CorePages.All(new Dictionary<string, object> { [CorePages.Today] = dashboard }), test.Appearance, test.Gallery);
         Assert.ThrowsExactly<InvalidOperationException>(() => navigation.OpenSheet(vault.SheetId));
@@ -859,7 +860,7 @@ public sealed class ReviewTests
             return page.Review!;
         }
 
-        public SheetPageViewModel SheetPage(string id) => new(App.Sheets, App.Annotations, Bar, id, () => Calls.Add("retour"), sheet => Calls.Add($"fiche {sheet}"), new RecordingLinks());
+        public SheetPageViewModel SheetPage(string id) => new(App.Sheets, App.Annotations, Bar, id, () => Calls.Add("retour"), sheet => Calls.Add($"fiche {sheet}"), new RecordingLinks(), sheet => new SheetEditorViewModel(sheet, App.Editing, App.Sheets, new FakeSpelling()));
 
         public PassagePageViewModel PassagePage(string passageId, string sheetId, bool activeRecall) =>
             new(App.Sheets, Bar, passageId, sheetId, activeRecall, () => Calls.Add("retour"), sheet => Calls.Add($"fiche {sheet}"));

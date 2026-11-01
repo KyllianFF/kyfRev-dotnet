@@ -431,16 +431,70 @@ public sealed class Scenarios
             Assert.Contains("J1", running.Row(Today, Title) ?? "");
         }
 
-        // Écrire le texte et surligner n'existent pas encore dans l'application.
+        // Le texte s'écrit dans l'application, et le passage s'y surligne.
+        using (var running = trial.Launch(Day(10, 14)))
+        {
+            running.OpenView("Fiches");
+            running.OpenSheetRow(Title);
+            running.StartWriting();
+            running.TypeInSheet("Les trois ordres de la societe.");
+            running.WaitSaved();
+            running.StopWriting();
+            Assert.Contains("Les trois ordres de la societe.", running.SheetText());
+            running.HighlightInText("trois ordres");
+            running.WaitPassages("1");
+        }
         var passage = trial.On(Day(10, 14), app =>
         {
-            Assert.IsTrue(app.Editing.Save(sheet, Body, app.Sheets.Open(sheet).Value.Fingerprint, 1).Succeeded);
-            return NewPassage(app, sheet, "trois ordres");
+            var opened = app.Sheets.Open(sheet).Value;
+            Assert.Contains("Les trois ordres de la societe.", opened.Body);
+            return opened.Annotations.Single().Id;
         });
         Assert.AreEqual("2026-10-15", trial.AnnotationTracking(sheet, passage).GetProperty("cycle").GetProperty("echeance").GetString());
         using (var running = trial.Launch(Day(10, 15)))
         {
             Assert.Contains("J1", running.Rows(Today).Single(row => row.StartsWith("Passage", StringComparison.Ordinal)) ?? "");
+        }
+    }
+
+    [TestMethod]
+    public void T14_a_change_on_disk_while_writing_loses_nothing()
+    {
+        using var trial = new Trial();
+        var created = new DateOnly(2026, 10, 9);
+        var (sheet, relative) = trial.On(created, app =>
+        {
+            var id = NewSheet(app, Title, "Le texte de depart.");
+            return (id, app.Sheets.Open(id).Value.Path);
+        });
+        var file = trial.SheetPath(relative);
+
+        using (var running = trial.Launch(created.AddDays(1)))
+        {
+            running.Open(Today, Title);
+            running.StartWriting();
+
+            // Un autre programme modifie la fiche pendant qu'elle s'écrit.
+            File.AppendAllText(file, "\nAjout venu d'ailleurs.");
+            running.TypeInSheet("Ma frappe. ");
+            running.WaitSaveState("Conflit avec le disque");
+            Assert.Contains("Ajout venu d'ailleurs.", File.ReadAllText(file), "Rien n'est écrit tant que ce n'est pas tranché.");
+            Assert.DoesNotContain("Ma frappe.", File.ReadAllText(file));
+
+            running.KeepMyVersion();
+            running.WaitSaved();
+            Assert.Contains("Ma frappe. Le texte de depart.", File.ReadAllText(file));
+            Assert.IsTrue(trial.Versions(sheet).Any(version => version.Contains("Ajout venu d'ailleurs.", StringComparison.Ordinal)), "La version écartée va dans l'historique.");
+
+            // Et dans l'autre sens : le disque l'emporte, mon texte va dans l'historique.
+            File.AppendAllText(file, "\nUn second ajout.");
+            running.TypeInSheet("Encore. ");
+            running.WaitSaveState("Conflit avec le disque");
+            running.ReloadDiskVersion();
+            running.WaitSaved();
+            Assert.Contains("Un second ajout.", running.WrittenText());
+            Assert.DoesNotContain("Encore.", running.WrittenText());
+            Assert.IsTrue(trial.Versions(sheet).Any(version => version.Contains("Encore.", StringComparison.Ordinal)), "Mon texte écarté va dans l'historique.");
         }
     }
 

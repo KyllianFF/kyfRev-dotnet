@@ -12,6 +12,7 @@ using KyfRev.Application.Model;
 using KyfRev.Application.Ports;
 using KyfRev.Application.UseCases;
 using KyfRev.DesignSystem.Controls;
+using KyfRev.Presentation.Wpf.Editing;
 using KyfRev.Presentation.Wpf.Pages;
 using KyfRev.Presentation.Wpf.Reading;
 using KyfRev.Presentation.Wpf.Shell;
@@ -820,7 +821,11 @@ internal sealed class ReadingVault : IDisposable
 
     public List<string> OpenedSheets { get; } = [];
 
-    public SheetPageViewModel Page() => new(App.Sheets, App.Annotations, Bar, SheetId, () => { }, OpenedSheets.Add, Links);
+    public FakeSpelling Spelling { get; } = new();
+
+    public SheetPageViewModel Page() => new(App.Sheets, App.Annotations, Bar, SheetId, () => Backs++, OpenedSheets.Add, Links, sheet => new SheetEditorViewModel(sheet, App.Editing, App.Sheets, Spelling));
+
+    public int Backs { get; private set; }
 
     public string Annotate(string exact, bool lost = false)
     {

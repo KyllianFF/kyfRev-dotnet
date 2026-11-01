@@ -9,6 +9,48 @@ public static class Icons
     /// <summary>Document : une fiche.</summary>
     public static string Document { get; } = Glyph(0xE8A5);
 
+    /// <summary>Flèche qui revient : annuler.</summary>
+    public static string Undo { get; } = Glyph(0xE7A7);
+
+    /// <summary>Flèche qui repart : rétablir.</summary>
+    public static string Redo { get; } = Glyph(0xE7A6);
+
+    /// <summary>Gras.</summary>
+    public static string Bold { get; } = Glyph(0xE8DD);
+
+    /// <summary>Italique.</summary>
+    public static string Italic { get; } = Glyph(0xE8DB);
+
+    /// <summary>Souligné.</summary>
+    public static string Underline { get; } = Glyph(0xE8DC);
+
+    /// <summary>Barré.</summary>
+    public static string Strike { get; } = Glyph(0xEDE0);
+
+    /// <summary>Liste à puces.</summary>
+    public static string Bullets { get; } = Glyph(0xE8FD);
+
+    /// <summary>Lignes de texte : à côté d'un numéro, une liste numérotée.</summary>
+    public static string ListLines { get; } = Glyph(0xEA37);
+
+    /// <summary>Chevron vers le bas : un menu s'ouvre.</summary>
+    public static string ChevronDown { get; } = Glyph(0xE70D);
+
+    /// <summary>Grille : un tableau.</summary>
+    public static string Table { get; } = Glyph(0xE80A);
+
+    /// <summary>Accolades : du code.</summary>
+    public static string Code { get; } = Glyph(0xE943);
+
+    /// <summary>Maillon : un lien.</summary>
+    public static string Link { get; } = Glyph(0xE71B);
+
+    /// <summary>Paysage : une image.</summary>
+    public static string Picture { get; } = Glyph(0xE8B9);
+
+    /// <summary>Trait : une ligne horizontale.</summary>
+    public static string Rule { get; } = Glyph(0xE94E);
+
     /// <summary>Flèche vers la gauche : revenir à la vue précédente.</summary>
     public static string Back { get; } = Glyph(0xE72B);
 

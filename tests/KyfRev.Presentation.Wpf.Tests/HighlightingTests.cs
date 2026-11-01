@@ -8,6 +8,7 @@ using CsCheck;
 using KyfRev.Application;
 using KyfRev.Application.Model;
 using KyfRev.DesignSystem.Controls;
+using KyfRev.Presentation.Wpf.Editing;
 using KyfRev.Presentation.Wpf.Pages;
 using KyfRev.Presentation.Wpf.Reading;
 using KyfRev.Rendering;
@@ -554,14 +555,14 @@ public sealed class HighlightingTests
         try
         {
             var viewer = Named<SheetDocumentViewer>(window, "SheetText");
-            Assert.IsEmpty(sheetPage.TextMenuItems(null));
+            Assert.AreEqual(EditingText.EditSheet, Headers(sheetPage.TextMenuItems(null)));
 
             var run = Runs(viewer).First(candidate => candidate.Background is not null);
             var onPassage = Headers(sheetPage.TextMenuItems(run));
-            Assert.AreEqual($"{ReadingText.ShowPassage}|{ReadingText.EditComment}|{ReadingText.DeletePassage}", onPassage);
+            Assert.AreEqual($"{ReadingText.ShowPassage}|{ReadingText.EditComment}|{ReadingText.DeletePassage}|{EditingText.EditSheet}", onPassage);
 
             Select(viewer, Position(viewer, "second"));
-            Assert.AreEqual($"{ReadingText.Copy}|{ReadingText.Highlight}|{ReadingText.Annotate}|{ReadingText.Define}", Headers(sheetPage.TextMenuItems(null)));
+            Assert.AreEqual($"{ReadingText.Copy}|{ReadingText.Highlight}|{ReadingText.Annotate}|{ReadingText.Define}|{EditingText.EditSheet}", Headers(sheetPage.TextMenuItems(null)));
 
             ((MenuItem)sheetPage.TextMenuItems(null)[3]).RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
             Assert.IsTrue(page.IsEditing);

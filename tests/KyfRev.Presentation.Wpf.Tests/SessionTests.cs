@@ -366,7 +366,7 @@ public sealed class SessionTests
             }
             Time.Now += TimeSpan.FromDays(2);
             var test = new TestShell();
-            Navigation = new ReviewNavigation(App.Sheets, App.Annotations, App.Reviews, App.Reminders, App.Vaults, Sessions, Time, new RecordingLinks());
+            Navigation = new ReviewNavigation(App.Sheets, App.Annotations, App.Reviews, App.Reminders, App.Vaults, Sessions, Time, new RecordingLinks(), App.Editing, new FakeSpelling());
             Dashboard = new DashboardPageViewModel(App.Reminders, App.Sheets, Navigation);
             Shell = new ShellViewModel(CorePages.All(new Dictionary<string, object> { [CorePages.Today] = Dashboard }), test.Appearance, test.Gallery);
             Navigation.Attach(Shell);

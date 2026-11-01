@@ -215,6 +215,7 @@
       "kyfrev.presentation.wpf": {
         "type": "Project",
         "dependencies": {
+          "AvalonEdit": "[6.3.1.120, )",
           "CommunityToolkit.Mvvm": "[8.4.2, )",
           "KyfRev.Application": "[1.0.0-alpha.0, )",
           "KyfRev.DesignSystem": "[1.0.0-alpha.0, )",
@@ -227,6 +228,12 @@
         "dependencies": {
           "KyfRev.Application": "[1.0.0-alpha.0, )"
         }
+      },
+      "AvalonEdit": {
+        "type": "CentralTransitive",
+        "requested": "[6.3.1.120, )",
+        "resolved": "6.3.1.120",
+        "contentHash": "6ASBKPzAg64BLDlFOJo4Ypr1sA/6hB5+TfHLJaZYUSTE0jgxvKlVqKeo/ISTG9qEMxu604qUu6BGugmJkfdrNw=="
       },
       "CommunityToolkit.Mvvm": {
         "type": "CentralTransitive",

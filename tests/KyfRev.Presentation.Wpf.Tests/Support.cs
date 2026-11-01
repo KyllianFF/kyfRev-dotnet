@@ -252,6 +252,36 @@ internal sealed class UiThread : IDisposable
     public void Dispose() => SynchronizationContext.SetSynchronizationContext(_previous);
 }
 
+/// <summary>Correcteur simulé : « ékole » est la seule faute qu'il connaisse.</summary>
+internal sealed class FakeSpelling : ISpelling
+{
+    private const string Wrong = "ékole";
+
+    public List<string> Added { get; } = [];
+
+    public IReadOnlyList<SpellingMistake> Check(string text)
+    {
+        var found = new List<SpellingMistake>();
+        for (var at = text.IndexOf(Wrong, StringComparison.Ordinal); at >= 0 && !Added.Contains(Wrong); at = text.IndexOf(Wrong, at + 1, StringComparison.Ordinal))
+        {
+            found.Add(new SpellingMistake(at, Wrong.Length));
+        }
+        return found;
+    }
+
+    public SpellingCorrection? Correct(string word)
+    {
+        var at = word.IndexOf(Wrong, StringComparison.Ordinal);
+        return at < 0 || Added.Contains(Wrong) ? null : new SpellingCorrection(at, Wrong.Length, ["école", "écoles"]);
+    }
+
+    public bool Add(string word)
+    {
+        Added.Add(word);
+        return true;
+    }
+}
+
 /// <summary>Séance gardée en mémoire ; peut refuser d'être écrite.</summary>
 internal sealed class MemorySessions : IStudySessionStore
 {

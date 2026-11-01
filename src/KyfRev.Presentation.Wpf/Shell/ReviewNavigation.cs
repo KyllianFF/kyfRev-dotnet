@@ -2,6 +2,7 @@ using KyfRev.Application.Model;
 using KyfRev.Application.Ports;
 using KyfRev.Application.UseCases;
 using KyfRev.DesignSystem.Controls;
+using KyfRev.Presentation.Wpf.Editing;
 using KyfRev.Presentation.Wpf.Pages;
 
 namespace KyfRev.Presentation.Wpf.Shell;
@@ -44,10 +45,12 @@ public sealed class ReviewNavigation : IReviewOpener
     private readonly IStudySessionStore _sessions;
     private readonly IExternalLinks _links;
     private readonly AnnotationUseCases _annotations;
+    private readonly EditingUseCases _editing;
+    private readonly ISpelling _spelling;
     private ShellViewModel? _shell;
 
     /// <summary>La navigation, sur les cas d'usage des fiches, des révisions et des rappels, et la séance gardée sur ce poste.</summary>
-    public ReviewNavigation(SheetUseCases sheets, AnnotationUseCases annotations, ReviewUseCases reviews, ReminderUseCases reminders, VaultUseCases vaults, IStudySessionStore sessions, TimeProvider time, IExternalLinks links)
+    public ReviewNavigation(SheetUseCases sheets, AnnotationUseCases annotations, ReviewUseCases reviews, ReminderUseCases reminders, VaultUseCases vaults, IStudySessionStore sessions, TimeProvider time, IExternalLinks links, EditingUseCases editing, ISpelling spelling)
     {
         ArgumentNullException.ThrowIfNull(sheets);
         ArgumentNullException.ThrowIfNull(reviews);
@@ -57,6 +60,10 @@ public sealed class ReviewNavigation : IReviewOpener
         ArgumentNullException.ThrowIfNull(time);
         ArgumentNullException.ThrowIfNull(links);
         ArgumentNullException.ThrowIfNull(annotations);
+        ArgumentNullException.ThrowIfNull(editing);
+        ArgumentNullException.ThrowIfNull(spelling);
+        _editing = editing;
+        _spelling = spelling;
         _links = links;
         _annotations = annotations;
         _sheets = sheets;
@@ -105,7 +112,7 @@ public sealed class ReviewNavigation : IReviewOpener
     {
         var shell = Shell;
         var from = shell.Current;
-        var page = new SheetPageViewModel(_sheets, _annotations, Bar, sheetId, () => shell.Navigate(from), OpenSheet, _links);
+        var page = new SheetPageViewModel(_sheets, _annotations, Bar, sheetId, () => shell.Navigate(from), OpenSheet, _links, Editor);
         shell.Navigate(new NavigationItem("fiche", ReviewText.SheetPage, Icons.Document, int.MaxValue, page));
         page.LoadCommand.Execute(null);
     }
@@ -161,11 +168,13 @@ public sealed class ReviewNavigation : IReviewOpener
     }
 
     /// <summary>La page d'un élément de séance ; « Retour » quitte la séance, gardée pour être reprise.</summary>
+    private SheetEditorViewModel Editor(OpenedSheet sheet) => new(sheet, _editing, _sheets, _spelling);
+
     private object ItemPage(SessionItem item, bool activeRecall, Action leave)
     {
         if (item.Kind == ItemKind.Sheet)
         {
-            var sheet = new SheetPageViewModel(_sheets, _annotations, Bar, item.Id, leave, OpenSheet, _links);
+            var sheet = new SheetPageViewModel(_sheets, _annotations, Bar, item.Id, leave, OpenSheet, _links, Editor);
             sheet.LoadCommand.Execute(null);
             return sheet;
         }

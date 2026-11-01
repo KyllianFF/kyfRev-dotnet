@@ -185,6 +185,53 @@ internal sealed class RunningApplication : IDisposable
         Keyboard.Type(VirtualKeyShort.KEY_H);
     }
 
+    /// <summary>Attend ce décompte sur le bouton des passages.</summary>
+    public void WaitPassages(string count) =>
+        Retry.WhileFalse(() => Find("PassagesToggle")?.Name.Contains(count, StringComparison.Ordinal) == true, Patience, Interval, throwOnTimeout: true, timeoutMessage: $"Le décompte {count} des passages n'arrive pas.");
+
+    /// <summary>Passe à l'écriture par le bouton « Écrire ».</summary>
+    public void StartWriting()
+    {
+        Wait("WriteToggle").Patterns.Toggle.Pattern.Toggle();
+        Wait("SheetSource");
+    }
+
+    /// <summary>Revient à la lecture par le raccourci Ctrl+E.</summary>
+    public void StopWriting()
+    {
+        var source = Wait("SheetSource");
+        source.Focus();
+        Keyboard.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_E);
+        Retry.WhileTrue(() => Find("SheetSource")?.IsOffscreen == false, Patience, Interval, throwOnTimeout: true, timeoutMessage: "L'écriture reste ouverte.");
+    }
+
+    /// <summary>Tape un texte au clavier, à la place du curseur.</summary>
+    public void TypeInSheet(string text)
+    {
+        var source = Wait("SheetSource");
+        source.SetForeground();
+        source.Focus();
+        // Le focus arrive un peu après la demande : la frappe ne part qu'une fois le champ prêt.
+        Retry.WhileFalse(() => source.Properties.HasKeyboardFocus.ValueOrDefault, Patience, Interval, throwOnTimeout: true, timeoutMessage: "Le champ d'écriture ne prend pas le focus.");
+        Keyboard.Type(text);
+    }
+
+    /// <summary>Attend que tout soit enregistré.</summary>
+    public void WaitSaved() => WaitSaveState("Enregistré");
+
+    /// <summary>Attend cet état de l'enregistrement.</summary>
+    public void WaitSaveState(string state) =>
+        Retry.WhileFalse(() => Find("SaveStateText")?.Name == state, Patience, Interval, throwOnTimeout: true, timeoutMessage: $"L'état « {state} » n'arrive pas.");
+
+    /// <summary>Le Markdown du champ d'écriture, tel que le lit un lecteur d'écran.</summary>
+    public string WrittenText() => Wait("SheetSource").Patterns.Value.Pattern.Value.Value;
+
+    /// <summary>Garde le texte en cours d'écriture, pendant un conflit.</summary>
+    public void KeepMyVersion() => Press("KeepMineButton");
+
+    /// <summary>Reprend le texte du disque, pendant un conflit.</summary>
+    public void ReloadDiskVersion() => Press("ReloadDiskButton");
+
     /// <summary>Attend que le décompte des passages à revoir atteigne ce nombre.</summary>
     public void WaitMarked(string count) =>
         Retry.WhileFalse(() => Find("MarkedLabel")?.Name.Contains(count, StringComparison.Ordinal) == true, Patience, Interval, throwOnTimeout: true, timeoutMessage: $"Le décompte n'atteint pas {count}.");
