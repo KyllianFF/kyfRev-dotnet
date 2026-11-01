@@ -65,11 +65,12 @@
           <Setter TargetName="Side" Property="Grid.Column" Value="0" />
           <Setter TargetName="Side" Property="Grid.Row" Value="1" />
           <Setter TargetName="Side" Property="HorizontalAlignment" Value="Left" />
-          <Setter TargetName="Side" Property="Margin" Value="8,4,0,0" />
+          <Setter TargetName="Side" Property="Margin" Value="12,4,0,0" />
           <Setter TargetName="Status" Property="HorizontalAlignment" Value="Left" />
-          <Setter TargetName="Status" Property="Margin" Value="8,0,0,0" />
-          <Setter TargetName="ToggleRow" Property="Padding" Value="8,0" />
-          <Setter TargetName="RestartRow" Property="Padding" Value="8,0" />
+          <Setter TargetName="Status" Property="Margin" Value="4,0,0,0" />
+          <Setter TargetName="ToggleRow" Property="Padding" Value="4,0" />
+          <Setter TargetName="RestartRow" Property="Padding" Value="4,0" />
+          <Setter TargetName="RestartRow" Property="Margin" Value="2,0,0,0" />
         </DataTrigger>
       </DataTemplate.Triggers>
     </DataTemplate>
