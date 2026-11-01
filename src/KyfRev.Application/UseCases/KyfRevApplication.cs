@@ -5,8 +5,8 @@ namespace KyfRev.Application.UseCases;
 
 /// <summary>
 /// Tous les cas d'usage, regroupés par domaine, autour d'un même coffre ouvert. La racine de
-/// composition (l'application, les tests) fournit les ports : le coffre, les sauvegardes, la
-/// mémoire des coffres, l'horloge et le journal.
+/// composition (l'application, les tests) fournit les ports : le coffre, les sauvegardes, les
+/// emplacements des coffres, l'horloge et le journal.
 /// </summary>
 public sealed class KyfRevApplication : IDisposable
 {
@@ -15,14 +15,14 @@ public sealed class KyfRevApplication : IDisposable
     /// <summary>Assemble les cas d'usage.</summary>
     /// <param name="store">Ouverture et création des coffres.</param>
     /// <param name="backups">Fichiers de sauvegarde.</param>
-    /// <param name="recent">Mémoire du dernier coffre ouvert.</param>
+    /// <param name="locations">Coffre prévu et mémoire du dernier coffre ouvert.</param>
     /// <param name="time">Horloge : seule source de la date du jour.</param>
     /// <param name="logging">Journal de diagnostic.</param>
     /// <param name="version">Version de l'application.</param>
-    public KyfRevApplication(IVaultStore store, IBackupFiles backups, IRecentVaults recent, TimeProvider time, ILoggerFactory logging, string version)
+    public KyfRevApplication(IVaultStore store, IBackupFiles backups, IVaultLocations locations, TimeProvider time, ILoggerFactory logging, string version)
     {
         ArgumentNullException.ThrowIfNull(logging);
-        Vaults = new VaultUseCases(_host, store, backups, recent, time, logging.CreateLogger<VaultUseCases>(), version);
+        Vaults = new VaultUseCases(_host, store, backups, locations, time, logging.CreateLogger<VaultUseCases>(), version);
         Sheets = new SheetUseCases(_host, time, logging.CreateLogger<SheetUseCases>());
         Editing = new EditingUseCases(_host, time);
         Folders = new FolderUseCases(_host, time);

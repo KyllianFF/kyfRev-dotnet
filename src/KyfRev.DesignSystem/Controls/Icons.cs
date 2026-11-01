@@ -9,6 +9,15 @@ public static class Icons
     /// <summary>Document : une fiche.</summary>
     public static string Document { get; } = Glyph(0xE8A5);
 
+    /// <summary>Maison : l'accueil.</summary>
+    public static string Home { get; } = Glyph(0xE80F);
+
+    /// <summary>Dossier ouvert : ouvrir un coffre existant.</summary>
+    public static string FolderOpen { get; } = Glyph(0xE838);
+
+    /// <summary>Nouveau dossier : créer un coffre.</summary>
+    public static string NewFolder { get; } = Glyph(0xE8F4);
+
     /// <summary>Surligneur : un passage annoté.</summary>
     public static string Highlighter { get; } = Glyph(0xE7E6);
 

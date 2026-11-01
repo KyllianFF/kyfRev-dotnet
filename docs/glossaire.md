@@ -67,6 +67,11 @@ Ce glossaire fixe la correspondance. Les **clés JSON du coffre restent celles d
 
 | Terme | Code | Clé JSON (format 1) | Définition |
 |---|---|---|---|
+| Emplacements | `IVaultLocations`, `VaultLocations` | `portable.json`, `installation.json`, `config-locale.json` | Mode de l'application, coffre prévu et dernier coffre ouvert, rouvert au démarrage. |
+| Mode portable | `AppMode.Portable` | `portable.json` (`coffre`, chemin relatif) | Tout reste dans le dossier transportable : `MesRévisions\Application`, `Coffre`, `Sauvegardes`. |
+| Mode installé | `AppMode.Installed` | `installation.json` (`coffre` : `documents` ou `donnees`) | Programme installé ; chaque utilisateur a son coffre dans ses Documents ou ses données d'application. |
+| Dernier coffre | `IVaultLocations.Remember` | `config-locale.json` (`dernierCoffre`) | Coffre rouvert au démarrage ; jamais retenu en mode portable. |
+| Accueil | `WelcomePageViewModel` | — | Écran sans coffre ouvert : créer le coffre prévu, créer ou ouvrir un coffre choisi. |
 | Verrou | `VaultLock` | `.suivi/verrou` | Empêche deux instances d'ouvrir le même coffre. |
 | Journal d'opération | `OperationJournal` | `.suivi/operation.json` | Opération multi-fichiers rejouée si elle a été interrompue. |
 | Version | `SheetVersion` | `.suivi/versions/` | Copie d'une fiche avant écrasement. |

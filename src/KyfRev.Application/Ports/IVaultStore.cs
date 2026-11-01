@@ -41,11 +41,30 @@ public interface IBackupFiles
     bool IsFile(string path);
 }
 
-/// <summary>Mémoire des coffres ouverts : le dernier est rouvert au démarrage.</summary>
-public interface IRecentVaults
+/// <summary>
+/// Où sont les coffres de ce poste : celui que prévoit le mode portable ou installé, et la
+/// mémoire du dernier coffre ouvert, rouvert au démarrage.
+/// </summary>
+public interface IVaultLocations
 {
-    /// <summary>Retient le coffre qui vient d'être ouvert.</summary>
-    void Remember(string root);
+    /// <summary>Mode de l'application, selon ce qui se trouve à côté de l'exécutable.</summary>
+    AppMode Mode { get; }
+
+    /// <summary>
+    /// Coffre à ouvrir au démarrage : celui du mode portable ; sinon le dernier ouvert, et à
+    /// défaut celui que prévoit le mode installé.
+    /// </summary>
+    string? VaultToOpen();
+
+    /// <summary>Le coffre prévu (mode portable ou installé), s'il reste à créer.</summary>
+    string? VaultToCreate();
+
+    /// <summary>Retient le coffre qui vient d'être ouvert (rien en mode portable, où il est prévu).</summary>
+    /// <returns>
+    /// Faux si la mémoire n'a pas pu être écrite : le coffre reste ouvert, il ne sera seulement pas
+    /// rouvert de lui-même au prochain démarrage.
+    /// </returns>
+    bool Remember(string root);
 }
 
 /// <summary>

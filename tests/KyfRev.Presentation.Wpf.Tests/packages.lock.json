@@ -173,6 +173,7 @@
       "kyfRev": {
         "type": "Project",
         "dependencies": {
+          "KyfRev.Infrastructure.Vault": "[1.0.0-alpha.0, )",
           "KyfRev.Infrastructure.Windows": "[1.0.0-alpha.0, )",
           "KyfRev.Presentation.Wpf": "[1.0.0-alpha.0, )",
           "Microsoft.Extensions.DependencyInjection": "[10.0.13, )"
@@ -191,6 +192,14 @@
       },
       "kyfrev.domain": {
         "type": "Project"
+      },
+      "kyfrev.infrastructure.vault": {
+        "type": "Project",
+        "dependencies": {
+          "KyfRev.Application": "[1.0.0-alpha.0, )",
+          "KyfRev.Domain": "[1.0.0-alpha.0, )",
+          "YamlDotNet": "[18.1.0, )"
+        }
       },
       "kyfrev.infrastructure.windows": {
         "type": "Project",
@@ -235,6 +244,12 @@
         "dependencies": {
           "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.13"
         }
+      },
+      "YamlDotNet": {
+        "type": "CentralTransitive",
+        "requested": "[18.1.0, )",
+        "resolved": "18.1.0",
+        "contentHash": "5K+9KFg2TdTl7VXv88Qzi/0lqK6JFoNP3lRuImPYGRV7K/QYklDyTrj4+A+KAki1JsQi6qKY+hDyY7d6WRqjrw=="
       }
     }
   }

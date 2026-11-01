@@ -18,8 +18,20 @@
   <data name="Archives" xml:space="preserve">
     <value>Archives</value>
   </data>
+  <data name="ChooseEmptyFolder" xml:space="preserve">
+    <value>Choisissez un dossier vide pour le nouveau coffre</value>
+  </data>
+  <data name="ChooseVaultFolder" xml:space="preserve">
+    <value>Choisissez le dossier du coffre</value>
+  </data>
   <data name="ComingSoon" xml:space="preserve">
     <value>Cette vue arrive dans une prochaine version de kyfRev. Vos fiches restent dans le coffre, lisibles par la version 0.x en attendant.</value>
+  </data>
+  <data name="CreateVault" xml:space="preserve">
+    <value>Créer un coffre</value>
+  </data>
+  <data name="CreateVaultHere" xml:space="preserve">
+    <value>Créer le coffre ici</value>
   </data>
   <data name="Definitions" xml:space="preserve">
     <value>Définitions</value>
@@ -45,8 +57,14 @@
   <data name="MainNavigation" xml:space="preserve">
     <value>Navigation principale</value>
   </data>
+  <data name="NewVaultHelp" xml:space="preserve">
+    <value>Un nouveau coffre se crée dans un dossier vide.</value>
+  </data>
   <data name="NoCommand" xml:space="preserve">
     <value>Aucune commande ne correspond.</value>
+  </data>
+  <data name="OpenExistingVault" xml:space="preserve">
+    <value>Ouvrir un coffre existant</value>
   </data>
   <data name="Search" xml:space="preserve">
     <value>Rechercher</value>
@@ -59,6 +77,9 @@
   </data>
   <data name="Settings" xml:space="preserve">
     <value>Paramètres</value>
+  </data>
+  <data name="Sheets" xml:space="preserve">
+    <value>Fiches</value>
   </data>
   <data name="ShortcutFocusMode" xml:space="preserve">
     <value>Afficher ou masquer le menu (mode concentration)</value>
@@ -81,9 +102,6 @@
   <data name="ShortcutZoomReset" xml:space="preserve">
     <value>Revenir à la taille normale</value>
   </data>
-  <data name="Sheets" xml:space="preserve">
-    <value>Fiches</value>
-  </data>
   <data name="Statistics" xml:space="preserve">
     <value>Statistiques</value>
   </data>
@@ -104,6 +122,15 @@
   </data>
   <data name="Today" xml:space="preserve">
     <value>Aujourd'hui</value>
+  </data>
+  <data name="VaultNotOpened" xml:space="preserve">
+    <value>Le coffre n'a pas pu être ouvert.</value>
+  </data>
+  <data name="Welcome" xml:space="preserve">
+    <value>Bienvenue dans kyfRev</value>
+  </data>
+  <data name="WelcomeIntro" xml:space="preserve">
+    <value>Vos fiches de révision, leur calendrier des J et vos annotations vivent dans un dossier : le coffre. Il reste lisible sans l'application et se transporte d'un ordinateur à l'autre.</value>
   </data>
   <data name="Zoom" xml:space="preserve">
     <value>Zoom : {0} %</value>

@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Date** | 31 octobre 2026 |
-| **Statut** | Plan validé le 31 octobre 2026 : les 13 décisions du §7 sont arrêtées sur l'option recommandée (décision 2 : option C, §2.6). J1, J2, J3 et J4 validés et fusionnés le 31 octobre 2026 (J3 en cinq demandes de fusion : lecture fidèle, écriture des fiches, écritures complémentaires, sauvegardes et exports, corpus d'ancrage ; J4 en deux : couche Application et garde-fous, modularité et module Citations). J5 : J5.1 design system et J5.2 coquille WPF fusionnées le 1er novembre 2026, en attente de votre validation des captures (`docs/captures/j5`). J6 commencé : J6.1 tableau de bord et archives. |
+| **Statut** | Plan validé le 31 octobre 2026 : les 13 décisions du §7 sont arrêtées sur l'option recommandée (décision 2 : option C, §2.6). J1, J2, J3 et J4 validés et fusionnés le 31 octobre 2026 (J3 en cinq demandes de fusion : lecture fidèle, écriture des fiches, écritures complémentaires, sauvegardes et exports, corpus d'ancrage ; J4 en deux : couche Application et garde-fous, modularité et module Citations). J5 : J5.1 design system et J5.2 coquille WPF fusionnées le 1er novembre 2026, en attente de votre validation des captures (`docs/captures/j5`). J6 commencé : J6.1 tableau de bord et archives ; J6.2 emplacements, ouverture au démarrage et accueil. |
 | **Périmètre audité** | Dépôt `KyllianFF/kyfRev` à `87f291c` (v0.8.0, 133 commits) ; application installée `C:\Program Files\kyfRev` (0.7.0) ; coffre `Documents\kyfRev\Coffre` et ses sauvegardes. |
 | **Méthode** | Lecture intégrale du cœur métier (`crates/noyau`), lecture du dossier de conception (64 décisions D1 à D64), analyse du crate `coffre` (persistance), de `src-tauri` (commandes, extensions, sécurité, livraison) et de l'interface Svelte. Aucune modification de l'existant. |
 
@@ -550,7 +550,7 @@ L'audit du format a relevé 19 pièges, tous traités et testés.
    - `jeton-github.bin` (relu par DPAPI, puis protégé de nouveau avec l'entropie de l'application) ;
    - l'état des extensions.
    
-   Ses propres fichiers locaux (journal, données WebView2) vont dans des sous-dossiers distincts de `%LOCALAPPDATA%\kyfRev`, pour ne pas entrer en collision avec la 0.x.
+   Ses propres fichiers locaux (journal, données WebView2) vont dans des sous-dossiers distincts de `%LOCALAPPDATA%\kyfRev`, pour ne pas entrer en collision avec la 0.x : `%LOCALAPPDATA%\kyfRev\v1`, où elle retient aussi son dernier coffre (J6.2).
 3. **Contrôle croisé** : le coffre écrit par la nouvelle application est rouvert par Tauri 0.8.0. Son panneau Santé ne doit signaler **aucun** problème.
 4. **Chiffrement (facultatif)** : `chiffrer` vers un nouveau dossier, puis bascule de l'application vers ce dossier. Le dossier en clair est conservé jusqu'à confirmation explicite, puis retiré **par l'utilisateur**, avec un avertissement : sur un SSD, l'effacement sûr n'est pas garanti, d'où la recommandation BitLocker.
 5. **Retrait de la 0.x** : l'installateur détecte kyfRev 0.x (clé de désinstallation, éditeur « kyfRev ») et propose de le désinstaller **après** un premier lancement réussi, jamais d'office. Le coffre n'est jamais touché par une désinstallation.

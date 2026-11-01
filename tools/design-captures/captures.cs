@@ -1,5 +1,6 @@
 #:project ../../src/KyfRev.DesignSystem/KyfRev.DesignSystem.csproj
 #:project ../../src/KyfRev.Presentation.Wpf/KyfRev.Presentation.Wpf.csproj
+#:project ../../src/KyfRev.Infrastructure.Vault/KyfRev.Infrastructure.Vault.csproj
 #:property TargetFramework=net10.0-windows
 #:property UseWPF=true
 #:property ImplicitUsings=enable
@@ -9,18 +10,22 @@
 // Usage : dotnet run tools/design-captures/captures.cs -- <dossier>
 // Écrit galerie-clair.png, galerie-sombre.png et galerie-contraste-eleve.png (couleurs système
 // actuelles du poste), les vues de la coquille (coquille-clair.png, coquille-sombre.png,
-// recherche-sombre.png, aide-clair.png), et affiche le contraste de chaque paire de rôles.
+// recherche-sombre.png, aide-clair.png), l'accueil sans coffre (accueil-clair.png,
+// accueil-sombre.png), et affiche le contraste de chaque paire de rôles.
 using System.Globalization;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using KyfRev.Application.Model;
 using KyfRev.Application.Modules;
 using KyfRev.Application.Ports;
+using KyfRev.Application.UseCases;
 using KyfRev.DesignSystem;
 using KyfRev.DesignSystem.Controls;
 using KyfRev.DesignSystem.Tokens;
+using KyfRev.Infrastructure.Vault.Adapters;
 using KyfRev.Presentation.Wpf.Pages;
 using KyfRev.Presentation.Wpf.Shell;
 
@@ -41,6 +46,16 @@ var thread = new Thread(() =>
         shell.PaletteQuery = "aller";
     });
     Shell(folder, "aide-clair.png", ThemePreference.Light, shell => shell.ShowHelp());
+    // L'accueil d'une installation dont le coffre prévu reste à créer, avec un refus affiché.
+    using var app = new KyfRevApplication(new VaultStore(), new BackupFiles(), new PlannedVault(), TimeProvider.System, Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, "1.0.0");
+    foreach (var (theme, name) in new[] { (ThemePreference.Light, "clair"), (ThemePreference.Dark, "sombre") })
+    {
+        Shell(folder, $"accueil-{name}.png", theme, shell => shell.ShowWelcome(new WelcomePageViewModel(
+            app.Vaults,
+            new NoPicker(),
+            app.Vaults.State() with { OpenError = @"Le coffre « D:\Cours\Coffre » est introuvable." },
+            _ => { })));
+    }
 });
 thread.SetApartmentState(ApartmentState.STA);
 thread.Start();
@@ -226,4 +241,23 @@ internal sealed class StillAppearance : ISystemAppearance
 internal sealed class NoChrome : IWindowChrome
 {
     public bool UseDarkTitleBar(nint windowHandle, bool dark) => false;
+}
+
+// Une installation dont le coffre prévu, dans les Documents, reste à créer.
+internal sealed class PlannedVault : IVaultLocations
+{
+    private const string Planned = @"C:\Users\Élève\Documents\kyfRev\Coffre";
+
+    public AppMode Mode => AppMode.Installed;
+
+    public string? VaultToOpen() => Planned;
+
+    public string? VaultToCreate() => Planned;
+
+    public bool Remember(string root) => true;
+}
+
+internal sealed class NoPicker : IFolderPicker
+{
+    public string? Pick(string title) => null;
 }
