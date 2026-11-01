@@ -149,6 +149,15 @@ public static class DashboardText
     /// <summary>« À venir ».</summary>
     public static string Forecast => Text(nameof(Forecast));
 
+    /// <summary>« Historique ».</summary>
+    public static string History => Text(nameof(History));
+
+    /// <summary>« Aperçu de l'élément choisi ».</summary>
+    public static string Preview => Text(nameof(Preview));
+
+    /// <summary>« Réviser maintenant ».</summary>
+    public static string ReviewNow => Text(nameof(ReviewNow));
+
     /// <summary>« mardi 3 novembre : 1 élément ».</summary>
     public static string ForecastDayOneOf(object day, object count) => Format("ForecastDayOne", day, count);
 

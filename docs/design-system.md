@@ -175,12 +175,18 @@ La vue d'ouverture suit la largeur de sa page, zoom et menu déjà comptés :
 |---|---|
 | moins de 600 px | une colonne ; le résumé sous le titre, le bouton de séance sur toute la largeur ; le tri réduit à son icône, le retard sous le titre de la ligne, pas de pied de liste |
 | de 600 à 879 px | une colonne ; les boutons de séance dans le résumé |
-| 880 px et plus | le résumé à côté du titre ; la liste et une colonne latérale de 340 px |
+| de 880 à 1 549 px | le résumé à côté du titre ; la liste et une colonne latérale de 340 px |
+| de 1 550 à 2 149 px | s'y ajoute l'aperçu de la ligne choisie, sur 620 px |
+| 2 150 px et plus | la liste en deux cartes (retards et rappels ; aujourd'hui et à venir), un aperçu de 840 px, 14 jours à venir |
 
 La colonne latérale montre les rappels de consolidation, les échéances des sept prochains jours,
 les révisions validées ces sept derniers jours et, ancrés en bas, les encarts des modules. Sans
 elle, les rappels restent dans la liste et le reste défile à sa suite : la liste reste
 virtualisée. Une carte sans rien à montrer n'apparaît pas : aucun contenu de remplissage.
+
+Avec l'aperçu, un clic choisit la ligne et un double clic, Entrée ou « Réviser maintenant » l'ouvre.
+L'aperçu montre le texte d'une fiche, les étapes de son cycle et ce qui a été révisé ; un passage
+caché ou une définition n'y dévoile rien : seule la révision le montre.
 
 Le graphique de la semaine n'a qu'une série : une couleur, des barres fines ancrées en bas, un
 trait discret pour un jour sans révision, les jours écrits dessous. Chaque jour donne sa valeur

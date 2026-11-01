@@ -55,7 +55,7 @@ public sealed class DashboardTests
         app.Annotations.CreateDefinition(meiosis, Passage with { Exact = "prophase", Start = 3 }, new Definition("Prophase", "Première phase.")).Value.ToString();
         time.AdvanceDays(1);
 
-        var page = new DashboardPageViewModel(app.Reminders, new FakeOpener());
+        var page = new DashboardPageViewModel(app.Reminders, app.Sheets, new FakeOpener());
         await page.RefreshCommand.ExecuteAsync(null);
 
         // Le 4 : Mitose et son passage en retard de 2 jours, Atome d'1 jour ; Méiose et sa définition aujourd'hui.
@@ -225,15 +225,16 @@ public sealed class DashboardTests
     public async Task Without_a_vault_the_refusal_is_shown()
     {
         using var test = new TestVaults(AppMode.Development);
-        var page = new DashboardPageViewModel(test.App.Reminders, new FakeOpener());
+        var page = new DashboardPageViewModel(test.App.Reminders, test.App.Sheets, new FakeOpener());
 
         await page.RefreshCommand.ExecuteAsync(null);
 
         Assert.AreEqual("Aucun coffre n'est ouvert.", page.Error);
         Assert.IsTrue(page.HasError);
         Assert.IsEmpty(page.Rows);
-        Assert.ThrowsExactly<ArgumentNullException>(() => new DashboardPageViewModel(null!, new FakeOpener()));
-        Assert.ThrowsExactly<ArgumentNullException>(() => new DashboardPageViewModel(test.App.Reminders, null!));
+        Assert.ThrowsExactly<ArgumentNullException>(() => new DashboardPageViewModel(null!, test.App.Sheets, new FakeOpener()));
+        Assert.ThrowsExactly<ArgumentNullException>(() => new DashboardPageViewModel(test.App.Reminders, null!, new FakeOpener()));
+        Assert.ThrowsExactly<ArgumentNullException>(() => new DashboardPageViewModel(test.App.Reminders, test.App.Sheets, null!));
         Assert.ThrowsExactly<ArgumentNullException>(() => page.Show(null!));
         Assert.ThrowsExactly<ArgumentNullException>(() => CorePages.All(null!));
     }
@@ -242,7 +243,7 @@ public sealed class DashboardTests
     public async Task The_dashboard_is_read_again_each_time_the_view_opens()
     {
         using var test = new TestVaults(AppMode.Development);
-        var page = new DashboardPageViewModel(test.App.Reminders, new FakeOpener());
+        var page = new DashboardPageViewModel(test.App.Reminders, test.App.Sheets, new FakeOpener());
         var shell = new ShellViewModel(CorePages.All(new Dictionary<string, object> { [CorePages.Today] = page }), new TestShell().Appearance, new object());
         Assert.AreSame(page, shell.Home.Page);
         var reads = 0;
@@ -371,7 +372,7 @@ public sealed class DashboardTests
         var time = new FakeTime(new DateTimeOffset(2026, 10, 1, 8, 0, 0, TimeSpan.Zero));
         using var test = new TestVaults(AppMode.Development, time);
         Assert.IsNotNull(test.App.Vaults.Create(test.PathOf("Coffre")).Vault);
-        var page = new DashboardPageViewModel(test.App.Reminders, new FakeOpener(), [new Widget(20, "Second"), new Widget(5, null), new Widget(10, "Premier")]);
+        var page = new DashboardPageViewModel(test.App.Reminders, test.App.Sheets, new FakeOpener(), [new Widget(20, "Second"), new Widget(5, null), new Widget(10, "Premier")]);
 
         await page.RefreshCommand.ExecuteAsync(null);
 
@@ -381,13 +382,197 @@ public sealed class DashboardTests
         Same("Premier | Second", page.Cards.Select(card => card.Title));
     }
 
+    [TestMethod]
+    public async Task The_preview_shows_the_chosen_row_without_giving_away_a_passage()
+    {
+        var time = new FakeTime(new DateTimeOffset(2026, 10, 1, 8, 0, 0, TimeSpan.Zero));
+        using var test = new TestVaults(AppMode.Development, time);
+        var app = test.App;
+        Assert.IsNotNull(app.Vaults.Create(test.PathOf("Coffre")).Vault);
+        var mitosis = app.Sheets.Create("Biologie", "Mitose", null).Value;
+        var passage = app.Annotations.Create(mitosis, Passage, "Avant la métaphase").Value;
+        app.Annotations.CreateDefinition(mitosis, Passage with { Exact = "prophase", Start = 3 }, new Definition("Prophase", "Première phase.")).Value.ToString();
+        time.AdvanceDays(1);
+        var page = new DashboardPageViewModel(app.Reminders, app.Sheets, new FakeOpener());
+        await page.RefreshCommand.ExecuteAsync(null);
+
+        // Sans la place d'un aperçu, rien n'est lu.
+        page.PageWidth = DashboardPageViewModel.PreviewMinimum - 1;
+        Assert.AreEqual(TodayLayout.WithSide, page.Layout);
+        Assert.IsFalse(page.HasPreview);
+        Assert.IsNull(page.SelectedRow);
+        Assert.IsFalse(page.ShowsPreview);
+
+        // La première ligne est choisie d'emblée.
+        page.PageWidth = DashboardPageViewModel.PreviewMinimum;
+        Assert.AreEqual(TodayLayout.WithPreview, page.Layout);
+        Assert.IsTrue(page.HasPreview);
+        await page.LoadPreviewCommand.ExecutionTask!;
+        var sheetRow = page.Rows.OfType<DueItemRow>().Single(row => row.Item.Kind == ItemKind.Sheet);
+        Assert.AreSame(sheetRow, page.SelectedRow);
+        Assert.IsTrue(page.ShowsPreview);
+        var preview = page.Preview!;
+        Assert.AreSame(sheetRow, preview.Row);
+        Assert.AreEqual("Mitose", preview.Title);
+        Assert.AreEqual(sheetRow.Meta, preview.Meta);
+        Assert.IsTrue(preview.HasBody);
+        Assert.AreEqual(app.Sheets.Open(mitosis).Value.Body, preview.Body);
+        Assert.IsFalse(preview.HasPrompt);
+        Assert.IsFalse(preview.HasError);
+        Assert.IsTrue(preview.HasSteps);
+        Assert.IsTrue(preview.Steps[0].IsDone);
+        Assert.IsTrue(preview.HasHistory);
+        Assert.AreEqual("J0 : validée le jeu. 1 oct.", preview.History.Single());
+
+        // Un passage caché et une définition ne dévoilent rien.
+        page.SelectedRow = page.Rows.OfType<DueItemRow>().Single(row => row.Item.Id == passage);
+        await page.LoadPreviewCommand.ExecutionTask!;
+        Assert.AreEqual("Passage à retrouver", page.Preview!.Title);
+        Assert.IsFalse(page.Preview.HasBody);
+        Assert.AreEqual(ReviewText.RecallPassage, page.Preview.Prompt);
+        Assert.IsTrue(page.Preview.HasSteps);
+        var definition = page.Rows.OfType<DueItemRow>().Single(row => row.Heading == DueItemHeading.Term);
+        page.SelectedRow = definition;
+        await page.LoadPreviewCommand.ExecutionTask!;
+        Assert.AreEqual("Prophase", page.Preview!.Title);
+        Assert.IsFalse(page.Preview.HasBody);
+        Assert.AreEqual(ReviewText.RecallDefinition, page.Preview.Prompt);
+
+        // Une relecture garde la ligne choisie, même si la ligne est une nouvelle instance.
+        await page.RefreshCommand.ExecuteAsync(null);
+        Assert.AreEqual(definition.Item.Id, ((DueItemRow)page.SelectedRow!).Item.Id);
+
+        // Seule la dernière demande compte.
+        page.SelectedRow = page.Rows.OfType<DueItemRow>().First();
+        var overtaken = page.LoadPreviewCommand.ExecutionTask!;
+        page.SelectedRow = definition;
+        var last = page.LoadPreviewCommand.ExecutionTask!;
+        await Task.WhenAll(overtaken, last);
+        Assert.AreSame(definition, page.Preview!.Row);
+
+        // Une fiche introuvable se dit, sur une ligne comme sur un rappel.
+        var missing = new DueItemRow(Item("Disparue", ItemKind.Sheet, "J3"), activeRecall: true, showDueDate: false);
+        page.SelectedRow = missing;
+        await page.LoadPreviewCommand.ExecutionTask!;
+        Assert.IsTrue(page.Preview!.HasError);
+        Assert.AreEqual("Disparue", page.Preview.Title);
+        Assert.IsFalse(page.Preview.HasSteps);
+        Assert.IsFalse(page.Preview.HasHistory);
+        page.SelectedRow = new ReminderRow(Reminder("Cellule", previous: 0));
+        await page.LoadPreviewCommand.ExecutionTask!;
+        Assert.IsTrue(page.Preview!.HasError);
+        Assert.AreEqual("Cellule", page.Preview.Title);
+        page.SelectedRow = new ReminderRow(new PendingReminder(mitosis, "Mitose", "Biologie", [], Day, Day, 0));
+        await page.LoadPreviewCommand.ExecutionTask!;
+        Assert.AreEqual("Mitose", page.Preview!.Title);
+        Assert.IsTrue(page.Preview.HasBody);
+
+        // Un en-tête n'a pas d'aperçu ; sans la place, plus rien n'est choisi.
+        page.SelectedRow = page.Rows[0];
+        await page.LoadPreviewCommand.ExecutionTask!;
+        Assert.IsNull(page.Preview);
+        page.PageWidth = DashboardPageViewModel.SideColumnMinimum;
+        Assert.IsNull(page.SelectedRow);
+        await page.LoadPreviewCommand.ExecutionTask!;
+        Assert.IsFalse(page.ShowsPreview);
+    }
+
+    [TestMethod]
+    public void The_list_splits_in_two_cards_on_the_largest_screens()
+    {
+        var page = Page();
+        page.Show(Sample(reminders: [Reminder("Cellule", previous: 0)]) with
+        {
+            Upcoming = [Item("Demain", ItemKind.Sheet, "J3")],
+            Workload = [.. Enumerable.Range(0, 31).Select(offset => new WorkloadDay(Day.AddDays(offset), [], []))],
+        });
+        page.PageWidth = DashboardPageViewModel.SplitMinimum;
+        Assert.AreEqual(TodayLayout.WithSplit, page.Layout);
+        Same("En retard, 2 | Zèbre | Éléphant | Rappels de consolidation, 1 | Cellule", page.Rows.Select(Title));
+        Same("Aujourd'hui, 2 | Douane | Fourmi | À venir — 7 jours, 1 | Demain", page.SecondRows.Select(Title));
+        Assert.IsFalse(page.HasSideReminders, "les rappels sont dans la première carte");
+        Assert.HasCount(14, page.Forecast);
+        Assert.AreEqual("Zèbre", Title(page.SelectedRow!));
+
+        page.PageWidth = DashboardPageViewModel.PreviewMinimum;
+        Assert.AreEqual(TodayLayout.WithPreview, page.Layout);
+        Assert.IsEmpty(page.SecondRows);
+        Assert.IsTrue(page.HasSideReminders);
+        Assert.HasCount(7, page.Forecast);
+        Assert.AreEqual("Zèbre", Title(page.SelectedRow!), "la ligne choisie reste choisie");
+    }
+
+    [STATestMethod]
+    public void With_the_preview_a_click_chooses_and_a_double_click_opens()
+    {
+        var test = new TestShell();
+        var opener = new FakeOpener();
+        using var vaults = new TestVaults(AppMode.Development);
+        var page = new DashboardPageViewModel(vaults.App.Reminders, vaults.App.Sheets, opener);
+        page.Show(Sample());
+        var shell = new ShellViewModel(CorePages.All(new Dictionary<string, object> { [CorePages.Today] = page }), test.Appearance, test.Gallery);
+        var window = Show(test, shell);
+        try
+        {
+            // La largeur vue par la page, sans dépendre de la taille de l'écran.
+            page.PageWidth = DashboardPageViewModel.PreviewMinimum;
+            window.UpdateLayout();
+            UiThread.Until(() => page.ShowsPreview);
+            TestShell.Flush();
+            var list = Named<ListBox>(window, "Items");
+            Assert.AreEqual(620, Named<Card>(window, "PreviewCard").ActualWidth);
+            Assert.AreSame(page.SelectedRow, list.SelectedItem);
+            Assert.IsTrue(Named<Notification>(window, "PreviewError").IsOpen, "aucun coffre n'est ouvert ici");
+
+            // Un clic choisit la ligne, sans l'ouvrir.
+            var container = (ListBoxItem)list.ItemContainerGenerator.ContainerFromItem(page.SelectedRow);
+            container.RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, 0, MouseButton.Left) { RoutedEvent = UIElement.MouseUpEvent });
+            Assert.IsEmpty(opener.Opened);
+            var other = page.Rows.OfType<DueItemRow>().Last();
+            list.SetCurrentValue(Selector.SelectedItemProperty, other);
+            Assert.AreSame(other, page.SelectedRow);
+            UiThread.Until(() => ReferenceEquals(page.Preview?.Row, other));
+            TestShell.Flush();
+
+            // Le double clic et le bouton de l'aperçu l'ouvrent ; le double clic sur un en-tête, non.
+            list.RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, 0, MouseButton.Left) { RoutedEvent = Control.MouseDoubleClickEvent });
+            Assert.HasCount(1, opener.Opened);
+            var review = Named<Button>(window, "ReviewNow");
+            review.Command.Execute(review.CommandParameter);
+            Assert.HasCount(2, opener.Opened);
+            list.SetCurrentValue(Selector.SelectedItemProperty, page.Rows[0]);
+            list.RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, 0, MouseButton.Left) { RoutedEvent = Control.MouseDoubleClickEvent });
+            Assert.HasCount(2, opener.Opened);
+            Assert.AreSame(other, page.SelectedRow, "un en-tête ne change pas l'aperçu");
+
+            // En deux cartes, une seule ligne reste choisie, et l'aperçu s'élargit.
+            page.PageWidth = DashboardPageViewModel.SplitMinimum;
+            window.UpdateLayout();
+            TestShell.Flush();
+            var second = Named<ListBox>(window, "SecondItems");
+            Assert.AreEqual(840, Named<Card>(window, "PreviewCard").ActualWidth);
+            Assert.IsNotNull(list.SelectedItem ?? second.SelectedItem);
+            second.SetCurrentValue(Selector.SelectedItemProperty, page.SecondRows.OfType<DueItemRow>().First());
+            Assert.AreSame(second.SelectedItem, page.SelectedRow);
+            Assert.IsNull(list.SelectedItem);
+            list.SetCurrentValue(Selector.SelectedItemProperty, page.Rows.OfType<DueItemRow>().First());
+            Assert.AreSame(list.SelectedItem, page.SelectedRow);
+            Assert.IsNull(second.SelectedItem);
+            UiThread.Until(() => ReferenceEquals(page.Preview?.Row, page.SelectedRow));
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
     [STATestMethod]
     public void The_view_keeps_within_the_width_of_the_window()
     {
         var test = new TestShell();
         var opener = new FakeOpener();
         using var vaults = new TestVaults(AppMode.Development);
-        var page = new DashboardPageViewModel(vaults.App.Reminders, opener, [new Widget(1, "Citation du jour")]);
+        var page = new DashboardPageViewModel(vaults.App.Reminders, vaults.App.Sheets, opener, [new Widget(1, "Citation du jour")]);
         var forecast = Enumerable.Range(0, 8).Select(offset => new WorkloadDay(Day.AddDays(offset), [Item($"Fiche {offset}", ItemKind.Sheet, "J3")], []));
         page.Show(
             Sample(reminders: [Reminder("Cellule", previous: 0)]) with { Workload = [.. forecast], RecentReviews = [.. Enumerable.Range(0, 7).Select(age => new ReviewDay(Day.AddDays(-age), age))] },
@@ -447,10 +632,10 @@ public sealed class DashboardTests
             list.ScrollIntoView(extras);
             list.UpdateLayout();
             TestShell.Flush();
-            list.SelectedItem = extras;
+            list.SetCurrentValue(Selector.SelectedItemProperty, extras);
             Assert.IsNull(list.SelectedItem);
             Assert.IsNotNull(Named<ItemsControl>(list, "Week"));
-            list.SelectedItem = page.Rows[1];
+            list.SetCurrentValue(Selector.SelectedItemProperty, page.Rows[1]);
             Assert.AreSame(page.Rows[1], list.SelectedItem);
         }
         finally
@@ -509,6 +694,13 @@ public sealed class DashboardTests
         public DashboardCard? Card() => title is null ? null : new DashboardCard(title, "Un texte", null);
     }
 
+    private static string Title(object row) => row switch
+    {
+        DueItemRow item => item.Item.Title,
+        ReminderRow reminder => reminder.Title,
+        _ => row.ToString()!,
+    };
+
     private static void Same(string expected, IEnumerable<string> actual, string message = "") =>
         Assert.AreEqual(expected, string.Join(" | ", actual), message);
 
@@ -516,7 +708,7 @@ public sealed class DashboardTests
     {
         var test = new TestVaults(AppMode.Development);
         test.Dispose();
-        return new DashboardPageViewModel(test.App.Reminders, new FakeOpener());
+        return new DashboardPageViewModel(test.App.Reminders, test.App.Sheets, new FakeOpener());
     }
 
     private static ShellWindow Show(TestShell test, ShellViewModel shell)

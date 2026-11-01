@@ -14,6 +14,7 @@ internal sealed partial class DashboardPage : UserControl
         InitializeComponent();
         // Un clic sur une ligne l'ouvre, même si la liste a déjà traité le clic pour la sélectionner.
         Items.AddHandler(MouseUpEvent, new MouseButtonEventHandler(OnItemsMouseUp), handledEventsToo: true);
+        SecondItems.AddHandler(MouseUpEvent, new MouseButtonEventHandler(OnItemsMouseUp), handledEventsToo: true);
         SortMenu.AddHandler(MenuItem.ClickEvent, new RoutedEventHandler(OnSortChosen));
         // La disposition suit la largeur de la page, zoom et menu déjà comptés.
         SizeChanged += (_, e) => Page.PageWidth = e.NewSize.Width;
@@ -27,6 +28,7 @@ internal sealed partial class DashboardPage : UserControl
     /// </summary>
     private void OnItemsKeyDown(object sender, KeyEventArgs e)
     {
+        var list = (ListBox)sender;
         if (e.Key is not (Key.Enter or Key.Space) || Keyboard.FocusedElement is not ListBoxItem { DataContext: var row })
         {
             return;
@@ -34,9 +36,9 @@ internal sealed partial class DashboardPage : UserControl
         if (row is DashboardGroup group)
         {
             group.ToggleCommand.Execute(null);
-            Items.ScrollIntoView(group);
-            Items.UpdateLayout();
-            (Items.ItemContainerGenerator.ContainerFromItem(group) as ListBoxItem)?.Focus();
+            list.ScrollIntoView(group);
+            list.UpdateLayout();
+            (list.ItemContainerGenerator.ContainerFromItem(group) as ListBoxItem)?.Focus();
             e.Handled = true;
         }
         else if (e.Key == Key.Enter && row is DueItemRow or ReminderRow)
@@ -46,12 +48,31 @@ internal sealed partial class DashboardPage : UserControl
         }
     }
 
-    /// <summary>La suite de la liste (les jours à venir, la semaine, les encarts) se lit mais ne se choisit pas.</summary>
+    /// <summary>
+    /// La suite de la liste (les jours à venir, la semaine, les encarts) se lit mais ne se choisit pas ;
+    /// une ligne choisie s'affiche dans l'aperçu.
+    /// </summary>
     private void OnItemsSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (Items.SelectedItem is DashboardExtras)
+        // SetCurrentValue : la liaison de SelectedItem à la ligne choisie doit survivre.
+        var list = (ListBox)sender;
+        if (list.SelectedItem is DashboardExtras)
         {
-            Items.SelectedItem = null;
+            list.SetCurrentValue(Selector.SelectedItemProperty, null);
+        }
+        else if (Page.HasPreview && list.SelectedItem is DueItemRow or ReminderRow)
+        {
+            Page.SelectedRow = list.SelectedItem;
+            (ReferenceEquals(list, Items) ? SecondItems : Items).SetCurrentValue(Selector.SelectedItemProperty, null);
+        }
+    }
+
+    /// <summary>Avec l'aperçu, un clic choisit la ligne ; un double clic l'ouvre.</summary>
+    private void OnItemsDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        if (Page.HasPreview && ((ListBox)sender).SelectedItem is (DueItemRow or ReminderRow) and var row)
+        {
+            Page.OpenCommand.Execute(row);
         }
     }
 
@@ -74,7 +95,7 @@ internal sealed partial class DashboardPage : UserControl
     /// <summary>Un clic gauche sur une ligne (pas sur un en-tête) l'ouvre.</summary>
     private void OnItemsMouseUp(object sender, MouseButtonEventArgs e)
     {
-        if (e.ChangedButton == MouseButton.Left && ContainerOf(e.OriginalSource as DependencyObject) is { DataContext: DueItemRow or ReminderRow } container)
+        if (!Page.HasPreview && e.ChangedButton == MouseButton.Left && ContainerOf(e.OriginalSource as DependencyObject) is { DataContext: DueItemRow or ReminderRow } container)
         {
             Page.OpenCommand.Execute(container.DataContext);
         }

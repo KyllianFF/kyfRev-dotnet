@@ -190,7 +190,7 @@ public sealed class SessionTests
     {
         var opener = new FakeOpener();
         using var vault = new TestVaults(AppMode.Development);
-        var dashboard = new DashboardPageViewModel(vault.App.Reminders, opener);
+        var dashboard = new DashboardPageViewModel(vault.App.Reminders, vault.App.Sheets, opener);
         var overdue = Item("Mitose", ItemKind.Sheet);
         var today = Item("Méiose", ItemKind.Passage);
         var day = new Dashboard(new DateOnly(2026, 10, 3), [overdue], [today], [], [], [], [], 2, true, [], null, 2, 0, 0, 0, false, false);
@@ -367,7 +367,7 @@ public sealed class SessionTests
             Time.Now += TimeSpan.FromDays(2);
             var test = new TestShell();
             Navigation = new ReviewNavigation(App.Sheets, App.Reviews, App.Reminders, App.Vaults, Sessions, Time);
-            Dashboard = new DashboardPageViewModel(App.Reminders, Navigation);
+            Dashboard = new DashboardPageViewModel(App.Reminders, App.Sheets, Navigation);
             Shell = new ShellViewModel(CorePages.All(new Dictionary<string, object> { [CorePages.Today] = Dashboard }), test.Appearance, test.Gallery);
             Navigation.Attach(Shell);
         }

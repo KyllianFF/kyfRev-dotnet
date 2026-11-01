@@ -192,4 +192,13 @@
   <data name="WeekNounMany" xml:space="preserve">
     <value>révisions validées</value>
   </data>
+  <data name="History" xml:space="preserve">
+    <value>Historique</value>
+  </data>
+  <data name="Preview" xml:space="preserve">
+    <value>Aperçu de l'élément choisi</value>
+  </data>
+  <data name="ReviewNow" xml:space="preserve">
+    <value>Réviser maintenant</value>
+  </data>
 </root>

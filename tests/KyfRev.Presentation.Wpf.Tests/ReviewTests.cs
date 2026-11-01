@@ -296,7 +296,7 @@ public sealed class ReviewTests
         using var vault = new ReviewVault();
         var test = new TestShell();
         var navigation = new ReviewNavigation(vault.App.Sheets, vault.App.Reviews, vault.App.Reminders, vault.App.Vaults, new MemorySessions(), vault.Time);
-        var dashboard = new DashboardPageViewModel(vault.App.Reminders, navigation);
+        var dashboard = new DashboardPageViewModel(vault.App.Reminders, vault.App.Sheets, navigation);
         var shell = new ShellViewModel(CorePages.All(new Dictionary<string, object> { [CorePages.Today] = dashboard }), test.Appearance, test.Gallery);
         Assert.ThrowsExactly<InvalidOperationException>(() => navigation.OpenSheet(vault.SheetId));
         navigation.Attach(shell);
@@ -349,7 +349,7 @@ public sealed class ReviewTests
     {
         var opener = new FakeOpener();
         using var vault = new ReviewVault();
-        var dashboard = new DashboardPageViewModel(vault.App.Reminders, opener);
+        var dashboard = new DashboardPageViewModel(vault.App.Reminders, vault.App.Sheets, opener);
         var reminder = new PendingReminder("fiche", "Cellule", string.Empty, [], new DateOnly(2026, 9, 1), new DateOnly(2026, 10, 3), 0);
 
         dashboard.OpenCommand.Execute(new ReminderRow(reminder));
@@ -462,7 +462,7 @@ public sealed class ReviewTests
         var test = new TestShell();
         var opener = new FakeOpener();
         using var vault = new ReviewVault();
-        var dashboard = new DashboardPageViewModel(vault.App.Reminders, opener);
+        var dashboard = new DashboardPageViewModel(vault.App.Reminders, vault.App.Sheets, opener);
         var item = new DueItem(ItemKind.Sheet, "id", "id", "Mitose", null, null, [], null, "Biologie", [], "J1", new DateOnly(2026, 10, 2), 1, new DateOnly(2026, 10, 1), 1, true);
         dashboard.Show(new Dashboard(new DateOnly(2026, 10, 3), [item], [], [], [], [], [], 2, true, [], null, 1, 0, 0, 0, false, false));
         var shell = new ShellViewModel(CorePages.All(new Dictionary<string, object> { [CorePages.Today] = dashboard }), test.Appearance, test.Gallery);

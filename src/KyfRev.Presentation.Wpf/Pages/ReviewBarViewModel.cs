@@ -54,6 +54,25 @@ public sealed record StepMark(string Label, bool IsDone, bool IsCurrent, bool Wa
 {
     /// <summary>La description : c'est aussi le nom lu par le lecteur d'écran.</summary>
     public override string ToString() => Description;
+
+    /// <summary>La frise du cycle de <paramref name="state"/>.</summary>
+    internal static IReadOnlyList<StepMark> Of(ReviewState state)
+    {
+        var current = state.Steps.Select(step => step.DoneOn).ToList().IndexOf(null);
+        return
+        [
+            .. state.Steps.Select((step, index) => step.DoneOn is { } done
+                ? new StepMark(step.Label, true, false, step.DaysLate > 0, step.DaysLate switch
+                {
+                    > 0 => ReviewText.StepDoneLateOf(step.Label, Dates.Short(done), step.DaysLate),
+                    < 0 => ReviewText.StepDoneEarlyOf(step.Label, Dates.Short(done), -step.DaysLate),
+                    _ => ReviewText.StepDoneOf(step.Label, Dates.Short(done)),
+                })
+                : index == current
+                    ? new StepMark(step.Label, false, true, false, state.Status == ReviewStatus.Active && state.DueDate is { } due ? ReviewText.StepExpectedOnOf(step.Label, Dates.Short(due)) : ReviewText.StepExpectedOf(step.Label))
+                    : new StepMark(step.Label, false, false, false, ReviewText.StepUpcomingOf(step.Label))),
+        ];
+    }
 }
 
 /// <summary>
@@ -164,26 +183,7 @@ public sealed partial class ReviewBarViewModel : ObservableObject
     public string ReminderToggleLabel => State.IncludedInReminders ? ReviewText.ExcludeFromReminders : ReviewText.IncludeInReminders;
 
     /// <summary>La frise des étapes du cycle.</summary>
-    public IReadOnlyList<StepMark> Steps
-    {
-        get
-        {
-            var current = State.Steps.Select(step => step.DoneOn).ToList().IndexOf(null);
-            return
-            [
-                .. State.Steps.Select((step, index) => step.DoneOn is { } done
-                    ? new StepMark(step.Label, true, false, step.DaysLate > 0, step.DaysLate switch
-                    {
-                        > 0 => ReviewText.StepDoneLateOf(step.Label, Dates.Short(done), step.DaysLate),
-                        < 0 => ReviewText.StepDoneEarlyOf(step.Label, Dates.Short(done), -step.DaysLate),
-                        _ => ReviewText.StepDoneOf(step.Label, Dates.Short(done)),
-                    })
-                    : index == current
-                        ? new StepMark(step.Label, false, true, false, IsActive && State.DueDate is { } due ? ReviewText.StepExpectedOnOf(step.Label, Dates.Short(due)) : ReviewText.StepExpectedOf(step.Label))
-                        : new StepMark(step.Label, false, false, false, ReviewText.StepUpcomingOf(step.Label))),
-            ];
-        }
-    }
+    public IReadOnlyList<StepMark> Steps => StepMark.Of(State);
 
     /// <summary>Ce que la dernière action réussie a fait.</summary>
     [ObservableProperty]

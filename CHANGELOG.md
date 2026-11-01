@@ -51,7 +51,11 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   aujourd'hui, les rappels de consolidation et les sept jours à venir, qui ne sont plus repliés
   d'emblée. À côté de la liste si la page fait au moins 880 px, à sa suite sinon : les échéances
   des sept prochains jours, les révisions validées ces sept derniers jours et les encarts des
-  modules, ancrés en bas. Ces cartes n'apparaissent que si elles ont quelque chose à montrer.
+  modules, ancrés en bas. Ces cartes n'apparaissent que si elles ont quelque chose à montrer. À
+  partir de 1 550 px de page, la ligne choisie se lit dans un aperçu (son texte, les étapes de son
+  cycle, ce qui a été révisé), sans rien dévoiler d'un passage caché ou d'une définition : un clic
+  choisit la ligne, un double clic ou Entrée l'ouvre. À partir de 2 150 px, la liste se partage en
+  deux cartes et les échéances portent sur 14 jours.
   Chaque ligne montre la nature de l'élément (fiche, passage, définition), son dossier, ses
   étiquettes, son cycle, sa dernière révision, son étape et son retard ; avec le rappel actif, un
   passage reste caché et seul son commentaire sert d'indice. Filtre (tout, fiches, passages), tri
