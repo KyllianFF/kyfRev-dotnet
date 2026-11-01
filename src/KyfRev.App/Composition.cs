@@ -40,11 +40,14 @@ internal static class Composition
             NullLoggerFactory.Instance,
             Version));
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Vaults);
+        services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Reminders);
+        services.AddSingleton<DashboardPageViewModel>();
         services.AddSingleton(_ => new DesignResources(ThemeKind.Light, Motion.SystemPrefersReducedMotion));
         services.AddSingleton<AppearanceController>();
         services.AddSingleton<GalleryPageViewModel>();
         services.AddSingleton(provider => new ShellViewModel(
-            CorePages.All().Concat(provider.GetServices<INavigationContributor>().Select(contributor => CorePages.FromModule(contributor.Entry))),
+            CorePages.All(new Dictionary<string, object> { [CorePages.Today] = provider.GetRequiredService<DashboardPageViewModel>() })
+                .Concat(provider.GetServices<INavigationContributor>().Select(contributor => CorePages.FromModule(contributor.Entry))),
             provider.GetRequiredService<AppearanceController>(),
             provider.GetRequiredService<GalleryPageViewModel>()));
         services.AddTransient<ShellWindow>();

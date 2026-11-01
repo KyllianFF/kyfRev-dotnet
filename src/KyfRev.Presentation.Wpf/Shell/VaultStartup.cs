@@ -7,7 +7,7 @@ namespace KyfRev.Presentation.Wpf.Shell;
 /// Le démarrage, comme dans la 0.x : le coffre prévu est ouvert (celui du mode portable, le
 /// dernier ouvert, ou celui du profil en mode installé). Sans coffre ouvert, la coquille montre
 /// l'accueil, avec le message d'un coffre qui n'a pas pu être ouvert ; le menu revient dès qu'un
-/// coffre l'est.
+/// coffre l'est, sur la vue « Aujourd'hui ».
 /// </summary>
 public static class VaultStartup
 {
@@ -20,6 +20,10 @@ public static class VaultStartup
         if (state.Vault is null)
         {
             shell.ShowWelcome(new WelcomePageViewModel(vaults, picker, state, _ => shell.ShowWorkspace()));
+        }
+        else
+        {
+            shell.ShowWorkspace();
         }
         return state;
     }

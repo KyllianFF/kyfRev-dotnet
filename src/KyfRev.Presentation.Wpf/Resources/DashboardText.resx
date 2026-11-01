@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="All" xml:space="preserve">
+    <value>Tout</value>
+  </data>
+  <data name="AllArchived" xml:space="preserve">
+    <value>Toutes vos fiches sont archivées ; les rappels de consolidation apparaîtront ici.</value>
+  </data>
+  <data name="ArchivedOn" xml:space="preserve">
+    <value>Archivée le {0}</value>
+  </data>
+  <data name="CommentHint" xml:space="preserve">
+    <value>Commentaire : {0}</value>
+  </data>
+  <data name="Cycle" xml:space="preserve">
+    <value>cycle {0}</value>
+  </data>
+  <data name="DaysLate" xml:space="preserve">
+    <value>Retard {0} j</value>
+  </data>
+  <data name="Definition" xml:space="preserve">
+    <value>Définition</value>
+  </data>
+  <data name="EmptyTitle" xml:space="preserve">
+    <value>Rien à réviser aujourd'hui</value>
+  </data>
+  <data name="FileMissing" xml:space="preserve">
+    <value>fichier introuvable</value>
+  </data>
+  <data name="FirstReminder" xml:space="preserve">
+    <value>1er rappel</value>
+  </data>
+  <data name="FirstSheet" xml:space="preserve">
+    <value>Créez votre première fiche : sa révision J1 sera due demain.</value>
+  </data>
+  <data name="HealthWarningMany" xml:space="preserve">
+    <value>{0} points à vérifier dans le coffre (fichier manquant, lien à revoir…).</value>
+  </data>
+  <data name="HealthWarningOne" xml:space="preserve">
+    <value>{0} point à vérifier dans le coffre (fichier manquant, lien à revoir…).</value>
+  </data>
+  <data name="Items" xml:space="preserve">
+    <value>Éléments à réviser</value>
+  </data>
+  <data name="ItemsToReviewMany" xml:space="preserve">
+    <value>{0} éléments à réviser</value>
+  </data>
+  <data name="ItemsToReviewOne" xml:space="preserve">
+    <value>{0} élément à réviser</value>
+  </data>
+  <data name="LastReview" xml:space="preserve">
+    <value>dernière révision {0}</value>
+  </data>
+  <data name="Loading" xml:space="preserve">
+    <value>Chargement du tableau de bord</value>
+  </data>
+  <data name="NextDue" xml:space="preserve">
+    <value>prochaine échéance {0}</value>
+  </data>
+  <data name="NextReview" xml:space="preserve">
+    <value>Prochaine révision : {0}.</value>
+  </data>
+  <data name="NothingToReview" xml:space="preserve">
+    <value>rien à réviser</value>
+  </data>
+  <data name="NthReminder" xml:space="preserve">
+    <value>{0}e rappel</value>
+  </data>
+  <data name="Overdue" xml:space="preserve">
+    <value>En retard</value>
+  </data>
+  <data name="Passage" xml:space="preserve">
+    <value>Passage</value>
+  </data>
+  <data name="PassageToRecall" xml:space="preserve">
+    <value>Passage à retrouver</value>
+  </data>
+  <data name="Passages" xml:space="preserve">
+    <value>Passages</value>
+  </data>
+  <data name="PriorityWarningMany" xml:space="preserve">
+    <value>{0} fiches attendent un rappel depuis plus de 30 jours : augmentez le nombre de rappels quotidiens.</value>
+  </data>
+  <data name="PriorityWarningOne" xml:space="preserve">
+    <value>{0} fiche attend un rappel depuis plus de 30 jours : augmentez le nombre de rappels quotidiens.</value>
+  </data>
+  <data name="Reminder" xml:space="preserve">
+    <value>Rappel</value>
+  </data>
+  <data name="Reminders" xml:space="preserve">
+    <value>Rappels de consolidation</value>
+  </data>
+  <data name="Sheet" xml:space="preserve">
+    <value>Fiche</value>
+  </data>
+  <data name="Sheets" xml:space="preserve">
+    <value>Fiches</value>
+  </data>
+  <data name="SheetsActiveMany" xml:space="preserve">
+    <value>{0} fiches actives</value>
+  </data>
+  <data name="SheetsActiveOne" xml:space="preserve">
+    <value>{0} fiche active</value>
+  </data>
+  <data name="SheetsArchivedMany" xml:space="preserve">
+    <value>{0} fiches archivées</value>
+  </data>
+  <data name="SheetsArchivedOne" xml:space="preserve">
+    <value>{0} fiche archivée</value>
+  </data>
+  <data name="Show" xml:space="preserve">
+    <value>Afficher</value>
+  </data>
+  <data name="SortBy" xml:space="preserve">
+    <value>Trier par</value>
+  </data>
+  <data name="SortCycle" xml:space="preserve">
+    <value>nombre de cycles</value>
+  </data>
+  <data name="SortDueDate" xml:space="preserve">
+    <value>échéance</value>
+  </data>
+  <data name="SortLastReview" xml:space="preserve">
+    <value>dernière révision</value>
+  </data>
+  <data name="SortStep" xml:space="preserve">
+    <value>étape J</value>
+  </data>
+  <data name="SortTitle" xml:space="preserve">
+    <value>titre</value>
+  </data>
+  <data name="StepTooltip" xml:space="preserve">
+    <value>Étape du calendrier</value>
+  </data>
+  <data name="Today" xml:space="preserve">
+    <value>Aujourd'hui</value>
+  </data>
+  <data name="Upcoming" xml:space="preserve">
+    <value>À venir — 7 jours</value>
+  </data>
+</root>

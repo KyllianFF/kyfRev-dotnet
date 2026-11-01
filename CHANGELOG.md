@@ -9,6 +9,16 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- Vue « Aujourd'hui » : le tableau de bord, présenté comme dans la version 0.x. La liste à
+  réviser vient toujours en premier (en retard, puis aujourd'hui), puis les rappels de
+  consolidation et les sept jours à venir, replié d'emblée. Chaque ligne montre la nature de
+  l'élément (fiche, passage, définition), son dossier, ses étiquettes, son cycle, sa dernière
+  révision, son étape et son retard ; avec le rappel actif, un passage reste caché et seul son
+  commentaire sert d'indice. Filtre (tout, fiches, passages), tri (échéance, étape J, nombre de
+  cycles, dernière révision, titre), avertissements de « Santé du coffre » et de rappels en
+  souffrance, états vides. Les groupes se replient à la souris ou au clavier (Entrée, Espace),
+  le focus restant sur l'en-tête. La vue est relue à chaque ouverture ; sa liste est
+  virtualisée : 2 000 fiches en retard s'affichent en moins de 150 ms, calcul non compris.
 - Ouverture du coffre au démarrage et accueil, comme dans la version 0.x : le coffre du mode
   portable (`portable.json`), sinon le dernier ouvert, sinon celui que prévoit le mode installé
   (`installation.json` : Documents ou données d'application). Sans coffre ouvert, l'accueil

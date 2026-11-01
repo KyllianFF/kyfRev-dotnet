@@ -11,7 +11,9 @@
 // Écrit galerie-clair.png, galerie-sombre.png et galerie-contraste-eleve.png (couleurs système
 // actuelles du poste), les vues de la coquille (coquille-clair.png, coquille-sombre.png,
 // recherche-sombre.png, aide-clair.png), l'accueil sans coffre (accueil-clair.png,
-// accueil-sombre.png), et affiche le contraste de chaque paire de rôles.
+// accueil-sombre.png), le tableau de bord (aujourdhui-clair.png, aujourdhui-sombre.png), et
+// affiche le contraste de chaque paire de rôles.
+using System.Collections.Immutable;
 using System.Globalization;
 using System.IO;
 using System.Windows;
@@ -56,6 +58,14 @@ var thread = new Thread(() =>
             app.Vaults.State() with { OpenError = @"Le coffre « D:\Cours\Coffre » est introuvable." },
             _ => { })));
     }
+    // Le tableau de bord d'une journée chargée : retards, passage caché par le rappel actif,
+    // définition, rappel de consolidation, « À venir » replié, un point de santé à vérifier.
+    foreach (var (theme, name) in new[] { (ThemePreference.Light, "clair"), (ThemePreference.Dark, "sombre") })
+    {
+        var today = new DashboardPageViewModel(app.Reminders);
+        today.Show(SampleDashboard());
+        Shell(folder, $"aujourdhui-{name}.png", theme, _ => { }, new Dictionary<string, object> { [CorePages.Today] = today });
+    }
 });
 thread.SetApartmentState(ApartmentState.STA);
 thread.Start();
@@ -73,11 +83,11 @@ foreach (var theme in new[] { ThemeKind.Light, ThemeKind.Dark })
 }
 
 // La fenêtre de la coquille, hors de l'écran, dans un état donné ; seul son contenu est rendu.
-static void Shell(string folder, string file, ThemePreference theme, Action<ShellViewModel> prepare)
+static void Shell(string folder, string file, ThemePreference theme, Action<ShellViewModel> prepare, IReadOnlyDictionary<string, object>? pages = null)
 {
     var design = new DesignResources(ThemeKind.Light, reducedMotion: true);
     var appearance = new AppearanceController(design, new StillAppearance(), new NoChrome()) { Preference = theme };
-    var shell = new ShellViewModel(CorePages.All().Append(CorePages.FromModule(new NavigationEntry("citations", "Citations", 60))), appearance, new GalleryPageViewModel(appearance));
+    var shell = new ShellViewModel(CorePages.All(pages ?? new Dictionary<string, object>()).Append(CorePages.FromModule(new NavigationEntry("citations", "Citations", 60))), appearance, new GalleryPageViewModel(appearance));
     var window = new ShellWindow(shell) { Width = 1280, Height = 800, Left = -20000, Top = -20000, WindowStartupLocation = WindowStartupLocation.Manual, ShowActivated = false, ShowInTaskbar = false };
     window.Resources.MergedDictionaries.Add(design.Dictionary);
     window.Show();
@@ -260,4 +270,40 @@ internal sealed class PlannedVault : IVaultLocations
 internal sealed class NoPicker : IFolderPicker
 {
     public string? Pick(string title) => null;
+}
+
+internal static partial class Program
+{
+    private static readonly DateOnly Monday = new(2026, 11, 2);
+
+    // Une journée de révision vraisemblable, sans donnée personnelle.
+    private static Dashboard SampleDashboard()
+    {
+        static DueItem Item(ItemKind kind, string title, string folder, string step, int late, int cycle, string? excerpt = null, string? term = null, string? comment = null, ImmutableArray<string> tags = default) =>
+            new(kind, $"id-{title}-{step}", $"fiche-{title}", title, excerpt, term, ["Prophase I"], comment, folder, tags.IsDefault ? [] : tags, step, Monday.AddDays(-late), late, Monday.AddDays(-late - 7), cycle, true);
+        return new Dashboard(
+            Monday,
+            [
+                Item(ItemKind.Sheet, "Mitose", "Biologie", "J7", 3, 1, tags: ["bio", "partiel"]),
+                Item(ItemKind.Passage, "Méiose", "Biologie", "J3", 1, 1, excerpt: "Les chromosomes homologues s'apparient", comment: "Avant la métaphase I"),
+            ],
+            [
+                Item(ItemKind.Sheet, "Loi d'Ohm", "Physique/Électricité", "J14", 0, 2),
+                Item(ItemKind.Sheet, "Théorème de Pythagore", "Mathématiques", "J30", 0, 1),
+                Item(ItemKind.Passage, "Circuits RLC", "Physique/Électricité", "J1", 0, 1, excerpt: "impédance", term: "Impédance"),
+            ],
+            [new PendingReminder("fiche-revolution", "La Révolution française", "Histoire", [], new DateOnly(2026, 5, 4), Monday, 0)],
+            [.. Enumerable.Range(1, 6).Select(n => Item(ItemKind.Sheet, $"Chapitre {n}", "Chimie", "J3", 0, 1) with { DueDate = Monday.AddDays(n), DaysLate = 0 })],
+            [],
+            2,
+            true,
+            [],
+            Monday.AddDays(1),
+            48,
+            12,
+            1,
+            0,
+            true,
+            false);
+    }
 }

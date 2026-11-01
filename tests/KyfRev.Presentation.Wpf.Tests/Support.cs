@@ -1,9 +1,14 @@
+using System.IO;
 using System.Windows.Threading;
+using KyfRev.Application.Model;
 using KyfRev.Application.Ports;
+using KyfRev.Application.UseCases;
 using KyfRev.DesignSystem;
 using KyfRev.DesignSystem.Tokens;
+using KyfRev.Infrastructure.Vault.Adapters;
 using KyfRev.Presentation.Wpf.Pages;
 using KyfRev.Presentation.Wpf.Shell;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace KyfRev.Presentation.Wpf.Tests;
 
@@ -77,4 +82,109 @@ internal static class Repository
         }
         throw new InvalidOperationException("Solution introuvable.");
     }
+}
+
+/// <summary>Sélecteur de dossiers simulé : rend les réponses prévues, note les titres.</summary>
+internal sealed class FakePicker : IFolderPicker
+{
+    public Queue<string?> Answers { get; } = new();
+
+    public List<string> Titles { get; } = [];
+
+    public string? Pick(string title)
+    {
+        Titles.Add(title);
+        return Answers.Dequeue();
+    }
+}
+
+/// <summary>Emplacements simulés : un coffre prévu (selon le mode) et la mémoire du dernier ouvert.</summary>
+internal sealed class FakeLocations(AppMode mode, string? planned) : IVaultLocations
+{
+    public AppMode Mode => mode;
+
+    public List<string> Remembered { get; } = [];
+
+    public string? VaultToOpen() => mode == AppMode.Portable ? planned : Remembered.LastOrDefault() ?? planned;
+
+    public string? VaultToCreate() => planned is not null && !Directory.Exists(Path.Combine(planned, ".suivi")) ? planned : null;
+
+    public bool Remember(string root)
+    {
+        Remembered.Add(root);
+        return true;
+    }
+}
+
+/// <summary>Les cas d'usage sur un dossier d'essai jetable, avec une horloge au choix ; le coffre prévu y est « Prévu/Coffre ».</summary>
+internal sealed class TestVaults : IDisposable
+{
+    public TestVaults(AppMode mode, TimeProvider? time = null)
+    {
+        Time = time ?? TimeProvider.System;
+        Root = Path.Combine(Path.GetTempPath(), "kyfrev-presentation", Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(Root);
+        Planned = Path.Combine(Root, "Prévu", "Coffre");
+        Locations = new FakeLocations(mode, mode == AppMode.Development ? null : Planned);
+        App = NewApplication(Locations, Time);
+    }
+
+    public string Root { get; }
+
+    public string Planned { get; }
+
+    public FakeLocations Locations { get; }
+
+    public FakePicker Picker { get; } = new();
+
+    public KyfRevApplication App { get; private set; }
+
+    public TimeProvider Time { get; }
+
+    public WelcomePageViewModel Welcome(Action<AppState> opened) => new(App.Vaults, Picker, App.Vaults.State(), opened);
+
+    public string PathOf(string name) => Path.Combine(Root, name);
+
+    public string Folder(string name) => Directory.CreateDirectory(PathOf(name)).FullName;
+
+    /// <summary>Un coffre créé puis refermé, prêt à être ouvert.</summary>
+    public string CreateVault(string name)
+    {
+        var root = PathOf(name);
+        using (var other = NewApplication(new FakeLocations(AppMode.Development, null), Time))
+        {
+            Assert.AreEqual(root, other.Vaults.Create(root).Vault);
+        }
+        return root;
+    }
+
+    /// <summary>Le démarrage suivant : le coffre ouvert est fermé ; les mêmes emplacements sont repris.</summary>
+    public KyfRevApplication Restart()
+    {
+        App.Dispose();
+        App = NewApplication(Locations, Time);
+        return App;
+    }
+
+    public void Dispose()
+    {
+        App.Dispose();
+        Directory.Delete(Root, recursive: true);
+    }
+
+    private static KyfRevApplication NewApplication(IVaultLocations locations, TimeProvider time) =>
+        new(new VaultStore(), new BackupFiles(), locations, time, NullLoggerFactory.Instance, "1.0.0-essai");
+}
+
+/// <summary>Horloge simulée, en temps universel : l'instant avance à la demande.</summary>
+internal sealed class FakeTime(DateTimeOffset now) : TimeProvider
+{
+    public DateTimeOffset Now { get; set; } = now;
+
+    public override TimeZoneInfo LocalTimeZone => TimeZoneInfo.Utc;
+
+    public override DateTimeOffset GetUtcNow() => Now;
+
+    /// <summary>Le même instant, <paramref name="days"/> jours plus tard.</summary>
+    public void AdvanceDays(int days) => Now = Now.AddDays(days);
 }

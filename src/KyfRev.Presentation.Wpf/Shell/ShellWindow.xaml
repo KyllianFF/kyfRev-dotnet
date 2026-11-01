@@ -21,6 +21,9 @@
     <DataTemplate DataType="{x:Type pages:WelcomePageViewModel}">
       <pages:WelcomePage />
     </DataTemplate>
+    <DataTemplate DataType="{x:Type pages:DashboardPageViewModel}">
+      <pages:DashboardPage />
+    </DataTemplate>
     <DataTemplate x:Key="NavigationItemTemplate">
       <StackPanel Orientation="Horizontal">
         <kyf:Icon Text="{Binding Glyph}" Margin="0,0,12,0" />
