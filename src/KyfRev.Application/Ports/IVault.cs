@@ -137,6 +137,9 @@ public interface IReviewStore
 
     /// <summary>Où en est l'élément, au jour donné.</summary>
     ReviewState ReviewStateOf(ItemKind kind, string id, DateOnly day);
+
+    /// <summary>Tableau de bord du jour donné.</summary>
+    Dashboard Dashboard(DateOnly day);
 }
 
 /// <summary>Passages annotés et définitions.</summary>
@@ -178,6 +181,9 @@ public interface IReminderStore
 
     /// <summary>Tirage du jour, fait une seule fois par jour.</summary>
     DayPreparation PrepareDay(Moment now);
+
+    /// <summary>Fiches archivées, les plus récemment archivées d'abord.</summary>
+    IReadOnlyList<ArchivedSheetEntry> Archives(DateOnly day);
 }
 
 /// <summary>Examens par dossier.</summary>

@@ -1,0 +1,57 @@
+{
+  "format": 1,
+  "ficheId": "f_01M6A93CD1KDSKMZ6WF92G24SN",
+  "annotations": [
+    {
+      "id": "a_01M6A93CGCJ2BWYDD5NF7E77YW",
+      "ficheId": "f_01M6A93CD1KDSKMZ6WF92G24SN",
+      "creeeLe": "2026-09-02T12:00:00Z",
+      "modifieeLe": "2026-09-02T12:00:00Z",
+      "ancre": {
+        "exact": "Une onde   transporte\nde l'énergie",
+        "avant": "",
+        "apres": "",
+        "debut": 7,
+        "fin": 41,
+        "section": [
+          "Ondes"
+        ],
+        "empreinteFiche": "sha256:aa"
+      },
+      "etatAncrage": "ancree",
+      "statut": "active",
+      "cycle": {
+        "numero": 1,
+        "sequence": [
+          0,
+          1,
+          3,
+          7,
+          14,
+          30
+        ],
+        "demarreLe": "2026-09-02",
+        "etape": 1,
+        "echeance": "2026-09-03",
+        "derniereRevision": "2026-09-02"
+      },
+      "compteurs": {
+        "cyclesCommences": 1,
+        "cyclesTermines": 0,
+        "cyclesInterrompus": 0
+      },
+      "historique": [
+        {
+          "evt": "revision",
+          "le": "2026-09-02T12:00:00Z",
+          "jour": "2026-09-02",
+          "cycle": 1,
+          "etape": "J0",
+          "prevuLe": "2026-09-02",
+          "retardJours": 0,
+          "origine": "creation"
+        }
+      ]
+    }
+  ]
+}

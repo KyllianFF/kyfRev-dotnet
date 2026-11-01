@@ -1,0 +1,14 @@
+.suivi
+.suivi/annotations
+.suivi/fiches
+.suivi/versions
+citations
+fiches
+fiches/Animaux
+fiches/Biologie
+fiches/Histoire
+fiches/Histoire/XVIIIe
+fiches/Lettres
+fiches/Nature
+fiches/Physique
+fiches/Sciences

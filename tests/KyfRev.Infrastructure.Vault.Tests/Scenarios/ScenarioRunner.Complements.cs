@@ -145,6 +145,26 @@ internal sealed partial class ScenarioRunner
             case "retirer_examen":
                 Vault.WithdrawExam(Raw(operation, "dossier") ?? string.Empty);
                 return string.Empty;
+            case "tableau_de_bord":
+                {
+                    var t = Vault.Dashboard(now.Day);
+                    var workload = string.Join(' ', t.Workload
+                        .Where(slot => slot.Due.Length > 0 || slot.Projected.Length > 0)
+                        .Select(slot => $"{DayOrDash(slot.Day)}:[{Items(slot.Due)}]/[{string.Join(';', slot.Projected.Select(Projected))}]"));
+                    var reminders = string.Join(';', t.Reminders.Select(r =>
+                        $"{r.SheetId}|{Json(r.Title)}|{Json(r.Folder)}|{List(r.Tags)}|{DayOrDash(r.ArchivedOn)}|{DayOrDash(r.DrawnOn)}|{r.PreviousReminders}"));
+                    var exams = string.Join(';', t.Exams.Select(e => $"{Json(e.Folder)} {DayOrDash(e.Day)}"));
+                    var quote = t.QuotesActive && DailyQuote.Of(Port, now.Day) is { } ofTheDay ? ofTheDay.Path : "-";
+                    return $"jour={DayOrDash(t.Day)} retard=[{Items(t.Overdue)}] aujourdhui=[{Items(t.Today)}] rappels=[{reminders}] a_venir=[{Items(t.Upcoming)}]"
+                        + $" charge={{{workload}}} jours_de_charge={t.Workload.Length} rappels_par_jour={t.RemindersPerDay} rappel_actif={Bool(t.ActiveRecall)} examens=[{exams}]"
+                        + $" prochaine={DayOrDash(t.NextDueDate)} actives={t.ActiveSheets} archivees={t.ArchivedSheets} sante={t.HealthProblems} prioritaires={t.UnservedPriorities}"
+                        + $" citations={Bool(t.QuotesActive)} citation={quote} schemas={Bool(t.SchemasActive)}";
+                }
+            case "archives":
+                return string.Join(';', Vault.Archives(now.Day).Select(a =>
+                    $"{a.Id}|{Json(a.Title)}|{Json(a.Folder)}|{List(a.Tags)}|{DayOrDash(a.ArchivedOn)}|{Bool(a.ManualArchiving)}|{ReminderStatusName(a.ReminderStatus)}"
+                    + $"|{DayOrDash(a.EligibleOn)}|{DayOrDash(a.ReminderDrawnOn)}|{a.CompletedCycles}|{a.RemindersHandled}"
+                    + $"|{(a.LastReminderOn is { } on ? $"{DayOrDash(on)}:{OutcomeName(a.LastReminderOutcome!.Value)}" : "-")}|{Bool(a.FilePresent)}"));
             case "examens_a_venir":
                 return string.Join(';', Vault.UpcomingExams(now.Day).Select(e =>
                     $"{Json(e.Folder)} {Json(e.Name)} {e.Day:yyyy-MM-dd} {e.DaysLeft} {e.Items} {e.AfterExam}"));
@@ -346,6 +366,31 @@ internal sealed partial class ScenarioRunner
     private static string Debug(IEnumerable<int> values) => $"[{string.Join(", ", values)}]";
 
     private static string Bool(bool value) => value ? "true" : "false";
+
+    /// <summary>Un élément du tableau de bord, comme le format de l'outil de référence.</summary>
+    private static string Items(IEnumerable<DueItem> items) => string.Join(';', items.Select(e =>
+        $"{KindName(e.Kind)}|{e.Id}|{e.SheetId}|{Json(e.Title)}|{Optional(e.Excerpt)}|{Optional(e.Term)}|{List(e.Section)}|{Optional(e.Comment)}|{Json(e.Folder)}|{List(e.Tags)}"
+        + $"|{e.Step}|{DayOrDash(e.DueDate)}|{e.DaysLate}|{DayOrDash(e.LastReview)}|{e.Cycle}|{Bool(e.FilePresent)}"));
+
+    private static string Projected(ProjectedItem p) =>
+        $"{KindName(p.Kind)}|{p.Id}|{p.SheetId}|{Json(p.Title)}|{Optional(p.Excerpt)}|{Optional(p.Term)}|{List(p.Section)}|{p.Step}";
+
+    private static string KindName(ItemKind kind) => kind == ItemKind.Sheet ? "Fiche" : "Passage";
+
+    private static string ReminderStatusName(ReminderStatus status) => status switch
+    {
+        ReminderStatus.Resting => "AuRepos",
+        ReminderStatus.Eligible => "Eligible",
+        ReminderStatus.Pending => "RappelEnAttente",
+        _ => "ExclueDesRappels",
+    };
+
+    private static string OutcomeName(ReminderOutcome outcome) => outcome switch
+    {
+        ReminderOutcome.Known => "Connue",
+        ReminderOutcome.SomePointsToReview => "CertainsPointsARevoir",
+        _ => "ARevoirEntierement",
+    };
 
     private static string Optional(string? text) => text is null ? "null" : Json(text);
 

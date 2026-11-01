@@ -20,27 +20,62 @@ internal static class RealPaths
     {
         var full = Path.GetFullPath(path);
         var root = Path.GetPathRoot(full) ?? full;
-        var current = root;
+        return Walk(root, full[root.Length..]);
+    }
+
+    /// <summary>
+    /// Comme <see cref="OfExistingPart"/>, pour le chemin <paramref name="relative"/> placé sous
+    /// <paramref name="realBase"/>, déjà réel : seuls les composants de <paramref name="relative"/>
+    /// sont examinés. Un lien au-dessus de la base ne peut rien faire sortir de dessous elle.
+    /// </summary>
+    public static string OfExistingPartBelow(string realBase, string relative) => Walk(realBase, relative);
+
+    /// <summary>
+    /// Résout les composants de <paramref name="rest"/> un à un depuis <paramref name="current"/> :
+    /// une lecture d'attributs par composant, la cible n'étant lue que pour un point d'analyse.
+    /// </summary>
+    private static string Walk(string current, string rest)
+    {
         var links = 0;
-        foreach (var component in full[root.Length..].Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries))
+        foreach (var component in rest.Split(Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries))
         {
             var next = Path.Combine(current, component);
-            FileSystemInfo info = Directory.Exists(next) ? new DirectoryInfo(next) : new FileInfo(next);
-            if (!info.Exists)
+            if (AttributesOf(next) is not { } attributes)
             {
                 break;
             }
-            if (info.LinkTarget is not null)
+            if ((attributes & FileAttributes.ReparsePoint) != 0)
             {
-                if (++links > MaxLinks)
+                FileSystemInfo info = (attributes & FileAttributes.Directory) != 0 ? new DirectoryInfo(next) : new FileInfo(next);
+                if (info.LinkTarget is not null)
                 {
-                    throw new IOException($"Trop de liens symboliques dans « {path} ».");
+                    if (++links > MaxLinks)
+                    {
+                        throw new IOException($"Trop de liens symboliques dans « {Path.Combine(current, rest)} ».");
+                    }
+                    next = OfExistingPart(info.ResolveLinkTarget(returnFinalTarget: true)?.FullName ?? next);
                 }
-                next = OfExistingPart(info.ResolveLinkTarget(returnFinalTarget: true)?.FullName ?? next);
             }
             current = next;
         }
         return current;
+    }
+
+    /// <summary>Attributs de l'élément, ou rien s'il n'existe pas (ni lui ni un lien qui y mène).</summary>
+    private static FileAttributes? AttributesOf(string path)
+    {
+        try
+        {
+            return File.GetAttributes(path);
+        }
+        catch (FileNotFoundException)
+        {
+            return null;
+        }
+        catch (DirectoryNotFoundException)
+        {
+            return null;
+        }
     }
 
     /// <summary>Vrai si <paramref name="path"/> est <paramref name="folder"/> ou se trouve dessous.</summary>

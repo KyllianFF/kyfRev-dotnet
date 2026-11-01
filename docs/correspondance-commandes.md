@@ -79,6 +79,13 @@ Ces cas d'usage ne sont chargés que si le coffre active le module Citations.
 | `restaurer_citation` | `QuoteUseCases.Restore` | J4.2 | |
 | `chercher_citation_du_jour` | `QuoteUseCases.SearchQuoteOfTheDayAsync` | J4.2 | Par le lecteur HTTPS durci de `KyfRev.Infrastructure.Online`. |
 
+## Reprises par les cas d'usage du parcours de révision (J6.1)
+
+| Commande 0.x | Cas d'usage | Jalon | Remarque |
+|---|---|---|---|
+| `tableau_de_bord` | `ReminderUseCases.Dashboard` | J6.1 | La journée y est préparée de nouveau après minuit. La citation du jour vient du module Citations, comme encart du tableau de bord. |
+| `archives` | `ReminderUseCases.Archives` | J6.1 | |
+
 ## Apportées par les jalons suivants
 
 | Commande 0.x | Cas d'usage | Jalon | Remarque |
@@ -87,8 +94,6 @@ Ces cas d'usage ne sont chargés que si le coffre active le module Citations.
 | `appliquer_zoom` | — | J5 | Taille de l'interface : coquille WPF. |
 | `journaliser_erreur_interface` | — | J5 | Journal de diagnostic. |
 | `diagnostic` | — | J5 | Journal de diagnostic. |
-| `tableau_de_bord` | — | J6 | Tableau de bord (la journée y est préparée de nouveau après minuit). |
-| `archives` | — | J6 | Archives et rappels. |
 | `corriger_mot` | — | J7 | Correcteur de Windows. |
 | `ajouter_au_dictionnaire` | — | J7 | Correcteur de Windows. |
 | `statistiques` | — | J9 | Statistiques et charge. |

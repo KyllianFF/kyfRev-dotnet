@@ -34,17 +34,16 @@ public sealed partial class CommandMapTests
 
         foreach (var (command, useCase, milestone) in table)
         {
-            if (milestone is "J4.1" or "J4.2")
+            if (useCase != "—")
             {
                 Assert.AreEqual(useCase, useCases.GetValueOrDefault(command), command);
             }
             else
             {
-                Assert.AreEqual("—", useCase, command);
                 Assert.IsFalse(useCases.ContainsKey(command), $"{command} est déjà repris : le tableau doit le dire.");
             }
         }
-        Assert.AreEqual(table.Count(row => row.Milestone is "J4.1" or "J4.2"), useCases.Count);
+        Assert.AreEqual(table.Count(row => row.UseCase != "—"), useCases.Count);
     }
 
     [GeneratedRegex(@"^\| `(?<commande>[a-z_]+)` \| (?<cas>[^|]+) \| (?<jalon>J[0-9.]+) \|")]

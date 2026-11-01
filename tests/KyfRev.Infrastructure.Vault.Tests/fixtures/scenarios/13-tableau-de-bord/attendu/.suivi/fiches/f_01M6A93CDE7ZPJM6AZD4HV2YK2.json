@@ -1,0 +1,53 @@
+{
+  "format": 1,
+  "id": "f_01M6A93CDE7ZPJM6AZD4HV2YK2",
+  "chemin": "fiches/Animaux/Zèbre.md",
+  "titre": "Zèbre",
+  "empreinte": "sha256:550e3134f0f6ea7297915be9c8240c6bed2adb5d815995832a3e239a0ad123e3",
+  "modifieeLe": "2026-09-01T12:00:00Z",
+  "statut": "archivee",
+  "archive": {
+    "archiveeLe": "2026-09-03",
+    "raison": "manuelle",
+    "inclureDansRappels": true,
+    "niveauRepos": 1,
+    "eligibleLe": "2027-03-05",
+    "rappelTireLe": null
+  },
+  "compteurs": {
+    "cyclesCommences": 1,
+    "cyclesTermines": 0,
+    "cyclesInterrompus": 1
+  },
+  "historique": [
+    {
+      "evt": "revision",
+      "le": "2026-09-01T12:00:00Z",
+      "jour": "2026-09-01",
+      "cycle": 1,
+      "etape": "J0",
+      "prevuLe": "2026-09-01",
+      "retardJours": 0,
+      "origine": "creation"
+    },
+    {
+      "evt": "interruption",
+      "le": "2026-09-03T12:00:00Z",
+      "jour": "2026-09-03",
+      "cycle": 1
+    },
+    {
+      "evt": "archivage",
+      "le": "2026-09-03T12:00:00Z",
+      "jour": "2026-09-03",
+      "raison": "manuelle"
+    },
+    {
+      "evt": "rappel",
+      "le": "2026-11-05T12:00:00Z",
+      "jour": "2026-11-05",
+      "tireLe": "2026-11-04",
+      "resultat": "connue"
+    }
+  ]
+}

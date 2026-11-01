@@ -157,12 +157,16 @@ public sealed partial class VaultSession : IDisposable
 
         // 1. Les fiches sur le disque, regroupées par identifiant.
         var found = new SortedDictionary<string, List<FoundSheet>>(StringComparer.Ordinal);
+        _links.Clear();
         foreach (var path in ListMarkdown(SheetsFolder, report.UnreadableList))
         {
             var absolute = path.ToAbsolute(Root);
             byte[] bytes;
+            DateTime modified;
             try
             {
+                // La date d'abord : un changement pendant la lecture fera relire la fiche (liens cassés).
+                modified = File.GetLastWriteTimeUtc(absolute);
                 bytes = File.ReadAllBytes(absolute);
             }
             catch (Exception exception) when (IsIo(exception))
@@ -175,6 +179,7 @@ public sealed partial class VaultSession : IDisposable
                 report.UnreadableList.Add(new UnreadableFile(path.Value, "fichier non encodé en UTF-8"));
                 continue;
             }
+            RememberLinks(path, text, modified, bytes.Length);
             var reading = FrontMatter.Read(text);
             if (!reading.IsSuccess)
             {
@@ -308,7 +313,8 @@ public sealed partial class VaultSession : IDisposable
     internal string Confine(VaultPath path)
     {
         var absolute = path.ToAbsolute(Root);
-        var real = Io(absolute, () => RealPaths.OfExistingPart(absolute));
+        // La racine réelle est résolue à l'ouverture : seuls les composants du chemin dans le coffre sont examinés.
+        var real = Io(absolute, () => RealPaths.OfExistingPartBelow(_realRoot, path.Value.Replace('/', Path.DirectorySeparatorChar)));
         return RealPaths.IsWithin(real, _realRoot) ? absolute : throw VaultException.OutsideVault(absolute);
     }
 
