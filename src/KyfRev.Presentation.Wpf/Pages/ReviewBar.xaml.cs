@@ -12,11 +12,12 @@ internal sealed partial class ReviewBar : UserControl
         InitializeComponent();
     }
 
-    /// <summary>« ⋯ » ouvre les autres actions de révision sous le bouton ; le clavier y entre.</summary>
-    private void OnMore(object sender, RoutedEventArgs e)
+    /// <summary>« Reporter » et « ⋯ » ouvrent leur menu au-dessus du bouton, la barre étant en bas ; le clavier y entre.</summary>
+    private void OnMenuButton(object sender, RoutedEventArgs e)
     {
-        MoreMenu.PlacementTarget = MoreButton;
-        MoreMenu.Placement = PlacementMode.Bottom;
-        MoreMenu.IsOpen = true;
+        var button = (Button)sender;
+        button.ContextMenu.PlacementTarget = button;
+        button.ContextMenu.Placement = PlacementMode.Top;
+        button.ContextMenu.IsOpen = true;
     }
 }

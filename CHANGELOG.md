@@ -25,14 +25,18 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   que rien n'a été fait puis « Suivant » (Ctrl+→), « Terminer la séance », et le mode révision
   plein écran (F11, Échap pour en sortir). La séance est gardée sur ce poste à chaque pas :
   quittée ou interrompue, elle se reprend le même jour (« Reprendre la séance (3 restants) »).
-  Le bilan de fin donne la durée, les éléments faits, reportés et restants.
+  Le bilan de fin donne la durée, les éléments faits, reportés et restants. Au style Veillée, la
+  progression occupe toute la largeur en haut de la page, et les boutons passent sous elle sur
+  fenêtre étroite.
 - Journal de diagnostic `kyfRev.log`, comme celui de la version 0.x : il s'allonge d'un démarrage
   à l'autre (chaque démarrage marqué, avec la version, le mode et le système), consigne les
   arrêts inattendus et les erreurs des tâches de fond, et devient `kyfRev.precedent.log`
   au-delà de 1 Mo : deux fichiers au plus. Comme le prévoit le plan, la rotation se fait aussi en
   cours d'exécution, et le dossier du profil de l'utilisateur y est masqué (`%USERPROFILE%`).
   Installé, il est rangé dans `%LOCALAPPDATA%\kyfRev\v1`, à part de celui de la 0.x.
-- Fiche et passage en révision, ouverts d'un clic (ou d'Entrée) depuis la vue « Aujourd'hui »,
+- Fiche et passage en révision, au centre de la page, sur 720 px au plus, avec la barre de révision
+  toujours visible en bas : la frise des étapes, l'étape attendue, « Reporter » (à demain ou de
+  3 jours), les autres actions et « Valider ». Ouverts d'un clic (ou d'Entrée) depuis la vue « Aujourd'hui »,
   comme dans la version 0.x. La barre de révision montre l'étape attendue et son échéance, la
   frise des étapes du cycle, « Valider la révision » (Ctrl+Entrée), une confirmation avant une
   révision en avance, le report à demain ou de 3 jours, « Recommencer à J0… » et « Archiver… »

@@ -122,6 +122,9 @@ public static class ReviewText
     /// <summary>« Reporter de 3 jours ».</summary>
     public static string PostponeThreeDays => Text(nameof(PostponeThreeDays));
 
+    /// <summary>« Reporter ».</summary>
+    public static string Postpone => Text(nameof(Postpone));
+
     /// <summary>« Reporter à demain ».</summary>
     public static string PostponeTomorrow => Text(nameof(PostponeTomorrow));
 

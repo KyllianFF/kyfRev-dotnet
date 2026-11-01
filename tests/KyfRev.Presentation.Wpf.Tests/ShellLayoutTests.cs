@@ -49,6 +49,18 @@ public sealed class ShellLayoutTests
         Assert.ThrowsExactly<NotSupportedException>(() => aligned.ConvertBack(HorizontalAlignment.Center, typeof(NavigationLayout), "Left", culture));
     }
 
+    [TestMethod]
+    public void A_view_knows_when_a_width_reaches_its_threshold()
+    {
+        var culture = CultureInfo.InvariantCulture;
+        var atLeast = new KyfRev.Presentation.Wpf.Pages.WidthAtLeastConverter();
+        Assert.AreEqual(true, atLeast.Convert(720.0, typeof(bool), "720", culture));
+        Assert.AreEqual(false, atLeast.Convert(719.5, typeof(bool), "720", culture));
+        Assert.AreEqual(false, atLeast.Convert("800", typeof(bool), "720", culture));
+        Assert.AreEqual(false, atLeast.Convert(800.0, typeof(bool), null!, culture));
+        Assert.ThrowsExactly<NotSupportedException>(() => atLeast.ConvertBack(true, typeof(double), "720", culture));
+    }
+
     [STATestMethod]
     public void The_shell_recomputes_its_layout_with_the_width_and_the_zoom()
     {

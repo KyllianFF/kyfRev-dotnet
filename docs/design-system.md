@@ -188,6 +188,16 @@ au survol et au lecteur d'écran.
 
 ![Aujourd'hui, 1 600 px, thème clair](captures/j6/aujourdhui-ecran-clair.png)
 
+## Révision
+
+Une fiche ou un passage se lit au centre de la page, sur 720 px au plus. La barre de révision reste
+visible en bas, centrée, sur 980 px au plus : la frise des étapes, l'étape attendue et son échéance,
+« Reporter », les autres actions et « Valider ». Sous 720 px de page, ces éléments passent l'un
+sous l'autre. En séance, la progression occupe toute la largeur en haut de la page ; sous 560 px,
+les boutons de la séance passent sous elle.
+
+![Séance, thème clair](captures/j6/seance-clair.png)
+
 ## Emploi
 
 ```csharp

@@ -9,21 +9,21 @@
   </UserControl.Resources>
 
   <ScrollViewer VerticalScrollBarVisibility="Auto" Focusable="False">
-    <StackPanel MaxWidth="560" Margin="32" HorizontalAlignment="Center" VerticalAlignment="Center">
+    <StackPanel MaxWidth="560" Margin="16" HorizontalAlignment="Center" VerticalAlignment="Center">
       <TextBlock x:Name="Heading" Text="{x:Static p:ShellText.Welcome}" Style="{DynamicResource Kyf.Text.Display}"
                  HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" AutomationProperties.HeadingLevel="Level1" />
       <TextBlock Text="{x:Static p:ShellText.WelcomeIntro}" Style="{DynamicResource Kyf.Text.Secondary}"
                  FontSize="{DynamicResource Kyf.FontSize.BodyLarge}" Margin="0,16,0,0" TextAlignment="Center" TextWrapping="Wrap" />
 
-      <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,24,0,0">
-        <Button x:Name="CreateButton" Command="{Binding CreateCommand}" Style="{DynamicResource Kyf.Button.Primary}"
+      <WrapPanel HorizontalAlignment="Center" Margin="0,24,0,0">
+        <Button x:Name="CreateButton" Command="{Binding CreateCommand}" Style="{DynamicResource Kyf.Button.Primary}" Margin="6"
                 AutomationProperties.Name="{Binding CreateLabel}">
           <StackPanel Orientation="Horizontal">
             <kyf:Icon Text="{x:Static kyf:Icons.NewFolder}" Margin="0,0,8,0" />
             <TextBlock Text="{Binding CreateLabel}" VerticalAlignment="Center" />
           </StackPanel>
         </Button>
-        <Button x:Name="OpenButton" Command="{Binding OpenCommand}" Margin="12,0,0,0"
+        <Button x:Name="OpenButton" Command="{Binding OpenCommand}" Margin="6"
                 Visibility="{Binding CanOpenExisting, Converter={StaticResource Visible}}"
                 AutomationProperties.Name="{x:Static p:ShellText.OpenExistingVault}">
           <StackPanel Orientation="Horizontal">
@@ -31,7 +31,7 @@
             <TextBlock Text="{x:Static p:ShellText.OpenExistingVault}" VerticalAlignment="Center" />
           </StackPanel>
         </Button>
-      </StackPanel>
+      </WrapPanel>
 
       <!-- Le coffre prévu, ou comment en créer un. -->
       <TextBlock x:Name="PlannedVault" Text="{Binding VaultToCreate}" FontFamily="{DynamicResource Kyf.Font.Code}"

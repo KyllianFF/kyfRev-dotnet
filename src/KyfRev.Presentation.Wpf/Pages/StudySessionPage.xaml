@@ -3,9 +3,22 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:kyf="clr-namespace:KyfRev.DesignSystem.Controls;assembly=KyfRev.DesignSystem"
-             xmlns:pages="clr-namespace:KyfRev.Presentation.Wpf.Pages">
+             xmlns:pages="clr-namespace:KyfRev.Presentation.Wpf.Pages"
+             x:Name="Self">
   <UserControl.Resources>
     <BooleanToVisibilityConverter x:Key="Visible" />
+    <pages:WidthAtLeastConverter x:Key="AtLeast" />
+
+    <!-- Les boutons de la séance : à droite de la progression, ou dessous quand la place manque. -->
+    <Style x:Key="SessionActions" TargetType="WrapPanel">
+      <Setter Property="DockPanel.Dock" Value="Right" />
+      <Style.Triggers>
+        <DataTrigger Binding="{Binding ActualWidth, ElementName=Self, Converter={StaticResource AtLeast}, ConverterParameter=560}" Value="False">
+          <Setter Property="DockPanel.Dock" Value="Bottom" />
+          <Setter Property="Margin" Value="0,8,0,0" />
+        </DataTrigger>
+      </Style.Triggers>
+    </Style>
   </UserControl.Resources>
   <UserControl.InputBindings>
     <KeyBinding Key="Right" Modifiers="Control" Command="{Binding NextCommand}" />
@@ -17,64 +30,54 @@
       <RowDefinition Height="*" />
     </Grid.RowDefinitions>
 
-    <!-- La barre de la séance : progression, plein écran, terminer, passer ou suivant. -->
+    <!-- La barre de la séance : la progression sur toute la largeur, plein écran, terminer, passer ou suivant. -->
     <Border x:Name="SessionBar" Background="{DynamicResource Kyf.Brush.Surface}" BorderBrush="{DynamicResource Kyf.Brush.Divider}"
-            BorderThickness="0,0,0,1" Padding="32,12" Visibility="{Binding IsRunning, Converter={StaticResource Visible}}">
-      <DockPanel>
-        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-          <Button x:Name="FullScreenButton" Command="{Binding ToggleFullScreenCommand}" Style="{DynamicResource Kyf.Button.Subtle}" Margin="0,0,8,0"
-                  ToolTip="F11" AutomationProperties.Name="{x:Static pages:SessionText.FullScreen}" AutomationProperties.AcceleratorKey="F11">
-            <StackPanel Orientation="Horizontal">
-              <kyf:Icon Text="{x:Static kyf:Icons.FocusMode}" Margin="0,0,8,0" />
-              <TextBlock Text="{x:Static pages:SessionText.FullScreen}" VerticalAlignment="Center" />
-            </StackPanel>
-          </Button>
-          <Button x:Name="EndButton" Content="{x:Static pages:SessionText.Finish}" Command="{Binding EndCommand}" Margin="0,0,8,0" />
-          <!-- Rien n'a été fait : « Passer » ; une fois l'élément traité : « Suivant », en bouton principal. -->
-          <Button x:Name="SkipButton" Command="{Binding NextCommand}" ToolTip="Ctrl+→" AutomationProperties.Name="{x:Static pages:SessionText.Skip}"
-                  AutomationProperties.AcceleratorKey="Ctrl+→" Visibility="{Binding IsWaiting, Converter={StaticResource Visible}}">
-            <StackPanel Orientation="Horizontal">
-              <TextBlock Text="{x:Static pages:SessionText.Skip}" VerticalAlignment="Center" />
-              <kyf:Icon Text="&#xE72A;" Margin="8,0,0,0" />
-            </StackPanel>
-          </Button>
-          <Button x:Name="NextButton" Command="{Binding NextCommand}" Style="{DynamicResource Kyf.Button.Primary}" ToolTip="Ctrl+→"
-                  AutomationProperties.Name="{x:Static pages:SessionText.Next}" AutomationProperties.AcceleratorKey="Ctrl+→"
-                  Visibility="{Binding HasActed, Converter={StaticResource Visible}}">
-            <StackPanel Orientation="Horizontal">
-              <TextBlock Text="{x:Static pages:SessionText.Next}" VerticalAlignment="Center" />
-              <kyf:Icon Text="&#xE72A;" Margin="8,0,0,0" />
-            </StackPanel>
-          </Button>
-        </StackPanel>
-        <!-- La colonne suit la place laissée par les boutons, jusqu'à 360 px. -->
-        <Grid VerticalAlignment="Center" AutomationProperties.Name="{Binding ProgressName}">
-          <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*" MaxWidth="360" />
-          </Grid.ColumnDefinitions>
-          <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-          </Grid.RowDefinitions>
-          <TextBlock x:Name="ProgressLabel" Text="{Binding ProgressLabel}" Style="{DynamicResource Kyf.Text.BodyStrong}" />
-          <!-- Piste de la progression : la part parcourue se remplit. -->
-          <Grid x:Name="ProgressTrack" Grid.Row="1" Height="6" Margin="0,6,0,0">
-            <Border Background="{DynamicResource Kyf.Brush.SurfaceAlt}" CornerRadius="3" />
-            <Border x:Name="ProgressFill" Background="{DynamicResource Kyf.Brush.Primary}" CornerRadius="3" RenderTransformOrigin="0,0.5">
-              <Border.RenderTransform>
-                <ScaleTransform ScaleX="{Binding Progress}" />
-              </Border.RenderTransform>
-            </Border>
-          </Grid>
+            BorderThickness="0,0,0,1" Visibility="{Binding IsRunning, Converter={StaticResource Visible}}">
+      <StackPanel>
+        <!-- Piste de la progression : la part parcourue se remplit. -->
+        <Grid x:Name="ProgressTrack" Height="4">
+          <Border Background="{DynamicResource Kyf.Brush.SurfaceAlt}" />
+          <Border x:Name="ProgressFill" Background="{DynamicResource Kyf.Brush.Primary}" RenderTransformOrigin="0,0.5">
+            <Border.RenderTransform>
+              <ScaleTransform ScaleX="{Binding Progress}" />
+            </Border.RenderTransform>
+          </Border>
         </Grid>
-      </DockPanel>
+        <DockPanel Margin="16,8">
+          <WrapPanel Style="{StaticResource SessionActions}">
+            <Button x:Name="FullScreenButton" Command="{Binding ToggleFullScreenCommand}" Style="{DynamicResource Kyf.Button.Icon}" Margin="0,0,8,0"
+                    Content="{x:Static kyf:Icons.FocusMode}" ToolTip="F11" AutomationProperties.Name="{x:Static pages:SessionText.FullScreen}"
+                    AutomationProperties.AcceleratorKey="F11" />
+            <Button x:Name="EndButton" Content="{x:Static pages:SessionText.Finish}" Command="{Binding EndCommand}" Margin="0,0,8,0" />
+            <!-- Rien n'a été fait : « Passer » ; une fois l'élément traité : « Suivant », en bouton principal. -->
+            <Button x:Name="SkipButton" Command="{Binding NextCommand}" ToolTip="Ctrl+→" AutomationProperties.Name="{x:Static pages:SessionText.Skip}"
+                    AutomationProperties.AcceleratorKey="Ctrl+→" Visibility="{Binding IsWaiting, Converter={StaticResource Visible}}">
+              <StackPanel Orientation="Horizontal">
+                <TextBlock Text="{x:Static pages:SessionText.Skip}" VerticalAlignment="Center" />
+                <kyf:Icon Text="&#xE72A;" Margin="8,0,0,0" />
+              </StackPanel>
+            </Button>
+            <Button x:Name="NextButton" Command="{Binding NextCommand}" Style="{DynamicResource Kyf.Button.Primary}" ToolTip="Ctrl+→"
+                    AutomationProperties.Name="{x:Static pages:SessionText.Next}" AutomationProperties.AcceleratorKey="Ctrl+→"
+                    Visibility="{Binding HasActed, Converter={StaticResource Visible}}">
+              <StackPanel Orientation="Horizontal">
+                <TextBlock Text="{x:Static pages:SessionText.Next}" VerticalAlignment="Center" />
+                <kyf:Icon Text="&#xE72A;" Margin="8,0,0,0" />
+              </StackPanel>
+            </Button>
+          </WrapPanel>
+          <StackPanel VerticalAlignment="Center" AutomationProperties.Name="{Binding ProgressName}">
+            <TextBlock x:Name="ProgressLabel" Text="{Binding ProgressLabel}" Style="{DynamicResource Kyf.Text.BodyStrong}" />
+          </StackPanel>
+        </DockPanel>
+      </StackPanel>
     </Border>
 
     <!-- L'élément en cours : sa fiche ou son passage, avec sa barre de révision. -->
     <ContentControl x:Name="Item" Grid.Row="1" Content="{Binding Current}" Focusable="False" IsTabStop="False" />
 
     <!-- Le bilan de fin. -->
-    <StackPanel x:Name="SummaryPanel" Grid.Row="0" Grid.RowSpan="2" MaxWidth="560" Margin="32" HorizontalAlignment="Center" VerticalAlignment="Center"
+    <StackPanel x:Name="SummaryPanel" Grid.Row="0" Grid.RowSpan="2" MaxWidth="560" Margin="16" HorizontalAlignment="Center" VerticalAlignment="Center"
                 Visibility="{Binding IsFinished, Converter={StaticResource Visible}}">
       <kyf:Icon Text="{x:Static kyf:Icons.Success}" FontSize="40" Foreground="{DynamicResource Kyf.Brush.Success}" HorizontalAlignment="Center" />
       <TextBlock x:Name="SummaryTitle" Text="{x:Static pages:SessionText.SummaryTitle}" Style="{DynamicResource Kyf.Text.Title}" HorizontalAlignment="Center"

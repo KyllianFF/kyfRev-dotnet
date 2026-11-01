@@ -123,6 +123,9 @@
   <data name="PassageNotFound" xml:space="preserve">
     <value>Ce passage est introuvable.</value>
   </data>
+  <data name="Postpone" xml:space="preserve">
+    <value>Reporter</value>
+  </data>
   <data name="PostponeThreeDays" xml:space="preserve">
     <value>Reporter de 3 jours</value>
   </data>

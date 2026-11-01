@@ -376,12 +376,19 @@ public sealed class ReviewTests
             Assert.AreEqual(Visibility.Collapsed, Named<StackPanel>(window, "Done").Visibility);
             Assert.AreEqual("J0 : validée le jeu. 1 oct.", AutomationProperties.GetName(Descendants(Named<ItemsControl>(window, "Steps")).OfType<StackPanel>().First()));
 
-            // « ⋯ » ouvre les autres actions.
-            Named<Button>(window, "MoreButton").RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
-            var menu = Named<Button>(window, "MoreButton").ContextMenu;
-            Assert.IsTrue(menu.IsOpen);
-            Assert.AreSame(page.Review, menu.DataContext);
-            menu.IsOpen = false;
+            // « Reporter » et « ⋯ » ouvrent leurs actions, au-dessus du bouton.
+            foreach (var name in new[] { "PostponeButton", "MoreButton" })
+            {
+                var button = Named<Button>(window, name);
+                button.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+                var menu = button.ContextMenu;
+                Assert.IsTrue(menu.IsOpen);
+                Assert.AreSame(button, menu.PlacementTarget);
+                Assert.AreEqual(PlacementMode.Top, menu.Placement);
+                Assert.AreSame(page.Review, menu.DataContext);
+                menu.IsOpen = false;
+            }
+            Assert.AreEqual(Visibility.Collapsed, Descendants(Named<ItemsControl>(window, "Steps")).OfType<Border>().First(border => border.Name == "Link").Visibility, "la première étape n'a rien avant elle");
 
             // Recommencer à J0 : le dialogue s'ouvre, Annuler ne fait rien, le bouton principal confirme.
             page.Review!.RequestRestartCommand.Execute(null);
@@ -398,6 +405,15 @@ public sealed class ReviewTests
             dialog.Close(DialogChoice.Primary);
             UiThread.Until(() => page.Review.HasMessage);
             StringAssert.StartsWith(page.Review.Message, "Nouveau cycle", StringComparison.Ordinal);
+
+            // Sur une ligne quand il y a la place, l'un sous l'autre sinon ; jamais de défilement horizontal.
+            var steps = Named<ItemsControl>(window, "Steps");
+            Assert.AreEqual(0, Grid.GetRow(steps));
+            window.Width = 420;
+            window.UpdateLayout();
+            TestShell.Flush();
+            Assert.AreEqual(1, Grid.GetRow(steps));
+            Assert.IsLessThanOrEqualTo(window.ActualWidth, Named<Button>(window, "ValidateButton").TranslatePoint(new Point(Named<Button>(window, "ValidateButton").ActualWidth, 0), window).X);
 
             // Ctrl+Entrée valide la révision.
             var shortcut = Descendants(window).OfType<SheetPage>().Single().InputBindings.OfType<KeyBinding>().Single(binding => binding.Key == Key.Enter && binding.Modifiers == ModifierKeys.Control);
