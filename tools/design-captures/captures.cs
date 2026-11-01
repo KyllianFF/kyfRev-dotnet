@@ -14,9 +14,10 @@
 // (coquille-etroite-clair.png, coquille-etroite-plus-sombre.png, coquille-moyenne-sombre.png,
 // coquille-large-clair.png, aide-etroite-sombre.png), l'accueil sans coffre (accueil-clair.png,
 // accueil-sombre.png), le tableau de bord (aujourdhui-clair.png, aujourdhui-sombre.png,
-// aujourdhui-etroit-clair.png, aujourdhui-tablette-sombre.png, aujourdhui-ecran-clair.png), une fiche
+// aujourdhui-etroit-clair.png, aujourdhui-tablette-sombre.png, aujourdhui-ecran-clair.png,
+// aujourdhui-grand-clair.png, aujourdhui-ultralarge-sombre.png, aujourdhui-contraste-eleve.png), une fiche
 // et un passage en révision (fiche-clair.png, passage-sombre.png, sur un coffre d'essai jetable),
-// la séance d'étude et son bilan (seance-clair.png, seance-etroite-sombre.png, bilan-sombre.png), et affiche le contraste de
+// la séance d'étude et son bilan (seance-clair.png, seance-contraste-eleve.png, seance-etroite-sombre.png, bilan-sombre.png), et affiche le contraste de
 // chaque paire de rôles.
 using System.Collections.Immutable;
 using System.Globalization;
@@ -76,10 +77,13 @@ var thread = new Thread(() =>
     // d'encart de module (les modules ne sont pas encore branchés dans l'application).
     foreach (var (theme, name) in new[] { (ThemePreference.Light, "clair"), (ThemePreference.Dark, "sombre") })
     {
-        var today = new DashboardPageViewModel(app.Reminders, new ReviewNavigation(app.Sheets, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System));
+        var today = new DashboardPageViewModel(app.Reminders, app.Sheets, new ReviewNavigation(app.Sheets, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System));
         today.Show(SampleDashboard(), SampleCards);
         Shell(folder, $"aujourdhui-{name}.png", theme, _ => { }, new Dictionary<string, object> { [CorePages.Today] = today });
     }
+    var contrast = new DashboardPageViewModel(app.Reminders, app.Sheets, new ReviewNavigation(app.Sheets, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System));
+    contrast.Show(SampleDashboard(), SampleCards);
+    Shell(folder, "aujourdhui-contraste-eleve.png", ThemePreference.System, _ => { }, new Dictionary<string, object> { [CorePages.Today] = contrast }, highContrast: true);
     foreach (var (file, theme, width, height) in new[]
     {
         ("aujourdhui-etroit-clair.png", ThemePreference.Light, 390.0, 844.0),
@@ -87,7 +91,7 @@ var thread = new Thread(() =>
         ("aujourdhui-ecran-clair.png", ThemePreference.Light, 1600.0, 1000.0),
     })
     {
-        var today = new DashboardPageViewModel(app.Reminders, new ReviewNavigation(app.Sheets, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System));
+        var today = new DashboardPageViewModel(app.Reminders, app.Sheets, new ReviewNavigation(app.Sheets, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System));
         today.Show(SampleDashboard(), SampleCards);
         Shell(folder, file, theme, _ => { }, new Dictionary<string, object> { [CorePages.Today] = today }, width, height);
     }
@@ -109,15 +113,16 @@ foreach (var theme in new[] { ThemeKind.Light, ThemeKind.Dark })
 }
 
 // La fenêtre de la coquille, hors de l'écran, dans un état donné ; seul son contenu est rendu.
-static void Shell(string folder, string file, ThemePreference theme, Action<ShellViewModel> prepare, IReadOnlyDictionary<string, object>? pages = null, double width = 1280, double height = 800)
+static void Shell(string folder, string file, ThemePreference theme, Action<ShellViewModel> prepare, IReadOnlyDictionary<string, object>? pages = null, double width = 1280, double height = 800, Func<bool>? ready = null, bool highContrast = false)
 {
     var design = new DesignResources(ThemeKind.Light, reducedMotion: true);
-    var appearance = new AppearanceController(design, new StillAppearance(), new NoChrome()) { Preference = theme };
+    var appearance = new AppearanceController(design, new StillAppearance(highContrast), new NoChrome()) { Preference = theme };
     var shell = new ShellViewModel(CorePages.All(pages ?? new Dictionary<string, object>()).Append(CorePages.FromModule(new NavigationEntry("citations", "Citations", 60))), appearance, new GalleryPageViewModel(appearance));
     var window = new ShellWindow(shell) { Width = width, Height = height, Left = -20000, Top = -20000, WindowStartupLocation = WindowStartupLocation.Manual, ShowActivated = false, ShowInTaskbar = false };
     window.Resources.MergedDictionaries.Add(design.Dictionary);
     window.Show();
     prepare(shell);
+    Pump(ready ?? (() => true));
     window.Dispatcher.Invoke(System.Windows.Threading.DispatcherPriority.ApplicationIdle, () => { });
     var content = (Panel)window.Content;
     // Le fond de la fenêtre n'appartient pas à son contenu : il est repeint dessous pour la capture.
@@ -198,6 +203,16 @@ static void ReviewCaptures(string folder)
         });
         Shell(
             folder,
+            "seance-contraste-eleve.png",
+            ThemePreference.System,
+            shell =>
+            {
+                shell.ToggleFocusMode();
+                shell.Navigate(new NavigationItem("seance", "Séance", Icons.Calendar, int.MaxValue, running));
+            },
+            highContrast: true);
+        Shell(
+            folder,
             "seance-etroite-sombre.png",
             ThemePreference.Dark,
             shell =>
@@ -207,6 +222,23 @@ static void ReviewCaptures(string folder)
             },
             width: 390,
             height: 844);
+        // Les grands écrans : l'aperçu de la ligne choisie, sur la fiche du coffre d'essai ; puis la liste en deux.
+        foreach (var (file, theme, width, height) in new[] { ("aujourdhui-grand-clair.png", ThemePreference.Light, 1920.0, 1080.0), ("aujourdhui-ultralarge-sombre.png", ThemePreference.Dark, 2560.0, 1200.0) })
+        {
+            var sample = SampleDashboard();
+            DueItem Real(DueItem item) => item with { SheetId = sheet };
+            var today = new DashboardPageViewModel(app.Reminders, app.Sheets, new ReviewNavigation(app.Sheets, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System));
+            today.Show(
+                sample with
+                {
+                    Overdue = [Real(sample.Overdue[0]) with { Title = "La Révolution française", Folder = "Histoire", Tags = ["histoire", "partiel"] }, .. sample.Overdue.Skip(1).Select(Real)],
+                    Today = [.. sample.Today.Select(Real)],
+                    Upcoming = [.. sample.Upcoming.Select(Real)],
+                    Workload = [.. Enumerable.Range(0, 31).Select(offset => new WorkloadDay(sample.Day.AddDays(offset), [.. sample.Upcoming.Take(SampleWorkload[offset % SampleWorkload.Length])], []))],
+                },
+                SampleCards);
+            Shell(folder, file, theme, _ => { }, new Dictionary<string, object> { [CorePages.Today] = today }, width, height, () => today.ShowsPreview && today.Preview!.HasBody);
+        }
         var finished = new StudySessionViewModel(new StudySession(root, new DateOnly(2026, 10, 3), items, 11, 9, 2, 0, TimeSpan.FromSeconds(754), true), new NoSessions(), time, Item, () => { }, () => { });
         finished.EndCommand.Execute(null);
         Shell(folder, "bilan-sombre.png", ThemePreference.Dark, shell => shell.Navigate(new NavigationItem("seance", "Séance", Icons.Calendar, int.MaxValue, finished)));
@@ -354,7 +386,7 @@ static void Save(FrameworkElement gallery, string path)
 }
 
 // Windows tel qu'il est : ni sombre ni contraste élevé ; le thème vient du choix fait ici.
-internal sealed class StillAppearance : ISystemAppearance
+internal sealed class StillAppearance(bool highContrast) : ISystemAppearance
 {
     public event EventHandler? Changed
     {
@@ -364,7 +396,7 @@ internal sealed class StillAppearance : ISystemAppearance
 
     public bool PrefersDarkTheme => false;
 
-    public bool HighContrast => false;
+    public bool HighContrast => highContrast;
 
     public bool ReducedMotion => true;
 }

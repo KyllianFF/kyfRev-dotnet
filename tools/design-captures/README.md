@@ -19,8 +19,9 @@ Fichiers écrits : `galerie-clair.png`, `galerie-sombre.png`, `galerie-contraste
 « Plus »), `aide-etroite-sombre.png`, `coquille-moyenne-sombre.png` (1 024 px),
 `coquille-large-clair.png` (1 460 px), `accueil-clair.png`, `accueil-sombre.png`, `aujourdhui-clair.png`, `aujourdhui-sombre.png`,
 `aujourdhui-etroit-clair.png` (390 px), `aujourdhui-tablette-sombre.png` (834 px),
-`aujourdhui-ecran-clair.png` (1 600 px),
-`fiche-clair.png`, `passage-sombre.png`, `seance-clair.png`, `seance-etroite-sombre.png` (390 px) et `bilan-sombre.png`. Les
+`aujourdhui-ecran-clair.png` (1 600 px), `aujourdhui-grand-clair.png` (1 920 px, avec l'aperçu),
+`aujourdhui-ultralarge-sombre.png` (2 560 px, la liste en deux), `aujourdhui-contraste-eleve.png`,
+`fiche-clair.png`, `passage-sombre.png`, `seance-clair.png`, `seance-contraste-eleve.png`, `seance-etroite-sombre.png` (390 px) et `bilan-sombre.png`. Les
 captures de chaque jalon sont rangées dans `docs/captures/<jalon>` (`j5` : design system et
 coquille ; `j6` : accueil, tableau de bord, fiche et passage en révision, séance d'étude). Le
 contraste élevé prend les couleurs système du poste qui lance l'outil : sur un poste sans

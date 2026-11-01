@@ -49,6 +49,12 @@ public enum TodayLayout
 
     /// <summary>La liste et une colonne latérale.</summary>
     WithSide,
+
+    /// <summary>La liste, l'aperçu de la ligne choisie et la colonne latérale.</summary>
+    WithPreview,
+
+    /// <summary>La liste en deux cartes, l'aperçu et la colonne latérale.</summary>
+    WithSplit,
 }
 
 /// <summary>
@@ -58,13 +64,15 @@ public enum TodayLayout
 /// (tout, fiches, passages) et tri (échéance, étape J, cycles, dernière révision, titre) ;
 /// avertissements de « Santé du coffre » et de rappels en souffrance ; état vide. Le tableau de bord
 /// est relu chaque fois que la vue s'ouvre ; une seule liste virtualisée porte en-têtes et lignes,
-/// pour qu'un grand coffre s'affiche vite.
+/// pour qu'un grand coffre s'affiche vite. Sur les grands écrans, la ligne choisie se lit à côté de
+/// la liste (<see cref="TodayPreview"/>) ; sur les plus grands, la liste se partage en deux cartes.
 /// </summary>
 public sealed partial class DashboardPageViewModel : ObservableObject, INavigationAware
 {
     private static readonly StringComparer FrenchTitles = StringComparer.Create(CultureInfo.GetCultureInfo("fr-FR"), ignoreCase: false);
 
     private readonly ReminderUseCases _reminders;
+    private readonly SheetUseCases _sheets;
     private readonly IReviewOpener _opener;
     private readonly DashboardGroup _overdue;
     private readonly DashboardGroup _today;
@@ -75,15 +83,21 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
     private Dashboard? _dashboard;
     private IReadOnlyList<DueItem> _toStart = [];
 
+    /// <summary>Numéro du dernier aperçu demandé : une lecture dépassée est ignorée.</summary>
+    private int _previewTicket;
+
     /// <summary>
-    /// La vue, sur les cas d'usage des rappels (qui rendent le tableau de bord) ; <paramref name="opener"/>
-    /// ouvre ses lignes, <paramref name="widgets"/> sont les encarts apportés par les modules.
+    /// La vue, sur les cas d'usage des rappels (qui rendent le tableau de bord) et des fiches (qui
+    /// nourrissent l'aperçu) ; <paramref name="opener"/> ouvre ses lignes, <paramref name="widgets"/> sont
+    /// les encarts apportés par les modules.
     /// </summary>
-    public DashboardPageViewModel(ReminderUseCases reminders, IReviewOpener opener, IEnumerable<IDashboardWidget>? widgets = null)
+    public DashboardPageViewModel(ReminderUseCases reminders, SheetUseCases sheets, IReviewOpener opener, IEnumerable<IDashboardWidget>? widgets = null)
     {
         ArgumentNullException.ThrowIfNull(reminders);
+        ArgumentNullException.ThrowIfNull(sheets);
         ArgumentNullException.ThrowIfNull(opener);
         _reminders = reminders;
+        _sheets = sheets;
         _opener = opener;
         _widgets = [.. (widgets ?? []).OrderBy(widget => widget.Order)];
         _extras = new DashboardExtras(this);
@@ -103,6 +117,7 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
         SelectedFilter = Filters[0];
         SelectedSort = Sorts[0];
         Rows = [];
+        SecondRows = [];
         Subtitle = string.Empty;
         DayLabel = string.Empty;
         ReviewNoun = string.Empty;
@@ -145,16 +160,41 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
     /// <summary>Largeur à partir de laquelle la colonne latérale tient à côté de la liste.</summary>
     public const double SideColumnMinimum = 880;
 
+    /// <summary>Largeur à partir de laquelle l'aperçu tient à côté de la liste.</summary>
+    public const double PreviewMinimum = 1550;
+
+    /// <summary>Largeur à partir de laquelle la liste se partage en deux cartes.</summary>
+    public const double SplitMinimum = 2150;
+
     /// <summary>Largeur à partir de laquelle les boutons et le retard tiennent sur la ligne.</summary>
     public const double RoomyMinimum = 600;
 
     /// <summary>Largeur de la page, en pixels indépendants, zoom déjà compté.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Layout), nameof(HasRoom))]
+    [NotifyPropertyChangedFor(nameof(Layout), nameof(HasRoom), nameof(HasPreview))]
     public partial double PageWidth { get; set; }
 
     /// <summary>Disposition de la vue.</summary>
-    public TodayLayout Layout => PageWidth >= SideColumnMinimum ? TodayLayout.WithSide : TodayLayout.OneColumn;
+    public TodayLayout Layout => LayoutFor(PageWidth);
+
+    /// <summary>La ligne choisie se lit à côté de la liste : un clic la choisit, un double clic l'ouvre.</summary>
+    public bool HasPreview => Layout is TodayLayout.WithPreview or TodayLayout.WithSplit;
+
+    /// <summary>La ligne choisie, quand la page a la place d'un aperçu.</summary>
+    [ObservableProperty]
+    public partial object? SelectedRow { get; set; }
+
+    /// <summary>L'aperçu de la ligne choisie ; rien sans ligne choisie, le temps de la première lecture comprise.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsPreview))]
+    public partial TodayPreview? Preview { get; private set; }
+
+    /// <summary>Un aperçu est à montrer.</summary>
+    public bool ShowsPreview => Preview is not null;
+
+    /// <summary>La seconde carte de la liste, quand elle se partage en deux : aujourd'hui et à venir.</summary>
+    [ObservableProperty]
+    public partial IReadOnlyList<object> SecondRows { get; private set; }
 
     /// <summary>
     /// La page est assez large pour tout garder sur une ligne ; sinon, la liste passe avant le reste :
@@ -354,10 +394,59 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
     partial void OnPageWidthChanged(double oldValue, double newValue)
     {
         // Les rappels et les encarts changent de place : la liste n'est refaite que si la disposition change.
-        if (oldValue >= SideColumnMinimum != newValue >= SideColumnMinimum)
+        if (LayoutFor(oldValue) != LayoutFor(newValue))
         {
             BuildRows();
         }
+    }
+
+    partial void OnSelectedRowChanged(object? value) => LoadPreviewCommand.Execute(value);
+
+    private static TodayLayout LayoutFor(double width) => width switch
+    {
+        >= SplitMinimum => TodayLayout.WithSplit,
+        >= PreviewMinimum => TodayLayout.WithPreview,
+        >= SideColumnMinimum => TodayLayout.WithSide,
+        _ => TodayLayout.OneColumn,
+    };
+
+    /// <summary>Ce qui identifie une ligne d'une lecture à l'autre ; rien pour un en-tête.</summary>
+    private static string? KeyOf(object? row) => row switch
+    {
+        DueItemRow item => item.Item.Id,
+        ReminderRow reminder => reminder.Reminder.SheetId,
+        _ => null,
+    };
+
+    /// <summary>Lit la fiche de la ligne choisie, hors du fil de l'interface ; seule la dernière demande compte.</summary>
+    [RelayCommand(AllowConcurrentExecutions = true)]
+    private async Task LoadPreviewAsync(object? row)
+    {
+        var ticket = ++_previewTicket;
+        var sheet = row switch
+        {
+            DueItemRow item => item.Item.SheetId,
+            ReminderRow reminder => reminder.Reminder.SheetId,
+            _ => null,
+        };
+        if (sheet is null)
+        {
+            Preview = null;
+            return;
+        }
+        var outcome = await Task.Run(() => _sheets.Open(sheet)).ConfigureAwait(true);
+        if (ticket == _previewTicket)
+        {
+            Preview = outcome.Succeeded ? TodayPreview.Of(row!, outcome.Value) : TodayPreview.Failed(row!, outcome.Error);
+        }
+    }
+
+    /// <summary>Garde la ligne choisie d'une lecture à l'autre ; sinon, la première ligne.</summary>
+    private void KeepSelection(IEnumerable<object> rows)
+    {
+        var key = KeyOf(SelectedRow);
+        var candidates = HasPreview ? rows.Where(row => KeyOf(row) is not null).ToList() : [];
+        SelectedRow = candidates.Find(row => KeyOf(row) == key) ?? candidates.FirstOrDefault();
     }
 
     private List<DashboardCard> ReadCards() => [.. _widgets.Select(widget => widget.Card()).OfType<DashboardCard>()];
@@ -389,22 +478,27 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
                 : dashboard.ActiveSheets + dashboard.ArchivedSheets == 0 ? DashboardText.FirstSheet
                 : DashboardText.AllArchived));
         }
+        // En deux cartes : les retards et les rappels d'un côté, aujourd'hui et à venir de l'autre.
+        var second = Layout == TodayLayout.WithSplit ? [] : rows;
         Add(rows, _overdue, overdue.Select(item => new DueItemRow(item, dashboard.ActiveRecall, showDueDate: false)));
-        Add(rows, _today, today.Select(item => new DueItemRow(item, dashboard.ActiveRecall, showDueDate: false)));
-        var hasSide = Layout == TodayLayout.WithSide;
+        Add(second, _today, today.Select(item => new DueItemRow(item, dashboard.ActiveRecall, showDueDate: false)));
+        var hasSide = Layout is TodayLayout.WithSide or TodayLayout.WithPreview;
         Add(rows, _reminderGroup, (hasSide ? [] : reminders).Select(reminder => new ReminderRow(reminder)));
-        Add(rows, _upcoming, upcoming.Select(item => new DueItemRow(item, dashboard.ActiveRecall, showDueDate: true)));
+        Add(second, _upcoming, upcoming.Select(item => new DueItemRow(item, dashboard.ActiveRecall, showDueDate: true)));
         SideReminders = hasSide ? [.. reminders.Select(reminder => new ReminderRow(reminder))] : [];
-        Forecast = [.. dashboard.Workload.Skip(1).Take(Application.Model.Dashboard.UpcomingDays).Select(day => new ForecastDay(day.Day, day.Due.Length))];
+        var comingDays = Layout == TodayLayout.WithSplit ? 2 * Application.Model.Dashboard.UpcomingDays : Application.Model.Dashboard.UpcomingDays;
+        Forecast = [.. dashboard.Workload.Skip(1).Take(comingDays).Select(day => new ForecastDay(day.Day, day.Due.Length))];
         var most = dashboard.RecentReviews.Select(day => day.Reviews).DefaultIfEmpty().Max();
         Week = [.. dashboard.RecentReviews.Select(day => new WeekBar(day, most, day.Day == dashboard.Day))];
         WeekTotal = dashboard.RecentReviews.Sum(day => day.Reviews);
         WeekNoun = WeekTotal > 1 ? DashboardText.WeekNounMany : DashboardText.WeekNounOne;
-        if (!hasSide && (HasForecast || HasWeek || HasCards))
+        if (Layout == TodayLayout.OneColumn && (HasForecast || HasWeek || HasCards))
         {
             rows.Add(_extras);
         }
         Rows = rows;
+        SecondRows = ReferenceEquals(second, rows) ? [] : second;
+        KeepSelection(ReferenceEquals(second, rows) ? rows : [.. rows, .. second]);
 
         DayLabel = Dates.Capitalized(Dates.Long(dashboard.Day));
         ReviewCount = total;
