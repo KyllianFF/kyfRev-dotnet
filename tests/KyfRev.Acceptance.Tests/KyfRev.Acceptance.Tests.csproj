@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <!-- L'application tourne dans un autre processus : ce projet ne mesure aucun module, et le seuil de
+         couverture échouerait sur un rapport vide (code de sortie 14). -->
+    <TestingPlatformCommandLineArguments>$(TestingPlatformCommandLineArguments) --ignore-exit-code 14</TestingPlatformCommandLineArguments>
+  </PropertyGroup>
+
+  <!--
+    Les scénarios d'acceptation : la vraie application, dans son propre processus, pilotée par FlaUI.
+    Le coffre se prépare et se relit ici, avec une date simulée.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\KyfRev.Application\KyfRev.Application.csproj" />
+    <ProjectReference Include="..\..\src\KyfRev.Infrastructure.Vault\KyfRev.Infrastructure.Vault.csproj" />
+    <!-- Compilé avant les scénarios, qui le lancent sans jamais le charger. -->
+    <ProjectReference Include="..\..\tools\acceptance-host\KyfRev.Acceptance.Host.csproj" ReferenceOutputAssembly="false" Private="false" SetRuntimeIdentifier="RuntimeIdentifier=win-x64" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FlaUI.UIA3" />
+  </ItemGroup>
+
+</Project>

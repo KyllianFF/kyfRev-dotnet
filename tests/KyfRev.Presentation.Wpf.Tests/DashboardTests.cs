@@ -2,6 +2,8 @@ using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Automation;
+using System.Windows.Automation.Peers;
+using System.Windows.Automation.Provider;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Documents;
@@ -500,6 +502,58 @@ public sealed class DashboardTests
         Assert.IsTrue(page.HasSideReminders);
         Assert.HasCount(7, page.Forecast);
         Assert.AreEqual("Zèbre", Title(page.SelectedRow!), "la ligne choisie reste choisie");
+    }
+
+    [STATestMethod]
+    public void Leaving_the_page_with_a_chosen_row_is_harmless()
+    {
+        var test = new TestShell();
+        using var vaults = new TestVaults(AppMode.Development);
+        var page = new DashboardPageViewModel(vaults.App.Reminders, vaults.App.Sheets, new FakeOpener());
+        page.Show(Sample());
+        var shell = new ShellViewModel(CorePages.All(new Dictionary<string, object> { [CorePages.Today] = page }), test.Appearance, test.Gallery);
+        var window = Show(test, shell);
+        try
+        {
+            // Un clic choisit la ligne avant de l'ouvrir : la page quittée se vide alors de cette ligne.
+            var list = Named<ListBox>(window, "Items");
+            list.SelectedItem = page.Rows.OfType<DueItemRow>().First();
+
+            shell.Navigate(shell.Gallery);
+            window.UpdateLayout();
+
+            Assert.AreSame(shell.Gallery, shell.Current);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
+    public void A_row_opens_by_automation_and_a_header_does_not()
+    {
+        var test = new TestShell();
+        var opener = new FakeOpener();
+        using var vaults = new TestVaults(AppMode.Development);
+        var page = new DashboardPageViewModel(vaults.App.Reminders, vaults.App.Sheets, opener);
+        page.Show(Sample());
+        var shell = new ShellViewModel(CorePages.All(new Dictionary<string, object> { [CorePages.Today] = page }), test.Appearance, test.Gallery);
+        var window = Show(test, shell);
+        try
+        {
+            var rows = UIElementAutomationPeer.CreatePeerForElement(Named<ListBox>(window, "Items")).GetChildren();
+
+            Assert.IsInstanceOfType<DashboardGroup>(page.Rows[0]);
+            Assert.IsNull(rows[0].GetPattern(PatternInterface.Invoke), "un en-tête se replie, il ne s'ouvre pas");
+            Assert.IsEmpty(opener.Opened);
+            ((IInvokeProvider)rows[1].GetPattern(PatternInterface.Invoke)).Invoke();
+            UiThread.Until(() => opener.Opened.Count == 1);
+        }
+        finally
+        {
+            window.Close();
+        }
     }
 
     [STATestMethod]

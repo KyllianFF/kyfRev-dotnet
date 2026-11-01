@@ -26,6 +26,7 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="KyfRev.Presentation.Wpf.Tests" />
+    <InternalsVisibleTo Include="KyfRev.Acceptance.Host" />
   </ItemGroup>
 
   <!-- Date de publication (section datée du CHANGELOG), passée par tools/installer.ps1. -->

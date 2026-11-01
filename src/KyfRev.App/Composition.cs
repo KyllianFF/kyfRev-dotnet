@@ -25,20 +25,23 @@ internal static class Composition
         typeof(Composition).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion.Split('+')[0] ?? "0.0.0";
 
     /// <summary>Les services de l'application.</summary>
-    public static ServiceProvider Build()
+    /// <param name="time">Horloge ; celle du système par défaut.</param>
+    /// <param name="locations">Emplacements ; ceux de l'exécutable en cours par défaut.</param>
+    public static ServiceProvider Build(TimeProvider? time = null, VaultLocations? locations = null)
     {
+        var clock = time ?? TimeProvider.System;
         var services = new ServiceCollection();
         // Signalé ouvert à l'installateur tant que les services vivent.
         services.AddSingleton<OpenMarker>();
         services.AddSingleton<ISystemAppearance, WindowsAppearance>();
         services.AddSingleton<IWindowChrome, WindowChrome>();
-        services.AddSingleton(_ => VaultLocations.Detect());
+        services.AddSingleton(_ => locations ?? VaultLocations.Detect());
         services.AddSingleton<IVaultLocations>(provider => provider.GetRequiredService<VaultLocations>());
         services.AddSingleton<IStudySessionStore>(provider => new StudySessionFile(provider.GetRequiredService<VaultLocations>().LocalData));
         services.AddSingleton<ILoggerFactory>(provider =>
         {
             var locations = provider.GetRequiredService<VaultLocations>();
-            var log = new DiagnosticLog(locations.LocalData, Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), TimeProvider.System);
+            var log = new DiagnosticLog(locations.LocalData, Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), clock);
             log.Started(Version, ModeName(locations.Mode));
             return log;
         });
@@ -48,14 +51,14 @@ internal static class Composition
             new VaultStore(),
             new BackupFiles(),
             provider.GetRequiredService<IVaultLocations>(),
-            TimeProvider.System,
+            clock,
             provider.GetRequiredService<ILoggerFactory>(),
             Version));
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Vaults);
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Reminders);
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Sheets);
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Reviews);
-        services.AddSingleton(TimeProvider.System);
+        services.AddSingleton(clock);
         services.AddSingleton<ReviewNavigation>();
         services.AddSingleton<IReviewOpener>(provider => provider.GetRequiredService<ReviewNavigation>());
         services.AddSingleton<DashboardPageViewModel>();

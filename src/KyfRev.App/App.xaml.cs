@@ -17,11 +17,17 @@ internal sealed partial class App : System.Windows.Application
 {
     private ServiceProvider? _services;
 
+    /// <summary>L'horloge de l'application ; les scénarios d'acceptation y mettent une date simulée.</summary>
+    internal TimeProvider Time { get; init; } = TimeProvider.System;
+
+    /// <summary>Les emplacements de l'application ; les scénarios d'acceptation y mettent un dossier à eux.</summary>
+    internal VaultLocations? Locations { get; init; }
+
     /// <inheritdoc/>
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
-        _services = Composition.Build();
+        _services = Composition.Build(Time, Locations);
         _services.GetRequiredService<OpenMarker>();
         WatchUnexpectedErrors(_services.GetRequiredService<ILoggerFactory>().CreateLogger("kyfRev"));
         Resources.MergedDictionaries.Add(_services.GetRequiredService<AppearanceController>().Resources);
