@@ -106,8 +106,8 @@ public static class ThemeColors
 
     private static FrozenDictionary<ColorRole, TokenColor> Build(ThemeNeutrals neutrals, bool light)
     {
-        var (violet, periwinkle, mauve) = (Palette.Violet, Palette.Periwinkle, Palette.Mauve);
-        // Thème clair : la nuance 600 pour ce qui se détache sur fond clair, les nuances 100 en
+        var (forest, amber) = (Palette.Forest, Palette.Amber);
+        // Thème clair : la nuance 700 pour ce qui se détache sur fond clair, les nuances 100 en
         // fond de pastille ; thème sombre : les nuances claires sur fond sombre, et l'inverse.
         int Pick(int lightShade, int darkShade) => light ? lightShade : darkShade;
         return new Dictionary<ColorRole, TokenColor>
@@ -119,36 +119,36 @@ public static class ThemeColors
             [ColorRole.ControlBorder] = neutrals.ControlBorder,
             [ColorRole.Text] = neutrals.Text,
             [ColorRole.TextSecondary] = neutrals.TextSecondary,
-            [ColorRole.Primary] = violet[Pick(600, 400)],
-            [ColorRole.PrimaryHover] = violet[Pick(700, 300)],
-            [ColorRole.PrimaryPressed] = violet[Pick(800, 200)],
+            [ColorRole.Primary] = forest[Pick(700, 300)],
+            [ColorRole.PrimaryHover] = forest[Pick(800, 200)],
+            [ColorRole.PrimaryPressed] = forest[Pick(900, 100)],
             [ColorRole.OnPrimary] = neutrals.OnPrimary,
-            [ColorRole.Link] = violet[Pick(600, 300)],
-            [ColorRole.Focus] = violet[Pick(600, 400)],
-            [ColorRole.MarkerSheet] = violet[Pick(600, 400)],
-            [ColorRole.MarkerPassage] = periwinkle[Pick(600, 400)],
-            [ColorRole.MarkerReminder] = mauve[Pick(600, 400)],
-            [ColorRole.PillSheetBackground] = violet[Pick(100, 800)],
-            [ColorRole.PillSheetText] = violet[Pick(800, 100)],
-            [ColorRole.PillPassageBackground] = periwinkle[Pick(100, 800)],
-            [ColorRole.PillPassageText] = periwinkle[Pick(800, 100)],
-            [ColorRole.PillReminderBackground] = mauve[Pick(100, 800)],
-            [ColorRole.PillReminderText] = mauve[Pick(800, 100)],
-            [ColorRole.Selection] = periwinkle[Pick(200, 800)],
+            [ColorRole.Link] = forest[Pick(700, 300)],
+            [ColorRole.Focus] = forest[Pick(700, 300)],
+            [ColorRole.MarkerSheet] = forest[Pick(700, 300)],
+            [ColorRole.MarkerPassage] = amber[Pick(700, 300)],
+            [ColorRole.MarkerReminder] = neutrals.TextSecondary,
+            [ColorRole.PillSheetBackground] = forest[Pick(100, 900)],
+            [ColorRole.PillSheetText] = forest[Pick(800, 100)],
+            [ColorRole.PillPassageBackground] = amber[Pick(100, 900)],
+            [ColorRole.PillPassageText] = amber[Pick(800, 100)],
+            [ColorRole.PillReminderBackground] = neutrals.SurfaceAlt,
+            [ColorRole.PillReminderText] = neutrals.Text,
+            [ColorRole.Selection] = forest[Pick(200, 800)],
             [ColorRole.OnSelection] = neutrals.Text,
-            [ColorRole.Highlight] = mauve[Pick(200, 800)],
-            [ColorRole.HighlightActive] = mauve[Pick(300, 700)],
+            [ColorRole.Highlight] = amber[Pick(200, 800)],
+            [ColorRole.HighlightActive] = amber[Pick(300, 700)],
             [ColorRole.OnHighlight] = neutrals.Text,
-            [ColorRole.NavigationActiveBackground] = violet[Pick(100, 800)],
-            [ColorRole.NavigationActiveText] = violet[Pick(800, 100)],
+            [ColorRole.NavigationActiveBackground] = forest[Pick(100, 900)],
+            [ColorRole.NavigationActiveText] = neutrals.Text,
             [ColorRole.Critical] = neutrals.Critical,
             [ColorRole.CriticalBackground] = neutrals.CriticalBackground,
             [ColorRole.Warning] = neutrals.Warning,
             [ColorRole.WarningBackground] = neutrals.WarningBackground,
             [ColorRole.Success] = neutrals.Success,
             [ColorRole.SuccessBackground] = neutrals.SuccessBackground,
-            [ColorRole.Info] = periwinkle[Pick(800, 100)],
-            [ColorRole.InfoBackground] = periwinkle[Pick(100, 800)],
+            [ColorRole.Info] = forest[Pick(800, 100)],
+            [ColorRole.InfoBackground] = forest[Pick(100, 900)],
             [ColorRole.Scrim] = neutrals.Scrim,
         }.ToFrozenDictionary();
     }

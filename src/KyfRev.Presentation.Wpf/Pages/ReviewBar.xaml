@@ -84,8 +84,8 @@
                   <Setter TargetName="Check" Property="Visibility" Value="Visible" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding WasLate}" Value="True">
-                  <Setter TargetName="Point" Property="Background" Value="{DynamicResource Kyf.Brush.Critical}" />
-                  <Setter TargetName="Point" Property="BorderBrush" Value="{DynamicResource Kyf.Brush.Critical}" />
+                  <Setter TargetName="Point" Property="Background" Value="{DynamicResource Kyf.Brush.Warning}" />
+                  <Setter TargetName="Point" Property="BorderBrush" Value="{DynamicResource Kyf.Brush.Warning}" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding IsCurrent}" Value="True">
                   <Setter TargetName="Point" Property="BorderBrush" Value="{DynamicResource Kyf.Brush.Primary}" />

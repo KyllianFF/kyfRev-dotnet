@@ -123,7 +123,8 @@ Ce glossaire fixe la correspondance. Les **clés JSON du coffre restent celles d
 
 | Terme | Code | Clé JSON (format 1) | Définition |
 |---|---|---|---|
-| Gamme | `ColorRamp` (`Palette.Violet`, `Palette.Periwinkle`, `Palette.Mauve`) | — | Dix nuances (50 à 900) d'une couleur : violet, pervenche, mauve. |
+| Gamme | `ColorRamp` (`Palette.Forest`, `Palette.Amber`) | — | Dix nuances (50 à 900) d'une couleur de l'identité Veillée : forêt, ambre. |
+| Veillée | `Palette`, `ThemeColors`, `Typography` | — | L'identité visuelle de kyfRev : vert forêt et ambre, thème clair « Jour » et sombre « Veillée », polices Atkinson Hyperlegible. |
 | Jeton | `Palette`, `Typography`, `Spacing`, `Radii`, `Elevation`, `Motion` | — | Valeur de référence de l'identité visuelle, écrite à un seul endroit. |
 | Rôle | `ColorRole` | — | Usage d'une couleur (texte, fond, bouton principal…), traduit par chaque thème. |
 | Thème | `ThemeKind` (`Light`, `Dark`, `HighContrast`) | — | Clair, sombre, ou contraste élevé de Windows. |

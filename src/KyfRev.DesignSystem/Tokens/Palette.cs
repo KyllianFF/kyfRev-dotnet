@@ -3,63 +3,59 @@ using System.Collections.Immutable;
 namespace KyfRev.DesignSystem.Tokens;
 
 /// <summary>
-/// Toutes les couleurs de kyfRev, et le seul endroit où elles s'écrivent (conception de la 0.x,
-/// §12). Trois gammes construites dans l'espace OKLCH autour des quatre couleurs fournies
-/// (violet 600, pervenche 400, mauve 400 et 300), puis les neutres teintés de violet et les
-/// couleurs fonctionnelles de chaque thème. Les composants n'emploient que des rôles
+/// Toutes les couleurs de kyfRev, et le seul endroit où elles s'écrivent : l'identité « Veillée »,
+/// choisie en novembre 2026. Deux gammes, le vert forêt (l'action, ce qui est fait) et l'ambre
+/// (le retard, les passages surlignés), puis les neutres de chaque thème : « Jour », clair et
+/// teinté de sauge, et « Veillée », sombre et chaud. Les composants n'emploient que des rôles
 /// (<see cref="ColorRole"/>), jamais ces valeurs.
 /// </summary>
 public static class Palette
 {
-    /// <summary>Violet : la couleur principale (600 : <c>#7f4ea8</c>, fournie).</summary>
-    public static ColorRamp Violet { get; } = new(
-        "violet", "#f9f4fe", "#f2e8fe", "#e6cdfe", "#d5adfb", "#bd8ee8", "#a270ce", "#7f4ea8", "#6d4192", "#542f72", "#3a1e51");
+    /// <summary>Vert forêt : la couleur principale (700 en thème clair, 300 en thème sombre).</summary>
+    public static ColorRamp Forest { get; } = new(
+        "forêt", "#f1f6f1", "#dde8df", "#c1daca", "#86c7a1", "#5eaa80", "#418c64", "#357a57", "#2e6a4e", "#234f3b", "#2a3a30");
 
-    /// <summary>Pervenche : la couleur secondaire, celle des passages et de la sélection (400 : <c>#9c93e5</c>, fournie).</summary>
-    public static ColorRamp Periwinkle { get; } = new(
-        "pervenche", "#f6f6fe", "#ebebfe", "#d6d4ff", "#bdb7fe", "#9c93e5", "#887dd2", "#6e62b4", "#574d95", "#423975", "#2d2554");
-
-    /// <summary>Mauve : l'accent, celui des rappels et du surlignage (400 : <c>#ba8cbe</c> et 300 : <c>#c7a3d2</c>, fournies).</summary>
-    public static ColorRamp Mauve { get; } = new(
-        "mauve", "#fdf3fd", "#f7e7f8", "#ebceed", "#c7a3d2", "#ba8cbe", "#a677ab", "#8b5d8f", "#714874", "#57355a", "#3c233f");
+    /// <summary>Ambre : le retard, l'avertissement et les passages surlignés.</summary>
+    public static ColorRamp Amber { get; } = new(
+        "ambre", "#fbf5ec", "#f4e8d6", "#f0d3a8", "#eba458", "#d88a33", "#b9701c", "#a36114", "#93540f", "#6b3d0c", "#3a2e1f");
 
     /// <summary>Couleur des ombres portées, dans les deux thèmes (leur opacité vient de l'élévation).</summary>
     public static TokenColor Shadow { get; } = TokenColor.FromHex("#000000");
 
-    /// <summary>Neutres et couleurs fonctionnelles du thème clair.</summary>
+    /// <summary>Neutres et couleurs fonctionnelles du thème clair, « Jour ».</summary>
     public static ThemeNeutrals Light { get; } = new(
-        Background: TokenColor.FromHex("#f8f7fb"),
-        Surface: TokenColor.FromHex("#ffffff"),
-        SurfaceAlt: TokenColor.FromHex("#f1eff6"),
-        Divider: TokenColor.FromHex("#dedae8"),
-        ControlBorder: TokenColor.FromHex("#8a8498"),
-        Text: TokenColor.FromHex("#221d2e"),
-        TextSecondary: TokenColor.FromHex("#5d566d"),
+        Background: TokenColor.FromHex("#edefe9"),
+        Surface: TokenColor.FromHex("#fafbf7"),
+        SurfaceAlt: TokenColor.FromHex("#e3e8e0"),
+        Divider: TokenColor.FromHex("#d3d9d0"),
+        ControlBorder: TokenColor.FromHex("#77837a"),
+        Text: TokenColor.FromHex("#1d2822"),
+        TextSecondary: TokenColor.FromHex("#4f5c54"),
         OnPrimary: TokenColor.FromHex("#ffffff"),
-        Critical: TokenColor.FromHex("#b3261e"),
-        CriticalBackground: TokenColor.FromHex("#fdecea"),
-        Warning: TokenColor.FromHex("#8a5300"),
-        WarningBackground: TokenColor.FromHex("#fff4e0"),
-        Success: TokenColor.FromHex("#1e7a46"),
-        SuccessBackground: TokenColor.FromHex("#e7f5ec"),
-        Scrim: TokenColor.FromHex("#73221d2e"));
+        Critical: TokenColor.FromHex("#a33a2b"),
+        CriticalBackground: TokenColor.FromHex("#f8e4df"),
+        Warning: TokenColor.FromHex("#93540f"),
+        WarningBackground: TokenColor.FromHex("#f4e8d6"),
+        Success: TokenColor.FromHex("#2e6a4e"),
+        SuccessBackground: TokenColor.FromHex("#dde8df"),
+        Scrim: TokenColor.FromHex("#731d2822"));
 
-    /// <summary>Neutres et couleurs fonctionnelles du thème sombre.</summary>
+    /// <summary>Neutres et couleurs fonctionnelles du thème sombre, « Veillée » : chaud plutôt que bleuté.</summary>
     public static ThemeNeutrals Dark { get; } = new(
-        Background: TokenColor.FromHex("#15121c"),
-        Surface: TokenColor.FromHex("#1e1a28"),
-        SurfaceAlt: TokenColor.FromHex("#2a2536"),
-        Divider: TokenColor.FromHex("#3a3448"),
-        ControlBorder: TokenColor.FromHex("#777087"),
-        Text: TokenColor.FromHex("#ece8f4"),
-        TextSecondary: TokenColor.FromHex("#a9a1bb"),
-        OnPrimary: TokenColor.FromHex("#15121c"),
-        Critical: TokenColor.FromHex("#ff8a80"),
-        CriticalBackground: TokenColor.FromHex("#3d1f22"),
-        Warning: TokenColor.FromHex("#f0b45a"),
-        WarningBackground: TokenColor.FromHex("#3a2a12"),
-        Success: TokenColor.FromHex("#6fcf97"),
-        SuccessBackground: TokenColor.FromHex("#173326"),
+        Background: TokenColor.FromHex("#191714"),
+        Surface: TokenColor.FromHex("#24211c"),
+        SurfaceAlt: TokenColor.FromHex("#2e2a24"),
+        Divider: TokenColor.FromHex("#38332b"),
+        ControlBorder: TokenColor.FromHex("#877e70"),
+        Text: TokenColor.FromHex("#efe9dc"),
+        TextSecondary: TokenColor.FromHex("#b4ab9b"),
+        OnPrimary: TokenColor.FromHex("#13201a"),
+        Critical: TokenColor.FromHex("#f0a090"),
+        CriticalBackground: TokenColor.FromHex("#3b2420"),
+        Warning: TokenColor.FromHex("#eba458"),
+        WarningBackground: TokenColor.FromHex("#3a2e1f"),
+        Success: TokenColor.FromHex("#86c7a1"),
+        SuccessBackground: TokenColor.FromHex("#2a3a30"),
         Scrim: TokenColor.FromHex("#99000000"));
 }
 
@@ -77,7 +73,7 @@ public sealed class ColorRamp
         _colors = [.. hex.Select(TokenColor.FromHex)];
     }
 
-    /// <summary>Nom de la gamme (« violet », « pervenche », « mauve »).</summary>
+    /// <summary>Nom de la gamme (« forêt », « ambre »).</summary>
     public string Name { get; }
 
     /// <summary>La nuance <paramref name="shade"/> (50, 100… 900).</summary>
@@ -87,7 +83,7 @@ public sealed class ColorRamp
         : throw new ArgumentOutOfRangeException(nameof(shade), shade, "Nuance attendue : 50, 100, 200… 900.");
 }
 
-/// <summary>Neutres teintés de violet et couleurs fonctionnelles d'un thème.</summary>
+/// <summary>Neutres et couleurs fonctionnelles d'un thème.</summary>
 /// <param name="Background">Fond de la fenêtre.</param>
 /// <param name="Surface">Fond des cartes et des champs.</param>
 /// <param name="SurfaceAlt">Fond secondaire : survol, blocs de code, squelettes.</param>
@@ -96,10 +92,10 @@ public sealed class ColorRamp
 /// <param name="Text">Texte.</param>
 /// <param name="TextSecondary">Texte secondaire.</param>
 /// <param name="OnPrimary">Texte sur la couleur principale.</param>
-/// <param name="Critical">Retard et erreur.</param>
+/// <param name="Critical">Erreur.</param>
 /// <param name="CriticalBackground">Fond des messages d'erreur.</param>
-/// <param name="Warning">Avertissement.</param>
-/// <param name="WarningBackground">Fond des avertissements.</param>
+/// <param name="Warning">Retard et avertissement.</param>
+/// <param name="WarningBackground">Fond des retards et des avertissements.</param>
 /// <param name="Success">Réussite.</param>
 /// <param name="SuccessBackground">Fond des réussites.</param>
 /// <param name="Scrim">Voile sous les dialogues (transparent).</param>

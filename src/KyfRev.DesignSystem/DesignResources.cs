@@ -97,9 +97,9 @@ public sealed class DesignResources
     {
         var dictionary = new ResourceDictionary
         {
-            [DesignKeys.UiFont] = new FontFamily(Typography.UiFamily),
-            [DesignKeys.DisplayFont] = new FontFamily(Typography.DisplayFamily),
-            [DesignKeys.CodeFont] = new FontFamily(Typography.CodeFamily),
+            [DesignKeys.UiFont] = new FontFamily(Typography.FontsBase, Typography.UiFamily),
+            [DesignKeys.DisplayFont] = new FontFamily(Typography.FontsBase, Typography.DisplayFamily),
+            [DesignKeys.CodeFont] = new FontFamily(Typography.FontsBase, Typography.CodeFamily),
             [DesignKeys.IconFont] = new FontFamily(Typography.IconFamily),
             [DesignKeys.ControlRadius] = new CornerRadius(Radii.Control),
             [DesignKeys.CardRadius] = new CornerRadius(Radii.Card),

@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Date** | 31 octobre 2026 |
-| **Statut** | Plan validé le 31 octobre 2026 : les 13 décisions du §7 sont arrêtées sur l'option recommandée (décision 2 : option C, §2.6). J1, J2, J3 et J4 validés et fusionnés le 31 octobre 2026 (J3 en cinq demandes de fusion : lecture fidèle, écriture des fiches, écritures complémentaires, sauvegardes et exports, corpus d'ancrage ; J4 en deux : couche Application et garde-fous, modularité et module Citations). J5 validé le 1er novembre 2026 sur ses captures (`docs/captures/j5`), en deux demandes de fusion : design system, coquille WPF et galerie de composants. Jalon en cours : J6, avec J6.1 tableau de bord et archives ; J6.2 emplacements, ouverture au démarrage et accueil ; J6.3 vue « Aujourd'hui » ; J6.4 fiche et passage en révision ; J6.5 séance d'étude ; journal de diagnostic ; J6.6 squelette de l'installateur (Inno Setup 6.7.3). |
+| **Statut** | Plan validé le 31 octobre 2026 : les 13 décisions du §7 sont arrêtées sur l'option recommandée (décision 2 : option C, §2.6). J1, J2, J3 et J4 validés et fusionnés le 31 octobre 2026 (J3 en cinq demandes de fusion : lecture fidèle, écriture des fiches, écritures complémentaires, sauvegardes et exports, corpus d'ancrage ; J4 en deux : couche Application et garde-fous, modularité et module Citations). J5 validé le 1er novembre 2026 sur ses captures (`docs/captures/j5`), en deux demandes de fusion : design system, coquille WPF et galerie de composants ; puis rouvert le même jour pour une nouvelle identité visuelle, « Veillée », que vous avez choisie parmi plusieurs propositions : J5.3 jetons, polices et composants Veillée ; à suivre, J5.4 coquille adaptative et les écrans de J6 au nouveau style, avant une nouvelle validation sur captures. Jalon en cours : J6, avec J6.1 tableau de bord et archives ; J6.2 emplacements, ouverture au démarrage et accueil ; J6.3 vue « Aujourd'hui » ; J6.4 fiche et passage en révision ; J6.5 séance d'étude ; journal de diagnostic ; J6.6 squelette de l'installateur (Inno Setup 6.7.3). |
 | **Périmètre audité** | Dépôt `KyllianFF/kyfRev` à `87f291c` (v0.8.0, 133 commits) ; application installée `C:\Program Files\kyfRev` (0.7.0) ; coffre `Documents\kyfRev\Coffre` et ses sauvegardes. |
 | **Méthode** | Lecture intégrale du cœur métier (`crates/noyau`), lecture du dossier de conception (64 décisions D1 à D64), analyse du crate `coffre` (persistance), de `src-tauri` (commandes, extensions, sécurité, livraison) et de l'interface Svelte. Aucune modification de l'existant. |
 
@@ -294,7 +294,7 @@ Il existe **deux niveaux**.
 | Contrats d'extension (manifeste, protocole, catalogue format 1) | `src-tauri/extensions.rs`, `catalogue.rs` | Compatibles, avec les durcissements |
 | `portable.json`, `installation.json`, `config-locale.json`, `jeton-github.bin` | `emplacements.rs`, `github.rs` | `ProtectedData.Unprotect` relit le jeton existant |
 | Logique pure du module topologie (~3 500 l. TypeScript) | `src/lib/topologie` | Si le module passe en natif (§6, J10) |
-| Identité visuelle : 3 gammes OKLCH, rôles, contrastes | Conception §12, `theme.css` | Portés en dictionnaires de ressources XAML |
+| Identité visuelle : 3 gammes OKLCH, rôles, contrastes | Conception §12, `theme.css` | Rôles et exigences de contraste repris ; couleurs et polices remplacées par l'identité « Veillée », choisie en novembre 2026 |
 
 **À réécrire**
 - Câblage Tauri et 97 commandes IPC : cas d'usage de la couche Application, appelés directement par les ViewModels.
@@ -734,11 +734,11 @@ Les jalons sont **séquentiels**. Chacun est livré par une ou plusieurs branche
 ### J5. Design system et coquille WPF (M)
 - **Livrables** :
   - `KyfRev.DesignSystem` :
-    - jetons portés de §12 (3 gammes, rôles) ;
+    - jetons de l'identité « Veillée » (2 gammes, forêt et ambre, et leurs rôles), choisie en novembre 2026 parmi plusieurs propositions ; polices Atkinson Hyperlegible Next et Mono livrées avec l'application ;
     - échelles **régulières** : typographie, espacements sur une grille de 4 px, rayons, élévations, durées ;
     - thèmes clair, sombre et **contraste élevé** Windows ;
     - composants : bouton, champ, carte, pastille, menu, dialogue, notification, état vide, squelette de chargement ;
-  - coquille : navigation latérale, Ctrl+K, F1, mode concentration, zoom ;
+  - coquille : navigation qui s'adapte à la largeur de la fenêtre (barre latérale, colonne d'icônes ou onglets en bas, jamais de défilement horizontal), Ctrl+K, F1, mode concentration, zoom ;
   - réduction des animations respectée ;
   - galerie de composants pour la revue visuelle.
 - **Critères** :
