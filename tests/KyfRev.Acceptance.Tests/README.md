@@ -13,8 +13,11 @@ Ce qui a été enregistré se lit dans les fichiers de suivi du coffre, tels qu'
 dotnet test --project tests/KyfRev.Acceptance.Tests -c Release
 ```
 
-Des fenêtres s'ouvrent et se referment pendant environ une minute. Les boutons et les lignes sont
-invoqués sans souris ni clavier : le poste reste utilisable.
+Des fenêtres s'ouvrent et se referment pendant environ une minute, sans prendre le premier plan. Les
+boutons et les lignes sont invoqués sans souris ni clavier : le poste reste utilisable.
+
+Ne les lancez pas en même temps que `KyfRev.Presentation.Wpf.Tests`, dont les contrôles d'accessibilité
+parcourent les fenêtres du bureau. L'intégration continue passe un projet de tests après l'autre.
 
 ## Ce qui passe par l'application, et ce qui ne le peut pas encore
 

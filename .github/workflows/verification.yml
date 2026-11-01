@@ -99,9 +99,12 @@ jobs:
       # Chaque projet de tests mesure les modules qu'il teste (testconfig.json du projet) ; le
       # seuil s'applique à chacun de ces modules. Coverlet ignore sans le dire un filtre qui
       # contient un tiret : « [kyfrev*coffre]* » désigne l'assembly kyfrev-coffre.
+      # Un projet après l'autre : les scénarios d'acceptation ouvrent et ferment de vraies fenêtres,
+      # et ceux qui parcourent le bureau ou ouvrent un menu ne doivent pas les croiser.
       - name: Tests et couverture (95 % des lignes au minimum)
         run: >-
           dotnet test --solution KyfRev.slnx --configuration Release --no-build
+          --max-parallel-test-modules 1
           --coverlet --coverlet-output-format cobertura
           --coverlet-threshold 95 --coverlet-threshold-type line
           --results-directory artifacts/coverage
