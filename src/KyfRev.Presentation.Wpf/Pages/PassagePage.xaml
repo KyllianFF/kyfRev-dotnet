@@ -24,19 +24,24 @@
 
   <Grid>
     <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
       <RowDefinition Height="*" />
       <RowDefinition Height="Auto" />
     </Grid.RowDefinitions>
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto" Focusable="False">
-      <StackPanel Margin="16" MaxWidth="720">
-        <Button x:Name="BackButton" Command="{Binding BackCommand}" Style="{DynamicResource Kyf.Button.Subtle}" HorizontalAlignment="Left" Margin="-16,0,0,0"
-                AutomationProperties.Name="{x:Static pages:ReviewText.Back}">
-          <StackPanel Orientation="Horizontal">
-            <kyf:Icon Text="{x:Static kyf:Icons.Back}" Margin="0,0,8,0" />
-            <TextBlock Text="{x:Static pages:ReviewText.Back}" VerticalAlignment="Center" />
-          </StackPanel>
-        </Button>
+    <!-- Le retour reste à portée, même la page défilée. Aligné sur la colonne de lecture. -->
+    <Grid MaxWidth="720" Margin="16,16,16,0">
+      <Button x:Name="BackButton" Command="{Binding BackCommand}" Style="{DynamicResource Kyf.Button.Subtle}" HorizontalAlignment="Left" Margin="-16,0,0,0"
+              AutomationProperties.Name="{x:Static pages:ReviewText.Back}">
+        <StackPanel Orientation="Horizontal">
+          <kyf:Icon Text="{x:Static kyf:Icons.Back}" Margin="0,0,8,0" />
+          <TextBlock Text="{x:Static pages:ReviewText.Back}" VerticalAlignment="Center" />
+        </StackPanel>
+      </Button>
+    </Grid>
+
+    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Focusable="False">
+      <StackPanel Margin="16,8,16,16" MaxWidth="720">
 
         <TextBlock x:Name="Loading" Text="{x:Static pages:ReviewText.OpeningPassage}" Style="{DynamicResource Kyf.Text.Secondary}" Margin="0,16,0,0"
                    Visibility="{Binding IsLoading, Converter={StaticResource Visible}}" />
@@ -118,9 +123,9 @@
     </ScrollViewer>
 
     <!-- Toujours visible, même la carte défilée. -->
-    <ContentControl Grid.Row="1" Content="{Binding Review}" Focusable="False" IsTabStop="False" Margin="16,8,16,16" />
+    <ContentControl Grid.Row="2" Content="{Binding Review}" Focusable="False" IsTabStop="False" Margin="16,8,16,16" />
 
-    <kyf:Dialog x:Name="Confirmation" Grid.RowSpan="2" Title="{Binding Review.ConfirmTitle}" IsOpen="{Binding Review.IsConfirming, Mode=OneWay}"
+    <kyf:Dialog x:Name="Confirmation" Grid.RowSpan="3" Title="{Binding Review.ConfirmTitle}" IsOpen="{Binding Review.IsConfirming, Mode=OneWay}"
                 PrimaryButtonText="{Binding Review.ConfirmLabel}" Closed="OnConfirmationClosed">
       <TextBlock Text="{Binding Review.ConfirmMessage}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" />
     </kyf:Dialog>

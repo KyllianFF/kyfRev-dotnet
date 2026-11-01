@@ -250,7 +250,9 @@ public sealed class Scenarios
         using (var running = trial.Launch(created.AddDays(1)))
         {
             running.Open(Today, Title);
+            var back = running.BackPosition();
             Assert.AreEqual(100, running.ScrollToEnd(), 0.01);
+            Assert.AreEqual(back, running.BackPosition(), "Le retour reste accessible en bas de la fiche.");
             running.Back();
             Assert.IsNotNull(running.Row(Today, Title), "Lire n'est pas réviser.");
         }
