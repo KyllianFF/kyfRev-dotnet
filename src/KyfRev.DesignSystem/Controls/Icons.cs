@@ -9,6 +9,12 @@ public static class Icons
     /// <summary>Document : une fiche.</summary>
     public static string Document { get; } = Glyph(0xE8A5);
 
+    /// <summary>Flèche vers la gauche : revenir à la vue précédente.</summary>
+    public static string Back { get; } = Glyph(0xE72B);
+
+    /// <summary>Œil : montrer ce qui est caché.</summary>
+    public static string Show { get; } = Glyph(0xE7B3);
+
     /// <summary>Maison : l'accueil.</summary>
     public static string Home { get; } = Glyph(0xE80F);
 

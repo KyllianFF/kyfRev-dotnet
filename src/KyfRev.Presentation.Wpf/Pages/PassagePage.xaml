@@ -1,0 +1,122 @@
+<UserControl x:Class="KyfRev.Presentation.Wpf.Pages.PassagePage"
+             x:ClassModifier="internal"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:kyf="clr-namespace:KyfRev.DesignSystem.Controls;assembly=KyfRev.DesignSystem"
+             xmlns:pages="clr-namespace:KyfRev.Presentation.Wpf.Pages">
+  <UserControl.Resources>
+    <BooleanToVisibilityConverter x:Key="Visible" />
+    <!-- Le trou du texte à trous ; une fois le passage demandé, il est surligné. -->
+    <Style x:Key="Hole" TargetType="Run">
+      <Setter Property="Background" Value="{DynamicResource Kyf.Brush.SurfaceAlt}" />
+      <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.TextSecondary}" />
+      <Style.Triggers>
+        <DataTrigger Binding="{Binding IsRevealed}" Value="True">
+          <Setter Property="Background" Value="{DynamicResource Kyf.Brush.PillPassageBackground}" />
+          <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Text}" />
+        </DataTrigger>
+      </Style.Triggers>
+    </Style>
+  </UserControl.Resources>
+  <UserControl.InputBindings>
+    <KeyBinding Key="Enter" Modifiers="Control" Command="{Binding Review.ValidateCommand}" />
+  </UserControl.InputBindings>
+
+  <Grid>
+    <ScrollViewer VerticalScrollBarVisibility="Auto" Focusable="False">
+      <StackPanel Margin="32,16,32,16" MaxWidth="760" HorizontalAlignment="Left">
+        <Button x:Name="BackButton" Command="{Binding BackCommand}" Style="{DynamicResource Kyf.Button.Subtle}" HorizontalAlignment="Left"
+                AutomationProperties.Name="{x:Static pages:ReviewText.Back}">
+          <StackPanel Orientation="Horizontal">
+            <kyf:Icon Text="{x:Static kyf:Icons.Back}" Margin="0,0,8,0" />
+            <TextBlock Text="{x:Static pages:ReviewText.Back}" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+
+        <TextBlock x:Name="Loading" Text="{x:Static pages:ReviewText.OpeningPassage}" Style="{DynamicResource Kyf.Text.Secondary}" Margin="0,16,0,0"
+                   Visibility="{Binding IsLoading, Converter={StaticResource Visible}}" />
+        <kyf:Notification x:Name="ErrorMessage" Severity="Critical" Message="{Binding Error}" IsOpen="{Binding HasError, Mode=OneWay}"
+                          IsClosable="False" Margin="0,16,0,0" />
+
+        <!-- La carte mémoire. -->
+        <kyf:Card x:Name="Card" Margin="0,16,0,0" Visibility="{Binding IsLoaded, Converter={StaticResource Visible}}">
+          <StackPanel>
+            <TextBlock x:Name="Type" Text="{Binding TypeLabel}" Style="{DynamicResource Kyf.Text.Caption}" AutomationProperties.HeadingLevel="Level1" />
+            <TextBlock x:Name="Source" Text="{Binding Source}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="0,4,0,12" />
+
+            <!-- Définition : le terme ; l'explication une fois demandée. -->
+            <StackPanel x:Name="Definition" Visibility="{Binding IsDefinition, Converter={StaticResource Visible}}">
+              <TextBlock x:Name="Term" Text="{Binding Term}" Style="{DynamicResource Kyf.Text.Subtitle}" TextWrapping="Wrap" />
+              <StackPanel Visibility="{Binding IsRevealed, Converter={StaticResource Visible}}" Margin="0,12,0,0">
+                <TextBlock x:Name="Explanation" Text="{Binding Explanation}" Style="{DynamicResource Kyf.Text.BodyLarge}" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding Quote}" TextWrapping="Wrap" Margin="0,12,0,0" Padding="4,2"
+                           Background="{DynamicResource Kyf.Brush.PillPassageBackground}" HorizontalAlignment="Left" />
+              </StackPanel>
+              <StackPanel Visibility="{Binding IsHidden, Converter={StaticResource Visible}}" Margin="0,12,0,0">
+                <TextBlock Text="{x:Static pages:ReviewText.RecallDefinition}" Style="{DynamicResource Kyf.Text.Secondary}" />
+                <Button x:Name="ShowDefinition" Command="{Binding RevealCommand}" Style="{DynamicResource Kyf.Button.Primary}"
+                        HorizontalAlignment="Left" Margin="0,8,0,0" AutomationProperties.Name="{x:Static pages:ReviewText.ShowDefinition}">
+                  <StackPanel Orientation="Horizontal">
+                    <kyf:Icon Text="{x:Static kyf:Icons.Show}" Margin="0,0,8,0" />
+                    <TextBlock Text="{x:Static pages:ReviewText.ShowDefinition}" VerticalAlignment="Center" />
+                  </StackPanel>
+                </Button>
+              </StackPanel>
+            </StackPanel>
+
+            <!-- Rappel actif : le commentaire comme indice, le texte autour, un trou à la place du passage. -->
+            <StackPanel x:Name="Recall" Visibility="{Binding IsRecall, Converter={StaticResource Visible}}">
+              <TextBlock x:Name="Hint" TextWrapping="Wrap" Visibility="{Binding HasComment, Converter={StaticResource Visible}}" Margin="0,0,0,12">
+                <Run Text="{x:Static pages:ReviewText.MyComment}" FontWeight="SemiBold" /> <Run Text="{Binding Comment, Mode=OneWay}" />
+              </TextBlock>
+              <Border BorderBrush="{DynamicResource Kyf.Brush.Divider}" BorderThickness="3,0,0,0" Padding="12,4">
+                <TextBlock x:Name="Cloze" TextWrapping="Wrap" Style="{DynamicResource Kyf.Text.BodyLarge}"
+                           AutomationProperties.Name="{Binding ClozeSpoken}" AutomationProperties.LiveSetting="Polite">
+                  <!-- Les trois morceaux se touchent : aucune espace n'est ajoutée entre eux. -->
+                  <Run Text="{Binding Cloze.Leading, Mode=OneWay}" /><Run x:Name="Hole" Text="{Binding ClozeMiddle, Mode=OneWay}"
+                       Style="{StaticResource Hole}" /><Run
+                       Text="{Binding Cloze.Trailing, Mode=OneWay}" />
+                </TextBlock>
+              </Border>
+              <StackPanel Visibility="{Binding IsHidden, Converter={StaticResource Visible}}" Margin="0,12,0,0">
+                <TextBlock Text="{x:Static pages:ReviewText.RecallPassage}" Style="{DynamicResource Kyf.Text.Secondary}" />
+                <Button x:Name="ShowPassage" Command="{Binding RevealCommand}" Style="{DynamicResource Kyf.Button.Primary}"
+                        HorizontalAlignment="Left" Margin="0,8,0,0" AutomationProperties.Name="{x:Static pages:ReviewText.ShowPassage}">
+                  <StackPanel Orientation="Horizontal">
+                    <kyf:Icon Text="{x:Static kyf:Icons.Show}" Margin="0,0,8,0" />
+                    <TextBlock Text="{x:Static pages:ReviewText.ShowPassage}" VerticalAlignment="Center" />
+                  </StackPanel>
+                </Button>
+              </StackPanel>
+            </StackPanel>
+
+            <!-- Passage montré tel quel. -->
+            <TextBlock x:Name="Quote" Text="{Binding Quote}" Style="{DynamicResource Kyf.Text.BodyLarge}" TextWrapping="Wrap" Padding="4,2"
+                       Background="{DynamicResource Kyf.Brush.PillPassageBackground}" HorizontalAlignment="Left"
+                       Visibility="{Binding IsPlain, Converter={StaticResource Visible}}" />
+
+            <TextBlock x:Name="Comment" TextWrapping="Wrap" Margin="0,12,0,0" Visibility="{Binding ShowsCommentBelow, Converter={StaticResource Visible}}">
+              <Run Text="{x:Static pages:ReviewText.MyComment}" FontWeight="SemiBold" /> <Run Text="{Binding Comment, Mode=OneWay}" />
+            </TextBlock>
+            <kyf:Notification x:Name="AnchorWarning" Severity="Warning" Message="{Binding AnchorWarning}" IsOpen="{Binding HasAnchorWarning, Mode=OneWay}"
+                              IsClosable="False" Margin="0,12,0,0" />
+            <Button x:Name="SeeInSheet" Command="{Binding SeeInSheetCommand}" HorizontalAlignment="Left" Margin="0,16,0,0"
+                    AutomationProperties.Name="{x:Static pages:ReviewText.SeeInSheet}">
+              <StackPanel Orientation="Horizontal">
+                <kyf:Icon Text="{x:Static kyf:Icons.Document}" Margin="0,0,8,0" />
+                <TextBlock Text="{x:Static pages:ReviewText.SeeInSheet}" VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
+          </StackPanel>
+        </kyf:Card>
+
+        <ContentControl Content="{Binding Review}" Focusable="False" IsTabStop="False" Margin="0,16,0,0" />
+      </StackPanel>
+    </ScrollViewer>
+
+    <kyf:Dialog x:Name="Confirmation" Title="{Binding Review.ConfirmTitle}" IsOpen="{Binding Review.IsConfirming, Mode=OneWay}"
+                PrimaryButtonText="{Binding Review.ConfirmLabel}" Closed="OnConfirmationClosed">
+      <TextBlock Text="{Binding Review.ConfirmMessage}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" />
+    </kyf:Dialog>
+  </Grid>
+</UserControl>

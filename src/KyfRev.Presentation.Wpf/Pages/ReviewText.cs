@@ -1,0 +1,219 @@
+using System.Globalization;
+using System.Resources;
+
+namespace KyfRev.Presentation.Wpf.Pages;
+
+/// <summary>Textes de la révision d'une fiche ou d'un passage, ceux de la 0.x, lus dans les ressources (<c>Resources/ReviewText.resx</c>).</summary>
+public static class ReviewText
+{
+    private static readonly ResourceManager Resources = new("KyfRev.Presentation.Wpf.Resources.ReviewText", typeof(ReviewText).Assembly);
+
+    /// <summary>« La position de ce passage dans la fiche est à vérifier : le texte ci-dessus reste celui que vous aviez surligné. ».</summary>
+    public static string AnchorNeedsReview => Text(nameof(AnchorNeedsReview));
+
+    /// <summary>« La position de ce passage dans la fiche est introuvable : le texte ci-dessus reste celui que vous aviez surligné. ».</summary>
+    public static string AnchorNotFound => Text(nameof(AnchorNotFound));
+
+    /// <summary>« Archiver… ».</summary>
+    public static string ArchiveAction => Text(nameof(ArchiveAction));
+
+    /// <summary>« Archiver ».</summary>
+    public static string ArchiveConfirm => Text(nameof(ArchiveConfirm));
+
+    /// <summary>« Elle quitte les révisions actives mais reste consultable dans « Archives ». Rien n'est supprimé, et ses passages annotés gardent leur propre calendrier. ».</summary>
+    public static string ArchiveMessage => Text(nameof(ArchiveMessage));
+
+    /// <summary>« Archiver la fiche ? ».</summary>
+    public static string ArchiveTitle => Text(nameof(ArchiveTitle));
+
+    /// <summary>« Fiche archivée. Elle reste consultable dans « Archives » et n'est jamais supprimée. ».</summary>
+    public static string ArchivedMessage => Text(nameof(ArchivedMessage));
+
+    /// <summary>« le … ».</summary>
+    public static string ArchivedOnOf(object day) => Format("ArchivedOn", day);
+
+    /// <summary>« Retour ».</summary>
+    public static string Back => Text(nameof(Back));
+
+    /// <summary>« … cycle(s) terminé(s) ».</summary>
+    public static string CyclesCompletedOf(object count) => Format("CyclesCompleted", count);
+
+    /// <summary>« Définition ».</summary>
+    public static string Definition => Text(nameof(Definition));
+
+    /// <summary>« archivée ».</summary>
+    public static string DefinitionArchivedStep => Text(nameof(DefinitionArchivedStep));
+
+    /// <summary>« en retard de … j (prévue …) ».</summary>
+    public static string DueLateOf(object days, object day) => Format("DueLate", days, day);
+
+    /// <summary>« prévue … ».</summary>
+    public static string DueOnOf(object day) => Format("DueOn", day);
+
+    /// <summary>« prévue aujourd'hui ».</summary>
+    public static string DueToday => Text(nameof(DueToday));
+
+    /// <summary>« Valider maintenant ».</summary>
+    public static string EarlyConfirm => Text(nameof(EarlyConfirm));
+
+    /// <summary>« Cette révision est prévue …. La valider maintenant fera repartir le calendrier d'aujourd'hui. ».</summary>
+    public static string EarlyMessageOf(object day) => Format("EarlyMessage", day);
+
+    /// <summary>« Réviser en avance ? ».</summary>
+    public static string EarlyTitle => Text(nameof(EarlyTitle));
+
+    /// <summary>« prochain rappel possible à partir du … ».</summary>
+    public static string EligibleOnOf(object day) => Format("EligibleOn", day);
+
+    /// <summary>« Exclure des rappels ».</summary>
+    public static string ExcludeFromReminders => Text(nameof(ExcludeFromReminders));
+
+    /// <summary>« Fiche exclue des rappels de consolidation. ».</summary>
+    public static string Excluded => Text(nameof(Excluded));
+
+    /// <summary>« exclue des rappels ».</summary>
+    public static string ExcludedFromReminders => Text(nameof(ExcludedFromReminders));
+
+    /// <summary>« Étape attendue ».</summary>
+    public static string ExpectedStep => Text(nameof(ExpectedStep));
+
+    /// <summary>« passage caché : … ».</summary>
+    public static string HiddenPassageOf(object words) => Format("HiddenPassage", words);
+
+    /// <summary>« … mots ».</summary>
+    public static string HiddenWordsManyOf(object count) => Format("HiddenWordsMany", count);
+
+    /// <summary>« … mot ».</summary>
+    public static string HiddenWordsOneOf(object count) => Format("HiddenWordsOne", count);
+
+    /// <summary>« Réinclure dans les rappels ».</summary>
+    public static string IncludeInReminders => Text(nameof(IncludeInReminders));
+
+    /// <summary>« Fiche réincluse dans les rappels de consolidation. ».</summary>
+    public static string Included => Text(nameof(Included));
+
+    /// <summary>« Autres actions de révision ».</summary>
+    public static string MoreActions => Text(nameof(MoreActions));
+
+    /// <summary>« Mon commentaire : ».</summary>
+    public static string MyComment => Text(nameof(MyComment));
+
+    /// <summary>« Prochaine étape ».</summary>
+    public static string NextStep => Text(nameof(NextStep));
+
+    /// <summary>« Ouverture du passage… ».</summary>
+    public static string OpeningPassage => Text(nameof(OpeningPassage));
+
+    /// <summary>« Ouverture de la fiche… ».</summary>
+    public static string OpeningSheet => Text(nameof(OpeningSheet));
+
+    /// <summary>« Passage ».</summary>
+    public static string Passage => Text(nameof(Passage));
+
+    /// <summary>« Passage archivé ».</summary>
+    public static string PassageArchived => Text(nameof(PassageArchived));
+
+    /// <summary>« archivé ».</summary>
+    public static string PassageArchivedStep => Text(nameof(PassageArchivedStep));
+
+    /// <summary>« Ce passage est introuvable. ».</summary>
+    public static string PassageNotFound => Text(nameof(PassageNotFound));
+
+    /// <summary>« Reporter de 3 jours ».</summary>
+    public static string PostponeThreeDays => Text(nameof(PostponeThreeDays));
+
+    /// <summary>« Reporter à demain ».</summary>
+    public static string PostponeTomorrow => Text(nameof(PostponeTomorrow));
+
+    /// <summary>« … reportée au …. ».</summary>
+    public static string PostponedOf(object step, object day) => Format("Postponed", step, day);
+
+    /// <summary>« Rappelez-vous sa définition, puis vérifiez. ».</summary>
+    public static string RecallDefinition => Text(nameof(RecallDefinition));
+
+    /// <summary>« Rappelez-vous le passage surligné, puis vérifiez. ».</summary>
+    public static string RecallPassage => Text(nameof(RecallPassage));
+
+    /// <summary>« rappel en attente ».</summary>
+    public static string ReminderPending => Text(nameof(ReminderPending));
+
+    /// <summary>« Recommencer à J0… ».</summary>
+    public static string RestartAction => Text(nameof(RestartAction));
+
+    /// <summary>« Remettre en révision (J0) ».</summary>
+    public static string RestartArchived => Text(nameof(RestartArchived));
+
+    /// <summary>« Recommencer ».</summary>
+    public static string RestartConfirm => Text(nameof(RestartConfirm));
+
+    /// <summary>« Le cycle en cours du passage sera interrompu et un nouveau cycle commencera aujourd'hui. L'historique est conservé. ».</summary>
+    public static string RestartPassageMessage => Text(nameof(RestartPassageMessage));
+
+    /// <summary>« Le cycle en cours de la fiche sera interrompu et un nouveau cycle commencera aujourd'hui. L'historique est conservé. ».</summary>
+    public static string RestartSheetMessage => Text(nameof(RestartSheetMessage));
+
+    /// <summary>« Recommencer à J0 ? ».</summary>
+    public static string RestartTitle => Text(nameof(RestartTitle));
+
+    /// <summary>« Nouveau cycle : J0 validé aujourd'hui, … …. ».</summary>
+    public static string RestartedOf(object step, object day) => Format("Restarted", step, day);
+
+    /// <summary>« Révision ».</summary>
+    public static string Review => Text(nameof(Review));
+
+    /// <summary>« Révision du jour enregistrée ».</summary>
+    public static string ReviewedToday => Text(nameof(ReviewedToday));
+
+    /// <summary>« Voir dans la fiche ».</summary>
+    public static string SeeInSheet => Text(nameof(SeeInSheet));
+
+    /// <summary>« Fiche archivée ».</summary>
+    public static string SheetArchived => Text(nameof(SheetArchived));
+
+    /// <summary>« Fiche ».</summary>
+    public static string SheetPage => Text(nameof(SheetPage));
+
+    /// <summary>« Afficher la définition ».</summary>
+    public static string ShowDefinition => Text(nameof(ShowDefinition));
+
+    /// <summary>« Afficher le passage ».</summary>
+    public static string ShowPassage => Text(nameof(ShowPassage));
+
+    /// <summary>« … : validée le … ».</summary>
+    public static string StepDoneOf(object step, object day) => Format("StepDone", step, day);
+
+    /// <summary>« … : validée le … (… j en avance) ».</summary>
+    public static string StepDoneEarlyOf(object step, object day, object days) => Format("StepDoneEarly", step, day, days);
+
+    /// <summary>« … : validée le … (… j de retard) ».</summary>
+    public static string StepDoneLateOf(object step, object day, object days) => Format("StepDoneLate", step, day, days);
+
+    /// <summary>« … : étape attendue ».</summary>
+    public static string StepExpectedOf(object step) => Format("StepExpected", step);
+
+    /// <summary>« … : étape attendue, prévue … ».</summary>
+    public static string StepExpectedOnOf(object step, object day) => Format("StepExpectedOn", step, day);
+
+    /// <summary>« … : à venir ».</summary>
+    public static string StepUpcomingOf(object step) => Format("StepUpcoming", step);
+
+    /// <summary>« Étapes du cycle ».</summary>
+    public static string Steps => Text(nameof(Steps));
+
+    /// <summary>« Valider la révision … ».</summary>
+    public static string ValidateOf(object step) => Format("Validate", step);
+
+    /// <summary>« … validée. Prochaine étape : …, …. ».</summary>
+    public static string ValidatedOf(object done, object step, object day) => Format("Validated", done, step, day);
+
+    /// <summary>« … validée : cycle terminé. Le passage est archivé. ».</summary>
+    public static string ValidatedLastPassageOf(object done) => Format("ValidatedLastPassage", done);
+
+    /// <summary>« … validée : cycle terminé. La fiche est archivée ; un rappel de consolidation viendra dans deux mois. ».</summary>
+    public static string ValidatedLastSheetOf(object done) => Format("ValidatedLastSheet", done);
+
+    private static string Format(string name, params object[] values) => string.Format(CultureInfo.CurrentCulture, Text(name), values);
+
+    private static string Text(string name) =>
+        Resources.GetString(name, CultureInfo.CurrentUICulture) ?? throw new MissingManifestResourceException($"Texte « {name} » absent des ressources.");
+}

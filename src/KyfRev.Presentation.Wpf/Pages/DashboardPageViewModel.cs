@@ -53,17 +53,20 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
     private static readonly StringComparer FrenchTitles = StringComparer.Create(CultureInfo.GetCultureInfo("fr-FR"), ignoreCase: false);
 
     private readonly ReminderUseCases _reminders;
+    private readonly IReviewOpener _opener;
     private readonly DashboardGroup _overdue;
     private readonly DashboardGroup _today;
     private readonly DashboardGroup _reminderGroup;
     private readonly DashboardGroup _upcoming;
     private Dashboard? _dashboard;
 
-    /// <summary>La vue, sur les cas d'usage des rappels (qui rendent le tableau de bord).</summary>
-    public DashboardPageViewModel(ReminderUseCases reminders)
+    /// <summary>La vue, sur les cas d'usage des rappels (qui rendent le tableau de bord) ; <paramref name="opener"/> ouvre ses lignes.</summary>
+    public DashboardPageViewModel(ReminderUseCases reminders, IReviewOpener opener)
     {
         ArgumentNullException.ThrowIfNull(reminders);
+        ArgumentNullException.ThrowIfNull(opener);
         _reminders = reminders;
+        _opener = opener;
         _overdue = new DashboardGroup(DashboardText.Overdue, Icons.Clock, DashboardTone.Overdue, expanded: true, BuildRows);
         _today = new DashboardGroup(DashboardText.Today, Icons.Calendar, DashboardTone.Normal, expanded: true, BuildRows);
         _reminderGroup = new DashboardGroup(DashboardText.Reminders, Icons.Sync, DashboardTone.Reminder, expanded: true, BuildRows);
@@ -175,14 +178,30 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
         }
     }
 
+    /// <summary>Ouvre une ligne : la fiche ou le passage à réviser, ou la fiche d'un rappel. Un en-tête n'ouvre rien.</summary>
+    [RelayCommand]
+    private void Open(object? row)
+    {
+        switch (row)
+        {
+            case DueItemRow item:
+                _opener.Open(item.Item, item.ActiveRecall);
+                break;
+            case ReminderRow reminder:
+                _opener.OpenReminder(reminder.Reminder);
+                break;
+        }
+    }
+
     /// <summary>Affiche un tableau de bord déjà lu.</summary>
     public void Show(Dashboard dashboard)
     {
         ArgumentNullException.ThrowIfNull(dashboard);
         Error = null;
+        BuildRows(dashboard);
+        // Retenu, et annoncé, une fois les lignes prêtes.
         _dashboard = dashboard;
         OnPropertyChanged(nameof(Dashboard));
-        BuildRows();
     }
 
     partial void OnSelectedFilterChanged(Choice<DashboardFilter> value) => BuildRows();
@@ -191,10 +210,14 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
 
     private void BuildRows()
     {
-        if (_dashboard is not { } dashboard)
+        if (_dashboard is { } dashboard)
         {
-            return;
+            BuildRows(dashboard);
         }
+    }
+
+    private void BuildRows(Dashboard dashboard)
+    {
         var overdue = Prepare(dashboard.Overdue);
         var today = Prepare(dashboard.Today);
         var upcoming = Prepare(dashboard.Upcoming);

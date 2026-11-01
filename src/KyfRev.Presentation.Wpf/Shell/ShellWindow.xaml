@@ -24,6 +24,15 @@
     <DataTemplate DataType="{x:Type pages:DashboardPageViewModel}">
       <pages:DashboardPage />
     </DataTemplate>
+    <DataTemplate DataType="{x:Type pages:SheetPageViewModel}">
+      <pages:SheetPage />
+    </DataTemplate>
+    <DataTemplate DataType="{x:Type pages:PassagePageViewModel}">
+      <pages:PassagePage />
+    </DataTemplate>
+    <DataTemplate DataType="{x:Type pages:ReviewBarViewModel}">
+      <pages:ReviewBar />
+    </DataTemplate>
     <DataTemplate x:Key="NavigationItemTemplate">
       <StackPanel Orientation="Horizontal">
         <kyf:Icon Text="{Binding Glyph}" Margin="0,0,12,0" />

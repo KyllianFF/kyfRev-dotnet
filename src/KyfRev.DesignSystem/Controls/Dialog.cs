@@ -116,10 +116,13 @@ public class Dialog : ContentControl
         _secondaryButton?.Click += OnSecondary;
     }
 
-    /// <summary>Ferme le dialogue avec le choix donné.</summary>
+    /// <summary>
+    /// Ferme le dialogue avec le choix donné. Une liaison de <see cref="IsOpen"/> est gardée, même à
+    /// sens unique : le modèle de vue reçoit le choix par <see cref="Closed"/>.
+    /// </summary>
     public void Close(DialogChoice choice)
     {
-        IsOpen = false;
+        SetCurrentValue(IsOpenProperty, false);
         RaiseEvent(new DialogClosedEventArgs(ClosedEvent, this, choice));
     }
 
