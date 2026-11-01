@@ -28,6 +28,8 @@ internal static class Composition
     public static ServiceProvider Build()
     {
         var services = new ServiceCollection();
+        // Signalé ouvert à l'installateur tant que les services vivent.
+        services.AddSingleton<OpenMarker>();
         services.AddSingleton<ISystemAppearance, WindowsAppearance>();
         services.AddSingleton<IWindowChrome, WindowChrome>();
         services.AddSingleton(_ => VaultLocations.Detect());

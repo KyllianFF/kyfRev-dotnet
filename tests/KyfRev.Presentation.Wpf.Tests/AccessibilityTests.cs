@@ -80,7 +80,7 @@ public sealed class AccessibilityTests
     private static string ApplicationPath()
     {
         var configuration = new DirectoryInfo(AppContext.BaseDirectory).Parent!.Name;
-        var path = Path.Combine(Repository.Root, "src", "KyfRev.App", "bin", configuration, "net10.0-windows", "kyfRev.exe");
+        var path = Path.Combine(Repository.Root, "src", "KyfRev.App", "bin", configuration, "net10.0-windows", "win-x64", "kyfRev.exe");
         Assert.IsTrue(File.Exists(path), path);
         return path;
     }

@@ -7,6 +7,8 @@
     <AssemblyName>kyfRev</AssemblyName>
     <RootNamespace>KyfRev.App</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- Windows x64 seulement ; les bibliothèques restent indépendantes de la plateforme. -->
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <Description>kyfRev : l'application de bureau. Racine de composition : relie la présentation, le design system et l'infrastructure.</Description>
   </PropertyGroup>
 
@@ -22,6 +24,11 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="KyfRev.Presentation.Wpf.Tests" />
+  </ItemGroup>
+
+  <!-- Date de publication (section datée du CHANGELOG), passée par tools/installer.ps1. -->
+  <ItemGroup Condition="'$(ReleaseDate)' != ''">
+    <AssemblyMetadata Include="ReleaseDate" Value="$(ReleaseDate)" />
   </ItemGroup>
 
 </Project>

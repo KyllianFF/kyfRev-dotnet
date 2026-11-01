@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>net10.0-windows</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <Description>Services de Windows pour kyfRev : emplacements des coffres (portable, installé, développement), préférences d'affichage (thème, contraste élevé, animations) et barre de titre.</Description>
+    <Description>Services de Windows pour kyfRev : emplacements des coffres (portable, installé, développement), préférences d'affichage (thème, contraste élevé, animations), barre de titre, et signal « kyfRev ouvert » pour l'installateur.</Description>
   </PropertyGroup>
 
   <ItemGroup>

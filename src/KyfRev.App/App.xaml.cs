@@ -8,7 +8,8 @@ using Microsoft.Extensions.Logging;
 namespace KyfRev.App;
 
 /// <summary>
-/// L'application : assemble les services, applique l'apparence de Windows, ouvre le coffre prévu
+/// L'application : se signale ouverte à l'installateur, assemble les services, applique
+/// l'apparence de Windows, ouvre le coffre prévu
 /// (l'accueil à défaut), puis la fenêtre principale. Avec <c>--galerie</c>, la fenêtre s'ouvre sur
 /// la galerie des composants, sans ouvrir de coffre.
 /// </summary>
@@ -21,6 +22,7 @@ internal sealed partial class App : System.Windows.Application
     {
         base.OnStartup(e);
         _services = Composition.Build();
+        _services.GetRequiredService<OpenMarker>();
         WatchUnexpectedErrors(_services.GetRequiredService<ILoggerFactory>().CreateLogger("kyfRev"));
         Resources.MergedDictionaries.Add(_services.GetRequiredService<AppearanceController>().Resources);
         var shell = _services.GetRequiredService<ShellViewModel>();
