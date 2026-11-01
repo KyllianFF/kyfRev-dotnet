@@ -14,21 +14,26 @@
   <Grid>
     <Grid>
       <Grid.RowDefinitions>
+        <RowDefinition Height="Auto" />
         <RowDefinition Height="*" />
         <RowDefinition Height="Auto" />
       </Grid.RowDefinitions>
 
+      <!-- Le retour reste à portée, même la page défilée. Aligné sur la colonne de lecture. -->
+      <Grid MaxWidth="720" Margin="16,16,16,0">
+        <Button x:Name="BackButton" Command="{Binding BackCommand}" Style="{DynamicResource Kyf.Button.Subtle}" HorizontalAlignment="Left" Margin="-16,0,0,0"
+                AutomationProperties.Name="{x:Static pages:ReviewText.Back}">
+          <StackPanel Orientation="Horizontal">
+            <kyf:Icon Text="{x:Static kyf:Icons.Back}" Margin="0,0,8,0" />
+            <TextBlock Text="{x:Static pages:ReviewText.Back}" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+      </Grid>
+
       <!-- La fiche, au centre et à largeur de lecture ; elle défile seule. -->
-      <ScrollViewer VerticalScrollBarVisibility="Auto" Focusable="False">
-        <StackPanel MaxWidth="720" Margin="16">
-          <Button x:Name="BackButton" Command="{Binding BackCommand}" Style="{DynamicResource Kyf.Button.Subtle}" HorizontalAlignment="Left" Margin="-16,0,0,0"
-                  AutomationProperties.Name="{x:Static pages:ReviewText.Back}">
-            <StackPanel Orientation="Horizontal">
-              <kyf:Icon Text="{x:Static kyf:Icons.Back}" Margin="0,0,8,0" />
-              <TextBlock Text="{x:Static pages:ReviewText.Back}" VerticalAlignment="Center" />
-            </StackPanel>
-          </Button>
-          <ItemsControl ItemsSource="{Binding Details}" Focusable="False" Margin="0,8,0,0">
+      <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Focusable="False">
+        <StackPanel MaxWidth="720" Margin="16,8,16,16">
+          <ItemsControl ItemsSource="{Binding Details}" Focusable="False">
             <ItemsControl.ItemsPanel>
               <ItemsPanelTemplate>
                 <WrapPanel />
@@ -51,7 +56,7 @@
       </ScrollViewer>
 
       <!-- Toujours visible, même la fiche défilée. -->
-      <ContentControl Grid.Row="1" Content="{Binding Review}" Focusable="False" IsTabStop="False" Margin="16,8,16,16" />
+      <ContentControl Grid.Row="2" Content="{Binding Review}" Focusable="False" IsTabStop="False" Margin="16,8,16,16" />
     </Grid>
 
     <kyf:Dialog x:Name="Confirmation" Title="{Binding Review.ConfirmTitle}" IsOpen="{Binding Review.IsConfirming, Mode=OneWay}"

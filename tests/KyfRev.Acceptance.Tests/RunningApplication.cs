@@ -165,6 +165,9 @@ internal sealed class RunningApplication : IDisposable
         return scroll.VerticalScrollPercent;
     }
 
+    /// <summary>La position du bouton « Retour » à l'écran : une fiche défilée ne doit pas l'emporter.</summary>
+    public int BackPosition() => Wait("BackButton").BoundingRectangle.Top;
+
     /// <summary>Le texte de l'alerte de saturation des rappels ; rien sans alerte.</summary>
     public string? PriorityWarning()
     {

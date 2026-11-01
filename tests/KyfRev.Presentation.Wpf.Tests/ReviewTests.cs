@@ -518,6 +518,57 @@ public sealed class ReviewTests
     }
 
     [STATestMethod]
+    public void The_back_button_stays_in_view_when_the_sheet_scrolls()
+    {
+        using var ui = new UiThread();
+        using var vault = new ReviewVault();
+        var opened = vault.App.Sheets.Open(vault.SheetId).Value;
+        var body = string.Join(Environment.NewLine, Enumerable.Repeat("Un paragraphe.", 200));
+        Assert.IsTrue(vault.App.Editing.Save(vault.SheetId, body, opened.Fingerprint, 1).Succeeded);
+        var page = vault.SheetPage(vault.SheetId);
+        page.LoadCommand.Execute(null);
+        UiThread.Until(() => !page.IsLoading);
+        var window = Show(new TestShell(), page);
+        try
+        {
+            var back = Named<Button>(window, "BackButton");
+            var text = Named<TextBlock>(window, "Body");
+            var scroller = Descendants(window).OfType<ScrollViewer>().First(text.IsDescendantOf);
+            var before = back.TranslatePoint(default, window);
+
+            scroller.ScrollToEnd();
+            TestShell.Flush();
+
+            Assert.IsGreaterThan(0, scroller.VerticalOffset);
+            Assert.AreEqual(before, back.TranslatePoint(default, window));
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
+    public void The_back_button_of_a_passage_does_not_scroll_either()
+    {
+        using var ui = new UiThread();
+        using var vault = new ReviewVault();
+        var page = vault.PassagePage(vault.PassageId, vault.SheetId, activeRecall: true);
+        page.LoadCommand.Execute(null);
+        UiThread.Until(() => !page.IsLoading);
+        var window = Show(new TestShell(), page);
+        try
+        {
+            var back = Named<Button>(window, "BackButton");
+            Assert.IsFalse(Descendants(window).OfType<ScrollViewer>().Any(back.IsDescendantOf));
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
     public void The_sheet_page_shows_the_reminder_answers_instead_of_the_steps()
     {
         using var ui = new UiThread();
