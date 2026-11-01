@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="AnchorNeedsReview" xml:space="preserve">
+    <value>La position de ce passage dans la fiche est à vérifier : le texte ci-dessus reste celui que vous aviez surligné.</value>
+  </data>
+  <data name="AnchorNotFound" xml:space="preserve">
+    <value>La position de ce passage dans la fiche est introuvable : le texte ci-dessus reste celui que vous aviez surligné.</value>
+  </data>
+  <data name="ArchiveAction" xml:space="preserve">
+    <value>Archiver…</value>
+  </data>
+  <data name="ArchiveConfirm" xml:space="preserve">
+    <value>Archiver</value>
+  </data>
+  <data name="ArchiveMessage" xml:space="preserve">
+    <value>Elle quitte les révisions actives mais reste consultable dans « Archives ». Rien n'est supprimé, et ses passages annotés gardent leur propre calendrier.</value>
+  </data>
+  <data name="ArchiveTitle" xml:space="preserve">
+    <value>Archiver la fiche ?</value>
+  </data>
+  <data name="ArchivedMessage" xml:space="preserve">
+    <value>Fiche archivée. Elle reste consultable dans « Archives » et n'est jamais supprimée.</value>
+  </data>
+  <data name="ArchivedOn" xml:space="preserve">
+    <value>le {0}</value>
+  </data>
+  <data name="Back" xml:space="preserve">
+    <value>Retour</value>
+  </data>
+  <data name="CyclesCompleted" xml:space="preserve">
+    <value>{0} cycle(s) terminé(s)</value>
+  </data>
+  <data name="Definition" xml:space="preserve">
+    <value>Définition</value>
+  </data>
+  <data name="DefinitionArchivedStep" xml:space="preserve">
+    <value>archivée</value>
+  </data>
+  <data name="DueLate" xml:space="preserve">
+    <value>en retard de {0} j (prévue {1})</value>
+  </data>
+  <data name="DueOn" xml:space="preserve">
+    <value>prévue {0}</value>
+  </data>
+  <data name="DueToday" xml:space="preserve">
+    <value>prévue aujourd'hui</value>
+  </data>
+  <data name="EarlyConfirm" xml:space="preserve">
+    <value>Valider maintenant</value>
+  </data>
+  <data name="EarlyMessage" xml:space="preserve">
+    <value>Cette révision est prévue {0}. La valider maintenant fera repartir le calendrier d'aujourd'hui.</value>
+  </data>
+  <data name="EarlyTitle" xml:space="preserve">
+    <value>Réviser en avance ?</value>
+  </data>
+  <data name="EligibleOn" xml:space="preserve">
+    <value>prochain rappel possible à partir du {0}</value>
+  </data>
+  <data name="ExcludeFromReminders" xml:space="preserve">
+    <value>Exclure des rappels</value>
+  </data>
+  <data name="Excluded" xml:space="preserve">
+    <value>Fiche exclue des rappels de consolidation.</value>
+  </data>
+  <data name="ExcludedFromReminders" xml:space="preserve">
+    <value>exclue des rappels</value>
+  </data>
+  <data name="ExpectedStep" xml:space="preserve">
+    <value>Étape attendue</value>
+  </data>
+  <data name="HiddenPassage" xml:space="preserve">
+    <value>passage caché : {0}</value>
+  </data>
+  <data name="HiddenWordsMany" xml:space="preserve">
+    <value>{0} mots</value>
+  </data>
+  <data name="HiddenWordsOne" xml:space="preserve">
+    <value>{0} mot</value>
+  </data>
+  <data name="IncludeInReminders" xml:space="preserve">
+    <value>Réinclure dans les rappels</value>
+  </data>
+  <data name="Included" xml:space="preserve">
+    <value>Fiche réincluse dans les rappels de consolidation.</value>
+  </data>
+  <data name="MoreActions" xml:space="preserve">
+    <value>Autres actions de révision</value>
+  </data>
+  <data name="MyComment" xml:space="preserve">
+    <value>Mon commentaire :</value>
+  </data>
+  <data name="NextStep" xml:space="preserve">
+    <value>Prochaine étape</value>
+  </data>
+  <data name="OpeningPassage" xml:space="preserve">
+    <value>Ouverture du passage…</value>
+  </data>
+  <data name="OpeningSheet" xml:space="preserve">
+    <value>Ouverture de la fiche…</value>
+  </data>
+  <data name="Passage" xml:space="preserve">
+    <value>Passage</value>
+  </data>
+  <data name="PassageArchived" xml:space="preserve">
+    <value>Passage archivé</value>
+  </data>
+  <data name="PassageArchivedStep" xml:space="preserve">
+    <value>archivé</value>
+  </data>
+  <data name="PassageNotFound" xml:space="preserve">
+    <value>Ce passage est introuvable.</value>
+  </data>
+  <data name="PostponeThreeDays" xml:space="preserve">
+    <value>Reporter de 3 jours</value>
+  </data>
+  <data name="PostponeTomorrow" xml:space="preserve">
+    <value>Reporter à demain</value>
+  </data>
+  <data name="Postponed" xml:space="preserve">
+    <value>{0} reportée au {1}.</value>
+  </data>
+  <data name="RecallDefinition" xml:space="preserve">
+    <value>Rappelez-vous sa définition, puis vérifiez.</value>
+  </data>
+  <data name="RecallPassage" xml:space="preserve">
+    <value>Rappelez-vous le passage surligné, puis vérifiez.</value>
+  </data>
+  <data name="ReminderPending" xml:space="preserve">
+    <value>rappel en attente</value>
+  </data>
+  <data name="RestartAction" xml:space="preserve">
+    <value>Recommencer à J0…</value>
+  </data>
+  <data name="RestartArchived" xml:space="preserve">
+    <value>Remettre en révision (J0)</value>
+  </data>
+  <data name="RestartConfirm" xml:space="preserve">
+    <value>Recommencer</value>
+  </data>
+  <data name="RestartPassageMessage" xml:space="preserve">
+    <value>Le cycle en cours du passage sera interrompu et un nouveau cycle commencera aujourd'hui. L'historique est conservé.</value>
+  </data>
+  <data name="RestartSheetMessage" xml:space="preserve">
+    <value>Le cycle en cours de la fiche sera interrompu et un nouveau cycle commencera aujourd'hui. L'historique est conservé.</value>
+  </data>
+  <data name="RestartTitle" xml:space="preserve">
+    <value>Recommencer à J0 ?</value>
+  </data>
+  <data name="Restarted" xml:space="preserve">
+    <value>Nouveau cycle : J0 validé aujourd'hui, {0} {1}.</value>
+  </data>
+  <data name="Review" xml:space="preserve">
+    <value>Révision</value>
+  </data>
+  <data name="ReviewedToday" xml:space="preserve">
+    <value>Révision du jour enregistrée</value>
+  </data>
+  <data name="SeeInSheet" xml:space="preserve">
+    <value>Voir dans la fiche</value>
+  </data>
+  <data name="SheetArchived" xml:space="preserve">
+    <value>Fiche archivée</value>
+  </data>
+  <data name="SheetPage" xml:space="preserve">
+    <value>Fiche</value>
+  </data>
+  <data name="ShowDefinition" xml:space="preserve">
+    <value>Afficher la définition</value>
+  </data>
+  <data name="ShowPassage" xml:space="preserve">
+    <value>Afficher le passage</value>
+  </data>
+  <data name="StepDone" xml:space="preserve">
+    <value>{0} : validée le {1}</value>
+  </data>
+  <data name="StepDoneEarly" xml:space="preserve">
+    <value>{0} : validée le {1} ({2} j en avance)</value>
+  </data>
+  <data name="StepDoneLate" xml:space="preserve">
+    <value>{0} : validée le {1} ({2} j de retard)</value>
+  </data>
+  <data name="StepExpected" xml:space="preserve">
+    <value>{0} : étape attendue</value>
+  </data>
+  <data name="StepExpectedOn" xml:space="preserve">
+    <value>{0} : étape attendue, prévue {1}</value>
+  </data>
+  <data name="StepUpcoming" xml:space="preserve">
+    <value>{0} : à venir</value>
+  </data>
+  <data name="Steps" xml:space="preserve">
+    <value>Étapes du cycle</value>
+  </data>
+  <data name="Validate" xml:space="preserve">
+    <value>Valider la révision {0}</value>
+  </data>
+  <data name="Validated" xml:space="preserve">
+    <value>{0} validée. Prochaine étape : {1}, {2}.</value>
+  </data>
+  <data name="ValidatedLastPassage" xml:space="preserve">
+    <value>{0} validée : cycle terminé. Le passage est archivé.</value>
+  </data>
+  <data name="ValidatedLastSheet" xml:space="preserve">
+    <value>{0} validée : cycle terminé. La fiche est archivée ; un rappel de consolidation viendra dans deux mois.</value>
+  </data>
+</root>

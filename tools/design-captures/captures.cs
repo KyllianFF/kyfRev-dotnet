@@ -11,8 +11,9 @@
 // Écrit galerie-clair.png, galerie-sombre.png et galerie-contraste-eleve.png (couleurs système
 // actuelles du poste), les vues de la coquille (coquille-clair.png, coquille-sombre.png,
 // recherche-sombre.png, aide-clair.png), l'accueil sans coffre (accueil-clair.png,
-// accueil-sombre.png), le tableau de bord (aujourdhui-clair.png, aujourdhui-sombre.png), et
-// affiche le contraste de chaque paire de rôles.
+// accueil-sombre.png), le tableau de bord (aujourdhui-clair.png, aujourdhui-sombre.png), une fiche
+// et un passage en révision (fiche-clair.png, passage-sombre.png, sur un coffre d'essai jetable),
+// et affiche le contraste de chaque paire de rôles.
 using System.Collections.Immutable;
 using System.Globalization;
 using System.IO;
@@ -62,10 +63,11 @@ var thread = new Thread(() =>
     // définition, rappel de consolidation, « À venir » replié, un point de santé à vérifier.
     foreach (var (theme, name) in new[] { (ThemePreference.Light, "clair"), (ThemePreference.Dark, "sombre") })
     {
-        var today = new DashboardPageViewModel(app.Reminders);
+        var today = new DashboardPageViewModel(app.Reminders, new ReviewNavigation(app.Sheets, app.Reviews, app.Reminders, TimeProvider.System));
         today.Show(SampleDashboard());
         Shell(folder, $"aujourdhui-{name}.png", theme, _ => { }, new Dictionary<string, object> { [CorePages.Today] = today });
     }
+    ReviewCaptures(folder);
 });
 thread.SetApartmentState(ApartmentState.STA);
 thread.Start();
@@ -108,6 +110,71 @@ static void Shell(string folder, string file, ThemePreference theme, Action<Shel
     }
     window.Close();
     Console.WriteLine($"{path} : {bitmap.PixelWidth} × {bitmap.PixelHeight}");
+}
+
+// Une fiche et un de ses passages en révision, sur un coffre d'essai jetable : la fiche créée
+// le jeudi 1er octobre 2026, ouverte le samedi 3 (J1 en retard d'un jour), rappel actif.
+static void ReviewCaptures(string folder)
+{
+    // Les pages lisent le coffre en tâche de fond : leurs suites reviennent sur ce fil.
+    SynchronizationContext.SetSynchronizationContext(new System.Windows.Threading.DispatcherSynchronizationContext());
+    var root = Path.Combine(Path.GetTempPath(), "kyfrev-captures", Guid.NewGuid().ToString("N"));
+    var time = new FixedTime(new DateTimeOffset(2026, 10, 1, 8, 0, 0, TimeSpan.Zero));
+    try
+    {
+        using var app = new KyfRevApplication(new VaultStore(), new BackupFiles(), new PlannedVault(), time, Microsoft.Extensions.Logging.Abstractions.NullLoggerFactory.Instance, "1.0.0");
+        app.Vaults.Create(Path.Combine(root, "Coffre"));
+        var sheet = app.Sheets.Create("Histoire", "La Révolution française", null).Value;
+        app.Sheets.SetTags(sheet, ["histoire", "partiel"]);
+        var opened = app.Sheets.Open(sheet).Value;
+        app.Editing.Save(sheet, """
+            # La Révolution française
+
+            ## Les causes
+
+            En 1789, la société d'Ancien Régime est divisée en trois ordres : le clergé, la noblesse et le tiers état.
+            La crise financière pousse Louis XVI à convoquer les États généraux.
+
+            ## Les étapes
+
+            - 5 mai 1789 : ouverture des États généraux ;
+            - 17 juin : les députés du tiers état se proclament Assemblée nationale ;
+            - 14 juillet : prise de la Bastille ;
+            - 26 août : Déclaration des droits de l'homme et du citoyen.
+            """, opened.Fingerprint, 1);
+        var anchor = new Anchor("trois ordres", "ciété d'Ancien Régime est divisée en ", " : le clergé, la noblesse et le tie", 50, 62, ["La Révolution française", "Les causes"], 5, opened.Fingerprint);
+        var passage = app.Annotations.Create(sheet, anchor, "Qui paie l'impôt ?").Value;
+        time.Now = time.Now.AddDays(2);
+
+        ReviewBarViewModel Bar(ItemKind kind, string id, ReviewState state) => new(app.Reviews, app.Reminders, time, kind, id, state);
+        var sheetPage = new SheetPageViewModel(app.Sheets, Bar, sheet, () => { });
+        sheetPage.LoadCommand.Execute(null);
+        Pump(() => !sheetPage.IsLoading);
+        Shell(folder, "fiche-clair.png", ThemePreference.Light, shell => shell.Navigate(new NavigationItem("fiche", "Fiche", Icons.Document, int.MaxValue, sheetPage)));
+
+        var passagePage = new PassagePageViewModel(app.Sheets, Bar, passage, sheet, activeRecall: true, () => { }, _ => { });
+        passagePage.LoadCommand.Execute(null);
+        Pump(() => !passagePage.IsLoading);
+        Shell(folder, "passage-sombre.png", ThemePreference.Dark, shell => shell.Navigate(new NavigationItem("passage", "Passage", Icons.Highlighter, int.MaxValue, passagePage)));
+    }
+    finally
+    {
+        if (Directory.Exists(root))
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+}
+
+// Fait tourner le fil de l'interface jusqu'à ce que la page soit lue.
+static void Pump(Func<bool> done)
+{
+    while (!done())
+    {
+        var frame = new System.Windows.Threading.DispatcherFrame();
+        System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, () => frame.Continue = false);
+        System.Windows.Threading.Dispatcher.PushFrame(frame);
+    }
 }
 
 static FrameworkElement Gallery(DesignResources design, string name)
@@ -306,4 +373,14 @@ internal static partial class Program
             true,
             false);
     }
+}
+
+// Horloge arrêtée, avancée à la main : les captures ne dépendent pas du jour où on les fait.
+internal sealed class FixedTime(DateTimeOffset now) : TimeProvider
+{
+    public DateTimeOffset Now { get; set; } = now;
+
+    public override TimeZoneInfo LocalTimeZone => TimeZoneInfo.Utc;
+
+    public override DateTimeOffset GetUtcNow() => Now;
 }

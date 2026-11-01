@@ -52,7 +52,7 @@ public sealed class DashboardTests
         app.Annotations.CreateDefinition(meiosis, Passage with { Exact = "prophase", Start = 3 }, new Definition("Prophase", "Première phase.")).Value.ToString();
         time.AdvanceDays(1);
 
-        var page = new DashboardPageViewModel(app.Reminders);
+        var page = new DashboardPageViewModel(app.Reminders, new FakeOpener());
         await page.RefreshCommand.ExecuteAsync(null);
 
         // Le 4 : Mitose et son passage en retard de 2 jours, Atome d'1 jour ; Méiose et sa définition aujourd'hui.
@@ -202,14 +202,15 @@ public sealed class DashboardTests
     public async Task Without_a_vault_the_refusal_is_shown()
     {
         using var test = new TestVaults(AppMode.Development);
-        var page = new DashboardPageViewModel(test.App.Reminders);
+        var page = new DashboardPageViewModel(test.App.Reminders, new FakeOpener());
 
         await page.RefreshCommand.ExecuteAsync(null);
 
         Assert.AreEqual("Aucun coffre n'est ouvert.", page.Error);
         Assert.IsTrue(page.HasError);
         Assert.IsEmpty(page.Rows);
-        Assert.ThrowsExactly<ArgumentNullException>(() => new DashboardPageViewModel(null!));
+        Assert.ThrowsExactly<ArgumentNullException>(() => new DashboardPageViewModel(null!, new FakeOpener()));
+        Assert.ThrowsExactly<ArgumentNullException>(() => new DashboardPageViewModel(test.App.Reminders, null!));
         Assert.ThrowsExactly<ArgumentNullException>(() => page.Show(null!));
         Assert.ThrowsExactly<ArgumentNullException>(() => CorePages.All(null!));
     }
@@ -218,7 +219,7 @@ public sealed class DashboardTests
     public async Task The_dashboard_is_read_again_each_time_the_view_opens()
     {
         using var test = new TestVaults(AppMode.Development);
-        var page = new DashboardPageViewModel(test.App.Reminders);
+        var page = new DashboardPageViewModel(test.App.Reminders, new FakeOpener());
         var shell = new ShellViewModel(CorePages.All(new Dictionary<string, object> { [CorePages.Today] = page }), new TestShell().Appearance, new object());
         Assert.AreSame(page, shell.Home.Page);
         var reads = 0;
@@ -329,7 +330,7 @@ public sealed class DashboardTests
     {
         var test = new TestVaults(AppMode.Development);
         test.Dispose();
-        return new DashboardPageViewModel(test.App.Reminders);
+        return new DashboardPageViewModel(test.App.Reminders, new FakeOpener());
     }
 
     private static ShellWindow Show(TestShell test, ShellViewModel shell)

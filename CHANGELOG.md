@@ -9,6 +9,16 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- Fiche et passage en révision, ouverts d'un clic (ou d'Entrée) depuis la vue « Aujourd'hui »,
+  comme dans la version 0.x. La barre de révision montre l'étape attendue et son échéance, la
+  frise des étapes du cycle, « Valider la révision » (Ctrl+Entrée), une confirmation avant une
+  révision en avance, le report à demain ou de 3 jours, « Recommencer à J0… » et « Archiver… »
+  avec confirmation ; un élément archivé se remet en révision, une fiche archivée s'exclut des
+  rappels ou y revient. Un passage est une carte mémoire : l'explication d'une définition reste
+  cachée jusqu'à ce qu'on la demande ; avec le rappel actif, le passage aussi, remplacé par un
+  trou dans le texte qui l'entoure, son commentaire servant d'indice. « Voir dans la fiche » et
+  « Retour » ramènent d'où l'on vient. Le texte d'une fiche est encore montré tel qu'il est
+  écrit : son rendu natif vient avec la lecture native.
 - Vue « Aujourd'hui » : le tableau de bord, présenté comme dans la version 0.x. La liste à
   réviser vient toujours en premier (en retard, puis aujourd'hui), puis les rappels de
   consolidation et les sept jours à venir, replié d'emblée. Chaque ligne montre la nature de
@@ -185,6 +195,8 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Modifié
 
+- Un dialogue ou une notification qui se ferme de lui-même garde la liaison de son ouverture :
+  il peut se rouvrir quand le modèle de vue le demande.
 - Grands coffres plus rapides : les liens cassés sont relevés sans relire les fiches qui n'ont
   pas changé (date et taille du fichier), et la vérification qu'un chemin reste dans le coffre
   n'examine plus que ses composants sous la racine réelle du coffre. Un chemin qui passe par un

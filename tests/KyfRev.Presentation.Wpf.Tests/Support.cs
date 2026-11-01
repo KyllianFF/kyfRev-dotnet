@@ -188,3 +188,55 @@ internal sealed class FakeTime(DateTimeOffset now) : TimeProvider
     /// <summary>Le même instant, <paramref name="days"/> jours plus tard.</summary>
     public void AdvanceDays(int days) => Now = Now.AddDays(days);
 }
+
+/// <summary>Ouverture simulée des lignes du tableau de bord : note ce qui est ouvert.</summary>
+internal sealed class FakeOpener : IReviewOpener
+{
+    public List<object> Opened { get; } = [];
+
+    public void Open(DueItem item, bool activeRecall) => Opened.Add((item, activeRecall));
+
+    public void OpenReminder(PendingReminder reminder) => Opened.Add(reminder);
+}
+
+/// <summary>Attente d'une condition qu'une tâche de fond rendra vraie, sans délai fixe.</summary>
+internal static class Waiting
+{
+    public static async Task UntilAsync(Func<bool> condition)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(10);
+        while (!condition())
+        {
+            Assert.IsLessThan(deadline, DateTime.UtcNow, "délai dépassé");
+            await Task.Yield();
+        }
+    }
+}
+
+/// <summary>
+/// Fait tourner le fil de l'interface d'un essai STA jusqu'à ce qu'une condition soit vraie : les
+/// suites des tâches de fond y reviennent, comme dans l'application.
+/// </summary>
+internal sealed class UiThread : IDisposable
+{
+    private readonly SynchronizationContext? _previous = SynchronizationContext.Current;
+
+    public UiThread()
+    {
+        SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(Dispatcher.CurrentDispatcher));
+    }
+
+    public static void Until(Func<bool> condition)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(10);
+        while (!condition())
+        {
+            Assert.IsLessThan(deadline, DateTime.UtcNow, "délai dépassé");
+            var frame = new DispatcherFrame();
+            Dispatcher.CurrentDispatcher.BeginInvoke(DispatcherPriority.Background, () => frame.Continue = false);
+            Dispatcher.PushFrame(frame);
+        }
+    }
+
+    public void Dispose() => SynchronizationContext.SetSynchronizationContext(_previous);
+}

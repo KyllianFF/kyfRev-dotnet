@@ -104,6 +104,7 @@ public sealed class DueItemRow
     internal DueItemRow(DueItem item, bool activeRecall, bool showDueDate)
     {
         Item = item;
+        ActiveRecall = activeRecall;
         var sheet = item.Kind == ItemKind.Sheet;
         // Rappel actif : le texte d'un passage n'est pas montré (une définition, si : son terme ne donne pas la réponse).
         var hidden = activeRecall && !sheet && item.Term is null;
@@ -135,6 +136,9 @@ public sealed class DueItemRow
 
     /// <summary>L'élément.</summary>
     public DueItem Item { get; }
+
+    /// <summary>Rappel actif du coffre : le passage reste caché jusqu'à ce qu'on le demande.</summary>
+    public bool ActiveRecall { get; }
 
     /// <summary>Pastille : fiche ou passage.</summary>
     public PillKind PillKind { get; }

@@ -74,6 +74,10 @@ Ce glossaire fixe la correspondance. Les **clés JSON du coffre restent celles d
 | Accueil | `WelcomePageViewModel` | — | Écran sans coffre ouvert : créer le coffre prévu, créer ou ouvrir un coffre choisi. |
 | Vue « Aujourd'hui » | `DashboardPageViewModel` | — | Le tableau de bord à l'écran : groupes repliables, filtre, tri, avertissements. |
 | Rappel actif | `Dashboard.ActiveRecall` | `revision.rappelActif` | Le texte d'un passage à réviser reste caché ; son commentaire sert d'indice. |
+| Barre de révision | `ReviewBarViewModel` | — | Étape attendue, échéance, frise des étapes, valider, reporter, recommencer, archiver. |
+| Frise des étapes | `StepMark` | — | J0 ✓ J1 ✓ J3 ● J7 : étapes faites (avec leur retard ou leur avance), attendue, à venir. |
+| Texte à trous | `Cloze` | — | Le texte enregistré autour d'un passage, le passage remplacé par un trou dont on donne le nombre de mots. |
+| Carte mémoire | `PassagePageViewModel` | — | Révision d'un passage ou d'une définition : ce qu'il faut se rappeler reste caché jusqu'à ce qu'on le demande. |
 | Verrou | `VaultLock` | `.suivi/verrou` | Empêche deux instances d'ouvrir le même coffre. |
 | Journal d'opération | `OperationJournal` | `.suivi/operation.json` | Opération multi-fichiers rejouée si elle a été interrompue. |
 | Version | `SheetVersion` | `.suivi/versions/` | Copie d'une fiche avant écrasement. |

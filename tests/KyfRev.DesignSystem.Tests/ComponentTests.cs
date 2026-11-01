@@ -136,6 +136,32 @@ public sealed class ComponentTests
     }
 
     [STATestMethod]
+    public void Closing_keeps_a_one_way_binding_of_is_open()
+    {
+        var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
+        var source = new Switch { IsOn = true };
+        var dialog = new Dialog { Title = "Recommencer à J0 ?", PrimaryButtonText = "Recommencer", DataContext = source };
+        var notification = new Notification { Message = "Fiche archivée.", DataContext = source };
+        foreach (var (control, property) in new (FrameworkElement, DependencyProperty)[] { (dialog, Dialog.IsOpenProperty), (notification, Notification.IsOpenProperty) })
+        {
+            control.SetBinding(property, new System.Windows.Data.Binding(nameof(Switch.IsOn)) { Mode = System.Windows.Data.BindingMode.OneWay });
+        }
+        Host.Of(design, dialog);
+        Host.Of(design, notification);
+
+        dialog.Close(DialogChoice.Primary);
+        notification.Close();
+        Assert.IsFalse(dialog.IsOpen);
+        Assert.IsFalse(notification.IsOpen);
+
+        // La source dit encore « ouvert » ; quand elle change, la liaison suit toujours.
+        source.IsOn = false;
+        source.IsOn = true;
+        Assert.IsTrue(dialog.IsOpen);
+        Assert.IsTrue(notification.IsOpen);
+    }
+
+    [STATestMethod]
     public void An_empty_state_offers_its_action()
     {
         var action = new Button { Content = "Créer une fiche" };
@@ -230,5 +256,23 @@ public sealed class ComponentTests
         Assert.AreSame(ring, button.FocusVisualStyle);
         Assert.AreSame(ring, item.FocusVisualStyle);
         Assert.AreEqual(32.0, button.MinHeight);
+    }
+}
+
+/// <summary>Une source de liaison qui signale ses changements.</summary>
+internal sealed class Switch : System.ComponentModel.INotifyPropertyChanged
+{
+    private bool _isOn;
+
+    public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+
+    public bool IsOn
+    {
+        get => _isOn;
+        set
+        {
+            _isOn = value;
+            PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(IsOn)));
+        }
     }
 }

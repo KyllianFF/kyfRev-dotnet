@@ -128,10 +128,10 @@ public class Notification : Control
         _closeButton?.Click += OnClose;
     }
 
-    /// <summary>Ferme la notification, comme le bouton « Fermer ».</summary>
+    /// <summary>Ferme la notification, comme le bouton « Fermer ». Une liaison de <see cref="IsOpen"/> est gardée.</summary>
     public void Close()
     {
-        IsOpen = false;
+        SetCurrentValue(IsOpenProperty, false);
         RaiseEvent(new RoutedEventArgs(ClosedEvent, this));
     }
 
