@@ -8,12 +8,14 @@ namespace KyfRev.Presentation.Wpf.Shell;
 
 /// <summary>
 /// Fenêtre principale. Le focus suit l'utilisateur : il entre dans la recherche quand elle
-/// s'ouvre et revient d'où il venait quand elle se ferme ; au démarrage, il est sur le menu.
+/// s'ouvre et revient d'où il venait quand elle se ferme ; au démarrage, il est sur le menu. En
+/// plein écran, la fenêtre perd son cadre et couvre tout l'écran ; elle retrouve ensuite son état.
 /// </summary>
 public sealed partial class ShellWindow : Window
 {
     private readonly ShellViewModel _shell;
     private IInputElement? _focusBeforePalette;
+    private WindowState _windowedState;
 
     /// <summary>La fenêtre de la coquille <paramref name="shell"/>.</summary>
     public ShellWindow(ShellViewModel shell)
@@ -45,6 +47,11 @@ public sealed partial class ShellWindow : Window
 
     private void OnShellChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (e.PropertyName == nameof(ShellViewModel.IsFullScreen))
+        {
+            ApplyFullScreen(_shell.IsFullScreen);
+            return;
+        }
         if (e.PropertyName != nameof(ShellViewModel.IsPaletteOpen))
         {
             return;
@@ -61,6 +68,23 @@ public sealed partial class ShellWindow : Window
         else
         {
             FocusNavigation();
+        }
+    }
+
+    private void ApplyFullScreen(bool fullScreen)
+    {
+        if (fullScreen)
+        {
+            _windowedState = WindowState;
+            WindowStyle = WindowStyle.None;
+            // Repasser par l'état normal fait couvrir aussi la barre des tâches.
+            WindowState = WindowState.Normal;
+            WindowState = WindowState.Maximized;
+        }
+        else
+        {
+            WindowStyle = WindowStyle.SingleBorderWindow;
+            WindowState = _windowedState;
         }
     }
 

@@ -22,6 +22,28 @@ public enum ReviewConfirmation
     Archive,
 }
 
+/// <summary>Ce que la dernière action de la barre a fait.</summary>
+public enum ReviewAction
+{
+    /// <summary>Rien encore.</summary>
+    None,
+
+    /// <summary>Révision validée.</summary>
+    Validated,
+
+    /// <summary>Échéance reportée.</summary>
+    Postponed,
+
+    /// <summary>Cycle recommencé à J0 (ou élément archivé remis en révision).</summary>
+    Restarted,
+
+    /// <summary>Fiche archivée.</summary>
+    Archived,
+
+    /// <summary>Fiche exclue des rappels, ou réincluse.</summary>
+    RemindersChanged,
+}
+
 /// <summary>Une étape de la frise du cycle : J0 ✓ J1 ✓ J3 ● J7 J14 J30.</summary>
 /// <param name="Label">« J3 ».</param>
 /// <param name="IsDone">Validée.</param>
@@ -163,6 +185,10 @@ public sealed partial class ReviewBarViewModel : ObservableObject
         }
     }
 
+    /// <summary>Ce que la dernière action réussie a fait.</summary>
+    [ObservableProperty]
+    public partial ReviewAction LastAction { get; private set; }
+
     /// <summary>Une action est en cours.</summary>
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(ValidateCommand))]
@@ -249,7 +275,7 @@ public sealed partial class ReviewBarViewModel : ObservableObject
         {
             ReviewConfirmation.Early => ValidateNowAsync(),
             ReviewConfirmation.Restart => RestartAsync(),
-            ReviewConfirmation.Archive => ActAsync(() => _reviews.Archive(Id), _ => ReviewText.ArchivedMessage),
+            ReviewConfirmation.Archive => ActAsync(ReviewAction.Archived, () => _reviews.Archive(Id), _ => ReviewText.ArchivedMessage),
             _ => Task.CompletedTask,
         };
     }
@@ -281,6 +307,7 @@ public sealed partial class ReviewBarViewModel : ObservableObject
         var include = !State.IncludedInReminders;
         var state = State;
         await ActAsync(
+            ReviewAction.RemindersChanged,
             () =>
             {
                 var outcome = _reminders.Include(Id, include);
@@ -295,6 +322,7 @@ public sealed partial class ReviewBarViewModel : ObservableObject
     {
         var step = State.Step ?? string.Empty;
         return ActAsync(
+            ReviewAction.Validated,
             () => _reviews.Validate(Kind, Id),
             next => next.Status == ReviewStatus.Archived
                 ? IsSheet ? ReviewText.ValidatedLastSheetOf(step) : ReviewText.ValidatedLastPassageOf(step)
@@ -304,13 +332,13 @@ public sealed partial class ReviewBarViewModel : ObservableObject
     private Task PostponeAsync(DateOnly day)
     {
         var step = State.Step ?? string.Empty;
-        return ActAsync(() => _reviews.Postpone(Kind, Id, day), _ => ReviewText.PostponedOf(step, Dates.Long(day)));
+        return ActAsync(ReviewAction.Postponed, () => _reviews.Postpone(Kind, Id, day), _ => ReviewText.PostponedOf(step, Dates.Long(day)));
     }
 
     private Task RestartAsync() =>
-        ActAsync(() => _reviews.Restart(Kind, Id), next => ReviewText.RestartedOf(next.Step ?? string.Empty, next.DueDate is { } due ? Dates.Long(due) : string.Empty));
+        ActAsync(ReviewAction.Restarted, () => _reviews.Restart(Kind, Id), next => ReviewText.RestartedOf(next.Step ?? string.Empty, next.DueDate is { } due ? Dates.Long(due) : string.Empty));
 
-    private async Task ActAsync(Func<Outcome<ReviewState>> action, Func<ReviewState, string> message)
+    private async Task ActAsync(ReviewAction kind, Func<Outcome<ReviewState>> action, Func<ReviewState, string> message)
     {
         IsBusy = true;
         Error = null;
@@ -320,6 +348,7 @@ public sealed partial class ReviewBarViewModel : ObservableObject
             if (outcome.Succeeded)
             {
                 State = outcome.Value;
+                LastAction = kind;
                 Message = message(outcome.Value);
                 Changed?.Invoke(this, EventArgs.Empty);
             }

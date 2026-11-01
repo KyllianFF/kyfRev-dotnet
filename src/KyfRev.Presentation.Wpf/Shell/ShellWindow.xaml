@@ -33,6 +33,9 @@
     <DataTemplate DataType="{x:Type pages:ReviewBarViewModel}">
       <pages:ReviewBar />
     </DataTemplate>
+    <DataTemplate DataType="{x:Type pages:StudySessionViewModel}">
+      <pages:StudySessionPage />
+    </DataTemplate>
     <DataTemplate x:Key="NavigationItemTemplate">
       <StackPanel Orientation="Horizontal">
         <kyf:Icon Text="{Binding Glyph}" Margin="0,0,12,0" />
@@ -45,6 +48,8 @@
     <KeyBinding Key="K" Modifiers="Control" Command="{Binding OpenPaletteCommand}" />
     <KeyBinding Key="F1" Command="{Binding ShowHelpCommand}" />
     <KeyBinding Key="F" Modifiers="Control+Shift" Command="{Binding ToggleFocusModeCommand}" />
+    <KeyBinding Key="F11" Command="{Binding ToggleFullScreenCommand}" />
+    <KeyBinding Key="Escape" Command="{Binding ExitFullScreenCommand}" />
     <KeyBinding Key="OemPlus" Modifiers="Control" Command="{Binding ZoomInCommand}" />
     <KeyBinding Key="Add" Modifiers="Control" Command="{Binding ZoomInCommand}" />
     <KeyBinding Key="OemMinus" Modifiers="Control" Command="{Binding ZoomOutCommand}" />

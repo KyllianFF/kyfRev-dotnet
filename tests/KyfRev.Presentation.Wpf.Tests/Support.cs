@@ -197,6 +197,15 @@ internal sealed class FakeOpener : IReviewOpener
     public void Open(DueItem item, bool activeRecall) => Opened.Add((item, activeRecall));
 
     public void OpenReminder(PendingReminder reminder) => Opened.Add(reminder);
+
+    /// <summary>Éléments restants de la séance à reprendre, simulés.</summary>
+    public int? Resumable { get; set; }
+
+    public void StartSession(IReadOnlyList<DueItem> items, bool activeRecall) => Opened.Add(("séance", items, activeRecall));
+
+    public int? ResumableItems() => Resumable;
+
+    public void ResumeSession() => Opened.Add("reprise");
 }
 
 /// <summary>Attente d'une condition qu'une tâche de fond rendra vraie, sans délai fixe.</summary>
@@ -239,4 +248,31 @@ internal sealed class UiThread : IDisposable
     }
 
     public void Dispose() => SynchronizationContext.SetSynchronizationContext(_previous);
+}
+
+/// <summary>Séance gardée en mémoire ; peut refuser d'être écrite.</summary>
+internal sealed class MemorySessions : IStudySessionStore
+{
+    public StudySession? Kept { get; set; }
+
+    public int Saves { get; private set; }
+
+    public bool Forgotten { get; private set; }
+
+    public StudySession? Load() => Kept;
+
+    public bool Save(StudySession session)
+    {
+        Saves++;
+        Kept = session;
+        Forgotten = false;
+        return true;
+    }
+
+    public bool Forget()
+    {
+        Kept = null;
+        Forgotten = true;
+        return true;
+    }
 }

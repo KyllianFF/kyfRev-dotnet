@@ -9,6 +9,12 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- Séance d'étude, repensée : « Commencer (N) » sur la liste du jour (en retard, puis
+  aujourd'hui, filtrée et triée), la progression visible (« Séance : 5 / 12 »), « Passer » tant
+  que rien n'a été fait puis « Suivant » (Ctrl+→), « Terminer la séance », et le mode révision
+  plein écran (F11, Échap pour en sortir). La séance est gardée sur ce poste à chaque pas :
+  quittée ou interrompue, elle se reprend le même jour (« Reprendre la séance (3 restants) »).
+  Le bilan de fin donne la durée, les éléments faits, reportés et restants.
 - Journal de diagnostic `kyfRev.log`, comme celui de la version 0.x : il s'allonge d'un démarrage
   à l'autre (chaque démarrage marqué, avec la version, le mode et le système), consigne les
   arrêts inattendus et les erreurs des tâches de fond, et devient `kyfRev.precedent.log`

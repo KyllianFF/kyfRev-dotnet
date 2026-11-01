@@ -59,6 +59,7 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
     private readonly DashboardGroup _reminderGroup;
     private readonly DashboardGroup _upcoming;
     private Dashboard? _dashboard;
+    private IReadOnlyList<DueItem> _toStart = [];
 
     /// <summary>La vue, sur les cas d'usage des rappels (qui rendent le tableau de bord) ; <paramref name="opener"/> ouvre ses lignes.</summary>
     public DashboardPageViewModel(ReminderUseCases reminders, IReviewOpener opener)
@@ -86,6 +87,8 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
         Rows = [];
         Subtitle = string.Empty;
         Footer = string.Empty;
+        StartLabel = string.Empty;
+        ResumeLabel = string.Empty;
     }
 
     /// <summary>« Aujourd'hui ».</summary>
@@ -148,6 +151,24 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
     [ObservableProperty]
     public partial bool IsLoading { get; private set; }
 
+    /// <summary>« Commencer (5) » : une séance sur la liste du jour (en retard, puis aujourd'hui), filtrée et triée.</summary>
+    [ObservableProperty]
+    public partial string StartLabel { get; private set; }
+
+    /// <summary>Il y a de quoi faire une séance.</summary>
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(StartCommand))]
+    public partial bool CanStart { get; private set; }
+
+    /// <summary>« Reprendre la séance (3 restants) ».</summary>
+    [ObservableProperty]
+    public partial string ResumeLabel { get; private set; }
+
+    /// <summary>Une séance interrompue aujourd'hui peut être reprise.</summary>
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(ResumeCommand))]
+    public partial bool CanResume { get; private set; }
+
     /// <summary>Le tableau de bord lu en dernier.</summary>
     public Dashboard? Dashboard => _dashboard;
 
@@ -193,11 +214,22 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
         }
     }
 
+    /// <summary>Lance une séance sur la liste du jour, dans l'ordre affiché.</summary>
+    [RelayCommand(CanExecute = nameof(CanStart))]
+    private void Start() => _opener.StartSession(_toStart, _dashboard?.ActiveRecall ?? true);
+
+    /// <summary>Reprend la séance interrompue.</summary>
+    [RelayCommand(CanExecute = nameof(CanResume))]
+    private void Resume() => _opener.ResumeSession();
+
     /// <summary>Affiche un tableau de bord déjà lu.</summary>
     public void Show(Dashboard dashboard)
     {
         ArgumentNullException.ThrowIfNull(dashboard);
         Error = null;
+        var resumable = _opener.ResumableItems();
+        CanResume = resumable is > 0;
+        ResumeLabel = resumable is { } remaining ? Dates.Plural(remaining, SessionText.ResumeOneOf, SessionText.ResumeManyOf) : string.Empty;
         BuildRows(dashboard);
         // Retenu, et annoncé, une fois les lignes prêtes.
         _dashboard = dashboard;
@@ -223,6 +255,9 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
         var upcoming = Prepare(dashboard.Upcoming);
         var reminders = SelectedFilter.Value == DashboardFilter.Passages ? [] : dashboard.Reminders;
         var total = overdue.Count + today.Count + reminders.Length;
+        _toStart = [.. overdue, .. today];
+        CanStart = _toStart.Count > 0;
+        StartLabel = SessionText.StartOf(_toStart.Count);
 
         var rows = new List<object>();
         if (total == 0)

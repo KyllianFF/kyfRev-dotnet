@@ -13,7 +13,8 @@
 // recherche-sombre.png, aide-clair.png), l'accueil sans coffre (accueil-clair.png,
 // accueil-sombre.png), le tableau de bord (aujourdhui-clair.png, aujourdhui-sombre.png), une fiche
 // et un passage en révision (fiche-clair.png, passage-sombre.png, sur un coffre d'essai jetable),
-// et affiche le contraste de chaque paire de rôles.
+// la séance d'étude et son bilan (seance-clair.png, bilan-sombre.png), et affiche le contraste de
+// chaque paire de rôles.
 using System.Collections.Immutable;
 using System.Globalization;
 using System.IO;
@@ -63,7 +64,7 @@ var thread = new Thread(() =>
     // définition, rappel de consolidation, « À venir » replié, un point de santé à vérifier.
     foreach (var (theme, name) in new[] { (ThemePreference.Light, "clair"), (ThemePreference.Dark, "sombre") })
     {
-        var today = new DashboardPageViewModel(app.Reminders, new ReviewNavigation(app.Sheets, app.Reviews, app.Reminders, TimeProvider.System));
+        var today = new DashboardPageViewModel(app.Reminders, new ReviewNavigation(app.Sheets, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System));
         today.Show(SampleDashboard());
         Shell(folder, $"aujourdhui-{name}.png", theme, _ => { }, new Dictionary<string, object> { [CorePages.Today] = today });
     }
@@ -156,6 +157,25 @@ static void ReviewCaptures(string folder)
         passagePage.LoadCommand.Execute(null);
         Pump(() => !passagePage.IsLoading);
         Shell(folder, "passage-sombre.png", ThemePreference.Dark, shell => shell.Navigate(new NavigationItem("passage", "Passage", Icons.Highlighter, int.MaxValue, passagePage)));
+
+        // La séance : la fiche en cours, puis le bilan d'une séance de douze éléments.
+        object Item(SessionItem item, bool activeRecall)
+        {
+            var page = new SheetPageViewModel(app.Sheets, Bar, item.Id, () => { });
+            page.LoadCommand.Execute(null);
+            Pump(() => !page.IsLoading);
+            return page;
+        }
+        var items = Enumerable.Repeat(new SessionItem(ItemKind.Sheet, sheet, sheet), 12).ToImmutableArray();
+        var running = new StudySessionViewModel(new StudySession(root, new DateOnly(2026, 10, 3), items, 4, 3, 1, 0, TimeSpan.FromMinutes(9), true), new NoSessions(), time, Item, () => { }, () => { });
+        Shell(folder, "seance-clair.png", ThemePreference.Light, shell =>
+        {
+            shell.ToggleFocusMode();
+            shell.Navigate(new NavigationItem("seance", "Séance", Icons.Calendar, int.MaxValue, running));
+        });
+        var finished = new StudySessionViewModel(new StudySession(root, new DateOnly(2026, 10, 3), items, 11, 9, 2, 0, TimeSpan.FromSeconds(754), true), new NoSessions(), time, Item, () => { }, () => { });
+        finished.EndCommand.Execute(null);
+        Shell(folder, "bilan-sombre.png", ThemePreference.Dark, shell => shell.Navigate(new NavigationItem("seance", "Séance", Icons.Calendar, int.MaxValue, finished)));
     }
     finally
     {
@@ -383,4 +403,13 @@ internal sealed class FixedTime(DateTimeOffset now) : TimeProvider
     public override TimeZoneInfo LocalTimeZone => TimeZoneInfo.Utc;
 
     public override DateTimeOffset GetUtcNow() => Now;
+}
+
+internal sealed class NoSessions : IStudySessionStore
+{
+    public StudySession? Load() => null;
+
+    public bool Save(StudySession session) => true;
+
+    public bool Forget() => true;
 }

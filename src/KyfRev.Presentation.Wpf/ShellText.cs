@@ -77,14 +77,23 @@ public static class ShellText
     /// <summary>Raccourci du mode concentration.</summary>
     public static string ShortcutFocusMode => Text(nameof(ShortcutFocusMode));
 
+    /// <summary>« Plein écran ».</summary>
+    public static string ShortcutFullScreen => Text(nameof(ShortcutFullScreen));
+
     /// <summary>Raccourci des vues du menu.</summary>
     public static string ShortcutGoTo => Text(nameof(ShortcutGoTo));
 
     /// <summary>Raccourci de l'aide.</summary>
     public static string ShortcutHelp => Text(nameof(ShortcutHelp));
 
+    /// <summary>« Élément suivant de la séance, ou le passer ».</summary>
+    public static string ShortcutNext => Text(nameof(ShortcutNext));
+
     /// <summary>Raccourci de la recherche.</summary>
     public static string ShortcutSearch => Text(nameof(ShortcutSearch));
+
+    /// <summary>« Valider la révision ».</summary>
+    public static string ShortcutValidate => Text(nameof(ShortcutValidate));
 
     /// <summary>Raccourci pour agrandir.</summary>
     public static string ShortcutZoomIn => Text(nameof(ShortcutZoomIn));
