@@ -9,8 +9,10 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
-- Écriture d'une fiche : le bouton « Écrire » ou Ctrl+E ouvre le Markdown à gauche et son rendu à droite,
-  sous un ruban à la manière d'Office. L'onglet Accueil met en forme (gras, italique, souligné, barré,
+- Écriture d'une fiche : le bouton « Écrire » ou Ctrl+E ouvre le texte mis en forme, qui se modifie
+  directement à sa place, comme dans un traitement de texte. Le bouton « Afficher le Markdown » ouvre le code
+  à gauche et son rendu à droite. Ce que l'on ne touche pas reste identique à l'octet dans le fichier. Un ruban
+  à la manière d'Office accompagne les deux. L'onglet Accueil met en forme (gras, italique, souligné, barré,
   exposant, indice, casse, titres, listes), l'onglet Insertion ajoute un tableau à la taille choisie, un bloc
   de code avec son langage, un lien, des images, une formule ou une ligne. Le texte s'enregistre 1,5 s après
   la dernière frappe, et aussi en quittant l'écriture ou en fermant la fenêtre. Si la fiche change sur le

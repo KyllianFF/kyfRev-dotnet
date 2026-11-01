@@ -5,6 +5,8 @@
              xmlns:kyf="clr-namespace:KyfRev.DesignSystem.Controls;assembly=KyfRev.DesignSystem"
              xmlns:editing="clr-namespace:KyfRev.Presentation.Wpf.Editing">
   <UserControl.Resources>
+    <BooleanToVisibilityConverter x:Key="Visible" />
+
     <!-- Un groupe du ruban : ses outils, son nom dessous, un filet à droite. -->
     <Style x:Key="Group" TargetType="HeaderedContentControl">
       <Setter Property="Focusable" Value="False" />
@@ -33,7 +35,11 @@
   <Border Background="{DynamicResource Kyf.Brush.SurfaceAlt}" BorderBrush="{DynamicResource Kyf.Brush.Divider}" BorderThickness="1" CornerRadius="{DynamicResource Kyf.Radius.Control}">
     <DockPanel>
       <DockPanel DockPanel.Dock="Top" Margin="4,2,4,0">
-        <ToggleButton x:Name="PreviewToggle" DockPanel.Dock="Right" Style="{DynamicResource Kyf.Button.Tool}" Padding="10,0" Content="{x:Static editing:EditingText.Preview}" IsChecked="{Binding IsPreviewOn}" />
+        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+          <ToggleButton x:Name="PreviewToggle" Style="{DynamicResource Kyf.Button.Tool}" Padding="10,0" Margin="0,0,4,0" Content="{x:Static editing:EditingText.Preview}" IsChecked="{Binding IsPreviewOn}"
+                        Visibility="{Binding IsMarkdownShown, Converter={StaticResource Visible}}" />
+          <ToggleButton x:Name="MarkdownToggle" Style="{DynamicResource Kyf.Button.Tool}" Padding="10,0" Content="{x:Static editing:EditingText.ShowMarkdown}" IsChecked="{Binding IsMarkdownOn}" IsEnabled="{Binding IsVisualAvailable}" />
+        </StackPanel>
         <StackPanel Orientation="Horizontal">
           <ToggleButton x:Name="HomeTab" Style="{DynamicResource Kyf.Button.Tab}" Content="{x:Static editing:EditingText.Home}" IsChecked="True" Click="OnHomeTab" />
           <ToggleButton x:Name="InsertTab" Style="{DynamicResource Kyf.Button.Tab}" Content="{x:Static editing:EditingText.Insert}" Click="OnInsertTab" />
@@ -68,22 +74,22 @@
 
           <HeaderedContentControl Style="{StaticResource Group}" Header="{x:Static editing:EditingText.FontGroup}">
             <StackPanel Orientation="Horizontal">
-              <Button x:Name="BoldButton" Style="{DynamicResource Kyf.Button.Tool}" Command="{Binding ToggleMarkCommand}" CommandParameter="{x:Static editing:InlineMark.Bold}" ToolTip="{x:Static editing:EditingText.Bold}" AutomationProperties.Name="{x:Static editing:EditingText.Bold}">
+              <Button x:Name="BoldButton" Style="{DynamicResource Kyf.Button.Tool}" Tag="{Binding Tools.Bold}" Command="{Binding ToggleMarkCommand}" CommandParameter="{x:Static editing:InlineMark.Bold}" ToolTip="{x:Static editing:EditingText.Bold}" AutomationProperties.Name="{x:Static editing:EditingText.Bold}">
                 <kyf:Icon Text="{x:Static kyf:Icons.Bold}" />
               </Button>
-              <Button x:Name="ItalicButton" Style="{DynamicResource Kyf.Button.Tool}" Command="{Binding ToggleMarkCommand}" CommandParameter="{x:Static editing:InlineMark.Italic}" ToolTip="{x:Static editing:EditingText.Italic}" AutomationProperties.Name="{x:Static editing:EditingText.Italic}">
+              <Button x:Name="ItalicButton" Style="{DynamicResource Kyf.Button.Tool}" Tag="{Binding Tools.Italic}" Command="{Binding ToggleMarkCommand}" CommandParameter="{x:Static editing:InlineMark.Italic}" ToolTip="{x:Static editing:EditingText.Italic}" AutomationProperties.Name="{x:Static editing:EditingText.Italic}">
                 <kyf:Icon Text="{x:Static kyf:Icons.Italic}" />
               </Button>
-              <Button x:Name="UnderlineButton" Style="{DynamicResource Kyf.Button.Tool}" Command="{Binding ToggleMarkCommand}" CommandParameter="{x:Static editing:InlineMark.Underline}" ToolTip="{x:Static editing:EditingText.Underline}" AutomationProperties.Name="{x:Static editing:EditingText.Underline}">
+              <Button x:Name="UnderlineButton" Style="{DynamicResource Kyf.Button.Tool}" Tag="{Binding Tools.Underline}" Command="{Binding ToggleMarkCommand}" CommandParameter="{x:Static editing:InlineMark.Underline}" ToolTip="{x:Static editing:EditingText.Underline}" AutomationProperties.Name="{x:Static editing:EditingText.Underline}">
                 <kyf:Icon Text="{x:Static kyf:Icons.Underline}" />
               </Button>
-              <Button x:Name="StrikeButton" Style="{DynamicResource Kyf.Button.Tool}" Command="{Binding ToggleMarkCommand}" CommandParameter="{x:Static editing:InlineMark.Strike}" ToolTip="{x:Static editing:EditingText.Strike}" AutomationProperties.Name="{x:Static editing:EditingText.Strike}">
+              <Button x:Name="StrikeButton" Style="{DynamicResource Kyf.Button.Tool}" Tag="{Binding Tools.Strike}" Command="{Binding ToggleMarkCommand}" CommandParameter="{x:Static editing:InlineMark.Strike}" ToolTip="{x:Static editing:EditingText.Strike}" AutomationProperties.Name="{x:Static editing:EditingText.Strike}">
                 <kyf:Icon Text="{x:Static kyf:Icons.Strike}" />
               </Button>
-              <Button x:Name="SuperscriptButton" Style="{DynamicResource Kyf.Button.Tool}" Command="{Binding ToggleMarkCommand}" CommandParameter="{x:Static editing:InlineMark.Superscript}" ToolTip="{x:Static editing:EditingText.Superscript}" AutomationProperties.Name="{x:Static editing:EditingText.Superscript}">
+              <Button x:Name="SuperscriptButton" Style="{DynamicResource Kyf.Button.Tool}" Tag="{Binding Tools.Superscript}" Command="{Binding ToggleMarkCommand}" CommandParameter="{x:Static editing:InlineMark.Superscript}" ToolTip="{x:Static editing:EditingText.Superscript}" AutomationProperties.Name="{x:Static editing:EditingText.Superscript}">
                 <TextBlock Text="x²" Style="{StaticResource Letter}" />
               </Button>
-              <Button x:Name="SubscriptButton" Style="{DynamicResource Kyf.Button.Tool}" Command="{Binding ToggleMarkCommand}" CommandParameter="{x:Static editing:InlineMark.Subscript}" ToolTip="{x:Static editing:EditingText.Subscript}" AutomationProperties.Name="{x:Static editing:EditingText.Subscript}">
+              <Button x:Name="SubscriptButton" Style="{DynamicResource Kyf.Button.Tool}" Tag="{Binding Tools.Subscript}" Command="{Binding ToggleMarkCommand}" CommandParameter="{x:Static editing:InlineMark.Subscript}" ToolTip="{x:Static editing:EditingText.Subscript}" AutomationProperties.Name="{x:Static editing:EditingText.Subscript}">
                 <TextBlock Text="x₂" Style="{StaticResource Letter}" />
               </Button>
               <Button x:Name="CaseButton" Style="{DynamicResource Kyf.Button.Tool}" Click="OnMenuButton" ToolTip="{x:Static editing:EditingText.ChangeCase}" AutomationProperties.Name="{x:Static editing:EditingText.ChangeCase}">
@@ -153,7 +159,7 @@
 
           <HeaderedContentControl Style="{StaticResource Group}" Header="{x:Static editing:EditingText.OtherGroup}">
             <StackPanel Orientation="Horizontal">
-              <Button x:Name="FormulaButton" Style="{DynamicResource Kyf.Button.ToolLarge}" Command="{Binding ToggleMarkCommand}" CommandParameter="{x:Static editing:InlineMark.Formula}" ToolTip="{x:Static editing:EditingText.Formula}" AutomationProperties.Name="{x:Static editing:EditingText.Formula}">
+              <Button x:Name="FormulaButton" Style="{DynamicResource Kyf.Button.ToolLarge}" Command="{Binding AskFormulaCommand}" ToolTip="{x:Static editing:EditingText.Formula}" AutomationProperties.Name="{x:Static editing:EditingText.Formula}">
                 <StackPanel>
                   <TextBlock Text="∑" FontSize="16" Height="20" LineHeight="20" LineStackingStrategy="BlockLineHeight" HorizontalAlignment="Center" Foreground="{DynamicResource Kyf.Brush.Text}" />
                   <TextBlock Text="{x:Static editing:EditingText.Formula}" Style="{DynamicResource Kyf.Text.Caption}" Foreground="{DynamicResource Kyf.Brush.Text}" HorizontalAlignment="Center" />

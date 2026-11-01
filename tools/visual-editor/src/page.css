@@ -1,0 +1,125 @@
+/*
+ * La page de l'éditeur : le fond et le texte viennent du thème de l'application, reçu
+ * de l'hôte (variables CSS). Le défilement est vertical seulement.
+ */
+
+@font-face {
+  font-family: "Atkinson Hyperlegible Next";
+  src: url("/polices/AtkinsonHyperlegibleNext-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "Atkinson Hyperlegible Next";
+  src: url("/polices/AtkinsonHyperlegibleNext-Italic.ttf") format("truetype");
+  font-weight: 400;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: "Atkinson Hyperlegible Next";
+  src: url("/polices/AtkinsonHyperlegibleNext-SemiBold.ttf") format("truetype");
+  font-weight: 600;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "Atkinson Hyperlegible Next";
+  src: url("/polices/AtkinsonHyperlegibleNext-SemiBoldItalic.ttf") format("truetype");
+  font-weight: 600;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: "Atkinson Hyperlegible Next";
+  src: url("/polices/AtkinsonHyperlegibleNext-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "Atkinson Hyperlegible Next";
+  src: url("/polices/AtkinsonHyperlegibleNext-BoldItalic.ttf") format("truetype");
+  font-weight: 700;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: "Atkinson Hyperlegible Mono";
+  src: url("/polices/AtkinsonHyperlegibleMono-Regular.ttf") format("truetype");
+  font-weight: 400;
+}
+
+@font-face {
+  font-family: "Atkinson Hyperlegible Mono";
+  src: url("/polices/AtkinsonHyperlegibleMono-SemiBold.ttf") format("truetype");
+  font-weight: 600;
+}
+
+:root {
+  /* Les contrôles du moteur (barre de défilement, liste des langages) suivent le thème. */
+  color-scheme: var(--schema, light);
+  scrollbar-color: var(--texte-secondaire) var(--fond);
+  --police: "Atkinson Hyperlegible Next", "Segoe UI", sans-serif;
+  --police-lecture: var(--police);
+  --police-code: "Atkinson Hyperlegible Mono", Consolas, monospace;
+  --police-titre: var(--police);
+  --rayon: 6px;
+  --rayon-carte: 10px;
+  --duree: 0.15s;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--fond);
+  color: var(--texte);
+  font-family: var(--police);
+  overflow-x: hidden;
+}
+
+#fiche {
+  box-sizing: border-box;
+  min-height: 100%;
+  padding: 4px 8px 0 4px;
+}
+
+.contenu-fiche pre,
+.contenu-fiche code,
+.editeur-visuel .bloc-code {
+  font-family: var(--police-code);
+}
+
+/* Un tableau trop large se replie : jamais de défilement horizontal. */
+.editeur-visuel table {
+  max-width: 100%;
+  table-layout: fixed;
+  width: 100%;
+}
+
+.editeur-visuel th,
+.editeur-visuel td {
+  overflow-wrap: anywhere;
+}
+
+.contenu-fiche pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.editeur-visuel .entete-code select {
+  color: var(--texte);
+}
+
+.editeur-visuel .entete-code select option {
+  background: var(--surface);
+  color: var(--texte);
+}
+
+.contenu-fiche ::selection {
+  background: var(--selection);
+  color: var(--sur-selection);
+}

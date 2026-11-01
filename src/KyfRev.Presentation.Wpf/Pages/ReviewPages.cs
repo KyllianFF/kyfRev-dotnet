@@ -401,8 +401,8 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
     /// <summary>Le titre de la confirmation.</summary>
     public string DeleteTitle => Deleting is { IsDefinition: true } ? ReadingText.DeleteDefinitionTitle : ReadingText.DeletePassageTitle;
 
-    /// <summary>Le plan de la fiche.</summary>
-    public IReadOnlyList<OutlineEntry> Outline => Reading?.Outline ?? [];
+    /// <summary>Le plan de la fiche : en écriture, celui du texte en cours.</summary>
+    public IReadOnlyList<OutlineEntry> Outline => Editor?.Preview?.Outline ?? Reading?.Outline ?? [];
 
     /// <summary>Ses passages et définitions.</summary>
     public IReadOnlyList<PassageEntry> Passages => Reading?.Passages ?? [];
@@ -452,16 +452,16 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
     private partial bool PassagesOverlaid { get; set; }
 
     /// <summary>Le plan est montré à côté du texte.</summary>
-    public bool ShowsOutline => HasOutline && WantsOutline && OutlineFits;
+    public bool ShowsOutline => HasOutline && WantsOutline && OutlineFits && !ShowsCode;
 
     /// <summary>Les passages sont montrés à côté du texte.</summary>
-    public bool ShowsPassages => HasPassages && WantsPassages && PassagesFits;
+    public bool ShowsPassages => HasPassages && WantsPassages && PassagesFits && !ShowsCode;
 
     /// <summary>Le plan est montré par-dessus le texte.</summary>
-    public bool ShowsOutlineOverlay => OutlineOverlaid && !OutlineFits;
+    public bool ShowsOutlineOverlay => OutlineOverlaid && !OutlineFits && !ShowsCode;
 
     /// <summary>Les passages sont montrés par-dessus le texte.</summary>
-    public bool ShowsPassagesOverlay => PassagesOverlaid && !PassagesFits;
+    public bool ShowsPassagesOverlay => PassagesOverlaid && !PassagesFits && !ShowsCode;
 
     /// <summary>Le bouton du plan : à côté du texte s'il y tient, sinon par-dessus.</summary>
     public bool IsOutlineOn
@@ -538,8 +538,48 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
         }
     }
 
+    /// <summary>Le code Markdown et son rendu prennent toute la largeur.</summary>
+    public bool ShowsCode => Editor?.IsMarkdownShown == true;
+
+    /// <summary>Les boutons du plan et des passages ont un sens.</summary>
+    public bool ShowsPanelToggles => !ShowsCode;
+
+    /// <summary>La largeur du texte : celle de la lecture, ou toute la place pour le code et son rendu.</summary>
+    public double TextWidth => ShowsCode ? double.PositiveInfinity : TextMaxWidth;
+
     /// <summary>Le raccourci de validation : en écriture, il n'y a rien à valider.</summary>
     public System.Windows.Input.ICommand? ValidateShortcut => IsWriting ? null : Review?.ValidateCommand;
+
+    partial void OnEditorChanging(SheetEditorViewModel? value)
+    {
+        Editor?.PropertyChanged -= OnEditorPropertyChanged;
+        value?.PropertyChanged += OnEditorPropertyChanged;
+    }
+
+    partial void OnEditorChanged(SheetEditorViewModel? value) => NotifyLayout();
+
+    private void OnEditorPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(SheetEditorViewModel.IsMarkdownShown) or nameof(SheetEditorViewModel.Preview))
+        {
+            NotifyLayout();
+        }
+    }
+
+    private void NotifyLayout()
+    {
+        OnPropertyChanged(nameof(Outline));
+        OnPropertyChanged(nameof(HasOutline));
+        OnPropertyChanged(nameof(ShowsCode));
+        OnPropertyChanged(nameof(ShowsPanelToggles));
+        OnPropertyChanged(nameof(TextWidth));
+        OnPropertyChanged(nameof(ShowsOutline));
+        OnPropertyChanged(nameof(ShowsPassages));
+        OnPropertyChanged(nameof(ShowsOutlineOverlay));
+        OnPropertyChanged(nameof(ShowsPassagesOverlay));
+        OnPropertyChanged(nameof(IsOutlineOn));
+        OnPropertyChanged(nameof(IsPassagesOn));
+    }
 
     /// <summary>Passe à l'écriture : le texte du disque, relu maintenant.</summary>
     [RelayCommand]

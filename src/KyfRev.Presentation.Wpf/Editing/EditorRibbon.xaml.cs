@@ -42,7 +42,7 @@ internal sealed partial class EditorRibbon : UserControl
     /// <summary>La liste qui porte ce choix.</summary>
     internal Popup TablePopup => _tablePopup;
 
-    /// <summary>Demande les images à insérer ; fournie par la vue.</summary>
+    /// <summary>Demande les images à insérer ; fourni par la page.</summary>
     internal Action? ChooseImages { get; set; }
 
     private readonly TableChooser _chooser = new();

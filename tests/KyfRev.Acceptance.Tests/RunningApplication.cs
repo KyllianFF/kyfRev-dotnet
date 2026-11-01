@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Globalization;
 using FlaUI.Core.AutomationElements;
+using FlaUI.Core.Definitions;
 using FlaUI.Core.Input;
 using FlaUI.Core.Tools;
 using FlaUI.Core.WindowsAPI;
@@ -31,10 +32,15 @@ internal sealed class RunningApplication : IDisposable
     private readonly UIA3Automation _automation = new();
     private readonly Window _window;
 
-    public RunningApplication(string folder, DateOnly day)
+    public RunningApplication(string folder, DateOnly day, IReadOnlyDictionary<string, string>? environment = null)
     {
         var start = ScenarioClock.At(day).ToString("O", CultureInfo.InvariantCulture);
-        _process = Process.Start(new ProcessStartInfo(HostPath(), [folder, start]) { UseShellExecute = false })!;
+        var information = new ProcessStartInfo(HostPath(), [folder, start]) { UseShellExecute = false };
+        foreach (var (name, value) in environment ?? new Dictionary<string, string>())
+        {
+            information.Environment[name] = value;
+        }
+        _process = Process.Start(information)!;
         _application = FlauiApplication.Attach(_process.Id);
         _window = _application.GetMainWindow(_automation, Patience) ?? throw new InvalidOperationException("La fenêtre de l'application ne s'est pas ouverte.");
     }
@@ -189,31 +195,58 @@ internal sealed class RunningApplication : IDisposable
     public void WaitPassages(string count) =>
         Retry.WhileFalse(() => Find("PassagesToggle")?.Name.Contains(count, StringComparison.Ordinal) == true, Patience, Interval, throwOnTimeout: true, timeoutMessage: $"Le décompte {count} des passages n'arrive pas.");
 
-    /// <summary>Passe à l'écriture par le bouton « Écrire ».</summary>
+    /// <summary>Passe à l'écriture par le bouton « Écrire » : le texte mis en forme s'ouvre.</summary>
     public void StartWriting()
     {
         Wait("WriteToggle").Patterns.Toggle.Pattern.Toggle();
-        Wait("SheetSource");
+        WaitTextFocused();
     }
 
     /// <summary>Revient à la lecture par le raccourci Ctrl+E.</summary>
     public void StopWriting()
     {
-        var source = Wait("SheetSource");
-        source.Focus();
+        WaitTextFocused();
         Keyboard.TypeSimultaneously(VirtualKeyShort.CONTROL, VirtualKeyShort.KEY_E);
-        Retry.WhileTrue(() => Find("SheetSource")?.IsOffscreen == false, Patience, Interval, throwOnTimeout: true, timeoutMessage: "L'écriture reste ouverte.");
+        Retry.WhileFalse(() => Find("ReadToggle")?.Patterns.Toggle.Pattern.ToggleState.Value == ToggleState.On, Patience, Interval, throwOnTimeout: true, timeoutMessage: "L'écriture reste ouverte.");
     }
 
     /// <summary>Tape un texte au clavier, à la place du curseur.</summary>
     public void TypeInSheet(string text)
     {
-        var source = Wait("SheetSource");
-        source.SetForeground();
-        source.Focus();
-        // Le focus arrive un peu après la demande : la frappe ne part qu'une fois le champ prêt.
-        Retry.WhileFalse(() => source.Properties.HasKeyboardFocus.ValueOrDefault, Patience, Interval, throwOnTimeout: true, timeoutMessage: "Le champ d'écriture ne prend pas le focus.");
+        WaitTextFocused();
         Keyboard.Type(text);
+    }
+
+    /// <summary>Ouvre le code Markdown à gauche, par son bouton.</summary>
+    public void ShowMarkdown()
+    {
+        Wait("MarkdownToggle").Patterns.Toggle.Pattern.Toggle();
+        Wait("SheetSource");
+    }
+
+    /// <summary>
+    /// La frappe ne part qu'une fois le texte prêt à la recevoir. Le texte mis en forme s'annonce sous son nom : c'est
+    /// aussi ce qu'entend un lecteur d'écran.
+    /// </summary>
+    private void WaitTextFocused()
+    {
+        var seen = string.Empty;
+        _window.SetForeground();
+        var ready = Retry.WhileFalse(
+            () =>
+            {
+                if (Find("SheetSource") is { IsOffscreen: false } source)
+                {
+                    source.Focus();
+                    return source.Properties.HasKeyboardFocus.ValueOrDefault;
+                }
+                var focused = _automation.FocusedElement();
+                seen = $"{focused?.Properties.ControlType.ValueOrDefault} « {focused?.Name} »";
+                return focused?.Name == "Texte de la fiche";
+            },
+            Patience,
+            Interval);
+        Assert.IsTrue(ready.Success, $"Le texte de la fiche ne prend pas le focus : {seen} l'a.");
     }
 
     /// <summary>Attend que tout soit enregistré.</summary>

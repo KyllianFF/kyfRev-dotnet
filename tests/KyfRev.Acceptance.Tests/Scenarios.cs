@@ -458,6 +458,46 @@ public sealed class Scenarios
     }
 
     [TestMethod]
+    public void T17_no_debugging_port_even_with_the_variables()
+    {
+        using var trial = new Trial();
+        var created = new DateOnly(2026, 10, 9);
+        trial.On(created, app => NewSheet(app, Title));
+        var port = FreePort();
+
+        using var running = trial.Launch(created.AddDays(1), new Dictionary<string, string>
+        {
+            ["WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS"] = string.Create(CultureInfo.InvariantCulture, $"--remote-debugging-port={port}"),
+        });
+        running.Open(Today, Title);
+        running.StartWriting();
+
+        // Le moteur tourne : rien n'écoute sur le port demandé, ni sur le port habituel.
+        Assert.IsFalse(IsListening(port), "Le port de débogage demandé par la variable est fermé.");
+    }
+
+    private static int FreePort()
+    {
+        using var listener = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, 0);
+        listener.Start();
+        return ((System.Net.IPEndPoint)listener.LocalEndpoint).Port;
+    }
+
+    private static bool IsListening(int port)
+    {
+        using var client = new System.Net.Sockets.TcpClient();
+        try
+        {
+            client.Connect(System.Net.IPAddress.Loopback, port);
+            return true;
+        }
+        catch (System.Net.Sockets.SocketException)
+        {
+            return false;
+        }
+    }
+
+    [TestMethod]
     public void T14_a_change_on_disk_while_writing_loses_nothing()
     {
         using var trial = new Trial();
@@ -492,6 +532,7 @@ public sealed class Scenarios
             running.WaitSaveState("Conflit avec le disque");
             running.ReloadDiskVersion();
             running.WaitSaved();
+            running.ShowMarkdown();
             Assert.Contains("Un second ajout.", running.WrittenText());
             Assert.DoesNotContain("Encore.", running.WrittenText());
             Assert.IsTrue(trial.Versions(sheet).Any(version => version.Contains("Encore.", StringComparison.Ordinal)), "Mon texte écarté va dans l'historique.");

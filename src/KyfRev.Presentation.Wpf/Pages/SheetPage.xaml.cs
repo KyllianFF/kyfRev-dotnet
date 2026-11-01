@@ -15,6 +15,8 @@ internal sealed partial class SheetPage : UserControl
     public SheetPage()
     {
         InitializeComponent();
+        Ribbon.ChooseImages = EditorView.ChooseImages;
+        EditorView.CoveredTextClicked = () => (DataContext as SheetPageViewModel)?.CloseOverlayCommand.Execute(null);
         SizeChanged += (_, e) =>
         {
             if (DataContext is SheetPageViewModel page)
@@ -24,11 +26,27 @@ internal sealed partial class SheetPage : UserControl
         };
         DataContextChanged += (_, e) =>
         {
+            if (e.OldValue is SheetPageViewModel previous)
+            {
+                previous.PropertyChanged -= OnPageChanged;
+            }
             if (e.NewValue is SheetPageViewModel page)
             {
                 page.PageWidth = ActualWidth;
+                page.PropertyChanged += OnPageChanged;
             }
         };
+    }
+
+    /// <summary>Le texte mis en forme a sa propre fenêtre : tout ce qui le recouvre le lui dit.</summary>
+    private void OnPageChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(SheetPageViewModel.IsEditing) or nameof(SheetPageViewModel.IsDeleting)
+            or nameof(SheetPageViewModel.ShowsOutlineOverlay) or nameof(SheetPageViewModel.ShowsPassagesOverlay))
+        {
+            var page = (SheetPageViewModel)sender!;
+            EditorView.PageCovered = page.IsEditing || page.IsDeleting || page.ShowsOutlineOverlay || page.ShowsPassagesOverlay;
+        }
     }
 
     /// <summary>La réponse à la confirmation (révision en avance, J0, archivage) part vers la barre de révision.</summary>
@@ -54,7 +72,14 @@ internal sealed partial class SheetPage : UserControl
         if (DataContext is SheetPageViewModel page && ((FrameworkElement)sender).DataContext is OutlineEntry entry)
         {
             page.CloseOverlayCommand.Execute(null);
-            SheetText.Show(entry.Heading);
+            if (page.Editor is { } editor)
+            {
+                editor.GoToHeading(entry.Title, page.Outline.TakeWhile(other => !ReferenceEquals(other, entry)).Count(other => other.Title == entry.Title));
+            }
+            else
+            {
+                SheetText.Show(entry.Heading);
+            }
         }
     }
 
@@ -70,7 +95,7 @@ internal sealed partial class SheetPage : UserControl
     {
         page.CloseOverlayCommand.Execute(null);
         page.ActivateCommand.Execute(entry.Annotation.Id);
-        if (entry.Position is { } position)
+        if (entry.Position is { } position && page.IsReading)
         {
             SheetText.Show(position.Start);
         }

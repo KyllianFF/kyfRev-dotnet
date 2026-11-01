@@ -6,6 +6,7 @@ using KyfRev.Application.UseCases;
 using KyfRev.DesignSystem;
 using KyfRev.DesignSystem.Tokens;
 using KyfRev.Infrastructure.Vault.Adapters;
+using KyfRev.Presentation.Wpf.Editing;
 using KyfRev.Presentation.Wpf.Pages;
 using KyfRev.Presentation.Wpf.Shell;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -250,6 +251,15 @@ internal sealed class UiThread : IDisposable
     }
 
     public void Dispose() => SynchronizationContext.SetSynchronizationContext(_previous);
+}
+
+/// <summary>L'environnement de l'écriture dans les essais : un seul dossier WebView2 par machine de test.</summary>
+internal static class FakeEnvironment
+{
+    public static string WebData { get; } = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "kyfrev-essais-webview2");
+
+    /// <summary>Ouvrir sur le code : sans le moteur web, pour les essais qui n'en ont pas besoin.</summary>
+    public static EditorEnvironment Markdown() => new(new FakeSpelling(), WebData, StartsInMarkdown: true);
 }
 
 /// <summary>Correcteur simulé : « ékole » est la seule faute qu'il connaisse.</summary>

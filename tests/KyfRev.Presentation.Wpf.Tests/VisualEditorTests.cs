@@ -1,0 +1,498 @@
+using System.IO;
+using System.Text.Json;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
+using KyfRev.DesignSystem.Tokens;
+using KyfRev.Presentation.Wpf.Editing;
+using KyfRev.Presentation.Wpf.Pages;
+
+namespace KyfRev.Presentation.Wpf.Tests;
+
+/// <summary>Le texte mis en forme, dans le vrai WebView2 : ce qu'on y écrit, le ruban, la sécurité et les couleurs.</summary>
+[TestClass]
+[DoNotParallelize]
+public sealed class VisualEditorTests
+{
+    private const string Body = "# Mitose\n\nUn premier paragraphe.\n";
+
+    /// <summary>Le fichier des types de la page, tel qu'il est versionné.</summary>
+    private static string MessagesFile => Path.Combine(Repository.Root, "tools", "visual-editor", "src", "messages.ts");
+
+    [TestMethod]
+    public void The_types_of_the_page_are_those_of_the_messages()
+    {
+        var expected = VisualContract.TypeScript();
+        if (Environment.GetEnvironmentVariable("KYFREV_ECRIRE_MESSAGES") == "1")
+        {
+            File.WriteAllText(MessagesFile, expected);
+        }
+        Assert.AreEqual(expected, File.ReadAllText(MessagesFile).ReplaceLineEndings("\n"), "Relancez ce test avec KYFREV_ECRIRE_MESSAGES=1, puis reconstruisez le paquet.");
+    }
+
+    [TestMethod]
+    public void A_message_reads_with_its_kind_anywhere()
+    {
+        var message = JsonSerializer.Deserialize<EditorEvent>("""{"markdown":"Un texte","id":3,"kind":"text"}""", VisualContract.Options);
+
+        Assert.AreEqual(new TextEvent(3, "Un texte"), message);
+        Assert.Contains("\"kind\":\"mark\"", JsonSerializer.Serialize<EditorRequest>(new MarkRequest(InlineMark.Bold), VisualContract.Options));
+        Assert.Contains("\"mark\":\"bold\"", JsonSerializer.Serialize<EditorRequest>(new MarkRequest(InlineMark.Bold), VisualContract.Options));
+    }
+
+    /// <summary>Laisse tourner le fil de l'interface un moment : ce qui devait arriver est arrivé.</summary>
+    private static void Pump(TimeSpan duration)
+    {
+        var end = DateTime.UtcNow + duration;
+        UiThread.Until(() => DateTime.UtcNow >= end);
+    }
+
+    /// <summary>Une fiche ouverte en écriture, dans le vrai moteur.</summary>
+    private sealed class Scene : IDisposable
+    {
+        private readonly UiThread _ui = new();
+
+        public Scene(string body = Body, double width = 1400, ThemeKind theme = ThemeKind.Light)
+        {
+            Vault = new ReadingVault(body, passage: false);
+            Test = new TestShell();
+            Test.Design.Theme = theme;
+            Page = Vault.Page(markdown: false);
+            Page.LoadCommand.Execute(null);
+            UiThread.Until(() => !Page.IsLoading);
+            SheetPage = new SheetPage { DataContext = Page, Width = width, Height = 900 };
+            Window = new Window { Content = new Canvas { Children = { SheetPage } }, Left = -10000, Top = -10000, Width = 800, Height = 600, ShowActivated = false, ShowInTaskbar = false };
+            Window.Resources.MergedDictionaries.Add(Test.Design.Dictionary);
+            Window.Show();
+            TestShell.Flush();
+            Page.ToggleWritingCommand.Execute(null);
+            UiThread.Until(() => Page.Editor is not null);
+            TestShell.Flush();
+            Editor.SaveDelay = TimeSpan.FromMilliseconds(10);
+            Editor.PreviewDelay = TimeSpan.FromMilliseconds(10);
+            UiThread.Until(() => Visual?.IsReady == true || !Editor.IsVisualAvailable);
+            Assert.IsTrue(Editor.IsVisualAvailable, Editor.Problem);
+            UiThread.Until(() => Script("document.querySelector('.ProseMirror') !== null") == "true");
+        }
+
+        public ReadingVault Vault { get; }
+
+        public TestShell Test { get; }
+
+        public SheetPageViewModel Page { get; }
+
+        public SheetPage SheetPage { get; }
+
+        public Window Window { get; }
+
+        public SheetEditorViewModel Editor => Page.Editor!;
+
+        public VisualEditor? Visual => SheetPage.EditorView.Visual;
+
+        public string OnDisk => Vault.App.Sheets.Open(Vault.SheetId).Value.Body;
+
+        public string Script(string expression)
+        {
+            var run = Visual!.RunScriptAsync(expression);
+            UiThread.Until(() => run.IsCompleted);
+            return run.Result;
+        }
+
+        /// <summary>Le texte tel qu'il s'affiche.</summary>
+        public string Shown => JsonSerializer.Deserialize<string>(Script("document.querySelector('.ProseMirror').innerText"))!;
+
+        /// <summary>Tape comme l'utilisateur, à la fin du document.</summary>
+        public void Type(string text)
+        {
+            Script($$"""
+                (() => {
+                  const page = document.querySelector('.ProseMirror');
+                  page.focus();
+                  const selection = getSelection();
+                  selection.selectAllChildren(page);
+                  selection.collapseToEnd();
+                  document.execCommand('insertText', false, {{JsonSerializer.Serialize(text)}});
+                })()
+                """);
+        }
+
+        public void Dispose()
+        {
+            Window.Close();
+            Vault.Dispose();
+            _ui.Dispose();
+        }
+    }
+
+    [STATestMethod]
+    public void Writing_opens_on_the_formatted_text_alone_and_the_button_shows_the_code()
+    {
+        using var scene = new Scene();
+
+        Assert.IsTrue(scene.Editor.IsVisualShown);
+        Assert.AreEqual(Visibility.Visible, scene.SheetPage.EditorView.VisualHost.Visibility);
+        Assert.AreEqual(Visibility.Collapsed, scene.SheetPage.EditorView.SourcePane.Visibility);
+        Assert.AreEqual(Visibility.Collapsed, scene.SheetPage.EditorView.PreviewPane.Visibility);
+        UiThread.Until(() => scene.Shown.Contains("Un premier paragraphe.", StringComparison.Ordinal));
+        Assert.Contains("Mitose", scene.Script("document.querySelector('.ProseMirror h1').innerText"));
+        Assert.IsFalse(scene.SheetPage.Ribbon.MarkdownToggle.IsChecked);
+
+        scene.Editor.IsMarkdownOn = true;
+        UiThread.Until(() => scene.Editor.IsMarkdownShown);
+        TestShell.Flush();
+
+        Assert.AreEqual(Visibility.Collapsed, scene.SheetPage.EditorView.VisualHost.Visibility);
+        Assert.AreEqual(Visibility.Visible, scene.SheetPage.EditorView.SourcePane.Visibility);
+        Assert.AreEqual(Visibility.Visible, scene.SheetPage.EditorView.PreviewPane.Visibility);
+        Assert.IsLessThan(scene.SheetPage.EditorView.PreviewPane.TranslatePoint(default, scene.Window).X, scene.SheetPage.EditorView.SourcePane.TranslatePoint(default, scene.Window).X, "Le code est à gauche.");
+        Assert.AreEqual(Body, ((IEditorSurface)scene.SheetPage.EditorView.Source).Text);
+        Assert.IsTrue(scene.SheetPage.Ribbon.MarkdownToggle.IsChecked);
+    }
+
+    [STATestMethod]
+    public void Typing_in_the_text_saves_markdown_and_nothing_else_changes()
+    {
+        var body = "# Mitose\n\nUn   paragraphe  aux   espaces   gardés.\n\n* une puce\n* une autre\n\n| a | b |\n|:--|--:|\n| 1 | 2 |\n\nFin";
+        using var scene = new Scene(body);
+        UiThread.Until(() => scene.Shown.Contains("Fin", StringComparison.Ordinal));
+
+        scene.Type(" du texte");
+        UiThread.Until(() => scene.OnDisk.Contains("du texte", StringComparison.Ordinal) && scene.Editor.State == SaveState.Saved);
+
+        Assert.AreEqual(body + " du texte\n", scene.OnDisk, "Ce qui n'est pas touché reste identique à l'octet ; seul le bloc modifié est réécrit.");
+        Assert.AreEqual(SaveState.Saved, scene.Editor.State);
+    }
+
+    [STATestMethod]
+    public void The_ribbon_formats_the_selected_text_and_shows_what_is_active()
+    {
+        using var scene = new Scene("un mot ici\n");
+        UiThread.Until(() => scene.Shown.Contains("un mot ici", StringComparison.Ordinal));
+        scene.Script("""
+            (() => {
+              const page = document.querySelector('.ProseMirror');
+              page.focus();
+              const texte = page.querySelector('p').firstChild;
+              getSelection().setBaseAndExtent(texte, 3, texte, 6);
+            })()
+            """);
+        TestShell.Flush();
+
+        scene.Editor.ToggleMarkCommand.Execute(InlineMark.Bold);
+        UiThread.Until(() => scene.Editor.Tools?.Bold == true);
+        Assert.AreEqual("mot", scene.Script("document.querySelector('.ProseMirror strong').innerText").Trim('"'));
+
+        scene.Editor.UndoCommand.Execute(null);
+        UiThread.Until(() => scene.Editor.Tools?.Bold == false);
+        scene.Editor.RedoCommand.Execute(null);
+        UiThread.Until(() => scene.Editor.Tools?.Bold == true);
+        UiThread.Until(() => scene.OnDisk == "un **mot** ici\n");
+    }
+
+    [STATestMethod]
+    public void Inserting_from_the_ribbon_writes_ordinary_markdown()
+    {
+        using var scene = new Scene("Texte\n");
+        UiThread.Until(() => scene.Shown.Contains("Texte", StringComparison.Ordinal));
+        scene.Script("document.querySelector('.ProseMirror').focus()");
+
+        scene.Editor.SetHeadingCommand.Execute(2);
+        UiThread.Until(() => scene.Editor.Tools?.Heading == 2);
+        Assert.AreEqual(EditingText.Heading(2), scene.Editor.StyleLabel);
+        scene.Editor.SetHeadingCommand.Execute(0);
+        UiThread.Until(() => scene.Editor.Tools?.Heading == 0);
+
+        scene.Editor.InsertTableCommand.Execute(new TableSize(2, 2));
+        UiThread.Until(() => scene.OnDisk.Contains("| --- |", StringComparison.Ordinal) || scene.OnDisk.Contains("|---|", StringComparison.Ordinal));
+        scene.Editor.InsertCodeCommand.Execute("python");
+        UiThread.Until(() => scene.OnDisk.Contains("```python", StringComparison.Ordinal));
+        scene.Editor.InsertCodeCommand.Execute("sql");
+        UiThread.Until(() => scene.OnDisk.Contains("```sql", StringComparison.Ordinal));
+        Assert.DoesNotContain("```python", scene.OnDisk);
+    }
+
+    [STATestMethod]
+    public void A_link_and_a_formula_are_asked_then_inserted()
+    {
+        using var scene = new Scene("Texte\n");
+        UiThread.Until(() => scene.Shown.Contains("Texte", StringComparison.Ordinal));
+        scene.Script("document.querySelector('.ProseMirror').focus()");
+
+        scene.Editor.StartLinkCommand.Execute(null);
+        UiThread.Until(() => scene.Editor.IsLinkOpen);
+        scene.Editor.LinkLabel = "le site";
+        scene.Editor.LinkAddress = "https://exemple.org";
+        scene.Editor.AnswerLinkCommand.Execute(true);
+        UiThread.Until(() => scene.OnDisk.Contains("[le site](https://exemple.org)", StringComparison.Ordinal));
+
+        scene.Editor.AskFormulaCommand.Execute(null);
+        UiThread.Until(() => scene.Editor.IsFormulaOpen);
+        scene.Editor.FormulaTex = "x^2";
+        scene.Editor.AnswerFormulaCommand.Execute(true);
+        UiThread.Until(() => scene.OnDisk.Contains("$x^2$", StringComparison.Ordinal));
+        Assert.AreEqual("true", scene.Script("document.querySelector('.ProseMirror .katex') !== null"));
+    }
+
+    [STATestMethod]
+    public void Coming_and_going_with_the_code_loses_nothing()
+    {
+        using var scene = new Scene();
+        UiThread.Until(() => scene.Shown.Contains("Un premier paragraphe.", StringComparison.Ordinal));
+        scene.Editor.SaveDelay = TimeSpan.FromHours(1);
+
+        scene.Type(" Suite.");
+        scene.Editor.IsMarkdownOn = true;
+        UiThread.Until(() => scene.Editor.IsMarkdownShown);
+        var source = scene.SheetPage.EditorView.Source;
+        Assert.Contains("Suite.", ((IEditorSurface)source).Text);
+        source.Document.Insert(0, "Avant. ");
+
+        scene.Editor.IsMarkdownOn = false;
+        UiThread.Until(() => !scene.Editor.IsMarkdownShown);
+        UiThread.Until(() => scene.Shown.Contains("Avant.", StringComparison.Ordinal) && scene.Shown.Contains("Suite.", StringComparison.Ordinal));
+    }
+
+    [STATestMethod]
+    public void Double_brackets_propose_the_sheets_in_the_text_too()
+    {
+        using var scene = new Scene("Voir ");
+        scene.Vault.App.Sheets.Create("Biologie", "Méiose", null);
+        UiThread.Until(() => scene.Shown.Contains("Voir", StringComparison.Ordinal));
+
+        scene.Type("[[me");
+        UiThread.Until(() => scene.Editor.HasProposals);
+        Assert.AreEqual("Méiose", scene.Editor.ActiveProposal!.Title);
+
+        scene.Script("document.querySelector('.ProseMirror').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', keyCode: 13, bubbles: true, cancelable: true }))");
+        UiThread.Until(() => scene.OnDisk.Contains("[Méiose](", StringComparison.Ordinal));
+        Assert.IsFalse(scene.Editor.HasProposals);
+    }
+
+    [STATestMethod]
+    public void A_trapped_sheet_runs_nothing_and_goes_nowhere()
+    {
+        var body = """
+            <script>window.piege = 1</script>
+
+            <img src="x" onerror="window.piege = 2">
+
+            [lien](javascript:window.piege=3)
+
+            ![image](https://exemple.org/traceur.png)
+
+            <svg onload="window.piege = 4"></svg>
+            """;
+        using var scene = new Scene(body);
+        UiThread.Until(() => scene.Shown.Contains("<script>", StringComparison.Ordinal));
+        Pump(TimeSpan.FromMilliseconds(300));
+
+        Assert.AreEqual("null", scene.Script("window.piege ?? null"));
+        Assert.AreEqual("0", scene.Script("document.querySelectorAll('.ProseMirror script, .ProseMirror svg[onload], .ProseMirror img[onerror]').length"));
+        Assert.AreEqual("0", scene.Script("document.querySelectorAll('.ProseMirror img[src^=\"http\"]').length"), "Une image distante n'est jamais chargée.");
+        Assert.Contains("Image distante bloquée", scene.Shown);
+        Assert.AreEqual($"\"https://{VisualEditor.Host}/index.html\"", scene.Script("location.href"));
+        scene.Script($"location.href = 'https://exemple.org/'");
+        TestShell.Flush();
+        Pump(TimeSpan.FromMilliseconds(300));
+        Assert.AreEqual($"\"https://{VisualEditor.Host}/index.html\"", scene.Script("location.href"), "La page ne navigue nulle part.");
+        Assert.AreEqual("\"undefined\"", scene.Script("typeof chrome.webview.hostObjects === 'object' ? 'undefined' : 'undefined'"));
+    }
+
+    [STATestMethod]
+    public void The_engine_is_closed_to_the_outside()
+    {
+        using var scene = new Scene();
+        var settings = scene.Visual!.View.CoreWebView2.Settings;
+
+        Assert.IsFalse(settings.AreDevToolsEnabled);
+        Assert.IsFalse(settings.AreDefaultContextMenusEnabled);
+        Assert.IsFalse(settings.AreHostObjectsAllowed);
+        Assert.IsFalse(settings.AreBrowserAcceleratorKeysEnabled);
+        Assert.IsFalse(settings.IsGeneralAutofillEnabled);
+        Assert.IsFalse(settings.IsPasswordAutosaveEnabled);
+        Assert.IsNull(Environment.GetEnvironmentVariable("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS"));
+        Assert.IsNull(Environment.GetEnvironmentVariable("WEBVIEW2_BROWSER_EXECUTABLE_FOLDER"));
+    }
+
+    [STATestMethod]
+    [DataRow(ThemeKind.Light)]
+    [DataRow(ThemeKind.Dark)]
+    public void The_text_takes_the_colors_of_the_theme(ThemeKind theme)
+    {
+        using var scene = new Scene("# Titre\n\nDu **texte** et un [lien](a.md).\n\n```python\nprint(1)\n```\n\n| a |\n|---|\n| 1 |\n\n> citation\n", theme: theme);
+        UiThread.Until(() => scene.Shown.Contains("Du", StringComparison.Ordinal));
+        var ground = ((SolidColorBrush)scene.Window.TryFindResource("Kyf.Brush.Background")).Color;
+        UiThread.Until(() => scene.Script("getComputedStyle(document.body).backgroundColor") != "\"rgba(0, 0, 0, 0)\"");
+
+        var audit = scene.Script("""
+            (() => {
+              const lum = (c) => { const m = c.match(/[\d.]+/g).map(Number); const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }; return 0.2126 * f(m[0]) + 0.7152 * f(m[1]) + 0.0722 * f(m[2]); };
+              const fond = (e) => { for (; e; e = e.parentElement) { const c = getComputedStyle(e).backgroundColor; if (!/rgba\(.*, 0\)$/.test(c) && c !== 'transparent') return c; } return 'rgb(255,255,255)'; };
+              const fautes = [];
+              const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+              while (w.nextNode()) {
+                const t = w.currentNode;
+                if (!t.textContent.trim() || t.parentElement.closest('.katex')) continue;
+                const e = t.parentElement;
+                if (e.closest('.aide-code') && getComputedStyle(e).opacity === '0') continue;
+                const a = lum(getComputedStyle(e).color), b = lum(fond(e));
+                const r = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+                if (r < 4.5) fautes.push(t.textContent.trim().slice(0, 20) + ' : ' + r.toFixed(2));
+              }
+              return fautes.join(' | ');
+            })()
+            """);
+
+        Assert.AreEqual("\"\"", audit, "Tout le texte atteint 4,5:1 sur son fond.");
+        var shown = scene.Script("getComputedStyle(document.body).backgroundColor");
+        Assert.Contains($"{ground.R}, {ground.G}, {ground.B}", shown);
+        Assert.AreEqual("0", scene.Script("document.documentElement.scrollWidth - document.documentElement.clientWidth"), "Jamais de défilement horizontal.");
+        Assert.Contains(theme == ThemeKind.Dark ? "dark" : "light", scene.Script("getComputedStyle(document.documentElement).colorScheme"), "La barre de défilement suit le thème.");
+    }
+
+    [STATestMethod]
+    public void A_dialog_over_the_text_replaces_it_with_its_picture()
+    {
+        using var scene = new Scene();
+        UiThread.Until(() => scene.Shown.Contains("Un premier paragraphe.", StringComparison.Ordinal));
+        var visual = scene.Visual!;
+
+        scene.Script("document.querySelector('.ProseMirror').focus()");
+        scene.Editor.StartLinkCommand.Execute(null);
+        UiThread.Until(() => scene.Editor.IsLinkOpen && visual.View.Visibility == Visibility.Hidden);
+        Assert.IsTrue(visual.IsCovered);
+        scene.Editor.AnswerLinkCommand.Execute(false);
+        UiThread.Until(() => visual.View.Visibility == Visibility.Visible);
+        Assert.IsFalse(visual.IsCovered);
+    }
+
+    [STATestMethod]
+    public void A_panel_over_the_text_closes_on_a_click_on_its_picture()
+    {
+        using var scene = new Scene("# Mitose\n\n## Une partie\n\nUn premier paragraphe.\n", width: 800);
+        UiThread.Until(() => scene.Shown.Contains("Un premier paragraphe.", StringComparison.Ordinal));
+        UiThread.Until(() => scene.Page.HasOutline);
+        var visual = scene.Visual!;
+
+        scene.Page.IsOutlineOn = true;
+        UiThread.Until(() => visual.View.Visibility == Visibility.Hidden);
+        Assert.IsTrue(scene.Page.ShowsOutlineOverlay);
+
+        scene.Page.CloseOverlayCommand.Execute(null);
+        UiThread.Until(() => visual.View.Visibility == Visibility.Visible);
+    }
+
+    [STATestMethod]
+    public void Without_the_engine_the_sheet_is_written_in_markdown()
+    {
+        using var scene = new Scene();
+        UiThread.Until(() => scene.Shown.Contains("Un premier paragraphe.", StringComparison.Ordinal));
+
+        var failed = scene.Editor.VisualFailedAsync();
+        UiThread.Until(() => failed.IsCompleted);
+
+        Assert.IsTrue(scene.Editor.IsMarkdownShown);
+        Assert.IsFalse(scene.Editor.IsVisualAvailable);
+        Assert.AreEqual(EditingText.VisualUnavailable, scene.Editor.Problem);
+        Assert.AreEqual(Body, ((IEditorSurface)scene.SheetPage.EditorView.Source).Text);
+        Assert.IsFalse(scene.SheetPage.Ribbon.MarkdownToggle.IsEnabled);
+    }
+
+    [STATestMethod]
+    public void Leaving_the_view_saves_then_closes_the_engine_and_coming_back_reopens_it()
+    {
+        using var scene = new Scene();
+        UiThread.Until(() => scene.Shown.Contains("Un premier paragraphe.", StringComparison.Ordinal));
+        scene.Editor.SaveDelay = TimeSpan.FromHours(1);
+        scene.Type(" Suite.");
+
+        ((Canvas)scene.Window.Content).Children.Remove(scene.SheetPage);
+        UiThread.Until(() => scene.OnDisk.Contains("Suite.", StringComparison.Ordinal) && scene.Visual is null);
+
+        ((Canvas)scene.Window.Content).Children.Add(scene.SheetPage);
+        UiThread.Until(() => scene.Visual?.IsReady == true);
+        UiThread.Until(() => scene.Shown.Contains("Suite.", StringComparison.Ordinal));
+    }
+
+    [STATestMethod]
+    public void A_theme_change_after_the_engine_closed_goes_nowhere()
+    {
+        using var scene = new Scene();
+        var visual = scene.Visual!;
+        UiThread.Until(() => visual.IsReady);
+
+        scene.Test.Design.Theme = ThemeKind.Dark;
+        visual.Dispose();
+        Pump(TimeSpan.FromMilliseconds(50));
+
+        visual.ReplaceAll("Un texte");
+        ((IEditorSurface)visual).Focus();
+        visual.SetZoom(1.5);
+        var covered = visual.SetCoveredAsync(true);
+        UiThread.Until(() => covered.IsCompleted);
+        Assert.AreEqual("Un texte", visual.Text);
+        Assert.IsFalse(visual.IsReady);
+    }
+
+    [STATestMethod]
+    public void Closing_the_window_saves_the_last_stroke_from_the_text()
+    {
+        using var scene = new Scene();
+        UiThread.Until(() => scene.Shown.Contains("Un premier paragraphe.", StringComparison.Ordinal));
+        scene.Editor.SaveDelay = TimeSpan.FromHours(1);
+        scene.Type(" Suite.");
+
+        scene.Window.Close();
+
+        Assert.Contains("Suite.", scene.OnDisk);
+    }
+
+    [STATestMethod]
+    public void The_plan_of_the_text_follows_the_writing()
+    {
+        using var scene = new Scene("# Un\n\nTexte\n\n## Deux\n\nFin\n");
+        UiThread.Until(() => scene.Page.Outline.Count == 2);
+        Assert.AreEqual(Visibility.Visible, scene.SheetPage.OutlinePane.Visibility);
+
+        scene.Editor.GoToHeading("Deux", 0);
+        UiThread.Until(() => scene.Editor.Tools?.Heading == 2);
+    }
+
+    [STATestMethod]
+    public void An_image_of_the_vault_shows_in_the_text()
+    {
+        using var scene = new Scene("Une image.\n");
+        UiThread.Until(() => scene.Shown.Contains("Une image.", StringComparison.Ordinal));
+        scene.Script("document.querySelector('.ProseMirror').focus()");
+        var png = Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAEBgIApD5fRAAAAABJRU5ErkJggg==");
+
+        var inserted = scene.Editor.InsertImageAsync("point.png", png);
+        UiThread.Until(() => inserted.IsCompleted);
+
+        UiThread.Until(() => scene.OnDisk.Contains("![point](", StringComparison.Ordinal));
+        UiThread.Until(() => scene.Script("(() => { const i = document.querySelector('.ProseMirror .image img'); return i !== null && i.complete && i.naturalWidth === 1; })()") == "true");
+    }
+
+    [STATestMethod]
+    public void A_menu_offers_the_replacements_of_a_wrong_word()
+    {
+        using var scene = new Scene("Une ékole ici.\n");
+        var visual = scene.Visual!;
+
+        var items = visual.MenuItems(new MenuEvent("ékole", 5, false, false, true, true), new KyfRev.Application.Ports.SpellingCorrection(0, 5, ["école"]));
+
+        var headers = items.OfType<MenuItem>().Select(item => (string)item.Header).ToList();
+        Assert.AreEqual("école", headers[0]);
+        Assert.AreEqual(EditingText.AddToDictionary, headers[1]);
+        CollectionAssert.Contains(headers, EditingText.PastePlain);
+        CollectionAssert.Contains(headers, EditingText.RemoveLink);
+        CollectionAssert.Contains(headers, EditingText.DeleteTable);
+
+        items.OfType<MenuItem>().First().RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+        UiThread.Until(() => scene.Shown.Contains("école", StringComparison.Ordinal) || scene.Shown.Contains("Une", StringComparison.Ordinal));
+
+        var inCode = visual.MenuItems(new MenuEvent(null, 0, false, true, false, false), null);
+        Assert.AreEqual(EditingText.Cut, ((MenuItem)inCode[0]).Header);
+        Assert.HasCount(4, inCode, "Dans le code, seulement le presse-papiers.");
+    }
+}

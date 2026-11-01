@@ -46,11 +46,11 @@ public sealed class ReviewNavigation : IReviewOpener
     private readonly IExternalLinks _links;
     private readonly AnnotationUseCases _annotations;
     private readonly EditingUseCases _editing;
-    private readonly ISpelling _spelling;
+    private readonly EditorEnvironment _environment;
     private ShellViewModel? _shell;
 
     /// <summary>La navigation, sur les cas d'usage des fiches, des révisions et des rappels, et la séance gardée sur ce poste.</summary>
-    public ReviewNavigation(SheetUseCases sheets, AnnotationUseCases annotations, ReviewUseCases reviews, ReminderUseCases reminders, VaultUseCases vaults, IStudySessionStore sessions, TimeProvider time, IExternalLinks links, EditingUseCases editing, ISpelling spelling)
+    public ReviewNavigation(SheetUseCases sheets, AnnotationUseCases annotations, ReviewUseCases reviews, ReminderUseCases reminders, VaultUseCases vaults, IStudySessionStore sessions, TimeProvider time, IExternalLinks links, EditingUseCases editing, EditorEnvironment environment)
     {
         ArgumentNullException.ThrowIfNull(sheets);
         ArgumentNullException.ThrowIfNull(reviews);
@@ -61,9 +61,9 @@ public sealed class ReviewNavigation : IReviewOpener
         ArgumentNullException.ThrowIfNull(links);
         ArgumentNullException.ThrowIfNull(annotations);
         ArgumentNullException.ThrowIfNull(editing);
-        ArgumentNullException.ThrowIfNull(spelling);
+        ArgumentNullException.ThrowIfNull(environment);
         _editing = editing;
-        _spelling = spelling;
+        _environment = environment;
         _links = links;
         _annotations = annotations;
         _sheets = sheets;
@@ -168,7 +168,7 @@ public sealed class ReviewNavigation : IReviewOpener
     }
 
     /// <summary>La page d'un élément de séance ; « Retour » quitte la séance, gardée pour être reprise.</summary>
-    private SheetEditorViewModel Editor(OpenedSheet sheet) => new(sheet, _editing, _sheets, _spelling);
+    private SheetEditorViewModel Editor(OpenedSheet sheet) => new(sheet, _editing, _sheets, _environment);
 
     private object ItemPage(SessionItem item, bool activeRecall, Action leave)
     {

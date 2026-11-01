@@ -63,7 +63,7 @@ public sealed class WritingTests
 
         public MarkdownEditor Source => View.Source;
 
-        public EditorRibbon Ribbon => View.Ribbon;
+        public EditorRibbon Ribbon => SheetPage.Ribbon;
 
         public string OnDisk => Vault.App.Sheets.Open(Vault.SheetId).Value.Body;
 
@@ -298,7 +298,7 @@ public sealed class WritingTests
         UiThread.Until(() => scene.Editor.State == SaveState.Conflict);
 
         Assert.AreEqual("Sur le disque.", scene.OnDisk);
-        Assert.AreEqual(Visibility.Visible, scene.View.ConflictPanel.Visibility);
+        Assert.AreEqual(Visibility.Visible, scene.SheetPage.ConflictPanel.Visibility);
         Assert.AreEqual(EditingText.InConflict, scene.Editor.StateLabel);
 
         scene.Type("Encore. ");
@@ -322,12 +322,12 @@ public sealed class WritingTests
         UiThread.Until(() => scene.Editor.State == SaveState.Conflict);
         var versions = scene.Vault.App.Editing.Versions(scene.Vault.SheetId).Value.Count;
 
-        Click(scene.View.KeepMineButton);
+        Click(scene.SheetPage.KeepMineButton);
         scene.WaitSaved();
 
         Assert.AreEqual("Ma frappe. " + Body, scene.OnDisk);
         Assert.IsGreaterThanOrEqualTo(versions, scene.Vault.App.Editing.Versions(scene.Vault.SheetId).Value.Count);
-        Assert.AreEqual(Visibility.Collapsed, scene.View.ConflictPanel.Visibility);
+        Assert.AreEqual(Visibility.Collapsed, scene.SheetPage.ConflictPanel.Visibility);
     }
 
     [STATestMethod]
@@ -339,7 +339,7 @@ public sealed class WritingTests
         scene.Type("Ma frappe. ");
         UiThread.Until(() => scene.Editor.State == SaveState.Conflict);
 
-        Click(scene.View.ReloadDiskButton);
+        Click(scene.SheetPage.ReloadDiskButton);
         UiThread.Until(() => scene.Editor.State == SaveState.Saved);
 
         Assert.AreEqual("Sur le disque.", Written(scene));
@@ -366,12 +366,12 @@ public sealed class WritingTests
     {
         using var scene = new Scene();
         var sheet = scene.Vault.App.Sheets.Open(scene.Vault.SheetId).Value;
-        var editor = new SheetEditorViewModel(sheet with { Id = "inconnue" }, scene.Vault.App.Editing, scene.Vault.App.Sheets, new FakeSpelling())
+        var editor = new SheetEditorViewModel(sheet with { Id = "inconnue" }, scene.Vault.App.Editing, scene.Vault.App.Sheets, FakeEnvironment.Markdown())
         {
             SaveDelay = TimeSpan.FromMilliseconds(10),
         };
         var surface = new MarkdownEditor();
-        editor.Attach(surface);
+        editor.Attach(surface, () => null);
 
         surface.Document.Insert(0, "A");
         UiThread.Until(() => editor.State == SaveState.Failed);
@@ -701,6 +701,20 @@ public sealed class WritingTests
     }
 
     [STATestMethod]
+    public void A_busy_clipboard_is_said_and_nothing_is_pasted()
+    {
+        using var scene = new Scene("x");
+
+        scene.Editor.Report(EditingText.ClipboardBusy);
+
+        Assert.AreEqual(EditingText.ClipboardBusy, scene.Editor.Problem);
+        Assert.IsTrue(scene.SheetPage.DismissButton.Command.CanExecute(null));
+        Assert.IsTrue(System.Windows.Input.ApplicationCommands.Paste.CanExecute(null, scene.Source.TextArea), "Vérifier le collage n'ouvre pas le presse-papiers, qu'un autre programme peut tenir.");
+        scene.SheetPage.DismissButton.Command.Execute(null);
+        Assert.IsFalse(scene.Editor.HasProblem);
+    }
+
+    [STATestMethod]
     public void A_dropped_image_lands_where_it_is_dropped()
     {
         using var scene = new Scene("début\n\nfin");
@@ -986,11 +1000,11 @@ public sealed class WritingTests
         using var scene = new Scene();
         var other = new MarkdownEditor();
 
-        scene.Editor.Attach(other);
+        scene.Editor.Attach(other, () => null);
         other.Document.Insert(0, "A");
         Assert.AreEqual(SaveState.Modified, scene.Editor.State);
 
-        scene.Editor.Attach(scene.Source);
+        scene.Editor.Attach(scene.Source, () => null);
         Assert.AreEqual(Body, Written(scene));
     }
 

@@ -1,3 +1,4 @@
+using System.IO;
 using System.Reflection;
 using KyfRev.Application.Model;
 using KyfRev.Application.Modules;
@@ -7,6 +8,7 @@ using KyfRev.DesignSystem;
 using KyfRev.DesignSystem.Tokens;
 using KyfRev.Infrastructure.Vault.Adapters;
 using KyfRev.Infrastructure.Windows;
+using KyfRev.Presentation.Wpf.Editing;
 using KyfRev.Presentation.Wpf.Pages;
 using KyfRev.Presentation.Wpf.Shell;
 using Microsoft.Extensions.DependencyInjection;
@@ -64,6 +66,9 @@ internal static class Composition
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Reviews);
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Editing);
         services.AddSingleton<ISpelling, WindowsSpelling>();
+        services.AddSingleton(provider => new EditorEnvironment(
+            provider.GetRequiredService<ISpelling>(),
+            Path.Combine(provider.GetRequiredService<VaultLocations>().LocalData, "WebView2")));
         services.AddSingleton(clock);
         services.AddSingleton<ReviewNavigation>();
         services.AddSingleton<IReviewOpener>(provider => provider.GetRequiredService<ReviewNavigation>());

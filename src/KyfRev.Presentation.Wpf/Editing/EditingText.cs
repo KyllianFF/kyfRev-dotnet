@@ -23,6 +23,60 @@ public static class EditingText
     /// <summary>Nom du rendu, pour le lecteur d'écran.</summary>
     public const string PreviewName = "Rendu de la fiche";
 
+    /// <summary>Nom du texte modifiable, pour le lecteur d'écran.</summary>
+    public const string VisualText = "Texte de la fiche, modifiable";
+
+    /// <summary>Afficher le code à gauche du rendu.</summary>
+    public const string ShowMarkdown = "Afficher le Markdown";
+
+    /// <summary>L'éditeur visuel n'a pas démarré.</summary>
+    public const string VisualUnavailable = "Le texte mis en forme n'a pas pu s'ouvrir : la fiche s'écrit ici en Markdown. Rien n'est perdu.";
+
+    /// <summary>Le presse-papiers est tenu par un autre programme.</summary>
+    public const string ClipboardBusy = "Le presse-papiers est occupé par un autre programme : rien n'a été collé. Réessayez dans un instant.";
+
+    /// <summary>Coller sans mise en forme.</summary>
+    public const string PastePlain = "Coller sans mise en forme";
+
+    /// <summary>Effacer la mise en forme.</summary>
+    public const string ClearFormat = "Effacer la mise en forme";
+
+    /// <summary>Modifier un lien.</summary>
+    public const string EditLink = "Modifier le lien";
+
+    /// <summary>Retirer un lien.</summary>
+    public const string RemoveLink = "Retirer le lien";
+
+    /// <summary>Ajouter une ligne au-dessus.</summary>
+    public const string RowBefore = "Insérer une ligne au-dessus";
+
+    /// <summary>Ajouter une ligne en dessous.</summary>
+    public const string RowAfter = "Insérer une ligne en dessous";
+
+    /// <summary>Ajouter une colonne à gauche.</summary>
+    public const string ColumnBefore = "Insérer une colonne à gauche";
+
+    /// <summary>Ajouter une colonne à droite.</summary>
+    public const string ColumnAfter = "Insérer une colonne à droite";
+
+    /// <summary>Supprimer une ligne.</summary>
+    public const string DeleteRow = "Supprimer la ligne";
+
+    /// <summary>Supprimer une colonne.</summary>
+    public const string DeleteColumn = "Supprimer la colonne";
+
+    /// <summary>Supprimer un tableau.</summary>
+    public const string DeleteTable = "Supprimer le tableau";
+
+    /// <summary>Le titre de la saisie d'une formule.</summary>
+    public const string FormulaTitle = "Insérer une formule";
+
+    /// <summary>La source d'une formule.</summary>
+    public const string FormulaSource = "Formule (LaTeX)";
+
+    /// <summary>Une formule sur sa propre ligne.</summary>
+    public const string FormulaBlock = "Sur sa propre ligne";
+
     /// <summary>Montrer le rendu.</summary>
     public const string Preview = "Aperçu";
 
@@ -49,6 +103,9 @@ public static class EditingText
 
     /// <summary>Reprendre le texte du disque.</summary>
     public const string ReloadDisk = "Recharger la version du disque";
+
+    /// <summary>Refermer un refus.</summary>
+    public const string Dismiss = "Fermer";
 
     /// <summary>Réessayer l'enregistrement.</summary>
     public const string Retry = "Réessayer";

@@ -10,32 +10,11 @@
   </UserControl.Resources>
 
   <Grid>
-    <Grid.RowDefinitions>
-      <RowDefinition Height="Auto" />
-      <RowDefinition Height="Auto" />
-      <RowDefinition Height="*" />
-    </Grid.RowDefinitions>
+    <!-- Par défaut, le texte se modifie à sa place. -->
+    <ContentControl x:Name="VisualHost" Focusable="False" IsTabStop="False" Visibility="{Binding IsVisualShown, Converter={StaticResource Visible}}" />
 
-    <editing:EditorRibbon x:Name="Ribbon" Margin="0,0,0,8" />
-
-    <StackPanel Grid.Row="1">
-      <!-- Un conflit n'écrit rien tant qu'il n'est pas tranché : aucune des deux versions n'est perdue. -->
-      <StackPanel x:Name="ConflictPanel" Margin="0,0,0,8" Visibility="{Binding HasConflict, Converter={StaticResource Visible}}">
-        <kyf:Notification x:Name="ConflictMessage" Severity="Warning" Message="{x:Static editing:EditingText.ConflictMessage}" IsClosable="False" Margin="0,0,0,8" />
-        <WrapPanel>
-          <Button x:Name="KeepMineButton" Content="{x:Static editing:EditingText.KeepMine}" Command="{Binding KeepMineCommand}" Margin="0,0,8,0" />
-          <Button x:Name="ReloadDiskButton" Content="{x:Static editing:EditingText.ReloadDisk}" Command="{Binding ReloadDiskCommand}" />
-        </WrapPanel>
-      </StackPanel>
-      <StackPanel Margin="0,0,0,8" Visibility="{Binding HasProblem, Converter={StaticResource Visible}}">
-        <kyf:Notification x:Name="ProblemMessage" Severity="Critical" Message="{Binding Problem}" IsClosable="False" Margin="0,0,0,8" />
-        <Button x:Name="RetryButton" Content="{x:Static editing:EditingText.Retry}" Command="{Binding RetryCommand}" HorizontalAlignment="Left"
-                Visibility="{Binding HasFailed, Converter={StaticResource Visible}}" />
-      </StackPanel>
-    </StackPanel>
-
-    <!-- Le code à gauche, le rendu à droite : ce qui est masqué ne prend aucune place. -->
-    <UniformGrid Grid.Row="2" Rows="1">
+    <!-- Sur demande, le code à gauche et le rendu à droite : ce qui est masqué ne prend aucune place. -->
+    <UniformGrid Rows="1">
       <Border x:Name="SourcePane" BorderBrush="{DynamicResource Kyf.Brush.Divider}" BorderThickness="1" CornerRadius="{DynamicResource Kyf.Radius.Control}"
               Visibility="{Binding ShowsSource, Converter={StaticResource Visible}}">
         <editing:MarkdownEditor x:Name="Source" />
@@ -47,7 +26,7 @@
     </UniformGrid>
 
     <!-- Les fiches proposées après « [[ » : la frappe continue dans le champ, qui passe ses touches à la liste. -->
-    <Popup x:Name="ProposalsPopup" IsOpen="{Binding HasProposals, Mode=OneWay}" PlacementTarget="{Binding ElementName=Source}" Placement="Relative" StaysOpen="True" Focusable="False">
+    <Popup x:Name="ProposalsPopup" IsOpen="{Binding HasProposals, Mode=OneWay}" PlacementTarget="{Binding ElementName=VisualHost}" Placement="Relative" StaysOpen="True" Focusable="False">
       <Border Background="{DynamicResource Kyf.Brush.Surface}" BorderBrush="{DynamicResource Kyf.Brush.ControlBorder}" BorderThickness="1" MinWidth="240" MaxWidth="420" Padding="4">
         <ListBox x:Name="ProposalsList" ItemsSource="{Binding Proposals}" SelectedItem="{Binding ActiveProposal}" Focusable="False"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled" AutomationProperties.Name="{x:Static editing:EditingText.Proposals}">
@@ -69,13 +48,23 @@
       </Border>
     </Popup>
 
-    <kyf:Dialog x:Name="LinkDialog" Grid.RowSpan="3" Title="{x:Static editing:EditingText.LinkTitle}" IsOpen="{Binding IsLinkOpen, Mode=OneWay}"
+    <kyf:Dialog x:Name="LinkDialog" Title="{x:Static editing:EditingText.LinkTitle}" IsOpen="{Binding IsLinkOpen, Mode=OneWay}"
                 PrimaryButtonText="{x:Static editing:EditingText.InsertLink}" Closed="OnLinkClosed">
       <StackPanel>
         <TextBlock Text="{x:Static editing:EditingText.LinkLabel}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,0,0,4" />
         <TextBox x:Name="LinkLabelBox" Text="{Binding LinkLabel, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="{x:Static editing:EditingText.LinkLabel}" />
         <TextBlock Text="{x:Static editing:EditingText.LinkAddress}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,8,0,4" />
         <TextBox x:Name="LinkAddressBox" Text="{Binding LinkAddress, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="{x:Static editing:EditingText.LinkAddress}" />
+      </StackPanel>
+    </kyf:Dialog>
+
+    <kyf:Dialog x:Name="FormulaDialog" Title="{x:Static editing:EditingText.FormulaTitle}" IsOpen="{Binding IsFormulaOpen, Mode=OneWay}"
+                PrimaryButtonText="{x:Static editing:EditingText.InsertLink}" Closed="OnFormulaClosed">
+      <StackPanel>
+        <TextBlock Text="{x:Static editing:EditingText.FormulaSource}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,0,0,4" />
+        <TextBox x:Name="FormulaBox" Text="{Binding FormulaTex, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap" MinLines="2" VerticalContentAlignment="Top"
+                 FontFamily="{DynamicResource Kyf.Font.Code}" AutomationProperties.Name="{x:Static editing:EditingText.FormulaSource}" />
+        <CheckBox x:Name="FormulaBlockBox" Content="{x:Static editing:EditingText.FormulaBlock}" IsChecked="{Binding FormulaBlock}" Margin="0,8,0,0" />
       </StackPanel>
     </kyf:Dialog>
   </Grid>

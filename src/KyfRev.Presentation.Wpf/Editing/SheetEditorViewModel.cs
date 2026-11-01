@@ -1,9 +1,11 @@
 using System.IO;
 using System.Security.Cryptography;
+using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using KyfRev.Application;
 using KyfRev.Application.Model;
 using KyfRev.Application.Ports;
 using KyfRev.Application.UseCases;
@@ -36,41 +38,124 @@ public enum SaveState
 /// <param name="Columns">Ses colonnes.</param>
 public sealed record TableSize(int Rows, int Columns);
 
-/// <summary>Ce que l'éditeur attend du champ d'écriture. Le texte n'y a que des fins de ligne « \n ».</summary>
+/// <summary>Ce dont l'écriture a besoin autour d'elle.</summary>
+/// <param name="Spelling">Le correcteur d'orthographe.</param>
+/// <param name="WebDataFolder">Le dossier des données de WebView2.</param>
+/// <param name="StartsInMarkdown">Ouvrir sur le code, et non sur le texte mis en forme.</param>
+public sealed record EditorEnvironment(ISpelling Spelling, string WebDataFolder, bool StartsInMarkdown = false);
+
+/// <summary>Ce que le ruban affiche de l'endroit du curseur.</summary>
+/// <param name="Bold">Gras.</param>
+/// <param name="Italic">Italique.</param>
+/// <param name="Underline">Souligné.</param>
+/// <param name="Strike">Barré.</param>
+/// <param name="Superscript">Exposant.</param>
+/// <param name="Subscript">Indice.</param>
+/// <param name="Heading">Le niveau de titre ; 0 pour du texte.</param>
+/// <param name="List">La liste où il se trouve.</param>
+/// <param name="CanUndo">Un geste peut être annulé.</param>
+/// <param name="CanRedo">Un geste annulé peut être rétabli.</param>
+public sealed record EditorTools(bool Bold, bool Italic, bool Underline, bool Strike, bool Superscript, bool Subscript, int Heading, ListKind? List, bool CanUndo, bool CanRedo);
+
+/// <summary>Une saisie « [[… » au curseur.</summary>
+/// <param name="Query">Ce qui est cherché.</param>
+/// <param name="Start">Où elle commence.</param>
+public sealed record LinkInput(string Query, int Start);
+
+/// <summary>Ce qui préremplit la saisie d'un lien.</summary>
+/// <param name="Label">Son texte.</param>
+/// <param name="Address">Son adresse.</param>
+public sealed record LinkQuestion(string Label, string Address);
+
+/// <summary>Ce qui préremplit la saisie d'une formule.</summary>
+/// <param name="Tex">Sa source.</param>
+/// <param name="Block">Sur sa propre ligne.</param>
+/// <param name="Position">Celle qu'elle remplace.</param>
+public sealed record FormulaQuestion(string Tex, bool Block, int? Position);
+
+/// <summary>
+/// Ce que l'éditeur attend d'une façon d'écrire : le texte mis en forme ou le code Markdown. L'enregistrement et
+/// les conflits ne dépendent que de cette interface.
+/// </summary>
 internal interface IEditorSurface
 {
     /// <summary>Le texte a changé par la main de l'utilisateur.</summary>
     event EventHandler? TextEdited;
 
-    /// <summary>Le curseur a bougé.</summary>
-    event EventHandler? CaretMoved;
+    /// <summary>L'endroit du curseur a changé.</summary>
+    event EventHandler<EditorTools>? ToolsChanged;
 
-    /// <summary>Le Markdown actuel de la fiche.</summary>
+    /// <summary>Une saisie « [[… » au curseur, ou plus de saisie.</summary>
+    event EventHandler<LinkInput?>? LinkInputChanged;
+
+    /// <summary>La saisie d'un lien est demandée.</summary>
+    event EventHandler<LinkQuestion>? LinkAsked;
+
+    /// <summary>La saisie d'une formule est demandée.</summary>
+    event EventHandler<FormulaQuestion>? FormulaAsked;
+
+    /// <summary>Enregistrer tout de suite.</summary>
+    event EventHandler? SaveAsked;
+
+    /// <summary>Une touche pour la liste des fiches.</summary>
+    event EventHandler<Key>? ListKeyPressed;
+
+    /// <summary>Le Markdown actuel de la fiche, avec des fins de ligne « \n ».</summary>
     string Text { get; }
 
-    /// <summary>Le début de la sélection.</summary>
-    int SelectionStart { get; }
+    /// <summary>Où ouvrir la liste des fiches, dans le champ.</summary>
+    Point InputPoint { get; }
 
-    /// <summary>La fin de la sélection.</summary>
-    int SelectionEnd { get; }
+    /// <summary>Met <see cref="Text"/> à jour de la dernière frappe.</summary>
+    Task SyncAsync();
 
-    /// <summary>La ligne du curseur.</summary>
-    string CaretLine { get; }
-
-    /// <summary>Le curseur dans sa ligne.</summary>
-    int CaretColumn { get; }
-
-    /// <summary>Un geste peut être annulé.</summary>
-    bool CanUndo { get; }
-
-    /// <summary>Un geste annulé peut être rétabli.</summary>
-    bool CanRedo { get; }
-
-    /// <summary>Fait un remplacement, comme une frappe.</summary>
-    void Apply(TextChange change);
-
-    /// <summary>Remplace tout par un contenu déjà enregistré : rien à enregistrer, rien à annuler.</summary>
+    /// <summary>Remplace tout par un contenu déjà connu : rien à enregistrer, rien à annuler.</summary>
     void ReplaceAll(string text);
+
+    /// <summary>Met en forme la sélection, ou retire sa mise en forme.</summary>
+    void ToggleMark(InlineMark mark);
+
+    /// <summary>Donne un niveau de titre ; 0 en refait du texte.</summary>
+    void SetHeading(int level);
+
+    /// <summary>Met en liste, ou en sort.</summary>
+    void ToggleList(ListKind kind);
+
+    /// <summary>Change la casse ; sans style, la suivante.</summary>
+    void ChangeCase(CaseStyle? style);
+
+    /// <summary>Insère un tableau vide.</summary>
+    void InsertTable(int rows, int columns);
+
+    /// <summary>Crée un bloc de code, ou change le langage de celui où est le curseur.</summary>
+    void InsertCode(string language);
+
+    /// <summary>Insère une ligne horizontale.</summary>
+    void InsertRule();
+
+    /// <summary>Demande la saisie d'une formule, si cette façon d'écrire en a une.</summary>
+    void AskFormula();
+
+    /// <summary>Insère une formule, ou remplace celle de cette position.</summary>
+    void InsertFormula(string tex, bool block, int? position);
+
+    /// <summary>Demande la saisie d'un lien.</summary>
+    void AskLink();
+
+    /// <summary>Crée ou modifie un lien.</summary>
+    void InsertLink(string label, string address);
+
+    /// <summary>Insère une image du coffre.</summary>
+    void InsertImage(string link, string alternative, int? position);
+
+    /// <summary>Remplace la saisie « [[… » par un lien vers une fiche.</summary>
+    void InsertSheetLink(string label, string address);
+
+    /// <summary>Dit si la liste des fiches est ouverte.</summary>
+    void SetProposalsOpen(bool open);
+
+    /// <summary>Amène un titre en haut de la vue.</summary>
+    void GoToHeading(string title, int occurrence);
 
     /// <summary>Annule le dernier geste.</summary>
     void Undo();
@@ -84,8 +169,9 @@ internal interface IEditorSurface
 
 /// <summary>
 /// L'écriture d'une fiche : enregistrement automatique après la dernière frappe, un seul à la fois, et conflit
-/// avec le disque sans perte. Les gestes du ruban rendent un remplacement du Markdown, et rien d'autre ne le
-/// réécrit : ce que l'utilisateur n'a pas touché reste tel quel, octet pour octet.
+/// avec le disque sans perte. Par défaut, le texte mis en forme se modifie à sa place, comme dans un traitement de
+/// texte ; un bouton affiche le code Markdown à gauche et son rendu à droite. Ni l'une ni l'autre ne réécrit ce que
+/// l'utilisateur n'a pas touché : il reste tel quel, octet pour octet.
 /// </summary>
 public sealed partial class SheetEditorViewModel : ObservableObject
 {
@@ -104,6 +190,9 @@ public sealed partial class SheetEditorViewModel : ObservableObject
     private readonly ulong _session;
     private readonly DispatcherTimer _saveTimer;
     private readonly DispatcherTimer _previewTimer;
+    private IEditorSurface? _source;
+    private IEditorSurface? _visual;
+    private Func<IEditorSurface?>? _visualProvider;
     private IEditorSurface? _surface;
     private string _fingerprint;
     private string _saved;
@@ -114,18 +203,21 @@ public sealed partial class SheetEditorViewModel : ObservableObject
     private bool _loadingKnown;
     private int? _inputStart;
     private int? _dismissedAt;
+    private string _inputQuery = string.Empty;
+    private SaveConflict? _conflict;
+    private int? _formulaPosition;
 
     /// <summary>L'écriture de <paramref name="sheet"/>.</summary>
-    public SheetEditorViewModel(OpenedSheet sheet, EditingUseCases editing, SheetUseCases sheets, ISpelling spelling)
+    public SheetEditorViewModel(OpenedSheet sheet, EditingUseCases editing, SheetUseCases sheets, EditorEnvironment environment)
     {
         ArgumentNullException.ThrowIfNull(sheet);
         ArgumentNullException.ThrowIfNull(editing);
         ArgumentNullException.ThrowIfNull(sheets);
-        ArgumentNullException.ThrowIfNull(spelling);
+        ArgumentNullException.ThrowIfNull(environment);
         _sheet = sheet;
         _editing = editing;
         _sheets = sheets;
-        Spelling = spelling;
+        Environment = environment;
         _crlf = sheet.Body.Contains("\r\n", StringComparison.Ordinal);
         _fingerprint = sheet.Fingerprint;
         _saved = Normalize(sheet.Body);
@@ -141,17 +233,22 @@ public sealed partial class SheetEditorViewModel : ObservableObject
         };
         LinkLabel = string.Empty;
         LinkAddress = string.Empty;
+        FormulaTex = string.Empty;
         Proposals = [];
+        IsMarkdownShown = environment.StartsInMarkdown;
     }
 
+    /// <summary>Ce dont l'écriture a besoin autour d'elle.</summary>
+    public EditorEnvironment Environment { get; }
+
     /// <summary>Le correcteur d'orthographe.</summary>
-    public ISpelling Spelling { get; }
+    public ISpelling Spelling => Environment.Spelling;
 
     /// <summary>L'identifiant de la fiche écrite.</summary>
     public string SheetId => _sheet.Id;
 
-    /// <summary>Le Markdown à l'ouverture, avec des fins de ligne « \n ».</summary>
-    public string InitialText => Normalize(_sheet.Body);
+    /// <summary>Le dossier de la fiche dans le coffre, d'où partent ses images.</summary>
+    public string Folder => ContentTargets.FolderOf(_sheet.Path);
 
     /// <summary>Le délai entre la dernière frappe et l'enregistrement.</summary>
     internal TimeSpan SaveDelay
@@ -199,9 +296,36 @@ public sealed partial class SheetEditorViewModel : ObservableObject
     /// <summary>Un enregistrement a écrit le texte sur le disque.</summary>
     public bool HasChanged { get; private set; }
 
-    /// <summary>Le rendu du Markdown actuel.</summary>
+    /// <summary>Le rendu du Markdown actuel, qui donne aussi le plan.</summary>
     [ObservableProperty]
     public partial SheetReading? Preview { get; private set; }
+
+    /// <summary>Ce que le ruban affiche de l'endroit du curseur.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(StyleLabel))]
+    public partial EditorTools? Tools { get; private set; }
+
+    /// <summary>Le style de la ligne du curseur.</summary>
+    public string StyleLabel => Tools is { Heading: > 0 } tools ? EditingText.Heading(tools.Heading) : EditingText.NormalText;
+
+    /// <summary>Le code Markdown est affiché, à gauche de son rendu. Sinon, le texte se modifie à sa place.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsVisualShown), nameof(ShowsPreview), nameof(ShowsSource), nameof(IsPreviewOn), nameof(IsMarkdownOn))]
+    public partial bool IsMarkdownShown { get; private set; }
+
+    /// <summary>Le texte se modifie à sa place.</summary>
+    public bool IsVisualShown => !IsMarkdownShown;
+
+    /// <summary>Le texte mis en forme a pu s'ouvrir.</summary>
+    [ObservableProperty]
+    public partial bool IsVisualAvailable { get; private set; } = true;
+
+    /// <summary>Le bouton « Afficher le Markdown ».</summary>
+    public bool IsMarkdownOn
+    {
+        get => IsMarkdownShown;
+        set => _ = ShowMarkdownAsync(value);
+    }
 
     /// <summary>La largeur de la vue d'écriture.</summary>
     [ObservableProperty]
@@ -221,11 +345,11 @@ public sealed partial class SheetEditorViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(ShowsPreview), nameof(ShowsSource), nameof(IsPreviewOn))]
     private partial bool PreviewReplacesSource { get; set; }
 
-    /// <summary>Le rendu est montré.</summary>
-    public bool ShowsPreview => PreviewFits ? WantsPreview : PreviewReplacesSource;
+    /// <summary>Le rendu est montré, à côté du code.</summary>
+    public bool ShowsPreview => IsMarkdownShown && (PreviewFits ? WantsPreview : PreviewReplacesSource);
 
     /// <summary>Le code est montré.</summary>
-    public bool ShowsSource => PreviewFits || !PreviewReplacesSource;
+    public bool ShowsSource => IsMarkdownShown && (PreviewFits || !PreviewReplacesSource);
 
     /// <summary>Le bouton de l'aperçu : à côté du code s'il y tient, sinon à sa place.</summary>
     public bool IsPreviewOn
@@ -244,10 +368,6 @@ public sealed partial class SheetEditorViewModel : ObservableObject
         }
     }
 
-    /// <summary>Le style de la ligne du curseur.</summary>
-    [ObservableProperty]
-    public partial string StyleLabel { get; private set; } = EditingText.NormalText;
-
     /// <summary>La saisie d'un lien est ouverte.</summary>
     [ObservableProperty]
     public partial bool IsLinkOpen { get; private set; }
@@ -259,6 +379,18 @@ public sealed partial class SheetEditorViewModel : ObservableObject
     /// <summary>L'adresse du lien.</summary>
     [ObservableProperty]
     public partial string LinkAddress { get; set; }
+
+    /// <summary>La saisie d'une formule est ouverte.</summary>
+    [ObservableProperty]
+    public partial bool IsFormulaOpen { get; private set; }
+
+    /// <summary>La source de la formule.</summary>
+    [ObservableProperty]
+    public partial string FormulaTex { get; set; }
+
+    /// <summary>La formule est sur sa propre ligne.</summary>
+    [ObservableProperty]
+    public partial bool FormulaBlock { get; set; }
 
     /// <summary>Les fiches proposées après « [[ ».</summary>
     [ObservableProperty]
@@ -272,19 +404,55 @@ public sealed partial class SheetEditorViewModel : ObservableObject
     [ObservableProperty]
     public partial VaultSheet? ActiveProposal { get; set; }
 
-    /// <summary>Le champ d'écriture : le remet sur le texte à ouvrir.</summary>
-    internal void Attach(IEditorSurface surface)
+    /// <summary>Où ouvrir la liste des fiches, dans le champ actif.</summary>
+    internal Point InputPoint => _surface?.InputPoint ?? default;
+
+    /// <summary>Le champ actif.</summary>
+    internal IEditorSurface? Surface => _surface;
+
+    /// <summary>Les champs d'écriture : le code, et le texte mis en forme, créé à la première demande.</summary>
+    internal void Attach(IEditorSurface source, Func<IEditorSurface?> visual)
     {
-        if (_surface is not null)
-        {
-            _surface.TextEdited -= OnTextEdited;
-            _surface.CaretMoved -= OnCaretMoved;
-        }
-        _surface = surface;
+        Hook(_surface, false);
+        _source = source;
+        _visualProvider = visual;
+        _visual = null;
+        var surface = IsMarkdownShown ? source : VisualOrFallback();
+        IsMarkdownShown = ReferenceEquals(surface, source);
         surface.ReplaceAll(_saved);
-        surface.TextEdited += OnTextEdited;
-        surface.CaretMoved += OnCaretMoved;
-        OnCaretMoved(surface, EventArgs.Empty);
+        _surface = surface;
+        Hook(surface, true);
+    }
+
+    /// <summary>Le texte mis en forme s'est arrêté : l'écriture continue en Markdown, sans rien perdre.</summary>
+    internal async Task VisualFailedAsync()
+    {
+        IsVisualAvailable = false;
+        _visualProvider = null;
+        Problem = EditingText.VisualUnavailable;
+        if (!IsMarkdownShown)
+        {
+            await ShowMarkdownAsync(true).ConfigureAwait(true);
+        }
+    }
+
+    /// <summary>Passe d'une façon d'écrire à l'autre, sans rien perdre ni enregistrer.</summary>
+    public async Task ShowMarkdownAsync(bool markdown)
+    {
+        if (markdown != IsMarkdownShown && _surface is { } from && _source is { } source && (markdown || IsVisualAvailable))
+        {
+            await from.SyncAsync().ConfigureAwait(true);
+            var text = from.Text;
+            var to = markdown ? source : VisualOrFallback();
+            Hook(from, false);
+            to.ReplaceAll(text);
+            _surface = to;
+            Hook(to, true);
+            IsMarkdownShown = ReferenceEquals(to, source);
+            await RefreshPreviewAsync().ConfigureAwait(true);
+            to.Focus();
+        }
+        OnPropertyChanged(nameof(IsMarkdownOn));
     }
 
     /// <summary>Enregistre le texte s'il a changé ; un seul enregistrement à la fois, le suivant repart du texte du moment.</summary>
@@ -296,12 +464,13 @@ public sealed partial class SheetEditorViewModel : ObservableObject
             _again = true;
             return _running;
         }
-        if (_surface is null || HasConflict || _surface.Text == _saved)
+        if (_surface is null || HasConflict)
         {
             return Task.CompletedTask;
         }
-        _running = SaveLoopAsync();
-        return _running;
+        var loop = SaveLoopAsync();
+        _running = loop.IsCompleted ? null : loop;
+        return loop;
     }
 
     /// <summary>Avant de quitter l'écriture : vrai si tout est enregistré.</summary>
@@ -309,11 +478,17 @@ public sealed partial class SheetEditorViewModel : ObservableObject
     {
         _saveTimer.Stop();
         _previewTimer.Stop();
-        for (var attempt = 0; attempt < SaveAttempts && _surface is not null && _surface.Text != _saved && !HasConflict && !HasFailed; attempt++)
+        if (_surface is not { } surface)
+        {
+            return true;
+        }
+        await surface.SyncAsync().ConfigureAwait(true);
+        for (var attempt = 0; attempt < SaveAttempts && surface.Text != _saved && !HasConflict && !HasFailed; attempt++)
         {
             await SaveAsync().ConfigureAwait(true);
+            await surface.SyncAsync().ConfigureAwait(true);
         }
-        return _surface is null || _surface.Text == _saved;
+        return surface.Text == _saved;
     }
 
     /// <summary>Prépare le premier rendu, ou le refait.</summary>
@@ -324,6 +499,7 @@ public sealed partial class SheetEditorViewModel : ObservableObject
             return;
         }
         var version = ++_previewVersion;
+        await surface.SyncAsync().ConfigureAwait(true);
         var text = surface.Text;
         var reading = await Task.Run(() => SheetReading.Of(_sheet with { Body = text, Annotations = [] }, _sheets)).ConfigureAwait(true);
         if (version == _previewVersion)
@@ -331,6 +507,9 @@ public sealed partial class SheetEditorViewModel : ObservableObject
             Preview = reading;
         }
     }
+
+    /// <summary>Le contenu d'une image du coffre, pour le texte mis en forme.</summary>
+    public Outcome<byte[]> ReadResource(string path) => _sheets.ReadResource(path);
 
     /// <summary>Copie des images choisies à côté de la fiche et les insère.</summary>
     public async Task InsertImageFilesAsync(IReadOnlyList<string> paths, int? position = null)
@@ -360,25 +539,26 @@ public sealed partial class SheetEditorViewModel : ObservableObject
     }
 
     /// <summary>Copie une image à côté de la fiche et l'insère ; rend vrai si elle y est.</summary>
-    public async Task<bool> InsertImageAsync(string name, byte[] content, int? position = null)
+    public async Task<bool> InsertImageAsync(string name, byte[]? content, int? position = null)
     {
         ArgumentNullException.ThrowIfNull(name);
-        ArgumentNullException.ThrowIfNull(content);
+        if (content is null)
+        {
+            Problem = EditingText.ImageTooLarge(name);
+            return false;
+        }
         var outcome = await Task.Run(() => _editing.AddImage(SheetId, name, content)).ConfigureAwait(true);
         if (!outcome.Succeeded)
         {
             Problem = outcome.Error;
             return false;
         }
-        if (_surface is { } surface)
-        {
-            var alternative = Path.GetFileNameWithoutExtension(name).Replace("[", string.Empty, StringComparison.Ordinal).Replace("]", string.Empty, StringComparison.Ordinal);
-            surface.Apply(MarkdownEdits.Block(surface.Text, position ?? surface.SelectionStart, $"![{alternative}]({outcome.Value})"));
-        }
+        var alternative = Path.GetFileNameWithoutExtension(name).Replace("[", string.Empty, StringComparison.Ordinal).Replace("]", string.Empty, StringComparison.Ordinal);
+        _surface?.InsertImage(outcome.Value, alternative, position);
         return true;
     }
 
-    /// <summary>Les touches qui agissent sur le texte, avant le champ : rend vrai si l'une d'elles est prise.</summary>
+    /// <summary>Les touches qui agissent sur le code, avant le champ : rend vrai si l'une d'elles est prise.</summary>
     public bool TakeKey(Key key, ModifierKeys modifiers)
     {
         if (TakeProposalKey(key, modifiers))
@@ -398,7 +578,47 @@ public sealed partial class SheetEditorViewModel : ObservableObject
         return action is not null;
     }
 
+    /// <summary>Dit ce qui vient d'échouer.</summary>
+    internal void Report(string problem) => Problem = problem;
+
+    /// <summary>Amène un titre du plan en haut du texte.</summary>
+    internal void GoToHeading(string title, int occurrence) => _surface?.GoToHeading(title, occurrence);
+
     private static string Normalize(string text) => text.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n');
+
+    private IEditorSurface VisualOrFallback()
+    {
+        _visual ??= _visualProvider?.Invoke();
+        return _visual ?? _source!;
+    }
+
+    private void Hook(IEditorSurface? surface, bool on)
+    {
+        if (surface is null)
+        {
+            return;
+        }
+        if (on)
+        {
+            surface.TextEdited += OnTextEdited;
+            surface.ToolsChanged += OnToolsChanged;
+            surface.LinkInputChanged += OnLinkInput;
+            surface.LinkAsked += OnLinkAsked;
+            surface.FormulaAsked += OnFormulaAsked;
+            surface.SaveAsked += OnSaveAsked;
+            surface.ListKeyPressed += OnListKey;
+        }
+        else
+        {
+            surface.TextEdited -= OnTextEdited;
+            surface.ToolsChanged -= OnToolsChanged;
+            surface.LinkInputChanged -= OnLinkInput;
+            surface.LinkAsked -= OnLinkAsked;
+            surface.FormulaAsked -= OnFormulaAsked;
+            surface.SaveAsked -= OnSaveAsked;
+            surface.ListKeyPressed -= OnListKey;
+        }
+    }
 
     private string ToDisk(string text) => _crlf ? text.Replace("\n", "\r\n", StringComparison.Ordinal) : text;
 
@@ -409,8 +629,13 @@ public sealed partial class SheetEditorViewModel : ObservableObject
             do
             {
                 _again = false;
-                var current = _surface!.Text;
-                if (HasConflict || current == _saved)
+                await _surface!.SyncAsync().ConfigureAwait(true);
+                var current = _surface.Text;
+                if (HasConflict)
+                {
+                    return;
+                }
+                if (current == _saved)
                 {
                     break;
                 }
@@ -443,8 +668,6 @@ public sealed partial class SheetEditorViewModel : ObservableObject
         }
     }
 
-    private SaveConflict? _conflict;
-
     /// <summary>« Garder ma version » : celle du disque va d'abord dans l'historique, comme à chaque session.</summary>
     [RelayCommand]
     private async Task KeepMineAsync()
@@ -468,6 +691,7 @@ public sealed partial class SheetEditorViewModel : ObservableObject
         {
             return;
         }
+        await surface.SyncAsync().ConfigureAwait(true);
         var mine = ToDisk(surface.Text);
         var kept = await Task.Run(() => _editing.KeepAsVersion(SheetId, mine)).ConfigureAwait(true);
         if (!kept.Succeeded)
@@ -507,7 +731,7 @@ public sealed partial class SheetEditorViewModel : ObservableObject
         _surface?.Focus();
     }
 
-    private bool CanUndo() => _surface?.CanUndo == true;
+    private bool CanUndo() => Tools?.CanUndo == true;
 
     /// <summary>Rétablit le dernier geste annulé.</summary>
     [RelayCommand(CanExecute = nameof(CanRedo))]
@@ -517,19 +741,19 @@ public sealed partial class SheetEditorViewModel : ObservableObject
         _surface?.Focus();
     }
 
-    private bool CanRedo() => _surface?.CanRedo == true;
+    private bool CanRedo() => Tools?.CanRedo == true;
 
     /// <summary>Met en forme la sélection, ou retire sa mise en forme.</summary>
     [RelayCommand]
-    private void ToggleMark(InlineMark mark) => Edit((text, start, end) => MarkdownEdits.Toggle(text, start, end, mark));
+    private void ToggleMark(InlineMark mark) => _surface?.ToggleMark(mark);
 
     /// <summary>Donne un niveau de titre aux lignes de la sélection ; 0 en refait du texte.</summary>
     [RelayCommand]
-    private void SetHeading(int level) => Edit((text, start, end) => MarkdownEdits.Heading(text, start, end, level));
+    private void SetHeading(int level) => _surface?.SetHeading(level);
 
     /// <summary>Met les lignes de la sélection en liste, ou les en sort.</summary>
     [RelayCommand]
-    private void ToggleList(ListKind kind) => Edit((text, start, end) => MarkdownEdits.List(text, start, end, kind));
+    private void ToggleList(ListKind kind) => _surface?.ToggleList(kind);
 
     /// <summary>Change la casse de la sélection, ou du mot sous le curseur.</summary>
     [RelayCommand]
@@ -537,27 +761,38 @@ public sealed partial class SheetEditorViewModel : ObservableObject
 
     /// <summary>Insère un tableau vide.</summary>
     [RelayCommand]
-    private void InsertTable(TableSize size) => Edit((text, start, _) => MarkdownEdits.Block(text, start, MarkdownEdits.Table(size.Rows, size.Columns)));
+    private void InsertTable(TableSize size) => _surface?.InsertTable(size.Rows, size.Columns);
 
     /// <summary>Crée un bloc de code, ou change le langage de celui où est le curseur.</summary>
     [RelayCommand]
-    private void InsertCode(string language) => Edit((text, start, end) => MarkdownEdits.Code(text, start, end, language));
+    private void InsertCode(string language) => _surface?.InsertCode(language);
 
     /// <summary>Insère une ligne horizontale.</summary>
     [RelayCommand]
-    private void InsertRule() => Edit((text, start, _) => MarkdownEdits.Rule(text, start));
+    private void InsertRule() => _surface?.InsertRule();
+
+    /// <summary>Demande une formule : une saisie dans le texte mis en forme, des signes dans le code.</summary>
+    [RelayCommand]
+    private void AskFormula() => _surface?.AskFormula();
+
+    /// <summary>Insère la formule saisie.</summary>
+    [RelayCommand]
+    private void AnswerFormula(bool confirmed)
+    {
+        IsFormulaOpen = false;
+        if (confirmed && FormulaTex.Trim().Length > 0)
+        {
+            _surface?.InsertFormula(FormulaTex.Trim(), FormulaBlock, _formulaPosition);
+        }
+        else
+        {
+            _surface?.Focus();
+        }
+    }
 
     /// <summary>Ouvre la saisie d'un lien, le texte sélectionné comme libellé.</summary>
     [RelayCommand]
-    private void StartLink()
-    {
-        if (_surface is { } surface)
-        {
-            LinkLabel = surface.Text[surface.SelectionStart..surface.SelectionEnd];
-            LinkAddress = string.Empty;
-            IsLinkOpen = true;
-        }
-    }
+    private void StartLink() => _surface?.AskLink();
 
     /// <summary>Insère le lien saisi.</summary>
     [RelayCommand]
@@ -567,8 +802,7 @@ public sealed partial class SheetEditorViewModel : ObservableObject
         var address = LinkAddress.Trim();
         if (confirmed && address.Length > 0)
         {
-            var label = LinkLabel.Trim().Length > 0 ? LinkLabel.Trim() : address;
-            Edit((_, start, end) => MarkdownEdits.Link(start, end, label, address));
+            _surface?.InsertLink(LinkLabel.Trim().Length > 0 ? LinkLabel.Trim() : address, address);
         }
         else
         {
@@ -580,33 +814,16 @@ public sealed partial class SheetEditorViewModel : ObservableObject
     [RelayCommand]
     private void ChooseProposal(VaultSheet sheet)
     {
-        if (_surface is not { } surface || _inputStart is not { } start)
+        if (_surface is { } surface && _inputStart is not null)
         {
-            return;
-        }
-        var caret = surface.SelectionStart;
-        var text = surface.Text;
-        var end = string.CompareOrdinal(text, caret, "]]", 0, 2) == 0 ? caret + 2 : caret;
-        var link = SheetLinks.MarkdownLink(sheet.Title, SheetLinks.AddressOf(ContentTargets.FolderOf(_sheet.Path), sheet.Path));
-        surface.Apply(new TextChange(start, end - start, link, start + link.Length, 0));
-        surface.Focus();
-    }
-
-    private void Edit(Func<string, int, int, TextChange> edit)
-    {
-        if (_surface is { } surface)
-        {
-            surface.Apply(edit(surface.Text, surface.SelectionStart, surface.SelectionEnd));
+            surface.InsertSheetLink(sheet.Title, SheetLinks.AddressOf(Folder, sheet.Path));
             surface.Focus();
         }
     }
 
     private void ChangeCaseTo(CaseStyle? style)
     {
-        if (_surface is { } surface && MarkdownEdits.Case(surface.Text, surface.SelectionStart, surface.SelectionEnd, style) is { } change)
-        {
-            surface.Apply(change);
-        }
+        _surface?.ChangeCase(style);
         _surface?.Focus();
     }
 
@@ -620,49 +837,64 @@ public sealed partial class SheetEditorViewModel : ObservableObject
         _saveTimer.Start();
         _previewTimer.Stop();
         _previewTimer.Start();
+    }
+
+    private void OnToolsChanged(object? sender, EditorTools tools)
+    {
+        Tools = tools;
         UndoCommand.NotifyCanExecuteChanged();
         RedoCommand.NotifyCanExecuteChanged();
     }
 
-    private void OnCaretMoved(object? sender, EventArgs e)
+    private void OnSaveAsked(object? sender, EventArgs e) => _ = SaveAsync();
+
+    private void OnListKey(object? sender, Key key) => TakeProposalKey(key, ModifierKeys.None);
+
+    private void OnLinkAsked(object? sender, LinkQuestion question)
     {
-        var surface = _surface!;
-        var level = MarkdownEdits.HeadingLevel(surface.CaretLine, 0);
-        StyleLabel = level > 0 ? EditingText.Heading(level) : EditingText.NormalText;
-        FollowLinkInput(surface);
+        LinkLabel = question.Label;
+        LinkAddress = question.Address;
+        IsLinkOpen = true;
     }
 
-    /// <summary>La liste des fiches s'ouvre sur une saisie « [[… » hors du code, et se tient fermée après Échap.</summary>
-    private void FollowLinkInput(IEditorSurface surface)
+    private void OnFormulaAsked(object? sender, FormulaQuestion question)
     {
-        var before = surface.CaretLine[..surface.CaretColumn];
-        var input = surface.SelectionStart == surface.SelectionEnd ? SheetLinks.InputBefore(before) : null;
-        if (input is { } found && (MarkdownLines.IsInInlineCode(before) || MarkdownLines.FenceAt(surface.Text, surface.SelectionStart) is not null))
-        {
-            input = null;
-        }
-        var start = input is { } typed ? surface.SelectionStart - typed.Length : (int?)null;
-        if (start != _dismissedAt)
+        FormulaTex = question.Tex;
+        FormulaBlock = question.Block;
+        _formulaPosition = question.Position;
+        IsFormulaOpen = true;
+    }
+
+    /// <summary>La liste des fiches s'ouvre sur une saisie « [[… », et se tient fermée après Échap.</summary>
+    private void OnLinkInput(object? sender, LinkInput? input)
+    {
+        if (input?.Start != _dismissedAt)
         {
             _dismissedAt = null;
         }
-        if (input is null || start == _dismissedAt)
+        if (input is null || input.Start == _dismissedAt)
         {
             CloseProposals();
             return;
         }
-        _inputStart = start;
+        _inputStart = input.Start;
+        _inputQuery = input.Query;
         if (_known is null)
         {
             _ = LoadKnownAsync();
             return;
         }
-        var query = input.Value.Query;
-        Proposals = SheetLinks.Propose(_known, query, SheetId);
+        ShowProposals();
+    }
+
+    private void ShowProposals()
+    {
+        Proposals = SheetLinks.Propose(_known!, _inputQuery, SheetId);
         if (ActiveProposal is null || !Proposals.Contains(ActiveProposal))
         {
             ActiveProposal = Proposals.Count > 0 ? Proposals[0] : null;
         }
+        _surface?.SetProposalsOpen(HasProposals);
     }
 
     private async Task LoadKnownAsync()
@@ -675,9 +907,9 @@ public sealed partial class SheetEditorViewModel : ObservableObject
         var listed = await Task.Run(_sheets.List).ConfigureAwait(true);
         _known = listed.Succeeded ? listed.Value : [];
         _loadingKnown = false;
-        if (_surface is { } surface)
+        if (_inputStart is not null)
         {
-            FollowLinkInput(surface);
+            ShowProposals();
         }
     }
 
@@ -686,6 +918,7 @@ public sealed partial class SheetEditorViewModel : ObservableObject
         _inputStart = null;
         Proposals = [];
         ActiveProposal = null;
+        _surface?.SetProposalsOpen(false);
     }
 
     private bool TakeProposalKey(Key key, ModifierKeys modifiers)

@@ -39,6 +39,7 @@ internal sealed class MarkdownEditor : TextEditor, IEditorSurface
     private readonly SpellingLayer _spellingLayer;
     private List<MarkdownLines.Fence>? _fences;
     private bool _silent;
+    private int? _inputStart;
 
     public MarkdownEditor()
     {
@@ -71,11 +72,11 @@ internal sealed class MarkdownEditor : TextEditor, IEditorSurface
         _spellingLayer = new SpellingLayer(this);
         TextArea.TextView.BackgroundRenderers.Add(_spellingLayer);
         Document.Changed += OnDocumentChanged;
-        TextArea.Caret.PositionChanged += (_, _) => CaretMoved?.Invoke(this, EventArgs.Empty);
-        TextArea.SelectionChanged += (_, _) => CaretMoved?.Invoke(this, EventArgs.Empty);
+        TextArea.Caret.PositionChanged += (_, _) => FollowCaret();
+        TextArea.SelectionChanged += (_, _) => FollowCaret();
         TextArea.ContextMenuOpening += OnContextMenuOpening;
         TextArea.ContextMenu = new ContextMenu();
-        DataObject.AddPastingHandler(TextArea, OnPasting);
+        ReplacePasteCommand();
         TextArea.AllowDrop = true;
         TextArea.PreviewDragOver += OnPreviewDragOver;
         TextArea.PreviewDrop += OnPreviewDrop;
@@ -85,7 +86,37 @@ internal sealed class MarkdownEditor : TextEditor, IEditorSurface
     public event EventHandler? TextEdited;
 
     /// <inheritdoc/>
-    public event EventHandler? CaretMoved;
+    public event EventHandler<EditorTools>? ToolsChanged;
+
+    /// <inheritdoc/>
+    public event EventHandler<LinkInput?>? LinkInputChanged;
+
+    /// <inheritdoc/>
+    public event EventHandler<LinkQuestion>? LinkAsked;
+
+    /// <inheritdoc/>
+    event EventHandler<FormulaQuestion>? IEditorSurface.FormulaAsked
+    {
+        add { }
+        remove { }
+    }
+
+    /// <inheritdoc/>
+    event EventHandler? IEditorSurface.SaveAsked
+    {
+        add { }
+        remove { }
+    }
+
+    /// <inheritdoc/>
+    event EventHandler<Key>? IEditorSurface.ListKeyPressed
+    {
+        add { }
+        remove { }
+    }
+
+    /// <summary>Un autre programme tient le presse-papiers : rien n'a été collé.</summary>
+    public event EventHandler? ClipboardBusy;
 
     /// <summary>Des fichiers d'image sont déposés ou collés, avec le point de dépôt.</summary>
     public event Action<IReadOnlyList<string>, int?>? ImageFilesDropped;
@@ -152,19 +183,19 @@ internal sealed class MarkdownEditor : TextEditor, IEditorSurface
     }
 
     /// <inheritdoc/>
-    int IEditorSurface.SelectionStart => SelectionStart;
+    Point IEditorSurface.InputPoint => CaretPoint;
 
-    /// <inheritdoc/>
-    int IEditorSurface.SelectionEnd => SelectionStart + SelectionLength;
+    /// <summary>Le texte sélectionné, et où il est.</summary>
+    private (int Start, int End) Range => (SelectionStart, SelectionStart + SelectionLength);
 
-    /// <inheritdoc/>
-    public string CaretLine => Document.GetText(Document.GetLineByNumber(TextArea.Caret.Line));
+    /// <summary>La ligne du curseur.</summary>
+    private string CaretLine => Document.GetText(Document.GetLineByNumber(TextArea.Caret.Line));
 
-    /// <inheritdoc/>
-    public int CaretColumn => TextArea.Caret.Offset - Document.GetLineByNumber(TextArea.Caret.Line).Offset;
+    /// <summary>Le curseur dans sa ligne.</summary>
+    private int CaretColumn => TextArea.Caret.Offset - Document.GetLineByNumber(TextArea.Caret.Line).Offset;
 
     /// <summary>La position du curseur dans le champ, pour y ouvrir une liste.</summary>
-    public Point CaretPoint
+    private Point CaretPoint
     {
         get
         {
@@ -173,13 +204,109 @@ internal sealed class MarkdownEditor : TextEditor, IEditorSurface
         }
     }
 
-    /// <inheritdoc/>
-    public void Apply(TextChange change)
+    /// <summary>Fait un remplacement, comme une frappe.</summary>
+    internal void Apply(TextChange change)
     {
         Document.Replace(change.Start, change.Length, change.Text);
         Select(change.SelectionStart, change.SelectionLength);
         TextArea.Caret.Offset = change.SelectionStart + change.SelectionLength;
         TextArea.Caret.BringCaretToView();
+    }
+
+    /// <inheritdoc/>
+    Task IEditorSurface.SyncAsync() => Task.CompletedTask;
+
+    /// <inheritdoc/>
+    public void ReplaceAll(string text)
+    {
+        _silent = true;
+        Document.Text = text;
+        Document.UndoStack.ClearAll();
+        TextArea.Caret.Offset = 0;
+        _silent = false;
+        FollowCaret();
+    }
+
+    /// <inheritdoc/>
+    public void ToggleMark(InlineMark mark) => Edit((text, start, end) => MarkdownEdits.Toggle(text, start, end, mark));
+
+    /// <inheritdoc/>
+    public void SetHeading(int level) => Edit((text, start, end) => MarkdownEdits.Heading(text, start, end, level));
+
+    /// <inheritdoc/>
+    public void ToggleList(ListKind kind) => Edit((text, start, end) => MarkdownEdits.List(text, start, end, kind));
+
+    /// <inheritdoc/>
+    public void ChangeCase(CaseStyle? style)
+    {
+        var (start, end) = Range;
+        if (MarkdownEdits.Case(((IEditorSurface)this).Text, start, end, style) is { } change)
+        {
+            Apply(change);
+        }
+    }
+
+    /// <inheritdoc/>
+    public void InsertTable(int rows, int columns) => Edit((text, start, _) => MarkdownEdits.Block(text, start, MarkdownEdits.Table(rows, columns)));
+
+    /// <inheritdoc/>
+    public void InsertCode(string language) => Edit((text, start, end) => MarkdownEdits.Code(text, start, end, language));
+
+    /// <inheritdoc/>
+    public void InsertRule() => Edit((text, start, _) => MarkdownEdits.Rule(text, start));
+
+    /// <inheritdoc/>
+    public void AskFormula() => ToggleMark(InlineMark.Formula);
+
+    /// <inheritdoc/>
+    public void InsertFormula(string tex, bool block, int? position) =>
+        Edit((text, start, end) => block ? MarkdownEdits.Block(text, position ?? start, $"$$\n{tex}\n$$") : new TextChange(start, end - start, $"${tex}$", start + tex.Length + 2, 0));
+
+    /// <inheritdoc/>
+    public void AskLink()
+    {
+        var (start, end) = Range;
+        LinkAsked?.Invoke(this, new LinkQuestion(Document.GetText(start, end - start), string.Empty));
+    }
+
+    /// <inheritdoc/>
+    public void InsertLink(string label, string address) => Edit((_, start, end) => MarkdownEdits.Link(start, end, label, address));
+
+    /// <inheritdoc/>
+    public void InsertImage(string link, string alternative, int? position) =>
+        Edit((text, start, _) => MarkdownEdits.Block(text, position ?? start, $"![{alternative}]({link})"));
+
+    /// <inheritdoc/>
+    public void InsertSheetLink(string label, string address)
+    {
+        var text = ((IEditorSurface)this).Text;
+        var caret = TextArea.Caret.Offset;
+        var start = _inputStart ?? caret;
+        var end = string.CompareOrdinal(text, caret, "]]", 0, 2) == 0 ? caret + 2 : caret;
+        var link = SheetLinks.MarkdownLink(label, address);
+        Apply(new TextChange(start, end - start, link, start + link.Length, 0));
+    }
+
+    /// <inheritdoc/>
+    void IEditorSurface.SetProposalsOpen(bool open)
+    {
+    }
+
+    /// <inheritdoc/>
+    public void GoToHeading(string title, int occurrence)
+    {
+        var seen = 0;
+        foreach (var line in Document.Lines)
+        {
+            var text = Document.GetText(line);
+            if (!IsInFence(line.Offset) && text.TrimStart().StartsWith('#') && text.TrimStart().TrimStart('#').Trim() == title && seen++ == occurrence)
+            {
+                TextArea.Caret.Offset = line.Offset;
+                TextArea.Caret.BringCaretToView();
+                TextArea.Focus();
+                return;
+            }
+        }
     }
 
     /// <inheritdoc/>
@@ -190,16 +317,6 @@ internal sealed class MarkdownEditor : TextEditor, IEditorSurface
 
     /// <inheritdoc/>
     void IEditorSurface.Focus() => TextArea.Focus();
-
-    /// <inheritdoc/>
-    public void ReplaceAll(string text)
-    {
-        _silent = true;
-        Document.Text = text;
-        Document.UndoStack.ClearAll();
-        TextArea.Caret.Offset = 0;
-        _silent = false;
-    }
 
     /// <summary>Indique qu'une position du texte est dans un bloc de code.</summary>
     internal bool IsInFence(int offset)
@@ -269,14 +386,53 @@ internal sealed class MarkdownEditor : TextEditor, IEditorSurface
         if (!_silent)
         {
             TextEdited?.Invoke(this, EventArgs.Empty);
+            FollowCaret();
         }
     }
 
-    /// <summary>Le collage reste en fin de ligne « \n » ; une image collée va à côté de la fiche.</summary>
-    private void OnPasting(object sender, DataObjectPastingEventArgs e)
+    private void Edit(Func<string, int, int, TextChange> edit)
     {
-        e.CancelCommand();
-        Paste(e.DataObject);
+        var (start, end) = Range;
+        Apply(edit(((IEditorSurface)this).Text, start, end));
+        TextArea.Focus();
+    }
+
+    /// <summary>Le ruban suit le curseur, et la liste des fiches s'ouvre sur une saisie « [[… » hors du code.</summary>
+    private void FollowCaret()
+    {
+        ToolsChanged?.Invoke(this, new EditorTools(false, false, false, false, false, false, MarkdownEdits.HeadingLevel(CaretLine, 0), null, CanUndo, CanRedo));
+        var before = CaretLine[..CaretColumn];
+        var input = SelectionLength == 0 ? SheetLinks.InputBefore(before) : null;
+        if (input is not null && (MarkdownLines.IsInInlineCode(before) || IsInFence(TextArea.Caret.Offset)))
+        {
+            input = null;
+        }
+        _inputStart = input is { } typed ? TextArea.Caret.Offset - typed.Length : null;
+        LinkInputChanged?.Invoke(this, input is { } found ? new LinkInput(found.Query, _inputStart!.Value) : null);
+    }
+
+    /// <summary>Le collage reste en fin de ligne « \n » ; une image collée va à côté de la fiche.</summary>
+    private void ReplacePasteCommand()
+    {
+        var bindings = TextArea.DefaultInputHandler.Editing.CommandBindings;
+        bindings.Remove(bindings.First(binding => binding.Command == ApplicationCommands.Paste));
+        bindings.Add(new CommandBinding(ApplicationCommands.Paste, (_, _) => PasteFromClipboard(), (_, e) => e.CanExecute = true));
+    }
+
+    /// <summary>Un presse-papiers occupé par un autre programme n'est pas une panne : rien n'est collé.</summary>
+    private void PasteFromClipboard()
+    {
+        try
+        {
+            if (Clipboard.GetDataObject() is { } data)
+            {
+                Paste(data);
+            }
+        }
+        catch (System.Runtime.InteropServices.ExternalException)
+        {
+            ClipboardBusy?.Invoke(this, EventArgs.Empty);
+        }
     }
 
     /// <summary>Colle du texte ou une image.</summary>

@@ -23,7 +23,8 @@
 // archives-contraste-eleve.png), les fiches (fiches-clair.png, fiches-sombre.png, fiches-etroit-clair.png,
 // fiches-nouvelle-sombre.png, fiches-contraste-eleve.png), la lecture d'une fiche (fiche-clair.png,
 // lecture-sombre.png, lecture-moyenne-clair.png, lecture-etroite-sombre.png, lecture-volet-clair.png, lecture-contraste-eleve.png), l'écriture (ecriture-clair.png,
-// ecriture-sombre.png, ecriture-insertion-sombre.png, ecriture-moyenne-clair.png, ecriture-etroite-sombre.png, ecriture-contraste-eleve.png), et affiche le contraste de
+// ecriture-sombre.png, ecriture-insertion-sombre.png, ecriture-moyenne-clair.png, ecriture-etroite-sombre.png, ecriture-contraste-eleve.png,
+// ecriture-markdown-sombre.png, ecriture-markdown-clair.png), et affiche le contraste de
 // chaque paire de rôles.
 using System.Collections.Immutable;
 using System.Globalization;
@@ -84,11 +85,11 @@ var thread = new Thread(() =>
     // d'encart de module (les modules ne sont pas encore branchés dans l'application).
     foreach (var (theme, name) in new[] { (ThemePreference.Light, "clair"), (ThemePreference.Dark, "sombre") })
     {
-        var today = new DashboardPageViewModel(app.Reminders, app.Sheets, new ReviewNavigation(app.Sheets, app.Annotations, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System, new NoLinks(), app.Editing, new OneMistake()));
+        var today = new DashboardPageViewModel(app.Reminders, app.Sheets, new ReviewNavigation(app.Sheets, app.Annotations, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System, new NoLinks(), app.Editing, new EditorEnvironment(new OneMistake(), Path.Combine(Path.GetTempPath(), "kyfrev-captures-webview2"))));
         today.Show(SampleDashboard(), SampleCards);
         Shell(folder, $"aujourdhui-{name}.png", theme, _ => { }, new Dictionary<string, object> { [CorePages.Today] = today });
     }
-    var contrast = new DashboardPageViewModel(app.Reminders, app.Sheets, new ReviewNavigation(app.Sheets, app.Annotations, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System, new NoLinks(), app.Editing, new OneMistake()));
+    var contrast = new DashboardPageViewModel(app.Reminders, app.Sheets, new ReviewNavigation(app.Sheets, app.Annotations, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System, new NoLinks(), app.Editing, new EditorEnvironment(new OneMistake(), Path.Combine(Path.GetTempPath(), "kyfrev-captures-webview2"))));
     contrast.Show(SampleDashboard(), SampleCards);
     Shell(folder, "aujourdhui-contraste-eleve.png", ThemePreference.System, _ => { }, new Dictionary<string, object> { [CorePages.Today] = contrast }, highContrast: true);
     foreach (var (file, theme, width, height) in new[]
@@ -98,7 +99,7 @@ var thread = new Thread(() =>
         ("aujourdhui-ecran-clair.png", ThemePreference.Light, 1600.0, 1000.0),
     })
     {
-        var today = new DashboardPageViewModel(app.Reminders, app.Sheets, new ReviewNavigation(app.Sheets, app.Annotations, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System, new NoLinks(), app.Editing, new OneMistake()));
+        var today = new DashboardPageViewModel(app.Reminders, app.Sheets, new ReviewNavigation(app.Sheets, app.Annotations, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System, new NoLinks(), app.Editing, new EditorEnvironment(new OneMistake(), Path.Combine(Path.GetTempPath(), "kyfrev-captures-webview2"))));
         today.Show(SampleDashboard(), SampleCards);
         Shell(folder, file, theme, _ => { }, new Dictionary<string, object> { [CorePages.Today] = today }, width, height);
     }
@@ -111,7 +112,7 @@ var thread = new Thread(() =>
         ("archives-contraste-eleve.png", ThemePreference.System, 1280.0, 800.0, true),
     })
     {
-        var archives = new ArchivesPageViewModel(app.Reminders, app.Reviews, new ReviewNavigation(app.Sheets, app.Annotations, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System, new NoLinks(), app.Editing, new OneMistake()), TimeProvider.System);
+        var archives = new ArchivesPageViewModel(app.Reminders, app.Reviews, new ReviewNavigation(app.Sheets, app.Annotations, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System, new NoLinks(), app.Editing, new EditorEnvironment(new OneMistake(), Path.Combine(Path.GetTempPath(), "kyfrev-captures-webview2"))), TimeProvider.System);
         archives.Show(SampleArchives());
         Shell(
             folder,
@@ -124,7 +125,7 @@ var thread = new Thread(() =>
             highContrast: highContrast);
     }
     // Les filtres dépliés sur petit écran, l'un d'eux choisi.
-    var filtered = new ArchivesPageViewModel(app.Reminders, app.Reviews, new ReviewNavigation(app.Sheets, app.Annotations, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System, new NoLinks(), app.Editing, new OneMistake()), TimeProvider.System);
+    var filtered = new ArchivesPageViewModel(app.Reminders, app.Reviews, new ReviewNavigation(app.Sheets, app.Annotations, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System, new NoLinks(), app.Editing, new EditorEnvironment(new OneMistake(), Path.Combine(Path.GetTempPath(), "kyfrev-captures-webview2"))), TimeProvider.System);
     filtered.Show(SampleArchives());
     filtered.Bar.Filters[0].Selected = filtered.Bar.Filters[0].Choices[1];
     filtered.Bar.AreOpen = true;
@@ -154,6 +155,35 @@ foreach (var theme in new[] { ThemeKind.Light, ThemeKind.Dark })
 }
 
 // La fenêtre de la coquille, hors de l'écran, dans un état donné ; seul son contenu est rendu.
+// L'image du texte mis en forme, une fois la page prête et ses polices chargées.
+static BitmapSource WebPicture(Microsoft.Web.WebView2.Wpf.WebView2 web)
+{
+    Pump(() => web.CoreWebView2 is not null);
+    Task<string>? ready = null;
+    Pump(() =>
+    {
+        ready ??= web.ExecuteScriptAsync("document.querySelector('.ProseMirror') !== null && getComputedStyle(document.body).backgroundColor !== 'rgba(0, 0, 0, 0)' && document.fonts.status === 'loaded'");
+        if (!ready.IsCompleted)
+        {
+            return false;
+        }
+        var done = ready.Result == "true";
+        ready = null;
+        return done;
+    });
+    var picture = CapturedPicture(web);
+    Pump(() => picture.IsCompleted);
+    return picture.Result;
+}
+
+static async Task<BitmapSource> CapturedPicture(Microsoft.Web.WebView2.Wpf.WebView2 web)
+{
+    using var stream = new MemoryStream();
+    await web.CoreWebView2.CapturePreviewAsync(Microsoft.Web.WebView2.Core.CoreWebView2CapturePreviewImageFormat.Png, stream).ConfigureAwait(true);
+    stream.Position = 0;
+    return BitmapFrame.Create(stream, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+}
+
 static IEnumerable<DependencyObject> Descendants(DependencyObject root)
 {
     for (var i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)
@@ -189,6 +219,16 @@ static void Shell(string folder, string file, ThemePreference theme, Action<Shel
     content.UpdateLayout();
     var bitmap = new RenderTargetBitmap((int)content.ActualWidth, (int)content.ActualHeight, 96, 96, PixelFormats.Pbgra32);
     bitmap.Render(content);
+    // Le texte mis en forme a sa propre fenêtre, que la capture de WPF ne voit pas : son image est posée dessus.
+    foreach (var web in Descendants(content).OfType<Microsoft.Web.WebView2.Wpf.WebView2>().Where(view => view.IsVisible))
+    {
+        var drawing = new DrawingVisual();
+        using (var context = drawing.RenderOpen())
+        {
+            context.DrawImage(WebPicture(web), new Rect(web.TranslatePoint(default, content), web.RenderSize));
+        }
+        bitmap.Render(drawing);
+    }
     var encoder = new PngBitmapEncoder();
     encoder.Frames.Add(BitmapFrame.Create(bitmap));
     var path = Path.Combine(folder, file);
@@ -262,7 +302,7 @@ static void ReviewCaptures(string folder)
         time.Now = time.Now.AddDays(2);
 
         ReviewBarViewModel Bar(ItemKind kind, string id, ReviewState state) => new(app.Reviews, app.Reminders, app.Sheets, time, kind, id, state);
-        SheetEditorViewModel Editor(OpenedSheet opened) => new(opened, app.Editing, app.Sheets, new OneMistake());
+        SheetEditorViewModel Editor(OpenedSheet opened) => new(opened, app.Editing, app.Sheets, new EditorEnvironment(new OneMistake(), Path.Combine(Path.GetTempPath(), "kyfrev-captures-webview2")));
         var sheetPage = new SheetPageViewModel(app.Sheets, app.Annotations, Bar, sheet, () => { }, _ => { }, new NoLinks(), Editor);
         sheetPage.LoadCommand.Execute(null);
         Pump(() => !sheetPage.IsLoading);
@@ -277,7 +317,7 @@ static void ReviewCaptures(string folder)
         sheetPage.CloseOverlayCommand.Execute(null);
         Shell(folder, "lecture-contraste-eleve.png", ThemePreference.Light, shell => shell.Navigate(new NavigationItem("fiche", "Fiche", Icons.Document, int.MaxValue, sheetPage)), null, 1600, 1000, highContrast: true);
 
-        // L'écriture : le code à gauche, son rendu à droite, le ruban et ses deux onglets.
+        // L'écriture : le texte mis en forme par défaut, le ruban et ses deux onglets, puis le code à gauche et son rendu.
         sheetPage.StartWritingCommand.Execute(null);
         Pump(() => sheetPage.Editor is not null);
         void Writing(string file, ThemePreference theme, double width = 1600, double height = 1000, bool highContrast = false, bool insert = false)
@@ -290,11 +330,7 @@ static void ReviewCaptures(string folder)
                     tab.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
                 }
             }
-            Shell(folder, file, theme, shell => shell.Navigate(new NavigationItem("fiche", "Fiche", Icons.Document, int.MaxValue, sheetPage)), null, width, height, () =>
-            {
-                var editor = sheetPage.Editor!;
-                return editor.Preview is not null;
-            }, highContrast, ShowTab);
+            Shell(folder, file, theme, shell => shell.Navigate(new NavigationItem("fiche", "Fiche", Icons.Document, int.MaxValue, sheetPage)), null, width, height, () => sheetPage.Editor!.Preview is not null, highContrast, ShowTab);
         }
         Writing("ecriture-clair.png", ThemePreference.Light);
         Writing("ecriture-sombre.png", ThemePreference.Dark);
@@ -302,6 +338,10 @@ static void ReviewCaptures(string folder)
         Writing("ecriture-moyenne-clair.png", ThemePreference.Light, 1100, 800);
         Writing("ecriture-etroite-sombre.png", ThemePreference.Dark, 640, 800);
         Writing("ecriture-contraste-eleve.png", ThemePreference.Light, highContrast: true);
+        sheetPage.Editor!.IsMarkdownOn = true;
+        Pump(() => sheetPage.Editor!.IsMarkdownShown);
+        Writing("ecriture-markdown-sombre.png", ThemePreference.Dark);
+        Writing("ecriture-markdown-clair.png", ThemePreference.Light);
         sheetPage.StopWritingCommand.Execute(null);
         Pump(() => sheetPage.Editor is null);
 
@@ -351,7 +391,7 @@ static void ReviewCaptures(string folder)
         {
             var sample = SampleDashboard();
             DueItem Real(DueItem item) => item with { SheetId = sheet };
-            var today = new DashboardPageViewModel(app.Reminders, app.Sheets, new ReviewNavigation(app.Sheets, app.Annotations, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System, new NoLinks(), app.Editing, new OneMistake()));
+            var today = new DashboardPageViewModel(app.Reminders, app.Sheets, new ReviewNavigation(app.Sheets, app.Annotations, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System, new NoLinks(), app.Editing, new EditorEnvironment(new OneMistake(), Path.Combine(Path.GetTempPath(), "kyfrev-captures-webview2"))));
             today.Show(
                 sample with
                 {
@@ -400,7 +440,7 @@ static void ReviewCaptures(string folder)
         }
         SheetsPageViewModel SheetsPage()
         {
-            var navigation = new ReviewNavigation(app.Sheets, app.Annotations, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), time, new NoLinks(), app.Editing, new OneMistake());
+            var navigation = new ReviewNavigation(app.Sheets, app.Annotations, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), time, new NoLinks(), app.Editing, new EditorEnvironment(new OneMistake(), Path.Combine(Path.GetTempPath(), "kyfrev-captures-webview2")));
             var sheets = new SheetsPageViewModel(app.Sheets, app.Folders, app.Templates, navigation, time);
             sheets.RefreshCommand.Execute(null);
             Pump(() => !sheets.IsLoading && sheets.HasRows && sheets.Preview is not null);
