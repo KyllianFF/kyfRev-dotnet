@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Date** | 31 octobre 2026 |
-| **Statut** | Plan validé le 31 octobre 2026 : les 13 décisions du §7 sont arrêtées sur l'option recommandée (décision 2 : option C, §2.6). J1, J2, J3 et J4 validés et fusionnés le 31 octobre 2026 (J3 en cinq demandes de fusion : lecture fidèle, écriture des fiches, écritures complémentaires, sauvegardes et exports, corpus d'ancrage ; J4 en deux : couche Application et garde-fous, modularité et module Citations). J5 validé le 1er novembre 2026 sur ses captures (`docs/captures/j5`), en deux demandes de fusion : design system, coquille WPF et galerie de composants ; puis rouvert le même jour pour une nouvelle identité visuelle, « Veillée », que vous avez choisie parmi plusieurs propositions : J5.3 jetons, polices et composants Veillée ; J5.4 coquille adaptative (onglets sous 600 px, colonne d'icônes jusqu'à 1 399 px, barre latérale au-delà, jamais de défilement horizontal) ; J6.7 vue « Aujourd'hui » au nouveau style (résumé du jour, colonne latérale, révisions de la semaine) ; J6.8 fiche, passage, séance et accueil au nouveau style ; J6.9 aperçu et liste en deux sur grands écrans ; J5 revalidé le 1er novembre 2026 sur ces captures (`docs/captures/j5`, `docs/captures/j6`) ; J6.10 réponses aux rappels de consolidation (marquer un passage existant ; surligner un nouveau passage viendra avec J7). J6 validé le 1er novembre 2026, après votre essai sur un coffre généré (`tools/coffre-essai`), avec J6.1 tableau de bord et données des archives ; J6.2 emplacements, ouverture au démarrage et accueil ; J6.3 vue « Aujourd'hui » ; J6.4 fiche et passage en révision ; J6.5 séance d'étude ; journal de diagnostic ; J6.6 squelette de l'installateur (Inno Setup 6.7.3) ; scénarios d'acceptation T2 à T6, T9, T10, T11 et T18 (`tests/KyfRev.Acceptance.Tests`). Ajoutée ensuite : J6.11 vue « Archives », livrable de J6 qui manquait à la validation. Restent ouverts : T5 est à compléter avec J7 (surligner un nouveau passage pendant un rappel) ; l'assistant d'installation n'a pas encore été vu sur le poste (la CI l'installe et le désinstalle) ; la préversion `1.0.0-alpha.1` n'est pas publiée. Jalon suivant : J7. |
+| **Statut** | Plan validé le 31 octobre 2026 : les 13 décisions du §7 sont arrêtées sur l'option recommandée (décision 2 : option C, §2.6). J1, J2, J3 et J4 validés et fusionnés le 31 octobre 2026 (J3 en cinq demandes de fusion : lecture fidèle, écriture des fiches, écritures complémentaires, sauvegardes et exports, corpus d'ancrage ; J4 en deux : couche Application et garde-fous, modularité et module Citations). J5 validé le 1er novembre 2026 sur ses captures (`docs/captures/j5`), en deux demandes de fusion : design system, coquille WPF et galerie de composants ; puis rouvert le même jour pour une nouvelle identité visuelle, « Veillée », que vous avez choisie parmi plusieurs propositions : J5.3 jetons, polices et composants Veillée ; J5.4 coquille adaptative (onglets sous 600 px, colonne d'icônes jusqu'à 1 399 px, barre latérale au-delà, jamais de défilement horizontal) ; J6.7 vue « Aujourd'hui » au nouveau style (résumé du jour, colonne latérale, révisions de la semaine) ; J6.8 fiche, passage, séance et accueil au nouveau style ; J6.9 aperçu et liste en deux sur grands écrans ; J5 revalidé le 1er novembre 2026 sur ces captures (`docs/captures/j5`, `docs/captures/j6`) ; J6.10 réponses aux rappels de consolidation (marquer un passage existant ; surligner un nouveau passage viendra avec J7). J6 validé le 1er novembre 2026, après votre essai sur un coffre généré (`tools/coffre-essai`), avec J6.1 tableau de bord et données des archives ; J6.2 emplacements, ouverture au démarrage et accueil ; J6.3 vue « Aujourd'hui » ; J6.4 fiche et passage en révision ; J6.5 séance d'étude ; journal de diagnostic ; J6.6 squelette de l'installateur (Inno Setup 6.7.3) ; scénarios d'acceptation T2 à T6, T9, T10, T11 et T18 (`tests/KyfRev.Acceptance.Tests`). Ajoutée ensuite : J6.11 vue « Archives », livrable de J6 qui manquait à la validation. Restent ouverts : T5 est à compléter avec J7 (surligner un nouveau passage pendant un rappel) ; l'assistant d'installation n'a pas encore été vu sur le poste (la CI l'installe et le désinstalle) ; la préversion `1.0.0-alpha.1` n'est pas publiée. Vues encore vides réparties le 1er novembre 2026 : Fiches, Définitions et début de Paramètres à J7, Citations à J9, le reste de Paramètres au fil des jalons. Jalon suivant : J7. |
 | **Périmètre audité** | Dépôt `KyllianFF/kyfRev` à `87f291c` (v0.8.0, 133 commits) ; application installée `C:\Program Files\kyfRev` (0.7.0) ; coffre `Documents\kyfRev\Coffre` et ses sauvegardes. |
 | **Méthode** | Lecture intégrale du cœur métier (`crates/noyau`), lecture du dossier de conception (64 décisions D1 à D64), analyse du crate `coffre` (persistance), de `src-tauri` (commandes, extensions, sécurité, livraison) et de l'interface Svelte. Aucune modification de l'existant. |
 
@@ -767,7 +767,11 @@ Les jalons sont **séquentiels**. Chacun est livré par une ou plusieurs branche
   - essai sur une **copie** de votre coffre.
 
 ### J7. Lecture native, annotations et édition : `alpha.2` (XL)
+Ce jalon se découpe en sous-parties validées une à une, comme J6.
 - **Livrables** :
+  - vue **Fiches** : la liste et la création d'une fiche (l'arborescence et le glisser-déposer restent à J9) ;
+  - vue **Définitions** ;
+  - vue **Paramètres**, première partie : séquence des étapes et rappels de consolidation ;
   - `KyfRev.Rendering` : Markdown → document natif, projection du texte rendu, ré-ancrage en C# ;
   - lecture et révision natives : texte à trous, surlignage, passages, définitions, panneau d'annotations, plan, lecture à voix haute avec surlignage du bloc lu ;
   - moteur web caché et durci (CSP, aucune navigation, outils de développement coupés, variables `WEBVIEW2_*` neutralisées) : Mermaid et schémas rendus en SVG ;
@@ -781,12 +785,14 @@ Les jalons sont **séquentiels**. Chacun est livré par une ou plusieurs branche
   - T17 : aucun port de débogage, même avec les variables d'environnement ;
   - aller-retour Markdown de l'éditeur visuel fidèle à l'octet (19 cas existants) ;
   - fiche de 20 000 mots affichée en moins de 500 ms, avec un défilement fluide ;
-  - fiche lue par le Narrateur de Windows : texte, titres et surlignages annoncés.
+  - fiche lue par le Narrateur de Windows : texte, titres et surlignages annoncés ;
+  - scénarios d'acceptation : la fiche se crée et le passage se surligne dans l'application, T10 change la séquence dans « Paramètres », et T5 surligne un **nouveau** passage pendant le rappel.
 
 ### J8. Chiffrement au repos : `alpha.3` (M)
 - **Livrables** :
   - `KyfRev.Infrastructure.Crypto` : coffre chiffré, clé de récupération, DPAPI « se souvenir », verrouillage automatique ;
   - commandes `chiffrer`, `dechiffrer` et `changer-mot-de-passe` ;
+  - vue « Paramètres » : le chiffrement du coffre ;
   - documentation du modèle de menace.
 - **Critères** :
   - vecteurs de test connus (AES-GCM, Argon2id, PBKDF2) ;
@@ -800,7 +806,9 @@ Les jalons sont **séquentiels**. Chacun est livré par une ou plusieurs branche
   - recherche dans les fiches et recherche globale, statistiques, charge à 30 jours, examens et « Resserrer » ;
   - modèles, rétroliens et aperçu au survol, arborescence (glisser-déposer, renommer ou déplacer avec réécriture des liens) ;
   - corbeille et éléments supprimés, Santé, sauvegardes et restauration ;
-  - partage et exports, import Obsidian.
+  - partage et exports, import Obsidian ;
+  - vue **Citations**, et module Citations branché dans l'application (citation du jour sur « Aujourd'hui ») ;
+  - vue « Paramètres » : sauvegardes et citations.
 - **Critères** :
   - T1 (aucune action n'efface), T7 (déplacement du coffre), T13, T19, T20 automatisés ;
   - tests du crate `coffre` portés (import, partage, exports, maintenance, sauvegardes) au vert.
@@ -810,7 +818,8 @@ Les jalons sont **séquentiels**. Chacun est livré par une ou plusieurs branche
   - `Extensions.Host` : contrat identique ; code exécuté dans le moteur web caché ; HTML rendu en éléments natifs depuis une liste blanche stricte ; durcissements du §2.2 ;
   - catalogue **signé** ; jeton GitHub saisi dans un champ natif, avec entropie ;
   - vérification de mise à jour avec manifeste signé ;
-  - module Schémas en îlot WebView2 : compatibilité des formats 1 et 2, plan IP, exports.
+  - module Schémas en îlot WebView2 : compatibilité des formats 1 et 2, plan IP, exports ;
+  - vue « Paramètres » : extensions et module Schémas.
 - **Critères** :
   - les 4 extensions existantes fonctionnent **sans modification** ;
   - essai « sonde » porté et enrichi : fuite `data-externe`, usurpation entre cadres, faux dialogue ;
