@@ -31,5 +31,5 @@ Les positions des passages sont calculées sur une projection simple du texte : 
 leur texte exact et son contexte, comme à toute réouverture d'une fiche. Elles pourront donc être
 recalées lorsque la lecture native (J7) ouvrira ces fiches.
 
-Tant que J7 n'est pas livré, les fiches s'affichent en texte brut, et aucune page n'affiche encore les
-schémas ni les citations (J9) : ces données sont déjà dans le coffre, prêtes pour ces jalons.
+Tant que J7 n'est pas livré, les fiches s'affichent en texte brut. Aucune page n'affiche encore les
+schémas (J10) ni les citations : ces données sont déjà dans le coffre, prêtes pour ces vues.

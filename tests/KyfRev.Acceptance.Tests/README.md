@@ -22,15 +22,16 @@ Tout geste de révision passe par l'application : ouvrir une ligne, faire défil
 répondre à un rappel, marquer un passage. Ce que l'interface ne propose pas encore passe par les cas
 d'usage, sur le même coffre et à la même date :
 
-| Scénario | Ce qui passe par les cas d'usage | Disponible dans l'interface |
+| Scénario | Ce qui passe par les cas d'usage | Pourquoi |
 |---|---|---|
-| Tous | Créer une fiche | J8 |
-| T2, T11 | Surligner un passage | J7 |
-| T2 | Lire la vue « Archives » | J8 |
-| T3 | Les jours du repos entre le 4 décembre et le 1er février (la veille et le jour du premier rappel passent par l'application) | Sans objet |
-| T3, T18 | Archiver à la main les fiches de départ, et régler les rappels | J8 |
-| T4, T5, T6 | Vivre le premier cycle de la fiche (T2 le fait dans l'application) | Sans objet |
-| T10 | Changer la séquence des étapes | J8 |
+| Tous | Créer une fiche | Aucune vue ne le propose encore |
+| T2, T11 | Surligner un passage | Arrive avec J7 |
+| T2 | Lire la liste des archives | La vue « Archives » est encore vide |
+| T3 | Les jours du repos entre le 4 décembre et le 1er février (la veille et le jour du premier rappel passent par l'application) | Évite une soixantaine de lancements |
+| T3, T18 | Archiver à la main les fiches de départ | L'application sait le faire, mais ce n'est pas ce que ces scénarios vérifient |
+| T3, T18 | Régler les rappels | La vue « Paramètres » est encore vide |
+| T4, T5, T6 | Vivre le premier cycle de la fiche | T2 le fait déjà dans l'application |
+| T10 | Changer la séquence des étapes | La vue « Paramètres » est encore vide |
 
 **T5 reste à compléter avec J7.** La conception demande de surligner un passage pendant le rappel. Tant
 que la lecture native n'existe pas, le scénario remet à J0 un passage déjà surligné, ce que l'application
