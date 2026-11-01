@@ -25,6 +25,9 @@ public sealed partial class ShellViewModel : ObservableObject
     private readonly IReadOnlyList<PaletteEntry> _commands;
     private readonly IReadOnlyList<PaletteEntry> _commandsWithoutVault;
 
+    /// <summary>Un coffre est ouvert : les pages ouvertes sont prévenues (<see cref="INavigationAware"/>).</summary>
+    private bool _workspace;
+
     /// <summary>La coquille, avec les entrées du menu (cœur et modules actifs) et l'apparence.</summary>
     public ShellViewModel(IEnumerable<NavigationItem> navigation, AppearanceController appearance, object gallery)
     {
@@ -142,12 +145,20 @@ public sealed partial class ShellViewModel : ObservableObject
         UpdateResults();
     }
 
-    /// <summary>Un coffre est ouvert : le menu revient, sur sa première vue.</summary>
+    /// <summary>Un coffre est ouvert : le menu revient, sur sa première vue, qui est prévenue.</summary>
     public void ShowWorkspace()
     {
         IsWelcome = false;
+        _workspace = true;
         UpdateResults();
-        Navigate(Home);
+        if (ReferenceEquals(Current, Home))
+        {
+            Activate(Home);
+        }
+        else
+        {
+            Navigate(Home);
+        }
     }
 
     /// <summary>Ouvre la page d'une entrée ; rien tant que l'accueil est affiché.</summary>
@@ -257,6 +268,16 @@ public sealed partial class ShellViewModel : ObservableObject
         }
         return folded.ToString().Normalize(NormalizationForm.FormC);
     }
+
+    partial void OnCurrentChanged(NavigationItem value)
+    {
+        if (_workspace)
+        {
+            Activate(value);
+        }
+    }
+
+    private static void Activate(NavigationItem item) => (item.Page as INavigationAware)?.OnNavigatedTo();
 
     partial void OnSelectedMainChanged(NavigationItem? value)
     {
