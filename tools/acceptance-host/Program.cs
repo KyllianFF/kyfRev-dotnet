@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Windows;
 using KyfRev.Infrastructure.Windows;
+using KyfRev.Presentation.Wpf.Shell;
 
 namespace KyfRev.Acceptance.Host;
 
@@ -28,6 +29,9 @@ internal static class Program
             window.Height = 700;
         }));
         application.InitializeComponent();
+        // Sans prendre le premier plan : ni au poste, ni aux tests d'interface qui tournent en même temps,
+        // dont les menus se refermeraient. Les scénarios n'en ont pas besoin : ils invoquent les boutons.
+        application.Resources[typeof(ShellWindow)] = new Style(typeof(ShellWindow)) { Setters = { new Setter(Window.ShowActivatedProperty, false) } };
         return application.Run();
     }
 

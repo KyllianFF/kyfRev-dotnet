@@ -25,6 +25,9 @@
     <DataTemplate DataType="{x:Type pages:DashboardPageViewModel}">
       <pages:DashboardPage />
     </DataTemplate>
+    <DataTemplate DataType="{x:Type pages:ArchivesPageViewModel}">
+      <pages:ArchivesPage />
+    </DataTemplate>
     <DataTemplate DataType="{x:Type pages:SheetPageViewModel}">
       <pages:SheetPage />
     </DataTemplate>
@@ -208,7 +211,7 @@
             </ListBox.ItemsPanel>
           </ListBox>
           <Button x:Name="MoreButton" Grid.Column="1" Margin="4,4,4,8" Style="{DynamicResource Kyf.Button.Subtle}" Click="OnMoreClick"
-                  Padding="0" AutomationProperties.Name="{x:Static p:ShellText.MoreViews}" ToolTip="{x:Static p:ShellText.MoreViews}">
+                  Padding="0" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" AutomationProperties.Name="{x:Static p:ShellText.MoreViews}" ToolTip="{x:Static p:ShellText.MoreViews}">
             <Button.ContextMenu>
               <ContextMenu x:Name="MoreMenu" ItemsSource="{Binding OverflowNavigation}" DisplayMemberPath="Label"
                            AutomationProperties.Name="{x:Static p:ShellText.MoreViews}" />
@@ -224,7 +227,7 @@
                   </Style.Triggers>
                 </Style>
               </Border.Style>
-              <StackPanel>
+              <StackPanel VerticalAlignment="Center">
                 <kyf:Icon Text="{x:Static kyf:Icons.More}" HorizontalAlignment="Center" />
                 <TextBlock Text="{x:Static p:ShellText.More}" FontSize="12" TextAlignment="Center" Margin="0,2,0,0" />
               </StackPanel>

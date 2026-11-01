@@ -196,6 +196,8 @@ internal sealed class FakeOpener : IReviewOpener
 
     public void Open(DueItem item, bool activeRecall) => Opened.Add((item, activeRecall));
 
+    public void OpenSheet(string sheetId) => Opened.Add(sheetId);
+
     public void OpenReminder(PendingReminder reminder) => Opened.Add(reminder);
 
     /// <summary>Éléments restants de la séance à reprendre, simulés.</summary>

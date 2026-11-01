@@ -1,0 +1,215 @@
+<UserControl x:Class="KyfRev.Presentation.Wpf.Pages.ArchivesPage"
+             x:ClassModifier="internal"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:kyf="clr-namespace:KyfRev.DesignSystem.Controls;assembly=KyfRev.DesignSystem"
+             xmlns:pages="clr-namespace:KyfRev.Presentation.Wpf.Pages">
+  <UserControl.Resources>
+    <BooleanToVisibilityConverter x:Key="Visible" />
+
+    <!-- Un filtre : son choix en cours, les autres dans un menu ouvert sous le bouton. -->
+    <DataTemplate DataType="{x:Type pages:ArchiveFilter}">
+      <Button x:Name="FilterButton" Style="{DynamicResource Kyf.Button.Subtle}" Click="OnFilterClick" Margin="0,0,4,4"
+              AutomationProperties.Name="{Binding Name}">
+        <Button.ContextMenu>
+          <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"
+                       ItemsSource="{Binding Choices}" DisplayMemberPath="Label" MenuItem.Click="OnFilterChosen"
+                       AutomationProperties.Name="{Binding Label}" />
+        </Button.ContextMenu>
+        <StackPanel Orientation="Horizontal">
+          <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+          <kyf:Icon Text="&#xE70D;" FontSize="12" Margin="8,0,0,0" />
+        </StackPanel>
+      </Button>
+    </DataTemplate>
+
+    <!-- Une fiche archivée : l'ouvrir, son état, l'exclure ou la remettre en révision. -->
+    <DataTemplate DataType="{x:Type pages:ArchiveRow}">
+      <Border BorderThickness="0,0,0,1" BorderBrush="{DynamicResource Kyf.Brush.Divider}" Padding="0,6">
+        <Grid>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+          </Grid.ColumnDefinitions>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+          </Grid.RowDefinitions>
+          <Button x:Name="OpenRow" Style="{DynamicResource Kyf.Button.Subtle}" HorizontalContentAlignment="Stretch" VerticalAlignment="Top"
+                  Command="{Binding DataContext.OpenCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}"
+                  AutomationProperties.Name="{Binding Spoken}">
+            <StackPanel>
+              <TextBlock Text="{Binding Title}" FontSize="{DynamicResource Kyf.FontSize.BodyLarge}" FontWeight="SemiBold" TextWrapping="Wrap" />
+              <TextBlock Text="{Binding Meta}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,2,0,0" />
+              <StackPanel Orientation="Horizontal" Margin="0,2,0,0" Visibility="{Binding FileMissing, Converter={StaticResource Visible}}">
+                <kyf:Icon Text="{x:Static kyf:Icons.Warning}" Foreground="{DynamicResource Kyf.Brush.Warning}" FontSize="12" Margin="0,0,4,0" />
+                <TextBlock Text="{x:Static pages:DashboardText.FileMissing}" Style="{DynamicResource Kyf.Text.Caption}" Foreground="{DynamicResource Kyf.Brush.Warning}" />
+              </StackPanel>
+            </StackPanel>
+          </Button>
+          <StackPanel x:Name="Side" Grid.Column="1" Margin="12,4,0,0" HorizontalAlignment="Right">
+            <kyf:Pill x:Name="Status" Kind="{Binding StatusKind}" Text="{Binding Status}" HorizontalAlignment="Right" />
+            <WrapPanel HorizontalAlignment="Right" Margin="0,4,0,0">
+              <Button x:Name="ToggleRow" Content="{Binding ToggleLabel}" Style="{DynamicResource Kyf.Button.Subtle}"
+                      Command="{Binding DataContext.ToggleRemindersCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}"
+                      AutomationProperties.Name="{Binding ToggleName}" />
+              <Button x:Name="RestartRow" Content="{x:Static pages:ArchivesText.Restart}" Style="{DynamicResource Kyf.Button.Subtle}" Margin="4,0,0,0"
+                      Command="{Binding DataContext.RequestRestartCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}"
+                      AutomationProperties.Name="{Binding RestartName}" />
+            </WrapPanel>
+          </StackPanel>
+        </Grid>
+      </Border>
+      <DataTemplate.Triggers>
+        <DataTrigger Binding="{Binding DataContext.HasRoom, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="False">
+          <Setter TargetName="Side" Property="Grid.Column" Value="0" />
+          <Setter TargetName="Side" Property="Grid.Row" Value="1" />
+          <Setter TargetName="Side" Property="HorizontalAlignment" Value="Left" />
+          <Setter TargetName="Side" Property="Margin" Value="12,4,0,0" />
+          <Setter TargetName="Status" Property="HorizontalAlignment" Value="Left" />
+          <Setter TargetName="Status" Property="Margin" Value="4,0,0,0" />
+          <Setter TargetName="ToggleRow" Property="Padding" Value="4,0" />
+          <Setter TargetName="RestartRow" Property="Padding" Value="4,0" />
+          <Setter TargetName="RestartRow" Property="Margin" Value="2,0,0,0" />
+        </DataTrigger>
+      </DataTemplate.Triggers>
+    </DataTemplate>
+  </UserControl.Resources>
+
+  <Grid>
+    <Grid MaxWidth="1440" Margin="16">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="*" />
+      </Grid.RowDefinitions>
+
+      <StackPanel>
+        <TextBlock x:Name="Heading" Text="{Binding Title}" Style="{DynamicResource Kyf.Text.Title}" AutomationProperties.HeadingLevel="Level1" />
+        <TextBlock x:Name="Summary" Text="{Binding Summary}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="0,4,0,0" />
+      </StackPanel>
+
+      <StackPanel Grid.Row="1">
+        <kyf:Notification x:Name="ErrorMessage" Severity="Critical" Message="{Binding Error}" IsOpen="{Binding HasError, Mode=OneWay}" IsClosable="False" Margin="0,12,0,0" />
+        <kyf:Notification x:Name="DoneMessage" Severity="Success" Message="{Binding Message}" IsOpen="{Binding HasMessage, Mode=OneWay}" IsClosable="False" Margin="0,12,0,0" />
+      </StackPanel>
+
+      <!-- La recherche et les filtres. Sur une fenêtre étroite, les filtres se replient derrière un
+           bouton, et ceux qui sont choisis restent visibles en étiquettes. -->
+      <StackPanel x:Name="FilterBar" Grid.Row="2" Margin="0,12,0,8" Visibility="{Binding HasArchives, Converter={StaticResource Visible}}">
+        <Grid>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition>
+              <ColumnDefinition.Style>
+                <Style TargetType="ColumnDefinition">
+                  <Setter Property="Width" Value="*" />
+                  <Style.Triggers>
+                    <DataTrigger Binding="{Binding HasRoom}" Value="True">
+                      <Setter Property="Width" Value="260" />
+                    </DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </ColumnDefinition.Style>
+            </ColumnDefinition>
+            <ColumnDefinition Width="Auto" />
+          </Grid.ColumnDefinitions>
+          <TextBox x:Name="SearchBox" Text="{Binding Search, UpdateSourceTrigger=PropertyChanged}"
+                   kyf:Field.Placeholder="{x:Static pages:ArchivesText.SearchPlaceholder}" AutomationProperties.Name="{x:Static pages:ArchivesText.SearchName}" />
+          <ToggleButton x:Name="FiltersToggle" Grid.Column="1" Margin="8,0,0,0" Padding="0" Style="{DynamicResource Kyf.Button.Subtle}"
+                        HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" IsChecked="{Binding AreFiltersOpen}"
+                        Visibility="{Binding ShowsFilterToggle, Converter={StaticResource Visible}}" AutomationProperties.Name="{Binding FiltersLabel}">
+            <Border CornerRadius="{DynamicResource Kyf.Radius.Control}" Padding="12,0">
+              <Border.Style>
+                <Style TargetType="Border">
+                  <Style.Triggers>
+                    <DataTrigger Binding="{Binding HasActiveFilters}" Value="True">
+                      <Setter Property="Background" Value="{DynamicResource Kyf.Brush.NavigationActiveBackground}" />
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding AreFiltersOpen}" Value="True">
+                      <Setter Property="Background" Value="{DynamicResource Kyf.Brush.NavigationActiveBackground}" />
+                    </DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </Border.Style>
+              <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <kyf:Icon Text="&#xE71C;" Margin="0,0,6,0" />
+                <TextBlock x:Name="FiltersLabel" Text="{Binding FiltersLabel}" VerticalAlignment="Center" />
+              </StackPanel>
+            </Border>
+          </ToggleButton>
+        </Grid>
+        <ItemsControl x:Name="Filters" ItemsSource="{Binding Filters}" Focusable="False" Margin="0,4,0,0"
+                      Visibility="{Binding ShowsFilters, Converter={StaticResource Visible}}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <WrapPanel />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+        </ItemsControl>
+        <ItemsControl x:Name="ActiveFilters" ItemsSource="{Binding ActiveFilters}" Focusable="False" Margin="0,6,0,0"
+                      Visibility="{Binding ShowsActiveFilters, Converter={StaticResource Visible}}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <WrapPanel />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Button x:Name="RemoveFilter" Style="{DynamicResource Kyf.Button.Subtle}" Padding="0" Margin="0,0,6,4" MinHeight="32"
+                      HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
+                      Command="{Binding ClearCommand}" AutomationProperties.Name="{Binding RemoveName}">
+                <Border Background="{DynamicResource Kyf.Brush.NavigationActiveBackground}" CornerRadius="{DynamicResource Kyf.Radius.Control}" Padding="10,0">
+                  <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Name}" FontSize="{DynamicResource Kyf.FontSize.Caption}" Foreground="{DynamicResource Kyf.Brush.NavigationActiveText}" VerticalAlignment="Center" />
+                    <kyf:Icon Text="&#xE711;" FontSize="10" Foreground="{DynamicResource Kyf.Brush.NavigationActiveText}" Margin="6,0,0,0" />
+                  </StackPanel>
+                </Border>
+              </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+
+      <Grid Grid.Row="3">
+        <!-- Squelettes pendant la première lecture. -->
+        <StackPanel x:Name="Loading" Margin="0,12,0,0" Visibility="{Binding IsLoading, Converter={StaticResource Visible}}"
+                    AutomationProperties.Name="{x:Static pages:ArchivesText.Loading}">
+          <kyf:Skeleton Height="44" Margin="0,0,0,8" />
+          <kyf:Skeleton Height="44" Margin="0,0,0,8" />
+          <kyf:Skeleton Height="44" Margin="0,0,0,8" />
+        </StackPanel>
+
+        <kyf:EmptyState x:Name="Empty" Glyph="{x:Static kyf:Icons.Archive}" Title="{x:Static pages:ArchivesText.EmptyTitle}"
+                        Description="{x:Static pages:ArchivesText.EmptyDescription}" Visibility="{Binding IsEmpty, Converter={StaticResource Visible}}" />
+
+        <TextBlock x:Name="NoMatch" Text="{x:Static pages:ArchivesText.NoMatch}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="0,12,0,0"
+                   Visibility="{Binding HasNoMatch, Converter={StaticResource Visible}}" />
+
+        <!-- La liste : virtualisée, pour qu'un grand coffre reste fluide ; elle défile seule. -->
+        <kyf:Card x:Name="ListCard" Padding="8" Visibility="{Binding HasRows, Converter={StaticResource Visible}}">
+          <ItemsControl x:Name="Items" ItemsSource="{Binding Rows}" Focusable="False" VirtualizingPanel.IsVirtualizing="True"
+                        VirtualizingPanel.VirtualizationMode="Recycling" VirtualizingPanel.ScrollUnit="Pixel">
+            <ItemsControl.Template>
+              <ControlTemplate TargetType="ItemsControl">
+                <ScrollViewer CanContentScroll="True" Focusable="False" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                  <ItemsPresenter />
+                </ScrollViewer>
+              </ControlTemplate>
+            </ItemsControl.Template>
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <VirtualizingStackPanel />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+          </ItemsControl>
+        </kyf:Card>
+      </Grid>
+    </Grid>
+
+    <kyf:Dialog x:Name="Confirmation" Title="{x:Static pages:ArchivesText.RestartTitle}" IsOpen="{Binding IsConfirming, Mode=OneWay}"
+                PrimaryButtonText="{x:Static pages:ArchivesText.RestartConfirm}" Closed="OnConfirmationClosed">
+      <TextBlock Text="{Binding ConfirmMessage}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" />
+    </kyf:Dialog>
+  </Grid>
+</UserControl>

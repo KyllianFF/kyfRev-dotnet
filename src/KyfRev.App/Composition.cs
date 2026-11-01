@@ -62,13 +62,18 @@ internal static class Composition
         services.AddSingleton<ReviewNavigation>();
         services.AddSingleton<IReviewOpener>(provider => provider.GetRequiredService<ReviewNavigation>());
         services.AddSingleton<DashboardPageViewModel>();
+        services.AddSingleton<ArchivesPageViewModel>();
         services.AddSingleton(_ => new DesignResources(ThemeKind.Light, Motion.SystemPrefersReducedMotion));
         services.AddSingleton<AppearanceController>();
         services.AddSingleton<GalleryPageViewModel>();
         services.AddSingleton(provider =>
         {
             var shell = new ShellViewModel(
-                CorePages.All(new Dictionary<string, object> { [CorePages.Today] = provider.GetRequiredService<DashboardPageViewModel>() })
+                CorePages.All(new Dictionary<string, object>
+                {
+                    [CorePages.Today] = provider.GetRequiredService<DashboardPageViewModel>(),
+                    [CorePages.Archives] = provider.GetRequiredService<ArchivesPageViewModel>(),
+                })
                     .Concat(provider.GetServices<INavigationContributor>().Select(contributor => CorePages.FromModule(contributor.Entry))),
                 provider.GetRequiredService<AppearanceController>(),
                 provider.GetRequiredService<GalleryPageViewModel>());

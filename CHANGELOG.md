@@ -9,6 +9,12 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- Vue « Archives », comme dans la version 0.x : les fiches archivées, avec leur état de rappel, leurs
+  cycles terminés et leur dernier rappel. On les cherche par titre ou étiquette, on les filtre par
+  dossier, état de rappel, date d'archivage et nombre de cycles, et on les trie. Une fiche peut y être
+  relue, exclue des rappels ou réincluse, et remise en révision ; rien n'y est supprimé. Sur une
+  fenêtre étroite, les filtres se replient derrière un bouton, et ceux qui sont choisis restent
+  visibles en étiquettes.
 - Icône de kyfRev : un éventail de fiches du vert à l'ambre, sur l'exécutable, ses fenêtres et
   raccourcis, et l'installateur, dont l'assistant a aussi ses images. Elle reste nette de 16 à
   256 px et sur les fonds clairs comme sombres.

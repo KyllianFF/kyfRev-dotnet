@@ -14,6 +14,9 @@ public static class CorePages
     /// <summary>Identifiant de la vue « Aujourd'hui » (le tableau de bord).</summary>
     public const string Today = "aujourdhui";
 
+    /// <summary>Identifiant de la vue « Archives ».</summary>
+    public const string Archives = "archives";
+
     /// <summary>Les entrées du cœur, toutes encore à porter.</summary>
     public static IReadOnlyList<NavigationItem> All() => All(new Dictionary<string, object>());
 
@@ -28,7 +31,7 @@ public static class CorePages
             Entry(Today, ShellText.Today, Icons.Calendar, 10),
             Entry("fiches", ShellText.Sheets, Icons.Document, 20),
             Entry("definitions", ShellText.Definitions, Icons.Dictionary, 30),
-            Entry("archives", ShellText.Archives, Icons.Archive, 40),
+            Entry(Archives, ShellText.Archives, Icons.Archive, 40),
             Entry("statistiques", ShellText.Statistics, Icons.Chart, 50),
             Entry("sante", ShellText.Health, Icons.Health, NavigationItem.SecondaryOrder),
             Entry("parametres", ShellText.Settings, Icons.Settings, NavigationItem.SecondaryOrder + 10),

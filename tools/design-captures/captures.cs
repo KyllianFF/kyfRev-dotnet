@@ -18,7 +18,9 @@
 // aujourdhui-grand-clair.png, aujourdhui-ultralarge-sombre.png, aujourdhui-contraste-eleve.png), une fiche
 // et un passage en révision (fiche-clair.png, passage-sombre.png, sur un coffre d'essai jetable),
 // la réponse à un rappel (rappel-clair.png, rappel-marquage-sombre.png), la séance d'étude et son
-// bilan (seance-clair.png, seance-contraste-eleve.png, seance-etroite-sombre.png, bilan-sombre.png), et affiche le contraste de
+// bilan (seance-clair.png, seance-contraste-eleve.png, seance-etroite-sombre.png, bilan-sombre.png), les archives
+// (archives-clair.png, archives-sombre.png, archives-etroit-clair.png, archives-etroit-filtres-sombre.png,
+// archives-contraste-eleve.png), et affiche le contraste de
 // chaque paire de rôles.
 using System.Collections.Immutable;
 using System.Globalization;
@@ -96,6 +98,40 @@ var thread = new Thread(() =>
         today.Show(SampleDashboard(), SampleCards);
         Shell(folder, file, theme, _ => { }, new Dictionary<string, object> { [CorePages.Today] = today }, width, height);
     }
+    // Les archives : chaque état de rappel, un dernier rappel, un fichier introuvable.
+    foreach (var (file, theme, width, height, highContrast) in new[]
+    {
+        ("archives-clair.png", ThemePreference.Light, 1280.0, 800.0, false),
+        ("archives-sombre.png", ThemePreference.Dark, 1280.0, 800.0, false),
+        ("archives-etroit-clair.png", ThemePreference.Light, 390.0, 844.0, false),
+        ("archives-contraste-eleve.png", ThemePreference.System, 1280.0, 800.0, true),
+    })
+    {
+        var archives = new ArchivesPageViewModel(app.Reminders, app.Reviews, new ReviewNavigation(app.Sheets, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System), TimeProvider.System);
+        archives.Show(SampleArchives());
+        Shell(
+            folder,
+            file,
+            theme,
+            shell => shell.Navigate(shell.MainNavigation.Single(item => item.Id == CorePages.Archives)),
+            new Dictionary<string, object> { [CorePages.Archives] = archives },
+            width,
+            height,
+            highContrast: highContrast);
+    }
+    // Les filtres dépliés sur petit écran, l'un d'eux choisi.
+    var filtered = new ArchivesPageViewModel(app.Reminders, app.Reviews, new ReviewNavigation(app.Sheets, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System), TimeProvider.System);
+    filtered.Show(SampleArchives());
+    filtered.Filters[0].Selected = filtered.Filters[0].Choices[1];
+    filtered.AreFiltersOpen = true;
+    Shell(
+        folder,
+        "archives-etroit-filtres-sombre.png",
+        ThemePreference.Dark,
+        shell => shell.Navigate(shell.MainNavigation.Single(item => item.Id == CorePages.Archives)),
+        new Dictionary<string, object> { [CorePages.Archives] = filtered },
+        390,
+        844);
     ReviewCaptures(folder);
 });
 thread.SetApartmentState(ApartmentState.STA);
@@ -451,6 +487,15 @@ internal static partial class Program
     private static readonly DashboardCard[] SampleCards = [new("Citation du jour", "« Le cœur a ses raisons que la raison ne connaît point. »", "Blaise Pascal")];
 
     // Une journée de révision vraisemblable, sans donnée personnelle.
+    private static ImmutableArray<ArchivedSheetEntry> SampleArchives() =>
+    [
+        new("f_1", "La Révolution française : les causes", "Histoire", ["histoire", "partiel"], new DateOnly(2026, 8, 20), false, ReminderStatus.Pending, new DateOnly(2026, 10, 20), new DateOnly(2026, 10, 20), 1, 0, null, null, true),
+        new("f_2", "Mitose et méiose", "Sciences/Biologie", ["biologie"], new DateOnly(2026, 7, 29), false, ReminderStatus.Resting, new DateOnly(2027, 1, 30), null, 1, 1, new DateOnly(2026, 9, 30), KyfRev.Domain.Reviews.ReminderOutcome.Known, true),
+        new("f_3", "L'ADN et la synthèse des protéines", "Sciences/Biologie", ["biologie", "génétique"], new DateOnly(2026, 8, 3), false, ReminderStatus.Eligible, new DateOnly(2026, 10, 4), null, 2, 1, new DateOnly(2026, 10, 4), KyfRev.Domain.Reviews.ReminderOutcome.SomePointsToReview, true),
+        new("f_4", "Les sources du droit", "Droit", ["droit"], new DateOnly(2026, 9, 12), true, ReminderStatus.Excluded, new DateOnly(2026, 11, 12), null, 0, 0, null, null, true),
+        new("f_5", "Le théorème de Thalès", "", [], new DateOnly(2026, 6, 2), false, ReminderStatus.Resting, new DateOnly(2026, 11, 2), null, 3, 2, new DateOnly(2026, 7, 2), KyfRev.Domain.Reviews.ReminderOutcome.ReviewEntirely, false),
+    ];
+
     private static Dashboard SampleDashboard()
     {
         static DueItem Item(ItemKind kind, string title, string folder, string step, int late, int cycle, string? excerpt = null, string? term = null, string? comment = null, ImmutableArray<string> tags = default) =>

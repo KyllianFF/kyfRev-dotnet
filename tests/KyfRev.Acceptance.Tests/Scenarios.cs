@@ -12,7 +12,7 @@ namespace KyfRev.Acceptance.Tests;
 /// l'application réelle tourne, et ses gestes s'enregistrent dans un vrai coffre.
 ///
 /// Ce que l'application ne sait pas encore faire passe par les cas d'usage : créer une fiche,
-/// surligner un passage (J7), lire les archives, changer les réglages.
+/// surligner un passage (J7), changer les réglages.
 /// </summary>
 [TestClass]
 public sealed class Scenarios
@@ -60,6 +60,13 @@ public sealed class Scenarios
             running.Back();
             running.WaitWithoutRow(Today, "Fiche, " + Title);
             Assert.IsNotNull(running.Row(Overdue, Title), "Le passage reste à réviser.");
+
+            // Elle est dans les archives, et s'y relit.
+            running.OpenView("Archives");
+            Assert.Contains("archivée le", running.ArchivedRow(Title));
+            running.OpenArchived(Title);
+            running.Back();
+            Assert.Contains("1 cycle terminé", running.ArchivedRow(Title));
         }
 
         var tracking = trial.SheetTracking(sheet);
@@ -71,8 +78,35 @@ public sealed class Scenarios
             Reviews(tracking).Select(review => $"{review.GetProperty("jour").GetString()} {review.GetProperty("etape").GetString()}").ToArray());
         Assert.AreEqual(passageBefore, trial.AnnotationsFile(sheet), "Valider la fiche ne touche pas à ses passages.");
         Assert.AreEqual("active", trial.AnnotationTracking(sheet, passage).GetProperty("statut").GetString());
-        var archives = trial.On(last, app => app.Reminders.Archives().Value);
-        Assert.IsTrue(archives.Any(entry => entry.Id == sheet), "La fiche est dans les archives.");
+    }
+
+    [TestMethod]
+    public void An_archived_sheet_can_be_excluded_then_put_back_in_review_from_the_archives()
+    {
+        using var trial = new Trial();
+        var sheet = ArchivedSheet(trial, Title);
+        var day = ArchivedForReminder.AddDays(1);
+
+        using (var running = trial.Launch(day))
+        {
+            running.OpenView("Archives");
+            running.ToggleArchived(Title);
+            Assert.IsFalse(trial.SheetTracking(sheet).GetProperty("archive").GetProperty("inclureDansRappels").GetBoolean());
+            running.ToggleArchived(Title);
+            Assert.IsTrue(trial.SheetTracking(sheet).GetProperty("archive").GetProperty("inclureDansRappels").GetBoolean());
+            running.RestartArchived(Title);
+        }
+
+        var tracking = trial.SheetTracking(sheet);
+        Assert.AreEqual("active", tracking.GetProperty("statut").GetString());
+        var cycle = tracking.GetProperty("cycle");
+        Assert.AreEqual(2, cycle.GetProperty("numero").GetInt32());
+        Assert.AreEqual(day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), cycle.GetProperty("demarreLe").GetString());
+        Assert.AreEqual(day.AddDays(1).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture), cycle.GetProperty("echeance").GetString());
+        using (var running = trial.Launch(day.AddDays(1)))
+        {
+            Assert.Contains("J1", running.Row(Today, Title) ?? "");
+        }
     }
 
     [TestMethod]

@@ -13,20 +13,22 @@ Ce qui a été enregistré se lit dans les fichiers de suivi du coffre, tels qu'
 dotnet test --project tests/KyfRev.Acceptance.Tests -c Release
 ```
 
-Des fenêtres s'ouvrent et se referment pendant environ une minute. Les boutons et les lignes sont
-invoqués sans souris ni clavier : le poste reste utilisable.
+Des fenêtres s'ouvrent et se referment pendant environ une minute, sans prendre le premier plan. Les
+boutons et les lignes sont invoqués sans souris ni clavier : le poste reste utilisable.
+
+Ne les lancez pas en même temps que `KyfRev.Presentation.Wpf.Tests`, dont les contrôles d'accessibilité
+parcourent les fenêtres du bureau. L'intégration continue passe un projet de tests après l'autre.
 
 ## Ce qui passe par l'application, et ce qui ne le peut pas encore
 
 Tout geste de révision passe par l'application : ouvrir une ligne, faire défiler, valider, reporter,
-répondre à un rappel, marquer un passage. Ce que l'interface ne propose pas encore passe par les cas
+répondre à un rappel, marquer un passage, consulter les archives. Ce que l'interface ne propose pas encore passe par les cas
 d'usage, sur le même coffre et à la même date :
 
 | Scénario | Ce qui passe par les cas d'usage | Pourquoi |
 |---|---|---|
 | Tous | Créer une fiche | Aucune vue ne le propose encore |
 | T2, T11 | Surligner un passage | Arrive avec J7 |
-| T2 | Lire la liste des archives | La vue « Archives » est encore vide |
 | T3 | Les jours du repos entre le 4 décembre et le 1er février (la veille et le jour du premier rappel passent par l'application) | Évite une soixantaine de lancements |
 | T3, T18 | Archiver à la main les fiches de départ | L'application sait le faire, mais ce n'est pas ce que ces scénarios vérifient |
 | T3, T18 | Régler les rappels | La vue « Paramètres » est encore vide |
