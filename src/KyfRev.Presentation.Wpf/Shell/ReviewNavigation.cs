@@ -164,5 +164,5 @@ public sealed class ReviewNavigation : IReviewOpener
         return passage;
     }
 
-    private ReviewBarViewModel Bar(ItemKind kind, string id, ReviewState state) => new(_reviews, _reminders, _time, kind, id, state);
+    private ReviewBarViewModel Bar(ItemKind kind, string id, ReviewState state) => new(_reviews, _reminders, _sheets, _time, kind, id, state);
 }

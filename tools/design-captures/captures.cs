@@ -17,7 +17,8 @@
 // aujourdhui-etroit-clair.png, aujourdhui-tablette-sombre.png, aujourdhui-ecran-clair.png,
 // aujourdhui-grand-clair.png, aujourdhui-ultralarge-sombre.png, aujourdhui-contraste-eleve.png), une fiche
 // et un passage en révision (fiche-clair.png, passage-sombre.png, sur un coffre d'essai jetable),
-// la séance d'étude et son bilan (seance-clair.png, seance-contraste-eleve.png, seance-etroite-sombre.png, bilan-sombre.png), et affiche le contraste de
+// la réponse à un rappel (rappel-clair.png, rappel-marquage-sombre.png), la séance d'étude et son
+// bilan (seance-clair.png, seance-contraste-eleve.png, seance-etroite-sombre.png, bilan-sombre.png), et affiche le contraste de
 // chaque paire de rôles.
 using System.Collections.Immutable;
 using System.Globalization;
@@ -175,7 +176,7 @@ static void ReviewCaptures(string folder)
         var passage = app.Annotations.Create(sheet, anchor, "Qui paie l'impôt ?").Value;
         time.Now = time.Now.AddDays(2);
 
-        ReviewBarViewModel Bar(ItemKind kind, string id, ReviewState state) => new(app.Reviews, app.Reminders, time, kind, id, state);
+        ReviewBarViewModel Bar(ItemKind kind, string id, ReviewState state) => new(app.Reviews, app.Reminders, app.Sheets, time, kind, id, state);
         var sheetPage = new SheetPageViewModel(app.Sheets, Bar, sheet, () => { });
         sheetPage.LoadCommand.Execute(null);
         Pump(() => !sheetPage.IsLoading);
@@ -239,6 +240,20 @@ static void ReviewCaptures(string folder)
                 SampleCards);
             Shell(folder, file, theme, _ => { }, new Dictionary<string, object> { [CorePages.Today] = today }, width, height, () => today.ShowsPreview && today.Preview!.HasBody);
         }
+        // Un rappel de consolidation : la fiche archivée depuis deux mois, tirée ce jour-là.
+        app.Reviews.Archive(sheet).Value.ToString();
+        for (var days = 0; days < 75; days++)
+        {
+            time.Now = time.Now.AddDays(1);
+            app.Reminders.PrepareDay().Value.ToString();
+        }
+        var reminderPage = new SheetPageViewModel(app.Sheets, Bar, sheet, () => { });
+        reminderPage.LoadCommand.Execute(null);
+        Pump(() => !reminderPage.IsLoading);
+        Shell(folder, "rappel-clair.png", ThemePreference.Light, shell => shell.Navigate(new NavigationItem("fiche", "Fiche", Icons.Document, int.MaxValue, reminderPage)));
+        reminderPage.Review!.StartMarkingCommand.Execute(null);
+        Pump(() => reminderPage.Review.IsMarking);
+        Shell(folder, "rappel-marquage-sombre.png", ThemePreference.Dark, shell => shell.Navigate(new NavigationItem("fiche", "Fiche", Icons.Document, int.MaxValue, reminderPage)));
         var finished = new StudySessionViewModel(new StudySession(root, new DateOnly(2026, 10, 3), items, 11, 9, 2, 0, TimeSpan.FromSeconds(754), true), new NoSessions(), time, Item, () => { }, () => { });
         finished.EndCommand.Execute(null);
         Shell(folder, "bilan-sombre.png", ThemePreference.Dark, shell => shell.Navigate(new NavigationItem("seance", "Séance", Icons.Calendar, int.MaxValue, finished)));

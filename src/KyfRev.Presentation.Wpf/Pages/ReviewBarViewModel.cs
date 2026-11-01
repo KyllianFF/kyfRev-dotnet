@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using KyfRev.Application;
 using KyfRev.Application.Model;
 using KyfRev.Application.UseCases;
+using KyfRev.Domain.Reviews;
 
 namespace KyfRev.Presentation.Wpf.Pages;
 
@@ -20,6 +21,12 @@ public enum ReviewConfirmation
 
     /// <summary>Archiver la fiche.</summary>
     Archive,
+
+    /// <summary>Rappel : remettre toute la fiche en révision.</summary>
+    ReviewEntirely,
+
+    /// <summary>Rappel : aucun passage n'est marqué, enregistrer plutôt « Fiche connue ».</summary>
+    NoPassageMarked,
 }
 
 /// <summary>Ce que la dernière action de la barre a fait.</summary>
@@ -42,6 +49,22 @@ public enum ReviewAction
 
     /// <summary>Fiche exclue des rappels, ou réincluse.</summary>
     RemindersChanged,
+
+    /// <summary>Réponse donnée à un rappel de consolidation.</summary>
+    ReminderAnswered,
+}
+
+/// <summary>Un passage de la fiche, à marquer en répondant à un rappel.</summary>
+/// <param name="Id">L'annotation.</param>
+/// <param name="Label">« « Le passage » », ou le terme d'une définition.</param>
+/// <param name="IsMarked">Son cycle a commencé aujourd'hui : il est à revoir.</param>
+public sealed record PassageMark(string Id, string Label, bool IsMarked)
+{
+    /// <summary>Il reste à le marquer.</summary>
+    public bool CanMark => !IsMarked;
+
+    /// <summary>« Remettre à J0 : … » : le nom du bouton pour le lecteur d'écran.</summary>
+    public string MarkName => $"{ReviewText.MarkPassage} : {Label}";
 }
 
 /// <summary>Une étape de la frise du cycle : J0 ✓ J1 ✓ J3 ● J7 J14 J30.</summary>
@@ -80,25 +103,32 @@ public sealed record StepMark(string Label, bool IsDone, bool IsCurrent, bool Wa
 /// l'étape attendue et son échéance, « Valider la révision » (Ctrl+Entrée), une confirmation avant
 /// une révision en avance, le report (demain, dans 3 jours), « Recommencer à J0… » et, pour une
 /// fiche, « Archiver… » ; archivé, « Remettre en révision (J0) » et l'inclusion dans les rappels.
-/// Valider est toujours une action explicite.
+/// Valider est toujours une action explicite. Quand un rappel de consolidation attend sa réponse
+/// (<c>BarreRappel.svelte</c>) : « Fiche connue », « Certains points sont à revoir » (les passages à
+/// revoir se remettent à J0) ou « Fiche à revoir entièrement… ». Rien n'est enregistré tant que
+/// l'utilisateur n'a pas choisi : quitter la fiche ne vaut pas réponse.
 /// </summary>
 public sealed partial class ReviewBarViewModel : ObservableObject
 {
     private readonly ReviewUseCases _reviews;
     private readonly ReminderUseCases _reminders;
+    private readonly SheetUseCases _sheets;
     private readonly TimeProvider _time;
 
     /// <summary>La barre d'un élément, dans l'état <paramref name="state"/>.</summary>
-    public ReviewBarViewModel(ReviewUseCases reviews, ReminderUseCases reminders, TimeProvider time, ItemKind kind, string id, ReviewState state)
+    public ReviewBarViewModel(ReviewUseCases reviews, ReminderUseCases reminders, SheetUseCases sheets, TimeProvider time, ItemKind kind, string id, ReviewState state)
     {
         ArgumentNullException.ThrowIfNull(reviews);
         ArgumentNullException.ThrowIfNull(reminders);
+        ArgumentNullException.ThrowIfNull(sheets);
         ArgumentNullException.ThrowIfNull(time);
         ArgumentNullException.ThrowIfNull(id);
         ArgumentNullException.ThrowIfNull(state);
         _reviews = reviews;
         _reminders = reminders;
+        _sheets = sheets;
         _time = time;
+        Passages = [];
         Kind = kind;
         Id = id;
         State = state;
@@ -119,7 +149,8 @@ public sealed partial class ReviewBarViewModel : ObservableObject
     /// <summary>L'état de révision.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsActive), nameof(IsArchived), nameof(IsEarly), nameof(StepLabel), nameof(DueText), nameof(IsLate), nameof(CanValidate),
-        nameof(ValidateLabel), nameof(ArchivedStatus), nameof(Steps), nameof(ReminderToggleLabel), nameof(ShowsReviewedToday))]
+        nameof(ValidateLabel), nameof(ArchivedStatus), nameof(Steps), nameof(ReminderToggleLabel), nameof(ShowsReviewedToday),
+        nameof(IsReminder), nameof(ShowsArchivedActions), nameof(ShowsSteps), nameof(ShowsReminderChoices), nameof(ReminderIntro))]
     [NotifyCanExecuteChangedFor(nameof(ValidateCommand))]
     public partial ReviewState State { get; private set; }
 
@@ -182,6 +213,43 @@ public sealed partial class ReviewBarViewModel : ObservableObject
     /// <summary>« Exclure des rappels » ou « Réinclure dans les rappels ».</summary>
     public string ReminderToggleLabel => State.IncludedInReminders ? ReviewText.ExcludeFromReminders : ReviewText.IncludeInReminders;
 
+    /// <summary>Un rappel de consolidation attend sa réponse.</summary>
+    public bool IsReminder => IsArchived && IsSheet && State.ReminderPending;
+
+    /// <summary>Archivé sans rappel en attente : l'état des rappels et la remise en révision.</summary>
+    public bool ShowsArchivedActions => IsArchived && !IsReminder;
+
+    /// <summary>La frise montre où en est la révision ; un rappel porte sur toute la fiche.</summary>
+    public bool ShowsSteps => !IsReminder;
+
+    /// <summary>« Fiche archivée le …. Relisez-la, puis dites ce qu'il en reste. ».</summary>
+    public string ReminderIntro => ReviewText.ReminderIntroOf(State.ArchivedOn is { } archived ? Dates.Long(archived) : string.Empty);
+
+    /// <summary>« Certains points sont à revoir » : les passages à revoir se marquent.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsReminderChoices))]
+    public partial bool IsMarking { get; private set; }
+
+    /// <summary>Les trois réponses au rappel sont proposées.</summary>
+    public bool ShowsReminderChoices => IsReminder && !IsMarking;
+
+    /// <summary>Les passages de la fiche, pendant le marquage.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(MarkedCount), nameof(MarkedLabel), nameof(HasNoPassage), nameof(HasPassages))]
+    public partial IReadOnlyList<PassageMark> Passages { get; private set; }
+
+    /// <summary>Passages marqués aujourd'hui.</summary>
+    public int MarkedCount => Passages.Count(passage => passage.IsMarked);
+
+    /// <summary>« 2 passages marqués ».</summary>
+    public string MarkedLabel => Dates.Plural(MarkedCount, ReviewText.MarkedOneOf, ReviewText.MarkedManyOf);
+
+    /// <summary>La fiche a des passages à marquer.</summary>
+    public bool HasPassages => Passages.Count > 0;
+
+    /// <summary>La fiche n'a aucun passage.</summary>
+    public bool HasNoPassage => !HasPassages;
+
     /// <summary>La frise des étapes du cycle.</summary>
     public IReadOnlyList<StepMark> Steps => StepMark.Of(State);
 
@@ -224,6 +292,8 @@ public sealed partial class ReviewBarViewModel : ObservableObject
         ReviewConfirmation.Early => ReviewText.EarlyTitle,
         ReviewConfirmation.Restart => ReviewText.RestartTitle,
         ReviewConfirmation.Archive => ReviewText.ArchiveTitle,
+        ReviewConfirmation.ReviewEntirely => ReviewText.EntirelyTitle,
+        ReviewConfirmation.NoPassageMarked => ReviewText.NoMarkTitle,
         _ => string.Empty,
     };
 
@@ -233,6 +303,8 @@ public sealed partial class ReviewBarViewModel : ObservableObject
         ReviewConfirmation.Early => ReviewText.EarlyMessageOf(State.DueDate is { } due ? Dates.Long(due) : string.Empty),
         ReviewConfirmation.Restart => IsSheet ? ReviewText.RestartSheetMessage : ReviewText.RestartPassageMessage,
         ReviewConfirmation.Archive => ReviewText.ArchiveMessage,
+        ReviewConfirmation.ReviewEntirely => ReviewText.EntirelyMessage,
+        ReviewConfirmation.NoPassageMarked => ReviewText.NoMarkMessage,
         _ => string.Empty,
     };
 
@@ -242,6 +314,8 @@ public sealed partial class ReviewBarViewModel : ObservableObject
         ReviewConfirmation.Early => ReviewText.EarlyConfirm,
         ReviewConfirmation.Restart => ReviewText.RestartConfirm,
         ReviewConfirmation.Archive => ReviewText.ArchiveConfirm,
+        ReviewConfirmation.ReviewEntirely => ReviewText.EntirelyConfirm,
+        ReviewConfirmation.NoPassageMarked => ReviewText.ReminderKnown,
         _ => string.Empty,
     };
 
@@ -276,6 +350,8 @@ public sealed partial class ReviewBarViewModel : ObservableObject
             ReviewConfirmation.Early => ValidateNowAsync(),
             ReviewConfirmation.Restart => RestartAsync(),
             ReviewConfirmation.Archive => ActAsync(ReviewAction.Archived, () => _reviews.Archive(Id), _ => ReviewText.ArchivedMessage),
+            ReviewConfirmation.ReviewEntirely => AnswerReminderAsync(ReminderOutcome.ReviewEntirely),
+            ReviewConfirmation.NoPassageMarked => AnswerReminderAsync(ReminderOutcome.Known),
             _ => Task.CompletedTask,
         };
     }
@@ -316,6 +392,106 @@ public sealed partial class ReviewBarViewModel : ObservableObject
                     : Outcome.Refused<ReviewState>(outcome.Error!);
             },
             _ => include ? ReviewText.Included : ReviewText.Excluded).ConfigureAwait(true);
+    }
+
+    /// <summary>Rappel : « Fiche connue ».</summary>
+    [RelayCommand]
+    private Task AnswerKnownAsync() => AnswerReminderAsync(ReminderOutcome.Known);
+
+    /// <summary>Rappel : demande confirmation avant de remettre toute la fiche en révision.</summary>
+    [RelayCommand]
+    private void RequestReviewEntirely() => Confirmation = ReviewConfirmation.ReviewEntirely;
+
+    /// <summary>Rappel : « Certains points sont à revoir » : montre les passages à marquer.</summary>
+    [RelayCommand]
+    private async Task StartMarkingAsync()
+    {
+        Error = null;
+        await LoadPassagesAsync().ConfigureAwait(true);
+        IsMarking = !HasError;
+    }
+
+    /// <summary>Revient aux trois réponses ; les passages déjà remis à J0 le restent.</summary>
+    [RelayCommand]
+    private void CancelMarking() => IsMarking = false;
+
+    /// <summary>Remet un passage à J0 : il est à revoir dès demain.</summary>
+    [RelayCommand]
+    private async Task MarkPassageAsync(PassageMark passage)
+    {
+        ArgumentNullException.ThrowIfNull(passage);
+        Error = null;
+        var outcome = await Task.Run(() => _reviews.Restart(ItemKind.Passage, passage.Id)).ConfigureAwait(true);
+        if (outcome.Succeeded)
+        {
+            Message = ReviewText.PassageMarked;
+            await LoadPassagesAsync().ConfigureAwait(true);
+        }
+        else
+        {
+            Error = outcome.Error;
+        }
+    }
+
+    /// <summary>Termine le marquage ; sans passage marqué, propose plutôt « Fiche connue ».</summary>
+    [RelayCommand]
+    private Task FinishMarkingAsync()
+    {
+        if (MarkedCount > 0)
+        {
+            return AnswerReminderAsync(ReminderOutcome.SomePointsToReview);
+        }
+        Confirmation = ReviewConfirmation.NoPassageMarked;
+        return Task.CompletedTask;
+    }
+
+    private async Task LoadPassagesAsync()
+    {
+        var outcome = await Task.Run(() => _sheets.Open(Id)).ConfigureAwait(true);
+        if (outcome.Succeeded)
+        {
+            Passages =
+            [
+                .. outcome.Value.Annotations.Where(annotation => !annotation.InTrash).Select(annotation => new PassageMark(
+                    annotation.Id,
+                    annotation.Definition?.Term ?? $"« {annotation.Anchor.Exact} »",
+                    annotation.Review.StartedToday)),
+            ];
+        }
+        else
+        {
+            Error = outcome.Error;
+        }
+    }
+
+    private async Task AnswerReminderAsync(ReminderOutcome choice)
+    {
+        var marked = MarkedCount;
+        await ActAsync(
+            ReviewAction.ReminderAnswered,
+            () =>
+            {
+                var done = _reminders.Handle(Id, choice);
+                if (!done.Succeeded)
+                {
+                    return Outcome.Refused<ReviewState>(done.Error!);
+                }
+                var opened = _sheets.Open(Id);
+                return opened.Succeeded ? Outcome.Of(opened.Value.Review) : Outcome.Refused<ReviewState>(opened.Error!);
+            },
+            next => ReminderMessage(choice, marked, next)).ConfigureAwait(true);
+        IsMarking = IsMarking && HasError;
+    }
+
+    private static string ReminderMessage(ReminderOutcome choice, int marked, ReviewState next)
+    {
+        var eligible = next.EligibleOn is { } day ? $" {ReviewText.NextReminderOf(Dates.Long(day))}" : string.Empty;
+        return choice switch
+        {
+            ReminderOutcome.Known => ReviewText.KnownDone + eligible,
+            ReminderOutcome.SomePointsToReview => Dates.Plural(marked, ReviewText.SomeDoneOneOf, ReviewText.SomeDoneManyOf) + eligible,
+            _ => ReviewText.EntirelyDoneOf(next.DueDate is { } due ? Dates.Long(due) : string.Empty),
+        };
     }
 
     private Task ValidateNowAsync()

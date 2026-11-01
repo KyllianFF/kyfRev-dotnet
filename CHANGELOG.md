@@ -37,6 +37,11 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   au-delà de 1 Mo : deux fichiers au plus. Comme le prévoit le plan, la rotation se fait aussi en
   cours d'exécution, et le dossier du profil de l'utilisateur y est masqué (`%USERPROFILE%`).
   Installé, il est rangé dans `%LOCALAPPDATA%\kyfRev\v1`, à part de celui de la 0.x.
+- Réponse aux rappels de consolidation, comme dans la version 0.x : une fiche dont le rappel
+  attend sa réponse propose « Fiche connue », « Certains points sont à revoir » (les passages à
+  revoir se remettent à J0, et il en faut au moins un) ou « Fiche à revoir entièrement… », avec
+  confirmation. Rien n'est enregistré tant qu'aucune réponse n'est choisie : quitter la fiche ne
+  vaut pas réponse. Surligner un nouveau passage viendra avec la lecture native.
 - Fiche et passage en révision, au centre de la page, sur 720 px au plus, avec la barre de révision
   toujours visible en bas : la frise des étapes, l'étape attendue, « Reporter » (à demain ou de
   3 jours), les autres actions et « Valider ». Ouverts d'un clic (ou d'Entrée) depuis la vue « Aujourd'hui »,

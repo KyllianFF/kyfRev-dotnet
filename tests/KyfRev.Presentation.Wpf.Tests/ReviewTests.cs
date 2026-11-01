@@ -357,6 +357,221 @@ public sealed class ReviewTests
         Assert.AreSame(reminder, opener.Opened.Single());
     }
 
+    [TestMethod]
+    public async Task A_pending_reminder_can_be_answered_known()
+    {
+        using var vault = new ReviewVault();
+        var bar = await vault.ReminderBarAsync();
+        var changes = 0;
+        bar.Changed += (_, _) => changes++;
+
+        Assert.IsTrue(bar.IsReminder);
+        Assert.IsTrue(bar.ShowsReminderChoices);
+        Assert.IsFalse(bar.ShowsSteps);
+        Assert.IsFalse(bar.ShowsArchivedActions);
+        StringAssert.StartsWith(bar.ReminderIntro, "Fiche archivée le ", StringComparison.Ordinal);
+        StringAssert.EndsWith(bar.ReminderIntro, ". Relisez-la, puis dites ce qu'il en reste.", StringComparison.Ordinal);
+        Assert.HasCount(1, vault.App.Reminders.Dashboard().Value.Reminders);
+
+        await bar.AnswerKnownCommand.ExecuteAsync(null);
+
+        Assert.AreEqual(ReviewAction.ReminderAnswered, bar.LastAction);
+        Assert.AreEqual(1, changes);
+        Assert.IsFalse(bar.IsReminder);
+        Assert.IsTrue(bar.ShowsArchivedActions);
+        Assert.IsTrue(bar.ShowsSteps);
+        StringAssert.StartsWith(bar.Message, "Fiche connue : elle reste archivée. Prochain rappel possible à partir du ", StringComparison.Ordinal);
+        Assert.IsEmpty(vault.App.Reminders.Dashboard().Value.Reminders);
+
+        // Une seconde réponse est refusée : plus aucun rappel n'attend.
+        await bar.AnswerKnownCommand.ExecuteAsync(null);
+        Assert.IsTrue(bar.HasError);
+    }
+
+    [TestMethod]
+    public async Task Reviewing_a_whole_sheet_again_asks_first()
+    {
+        using var vault = new ReviewVault();
+        var bar = await vault.ReminderBarAsync();
+
+        bar.RequestReviewEntirelyCommand.Execute(null);
+        Assert.AreEqual(ReviewConfirmation.ReviewEntirely, bar.Confirmation);
+        Assert.AreEqual("Revoir toute la fiche ?", bar.ConfirmTitle);
+        Assert.AreEqual("Remettre en révision", bar.ConfirmLabel);
+        StringAssert.StartsWith(bar.ConfirmMessage, "Elle redevient active", StringComparison.Ordinal);
+        await bar.AnswerCommand.ExecuteAsync(false);
+        Assert.IsTrue(bar.IsReminder, "annuler ne répond pas au rappel");
+
+        bar.RequestReviewEntirelyCommand.Execute(null);
+        await bar.AnswerCommand.ExecuteAsync(true);
+
+        Assert.IsTrue(bar.IsActive);
+        Assert.IsFalse(bar.IsReminder);
+        Assert.AreEqual("J1", bar.State.Step);
+        StringAssert.StartsWith(bar.Message, "La fiche est de nouveau en révision : J1 ", StringComparison.Ordinal);
+    }
+
+    [TestMethod]
+    public async Task Some_points_to_review_need_a_marked_passage()
+    {
+        using var vault = new ReviewVault();
+        var bar = await vault.ReminderBarAsync();
+
+        await bar.StartMarkingCommand.ExecuteAsync(null);
+        Assert.IsTrue(bar.IsMarking);
+        Assert.IsFalse(bar.ShowsReminderChoices);
+        Assert.IsTrue(bar.HasPassages);
+        Assert.IsFalse(bar.HasNoPassage);
+        Assert.HasCount(2, bar.Passages);
+        Assert.AreEqual("0 passage marqué", bar.MarkedLabel);
+        var passage = bar.Passages.Single(mark => mark.Id == vault.PassageId);
+        Assert.AreEqual("« La prophase »", passage.Label);
+        Assert.AreEqual("Remettre à J0 : « La prophase »", passage.MarkName);
+        Assert.IsTrue(passage.CanMark);
+        Assert.AreEqual("Prophase", bar.Passages.Single(mark => mark.Id == vault.DefinitionId).Label);
+
+        // Sans passage marqué, terminer ne répond pas : la réponse proposée est « Fiche connue ».
+        await bar.FinishMarkingCommand.ExecuteAsync(null);
+        Assert.AreEqual(ReviewConfirmation.NoPassageMarked, bar.Confirmation);
+        Assert.AreEqual("Aucun passage marqué", bar.ConfirmTitle);
+        Assert.AreEqual("Fiche connue", bar.ConfirmLabel);
+        StringAssert.Contains(bar.ConfirmMessage, "au moins un passage remis à J0", StringComparison.Ordinal);
+        await bar.AnswerCommand.ExecuteAsync(false);
+        Assert.IsTrue(bar.IsMarking);
+        Assert.IsTrue(bar.IsReminder);
+
+        await bar.MarkPassageCommand.ExecuteAsync(passage);
+        Assert.AreEqual("Passage remis à J0 : à revoir dès demain.", bar.Message);
+        Assert.AreEqual("1 passage marqué", bar.MarkedLabel);
+        Assert.IsFalse(bar.Passages.Single(mark => mark.Id == vault.PassageId).CanMark);
+
+        // Annuler revient aux réponses ; le passage reste marqué.
+        bar.CancelMarkingCommand.Execute(null);
+        Assert.IsTrue(bar.ShowsReminderChoices);
+        await bar.StartMarkingCommand.ExecuteAsync(null);
+        Assert.AreEqual(1, bar.MarkedCount);
+
+        await bar.FinishMarkingCommand.ExecuteAsync(null);
+        Assert.IsFalse(bar.IsMarking);
+        Assert.IsFalse(bar.IsReminder);
+        Assert.IsTrue(bar.IsArchived);
+        StringAssert.StartsWith(bar.Message, "1 passage à revoir dès demain (J1). La fiche reste archivée. Prochain rappel possible", StringComparison.Ordinal);
+    }
+
+    [TestMethod]
+    public async Task Without_a_marked_passage_the_answer_can_be_known()
+    {
+        using var vault = new ReviewVault();
+        var bar = await vault.ReminderBarAsync();
+        await bar.StartMarkingCommand.ExecuteAsync(null);
+        await bar.FinishMarkingCommand.ExecuteAsync(null);
+
+        await bar.AnswerCommand.ExecuteAsync(true);
+
+        Assert.IsFalse(bar.IsMarking);
+        Assert.IsFalse(bar.IsReminder);
+        StringAssert.StartsWith(bar.Message, "Fiche connue", StringComparison.Ordinal);
+    }
+
+    [TestMethod]
+    public async Task Several_passages_can_be_marked()
+    {
+        using var vault = new ReviewVault();
+        var bar = await vault.ReminderBarAsync();
+        await bar.StartMarkingCommand.ExecuteAsync(null);
+        foreach (var id in new[] { vault.PassageId, vault.DefinitionId })
+        {
+            await bar.MarkPassageCommand.ExecuteAsync(bar.Passages.Single(mark => mark.Id == id));
+        }
+        Assert.AreEqual("2 passages marqués", bar.MarkedLabel);
+
+        await bar.FinishMarkingCommand.ExecuteAsync(null);
+
+        StringAssert.StartsWith(bar.Message, "2 passages à revoir dès demain (J1).", StringComparison.Ordinal);
+    }
+
+    [TestMethod]
+    public async Task A_reminder_says_when_it_cannot_be_answered()
+    {
+        using var vault = new ReviewVault();
+        var bar = await vault.ReminderBarAsync();
+
+        // Une fiche sans passage n'a rien à marquer.
+        var plain = vault.App.Sheets.Create("Chimie", "Atome", null).Value;
+        var empty = vault.Bar(ItemKind.Sheet, plain, bar.State);
+        Assert.IsTrue(empty.IsReminder);
+        await empty.StartMarkingCommand.ExecuteAsync(null);
+        Assert.IsTrue(empty.IsMarking);
+        Assert.IsTrue(empty.HasNoPassage);
+
+        // Une fiche introuvable, un passage introuvable : le refus s'affiche, rien ne change.
+        var missing = vault.Bar(ItemKind.Sheet, "introuvable", bar.State);
+        await missing.StartMarkingCommand.ExecuteAsync(null);
+        Assert.IsFalse(missing.IsMarking);
+        Assert.IsTrue(missing.HasError);
+        await missing.AnswerKnownCommand.ExecuteAsync(null);
+        Assert.IsTrue(missing.IsReminder);
+        Assert.IsTrue(missing.HasError);
+        await bar.MarkPassageCommand.ExecuteAsync(new PassageMark("introuvable", "Rien", false));
+        Assert.IsTrue(bar.HasError);
+        await Assert.ThrowsExactlyAsync<ArgumentNullException>(() => bar.MarkPassageCommand.ExecuteAsync(null));
+    }
+
+    [STATestMethod]
+    public void The_sheet_page_shows_the_reminder_answers_instead_of_the_steps()
+    {
+        using var ui = new UiThread();
+        using var vault = new ReviewVault();
+        vault.PrepareReminder();
+        var test = new TestShell();
+        var page = vault.SheetPage(vault.SheetId);
+        page.LoadCommand.Execute(null);
+        UiThread.Until(() => !page.IsLoading);
+        var window = Show(test, page);
+        try
+        {
+            var bar = page.Review!;
+            Assert.IsTrue(Named<Button>(window, "Known").IsVisible);
+            Assert.IsTrue(Named<Button>(window, "SomePoints").IsVisible);
+            Assert.IsTrue(Named<Button>(window, "ReviewEntirely").IsVisible);
+            Assert.IsFalse(Named<ItemsControl>(window, "Steps").IsVisible);
+            Assert.IsFalse(Named<StackPanel>(window, "Marking").IsVisible);
+
+            // « Fiche à revoir entièrement… » passe par le dialogue de la page.
+            Named<Button>(window, "ReviewEntirely").Command.Execute(null);
+            TestShell.Flush();
+            var dialog = Named<Dialog>(window, "Confirmation");
+            Assert.IsTrue(dialog.IsOpen);
+            Assert.AreEqual("Revoir toute la fiche ?", dialog.Title);
+            dialog.Close(DialogChoice.Secondary);
+            UiThread.Until(() => !bar.IsConfirming);
+            Assert.IsTrue(bar.IsReminder);
+
+            // Le marquage montre les passages, chacun avec son bouton.
+            Named<Button>(window, "SomePoints").Command.Execute(null);
+            UiThread.Until(() => bar.IsMarking);
+            TestShell.Flush();
+            Assert.IsTrue(Named<StackPanel>(window, "Marking").IsVisible);
+            Assert.IsFalse(Named<Button>(window, "Known").IsVisible);
+            Assert.IsTrue(Named<Button>(window, "FinishMarking").IsVisible);
+            var buttons = Descendants(Named<ItemsControl>(window, "Passages")).OfType<Button>().ToList();
+            Assert.HasCount(2, buttons);
+            buttons[0].Command.Execute(buttons[0].CommandParameter);
+            UiThread.Until(() => bar.MarkedCount == 1);
+            TestShell.Flush();
+            Assert.AreEqual("1 passage marqué", Named<TextBlock>(window, "MarkedLabel").Text);
+            Named<Button>(window, "FinishMarking").Command.Execute(null);
+            UiThread.Until(() => !bar.IsReminder);
+            TestShell.Flush();
+            Assert.IsTrue(Named<ItemsControl>(window, "Steps").IsVisible);
+            Assert.IsTrue(Named<Notification>(window, "Message").IsOpen);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
     [STATestMethod]
     public void The_sheet_page_validates_with_ctrl_enter_and_confirms_in_a_dialog()
     {
@@ -552,7 +767,21 @@ public sealed class ReviewTests
 
         public List<string> Calls { get; } = [];
 
-        public ReviewBarViewModel Bar(ItemKind kind, string id, ReviewState state) => new(App.Reviews, App.Reminders, Time, kind, id, state);
+        public ReviewBarViewModel Bar(ItemKind kind, string id, ReviewState state) => new(App.Reviews, App.Reminders, App.Sheets, Time, kind, id, state);
+
+        /// <summary>La fiche archivée, puis tirée pour un rappel deux mois et demi plus tard.</summary>
+        public void PrepareReminder()
+        {
+            Assert.IsTrue(App.Reviews.Archive(SheetId).Succeeded);
+            Time.AdvanceDays(75);
+            CollectionAssert.Contains(App.Reminders.PrepareDay().Value.NewReminders.ToList(), SheetId);
+        }
+
+        public async Task<ReviewBarViewModel> ReminderBarAsync()
+        {
+            PrepareReminder();
+            return await SheetBarAsync();
+        }
 
         public async Task<ReviewBarViewModel> SheetBarAsync()
         {
