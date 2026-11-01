@@ -56,6 +56,12 @@ public sealed class VaultLocations : IVaultLocations
     /// <inheritdoc/>
     public AppMode Mode { get; }
 
+    /// <summary>
+    /// Dossier des données propres à ce poste (journal de diagnostic, dernier coffre) : à côté de
+    /// l'exécutable en mode portable ou en développement, <c>%LOCALAPPDATA%\kyfRev\v1</c> installé.
+    /// </summary>
+    public string LocalData => _localData;
+
     /// <summary>Les emplacements de l'exécutable en cours, pour l'utilisateur en cours.</summary>
     public static VaultLocations Detect()
     {

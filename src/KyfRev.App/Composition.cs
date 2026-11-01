@@ -1,4 +1,5 @@
 using System.Reflection;
+using KyfRev.Application.Model;
 using KyfRev.Application.Modules;
 using KyfRev.Application.Ports;
 using KyfRev.Application.UseCases;
@@ -9,7 +10,7 @@ using KyfRev.Infrastructure.Windows;
 using KyfRev.Presentation.Wpf.Pages;
 using KyfRev.Presentation.Wpf.Shell;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Logging;
 
 namespace KyfRev.App;
 
@@ -29,7 +30,15 @@ internal static class Composition
         var services = new ServiceCollection();
         services.AddSingleton<ISystemAppearance, WindowsAppearance>();
         services.AddSingleton<IWindowChrome, WindowChrome>();
-        services.AddSingleton<IVaultLocations>(_ => VaultLocations.Detect());
+        services.AddSingleton(_ => VaultLocations.Detect());
+        services.AddSingleton<IVaultLocations>(provider => provider.GetRequiredService<VaultLocations>());
+        services.AddSingleton<ILoggerFactory>(provider =>
+        {
+            var locations = provider.GetRequiredService<VaultLocations>();
+            var log = new DiagnosticLog(locations.LocalData, Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), TimeProvider.System);
+            log.Started(Version, ModeName(locations.Mode));
+            return log;
+        });
         services.AddSingleton<IFolderPicker, FolderPicker>();
         // Le coffre ouvert est fermé, et son verrou libéré, quand les services le sont.
         services.AddSingleton(provider => new KyfRevApplication(
@@ -37,7 +46,7 @@ internal static class Composition
             new BackupFiles(),
             provider.GetRequiredService<IVaultLocations>(),
             TimeProvider.System,
-            NullLoggerFactory.Instance,
+            provider.GetRequiredService<ILoggerFactory>(),
             Version));
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Vaults);
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Reminders);
@@ -64,4 +73,12 @@ internal static class Composition
         services.AddTransient<ShellWindow>();
         return services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
     }
+
+    /// <summary>Le mode tel que le journal le nomme, comme la 0.x.</summary>
+    internal static string ModeName(AppMode mode) => mode switch
+    {
+        AppMode.Portable => "portable",
+        AppMode.Installed => "installée",
+        _ => "développement",
+    };
 }
