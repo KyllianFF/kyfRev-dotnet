@@ -25,6 +25,7 @@ public sealed class CompositionTests
         var shell = (ShellViewModel)window.DataContext;
         Assert.AreSame(services.GetRequiredService<ShellViewModel>(), shell);
         Assert.HasCount(5, shell.MainNavigation);
+        Assert.IsInstanceOfType<SheetsPageViewModel>(shell.MainNavigation.Single(item => item.Id == CorePages.Sheets).Page);
         Assert.IsInstanceOfType<ArchivesPageViewModel>(shell.MainNavigation.Single(item => item.Id == CorePages.Archives).Page);
         Assert.HasCount(2, shell.SecondaryNavigation);
         window.Close();

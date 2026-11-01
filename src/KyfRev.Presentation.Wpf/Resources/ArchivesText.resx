@@ -135,12 +135,6 @@
   <data name="RestingUntil" xml:space="preserve">
     <value>Au repos jusqu'au {0}</value>
   </data>
-  <data name="SearchName" xml:space="preserve">
-    <value>Rechercher</value>
-  </data>
-  <data name="SearchPlaceholder" xml:space="preserve">
-    <value>Titre ou étiquette…</value>
-  </data>
   <data name="SortArchiving" xml:space="preserve">
     <value>Archivage récent</value>
   </data>
@@ -161,14 +155,5 @@
   </data>
   <data name="ThreeOrMoreCycles" xml:space="preserve">
     <value>3 ou plus</value>
-  </data>
-  <data name="Filters" xml:space="preserve">
-    <value>Filtres</value>
-  </data>
-  <data name="FiltersWithCount" xml:space="preserve">
-    <value>Filtres · {0}</value>
-  </data>
-  <data name="RemoveFilter" xml:space="preserve">
-    <value>Retirer le filtre {0}</value>
   </data>
 </root>

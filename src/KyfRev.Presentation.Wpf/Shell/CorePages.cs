@@ -14,6 +14,9 @@ public static class CorePages
     /// <summary>Identifiant de la vue « Aujourd'hui » (le tableau de bord).</summary>
     public const string Today = "aujourdhui";
 
+    /// <summary>Identifiant de la vue « Fiches ».</summary>
+    public const string Sheets = "fiches";
+
     /// <summary>Identifiant de la vue « Archives ».</summary>
     public const string Archives = "archives";
 
@@ -29,7 +32,7 @@ public static class CorePages
         return
         [
             Entry(Today, ShellText.Today, Icons.Calendar, 10),
-            Entry("fiches", ShellText.Sheets, Icons.Document, 20),
+            Entry(Sheets, ShellText.Sheets, Icons.Document, 20),
             Entry("definitions", ShellText.Definitions, Icons.Dictionary, 30),
             Entry(Archives, ShellText.Archives, Icons.Archive, 40),
             Entry("statistiques", ShellText.Statistics, Icons.Chart, 50),

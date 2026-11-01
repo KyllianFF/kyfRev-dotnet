@@ -3,8 +3,8 @@ using KyfRev.Application.Model;
 namespace KyfRev.Presentation.Wpf.Pages;
 
 /// <summary>
-/// L'aperçu de la ligne choisie dans « Aujourd'hui », sur les grands écrans : son texte, les étapes de
-/// son cycle et ce qui a déjà été révisé. Un passage ou une définition n'y dévoile rien : seule la
+/// L'aperçu de la ligne choisie dans « Aujourd'hui » ou « Fiches », sur les grands écrans : son texte, les
+/// étapes de son cycle et ce qui a déjà été révisé. Un passage ou une définition n'y dévoile rien : seule la
 /// révision le montre.
 /// </summary>
 public sealed class TodayPreview
@@ -18,8 +18,11 @@ public sealed class TodayPreview
         History = [];
     }
 
-    /// <summary>La ligne de la liste, ouverte par « Réviser maintenant ».</summary>
+    /// <summary>La ligne de la liste, ouverte par le bouton de l'aperçu.</summary>
     public object Row { get; }
+
+    /// <summary>« Réviser maintenant » ou « Ouvrir la fiche ».</summary>
+    public string OpenLabel => Row is SheetRow ? SheetsText.OpenSheet : DashboardText.ReviewNow;
 
     /// <summary>« Fiche · Biologie · #partiel · cycle 1 · … ».</summary>
     public string Meta { get; }
@@ -70,13 +73,17 @@ public sealed class TodayPreview
             },
         }.With(sheet.Annotations.FirstOrDefault(annotation => annotation.Id == passage.Item.Id)?.Review ?? sheet.Review),
         DueItemRow item => new TodayPreview(row, item.Meta, sheet.Title) { Body = sheet.Body }.With(sheet.Review),
+        SheetRow listed => new TodayPreview(row, listed.Details, sheet.Title) { Body = sheet.Body }.With(sheet.Review),
         _ => new TodayPreview(row, ((ReminderRow)row).Meta, sheet.Title) { Body = sheet.Body }.With(sheet.Review),
     };
 
     /// <summary>La fiche de <paramref name="row"/> n'a pas pu être lue : <paramref name="error"/>.</summary>
-    internal static TodayPreview Failed(object row, string? error) => row is DueItemRow item
-        ? new TodayPreview(row, item.Meta, item.HeadingText) { Error = error }
-        : new TodayPreview(row, ((ReminderRow)row).Meta, ((ReminderRow)row).Title) { Error = error };
+    internal static TodayPreview Failed(object row, string? error) => row switch
+    {
+        DueItemRow item => new TodayPreview(row, item.Meta, item.HeadingText) { Error = error },
+        SheetRow listed => new TodayPreview(row, listed.Details, listed.Title) { Error = error },
+        _ => new TodayPreview(row, ((ReminderRow)row).Meta, ((ReminderRow)row).Title) { Error = error },
+    };
 
     private TodayPreview With(ReviewState review)
     {

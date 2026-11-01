@@ -20,7 +20,8 @@
 // la réponse à un rappel (rappel-clair.png, rappel-marquage-sombre.png), la séance d'étude et son
 // bilan (seance-clair.png, seance-contraste-eleve.png, seance-etroite-sombre.png, bilan-sombre.png), les archives
 // (archives-clair.png, archives-sombre.png, archives-etroit-clair.png, archives-etroit-filtres-sombre.png,
-// archives-contraste-eleve.png), et affiche le contraste de
+// archives-contraste-eleve.png), les fiches (fiches-clair.png, fiches-sombre.png, fiches-etroit-clair.png,
+// fiches-nouvelle-sombre.png, fiches-contraste-eleve.png), et affiche le contraste de
 // chaque paire de rôles.
 using System.Collections.Immutable;
 using System.Globalization;
@@ -122,8 +123,8 @@ var thread = new Thread(() =>
     // Les filtres dépliés sur petit écran, l'un d'eux choisi.
     var filtered = new ArchivesPageViewModel(app.Reminders, app.Reviews, new ReviewNavigation(app.Sheets, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System), TimeProvider.System);
     filtered.Show(SampleArchives());
-    filtered.Filters[0].Selected = filtered.Filters[0].Choices[1];
-    filtered.AreFiltersOpen = true;
+    filtered.Bar.Filters[0].Selected = filtered.Bar.Filters[0].Choices[1];
+    filtered.Bar.AreOpen = true;
     Shell(
         folder,
         "archives-etroit-filtres-sombre.png",
@@ -293,6 +294,62 @@ static void ReviewCaptures(string folder)
         var finished = new StudySessionViewModel(new StudySession(root, new DateOnly(2026, 10, 3), items, 11, 9, 2, 0, TimeSpan.FromSeconds(754), true), new NoSessions(), time, Item, () => { }, () => { });
         finished.EndCommand.Execute(null);
         Shell(folder, "bilan-sombre.png", ThemePreference.Dark, shell => shell.Navigate(new NavigationItem("seance", "Séance", Icons.Calendar, int.MaxValue, finished)));
+
+        // Les fiches : par dossier, avec l'aperçu de la première et une fiche archivée.
+        foreach (var (folderName, tag, title, body) in new[]
+        {
+            ("Biologie", "biologie", "La cellule eucaryote", "# La cellule eucaryote\n\nLa cellule eucaryote possède un noyau délimité par une membrane, qui renferme l'ADN.\nLes mitochondries produisent l'énergie sous forme d'ATP.\n"),
+            ("Biologie", "biologie", "Mitose et méiose", "# Mitose et méiose\n"),
+            ("Histoire", "histoire", "Napoléon et l'Empire", "# Napoléon et l'Empire\n"),
+            ("Réseaux", "réseaux", "Le modèle OSI", "# Le modèle OSI\n"),
+        })
+        {
+            var created = app.Sheets.Create(folderName, title, null).Value;
+            app.Sheets.SetTags(created, [tag]);
+            app.Editing.Save(created, body, app.Sheets.Open(created).Value.Fingerprint, 1);
+            if (title == "Mitose et méiose")
+            {
+                app.Reviews.Archive(created);
+            }
+        }
+        SheetsPageViewModel SheetsPage()
+        {
+            var navigation = new ReviewNavigation(app.Sheets, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), time);
+            var sheets = new SheetsPageViewModel(app.Sheets, app.Folders, app.Templates, navigation, time);
+            sheets.RefreshCommand.Execute(null);
+            Pump(() => !sheets.IsLoading && sheets.HasRows && sheets.Preview is not null);
+            return sheets;
+        }
+        foreach (var (file, theme, width, height, highContrast) in new[]
+        {
+            ("fiches-clair.png", ThemePreference.Light, 1280.0, 800.0, false),
+            ("fiches-sombre.png", ThemePreference.Dark, 1280.0, 800.0, false),
+            ("fiches-etroit-clair.png", ThemePreference.Light, 390.0, 844.0, false),
+            ("fiches-contraste-eleve.png", ThemePreference.System, 1280.0, 800.0, true),
+        })
+        {
+            var sheets = SheetsPage();
+            Shell(
+                folder,
+                file,
+                theme,
+                shell => shell.Navigate(shell.MainNavigation.Single(item => item.Id == CorePages.Sheets)),
+                new Dictionary<string, object> { [CorePages.Sheets] = sheets },
+                width,
+                height,
+                highContrast: highContrast);
+        }
+        var creating = SheetsPage();
+        creating.RequestCreateCommand.Execute(null);
+        Pump(() => creating.IsCreating);
+        Shell(
+            folder,
+            "fiches-nouvelle-sombre.png",
+            ThemePreference.Dark,
+            shell => shell.Navigate(shell.MainNavigation.Single(item => item.Id == CorePages.Sheets)),
+            new Dictionary<string, object> { [CorePages.Sheets] = creating },
+            1280,
+            800);
     }
     finally
     {

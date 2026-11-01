@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="AllFolders" xml:space="preserve">
+    <value>Tous</value>
+  </data>
+  <data name="ArchivedRow" xml:space="preserve">
+    <value>Archivée</value>
+  </data>
+  <data name="AtRoot" xml:space="preserve">
+    <value>À la racine</value>
+  </data>
+  <data name="CountMany" xml:space="preserve">
+    <value>{0} fiches</value>
+  </data>
+  <data name="CountOne" xml:space="preserve">
+    <value>{0} fiche</value>
+  </data>
+  <data name="CreateSheet" xml:space="preserve">
+    <value>Créer la fiche</value>
+  </data>
+  <data name="DueToday" xml:space="preserve">
+    <value>aujourd'hui</value>
+  </data>
+  <data name="EmptyDescription" xml:space="preserve">
+    <value>Créez votre première fiche : sa révision J1 sera due demain.</value>
+  </data>
+  <data name="EmptyTemplate" xml:space="preserve">
+    <value>Fiche vide</value>
+  </data>
+  <data name="EmptyTitle" xml:space="preserve">
+    <value>Aucune fiche pour l'instant</value>
+  </data>
+  <data name="FilterFolder" xml:space="preserve">
+    <value>Dossier</value>
+  </data>
+  <data name="FilterSort" xml:space="preserve">
+    <value>Tri</value>
+  </data>
+  <data name="FilterState" xml:space="preserve">
+    <value>État</value>
+  </data>
+  <data name="FolderCount" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="ListName" xml:space="preserve">
+    <value>Fiches du coffre</value>
+  </data>
+  <data name="Loading" xml:space="preserve">
+    <value>Chargement des fiches…</value>
+  </data>
+  <data name="NewFolderChoice" xml:space="preserve">
+    <value>Nouveau dossier…</value>
+  </data>
+  <data name="NewFolderName" xml:space="preserve">
+    <value>Nom du nouveau dossier</value>
+  </data>
+  <data name="NewFolderPlaceholder" xml:space="preserve">
+    <value>Histoire/Révolution</value>
+  </data>
+  <data name="NewSheet" xml:space="preserve">
+    <value>Nouvelle fiche</value>
+  </data>
+  <data name="NoFolder" xml:space="preserve">
+    <value>Sans dossier</value>
+  </data>
+  <data name="NoMatch" xml:space="preserve">
+    <value>Aucune fiche ne correspond à ces filtres.</value>
+  </data>
+  <data name="OpenSheet" xml:space="preserve">
+    <value>Ouvrir la fiche</value>
+  </data>
+  <data name="SortDueDate" xml:space="preserve">
+    <value>Échéance</value>
+  </data>
+  <data name="SortFolder" xml:space="preserve">
+    <value>Par dossier</value>
+  </data>
+  <data name="SortTitle" xml:space="preserve">
+    <value>Titre</value>
+  </data>
+  <data name="StateActive" xml:space="preserve">
+    <value>En révision</value>
+  </data>
+  <data name="StateAll" xml:space="preserve">
+    <value>Toutes</value>
+  </data>
+  <data name="StateArchived" xml:space="preserve">
+    <value>Archivées</value>
+  </data>
+  <data name="StateDue" xml:space="preserve">
+    <value>À réviser</value>
+  </data>
+  <data name="Step" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="SummaryMany" xml:space="preserve">
+    <value>{0} · {1} en révision · {2} archivées</value>
+  </data>
+  <data name="SummaryOne" xml:space="preserve">
+    <value>{0} · {1} en révision · {2} archivée</value>
+  </data>
+  <data name="Template" xml:space="preserve">
+    <value>Modèle</value>
+  </data>
+  <data name="TitleLabel" xml:space="preserve">
+    <value>Titre</value>
+  </data>
+  <data name="TitlePlaceholder" xml:space="preserve">
+    <value>Révolution française : les causes</value>
+  </data>
+  <data name="TitleRequired" xml:space="preserve">
+    <value>Donnez un titre à la fiche.</value>
+  </data>
+</root>

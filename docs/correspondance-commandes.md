@@ -99,7 +99,7 @@ Ces cas d'usage ne sont chargés que si le coffre active le module Citations.
 | `statistiques` | — | J9 | Statistiques et charge. |
 | `retroliens` | — | J9 | Rétroliens. |
 | `apercu_fiche` | — | J9 | Aperçu au survol. |
-| `liste_des_fiches` | — | J9 | Vue « Fiches » et arborescence. |
+| `liste_des_fiches` | `SheetUseCases.List` | J7.1 | Vue « Fiches » ; l'arborescence reste à J9. |
 | `chercher_dans_les_fiches` | — | J9 | Recherche dans les fiches. |
 | `recherche_globale` | — | J9 | Recherche globale. |
 | `liste_des_definitions` | — | J9 | Vue « Définitions ». |

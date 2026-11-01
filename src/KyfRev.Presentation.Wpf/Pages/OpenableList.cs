@@ -7,16 +7,16 @@ using System.Windows.Input;
 namespace KyfRev.Presentation.Wpf.Pages;
 
 /// <summary>
-/// La liste d'« Aujourd'hui ». Une ligne à réviser s'ouvre d'un clic ou d'Entrée ; elle s'ouvre aussi
+/// Une liste dont les lignes s'ouvrent : d'un clic ou d'Entrée, et aussi
 /// par l'automatisation, pour un lecteur d'écran comme pour les scénarios d'acceptation.
 /// </summary>
-internal sealed class DashboardList : ListBox
+internal sealed class OpenableList : ListBox
 {
     /// <summary>Ouvre la ligne qui lui est passée.</summary>
     public static readonly DependencyProperty OpenCommandProperty =
-        DependencyProperty.Register(nameof(OpenCommand), typeof(ICommand), typeof(DashboardList));
+        DependencyProperty.Register(nameof(OpenCommand), typeof(ICommand), typeof(OpenableList));
 
-    public DashboardList()
+    public OpenableList()
     {
         // Le style de toutes les listes : un style implicite ne s'applique pas tout seul à une classe dérivée.
         SetResourceReference(StyleProperty, typeof(ListBox));
@@ -32,7 +32,7 @@ internal sealed class DashboardList : ListBox
     /// <inheritdoc/>
     protected override AutomationPeer OnCreateAutomationPeer() => new ListPeer(this);
 
-    private sealed class ListPeer(DashboardList list) : ListBoxAutomationPeer(list)
+    private sealed class ListPeer(OpenableList list) : ListBoxAutomationPeer(list)
     {
         public void Open(object row) =>
             list.Dispatcher.BeginInvoke(() => list.OpenCommand?.Execute(row));
@@ -43,7 +43,7 @@ internal sealed class DashboardList : ListBox
     private sealed class RowPeer(object row, ListPeer list) : ListBoxItemAutomationPeer(row, list), IInvokeProvider
     {
         public override object GetPattern(PatternInterface patternInterface) =>
-            patternInterface == PatternInterface.Invoke && Item is DueItemRow or ReminderRow ? this : base.GetPattern(patternInterface);
+            patternInterface == PatternInterface.Invoke && Item is DueItemRow or ReminderRow or SheetRow ? this : base.GetPattern(patternInterface);
 
         public void Invoke() => list.Open(Item);
     }

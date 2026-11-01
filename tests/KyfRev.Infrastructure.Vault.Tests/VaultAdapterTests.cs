@@ -131,6 +131,32 @@ public sealed class VaultAdapterTests
     }
 
     [TestMethod]
+    public void The_sheet_list_goes_by_folder_then_title_and_says_where_each_sheet_is()
+    {
+        using var folder = TemporaryVault.Empty();
+        using var vault = new VaultStore().Initialize(folder.Root, Now);
+        var zebra = vault.CreateSheet("Histoire", "zèbre", "", Now);
+        var atoms = vault.CreateSheet("Histoire", "Atomes", "", Now);
+        var root = vault.CreateSheet(null, "À la racine", "", Now);
+        var archived = vault.CreateSheet("Biologie", "Mitose", "", Now);
+        vault.ArchiveSheet(archived, Tomorrow);
+
+        var sheets = vault.SheetList();
+
+        CollectionAssert.AreEqual(new[] { root, archived, atoms, zebra }, sheets.Select(sheet => sheet.Id).ToArray());
+        Assert.AreEqual(string.Empty, sheets[0].Folder);
+        Assert.AreEqual("J1", sheets[0].Step);
+        Assert.AreEqual(Tomorrow.Day, sheets[0].DueDate);
+        Assert.IsFalse(sheets[0].Archived);
+        Assert.IsTrue(sheets[0].FilePresent);
+        Assert.AreEqual("Biologie", sheets[1].Folder);
+        Assert.IsTrue(sheets[1].Archived);
+        Assert.IsNull(sheets[1].Step);
+        Assert.IsNull(sheets[1].DueDate);
+        StringAssert.EndsWith(sheets[1].Path, "Mitose.md", StringComparison.Ordinal);
+    }
+
+    [TestMethod]
     public void Quotes_reach_the_session()
     {
         using var folder = TemporaryVault.Empty();

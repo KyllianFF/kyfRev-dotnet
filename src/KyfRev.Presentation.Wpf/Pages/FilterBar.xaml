@@ -1,0 +1,89 @@
+<UserControl x:Class="KyfRev.Presentation.Wpf.Pages.FilterBar"
+             x:ClassModifier="internal"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:kyf="clr-namespace:KyfRev.DesignSystem.Controls;assembly=KyfRev.DesignSystem"
+             xmlns:pages="clr-namespace:KyfRev.Presentation.Wpf.Pages">
+  <UserControl.Resources>
+    <BooleanToVisibilityConverter x:Key="Visible" />
+    <DataTemplate DataType="{x:Type pages:ListFilter}">
+      <pages:ListFilterButton Margin="0,0,4,4" />
+    </DataTemplate>
+  </UserControl.Resources>
+
+  <!-- La recherche et les filtres. Sur une fenêtre étroite, les filtres se replient derrière un
+       bouton, et ceux qui sont choisis restent visibles en étiquettes. -->
+  <StackPanel>
+    <Grid>
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition>
+          <ColumnDefinition.Style>
+            <Style TargetType="ColumnDefinition">
+              <Setter Property="Width" Value="*" />
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding HasRoom}" Value="True">
+                  <Setter Property="Width" Value="260" />
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </ColumnDefinition.Style>
+        </ColumnDefinition>
+        <ColumnDefinition Width="Auto" />
+      </Grid.ColumnDefinitions>
+      <TextBox x:Name="SearchBox" Text="{Binding Search, UpdateSourceTrigger=PropertyChanged}"
+               kyf:Field.Placeholder="{x:Static pages:ListText.SearchPlaceholder}" AutomationProperties.Name="{x:Static pages:ListText.SearchName}" />
+      <ToggleButton x:Name="FiltersToggle" Grid.Column="1" Margin="8,0,0,0" Padding="0" Style="{DynamicResource Kyf.Button.Subtle}"
+                    HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" IsChecked="{Binding AreOpen}"
+                    Visibility="{Binding ShowsToggle, Converter={StaticResource Visible}}" AutomationProperties.Name="{Binding ToggleLabel}">
+        <Border CornerRadius="{DynamicResource Kyf.Radius.Control}" Padding="12,0">
+          <Border.Style>
+            <Style TargetType="Border">
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding HasActiveFilters}" Value="True">
+                  <Setter Property="Background" Value="{DynamicResource Kyf.Brush.NavigationActiveBackground}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding AreOpen}" Value="True">
+                  <Setter Property="Background" Value="{DynamicResource Kyf.Brush.NavigationActiveBackground}" />
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </Border.Style>
+          <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+            <kyf:Icon Text="&#xE71C;" Margin="0,0,6,0" />
+            <TextBlock x:Name="ToggleLabel" Text="{Binding ToggleLabel}" VerticalAlignment="Center" />
+          </StackPanel>
+        </Border>
+      </ToggleButton>
+    </Grid>
+    <ItemsControl x:Name="Filters" ItemsSource="{Binding Filters}" Focusable="False" Margin="0,4,0,0"
+                  Visibility="{Binding ShowsFilters, Converter={StaticResource Visible}}">
+      <ItemsControl.ItemsPanel>
+        <ItemsPanelTemplate>
+          <WrapPanel />
+        </ItemsPanelTemplate>
+      </ItemsControl.ItemsPanel>
+    </ItemsControl>
+    <ItemsControl x:Name="ActiveFilters" ItemsSource="{Binding ActiveFilters}" Focusable="False" Margin="0,6,0,0"
+                  Visibility="{Binding ShowsActive, Converter={StaticResource Visible}}">
+      <ItemsControl.ItemsPanel>
+        <ItemsPanelTemplate>
+          <WrapPanel />
+        </ItemsPanelTemplate>
+      </ItemsControl.ItemsPanel>
+      <ItemsControl.ItemTemplate>
+        <DataTemplate>
+          <Button x:Name="RemoveFilter" Style="{DynamicResource Kyf.Button.Subtle}" Padding="0" Margin="0,0,6,4" MinHeight="32"
+                  HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
+                  Command="{Binding ClearCommand}" AutomationProperties.Name="{Binding RemoveName}">
+            <Border Background="{DynamicResource Kyf.Brush.NavigationActiveBackground}" CornerRadius="{DynamicResource Kyf.Radius.Control}" Padding="10,0">
+              <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <TextBlock Text="{Binding Name}" FontSize="{DynamicResource Kyf.FontSize.Caption}" Foreground="{DynamicResource Kyf.Brush.NavigationActiveText}" VerticalAlignment="Center" />
+                <kyf:Icon Text="&#xE711;" FontSize="10" Foreground="{DynamicResource Kyf.Brush.NavigationActiveText}" Margin="6,0,0,0" />
+              </StackPanel>
+            </Border>
+          </Button>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
+  </StackPanel>
+</UserControl>

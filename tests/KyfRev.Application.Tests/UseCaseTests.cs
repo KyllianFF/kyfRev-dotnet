@@ -56,6 +56,7 @@ public sealed class UseCaseTests
         Assert.AreEqual(2, dashboard.Overdue.Single().DaysLate);
         Assert.AreEqual(1, dashboard.ActiveSheets);
         Assert.IsEmpty(app.Reminders.Archives().Value);
+        Assert.AreEqual(id, app.Sheets.List().Value.Single().Id);
 
         Assert.IsTrue(app.Reviews.Archive(id).Succeeded);
         Assert.AreEqual(id, app.Reminders.Archives().Value.Single().Id);

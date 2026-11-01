@@ -25,6 +25,9 @@
     <DataTemplate DataType="{x:Type pages:DashboardPageViewModel}">
       <pages:DashboardPage />
     </DataTemplate>
+    <DataTemplate DataType="{x:Type pages:SheetsPageViewModel}">
+      <pages:SheetsPage />
+    </DataTemplate>
     <DataTemplate DataType="{x:Type pages:ArchivesPageViewModel}">
       <pages:ArchivesPage />
     </DataTemplate>

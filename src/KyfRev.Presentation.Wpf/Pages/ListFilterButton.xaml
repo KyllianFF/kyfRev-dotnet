@@ -1,0 +1,18 @@
+<UserControl x:Class="KyfRev.Presentation.Wpf.Pages.ListFilterButton"
+             x:ClassModifier="internal"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:kyf="clr-namespace:KyfRev.DesignSystem.Controls;assembly=KyfRev.DesignSystem">
+  <!-- Un filtre : son choix en cours, les autres dans un menu ouvert sous le bouton. -->
+  <Button x:Name="FilterButton" Style="{DynamicResource Kyf.Button.Subtle}" Click="OnFilterClick" AutomationProperties.Name="{Binding Name}">
+    <Button.ContextMenu>
+      <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}"
+                   ItemsSource="{Binding Choices}" DisplayMemberPath="Label" MenuItem.Click="OnFilterChosen"
+                   AutomationProperties.Name="{Binding Label}" />
+    </Button.ContextMenu>
+    <StackPanel Orientation="Horizontal">
+      <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+      <kyf:Icon Text="&#xE70D;" FontSize="12" Margin="8,0,0,0" />
+    </StackPanel>
+  </Button>
+</UserControl>

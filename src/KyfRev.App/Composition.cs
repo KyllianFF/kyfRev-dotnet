@@ -57,11 +57,14 @@ internal static class Composition
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Vaults);
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Reminders);
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Sheets);
+        services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Folders);
+        services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Templates);
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Reviews);
         services.AddSingleton(clock);
         services.AddSingleton<ReviewNavigation>();
         services.AddSingleton<IReviewOpener>(provider => provider.GetRequiredService<ReviewNavigation>());
         services.AddSingleton<DashboardPageViewModel>();
+        services.AddSingleton<SheetsPageViewModel>();
         services.AddSingleton<ArchivesPageViewModel>();
         services.AddSingleton(_ => new DesignResources(ThemeKind.Light, Motion.SystemPrefersReducedMotion));
         services.AddSingleton<AppearanceController>();
@@ -72,6 +75,7 @@ internal static class Composition
                 CorePages.All(new Dictionary<string, object>
                 {
                     [CorePages.Today] = provider.GetRequiredService<DashboardPageViewModel>(),
+                    [CorePages.Sheets] = provider.GetRequiredService<SheetsPageViewModel>(),
                     [CorePages.Archives] = provider.GetRequiredService<ArchivesPageViewModel>(),
                 })
                     .Concat(provider.GetServices<INavigationContributor>().Select(contributor => CorePages.FromModule(contributor.Entry))),

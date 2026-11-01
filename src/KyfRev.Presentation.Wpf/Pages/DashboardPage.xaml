@@ -6,6 +6,10 @@
              xmlns:modules="clr-namespace:KyfRev.Application.Modules;assembly=KyfRev.Application"
              xmlns:pages="clr-namespace:KyfRev.Presentation.Wpf.Pages">
   <UserControl.Resources>
+    <ResourceDictionary>
+    <ResourceDictionary.MergedDictionaries>
+      <ResourceDictionary Source="ItemPreview.xaml" />
+    </ResourceDictionary.MergedDictionaries>
     <BooleanToVisibilityConverter x:Key="Visible" />
 
     <!-- Choix en ligne (filtre), comme le choix du thème de la galerie. -->
@@ -293,78 +297,7 @@
       </Style.Triggers>
     </Style>
 
-    <!-- L'aperçu de la ligne choisie : son texte, les étapes de son cycle, ce qui a été révisé. -->
-    <DataTemplate DataType="{x:Type pages:TodayPreview}">
-      <Grid>
-        <Grid.RowDefinitions>
-          <RowDefinition Height="Auto" />
-          <RowDefinition Height="Auto" />
-          <RowDefinition Height="*" />
-          <RowDefinition Height="Auto" />
-          <RowDefinition Height="Auto" />
-          <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
-        <TextBlock x:Name="PreviewMeta" Text="{Binding Meta}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" />
-        <TextBlock x:Name="PreviewTitle" Grid.Row="1" Text="{Binding Title}" Style="{DynamicResource Kyf.Text.Title}" TextWrapping="Wrap" Margin="0,4,0,0"
-                   AutomationProperties.HeadingLevel="Level2" />
-        <ScrollViewer Grid.Row="2" Margin="0,12,0,0" VerticalScrollBarVisibility="Auto" Focusable="False">
-          <StackPanel>
-            <kyf:Notification x:Name="PreviewError" Severity="Critical" Message="{Binding Error}" IsOpen="{Binding HasError, Mode=OneWay}" IsClosable="False" />
-            <TextBlock x:Name="PreviewPrompt" Text="{Binding Prompt}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap"
-                       Visibility="{Binding HasPrompt, Converter={StaticResource Visible}}" />
-            <TextBlock x:Name="PreviewBody" Text="{Binding Body}" Style="{DynamicResource Kyf.Text.BodyLarge}" TextWrapping="Wrap"
-                       Visibility="{Binding HasBody, Converter={StaticResource Visible}}" />
-          </StackPanel>
-        </ScrollViewer>
-        <ItemsControl x:Name="PreviewSteps" Grid.Row="3" ItemsSource="{Binding Steps}" Focusable="False" Margin="0,12,0,0"
-                      AutomationProperties.Name="{x:Static pages:ReviewText.Steps}" Visibility="{Binding HasSteps, Converter={StaticResource Visible}}">
-          <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate>
-              <WrapPanel />
-            </ItemsPanelTemplate>
-          </ItemsControl.ItemsPanel>
-          <ItemsControl.ItemTemplate>
-            <DataTemplate DataType="{x:Type pages:StepMark}">
-              <Border x:Name="Chip" CornerRadius="13" Padding="10,2" Margin="0,0,6,6" BorderThickness="1" BorderBrush="{DynamicResource Kyf.Brush.ControlBorder}"
-                      ToolTip="{Binding Description}" AutomationProperties.Name="{Binding Description}">
-                <StackPanel Orientation="Horizontal">
-                  <TextBlock x:Name="Label" Text="{Binding Label}" FontFamily="{DynamicResource Kyf.Font.Code}" FontSize="{DynamicResource Kyf.FontSize.Caption}" VerticalAlignment="Center" />
-                  <kyf:Icon x:Name="Check" Text="&#xE73E;" FontSize="10" Margin="4,0,0,0" Visibility="Collapsed" />
-                </StackPanel>
-              </Border>
-              <DataTemplate.Triggers>
-                <DataTrigger Binding="{Binding IsDone}" Value="True">
-                  <Setter TargetName="Chip" Property="Background" Value="{DynamicResource Kyf.Brush.Primary}" />
-                  <Setter TargetName="Chip" Property="BorderBrush" Value="{DynamicResource Kyf.Brush.Primary}" />
-                  <Setter TargetName="Label" Property="Foreground" Value="{DynamicResource Kyf.Brush.OnPrimary}" />
-                  <Setter TargetName="Check" Property="Foreground" Value="{DynamicResource Kyf.Brush.OnPrimary}" />
-                  <Setter TargetName="Check" Property="Visibility" Value="Visible" />
-                </DataTrigger>
-                <DataTrigger Binding="{Binding IsCurrent}" Value="True">
-                  <Setter TargetName="Chip" Property="Background" Value="{DynamicResource Kyf.Brush.NavigationActiveBackground}" />
-                  <Setter TargetName="Chip" Property="BorderBrush" Value="{DynamicResource Kyf.Brush.Primary}" />
-                  <Setter TargetName="Label" Property="Foreground" Value="{DynamicResource Kyf.Brush.NavigationActiveText}" />
-                  <Setter TargetName="Label" Property="FontWeight" Value="SemiBold" />
-                </DataTrigger>
-              </DataTemplate.Triggers>
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
-        <StackPanel x:Name="PreviewHistory" Grid.Row="4" Margin="0,6,0,0" Visibility="{Binding HasHistory, Converter={StaticResource Visible}}">
-          <Separator Margin="0,0,0,8" />
-          <TextBlock Text="{x:Static pages:DashboardText.History}" Style="{DynamicResource Kyf.Text.BodyStrong}" AutomationProperties.HeadingLevel="Level3" />
-          <ItemsControl ItemsSource="{Binding History}" Focusable="False" Margin="0,4,0,0">
-            <ItemsControl.ItemTemplate>
-              <DataTemplate>
-                <TextBlock Text="{Binding}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" />
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
-        </StackPanel>
-        <Button x:Name="ReviewNow" Grid.Row="5" Content="{x:Static pages:DashboardText.ReviewNow}" Style="{DynamicResource Kyf.Button.Primary}" HorizontalAlignment="Left" Margin="0,12,0,0"
-                Command="{Binding DataContext.OpenCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding Row}" />
-      </Grid>
-    </DataTemplate>
+    </ResourceDictionary>
   </UserControl.Resources>
 
   <Grid Style="{StaticResource PageMargin}">
@@ -514,7 +447,7 @@
           </StackPanel>
 
           <!-- La liste : une seule liste virtualisée, pour qu'un grand coffre s'affiche vite. -->
-          <pages:DashboardList x:Name="Items" Grid.Row="1" ItemsSource="{Binding Rows}" OpenCommand="{Binding OpenCommand}" SelectedItem="{Binding SelectedRow, Mode=OneWay}"
+          <pages:OpenableList x:Name="Items" Grid.Row="1" ItemsSource="{Binding Rows}" OpenCommand="{Binding OpenCommand}" SelectedItem="{Binding SelectedRow, Mode=OneWay}"
                    AutomationProperties.Name="{x:Static pages:DashboardText.Items}"
                    ScrollViewer.CanContentScroll="True" VirtualizingPanel.IsVirtualizing="True"
                    VirtualizingPanel.VirtualizationMode="Recycling" VirtualizingPanel.ScrollUnit="Pixel"
@@ -527,7 +460,7 @@
 
       <ContentControl Style="{StaticResource SecondList}">
         <kyf:Card Padding="8">
-          <pages:DashboardList x:Name="SecondItems" ItemsSource="{Binding SecondRows}" OpenCommand="{Binding OpenCommand}" SelectedItem="{Binding SelectedRow, Mode=OneWay}"
+          <pages:OpenableList x:Name="SecondItems" ItemsSource="{Binding SecondRows}" OpenCommand="{Binding OpenCommand}" SelectedItem="{Binding SelectedRow, Mode=OneWay}"
                    AutomationProperties.Name="{x:Static pages:DashboardText.Items}"
                    ScrollViewer.CanContentScroll="True" VirtualizingPanel.IsVirtualizing="True"
                    VirtualizingPanel.VirtualizationMode="Recycling" VirtualizingPanel.ScrollUnit="Pixel"

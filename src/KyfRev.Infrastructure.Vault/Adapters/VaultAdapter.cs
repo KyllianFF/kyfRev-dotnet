@@ -66,6 +66,9 @@ public sealed class VaultAdapter(VaultSession inner) : IVault
     }
 
     /// <inheritdoc/>
+    public IReadOnlyList<VaultSheet> SheetList() => inner.SheetList();
+
+    /// <inheritdoc/>
     public string? SheetIdAt(string path) => inner.Sheets.FirstOrDefault(entry => entry.Sheet.Path.Value == path)?.Sheet.Id;
 
     /// <inheritdoc/>
