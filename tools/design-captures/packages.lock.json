@@ -2,6 +2,11 @@
   "version": 2,
   "dependencies": {
     "net10.0-windows7.0": {
+      "XamlMath.Shared": {
+        "type": "Transitive",
+        "resolved": "2.1.0",
+        "contentHash": "p7W78KZc2EWuVqAd704m4yGWg0HtxahjNYRVxDWhw7npf8oMD8C7EUc1pjkjZIcmk5PxXJ+t5FE2Fs3gBYjv1A=="
+      },
       "kyfrev.application": {
         "type": "Project",
         "dependencies": {
@@ -29,7 +34,15 @@
         "dependencies": {
           "CommunityToolkit.Mvvm": "[8.4.2, )",
           "KyfRev.Application": "[1.0.0-alpha.0, )",
-          "KyfRev.DesignSystem": "[1.0.0-alpha.0, )"
+          "KyfRev.DesignSystem": "[1.0.0-alpha.0, )",
+          "KyfRev.Rendering": "[1.0.0-alpha.0, )",
+          "WpfMath": "[2.1.0, )"
+        }
+      },
+      "kyfrev.rendering": {
+        "type": "Project",
+        "dependencies": {
+          "KyfRev.Application": "[1.0.0-alpha.0, )"
         }
       },
       "CommunityToolkit.Mvvm": {
@@ -51,6 +64,15 @@
         "contentHash": "aSZEhEig4fvNiw2zs8Z6NyDlniKtq6YjcF3DyHuqTEHcZ2VKA/6itMPZ+dW+yWABWExlDcQwwdbqX1Rcb7W8WQ==",
         "dependencies": {
           "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.13"
+        }
+      },
+      "WpfMath": {
+        "type": "CentralTransitive",
+        "requested": "[2.1.0, )",
+        "resolved": "2.1.0",
+        "contentHash": "216GtCBYFMPw5SaArNcuTgemgAWw985LihSEf7mtOjJYTN04X4BVFGPrkJ2Fiv1ffL8gX2xiRw/o+q1SC5oSAA==",
+        "dependencies": {
+          "XamlMath.Shared": "2.1.0"
         }
       },
       "YamlDotNet": {

@@ -109,6 +109,9 @@ public sealed class VaultAdapter(VaultSession inner) : IVault
     public string AddResource(string id, string name, ReadOnlySpan<byte> content) => inner.AddResource(id, name, content);
 
     /// <inheritdoc/>
+    public byte[] ReadResource(string path) => inner.ReadResource(path);
+
+    /// <inheritdoc/>
     public IReadOnlyList<string> Folders() => inner.Folders();
 
     /// <inheritdoc/>

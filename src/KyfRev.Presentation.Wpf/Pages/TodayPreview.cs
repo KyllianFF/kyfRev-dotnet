@@ -1,4 +1,5 @@
 using KyfRev.Application.Model;
+using KyfRev.Application.UseCases;
 
 namespace KyfRev.Presentation.Wpf.Pages;
 
@@ -30,11 +31,11 @@ public sealed class TodayPreview
     /// <summary>Titre de la fiche, terme, passage entre guillemets, ou « Passage à retrouver ».</summary>
     public string Title { get; }
 
-    /// <summary>Texte de la fiche ; rien pour un passage ou une définition.</summary>
-    public string? Body { get; private init; }
+    /// <summary>La fiche prête à lire ; rien pour un passage ou une définition.</summary>
+    public SheetReading? Reading { get; private init; }
 
     /// <summary>La fiche a un texte à montrer.</summary>
-    public bool HasBody => Body is not null;
+    public bool HasBody => Reading is not null;
 
     /// <summary>Ce qu'il faut se rappeler, à la place du texte d'un passage caché ou d'une définition.</summary>
     public string? Prompt { get; private init; }
@@ -61,7 +62,7 @@ public sealed class TodayPreview
     public bool HasHistory => History.Count > 0;
 
     /// <summary>L'aperçu de <paramref name="row"/>, dans la fiche <paramref name="sheet"/>.</summary>
-    internal static TodayPreview Of(object row, OpenedSheet sheet) => row switch
+    internal static TodayPreview Of(object row, OpenedSheet sheet, SheetUseCases sheets) => row switch
     {
         DueItemRow { Item.Kind: ItemKind.Passage } passage => new TodayPreview(row, passage.Meta, passage.HeadingText)
         {
@@ -72,9 +73,9 @@ public sealed class TodayPreview
                 _ => null,
             },
         }.With(sheet.Annotations.FirstOrDefault(annotation => annotation.Id == passage.Item.Id)?.Review ?? sheet.Review),
-        DueItemRow item => new TodayPreview(row, item.Meta, sheet.Title) { Body = sheet.Body }.With(sheet.Review),
-        SheetRow listed => new TodayPreview(row, listed.Details, sheet.Title) { Body = sheet.Body }.With(sheet.Review),
-        _ => new TodayPreview(row, ((ReminderRow)row).Meta, sheet.Title) { Body = sheet.Body }.With(sheet.Review),
+        DueItemRow item => new TodayPreview(row, item.Meta, sheet.Title) { Reading = SheetReading.Of(sheet, sheets) }.With(sheet.Review),
+        SheetRow listed => new TodayPreview(row, listed.Details, sheet.Title) { Reading = SheetReading.Of(sheet, sheets) }.With(sheet.Review),
+        _ => new TodayPreview(row, ((ReminderRow)row).Meta, sheet.Title) { Reading = SheetReading.Of(sheet, sheets) }.With(sheet.Review),
     };
 
     /// <summary>La fiche de <paramref name="row"/> n'a pas pu être lue : <paramref name="error"/>.</summary>
@@ -90,7 +91,7 @@ public sealed class TodayPreview
         var steps = StepMark.Of(review);
         return new TodayPreview(Row, Meta, Title)
         {
-            Body = Body,
+            Reading = Reading,
             Prompt = Prompt,
             Steps = steps,
             History = [.. steps.Where(step => step.IsDone).Reverse().Select(step => step.Description)],

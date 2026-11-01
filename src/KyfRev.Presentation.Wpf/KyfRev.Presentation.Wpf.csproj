@@ -10,10 +10,12 @@
   <ItemGroup>
     <ProjectReference Include="..\KyfRev.Application\KyfRev.Application.csproj" />
     <ProjectReference Include="..\KyfRev.DesignSystem\KyfRev.DesignSystem.csproj" />
+    <ProjectReference Include="..\KyfRev.Rendering\KyfRev.Rendering.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="WpfMath" />
   </ItemGroup>
 
   <ItemGroup>

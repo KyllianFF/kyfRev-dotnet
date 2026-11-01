@@ -21,7 +21,8 @@
 // bilan (seance-clair.png, seance-contraste-eleve.png, seance-etroite-sombre.png, bilan-sombre.png), les archives
 // (archives-clair.png, archives-sombre.png, archives-etroit-clair.png, archives-etroit-filtres-sombre.png,
 // archives-contraste-eleve.png), les fiches (fiches-clair.png, fiches-sombre.png, fiches-etroit-clair.png,
-// fiches-nouvelle-sombre.png, fiches-contraste-eleve.png), et affiche le contraste de
+// fiches-nouvelle-sombre.png, fiches-contraste-eleve.png), la lecture d'une fiche (fiche-clair.png,
+// lecture-sombre.png, lecture-moyenne-clair.png, lecture-etroite-sombre.png, lecture-volet-clair.png, lecture-contraste-eleve.png), et affiche le contraste de
 // chaque paire de rôles.
 using System.Collections.Immutable;
 using System.Globalization;
@@ -81,11 +82,11 @@ var thread = new Thread(() =>
     // d'encart de module (les modules ne sont pas encore branchés dans l'application).
     foreach (var (theme, name) in new[] { (ThemePreference.Light, "clair"), (ThemePreference.Dark, "sombre") })
     {
-        var today = new DashboardPageViewModel(app.Reminders, app.Sheets, new ReviewNavigation(app.Sheets, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System));
+        var today = new DashboardPageViewModel(app.Reminders, app.Sheets, new ReviewNavigation(app.Sheets, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System, new NoLinks()));
         today.Show(SampleDashboard(), SampleCards);
         Shell(folder, $"aujourdhui-{name}.png", theme, _ => { }, new Dictionary<string, object> { [CorePages.Today] = today });
     }
-    var contrast = new DashboardPageViewModel(app.Reminders, app.Sheets, new ReviewNavigation(app.Sheets, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System));
+    var contrast = new DashboardPageViewModel(app.Reminders, app.Sheets, new ReviewNavigation(app.Sheets, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System, new NoLinks()));
     contrast.Show(SampleDashboard(), SampleCards);
     Shell(folder, "aujourdhui-contraste-eleve.png", ThemePreference.System, _ => { }, new Dictionary<string, object> { [CorePages.Today] = contrast }, highContrast: true);
     foreach (var (file, theme, width, height) in new[]
@@ -95,7 +96,7 @@ var thread = new Thread(() =>
         ("aujourdhui-ecran-clair.png", ThemePreference.Light, 1600.0, 1000.0),
     })
     {
-        var today = new DashboardPageViewModel(app.Reminders, app.Sheets, new ReviewNavigation(app.Sheets, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System));
+        var today = new DashboardPageViewModel(app.Reminders, app.Sheets, new ReviewNavigation(app.Sheets, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System, new NoLinks()));
         today.Show(SampleDashboard(), SampleCards);
         Shell(folder, file, theme, _ => { }, new Dictionary<string, object> { [CorePages.Today] = today }, width, height);
     }
@@ -108,7 +109,7 @@ var thread = new Thread(() =>
         ("archives-contraste-eleve.png", ThemePreference.System, 1280.0, 800.0, true),
     })
     {
-        var archives = new ArchivesPageViewModel(app.Reminders, app.Reviews, new ReviewNavigation(app.Sheets, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System), TimeProvider.System);
+        var archives = new ArchivesPageViewModel(app.Reminders, app.Reviews, new ReviewNavigation(app.Sheets, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System, new NoLinks()), TimeProvider.System);
         archives.Show(SampleArchives());
         Shell(
             folder,
@@ -121,7 +122,7 @@ var thread = new Thread(() =>
             highContrast: highContrast);
     }
     // Les filtres dépliés sur petit écran, l'un d'eux choisi.
-    var filtered = new ArchivesPageViewModel(app.Reminders, app.Reviews, new ReviewNavigation(app.Sheets, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System), TimeProvider.System);
+    var filtered = new ArchivesPageViewModel(app.Reminders, app.Reviews, new ReviewNavigation(app.Sheets, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System, new NoLinks()), TimeProvider.System);
     filtered.Show(SampleArchives());
     filtered.Bar.Filters[0].Selected = filtered.Bar.Filters[0].Choices[1];
     filtered.Bar.AreOpen = true;
@@ -202,22 +203,57 @@ static void ReviewCaptures(string folder)
             En 1789, la société d'Ancien Régime est divisée en trois ordres : le clergé, la noblesse et le tiers état.
             La crise financière pousse Louis XVI à convoquer les États généraux.
 
+            > Qu'est-ce que le tiers état ? Tout. Qu'a-t-il été jusqu'à présent ? Rien.
+
+            | Ordre | Part de la population | Privilèges |
+            |---|:-:|---|
+            | Clergé | ~0,5 % | exemption d'impôts |
+            | Noblesse | ~1,5 % | droits seigneuriaux |
+            | Tiers état | ~98 % | **aucun** |
+
             ## Les étapes
 
             - 5 mai 1789 : ouverture des États généraux ;
             - 17 juin : les députés du tiers état se proclament Assemblée nationale ;
-            - 14 juillet : prise de la Bastille ;
-            - 26 août : Déclaration des droits de l'homme et du citoyen.
+            - 14 juillet : prise de la *Bastille* ;
+            - 26 août : Déclaration des droits de l'homme et du citoyen[^1].
+
+            ## La dette
+
+            La charge de la dette approche $\frac{1}{2}$ des dépenses : $d = \sum_{i} r_i c_i$ en 1788.
+
+            $$
+            \frac{\text{intérêts}}{\text{dépenses}} \approx 0{,}5
+            $$
+
+            ```python
+            def ordres():
+                return ["clergé", "noblesse", "tiers état"]
+            ```
+
+            Voir aussi [une autre fiche](Autre.md) et [le site](https://exemple.org).
+
+            [^1]: Votée par l'Assemblée constituante.
             """, opened.Fingerprint, 1);
         var anchor = new Anchor("trois ordres", "ciété d'Ancien Régime est divisée en ", " : le clergé, la noblesse et le tie", 50, 62, ["La Révolution française", "Les causes"], 5, opened.Fingerprint);
         var passage = app.Annotations.Create(sheet, anchor, "Qui paie l'impôt ?").Value;
+        app.Annotations.Create(sheet, new Anchor("Bastille", "14 juillet : prise de la ", " ;", 400, 408, ["Les étapes"], null, app.Sheets.Open(sheet).Value.Fingerprint), "Le symbole de la Révolution.");
         time.Now = time.Now.AddDays(2);
 
         ReviewBarViewModel Bar(ItemKind kind, string id, ReviewState state) => new(app.Reviews, app.Reminders, app.Sheets, time, kind, id, state);
-        var sheetPage = new SheetPageViewModel(app.Sheets, Bar, sheet, () => { });
+        var sheetPage = new SheetPageViewModel(app.Sheets, Bar, sheet, () => { }, _ => { }, new NoLinks());
         sheetPage.LoadCommand.Execute(null);
         Pump(() => !sheetPage.IsLoading);
-        Shell(folder, "fiche-clair.png", ThemePreference.Light, shell => shell.Navigate(new NavigationItem("fiche", "Fiche", Icons.Document, int.MaxValue, sheetPage)));
+        void Reading(string file, ThemePreference theme, double width = 1600, double height = 1000) =>
+            Shell(folder, file, theme, shell => shell.Navigate(new NavigationItem("fiche", "Fiche", Icons.Document, int.MaxValue, sheetPage)), null, width, height);
+        Reading("fiche-clair.png", ThemePreference.Light);
+        Reading("lecture-sombre.png", ThemePreference.Dark);
+        Reading("lecture-moyenne-clair.png", ThemePreference.Light, 1200, 820);
+        Reading("lecture-etroite-sombre.png", ThemePreference.Dark, 800, 760);
+        sheetPage.IsOutlineOn = true;
+        Reading("lecture-volet-clair.png", ThemePreference.Light, 800, 760);
+        sheetPage.CloseOverlayCommand.Execute(null);
+        Shell(folder, "lecture-contraste-eleve.png", ThemePreference.Light, shell => shell.Navigate(new NavigationItem("fiche", "Fiche", Icons.Document, int.MaxValue, sheetPage)), null, 1600, 1000, highContrast: true);
 
         var passagePage = new PassagePageViewModel(app.Sheets, Bar, passage, sheet, activeRecall: true, () => { }, _ => { });
         passagePage.LoadCommand.Execute(null);
@@ -227,7 +263,7 @@ static void ReviewCaptures(string folder)
         // La séance : la fiche en cours, puis le bilan d'une séance de douze éléments.
         object Item(SessionItem item, bool activeRecall)
         {
-            var page = new SheetPageViewModel(app.Sheets, Bar, item.Id, () => { });
+            var page = new SheetPageViewModel(app.Sheets, Bar, item.Id, () => { }, _ => { }, new NoLinks());
             page.LoadCommand.Execute(null);
             Pump(() => !page.IsLoading);
             return page;
@@ -265,7 +301,7 @@ static void ReviewCaptures(string folder)
         {
             var sample = SampleDashboard();
             DueItem Real(DueItem item) => item with { SheetId = sheet };
-            var today = new DashboardPageViewModel(app.Reminders, app.Sheets, new ReviewNavigation(app.Sheets, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System));
+            var today = new DashboardPageViewModel(app.Reminders, app.Sheets, new ReviewNavigation(app.Sheets, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), TimeProvider.System, new NoLinks()));
             today.Show(
                 sample with
                 {
@@ -284,7 +320,7 @@ static void ReviewCaptures(string folder)
             time.Now = time.Now.AddDays(1);
             app.Reminders.PrepareDay().Value.ToString();
         }
-        var reminderPage = new SheetPageViewModel(app.Sheets, Bar, sheet, () => { });
+        var reminderPage = new SheetPageViewModel(app.Sheets, Bar, sheet, () => { }, _ => { }, new NoLinks());
         reminderPage.LoadCommand.Execute(null);
         Pump(() => !reminderPage.IsLoading);
         Shell(folder, "rappel-clair.png", ThemePreference.Light, shell => shell.Navigate(new NavigationItem("fiche", "Fiche", Icons.Document, int.MaxValue, reminderPage)));
@@ -314,7 +350,7 @@ static void ReviewCaptures(string folder)
         }
         SheetsPageViewModel SheetsPage()
         {
-            var navigation = new ReviewNavigation(app.Sheets, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), time);
+            var navigation = new ReviewNavigation(app.Sheets, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), time, new NoLinks());
             var sheets = new SheetsPageViewModel(app.Sheets, app.Folders, app.Templates, navigation, time);
             sheets.RefreshCommand.Execute(null);
             Pump(() => !sheets.IsLoading && sheets.HasRows && sheets.Preview is not null);
@@ -593,6 +629,11 @@ internal sealed class FixedTime(DateTimeOffset now) : TimeProvider
     public override TimeZoneInfo LocalTimeZone => TimeZoneInfo.Utc;
 
     public override DateTimeOffset GetUtcNow() => Now;
+}
+
+internal sealed class NoLinks : KyfRev.Application.Ports.IExternalLinks
+{
+    public bool Open(string address) => true;
 }
 
 internal sealed class NoSessions : IStudySessionStore

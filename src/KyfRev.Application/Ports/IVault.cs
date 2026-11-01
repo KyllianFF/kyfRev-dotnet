@@ -89,6 +89,9 @@ public interface ISheetEditor
 
     /// <summary>Copie une ressource à côté de la fiche ; rend le lien relatif à insérer.</summary>
     string AddResource(string id, string name, ReadOnlySpan<byte> content);
+
+    /// <summary>Contenu d'une ressource du dossier des fiches (une image), pour l'affichage.</summary>
+    byte[] ReadResource(string path);
 }
 
 /// <summary>Dossiers de fiches.</summary>

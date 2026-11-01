@@ -49,6 +49,28 @@ public sealed partial class VaultSession
     }
 
     /// <summary>
+    /// Contenu d'une ressource du dossier des fiches (une image), pour l'affichage. Tout chemin hors de
+    /// ce dossier, ou qui sort du coffre, est refusé ; les fiches aussi : ce ne sont pas des ressources.
+    /// </summary>
+    public byte[] ReadResource(string path)
+    {
+        ArgumentNullException.ThrowIfNull(path);
+        var target = VaultPath.Create(path);
+        if (!target.IsWithin(VaultPath.Create(VaultLayout.Sheets)))
+        {
+            throw VaultException.InvalidPath(target.Value, "seules les ressources des fiches sont accessibles");
+        }
+        if (target.Name.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
+        {
+            throw VaultException.InvalidPath(target.Value, "une fiche n'est pas une ressource");
+        }
+        var absolute = Confine(target);
+        return Io(absolute, () => new FileInfo(absolute).Length > MaxResourceBytes
+            ? throw VaultException.InvalidPath(target.Value, "ressource trop volumineuse")
+            : File.ReadAllBytes(absolute));
+    }
+
+    /// <summary>
     /// Copie une ressource (image, PDF…) dans le dossier de ressources de la fiche, sous un nom
     /// sûr et sans jamais écraser un fichier existant.
     /// </summary>

@@ -1,9 +1,10 @@
-using System.Collections.Immutable;
 using System.Text.RegularExpressions;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using KyfRev.Application.Model;
+using KyfRev.Application.Ports;
 using KyfRev.Application.UseCases;
+using KyfRev.Rendering;
 
 namespace KyfRev.Presentation.Wpf.Pages;
 
@@ -238,31 +239,57 @@ public sealed partial class PassagePageViewModel : ObservableObject, IReviewPage
 }
 
 /// <summary>
-/// Une fiche ouverte pour la lire et la réviser : son titre, son dossier, ses étiquettes, son
-/// texte, et la barre de révision. Ouvrir une fiche ne valide rien. Le texte est montré tel qu'il
-/// est écrit ; le rendu natif du Markdown, les passages surlignés et le texte à trous du mode
-/// Réviser viennent avec la lecture native (J7).
+/// Une fiche ouverte pour la lire et la réviser : son plan à gauche, son texte, ses passages à droite, et la
+/// barre de révision. Ouvrir une fiche ne valide rien. Les volets se replient quand la fenêtre rétrécit, le
+/// plan d'abord ; ils s'ouvrent alors par-dessus le texte, avec les mêmes boutons.
 /// </summary>
 public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
 {
+    /// <summary>Largeur du plan à côté du texte.</summary>
+    public const double OutlineWidth = 230;
+
+    /// <summary>Largeur des passages à côté du texte.</summary>
+    public const double PassagesWidth = 300;
+
+    /// <summary>Largeur maximale du texte, pour rester lisible.</summary>
+    public const double TextMaxWidth = 820;
+
+    /// <summary>Largeur du plan ouvert par-dessus le texte.</summary>
+    public const double OutlineOverlayWidth = 280;
+
+    /// <summary>Largeur des passages ouverts par-dessus le texte.</summary>
+    public const double PassagesOverlayWidth = 320;
+
+    /// <summary>En dessous, les passages ne tiennent plus à côté du texte.</summary>
+    public const double PassagesMinimum = 880;
+
+    /// <summary>En dessous, le plan ne tient plus à côté du reste.</summary>
+    public const double OutlineMinimum = 1120;
+
     private readonly SheetUseCases _sheets;
     private readonly Func<ItemKind, string, ReviewState, ReviewBarViewModel> _reviewBar;
     private readonly Action _back;
+    private readonly Action<string> _openSheet;
+    private readonly IExternalLinks _links;
 
     /// <summary>La fiche <paramref name="sheetId"/>.</summary>
-    public SheetPageViewModel(SheetUseCases sheets, Func<ItemKind, string, ReviewState, ReviewBarViewModel> reviewBar, string sheetId, Action back)
+    public SheetPageViewModel(SheetUseCases sheets, Func<ItemKind, string, ReviewState, ReviewBarViewModel> reviewBar, string sheetId, Action back, Action<string> openSheet, IExternalLinks links)
     {
         ArgumentNullException.ThrowIfNull(sheets);
         ArgumentNullException.ThrowIfNull(reviewBar);
         ArgumentNullException.ThrowIfNull(sheetId);
         ArgumentNullException.ThrowIfNull(back);
+        ArgumentNullException.ThrowIfNull(openSheet);
+        ArgumentNullException.ThrowIfNull(links);
         _sheets = sheets;
         _reviewBar = reviewBar;
         SheetId = sheetId;
         _back = back;
-        Title = string.Empty;
-        Body = string.Empty;
-        Details = [];
+        _openSheet = openSheet;
+        _links = links;
+        WantsOutline = true;
+        WantsPassages = true;
+        PageWidth = double.PositiveInfinity;
         IsLoading = true;
     }
 
@@ -281,21 +308,116 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
     /// <summary>Un refus est affiché.</summary>
     public bool HasError => Error is not null;
 
-    /// <summary>Titre.</summary>
+    /// <summary>Un lien de la fiche n'a pas pu être suivi.</summary>
     [ObservableProperty]
-    public partial string Title { get; private set; }
+    [NotifyPropertyChangedFor(nameof(HasLinkProblem))]
+    public partial string? LinkProblem { get; private set; }
 
-    /// <summary>Dossier et étiquettes (« Biologie », « #partiel »).</summary>
-    [ObservableProperty]
-    public partial ImmutableArray<string> Details { get; private set; }
+    /// <summary>Un lien n'a pas pu être suivi.</summary>
+    public bool HasLinkProblem => LinkProblem is not null;
 
-    /// <summary>Texte de la fiche, sans son en-tête.</summary>
+    /// <summary>La fiche prête à lire.</summary>
     [ObservableProperty]
-    public partial string Body { get; private set; }
+    [NotifyPropertyChangedFor(nameof(Outline), nameof(Passages), nameof(HasOutline), nameof(HasPassages), nameof(PassagesLabel), nameof(ShowsOutline), nameof(ShowsPassages), nameof(IsOutlineOn), nameof(IsPassagesOn))]
+    public partial SheetReading? Reading { get; private set; }
+
+    /// <summary>Le plan de la fiche.</summary>
+    public IReadOnlyList<OutlineEntry> Outline => Reading?.Outline ?? [];
+
+    /// <summary>Ses passages et définitions.</summary>
+    public IReadOnlyList<PassageEntry> Passages => Reading?.Passages ?? [];
+
+    /// <summary>La fiche a des titres.</summary>
+    public bool HasOutline => Outline.Count > 0;
+
+    /// <summary>La fiche a des passages ou des définitions.</summary>
+    public bool HasPassages => Passages.Count > 0;
+
+    /// <summary>« Passages · 3 ».</summary>
+    public string PassagesLabel => ReadingText.PassagesOf(Passages.Count);
 
     /// <summary>La barre de révision de la fiche.</summary>
     [ObservableProperty]
     public partial ReviewBarViewModel? Review { get; private set; }
+
+    /// <summary>Largeur de la page.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(OutlineFits), nameof(PassagesFits), nameof(ShowsOutline), nameof(ShowsPassages), nameof(ShowsOutlineOverlay), nameof(ShowsPassagesOverlay), nameof(IsOutlineOn), nameof(IsPassagesOn))]
+    public partial double PageWidth { get; set; }
+
+    /// <summary>Le plan tient à côté du texte.</summary>
+    public bool OutlineFits => PageWidth >= OutlineMinimum;
+
+    /// <summary>Les passages tiennent à côté du texte.</summary>
+    public bool PassagesFits => PageWidth >= PassagesMinimum;
+
+    /// <summary>Le plan est voulu à côté du texte, quand il y tient.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsOutline), nameof(IsOutlineOn))]
+    private partial bool WantsOutline { get; set; }
+
+    /// <summary>Les passages sont voulus à côté du texte, quand ils y tiennent.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsPassages), nameof(IsPassagesOn))]
+    private partial bool WantsPassages { get; set; }
+
+    /// <summary>Le plan est ouvert par-dessus le texte.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsOutlineOverlay), nameof(IsOutlineOn))]
+    private partial bool OutlineOverlaid { get; set; }
+
+    /// <summary>Les passages sont ouverts par-dessus le texte.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsPassagesOverlay), nameof(IsPassagesOn))]
+    private partial bool PassagesOverlaid { get; set; }
+
+    /// <summary>Le plan est montré à côté du texte.</summary>
+    public bool ShowsOutline => HasOutline && WantsOutline && OutlineFits;
+
+    /// <summary>Les passages sont montrés à côté du texte.</summary>
+    public bool ShowsPassages => HasPassages && WantsPassages && PassagesFits;
+
+    /// <summary>Le plan est montré par-dessus le texte.</summary>
+    public bool ShowsOutlineOverlay => OutlineOverlaid && !OutlineFits;
+
+    /// <summary>Les passages sont montrés par-dessus le texte.</summary>
+    public bool ShowsPassagesOverlay => PassagesOverlaid && !PassagesFits;
+
+    /// <summary>Le bouton du plan : à côté du texte s'il y tient, sinon par-dessus.</summary>
+    public bool IsOutlineOn
+    {
+        get => ShowsOutline || ShowsOutlineOverlay;
+        set
+        {
+            if (OutlineFits)
+            {
+                WantsOutline = value;
+            }
+            else
+            {
+                PassagesOverlaid = false;
+                OutlineOverlaid = value;
+            }
+        }
+    }
+
+    /// <summary>Le bouton des passages : à côté du texte s'ils y tiennent, sinon par-dessus.</summary>
+    public bool IsPassagesOn
+    {
+        get => ShowsPassages || ShowsPassagesOverlay;
+        set
+        {
+            if (PassagesFits)
+            {
+                WantsPassages = value;
+            }
+            else
+            {
+                OutlineOverlaid = false;
+                PassagesOverlaid = value;
+            }
+        }
+    }
 
     /// <summary>Lit la fiche.</summary>
     [RelayCommand]
@@ -304,21 +426,54 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
         IsLoading = true;
         try
         {
-            var outcome = await Task.Run(() => _sheets.Open(SheetId)).ConfigureAwait(true);
+            var (outcome, reading) = await Task.Run(() =>
+            {
+                var opened = _sheets.Open(SheetId);
+                return (opened, opened.Succeeded ? SheetReading.Of(opened.Value, _sheets) : null);
+            }).ConfigureAwait(true);
             if (!outcome.Succeeded)
             {
                 Error = outcome.Error;
                 return;
             }
-            var sheet = outcome.Value;
-            Title = sheet.Title;
-            Details = [.. (sheet.Folder.Length > 0 ? [sheet.Folder] : Array.Empty<string>()).Concat(sheet.Tags.Select(tag => $"#{tag}"))];
-            Body = sheet.Body;
-            Review = _reviewBar(ItemKind.Sheet, SheetId, sheet.Review);
+            Reading = reading;
+            Review = _reviewBar(ItemKind.Sheet, SheetId, outcome.Value.Review);
         }
         finally
         {
             IsLoading = false;
+        }
+    }
+
+    /// <summary>Referme le volet ouvert par-dessus le texte.</summary>
+    [RelayCommand]
+    private void CloseOverlay()
+    {
+        OutlineOverlaid = false;
+        PassagesOverlaid = false;
+    }
+
+    /// <summary>Suit un lien de la fiche : vers le navigateur du système, ou vers une autre fiche.</summary>
+    [RelayCommand]
+    private void OpenLink(LinkTarget? target)
+    {
+        LinkProblem = null;
+        switch (target)
+        {
+            case ExternalLink external when !_links.Open(external.Address):
+                LinkProblem = ReadingText.CannotOpenAddress;
+                break;
+            case SheetLink sheet:
+                var found = _sheets.IdAt(sheet.Path);
+                if (found is { Succeeded: true, Value: { } id })
+                {
+                    _openSheet(id);
+                }
+                else
+                {
+                    LinkProblem = ReadingText.MissingLinkedSheet;
+                }
+                break;
         }
     }
 

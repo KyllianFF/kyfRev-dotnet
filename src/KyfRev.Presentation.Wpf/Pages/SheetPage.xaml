@@ -3,12 +3,80 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:kyf="clr-namespace:KyfRev.DesignSystem.Controls;assembly=KyfRev.DesignSystem"
+             xmlns:reading="clr-namespace:KyfRev.Presentation.Wpf.Reading"
              xmlns:pages="clr-namespace:KyfRev.Presentation.Wpf.Pages">
   <UserControl.Resources>
     <BooleanToVisibilityConverter x:Key="Visible" />
+
+    <!-- Le titre d'une partie : celle qui est à l'écran ressort. -->
+    <Style x:Key="OutlineTitle" TargetType="TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.TextSecondary}" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+      <Style.Triggers>
+        <DataTrigger Binding="{Binding IsActive}" Value="True">
+          <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Text}" />
+          <Setter Property="FontWeight" Value="SemiBold" />
+        </DataTrigger>
+      </Style.Triggers>
+    </Style>
+
+    <!-- Le plan de la fiche : un clic amène la partie en haut du texte. -->
+    <DataTemplate x:Key="OutlinePanel">
+      <Border Background="{DynamicResource Kyf.Brush.SurfaceAlt}" BorderBrush="{DynamicResource Kyf.Brush.Divider}" BorderThickness="1" CornerRadius="{DynamicResource Kyf.Radius.Card}" Padding="12">
+        <DockPanel>
+          <TextBlock DockPanel.Dock="Top" Text="{x:Static pages:ReadingText.Outline}" Style="{DynamicResource Kyf.Text.BodyStrong}" Margin="4,0,0,8"
+                     AutomationProperties.HeadingLevel="Level2" />
+          <ScrollViewer VerticalScrollBarVisibility="Auto" Focusable="False">
+            <ItemsControl ItemsSource="{Binding Outline}" Focusable="False">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate DataType="{x:Type pages:OutlineEntry}">
+                  <Button Style="{DynamicResource Kyf.Button.Subtle}" HorizontalContentAlignment="Left" HorizontalAlignment="Stretch" Click="OnOutlineEntryClick"
+                          AutomationProperties.Name="{Binding Title}" Padding="4,3">
+                    <TextBlock Text="{Binding Title}" Style="{StaticResource OutlineTitle}" Margin="{Binding Indent, Converter={x:Static pages:IndentConverter.Instance}}" />
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </DockPanel>
+      </Border>
+    </DataTemplate>
+
+    <!-- Les passages et les définitions : un clic amène leur texte en haut. -->
+    <DataTemplate x:Key="PassagesPanel">
+      <Border Background="{DynamicResource Kyf.Brush.SurfaceAlt}" BorderBrush="{DynamicResource Kyf.Brush.Divider}" BorderThickness="1" CornerRadius="{DynamicResource Kyf.Radius.Card}" Padding="12">
+        <DockPanel>
+          <TextBlock DockPanel.Dock="Top" Text="{Binding PassagesLabel}" Style="{DynamicResource Kyf.Text.BodyStrong}" Margin="4,0,0,8"
+                     AutomationProperties.HeadingLevel="Level2" />
+          <ScrollViewer VerticalScrollBarVisibility="Auto" Focusable="False">
+            <ItemsControl ItemsSource="{Binding Passages}" Focusable="False">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate DataType="{x:Type pages:PassageEntry}">
+                  <Button Style="{DynamicResource Kyf.Button.Subtle}" HorizontalContentAlignment="Stretch" HorizontalAlignment="Stretch" Click="OnPassageEntryClick"
+                          AutomationProperties.Name="{Binding Title}" Padding="4,6">
+                    <StackPanel>
+                      <Border x:Name="Quote" HorizontalAlignment="Left" Padding="4,1" Background="{DynamicResource Kyf.Brush.PillPassageBackground}"
+                              Visibility="{Binding IsPassage, Converter={StaticResource Visible}}">
+                        <TextBlock Text="{Binding Title}" TextWrapping="Wrap" MaxHeight="72" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource Kyf.Brush.PillPassageText}" />
+                      </Border>
+                      <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap" Visibility="{Binding IsDefinition, Converter={StaticResource Visible}}" />
+                      <TextBlock Text="{Binding Detail}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,2,0,0"
+                                 Visibility="{Binding HasDetail, Converter={StaticResource Visible}}" />
+                      <TextBlock Text="{x:Static pages:ReadingText.LostPassage}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,2,0,0"
+                                 Foreground="{DynamicResource Kyf.Brush.Warning}" Visibility="{Binding IsLost, Converter={StaticResource Visible}}" />
+                    </StackPanel>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </DockPanel>
+      </Border>
+    </DataTemplate>
   </UserControl.Resources>
   <UserControl.InputBindings>
     <KeyBinding Key="Enter" Modifiers="Control" Command="{Binding Review.ValidateCommand}" />
+    <KeyBinding Key="Escape" Command="{Binding CloseOverlayCommand}" />
   </UserControl.InputBindings>
 
   <Grid>
@@ -19,41 +87,56 @@
         <RowDefinition Height="Auto" />
       </Grid.RowDefinitions>
 
-      <!-- Le retour reste à portée, même la page défilée. Aligné sur la colonne de lecture. -->
-      <Grid MaxWidth="720" Margin="16,16,16,0">
-        <Button x:Name="BackButton" Command="{Binding BackCommand}" Style="{DynamicResource Kyf.Button.Subtle}" HorizontalAlignment="Left" Margin="-16,0,0,0"
+      <!-- Le retour reste à portée, même la fiche défilée ; les volets s'ouvrent et se ferment ici. -->
+      <DockPanel Margin="16,16,16,8">
+        <Button x:Name="BackButton" DockPanel.Dock="Left" Command="{Binding BackCommand}" Style="{DynamicResource Kyf.Button.Subtle}" Margin="-8,0,0,0"
                 AutomationProperties.Name="{x:Static pages:ReviewText.Back}">
           <StackPanel Orientation="Horizontal">
             <kyf:Icon Text="{x:Static kyf:Icons.Back}" Margin="0,0,8,0" />
             <TextBlock Text="{x:Static pages:ReviewText.Back}" VerticalAlignment="Center" />
           </StackPanel>
         </Button>
-      </Grid>
-
-      <!-- La fiche, au centre et à largeur de lecture ; elle défile seule. -->
-      <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Focusable="False">
-        <StackPanel MaxWidth="720" Margin="16,8,16,16">
-          <ItemsControl ItemsSource="{Binding Details}" Focusable="False">
-            <ItemsControl.ItemsPanel>
-              <ItemsPanelTemplate>
-                <WrapPanel />
-              </ItemsPanelTemplate>
-            </ItemsControl.ItemsPanel>
-            <ItemsControl.ItemTemplate>
-              <DataTemplate>
-                <TextBlock Text="{Binding}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,0,12,0" />
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
-          <TextBlock x:Name="Heading" Text="{Binding Title}" Style="{DynamicResource Kyf.Text.Title}" TextWrapping="Wrap" Margin="0,4,0,0"
-                     AutomationProperties.HeadingLevel="Level1" />
-          <TextBlock x:Name="Loading" Text="{x:Static pages:ReviewText.OpeningSheet}" Style="{DynamicResource Kyf.Text.Secondary}"
-                     Visibility="{Binding IsLoading, Converter={StaticResource Visible}}" />
-          <kyf:Notification x:Name="ErrorMessage" Severity="Critical" Message="{Binding Error}" IsOpen="{Binding HasError, Mode=OneWay}"
-                            IsClosable="False" Margin="0,12,0,0" />
-          <TextBlock x:Name="Body" Text="{Binding Body}" Style="{DynamicResource Kyf.Text.BodyLarge}" TextWrapping="Wrap" Margin="0,16,0,0" />
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+          <ToggleButton x:Name="OutlineToggle" Content="{x:Static pages:ReadingText.Outline}" IsChecked="{Binding IsOutlineOn}" Margin="0,0,8,0"
+                        Visibility="{Binding HasOutline, Converter={StaticResource Visible}}" />
+          <ToggleButton x:Name="PassagesToggle" Content="{Binding PassagesLabel}" IsChecked="{Binding IsPassagesOn}"
+                        Visibility="{Binding HasPassages, Converter={StaticResource Visible}}" />
         </StackPanel>
-      </ScrollViewer>
+      </DockPanel>
+
+      <Grid Grid.Row="1" Margin="16,0,16,0">
+        <DockPanel>
+          <ContentControl x:Name="OutlinePane" DockPanel.Dock="Left" Width="{x:Static pages:SheetPageViewModel.OutlineWidth}" Margin="0,0,16,0" Focusable="False" IsTabStop="False"
+                          Content="{Binding}" ContentTemplate="{StaticResource OutlinePanel}" Visibility="{Binding ShowsOutline, Converter={StaticResource Visible}}" />
+          <ContentControl x:Name="PassagesPane" DockPanel.Dock="Right" Width="{x:Static pages:SheetPageViewModel.PassagesWidth}" Margin="16,0,0,0" Focusable="False" IsTabStop="False"
+                          Content="{Binding}" ContentTemplate="{StaticResource PassagesPanel}" Visibility="{Binding ShowsPassages, Converter={StaticResource Visible}}" />
+
+          <!-- La fiche, à largeur de lecture ; elle défile seule, avec son titre. -->
+          <Grid MaxWidth="{x:Static pages:SheetPageViewModel.TextMaxWidth}">
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <StackPanel>
+              <TextBlock x:Name="Loading" Text="{x:Static pages:ReviewText.OpeningSheet}" Style="{DynamicResource Kyf.Text.Secondary}"
+                         Visibility="{Binding IsLoading, Converter={StaticResource Visible}}" />
+              <kyf:Notification x:Name="ErrorMessage" Severity="Critical" Message="{Binding Error}" IsOpen="{Binding HasError, Mode=OneWay}"
+                                IsClosable="False" Margin="0,0,0,12" />
+              <kyf:Notification x:Name="LinkMessage" Severity="Warning" Message="{Binding LinkProblem}" IsOpen="{Binding HasLinkProblem, Mode=OneWay}"
+                                IsClosable="False" Margin="0,0,0,12" />
+            </StackPanel>
+            <reading:SheetDocumentViewer x:Name="SheetText" Grid.Row="1" Reading="{Binding Reading}" OpenLinkCommand="{Binding OpenLinkCommand}"
+                                         PreviewMouseLeftButtonDown="OnTextPressed"
+                                         AutomationProperties.Name="{x:Static pages:ReadingText.Document}" />
+          </Grid>
+        </DockPanel>
+
+        <!-- Sans la place, un volet s'ouvre par-dessus le texte, avec les mêmes boutons. -->
+        <ContentControl x:Name="OutlineOverlay" HorizontalAlignment="Left" VerticalAlignment="Top" Width="{x:Static pages:SheetPageViewModel.OutlineOverlayWidth}" Focusable="False" IsTabStop="False"
+                        Content="{Binding}" ContentTemplate="{StaticResource OutlinePanel}" Visibility="{Binding ShowsOutlineOverlay, Converter={StaticResource Visible}}" />
+        <ContentControl x:Name="PassagesOverlay" HorizontalAlignment="Right" VerticalAlignment="Top" Width="{x:Static pages:SheetPageViewModel.PassagesOverlayWidth}" Focusable="False" IsTabStop="False"
+                        Content="{Binding}" ContentTemplate="{StaticResource PassagesPanel}" Visibility="{Binding ShowsPassagesOverlay, Converter={StaticResource Visible}}" />
+      </Grid>
 
       <!-- Toujours visible, même la fiche défilée. -->
       <ContentControl Grid.Row="2" Content="{Binding Review}" Focusable="False" IsTabStop="False" Margin="16,8,16,16" />
