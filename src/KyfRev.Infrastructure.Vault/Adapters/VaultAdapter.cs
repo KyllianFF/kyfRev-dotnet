@@ -151,6 +151,9 @@ public sealed class VaultAdapter(VaultSession inner) : IVault
         ReviewState.Of(kind == ItemKind.Sheet ? inner.Sheet(id).Sheet.Tracking : inner.Annotation(id).Tracking, day);
 
     /// <inheritdoc/>
+    public Dashboard Dashboard(DateOnly day) => inner.Dashboard(day);
+
+    /// <inheritdoc/>
     public string CreateAnnotation(string sheetId, Anchor anchor, string? comment, Moment now) =>
         inner.CreateAnnotation(sheetId, ToStored(anchor), comment, now);
 
@@ -184,6 +187,9 @@ public sealed class VaultAdapter(VaultSession inner) : IVault
 
     /// <inheritdoc/>
     public DayPreparation PrepareDay(Moment now) => inner.PrepareDay(now);
+
+    /// <inheritdoc/>
+    public IReadOnlyList<ArchivedSheetEntry> Archives(DateOnly day) => inner.Archives(day);
 
     /// <inheritdoc/>
     public void DefineExam(string folder, string name, DateOnly day) => inner.DefineExam(folder, name, day);

@@ -1,5 +1,4 @@
 using System.Text;
-using KyfRev.Application.Text;
 using KyfRev.Domain.Calendar;
 using KyfRev.Domain.Reviews;
 using KyfRev.Infrastructure.Vault.Files;
@@ -45,49 +44,6 @@ public sealed partial class VaultSession
             orphans,
             toCheck,
             health.Problems + toCheck.Count + brokenLinks.Count);
-    }
-
-    /// <summary>
-    /// Liens et images des fiches présentes qui mènent à un fichier absent du coffre, triés par
-    /// titre puis destination. Les adresses externes ne sont pas vérifiées.
-    /// </summary>
-    public IReadOnlyList<BrokenLink> BrokenLinks()
-    {
-        var broken = new List<BrokenLink>();
-        foreach (var (id, entry) in _sheets)
-        {
-            if (entry.Presence != FilePresence.Present)
-            {
-                continue;
-            }
-            string text;
-            try
-            {
-                text = ReadSheet(id).Text;
-            }
-            catch (VaultException)
-            {
-                continue;
-            }
-            var folder = entry.Sheet.Path.Parent?.Value ?? string.Empty;
-            foreach (var link in MarkdownLinks.Find(text))
-            {
-                var raw = text[link.Start..link.End];
-                var cut = raw.IndexOfAny(['#', '?']);
-                var rawPath = cut < 0 ? raw : raw[..cut];
-                if (MarkdownLinks.IsExternal(rawPath))
-                {
-                    continue;
-                }
-                var target = MarkdownLinks.Decode(rawPath);
-                if (!LeadsToAFile(folder, target))
-                {
-                    broken.Add(new BrokenLink(id, entry.Sheet.Title, target));
-                }
-            }
-        }
-        // Tri stable, comme celui de la 0.x.
-        return [.. broken.OrderBy(link => link.Title, Utf8Order.Instance).ThenBy(link => link.Target, Utf8Order.Instance)];
     }
 
     /// <summary>

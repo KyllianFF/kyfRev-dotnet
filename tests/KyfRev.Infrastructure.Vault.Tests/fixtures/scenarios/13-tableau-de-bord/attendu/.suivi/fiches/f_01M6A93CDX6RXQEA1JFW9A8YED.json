@@ -1,0 +1,41 @@
+{
+  "format": 1,
+  "id": "f_01M6A93CDX6RXQEA1JFW9A8YED",
+  "chemin": "fiches/Nature/écologie.md",
+  "titre": "écologie",
+  "empreinte": "sha256:f9d1b709cced41f3acbb77aee7aa1684b18fd901bf03ebe76d8ee31736c7e095",
+  "modifieeLe": "2026-09-01T12:00:00Z",
+  "statut": "active",
+  "cycle": {
+    "numero": 1,
+    "sequence": [
+      0,
+      1,
+      3,
+      7,
+      14,
+      30
+    ],
+    "demarreLe": "2026-09-01",
+    "etape": 1,
+    "echeance": "2026-09-02",
+    "derniereRevision": "2026-09-01"
+  },
+  "compteurs": {
+    "cyclesCommences": 1,
+    "cyclesTermines": 0,
+    "cyclesInterrompus": 0
+  },
+  "historique": [
+    {
+      "evt": "revision",
+      "le": "2026-09-01T12:00:00Z",
+      "jour": "2026-09-01",
+      "cycle": 1,
+      "etape": "J0",
+      "prevuLe": "2026-09-01",
+      "retardJours": 0,
+      "origine": "creation"
+    }
+  ]
+}

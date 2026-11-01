@@ -1,0 +1,321 @@
+{
+  "description": "Tableau de bord et archives : retards, aujourd'hui, à venir et charge des 30 jours (fiches, passages et définitions, commentaires abrégés, titres à accents et à casse différente, tris de la 0.x), rappels tirés, répondus et exclus, examen, fichier disparu, citation du jour, réglages.",
+  "operations": [
+    {
+      "op": "initialiser",
+      "le": "2026-09-01"
+    },
+    {
+      "op": "tableau_de_bord",
+      "le": "2026-09-01"
+    },
+    {
+      "op": "archives",
+      "le": "2026-09-01"
+    },
+    {
+      "op": "creer_fiche",
+      "nom": "a",
+      "dossier": "Histoire/XVIIIe",
+      "titre": "Révolution",
+      "corps": "# Révolution\n\nLes trois ordres de l'Ancien Régime.\n",
+      "le": "2026-09-01"
+    },
+    {
+      "op": "creer_fiche",
+      "nom": "b",
+      "dossier": "Biologie",
+      "titre": "Mitose",
+      "corps": "# Mitose\n\nLa prophase précède la métaphase.\n",
+      "le": "2026-09-01"
+    },
+    {
+      "op": "creer_fiche",
+      "nom": "c",
+      "dossier": "Sciences",
+      "titre": "Ondes",
+      "corps": "# Ondes\n\nUne onde transporte de l'énergie.\n",
+      "le": "2026-09-01"
+    },
+    {
+      "op": "creer_fiche",
+      "nom": "d",
+      "dossier": "Animaux",
+      "titre": "Zèbre",
+      "corps": "Rayures.\n",
+      "le": "2026-09-01"
+    },
+    {
+      "op": "creer_fiche",
+      "nom": "e",
+      "dossier": "Nature",
+      "titre": "écologie",
+      "corps": "Écosystèmes.\n",
+      "le": "2026-09-01"
+    },
+    {
+      "op": "creer_fiche",
+      "nom": "f",
+      "dossier": "Physique",
+      "titre": "Ångström",
+      "corps": "Unité de longueur.\n",
+      "le": "2026-09-01"
+    },
+    {
+      "op": "creer_fiche",
+      "nom": "g",
+      "dossier": "Lettres",
+      "titre": "abc",
+      "corps": "Alphabet.\n",
+      "le": "2026-09-02"
+    },
+    {
+      "op": "creer_fiche",
+      "nom": "h",
+      "dossier": "Lettres",
+      "titre": "ABC",
+      "corps": "Alphabet en capitales.\n",
+      "le": "2026-09-02"
+    },
+    {
+      "op": "modifier_etiquettes",
+      "fiche": "a",
+      "etiquettes": [
+        "histoire",
+        "bac"
+      ],
+      "le": "2026-09-01"
+    },
+    {
+      "op": "creer_annotation",
+      "nom": "p1",
+      "fiche": "a",
+      "ancre": {
+        "exact": "trois ordres",
+        "avant": "",
+        "apres": "",
+        "debut": 18,
+        "fin": 30,
+        "section": [
+          "Révolution"
+        ],
+        "empreinte_fiche": "sha256:aa"
+      },
+      "commentaire": "  Clergé,   noblesse et tiers état : un rappel très détaillé un rappel très détaillé un rappel très détaillé un rappel très détaillé un rappel très détaillé un rappel très détaillé un rappel très détaillé un rappel très détaillé un rappel très détaillé   fin. ",
+      "le": "2026-09-01"
+    },
+    {
+      "op": "creer_definition",
+      "nom": "d1",
+      "fiche": "b",
+      "ancre": {
+        "exact": "prophase",
+        "avant": "",
+        "apres": "",
+        "debut": 12,
+        "fin": 20,
+        "section": [
+          "Mitose"
+        ],
+        "empreinte_fiche": "sha256:aa"
+      },
+      "terme": " Prophase ",
+      "explication": " Première phase. ",
+      "le": "2026-09-01"
+    },
+    {
+      "op": "creer_annotation",
+      "nom": "p2",
+      "fiche": "c",
+      "ancre": {
+        "exact": "Une onde   transporte\nde l'énergie",
+        "avant": "",
+        "apres": "",
+        "debut": 7,
+        "fin": 41,
+        "section": [
+          "Ondes"
+        ],
+        "empreinte_fiche": "sha256:aa"
+      },
+      "le": "2026-09-02"
+    },
+    {
+      "op": "creer_annotation",
+      "nom": "p3",
+      "fiche": "g",
+      "ancre": {
+        "exact": "Alphabet",
+        "avant": "",
+        "apres": "",
+        "debut": 0,
+        "fin": 8,
+        "section": [],
+        "empreinte_fiche": "sha256:aa"
+      },
+      "commentaire": "Lettres",
+      "le": "2026-09-02"
+    },
+    {
+      "op": "tableau_de_bord",
+      "le": "2026-09-02"
+    },
+    {
+      "op": "reviser",
+      "fiche": "a",
+      "le": "2026-09-02"
+    },
+    {
+      "op": "reviser",
+      "fiche": "b",
+      "le": "2026-09-03"
+    },
+    {
+      "op": "reviser_annotation",
+      "annotation": "p1",
+      "le": "2026-09-02"
+    },
+    {
+      "op": "reporter",
+      "fiche": "c",
+      "vers": "2026-09-06",
+      "le": "2026-09-02"
+    },
+    {
+      "op": "reporter",
+      "fiche": "f",
+      "vers": "2026-11-30",
+      "le": "2026-09-02"
+    },
+    {
+      "op": "archiver",
+      "fiche": "d",
+      "le": "2026-09-03"
+    },
+    {
+      "op": "reporter_annotation",
+      "annotation": "d1",
+      "vers": "2026-09-05",
+      "le": "2026-09-03"
+    },
+    {
+      "op": "tableau_de_bord",
+      "le": "2026-09-03"
+    },
+    {
+      "op": "tableau_de_bord",
+      "le": "2026-09-05"
+    },
+    {
+      "op": "definir_examen",
+      "dossier": "Histoire",
+      "nom_examen": "Partiel",
+      "jour": "2026-09-20"
+    },
+    {
+      "op": "modifier_reglages",
+      "citations_actives": true
+    },
+    {
+      "op": "ajouter_citation",
+      "nom": "q1",
+      "texte": "Le cœur a ses raisons que la raison ne connaît point.",
+      "auteur": "Blaise Pascal",
+      "le": "2026-09-05"
+    },
+    {
+      "op": "tableau_de_bord",
+      "le": "2026-09-10"
+    },
+    {
+      "op": "reviser",
+      "fiche": "g",
+      "le": "2026-09-03"
+    },
+    {
+      "op": "reviser",
+      "fiche": "g",
+      "le": "2026-09-06"
+    },
+    {
+      "op": "reviser",
+      "fiche": "g",
+      "le": "2026-09-13"
+    },
+    {
+      "op": "reviser",
+      "fiche": "g",
+      "le": "2026-09-27"
+    },
+    {
+      "op": "reviser",
+      "fiche": "g",
+      "le": "2026-10-27"
+    },
+    {
+      "op": "archives",
+      "le": "2026-10-27"
+    },
+    {
+      "op": "supprimer",
+      "chemin": "fiches/Nature/écologie.md"
+    },
+    {
+      "op": "analyser",
+      "le": "2026-10-28"
+    },
+    {
+      "op": "tableau_de_bord",
+      "le": "2026-10-28"
+    },
+    {
+      "op": "preparer_journee",
+      "le": "2026-11-04"
+    },
+    {
+      "op": "tableau_de_bord",
+      "le": "2026-11-04"
+    },
+    {
+      "op": "archives",
+      "le": "2026-11-04"
+    },
+    {
+      "op": "traiter_rappel",
+      "fiche": "d",
+      "choix": "connue",
+      "le": "2026-11-05"
+    },
+    {
+      "op": "archives",
+      "le": "2026-11-05"
+    },
+    {
+      "op": "preparer_journee",
+      "le": "2026-12-28"
+    },
+    {
+      "op": "tableau_de_bord",
+      "le": "2026-12-28"
+    },
+    {
+      "op": "inclure_dans_rappels",
+      "fiche": "g",
+      "inclure": false,
+      "le": "2026-12-29"
+    },
+    {
+      "op": "archives",
+      "le": "2026-12-29"
+    },
+    {
+      "op": "modifier_reglages",
+      "max_par_jour": 3,
+      "rappel_actif": false
+    },
+    {
+      "op": "tableau_de_bord",
+      "le": "2027-01-15"
+    }
+  ]
+}

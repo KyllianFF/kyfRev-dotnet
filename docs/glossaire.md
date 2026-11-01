@@ -97,6 +97,9 @@ Ce glossaire fixe la correspondance. Les **clés JSON du coffre restent celles d
 | Présent | `Present` | — | Jour local, instant exact et heure locale, lus sur l'horloge injectée. |
 | Fiche ouverte | `OpenedSheet` | — | Fiche lue pour la lecture ou la révision ; l'ouvrir ne valide rien. |
 | État de révision | `ReviewState` | — | Où en est une fiche ou un passage dans son calendrier, un jour donné. |
+| Tableau de bord | `Dashboard`, `DueItem` | — | Retards, révisions du jour, rappels en attente, sept jours à venir et charge des 30 jours. |
+| Charge | `WorkloadDay`, `ProjectedItem` | — | Par jour, les échéances connues et les étapes attendues si chaque révision est faite à son échéance. |
+| Archives | `ArchivedSheetEntry`, `ReminderStatus` | — | Fiches archivées et où elles en sont des rappels : au repos, éligible, en attente, exclue. |
 | Module | `IKyfRevModule`, `ModuleCatalog` | réglages du coffre (`citations.active`…) | Fonction facultative compilée avec l'application : ses services ne sont déclarés que si le coffre l'active. |
 | Point d'extension | `INavigationContributor`, `IDashboardWidget`, `IVaultHealthCheck`, `ISearchProvider`, `IExportFormat`, `IBlockRenderer` | — | Ce qu'un module peut apporter : entrée du menu, encart du tableau de bord, remarque de santé, résultats de recherche, export, rendu d'un bloc. |
 | Lecteur en ligne | `IOnlineReader`, `OnlineReader` | — | Seul accès au réseau : HTTPS, ni redirection ni cookie, réponse bornée en taille et en durée. |

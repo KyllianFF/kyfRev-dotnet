@@ -1,5 +1,3 @@
-using System.Diagnostics;
-using System.Text;
 using KyfRev.Domain.Calendar;
 using KyfRev.Infrastructure.Vault.Ids;
 using KyfRev.Infrastructure.Vault.Tests.Support;
@@ -66,7 +64,7 @@ public sealed class VaultSessionTests
         outside.Write("Secret.md", "---\nid: f_01M69JFV2X5VM53EY3DR1BY61M\n---\n");
         using var vault = VaultSession.Initialize(folder.Root, Now);
         var link = folder.PathOf("fiches/Dehors");
-        CreateDirectoryLink(link, outside.Root);
+        FileLinks.CreateDirectoryLink(link, outside.Root);
         try
         {
             Assert.AreEqual(VaultErrorKind.OutsideVault, Assert.ThrowsExactly<VaultException>(() => vault.CreateSheet("Dehors", "Fuite", "", Now)).Kind);
@@ -215,26 +213,6 @@ public sealed class VaultSessionTests
         Assert.AreEqual("Accès au coffre impossible.", new VaultException().Message);
         Assert.AreEqual(VaultErrorKind.Io, new VaultException("x").Kind);
         Assert.AreEqual(VaultErrorKind.Io, new VaultException("x", new IOException()).Kind);
-    }
-
-    /// <summary>Lien symbolique, ou jonction si le poste n'autorise pas les liens symboliques.</summary>
-    private static void CreateDirectoryLink(string link, string target)
-    {
-        try
-        {
-            Directory.CreateSymbolicLink(link, target);
-        }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
-        {
-            using var mklink = Process.Start(new ProcessStartInfo("cmd.exe", ["/c", "mklink", "/J", link, target])
-            {
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                StandardOutputEncoding = Encoding.UTF8,
-            })!;
-            mklink.WaitForExit();
-            Assert.AreEqual(0, mklink.ExitCode, "jonction impossible à créer");
-        }
     }
 
     private sealed class FixedClock(DateTimeOffset now) : TimeProvider

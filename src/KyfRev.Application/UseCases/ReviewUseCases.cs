@@ -75,6 +75,29 @@ public sealed class ReminderUseCases(VaultHost host, TimeProvider time)
         return host.Use(vault => vault.PrepareDay(now));
     }
 
+    /// <summary>
+    /// Tableau de bord du jour. La journée est d'abord préparée : si l'application est restée
+    /// ouverte après minuit, les rappels du nouveau jour sont tirés.
+    /// </summary>
+    [ZeroXCommand("tableau_de_bord")]
+    public Outcome<Dashboard> Dashboard()
+    {
+        var now = Present.Of(time).Now;
+        return host.Use(vault =>
+        {
+            vault.PrepareDay(now);
+            return vault.Dashboard(now.Day);
+        });
+    }
+
+    /// <summary>Fiches archivées et où elles en sont des rappels.</summary>
+    [ZeroXCommand("archives")]
+    public Outcome<IReadOnlyList<ArchivedSheetEntry>> Archives()
+    {
+        var day = Present.Of(time).Now.Day;
+        return host.Use(vault => vault.Archives(day));
+    }
+
     /// <summary>Réponse à un rappel : connue, certains points à revoir, ou à revoir entièrement.</summary>
     [ZeroXCommand("traiter_rappel")]
     public Outcome<Done> Handle(string sheetId, ReminderOutcome choice)

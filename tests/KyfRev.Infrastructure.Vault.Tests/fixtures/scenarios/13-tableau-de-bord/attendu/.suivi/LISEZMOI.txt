@@ -1,0 +1,6 @@
+Ce dossier contient les données de suivi de l'application de révision :
+calendriers des J, annotations, historique, versions des fiches et réglages.
+
+Ne le modifiez pas à la main. Vos fiches, elles, sont de simples fichiers
+Markdown dans le dossier « fiches » : vous pouvez les lire et les copier avec
+n'importe quel éditeur de texte.

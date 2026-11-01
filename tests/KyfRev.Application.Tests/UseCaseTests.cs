@@ -39,6 +39,30 @@ public sealed class UseCaseTests
     }
 
     [TestMethod]
+    public void The_dashboard_prepares_the_day_and_lists_what_to_review()
+    {
+        using var folder = new TestFolder();
+        using var test = Opened(folder);
+        var app = test.App;
+        var id = app.Sheets.Create("Biologie", "Mitose", string.Empty).Value;
+        var created = app.Reminders.Dashboard().Value;
+        Assert.IsEmpty(created.Today, "la création vaut J0");
+        Assert.AreEqual(id, created.Upcoming.Single().Id);
+        Assert.AreEqual(new DateOnly(2026, 10, 2), created.NextDueDate);
+
+        test.Time.Advance(TimeSpan.FromDays(3));
+        var dashboard = app.Reminders.Dashboard().Value;
+        Assert.AreEqual(new DateOnly(2026, 10, 4), dashboard.Day);
+        Assert.AreEqual(2, dashboard.Overdue.Single().DaysLate);
+        Assert.AreEqual(1, dashboard.ActiveSheets);
+        Assert.IsEmpty(app.Reminders.Archives().Value);
+
+        Assert.IsTrue(app.Reviews.Archive(id).Succeeded);
+        Assert.AreEqual(id, app.Reminders.Archives().Value.Single().Id);
+        Assert.AreEqual(1, app.Reminders.Dashboard().Value.ArchivedSheets);
+    }
+
+    [TestMethod]
     public void Sheets_folders_and_templates()
     {
         using var folder = new TestFolder();

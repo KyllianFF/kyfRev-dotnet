@@ -1,0 +1,19 @@
+{
+  "format": 1,
+  "tirages": [
+    {
+      "jour": "2026-11-04",
+      "selection": [
+        "f_01M6A93CDE7ZPJM6AZD4HV2YK2"
+      ],
+      "prioritairesNonServis": 0
+    },
+    {
+      "jour": "2026-12-28",
+      "selection": [
+        "f_01M6A93CEREKFTCE5SVVCJJCYN"
+      ],
+      "prioritairesNonServis": 0
+    }
+  ]
+}

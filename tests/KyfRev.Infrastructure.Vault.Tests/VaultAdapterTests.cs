@@ -118,6 +118,19 @@ public sealed class VaultAdapterTests
     }
 
     [TestMethod]
+    public void Dashboard_and_archives_reach_the_session()
+    {
+        using var folder = TemporaryVault.Empty();
+        using var vault = new VaultStore().Initialize(folder.Root, Now);
+        var id = vault.CreateSheet(null, "Mitose", "La prophase.\n", Now);
+
+        Assert.AreEqual(id, vault.Dashboard(Tomorrow.Day).Today.Single().Id);
+        Assert.IsEmpty(vault.Archives(Tomorrow.Day));
+        vault.ArchiveSheet(id, Tomorrow);
+        Assert.AreEqual(id, vault.Archives(Tomorrow.Day).Single().Id);
+    }
+
+    [TestMethod]
     public void Quotes_reach_the_session()
     {
         using var folder = TemporaryVault.Empty();

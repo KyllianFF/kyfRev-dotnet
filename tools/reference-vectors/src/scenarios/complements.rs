@@ -56,6 +56,47 @@ fn contenu(valeur: &Value) -> ContenuCitation {
     }
 }
 
+/// Un élément du tableau de bord, champ par champ.
+fn element(e: &coffre::ElementARevoir) -> String {
+    format!(
+        "{:?}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}|{}",
+        e.genre,
+        e.id,
+        e.fiche_id,
+        json(&e.titre),
+        optionnel(e.extrait.as_deref()),
+        optionnel(e.terme.as_deref()),
+        liste(&e.section),
+        optionnel(e.commentaire.as_deref()),
+        json(&e.dossier),
+        liste(&e.etiquettes),
+        e.etape,
+        e.echeance,
+        e.retard_jours,
+        e.derniere_revision,
+        e.cycle,
+        e.fichier_present
+    )
+}
+
+fn elements(liste_elements: &[coffre::ElementARevoir]) -> String {
+    liste_elements.iter().map(element).collect::<Vec<_>>().join(";")
+}
+
+fn projetee(p: &coffre::EtapeProjetee) -> String {
+    format!(
+        "{:?}|{}|{}|{}|{}|{}|{}|{}",
+        p.genre,
+        p.id,
+        p.fiche_id,
+        json(&p.titre),
+        optionnel(p.extrait.as_deref()),
+        optionnel(p.terme.as_deref()),
+        liste(&p.section),
+        p.etape
+    )
+}
+
 fn citation(c: &Citation) -> String {
     let s = &c.contenu.source;
     format!(
@@ -295,6 +336,79 @@ impl Partie {
                 let dossier = chaine(operation, "dossier").unwrap_or_default();
                 self.coffre().retirer_examen(&dossier).map(|()| String::new())
             }
+            "tableau_de_bord" => {
+                let t = self.coffre().tableau_de_bord(maintenant().jour)?;
+                let charge = t
+                    .charge
+                    .iter()
+                    .filter(|j| !j.echeances.is_empty() || !j.projetees.is_empty())
+                    .map(|j| format!("{}:[{}]/[{}]", j.jour, elements(&j.echeances), j.projetees.iter().map(projetee).collect::<Vec<_>>().join(";")))
+                    .collect::<Vec<_>>()
+                    .join(" ");
+                let rappels = t
+                    .rappels
+                    .iter()
+                    .map(|r| {
+                        format!(
+                            "{}|{}|{}|{}|{}|{}|{}",
+                            r.fiche_id,
+                            json(&r.titre),
+                            json(&r.dossier),
+                            liste(&r.etiquettes),
+                            r.archivee_le,
+                            r.tire_le,
+                            r.rappels_precedents
+                        )
+                    })
+                    .collect::<Vec<_>>()
+                    .join(";");
+                let examens = t.examens.iter().map(|e| format!("{} {}", json(&e.dossier), e.jour)).collect::<Vec<_>>().join(";");
+                Ok(format!(
+                    "jour={} retard=[{}] aujourdhui=[{}] rappels=[{}] a_venir=[{}] charge={{{}}} jours_de_charge={} rappels_par_jour={} rappel_actif={} examens=[{}] prochaine={} actives={} archivees={} sante={} prioritaires={} citations={} citation={} schemas={}",
+                    t.jour,
+                    elements(&t.en_retard),
+                    elements(&t.aujourdhui),
+                    rappels,
+                    elements(&t.a_venir),
+                    charge,
+                    t.charge.len(),
+                    t.rappels_par_jour,
+                    t.rappel_actif,
+                    examens,
+                    t.prochaine_echeance.map_or_else(|| "-".to_owned(), |j| j.to_string()),
+                    t.fiches_actives,
+                    t.fiches_archivees,
+                    t.problemes_sante,
+                    t.prioritaires_non_servis,
+                    t.citations_actives,
+                    t.citation_du_jour.as_ref().map_or("-", |c| c.chemin.as_str()),
+                    t.schemas_actifs
+                ))
+            }
+            "archives" => Ok(self
+                .coffre()
+                .archives(maintenant().jour)
+                .iter()
+                .map(|a| {
+                    format!(
+                        "{}|{}|{}|{}|{}|{}|{:?}|{}|{}|{}|{}|{}|{}",
+                        a.id,
+                        json(&a.titre),
+                        json(&a.dossier),
+                        liste(&a.etiquettes),
+                        a.archivee_le,
+                        a.archivage_manuel,
+                        a.etat_rappel,
+                        a.eligible_le,
+                        a.rappel_tire_le.map_or_else(|| "-".to_owned(), |j| j.to_string()),
+                        a.cycles_termines,
+                        a.rappels_traites,
+                        a.dernier_rappel.as_ref().map_or_else(|| "-".to_owned(), |d| format!("{}:{:?}", d.le, d.resultat)),
+                        a.fichier_present
+                    )
+                })
+                .collect::<Vec<_>>()
+                .join(";")),
             "examens_a_venir" => Ok(self
                 .coffre()
                 .examens_a_venir(maintenant().jour)?

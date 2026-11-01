@@ -9,6 +9,13 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- Tableau de bord et archives, identiques à la version 0.x (treizième scénario comparé,
+  50 opérations) : retards du plus ancien au plus récent, révisions du jour (fiches d'abord),
+  rappels en attente, les sept jours à venir, charge des 30 jours (échéances connues et étapes
+  projetées), examens, prochaine échéance, compteurs et problèmes de « Santé du coffre » ;
+  archives avec l'état des rappels (au repos, éligible, en attente, exclue) et le dernier rappel.
+  La journée est préparée de nouveau si l'application est restée ouverte après minuit. Sur un
+  coffre de 2 000 fiches, le calcul prend moins de 150 ms.
 - Coquille de l'application (`KyfRev.Presentation.Wpf`, `KyfRev.App`) : menu latéral dans
   l'ordre de la 0.x (Aujourd'hui, Fiches, Définitions, Archives, Statistiques, modules actifs ;
   Santé du coffre et Paramètres en bas), recherche de commandes (Ctrl+K, sans tenir compte des
@@ -159,6 +166,10 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Modifié
 
+- Grands coffres plus rapides : les liens cassés sont relevés sans relire les fiches qui n'ont
+  pas changé (date et taille du fichier), et la vérification qu'un chemin reste dans le coffre
+  n'examine plus que ses composants sous la racine réelle du coffre. Un chemin qui passe par un
+  lien symbolique ou une jonction est toujours vérifié chemin par chemin.
 - Le texte aux règles de Rust (minuscules, ordre des octets UTF-8) et le modèle des citations
   passent dans `KyfRev.Application`, partagés par le coffre et les modules.
 - L'examen d'un dossier se « retire » (`WithdrawExam`) : plus aucun nom de suppression dans les
