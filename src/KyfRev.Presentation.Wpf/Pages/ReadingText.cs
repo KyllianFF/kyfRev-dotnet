@@ -17,6 +17,93 @@ public static class ReadingText
     /// <summary>Un passage dont le texte a disparu de la fiche.</summary>
     public const string LostPassage = "Son texte n'est plus dans la fiche.";
 
+    /// <summary>Un passage dont la position n'est qu'approchée.</summary>
+    public const string CandidatePassage = "Position à vérifier : son texte a changé.";
+
+    /// <summary>Copier la sélection.</summary>
+    public const string Copy = "Copier";
+
+    /// <summary>Surligner la sélection.</summary>
+    public const string Highlight = "Surligner";
+
+    /// <summary>Le raccourci de « Surligner ».</summary>
+    public const string HighlightKey = "H";
+
+    /// <summary>Surligner la sélection avec un commentaire.</summary>
+    public const string Annotate = "Annoter…";
+
+    /// <summary>Faire de la sélection une définition.</summary>
+    public const string Define = "Définir…";
+
+    /// <summary>Amener un passage à l'écran.</summary>
+    public const string ShowPassage = "Afficher le passage";
+
+    /// <summary>Amener une définition à l'écran.</summary>
+    public const string ShowDefinition = "Afficher la définition";
+
+    /// <summary>Changer le commentaire d'un passage.</summary>
+    public const string EditComment = "Modifier le commentaire…";
+
+    /// <summary>Changer une définition.</summary>
+    public const string EditDefinition = "Modifier la définition…";
+
+    /// <summary>Accepter la position proposée.</summary>
+    public const string ConfirmPosition = "Confirmer la position";
+
+    /// <summary>Refuser la position proposée.</summary>
+    public const string KeepWithoutPosition = "Garder sans position";
+
+    /// <summary>Mettre un passage à la corbeille.</summary>
+    public const string DeletePassage = "Supprimer le passage…";
+
+    /// <summary>Mettre une définition à la corbeille.</summary>
+    public const string DeleteDefinition = "Supprimer la définition…";
+
+    /// <summary>Le titre de la saisie d'un commentaire.</summary>
+    public const string CommentTitle = "Commentaire du passage";
+
+    /// <summary>Le titre de la saisie d'une définition.</summary>
+    public const string DefinitionTitle = "Définition";
+
+    /// <summary>Le champ du terme.</summary>
+    public const string TermLabel = "Terme";
+
+    /// <summary>Le champ de l'explication.</summary>
+    public const string ExplanationLabel = "Ce que signifie ce terme";
+
+    /// <summary>Enregistrer une saisie.</summary>
+    public const string Save = "Enregistrer";
+
+    /// <summary>Une définition incomplète.</summary>
+    public const string DefinitionIncomplete = "Écrivez le terme et son explication.";
+
+    /// <summary>Le titre de la suppression d'un passage.</summary>
+    public const string DeletePassageTitle = "Supprimer ce passage ?";
+
+    /// <summary>Le titre de la suppression d'une définition.</summary>
+    public const string DeleteDefinitionTitle = "Supprimer cette définition ?";
+
+    /// <summary>Ce que devient ce qu'on supprime.</summary>
+    public const string DeleteMessage = "Il va à la corbeille et ne sera plus révisé.";
+
+    /// <summary>Confirmer une suppression.</summary>
+    public const string DeleteLabel = "Supprimer";
+
+    /// <summary>Un passage vient d'être surligné.</summary>
+    public const string PassageCreated = "Passage surligné : à réviser demain (J1).";
+
+    /// <summary>Une définition vient d'être écrite.</summary>
+    public const string DefinitionCreated = "Définition enregistrée : à réviser demain (J1).";
+
+    /// <summary>Une annotation vient de changer.</summary>
+    public const string Saved = "Modification enregistrée.";
+
+    /// <summary>Une annotation vient de partir à la corbeille.</summary>
+    public const string Deleted = "Mis à la corbeille.";
+
+    /// <summary>Une position vient d'être confirmée.</summary>
+    public const string PositionConfirmed = "Position confirmée.";
+
     /// <summary>Un lien qui ne mène nulle part.</summary>
     public const string BrokenLink = "Ce lien ne mène à rien.";
 

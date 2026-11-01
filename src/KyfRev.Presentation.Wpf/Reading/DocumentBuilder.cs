@@ -66,7 +66,8 @@ internal sealed class DocumentBuilder
     private readonly bool _opensLinks;
     private readonly bool _showsHeader;
     private readonly List<Task> _images = [];
-    private readonly Queue<(Decorator Slot, string Source, double Size)> _pendingFormulas = new();
+    private readonly Queue<(Border Slot, string Source, double Size)> _pendingFormulas = new();
+    private readonly Dictionary<RenderNode, TextPiece> _pieces;
     private FlowDocument? _document;
     private Paragraph? _openRootParagraph;
     private int _nextRootChild;
@@ -75,9 +76,11 @@ internal sealed class DocumentBuilder
     private bool _isCancelled;
     private bool _afterBreak;
 
-    public DocumentBuilder(SheetReading reading, Action<LinkTarget> follow, bool opensLinks, bool showsHeader)
+    public DocumentBuilder(SheetReading reading, Action<LinkTarget> follow, bool opensLinks, bool showsHeader, Func<string, Brush?>? findBrush = null)
     {
         _reading = reading;
+        _pieces = reading.Map.Pieces.ToDictionary(piece => piece.Node);
+        Layer = new TextLayer(findBrush ?? (_ => null));
         _follow = follow;
         _opensLinks = opensLinks;
         _showsHeader = showsHeader;
@@ -89,8 +92,8 @@ internal sealed class DocumentBuilder
     /// <summary>L'endroit de chaque identifiant (notes et renvois).</summary>
     public Dictionary<string, TextElement> Identified { get; } = new(StringComparer.Ordinal);
 
-    /// <summary>Le morceau de chaque nœud de texte affiché.</summary>
-    public Dictionary<RenderText, Run> Runs { get; } = [];
+    /// <summary>Le lien entre le document et le texte affiché, et les surlignages.</summary>
+    public TextLayer Layer { get; }
 
     /// <summary>Il reste du contenu à ajouter ou des formules à dessiner.</summary>
     public bool HasPendingWork => HasPendingContent || _pendingFormulas.Count > 0;
@@ -406,10 +409,6 @@ internal sealed class DocumentBuilder
             blocks.Add(note);
         }
         var run = new Run(text);
-        if (value is not null)
-        {
-            Runs[value] = run;
-        }
         var block = new Paragraph(run)
         {
             Margin = new Thickness(0, 0, 0, 12),
@@ -421,6 +420,10 @@ internal sealed class DocumentBuilder
         block.SetResourceReference(TextElement.FontFamilyProperty, CodeFont);
         block.SetResourceReference(TextElement.BackgroundProperty, SurfaceAlt);
         blocks.Add(block);
+        if (value is not null && _pieces.TryGetValue(value, out var piece))
+        {
+            Layer.AddRun(run, piece.Start);
+        }
     }
 
     private Table BuildTable(RenderElement element)
@@ -482,12 +485,22 @@ internal sealed class DocumentBuilder
 
     private BlockUIContainer BuildFormulaBlock(RenderElement element)
     {
-        var slot = new Decorator { HorizontalAlignment = HorizontalAlignment.Center };
+        var slot = new Border { HorizontalAlignment = HorizontalAlignment.Center };
         PlaceFormula(slot, element.Formula!, ReadingSize * 1.2, block: true);
-        return new BlockUIContainer(slot) { Margin = new Thickness(0, 4, 0, 16) };
+        var container = new BlockUIContainer(slot) { Margin = new Thickness(0, 4, 0, 16) };
+        RegisterFormula(element, container, slot);
+        return container;
     }
 
-    private void PlaceFormula(Decorator slot, string source, double size, bool block)
+    private void RegisterFormula(RenderElement element, TextElement container, Border slot)
+    {
+        if (_pieces.TryGetValue(element, out var piece))
+        {
+            Layer.AddFormula(container, slot, piece.Start, piece.End);
+        }
+    }
+
+    private void PlaceFormula(Border slot, string source, double size, bool block)
     {
         if (_formulas++ < FormulasAtOnce)
         {
@@ -557,7 +570,7 @@ internal sealed class DocumentBuilder
                 _afterBreak = true;
                 break;
             case "span" when element.Formula is { } formula:
-                AddFormula(formula, inlines);
+                AddFormula(element, formula, inlines);
                 break;
             case "img":
                 inlines.Add(BuildImage(element));
@@ -605,21 +618,23 @@ internal sealed class DocumentBuilder
     {
         // Un saut de ligne simple se lit comme une espace ; celui qui suit un saut dur est déjà à l'écran.
         var value = text.Value.Replace('\n', ' ');
-        if (_afterBreak && value.StartsWith(' '))
-        {
-            value = value[1..];
-        }
+        var skipped = _afterBreak && value.StartsWith(' ') ? 1 : 0;
         _afterBreak = false;
-        var run = new Run(value);
-        Runs[text] = run;
+        var run = new Run(value[skipped..]);
         inlines.Add(run);
+        if (_pieces.TryGetValue(text, out var piece))
+        {
+            Layer.AddRun(run, piece.Start + skipped);
+        }
     }
 
-    private void AddFormula(string source, InlineCollection inlines)
+    private void AddFormula(RenderElement element, string source, InlineCollection inlines)
     {
-        var slot = new Decorator();
+        var slot = new Border();
         PlaceFormula(slot, source, ReadingSize, block: false);
-        inlines.Add(new InlineUIContainer(slot) { BaselineAlignment = BaselineAlignment.Center });
+        var container = new InlineUIContainer(slot) { BaselineAlignment = BaselineAlignment.Center };
+        inlines.Add(container);
+        RegisterFormula(element, container, slot);
     }
 
     private void AddLink(RenderElement element, InlineCollection inlines, int depth, bool inLink)

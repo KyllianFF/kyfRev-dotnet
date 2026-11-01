@@ -3,6 +3,7 @@ using System.Text.Json;
 using KyfRev.Application;
 using KyfRev.Application.Model;
 using KyfRev.Application.UseCases;
+using KyfRev.Rendering;
 using static KyfRev.Acceptance.Tests.RunningApplication;
 
 namespace KyfRev.Acceptance.Tests;
@@ -219,6 +220,28 @@ public sealed class Scenarios
         }
         Assert.AreEqual(sheetBefore, trial.SheetFile(sheet), "Valider le passage ne touche pas au suivi de la fiche.");
         Assert.AreEqual("2027-02-12", trial.AnnotationTracking(sheet, passage).GetProperty("cycle").GetProperty("echeance").GetString());
+    }
+
+    [TestMethod]
+    public void T5_a_new_passage_highlighted_during_a_reminder_counts_as_marked()
+    {
+        using var trial = new Trial();
+        var (sheet, _) = ArchivedSheetWithPassage(trial, Title);
+        using (var running = trial.Launch(Reminder))
+        {
+            running.Open(Reminders, Title);
+            running.StartMarking();
+            running.HighlightInText("le clergé");
+            running.WaitMarked("1");
+            running.FinishMarking();
+            running.WaitAnswered();
+        }
+
+        var tracking = trial.SheetTracking(sheet);
+        Assert.AreEqual("archivee", tracking.GetProperty("statut").GetString());
+        Assert.AreEqual("certains_points_a_revoir", Answers(tracking).Single().GetProperty("resultat").GetString());
+        var created = trial.Annotations(sheet).Single(annotation => annotation.GetProperty("ancre").GetProperty("exact").GetString() == "le clergé");
+        Assert.AreEqual("2027-02-09", created.GetProperty("cycle").GetProperty("echeance").GetString());
     }
 
     [TestMethod]
@@ -511,18 +534,11 @@ public sealed class Scenarios
 
     private static string NewPassage(KyfRevApplication app, string sheet, string exact)
     {
+        // Comme dans l'application : sur le texte affiché. Une ancre juste n'est plus réécrite à l'ouverture.
         var opened = app.Sheets.Open(sheet).Value;
-        var start = opened.Body.IndexOf(exact, StringComparison.Ordinal);
-        var end = start + exact.Length;
-        var anchor = new Anchor(
-            exact,
-            opened.Body[Math.Max(0, start - 32)..start],
-            opened.Body[end..Math.Min(opened.Body.Length, end + 32)],
-            start,
-            end,
-            [opened.Title],
-            opened.FirstBodyLine,
-            opened.Fingerprint);
+        var map = TextMap.Of(SheetRenderer.Render(opened.Body, opened.Title));
+        var start = map.Text.IndexOf(exact, StringComparison.Ordinal);
+        var anchor = Anchoring.AnchorOf(map.Text, new TextPosition(start, start + exact.Length), map.SectionAt(start), map.SourceLineAt(start, opened.FirstBodyLine), opened.Fingerprint);
         return app.Annotations.Create(sheet, anchor, null).Value;
     }
 

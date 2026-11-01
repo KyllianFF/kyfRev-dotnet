@@ -1,7 +1,9 @@
 using System.Diagnostics;
 using System.Globalization;
 using FlaUI.Core.AutomationElements;
+using FlaUI.Core.Input;
 using FlaUI.Core.Tools;
+using FlaUI.Core.WindowsAPI;
 using FlaUI.UIA3;
 using FlauiApplication = FlaUI.Core.Application;
 
@@ -171,6 +173,21 @@ internal sealed class RunningApplication : IDisposable
 
     /// <summary>La position du bouton « Retour » à l'écran : une fiche défilée ne doit pas l'emporter.</summary>
     public int BackPosition() => Wait("BackButton").BoundingRectangle.Top;
+
+    /// <summary>Sélectionne un mot du texte de la fiche et le surligne avec la touche H.</summary>
+    public void HighlightInText(string exact)
+    {
+        var view = Wait("SheetText");
+        var document = view.FindAllDescendants().Append(view).First(element => element.Patterns.Text.IsSupported);
+        document.Patterns.Text.Pattern.DocumentRange.FindText(exact, backward: false, ignoreCase: false).Select();
+        view.SetForeground();
+        view.Focus();
+        Keyboard.Type(VirtualKeyShort.KEY_H);
+    }
+
+    /// <summary>Attend que le décompte des passages à revoir atteigne ce nombre.</summary>
+    public void WaitMarked(string count) =>
+        Retry.WhileFalse(() => Find("MarkedLabel")?.Name.Contains(count, StringComparison.Ordinal) == true, Patience, Interval, throwOnTimeout: true, timeoutMessage: $"Le décompte n'atteint pas {count}.");
 
     /// <summary>Le texte de la fiche, tel que le lit un lecteur d'écran.</summary>
     public string SheetText() => Retry.WhileEmpty(

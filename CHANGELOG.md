@@ -9,6 +9,10 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- Surlignage dans le texte : les passages paraissent en ambre et les définitions en pointillé vert, à leur
+  place, même si la fiche a changé. On sélectionne du texte, puis la touche H surligne, et le clic droit
+  propose Annoter et Définir. Un passage dont le texte a changé se confirme ou se garde sans position.
+  Pendant un rappel, un passage surligné compte comme à revoir.
 - Lecture native d'une fiche : le Markdown s'affiche enfin mis en forme, dans la fiche et dans son aperçu,
   avec ses titres, listes, citations, tableaux, formules, notes, liens et images du coffre. La fiche se
   lit en trois volets : son plan, son texte et ses passages. Quand la fenêtre rétrécit, le plan puis les

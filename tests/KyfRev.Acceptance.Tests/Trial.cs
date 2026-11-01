@@ -53,6 +53,10 @@ internal sealed class Trial : IDisposable
     public JsonElement AnnotationTracking(string sheet, string annotation) =>
         Parse(AnnotationsFile(sheet)).GetProperty("annotations").EnumerateArray().Single(entry => entry.GetProperty("id").GetString() == annotation);
 
+    /// <summary>Les annotations d'une fiche.</summary>
+    public IReadOnlyList<JsonElement> Annotations(string sheet) =>
+        [.. Parse(AnnotationsFile(sheet)).GetProperty("annotations").EnumerateArray().Select(entry => entry.Clone())];
+
     /// <summary>Le journal des tirages de rappels.</summary>
     public string DrawsFile() => File.ReadAllText(Path.Combine(Vault, ".suivi", "rappels.json"));
 

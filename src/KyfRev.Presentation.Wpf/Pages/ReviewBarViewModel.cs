@@ -411,6 +411,15 @@ public sealed partial class ReviewBarViewModel : ObservableObject
         IsMarking = !HasError;
     }
 
+    /// <summary>Relit les passages à marquer : un passage créé pendant un rappel y paraît, déjà à revoir.</summary>
+    public async Task RefreshPassagesAsync()
+    {
+        if (IsMarking)
+        {
+            await LoadPassagesAsync().ConfigureAwait(true);
+        }
+    }
+
     /// <summary>Revient aux trois réponses ; les passages déjà remis à J0 le restent.</summary>
     [RelayCommand]
     private void CancelMarking() => IsMarking = false;

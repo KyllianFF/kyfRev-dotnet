@@ -30,7 +30,7 @@
                      Visibility="{Binding HasPrompt, Converter={StaticResource Visible}}" />
         </StackPanel>
         <!-- Le titre est déjà au-dessus. Les liens s'y lisent : on les suit une fois la fiche ouverte. -->
-        <reading:SheetDocumentViewer x:Name="PreviewBody" Grid.Row="1" Reading="{Binding Reading}" ShowsHeader="False"
+        <reading:SheetDocumentViewer x:Name="PreviewBody" Grid.Row="1" Reading="{Binding Reading}" Highlights="{Binding Reading.Highlights}" ShowsHeader="False"
                                      AutomationProperties.Name="{x:Static pages:ReadingText.Document}"
                                      Visibility="{Binding HasBody, Converter={StaticResource Visible}}" />
       </Grid>

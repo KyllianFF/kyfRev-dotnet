@@ -140,10 +140,10 @@ public sealed class ReadingTests
     {
         var elements = LogicalDescendants(Build("$x^2$ et $\\nope{y}$\n\n$$\n\\frac{1}{2}\n$$\n\n$$\n\\nope{z}\n$$\n\n$\\tfrac{1}{2}+\\dfrac{1}{3}$", showsHeader: false).Document).ToList();
 
-        var inline = elements.OfType<InlineUIContainer>().Select(container => ((Decorator)container.Child).Child).ToList();
+        var inline = elements.OfType<InlineUIContainer>().Select(container => ((Border)container.Child).Child).ToList();
         Assert.AreEqual("x^2", ((FormulaControl)inline[0]).Formula);
         Assert.AreEqual("$\\nope{y}$", ((TextBlock)inline[1]).Text);
-        var blocks = elements.OfType<BlockUIContainer>().Select(container => ((Decorator)container.Child).Child).ToList();
+        var blocks = elements.OfType<BlockUIContainer>().Select(container => ((Border)container.Child).Child).ToList();
         Assert.AreEqual("\\frac{1}{2}", ((FormulaControl)((Viewbox)blocks[0]).Child).Formula);
         Assert.AreEqual("$$\\nope{z}$$", ((TextBlock)blocks[1]).Text);
         Assert.AreEqual("\\frac{1}{2}+\\frac{1}{3}", ((FormulaControl)inline[2]).Formula, "Deux écritures courantes de KaTeX se dessinent comme une fraction.");
@@ -161,10 +161,10 @@ public sealed class ReadingTests
         var document = builder.Build();
         var slots = LogicalDescendants(document).Select(element => element switch
         {
-            InlineUIContainer inline => (Decorator)inline.Child,
-            BlockUIContainer block => (Decorator)block.Child,
+            InlineUIContainer inline => (Border)inline.Child,
+            BlockUIContainer block => (Border)block.Child,
             _ => null,
-        }).OfType<Decorator>().ToList();
+        }).OfType<Border>().ToList();
 
         Assert.HasCount(80, slots);
         Assert.IsTrue(builder.HasPendingWork);
@@ -387,7 +387,7 @@ public sealed class ReadingTests
         Assert.IsTrue(definition.IsDefinition);
         Assert.AreEqual("mot", definition.Title);
         Assert.AreEqual("Son sens", definition.Detail);
-        Assert.AreEqual(new TextPosition((int)passage.Annotation.Anchor.Start, (int)passage.Annotation.Anchor.End), page.Reading!.PositionOf(passage.Annotation));
+        Assert.AreEqual(new TextPosition((int)passage.Annotation.Anchor.Start, (int)passage.Annotation.Anchor.End), passage.Position);
     }
 
     [TestMethod]
@@ -398,18 +398,18 @@ public sealed class ReadingTests
 
         page.OpenLinkCommand.Execute(new ExternalLink("https://exemple.org"));
         Assert.AreEqual("https://exemple.org", vault.Links.Opened.Single());
-        Assert.IsFalse(page.HasLinkProblem);
+        Assert.IsFalse(page.HasProblem);
 
         vault.Links.Works = false;
         page.OpenLinkCommand.Execute(new ExternalLink("https://exemple.org/b"));
-        Assert.AreEqual(ReadingText.CannotOpenAddress, page.LinkProblem);
+        Assert.AreEqual(ReadingText.CannotOpenAddress, page.Problem);
 
         page.OpenLinkCommand.Execute(new SheetLink(vault.App.Sheets.Open(vault.SheetId).Value.Path));
         Assert.AreEqual(vault.SheetId, vault.OpenedSheets.Single());
-        Assert.IsFalse(page.HasLinkProblem);
+        Assert.IsFalse(page.HasProblem);
 
         page.OpenLinkCommand.Execute(new SheetLink("fiches/Absente.md"));
-        Assert.AreEqual(ReadingText.MissingLinkedSheet, page.LinkProblem);
+        Assert.AreEqual(ReadingText.MissingLinkedSheet, page.Problem);
     }
 
     [STATestMethod]
@@ -820,7 +820,7 @@ internal sealed class ReadingVault : IDisposable
 
     public List<string> OpenedSheets { get; } = [];
 
-    public SheetPageViewModel Page() => new(App.Sheets, Bar, SheetId, () => { }, OpenedSheets.Add, Links);
+    public SheetPageViewModel Page() => new(App.Sheets, App.Annotations, Bar, SheetId, () => { }, OpenedSheets.Add, Links);
 
     public string Annotate(string exact, bool lost = false)
     {
@@ -832,6 +832,9 @@ internal sealed class ReadingVault : IDisposable
         }
         return id;
     }
+
+    /// <summary>Passe à un autre coffre : ce qui visait celui-ci est ensuite refusé.</summary>
+    public void Leave() => Assert.IsNotNull(App.Vaults.Create(_vaults.PathOf("Autre")).Vault);
 
     public void Dispose() => _vaults.Dispose();
 
