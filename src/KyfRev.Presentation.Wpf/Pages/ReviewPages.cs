@@ -60,7 +60,7 @@ public sealed partial record Cloze(string Before, string After, bool MoreBefore,
 /// rappel actif, le passage aussi : son commentaire et le texte autour d'abord, le passage
 /// remplacé par un trou. La barre de révision suit.
 /// </summary>
-public sealed partial class PassagePageViewModel : ObservableObject
+public sealed partial class PassagePageViewModel : ObservableObject, IReviewPage
 {
     private readonly SheetUseCases _sheets;
     private readonly Func<ItemKind, string, ReviewState, ReviewBarViewModel> _reviewBar;
@@ -243,7 +243,7 @@ public sealed partial class PassagePageViewModel : ObservableObject
 /// est écrit ; le rendu natif du Markdown, les passages surlignés et le texte à trous du mode
 /// Réviser viennent avec la lecture native (J7).
 /// </summary>
-public sealed partial class SheetPageViewModel : ObservableObject
+public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
 {
     private readonly SheetUseCases _sheets;
     private readonly Func<ItemKind, string, ReviewState, ReviewBarViewModel> _reviewBar;

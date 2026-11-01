@@ -67,6 +67,19 @@ public interface IVaultLocations
     bool Remember(string root);
 }
 
+/// <summary>La séance d'étude en cours, gardée sur ce poste pour être reprise.</summary>
+public interface IStudySessionStore
+{
+    /// <summary>La séance gardée ; rien s'il n'y en a pas, ou si elle est illisible.</summary>
+    StudySession? Load();
+
+    /// <summary>Garde la séance ; faux si elle n'a pas pu l'être (elle ne sera alors pas reprise).</summary>
+    bool Save(StudySession session);
+
+    /// <summary>Oublie la séance gardée : elle est terminée. Faux si elle n'a pas pu l'être.</summary>
+    bool Forget();
+}
+
 /// <summary>
 /// Lecture d'une adresse en ligne, durcie : HTTPS seulement, ni redirection ni cookie, réponse
 /// limitée en taille et en durée. Seule l'adresse demandée part ; un échec est une

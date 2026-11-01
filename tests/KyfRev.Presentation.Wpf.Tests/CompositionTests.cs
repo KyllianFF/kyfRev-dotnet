@@ -35,6 +35,7 @@ public sealed class CompositionTests
 
         Assert.IsInstanceOfType<VaultLocations>(services.GetRequiredService<IVaultLocations>());
         Assert.IsInstanceOfType<FolderPicker>(services.GetRequiredService<IFolderPicker>());
+        Assert.IsInstanceOfType<StudySessionFile>(services.GetRequiredService<IStudySessionStore>());
         var vaults = services.GetRequiredService<VaultUseCases>();
         Assert.AreSame(services.GetRequiredService<KyfRevApplication>().Vaults, vaults);
         // Ni portable.json ni installation.json à côté des essais : mode développement, aucun coffre ouvert.

@@ -295,7 +295,7 @@ public sealed class ReviewTests
     {
         using var vault = new ReviewVault();
         var test = new TestShell();
-        var navigation = new ReviewNavigation(vault.App.Sheets, vault.App.Reviews, vault.App.Reminders, vault.Time);
+        var navigation = new ReviewNavigation(vault.App.Sheets, vault.App.Reviews, vault.App.Reminders, vault.App.Vaults, new MemorySessions(), vault.Time);
         var dashboard = new DashboardPageViewModel(vault.App.Reminders, navigation);
         var shell = new ShellViewModel(CorePages.All(new Dictionary<string, object> { [CorePages.Today] = dashboard }), test.Appearance, test.Gallery);
         Assert.ThrowsExactly<InvalidOperationException>(() => navigation.OpenSheet(vault.SheetId));

@@ -32,6 +32,7 @@ internal static class Composition
         services.AddSingleton<IWindowChrome, WindowChrome>();
         services.AddSingleton(_ => VaultLocations.Detect());
         services.AddSingleton<IVaultLocations>(provider => provider.GetRequiredService<VaultLocations>());
+        services.AddSingleton<IStudySessionStore>(provider => new StudySessionFile(provider.GetRequiredService<VaultLocations>().LocalData));
         services.AddSingleton<ILoggerFactory>(provider =>
         {
             var locations = provider.GetRequiredService<VaultLocations>();

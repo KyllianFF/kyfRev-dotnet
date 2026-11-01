@@ -43,6 +43,9 @@ public sealed partial class ShellViewModel : ObservableObject
             new("Ctrl+K", ShellText.ShortcutSearch),
             new("F1", ShellText.ShortcutHelp),
             new("Ctrl+Maj+F", ShellText.ShortcutFocusMode),
+            new("F11", ShellText.ShortcutFullScreen),
+            new("Ctrl+Entrée", ShellText.ShortcutValidate),
+            new("Ctrl+→", ShellText.ShortcutNext),
             new("Ctrl+1 … Ctrl+9", ShellText.ShortcutGoTo),
             new("Ctrl+plus", ShellText.ShortcutZoomIn),
             new("Ctrl+moins", ShellText.ShortcutZoomOut),
@@ -94,8 +97,13 @@ public sealed partial class ShellViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsMenuVisible))]
     public partial bool IsWelcome { get; private set; }
 
-    /// <summary>Le menu latéral est affiché : un coffre est ouvert, hors du mode concentration.</summary>
-    public bool IsMenuVisible => !IsWelcome && !IsFocusMode;
+    /// <summary>Le menu latéral est affiché : un coffre est ouvert, hors du mode concentration et du plein écran.</summary>
+    public bool IsMenuVisible => !IsWelcome && !IsFocusMode && !IsFullScreen;
+
+    /// <summary>Plein écran (F11) : la fenêtre occupe tout l'écran, sans menu, pour réviser sans distraction.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsMenuVisible))]
+    public partial bool IsFullScreen { get; private set; }
 
     /// <summary>Mode concentration : le menu est masqué.</summary>
     [ObservableProperty]
@@ -237,6 +245,14 @@ public sealed partial class ShellViewModel : ObservableObject
     [RelayCommand]
     public void ToggleFocusMode() => IsFocusMode = !IsFocusMode;
 
+    /// <summary>Passe en plein écran, ou en sort (F11).</summary>
+    [RelayCommand]
+    public void ToggleFullScreen() => IsFullScreen = !IsFullScreen;
+
+    /// <summary>Sort du plein écran (Échap).</summary>
+    [RelayCommand]
+    public void ExitFullScreen() => IsFullScreen = false;
+
     /// <summary>Agrandit l'interface d'un pas.</summary>
     [RelayCommand]
     public void ZoomIn() => Zoom = Math.Min(MaximumZoom, Math.Round(Zoom + ZoomStep, 1));
@@ -336,6 +352,7 @@ public sealed partial class ShellViewModel : ObservableObject
         List<PaletteEntry> commands =
         [
             new(ShellText.FocusMode, "Ctrl+Maj+F", Icons.FocusMode, ToggleFocusMode),
+            new(ShellText.ShortcutFullScreen, "F11", Icons.FocusMode, ToggleFullScreen),
             new(ShellText.ShortcutZoomIn, "Ctrl+plus", Icons.ZoomIn, ZoomIn),
             new(ShellText.ShortcutZoomOut, "Ctrl+moins", Icons.ZoomOut, ZoomOut),
             new(ShellText.ShortcutZoomReset, "Ctrl+0", Icons.ZoomOut, ResetZoom),

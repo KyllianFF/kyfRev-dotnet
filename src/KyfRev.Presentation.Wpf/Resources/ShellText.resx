@@ -84,14 +84,23 @@
   <data name="ShortcutFocusMode" xml:space="preserve">
     <value>Afficher ou masquer le menu (mode concentration)</value>
   </data>
+  <data name="ShortcutFullScreen" xml:space="preserve">
+    <value>Plein écran</value>
+  </data>
   <data name="ShortcutGoTo" xml:space="preserve">
     <value>Aller à la vue 1 à 9 du menu</value>
   </data>
   <data name="ShortcutHelp" xml:space="preserve">
     <value>Afficher les raccourcis clavier</value>
   </data>
+  <data name="ShortcutNext" xml:space="preserve">
+    <value>Élément suivant de la séance, ou le passer</value>
+  </data>
   <data name="ShortcutSearch" xml:space="preserve">
     <value>Rechercher une commande ou une vue</value>
+  </data>
+  <data name="ShortcutValidate" xml:space="preserve">
+    <value>Valider la révision</value>
   </data>
   <data name="ShortcutZoomIn" xml:space="preserve">
     <value>Agrandir l'interface</value>

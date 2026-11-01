@@ -142,11 +142,25 @@
       <RowDefinition Height="Auto" />
     </Grid.RowDefinitions>
 
-    <StackPanel>
-      <TextBlock x:Name="Heading" Text="{x:Static pages:DashboardText.Today}" Style="{DynamicResource Kyf.Text.Title}"
-                 AutomationProperties.HeadingLevel="Level1" />
-      <TextBlock x:Name="Subtitle" Text="{Binding Subtitle}" Style="{DynamicResource Kyf.Text.Secondary}" Margin="0,4,0,0" />
-    </StackPanel>
+    <DockPanel>
+      <!-- La séance : la reprendre, ou la commencer sur la liste du jour. -->
+      <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+        <Button x:Name="ResumeButton" Content="{Binding ResumeLabel}" Command="{Binding ResumeCommand}" Margin="0,0,8,0"
+                Visibility="{Binding CanResume, Converter={StaticResource Visible}}" />
+        <Button x:Name="StartButton" Command="{Binding StartCommand}" Style="{DynamicResource Kyf.Button.Primary}"
+                Visibility="{Binding CanStart, Converter={StaticResource Visible}}" AutomationProperties.Name="{Binding StartLabel}">
+          <StackPanel Orientation="Horizontal">
+            <kyf:Icon Text="&#xE768;" Margin="0,0,8,0" />
+            <TextBlock Text="{Binding StartLabel}" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+      </StackPanel>
+      <StackPanel>
+        <TextBlock x:Name="Heading" Text="{x:Static pages:DashboardText.Today}" Style="{DynamicResource Kyf.Text.Title}"
+                   AutomationProperties.HeadingLevel="Level1" />
+        <TextBlock x:Name="Subtitle" Text="{Binding Subtitle}" Style="{DynamicResource Kyf.Text.Secondary}" Margin="0,4,0,0" />
+      </StackPanel>
+    </DockPanel>
 
     <WrapPanel Grid.Row="1" Margin="0,16,0,0">
       <TextBlock Text="{x:Static pages:DashboardText.Show}" Style="{DynamicResource Kyf.Text.Caption}" VerticalAlignment="Center" />
