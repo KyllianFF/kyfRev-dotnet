@@ -336,7 +336,7 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
         var outcome = await Task.Run(() => _sheets.Open(sheet.Sheet.Id)).ConfigureAwait(true);
         if (ticket == _previewTicket)
         {
-            Preview = outcome.Succeeded ? TodayPreview.Of(sheet, outcome.Value) : TodayPreview.Failed(sheet, outcome.Error);
+            Preview = outcome.Succeeded ? TodayPreview.Of(sheet, outcome.Value, _sheets) : TodayPreview.Failed(sheet, outcome.Error);
         }
     }
 

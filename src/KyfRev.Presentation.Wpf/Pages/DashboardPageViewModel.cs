@@ -437,7 +437,7 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
         var outcome = await Task.Run(() => _sheets.Open(sheet)).ConfigureAwait(true);
         if (ticket == _previewTicket)
         {
-            Preview = outcome.Succeeded ? TodayPreview.Of(row!, outcome.Value) : TodayPreview.Failed(row!, outcome.Error);
+            Preview = outcome.Succeeded ? TodayPreview.Of(row!, outcome.Value, _sheets) : TodayPreview.Failed(row!, outcome.Error);
         }
     }
 

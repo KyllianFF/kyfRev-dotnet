@@ -172,6 +172,14 @@ internal sealed class RunningApplication : IDisposable
     /// <summary>La position du bouton « Retour » à l'écran : une fiche défilée ne doit pas l'emporter.</summary>
     public int BackPosition() => Wait("BackButton").BoundingRectangle.Top;
 
+    /// <summary>Le texte de la fiche, tel que le lit un lecteur d'écran.</summary>
+    public string SheetText() => Retry.WhileEmpty(
+        () => Wait("SheetText").FindAllDescendants().Append(Wait("SheetText")).FirstOrDefault(element => element.Patterns.Text.IsSupported)?.Patterns.Text.Pattern.DocumentRange.GetText(-1) ?? string.Empty,
+        Patience,
+        Interval,
+        throwOnTimeout: true,
+        timeoutMessage: "Le texte de la fiche ne se lit pas.").Result!;
+
     /// <summary>Ouvre une vue du menu, comme d'un clic sur son entrée, et attend son titre.</summary>
     public void OpenView(string name)
     {

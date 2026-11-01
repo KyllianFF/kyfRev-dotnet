@@ -25,6 +25,9 @@ public sealed partial class SheetUseCases(VaultHost host, TimeProvider time, ILo
         });
     }
 
+    /// <summary>Contenu d'une image d'une fiche, pour l'afficher ; seul le dossier des fiches est lisible.</summary>
+    public Outcome<byte[]> ReadResource(string path) => host.Use(vault => vault.ReadResource(path));
+
     /// <summary>Toutes les fiches, par dossier puis par titre.</summary>
     [ZeroXCommand("liste_des_fiches")]
     public Outcome<IReadOnlyList<VaultSheet>> List() => host.Use(vault => vault.SheetList());

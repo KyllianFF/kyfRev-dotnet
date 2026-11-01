@@ -273,6 +273,24 @@ public sealed class Scenarios
     }
 
     [TestMethod]
+    public void A_sheet_reads_as_a_document_and_no_longer_as_markdown()
+    {
+        using var trial = new Trial();
+        var created = new DateOnly(2026, 10, 9);
+        trial.On(created, app => NewSheet(app, Title, "# " + Title + "\n\n## Les causes\n\nLe **tiers état** et *rien* d'autre.\n\n- un\n- deux\n"));
+
+        using var running = trial.Launch(created.AddDays(1));
+        running.Open(Today, Title);
+        var text = running.SheetText();
+
+        Assert.Contains("Les causes", text);
+        Assert.Contains("Le tiers état et rien d'autre.", text);
+        Assert.DoesNotContain("**", text);
+        Assert.DoesNotContain("## ", text);
+        Assert.AreEqual(text.IndexOf(Title, StringComparison.Ordinal), text.LastIndexOf(Title, StringComparison.Ordinal), "Le titre répété n'est montré qu'une fois.");
+    }
+
+    [TestMethod]
     public void T9_reading_a_sheet_changes_nothing()
     {
         using var trial = new Trial();

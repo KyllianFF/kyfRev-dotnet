@@ -11,6 +11,36 @@ public sealed class VaultSessionTests
     private static readonly Moment Now = new(new DateOnly(2026, 9, 1), new DateTimeOffset(2026, 9, 1, 12, 0, 0, TimeSpan.Zero));
 
     [TestMethod]
+    public void A_resource_of_a_sheet_is_read_and_nothing_else_is()
+    {
+        using var folder = TemporaryVault.Empty();
+        using var vault = VaultSession.Initialize(folder.Root, Now);
+        var id = vault.CreateSheet(null, "Fiche", "Corps", Now);
+        var link = vault.AddResource(id, "carte.png", [1, 2, 3]);
+        var path = $"fiches/{link}";
+
+        CollectionAssert.AreEqual(new byte[] { 1, 2, 3 }, vault.ReadResource(path));
+        Assert.ThrowsExactly<VaultException>(() => vault.ReadResource(".suivi/coffre.json"));
+        Assert.ThrowsExactly<VaultException>(() => vault.ReadResource("fiches/Fiche.md"));
+        Assert.ThrowsExactly<VaultException>(() => vault.ReadResource("fiches/FICHE.MD"));
+        Assert.ThrowsExactly<VaultException>(() => vault.ReadResource("../hors.png"));
+        Assert.ThrowsExactly<VaultException>(() => vault.ReadResource("fiches/absente.png"));
+    }
+
+    [TestMethod]
+    public void A_resource_too_big_to_show_is_refused()
+    {
+        using var folder = TemporaryVault.Empty();
+        using var vault = VaultSession.Initialize(folder.Root, Now);
+        using (var big = File.Create(Path.Combine(folder.Root, "fiches", "grande.png")))
+        {
+            big.SetLength(VaultSession.MaxResourceBytes + 1);
+        }
+
+        Assert.ThrowsExactly<VaultException>(() => vault.ReadResource("fiches/grande.png"));
+    }
+
+    [TestMethod]
     public void A_new_vault_needs_an_empty_folder()
     {
         using var folder = TemporaryVault.Empty();

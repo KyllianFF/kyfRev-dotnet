@@ -9,7 +9,13 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
-- Moteur de rendu des fiches (`KyfRev.Rendering`), sans effet visible pour l'instant : il transforme le
+- Lecture native d'une fiche : le Markdown s'affiche enfin mis en forme, dans la fiche et dans son aperçu,
+  avec ses titres, listes, citations, tableaux, formules, notes, liens et images du coffre. La fiche se
+  lit en trois volets : son plan, son texte et ses passages. Quand la fenêtre rétrécit, le plan puis les
+  passages se replient et s'ouvrent à la demande par-dessus le texte, avec les mêmes boutons. Un lien
+  mène à une autre fiche ou au navigateur du système, sans jamais charger quoi que ce soit du web. Une
+  fiche de 20 000 mots paraît aussitôt : son début d'abord, la suite juste après.
+- Moteur de rendu des fiches (`KyfRev.Rendering`) : il transforme le
   Markdown en un arbre de contenu, en tire le texte affiché et y retrouve les passages. Il reproduit à
   l'identique le texte, les positions et le ré-ancrage de la version 0.x sur les 230 documents et les
   116 modifications du corpus d'ancrage, et sur 1 149 cas limites calculés par la 0.x elle-même.

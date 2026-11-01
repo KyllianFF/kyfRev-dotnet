@@ -1,0 +1,713 @@
+using System.IO;
+using System.Windows;
+using System.Windows.Automation;
+using System.Windows.Controls;
+using System.Windows.Documents;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Threading;
+using KyfRev.Presentation.Wpf.Pages;
+using KyfRev.Rendering;
+using WpfMath.Controls;
+using WpfMath.Parsers;
+using XamlMath.Exceptions;
+using LinkTarget = KyfRev.Rendering.LinkTarget;
+using Typography = KyfRev.DesignSystem.Tokens.Typography;
+
+namespace KyfRev.Presentation.Wpf.Reading;
+
+/// <summary>
+/// Tire un document natif du contenu d'une fiche. Le texte de chaque nœud reste dans son propre morceau,
+/// de la même longueur : c'est ce qui permet de passer d'une position du texte affiché à l'écran. Le
+/// contenu n'exécute jamais rien : ni HTML, ni script, et un lien ne navigue que par l'action reçue.
+/// Un document natif calcule toute sa mise en page d'un coup : le début de la fiche paraît donc tout de
+/// suite, et la suite s'ajoute juste après, entre deux gestes de l'utilisateur, quelle que soit sa longueur.
+/// </summary>
+internal sealed class DocumentBuilder
+{
+    /// <summary>
+    /// Au-delà, les blocs et le texte en ligne ne s'imbriquent plus : le contenu reste entier, et une fiche
+    /// piégée ne peut pas épuiser la mise en page.
+    /// </summary>
+    private const int MaxBlockDepth = 12;
+
+    private const int MaxInlineDepth = 24;
+
+    private const double ImageMaxHeight = 560;
+
+    private const int ImageMaxPixels = 2400;
+
+    /// <summary>Ce qui paraît au premier affichage, en caractères : plusieurs écrans.</summary>
+    private const int FirstCharacters = 12000;
+
+    private const int CharactersPerTurn = 6000;
+
+    /// <summary>Un bloc coûte plus que son texte.</summary>
+    private const int ElementWeight = 40;
+
+    /// <summary>Les formules dessinées avant le premier affichage ; les suivantes le sont juste après, peu à peu.</summary>
+    private const int FormulasAtOnce = 6;
+
+    private const int FormulasPerTurn = 8;
+
+    private const string Text = "Kyf.Brush.Text";
+    private const string TextSecondary = "Kyf.Brush.TextSecondary";
+    private const string SurfaceAlt = "Kyf.Brush.SurfaceAlt";
+    private const string Divider = "Kyf.Brush.Divider";
+    private const string LinkBrush = "Kyf.Brush.Link";
+    private const string CodeFont = "Kyf.Font.Code";
+    private const string DisplayFont = "Kyf.Font.Display";
+    private const string UiFont = "Kyf.Font.Ui";
+
+    private static readonly double ReadingSize = Typography.BodyLarge.Size;
+
+    private readonly SheetReading _reading;
+    private readonly Action<LinkTarget> _follow;
+    private readonly bool _opensLinks;
+    private readonly bool _showsHeader;
+    private readonly List<Task> _images = [];
+    private readonly Queue<(Decorator Slot, string Source, double Size)> _pendingFormulas = new();
+    private FlowDocument? _document;
+    private Paragraph? _openRootParagraph;
+    private int _nextRootChild;
+    private int _formulas;
+    private bool _isScheduled;
+    private bool _isCancelled;
+    private bool _afterBreak;
+
+    public DocumentBuilder(SheetReading reading, Action<LinkTarget> follow, bool opensLinks, bool showsHeader)
+    {
+        _reading = reading;
+        _follow = follow;
+        _opensLinks = opensLinks;
+        _showsHeader = showsHeader;
+    }
+
+    /// <summary>Le paragraphe de chaque titre.</summary>
+    public Dictionary<RenderElement, Paragraph> Headings { get; } = [];
+
+    /// <summary>L'endroit de chaque identifiant (notes et renvois).</summary>
+    public Dictionary<string, TextElement> Identified { get; } = new(StringComparer.Ordinal);
+
+    /// <summary>Le morceau de chaque nœud de texte affiché.</summary>
+    public Dictionary<RenderText, Run> Runs { get; } = [];
+
+    /// <summary>Il reste du contenu à ajouter ou des formules à dessiner.</summary>
+    public bool HasPendingWork => HasPendingContent || _pendingFormulas.Count > 0;
+
+    /// <summary>Se termine quand les images demandées sont chargées.</summary>
+    public Task Images => Task.WhenAll(_images);
+
+    private bool HasPendingContent => _nextRootChild < _reading.Root.Children.Count;
+
+    public FlowDocument Build()
+    {
+        var document = new FlowDocument
+        {
+            PagePadding = new Thickness(0, 4, 0, 24),
+            TextAlignment = TextAlignment.Left,
+            IsHyphenationEnabled = false,
+            IsOptimalParagraphEnabled = false,
+            FontSize = ReadingSize,
+            LineHeight = ReadingSize * Typography.ReadingLineSpacing,
+            LineStackingStrategy = LineStackingStrategy.MaxHeight,
+        };
+        document.SetResourceReference(TextElement.ForegroundProperty, Text);
+        document.SetResourceReference(TextElement.FontFamilyProperty, UiFont);
+        if (_showsHeader)
+        {
+            AddHeader(document.Blocks);
+        }
+        _document = document;
+        AppendContent(FirstCharacters);
+        ScheduleNextTurn();
+        return document;
+    }
+
+    /// <summary>Ajoute tout de suite ce qui reste du contenu : il faut aller quelque part dans la suite.</summary>
+    public void Complete() => AppendContent(int.MaxValue);
+
+    /// <summary>Ce document n'est plus montré : plus rien ne s'y ajoute.</summary>
+    public void Cancel() => _isCancelled = true;
+
+    private static bool IsBlock(RenderElement element) => element.Tag is "p" or "h1" or "h2" or "h3" or "h4" or "h5" or "h6"
+        or "ul" or "ol" or "blockquote" or "pre" or "table" or "hr" or "section" or "div";
+
+    private static bool IsBlank(string text) => string.IsNullOrWhiteSpace(text);
+
+    private static int Weight(RenderNode node) => node is RenderText text
+        ? text.Value.Length
+        : ElementWeight + ((RenderElement)node).Children.Sum(Weight);
+
+    private static double HeadingSize(int level) => level switch
+    {
+        1 => 28,
+        2 => Typography.Subtitle.Size + 2,
+        3 => Typography.Subtitle.Size - 2,
+        _ => ReadingSize,
+    };
+
+    /// <summary>Lit une image sans le fil de l'interface, en plafonnant sa taille en mémoire.</summary>
+    private static BitmapImage Decode(byte[] content)
+    {
+        using var probe = new MemoryStream(content);
+        var width = BitmapDecoder.Create(probe, BitmapCreateOptions.None, BitmapCacheOption.None).Frames[0].PixelWidth;
+        var bitmap = new BitmapImage();
+        bitmap.BeginInit();
+        bitmap.CacheOption = BitmapCacheOption.OnLoad;
+        bitmap.StreamSource = new MemoryStream(content);
+        if (width > ImageMaxPixels)
+        {
+            bitmap.DecodePixelWidth = ImageMaxPixels;
+        }
+        bitmap.EndInit();
+        bitmap.Freeze();
+        return bitmap;
+    }
+
+    private static byte[]? EmbeddedContent(string data)
+    {
+        const string marker = ";base64,";
+        var start = data.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+        if (start < 0)
+        {
+            return null;
+        }
+        var buffer = new byte[data.Length];
+        return Convert.TryFromBase64String(data[(start + marker.Length)..], buffer, out var written) ? buffer[..written] : null;
+    }
+
+    private static Paragraph NewParagraph() => new() { Margin = new Thickness(0, 0, 0, 12) };
+
+    private void AddHeader(BlockCollection blocks)
+    {
+        if (_reading.Details.Length > 0)
+        {
+            var details = new Paragraph(new Run(_reading.Details)) { Margin = new Thickness(0, 0, 0, 4), FontSize = Typography.Caption.Size };
+            details.SetResourceReference(TextElement.ForegroundProperty, TextSecondary);
+            blocks.Add(details);
+        }
+        var title = new Paragraph(new Run(_reading.Title))
+        {
+            Margin = new Thickness(0, 0, 0, 16),
+            FontSize = Typography.Title.Size,
+            FontWeight = FontWeights.SemiBold,
+            LineHeight = Typography.Title.LineHeight,
+        };
+        title.SetResourceReference(TextElement.FontFamilyProperty, DisplayFont);
+        AutomationProperties.SetHeadingLevel(title, AutomationHeadingLevel.Level1);
+        blocks.Add(title);
+    }
+
+    private void AppendContent(int characters)
+    {
+        var children = _reading.Root.Children;
+        var added = 0;
+        while (added < characters && _nextRootChild < children.Count)
+        {
+            var child = children[_nextRootChild++];
+            AddChild(child, _document!.Blocks, 0, ref _openRootParagraph);
+            added += Weight(child);
+        }
+    }
+
+    private void ScheduleNextTurn()
+    {
+        if (!_isScheduled && !_isCancelled && HasPendingWork)
+        {
+            _isScheduled = true;
+            _document!.Dispatcher.BeginInvoke(DispatcherPriority.Background, NextTurn);
+        }
+    }
+
+    private void NextTurn()
+    {
+        _isScheduled = false;
+        if (_isCancelled)
+        {
+            return;
+        }
+        if (HasPendingContent)
+        {
+            AppendContent(CharactersPerTurn);
+        }
+        else
+        {
+            DrawPendingFormulas();
+        }
+        ScheduleNextTurn();
+    }
+
+    /// <summary>Le contenu d'un conteneur : ses blocs, et un paragraphe pour le texte qui n'est dans aucun.</summary>
+    private void AddBlocks(RenderElement parent, BlockCollection blocks, int depth)
+    {
+        Paragraph? open = null;
+        foreach (var child in parent.Children)
+        {
+            AddChild(child, blocks, depth, ref open);
+        }
+    }
+
+    private void AddChild(RenderNode child, BlockCollection blocks, int depth, ref Paragraph? open)
+    {
+        if (child is RenderElement element && IsBlock(element))
+        {
+            open = null;
+            AddBlock(element, blocks, depth);
+        }
+        else if (open is not null || child is not RenderText text || !IsBlank(text.Value))
+        {
+            if (open is null)
+            {
+                open = NewParagraph();
+                open.Margin = new Thickness(0, 0, 0, 4);
+                blocks.Add(open);
+            }
+            AddInline(child, open.Inlines, 0, false);
+        }
+    }
+
+    private void AddBlock(RenderElement element, BlockCollection blocks, int depth)
+    {
+        switch (element.Tag)
+        {
+            case "p":
+                var paragraph = NewParagraph();
+                AddInlines(element, paragraph.Inlines, 0, false);
+                blocks.Add(paragraph);
+                break;
+            case "ul" or "ol":
+                AddList(element, blocks, depth);
+                break;
+            case "blockquote":
+                AddQuote(element, blocks, depth);
+                break;
+            case "pre":
+                AddCode(element, blocks);
+                break;
+            case "table":
+                blocks.Add(BuildTable(element));
+                break;
+            case "hr":
+                blocks.Add(BuildRule());
+                break;
+            case "section":
+                var notes = new Section { FontSize = Typography.Body.Size };
+                AddBlocks(element, notes.Blocks, depth + 1);
+                blocks.Add(notes);
+                break;
+            case "div":
+                blocks.Add(BuildFormulaBlock(element));
+                break;
+            default:
+                AddHeading(element, blocks);
+                break;
+        }
+    }
+
+    private void AddHeading(RenderElement element, BlockCollection blocks)
+    {
+        // Le titre de la page le dit déjà ; il reste compté dans le texte affiché.
+        if (element.IsRepeatedTitle)
+        {
+            return;
+        }
+        var level = element.HeadingLevel;
+        var size = HeadingSize(level);
+        var heading = new Paragraph
+        {
+            Margin = new Thickness(0, level <= 2 ? 24 : 16, 0, 8),
+            FontSize = size,
+            FontWeight = FontWeights.SemiBold,
+            LineHeight = size * 1.3,
+            KeepWithNext = true,
+        };
+        heading.SetResourceReference(TextElement.FontFamilyProperty, DisplayFont);
+        AutomationProperties.SetHeadingLevel(heading, level switch
+        {
+            1 => AutomationHeadingLevel.Level2,
+            2 => AutomationHeadingLevel.Level3,
+            3 => AutomationHeadingLevel.Level4,
+            4 => AutomationHeadingLevel.Level5,
+            5 => AutomationHeadingLevel.Level6,
+            _ => AutomationHeadingLevel.Level7,
+        });
+        AddInlines(element, heading.Inlines, 0, false);
+        Headings[element] = heading;
+        blocks.Add(heading);
+    }
+
+    private void AddList(RenderElement element, BlockCollection blocks, int depth)
+    {
+        var items = element.Children.OfType<RenderElement>().Where(child => child.Tag == "li");
+        if (depth >= MaxBlockDepth)
+        {
+            foreach (var item in items)
+            {
+                AddBlocks(item, blocks, depth);
+            }
+            return;
+        }
+        var list = new List
+        {
+            MarkerStyle = element.Tag == "ol" ? TextMarkerStyle.Decimal : TextMarkerStyle.Disc,
+            Margin = new Thickness(0, 0, 0, 12),
+            Padding = new Thickness(24, 0, 0, 0),
+        };
+        if (element.ListStart is { } start)
+        {
+            list.StartIndex = Math.Max(start, 1);
+        }
+        foreach (var item in items)
+        {
+            var entry = new ListItem();
+            AddBlocks(item, entry.Blocks, depth + 1);
+            if (entry.Blocks.Count == 0)
+            {
+                entry.Blocks.Add(new Paragraph { Margin = default });
+            }
+            if (item.Identifier is { } identifier)
+            {
+                Identified[identifier] = entry;
+            }
+            list.ListItems.Add(entry);
+        }
+        blocks.Add(list);
+    }
+
+    private void AddQuote(RenderElement element, BlockCollection blocks, int depth)
+    {
+        if (depth >= MaxBlockDepth)
+        {
+            AddBlocks(element, blocks, depth);
+            return;
+        }
+        var quote = new Section
+        {
+            Margin = new Thickness(0, 0, 0, 12),
+            Padding = new Thickness(16, 0, 0, 0),
+            BorderThickness = new Thickness(3, 0, 0, 0),
+        };
+        quote.SetResourceReference(Block.BorderBrushProperty, Divider);
+        quote.SetResourceReference(TextElement.ForegroundProperty, TextSecondary);
+        AddBlocks(element, quote.Blocks, depth + 1);
+        blocks.Add(quote);
+    }
+
+    private void AddCode(RenderElement element, BlockCollection blocks)
+    {
+        var code = element.Children.OfType<RenderElement>().First();
+        var value = code.Children.OfType<RenderText>().FirstOrDefault();
+        var text = value?.Value.TrimEnd('\n') ?? string.Empty;
+        if (code.Language is "mermaid" or "reseau")
+        {
+            var note = new Paragraph(new Run(ReadingText.DiagramAsText)) { Margin = new Thickness(0, 0, 0, 4), FontSize = Typography.Caption.Size };
+            note.SetResourceReference(TextElement.ForegroundProperty, TextSecondary);
+            blocks.Add(note);
+        }
+        var run = new Run(text);
+        if (value is not null)
+        {
+            Runs[value] = run;
+        }
+        var block = new Paragraph(run)
+        {
+            Margin = new Thickness(0, 0, 0, 12),
+            Padding = new Thickness(12, 8, 12, 8),
+            FontSize = Typography.Body.Size,
+            LineHeight = Typography.Body.LineHeight,
+            LineStackingStrategy = LineStackingStrategy.BlockLineHeight,
+        };
+        block.SetResourceReference(TextElement.FontFamilyProperty, CodeFont);
+        block.SetResourceReference(TextElement.BackgroundProperty, SurfaceAlt);
+        blocks.Add(block);
+    }
+
+    private Table BuildTable(RenderElement element)
+    {
+        var table = new Table { CellSpacing = 0, Margin = new Thickness(0, 0, 0, 12), BorderThickness = new Thickness(1, 1, 0, 0) };
+        table.SetResourceReference(Block.BorderBrushProperty, Divider);
+        var groups = element.Children.OfType<RenderElement>().ToList();
+        var columns = groups.SelectMany(group => group.Children.OfType<RenderElement>()).Max(row => row.Children.OfType<RenderElement>().Count());
+        for (var i = 0; i < columns; i++)
+        {
+            table.Columns.Add(new TableColumn());
+        }
+        foreach (var group in groups)
+        {
+            var rows = new TableRowGroup();
+            foreach (var row in group.Children.OfType<RenderElement>())
+            {
+                var line = new TableRow();
+                foreach (var cell in row.Children.OfType<RenderElement>())
+                {
+                    line.Cells.Add(BuildCell(cell));
+                }
+                rows.Rows.Add(line);
+            }
+            table.RowGroups.Add(rows);
+        }
+        return table;
+    }
+
+    private TableCell BuildCell(RenderElement cell)
+    {
+        var paragraph = new Paragraph
+        {
+            Margin = default,
+            TextAlignment = cell.Alignment switch
+            {
+                "center" => TextAlignment.Center,
+                "right" => TextAlignment.Right,
+                _ => TextAlignment.Left,
+            },
+        };
+        AddInlines(cell, paragraph.Inlines, 0, false);
+        var result = new TableCell(paragraph) { Padding = new Thickness(8, 4, 8, 4), BorderThickness = new Thickness(0, 0, 1, 1) };
+        result.SetResourceReference(TableCell.BorderBrushProperty, Divider);
+        if (cell.Tag == "th")
+        {
+            result.FontWeight = FontWeights.SemiBold;
+            result.SetResourceReference(TextElement.BackgroundProperty, SurfaceAlt);
+        }
+        return result;
+    }
+
+    private static Paragraph BuildRule()
+    {
+        var rule = new Paragraph { Margin = new Thickness(0, 12, 0, 16), BorderThickness = new Thickness(0, 0, 0, 1), FontSize = 1, LineHeight = 1, LineStackingStrategy = LineStackingStrategy.BlockLineHeight };
+        rule.SetResourceReference(Block.BorderBrushProperty, Divider);
+        return rule;
+    }
+
+    private BlockUIContainer BuildFormulaBlock(RenderElement element)
+    {
+        var slot = new Decorator { HorizontalAlignment = HorizontalAlignment.Center };
+        PlaceFormula(slot, element.Formula!, ReadingSize * 1.2, block: true);
+        return new BlockUIContainer(slot) { Margin = new Thickness(0, 4, 0, 16) };
+    }
+
+    private void PlaceFormula(Decorator slot, string source, double size, bool block)
+    {
+        if (_formulas++ < FormulasAtOnce)
+        {
+            slot.Child = FormulaOrText(source, size, block);
+        }
+        else
+        {
+            slot.Child = FormulaAsText(source, block);
+            _pendingFormulas.Enqueue((slot, source, block ? size : -size));
+        }
+    }
+
+    private void DrawPendingFormulas()
+    {
+        for (var i = 0; i < FormulasPerTurn && _pendingFormulas.TryDequeue(out var formula); i++)
+        {
+            formula.Slot.Child = FormulaOrText(formula.Source, Math.Abs(formula.Size), formula.Size > 0);
+        }
+    }
+
+    /// <summary>Une formule dessinée ; une large se réduit plutôt que de faire défiler la page. Inconnue, elle reste lisible.</summary>
+    private static UIElement FormulaOrText(string source, double size, bool block)
+    {
+        // Deux écritures de KaTeX que ce moteur ne connaît pas, et qui se lisent très bien comme une fraction.
+        var drawn = source.Replace("\\tfrac", "\\frac", StringComparison.Ordinal).Replace("\\dfrac", "\\frac", StringComparison.Ordinal);
+        try
+        {
+            WpfTeXFormulaParser.Instance.Parse(drawn);
+        }
+        catch (TexException)
+        {
+            return FormulaAsText(source, block);
+        }
+        var control = new FormulaControl { Formula = drawn, Scale = size, SnapsToDevicePixels = true };
+        control.SetResourceReference(Control.ForegroundProperty, Text);
+        AutomationProperties.SetName(control, source);
+        return block ? new Viewbox { StretchDirection = StretchDirection.DownOnly, Child = control } : control;
+    }
+
+    private static TextBlock FormulaAsText(string source, bool block)
+    {
+        var text = new TextBlock { Text = block ? $"$${source}$$" : $"${source}$", TextWrapping = TextWrapping.Wrap, ToolTip = ReadingText.FormulaAsText };
+        text.SetResourceReference(TextElement.FontFamilyProperty, CodeFont);
+        return text;
+    }
+
+    private void AddInlines(RenderElement parent, InlineCollection inlines, int depth, bool inLink)
+    {
+        foreach (var child in parent.Children)
+        {
+            AddInline(child, inlines, depth, inLink);
+        }
+    }
+
+    private void AddInline(RenderNode node, InlineCollection inlines, int depth, bool inLink)
+    {
+        if (node is RenderText text)
+        {
+            AddText(text, inlines);
+            return;
+        }
+        var element = (RenderElement)node;
+        switch (element.Tag)
+        {
+            case "br":
+                inlines.Add(new LineBreak());
+                _afterBreak = true;
+                break;
+            case "span" when element.Formula is { } formula:
+                AddFormula(formula, inlines);
+                break;
+            case "img":
+                inlines.Add(BuildImage(element));
+                break;
+            case "a" when depth < MaxInlineDepth:
+                AddLink(element, inlines, depth, inLink);
+                break;
+            case "code" when depth < MaxInlineDepth:
+                var code = new Span { FontSize = ReadingSize * 0.92 };
+                code.SetResourceReference(TextElement.FontFamilyProperty, CodeFont);
+                code.SetResourceReference(TextElement.BackgroundProperty, SurfaceAlt);
+                AddSpan(element, code, inlines, depth, inLink);
+                break;
+            case "em" when depth < MaxInlineDepth:
+                AddSpan(element, new Italic(), inlines, depth, inLink);
+                break;
+            case "strong" when depth < MaxInlineDepth:
+                AddSpan(element, new Bold(), inlines, depth, inLink);
+                break;
+            case "u" when depth < MaxInlineDepth:
+                AddSpan(element, new Underline(), inlines, depth, inLink);
+                break;
+            case "s" when depth < MaxInlineDepth:
+                AddSpan(element, new Span { TextDecorations = TextDecorations.Strikethrough }, inlines, depth, inLink);
+                break;
+            case "sup" when depth < MaxInlineDepth:
+                AddSpan(element, new Span { BaselineAlignment = BaselineAlignment.Superscript, FontSize = ReadingSize * 0.75 }, inlines, depth, inLink);
+                break;
+            case "sub" when depth < MaxInlineDepth:
+                AddSpan(element, new Span { BaselineAlignment = BaselineAlignment.Subscript, FontSize = ReadingSize * 0.75 }, inlines, depth, inLink);
+                break;
+            default:
+                AddInlines(element, inlines, depth, inLink);
+                break;
+        }
+    }
+
+    private void AddSpan(RenderElement element, Span span, InlineCollection inlines, int depth, bool inLink)
+    {
+        AddInlines(element, span.Inlines, depth + 1, inLink);
+        inlines.Add(span);
+    }
+
+    private void AddText(RenderText text, InlineCollection inlines)
+    {
+        // Un saut de ligne simple se lit comme une espace ; celui qui suit un saut dur est déjà à l'écran.
+        var value = text.Value.Replace('\n', ' ');
+        if (_afterBreak && value.StartsWith(' '))
+        {
+            value = value[1..];
+        }
+        _afterBreak = false;
+        var run = new Run(value);
+        Runs[text] = run;
+        inlines.Add(run);
+    }
+
+    private void AddFormula(string source, InlineCollection inlines)
+    {
+        var slot = new Decorator();
+        PlaceFormula(slot, source, ReadingSize, block: false);
+        inlines.Add(new InlineUIContainer(slot) { BaselineAlignment = BaselineAlignment.Center });
+    }
+
+    private void AddLink(RenderElement element, InlineCollection inlines, int depth, bool inLink)
+    {
+        var target = ContentTargets.OfLink(element.Target ?? string.Empty, _reading.Folder);
+        Span link;
+        if (inLink || target is BrokenLink || (!_opensLinks && target is not PageAnchor))
+        {
+            link = new Span();
+            if (target is BrokenLink)
+            {
+                link.ToolTip = ReadingText.BrokenLink;
+                link.TextDecorations = TextDecorations.Underline;
+            }
+        }
+        else
+        {
+            // Un clic plutôt qu'une commande : une commande s'abonne pour chaque lien, ce qui se sent sur une longue fiche.
+            var hyperlink = new Hyperlink { ToolTip = target is ExternalLink external ? external.Address : null, Tag = target };
+            hyperlink.Click += (_, _) => _follow(target);
+            hyperlink.SetResourceReference(TextElement.ForegroundProperty, LinkBrush);
+            link = hyperlink;
+            inLink = true;
+        }
+        if (element.Identifier is { } identifier)
+        {
+            Identified[identifier] = link;
+        }
+        AddSpan(element, link, inlines, depth, inLink);
+    }
+
+    private Inline BuildImage(RenderElement element)
+    {
+        var target = ContentTargets.OfImage(element.Target ?? string.Empty, _reading.Folder);
+        if (target is BlockedImage blocked)
+        {
+            return BuildNotice(ReadingText.Blocked(blocked));
+        }
+        if (target is VaultImage { Path: var path } && path.EndsWith(".svg", StringComparison.OrdinalIgnoreCase))
+        {
+            return BuildNotice($"{ReadingText.SvgLater} : {path[(path.LastIndexOf('/') + 1)..]}");
+        }
+        var image = new Image { Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly, MaxHeight = ImageMaxHeight };
+        AutomationProperties.SetName(image, element.AlternativeText ?? string.Empty);
+        var container = new InlineUIContainer(image) { BaselineAlignment = BaselineAlignment.Center };
+        _images.Add(LoadImageAsync(container, image, target));
+        return container;
+    }
+
+    private static Span BuildNotice(string message)
+    {
+        var notice = new Span(new Run(message)) { FontSize = Typography.Caption.Size };
+        notice.SetResourceReference(TextElement.BackgroundProperty, SurfaceAlt);
+        notice.SetResourceReference(TextElement.ForegroundProperty, TextSecondary);
+        return notice;
+    }
+
+    private async Task LoadImageAsync(InlineUIContainer container, Image image, ImageTarget target)
+    {
+        var bitmap = await Task.Run(() => ReadBitmap(target)).ConfigureAwait(true);
+        if (bitmap is not null)
+        {
+            image.Source = bitmap;
+        }
+        else
+        {
+            var notice = new TextBlock { Text = ReadingText.UnreadableImage, FontSize = Typography.Caption.Size };
+            notice.SetResourceReference(TextBlock.ForegroundProperty, TextSecondary);
+            container.Child = notice;
+        }
+    }
+
+    private BitmapImage? ReadBitmap(ImageTarget target)
+    {
+        var content = target is VaultImage vault
+            ? _reading.ReadImage(vault.Path) is { Succeeded: true } outcome ? outcome.Value : null
+            : EmbeddedContent(((EmbeddedImage)target).Data);
+        if (content is null)
+        {
+            return null;
+        }
+        try
+        {
+            return Decode(content);
+        }
+        catch (Exception problem) when (problem is NotSupportedException or FileFormatException or ArgumentException or InvalidOperationException or IOException or OverflowException)
+        {
+            return null;
+        }
+    }
+}

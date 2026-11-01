@@ -68,6 +68,9 @@ public sealed class RenderElement : RenderNode
     /// <summary>Ce titre répète celui de la fiche : masqué, mais gardé dans le texte, où les ancres s'y réfèrent.</summary>
     public bool IsRepeatedTitle { get; internal set; }
 
+    /// <summary>Le niveau d'un titre, de 1 à 6 ; 0 pour un autre élément.</summary>
+    public int HeadingLevel => Tag is ['h', >= '1' and <= '6'] ? Tag[1] - '0' : 0;
+
     /// <summary>Nombre d'éléments au-dessus de celui-ci.</summary>
     internal int Depth { get; set; }
 
@@ -84,7 +87,7 @@ public sealed class RenderElement : RenderNode
     }
 
     /// <summary>Le texte de l'élément et de tout ce qu'il contient ; une formule compte pour sa source.</summary>
-    internal string TextContent()
+    public string TextContent()
     {
         if (Formula is not null)
         {

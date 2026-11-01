@@ -42,10 +42,11 @@ public sealed class ReviewNavigation : IReviewOpener
     private readonly TimeProvider _time;
     private readonly VaultUseCases _vaults;
     private readonly IStudySessionStore _sessions;
+    private readonly IExternalLinks _links;
     private ShellViewModel? _shell;
 
     /// <summary>La navigation, sur les cas d'usage des fiches, des révisions et des rappels, et la séance gardée sur ce poste.</summary>
-    public ReviewNavigation(SheetUseCases sheets, ReviewUseCases reviews, ReminderUseCases reminders, VaultUseCases vaults, IStudySessionStore sessions, TimeProvider time)
+    public ReviewNavigation(SheetUseCases sheets, ReviewUseCases reviews, ReminderUseCases reminders, VaultUseCases vaults, IStudySessionStore sessions, TimeProvider time, IExternalLinks links)
     {
         ArgumentNullException.ThrowIfNull(sheets);
         ArgumentNullException.ThrowIfNull(reviews);
@@ -53,6 +54,8 @@ public sealed class ReviewNavigation : IReviewOpener
         ArgumentNullException.ThrowIfNull(vaults);
         ArgumentNullException.ThrowIfNull(sessions);
         ArgumentNullException.ThrowIfNull(time);
+        ArgumentNullException.ThrowIfNull(links);
+        _links = links;
         _sheets = sheets;
         _reviews = reviews;
         _reminders = reminders;
@@ -99,7 +102,7 @@ public sealed class ReviewNavigation : IReviewOpener
     {
         var shell = Shell;
         var from = shell.Current;
-        var page = new SheetPageViewModel(_sheets, Bar, sheetId, () => shell.Navigate(from));
+        var page = new SheetPageViewModel(_sheets, Bar, sheetId, () => shell.Navigate(from), OpenSheet, _links);
         shell.Navigate(new NavigationItem("fiche", ReviewText.SheetPage, Icons.Document, int.MaxValue, page));
         page.LoadCommand.Execute(null);
     }
@@ -159,7 +162,7 @@ public sealed class ReviewNavigation : IReviewOpener
     {
         if (item.Kind == ItemKind.Sheet)
         {
-            var sheet = new SheetPageViewModel(_sheets, Bar, item.Id, leave);
+            var sheet = new SheetPageViewModel(_sheets, Bar, item.Id, leave, OpenSheet, _links);
             sheet.LoadCommand.Execute(null);
             return sheet;
         }

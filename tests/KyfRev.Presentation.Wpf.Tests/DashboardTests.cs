@@ -418,7 +418,7 @@ public sealed class DashboardTests
         Assert.AreEqual("Mitose", preview.Title);
         Assert.AreEqual(sheetRow.Meta, preview.Meta);
         Assert.IsTrue(preview.HasBody);
-        Assert.AreEqual(app.Sheets.Open(mitosis).Value.Body, preview.Body);
+        Assert.AreEqual(app.Sheets.Open(mitosis).Value.Body.Trim(), preview.Reading!.Map.Text.Trim());
         Assert.IsFalse(preview.HasPrompt);
         Assert.IsFalse(preview.HasError);
         Assert.IsTrue(preview.HasSteps);

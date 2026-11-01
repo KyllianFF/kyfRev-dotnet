@@ -24,8 +24,6 @@ public sealed class TextMap
         "p", "h1", "h2", "h3", "h4", "h5", "h6", "ul", "ol", "li", "dl", "dt", "dd", "pre", "blockquote",
         "table", "thead", "tbody", "tr", "td", "th", "figure", "hr", "div", "section", "details", "summary");
 
-    private static readonly FrozenTags Headings = new("h1", "h2", "h3", "h4", "h5", "h6");
-
     private readonly RenderElement _root;
     private readonly List<TextPiece> _pieces = [];
     private readonly StringBuilder _text = new();
@@ -43,6 +41,9 @@ public sealed class TextMap
     /// <summary>Ses morceaux, dans l'ordre.</summary>
     public IReadOnlyList<TextPiece> Pieces => _pieces;
 
+    /// <summary>Les titres, dans l'ordre, sans le titre répété.</summary>
+    public IEnumerable<RenderElement> Headings => Descendants(_root).Where(element => element.HeadingLevel > 0 && !element.IsRepeatedTitle);
+
     /// <summary>Le texte affiché d'un contenu.</summary>
     public static TextMap Of(RenderElement root)
     {
@@ -54,14 +55,14 @@ public sealed class TextMap
     public ImmutableArray<string> SectionAt(int position)
     {
         var path = new List<(int Level, string Title)>();
-        foreach (var heading in Descendants(_root).Where(element => Headings.Contains(element.Tag) && !element.IsRepeatedTitle))
+        foreach (var heading in Headings)
         {
             var first = _pieces.Find(piece => IsWithin(piece.Node, heading));
             if (first is null || first.Start > position)
             {
                 break;
             }
-            var level = heading.Tag[1] - '0';
+            var level = heading.HeadingLevel;
             while (path.Count > 0 && path[^1].Level >= level)
             {
                 path.RemoveAt(path.Count - 1);

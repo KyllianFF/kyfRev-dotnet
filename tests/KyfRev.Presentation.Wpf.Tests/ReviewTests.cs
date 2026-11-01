@@ -280,9 +280,9 @@ public sealed class ReviewTests
 
         await page.LoadCommand.ExecuteAsync(null);
 
-        Assert.AreEqual("Mitose", page.Title);
-        Assert.AreEqual("Biologie | #bio | #partiel", string.Join(" | ", page.Details));
-        Assert.AreEqual(vault.App.Sheets.Open(vault.SheetId).Value.Body, page.Body);
+        Assert.AreEqual("Mitose", page.Reading!.Title);
+        Assert.AreEqual("Biologie  ·  #bio  ·  #partiel", page.Reading.Details);
+        Assert.AreEqual(vault.App.Sheets.Open(vault.SheetId).Value.Body.Trim(), page.Reading.Map.Text.Trim());
         Assert.AreEqual(ItemKind.Sheet, page.Review!.Kind);
         Assert.AreEqual(vault.SheetId, page.Review.Id);
         Assert.IsFalse(page.HasError);
@@ -295,7 +295,7 @@ public sealed class ReviewTests
     {
         using var vault = new ReviewVault();
         var test = new TestShell();
-        var navigation = new ReviewNavigation(vault.App.Sheets, vault.App.Reviews, vault.App.Reminders, vault.App.Vaults, new MemorySessions(), vault.Time);
+        var navigation = new ReviewNavigation(vault.App.Sheets, vault.App.Reviews, vault.App.Reminders, vault.App.Vaults, new MemorySessions(), vault.Time, new RecordingLinks());
         var dashboard = new DashboardPageViewModel(vault.App.Reminders, vault.App.Sheets, navigation);
         var shell = new ShellViewModel(CorePages.All(new Dictionary<string, object> { [CorePages.Today] = dashboard }), test.Appearance, test.Gallery);
         Assert.ThrowsExactly<InvalidOperationException>(() => navigation.OpenSheet(vault.SheetId));
@@ -532,8 +532,8 @@ public sealed class ReviewTests
         try
         {
             var back = Named<Button>(window, "BackButton");
-            var text = Named<TextBlock>(window, "Body");
-            var scroller = Descendants(window).OfType<ScrollViewer>().First(text.IsDescendantOf);
+            var text = Named<KyfRev.Presentation.Wpf.Reading.SheetDocumentViewer>(window, "SheetText");
+            var scroller = Descendants(text).OfType<ScrollViewer>().First();
             var before = back.TranslatePoint(default, window);
 
             scroller.ScrollToEnd();
@@ -635,7 +635,8 @@ public sealed class ReviewTests
         var window = Show(test, page);
         try
         {
-            Assert.AreEqual(AutomationHeadingLevel.Level1, AutomationProperties.GetHeadingLevel(Named<TextBlock>(window, "Heading")));
+            var title = Named<KyfRev.Presentation.Wpf.Reading.SheetDocumentViewer>(window, "SheetText").Document.Blocks.OfType<System.Windows.Documents.Paragraph>().ElementAt(1);
+            Assert.AreEqual(AutomationHeadingLevel.Level1, AutomationProperties.GetHeadingLevel(title));
             var validate = Named<Button>(window, "ValidateButton");
             Assert.AreEqual("Valider la révision J1", AutomationProperties.GetName(validate));
             Assert.AreEqual("Ctrl+Entrée", AutomationProperties.GetAcceleratorKey(validate));
@@ -841,7 +842,7 @@ public sealed class ReviewTests
             return page.Review!;
         }
 
-        public SheetPageViewModel SheetPage(string id) => new(App.Sheets, Bar, id, () => Calls.Add("retour"));
+        public SheetPageViewModel SheetPage(string id) => new(App.Sheets, Bar, id, () => Calls.Add("retour"), sheet => Calls.Add($"fiche {sheet}"), new RecordingLinks());
 
         public PassagePageViewModel PassagePage(string passageId, string sheetId, bool activeRecall) =>
             new(App.Sheets, Bar, passageId, sheetId, activeRecall, () => Calls.Add("retour"), sheet => Calls.Add($"fiche {sheet}"));
