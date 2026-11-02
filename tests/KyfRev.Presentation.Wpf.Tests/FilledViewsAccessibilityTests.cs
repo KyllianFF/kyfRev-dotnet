@@ -25,11 +25,13 @@ public sealed class FilledViewsAccessibilityTests
         using var vault = new ReadingVault(Body, passage: true);
         var page = new DefinitionsPageViewModel(vault.App.Annotations, new FakeOpener());
 
-        var names = Names(page, () => page.Rows.Count > 0, root => page.Rows[0].EditCommand.Execute(null));
-
+        var names = Names(page, () => page.Rows.Count > 0, null);
         CollectionAssert.Contains(names, DefinitionsText.WholeVault);
-        CollectionAssert.Contains(names, DefinitionsText.TermLabel);
         CollectionAssert.Contains(names, DefinitionsText.SeeInSheet);
+
+        var editing = Names(page, () => page.Rows.Count > 0, root => page.Rows[0].EditCommand.Execute(null));
+        CollectionAssert.Contains(editing, DefinitionsText.TermLabel);
+        CollectionAssert.Contains(editing, DefinitionsText.Save);
     }
 
     [STATestMethod]
