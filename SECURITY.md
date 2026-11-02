@@ -2,7 +2,7 @@
 
 ## Signaler une vulnérabilité
 
-Le dépôt est privé. Signalez toute vulnérabilité directement à son mainteneur, KyllianFF,
+Signalez toute vulnérabilité en privé, avec [le formulaire de signalement du dépôt](https://github.com/KyllianFF/kyfRev-dotnet/security/advisories/new),
 sans la décrire dans une issue. Indiquez la version concernée, les étapes pour reproduire et
 l'impact estimé.
 
