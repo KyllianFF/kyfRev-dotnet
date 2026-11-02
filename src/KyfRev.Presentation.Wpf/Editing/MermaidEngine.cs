@@ -26,6 +26,10 @@ public interface IMermaidEngine
     /// <param name="code">Le code Mermaid.</param>
     /// <param name="theme">Les couleurs du thème, sous les noms de Mermaid.</param>
     Task<MermaidPicture?> DrawAsync(string code, IReadOnlyDictionary<string, string> theme);
+
+    /// <summary>Fait une image d'un fichier SVG, où ni script ni adresse n'agissent ; rien s'il ne se lit pas.</summary>
+    /// <param name="svg">Le contenu du fichier.</param>
+    Task<MermaidPicture?> DrawSvgAsync(ReadOnlyMemory<byte> svg);
 }
 
 /// <summary>
@@ -41,6 +45,7 @@ public sealed class MermaidEngine : IMermaidEngine, IDisposable
     private const string Host = "dessins.kyfrev.invalid";
     private const string StartAddress = $"https://{Host}/diagrammes.html";
     private const int CacheSize = 64;
+    private const int LargestSvg = 5 * 1024 * 1024;
     private const int HiddenWidth = 1600;
     private const int HiddenHeight = 1200;
     private const int PopupWindow = unchecked((int)0x80000000);
@@ -122,7 +127,22 @@ public sealed class MermaidEngine : IMermaidEngine, IDisposable
         {
             return null;
         }
-        var key = string.Join('\n', theme.Values) + '\n' + code;
+        return await AskAsync(string.Join('\n', theme.Values) + '\n' + code, id => new { id, code, theme }).ConfigureAwait(true);
+    }
+
+    /// <inheritdoc/>
+    public async Task<MermaidPicture?> DrawSvgAsync(ReadOnlyMemory<byte> svg)
+    {
+        if (_disposed || svg.Length > LargestSvg)
+        {
+            return null;
+        }
+        var content = Convert.ToBase64String(svg.Span);
+        return await AskAsync(content, id => new { id, svg = content }).ConfigureAwait(true);
+    }
+
+    private async Task<MermaidPicture?> AskAsync(string key, Func<int, object> request)
+    {
         if (_cache.TryGetValue(key, out var known))
         {
             return known;
@@ -134,7 +154,7 @@ public sealed class MermaidEngine : IMermaidEngine, IDisposable
         var id = ++_nextId;
         var answer = new TaskCompletionSource<MermaidPicture?>(TaskCreationOptions.RunContinuationsAsynchronously);
         _pending[id] = answer;
-        _controller.CoreWebView2.PostWebMessageAsJson(JsonSerializer.Serialize(new { id, code, theme }));
+        _controller.CoreWebView2.PostWebMessageAsJson(JsonSerializer.Serialize(request(id)));
         var first = await Task.WhenAny(answer.Task, Task.Delay(Patience)).ConfigureAwait(true);
         if (first != answer.Task)
         {

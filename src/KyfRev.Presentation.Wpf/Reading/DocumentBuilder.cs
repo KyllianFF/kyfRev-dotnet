@@ -9,6 +9,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using KyfRev.DesignSystem.Controls;
 using KyfRev.DesignSystem.Tokens;
+using KyfRev.Presentation.Wpf.Editing;
 using KyfRev.Presentation.Wpf.Pages;
 using KyfRev.Rendering;
 using KyfRev.Rendering.Diagrams;
@@ -114,6 +115,9 @@ internal sealed class DocumentBuilder
 
     /// <summary>Les étendues de texte en gras, dans le texte affiché.</summary>
     public List<(int Start, int End)> BoldRanges { get; } = [];
+
+    /// <summary>Ce qui fait une image d'un SVG ; rien sans le moteur web.</summary>
+    public IMermaidEngine? Pictures { get; init; }
 
     /// <summary>Les schémas se dessinent ; sinon, ils se lisent en code.</summary>
     public bool DrawsMermaid { get; init; }
@@ -927,14 +931,15 @@ internal sealed class DocumentBuilder
         {
             return BuildNotice(ReadingText.Blocked(blocked));
         }
-        if (target is VaultImage { Path: var path } && path.EndsWith(".svg", StringComparison.OrdinalIgnoreCase))
+        var svg = target is VaultImage { Path: var path } && path.EndsWith(".svg", StringComparison.OrdinalIgnoreCase) ? path : null;
+        if (svg is not null && Pictures is null)
         {
-            return BuildNotice($"{ReadingText.SvgLater} : {path[(path.LastIndexOf('/') + 1)..]}");
+            return BuildNotice($"{ReadingText.SvgLater} : {svg[(svg.LastIndexOf('/') + 1)..]}");
         }
         var image = new Image { Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly, MaxHeight = ImageMaxHeight };
         AutomationProperties.SetName(image, element.AlternativeText ?? string.Empty);
         var container = new InlineUIContainer(image) { BaselineAlignment = BaselineAlignment.Center };
-        _images.Add(LoadImageAsync(container, image, target));
+        _images.Add(svg is not null ? LoadSvgAsync(container, image, svg) : LoadImageAsync(container, image, target));
         return container;
     }
 
@@ -946,6 +951,30 @@ internal sealed class DocumentBuilder
         return notice;
     }
 
+    /// <summary>Une image SVG passe par la page cachée, qui la rend sans qu'aucun script ni adresse n'y agisse.</summary>
+    private async Task LoadSvgAsync(InlineUIContainer container, Image image, string path)
+    {
+        var content = await Task.Run(() => _reading.ReadImage(path)).ConfigureAwait(true);
+        var picture = content.Succeeded && Pictures is { } engine
+            ? await engine.DrawSvgAsync(content.Value).ConfigureAwait(true)
+            : null;
+        if (picture is null)
+        {
+            ShowUnreadable(container);
+            return;
+        }
+        using var stream = new MemoryStream(picture.Png.ToArray());
+        image.Source = BitmapFrame.Create(stream, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+        image.MaxWidth = picture.Width;
+    }
+
+    private static void ShowUnreadable(InlineUIContainer container)
+    {
+        var notice = new TextBlock { Text = ReadingText.UnreadableImage, FontSize = Typography.Caption.Size };
+        notice.SetResourceReference(TextBlock.ForegroundProperty, TextSecondary);
+        container.Child = notice;
+    }
+
     private async Task LoadImageAsync(InlineUIContainer container, Image image, ImageTarget target)
     {
         var bitmap = await Task.Run(() => ReadBitmap(target)).ConfigureAwait(true);
@@ -955,9 +984,7 @@ internal sealed class DocumentBuilder
         }
         else
         {
-            var notice = new TextBlock { Text = ReadingText.UnreadableImage, FontSize = Typography.Caption.Size };
-            notice.SetResourceReference(TextBlock.ForegroundProperty, TextSecondary);
-            container.Child = notice;
+            ShowUnreadable(container);
         }
     }
 

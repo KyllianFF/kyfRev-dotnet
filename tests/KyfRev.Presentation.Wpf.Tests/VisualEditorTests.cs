@@ -788,6 +788,52 @@ public sealed class VisualEditorTests
     }
 
     [EngineTest]
+    public void An_svg_image_becomes_a_picture_and_nothing_in_it_acts()
+    {
+        using var engine = new MermaidEngine(FakeEnvironment.WebData);
+        const string trapped = """
+            <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 120 60" onload="window.piege = 1">
+              <script>window.piege = 2;</script>
+              <image href="https://exemple.invalid/a.png" width="10" height="10" onerror="window.piege = 3" />
+              <a xlink:href="javascript:window.piege = 4"><rect width="120" height="60" fill="#3a7" /></a>
+            </svg>
+            """;
+
+        var drawing = engine.DrawSvgAsync(System.Text.Encoding.UTF8.GetBytes(trapped));
+        UiThread.Until(() => drawing.IsCompleted, TimeSpan.FromSeconds(25));
+
+        Assert.IsNotNull(drawing.Result, "le dessin reste une image");
+        Assert.AreEqual(120, drawing.Result.Width);
+        Assert.AreEqual(60, drawing.Result.Height);
+        Assert.IsGreaterThan(0, drawing.Result.Png.Length);
+        var check = engine.RunScriptAsync("typeof window.piege");
+        UiThread.Until(() => check.IsCompleted);
+        Assert.AreEqual("\"undefined\"", check.Result, "ni script, ni attribut, ni lien n'a agi");
+    }
+
+    [EngineTest]
+    public void What_is_not_an_svg_is_not_a_picture()
+    {
+        using var engine = new MermaidEngine(FakeEnvironment.WebData);
+
+        var broken = engine.DrawSvgAsync(System.Text.Encoding.UTF8.GetBytes("ceci n'est pas un dessin"));
+        UiThread.Until(() => broken.IsCompleted, TimeSpan.FromSeconds(25));
+
+        Assert.IsNull(broken.Result);
+    }
+
+    [TestMethod]
+    public async Task An_svg_too_big_or_for_a_closed_engine_is_not_drawn()
+    {
+        var engine = new MermaidEngine(FakeEnvironment.WebData);
+
+        Assert.IsNull(await engine.DrawSvgAsync(new byte[(5 * 1024 * 1024) + 1]));
+
+        engine.Dispose();
+        Assert.IsNull(await engine.DrawSvgAsync(new byte[10]));
+    }
+
+    [EngineTest]
     public void A_drawing_that_never_ends_stops_the_page_and_the_next_one_starts_it_again()
     {
         using var scene = new Scene();
