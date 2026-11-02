@@ -640,9 +640,15 @@ internal sealed class DocumentBuilder
             var run = new Run(text.Substring(colored.Start, colored.Length));
             if (colored.Brush is { } brush)
             {
-                run.SetResourceReference(TextElement.ForegroundProperty, brush);
+                // Autour du texte, et non sur lui : surligner ou couper le texte ne perd pas la couleur.
+                var span = new Span(run);
+                span.SetResourceReference(TextElement.ForegroundProperty, brush);
+                block.Inlines.Add(span);
             }
-            block.Inlines.Add(run);
+            else
+            {
+                block.Inlines.Add(run);
+            }
             if (place is { } start)
             {
                 Layer.AddRun(run, start + colored.Start);
@@ -963,9 +969,16 @@ internal sealed class DocumentBuilder
             ShowUnreadable(container);
             return;
         }
-        using var stream = new MemoryStream(picture.Png.ToArray());
-        image.Source = BitmapFrame.Create(stream, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
-        image.MaxWidth = picture.Width;
+        try
+        {
+            using var stream = new MemoryStream(picture.Png.ToArray());
+            image.Source = BitmapFrame.Create(stream, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+            image.MaxWidth = picture.Width;
+        }
+        catch (Exception problem) when (problem is NotSupportedException or FileFormatException or ArgumentException or InvalidOperationException)
+        {
+            ShowUnreadable(container);
+        }
     }
 
     private static void ShowUnreadable(InlineUIContainer container)

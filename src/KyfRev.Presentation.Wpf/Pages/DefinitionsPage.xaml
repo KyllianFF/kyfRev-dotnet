@@ -15,7 +15,7 @@
     </Grid.ColumnDefinitions>
     <Grid.RowDefinitions>
       <RowDefinition x:Name="FoldersRow" Height="*" />
-      <RowDefinition Height="Auto" />
+      <RowDefinition x:Name="ListRow" Height="Auto" />
     </Grid.RowDefinitions>
 
     <!-- À gauche : le titre, la recherche et les dossiers. Quand la place manque, ils passent au-dessus. -->

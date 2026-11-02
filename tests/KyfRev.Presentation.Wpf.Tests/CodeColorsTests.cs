@@ -1,3 +1,4 @@
+using System.Windows;
 using System.Windows.Documents;
 using KyfRev.Application;
 using KyfRev.Application.Model;
@@ -96,14 +97,45 @@ public sealed class CodeColorsTests
         var viewer = new SheetDocumentViewer { Reading = reading };
         var block = viewer.Document.Blocks.OfType<Paragraph>().Single(paragraph => paragraph.Inlines.Count > 1);
 
-        var text = string.Concat(block.Inlines.OfType<Run>().Select(run => run.Text));
+        var text = string.Concat(Runs(block).Select(run => run.Text));
 
         Assert.AreEqual(CSharp.Replace("\r\n", "\n", StringComparison.Ordinal), text);
         Assert.IsGreaterThan(5, block.Inlines.Count, "plusieurs couleurs");
         var start = reading.Map.Text.IndexOf("Console", StringComparison.Ordinal);
         viewer.Highlights = [new Highlight("h", start, start + "Console".Length, false, false)];
-        Assert.AreEqual("h", viewer.AnnotationsAt(block.Inlines.OfType<Run>().First(run => run.Text == "Console")).Single());
+        Assert.AreEqual("h", viewer.AnnotationsAt(Runs(block).First(run => run.Text == "Console")).Single());
     }
+
+    [STATestMethod]
+    public void A_highlight_does_not_take_away_the_color_of_the_code()
+    {
+        var reading = SheetReading.Of(
+            new OpenedSheet("f_1", "Code", "fiches/Code.md", string.Empty, [], "```cs\n" + CSharp + "\n```\n", 1, "sha256:essai", null, DateTimeOffset.UnixEpoch, null!, []),
+            _ => Outcome.Refused<byte[]>("non"));
+        var viewer = new SheetDocumentViewer { Reading = reading };
+        var block = viewer.Document.Blocks.OfType<Paragraph>().Single(paragraph => paragraph.Inlines.Count > 1);
+        var start = reading.Map.Text.IndexOf("public", StringComparison.Ordinal);
+
+        viewer.Highlights = [new Highlight("d", start + 1, start + 3, true, false)];
+        viewer.Highlights = [];
+
+        var pieces = Runs(block).Where(run => "public".Contains(run.Text, StringComparison.Ordinal) && run.Text.Length > 0).ToList();
+        Assert.IsGreaterThan(1, pieces.Count, "le mot a été coupé");
+        foreach (var piece in pieces)
+        {
+            Assert.AreNotEqual(DependencyProperty.UnsetValue, piece.Parent is Span span ? span.ReadLocalValue(TextElement.ForegroundProperty) : DependencyProperty.UnsetValue, piece.Text);
+        }
+    }
+
+    private static IEnumerable<Run> Runs(Paragraph block) => InlinesOf(block.Inlines);
+
+    private static IEnumerable<Run> InlinesOf(InlineCollection inlines) =>
+        inlines.SelectMany(inline => inline switch
+        {
+            Run run => [run],
+            Span span => InlinesOf(span.Inlines),
+            _ => [],
+        });
 
     private static string? BrushOf(string code, string language, string word)
     {

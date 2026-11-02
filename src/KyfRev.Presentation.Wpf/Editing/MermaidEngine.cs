@@ -210,7 +210,7 @@ public sealed class MermaidEngine : IMermaidEngine, IDisposable
             await _starting.ConfigureAwait(true);
             return _controller is not null;
         }
-        catch (Exception exception) when (exception is WebView2RuntimeNotFoundException or InvalidOperationException or COMException or ArgumentException or IOException or UnauthorizedAccessException)
+        catch (Exception exception) when (exception is TimeoutException or WebView2RuntimeNotFoundException or InvalidOperationException or COMException or ArgumentException or IOException or UnauthorizedAccessException)
         {
             Stop();
             return false;

@@ -570,8 +570,8 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
 
     private void SetRevising(bool revising)
     {
-        IsRevising = revising;
         Holes.IsActive = revising && _activeRecall();
+        IsRevising = revising;
     }
 
     /// <summary>Le volet des passages tait ce que le texte masque encore.</summary>
@@ -648,6 +648,7 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
         if (Editor is null)
         {
             CloseOverlay();
+            CancelRebinding();
             var opened = await Task.Run(() => _sheets.Open(SheetId)).ConfigureAwait(true);
             if (opened.Succeeded)
             {
@@ -844,6 +845,14 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
         Rebinding = passage;
     }
 
+    /// <summary>Échap : referme ce qui est ouvert par-dessus, et renonce à changer la place d'un passage.</summary>
+    [RelayCommand]
+    private void Escape()
+    {
+        CloseOverlay();
+        CancelRebinding();
+    }
+
     /// <summary>Renonce à changer la place du passage.</summary>
     [RelayCommand]
     private void CancelRebinding()
@@ -911,7 +920,6 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
     [RelayCommand]
     private void CloseOverlay()
     {
-        Rebinding = null;
         OutlineOverlaid = false;
         PassagesOverlaid = false;
     }
