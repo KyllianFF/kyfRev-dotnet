@@ -1,0 +1,54 @@
+<UserControl x:Class="KyfRev.Presentation.Wpf.Editing.DiagramGalleryView"
+             x:ClassModifier="internal"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:editing="clr-namespace:KyfRev.Presentation.Wpf.Editing"
+             xmlns:reading="clr-namespace:KyfRev.Presentation.Wpf.Reading"
+             Height="500">
+  <UserControl.Resources>
+    <BooleanToVisibilityConverter x:Key="Visible" />
+  </UserControl.Resources>
+  <Grid>
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="140" />
+      <ColumnDefinition Width="*" MinWidth="170" />
+      <ColumnDefinition Width="280" />
+    </Grid.ColumnDefinitions>
+
+    <!-- Les catégories, à gauche. -->
+    <ListBox x:Name="CategoryList" ItemsSource="{Binding Categories}" SelectedItem="{Binding SelectedCategory}" BorderThickness="0" Background="Transparent"
+             ScrollViewer.HorizontalScrollBarVisibility="Disabled" AutomationProperties.Name="{x:Static editing:EditingText.GalleryCategories}" />
+
+    <!-- Une vignette par modèle : elles passent à la ligne, jamais de défilement horizontal. -->
+    <ListBox x:Name="ItemList" Grid.Column="1" Margin="8,0" ItemsSource="{Binding Items}" SelectedItem="{Binding SelectedItem}" BorderThickness="0" Background="Transparent"
+             ScrollViewer.HorizontalScrollBarVisibility="Disabled" AutomationProperties.Name="{x:Static editing:EditingText.GalleryModels}">
+      <ListBox.ItemsPanel>
+        <ItemsPanelTemplate>
+          <WrapPanel />
+        </ItemsPanelTemplate>
+      </ListBox.ItemsPanel>
+      <ListBox.ItemTemplate>
+        <DataTemplate>
+          <StackPanel Width="128">
+            <reading:DiagramView Scene="{Binding Thumbnail}" IsThumbnail="True" Width="128" />
+            <TextBlock Text="{Binding Name}" TextAlignment="Center" TextWrapping="Wrap" Margin="0,4,0,0" />
+          </StackPanel>
+        </DataTemplate>
+      </ListBox.ItemTemplate>
+    </ListBox>
+
+    <!-- À droite : l'aperçu, qui suit le texte saisi. -->
+    <DockPanel Grid.Column="2">
+      <reading:DiagramView x:Name="PreviewView" DockPanel.Dock="Top" Scene="{Binding Preview}" Width="280" Visibility="{Binding IsDrawn, Converter={StaticResource Visible}}" />
+      <reading:MermaidView x:Name="MermaidPreview" DockPanel.Dock="Top" Height="176" ClipToBounds="True" Code="{Binding MermaidCode}" Visibility="{Binding IsMermaid, Converter={StaticResource Visible}}" />
+      <TextBlock DockPanel.Dock="Top" Text="{Binding SelectedItem.Name}" Style="{DynamicResource Kyf.Text.BodyStrong}" Margin="0,8,0,0" />
+      <TextBlock DockPanel.Dock="Top" Text="{Binding SelectedItem.Description}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" />
+      <TextBlock DockPanel.Dock="Top" Text="{Binding InputHelp}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,8,0,4" />
+      <CheckBox x:Name="CodeToggle" DockPanel.Dock="Bottom" Content="{x:Static editing:EditingText.GalleryShowCode}" IsChecked="{Binding ShowsCode}" Margin="0,8,0,0" Visibility="{Binding IsMermaid, Converter={StaticResource Visible}}" />
+      <TextBox x:Name="CodeBox" DockPanel.Dock="Bottom" Text="{Binding MermaidCode, Mode=OneWay}" IsReadOnly="True" Height="96" Margin="0,8,0,0" VerticalContentAlignment="Top" VerticalScrollBarVisibility="Auto" FontFamily="{DynamicResource Kyf.Font.Code}"
+               AutomationProperties.Name="{x:Static editing:EditingText.GalleryShowCode}" Visibility="{Binding ShowsCode, Converter={StaticResource Visible}}" />
+      <TextBox x:Name="ItemsBox" Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap" VerticalContentAlignment="Top"
+               VerticalScrollBarVisibility="Auto" AutomationProperties.Name="{Binding InputHelp}" />
+    </DockPanel>
+  </Grid>
+</UserControl>

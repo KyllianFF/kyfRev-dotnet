@@ -595,6 +595,62 @@ figure.bloc-extension {
   margin: 0;
 }
 
+/* Un bloc qui se dessine : on voit le dessin, et le code seulement si l'on y entre. */
+.editeur-visuel .apercu-dessin svg {
+  display: block;
+  width: 100%;
+  max-width: 640px;
+  margin: 8px auto;
+  font-family: var(--police, inherit);
+}
+
+.editeur-visuel .apercu-dessin img {
+  display: block;
+  max-width: min(100%, 640px);
+  margin: 8px auto;
+}
+
+.editeur-visuel .bloc-dessin:not(.en-edition):not(.dessin-impossible) > pre {
+  display: none;
+}
+
+.editeur-visuel .bloc-dessin:not(.en-edition) .entete-code {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 1;
+  justify-content: flex-end;
+  background: transparent;
+  border: none;
+  opacity: 0;
+}
+
+.editeur-visuel .bloc-dessin {
+  position: relative;
+}
+
+.editeur-visuel .bloc-dessin:hover .entete-code,
+.editeur-visuel .bloc-dessin:focus-within .entete-code {
+  opacity: 1;
+}
+
+.editeur-visuel .bloc-dessin:not(.en-edition) .entete-code select,
+.editeur-visuel .bloc-dessin:not(.en-edition) .aide-code,
+.editeur-visuel .bloc-dessin.en-edition .action-code {
+  display: none;
+}
+
+.editeur-visuel .action-dessin {
+  margin-left: 6px;
+  padding: 1px 8px;
+  color: var(--texte);
+  font: inherit;
+  background: var(--surface);
+  border: 1px solid var(--bordure);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
 /* Une tâche : sa case à la place de la puce. */
 .contenu-fiche ul:has(> li.tache),
 .contenu-fiche ol:has(> li.tache) {

@@ -239,9 +239,11 @@ internal sealed class UiThread : IDisposable
         SynchronizationContext.SetSynchronizationContext(new DispatcherSynchronizationContext(Dispatcher.CurrentDispatcher));
     }
 
-    public static void Until(Func<bool> condition)
+    public static void Until(Func<bool> condition) => Until(condition, TimeSpan.FromSeconds(10));
+
+    public static void Until(Func<bool> condition, TimeSpan patience)
     {
-        var deadline = DateTime.UtcNow.AddSeconds(10);
+        var deadline = DateTime.UtcNow + patience;
         while (!condition())
         {
             Assert.IsLessThan(deadline, DateTime.UtcNow, "délai dépassé");

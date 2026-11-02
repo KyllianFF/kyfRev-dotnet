@@ -51,7 +51,7 @@ import {
   type ViewMutationRecord,
   EditorView as Vue,
 } from "prosemirror-view";
-import { affichageImage, formuleHtml } from "./analyse";
+import { affichageImage, formuleHtml, svgNettoye } from "./analyse";
 import {
   type Alignement,
   alignementCourant,
@@ -102,6 +102,8 @@ export type EtatOutils = {
   canRedo: boolean;
 };
 
+export type Dessin = { svg: string | null; image: string | null };
+
 export type Formule = { position: number | null; tex: string; block: boolean };
 
 /** Ce que l'éditeur dit à l'hôte. */
@@ -122,6 +124,10 @@ export type Reactions = {
   clavierlien: (touche: string) => boolean;
   /** Clic droit : le menu est natif. */
   onmenu: () => void;
+  /** Le dessin d'un bloc : un SVG, ou une image ; ni l'un ni l'autre : il ne se dessine pas. */
+  dessin: (langage: string, code: string) => Promise<Dessin>;
+  /** Modifier ce dessin : c'est la galerie de l'application. */
+  ondessin: (langage: string, code: string, position: number) => void;
 };
 
 /** Touches que la liste des fiches peut prendre à l'éditeur. */
@@ -483,23 +489,33 @@ function vueFormule(bloc: boolean, onformule: (formule: Formule) => void) {
   };
 }
 
+/** Un bloc qui se dessine : son code ne se montre que si l'on y entre. */
+const seDessine = (langage: string) => /^(smartart\s|mermaid\s*$)/.test(langage);
+
+/** Le dessin suit la frappe, sans la gêner. */
+const DELAI_DESSIN = 250;
+
 /** Bloc de code : son langage se choisit dans son en-tête, directement dans le texte. */
 class VueCode implements NodeView {
   dom: HTMLElement;
   contentDOM: HTMLElement;
   private entete: HTMLElement;
+  private apercu: HTMLElement | null = null;
+  private minuterie: ReturnType<typeof setTimeout> | undefined;
 
   constructor(
     private noeud: Node,
     vue: EditorView,
     position: () => number | undefined,
     decorations: readonly Decoration[],
+    private reactions: Reactions,
   ) {
     this.dom = document.createElement("div");
     this.dom.className = "bloc-code";
     this.marquerEdition(decorations);
     this.entete = this.creerEntete(vue, position);
     this.dom.append(this.entete);
+    if (seDessine(noeud.attrs.language as string)) this.preparerDessin(vue, position);
     const pre = document.createElement("pre");
     this.contentDOM = document.createElement("code");
     if (noeud.attrs.language) this.contentDOM.className = `language-${noeud.attrs.language}`;
@@ -536,6 +552,74 @@ class VueCode implements NodeView {
     return entete;
   }
 
+  /** Le dessin du bloc, et ce qu'il faut pour le modifier ou pour voir son code. */
+  private preparerDessin(vue: EditorView, position: () => number | undefined): void {
+    this.dom.classList.add("bloc-dessin");
+    this.apercu = document.createElement("div");
+    this.apercu.className = "apercu-dessin";
+    this.apercu.contentEditable = "false";
+    const modifier = () => {
+      const ici = position();
+      if (ici !== undefined) {
+        this.reactions.ondessin(this.noeud.attrs.language as string, this.noeud.textContent, ici);
+      }
+    };
+    this.apercu.addEventListener("dblclick", modifier);
+    this.dom.append(this.apercu);
+    const action = (texte: string, faire: () => void, classe = "") => {
+      const bouton = document.createElement("button");
+      bouton.type = "button";
+      bouton.className = `action-dessin ${classe}`;
+      bouton.textContent = texte;
+      bouton.addEventListener("click", faire);
+      return bouton;
+    };
+    if (/^smartart/.test(this.noeud.attrs.language as string)) this.entete.append(action("Modifier…", modifier));
+    else document.addEventListener("theme", this.suivreTheme);
+    this.entete.append(
+      action(
+        "Voir le code",
+        () => {
+          const ici = position();
+          if (ici === undefined) return;
+          vue.dispatch(vue.state.tr.setSelection(TextSelection.create(vue.state.doc, ici + 1)));
+          vue.focus();
+        },
+        "action-code",
+      ),
+    );
+    this.demanderDessin();
+  }
+
+  private demanderDessin(): void {
+    clearTimeout(this.minuterie);
+    this.minuterie = setTimeout(() => {
+      const code = this.noeud.textContent;
+      void this.reactions.dessin(this.noeud.attrs.language as string, code).then((dessin) => {
+        if (this.apercu && this.noeud.textContent === code) this.montrerDessin(dessin);
+      });
+    }, DELAI_DESSIN);
+  }
+
+  /** Le dessin ; s'il n'y en a pas, c'est le code qui se lit. */
+  private montrerDessin({ svg, image }: Dessin): void {
+    if (!this.apercu) return;
+    this.dom.classList.toggle("dessin-impossible", !svg && !image);
+    if (image) {
+      const dessin = document.createElement("img");
+      dessin.src = image;
+      dessin.alt = this.noeud.textContent;
+      this.apercu.replaceChildren(dessin);
+    } else this.apercu.innerHTML = svg ? svgNettoye(svg) : "";
+  }
+
+  private readonly suivreTheme = () => this.demanderDessin();
+
+  destroy(): void {
+    clearTimeout(this.minuterie);
+    document.removeEventListener("theme", this.suivreTheme);
+  }
+
   private marquerEdition(decorations: readonly Decoration[]) {
     this.dom.classList.toggle(
       "en-edition",
@@ -545,8 +629,10 @@ class VueCode implements NodeView {
 
   update(noeud: Node, decorations: readonly Decoration[]): boolean {
     if (noeud.type !== this.noeud.type || noeud.attrs.language !== this.noeud.attrs.language) return false;
+    const change = noeud.textContent !== this.noeud.textContent;
     this.noeud = noeud;
     this.marquerEdition(decorations);
+    if (change && this.apercu) this.demanderDessin();
     return true;
   }
 
@@ -624,7 +710,7 @@ export class EditeurVisuel {
         image: vueImage(() => this.dossier),
         math_inline: vueFormule(false, reactions.onformule),
         math_block: vueFormule(true, reactions.onformule),
-        code_block: (noeud, vue, position, decorations) => new VueCode(noeud, vue, position, decorations),
+        code_block: (noeud, vue, position, decorations) => new VueCode(noeud, vue, position, decorations, reactions),
         list_item: (noeud, vue, position) => new VuePoint(noeud, vue, position),
       },
       dispatchTransaction: (tr: Transaction) => {
@@ -795,6 +881,18 @@ export class EditeurVisuel {
       return;
     }
     this.insererBloc(n.code_block.create({ language: langage }), 1);
+  }
+
+  /** Insère un dessin après le paragraphe courant, ou remplace celui de cette position. */
+  insererDessin(langage: string, code: string, position: number | null): void {
+    const bloc = n.code_block.create({ language: langage }, code ? schema.text(code) : null);
+    const actuel = position === null ? null : this.vue.state.doc.nodeAt(position);
+    if (position !== null && actuel?.type === n.code_block) {
+      this.vue.dispatch(this.vue.state.tr.replaceWith(position, position + actuel.nodeSize, bloc));
+      this.vue.focus();
+      return;
+    }
+    this.insererBloc(bloc, bloc.nodeSize);
   }
 
   focus(): void {

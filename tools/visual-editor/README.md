@@ -21,3 +21,9 @@ npm run build
 ```
 
 `src/messages.ts` est généré depuis `VisualMessages.cs`. Un test de la présentation vérifie qu'il est à jour et donne le texte attendu s'il ne l'est pas.
+
+## La page des dessins
+
+`src/diagrammes.ts` et `public/diagrammes.html` sont la page cachée qui dessine les schémas et les graphiques : Mermaid en mode
+strict, tel qu'il est publié (`mermaid.min.js`), à part de l'éditeur, qui n'a pas à le charger. `npm run build` écrit les deux
+paquets.

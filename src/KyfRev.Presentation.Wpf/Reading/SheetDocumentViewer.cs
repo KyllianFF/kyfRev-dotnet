@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Input;
+using KyfRev.Presentation.Wpf.Editing;
 using KyfRev.Presentation.Wpf.Pages;
 using KyfRev.Rendering;
 using LinkTarget = KyfRev.Rendering.LinkTarget;
@@ -158,7 +159,8 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
         _built?.Cancel();
         if (Reading is { } reading)
         {
-            _built = new DocumentBuilder(reading, Follow, OpenLinkCommand is not null, ShowsHeader, key => TryFindResource(key) as System.Windows.Media.Brush);
+            var drawsMermaid = TryFindResource(MermaidEngine.ResourceKey) is not null;
+            _built = new DocumentBuilder(reading, Follow, OpenLinkCommand is not null, ShowsHeader, key => TryFindResource(key) as System.Windows.Media.Brush) { DrawsMermaid = drawsMermaid };
             ApplyHighlights();
             Document = _built.Build();
         }

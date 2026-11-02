@@ -6,6 +6,12 @@ namespace KyfRev.DesignSystem.Controls;
 /// </summary>
 public static class Icons
 {
+    /// <summary>Des blocs assemblés : un SmartArt.</summary>
+    public static string SmartArt { get; } = Glyph(0xE8A9);
+
+    /// <summary>Des boîtes reliées : un schéma.</summary>
+    public static string Schema { get; } = Glyph(0xF003);
+
     /// <summary>Case vide : une tâche à faire.</summary>
     public static string TaskOpen { get; } = Glyph(0xE739);
 

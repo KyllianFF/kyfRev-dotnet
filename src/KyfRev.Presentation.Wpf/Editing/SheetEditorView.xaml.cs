@@ -4,7 +4,6 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
 using KyfRev.Application.Model;
-using KyfRev.DesignSystem.Controls;
 using KyfRev.Presentation.Wpf.Shell;
 using Microsoft.Win32;
 
@@ -155,7 +154,7 @@ internal sealed partial class SheetEditorView : UserControl
     }
 
     private void UpdateCover() =>
-        _ = Visual?.SetCoveredAsync(_pageCovered || _shell is { IsPaletteOpen: true } or { IsHelpOpen: true } || _page is { IsLinkOpen: true } or { IsFormulaOpen: true });
+        _ = Visual?.SetCoveredAsync(_pageCovered || _shell is { IsPaletteOpen: true } or { IsHelpOpen: true } || _page is { IsLinkOpen: true } or { IsFormulaOpen: true } or { IsGalleryOpen: true });
 
     private void UpdateZoom()
     {
@@ -168,7 +167,7 @@ internal sealed partial class SheetEditorView : UserControl
     /// <summary>La liste des fiches s'ouvre sous « [[ ».</summary>
     private void OnPageChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is nameof(SheetEditorViewModel.IsLinkOpen) or nameof(SheetEditorViewModel.IsFormulaOpen))
+        if (e.PropertyName is nameof(SheetEditorViewModel.IsLinkOpen) or nameof(SheetEditorViewModel.IsFormulaOpen) or nameof(SheetEditorViewModel.IsGalleryOpen))
         {
             UpdateCover();
         }
@@ -190,12 +189,6 @@ internal sealed partial class SheetEditorView : UserControl
             _page?.ChooseProposalCommand.Execute(sheet);
         }
     }
-
-    private void OnLinkClosed(object sender, DialogClosedEventArgs e) =>
-        _page?.AnswerLinkCommand.Execute(e.Choice == DialogChoice.Primary);
-
-    private void OnFormulaClosed(object sender, DialogClosedEventArgs e) =>
-        _page?.AnswerFormulaCommand.Execute(e.Choice == DialogChoice.Primary);
 
     /// <summary>La fenêtre attend la fin de l'enregistrement : la dernière frappe n'est pas perdue.</summary>
     private void OnWindowClosing(object? sender, CancelEventArgs e)

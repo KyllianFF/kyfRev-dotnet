@@ -19,6 +19,11 @@ export function analyseurMarkdown(): Analyseur {
   return md;
 }
 
+/** Le SVG d'un dessin, tel qu'il peut entrer dans la page. */
+export function svgNettoye(svg: string): string {
+  return DOMPurify.sanitize(svg, { USE_PROFILES: { svg: true } });
+}
+
 /** Ce qu'affiche une image : son adresse, ou la raison pour laquelle elle est bloquée. */
 export type AffichageImage = { adresse: string } | { bloquee: string; detail: string };
 

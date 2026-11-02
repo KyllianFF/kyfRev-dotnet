@@ -45,6 +45,10 @@ public class Dialog : ContentControl
     public static readonly DependencyProperty TitleProperty =
         DependencyProperty.Register(nameof(Title), typeof(string), typeof(Dialog), new PropertyMetadata(string.Empty));
 
+    /// <summary>La largeur la plus grande de la carte : 560 par défaut, plus pour un contenu qui en a besoin.</summary>
+    public static readonly DependencyProperty CardMaxWidthProperty =
+        DependencyProperty.Register(nameof(CardMaxWidth), typeof(double), typeof(Dialog), new PropertyMetadata(560d));
+
     /// <summary>Propriété <see cref="IsOpen"/>.</summary>
     public static readonly DependencyProperty IsOpenProperty =
         DependencyProperty.Register(nameof(IsOpen), typeof(bool), typeof(Dialog), new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, (dialog, e) => ((Dialog)dialog).OnIsOpenChanged((bool)e.NewValue)));
@@ -81,6 +85,13 @@ public class Dialog : ContentControl
     {
         get => (string)GetValue(TitleProperty);
         set => SetValue(TitleProperty, value);
+    }
+
+    /// <inheritdoc cref="CardMaxWidthProperty"/>
+    public double CardMaxWidth
+    {
+        get => (double)GetValue(CardMaxWidthProperty);
+        set => SetValue(CardMaxWidthProperty, value);
     }
 
     /// <summary>Ouvert ; fermé par défaut.</summary>

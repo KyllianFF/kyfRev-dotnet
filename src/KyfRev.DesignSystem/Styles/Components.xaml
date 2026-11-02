@@ -166,6 +166,42 @@
     </Style.Triggers>
   </Style>
 
+  <!-- Case à cocher : le texte et la case suivent le thème. -->
+  <Style TargetType="CheckBox">
+    <Setter Property="FontFamily" Value="{DynamicResource Kyf.Font.Ui}" />
+    <Setter Property="FontSize" Value="{DynamicResource Kyf.FontSize.Body}" />
+    <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Text}" />
+    <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="CheckBox">
+          <StackPanel Orientation="Horizontal" Background="Transparent">
+            <Border x:Name="Box" Width="18" Height="18" CornerRadius="4" BorderThickness="1" Background="{DynamicResource Kyf.Brush.Surface}"
+                    BorderBrush="{DynamicResource Kyf.Brush.ControlBorder}" VerticalAlignment="Center">
+              <kyf:Icon x:Name="Mark" Text="&#xE73E;" FontSize="12" HorizontalAlignment="Center" Foreground="{DynamicResource Kyf.Brush.OnPrimary}" Visibility="Collapsed" />
+            </Border>
+            <ContentPresenter VerticalAlignment="Center" Margin="8,0,0,0" />
+          </StackPanel>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsChecked" Value="True">
+              <Setter TargetName="Box" Property="Background" Value="{DynamicResource Kyf.Brush.Primary}" />
+              <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource Kyf.Brush.Primary}" />
+              <Setter TargetName="Mark" Property="Visibility" Value="Visible" />
+            </Trigger>
+            <Trigger Property="IsKeyboardFocused" Value="True">
+              <Setter TargetName="Box" Property="BorderBrush" Value="{DynamicResource Kyf.Brush.Focus}" />
+              <Setter TargetName="Box" Property="BorderThickness" Value="2" />
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+              <Setter Property="Opacity" Value="0.6" />
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
   <!-- Dialogue : voile, carte au centre, ombre de l'élévation « Dialog », focus tenu à l'intérieur. -->
   <Style TargetType="kyf:Dialog">
     <Setter Property="FontFamily" Value="{DynamicResource Kyf.Font.Ui}" />
@@ -187,7 +223,7 @@
         <ControlTemplate TargetType="kyf:Dialog">
           <Grid>
             <Rectangle Fill="{DynamicResource Kyf.Brush.Scrim}" />
-            <Grid HorizontalAlignment="Center" VerticalAlignment="Center" MinWidth="280" MaxWidth="560" Margin="16">
+            <Grid HorizontalAlignment="Center" VerticalAlignment="Center" MinWidth="280" MaxWidth="{TemplateBinding CardMaxWidth}" Margin="16">
               <Border Background="{TemplateBinding Background}" CornerRadius="{DynamicResource Kyf.Radius.Dialog}"
                       Effect="{DynamicResource Kyf.Elevation.Dialog}" />
               <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"

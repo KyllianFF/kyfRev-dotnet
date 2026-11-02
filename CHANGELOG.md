@@ -9,6 +9,12 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- Galerie de l'onglet Insertion, comme celle d'Office : des catégories, une vignette par modèle, un aperçu qui suit le
+  texte saisi. 17 SmartArt que kyfRev dessine lui-même, en un bloc de code lisible partout (`smartart cycle`, puis un
+  élément par ligne). 9 schémas et 6 graphiques en Mermaid. Un SmartArt se rouvre dans la galerie par « Modifier… ».
+- Les schémas et les graphiques Mermaid se dessinent enfin, en lecture et à l'écriture, avec les couleurs du thème, dans
+  une page cachée fermée, sans accès au coffre. Un dessin n'est qu'une image : aucun lien ni script n'y agit. Ce qui ne
+  se dessine pas se lit en code.
 - Mise en forme étendue : couleur et taille du texte, alignement (gauche, centre, droite, justifié) et listes de
   tâches, à la manière d'un traitement de texte. Ctrl+L, Ctrl+R et Ctrl+J alignent. Une tâche se coche à sa place, et
   « [ ] » suivi d'une espace en crée une. Une couleur choisie reste lisible dans tous les thèmes : sa teinte reste, sa

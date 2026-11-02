@@ -1,7 +1,7 @@
 // Le bus entre l'éditeur et l'application : messages typés (./messages.ts est généré
 // depuis le C#), aucun objet de l'hôte exposé à la page.
 
-import type { ActionTableau, EtatOutils, NomMarque } from "./editeur";
+import type { ActionTableau, Dessin, EtatOutils, NomMarque } from "./editeur";
 import { EditeurVisuel } from "./editeur";
 import type { Casse } from "./casse";
 import type { DepuisEditeur, VersEditeur } from "./messages";
@@ -43,6 +43,23 @@ let listeOuverte = false;
 let minuterie: ReturnType<typeof setTimeout> | undefined;
 let dernierEtat = "";
 let derniereSaisie: string | null = null;
+
+/** Les dessins demandés à l'hôte : le même bloc n'est demandé qu'une fois à la fois. */
+const dessins = new Map<string, { promesse: Promise<Dessin>; repondre: (dessin: Dessin) => void }>();
+const cleDessin = (langage: string, code: string) => `${langage}\n${code}`;
+
+function demanderDessin(langage: string, code: string): Promise<Dessin> {
+  const cle = cleDessin(langage, code);
+  const deja = dessins.get(cle);
+  if (deja) return deja.promesse;
+  let repondre: (dessin: Dessin) => void = () => {};
+  const promesse = new Promise<Dessin>((fin) => {
+    repondre = fin;
+  });
+  dessins.set(cle, { promesse, repondre });
+  envoyer({ kind: "askDiagram", language: langage, code });
+  return promesse;
+}
 
 function envoyerTexte(id: number | null): void {
   clearTimeout(minuterie);
@@ -104,6 +121,8 @@ const editeur: EditeurVisuel = new EditeurVisuel(parent, {
     const etat = editeur.etatOutils();
     envoyer({ kind: "menu", ...editeur.contexteDuMenu(), inCode: etat.inCode, inTable: etat.table, onLink: etat.link });
   },
+  dessin: demanderDessin,
+  ondessin: (language, code, position) => envoyer({ kind: "editDiagram", language, code, position }),
 });
 
 function demanderLien(): void {
@@ -116,10 +135,20 @@ function traiter(message: VersEditeur): void {
     case "load":
       editeur.remplacer(message.text, message.folder);
       break;
+    case "diagram": {
+      const cle = cleDessin(message.language, message.code);
+      dessins.get(cle)?.repondre({ svg: message.svg, image: message.image });
+      dessins.delete(cle);
+      break;
+    }
+    case "insertDiagram":
+      editeur.insererDessin(message.language, message.code, message.position);
+      break;
     case "theme":
       for (const [nom, valeur] of Object.entries(message.variables)) {
         document.documentElement.style.setProperty(nom, valeur);
       }
+      document.dispatchEvent(new Event("theme"));
       break;
     case "sync":
       envoyerTexte(message.id);

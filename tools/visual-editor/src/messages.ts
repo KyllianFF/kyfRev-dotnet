@@ -29,7 +29,9 @@ export type VersEditeur =
   | { kind: "focus" }
   | { kind: "goToHeading"; title: string; occurrence: number }
   | { kind: "clipboard"; action: string }
-  | { kind: "listOpen"; open: boolean };
+  | { kind: "listOpen"; open: boolean }
+  | { kind: "insertDiagram"; language: string; code: string; position: number | null }
+  | { kind: "diagram"; language: string; code: string; svg: string | null; image: string | null };
 
 export type DepuisEditeur =
   | { kind: "ready" }
@@ -42,4 +44,6 @@ export type DepuisEditeur =
   | { kind: "linkInput"; query: string | null; start: number; x: number; y: number }
   | { kind: "listKey"; key: string }
   | { kind: "menu"; word: string | null; wordStart: number; hasSelection: boolean; inCode: boolean; inTable: boolean; onLink: boolean }
-  | { kind: "dropped"; name: string; base64: string | null; position: number | null };
+  | { kind: "dropped"; name: string; base64: string | null; position: number | null }
+  | { kind: "askDiagram"; language: string; code: string }
+  | { kind: "editDiagram"; language: string; code: string; position: number };

@@ -191,6 +191,48 @@ public static class EditingText
     /// <summary>Liste à puces.</summary>
     public const string Bullets = "Liste à puces";
 
+    /// <summary>Le groupe des dessins.</summary>
+    public const string IllustrationsGroup = "Illustrations";
+
+    /// <summary>Insérer un schéma.</summary>
+    public const string Schema = "Schéma";
+
+    /// <summary>Insérer un graphique.</summary>
+    public const string Chart = "Graphique";
+
+    /// <summary>La saisie de la galerie des graphiques.</summary>
+    public const string GalleryOneValuePerLine = "Une valeur par ligne (libellé : valeur)";
+
+    /// <summary>Montrer le code d'un schéma ou d'un graphique.</summary>
+    public const string GalleryShowCode = "Voir le code Mermaid";
+
+    /// <summary>Insérer un SmartArt.</summary>
+    public const string SmartArt = "SmartArt";
+
+    /// <summary>Le titre de la galerie des SmartArt.</summary>
+    public const string GallerySmartArtTitle = "Insérer un SmartArt";
+
+    /// <summary>Le titre de la galerie des schémas.</summary>
+    public const string GallerySchemaTitle = "Insérer un schéma";
+
+    /// <summary>Le titre de la galerie des graphiques.</summary>
+    public const string GalleryChartTitle = "Insérer un graphique";
+
+    /// <summary>La catégorie de tous les modèles.</summary>
+    public const string GalleryAll = "Tous";
+
+    /// <summary>La liste des catégories de la galerie.</summary>
+    public const string GalleryCategories = "Catégories";
+
+    /// <summary>La liste des modèles de la galerie.</summary>
+    public const string GalleryModels = "Modèles";
+
+    /// <summary>La saisie de la galerie.</summary>
+    public const string GalleryOnePerLine = "Un élément par ligne";
+
+    /// <summary>Insérer ce qui est choisi dans la galerie.</summary>
+    public const string GalleryInsert = "Insérer";
+
     /// <summary>Liste de tâches.</summary>
     public const string Tasks = "Liste de tâches";
 

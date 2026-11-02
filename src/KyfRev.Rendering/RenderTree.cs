@@ -50,6 +50,9 @@ public sealed class RenderElement : RenderNode
     /// <summary>Langue d'un bloc de code (<c>python</c>, <c>mermaid</c>…), sur son élément <c>code</c>.</summary>
     public string? Language { get; internal set; }
 
+    /// <summary>Ce qui suit la langue d'un bloc de code (<c>cycle</c> après <c>smartart</c>), sur son élément <c>code</c>.</summary>
+    public string? CodeArguments { get; internal set; }
+
     /// <summary>Destination d'un lien, ou source d'une image, telle qu'elle est écrite.</summary>
     public string? Target { get; internal set; }
 

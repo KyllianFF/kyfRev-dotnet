@@ -10,6 +10,7 @@ using KyfRev.DesignSystem.Controls;
 using KyfRev.DesignSystem.Tokens;
 using KyfRev.Presentation.Wpf.Pages;
 using KyfRev.Rendering;
+using KyfRev.Rendering.Diagrams;
 using WpfMath.Controls;
 using WpfMath.Parsers;
 using XamlMath.Exceptions;
@@ -66,6 +67,8 @@ internal sealed class DocumentBuilder
 
     private const double TaskBoxSize = 15;
 
+    private const double DiagramWidth = 640;
+
     private static readonly double ReadingSize = Typography.BodyLarge.Size;
 
     private readonly SheetReading _reading;
@@ -100,6 +103,9 @@ internal sealed class DocumentBuilder
 
     /// <summary>L'endroit de chaque identifiant (notes et renvois).</summary>
     public Dictionary<string, TextElement> Identified { get; } = new(StringComparer.Ordinal);
+
+    /// <summary>Les schémas se dessinent ; sinon, ils se lisent en code.</summary>
+    public bool DrawsMermaid { get; init; }
 
     /// <summary>Le lien entre le document et le texte affiché, et les surlignages.</summary>
     public TextLayer Layer { get; }
@@ -507,6 +513,18 @@ internal sealed class DocumentBuilder
         var code = element.Children.OfType<RenderElement>().First();
         var value = code.Children.OfType<RenderText>().FirstOrDefault();
         var text = value?.Value.TrimEnd('\n') ?? string.Empty;
+        if (code.Language == SmartArt.Language && SmartArt.Draw(code.CodeArguments, text) is { } scene)
+        {
+            var drawing = new DiagramView { Scene = scene, MaxWidth = DiagramWidth };
+            blocks.Add(new BlockUIContainer(drawing) { Margin = new Thickness(0, 4, 0, 16) });
+            return;
+        }
+        if (code.Language == MermaidTemplates.Language && DrawsMermaid)
+        {
+            var view = new MermaidView { Code = text, MaxWidth = DiagramWidth };
+            blocks.Add(new BlockUIContainer(view) { Margin = new Thickness(0, 4, 0, 16) });
+            return;
+        }
         if (code.Language is "mermaid" or "reseau")
         {
             var note = new Paragraph(new Run(ReadingText.DiagramAsText)) { Margin = new Thickness(0, 0, 0, 4), FontSize = Typography.Caption.Size };

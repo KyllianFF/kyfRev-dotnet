@@ -36,6 +36,8 @@ namespace KyfRev.Presentation.Wpf.Editing;
 [JsonDerivedType(typeof(GoToHeadingRequest), "goToHeading")]
 [JsonDerivedType(typeof(ClipboardRequest), "clipboard")]
 [JsonDerivedType(typeof(ListOpenRequest), "listOpen")]
+[JsonDerivedType(typeof(InsertDiagramRequest), "insertDiagram")]
+[JsonDerivedType(typeof(DiagramRequest), "diagram")]
 internal abstract record EditorRequest;
 
 /// <summary>Ouvre ce Markdown : rien à enregistrer, rien à annuler.</summary>
@@ -125,6 +127,12 @@ internal sealed record ClipboardRequest(string Action) : EditorRequest;
 /// <summary>Dit si la liste des fiches est ouverte : elle prend alors ses touches.</summary>
 internal sealed record ListOpenRequest(bool Open) : EditorRequest;
 
+/// <summary>Insère un dessin, ou remplace celui de cette position.</summary>
+internal sealed record InsertDiagramRequest(string Language, string Code, int? Position) : EditorRequest;
+
+/// <summary>Le dessin d'un bloc : un SVG, ou une image en adresse <c>data:</c> ; ni l'un ni l'autre : il ne se dessine pas.</summary>
+internal sealed record DiagramRequest(string Language, string Code, string? Svg, string? Image) : EditorRequest;
+
 /// <summary>Ce que l'éditeur visuel dit à l'application.</summary>
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "kind")]
 [JsonDerivedType(typeof(ReadyEvent), "ready")]
@@ -138,6 +146,8 @@ internal sealed record ListOpenRequest(bool Open) : EditorRequest;
 [JsonDerivedType(typeof(ListKeyEvent), "listKey")]
 [JsonDerivedType(typeof(MenuEvent), "menu")]
 [JsonDerivedType(typeof(DroppedEvent), "dropped")]
+[JsonDerivedType(typeof(AskDiagramEvent), "askDiagram")]
+[JsonDerivedType(typeof(EditDiagramEvent), "editDiagram")]
 internal abstract record EditorEvent;
 
 /// <summary>La page est prête.</summary>
@@ -172,6 +182,12 @@ internal sealed record MenuEvent(string? Word, int WordStart, bool HasSelection,
 
 /// <summary>Une image collée ou déposée ; sans contenu, elle est trop lourde pour être lue.</summary>
 internal sealed record DroppedEvent(string Name, string? Base64, int? Position) : EditorEvent;
+
+/// <summary>La page a besoin du dessin d'un bloc.</summary>
+internal sealed record AskDiagramEvent(string Language, string Code) : EditorEvent;
+
+/// <summary>L'utilisateur veut modifier ce dessin.</summary>
+internal sealed record EditDiagramEvent(string Language, string Code, int Position) : EditorEvent;
 
 /// <summary>
 /// Le contrat du bus : le même des deux côtés. Les types de la page (<c>tools/visual-editor/src/messages.ts</c>)
