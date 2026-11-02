@@ -281,7 +281,7 @@ internal sealed class RunningApplication : IDisposable
     public void OpenView(string name)
     {
         var entry = Retry.WhileNull(
-            () => Wait("MainNavigation").FindAllChildren().FirstOrDefault(child => child.Name == name),
+            () => Wait("MainNavigation").FindAllChildren().Concat(Wait("SecondaryNavigation").FindAllChildren()).FirstOrDefault(child => child.Name == name),
             Patience,
             Interval,
             throwOnTimeout: true,
