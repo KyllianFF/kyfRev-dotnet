@@ -66,6 +66,25 @@ public sealed class UseCaseTests
     }
 
     [TestMethod]
+    public void A_setting_changes_from_the_current_ones_and_the_rest_stays()
+    {
+        using var folder = new TestFolder();
+        using var test = Opened(folder);
+        var settings = test.App.Settings;
+        var before = settings.Get().Value;
+
+        var saved = settings.Update(current => current with { MaxPerDay = before.MaxPerDay + 1 }).Value;
+
+        Assert.AreEqual(before.MaxPerDay + 1, saved.MaxPerDay);
+        Assert.AreEqual(before.BackupRotation, saved.BackupRotation);
+        Assert.AreEqual(saved.MaxPerDay, settings.Get().Value.MaxPerDay);
+
+        var refused = settings.Update(current => current with { MaxPerDay = 0 });
+        Assert.IsFalse(refused.Succeeded);
+        Assert.AreEqual(saved.MaxPerDay, settings.Get().Value.MaxPerDay);
+    }
+
+    [TestMethod]
     public void The_dashboard_prepares_the_day_and_lists_what_to_review()
     {
         using var folder = new TestFolder();
@@ -263,6 +282,7 @@ public sealed class UseCaseTests
         _ when type == typeof(Anchor) => Passage,
         _ when type == typeof(Definition) => new Definition("Terme", "Explication."),
         _ when type == typeof(VaultPreferences) => new VaultPreferences([1, 3], true, 2, 30, [2, 4], false, true, true, false, [], false),
+        _ when type == typeof(Func<VaultPreferences, VaultPreferences>) => (Func<VaultPreferences, VaultPreferences>)(preferences => preferences),
         _ when type.IsEnum => Enum.GetValues(type).GetValue(0),
         _ => throw new InvalidOperationException($"Pas d'exemple pour {type}"),
     };
