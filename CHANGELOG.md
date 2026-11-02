@@ -9,6 +9,8 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- Le code d'une fiche est coloré en lecture, selon son langage, avec les couleurs du thème : C#, C et C++, CSS, HTML, Java,
+  JavaScript et TypeScript, JSON, PHP, PowerShell, Python, SQL, TeX, Visual Basic, XML et les différences de fichiers.
 - Écouter une fiche : le bouton « Écouter » de la lecture fait lire la fiche par les voix de Windows, hors ligne, bloc par
   bloc. Le bloc lu ressort et vient au milieu de la vue. Pause, bloc voisin, vitesse et voix se règlent pendant la lecture.
   Une formule et une image sont nommées, le code et les dessins sont passés. Pendant une révision à trous, la voix se tait :

@@ -618,8 +618,7 @@ internal sealed class DocumentBuilder
             _unspoken.Add(note);
             blocks.Add(note);
         }
-        var run = new Run(text);
-        var block = new Paragraph(run)
+        var block = new Paragraph
         {
             Margin = new Thickness(0, 0, 0, 12),
             Padding = new Thickness(12, 8, 12, 8),
@@ -631,9 +630,19 @@ internal sealed class DocumentBuilder
         block.SetResourceReference(TextElement.BackgroundProperty, SurfaceAlt);
         _unspoken.Add(block);
         blocks.Add(block);
-        if (value is not null && _pieces.TryGetValue(value, out var piece))
+        var place = value is not null && _pieces.TryGetValue(value, out var piece) ? piece.Start : (int?)null;
+        foreach (var colored in CodeColors.Pieces(text, code.Language))
         {
-            Layer.AddRun(run, piece.Start);
+            var run = new Run(text.Substring(colored.Start, colored.Length));
+            if (colored.Brush is { } brush)
+            {
+                run.SetResourceReference(TextElement.ForegroundProperty, brush);
+            }
+            block.Inlines.Add(run);
+            if (place is { } start)
+            {
+                Layer.AddRun(run, start + colored.Start);
+            }
         }
     }
 

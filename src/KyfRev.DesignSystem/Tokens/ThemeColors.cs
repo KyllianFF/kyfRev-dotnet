@@ -88,6 +88,10 @@ public static class ThemeColors
         [ColorRole.Success] = SystemColor.WindowText,
         [ColorRole.SuccessBackground] = SystemColor.Window,
         [ColorRole.Info] = SystemColor.WindowText,
+        [ColorRole.CodeKeyword] = SystemColor.WindowText,
+        [ColorRole.CodeString] = SystemColor.WindowText,
+        [ColorRole.CodeNumber] = SystemColor.WindowText,
+        [ColorRole.CodeTitle] = SystemColor.WindowText,
         [ColorRole.InfoBackground] = SystemColor.Window,
         [ColorRole.Scrim] = SystemColor.Window,
     }.ToFrozenDictionary();
@@ -149,6 +153,10 @@ public static class ThemeColors
             [ColorRole.SuccessBackground] = neutrals.SuccessBackground,
             [ColorRole.Info] = forest[Pick(800, 100)],
             [ColorRole.InfoBackground] = forest[Pick(100, 900)],
+            [ColorRole.CodeKeyword] = forest[Pick(700, 300)],
+            [ColorRole.CodeString] = amber[Pick(800, 200)],
+            [ColorRole.CodeNumber] = light ? Palette.CodeNumberLight : Palette.CodeNumberDark,
+            [ColorRole.CodeTitle] = light ? Palette.CodeTitleLight : Palette.CodeTitleDark,
             [ColorRole.Scrim] = neutrals.Scrim,
         }.ToFrozenDictionary();
     }

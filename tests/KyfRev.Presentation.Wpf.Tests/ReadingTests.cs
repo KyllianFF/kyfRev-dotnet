@@ -132,7 +132,7 @@ public sealed class ReadingTests
         var built = Build("```python\nprint(1)\nprint(2)\n```\n\n```mermaid\ngraph LR\n```", showsHeader: false);
         var blocks = built.Document.Blocks.OfType<Paragraph>().ToList();
 
-        Assert.AreEqual("print(1)\nprint(2)", ((Run)blocks[0].Inlines.FirstInline).Text);
+        Assert.AreEqual("print(1)\nprint(2)", string.Concat(blocks[0].Inlines.OfType<Run>().Select(run => run.Text)));
         Assert.AreEqual(ReadingText.DiagramAsText, TextOf(blocks[1]));
         Assert.AreEqual("graph LR", TextOf(blocks[2]));
     }

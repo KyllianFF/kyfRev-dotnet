@@ -118,6 +118,18 @@ public enum ColorRole
     /// <summary>Fond des informations.</summary>
     InfoBackground,
 
+    /// <summary>Mot réservé d'un bloc de code.</summary>
+    CodeKeyword,
+
+    /// <summary>Texte entre guillemets d'un bloc de code.</summary>
+    CodeString,
+
+    /// <summary>Nombre d'un bloc de code.</summary>
+    CodeNumber,
+
+    /// <summary>Nom de fonction ou de balise d'un bloc de code.</summary>
+    CodeTitle,
+
     /// <summary>Voile sous les dialogues (transparent, décoratif).</summary>
     Scrim,
 }
