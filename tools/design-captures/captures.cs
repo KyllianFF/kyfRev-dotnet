@@ -381,6 +381,31 @@ static void ReviewCaptures(string folder)
         var formatPage = new SheetPageViewModel(app.Sheets, app.Annotations, Bar, formatted, () => { }, _ => { }, new NoLinks(), Editor);
         formatPage.LoadCommand.Execute(null);
         Pump(() => !formatPage.IsLoading);
+        // L'historique : une version en face du texte actuel.
+        var kept = app.Sheets.Create("Histoire", "Historique", null).Value;
+        app.Editing.Save(kept, "# Historique\n\nUne ligne qui ne change pas.\n\nUne ligne que l'on va modifier.\n\nUne ligne que l'on va retirer.\n\nFin.\n", app.Sheets.Open(kept).Value.Fingerprint, 1);
+        var keptPage = new SheetPageViewModel(app.Sheets, app.Annotations, Bar, kept, () => { }, _ => { }, new NoLinks(), Editor);
+        keptPage.LoadCommand.Execute(null);
+        Pump(() => !keptPage.IsLoading);
+        keptPage.StartWritingCommand.Execute(null);
+        Pump(() => keptPage.Editor is not null);
+        app.Editing.KeepAsVersion(kept, "# Historique\n\nUne ligne qui ne change pas.\n\nUne ligne avant sa modification.\n\nUne ligne que l'on va retirer.\n\nFin.\n");
+        foreach (var (file, theme) in new[] { ("historique-clair.png", ThemePreference.Light), ("historique-sombre.png", ThemePreference.Dark) })
+        {
+            var historyReady = DateTime.UtcNow.AddSeconds(3);
+            Shell(folder, file, theme, shell => shell.Navigate(new NavigationItem("fiche", "Fiche", Icons.Document, int.MaxValue, keptPage)), null, 1600, 1000, () =>
+            {
+                if (!keptPage.Editor!.IsHistoryOpen && !keptPage.Editor.OpenHistoryCommand.IsRunning)
+                {
+                    keptPage.Editor.OpenHistoryCommand.Execute(null);
+                }
+                return keptPage.Editor.IsHistoryOpen && DateTime.UtcNow > historyReady;
+            });
+        }
+        keptPage.Editor!.CloseHistoryCommand.Execute(null);
+        keptPage.StopWritingCommand.Execute(null);
+        Pump(() => keptPage.Editor is null);
+
         void Format(string file, ThemePreference theme) =>
             Shell(folder, file, theme, shell => shell.Navigate(new NavigationItem("fiche", "Fiche", Icons.Document, int.MaxValue, formatPage)), null, 1600, 1000, () => formatPage.Editor is null || formatPage.Editor.Preview is not null);
         Format("format-lecture-clair.png", ThemePreference.Light);

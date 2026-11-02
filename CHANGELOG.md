@@ -9,6 +9,9 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- Historique d'une fiche : le bouton « Historique » du ruban montre chaque version en face du texte actuel, ce qui diffère
+  marqué d'une couleur et d'un signe, et permet de la remettre. Le texte actuel est d'abord gardé : rien n'est jamais
+  effacé. Quand une fiche a changé sur le disque, « Comparer » montre les deux versions avant de trancher.
 - Fiche en révision : le bouton « Réviser », ou une fiche ouverte depuis Aujourd'hui ou une séance. Avec le rappel actif,
   ses passages et son gras sont masqués jusqu'au clic, ou jusqu'à Entrée, pour se les rappeler avant de les relire. Le trou
   garde la largeur du texte, le volet tait aussi ce qui est masqué, et « Tout afficher » ou « Remasquer » le permettent d'un

@@ -288,6 +288,154 @@ public sealed class WritingTests
     }
 
     [STATestMethod]
+    public void The_history_compares_a_version_with_the_text_and_restores_it()
+    {
+        using var scene = new Scene("Première\n");
+        scene.Select(0, 0);
+        scene.Type("Ajout. ");
+        UiThread.Until(() => scene.OnDisk.StartsWith("Ajout. ", StringComparison.Ordinal));
+
+        scene.Editor.OpenHistoryCommand.Execute(null);
+        UiThread.Until(() => scene.Editor.IsHistoryOpen);
+        TestShell.Flush();
+
+        var history = scene.Editor.History!;
+        Assert.IsTrue(scene.SheetPage.HistoryDialog.IsOpen);
+        Assert.IsTrue(history.HasVersions);
+        Assert.IsFalse(history.IsEmpty);
+        var kept = history.Entries.Count;
+        Assert.IsGreaterThanOrEqualTo(1, kept);
+        Assert.AreSame(history.Entries[0], history.Selected);
+        Assert.Contains("version", history.Summary);
+        Assert.StartsWith("Version du ", history.VersionLabel);
+        Assert.AreEqual(DiffKind.Changed, history.Rows![0].Kind);
+        Assert.AreEqual("Première", history.Rows[0].Left);
+        Assert.AreEqual("Ajout. Première", history.Rows[0].Right);
+        Assert.AreSame(history.Rows, scene.SheetPage.HistoryDiff.Rows);
+
+        history.AskRestoreCommand.Execute(null);
+        Assert.IsTrue(history.IsConfirming);
+        history.CancelRestoreCommand.Execute(null);
+        Assert.IsTrue(history.IsNotConfirming);
+        Assert.Contains("Ajout.", Written(scene), "Rien n'a changé.");
+
+        history.AskRestoreCommand.Execute(null);
+        history.RestoreCommand.Execute(null);
+        UiThread.Until(() => !scene.Editor.IsHistoryOpen);
+
+        Assert.AreEqual("Première\n", Written(scene));
+        Assert.AreEqual("Première\n", scene.OnDisk);
+        Assert.AreEqual(SaveState.Saved, scene.Editor.State);
+        var versions = scene.Vault.App.Editing.Versions(scene.Vault.SheetId).Value;
+        Assert.HasCount(kept + 1, versions);
+        Assert.IsTrue(versions.Any(version => scene.Vault.App.Editing.ReadVersion(scene.Vault.SheetId, version.Name).Value.StartsWith("Ajout. ", StringComparison.Ordinal)));
+    }
+
+    [STATestMethod]
+    public void A_sheet_without_a_version_says_so()
+    {
+        using var scene = new Scene("Première\n");
+        var fresh = scene.Vault.App.Sheets.Create("Biologie", "Neuve", null).Value;
+
+        var history = new VersionsViewModel(scene.Vault.App.Editing, fresh, string.Empty, (_, _) => Task.FromResult(false));
+
+        Assert.IsTrue(history.IsEmpty);
+        Assert.IsFalse(history.HasVersions);
+        Assert.IsNull(history.Selected);
+        Assert.IsNull(history.Rows);
+        Assert.AreEqual(string.Empty, history.VersionLabel);
+    }
+
+    [STATestMethod]
+    public void The_history_closes_by_its_button_and_opens_again()
+    {
+        using var scene = new Scene("Première\n");
+        scene.Editor.OpenHistoryCommand.Execute(null);
+        UiThread.Until(() => scene.Editor.IsHistoryOpen);
+        TestShell.Flush();
+        Assert.IsTrue(scene.SheetPage.HistoryDialog.IsOpen);
+
+        scene.SheetPage.HistoryDialog.Close(KyfRev.DesignSystem.Controls.DialogChoice.Primary);
+        TestShell.Flush();
+        Assert.IsFalse(scene.Editor.IsHistoryOpen);
+
+        scene.Editor.OpenHistoryCommand.Execute(null);
+        UiThread.Until(() => scene.Editor.IsHistoryOpen);
+        TestShell.Flush();
+        Assert.IsTrue(scene.SheetPage.HistoryDialog.IsOpen);
+    }
+
+    [STATestMethod]
+    public void A_version_that_cannot_be_read_is_said()
+    {
+        using var scene = new Scene("Première\n");
+        scene.Editor.OpenHistoryCommand.Execute(null);
+        UiThread.Until(() => scene.Editor.IsHistoryOpen);
+        var history = scene.Editor.History!;
+        history.Selected = new VersionEntry(new KyfRev.Application.Model.SheetVersion("inconnue", DateTimeOffset.UnixEpoch, 2048));
+
+        Assert.IsTrue(history.HasProblem);
+        Assert.IsNull(history.Rows);
+        Assert.AreEqual("2 ko", history.Selected.Size);
+
+        history.RestoreCommand.Execute(null);
+        Assert.IsTrue(scene.Editor.IsHistoryOpen);
+    }
+
+    [STATestMethod]
+    public void Restoring_stops_at_a_conflict_and_nothing_is_lost()
+    {
+        using var scene = new Scene("Première\n");
+        scene.Select(0, 0);
+        scene.Type("Ajout. ");
+        UiThread.Until(() => scene.OnDisk.StartsWith("Ajout. ", StringComparison.Ordinal));
+        scene.Editor.OpenHistoryCommand.Execute(null);
+        UiThread.Until(() => scene.Editor.IsHistoryOpen);
+        var history = scene.Editor.History!;
+        Assert.IsTrue(scene.Vault.App.Editing.Save(scene.Vault.SheetId, "Sur le disque.", scene.Vault.App.Sheets.Open(scene.Vault.SheetId).Value.Fingerprint, 99).Succeeded);
+
+        history.RestoreCommand.Execute(null);
+        UiThread.Until(() => history.HasProblem);
+
+        Assert.AreEqual(EditingText.VersionNotRestored, history.Problem);
+        Assert.IsTrue(history.IsNotConfirming);
+        Assert.AreEqual(SaveState.Conflict, scene.Editor.State);
+        Assert.AreEqual("Sur le disque.", scene.OnDisk);
+        Assert.Contains("Ajout.", Written(scene));
+    }
+
+    [STATestMethod]
+    public void A_conflict_compares_the_disk_with_my_text_and_closes()
+    {
+        using var scene = new Scene("Commun\nPremière\n");
+        Assert.IsTrue(scene.Vault.App.Editing.Save(scene.Vault.SheetId, "Commun\nSur le disque\n", scene.Vault.App.Sheets.Open(scene.Vault.SheetId).Value.Fingerprint, 99).Succeeded);
+        scene.Select(0, 0);
+        scene.Type("Ma ");
+        UiThread.Until(() => scene.Editor.State == SaveState.Conflict);
+
+        scene.Editor.CompareConflictCommand.Execute(null);
+        UiThread.Until(() => scene.Editor.IsComparingConflict);
+        TestShell.Flush();
+
+        Assert.IsTrue(scene.SheetPage.ConflictDialog.IsOpen);
+        var rows = scene.Editor.ConflictRows!;
+        Assert.AreEqual("Commun", rows[0].Left);
+        Assert.AreEqual("Ma Commun", rows[0].Right);
+        Assert.AreEqual("Sur le disque", rows[1].Left);
+        Assert.AreEqual("Première", rows[1].Right);
+
+        scene.SheetPage.ConflictDialog.Close(KyfRev.DesignSystem.Controls.DialogChoice.Primary);
+        TestShell.Flush();
+        UiThread.Until(() => !scene.Editor.IsComparingConflict);
+
+        scene.Editor.CompareConflictCommand.Execute(null);
+        UiThread.Until(() => scene.Editor.IsComparingConflict);
+        scene.Editor.KeepMineCommand.Execute(null);
+        UiThread.Until(() => scene.Editor.State == SaveState.Saved);
+        Assert.IsFalse(scene.Editor.IsComparingConflict);
+    }
+
+    [STATestMethod]
     public void A_change_on_disk_is_a_conflict_that_writes_nothing()
     {
         using var scene = new Scene();

@@ -191,6 +191,66 @@ public static class EditingText
     /// <summary>Liste à puces.</summary>
     public const string Bullets = "Liste à puces";
 
+    /// <summary>La culture des dates de l'écriture.</summary>
+    public static CultureInfo Culture { get; } = CultureInfo.GetCultureInfo("fr-FR");
+
+    /// <summary>L'historique d'une fiche.</summary>
+    public const string History = "Historique";
+
+    /// <summary>Le titre de l'historique.</summary>
+    public const string HistoryTitle = "Historique des versions";
+
+    /// <summary>Fermer l'historique.</summary>
+    public const string HistoryClose = "Fermer";
+
+    /// <summary>La liste des versions.</summary>
+    public const string HistoryVersions = "Versions";
+
+    /// <summary>Le côté du texte actuel.</summary>
+    public const string HistoryCurrent = "Texte actuel";
+
+    /// <summary>Aucune version encore.</summary>
+    public const string HistoryEmpty = "Aucune version pour l'instant. La première est gardée dès le premier enregistrement de chaque séance d'écriture, et avant toute restauration.";
+
+    /// <summary>Demander à remettre une version.</summary>
+    public const string HistoryRestoreAsk = "Restaurer cette version…";
+
+    /// <summary>Remettre la version.</summary>
+    public const string HistoryRestore = "Restaurer";
+
+    /// <summary>Renoncer à remettre la version.</summary>
+    public const string HistoryCancel = "Annuler";
+
+    /// <summary>Ce que fait la remise d'une version.</summary>
+    public const string HistoryRestoreNote = "Le texte actuel sera d'abord gardé dans l'historique.";
+
+    /// <summary>La version n'a pas été remise.</summary>
+    public const string VersionNotRestored = "La version n'a pas été remise : voyez le message de l'éditeur.";
+
+    /// <summary>Comparer les deux versions d'un conflit.</summary>
+    public const string ConflictCompare = "Comparer";
+
+    /// <summary>Le titre de la comparaison d'un conflit.</summary>
+    public const string ConflictCompareTitle = "La fiche a changé hors de kyfRev";
+
+    /// <summary>Le côté de la version du disque.</summary>
+    public const string ConflictDisk = "Version du disque";
+
+    /// <summary>Le côté de ma version.</summary>
+    public const string ConflictMine = "Ma version";
+
+    /// <summary>Combien de versions, et ce qu'elles pèsent.</summary>
+    public static string VersionsSummary(int count, long size) =>
+        string.Create(Culture, $"{count} version{(count > 1 ? "s" : string.Empty)} · {FileSize(size)}");
+
+    /// <summary>Une taille de fichier.</summary>
+    public static string FileSize(long size) => size switch
+    {
+        < 1024 => string.Create(Culture, $"{size} o"),
+        < 1024 * 1024 => string.Create(Culture, $"{size / 1024.0:0.#} ko"),
+        _ => string.Create(Culture, $"{size / (1024.0 * 1024):0.#} Mo"),
+    };
+
     /// <summary>Le groupe des dessins.</summary>
     public const string IllustrationsGroup = "Illustrations";
 

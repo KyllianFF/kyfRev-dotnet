@@ -38,6 +38,7 @@
     <DockPanel>
       <DockPanel DockPanel.Dock="Top" Margin="4,2,4,0">
         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+          <Button x:Name="HistoryButton" Style="{DynamicResource Kyf.Button.Tool}" Padding="10,0" Margin="0,0,4,0" Content="{x:Static editing:EditingText.History}" Command="{Binding OpenHistoryCommand}" />
           <ToggleButton x:Name="PreviewToggle" Style="{DynamicResource Kyf.Button.Tool}" Padding="10,0" Margin="0,0,4,0" Content="{x:Static editing:EditingText.Preview}" IsChecked="{Binding IsPreviewOn}"
                         Visibility="{Binding IsMarkdownShown, Converter={StaticResource Visible}}" />
           <ToggleButton x:Name="MarkdownToggle" Style="{DynamicResource Kyf.Button.Tool}" Padding="10,0" Content="{x:Static editing:EditingText.ShowMarkdown}" IsChecked="{Binding IsMarkdownOn}" IsEnabled="{Binding IsVisualAvailable}" />
