@@ -23,7 +23,7 @@
 // archives-contraste-eleve.png), les fiches (fiches-clair.png, fiches-sombre.png, fiches-etroit-clair.png,
 // fiches-nouvelle-sombre.png, fiches-contraste-eleve.png), le glossaire (definitions-clair.png, definitions-sombre.png,
 // definitions-large-sombre.png, definitions-etroit-clair.png, definitions-modification-sombre.png, definitions-contraste-eleve.png),
-// le code coloré (code-sombre.png, code-clair.png, code-contraste-eleve.png), la lecture à voix haute (ecoute-sombre.png, ecoute-clair.png, ecoute-etroite-sombre.png), les réglages (parametres-clair.png, parametres-sombre.png, parametres-etroit-sombre.png, parametres-refus-sombre.png, parametres-contraste-eleve.png), la lecture d'une fiche (fiche-clair.png,
+// le changement de place d'un passage et la corbeille du volet (rattacher-sombre.png, rattacher-etroit-clair.png), le code coloré (code-sombre.png, code-clair.png, code-contraste-eleve.png), la lecture à voix haute (ecoute-sombre.png, ecoute-clair.png, ecoute-etroite-sombre.png), les réglages (parametres-clair.png, parametres-sombre.png, parametres-etroit-sombre.png, parametres-refus-sombre.png, parametres-contraste-eleve.png), la lecture d'une fiche (fiche-clair.png,
 // lecture-sombre.png, lecture-moyenne-clair.png, lecture-etroite-sombre.png, lecture-volet-clair.png, lecture-contraste-eleve.png), l'écriture (ecriture-clair.png,
 // ecriture-sombre.png, ecriture-insertion-sombre.png, ecriture-moyenne-clair.png, ecriture-etroite-sombre.png, ecriture-contraste-eleve.png,
 // ecriture-markdown-sombre.png, ecriture-markdown-clair.png), et affiche le contraste de
@@ -418,6 +418,24 @@ static void ReviewCaptures(string folder)
             codePage.LoadCommand.Execute(null);
             Pump(() => !codePage.IsLoading);
             Shell(folder, file, theme, shell => shell.Navigate(new NavigationItem("fiche", "Fiche", Icons.Document, int.MaxValue, codePage)), null, 1280, 800, null, highContrast);
+        }
+
+        // Changer la place d'un passage : la barre, et la corbeille ouverte au bas du volet.
+        var thrownAway = app.Annotations.Create(sheet, new Anchor("clergé", string.Empty, string.Empty, 0, 6, [], null, app.Sheets.Open(sheet).Value.Fingerprint), "À jeter.").Value;
+        app.Annotations.Trash(thrownAway);
+        foreach (var (file, theme, width, height) in new[] { ("rattacher-sombre.png", ThemePreference.Dark, 1280.0, 800.0), ("rattacher-etroit-clair.png", ThemePreference.Light, 390.0, 844.0) })
+        {
+            var rebinding = new SheetPageViewModel(app.Sheets, app.Annotations, Bar, sheet, () => { }, _ => { }, new NoLinks(), Editor);
+            rebinding.LoadCommand.Execute(null);
+            Pump(() => !rebinding.IsLoading);
+            rebinding.StartRebindingCommand.Execute(rebinding.Passages[0]);
+            Shell(folder, file, theme, shell => shell.Navigate(new NavigationItem("fiche", "Fiche", Icons.Document, int.MaxValue, rebinding)), null, width, height, null, adjust: root =>
+            {
+                if (Descendants(root).OfType<System.Windows.Controls.Primitives.ToggleButton>().FirstOrDefault(toggle => toggle.Name == "TrashToggle") is { } trash)
+                {
+                    trash.IsChecked = true;
+                }
+            });
         }
 
         // Écouter la fiche : le bloc lu ressort, et la barre passe à la ligne sur une fenêtre étroite.

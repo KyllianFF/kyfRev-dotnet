@@ -50,32 +50,50 @@
           <TextBlock DockPanel.Dock="Top" Text="{Binding PassagesLabel}" Style="{DynamicResource Kyf.Text.BodyStrong}" Margin="4,0,0,8"
                      AutomationProperties.HeadingLevel="Level2" />
           <ScrollViewer VerticalScrollBarVisibility="Auto" Focusable="False">
-            <ItemsControl ItemsSource="{Binding Passages}" Focusable="False">
-              <ItemsControl.ItemTemplate>
-                <DataTemplate DataType="{x:Type pages:PassageEntry}">
-                  <Button Style="{DynamicResource Kyf.Button.Subtle}" HorizontalContentAlignment="Stretch" HorizontalAlignment="Stretch" Click="OnPassageEntryClick"
-                          ContextMenuOpening="OnPassageEntryMenu" AutomationProperties.Name="{Binding ShownTitle}" Padding="4,6">
-                    <Button.ContextMenu>
-                      <ContextMenu />
-                    </Button.ContextMenu>
-                    <StackPanel>
-                      <Border x:Name="Quote" HorizontalAlignment="Left" Padding="4,1" Background="{DynamicResource Kyf.Brush.PillPassageBackground}"
-                              Visibility="{Binding IsPassage, Converter={StaticResource Visible}}">
-                        <TextBlock Text="{Binding ShownTitle}" TextWrapping="Wrap" MaxHeight="72" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource Kyf.Brush.PillPassageText}" />
-                      </Border>
-                      <TextBlock Text="{Binding ShownTitle}" FontWeight="SemiBold" TextWrapping="Wrap" Visibility="{Binding IsDefinition, Converter={StaticResource Visible}}" />
-                      <TextBlock Text="{Binding ShownDetail}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,2,0,0"
-                                 Visibility="{Binding HasShownDetail, Converter={StaticResource Visible}}" />
-                      <TextBlock Text="{x:Static pages:ReadingText.LostPassage}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,2,0,0"
-                                 Foreground="{DynamicResource Kyf.Brush.Warning}" Visibility="{Binding IsLost, Converter={StaticResource Visible}}" />
-                      <TextBlock Text="{x:Static pages:ReadingText.CandidatePassage}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,2,0,0"
-                                 Foreground="{DynamicResource Kyf.Brush.Warning}" Visibility="{Binding IsCandidate, Converter={StaticResource Visible}}" />
-                      <Rectangle Height="2" Margin="0,4,0,0" Fill="{DynamicResource Kyf.Brush.MarkerPassage}" Visibility="{Binding IsActive, Converter={StaticResource Visible}}" />
-                    </StackPanel>
-                  </Button>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
+            <StackPanel>
+              <ItemsControl ItemsSource="{Binding Passages}" Focusable="False">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate DataType="{x:Type pages:PassageEntry}">
+                    <Button Style="{DynamicResource Kyf.Button.Subtle}" HorizontalContentAlignment="Stretch" HorizontalAlignment="Stretch" Click="OnPassageEntryClick"
+                            ContextMenuOpening="OnPassageEntryMenu" AutomationProperties.Name="{Binding ShownTitle}" Padding="4,6">
+                      <Button.ContextMenu>
+                        <ContextMenu />
+                      </Button.ContextMenu>
+                      <StackPanel>
+                        <Border x:Name="Quote" HorizontalAlignment="Left" Padding="4,1" Background="{DynamicResource Kyf.Brush.PillPassageBackground}"
+                                Visibility="{Binding IsPassage, Converter={StaticResource Visible}}">
+                          <TextBlock Text="{Binding ShownTitle}" TextWrapping="Wrap" MaxHeight="72" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource Kyf.Brush.PillPassageText}" />
+                        </Border>
+                        <TextBlock Text="{Binding ShownTitle}" FontWeight="SemiBold" TextWrapping="Wrap" Visibility="{Binding IsDefinition, Converter={StaticResource Visible}}" />
+                        <TextBlock Text="{Binding ShownDetail}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,2,0,0"
+                                   Visibility="{Binding HasShownDetail, Converter={StaticResource Visible}}" />
+                        <TextBlock Text="{x:Static pages:ReadingText.LostPassage}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,2,0,0"
+                                   Foreground="{DynamicResource Kyf.Brush.Warning}" Visibility="{Binding IsLost, Converter={StaticResource Visible}}" />
+                        <TextBlock Text="{x:Static pages:ReadingText.CandidatePassage}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,2,0,0"
+                                   Foreground="{DynamicResource Kyf.Brush.Warning}" Visibility="{Binding IsCandidate, Converter={StaticResource Visible}}" />
+                        <Rectangle Height="2" Margin="0,4,0,0" Fill="{DynamicResource Kyf.Brush.MarkerPassage}" Visibility="{Binding IsActive, Converter={StaticResource Visible}}" />
+                      </StackPanel>
+                    </Button>
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+              <!-- La corbeille de la fiche, repliée : on y vient pour rendre, pas pour lire. -->
+              <StackPanel Margin="0,12,0,0" Visibility="{Binding HasTrashedPassages, Converter={StaticResource Visible}}">
+                <ToggleButton x:Name="TrashToggle" Content="{Binding TrashLabel}" Style="{DynamicResource Kyf.Button.Tool}" HorizontalAlignment="Left" Padding="8,0" />
+                <ItemsControl ItemsSource="{Binding TrashedPassages}" Focusable="False" Margin="0,4,0,0" Visibility="{Binding IsChecked, ElementName=TrashToggle, Converter={StaticResource Visible}}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type pages:TrashedPassage}">
+                      <DockPanel Margin="4,2">
+                        <Button DockPanel.Dock="Right" Content="{x:Static pages:ReadingText.Restore}" Style="{DynamicResource Kyf.Button.Subtle}" Margin="4,0,0,0"
+                                Command="{Binding DataContext.RestorePassageCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"
+                                AutomationProperties.Name="{Binding Label, StringFormat={x:Static pages:ReadingText.RestoreNamed}}" />
+                        <TextBlock Text="{Binding Label}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                      </DockPanel>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </StackPanel>
           </ScrollViewer>
         </DockPanel>
       </Border>
@@ -105,7 +123,8 @@
             <TextBlock Text="{x:Static pages:ReviewText.Back}" VerticalAlignment="Center" />
           </StackPanel>
         </Button>
-        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right">
+        <!-- Quand la place manque, les volets passent au-dessus des modes : aucun bouton ne passe sous le retour. -->
+        <WrapPanel DockPanel.Dock="Right" HorizontalAlignment="Right">
           <StackPanel Orientation="Horizontal" Visibility="{Binding ShowsPanelToggles, Converter={StaticResource Visible}}">
             <ToggleButton x:Name="OutlineToggle" Content="{x:Static pages:ReadingText.Outline}" IsChecked="{Binding IsOutlineOn}" Margin="0,0,8,0"
                           Visibility="{Binding HasOutline, Converter={StaticResource Visible}}" />
@@ -114,20 +133,22 @@
           </StackPanel>
           <TextBlock x:Name="SaveStateText" Text="{Binding Editor.StateLabel}" Style="{DynamicResource Kyf.Text.Secondary}" VerticalAlignment="Center" Margin="0,0,12,0"
                      AutomationProperties.LiveSetting="Polite" Visibility="{Binding IsWriting, Converter={StaticResource Visible}}" />
-          <ToggleButton x:Name="ReadToggle" Content="{x:Static editing:EditingText.Read}" IsChecked="{Binding IsReadOn}"
-                        Style="{DynamicResource Kyf.Button.Tool}" MinHeight="40" Padding="12,0" />
-          <ToggleButton x:Name="ReviseToggle" Content="{x:Static pages:ReadingText.Revise}" IsChecked="{Binding IsReviseOn}"
-                        Style="{DynamicResource Kyf.Button.Tool}" MinHeight="40" Padding="12,0" />
-          <ToggleButton x:Name="WriteToggle" Content="{x:Static editing:EditingText.Write}" IsChecked="{Binding IsWriteOn}"
-                        Style="{DynamicResource Kyf.Button.Tool}" MinHeight="40" Padding="12,0" ToolTip="{x:Static editing:EditingText.WriteKey}" />
-          <ToggleButton x:Name="ListenToggle" IsChecked="{Binding ReadAloud.IsOpen, Mode=OneWay}" Click="OnListenToggle" Style="{DynamicResource Kyf.Button.Tool}" MinHeight="40" Padding="12,0" Margin="8,0,0,0" Visibility="Collapsed"
-                        ToolTip="{x:Static pages:ReadingText.ListenRegion}" AutomationProperties.Name="{x:Static pages:ReadingText.Listen}">
-            <StackPanel Orientation="Horizontal">
-              <kyf:Icon Text="{x:Static kyf:Icons.Speaker}" VerticalAlignment="Center" />
-              <TextBlock x:Name="ListenLabel" Text="{x:Static pages:ReadingText.Listen}" VerticalAlignment="Center" Margin="8,0,0,0" />
-            </StackPanel>
-          </ToggleButton>
-        </StackPanel>
+          <StackPanel Orientation="Horizontal">
+            <ToggleButton x:Name="ReadToggle" Content="{x:Static editing:EditingText.Read}" IsChecked="{Binding IsReadOn}"
+                          Style="{DynamicResource Kyf.Button.Tool}" MinHeight="40" Padding="12,0" />
+            <ToggleButton x:Name="ReviseToggle" Content="{x:Static pages:ReadingText.Revise}" IsChecked="{Binding IsReviseOn}"
+                          Style="{DynamicResource Kyf.Button.Tool}" MinHeight="40" Padding="12,0" />
+            <ToggleButton x:Name="WriteToggle" Content="{x:Static editing:EditingText.Write}" IsChecked="{Binding IsWriteOn}"
+                          Style="{DynamicResource Kyf.Button.Tool}" MinHeight="40" Padding="12,0" ToolTip="{x:Static editing:EditingText.WriteKey}" />
+            <ToggleButton x:Name="ListenToggle" IsChecked="{Binding ReadAloud.IsOpen, Mode=OneWay}" Click="OnListenToggle" Style="{DynamicResource Kyf.Button.Tool}" MinHeight="40" Padding="12,0" Margin="8,0,0,0" Visibility="Collapsed"
+                          ToolTip="{x:Static pages:ReadingText.ListenRegion}" AutomationProperties.Name="{x:Static pages:ReadingText.Listen}">
+              <StackPanel Orientation="Horizontal">
+                <kyf:Icon Text="{x:Static kyf:Icons.Speaker}" VerticalAlignment="Center" />
+                <TextBlock x:Name="ListenLabel" Text="{x:Static pages:ReadingText.Listen}" VerticalAlignment="Center" Margin="8,0,0,0" />
+              </StackPanel>
+            </ToggleButton>
+          </StackPanel>
+        </WrapPanel>
         <TextBlock x:Name="Notice" Text="{Binding Notice}" Style="{DynamicResource Kyf.Text.Secondary}" VerticalAlignment="Center" Margin="16,0" TextTrimming="CharacterEllipsis"
                    AutomationProperties.LiveSetting="Polite" />
       </DockPanel>
@@ -139,6 +160,15 @@
           <Button x:Name="HideAllButton" Style="{DynamicResource Kyf.Button.Subtle}" Content="{x:Static pages:ReadingText.HideAllHoles}" Command="{Binding HideAllCommand}" IsEnabled="{Binding CanHideAll}" Margin="4,0,0,0" />
         </StackPanel>
         <TextBlock x:Name="HolesSummary" Text="{Binding Summary}" Style="{DynamicResource Kyf.Text.Secondary}" VerticalAlignment="Center" AutomationProperties.LiveSetting="Polite" />
+      </DockPanel>
+
+      <!-- Un passage attend sa nouvelle place : on la sélectionne dans le texte, le reste de la page reste lisible. -->
+      <DockPanel x:Name="RebindBar" Grid.Row="1" Margin="16,0,16,8" Visibility="{Binding IsRebinding, Converter={StaticResource Visible}}">
+        <StackPanel x:Name="RebindButtons" DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+          <Button x:Name="RebindHereButton" Content="{x:Static pages:ReadingText.RebindHere}" Style="{DynamicResource Kyf.Button.Primary}" Click="OnRebindHere" Margin="8,0,8,0" />
+          <Button x:Name="RebindCancelButton" Content="{x:Static pages:ReadingText.RebindCancel}" Command="{Binding CancelRebindingCommand}" />
+        </StackPanel>
+        <TextBlock x:Name="RebindPrompt" Text="{Binding RebindingPrompt}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" VerticalAlignment="Center" AutomationProperties.LiveSetting="Polite" />
       </DockPanel>
 
       <!-- Écouter la fiche : la lecture et ses réglages. Sur une fenêtre étroite, ils passent à la ligne. -->
@@ -263,6 +293,14 @@
     <kyf:Dialog x:Name="PassageDelete" Title="{Binding DeleteTitle}" IsOpen="{Binding IsDeleting, Mode=OneWay}"
                 PrimaryButtonText="{x:Static pages:ReadingText.DeleteLabel}" Closed="OnDeleteClosed">
       <TextBlock Text="{x:Static pages:ReadingText.DeleteMessage}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" />
+    </kyf:Dialog>
+
+    <kyf:Dialog x:Name="RebindConfirm" Title="{x:Static pages:ReadingText.RebindTitle}" IsOpen="{Binding IsConfirmingRebinding, Mode=OneWay}"
+                PrimaryButtonText="{x:Static pages:ReadingText.RebindKeep}" SecondaryButtonText="{x:Static pages:ReadingText.RebindRestart}" Closed="OnRebindClosed">
+      <StackPanel>
+        <TextBlock Text="{Binding RebindingMessage}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" />
+        <Button x:Name="RebindConfirmCancel" Content="{x:Static pages:ReadingText.RebindCancel}" Style="{DynamicResource Kyf.Button.Subtle}" HorizontalAlignment="Right" Margin="0,8,0,0" Click="OnRebindConfirmCancel" />
+      </StackPanel>
     </kyf:Dialog>
 
     <kyf:Dialog x:Name="HistoryDialog" DataContext="{Binding Editor}" Title="{x:Static editing:EditingText.HistoryTitle}" IsOpen="{Binding IsHistoryOpen, Mode=OneWay}" CardMaxWidth="1150" IsWide="True"

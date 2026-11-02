@@ -1,3 +1,5 @@
+using System.Globalization;
+
 using KyfRev.Rendering;
 
 namespace KyfRev.Presentation.Wpf.Pages;
@@ -166,6 +168,8 @@ public static class ReadingText
     public static string HolesSummary(int revealed, int total) =>
         string.Create(System.Globalization.CultureInfo.InvariantCulture, $"Texte à trous : {revealed} sur {total} affichés.");
 
+    private const int ShortLength = 60;
+
     /// <summary>Écouter la fiche.</summary>
     public const string Listen = "Écouter";
 
@@ -235,4 +239,60 @@ public static class ReadingText
 
     /// <summary>La voix n'a pas pu lire.</summary>
     public static string VoiceFailed(string? reason) => $"La voix de Windows n'a pas pu lire la fiche ({reason}). Réessayez, ou choisissez une autre voix.";
+
+    /// <summary>Choisir une autre place pour un passage perdu ou incertain.</summary>
+    public const string RebindLost = "Choisir un autre passage…";
+
+    /// <summary>Changer la place d'un passage.</summary>
+    public const string RebindOther = "Modifier le passage…";
+
+    /// <summary>Le rattacher à la sélection.</summary>
+    public const string RebindHere = "Rattacher à la sélection";
+
+    /// <summary>Le titre de la confirmation.</summary>
+    public const string RebindTitle = "Changer le passage ?";
+
+    /// <summary>Garder sa progression.</summary>
+    public const string RebindKeep = "Conserver la progression";
+
+    /// <summary>Repartir de J0.</summary>
+    public const string RebindRestart = "Recommencer à J0";
+
+    /// <summary>Renoncer.</summary>
+    public const string RebindCancel = "Annuler";
+
+    /// <summary>Le passage est changé, sa progression reste.</summary>
+    public const string RebindKept = "Passage modifié, progression conservée.";
+
+    /// <summary>Le passage est changé, il repart de J0.</summary>
+    public const string RebindRestarted = "Passage modifié : retour à J0.";
+
+    /// <summary>Rien n'est sélectionné.</summary>
+    public const string RebindNoSelection = "Sélectionnez d'abord le nouveau passage dans la fiche.";
+
+    /// <summary>Remettre un passage de la corbeille.</summary>
+    public const string Restore = "Restaurer";
+
+    /// <summary>Le nom du bouton, pour un lecteur d'écran.</summary>
+    public const string RestoreNamed = "Restaurer {0}";
+
+    /// <summary>Le passage est de retour.</summary>
+    public const string Restored = "Passage restauré.";
+
+    /// <summary>« Corbeille · 2 ».</summary>
+    public static string TrashOf(int count) => string.Create(CultureInfo.InvariantCulture, $"Corbeille · {count}");
+
+    /// <summary>Une définition à la corbeille.</summary>
+    public static string TrashedDefinition(string term) => $"Définition : {term}";
+
+    /// <summary>Un passage à la corbeille.</summary>
+    public static string TrashedPassage(string exact) => $"« {Short(exact)} »";
+
+    /// <summary>Ce qu'il faut faire pour rattacher un passage.</summary>
+    public static string RebindPrompt(string title) => $"Sélectionnez dans la fiche le nouveau passage pour « {Short(title)} ».";
+
+    /// <summary>La question posée pour confirmer une nouvelle place.</summary>
+    public static string RebindMessage(string exact) => $"Nouveau passage : « {Short(exact)} ». Sa progression dans le calendrier peut être conservée, ou repartir de J0.";
+
+    private static string Short(string text) => text.Length <= ShortLength ? text : string.Concat(text.AsSpan(0, ShortLength), "…");
 }
