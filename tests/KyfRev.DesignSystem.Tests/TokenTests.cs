@@ -23,6 +23,17 @@ public sealed class TokenTests
     }
 
     [TestMethod]
+    [DataRow(ThemeKind.Light)]
+    [DataRow(ThemeKind.Dark)]
+    public void Text_stays_readable_on_what_marks_a_difference(ThemeKind theme)
+    {
+        var colors = ThemeColors.For(theme);
+
+        Assert.IsGreaterThanOrEqualTo(4.5, colors[ColorRole.Text].ContrastWith(colors[ColorRole.CriticalBackground]));
+        Assert.IsGreaterThanOrEqualTo(4.5, colors[ColorRole.Text].ContrastWith(colors[ColorRole.SuccessBackground]));
+    }
+
+    [TestMethod]
     public void A_color_that_is_already_readable_stays_the_same()
     {
         var dark = ThemeColors.For(ThemeKind.Dark)[ColorRole.Background];

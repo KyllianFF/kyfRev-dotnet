@@ -142,6 +142,7 @@
         <StackPanel x:Name="ConflictPanel" Margin="0,8,0,0" Visibility="{Binding HasConflict, Converter={StaticResource Visible}}">
           <kyf:Notification x:Name="ConflictMessage" Severity="Warning" Message="{x:Static editing:EditingText.ConflictMessage}" IsClosable="False" Margin="0,0,0,8" />
           <WrapPanel>
+            <Button x:Name="CompareConflictButton" Content="{x:Static editing:EditingText.ConflictCompare}" Command="{Binding CompareConflictCommand}" Margin="0,0,8,0" />
             <Button x:Name="KeepMineButton" Content="{x:Static editing:EditingText.KeepMine}" Command="{Binding KeepMineCommand}" Margin="0,0,8,0" />
             <Button x:Name="ReloadDiskButton" Content="{x:Static editing:EditingText.ReloadDisk}" Command="{Binding ReloadDiskCommand}" />
           </WrapPanel>
@@ -233,7 +234,64 @@
       <TextBlock Text="{x:Static pages:ReadingText.DeleteMessage}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" />
     </kyf:Dialog>
 
-    <kyf:Dialog x:Name="GalleryDialog" DataContext="{Binding Editor}" Title="{Binding Gallery.Title}" IsOpen="{Binding IsGalleryOpen, Mode=OneWay}" CardMaxWidth="980"
+    <kyf:Dialog x:Name="HistoryDialog" DataContext="{Binding Editor}" Title="{x:Static editing:EditingText.HistoryTitle}" IsOpen="{Binding IsHistoryOpen, Mode=OneWay}" CardMaxWidth="1150" IsWide="True"
+                PrimaryButtonText="{x:Static editing:EditingText.HistoryClose}" SecondaryButtonText="" Closed="OnHistoryClosed">
+      <Grid x:Name="HistoryContent" DataContext="{Binding History}" Height="560">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto" />
+          <RowDefinition Height="Auto" />
+          <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="210" />
+          <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <TextBlock x:Name="HistorySummary" Grid.ColumnSpan="2" Text="{Binding Summary}" Style="{DynamicResource Kyf.Text.Secondary}" Margin="0,0,0,8"
+                   Visibility="{Binding HasVersions, Converter={StaticResource Visible}}" />
+        <kyf:Notification x:Name="HistoryProblem" Grid.Row="1" Grid.ColumnSpan="2" Severity="Critical" Message="{Binding Problem}" IsClosable="False" Margin="0,0,0,8"
+                          Visibility="{Binding HasProblem, Converter={StaticResource Visible}}" />
+        <TextBlock x:Name="HistoryEmptyText" Grid.Row="2" Grid.ColumnSpan="2" Text="{x:Static editing:EditingText.HistoryEmpty}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap"
+                   Visibility="{Binding IsEmpty, Converter={StaticResource Visible}}" />
+        <ListBox x:Name="HistoryList" Grid.Row="2" ItemsSource="{Binding Entries}" SelectedItem="{Binding Selected}" BorderThickness="0" Background="Transparent" Margin="0,0,12,0"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled" AutomationProperties.Name="{x:Static editing:EditingText.HistoryVersions}"
+                 Visibility="{Binding HasVersions, Converter={StaticResource Visible}}">
+          <ListBox.ItemTemplate>
+            <DataTemplate>
+              <StackPanel>
+                <TextBlock Text="{Binding Date}" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding Size}" Style="{DynamicResource Kyf.Text.Caption}" />
+              </StackPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
+        <DockPanel Grid.Row="2" Grid.Column="1" Visibility="{Binding HasVersions, Converter={StaticResource Visible}}">
+          <UniformGrid DockPanel.Dock="Top" Rows="1" Margin="0,0,0,4">
+            <TextBlock x:Name="HistoryVersionLabel" Text="{Binding VersionLabel}" Style="{DynamicResource Kyf.Text.Caption}" />
+            <TextBlock Text="{x:Static editing:EditingText.HistoryCurrent}" Style="{DynamicResource Kyf.Text.Caption}" />
+          </UniformGrid>
+          <WrapPanel DockPanel.Dock="Bottom" HorizontalAlignment="Right" Margin="0,8,0,0">
+            <Button x:Name="RestoreAskButton" Content="{x:Static editing:EditingText.HistoryRestoreAsk}" Command="{Binding AskRestoreCommand}" Visibility="{Binding IsNotConfirming, Converter={StaticResource Visible}}" />
+            <TextBlock Text="{x:Static editing:EditingText.HistoryRestoreNote}" Style="{DynamicResource Kyf.Text.Secondary}" VerticalAlignment="Center" Margin="0,0,8,0" Visibility="{Binding IsConfirming, Converter={StaticResource Visible}}" />
+            <Button x:Name="RestoreCancelButton" Content="{x:Static editing:EditingText.HistoryCancel}" Command="{Binding CancelRestoreCommand}" Margin="0,0,8,0" Visibility="{Binding IsConfirming, Converter={StaticResource Visible}}" />
+            <Button x:Name="RestoreButton" Content="{x:Static editing:EditingText.HistoryRestore}" Command="{Binding RestoreCommand}" Style="{DynamicResource Kyf.Button.Primary}" Visibility="{Binding IsConfirming, Converter={StaticResource Visible}}" />
+          </WrapPanel>
+          <editing:DiffView x:Name="HistoryDiff" Rows="{Binding Rows}" />
+        </DockPanel>
+      </Grid>
+    </kyf:Dialog>
+
+    <kyf:Dialog x:Name="ConflictDialog" DataContext="{Binding Editor}" Title="{x:Static editing:EditingText.ConflictCompareTitle}" IsOpen="{Binding IsComparingConflict, Mode=OneWay}" CardMaxWidth="1150" IsWide="True"
+                PrimaryButtonText="{x:Static editing:EditingText.HistoryClose}" SecondaryButtonText="" Closed="OnConflictCompareClosed">
+      <DockPanel Height="520">
+        <UniformGrid DockPanel.Dock="Top" Rows="1" Margin="0,0,0,4">
+          <TextBlock Text="{x:Static editing:EditingText.ConflictDisk}" Style="{DynamicResource Kyf.Text.Caption}" />
+          <TextBlock Text="{x:Static editing:EditingText.ConflictMine}" Style="{DynamicResource Kyf.Text.Caption}" />
+        </UniformGrid>
+        <editing:DiffView x:Name="ConflictDiff" Rows="{Binding ConflictRows}" />
+      </DockPanel>
+    </kyf:Dialog>
+
+    <kyf:Dialog x:Name="GalleryDialog" DataContext="{Binding Editor}" Title="{Binding Gallery.Title}" IsOpen="{Binding IsGalleryOpen, Mode=OneWay}" CardMaxWidth="980" IsWide="True"
                 PrimaryButtonText="{x:Static editing:EditingText.GalleryInsert}" Closed="OnGalleryClosed">
       <editing:DiagramGalleryView x:Name="GalleryContent" DataContext="{Binding Gallery}" />
     </kyf:Dialog>

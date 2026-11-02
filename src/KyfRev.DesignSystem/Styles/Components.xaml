@@ -223,7 +223,7 @@
         <ControlTemplate TargetType="kyf:Dialog">
           <Grid>
             <Rectangle Fill="{DynamicResource Kyf.Brush.Scrim}" />
-            <Grid HorizontalAlignment="Center" VerticalAlignment="Center" MinWidth="280" MaxWidth="{TemplateBinding CardMaxWidth}" Margin="16">
+            <Grid x:Name="Card" HorizontalAlignment="Center" VerticalAlignment="Center" MinWidth="280" MaxWidth="{TemplateBinding CardMaxWidth}" Margin="16">
               <Border Background="{TemplateBinding Background}" CornerRadius="{DynamicResource Kyf.Radius.Dialog}"
                       Effect="{DynamicResource Kyf.Elevation.Dialog}" />
               <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
@@ -246,6 +246,9 @@
             </Grid>
           </Grid>
           <ControlTemplate.Triggers>
+            <Trigger Property="IsWide" Value="True">
+              <Setter TargetName="Card" Property="HorizontalAlignment" Value="Stretch" />
+            </Trigger>
             <Trigger Property="SecondaryButtonText" Value="">
               <Setter TargetName="PART_SecondaryButton" Property="Visibility" Value="Collapsed" />
             </Trigger>

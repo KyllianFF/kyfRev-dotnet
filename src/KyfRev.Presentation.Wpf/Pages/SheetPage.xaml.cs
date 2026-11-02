@@ -221,6 +221,17 @@ internal sealed partial class SheetPage : UserControl
     private void OnLinkClosed(object sender, DialogClosedEventArgs e) =>
         (DataContext as SheetPageViewModel)?.Editor?.AnswerLinkCommand.Execute(e.Choice == DialogChoice.Primary);
 
+    private void OnHistoryClosed(object sender, DialogClosedEventArgs e) =>
+        (DataContext as SheetPageViewModel)?.Editor?.CloseHistoryCommand.Execute(null);
+
+    private void OnConflictCompareClosed(object sender, DialogClosedEventArgs e)
+    {
+        if ((DataContext as SheetPageViewModel)?.Editor is { IsComparingConflict: true } editor)
+        {
+            editor.CompareConflictCommand.Execute(null);
+        }
+    }
+
     private void OnGalleryClosed(object sender, DialogClosedEventArgs e) =>
         (DataContext as SheetPageViewModel)?.Editor?.AnswerGalleryCommand.Execute(e.Choice == DialogChoice.Primary);
 

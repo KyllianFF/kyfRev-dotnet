@@ -1,0 +1,51 @@
+<UserControl x:Class="KyfRev.Presentation.Wpf.Editing.DiffView"
+             x:ClassModifier="internal"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <UserControl.Resources>
+    <BooleanToVisibilityConverter x:Key="Visible" />
+
+    <Style x:Key="Line" TargetType="TextBlock">
+      <Setter Property="TextWrapping" Value="Wrap" />
+      <Setter Property="FontFamily" Value="{DynamicResource Kyf.Font.Code}" />
+      <Setter Property="FontSize" Value="{DynamicResource Kyf.FontSize.Body}" />
+      <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Text}" />
+      <Setter Property="Padding" Value="4,1" />
+    </Style>
+  </UserControl.Resources>
+
+  <!-- Une ligne de chaque côté, en face l'une de l'autre ; un signe double la couleur. Jamais de défilement horizontal. -->
+  <ItemsControl x:Name="Lines" ItemsSource="{Binding Rows, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.ScrollUnit="Pixel" Focusable="False">
+    <ItemsControl.Template>
+      <ControlTemplate TargetType="ItemsControl">
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" CanContentScroll="True" Focusable="False">
+          <ItemsPresenter />
+        </ScrollViewer>
+      </ControlTemplate>
+    </ItemsControl.Template>
+    <ItemsControl.ItemsPanel>
+      <ItemsPanelTemplate>
+        <VirtualizingStackPanel />
+      </ItemsPanelTemplate>
+    </ItemsControl.ItemsPanel>
+    <ItemsControl.ItemTemplate>
+      <DataTemplate>
+        <Grid>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="16" />
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="16" />
+            <ColumnDefinition Width="*" />
+          </Grid.ColumnDefinitions>
+          <Border Grid.ColumnSpan="2" Background="{DynamicResource Kyf.Brush.CriticalBackground}" Visibility="{Binding IsLeftMarked, Converter={StaticResource Visible}}" />
+          <Border Grid.Column="2" Grid.ColumnSpan="2" Background="{DynamicResource Kyf.Brush.SuccessBackground}" Visibility="{Binding IsRightMarked, Converter={StaticResource Visible}}" />
+          <TextBlock Text="{Binding LeftSign}" Style="{StaticResource Line}" Padding="4,1,0,1" />
+          <TextBlock Grid.Column="1" Text="{Binding Left}" Style="{StaticResource Line}" />
+          <TextBlock Grid.Column="2" Text="{Binding RightSign}" Style="{StaticResource Line}" Padding="4,1,0,1" />
+          <TextBlock Grid.Column="3" Text="{Binding Right}" Style="{StaticResource Line}" />
+        </Grid>
+      </DataTemplate>
+    </ItemsControl.ItemTemplate>
+  </ItemsControl>
+</UserControl>

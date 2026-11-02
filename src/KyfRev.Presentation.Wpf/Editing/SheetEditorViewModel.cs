@@ -425,6 +425,22 @@ public sealed partial class SheetEditorViewModel : ObservableObject
         }
     }
 
+    /// <summary>L'historique ouvert ; rien s'il est fermé.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsHistoryOpen))]
+    public partial VersionsViewModel? History { get; private set; }
+
+    /// <summary>L'historique est ouvert.</summary>
+    public bool IsHistoryOpen => History is not null;
+
+    /// <summary>Le conflit se compare : la version du disque en face de la mienne.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsComparingConflict))]
+    public partial IReadOnlyList<DiffRow>? ConflictRows { get; private set; }
+
+    /// <summary>La comparaison du conflit est ouverte.</summary>
+    public bool IsComparingConflict => ConflictRows is not null;
+
     /// <summary>La galerie ouverte ; rien si elle est fermée.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsGalleryOpen))]
@@ -746,6 +762,7 @@ public sealed partial class SheetEditorViewModel : ObservableObject
         {
             return;
         }
+        ConflictRows = null;
         _fingerprint = conflict.DiskFingerprint;
         _conflict = null;
         State = SaveState.Modified;
@@ -761,6 +778,7 @@ public sealed partial class SheetEditorViewModel : ObservableObject
         {
             return;
         }
+        ConflictRows = null;
         await surface.SyncAsync().ConfigureAwait(true);
         var mine = ToDisk(surface.Text);
         var kept = await Task.Run(() => _editing.KeepAsVersion(SheetId, mine)).ConfigureAwait(true);
@@ -860,6 +878,80 @@ public sealed partial class SheetEditorViewModel : ObservableObject
     /// <summary>Crée un bloc de code, ou change le langage de celui où est le curseur.</summary>
     [RelayCommand]
     private void InsertCode(string language) => _surface?.InsertCode(language);
+
+    /// <summary>Ouvre l'historique : d'abord ce qui est tapé, pour comparer au vrai texte actuel.</summary>
+    [RelayCommand]
+    private async Task OpenHistoryAsync()
+    {
+        if (_surface is not { } surface)
+        {
+            return;
+        }
+        await surface.SyncAsync().ConfigureAwait(true);
+        var history = new VersionsViewModel(_editing, SheetId, surface.Text, RestoreVersionAsync);
+        history.Closed += (_, _) => CloseHistory();
+        History = history;
+    }
+
+    /// <summary>Referme l'historique.</summary>
+    [RelayCommand]
+    private void CloseHistory()
+    {
+        History = null;
+        _surface?.Focus();
+    }
+
+    /// <summary>Remet une version : ce qui est tapé s'enregistre d'abord, et le texte actuel va dans l'historique.</summary>
+    private async Task<bool> RestoreVersionAsync(string name, string body)
+    {
+        if (_surface is not { } surface)
+        {
+            return false;
+        }
+        await FinishAsync().ConfigureAwait(true);
+        if (HasConflict || HasFailed || surface.Text != _saved)
+        {
+            return false;
+        }
+        var (id, fingerprint) = (SheetId, _fingerprint);
+        var restored = await Task.Run(() => _editing.RestoreVersion(id, name, fingerprint)).ConfigureAwait(true);
+        if (!restored.Succeeded)
+        {
+            Problem = restored.Error;
+            State = SaveState.Failed;
+            return false;
+        }
+        if (restored.Value is SaveConflict conflict)
+        {
+            _conflict = conflict;
+            State = SaveState.Conflict;
+            return false;
+        }
+        _fingerprint = ((SheetSaved)restored.Value).Fingerprint;
+        _saved = Normalize(body);
+        surface.ReplaceAll(_saved);
+        State = SaveState.Saved;
+        HasChanged = true;
+        Problem = null;
+        await RefreshPreviewAsync().ConfigureAwait(true);
+        return true;
+    }
+
+    /// <summary>Montre la version du disque en face de la mienne, ou referme la comparaison.</summary>
+    [RelayCommand]
+    private async Task CompareConflictAsync()
+    {
+        if (IsComparingConflict)
+        {
+            ConflictRows = null;
+            return;
+        }
+        if (_conflict is { } conflict && _surface is { } surface)
+        {
+            await surface.SyncAsync().ConfigureAwait(true);
+            ConflictRows = TextDiff.Rows(Normalize(conflict.DiskBody), surface.Text);
+        }
+    }
 
     /// <summary>Ouvre la galerie.</summary>
     [RelayCommand]
