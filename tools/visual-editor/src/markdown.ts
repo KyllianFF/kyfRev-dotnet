@@ -188,7 +188,7 @@ function convertir(jetons: Token[]): Node {
   const fermer = () => {
     const cadre = pile.pop() as Cadre;
     const noeud =
-      cadre.type === n.list_item
+      cadre.type === n.list_item || cadre.type === n.alignement
         ? cadre.type.createAndFill(cadre.attrs, cadre.contenu)
         : cadre.type.createChecked(cadre.attrs, cadre.contenu);
     if (!noeud) throw new Inconvertible(cadre.type.name);
@@ -199,8 +199,11 @@ function convertir(jetons: Token[]): Node {
   const alignementDe = (jeton: Token) =>
     /text-align:\s*(left|center|right)/.exec(String(jeton.attrGet("style") ?? ""))?.[1] ?? null;
 
-  for (const jeton of jetons) {
+  for (const [rang, jeton] of jetons.entries()) {
     switch (jeton.type) {
+      case "alignement_open":
+        ouvrir(n.alignement, { align: attribut(jeton, "align") ?? "center" });
+        break;
       case "paragraph_open":
         if (jeton.hidden) {
           // Paragraphe masqué : la liste qui le contient est « serrée ».
@@ -228,7 +231,7 @@ function convertir(jetons: Token[]): Node {
         });
         break;
       case "list_item_open":
-        ouvrir(n.list_item);
+        ouvrir(n.list_item, { tache: tacheDe(jetons, rang) });
         break;
       case "table_open":
         ouvrir(n.table);
@@ -247,6 +250,7 @@ function convertir(jetons: Token[]): Node {
       case "tbody_open":
       case "tbody_close":
         break;
+      case "alignement_close":
       case "paragraph_close":
       case "heading_close":
       case "blockquote_close":
@@ -286,6 +290,20 @@ function convertir(jetons: Token[]): Node {
   return noeud;
 }
 
+/**
+ * Case d'une tâche au début d'un point de liste (« - [ ] », « - [x] ») : retirée du texte.
+ * Se lit sur la source : « \\[ \\] » écrit des crochets, pas une case.
+ */
+function tacheDe(jetons: Token[], rang: number): boolean | null {
+  const contenu = jetons[rang + 1]?.type === "paragraph_open" ? jetons[rang + 2] : undefined;
+  const premier = contenu?.type === "inline" ? contenu.children?.[0] : undefined;
+  if (!contenu || premier?.type !== "text") return null;
+  const trouve = /^\[([ xX])\](?: |$)/.exec(contenu.content);
+  if (!trouve) return null;
+  premier.content = premier.content.slice(trouve[0].length);
+  return trouve[1] !== " ";
+}
+
 /** Attribut d'un jeton, en texte ; `null` s'il est absent. */
 function attribut(jeton: Token, nom: string): string | null {
   const valeur = jeton.attrGet(nom);
@@ -305,6 +323,12 @@ function enLigne(jetons: Token[]): Node[] {
   const fermer = (type: MarkType) => {
     marques = type.removeFromSet(marques);
   };
+  /** Les couleurs et les tailles ouvertes : une balise fermée rend celle qu'elle cachait. */
+  const spans: Mark[] = [];
+  const appliquerSpans = () => {
+    marques = m.couleur.removeFromSet(m.taille.removeFromSet(marques));
+    for (const marque of spans) marques = marque.addToSet(marques);
+  };
   const paires: Record<string, MarkType> = {
     strong: m.strong,
     em: m.em,
@@ -323,6 +347,16 @@ function enLigne(jetons: Token[]): Node[] {
       continue;
     }
     switch (jeton.type) {
+      case "span_open": {
+        const [propriete, valeur] = (attribut(jeton, "style") ?? "").split(":") as [string, string];
+        spans.push((propriete === "color" ? m.couleur : m.taille).create({ valeur }));
+        appliquerSpans();
+        break;
+      }
+      case "span_close":
+        spans.pop();
+        appliquerSpans();
+        break;
       case "text":
         ecrire(jeton.content);
         break;
@@ -419,7 +453,8 @@ function blocs(parent: Node, serre = false): string {
   const parties: string[] = [];
   parent.forEach((enfant) => {
     const texte = bloc(enfant);
-    if (enfant.type === n.paragraph && texte === "" && parent.childCount > 1) return;
+    if (texte === "" && parent.childCount > 1 && (enfant.type === n.paragraph || enfant.type === n.alignement))
+      return;
     if (parties.length > 0) parties.push(serre && estListe(enfant) ? "\n" : "\n\n");
     parties.push(texte);
   });
@@ -430,6 +465,11 @@ function bloc(noeud: Node): string {
   switch (noeud.type) {
     case n.paragraph:
       return enLigneMd(noeud);
+    case n.alignement: {
+      // Resté vide, il ne s'écrit pas.
+      const contenu = blocs(noeud);
+      return contenu.trim() === "" ? "" : `<div align="${noeud.attrs.align}">\n\n${contenu}\n\n</div>`;
+    }
     case n.heading: {
       const contenu = enLigneMd(noeud, { uneLigne: true }).replace(/(\s)(#+)$/, "$1\\$2");
       return `${"#".repeat(noeud.attrs.level as number)}${contenu ? ` ${contenu}` : ""}`;
@@ -472,10 +512,12 @@ function liste(noeud: Node, marqueur: (rang: number) => string): string {
     const debut = marqueur(rang);
     const retrait = " ".repeat(debut.length);
     const lignes = blocs(element, serre).split("\n");
+    const tache = element.attrs.tache as boolean | null;
+    const premiere = debut + (tache === null ? "" : tache ? "[x] " : "[ ] ");
     elements.push(
       lignes
         .map((ligne, i) => {
-          if (i === 0) return ligne === "" ? debut.trimEnd() : debut + ligne;
+          if (i === 0) return ligne === "" ? premiere.trimEnd() : premiere + ligne;
           return ligne === "" ? "" : retrait + ligne;
         })
         .join("\n"),
@@ -572,12 +614,17 @@ function enLigneMd(parent: Node, options: OptionsLigne = {}): string {
 
   let sortie = "";
   const ouvertes: Mark[] = [];
-  const ouvrant = (marque: Mark) =>
-    marque.type === m.link ? "[" : (delimiteurs[marque.type.name]?.[0] ?? "");
-  const fermant = (marque: Mark) =>
-    marque.type === m.link
-      ? `](${destination(marque.attrs.href as string, marque.attrs.title)})`
-      : (delimiteurs[marque.type.name]?.[1] ?? "");
+  const ouvrant = (marque: Mark) => {
+    if (marque.type === m.link) return "[";
+    if (marque.type === m.couleur) return `<span style="color:${marque.attrs.valeur}">`;
+    if (marque.type === m.taille) return `<span style="font-size:${marque.attrs.valeur}">`;
+    return delimiteurs[marque.type.name]?.[0] ?? "";
+  };
+  const fermant = (marque: Mark) => {
+    if (marque.type === m.link) return `](${destination(marque.attrs.href as string, marque.attrs.title)})`;
+    if (marque.type === m.couleur || marque.type === m.taille) return "</span>";
+    return delimiteurs[marque.type.name]?.[1] ?? "";
+  };
   /** Ferme les marques au-delà des `garder` premières ; les espaces finaux passent après le délimiteur. */
   const fermerJusqua = (garder: number) => {
     while (ouvertes.length > garder) {

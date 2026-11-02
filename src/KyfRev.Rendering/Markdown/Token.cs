@@ -68,8 +68,11 @@ internal sealed class Token(TokenKind kind, string tag, int nesting)
     /// <summary>Numéro de départ d'une liste qui ne commence pas à 1.</summary>
     public int? Start { get; set; }
 
-    /// <summary>Alignement d'une cellule de tableau.</summary>
+    /// <summary>Alignement d'une cellule de tableau, ou d'un passage aligné.</summary>
     public string? Alignment { get; set; }
+
+    /// <summary>Couleur ou taille d'un passage, écrite comme dans la fiche (<c>color:…</c>, <c>font-size:…em</c>).</summary>
+    public string? Style { get; set; }
 
     /// <summary>Étiquette d'une définition de note.</summary>
     public string? Label { get; set; }
@@ -101,4 +104,10 @@ internal sealed class ParseEnvironment
     public Dictionary<string, int> FootnoteReferences { get; } = new(StringComparer.Ordinal);
 
     public List<FootnoteEntry> Footnotes { get; } = [];
+
+    /// <summary>
+    /// Lignes que la recherche des fermetures de passages alignés peut encore lire. Une fiche piégée ouvre des passages
+    /// sans fin : au-delà, ce n'est plus que du texte, et la lecture ne s'effondre pas. L'éditeur a la même limite.
+    /// </summary>
+    public int AlignmentScanBudget { get; set; } = 1_000_000;
 }

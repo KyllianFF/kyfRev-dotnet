@@ -10,7 +10,7 @@ internal static partial class BlockParser
 
     private static readonly BlockRule[] AllRules =
     [
-        Table, Code, Fence, Blockquote, MathBlock, HorizontalRule, List, FootnoteDefinition, Reference, Heading, SetextHeading, Paragraph,
+        Table, Code, AlignedPassage, Fence, Blockquote, MathBlock, HorizontalRule, List, FootnoteDefinition, Reference, Heading, SetextHeading, Paragraph,
     ];
 
     /// <summary>Ce qui peut interrompre un paragraphe ou une définition de lien.</summary>

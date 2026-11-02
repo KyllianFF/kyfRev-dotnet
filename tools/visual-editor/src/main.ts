@@ -186,6 +186,15 @@ function traiter(message: VersEditeur): void {
     case "clearFormat":
       editeur.effacerMiseEnForme();
       break;
+    case "color":
+      editeur.couleur(message.color);
+      break;
+    case "size":
+      editeur.taille(message.size);
+      break;
+    case "align":
+      editeur.aligner(message.align);
+      break;
     case "image":
       editeur.insererImage(message.link, message.alternative, message.position);
       break;

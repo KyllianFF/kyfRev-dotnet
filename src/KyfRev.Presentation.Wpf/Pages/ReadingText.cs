@@ -8,6 +8,12 @@ public static class ReadingText
     /// <summary>Nom du texte de la fiche, pour le lecteur d'écran.</summary>
     public const string Document = "Texte de la fiche";
 
+    /// <summary>La case d'une tâche faite, pour le lecteur d'écran.</summary>
+    public const string TaskDone = "Tâche faite";
+
+    /// <summary>La case d'une tâche à faire, pour le lecteur d'écran.</summary>
+    public const string TaskOpen = "Tâche à faire";
+
     /// <summary>Le plan de la fiche.</summary>
     public const string Outline = "Plan";
 

@@ -66,7 +66,7 @@ public sealed class DesignResources
     /// <summary>Couleurs d'un thème : une couleur et un pinceau figé par rôle, et les ombres.</summary>
     internal static ResourceDictionary ThemeDictionary(ThemeKind theme)
     {
-        var dictionary = new ResourceDictionary();
+        var dictionary = new ResourceDictionary { [DesignKeys.IsHighContrast] = theme == ThemeKind.HighContrast };
         foreach (var role in Enum.GetValues<ColorRole>())
         {
             var color = theme == ThemeKind.HighContrast

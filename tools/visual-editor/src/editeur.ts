@@ -52,7 +52,15 @@ import {
   EditorView as Vue,
 } from "prosemirror-view";
 import { affichageImage, formuleHtml } from "./analyse";
-import { insertionDeBloc, insertionDeLigne } from "./blocs";
+import {
+  type Alignement,
+  alignementCourant,
+  alignerSelection,
+  basculerTaches,
+  insertionDeBloc,
+  insertionDeLigne,
+  sansTaches,
+} from "./blocs";
 import type { Casse } from "./casse";
 import { changementDeCasse } from "./casse-visuelle";
 import { colorer, langages, type Morceau } from "./coloration";
@@ -84,8 +92,12 @@ export type EtatOutils = {
   link: boolean;
   heading: number;
   inCode: boolean;
-  list: "bullets" | "numbers" | null;
+  list: "bullets" | "numbers" | "tasks" | null;
   table: boolean;
+  /** Couleur et taille du texte, écrites comme dans le fichier ; `null` : celles du thème. */
+  color: string | null;
+  size: string | null;
+  align: Alignement;
   canUndo: boolean;
   canRedo: boolean;
 };
@@ -233,6 +245,8 @@ const avantLePremierBloc: Command = (etat, dispatch, vue) => {
     const { $from, empty } = selection;
     if (!empty || $from.depth === 0 || $from.before(1) !== 0) return false;
     if (premier.type === n.table && $from.index(1) !== 0) return false;
+    // Dans une liste, une citation, un passage aligné : seulement depuis leur tout premier bloc.
+    if (premier.type !== n.table && $from.start() !== Selection.atStart(etat.doc).from) return false;
     if (vue && !vue.endOfTextblock("up")) return false;
   }
   const tr = etat.tr.insert(0, n.paragraph.create());
@@ -300,7 +314,23 @@ const sautDeLigne: Command = chainCommands(exitCode, (etat, dispatch) => {
   return true;
 });
 
-/** Raccourcis Markdown pendant la frappe : « # », « - », « 1. », « > », « ``` ». */
+/** Entrée dans une tâche : la suivante reste à faire, même si celle-ci est faite. */
+const entreeDansListe: Command = (etat, dispatch, vue) => {
+  const { $from } = etat.selection;
+  const point = $from.depth >= 1 ? $from.node(-1) : null;
+  const aFaire = point?.type === n.list_item && point.attrs.tache !== null ? { tache: false } : undefined;
+  return splitListItem(n.list_item, aFaire)(etat, dispatch, vue);
+};
+
+const aligner =
+  (valeur: Alignement): Command =>
+  (etat, dispatch) => {
+    const tr = alignerSelection(etat, valeur);
+    if (tr) dispatch?.(tr.scrollIntoView());
+    return true;
+  };
+
+/** Raccourcis Markdown pendant la frappe : « # », « - », « 1. », « > », « ``` », « [ ] ». */
 function reglesDeSaisie(): Plugin {
   return inputRules({
     rules: [
@@ -314,6 +344,20 @@ function reglesDeSaisie(): Plugin {
       ),
       wrappingInputRule(/^\s*>\s$/, n.blockquote),
       textblockTypeInputRule(/^```([\w-]*)\s$/, n.code_block, (r) => ({ language: r[1] ?? "" })),
+      // « [ ] » puis espace : une tâche, dans un point de liste ou en en créant un.
+      new InputRule(/^\[([ xX]?)\]\s$/, (etat, r, debut, fin) => {
+        const fait = (r[1] ?? " ").toLowerCase() === "x";
+        const avant = etat.apply(etat.tr.delete(debut, fin));
+        const tr = etat.tr.delete(debut, fin);
+        const taches = basculerTaches(avant);
+        if (!taches) return null;
+        for (const pas of taches.steps) tr.step(pas);
+        const $ici = tr.doc.resolve(tr.mapping.map(debut));
+        if (fait && $ici.node(-1).type === n.list_item) {
+          tr.setNodeMarkup($ici.before(-1), null, { ...$ici.node(-1).attrs, tache: true });
+        }
+        return tr;
+      }),
       // « --- » puis espace : un trait de séparation, et l'on continue d'écrire dessous.
       new InputRule(/^(?:---|\*\*\*|___)\s$/, (etat, _r, debut, fin) => {
         const $debut = etat.doc.resolve(debut);
@@ -329,6 +373,67 @@ function reglesDeSaisie(): Plugin {
 }
 
 // --- Vues des nœuds -------------------------------------------------------------
+
+/** Point de liste : une tâche a sa case, que l'on coche sans quitter le texte. */
+class VuePoint implements NodeView {
+  dom: HTMLElement;
+  contentDOM: HTMLElement;
+  private readonly boite: HTMLInputElement | null = null;
+
+  constructor(
+    private noeud: Node,
+    vue: EditorView,
+    position: () => number | undefined,
+  ) {
+    this.dom = document.createElement("li");
+    this.contentDOM = this.dom;
+    if (noeud.attrs.tache === null) return;
+    this.dom.className = "tache";
+    const boite = document.createElement("input");
+    boite.type = "checkbox";
+    boite.contentEditable = "false";
+    boite.setAttribute("aria-label", "Tâche faite");
+    boite.addEventListener("mousedown", (evenement) => evenement.preventDefault());
+    boite.addEventListener("click", (evenement) => {
+      evenement.preventDefault();
+      const ici = position();
+      if (ici === undefined) return;
+      const attrs = { ...this.noeud.attrs, tache: !this.noeud.attrs.tache };
+      vue.dispatch(vue.state.tr.setNodeMarkup(ici, null, attrs));
+    });
+    this.boite = boite;
+    this.contentDOM = document.createElement("div");
+    this.contentDOM.className = "tache-texte";
+    this.dom.append(boite, this.contentDOM);
+    this.afficher();
+  }
+
+  private afficher(): void {
+    if (!this.boite) return;
+    const fait = this.noeud.attrs.tache === true;
+    this.boite.checked = fait;
+    this.dom.classList.toggle("faite", fait);
+    this.dom.dataset.tache = fait ? "fait" : "a-faire";
+  }
+
+  update(noeud: Node): boolean {
+    if (noeud.type !== this.noeud.type || (noeud.attrs.tache === null) !== (this.noeud.attrs.tache === null)) {
+      return false;
+    }
+    this.noeud = noeud;
+    this.afficher();
+    return true;
+  }
+
+  ignoreMutation(mutation: ViewMutationRecord): boolean {
+    if (mutation.type === "selection") return false;
+    return !this.contentDOM.contains(mutation.target);
+  }
+
+  stopEvent(evenement: Event): boolean {
+    return evenement.target === this.boite;
+  }
+}
 
 /** Image du coffre, ou encadré qui explique pourquoi elle ne s'affiche pas. */
 function vueImage(dossier: () => string, ressource: Reactions["ressource"]) {
@@ -525,6 +630,7 @@ export class EditeurVisuel {
         math_inline: vueFormule(false, reactions.onformule),
         math_block: vueFormule(true, reactions.onformule),
         code_block: (noeud, vue, position, decorations) => new VueCode(noeud, vue, position, decorations),
+        list_item: (noeud, vue, position) => new VuePoint(noeud, vue, position),
       },
       dispatchTransaction: (tr: Transaction) => {
         this.vue.updateState(this.vue.state.apply(tr));
@@ -613,7 +719,10 @@ export class EditeurVisuel {
           "Mod-Alt-2": setBlockType(n.heading, { level: 2 }),
           "Mod-Alt-3": setBlockType(n.heading, { level: 3 }),
           "Mod-Alt-4": setBlockType(n.heading, { level: 4 }),
-          Enter: chainCommands(entreeDansLeCode, splitListItem(n.list_item)),
+          "Mod-l": aligner("left"),
+          "Mod-r": aligner("right"),
+          "Mod-j": aligner("justify"),
+          Enter: chainCommands(entreeDansLeCode, entreeDansListe),
           ArrowUp: avantLePremierBloc,
           "Shift-Enter": sautDeLigne,
           "Mod-Enter": sautDeLigne,
@@ -717,7 +826,7 @@ export class EditeurVisuel {
       const { from, to, empty } = etat.selection;
       if (empty) return false;
       let tr = etat.tr;
-      for (const nom of ["strong", "em", "underline", "strike", "sup", "sub", "code"] as const) {
+      for (const nom of ["couleur", "taille", "strong", "em", "underline", "strike", "sup", "sub", "code"] as const) {
         tr = tr.removeMark(from, to, m[nom] as MarkType);
       }
       dispatch?.(tr);
@@ -725,20 +834,67 @@ export class EditeurVisuel {
     });
   }
 
+  /** Pose une couleur (`#rrggbb`), ou rend celle du thème ; sans sélection, pour ce qui sera tapé. */
+  couleur(valeur: string | null): void {
+    this.poserValeur(m.couleur as MarkType, valeur);
+  }
+
+  /** Pose une taille (`1.25em`), ou rend la taille normale ; sans sélection, pour ce qui sera tapé. */
+  taille(valeur: string | null): void {
+    this.poserValeur(m.taille as MarkType, valeur);
+  }
+
+  private poserValeur(type: MarkType, valeur: string | null): void {
+    this.executer((etat, dispatch) => {
+      const tr = etat.tr;
+      if (etat.selection.empty) {
+        if (valeur) tr.addStoredMark(type.create({ valeur }));
+        else tr.removeStoredMark(type);
+      } else {
+        for (const { $from, $to } of etat.selection.ranges) {
+          if (valeur) tr.addMark($from.pos, $to.pos, type.create({ valeur }));
+          else tr.removeMark($from.pos, $to.pos, type);
+        }
+      }
+      dispatch?.(tr);
+      return true;
+    });
+  }
+
+  aligner(valeur: Alignement): void {
+    this.executer(aligner(valeur));
+  }
+
   titre(niveau: number): void {
     if (niveau === 0) this.executer(setBlockType(n.paragraph));
     else this.executer(setBlockType(n.heading, { level: niveau }));
   }
 
-  liste(genre: "bullets" | "numbers"): void {
+  liste(genre: "bullets" | "numbers" | "tasks"): void {
+    if (genre === "tasks") {
+      this.executer((etat, dispatch) => {
+        const tr = basculerTaches(etat);
+        if (tr) dispatch?.(tr.scrollIntoView());
+        return true;
+      });
+      return;
+    }
     const type = genre === "bullets" ? n.bullet_list : n.ordered_list;
     this.executer((etat, dispatch) => {
       const { $from } = etat.selection;
+      const ordinaires = sansTaches(etat);
       for (let profondeur = $from.depth; profondeur > 0; profondeur--) {
         const noeud = $from.node(profondeur);
-        if (noeud.type === type) return liftListItem(n.list_item)(etat, dispatch);
+        if (noeud.type === type) {
+          // Une tâche redevient un point de cette liste ; un point ordinaire en sort.
+          if (ordinaires) {
+            dispatch?.(ordinaires);
+            return true;
+          }
+          return liftListItem(n.list_item)(etat, dispatch);
+        }
         if (noeud.type === n.bullet_list || noeud.type === n.ordered_list) {
-          dispatch?.(etat.tr.setNodeMarkup($from.before(profondeur), type));
+          dispatch?.((ordinaires ?? etat.tr).setNodeMarkup($from.before(profondeur), type));
           return true;
         }
       }
@@ -997,12 +1153,24 @@ export class EditeurVisuel {
     const actif = (type: MarkType | undefined) =>
       type !== undefined &&
       (empty ? type.isInSet(etat.storedMarks ?? $from.marks()) !== undefined : etat.doc.rangeHasMark(from, to, type));
+    /** La valeur d'une marque sous le curseur, ou au début de la sélection. */
+    const valeur = (type: MarkType): string | null => {
+      let marque = empty ? type.isInSet(etat.storedMarks ?? $from.marks()) : undefined;
+      if (!empty) {
+        etat.doc.nodesBetween(from, to, (noeud) => {
+          marque ??= type.isInSet(noeud.marks);
+          return !marque;
+        });
+      }
+      return marque ? (marque.attrs.valeur as string) : null;
+    };
     const parent = $from.parent;
     let list: EtatOutils["list"] = null;
-    for (let profondeur = $from.depth; profondeur > 0; profondeur--) {
-      const type = $from.node(profondeur).type;
-      if (!list && type === n.bullet_list) list = "bullets";
-      if (!list && type === n.ordered_list) list = "numbers";
+    for (let profondeur = $from.depth; profondeur > 0 && !list; profondeur--) {
+      const noeud = $from.node(profondeur);
+      if (noeud.type === n.list_item && noeud.attrs.tache !== null) list = "tasks";
+      if (noeud.type === n.bullet_list) list = "bullets";
+      if (noeud.type === n.ordered_list) list = "numbers";
     }
     return {
       bold: actif(m.strong),
@@ -1016,6 +1184,9 @@ export class EditeurVisuel {
       inCode: parent.type === n.code_block,
       list,
       table: isInTable(etat),
+      color: valeur(m.couleur as MarkType),
+      size: valeur(m.taille as MarkType),
+      align: alignementCourant(etat),
       canUndo: undoDepth(etat) > 0,
       canRedo: redoDepth(etat) > 0,
     };

@@ -12,6 +12,7 @@ using KyfRev.Application.Model;
 using KyfRev.Application.Ports;
 using KyfRev.Application.UseCases;
 using KyfRev.DesignSystem.Controls;
+using KyfRev.DesignSystem.Tokens;
 using KyfRev.Presentation.Wpf.Editing;
 using KyfRev.Presentation.Wpf.Pages;
 using KyfRev.Presentation.Wpf.Reading;
@@ -695,6 +696,128 @@ public sealed class ReadingTests
         "f_1", "Mitose", "fiches/Biologie/Mitose.md", "Biologie", ["bio", "partiel"], body, 1, "sha256:essai", null, DateTimeOffset.UnixEpoch, null!, []);
 
     private static SheetReading ReadingOf(OpenedSheet sheet, Func<string, Outcome<byte[]>> read) => SheetReading.Of(sheet, read);
+
+    [STATestMethod]
+    public void A_size_is_relative_to_the_text_around_it()
+    {
+        var elements = LogicalDescendants(Build("<span style=\"font-size:2em\">grand <span style=\"font-size:0.5em\">moyen</span></span>\n\n## <span style=\"font-size:2em\">Titre</span>\n\nfin", showsHeader: false).Document).OfType<Span>().ToList();
+        var reading = KyfRev.DesignSystem.Tokens.Typography.BodyLarge.Size;
+
+        Assert.AreEqual(reading * 2, elements[0].FontSize);
+        Assert.AreEqual(reading, elements[1].FontSize);
+        Assert.IsGreaterThan(reading * 2, elements[2].FontSize, "Dans un titre, c'est le double du titre.");
+    }
+
+    [STATestMethod]
+    public void A_color_is_readable_on_the_ground_and_follows_the_theme()
+    {
+        const string written = "#00008b";
+        var test = new TestShell();
+        test.Design.Theme = ThemeKind.Light;
+        var built = Build($"<span style=\"color:{written}\">mot</span>", showsHeader: false).Document;
+        built.Resources.MergedDictionaries.Add(test.Design.Dictionary);
+        var span = LogicalDescendants(built).OfType<ColoredSpan>().Single();
+        Color Shown() => ((SolidColorBrush)span.Foreground).Color;
+
+        Assert.AreEqual(TokenColor.FromHex(written).ReadableOn(ThemeColors.For(ThemeKind.Light)[ColorRole.Background]).ToColor(), Shown());
+
+        test.Design.Theme = ThemeKind.Dark;
+        TestShell.Flush();
+        var dark = ThemeColors.For(ThemeKind.Dark)[ColorRole.Background];
+        Assert.AreEqual(TokenColor.FromHex(written).ReadableOn(dark).ToColor(), Shown());
+        var shown = Shown();
+        Assert.IsGreaterThanOrEqualTo(4.5, new TokenColor(shown.A, shown.R, shown.G, shown.B).ContrastWith(dark));
+    }
+
+    [STATestMethod]
+    public void In_high_contrast_a_chosen_color_gives_way_to_that_of_the_theme()
+    {
+        var test = new TestShell();
+        test.Design.Theme = ThemeKind.HighContrast;
+        var built = Build("<span style=\"color:#ff0000\">mot</span>", showsHeader: false).Document;
+        built.Resources.MergedDictionaries.Add(test.Design.Dictionary);
+        var span = LogicalDescendants(built).OfType<ColoredSpan>().Single();
+
+        Assert.AreNotEqual(BaseValueSource.Local, DependencyPropertyHelper.GetValueSource(span, TextElement.ForegroundProperty).BaseValueSource);
+    }
+
+    [STATestMethod]
+    [DataRow("center", TextAlignment.Center)]
+    [DataRow("right", TextAlignment.Right)]
+    [DataRow("justify", TextAlignment.Justify)]
+    public void A_passage_is_aligned_with_all_it_holds(string written, TextAlignment expected)
+    {
+        var built = Build($"<div align=\"{written}\">\n\nUn\n\n- deux\n\n</div>\n\nAprès", showsHeader: false).Document;
+
+        var section = built.Blocks.OfType<Section>().Single();
+        Assert.AreEqual(expected, section.TextAlignment);
+        Assert.AreEqual(expected, section.Blocks.OfType<Paragraph>().Single().TextAlignment);
+        Assert.AreEqual(TextAlignment.Left, built.Blocks.OfType<Paragraph>().Last().TextAlignment);
+    }
+
+    [STATestMethod]
+    public void A_formula_block_is_still_drawn_as_a_formula()
+    {
+        var built = Build("$$\nx\n$$", showsHeader: false).Document;
+
+        Assert.IsInstanceOfType<BlockUIContainer>(built.Blocks.FirstBlock);
+    }
+
+    [STATestMethod]
+    public void A_task_draws_its_box_in_place_of_what_it_writes()
+    {
+        var built = Build("- [ ] Acheter\n- [x] Fait\n\nFin", showsHeader: false).Document;
+
+        var list = built.Blocks.OfType<List>().Single();
+        Assert.AreEqual(TextMarkerStyle.None, list.MarkerStyle, "La case prend la place de la puce.");
+        var items = list.ListItems.Select(item => (Paragraph)item.Blocks.FirstBlock).ToList();
+        Assert.AreEqual("Acheter", string.Concat(items[0].Inlines.OfType<Run>().Select(run => run.Text)));
+        Assert.AreEqual("Fait", string.Concat(items[1].Inlines.OfType<Run>().Select(run => run.Text)));
+        var open = (Icon)((InlineUIContainer)items[0].Inlines.FirstInline).Child;
+        var done = (Icon)((InlineUIContainer)items[1].Inlines.FirstInline).Child;
+        Assert.AreEqual(Icons.TaskOpen, open.Text);
+        Assert.AreEqual(Icons.TaskDone, done.Text);
+        Assert.AreEqual(ReadingText.TaskOpen, System.Windows.Automation.AutomationProperties.GetName(open));
+        Assert.AreEqual(ReadingText.TaskDone, System.Windows.Automation.AutomationProperties.GetName(done));
+        Assert.AreEqual(TextDecorations.Strikethrough, items[1].Inlines.OfType<Run>().Single().TextDecorations, "Le texte est barré.");
+        Assert.IsFalse(items[1].TextDecorations is { Count: > 0 }, "La case ne l'est pas.");
+        Assert.IsFalse(items[0].Inlines.OfType<Run>().Single().TextDecorations is { Count: > 0 });
+    }
+
+    [STATestMethod]
+    public void A_list_with_tasks_and_points_keeps_its_markers()
+    {
+        var built = Build("- [ ] Une tâche\n- Un point\n\n1. [x] numérotée\n", showsHeader: false).Document;
+
+        var lists = built.Blocks.OfType<List>().ToList();
+        Assert.AreEqual(TextMarkerStyle.Disc, lists[0].MarkerStyle);
+        Assert.AreEqual("Un point", string.Concat(((Paragraph)lists[0].ListItems.Last().Blocks.FirstBlock).Inlines.OfType<Run>().Select(run => run.Text)));
+    }
+
+    [STATestMethod]
+    public void A_box_alone_is_a_task_with_no_text()
+    {
+        var built = Build("- [ ]\n", showsHeader: false).Document;
+
+        var paragraph = (Paragraph)built.Blocks.OfType<List>().Single().ListItems.Single().Blocks.FirstBlock;
+        Assert.AreEqual(string.Empty, string.Concat(paragraph.Inlines.OfType<Run>().Select(run => run.Text)));
+        Assert.IsInstanceOfType<InlineUIContainer>(paragraph.Inlines.FirstInline);
+    }
+
+    [STATestMethod]
+    public void The_text_of_a_task_keeps_its_position_in_the_sheet()
+    {
+        var reading = SheetReading.Of(Sheet("- [ ] Acheter du pain\n"), _ => Outcome.Refused<byte[]>("non"));
+        var builder = new DocumentBuilder(reading, _ => { }, opensLinks: true, showsHeader: false);
+        var document = builder.Build();
+
+        var start = reading.Map.Text.IndexOf("Acheter", StringComparison.Ordinal);
+        Assert.AreEqual(reading.Map.Text.IndexOf("[ ] ", StringComparison.Ordinal) + 4, start, "Comme la 0.x : la case compte dans le texte.");
+        var run = LogicalDescendants(document).OfType<Run>().Single();
+        Assert.AreEqual("Acheter du pain", run.Text.Trim());
+        Assert.AreSame(run, builder.Layer.ElementAt(start));
+        Assert.AreEqual(start, builder.Layer.PositionOf(run.ContentStart, isStart: true));
+    }
 
     private static (FlowDocument Document, Task Images) Build(string body, bool showsHeader = true, bool opensLinks = true, List<object?>? follow = null, Func<string, Outcome<byte[]>>? read = null)
     {

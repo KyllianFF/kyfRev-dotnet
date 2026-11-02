@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+
 namespace KyfRev.Rendering.Markdown;
 
 /// <summary>Les blocs qui en contiennent d'autres : citations, listes et notes.</summary>
@@ -123,6 +125,91 @@ internal static partial class BlockParser
         state.BlockIndent = oldIndent;
         return true;
     }
+
+    /// <summary>
+    /// Un passage aligné : <c>&lt;div align="center"&gt;</c> seul sur sa ligne, des blocs, <c>&lt;/div&gt;</c> seul sur sa
+    /// ligne. Sans fermeture, ou collé sous un paragraphe, ce n'est que du texte.
+    /// </summary>
+    private static bool AlignedPassage(BlockState state, int startLine, int endLine, bool silent)
+    {
+        string Content(int line) => state.Source[(state.LineStarts[line] + state.TextShift[line])..state.LineEnds[line]];
+        int Indent(int line) => state.SpaceCount[line] - state.BlockIndent;
+        if (Indent(startLine) >= 4)
+        {
+            return false;
+        }
+        var opening = AlignmentOpening().Match(Content(startLine));
+        if (!opening.Success)
+        {
+            return false;
+        }
+        var depth = 1;
+        string? fence = null;
+        var nextLine = startLine + 1;
+        for (; nextLine < endLine; nextLine++)
+        {
+            if (--state.Environment.AlignmentScanBudget < 0)
+            {
+                return false;
+            }
+            var content = Content(nextLine);
+            if (Indent(nextLine) < 0 && content.Trim().Length > 0)
+            {
+                return false;
+            }
+            if (Indent(nextLine) >= 4)
+            {
+                continue;
+            }
+            var marker = FenceMarker().Match(content).Value;
+            if (fence is not null)
+            {
+                if (marker.Length > 0 && marker[0] == fence[0] && marker.Length >= fence.Length && content.Trim() == marker)
+                {
+                    fence = null;
+                }
+            }
+            else if (marker.Length > 0)
+            {
+                fence = marker;
+            }
+            else if (AlignmentOpening().IsMatch(content))
+            {
+                depth++;
+            }
+            else if (AlignmentClosing().IsMatch(content) && --depth == 0)
+            {
+                break;
+            }
+        }
+        if (nextLine >= endLine)
+        {
+            return false;
+        }
+        if (silent)
+        {
+            return true;
+        }
+        var open = state.Push(TokenKind.Element, "div", 1);
+        open.Line = startLine;
+        open.Alignment = opening.Groups[1].Value;
+        var oldLineMax = state.LineMax;
+        state.LineMax = nextLine;
+        Tokenize(state, startLine + 1, nextLine);
+        state.LineMax = oldLineMax;
+        state.Push(TokenKind.Element, "div", -1);
+        state.Line = nextLine + 1;
+        return true;
+    }
+
+    [GeneratedRegex(@"^<div align=""(center|right|justify)"">[ \t]*$")]
+    private static partial Regex AlignmentOpening();
+
+    [GeneratedRegex(@"^</div>[ \t]*$")]
+    private static partial Regex AlignmentClosing();
+
+    [GeneratedRegex(@"^(?:`{3,}|~{3,})")]
+    private static partial Regex FenceMarker();
 
     private static int SkipBulletListMarker(BlockState state, int startLine)
     {

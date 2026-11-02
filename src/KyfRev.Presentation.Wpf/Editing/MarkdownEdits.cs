@@ -36,6 +36,25 @@ public enum ListKind
 
     /// <summary>Liste numérotée.</summary>
     Numbers,
+
+    /// <summary>Liste de tâches, à faire ou faites.</summary>
+    Tasks,
+}
+
+/// <summary>Un alignement du texte.</summary>
+public enum TextAlign
+{
+    /// <summary>À gauche : le texte ordinaire.</summary>
+    Left,
+
+    /// <summary>Au centre.</summary>
+    Center,
+
+    /// <summary>À droite.</summary>
+    Right,
+
+    /// <summary>Justifié.</summary>
+    Justify,
 }
 
 /// <summary>Un remplacement dans le texte, et la sélection qui le suit.</summary>
@@ -52,6 +71,10 @@ internal readonly record struct TextChange(int Start, int Length, string Text, i
 /// </summary>
 internal static partial class MarkdownEdits
 {
+    private const string SpanClosing = "</span>";
+
+    private const string AlignmentStart = "<div align=";
+
     /// <summary>Marque la sélection, ou retire la marque qui l'entoure déjà.</summary>
     public static TextChange Toggle(string text, int start, int end, InlineMark mark)
     {
@@ -94,7 +117,12 @@ internal static partial class MarkdownEdits
     {
         var (from, to) = LinesOf(text, start, end);
         var lines = text[from..to].Split('\n');
-        var marker = kind == ListKind.Bullets ? BulletMarker() : NumberMarker();
+        var marker = kind switch
+        {
+            ListKind.Bullets => BulletMarker(),
+            ListKind.Tasks => TaskMarker(),
+            _ => NumberMarker(),
+        };
         var removing = lines.Where(line => line.Trim().Length > 0).All(line => marker.IsMatch(line));
         var rank = 0;
         return RewriteLines(text, start, end, line =>
@@ -107,10 +135,113 @@ internal static partial class MarkdownEdits
             var indent = match.Groups[1].Value;
             var content = line[match.Length..];
             rank++;
-            return removing ? indent + content
-                : kind == ListKind.Bullets ? $"{indent}- {content}"
-                : string.Create(CultureInfo.InvariantCulture, $"{indent}{rank}. {content}");
+            return (kind, removing) switch
+            {
+                // Une tâche redevient un point ordinaire : elle reste dans sa liste.
+                (ListKind.Tasks, true) => $"{indent}- {content}",
+                (_, true) => indent + content,
+                (ListKind.Bullets, _) => $"{indent}- {content}",
+                (ListKind.Tasks, _) => $"{indent}- [ ] {content}",
+                _ => string.Create(CultureInfo.InvariantCulture, $"{indent}{rank}. {content}"),
+            };
         });
+    }
+
+    /// <summary>
+    /// Pose une couleur ou une taille sur la sélection : elle remplace celle qui l'entoure déjà, et, sans valeur, la
+    /// retire ; rien à faire si elle n'y est pas.
+    /// </summary>
+    /// <param name="text">Le texte.</param>
+    /// <param name="start">Le début de la sélection.</param>
+    /// <param name="end">La fin de la sélection.</param>
+    /// <param name="property">La propriété : <c>color</c> ou <c>font-size</c>.</param>
+    /// <param name="value">Sa valeur, telle qu'elle s'écrit.</param>
+    public static TextChange? Style(string text, int start, int end, string property, string? value)
+    {
+        (start, end) = WithoutEdgeSpaces(text, start, end);
+        var prefix = $"<span style=\"{property}:";
+        var selected = text[start..end];
+        if (OpeningBefore(text, start, prefix) is { } opening && IsAt(text, end, SpanClosing))
+        {
+            if (value is null)
+            {
+                return new TextChange(opening, end + SpanClosing.Length - opening, selected, opening, selected.Length);
+            }
+            var replaced = $"{prefix}{value}\">";
+            return new TextChange(opening, start - opening, replaced, opening + replaced.Length, selected.Length);
+        }
+        if (value is null)
+        {
+            return null;
+        }
+        var open = $"{prefix}{value}\">";
+        return new TextChange(start, selected.Length, open + selected + SpanClosing, start + open.Length, selected.Length);
+    }
+
+    /// <summary>La couleur ou la taille qui entoure exactement la sélection.</summary>
+    public static string? StyleAround(string text, int start, int end, string property)
+    {
+        (start, end) = WithoutEdgeSpaces(text, start, end);
+        var prefix = $"<span style=\"{property}:";
+        return OpeningBefore(text, start, prefix) is { } opening && IsAt(text, end, SpanClosing)
+            ? text[(opening + prefix.Length)..(start - 2)]
+            : null;
+    }
+
+    /// <summary>
+    /// Aligne les lignes de la sélection : un passage aligné les entoure déjà, il change de valeur, et « à gauche » le
+    /// retire ; sinon, il se crée autour d'elles, isolé par des lignes vides.
+    /// </summary>
+    public static TextChange? Align(string text, int start, int end, TextAlign align)
+    {
+        var (from, to) = LinesOf(text, start, end);
+        var value = align switch
+        {
+            TextAlign.Center => "center",
+            TextAlign.Right => "right",
+            TextAlign.Justify => "justify",
+            _ => null,
+        };
+        var opening = $"<div align=\"{value}\">";
+        if (AlignedPassageAround(text, from, to) is { } passage)
+        {
+            if (value is not null)
+            {
+                var delta = opening.Length - (passage.OpeningEnd - passage.Start);
+                return new TextChange(passage.Start, passage.OpeningEnd - passage.Start, opening, start + delta, end - start);
+            }
+            var content = text[passage.OpeningEnd..passage.ClosingStart].Trim('\n');
+            var removed = text.IndexOf(content, passage.OpeningEnd, StringComparison.Ordinal) - passage.Start;
+            return new TextChange(passage.Start, passage.End - passage.Start, content, Math.Max(passage.Start, start - removed), end - start);
+        }
+        if (value is null)
+        {
+            return null;
+        }
+        var before = from == 0 || (from >= 2 && text[from - 2] == '\n') ? string.Empty : "\n";
+        var after = to == text.Length || text.AsSpan(to).StartsWith("\n\n", StringComparison.Ordinal) ? string.Empty : "\n";
+        var head = $"{before}{opening}\n\n";
+        return new TextChange(from, to - from, $"{head}{text[from..to]}\n\n</div>{after}", start + head.Length, end - start);
+    }
+
+    /// <summary>L'alignement à cet endroit.</summary>
+    public static TextAlign AlignAt(string text, int position)
+    {
+        if (!text.Contains(AlignmentStart, StringComparison.Ordinal))
+        {
+            return TextAlign.Left;
+        }
+        var (from, to) = LineAround(text, position);
+        if (AlignedPassageAround(text, from, to) is not { } passage)
+        {
+            return TextAlign.Left;
+        }
+        return AlignmentOpening().Match(text[passage.Start..passage.OpeningEnd]).Groups[1].Value switch
+        {
+            "center" => TextAlign.Center,
+            "right" => TextAlign.Right,
+            _ => TextAlign.Justify,
+        };
     }
 
     /// <summary>Insère un bloc sur ses propres lignes ; le curseur reprend après lui.</summary>
@@ -245,6 +376,49 @@ internal static partial class MarkdownEdits
         return from == to ? (start, start) : (from, to);
     }
 
+    /// <summary>Le début de la balise ouvrante qui finit juste avant <paramref name="start"/>.</summary>
+    private static int? OpeningBefore(string text, int start, string prefix)
+    {
+        if (start < prefix.Length + 2 || text[start - 1] != '>' || text[start - 2] != '"')
+        {
+            return null;
+        }
+        var opening = text.LastIndexOf(prefix, start - 1, StringComparison.Ordinal);
+        return opening >= 0 && text.IndexOf('>', opening) == start - 1 ? opening : null;
+    }
+
+    /// <summary>Le plus petit passage aligné qui contient ces lignes, hors des blocs de code.</summary>
+    private static AlignedPassage? AlignedPassageAround(string text, int from, int to)
+    {
+        if (!text.Contains(AlignmentStart, StringComparison.Ordinal))
+        {
+            return null;
+        }
+        var fences = MarkdownLines.Fences(text);
+        var opened = new Stack<(int Start, int End)>();
+        AlignedPassage? found = null;
+        var position = 0;
+        while (position <= text.Length)
+        {
+            var (lineStart, lineEnd) = LineAround(text, position);
+            var line = text[lineStart..lineEnd];
+            if (!fences.Exists(fence => fence.Start <= lineStart && lineStart <= fence.End))
+            {
+                if (AlignmentOpening().IsMatch(line))
+                {
+                    opened.Push((lineStart, lineEnd));
+                }
+                else if (line.TrimEnd() == "</div>" && opened.TryPop(out var open) && open.Start <= from && to <= lineEnd
+                    && (found is null || open.Start > found.Value.Start))
+                {
+                    found = new AlignedPassage(open.Start, open.End, lineStart, lineEnd);
+                }
+            }
+            position = lineEnd + 1;
+        }
+        return found;
+    }
+
     private static bool IsAt(string text, int index, string expected) =>
         index >= 0 && string.CompareOrdinal(text, index, expected, 0, expected.Length) == 0;
 
@@ -272,11 +446,17 @@ internal static partial class MarkdownEdits
     [GeneratedRegex(@"^ {0,3}#{1,6}(?:[ \t]+|$)")]
     private static partial Regex HeadingPrefix();
 
-    [GeneratedRegex(@"^(\s*)(?:[-*+]\s+|\d+[.)]\s+)?")]
+    [GeneratedRegex(@"^(\s*)(?:[-*+]\s+|\d+[.)]\s+)?(?:\[[ xX]\](?:\s+|$))?")]
     private static partial Regex AnyMarker();
 
-    [GeneratedRegex(@"^\s*[-*+]\s")]
+    [GeneratedRegex(@"^\s*[-*+]\s(?!\[[ xX]\](?:\s|$))")]
     private static partial Regex BulletMarker();
+
+    [GeneratedRegex(@"^\s*[-*+]\s\[[ xX]\](?:\s|$)")]
+    private static partial Regex TaskMarker();
+
+    [GeneratedRegex(@"^<div align=""(center|right|justify)"">[ \t]*$")]
+    private static partial Regex AlignmentOpening();
 
     [GeneratedRegex(@"^\s*\d+[.)]\s")]
     private static partial Regex NumberMarker();
@@ -284,6 +464,13 @@ internal static partial class MarkdownEdits
     [GeneratedRegex(@"^( {0,3}(?:`{3,}|~{3,})).*$")]
     private static partial Regex OpeningFence();
 }
+
+/// <summary>Un passage aligné, dans le texte.</summary>
+/// <param name="Start">Le début de sa ligne d'ouverture.</param>
+/// <param name="OpeningEnd">La fin de sa ligne d'ouverture.</param>
+/// <param name="ClosingStart">Le début de sa ligne de fermeture.</param>
+/// <param name="End">La fin de sa ligne de fermeture.</param>
+internal readonly record struct AlignedPassage(int Start, int OpeningEnd, int ClosingStart, int End);
 
 /// <summary>Ce que l'éditeur doit savoir des lignes du Markdown : les blocs de code et ce qui ne se corrige pas.</summary>
 internal static partial class MarkdownLines

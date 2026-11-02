@@ -41,6 +41,9 @@ public static class DesignKeys
     /// <summary>Durée normale, nulle si les animations sont réduites.</summary>
     public const string NormalDuration = "Kyf.Duration.Normal";
 
+    /// <summary>Le contraste élevé de Windows est actif : les couleurs sont les siennes, y compris celles du texte des fiches.</summary>
+    public const string IsHighContrast = "Kyf.Theme.IsHighContrast";
+
     /// <summary>Pinceau d'un rôle de couleur.</summary>
     public static string Brush(ColorRole role) => $"Kyf.Brush.{role}";
 

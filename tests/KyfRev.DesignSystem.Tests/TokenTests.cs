@@ -10,6 +10,47 @@ namespace KyfRev.DesignSystem.Tests;
 public sealed class TokenTests
 {
     [TestMethod]
+    [DataRow(ThemeKind.Light)]
+    [DataRow(ThemeKind.Dark)]
+    public void Any_chosen_color_becomes_readable_on_the_ground_of_the_theme(ThemeKind theme)
+    {
+        var ground = ThemeColors.For(theme)[ColorRole.Background];
+        var extremes = new[] { "#000000", "#ffffff", "#ffff00", "#0000ff", "#ff0000", "#00ff00", "#00ffff", "#ff00ff", "#808080" };
+        foreach (var color in Palette.TextColors.Select(choice => choice.Color).Concat(extremes.Select(TokenColor.FromHex)))
+        {
+            Assert.IsGreaterThanOrEqualTo(4.5, color.ReadableOn(ground).ContrastWith(ground), color.ToString());
+        }
+    }
+
+    [TestMethod]
+    public void A_color_that_is_already_readable_stays_the_same()
+    {
+        var dark = ThemeColors.For(ThemeKind.Dark)[ColorRole.Background];
+        var pale = TokenColor.FromHex("#a0d0ff");
+
+        var result = pale.ReadableOn(dark);
+
+        Assert.IsLessThanOrEqualTo(1, Math.Abs(pale.R - result.R));
+        Assert.IsLessThanOrEqualTo(1, Math.Abs(pale.G - result.G));
+        Assert.IsLessThanOrEqualTo(1, Math.Abs(pale.B - result.B));
+    }
+
+    [TestMethod]
+    public void The_proposed_text_colors_remain_distinct_in_each_theme()
+    {
+        foreach (var theme in new[] { ThemeKind.Light, ThemeKind.Dark })
+        {
+            var ground = ThemeColors.For(theme)[ColorRole.Background];
+            var shown = Palette.TextColors.Select(choice => choice.Color.ReadableOn(ground)).ToList();
+            foreach (var (first, second) in shown.SelectMany((color, rank) => shown.Skip(rank + 1).Select(other => (color, other))))
+            {
+                var distance = Math.Abs(first.R - second.R) + Math.Abs(first.G - second.G) + Math.Abs(first.B - second.B);
+                Assert.IsGreaterThan(30, distance, $"{first} et {second} se confondent.");
+            }
+        }
+    }
+
+    [TestMethod]
     public void The_validated_veillee_colors_keep_their_place()
     {
         Assert.AreEqual("#2e6a4e", Palette.Forest[700].ToString());

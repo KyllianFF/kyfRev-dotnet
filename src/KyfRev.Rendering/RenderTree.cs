@@ -62,8 +62,20 @@ public sealed class RenderElement : RenderNode
     /// <summary>Numéro de départ d'une liste numérotée qui ne commence pas à 1.</summary>
     public int? ListStart { get; internal set; }
 
-    /// <summary>Alignement d'une colonne de tableau (<c>left</c>, <c>center</c> ou <c>right</c>).</summary>
+    /// <summary>
+    /// Alignement d'une colonne de tableau (<c>left</c>, <c>center</c> ou <c>right</c>), ou d'un passage
+    /// (<c>center</c>, <c>right</c> ou <c>justify</c>).
+    /// </summary>
     public string? Alignment { get; internal set; }
+
+    /// <summary>Couleur d'un passage, écrite <c>#rrggbb</c>.</summary>
+    public string? TextColor { get; internal set; }
+
+    /// <summary>Taille d'un passage, par rapport au texte qui l'entoure.</summary>
+    public double? FontScale { get; internal set; }
+
+    /// <summary>Un point de liste qui est une tâche : faite, ou à faire ; rien pour un point ordinaire.</summary>
+    public bool? Task { get; internal set; }
 
     /// <summary>Ce titre répète celui de la fiche : masqué, mais gardé dans le texte, où les ancres s'y réfèrent.</summary>
     public bool IsRepeatedTitle { get; internal set; }

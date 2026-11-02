@@ -11,6 +11,7 @@
   <ItemGroup>
     <!-- Corpus d'ancrage produit par kyfRev 0.x (tools/anchoring-corpus). -->
     <None Include="../fixtures/ancrage/*.json" Link="fixtures/ancrage/%(Filename)%(Extension)" CopyToOutputDirectory="Always" />
+    <None Include="../fixtures/format-etendu/*.json" Link="fixtures/format-etendu/%(Filename)%(Extension)" CopyToOutputDirectory="Always" />
   </ItemGroup>
 
 </Project>

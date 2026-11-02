@@ -6,6 +6,8 @@ using System.Windows.Documents;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
+using KyfRev.DesignSystem.Controls;
+using KyfRev.DesignSystem.Tokens;
 using KyfRev.Presentation.Wpf.Pages;
 using KyfRev.Rendering;
 using WpfMath.Controls;
@@ -59,6 +61,11 @@ internal sealed class DocumentBuilder
     private const string DisplayFont = "Kyf.Font.Display";
     private const string UiFont = "Kyf.Font.Ui";
 
+    /// <summary>« [ ] », avec son espace.</summary>
+    private const int TaskMarkLength = 4;
+
+    private const double TaskBoxSize = 15;
+
     private static readonly double ReadingSize = Typography.BodyLarge.Size;
 
     private readonly SheetReading _reading;
@@ -67,6 +74,7 @@ internal sealed class DocumentBuilder
     private readonly bool _showsHeader;
     private readonly List<Task> _images = [];
     private readonly Queue<(Border Slot, string Source, double Size)> _pendingFormulas = new();
+    private readonly HashSet<RenderText> _taskTexts = [];
     private readonly Dictionary<RenderNode, TextPiece> _pieces;
     private FlowDocument? _document;
     private Paragraph? _openRootParagraph;
@@ -75,6 +83,7 @@ internal sealed class DocumentBuilder
     private bool _isScheduled;
     private bool _isCancelled;
     private bool _afterBreak;
+    private double _inlineSize = ReadingSize;
 
     public DocumentBuilder(SheetReading reading, Action<LinkTarget> follow, bool opensLinks, bool showsHeader, Func<string, Brush?>? findBrush = null)
     {
@@ -299,6 +308,9 @@ internal sealed class DocumentBuilder
                 AddBlocks(element, notes.Blocks, depth + 1);
                 blocks.Add(notes);
                 break;
+            case "div" when element.Alignment is { } alignment:
+                AddAligned(element, alignment, blocks, depth);
+                break;
             case "div":
                 blocks.Add(BuildFormulaBlock(element));
                 break;
@@ -306,6 +318,26 @@ internal sealed class DocumentBuilder
                 AddHeading(element, blocks);
                 break;
         }
+    }
+
+    private void AddAligned(RenderElement element, string alignment, BlockCollection blocks, int depth)
+    {
+        if (depth >= MaxBlockDepth)
+        {
+            AddBlocks(element, blocks, depth);
+            return;
+        }
+        var section = new Section
+        {
+            TextAlignment = alignment switch
+            {
+                "center" => TextAlignment.Center,
+                "right" => TextAlignment.Right,
+                _ => TextAlignment.Justify,
+            },
+        };
+        AddBlocks(element, section.Blocks, depth + 1);
+        blocks.Add(section);
     }
 
     private void AddHeading(RenderElement element, BlockCollection blocks)
@@ -335,14 +367,16 @@ internal sealed class DocumentBuilder
             5 => AutomationHeadingLevel.Level6,
             _ => AutomationHeadingLevel.Level7,
         });
+        _inlineSize = size;
         AddInlines(element, heading.Inlines, 0, false);
+        _inlineSize = ReadingSize;
         Headings[element] = heading;
         blocks.Add(heading);
     }
 
     private void AddList(RenderElement element, BlockCollection blocks, int depth)
     {
-        var items = element.Children.OfType<RenderElement>().Where(child => child.Tag == "li");
+        var items = element.Children.OfType<RenderElement>().Where(child => child.Tag == "li").ToList();
         if (depth >= MaxBlockDepth)
         {
             foreach (var item in items)
@@ -361,13 +395,27 @@ internal sealed class DocumentBuilder
         {
             list.StartIndex = Math.Max(start, 1);
         }
+        if (items.TrueForAll(item => item.Task is not null))
+        {
+            // Seulement des tâches : la case prend la place de la puce.
+            list.MarkerStyle = TextMarkerStyle.None;
+            list.Padding = new Thickness(4, 0, 0, 0);
+        }
         foreach (var item in items)
         {
             var entry = new ListItem();
+            if (item.Task is not null && FirstText(item) is { } written)
+            {
+                _taskTexts.Add(written);
+            }
             AddBlocks(item, entry.Blocks, depth + 1);
             if (entry.Blocks.Count == 0)
             {
                 entry.Blocks.Add(new Paragraph { Margin = default });
+            }
+            if (item.Task is { } done)
+            {
+                MarkTask(entry, done);
             }
             if (item.Identifier is { } identifier)
             {
@@ -376,6 +424,63 @@ internal sealed class DocumentBuilder
             list.ListItems.Add(entry);
         }
         blocks.Add(list);
+    }
+
+    /// <summary>Le premier texte d'un élément : celui où est écrite la case d'une tâche.</summary>
+    private static RenderText? FirstText(RenderElement element)
+    {
+        foreach (var child in element.Children)
+        {
+            switch (child)
+            {
+                case RenderText text when !IsBlank(text.Value):
+                    return text;
+                case RenderElement inner when FirstText(inner) is { } found:
+                    return found;
+            }
+        }
+        return null;
+    }
+
+    /// <summary>La case d'une tâche devant son texte ; faite, le texte est barré.</summary>
+    private static void MarkTask(ListItem entry, bool done)
+    {
+        if (entry.Blocks.FirstBlock is not Paragraph paragraph)
+        {
+            return;
+        }
+        if (done)
+        {
+            // Le texte seul : la case reste nette.
+            foreach (var inline in paragraph.Inlines)
+            {
+                inline.TextDecorations = TextDecorations.Strikethrough;
+                inline.SetResourceReference(TextElement.ForegroundProperty, TextSecondary);
+            }
+        }
+        // Une case de la hauteur de sa police, posée sur la ligne : elle ne l'élargit pas.
+        var box = new Icon
+        {
+            Text = done ? Icons.TaskDone : Icons.TaskOpen,
+            FontSize = TaskBoxSize,
+            LineHeight = TaskBoxSize,
+            LineStackingStrategy = LineStackingStrategy.BlockLineHeight,
+            Margin = new Thickness(0, 0, 6, -2),
+        };
+        if (done)
+        {
+            box.SetResourceReference(TextBlock.ForegroundProperty, "Kyf.Brush.Primary");
+        }
+        AutomationProperties.SetName(box, done ? ReadingText.TaskDone : ReadingText.TaskOpen);
+        var mark = new InlineUIContainer(box);
+        if (paragraph.Inlines.FirstInline is { } first)
+        {
+            paragraph.Inlines.InsertBefore(first, mark);
+        }
+        else
+        {
+            paragraph.Inlines.Add(mark);
+        }
     }
 
     private void AddQuote(RenderElement element, BlockCollection blocks, int depth)
@@ -572,6 +677,9 @@ internal sealed class DocumentBuilder
             case "span" when element.Formula is { } formula:
                 AddFormula(element, formula, inlines);
                 break;
+            case "span" when depth < MaxInlineDepth:
+                AddStyled(element, inlines, depth, inLink);
+                break;
             case "img":
                 inlines.Add(BuildImage(element));
                 break;
@@ -579,7 +687,7 @@ internal sealed class DocumentBuilder
                 AddLink(element, inlines, depth, inLink);
                 break;
             case "code" when depth < MaxInlineDepth:
-                var code = new Span { FontSize = ReadingSize * 0.92 };
+                var code = new Span { FontSize = _inlineSize * 0.92 };
                 code.SetResourceReference(TextElement.FontFamilyProperty, CodeFont);
                 code.SetResourceReference(TextElement.BackgroundProperty, SurfaceAlt);
                 AddSpan(element, code, inlines, depth, inLink);
@@ -597,15 +705,29 @@ internal sealed class DocumentBuilder
                 AddSpan(element, new Span { TextDecorations = TextDecorations.Strikethrough }, inlines, depth, inLink);
                 break;
             case "sup" when depth < MaxInlineDepth:
-                AddSpan(element, new Span { BaselineAlignment = BaselineAlignment.Superscript, FontSize = ReadingSize * 0.75 }, inlines, depth, inLink);
+                AddSpan(element, new Span { BaselineAlignment = BaselineAlignment.Superscript, FontSize = _inlineSize * 0.75 }, inlines, depth, inLink);
                 break;
             case "sub" when depth < MaxInlineDepth:
-                AddSpan(element, new Span { BaselineAlignment = BaselineAlignment.Subscript, FontSize = ReadingSize * 0.75 }, inlines, depth, inLink);
+                AddSpan(element, new Span { BaselineAlignment = BaselineAlignment.Subscript, FontSize = _inlineSize * 0.75 }, inlines, depth, inLink);
                 break;
             default:
                 AddInlines(element, inlines, depth, inLink);
                 break;
         }
+    }
+
+    /// <summary>Un passage coloré ou agrandi par la fiche ; la taille est relative au texte qui l'entoure.</summary>
+    private void AddStyled(RenderElement element, InlineCollection inlines, int depth, bool inLink)
+    {
+        var span = element.TextColor is { } color ? new ColoredSpan(TokenColor.FromHex(color)) : new Span();
+        var outer = _inlineSize;
+        if (element.FontScale is { } scale)
+        {
+            _inlineSize = outer * scale;
+            span.FontSize = _inlineSize;
+        }
+        AddSpan(element, span, inlines, depth, inLink);
+        _inlineSize = outer;
     }
 
     private void AddSpan(RenderElement element, Span span, InlineCollection inlines, int depth, bool inLink)
@@ -618,7 +740,8 @@ internal sealed class DocumentBuilder
     {
         // Un saut de ligne simple se lit comme une espace ; celui qui suit un saut dur est déjà à l'écran.
         var value = text.Value.Replace('\n', ' ');
-        var skipped = _afterBreak && value.StartsWith(' ') ? 1 : 0;
+        // La case d'une tâche se dessine : son écriture compte dans les positions, sans s'afficher.
+        var skipped = _taskTexts.Remove(text) ? Math.Min(TaskMarkLength, value.Length) : _afterBreak && value.StartsWith(' ') ? 1 : 0;
         _afterBreak = false;
         var run = new Run(value[skipped..]);
         inlines.Add(run);

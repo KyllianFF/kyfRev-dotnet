@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO;
 using System.Security.Cryptography;
 using System.Windows;
@@ -55,7 +56,10 @@ public sealed record EditorEnvironment(ISpelling Spelling, string WebDataFolder,
 /// <param name="List">La liste où il se trouve.</param>
 /// <param name="CanUndo">Un geste peut être annulé.</param>
 /// <param name="CanRedo">Un geste annulé peut être rétabli.</param>
-public sealed record EditorTools(bool Bold, bool Italic, bool Underline, bool Strike, bool Superscript, bool Subscript, int Heading, ListKind? List, bool CanUndo, bool CanRedo);
+/// <param name="Color">La couleur du texte, écrite <c>#rrggbb</c> ; rien : celle du thème.</param>
+/// <param name="Size">La taille du texte, écrite <c>1.25em</c> ; rien : la taille normale.</param>
+/// <param name="Align">L'alignement.</param>
+public sealed record EditorTools(bool Bold, bool Italic, bool Underline, bool Strike, bool Superscript, bool Subscript, int Heading, ListKind? List, bool CanUndo, bool CanRedo, string? Color = null, string? Size = null, TextAlign Align = TextAlign.Left);
 
 /// <summary>Une saisie « [[… » au curseur.</summary>
 /// <param name="Query">Ce qui est cherché.</param>
@@ -120,6 +124,15 @@ internal interface IEditorSurface
 
     /// <summary>Met en liste, ou en sort.</summary>
     void ToggleList(ListKind kind);
+
+    /// <summary>Pose une couleur, écrite <c>#rrggbb</c> ; rien : celle du thème.</summary>
+    void SetColor(string? color);
+
+    /// <summary>Pose une taille, écrite <c>1.25em</c> ; rien : la taille normale.</summary>
+    void SetFontSize(string? size);
+
+    /// <summary>Aligne les blocs de la sélection.</summary>
+    void SetAlign(TextAlign align);
 
     /// <summary>Change la casse ; sans style, la suivante.</summary>
     void ChangeCase(CaseStyle? style);
@@ -303,7 +316,39 @@ public sealed partial class SheetEditorViewModel : ObservableObject
     /// <summary>Ce que le ruban affiche de l'endroit du curseur.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(StyleLabel))]
+    [NotifyPropertyChangedFor(nameof(SizeLabel))]
+    [NotifyPropertyChangedFor(nameof(IsAlignLeft))]
+    [NotifyPropertyChangedFor(nameof(IsAlignCenter))]
+    [NotifyPropertyChangedFor(nameof(IsAlignRight))]
+    [NotifyPropertyChangedFor(nameof(IsAlignJustify))]
+    [NotifyPropertyChangedFor(nameof(IsBullets))]
+    [NotifyPropertyChangedFor(nameof(IsNumbers))]
+    [NotifyPropertyChangedFor(nameof(IsTasks))]
     public partial EditorTools? Tools { get; private set; }
+
+    /// <summary>La taille du texte, en pixels.</summary>
+    public string SizeLabel => FontSizes.Pixels(Tools?.Size).ToString(CultureInfo.InvariantCulture);
+
+    /// <summary>Le curseur est dans du texte à gauche.</summary>
+    public bool IsAlignLeft => Tools?.Align is null or TextAlign.Left;
+
+    /// <summary>Le curseur est dans du texte centré.</summary>
+    public bool IsAlignCenter => Tools?.Align == TextAlign.Center;
+
+    /// <summary>Le curseur est dans du texte à droite.</summary>
+    public bool IsAlignRight => Tools?.Align == TextAlign.Right;
+
+    /// <summary>Le curseur est dans du texte justifié.</summary>
+    public bool IsAlignJustify => Tools?.Align == TextAlign.Justify;
+
+    /// <summary>Le curseur est dans une liste à puces.</summary>
+    public bool IsBullets => Tools?.List == ListKind.Bullets;
+
+    /// <summary>Le curseur est dans une liste numérotée.</summary>
+    public bool IsNumbers => Tools?.List == ListKind.Numbers;
+
+    /// <summary>Le curseur est dans une tâche.</summary>
+    public bool IsTasks => Tools?.List == ListKind.Tasks;
 
     /// <summary>Le style de la ligne du curseur.</summary>
     public string StyleLabel => Tools is { Heading: > 0 } tools ? EditingText.Heading(tools.Heading) : EditingText.NormalText;
@@ -570,6 +615,9 @@ public sealed partial class SheetEditorViewModel : ObservableObject
             (Key.B, ModifierKeys.Control) => () => ToggleMark(InlineMark.Bold),
             (Key.I, ModifierKeys.Control) => () => ToggleMark(InlineMark.Italic),
             (Key.U, ModifierKeys.Control) => () => ToggleMark(InlineMark.Underline),
+            (Key.L, ModifierKeys.Control) => () => SetAlign(TextAlign.Left),
+            (Key.R, ModifierKeys.Control) => () => SetAlign(TextAlign.Right),
+            (Key.J, ModifierKeys.Control) => () => SetAlign(TextAlign.Justify),
             (Key.S, ModifierKeys.Control) => () => _ = SaveAsync(),
             (Key.F3, ModifierKeys.Shift) => () => ChangeCaseTo(null),
             _ => null,
@@ -754,6 +802,30 @@ public sealed partial class SheetEditorViewModel : ObservableObject
     /// <summary>Met les lignes de la sélection en liste, ou les en sort.</summary>
     [RelayCommand]
     private void ToggleList(ListKind kind) => _surface?.ToggleList(kind);
+
+    /// <summary>Pose une couleur sur la sélection, écrite <c>#rrggbb</c> ; rien : celle du thème.</summary>
+    [RelayCommand]
+    private void SetColor(string? color)
+    {
+        _surface?.SetColor(color);
+        _surface?.Focus();
+    }
+
+    /// <summary>Pose une taille sur la sélection, en pixels.</summary>
+    [RelayCommand]
+    private void SetFontSize(int pixels)
+    {
+        _surface?.SetFontSize(FontSizes.Style(pixels));
+        _surface?.Focus();
+    }
+
+    /// <summary>Passe à la taille suivante de la liste, vers le haut ou vers le bas.</summary>
+    [RelayCommand]
+    private void StepFontSize(int direction) => SetFontSize(FontSizes.Step(Tools?.Size, direction));
+
+    /// <summary>Aligne les blocs de la sélection.</summary>
+    [RelayCommand]
+    private void SetAlign(TextAlign align) => _surface?.SetAlign(align);
 
     /// <summary>Change la casse de la sélection, ou du mot sous le curseur.</summary>
     [RelayCommand]

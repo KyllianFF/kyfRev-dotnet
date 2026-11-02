@@ -322,3 +322,167 @@ describe("texte collé", () => {
     });
   });
 });
+
+describe("format étendu : couleur et taille", () => {
+  const marquesDe = (texte: string) => {
+    const paragraphe = depuisMarkdown(texte).doc.firstChild as Node;
+    const trouvees: string[] = [];
+    paragraphe.forEach((enfant) => {
+      for (const marque of enfant.marks) {
+        trouvees.push(`${enfant.text}:${marque.type.name}=${marque.attrs.valeur ?? ""}`);
+      }
+    });
+    return { paragraphe, trouvees };
+  };
+
+  it("lit la couleur et la taille, et les réécrit à l'identique", () => {
+    const rouge = '<span style="color:#ff0000">rouge</span>\n';
+    expect(marquesDe(rouge).trouvees).toEqual(["rouge:couleur=#ff0000"]);
+    expect(reecrire(rouge)).toBe(rouge);
+    const grand = 'Un <span style="font-size:1.25em">grand</span> mot\n';
+    expect(marquesDe(grand).trouvees).toEqual(["grand:taille=1.25em"]);
+    expect(reecrire(grand)).toBe(grand);
+  });
+
+  it("garde les deux ensemble, et ce qu'elles entourent", () => {
+    const texte = '<span style="color:#00ff00"><span style="font-size:2em">**gras**</span></span>\n';
+    expect(reecrire(texte)).toBe(texte);
+    stable(texte);
+    stable('<span style="color:#00ff00">[lien](https://exemple.org) et `code`</span> suite\n');
+  });
+
+  it("une balise fermée rend la couleur qu'elle cachait", () => {
+    const { trouvees } = marquesDe(
+      '<span style="color:#111111">a<span style="color:#222222">b</span>c</span>\n',
+    );
+    expect(trouvees).toEqual(["a:couleur=#111111", "b:couleur=#222222", "c:couleur=#111111"]);
+  });
+
+  it.each([
+    '<span style="color:red">nom de couleur</span>',
+    '<span style="color:#ff00">quatre chiffres</span>',
+    '<span style="font-size:9em">trop grand</span>',
+    '<span style="font-size:0.4em">trop petit</span>',
+    '<span style="font-size:12px">autre unité</span>',
+    '<span onclick="x">attribut</span>',
+    '<span style="color:#ff0000;background:url(x)">deux propriétés</span>',
+    '<span style="color:#ff0000">sans fermeture',
+    "fermeture seule</span>",
+  ])("%s reste du texte", (ecrit) => {
+    const paragraphe = depuisMarkdown(`${ecrit}\n`).doc.firstChild as Node;
+    expect(paragraphe.textContent).toBe(ecrit);
+    paragraphe.forEach((enfant) => expect(enfant.marks).toHaveLength(0));
+  });
+
+  it("le texte d'une balise n'est jamais relu comme une balise", () => {
+    const doc = schema.nodes.doc.create(null, paragraphe('<span style="color:#ff0000">x</span>'));
+    const ecrit = versMarkdown(doc, null);
+    expect(ecrit).toBe('\\<span style="color:#ff0000">x\\</span>\n');
+    expect((depuisMarkdown(ecrit).doc.firstChild as Node).textContent).toBe('<span style="color:#ff0000">x</span>');
+  });
+});
+
+describe("format étendu : alignement", () => {
+  const aligne = '<div align="center">\n\nAu centre\n\n</div>\n';
+
+  it("lit un passage aligné, et le réécrit à l'identique", () => {
+    const { doc } = depuisMarkdown(aligne);
+    expect(doc.firstChild?.type.name).toBe("alignement");
+    expect(doc.firstChild?.attrs.align).toBe("center");
+    expect(doc.firstChild?.textContent).toBe("Au centre");
+    expect(reecrire(aligne)).toBe(aligne);
+    stable(aligne);
+  });
+
+  it("ne réécrit que le bloc modifié", () => {
+    const texte = `Un  \n\n\n${aligne}\n\n* Deux\n`;
+    const origine = depuisMarkdown(texte);
+    expect(versMarkdown(origine.doc, origine)).toBe(texte);
+    const doc = remplacer(origine.doc, 0, paragraphe("Modifié"));
+    expect(versMarkdown(doc, origine)).toBe(`Modifié\n\n${aligne}\n\n* Deux\n`);
+  });
+
+  it("accepte des blocs variés et se relit pareil", () => {
+    stable('<div align="right">\n\n# Titre\n\n- a\n- b\n\n> citation\n\n</div>\n');
+    stable('<div align="justify">\n\n<div align="center">\n\nDedans\n\n</div>\n\nAprès\n\n</div>\n');
+    stable('> <div align="center">\n>\n> Dans une citation\n>\n> </div>\n');
+    stable('- point\n\n  <div align="center">\n\n  Dans un point\n\n  </div>\n');
+  });
+
+  it("une ligne de fermeture dans un bloc de code ne ferme rien", () => {
+    const texte = '<div align="center">\n\n```html\n</div>\n```\n\nSuite\n\n</div>\n';
+    const { doc } = depuisMarkdown(texte);
+    expect(doc.childCount).toBe(1);
+    expect(doc.firstChild?.childCount).toBe(2);
+    expect(reecrire(texte)).toBe(texte);
+  });
+
+  it("collé sans lignes vides, il est lu aussi", () => {
+    const { doc } = depuisMarkdown('<div align="right">\nTexte\n</div>\n');
+    expect(doc.firstChild?.type.name).toBe("alignement");
+    expect(doc.firstChild?.textContent).toBe("Texte");
+  });
+
+  it.each([
+    ['sans fermeture', '<div align="center">\n\nTexte\n'],
+    ["autre valeur", '<div align="left">\n\nTexte\n\n</div>\n'],
+    ["autre attribut", '<div class="x">\n\nTexte\n\n</div>\n'],
+    ["collée sous un paragraphe", 'Texte\n<div align="center">\n\nSuite\n\n</div>\n'],
+  ])("%s : ce n'est que du texte", (_nom, texte) => {
+    const { doc } = depuisMarkdown(texte);
+    doc.forEach((bloc) => expect(bloc.type.name).not.toBe("alignement"));
+  });
+
+  it("resté vide, il ne s'écrit pas", () => {
+    const vide = schema.nodes.alignement.create({ align: "center" }, schema.nodes.paragraph.create());
+    expect(versMarkdown(schema.nodes.doc.create(null, [paragraphe("Un"), vide]), null)).toBe("Un\n");
+  });
+});
+
+describe("format étendu : tâches", () => {
+  const taches = (texte: string) => {
+    const resultat: (boolean | null)[] = [];
+    depuisMarkdown(texte).doc.descendants((noeud) => {
+      if (noeud.type === schema.nodes.list_item) resultat.push(noeud.attrs.tache as boolean | null);
+    });
+    return resultat;
+  };
+
+  it("lit les cases, à faire ou faites, et les réécrit à l'identique", () => {
+    const texte = "- [ ] à faire\n- [x] fait\n- ordinaire\n";
+    expect(taches(texte)).toEqual([false, true, null]);
+    expect(reecrire(texte)).toBe(texte);
+    stable(texte);
+    stable("1. [x] numérotée\n2. [ ] aussi\n");
+    stable("- [ ] parent\n  - [x] enfant\n");
+  });
+
+  it("retire la case du texte", () => {
+    const point = depuisMarkdown("- [X] Texte\n").doc.firstChild?.firstChild;
+    expect(point?.textContent).toBe("Texte");
+    expect(point?.attrs.tache).toBe(true);
+  });
+
+  it("une tâche sans texte reste une tâche", () => {
+    expect(taches("- [ ]\n")).toEqual([false]);
+    expect(reecrire("- [ ]\n")).toBe("- [ ]\n");
+  });
+
+  it.each([
+    ["des crochets échappés", "- \\[ \\] texte\n"],
+    ["sans espace après", "- [ ]texte\n"],
+    ["une autre lettre", "- [y] texte\n"],
+    ["un lien", "- [x](https://exemple.org) texte\n"],
+    ["en plein texte", "- texte [ ] suite\n"],
+  ])("%s : pas une tâche", (_nom, texte) => {
+    expect(taches(texte)).toEqual([null]);
+  });
+
+  it("des crochets écrits dans un point restent des crochets", () => {
+    const point = schema.nodes.list_item.create(null, paragraphe("[ ] littéral"));
+    const doc = schema.nodes.doc.create(null, schema.nodes.bullet_list.create(null, point));
+    const ecrit = versMarkdown(doc, null);
+    expect(ecrit).toBe("- \\[ \\] littéral\n");
+    expect(taches(ecrit)).toEqual([null]);
+  });
+});
