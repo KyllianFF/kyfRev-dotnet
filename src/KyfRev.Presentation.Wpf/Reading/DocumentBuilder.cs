@@ -87,6 +87,7 @@ internal sealed class DocumentBuilder
     private bool _isCancelled;
     private bool _afterBreak;
     private double _inlineSize = ReadingSize;
+    private int _boldDepth;
 
     public DocumentBuilder(SheetReading reading, Action<LinkTarget> follow, bool opensLinks, bool showsHeader, Func<string, Brush?>? findBrush = null)
     {
@@ -103,6 +104,9 @@ internal sealed class DocumentBuilder
 
     /// <summary>L'endroit de chaque identifiant (notes et renvois).</summary>
     public Dictionary<string, TextElement> Identified { get; } = new(StringComparer.Ordinal);
+
+    /// <summary>Les étendues de texte en gras, dans le texte affiché.</summary>
+    public List<(int Start, int End)> BoldRanges { get; } = [];
 
     /// <summary>Les schémas se dessinent ; sinon, ils se lisent en code.</summary>
     public bool DrawsMermaid { get; init; }
@@ -714,7 +718,7 @@ internal sealed class DocumentBuilder
                 AddSpan(element, new Italic(), inlines, depth, inLink);
                 break;
             case "strong" when depth < MaxInlineDepth:
-                AddSpan(element, new Bold(), inlines, depth, inLink);
+                AddBold(element, inlines, depth, inLink);
                 break;
             case "u" when depth < MaxInlineDepth:
                 AddSpan(element, new Underline(), inlines, depth, inLink);
@@ -733,6 +737,22 @@ internal sealed class DocumentBuilder
                 break;
         }
     }
+
+    /// <summary>Du gras : un trou, en révision. Le gras dans le gras n'en fait qu'un.</summary>
+    private void AddBold(RenderElement element, InlineCollection inlines, int depth, bool inLink)
+    {
+        var pieces = Descendants(element).OfType<RenderText>().Select(text => _pieces.GetValueOrDefault(text)).OfType<TextPiece>().ToList();
+        if (_boldDepth == 0 && pieces.Count > 0)
+        {
+            BoldRanges.Add((pieces[0].Start, pieces[^1].End));
+        }
+        _boldDepth++;
+        AddSpan(element, new Bold(), inlines, depth, inLink);
+        _boldDepth--;
+    }
+
+    private static IEnumerable<RenderNode> Descendants(RenderElement element) =>
+        element.Children.SelectMany(child => child is RenderElement inner ? Descendants(inner) : [child]);
 
     /// <summary>Un passage coloré ou agrandi par la fiche ; la taille est relative au texte qui l'entoure.</summary>
     private void AddStyled(RenderElement element, InlineCollection inlines, int depth, bool inLink)

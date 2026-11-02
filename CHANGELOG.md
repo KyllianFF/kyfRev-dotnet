@@ -9,6 +9,10 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- Fiche en révision : le bouton « Réviser », ou une fiche ouverte depuis Aujourd'hui ou une séance. Avec le rappel actif,
+  ses passages et son gras sont masqués jusqu'au clic, ou jusqu'à Entrée, pour se les rappeler avant de les relire. Le trou
+  garde la largeur du texte, le volet tait aussi ce qui est masqué, et « Tout afficher » ou « Remasquer » le permettent d'un
+  coup.
 - Galerie de l'onglet Insertion, comme celle d'Office : des catégories, une vignette par modèle, un aperçu qui suit le
   texte saisi. 17 SmartArt que kyfRev dessine lui-même, en un bloc de code lisible partout (`smartart cycle`, puis un
   élément par ligne). 9 schémas et 6 graphiques en Mermaid. Un SmartArt se rouvre dans la galerie par « Modifier… ».

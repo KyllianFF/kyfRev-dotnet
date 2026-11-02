@@ -37,6 +37,10 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
         nameof(ActiveHighlight), typeof(string), typeof(SheetDocumentViewer), new PropertyMetadata(null, OnHighlightsChanged));
 
     private DocumentBuilder? _built;
+    /// <summary>Le texte à trous.</summary>
+    public static readonly DependencyProperty HolesProperty = DependencyProperty.Register(
+        nameof(Holes), typeof(TextHoles), typeof(SheetDocumentViewer), new PropertyMetadata(null, OnHolesChanged));
+
     private ScrollViewer? _scroller;
     private double? _restoreOffset;
 
@@ -50,6 +54,13 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
         SetResourceReference(SelectionBrushProperty, "Kyf.Brush.Selection");
         // Les traits sous le texte prennent leur couleur du thème, connu une fois la vue en place.
         Loaded += (_, _) => ApplyHighlights();
+    }
+
+    /// <inheritdoc cref="HolesProperty"/>
+    public TextHoles? Holes
+    {
+        get => (TextHoles?)GetValue(HolesProperty);
+        set => SetValue(HolesProperty, value);
     }
 
     /// <summary>La fiche à montrer.</summary>
@@ -151,7 +162,65 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
 
     private static void OnHighlightsChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e) => ((SheetDocumentViewer)sender).ApplyHighlights();
 
-    private void ApplyHighlights() => _built?.Layer.Set(Highlights ?? [], ActiveHighlight);
+    private void ApplyHighlights()
+    {
+        _built?.Layer.Set(Highlights ?? [], ActiveHighlight);
+        ComputeHoles();
+    }
+
+    private static void OnHolesChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e)
+    {
+        var viewer = (SheetDocumentViewer)sender;
+        if (e.OldValue is TextHoles old)
+        {
+            old.Changed -= viewer.OnHolesChanged;
+        }
+        if (e.NewValue is TextHoles holes)
+        {
+            holes.Changed += viewer.OnHolesChanged;
+        }
+        viewer.ComputeHoles();
+    }
+
+    private void OnHolesChanged(object? sender, EventArgs e) => _built?.Layer.SetHoles(Holes?.Hidden ?? []);
+
+    /// <summary>Les trous dépendent de tout le texte : il se termine d'abord.</summary>
+    private void ComputeHoles()
+    {
+        if (_built is not { } built)
+        {
+            return;
+        }
+        if (Holes is not { IsActive: true } holes)
+        {
+            built.Layer.SetHoles([]);
+            return;
+        }
+        built.Complete();
+        holes.Set(TextHoles.Compute(Highlights ?? [], built.BoldRanges));
+    }
+
+    /// <summary>Affiche le trou visé par la souris ; rend faux s'il n'y en a pas.</summary>
+    internal bool RevealHoleAt(object? source)
+    {
+        if (_built?.Layer.HoleAt(source) is not { } hole)
+        {
+            return false;
+        }
+        Holes?.Reveal(hole.Key);
+        return true;
+    }
+
+    /// <summary>Affiche le premier trou encore masqué, et l'amène à l'écran ; rend faux s'il n'y en a pas.</summary>
+    internal bool RevealNextHole()
+    {
+        if (Holes is not { IsActive: true } holes || holes.RevealNext() is not { } hole)
+        {
+            return false;
+        }
+        _built?.Layer.ElementAt(hole.Start)?.BringIntoView();
+        return true;
+    }
 
     private void Rebuild()
     {
@@ -161,8 +230,9 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
         {
             var drawsMermaid = TryFindResource(MermaidEngine.ResourceKey) is not null;
             _built = new DocumentBuilder(reading, Follow, OpenLinkCommand is not null, ShowsHeader, key => TryFindResource(key) as System.Windows.Media.Brush) { DrawsMermaid = drawsMermaid };
-            ApplyHighlights();
+            _built.Layer.Set(Highlights ?? [], ActiveHighlight);
             Document = _built.Build();
+            ComputeHoles();
         }
         else
         {

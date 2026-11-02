@@ -14,6 +14,21 @@ public static class ReadingText
     /// <summary>La case d'une tâche à faire, pour le lecteur d'écran.</summary>
     public const string TaskOpen = "Tâche à faire";
 
+    /// <summary>Réviser une fiche.</summary>
+    public const string Revise = "Réviser";
+
+    /// <summary>Tout afficher, dans le texte à trous.</summary>
+    public const string RevealAllHoles = "Tout afficher";
+
+    /// <summary>Tout masquer de nouveau, dans le texte à trous.</summary>
+    public const string HideAllHoles = "Remasquer";
+
+    /// <summary>Un passage encore masqué, dans le volet.</summary>
+    public const string PassageToFind = "Passage à retrouver";
+
+    /// <summary>Un terme encore masqué, dans le volet.</summary>
+    public const string TermToFind = "Terme à retrouver";
+
     /// <summary>Le plan de la fiche.</summary>
     public const string Outline = "Plan";
 
@@ -146,4 +161,8 @@ public static class ReadingText
         };
         return $"{reason} : {image.Detail}";
     }
+
+    /// <summary>Où l'on en est dans le texte à trous.</summary>
+    public static string HolesSummary(int revealed, int total) =>
+        string.Create(System.Globalization.CultureInfo.InvariantCulture, $"Texte à trous : {revealed} sur {total} affichés.");
 }
