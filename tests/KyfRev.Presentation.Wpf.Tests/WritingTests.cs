@@ -744,6 +744,64 @@ public sealed class WritingTests
     }
 
     [STATestMethod]
+    [DataRow(GalleryKind.Schema, EditingText.GallerySchemaTitle, 9, EditingText.GalleryOnePerLine)]
+    [DataRow(GalleryKind.Chart, EditingText.GalleryChartTitle, 6, EditingText.GalleryOneValuePerLine)]
+    public void The_gallery_of_schemas_and_charts_writes_mermaid(GalleryKind kind, string title, int count, string help)
+    {
+        var gallery = DiagramGalleryViewModel.For(kind);
+
+        Assert.AreEqual(title, gallery.Title);
+        Assert.HasCount(count, gallery.Items);
+        Assert.AreEqual(help, gallery.InputHelp);
+        Assert.IsTrue(gallery.IsMermaid);
+        Assert.IsFalse(gallery.IsDrawn);
+        Assert.IsNull(gallery.Preview);
+        Assert.IsNotNull(gallery.MermaidCode);
+        Assert.AreEqual((KyfRev.Rendering.Diagrams.MermaidTemplates.Language, gallery.MermaidCode), gallery.Source());
+    }
+
+    [STATestMethod]
+    public void The_gallery_opens_on_schemas_from_the_ribbon_and_reads_as_code_without_the_hidden_page()
+    {
+        using var scene = new Scene("Avant\n");
+
+        scene.Editor.OpenGalleryCommand.Execute(GalleryKind.Schema);
+        TestShell.Flush();
+
+        var view = scene.SheetPage.GalleryContent;
+        Assert.AreEqual(Visibility.Visible, view.MermaidPreview.IsVisible ? Visibility.Visible : Visibility.Collapsed);
+        Assert.IsFalse(view.PreviewView.IsVisible);
+        Assert.IsTrue(view.MermaidPreview.ShowsCode);
+        Assert.AreEqual(scene.Editor.Gallery!.MermaidCode, view.MermaidPreview.Code);
+
+        scene.Editor.Gallery.ShowsCode = true;
+        TestShell.Flush();
+        Assert.IsTrue(view.CodeBox.IsVisible);
+
+        scene.Editor.AnswerGalleryCommand.Execute(true);
+        Assert.Contains("```mermaid\nflowchart LR", scene.Source.Text);
+    }
+
+    [STATestMethod]
+    [DataRow(ThemeKind.Light)]
+    [DataRow(ThemeKind.Dark)]
+    public void A_check_box_takes_the_text_color_of_the_theme(ThemeKind theme)
+    {
+        using var scene = new Scene("Avant\n");
+        scene.Test.Design.Theme = theme;
+        TestShell.Flush();
+        scene.Editor.OpenGalleryCommand.Execute(GalleryKind.Schema);
+        TestShell.Flush();
+
+        var box = scene.SheetPage.GalleryContent.CodeToggle;
+        box.ApplyTemplate();
+        var text = (System.Windows.Media.SolidColorBrush)box.Foreground;
+        var ground = ThemeColors.For(theme)[ColorRole.Surface];
+
+        Assert.IsGreaterThanOrEqualTo(4.5, new TokenColor(text.Color.A, text.Color.R, text.Color.G, text.Color.B).ContrastWith(ground));
+    }
+
+    [STATestMethod]
     public void The_gallery_has_nothing_to_write_without_text()
     {
         var gallery = DiagramGalleryViewModel.For(GalleryKind.SmartArt);

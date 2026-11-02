@@ -200,6 +200,18 @@
 
           <HeaderedContentControl Style="{StaticResource Group}" Header="{x:Static editing:EditingText.IllustrationsGroup}">
             <StackPanel Orientation="Horizontal">
+              <Button x:Name="SchemaButton" Style="{DynamicResource Kyf.Button.ToolLarge}" Command="{Binding OpenGalleryCommand}" CommandParameter="{x:Static editing:GalleryKind.Schema}" ToolTip="{x:Static editing:EditingText.GallerySchemaTitle}" AutomationProperties.Name="{x:Static editing:EditingText.Schema}">
+                <StackPanel>
+                  <kyf:Icon Text="{x:Static kyf:Icons.Schema}" FontSize="20" HorizontalAlignment="Center" />
+                  <TextBlock Text="{x:Static editing:EditingText.Schema}" Style="{DynamicResource Kyf.Text.Caption}" Foreground="{DynamicResource Kyf.Brush.Text}" HorizontalAlignment="Center" />
+                </StackPanel>
+              </Button>
+              <Button x:Name="ChartButton" Style="{DynamicResource Kyf.Button.ToolLarge}" Command="{Binding OpenGalleryCommand}" CommandParameter="{x:Static editing:GalleryKind.Chart}" ToolTip="{x:Static editing:EditingText.GalleryChartTitle}" AutomationProperties.Name="{x:Static editing:EditingText.Chart}">
+                <StackPanel>
+                  <kyf:Icon Text="{x:Static kyf:Icons.Chart}" FontSize="20" HorizontalAlignment="Center" />
+                  <TextBlock Text="{x:Static editing:EditingText.Chart}" Style="{DynamicResource Kyf.Text.Caption}" Foreground="{DynamicResource Kyf.Brush.Text}" HorizontalAlignment="Center" />
+                </StackPanel>
+              </Button>
               <Button x:Name="SmartArtButton" Style="{DynamicResource Kyf.Button.ToolLarge}" Command="{Binding OpenGalleryCommand}" CommandParameter="{x:Static editing:GalleryKind.SmartArt}" ToolTip="{x:Static editing:EditingText.GallerySmartArtTitle}" AutomationProperties.Name="{x:Static editing:EditingText.SmartArt}">
                 <StackPanel>
                   <kyf:Icon Text="{x:Static kyf:Icons.SmartArt}" FontSize="20" HorizontalAlignment="Center" />

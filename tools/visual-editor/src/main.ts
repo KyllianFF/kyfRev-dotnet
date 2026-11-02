@@ -1,7 +1,7 @@
 // Le bus entre l'éditeur et l'application : messages typés (./messages.ts est généré
 // depuis le C#), aucun objet de l'hôte exposé à la page.
 
-import type { ActionTableau, EtatOutils, NomMarque } from "./editeur";
+import type { ActionTableau, Dessin, EtatOutils, NomMarque } from "./editeur";
 import { EditeurVisuel } from "./editeur";
 import type { Casse } from "./casse";
 import type { DepuisEditeur, VersEditeur } from "./messages";
@@ -45,15 +45,15 @@ let dernierEtat = "";
 let derniereSaisie: string | null = null;
 
 /** Les dessins demandés à l'hôte : le même bloc n'est demandé qu'une fois à la fois. */
-const dessins = new Map<string, { promesse: Promise<string | null>; repondre: (svg: string | null) => void }>();
+const dessins = new Map<string, { promesse: Promise<Dessin>; repondre: (dessin: Dessin) => void }>();
 const cleDessin = (langage: string, code: string) => `${langage}\n${code}`;
 
-function demanderDessin(langage: string, code: string): Promise<string | null> {
+function demanderDessin(langage: string, code: string): Promise<Dessin> {
   const cle = cleDessin(langage, code);
   const deja = dessins.get(cle);
   if (deja) return deja.promesse;
-  let repondre: (svg: string | null) => void = () => {};
-  const promesse = new Promise<string | null>((fin) => {
+  let repondre: (dessin: Dessin) => void = () => {};
+  const promesse = new Promise<Dessin>((fin) => {
     repondre = fin;
   });
   dessins.set(cle, { promesse, repondre });
@@ -137,7 +137,7 @@ function traiter(message: VersEditeur): void {
       break;
     case "diagram": {
       const cle = cleDessin(message.language, message.code);
-      dessins.get(cle)?.repondre(message.svg);
+      dessins.get(cle)?.repondre({ svg: message.svg, image: message.image });
       dessins.delete(cle);
       break;
     }
@@ -148,6 +148,7 @@ function traiter(message: VersEditeur): void {
       for (const [nom, valeur] of Object.entries(message.variables)) {
         document.documentElement.style.setProperty(nom, valeur);
       }
+      document.dispatchEvent(new Event("theme"));
       break;
     case "sync":
       envoyerTexte(message.id);

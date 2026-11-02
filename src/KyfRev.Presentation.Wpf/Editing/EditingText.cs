@@ -194,6 +194,18 @@ public static class EditingText
     /// <summary>Le groupe des dessins.</summary>
     public const string IllustrationsGroup = "Illustrations";
 
+    /// <summary>Insérer un schéma.</summary>
+    public const string Schema = "Schéma";
+
+    /// <summary>Insérer un graphique.</summary>
+    public const string Chart = "Graphique";
+
+    /// <summary>La saisie de la galerie des graphiques.</summary>
+    public const string GalleryOneValuePerLine = "Une valeur par ligne (libellé : valeur)";
+
+    /// <summary>Montrer le code d'un schéma ou d'un graphique.</summary>
+    public const string GalleryShowCode = "Voir le code Mermaid";
+
     /// <summary>Insérer un SmartArt.</summary>
     public const string SmartArt = "SmartArt";
 

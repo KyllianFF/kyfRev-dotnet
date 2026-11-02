@@ -102,6 +102,8 @@ export type EtatOutils = {
   canRedo: boolean;
 };
 
+export type Dessin = { svg: string | null; image: string | null };
+
 export type Formule = { position: number | null; tex: string; block: boolean };
 
 /** Ce que l'éditeur dit à l'hôte. */
@@ -122,8 +124,8 @@ export type Reactions = {
   clavierlien: (touche: string) => boolean;
   /** Clic droit : le menu est natif. */
   onmenu: () => void;
-  /** Le dessin d'un bloc, en SVG ; `null` : ce n'est qu'un bloc de code. */
-  dessin: (langage: string, code: string) => Promise<string | null>;
+  /** Le dessin d'un bloc : un SVG, ou une image ; ni l'un ni l'autre : il ne se dessine pas. */
+  dessin: (langage: string, code: string) => Promise<Dessin>;
   /** Modifier ce dessin : c'est la galerie de l'application. */
   ondessin: (langage: string, code: string, position: number) => void;
 };
@@ -488,7 +490,7 @@ function vueFormule(bloc: boolean, onformule: (formule: Formule) => void) {
 }
 
 /** Un bloc qui se dessine : son code ne se montre que si l'on y entre. */
-const seDessine = (langage: string) => /^smartart\s/.test(langage);
+const seDessine = (langage: string) => /^(smartart\s|mermaid\s*$)/.test(langage);
 
 /** Le dessin suit la frappe, sans la gêner. */
 const DELAI_DESSIN = 250;
@@ -572,8 +574,9 @@ class VueCode implements NodeView {
       bouton.addEventListener("click", faire);
       return bouton;
     };
+    if (/^smartart/.test(this.noeud.attrs.language as string)) this.entete.append(action("Modifier…", modifier));
+    else document.addEventListener("theme", this.suivreTheme);
     this.entete.append(
-      action("Modifier…", modifier),
       action(
         "Voir le code",
         () => {
@@ -592,14 +595,29 @@ class VueCode implements NodeView {
     clearTimeout(this.minuterie);
     this.minuterie = setTimeout(() => {
       const code = this.noeud.textContent;
-      void this.reactions.dessin(this.noeud.attrs.language as string, code).then((svg) => {
-        if (this.apercu && this.noeud.textContent === code) this.apercu.innerHTML = svg ? svgNettoye(svg) : "";
+      void this.reactions.dessin(this.noeud.attrs.language as string, code).then((dessin) => {
+        if (this.apercu && this.noeud.textContent === code) this.montrerDessin(dessin);
       });
     }, DELAI_DESSIN);
   }
 
+  /** Le dessin ; s'il n'y en a pas, c'est le code qui se lit. */
+  private montrerDessin({ svg, image }: Dessin): void {
+    if (!this.apercu) return;
+    this.dom.classList.toggle("dessin-impossible", !svg && !image);
+    if (image) {
+      const dessin = document.createElement("img");
+      dessin.src = image;
+      dessin.alt = this.noeud.textContent;
+      this.apercu.replaceChildren(dessin);
+    } else this.apercu.innerHTML = svg ? svgNettoye(svg) : "";
+  }
+
+  private readonly suivreTheme = () => this.demanderDessin();
+
   destroy(): void {
     clearTimeout(this.minuterie);
+    document.removeEventListener("theme", this.suivreTheme);
   }
 
   private marquerEdition(decorations: readonly Decoration[]) {

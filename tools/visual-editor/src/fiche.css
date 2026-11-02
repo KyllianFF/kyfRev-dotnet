@@ -604,7 +604,13 @@ figure.bloc-extension {
   font-family: var(--police, inherit);
 }
 
-.editeur-visuel .bloc-dessin:not(.en-edition) > pre {
+.editeur-visuel .apercu-dessin img {
+  display: block;
+  max-width: min(100%, 640px);
+  margin: 8px auto;
+}
+
+.editeur-visuel .bloc-dessin:not(.en-edition):not(.dessin-impossible) > pre {
   display: none;
 }
 

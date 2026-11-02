@@ -75,15 +75,33 @@ public sealed partial class DiagramGalleryViewModel : ObservableObject
     /// <summary>Le modèle choisi.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(Preview))]
+    [NotifyPropertyChangedFor(nameof(MermaidCode))]
     public partial GalleryItem? SelectedItem { get; set; }
 
     /// <summary>Le texte saisi, un élément par ligne.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(Preview))]
+    [NotifyPropertyChangedFor(nameof(MermaidCode))]
     public partial string Text { get; set; } = string.Empty;
 
-    /// <summary>Le dessin du modèle choisi, avec le texte saisi.</summary>
-    public DiagramScene? Preview => SelectedItem is { } item ? SmartArt.Draw(item.Id, Text) : null;
+    /// <summary>Le modèle choisi s'écrit en Mermaid.</summary>
+    public bool IsMermaid => Kind != GalleryKind.SmartArt;
+
+    /// <summary>Le modèle choisi est dessiné par kyfRev.</summary>
+    public bool IsDrawn => !IsMermaid;
+
+    /// <summary>Le dessin du modèle choisi, avec le texte saisi ; rien pour un modèle Mermaid.</summary>
+    public DiagramScene? Preview => !IsMermaid && SelectedItem is { } item ? SmartArt.Draw(item.Id, Text) : null;
+
+    /// <summary>Le code du modèle choisi, avec le texte saisi ; rien pour un SmartArt.</summary>
+    public string? MermaidCode => IsMermaid ? MermaidTemplates.Code(SelectedItem?.Id, Text) : null;
+
+    /// <summary>Le code se montre sous l'aperçu.</summary>
+    [ObservableProperty]
+    public partial bool ShowsCode { get; set; }
+
+    /// <summary>Ce qu'il faut écrire dans la saisie.</summary>
+    public string InputHelp => Kind == GalleryKind.Chart ? EditingText.GalleryOneValuePerLine : EditingText.GalleryOnePerLine;
 
     /// <summary>Une galerie vide, pour insérer.</summary>
     public static DiagramGalleryViewModel For(GalleryKind kind) => new(kind, ItemsOf(kind), null);
@@ -117,7 +135,7 @@ public sealed partial class DiagramGalleryViewModel : ObservableObject
         {
             return null;
         }
-        return SmartArt.Source(item.Id, Text);
+        return IsMermaid ? (MermaidTemplates.Language, MermaidCode!) : SmartArt.Source(item.Id, Text);
     }
 
     partial void OnSelectedCategoryChanged(string value)
@@ -138,7 +156,12 @@ public sealed partial class DiagramGalleryViewModel : ObservableObject
 
     private static List<GalleryItem> ItemsOf(GalleryKind kind)
     {
-        ArgumentOutOfRangeException.ThrowIfNotEqual((int)kind, (int)GalleryKind.SmartArt);
-        return [.. SmartArt.Layouts.Select(layout => new GalleryItem(layout.Id, layout.Name, layout.Category, layout.Description, layout.Sample, SmartArt.Draw(layout.Id, layout.Sample)!))];
+        if (kind == GalleryKind.SmartArt)
+        {
+            return [.. SmartArt.Layouts.Select(layout => new GalleryItem(layout.Id, layout.Name, layout.Category, layout.Description, layout.Sample, SmartArt.Draw(layout.Id, layout.Sample)!))];
+        }
+        var family = kind == GalleryKind.Chart ? MermaidFamily.Chart : MermaidFamily.Schema;
+        return [.. MermaidTemplates.All.Where(template => template.Family == family)
+            .Select(template => new GalleryItem(template.Id, template.Name, template.Category, template.Description, template.Sample, MermaidTemplates.Thumbnail(template)))];
     }
 }

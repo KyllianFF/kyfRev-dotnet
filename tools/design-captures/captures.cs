@@ -414,6 +414,72 @@ static void ReviewCaptures(string folder)
         drawnPage.StopWritingCommand.Execute(null);
         Pump(() => drawnPage.Editor is null);
 
+        // Les schémas et les graphiques : la galerie, dans le vrai moteur, puis tous les modèles en lecture.
+        using var mermaid = new MermaidEngine(Path.Combine(Path.GetTempPath(), "kyfrev-captures-webview2"));
+        var host_ = System.Windows.Application.Current ?? new System.Windows.Application { ShutdownMode = ShutdownMode.OnExplicitShutdown };
+        host_.Resources[MermaidEngine.ResourceKey] = mermaid;
+        var schemas = app.Sheets.Create("Histoire", "Schémas et graphiques", null).Value;
+        var schemaBody = string.Join("\n\n", KyfRev.Rendering.Diagrams.MermaidTemplates.All.Select(template => $"## {template.Name}\n\n```mermaid\n{KyfRev.Rendering.Diagrams.MermaidTemplates.Code(template.Id, template.Sample)}\n```"));
+        app.Editing.Save(schemas, schemaBody, app.Sheets.Open(schemas).Value.Fingerprint, 1);
+        var schemasPage = new SheetPageViewModel(app.Sheets, app.Annotations, Bar, schemas, () => { }, _ => { }, new NoLinks(), Editor);
+        schemasPage.LoadCommand.Execute(null);
+        Pump(() => !schemasPage.IsLoading);
+        void Schemas(string file, ThemePreference theme, double seconds)
+        {
+            var ready = DateTime.UtcNow.AddSeconds(seconds);
+            Shell(folder, file, theme, shell => shell.Navigate(new NavigationItem("fiche", "Fiche", Icons.Document, int.MaxValue, schemasPage)), null, 1600, 1000, () => DateTime.UtcNow > ready);
+        }
+        Schemas("schemas-lecture-clair.png", ThemePreference.Light, 6);
+        Schemas("schemas-lecture-sombre.png", ThemePreference.Dark, 6);
+        schemasPage.StartWritingCommand.Execute(null);
+        Pump(() => schemasPage.Editor is not null);
+        schemasPage.Editor!.OpenGalleryCommand.Execute(GalleryKind.Schema);
+        Schemas("galerie-schema-clair.png", ThemePreference.Light, 5);
+        Schemas("galerie-schema-sombre.png", ThemePreference.Dark, 5);
+        schemasPage.Editor!.AnswerGalleryCommand.Execute(false);
+        schemasPage.Editor!.OpenGalleryCommand.Execute(GalleryKind.Chart);
+        Schemas("galerie-graphique-clair.png", ThemePreference.Light, 5);
+        Schemas("galerie-graphique-sombre.png", ThemePreference.Dark, 5);
+        schemasPage.Editor!.AnswerGalleryCommand.Execute(false);
+        schemasPage.StopWritingCommand.Execute(null);
+        Pump(() => schemasPage.Editor is null);
+
+        // Tous les schémas et les graphiques d'un coup d'œil, dans chaque thème.
+        foreach (var (name, kind) in new[] { ("clair", ThemeKind.Light), ("sombre", ThemeKind.Dark) })
+        {
+            var design = new DesignResources(kind, reducedMotion: true);
+            var grid = new System.Windows.Controls.Primitives.UniformGrid { Columns = 4, Width = 1720 };
+            grid.SetResourceReference(System.Windows.Controls.Panel.BackgroundProperty, "Kyf.Brush.Background");
+            var host = new Window { Content = grid, SizeToContent = SizeToContent.WidthAndHeight, Left = -20000, Top = -20000, ShowActivated = false, ShowInTaskbar = false, WindowStyle = WindowStyle.None };
+            host.Resources.MergedDictionaries.Add(design.Dictionary);
+            host.Show();
+            foreach (var template in KyfRev.Rendering.Diagrams.MermaidTemplates.All)
+            {
+                var drawing = mermaid.DrawAsync(KyfRev.Rendering.Diagrams.MermaidTemplates.Code(template.Id, template.Sample)!, MermaidEngine.ThemeOf(grid));
+                Pump(() => drawing.IsCompleted);
+                var cell = new StackPanel { Margin = new Thickness(10) };
+                var title = new TextBlock { Text = template.Name };
+                title.SetResourceReference(TextBlock.ForegroundProperty, "Kyf.Brush.TextSecondary");
+                cell.Children.Add(title);
+                if (drawing.Result is { } picture)
+                {
+                    using var stream = new MemoryStream(picture.Png.ToArray());
+                    cell.Children.Add(new System.Windows.Controls.Image { Source = BitmapFrame.Create(stream, BitmapCreateOptions.None, BitmapCacheOption.OnLoad), MaxHeight = 300, MaxWidth = 400 });
+                }
+                grid.Children.Add(cell);
+            }
+            host.Dispatcher.Invoke(System.Windows.Threading.DispatcherPriority.ApplicationIdle, () => { });
+            var sheetPicture = new RenderTargetBitmap((int)grid.ActualWidth, (int)grid.ActualHeight, 96, 96, PixelFormats.Pbgra32);
+            sheetPicture.Render(grid);
+            var sheetEncoder = new PngBitmapEncoder();
+            sheetEncoder.Frames.Add(BitmapFrame.Create(sheetPicture));
+            using (var stream = File.Create(Path.Combine(folder, $"mermaid-tous-{name}.png")))
+            {
+                sheetEncoder.Save(stream);
+            }
+            host.Close();
+        }
+
         // Tous les SmartArt d'un coup d'œil, et leur vignette.
         foreach (var (name, kind) in new[] { ("clair", ThemeKind.Light), ("sombre", ThemeKind.Dark) })
         {

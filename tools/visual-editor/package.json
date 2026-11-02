@@ -5,7 +5,7 @@
   "type": "module",
   "description": "Éditeur visuel des fiches de kyfRev : le paquet est écrit dans src/KyfRev.Presentation.Wpf/Editing/Web.",
   "scripts": {
-    "build": "vite build",
+    "build": "vite build && vite build --config vite.diagrammes.config.ts",
     "test": "vitest run",
     "check": "tsc --noEmit"
   },
@@ -16,6 +16,7 @@
     "katex": "0.18.10",
     "markdown-it": "15.0.3",
     "markdown-it-footnote": "4.0.0",
+    "mermaid": "12.2.0",
     "prosemirror-commands": "1.7.2",
     "prosemirror-dropcursor": "1.8.4",
     "prosemirror-gapcursor": "1.4.1",

@@ -361,7 +361,7 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
                 ToolsChanged?.Invoke(this, new EditorTools(tools.Bold, tools.Italic, tools.Underline, tools.Strike, tools.Superscript, tools.Subscript, tools.Heading, tools.List, tools.CanUndo, tools.CanRedo, tools.Color, tools.Size, tools.Align));
                 break;
             case AskDiagramEvent diagram:
-                Send(new DiagramRequest(diagram.Language, diagram.Code, SvgOf(diagram.Language, diagram.Code)));
+                _ = AnswerDiagramAsync(diagram);
                 break;
             case EditDiagramEvent edit:
                 DiagramAsked?.Invoke(this, new DiagramQuestion(edit.Language, edit.Code, edit.Position));
@@ -468,7 +468,8 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
     };
 
     /// <summary>L'environnement partagé. Rien de ce qui vient de l'extérieur ne le règle : ni port de débogage, ni autre moteur.</summary>
-    private static Task<CoreWebView2Environment> EnvironmentOf(string dataFolder)
+    /// <summary>L'environnement du moteur : un par fil d'interface.</summary>
+    internal static Task<CoreWebView2Environment> EnvironmentOf(string dataFolder)
     {
         if (_environment is null)
         {
@@ -532,6 +533,37 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
 
     private void Configure(CoreWebView2 web)
     {
+        Harden(web);
+        web.AddWebResourceRequestedFilter("*", CoreWebView2WebResourceContext.All);
+        web.WebResourceRequested += (_, e) => Serve(web, e, Host, ContentOf);
+        web.WebMessageReceived += OnMessage;
+        web.NavigationStarting += (_, e) => e.Cancel = e.Uri != StartAddress;
+        web.PermissionRequested += (_, e) => e.State = e.PermissionKind == CoreWebView2PermissionKind.ClipboardRead ? CoreWebView2PermissionState.Allow : CoreWebView2PermissionState.Deny;
+        web.ProcessFailed += (_, e) => Failed?.Invoke(this, e.ProcessFailedKind.ToString());
+    }
+
+    /// <summary>Le dessin d'un bloc : un SmartArt tout de suite, un schéma quand la page cachée l'a fait.</summary>
+    private async Task AnswerDiagramAsync(AskDiagramEvent diagram)
+    {
+        var svg = SvgOf(diagram.Language, diagram.Code);
+        string? image = null;
+        if (diagram.Language.Trim() == MermaidTemplates.Language && TryFindResource(MermaidEngine.ResourceKey) is IMermaidEngine engine)
+        {
+            image = (await engine.DrawAsync(diagram.Code, MermaidEngine.ThemeOf(this)).ConfigureAwait(true))?.Image;
+        }
+        Send(new DiagramRequest(diagram.Language, diagram.Code, svg, image));
+    }
+
+    /// <summary>Le dessin d'un SmartArt, en SVG ; rien pour un autre bloc.</summary>
+    private static string? SvgOf(string info, string code)
+    {
+        var parts = info.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return parts is [SmartArt.Language, var layout] && SmartArt.Draw(layout, code) is { } scene ? DiagramSvg.Write(scene) : null;
+    }
+
+    /// <summary>Ferme le moteur : pas d'outils de développement, pas de script de l'hôte, ni fenêtre, ni téléchargement.</summary>
+    internal static void Harden(CoreWebView2 web)
+    {
         var settings = web.Settings;
         settings.AreDevToolsEnabled = false;
         settings.AreDefaultContextMenusEnabled = false;
@@ -546,45 +578,27 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
         settings.IsGeneralAutofillEnabled = false;
         settings.IsPasswordAutosaveEnabled = false;
         settings.IsWebMessageEnabled = true;
-        web.AddWebResourceRequestedFilter("*", CoreWebView2WebResourceContext.All);
-        web.WebResourceRequested += OnResourceRequested;
-        web.WebMessageReceived += OnMessage;
-        web.NavigationStarting += (_, e) => e.Cancel = e.Uri != StartAddress;
         web.NewWindowRequested += (_, e) => e.Handled = true;
         web.DownloadStarting += (_, e) => e.Cancel = true;
-        web.PermissionRequested += (_, e) => e.State = e.PermissionKind == CoreWebView2PermissionKind.ClipboardRead ? CoreWebView2PermissionState.Allow : CoreWebView2PermissionState.Deny;
-        web.ProcessFailed += (_, e) => Failed?.Invoke(this, e.ProcessFailedKind.ToString());
     }
 
-    /// <summary>Le dessin d'un bloc, en SVG ; rien : ce n'est qu'un bloc de code.</summary>
-    private static string? SvgOf(string info, string code)
+    /// <summary>Seul ce que l'application donne est servi ; tout le reste est refusé.</summary>
+    internal static void Serve(CoreWebView2 web, CoreWebView2WebResourceRequestedEventArgs e, string host, Func<string, byte[]?> contentOf)
     {
-        var parts = info.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        return parts is [SmartArt.Language, var layout] && SmartArt.Draw(layout, code) is { } scene ? DiagramSvg.Write(scene) : null;
-    }
-
-    /// <summary>Seul ce qui vient de l'application et du coffre est servi ; tout le reste est refusé.</summary>
-    private void OnResourceRequested(object? sender, CoreWebView2WebResourceRequestedEventArgs e)
-    {
-        var web = (CoreWebView2)sender!;
         var address = new Uri(e.Request.Uri);
-        var content = address.Host == Host ? ContentOf(Uri.UnescapeDataString(address.AbsolutePath)) : null;
+        var content = address.Host == host ? contentOf(Uri.UnescapeDataString(address.AbsolutePath)) : null;
         e.Response = content is null
             ? web.Environment.CreateWebResourceResponse(null, 403, "Forbidden", "Cache-Control: no-store")
             : web.Environment.CreateWebResourceResponse(
                 new MemoryStream(content),
                 200,
                 "OK",
-                string.Create(CultureInfo.InvariantCulture, $"Content-Type: {ContentTypeOf(address.AbsolutePath)}\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\nContent-Security-Policy: {SecurityPolicy}"));
+                string.Create(CultureInfo.InvariantCulture, $"Content-Type: {ContentTypeOf(address.AbsolutePath)}\r\nCache-Control: no-store\r\nContent-Security-Policy: {SecurityPolicy}\r\nX-Content-Type-Options: nosniff"));
     }
 
-    private byte[]? ContentOf(string path)
+    /// <summary>Un fichier de la page, venu de l'application.</summary>
+    internal static byte[]? PageContent(string path)
     {
-        if (path.StartsWith("/coffre/", StringComparison.Ordinal))
-        {
-            var outcome = _readResource(path["/coffre/".Length..]);
-            return outcome.Succeeded ? outcome.Value : null;
-        }
         if (path.StartsWith("/polices/Atkinson", StringComparison.Ordinal))
         {
             return FontOf(path["/polices/".Length..]);
@@ -597,6 +611,16 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
         using var memory = new MemoryStream();
         stream.CopyTo(memory);
         return memory.ToArray();
+    }
+
+    private byte[]? ContentOf(string path)
+    {
+        if (path.StartsWith("/coffre/", StringComparison.Ordinal))
+        {
+            var outcome = _readResource(path["/coffre/".Length..]);
+            return outcome.Succeeded ? outcome.Value : null;
+        }
+        return PageContent(path);
     }
 
     private static byte[]? FontOf(string file)
@@ -638,9 +662,10 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
     /// <summary>Ce qui arrive après la fermeture du moteur (un changement de thème, une frappe en attente) ne va nulle part.</summary>
     private void Send(EditorRequest request)
     {
-        if (!_disposed)
+        // Sa fenêtre fermée, le moteur n'est plus là : ce qui arrive encore ne va nulle part.
+        if (!_disposed && _view.CoreWebView2 is { } web)
         {
-            _view.CoreWebView2.PostWebMessageAsJson(JsonSerializer.Serialize(request, VisualContract.Options));
+            web.PostWebMessageAsJson(JsonSerializer.Serialize(request, VisualContract.Options));
         }
     }
 

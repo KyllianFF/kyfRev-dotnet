@@ -69,6 +69,7 @@ internal static class Composition
         services.AddSingleton(provider => new EditorEnvironment(
             provider.GetRequiredService<ISpelling>(),
             Path.Combine(provider.GetRequiredService<VaultLocations>().LocalData, "WebView2")));
+        services.AddSingleton(provider => new MermaidEngine(Path.Combine(provider.GetRequiredService<VaultLocations>().LocalData, "WebView2")));
         services.AddSingleton(clock);
         services.AddSingleton<ReviewNavigation>();
         services.AddSingleton<IReviewOpener>(provider => provider.GetRequiredService<ReviewNavigation>());

@@ -1,0 +1,8 @@
+# Les règles par défaut de gitleaks, sauf pour un fichier tiers publié tel quel : le code
+# minifié de Mermaid contient des suites qui ressemblent à des clés (« keyCount »…).
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Mermaid, tel qu'il est publié sur npm"
+paths = ['''^src/KyfRev\.Presentation\.Wpf/Editing/Web/mermaid\.min\.js$''']

@@ -3,6 +3,8 @@ using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using KyfRev.Application;
+using KyfRev.Application.Model;
 using KyfRev.DesignSystem.Tokens;
 using KyfRev.Presentation.Wpf.Editing;
 using KyfRev.Presentation.Wpf.Pages;
@@ -730,6 +732,148 @@ public sealed class VisualEditorTests
 
         Assert.AreEqual("0", scene.Script("document.querySelectorAll('.apercu-dessin svg').length"));
     }
+
+    [EngineTest]
+    [DataRow(ThemeKind.Light)]
+    [DataRow(ThemeKind.Dark)]
+    public void Every_template_draws_in_the_hidden_page(ThemeKind theme)
+    {
+        using var scene = new Scene();
+        scene.Test.Design.Theme = theme;
+        using var engine = new MermaidEngine(FakeEnvironment.WebData);
+        var problems = new List<string>();
+        foreach (var template in KyfRev.Rendering.Diagrams.MermaidTemplates.All)
+        {
+            var drawing = engine.DrawAsync(KyfRev.Rendering.Diagrams.MermaidTemplates.Code(template.Id, template.Sample)!, MermaidEngine.ThemeOf(scene.SheetPage));
+            UiThread.Until(() => drawing.IsCompleted, TimeSpan.FromSeconds(25));
+            if (drawing.Result is not { } picture || picture.Png.Length < 500 || picture.Width < 10)
+            {
+                problems.Add(template.Id);
+            }
+        }
+
+        Assert.AreEqual(string.Empty, string.Join(", ", problems));
+    }
+
+    [EngineTest]
+    public void The_same_drawing_is_only_made_once_and_bad_code_draws_nothing()
+    {
+        using var scene = new Scene();
+        using var engine = new MermaidEngine(FakeEnvironment.WebData);
+        var theme = MermaidEngine.ThemeOf(scene.SheetPage);
+        var first = engine.DrawAsync("flowchart LR\n  a --> b", theme);
+        UiThread.Until(() => first.IsCompleted, TimeSpan.FromSeconds(25));
+        var second = engine.DrawAsync("flowchart LR\n  a --> b", theme);
+
+        Assert.IsTrue(second.IsCompleted);
+        Assert.AreSame(first.Result, second.Result);
+
+        var bad = engine.DrawAsync("ceci n'est pas un schéma", theme);
+        UiThread.Until(() => bad.IsCompleted, TimeSpan.FromSeconds(25));
+        Assert.IsNull(bad.Result);
+    }
+
+    [EngineTest]
+    public void A_trapped_schema_is_only_a_picture()
+    {
+        using var scene = new Scene();
+        using var engine = new MermaidEngine(FakeEnvironment.WebData);
+        var code = "flowchart LR\n  a[\"<img src=x onerror=window.piege=1>\"] --> b\n  click a href \"javascript:window.piege=2\"\n  click b call piege()";
+        var drawing = engine.DrawAsync(code, MermaidEngine.ThemeOf(scene.SheetPage));
+        UiThread.Until(() => drawing.IsCompleted, TimeSpan.FromSeconds(25));
+
+        var check = engine.RunScriptAsync("typeof window.piege");
+        UiThread.Until(() => check.IsCompleted);
+        Assert.AreEqual("\"undefined\"", check.Result);
+    }
+
+    [EngineTest]
+    public void A_drawing_that_never_ends_stops_the_page_and_the_next_one_starts_it_again()
+    {
+        using var scene = new Scene();
+        using var engine = new MermaidEngine(FakeEnvironment.WebData);
+        var theme = MermaidEngine.ThemeOf(scene.SheetPage);
+        var first = engine.DrawAsync("flowchart LR\n  a --> b", theme);
+        UiThread.Until(() => first.IsCompleted, TimeSpan.FromSeconds(25));
+
+        engine.Patience = TimeSpan.Zero;
+        var cut = engine.DrawAsync("flowchart LR\n  c --> d", theme);
+        UiThread.Until(() => cut.IsCompleted);
+        Assert.IsNull(cut.Result);
+
+        engine.Patience = TimeSpan.FromSeconds(20);
+        var next = engine.DrawAsync("flowchart LR\n  e --> f", theme);
+        UiThread.Until(() => next.IsCompleted, TimeSpan.FromSeconds(25));
+        Assert.IsNotNull(next.Result);
+    }
+
+    [EngineTest]
+    public void A_closed_engine_draws_nothing()
+    {
+        var engine = new MermaidEngine(FakeEnvironment.WebData);
+        engine.Dispose();
+
+        var drawing = engine.DrawAsync("flowchart LR\n  a --> b", new Dictionary<string, string>());
+
+        Assert.IsTrue(drawing.IsCompleted);
+        Assert.IsNull(drawing.Result);
+    }
+
+    [EngineTest]
+    public void A_schema_shows_its_picture_in_the_text_and_its_code_when_it_cannot_be_drawn()
+    {
+        using var scene = new Scene("Début\n\n```mermaid\nflowchart LR\n  a --> b\n```\n\nFin\n");
+        using var engine = new MermaidEngine(FakeEnvironment.WebData);
+        scene.Window.Resources[MermaidEngine.ResourceKey] = engine;
+        scene.Script("document.dispatchEvent(new Event('theme'))");
+
+        UiThread.Until(() => scene.Script("document.querySelectorAll('.apercu-dessin img').length") == "1", TimeSpan.FromSeconds(25));
+        Assert.AreEqual("\"none\"", scene.Script("getComputedStyle(document.querySelector('.bloc-dessin pre')).display"));
+        Assert.StartsWith("\"data:image/svg+xml", scene.Script("document.querySelector('.apercu-dessin img').src"));
+    }
+
+    [EngineTest]
+    public void Without_the_hidden_page_a_schema_is_read_as_code()
+    {
+        using var scene = new Scene("```mermaid\nflowchart LR\n  a --> b\n```\n");
+
+        UiThread.Until(() => scene.Script("document.querySelectorAll('.dessin-impossible').length") == "1");
+        Assert.AreNotEqual("\"none\"", scene.Script("getComputedStyle(document.querySelector('.bloc-dessin pre')).display"));
+    }
+
+    [EngineTest]
+    public void The_reading_shows_the_picture_of_a_schema()
+    {
+        using var engine = new MermaidEngine(FakeEnvironment.WebData);
+        var test = new TestShell();
+        var viewer = new KyfRev.Presentation.Wpf.Reading.SheetDocumentViewer();
+        var reading = SheetReading.Of(new OpenedSheet("f_1", "Mitose", "fiches/Biologie/Mitose.md", "Biologie", [], "```mermaid\nflowchart LR\n  a --> b\n```\n\n```mermaid\nceci n'est pas un schéma\n```\n", 1, "sha256:essai", null, DateTimeOffset.UnixEpoch, null!, []), _ => Outcome.Refused<byte[]>("non"));
+        var window = new Window { Content = viewer, Left = -10000, Top = -10000, Width = 900, Height = 700, ShowActivated = false, ShowInTaskbar = false };
+        window.Resources.MergedDictionaries.Add(test.Design.Dictionary);
+        window.Resources[MermaidEngine.ResourceKey] = engine;
+        window.Show();
+        try
+        {
+            viewer.Reading = reading;
+            TestShell.Flush();
+            var views = new List<KyfRev.Presentation.Wpf.Reading.MermaidView>();
+            UiThread.Until(() =>
+            {
+                views = [.. LogicalDocumentViews(viewer)];
+                return views.Count == 2 && views[0].ShowsPicture;
+            }, TimeSpan.FromSeconds(25));
+            UiThread.Until(() => views[1].IsLoaded, TimeSpan.FromSeconds(25));
+            Pump(TimeSpan.FromSeconds(2));
+            Assert.IsTrue(views[1].ShowsCode, "Ce qui ne se dessine pas se lit en code.");
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    private static IEnumerable<KyfRev.Presentation.Wpf.Reading.MermaidView> LogicalDocumentViews(KyfRev.Presentation.Wpf.Reading.SheetDocumentViewer viewer) =>
+        viewer.Document?.Blocks.OfType<System.Windows.Documents.BlockUIContainer>().Select(block => block.Child).OfType<KyfRev.Presentation.Wpf.Reading.MermaidView>() ?? [];
 
     [EngineTest]
     public void A_theme_change_after_the_engine_closed_goes_nowhere()

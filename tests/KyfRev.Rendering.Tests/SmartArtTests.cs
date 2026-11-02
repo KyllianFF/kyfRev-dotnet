@@ -156,6 +156,89 @@ public sealed class SmartArtTests
         Assert.Contains("<tspan", svg);
     }
 
+    public static IEnumerable<object[]> Templates => MermaidTemplates.All.Select(template => new object[] { template.Id });
+
+    [TestMethod]
+    [DynamicData(nameof(Templates))]
+    public void A_template_writes_code_and_has_its_thumbnail(string id)
+    {
+        var template = MermaidTemplates.All.Single(candidate => candidate.Id == id);
+
+        var code = MermaidTemplates.Code(id, template.Sample)!;
+
+        Assert.IsGreaterThan(5, code.Length);
+        Assert.DoesNotContain("\r", code);
+        var thumbnail = MermaidTemplates.Thumbnail(template);
+        Assert.IsGreaterThan(0, thumbnail.Shapes.Length);
+        AssertInside(thumbnail);
+    }
+
+    [TestMethod]
+    public void A_template_writes_nothing_without_text_or_without_a_name()
+    {
+        Assert.IsNull(MermaidTemplates.Code("etapes", " \n "));
+        Assert.IsNull(MermaidTemplates.Code("inconnu", "a"));
+        Assert.IsNull(MermaidTemplates.Code(null, "a"));
+    }
+
+    [TestMethod]
+    public void The_flows_are_chained_in_quotes()
+    {
+        Assert.AreEqual("flowchart LR\n    n0[\"Crise\"]\n    n1[\"Bastille\"]\n    n0 --> n1", MermaidTemplates.Code("etapes", "Crise\nBastille"));
+    }
+
+    [TestMethod]
+    [DataRow("etapes")]
+    [DataRow("etats")]
+    [DataRow("classes")]
+    [DataRow("causes")]
+    public void A_quote_in_a_text_never_closes_its_label(string id)
+    {
+        var code = MermaidTemplates.Code(id, "a\"] --> x[\"b\nc")!;
+
+        Assert.Contains("#quot;", code);
+        Assert.DoesNotContain("a\"]", code);
+    }
+
+    [TestMethod]
+    [DataRow("echanges")]
+    [DataRow("planning")]
+    [DataRow("taches")]
+    [DataRow("carte")]
+    public void Where_no_quote_is_possible_syntax_disappears(string id)
+    {
+        var code = MermaidTemplates.Code(id, "a:b;c[d](e)\nf")!;
+
+        Assert.DoesNotContain("a:b", code);
+        Assert.DoesNotContain("c[d]", code);
+    }
+
+    [TestMethod]
+    public void A_text_made_only_of_syntax_keeps_a_place()
+    {
+        Assert.Contains("?", MermaidTemplates.Code("carte", ";;;\nb")!);
+    }
+
+    [TestMethod]
+    public void The_charts_read_their_values_in_either_notation()
+    {
+        Assert.AreEqual("pie showData\n    \"a\" : 1.5\n    \"b\" : 2\n    \"c\" : 1", MermaidTemplates.Code("secteurs", "a : 1,5\nb : 2\nc"));
+        Assert.Contains("y-axis 0 --> 27", MermaidTemplates.Code("colonnes", "x : 21\ny : 24")!);
+        Assert.Contains("bar [21, 24]", MermaidTemplates.Code("mixte", "x : 21 : 18\ny : 24 : 22")!);
+        Assert.Contains("line [18, 22]", MermaidTemplates.Code("mixte", "x : 21 : 18\ny : 24 : 22")!);
+        Assert.Contains("xychart-beta horizontal", MermaidTemplates.Code("barres", "x : 1")!);
+        Assert.Contains("line [1]", MermaidTemplates.Code("courbes", "x : 1")!);
+        Assert.DoesNotContain("bar", MermaidTemplates.Code("courbes", "x : 1")!);
+        Assert.Contains("treemap-beta", MermaidTemplates.Code("carte-proportionnelle", "x : 1")!);
+    }
+
+    [TestMethod]
+    [DataRow("x : -1")]
+    [DataRow("x : abc")]
+    [DataRow("x : Infinity")]
+    public void A_value_that_cannot_be_drawn_counts_for_one(string line) =>
+        Assert.Contains(": 1", MermaidTemplates.Code("secteurs", line)!);
+
     private static void AssertInside(DiagramScene scene)
     {
         const double margin = 1;

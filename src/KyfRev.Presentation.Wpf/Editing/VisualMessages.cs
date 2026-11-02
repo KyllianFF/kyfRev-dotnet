@@ -130,8 +130,8 @@ internal sealed record ListOpenRequest(bool Open) : EditorRequest;
 /// <summary>Insère un dessin, ou remplace celui de cette position.</summary>
 internal sealed record InsertDiagramRequest(string Language, string Code, int? Position) : EditorRequest;
 
-/// <summary>Le dessin d'un bloc, en SVG ; rien : ce n'est qu'un bloc de code.</summary>
-internal sealed record DiagramRequest(string Language, string Code, string? Svg) : EditorRequest;
+/// <summary>Le dessin d'un bloc : un SVG, ou une image en adresse <c>data:</c> ; ni l'un ni l'autre : il ne se dessine pas.</summary>
+internal sealed record DiagramRequest(string Language, string Code, string? Svg, string? Image) : EditorRequest;
 
 /// <summary>Ce que l'éditeur visuel dit à l'application.</summary>
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "kind")]
