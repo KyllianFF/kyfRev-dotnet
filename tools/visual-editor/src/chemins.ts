@@ -35,3 +35,8 @@ export function separerSuffixe(brut: string): [string, string] {
   const coupure = brut.search(/[#?]/);
   return coupure === -1 ? [brut, ""] : [brut.slice(0, coupure), brut.slice(coupure)];
 }
+
+/** Adresse d'une ressource du coffre, servie par l'hôte de l'éditeur. */
+export function adresseRessource(chemin: string): string {
+  return `/coffre/${chemin.split("/").map(encodeURIComponent).join("/")}`;
+}

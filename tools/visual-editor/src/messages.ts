@@ -26,8 +26,7 @@ export type VersEditeur =
   | { kind: "focus" }
   | { kind: "goToHeading"; title: string; occurrence: number }
   | { kind: "clipboard"; action: string }
-  | { kind: "listOpen"; open: boolean }
-  | { kind: "resource"; path: string; dataUrl: string | null };
+  | { kind: "listOpen"; open: boolean };
 
 export type DepuisEditeur =
   | { kind: "ready" }
@@ -40,5 +39,4 @@ export type DepuisEditeur =
   | { kind: "linkInput"; query: string | null; start: number; x: number; y: number }
   | { kind: "listKey"; key: string }
   | { kind: "menu"; word: string | null; wordStart: number; hasSelection: boolean; inCode: boolean; inTable: boolean; onLink: boolean }
-  | { kind: "dropped"; name: string; base64: string | null; position: number | null }
-  | { kind: "askResource"; path: string };
+  | { kind: "dropped"; name: string; base64: string | null; position: number | null };

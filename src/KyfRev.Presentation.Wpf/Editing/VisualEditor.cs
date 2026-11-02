@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.IO;
+using System.Reflection;
 using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
@@ -26,6 +27,9 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
     /// <summary>La page servie : un nom réservé, qui ne mène à rien hors de l'application.</summary>
     internal const string Host = "editeur.kyfrev.invalid";
 
+    private const string StartAddress = $"https://{Host}/index.html";
+    private const string ResourcePrefix = "kyfrev-web/";
+    private const string SecurityPolicy = "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
 
     private static readonly TimeSpan SyncPatience = TimeSpan.FromSeconds(2);
 
@@ -86,7 +90,6 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
     private int _lastSync;
     private bool _covered;
     private bool _configured;
-    private string? _startAddress;
     private bool _disposed;
 
     public VisualEditor(string folder, Func<string, Outcome<byte[]>> readResource, ISpelling spelling, string dataFolder)
@@ -336,9 +339,6 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
             case ToolsEvent tools:
                 ToolsChanged?.Invoke(this, new EditorTools(tools.Bold, tools.Italic, tools.Underline, tools.Strike, tools.Superscript, tools.Subscript, tools.Heading, tools.List, tools.CanUndo, tools.CanRedo));
                 break;
-            case AskResourceEvent resource:
-                Send(new ResourceRequest(resource.Path, DataUrlOf(resource.Path)));
-                break;
             case AskLinkEvent link:
                 LinkAsked?.Invoke(this, new LinkQuestion(link.Label, link.Address));
                 break;
@@ -423,15 +423,21 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
         _ => Key.Enter,
     };
 
-    private static string ImageTypeOf(string path) => Path.GetExtension(path).ToUpperInvariant() switch
+    private static string ContentTypeOf(string path) => Path.GetExtension(path).ToUpperInvariant() switch
     {
+        ".HTML" => "text/html; charset=utf-8",
+        ".JS" => "text/javascript; charset=utf-8",
+        ".CSS" => "text/css; charset=utf-8",
+        ".WOFF2" => "font/woff2",
+        ".TTF" => "font/ttf",
+        ".PNG" => "image/png",
         ".JPG" or ".JPEG" => "image/jpeg",
         ".GIF" => "image/gif",
         ".WEBP" => "image/webp",
         ".AVIF" => "image/avif",
         ".BMP" => "image/bmp",
         ".SVG" => "image/svg+xml",
-        _ => "image/png",
+        _ => "application/octet-stream",
     };
 
     /// <summary>L'environnement partagé. Rien de ce qui vient de l'extérieur ne le règle : ni port de débogage, ni autre moteur.</summary>
@@ -485,11 +491,8 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
                 return;
             }
             Configure(_view.CoreWebView2);
-            var (folder, version) = EditorPage.Prepare(_dataFolder);
-            _view.CoreWebView2.SetVirtualHostNameToFolderMapping(Host, folder, CoreWebView2HostResourceAccessKind.Deny);
-            _startAddress = $"https://{Host}/{version}/index.html";
             _configured = true;
-            _view.CoreWebView2.Navigate(_startAddress);
+            _view.CoreWebView2.Navigate(StartAddress);
         }
         catch (Exception exception) when (exception is WebView2RuntimeNotFoundException or InvalidOperationException or System.Runtime.InteropServices.COMException or ArgumentException or IOException or UnauthorizedAccessException or ObjectDisposedException)
         {
@@ -519,32 +522,59 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
         web.AddWebResourceRequestedFilter("*", CoreWebView2WebResourceContext.All);
         web.WebResourceRequested += OnResourceRequested;
         web.WebMessageReceived += OnMessage;
-        web.NavigationStarting += (_, e) => e.Cancel = e.Uri != _startAddress;
+        web.NavigationStarting += (_, e) => e.Cancel = e.Uri != StartAddress;
         web.NewWindowRequested += (_, e) => e.Handled = true;
         web.DownloadStarting += (_, e) => e.Cancel = true;
         web.PermissionRequested += (_, e) => e.State = e.PermissionKind == CoreWebView2PermissionKind.ClipboardRead ? CoreWebView2PermissionState.Allow : CoreWebView2PermissionState.Deny;
         web.ProcessFailed += (_, e) => Failed?.Invoke(this, e.ProcessFailedKind.ToString());
     }
 
-    /// <summary>La page vient de son dossier ; tout le reste est refusé.</summary>
+    /// <summary>Seul ce qui vient de l'application et du coffre est servi ; tout le reste est refusé.</summary>
     private void OnResourceRequested(object? sender, CoreWebView2WebResourceRequestedEventArgs e)
     {
-        if (new Uri(e.Request.Uri).Host != Host)
-        {
-            e.Response = ((CoreWebView2)sender!).Environment.CreateWebResourceResponse(null, 403, "Forbidden", string.Empty);
-        }
+        var web = (CoreWebView2)sender!;
+        var address = new Uri(e.Request.Uri);
+        var content = address.Host == Host ? ContentOf(Uri.UnescapeDataString(address.AbsolutePath)) : null;
+        e.Response = content is null
+            ? web.Environment.CreateWebResourceResponse(null, 403, "Forbidden", "Cache-Control: no-store")
+            : web.Environment.CreateWebResourceResponse(
+                new MemoryStream(content),
+                200,
+                "OK",
+                string.Create(CultureInfo.InvariantCulture, $"Content-Type: {ContentTypeOf(address.AbsolutePath)}\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\nContent-Security-Policy: {SecurityPolicy}"));
     }
 
-    /// <summary>
-    /// Une image du coffre, en adresse <c>data:</c>. Le moteur lirait une réponse .NET sur ses propres fils, et non sur
-    /// celui de l'interface : la fin de l'un d'eux ferait planter le processus.
-    /// </summary>
-    private string? DataUrlOf(string path)
+    private byte[]? ContentOf(string path)
     {
-        var outcome = _readResource(path);
-        return outcome.Succeeded
-            ? string.Create(CultureInfo.InvariantCulture, $"data:{ImageTypeOf(path)};base64,{Convert.ToBase64String(outcome.Value)}")
-            : null;
+        if (path.StartsWith("/coffre/", StringComparison.Ordinal))
+        {
+            var outcome = _readResource(path["/coffre/".Length..]);
+            return outcome.Succeeded ? outcome.Value : null;
+        }
+        if (path.StartsWith("/polices/Atkinson", StringComparison.Ordinal))
+        {
+            return FontOf(path["/polices/".Length..]);
+        }
+        using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(ResourcePrefix + path.TrimStart('/'));
+        if (stream is null)
+        {
+            return null;
+        }
+        using var memory = new MemoryStream();
+        stream.CopyTo(memory);
+        return memory.ToArray();
+    }
+
+    private static byte[]? FontOf(string file)
+    {
+        var resource = System.Windows.Application.GetResourceStream(new Uri($"/KyfRev.DesignSystem;component/Fonts/{file}", UriKind.Relative));
+        if (resource is null)
+        {
+            return null;
+        }
+        using var memory = new MemoryStream();
+        resource.Stream.CopyTo(memory);
+        return memory.ToArray();
     }
 
     private void OnMessage(object? sender, CoreWebView2WebMessageReceivedEventArgs e)

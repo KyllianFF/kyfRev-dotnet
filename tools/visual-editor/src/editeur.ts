@@ -110,8 +110,6 @@ export type Reactions = {
   clavierlien: (touche: string) => boolean;
   /** Clic droit : le menu est natif. */
   onmenu: () => void;
-  /** Le contenu d'une image du coffre, en adresse `data:` ; `null` si elle est introuvable. */
-  ressource: (chemin: string) => Promise<string | null>;
 };
 
 /** Touches que la liste des fiches peut prendre à l'éditeur. */
@@ -331,7 +329,7 @@ function reglesDeSaisie(): Plugin {
 // --- Vues des nœuds -------------------------------------------------------------
 
 /** Image du coffre, ou encadré qui explique pourquoi elle ne s'affiche pas. */
-function vueImage(dossier: () => string, ressource: Reactions["ressource"]) {
+function vueImage(dossier: () => string) {
   return (noeud: Node): NodeView => {
     const dom = document.createElement("span");
     dom.className = "image";
@@ -342,23 +340,20 @@ function vueImage(dossier: () => string, ressource: Reactions["ressource"]) {
       encadre.title = detail;
       return encadre;
     };
-    const introuvable = () => bloquee("Image introuvable", noeud.attrs.src as string);
-    const montrer = (adresse: string) => {
+    const affichage = affichageImage(noeud.attrs.src as string, dossier());
+    if ("bloquee" in affichage) {
+      dom.append(bloquee(affichage.bloquee, affichage.detail));
+    } else {
       const image = document.createElement("img");
-      image.src = adresse;
+      image.src = affichage.adresse;
       image.alt = noeud.attrs.alt as string;
       if (noeud.attrs.title) image.title = noeud.attrs.title as string;
-      image.addEventListener("error", () => image.replaceWith(introuvable()), { once: true });
+      image.addEventListener(
+        "error",
+        () => image.replaceWith(bloquee("Image introuvable", noeud.attrs.src as string)),
+        { once: true },
+      );
       dom.append(image);
-    };
-    const affichage = affichageImage(noeud.attrs.src as string, dossier());
-    if ("bloquee" in affichage) dom.append(bloquee(affichage.bloquee, affichage.detail));
-    else if ("adresse" in affichage) montrer(affichage.adresse);
-    else {
-      void ressource(affichage.ressource).then((adresse) => {
-        if (adresse) montrer(adresse);
-        else dom.append(introuvable());
-      });
     }
     return { dom, ignoreMutation: () => true };
   };
@@ -521,7 +516,7 @@ export class EditeurVisuel {
         "aria-label": "Texte de la fiche",
       },
       nodeViews: {
-        image: vueImage(() => this.dossier, reactions.ressource),
+        image: vueImage(() => this.dossier),
         math_inline: vueFormule(false, reactions.onformule),
         math_block: vueFormule(true, reactions.onformule),
         code_block: (noeud, vue, position, decorations) => new VueCode(noeud, vue, position, decorations),
