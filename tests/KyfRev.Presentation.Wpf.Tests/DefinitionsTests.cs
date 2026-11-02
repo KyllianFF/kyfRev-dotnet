@@ -251,8 +251,10 @@ public sealed class DefinitionsTests
         glossary.Filled();
         var page = new DefinitionsPageViewModel(glossary.App.Annotations, glossary.Opener);
         var test = new TestShell();
-        test.Shell.Navigate(new NavigationItem(CorePages.Definitions, DefinitionsText.Title, Icons.Dictionary, int.MaxValue, page));
-        var window = new ShellWindow(test.Shell) { ShowActivated = false, Left = -10000, Top = -10000, Width = 1500, Height = 900, WindowStartupLocation = WindowStartupLocation.Manual };
+
+        // La largeur est celle de la page et non de la fenêtre, que Windows borne à la taille de l'écran.
+        var host = new Border { Width = 1500, Height = 900, Child = new DefinitionsPage { DataContext = page } };
+        var window = new Window { ShowActivated = false, Left = -10000, Top = -10000, Width = 800, Height = 600, WindowStartupLocation = WindowStartupLocation.Manual, Content = host };
         window.Resources.MergedDictionaries.Add(test.Design.Dictionary);
         window.Show();
         try
@@ -267,7 +269,7 @@ public sealed class DefinitionsTests
             AssertInside(wide, scroller);
             Assert.AreEqual(0, Grid.GetRow(Named<FrameworkElement>(window, "ListPanel")));
 
-            window.Width = 560;
+            host.Width = 560;
             TestShell.Flush();
 
             var narrow = Cards(scroller);

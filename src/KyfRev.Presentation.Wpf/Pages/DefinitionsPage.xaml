@@ -20,7 +20,7 @@
 
     <!-- À gauche : le titre, la recherche et les dossiers. Quand la place manque, ils passent au-dessus. -->
     <DockPanel x:Name="FoldersPanel" Margin="0,0,16,0">
-      <TextBlock DockPanel.Dock="Top" Text="{x:Static pages:DefinitionsText.Title}" Style="{DynamicResource Kyf.Text.Title}" AutomationProperties.HeadingLevel="Level1" />
+      <TextBlock x:Name="Heading" DockPanel.Dock="Top" Text="{x:Static pages:DefinitionsText.Title}" Style="{DynamicResource Kyf.Text.Title}" AutomationProperties.HeadingLevel="Level1" />
       <TextBox x:Name="SearchBox" DockPanel.Dock="Top" Text="{Binding Search, UpdateSourceTrigger=PropertyChanged}" kyf:Field.Placeholder="{x:Static pages:DefinitionsText.SearchLabel}"
                AutomationProperties.Name="{x:Static pages:DefinitionsText.SearchLabel}" Margin="0,12,0,8" />
       <ListBox x:Name="FolderList" ItemsSource="{Binding Folders}" SelectedItem="{Binding SelectedFolder}" DisplayMemberPath="Label" BorderThickness="0" Background="Transparent"
