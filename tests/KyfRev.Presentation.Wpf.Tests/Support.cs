@@ -255,9 +255,36 @@ internal sealed class UiThread : IDisposable
 }
 
 /// <summary>
-/// Un essai qui emploie le vrai moteur web : toujours sur le même fil, qui dure autant que le processus. Un fil qui se
-/// termine en laissant des objets du moteur ferait planter tout le processus : leur fermeture rappelle du code .NET,
-/// alors que le fil n'existe plus pour lui. L'application n'a pas ce problème : son fil dure autant qu'elle.
+/// Un essai sur son propre fil STA, comme celui de MSTest, dont le nom le remplace ici ; mais, à la fin, le fil ferme son
+/// dispatcher. Sinon, c'est à la fin du fil que Windows défait le service de saisie (TSF), s'il y a servi : il rappelle alors
+/// le TextStore de WPF, en .NET, sur un fil que .NET a déjà quitté, et tout le processus plante.
+/// </summary>
+internal sealed class STATestMethodAttribute([CallerFilePath] string callerFilePath = "", [CallerLineNumber] int callerLineNumber = -1)
+    : TestMethodAttribute(callerFilePath, callerLineNumber)
+{
+    public string CallerFilePath { get; } = callerFilePath;
+
+    public int CallerLineNumber { get; } = callerLineNumber;
+
+    public override Task<TestResult[]> ExecuteAsync(ITestMethod testMethod)
+    {
+        var outcome = new TaskCompletionSource<Task<TestResult[]>>();
+        var thread = new Thread(() =>
+        {
+            var running = base.ExecuteAsync(testMethod);
+            ((IAsyncResult)running).AsyncWaitHandle.WaitOne();
+            Dispatcher.CurrentDispatcher.InvokeShutdown();
+            outcome.SetResult(running);
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        return outcome.Task.Unwrap();
+    }
+}
+
+/// <summary>
+/// Un essai qui emploie le vrai moteur web : toujours sur le même fil, qui dure autant que le processus. Le moteur et son
+/// environnement n'ont ainsi à démarrer qu'une fois, comme dans l'application.
 /// </summary>
 internal sealed class EngineTestAttribute([CallerFilePath] string callerFilePath = "", [CallerLineNumber] int callerLineNumber = -1)
     : TestMethodAttribute(callerFilePath, callerLineNumber)

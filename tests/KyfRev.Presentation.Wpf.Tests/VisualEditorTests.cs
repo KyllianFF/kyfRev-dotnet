@@ -415,6 +415,40 @@ public sealed class VisualEditorTests
     }
 
     [EngineTest]
+    public void An_image_missing_from_the_vault_says_so()
+    {
+        using var scene = new Scene("Avant\n\n![absente](absente.png)\n");
+
+        UiThread.Until(() => scene.Shown.Contains("Image introuvable", StringComparison.Ordinal));
+        Assert.AreEqual("0", scene.Script("document.querySelectorAll('.ProseMirror .image img').length"));
+    }
+
+    [EngineTest]
+    public void The_page_may_load_nothing_from_elsewhere()
+    {
+        using var scene = new Scene();
+
+        scene.Script("""
+            (() => {
+              window.bloquee = false;
+              document.addEventListener('securitypolicyviolation', () => { window.bloquee = true; });
+              const image = new Image();
+              image.src = 'https://exemple.invalid/x.png';
+            })()
+            """);
+        UiThread.Until(() => scene.Script("window.bloquee") == "true");
+    }
+
+    [EngineTest]
+    public void The_fonts_of_the_application_reach_the_page()
+    {
+        using var scene = new Scene();
+        UiThread.Until(() => scene.Script("document.fonts.status") == "\"loaded\"");
+
+        Assert.AreEqual("true", scene.Script("document.fonts.check('16px \"Atkinson Hyperlegible Next\"')"));
+    }
+
+    [EngineTest]
     public void A_theme_change_after_the_engine_closed_goes_nowhere()
     {
         using var scene = new Scene();
