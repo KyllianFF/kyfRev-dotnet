@@ -104,6 +104,11 @@ internal sealed partial class SheetPage : UserControl
     /// <summary>Touche H : surligne la sélection, comme dans la 0.x.</summary>
     private void OnTextKey(object sender, KeyEventArgs e)
     {
+        if (e.Key is Key.Enter or Key.Space && Keyboard.Modifiers == ModifierKeys.None && SheetText.RevealNextHole())
+        {
+            e.Handled = true;
+            return;
+        }
         if (e.Key == Key.H && Keyboard.Modifiers == ModifierKeys.None && DataContext is SheetPageViewModel page && SelectedPosition() is { } position)
         {
             e.Handled = true;
@@ -114,6 +119,11 @@ internal sealed partial class SheetPage : UserControl
     /// <summary>Un clic sur un passage surligné le fait ressortir dans le panneau.</summary>
     private void OnTextReleased(object sender, MouseButtonEventArgs e)
     {
+        if (SheetText.RevealHoleAt(e.OriginalSource))
+        {
+            e.Handled = true;
+            return;
+        }
         if (DataContext is SheetPageViewModel page && SheetText.Selection is { IsEmpty: true } && SheetText.AnnotationsAt(e.OriginalSource) is [var id, ..])
         {
             page.ActivateCommand.Execute(id);

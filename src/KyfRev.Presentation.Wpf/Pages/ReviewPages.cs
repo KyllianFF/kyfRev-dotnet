@@ -284,12 +284,17 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
     private readonly IExternalLinks _links;
     private readonly AnnotationUseCases _annotations;
     private readonly Func<OpenedSheet, SheetEditorViewModel> _editor;
+    private readonly Func<bool> _activeRecall;
     private TextPosition? _editedPosition;
     private PassageEntry? _editedPassage;
 
     /// <summary>La fiche <paramref name="sheetId"/>.</summary>
-    public SheetPageViewModel(SheetUseCases sheets, AnnotationUseCases annotations, Func<ItemKind, string, ReviewState, ReviewBarViewModel> reviewBar, string sheetId, Action back, Action<string> openSheet, IExternalLinks links, Func<OpenedSheet, SheetEditorViewModel> editor)
+    public SheetPageViewModel(SheetUseCases sheets, AnnotationUseCases annotations, Func<ItemKind, string, ReviewState, ReviewBarViewModel> reviewBar, string sheetId, Action back, Action<string> openSheet, IExternalLinks links, Func<OpenedSheet, SheetEditorViewModel> editor, bool revising = false, Func<bool>? activeRecall = null)
     {
+        _activeRecall = activeRecall ?? (() => false);
+        IsRevising = revising;
+        Holes.IsActive = revising && _activeRecall();
+        Holes.Changed += OnHolesChanged;
         ArgumentNullException.ThrowIfNull(sheets);
         ArgumentNullException.ThrowIfNull(annotations);
         ArgumentNullException.ThrowIfNull(reviewBar);
@@ -513,14 +518,53 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
     /// <summary>Le bouton « Lire » : le choisir revient à la lecture ; le mode en cours reste choisi.</summary>
     public bool IsReadOn
     {
-        get => IsReading;
+        get => IsReading && !IsRevising;
         set
         {
             if (value)
             {
                 StopWritingCommand.Execute(null);
+                SetRevising(false);
             }
             OnPropertyChanged();
+        }
+    }
+
+    /// <summary>Le bouton « Réviser » : la fiche se relit, et, si le rappel actif est choisi, elle est à trous.</summary>
+    public bool IsReviseOn
+    {
+        get => IsReading && IsRevising;
+        set
+        {
+            if (value)
+            {
+                StopWritingCommand.Execute(null);
+                SetRevising(true);
+            }
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>La fiche est en révision.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsReadOn), nameof(IsReviseOn))]
+    public partial bool IsRevising { get; private set; }
+
+    /// <summary>Le texte à trous de la révision.</summary>
+    public TextHoles Holes { get; } = new();
+
+    private void SetRevising(bool revising)
+    {
+        IsRevising = revising;
+        Holes.IsActive = revising && _activeRecall();
+    }
+
+    /// <summary>Le volet des passages tait ce que le texte masque encore.</summary>
+    private void OnHolesChanged(object? sender, EventArgs e)
+    {
+        foreach (var entry in Passages)
+        {
+            entry.IsMasked = Holes.Masks(entry.Annotation.Id);
         }
     }
 
@@ -532,6 +576,7 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
         {
             if (value)
             {
+                SetRevising(false);
                 StartWritingCommand.Execute(null);
             }
             OnPropertyChanged();

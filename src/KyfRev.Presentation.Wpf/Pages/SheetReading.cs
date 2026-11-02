@@ -62,6 +62,20 @@ public sealed partial class PassageEntry : ObservableObject
     /// <summary>Le terme d'une définition, ou le texte d'un passage.</summary>
     public string Title => Annotation.Definition?.Term ?? Annotation.Anchor.Exact;
 
+    /// <summary>Encore masqué dans le texte à trous : le volet le tait aussi.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShownTitle), nameof(ShownDetail), nameof(HasShownDetail))]
+    public partial bool IsMasked { get; set; }
+
+    /// <summary>Ce que le volet en montre.</summary>
+    public string ShownTitle => !IsMasked ? Title : IsDefinition ? ReadingText.TermToFind : ReadingText.PassageToFind;
+
+    /// <summary>Ce que le volet montre de son explication ou de son commentaire.</summary>
+    public string? ShownDetail => IsMasked ? null : Detail;
+
+    /// <summary>Le volet montre une explication ou un commentaire.</summary>
+    public bool HasShownDetail => !string.IsNullOrEmpty(ShownDetail);
+
     /// <summary>L'explication d'une définition, ou le commentaire d'un passage.</summary>
     public string? Detail => Annotation.Definition?.Explanation ?? Annotation.Comment;
 

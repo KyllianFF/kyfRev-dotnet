@@ -528,6 +528,15 @@ static void ReviewCaptures(string folder)
             host.Close();
         }
 
+        // Le texte à trous : la fiche en révision, avec le rappel actif, un trou déjà affiché.
+        var revisingPage = new SheetPageViewModel(app.Sheets, app.Annotations, Bar, sheet, () => { }, _ => { }, new NoLinks(), Editor, revising: true, () => true);
+        revisingPage.LoadCommand.Execute(null);
+        Pump(() => !revisingPage.IsLoading);
+        void Holes(string file, ThemePreference theme) =>
+            Shell(folder, file, theme, shell => shell.Navigate(new NavigationItem("fiche", "Fiche", Icons.Document, int.MaxValue, revisingPage)), null, 1600, 1000);
+        Holes("trous-clair.png", ThemePreference.Light);
+        Holes("trous-sombre.png", ThemePreference.Dark);
+
         var passagePage = new PassagePageViewModel(app.Sheets, Bar, passage, sheet, activeRecall: true, () => { }, _ => { });
         passagePage.LoadCommand.Execute(null);
         Pump(() => !passagePage.IsLoading);

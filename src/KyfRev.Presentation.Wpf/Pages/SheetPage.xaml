@@ -54,18 +54,18 @@
               <ItemsControl.ItemTemplate>
                 <DataTemplate DataType="{x:Type pages:PassageEntry}">
                   <Button Style="{DynamicResource Kyf.Button.Subtle}" HorizontalContentAlignment="Stretch" HorizontalAlignment="Stretch" Click="OnPassageEntryClick"
-                          ContextMenuOpening="OnPassageEntryMenu" AutomationProperties.Name="{Binding Title}" Padding="4,6">
+                          ContextMenuOpening="OnPassageEntryMenu" AutomationProperties.Name="{Binding ShownTitle}" Padding="4,6">
                     <Button.ContextMenu>
                       <ContextMenu />
                     </Button.ContextMenu>
                     <StackPanel>
                       <Border x:Name="Quote" HorizontalAlignment="Left" Padding="4,1" Background="{DynamicResource Kyf.Brush.PillPassageBackground}"
                               Visibility="{Binding IsPassage, Converter={StaticResource Visible}}">
-                        <TextBlock Text="{Binding Title}" TextWrapping="Wrap" MaxHeight="72" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource Kyf.Brush.PillPassageText}" />
+                        <TextBlock Text="{Binding ShownTitle}" TextWrapping="Wrap" MaxHeight="72" TextTrimming="CharacterEllipsis" Foreground="{DynamicResource Kyf.Brush.PillPassageText}" />
                       </Border>
-                      <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap" Visibility="{Binding IsDefinition, Converter={StaticResource Visible}}" />
-                      <TextBlock Text="{Binding Detail}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,2,0,0"
-                                 Visibility="{Binding HasDetail, Converter={StaticResource Visible}}" />
+                      <TextBlock Text="{Binding ShownTitle}" FontWeight="SemiBold" TextWrapping="Wrap" Visibility="{Binding IsDefinition, Converter={StaticResource Visible}}" />
+                      <TextBlock Text="{Binding ShownDetail}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,2,0,0"
+                                 Visibility="{Binding HasShownDetail, Converter={StaticResource Visible}}" />
                       <TextBlock Text="{x:Static pages:ReadingText.LostPassage}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,2,0,0"
                                  Foreground="{DynamicResource Kyf.Brush.Warning}" Visibility="{Binding IsLost, Converter={StaticResource Visible}}" />
                       <TextBlock Text="{x:Static pages:ReadingText.CandidatePassage}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,2,0,0"
@@ -116,11 +116,22 @@
                      AutomationProperties.LiveSetting="Polite" Visibility="{Binding IsWriting, Converter={StaticResource Visible}}" />
           <ToggleButton x:Name="ReadToggle" Content="{x:Static editing:EditingText.Read}" IsChecked="{Binding IsReadOn}"
                         Style="{DynamicResource Kyf.Button.Tool}" MinHeight="40" Padding="12,0" />
+          <ToggleButton x:Name="ReviseToggle" Content="{x:Static pages:ReadingText.Revise}" IsChecked="{Binding IsReviseOn}"
+                        Style="{DynamicResource Kyf.Button.Tool}" MinHeight="40" Padding="12,0" />
           <ToggleButton x:Name="WriteToggle" Content="{x:Static editing:EditingText.Write}" IsChecked="{Binding IsWriteOn}"
                         Style="{DynamicResource Kyf.Button.Tool}" MinHeight="40" Padding="12,0" ToolTip="{x:Static editing:EditingText.WriteKey}" />
         </StackPanel>
         <TextBlock x:Name="Notice" Text="{Binding Notice}" Style="{DynamicResource Kyf.Text.Secondary}" VerticalAlignment="Center" Margin="16,0" TextTrimming="CharacterEllipsis"
                    AutomationProperties.LiveSetting="Polite" />
+      </DockPanel>
+
+      <!-- Texte à trous : où l'on en est, et de quoi tout afficher ou tout remasquer. -->
+      <DockPanel x:Name="HolesBar" Grid.Row="1" Margin="16,0,16,8" DataContext="{Binding Holes}" Visibility="{Binding HasHoles, Converter={StaticResource Visible}}">
+        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+          <Button x:Name="RevealAllButton" Style="{DynamicResource Kyf.Button.Subtle}" Content="{x:Static pages:ReadingText.RevealAllHoles}" Command="{Binding RevealAllCommand}" IsEnabled="{Binding CanRevealAll}" />
+          <Button x:Name="HideAllButton" Style="{DynamicResource Kyf.Button.Subtle}" Content="{x:Static pages:ReadingText.HideAllHoles}" Command="{Binding HideAllCommand}" IsEnabled="{Binding CanHideAll}" Margin="4,0,0,0" />
+        </StackPanel>
+        <TextBlock x:Name="HolesSummary" Text="{Binding Summary}" Style="{DynamicResource Kyf.Text.Secondary}" VerticalAlignment="Center" AutomationProperties.LiveSetting="Polite" />
       </DockPanel>
 
       <!-- Le ruban court sur toute la largeur, au-dessus du plan et des passages. -->
@@ -169,7 +180,7 @@
             <editing:SheetEditorView x:Name="EditorView" Grid.Row="1" DataContext="{Binding Editor}"
                                      Visibility="{Binding DataContext.IsWriting, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource Visible}}" />
             <reading:SheetDocumentViewer x:Name="SheetText" Grid.Row="1" Visibility="{Binding IsReading, Converter={StaticResource Visible}}" Reading="{Binding Reading}" OpenLinkCommand="{Binding OpenLinkCommand}"
-                                         Highlights="{Binding Highlights}" ActiveHighlight="{Binding ActivePassage}"
+                                         Highlights="{Binding Highlights}" ActiveHighlight="{Binding ActivePassage}" Holes="{Binding Holes}"
                                          PreviewMouseLeftButtonDown="OnTextPressed" PreviewMouseLeftButtonUp="OnTextReleased" PreviewKeyDown="OnTextKey"
                                          ContextMenuOpening="OnTextMenu"
                                          AutomationProperties.Name="{x:Static pages:ReadingText.Document}">

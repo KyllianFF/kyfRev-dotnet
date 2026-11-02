@@ -25,6 +25,7 @@ internal sealed class TextLayer(Func<string, Brush?> findBrush)
     private readonly List<FormulaMark> _formulas = [];
     private IReadOnlyList<Highlight> _highlights = [];
     private string? _active;
+    private IReadOnlyList<TextHole> _holes = [];
 
     private static DashStyle FrozenDots()
     {
@@ -63,6 +64,29 @@ internal sealed class TextLayer(Func<string, Brush?> findBrush)
             i += Apply(i);
         }
         _formulas.ForEach(Style);
+    }
+
+    /// <summary>Change les trous encore masqués.</summary>
+    public void SetHoles(IReadOnlyList<TextHole> holes)
+    {
+        _holes = holes;
+        foreach (var segment in _segments)
+        {
+            Style(segment, Covering(segment.Start, segment.End));
+        }
+        _formulas.ForEach(Style);
+    }
+
+    /// <summary>Le trou masqué à l'endroit visé par la souris ; rien s'il n'y en a pas.</summary>
+    public TextHole? HoleAt(object? source)
+    {
+        if (source is Run run && _byRun.TryGetValue(run, out var segment))
+        {
+            return HoleOver(segment.Start, segment.End);
+        }
+        return source is DependencyObject target && _formulas.Find(candidate => candidate.Slot == target || candidate.Slot.IsAncestorOf(target)) is { } formula
+            ? HoleOver(formula.Start, formula.End)
+            : null;
     }
 
     /// <summary>L'élément du document où se trouve une position du texte affiché ; rien si elle n'est pas montrée.</summary>
@@ -109,6 +133,9 @@ internal sealed class TextLayer(Func<string, Brush?> findBrush)
         return range is { } found ? [.. Covering(found.Start, found.End).Select(highlight => highlight.Id)] : [];
     }
 
+    private TextHole? HoleOver(int start, int end) =>
+        _holes.FirstOrDefault(hole => hole.Start < end && hole.End > start);
+
     private List<Highlight> Covering(int start, int end) =>
         [.. _highlights.Where(highlight => highlight.Start < end && highlight.End > start)];
 
@@ -149,12 +176,21 @@ internal sealed class TextLayer(Func<string, Brush?> findBrush)
 
     private void Style(Segment segment, List<Highlight> covering)
     {
-        if (covering.Count == 0 && !segment.IsStyled)
+        var hidden = HoleOver(segment.Start, segment.End) is not null;
+        if (covering.Count == 0 && !segment.IsStyled && !hidden)
         {
             return;
         }
         var run = segment.Run;
-        segment.IsStyled = covering.Count > 0;
+        segment.IsStyled = covering.Count > 0 || hidden;
+        if (hidden)
+        {
+            // Le trou garde la largeur du texte, comme une ligne à compléter : le texte a la couleur du fond.
+            run.SetResourceReference(TextElement.BackgroundProperty, PassageBackground);
+            run.SetResourceReference(TextElement.ForegroundProperty, PassageBackground);
+            run.TextDecorations = [HoleLine()];
+            return;
+        }
         if (covering.Exists(highlight => !highlight.IsDefinition && !highlight.IsCandidate))
         {
             run.SetResourceReference(TextElement.BackgroundProperty, PassageBackground);
@@ -174,6 +210,16 @@ internal sealed class TextLayer(Func<string, Brush?> findBrush)
         {
             run.ClearValue(Inline.TextDecorationsProperty);
         }
+    }
+
+    private TextDecoration HoleLine()
+    {
+        var decoration = new TextDecoration { Location = TextDecorationLocation.Underline };
+        if (findBrush(PassageMarker) is { } brush)
+        {
+            decoration.Pen = new Pen(brush, 2) { DashStyle = DashStyles.Dash };
+        }
+        return decoration;
     }
 
     /// <summary>Un trait sous le texte : le fond ne suffit pas, il ne se voit pas en contraste élevé.</summary>
@@ -200,6 +246,16 @@ internal sealed class TextLayer(Func<string, Brush?> findBrush)
     private void Style(FormulaMark formula)
     {
         var covering = Covering(formula.Start, formula.End);
+        var hidden = HoleOver(formula.Start, formula.End) is not null;
+        if (formula.Slot.Child is { } drawing)
+        {
+            drawing.Visibility = hidden ? Visibility.Hidden : Visibility.Visible;
+        }
+        if (hidden)
+        {
+            formula.Slot.SetResourceReference(Border.BackgroundProperty, PassageBackground);
+            return;
+        }
         if (covering.Exists(highlight => !highlight.IsDefinition && !highlight.IsCandidate))
         {
             formula.Slot.SetResourceReference(Border.BackgroundProperty, PassageBackground);
