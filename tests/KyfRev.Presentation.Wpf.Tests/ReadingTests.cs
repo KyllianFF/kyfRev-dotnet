@@ -132,7 +132,7 @@ public sealed class ReadingTests
         var built = Build("```python\nprint(1)\nprint(2)\n```\n\n```mermaid\ngraph LR\n```", showsHeader: false);
         var blocks = built.Document.Blocks.OfType<Paragraph>().ToList();
 
-        Assert.AreEqual("print(1)\nprint(2)", string.Concat(blocks[0].Inlines.OfType<Run>().Select(run => run.Text)));
+        Assert.AreEqual("print(1)\nprint(2)", string.Concat(LogicalDescendants(blocks[0]).OfType<Run>().Select(run => run.Text)));
         Assert.AreEqual(ReadingText.DiagramAsText, TextOf(blocks[1]));
         Assert.AreEqual("graph LR", TextOf(blocks[2]));
     }
@@ -597,6 +597,21 @@ public sealed class ReadingTests
     }
 
     [STATestMethod]
+    public void A_picture_that_does_not_decode_says_it_is_unreadable()
+    {
+        using var ui = new UiThread();
+        var reading = SheetReading.Of(Sheet("![Un dessin](dessin.svg)\n"), _ => Outcome.Of(new byte[] { 1 }));
+        var built = new DocumentBuilder(reading, _ => { }, opensLinks: false, showsHeader: false) { Pictures = new FakePictures([]) };
+        var document = built.Build();
+        built.Complete();
+
+        UiThread.Until(() => built.Images.IsCompleted);
+
+        Assert.IsFalse(built.Images.IsFaulted);
+        Assert.AreEqual(ReadingText.UnreadableImage, LogicalDescendants(document).OfType<InlineUIContainer>().Select(container => container.Child).OfType<TextBlock>().Single().Text);
+    }
+
+    [STATestMethod]
     public void An_svg_of_the_vault_is_shown_as_a_picture()
     {
         using var ui = new UiThread();
@@ -1013,15 +1028,13 @@ internal sealed class RecordingLinks : IExternalLinks
 }
 
 /// <summary>Un coffre d'essai avec la fiche « Mitose », et ses passages si on en veut.</summary>
-/// <summary>Une page cachée simulée : elle dessine le premier SVG demandé, et refuse les suivants.</summary>
+/// <summary>Une page cachée simulée : elle ne dessine que le fichier dont le premier octet vaut 1.</summary>
 internal sealed class FakePictures(byte[] png) : IMermaidEngine
 {
-    private int _calls;
-
     public Task<MermaidPicture?> DrawAsync(string code, IReadOnlyDictionary<string, string> theme) => Task.FromResult<MermaidPicture?>(null);
 
     public Task<MermaidPicture?> DrawSvgAsync(ReadOnlyMemory<byte> svg) =>
-        Task.FromResult(_calls++ == 0 ? new MermaidPicture(png, "data:image/png;base64,", 12, 6) : null);
+        Task.FromResult(svg.Span[0] == 1 ? new MermaidPicture(png, "data:image/png;base64,", 12, 6) : null);
 }
 
 internal sealed class ReadingVault : IDisposable

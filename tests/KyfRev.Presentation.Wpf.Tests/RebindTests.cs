@@ -111,7 +111,7 @@ public sealed class RebindTests
     }
 
     [TestMethod]
-    public async Task Escape_gives_up_waiting()
+    public async Task Escape_gives_up_waiting_but_closing_a_panel_does_not()
     {
         using var vault = new ReadingVault(Body, passage: false);
         vault.Annotate("autre paragraphe");
@@ -119,6 +119,21 @@ public sealed class RebindTests
         page.StartRebindingCommand.Execute(page.Passages.Single());
 
         page.CloseOverlayCommand.Execute(null);
+        Assert.IsTrue(page.IsRebinding, "un clic dans le texte referme les volets : c'est là qu'on sélectionne");
+
+        page.EscapeCommand.Execute(null);
+        Assert.IsFalse(page.IsRebinding);
+    }
+
+    [TestMethod]
+    public async Task Writing_gives_up_waiting()
+    {
+        using var vault = new ReadingVault(Body, passage: false);
+        vault.Annotate("autre paragraphe");
+        var page = await LoadedAsync(vault);
+        page.StartRebindingCommand.Execute(page.Passages.Single());
+
+        await page.StartWritingCommand.ExecuteAsync(null);
 
         Assert.IsFalse(page.IsRebinding);
     }
@@ -186,6 +201,12 @@ public sealed class RebindTests
             Assert.IsTrue(page.IsRebinding);
             var bar = Named<DockPanel>(window, "RebindBar");
             Assert.AreEqual(Visibility.Visible, bar.Visibility);
+
+            // Sélectionner commence par un clic dans le texte : il ne fait pas renoncer.
+            var pressed = Named<SheetDocumentViewer>(window, "SheetText");
+            pressed.RaiseEvent(new System.Windows.Input.MouseButtonEventArgs(System.Windows.Input.Mouse.PrimaryDevice, 0, System.Windows.Input.MouseButton.Left) { RoutedEvent = UIElement.PreviewMouseLeftButtonDownEvent });
+            TestShell.Flush();
+            Assert.IsTrue(page.IsRebinding, "un clic dans le texte garde le rattachement");
 
             var here = Named<Button>(window, "RebindHereButton");
             here.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));

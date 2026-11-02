@@ -102,7 +102,7 @@
   <UserControl.InputBindings>
     <KeyBinding Key="Enter" Modifiers="Control" Command="{Binding ValidateShortcut}" />
     <KeyBinding Key="E" Modifiers="Control" Command="{Binding ToggleWritingCommand}" />
-    <KeyBinding Key="Escape" Command="{Binding CloseOverlayCommand}" />
+    <KeyBinding Key="Escape" Command="{Binding EscapeCommand}" />
   </UserControl.InputBindings>
 
   <Grid>
@@ -153,47 +153,50 @@
                    AutomationProperties.LiveSetting="Polite" />
       </DockPanel>
 
-      <!-- Texte à trous : où l'on en est, et de quoi tout afficher ou tout remasquer. -->
-      <DockPanel x:Name="HolesBar" Grid.Row="1" Margin="16,0,16,8" DataContext="{Binding Holes}" Visibility="{Binding HasHoles, Converter={StaticResource Visible}}">
-        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-          <Button x:Name="RevealAllButton" Style="{DynamicResource Kyf.Button.Subtle}" Content="{x:Static pages:ReadingText.RevealAllHoles}" Command="{Binding RevealAllCommand}" IsEnabled="{Binding CanRevealAll}" />
-          <Button x:Name="HideAllButton" Style="{DynamicResource Kyf.Button.Subtle}" Content="{x:Static pages:ReadingText.HideAllHoles}" Command="{Binding HideAllCommand}" IsEnabled="{Binding CanHideAll}" Margin="4,0,0,0" />
-        </StackPanel>
-        <TextBlock x:Name="HolesSummary" Text="{Binding Summary}" Style="{DynamicResource Kyf.Text.Secondary}" VerticalAlignment="Center" AutomationProperties.LiveSetting="Polite" />
-      </DockPanel>
-
-      <!-- Un passage attend sa nouvelle place : on la sélectionne dans le texte, le reste de la page reste lisible. -->
-      <DockPanel x:Name="RebindBar" Grid.Row="1" Margin="16,0,16,8" Visibility="{Binding IsRebinding, Converter={StaticResource Visible}}">
-        <StackPanel x:Name="RebindButtons" DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-          <Button x:Name="RebindHereButton" Content="{x:Static pages:ReadingText.RebindHere}" Style="{DynamicResource Kyf.Button.Primary}" Click="OnRebindHere" Margin="8,0,8,0" />
-          <Button x:Name="RebindCancelButton" Content="{x:Static pages:ReadingText.RebindCancel}" Command="{Binding CancelRebindingCommand}" />
-        </StackPanel>
-        <TextBlock x:Name="RebindPrompt" Text="{Binding RebindingPrompt}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" VerticalAlignment="Center" AutomationProperties.LiveSetting="Polite" />
-      </DockPanel>
-
-      <!-- Écouter la fiche : la lecture et ses réglages. Sur une fenêtre étroite, ils passent à la ligne. -->
-      <WrapPanel x:Name="ListenBar" Grid.Row="1" Margin="16,0,16,8" DataContext="{Binding ReadAloud}" Visibility="{Binding IsOpen, Converter={StaticResource Visible}, FallbackValue=Collapsed}"
-                 AutomationProperties.Name="{x:Static pages:ReadingText.ListenRegion}">
-        <Button x:Name="ListenPlay" Command="{Binding PlayPauseCommand}" Style="{DynamicResource Kyf.Button.Primary}" Margin="0,0,8,4" AutomationProperties.Name="{Binding PlayLabel}">
-          <StackPanel Orientation="Horizontal">
-            <kyf:Icon Text="{Binding PlayGlyph}" Margin="0,0,8,0" />
-            <TextBlock Text="{Binding PlayLabel}" />
+      <!-- Les barres de la lecture s'empilent : on peut écouter en changeant la place d'un passage. -->
+      <StackPanel Grid.Row="1" Visibility="{Binding IsReading, Converter={StaticResource Visible}}">
+        <!-- Texte à trous : où l'on en est, et de quoi tout afficher ou tout remasquer. -->
+        <DockPanel x:Name="HolesBar" Margin="16,0,16,8" DataContext="{Binding Holes}" Visibility="{Binding HasHoles, Converter={StaticResource Visible}}">
+          <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+            <Button x:Name="RevealAllButton" Style="{DynamicResource Kyf.Button.Subtle}" Content="{x:Static pages:ReadingText.RevealAllHoles}" Command="{Binding RevealAllCommand}" IsEnabled="{Binding CanRevealAll}" />
+            <Button x:Name="HideAllButton" Style="{DynamicResource Kyf.Button.Subtle}" Content="{x:Static pages:ReadingText.HideAllHoles}" Command="{Binding HideAllCommand}" IsEnabled="{Binding CanHideAll}" Margin="4,0,0,0" />
           </StackPanel>
-        </Button>
-        <Button x:Name="ListenStop" Command="{Binding StopCommand}" Style="{DynamicResource Kyf.Button.Icon}" Content="{x:Static kyf:Icons.Stop}" Margin="0,0,4,4"
-                ToolTip="{x:Static pages:ReadingText.ListenStop}" AutomationProperties.Name="{x:Static pages:ReadingText.ListenStop}" />
-        <Button x:Name="ListenPrevious" Command="{Binding PreviousCommand}" Style="{DynamicResource Kyf.Button.Icon}" Content="{x:Static kyf:Icons.Previous}" Margin="0,0,4,4"
-                ToolTip="{x:Static pages:ReadingText.ListenPrevious}" AutomationProperties.Name="{x:Static pages:ReadingText.ListenPrevious}" />
-        <TextBlock x:Name="ListenProgress" Text="{Binding Progress}" Style="{DynamicResource Kyf.Text.Secondary}" VerticalAlignment="Center" MinWidth="56" TextAlignment="Center" Margin="0,0,4,4" AutomationProperties.LiveSetting="Polite" />
-        <Button x:Name="ListenNext" Command="{Binding NextCommand}" Style="{DynamicResource Kyf.Button.Icon}" Content="{x:Static kyf:Icons.Next}" Margin="0,0,12,4"
-                ToolTip="{x:Static pages:ReadingText.ListenNext}" AutomationProperties.Name="{x:Static pages:ReadingText.ListenNext}" />
-        <Button x:Name="ListenRate" Content="{Binding RateLabel}" Style="{DynamicResource Kyf.Button.Subtle}" Click="OnRateMenu" Margin="0,0,4,4" />
-        <Button x:Name="ListenVoice" Content="{Binding VoiceLabel}" Style="{DynamicResource Kyf.Button.Subtle}" Click="OnVoiceMenu" Margin="0,0,12,4" />
-        <TextBlock x:Name="ListenMessage" Text="{Binding Message}" Style="{DynamicResource Kyf.Text.Secondary}" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,12,4"
-                   Visibility="{Binding HasMessage, Converter={StaticResource Visible}}" AutomationProperties.LiveSetting="Polite" />
-        <Button x:Name="ListenClose" Command="{Binding CloseCommand}" Style="{DynamicResource Kyf.Button.Icon}" Content="{x:Static kyf:Icons.Close}" Margin="0,0,0,4"
-                ToolTip="{x:Static pages:ReadingText.ListenClose}" AutomationProperties.Name="{x:Static pages:ReadingText.ListenClose}" />
-      </WrapPanel>
+          <TextBlock x:Name="HolesSummary" Text="{Binding Summary}" Style="{DynamicResource Kyf.Text.Secondary}" VerticalAlignment="Center" AutomationProperties.LiveSetting="Polite" />
+        </DockPanel>
+
+        <!-- Un passage attend sa nouvelle place : on la sélectionne dans le texte, le reste de la page reste lisible. -->
+        <DockPanel x:Name="RebindBar" Margin="16,0,16,8" Visibility="{Binding IsRebinding, Converter={StaticResource Visible}}">
+          <StackPanel x:Name="RebindButtons" DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+            <Button x:Name="RebindHereButton" Content="{x:Static pages:ReadingText.RebindHere}" Style="{DynamicResource Kyf.Button.Primary}" Click="OnRebindHere" Margin="8,0,8,0" />
+            <Button x:Name="RebindCancelButton" Content="{x:Static pages:ReadingText.RebindCancel}" Command="{Binding CancelRebindingCommand}" />
+          </StackPanel>
+          <TextBlock x:Name="RebindPrompt" Text="{Binding RebindingPrompt}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" VerticalAlignment="Center" AutomationProperties.LiveSetting="Polite" />
+        </DockPanel>
+
+        <!-- Écouter la fiche : la lecture et ses réglages. Sur une fenêtre étroite, ils passent à la ligne. -->
+        <WrapPanel x:Name="ListenBar" Margin="16,0,16,8" DataContext="{Binding ReadAloud}" Visibility="{Binding IsOpen, Converter={StaticResource Visible}, FallbackValue=Collapsed}"
+                   AutomationProperties.Name="{x:Static pages:ReadingText.ListenRegion}">
+          <Button x:Name="ListenPlay" Command="{Binding PlayPauseCommand}" Style="{DynamicResource Kyf.Button.Primary}" Margin="0,0,8,4" AutomationProperties.Name="{Binding PlayLabel}">
+            <StackPanel Orientation="Horizontal">
+              <kyf:Icon Text="{Binding PlayGlyph}" Margin="0,0,8,0" />
+              <TextBlock Text="{Binding PlayLabel}" />
+            </StackPanel>
+          </Button>
+          <Button x:Name="ListenStop" Command="{Binding StopCommand}" Style="{DynamicResource Kyf.Button.Icon}" Content="{x:Static kyf:Icons.Stop}" Margin="0,0,4,4"
+                  ToolTip="{x:Static pages:ReadingText.ListenStop}" AutomationProperties.Name="{x:Static pages:ReadingText.ListenStop}" />
+          <Button x:Name="ListenPrevious" Command="{Binding PreviousCommand}" Style="{DynamicResource Kyf.Button.Icon}" Content="{x:Static kyf:Icons.Previous}" Margin="0,0,4,4"
+                  ToolTip="{x:Static pages:ReadingText.ListenPrevious}" AutomationProperties.Name="{x:Static pages:ReadingText.ListenPrevious}" />
+          <TextBlock x:Name="ListenProgress" Text="{Binding Progress}" Style="{DynamicResource Kyf.Text.Secondary}" VerticalAlignment="Center" MinWidth="56" TextAlignment="Center" Margin="0,0,4,4" AutomationProperties.LiveSetting="Polite" />
+          <Button x:Name="ListenNext" Command="{Binding NextCommand}" Style="{DynamicResource Kyf.Button.Icon}" Content="{x:Static kyf:Icons.Next}" Margin="0,0,12,4"
+                  ToolTip="{x:Static pages:ReadingText.ListenNext}" AutomationProperties.Name="{x:Static pages:ReadingText.ListenNext}" />
+          <Button x:Name="ListenRate" Content="{Binding RateLabel}" Style="{DynamicResource Kyf.Button.Subtle}" Click="OnRateMenu" Margin="0,0,4,4" />
+          <Button x:Name="ListenVoice" Content="{Binding VoiceLabel}" Style="{DynamicResource Kyf.Button.Subtle}" Click="OnVoiceMenu" Margin="0,0,12,4" />
+          <TextBlock x:Name="ListenMessage" Text="{Binding Message}" Style="{DynamicResource Kyf.Text.Secondary}" VerticalAlignment="Center" TextWrapping="Wrap" Margin="0,0,12,4"
+                     Visibility="{Binding HasMessage, Converter={StaticResource Visible}}" AutomationProperties.LiveSetting="Polite" />
+          <Button x:Name="ListenClose" Command="{Binding CloseCommand}" Style="{DynamicResource Kyf.Button.Icon}" Content="{x:Static kyf:Icons.Close}" Margin="0,0,0,4"
+                  ToolTip="{x:Static pages:ReadingText.ListenClose}" AutomationProperties.Name="{x:Static pages:ReadingText.ListenClose}" />
+        </WrapPanel>
+      </StackPanel>
 
       <!-- Le ruban court sur toute la largeur, au-dessus du plan et des passages. -->
       <StackPanel Grid.Row="1" Margin="16,0,16,8" DataContext="{Binding Editor}"

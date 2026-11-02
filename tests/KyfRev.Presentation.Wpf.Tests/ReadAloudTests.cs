@@ -344,6 +344,30 @@ public sealed class ReadAloudTests
     }
 
     [STATestMethod]
+    public void Listening_and_changing_a_place_show_one_bar_under_the_other()
+    {
+        using var ui = new UiThread();
+        var (test, window, vault, page, _) = Open();
+        try
+        {
+            Click(Named<ToggleButton>(window, "ListenToggle"));
+            page.StartRebindingCommand.Execute(page.Passages[0]);
+            TestShell.Flush();
+
+            var (rebind, listen) = (Named<DockPanel>(window, "RebindBar"), Named<WrapPanel>(window, "ListenBar"));
+            var bottom = rebind.TranslatePoint(new Point(0, rebind.ActualHeight), window).Y;
+            Assert.IsGreaterThan(0, rebind.ActualHeight);
+            Assert.IsGreaterThanOrEqualTo(bottom, listen.TranslatePoint(default, window).Y);
+        }
+        finally
+        {
+            window.Close();
+            vault.Dispose();
+        }
+        GC.KeepAlive(test);
+    }
+
+    [STATestMethod]
     public void The_listen_button_shrinks_to_its_icon_when_room_lacks()
     {
         using var ui = new UiThread();
@@ -380,15 +404,25 @@ public sealed class ReadAloudTests
     public void A_revision_with_holes_is_not_read_aloud()
     {
         using var ui = new UiThread();
-        var (test, window, vault, page, _) = Open();
+        var (test, window, vault, page, speech) = Open(activeRecall: true);
         try
         {
             var toggle = Named<ToggleButton>(window, "ListenToggle");
-            page.Holes.IsActive = true;
+            Click(toggle);
+            page.ReadAloud!.PlayPauseCommand.Execute(null);
+            TestShell.Flush();
+
             page.IsReviseOn = true;
             TestShell.Flush();
 
             Assert.AreEqual(Visibility.Collapsed, toggle.Visibility, "la voix dirait ce qui est masqué");
+            Assert.IsFalse(page.ReadAloud.IsOpen);
+            Assert.IsTrue(speech.Said.Last().Cancellation.IsCancellationRequested, "elle se tait aussitôt");
+
+            page.IsReadOn = true;
+            TestShell.Flush();
+
+            Assert.AreEqual(Visibility.Visible, toggle.Visibility, "en lecture, on peut de nouveau écouter");
         }
         finally
         {
@@ -402,7 +436,7 @@ public sealed class ReadAloudTests
     public void The_choices_open_under_their_button_with_the_current_one_checked()
     {
         using var ui = new UiThread();
-        var (test, window, vault, page, _) = Open("Hortense", "Julie");
+        var (test, window, vault, page, _) = Open(false, "Hortense", "Julie");
         try
         {
             Click(Named<ToggleButton>(window, "ListenToggle"));
@@ -436,11 +470,11 @@ public sealed class ReadAloudTests
         GC.KeepAlive(test);
     }
 
-    private static (TestShell Test, ShellWindow Window, ReadingVault Vault, SheetPageViewModel Page, FakeSpeech Speech) Open(params string[] voices)
+    private static (TestShell Test, ShellWindow Window, ReadingVault Vault, SheetPageViewModel Page, FakeSpeech Speech) Open(bool activeRecall = false, params string[] voices)
     {
-        var vault = new ReadingVault("# Mitose\n\nPremier paragraphe.\n\nSecond paragraphe.\n\nTroisième paragraphe.\n", passage: false);
+        var vault = new ReadingVault("# Mitose\n\nPremier paragraphe avec un mot.\n\nSecond paragraphe.\n\nTroisième paragraphe.\n", passage: true);
         var speech = voices.Length > 0 ? new FakeSpeech(voices) : new FakeSpeech();
-        var page = vault.Page(speech: speech);
+        var page = vault.Page(activeRecall: () => activeRecall, speech: speech);
         var test = new TestShell();
         test.Shell.Navigate(new NavigationItem("fiche", "Fiche", Icons.Document, int.MaxValue, page));
         var window = new ShellWindow(test.Shell) { ShowActivated = false, Left = -10000, Top = -10000, Width = 1000, Height = 760, WindowStartupLocation = WindowStartupLocation.Manual };

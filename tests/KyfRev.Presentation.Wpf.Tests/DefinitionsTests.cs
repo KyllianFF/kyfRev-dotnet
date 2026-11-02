@@ -137,9 +137,59 @@ public sealed class DefinitionsTests
         Assert.AreEqual("Prise de la Bastille", saved.Term);
         Assert.AreEqual("Le 14 juillet 1789.", saved.Explanation, "les blancs autour sont retirés");
         Assert.IsTrue(saved.IsShown);
-        Assert.AreEqual("Histoire", page.SelectedFolder.Path);
+        Assert.AreEqual("Histoire", page.SelectedFolder!.Path);
         var stored = glossary.App.Annotations.Definitions().Value.Single(definition => definition.Id == saved.Definition.Id);
         Assert.AreEqual("Prise de la Bastille", stored.Term);
+    }
+
+    [TestMethod]
+    public async Task A_draft_survives_a_search_a_folder_another_save_and_a_return()
+    {
+        using var glossary = new Glossary();
+        glossary.Filled();
+        var page = await glossary.LoadedAsync();
+        var draft = page.Rows.Single(row => row.Term == "Mitose");
+        draft.EditCommand.Execute(null);
+        draft.EditedExplanation = "Mon brouillon.";
+
+        page.Search = "noyau";
+        Assert.IsFalse(page.Rows.Contains(draft));
+        page.Search = string.Empty;
+        Assert.AreSame(draft, page.Rows.Single(row => row.Term == "Mitose"), "la recherche ne perd rien");
+
+        page.SelectedFolder = page.Folders.Single(folder => folder.Path == "Histoire");
+        page.SelectedFolder = page.Folders[0];
+        Assert.AreSame(draft, page.Rows.Single(row => row.Term == "Mitose"), "le dossier non plus");
+
+        var other = page.Rows.Single(row => row.Term == "Noyau");
+        other.EditCommand.Execute(null);
+        other.EditedExplanation = "Il renferme tout l'ADN.";
+        await other.SaveCommand.ExecuteAsync(null);
+        var after = page.Rows.Single(row => row.Term == "Mitose");
+        Assert.AreEqual("Mon brouillon.", after.EditedExplanation, "enregistrer une autre carte non plus");
+        Assert.IsTrue(after.IsEditing);
+        Assert.IsTrue(page.Rows.Single(row => row.Term == "Noyau").IsShown, "celle qu'on enregistre se lit de nouveau");
+
+        await page.LoadCommand.ExecuteAsync(null);
+        Assert.AreEqual("Mon brouillon.", page.Rows.Single(row => row.Term == "Mitose").EditedExplanation, "revenir sur la vue non plus");
+    }
+
+    [TestMethod]
+    public async Task A_view_that_comes_apart_loses_neither_the_folder_nor_the_page()
+    {
+        using var glossary = new Glossary();
+        glossary.Filled();
+        var page = await glossary.LoadedAsync();
+        page.SelectedFolder = page.Folders.Single(folder => folder.Path == "Histoire");
+
+        // Une liste qui se défait écrit « rien » dans ce qui lui est lié.
+        page.SelectedFolder = null;
+        Assert.HasCount(1, page.Rows);
+
+        await page.LoadCommand.ExecuteAsync(null);
+
+        Assert.AreEqual("Histoire", page.SelectedFolder!.Path);
+        Assert.HasCount(1, page.Rows);
     }
 
     [TestMethod]
@@ -270,7 +320,9 @@ public sealed class DefinitionsTests
             Assert.AreEqual(0, Grid.GetRow(Named<FrameworkElement>(window, "ListPanel")));
 
             host.Width = 560;
+            host.Height = 420;
             TestShell.Flush();
+            Assert.IsGreaterThan(0, scroller.ScrollableHeight, "en largeur étroite aussi, les cartes défilent");
 
             var narrow = Cards(scroller);
             Assert.AreEqual(1, Grid.GetRow(Named<FrameworkElement>(window, "ListPanel")), "les dossiers passent au-dessus");

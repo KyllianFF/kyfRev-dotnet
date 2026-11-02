@@ -146,11 +146,12 @@ public sealed partial class DiagramGalleryViewModel : ObservableObject
         }
     }
 
-    partial void OnSelectedItemChanged(GalleryItem? value)
+    /// <summary>Changer de modèle garde ce qui est écrit, comme dans Office : seul un exemple encore intact se remplace.</summary>
+    partial void OnSelectedItemChanged(GalleryItem? oldValue, GalleryItem? newValue)
     {
-        if (value is not null)
+        if (newValue is not null && (string.IsNullOrWhiteSpace(Text) || Text == oldValue?.Sample))
         {
-            Text = value.Sample;
+            Text = newValue.Sample;
         }
     }
 

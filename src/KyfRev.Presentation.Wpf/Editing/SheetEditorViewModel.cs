@@ -230,6 +230,9 @@ public sealed partial class SheetEditorViewModel : ObservableObject
     private int? _dismissedAt;
     private string _inputQuery = string.Empty;
     private SaveConflict? _conflict;
+
+    /// <summary>Le texte doit s'écrire, même identique au dernier enregistré : le disque a changé, et on garde ma version.</summary>
+    private bool _mustWrite;
     private int? _formulaPosition;
 
     /// <summary>L'écriture de <paramref name="sheet"/>.</summary>
@@ -732,10 +735,11 @@ public sealed partial class SheetEditorViewModel : ObservableObject
                 {
                     return;
                 }
-                if (current == _saved)
+                if (current == _saved && !_mustWrite)
                 {
                     break;
                 }
+                _mustWrite = false;
                 State = SaveState.Saving;
                 var (fingerprint, session, written) = (_fingerprint, _session, ToDisk(current));
                 var outcome = await Task.Run(() => _editing.Save(SheetId, written, fingerprint, session)).ConfigureAwait(true);
@@ -776,6 +780,7 @@ public sealed partial class SheetEditorViewModel : ObservableObject
         ConflictRows = null;
         _fingerprint = conflict.DiskFingerprint;
         _conflict = null;
+        _mustWrite = true;
         State = SaveState.Modified;
         await SaveAsync().ConfigureAwait(true);
         _surface?.Focus();

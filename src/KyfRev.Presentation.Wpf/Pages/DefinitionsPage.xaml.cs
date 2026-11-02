@@ -42,6 +42,7 @@ internal sealed partial class DefinitionsPage : UserControl
         var narrow = ActualWidth < NarrowPage;
         FoldersColumn.Width = narrow ? new GridLength(0) : new GridLength(260);
         FoldersRow.Height = narrow ? GridLength.Auto : new GridLength(1, GridUnitType.Star);
+        ListRow.Height = narrow ? new GridLength(1, GridUnitType.Star) : GridLength.Auto;
         Grid.SetColumnSpan(FoldersPanel, narrow ? 2 : 1);
         Grid.SetRow(ListPanel, narrow ? 1 : 0);
         Grid.SetRowSpan(ListPanel, narrow ? 1 : 2);

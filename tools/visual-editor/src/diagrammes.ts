@@ -19,6 +19,12 @@ type Demande = { id: number; code: string; theme: Record<string, string> } | { i
 /** Une image deux fois plus fine que sa taille : elle reste nette sur un écran agrandi. */
 const FINESSE = 2;
 
+/** Le plus grand côté d'une image : une toile trop grande ne donne rien. */
+const COTE_MAXIMAL = 8192;
+
+/** Les unités absolues d'une longueur SVG, en pixels. */
+const UNITES: Record<string, number> = { "": 1, px: 1, pt: 96 / 72, pc: 16, mm: 96 / 25.4, cm: 96 / 2.54, in: 96 };
+
 /** Pas d'étiquettes HTML : elles empêcheraient d'en faire une image. */
 const POLICE = '"Segoe UI", sans-serif';
 
@@ -89,6 +95,47 @@ function dimensionne(svg: string): { source: string; largeur: number; hauteur: n
   return { source: new XMLSerializer().serializeToString(racine), largeur, hauteur };
 }
 
+/** Une longueur en unité absolue ; rien pour un pourcentage ou une unité relative. */
+function longueur(valeur: string | null): number | null {
+  const lue = /^\s*([\d.]+)\s*([a-z]*)\s*$/i.exec(valeur ?? "");
+  const facteur = lue ? UNITES[(lue[2] as string).toLowerCase()] : undefined;
+  const nombre = lue ? Number.parseFloat(lue[1] as string) : Number.NaN;
+  return facteur !== undefined && nombre > 0 ? nombre * facteur : null;
+}
+
+/**
+ * Un fichier SVG garde la taille qu'il déclare, et son style : ils font partie du dessin. Son cadre ne donne
+ * la taille qu'à défaut, car il compte en unités du dessin, et non en pixels.
+ */
+function dimensionneFichier(svg: string): { source: string; largeur: number; hauteur: number } {
+  const racine = new DOMParser().parseFromString(svg, "image/svg+xml").documentElement;
+  const cadre = (racine.getAttribute("viewBox") ?? "").split(/[\s,]+/).map(Number);
+  const [cadreLargeur, cadreHauteur] = [cadre[2] || 0, cadre[3] || 0];
+  const ecriteLargeur = longueur(racine.getAttribute("width"));
+  const ecriteHauteur = longueur(racine.getAttribute("height"));
+  const rapport = cadreLargeur > 0 && cadreHauteur > 0 ? cadreHauteur / cadreLargeur : null;
+  const depuisHauteur = ecriteHauteur !== null && rapport !== null ? ecriteHauteur / rapport : null;
+  const depuisLargeur = ecriteLargeur !== null && rapport !== null ? ecriteLargeur * rapport : null;
+  const largeur = Math.ceil(ecriteLargeur ?? depuisHauteur ?? (cadreLargeur || 640));
+  const hauteur = Math.ceil(ecriteHauteur ?? depuisLargeur ?? (cadreHauteur || 400));
+  racine.setAttribute("width", String(largeur));
+  racine.setAttribute("height", String(hauteur));
+  return { source: new XMLSerializer().serializeToString(racine), largeur, hauteur };
+}
+
+/** Le texte d'un fichier SVG, selon sa marque d'ordre ou l'encodage qu'il déclare ; UTF-8 sinon. */
+function texteDe(octets: Uint8Array): string {
+  if (octets[0] === 0xff && octets[1] === 0xfe) return new TextDecoder("utf-16le").decode(octets);
+  if (octets[0] === 0xfe && octets[1] === 0xff) return new TextDecoder("utf-16be").decode(octets);
+  const tete = new TextDecoder("latin1").decode(octets.slice(0, 200));
+  const declare = /encoding\s*=\s*["']([\w.-]+)["']/.exec(tete)?.[1];
+  try {
+    return new TextDecoder(declare ?? "utf-8").decode(octets);
+  } catch {
+    return new TextDecoder("utf-8").decode(octets);
+  }
+}
+
 function adresseSvg(source: string): string {
   const octets = new TextEncoder().encode(source);
   let binaire = "";
@@ -100,27 +147,29 @@ function adresseSvg(source: string): string {
  * Le SVG donné, ou celui que Mermaid tire de son code. Une image SVG du coffre n'entre jamais dans la
  * page : elle n'y est qu'analysée, puis montrée comme une image, où ni script ni adresse n'agissent.
  */
-async function sourceDe(demande: Demande): Promise<string> {
+async function sourceDe(demande: Demande): Promise<{ source: string; largeur: number; hauteur: number }> {
   if ("svg" in demande) {
-    return new TextDecoder().decode(Uint8Array.from(atob(demande.svg), (lettre) => lettre.charCodeAt(0)));
+    return dimensionneFichier(texteDe(Uint8Array.from(atob(demande.svg), (lettre) => lettre.charCodeAt(0))));
   }
   configurer(demande.theme);
-  return (await mermaid.render(`dessin${demande.id}`, demande.code)).svg;
+  return dimensionne((await mermaid.render(`dessin${demande.id}`, demande.code)).svg);
 }
 
 async function dessiner(demande: Demande): Promise<void> {
   const { id } = demande;
   try {
-    const { source, largeur, hauteur } = dimensionne(await sourceDe(demande));
+    const { source, largeur, hauteur } = await sourceDe(demande);
     const adresse = adresseSvg(source);
     const image = new Image();
     image.src = adresse;
     await image.decode();
     const toile = document.createElement("canvas");
-    toile.width = largeur * FINESSE;
-    toile.height = hauteur * FINESSE;
+    const finesse = Math.min(FINESSE, COTE_MAXIMAL / Math.max(largeur, hauteur));
+    toile.width = Math.ceil(largeur * finesse);
+    toile.height = Math.ceil(hauteur * finesse);
     toile.getContext("2d")?.drawImage(image, 0, 0, toile.width, toile.height);
     const png = toile.toDataURL("image/png");
+    if (png === "data:,") throw new Error("Image trop grande");
     chrome.webview.postMessage({
       kind: "drawn",
       id,

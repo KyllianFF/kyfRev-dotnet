@@ -812,6 +812,63 @@ public sealed class VisualEditorTests
     }
 
     [EngineTest]
+    [DataRow("""<svg xmlns="http://www.w3.org/2000/svg" width="210mm" height="297mm" viewBox="0 0 21000 29700"><rect width="21000" height="29700" /></svg>""", 794, 1123)]
+    [DataRow("""<svg xmlns="http://www.w3.org/2000/svg" width="600" height="300" viewBox="0 0 1 1"><rect width="1" height="1" /></svg>""", 600, 300)]
+    [DataRow("""<svg xmlns="http://www.w3.org/2000/svg" width="210mm" height="99mm"><rect width="10" height="10" /></svg>""", 794, 375)]
+    [DataRow("""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 60" width="100%"><rect width="1" height="1" /></svg>""", 120, 60)]
+    [DataRow("""<svg xmlns="http://www.w3.org/2000/svg" width="200" viewBox="0 0 100 50"><rect width="1" height="1" /></svg>""", 200, 100)]
+    [DataRow("""<svg xmlns="http://www.w3.org/2000/svg"><rect width="1" height="1" /></svg>""", 640, 400)]
+    [DataRow("""<svg xmlns="http://www.w3.org/2000/svg" width="40000" height="30000"><rect width="1" height="1" /></svg>""", 40000, 30000)]
+    public void An_svg_keeps_the_size_it_declares(string svg, int width, int height)
+    {
+        using var engine = new MermaidEngine(FakeEnvironment.WebData);
+
+        var drawing = engine.DrawSvgAsync(System.Text.Encoding.UTF8.GetBytes(svg));
+        UiThread.Until(() => drawing.IsCompleted, TimeSpan.FromSeconds(25));
+
+        Assert.IsNotNull(drawing.Result, svg);
+        Assert.AreEqual(width, drawing.Result.Width);
+        Assert.AreEqual(height, drawing.Result.Height);
+        Assert.IsGreaterThan(0, drawing.Result.Png.Length);
+    }
+
+    [EngineTest]
+    public void An_svg_keeps_its_style_and_its_encoding()
+    {
+        using var engine = new MermaidEngine(FakeEnvironment.WebData);
+        var latin = System.Text.Encoding.Latin1.GetBytes("""<?xml version="1.0" encoding="ISO-8859-1"?><svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" style="fill:none"><title>été</title><rect width="1" height="1" /></svg>""");
+        var unicode = System.Text.Encoding.Unicode.GetPreamble().Concat(System.Text.Encoding.Unicode.GetBytes("""<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><title>été</title></svg>""")).ToArray();
+
+        var drawing = engine.DrawSvgAsync(latin);
+        UiThread.Until(() => drawing.IsCompleted, TimeSpan.FromSeconds(25));
+        var wide = engine.DrawSvgAsync(unicode);
+        UiThread.Until(() => wide.IsCompleted, TimeSpan.FromSeconds(25));
+
+        Assert.IsNotNull(wide.Result, "UTF-16");
+        var source = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(drawing.Result!.Image[(drawing.Result.Image.IndexOf(',', StringComparison.Ordinal) + 1)..]));
+        StringAssert.Contains(source, "été", StringComparison.Ordinal);
+        StringAssert.Contains(source, "fill:none", StringComparison.Ordinal);
+    }
+
+    [EngineTest]
+    public void A_start_that_takes_too_long_lets_the_next_drawing_try_again()
+    {
+        using var scene = new Scene();
+        using var engine = new MermaidEngine(FakeEnvironment.WebData) { Patience = TimeSpan.Zero };
+        var theme = MermaidEngine.ThemeOf(scene.SheetPage);
+
+        var cut = engine.DrawAsync("flowchart LR\n  a --> b", theme);
+        UiThread.Until(() => cut.IsCompleted, TimeSpan.FromSeconds(25));
+        Assert.IsFalse(cut.IsFaulted, "trop lent n'est pas une panne");
+        Assert.IsNull(cut.Result);
+
+        engine.Patience = TimeSpan.FromSeconds(20);
+        var next = engine.DrawAsync("flowchart LR\n  c --> d", theme);
+        UiThread.Until(() => next.IsCompleted, TimeSpan.FromSeconds(25));
+        Assert.IsNotNull(next.Result);
+    }
+
+    [EngineTest]
     public void What_is_not_an_svg_is_not_a_picture()
     {
         using var engine = new MermaidEngine(FakeEnvironment.WebData);

@@ -80,6 +80,9 @@ public sealed partial class DefinitionRow : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
     public partial string EditedExplanation { get; set; }
 
+    /// <summary>La définition est enregistrée : elle se lit de nouveau.</summary>
+    internal void EndEditing() => IsEditing = false;
+
     /// <summary>Modifie la définition sur place.</summary>
     [RelayCommand]
     private void Edit() => IsEditing = true;
@@ -109,7 +112,9 @@ public sealed partial class DefinitionsPageViewModel : ObservableObject
 {
     private readonly AnnotationUseCases _annotations;
     private readonly IReviewOpener _opener;
+    private readonly Dictionary<string, DefinitionRow> _rows = new(StringComparer.Ordinal);
     private IReadOnlyList<VaultDefinition> _all = [];
+    private string _folder = string.Empty;
 
     /// <summary>Le glossaire, sur ces cas d'usage.</summary>
     public DefinitionsPageViewModel(AnnotationUseCases annotations, IReviewOpener opener)
@@ -127,9 +132,9 @@ public sealed partial class DefinitionsPageViewModel : ObservableObject
     /// <summary>Les définitions montrées.</summary>
     public ObservableCollection<DefinitionRow> Rows { get; } = [];
 
-    /// <summary>Le dossier choisi.</summary>
+    /// <summary>Le dossier choisi ; rien pendant que la vue se défait, sans que le choix soit perdu.</summary>
     [ObservableProperty]
-    public partial DefinitionFolder SelectedFolder { get; set; }
+    public partial DefinitionFolder? SelectedFolder { get; set; }
 
     /// <summary>Ce qui est cherché.</summary>
     [ObservableProperty]
@@ -171,7 +176,8 @@ public sealed partial class DefinitionsPageViewModel : ObservableObject
         }
         Error = null;
         _all = outcome.Value;
-        var chosen = SelectedFolder.Path;
+        KeepRows();
+        var chosen = _folder;
         Folders.Clear();
         Folders.Add(new DefinitionFolder(string.Empty, DefinitionsText.WholeVault));
         foreach (var folder in _all.SelectMany(definition => Ancestors(definition.Folder)).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal))
@@ -190,6 +196,7 @@ public sealed partial class DefinitionsPageViewModel : ObservableObject
         var outcome = await Task.Run(() => _annotations.ModifyDefinition(id, definition)).ConfigureAwait(true);
         if (outcome.Succeeded)
         {
+            row.EndEditing();
             await LoadAsync().ConfigureAwait(true);
         }
         else
@@ -201,7 +208,14 @@ public sealed partial class DefinitionsPageViewModel : ObservableObject
     /// <summary>Ouvre la fiche d'une définition, sur son passage.</summary>
     internal void Open(DefinitionRow row) => _opener.OpenPassageInSheet(row.Definition.SheetId, row.Definition.Id);
 
-    partial void OnSelectedFolderChanged(DefinitionFolder value) => Refresh();
+    partial void OnSelectedFolderChanged(DefinitionFolder? value)
+    {
+        if (value is not null)
+        {
+            _folder = value.Path;
+            Refresh();
+        }
+    }
 
     partial void OnSearchChanged(string value) => Refresh();
 
@@ -217,9 +231,20 @@ public sealed partial class DefinitionsPageViewModel : ObservableObject
     private static string Label(string folder) =>
         new string(' ', folder.Count(character => character == '/') * 3) + folder[(folder.LastIndexOf('/') + 1)..];
 
+    /// <summary>Une définition en cours de modification garde son brouillon quand le glossaire se relit.</summary>
+    private void KeepRows()
+    {
+        var kept = _rows.Values.Where(row => row.IsEditing).ToDictionary(row => row.Definition.Id, StringComparer.Ordinal);
+        _rows.Clear();
+        foreach (var definition in _all)
+        {
+            _rows[definition.Id] = kept.GetValueOrDefault(definition.Id) ?? new DefinitionRow(definition, this);
+        }
+    }
+
     private void Refresh()
     {
-        var folder = SelectedFolder?.Path ?? string.Empty;
+        var folder = _folder;
         var wanted = DefinitionsText.WithoutAccents(Search.Trim());
         Rows.Clear();
         foreach (var definition in _all)
@@ -227,7 +252,7 @@ public sealed partial class DefinitionsPageViewModel : ObservableObject
             var inFolder = folder.Length == 0 || definition.Folder == folder || definition.Folder.StartsWith(folder + "/", StringComparison.Ordinal);
             if (inFolder && DefinitionsText.WithoutAccents($"{definition.Term} {definition.Explanation}").Contains(wanted, StringComparison.Ordinal))
             {
-                Rows.Add(new DefinitionRow(definition, this));
+                Rows.Add(_rows[definition.Id]);
             }
         }
         OnPropertyChanged(nameof(HasNoMatch));
