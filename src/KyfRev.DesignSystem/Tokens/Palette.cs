@@ -2,6 +2,11 @@ using System.Collections.Immutable;
 
 namespace KyfRev.DesignSystem.Tokens;
 
+/// <summary>Une couleur et son nom, pour la choisir.</summary>
+/// <param name="Name">Son nom.</param>
+/// <param name="Color">La couleur.</param>
+public sealed record NamedColor(string Name, TokenColor Color);
+
 /// <summary>
 /// Toutes les couleurs de kyfRev, et le seul endroit où elles s'écrivent : l'identité « Veillée »,
 /// choisie en novembre 2026. Deux gammes, le vert forêt (l'action, ce qui est fait) et l'ambre
@@ -18,6 +23,26 @@ public static class Palette
     /// <summary>Ambre : le retard, l'avertissement et les passages surlignés.</summary>
     public static ColorRamp Amber { get; } = new(
         "ambre", "#fbf5ec", "#f4e8d6", "#f0d3a8", "#eba458", "#d88a33", "#b9701c", "#a36114", "#93540f", "#6b3d0c", "#3a2e1f");
+
+    /// <summary>
+    /// Les couleurs proposées pour le texte des fiches : des teintes franches, de clarté moyenne. Le texte les prend
+    /// par <see cref="TokenColor.ReadableOn"/>, qui en fait une couleur lisible sur le fond du thème.
+    /// </summary>
+    public static ImmutableArray<NamedColor> TextColors { get; } =
+    [
+        new("Rouge", TokenColor.FromHex("#d0021b")),
+        new("Orange", TokenColor.FromHex("#b85c00")),
+        new("Or", TokenColor.FromHex("#8a7300")),
+        new("Vert", TokenColor.FromHex("#2e7d32")),
+        new("Émeraude", TokenColor.FromHex("#00796b")),
+        new("Cyan", TokenColor.FromHex("#00708c")),
+        new("Bleu", TokenColor.FromHex("#1565c0")),
+        new("Indigo", TokenColor.FromHex("#4338ca")),
+        new("Violet", TokenColor.FromHex("#7b1fa2")),
+        new("Rose", TokenColor.FromHex("#c2185b")),
+        new("Brun", TokenColor.FromHex("#6d4c41")),
+        new("Gris", TokenColor.FromHex("#616161")),
+    ];
 
     /// <summary>Couleur des ombres portées, dans les deux thèmes (leur opacité vient de l'élévation).</summary>
     public static TokenColor Shadow { get; } = TokenColor.FromHex("#000000");

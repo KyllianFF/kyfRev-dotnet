@@ -5,7 +5,9 @@ namespace KyfRev.Rendering.Markdown;
 /// <summary>Les liens, les images, les notes et les balises permises.</summary>
 internal static partial class InlineParser
 {
-    private static readonly string[] AllowedTagNames = ["u", "sup", "sub"];
+    private const string SpanName = "span";
+
+    private static readonly string[] AllowedTagNames = ["u", "sup", "sub", SpanName];
 
     private static bool IsAsciiLetter(int code) => code is (>= 'A' and <= 'Z') or (>= 'a' and <= 'z');
 
@@ -344,8 +346,9 @@ internal static partial class InlineParser
     }
 
     /// <summary>
-    /// <c>&lt;u&gt;</c>, <c>&lt;sup&gt;</c> et <c>&lt;sub&gt;</c>, sans attribut : le reste du HTML reste du texte.
-    /// Une balise ouvrante n'est retenue que si sa fermante suit, une fermante que si elle ferme quelque chose.
+    /// <c>&lt;u&gt;</c>, <c>&lt;sup&gt;</c> et <c>&lt;sub&gt;</c>, sans attribut, et <c>&lt;span&gt;</c> avec exactement
+    /// une couleur ou une taille : le reste du HTML reste du texte. Une balise ouvrante n'est retenue que si sa fermante
+    /// suit, une fermante que si elle ferme quelque chose.
     /// </summary>
     private static bool AllowedTag(InlineState state, bool silent)
     {
@@ -354,11 +357,26 @@ internal static partial class InlineParser
         {
             return false;
         }
+        var styled = StyledSpan().Match(state.Source, start);
+        if (styled.Success)
+        {
+            if (state.Source.IndexOf("</span>", start + styled.Length, StringComparison.Ordinal) < 0)
+            {
+                return false;
+            }
+            if (!silent)
+            {
+                state.Push(TokenKind.Element, SpanName, 1).Style = styled.Groups[1].Value;
+                state.OpenTags[SpanName] = state.OpenTags.GetValueOrDefault(SpanName) + 1;
+            }
+            state.Position += styled.Length;
+            return true;
+        }
         var closing = state.At(start + 1) == '/';
         var nameStart = start + (closing ? 2 : 1);
         var name = Array.Find(AllowedTagNames, candidate =>
             string.CompareOrdinal(state.Source, nameStart, candidate, 0, candidate.Length) == 0 && state.At(nameStart + candidate.Length) == '>');
-        if (name is null)
+        if (name is null || (name == SpanName && !closing))
         {
             return false;
         }
@@ -383,6 +401,10 @@ internal static partial class InlineParser
         state.Position += length;
         return true;
     }
+
+    /// <summary>Une couleur à six chiffres ; une taille de 0,5 à 3 fois le texte, au centième.</summary>
+    [GeneratedRegex(@"\G<span style=""(color:#[0-9a-fA-F]{6}|font-size:(?:0\.[5-9][0-9]?|[12](?:\.[0-9]{1,2})?|3(?:\.0{1,2})?)em)"">")]
+    private static partial Regex StyledSpan();
 
     private static bool Autolink(InlineState state, bool silent)
     {

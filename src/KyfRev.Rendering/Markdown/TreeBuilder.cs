@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.RegularExpressions;
 
 namespace KyfRev.Rendering.Markdown;
 
@@ -6,7 +7,7 @@ namespace KyfRev.Rendering.Markdown;
 /// Écrit les jetons sous forme d'arbre, avec les retours à la ligne que le rendu de markdown-it met dans son
 /// HTML : le navigateur en faisait des nœuds de texte, qui comptent dans les positions de la 0.x.
 /// </summary>
-internal sealed class TreeBuilder
+internal sealed partial class TreeBuilder
 {
     private const string BackReference = "\u21A9\uFE0E";
 
@@ -172,6 +173,11 @@ internal sealed class TreeBuilder
             element.ListStart = token.Start;
             element.Alignment = token.Alignment;
             element.Target = token.Href;
+            ApplyStyle(element, token.Style);
+            if (token.Tag == "li" && token.Nesting == 1)
+            {
+                element.Task = TaskOf(tokens, index);
+            }
         }
         var lineFeed = token.Block;
         if (token.Block && token.Nesting == 1 && index + 1 < tokens.Count)
@@ -183,6 +189,34 @@ internal sealed class TreeBuilder
         {
             WriteText("\n");
         }
+    }
+
+    private static void ApplyStyle(RenderElement element, string? style)
+    {
+        if (style is null)
+        {
+            return;
+        }
+        var value = style[(style.IndexOf(':', StringComparison.Ordinal) + 1)..];
+        if (style.StartsWith("color:", StringComparison.Ordinal))
+        {
+            element.TextColor = value;
+        }
+        else
+        {
+            element.FontScale = double.Parse(value.AsSpan(0, value.Length - 2), NumberStyles.Float, CultureInfo.InvariantCulture);
+        }
+    }
+
+    /// <summary>La case d'une tâche au début d'un point de liste. Elle se lit sur la source : « \[ \] » écrit des crochets.</summary>
+    private static bool? TaskOf(List<Token> tokens, int index)
+    {
+        if (index + 2 >= tokens.Count || tokens[index + 1].Tag != "p" || tokens[index + 2] is not { Kind: TokenKind.Inline, Children: [{ Kind: TokenKind.Text }, ..] } inline)
+        {
+            return null;
+        }
+        var match = TaskMark().Match(inline.Content);
+        return match.Success ? match.Groups[1].Value != " " : null;
     }
 
     private void WriteCodeBlock(string content, string? language)
@@ -257,4 +291,7 @@ internal sealed class TreeBuilder
             }
         }
     }
+
+    [GeneratedRegex(@"^\[([ xX])\](?: |\z)")]
+    private static partial Regex TaskMark();
 }

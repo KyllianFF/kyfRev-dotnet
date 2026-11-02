@@ -24,6 +24,9 @@ namespace KyfRev.Presentation.Wpf.Editing;
 [JsonDerivedType(typeof(LinkRequest), "link")]
 [JsonDerivedType(typeof(UnlinkRequest), "unlink")]
 [JsonDerivedType(typeof(ClearFormatRequest), "clearFormat")]
+[JsonDerivedType(typeof(ColorRequest), "color")]
+[JsonDerivedType(typeof(SizeRequest), "size")]
+[JsonDerivedType(typeof(AlignRequest), "align")]
 [JsonDerivedType(typeof(ImageRequest), "image")]
 [JsonDerivedType(typeof(SheetLinkRequest), "sheetLink")]
 [JsonDerivedType(typeof(ReplaceWordRequest), "replaceWord")]
@@ -86,6 +89,15 @@ internal sealed record UnlinkRequest : EditorRequest;
 /// <summary>Efface la mise en forme de la sélection.</summary>
 internal sealed record ClearFormatRequest : EditorRequest;
 
+/// <summary>Pose une couleur sur la sélection, écrite <c>#rrggbb</c> ; rien : celle du thème.</summary>
+internal sealed record ColorRequest(string? Color) : EditorRequest;
+
+/// <summary>Pose une taille sur la sélection, écrite <c>1.25em</c> ; rien : la taille normale.</summary>
+internal sealed record SizeRequest(string? Size) : EditorRequest;
+
+/// <summary>Aligne les blocs de la sélection.</summary>
+internal sealed record AlignRequest(TextAlign Align) : EditorRequest;
+
 /// <summary>Insère une image du coffre.</summary>
 internal sealed record ImageRequest(string Link, string Alternative, int? Position) : EditorRequest;
 
@@ -141,7 +153,7 @@ internal sealed record TextEvent(int? Id, string Markdown) : EditorEvent;
 internal sealed record SaveEvent : EditorEvent;
 
 /// <summary>Ce que le ruban affiche.</summary>
-internal sealed record ToolsEvent(bool Bold, bool Italic, bool Underline, bool Strike, bool Superscript, bool Subscript, bool Link, int Heading, bool InCode, ListKind? List, bool Table, bool CanUndo, bool CanRedo) : EditorEvent;
+internal sealed record ToolsEvent(bool Bold, bool Italic, bool Underline, bool Strike, bool Superscript, bool Subscript, bool Link, int Heading, bool InCode, ListKind? List, bool Table, string? Color, string? Size, TextAlign Align, bool CanUndo, bool CanRedo) : EditorEvent;
 
 /// <summary>Ctrl+K, ou la réponse à une demande : le lien à préremplir.</summary>
 internal sealed record AskLinkEvent(string Label, string Address) : EditorEvent;

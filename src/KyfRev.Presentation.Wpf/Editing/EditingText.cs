@@ -191,6 +191,48 @@ public static class EditingText
     /// <summary>Liste à puces.</summary>
     public const string Bullets = "Liste à puces";
 
+    /// <summary>Liste de tâches.</summary>
+    public const string Tasks = "Liste de tâches";
+
+    /// <summary>Taille de la police.</summary>
+    public const string FontSize = "Taille de la police";
+
+    /// <summary>Agrandir le texte.</summary>
+    public const string FontGrow = "Agrandir le texte";
+
+    /// <summary>Réduire le texte.</summary>
+    public const string FontShrink = "Réduire le texte";
+
+    /// <summary>Couleur du texte.</summary>
+    public const string TextColor = "Couleur du texte";
+
+    /// <summary>La couleur du thème.</summary>
+    public const string ColorAutomatic = "Automatique";
+
+    /// <summary>Une couleur écrite.</summary>
+    public const string ColorOther = "Autre couleur (#rrggbb)";
+
+    /// <summary>Appliquer la couleur écrite.</summary>
+    public const string ColorApply = "Appliquer";
+
+    /// <summary>La couleur écrite ne se lit pas.</summary>
+    public const string ColorInvalid = "Écrivez six chiffres hexadécimaux, de 0 à 9 et de a à f.";
+
+    /// <summary>Aligner à gauche.</summary>
+    public const string AlignLeft = "Aligner à gauche (Ctrl+L)";
+
+    /// <summary>Centrer.</summary>
+    public const string AlignCenter = "Centrer";
+
+    /// <summary>Aligner à droite.</summary>
+    public const string AlignRight = "Aligner à droite (Ctrl+R)";
+
+    /// <summary>Justifier.</summary>
+    public const string AlignJustify = "Justifier (Ctrl+J)";
+
+    /// <summary>La taille du texte normal, dans la liste.</summary>
+    public static string FontSizeNormal(int pixels) => string.Create(CultureInfo.InvariantCulture, $"{pixels} (normale)");
+
     /// <summary>Liste numérotée.</summary>
     public const string Numbers = "Liste numérotée";
 

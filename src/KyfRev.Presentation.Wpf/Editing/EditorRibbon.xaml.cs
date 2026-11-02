@@ -16,6 +16,11 @@ internal sealed partial class EditorRibbon : UserControl
             var chosen = level;
             Item(StyleMenu, EditingText.Heading(level), page => page.SetHeadingCommand.Execute(chosen));
         }
+        foreach (var pixels in FontSizes.Steps)
+        {
+            var label = pixels == FontSizes.Normal ? EditingText.FontSizeNormal(pixels) : pixels.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            Item(SizeMenu, label, page => page.SetFontSizeCommand.Execute(pixels));
+        }
         foreach (var (style, label) in new (CaseStyle Style, string Label)[]
         {
             (CaseStyle.Sentence, EditingText.CaseSentence),
@@ -34,6 +39,9 @@ internal sealed partial class EditorRibbon : UserControl
         }
         _chooser.Chosen += OnTableChosen;
         _tablePopup = new Popup { Child = _chooser, StaysOpen = false, Placement = PlacementMode.Bottom, PlacementTarget = TableButton, AllowsTransparency = false };
+        _colorPopup = new Popup { Child = _colors, StaysOpen = false, Placement = PlacementMode.Bottom, PlacementTarget = ColorButton, AllowsTransparency = false };
+        _colors.Chosen += OnColorChosen;
+        _colors.Cancelled += OnColorCancelled;
     }
 
     /// <summary>Le choix de la taille d'un tableau.</summary>
@@ -42,11 +50,19 @@ internal sealed partial class EditorRibbon : UserControl
     /// <summary>La liste qui porte ce choix.</summary>
     internal Popup TablePopup => _tablePopup;
 
+    /// <summary>Le choix de la couleur du texte.</summary>
+    internal ColorChooser Colors => _colors;
+
+    /// <summary>La liste qui porte ce choix.</summary>
+    internal Popup ColorPopup => _colorPopup;
+
     /// <summary>Demande les images à insérer ; fourni par la page.</summary>
     internal Action? ChooseImages { get; set; }
 
     private readonly TableChooser _chooser = new();
     private readonly Popup _tablePopup;
+    private readonly ColorChooser _colors = new();
+    private readonly Popup _colorPopup;
 
     private void Item(ContextMenu menu, string header, Action<SheetEditorViewModel> action)
     {
@@ -82,6 +98,24 @@ internal sealed partial class EditorRibbon : UserControl
         if (DataContext is SheetEditorViewModel page)
         {
             page.InsertTableCommand.Execute(new TableSize(rows, columns));
+        }
+    }
+
+    private void OnColorButton(object sender, RoutedEventArgs e)
+    {
+        _colors.Prepare();
+        _colorPopup.IsOpen = true;
+        _colors.AutomaticButton.Focus();
+    }
+
+    private void OnColorCancelled() => _colorPopup.IsOpen = false;
+
+    private void OnColorChosen(string? color)
+    {
+        _colorPopup.IsOpen = false;
+        if (DataContext is SheetEditorViewModel page)
+        {
+            page.SetColorCommand.Execute(color);
         }
     }
 

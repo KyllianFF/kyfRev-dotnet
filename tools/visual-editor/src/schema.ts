@@ -22,6 +22,7 @@ const alignement = {
 type NomNoeud =
   | "doc"
   | "paragraph"
+  | "alignement"
   | "heading"
   | "blockquote"
   | "horizontal_rule"
@@ -41,7 +42,7 @@ type NomNoeud =
   | "math_inline"
   | "note";
 
-type NomMarque = "link" | "strong" | "em" | "underline" | "strike" | "sup" | "sub" | "code";
+type NomMarque = "link" | "couleur" | "taille" | "strong" | "em" | "underline" | "strike" | "sup" | "sub" | "code";
 
 /** Liste « serrée » (sans ligne vide entre ses points) : présentée sans espace entre eux, comme en lecture. */
 const serree = (noeud: Node): Record<string, string> => (noeud.attrs.tight ? { class: "serree" } : {});
@@ -71,6 +72,24 @@ const noeuds: Record<NomNoeud, NodeSpec> = {
     defining: true,
     parseDOM: [{ tag: "blockquote" }],
     toDOM: () => ["blockquote", 0],
+  },
+
+  /** Un passage aligné : `<div align="…">`, en Markdown. */
+  alignement: {
+    attrs: { align: { default: "center" } },
+    content: "block+",
+    group: "block",
+    parseDOM: [
+      {
+        tag: "div[data-align]",
+        getAttrs: (dom) => ({ align: dom.getAttribute("data-align") ?? "center" }),
+      },
+    ],
+    toDOM: (noeud) => [
+      "div",
+      { class: "aligne", "data-align": noeud.attrs.align, style: `text-align:${noeud.attrs.align}` },
+      0,
+    ],
   },
 
   horizontal_rule: {
@@ -150,11 +169,24 @@ const noeuds: Record<NomNoeud, NodeSpec> = {
     ],
   },
 
+  /** `tache` : `null` pour un point ordinaire, sinon une case, cochée ou non. */
   list_item: {
+    attrs: { tache: { default: null } },
     content: "paragraph block*",
     defining: true,
-    parseDOM: [{ tag: "li" }],
-    toDOM: () => ["li", 0],
+    parseDOM: [
+      {
+        tag: "li",
+        getAttrs: (dom) => ({
+          tache: dom.hasAttribute("data-tache") ? dom.getAttribute("data-tache") === "fait" : null,
+        }),
+      },
+    ],
+    toDOM: (noeud) => [
+      "li",
+      noeud.attrs.tache === null ? {} : { "data-tache": noeud.attrs.tache ? "fait" : "a-faire" },
+      0,
+    ],
   },
 
   ...(tableNodes({
@@ -228,6 +260,32 @@ const marques: Record<NomMarque, MarkSpec> = {
       },
     ],
     toDOM: (marque) => ["a", { href: marque.attrs.href, title: marque.attrs.title ?? marque.attrs.href }, 0],
+  },
+
+  // Couleur et taille : seulement les nôtres. Celles d'un texte collé d'ailleurs (une page
+  // web fixe la couleur de tout) n'entrent pas dans la fiche.
+  couleur: {
+    attrs: { valeur: {} },
+    parseDOM: [
+      { tag: "span[data-couleur]", getAttrs: (dom) => ({ valeur: dom.getAttribute("data-couleur") }) },
+    ],
+    toDOM: (marque) => [
+      "span",
+      { class: "couleur", "data-couleur": marque.attrs.valeur, style: `--couleur:${marque.attrs.valeur}` },
+      0,
+    ],
+  },
+
+  taille: {
+    attrs: { valeur: {} },
+    parseDOM: [
+      { tag: "span[data-taille]", getAttrs: (dom) => ({ valeur: dom.getAttribute("data-taille") }) },
+    ],
+    toDOM: (marque) => [
+      "span",
+      { "data-taille": marque.attrs.valeur, style: `font-size:${marque.attrs.valeur}` },
+      0,
+    ],
   },
 
   strong: {

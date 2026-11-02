@@ -11,6 +11,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using KyfRev.Application;
 using KyfRev.Application.Ports;
+using KyfRev.DesignSystem;
 using KyfRev.DesignSystem.Tokens;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
@@ -243,6 +244,15 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
     public void ToggleList(ListKind kind) => Post(new ListRequest(kind));
 
     /// <inheritdoc/>
+    public void SetColor(string? color) => Post(new ColorRequest(color));
+
+    /// <inheritdoc/>
+    public void SetFontSize(string? size) => Post(new SizeRequest(size));
+
+    /// <inheritdoc/>
+    public void SetAlign(TextAlign align) => Post(new AlignRequest(align));
+
+    /// <inheritdoc/>
     public void ChangeCase(CaseStyle? style) => Post(new CaseRequest(style));
 
     /// <inheritdoc/>
@@ -337,7 +347,7 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
                 SaveAsked?.Invoke(this, EventArgs.Empty);
                 break;
             case ToolsEvent tools:
-                ToolsChanged?.Invoke(this, new EditorTools(tools.Bold, tools.Italic, tools.Underline, tools.Strike, tools.Superscript, tools.Subscript, tools.Heading, tools.List, tools.CanUndo, tools.CanRedo));
+                ToolsChanged?.Invoke(this, new EditorTools(tools.Bold, tools.Italic, tools.Underline, tools.Strike, tools.Superscript, tools.Subscript, tools.Heading, tools.List, tools.CanUndo, tools.CanRedo, tools.Color, tools.Size, tools.Align));
                 break;
             case AskLinkEvent link:
                 LinkAsked?.Invoke(this, new LinkQuestion(link.Label, link.Address));
@@ -639,9 +649,13 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
         }
         if (TryFindResource("Kyf.Brush.Background") is SolidColorBrush { Color: var ground })
         {
-            variables["--schema"] = (0.2126 * ground.R) + (0.7152 * ground.G) + (0.0722 * ground.B) < 128 ? "dark" : "light";
+            var dark = (0.2126 * ground.R) + (0.7152 * ground.G) + (0.0722 * ground.B) < 128;
+            variables["--schema"] = dark ? "dark" : "light";
+            variables["--clarte-min"] = string.Create(CultureInfo.InvariantCulture, $"{(dark ? TokenColor.ReadableLightnessOnDark : 0)}");
+            variables["--clarte-max"] = string.Create(CultureInfo.InvariantCulture, $"{(dark ? 1 : TokenColor.ReadableLightnessOnLight)}");
             _view.DefaultBackgroundColor = new TokenColor(ground.A, ground.R, ground.G, ground.B).ToDrawingColor();
         }
+        variables["--couleur-forcee"] = TryFindResource(DesignKeys.IsHighContrast) is true ? "currentColor" : string.Empty;
         Send(new ThemeRequest(variables));
     }
 }

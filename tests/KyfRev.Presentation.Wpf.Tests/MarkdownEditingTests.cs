@@ -7,6 +7,96 @@ namespace KyfRev.Presentation.Wpf.Tests;
 [TestClass]
 public sealed class MarkdownEditingTests
 {
+    [TestMethod]
+    [DataRow("un «mot» ici", "color", "#ff0000", "un <span style=\"color:#ff0000\">«mot»</span> ici")]
+    [DataRow("un « mot » ici", "color", "#ff0000", "un  <span style=\"color:#ff0000\">«mot»</span>  ici")]
+    [DataRow("<span style=\"color:#ff0000\">«mot»</span>", "color", "#0000ff", "<span style=\"color:#0000ff\">«mot»</span>")]
+    [DataRow("<span style=\"color:#ff0000\">«mot»</span>", "color", null, "«mot»")]
+    [DataRow("«mot»", "font-size", "1.25em", "<span style=\"font-size:1.25em\">«mot»</span>")]
+    [DataRow("<span style=\"font-size:1.25em\">«mot»</span>", "font-size", "2em", "<span style=\"font-size:2em\">«mot»</span>")]
+    [DataRow("<span style=\"font-size:1.25em\">«mot»</span>", "color", "#ff0000", "<span style=\"font-size:1.25em\"><span style=\"color:#ff0000\">«mot»</span></span>")]
+    [DataRow("|", "color", "#ff0000", "<span style=\"color:#ff0000\">|</span>")]
+    public void A_color_or_a_size_wraps_the_selection_or_changes_what_wraps_it(string model, string property, string? value, string expected) =>
+        Assert.AreEqual(expected, Apply(model, (text, start, end) => MarkdownEdits.Style(text, start, end, property, value)!.Value));
+
+    [TestMethod]
+    [DataRow("«mot»", "color")]
+    [DataRow("<span style=\"font-size:2em\">«mot»</span>", "color")]
+    [DataRow("<b>«mot»</span>", "color")]
+    public void Removing_a_style_that_is_not_there_changes_nothing(string model, string property)
+    {
+        var (text, start, end) = Parse(model);
+
+        Assert.IsNull(MarkdownEdits.Style(text, start, end, property, null));
+    }
+
+    [TestMethod]
+    [DataRow("<span style=\"color:#ff0000\">«mot»</span>", "color", "#ff0000")]
+    [DataRow("<span style=\"font-size:1.25em\">«mot»</span>", "font-size", "1.25em")]
+    [DataRow("<span style=\"color:#ff0000\">«mot»</span>", "font-size", null)]
+    [DataRow("«mot»", "color", null)]
+    [DataRow("|", "color", null)]
+    public void The_style_around_the_selection_is_read(string model, string property, string? expected)
+    {
+        var (text, start, end) = Parse(model);
+
+        Assert.AreEqual(expected, MarkdownEdits.StyleAround(text, start, end, property));
+    }
+
+    [TestMethod]
+    [DataRow("un|", TextAlign.Center, "<div align=\"center\">\n\nun|\n\n</div>")]
+    [DataRow("avant\n\nun|\n\naprès", TextAlign.Right, "avant\n\n<div align=\"right\">\n\nun|\n\n</div>\n\naprès")]
+    [DataRow("avant\nun|\naprès", TextAlign.Justify, "avant\n\n<div align=\"justify\">\n\nun|\n\n</div>\n\naprès")]
+    [DataRow("«un\ndeux»", TextAlign.Center, "<div align=\"center\">\n\n«un\ndeux»\n\n</div>")]
+    [DataRow("<div align=\"center\">\n\nun|\n\n</div>", TextAlign.Right, "<div align=\"right\">\n\nun|\n\n</div>")]
+    [DataRow("<div align=\"justify\">\n\nun|\n\n</div>", TextAlign.Center, "<div align=\"center\">\n\nun|\n\n</div>")]
+    [DataRow("<div align=\"center\">\n\nun|\n\n</div>", TextAlign.Left, "un|")]
+    [DataRow("a\n\n<div align=\"center\">\n\nun|\n\n</div>\n\nb", TextAlign.Left, "a\n\nun|\n\nb")]
+    [DataRow("<div align=\"center\">\n\n<div align=\"right\">\n\nun|\n\n</div>\n\n</div>", TextAlign.Left, "<div align=\"center\">\n\nun|\n\n</div>")]
+    public void Lines_are_aligned_and_a_passage_changes_or_goes_away(string model, TextAlign align, string expected) =>
+        Assert.AreEqual(expected, Apply(model, (text, start, end) => MarkdownEdits.Align(text, start, end, align)!.Value));
+
+    [TestMethod]
+    public void Aligning_to_the_left_outside_a_passage_changes_nothing()
+    {
+        Assert.IsNull(MarkdownEdits.Align("un", 1, 1, TextAlign.Left));
+        Assert.IsNull(MarkdownEdits.Align("<div align=\"center\">\n\nun\n\n</div>\n\ndeux", 33, 33, TextAlign.Left));
+    }
+
+    [TestMethod]
+    public void A_closing_line_in_a_code_block_closes_nothing()
+    {
+        const string text = "<div align=\"center\">\n\n```\n</div>\n```\n\nun\n\n</div>";
+
+        Assert.AreEqual(TextAlign.Center, MarkdownEdits.AlignAt(text, text.IndexOf("un", StringComparison.Ordinal)));
+    }
+
+    [TestMethod]
+    [DataRow("un", 1, TextAlign.Left)]
+    [DataRow("<div align=\"center\">\n\nun\n\n</div>", 25, TextAlign.Center)]
+    [DataRow("<div align=\"right\">\n\nun\n\n</div>", 24, TextAlign.Right)]
+    [DataRow("<div align=\"justify\">\n\nun\n\n</div>", 26, TextAlign.Justify)]
+    [DataRow("<div align=\"center\">\n\nun\n\n</div>\n\ndeux", 37, TextAlign.Left)]
+    [DataRow("<div align=\"center\">\n\nun sans fin", 25, TextAlign.Left)]
+    public void The_alignment_at_a_position_is_read(string text, int position, TextAlign expected) =>
+        Assert.AreEqual(expected, MarkdownEdits.AlignAt(text, position));
+
+    [TestMethod]
+    public void Font_sizes_are_written_relative_to_the_normal_text()
+    {
+        Assert.IsNull(FontSizes.Style(FontSizes.Normal));
+        foreach (var pixels in FontSizes.Steps)
+        {
+            Assert.AreEqual(pixels, FontSizes.Pixels(FontSizes.Style(pixels)), "La taille se relit à l'identique.");
+        }
+        Assert.AreEqual("1.18em", FontSizes.Style(20));
+        Assert.AreEqual(20, FontSizes.Step(null, 1));
+        Assert.AreEqual(14, FontSizes.Step(null, -1));
+        Assert.AreEqual(40, FontSizes.Step("2.35em", 1), "Au bout de la liste, on y reste.");
+        Assert.AreEqual(10, FontSizes.Step("0.59em", -1));
+        Assert.AreEqual(24, FontSizes.Step("1.25em", 1), "Une taille hors de la liste va à la suivante.");
+    }
+
     /// <summary>Applique un remplacement au texte où « | » marque le curseur et « [ ] » la sélection ; rend le résultat marqué de même.</summary>
     private static string Apply(string model, Func<string, int, int, TextChange> edit)
     {
@@ -83,6 +173,12 @@ public sealed class MarkdownEditingTests
     [DataRow("«- un\n- deux»", ListKind.Numbers, "«1. un\n2. deux»")]
     [DataRow("«1. un\n2. deux»", ListKind.Bullets, "«- un\n- deux»")]
     [DataRow("  |retrait", ListKind.Bullets, "  - |retrait")]
+    [DataRow("«un\ndeux»", ListKind.Tasks, "«- [ ] un\n- [ ] deux»")]
+    [DataRow("«- [ ] un\n- [x] deux»", ListKind.Tasks, "«- un\n- deux»")]
+    [DataRow("«- un»", ListKind.Tasks, "«- [ ] un»")]
+    [DataRow("«- [ ] un»", ListKind.Bullets, "«- un»")]
+    [DataRow("«- [x] un»", ListKind.Numbers, "«1. un»")]
+    [DataRow("«1. un»", ListKind.Tasks, "«- [ ] un»")]
     public void Lines_go_in_and_out_of_a_list(string model, ListKind kind, string expected) =>
         Assert.AreEqual(expected, Apply(model, (text, start, end) => MarkdownEdits.List(text, start, end, kind)));
 

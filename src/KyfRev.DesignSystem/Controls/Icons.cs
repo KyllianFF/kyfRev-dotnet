@@ -6,6 +6,27 @@ namespace KyfRev.DesignSystem.Controls;
 /// </summary>
 public static class Icons
 {
+    /// <summary>Case vide : une tâche à faire.</summary>
+    public static string TaskOpen { get; } = Glyph(0xE739);
+
+    /// <summary>Case cochée : une tâche faite.</summary>
+    public static string TaskDone { get; } = Glyph(0xE73A);
+
+    /// <summary>Cases et lignes : une liste de tâches.</summary>
+    public static string TaskList { get; } = Glyph(0xE9D5);
+
+    /// <summary>Lignes à gauche.</summary>
+    public static string AlignLeft { get; } = Glyph(0xE8E4);
+
+    /// <summary>Lignes au centre.</summary>
+    public static string AlignCenter { get; } = Glyph(0xE8E3);
+
+    /// <summary>Lignes à droite.</summary>
+    public static string AlignRight { get; } = Glyph(0xE8E2);
+
+    /// <summary>Lignes de toute la largeur.</summary>
+    public static string AlignJustify { get; } = Glyph(0xE700);
+
     /// <summary>Document : une fiche.</summary>
     public static string Document { get; } = Glyph(0xE8A5);
 

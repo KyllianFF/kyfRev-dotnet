@@ -9,6 +9,12 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- Mise en forme étendue : couleur et taille du texte, alignement (gauche, centre, droite, justifié) et listes de
+  tâches, à la manière d'un traitement de texte. Ctrl+L, Ctrl+R et Ctrl+J alignent. Une tâche se coche à sa place, et
+  « [ ] » suivi d'une espace en crée une. Une couleur choisie reste lisible dans tous les thèmes : sa teinte reste, sa
+  clarté s'adapte, et le contraste élevé la remplace par celle du système. Les fiches restent en Markdown : couleur et
+  taille s'écrivent `<span style="…">`, l'alignement `<div align="…">`, les tâches `- [ ]`. Seules ces formes exactes
+  sont reconnues, tout autre HTML reste du texte. kyfRev 0.8.0 les affiche comme du texte, sans rien perdre.
 - Écriture d'une fiche : le bouton « Écrire » ou Ctrl+E ouvre le texte mis en forme, qui se modifie
   directement à sa place, comme dans un traitement de texte. Le bouton « Afficher le Markdown » ouvre le code
   à gauche et son rendu à droite. Ce que l'on ne touche pas reste identique à l'octet dans le fichier. Un ruban

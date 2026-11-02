@@ -595,6 +595,57 @@ figure.bloc-extension {
   margin: 0;
 }
 
+/* Une tâche : sa case à la place de la puce. */
+.contenu-fiche ul:has(> li.tache),
+.contenu-fiche ol:has(> li.tache) {
+  padding-inline-start: 1.5em;
+}
+
+.editeur-visuel li.tache {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5em;
+  margin-inline-start: -1.5em;
+  list-style: none;
+}
+
+.editeur-visuel li.tache > input {
+  flex: none;
+  width: 1em;
+  height: 1em;
+  margin: 0;
+  accent-color: var(--principale);
+  cursor: pointer;
+}
+
+.editeur-visuel .tache-texte {
+  flex: 1;
+  min-width: 0;
+}
+
+.editeur-visuel li.faite > .tache-texte > p:first-child {
+  color: var(--texte-secondaire);
+  text-decoration: line-through;
+}
+
+.editeur-visuel .serree > li > .tache-texte > p,
+.editeur-visuel .serree > li > .tache-texte > ul,
+.editeur-visuel .serree > li > .tache-texte > ol {
+  margin: 0;
+}
+
+/*
+ * Une couleur choisie reste lisible dans tous les thèmes : sa teinte reste, sa clarté
+ * s'adapte (--clarte-min et --clarte-max viennent de l'hôte). En contraste élevé,
+ * --couleur-forcee laisse celle du thème.
+ */
+.contenu-fiche .couleur {
+  color: var(
+    --couleur-forcee,
+    oklch(from var(--couleur) clamp(var(--clarte-min, 0), l, var(--clarte-max, 0.45)) c h)
+  );
+}
+
 /* Tableaux : largeur naturelle, cellules assez larges pour y cliquer. */
 .editeur-visuel table {
   display: table;

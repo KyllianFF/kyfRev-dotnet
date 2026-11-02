@@ -16,6 +16,9 @@ namespace KyfRev.Presentation.Wpf.Editing;
 /// </summary>
 internal sealed class MarkdownEditor : TextEditor, IEditorSurface
 {
+    private const string ColorProperty = "color";
+    private const string SizeProperty = "font-size";
+
     /// <summary>La couleur du curseur.</summary>
     public static readonly DependencyProperty CaretBrushProperty = DependencyProperty.Register(
         nameof(CaretBrush), typeof(Brush), typeof(MarkdownEditor), new PropertyMetadata(null, (sender, e) => ((MarkdownEditor)sender).TextArea.Caret.CaretBrush = (Brush?)e.NewValue));
@@ -237,6 +240,15 @@ internal sealed class MarkdownEditor : TextEditor, IEditorSurface
     public void ToggleList(ListKind kind) => Edit((text, start, end) => MarkdownEdits.List(text, start, end, kind));
 
     /// <inheritdoc/>
+    public void SetColor(string? color) => EditIfAny((text, start, end) => MarkdownEdits.Style(text, start, end, ColorProperty, color));
+
+    /// <inheritdoc/>
+    public void SetFontSize(string? size) => EditIfAny((text, start, end) => MarkdownEdits.Style(text, start, end, SizeProperty, size));
+
+    /// <inheritdoc/>
+    public void SetAlign(TextAlign align) => EditIfAny((text, start, end) => MarkdownEdits.Align(text, start, end, align));
+
+    /// <inheritdoc/>
     public void ChangeCase(CaseStyle? style)
     {
         var (start, end) = Range;
@@ -397,10 +409,27 @@ internal sealed class MarkdownEditor : TextEditor, IEditorSurface
         TextArea.Focus();
     }
 
+    private void EditIfAny(Func<string, int, int, TextChange?> edit)
+    {
+        var (start, end) = Range;
+        if (edit(((IEditorSurface)this).Text, start, end) is { } change)
+        {
+            Apply(change);
+        }
+        TextArea.Focus();
+    }
+
     /// <summary>Le ruban suit le curseur, et la liste des fiches s'ouvre sur une saisie « [[… » hors du code.</summary>
     private void FollowCaret()
     {
-        ToolsChanged?.Invoke(this, new EditorTools(false, false, false, false, false, false, MarkdownEdits.HeadingLevel(CaretLine, 0), null, CanUndo, CanRedo));
+        var text = Document.Text;
+        var (selectionStart, selectionEnd) = Range;
+        ToolsChanged?.Invoke(this, new EditorTools(false, false, false, false, false, false, MarkdownEdits.HeadingLevel(CaretLine, 0), null, CanUndo, CanRedo)
+        {
+            Color = MarkdownEdits.StyleAround(text, selectionStart, selectionEnd, ColorProperty),
+            Size = MarkdownEdits.StyleAround(text, selectionStart, selectionEnd, SizeProperty),
+            Align = MarkdownEdits.AlignAt(text, selectionStart),
+        });
         var before = CaretLine[..CaretColumn];
         var input = SelectionLength == 0 ? SheetLinks.InputBefore(before) : null;
         if (input is not null && (MarkdownLines.IsInInlineCode(before) || IsInFence(TextArea.Caret.Offset)))

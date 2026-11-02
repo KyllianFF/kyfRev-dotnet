@@ -6,7 +6,7 @@ export type VersEditeur =
   | { kind: "sync"; id: number }
   | { kind: "mark"; mark: "bold" | "italic" | "underline" | "strike" | "superscript" | "subscript" | "formula" }
   | { kind: "heading"; level: number }
-  | { kind: "list"; list: "bullets" | "numbers" }
+  | { kind: "list"; list: "bullets" | "numbers" | "tasks" }
   | { kind: "case"; style: "sentence" | "lower" | "upper" | "words" | "invert" | "alternate" | null }
   | { kind: "table"; rows: number; columns: number }
   | { kind: "tableAction"; action: string }
@@ -18,6 +18,9 @@ export type VersEditeur =
   | { kind: "link"; label: string; address: string }
   | { kind: "unlink" }
   | { kind: "clearFormat" }
+  | { kind: "color"; color: string | null }
+  | { kind: "size"; size: string | null }
+  | { kind: "align"; align: "left" | "center" | "right" | "justify" }
   | { kind: "image"; link: string; alternative: string; position: number | null }
   | { kind: "sheetLink"; label: string; address: string }
   | { kind: "replaceWord"; start: number; end: number; text: string }
@@ -33,7 +36,7 @@ export type DepuisEditeur =
   | { kind: "edited" }
   | { kind: "text"; id: number | null; markdown: string }
   | { kind: "save" }
-  | { kind: "tools"; bold: boolean; italic: boolean; underline: boolean; strike: boolean; superscript: boolean; subscript: boolean; link: boolean; heading: number; inCode: boolean; list: "bullets" | "numbers" | null; table: boolean; canUndo: boolean; canRedo: boolean }
+  | { kind: "tools"; bold: boolean; italic: boolean; underline: boolean; strike: boolean; superscript: boolean; subscript: boolean; link: boolean; heading: number; inCode: boolean; list: "bullets" | "numbers" | "tasks" | null; table: boolean; color: string | null; size: string | null; align: "left" | "center" | "right" | "justify"; canUndo: boolean; canRedo: boolean }
   | { kind: "askLink"; label: string; address: string }
   | { kind: "askFormula"; position: number | null; tex: string; block: boolean }
   | { kind: "linkInput"; query: string | null; start: number; x: number; y: number }

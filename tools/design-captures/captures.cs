@@ -345,6 +345,71 @@ static void ReviewCaptures(string folder)
         sheetPage.StopWritingCommand.Execute(null);
         Pump(() => sheetPage.Editor is null);
 
+        // Le format étendu : couleur, taille, alignement et tâches, en lecture et à l'écriture ; et le choix de la couleur.
+        var formatted = app.Sheets.Create("Histoire", "Mise en forme", null).Value;
+        app.Editing.Save(formatted, """
+            # Mise en forme
+
+            Un texte avec du <span style="color:#d32f2f">rouge</span>, du <span style="color:#00897b">vert</span>, du <span style="color:#1565c0">bleu</span>, de l'<span style="color:#b7791f">or</span> et du <span style="color:#7b1fa2">violet</span>.
+
+            Du <span style="font-size:0.71em">petit</span>, du normal, du <span style="font-size:1.41em">grand</span> et du <span style="font-size:2.35em">très grand</span>.
+
+            <div align="center">
+
+            Un paragraphe au centre, avec **du gras**.
+
+            </div>
+
+            <div align="right">
+
+            Un paragraphe à droite.
+
+            </div>
+
+            <div align="justify">
+
+            Un paragraphe justifié : ses lignes vont d'un bord à l'autre du texte, sauf la dernière. Il faut assez de mots pour que cela se voie, et ceux-ci devraient suffire à remplir plusieurs lignes dans la colonne de lecture.
+
+            </div>
+
+            ## Tâches
+
+            - [x] Relire le chapitre
+            - [ ] Faire les exercices
+            - [ ] Préparer les questions
+            """, app.Sheets.Open(formatted).Value.Fingerprint, 1);
+        var formatPage = new SheetPageViewModel(app.Sheets, app.Annotations, Bar, formatted, () => { }, _ => { }, new NoLinks(), Editor);
+        formatPage.LoadCommand.Execute(null);
+        Pump(() => !formatPage.IsLoading);
+        void Format(string file, ThemePreference theme) =>
+            Shell(folder, file, theme, shell => shell.Navigate(new NavigationItem("fiche", "Fiche", Icons.Document, int.MaxValue, formatPage)), null, 1600, 1000, () => formatPage.Editor is null || formatPage.Editor.Preview is not null);
+        Format("format-lecture-clair.png", ThemePreference.Light);
+        Format("format-lecture-sombre.png", ThemePreference.Dark);
+        formatPage.StartWritingCommand.Execute(null);
+        Pump(() => formatPage.Editor is not null);
+        Format("format-ecriture-clair.png", ThemePreference.Light);
+        Format("format-ecriture-sombre.png", ThemePreference.Dark);
+        formatPage.StopWritingCommand.Execute(null);
+        Pump(() => formatPage.Editor is null);
+        foreach (var (name, kind) in new[] { ("clair", ThemeKind.Light), ("sombre", ThemeKind.Dark) })
+        {
+            var chooser = (FrameworkElement)Activator.CreateInstance(typeof(SheetEditorViewModel).Assembly.GetType("KyfRev.Presentation.Wpf.Editing.ColorChooser")!)!;
+            var host = new Window { Content = chooser, SizeToContent = SizeToContent.WidthAndHeight, Left = -20000, Top = -20000, ShowActivated = false, ShowInTaskbar = false, WindowStyle = WindowStyle.None };
+            host.Resources.MergedDictionaries.Add(new DesignResources(kind, reducedMotion: true).Dictionary);
+            host.Show();
+            chooser.GetType().GetMethod("Prepare")!.Invoke(chooser, null);
+            host.Dispatcher.Invoke(System.Windows.Threading.DispatcherPriority.ApplicationIdle, () => { });
+            var picture = new RenderTargetBitmap((int)chooser.ActualWidth, (int)chooser.ActualHeight, 96, 96, PixelFormats.Pbgra32);
+            picture.Render(chooser);
+            var encoder = new PngBitmapEncoder();
+            encoder.Frames.Add(BitmapFrame.Create(picture));
+            using (var stream = File.Create(Path.Combine(folder, $"format-couleurs-{name}.png")))
+            {
+                encoder.Save(stream);
+            }
+            host.Close();
+        }
+
         var passagePage = new PassagePageViewModel(app.Sheets, Bar, passage, sheet, activeRecall: true, () => { }, _ => { });
         passagePage.LoadCommand.Execute(null);
         Pump(() => !passagePage.IsLoading);

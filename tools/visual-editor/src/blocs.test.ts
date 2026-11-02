@@ -1,6 +1,14 @@
 import { EditorState, TextSelection } from "prosemirror-state";
 import { describe, expect, it } from "vitest";
-import { insertionDeBloc, insertionDeLigne } from "./blocs";
+import {
+  type Alignement,
+  alignementCourant,
+  alignerSelection,
+  basculerTaches,
+  insertionDeBloc,
+  insertionDeLigne,
+  sansTaches,
+} from "./blocs";
 import { depuisMarkdown, versMarkdown } from "./markdown";
 import { schema } from "./schema";
 
@@ -73,5 +81,104 @@ describe("autres blocs de la barre d'outils", () => {
     expect(apres.doc.child(1).type).toBe(n.code_block);
     expect(apres.selection.$from.parent.type).toBe(n.code_block);
     expect(apres.doc.lastChild?.type).toBe(n.paragraph);
+  });
+});
+
+describe("aligner", () => {
+  /** Sélection de la position `de` à la position `a`, puis alignement ; rend le Markdown. */
+  const aligner = (texte: string, valeur: Alignement, de: number, a = de) => {
+    const origine = depuisMarkdown(texte);
+    const depart = EditorState.create({ doc: origine.doc });
+    const etat = depart.apply(depart.tr.setSelection(TextSelection.create(depart.doc, de, a)));
+    const tr = alignerSelection(etat, valeur);
+    return tr ? { apres: etat.apply(tr), markdown: versMarkdown(tr.doc, origine) } : null;
+  };
+
+  it("enveloppe le paragraphe du curseur, sans toucher aux autres", () => {
+    const resultat = aligner("Un  \n\n\nDeux\n\n\nTrois\n", "center", 7);
+    expect(resultat?.markdown).toBe('Un  \n\n<div align="center">\n\nDeux\n\n</div>\n\nTrois\n');
+    expect(resultat && alignementCourant(resultat.apres)).toBe("center");
+  });
+
+  it("change la valeur d'un passage entier", () => {
+    const texte = '<div align="center">\n\nUn\n\n</div>\n';
+    expect(aligner(texte, "right", 3)?.markdown).toBe('<div align="right">\n\nUn\n\n</div>\n');
+  });
+
+  it("à gauche, sort du passage", () => {
+    expect(aligner('<div align="center">\n\nUn\n\n</div>\n', "left", 3)?.markdown).toBe("Un\n");
+  });
+
+  it("dans un passage de plusieurs blocs, seul le bloc du curseur change", () => {
+    const texte = '<div align="center">\n\nUn\n\nDeux\n\nTrois\n\n</div>\n';
+    expect(aligner(texte, "right", 7)?.markdown).toBe(
+      '<div align="center">\n\nUn\n\n</div>\n\n<div align="right">\n\nDeux\n\n</div>\n\n<div align="center">\n\nTrois\n\n</div>\n',
+    );
+    expect(aligner(texte, "left", 7)?.markdown).toBe(
+      '<div align="center">\n\nUn\n\n</div>\n\nDeux\n\n<div align="center">\n\nTrois\n\n</div>\n',
+    );
+  });
+
+  it("une sélection qui englobe un passage aligné n'en imbrique pas un autre", () => {
+    const texte = 'Avant\n\n<div align="center">\n\nDedans\n\n</div>\n\nAprès\n';
+    const fin = depuisMarkdown(texte).doc.content.size - 1;
+    expect(aligner(texte, "right", 1, fin)?.markdown).toBe(
+      '<div align="right">\n\nAvant\n\nDedans\n\nAprès\n\n</div>\n',
+    );
+    expect(aligner(texte, "left", 1, fin)?.markdown).toBe("Avant\n\nDedans\n\nAprès\n");
+  });
+
+  it("une liste s'aligne entière", () => {
+    expect(aligner("- a\n- b\n", "center", 3)?.markdown).toBe('<div align="center">\n\n- a\n- b\n\n</div>\n');
+  });
+
+  it("dans un tableau, la colonne s'aligne", () => {
+    const texte = "| a | b |\n| --- | --- |\n| c | d |\n";
+    expect(aligner(texte, "center", 3)?.markdown).toBe("| a | b |\n| :---: | --- |\n| c | d |\n");
+    expect(aligner("| a |\n| :---: |\n| c |\n", "left", 3)?.markdown).toBe("| a |\n| --- |\n| c |\n");
+  });
+
+  it("le code ne s'aligne pas", () => {
+    expect(aligner("```\ncode\n```\n", "center", 2)).toBeNull();
+  });
+
+  it("l'alignement sous le curseur est celui du passage ; à gauche par défaut", () => {
+    const etat = EditorState.create({ doc: depuisMarkdown("Un\n").doc });
+    expect(alignementCourant(etat)).toBe("left");
+  });
+
+  it("justifie aussi", () => {
+    expect(aligner("Un\n", "justify", 2)?.markdown).toBe('<div align="justify">\n\nUn\n\n</div>\n');
+  });
+});
+
+describe("tâches", () => {
+  const appliquer = (texte: string, de: number, a = de) => {
+    const origine = depuisMarkdown(texte);
+    const depart = EditorState.create({ doc: origine.doc });
+    const etat = depart.apply(depart.tr.setSelection(TextSelection.create(depart.doc, de, a)));
+    const tr = basculerTaches(etat);
+    return tr ? versMarkdown(tr.doc, origine) : null;
+  };
+
+  it("d'un paragraphe, fait une tâche", () => {
+    expect(appliquer("Texte\n", 2)).toBe("- [ ] Texte\n");
+  });
+
+  it("d'un point de liste, fait une tâche, et ne change que celui-là", () => {
+    expect(appliquer("- a\n- b\n", 3)).toBe("- [ ] a\n- b\n");
+  });
+
+  it("de toute la sélection, fait des tâches ; une case déjà cochée le reste", () => {
+    expect(appliquer("- [x] a\n- b\n", 3, 9)).toBe("- [x] a\n- [ ] b\n");
+  });
+
+  it("d'une tâche, refait un point ordinaire", () => {
+    expect(appliquer("- [x] a\n- [ ] b\n", 3)).toBe("- a\n- [ ] b\n");
+  });
+
+  it("sans tâche, rien à retirer", () => {
+    const etat = EditorState.create({ doc: depuisMarkdown("- a\n").doc });
+    expect(sansTaches(etat.apply(etat.tr.setSelection(TextSelection.create(etat.doc, 3))))).toBeNull();
   });
 });
