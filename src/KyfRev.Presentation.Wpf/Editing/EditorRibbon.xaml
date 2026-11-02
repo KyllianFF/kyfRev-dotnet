@@ -198,6 +198,17 @@
             </StackPanel>
           </HeaderedContentControl>
 
+          <HeaderedContentControl Style="{StaticResource Group}" Header="{x:Static editing:EditingText.IllustrationsGroup}">
+            <StackPanel Orientation="Horizontal">
+              <Button x:Name="SmartArtButton" Style="{DynamicResource Kyf.Button.ToolLarge}" Command="{Binding OpenGalleryCommand}" CommandParameter="{x:Static editing:GalleryKind.SmartArt}" ToolTip="{x:Static editing:EditingText.GallerySmartArtTitle}" AutomationProperties.Name="{x:Static editing:EditingText.SmartArt}">
+                <StackPanel>
+                  <kyf:Icon Text="{x:Static kyf:Icons.SmartArt}" FontSize="20" HorizontalAlignment="Center" />
+                  <TextBlock Text="{x:Static editing:EditingText.SmartArt}" Style="{DynamicResource Kyf.Text.Caption}" Foreground="{DynamicResource Kyf.Brush.Text}" HorizontalAlignment="Center" />
+                </StackPanel>
+              </Button>
+            </StackPanel>
+          </HeaderedContentControl>
+
           <HeaderedContentControl Style="{StaticResource Group}" Header="{x:Static editing:EditingText.LinksGroup}">
             <StackPanel Orientation="Horizontal">
               <Button x:Name="LinkButton" Style="{DynamicResource Kyf.Button.ToolLarge}" Command="{Binding StartLinkCommand}" ToolTip="{x:Static editing:EditingText.Link}" AutomationProperties.Name="{x:Static editing:EditingText.Link}">

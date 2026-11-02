@@ -613,7 +613,7 @@ public sealed class WritingTests
         Assert.AreEqual(before, Written(scene));
         scene.Editor.StartLinkCommand.Execute(null);
         scene.Editor.LinkAddress = "https://b.org";
-        scene.View.LinkDialog.IsOpen = false;
+        scene.SheetPage.LinkDialog.IsOpen = false;
         TestShell.Flush();
         Assert.AreEqual(before, Written(scene));
     }
@@ -712,6 +712,101 @@ public sealed class WritingTests
         Assert.IsTrue(System.Windows.Input.ApplicationCommands.Paste.CanExecute(null, scene.Source.TextArea), "Vérifier le collage n'ouvre pas le presse-papiers, qu'un autre programme peut tenir.");
         scene.SheetPage.DismissButton.Command.Execute(null);
         Assert.IsFalse(scene.Editor.HasProblem);
+    }
+
+    [STATestMethod]
+    public void The_gallery_shows_its_models_by_category_and_follows_the_text()
+    {
+        var gallery = DiagramGalleryViewModel.For(GalleryKind.SmartArt);
+
+        Assert.AreEqual(EditingText.GallerySmartArtTitle, gallery.Title);
+        Assert.AreEqual(EditingText.GalleryAll, gallery.Categories[0]);
+        Assert.HasCount(17, gallery.Items);
+        Assert.IsTrue(gallery.Items.All(item => item.Thumbnail.Shapes.Length > 0));
+        Assert.AreEqual(gallery.Items[0], gallery.SelectedItem);
+        Assert.AreEqual(gallery.Items[0].Sample, gallery.Text);
+
+        gallery.SelectedCategory = "Cycle";
+        Assert.AreEqual("cycle radial", string.Join(' ', gallery.Items.Select(item => item.Id)));
+        Assert.AreEqual("cycle", gallery.SelectedItem!.Id, "Le modèle choisi n'est plus montré : le premier le remplace.");
+        Assert.AreEqual(gallery.SelectedItem.Sample, gallery.Text);
+
+        var previews = new List<string?>();
+        gallery.PropertyChanged += (_, e) => previews.Add(e.PropertyName);
+        gallery.Text = "Une\nDeux";
+        Assert.Contains(nameof(DiagramGalleryViewModel.Preview), previews);
+        Assert.AreEqual("Cycle : Une, Deux", gallery.Preview!.Description);
+        Assert.AreEqual(("smartart cycle", "Une\nDeux"), gallery.Source());
+
+        gallery.SelectedCategory = EditingText.GalleryAll;
+        Assert.AreEqual("cycle", gallery.SelectedItem!.Id, "Toujours montré : il reste choisi.");
+        Assert.AreEqual("Une\nDeux", gallery.Text);
+    }
+
+    [STATestMethod]
+    public void The_gallery_has_nothing_to_write_without_text()
+    {
+        var gallery = DiagramGalleryViewModel.For(GalleryKind.SmartArt);
+
+        gallery.Text = " \n ";
+
+        Assert.IsNull(gallery.Source());
+        gallery.SelectedItem = null;
+        Assert.IsNull(gallery.Source());
+        Assert.IsNull(gallery.Preview);
+    }
+
+    [STATestMethod]
+    [DataRow("smartart cycle", "a\nb", "cycle")]
+    [DataRow("smartart  matrice", "a", "matrice")]
+    public void The_gallery_opens_on_a_smartart_of_the_sheet(string info, string code, string layout)
+    {
+        var gallery = DiagramGalleryViewModel.ForExisting(info, code, 12)!;
+
+        Assert.AreEqual(layout, gallery.SelectedItem!.Id);
+        Assert.AreEqual(code, gallery.Text);
+        Assert.AreEqual(12, gallery.Position);
+    }
+
+    [STATestMethod]
+    [DataRow("python")]
+    [DataRow("smartart")]
+    [DataRow("smartart inconnu")]
+    [DataRow("mermaid")]
+    public void The_gallery_stays_closed_on_anything_else(string info) =>
+        Assert.IsNull(DiagramGalleryViewModel.ForExisting(info, "x", 0));
+
+    [STATestMethod]
+    public void The_gallery_writes_a_code_block_in_the_markdown()
+    {
+        using var scene = new Scene("Avant\n");
+        scene.Editor.OpenGalleryCommand.Execute(GalleryKind.SmartArt);
+        Assert.IsTrue(scene.Editor.IsGalleryOpen);
+        scene.Editor.Gallery!.Text = "Un\nDeux";
+
+        scene.Editor.AnswerGalleryCommand.Execute(false);
+        Assert.IsFalse(scene.Editor.IsGalleryOpen);
+        Assert.DoesNotContain("smartart", scene.Source.Text);
+
+        scene.Editor.OpenGalleryCommand.Execute(GalleryKind.SmartArt);
+        scene.Editor.Gallery!.Text = "Un\nDeux";
+        scene.Editor.AnswerGalleryCommand.Execute(true);
+        Assert.Contains("```smartart blocs\nUn\nDeux\n```", scene.Source.Text);
+    }
+
+    [STATestMethod]
+    public void The_gallery_is_a_list_of_drawings_with_their_names()
+    {
+        using var scene = new Scene("Avant\n");
+        scene.Editor.OpenGalleryCommand.Execute(GalleryKind.SmartArt);
+        TestShell.Flush();
+
+        var view = scene.SheetPage.GalleryContent;
+        Assert.AreEqual(scene.Editor.Gallery, view.DataContext);
+        Assert.IsTrue(scene.SheetPage.GalleryDialog.IsOpen);
+        Assert.HasCount(17, view.ItemList.Items);
+        Assert.AreEqual(scene.Editor.Gallery!.Categories.Count, view.CategoryList.Items.Count);
+        Assert.AreEqual(scene.Editor.Gallery.Preview!.Description, view.PreviewView.Scene!.Description);
     }
 
     [STATestMethod]

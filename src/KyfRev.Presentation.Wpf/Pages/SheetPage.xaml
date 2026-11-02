@@ -221,5 +221,30 @@
                 PrimaryButtonText="{x:Static pages:ReadingText.DeleteLabel}" Closed="OnDeleteClosed">
       <TextBlock Text="{x:Static pages:ReadingText.DeleteMessage}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" />
     </kyf:Dialog>
+
+    <kyf:Dialog x:Name="GalleryDialog" DataContext="{Binding Editor}" Title="{Binding Gallery.Title}" IsOpen="{Binding IsGalleryOpen, Mode=OneWay}" CardMaxWidth="980"
+                PrimaryButtonText="{x:Static editing:EditingText.GalleryInsert}" Closed="OnGalleryClosed">
+      <editing:DiagramGalleryView x:Name="GalleryContent" DataContext="{Binding Gallery}" />
+    </kyf:Dialog>
+
+    <kyf:Dialog x:Name="LinkDialog" DataContext="{Binding Editor}" Title="{x:Static editing:EditingText.LinkTitle}" IsOpen="{Binding IsLinkOpen, Mode=OneWay}"
+                PrimaryButtonText="{x:Static editing:EditingText.InsertLink}" Closed="OnLinkClosed">
+      <StackPanel>
+        <TextBlock Text="{x:Static editing:EditingText.LinkLabel}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,0,0,4" />
+        <TextBox x:Name="LinkLabelBox" Text="{Binding LinkLabel, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="{x:Static editing:EditingText.LinkLabel}" />
+        <TextBlock Text="{x:Static editing:EditingText.LinkAddress}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,8,0,4" />
+        <TextBox x:Name="LinkAddressBox" Text="{Binding LinkAddress, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="{x:Static editing:EditingText.LinkAddress}" />
+      </StackPanel>
+    </kyf:Dialog>
+
+    <kyf:Dialog x:Name="FormulaDialog" DataContext="{Binding Editor}" Title="{x:Static editing:EditingText.FormulaTitle}" IsOpen="{Binding IsFormulaOpen, Mode=OneWay}"
+                PrimaryButtonText="{x:Static editing:EditingText.InsertLink}" Closed="OnFormulaClosed">
+      <StackPanel>
+        <TextBlock Text="{x:Static editing:EditingText.FormulaSource}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,0,0,4" />
+        <TextBox x:Name="FormulaBox" Text="{Binding FormulaTex, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap" MinLines="2" VerticalContentAlignment="Top"
+                 FontFamily="{DynamicResource Kyf.Font.Code}" AutomationProperties.Name="{x:Static editing:EditingText.FormulaSource}" />
+        <CheckBox x:Name="FormulaBlockBox" Content="{x:Static editing:EditingText.FormulaBlock}" IsChecked="{Binding FormulaBlock}" Margin="0,8,0,0" />
+      </StackPanel>
+    </kyf:Dialog>
   </Grid>
 </UserControl>

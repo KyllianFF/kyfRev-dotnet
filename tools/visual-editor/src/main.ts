@@ -44,6 +44,23 @@ let minuterie: ReturnType<typeof setTimeout> | undefined;
 let dernierEtat = "";
 let derniereSaisie: string | null = null;
 
+/** Les dessins demandés à l'hôte : le même bloc n'est demandé qu'une fois à la fois. */
+const dessins = new Map<string, { promesse: Promise<string | null>; repondre: (svg: string | null) => void }>();
+const cleDessin = (langage: string, code: string) => `${langage}\n${code}`;
+
+function demanderDessin(langage: string, code: string): Promise<string | null> {
+  const cle = cleDessin(langage, code);
+  const deja = dessins.get(cle);
+  if (deja) return deja.promesse;
+  let repondre: (svg: string | null) => void = () => {};
+  const promesse = new Promise<string | null>((fin) => {
+    repondre = fin;
+  });
+  dessins.set(cle, { promesse, repondre });
+  envoyer({ kind: "askDiagram", language: langage, code });
+  return promesse;
+}
+
 function envoyerTexte(id: number | null): void {
   clearTimeout(minuterie);
   envoyer({ kind: "text", id, markdown: editeur.texte() });
@@ -104,6 +121,8 @@ const editeur: EditeurVisuel = new EditeurVisuel(parent, {
     const etat = editeur.etatOutils();
     envoyer({ kind: "menu", ...editeur.contexteDuMenu(), inCode: etat.inCode, inTable: etat.table, onLink: etat.link });
   },
+  dessin: demanderDessin,
+  ondessin: (language, code, position) => envoyer({ kind: "editDiagram", language, code, position }),
 });
 
 function demanderLien(): void {
@@ -115,6 +134,15 @@ function traiter(message: VersEditeur): void {
   switch (message.kind) {
     case "load":
       editeur.remplacer(message.text, message.folder);
+      break;
+    case "diagram": {
+      const cle = cleDessin(message.language, message.code);
+      dessins.get(cle)?.repondre(message.svg);
+      dessins.delete(cle);
+      break;
+    }
+    case "insertDiagram":
+      editeur.insererDessin(message.language, message.code, message.position);
       break;
     case "theme":
       for (const [nom, valeur] of Object.entries(message.variables)) {

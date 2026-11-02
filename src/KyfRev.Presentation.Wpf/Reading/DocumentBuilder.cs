@@ -10,6 +10,7 @@ using KyfRev.DesignSystem.Controls;
 using KyfRev.DesignSystem.Tokens;
 using KyfRev.Presentation.Wpf.Pages;
 using KyfRev.Rendering;
+using KyfRev.Rendering.Diagrams;
 using WpfMath.Controls;
 using WpfMath.Parsers;
 using XamlMath.Exceptions;
@@ -65,6 +66,8 @@ internal sealed class DocumentBuilder
     private const int TaskMarkLength = 4;
 
     private const double TaskBoxSize = 15;
+
+    private const double DiagramWidth = 640;
 
     private static readonly double ReadingSize = Typography.BodyLarge.Size;
 
@@ -507,6 +510,12 @@ internal sealed class DocumentBuilder
         var code = element.Children.OfType<RenderElement>().First();
         var value = code.Children.OfType<RenderText>().FirstOrDefault();
         var text = value?.Value.TrimEnd('\n') ?? string.Empty;
+        if (code.Language == SmartArt.Language && SmartArt.Draw(code.CodeArguments, text) is { } scene)
+        {
+            var view = new DiagramView { Scene = scene, MaxWidth = DiagramWidth };
+            blocks.Add(new BlockUIContainer(view) { Margin = new Thickness(0, 4, 0, 16) });
+            return;
+        }
         if (code.Language is "mermaid" or "reseau")
         {
             var note = new Paragraph(new Run(ReadingText.DiagramAsText)) { Margin = new Thickness(0, 0, 0, 4), FontSize = Typography.Caption.Size };

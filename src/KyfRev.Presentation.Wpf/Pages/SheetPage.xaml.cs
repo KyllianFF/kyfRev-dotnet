@@ -208,6 +208,15 @@ internal sealed partial class SheetPage : UserControl
         }
     }
 
+    private void OnLinkClosed(object sender, DialogClosedEventArgs e) =>
+        (DataContext as SheetPageViewModel)?.Editor?.AnswerLinkCommand.Execute(e.Choice == DialogChoice.Primary);
+
+    private void OnGalleryClosed(object sender, DialogClosedEventArgs e) =>
+        (DataContext as SheetPageViewModel)?.Editor?.AnswerGalleryCommand.Execute(e.Choice == DialogChoice.Primary);
+
+    private void OnFormulaClosed(object sender, DialogClosedEventArgs e) =>
+        (DataContext as SheetPageViewModel)?.Editor?.AnswerFormulaCommand.Execute(e.Choice == DialogChoice.Primary);
+
     private void OnDeleteClosed(object sender, DialogClosedEventArgs e)
     {
         if (DataContext is SheetPageViewModel page)

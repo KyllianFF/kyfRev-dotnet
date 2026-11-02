@@ -62,6 +62,15 @@ internal sealed partial class TreeBuilder
         return text[..end];
     }
 
+    /// <summary>Ce qui suit la langue d'un bloc de code.</summary>
+    private static string? FenceArguments(string info)
+    {
+        var text = JsText.Trim(LinkScanner.UnescapeAll(info));
+        var language = FenceLanguage(info);
+        var rest = language is null ? string.Empty : JsText.Trim(text[language.Length..]);
+        return rest.Length > 0 ? rest : null;
+    }
+
     private void WriteTokens(List<Token> tokens)
     {
         for (var i = 0; i < tokens.Count; i++)
@@ -99,10 +108,10 @@ internal sealed partial class TreeBuilder
                 Close("code");
                 break;
             case TokenKind.CodeBlock:
-                WriteCodeBlock(token.Content, null);
+                WriteCodeBlock(token.Content, null, null);
                 break;
             case TokenKind.Fence:
-                WriteCodeBlock(token.Content, FenceLanguage(token.Info));
+                WriteCodeBlock(token.Content, FenceLanguage(token.Info), FenceArguments(token.Info));
                 break;
             case TokenKind.MathInline:
                 Leaf("span").Formula = JsText.Trim(token.Content);
@@ -219,10 +228,12 @@ internal sealed partial class TreeBuilder
         return match.Success ? match.Groups[1].Value != " " : null;
     }
 
-    private void WriteCodeBlock(string content, string? language)
+    private void WriteCodeBlock(string content, string? language, string? arguments)
     {
         Open("pre");
-        Open("code").Language = language;
+        var code = Open("code");
+        code.Language = language;
+        code.CodeArguments = arguments;
         WriteText(content);
         Close("code");
         Close("pre");

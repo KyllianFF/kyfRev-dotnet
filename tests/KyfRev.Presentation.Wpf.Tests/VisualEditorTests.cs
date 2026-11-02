@@ -667,6 +667,71 @@ public sealed class VisualEditorTests
     }
 
     [EngineTest]
+    public void A_smartart_shows_its_drawing_and_its_code_only_when_asked()
+    {
+        using var scene = new Scene("Avant\n\n```smartart cycle\nG1\nS\n```\n\nAprès\n");
+        UiThread.Until(() => scene.Script("document.querySelectorAll('.apercu-dessin svg text').length") == "2");
+
+        Assert.AreEqual("\"none\"", scene.Script("getComputedStyle(document.querySelector('.bloc-dessin pre')).display"));
+        scene.Script("[...document.querySelectorAll('.action-dessin')].find((b) => b.textContent === 'Voir le code').click()");
+        UiThread.Until(() => scene.Script("getComputedStyle(document.querySelector('.bloc-dessin pre')).display") != "\"none\"");
+
+        scene.Script("document.execCommand('insertText', false, 'G2\\n')");
+        UiThread.Until(() => scene.Script("document.querySelectorAll('.apercu-dessin svg text').length") == "3");
+    }
+
+    [EngineTest]
+    public void The_gallery_inserts_a_smartart_and_opens_again_on_it()
+    {
+        using var scene = new Scene("Avant\n");
+        UiThread.Until(() => scene.Shown.Contains("Avant", StringComparison.Ordinal));
+        scene.Editor.OpenGalleryCommand.Execute(GalleryKind.SmartArt);
+        UiThread.Until(() => scene.Visual!.IsCovered);
+        Assert.IsTrue(scene.SheetPage.GalleryDialog.IsOpen);
+        var gallery = scene.Editor.Gallery!;
+        gallery.SelectedItem = gallery.Items.Single(item => item.Id == "pyramide");
+        gallery.Text = "Sommet\nBase";
+
+        scene.Editor.AnswerGalleryCommand.Execute(true);
+
+        UiThread.Until(() => scene.OnDisk.Contains("```smartart pyramide\nSommet\nBase\n```", StringComparison.Ordinal));
+        UiThread.Until(() => !scene.Visual!.IsCovered);
+        Assert.IsFalse(scene.Editor.IsGalleryOpen);
+        UiThread.Until(() => scene.Script("document.querySelectorAll('.apercu-dessin svg text').length") == "2");
+
+        scene.Script("[...document.querySelectorAll('.action-dessin')].find((b) => b.textContent === 'Modifier…').click()");
+        UiThread.Until(() => scene.Editor.IsGalleryOpen);
+        Assert.AreEqual("pyramide", scene.Editor.Gallery!.SelectedItem!.Id);
+        Assert.AreEqual("Sommet\nBase", scene.Editor.Gallery.Text);
+        scene.Editor.Gallery.Text = "Sommet\nMilieu\nBase";
+        scene.Editor.AnswerGalleryCommand.Execute(true);
+
+        UiThread.Until(() => scene.OnDisk.Contains("```smartart pyramide\nSommet\nMilieu\nBase\n```", StringComparison.Ordinal));
+        Assert.AreEqual(1, System.Text.RegularExpressions.Regex.Count(scene.OnDisk, "smartart"), "Il est remplacé, pas ajouté.");
+    }
+
+    [EngineTest]
+    public void A_trapped_smartart_shows_its_text_and_runs_nothing()
+    {
+        using var scene = new Scene("```smartart processus\n<img src=x onerror=\"window.piege=1\">\n<script>window.piege=2</script>\n```\n");
+        UiThread.Until(() => scene.Script("document.querySelectorAll('.apercu-dessin svg text').length") == "2");
+        Pump(TimeSpan.FromMilliseconds(300));
+
+        Assert.AreEqual("0", scene.Script("document.querySelectorAll('.apercu-dessin img, .apercu-dessin script').length"));
+        Assert.AreEqual("\"undefined\"", scene.Script("typeof window.piege"));
+    }
+
+    [EngineTest]
+    public void A_code_block_in_another_language_does_not_draw()
+    {
+        using var scene = new Scene("```python\nprint(1)\n```\n\n```smartart inconnu\nx\n```\n");
+        UiThread.Until(() => scene.Shown.Contains("print", StringComparison.Ordinal));
+        Pump(TimeSpan.FromMilliseconds(400));
+
+        Assert.AreEqual("0", scene.Script("document.querySelectorAll('.apercu-dessin svg').length"));
+    }
+
+    [EngineTest]
     public void A_theme_change_after_the_engine_closed_goes_nowhere()
     {
         using var scene = new Scene();

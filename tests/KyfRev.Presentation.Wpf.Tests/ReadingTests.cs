@@ -819,6 +819,77 @@ public sealed class ReadingTests
         Assert.AreEqual(start, builder.Layer.PositionOf(run.ContentStart, isStart: true));
     }
 
+    [STATestMethod]
+    public void A_smartart_is_drawn_instead_of_its_code()
+    {
+        var built = Build("Avant\n\n```smartart cycle\nG1\nS\n```\n\nAprès", showsHeader: false).Document;
+
+        var view = (DiagramView)built.Blocks.OfType<BlockUIContainer>().Single().Child;
+        Assert.AreEqual("Cycle : G1, S", view.Scene!.Description);
+        Assert.AreEqual("Cycle : G1, S", System.Windows.Automation.AutomationProperties.GetName(view));
+        Assert.IsFalse(LogicalDescendants(built).OfType<Run>().Any(run => run.Text.Contains("G1", StringComparison.Ordinal)));
+    }
+
+    [STATestMethod]
+    public void A_smartart_with_an_unknown_model_stays_a_code_block()
+    {
+        var built = Build("```smartart inconnu\nG1\n```", showsHeader: false).Document;
+
+        Assert.IsTrue(LogicalDescendants(built).OfType<Run>().Any(run => run.Text == "G1"));
+        Assert.IsEmpty(built.Blocks.OfType<BlockUIContainer>().ToList());
+    }
+
+    [STATestMethod]
+    public void A_drawn_smartart_leaves_the_text_after_it_at_its_place()
+    {
+        var reading = SheetReading.Of(Sheet("```smartart cycle\nG1\n```\n\nAprès"), _ => Outcome.Refused<byte[]>("non"));
+        var builder = new DocumentBuilder(reading, _ => { }, opensLinks: true, showsHeader: false);
+        var document = builder.Build();
+
+        var start = reading.Map.Text.IndexOf("Après", StringComparison.Ordinal);
+        var run = LogicalDescendants(document).OfType<Run>().Single(candidate => candidate.Text == "Après");
+        Assert.AreSame(run, builder.Layer.ElementAt(start));
+    }
+
+    [STATestMethod]
+    public void A_drawing_takes_its_size_from_the_width_it_is_given()
+    {
+        var view = new DiagramView { Scene = KyfRev.Rendering.Diagrams.SmartArt.Draw("cycle", "a\nb") };
+
+        view.Measure(new System.Windows.Size(240, double.PositiveInfinity));
+        Assert.AreEqual(new System.Windows.Size(240, 150), view.DesiredSize);
+        view.Measure(new System.Windows.Size(double.PositiveInfinity, double.PositiveInfinity));
+        Assert.AreEqual(new System.Windows.Size(480, 300), view.DesiredSize);
+        view.Scene = null;
+        view.Measure(new System.Windows.Size(240, 240));
+        Assert.AreEqual(default, view.DesiredSize);
+    }
+
+    [STATestMethod]
+    [DataRow(ThemeKind.Light)]
+    [DataRow(ThemeKind.Dark)]
+    [DataRow(ThemeKind.HighContrast)]
+    public void Every_model_draws_in_every_theme_as_a_drawing_and_as_a_thumbnail(ThemeKind theme)
+    {
+        var test = new TestShell();
+        test.Design.Theme = theme;
+        foreach (var layout in KyfRev.Rendering.Diagrams.SmartArt.Layouts)
+        {
+            foreach (var thumbnail in new[] { false, true })
+            {
+                var view = new DiagramView { Scene = KyfRev.Rendering.Diagrams.SmartArt.Draw(layout.Id, layout.Sample), IsThumbnail = thumbnail };
+                view.Resources.MergedDictionaries.Add(test.Design.Dictionary);
+                view.Measure(new System.Windows.Size(240, 150));
+                view.Arrange(new Rect(0, 0, 240, 150));
+                var bitmap = new RenderTargetBitmap(240, 150, 96, 96, PixelFormats.Pbgra32);
+                bitmap.Render(view);
+                var pixels = new byte[240 * 150 * 4];
+                bitmap.CopyPixels(pixels, 240 * 4, 0);
+                Assert.IsTrue(pixels.Any(value => value != 0), layout.Id);
+            }
+        }
+    }
+
     private static (FlowDocument Document, Task Images) Build(string body, bool showsHeader = true, bool opensLinks = true, List<object?>? follow = null, Func<string, Outcome<byte[]>>? read = null)
     {
         var builder = new DocumentBuilder(

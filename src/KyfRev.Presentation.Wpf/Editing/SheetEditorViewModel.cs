@@ -77,6 +77,12 @@ public sealed record LinkQuestion(string Label, string Address);
 /// <param name="Position">Celle qu'elle remplace.</param>
 public sealed record FormulaQuestion(string Tex, bool Block, int? Position);
 
+/// <summary>Un dessin de la fiche à modifier.</summary>
+/// <param name="Info">Ce qui suit les accents graves de son bloc.</param>
+/// <param name="Code">Le contenu de son bloc.</param>
+/// <param name="Position">Où il se trouve.</param>
+public sealed record DiagramQuestion(string Info, string Code, int Position);
+
 /// <summary>
 /// Ce que l'éditeur attend d'une façon d'écrire : le texte mis en forme ou le code Markdown. L'enregistrement et
 /// les conflits ne dépendent que de cette interface.
@@ -97,6 +103,9 @@ internal interface IEditorSurface
 
     /// <summary>La saisie d'une formule est demandée.</summary>
     event EventHandler<FormulaQuestion>? FormulaAsked;
+
+    /// <summary>La modification d'un dessin est demandée.</summary>
+    event EventHandler<DiagramQuestion>? DiagramAsked;
 
     /// <summary>Enregistrer tout de suite.</summary>
     event EventHandler? SaveAsked;
@@ -124,6 +133,9 @@ internal interface IEditorSurface
 
     /// <summary>Met en liste, ou en sort.</summary>
     void ToggleList(ListKind kind);
+
+    /// <summary>Insère un dessin, ou remplace celui de cette position.</summary>
+    void InsertDiagram(string info, string code, int? position);
 
     /// <summary>Pose une couleur, écrite <c>#rrggbb</c> ; rien : celle du thème.</summary>
     void SetColor(string? color);
@@ -413,6 +425,14 @@ public sealed partial class SheetEditorViewModel : ObservableObject
         }
     }
 
+    /// <summary>La galerie ouverte ; rien si elle est fermée.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsGalleryOpen))]
+    public partial DiagramGalleryViewModel? Gallery { get; private set; }
+
+    /// <summary>La galerie est ouverte.</summary>
+    public bool IsGalleryOpen => Gallery is not null;
+
     /// <summary>La saisie d'un lien est ouverte.</summary>
     [ObservableProperty]
     public partial bool IsLinkOpen { get; private set; }
@@ -653,6 +673,7 @@ public sealed partial class SheetEditorViewModel : ObservableObject
             surface.LinkInputChanged += OnLinkInput;
             surface.LinkAsked += OnLinkAsked;
             surface.FormulaAsked += OnFormulaAsked;
+            surface.DiagramAsked += OnDiagramAsked;
             surface.SaveAsked += OnSaveAsked;
             surface.ListKeyPressed += OnListKey;
         }
@@ -663,6 +684,7 @@ public sealed partial class SheetEditorViewModel : ObservableObject
             surface.LinkInputChanged -= OnLinkInput;
             surface.LinkAsked -= OnLinkAsked;
             surface.FormulaAsked -= OnFormulaAsked;
+            surface.DiagramAsked -= OnDiagramAsked;
             surface.SaveAsked -= OnSaveAsked;
             surface.ListKeyPressed -= OnListKey;
         }
@@ -839,6 +861,23 @@ public sealed partial class SheetEditorViewModel : ObservableObject
     [RelayCommand]
     private void InsertCode(string language) => _surface?.InsertCode(language);
 
+    /// <summary>Ouvre la galerie.</summary>
+    [RelayCommand]
+    private void OpenGallery(GalleryKind kind) => Gallery = DiagramGalleryViewModel.For(kind);
+
+    /// <summary>Ferme la galerie, et insère ce qui y est choisi, si l'utilisateur le veut.</summary>
+    [RelayCommand]
+    private void AnswerGallery(bool accepted)
+    {
+        var gallery = Gallery;
+        Gallery = null;
+        if (accepted && gallery?.Source() is { } source)
+        {
+            _surface?.InsertDiagram(source.Info, source.Code, gallery.Position);
+        }
+        _surface?.Focus();
+    }
+
     /// <summary>Insère une ligne horizontale.</summary>
     [RelayCommand]
     private void InsertRule() => _surface?.InsertRule();
@@ -927,6 +966,14 @@ public sealed partial class SheetEditorViewModel : ObservableObject
         LinkLabel = question.Label;
         LinkAddress = question.Address;
         IsLinkOpen = true;
+    }
+
+    private void OnDiagramAsked(object? sender, DiagramQuestion question)
+    {
+        if (DiagramGalleryViewModel.ForExisting(question.Info, question.Code, question.Position) is { } gallery)
+        {
+            Gallery = gallery;
+        }
     }
 
     private void OnFormulaAsked(object? sender, FormulaQuestion question)

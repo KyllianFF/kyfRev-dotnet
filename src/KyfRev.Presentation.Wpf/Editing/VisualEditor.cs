@@ -13,6 +13,7 @@ using KyfRev.Application;
 using KyfRev.Application.Ports;
 using KyfRev.DesignSystem;
 using KyfRev.DesignSystem.Tokens;
+using KyfRev.Rendering.Diagrams;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
 
@@ -53,6 +54,10 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
         ("--bordure", "Kyf.Brush.Divider"),
         ("--texte", "Kyf.Brush.Text"),
         ("--texte-secondaire", "Kyf.Brush.TextSecondary"),
+        ("--actif-fond", "Kyf.Brush.NavigationActiveBackground"),
+        ("--actif-texte", "Kyf.Brush.NavigationActiveText"),
+        ("--pastille-fond", "Kyf.Brush.PillPassageBackground"),
+        ("--pastille-texte", "Kyf.Brush.PillPassageText"),
         ("--lien", "Kyf.Brush.Link"),
         ("--principale", "Kyf.Brush.Primary"),
         ("--focus", "Kyf.Brush.Focus"),
@@ -124,6 +129,9 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
 
     /// <inheritdoc/>
     public event EventHandler<FormulaQuestion>? FormulaAsked;
+
+    /// <inheritdoc/>
+    public event EventHandler<DiagramQuestion>? DiagramAsked;
 
     /// <inheritdoc/>
     public event EventHandler? SaveAsked;
@@ -244,6 +252,9 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
     public void ToggleList(ListKind kind) => Post(new ListRequest(kind));
 
     /// <inheritdoc/>
+    public void InsertDiagram(string info, string code, int? position) => Post(new InsertDiagramRequest(info, code, position));
+
+    /// <inheritdoc/>
     public void SetColor(string? color) => Post(new ColorRequest(color));
 
     /// <inheritdoc/>
@@ -348,6 +359,12 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
                 break;
             case ToolsEvent tools:
                 ToolsChanged?.Invoke(this, new EditorTools(tools.Bold, tools.Italic, tools.Underline, tools.Strike, tools.Superscript, tools.Subscript, tools.Heading, tools.List, tools.CanUndo, tools.CanRedo, tools.Color, tools.Size, tools.Align));
+                break;
+            case AskDiagramEvent diagram:
+                Send(new DiagramRequest(diagram.Language, diagram.Code, SvgOf(diagram.Language, diagram.Code)));
+                break;
+            case EditDiagramEvent edit:
+                DiagramAsked?.Invoke(this, new DiagramQuestion(edit.Language, edit.Code, edit.Position));
                 break;
             case AskLinkEvent link:
                 LinkAsked?.Invoke(this, new LinkQuestion(link.Label, link.Address));
@@ -537,6 +554,13 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
         web.DownloadStarting += (_, e) => e.Cancel = true;
         web.PermissionRequested += (_, e) => e.State = e.PermissionKind == CoreWebView2PermissionKind.ClipboardRead ? CoreWebView2PermissionState.Allow : CoreWebView2PermissionState.Deny;
         web.ProcessFailed += (_, e) => Failed?.Invoke(this, e.ProcessFailedKind.ToString());
+    }
+
+    /// <summary>Le dessin d'un bloc, en SVG ; rien : ce n'est qu'un bloc de code.</summary>
+    private static string? SvgOf(string info, string code)
+    {
+        var parts = info.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        return parts is [SmartArt.Language, var layout] && SmartArt.Draw(layout, code) is { } scene ? DiagramSvg.Write(scene) : null;
     }
 
     /// <summary>Seul ce qui vient de l'application et du coffre est servi ; tout le reste est refusé.</summary>

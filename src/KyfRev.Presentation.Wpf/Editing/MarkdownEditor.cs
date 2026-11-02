@@ -98,6 +98,13 @@ internal sealed class MarkdownEditor : TextEditor, IEditorSurface
     public event EventHandler<LinkQuestion>? LinkAsked;
 
     /// <inheritdoc/>
+    event EventHandler<DiagramQuestion>? IEditorSurface.DiagramAsked
+    {
+        add { }
+        remove { }
+    }
+
+    /// <inheritdoc/>
     event EventHandler<FormulaQuestion>? IEditorSurface.FormulaAsked
     {
         add { }
@@ -238,6 +245,10 @@ internal sealed class MarkdownEditor : TextEditor, IEditorSurface
 
     /// <inheritdoc/>
     public void ToggleList(ListKind kind) => Edit((text, start, end) => MarkdownEdits.List(text, start, end, kind));
+
+    /// <inheritdoc/>
+    public void InsertDiagram(string info, string code, int? position) =>
+        Edit((text, start, _) => MarkdownEdits.Block(text, start, $"```{info}\n{code}\n```"));
 
     /// <inheritdoc/>
     public void SetColor(string? color) => EditIfAny((text, start, end) => MarkdownEdits.Style(text, start, end, ColorProperty, color));
