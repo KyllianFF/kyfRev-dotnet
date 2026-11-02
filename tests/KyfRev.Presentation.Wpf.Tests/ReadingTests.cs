@@ -1017,7 +1017,13 @@ internal sealed class ReadingVault : IDisposable
 
     public FakeSpelling Spelling { get; } = new();
 
-    public SheetPageViewModel Page(bool markdown = true, bool revising = false, Func<bool>? activeRecall = null) => new(App.Sheets, App.Annotations, Bar, SheetId, () => Backs++, OpenedSheets.Add, Links, sheet => new SheetEditorViewModel(sheet, App.Editing, App.Sheets, new EditorEnvironment(Spelling, FakeEnvironment.WebData, markdown)), revising, activeRecall);
+    public SheetPageViewModel Page(bool markdown = true, bool revising = false, Func<bool>? activeRecall = null, ISpeech? speech = null) => new(App.Sheets, App.Annotations, Bar, SheetId, () => Backs++, OpenedSheets.Add, Links, sheet => new SheetEditorViewModel(sheet, App.Editing, App.Sheets, new EditorEnvironment(Spelling, FakeEnvironment.WebData, markdown)), revising, activeRecall) { ReadAloud = speech is null ? null : new ReadAloudViewModel(speech) };
+
+    public SheetReading Reading()
+    {
+        var opened = App.Sheets.Open(SheetId).Value;
+        return SheetReading.Of(opened, _ => Outcome.Refused<byte[]>("non"));
+    }
 
     public int Backs { get; private set; }
 

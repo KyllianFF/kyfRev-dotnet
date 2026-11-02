@@ -120,6 +120,24 @@ public static class Icons
     /// <summary>Croix : fermer.</summary>
     public static string Close { get; } = Glyph(0xE711);
 
+    /// <summary>Écouter.</summary>
+    public static string Speaker { get; } = Glyph(0xE767);
+
+    /// <summary>Lire.</summary>
+    public static string Play { get; } = Glyph(0xE768);
+
+    /// <summary>Mettre en pause.</summary>
+    public static string Pause { get; } = Glyph(0xE769);
+
+    /// <summary>Arrêter.</summary>
+    public static string Stop { get; } = Glyph(0xE71A);
+
+    /// <summary>Le bloc précédent.</summary>
+    public static string Previous { get; } = Glyph(0xE76B);
+
+    /// <summary>Le bloc suivant.</summary>
+    public static string Next { get; } = Glyph(0xE76C);
+
     /// <summary>Calendrier : le jour.</summary>
     public static string Calendar { get; } = Glyph(0xE787);
 

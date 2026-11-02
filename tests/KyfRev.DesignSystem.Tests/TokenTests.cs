@@ -31,6 +31,7 @@ public sealed class TokenTests
 
         Assert.IsGreaterThanOrEqualTo(4.5, colors[ColorRole.Text].ContrastWith(colors[ColorRole.CriticalBackground]));
         Assert.IsGreaterThanOrEqualTo(4.5, colors[ColorRole.Text].ContrastWith(colors[ColorRole.SuccessBackground]));
+        Assert.IsGreaterThanOrEqualTo(4.5, colors[ColorRole.Text].ContrastWith(colors[ColorRole.PillSheetBackground]), "le bloc lu à voix haute");
     }
 
     [TestMethod]

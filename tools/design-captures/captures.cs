@@ -23,7 +23,7 @@
 // archives-contraste-eleve.png), les fiches (fiches-clair.png, fiches-sombre.png, fiches-etroit-clair.png,
 // fiches-nouvelle-sombre.png, fiches-contraste-eleve.png), le glossaire (definitions-clair.png, definitions-sombre.png,
 // definitions-large-sombre.png, definitions-etroit-clair.png, definitions-modification-sombre.png, definitions-contraste-eleve.png),
-// les réglages (parametres-clair.png, parametres-sombre.png, parametres-etroit-sombre.png, parametres-refus-sombre.png, parametres-contraste-eleve.png), la lecture d'une fiche (fiche-clair.png,
+// la lecture à voix haute (ecoute-sombre.png, ecoute-clair.png, ecoute-etroite-sombre.png), les réglages (parametres-clair.png, parametres-sombre.png, parametres-etroit-sombre.png, parametres-refus-sombre.png, parametres-contraste-eleve.png), la lecture d'une fiche (fiche-clair.png,
 // lecture-sombre.png, lecture-moyenne-clair.png, lecture-etroite-sombre.png, lecture-volet-clair.png, lecture-contraste-eleve.png), l'écriture (ecriture-clair.png,
 // ecriture-sombre.png, ecriture-insertion-sombre.png, ecriture-moyenne-clair.png, ecriture-etroite-sombre.png, ecriture-contraste-eleve.png,
 // ecriture-markdown-sombre.png, ecriture-markdown-clair.png), et affiche le contraste de
@@ -407,6 +407,27 @@ static void ReviewCaptures(string folder)
         keptPage.Editor!.CloseHistoryCommand.Execute(null);
         keptPage.StopWritingCommand.Execute(null);
         Pump(() => keptPage.Editor is null);
+
+        // Écouter la fiche : le bloc lu ressort, et la barre passe à la ligne sur une fenêtre étroite.
+        foreach (var (file, theme, width, height) in new[]
+        {
+            ("ecoute-sombre.png", ThemePreference.Dark, 1280.0, 800.0),
+            ("ecoute-clair.png", ThemePreference.Light, 1280.0, 800.0),
+            ("ecoute-etroite-sombre.png", ThemePreference.Dark, 390.0, 844.0),
+        })
+        {
+            var listened = new SheetPageViewModel(app.Sheets, app.Annotations, Bar, sheet, () => { }, _ => { }, new NoLinks(), Editor) { ReadAloud = new ReadAloudViewModel(new SilentSpeech()) };
+            listened.LoadCommand.Execute(null);
+            Pump(() => !listened.IsLoading);
+            Shell(folder, file, theme, shell => shell.Navigate(new NavigationItem("fiche", "Fiche", Icons.Document, int.MaxValue, listened)), null, width, height, null, adjust: root =>
+            {
+                Descendants(root).OfType<System.Windows.Controls.Primitives.ToggleButton>().First(toggle => toggle.Name == "ListenToggle")
+                    .RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+                listened.ReadAloud!.PlayPauseCommand.Execute(null);
+                listened.ReadAloud.NextCommand.Execute(null);
+                listened.ReadAloud.NextCommand.Execute(null);
+            });
+        }
 
         void Format(string file, ThemePreference theme) =>
             Shell(folder, file, theme, shell => shell.Navigate(new NavigationItem("fiche", "Fiche", Icons.Document, int.MaxValue, formatPage)), null, 1600, 1000, () => formatPage.Editor is null || formatPage.Editor.Preview is not null);
@@ -1044,6 +1065,23 @@ internal sealed class OneMistake : KyfRev.Application.Ports.ISpelling
     public KyfRev.Application.Ports.SpellingCorrection? Correct(string word) => null;
 
     public bool Add(string word) => false;
+}
+
+/// <summary>Des voix muettes : une capture n'a pas besoin de les entendre.</summary>
+internal sealed class SilentSpeech : KyfRev.Application.Ports.ISpeech
+{
+    public IReadOnlyList<string> FrenchVoices() => ["Microsoft Hortense Desktop"];
+
+    public Task<KyfRev.Application.Outcome<KyfRev.Application.Done>> SpeakAsync(string text, string? voice, double rate, CancellationToken cancellation) =>
+        new TaskCompletionSource<KyfRev.Application.Outcome<KyfRev.Application.Done>>().Task;
+
+    public void PauseSpeaking()
+    {
+    }
+
+    public void ResumeSpeaking()
+    {
+    }
 }
 
 internal sealed class NoLinks : KyfRev.Application.Ports.IExternalLinks

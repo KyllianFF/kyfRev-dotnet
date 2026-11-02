@@ -67,6 +67,7 @@ internal static class Composition
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Editing);
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Settings);
         services.AddSingleton<ISpelling, WindowsSpelling>();
+        services.AddSingleton<ISpeech, WindowsSpeech>();
         services.AddSingleton(provider => new EditorEnvironment(
             provider.GetRequiredService<ISpelling>(),
             Path.Combine(provider.GetRequiredService<VaultLocations>().LocalData, "WebView2")));
