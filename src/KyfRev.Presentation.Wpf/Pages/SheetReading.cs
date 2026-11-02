@@ -39,6 +39,11 @@ public sealed partial class OutlineEntry : ObservableObject
 /// <param name="IsCandidate">Une position approchée, à vérifier.</param>
 public sealed record Highlight(string Id, int Start, int End, bool IsDefinition, bool IsCandidate);
 
+/// <summary>Un passage ou une définition à la corbeille de la fiche.</summary>
+/// <param name="Id">L'annotation.</param>
+/// <param name="Label">Ce qu'en montre le volet.</param>
+public sealed record TrashedPassage(string Id, string Label);
+
 /// <summary>Un passage ou une définition de la fiche, dans son panneau.</summary>
 public sealed partial class PassageEntry : ObservableObject
 {
@@ -122,6 +127,7 @@ public sealed class SheetReading
         var top = headings.Count > 0 ? headings.Min(heading => heading.HeadingLevel) : 0;
         Outline = [.. headings.Select(heading => new OutlineEntry(heading, heading.HeadingLevel - top))];
         Passages = Place(sheet.Annotations);
+        Trashed = InTrash(sheet.Annotations);
     }
 
     /// <summary>L'empreinte de la fiche lue.</summary>
@@ -148,6 +154,9 @@ public sealed class SheetReading
     /// <summary>Ses passages et définitions, hors corbeille, chacun à sa place dans le texte actuel.</summary>
     public IReadOnlyList<PassageEntry> Passages { get; private set; }
 
+    /// <summary>Ce qui est à la corbeille de la fiche.</summary>
+    public IReadOnlyList<TrashedPassage> Trashed { get; private set; }
+
     /// <summary>Ce qui se surligne dans le texte.</summary>
     public IReadOnlyList<Highlight> Highlights => [.. Passages
         .Where(passage => passage.Position is not null)
@@ -165,7 +174,11 @@ public sealed class SheetReading
     internal static SheetReading Of(OpenedSheet sheet, Func<string, Outcome<byte[]>> readImage) => new(sheet, readImage);
 
     /// <summary>Replace les annotations relues, le texte n'ayant pas changé.</summary>
-    public void Update(ImmutableArray<AnnotationView> annotations) => Passages = Place(annotations);
+    public void Update(ImmutableArray<AnnotationView> annotations)
+    {
+        Passages = Place(annotations);
+        Trashed = InTrash(annotations);
+    }
 
     /// <summary>L'ancre d'une position du texte affiché, avec son contexte et ses repères.</summary>
     public Anchor AnchorAt(TextPosition position) =>
@@ -191,6 +204,13 @@ public sealed class SheetReading
 
     /// <summary>Le contenu d'une image du coffre.</summary>
     internal Outcome<byte[]> ReadImage(string path) => _readImage(path);
+
+    private static List<TrashedPassage> InTrash(ImmutableArray<AnnotationView> annotations) =>
+    [
+        .. annotations.Where(annotation => annotation.InTrash).Select(annotation => new TrashedPassage(
+            annotation.Id,
+            annotation.Definition is { } definition ? ReadingText.TrashedDefinition(definition.Term) : ReadingText.TrashedPassage(annotation.Anchor.Exact))),
+    ];
 
     private List<PassageEntry> Place(ImmutableArray<AnnotationView> annotations) =>
     [

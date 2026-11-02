@@ -27,6 +27,10 @@ internal sealed partial class SheetPage : UserControl
         {
             // Quand la place manque, « Écouter » se réduit à son icône : les autres boutons restent lisibles.
             ListenLabel.Visibility = e.NewSize.Width < ListenLabelWidth ? Visibility.Collapsed : Visibility.Visible;
+
+            // Et les boutons du rattachement passent sous leur consigne, plutôt que de l'écraser.
+            DockPanel.SetDock(RebindButtons, e.NewSize.Width < ListenLabelWidth ? Dock.Bottom : Dock.Right);
+            RebindButtons.Margin = e.NewSize.Width < ListenLabelWidth ? new Thickness(0, 8, 0, 0) : default;
             if (DataContext is SheetPageViewModel page)
             {
                 page.PageWidth = e.NewSize.Width;
@@ -272,6 +276,10 @@ internal sealed partial class SheetPage : UserControl
         }
         if (SelectedPosition() is { } position)
         {
+            if (page.IsRebinding)
+            {
+                return [Item(ReadingText.RebindHere, () => page.RebindAtCommand.Execute(position)), Item(ReadingText.RebindCancel, () => page.CancelRebindingCommand.Execute(null))];
+            }
             return
             [
                 new MenuItem { Header = ReadingText.Copy, Command = ApplicationCommands.Copy, CommandTarget = SheetText },
@@ -303,6 +311,7 @@ internal sealed partial class SheetPage : UserControl
             items.Add(Item(ReadingText.ConfirmPosition, () => page.ConfirmPositionCommand.Execute(entry)));
             items.Add(Item(ReadingText.KeepWithoutPosition, () => page.KeepWithoutPositionCommand.Execute(entry)));
         }
+        items.Add(Item(entry.State == KyfRev.Application.Model.AnchorState.Anchored ? ReadingText.RebindOther : ReadingText.RebindLost, () => page.StartRebindingCommand.Execute(entry)));
         items.Add(new Separator());
         items.Add(Item(entry.IsDefinition ? ReadingText.DeleteDefinition : ReadingText.DeletePassage, () => page.RequestDeleteCommand.Execute(entry)));
         return items;
@@ -315,6 +324,37 @@ internal sealed partial class SheetPage : UserControl
             page.AnswerEditorCommand.Execute(e.Choice == DialogChoice.Primary);
         }
     }
+
+    /// <summary>Le passage en attente prend pour place la sélection ; sans sélection, on le rappelle.</summary>
+    private void OnRebindHere(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is SheetPageViewModel page)
+        {
+            RebindAtSelection(page);
+        }
+    }
+
+    private void RebindAtSelection(SheetPageViewModel page)
+    {
+        if (SelectedPosition() is { } position)
+        {
+            page.RebindAtCommand.Execute(position);
+        }
+        else
+        {
+            page.AskForRebindingSelection();
+        }
+    }
+
+    private void OnRebindClosed(object sender, DialogClosedEventArgs e) =>
+        (DataContext as SheetPageViewModel)?.AnswerRebindingCommand.Execute(e.Choice switch
+        {
+            DialogChoice.Primary => false,
+            DialogChoice.Secondary => true,
+            _ => (bool?)null,
+        });
+
+    private void OnRebindConfirmCancel(object sender, RoutedEventArgs e) => RebindConfirm.Close(DialogChoice.None);
 
     private void OnLinkClosed(object sender, DialogClosedEventArgs e) =>
         (DataContext as SheetPageViewModel)?.Editor?.AnswerLinkCommand.Execute(e.Choice == DialogChoice.Primary);

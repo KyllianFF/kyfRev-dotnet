@@ -559,7 +559,7 @@ public sealed class HighlightingTests
 
             var run = Runs(viewer).First(candidate => candidate.Background is not null);
             var onPassage = Headers(sheetPage.TextMenuItems(run));
-            Assert.AreEqual($"{ReadingText.ShowPassage}|{ReadingText.EditComment}|{ReadingText.DeletePassage}|{EditingText.EditSheet}", onPassage);
+            Assert.AreEqual($"{ReadingText.ShowPassage}|{ReadingText.EditComment}|{ReadingText.RebindOther}|{ReadingText.DeletePassage}|{EditingText.EditSheet}", onPassage);
 
             Select(viewer, Position(viewer, "second"));
             Assert.AreEqual($"{ReadingText.Copy}|{ReadingText.Highlight}|{ReadingText.Annotate}|{ReadingText.Define}|{EditingText.EditSheet}", Headers(sheetPage.TextMenuItems(null)));
@@ -600,7 +600,7 @@ public sealed class HighlightingTests
         {
             var candidate = page.Passages.Single();
             var items = sheetPage.PassageMenuItems(page, candidate);
-            Assert.AreEqual($"{ReadingText.ShowPassage}|{ReadingText.EditComment}|{ReadingText.ConfirmPosition}|{ReadingText.KeepWithoutPosition}|{ReadingText.DeletePassage}", Headers(items));
+            Assert.AreEqual($"{ReadingText.ShowPassage}|{ReadingText.EditComment}|{ReadingText.ConfirmPosition}|{ReadingText.KeepWithoutPosition}|{ReadingText.RebindLost}|{ReadingText.DeletePassage}", Headers(items));
 
             items[0].RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
             Assert.AreEqual(candidate.Annotation.Id, page.ActivePassage);
@@ -613,7 +613,7 @@ public sealed class HighlightingTests
             items[3].RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
             UiThread.Until(() => page.Passages.Single().IsLost);
 
-            Assert.AreEqual($"{ReadingText.EditComment}|{ReadingText.DeletePassage}", Headers(sheetPage.PassageMenuItems(page, page.Passages.Single())));
+            Assert.AreEqual($"{ReadingText.EditComment}|{ReadingText.RebindLost}|{ReadingText.DeletePassage}", Headers(sheetPage.PassageMenuItems(page, page.Passages.Single())));
         }
         finally
         {

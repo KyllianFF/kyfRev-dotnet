@@ -9,6 +9,8 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- Changer la place d'un passage depuis son menu, même perdu : on sélectionne le nouveau texte, puis on garde sa progression
+  ou on repart de J0. La corbeille de la fiche est au bas du volet des passages, d'où tout se restaure.
 - Le code d'une fiche est coloré en lecture, selon son langage, avec les couleurs du thème : C#, C et C++, CSS, HTML, Java,
   JavaScript et TypeScript, JSON, PHP, PowerShell, Python, SQL, TeX, Visual Basic, XML et les différences de fichiers.
 - Écouter une fiche : le bouton « Écouter » de la lecture fait lire la fiche par les voix de Windows, hors ligne, bloc par
@@ -338,4 +340,5 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 ### Corrigé
 
 - Dans un champ de saisie, le texte commençait 12 pixels plus loin que le texte indicatif : il sautait à la première frappe.
+- Sur une fenêtre étroite, les boutons d'une fiche passaient les uns sous les autres : ils vont à la ligne.
 - Le libellé long d'une case à cocher était coupé : il passe maintenant à la ligne, en face de sa case.

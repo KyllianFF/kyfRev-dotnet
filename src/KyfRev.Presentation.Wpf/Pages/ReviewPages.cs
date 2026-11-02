@@ -416,7 +416,16 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
     public bool HasOutline => Outline.Count > 0;
 
     /// <summary>La fiche a des passages ou des définitions.</summary>
-    public bool HasPassages => Passages.Count > 0;
+    public bool HasPassages => Passages.Count > 0 || TrashedPassages.Count > 0;
+
+    /// <summary>Ce qui est à la corbeille de la fiche.</summary>
+    public IReadOnlyList<TrashedPassage> TrashedPassages => Reading?.Trashed ?? [];
+
+    /// <summary>La corbeille a quelque chose à rendre.</summary>
+    public bool HasTrashedPassages => TrashedPassages.Count > 0;
+
+    /// <summary>« Corbeille · 2 ».</summary>
+    public string TrashLabel => ReadingText.TrashOf(TrashedPassages.Count);
 
     /// <summary>« Passages · 3 ».</summary>
     public string PassagesLabel => ReadingText.PassagesOf(Passages.Count);
@@ -800,6 +809,76 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
         }
     }
 
+    /// <summary>Remet un passage de la corbeille.</summary>
+    [RelayCommand]
+    private async Task RestorePassageAsync(TrashedPassage passage) =>
+        await RunAsync(() => _annotations.Restore(passage.Id), ReadingText.Restored).ConfigureAwait(true);
+
+    /// <summary>Le passage que l'on rattache : il attend une nouvelle sélection dans le texte.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsRebinding), nameof(RebindingPrompt))]
+    public partial PassageEntry? Rebinding { get; private set; }
+
+    /// <summary>La nouvelle place choisie, en attente de confirmation.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsConfirmingRebinding), nameof(RebindingMessage))]
+    public partial Anchor? RebindingTarget { get; private set; }
+
+    /// <summary>Un passage attend sa nouvelle place.</summary>
+    public bool IsRebinding => Rebinding is not null;
+
+    /// <summary>Ce qu'il faut faire pour le rattacher.</summary>
+    public string RebindingPrompt => Rebinding is { } passage ? ReadingText.RebindPrompt(passage.Title) : string.Empty;
+
+    /// <summary>La nouvelle place attend d'être confirmée.</summary>
+    public bool IsConfirmingRebinding => RebindingTarget is not null;
+
+    /// <summary>La question posée pour la confirmer.</summary>
+    public string RebindingMessage => RebindingTarget is { } target ? ReadingText.RebindMessage(target.Exact) : string.Empty;
+
+    /// <summary>Attend dans le texte la nouvelle place d'un passage.</summary>
+    [RelayCommand]
+    private void StartRebinding(PassageEntry passage)
+    {
+        CloseOverlay();
+        Rebinding = passage;
+    }
+
+    /// <summary>Renonce à changer la place du passage.</summary>
+    [RelayCommand]
+    private void CancelRebinding()
+    {
+        Rebinding = null;
+        RebindingTarget = null;
+    }
+
+    /// <summary>Propose cette position comme nouvelle place du passage.</summary>
+    [RelayCommand]
+    private void RebindAt(TextPosition position)
+    {
+        if (Rebinding is not null && Reading is not null)
+        {
+            RebindingTarget = Reading.AnchorAt(position);
+        }
+    }
+
+    /// <summary>Rappelle qu'il faut d'abord sélectionner la nouvelle place.</summary>
+    internal void AskForRebindingSelection() => Notice = ReadingText.RebindNoSelection;
+
+    /// <summary>Répond à la confirmation : sa progression reste, ou elle repart de J0. Rien : on peut encore choisir.</summary>
+    [RelayCommand]
+    private async Task AnswerRebindingAsync(bool? restart)
+    {
+        var (passage, target) = (Rebinding, RebindingTarget);
+        RebindingTarget = null;
+        if (restart is not { } again || passage is null || target is null)
+        {
+            return;
+        }
+        Rebinding = null;
+        await RunAsync(() => _annotations.ModifyPassage(passage.Annotation.Id, target, again), again ? ReadingText.RebindRestarted : ReadingText.RebindKept).ConfigureAwait(true);
+    }
+
     /// <summary>Accepte la position proposée pour un passage dont le texte a changé.</summary>
     [RelayCommand]
     private async Task ConfirmPositionAsync(PassageEntry passage)
@@ -832,6 +911,7 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
     [RelayCommand]
     private void CloseOverlay()
     {
+        Rebinding = null;
         OutlineOverlaid = false;
         PassagesOverlaid = false;
     }
@@ -947,6 +1027,9 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
         Highlights = Reading!.Highlights;
         Activate(Reading.Passages.Any(passage => passage.Annotation.Id == ActivePassage) ? ActivePassage : null);
         OnPropertyChanged(nameof(Passages));
+        OnPropertyChanged(nameof(TrashedPassages));
+        OnPropertyChanged(nameof(HasTrashedPassages));
+        OnPropertyChanged(nameof(TrashLabel));
         OnPropertyChanged(nameof(HasPassages));
         OnPropertyChanged(nameof(PassagesLabel));
         OnPropertyChanged(nameof(ShowsPassages));
