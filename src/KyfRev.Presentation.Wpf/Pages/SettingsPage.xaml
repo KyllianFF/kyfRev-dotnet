@@ -1,0 +1,80 @@
+<UserControl x:Class="KyfRev.Presentation.Wpf.Pages.SettingsPage"
+             x:ClassModifier="internal"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:kyf="clr-namespace:KyfRev.DesignSystem.Controls;assembly=KyfRev.DesignSystem"
+             xmlns:pages="clr-namespace:KyfRev.Presentation.Wpf.Pages">
+  <UserControl.Resources>
+    <BooleanToVisibilityConverter x:Key="Visible" />
+    <Style x:Key="FieldLabel" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+      <Setter Property="TextWrapping" Value="Wrap" />
+      <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Text}" />
+      <Setter Property="Margin" Value="0,0,0,4" />
+    </Style>
+    <Style x:Key="Hint" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+      <Setter Property="TextWrapping" Value="Wrap" />
+      <Setter Property="FontSize" Value="{DynamicResource Kyf.FontSize.Caption}" />
+      <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.TextSecondary}" />
+      <Setter Property="Margin" Value="0,4,0,0" />
+    </Style>
+  </UserControl.Resources>
+
+  <DockPanel Margin="16">
+    <TextBlock x:Name="Heading" DockPanel.Dock="Top" Text="{x:Static pages:SettingsText.Title}" Style="{DynamicResource Kyf.Text.Title}" AutomationProperties.HeadingLevel="Level1" Margin="0,0,0,12" />
+    <kyf:Notification x:Name="ErrorMessage" DockPanel.Dock="Top" Severity="Critical" Message="{Binding Error}" IsOpen="{Binding HasError, Mode=OneWay}" IsClosable="False" Margin="0,0,0,8" />
+    <kyf:Notification x:Name="SavedMessage" DockPanel.Dock="Top" Severity="Success" Message="{x:Static pages:SettingsText.Saved}" IsOpen="{Binding IsSaved, Mode=OneWay}" IsClosable="False" Margin="0,0,0,8" />
+
+    <!-- L'enregistrement reste à portée, et dit ce qu'il change avant que l'on enregistre. -->
+    <Grid x:Name="SaveBar" DockPanel.Dock="Bottom" Margin="0,12,0,0" Visibility="{Binding IsReady, Converter={StaticResource Visible}}">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*" />
+        <ColumnDefinition Width="Auto" />
+      </Grid.ColumnDefinitions>
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="Auto" />
+      </Grid.RowDefinitions>
+      <TextBlock Text="{x:Static pages:SettingsText.SaveHelp}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" VerticalAlignment="Center" />
+      <Button x:Name="SaveSettings" Grid.Column="1" Content="{x:Static pages:SettingsText.Save}" Command="{Binding SaveCommand}" Style="{DynamicResource Kyf.Button.Primary}" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="12,0,0,0" />
+    </Grid>
+
+    <Grid>
+      <StackPanel x:Name="Loading" Visibility="{Binding IsLoading, Converter={StaticResource Visible}}" AutomationProperties.Name="{x:Static pages:SettingsText.Loading}">
+        <kyf:Skeleton Height="220" />
+      </StackPanel>
+      <ScrollViewer x:Name="Scroller" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False" Visibility="{Binding IsReady, Converter={StaticResource Visible}}">
+        <!-- Deux colonnes quand la place le permet, une seule sinon. -->
+        <UniformGrid x:Name="Sections" Columns="2" VerticalAlignment="Top">
+          <kyf:Card x:Name="CalendarCard" Padding="16" Margin="0,0,8,8">
+            <StackPanel>
+              <TextBlock Text="{x:Static pages:SettingsText.Calendar}" Style="{DynamicResource Kyf.Text.Subtitle}" AutomationProperties.HeadingLevel="Level2" Margin="0,0,0,12" />
+              <TextBlock Text="{x:Static pages:SettingsText.Steps}" Style="{StaticResource FieldLabel}" />
+              <TextBox x:Name="StepsBox" Text="{Binding Steps, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="{x:Static pages:SettingsText.Steps}" AutomationProperties.HelpText="{x:Static pages:SettingsText.StepsHelp}" />
+              <TextBlock Text="{x:Static pages:SettingsText.StepsHelp}" Style="{StaticResource Hint}" />
+              <TextBlock x:Name="StepsPreview" Text="{Binding StepsPreview}" Style="{StaticResource Hint}" Foreground="{DynamicResource Kyf.Brush.Text}" Margin="0,8,0,0" Visibility="{Binding HasStepsPreview, Converter={StaticResource Visible}}" />
+              <CheckBox x:Name="ActiveRecallBox" IsChecked="{Binding ActiveRecall}" Margin="0,16,0,0" AutomationProperties.Name="{x:Static pages:SettingsText.ActiveRecall}" AutomationProperties.HelpText="{x:Static pages:SettingsText.ActiveRecallHelp}">
+                <TextBlock Text="{x:Static pages:SettingsText.ActiveRecall}" TextWrapping="Wrap" />
+              </CheckBox>
+              <TextBlock Text="{x:Static pages:SettingsText.ActiveRecallHelp}" Style="{StaticResource Hint}" />
+            </StackPanel>
+          </kyf:Card>
+          <kyf:Card x:Name="RemindersCard" Padding="16" Margin="0,0,0,8">
+            <StackPanel>
+              <TextBlock Text="{x:Static pages:SettingsText.Reminders}" Style="{DynamicResource Kyf.Text.Subtitle}" AutomationProperties.HeadingLevel="Level2" Margin="0,0,0,12" />
+              <TextBlock Text="{x:Static pages:SettingsText.MaxPerDay}" Style="{StaticResource FieldLabel}" />
+              <TextBox x:Name="MaxPerDayBox" Text="{Binding MaxPerDay, UpdateSourceTrigger=PropertyChanged}" Width="96" HorizontalAlignment="Left" AutomationProperties.Name="{x:Static pages:SettingsText.MaxPerDay}" />
+              <TextBlock Text="{x:Static pages:SettingsText.MaxWaitDays}" Style="{StaticResource FieldLabel}" Margin="0,12,0,4" />
+              <TextBox x:Name="MaxWaitDaysBox" Text="{Binding MaxWaitDays, UpdateSourceTrigger=PropertyChanged}" Width="96" HorizontalAlignment="Left" AutomationProperties.Name="{x:Static pages:SettingsText.MaxWaitDays}" />
+              <TextBlock Text="{x:Static pages:SettingsText.RestMonths}" Style="{StaticResource FieldLabel}" Margin="0,12,0,4" />
+              <TextBox x:Name="RestMonthsBox" Text="{Binding RestMonths, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="{x:Static pages:SettingsText.RestMonths}" AutomationProperties.HelpText="{x:Static pages:SettingsText.RestMonthsHelp}" />
+              <TextBlock Text="{x:Static pages:SettingsText.RestMonthsHelp}" Style="{StaticResource Hint}" />
+              <CheckBox x:Name="ManualArchivingBox" IsChecked="{Binding IncludeManualArchiving}" Margin="0,16,0,0" AutomationProperties.Name="{x:Static pages:SettingsText.IncludeManualArchiving}">
+                <TextBlock Text="{x:Static pages:SettingsText.IncludeManualArchiving}" TextWrapping="Wrap" />
+              </CheckBox>
+            </StackPanel>
+          </kyf:Card>
+        </UniformGrid>
+      </ScrollViewer>
+    </Grid>
+  </DockPanel>
+</UserControl>

@@ -176,13 +176,18 @@
     <Setter Property="Template">
       <Setter.Value>
         <ControlTemplate TargetType="CheckBox">
-          <StackPanel Orientation="Horizontal" Background="Transparent">
+          <!-- Un libellé long passe à la ligne : la case reste en face de sa première ligne. -->
+          <Grid Background="Transparent">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="Auto" />
+              <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
             <Border x:Name="Box" Width="18" Height="18" CornerRadius="4" BorderThickness="1" Background="{DynamicResource Kyf.Brush.Surface}"
-                    BorderBrush="{DynamicResource Kyf.Brush.ControlBorder}" VerticalAlignment="Center">
+                    BorderBrush="{DynamicResource Kyf.Brush.ControlBorder}" VerticalAlignment="Top" Margin="0,3,0,0">
               <kyf:Icon x:Name="Mark" Text="&#xE73E;" FontSize="12" HorizontalAlignment="Center" Foreground="{DynamicResource Kyf.Brush.OnPrimary}" Visibility="Collapsed" />
             </Border>
-            <ContentPresenter VerticalAlignment="Center" Margin="8,0,0,0" />
-          </StackPanel>
+            <ContentPresenter Grid.Column="1" VerticalAlignment="Center" Margin="8,0,0,0" />
+          </Grid>
           <ControlTemplate.Triggers>
             <Trigger Property="IsChecked" Value="True">
               <Setter TargetName="Box" Property="Background" Value="{DynamicResource Kyf.Brush.Primary}" />

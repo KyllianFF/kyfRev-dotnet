@@ -197,6 +197,18 @@ public sealed class ComponentTests
     }
 
     [STATestMethod]
+    public void A_long_check_box_label_wraps_instead_of_being_cut()
+    {
+        var label = new TextBlock { Text = "Un libellé assez long pour ne pas tenir sur une seule ligne de cette largeur", TextWrapping = TextWrapping.Wrap };
+        var box = new CheckBox { Content = label };
+        Host.Of(new DesignResources(ThemeKind.Light, reducedMotion: false), box, width: 200);
+
+        Assert.IsLessThanOrEqualTo(200, box.ActualWidth);
+        Assert.IsLessThan(200, label.ActualWidth, "le libellé garde la place de la case");
+        Assert.IsGreaterThan(label.FontSize * 2, label.ActualHeight, "il passe à la ligne");
+    }
+
+    [STATestMethod]
     public void Typed_text_starts_where_the_placeholder_does()
     {
         var field = new TextBox();

@@ -22,7 +22,8 @@
 // (archives-clair.png, archives-sombre.png, archives-etroit-clair.png, archives-etroit-filtres-sombre.png,
 // archives-contraste-eleve.png), les fiches (fiches-clair.png, fiches-sombre.png, fiches-etroit-clair.png,
 // fiches-nouvelle-sombre.png, fiches-contraste-eleve.png), le glossaire (definitions-clair.png, definitions-sombre.png,
-// definitions-large-sombre.png, definitions-etroit-clair.png, definitions-modification-sombre.png, definitions-contraste-eleve.png), la lecture d'une fiche (fiche-clair.png,
+// definitions-large-sombre.png, definitions-etroit-clair.png, definitions-modification-sombre.png, definitions-contraste-eleve.png),
+// les réglages (parametres-clair.png, parametres-sombre.png, parametres-etroit-sombre.png, parametres-refus-sombre.png, parametres-contraste-eleve.png), la lecture d'une fiche (fiche-clair.png,
 // lecture-sombre.png, lecture-moyenne-clair.png, lecture-etroite-sombre.png, lecture-volet-clair.png, lecture-contraste-eleve.png), l'écriture (ecriture-clair.png,
 // ecriture-sombre.png, ecriture-insertion-sombre.png, ecriture-moyenne-clair.png, ecriture-etroite-sombre.png, ecriture-contraste-eleve.png,
 // ecriture-markdown-sombre.png, ecriture-markdown-clair.png), et affiche le contraste de
@@ -730,6 +731,44 @@ static void ReviewCaptures(string folder)
                 height,
                 highContrast: highContrast);
         }
+        foreach (var (file, theme, width, height, highContrast) in new[]
+        {
+            ("parametres-clair.png", ThemePreference.Light, 1280.0, 800.0, false),
+            ("parametres-sombre.png", ThemePreference.Dark, 1280.0, 800.0, false),
+            ("parametres-etroit-sombre.png", ThemePreference.Dark, 390.0, 844.0, false),
+            ("parametres-contraste-eleve.png", ThemePreference.System, 1280.0, 800.0, true),
+        })
+        {
+            var settingsPage = new SettingsPageViewModel(app.Settings, time);
+            Shell(
+                folder,
+                file,
+                theme,
+                shell => shell.Navigate(shell.SecondaryNavigation.Single(item => item.Id == CorePages.Settings)),
+                new Dictionary<string, object> { [CorePages.Settings] = settingsPage },
+                width,
+                height,
+                () => settingsPage.IsReady,
+                highContrast: highContrast);
+        }
+        var refusedSettings = new SettingsPageViewModel(app.Settings, time);
+        Shell(
+            folder,
+            "parametres-refus-sombre.png",
+            ThemePreference.Dark,
+            shell => shell.Navigate(shell.SecondaryNavigation.Single(item => item.Id == CorePages.Settings)),
+            new Dictionary<string, object> { [CorePages.Settings] = refusedSettings },
+            1280,
+            800,
+            () =>
+            {
+                if (refusedSettings.IsReady && !refusedSettings.HasError && !refusedSettings.SaveCommand.IsRunning)
+                {
+                    refusedSettings.Steps = "3, 1";
+                    refusedSettings.SaveCommand.Execute(null);
+                }
+                return refusedSettings.HasError;
+            });
         var editedGlossary = new DefinitionsPageViewModel(app.Annotations, new ReviewNavigation(app.Sheets, app.Annotations, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), time, new NoLinks(), app.Editing, new EditorEnvironment(new OneMistake(), Path.Combine(Path.GetTempPath(), "kyfrev-captures-webview2"))));
         Shell(
             folder,
