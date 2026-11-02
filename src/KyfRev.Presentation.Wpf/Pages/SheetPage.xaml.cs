@@ -49,6 +49,7 @@ internal sealed partial class SheetPage : UserControl
                 page.PropertyChanged += OnPageChanged;
                 page.ReadAloud?.PropertyChanged += OnReadAloudChanged;
                 UpdateListenToggle(page);
+                ShowWantedPassage(page);
             }
         };
     }
@@ -61,13 +62,9 @@ internal sealed partial class SheetPage : UserControl
             listened.ReadAloud?.CloseCommand.Execute(null);
             UpdateListenToggle(listened);
         }
-        if (e.PropertyName == nameof(SheetPageViewModel.Reading) && sender is SheetPageViewModel { PassageToShow: { } wanted } opened)
+        if (e.PropertyName == nameof(SheetPageViewModel.Reading) && sender is SheetPageViewModel opened)
         {
-            opened.PassageToShow = null;
-            if (opened.Passages.FirstOrDefault(entry => entry.Annotation.Id == wanted) is { } passage)
-            {
-                Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, () => ShowPassage(opened, passage));
-            }
+            ShowWantedPassage(opened);
         }
         if (e.PropertyName is nameof(SheetPageViewModel.IsEditing) or nameof(SheetPageViewModel.IsDeleting)
             or nameof(SheetPageViewModel.ShowsOutlineOverlay) or nameof(SheetPageViewModel.ShowsPassagesOverlay))
@@ -177,6 +174,19 @@ internal sealed partial class SheetPage : UserControl
         }
         button.ContextMenu = menu;
         menu.IsOpen = choices.Count > 0;
+    }
+
+    /// <summary>La fiche s'ouvre sur le passage demandé : elle peut être lue avant ou après que la vue la montre.</summary>
+    private void ShowWantedPassage(SheetPageViewModel page)
+    {
+        if (page is { Reading: not null, PassageToShow: { } wanted })
+        {
+            page.PassageToShow = null;
+            if (page.Passages.FirstOrDefault(entry => entry.Annotation.Id == wanted) is { } passage)
+            {
+                Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, () => ShowPassage(page, passage));
+            }
+        }
     }
 
     private void ShowPassage(SheetPageViewModel page, PassageEntry entry)
