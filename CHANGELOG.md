@@ -9,6 +9,9 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- Vue « Définitions » : le glossaire du coffre, par dossier, avec une recherche qui ignore les accents et la casse, sur le
+  terme comme sur l'explication. Chaque définition dit d'où elle vient et quand elle revient en révision, se modifie sur
+  place, et « Voir dans la fiche » ouvre la fiche sur le passage. Une position à vérifier ou un passage perdu est signalé.
 - Historique d'une fiche : le bouton « Historique » du ruban montre chaque version en face du texte actuel, ce qui diffère
   marqué d'une couleur et d'un signe, et permet de la remettre. Le texte actuel est d'abord gardé : rien n'est jamais
   effacé. Quand une fiche a changé sur le disque, « Comparer » montre les deux versions avant de trancher.
@@ -322,3 +325,7 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   dans la version 0.x.
 
 [Non publié]: https://github.com/KyllianFF/kyfRev-dotnet/commits/main
+
+### Corrigé
+
+- Dans un champ de saisie, le texte commençait 12 pixels plus loin que le texte indicatif : il sautait à la première frappe.

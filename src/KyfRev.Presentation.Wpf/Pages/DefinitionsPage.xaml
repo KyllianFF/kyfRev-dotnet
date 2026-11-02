@@ -1,0 +1,87 @@
+<UserControl x:Class="KyfRev.Presentation.Wpf.Pages.DefinitionsPage"
+             x:ClassModifier="internal"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:kyf="clr-namespace:KyfRev.DesignSystem.Controls;assembly=KyfRev.DesignSystem"
+             xmlns:pages="clr-namespace:KyfRev.Presentation.Wpf.Pages">
+  <UserControl.Resources>
+    <BooleanToVisibilityConverter x:Key="Visible" />
+  </UserControl.Resources>
+
+  <Grid x:Name="Layout" Margin="16">
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition x:Name="FoldersColumn" Width="260" />
+      <ColumnDefinition Width="*" />
+    </Grid.ColumnDefinitions>
+    <Grid.RowDefinitions>
+      <RowDefinition x:Name="FoldersRow" Height="*" />
+      <RowDefinition Height="Auto" />
+    </Grid.RowDefinitions>
+
+    <!-- À gauche : le titre, la recherche et les dossiers. Quand la place manque, ils passent au-dessus. -->
+    <DockPanel x:Name="FoldersPanel" Margin="0,0,16,0">
+      <TextBlock DockPanel.Dock="Top" Text="{x:Static pages:DefinitionsText.Title}" Style="{DynamicResource Kyf.Text.Title}" AutomationProperties.HeadingLevel="Level1" />
+      <TextBox x:Name="SearchBox" DockPanel.Dock="Top" Text="{Binding Search, UpdateSourceTrigger=PropertyChanged}" kyf:Field.Placeholder="{x:Static pages:DefinitionsText.SearchLabel}"
+               AutomationProperties.Name="{x:Static pages:DefinitionsText.SearchLabel}" Margin="0,12,0,8" />
+      <ListBox x:Name="FolderList" ItemsSource="{Binding Folders}" SelectedItem="{Binding SelectedFolder}" DisplayMemberPath="Label" BorderThickness="0" Background="Transparent"
+               ScrollViewer.HorizontalScrollBarVisibility="Disabled" AutomationProperties.Name="{x:Static pages:DefinitionsText.FoldersLabel}" />
+    </DockPanel>
+
+    <DockPanel x:Name="ListPanel" Grid.Column="1">
+      <kyf:Notification x:Name="ErrorMessage" DockPanel.Dock="Top" Severity="Critical" Message="{Binding Error}" IsOpen="{Binding HasError, Mode=OneWay}" IsClosable="False" Margin="0,0,0,8" />
+      <TextBlock x:Name="Summary" DockPanel.Dock="Top" Text="{Binding Summary}" Style="{DynamicResource Kyf.Text.Secondary}" Margin="0,0,0,8" />
+      <Grid>
+        <StackPanel x:Name="Loading" Visibility="{Binding IsLoading, Converter={StaticResource Visible}}" AutomationProperties.Name="{x:Static pages:DefinitionsText.Loading}">
+          <kyf:Skeleton Height="88" Margin="0,0,0,8" />
+          <kyf:Skeleton Height="88" Margin="0,0,0,8" />
+        </StackPanel>
+        <kyf:EmptyState x:Name="Empty" Glyph="{x:Static kyf:Icons.Dictionary}" Title="{x:Static pages:DefinitionsText.EmptyTitle}" Description="{x:Static pages:DefinitionsText.EmptyDescription}"
+                        Visibility="{Binding IsEmpty, Converter={StaticResource Visible}}" />
+        <TextBlock x:Name="NoMatch" Text="{x:Static pages:DefinitionsText.NoMatch}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Visibility="{Binding HasNoMatch, Converter={StaticResource Visible}}" />
+        <ScrollViewer x:Name="Scroller" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
+          <!-- Des cartes, autant de colonnes que la largeur en permet : un écran large ne reste pas vide. -->
+          <ItemsControl x:Name="List" ItemsSource="{Binding Rows}" AutomationProperties.Name="{x:Static pages:DefinitionsText.ListName}" Focusable="False">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <WrapPanel x:Name="Cards" />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate DataType="{x:Type pages:DefinitionRow}">
+                <kyf:Card Margin="0,0,8,8" Padding="12" Width="{Binding CardWidth, RelativeSource={RelativeSource AncestorType=pages:DefinitionsPage}}">
+                  <DockPanel>
+                    <!-- En bas de la carte : d'une carte à l'autre, les boutons d'une rangée s'alignent. -->
+                    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="-6,6,0,0" Visibility="{Binding IsShown, Converter={StaticResource Visible}}">
+                      <Button Content="{x:Static pages:DefinitionsText.SeeInSheet}" Command="{Binding OpenCommand}" Style="{DynamicResource Kyf.Button.Subtle}" />
+                      <Button Content="{x:Static pages:DefinitionsText.Edit}" Command="{Binding EditCommand}" Style="{DynamicResource Kyf.Button.Subtle}" Margin="4,0,0,0" />
+                    </StackPanel>
+                    <StackPanel>
+                      <StackPanel Visibility="{Binding IsShown, Converter={StaticResource Visible}}">
+                        <TextBlock Text="{Binding Term}" Style="{DynamicResource Kyf.Text.BodyStrong}" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding Explanation}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                      </StackPanel>
+                      <StackPanel Visibility="{Binding IsEditing, Converter={StaticResource Visible}}">
+                        <TextBox Text="{Binding EditedTerm, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="{x:Static pages:DefinitionsText.TermLabel}" />
+                        <TextBox Text="{Binding EditedExplanation, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap" MinLines="3" Padding="12,8" VerticalContentAlignment="Top" Margin="0,8,0,0"
+                                 AutomationProperties.Name="{x:Static pages:DefinitionsText.ExplanationLabel}" />
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
+                          <Button Content="{x:Static pages:DefinitionsText.Cancel}" Command="{Binding CancelCommand}" Margin="0,0,8,0" />
+                          <Button Content="{x:Static pages:DefinitionsText.Save}" Command="{Binding SaveCommand}" Style="{DynamicResource Kyf.Button.Primary}" />
+                        </StackPanel>
+                      </StackPanel>
+                      <TextBlock Text="{Binding Source}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,8,0,0" />
+                      <StackPanel Orientation="Horizontal" Margin="0,4,0,0" Visibility="{Binding HasWarning, Converter={StaticResource Visible}}">
+                        <kyf:Icon Text="{x:Static kyf:Icons.Warning}" Foreground="{DynamicResource Kyf.Brush.Warning}" FontSize="12" Margin="0,0,4,0" />
+                        <TextBlock Text="{Binding Warning}" Style="{DynamicResource Kyf.Text.Caption}" Foreground="{DynamicResource Kyf.Brush.Warning}" TextWrapping="Wrap" />
+                      </StackPanel>
+                    </StackPanel>
+                  </DockPanel>
+                </kyf:Card>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </Grid>
+    </DockPanel>
+  </Grid>
+</UserControl>

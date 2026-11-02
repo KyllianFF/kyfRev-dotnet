@@ -49,6 +49,9 @@ public interface ISheetStore
     /// <summary>Toutes les fiches, par dossier puis par titre.</summary>
     IReadOnlyList<VaultSheet> SheetList();
 
+    /// <summary>Le glossaire : les définitions hors corbeille, par dossier, puis par terme.</summary>
+    IReadOnlyList<VaultDefinition> Definitions(DateOnly day);
+
     /// <summary>Change le titre : en-tête mis à jour, fichier renommé, liens réécrits.</summary>
     void ChangeTitle(string id, string title, Moment now);
 

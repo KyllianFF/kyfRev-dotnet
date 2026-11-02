@@ -28,6 +28,9 @@
     <DataTemplate DataType="{x:Type pages:SheetsPageViewModel}">
       <pages:SheetsPage />
     </DataTemplate>
+    <DataTemplate DataType="{x:Type pages:DefinitionsPageViewModel}">
+      <pages:DefinitionsPage />
+    </DataTemplate>
     <DataTemplate DataType="{x:Type pages:ArchivesPageViewModel}">
       <pages:ArchivesPage />
     </DataTemplate>

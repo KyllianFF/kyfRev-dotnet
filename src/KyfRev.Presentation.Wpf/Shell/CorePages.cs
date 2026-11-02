@@ -17,6 +17,9 @@ public static class CorePages
     /// <summary>Identifiant de la vue « Fiches ».</summary>
     public const string Sheets = "fiches";
 
+    /// <summary>Identifiant de la vue « Définitions ».</summary>
+    public const string Definitions = "definitions";
+
     /// <summary>Identifiant de la vue « Archives ».</summary>
     public const string Archives = "archives";
 
@@ -33,7 +36,7 @@ public static class CorePages
         [
             Entry(Today, ShellText.Today, Icons.Calendar, 10),
             Entry(Sheets, ShellText.Sheets, Icons.Document, 20),
-            Entry("definitions", ShellText.Definitions, Icons.Dictionary, 30),
+            Entry(Definitions, ShellText.Definitions, Icons.Dictionary, 30),
             Entry(Archives, ShellText.Archives, Icons.Archive, 40),
             Entry("statistiques", ShellText.Statistics, Icons.Chart, 50),
             Entry("sante", ShellText.Health, Icons.Health, NavigationItem.SecondaryOrder),

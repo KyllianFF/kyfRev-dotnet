@@ -126,6 +126,14 @@ public sealed class AnnotationUseCases(VaultHost host, TimeProvider time)
         return host.Use(vault => vault.CreateAnnotation(sheetId, anchor, comment, now));
     }
 
+    /// <summary>Le glossaire du coffre.</summary>
+    [ZeroXCommand("liste_des_definitions")]
+    public Outcome<IReadOnlyList<VaultDefinition>> Definitions()
+    {
+        var day = Present.Of(time).Now.Day;
+        return host.Use(vault => vault.Definitions(day));
+    }
+
     /// <summary>Pose une définition (terme et explication) sur un passage ; sa création vaut J0.</summary>
     [ZeroXCommand("creer_definition")]
     public Outcome<string> CreateDefinition(string sheetId, Anchor anchor, Definition definition)

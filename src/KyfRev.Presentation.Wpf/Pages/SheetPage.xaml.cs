@@ -41,6 +41,14 @@ internal sealed partial class SheetPage : UserControl
     /// <summary>Le texte mis en forme a sa propre fenêtre : tout ce qui le recouvre le lui dit.</summary>
     private void OnPageChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
+        if (e.PropertyName == nameof(SheetPageViewModel.Reading) && sender is SheetPageViewModel { PassageToShow: { } wanted } opened)
+        {
+            opened.PassageToShow = null;
+            if (opened.Passages.FirstOrDefault(entry => entry.Annotation.Id == wanted) is { } passage)
+            {
+                Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, () => ShowPassage(opened, passage));
+            }
+        }
         if (e.PropertyName is nameof(SheetPageViewModel.IsEditing) or nameof(SheetPageViewModel.IsDeleting)
             or nameof(SheetPageViewModel.ShowsOutlineOverlay) or nameof(SheetPageViewModel.ShowsPassagesOverlay))
         {

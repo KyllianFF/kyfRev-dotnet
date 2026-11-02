@@ -159,6 +159,29 @@ public sealed record AnnotationView(
     bool InTrash,
     ReviewState Review);
 
+/// <summary>Une définition du coffre, avec ce qu'il faut pour la retrouver.</summary>
+/// <param name="Id">L'annotation qui la porte.</param>
+/// <param name="SheetId">Sa fiche.</param>
+/// <param name="SheetTitle">Le titre de sa fiche.</param>
+/// <param name="Folder">Le dossier de sa fiche, relatif à <c>fiches/</c>.</param>
+/// <param name="Term">Le terme.</param>
+/// <param name="Explanation">L'explication.</param>
+/// <param name="Section">Les titres au-dessus du passage défini.</param>
+/// <param name="AnchorState">L'état de sa position dans la fiche.</param>
+/// <param name="Step">La prochaine étape de révision ; rien si elle n'en a plus.</param>
+/// <param name="DueDate">La date de cette étape.</param>
+public sealed record VaultDefinition(
+    string Id,
+    string SheetId,
+    string SheetTitle,
+    string Folder,
+    string Term,
+    string Explanation,
+    ImmutableArray<string> Section,
+    AnchorState AnchorState,
+    string? Step,
+    DateOnly? DueDate);
+
 /// <summary>Une fiche du coffre, active ou archivée.</summary>
 /// <param name="Id">Identifiant.</param>
 /// <param name="Title">Titre.</param>
