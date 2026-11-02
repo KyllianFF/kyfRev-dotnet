@@ -8,7 +8,7 @@ import DOMPurify from "dompurify";
 import MarkdownIt, { type MarkdownIt as Analyseur } from "markdown-it";
 import footnote from "markdown-it-footnote";
 import { balises } from "./balises";
-import { adresseRessource, decoder, estExterne, resoudre, separerSuffixe } from "./chemins";
+import { decoder, estExterne, resoudre, separerSuffixe } from "./chemins";
 
 /** Syntaxe reconnue dans les fiches : la même que celle de la lecture. */
 export function analyseurMarkdown(): Analyseur {
@@ -19,16 +19,16 @@ export function analyseurMarkdown(): Analyseur {
   return md;
 }
 
-/** Ce qu'affiche une image : son adresse, ou la raison pour laquelle elle est bloquée. */
-export type AffichageImage = { adresse: string } | { bloquee: string; detail: string };
+/** Ce qu'affiche une image : son adresse, son chemin dans le coffre, ou la raison pour laquelle elle est bloquée. */
+export type AffichageImage = { adresse: string } | { ressource: string } | { bloquee: string; detail: string };
 
-/** Images relatives servies par l'hôte ; tout le reste est bloqué, sauf `data:image`. */
+/** Images relatives demandées à l'hôte ; tout le reste est bloqué, sauf `data:image`. */
 export function affichageImage(source: string, dossier: string): AffichageImage {
   const [chemin] = separerSuffixe(source);
   if (!estExterne(chemin)) {
     const cible = resoudre(dossier, decoder(chemin));
     if (!cible) return { bloquee: "Image hors du coffre", detail: decoder(chemin) };
-    return { adresse: adresseRessource(cible) };
+    return { ressource: cible };
   }
   // Images distantes bloquées par défaut : jamais chargées.
   if (/^https?:/i.test(source)) return { bloquee: "Image distante bloquée", detail: source };

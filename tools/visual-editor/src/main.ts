@@ -44,6 +44,20 @@ let minuterie: ReturnType<typeof setTimeout> | undefined;
 let dernierEtat = "";
 let derniereSaisie: string | null = null;
 
+/** Les images du coffre déjà demandées à l'hôte, pour la fiche ouverte. */
+const ressources = new Map<string, Promise<string | null>>();
+const reponses = new Map<string, (adresse: string | null) => void>();
+
+function chargerRessource(chemin: string): Promise<string | null> {
+  let chargee = ressources.get(chemin);
+  if (!chargee) {
+    chargee = new Promise((repondre) => reponses.set(chemin, repondre));
+    ressources.set(chemin, chargee);
+    envoyer({ kind: "askResource", path: chemin });
+  }
+  return chargee;
+}
+
 function envoyerTexte(id: number | null): void {
   clearTimeout(minuterie);
   envoyer({ kind: "text", id, markdown: editeur.texte() });
@@ -104,6 +118,7 @@ const editeur: EditeurVisuel = new EditeurVisuel(parent, {
     const etat = editeur.etatOutils();
     envoyer({ kind: "menu", ...editeur.contexteDuMenu(), inCode: etat.inCode, inTable: etat.table, onLink: etat.link });
   },
+  ressource: chargerRessource,
 });
 
 function demanderLien(): void {
@@ -114,7 +129,12 @@ function demanderLien(): void {
 function traiter(message: VersEditeur): void {
   switch (message.kind) {
     case "load":
+      ressources.clear();
       editeur.remplacer(message.text, message.folder);
+      break;
+    case "resource":
+      reponses.get(message.path)?.(message.dataUrl);
+      reponses.delete(message.path);
       break;
     case "theme":
       for (const [nom, valeur] of Object.entries(message.variables)) {
