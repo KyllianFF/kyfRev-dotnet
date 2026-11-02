@@ -11,7 +11,11 @@ namespace KyfRev.Presentation.Wpf.Pages;
 /// <summary>Un dossier du glossaire : le choisir montre aussi ses sous-dossiers.</summary>
 /// <param name="Path">Son chemin ; vide pour tout le coffre.</param>
 /// <param name="Label">Ce qui s'affiche.</param>
-public sealed record DefinitionFolder(string Path, string Label);
+public sealed record DefinitionFolder(string Path, string Label)
+{
+    /// <summary>Ce qu'en dit un lecteur d'écran : son nom, sans le retrait qui le place dans la liste.</summary>
+    public override string ToString() => Label.Trim();
+}
 
 /// <summary>Une définition du glossaire : on peut la modifier sur place, ou aller la voir dans sa fiche.</summary>
 public sealed partial class DefinitionRow : ObservableObject
