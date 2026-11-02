@@ -7,12 +7,13 @@
     Avec l'installateur donné et un installateur d'essai plus récent (construit par
     tools/installer.ps1), dans un dossier temporaire :
     1. installation sans raccourci, fiches dans AppData (/NOICONS, /COFFRE=donnees) : fichiers,
-       installation.json, inscription dans Paramètres › Applications ;
+       licences, installation.json, inscription dans Paramètres › Applications ;
     2. kyfRev ouvert : une installation s'arrête sans rien modifier ;
     3. sur un poste vierge, kyfRev installé démarre en mode « installée » et se signale ouvert ;
-    4. mise à jour par la version plus récente : même dossier, mêmes choix ;
+    4. mise à jour par la version plus récente : même dossier, mêmes choix, licences en place ;
     5. retour à la version d'origine refusé : code 7, rien n'est modifié ;
-    6. désinstallation : le dossier et l'inscription disparaissent, les données du profil restent ;
+    6. désinstallation : le dossier, ses licences et l'inscription disparaissent, les données du
+       profil restent ;
     7. sur un poste vierge, installation par défaut : raccourcis dans le menu Démarrer et sur le
        Bureau, fiches dans Documents ; la désinstallation retire les raccourcis.
     Les journaux d'Inno Setup sont rangés dans artifacts/installer/essais.
@@ -38,6 +39,14 @@ $cle = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\{69A07F65-7110
 $dossier = Join-Path ([IO.Path]::GetTempPath()) ('kyfrev-installation-' + [guid]::NewGuid().ToString('N'))
 $journaux = Join-Path $racine 'artifacts\installer\essais'
 $profil = Join-Path $env:LOCALAPPDATA 'kyfRev'
+# Le dossier licences de l'installation : nom de chaque fichier, et fichier du dépôt dont il est la copie.
+$licences = [ordered]@{
+    'LICENSE.txt'                      = 'LICENSE'
+    'THIRD-PARTY-NOTICES-rendu.md'     = 'src\KyfRev.Rendering\THIRD-PARTY-NOTICES.md'
+    'THIRD-PARTY-NOTICES-editeur.md'   = 'src\KyfRev.Presentation.Wpf\Editing\THIRD-PARTY-NOTICES.md'
+    'OFL-AtkinsonHyperlegibleMono.txt' = 'src\KyfRev.DesignSystem\Fonts\OFL-AtkinsonHyperlegibleMono.txt'
+    'OFL-AtkinsonHyperlegibleNext.txt' = 'src\KyfRev.DesignSystem\Fonts\OFL-AtkinsonHyperlegibleNext.txt'
+}
 $Installateur = (Resolve-Path $Installateur).Path
 $version = (Get-Item $Installateur).VersionInfo.ProductVersion.Trim()
 
@@ -47,6 +56,16 @@ New-Item -ItemType Directory -Force $journaux | Out-Null
 function Assert-Vrai([bool] $Condition, [string] $Message) {
     if (-not $Condition) { throw "Échec : $Message." }
     Write-Host "  ok : $Message"
+}
+
+# Chaque licence est installée, à l'identique du dépôt, et celles des polices ne sont pas en double.
+function Assert-Licences {
+    foreach ($licence in $licences.GetEnumerator()) {
+        $installee = Join-Path $dossier 'licences' $licence.Key
+        $identique = (Test-Path $installee) -and (Get-FileHash $installee).Hash -eq (Get-FileHash (Join-Path $racine $licence.Value)).Hash
+        Assert-Vrai $identique "licences\$($licence.Key) installé, à l'identique du dépôt"
+    }
+    Assert-Vrai (-not (Test-Path (Join-Path $dossier 'Fonts'))) 'aucune copie des licences des polices ailleurs'
 }
 
 $script:numero = 0
@@ -118,6 +137,7 @@ try {
     Assert-Vrai (Test-Icone (Join-Path $dossier 'kyfRev.exe')) 'kyfRev.exe porte l''icône de kyfRev'
     Assert-Vrai (Test-Icone $Installateur) 'l''installateur porte l''icône de kyfRev'
     Assert-Vrai (-not (Get-ChildItem $dossier -Filter *.pdb)) 'aucun fichier de symboles'
+    Assert-Licences
     Assert-Vrai ((Get-Installation) -eq "{`"coffre`":`"donnees`"}`n") 'installation.json : fiches dans AppData'
     $inscription = Get-Inscription
     Assert-Vrai ($null -ne $inscription) 'inscrit dans Paramètres › Applications, pour l''utilisateur'
@@ -165,6 +185,7 @@ try {
     Assert-Vrai ($inscription.DisplayVersion -eq '99.0.0') 'version 99.0.0 inscrite'
     Assert-Vrai ($inscription.InstallLocation.TrimEnd('\') -eq $dossier) 'même dossier'
     Assert-Vrai ((Get-Item (Join-Path $dossier 'kyfRev.exe')).VersionInfo.ProductVersion -like '99.0.0*') 'kyfRev.exe remplacé'
+    Assert-Licences
     Assert-Vrai ((Get-Installation) -eq "{`"coffre`":`"donnees`"}`n") 'fiches toujours dans AppData'
     Assert-Vrai (-not (Get-Raccourcis)) 'toujours aucun raccourci'
 
@@ -179,6 +200,7 @@ try {
     $code = Invoke-Desinstallation
     Assert-Vrai ($code -eq 0) "désinstallation terminée (code $code)"
     Assert-Vrai ($null -eq (Get-Inscription)) 'plus inscrit dans Paramètres › Applications'
+    Assert-Vrai (-not (Test-Path (Join-Path $dossier 'licences'))) 'licences retirées'
     Assert-Vrai (-not (Test-Path $dossier)) 'dossier d''installation retiré'
     Assert-Vrai ((@(Get-Profil) -join "`n") -eq (@($avant) -join "`n")) 'données du profil intactes'
 

@@ -86,4 +86,5 @@ Les règles de contribution (branches, commits, fusions, versions) sont dans
 Le code repris d'autres projets garde sa licence : voir les avis de
 [`KyfRev.Rendering`](src/KyfRev.Rendering/THIRD-PARTY-NOTICES.md) et de
 [l'éditeur](src/KyfRev.Presentation.Wpf/Editing/THIRD-PARTY-NOTICES.md), et les licences des
-[polices](src/KyfRev.DesignSystem/Fonts).
+[polices](src/KyfRev.DesignSystem/Fonts). L'installateur dépose ces fichiers, avec la licence de
+kyfRev, dans le dossier `licences` de l'application.
