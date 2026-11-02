@@ -21,8 +21,8 @@
 ; - une version plus récente déjà installée n'est jamais remplacée : rien n'est modifié, et le
 ;   code de sortie est 7 ;
 ; - kyfRev ouvert est détecté avant l'installation comme avant la désinstallation (AppMutex) ;
-; - la licence de kyfRev, les avis de tiers et les licences des polices sont installés dans
-;   {app}\licences, et retirés avec l'application ;
+; - la licence de kyfRev, les avis de tiers, les avis des paquets NuGet et les licences des polices
+;   sont installés dans {app}\licences, et retirés avec l'application ;
 ; - la désinstallation ne touche jamais aux coffres, aux sauvegardes ni aux réglages des profils.
 
 #ifndef Version
@@ -96,6 +96,7 @@ ConfirmUninstall=Voulez-vous retirer %1 de cet ordinateur ?%n%nLes fiches, les s
 
 [Files]
 ; Les polices sont dans les assemblys : Fonts ne contient que leurs licences, installées plus bas.
+; La publication contient aussi licences\THIRD-PARTY-NOTICES-nuget.md, écrit par tools/installer.ps1.
 Source: "{#Source}\*"; Excludes: "*.pdb,\Fonts"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; Emplacement des fiches de chaque personne, lu au démarrage (mode installé).
 Source: "installation-documents.json"; DestDir: "{app}"; DestName: "installation.json"; Check: VaultIn('documents'); Flags: ignoreversion

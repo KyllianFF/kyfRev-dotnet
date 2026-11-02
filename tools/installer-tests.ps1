@@ -66,6 +66,19 @@ function Assert-Licences {
         Assert-Vrai $identique "licences\$($licence.Key) installé, à l'identique du dépôt"
     }
     Assert-Vrai (-not (Test-Path (Join-Path $dossier 'Fonts'))) 'aucune copie des licences des polices ailleurs'
+
+    $fichier = Join-Path $dossier 'licences\THIRD-PARTY-NOTICES-nuget.md'
+    Assert-Vrai (Test-Path $fichier) 'licences\THIRD-PARTY-NOTICES-nuget.md installé'
+    $avis = Get-Content -Raw -Encoding utf8 $fichier
+    $deps = Get-Content -Raw (Join-Path $dossier 'kyfRev.deps.json') | ConvertFrom-Json -AsHashtable
+    $paquets = @($deps.libraries.GetEnumerator() | Where-Object { $_.Value.type -in 'package', 'runtimepack' } |
+            ForEach-Object { $_.Key -replace '^runtimepack\.', '' -replace '/', ' ' })
+    $absents = @($paquets | Where-Object { -not $avis.Contains("## $_`n") })
+    Assert-Vrai ($paquets.Count -gt 0 -and $absents.Count -eq 0) "avis NuGet : $($paquets.Count) paquets publiés, tous cités$(if ($absents) { " (absents : $($absents -join ', '))" })"
+    # Ce qui ne vient pas d'une mention MIT ordinaire : WebView2 et ses tiers, les polices de WpfMath, les textes du dépôt.
+    $textes = 'Redistributions in binary form', 'StringTemplate4', 'jlm_msam10.ttf', 'Knuth License', 'AvalonEdit Contributors', 'Antoine Aubry', 'Alex Regueiro', '.NET Runtime uses third-party libraries'
+    $absents = @($textes | Where-Object { -not $avis.Contains($_) })
+    Assert-Vrai ($absents.Count -eq 0) "avis NuGet : les textes attendus sont là$(if ($absents) { " (absents : $($absents -join ', '))" })"
 }
 
 $script:numero = 0

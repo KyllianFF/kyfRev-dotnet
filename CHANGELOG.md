@@ -9,8 +9,8 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
-- L'installation dépose la licence de kyfRev, les avis de tiers et les licences des polices dans le dossier `licences` de
-  l'application ; la désinstallation les retire avec elle.
+- L'installation dépose la licence de kyfRev, les avis de tiers, ceux des paquets NuGet publiés (runtime .NET compris) et les
+  licences des polices dans le dossier `licences` de l'application ; la désinstallation les retire avec elle.
 - La fenêtre d'insertion d'une formule montre son aperçu pendant la saisie, et propose des exemples à reprendre.
 - Les images SVG d'une fiche s'affichent en lecture, comme images : aucun script ni aucune adresse qu'elles contiennent n'agit.
 - Changer la place d'un passage depuis son menu, même perdu : on sélectionne le nouveau texte, puis on garde sa progression

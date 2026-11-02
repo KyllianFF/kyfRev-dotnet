@@ -8,6 +8,7 @@
       datée du CHANGELOG ;
     - publie l'application autonome (runtime .NET inclus, Windows x64), la date de publication
       inscrite dans les métadonnées de l'exécutable (ReleaseDate) ;
+    - écrit dans la publication les avis des paquets NuGet publiés (tools/avis-nuget.ps1) ;
     - compile l'installateur avec Inno Setup 6 : artifacts/installer/kyfRev-<version>-installation.exe,
       dont le chemin est le résultat du script.
 
@@ -75,6 +76,7 @@ $publication = @(
 if ($date) { $publication += "-p:ReleaseDate=$date" }
 dotnet @publication | Out-Host
 if ($LASTEXITCODE -ne 0) { throw 'Publication de l''application impossible.' }
+& (Join-Path $PSScriptRoot 'avis-nuget.ps1') -Publication $application
 
 $compilation = @('/Qp', "/O$sortie", "/DVersion=$Version", "/DNumericVersion=$numerique", "/DSource=$application")
 if ($dateTexte) { $compilation += "/DReleaseDate=$dateTexte" }
