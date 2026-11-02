@@ -1,8 +1,13 @@
 name: Vérification
 
+# La gouvernance, légère, suit chaque envoi. Les jobs sur Windows ne tournent que sur une demande
+# de fusion prête (pas un brouillon) et sur main : ce sont eux qui consomment le quota d'Actions.
 on:
   push:
     branches: ['**']
+  pull_request:
+    branches: [main]
+    types: [opened, reopened, synchronize, ready_for_review]
   workflow_dispatch:
 
 permissions:
@@ -22,6 +27,8 @@ env:
 jobs:
   gouvernance:
     name: Gouvernance du dépôt
+    # Elle a déjà vu ces commits à leur envoi.
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -74,6 +81,11 @@ jobs:
 
   construction:
     name: Compilation, tests et qualité
+    # Sur Windows, ce job coûte cher : il attend une demande de fusion prête, ou main.
+    if: >-
+      github.event_name == 'workflow_dispatch'
+      || (github.event_name == 'push' && github.ref_name == 'main')
+      || (github.event_name == 'pull_request' && !github.event.pull_request.draft)
     runs-on: windows-2025
     timeout-minutes: 20
     steps:
@@ -141,6 +153,11 @@ jobs:
 
   editeur-visuel:
     name: Éditeur visuel
+    # Sur Windows, ce job coûte cher : il attend une demande de fusion prête, ou main.
+    if: >-
+      github.event_name == 'workflow_dispatch'
+      || (github.event_name == 'push' && github.ref_name == 'main')
+      || (github.event_name == 'pull_request' && !github.event.pull_request.draft)
     runs-on: windows-2025
     timeout-minutes: 10
     defaults:
@@ -169,6 +186,11 @@ jobs:
 
   installateur:
     name: Installateur
+    # Sur Windows, ce job coûte cher : il attend une demande de fusion prête, ou main.
+    if: >-
+      github.event_name == 'workflow_dispatch'
+      || (github.event_name == 'push' && github.ref_name == 'main')
+      || (github.event_name == 'pull_request' && !github.event.pull_request.draft)
     runs-on: windows-2025
     timeout-minutes: 20
     env:

@@ -632,7 +632,7 @@ Ce corpus est versionné dans `tests/fixtures/`. Critères :
 **Secrets et données personnelles**
 - Gitleaks en crochet `pre-commit` et en CI ; aucune donnée personnelle dans les fixtures, qui sont toutes synthétiques.
 
-**CI GitHub Actions**, sur chaque push et chaque demande de fusion :
+**CI GitHub Actions**, sur chaque demande de fusion prête et sur `main` (décidé le 2 novembre 2026, après l'épuisement du quota d'Actions ; sur chaque push, seuls les contrôles d'identité, de nom de branche et de secrets tournent) :
 - compilation et formatage (`dotnet format --verify-no-changes`) ;
 - tests et couverture ;
 - `dotnet list package --vulnerable --include-transitive` ;
