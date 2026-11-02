@@ -221,8 +221,8 @@ function Invoke-Editeur {
         Invoke-Etape 'Éditeur : aller-retour Markdown' { Exec npm test }
         Invoke-Etape 'Éditeur : le paquet correspond à ses sources' {
             Exec npm run build
-            $web = '../../src/KyfRev.Presentation.Wpf/Editing/Web'
-            $ecart = git status --porcelain -- $web
+            $paquet = '../../src/KyfRev.Presentation.Wpf/Editing/Web', '../../src/KyfRev.Presentation.Wpf/Editing/THIRD-PARTY-NOTICES.md'
+            $ecart = git status --porcelain -- @paquet
             if ($ecart) { throw "Le paquet versionné diffère de ses sources : $ecart" }
         }
     }

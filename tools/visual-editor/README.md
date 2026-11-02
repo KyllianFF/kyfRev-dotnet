@@ -26,4 +26,4 @@ npm run build
 
 `src/diagrammes.ts` et `public/diagrammes.html` sont la page cachée qui dessine les schémas et les graphiques : Mermaid en mode
 strict, tel qu'il est publié (`mermaid.min.js`), à part de l'éditeur, qui n'a pas à le charger. `npm run build` écrit les deux
-paquets.
+paquets, puis leurs avis de tiers, depuis le verrou (`avis-de-tiers.js`).
