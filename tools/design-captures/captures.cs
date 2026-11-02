@@ -23,7 +23,7 @@
 // archives-contraste-eleve.png), les fiches (fiches-clair.png, fiches-sombre.png, fiches-etroit-clair.png,
 // fiches-nouvelle-sombre.png, fiches-contraste-eleve.png), le glossaire (definitions-clair.png, definitions-sombre.png,
 // definitions-large-sombre.png, definitions-etroit-clair.png, definitions-modification-sombre.png, definitions-contraste-eleve.png),
-// la lecture à voix haute (ecoute-sombre.png, ecoute-clair.png, ecoute-etroite-sombre.png), les réglages (parametres-clair.png, parametres-sombre.png, parametres-etroit-sombre.png, parametres-refus-sombre.png, parametres-contraste-eleve.png), la lecture d'une fiche (fiche-clair.png,
+// le code coloré (code-sombre.png, code-clair.png, code-contraste-eleve.png), la lecture à voix haute (ecoute-sombre.png, ecoute-clair.png, ecoute-etroite-sombre.png), les réglages (parametres-clair.png, parametres-sombre.png, parametres-etroit-sombre.png, parametres-refus-sombre.png, parametres-contraste-eleve.png), la lecture d'une fiche (fiche-clair.png,
 // lecture-sombre.png, lecture-moyenne-clair.png, lecture-etroite-sombre.png, lecture-volet-clair.png, lecture-contraste-eleve.png), l'écriture (ecriture-clair.png,
 // ecriture-sombre.png, ecriture-insertion-sombre.png, ecriture-moyenne-clair.png, ecriture-etroite-sombre.png, ecriture-contraste-eleve.png,
 // ecriture-markdown-sombre.png, ecriture-markdown-clair.png), et affiche le contraste de
@@ -407,6 +407,18 @@ static void ReviewCaptures(string folder)
         keptPage.Editor!.CloseHistoryCommand.Execute(null);
         keptPage.StopWritingCommand.Execute(null);
         Pump(() => keptPage.Editor is null);
+
+        // Le code d'une fiche, coloré selon son langage.
+        var coded = app.Sheets.Create("Histoire", "Du code", null).Value;
+        const string codeBody = "# Du code\n\n```csharp\n// Un commentaire\npublic int Dire(string texte)\n{\n    Console.WriteLine(\"bonjour\");\n    return 42;\n}\n```\n\n```python\n# Un commentaire\ndef dire(texte):\n    print(\"bonjour\", 42)\n```\n\n```json\n{ \"nom\": \"kyfRev\", \"actif\": true, \"version\": 1 }\n```\n\n```html\n<a href=\"page.html\">Un lien</a>\n```\n\n```\nSans langage, le code reste d'une couleur.\n```\n";
+        app.Editing.Save(coded, codeBody, app.Sheets.Open(coded).Value.Fingerprint, 1);
+        foreach (var (file, theme, highContrast) in new[] { ("code-sombre.png", ThemePreference.Dark, false), ("code-clair.png", ThemePreference.Light, false), ("code-contraste-eleve.png", ThemePreference.System, true) })
+        {
+            var codePage = new SheetPageViewModel(app.Sheets, app.Annotations, Bar, coded, () => { }, _ => { }, new NoLinks(), Editor);
+            codePage.LoadCommand.Execute(null);
+            Pump(() => !codePage.IsLoading);
+            Shell(folder, file, theme, shell => shell.Navigate(new NavigationItem("fiche", "Fiche", Icons.Document, int.MaxValue, codePage)), null, 1280, 800, null, highContrast);
+        }
 
         // Écouter la fiche : le bloc lu ressort, et la barre passe à la ligne sur une fenêtre étroite.
         foreach (var (file, theme, width, height) in new[]

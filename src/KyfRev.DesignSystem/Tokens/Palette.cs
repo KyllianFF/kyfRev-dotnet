@@ -47,6 +47,18 @@ public static class Palette
     /// <summary>Couleur des ombres portées, dans les deux thèmes (leur opacité vient de l'élévation).</summary>
     public static TokenColor Shadow { get; } = TokenColor.FromHex("#000000");
 
+    /// <summary>Les nombres d'un bloc de code, sur fond clair.</summary>
+    public static TokenColor CodeNumberLight { get; } = TokenColor.FromHex("#1f5f99");
+
+    /// <summary>Les nombres d'un bloc de code, sur fond sombre.</summary>
+    public static TokenColor CodeNumberDark { get; } = TokenColor.FromHex("#8fbce8");
+
+    /// <summary>Les noms de fonction d'un bloc de code, sur fond clair.</summary>
+    public static TokenColor CodeTitleLight { get; } = TokenColor.FromHex("#6a3f9e");
+
+    /// <summary>Les noms de fonction d'un bloc de code, sur fond sombre.</summary>
+    public static TokenColor CodeTitleDark { get; } = TokenColor.FromHex("#c4a8ea");
+
     /// <summary>Neutres et couleurs fonctionnelles du thème clair, « Jour ».</summary>
     public static ThemeNeutrals Light { get; } = new(
         Background: TokenColor.FromHex("#edefe9"),

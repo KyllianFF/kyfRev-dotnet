@@ -44,6 +44,7 @@ public static class ContrastRequirements
         new(ColorRole.Success, ColorRole.SuccessBackground, Text),
         new(ColorRole.Info, ColorRole.InfoBackground, Text),
         .. Over([ColorRole.Critical, ColorRole.Warning, ColorRole.Success], [ColorRole.Background, ColorRole.Surface], Text),
+        .. Over([ColorRole.CodeKeyword, ColorRole.CodeString, ColorRole.CodeNumber, ColorRole.CodeTitle], [ColorRole.SurfaceAlt], Text),
         .. Over(
             [ColorRole.ControlBorder, ColorRole.Focus, ColorRole.Primary, ColorRole.MarkerSheet, ColorRole.MarkerPassage, ColorRole.MarkerReminder],
             Grounds,

@@ -233,7 +233,7 @@ public sealed class HighlightingTests
         var reading = SheetReading.Of(Sheet("```python\nprint(1)\nprint(2)\n```\n"), _ => Outcome.Refused<byte[]>("non"));
         var viewer = new SheetDocumentViewer { Highlights = [new Highlight("a", 9, 17, false, false)], Reading = reading };
 
-        Assert.AreEqual("print(2)", Runs(viewer).Single(run => run.TextDecorations is { Count: > 0 }).Text);
+        Assert.AreEqual("print(2)", string.Concat(Runs(viewer).Where(run => run.TextDecorations is { Count: > 0 }).Select(run => run.Text)), "le code coloré garde ses morceaux");
     }
 
     [STATestMethod]
