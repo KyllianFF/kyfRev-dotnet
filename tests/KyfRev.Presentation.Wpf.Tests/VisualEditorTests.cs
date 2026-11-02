@@ -103,34 +103,40 @@ public sealed class VisualEditorTests
         /// <summary>Le texte tel qu'il s'affiche.</summary>
         public string Shown => JsonSerializer.Deserialize<string>(Script("document.querySelector('.ProseMirror').innerText"))!;
 
-        /// <summary>Sélectionne tout le texte.</summary>
-        public void SelectAll()
-        {
-            UiThread.Until(() => Shown.Trim().Length > 0);
-            Script("""
-                (() => {
-                  const page = document.querySelector('.ProseMirror');
-                  page.focus();
-                  getSelection().selectAllChildren(page);
-                })()
-                """);
-            Pump(TimeSpan.FromMilliseconds(100));
-        }
-
-        /// <summary>Place le curseur dans le bloc de ce texte, à sa fin ou à son début.</summary>
-        public void PlaceCaretIn(string text, bool atStart = false)
+        /// <summary>
+        /// Pose une sélection et la fait lire aussitôt à ProseMirror. Il ne la lirait qu'à l'événement du
+        /// navigateur ; d'ici là, le minuteur de sa dernière prise de focus peut remettre l'ancienne, et le
+        /// ruban agit alors sur le premier bloc.
+        /// </summary>
+        public void Select(string selecting)
         {
             Script($$"""
                 (() => {
                   const page = document.querySelector('.ProseMirror');
                   page.focus();
-                  const bloc = [...page.querySelectorAll('p')].find((p) => p.textContent === {{JsonSerializer.Serialize(text)}});
                   const selection = getSelection();
-                  selection.selectAllChildren(bloc);
-                  {{(atStart ? "selection.collapseToStart();" : "selection.collapseToEnd();")}}
+                  {{selecting}}
+                  document.dispatchEvent(new Event('selectionchange'));
                 })()
                 """);
             Pump(TimeSpan.FromMilliseconds(100));
+        }
+
+        /// <summary>Sélectionne tout le texte.</summary>
+        public void SelectAll()
+        {
+            UiThread.Until(() => Shown.Trim().Length > 0);
+            Select("selection.selectAllChildren(page);");
+        }
+
+        /// <summary>Place le curseur dans le bloc de ce texte, à sa fin ou à son début.</summary>
+        public void PlaceCaretIn(string text, bool atStart = false)
+        {
+            Select($$"""
+                const bloc = [...page.querySelectorAll('p')].find((p) => p.textContent === {{JsonSerializer.Serialize(text)}});
+                selection.selectAllChildren(bloc);
+                {{(atStart ? "selection.collapseToStart();" : "selection.collapseToEnd();")}}
+                """);
         }
 
         /// <summary>Tape comme l'utilisateur, à la fin du document.</summary>
@@ -200,15 +206,10 @@ public sealed class VisualEditorTests
     {
         using var scene = new Scene("un mot ici\n");
         UiThread.Until(() => scene.Shown.Contains("un mot ici", StringComparison.Ordinal));
-        scene.Script("""
-            (() => {
-              const page = document.querySelector('.ProseMirror');
-              page.focus();
-              const texte = page.querySelector('p').firstChild;
-              getSelection().setBaseAndExtent(texte, 3, texte, 6);
-            })()
+        scene.Select("""
+            const texte = page.querySelector('p').firstChild;
+            selection.setBaseAndExtent(texte, 3, texte, 6);
             """);
-        TestShell.Flush();
 
         scene.Editor.ToggleMarkCommand.Execute(InlineMark.Bold);
         UiThread.Until(() => scene.Editor.Tools?.Bold == true);
@@ -554,16 +555,10 @@ public sealed class VisualEditorTests
     {
         using var scene = new Scene("Début\n");
         UiThread.Until(() => scene.Shown.Contains("Début", StringComparison.Ordinal));
-        scene.Script("""
-            (() => {
-              const page = document.querySelector('.ProseMirror');
-              page.focus();
-              const selection = getSelection();
-              selection.selectAllChildren(page);
-              selection.collapseToEnd();
-            })()
+        scene.Select("""
+            selection.selectAllChildren(page);
+            selection.collapseToEnd();
             """);
-        Pump(TimeSpan.FromMilliseconds(100));
         scene.Editor.SetColorCommand.Execute("#d32f2f");
         Pump(TimeSpan.FromMilliseconds(100));
         scene.Script("document.execCommand('insertText', false, ' rouge')");
@@ -604,16 +599,10 @@ public sealed class VisualEditorTests
         UiThread.Until(() => scene.OnDisk == "- [x] Acheter\n");
         Assert.AreEqual("\"line-through\"", scene.Script("getComputedStyle(document.querySelector('li.faite p')).textDecorationLine"));
 
-        scene.Script("""
-            (() => {
-              const page = document.querySelector('.ProseMirror');
-              page.focus();
-              const selection = getSelection();
-              selection.selectAllChildren(page.querySelector('li.tache p'));
-              selection.collapseToEnd();
-            })()
+        scene.Select("""
+            selection.selectAllChildren(page.querySelector('li.tache p'));
+            selection.collapseToEnd();
             """);
-        Pump(TimeSpan.FromMilliseconds(100));
         scene.Script("document.querySelector('.ProseMirror').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', keyCode: 13, bubbles: true, cancelable: true }))");
         Pump(TimeSpan.FromMilliseconds(100));
         scene.Script("document.execCommand('insertText', false, 'Payer')");

@@ -58,6 +58,14 @@ ne tournent que sur une demande de fusion prête et sur `main`. Pour plusieurs b
 seule la dernière a besoin d'être prête : elle contient les autres, et `main` ne reçoit qu'un
 envoi une fois toutes les fusions faites.
 
+Quand l'intégration continue ne peut pas tourner (quota d'Actions épuisé), `tools/verification-sandbox.ps1`
+refait ses étapes sur le commit en cours dans Windows Sandbox, un Windows vierge et jetable, et finit par un
+bilan : Smart App Control n'y bloque pas les assemblys tout juste compilées, et le poste reste utilisable.
+`tools/verification-locale.ps1` fait la même chose directement sur le poste, si Windows Sandbox n'est pas
+activé. Ses scénarios tapent alors de vraies touches : il ne faut toucher ni au clavier ni à la souris pendant
+ce temps, ou passer `-SansClavier`. Dans les deux cas, ce qui n'a pas pu être essayé est marqué « non vérifié »,
+et non réussi.
+
 ## Avant chaque envoi
 
 - `dotnet build`, `dotnet test --solution KyfRev.slnx` et `dotnet format --verify-no-changes`

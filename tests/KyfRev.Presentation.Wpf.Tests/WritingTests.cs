@@ -181,11 +181,13 @@ public sealed class WritingTests
         scene.Select(0, 0);
         scene.Type("A");
         var first = scene.Editor.SaveAsync();
-        scene.Type("B");
-        var second = scene.Editor.SaveAsync();
-        Assert.AreSame(first, second);
+        Assert.AreSame(first, scene.Editor.SaveAsync(), "une écriture en cours n'en lance pas une autre");
 
-        UiThread.Until(() => first.IsCompleted);
+        // Taper laisse tourner le fil de l'interface : la première écriture peut déjà être finie.
+        scene.Type("B");
+        var last = scene.Editor.SaveAsync();
+
+        UiThread.Until(() => first.IsCompleted && last.IsCompleted);
         Assert.AreEqual("AB" + Body, scene.OnDisk);
         Assert.AreEqual(SaveState.Saved, scene.Editor.State);
     }
