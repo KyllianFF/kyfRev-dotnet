@@ -84,7 +84,7 @@ internal sealed class TextLayer(Func<string, Brush?> findBrush)
         {
             return HoleOver(segment.Start, segment.End);
         }
-        return source is DependencyObject target && _formulas.Find(candidate => candidate.Slot == target || candidate.Slot.IsAncestorOf(target)) is { } formula
+        return source is Visual target && _formulas.Find(candidate => candidate.Slot == target || candidate.Slot.IsAncestorOf(target)) is { } formula
             ? HoleOver(formula.Start, formula.End)
             : null;
     }
@@ -126,7 +126,7 @@ internal sealed class TextLayer(Func<string, Brush?> findBrush)
         {
             range = (segment.Start, segment.End);
         }
-        else if (source is DependencyObject target && _formulas.Find(candidate => candidate.Slot == target || candidate.Slot.IsAncestorOf(target)) is { } formula)
+        else if (source is Visual target && _formulas.Find(candidate => candidate.Slot == target || candidate.Slot.IsAncestorOf(target)) is { } formula)
         {
             range = (formula.Start, formula.End);
         }

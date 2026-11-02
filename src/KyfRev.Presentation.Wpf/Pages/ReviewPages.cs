@@ -515,7 +515,7 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
 
     /// <summary>L'écriture en cours ; rien en lecture.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsWriting), nameof(IsReading), nameof(IsReadOn), nameof(IsWriteOn), nameof(ValidateShortcut))]
+    [NotifyPropertyChangedFor(nameof(IsWriting), nameof(IsReading), nameof(IsReadOn), nameof(IsReviseOn), nameof(IsWriteOn), nameof(ValidateShortcut))]
     public partial SheetEditorViewModel? Editor { get; private set; }
 
     /// <summary>La fiche s'écrit.</summary>

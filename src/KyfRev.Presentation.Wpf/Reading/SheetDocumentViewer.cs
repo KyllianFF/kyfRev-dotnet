@@ -196,12 +196,23 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
         if (e.OldValue is TextHoles old)
         {
             old.Changed -= viewer.OnHolesChanged;
+            old.PropertyChanged -= viewer.OnHolesActivated;
         }
         if (e.NewValue is TextHoles holes)
         {
             holes.Changed += viewer.OnHolesChanged;
+            holes.PropertyChanged += viewer.OnHolesActivated;
         }
         viewer.ComputeHoles();
+    }
+
+    /// <summary>Les trous n'existent pas en lecture : ils se calculent quand la révision commence.</summary>
+    private void OnHolesActivated(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(TextHoles.IsActive))
+        {
+            ComputeHoles();
+        }
     }
 
     private void OnHolesChanged(object? sender, EventArgs e) => _built?.Layer.SetHoles(Holes?.Hidden ?? []);

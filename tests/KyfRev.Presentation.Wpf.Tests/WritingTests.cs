@@ -406,6 +406,52 @@ public sealed class WritingTests
     }
 
     [STATestMethod]
+    public void Keeping_my_version_after_a_refused_restore_writes_it()
+    {
+        using var scene = new Scene("Première\n");
+        scene.Select(0, 0);
+        scene.Type("Ajout. ");
+        UiThread.Until(() => scene.OnDisk.StartsWith("Ajout. ", StringComparison.Ordinal));
+        scene.WaitSaved();
+        scene.Editor.OpenHistoryCommand.Execute(null);
+        UiThread.Until(() => scene.Editor.IsHistoryOpen);
+        var history = scene.Editor.History!;
+
+        // Un autre programme change la fiche : la version n'est pas remise, et rien n'attend de s'écrire.
+        Assert.IsTrue(scene.Vault.App.Editing.Save(scene.Vault.SheetId, "Sur le disque.\n", scene.Vault.App.Sheets.Open(scene.Vault.SheetId).Value.Fingerprint, 99).Succeeded);
+        history.AskRestoreCommand.Execute(null);
+        history.RestoreCommand.Execute(null);
+        UiThread.Until(() => scene.Editor.State == SaveState.Conflict);
+
+        scene.Editor.KeepMineCommand.Execute(null);
+
+        UiThread.Until(() => scene.Editor.State == SaveState.Saved);
+        Assert.StartsWith("Ajout. ", scene.OnDisk, "ma version est écrite, et non seulement annoncée");
+    }
+
+    [TestMethod]
+    public void Changing_the_model_keeps_what_is_written()
+    {
+        var existing = DiagramGalleryViewModel.ForExisting("smartart cycle", "Mes\nÉléments", 3)!;
+        existing.SelectedItem = existing.Items.First(item => item.Id == "pyramide");
+        Assert.AreEqual("Mes\nÉléments", existing.Text, "c'est ce que propose Office");
+
+        var fresh = DiagramGalleryViewModel.For(GalleryKind.SmartArt);
+        var untouched = fresh.Text;
+        fresh.SelectedItem = fresh.Items[^1];
+        Assert.AreEqual(fresh.Items[^1].Sample, fresh.Text, "un exemple intact suit le modèle");
+        Assert.AreNotEqual(string.Empty, untouched);
+
+        fresh.Text = "À moi";
+        fresh.SelectedItem = fresh.Items[0];
+        Assert.AreEqual("À moi", fresh.Text);
+
+        fresh.Text = "   ";
+        fresh.SelectedItem = fresh.Items[1];
+        Assert.AreEqual(fresh.Items[1].Sample, fresh.Text, "un champ vide reprend l'exemple");
+    }
+
+    [STATestMethod]
     public void A_conflict_compares_the_disk_with_my_text_and_closes()
     {
         using var scene = new Scene("Commun\nPremière\n");

@@ -68,8 +68,8 @@ public sealed partial class TextHoles : ObservableObject
             if (!passages.Exists(passage => passage.Start <= start && end <= passage.End))
             {
                 holes.Add(new TextHole(string.Create(CultureInfo.InvariantCulture, $"gras:{rank}"), start, end, null));
-                rank++;
             }
+            rank++;
         }
         return [.. holes.OrderBy(hole => hole.Start)];
     }

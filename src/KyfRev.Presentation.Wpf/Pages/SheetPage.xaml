@@ -154,7 +154,7 @@
       </DockPanel>
 
       <!-- Les barres de la lecture s'empilent : on peut écouter en changeant la place d'un passage. -->
-      <StackPanel Grid.Row="1">
+      <StackPanel Grid.Row="1" Visibility="{Binding IsReading, Converter={StaticResource Visible}}">
         <!-- Texte à trous : où l'on en est, et de quoi tout afficher ou tout remasquer. -->
         <DockPanel x:Name="HolesBar" Margin="16,0,16,8" DataContext="{Binding Holes}" Visibility="{Binding HasHoles, Converter={StaticResource Visible}}">
           <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">

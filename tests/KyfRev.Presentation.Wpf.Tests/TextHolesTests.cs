@@ -1,5 +1,8 @@
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Documents;
+using System.Windows.Input;
+using System.Windows.Media;
 using KyfRev.Application;
 using KyfRev.Presentation.Wpf.Pages;
 using KyfRev.Presentation.Wpf.Reading;
@@ -19,7 +22,7 @@ public sealed class TextHolesTests
 
         var holes = TextHoles.Compute(highlights, [(10, 15), (32, 36), (45, 48)]);
 
-        Assert.AreEqual("passage:p2 gras:0 passage:p1 gras:1", string.Join(' ', holes.Select(hole => hole.Key)));
+        Assert.AreEqual("passage:p2 gras:0 passage:p1 gras:2", string.Join(' ', holes.Select(hole => hole.Key)));
         Assert.AreEqual("p2", holes[0].PassageId);
         Assert.IsNull(holes[1].PassageId);
     }
@@ -196,6 +199,119 @@ public sealed class TextHolesTests
         page.Holes.RevealAllCommand.Execute(null);
         Assert.IsFalse(entry.IsMasked);
         Assert.AreEqual(title, entry.ShownTitle);
+    }
+
+    [STATestMethod]
+    public void A_click_beside_the_text_of_a_sheet_with_a_formula_stays_harmless()
+    {
+        var (window, viewer, _) = Host("Une $x^2$ formule.\n\nUn paragraphe.\n");
+        try
+        {
+            // Un clic à droite d'une ligne vise le paragraphe, un élément du document qui n'est pas visuel.
+            var paragraph = viewer.Document.Blocks.OfType<Paragraph>().First();
+
+            Assert.IsEmpty(viewer.AnnotationsAt(paragraph));
+            Assert.IsEmpty(viewer.AnnotationsAt(viewer.Document));
+            Assert.IsFalse(viewer.RevealHoleAt(paragraph));
+            Assert.IsFalse(viewer.RevealHoleAt(viewer.Document));
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
+    public void Going_from_reading_to_revising_makes_the_holes()
+    {
+        var (window, viewer, holes) = Host();
+        try
+        {
+            holes.IsActive = false;
+            viewer.Reading = viewer.Reading;
+            TestShell.Flush();
+            Assert.IsEmpty(holes.Hidden);
+
+            holes.IsActive = true;
+            TestShell.Flush();
+
+            Assert.IsTrue(holes.HasHoles, "le texte devient à trous sans attendre");
+            Assert.IsNotEmpty(holes.Hidden);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [TestMethod]
+    public void A_new_passage_does_not_change_which_bold_is_revealed()
+    {
+        (int, int)[] bold = [(0, 5), (10, 15), (20, 25)];
+        var before = TextHoles.Compute([], bold);
+        var after = TextHoles.Compute([new Highlight("p", 0, 6, false, false)], bold);
+
+        Assert.AreEqual(before.Single(hole => hole.Start == 10).Key, after.Single(hole => hole.Start == 10).Key);
+        Assert.AreEqual(before.Single(hole => hole.Start == 20).Key, after.Single(hole => hole.Start == 20).Key);
+    }
+
+    [STATestMethod]
+    public void Revising_puts_the_keys_on_the_text_and_writing_hides_the_bars()
+    {
+        using var ui = new UiThread();
+        using var vault = new ReadingVault("# Mitose\n\nUn **autre** paragraphe avec un mot.\n", passage: true);
+        var page = vault.Page(activeRecall: () => true);
+        var test = new TestShell();
+        var window = new Window { ShowActivated = false, Left = -10000, Top = -10000, Width = 1000, Height = 700, WindowStartupLocation = WindowStartupLocation.Manual, Content = new SheetPage { DataContext = page } };
+        window.Resources.MergedDictionaries.Add(test.Design.Dictionary);
+        window.Show();
+        try
+        {
+            page.LoadCommand.Execute(null);
+            UiThread.Until(() => page.Reading is not null && !page.IsLoading);
+            TestShell.Flush();
+            var bars = new List<string>();
+            page.PropertyChanged += (_, e) => bars.Add(e.PropertyName ?? string.Empty);
+
+            page.IsReviseOn = true;
+            TestShell.Flush();
+
+            var viewer = Named<SheetDocumentViewer>(window, "SheetText");
+            Assert.AreSame(viewer, FocusManager.GetFocusedElement(FocusManager.GetFocusScope(viewer)), "Entrée et Espace vont au texte");
+            Assert.IsTrue(page.Holes.HasHoles);
+            var holesBar = Named<DockPanel>(window, "HolesBar");
+            Assert.IsTrue(holesBar.IsVisible);
+
+            page.StartWritingCommand.Execute(null);
+            UiThread.Until(() => page.Editor is not null);
+            TestShell.Flush();
+
+            Assert.IsFalse(holesBar.IsVisible, "la barre des trous ne passe pas sur le ruban");
+            Assert.IsFalse(page.IsReviseOn);
+            CollectionAssert.Contains(bars, nameof(SheetPageViewModel.IsReviseOn), "le bouton « Réviser » suit le mode");
+            page.StopWritingCommand.Execute(null);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    private static T Named<T>(DependencyObject root, string name)
+        where T : FrameworkElement =>
+        Descendants(root).OfType<T>().First(element => element.Name == name);
+
+    private static IEnumerable<DependencyObject> Descendants(DependencyObject root)
+    {
+        for (var i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)
+        {
+            var child = VisualTreeHelper.GetChild(root, i);
+            yield return child;
+            foreach (var descendant in Descendants(child))
+            {
+                yield return descendant;
+            }
+        }
     }
 
     private static IEnumerable<Run> LogicalRuns(SheetDocumentViewer viewer) => LogicalChildrenOfType<Run>(viewer);

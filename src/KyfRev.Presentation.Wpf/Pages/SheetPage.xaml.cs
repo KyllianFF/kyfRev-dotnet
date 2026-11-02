@@ -70,6 +70,11 @@ internal sealed partial class SheetPage : UserControl
         {
             ShowWantedPassage(opened);
         }
+        if (e.PropertyName is nameof(SheetPageViewModel.Reading) or nameof(SheetPageViewModel.IsRevising) && sender is SheetPageViewModel { IsReading: true, Holes.IsActive: true })
+        {
+            // Entrée et Espace affichent le trou suivant : ils doivent aller au texte, et non au bouton « Réviser ».
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, () => SheetText.Focus());
+        }
         if (e.PropertyName is nameof(SheetPageViewModel.IsEditing) or nameof(SheetPageViewModel.IsDeleting)
             or nameof(SheetPageViewModel.ShowsOutlineOverlay) or nameof(SheetPageViewModel.ShowsPassagesOverlay))
         {
@@ -221,9 +226,9 @@ internal sealed partial class SheetPage : UserControl
     /// <summary>Un clic sur un passage surligné le fait ressortir dans le panneau.</summary>
     private void OnTextReleased(object sender, MouseButtonEventArgs e)
     {
+        // Le relâchement reste au texte, même sur un trou : c'est lui qui rend la souris.
         if (SheetText.RevealHoleAt(e.OriginalSource))
         {
-            e.Handled = true;
             return;
         }
         if (DataContext is SheetPageViewModel page && SheetText.Selection is { IsEmpty: true } && SheetText.AnnotationsAt(e.OriginalSource) is [var id, ..])
