@@ -1,4 +1,5 @@
 using System.IO;
+using System.Text;
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
@@ -18,6 +19,11 @@ using LinkTarget = KyfRev.Rendering.LinkTarget;
 using Typography = KyfRev.DesignSystem.Tokens.Typography;
 
 namespace KyfRev.Presentation.Wpf.Reading;
+
+/// <summary>Un bloc du texte, et ce qu'il donne à voix haute.</summary>
+/// <param name="Block">Le bloc.</param>
+/// <param name="Text">Ce qui se dit.</param>
+internal sealed record SpokenBlock(Block Block, string Text);
 
 /// <summary>
 /// Tire un document natif du contenu d'une fiche. Le texte de chaque nœud reste dans son propre morceau,
@@ -79,6 +85,7 @@ internal sealed class DocumentBuilder
     private readonly Queue<(Border Slot, string Source, double Size)> _pendingFormulas = new();
     private readonly HashSet<RenderText> _taskTexts = [];
     private readonly Dictionary<RenderNode, TextPiece> _pieces;
+    private readonly HashSet<Paragraph> _unspoken = [];
     private FlowDocument? _document;
     private Paragraph? _openRootParagraph;
     private int _nextRootChild;
@@ -201,11 +208,86 @@ internal sealed class DocumentBuilder
 
     private static Paragraph NewParagraph() => new() { Margin = new Thickness(0, 0, 0, 12) };
 
+    /// <summary>Ce qui se lit à voix haute, dans l'ordre : ni le code, ni les dessins, ni ce qui entoure la fiche.</summary>
+    public IReadOnlyList<SpokenBlock> SpokenBlocks()
+    {
+        Complete();
+        var spoken = new List<SpokenBlock>();
+        CollectSpoken(_document!.Blocks, spoken);
+        return spoken;
+    }
+
+    private void CollectSpoken(IEnumerable<Block> blocks, List<SpokenBlock> spoken)
+    {
+        foreach (var block in blocks)
+        {
+            switch (block)
+            {
+                case Paragraph paragraph when !_unspoken.Contains(paragraph):
+                    var text = new StringBuilder();
+                    AppendSpoken(paragraph.Inlines, text);
+                    var said = string.Join(' ', text.ToString().Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+                    if (said.Length >= 2)
+                    {
+                        spoken.Add(new SpokenBlock(paragraph, said));
+                    }
+                    break;
+                case Section section:
+                    CollectSpoken(section.Blocks, spoken);
+                    break;
+                case List list:
+                    foreach (var item in list.ListItems)
+                    {
+                        CollectSpoken(item.Blocks, spoken);
+                    }
+                    break;
+                case Table table:
+                    foreach (var cell in table.RowGroups.SelectMany(group => group.Rows).SelectMany(row => row.Cells))
+                    {
+                        CollectSpoken(cell.Blocks, spoken);
+                    }
+                    break;
+            }
+        }
+    }
+
+    /// <summary>Le texte d'un bloc tel qu'il se dit : les formules et les images y sont nommées.</summary>
+    private static void AppendSpoken(InlineCollection inlines, StringBuilder text)
+    {
+        foreach (var inline in inlines)
+        {
+            switch (inline)
+            {
+                case Run run:
+                    text.Append(run.Text);
+                    break;
+                case Span span:
+                    AppendSpoken(span.Inlines, text);
+                    break;
+                case LineBreak:
+                    text.Append(' ');
+                    break;
+                case InlineUIContainer { Child: Image image }:
+                    var alternative = AutomationProperties.GetName(image);
+                    text.Append(' ').Append(ReadingText.SpokenImage);
+                    text.Append(alternative.Length > 0 ? $" : {alternative} " : " ");
+                    break;
+                case InlineUIContainer { Child: Border }:
+                    text.Append(' ').Append(ReadingText.SpokenFormula).Append(' ');
+                    break;
+                case InlineUIContainer { Child: { } child }:
+                    text.Append(' ').Append(AutomationProperties.GetName(child)).Append(' ');
+                    break;
+            }
+        }
+    }
+
     private void AddHeader(BlockCollection blocks)
     {
         if (_reading.Details.Length > 0)
         {
             var details = new Paragraph(new Run(_reading.Details)) { Margin = new Thickness(0, 0, 0, 4), FontSize = Typography.Caption.Size };
+            _unspoken.Add(details);
             details.SetResourceReference(TextElement.ForegroundProperty, TextSecondary);
             blocks.Add(details);
         }
@@ -533,6 +615,7 @@ internal sealed class DocumentBuilder
         {
             var note = new Paragraph(new Run(ReadingText.DiagramAsText)) { Margin = new Thickness(0, 0, 0, 4), FontSize = Typography.Caption.Size };
             note.SetResourceReference(TextElement.ForegroundProperty, TextSecondary);
+            _unspoken.Add(note);
             blocks.Add(note);
         }
         var run = new Run(text);
@@ -546,6 +629,7 @@ internal sealed class DocumentBuilder
         };
         block.SetResourceReference(TextElement.FontFamilyProperty, CodeFont);
         block.SetResourceReference(TextElement.BackgroundProperty, SurfaceAlt);
+        _unspoken.Add(block);
         blocks.Add(block);
         if (value is not null && _pieces.TryGetValue(value, out var piece))
         {

@@ -550,6 +550,9 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
     [NotifyPropertyChangedFor(nameof(IsReadOn), nameof(IsReviseOn))]
     public partial bool IsRevising { get; private set; }
 
+    /// <summary>Le lecteur à voix haute ; rien sans les voix de Windows.</summary>
+    public ReadAloudViewModel? ReadAloud { get; init; }
+
     /// <summary>Le passage à montrer à l'ouverture, une seule fois ; rien pour la montrer depuis le début.</summary>
     public string? PassageToShow { get; set; }
 

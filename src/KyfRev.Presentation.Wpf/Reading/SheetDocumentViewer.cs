@@ -43,6 +43,7 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
 
     private ScrollViewer? _scroller;
     private double? _restoreOffset;
+    private Block? _spoken;
 
     public SheetDocumentViewer()
     {
@@ -143,6 +144,27 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
         }
     }
 
+    /// <summary>Ce qui se lit à voix haute : tout le texte se termine d'abord.</summary>
+    internal IReadOnlyList<SpokenBlock> SpokenBlocks() => _built?.SpokenBlocks() ?? [];
+
+    /// <summary>Met en avant le bloc lu à voix haute, et l'amène au milieu de la vue ; rien pour n'en mettre aucun.</summary>
+    internal void MarkSpoken(Block? block)
+    {
+        _spoken?.ClearValue(TextElement.BackgroundProperty);
+        _spoken = block;
+        if (block is null)
+        {
+            return;
+        }
+        block.SetResourceReference(TextElement.BackgroundProperty, "Kyf.Brush.PillSheetBackground");
+        if (_scroller is { } scroller)
+        {
+            UpdateLayout();
+            var top = block.ContentStart.GetCharacterRect(LogicalDirection.Forward).Top;
+            scroller.ScrollToVerticalOffset(scroller.VerticalOffset + top - (scroller.ViewportHeight / 2));
+        }
+    }
+
     /// <summary>La sélection dans le texte affiché, sans ses espaces de bord ; rien si elle n'y mène à rien.</summary>
     public TextPosition? CurrentSelection()
     {
@@ -224,6 +246,7 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
 
     private void Rebuild()
     {
+        _spoken = null;
         _restoreOffset = KeepsScroll && _scroller is { VerticalOffset: > 0 } scroller ? scroller.VerticalOffset : null;
         _built?.Cancel();
         if (Reading is { } reading)

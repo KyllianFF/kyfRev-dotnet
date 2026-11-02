@@ -10,6 +10,10 @@
     <ProjectReference Include="..\KyfRev.Application\KyfRev.Application.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="System.Speech" />
+  </ItemGroup>
+
   <!-- SystemEvents (changement des paramètres de Windows) vient du runtime de bureau, celui de l'application. -->
   <ItemGroup>
     <FrameworkReference Include="Microsoft.WindowsDesktop.App" />

@@ -209,7 +209,8 @@
       "kyfrev.infrastructure.windows": {
         "type": "Project",
         "dependencies": {
-          "KyfRev.Application": "[1.0.0-alpha.0, )"
+          "KyfRev.Application": "[1.0.0-alpha.0, )",
+          "System.Speech": "[10.0.13, )"
         }
       },
       "kyfrev.presentation.wpf": {
@@ -271,6 +272,12 @@
         "requested": "[1.0.4258.31, )",
         "resolved": "1.0.4258.31",
         "contentHash": "sHVZ2MQrHT1J3q5/6csn0fIP27rzpTO/RRC+wPQDrZheB7T4t2n+vVbY6SdCKr4WRV9s/gmBM3PPMWWJtoDzMg=="
+      },
+      "System.Speech": {
+        "type": "CentralTransitive",
+        "requested": "[10.0.13, )",
+        "resolved": "10.0.13",
+        "contentHash": "XxZ8CqmEYRvud8jyJcFKvIVIqNseAy6NdTbEJwSUzDX1FXYCf2gGuCmFST/cOFIOAMIKJ7hHiynhRl+oyIQHvw=="
       },
       "WpfMath": {
         "type": "CentralTransitive",

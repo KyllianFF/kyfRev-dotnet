@@ -9,6 +9,10 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- Écouter une fiche : le bouton « Écouter » de la lecture fait lire la fiche par les voix de Windows, hors ligne, bloc par
+  bloc. Le bloc lu ressort et vient au milieu de la vue. Pause, bloc voisin, vitesse et voix se règlent pendant la lecture.
+  Une formule et une image sont nommées, le code et les dessins sont passés. Pendant une révision à trous, la voix se tait :
+  elle dirait ce qui est masqué.
 - Vue « Paramètres », première partie : la séquence des étapes, le rappel actif et les rappels de consolidation. La vue
   montre aussitôt les dates que donne la séquence saisie, et dit avant l'enregistrement que les cycles en cours gardent
   leur calendrier. Ce qui ne se lit pas ou que le coffre refuse est expliqué, et la saisie reste.

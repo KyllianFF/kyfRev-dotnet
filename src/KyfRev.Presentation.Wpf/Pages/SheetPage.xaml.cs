@@ -5,6 +5,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using KyfRev.DesignSystem.Controls;
 using KyfRev.Presentation.Wpf.Editing;
+using KyfRev.Presentation.Wpf.Reading;
 using KyfRev.Rendering;
 
 namespace KyfRev.Presentation.Wpf.Pages;
@@ -12,13 +13,20 @@ namespace KyfRev.Presentation.Wpf.Pages;
 /// <summary>Vue d'une fiche ouverte pour la lire et la réviser : son plan, son texte et ses passages.</summary>
 internal sealed partial class SheetPage : UserControl
 {
+    private const double ListenLabelWidth = 520;
+
+    private IReadOnlyList<SpokenBlock> _spoken = [];
+
     public SheetPage()
     {
         InitializeComponent();
         Ribbon.ChooseImages = EditorView.ChooseImages;
+        Unloaded += (_, _) => (DataContext as SheetPageViewModel)?.ReadAloud?.CloseCommand.Execute(null);
         EditorView.CoveredTextClicked = () => (DataContext as SheetPageViewModel)?.CloseOverlayCommand.Execute(null);
         SizeChanged += (_, e) =>
         {
+            // Quand la place manque, « Écouter » se réduit à son icône : les autres boutons restent lisibles.
+            ListenLabel.Visibility = e.NewSize.Width < ListenLabelWidth ? Visibility.Collapsed : Visibility.Visible;
             if (DataContext is SheetPageViewModel page)
             {
                 page.PageWidth = e.NewSize.Width;
@@ -29,11 +37,18 @@ internal sealed partial class SheetPage : UserControl
             if (e.OldValue is SheetPageViewModel previous)
             {
                 previous.PropertyChanged -= OnPageChanged;
+                if (previous.ReadAloud is { } reader)
+                {
+                    reader.PropertyChanged -= OnReadAloudChanged;
+                    reader.CloseCommand.Execute(null);
+                }
             }
             if (e.NewValue is SheetPageViewModel page)
             {
                 page.PageWidth = ActualWidth;
                 page.PropertyChanged += OnPageChanged;
+                page.ReadAloud?.PropertyChanged += OnReadAloudChanged;
+                UpdateListenToggle(page);
             }
         };
     }
@@ -41,6 +56,11 @@ internal sealed partial class SheetPage : UserControl
     /// <summary>Le texte mis en forme a sa propre fenêtre : tout ce qui le recouvre le lui dit.</summary>
     private void OnPageChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
+        if (e.PropertyName is nameof(SheetPageViewModel.Reading) or nameof(SheetPageViewModel.IsReading) or nameof(SheetPageViewModel.IsRevising) && sender is SheetPageViewModel listened)
+        {
+            listened.ReadAloud?.CloseCommand.Execute(null);
+            UpdateListenToggle(listened);
+        }
         if (e.PropertyName == nameof(SheetPageViewModel.Reading) && sender is SheetPageViewModel { PassageToShow: { } wanted } opened)
         {
             opened.PassageToShow = null;
@@ -97,6 +117,66 @@ internal sealed partial class SheetPage : UserControl
         {
             ShowPassage(page, entry);
         }
+    }
+
+    /// <summary>On écoute ce qu'on lit. Pendant une révision à trous, la voix dirait ce qui est masqué.</summary>
+    private void UpdateListenToggle(SheetPageViewModel page) =>
+        ListenToggle.Visibility = page is { ReadAloud: not null, IsReading: true, Holes.IsActive: false } ? Visibility.Visible : Visibility.Collapsed;
+
+    private void OnListenToggle(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is not SheetPageViewModel { ReadAloud: { } reader })
+        {
+            return;
+        }
+        if (reader.IsOpen)
+        {
+            reader.CloseCommand.Execute(null);
+        }
+        else
+        {
+            _spoken = SheetText.SpokenBlocks();
+            reader.Open([.. _spoken.Select(block => block.Text)]);
+        }
+    }
+
+    /// <summary>Le bloc en cours ressort dans le texte.</summary>
+    private void OnReadAloudChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ReadAloudViewModel.Current) && sender is ReadAloudViewModel reader)
+        {
+            SheetText.MarkSpoken(reader.Current is { } index && index < _spoken.Count ? _spoken[index].Block : null);
+        }
+    }
+
+    private void OnRateMenu(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is SheetPageViewModel { ReadAloud: { } reader })
+        {
+            OpenChoices((Button)sender, ReadAloudViewModel.Rates, reader.Rate, rate => rate.Label, rate => reader.Rate = rate);
+        }
+    }
+
+    private void OnVoiceMenu(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is SheetPageViewModel { ReadAloud: { } reader })
+        {
+            OpenChoices((Button)sender, reader.Voices, reader.Voice, ReadingText.ShortVoice, voice => reader.Voice = voice);
+        }
+    }
+
+    /// <summary>Un menu de choix sous son bouton, celui du moment coché.</summary>
+    private static void OpenChoices<T>(Button button, IReadOnlyList<T> choices, T? current, Func<T, string> label, Action<T> choose)
+    {
+        var menu = new ContextMenu { PlacementTarget = button, Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom };
+        foreach (var choice in choices)
+        {
+            var item = new MenuItem { Header = label(choice), IsCheckable = true, IsChecked = EqualityComparer<T>.Default.Equals(choice, current) };
+            item.Click += (_, _) => choose(choice);
+            menu.Items.Add(item);
+        }
+        button.ContextMenu = menu;
+        menu.IsOpen = choices.Count > 0;
     }
 
     private void ShowPassage(SheetPageViewModel page, PassageEntry entry)

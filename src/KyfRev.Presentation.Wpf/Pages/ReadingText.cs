@@ -165,4 +165,74 @@ public static class ReadingText
     /// <summary>Où l'on en est dans le texte à trous.</summary>
     public static string HolesSummary(int revealed, int total) =>
         string.Create(System.Globalization.CultureInfo.InvariantCulture, $"Texte à trous : {revealed} sur {total} affichés.");
+
+    /// <summary>Écouter la fiche.</summary>
+    public const string Listen = "Écouter";
+
+    /// <summary>La région du lecteur.</summary>
+    public const string ListenRegion = "Écouter la fiche";
+
+    /// <summary>Lancer la lecture.</summary>
+    public const string ListenPlay = "Lire";
+
+    /// <summary>Mettre en pause.</summary>
+    public const string ListenPause = "Pause";
+
+    /// <summary>Reprendre.</summary>
+    public const string ListenResume = "Reprendre";
+
+    /// <summary>Arrêter.</summary>
+    public const string ListenStop = "Arrêter";
+
+    /// <summary>Le bloc précédent.</summary>
+    public const string ListenPrevious = "Bloc précédent";
+
+    /// <summary>Le bloc suivant.</summary>
+    public const string ListenNext = "Bloc suivant";
+
+    /// <summary>Fermer le lecteur.</summary>
+    public const string ListenClose = "Fermer le lecteur";
+
+    /// <summary>Lentement.</summary>
+    public const string RateSlow = "Lente";
+
+    /// <summary>À vitesse normale.</summary>
+    public const string RateNormal = "Normale";
+
+    /// <summary>Un peu plus vite.</summary>
+    public const string RateFaster = "Un peu plus vite";
+
+    /// <summary>Vite.</summary>
+    public const string RateFast = "Rapide";
+
+    /// <summary>Sans voix.</summary>
+    public const string NoVoice = "aucune";
+
+    /// <summary>Rien à lire.</summary>
+    public const string NothingToListen = "Rien à lire dans cette fiche.";
+
+    /// <summary>Pas de voix française.</summary>
+    public const string NoFrenchVoice = "Aucune voix française n'est installée dans Windows (Paramètres › Heure et langue › Voix).";
+
+    /// <summary>Une formule, telle qu'elle se dit.</summary>
+    public const string SpokenFormula = "formule";
+
+    /// <summary>Une image, telle qu'elle se dit.</summary>
+    public const string SpokenImage = "image";
+
+    /// <summary>« Vitesse : Normale ».</summary>
+    public static string RateOf(string rate) => $"Vitesse : {rate}";
+
+    /// <summary>« Voix : Hortense ».</summary>
+    public static string VoiceOf(string voice) => $"Voix : {voice}";
+
+    /// <summary>Le nom d'une voix sans ce qui le rallonge : « Microsoft Hortense Desktop » se dit « Hortense ».</summary>
+    public static string ShortVoice(string voice)
+    {
+        ArgumentNullException.ThrowIfNull(voice);
+        return voice.Replace("Microsoft ", string.Empty, StringComparison.Ordinal).Replace(" Desktop", string.Empty, StringComparison.Ordinal);
+    }
+
+    /// <summary>La voix n'a pas pu lire.</summary>
+    public static string VoiceFailed(string? reason) => $"La voix de Windows n'a pas pu lire la fiche ({reason}). Réessayez, ou choisissez une autre voix.";
 }
