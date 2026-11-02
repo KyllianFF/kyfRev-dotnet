@@ -9,6 +9,7 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- Les images SVG d'une fiche s'affichent en lecture, comme images : aucun script ni aucune adresse qu'elles contiennent n'agit.
 - Changer la place d'un passage depuis son menu, même perdu : on sélectionne le nouveau texte, puis on garde sa progression
   ou on repart de J0. La corbeille de la fiche est au bas du volet des passages, d'où tout se restaure.
 - Le code d'une fiche est coloré en lecture, selon son langage, avec les couleurs du thème : C#, C et C++, CSS, HTML, Java,

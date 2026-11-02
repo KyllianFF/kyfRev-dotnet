@@ -14,7 +14,7 @@ declare const chrome: {
   };
 };
 
-type Demande = { id: number; code: string; theme: Record<string, string> };
+type Demande = { id: number; code: string; theme: Record<string, string> } | { id: number; svg: string };
 
 /** Une image deux fois plus fine que sa taille : elle reste nette sur un écran agrandi. */
 const FINESSE = 2;
@@ -96,11 +96,22 @@ function adresseSvg(source: string): string {
   return `data:image/svg+xml;base64,${btoa(binaire)}`;
 }
 
-async function dessiner({ id, code, theme }: Demande): Promise<void> {
+/**
+ * Le SVG donné, ou celui que Mermaid tire de son code. Une image SVG du coffre n'entre jamais dans la
+ * page : elle n'y est qu'analysée, puis montrée comme une image, où ni script ni adresse n'agissent.
+ */
+async function sourceDe(demande: Demande): Promise<string> {
+  if ("svg" in demande) {
+    return new TextDecoder().decode(Uint8Array.from(atob(demande.svg), (lettre) => lettre.charCodeAt(0)));
+  }
+  configurer(demande.theme);
+  return (await mermaid.render(`dessin${demande.id}`, demande.code)).svg;
+}
+
+async function dessiner(demande: Demande): Promise<void> {
+  const { id } = demande;
   try {
-    configurer(theme);
-    const rendu = await mermaid.render(`dessin${id}`, code);
-    const { source, largeur, hauteur } = dimensionne(rendu.svg);
+    const { source, largeur, hauteur } = dimensionne(await sourceDe(demande));
     const adresse = adresseSvg(source);
     const image = new Image();
     image.src = adresse;

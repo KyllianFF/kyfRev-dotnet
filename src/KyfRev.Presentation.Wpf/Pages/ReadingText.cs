@@ -140,7 +140,7 @@ public static class ReadingText
     public const string UnreadableImage = "Image illisible";
 
     /// <summary>Une image SVG, qui viendra avec le dessin des diagrammes.</summary>
-    public const string SvgLater = "Image SVG, pas encore affichée par cette version";
+    public const string SvgLater = "Image SVG, que ce poste ne peut pas afficher sans le moteur WebView2";
 
     /// <summary>Un diagramme, montré sous sa forme de texte.</summary>
     public const string DiagramAsText = "Diagramme, montré ici sous sa forme de texte";

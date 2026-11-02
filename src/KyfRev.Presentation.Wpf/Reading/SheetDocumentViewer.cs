@@ -252,7 +252,7 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
         if (Reading is { } reading)
         {
             var drawsMermaid = TryFindResource(MermaidEngine.ResourceKey) is not null;
-            _built = new DocumentBuilder(reading, Follow, OpenLinkCommand is not null, ShowsHeader, key => TryFindResource(key) as System.Windows.Media.Brush) { DrawsMermaid = drawsMermaid };
+            _built = new DocumentBuilder(reading, Follow, OpenLinkCommand is not null, ShowsHeader, key => TryFindResource(key) as System.Windows.Media.Brush) { DrawsMermaid = drawsMermaid, Pictures = TryFindResource(MermaidEngine.ResourceKey) as IMermaidEngine };
             _built.Layer.Set(Highlights ?? [], ActiveHighlight);
             Document = _built.Build();
             ComputeHoles();
