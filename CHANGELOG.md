@@ -9,6 +9,9 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- Vue « Paramètres », première partie : la séquence des étapes, le rappel actif et les rappels de consolidation. La vue
+  montre aussitôt les dates que donne la séquence saisie, et dit avant l'enregistrement que les cycles en cours gardent
+  leur calendrier. Ce qui ne se lit pas ou que le coffre refuse est expliqué, et la saisie reste.
 - Vue « Définitions » : le glossaire du coffre, par dossier, avec une recherche qui ignore les accents et la casse, sur le
   terme comme sur l'explication. Chaque définition dit d'où elle vient et quand elle revient en révision, se modifie sur
   place, et « Voir dans la fiche » ouvre la fiche sur le passage. Une position à vérifier ou un passage perdu est signalé.
@@ -329,3 +332,4 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 ### Corrigé
 
 - Dans un champ de saisie, le texte commençait 12 pixels plus loin que le texte indicatif : il sautait à la première frappe.
+- Le libellé long d'une case à cocher était coupé : il passe maintenant à la ligne, en face de sa case.

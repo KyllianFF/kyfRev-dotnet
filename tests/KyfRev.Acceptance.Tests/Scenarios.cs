@@ -382,6 +382,26 @@ public sealed class Scenarios
     }
 
     [TestMethod]
+    public void T10_the_sequence_changes_in_the_settings_view()
+    {
+        using var trial = new Trial();
+        var sheet = trial.On(Day(10, 9), app => NewSheet(app, Title));
+        var before = trial.SheetTracking(sheet).GetProperty("cycle").GetProperty("sequence").GetRawText();
+
+        using (var running = trial.Launch(Day(10, 9)))
+        {
+            running.OpenView("Paramètres");
+            running.ChangeSteps("2, 4, 8");
+            running.SaveSettings();
+        }
+
+        var next = trial.On(Day(10, 9), app => NewSheet(app, "Mitose"));
+        Assert.AreEqual("2026-10-11", Due(trial, next), "Une nouvelle fiche suit la nouvelle séquence.");
+        Assert.AreEqual(before, trial.SheetTracking(sheet).GetProperty("cycle").GetProperty("sequence").GetRawText(), "Le cycle en cours garde son calendrier.");
+        Assert.AreEqual("2026-10-10", Due(trial, sheet));
+    }
+
+    [TestMethod]
     public void T10_changing_the_sequence_does_not_touch_a_running_cycle()
     {
         using var trial = new Trial();

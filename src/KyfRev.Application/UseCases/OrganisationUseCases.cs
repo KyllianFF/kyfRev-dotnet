@@ -91,6 +91,17 @@ public sealed class SettingsUseCases(VaultHost host)
     /// <summary>Enregistre les réglages, après vérification.</summary>
     [ZeroXCommand("modifier_reglages")]
     public Outcome<Done> Change(VaultPreferences preferences) => host.Use(vault => vault.ChangePreferences(preferences));
+
+    /// <summary>Modifie les réglages à partir de ceux du moment : ce que l'appelant ne touche pas ne change pas. Rend ce qui est enregistré.</summary>
+    public Outcome<VaultPreferences> Update(Func<VaultPreferences, VaultPreferences> change)
+    {
+        ArgumentNullException.ThrowIfNull(change);
+        return host.Use(vault =>
+        {
+            vault.ChangePreferences(change(vault.Preferences));
+            return vault.Preferences;
+        });
+    }
 }
 
 /// <summary>Modèles de fiche.</summary>

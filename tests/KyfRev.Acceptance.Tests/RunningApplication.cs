@@ -281,7 +281,7 @@ internal sealed class RunningApplication : IDisposable
     public void OpenView(string name)
     {
         var entry = Retry.WhileNull(
-            () => Wait("MainNavigation").FindAllChildren().FirstOrDefault(child => child.Name == name),
+            () => Wait("MainNavigation").FindAllChildren().Concat(Wait("SecondaryNavigation").FindAllChildren()).FirstOrDefault(child => child.Name == name),
             Patience,
             Interval,
             throwOnTimeout: true,
@@ -301,6 +301,16 @@ internal sealed class RunningApplication : IDisposable
 
     /// <summary>Cherche dans la vue ouverte.</summary>
     public void Search(string text) => Wait("SearchBox").AsTextBox().Text = text;
+
+    /// <summary>Change la séquence des étapes dans la vue « Paramètres ».</summary>
+    public void ChangeSteps(string steps) => Wait("StepsBox").AsTextBox().Text = steps;
+
+    /// <summary>Enregistre les réglages, et attend que la vue le confirme.</summary>
+    public void SaveSettings()
+    {
+        Press("SaveSettings");
+        Wait("SavedMessage");
+    }
 
     /// <summary>La ligne d'une fiche dans la vue « Fiches », une fois lue.</summary>
     public string WaitSheetRow(string title) => WaitListRow(title).Name;

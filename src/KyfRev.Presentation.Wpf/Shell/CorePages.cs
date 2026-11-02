@@ -20,6 +20,9 @@ public static class CorePages
     /// <summary>Identifiant de la vue « Définitions ».</summary>
     public const string Definitions = "definitions";
 
+    /// <summary>Identifiant de la vue « Paramètres ».</summary>
+    public const string Settings = "parametres";
+
     /// <summary>Identifiant de la vue « Archives ».</summary>
     public const string Archives = "archives";
 
@@ -40,7 +43,7 @@ public static class CorePages
             Entry(Archives, ShellText.Archives, Icons.Archive, 40),
             Entry("statistiques", ShellText.Statistics, Icons.Chart, 50),
             Entry("sante", ShellText.Health, Icons.Health, NavigationItem.SecondaryOrder),
-            Entry("parametres", ShellText.Settings, Icons.Settings, NavigationItem.SecondaryOrder + 10),
+            Entry(Settings, ShellText.Settings, Icons.Settings, NavigationItem.SecondaryOrder + 10),
         ];
     }
 
