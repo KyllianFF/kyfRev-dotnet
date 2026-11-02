@@ -3,7 +3,7 @@
 | | |
 |---|---|
 | **Date** | 31 octobre 2026 |
-| **Statut** | Plan validé le 31 octobre 2026 : les 13 décisions du §7 sont arrêtées sur l'option recommandée (décision 2 : option C, §2.6). J1, J2, J3 et J4 validés et fusionnés le 31 octobre 2026 (J3 en cinq demandes de fusion : lecture fidèle, écriture des fiches, écritures complémentaires, sauvegardes et exports, corpus d'ancrage ; J4 en deux : couche Application et garde-fous, modularité et module Citations). J5 validé le 1er novembre 2026 sur ses captures (`docs/captures/j5`), en deux demandes de fusion : design system, coquille WPF et galerie de composants ; puis rouvert le même jour pour une nouvelle identité visuelle, « Veillée », que vous avez choisie parmi plusieurs propositions : J5.3 jetons, polices et composants Veillée ; J5.4 coquille adaptative (onglets sous 600 px, colonne d'icônes jusqu'à 1 399 px, barre latérale au-delà, jamais de défilement horizontal) ; J6.7 vue « Aujourd'hui » au nouveau style (résumé du jour, colonne latérale, révisions de la semaine) ; J6.8 fiche, passage, séance et accueil au nouveau style ; J6.9 aperçu et liste en deux sur grands écrans ; J5 revalidé le 1er novembre 2026 sur ces captures (`docs/captures/j5`, `docs/captures/j6`) ; J6.10 réponses aux rappels de consolidation (marquer un passage existant ; surligner un nouveau passage viendra avec J7). J6 validé le 1er novembre 2026, après votre essai sur un coffre généré (`tools/coffre-essai`), avec J6.1 tableau de bord et données des archives ; J6.2 emplacements, ouverture au démarrage et accueil ; J6.3 vue « Aujourd'hui » ; J6.4 fiche et passage en révision ; J6.5 séance d'étude ; journal de diagnostic ; J6.6 squelette de l'installateur (Inno Setup 6.7.3) ; scénarios d'acceptation T2 à T6, T9, T10, T11 et T18 (`tests/KyfRev.Acceptance.Tests`). Ajoutée ensuite : J6.11 vue « Archives », livrable de J6 qui manquait à la validation. Restent ouverts : l'assistant d'installation n'a pas encore été vu sur le poste (la CI l'installe et le désinstalle) ; la préversion `1.0.0-alpha.1` n'est pas publiée. Vues encore vides réparties le 1er novembre 2026 : Fiches, Définitions et début de Paramètres à J7, Citations à J9, le reste de Paramètres au fil des jalons. Jalon en cours : J7, avec J7.1 vue « Fiches » (liste, aperçu et création) J7.2 moteur de rendu `KyfRev.Rendering`, sans effet visible : texte affiché, positions et ré-ancrage identiques à la 0.x sur le corpus d'ancrage (T12) et sur 1 149 cas limites calculés par la 0.x ; et J7.3 lecture native d'une fiche et de son aperçu, en trois volets (plan, texte, passages), avec formules, tableaux, liens et images du coffre. J7.4 surlignage dans le texte : passages et définitions replacés à l'ouverture, créés par le clic droit ou la touche H, et T5 complété (un passage surligné pendant un rappel compte comme à revoir). J7.5 écriture d'une fiche : le texte mis en forme se modifie à sa place (ProseMirror dans WebView2, durci), un bouton affiche le Markdown natif à gauche et son rendu à droite, ruban Accueil et Insertion, enregistrement automatique, conflit avec le disque sans perte (T14, sans l'écran de comparaison), `[[`, images et correcteur de Windows ; T17 couvert. J7.6 le reste de l'écriture et de la lecture : format étendu (couleur, taille, alignement, tâches), galerie des schémas, graphiques et SmartArt dessinés, texte à trous, versions et comparaison, vues Définitions et Paramètres (première partie), écoute à voix haute, code coloré, images SVG, changement de place d'un passage et corbeille du volet. Reste à valider à J7 : un essai à la main, écran déverrouillé (son des voix, Narrateur, souris). Les demandes de fusion 47 à 56 sont entrées sur `main` sans CI le 2 novembre, GitHub refusant de démarrer ses jobs ; je les ai vérifiées localement, puis dans Windows Sandbox (`tools/verification-sandbox.ps1`), qui refait les étapes de la CI. Le dépôt est public depuis ce jour, et la CI est de nouveau verte sur `main` (`f707bcd`). |
+| **Statut** | Plan validé le 31 octobre 2026 : les 13 décisions du §7 sont arrêtées sur l'option recommandée (décision 2 : option C, §2.6). J1, J2, J3 et J4 validés et fusionnés le 31 octobre 2026 (J3 en cinq demandes de fusion : lecture fidèle, écriture des fiches, écritures complémentaires, sauvegardes et exports, corpus d'ancrage ; J4 en deux : couche Application et garde-fous, modularité et module Citations). J5 validé le 1er novembre 2026 sur ses captures (`docs/captures/j5`), en deux demandes de fusion : design system, coquille WPF et galerie de composants ; puis rouvert le même jour pour une nouvelle identité visuelle, « Veillée », que j'ai choisie parmi plusieurs pistes : J5.3 jetons, polices et composants Veillée ; J5.4 coquille adaptative (onglets sous 600 px, colonne d'icônes jusqu'à 1 399 px, barre latérale au-delà, jamais de défilement horizontal) ; J6.7 vue « Aujourd'hui » au nouveau style (résumé du jour, colonne latérale, révisions de la semaine) ; J6.8 fiche, passage, séance et accueil au nouveau style ; J6.9 aperçu et liste en deux sur grands écrans ; J5 revalidé le 1er novembre 2026 sur ces captures (`docs/captures/j5`, `docs/captures/j6`) ; J6.10 réponses aux rappels de consolidation (marquer un passage existant ; surligner un nouveau passage viendra avec J7). J6 validé le 1er novembre 2026, après mon essai sur un coffre généré (`tools/coffre-essai`), avec J6.1 tableau de bord et données des archives ; J6.2 emplacements, ouverture au démarrage et accueil ; J6.3 vue « Aujourd'hui » ; J6.4 fiche et passage en révision ; J6.5 séance d'étude ; journal de diagnostic ; J6.6 squelette de l'installateur (Inno Setup 6.7.3) ; scénarios d'acceptation T2 à T6, T9, T10, T11 et T18 (`tests/KyfRev.Acceptance.Tests`). Ajoutée ensuite : J6.11 vue « Archives », livrable de J6 qui manquait à la validation. Restent ouverts : l'assistant d'installation n'a pas encore été vu sur le poste (la CI l'installe et le désinstalle) ; la préversion `1.0.0-alpha.1` n'est pas publiée. Vues encore vides réparties le 1er novembre 2026 : Fiches, Définitions et début de Paramètres à J7, Citations à J9, le reste de Paramètres au fil des jalons. Jalon en cours : J7, avec J7.1 vue « Fiches » (liste, aperçu et création) J7.2 moteur de rendu `KyfRev.Rendering`, sans effet visible : texte affiché, positions et ré-ancrage identiques à la 0.x sur le corpus d'ancrage (T12) et sur 1 149 cas limites calculés par la 0.x ; et J7.3 lecture native d'une fiche et de son aperçu, en trois volets (plan, texte, passages), avec formules, tableaux, liens et images du coffre. J7.4 surlignage dans le texte : passages et définitions replacés à l'ouverture, créés par le clic droit ou la touche H, et T5 complété (un passage surligné pendant un rappel compte comme à revoir). J7.5 écriture d'une fiche : le texte mis en forme se modifie à sa place (ProseMirror dans WebView2, durci), un bouton affiche le Markdown natif à gauche et son rendu à droite, ruban Accueil et Insertion, enregistrement automatique, conflit avec le disque sans perte (T14, sans l'écran de comparaison), `[[`, images et correcteur de Windows ; T17 couvert. J7.6 le reste de l'écriture et de la lecture : format étendu (couleur, taille, alignement, tâches), galerie des schémas, graphiques et SmartArt dessinés, texte à trous, versions et comparaison, vues Définitions et Paramètres (première partie), écoute à voix haute, code coloré, images SVG, changement de place d'un passage et corbeille du volet. Reste à valider à J7 : un essai à la main, écran déverrouillé (son des voix, Narrateur, souris). Les demandes de fusion 47 à 56 sont entrées sur `main` sans CI le 2 novembre, GitHub refusant de démarrer ses jobs ; je les ai vérifiées localement, puis dans Windows Sandbox (`tools/verification-sandbox.ps1`), qui refait les étapes de la CI. Le dépôt est public depuis ce jour, et la CI est de nouveau verte sur `main` (`f707bcd`). |
 | **Périmètre audité** | Dépôt `KyllianFF/kyfRev` à `87f291c` (v0.8.0, 133 commits) ; application installée `C:\Program Files\kyfRev` (0.7.0) ; coffre `Documents\kyfRev\Coffre` et ses sauvegardes. |
 | **Méthode** | Lecture intégrale du cœur métier (`crates/noyau`), lecture du dossier de conception (64 décisions D1 à D64), analyse du crate `coffre` (persistance), de `src-tauri` (commandes, extensions, sécurité, livraison) et de l'interface Svelte. Aucune modification de l'existant. |
 
@@ -44,7 +44,7 @@
 | Installateur | **Inno Setup 6** : installation par utilisateur (`%LocalAppData%\Programs\kyfRev`) par défaut, option « tous les utilisateurs » (`Program Files`), plus une version portable (§5.5). |
 | Versions | `1.0.0-alpha.N`, puis `1.0.0` à la parité fonctionnelle avec la 0.8.0 (§5.3). |
 
-Les **décisions à valider** sont regroupées au §7.
+Les **décisions** sont regroupées au §7.
 
 ---
 
@@ -344,7 +344,7 @@ Il existe **deux niveaux**.
   - À défaut, la recherche par citation exacte les rattache presque toujours ; seuls des cas limites passeraient en `a_verifier`.
 - **Mermaid** n'a aucun équivalent natif.
 - L'éditeur visuel fidèle à l'octet coûterait **30 à 40 jours ou plus** à réécrire en natif.
-- **Exposition réelle aujourd'hui** : votre coffre ne contient **aucune annotation**.
+- **Exposition réelle aujourd'hui** : mon coffre ne contient **aucune annotation**.
 
 | | A. Hybride | B. 100 % natif, éditeur compris | **C. Lecture native, éditeur visuel en WebView2 (recommandée)** |
 |---|---|---|---|
@@ -674,11 +674,11 @@ La livraison n'est déclenchée que sur étiquette. Toutes les actions sont épi
 
 ## 6. Feuille de route
 
-Les jalons sont **séquentiels**. Chacun est livré par une ou plusieurs branches conformes au §5.1 et se clôt par **votre validation** sur ses critères. Taille indicative : S < 5 j, M = 5 à 15 j, L = 15 à 30 j, XL > 30 j de travail. La parité complète représente plusieurs mois à temps plein, dont environ 40 % pour l'interface.
+Les jalons sont **séquentiels**. Chacun est livré par une ou plusieurs branches conformes au §5.1 et se clôt par **ma validation** sur ses critères. Taille indicative : S < 5 j, M = 5 à 15 j, L = 15 à 30 j, XL > 30 j de travail. La parité complète représente plusieurs mois à temps plein, dont environ 40 % pour l'interface.
 
 ### J0. Validation du plan (ce document)
 - **Livrable** : décisions du §7 arrêtées.
-- **Critère** : votre accord explicite.
+- **Critère** : mon accord explicite.
 
 ### J1. Socle du dépôt et gouvernance (S)
 - **Livrables** :
@@ -716,7 +716,7 @@ Les jalons sont **séquentiels**. Chacun est livré par une ou plusieurs branche
   - un coffre écrit par C#, rouvert par Tauri 0.8.0, n'a **aucun** signalement dans Santé ;
   - une coupure simulée pendant l'écriture laisse l'ancienne ou la nouvelle version (T15) ;
   - le verrou est respecté entre C# et Rust ;
-  - `verifier` sur votre coffre réel n'écrit **aucun** octet (empreintes avant et après).
+  - `verifier` sur mon coffre réel n'écrit **aucun** octet (empreintes avant et après).
 
 ### J4. Application, modularité, garde-fous (M)
 - **Livrables** :
@@ -734,7 +734,7 @@ Les jalons sont **séquentiels**. Chacun est livré par une ou plusieurs branche
 ### J5. Design system et coquille WPF (M)
 - **Livrables** :
   - `KyfRev.DesignSystem` :
-    - jetons de l'identité « Veillée » (2 gammes, forêt et ambre, et leurs rôles), choisie en novembre 2026 parmi plusieurs propositions ; polices Atkinson Hyperlegible Next et Mono livrées avec l'application ;
+    - jetons de l'identité « Veillée » (2 gammes, forêt et ambre, et leurs rôles), choisie en novembre 2026 parmi plusieurs pistes ; polices Atkinson Hyperlegible Next et Mono livrées avec l'application ;
     - échelles **régulières** : typographie, espacements sur une grille de 4 px, rayons, élévations, durées ;
     - thèmes clair, sombre et **contraste élevé** Windows ;
     - composants : bouton, champ, carte, pastille, menu, dialogue, notification, état vide, squelette de chargement ;
@@ -746,7 +746,7 @@ Les jalons sont **séquentiels**. Chacun est livré par une ou plusieurs branche
   - aucune couleur codée en dur hors des jetons (test) ;
   - navigation complète au clavier avec focus toujours visible ;
   - Accessibility Insights (FastPass) sans erreur ;
-  - captures claires et sombres validées par vous.
+  - captures claires et sombres validées par moi.
 
 ### J6. Parcours de révision : `1.0.0-alpha.1` (L)
 - **Livrables** :
@@ -764,7 +764,7 @@ Les jalons sont **séquentiels**. Chacun est livré par une ou plusieurs branche
   - scénarios d'acceptation T2 à T6, T9, T10, T11 et T18 automatisés de bout en bout (FlaUI, horloge simulée) ;
   - tableau de bord affiché en moins de 300 ms sur un coffre de 2 000 fiches ;
   - préversion installable et désinstallable sans droits administrateur ;
-  - essai sur une **copie** de votre coffre.
+  - essai sur une **copie** de mon coffre.
 
 ### J7. Lecture native, annotations et édition : `alpha.2` (XL)
 Ce jalon se découpe en sous-parties validées une à une, comme J6.
@@ -782,7 +782,7 @@ Ce jalon se découpe en sous-parties validées une à une, comme J6.
   - en écriture, le texte mis en forme se modifie à sa place : c'est l'éditeur visuel, le mode par défaut dès qu'il existera. Un bouton affiche le code Markdown dans un volet à part, **à gauche** du texte ;
   - le ruban ressemble à ceux d'Office : un onglet **Accueil** (gras, italique, souligné, barré, couleur, exposant et indice, listes à puces, numérotées et de tâches, taille, alignement, casse) et un onglet **Insertion** (tableau à la taille choisie, bloc de code avec son langage, schéma, graphique, SmartArt, lien, images). Annuler, Rétablir, les titres, la formule et la ligne s'y ajoutent, repris de la 0.x ;
   - la casse propose aussi « iNVERSER lA cASSE », absente de la 0.x ;
-  - **le format s'étend**, à la demande de l'utilisateur : couleur et taille en `<span style="…">`, alignement en `<div align="…">`, tâches en `- [ ]`. Seules ces formes exactes sont reconnues, et tout autre HTML reste du texte. La 0.8.0 les affiche comme du texte, sans rien perdre : une fiche qui les emploie n'y a plus la même mise en forme, ni les mêmes positions de passages ;
+  - **le format s'étend**, sur ma décision : couleur et taille en `<span style="…">`, alignement en `<div align="…">`, tâches en `- [ ]`. Seules ces formes exactes sont reconnues, et tout autre HTML reste du texte. La 0.8.0 les affiche comme du texte, sans rien perdre : une fiche qui les emploie n'y a plus la même mise en forme, ni les mêmes positions de passages ;
   - couleur, taille, alignement, tâches : les choix de réalisation. Une couleur lue dans une fiche reste **lisible partout** : sa teinte et sa saturation restent, sa clarté (OKLCH) s'arrête à 0,45 sur fond clair et à 0,78 sur fond sombre, bornes calculées sur tout le cube de couleurs pour garantir 4,5:1, y compris sur la surface des tableaux. La même règle vaut à la lecture (`TokenColor.ReadableOn`) et à l'écriture (CSS). En contraste élevé, le thème l'emporte. Une couleur collée d'ailleurs n'entre pas dans la fiche : une page web fixe la couleur de tout. La taille se choisit en pixels et s'écrit relative au texte (`1.18em`), de 0,5 à 3 fois, pour suivre un titre. Un passage aligné est un conteneur de blocs, sur ses propres lignes, sans interrompre un paragraphe ; Markdown n'aligne un tableau que par colonne, et une liste s'aligne entière. En lecture, la case d'une tâche se dessine, mais « [ ] » compte encore dans le texte : les positions des surlignages restent celles de la 0.x. Cocher se fait en écriture ;
   - les règles du format sont vérifiées **des deux côtés sur les mêmes cas** (`tests/fixtures/format-etendu/cas.json`), lus par la lecture native et par l'éditeur. Une fiche piégée qui ouvre des passages sans fin ne fait pas s'effondrer la lecture : la recherche des fermetures a un budget de lignes, le même des deux côtés ;
   - schéma, graphique et SmartArt ouvrent une **galerie comme celle d'Office** : des catégories, une vignette par modèle, un aperçu qui suit le texte saisi ;
@@ -790,7 +790,7 @@ Ce jalon se découpe en sous-parties validées une à une, comme J6.
   - un SmartArt est décrit une seule fois (`KyfRev.Rendering/Diagrams`) : une liste de formes, sans thème ni affichage, que WPF dessine en lecture et que l'éditeur reçoit en SVG. Les deux restent donc identiques ;
   - Mermaid dessine dans **une page cachée** (`MermaidEngine`) : le même moteur que l'éditeur, aussi fermé, qui ne voit jamais le coffre et ne reçoit que du code. Il rend une image, et un dessin qui ne finit pas (20 s) ferme la page, qui repart pour le suivant. Mermaid 12.2.0 pèse 5,5 Mo, chargés seulement si une fiche a un schéma. Sans étiquettes HTML : elles empêcheraient d'en faire une image ;
   - un schéma écrit à la main reste modifiable en code : seule un SmartArt se rouvre dans la galerie, car rien ne permet de retrouver un modèle dans du code Mermaid ;
-  - à la demande de l'utilisateur, avant toute fusion, l'éditeur visuel arrive en même temps que le ruban et le Markdown natif ; puis le format étendu ; puis la galerie ;
+  - sur ma décision, avant toute fusion, l'éditeur visuel arrive en même temps que le ruban et le Markdown natif ; puis le format étendu ; puis la galerie ;
   - contrôle retenu : `WebView2`, et non `WebView2CompositionControl`, qui demande le SDK Windows et passe par une capture de l'écran, au détriment de la frappe. Le moteur a sa propre fenêtre : pendant qu'un dialogue ou un volet le recouvre, son image prend sa place ;
   - le bus de messages est typé et généré : `VisualMessages.cs` donne `tools/visual-editor/src/messages.ts`, et un test vérifie qu'il est à jour. Le paquet de l'éditeur est versionné, et la CI vérifie qu'il correspond à ses sources : compiler kyfRev ne demande pas Node.
 - **Décisions de la lecture, arrêtées le 2 novembre** :
@@ -870,9 +870,9 @@ Ce jalon se découpe en sous-parties validées une à une, comme J6.
 
 ---
 
-## 7. Décisions à valider
+## 7. Décisions
 
-Répondez par exemple « 1A, 2A, 3A… » ; chaque option recommandée est en premier.
+L'option que j'ai retenue est en gras.
 
 | # | Décision | Options |
 |---|---|---|
@@ -880,7 +880,7 @@ Répondez par exemple « 1A, 2A, 3A… » ; chaque option recommandée est en pr
 | 2 | **Surface « document »** | **C. Lecture, révision et annotations natives ; éditeur visuel dans WebView2** (recommandé, révisé le 31 octobre) · A. Hybride · B. 100 % natif, sans éditeur visuel en 1.0 |
 | 3 | **Module Schémas réseau** | **A. Îlot WebView2 en 1.0, natif plus tard** (recommandé) · B. Natif dès la 1.0 (+30 à 45 j) · C. Abandonné |
 | 4 | **Extensions tierces** | **A. Contrat HTML/JS actuel conservé et durci** (recommandé) · B. Seulement des modules .NET internes · C. Abandonnées |
-| 5 | **Nom du dépôt** | **A. `kyfRev-dotnet`** (recommandé) · B. autre nom proposé par vous |
+| 5 | **Nom du dépôt** | **A. `kyfRev-dotnet`** (recommandé) · B. un autre nom |
 | 6 | **Chiffrement** | **A. Option par coffre, coffre en clair par défaut** (recommandé) · B. Obligatoire pour tout nouveau coffre |
 | 7 | **Installateur** | **A. Inno Setup, par utilisateur par défaut avec option tous les utilisateurs** (recommandé) · B. Inno Setup, pour tous les utilisateurs seulement (comme la 0.x) · C. WiX (MSI) |
 | 8 | **Exécutable** | **A. Autonome (runtime inclus)** (recommandé) · B. Dépendant du runtime .NET installé |
