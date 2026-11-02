@@ -52,6 +52,12 @@ Le crochet `pre-push` et l'intégration continue refusent tout commit fait direc
 `main` et toute fusion d'une branche mal nommée. Une demande de fusion ouverte sur GitHub pour
 la relecture est marquée fusionnée automatiquement après l'envoi.
 
+Une demande de fusion s'ouvre **en brouillon** tant qu'elle n'est pas prête : un envoi sur une
+branche ne lance que la gouvernance, et les jobs sur Windows, qui consomment le quota d'Actions,
+ne tournent que sur une demande de fusion prête et sur `main`. Pour plusieurs branches empilées,
+seule la dernière a besoin d'être prête : elle contient les autres, et `main` ne reçoit qu'un
+envoi une fois toutes les fusions faites.
+
 ## Avant chaque envoi
 
 - `dotnet build`, `dotnet test --solution KyfRev.slnx` et `dotnet format --verify-no-changes`
