@@ -102,7 +102,7 @@ Ces cas d'usage ne sont chargés que si le coffre active le module Citations.
 | `liste_des_fiches` | `SheetUseCases.List` | J7.1 | Vue « Fiches » ; l'arborescence reste à J9. |
 | `chercher_dans_les_fiches` | — | J9 | Recherche dans les fiches. |
 | `recherche_globale` | — | J9 | Recherche globale. |
-| `liste_des_definitions` | — | J9 | Vue « Définitions ». |
+| `liste_des_definitions` | `AnnotationUseCases.Definitions` | J7.6 | Vue « Définitions ». |
 | `schemas` | — | J10 | Module Schémas réseau. |
 | `lire_schema` | — | J10 | Module Schémas réseau (le coffre sait déjà lire un schéma). |
 | `creer_schema` | — | J10 | Module Schémas réseau (le coffre sait déjà créer un schéma). |

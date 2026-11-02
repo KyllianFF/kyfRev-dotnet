@@ -130,6 +130,33 @@ public sealed class VaultAdapter(VaultSession inner) : IVault
     public IReadOnlyList<TrashedSheet> TrashedSheets() => inner.TrashedSheets();
 
     /// <inheritdoc/>
+    public IReadOnlyList<VaultDefinition> Definitions(DateOnly day)
+    {
+        var sheets = SheetList().ToDictionary(sheet => sheet.Id, StringComparer.Ordinal);
+        var french = CultureInfo.GetCultureInfo("fr-FR").CompareInfo;
+        return [.. inner.AllAnnotations
+            .Where(annotation => annotation is { TrashedAt: null, Definition: not null })
+            .Select(annotation =>
+            {
+                var sheet = sheets.GetValueOrDefault(annotation.SheetId);
+                var review = ReviewState.Of(annotation.Tracking, day);
+                return new VaultDefinition(
+                    annotation.Id,
+                    annotation.SheetId,
+                    sheet?.Title ?? string.Empty,
+                    sheet?.Folder ?? string.Empty,
+                    annotation.Definition!.Term,
+                    annotation.Definition.Explanation,
+                    ToAnchor(annotation.Anchor).Section,
+                    annotation.AnchorState,
+                    review.Step,
+                    review.DueDate);
+            })
+            .OrderBy(definition => definition.Folder, StringComparer.Ordinal)
+            .ThenBy(definition => definition.Term, Comparer<string>.Create((left, right) => french.Compare(left, right, CompareOptions.IgnoreCase)))];
+    }
+
+    /// <inheritdoc/>
     public int TrashFolder(string folder, Moment now) => inner.TrashFolder(folder, now);
 
     /// <inheritdoc/>

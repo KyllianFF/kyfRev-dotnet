@@ -29,7 +29,7 @@
                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}" Visibility="Collapsed"
                          Foreground="{DynamicResource Kyf.Brush.TextSecondary}"
                          Text="{TemplateBinding kyf:Field.Placeholder}" />
-              <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" Focusable="False"
+              <ScrollViewer x:Name="PART_ContentHost" Focusable="False"
                             VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
                             HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden" />
             </Grid>

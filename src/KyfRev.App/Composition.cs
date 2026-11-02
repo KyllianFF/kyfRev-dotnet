@@ -76,6 +76,7 @@ internal static class Composition
         services.AddSingleton<IReviewOpener>(provider => provider.GetRequiredService<ReviewNavigation>());
         services.AddSingleton<DashboardPageViewModel>();
         services.AddSingleton<SheetsPageViewModel>();
+        services.AddSingleton<DefinitionsPageViewModel>();
         services.AddSingleton<ArchivesPageViewModel>();
         services.AddSingleton(_ => new DesignResources(ThemeKind.Light, Motion.SystemPrefersReducedMotion));
         services.AddSingleton<AppearanceController>();
@@ -87,6 +88,7 @@ internal static class Composition
                 {
                     [CorePages.Today] = provider.GetRequiredService<DashboardPageViewModel>(),
                     [CorePages.Sheets] = provider.GetRequiredService<SheetsPageViewModel>(),
+                    [CorePages.Definitions] = provider.GetRequiredService<DefinitionsPageViewModel>(),
                     [CorePages.Archives] = provider.GetRequiredService<ArchivesPageViewModel>(),
                 })
                     .Concat(provider.GetServices<INavigationContributor>().Select(contributor => CorePages.FromModule(contributor.Entry))),

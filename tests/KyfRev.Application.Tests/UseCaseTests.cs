@@ -39,6 +39,33 @@ public sealed class UseCaseTests
     }
 
     [TestMethod]
+    public void The_glossary_gives_each_definition_and_where_it_comes_from()
+    {
+        using var folder = new TestFolder();
+        using var test = Opened(folder);
+        var app = test.App;
+        var sheet = app.Sheets.Create("Biologie/Cellule", "Mitose", string.Empty).Value;
+        var noyau = app.Annotations.CreateDefinition(sheet, Passage, new Definition("Noyau", "Il renferme l'ADN.")).Value;
+        var ecologie = app.Annotations.CreateDefinition(sheet, Passage, new Definition("Écologie", "L'étude des milieux.")).Value;
+        app.Annotations.Create(sheet, Passage, "Un simple commentaire.");
+        app.Annotations.Trash(app.Annotations.CreateDefinition(sheet, Passage, new Definition("Jetée", "À la corbeille.")).Value);
+
+        var glossary = app.Annotations.Definitions().Value;
+
+        Assert.AreEqual(ecologie + "|" + noyau, string.Join('|', glossary.Select(definition => definition.Id)), "É se range avec E");
+        var first = glossary[0];
+        Assert.AreEqual(sheet, first.SheetId);
+        Assert.AreEqual("Mitose", first.SheetTitle);
+        Assert.AreEqual("Biologie/Cellule", first.Folder);
+        Assert.AreEqual("Écologie", first.Term);
+        Assert.AreEqual("L'étude des milieux.", first.Explanation);
+        Assert.AreEqual("Mitose", first.Section.Single());
+        Assert.AreEqual(AnchorState.Anchored, first.AnchorState);
+        Assert.AreEqual("J1", first.Step);
+        Assert.IsNotNull(first.DueDate);
+    }
+
+    [TestMethod]
     public void The_dashboard_prepares_the_day_and_lists_what_to_review()
     {
         using var folder = new TestFolder();

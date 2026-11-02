@@ -19,6 +19,9 @@ public interface IReviewOpener
     /// <summary>Ouvre une fiche, pour la relire.</summary>
     void OpenSheet(string sheetId);
 
+    /// <summary>Ouvre une fiche, sur un de ses passages.</summary>
+    void OpenPassageInSheet(string sheetId, string passageId);
+
     /// <summary>Lance une séance d'étude sur ces éléments, dans cet ordre.</summary>
     void StartSession(IReadOnlyList<DueItem> items, bool activeRecall);
 
@@ -112,11 +115,14 @@ public sealed class ReviewNavigation : IReviewOpener
     /// <remarks>« Retour » ramène à la page courante.</remarks>
     public void OpenSheet(string sheetId) => OpenSheet(sheetId, revising: false);
 
-    private void OpenSheet(string sheetId, bool revising)
+    /// <inheritdoc/>
+    public void OpenPassageInSheet(string sheetId, string passageId) => OpenSheet(sheetId, revising: false, passageId);
+
+    private void OpenSheet(string sheetId, bool revising, string? passageId = null)
     {
         var shell = Shell;
         var from = shell.Current;
-        var page = new SheetPageViewModel(_sheets, _annotations, Bar, sheetId, () => shell.Navigate(from), OpenSheet, _links, Editor, revising, ActiveRecall);
+        var page = new SheetPageViewModel(_sheets, _annotations, Bar, sheetId, () => shell.Navigate(from), OpenSheet, _links, Editor, revising, ActiveRecall) { PassageToShow = passageId };
         shell.Navigate(new NavigationItem("fiche", ReviewText.SheetPage, Icons.Document, int.MaxValue, page));
         page.LoadCommand.Execute(null);
     }

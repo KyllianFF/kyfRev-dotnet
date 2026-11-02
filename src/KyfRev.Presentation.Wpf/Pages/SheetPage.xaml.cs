@@ -34,6 +34,7 @@ internal sealed partial class SheetPage : UserControl
             {
                 page.PageWidth = ActualWidth;
                 page.PropertyChanged += OnPageChanged;
+                ShowWantedPassage(page);
             }
         };
     }
@@ -41,6 +42,10 @@ internal sealed partial class SheetPage : UserControl
     /// <summary>Le texte mis en forme a sa propre fenêtre : tout ce qui le recouvre le lui dit.</summary>
     private void OnPageChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
+        if (e.PropertyName == nameof(SheetPageViewModel.Reading) && sender is SheetPageViewModel opened)
+        {
+            ShowWantedPassage(opened);
+        }
         if (e.PropertyName is nameof(SheetPageViewModel.IsEditing) or nameof(SheetPageViewModel.IsDeleting)
             or nameof(SheetPageViewModel.ShowsOutlineOverlay) or nameof(SheetPageViewModel.ShowsPassagesOverlay))
         {
@@ -88,6 +93,19 @@ internal sealed partial class SheetPage : UserControl
         if (DataContext is SheetPageViewModel page && ((FrameworkElement)sender).DataContext is PassageEntry entry)
         {
             ShowPassage(page, entry);
+        }
+    }
+
+    /// <summary>La fiche s'ouvre sur le passage demandé : elle peut être lue avant ou après que la vue la montre.</summary>
+    private void ShowWantedPassage(SheetPageViewModel page)
+    {
+        if (page is { Reading: not null, PassageToShow: { } wanted })
+        {
+            page.PassageToShow = null;
+            if (page.Passages.FirstOrDefault(entry => entry.Annotation.Id == wanted) is { } passage)
+            {
+                Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, () => ShowPassage(page, passage));
+            }
         }
     }
 

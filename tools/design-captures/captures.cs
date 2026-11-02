@@ -21,7 +21,8 @@
 // bilan (seance-clair.png, seance-contraste-eleve.png, seance-etroite-sombre.png, bilan-sombre.png), les archives
 // (archives-clair.png, archives-sombre.png, archives-etroit-clair.png, archives-etroit-filtres-sombre.png,
 // archives-contraste-eleve.png), les fiches (fiches-clair.png, fiches-sombre.png, fiches-etroit-clair.png,
-// fiches-nouvelle-sombre.png, fiches-contraste-eleve.png), la lecture d'une fiche (fiche-clair.png,
+// fiches-nouvelle-sombre.png, fiches-contraste-eleve.png), le glossaire (definitions-clair.png, definitions-sombre.png,
+// definitions-large-sombre.png, definitions-etroit-clair.png, definitions-modification-sombre.png, definitions-contraste-eleve.png), la lecture d'une fiche (fiche-clair.png,
 // lecture-sombre.png, lecture-moyenne-clair.png, lecture-etroite-sombre.png, lecture-volet-clair.png, lecture-contraste-eleve.png), l'écriture (ecriture-clair.png,
 // ecriture-sombre.png, ecriture-insertion-sombre.png, ecriture-moyenne-clair.png, ecriture-etroite-sombre.png, ecriture-contraste-eleve.png,
 // ecriture-markdown-sombre.png, ecriture-markdown-clair.png), et affiche le contraste de
@@ -693,6 +694,59 @@ static void ReviewCaptures(string folder)
             new Dictionary<string, object> { [CorePages.Sheets] = creating },
             1280,
             800);
+
+        // Le glossaire : des définitions dans plusieurs dossiers, une position à vérifier et un passage perdu.
+        var sheetsByTitle = app.Sheets.List().Value.ToDictionary(entry => entry.Title, entry => entry.Id);
+        string Define(string title, string term, string explanation, params string[] section) =>
+            app.Annotations.CreateDefinition(
+                sheetsByTitle[title],
+                new Anchor(term, string.Empty, string.Empty, 0, term.Length, [.. section], null, app.Sheets.Open(sheetsByTitle[title]).Value.Fingerprint),
+                new Definition(term, explanation)).Value;
+        Define("La cellule eucaryote", "Noyau", "Compartiment délimité par une double membrane, qui renferme l'ADN de la cellule.", "Structure");
+        Define("La cellule eucaryote", "Mitochondrie", "Organite qui produit l'énergie de la cellule sous forme d'ATP.", "Structure", "Les organites");
+        Define("Mitose et méiose", "Prophase", "Première phase de la division : les chromosomes se condensent et l'enveloppe du noyau se fragmente.", "La mitose");
+        Define("Napoléon et l'Empire", "Code civil", "Recueil de lois promulgué en 1804, qui unifie le droit français.");
+        var toCheck = Define("Le modèle OSI", "Couche transport", "Quatrième couche : elle assure le transfert de bout en bout, avec TCP ou UDP.", "Les sept couches");
+        app.Annotations.Reanchor(toCheck, new Anchor("Couche transport", string.Empty, string.Empty, 0, 16, ["Les sept couches"], null, "sha256:aa"), AnchorState.NeedsReview);
+        var lost = Define("Le modèle OSI", "Encapsulation", "Chaque couche ajoute son en-tête aux données de la couche du dessus.");
+        app.Annotations.Reanchor(lost, new Anchor("Encapsulation", string.Empty, string.Empty, 0, 13, [], null, "sha256:aa"), AnchorState.NotFound);
+        foreach (var (file, theme, width, height, highContrast) in new[]
+        {
+            ("definitions-clair.png", ThemePreference.Light, 1280.0, 800.0, false),
+            ("definitions-sombre.png", ThemePreference.Dark, 1280.0, 800.0, false),
+            ("definitions-large-sombre.png", ThemePreference.Dark, 1920.0, 1080.0, false),
+            ("definitions-etroit-clair.png", ThemePreference.Light, 390.0, 844.0, false),
+            ("definitions-contraste-eleve.png", ThemePreference.System, 1280.0, 800.0, true),
+        })
+        {
+            var glossary = new DefinitionsPageViewModel(app.Annotations, new ReviewNavigation(app.Sheets, app.Annotations, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), time, new NoLinks(), app.Editing, new EditorEnvironment(new OneMistake(), Path.Combine(Path.GetTempPath(), "kyfrev-captures-webview2"))));
+            Shell(
+                folder,
+                file,
+                theme,
+                shell => shell.Navigate(shell.MainNavigation.Single(item => item.Id == CorePages.Definitions)),
+                new Dictionary<string, object> { [CorePages.Definitions] = glossary },
+                width,
+                height,
+                highContrast: highContrast);
+        }
+        var editedGlossary = new DefinitionsPageViewModel(app.Annotations, new ReviewNavigation(app.Sheets, app.Annotations, app.Reviews, app.Reminders, app.Vaults, new NoSessions(), time, new NoLinks(), app.Editing, new EditorEnvironment(new OneMistake(), Path.Combine(Path.GetTempPath(), "kyfrev-captures-webview2"))));
+        Shell(
+            folder,
+            "definitions-modification-sombre.png",
+            ThemePreference.Dark,
+            shell => shell.Navigate(shell.MainNavigation.Single(item => item.Id == CorePages.Definitions)),
+            new Dictionary<string, object> { [CorePages.Definitions] = editedGlossary },
+            1280,
+            800,
+            () =>
+            {
+                if (editedGlossary.Rows.Count > 0 && editedGlossary.Rows.All(row => row.IsShown))
+                {
+                    editedGlossary.Rows[0].EditCommand.Execute(null);
+                }
+                return editedGlossary.Rows.Any(row => row.IsEditing);
+            });
     }
     finally
     {

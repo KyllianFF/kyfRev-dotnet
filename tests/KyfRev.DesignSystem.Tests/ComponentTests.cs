@@ -197,6 +197,21 @@ public sealed class ComponentTests
     }
 
     [STATestMethod]
+    public void Typed_text_starts_where_the_placeholder_does()
+    {
+        var field = new TextBox();
+        Field.SetPlaceholder(field, "Rechercher une fiche");
+        var host = Host.Of(new DesignResources(ThemeKind.Light, reducedMotion: false), field);
+        var placeholder = Host.Part<TextBlock>(field, "Placeholder");
+        var start = placeholder.TranslatePoint(new Point(placeholder.Padding.Left, 0), field).X;
+
+        field.Text = "Mitose";
+        Host.Layout(host);
+
+        Assert.AreEqual(start, field.GetRectFromCharacterIndex(0).Left, 1, "le texte ne saute pas à la première frappe");
+    }
+
+    [STATestMethod]
     public void A_field_shows_its_placeholder_while_empty()
     {
         var field = new TextBox();
