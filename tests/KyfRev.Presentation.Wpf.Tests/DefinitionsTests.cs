@@ -314,6 +314,32 @@ public sealed class DefinitionsTests
         }
     }
 
+    [STATestMethod]
+    public void A_sheet_read_before_its_view_appears_still_goes_to_the_passage()
+    {
+        using var ui = new UiThread();
+        using var vault = new ReadingVault("# Mitose\n\nUn paragraphe avec un mot à définir.\n", passage: true);
+        var id = vault.App.Annotations.Definitions().Value.Single().Id;
+        var page = vault.Page();
+        page.PassageToShow = id;
+        page.LoadCommand.Execute(null);
+        UiThread.Until(() => page.Reading is not null && !page.IsLoading);
+        var test = new TestShell();
+        var window = new Window { ShowActivated = false, Left = -10000, Top = -10000, Width = 800, Height = 600, WindowStartupLocation = WindowStartupLocation.Manual, Content = new SheetPage { DataContext = page } };
+        window.Resources.MergedDictionaries.Add(test.Design.Dictionary);
+        window.Show();
+        try
+        {
+            UiThread.Until(() => page.ActivePassage == id);
+
+            Assert.IsNull(page.PassageToShow);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
     private static string[] Terms(DefinitionsPageViewModel page) => [.. page.Rows.Select(row => row.Term)];
 
     private static List<Card> Cards(DependencyObject root) => [.. Descendants(root).OfType<Card>()];
