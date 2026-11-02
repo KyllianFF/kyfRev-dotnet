@@ -55,6 +55,12 @@
         </ControlTemplate>
       </Setter.Value>
     </Setter>
+    <!-- Un champ de plusieurs lignes ne se centre pas : son texte ne doit pas coller au bord. -->
+    <Style.Triggers>
+      <Trigger Property="AcceptsReturn" Value="True">
+        <Setter Property="Padding" Value="12,8" />
+      </Trigger>
+    </Style.Triggers>
   </Style>
 
 </ResourceDictionary>

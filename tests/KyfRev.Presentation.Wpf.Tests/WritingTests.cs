@@ -11,6 +11,7 @@ using ICSharpCode.AvalonEdit.Rendering;
 using KyfRev.DesignSystem.Tokens;
 using KyfRev.Presentation.Wpf.Editing;
 using KyfRev.Presentation.Wpf.Pages;
+using KyfRev.Presentation.Wpf.Reading;
 
 namespace KyfRev.Presentation.Wpf.Tests;
 
@@ -729,6 +730,32 @@ public sealed class WritingTests
         scene.Select(7, 0);
         Click(ribbon.RuleButton);
         Assert.AreEqual("$texte$\n\n---\n", Written(scene));
+    }
+
+    [STATestMethod]
+    public void An_example_of_formula_fills_the_field()
+    {
+        using var scene = new Scene("texte");
+
+        scene.Editor.UseFormulaExampleCommand.Execute(SheetEditorViewModel.FormulaExamples[1]);
+
+        Assert.AreEqual("\\frac{a}{b}", scene.Editor.FormulaTex);
+    }
+
+    [STATestMethod]
+    public void The_preview_draws_a_formula_and_shows_what_it_cannot_draw()
+    {
+        var preview = new FormulaPreview();
+        Assert.IsNull(preview.Content);
+
+        preview.Tex = "\\frac{a}{b}";
+        Assert.IsInstanceOfType<Viewbox>(preview.Content);
+
+        preview.Tex = "\\nope{y}";
+        Assert.AreEqual("$$\\nope{y}$$", ((TextBlock)preview.Content).Text, "ce qui ne se dessine pas reste lisible");
+
+        preview.Tex = "   ";
+        Assert.IsNull(preview.Content);
     }
 
     [STATestMethod]

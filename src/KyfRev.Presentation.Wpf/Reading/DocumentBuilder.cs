@@ -746,7 +746,7 @@ internal sealed class DocumentBuilder
     }
 
     /// <summary>Une formule dessinée ; une large se réduit plutôt que de faire défiler la page. Inconnue, elle reste lisible.</summary>
-    private static UIElement FormulaOrText(string source, double size, bool block)
+    internal static UIElement FormulaOrText(string source, double size, bool block)
     {
         // Deux écritures de KaTeX que ce moteur ne connaît pas, et qui se lisent très bien comme une fraction.
         var drawn = source.Replace("\\tfrac", "\\frac", StringComparison.Ordinal).Replace("\\dfrac", "\\frac", StringComparison.Ordinal);

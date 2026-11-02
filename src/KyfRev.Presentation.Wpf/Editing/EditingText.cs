@@ -77,6 +77,12 @@ public static class EditingText
     /// <summary>Une formule sur sa propre ligne.</summary>
     public const string FormulaBlock = "Sur sa propre ligne";
 
+    /// <summary>L'aperçu de la formule.</summary>
+    public const string FormulaPreview = "Aperçu";
+
+    /// <summary>Les exemples de formules.</summary>
+    public const string FormulaExamples = "Exemples";
+
     /// <summary>Montrer le rendu.</summary>
     public const string Preview = "Aperçu";
 

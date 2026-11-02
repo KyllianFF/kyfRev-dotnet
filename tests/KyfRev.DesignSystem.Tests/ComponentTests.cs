@@ -209,6 +209,17 @@ public sealed class ComponentTests
     }
 
     [STATestMethod]
+    public void A_field_of_several_lines_keeps_its_text_off_the_edge()
+    {
+        var single = new TextBox();
+        var several = new TextBox { AcceptsReturn = true };
+        Host.Of(new DesignResources(ThemeKind.Light, reducedMotion: false), new StackPanel { Children = { single, several } });
+
+        Assert.AreEqual(0, single.Padding.Top);
+        Assert.AreEqual(8, several.Padding.Top);
+    }
+
+    [STATestMethod]
     public void Typed_text_starts_where_the_placeholder_does()
     {
         var field = new TextBox();
