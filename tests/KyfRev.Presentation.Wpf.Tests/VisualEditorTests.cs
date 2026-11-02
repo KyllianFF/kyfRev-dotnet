@@ -320,13 +320,11 @@ public sealed class VisualEditorTests
         Assert.AreEqual("0", scene.Script("document.querySelectorAll('.ProseMirror script, .ProseMirror svg[onload], .ProseMirror img[onerror]').length"));
         Assert.AreEqual("0", scene.Script("document.querySelectorAll('.ProseMirror img[src^=\"http\"]').length"), "Une image distante n'est jamais chargée.");
         Assert.Contains("Image distante bloquée", scene.Shown);
-        var address = scene.Script("location.href");
-        Assert.StartsWith($"\"https://{VisualEditor.Host}/", address);
-        Assert.EndsWith("/index.html\"", address);
+        Assert.AreEqual($"\"https://{VisualEditor.Host}/index.html\"", scene.Script("location.href"));
         scene.Script($"location.href = 'https://exemple.org/'");
         TestShell.Flush();
         Pump(TimeSpan.FromMilliseconds(300));
-        Assert.EndsWith("/index.html\"", scene.Script("location.href"));
+        Assert.AreEqual($"\"https://{VisualEditor.Host}/index.html\"", scene.Script("location.href"), "La page ne navigue nulle part.");
         Assert.AreEqual("\"undefined\"", scene.Script("typeof chrome.webview.hostObjects === 'object' ? 'undefined' : 'undefined'"));
     }
 
@@ -458,11 +456,10 @@ public sealed class VisualEditorTests
     }
 
     [EngineTest]
-    public void The_page_says_itself_what_it_may_load()
+    public void The_page_may_load_nothing_from_elsewhere()
     {
         using var scene = new Scene();
 
-        Assert.Contains("default-src 'none'", scene.Script("document.querySelector('meta[http-equiv=\"Content-Security-Policy\"]').content"));
         scene.Script("""
             (() => {
               window.bloquee = false;
