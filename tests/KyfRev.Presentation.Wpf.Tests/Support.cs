@@ -1,4 +1,5 @@
 using System.IO;
+using System.Runtime.CompilerServices;
 using System.Windows.Threading;
 using KyfRev.Application.Model;
 using KyfRev.Application.Ports;
@@ -6,6 +7,7 @@ using KyfRev.Application.UseCases;
 using KyfRev.DesignSystem;
 using KyfRev.DesignSystem.Tokens;
 using KyfRev.Infrastructure.Vault.Adapters;
+using KyfRev.Presentation.Wpf.Editing;
 using KyfRev.Presentation.Wpf.Pages;
 using KyfRev.Presentation.Wpf.Shell;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -250,6 +252,107 @@ internal sealed class UiThread : IDisposable
     }
 
     public void Dispose() => SynchronizationContext.SetSynchronizationContext(_previous);
+}
+
+/// <summary>
+/// Un essai sur son propre fil STA, comme celui de MSTest, dont le nom le remplace ici ; mais, à la fin, le fil ferme son
+/// dispatcher. Sinon, c'est à la fin du fil que Windows défait le service de saisie (TSF), s'il y a servi : il rappelle alors
+/// le TextStore de WPF, en .NET, sur un fil que .NET a déjà quitté, et tout le processus plante.
+/// </summary>
+internal sealed class STATestMethodAttribute([CallerFilePath] string callerFilePath = "", [CallerLineNumber] int callerLineNumber = -1)
+    : TestMethodAttribute(callerFilePath, callerLineNumber)
+{
+    public string CallerFilePath { get; } = callerFilePath;
+
+    public int CallerLineNumber { get; } = callerLineNumber;
+
+    public override Task<TestResult[]> ExecuteAsync(ITestMethod testMethod)
+    {
+        var outcome = new TaskCompletionSource<Task<TestResult[]>>();
+        var thread = new Thread(() =>
+        {
+            var running = base.ExecuteAsync(testMethod);
+            ((IAsyncResult)running).AsyncWaitHandle.WaitOne();
+            Dispatcher.CurrentDispatcher.InvokeShutdown();
+            outcome.SetResult(running);
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        return outcome.Task.Unwrap();
+    }
+}
+
+/// <summary>
+/// Un essai qui emploie le vrai moteur web : toujours sur le même fil, qui dure autant que le processus. Le moteur et son
+/// environnement n'ont ainsi à démarrer qu'une fois, comme dans l'application.
+/// </summary>
+internal sealed class EngineTestAttribute([CallerFilePath] string callerFilePath = "", [CallerLineNumber] int callerLineNumber = -1)
+    : TestMethodAttribute(callerFilePath, callerLineNumber)
+{
+    private static readonly Dispatcher Engine = Start();
+
+    public string CallerFilePath { get; } = callerFilePath;
+
+    public int CallerLineNumber { get; } = callerLineNumber;
+
+    public override Task<TestResult[]> ExecuteAsync(ITestMethod testMethod) =>
+        Engine.InvokeAsync(() => base.ExecuteAsync(testMethod)).Task.Unwrap();
+
+    private static Dispatcher Start()
+    {
+        var started = new TaskCompletionSource<Dispatcher>();
+        var thread = new Thread(() =>
+        {
+            started.SetResult(Dispatcher.CurrentDispatcher);
+            Dispatcher.Run();
+        })
+        {
+            IsBackground = true,
+            Name = "Moteur web",
+        };
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        return started.Task.GetAwaiter().GetResult();
+    }
+}
+
+/// <summary>L'environnement de l'écriture dans les essais : un seul dossier WebView2 par machine de test.</summary>
+internal static class FakeEnvironment
+{
+    public static string WebData { get; } = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "kyfrev-essais-webview2");
+
+    /// <summary>Ouvrir sur le code : sans le moteur web, pour les essais qui n'en ont pas besoin.</summary>
+    public static EditorEnvironment Markdown() => new(new FakeSpelling(), WebData, StartsInMarkdown: true);
+}
+
+/// <summary>Correcteur simulé : « ékole » est la seule faute qu'il connaisse.</summary>
+internal sealed class FakeSpelling : ISpelling
+{
+    private const string Wrong = "ékole";
+
+    public List<string> Added { get; } = [];
+
+    public IReadOnlyList<SpellingMistake> Check(string text)
+    {
+        var found = new List<SpellingMistake>();
+        for (var at = text.IndexOf(Wrong, StringComparison.Ordinal); at >= 0 && !Added.Contains(Wrong); at = text.IndexOf(Wrong, at + 1, StringComparison.Ordinal))
+        {
+            found.Add(new SpellingMistake(at, Wrong.Length));
+        }
+        return found;
+    }
+
+    public SpellingCorrection? Correct(string word)
+    {
+        var at = word.IndexOf(Wrong, StringComparison.Ordinal);
+        return at < 0 || Added.Contains(Wrong) ? null : new SpellingCorrection(at, Wrong.Length, ["école", "écoles"]);
+    }
+
+    public bool Add(string word)
+    {
+        Added.Add(word);
+        return true;
+    }
 }
 
 /// <summary>Séance gardée en mémoire ; peut refuser d'être écrite.</summary>

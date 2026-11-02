@@ -44,6 +44,9 @@ public readonly record struct TokenColor(byte A, byte R, byte G, byte B)
     /// <summary>La couleur WPF.</summary>
     public Color ToColor() => Color.FromArgb(A, R, G, B);
 
+    /// <summary>La couleur de System.Drawing, pour les contrôles qui ne connaissent que celle-là.</summary>
+    public System.Drawing.Color ToDrawingColor() => System.Drawing.Color.FromArgb(A, R, G, B);
+
     /// <summary><c>#rrggbb</c>, ou <c>#aarrggbb</c> si la couleur est transparente.</summary>
     public override string ToString() =>
         IsOpaque

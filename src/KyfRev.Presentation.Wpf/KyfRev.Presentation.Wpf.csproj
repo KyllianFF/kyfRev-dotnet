@@ -14,8 +14,15 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="AvalonEdit" />
     <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="Microsoft.Web.WebView2" />
     <PackageReference Include="WpfMath" />
+  </ItemGroup>
+
+  <!-- Le paquet de l'éditeur visuel, construit par tools/visual-editor. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Editing\Web\**\*" LogicalName="kyfrev-web/%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 
   <ItemGroup>

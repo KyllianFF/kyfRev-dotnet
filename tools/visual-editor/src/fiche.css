@@ -1,0 +1,719 @@
+/*
+ * Mise en page de lecture des fiches (section 12.5) : lignes de 72 caractères
+ * au plus, 17 px, interligne 1,65 ; tableaux défilants ; code coloré.
+ */
+
+/* Largeur : toute la place disponible, ou des lignes de 72 caractères au plus
+   (Paramètres › Apparence, src/lib/theme.ts). */
+.contenu-fiche {
+  max-width: var(--largeur-fiche, none);
+  font-family: var(--police-lecture, inherit);
+  font-size: var(--taille-lecture, 17px);
+  line-height: var(--interligne-lecture, 1.65);
+  overflow-wrap: break-word;
+}
+
+/* Bloc lu à voix haute (D38). */
+.contenu-fiche .en-lecture {
+  border-radius: 3px;
+  outline: 2px solid var(--principale);
+  outline-offset: 4px;
+  background: var(--pastille-fiche-fond);
+}
+
+.contenu-fiche > :first-child,
+.contenu-fiche > .titre-repete + * {
+  margin-top: 0;
+}
+
+/* « # Titre » identique à l'en-tête de la fiche (Fiche.svelte). */
+.contenu-fiche > .titre-repete {
+  display: none;
+}
+
+.contenu-fiche h1,
+.contenu-fiche h2,
+.contenu-fiche h3,
+.contenu-fiche h4 {
+  margin: 1.6em 0 0.5em;
+  line-height: 1.3;
+}
+
+.contenu-fiche h1 {
+  font-size: 1.6em;
+}
+
+.contenu-fiche h2 {
+  font-size: 1.3em;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--bordure);
+}
+
+.contenu-fiche h3 {
+  font-size: 1.1em;
+}
+
+.contenu-fiche p,
+.contenu-fiche ul,
+.contenu-fiche ol,
+.contenu-fiche blockquote,
+.contenu-fiche table,
+.contenu-fiche pre,
+.contenu-fiche figure {
+  margin: 0 0 1em;
+}
+
+.contenu-fiche a {
+  color: var(--lien);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.contenu-fiche a[data-lien-casse] {
+  color: var(--avertissement);
+  text-decoration-style: dashed;
+  cursor: not-allowed;
+}
+
+/* Ligne horizontale (« --- ») : un trait discret, en lecture comme à l'écriture. */
+.contenu-fiche hr {
+  margin: 1.5em 0;
+  border: 0;
+  border-top: 1px solid var(--bordure);
+}
+
+.contenu-fiche blockquote {
+  padding: 4px 16px;
+  border-left: 4px solid var(--repere-rappel);
+  background: var(--surface-2);
+  color: var(--texte-secondaire);
+}
+
+.contenu-fiche code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: var(--surface-2);
+  font-family: var(--police-code);
+  font-size: 0.88em;
+}
+
+.contenu-fiche pre {
+  padding: 14px 16px;
+  border-radius: var(--rayon);
+  background: var(--surface-2);
+  overflow-x: auto;
+}
+
+.contenu-fiche pre code {
+  padding: 0;
+  background: none;
+}
+
+/* Tableaux : défilement horizontal, lignes alternées. */
+.contenu-fiche table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: 0.94em;
+}
+
+.contenu-fiche th,
+.contenu-fiche td {
+  padding: 6px 12px;
+  border: 1px solid var(--bordure);
+  text-align: left;
+}
+
+.contenu-fiche th {
+  background: var(--surface-2);
+}
+
+.contenu-fiche tr:nth-child(even) td {
+  background: var(--fond);
+}
+
+.contenu-fiche img {
+  max-width: 100%;
+  border-radius: var(--rayon);
+}
+
+.contenu-fiche .image-bloquee {
+  display: inline-block;
+  padding: 2px 8px;
+  border: 1px dashed var(--bordure);
+  border-radius: var(--rayon);
+  color: var(--texte-secondaire);
+  font-size: 0.85em;
+}
+
+.contenu-fiche figure.diagramme {
+  display: flex;
+  justify-content: center;
+  padding: 12px;
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon);
+  background: var(--surface);
+}
+
+.contenu-fiche figure.diagramme.erreur {
+  justify-content: flex-start;
+  color: var(--retard);
+  font-size: 0.9em;
+}
+
+/* Schéma réseau (D21, D39) : le dessin se réduit à la largeur de la fiche. */
+.contenu-fiche figure.reseau {
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.contenu-fiche figure.reseau svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.contenu-fiche figure.reseau figcaption {
+  color: var(--texte-secondaire);
+  font-size: 0.9em;
+  font-weight: 600;
+}
+
+.contenu-fiche figure.reseau.vide {
+  color: var(--texte-secondaire);
+  font-size: 0.9em;
+}
+
+/* Schéma cité (D39) : se rouvre par un double-clic ou son bouton. */
+.contenu-fiche figure.reseau[data-schema]:not(.erreur) svg {
+  cursor: zoom-in;
+}
+
+.contenu-fiche figure.reseau figcaption {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px 10px;
+}
+
+.contenu-fiche figure.reseau .modifier-schema {
+  height: 26px;
+  padding: 0 10px;
+  font-size: 0.8em;
+  font-weight: 400;
+}
+
+.contenu-fiche figure.reseau .ancien-format {
+  font-weight: 400;
+}
+
+.contenu-fiche .footnotes {
+  font-size: 0.9em;
+  color: var(--texte-secondaire);
+}
+
+.contenu-fiche mark,
+.contenu-fiche .surlignage {
+  padding: 0 1px;
+  border-radius: 2px;
+  background: var(--surlignage);
+  color: var(--texte);
+}
+
+/* Coloration du code (highlight.js), aux couleurs du thème. */
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-built_in,
+.hljs-title,
+.hljs-section,
+.hljs-function {
+  color: var(--lien);
+}
+
+.hljs-string,
+.hljs-attr,
+.hljs-template-tag {
+  color: var(--succes);
+}
+
+.hljs-number,
+.hljs-literal,
+.hljs-type {
+  color: var(--avertissement);
+}
+
+.hljs-comment,
+.hljs-quote {
+  color: var(--texte-secondaire);
+  font-style: italic;
+}
+
+/* Sélection et surlignages (section 12) : la sélection temporaire est
+   pervenche, le surlignage enregistré mauve ; un passage à vérifier n'est
+   que souligné en pointillés. */
+.contenu-fiche ::selection {
+  background: var(--selection);
+}
+
+.contenu-fiche .surlignage {
+  border-radius: 2px;
+  background: var(--surlignage);
+  color: inherit;
+  cursor: pointer;
+}
+
+.contenu-fiche .surlignage.superpose {
+  box-shadow: inset 0 -2px 0 var(--repere-rappel);
+}
+
+.contenu-fiche .surlignage.actif {
+  background: var(--surlignage-actif);
+}
+
+/* Définition : pervenche et soulignée, pour la distinguer d'un passage. */
+.contenu-fiche .surlignage.definition {
+  background: var(--pastille-passage-fond);
+  box-shadow: inset 0 -2px 0 var(--repere-passage);
+}
+
+.contenu-fiche .surlignage.definition.actif {
+  background: var(--selection);
+}
+
+.contenu-fiche .surlignage.candidat {
+  background: transparent;
+  text-decoration: underline dashed 2px var(--avertissement);
+  text-underline-offset: 3px;
+}
+
+.contenu-fiche .surlignage.candidat.actif {
+  background: var(--avertissement-fond);
+}
+
+.contenu-fiche .formule.bloc {
+  display: block;
+}
+
+/* Fiche rendue hors de l'écran pour le partage (src/lib/partage.ts) : mise en
+   page réelle (innerText, diagrammes), mais invisible. */
+.partage-hors-ecran {
+  position: fixed;
+  top: 0;
+  left: -10000px;
+  width: 820px;
+  /* Hors de l'écran, mais rendue : `innerText` (texte brut) ignore ce qui est masqué. */
+  pointer-events: none;
+}
+
+/* Impression (PDF) : seule la fiche, en couleurs claires (src/lib/partage.ts). */
+#zone-impression {
+  display: none;
+}
+
+@media print {
+  @page {
+    margin: 18mm 16mm;
+  }
+
+  body:has(> #zone-impression) > :not(#zone-impression) {
+    /* biome-ignore lint/complexity/noImportantStyles: à l'impression, rien d'autre que la fiche, quel que soit son style. */
+    display: none !important;
+  }
+
+  html,
+  body {
+    height: auto;
+    overflow: visible;
+    background: #ffffff;
+  }
+
+  #zone-impression {
+    display: block;
+    max-width: none;
+    font-size: 11.5pt;
+  }
+
+  #zone-impression table {
+    display: table;
+  }
+
+  #zone-impression pre {
+    white-space: pre-wrap;
+  }
+
+  #zone-impression figure,
+  #zone-impression pre,
+  #zone-impression table,
+  #zone-impression img {
+    break-inside: avoid;
+  }
+
+  #zone-impression h1,
+  #zone-impression h2,
+  #zone-impression h3 {
+    break-after: avoid;
+  }
+}
+
+/* Texte à trous (révision d'une fiche, D32) : passages et gras masqués
+   jusqu'au clic. Le trou garde la largeur du texte, comme une ligne à
+   compléter ; son contenu (texte, formule, image) est invisible. Placées en
+   fin de feuille, ces règles l'emportent sur celles des surlignages, de
+   même force (« [data-trou] » en plus de la classe). */
+.contenu-fiche [data-trou].trou:not(.revele) {
+  border-bottom: 2px dashed var(--repere-passage);
+  border-radius: 3px;
+  background: var(--pastille-passage-fond);
+  color: transparent;
+  text-decoration: none;
+  cursor: pointer;
+  user-select: none;
+  box-decoration-break: clone;
+}
+
+.contenu-fiche [data-trou].trou:not(.revele) * {
+  border-color: transparent;
+  color: transparent;
+}
+
+.contenu-fiche [data-trou].trou:not(.revele) :is(img, svg) {
+  visibility: hidden;
+}
+
+.contenu-fiche [data-trou].trou:not(.revele):hover {
+  border-bottom-style: solid;
+}
+
+.contenu-fiche .trou:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Un trou affiché ressort un instant. */
+.contenu-fiche .trou.revele {
+  animation: trou-revele 0.6s ease-out;
+}
+
+@keyframes trou-revele {
+  from {
+    background: var(--pastille-passage-fond);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .contenu-fiche .trou.revele {
+    animation: none;
+  }
+}
+
+/* Rendu des extensions (D62), dans les fiches et dans leur vue : le HTML
+   nettoyé de l'extension, avec les classes de kyfRev (bouton, champ,
+   pastille) et celles-ci (docs/extensions.md). */
+figure.bloc-extension {
+  margin: 1em 0;
+  padding: 12px 16px;
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon-carte);
+  background: var(--surface);
+}
+
+.contenu-fiche figure.bloc-extension > figcaption {
+  margin-top: 8px;
+  color: var(--texte-secondaire);
+  font-size: 12px;
+}
+
+.extension-rendu .secondaire {
+  color: var(--texte-secondaire);
+  font-size: 0.92em;
+}
+
+.extension-rendu .titre-extension {
+  margin: 0 0 6px;
+  font-weight: 600;
+}
+
+.extension-rendu .carte {
+  margin: 12px 0;
+  padding: 16px 18px;
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon-carte);
+  background: var(--surface);
+}
+
+.extension-rendu .actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.extension-rendu details summary {
+  cursor: pointer;
+}
+
+.extension-rendu details[open] summary {
+  font-weight: 600;
+}
+
+.erreur-extension {
+  color: var(--avertissement);
+  font-size: 13px;
+}
+
+.extension-rendu .question {
+  margin: 0;
+  font-family: var(--police-titre);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.extension-rendu .reponse {
+  margin: 10px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--bordure);
+}
+
+/* Vues des extensions : tableaux et intertitres comme dans les fiches. */
+.extension-rendu:not(.bloc-extension) h2 {
+  margin: 24px 0 8px;
+  font-size: 16px;
+}
+
+.extension-rendu:not(.bloc-extension) table {
+  width: 100%;
+  margin: 8px 0 16px;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.extension-rendu:not(.bloc-extension) :is(th, td) {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--bordure);
+  text-align: left;
+}
+
+.extension-rendu:not(.bloc-extension) th {
+  color: var(--texte-secondaire);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.extension-rendu .actions .champ {
+  flex: 1 1 260px;
+  width: auto;
+}
+
+/* Frise (extension Chronologie, ou toute liste <ol class="frise">). */
+.extension-rendu .frise {
+  margin: 8px 0 16px 6px;
+  padding: 0;
+  border-left: 2px solid var(--bordure);
+  list-style: none;
+}
+
+.extension-rendu .frise li {
+  position: relative;
+  display: grid;
+  grid-template-columns: 9.5em 1fr;
+  gap: 14px;
+  padding: 6px 0 6px 18px;
+}
+
+.extension-rendu .frise li::before {
+  position: absolute;
+  top: 14px;
+  left: -6px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--principale);
+  content: "";
+}
+
+.extension-rendu .frise time {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * Éditeur visuel (src/lib/visuel) : la fiche s'y présente comme en lecture
+ * (classe .contenu-fiche, lecture.css). Ici, seulement ce que l'écriture
+ * ajoute.
+ */
+
+.editeur-visuel {
+  min-height: 50vh;
+  padding-bottom: 120px;
+  caret-color: var(--principale);
+  outline: none;
+}
+
+/* Le texte est la zone de saisie : pas de cadre de focus autour de toute la fiche. */
+.editeur-visuel:focus-visible {
+  outline: none;
+}
+
+/* Invite d'une fiche vide. */
+.editeur-visuel p.invite::before {
+  content: attr(data-invite);
+  float: left;
+  height: 0;
+  color: var(--texte-secondaire);
+  pointer-events: none;
+}
+
+.editeur-visuel a {
+  cursor: text;
+}
+
+.editeur-visuel .image {
+  display: inline-block;
+  max-width: 100%;
+}
+
+.editeur-visuel .formule {
+  cursor: pointer;
+}
+
+.editeur-visuel .appel-note {
+  color: var(--lien);
+  font-size: 0.75em;
+}
+
+.editeur-visuel .ProseMirror-selectednode {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+.editeur-visuel .serree > li > p,
+.editeur-visuel .serree > li > ul,
+.editeur-visuel .serree > li > ol {
+  margin: 0;
+}
+
+/* Tableaux : largeur naturelle, cellules assez larges pour y cliquer. */
+.editeur-visuel table {
+  display: table;
+  width: auto;
+  table-layout: auto;
+  overflow: visible;
+}
+
+.editeur-visuel th,
+.editeur-visuel td {
+  position: relative;
+  min-width: 5em;
+  vertical-align: top;
+}
+
+.editeur-visuel .selectedCell::after {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  content: "";
+  background: var(--selection);
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Blocs de code et diagrammes. */
+.editeur-visuel .bloc-code {
+  margin: 0 0 1em;
+}
+
+.editeur-visuel .bloc-code pre {
+  margin: 0;
+}
+
+/* En-tête d'un bloc de code : son langage, et comment en sortir. */
+.editeur-visuel .entete-code {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 6px;
+  border: 1px solid var(--bordure);
+  border-bottom: 0;
+  border-radius: var(--rayon) var(--rayon) 0 0;
+  background: var(--surface);
+  font-family: var(--police);
+  font-size: 12px;
+}
+
+.editeur-visuel .entete-code select {
+  height: 26px;
+  padding: 0 4px;
+  border: 1px solid var(--bordure);
+  border-radius: 4px;
+  background: var(--fond);
+  font-size: 12px;
+}
+
+.editeur-visuel .entete-code + pre {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.editeur-visuel .aide-code {
+  color: var(--texte-secondaire);
+  opacity: 0;
+  transition: opacity var(--duree);
+}
+
+.editeur-visuel .bloc-code.en-edition .aide-code {
+  opacity: 1;
+}
+
+.editeur-visuel .bloc-code pre {
+  tab-size: 4;
+}
+
+/* Un diagramme montre son dessin ; son code n'apparaît que lorsqu'on y travaille. */
+.editeur-visuel .bloc-code.mermaid:not(.en-edition) pre,
+.editeur-visuel .bloc-code.mermaid:not(.en-edition) .entete-code {
+  display: none;
+}
+
+.editeur-visuel .bloc-code.mermaid.en-edition pre {
+  margin-bottom: 8px;
+  border: 1px solid var(--principale);
+}
+
+.editeur-visuel .bloc-code figure.diagramme {
+  margin: 0;
+  cursor: pointer;
+}
+
+.editeur-visuel .bloc-code figure.diagramme:hover {
+  border-color: var(--principale);
+}
+
+/* Markdown que l'éditeur visuel ne sait pas présenter : modifiable tel quel. */
+.editeur-visuel pre.bloc-brut {
+  position: relative;
+  padding-top: 22px;
+  border: 1px dashed var(--bordure);
+  background: transparent;
+  font-size: 0.85em;
+}
+
+.editeur-visuel pre.bloc-brut::before {
+  position: absolute;
+  top: 4px;
+  right: 10px;
+  content: "Markdown";
+  color: var(--texte-secondaire);
+  font-family: var(--police);
+  font-size: 11px;
+}
+
+.editeur-visuel .curseur-depot {
+  background: var(--principale);
+}
+
+.editeur-visuel .ProseMirror-gapcursor::after {
+  border-top-color: var(--texte);
+}

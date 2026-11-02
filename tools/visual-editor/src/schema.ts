@@ -1,0 +1,282 @@
+// Schéma du document de l'éditeur visuel : exactement ce que le Markdown des
+// fiches sait écrire (section 8.5), pas davantage. Ce qui n'y entre pas (notes
+// de bas de page, définitions de liens…) reste un « bloc Markdown » modifiable
+// tel quel, jamais perdu.
+
+import { type DOMOutputSpec, type MarkSpec, type Node, type NodeSpec, Schema } from "prosemirror-model";
+import { tableNodes } from "prosemirror-tables";
+
+type Alignement = "left" | "center" | "right" | null;
+
+const alignement = {
+  default: null,
+  getFromDOM: (dom: HTMLElement): Alignement => {
+    const valeur = dom.style.textAlign;
+    return valeur === "left" || valeur === "center" || valeur === "right" ? valeur : null;
+  },
+  setDOMAttr: (valeur: unknown, attrs: Record<string, unknown>) => {
+    if (valeur) attrs.style = `text-align: ${valeur}`;
+  },
+};
+
+type NomNoeud =
+  | "doc"
+  | "paragraph"
+  | "heading"
+  | "blockquote"
+  | "horizontal_rule"
+  | "code_block"
+  | "math_block"
+  | "brut"
+  | "bullet_list"
+  | "ordered_list"
+  | "list_item"
+  | "table"
+  | "table_row"
+  | "table_cell"
+  | "table_header"
+  | "text"
+  | "image"
+  | "hard_break"
+  | "math_inline"
+  | "note";
+
+type NomMarque = "link" | "strong" | "em" | "underline" | "strike" | "sup" | "sub" | "code";
+
+/** Liste « serrée » (sans ligne vide entre ses points) : présentée sans espace entre eux, comme en lecture. */
+const serree = (noeud: Node): Record<string, string> => (noeud.attrs.tight ? { class: "serree" } : {});
+
+const noeuds: Record<NomNoeud, NodeSpec> = {
+  doc: { content: "block+" },
+
+  paragraph: {
+    content: "inline*",
+    group: "block",
+    parseDOM: [{ tag: "p" }],
+    toDOM: () => ["p", 0],
+  },
+
+  heading: {
+    attrs: { level: { default: 1 } },
+    content: "inline*",
+    group: "block",
+    defining: true,
+    parseDOM: [1, 2, 3, 4, 5, 6].map((niveau) => ({ tag: `h${niveau}`, attrs: { level: niveau } })),
+    toDOM: (noeud) => [`h${noeud.attrs.level}`, 0],
+  },
+
+  blockquote: {
+    content: "block+",
+    group: "block",
+    defining: true,
+    parseDOM: [{ tag: "blockquote" }],
+    toDOM: () => ["blockquote", 0],
+  },
+
+  horizontal_rule: {
+    attrs: { markup: { default: "---" } },
+    group: "block",
+    parseDOM: [{ tag: "hr" }],
+    toDOM: () => ["hr"],
+  },
+
+  code_block: {
+    attrs: { language: { default: "" }, fence: { default: "```" } },
+    content: "text*",
+    marks: "",
+    group: "block",
+    code: true,
+    defining: true,
+    parseDOM: [
+      {
+        tag: "pre",
+        preserveWhitespace: "full",
+        getAttrs: (dom) => ({
+          language: /language-(\S+)/.exec(dom.querySelector("code")?.className ?? "")?.[1] ?? "",
+        }),
+      },
+    ],
+    toDOM: (noeud) => [
+      "pre",
+      ["code", noeud.attrs.language ? { class: `language-${noeud.attrs.language}` } : {}, 0],
+    ],
+  },
+
+  math_block: {
+    attrs: { tex: { default: "" } },
+    group: "block",
+    atom: true,
+    parseDOM: [
+      { tag: "div.formule[data-tex]", getAttrs: (dom) => ({ tex: dom.getAttribute("data-tex") ?? "" }) },
+    ],
+    toDOM: (noeud) => ["div", { class: "formule bloc", "data-tex": noeud.attrs.tex }, noeud.attrs.tex],
+  },
+
+  /** Markdown que l'éditeur visuel ne sait pas présenter : gardé et modifiable tel quel. */
+  brut: {
+    content: "text*",
+    marks: "",
+    group: "block",
+    code: true,
+    defining: true,
+    parseDOM: [{ tag: "pre.bloc-brut", preserveWhitespace: "full" }],
+    toDOM: () => ["pre", { class: "bloc-brut" }, ["code", 0]],
+  },
+
+  bullet_list: {
+    attrs: { bullet: { default: "-" }, tight: { default: true } },
+    content: "list_item+",
+    group: "block",
+    parseDOM: [{ tag: "ul" }],
+    toDOM: (noeud) => ["ul", serree(noeud), 0],
+  },
+
+  ordered_list: {
+    attrs: { order: { default: 1 }, delim: { default: "." }, tight: { default: true } },
+    content: "list_item+",
+    group: "block",
+    parseDOM: [
+      {
+        tag: "ol",
+        getAttrs: (dom) => ({
+          order: dom.hasAttribute("start") ? Number(dom.getAttribute("start")) || 1 : 1,
+        }),
+      },
+    ],
+    toDOM: (noeud): DOMOutputSpec => [
+      "ol",
+      { ...serree(noeud), ...(noeud.attrs.order === 1 ? {} : { start: String(noeud.attrs.order) }) },
+      0,
+    ],
+  },
+
+  list_item: {
+    content: "paragraph block*",
+    defining: true,
+    parseDOM: [{ tag: "li" }],
+    toDOM: () => ["li", 0],
+  },
+
+  ...(tableNodes({
+    tableGroup: "block",
+    cellContent: "inline*",
+    cellAttributes: { align: alignement },
+  }) as Record<"table" | "table_row" | "table_cell" | "table_header", NodeSpec>),
+
+  text: { group: "inline" },
+
+  image: {
+    attrs: { src: {}, alt: { default: "" }, title: { default: null } },
+    inline: true,
+    group: "inline",
+    draggable: true,
+    parseDOM: [
+      {
+        tag: "img[src]",
+        getAttrs: (dom) => ({
+          src: dom.getAttribute("src"),
+          alt: dom.getAttribute("alt") ?? "",
+          title: dom.getAttribute("title"),
+        }),
+      },
+    ],
+    toDOM: (noeud) => ["img", { src: noeud.attrs.src, alt: noeud.attrs.alt, title: noeud.attrs.title }],
+  },
+
+  hard_break: {
+    inline: true,
+    group: "inline",
+    selectable: false,
+    parseDOM: [{ tag: "br" }],
+    toDOM: () => ["br"],
+  },
+
+  math_inline: {
+    attrs: { tex: { default: "" } },
+    inline: true,
+    group: "inline",
+    atom: true,
+    parseDOM: [
+      { tag: "span.formule[data-tex]", getAttrs: (dom) => ({ tex: dom.getAttribute("data-tex") ?? "" }) },
+    ],
+    toDOM: (noeud) => ["span", { class: "formule", "data-tex": noeud.attrs.tex }, noeud.attrs.tex],
+  },
+
+  /** Appel de note de bas de page « [^1] ». */
+  note: {
+    attrs: { label: {} },
+    inline: true,
+    group: "inline",
+    atom: true,
+    toDOM: (noeud) => [
+      "sup",
+      { class: "appel-note", title: "Note de bas de page" },
+      `[${noeud.attrs.label}]`,
+    ],
+  },
+};
+
+/** L'ordre des marques est celui de leur imbrication en Markdown (la première est la plus extérieure). */
+const marques: Record<NomMarque, MarkSpec> = {
+  link: {
+    attrs: { href: {}, title: { default: null }, auto: { default: null } },
+    inclusive: false,
+    parseDOM: [
+      {
+        tag: "a[href]",
+        getAttrs: (dom) => ({ href: dom.getAttribute("href"), title: dom.getAttribute("title") }),
+      },
+    ],
+    toDOM: (marque) => ["a", { href: marque.attrs.href, title: marque.attrs.title ?? marque.attrs.href }, 0],
+  },
+
+  strong: {
+    parseDOM: [
+      { tag: "strong" },
+      // Word et Google Docs : <b style="font-weight: normal"> enveloppe parfois tout le texte collé.
+      { tag: "b", getAttrs: (dom) => dom.style.fontWeight !== "normal" && null },
+      { style: "font-weight=400", clearMark: (m) => m.type.name === "strong" },
+      { style: "font-weight", getAttrs: (valeur) => /^(bold(er)?|[6-9]\d{2})$/.test(valeur) && null },
+    ],
+    toDOM: () => ["strong", 0],
+  },
+
+  em: {
+    parseDOM: [
+      { tag: "i" },
+      { tag: "em" },
+      { style: "font-style=italic" },
+      { style: "font-style=normal", clearMark: (m) => m.type.name === "em" },
+    ],
+    toDOM: () => ["em", 0],
+  },
+
+  underline: {
+    parseDOM: [{ tag: "u" }, { style: "text-decoration=underline" }],
+    toDOM: () => ["u", 0],
+  },
+
+  strike: {
+    parseDOM: [{ tag: "s" }, { tag: "del" }, { tag: "strike" }, { style: "text-decoration=line-through" }],
+    toDOM: () => ["s", 0],
+  },
+
+  sup: {
+    excludes: "sup sub",
+    parseDOM: [{ tag: "sup" }, { style: "vertical-align=super" }],
+    toDOM: () => ["sup", 0],
+  },
+
+  sub: {
+    excludes: "sup sub",
+    parseDOM: [{ tag: "sub" }, { style: "vertical-align=sub" }],
+    toDOM: () => ["sub", 0],
+  },
+
+  code: {
+    parseDOM: [{ tag: "code" }],
+    toDOM: () => ["code", 0],
+  },
+};
+
+export const schema = new Schema<NomNoeud, NomMarque>({ nodes: noeuds, marks: marques });

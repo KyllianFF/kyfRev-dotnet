@@ -4,6 +4,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:kyf="clr-namespace:KyfRev.DesignSystem.Controls;assembly=KyfRev.DesignSystem"
              xmlns:reading="clr-namespace:KyfRev.Presentation.Wpf.Reading"
+             xmlns:editing="clr-namespace:KyfRev.Presentation.Wpf.Editing"
              xmlns:pages="clr-namespace:KyfRev.Presentation.Wpf.Pages">
   <UserControl.Resources>
     <BooleanToVisibilityConverter x:Key="Visible" />
@@ -81,13 +82,15 @@
     </DataTemplate>
   </UserControl.Resources>
   <UserControl.InputBindings>
-    <KeyBinding Key="Enter" Modifiers="Control" Command="{Binding Review.ValidateCommand}" />
+    <KeyBinding Key="Enter" Modifiers="Control" Command="{Binding ValidateShortcut}" />
+    <KeyBinding Key="E" Modifiers="Control" Command="{Binding ToggleWritingCommand}" />
     <KeyBinding Key="Escape" Command="{Binding CloseOverlayCommand}" />
   </UserControl.InputBindings>
 
   <Grid>
     <Grid>
       <Grid.RowDefinitions>
+        <RowDefinition Height="Auto" />
         <RowDefinition Height="Auto" />
         <RowDefinition Height="*" />
         <RowDefinition Height="Auto" />
@@ -103,16 +106,46 @@
           </StackPanel>
         </Button>
         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" HorizontalAlignment="Right">
-          <ToggleButton x:Name="OutlineToggle" Content="{x:Static pages:ReadingText.Outline}" IsChecked="{Binding IsOutlineOn}" Margin="0,0,8,0"
-                        Visibility="{Binding HasOutline, Converter={StaticResource Visible}}" />
-          <ToggleButton x:Name="PassagesToggle" Content="{Binding PassagesLabel}" IsChecked="{Binding IsPassagesOn}"
-                        Visibility="{Binding HasPassages, Converter={StaticResource Visible}}" />
+          <StackPanel Orientation="Horizontal" Visibility="{Binding ShowsPanelToggles, Converter={StaticResource Visible}}">
+            <ToggleButton x:Name="OutlineToggle" Content="{x:Static pages:ReadingText.Outline}" IsChecked="{Binding IsOutlineOn}" Margin="0,0,8,0"
+                          Visibility="{Binding HasOutline, Converter={StaticResource Visible}}" />
+            <ToggleButton x:Name="PassagesToggle" Content="{Binding PassagesLabel}" IsChecked="{Binding IsPassagesOn}" Margin="0,0,8,0"
+                          Visibility="{Binding HasPassages, Converter={StaticResource Visible}}" />
+          </StackPanel>
+          <TextBlock x:Name="SaveStateText" Text="{Binding Editor.StateLabel}" Style="{DynamicResource Kyf.Text.Secondary}" VerticalAlignment="Center" Margin="0,0,12,0"
+                     AutomationProperties.LiveSetting="Polite" Visibility="{Binding IsWriting, Converter={StaticResource Visible}}" />
+          <ToggleButton x:Name="ReadToggle" Content="{x:Static editing:EditingText.Read}" IsChecked="{Binding IsReadOn}"
+                        Style="{DynamicResource Kyf.Button.Tool}" MinHeight="40" Padding="12,0" />
+          <ToggleButton x:Name="WriteToggle" Content="{x:Static editing:EditingText.Write}" IsChecked="{Binding IsWriteOn}"
+                        Style="{DynamicResource Kyf.Button.Tool}" MinHeight="40" Padding="12,0" ToolTip="{x:Static editing:EditingText.WriteKey}" />
         </StackPanel>
         <TextBlock x:Name="Notice" Text="{Binding Notice}" Style="{DynamicResource Kyf.Text.Secondary}" VerticalAlignment="Center" Margin="16,0" TextTrimming="CharacterEllipsis"
                    AutomationProperties.LiveSetting="Polite" />
       </DockPanel>
 
-      <Grid Grid.Row="1" Margin="16,0,16,0">
+      <!-- Le ruban court sur toute la largeur, au-dessus du plan et des passages. -->
+      <StackPanel Grid.Row="1" Margin="16,0,16,8" DataContext="{Binding Editor}"
+                  Visibility="{Binding DataContext.IsWriting, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource Visible}}">
+        <editing:EditorRibbon x:Name="Ribbon" />
+        <!-- Un conflit n'écrit rien tant qu'il n'est pas tranché : aucune des deux versions n'est perdue. -->
+        <StackPanel x:Name="ConflictPanel" Margin="0,8,0,0" Visibility="{Binding HasConflict, Converter={StaticResource Visible}}">
+          <kyf:Notification x:Name="ConflictMessage" Severity="Warning" Message="{x:Static editing:EditingText.ConflictMessage}" IsClosable="False" Margin="0,0,0,8" />
+          <WrapPanel>
+            <Button x:Name="KeepMineButton" Content="{x:Static editing:EditingText.KeepMine}" Command="{Binding KeepMineCommand}" Margin="0,0,8,0" />
+            <Button x:Name="ReloadDiskButton" Content="{x:Static editing:EditingText.ReloadDisk}" Command="{Binding ReloadDiskCommand}" />
+          </WrapPanel>
+        </StackPanel>
+        <StackPanel Margin="0,8,0,0" Visibility="{Binding HasProblem, Converter={StaticResource Visible}}">
+          <kyf:Notification x:Name="WritingProblem" Severity="Critical" Message="{Binding Problem}" IsClosable="False" Margin="0,0,0,8" />
+          <WrapPanel>
+            <Button x:Name="RetryButton" Content="{x:Static editing:EditingText.Retry}" Command="{Binding RetryCommand}" Margin="0,0,8,0"
+                    Visibility="{Binding HasFailed, Converter={StaticResource Visible}}" />
+            <Button x:Name="DismissButton" Content="{x:Static editing:EditingText.Dismiss}" Command="{Binding DismissProblemCommand}" />
+          </WrapPanel>
+        </StackPanel>
+      </StackPanel>
+
+      <Grid Grid.Row="2" Margin="16,0,16,0">
         <DockPanel>
           <ContentControl x:Name="OutlinePane" DockPanel.Dock="Left" Width="{x:Static pages:SheetPageViewModel.OutlineWidth}" Margin="0,0,16,0" Focusable="False" IsTabStop="False"
                           Content="{Binding}" ContentTemplate="{StaticResource OutlinePanel}" Visibility="{Binding ShowsOutline, Converter={StaticResource Visible}}" />
@@ -120,7 +153,7 @@
                           Content="{Binding}" ContentTemplate="{StaticResource PassagesPanel}" Visibility="{Binding ShowsPassages, Converter={StaticResource Visible}}" />
 
           <!-- La fiche, à largeur de lecture ; elle défile seule, avec son titre. -->
-          <Grid MaxWidth="{x:Static pages:SheetPageViewModel.TextMaxWidth}">
+          <Grid MaxWidth="{Binding TextWidth}">
             <Grid.RowDefinitions>
               <RowDefinition Height="Auto" />
               <RowDefinition Height="*" />
@@ -133,7 +166,9 @@
               <kyf:Notification x:Name="ProblemMessage" Severity="Warning" Message="{Binding Problem}" IsOpen="{Binding HasProblem, Mode=OneWay}"
                                 IsClosable="False" Margin="0,0,0,12" />
             </StackPanel>
-            <reading:SheetDocumentViewer x:Name="SheetText" Grid.Row="1" Reading="{Binding Reading}" OpenLinkCommand="{Binding OpenLinkCommand}"
+            <editing:SheetEditorView x:Name="EditorView" Grid.Row="1" DataContext="{Binding Editor}"
+                                     Visibility="{Binding DataContext.IsWriting, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource Visible}}" />
+            <reading:SheetDocumentViewer x:Name="SheetText" Grid.Row="1" Visibility="{Binding IsReading, Converter={StaticResource Visible}}" Reading="{Binding Reading}" OpenLinkCommand="{Binding OpenLinkCommand}"
                                          Highlights="{Binding Highlights}" ActiveHighlight="{Binding ActivePassage}"
                                          PreviewMouseLeftButtonDown="OnTextPressed" PreviewMouseLeftButtonUp="OnTextReleased" PreviewKeyDown="OnTextKey"
                                          ContextMenuOpening="OnTextMenu"
@@ -152,8 +187,11 @@
                         Content="{Binding}" ContentTemplate="{StaticResource PassagesPanel}" Visibility="{Binding ShowsPassagesOverlay, Converter={StaticResource Visible}}" />
       </Grid>
 
+      <Border Grid.Row="3" Height="16" Visibility="{Binding IsWriting, Converter={StaticResource Visible}}" />
+
       <!-- Toujours visible, même la fiche défilée. -->
-      <ContentControl Grid.Row="2" Content="{Binding Review}" Focusable="False" IsTabStop="False" Margin="16,8,16,16" />
+      <ContentControl Grid.Row="3" Content="{Binding Review}" Focusable="False" IsTabStop="False" Margin="16,8,16,16"
+                      Visibility="{Binding IsReading, Converter={StaticResource Visible}}" />
     </Grid>
 
     <kyf:Dialog x:Name="Confirmation" Title="{Binding Review.ConfirmTitle}" IsOpen="{Binding Review.IsConfirming, Mode=OneWay}"

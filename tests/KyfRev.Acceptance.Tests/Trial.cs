@@ -38,9 +38,18 @@ internal sealed class Trial : IDisposable
     }
 
     /// <summary>La vraie application, ouverte sur ce coffre le jour donné.</summary>
-    public RunningApplication Launch(DateOnly day) => new(_folder, day);
+    public RunningApplication Launch(DateOnly day, IReadOnlyDictionary<string, string>? environment = null) => new(_folder, day, environment);
 
     /// <summary>Le suivi d'une fiche, tel qu'il est écrit dans le coffre.</summary>
+    public string SheetPath(string relative) => Path.Combine(Vault, relative);
+
+    /// <summary>Les versions gardées d'une fiche.</summary>
+    public IReadOnlyList<string> Versions(string sheet)
+    {
+        var folder = Path.Combine(Vault, ".suivi", "versions", sheet);
+        return Directory.Exists(folder) ? [.. Directory.GetFiles(folder).Select(File.ReadAllText)] : [];
+    }
+
     public string SheetFile(string sheet) => File.ReadAllText(Path.Combine(Vault, ".suivi", "fiches", $"{sheet}.json"));
 
     /// <summary>Le suivi d'une fiche, à interroger.</summary>
@@ -70,7 +79,8 @@ internal sealed class Trial : IDisposable
     {
         if (Directory.Exists(_folder))
         {
-            Directory.Delete(_folder, recursive: true);
+            // Le moteur web de l'application met un instant à lâcher ses fichiers après sa fermeture.
+            FlaUI.Core.Tools.Retry.WhileException(() => Directory.Delete(_folder, recursive: true), TimeSpan.FromSeconds(20), TimeSpan.FromMilliseconds(250), throwOnTimeout: true);
         }
     }
 

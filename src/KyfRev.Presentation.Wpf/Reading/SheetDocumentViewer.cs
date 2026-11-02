@@ -26,6 +26,9 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
     public static readonly DependencyProperty OpenLinkCommandProperty = DependencyProperty.Register(
         nameof(OpenLinkCommand), typeof(ICommand), typeof(SheetDocumentViewer), new PropertyMetadata(null, OnContentChanged));
 
+    public static readonly DependencyProperty KeepsScrollProperty = DependencyProperty.Register(
+        nameof(KeepsScroll), typeof(bool), typeof(SheetDocumentViewer));
+
     public static readonly DependencyProperty HighlightsProperty = DependencyProperty.Register(
         nameof(Highlights), typeof(IReadOnlyList<Highlight>), typeof(SheetDocumentViewer), new PropertyMetadata(null, OnHighlightsChanged));
 
@@ -34,6 +37,7 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
 
     private DocumentBuilder? _built;
     private ScrollViewer? _scroller;
+    private double? _restoreOffset;
 
     public SheetDocumentViewer()
     {
@@ -66,6 +70,13 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
     {
         get => (ICommand?)GetValue(OpenLinkCommandProperty);
         set => SetValue(OpenLinkCommandProperty, value);
+    }
+
+    /// <summary>Refaire le document garde l'endroit affiché : celui d'un rendu qu'on écrit.</summary>
+    public bool KeepsScroll
+    {
+        get => (bool)GetValue(KeepsScrollProperty);
+        set => SetValue(KeepsScrollProperty, value);
     }
 
     /// <summary>Les passages à surligner dans le texte.</summary>
@@ -143,6 +154,7 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
 
     private void Rebuild()
     {
+        _restoreOffset = KeepsScroll && _scroller is { VerticalOffset: > 0 } scroller ? scroller.VerticalOffset : null;
         _built?.Cancel();
         if (Reading is { } reading)
         {
@@ -188,6 +200,12 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
     /// <summary>La partie en cours : le dernier titre passé en haut de la vue.</summary>
     private void OnScrollChanged(object sender, ScrollChangedEventArgs e)
     {
+        // Le document se remplit par morceaux : l'endroit gardé revient dès qu'il existe.
+        if (_restoreOffset is { } offset && _scroller is { } scroller && (e.ExtentHeight >= offset + e.ViewportHeight || !HasPendingWork))
+        {
+            _restoreOffset = null;
+            scroller.ScrollToVerticalOffset(offset);
+        }
         if (_built is null || Reading is null || Reading.Outline.Count == 0)
         {
             return;

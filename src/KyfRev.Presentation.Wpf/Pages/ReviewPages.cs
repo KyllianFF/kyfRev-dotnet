@@ -5,6 +5,7 @@ using KyfRev.Application;
 using KyfRev.Application.Model;
 using KyfRev.Application.Ports;
 using KyfRev.Application.UseCases;
+using KyfRev.Presentation.Wpf.Editing;
 using KyfRev.Rendering;
 
 namespace KyfRev.Presentation.Wpf.Pages;
@@ -282,11 +283,12 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
     private readonly Action<string> _openSheet;
     private readonly IExternalLinks _links;
     private readonly AnnotationUseCases _annotations;
+    private readonly Func<OpenedSheet, SheetEditorViewModel> _editor;
     private TextPosition? _editedPosition;
     private PassageEntry? _editedPassage;
 
     /// <summary>La fiche <paramref name="sheetId"/>.</summary>
-    public SheetPageViewModel(SheetUseCases sheets, AnnotationUseCases annotations, Func<ItemKind, string, ReviewState, ReviewBarViewModel> reviewBar, string sheetId, Action back, Action<string> openSheet, IExternalLinks links)
+    public SheetPageViewModel(SheetUseCases sheets, AnnotationUseCases annotations, Func<ItemKind, string, ReviewState, ReviewBarViewModel> reviewBar, string sheetId, Action back, Action<string> openSheet, IExternalLinks links, Func<OpenedSheet, SheetEditorViewModel> editor)
     {
         ArgumentNullException.ThrowIfNull(sheets);
         ArgumentNullException.ThrowIfNull(annotations);
@@ -295,6 +297,8 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
         ArgumentNullException.ThrowIfNull(back);
         ArgumentNullException.ThrowIfNull(openSheet);
         ArgumentNullException.ThrowIfNull(links);
+        ArgumentNullException.ThrowIfNull(editor);
+        _editor = editor;
         _sheets = sheets;
         _reviewBar = reviewBar;
         SheetId = sheetId;
@@ -397,8 +401,8 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
     /// <summary>Le titre de la confirmation.</summary>
     public string DeleteTitle => Deleting is { IsDefinition: true } ? ReadingText.DeleteDefinitionTitle : ReadingText.DeletePassageTitle;
 
-    /// <summary>Le plan de la fiche.</summary>
-    public IReadOnlyList<OutlineEntry> Outline => Reading?.Outline ?? [];
+    /// <summary>Le plan de la fiche : en écriture, celui du texte en cours.</summary>
+    public IReadOnlyList<OutlineEntry> Outline => Editor?.Preview?.Outline ?? Reading?.Outline ?? [];
 
     /// <summary>Ses passages et définitions.</summary>
     public IReadOnlyList<PassageEntry> Passages => Reading?.Passages ?? [];
@@ -448,16 +452,16 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
     private partial bool PassagesOverlaid { get; set; }
 
     /// <summary>Le plan est montré à côté du texte.</summary>
-    public bool ShowsOutline => HasOutline && WantsOutline && OutlineFits;
+    public bool ShowsOutline => HasOutline && WantsOutline && OutlineFits && !ShowsCode;
 
     /// <summary>Les passages sont montrés à côté du texte.</summary>
-    public bool ShowsPassages => HasPassages && WantsPassages && PassagesFits;
+    public bool ShowsPassages => HasPassages && WantsPassages && PassagesFits && !ShowsCode;
 
     /// <summary>Le plan est montré par-dessus le texte.</summary>
-    public bool ShowsOutlineOverlay => OutlineOverlaid && !OutlineFits;
+    public bool ShowsOutlineOverlay => OutlineOverlaid && !OutlineFits && !ShowsCode;
 
     /// <summary>Les passages sont montrés par-dessus le texte.</summary>
-    public bool ShowsPassagesOverlay => PassagesOverlaid && !PassagesFits;
+    public bool ShowsPassagesOverlay => PassagesOverlaid && !PassagesFits && !ShowsCode;
 
     /// <summary>Le bouton du plan : à côté du texte s'il y tient, sinon par-dessus.</summary>
     public bool IsOutlineOn
@@ -492,6 +496,139 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
                 OutlineOverlaid = false;
                 PassagesOverlaid = value;
             }
+        }
+    }
+
+    /// <summary>L'écriture en cours ; rien en lecture.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsWriting), nameof(IsReading), nameof(IsReadOn), nameof(IsWriteOn), nameof(ValidateShortcut))]
+    public partial SheetEditorViewModel? Editor { get; private set; }
+
+    /// <summary>La fiche s'écrit.</summary>
+    public bool IsWriting => Editor is not null;
+
+    /// <summary>La fiche se lit.</summary>
+    public bool IsReading => Editor is null;
+
+    /// <summary>Le bouton « Lire » : le choisir revient à la lecture ; le mode en cours reste choisi.</summary>
+    public bool IsReadOn
+    {
+        get => IsReading;
+        set
+        {
+            if (value)
+            {
+                StopWritingCommand.Execute(null);
+            }
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>Le bouton « Écrire » : le choisir passe à l'écriture ; le mode en cours reste choisi.</summary>
+    public bool IsWriteOn
+    {
+        get => IsWriting;
+        set
+        {
+            if (value)
+            {
+                StartWritingCommand.Execute(null);
+            }
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>Le code Markdown et son rendu prennent toute la largeur.</summary>
+    public bool ShowsCode => Editor?.IsMarkdownShown == true;
+
+    /// <summary>Les boutons du plan et des passages ont un sens.</summary>
+    public bool ShowsPanelToggles => !ShowsCode;
+
+    /// <summary>La largeur du texte : celle de la lecture, ou toute la place pour le code et son rendu.</summary>
+    public double TextWidth => ShowsCode ? double.PositiveInfinity : TextMaxWidth;
+
+    /// <summary>Le raccourci de validation : en écriture, il n'y a rien à valider.</summary>
+    public System.Windows.Input.ICommand? ValidateShortcut => IsWriting ? null : Review?.ValidateCommand;
+
+    partial void OnEditorChanging(SheetEditorViewModel? value)
+    {
+        Editor?.PropertyChanged -= OnEditorPropertyChanged;
+        value?.PropertyChanged += OnEditorPropertyChanged;
+    }
+
+    partial void OnEditorChanged(SheetEditorViewModel? value) => NotifyLayout();
+
+    private void OnEditorPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(SheetEditorViewModel.IsMarkdownShown) or nameof(SheetEditorViewModel.Preview))
+        {
+            NotifyLayout();
+        }
+    }
+
+    private void NotifyLayout()
+    {
+        OnPropertyChanged(nameof(Outline));
+        OnPropertyChanged(nameof(HasOutline));
+        OnPropertyChanged(nameof(ShowsCode));
+        OnPropertyChanged(nameof(ShowsPanelToggles));
+        OnPropertyChanged(nameof(TextWidth));
+        OnPropertyChanged(nameof(ShowsOutline));
+        OnPropertyChanged(nameof(ShowsPassages));
+        OnPropertyChanged(nameof(ShowsOutlineOverlay));
+        OnPropertyChanged(nameof(ShowsPassagesOverlay));
+        OnPropertyChanged(nameof(IsOutlineOn));
+        OnPropertyChanged(nameof(IsPassagesOn));
+    }
+
+    /// <summary>Passe à l'écriture : le texte du disque, relu maintenant.</summary>
+    [RelayCommand]
+    private async Task StartWritingAsync()
+    {
+        if (Editor is null)
+        {
+            CloseOverlay();
+            var opened = await Task.Run(() => _sheets.Open(SheetId)).ConfigureAwait(true);
+            if (opened.Succeeded)
+            {
+                Editor = _editor(opened.Value);
+            }
+            else
+            {
+                Problem = opened.Error;
+            }
+        }
+        OnPropertyChanged(nameof(IsReadOn));
+        OnPropertyChanged(nameof(IsWriteOn));
+    }
+
+    /// <summary>Revient à la lecture, une fois tout enregistré ; sinon, l'écriture reste, avec ce qui bloque.</summary>
+    [RelayCommand]
+    private async Task StopWritingAsync()
+    {
+        if (Editor is { } editor && await editor.FinishAsync().ConfigureAwait(true))
+        {
+            Editor = null;
+            if (editor.HasChanged)
+            {
+                await LoadAsync().ConfigureAwait(true);
+            }
+        }
+        OnPropertyChanged(nameof(IsReadOn));
+        OnPropertyChanged(nameof(IsWriteOn));
+    }
+
+    /// <summary>Ctrl+E : de la lecture à l'écriture, et inversement.</summary>
+    [RelayCommand]
+    private async Task ToggleWritingAsync()
+    {
+        if (IsWriting)
+        {
+            await StopWritingAsync().ConfigureAwait(true);
+        }
+        else
+        {
+            await StartWritingAsync().ConfigureAwait(true);
         }
     }
 
@@ -672,9 +809,15 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
         }
     }
 
-    /// <summary>Revient à la vue d'où la fiche a été ouverte.</summary>
+    /// <summary>Revient à la vue d'où la fiche a été ouverte ; ce qui s'écrit est d'abord enregistré.</summary>
     [RelayCommand]
-    private void Back() => _back();
+    private async Task BackAsync()
+    {
+        if (Editor is not { } editor || await editor.FinishAsync().ConfigureAwait(true))
+        {
+            _back();
+        }
+    }
 
     private void OpenEditor()
     {

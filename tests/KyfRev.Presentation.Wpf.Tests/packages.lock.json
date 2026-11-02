@@ -215,10 +215,12 @@
       "kyfrev.presentation.wpf": {
         "type": "Project",
         "dependencies": {
+          "AvalonEdit": "[6.3.1.120, )",
           "CommunityToolkit.Mvvm": "[8.4.2, )",
           "KyfRev.Application": "[1.0.0-alpha.0, )",
           "KyfRev.DesignSystem": "[1.0.0-alpha.0, )",
           "KyfRev.Rendering": "[1.0.0-alpha.0, )",
+          "Microsoft.Web.WebView2": "[1.0.4258.31, )",
           "WpfMath": "[2.1.0, )"
         }
       },
@@ -227,6 +229,12 @@
         "dependencies": {
           "KyfRev.Application": "[1.0.0-alpha.0, )"
         }
+      },
+      "AvalonEdit": {
+        "type": "CentralTransitive",
+        "requested": "[6.3.1.120, )",
+        "resolved": "6.3.1.120",
+        "contentHash": "6ASBKPzAg64BLDlFOJo4Ypr1sA/6hB5+TfHLJaZYUSTE0jgxvKlVqKeo/ISTG9qEMxu604qUu6BGugmJkfdrNw=="
       },
       "CommunityToolkit.Mvvm": {
         "type": "CentralTransitive",
@@ -257,6 +265,12 @@
         "dependencies": {
           "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.13"
         }
+      },
+      "Microsoft.Web.WebView2": {
+        "type": "CentralTransitive",
+        "requested": "[1.0.4258.31, )",
+        "resolved": "1.0.4258.31",
+        "contentHash": "sHVZ2MQrHT1J3q5/6csn0fIP27rzpTO/RRC+wPQDrZheB7T4t2n+vVbY6SdCKr4WRV9s/gmBM3PPMWWJtoDzMg=="
       },
       "WpfMath": {
         "type": "CentralTransitive",
