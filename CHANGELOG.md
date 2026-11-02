@@ -9,6 +9,7 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- La fenêtre d'insertion d'une formule montre son aperçu pendant la saisie, et propose des exemples à reprendre.
 - Les images SVG d'une fiche s'affichent en lecture, comme images : aucun script ni aucune adresse qu'elles contiennent n'agit.
 - Changer la place d'un passage depuis son menu, même perdu : on sélectionne le nouveau texte, puis on garde sa progression
   ou on repart de J0. La corbeille de la fiche est au bas du volet des passages, d'où tout se restaure.
@@ -342,4 +343,5 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 - Dans un champ de saisie, le texte commençait 12 pixels plus loin que le texte indicatif : il sautait à la première frappe.
 - Sur une fenêtre étroite, les boutons d'une fiche passaient les uns sous les autres : ils vont à la ligne.
+- Le texte d'un champ de plusieurs lignes ne colle plus au bord haut.
 - Le libellé long d'une case à cocher était coupé : il passe maintenant à la ligne, en face de sa case.

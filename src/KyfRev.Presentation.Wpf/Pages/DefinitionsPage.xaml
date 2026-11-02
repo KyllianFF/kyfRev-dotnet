@@ -62,7 +62,7 @@
                       </StackPanel>
                       <StackPanel Visibility="{Binding IsEditing, Converter={StaticResource Visible}}">
                         <TextBox Text="{Binding EditedTerm, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="{x:Static pages:DefinitionsText.TermLabel}" />
-                        <TextBox Text="{Binding EditedExplanation, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap" MinLines="3" Padding="12,8" VerticalContentAlignment="Top" Margin="0,8,0,0"
+                        <TextBox Text="{Binding EditedExplanation, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap" MinLines="3" VerticalContentAlignment="Top" Margin="0,8,0,0"
                                  AutomationProperties.Name="{x:Static pages:DefinitionsText.ExplanationLabel}" />
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,8,0,0">
                           <Button Content="{x:Static pages:DefinitionsText.Cancel}" Command="{Binding CancelCommand}" Margin="0,0,8,0" />

@@ -461,6 +461,17 @@ public sealed partial class SheetEditorViewModel : ObservableObject
     [ObservableProperty]
     public partial string LinkAddress { get; set; }
 
+    /// <summary>Des formules à reprendre, pour qui ne connaît pas LaTeX par cœur.</summary>
+    public static IReadOnlyList<string> FormulaExamples { get; } =
+    [
+        "x^2",
+        "\\frac{a}{b}",
+        "\\sqrt{x}",
+        "\\vec{F} = m\\vec{a}",
+        "\\sum_{i=1}^{n} i",
+        "\\alpha, \\beta, \\pi",
+    ];
+
     /// <summary>La saisie d'une formule est ouverte.</summary>
     [ObservableProperty]
     public partial bool IsFormulaOpen { get; private set; }
@@ -977,6 +988,10 @@ public sealed partial class SheetEditorViewModel : ObservableObject
     /// <summary>Demande une formule : une saisie dans le texte mis en forme, des signes dans le code.</summary>
     [RelayCommand]
     private void AskFormula() => _surface?.AskFormula();
+
+    /// <summary>Reprend un exemple de formule.</summary>
+    [RelayCommand]
+    private void UseFormulaExample(string example) => FormulaTex = example;
 
     /// <summary>Insère la formule saisie.</summary>
     [RelayCommand]

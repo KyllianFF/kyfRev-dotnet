@@ -23,7 +23,7 @@
 // archives-contraste-eleve.png), les fiches (fiches-clair.png, fiches-sombre.png, fiches-etroit-clair.png,
 // fiches-nouvelle-sombre.png, fiches-contraste-eleve.png), le glossaire (definitions-clair.png, definitions-sombre.png,
 // definitions-large-sombre.png, definitions-etroit-clair.png, definitions-modification-sombre.png, definitions-contraste-eleve.png),
-// le changement de place d'un passage et la corbeille du volet (rattacher-sombre.png, rattacher-etroit-clair.png), le code coloré (code-sombre.png, code-clair.png, code-contraste-eleve.png), la lecture à voix haute (ecoute-sombre.png, ecoute-clair.png, ecoute-etroite-sombre.png), les réglages (parametres-clair.png, parametres-sombre.png, parametres-etroit-sombre.png, parametres-refus-sombre.png, parametres-contraste-eleve.png), la lecture d'une fiche (fiche-clair.png,
+// l'aperçu d'une formule (formule-sombre.png, formule-clair.png), le changement de place d'un passage et la corbeille du volet (rattacher-sombre.png, rattacher-etroit-clair.png), le code coloré (code-sombre.png, code-clair.png, code-contraste-eleve.png), la lecture à voix haute (ecoute-sombre.png, ecoute-clair.png, ecoute-etroite-sombre.png), les réglages (parametres-clair.png, parametres-sombre.png, parametres-etroit-sombre.png, parametres-refus-sombre.png, parametres-contraste-eleve.png), la lecture d'une fiche (fiche-clair.png,
 // lecture-sombre.png, lecture-moyenne-clair.png, lecture-etroite-sombre.png, lecture-volet-clair.png, lecture-contraste-eleve.png), l'écriture (ecriture-clair.png,
 // ecriture-sombre.png, ecriture-insertion-sombre.png, ecriture-moyenne-clair.png, ecriture-etroite-sombre.png, ecriture-contraste-eleve.png,
 // ecriture-markdown-sombre.png, ecriture-markdown-clair.png), et affiche le contraste de
@@ -405,6 +405,21 @@ static void ReviewCaptures(string folder)
             });
         }
         keptPage.Editor!.CloseHistoryCommand.Execute(null);
+        foreach (var (file, theme) in new[] { ("formule-sombre.png", ThemePreference.Dark), ("formule-clair.png", ThemePreference.Light) })
+        {
+            var formulaReady = DateTime.UtcNow.AddSeconds(3);
+            Shell(folder, file, theme, shell => shell.Navigate(new NavigationItem("fiche", "Fiche", Icons.Document, int.MaxValue, keptPage)), null, 1280, 800, () =>
+            {
+                if (keptPage.Editor!.IsFormulaOpen)
+                {
+                    keptPage.Editor.UseFormulaExampleCommand.Execute(SheetEditorViewModel.FormulaExamples[3]);
+                    return DateTime.UtcNow > formulaReady;
+                }
+                keptPage.Editor.AskFormulaCommand.Execute(null);
+                return false;
+            });
+            keptPage.Editor!.AnswerFormulaCommand.Execute(false);
+        }
         keptPage.StopWritingCommand.Execute(null);
         Pump(() => keptPage.Editor is null);
 
