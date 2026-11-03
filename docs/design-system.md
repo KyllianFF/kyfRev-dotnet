@@ -98,8 +98,8 @@ vérifient toutes, dans chaque thème :
 
 Les deux familles Atkinson sont livrées dans `src/KyfRev.DesignSystem/Fonts`, en fichiers
 statiques (WPF ne choisit pas la graisse d'une police variable), avec leur licence SIL Open
-Font License 1.1, copiée à côté de l'exécutable. Elles viennent des dépôts officiels, à un
-commit figé :
+Font License 1.1, copiée dans `Fonts` à côté de l'exécutable compilé, et dans `licences` une
+fois l'application installée. Elles viennent des dépôts officiels, à un commit figé :
 
 | Famille | Fichiers | Source |
 |---|---|---|

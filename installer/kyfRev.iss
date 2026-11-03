@@ -21,6 +21,8 @@
 ; - une version plus récente déjà installée n'est jamais remplacée : rien n'est modifié, et le
 ;   code de sortie est 7 ;
 ; - kyfRev ouvert est détecté avant l'installation comme avant la désinstallation (AppMutex) ;
+; - la licence de kyfRev, les avis de tiers, les avis des paquets NuGet et les licences des polices
+;   sont installés dans {app}\licences, et retirés avec l'application ;
 ; - la désinstallation ne touche jamais aux coffres, aux sauvegardes ni aux réglages des profils.
 
 #ifndef Version
@@ -93,10 +95,17 @@ WelcomeLabel2=kyfRev organise vos fiches de révision selon la méthode des J.%n
 ConfirmUninstall=Voulez-vous retirer %1 de cet ordinateur ?%n%nLes fiches, les sauvegardes et les réglages de chaque personne restent dans son profil : rien n'est effacé.
 
 [Files]
-Source: "{#Source}\*"; Excludes: "*.pdb"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+; Les polices sont dans les assemblys : Fonts ne contient que leurs licences, installées plus bas.
+; La publication contient aussi licences\THIRD-PARTY-NOTICES-nuget.md, écrit par tools/installer.ps1.
+Source: "{#Source}\*"; Excludes: "*.pdb,\Fonts"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; Emplacement des fiches de chaque personne, lu au démarrage (mode installé).
 Source: "installation-documents.json"; DestDir: "{app}"; DestName: "installation.json"; Check: VaultIn('documents'); Flags: ignoreversion
 Source: "installation-donnees.json"; DestDir: "{app}"; DestName: "installation.json"; Check: VaultIn('donnees'); Flags: ignoreversion
+; Licence de kyfRev, avis de tiers (deux fichiers du même nom dans le dépôt) et licences des polices.
+Source: "..\LICENSE"; DestDir: "{app}\licences"; DestName: "LICENSE.txt"; Flags: ignoreversion
+Source: "..\src\KyfRev.Rendering\THIRD-PARTY-NOTICES.md"; DestDir: "{app}\licences"; DestName: "THIRD-PARTY-NOTICES-rendu.md"; Flags: ignoreversion
+Source: "..\src\KyfRev.Presentation.Wpf\Editing\THIRD-PARTY-NOTICES.md"; DestDir: "{app}\licences"; DestName: "THIRD-PARTY-NOTICES-editeur.md"; Flags: ignoreversion
+Source: "..\src\KyfRev.DesignSystem\Fonts\OFL-*.txt"; DestDir: "{app}\licences"; Flags: ignoreversion
 
 [Icons]
 Name: "{autoprograms}\kyfRev"; Filename: "{app}\kyfRev.exe"; Check: ShortcutWanted(0)

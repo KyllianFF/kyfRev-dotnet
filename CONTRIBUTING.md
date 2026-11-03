@@ -84,6 +84,8 @@ et non réussi.
 - Versions définies uniquement dans `Directory.Packages.props`, ajoutées par `dotnet add package`.
 - Une version n'est adoptée que si elle est publiée depuis au moins **14 jours**, sous licence
   permissive. L'audit NuGet bloque la compilation à la moindre vulnérabilité connue.
+- Un paquet publié avec l'application livre le texte de sa licence, ou celui-ci est rangé dans
+  `installer/licences-nuget` : sans lui, `tools/avis-nuget.ps1` arrête la construction de l'installateur.
 - Les actions GitHub sont épinglées par empreinte de commit.
 
 ## Versions
