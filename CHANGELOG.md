@@ -9,6 +9,10 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- Les listes de choix suivent le thème, y compris le thème sombre.
+- Vue « Santé du coffre », comme dans la 0.x : chaque problème attend une décision et rien n'est réparé sans vous. Fiches
+  manquantes à restaurer depuis une sauvegarde, fichiers en double, fichiers non suivis, liens cassés, passages à vérifier,
+  et le diagnostic à copier pour un signalement.
 - Vue « Statistiques », comme dans la 0.x : la part des révisions faites à l'heure, les révisions validées, les jours
   actifs, la série en cours et son record, le calendrier d'activité sur 52 semaines, puis le détail par mois et par dossier.
   Rien n'y est enregistré : tout vient de l'historique du suivi.

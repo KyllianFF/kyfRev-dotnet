@@ -81,6 +81,15 @@ internal static class Composition
         services.AddSingleton<SettingsPageViewModel>();
         services.AddSingleton<ArchivesPageViewModel>();
         services.AddSingleton<StatisticsPageViewModel>();
+        services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Maintenance);
+        services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Backups);
+        services.AddSingleton(provider => new HealthPageViewModel(
+            provider.GetRequiredService<MaintenanceUseCases>(),
+            provider.GetRequiredService<BackupUseCases>(),
+            provider.GetRequiredService<SheetUseCases>(),
+            provider.GetRequiredService<IReviewOpener>(),
+            () => DiagnosticText(provider),
+            System.Windows.Clipboard.SetText));
         services.AddSingleton(_ => new DesignResources(ThemeKind.Light, Motion.SystemPrefersReducedMotion));
         services.AddSingleton<AppearanceController>();
         services.AddSingleton<GalleryPageViewModel>();
@@ -95,6 +104,7 @@ internal static class Composition
                     [CorePages.Settings] = provider.GetRequiredService<SettingsPageViewModel>(),
                     [CorePages.Archives] = provider.GetRequiredService<ArchivesPageViewModel>(),
                     [CorePages.Statistics] = provider.GetRequiredService<StatisticsPageViewModel>(),
+                    [CorePages.Health] = provider.GetRequiredService<HealthPageViewModel>(),
                 })
                     .Concat(provider.GetServices<INavigationContributor>().Select(contributor => CorePages.FromModule(contributor.Entry))),
                 provider.GetRequiredService<AppearanceController>(),
@@ -108,6 +118,26 @@ internal static class Composition
     }
 
     /// <summary>Le mode tel que le journal le nomme, comme la 0.x.</summary>
+    private static string DiagnosticText(IServiceProvider provider) => DiagnosticReport.Write(
+        Version,
+        ModeName(provider.GetRequiredService<VaultLocations>().Mode),
+        WebViewVersion(),
+        provider.GetRequiredService<VaultUseCases>().State().Vault is not null,
+        provider.GetRequiredService<TimeProvider>().GetLocalNow(),
+        provider.GetRequiredService<ILoggerFactory>() is DiagnosticLog log ? log.Tail(DiagnosticReport.LogLines) : string.Empty);
+
+    private static string WebViewVersion()
+    {
+        try
+        {
+            return Microsoft.Web.WebView2.Core.CoreWebView2Environment.GetAvailableBrowserVersionString();
+        }
+        catch (Microsoft.Web.WebView2.Core.WebView2RuntimeNotFoundException problem)
+        {
+            return $"introuvable ({problem.Message})";
+        }
+    }
+
     internal static string ModeName(AppMode mode) => mode switch
     {
         AppMode.Portable => "portable",

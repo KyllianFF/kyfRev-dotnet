@@ -301,6 +301,22 @@ public sealed class ComponentTests
     }
 
     [STATestMethod]
+    public void A_choice_list_follows_the_dark_theme()
+    {
+        var design = new DesignResources(ThemeKind.Dark, reducedMotion: false);
+        var choices = new ComboBox { ItemsSource = new[] { "Hortense", "Zira" }, SelectedIndex = 0 };
+        Host.Of(design, choices);
+        var colors = ThemeColors.For(ThemeKind.Dark);
+
+        var frame = Host.Part<Border>(Host.Part<ToggleButton>(choices, "Toggle"), "Frame");
+
+        Assert.AreEqual(colors[ColorRole.Surface].ToColor(), ((SolidColorBrush)frame.Background).Color);
+        Assert.AreEqual(colors[ColorRole.Text].ToColor(), ((SolidColorBrush)choices.Foreground).Color);
+        Assert.AreSame(design.Dictionary["Kyf.FocusVisual"], choices.FocusVisualStyle);
+        Assert.IsGreaterThanOrEqualTo(40.0, choices.MinHeight);
+    }
+
+    [STATestMethod]
     public void The_focus_ring_of_a_row_stays_inside_the_row()
     {
         var design = new DesignResources(ThemeKind.Light, reducedMotion: false);

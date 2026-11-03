@@ -50,6 +50,25 @@ public sealed partial class DiagnosticLog : ILoggerFactory
     /// <summary>Le fichier du journal.</summary>
     public string LogFile => _file;
 
+    /// <summary>Les dernières lignes du journal, au plus <paramref name="count"/>, le précédent servant de début.</summary>
+    public string Tail(int count)
+    {
+        var lines = new[] { _previous, _file }.SelectMany(ReadLines).ToList();
+        return string.Join('\n', lines.Skip(Math.Max(0, lines.Count - count))) + '\n';
+    }
+
+    /// <summary>Les lignes d'un journal, même en cours d'écriture ; rien s'il n'existe pas.</summary>
+    private static string[] ReadLines(string file)
+    {
+        if (!File.Exists(file))
+        {
+            return [];
+        }
+        using var stream = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+        using var reader = new StreamReader(stream);
+        return reader.ReadToEnd().Split('\n', StringSplitOptions.RemoveEmptyEntries);
+    }
+
     private DateTimeOffset Now => _time.GetLocalNow();
 
     /// <summary>Consigne le démarrage : version, mode, système.</summary>
