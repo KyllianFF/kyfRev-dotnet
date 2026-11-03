@@ -30,6 +30,12 @@
   <data name="BrokenLinksTitle" xml:space="preserve">
     <value>Liens cassés ({0})</value>
   </data>
+  <data name="ChecksText" xml:space="preserve">
+    <value>Les fichiers des fiches se lisent et portent leur identifiant, chaque fiche a son suivi, aucun fichier n'est en double, les liens internes mènent à un fichier du coffre, et les passages ont retrouvé leur place.</value>
+  </data>
+  <data name="ChecksTitle" xml:space="preserve">
+    <value>Ce qui a été vérifié</value>
+  </data>
   <data name="DiagnosticCopied" xml:space="preserve">
     <value>Diagnostic copié : collez-le dans votre message.</value>
   </data>

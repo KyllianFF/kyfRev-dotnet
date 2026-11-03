@@ -58,8 +58,13 @@
                 Content="{x:Static pages:HealthText.Analyze}" />
         <StackPanel>
           <TextBlock x:Name="Heading" Text="{Binding Title}" Style="{DynamicResource Kyf.Text.Title}" AutomationProperties.HeadingLevel="Level1" />
-          <kyf:Notification x:Name="SummaryGood" Severity="Success" Message="{Binding Summary}" IsOpen="{Binding IsHealthy, Mode=OneWay}" Margin="0,8,0,0" />
-          <kyf:Notification x:Name="SummaryProblems" Severity="Warning" Message="{Binding Summary}" IsOpen="{Binding HasProblems, Mode=OneWay}" Margin="0,8,0,0" />
+          <DockPanel Margin="0,4,0,0" Visibility="{Binding IsLoaded, Converter={StaticResource Visible}}">
+            <kyf:Icon x:Name="GoodIcon" Text="{x:Static kyf:Icons.Success}" Foreground="{DynamicResource Kyf.Brush.Success}" Margin="0,0,8,0" VerticalAlignment="Center"
+                      Visibility="{Binding IsHealthy, Converter={StaticResource Visible}}" />
+            <kyf:Icon x:Name="ProblemIcon" Text="{x:Static kyf:Icons.Warning}" Foreground="{DynamicResource Kyf.Brush.Warning}" Margin="0,0,8,0" VerticalAlignment="Center"
+                      Visibility="{Binding HasProblems, Converter={StaticResource Visible}}" />
+            <TextBlock x:Name="Summary" Text="{Binding Summary}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" />
+          </DockPanel>
         </StackPanel>
       </DockPanel>
       <kyf:Notification x:Name="ErrorMessage" Severity="Critical" Message="{Binding Error}" IsOpen="{Binding HasError, Mode=OneWay}" Margin="0,0,0,8" />
@@ -71,6 +76,14 @@
       </StackPanel>
 
       <ItemsControl x:Name="SectionsList" ItemsSource="{Binding Sections}" Focusable="False" IsEnabled="{Binding IsIdle}" />
+
+      <!-- Tout va bien : ce qui a été vérifié, pour que ce résultat veuille dire quelque chose. -->
+      <kyf:Card x:Name="ChecksCard" Padding="16,12" Margin="0,0,0,8" Visibility="{Binding IsHealthy, Converter={StaticResource Visible}}">
+        <StackPanel>
+          <TextBlock Text="{x:Static pages:HealthText.ChecksTitle}" Style="{DynamicResource Kyf.Text.BodyLarge}" FontWeight="SemiBold" AutomationProperties.HeadingLevel="Level2" />
+          <TextBlock Text="{x:Static pages:HealthText.ChecksText}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="0,4,0,0" />
+        </StackPanel>
+      </kyf:Card>
 
       <!-- Le diagnostic : rien ne part tout seul, c'est la personne qui colle le texte où elle veut. -->
       <kyf:Card x:Name="DiagnosticCard" Padding="16,12">

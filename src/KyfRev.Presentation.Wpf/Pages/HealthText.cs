@@ -26,6 +26,12 @@ public static class HealthText
     /// <summary>« Liens cassés ({0}) ».</summary>
     public static string BrokenLinksTitleOf(object count) => Format("BrokenLinksTitle", count);
 
+    /// <summary>« Les fichiers des fiches se lisent et portent leur identifiant, chaque… ».</summary>
+    public static string ChecksText => Text(nameof(ChecksText));
+
+    /// <summary>« Ce qui a été vérifié ».</summary>
+    public static string ChecksTitle => Text(nameof(ChecksTitle));
+
     /// <summary>« Diagnostic copié : collez-le dans votre message. ».</summary>
     public static string DiagnosticCopied => Text(nameof(DiagnosticCopied));
 
