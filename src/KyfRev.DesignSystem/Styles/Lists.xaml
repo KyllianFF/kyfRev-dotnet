@@ -11,7 +11,7 @@
     <Setter Property="MinHeight" Value="44" />
     <Setter Property="Margin" Value="0,0,0,4" />
     <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-    <Setter Property="FocusVisualStyle" Value="{DynamicResource Kyf.FocusVisual}" />
+    <Setter Property="FocusVisualStyle" Value="{DynamicResource Kyf.FocusVisual.Inset}" />
     <Setter Property="Template">
       <Setter.Value>
         <ControlTemplate TargetType="ListBoxItem">

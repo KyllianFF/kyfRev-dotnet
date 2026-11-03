@@ -103,7 +103,7 @@
 
   <Style TargetType="MenuItem">
     <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Text}" />
-    <Setter Property="FocusVisualStyle" Value="{DynamicResource Kyf.FocusVisual}" />
+    <Setter Property="FocusVisualStyle" Value="{DynamicResource Kyf.FocusVisual.Inset}" />
     <Setter Property="Template" Value="{StaticResource Kyf.Template.MenuItem}" />
   </Style>
 
