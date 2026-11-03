@@ -19,8 +19,7 @@
     </Style>
   </UserControl.Resources>
 
-  <DockPanel Margin="16">
-    <TextBlock x:Name="Heading" DockPanel.Dock="Top" Text="{x:Static pages:SettingsText.Title}" Style="{DynamicResource Kyf.Text.Title}" AutomationProperties.HeadingLevel="Level1" Margin="0,0,0,12" />
+  <DockPanel>
     <kyf:Notification x:Name="ErrorMessage" DockPanel.Dock="Top" Severity="Critical" Message="{Binding Error}" IsOpen="{Binding HasError, Mode=OneWay}" IsClosable="False" Margin="0,0,0,8" />
     <kyf:Notification x:Name="SavedMessage" DockPanel.Dock="Top" Severity="Success" Message="{x:Static pages:SettingsText.Saved}" IsOpen="{Binding IsSaved, Mode=OneWay}" IsClosable="False" Margin="0,0,0,8" />
 

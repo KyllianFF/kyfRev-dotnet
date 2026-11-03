@@ -1,0 +1,22 @@
+<UserControl x:Class="KyfRev.Presentation.Wpf.Pages.AboutSettingsPage"
+             x:ClassModifier="internal"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:kyf="clr-namespace:KyfRev.DesignSystem.Controls;assembly=KyfRev.DesignSystem"
+             xmlns:pages="clr-namespace:KyfRev.Presentation.Wpf.Pages">
+  <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
+    <StackPanel MaxWidth="1100">
+      <kyf:Card x:Name="AboutCard" Padding="16,12">
+        <StackPanel>
+          <TextBlock x:Name="VersionLine" Text="{Binding Version}" Style="{DynamicResource Kyf.Text.Subtitle}" AutomationProperties.HeadingLevel="Level2" />
+          <TextBlock Text="{x:Static pages:SettingsHubText.ModeLabel}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,12,0,0" />
+          <TextBlock x:Name="ModeLine" Text="{Binding Mode}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" />
+          <TextBlock Text="{x:Static pages:SettingsHubText.VaultTitle}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,12,0,0" />
+          <TextBlock x:Name="VaultLine" Text="{Binding Vault}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" />
+          <TextBlock Text="{x:Static pages:SettingsHubText.LicenseLabel}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,12,0,0" />
+          <TextBlock Text="{x:Static pages:SettingsHubText.LicenseText}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" />
+        </StackPanel>
+      </kyf:Card>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>
