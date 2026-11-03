@@ -18,9 +18,6 @@
   <data name="AppearanceTitle" xml:space="preserve">
     <value>Apparence</value>
   </data>
-  <data name="CollapseMenu" xml:space="preserve">
-    <value>Réduire la barre latérale à ses icônes dans Fiches</value>
-  </data>
   <data name="Font" xml:space="preserve">
     <value>Police des fiches</value>
   </data>

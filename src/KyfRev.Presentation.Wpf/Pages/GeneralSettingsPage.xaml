@@ -69,9 +69,6 @@
               <ComboBox x:Name="FontChoice" Grid.Column="1" ItemsSource="{x:Static pages:GeneralSettingsViewModel.Fonts}" SelectedItem="{Binding Font}" DisplayMemberPath="Label" AutomationProperties.Name="{x:Static pages:GeneralSettingsText.Font}" />
             </Grid>
 
-            <CheckBox x:Name="CollapseMenuBox" IsChecked="{Binding CollapsesMenu}" Margin="0,4,0,0" AutomationProperties.Name="{x:Static pages:GeneralSettingsText.CollapseMenu}">
-              <TextBlock Text="{x:Static pages:GeneralSettingsText.CollapseMenu}" TextWrapping="Wrap" />
-            </CheckBox>
           </StackPanel>
         </kyf:Card>
 

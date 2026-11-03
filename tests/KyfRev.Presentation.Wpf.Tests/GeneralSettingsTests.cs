@@ -71,7 +71,7 @@ public sealed class GeneralSettingsTests
     {
         var store = new MemoryMachinePreferences
         {
-            Stored = new MachinePreferences { Theme = ThemePreference.Dark, Zoom = 1.25, TextSize = ReadingTextSize.ExtraLarge, CollapsesMenu = false },
+            Stored = new MachinePreferences { Theme = ThemePreference.Dark, Zoom = 1.25, TextSize = ReadingTextSize.ExtraLarge },
         };
         var machine = new MachineSettings(store);
         var test = new TestShell();
@@ -80,7 +80,6 @@ public sealed class GeneralSettingsTests
 
         Assert.AreEqual(ThemeKind.Dark, test.Design.Theme);
         Assert.AreEqual(1.25, test.Shell.Zoom);
-        Assert.IsFalse(test.Shell.CollapsesMenu);
         Assert.AreEqual(21.0, ((ReadingComfort)test.Design.Dictionary[ReadingComfort.ResourceKey]).Size);
 
         machine.Update(preferences => preferences with { HighContrast = true, ReducedMotion = true, LargerTargets = true, Zoom = 9, LineSpacing = ReadingLineSpacing.Airy });
@@ -112,31 +111,20 @@ public sealed class GeneralSettingsTests
     }
 
     [STATestMethod]
-    public void The_sidebar_collapses_in_the_sheets_only_if_asked()
+    public void The_menu_keeps_its_size_in_every_view()
     {
         var test = new TestShell();
         var shell = test.Shell;
         shell.WindowWidth = 1600;
-        var sheets = shell.MainNavigation.First(item => item.Id == CorePages.Sheets);
-        Assert.AreEqual(NavigationLayout.Sidebar, shell.Layout);
 
-        shell.Navigate(sheets);
-        Assert.AreEqual(NavigationLayout.Sidebar, shell.Layout, "sans le réglage");
+        foreach (var item in shell.MainNavigation)
+        {
+            shell.Navigate(item);
+            Assert.AreEqual(NavigationLayout.Sidebar, shell.Layout, item.Label);
+        }
+        shell.Navigate(new NavigationItem("fiche", "Fiche", Icons.Document, int.MaxValue, new object()));
 
-        shell.CollapsesMenu = true;
-        Assert.AreEqual(NavigationLayout.Rail, shell.Layout);
-
-        shell.Navigate(new NavigationItem(CorePages.Sheet, "Fiche", Icons.Document, int.MaxValue, new object()));
-        Assert.AreEqual(NavigationLayout.Rail, shell.Layout, "une fiche ouverte aussi");
-
-        shell.Navigate(shell.MainNavigation[0]);
-        Assert.AreEqual(NavigationLayout.Sidebar, shell.Layout);
-
-        shell.WindowWidth = 900;
-        shell.Navigate(sheets);
-        Assert.AreEqual(NavigationLayout.Rail, shell.Layout);
-        shell.WindowWidth = 500;
-        Assert.AreEqual(NavigationLayout.Tabs, shell.Layout, "les onglets restent des onglets");
+        Assert.AreEqual(NavigationLayout.Sidebar, shell.Layout, "une fiche ouverte aussi : un menu qui bouge sous le clic en choisit une autre entrée");
     }
 
     [TestMethod]
@@ -152,7 +140,6 @@ public sealed class GeneralSettingsTests
                 TextSize = ReadingTextSize.Large,
                 LineSpacing = ReadingLineSpacing.Airy,
                 Font = ReadingFont.Serif,
-                CollapsesMenu = false,
                 ReducedMotion = true,
                 HighContrast = true,
                 LargerTargets = true,
@@ -169,7 +156,6 @@ public sealed class GeneralSettingsTests
         Assert.AreEqual("Grande (19 px)", page.TextSize.Label);
         Assert.AreEqual("Aéré", page.LineSpacing.Label);
         Assert.AreEqual("Avec empattements (Georgia)", page.Font.Label);
-        Assert.IsFalse(page.CollapsesMenu);
         Assert.IsTrue(page.ReducedMotion);
         Assert.IsTrue(page.HighContrast);
         Assert.IsTrue(page.LargerTargets);
@@ -193,7 +179,6 @@ public sealed class GeneralSettingsTests
         page.TextSize = GeneralSettingsViewModel.TextSizes[2];
         page.LineSpacing = GeneralSettingsViewModel.LineSpacings[1];
         page.Font = GeneralSettingsViewModel.Fonts[1];
-        page.CollapsesMenu = false;
         page.ReducedMotion = true;
         page.HighContrast = true;
         page.LargerTargets = true;
@@ -209,7 +194,6 @@ public sealed class GeneralSettingsTests
                 TextSize = ReadingTextSize.ExtraLarge,
                 LineSpacing = ReadingLineSpacing.Airy,
                 Font = ReadingFont.Serif,
-                CollapsesMenu = false,
                 ReducedMotion = true,
                 HighContrast = true,
                 LargerTargets = true,

@@ -77,9 +77,6 @@ public sealed record MachinePreferences
     /// <summary>Police du texte des fiches.</summary>
     public ReadingFont Font { get; init; } = ReadingFont.Sans;
 
-    /// <summary>La barre latérale se réduit à ses icônes dans « Fiches », comme par défaut dans la 0.x.</summary>
-    public bool CollapsesMenu { get; init; } = true;
-
     /// <summary>Animations réduites, même si Windows ne le demande pas.</summary>
     public bool ReducedMotion { get; init; }
 

@@ -92,7 +92,6 @@ public sealed class MachinePreferencesFile : IMachinePreferencesStore
             writer.WriteString("taille", Name(TextSizes, preferences.TextSize));
             writer.WriteString("interligne", Name(LineSpacings, preferences.LineSpacing));
             writer.WriteString("police", Name(Fonts, preferences.Font));
-            writer.WriteBoolean("reductionMenu", preferences.CollapsesMenu);
             writer.WriteBoolean("animationsReduites", preferences.ReducedMotion);
             writer.WriteBoolean("contrasteEleve", preferences.HighContrast);
             writer.WriteBoolean("ciblesAgrandies", preferences.LargerTargets);
@@ -126,7 +125,6 @@ public sealed class MachinePreferencesFile : IMachinePreferencesStore
             TextSize = Choice(root, "taille", TextSizes, defaults.TextSize),
             LineSpacing = Choice(root, "interligne", LineSpacings, defaults.LineSpacing),
             Font = Choice(root, "police", Fonts, defaults.Font),
-            CollapsesMenu = Flag(root, "reductionMenu", defaults.CollapsesMenu),
             ReducedMotion = Flag(root, "animationsReduites", defaults.ReducedMotion),
             HighContrast = Flag(root, "contrasteEleve", defaults.HighContrast),
             LargerTargets = Flag(root, "ciblesAgrandies", defaults.LargerTargets),

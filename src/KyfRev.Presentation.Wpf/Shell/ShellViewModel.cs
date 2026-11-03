@@ -86,19 +86,7 @@ public sealed partial class ShellViewModel : ObservableObject
     public partial double WindowWidth { get; set; }
 
     /// <summary>Disposition de la navigation : onglets, colonne d'icônes ou barre latérale.</summary>
-    public NavigationLayout Layout
-    {
-        get
-        {
-            var layout = ShellLayout.For(WindowWidth, Zoom);
-            return layout == NavigationLayout.Sidebar && CollapsesMenu && Current.Id is CorePages.Sheets or CorePages.Sheet ? NavigationLayout.Rail : layout;
-        }
-    }
-
-    /// <summary>La barre latérale se réduit à ses icônes dans « Fiches ».</summary>
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Layout))]
-    public partial bool CollapsesMenu { get; set; }
+    public NavigationLayout Layout => ShellLayout.For(WindowWidth, Zoom);
 
     /// <summary>Onglet choisi ; rien quand la vue ouverte est rangée sous « Plus ».</summary>
     [ObservableProperty]
@@ -332,7 +320,6 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         SelectedTab = TabNavigation.Contains(value) ? value : null;
         OnPropertyChanged(nameof(IsOverflowActive));
-        OnPropertyChanged(nameof(Layout));
         if (_workspace)
         {
             Activate(value);

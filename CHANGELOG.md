@@ -10,7 +10,7 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 ### Ajouté
 
 - Vue « Paramètres », onglet « Général » : le thème, la taille de l'interface, le confort de lecture des fiches (largeur,
-  taille du texte, interligne, police), la réduction de la barre latérale, les animations, le contraste élevé, les petits
+  taille du texte, interligne, police), les animations, le contraste élevé, les petits
   boutons agrandis, la voix et la vitesse de lecture. Ces réglages sont retenus sur l'ordinateur, hors du coffre, et le zoom
   réglé au clavier aussi.
 - Vue « Paramètres » : elle passe en onglets par thème. « Révisions » reprend la séquence et les rappels ; « Données »

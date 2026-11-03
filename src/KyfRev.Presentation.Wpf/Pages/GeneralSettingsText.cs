@@ -14,9 +14,6 @@ public static class GeneralSettingsText
     /// <summary>« Apparence ».</summary>
     public static string AppearanceTitle => Text(nameof(AppearanceTitle));
 
-    /// <summary>« Réduire la barre latérale à ses icônes dans Fiches ».</summary>
-    public static string CollapseMenu => Text(nameof(CollapseMenu));
-
     /// <summary>« Police des fiches ».</summary>
     public static string Font => Text(nameof(Font));
 

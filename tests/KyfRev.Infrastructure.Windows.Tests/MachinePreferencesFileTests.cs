@@ -16,7 +16,6 @@ public sealed class MachinePreferencesFileTests
         TextSize = ReadingTextSize.ExtraLarge,
         LineSpacing = ReadingLineSpacing.Airy,
         Font = ReadingFont.Serif,
-        CollapsesMenu = false,
         ReducedMotion = true,
         HighContrast = true,
         LargerTargets = true,
@@ -77,7 +76,7 @@ public sealed class MachinePreferencesFileTests
         using var folder = new Folder();
         File.WriteAllText(
             Path.Combine(folder.Path, "preferences.json"),
-            """{ "theme": "fuchsia", "zoom": -3, "largeur": 12, "taille": "grande", "reductionMenu": "oui", "contrasteEleve": true, "voix": 4, "vitesse": "vite" }""",
+            """{ "theme": "fuchsia", "zoom": -3, "largeur": 12, "taille": "grande", "animationsReduites": "oui", "contrasteEleve": true, "voix": 4, "vitesse": "vite" }""",
             new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
 
         var preferences = new MachinePreferencesFile(folder.Path).Load();

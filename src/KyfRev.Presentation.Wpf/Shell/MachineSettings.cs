@@ -66,6 +66,5 @@ public sealed class MachineSettings
         appearance.LargerTargets = preferences.LargerTargets;
         appearance.Resources[ReadingComfort.ResourceKey] = ReadingComfort.Of(preferences);
         shell.SetZoom(preferences.Zoom);
-        shell.CollapsesMenu = preferences.CollapsesMenu;
     }
 }

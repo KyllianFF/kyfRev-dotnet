@@ -127,7 +127,7 @@ public sealed class ReviewNavigation : IReviewOpener
         var shell = Shell;
         var from = shell.Current;
         var page = new SheetPageViewModel(_sheets, _annotations, Bar, sheetId, () => shell.Navigate(from), OpenSheet, _links, Editor, revising, ActiveRecall) { PassageToShow = passageId, ReadAloud = _speech is null ? null : new ReadAloudViewModel(_speech, _machine), ReadingMaxWidth = _machine?.Current.Width == ReadingWidth.Full ? double.PositiveInfinity : SheetPageViewModel.TextMaxWidth };
-        shell.Navigate(new NavigationItem(CorePages.Sheet, ReviewText.SheetPage, Icons.Document, int.MaxValue, page));
+        shell.Navigate(new NavigationItem("fiche", ReviewText.SheetPage, Icons.Document, int.MaxValue, page));
         page.LoadCommand.Execute(null);
     }
 
