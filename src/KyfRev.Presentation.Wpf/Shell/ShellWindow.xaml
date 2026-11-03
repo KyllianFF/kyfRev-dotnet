@@ -34,6 +34,9 @@
     <DataTemplate DataType="{x:Type pages:DefinitionsPageViewModel}">
       <pages:DefinitionsPage />
     </DataTemplate>
+    <DataTemplate DataType="{x:Type pages:StatisticsPageViewModel}">
+      <pages:StatisticsPage />
+    </DataTemplate>
     <DataTemplate DataType="{x:Type pages:ArchivesPageViewModel}">
       <pages:ArchivesPage />
     </DataTemplate>

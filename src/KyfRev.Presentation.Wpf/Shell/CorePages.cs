@@ -26,6 +26,9 @@ public static class CorePages
     /// <summary>Identifiant de la vue « Archives ».</summary>
     public const string Archives = "archives";
 
+    /// <summary>Identifiant de la vue « Statistiques ».</summary>
+    public const string Statistics = "statistiques";
+
     /// <summary>Les entrées du cœur, toutes encore à porter.</summary>
     public static IReadOnlyList<NavigationItem> All() => All(new Dictionary<string, object>());
 
@@ -41,7 +44,7 @@ public static class CorePages
             Entry(Sheets, ShellText.Sheets, Icons.Document, 20),
             Entry(Definitions, ShellText.Definitions, Icons.Dictionary, 30),
             Entry(Archives, ShellText.Archives, Icons.Archive, 40),
-            Entry("statistiques", ShellText.Statistics, Icons.Chart, 50),
+            Entry(Statistics, ShellText.Statistics, Icons.Chart, 50),
             Entry("sante", ShellText.Health, Icons.Health, NavigationItem.SecondaryOrder),
             Entry(Settings, ShellText.Settings, Icons.Settings, NavigationItem.SecondaryOrder + 10),
         ];

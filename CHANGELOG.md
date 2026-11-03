@@ -9,6 +9,9 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- Vue « Statistiques », comme dans la 0.x : la part des révisions faites à l'heure, les révisions validées, les jours
+  actifs, la série en cours et son record, le calendrier d'activité sur 52 semaines, puis le détail par mois et par dossier.
+  Rien n'y est enregistré : tout vient de l'historique du suivi.
 - L'installation dépose la licence de kyfRev, les avis de tiers, ceux des paquets NuGet publiés (runtime .NET compris) et les
   licences des polices dans le dossier `licences` de l'application ; la désinstallation les retire avec elle.
 - La fenêtre d'insertion d'une formule montre son aperçu pendant la saisie, et propose des exemples à reprendre.
