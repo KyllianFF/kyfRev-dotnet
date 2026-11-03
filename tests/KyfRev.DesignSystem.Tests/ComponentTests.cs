@@ -269,7 +269,7 @@ public sealed class ComponentTests
         Assert.AreEqual(FontWeights.SemiBold, item.FontWeight);
         Assert.AreEqual(ThemeColors.For(ThemeKind.Light)[ColorRole.NavigationActiveBackground].ToColor(), ((SolidColorBrush)row.Background).Color);
         Assert.AreEqual(ThemeColors.For(ThemeKind.Light)[ColorRole.NavigationActiveText].ToColor(), ((SolidColorBrush)item.Foreground).Color);
-        Assert.AreSame(design.Dictionary["Kyf.FocusVisual"], item.FocusVisualStyle);
+        Assert.AreSame(design.Dictionary["Kyf.FocusVisual.Inset"], item.FocusVisualStyle);
         Assert.IsGreaterThanOrEqualTo(44.0, item.MinHeight);
     }
 
@@ -289,14 +289,28 @@ public sealed class ComponentTests
     {
         var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
         var ring = (Style)design.Dictionary["Kyf.FocusVisual"];
+        var inset = (Style)design.Dictionary["Kyf.FocusVisual.Inset"];
         var button = new Button { Content = "Valider" };
         var item = new MenuItem { Header = "Ouvrir" };
         var panel = new StackPanel { Children = { button, new Menu { Items = { item } } } };
         Host.Of(design, panel);
 
         Assert.AreSame(ring, button.FocusVisualStyle);
-        Assert.AreSame(ring, item.FocusVisualStyle);
+        Assert.AreSame(inset, item.FocusVisualStyle);
         Assert.AreEqual(40.0, button.MinHeight);
+    }
+
+    [STATestMethod]
+    public void The_focus_ring_of_a_row_stays_inside_the_row()
+    {
+        var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
+        var ring = new Control { Style = (Style)design.Dictionary["Kyf.FocusVisual.Inset"] };
+        Host.Of(design, ring);
+
+        var drawn = (FrameworkElement)VisualTreeHelper.GetChild(ring, 0);
+
+        Assert.AreEqual(default, drawn.Margin);
+        Assert.AreEqual(design.Dictionary["Kyf.Radius.Control"], ((Border)drawn).CornerRadius);
     }
 }
 

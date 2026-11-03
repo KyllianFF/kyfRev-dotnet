@@ -123,7 +123,8 @@ fois l'application installée. Elles viennent des dépôts officiels, à un comm
 | Squelette | `Skeleton` | chargement, immobile si les animations sont réduites |
 | Texte | styles `Kyf.Text.*` | l'échelle typographique |
 
-Le focus clavier est toujours visible : un anneau de 2 px décalé de 2 px (`Kyf.FocusVisual`), ou
+Le focus clavier est toujours visible : un anneau de 2 px décalé de 2 px (`Kyf.FocusVisual`), à
+l'intérieur de la ligne dans les listes et les menus (`Kyf.FocusVisual.Inset`), ou
 le contour épaissi des champs. Les textes des composants (« Fermer », « Annuler »…) sont lus
 dans `Resources/DesignText.resx`.
 
