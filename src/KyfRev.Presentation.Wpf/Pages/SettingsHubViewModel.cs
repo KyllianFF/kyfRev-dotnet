@@ -29,13 +29,15 @@ public sealed partial class SettingsHubViewModel : ObservableObject, INavigation
     private readonly List<SettingsTab> _tabs;
 
     /// <summary>La vue, avec ses onglets, dans l'ordre ; le premier s'ouvre.</summary>
-    public SettingsHubViewModel(SettingsPageViewModel revisions, DataSettingsViewModel data, AboutSettingsViewModel about)
+    public SettingsHubViewModel(GeneralSettingsViewModel general, SettingsPageViewModel revisions, DataSettingsViewModel data, AboutSettingsViewModel about)
     {
+        ArgumentNullException.ThrowIfNull(general);
         ArgumentNullException.ThrowIfNull(revisions);
         ArgumentNullException.ThrowIfNull(data);
         ArgumentNullException.ThrowIfNull(about);
         _tabs =
         [
+            new SettingsTab(GeneralSettingsText.General, general),
             new SettingsTab(SettingsHubText.Revisions, revisions),
             new SettingsTab(SettingsHubText.Data, data),
             new SettingsTab(SettingsHubText.About, about),

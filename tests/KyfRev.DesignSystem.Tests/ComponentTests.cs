@@ -301,6 +301,32 @@ public sealed class ComponentTests
     }
 
     [STATestMethod]
+    public void A_choice_list_shows_the_member_it_is_told_to()
+    {
+        var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
+        var choices = new ComboBox { ItemsSource = new[] { new KeyValuePair<int, string>(1, "Clair") }, DisplayMemberPath = "Value", SelectedIndex = 0 };
+        Host.Of(design, choices);
+
+        CollectionAssert.Contains(Texts(choices).Select(text => text.Text).ToList(), "Clair");
+
+        static IEnumerable<TextBlock> Texts(DependencyObject root)
+        {
+            for (var i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)
+            {
+                var child = VisualTreeHelper.GetChild(root, i);
+                if (child is TextBlock text)
+                {
+                    yield return text;
+                }
+                foreach (var nested in Texts(child))
+                {
+                    yield return nested;
+                }
+            }
+        }
+    }
+
+    [STATestMethod]
     public void A_choice_list_follows_the_dark_theme()
     {
         var design = new DesignResources(ThemeKind.Dark, reducedMotion: false);

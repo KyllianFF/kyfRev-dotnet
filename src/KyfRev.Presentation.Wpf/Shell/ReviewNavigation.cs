@@ -52,10 +52,11 @@ public sealed class ReviewNavigation : IReviewOpener
     private readonly EditorEnvironment _environment;
     private readonly SettingsUseCases? _settings;
     private readonly ISpeech? _speech;
+    private readonly MachineSettings? _machine;
     private ShellViewModel? _shell;
 
     /// <summary>La navigation, sur les cas d'usage des fiches, des révisions et des rappels, et la séance gardée sur ce poste.</summary>
-    public ReviewNavigation(SheetUseCases sheets, AnnotationUseCases annotations, ReviewUseCases reviews, ReminderUseCases reminders, VaultUseCases vaults, IStudySessionStore sessions, TimeProvider time, IExternalLinks links, EditingUseCases editing, EditorEnvironment environment, SettingsUseCases? settings = null, ISpeech? speech = null)
+    public ReviewNavigation(SheetUseCases sheets, AnnotationUseCases annotations, ReviewUseCases reviews, ReminderUseCases reminders, VaultUseCases vaults, IStudySessionStore sessions, TimeProvider time, IExternalLinks links, EditingUseCases editing, EditorEnvironment environment, SettingsUseCases? settings = null, ISpeech? speech = null, MachineSettings? machine = null)
     {
         ArgumentNullException.ThrowIfNull(sheets);
         ArgumentNullException.ThrowIfNull(reviews);
@@ -69,6 +70,7 @@ public sealed class ReviewNavigation : IReviewOpener
         ArgumentNullException.ThrowIfNull(environment);
         _settings = settings;
         _speech = speech;
+        _machine = machine;
         _editing = editing;
         _environment = environment;
         _links = links;
@@ -124,7 +126,7 @@ public sealed class ReviewNavigation : IReviewOpener
     {
         var shell = Shell;
         var from = shell.Current;
-        var page = new SheetPageViewModel(_sheets, _annotations, Bar, sheetId, () => shell.Navigate(from), OpenSheet, _links, Editor, revising, ActiveRecall) { PassageToShow = passageId, ReadAloud = _speech is null ? null : new ReadAloudViewModel(_speech) };
+        var page = new SheetPageViewModel(_sheets, _annotations, Bar, sheetId, () => shell.Navigate(from), OpenSheet, _links, Editor, revising, ActiveRecall) { PassageToShow = passageId, ReadAloud = _speech is null ? null : new ReadAloudViewModel(_speech, _machine), ReadingMaxWidth = _machine?.Current.Width == ReadingWidth.Full ? double.PositiveInfinity : SheetPageViewModel.TextMaxWidth };
         shell.Navigate(new NavigationItem("fiche", ReviewText.SheetPage, Icons.Document, int.MaxValue, page));
         page.LoadCommand.Execute(null);
     }

@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using KyfRev.Application.Model;
 using KyfRev.DesignSystem.Controls;
 
 namespace KyfRev.Presentation.Wpf.Shell;
@@ -279,6 +280,9 @@ public sealed partial class ShellViewModel : ObservableObject
     /// <summary>Sort du plein écran (Échap).</summary>
     [RelayCommand]
     public void ExitFullScreen() => IsFullScreen = false;
+
+    /// <summary>Donne cette taille à l'interface, dans les limites du zoom.</summary>
+    public void SetZoom(double zoom) => Zoom = Math.Clamp(zoom, MinimumZoom, MaximumZoom);
 
     /// <summary>Agrandit l'interface d'un pas.</summary>
     [RelayCommand]

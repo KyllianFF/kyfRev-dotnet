@@ -48,6 +48,8 @@ internal static class Composition
             log.Started(Version, ModeName(locations.Mode));
             return log;
         });
+        services.AddSingleton<IMachinePreferencesStore>(provider => new MachinePreferencesFile(provider.GetRequiredService<VaultLocations>().LocalData));
+        services.AddSingleton<MachineSettings>();
         services.AddSingleton<IFolderPicker, FolderPicker>();
         // Le coffre ouvert est fermé, et son verrou libéré, quand les services le sont.
         services.AddSingleton(provider => new KyfRevApplication(
@@ -99,6 +101,7 @@ internal static class Composition
                 provider.GetRequiredService<SettingsPageViewModel>().Forget();
                 provider.GetRequiredService<ShellViewModel>().ShowWorkspace();
             }));
+        services.AddSingleton<GeneralSettingsViewModel>();
         services.AddSingleton<AboutSettingsViewModel>();
         services.AddSingleton<SettingsHubViewModel>();
         services.AddSingleton(provider => new HealthPageViewModel(
@@ -129,6 +132,7 @@ internal static class Composition
                 provider.GetRequiredService<GalleryPageViewModel>());
             // Les fiches et les passages s'ouvrent dans la coquille.
             provider.GetRequiredService<ReviewNavigation>().Attach(shell);
+            provider.GetRequiredService<MachineSettings>().Follow(provider.GetRequiredService<AppearanceController>(), shell);
             return shell;
         });
         services.AddTransient<ShellWindow>();

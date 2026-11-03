@@ -605,7 +605,10 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
     public bool ShowsPanelToggles => !ShowsCode;
 
     /// <summary>La largeur du texte : celle de la lecture, ou toute la place pour le code et son rendu.</summary>
-    public double TextWidth => ShowsCode ? double.PositiveInfinity : TextMaxWidth;
+    public double TextWidth => ShowsCode ? double.PositiveInfinity : ReadingMaxWidth;
+
+    /// <summary>La largeur du texte en lecture : celle qui reste lisible, ou toute la place si elle est préférée.</summary>
+    public double ReadingMaxWidth { get; init; } = TextMaxWidth;
 
     /// <summary>Le raccourci de validation : en écriture, il n'y a rien à valider.</summary>
     public System.Windows.Input.ICommand? ValidateShortcut => IsWriting ? null : Review?.ValidateCommand;

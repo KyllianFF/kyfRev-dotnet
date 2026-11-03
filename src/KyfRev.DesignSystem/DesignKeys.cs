@@ -44,6 +44,12 @@ public static class DesignKeys
     /// <summary>Le contraste élevé de Windows est actif : les couleurs sont les siennes, y compris celles du texte des fiches.</summary>
     public const string IsHighContrast = "Kyf.Theme.IsHighContrast";
 
+    /// <summary>Hauteur minimale des boutons discrets.</summary>
+    public const string CompactTarget = "Kyf.Target.Compact";
+
+    /// <summary>Hauteur minimale des onglets.</summary>
+    public const string TabTarget = "Kyf.Target.Tab";
+
     /// <summary>Pinceau d'un rôle de couleur.</summary>
     public static string Brush(ColorRole role) => $"Kyf.Brush.{role}";
 

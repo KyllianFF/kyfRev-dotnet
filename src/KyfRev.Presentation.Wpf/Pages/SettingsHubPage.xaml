@@ -4,6 +4,9 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:pages="clr-namespace:KyfRev.Presentation.Wpf.Pages">
   <UserControl.Resources>
+    <DataTemplate DataType="{x:Type pages:GeneralSettingsViewModel}">
+      <pages:GeneralSettingsPage />
+    </DataTemplate>
     <DataTemplate DataType="{x:Type pages:SettingsPageViewModel}">
       <pages:SettingsPage />
     </DataTemplate>

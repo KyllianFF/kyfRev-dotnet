@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Interop;
+using KyfRev.Application.Model;
 using KyfRev.DesignSystem;
 using KyfRev.DesignSystem.Tokens;
 using KyfRev.Presentation.Wpf.Pages;

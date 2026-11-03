@@ -391,6 +391,7 @@ public sealed class Scenarios
         using (var running = trial.Launch(Day(10, 9)))
         {
             running.OpenView("Paramètres");
+            running.OpenSettingsTab("Révisions");
             running.ChangeSteps("2, 4, 8");
             running.SaveSettings();
         }

@@ -42,16 +42,24 @@ public sealed class FilledViewsAccessibilityTests
         var app = vault.App;
         var page = new SettingsPageViewModel(app.Settings, TimeProvider.System);
         var data = new DataSettingsViewModel(app.Vaults, app.Backups, app.Trash, app.Annotations, app.Exports, app.Settings, new FakePicker(), new FakeOpener(), () => { });
-        var hub = new SettingsHubViewModel(page, data, new AboutSettingsViewModel(app.Vaults));
+        var general = new GeneralSettingsViewModel(new MachineSettings(new MemoryMachinePreferences()), new FakeVoices("Hortense"));
+        var hub = new SettingsHubViewModel(general, page, data, new AboutSettingsViewModel(app.Vaults));
 
-        var names = Names(hub, () => page.IsReady, null);
+        var names = Names(hub, () => hub.Selected.Page == general, null);
+
+        CollectionAssert.Contains(names, GeneralSettingsText.General);
+        CollectionAssert.Contains(names, GeneralSettingsText.ReducedMotion);
+        CollectionAssert.Contains(names, GeneralSettingsText.LargerTargets);
+
+        hub.Tabs[1].IsSelected = true;
+        names = Names(hub, () => page.IsReady, null);
 
         CollectionAssert.Contains(names, SettingsHubText.Data);
         CollectionAssert.Contains(names, SettingsText.Steps);
         CollectionAssert.Contains(names, SettingsText.ActiveRecall);
         CollectionAssert.Contains(names, SettingsText.Save);
 
-        hub.Tabs[1].IsSelected = true;
+        hub.Tabs[2].IsSelected = true;
         names = Names(hub, () => data.IsLoaded, null);
 
         CollectionAssert.Contains(names, SettingsHubText.OpenVault);

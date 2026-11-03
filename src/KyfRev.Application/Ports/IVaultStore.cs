@@ -80,6 +80,16 @@ public interface IStudySessionStore
     bool Forget();
 }
 
+/// <summary>Les préférences de ce poste, gardées hors du coffre.</summary>
+public interface IMachinePreferencesStore
+{
+    /// <summary>Les préférences gardées ; celles par défaut s'il n'y en a pas, ou si elles sont illisibles.</summary>
+    MachinePreferences Load();
+
+    /// <summary>Garde les préférences ; faux si elles n'ont pas pu l'être.</summary>
+    bool Save(MachinePreferences preferences);
+}
+
 /// <summary>
 /// Lecture d'une adresse en ligne, durcie : HTTPS seulement, ni redirection ni cookie, réponse
 /// limitée en taille et en durée. Seule l'adresse demandée part ; un échec est une

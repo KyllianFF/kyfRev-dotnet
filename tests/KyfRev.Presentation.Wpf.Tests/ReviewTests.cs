@@ -309,6 +309,23 @@ public sealed class ReviewTests
     }
 
     [TestMethod]
+    [DataRow(ReadingWidth.Comfortable, SheetPageViewModel.TextMaxWidth)]
+    [DataRow(ReadingWidth.Full, double.PositiveInfinity)]
+    public void A_sheet_opens_with_the_width_kept_on_this_computer(ReadingWidth width, double expected)
+    {
+        using var vault = new ReviewVault();
+        var test = new TestShell();
+        var machine = new MachineSettings(new MemoryMachinePreferences { Stored = new MachinePreferences { Width = width } });
+        var navigation = new ReviewNavigation(vault.App.Sheets, vault.App.Annotations, vault.App.Reviews, vault.App.Reminders, vault.App.Vaults, new MemorySessions(), vault.Time, new RecordingLinks(), vault.App.Editing, FakeEnvironment.Markdown(), machine: machine);
+        navigation.Attach(test.Shell);
+        test.Shell.ShowWorkspace();
+
+        navigation.OpenSheet(vault.SheetId);
+
+        Assert.AreEqual(expected, ((SheetPageViewModel)test.Shell.Current.Page).TextWidth);
+    }
+
+    [TestMethod]
     public async Task Rows_of_the_dashboard_open_their_item_and_back_returns_to_it()
     {
         using var vault = new ReviewVault();

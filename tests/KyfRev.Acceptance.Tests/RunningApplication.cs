@@ -308,6 +308,18 @@ internal sealed class RunningApplication : IDisposable
     /// <summary>Change la séquence des étapes dans la vue « Paramètres ».</summary>
     public void ChangeSteps(string steps) => Wait("StepsBox").AsTextBox().Text = steps;
 
+    /// <summary>Ouvre un onglet de la vue « Paramètres ».</summary>
+    public void OpenSettingsTab(string name)
+    {
+        var tab = Retry.WhileNull(
+            () => Wait("TabBar").FindAllDescendants().FirstOrDefault(child => child.Name == name && child.Patterns.SelectionItem.IsSupported),
+            Patience,
+            Interval,
+            throwOnTimeout: true,
+            timeoutMessage: $"L'onglet « {name} » est introuvable.").Result!;
+        tab.Patterns.SelectionItem.Pattern.Select();
+    }
+
     /// <summary>Enregistre les réglages, et attend que la vue le confirme.</summary>
     public void SaveSettings()
     {

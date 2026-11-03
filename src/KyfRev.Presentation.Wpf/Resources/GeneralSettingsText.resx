@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="AccessibilityTitle" xml:space="preserve">
+    <value>Accessibilité</value>
+  </data>
+  <data name="AppearanceTitle" xml:space="preserve">
+    <value>Apparence</value>
+  </data>
+  <data name="Font" xml:space="preserve">
+    <value>Police des fiches</value>
+  </data>
+  <data name="FontSans" xml:space="preserve">
+    <value>Sans empattements</value>
+  </data>
+  <data name="FontSerif" xml:space="preserve">
+    <value>Avec empattements (Georgia)</value>
+  </data>
+  <data name="General" xml:space="preserve">
+    <value>Général</value>
+  </data>
+  <data name="HighContrast" xml:space="preserve">
+    <value>Contraste élevé</value>
+  </data>
+  <data name="HighContrastHelp" xml:space="preserve">
+    <value>Les couleurs de contraste de Windows, même si ce mode y est désactivé.</value>
+  </data>
+  <data name="InterfaceSize" xml:space="preserve">
+    <value>Taille de l'interface</value>
+  </data>
+  <data name="InterfaceSizeHelp" xml:space="preserve">
+    <value>Aussi Ctrl+plus, Ctrl+moins, Ctrl+0.</value>
+  </data>
+  <data name="LargerTargets" xml:space="preserve">
+    <value>Agrandir les petits boutons</value>
+  </data>
+  <data name="LargerTargetsHelp" xml:space="preserve">
+    <value>Une cible plus haute, plus facile à atteindre.</value>
+  </data>
+  <data name="MachineNote" xml:space="preserve">
+    <value>Retenus sur cet ordinateur, appliqués aussitôt.</value>
+  </data>
+  <data name="NoVoice" xml:space="preserve">
+    <value>Aucune voix française n'est installée sur cet ordinateur.</value>
+  </data>
+  <data name="NotRemembered" xml:space="preserve">
+    <value>Ce réglage s'applique, mais n'a pas pu être retenu sur cet ordinateur.</value>
+  </data>
+  <data name="Percent" xml:space="preserve">
+    <value>{0} %</value>
+  </data>
+  <data name="Preview" xml:space="preserve">
+    <value>Aperçu</value>
+  </data>
+  <data name="PreviewText" xml:space="preserve">
+    <value>La mitose partage une cellule en deux cellules filles identiques : chacune reçoit une copie complète des chromosomes.</value>
+  </data>
+  <data name="Rate" xml:space="preserve">
+    <value>Vitesse de lecture</value>
+  </data>
+  <data name="ReducedMotion" xml:space="preserve">
+    <value>Réduire les animations</value>
+  </data>
+  <data name="ReducedMotionHelp" xml:space="preserve">
+    <value>Même si Windows ne le demande pas.</value>
+  </data>
+  <data name="Spacing" xml:space="preserve">
+    <value>Interligne des fiches</value>
+  </data>
+  <data name="SpacingAiry" xml:space="preserve">
+    <value>Aéré</value>
+  </data>
+  <data name="SpacingNormal" xml:space="preserve">
+    <value>Normal</value>
+  </data>
+  <data name="TextSize" xml:space="preserve">
+    <value>Taille du texte des fiches</value>
+  </data>
+  <data name="TextSizeExtraLarge" xml:space="preserve">
+    <value>Très grande (21 px)</value>
+  </data>
+  <data name="TextSizeLarge" xml:space="preserve">
+    <value>Grande (19 px)</value>
+  </data>
+  <data name="TextSizeNormal" xml:space="preserve">
+    <value>Normale (17 px)</value>
+  </data>
+  <data name="Theme" xml:space="preserve">
+    <value>Thème d'affichage</value>
+  </data>
+  <data name="ThemeDark" xml:space="preserve">
+    <value>Sombre</value>
+  </data>
+  <data name="ThemeLight" xml:space="preserve">
+    <value>Clair</value>
+  </data>
+  <data name="ThemeSystem" xml:space="preserve">
+    <value>Comme Windows</value>
+  </data>
+  <data name="Voice" xml:space="preserve">
+    <value>Voix de lecture</value>
+  </data>
+  <data name="Width" xml:space="preserve">
+    <value>Largeur des fiches</value>
+  </data>
+  <data name="WidthComfortable" xml:space="preserve">
+    <value>Confortable</value>
+  </data>
+  <data name="WidthFull" xml:space="preserve">
+    <value>Toute la largeur</value>
+  </data>
+</root>
