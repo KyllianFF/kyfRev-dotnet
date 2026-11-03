@@ -149,6 +149,9 @@ public interface IReviewStore
 
     /// <summary>Tableau de bord du jour donné.</summary>
     Dashboard Dashboard(DateOnly day);
+
+    /// <summary>Statistiques de régularité au jour donné.</summary>
+    Statistics Statistics(DateOnly day);
 }
 
 /// <summary>Passages annotés et définitions.</summary>

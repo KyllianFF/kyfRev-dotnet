@@ -187,6 +187,9 @@ public sealed class VaultAdapter(VaultSession inner) : IVault
     public Dashboard Dashboard(DateOnly day) => inner.Dashboard(day);
 
     /// <inheritdoc/>
+    public Statistics Statistics(DateOnly day) => inner.Statistics(day);
+
+    /// <inheritdoc/>
     public string CreateAnnotation(string sheetId, Anchor anchor, string? comment, Moment now) =>
         inner.CreateAnnotation(sheetId, ToStored(anchor), comment, now);
 

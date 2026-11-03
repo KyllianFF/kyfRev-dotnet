@@ -90,6 +90,14 @@ public sealed class ReminderUseCases(VaultHost host, TimeProvider time)
         });
     }
 
+    /// <summary>Statistiques de régularité : rien n'est écrit, tout vient de l'historique du suivi.</summary>
+    [ZeroXCommand("statistiques")]
+    public Outcome<Statistics> Statistics()
+    {
+        var day = Present.Of(time).Now.Day;
+        return host.Use(vault => vault.Statistics(day));
+    }
+
     /// <summary>Fiches archivées et où elles en sont des rappels.</summary>
     [ZeroXCommand("archives")]
     public Outcome<IReadOnlyList<ArchivedSheetEntry>> Archives()

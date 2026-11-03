@@ -80,6 +80,7 @@ internal static class Composition
         services.AddSingleton<DefinitionsPageViewModel>();
         services.AddSingleton<SettingsPageViewModel>();
         services.AddSingleton<ArchivesPageViewModel>();
+        services.AddSingleton<StatisticsPageViewModel>();
         services.AddSingleton(_ => new DesignResources(ThemeKind.Light, Motion.SystemPrefersReducedMotion));
         services.AddSingleton<AppearanceController>();
         services.AddSingleton<GalleryPageViewModel>();
@@ -93,6 +94,7 @@ internal static class Composition
                     [CorePages.Definitions] = provider.GetRequiredService<DefinitionsPageViewModel>(),
                     [CorePages.Settings] = provider.GetRequiredService<SettingsPageViewModel>(),
                     [CorePages.Archives] = provider.GetRequiredService<ArchivesPageViewModel>(),
+                    [CorePages.Statistics] = provider.GetRequiredService<StatisticsPageViewModel>(),
                 })
                     .Concat(provider.GetServices<INavigationContributor>().Select(contributor => CorePages.FromModule(contributor.Entry))),
                 provider.GetRequiredService<AppearanceController>(),

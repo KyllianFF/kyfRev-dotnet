@@ -10,6 +10,35 @@ namespace KyfRev.Application.Tests;
 [TestClass]
 public sealed class UseCaseTests
 {
+    [TestMethod]
+    public void The_statistics_read_the_history_of_the_vault()
+    {
+        using var folder = new TestFolder();
+        using var test = Opened(folder);
+        var app = test.App;
+        var id = app.Sheets.Create("Biologie", "Mitose", string.Empty).Value;
+        test.Time.Advance(TimeSpan.FromDays(1));
+        Assert.IsTrue(app.Reviews.Validate(ItemKind.Sheet, id).Succeeded);
+
+        var statistics = app.Reminders.Statistics().Value;
+
+        Assert.AreEqual(1, statistics.Reviews);
+        Assert.AreEqual(1, statistics.OnTime);
+        var day = statistics.Activity.Single();
+        Assert.AreEqual(1, day.Reviews);
+        Assert.AreEqual(1, day.Total);
+        Assert.AreEqual("Biologie", statistics.ByFolder.Single().Folder);
+    }
+
+    [TestMethod]
+    public void A_day_of_activity_adds_up_what_was_done()
+    {
+        var day = new ActivityDay(new DateOnly(2026, 10, 13), 2, 3, 4);
+
+        Assert.AreEqual(5, day.Reviews, "les fiches, les passages et les définitions");
+        Assert.AreEqual(9, day.Total, "et les rappels traités");
+    }
+
     private static readonly Anchor Passage = new("La prophase", "", " précède", 0, 11, ["Mitose"], 5, "sha256:aa");
 
     private static readonly string[] Checks =

@@ -96,7 +96,7 @@ Ces cas d'usage ne sont chargés que si le coffre active le module Citations.
 | `diagnostic` | — | J5 | Journal de diagnostic. |
 | `corriger_mot` | — | J7 | Correcteur de Windows : `ISpelling.Correct`, hors des cas d'usage. |
 | `ajouter_au_dictionnaire` | — | J7 | Correcteur de Windows : `ISpelling.Add`, hors des cas d'usage. |
-| `statistiques` | — | J9 | Statistiques et charge. |
+| `statistiques` | `ReminderUseCases.Statistics` | J9 | Statistiques de régularité. |
 | `retroliens` | — | J9 | Rétroliens. |
 | `apercu_fiche` | — | J9 | Aperçu au survol. |
 | `liste_des_fiches` | `SheetUseCases.List` | J7.1 | Vue « Fiches » ; l'arborescence reste à J9. |

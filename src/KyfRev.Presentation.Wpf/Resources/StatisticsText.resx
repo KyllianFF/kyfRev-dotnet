@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="ActiveDayMany" xml:space="preserve">
+    <value>{0} jours actifs</value>
+  </data>
+  <data name="ActiveDayOne" xml:space="preserve">
+    <value>{0} jour actif</value>
+  </data>
+  <data name="ActiveDaysColumn" xml:space="preserve">
+    <value>Jours actifs</value>
+  </data>
+  <data name="ActiveMany" xml:space="preserve">
+    <value>Jours actifs</value>
+  </data>
+  <data name="ActiveOne" xml:space="preserve">
+    <value>Jour actif</value>
+  </data>
+  <data name="ActiveValue" xml:space="preserve">
+    <value>{0} / {1}</value>
+  </data>
+  <data name="And" xml:space="preserve">
+    <value> et </value>
+  </data>
+  <data name="AverageDelayColumn" xml:space="preserve">
+    <value>Retard moyen</value>
+  </data>
+  <data name="BestDay" xml:space="preserve">
+    <value>meilleur jour : {0}, {1}</value>
+  </data>
+  <data name="ByFolder" xml:space="preserve">
+    <value>Par dossier</value>
+  </data>
+  <data name="ByMonth" xml:space="preserve">
+    <value>Par mois</value>
+  </data>
+  <data name="CalendarName" xml:space="preserve">
+    <value>Calendrier d'activité : {0} sur 52 semaines</value>
+  </data>
+  <data name="CalendarPeriod" xml:space="preserve">
+    <value>52 semaines</value>
+  </data>
+  <data name="CalendarTitle" xml:space="preserve">
+    <value>Calendrier d'activité</value>
+  </data>
+  <data name="DayDescription" xml:space="preserve">
+    <value>{0} : {1}</value>
+  </data>
+  <data name="DayMany" xml:space="preserve">
+    <value>{0} jours</value>
+  </data>
+  <data name="DayOne" xml:space="preserve">
+    <value>{0} jour</value>
+  </data>
+  <data name="DelayDetail" xml:space="preserve">
+    <value>retard moyen {0} j, au plus {1}</value>
+  </data>
+  <data name="DelayValue" xml:space="preserve">
+    <value>{0} j</value>
+  </data>
+  <data name="FolderColumn" xml:space="preserve">
+    <value>Dossier</value>
+  </data>
+  <data name="FolderSpoken" xml:space="preserve">
+    <value>{0}, {1}, {2}, à l'heure {3}, retard moyen {4}</value>
+  </data>
+  <data name="Friday" xml:space="preserve">
+    <value>Ven</value>
+  </data>
+  <data name="HandledMany" xml:space="preserve">
+    <value>{0} rappels traités</value>
+  </data>
+  <data name="HandledOne" xml:space="preserve">
+    <value>{0} rappel traité</value>
+  </data>
+  <data name="KeyFigures" xml:space="preserve">
+    <value>Chiffres clés</value>
+  </data>
+  <data name="Less" xml:space="preserve">
+    <value>Moins</value>
+  </data>
+  <data name="Loading" xml:space="preserve">
+    <value>Calcul des statistiques…</value>
+  </data>
+  <data name="Monday" xml:space="preserve">
+    <value>Lun</value>
+  </data>
+  <data name="MonthColumn" xml:space="preserve">
+    <value>Mois</value>
+  </data>
+  <data name="MonthSpoken" xml:space="preserve">
+    <value>{0}, {1}, {2}</value>
+  </data>
+  <data name="More" xml:space="preserve">
+    <value>Plus</value>
+  </data>
+  <data name="NoFolder" xml:space="preserve">
+    <value>Sans dossier</value>
+  </data>
+  <data name="NoMonth" xml:space="preserve">
+    <value>Pas encore de révision.</value>
+  </data>
+  <data name="NoSheet" xml:space="preserve">
+    <value>Pas encore de fiche.</value>
+  </data>
+  <data name="None" xml:space="preserve">
+    <value>—</value>
+  </data>
+  <data name="Note" xml:space="preserve">
+    <value>Une révision compte le jour où elle est validée ; la création d'une fiche (J0) n'en est pas une. Les séries se comptent depuis le début, le reste sur les 52 semaines du calendrier. Rien n'est enregistré : tout vient de l'historique du suivi.</value>
+  </data>
+  <data name="Nothing" xml:space="preserve">
+    <value>rien</value>
+  </data>
+  <data name="OnTimeColumn" xml:space="preserve">
+    <value>À l'heure</value>
+  </data>
+  <data name="OnTimeDetail" xml:space="preserve">
+    <value>{0} le jour prévu · {1} en avance · {2} en retard</value>
+  </data>
+  <data name="OnTimeLabel" xml:space="preserve">
+    <value>À l'heure</value>
+  </data>
+  <data name="OverWeeks" xml:space="preserve">
+    <value>sur 52 semaines</value>
+  </data>
+  <data name="OverWeeksWithReminders" xml:space="preserve">
+    <value>sur 52 semaines, et {0}</value>
+  </data>
+  <data name="PassageMany" xml:space="preserve">
+    <value>{0} passages</value>
+  </data>
+  <data name="PassageOne" xml:space="preserve">
+    <value>{0} passage</value>
+  </data>
+  <data name="Percent" xml:space="preserve">
+    <value>{0} %</value>
+  </data>
+  <data name="RecentDetail" xml:space="preserve">
+    <value>7 derniers jours : {0} · 30 derniers : {1}</value>
+  </data>
+  <data name="Record" xml:space="preserve">
+    <value>record : {0}, jusqu'au {1}</value>
+  </data>
+  <data name="ReminderMany" xml:space="preserve">
+    <value>{0} rappels de consolidation</value>
+  </data>
+  <data name="ReminderOne" xml:space="preserve">
+    <value>{0} rappel de consolidation</value>
+  </data>
+  <data name="ReviewMany" xml:space="preserve">
+    <value>{0} révisions</value>
+  </data>
+  <data name="ReviewOne" xml:space="preserve">
+    <value>{0} révision</value>
+  </data>
+  <data name="ReviewsColumn" xml:space="preserve">
+    <value>Révisions</value>
+  </data>
+  <data name="ReviewsDetail" xml:space="preserve">
+    <value>{0} ({1})</value>
+  </data>
+  <data name="ReviewsMany" xml:space="preserve">
+    <value>Révisions validées</value>
+  </data>
+  <data name="ReviewsOne" xml:space="preserve">
+    <value>Révision validée</value>
+  </data>
+  <data name="SheetMany" xml:space="preserve">
+    <value>{0} fiches</value>
+  </data>
+  <data name="SheetOne" xml:space="preserve">
+    <value>{0} fiche</value>
+  </data>
+  <data name="SheetsColumn" xml:space="preserve">
+    <value>Fiches</value>
+  </data>
+  <data name="StreakHint" xml:space="preserve">
+    <value>une révision aujourd'hui lance la série</value>
+  </data>
+  <data name="StreakLabel" xml:space="preserve">
+    <value>Série en cours</value>
+  </data>
+  <data name="Summary" xml:space="preserve">
+    <value>Votre régularité : révisions validées (fiches, passages, définitions) et rappels de consolidation traités.</value>
+  </data>
+  <data name="SummarySince" xml:space="preserve">
+    <value>Votre régularité : révisions validées (fiches, passages, définitions) et rappels de consolidation traités, depuis le {0}.</value>
+  </data>
+  <data name="Title" xml:space="preserve">
+    <value>Statistiques</value>
+  </data>
+  <data name="Wednesday" xml:space="preserve">
+    <value>Mer</value>
+  </data>
+</root>
