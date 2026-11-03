@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="ActionOn" xml:space="preserve">
+    <value>{0} : {1}</value>
+  </data>
+  <data name="AllGood" xml:space="preserve">
+    <value>Aucun problème : tout est en ordre.</value>
+  </data>
+  <data name="Analyze" xml:space="preserve">
+    <value>Analyser à nouveau</value>
+  </data>
+  <data name="BackupToUse" xml:space="preserve">
+    <value>Sauvegarde à utiliser</value>
+  </data>
+  <data name="BrokenLinksHelp" xml:space="preserve">
+    <value>Ces liens ou images mènent à un fichier absent du coffre.</value>
+  </data>
+  <data name="BrokenLinksTitle" xml:space="preserve">
+    <value>Liens cassés ({0})</value>
+  </data>
+  <data name="DiagnosticCopied" xml:space="preserve">
+    <value>Diagnostic copié : collez-le dans votre message.</value>
+  </data>
+  <data name="DiagnosticCopy" xml:space="preserve">
+    <value>Copier le diagnostic</value>
+  </data>
+  <data name="DiagnosticHelp" xml:space="preserve">
+    <value>Un problème avec kyfRev ? Copiez le diagnostic et joignez-le à votre signalement : version, système et fin du journal. Relisez-le avant de l'envoyer, il peut contenir des noms de fichiers.</value>
+  </data>
+  <data name="DiagnosticNotCopied" xml:space="preserve">
+    <value>La copie a échoué : sélectionnez le texte ci-dessous (Ctrl+A, Ctrl+C).</value>
+  </data>
+  <data name="DiagnosticText" xml:space="preserve">
+    <value>Texte du diagnostic</value>
+  </data>
+  <data name="DiagnosticTitle" xml:space="preserve">
+    <value>Diagnostic</value>
+  </data>
+  <data name="DuplicatesHelp" xml:space="preserve">
+    <value>Plusieurs fichiers portent le même identifiant (une fiche copiée hors de kyfRev). Choisissez l'original : il garde le suivi, chaque copie devient une nouvelle fiche (J0).</value>
+  </data>
+  <data name="DuplicatesTitle" xml:space="preserve">
+    <value>Fichiers en double ({0})</value>
+  </data>
+  <data name="Hide" xml:space="preserve">
+    <value>Masquer</value>
+  </data>
+  <data name="Information" xml:space="preserve">
+    <value>Pour information</value>
+  </data>
+  <data name="KeepOriginal" xml:space="preserve">
+    <value>Garder comme original</value>
+  </data>
+  <data name="Kept" xml:space="preserve">
+    <value>« {0} » garde le suivi ; les copies sont devenues de nouvelles fiches.</value>
+  </data>
+  <data name="LinkTarget" xml:space="preserve">
+    <value>→ {0}</value>
+  </data>
+  <data name="LinksToCheck" xml:space="preserve">
+    <value>liens à vérifier après un renommage</value>
+  </data>
+  <data name="Loading" xml:space="preserve">
+    <value>Analyse du coffre…</value>
+  </data>
+  <data name="MissingHelp" xml:space="preserve">
+    <value>Leur fichier a disparu du coffre ; leur suivi est conservé. Restaurez-les depuis une sauvegarde, ou laissez-les en attente : elles seront rattachées si le fichier réapparaît.</value>
+  </data>
+  <data name="MissingTitle" xml:space="preserve">
+    <value>Fiches manquantes ({0})</value>
+  </data>
+  <data name="ModifiedOutside" xml:space="preserve">
+    <value>modifiée hors de kyfRev depuis la dernière ouverture</value>
+  </data>
+  <data name="Moved" xml:space="preserve">
+    <value>déplacée hors de kyfRev, rattachée automatiquement : {0}</value>
+  </data>
+  <data name="NoBackup" xml:space="preserve">
+    <value>Aucune sauvegarde disponible.</value>
+  </data>
+  <data name="NotFound" xml:space="preserve">
+    <value>introuvable</value>
+  </data>
+  <data name="OpenSheet" xml:space="preserve">
+    <value>Ouvrir la fiche</value>
+  </data>
+  <data name="OrphansHelp" xml:space="preserve">
+    <value>Leur fiche est introuvable ; ils restent révisables à partir du texte copié.</value>
+  </data>
+  <data name="OrphansTitle" xml:space="preserve">
+    <value>Passages sans fiche ({0})</value>
+  </data>
+  <data name="PassageState" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="PassagesToCheckHelp" xml:space="preserve">
+    <value>Leur fiche a changé : leur position est incertaine ou introuvable. Ils restent révisables ; décidez depuis la fiche (confirmer, choisir un autre passage, conserver sans ancrage).</value>
+  </data>
+  <data name="PassagesToCheckTitle" xml:space="preserve">
+    <value>Passages à vérifier ({0})</value>
+  </data>
+  <data name="PointMany" xml:space="preserve">
+    <value>{0} points attendent une décision. Rien n'est réparé ni effacé sans vous.</value>
+  </data>
+  <data name="PointOne" xml:space="preserve">
+    <value>{0} point attend une décision. Rien n'est réparé ni effacé sans vous.</value>
+  </data>
+  <data name="PositionToCheck" xml:space="preserve">
+    <value>position à vérifier</value>
+  </data>
+  <data name="Quoted" xml:space="preserve">
+    <value>« {0} »</value>
+  </data>
+  <data name="RecreateTracking" xml:space="preserve">
+    <value>Recréer son suivi (J0)</value>
+  </data>
+  <data name="Restore" xml:space="preserve">
+    <value>Restaurer</value>
+  </data>
+  <data name="Restored" xml:space="preserve">
+    <value>« {0} » est restaurée depuis la sauvegarde.</value>
+  </data>
+  <data name="SeeInSheet" xml:space="preserve">
+    <value>Voir dans la fiche</value>
+  </data>
+  <data name="Show" xml:space="preserve">
+    <value>Afficher</value>
+  </data>
+  <data name="Title" xml:space="preserve">
+    <value>Santé du coffre</value>
+  </data>
+  <data name="ToExamineHelp" xml:space="preserve">
+    <value>kyfRev ne les modifie pas. Corrigez-les dans un éditeur de texte, ou restaurez une sauvegarde depuis les Paramètres.</value>
+  </data>
+  <data name="ToExamineTitle" xml:space="preserve">
+    <value>Fichiers à examiner ({0})</value>
+  </data>
+  <data name="Track" xml:space="preserve">
+    <value>Suivre cette fiche (J0)</value>
+  </data>
+  <data name="Tracked" xml:space="preserve">
+    <value>« {0} » est suivie : J1 demain.</value>
+  </data>
+  <data name="TrackingLost" xml:space="preserve">
+    <value>{0} · identifiant présent, suivi perdu</value>
+  </data>
+  <data name="TrackingRecreated" xml:space="preserve">
+    <value>Le suivi de « {0} » est recréé : J1 demain.</value>
+  </data>
+  <data name="UntrackedHelp" xml:space="preserve">
+    <value>Des fichiers Markdown du dossier « fiches » ne sont pas encore révisés avec kyfRev.</value>
+  </data>
+  <data name="UntrackedTitle" xml:space="preserve">
+    <value>Fichiers non suivis ({0})</value>
+  </data>
+</root>

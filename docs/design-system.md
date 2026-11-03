@@ -112,6 +112,7 @@ fois l'application installée. Elles viennent des dépôts officiels, à un comm
 |---|---|---|
 | Boutons | styles `Kyf.Button` (secondaire, par défaut), `Kyf.Button.Primary`, `Kyf.Button.Subtle`, `Kyf.Button.Icon` | une seule action principale par vue |
 | Champ | style de `TextBox`, indication `Field.Placeholder` | contour à 3:1, contour épaissi au focus, indication lue comme aide |
+| Liste de choix | style de `ComboBox` | comme un champ, et sa liste comme un menu ; suit le thème |
 | Carte | `Card`, repère `Marker` (fiche, passage, rappel) | ombre douce ; le repère est un court trait en haut |
 | Pastille | `Pill`, sorte `Kind` | icône et libellé : fiche, passage, rappel, retard, archivée, à vérifier, aujourd'hui |
 | Menu | styles de `ContextMenu`, `Menu`, `MenuItem` | coche, raccourci, sous-menus |

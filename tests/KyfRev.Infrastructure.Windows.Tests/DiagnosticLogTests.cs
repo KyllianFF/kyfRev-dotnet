@@ -15,6 +15,29 @@ public sealed class DiagnosticLogTests
     private static readonly DateTimeOffset Morning = new(2026, 11, 1, 8, 30, 0, TimeSpan.Zero);
 
     [TestMethod]
+    public void The_tail_takes_the_last_lines_and_starts_in_the_previous_log()
+    {
+        using var folder = new Folder();
+        using var log = new DiagnosticLog(folder.Path, @"C:\Users\Élève", new Clock(Morning));
+        File.WriteAllText(Path.Combine(folder.Path, "kyfRev.precedent.log"), "une\ndeux\n");
+        File.WriteAllText(log.LogFile, "trois\n\nquatre\n");
+
+        Assert.AreEqual("trois\nquatre\n", log.Tail(2));
+        Assert.AreEqual("deux\ntrois\nquatre\n", log.Tail(3));
+        Assert.AreEqual("une\ndeux\ntrois\nquatre\n", log.Tail(300));
+    }
+
+    [TestMethod]
+    public void The_tail_of_a_log_that_does_not_exist_is_empty()
+    {
+        using var folder = new Folder();
+        using var log = new DiagnosticLog(folder.Path, @"C:\Users\Élève", new Clock(Morning));
+        File.Delete(log.LogFile);
+
+        Assert.AreEqual("\n", log.Tail(10));
+    }
+
+    [TestMethod]
     public void Each_start_is_marked_and_lines_follow()
     {
         using var folder = new Folder();

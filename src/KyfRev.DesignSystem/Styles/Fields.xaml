@@ -4,6 +4,99 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:kyf="clr-namespace:KyfRev.DesignSystem.Controls">
 
+  <!-- Le bouton qui ouvre une liste de choix : tout le champ est cliquable, le contenu est dessiné par-dessus. -->
+  <Style x:Key="Kyf.ComboBox.Toggle" TargetType="ToggleButton">
+    <Setter Property="Focusable" Value="False" />
+    <Setter Property="ClickMode" Value="Press" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="ToggleButton">
+          <Border x:Name="Frame" Background="{DynamicResource Kyf.Brush.Surface}" BorderBrush="{DynamicResource Kyf.Brush.ControlBorder}" BorderThickness="1"
+                  CornerRadius="{DynamicResource Kyf.Radius.Control}" SnapsToDevicePixels="True">
+            <kyf:Icon Text="{x:Static kyf:Icons.ChevronDown}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,0,12,0" FontSize="12" />
+          </Border>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+              <Setter TargetName="Frame" Property="BorderBrush" Value="{DynamicResource Kyf.Brush.Text}" />
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <!-- Une liste de choix : comme un champ, et sa liste comme un menu. Sans ce style, Windows la dessine en clair, même en sombre. -->
+  <Style TargetType="ComboBox">
+    <Setter Property="FontFamily" Value="{DynamicResource Kyf.Font.Ui}" />
+    <Setter Property="FontSize" Value="{DynamicResource Kyf.FontSize.Body}" />
+    <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Text}" />
+    <Setter Property="MinHeight" Value="40" />
+    <Setter Property="Padding" Value="12,0,32,0" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="HorizontalContentAlignment" Value="Left" />
+    <Setter Property="FocusVisualStyle" Value="{DynamicResource Kyf.FocusVisual}" />
+    <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="ComboBox">
+          <Grid>
+            <ToggleButton x:Name="Toggle" Style="{StaticResource Kyf.ComboBox.Toggle}"
+                          IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}" />
+            <ContentPresenter Content="{TemplateBinding SelectionBoxItem}" ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                              Margin="{TemplateBinding Padding}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" IsHitTestVisible="False" />
+            <Popup x:Name="PART_Popup" IsOpen="{TemplateBinding IsDropDownOpen}" Placement="Bottom" AllowsTransparency="True" Focusable="False"
+                   PopupAnimation="None">
+              <!-- La marge laisse la place de l'ombre, comme pour un menu. -->
+              <Grid Margin="8,4,8,12" MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}">
+                <Border Background="{DynamicResource Kyf.Brush.Surface}" CornerRadius="{DynamicResource Kyf.Radius.Card}" Effect="{DynamicResource Kyf.Elevation.Flyout}" />
+                <Border Background="{DynamicResource Kyf.Brush.Surface}" BorderBrush="{DynamicResource Kyf.Brush.Divider}" BorderThickness="1"
+                        CornerRadius="{DynamicResource Kyf.Radius.Card}" Padding="4" MaxHeight="{TemplateBinding MaxDropDownHeight}" SnapsToDevicePixels="True">
+                  <ScrollViewer CanContentScroll="True" HorizontalScrollBarVisibility="Disabled">
+                    <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained" />
+                  </ScrollViewer>
+                </Border>
+              </Grid>
+            </Popup>
+          </Grid>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsEnabled" Value="False">
+              <Setter Property="Opacity" Value="0.5" />
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+    <Setter Property="ItemContainerStyle">
+      <Setter.Value>
+        <Style TargetType="ComboBoxItem">
+          <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Text}" />
+          <Setter Property="MinHeight" Value="36" />
+          <Setter Property="Padding" Value="8,0" />
+          <Setter Property="FocusVisualStyle" Value="{DynamicResource Kyf.FocusVisual.Inset}" />
+          <Setter Property="Template">
+            <Setter.Value>
+              <ControlTemplate TargetType="ComboBoxItem">
+                <Border x:Name="Row" Background="Transparent" CornerRadius="{DynamicResource Kyf.Radius.Control}" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
+                  <ContentPresenter VerticalAlignment="Center" />
+                </Border>
+                <ControlTemplate.Triggers>
+                  <Trigger Property="IsHighlighted" Value="True">
+                    <Setter TargetName="Row" Property="Background" Value="{DynamicResource Kyf.Brush.SurfaceAlt}" />
+                  </Trigger>
+                  <Trigger Property="IsSelected" Value="True">
+                    <Setter TargetName="Row" Property="Background" Value="{DynamicResource Kyf.Brush.NavigationActiveBackground}" />
+                    <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.NavigationActiveText}" />
+                  </Trigger>
+                </ControlTemplate.Triggers>
+              </ControlTemplate>
+            </Setter.Value>
+          </Setter>
+        </Style>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
   <!-- Champ de saisie : contour à 3:1 au moins ; au focus, contour épaissi de la couleur du focus. -->
   <Style TargetType="TextBox">
     <Setter Property="FontFamily" Value="{DynamicResource Kyf.Font.Ui}" />

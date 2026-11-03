@@ -93,7 +93,7 @@ Ces cas d'usage ne sont chargés que si le coffre active le module Citations.
 | `appliquer_theme` | — | J5 | Barre de titre de Windows : coquille WPF. |
 | `appliquer_zoom` | — | J5 | Taille de l'interface : coquille WPF. |
 | `journaliser_erreur_interface` | — | J5 | Journal de diagnostic. |
-| `diagnostic` | — | J5 | Journal de diagnostic. |
+| `diagnostic` | `DiagnosticReport.Write` | J9 | Hors des cas d'usage : version, système, moteur d'affichage et fin du journal. |
 | `corriger_mot` | — | J7 | Correcteur de Windows : `ISpelling.Correct`, hors des cas d'usage. |
 | `ajouter_au_dictionnaire` | — | J7 | Correcteur de Windows : `ISpelling.Add`, hors des cas d'usage. |
 | `statistiques` | `ReminderUseCases.Statistics` | J9 | Statistiques de régularité. |
