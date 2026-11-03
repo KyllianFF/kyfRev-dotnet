@@ -52,6 +52,9 @@ public sealed class VisualEditorTests
     /// <summary>Une fiche ouverte en écriture, dans le vrai moteur.</summary>
     private sealed class Scene : IDisposable
     {
+        // Le tout premier démarrage du moteur web sur une machine neuve dépasse largement 10 s sur le runner de la CI.
+        private static readonly TimeSpan EnginePatience = TimeSpan.FromMinutes(2);
+
         private readonly UiThread _ui = new();
 
         public Scene(string body = Body, double width = 1400, ThemeKind theme = ThemeKind.Light)
@@ -72,7 +75,7 @@ public sealed class VisualEditorTests
             TestShell.Flush();
             Editor.SaveDelay = TimeSpan.FromMilliseconds(10);
             Editor.PreviewDelay = TimeSpan.FromMilliseconds(10);
-            UiThread.Until(() => Visual?.IsReady == true || !Editor.IsVisualAvailable);
+            UiThread.Until(() => Visual?.IsReady == true || !Editor.IsVisualAvailable, EnginePatience);
             Assert.IsTrue(Editor.IsVisualAvailable, Editor.Problem);
             UiThread.Until(() => Script("document.querySelector('.ProseMirror') !== null") == "true");
         }

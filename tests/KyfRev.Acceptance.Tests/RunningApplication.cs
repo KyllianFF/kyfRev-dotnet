@@ -25,6 +25,9 @@ internal sealed class RunningApplication : IDisposable
     private static readonly string[] Groups = [Overdue, Today, Reminders, Upcoming];
     private static readonly string[] RowKinds = ["Fiche, ", "Passage, ", "Définition, ", "Rappel, "];
     private static readonly TimeSpan Patience = TimeSpan.FromSeconds(30);
+
+    // Le tout premier démarrage du moteur web sur une machine neuve a pris jusqu'à 39 s sur le runner de la CI.
+    private static readonly TimeSpan EnginePatience = TimeSpan.FromMinutes(2);
     private static readonly TimeSpan Interval = TimeSpan.FromMilliseconds(100);
 
     private readonly Process _process;
@@ -244,7 +247,7 @@ internal sealed class RunningApplication : IDisposable
                 seen = $"{focused?.Properties.ControlType.ValueOrDefault} « {focused?.Name} »";
                 return focused?.Name == "Texte de la fiche";
             },
-            Patience,
+            EnginePatience,
             Interval);
         Assert.IsTrue(ready.Success, $"Le texte de la fiche ne prend pas le focus : {seen} l'a.");
     }
