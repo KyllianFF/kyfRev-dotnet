@@ -28,8 +28,8 @@
     <DataTemplate DataType="{x:Type pages:SheetsPageViewModel}">
       <pages:SheetsPage />
     </DataTemplate>
-    <DataTemplate DataType="{x:Type pages:SettingsPageViewModel}">
-      <pages:SettingsPage />
+    <DataTemplate DataType="{x:Type pages:SettingsHubViewModel}">
+      <pages:SettingsHubPage />
     </DataTemplate>
     <DataTemplate DataType="{x:Type pages:DefinitionsPageViewModel}">
       <pages:DefinitionsPage />

@@ -39,13 +39,25 @@ public sealed class FilledViewsAccessibilityTests
     {
         using var ui = new UiThread();
         using var vault = new ReadingVault(Body, passage: false);
-        var page = new SettingsPageViewModel(vault.App.Settings, TimeProvider.System);
+        var app = vault.App;
+        var page = new SettingsPageViewModel(app.Settings, TimeProvider.System);
+        var data = new DataSettingsViewModel(app.Vaults, app.Backups, app.Trash, app.Annotations, app.Exports, app.Settings, new FakePicker(), new FakeOpener(), () => { });
+        var hub = new SettingsHubViewModel(page, data, new AboutSettingsViewModel(app.Vaults));
 
-        var names = Names(page, () => page.IsReady, null);
+        var names = Names(hub, () => page.IsReady, null);
 
+        CollectionAssert.Contains(names, SettingsHubText.Data);
         CollectionAssert.Contains(names, SettingsText.Steps);
         CollectionAssert.Contains(names, SettingsText.ActiveRecall);
         CollectionAssert.Contains(names, SettingsText.Save);
+
+        hub.Tabs[1].IsSelected = true;
+        names = Names(hub, () => data.IsLoaded, null);
+
+        CollectionAssert.Contains(names, SettingsHubText.OpenVault);
+        CollectionAssert.Contains(names, SettingsHubText.BackupNow);
+        CollectionAssert.Contains(names, SettingsHubText.Rotation);
+        CollectionAssert.Contains(names, SettingsHubText.ExportVault);
     }
 
     [STATestMethod]
@@ -85,7 +97,7 @@ public sealed class FilledViewsAccessibilityTests
             adjust?.Invoke(window);
             TestShell.Flush();
             var names = new List<string>();
-            foreach (var control in Descendants(window).OfType<Control>().Where(control => control is ButtonBase or TextBox or ListBoxItem && control.IsVisible))
+            foreach (var control in Descendants(window).OfType<Control>().Where(control => control is ButtonBase or TextBox or ListBoxItem or ComboBox && control.IsVisible && control.TemplatedParent is not (ComboBox or ScrollBar)))
             {
                 var name = UIElementAutomationPeer.CreatePeerForElement(control).GetName();
                 Assert.IsFalse(string.IsNullOrWhiteSpace(name), $"Sans nom : {control.GetType().Name} « {control.Name} »");

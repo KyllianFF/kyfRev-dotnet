@@ -9,6 +9,9 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- Vue « Paramètres » : elle passe en onglets par thème. « Révisions » reprend la séquence et les rappels ; « Données »
+  regroupe le coffre, les sauvegardes, les éléments supprimés et les exports ; « À propos » dit la version, le mode, le coffre
+  et la licence.
 - Les listes de choix suivent le thème, y compris le thème sombre.
 - Vue « Santé du coffre », comme dans la 0.x : chaque problème attend une décision et rien n'est réparé sans vous. Fiches
   manquantes à restaurer depuis une sauvegarde, fichiers en double, fichiers non suivis, liens cassés, passages à vérifier,

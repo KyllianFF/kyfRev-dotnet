@@ -137,6 +137,14 @@ public sealed partial class SettingsPageViewModel : ObservableObject
     /// <summary>La séquence saisie se lit : ce qu'elle donne se montre.</summary>
     public bool HasStepsPreview => StepsPreview.Length > 0;
 
+    /// <summary>Un autre coffre vient de s'ouvrir : ce qui était saisi ne le concerne pas.</summary>
+    public void Forget()
+    {
+        _stored = null;
+        OnPropertyChanged(nameof(HasChanges));
+        SaveCommand.NotifyCanExecuteChanged();
+    }
+
     /// <summary>Lit les réglages, sans écraser ce qui est en cours de saisie.</summary>
     [RelayCommand]
     private async Task LoadAsync()

@@ -83,6 +83,24 @@ internal static class Composition
         services.AddSingleton<StatisticsPageViewModel>();
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Maintenance);
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Backups);
+        services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Trash);
+        services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Exports);
+        services.AddSingleton(provider => new DataSettingsViewModel(
+            provider.GetRequiredService<VaultUseCases>(),
+            provider.GetRequiredService<BackupUseCases>(),
+            provider.GetRequiredService<TrashUseCases>(),
+            provider.GetRequiredService<AnnotationUseCases>(),
+            provider.GetRequiredService<ExportUseCases>(),
+            provider.GetRequiredService<SettingsUseCases>(),
+            provider.GetRequiredService<IFolderPicker>(),
+            provider.GetRequiredService<IReviewOpener>(),
+            () =>
+            {
+                provider.GetRequiredService<SettingsPageViewModel>().Forget();
+                provider.GetRequiredService<ShellViewModel>().ShowWorkspace();
+            }));
+        services.AddSingleton<AboutSettingsViewModel>();
+        services.AddSingleton<SettingsHubViewModel>();
         services.AddSingleton(provider => new HealthPageViewModel(
             provider.GetRequiredService<MaintenanceUseCases>(),
             provider.GetRequiredService<BackupUseCases>(),
@@ -101,7 +119,7 @@ internal static class Composition
                     [CorePages.Today] = provider.GetRequiredService<DashboardPageViewModel>(),
                     [CorePages.Sheets] = provider.GetRequiredService<SheetsPageViewModel>(),
                     [CorePages.Definitions] = provider.GetRequiredService<DefinitionsPageViewModel>(),
-                    [CorePages.Settings] = provider.GetRequiredService<SettingsPageViewModel>(),
+                    [CorePages.Settings] = provider.GetRequiredService<SettingsHubViewModel>(),
                     [CorePages.Archives] = provider.GetRequiredService<ArchivesPageViewModel>(),
                     [CorePages.Statistics] = provider.GetRequiredService<StatisticsPageViewModel>(),
                     [CorePages.Health] = provider.GetRequiredService<HealthPageViewModel>(),

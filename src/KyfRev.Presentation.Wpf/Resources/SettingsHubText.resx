@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="About" xml:space="preserve">
+    <value>À propos</value>
+  </data>
+  <data name="AnnotationMany" xml:space="preserve">
+    <value>{0} annotations</value>
+  </data>
+  <data name="AnnotationOne" xml:space="preserve">
+    <value>{0} annotation</value>
+  </data>
+  <data name="BackupDone" xml:space="preserve">
+    <value>Sauvegarde faite.</value>
+  </data>
+  <data name="BackupHelp" xml:space="preserve">
+    <value>Une sauvegarde .zip quotidienne, vérifiée, rangée hors du coffre dans « {0} ». Une seconde copie ailleurs (autre disque, cloud) reste conseillée.</value>
+  </data>
+  <data name="BackupNow" xml:space="preserve">
+    <value>Sauvegarder maintenant</value>
+  </data>
+  <data name="BackupRestored" xml:space="preserve">
+    <value>Sauvegarde restaurée dans « {0} ». Le coffre actuel n'a pas été modifié.</value>
+  </data>
+  <data name="BackupsTitle" xml:space="preserve">
+    <value>Sauvegardes</value>
+  </data>
+  <data name="Bytes" xml:space="preserve">
+    <value>{0} octets</value>
+  </data>
+  <data name="CreateVault" xml:space="preserve">
+    <value>Créer un nouveau coffre…</value>
+  </data>
+  <data name="Data" xml:space="preserve">
+    <value>Données</value>
+  </data>
+  <data name="ExportAnnotations" xml:space="preserve">
+    <value>Annotations (Markdown)</value>
+  </data>
+  <data name="ExportTracking" xml:space="preserve">
+    <value>Suivi des révisions (CSV)</value>
+  </data>
+  <data name="ExportVault" xml:space="preserve">
+    <value>Coffre complet (.zip)</value>
+  </data>
+  <data name="Exported" xml:space="preserve">
+    <value>Exporté dans « {0} ».</value>
+  </data>
+  <data name="ExportsHelp" xml:space="preserve">
+    <value>Dans le dossier de votre choix, hors du coffre ; aucun fichier existant n'est remplacé.</value>
+  </data>
+  <data name="ExportsTitle" xml:space="preserve">
+    <value>Exports</value>
+  </data>
+  <data name="Kilobytes" xml:space="preserve">
+    <value>{0} Ko</value>
+  </data>
+  <data name="LicenseLabel" xml:space="preserve">
+    <value>Licence</value>
+  </data>
+  <data name="LicenseText" xml:space="preserve">
+    <value>MIT. Les licences de kyfRev et des bibliothèques reprises sont dans le dossier « licences » de l'application.</value>
+  </data>
+  <data name="Megabytes" xml:space="preserve">
+    <value>{0} Mo</value>
+  </data>
+  <data name="ModeDevelopment" xml:space="preserve">
+    <value>développement</value>
+  </data>
+  <data name="ModeInstalled" xml:space="preserve">
+    <value>installé (le programme dans son dossier, vos données dans votre profil)</value>
+  </data>
+  <data name="ModeLabel" xml:space="preserve">
+    <value>Mode</value>
+  </data>
+  <data name="ModePortable" xml:space="preserve">
+    <value>portable (tout reste dans le dossier MesRévisions)</value>
+  </data>
+  <data name="NoBackup" xml:space="preserve">
+    <value>Aucune sauvegarde pour l'instant.</value>
+  </data>
+  <data name="NoTrash" xml:space="preserve">
+    <value>Aucun élément supprimé.</value>
+  </data>
+  <data name="OpenRestored" xml:space="preserve">
+    <value>Ouvrir ce coffre</value>
+  </data>
+  <data name="OpenSheet" xml:space="preserve">
+    <value>Ouvrir la fiche de : {0}</value>
+  </data>
+  <data name="OpenVault" xml:space="preserve">
+    <value>Ouvrir un autre coffre…</value>
+  </data>
+  <data name="PassageRestored" xml:space="preserve">
+    <value>Passage restauré.</value>
+  </data>
+  <data name="PickExport" xml:space="preserve">
+    <value>Choisissez le dossier de l'export</value>
+  </data>
+  <data name="PickNewVault" xml:space="preserve">
+    <value>Choisissez un dossier vide pour le nouveau coffre</value>
+  </data>
+  <data name="PickVault" xml:space="preserve">
+    <value>Choisissez le dossier du coffre</value>
+  </data>
+  <data name="Quoted" xml:space="preserve">
+    <value>« {0} »</value>
+  </data>
+  <data name="Restore" xml:space="preserve">
+    <value>Restaurer</value>
+  </data>
+  <data name="RestoreBackup" xml:space="preserve">
+    <value>Restaurer la sauvegarde du {0}</value>
+  </data>
+  <data name="RestoreBackupLabel" xml:space="preserve">
+    <value>Restaurer…</value>
+  </data>
+  <data name="RestoreConfirm" xml:space="preserve">
+    <value>La sauvegarde du {0} sera extraite dans un nouveau dossier, à côté du coffre. Le coffre actuel ne sera pas modifié.</value>
+  </data>
+  <data name="RestoreConfirmTitle" xml:space="preserve">
+    <value>Restaurer cette sauvegarde ?</value>
+  </data>
+  <data name="RestoreItem" xml:space="preserve">
+    <value>Restaurer : {0}</value>
+  </data>
+  <data name="Restored" xml:space="preserve">
+    <value>« {0} » est restaurée.</value>
+  </data>
+  <data name="Revisions" xml:space="preserve">
+    <value>Révisions</value>
+  </data>
+  <data name="Rotation" xml:space="preserve">
+    <value>Rotation : garder 14 quotidiennes, 8 hebdomadaires, 24 mensuelles</value>
+  </data>
+  <data name="SheetKind" xml:space="preserve">
+    <value>Fiche</value>
+  </data>
+  <data name="TabsName" xml:space="preserve">
+    <value>Thèmes des paramètres</value>
+  </data>
+  <data name="TrashHelp" xml:space="preserve">
+    <value>Les fiches, passages et définitions supprimés restent ici, restaurables ; rien n'est jamais purgé.</value>
+  </data>
+  <data name="TrashTitle" xml:space="preserve">
+    <value>Éléments supprimés</value>
+  </data>
+  <data name="TrashedOn" xml:space="preserve">
+    <value>supprimée le {0}</value>
+  </data>
+  <data name="VaultAlreadyOpen" xml:space="preserve">
+    <value>Ce coffre est déjà ouvert.</value>
+  </data>
+  <data name="VaultHelpInstalled" xml:space="preserve">
+    <value>Le coffre actuel est simplement fermé, sans rien modifier. kyfRev rouvrira le dernier coffre ouvert au prochain démarrage. Pour déplacer ce coffre : fermez kyfRev, déplacez son dossier avec l'Explorateur (avec le dossier Sauvegardes qui est à côté), puis rouvrez-le ici.</value>
+  </data>
+  <data name="VaultHelpPortable" xml:space="preserve">
+    <value>Le coffre actuel est simplement fermé, sans rien modifier. En version portable, kyfRev rouvre toujours MesRévisions\Coffre au démarrage. Pour déplacer ce coffre : fermez kyfRev, déplacez son dossier avec l'Explorateur (avec le dossier Sauvegardes qui est à côté), puis rouvrez-le ici.</value>
+  </data>
+  <data name="VaultOpen" xml:space="preserve">
+    <value>Ouvert : {0}</value>
+  </data>
+  <data name="VaultTitle" xml:space="preserve">
+    <value>Coffre</value>
+  </data>
+  <data name="Version" xml:space="preserve">
+    <value>kyfRev {0}</value>
+  </data>
+</root>
