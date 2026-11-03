@@ -6,6 +6,7 @@ using KyfRev.Application.Model;
 using KyfRev.Application.UseCases;
 using KyfRev.DesignSystem.Controls;
 using KyfRev.Presentation.Wpf.Pages;
+using KyfRev.Presentation.Wpf.Shell;
 
 namespace KyfRev.Presentation.Wpf.Tests;
 
@@ -15,7 +16,7 @@ public sealed class SettingsHubTests
 {
     private static readonly Anchor Passage = new("La prophase", "", " précède", 0, 11, ["Mitose", "Étapes"], 5, "sha256:aa");
 
-    private static readonly string[] Tabs = ["Révisions", "Données", "À propos"];
+    private static readonly string[] Tabs = ["Général", "Révisions", "Données", "À propos"];
 
     [TestMethod]
     public void The_view_needs_its_tabs()
@@ -23,9 +24,11 @@ public sealed class SettingsHubTests
         using var vault = new DataVault();
         var revisions = new SettingsPageViewModel(vault.App.Settings, TimeProvider.System);
         var about = new AboutSettingsViewModel(vault.App.Vaults);
-        Assert.ThrowsExactly<ArgumentNullException>(() => new SettingsHubViewModel(null!, vault.Page, about));
-        Assert.ThrowsExactly<ArgumentNullException>(() => new SettingsHubViewModel(revisions, null!, about));
-        Assert.ThrowsExactly<ArgumentNullException>(() => new SettingsHubViewModel(revisions, vault.Page, null!));
+        var general = DataVault.General();
+        Assert.ThrowsExactly<ArgumentNullException>(() => new SettingsHubViewModel(null!, revisions, vault.Page, about));
+        Assert.ThrowsExactly<ArgumentNullException>(() => new SettingsHubViewModel(general, null!, vault.Page, about));
+        Assert.ThrowsExactly<ArgumentNullException>(() => new SettingsHubViewModel(general, revisions, null!, about));
+        Assert.ThrowsExactly<ArgumentNullException>(() => new SettingsHubViewModel(general, revisions, vault.Page, null!));
         Assert.ThrowsExactly<ArgumentNullException>(() => new AboutSettingsViewModel(null!));
         Assert.ThrowsExactly<ArgumentNullException>(() => about.Show(null!));
     }
@@ -51,22 +54,22 @@ public sealed class SettingsHubTests
     public void The_view_opens_on_the_first_tab_and_keeps_one_selected()
     {
         using var vault = new DataVault();
-        var hub = new SettingsHubViewModel(new SettingsPageViewModel(vault.App.Settings, TimeProvider.System), vault.Page, new AboutSettingsViewModel(vault.App.Vaults));
+        var hub = vault.Hub();
         Assert.AreEqual("Paramètres", SettingsHubViewModel.Title);
         CollectionAssert.AreEqual(Tabs, hub.Tabs.Select(tab => tab.Label).ToArray());
         Assert.AreSame(hub.Tabs[0], hub.Selected);
         Assert.IsTrue(hub.Tabs[0].IsSelected);
         hub.OnNavigatedTo();
 
-        hub.Tabs[2].IsSelected = true;
-        Assert.AreSame(hub.Tabs[2], hub.Selected);
+        hub.Tabs[3].IsSelected = true;
+        Assert.AreSame(hub.Tabs[3], hub.Selected);
         Assert.IsFalse(hub.Tabs[0].IsSelected);
         Assert.AreEqual("kyfRev 1.0.0-essai", ((AboutSettingsViewModel)hub.Selected.Page).Version, "l'onglet se lit quand on l'ouvre");
 
-        hub.Tabs[2].IsSelected = false;
-        Assert.AreSame(hub.Tabs[2], hub.Selected, "décocher ne choisit rien d'autre");
-        hub.Tabs[2].IsSelected = true;
-        Assert.AreSame(hub.Tabs[2], hub.Selected);
+        hub.Tabs[3].IsSelected = false;
+        Assert.AreSame(hub.Tabs[3], hub.Selected, "décocher ne choisit rien d'autre");
+        hub.Tabs[3].IsSelected = true;
+        Assert.AreSame(hub.Tabs[3], hub.Selected);
     }
 
     [TestMethod]
@@ -446,7 +449,7 @@ public sealed class SettingsHubTests
         using var ui = new UiThread();
         using var vault = new DataVault();
         var test = new TestShell();
-        var hub = new SettingsHubViewModel(new SettingsPageViewModel(vault.App.Settings, TimeProvider.System), vault.Page, new AboutSettingsViewModel(vault.App.Vaults));
+        var hub = vault.Hub();
         hub.OnNavigatedTo();
         var host = new Border { Width = 640, Height = 700, Child = new SettingsHubPage { DataContext = hub } };
         host.Resources.MergedDictionaries.Add(test.Design.Dictionary);
@@ -459,11 +462,15 @@ public sealed class SettingsHubTests
         {
             Assert.AreEqual("Paramètres", Named<TextBlock>(window, "Heading").Text);
             var radios = Descendants<RadioButton>(window).ToList();
-            Assert.HasCount(3, radios);
+            Assert.HasCount(4, radios);
             Assert.IsTrue(radios[0].IsChecked);
-            Assert.IsNotNull(Find<FrameworkElement>(window, "StepsBox"), "Révisions s'ouvre d'abord");
+            Assert.IsNotNull(Find<FrameworkElement>(window, "ThemeChoice"), "Général s'ouvre d'abord");
 
             radios[1].IsChecked = true;
+            TestShell.Flush();
+            Assert.IsNotNull(Find<FrameworkElement>(window, "StepsBox"));
+
+            radios[2].IsChecked = true;
             TestShell.Flush();
             UiThread.Until(() => vault.Page.IsLoaded);
             TestShell.Flush();
@@ -475,7 +482,7 @@ public sealed class SettingsHubTests
             var scroller = Named<ScrollViewer>(window, "Scroller");
             Assert.IsLessThanOrEqualTo(scroller.ViewportWidth, scroller.ExtentWidth);
 
-            radios[2].IsChecked = true;
+            radios[3].IsChecked = true;
             TestShell.Flush();
             Assert.AreEqual("kyfRev 1.0.0-essai", Named<TextBlock>(window, "VersionLine").Text);
             Assert.AreEqual(vault.Root, Named<TextBlock>(window, "VaultLine").Text);
@@ -597,6 +604,10 @@ public sealed class SettingsHubTests
             var app = vaults.App;
             return new DataSettingsViewModel(app.Vaults, app.Backups, app.Trash, app.Annotations, app.Exports, app.Settings, vaults.Picker, opener ?? new FakeOpener(), changed);
         }
+
+        public static GeneralSettingsViewModel General() => new(new MachineSettings(new MemoryMachinePreferences()), new FakeVoices("Microsoft Hortense Desktop"));
+
+        public SettingsHubViewModel Hub() => new(General(), new SettingsPageViewModel(App.Settings, TimeProvider.System), Page, new AboutSettingsViewModel(App.Vaults));
 
         public async Task<DataSettingsViewModel> LoadedAsync()
         {

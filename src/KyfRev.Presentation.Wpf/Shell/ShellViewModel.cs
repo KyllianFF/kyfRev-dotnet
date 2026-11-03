@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using KyfRev.Application.Model;
 using KyfRev.DesignSystem.Controls;
 
 namespace KyfRev.Presentation.Wpf.Shell;
@@ -85,7 +86,19 @@ public sealed partial class ShellViewModel : ObservableObject
     public partial double WindowWidth { get; set; }
 
     /// <summary>Disposition de la navigation : onglets, colonne d'icônes ou barre latérale.</summary>
-    public NavigationLayout Layout => ShellLayout.For(WindowWidth, Zoom);
+    public NavigationLayout Layout
+    {
+        get
+        {
+            var layout = ShellLayout.For(WindowWidth, Zoom);
+            return layout == NavigationLayout.Sidebar && CollapsesMenu && Current.Id is CorePages.Sheets or CorePages.Sheet ? NavigationLayout.Rail : layout;
+        }
+    }
+
+    /// <summary>La barre latérale se réduit à ses icônes dans « Fiches ».</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Layout))]
+    public partial bool CollapsesMenu { get; set; }
 
     /// <summary>Onglet choisi ; rien quand la vue ouverte est rangée sous « Plus ».</summary>
     [ObservableProperty]
@@ -280,6 +293,9 @@ public sealed partial class ShellViewModel : ObservableObject
     [RelayCommand]
     public void ExitFullScreen() => IsFullScreen = false;
 
+    /// <summary>Donne cette taille à l'interface, dans les limites du zoom.</summary>
+    public void SetZoom(double zoom) => Zoom = Math.Clamp(zoom, MinimumZoom, MaximumZoom);
+
     /// <summary>Agrandit l'interface d'un pas.</summary>
     [RelayCommand]
     public void ZoomIn() => Zoom = Math.Min(MaximumZoom, Math.Round(Zoom + ZoomStep, 1));
@@ -316,6 +332,7 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         SelectedTab = TabNavigation.Contains(value) ? value : null;
         OnPropertyChanged(nameof(IsOverflowActive));
+        OnPropertyChanged(nameof(Layout));
         if (_workspace)
         {
             Activate(value);

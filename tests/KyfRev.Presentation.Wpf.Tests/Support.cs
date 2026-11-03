@@ -1,6 +1,7 @@
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Windows.Threading;
+using KyfRev.Application;
 using KyfRev.Application.Model;
 using KyfRev.Application.Ports;
 using KyfRev.Application.UseCases;
@@ -83,6 +84,45 @@ internal static class Repository
             }
         }
         throw new InvalidOperationException("Solution introuvable.");
+    }
+}
+
+/// <summary>Les préférences de ce poste, en mémoire.</summary>
+internal sealed class MemoryMachinePreferences : IMachinePreferencesStore
+{
+    public MachinePreferences Stored { get; set; } = new();
+
+    public bool Refuses { get; set; }
+
+    public int Saves { get; private set; }
+
+    public MachinePreferences Load() => Stored;
+
+    public bool Save(MachinePreferences preferences)
+    {
+        Saves++;
+        if (Refuses)
+        {
+            return false;
+        }
+        Stored = preferences;
+        return true;
+    }
+}
+
+/// <summary>Des voix installées, qui ne disent rien.</summary>
+internal sealed class FakeVoices(params string[] voices) : ISpeech
+{
+    public IReadOnlyList<string> FrenchVoices() => voices;
+
+    public Task<Outcome<Done>> SpeakAsync(string text, string? voice, double rate, CancellationToken cancellation) => new TaskCompletionSource<Outcome<Done>>().Task;
+
+    public void PauseSpeaking()
+    {
+    }
+
+    public void ResumeSpeaking()
+    {
     }
 }
 

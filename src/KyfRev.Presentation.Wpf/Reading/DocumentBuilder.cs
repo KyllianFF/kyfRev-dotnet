@@ -76,7 +76,7 @@ internal sealed class DocumentBuilder
 
     private const double DiagramWidth = 640;
 
-    private static readonly double ReadingSize = Typography.BodyLarge.Size;
+    private const double ListIndent = 24;
 
     private readonly SheetReading _reading;
     private readonly Action<LinkTarget> _follow;
@@ -94,11 +94,14 @@ internal sealed class DocumentBuilder
     private bool _isScheduled;
     private bool _isCancelled;
     private bool _afterBreak;
-    private double _inlineSize = ReadingSize;
+    private readonly ReadingComfort _comfort;
+    private double _inlineSize;
     private int _boldDepth;
 
-    public DocumentBuilder(SheetReading reading, Action<LinkTarget> follow, bool opensLinks, bool showsHeader, Func<string, Brush?>? findBrush = null)
+    public DocumentBuilder(SheetReading reading, Action<LinkTarget> follow, bool opensLinks, bool showsHeader, Func<string, Brush?>? findBrush = null, ReadingComfort? comfort = null)
     {
+        _comfort = comfort ?? ReadingComfort.Default;
+        _inlineSize = _comfort.Size;
         _reading = reading;
         _pieces = reading.Map.Pieces.ToDictionary(piece => piece.Node);
         Layer = new TextLayer(findBrush ?? (_ => null));
@@ -141,12 +144,19 @@ internal sealed class DocumentBuilder
             TextAlignment = TextAlignment.Left,
             IsHyphenationEnabled = false,
             IsOptimalParagraphEnabled = false,
-            FontSize = ReadingSize,
-            LineHeight = ReadingSize * Typography.ReadingLineSpacing,
+            FontSize = _comfort.Size,
+            LineHeight = _comfort.Size * _comfort.LineSpacing,
             LineStackingStrategy = LineStackingStrategy.MaxHeight,
         };
         document.SetResourceReference(TextElement.ForegroundProperty, Text);
-        document.SetResourceReference(TextElement.FontFamilyProperty, UiFont);
+        if (_comfort.Family is { } family)
+        {
+            document.FontFamily = family;
+        }
+        else
+        {
+            document.SetResourceReference(TextElement.FontFamilyProperty, UiFont);
+        }
         if (_showsHeader)
         {
             AddHeader(document.Blocks);
@@ -172,12 +182,12 @@ internal sealed class DocumentBuilder
         ? text.Value.Length
         : ElementWeight + ((RenderElement)node).Children.Sum(Weight);
 
-    private static double HeadingSize(int level) => level switch
+    private double HeadingSize(int level) => level switch
     {
         1 => 28,
         2 => Typography.Subtitle.Size + 2,
         3 => Typography.Subtitle.Size - 2,
-        _ => ReadingSize,
+        _ => _comfort.Size,
     };
 
     /// <summary>Lit une image sans le fil de l'interface, en plafonnant sa taille en mémoire.</summary>
@@ -465,7 +475,7 @@ internal sealed class DocumentBuilder
         });
         _inlineSize = size;
         AddInlines(element, heading.Inlines, 0, false);
-        _inlineSize = ReadingSize;
+        _inlineSize = _comfort.Size;
         Headings[element] = heading;
         blocks.Add(heading);
     }
@@ -485,7 +495,8 @@ internal sealed class DocumentBuilder
         {
             MarkerStyle = element.Tag == "ol" ? TextMarkerStyle.Decimal : TextMarkerStyle.Disc,
             Margin = new Thickness(0, 0, 0, 12),
-            Padding = new Thickness(24, 0, 0, 0),
+            // La puce grandit avec le texte : à retrait fixe, elle serait coupée à gauche.
+            Padding = new Thickness(ListIndent * _comfort.Size / ReadingComfort.Default.Size, 0, 0, 0),
         };
         if (element.ListStart is { } start)
         {
@@ -716,7 +727,7 @@ internal sealed class DocumentBuilder
     private BlockUIContainer BuildFormulaBlock(RenderElement element)
     {
         var slot = new Border { HorizontalAlignment = HorizontalAlignment.Center };
-        PlaceFormula(slot, element.Formula!, ReadingSize * 1.2, block: true);
+        PlaceFormula(slot, element.Formula!, _comfort.Size * 1.2, block: true);
         var container = new BlockUIContainer(slot) { Margin = new Thickness(0, 4, 0, 16) };
         RegisterFormula(element, container, slot);
         return container;
@@ -895,7 +906,7 @@ internal sealed class DocumentBuilder
     private void AddFormula(RenderElement element, string source, InlineCollection inlines)
     {
         var slot = new Border();
-        PlaceFormula(slot, source, ReadingSize, block: false);
+        PlaceFormula(slot, source, _comfort.Size, block: false);
         var container = new InlineUIContainer(slot) { BaselineAlignment = BaselineAlignment.Center };
         inlines.Add(container);
         RegisterFormula(element, container, slot);

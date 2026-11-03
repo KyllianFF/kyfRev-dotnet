@@ -3,13 +3,18 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using KyfRev.Application.Ports;
 using KyfRev.DesignSystem.Controls;
+using KyfRev.Presentation.Wpf.Shell;
 
 namespace KyfRev.Presentation.Wpf.Pages;
 
 /// <summary>Une vitesse de lecture.</summary>
 /// <param name="Value">Sa valeur : 1 pour la normale.</param>
 /// <param name="Label">Ce qui s'affiche.</param>
-public sealed record ReadingRate(double Value, string Label);
+public sealed record ReadingRate(double Value, string Label)
+{
+    /// <summary>Ce que dit le lecteur d'écran.</summary>
+    public override string ToString() => Label;
+}
 
 /// <summary>
 /// Écouter une fiche : les voix de Windows la lisent bloc par bloc, le bloc en cours mis en avant. On peut mettre
@@ -18,15 +23,18 @@ public sealed record ReadingRate(double Value, string Label);
 public sealed partial class ReadAloudViewModel : ObservableObject
 {
     private readonly ISpeech _speech;
+    private readonly MachineSettings? _machine;
     private IReadOnlyList<string> _blocks = [];
     private CancellationTokenSource? _reading;
 
-    /// <summary>Le lecteur, sur ces voix.</summary>
-    public ReadAloudViewModel(ISpeech speech)
+    /// <summary>Le lecteur, sur ces voix ; <paramref name="machine"/> retient la voix et la vitesse choisies sur ce poste.</summary>
+    public ReadAloudViewModel(ISpeech speech, MachineSettings? machine = null)
     {
         ArgumentNullException.ThrowIfNull(speech);
         _speech = speech;
-        Rate = Rates[1];
+        _machine = machine;
+        Rate = Rates.FirstOrDefault(rate => rate.Value == machine?.Current.Rate) ?? Rates[1];
+        Voice = machine?.Current.Voice;
     }
 
     /// <summary>Les vitesses proposées.</summary>
@@ -164,9 +172,20 @@ public sealed partial class ReadAloudViewModel : ObservableObject
         IsOpen = false;
     }
 
-    partial void OnRateChanged(ReadingRate value) => ReadAgain();
+    partial void OnRateChanged(ReadingRate value)
+    {
+        _machine?.Update(preferences => preferences with { Rate = value.Value });
+        ReadAgain();
+    }
 
-    partial void OnVoiceChanged(string? value) => ReadAgain();
+    partial void OnVoiceChanged(string? value)
+    {
+        if (value is not null)
+        {
+            _machine?.Update(preferences => preferences with { Voice = value });
+        }
+        ReadAgain();
+    }
 
     /// <summary>Un réglage change : le bloc en cours repart avec lui.</summary>
     private void ReadAgain()

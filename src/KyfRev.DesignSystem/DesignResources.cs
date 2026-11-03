@@ -9,15 +9,19 @@ namespace KyfRev.DesignSystem;
 /// <summary>
 /// Toutes les ressources du design system : échelles, couleurs du thème, durées, styles des
 /// contrôles et des composants, réunies dans <see cref="Dictionary"/>. L'application l'ajoute à
-/// ses ressources ; changer <see cref="Theme"/> ou <see cref="ReducedMotion"/> met l'interface à
-/// jour sans la recharger.
+/// ses ressources ; changer <see cref="Theme"/>, <see cref="ReducedMotion"/> ou
+/// <see cref="LargerTargets"/> met l'interface à jour sans la recharger.
 /// </summary>
 public sealed class DesignResources
 {
+    private const double LargerTarget = 40;
+
     private ResourceDictionary _theme;
     private ResourceDictionary _motion;
+    private ResourceDictionary _targets;
     private ThemeKind _themeKind;
     private bool _reducedMotion;
+    private bool _largerTargets;
 
     /// <summary>Thème et animations choisis.</summary>
     public DesignResources(ThemeKind theme, bool reducedMotion)
@@ -26,9 +30,11 @@ public sealed class DesignResources
         _reducedMotion = reducedMotion;
         _theme = ThemeDictionary(theme);
         _motion = MotionDictionary(reducedMotion);
+        _targets = TargetsDictionary(larger: false);
         Dictionary.MergedDictionaries.Add(Scales());
         Dictionary.MergedDictionaries.Add(_theme);
         Dictionary.MergedDictionaries.Add(_motion);
+        Dictionary.MergedDictionaries.Add(_targets);
         Dictionary.MergedDictionaries.Add(new Foundations());
         Dictionary.MergedDictionaries.Add(new Buttons());
         Dictionary.MergedDictionaries.Add(new Fields());
@@ -63,6 +69,17 @@ public sealed class DesignResources
         }
     }
 
+    /// <summary>Petits boutons agrandis : ils prennent la hauteur des boutons ordinaires.</summary>
+    public bool LargerTargets
+    {
+        get => _largerTargets;
+        set
+        {
+            _largerTargets = value;
+            _targets = Replace(_targets, TargetsDictionary(value));
+        }
+    }
+
     /// <summary>Couleurs d'un thème : une couleur et un pinceau figé par rôle, et les ombres.</summary>
     internal static ResourceDictionary ThemeDictionary(ThemeKind theme)
     {
@@ -91,6 +108,13 @@ public sealed class DesignResources
         [DesignKeys.AnimationsEnabled] = !reducedMotion,
         [DesignKeys.FastDuration] = new Duration(Motion.Effective(Motion.Fast, reducedMotion)),
         [DesignKeys.NormalDuration] = new Duration(Motion.Effective(Motion.Normal, reducedMotion)),
+    };
+
+    /// <summary>Hauteurs minimales des petits boutons.</summary>
+    internal static ResourceDictionary TargetsDictionary(bool larger) => new()
+    {
+        [DesignKeys.CompactTarget] = larger ? LargerTarget : 28.0,
+        [DesignKeys.TabTarget] = larger ? LargerTarget : 30.0,
     };
 
     private static ResourceDictionary Scales()

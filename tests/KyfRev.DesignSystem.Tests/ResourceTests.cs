@@ -105,6 +105,21 @@ public sealed partial class ResourceTests
         Assert.AreEqual(new Duration(TimeSpan.Zero), design.Dictionary[DesignKeys.NormalDuration]);
     }
 
+    [TestMethod]
+    public void Larger_targets_replace_the_small_heights()
+    {
+        var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
+        Assert.IsFalse(design.LargerTargets);
+        Assert.AreEqual(28.0, design.Dictionary[DesignKeys.CompactTarget]);
+        Assert.AreEqual(30.0, design.Dictionary[DesignKeys.TabTarget]);
+
+        design.LargerTargets = true;
+
+        Assert.IsTrue(design.LargerTargets);
+        Assert.AreEqual(40.0, design.Dictionary[DesignKeys.CompactTarget]);
+        Assert.AreEqual(40.0, design.Dictionary[DesignKeys.TabTarget]);
+    }
+
     /// <summary>
     /// Aucune couleur écrite en dur dans l'interface : les valeurs ne s'écrivent que dans
     /// <c>Tokens/Palette.cs</c>, et seul <c>Tokens/TokenColor.cs</c> fabrique une couleur WPF.

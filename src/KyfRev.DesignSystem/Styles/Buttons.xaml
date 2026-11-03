@@ -86,7 +86,7 @@
   <!-- Outil d'un ruban : compact, sans fond au repos ; s'il est à bascule, le choix se voit. -->
   <Style x:Key="Kyf.Button.Tool" TargetType="ButtonBase" BasedOn="{StaticResource Kyf.Button.Subtle}">
     <Setter Property="Padding" Value="6,0" />
-    <Setter Property="MinHeight" Value="28" />
+    <Setter Property="MinHeight" Value="{DynamicResource Kyf.Target.Compact}" />
     <Setter Property="MinWidth" Value="28" />
     <Style.Triggers>
       <Trigger Property="ToggleButton.IsChecked" Value="True">
@@ -114,7 +114,7 @@
       <CornerRadius x:Key="Kyf.Radius.Control">0</CornerRadius>
     </Style.Resources>
     <Setter Property="Padding" Value="12,0" />
-    <Setter Property="MinHeight" Value="30" />
+    <Setter Property="MinHeight" Value="{DynamicResource Kyf.Target.Tab}" />
     <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.TextSecondary}" />
     <Setter Property="BorderThickness" Value="0,0,0,2" />
     <Style.Triggers>
