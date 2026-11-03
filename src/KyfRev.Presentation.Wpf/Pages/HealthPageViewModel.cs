@@ -139,7 +139,11 @@ public sealed partial class HealthPageViewModel : ObservableObject, INavigationA
 
     /// <summary>Les sections à montrer : celles qui ont quelque chose à dire.</summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasSections))]
     public partial IReadOnlyList<HealthSection> Sections { get; private set; } = [];
+
+    /// <summary>Il y a au moins une section : une liste vide n'a pas de place à l'écran, et n'a pas à être annoncée.</summary>
+    public bool HasSections => Sections.Count > 0;
 
     /// <summary>Le rapport est là.</summary>
     [ObservableProperty]

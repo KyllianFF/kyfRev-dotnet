@@ -52,6 +52,7 @@ public sealed class HealthTests
         Assert.IsFalse(page.HasProblems);
         Assert.AreEqual("Aucun problème : tout est en ordre.", page.Summary);
         Assert.IsEmpty(page.Sections);
+        Assert.IsFalse(page.HasSections);
     }
 
     [TestMethod]
@@ -204,6 +205,7 @@ public sealed class HealthTests
         StringAssert.Contains(page.Message!, "garde le suivi", StringComparison.Ordinal);
         Assert.IsTrue(page.IsHealthy, page.Summary);
         Assert.IsTrue(page.Sections.All(section => section.IsInformation), "plus rien n'attend de décision");
+        Assert.IsTrue(page.HasSections);
     }
 
     [TestMethod]

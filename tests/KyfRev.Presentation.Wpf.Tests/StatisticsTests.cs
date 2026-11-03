@@ -44,6 +44,8 @@ public sealed class StatisticsTests
         Assert.AreEqual("une révision aujourd'hui lance la série", page.Tiles[3].Details.Single());
         Assert.IsTrue(page.HasNoMonth);
         Assert.IsTrue(page.HasNoFolder);
+        Assert.IsFalse(page.HasMonths);
+        Assert.IsFalse(page.HasFolders);
         Assert.AreEqual("Calendrier d'activité : 0 jour actif sur 52 semaines", page.CalendarName);
     }
 
@@ -87,6 +89,8 @@ public sealed class StatisticsTests
         page.Show(Busy());
 
         Assert.HasCount(2, page.Months);
+        Assert.IsTrue(page.HasMonths);
+        Assert.IsTrue(page.HasFolders);
         Assert.AreEqual("septembre 2026", page.Months[0].Label);
         Assert.AreEqual(0.5, page.Months[0].Share);
         Assert.AreEqual(1.0, page.Months[1].Share);

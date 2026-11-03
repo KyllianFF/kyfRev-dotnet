@@ -75,7 +75,8 @@
         <kyf:Skeleton Height="96" />
       </StackPanel>
 
-      <ItemsControl x:Name="SectionsList" ItemsSource="{Binding Sections}" Focusable="False" IsEnabled="{Binding IsIdle}" />
+      <ItemsControl x:Name="SectionsList" ItemsSource="{Binding Sections}" Focusable="False" IsEnabled="{Binding IsIdle}"
+                    Visibility="{Binding HasSections, Converter={StaticResource Visible}}" />
 
       <!-- Tout va bien : ce qui a été vérifié, pour que ce résultat veuille dire quelque chose. -->
       <kyf:Card x:Name="ChecksCard" Padding="16,12" Margin="0,0,0,8" Visibility="{Binding IsHealthy, Converter={StaticResource Visible}}">

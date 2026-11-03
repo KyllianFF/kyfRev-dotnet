@@ -218,7 +218,7 @@
                   <Run Text="{x:Static pages:StatisticsText.ReviewsColumn}" /> · <Run Text="{x:Static pages:StatisticsText.ActiveDaysColumn}" />
                 </TextBlock>
               </Grid>
-              <ItemsControl x:Name="MonthsList" ItemsSource="{Binding Months}" Focusable="False" />
+              <ItemsControl x:Name="MonthsList" ItemsSource="{Binding Months}" Focusable="False" Visibility="{Binding HasMonths, Converter={StaticResource Visible}}" />
               <TextBlock x:Name="NoMonth" Text="{x:Static pages:StatisticsText.NoMonth}" Style="{DynamicResource Kyf.Text.Secondary}"
                          Visibility="{Binding HasNoMonth, Converter={StaticResource Visible}}" />
             </StackPanel>
@@ -240,7 +240,7 @@
                 <TextBlock Grid.Column="3" Text="{x:Static pages:StatisticsText.OnTimeColumn}" Style="{DynamicResource Kyf.Text.Caption}" TextAlignment="Right" />
                 <TextBlock Grid.Column="4" Text="{x:Static pages:StatisticsText.AverageDelayColumn}" Style="{DynamicResource Kyf.Text.Caption}" TextAlignment="Right" />
               </Grid>
-              <ItemsControl x:Name="FoldersList" ItemsSource="{Binding Folders}" Focusable="False" />
+              <ItemsControl x:Name="FoldersList" ItemsSource="{Binding Folders}" Focusable="False" Visibility="{Binding HasFolders, Converter={StaticResource Visible}}" />
               <TextBlock x:Name="NoFolder" Text="{x:Static pages:StatisticsText.NoSheet}" Style="{DynamicResource Kyf.Text.Secondary}"
                          Visibility="{Binding HasNoFolder, Converter={StaticResource Visible}}" />
             </StackPanel>

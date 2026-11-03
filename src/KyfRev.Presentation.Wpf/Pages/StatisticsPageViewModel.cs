@@ -117,12 +117,12 @@ public sealed partial class StatisticsPageViewModel : ObservableObject, INavigat
 
     /// <summary>Les mois, sans ceux d'avant la première activité.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasNoMonth))]
+    [NotifyPropertyChangedFor(nameof(HasNoMonth), nameof(HasMonths))]
     public partial IReadOnlyList<MonthRow> Months { get; private set; } = [];
 
     /// <summary>Les dossiers, du plus révisé au moins révisé.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasNoFolder))]
+    [NotifyPropertyChangedFor(nameof(HasNoFolder), nameof(HasFolders))]
     public partial IReadOnlyList<FolderRow> Folders { get; private set; } = [];
 
     /// <summary>Les statistiques sont là.</summary>
@@ -168,6 +168,12 @@ public sealed partial class StatisticsPageViewModel : ObservableObject, INavigat
 
     /// <summary>Aucun mois à montrer.</summary>
     public bool HasNoMonth => Months.Count == 0;
+
+    /// <summary>Au moins un mois à montrer : une liste vide n'a pas de place à l'écran, et n'a pas à être annoncée.</summary>
+    public bool HasMonths => !HasNoMonth;
+
+    /// <summary>Au moins un dossier à montrer.</summary>
+    public bool HasFolders => !HasNoFolder;
 
     /// <summary>Aucun dossier à montrer.</summary>
     public bool HasNoFolder => Folders.Count == 0;
