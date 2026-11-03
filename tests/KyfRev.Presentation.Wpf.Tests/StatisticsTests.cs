@@ -4,9 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using KyfRev.Application.Model;
 using KyfRev.Application.UseCases;
-using KyfRev.DesignSystem.Controls;
 using KyfRev.Presentation.Wpf.Pages;
-using KyfRev.Presentation.Wpf.Shell;
 
 namespace KyfRev.Presentation.Wpf.Tests;
 
@@ -219,7 +217,7 @@ public sealed class StatisticsTests
         var page = Page(vaults);
         page.Show(Busy());
         var test = new TestShell();
-        var window = Show(test, page, width: 1400);
+        var (window, frame) = Show(test, page, width: 1400);
         try
         {
             Assert.AreEqual("Statistiques", Named<TextBlock>(window, "Heading").Text);
@@ -233,7 +231,7 @@ public sealed class StatisticsTests
             Assert.AreEqual(page.CalendarWidth, calendar.ActualWidth, 0.5);
             Assert.AreEqual(calendar.ActualHeight, page.RowHeight * 7, 0.5, "le calendrier n'a pas de vide sous ses cases");
 
-            window.Width = 800;
+            frame.Width = 800;
             TestShell.Flush();
             Assert.IsLessThanOrEqualTo(scroller.ViewportWidth, scroller.ExtentWidth, "pas de défilement horizontal, même à l'étroit");
             Assert.AreEqual(0, Grid.GetColumn(Named<FrameworkElement>(window, "FoldersCard")));
@@ -256,7 +254,7 @@ public sealed class StatisticsTests
         var page = Page(vaults);
         page.Show(Busy());
         var test = new TestShell();
-        var window = Show(test, page, width: 1100);
+        var (window, _) = Show(test, page, width: 1100);
         try
         {
             var calendar = UIElementAutomationPeer.CreatePeerForElement(Named<ActivityCalendar>(window, "Calendar"));
@@ -317,16 +315,15 @@ public sealed class StatisticsTests
         ],
     };
 
-    private static ShellWindow Show(TestShell test, object page, double width)
+    /// <summary>La page dans un cadre de largeur fixe : une fenêtre ne dépasse pas l'écran, et celui de la CI est petit.</summary>
+    private static (Window Window, Border Frame) Show(TestShell test, StatisticsPageViewModel page, double width)
     {
-        var shell = test.Shell;
-        shell.Navigate(new NavigationItem(CorePages.Statistics, "Statistiques", Icons.Chart, int.MaxValue, page));
-        var window = new ShellWindow(shell) { ShowActivated = true, Left = -10000, Top = -10000, Width = width, Height = 800 };
+        var frame = new Border { Width = width, Height = 800, Child = new StatisticsPage { DataContext = page } };
+        var window = new Window { Content = new Canvas { Children = { frame } }, ShowActivated = false, Left = -10000, Top = -10000, Width = 800, Height = 600 };
         window.Resources.MergedDictionaries.Add(test.Design.Dictionary);
         window.Show();
-        window.Activate();
         TestShell.Flush();
-        return window;
+        return (window, frame);
     }
 
     private static T Named<T>(DependencyObject root, string name)
