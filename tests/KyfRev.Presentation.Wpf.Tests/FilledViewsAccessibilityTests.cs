@@ -97,7 +97,7 @@ public sealed class FilledViewsAccessibilityTests
             adjust?.Invoke(window);
             TestShell.Flush();
             var names = new List<string>();
-            foreach (var control in Descendants(window).OfType<Control>().Where(control => control is ButtonBase or TextBox or ListBoxItem && control.IsVisible))
+            foreach (var control in Descendants(window).OfType<Control>().Where(control => control is ButtonBase or TextBox or ListBoxItem or ComboBox && control.IsVisible && control.TemplatedParent is not (ComboBox or ScrollBar)))
             {
                 var name = UIElementAutomationPeer.CreatePeerForElement(control).GetName();
                 Assert.IsFalse(string.IsNullOrWhiteSpace(name), $"Sans nom : {control.GetType().Name} « {control.Name} »");
