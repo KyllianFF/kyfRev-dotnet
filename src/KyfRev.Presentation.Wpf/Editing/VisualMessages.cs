@@ -38,6 +38,8 @@ namespace KyfRev.Presentation.Wpf.Editing;
 [JsonDerivedType(typeof(ListOpenRequest), "listOpen")]
 [JsonDerivedType(typeof(InsertDiagramRequest), "insertDiagram")]
 [JsonDerivedType(typeof(DiagramRequest), "diagram")]
+[JsonDerivedType(typeof(DeleteBlockRequest), "deleteBlock")]
+[JsonDerivedType(typeof(ShowBlockCodeRequest), "showBlockCode")]
 internal abstract record EditorRequest;
 
 /// <summary>Ouvre ce Markdown : rien à enregistrer, rien à annuler.</summary>
@@ -133,6 +135,12 @@ internal sealed record InsertDiagramRequest(string Language, string Code, int? P
 /// <summary>Le dessin d'un bloc : un SVG, ou une image en adresse <c>data:</c> ; ni l'un ni l'autre : il ne se dessine pas.</summary>
 internal sealed record DiagramRequest(string Language, string Code, string? Svg, string? Image) : EditorRequest;
 
+/// <summary>Retire de la fiche le bloc à cet endroit.</summary>
+internal sealed record DeleteBlockRequest(int Position) : EditorRequest;
+
+/// <summary>Entre dans le code du bloc à cet endroit.</summary>
+internal sealed record ShowBlockCodeRequest(int Position) : EditorRequest;
+
 /// <summary>Ce que l'éditeur visuel dit à l'application.</summary>
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "kind")]
 [JsonDerivedType(typeof(ReadyEvent), "ready")]
@@ -178,7 +186,7 @@ internal sealed record LinkInputEvent(string? Query, int Start, double X, double
 internal sealed record ListKeyEvent(string Key) : EditorEvent;
 
 /// <summary>Un clic droit : ce qu'il faut pour le menu natif.</summary>
-internal sealed record MenuEvent(string? Word, int WordStart, bool HasSelection, bool InCode, bool InTable, bool OnLink) : EditorEvent;
+internal sealed record MenuEvent(string? Word, int WordStart, bool HasSelection, bool InCode, bool InTable, bool OnLink, int? DrawingPosition = null, string? DrawingLanguage = null, string? DrawingCode = null) : EditorEvent;
 
 /// <summary>Une image collée ou déposée ; sans contenu, elle est trop lourde pour être lue.</summary>
 internal sealed record DroppedEvent(string Name, string? Base64, int? Position) : EditorEvent;

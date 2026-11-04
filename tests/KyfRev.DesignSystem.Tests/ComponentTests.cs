@@ -99,6 +99,35 @@ public sealed class ComponentTests
     }
 
     [STATestMethod]
+    [DataRow(ThemeKind.Light)]
+    [DataRow(ThemeKind.Dark)]
+    public void What_cannot_be_undone_shows_and_enter_does_not_trigger_it(ThemeKind theme)
+    {
+        var design = new DesignResources(theme, reducedMotion: false);
+        var dialog = new Dialog { Title = "Supprimer définitivement ?", IsOpen = true };
+        Host.Of(design, dialog);
+        Host.Flush();
+        var button = Host.Part<Button>(dialog, Dialog.PrimaryButtonPart);
+        Assert.IsTrue(button.IsDefault);
+        Assert.IsFalse(dialog.IsDestructive);
+
+        dialog.IsDestructive = true;
+        Host.Flush();
+
+        Assert.IsTrue(dialog.IsDestructive);
+        Assert.IsFalse(button.IsDefault);
+        var text = (SolidColorBrush)button.Foreground;
+        var ground = (SolidColorBrush)button.Background;
+        Assert.IsGreaterThanOrEqualTo(4.5, new TokenColor(text.Color.A, text.Color.R, text.Color.G, text.Color.B).ContrastWith(new TokenColor(ground.Color.A, ground.Color.R, ground.Color.G, ground.Color.B)));
+        Assert.AreEqual(ThemeColors.For(theme)[ColorRole.CriticalBackground], new TokenColor(ground.Color.A, ground.Color.R, ground.Color.G, ground.Color.B));
+
+        dialog.IsDestructive = false;
+        Host.Flush();
+
+        Assert.IsTrue(button.IsDefault);
+    }
+
+    [STATestMethod]
     public void A_dialog_closes_with_the_chosen_button_or_escape()
     {
         var design = new DesignResources(ThemeKind.Light, reducedMotion: false);

@@ -12,21 +12,17 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 - Clic droit, avec les actions rapides en tête du menu : texte d'une fiche et passages (« Écouter d'ici » compris), lignes
   d'« Aujourd'hui », fiches archivées, définitions, lignes de « Santé du coffre », champs de texte et éditeurs, dont les
   corrections restent dans le menu.
-
 - Suppression définitive : dans « Éléments supprimés », chaque élément peut être effacé pour de bon, après confirmation.
 - Vue « Fiches » : clic droit sur les fiches (ouvrir, réviser, modifier, renommer, étiquettes, déplacer, archiver, supprimer)
   et sur les dossiers (nouvelle fiche, nouveau dossier, renommer, déplacer, supprimer). Une suppression peut aussi être
   définitive, en le cochant.
 - Vue « Fiches » : une vraie arborescence, avec des dossiers dans les dossiers, qui se plient et se déplient, y compris les
   dossiers vides ; un avertissement au-delà de trois sous-dossiers.
-
-### Corrigé
-
-- Le curseur devient une main sur tout ce qui se clique, y compris les trous et les passages du texte.
-- En révision, « Afficher le passage » et un clic dans le volet découvrent le passage masqué.
-- Le passage visé depuis le volet ressort nettement dans le texte, dans les deux thèmes.
-- L'indicateur de sélection au clavier reste dans le volet des passages et dans le plan.
-- Les onglets ont un survol arrondi, comme le reste de l'application.
+- Écrire : un vrai éditeur d'organigramme. Les éléments se composent dans une liste, sur autant de niveaux qu'il faut, et un
+  élément peut en avoir sous lui sans toucher aux autres ; le dessin suit la frappe, et un clic sur une boîte la choisit.
+  Le bloc reste du texte lisible partout : une ligne par élément, décalée de deux espaces par niveau.
+- Écrire : clic droit sur un schéma, un graphique ou un SmartArt pour le modifier, voir son code ou le supprimer.
+- Écrire : la feuille se détache du fond, comme dans un traitement de texte, dans les deux thèmes.
 - Module Citations : la vue « Citations » (recherche, étiquettes, tri, ajout, modification, corbeille), la citation du jour
   sur « Aujourd'hui », cherchée sur Wikiquote si ce réglage est activé, l'onglet « Modules et extensions » de « Paramètres » pour
   l'activer sans redémarrer, et, dans l'onglet « Données », les citations supprimées et leur export.
@@ -378,6 +374,14 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Corrigé
 
+- Le curseur devient une main sur tout ce qui se clique, y compris les trous et les passages du texte.
+- En révision, « Afficher le passage » et un clic dans le volet découvrent le passage masqué.
+- Le passage visé depuis le volet ressort nettement dans le texte, dans les deux thèmes.
+- L'indicateur de sélection au clavier reste dans le volet des passages et dans le plan.
+- Les onglets ont un survol arrondi, comme le reste de l'application.
+- Écrire : un document caché ne se construit plus (le rendu masqué se refaisait à chaque pause de frappe), et les images
+  du coffre se lisent hors du fil de l'interface. Le passage en écriture bloque moins l'interface.
+- Les dialogues de suppression définitive montrent un bouton distinct, qu'Entrée ne déclenche pas.
 - Dans un champ de saisie, le texte commençait 12 pixels plus loin que le texte indicatif : il sautait à la première frappe.
 - Sur une fenêtre étroite, les boutons d'une fiche passaient les uns sous les autres : ils vont à la ligne.
 - Le texte d'un champ de plusieurs lignes ne colle plus au bord haut.

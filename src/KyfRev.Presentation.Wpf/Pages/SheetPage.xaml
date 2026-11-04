@@ -364,8 +364,13 @@
     </kyf:Dialog>
 
     <kyf:Dialog x:Name="GalleryDialog" DataContext="{Binding Editor}" Title="{Binding Gallery.Title}" IsOpen="{Binding IsGalleryOpen, Mode=OneWay}" CardMaxWidth="980" IsWide="True"
-                PrimaryButtonText="{x:Static editing:EditingText.GalleryInsert}" Closed="OnGalleryClosed">
+                PrimaryButtonText="{Binding Gallery.ConfirmLabel}" Closed="OnGalleryClosed">
       <editing:DiagramGalleryView x:Name="GalleryContent" DataContext="{Binding Gallery}" />
+    </kyf:Dialog>
+
+    <kyf:Dialog x:Name="DiagramEditorDialog" DataContext="{Binding Editor}" Title="{Binding DiagramEditor.Title}" IsOpen="{Binding IsDiagramEditorOpen, Mode=OneWay}" CardMaxWidth="1040" IsWide="True"
+                PrimaryButtonText="{Binding DiagramEditor.ConfirmLabel}" Closed="OnDiagramEditorClosed">
+      <editing:DiagramEditorView x:Name="DiagramEditorContent" DataContext="{Binding DiagramEditor}" />
     </kyf:Dialog>
 
     <kyf:Dialog x:Name="LinkDialog" DataContext="{Binding Editor}" Title="{x:Static editing:EditingText.LinkTitle}" IsOpen="{Binding IsLinkOpen, Mode=OneWay}"

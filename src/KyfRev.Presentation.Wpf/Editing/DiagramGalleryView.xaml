@@ -48,7 +48,7 @@
       <TextBox x:Name="CodeBox" DockPanel.Dock="Bottom" Text="{Binding MermaidCode, Mode=OneWay}" IsReadOnly="True" Height="96" Margin="0,8,0,0" VerticalContentAlignment="Top" VerticalScrollBarVisibility="Auto" FontFamily="{DynamicResource Kyf.Font.Code}"
                AutomationProperties.Name="{x:Static editing:EditingText.GalleryShowCode}" Visibility="{Binding ShowsCode, Converter={StaticResource Visible}}" />
       <TextBox x:Name="ItemsBox" Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap" VerticalContentAlignment="Top"
-               VerticalScrollBarVisibility="Auto" AutomationProperties.Name="{Binding InputHelp}" />
+               VerticalScrollBarVisibility="Auto" AutomationProperties.Name="{Binding InputHelp}" Visibility="{Binding ShowsItems, Converter={StaticResource Visible}}" />
     </DockPanel>
   </Grid>
 </UserControl>

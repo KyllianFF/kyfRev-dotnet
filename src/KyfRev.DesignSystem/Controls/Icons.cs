@@ -228,5 +228,17 @@ public static class Icons
         _ => Error,
     };
 
+    /// <summary>Ajouter.</summary>
+    public static string Add { get; } = Glyph(0xE710);
+
+    /// <summary>Monter.</summary>
+    public static string MoveUp { get; } = Glyph(0xE74A);
+
+    /// <summary>Descendre.</summary>
+    public static string MoveDown { get; } = Glyph(0xE74B);
+
+    /// <summary>Décaler vers la droite : un niveau de plus.</summary>
+    public static string IndentMore { get; } = Glyph(0xE72A);
+
     private static string Glyph(int code) => ((char)code).ToString();
 }

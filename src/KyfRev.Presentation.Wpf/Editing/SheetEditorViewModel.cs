@@ -452,6 +452,14 @@ public sealed partial class SheetEditorViewModel : ObservableObject
     /// <summary>La galerie est ouverte.</summary>
     public bool IsGalleryOpen => Gallery is not null;
 
+    /// <summary>L'éditeur de hiérarchie ouvert ; rien s'il est fermé.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsDiagramEditorOpen))]
+    public partial DiagramEditorViewModel? DiagramEditor { get; private set; }
+
+    /// <summary>L'éditeur de hiérarchie est ouvert.</summary>
+    public bool IsDiagramEditorOpen => DiagramEditor is not null;
+
     /// <summary>La saisie d'un lien est ouverte.</summary>
     [ObservableProperty]
     public partial bool IsLinkOpen { get; private set; }
@@ -979,9 +987,27 @@ public sealed partial class SheetEditorViewModel : ObservableObject
     {
         var gallery = Gallery;
         Gallery = null;
+        if (accepted && gallery is { IsHierarchy: true, SelectedItem: { } hierarchy })
+        {
+            DiagramEditor = DiagramEditorViewModel.For(hierarchy.Id, gallery.Text, gallery.Position);
+            return;
+        }
         if (accepted && gallery?.Source() is { } source)
         {
             _surface?.InsertDiagram(source.Info, source.Code, gallery.Position);
+        }
+        _surface?.Focus();
+    }
+
+    /// <summary>Ferme l'éditeur de hiérarchie, et écrit ce qui y est composé, si l'utilisateur le veut.</summary>
+    [RelayCommand]
+    private void AnswerDiagramEditor(bool accepted)
+    {
+        var editor = DiagramEditor;
+        DiagramEditor = null;
+        if (accepted && editor?.Source() is { } source)
+        {
+            _surface?.InsertDiagram(source.Info, source.Code, editor.Position);
         }
         _surface?.Focus();
     }
@@ -1082,6 +1108,11 @@ public sealed partial class SheetEditorViewModel : ObservableObject
 
     private void OnDiagramAsked(object? sender, DiagramQuestion question)
     {
+        if (DiagramEditorViewModel.ForExisting(question.Info, question.Code, question.Position) is { } editor)
+        {
+            DiagramEditor = editor;
+            return;
+        }
         if (DiagramGalleryViewModel.ForExisting(question.Info, question.Code, question.Position) is { } gallery)
         {
             Gallery = gallery;

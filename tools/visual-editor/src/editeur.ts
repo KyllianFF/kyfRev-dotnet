@@ -123,7 +123,7 @@ export type Reactions = {
   /** Touche pendant une saisie : vrai si la liste la prend. */
   clavierlien: (touche: string) => boolean;
   /** Clic droit : le menu est natif. */
-  onmenu: () => void;
+  onmenu: (dessin: DessinVise | null) => void;
   /** Le dessin d'un bloc : un SVG, ou une image ; ni l'un ni l'autre : il ne se dessine pas. */
   dessin: (langage: string, code: string) => Promise<Dessin>;
   /** Modifier ce dessin : c'est la galerie de l'application. */
@@ -489,6 +489,22 @@ function vueFormule(bloc: boolean, onformule: (formule: Formule) => void) {
   };
 }
 
+/** Le dessin visé par un clic droit. */
+export type DessinVise = { position: number; language: string; code: string };
+
+/** Où se trouve chaque bloc dessiné : son nœud le sait, son élément non. */
+const positionsDesDessins = new WeakMap<Element, () => number | undefined>();
+
+/** Le dessin sous la souris, tant qu'on n'est pas entré dans son code. */
+function dessinSous(vue: EditorView, cible: EventTarget | null): DessinVise | null {
+  const bloc = cible instanceof Element ? cible.closest(".bloc-dessin:not(.en-edition)") : null;
+  const position = bloc ? positionsDesDessins.get(bloc)?.() : undefined;
+  const noeud = position === undefined ? null : vue.state.doc.nodeAt(position);
+  return noeud && position !== undefined
+    ? { position, language: noeud.attrs.language as string, code: noeud.textContent }
+    : null;
+}
+
 /** Un bloc qui se dessine : son code ne se montre que si l'on y entre. */
 const seDessine = (langage: string) => /^(smartart\s|mermaid\s*$)/.test(langage);
 
@@ -555,6 +571,7 @@ class VueCode implements NodeView {
   /** Le dessin du bloc, et ce qu'il faut pour le modifier ou pour voir son code. */
   private preparerDessin(vue: EditorView, position: () => number | undefined): void {
     this.dom.classList.add("bloc-dessin");
+    positionsDesDessins.set(this.dom, position);
     this.apercu = document.createElement("div");
     this.apercu.className = "apercu-dessin";
     this.apercu.contentEditable = "false";
@@ -723,12 +740,17 @@ export class EditeurVisuel {
         // Le menu est natif : ProseMirror n'a qu'à laisser le curseur à sa place.
         contextmenu: (vue, evenement) => {
           evenement.preventDefault();
+          const dessin = dessinSous(vue, evenement.target);
+          if (dessin) {
+            reactions.onmenu(dessin);
+            return true;
+          }
           const lieu = vue.posAtCoords({ left: evenement.clientX, top: evenement.clientY });
           const { from, to, empty } = vue.state.selection;
           if (lieu && (empty || lieu.pos < from || lieu.pos > to)) {
             vue.dispatch(vue.state.tr.setSelection(TextSelection.near(vue.state.doc.resolve(lieu.pos))));
           }
-          reactions.onmenu();
+          reactions.onmenu(null);
           return true;
         },
         blur: () => {
@@ -893,6 +915,32 @@ export class EditeurVisuel {
       return;
     }
     this.insererBloc(bloc, bloc.nodeSize);
+  }
+
+  /** Retire un bloc de la fiche ; Ctrl+Z le rend. Une fiche garde toujours un paragraphe où écrire. */
+  supprimerBloc(position: number): void {
+    const etat = this.vue.state;
+    const noeud = etat.doc.nodeAt(position);
+    if (noeud?.type !== n.code_block) return;
+    const fin = position + noeud.nodeSize;
+    const tr = etat.doc.childCount === 1 ? etat.tr.replaceWith(position, fin, n.paragraph.create()) : etat.tr.delete(position, fin);
+    this.vue.dispatch(tr.scrollIntoView());
+    this.vue.focus();
+  }
+
+  /** Entre dans le code d'un bloc. */
+  voirCodeBloc(position: number): void {
+    const etat = this.vue.state;
+    if (etat.doc.nodeAt(position)?.type !== n.code_block) return;
+    this.vue.dispatch(etat.tr.setSelection(TextSelection.create(etat.doc, position + 1)));
+    this.vue.focus();
+  }
+
+  /** Le dessin dont le curseur est dans le code : il se retire aussi depuis là. */
+  dessinSousLeCurseur(): DessinVise | null {
+    const { $from } = this.vue.state.selection;
+    if ($from.parent.type !== n.code_block || !seDessine($from.parent.attrs.language as string)) return null;
+    return { position: $from.before(), language: $from.parent.attrs.language as string, code: $from.parent.textContent };
   }
 
   focus(): void {

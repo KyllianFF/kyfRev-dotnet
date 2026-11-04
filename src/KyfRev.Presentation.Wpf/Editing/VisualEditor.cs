@@ -77,6 +77,8 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
         ("--pastille-passage-fond", "Kyf.Brush.PillPassageBackground"),
     ];
 
+    private const string VaultResources = "/coffre/";
+
     private static readonly DependencyProperty ThemeProbeProperty = DependencyProperty.Register(
         "ThemeProbe", typeof(Brush), typeof(VisualEditor), new PropertyMetadata(null, (sender, _) => ((VisualEditor)sender).QueueTheme()));
 
@@ -393,6 +395,21 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
     /// <summary>Les éléments du menu natif, selon ce que la page a dit de l'endroit visé.</summary>
     internal List<Control> MenuItems(MenuEvent menu, SpellingCorrection? correction)
     {
+        if (!menu.InCode && menu.DrawingPosition is { } drawing)
+        {
+            return DrawingMenuItems(menu, drawing);
+        }
+        var items = TextMenuItems(menu, correction);
+        if (menu.DrawingPosition is { } current)
+        {
+            items.Add(new Separator());
+            items.Add(DeleteDrawing(menu.DrawingLanguage ?? string.Empty, menu.DrawingCode ?? string.Empty, current));
+        }
+        return items;
+    }
+
+    private List<Control> TextMenuItems(MenuEvent menu, SpellingCorrection? correction)
+    {
         List<Control> items =
         [
             ActionMenus.Quick(EditingText.Cut, Icons.Cut, () => Post(new ClipboardRequest("cut"))),
@@ -490,6 +507,36 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
         return _environment;
     }
 
+    /// <summary>Le menu d'un dessin : le modifier si kyfRev sait le faire, voir son code, le retirer de la fiche.</summary>
+    private List<Control> DrawingMenuItems(MenuEvent menu, int position)
+    {
+        var language = menu.DrawingLanguage ?? string.Empty;
+        var code = menu.DrawingCode ?? string.Empty;
+        var items = new List<Control>();
+        if (language.StartsWith(SmartArt.Language, StringComparison.Ordinal))
+        {
+            items.Add(ActionMenus.Quick(EditingText.EditDrawing, Icons.Edit, () => Receive(new EditDiagramEvent(language, code, position))));
+        }
+        items.Add(ActionMenus.Quick(EditingText.ShowDrawingCode, Icons.Code, () => Post(new ShowBlockCodeRequest(position))));
+        items.Add(new Separator());
+        items.Add(DeleteDrawing(language, code, position));
+        return items;
+    }
+
+    private MenuItem DeleteDrawing(string language, string code, int position) =>
+        ActionMenus.Item(DeleteDrawingLabel(language, code), () => Post(new DeleteBlockRequest(position)));
+
+    private static string DeleteDrawingLabel(string language, string code)
+    {
+        if (language.StartsWith(SmartArt.Language, StringComparison.Ordinal))
+        {
+            return EditingText.DeleteSmartArt;
+        }
+        return code.TrimStart().StartsWith("pie", StringComparison.Ordinal) || code.TrimStart().StartsWith("xychart", StringComparison.Ordinal) || code.TrimStart().StartsWith("treemap", StringComparison.Ordinal)
+            ? EditingText.DeleteChart
+            : EditingText.DeleteSchema;
+    }
+
     private MenuItem Item(string header, EditorRequest request)
     {
         var item = new MenuItem { Header = header };
@@ -543,11 +590,29 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
     {
         Harden(web);
         web.AddWebResourceRequestedFilter("*", CoreWebView2WebResourceContext.All);
-        web.WebResourceRequested += (_, e) => Serve(web, e, Host, ContentOf);
+        web.WebResourceRequested += (_, e) => OnResourceRequested(web, e);
         web.WebMessageReceived += OnMessage;
         web.NavigationStarting += (_, e) => e.Cancel = e.Uri != StartAddress;
         web.PermissionRequested += (_, e) => e.State = e.PermissionKind == CoreWebView2PermissionKind.ClipboardRead ? CoreWebView2PermissionState.Allow : CoreWebView2PermissionState.Deny;
         web.ProcessFailed += (_, e) => Failed?.Invoke(this, e.ProcessFailedKind.ToString());
+    }
+
+    /// <summary>Une image du coffre peut être lourde, ou loin : elle se lit sur un fil de travail, l'interface reste libre.</summary>
+    private async void OnResourceRequested(CoreWebView2 web, CoreWebView2WebResourceRequestedEventArgs e)
+    {
+        var address = new Uri(e.Request.Uri);
+        var path = Uri.UnescapeDataString(address.AbsolutePath);
+        if (address.Host != Host || !path.StartsWith(VaultResources, StringComparison.Ordinal))
+        {
+            Serve(web, e, Host, ContentOf);
+            return;
+        }
+        using var deferral = e.GetDeferral();
+        var content = await Task.Run(() => ContentOf(path)).ConfigureAwait(true);
+        if (!_disposed)
+        {
+            Respond(web, e, address, content);
+        }
     }
 
     /// <summary>Le dessin d'un bloc : un SmartArt tout de suite, un schéma quand la page cachée l'a fait.</summary>
@@ -594,7 +659,11 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
     internal static void Serve(CoreWebView2 web, CoreWebView2WebResourceRequestedEventArgs e, string host, Func<string, byte[]?> contentOf)
     {
         var address = new Uri(e.Request.Uri);
-        var content = address.Host == host ? contentOf(Uri.UnescapeDataString(address.AbsolutePath)) : null;
+        Respond(web, e, address, address.Host == host ? contentOf(Uri.UnescapeDataString(address.AbsolutePath)) : null);
+    }
+
+    private static void Respond(CoreWebView2 web, CoreWebView2WebResourceRequestedEventArgs e, Uri address, byte[]? content)
+    {
         e.Response = content is null
             ? web.Environment.CreateWebResourceResponse(null, 403, "Forbidden", "Cache-Control: no-store")
             : web.Environment.CreateWebResourceResponse(
@@ -623,9 +692,9 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
 
     private byte[]? ContentOf(string path)
     {
-        if (path.StartsWith("/coffre/", StringComparison.Ordinal))
+        if (path.StartsWith(VaultResources, StringComparison.Ordinal))
         {
-            var outcome = _readResource(path["/coffre/".Length..]);
+            var outcome = _readResource(path[VaultResources.Length..]);
             return outcome.Succeeded ? outcome.Value : null;
         }
         return PageContent(path);
