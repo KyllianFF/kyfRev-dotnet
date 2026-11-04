@@ -257,6 +257,11 @@
             <Trigger Property="SecondaryButtonText" Value="">
               <Setter TargetName="PART_SecondaryButton" Property="Visibility" Value="Collapsed" />
             </Trigger>
+            <!-- Ce qui ne s'annule pas se voit, et Entrée ne le déclenche pas. -->
+            <Trigger Property="IsDestructive" Value="True">
+              <Setter TargetName="PART_PrimaryButton" Property="Style" Value="{DynamicResource Kyf.Button.Danger}" />
+              <Setter TargetName="PART_PrimaryButton" Property="IsDefault" Value="False" />
+            </Trigger>
           </ControlTemplate.Triggers>
         </ControlTemplate>
       </Setter.Value>

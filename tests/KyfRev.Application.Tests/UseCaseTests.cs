@@ -249,6 +249,13 @@ public sealed class UseCaseTests
         Assert.IsTrue(app.Trash.RestoreSheet(id).Succeeded);
         app.Sheets.Create("Vieux", "Ancienne", null);
         Assert.AreEqual(1, app.Trash.TrashFolder("Vieux").Value);
+        Assert.IsFalse(app.Trash.PurgeSheet(id).Succeeded, "elle n'est plus à la corbeille");
+        var erased = app.Sheets.Create("Encore", "Effacée", null).Value;
+        Assert.IsTrue(app.Trash.TrashSheet(erased).Succeeded);
+        Assert.IsTrue(app.Trash.PurgeSheet(erased).Succeeded);
+        Assert.IsFalse(app.Sheets.Open(erased).Succeeded);
+        app.Sheets.Create("Encore", "Autre", null);
+        Assert.AreEqual(1, app.Trash.PurgeFolder("Encore").Value);
 
         File.WriteAllText(Path.Combine(folder.Vault, "fiches", "Libre.md"), "Texte.\n");
         File.WriteAllText(Path.Combine(folder.Vault, "fiches", "Orpheline.md"), "---\nid: f_01JQZ8S7ZK4V3H2N8M6X5W9PQR\n---\nTexte.\n");

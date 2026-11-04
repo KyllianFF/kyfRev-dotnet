@@ -85,7 +85,7 @@ Ce glossaire fixe la correspondance. Les **clés JSON du coffre restent celles d
 | Verrou | `VaultLock` | `.suivi/verrou` | Empêche deux instances d'ouvrir le même coffre. |
 | Journal d'opération | `OperationJournal` | `.suivi/operation.json` | Opération multi-fichiers rejouée si elle a été interrompue. |
 | Version | `SheetVersion` | `.suivi/versions/` | Copie d'une fiche avant écrasement. |
-| Corbeille | `Trash` | `fiches/.supprimees/` | Éléments supprimés, restaurables, jamais purgés. |
+| Corbeille | `Trash` | `fiches/.supprimees/` | Éléments supprimés, restaurables tant qu'ils ne sont pas supprimés définitivement. |
 | Sauvegarde | `Backup` | `Sauvegardes/coffre-*.zip` | Copie zip vérifiée du coffre, hors du coffre. |
 | Santé du coffre | `VaultHealth` | — | Diagnostic sans réparation silencieuse. |
 | Rotation | `RotationPolicy` | — | Copies conservées : 14 quotidiennes, 8 hebdomadaires, 24 mensuelles. |

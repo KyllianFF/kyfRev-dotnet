@@ -192,6 +192,55 @@ public sealed class VaultSessionTests
     }
 
     [TestMethod]
+    public void Only_what_is_in_the_trash_is_erased_and_it_leaves_no_file_behind()
+    {
+        using var folder = TemporaryVault.Empty();
+        using var vault = VaultSession.Initialize(folder.Root, Now);
+        var id = vault.CreateSheet("Cours", "Effacée", "Le corps.", Now);
+        var other = vault.CreateSheet("Cours", "Gardée", "Le corps.", Now);
+        var kept = vault.CreateAnnotation(other, new Format.StoredAnchor("Le", string.Empty, " corps.", 0, 2, [], null, "sha256:x", Format.UnknownProperties.None), null, Now);
+        Assert.AreEqual(VaultErrorKind.UnknownSheet, Assert.ThrowsExactly<VaultException>(() => vault.PurgeSheet(id)).Kind, "pas à la corbeille");
+        Assert.AreEqual(VaultErrorKind.UnknownAnnotation, Assert.ThrowsExactly<VaultException>(() => vault.PurgeAnnotation(kept)).Kind, "pas à la corbeille");
+        Assert.IsTrue(File.Exists(folder.PathOf("fiches/Cours/Effacée.md")));
+
+        vault.TrashSheet(id, Now);
+        Assert.IsTrue(Directory.Exists(folder.PathOf($"fiches/.supprimees/{id}")));
+        vault.PurgeSheet(id);
+
+        Assert.IsFalse(Directory.Exists(folder.PathOf($"fiches/.supprimees/{id}")));
+        Assert.IsFalse(File.Exists(folder.PathOf($".suivi/corbeille/{id}.json")));
+        Assert.IsFalse(File.Exists(folder.PathOf($".suivi/corbeille/{id}.annotations.json")));
+        Assert.IsEmpty(vault.TrashedSheets());
+        Assert.AreEqual(VaultErrorKind.UnknownSheet, Assert.ThrowsExactly<VaultException>(() => vault.PurgeSheet(id)).Kind, "deux fois");
+        Assert.AreEqual(VaultErrorKind.UnknownSheet, Assert.ThrowsExactly<VaultException>(() => vault.RestoreSheet(id, Now)).Kind);
+
+        vault.TrashAnnotation(kept, Now);
+        vault.PurgeAnnotation(kept);
+        Assert.IsEmpty(vault.TrashedAnnotations());
+        Assert.IsEmpty(vault.Annotations(other));
+        Assert.AreEqual(VaultErrorKind.UnknownAnnotation, Assert.ThrowsExactly<VaultException>(() => vault.RestoreAnnotation(kept, Now)).Kind);
+    }
+
+    [TestMethod]
+    public void A_folder_is_erased_whole_with_its_subfolders()
+    {
+        using var folder = TemporaryVault.Empty();
+        using var vault = VaultSession.Initialize(folder.Root, Now);
+        vault.CreateSheet("Cours/Vieux", "Une", "", Now);
+        vault.CreateSheet("Cours/Vieux/Plus", "Deux", "", Now);
+        var kept = vault.CreateSheet("Cours", "Gardée", "", Now);
+        vault.CreateFolder("Cours/Vieux/Vide");
+
+        Assert.AreEqual(2, vault.PurgeFolder("Cours/Vieux", Now));
+
+        Assert.IsFalse(Directory.Exists(folder.PathOf("fiches/Cours/Vieux")));
+        Assert.IsEmpty(vault.TrashedSheets());
+        Assert.IsEmpty(Directory.GetDirectories(folder.PathOf("fiches/.supprimees/dossiers")), "le rangement est vide");
+        Assert.HasCount(1, Directory.GetDirectories(folder.PathOf("fiches/.supprimees")), "il ne reste que lui");
+        Assert.AreEqual("fiches/Cours/Gardée.md", vault.Sheet(kept).Sheet.Path.Value);
+    }
+
+    [TestMethod]
     public void A_trash_move_blocked_by_an_existing_file_is_reported()
     {
         using var folder = TemporaryVault.Empty();

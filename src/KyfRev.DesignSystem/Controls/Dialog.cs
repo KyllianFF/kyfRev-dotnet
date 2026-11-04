@@ -53,6 +53,10 @@ public class Dialog : ContentControl
     public static readonly DependencyProperty IsWideProperty =
         DependencyProperty.Register(nameof(IsWide), typeof(bool), typeof(Dialog), new PropertyMetadata(false));
 
+    /// <summary>Propriété <see cref="IsDestructive"/>.</summary>
+    public static readonly DependencyProperty IsDestructiveProperty =
+        DependencyProperty.Register(nameof(IsDestructive), typeof(bool), typeof(Dialog), new PropertyMetadata(false));
+
     /// <summary>Propriété <see cref="IsOpen"/>.</summary>
     public static readonly DependencyProperty IsOpenProperty =
         DependencyProperty.Register(nameof(IsOpen), typeof(bool), typeof(Dialog), new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, (dialog, e) => ((Dialog)dialog).OnIsOpenChanged((bool)e.NewValue)));
@@ -103,6 +107,13 @@ public class Dialog : ContentControl
     {
         get => (double)GetValue(CardMaxWidthProperty);
         set => SetValue(CardMaxWidthProperty, value);
+    }
+
+    /// <summary>Le bouton principal fait ce qui ne s'annule pas : il le montre, et Entrée ne le déclenche pas.</summary>
+    public bool IsDestructive
+    {
+        get => (bool)GetValue(IsDestructiveProperty);
+        set => SetValue(IsDestructiveProperty, value);
     }
 
     /// <summary>Ouvert ; fermé par défaut.</summary>

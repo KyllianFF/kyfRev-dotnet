@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Archive" xml:space="preserve">
+    <value>Archiver…</value>
+  </data>
+  <data name="ArchiveConfirm" xml:space="preserve">
+    <value>Archiver</value>
+  </data>
+  <data name="ArchiveMessage" xml:space="preserve">
+    <value>« {0} » quitte les révisions. Elle reste dans Archives, avec son historique, et peut revenir par un rappel de consolidation.</value>
+  </data>
+  <data name="ArchiveTitle" xml:space="preserve">
+    <value>Archiver cette fiche ?</value>
+  </data>
+  <data name="Archived" xml:space="preserve">
+    <value>Fiche archivée.</value>
+  </data>
+  <data name="CreateConfirm" xml:space="preserve">
+    <value>Créer</value>
+  </data>
+  <data name="Delete" xml:space="preserve">
+    <value>Supprimer…</value>
+  </data>
+  <data name="DepthWarning" xml:space="preserve">
+    <value>Ce dossier serait à {0} niveaux. Au-delà de trois sous-dossiers, l'arborescence devient difficile à parcourir.</value>
+  </data>
+  <data name="EraseBox" xml:space="preserve">
+    <value>Supprimer définitivement, sans passer par la corbeille</value>
+  </data>
+  <data name="EraseConfirm" xml:space="preserve">
+    <value>Supprimer définitivement</value>
+  </data>
+  <data name="EraseHelp" xml:space="preserve">
+    <value>Cela ne s'annule pas : seules les sauvegardes déjà faites le contiennent encore.</value>
+  </data>
+  <data name="Erased" xml:space="preserve">
+    <value>Supprimé définitivement.</value>
+  </data>
+  <data name="FolderCreated" xml:space="preserve">
+    <value>Dossier créé.</value>
+  </data>
+  <data name="FolderNameLabel" xml:space="preserve">
+    <value>Nom du dossier</value>
+  </data>
+  <data name="FolderRenamed" xml:space="preserve">
+    <value>Dossier renommé.</value>
+  </data>
+  <data name="Move" xml:space="preserve">
+    <value>Déplacer vers…</value>
+  </data>
+  <data name="MoveConfirm" xml:space="preserve">
+    <value>Déplacer</value>
+  </data>
+  <data name="MoveLabel" xml:space="preserve">
+    <value>Vers le dossier</value>
+  </data>
+  <data name="MoveTitle" xml:space="preserve">
+    <value>Déplacer « {0} »</value>
+  </data>
+  <data name="Moved" xml:space="preserve">
+    <value>Déplacé.</value>
+  </data>
+  <data name="NameRequired" xml:space="preserve">
+    <value>Indiquez un nom.</value>
+  </data>
+  <data name="NewFolder" xml:space="preserve">
+    <value>Nouveau dossier</value>
+  </data>
+  <data name="NewFolderInTitle" xml:space="preserve">
+    <value>Nouveau dossier dans « {0} »</value>
+  </data>
+  <data name="NewFolderTitle" xml:space="preserve">
+    <value>Nouveau dossier à la racine</value>
+  </data>
+  <data name="NewSheet" xml:space="preserve">
+    <value>Nouvelle fiche</value>
+  </data>
+  <data name="Open" xml:space="preserve">
+    <value>Ouvrir</value>
+  </data>
+  <data name="Rename" xml:space="preserve">
+    <value>Renommer…</value>
+  </data>
+  <data name="RenameConfirm" xml:space="preserve">
+    <value>Renommer</value>
+  </data>
+  <data name="RenameFolderTitle" xml:space="preserve">
+    <value>Renommer le dossier</value>
+  </data>
+  <data name="RenameTitle" xml:space="preserve">
+    <value>Renommer la fiche</value>
+  </data>
+  <data name="Renamed" xml:space="preserve">
+    <value>Fiche renommée.</value>
+  </data>
+  <data name="Restart" xml:space="preserve">
+    <value>Remettre en révision…</value>
+  </data>
+  <data name="RestartConfirm" xml:space="preserve">
+    <value>Remettre en révision</value>
+  </data>
+  <data name="RestartMessage" xml:space="preserve">
+    <value>« {0} » redevient active : un nouveau cycle commence aujourd'hui (J0) et J1 sera dû demain. Son historique est conservé.</value>
+  </data>
+  <data name="RestartTitle" xml:space="preserve">
+    <value>Remettre en révision ?</value>
+  </data>
+  <data name="Restarted" xml:space="preserve">
+    <value>Fiche remise en révision.</value>
+  </data>
+  <data name="Review" xml:space="preserve">
+    <value>Réviser</value>
+  </data>
+  <data name="SaveConfirm" xml:space="preserve">
+    <value>Enregistrer</value>
+  </data>
+  <data name="SheetCountMany" xml:space="preserve">
+    <value>{0} fiches</value>
+  </data>
+  <data name="SheetCountOne" xml:space="preserve">
+    <value>{0} fiche</value>
+  </data>
+  <data name="Tags" xml:space="preserve">
+    <value>Étiquettes…</value>
+  </data>
+  <data name="TagsLabel" xml:space="preserve">
+    <value>Étiquettes, séparées par des virgules</value>
+  </data>
+  <data name="TagsSaved" xml:space="preserve">
+    <value>Étiquettes enregistrées.</value>
+  </data>
+  <data name="TagsTitle" xml:space="preserve">
+    <value>Étiquettes de « {0} »</value>
+  </data>
+  <data name="TitleLabel" xml:space="preserve">
+    <value>Titre</value>
+  </data>
+  <data name="TooDeep" xml:space="preserve">
+    <value>Au-delà de trois sous-dossiers, l'arborescence devient difficile à parcourir.</value>
+  </data>
+  <data name="TrashConfirm" xml:space="preserve">
+    <value>Mettre à la corbeille</value>
+  </data>
+  <data name="TrashEmptyFolderMessage" xml:space="preserve">
+    <value>« {0} » ne contient aucune fiche : il quitte l'arborescence. S'il contient d'autres fichiers, ils sont rangés avec lui.</value>
+  </data>
+  <data name="TrashFolderMessage" xml:space="preserve">
+    <value>« {0} » et {1} qu'il contient, sous-dossiers et fiches archivées compris, vont à la corbeille, avec leurs images et leurs annotations. Tout se restaure depuis Paramètres &gt; Données.</value>
+  </data>
+  <data name="TrashFolderTitle" xml:space="preserve">
+    <value>Supprimer ce dossier ?</value>
+  </data>
+  <data name="TrashMessage" xml:space="preserve">
+    <value>« {0} » va à la corbeille, avec ses images et ses annotations : elle disparaît des listes et des révisions, et se restaure depuis Paramètres &gt; Données.</value>
+  </data>
+  <data name="TrashTitle" xml:space="preserve">
+    <value>Supprimer cette fiche ?</value>
+  </data>
+  <data name="Trashed" xml:space="preserve">
+    <value>Mis à la corbeille.</value>
+  </data>
+  <data name="Write" xml:space="preserve">
+    <value>Modifier</value>
+  </data>
+</root>

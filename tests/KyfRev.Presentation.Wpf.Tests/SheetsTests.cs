@@ -69,9 +69,10 @@ public sealed class SheetsTests
         var page = Page(vaults, new FakeOpener());
         page.Show([Sheet("À la racine", ""), Sheet("Atomes", "Sciences/Chimie"), Sheet("Mitose", "Sciences/Chimie")]);
 
-        Assert.HasCount(5, page.Rows);
+        Assert.HasCount(6, page.Rows);
         Assert.AreEqual("Sans dossier · 1", page.Rows[0].ToString());
-        Assert.AreEqual("Sciences › Chimie · 2", page.Rows[2].ToString());
+        Assert.AreEqual("Sciences · 2", page.Rows[2].ToString());
+        Assert.AreEqual("Chimie · 2", page.Rows[3].ToString());
 
         // Les autres tris sont à plat : chaque ligne dit son dossier.
         var sort = page.Bar.Filters[2];

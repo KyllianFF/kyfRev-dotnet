@@ -41,6 +41,21 @@ public static class SettingsHubText
     /// <summary>« Données ».</summary>
     public static string Data => Text(nameof(Data));
 
+    /// <summary>« Supprimer définitivement ».</summary>
+    public static string Erase => Text(nameof(Erase));
+
+    /// <summary>« {0} sera effacé du coffre. Cela ne s'annule pas… ».</summary>
+    public static string EraseConfirmOf(object title) => Format("EraseConfirm", title);
+
+    /// <summary>« Supprimer définitivement ? ».</summary>
+    public static string EraseConfirmTitle => Text(nameof(EraseConfirmTitle));
+
+    /// <summary>« Supprimer définitivement : {0} ».</summary>
+    public static string EraseItemOf(object title) => Format("EraseItem", title);
+
+    /// <summary>« {0} : supprimé définitivement. ».</summary>
+    public static string ErasedOf(object title) => Format("Erased", title);
+
     /// <summary>« Annotations (Markdown) ».</summary>
     public static string ExportAnnotations => Text(nameof(ExportAnnotations));
 

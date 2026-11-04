@@ -23,8 +23,8 @@ public sealed class FolderUseCases(VaultHost host, TimeProvider time)
 }
 
 /// <summary>
-/// Corbeille : « supprimer » une fiche, un dossier ou une annotation les y range, restaurables ;
-/// rien n'y est jamais purgé.
+/// Corbeille : « supprimer » une fiche, un dossier ou une annotation les y range, restaurables. Seule la
+/// demande expresse de la personne les efface pour de bon.
 /// </summary>
 public sealed class TrashUseCases(VaultHost host, TimeProvider time)
 {
@@ -59,6 +59,16 @@ public sealed class TrashUseCases(VaultHost host, TimeProvider time)
     /// <summary>Annotations à la corbeille (« Éléments supprimés »), les plus récentes d'abord.</summary>
     [ZeroXCommand("elements_a_la_corbeille")]
     public Outcome<IReadOnlyList<TrashedAnnotation>> TrashedAnnotations() => host.Use(vault => vault.TrashedAnnotations());
+
+    /// <summary>Efface pour de bon une fiche déjà à la corbeille ; cela ne s'annule pas.</summary>
+    public Outcome<Done> PurgeSheet(string id) => host.Use(vault => vault.PurgeSheet(id));
+
+    /// <summary>Efface pour de bon un dossier et tout ce qu'il contient ; rend le nombre de fiches effacées.</summary>
+    public Outcome<int> PurgeFolder(string folder)
+    {
+        var now = Present.Of(time).Now;
+        return host.Use(vault => vault.PurgeFolder(folder, now));
+    }
 }
 
 /// <summary>Examens par dossier, et échéances ramenées avant l'examen.</summary>

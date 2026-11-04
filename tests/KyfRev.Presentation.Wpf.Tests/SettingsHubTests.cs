@@ -528,7 +528,7 @@ public sealed class SettingsHubTests
 
             vault.Page.RequestRestoreCommand.Execute(vault.Page.Backups[0]);
             TestShell.Flush();
-            var dialog = Descendants<Dialog>(window).Single();
+            var dialog = Descendants<Dialog>(window).Single(one => one.Name == "Confirmation");
             Assert.IsTrue(dialog.IsOpen);
             dialog.Close(DialogChoice.Secondary);
             TestShell.Flush();

@@ -13,6 +13,13 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   d'« Aujourd'hui », fiches archivées, définitions, lignes de « Santé du coffre », champs de texte et éditeurs, dont les
   corrections restent dans le menu.
 
+- Suppression définitive : dans « Éléments supprimés », chaque élément peut être effacé pour de bon, après confirmation.
+- Vue « Fiches » : clic droit sur les fiches (ouvrir, réviser, modifier, renommer, étiquettes, déplacer, archiver, supprimer)
+  et sur les dossiers (nouvelle fiche, nouveau dossier, renommer, déplacer, supprimer). Une suppression peut aussi être
+  définitive, en le cochant.
+- Vue « Fiches » : une vraie arborescence, avec des dossiers dans les dossiers, qui se plient et se déplient, y compris les
+  dossiers vides ; un avertissement au-delà de trois sous-dossiers.
+
 ### Corrigé
 
 - Le curseur devient une main sur tout ce qui se clique, y compris les trous et les passages du texte.

@@ -97,6 +97,9 @@ public sealed class DailyQuoteTests
 
         public string RestoreQuote(string path) => throw new NotSupportedException();
 
+
+        public void PurgeQuote(string path) => throw new NotSupportedException();
+
         public Quote? KeepOnlineQuote(string page, IReadOnlyList<QuoteContent> found, Moment now) => throw new NotSupportedException();
     }
 }

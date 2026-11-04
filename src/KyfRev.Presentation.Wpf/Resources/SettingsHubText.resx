@@ -45,6 +45,21 @@
   <data name="Data" xml:space="preserve">
     <value>Données</value>
   </data>
+  <data name="Erase" xml:space="preserve">
+    <value>Supprimer définitivement</value>
+  </data>
+  <data name="EraseConfirm" xml:space="preserve">
+    <value>{0} sera effacé du coffre. Cela ne s'annule pas : seules les sauvegardes déjà faites le contiennent encore.</value>
+  </data>
+  <data name="EraseConfirmTitle" xml:space="preserve">
+    <value>Supprimer définitivement ?</value>
+  </data>
+  <data name="EraseItem" xml:space="preserve">
+    <value>Supprimer définitivement : {0}</value>
+  </data>
+  <data name="Erased" xml:space="preserve">
+    <value>{0} : supprimé définitivement.</value>
+  </data>
   <data name="ExportAnnotations" xml:space="preserve">
     <value>Annotations (Markdown)</value>
   </data>
@@ -154,7 +169,7 @@
     <value>Thèmes des paramètres</value>
   </data>
   <data name="TrashHelp" xml:space="preserve">
-    <value>Les fiches, passages, définitions et citations supprimés restent ici, restaurables ; rien n'est jamais purgé.</value>
+    <value>Les fiches, passages, définitions et citations supprimés restent ici, restaurables, tant que vous ne les supprimez pas définitivement.</value>
   </data>
   <data name="TrashTitle" xml:space="preserve">
     <value>Éléments supprimés</value>

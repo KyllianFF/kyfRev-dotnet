@@ -242,6 +242,10 @@ internal sealed class FakeOpener : IReviewOpener
 
     public void OpenPassageInSheet(string sheetId, string passageId) => Opened.Add((sheetId, passageId));
 
+    public void ReviseSheet(string sheetId) => Opened.Add(("réviser", sheetId));
+
+    public void WriteSheet(string sheetId) => Opened.Add(("écrire", sheetId));
+
     public void OpenReminder(PendingReminder reminder) => Opened.Add(reminder);
 
     /// <summary>Éléments restants de la séance à reprendre, simulés.</summary>

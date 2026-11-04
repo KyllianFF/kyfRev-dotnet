@@ -38,7 +38,52 @@ public sealed partial class VaultSession
     /// dossier va dans <c>fiches/.supprimees/dossiers/</c>. Rien n'est effacé.
     /// </summary>
     /// <returns>Nombre de fiches mises à la corbeille.</returns>
-    public int TrashFolder(string folder, Moment now)
+    public int TrashFolder(string folder, Moment now) => TrashFolderInto(folder, now).Sheets.Count;
+
+    /// <summary>
+    /// Efface pour de bon une fiche déjà à la corbeille. C'est la seule voie qui efface une fiche, et elle n'existe qu'à
+    /// la demande expresse de la personne : seules les sauvegardes déjà faites la contiennent encore.
+    /// </summary>
+    public void PurgeSheet(string id)
+    {
+        ReadTrash(id);
+        // Le suivi d'abord : c'est lui qui fait exister la fiche à la corbeille.
+        Erase(VaultPath.Create($"{VaultLayout.TrashTracking}/{id}.json"));
+        Erase(VaultPath.Create($"{VaultLayout.TrashTracking}/{id}.annotations.json"));
+        Erase(VaultPath.Create($"{VaultLayout.SheetsTrash}/{id}"));
+    }
+
+    /// <summary>Efface pour de bon un dossier : ses fiches passent par la corbeille, puis tout est effacé.</summary>
+    /// <returns>Nombre de fiches effacées.</returns>
+    public int PurgeFolder(string folder, Moment now)
+    {
+        var (sheets, storage) = TrashFolderInto(folder, now);
+        foreach (var id in sheets)
+        {
+            PurgeSheet(id);
+        }
+        Erase(storage);
+        return sheets.Count;
+    }
+
+    private void Erase(VaultPath path)
+    {
+        var absolute = Confine(path);
+        Io(absolute, () =>
+        {
+            if (Directory.Exists(absolute))
+            {
+                Directory.Delete(absolute, recursive: true);
+            }
+            else if (File.Exists(absolute))
+            {
+                File.Delete(absolute);
+            }
+            return true;
+        });
+    }
+
+    private (List<string> Sheets, VaultPath Storage) TrashFolderInto(string folder, Moment now)
     {
         var path = FolderPath(folder);
         if (!Directory.Exists(Confine(path)))
@@ -51,7 +96,8 @@ public sealed partial class VaultSession
         {
             moves.AddRange(PrepareTrash(id, now));
         }
-        moves.Add(new PlannedMove(path, VaultPath.Create($"{TrashFolders}/{_ids.Next()}").Join(path.Name)));
+        var storage = VaultPath.Create($"{TrashFolders}/{_ids.Next()}");
+        moves.Add(new PlannedMove(path, storage.Join(path.Name)));
         try
         {
             MoveUnderJournal($"mise à la corbeille du dossier {path}", moves);
@@ -61,7 +107,7 @@ public sealed partial class VaultSession
             // Ce qui a été rangé quitte les listes, même si une étape a échoué.
             Analyze(now);
         }
-        return ids.Count;
+        return (ids, storage);
     }
 
     /// <summary>
