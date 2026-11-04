@@ -9,6 +9,17 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- Clic droit, avec les actions rapides en tête du menu : texte d'une fiche et passages (« Écouter d'ici » compris), lignes
+  d'« Aujourd'hui », fiches archivées, définitions, lignes de « Santé du coffre », champs de texte et éditeurs, dont les
+  corrections restent dans le menu.
+
+### Corrigé
+
+- Le curseur devient une main sur tout ce qui se clique, y compris les trous et les passages du texte.
+- En révision, « Afficher le passage » et un clic dans le volet découvrent le passage masqué.
+- Le passage visé depuis le volet ressort nettement dans le texte, dans les deux thèmes.
+- L'indicateur de sélection au clavier reste dans le volet des passages et dans le plan.
+- Les onglets ont un survol arrondi, comme le reste de l'application.
 - Module Citations : la vue « Citations » (recherche, étiquettes, tri, ajout, modification, corbeille), la citation du jour
   sur « Aujourd'hui », cherchée sur Wikiquote si ce réglage est activé, l'onglet « Modules et extensions » de « Paramètres » pour
   l'activer sans redémarrer, et, dans l'onglet « Données », les citations supprimées et leur export.

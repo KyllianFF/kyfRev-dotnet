@@ -564,16 +564,16 @@ public sealed class HighlightingTests
             Select(viewer, Position(viewer, "second"));
             Assert.AreEqual($"{ReadingText.Copy}|{ReadingText.Highlight}|{ReadingText.Annotate}|{ReadingText.Define}|{EditingText.EditSheet}", Headers(sheetPage.TextMenuItems(null)));
 
-            ((MenuItem)sheetPage.TextMenuItems(null)[3]).RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+            ((MenuItem)sheetPage.TextMenuItems(null)[2]).RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
             Assert.IsTrue(page.IsEditing);
             Assert.IsTrue(page.EditsComment);
             page.AnswerEditorCommand.Execute(false);
-            ((MenuItem)sheetPage.TextMenuItems(null)[4]).RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+            ((MenuItem)sheetPage.TextMenuItems(null)[3]).RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
             Assert.IsTrue(page.EditsDefinition);
             page.AnswerEditorCommand.Execute(false);
             UiThread.Until(() => !page.IsEditing);
 
-            ((MenuItem)sheetPage.TextMenuItems(null)[2]).RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+            ((MenuItem)sheetPage.TextMenuItems(null)[1]).RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
             UiThread.Until(() => page.Passages.Count == 3);
             Assert.AreEqual(ReadingText.PassageCreated, page.Notice);
         }
@@ -610,7 +610,7 @@ public sealed class HighlightingTests
             items[^1].RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
             Assert.IsTrue(page.IsDeleting);
             page.AnswerDeleteCommand.Execute(false);
-            items[3].RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+            items[4].RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
             UiThread.Until(() => page.Passages.Single().IsLost);
 
             Assert.AreEqual($"{ReadingText.EditComment}|{ReadingText.RebindLost}|{ReadingText.DeletePassage}", Headers(sheetPage.PassageMenuItems(page, page.Passages.Single())));
@@ -636,7 +636,7 @@ public sealed class HighlightingTests
         var (window, sheetPage) = ShowWide(test, page);
         try
         {
-            sheetPage.PassageMenuItems(page, page.Passages.Single())[2].RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+            sheetPage.PassageMenuItems(page, page.Passages.Single())[3].RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
             UiThread.Until(() => !page.Passages.Single().IsCandidate);
         }
         finally

@@ -93,7 +93,7 @@ internal static class Composition
         services.AddSingleton(provider =>
         {
             var modules = provider.GetRequiredService<ActiveModules>();
-            return new DashboardPageViewModel(provider.GetRequiredService<ReminderUseCases>(), provider.GetRequiredService<SheetUseCases>(), provider.GetRequiredService<IReviewOpener>(), modules.Widgets)
+            return new DashboardPageViewModel(provider.GetRequiredService<ReminderUseCases>(), provider.GetRequiredService<SheetUseCases>(), provider.GetRequiredService<IReviewOpener>(), modules.Widgets, provider.GetRequiredService<ReviewUseCases>())
             {
                 LookForNews = () => LookForQuoteAsync(modules),
             };

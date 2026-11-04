@@ -48,7 +48,10 @@
             </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
               <DataTemplate DataType="{x:Type pages:DefinitionRow}">
-                <kyf:Card Margin="0,0,8,8" Padding="12" Width="{Binding CardWidth, RelativeSource={RelativeSource AncestorType=pages:DefinitionsPage}}">
+                <kyf:Card Margin="0,0,8,8" Padding="12" Width="{Binding CardWidth, RelativeSource={RelativeSource AncestorType=pages:DefinitionsPage}}" ContextMenuOpening="OnRowMenu">
+                  <kyf:Card.ContextMenu>
+                    <ContextMenu />
+                  </kyf:Card.ContextMenu>
                   <DockPanel>
                     <!-- En bas de la carte : d'une carte à l'autre, les boutons d'une rangée s'alignent. -->
                     <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="-6,6,0,0" Visibility="{Binding IsShown, Converter={StaticResource Visible}}">
@@ -83,5 +86,10 @@
         </ScrollViewer>
       </Grid>
     </DockPanel>
+
+    <kyf:Dialog x:Name="DeleteConfirmation" Grid.ColumnSpan="2" Grid.RowSpan="2" Title="{x:Static pages:ReadingText.DeleteDefinitionTitle}" IsOpen="{Binding IsConfirmingDelete, Mode=OneWay}"
+                PrimaryButtonText="{x:Static pages:ReadingText.DeleteLabel}" Closed="OnDeleteClosed">
+      <TextBlock Text="{x:Static pages:ReadingText.DeleteMessage}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" />
+    </kyf:Dialog>
   </Grid>
 </UserControl>

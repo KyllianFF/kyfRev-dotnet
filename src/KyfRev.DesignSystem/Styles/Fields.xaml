@@ -27,6 +27,7 @@
 
   <!-- Une liste de choix : comme un champ, et sa liste comme un menu. Sans ce style, Windows la dessine en clair, même en sombre. -->
   <Style TargetType="ComboBox">
+    <Setter Property="Cursor" Value="Hand" />
     <Setter Property="FontFamily" Value="{DynamicResource Kyf.Font.Ui}" />
     <Setter Property="FontSize" Value="{DynamicResource Kyf.FontSize.Body}" />
     <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Text}" />
@@ -99,6 +100,7 @@
 
   <!-- Champ de saisie : contour à 3:1 au moins ; au focus, contour épaissi de la couleur du focus. -->
   <Style TargetType="TextBox">
+    <EventSetter Event="Loaded" Handler="OnFieldLoaded" />
     <Setter Property="FontFamily" Value="{DynamicResource Kyf.Font.Ui}" />
     <Setter Property="FontSize" Value="{DynamicResource Kyf.FontSize.Body}" />
     <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Text}" />

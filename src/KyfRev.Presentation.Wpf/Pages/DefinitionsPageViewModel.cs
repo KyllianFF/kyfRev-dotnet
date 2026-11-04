@@ -113,6 +113,7 @@ public sealed partial class DefinitionsPageViewModel : ObservableObject
     private readonly AnnotationUseCases _annotations;
     private readonly IReviewOpener _opener;
     private readonly Dictionary<string, DefinitionRow> _rows = new(StringComparer.Ordinal);
+    private DefinitionRow? _toDelete;
     private IReadOnlyList<VaultDefinition> _all = [];
     private string _folder = string.Empty;
 
@@ -197,6 +198,38 @@ public sealed partial class DefinitionsPageViewModel : ObservableObject
         if (outcome.Succeeded)
         {
             row.EndEditing();
+            await LoadAsync().ConfigureAwait(true);
+        }
+        else
+        {
+            Error = outcome.Error;
+        }
+    }
+
+    /// <summary>La mise à la corbeille attend sa confirmation.</summary>
+    [ObservableProperty]
+    public partial bool IsConfirmingDelete { get; private set; }
+
+    /// <summary>Demande confirmation avant de mettre une définition à la corbeille.</summary>
+    internal void RequestDelete(DefinitionRow row)
+    {
+        _toDelete = row;
+        IsConfirmingDelete = true;
+    }
+
+    /// <summary>La réponse à la mise à la corbeille.</summary>
+    [RelayCommand]
+    private async Task AnswerDeleteAsync(bool confirmed)
+    {
+        IsConfirmingDelete = false;
+        if (!confirmed || _toDelete is not { } row)
+        {
+            return;
+        }
+        var id = row.Definition.Id;
+        var outcome = await Task.Run(() => _annotations.Trash(id)).ConfigureAwait(true);
+        if (outcome.Succeeded)
+        {
             await LoadAsync().ConfigureAwait(true);
         }
         else

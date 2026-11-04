@@ -101,6 +101,12 @@ public static class DashboardText
     /// <summary>« Fiche ».</summary>
     public static string Sheet => Text(nameof(Sheet));
 
+    /// <summary>« Réviser ».</summary>
+    public static string ReviewAction => Text(nameof(ReviewAction));
+
+    /// <summary>« Ouvrir la fiche ».</summary>
+    public static string OpenSheet => Text(nameof(OpenSheet));
+
     /// <summary>« Fiches ».</summary>
     public static string Sheets => Text(nameof(Sheets));
 

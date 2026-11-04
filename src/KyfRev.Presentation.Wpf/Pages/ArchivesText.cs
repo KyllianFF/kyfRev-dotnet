@@ -119,6 +119,9 @@ public static class ArchivesText
     /// <summary>« Remettre en révision ».</summary>
     public static string RestartConfirm => Text(nameof(RestartConfirm));
 
+    /// <summary>« Ouvrir ».</summary>
+    public static string Open => Text(nameof(Open));
+
     /// <summary>« « … » redevient active : un nouveau cycle commence aujourd'hui (J0) et J1 sera dû demain. Son historique est conservé. ».</summary>
     public static string RestartMessageOf(object title) => Format("RestartMessage", title);
 

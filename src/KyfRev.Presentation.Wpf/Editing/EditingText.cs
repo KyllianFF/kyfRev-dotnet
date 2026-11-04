@@ -38,6 +38,9 @@ public static class EditingText
     /// <summary>Coller sans mise en forme.</summary>
     public const string PastePlain = "Coller sans mise en forme";
 
+    /// <summary>« Autres mises en forme ».</summary>
+    public const string MoreFormat = "Autres mises en forme";
+
     /// <summary>Effacer la mise en forme.</summary>
     public const string ClearFormat = "Effacer la mise en forme";
 

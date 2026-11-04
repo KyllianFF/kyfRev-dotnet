@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
+using KyfRev.DesignSystem.Controls;
 
 namespace KyfRev.Presentation.Wpf.Pages;
 
@@ -16,6 +17,11 @@ internal sealed partial class DashboardPage : UserControl
         Items.AddHandler(MouseUpEvent, new MouseButtonEventHandler(OnItemsMouseUp), handledEventsToo: true);
         SecondItems.AddHandler(MouseUpEvent, new MouseButtonEventHandler(OnItemsMouseUp), handledEventsToo: true);
         SortMenu.AddHandler(MenuItem.ClickEvent, new RoutedEventHandler(OnSortChosen));
+        foreach (var list in new ListBox[] { Items, SecondItems })
+        {
+            list.ContextMenu = new ContextMenu();
+            list.ContextMenuOpening += OnRowMenu;
+        }
         // La disposition suit la largeur de la page, zoom et menu déjà comptés.
         SizeChanged += (_, e) => Page.PageWidth = e.NewSize.Width;
     }
@@ -105,6 +111,41 @@ internal sealed partial class DashboardPage : UserControl
             Page.OpenCommand.Execute(container.DataContext);
         }
     }
+
+    /// <summary>Le menu d'une ligne : ce qu'on peut en faire d'ici.</summary>
+    private void OnRowMenu(object sender, ContextMenuEventArgs e)
+    {
+        var list = (ListBox)sender;
+        ActionMenus.Fill(list.ContextMenu!, RowMenuItems(ContainerOf(e.OriginalSource as DependencyObject)?.DataContext), e);
+    }
+
+    /// <summary>Les entrées du menu de cette ligne ; aucune pour un en-tête.</summary>
+    internal IReadOnlyList<Control> RowMenuItems(object? row)
+    {
+        switch (row)
+        {
+            case DueItemRow item:
+                List<Control> items =
+                [
+                    ActionMenus.Quick(DashboardText.ReviewAction, Icons.Review, () => Page.OpenCommand.Execute(item)),
+                    ActionMenus.Quick(DashboardText.OpenSheet, Icons.Document, () => Page.OpenSheetOf(item)),
+                ];
+                if (Page.CanAct)
+                {
+                    items.Add(new Separator());
+                    items.Add(ActionMenus.Item(ReviewText.PostponeTomorrow, () => _ = Page.PostponeTomorrowAsync(item)));
+                    items.Add(ActionMenus.Item(ReviewText.ArchiveAction, () => Page.RequestArchive(item)));
+                }
+                return items;
+            case ReminderRow:
+                return [ActionMenus.Quick(DashboardText.OpenSheet, Icons.Document, () => Page.OpenCommand.Execute(row))];
+            default:
+                return [];
+        }
+    }
+
+    /// <summary>La réponse à la mise aux archives part vers la vue.</summary>
+    private void OnArchiveClosed(object sender, DialogClosedEventArgs e) => Page.AnswerArchiveCommand.Execute(e.Choice == DialogChoice.Primary);
 
     private static ListBoxItem? ContainerOf(DependencyObject? element)
     {

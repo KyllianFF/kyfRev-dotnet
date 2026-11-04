@@ -102,6 +102,12 @@
   <data name="Reminders" xml:space="preserve">
     <value>Rappels de consolidation</value>
   </data>
+  <data name="ReviewAction" xml:space="preserve">
+    <value>Réviser</value>
+  </data>
+  <data name="OpenSheet" xml:space="preserve">
+    <value>Ouvrir la fiche</value>
+  </data>
   <data name="Sheet" xml:space="preserve">
     <value>Fiche</value>
   </data>

@@ -93,6 +93,24 @@ public static class Icons
     /// <summary>Nouveau dossier : créer un coffre.</summary>
     public static string NewFolder { get; } = Glyph(0xE8F4);
 
+    /// <summary>Deux feuilles : copier.</summary>
+    public static string Copy { get; } = Glyph(0xE8C8);
+
+    /// <summary>Ciseaux : couper.</summary>
+    public static string Cut { get; } = Glyph(0xE8C6);
+
+    /// <summary>Presse-papiers : coller.</summary>
+    public static string Paste { get; } = Glyph(0xE77F);
+
+    /// <summary>Crayon : modifier.</summary>
+    public static string Edit { get; } = Glyph(0xE70F);
+
+    /// <summary>Bulle : commenter.</summary>
+    public static string Comment { get; } = Glyph(0xE90A);
+
+    /// <summary>Toque d'étudiant : réviser.</summary>
+    public static string Review { get; } = Glyph(0xE7BE);
+
     /// <summary>Surligneur : un passage annoté.</summary>
     public static string Highlighter { get; } = Glyph(0xE7E6);
 

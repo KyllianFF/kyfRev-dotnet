@@ -1271,12 +1271,12 @@ public sealed class WritingTests
         using var scene = new Scene("l'ékole ici");
 
         var items = scene.Source.MenuItemsAt(3);
-        var first = (MenuItem)items[0];
-        Assert.AreEqual("école", first.Header);
-        Assert.AreEqual("écoles", ((MenuItem)items[1]).Header);
-        Assert.AreEqual(EditingText.AddToDictionary, ((MenuItem)items[2]).Header);
+        Assert.AreEqual(EditingText.Paste, ((MenuItem)items[2]).Header);
         Assert.IsInstanceOfType<Separator>(items[3]);
-        Assert.AreEqual(EditingText.Paste, ((MenuItem)items[^1]).Header);
+        var first = (MenuItem)items[4];
+        Assert.AreEqual("école", first.Header);
+        Assert.AreEqual("écoles", ((MenuItem)items[5]).Header);
+        Assert.AreEqual(EditingText.AddToDictionary, ((MenuItem)items[6]).Header);
 
         first.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
         Assert.AreEqual("l'école ici", Written(scene));

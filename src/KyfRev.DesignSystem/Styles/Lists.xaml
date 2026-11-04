@@ -6,6 +6,7 @@
   <!-- Élément de liste : survol sur la surface secondaire ; sélectionné, fond vert pâle et texte
        en gras, pour que l'état ne tienne pas qu'à la couleur. -->
   <Style TargetType="ListBoxItem">
+    <Setter Property="Cursor" Value="Hand" />
     <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Text}" />
     <Setter Property="Padding" Value="12,0" />
     <Setter Property="MinHeight" Value="44" />

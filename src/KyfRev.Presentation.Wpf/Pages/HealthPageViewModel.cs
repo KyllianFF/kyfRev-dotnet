@@ -125,6 +125,9 @@ public sealed partial class HealthPageViewModel : ObservableObject, INavigationA
         _checks = checks ?? [];
     }
 
+    /// <summary>Copie ce que dit une ligne, pour un signalement.</summary>
+    internal void CopyRow(HealthRow row) => _copy($"{row.Title} : {row.Detail}");
+
     /// <summary>« Santé du coffre ».</summary>
     public static string Title => HealthText.Title;
 

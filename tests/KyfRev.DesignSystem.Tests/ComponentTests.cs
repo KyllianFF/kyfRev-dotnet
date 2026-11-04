@@ -301,6 +301,176 @@ public sealed class ComponentTests
     }
 
     [STATestMethod]
+    public void The_quick_actions_share_a_row_above_the_list()
+    {
+        var panel = new ActionMenuPanel();
+        var (first, second) = (new Border { Width = 60, Height = 50, HorizontalAlignment = HorizontalAlignment.Left }, new Border { Width = 100, Height = 40, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top });
+        ActionMenuPanel.SetIsQuick(first, true);
+        ActionMenuPanel.SetIsQuick(second, true);
+        var hidden = new Border { Width = 500, Height = 500, Visibility = Visibility.Collapsed };
+        ActionMenuPanel.SetIsQuick(hidden, true);
+        var (rule, entry) = (new Border { Height = 1 }, new Border { Width = 120, Height = 40 });
+        foreach (var child in new[] { first, rule, second, hidden, entry })
+        {
+            panel.Children.Add(child);
+        }
+
+        panel.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+
+        Assert.AreEqual(new Size(200, 91), panel.DesiredSize, "deux cases de la largeur de la plus grande, puis la liste");
+
+        panel.Arrange(new Rect(new Size(300, 91)));
+
+        Assert.AreEqual(new Point(0, 0), first.TranslatePoint(new Point(0, 0), panel));
+        Assert.AreEqual(150, second.TranslatePoint(new Point(0, 0), panel).X, 0.01);
+        Assert.AreEqual(0, second.TranslatePoint(new Point(0, 0), panel).Y, 0.01, "dans la même rangée, quel que soit l'ordre");
+        Assert.AreEqual(50, rule.TranslatePoint(new Point(0, 0), panel).Y, 0.01);
+        Assert.AreEqual(51, entry.TranslatePoint(new Point(0, 0), panel).Y, 0.01);
+        Assert.ThrowsExactly<ArgumentNullException>(() => ActionMenuPanel.GetIsQuick(null!));
+        Assert.ThrowsExactly<ArgumentNullException>(() => ActionMenuPanel.SetIsQuick(null!, true));
+    }
+
+    [STATestMethod]
+    public void A_menu_without_quick_action_is_a_plain_pile()
+    {
+        var panel = new ActionMenuPanel();
+        var (first, second) = (new Border { Width = 60, Height = 30 }, new Border { Width = 100, Height = 40 });
+        panel.Children.Add(first);
+        panel.Children.Add(second);
+
+        panel.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        panel.Arrange(new Rect(panel.DesiredSize));
+
+        Assert.AreEqual(new Size(100, 70), panel.DesiredSize);
+        Assert.AreEqual(30, second.TranslatePoint(new Point(0, 0), panel).Y, 0.01);
+    }
+
+    [STATestMethod]
+    public void A_text_field_has_its_own_menu_with_the_clipboard_on_top()
+    {
+        var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
+        var (one, two) = (new TextBox(), new TextBox());
+        Host.Of(design, new StackPanel { Children = { one, two } });
+        Assert.IsNull(one.ContextMenu, "un menu n'existe que pour un champ chargé");
+        foreach (var field in new[] { one, two })
+        {
+            field.RaiseEvent(new RoutedEventArgs(FrameworkElement.LoadedEvent));
+        }
+
+        var menu = one.ContextMenu;
+
+        Assert.IsNotNull(menu);
+        Assert.IsNotNull(two.ContextMenu);
+        Assert.AreNotSame(menu, two.ContextMenu, "à chaque champ le sien");
+        menu.Resources.MergedDictionaries.Add(design.Dictionary);
+        var items = menu.Items.OfType<MenuItem>().ToList();
+        CollectionAssert.AreEqual(new[] { DesignText.Cut, DesignText.Copy, DesignText.Paste, DesignText.SelectAll }, items.Select(item => (string)item.Header).ToList());
+        Assert.AreEqual(ApplicationCommands.Cut, items[0].Command);
+        Assert.AreEqual(ApplicationCommands.Copy, items[1].Command);
+        Assert.AreEqual(ApplicationCommands.Paste, items[2].Command);
+        Assert.AreEqual(ApplicationCommands.SelectAll, items[3].Command);
+        Assert.IsTrue(ActionMenuPanel.GetIsQuick(items[0]));
+        Assert.IsFalse(ActionMenuPanel.GetIsQuick(items[3]));
+    }
+
+    [STATestMethod]
+    public void A_field_keeps_the_menu_it_was_given()
+    {
+        var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
+        var own = new ContextMenu();
+        var field = new TextBox { ContextMenu = own };
+        Host.Of(design, field);
+
+        field.RaiseEvent(new RoutedEventArgs(FrameworkElement.LoadedEvent));
+
+        Assert.AreSame(own, field.ContextMenu);
+    }
+
+    [STATestMethod]
+    public void The_tools_have_their_own_row_under_the_quick_actions()
+    {
+        var panel = new ActionMenuPanel();
+        var (quick, tool, otherTool, entry) = (new Border { Height = 50 }, new Border { Width = 40, Height = 36 }, new Border { Width = 40, Height = 36 }, new Border { Height = 40 });
+        ActionMenuPanel.SetIsQuick(quick, true);
+        ActionMenuPanel.SetIsTool(tool, true);
+        ActionMenuPanel.SetIsTool(otherTool, true);
+        foreach (var child in new[] { entry, tool, quick, otherTool })
+        {
+            panel.Children.Add(child);
+        }
+
+        panel.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        panel.Arrange(new Rect(new Size(200, panel.DesiredSize.Height)));
+
+        Assert.AreEqual(126d, panel.DesiredSize.Height);
+        Assert.AreEqual(0, quick.TranslatePoint(new Point(0, 0), panel).Y, 0.01);
+        Assert.AreEqual(50, tool.TranslatePoint(new Point(0, 0), panel).Y, 0.01);
+        Assert.AreEqual(50, otherTool.TranslatePoint(new Point(0, 0), panel).Y, 0.01);
+        Assert.AreEqual(86, entry.TranslatePoint(new Point(0, 0), panel).Y, 0.01);
+        Assert.IsTrue(ActionMenuPanel.GetIsTool(tool));
+        Assert.ThrowsExactly<ArgumentNullException>(() => ActionMenuPanel.GetIsTool(null!));
+        Assert.ThrowsExactly<ArgumentNullException>(() => ActionMenuPanel.SetIsTool(null!, true));
+    }
+
+    [STATestMethod]
+    public void What_can_be_clicked_shows_the_hand()
+    {
+        var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
+        var tab = new ToggleButton();
+        tab.SetResourceReference(FrameworkElement.StyleProperty, "Kyf.Button.Tab");
+        var tool = new MenuItem { Icon = new Icon { Text = Icons.Bold } };
+        tool.SetResourceReference(FrameworkElement.StyleProperty, "Kyf.MenuItem.Tool");
+        var quick = new MenuItem { Header = "Ouvrir" };
+        quick.SetResourceReference(FrameworkElement.StyleProperty, "Kyf.MenuItem.Quick");
+        var clickable = new Control[] { new Button(), new ToggleButton(), tab, new CheckBox(), new ComboBox(), new ListBoxItem(), new MenuItem(), tool, quick };
+        var host = new StackPanel();
+        foreach (var control in clickable)
+        {
+            host.Children.Add(control);
+        }
+        Host.Of(design, host);
+
+        foreach (var control in clickable)
+        {
+            Assert.AreEqual(Cursors.Hand, control.Cursor, control.GetType().Name);
+        }
+    }
+
+    [STATestMethod]
+    public void A_tab_has_a_rounded_hover_and_a_straight_line()
+    {
+        var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
+        var tab = new ToggleButton { Content = "Général", IsChecked = true };
+        tab.SetResourceReference(FrameworkElement.StyleProperty, "Kyf.Button.Tab");
+        Host.Of(design, tab);
+        var colors = ThemeColors.For(ThemeKind.Light);
+
+        var chrome = Host.Part<Border>(tab, "Chrome");
+        var line = Host.Part<Border>(tab, "Line");
+
+        Assert.AreEqual(new CornerRadius(Radii.Control), chrome.CornerRadius, "comme tous les survols de l'application");
+        Assert.AreEqual(new CornerRadius(0), line.CornerRadius);
+        Assert.AreEqual(colors[ColorRole.Primary].ToColor(), ((SolidColorBrush)line.Background).Color);
+        tab.IsEnabled = false;
+        Host.Layout(tab.Parent as FrameworkElement ?? tab);
+        Assert.AreEqual(0.5, Host.Part<Grid>(tab, "Root").Opacity, 0.01);
+    }
+
+    [STATestMethod]
+    public void A_quick_action_shows_its_icon_and_label_and_answers_the_pointer()
+    {
+        var design = new DesignResources(ThemeKind.Dark, reducedMotion: false);
+        var quick = new MenuItem { Header = "Ouvrir", Icon = new Icon { Text = Icons.Document } };
+        quick.SetResourceReference(FrameworkElement.StyleProperty, "Kyf.MenuItem.Quick");
+        var host = Host.Of(design, quick);
+
+        Assert.IsTrue(ActionMenuPanel.GetIsQuick(quick));
+        quick.IsEnabled = false;
+        Host.Layout(host);
+        Assert.AreEqual(0.5, ((Border)VisualTreeHelper.GetChild(quick, 0)).Opacity, 0.01);
+    }
+
+    [STATestMethod]
     public void A_choice_list_shows_the_member_it_is_told_to()
     {
         var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
