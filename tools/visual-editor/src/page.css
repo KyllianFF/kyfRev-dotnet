@@ -81,10 +81,22 @@ body {
   overflow-x: hidden;
 }
 
+/* La feuille : elle se détache du fond, comme dans un traitement de texte. */
 #fiche {
   box-sizing: border-box;
-  min-height: 100%;
-  padding: 4px 8px 0 4px;
+  min-height: calc(100% - 28px);
+  margin: 8px 12px 20px 8px;
+  padding: 32px 40px 48px;
+  background: var(--surface);
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon-carte);
+  box-shadow: 0 2px 12px rgb(0 0 0 / 22%);
+}
+
+@media (width < 640px) {
+  #fiche {
+    padding: 16px;
+  }
 }
 
 .contenu-fiche pre,

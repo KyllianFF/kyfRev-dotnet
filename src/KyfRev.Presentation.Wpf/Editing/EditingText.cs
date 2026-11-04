@@ -302,6 +302,108 @@ public static class EditingText
     /// <summary>Insérer ce qui est choisi dans la galerie.</summary>
     public const string GalleryInsert = "Insérer";
 
+    /// <summary>Passer de la galerie à l'éditeur du modèle choisi.</summary>
+    public const string GalleryContinue = "Continuer";
+
+    /// <summary>Ce qui attend après la galerie, pour une hiérarchie.</summary>
+    public const string GalleryNextStep = "Les niveaux et les éléments se composent à l'étape suivante.";
+
+    /// <summary>Titre de l'éditeur, pour une nouvelle hiérarchie.</summary>
+    public const string DiagramEditorNew = "Nouvel organigramme";
+
+    /// <summary>Titre de l'éditeur, pour une hiérarchie de la fiche.</summary>
+    public const string DiagramEditorEdit = "Modifier l'organigramme";
+
+    /// <summary>Valider l'éditeur, pour une hiérarchie de la fiche.</summary>
+    public const string DiagramEditorSave = "Enregistrer";
+
+    /// <summary>La liste des éléments, pour le lecteur d'écran.</summary>
+    public const string DiagramItems = "Éléments de la hiérarchie";
+
+    /// <summary>Un élément, pour le lecteur d'écran.</summary>
+    public const string DiagramItem = "Texte de l'élément";
+
+    /// <summary>Ajouter sous l'élément choisi.</summary>
+    public const string DiagramAddChild = "Ajouter un enfant";
+
+    /// <summary>Le même, avec son raccourci.</summary>
+    public const string DiagramAddChildKey = "Ajouter sous cet élément (Ctrl+Entrée)";
+
+    /// <summary>Ajouter au niveau de l'élément choisi.</summary>
+    public const string DiagramAddSibling = "Ajouter au même niveau";
+
+    /// <summary>Le même, avec son raccourci.</summary>
+    public const string DiagramAddSiblingKey = "Ajouter à côté de cet élément (Entrée)";
+
+    /// <summary>L'action rapide : un enfant.</summary>
+    public const string DiagramChild = "Enfant";
+
+    /// <summary>L'action rapide : un élément au même niveau.</summary>
+    public const string DiagramSibling = "Même niveau";
+
+    /// <summary>Descendre d'un niveau.</summary>
+    public const string DiagramIndent = "Décaler vers la droite";
+
+    /// <summary>Son raccourci.</summary>
+    public const string DiagramIndentShortcut = "Alt+→";
+
+    /// <summary>Le même, avec son raccourci.</summary>
+    public const string DiagramIndentKey = "Le placer sous l'élément d'avant (Alt+→)";
+
+    /// <summary>Remonter d'un niveau.</summary>
+    public const string DiagramOutdent = "Décaler vers la gauche";
+
+    /// <summary>Son raccourci.</summary>
+    public const string DiagramOutdentShortcut = "Alt+←";
+
+    /// <summary>Le même, avec son raccourci.</summary>
+    public const string DiagramOutdentKey = "Le remonter d'un niveau (Alt+←)";
+
+    /// <summary>Échanger avec l'élément d'avant.</summary>
+    public const string DiagramMoveUp = "Monter";
+
+    /// <summary>Son raccourci.</summary>
+    public const string DiagramMoveUpShortcut = "Alt+↑";
+
+    /// <summary>Le même, avec son raccourci.</summary>
+    public const string DiagramMoveUpKey = "Monter (Alt+↑)";
+
+    /// <summary>Échanger avec l'élément d'après.</summary>
+    public const string DiagramMoveDown = "Descendre";
+
+    /// <summary>Son raccourci.</summary>
+    public const string DiagramMoveDownShortcut = "Alt+↓";
+
+    /// <summary>Le même, avec son raccourci.</summary>
+    public const string DiagramMoveDownKey = "Descendre (Alt+↓)";
+
+    /// <summary>Retirer l'élément choisi.</summary>
+    public const string DiagramDelete = "Retirer cet élément";
+
+    /// <summary>Le dessin de haut en bas.</summary>
+    public const string DiagramDown = "De haut en bas";
+
+    /// <summary>Le dessin de gauche à droite.</summary>
+    public const string DiagramAcross = "De gauche à droite";
+
+    /// <summary>Les touches de la liste.</summary>
+    public const string DiagramKeys = "Entrée : même niveau · Ctrl+Entrée : enfant · Alt+flèches : déplacer. Un clic sur une boîte la choisit.";
+
+    /// <summary>Modifier le dessin visé par le clic droit.</summary>
+    public const string EditDrawing = "Modifier";
+
+    /// <summary>Montrer le code du dessin visé par le clic droit.</summary>
+    public const string ShowDrawingCode = "Voir le code";
+
+    /// <summary>Supprimer un SmartArt de la fiche.</summary>
+    public const string DeleteSmartArt = "Supprimer ce SmartArt";
+
+    /// <summary>Supprimer un graphique de la fiche.</summary>
+    public const string DeleteChart = "Supprimer ce graphique";
+
+    /// <summary>Supprimer un schéma de la fiche.</summary>
+    public const string DeleteSchema = "Supprimer ce schéma";
+
     /// <summary>Liste de tâches.</summary>
     public const string Tasks = "Liste de tâches";
 

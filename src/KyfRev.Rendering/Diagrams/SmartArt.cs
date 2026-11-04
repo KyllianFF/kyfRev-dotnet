@@ -18,6 +18,14 @@ public sealed record SmartArtLayout(string Id, string Name, string Category, str
 /// </summary>
 public static class SmartArt
 {
+    /// <summary>Le modèle de la hiérarchie de haut en bas.</summary>
+    public const string OrganizationChartId = "organigramme";
+
+    /// <summary>Le modèle de la hiérarchie de gauche à droite.</summary>
+    public const string HorizontalHierarchyId = "horizontal";
+
+    private const int MaximumInHierarchy = 64;
+
     /// <summary>Le langage de ces blocs.</summary>
     public const string Language = "smartart";
 
@@ -39,8 +47,8 @@ public static class SmartArt
         new("escalier", "Escalier", "Processus", "Une montée, marche après marche.", "Base\nNiveau 2\nNiveau 3\nSommet", 8),
         new("cycle", "Cycle", "Cycle", "Des étapes qui reviennent en boucle.", "G1\nS\nG2\nM", 10),
         new("radial", "Radial", "Cycle", "Un centre et ce qui en dépend.", "Cellule\nNoyau\nADN\nMembrane\nCytoplasme", 11),
-        new("organigramme", "Organigramme", "Hiérarchie", "Un sommet et ses subordonnés.", "Cellule\nNoyau\nCytoplasme\nMembrane", 8),
-        new("horizontal", "Hiérarchie horizontale", "Hiérarchie", "La même, de gauche à droite.", "Cellule\nNoyau\nCytoplasme\nMembrane", 9),
+        new(OrganizationChartId, "Organigramme", "Hiérarchie", "Un sommet et ce qui en dépend, sur autant de niveaux qu'il faut.", "Cellule\nNoyau\nCytoplasme\nMembrane", MaximumInHierarchy),
+        new(HorizontalHierarchyId, "Hiérarchie horizontale", "Hiérarchie", "La même, de gauche à droite.", "Cellule\nNoyau\nCytoplasme\nMembrane", MaximumInHierarchy),
         new("ensembles", "Ensembles", "Relation", "Ce que des idées ont en commun.", "Mitose\nMéiose", 3),
         new("convergence", "Convergence", "Relation", "Plusieurs causes pour un résultat.", "Chaleur\nEnzyme\nSubstrat\nRéaction", 9),
         new("matrice", "Matrice 2 × 2", "Matrice", "Quatre cas selon deux critères.", "Urgent\nImportant\nLes deux\nAucun", 4),
@@ -66,6 +74,14 @@ public static class SmartArt
         {
             return null;
         }
+        if (IsHierarchy(model.Id))
+        {
+            var outline = DiagramOutline.Parse(text).Take(model.Maximum).ToList();
+            var tree = new SceneBuilder();
+            var (treeWidth, treeHeight) = outline.Count > 0 ? DiagramHierarchy.Lay(outline, tree, model.Id == HorizontalHierarchyId) : (Width, Height);
+            var labels = string.Create(CultureInfo.InvariantCulture, $"{model.Name} : {string.Join(", ", outline.Select(item => item.Label))}");
+            return new DiagramScene(treeWidth, treeHeight, [.. tree.Shapes], labels);
+        }
         var items = Items(text);
         var shown = items.Take(model.Maximum).ToList();
         var scene = new SceneBuilder();
@@ -82,7 +98,11 @@ public static class SmartArt
     /// <param name="text">Les éléments, un par ligne.</param>
     /// <returns>Le texte après les accents graves, et le contenu du bloc.</returns>
     public static (string Info, string Code) Source(string layout, string text) =>
-        ($"{Language} {layout}", string.Join('\n', Items(text)));
+        ($"{Language} {layout}", IsHierarchy(layout) ? DiagramOutline.Write(DiagramOutline.Parse(text)) : string.Join('\n', Items(text)));
+
+    /// <summary>Ce modèle montre des niveaux : ses lignes se décalent, et il a son propre éditeur.</summary>
+    /// <param name="layout">Le nom du modèle dans le fichier.</param>
+    public static bool IsHierarchy(string? layout) => layout is OrganizationChartId or HorizontalHierarchyId;
 
     private static void Lay(string id, List<string> items, SceneBuilder scene)
     {
@@ -114,12 +134,6 @@ public static class SmartArt
                 break;
             case "radial":
                 Radial(items, scene);
-                break;
-            case "organigramme":
-                OrganizationChart(items, scene);
-                break;
-            case "horizontal":
-                HorizontalHierarchy(items, scene);
                 break;
             case "ensembles":
                 Sets(items, scene);
@@ -312,47 +326,6 @@ public static class SmartArt
             points.Add(new DiagramPoint((Width / 2) + (radiusX * Math.Cos(angle)), (Height / 2) + (radiusY * Math.Sin(angle))));
         }
         return points;
-    }
-
-    private static void OrganizationChart(List<string> items, SceneBuilder scene)
-    {
-        scene.Box(140, 16, 200, 84, items[0], DiagramTone.Accent);
-        var others = items.Count - 1;
-        if (others == 0)
-        {
-            return;
-        }
-        const double gap = 12;
-        var width = (Width - 16 - ((others - 1) * gap)) / others;
-        scene.Line(Width / 2, 100, Width / 2, 145);
-        for (var i = 0; i < others; i++)
-        {
-            var x = 8 + (i * (width + gap));
-            var center = x + (width / 2);
-            scene.Line(center, 145, Width / 2, 145);
-            scene.Line(center, 145, center, 190);
-            scene.Box(x, 190, width, 94, items[i + 1], DiagramTone.Main);
-        }
-    }
-
-    private static void HorizontalHierarchy(List<string> items, SceneBuilder scene)
-    {
-        scene.Box(12, 100, 156, 100, items[0], DiagramTone.Accent);
-        var others = items.Count - 1;
-        if (others == 0)
-        {
-            return;
-        }
-        const double gap = 10;
-        var height = (Height - 24 - ((others - 1) * gap)) / others;
-        scene.Line(168, 150, 216, 150);
-        for (var i = 0; i < others; i++)
-        {
-            var y = 12 + (i * (height + gap));
-            scene.Line(216, 150, 216, y + (height / 2));
-            scene.Line(216, y + (height / 2), 264, y + (height / 2));
-            scene.Box(264, y, 204, height, items[i + 1], DiagramTone.Main);
-        }
     }
 
     private static void Sets(List<string> items, SceneBuilder scene)

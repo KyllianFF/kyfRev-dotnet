@@ -1,0 +1,104 @@
+<UserControl x:Class="KyfRev.Presentation.Wpf.Editing.DiagramEditorView"
+             x:ClassModifier="internal"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:kyf="clr-namespace:KyfRev.DesignSystem.Controls;assembly=KyfRev.DesignSystem"
+             xmlns:editing="clr-namespace:KyfRev.Presentation.Wpf.Editing"
+             xmlns:reading="clr-namespace:KyfRev.Presentation.Wpf.Reading"
+             Height="520">
+  <Grid>
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="2*" MinWidth="300" />
+      <ColumnDefinition Width="3*" MinWidth="300" />
+    </Grid.ColumnDefinitions>
+
+    <!-- À gauche : les éléments, décalés selon leur niveau. -->
+    <DockPanel Margin="0,0,16,0">
+      <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+        <Button x:Name="AddChildButton" Command="{Binding AddChildCommand}" ToolTip="{x:Static editing:EditingText.DiagramAddChildKey}" Margin="0,0,8,4"
+                AutomationProperties.Name="{x:Static editing:EditingText.DiagramAddChild}">
+          <StackPanel Orientation="Horizontal">
+            <kyf:Icon Text="{x:Static kyf:Icons.Add}" Margin="0,0,8,0" />
+            <TextBlock Text="{x:Static editing:EditingText.DiagramAddChild}" />
+          </StackPanel>
+        </Button>
+        <Button x:Name="AddSiblingButton" Command="{Binding AddSiblingCommand}" ToolTip="{x:Static editing:EditingText.DiagramAddSiblingKey}" Margin="0,0,8,4"
+                AutomationProperties.Name="{x:Static editing:EditingText.DiagramAddSibling}">
+          <StackPanel Orientation="Horizontal">
+            <kyf:Icon Text="{x:Static kyf:Icons.Add}" Margin="0,0,8,0" />
+            <TextBlock Text="{x:Static editing:EditingText.DiagramAddSibling}" />
+          </StackPanel>
+        </Button>
+      </WrapPanel>
+      <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
+        <Button x:Name="OutdentButton" Style="{DynamicResource Kyf.Button.Icon}" Command="{Binding OutdentCommand}" ToolTip="{x:Static editing:EditingText.DiagramOutdentKey}"
+                AutomationProperties.Name="{x:Static editing:EditingText.DiagramOutdent}">
+          <kyf:Icon Text="{x:Static kyf:Icons.Back}" />
+        </Button>
+        <Button x:Name="IndentButton" Style="{DynamicResource Kyf.Button.Icon}" Command="{Binding IndentCommand}" ToolTip="{x:Static editing:EditingText.DiagramIndentKey}"
+                AutomationProperties.Name="{x:Static editing:EditingText.DiagramIndent}">
+          <kyf:Icon Text="{x:Static kyf:Icons.IndentMore}" />
+        </Button>
+        <Button x:Name="MoveUpButton" Style="{DynamicResource Kyf.Button.Icon}" Command="{Binding MoveUpCommand}" ToolTip="{x:Static editing:EditingText.DiagramMoveUpKey}"
+                AutomationProperties.Name="{x:Static editing:EditingText.DiagramMoveUp}">
+          <kyf:Icon Text="{x:Static kyf:Icons.MoveUp}" />
+        </Button>
+        <Button x:Name="MoveDownButton" Style="{DynamicResource Kyf.Button.Icon}" Command="{Binding MoveDownCommand}" ToolTip="{x:Static editing:EditingText.DiagramMoveDownKey}"
+                AutomationProperties.Name="{x:Static editing:EditingText.DiagramMoveDown}">
+          <kyf:Icon Text="{x:Static kyf:Icons.MoveDown}" />
+        </Button>
+        <Button x:Name="DeleteButton" Style="{DynamicResource Kyf.Button.Icon}" Command="{Binding DeleteCommand}" ToolTip="{x:Static editing:EditingText.DiagramDelete}"
+                AutomationProperties.Name="{x:Static editing:EditingText.DiagramDelete}">
+          <kyf:Icon Text="{x:Static kyf:Icons.Trash}" />
+        </Button>
+      </StackPanel>
+      <TextBlock DockPanel.Dock="Bottom" Text="{x:Static editing:EditingText.DiagramKeys}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,8,0,0" />
+      <ScrollViewer x:Name="NodesScroller" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
+        <ItemsControl x:Name="NodesList" ItemsSource="{Binding Nodes}" Focusable="False" IsTabStop="False" AutomationProperties.Name="{x:Static editing:EditingText.DiagramItems}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate DataType="{x:Type editing:DiagramNode}">
+              <Grid Margin="{Binding Indent}">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="14" />
+                  <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Ellipse x:Name="Mark" Width="6" Height="6" HorizontalAlignment="Left" VerticalAlignment="Center" Fill="{DynamicResource Kyf.Brush.TextSecondary}" />
+                <TextBox x:Name="NodeText" Grid.Column="1" Margin="0,0,0,4" Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}"
+                         AutomationProperties.Name="{x:Static editing:EditingText.DiagramItem}"
+                         GotKeyboardFocus="OnNodeFocused" PreviewKeyDown="OnNodeKey" ContextMenuOpening="OnNodeMenu">
+                  <TextBox.ContextMenu>
+                    <ContextMenu />
+                  </TextBox.ContextMenu>
+                </TextBox>
+              </Grid>
+              <DataTemplate.Triggers>
+                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                  <Setter TargetName="Mark" Property="Fill" Value="{DynamicResource Kyf.Brush.Primary}" />
+                </DataTrigger>
+              </DataTemplate.Triggers>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+    </DockPanel>
+
+    <!-- À droite : le dessin, qui suit la frappe ; un clic sur une boîte choisit son élément. -->
+    <DockPanel Grid.Column="1">
+      <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
+        <ToggleButton x:Name="DownButton" Style="{DynamicResource Kyf.Button.Tab}" Content="{x:Static editing:EditingText.DiagramDown}" IsChecked="{Binding IsDown}" Margin="0,0,4,0" />
+        <ToggleButton x:Name="AcrossButton" Style="{DynamicResource Kyf.Button.Tab}" Content="{x:Static editing:EditingText.DiagramAcross}" IsChecked="{Binding IsAcross}" />
+      </StackPanel>
+      <Border Background="{DynamicResource Kyf.Brush.Surface}" BorderBrush="{DynamicResource Kyf.Brush.Divider}" BorderThickness="1"
+              CornerRadius="{DynamicResource Kyf.Radius.Control}" Padding="12">
+        <Viewbox Stretch="Uniform" VerticalAlignment="Center">
+          <reading:DiagramView x:Name="PreviewView" Scene="{Binding Preview}" HighlightedBox="{Binding HighlightedBox}"
+                               MouseLeftButtonDown="OnPreviewClicked" ContextMenuOpening="OnPreviewMenu" Cursor="Hand">
+            <reading:DiagramView.ContextMenu>
+              <ContextMenu />
+            </reading:DiagramView.ContextMenu>
+          </reading:DiagramView>
+        </Viewbox>
+      </Border>
+    </DockPanel>
+  </Grid>
+</UserControl>

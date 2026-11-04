@@ -31,7 +31,9 @@ export type VersEditeur =
   | { kind: "clipboard"; action: string }
   | { kind: "listOpen"; open: boolean }
   | { kind: "insertDiagram"; language: string; code: string; position: number | null }
-  | { kind: "diagram"; language: string; code: string; svg: string | null; image: string | null };
+  | { kind: "diagram"; language: string; code: string; svg: string | null; image: string | null }
+  | { kind: "deleteBlock"; position: number }
+  | { kind: "showBlockCode"; position: number };
 
 export type DepuisEditeur =
   | { kind: "ready" }
@@ -43,7 +45,7 @@ export type DepuisEditeur =
   | { kind: "askFormula"; position: number | null; tex: string; block: boolean }
   | { kind: "linkInput"; query: string | null; start: number; x: number; y: number }
   | { kind: "listKey"; key: string }
-  | { kind: "menu"; word: string | null; wordStart: number; hasSelection: boolean; inCode: boolean; inTable: boolean; onLink: boolean }
+  | { kind: "menu"; word: string | null; wordStart: number; hasSelection: boolean; inCode: boolean; inTable: boolean; onLink: boolean; drawingPosition: number | null; drawingLanguage: string | null; drawingCode: string | null }
   | { kind: "dropped"; name: string; base64: string | null; position: number | null }
   | { kind: "askDiagram"; language: string; code: string }
   | { kind: "editDiagram"; language: string; code: string; position: number };

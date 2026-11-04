@@ -76,6 +76,10 @@ public sealed partial class DiagramGalleryViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(Preview))]
     [NotifyPropertyChangedFor(nameof(MermaidCode))]
+    [NotifyPropertyChangedFor(nameof(IsHierarchy))]
+    [NotifyPropertyChangedFor(nameof(ShowsItems))]
+    [NotifyPropertyChangedFor(nameof(ConfirmLabel))]
+    [NotifyPropertyChangedFor(nameof(InputHelp))]
     public partial GalleryItem? SelectedItem { get; set; }
 
     /// <summary>Le texte saisi, un élément par ligne.</summary>
@@ -100,8 +104,19 @@ public sealed partial class DiagramGalleryViewModel : ObservableObject
     [ObservableProperty]
     public partial bool ShowsCode { get; set; }
 
+    /// <summary>Le modèle choisi a plusieurs niveaux : ils s'écrivent dans son éditeur, à l'étape suivante.</summary>
+    public bool IsHierarchy => Kind == GalleryKind.SmartArt && SmartArt.IsHierarchy(SelectedItem?.Id);
+
+    /// <summary>La saisie d'une ligne par élément suffit au modèle choisi.</summary>
+    public bool ShowsItems => !IsHierarchy;
+
+    /// <summary>Le libellé du bouton qui valide.</summary>
+    public string ConfirmLabel => IsHierarchy ? EditingText.GalleryContinue : EditingText.GalleryInsert;
+
     /// <summary>Ce qu'il faut écrire dans la saisie.</summary>
-    public string InputHelp => Kind == GalleryKind.Chart ? EditingText.GalleryOneValuePerLine : EditingText.GalleryOnePerLine;
+    public string InputHelp => IsHierarchy
+        ? EditingText.GalleryNextStep
+        : Kind == GalleryKind.Chart ? EditingText.GalleryOneValuePerLine : EditingText.GalleryOnePerLine;
 
     /// <summary>Une galerie vide, pour insérer.</summary>
     public static DiagramGalleryViewModel For(GalleryKind kind) => new(kind, ItemsOf(kind), null);

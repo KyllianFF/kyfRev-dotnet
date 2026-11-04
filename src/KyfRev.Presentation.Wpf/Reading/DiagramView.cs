@@ -25,6 +25,13 @@ internal sealed class DiagramView : FrameworkElement
         typeof(DiagramView),
         new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.AffectsRender));
 
+    /// <summary>La boîte à mettre en évidence, par son rang parmi les boîtes ; rien : aucune.</summary>
+    public static readonly DependencyProperty HighlightedBoxProperty = DependencyProperty.Register(
+        nameof(HighlightedBox),
+        typeof(int?),
+        typeof(DiagramView),
+        new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender));
+
     private static readonly DependencyProperty ThemeProbeProperty = DependencyProperty.Register(
         "ThemeProbe",
         typeof(Brush),
@@ -32,6 +39,7 @@ internal sealed class DiagramView : FrameworkElement
         new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender));
 
     private const double ArrowLength = 10;
+    private const double HighlightWidth = 3;
     private const double LineSpacing = 1.2;
     private const double ThumbnailBarHeight = 12;
     private const double ThumbnailBarWidth = 56;
@@ -55,15 +63,25 @@ internal sealed class DiagramView : FrameworkElement
         set => SetValue(IsThumbnailProperty, value);
     }
 
-    /// <inheritdoc/>
-    protected override Size MeasureOverride(Size availableSize)
+    /// <inheritdoc cref="HighlightedBoxProperty"/>
+    public int? HighlightedBox
     {
-        if (Scene is not { } scene)
+        get => (int?)GetValue(HighlightedBoxProperty);
+        set => SetValue(HighlightedBoxProperty, value);
+    }
+
+    /// <summary>Le rang de la boîte à cet endroit ; rien s'il n'y en a pas.</summary>
+    /// <param name="point">L'endroit, dans cette vue.</param>
+    public int? BoxAt(Point point)
+    {
+        if (Scene is not { } scene || ActualWidth <= 0)
         {
-            return default;
+            return null;
         }
-        var width = double.IsInfinity(availableSize.Width) ? scene.Width : availableSize.Width;
-        return new Size(width, width * scene.Height / scene.Width);
+        var scale = ActualWidth / scene.Width;
+        var boxes = scene.Shapes.OfType<DiagramRectangle>().ToList();
+        var index = boxes.FindIndex(box => new Rect(box.X, box.Y, box.Width, box.Height).Contains(new Point(point.X / scale, point.Y / scale)));
+        return index < 0 ? null : index;
     }
 
     /// <inheritdoc/>
@@ -80,7 +98,22 @@ internal sealed class DiagramView : FrameworkElement
         {
             Draw(drawingContext, shape);
         }
+        if (HighlightedBox is { } highlighted && scene.Shapes.OfType<DiagramRectangle>().ElementAtOrDefault(highlighted) is { } box)
+        {
+            drawingContext.DrawRoundedRectangle(null, new Pen(Find(ColorRole.Focus), HighlightWidth), new Rect(box.X, box.Y, box.Width, box.Height), box.Radius, box.Radius);
+        }
         drawingContext.Pop();
+    }
+
+    /// <inheritdoc/>
+    protected override Size MeasureOverride(Size availableSize)
+    {
+        if (Scene is not { } scene)
+        {
+            return default;
+        }
+        var width = double.IsInfinity(availableSize.Width) ? scene.Width : availableSize.Width;
+        return new Size(width, width * scene.Height / scene.Width);
     }
 
     private static void OnSceneChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e)

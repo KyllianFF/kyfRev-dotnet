@@ -383,6 +383,9 @@ internal sealed partial class SheetPage : UserControl
         }
     }
 
+    private void OnDiagramEditorClosed(object sender, DialogClosedEventArgs e) =>
+        (DataContext as SheetPageViewModel)?.Editor?.AnswerDiagramEditorCommand.Execute(e.Choice == DialogChoice.Primary);
+
     private void OnGalleryClosed(object sender, DialogClosedEventArgs e) =>
         (DataContext as SheetPageViewModel)?.Editor?.AnswerGalleryCommand.Execute(e.Choice == DialogChoice.Primary);
 

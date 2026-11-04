@@ -44,6 +44,7 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
     private ScrollViewer? _scroller;
     private double? _restoreOffset;
     private Block? _spoken;
+    private bool _rebuildsWhenShown;
 
     public SheetDocumentViewer()
     {
@@ -55,6 +56,13 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
         SetResourceReference(SelectionBrushProperty, "Kyf.Brush.Selection");
         // Les traits sous le texte prennent leur couleur du thème, connu une fois la vue en place.
         Loaded += (_, _) => ApplyHighlights();
+        IsVisibleChanged += (_, e) =>
+        {
+            if (e.NewValue is true && _rebuildsWhenShown)
+            {
+                Rebuild();
+            }
+        };
     }
 
     /// <inheritdoc cref="HolesProperty"/>
@@ -257,6 +265,12 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
 
     private void Rebuild()
     {
+        // Un document caché ne se construit pas : l'interface a mieux à faire, et il se construira s'il se montre.
+        _rebuildsWhenShown = IsLoaded && !IsVisible;
+        if (_rebuildsWhenShown)
+        {
+            return;
+        }
         _spoken = null;
         _restoreOffset = KeepsScroll && _scroller is { VerticalOffset: > 0 } scroller ? scroller.VerticalOffset : null;
         _built?.Cancel();

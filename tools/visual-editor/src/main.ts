@@ -117,9 +117,19 @@ const editeur: EditeurVisuel = new EditeurVisuel(parent, {
     envoyer({ kind: "listKey", key: touche });
     return true;
   },
-  onmenu: () => {
+  onmenu: (vise) => {
     const etat = editeur.etatOutils();
-    envoyer({ kind: "menu", ...editeur.contexteDuMenu(), inCode: etat.inCode, inTable: etat.table, onLink: etat.link });
+    const dessin = vise ?? editeur.dessinSousLeCurseur();
+    envoyer({
+      kind: "menu",
+      ...editeur.contexteDuMenu(),
+      inCode: !vise && etat.inCode,
+      inTable: !vise && etat.table,
+      onLink: !vise && etat.link,
+      drawingPosition: dessin?.position ?? null,
+      drawingLanguage: dessin?.language ?? null,
+      drawingCode: dessin?.code ?? null,
+    });
   },
   dessin: demanderDessin,
   ondessin: (language, code, position) => envoyer({ kind: "editDiagram", language, code, position }),
@@ -143,6 +153,12 @@ function traiter(message: VersEditeur): void {
     }
     case "insertDiagram":
       editeur.insererDessin(message.language, message.code, message.position);
+      break;
+    case "deleteBlock":
+      editeur.supprimerBloc(message.position);
+      break;
+    case "showBlockCode":
+      editeur.voirCodeBloc(message.position);
       break;
     case "theme":
       for (const [nom, valeur] of Object.entries(message.variables)) {

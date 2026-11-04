@@ -1030,6 +1030,109 @@ public sealed class VisualEditorTests
     }
 
     [EngineTest]
+    public void A_right_click_on_a_drawing_offers_to_remove_it_and_ctrl_z_brings_it_back()
+    {
+        using var scene = new Scene("Avant\n\n```smartart cycle\nUne\nDeux\n```\n\n```mermaid\nflowchart TD\n  A --> B\n```\n\n```mermaid\npie\n  \"a\" : 1\n```\n\nAprès\n");
+        UiThread.Until(() => scene.Script("document.querySelectorAll('.bloc-dessin').length") == "3");
+        var visual = scene.Visual!;
+
+        // Le vrai clic droit, dans la page : il vise le dessin, sans entrer dans son code.
+        scene.Script("document.querySelector('.bloc-dessin').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 5, clientY: 5 }))");
+        UiThread.Until(() => visual.LastMenuItems is { Count: > 0 });
+        var menu = visual.LastMenuItems!;
+        ((ContextMenu)menu[0].Parent).IsOpen = false;
+        var headers = menu.OfType<MenuItem>().Select(item => (string)item.Header).ToList();
+        CollectionAssert.AreEqual(new[] { EditingText.EditDrawing, EditingText.ShowDrawingCode, EditingText.DeleteSmartArt }, headers);
+        Assert.AreEqual("\"none\"", scene.Script("getComputedStyle(document.querySelector('.bloc-dessin pre')).display"), "Le code reste caché.");
+
+        // Modifier : la galerie, sur ce bloc.
+        menu.OfType<MenuItem>().First().RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+        UiThread.Until(() => scene.Editor.IsGalleryOpen);
+        scene.Editor.AnswerGalleryCommand.Execute(false);
+        UiThread.Until(() => !scene.Editor.IsGalleryOpen);
+
+        // Supprimer : le bloc s'en va, le reste ne bouge pas.
+        menu.OfType<MenuItem>().Last().RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+        UiThread.Until(() => !scene.OnDisk.Contains("smartart", StringComparison.Ordinal) && scene.Editor.State == SaveState.Saved);
+        Assert.Contains("Avant", scene.OnDisk);
+        Assert.Contains("flowchart", scene.OnDisk);
+        Assert.Contains("Après", scene.OnDisk);
+
+        scene.Editor.UndoCommand.Execute(null);
+        UiThread.Until(() => scene.OnDisk.Contains("```smartart cycle\nUne\nDeux\n```", StringComparison.Ordinal));
+
+        // Un schéma et un graphique disent ce qu'ils sont ; seul un SmartArt se modifie ici.
+        var schema = visual.MenuItems(new MenuEvent(null, 0, false, false, false, false, 7, "mermaid", "flowchart TD"), null).OfType<MenuItem>().Select(item => (string)item.Header).ToList();
+        CollectionAssert.AreEqual(new[] { EditingText.ShowDrawingCode, EditingText.DeleteSchema }, schema);
+        foreach (var chart in new[] { "pie\n\"a\": 1", " xychart-beta", "treemap-beta" })
+        {
+            var labels = visual.MenuItems(new MenuEvent(null, 0, false, false, false, false, 7, "mermaid", chart), null).OfType<MenuItem>().Select(item => (string)item.Header).ToList();
+            CollectionAssert.Contains(labels, EditingText.DeleteChart);
+        }
+
+        // Dans son code, le menu du texte garde la suppression.
+        var inCode = visual.MenuItems(new MenuEvent(null, 0, false, true, false, false, 7, "mermaid", "flowchart TD"), null).OfType<MenuItem>().Select(item => (string)item.Header).ToList();
+        CollectionAssert.Contains(inCode, EditingText.DeleteSchema);
+        CollectionAssert.Contains(inCode, EditingText.Cut);
+    }
+
+    [EngineTest]
+    public void Removing_the_only_block_leaves_a_paragraph_to_write_in()
+    {
+        using var scene = new Scene("```smartart cycle\nUne\nDeux\n```\n");
+        UiThread.Until(() => scene.Script("document.querySelectorAll('.bloc-dessin').length") == "1");
+        var visual = scene.Visual!;
+        var items = visual.MenuItems(new MenuEvent(null, 0, false, false, false, false, 0, "smartart cycle", "Une\nDeux"), null).OfType<MenuItem>().ToList();
+
+        items[1].RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+        UiThread.Until(() => scene.Script("getComputedStyle(document.querySelector('.bloc-dessin pre')).display") != "\"none\"");
+
+        items[^1].RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+        UiThread.Until(() => scene.Script("document.querySelectorAll('.bloc-dessin').length") == "0");
+        Assert.AreEqual("1", scene.Script("document.querySelectorAll('.ProseMirror > p').length"));
+    }
+
+    [EngineTest]
+    public void An_organization_chart_of_the_sheet_opens_in_its_own_editor_and_is_replaced()
+    {
+        using var scene = new Scene("Avant\n\n```smartart organigramme\nGrand-mère\nEnfant\n```\n");
+        UiThread.Until(() => scene.Script("document.querySelectorAll('.apercu-dessin svg text').length") == "2");
+
+        scene.Script("[...document.querySelectorAll('.action-dessin')].find((b) => b.textContent === 'Modifier…').click()");
+        UiThread.Until(() => scene.Editor.IsDiagramEditorOpen);
+        UiThread.Until(() => scene.Visual!.IsCovered);
+        Assert.IsTrue(scene.SheetPage.DiagramEditorDialog.IsOpen);
+        var editor = scene.Editor.DiagramEditor!;
+        Assert.AreEqual("Enfant", editor.Nodes[1].Text);
+        editor.Select(editor.Nodes[1]);
+        editor.AddChildCommand.Execute(null);
+        editor.Selected!.Text = "Petit-enfant";
+
+        scene.Editor.AnswerDiagramEditorCommand.Execute(true);
+
+        UiThread.Until(() => scene.OnDisk.Contains("```smartart organigramme\nGrand-mère\n  Enfant\n    Petit-enfant\n```", StringComparison.Ordinal));
+        Assert.AreEqual(1, System.Text.RegularExpressions.Regex.Count(scene.OnDisk, "smartart"), "Il est remplacé, pas ajouté.");
+        UiThread.Until(() => scene.Script("document.querySelectorAll('.apercu-dessin svg text').length") == "3");
+    }
+
+    [EngineTest]
+    public void The_page_stands_out_from_the_background_in_both_themes()
+    {
+        foreach (var theme in new[] { ThemeKind.Light, ThemeKind.Dark })
+        {
+            using var scene = new Scene("Un texte.\n", theme: theme);
+            UiThread.Until(() => scene.Shown.Contains("Un texte", StringComparison.Ordinal));
+
+            var page = scene.Script("getComputedStyle(document.getElementById('fiche')).backgroundColor");
+            var ground = scene.Script("getComputedStyle(document.body).backgroundColor");
+            Assert.AreNotEqual(ground, page);
+            Assert.AreNotEqual("\"0px\"", scene.Script("getComputedStyle(document.getElementById('fiche')).borderTopWidth"));
+            Assert.AreNotEqual("\"none\"", scene.Script("getComputedStyle(document.getElementById('fiche')).boxShadow"));
+            Assert.AreEqual("0", scene.Script("document.documentElement.scrollWidth - document.documentElement.clientWidth"), "La feuille ne déborde pas.");
+        }
+    }
+
+    [EngineTest]
     public void A_menu_offers_the_replacements_of_a_wrong_word()
     {
         using var scene = new Scene("Une ékole ici.\n");

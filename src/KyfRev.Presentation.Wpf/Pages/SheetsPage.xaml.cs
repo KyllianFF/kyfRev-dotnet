@@ -115,7 +115,7 @@ internal sealed partial class SheetsPage : UserControl
     {
         if (e.NewValue is true)
         {
-            Dispatcher.BeginInvoke(DispatcherPriority.Input, () =>
+            Dispatcher.BeginInvoke(DispatcherPriority.ContextIdle, () =>
             {
                 ActionInputBox.Focus();
                 ActionInputBox.SelectAll();
