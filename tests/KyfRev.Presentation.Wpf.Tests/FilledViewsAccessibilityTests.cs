@@ -43,7 +43,8 @@ public sealed class FilledViewsAccessibilityTests
         var page = new SettingsPageViewModel(app.Settings, TimeProvider.System);
         var data = new DataSettingsViewModel(app.Vaults, app.Backups, app.Trash, app.Annotations, app.Exports, app.Settings, new FakePicker(), new FakeOpener(), () => { });
         var general = new GeneralSettingsViewModel(new MachineSettings(new MemoryMachinePreferences()), new FakeVoices("Hortense"));
-        var hub = new SettingsHubViewModel(general, page, data, new AboutSettingsViewModel(app.Vaults));
+        var modules = new ModulesSettingsViewModel(app.Settings, _ => { });
+        var hub = new SettingsHubViewModel(general, page, modules, data, new AboutSettingsViewModel(app.Vaults));
 
         var names = Names(hub, () => hub.Selected.Page == general, null);
 
@@ -60,6 +61,12 @@ public sealed class FilledViewsAccessibilityTests
         CollectionAssert.Contains(names, SettingsText.Save);
 
         hub.Tabs[2].IsSelected = true;
+        names = Names(hub, () => hub.Selected.Page == modules, null);
+
+        CollectionAssert.Contains(names, ModulesSettingsText.QuotesModule);
+        CollectionAssert.Contains(names, ModulesSettingsText.SchemasModule);
+
+        hub.Tabs[3].IsSelected = true;
         names = Names(hub, () => data.IsLoaded, null);
 
         CollectionAssert.Contains(names, SettingsHubText.OpenVault);

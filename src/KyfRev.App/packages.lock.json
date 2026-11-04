@@ -30,6 +30,12 @@
       "kyfrev.domain": {
         "type": "Project"
       },
+      "kyfrev.infrastructure.online": {
+        "type": "Project",
+        "dependencies": {
+          "KyfRev.Application": "[1.0.0-alpha.0, )"
+        }
+      },
       "kyfrev.infrastructure.vault": {
         "type": "Project",
         "dependencies": {
@@ -45,6 +51,13 @@
           "System.Speech": "[10.0.13, )"
         }
       },
+      "kyfrev.modules.citations": {
+        "type": "Project",
+        "dependencies": {
+          "KyfRev.Application": "[1.0.0-alpha.0, )",
+          "KyfRev.Domain": "[1.0.0-alpha.0, )"
+        }
+      },
       "kyfrev.presentation.wpf": {
         "type": "Project",
         "dependencies": {
@@ -52,6 +65,7 @@
           "CommunityToolkit.Mvvm": "[8.4.2, )",
           "KyfRev.Application": "[1.0.0-alpha.0, )",
           "KyfRev.DesignSystem": "[1.0.0-alpha.0, )",
+          "KyfRev.Modules.Citations": "[1.0.0-alpha.0, )",
           "KyfRev.Rendering": "[1.0.0-alpha.0, )",
           "Microsoft.Web.WebView2": "[1.0.4258.31, )",
           "WpfMath": "[2.1.0, )"

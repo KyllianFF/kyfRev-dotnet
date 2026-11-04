@@ -6,8 +6,10 @@ using KyfRev.Application.Ports;
 using KyfRev.Application.UseCases;
 using KyfRev.DesignSystem;
 using KyfRev.DesignSystem.Tokens;
+using KyfRev.Infrastructure.Online;
 using KyfRev.Infrastructure.Vault.Adapters;
 using KyfRev.Infrastructure.Windows;
+using KyfRev.Modules.Citations;
 using KyfRev.Presentation.Wpf.Editing;
 using KyfRev.Presentation.Wpf.Pages;
 using KyfRev.Presentation.Wpf.Shell;
@@ -51,6 +53,17 @@ internal static class Composition
         services.AddSingleton<IMachinePreferencesStore>(provider => new MachinePreferencesFile(provider.GetRequiredService<VaultLocations>().LocalData));
         services.AddSingleton<MachineSettings>();
         services.AddSingleton<IFolderPicker, FolderPicker>();
+        services.AddSingleton<IOnlineReader>(_ => new OnlineReader(Version));
+        services.AddSingleton(_ => new ModuleCatalog([new CitationsModule()]));
+        services.AddSingleton(provider => new ActiveModules(provider.GetRequiredService<ModuleCatalog>(), modules =>
+        {
+            // Ce que les modules attendent du cœur.
+            modules.AddSingleton(provider.GetRequiredService<KyfRevApplication>().Host);
+            modules.AddSingleton(clock);
+            modules.AddSingleton(provider.GetRequiredService<IOnlineReader>());
+            modules.AddSingleton(provider.GetRequiredService<ILoggerFactory>());
+            modules.AddSingleton(typeof(ILogger<>), typeof(Logger<>));
+        }));
         // Le coffre ouvert est fermé, et son verrou libéré, quand les services le sont.
         services.AddSingleton(provider => new KyfRevApplication(
             new VaultStore(),
@@ -77,7 +90,14 @@ internal static class Composition
         services.AddSingleton(clock);
         services.AddSingleton<ReviewNavigation>();
         services.AddSingleton<IReviewOpener>(provider => provider.GetRequiredService<ReviewNavigation>());
-        services.AddSingleton<DashboardPageViewModel>();
+        services.AddSingleton(provider =>
+        {
+            var modules = provider.GetRequiredService<ActiveModules>();
+            return new DashboardPageViewModel(provider.GetRequiredService<ReminderUseCases>(), provider.GetRequiredService<SheetUseCases>(), provider.GetRequiredService<IReviewOpener>(), modules.Widgets)
+            {
+                LookForNews = () => LookForQuoteAsync(modules),
+            };
+        });
         services.AddSingleton<SheetsPageViewModel>();
         services.AddSingleton<DefinitionsPageViewModel>();
         services.AddSingleton<SettingsPageViewModel>();
@@ -100,7 +120,11 @@ internal static class Composition
             {
                 provider.GetRequiredService<SettingsPageViewModel>().Forget();
                 provider.GetRequiredService<ShellViewModel>().ShowWorkspace();
-            }));
+            },
+            () => provider.GetRequiredService<ActiveModules>().Find<QuoteUseCases>()));
+        services.AddSingleton(provider => new ModulesSettingsViewModel(
+            provider.GetRequiredService<SettingsUseCases>(),
+            provider.GetRequiredService<ActiveModules>().Load));
         services.AddSingleton<GeneralSettingsViewModel>();
         services.AddSingleton<AboutSettingsViewModel>();
         services.AddSingleton<SettingsHubViewModel>();
@@ -110,7 +134,8 @@ internal static class Composition
             provider.GetRequiredService<SheetUseCases>(),
             provider.GetRequiredService<IReviewOpener>(),
             () => DiagnosticText(provider),
-            System.Windows.Clipboard.SetText));
+            System.Windows.Clipboard.SetText,
+            provider.GetRequiredService<ActiveModules>().HealthChecks));
         services.AddSingleton(_ => new DesignResources(ThemeKind.Light, Motion.SystemPrefersReducedMotion));
         services.AddSingleton<AppearanceController>();
         services.AddSingleton<GalleryPageViewModel>();
@@ -126,18 +151,32 @@ internal static class Composition
                     [CorePages.Archives] = provider.GetRequiredService<ArchivesPageViewModel>(),
                     [CorePages.Statistics] = provider.GetRequiredService<StatisticsPageViewModel>(),
                     [CorePages.Health] = provider.GetRequiredService<HealthPageViewModel>(),
-                })
-                    .Concat(provider.GetServices<INavigationContributor>().Select(contributor => CorePages.FromModule(contributor.Entry))),
+                }),
                 provider.GetRequiredService<AppearanceController>(),
                 provider.GetRequiredService<GalleryPageViewModel>());
             // Les fiches et les passages s'ouvrent dans la coquille.
             provider.GetRequiredService<ReviewNavigation>().Attach(shell);
             provider.GetRequiredService<MachineSettings>().Follow(provider.GetRequiredService<AppearanceController>(), shell);
+            var modules = provider.GetRequiredService<ActiveModules>();
+            modules.Changed += (_, _) => shell.SetModuleEntries(ModuleEntries(modules, provider.GetRequiredService<IExternalLinks>()));
+            shell.WorkspaceOpening += (_, _) => modules.Load(provider.GetRequiredService<SettingsUseCases>().Get() is { Succeeded: true } settings ? settings.Value : null);
             return shell;
         });
         services.AddTransient<ShellWindow>();
         return services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
     }
+
+    /// <summary>Les entrées du menu apportées par les modules actifs, avec leurs vues.</summary>
+    internal static IReadOnlyList<NavigationItem> ModuleEntries(ActiveModules modules, IExternalLinks links) =>
+        [.. modules.All<INavigationContributor>().Select(contributor => contributor.Entry).Select(entry =>
+            entry.Id == CitationsModule.ModuleId && modules.Find<QuoteUseCases>() is { } quotes
+                ? CorePages.FromModule(entry) with { Page = new QuotesPageViewModel(quotes, links) }
+                : CorePages.FromModule(entry))];
+
+    /// <summary>La citation du jour, cherchée en ligne si le module et ses réglages le veulent ; vrai si elle a changé.</summary>
+    private static async Task<bool> LookForQuoteAsync(ActiveModules modules) =>
+        modules.Find<QuoteUseCases>() is { } quotes
+        && await quotes.SearchQuoteOfTheDayAsync(CancellationToken.None).ConfigureAwait(true) is { Succeeded: true, Value: not null };
 
     /// <summary>Le mode tel que le journal le nomme, comme la 0.x.</summary>
     private static string DiagnosticText(IServiceProvider provider) => DiagnosticReport.Write(

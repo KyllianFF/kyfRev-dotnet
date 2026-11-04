@@ -16,7 +16,7 @@ public sealed class SettingsHubTests
 {
     private static readonly Anchor Passage = new("La prophase", "", " précède", 0, 11, ["Mitose", "Étapes"], 5, "sha256:aa");
 
-    private static readonly string[] Tabs = ["Général", "Révisions", "Données", "À propos"];
+    private static readonly string[] Tabs = ["Général", "Révisions", "Modules et extensions", "Données", "À propos"];
 
     [TestMethod]
     public void The_view_needs_its_tabs()
@@ -25,10 +25,12 @@ public sealed class SettingsHubTests
         var revisions = new SettingsPageViewModel(vault.App.Settings, TimeProvider.System);
         var about = new AboutSettingsViewModel(vault.App.Vaults);
         var general = DataVault.General();
-        Assert.ThrowsExactly<ArgumentNullException>(() => new SettingsHubViewModel(null!, revisions, vault.Page, about));
-        Assert.ThrowsExactly<ArgumentNullException>(() => new SettingsHubViewModel(general, null!, vault.Page, about));
-        Assert.ThrowsExactly<ArgumentNullException>(() => new SettingsHubViewModel(general, revisions, null!, about));
-        Assert.ThrowsExactly<ArgumentNullException>(() => new SettingsHubViewModel(general, revisions, vault.Page, null!));
+        var modules = new ModulesSettingsViewModel(vault.App.Settings, _ => { });
+        Assert.ThrowsExactly<ArgumentNullException>(() => new SettingsHubViewModel(null!, revisions, modules, vault.Page, about));
+        Assert.ThrowsExactly<ArgumentNullException>(() => new SettingsHubViewModel(general, null!, modules, vault.Page, about));
+        Assert.ThrowsExactly<ArgumentNullException>(() => new SettingsHubViewModel(general, revisions, null!, vault.Page, about));
+        Assert.ThrowsExactly<ArgumentNullException>(() => new SettingsHubViewModel(general, revisions, modules, null!, about));
+        Assert.ThrowsExactly<ArgumentNullException>(() => new SettingsHubViewModel(general, revisions, modules, vault.Page, null!));
         Assert.ThrowsExactly<ArgumentNullException>(() => new AboutSettingsViewModel(null!));
         Assert.ThrowsExactly<ArgumentNullException>(() => about.Show(null!));
     }
@@ -61,15 +63,15 @@ public sealed class SettingsHubTests
         Assert.IsTrue(hub.Tabs[0].IsSelected);
         hub.OnNavigatedTo();
 
-        hub.Tabs[3].IsSelected = true;
-        Assert.AreSame(hub.Tabs[3], hub.Selected);
+        hub.Tabs[4].IsSelected = true;
+        Assert.AreSame(hub.Tabs[4], hub.Selected);
         Assert.IsFalse(hub.Tabs[0].IsSelected);
         Assert.AreEqual("kyfRev 1.0.0-essai", ((AboutSettingsViewModel)hub.Selected.Page).Version, "l'onglet se lit quand on l'ouvre");
 
-        hub.Tabs[3].IsSelected = false;
-        Assert.AreSame(hub.Tabs[3], hub.Selected, "décocher ne choisit rien d'autre");
-        hub.Tabs[3].IsSelected = true;
-        Assert.AreSame(hub.Tabs[3], hub.Selected);
+        hub.Tabs[4].IsSelected = false;
+        Assert.AreSame(hub.Tabs[4], hub.Selected, "décocher ne choisit rien d'autre");
+        hub.Tabs[4].IsSelected = true;
+        Assert.AreSame(hub.Tabs[4], hub.Selected);
     }
 
     [TestMethod]
@@ -462,7 +464,7 @@ public sealed class SettingsHubTests
         {
             Assert.AreEqual("Paramètres", Named<TextBlock>(window, "Heading").Text);
             var radios = Descendants<RadioButton>(window).ToList();
-            Assert.HasCount(4, radios);
+            Assert.HasCount(5, radios);
             Assert.IsTrue(radios[0].IsChecked);
             Assert.IsNotNull(Find<FrameworkElement>(window, "ThemeChoice"), "Général s'ouvre d'abord");
 
@@ -471,6 +473,10 @@ public sealed class SettingsHubTests
             Assert.IsNotNull(Find<FrameworkElement>(window, "StepsBox"));
 
             radios[2].IsChecked = true;
+            TestShell.Flush();
+            Assert.IsNotNull(Find<FrameworkElement>(window, "QuotesBox"));
+
+            radios[3].IsChecked = true;
             TestShell.Flush();
             UiThread.Until(() => vault.Page.IsLoaded);
             TestShell.Flush();
@@ -482,7 +488,7 @@ public sealed class SettingsHubTests
             var scroller = Named<ScrollViewer>(window, "Scroller");
             Assert.IsLessThanOrEqualTo(scroller.ViewportWidth, scroller.ExtentWidth);
 
-            radios[3].IsChecked = true;
+            radios[4].IsChecked = true;
             TestShell.Flush();
             Assert.AreEqual("kyfRev 1.0.0-essai", Named<TextBlock>(window, "VersionLine").Text);
             Assert.AreEqual(vault.Root, Named<TextBlock>(window, "VaultLine").Text);
@@ -607,7 +613,7 @@ public sealed class SettingsHubTests
 
         public static GeneralSettingsViewModel General() => new(new MachineSettings(new MemoryMachinePreferences()), new FakeVoices("Microsoft Hortense Desktop"));
 
-        public SettingsHubViewModel Hub() => new(General(), new SettingsPageViewModel(App.Settings, TimeProvider.System), Page, new AboutSettingsViewModel(App.Vaults));
+        public SettingsHubViewModel Hub() => new(General(), new SettingsPageViewModel(App.Settings, TimeProvider.System), new ModulesSettingsViewModel(App.Settings, _ => { }), Page, new AboutSettingsViewModel(App.Vaults));
 
         public async Task<DataSettingsViewModel> LoadedAsync()
         {

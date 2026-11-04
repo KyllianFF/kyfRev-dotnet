@@ -10,6 +10,9 @@
     <DataTemplate DataType="{x:Type pages:SettingsPageViewModel}">
       <pages:SettingsPage />
     </DataTemplate>
+    <DataTemplate DataType="{x:Type pages:ModulesSettingsViewModel}">
+      <pages:ModulesSettingsPage />
+    </DataTemplate>
     <DataTemplate DataType="{x:Type pages:DataSettingsViewModel}">
       <pages:DataSettingsPage />
     </DataTemplate>

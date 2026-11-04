@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Added" xml:space="preserve">
+    <value>Citation ajoutée.</value>
+  </data>
+  <data name="AddedOn" xml:space="preserve">
+    <value>ajoutée le {0}</value>
+  </data>
+  <data name="AddressLabel" xml:space="preserve">
+    <value>Adresse web</value>
+  </data>
+  <data name="AllTags" xml:space="preserve">
+    <value>Toutes les étiquettes</value>
+  </data>
+  <data name="Attribution" xml:space="preserve">
+    <value>— {0}</value>
+  </data>
+  <data name="AuthorLabel" xml:space="preserve">
+    <value>Auteur</value>
+  </data>
+  <data name="ContextLabel" xml:space="preserve">
+    <value>Contexte</value>
+  </data>
+  <data name="CountMany" xml:space="preserve">
+    <value>{0} citations</value>
+  </data>
+  <data name="CountOne" xml:space="preserve">
+    <value>{0} citation</value>
+  </data>
+  <data name="DataKind" xml:space="preserve">
+    <value>Citation · {0}</value>
+  </data>
+  <data name="DateLabel" xml:space="preserve">
+    <value>Date</value>
+  </data>
+  <data name="DatePlaceholder" xml:space="preserve">
+    <value>1670, mai 1968, XVIIe siècle…</value>
+  </data>
+  <data name="Edit" xml:space="preserve">
+    <value>Modifier</value>
+  </data>
+  <data name="EditName" xml:space="preserve">
+    <value>Modifier la citation : {0}</value>
+  </data>
+  <data name="EditQuote" xml:space="preserve">
+    <value>Modifier la citation</value>
+  </data>
+  <data name="EmptyDescription" xml:space="preserve">
+    <value>Seul le texte est obligatoire : l'auteur, la date et la source sont facultatifs.</value>
+  </data>
+  <data name="EmptyTitle" xml:space="preserve">
+    <value>Aucune citation pour l'instant</value>
+  </data>
+  <data name="Excerpt" xml:space="preserve">
+    <value>« {0} » — {1}</value>
+  </data>
+  <data name="KindAndTitle" xml:space="preserve">
+    <value>{0} : {1}</value>
+  </data>
+  <data name="KindArticle" xml:space="preserve">
+    <value>Article</value>
+  </data>
+  <data name="KindBook" xml:space="preserve">
+    <value>Livre</value>
+  </data>
+  <data name="KindBroadcast" xml:space="preserve">
+    <value>Émission</value>
+  </data>
+  <data name="KindFilm" xml:space="preserve">
+    <value>Film</value>
+  </data>
+  <data name="KindLabel" xml:space="preserve">
+    <value>Type de source</value>
+  </data>
+  <data name="KindNewspaper" xml:space="preserve">
+    <value>Journal</value>
+  </data>
+  <data name="KindNone" xml:space="preserve">
+    <value>—</value>
+  </data>
+  <data name="KindOther" xml:space="preserve">
+    <value>Autre</value>
+  </data>
+  <data name="KindSong" xml:space="preserve">
+    <value>Chanson</value>
+  </data>
+  <data name="KindSpeech" xml:space="preserve">
+    <value>Discours</value>
+  </data>
+  <data name="KindUnknown" xml:space="preserve">
+    <value>Inconnue</value>
+  </data>
+  <data name="KindUnknownSource" xml:space="preserve">
+    <value>Source inconnue</value>
+  </data>
+  <data name="KindWebsite" xml:space="preserve">
+    <value>Site web</value>
+  </data>
+  <data name="ListName" xml:space="preserve">
+    <value>Citations</value>
+  </data>
+  <data name="Modified" xml:space="preserve">
+    <value>Citation modifiée.</value>
+  </data>
+  <data name="NewQuote" xml:space="preserve">
+    <value>Nouvelle citation</value>
+  </data>
+  <data name="NoMatch" xml:space="preserve">
+    <value>Aucune citation ne correspond à cette recherche.</value>
+  </data>
+  <data name="OpenSource" xml:space="preserve">
+    <value>Ouvrir la source de la citation : {0}</value>
+  </data>
+  <data name="PageLabel" xml:space="preserve">
+    <value>Page</value>
+  </data>
+  <data name="Restore" xml:space="preserve">
+    <value>Restaurer</value>
+  </data>
+  <data name="RestoreName" xml:space="preserve">
+    <value>Restaurer : {0}</value>
+  </data>
+  <data name="Restored" xml:space="preserve">
+    <value>Citation restaurée.</value>
+  </data>
+  <data name="Save" xml:space="preserve">
+    <value>Enregistrer</value>
+  </data>
+  <data name="SearchLabel" xml:space="preserve">
+    <value>Rechercher une citation</value>
+  </data>
+  <data name="SearchPlaceholder" xml:space="preserve">
+    <value>Texte, auteur, source…</value>
+  </data>
+  <data name="SortAdded" xml:space="preserve">
+    <value>Ajout récent</value>
+  </data>
+  <data name="SortAuthor" xml:space="preserve">
+    <value>Auteur</value>
+  </data>
+  <data name="SortLabel" xml:space="preserve">
+    <value>Tri</value>
+  </data>
+  <data name="SortPeriod" xml:space="preserve">
+    <value>Époque</value>
+  </data>
+  <data name="Source" xml:space="preserve">
+    <value>Source</value>
+  </data>
+  <data name="SourceTitleLabel" xml:space="preserve">
+    <value>Titre</value>
+  </data>
+  <data name="TagLabel" xml:space="preserve">
+    <value>Étiquette</value>
+  </data>
+  <data name="TagsLabel" xml:space="preserve">
+    <value>Étiquettes</value>
+  </data>
+  <data name="TagsPlaceholder" xml:space="preserve">
+    <value>philosophie, poésie</value>
+  </data>
+  <data name="TextLabel" xml:space="preserve">
+    <value>Texte</value>
+  </data>
+  <data name="TextRequired" xml:space="preserve">
+    <value>Le texte de la citation est obligatoire.</value>
+  </data>
+  <data name="Title" xml:space="preserve">
+    <value>Citations</value>
+  </data>
+  <data name="Trash" xml:space="preserve">
+    <value>Supprimer</value>
+  </data>
+  <data name="TrashConfirm" xml:space="preserve">
+    <value>Elle quitte la liste mais reste récupérable dans la corbeille, en bas de cette page.</value>
+  </data>
+  <data name="TrashConfirmTitle" xml:space="preserve">
+    <value>Supprimer cette citation ?</value>
+  </data>
+  <data name="TrashListName" xml:space="preserve">
+    <value>Corbeille des citations</value>
+  </data>
+  <data name="TrashName" xml:space="preserve">
+    <value>Supprimer la citation : {0}</value>
+  </data>
+  <data name="TrashTitle" xml:space="preserve">
+    <value>Corbeille ({0})</value>
+  </data>
+  <data name="Trashed" xml:space="preserve">
+    <value>Citation placée dans la corbeille.</value>
+  </data>
+  <data name="UnknownAuthor" xml:space="preserve">
+    <value>Auteur inconnu</value>
+  </data>
+  <data name="UnknownDate" xml:space="preserve">
+    <value>date inconnue</value>
+  </data>
+  <data name="Unreadable" xml:space="preserve">
+    <value>{0} dans « citations » : {1}. kyfRev ne les modifie pas.</value>
+  </data>
+  <data name="UnreadableMany" xml:space="preserve">
+    <value>{0} fichiers illisibles</value>
+  </data>
+  <data name="UnreadableOne" xml:space="preserve">
+    <value>{0} fichier illisible</value>
+  </data>
+  <data name="Wikiquote" xml:space="preserve">
+    <value>Wikiquote</value>
+  </data>
+  <data name="WithPage" xml:space="preserve">
+    <value>{0}, p. {1}</value>
+  </data>
+</root>

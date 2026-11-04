@@ -1,0 +1,146 @@
+<UserControl x:Class="KyfRev.Presentation.Wpf.Pages.QuotesPage"
+             x:ClassModifier="internal"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:kyf="clr-namespace:KyfRev.DesignSystem.Controls;assembly=KyfRev.DesignSystem"
+             xmlns:pages="clr-namespace:KyfRev.Presentation.Wpf.Pages">
+  <UserControl.Resources>
+    <BooleanToVisibilityConverter x:Key="Visible" />
+  </UserControl.Resources>
+
+  <Grid>
+    <DockPanel Margin="16">
+      <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+        <Button x:Name="NewQuote" DockPanel.Dock="Right" Content="{x:Static pages:QuotesText.NewQuote}" Command="{Binding NewQuoteCommand}" Style="{DynamicResource Kyf.Button.Primary}" VerticalAlignment="Top" Margin="12,0,0,0" />
+        <StackPanel>
+          <TextBlock x:Name="Heading" Text="{x:Static pages:QuotesText.Title}" Style="{DynamicResource Kyf.Text.Title}" AutomationProperties.HeadingLevel="Level1" />
+          <TextBlock x:Name="Summary" Text="{Binding Summary}" Style="{DynamicResource Kyf.Text.Secondary}" />
+        </StackPanel>
+      </DockPanel>
+
+      <kyf:Notification x:Name="ErrorMessage" DockPanel.Dock="Top" Severity="Critical" Message="{Binding Error}" IsOpen="{Binding HasError, Mode=OneWay}" IsClosable="False" Margin="0,0,0,8" />
+      <kyf:Notification x:Name="DoneMessage" DockPanel.Dock="Top" Severity="Success" Message="{Binding Message}" IsOpen="{Binding HasMessage, Mode=OneWay}" IsClosable="False" Margin="0,0,0,8" />
+
+      <WrapPanel x:Name="Filters" DockPanel.Dock="Top" Margin="0,0,0,8" Visibility="{Binding HasQuotes, Converter={StaticResource Visible}}">
+        <TextBox x:Name="SearchBox" Width="280" Text="{Binding Search, UpdateSourceTrigger=PropertyChanged}" kyf:Field.Placeholder="{x:Static pages:QuotesText.SearchPlaceholder}"
+                 AutomationProperties.Name="{x:Static pages:QuotesText.SearchLabel}" Margin="0,0,8,8" />
+        <ComboBox x:Name="TagChoice" MinWidth="216" ItemsSource="{Binding Tags}" SelectedItem="{Binding Tag}" DisplayMemberPath="Label" Margin="0,0,8,8"
+                  AutomationProperties.Name="{x:Static pages:QuotesText.TagLabel}" Visibility="{Binding HasTags, Converter={StaticResource Visible}}" />
+        <ComboBox x:Name="SortChoice" MinWidth="168" ItemsSource="{x:Static pages:QuotesPageViewModel.Sorts}" SelectedItem="{Binding Sort}" DisplayMemberPath="Label" Margin="0,0,0,8"
+                  AutomationProperties.Name="{x:Static pages:QuotesText.SortLabel}" />
+      </WrapPanel>
+
+      <Grid>
+        <kyf:EmptyState x:Name="Empty" Glyph="{x:Static kyf:Icons.Quote}" Title="{x:Static pages:QuotesText.EmptyTitle}" Description="{x:Static pages:QuotesText.EmptyDescription}"
+                        Visibility="{Binding IsEmpty, Converter={StaticResource Visible}}" />
+        <ScrollViewer x:Name="Scroller" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
+          <StackPanel>
+            <TextBlock x:Name="NoMatch" Text="{x:Static pages:QuotesText.NoMatch}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="0,0,0,8" Visibility="{Binding HasNoMatch, Converter={StaticResource Visible}}" />
+            <!-- Des cartes, autant de colonnes que la largeur en permet : un écran large ne reste pas vide. -->
+            <ItemsControl x:Name="List" ItemsSource="{Binding Rows}" Focusable="False" AutomationProperties.Name="{x:Static pages:QuotesText.ListName}" Visibility="{Binding HasRows, Converter={StaticResource Visible}}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <WrapPanel />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate DataType="{x:Type pages:QuoteRow}">
+                  <kyf:Card Margin="0,0,8,8" Padding="12" Width="{Binding CardWidth, RelativeSource={RelativeSource AncestorType=pages:QuotesPage}}">
+                    <DockPanel>
+                      <StackPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
+                        <TextBlock Text="{Binding Added}" Style="{DynamicResource Kyf.Text.Caption}" Visibility="{Binding HasAdded, Converter={StaticResource Visible}}" />
+                        <WrapPanel Margin="-6,4,0,0">
+                          <Button x:Name="OpenSource" Content="{Binding SourceLabel}" Command="{Binding OpenSource}" Style="{DynamicResource Kyf.Button.Subtle}" Margin="0,0,4,0"
+                                  AutomationProperties.Name="{Binding SourceName}" Visibility="{Binding HasSource, Converter={StaticResource Visible}}" />
+                          <Button x:Name="EditQuote" Content="{x:Static pages:QuotesText.Edit}" Command="{Binding Edit}" Style="{DynamicResource Kyf.Button.Subtle}" Margin="0,0,4,0" AutomationProperties.Name="{Binding EditName}" />
+                          <Button x:Name="TrashQuote" Content="{x:Static pages:QuotesText.Trash}" Command="{Binding Trash}" Style="{DynamicResource Kyf.Button.Subtle}" AutomationProperties.Name="{Binding TrashName}" />
+                        </WrapPanel>
+                      </StackPanel>
+                      <StackPanel>
+                        <TextBlock Text="{Binding Text}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding Attribution}" Style="{DynamicResource Kyf.Text.BodyStrong}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                        <TextBlock Text="{Binding Reference}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                        <TextBlock Text="{Binding Context}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="0,4,0,0" Visibility="{Binding HasContext, Converter={StaticResource Visible}}" />
+                      </StackPanel>
+                    </DockPanel>
+                  </kyf:Card>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <kyf:Card x:Name="TrashCard" Padding="16,12" Margin="0,8,8,8" Visibility="{Binding HasTrash, Converter={StaticResource Visible}}">
+              <StackPanel>
+                <TextBlock Text="{Binding TrashTitle}" Style="{DynamicResource Kyf.Text.Subtitle}" AutomationProperties.HeadingLevel="Level2" Margin="0,0,0,8" />
+                <ItemsControl x:Name="TrashList" ItemsSource="{Binding Trash}" Focusable="False" AutomationProperties.Name="{x:Static pages:QuotesText.TrashListName}">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type pages:TrashedQuoteRow}">
+                      <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource Kyf.Brush.Divider}" Padding="0,6">
+                        <DockPanel>
+                          <Button DockPanel.Dock="Right" Content="{x:Static pages:QuotesText.Restore}" Command="{Binding Restore}" VerticalAlignment="Center" Margin="12,0,0,0" AutomationProperties.Name="{Binding RestoreName}" />
+                          <TextBlock Text="{Binding Excerpt}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                        </DockPanel>
+                      </Border>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </kyf:Card>
+
+            <TextBlock x:Name="UnreadableFiles" Text="{Binding Unreadable}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="0,8,0,0" Visibility="{Binding HasUnreadable, Converter={StaticResource Visible}}" />
+          </StackPanel>
+        </ScrollViewer>
+      </Grid>
+    </DockPanel>
+
+    <kyf:Dialog x:Name="Form" Title="{Binding FormTitle}" IsOpen="{Binding IsFormOpen, Mode=OneWay}" IsWide="True" CardMaxWidth="640" PrimaryButtonText="{x:Static pages:QuotesText.Save}" Closed="OnFormClosed">
+      <StackPanel>
+        <kyf:Notification x:Name="FormErrorMessage" Severity="Critical" Message="{Binding FormError}" IsOpen="{Binding HasFormError, Mode=OneWay}" IsClosable="False" Margin="0,0,0,12" />
+        <TextBlock Text="{x:Static pages:QuotesText.TextLabel}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,0,0,4" />
+        <TextBox x:Name="TextBox" Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap" MinLines="3" VerticalContentAlignment="Top" AutomationProperties.Name="{x:Static pages:QuotesText.TextLabel}" />
+
+        <UniformGrid Columns="2" Margin="0,8,0,0">
+          <StackPanel Margin="0,0,4,0">
+            <TextBlock Text="{x:Static pages:QuotesText.AuthorLabel}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,0,0,4" />
+            <TextBox x:Name="AuthorBox" Text="{Binding Author, UpdateSourceTrigger=PropertyChanged}" kyf:Field.Placeholder="{x:Static pages:QuotesText.UnknownAuthor}" AutomationProperties.Name="{x:Static pages:QuotesText.AuthorLabel}" />
+          </StackPanel>
+          <StackPanel Margin="4,0,0,0">
+            <TextBlock Text="{x:Static pages:QuotesText.DateLabel}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,0,0,4" />
+            <TextBox x:Name="DateBox" Text="{Binding Date, UpdateSourceTrigger=PropertyChanged}" kyf:Field.Placeholder="{x:Static pages:QuotesText.DatePlaceholder}" AutomationProperties.Name="{x:Static pages:QuotesText.DateLabel}" />
+          </StackPanel>
+        </UniformGrid>
+
+        <UniformGrid Columns="2" Margin="0,8,0,0">
+          <StackPanel Margin="0,0,4,0">
+            <TextBlock Text="{x:Static pages:QuotesText.KindLabel}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,0,0,4" />
+            <ComboBox x:Name="KindChoice" ItemsSource="{x:Static pages:QuotesPageViewModel.SourceKinds}" SelectedItem="{Binding SourceKind}" DisplayMemberPath="Label" AutomationProperties.Name="{x:Static pages:QuotesText.KindLabel}" />
+          </StackPanel>
+          <StackPanel Margin="4,0,0,0">
+            <TextBlock Text="{x:Static pages:QuotesText.SourceTitleLabel}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,0,0,4" />
+            <TextBox x:Name="SourceTitleBox" Text="{Binding SourceTitle, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="{x:Static pages:QuotesText.SourceTitleLabel}" />
+          </StackPanel>
+        </UniformGrid>
+
+        <UniformGrid Columns="2" Margin="0,8,0,0">
+          <StackPanel Margin="0,0,4,0">
+            <TextBlock Text="{x:Static pages:QuotesText.PageLabel}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,0,0,4" />
+            <TextBox x:Name="PageBox" Text="{Binding SourcePage, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="{x:Static pages:QuotesText.PageLabel}" />
+          </StackPanel>
+          <StackPanel Margin="4,0,0,0">
+            <TextBlock Text="{x:Static pages:QuotesText.AddressLabel}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,0,0,4" />
+            <TextBox x:Name="AddressBox" Text="{Binding SourceAddress, UpdateSourceTrigger=PropertyChanged}" kyf:Field.Placeholder="https://…" AutomationProperties.Name="{x:Static pages:QuotesText.AddressLabel}" />
+          </StackPanel>
+        </UniformGrid>
+
+        <TextBlock Text="{x:Static pages:QuotesText.ContextLabel}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,8,0,4" />
+        <TextBox x:Name="ContextBox" Text="{Binding Context, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap" MinLines="2" VerticalContentAlignment="Top" AutomationProperties.Name="{x:Static pages:QuotesText.ContextLabel}" />
+
+        <TextBlock Text="{x:Static pages:QuotesText.TagsLabel}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,8,0,4" />
+        <TextBox x:Name="TagsBox" Text="{Binding TagsText, UpdateSourceTrigger=PropertyChanged}" kyf:Field.Placeholder="{x:Static pages:QuotesText.TagsPlaceholder}" AutomationProperties.Name="{x:Static pages:QuotesText.TagsLabel}" />
+      </StackPanel>
+    </kyf:Dialog>
+
+    <kyf:Dialog x:Name="TrashConfirmation" Title="{x:Static pages:QuotesText.TrashConfirmTitle}" IsOpen="{Binding IsConfirmingTrash, Mode=OneWay}" PrimaryButtonText="{x:Static pages:QuotesText.Trash}" Closed="OnTrashClosed">
+      <TextBlock Text="{x:Static pages:QuotesText.TrashConfirm}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" />
+    </kyf:Dialog>
+  </Grid>
+</UserControl>

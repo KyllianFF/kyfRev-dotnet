@@ -15,8 +15,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\KyfRev.Infrastructure.Online\KyfRev.Infrastructure.Online.csproj" />
     <ProjectReference Include="..\KyfRev.Infrastructure.Vault\KyfRev.Infrastructure.Vault.csproj" />
     <ProjectReference Include="..\KyfRev.Infrastructure.Windows\KyfRev.Infrastructure.Windows.csproj" />
+    <ProjectReference Include="..\KyfRev.Modules.Citations\KyfRev.Modules.Citations.csproj" />
     <ProjectReference Include="..\KyfRev.Presentation.Wpf\KyfRev.Presentation.Wpf.csproj" />
   </ItemGroup>
 
