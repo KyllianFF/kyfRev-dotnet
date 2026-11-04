@@ -1,9 +1,16 @@
 namespace KyfRev.Infrastructure.Windows.Tests;
 
-/// <summary>Les voix de Windows, sur une sortie muette : un poste peut n'en avoir aucune, comme un serveur.</summary>
+/// <summary>
+/// Les voix de Windows, sur une sortie muette : un poste peut n'en avoir aucune, comme un serveur.
+/// L'application n'a qu'une synthèse à la fois : ces tests aussi. Le premier démarrage du moteur peut
+/// prendre longtemps sur un poste neuf, d'où la patience.
+/// </summary>
 [TestClass]
+[DoNotParallelize]
 public sealed class WindowsSpeechTests
 {
+    private static readonly TimeSpan EnginePatience = TimeSpan.FromMinutes(2);
+
     [TestMethod]
     [DataRow(1.0, 0)]
     [DataRow(0.8, -2)]
@@ -30,7 +37,7 @@ public sealed class WindowsSpeechTests
     {
         using var speech = Mute();
 
-        var said = await speech.SpeakAsync("Un.", null, 1.5, CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(30));
+        var said = await speech.SpeakAsync("Un.", null, 1.5, CancellationToken.None).WaitAsync(EnginePatience);
 
         Assert.IsNotNull(said);
     }
@@ -40,7 +47,7 @@ public sealed class WindowsSpeechTests
     {
         using var speech = Mute();
 
-        var said = await speech.SpeakAsync("Un.", "Une voix qui n'existe pas", 1, CancellationToken.None).WaitAsync(TimeSpan.FromSeconds(30));
+        var said = await speech.SpeakAsync("Un.", "Une voix qui n'existe pas", 1, CancellationToken.None).WaitAsync(EnginePatience);
 
         Assert.IsFalse(said.Succeeded);
         Assert.IsNotNull(said.Error);
@@ -56,7 +63,7 @@ public sealed class WindowsSpeechTests
         var saying = speech.SpeakAsync(long_text, null, 1, cancellation.Token);
         await cancellation.CancelAsync();
 
-        await saying.WaitAsync(TimeSpan.FromSeconds(30));
+        await saying.WaitAsync(EnginePatience);
     }
 
     [TestMethod]
@@ -69,8 +76,8 @@ public sealed class WindowsSpeechTests
         speech.PauseSpeaking();
         var second = speech.SpeakAsync("Deux.", null, 1, CancellationToken.None);
 
-        await first.WaitAsync(TimeSpan.FromSeconds(30));
-        await second.WaitAsync(TimeSpan.FromSeconds(30));
+        await first.WaitAsync(EnginePatience);
+        await second.WaitAsync(EnginePatience);
         speech.ResumeSpeaking();
     }
 
