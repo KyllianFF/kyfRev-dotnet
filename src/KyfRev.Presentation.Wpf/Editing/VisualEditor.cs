@@ -17,6 +17,9 @@ using KyfRev.Rendering.Diagrams;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
 
+using KyfRev.DesignSystem.Controls;
+using KyfRev.Presentation.Wpf.Pages;
+
 namespace KyfRev.Presentation.Wpf.Editing;
 
 /// <summary>
@@ -391,7 +394,20 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
     /// <summary>Les éléments du menu natif, selon ce que la page a dit de l'endroit visé.</summary>
     internal List<Control> MenuItems(MenuEvent menu, SpellingCorrection? correction)
     {
-        var items = new List<Control>();
+        List<Control> items =
+        [
+            ActionMenus.Quick(EditingText.Cut, Icons.Cut, () => Post(new ClipboardRequest("cut"))),
+            ActionMenus.Quick(EditingText.Copy, Icons.Copy, () => Post(new ClipboardRequest("copy"))),
+            ActionMenus.Quick(EditingText.Paste, Icons.Paste, () => Post(new ClipboardRequest("paste"))),
+        ];
+        if (!menu.InCode)
+        {
+            items.Add(ActionMenus.Tool(EditingText.Bold, Icons.Bold, () => Post(new MarkRequest(InlineMark.Bold))));
+            items.Add(ActionMenus.Tool(EditingText.Italic, Icons.Italic, () => Post(new MarkRequest(InlineMark.Italic))));
+            items.Add(ActionMenus.Tool(EditingText.Underline, Icons.Underline, () => Post(new MarkRequest(InlineMark.Underline))));
+            items.Add(ActionMenus.Tool(EditingText.Strike, Icons.Strike, () => Post(new MarkRequest(InlineMark.Strike))));
+        }
+        items.Add(new Separator());
         if (correction is not null && menu.Word is { } word)
         {
             foreach (var suggestion in correction.Suggestions)
@@ -406,21 +422,14 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
             items.Add(add);
             items.Add(new Separator());
         }
-        items.Add(Item(EditingText.Cut, new ClipboardRequest("cut")));
-        items.Add(Item(EditingText.Copy, new ClipboardRequest("copy")));
-        items.Add(Item(EditingText.Paste, new ClipboardRequest("paste")));
         items.Add(Item(EditingText.PastePlain, new ClipboardRequest("pastePlain")));
         if (!menu.InCode)
         {
-            items.Add(new Separator());
-            items.Add(Item(EditingText.Bold, new MarkRequest(InlineMark.Bold)));
-            items.Add(Item(EditingText.Italic, new MarkRequest(InlineMark.Italic)));
-            items.Add(Item(EditingText.Underline, new MarkRequest(InlineMark.Underline)));
-            items.Add(Item(EditingText.Strike, new MarkRequest(InlineMark.Strike)));
-            items.Add(Item(EditingText.Superscript, new MarkRequest(InlineMark.Superscript)));
-            items.Add(Item(EditingText.Subscript, new MarkRequest(InlineMark.Subscript)));
-            items.Add(Item(EditingText.ClearFormat, new ClearFormatRequest()));
-            items.Add(new Separator());
+            var format = new MenuItem { Header = EditingText.MoreFormat };
+            format.Items.Add(Item(EditingText.Superscript, new MarkRequest(InlineMark.Superscript)));
+            format.Items.Add(Item(EditingText.Subscript, new MarkRequest(InlineMark.Subscript)));
+            format.Items.Add(Item(EditingText.ClearFormat, new ClearFormatRequest()));
+            items.Add(format);
             items.Add(Item(menu.OnLink ? EditingText.EditLink : EditingText.Link, new AskLinkRequest()));
             if (menu.OnLink)
             {

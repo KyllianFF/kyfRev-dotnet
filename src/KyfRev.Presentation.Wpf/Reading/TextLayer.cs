@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
+using System.Windows.Input;
 using System.Windows.Media;
 using KyfRev.Presentation.Wpf.Pages;
 
@@ -14,6 +15,8 @@ namespace KyfRev.Presentation.Wpf.Reading;
 internal sealed class TextLayer(Func<string, Brush?> findBrush)
 {
     private const string PassageBackground = "Kyf.Brush.PillPassageBackground";
+    private const string ActiveBackground = "Kyf.Brush.HighlightActive";
+    private const string ActiveText = "Kyf.Brush.OnHighlight";
     private const string PassageText = "Kyf.Brush.PillPassageText";
     private const string PassageMarker = "Kyf.Brush.MarkerPassage";
     private const string DefinitionMarker = "Kyf.Brush.MarkerSheet";
@@ -183,6 +186,15 @@ internal sealed class TextLayer(Func<string, Brush?> findBrush)
         }
         var run = segment.Run;
         segment.IsStyled = covering.Count > 0 || hidden;
+        // Ce qui répond au clic le montre : un trou se découvre, un passage ressort dans le volet.
+        if (covering.Count > 0 || hidden)
+        {
+            run.Cursor = Cursors.Hand;
+        }
+        else
+        {
+            run.ClearValue(FrameworkContentElement.CursorProperty);
+        }
         if (hidden)
         {
             // Le trou garde la largeur du texte, comme une ligne à compléter : le texte a la couleur du fond.
@@ -191,7 +203,13 @@ internal sealed class TextLayer(Func<string, Brush?> findBrush)
             run.TextDecorations = [HoleLine()];
             return;
         }
-        if (covering.Exists(highlight => !highlight.IsDefinition && !highlight.IsCandidate))
+        if (covering.Exists(highlight => highlight.Id == _active))
+        {
+            // Le passage visé depuis le volet doit sauter aux yeux, dans les deux thèmes.
+            run.SetResourceReference(TextElement.BackgroundProperty, ActiveBackground);
+            run.SetResourceReference(TextElement.ForegroundProperty, ActiveText);
+        }
+        else if (covering.Exists(highlight => !highlight.IsDefinition && !highlight.IsCandidate))
         {
             run.SetResourceReference(TextElement.BackgroundProperty, PassageBackground);
             run.SetResourceReference(TextElement.ForegroundProperty, PassageText);
@@ -256,7 +274,11 @@ internal sealed class TextLayer(Func<string, Brush?> findBrush)
             formula.Slot.SetResourceReference(Border.BackgroundProperty, PassageBackground);
             return;
         }
-        if (covering.Exists(highlight => !highlight.IsDefinition && !highlight.IsCandidate))
+        if (covering.Exists(highlight => highlight.Id == _active))
+        {
+            formula.Slot.SetResourceReference(Border.BackgroundProperty, ActiveBackground);
+        }
+        else if (covering.Exists(highlight => !highlight.IsDefinition && !highlight.IsCandidate))
         {
             formula.Slot.SetResourceReference(Border.BackgroundProperty, PassageBackground);
         }

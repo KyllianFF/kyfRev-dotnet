@@ -9,6 +9,7 @@ namespace KyfRev.Presentation.Wpf.Pages;
 internal static class ActionMenus
 {
     private const string QuickStyle = "Kyf.MenuItem.Quick";
+    private const string ToolStyle = "Kyf.MenuItem.Tool";
 
     /// <summary>Une action rapide : icône au-dessus du libellé.</summary>
     public static MenuItem Quick(string label, string glyph, Action action, bool isEnabled = true)
@@ -25,6 +26,15 @@ internal static class ActionMenus
         var item = NewQuick(label, glyph);
         item.Command = command;
         item.CommandTarget = target;
+        return item;
+    }
+
+    /// <summary>Un outil de la seconde rangée : une icône seule, son nom dans l'infobulle.</summary>
+    public static MenuItem Tool(string label, string glyph, Action action)
+    {
+        var item = new MenuItem { Header = label, Icon = new Icon { Text = glyph }, ToolTip = label };
+        item.SetResourceReference(FrameworkElement.StyleProperty, ToolStyle);
+        item.Click += (_, _) => action();
         return item;
     }
 

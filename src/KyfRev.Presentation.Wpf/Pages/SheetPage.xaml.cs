@@ -202,6 +202,8 @@ internal sealed partial class SheetPage : UserControl
     private void ShowPassage(SheetPageViewModel page, PassageEntry entry)
     {
         page.CloseOverlayCommand.Execute(null);
+        // Afficher un passage masqué, c'est d'abord le découvrir : demander à le voir vaut pour réponse.
+        page.Holes.RevealPassage(entry.Annotation.Id);
         page.ActivateCommand.Execute(entry.Annotation.Id);
         if (entry.Position is { } position && page.IsReading)
         {

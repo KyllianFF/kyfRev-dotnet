@@ -94,6 +94,20 @@ public sealed partial class TextHoles : ObservableObject
         }
     }
 
+    /// <summary>Affiche les trous d'un passage, s'il en a de masqués.</summary>
+    internal void RevealPassage(string passageId)
+    {
+        var added = false;
+        foreach (var hole in _all.Where(hole => hole.PassageId == passageId))
+        {
+            added |= _revealed.Add(hole.Key);
+        }
+        if (added)
+        {
+            Notify();
+        }
+    }
+
     /// <summary>Affiche le premier trou encore masqué, et le rend.</summary>
     internal TextHole? RevealNext()
     {

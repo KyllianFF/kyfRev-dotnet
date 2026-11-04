@@ -8,6 +8,9 @@ using ICSharpCode.AvalonEdit;
 using ICSharpCode.AvalonEdit.Document;
 using KyfRev.Application.Ports;
 
+using KyfRev.DesignSystem.Controls;
+using KyfRev.Presentation.Wpf.Pages;
+
 namespace KyfRev.Presentation.Wpf.Editing;
 
 /// <summary>
@@ -537,7 +540,12 @@ internal sealed class MarkdownEditor : TextEditor, IEditorSurface
     /// <summary>Les éléments du menu à cet endroit du texte.</summary>
     internal IReadOnlyList<Control> MenuItemsAt(int offset)
     {
-        var items = new List<Control>();
+        List<Control> items =
+        [
+            ActionMenus.Quick(EditingText.Cut, Icons.Cut, ApplicationCommands.Cut, TextArea),
+            ActionMenus.Quick(EditingText.Copy, Icons.Copy, ApplicationCommands.Copy, TextArea),
+            ActionMenus.Quick(EditingText.Paste, Icons.Paste, ApplicationCommands.Paste, TextArea),
+        ];
         var line = Document.GetLineByOffset(offset);
         if (Spelling is { } spelling && !IsInFence(offset) && TextCase.WordAround(Document.GetText(line), offset - line.Offset) is { } range)
         {
@@ -546,6 +554,7 @@ internal sealed class MarkdownEditor : TextEditor, IEditorSurface
             var correction = Task.Run(() => spelling.Correct(word)).GetAwaiter().GetResult();
             if (correction is not null)
             {
+                items.Add(new Separator());
                 foreach (var suggestion in correction.Suggestions)
                 {
                     var item = new MenuItem { Header = suggestion, FontWeight = FontWeights.SemiBold };
@@ -562,12 +571,8 @@ internal sealed class MarkdownEditor : TextEditor, IEditorSurface
                     _ = Task.Run(() => spelling.Add(word)).ContinueWith(_ => Dispatcher.BeginInvoke(_spellingLayer.Forget), TaskScheduler.Default);
                 };
                 items.Add(add);
-                items.Add(new Separator());
             }
         }
-        items.Add(new MenuItem { Header = EditingText.Cut, Command = ApplicationCommands.Cut, CommandTarget = TextArea });
-        items.Add(new MenuItem { Header = EditingText.Copy, Command = ApplicationCommands.Copy, CommandTarget = TextArea });
-        items.Add(new MenuItem { Header = EditingText.Paste, Command = ApplicationCommands.Paste, CommandTarget = TextArea });
         return items;
     }
 }

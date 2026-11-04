@@ -31,7 +31,7 @@
             <ItemsControl ItemsSource="{Binding Outline}" Focusable="False">
               <ItemsControl.ItemTemplate>
                 <DataTemplate DataType="{x:Type pages:OutlineEntry}">
-                  <Button Style="{DynamicResource Kyf.Button.Subtle}" HorizontalContentAlignment="Left" HorizontalAlignment="Stretch" Click="OnOutlineEntryClick"
+                  <Button FocusVisualStyle="{DynamicResource Kyf.FocusVisual.Inset}" Style="{DynamicResource Kyf.Button.Subtle}" HorizontalContentAlignment="Left" HorizontalAlignment="Stretch" Click="OnOutlineEntryClick"
                           AutomationProperties.Name="{Binding Title}" Padding="4,3">
                     <TextBlock Text="{Binding Title}" Style="{StaticResource OutlineTitle}" Margin="{Binding Indent, Converter={x:Static pages:IndentConverter.Instance}}" />
                   </Button>
@@ -54,7 +54,7 @@
               <ItemsControl ItemsSource="{Binding Passages}" Focusable="False">
                 <ItemsControl.ItemTemplate>
                   <DataTemplate DataType="{x:Type pages:PassageEntry}">
-                    <Button Style="{DynamicResource Kyf.Button.Subtle}" HorizontalContentAlignment="Stretch" HorizontalAlignment="Stretch" Click="OnPassageEntryClick"
+                    <Button FocusVisualStyle="{DynamicResource Kyf.FocusVisual.Inset}" Style="{DynamicResource Kyf.Button.Subtle}" HorizontalContentAlignment="Stretch" HorizontalAlignment="Stretch" Click="OnPassageEntryClick"
                             ContextMenuOpening="OnPassageEntryMenu" AutomationProperties.Name="{Binding ShownTitle}" Padding="4,6">
                       <Button.ContextMenu>
                         <ContextMenu />

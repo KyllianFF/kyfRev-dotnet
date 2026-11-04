@@ -1038,17 +1038,19 @@ public sealed class VisualEditorTests
         var items = visual.MenuItems(new MenuEvent("ékole", 5, false, false, true, true), new KyfRev.Application.Ports.SpellingCorrection(0, 5, ["école"]));
 
         var headers = items.OfType<MenuItem>().Select(item => (string)item.Header).ToList();
-        Assert.AreEqual("école", headers[0]);
-        Assert.AreEqual(EditingText.AddToDictionary, headers[1]);
+        Assert.AreEqual(EditingText.Cut, headers[0]);
+        Assert.AreEqual(EditingText.Bold, headers[3]);
+        Assert.AreEqual("école", headers[7]);
+        Assert.AreEqual(EditingText.AddToDictionary, headers[8]);
         CollectionAssert.Contains(headers, EditingText.PastePlain);
         CollectionAssert.Contains(headers, EditingText.RemoveLink);
         CollectionAssert.Contains(headers, EditingText.DeleteTable);
 
-        items.OfType<MenuItem>().First().RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+        items.OfType<MenuItem>().First(item => (string)item.Header == "école").RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
         UiThread.Until(() => scene.Shown.Contains("école", StringComparison.Ordinal) || scene.Shown.Contains("Une", StringComparison.Ordinal));
 
         var inCode = visual.MenuItems(new MenuEvent(null, 0, false, true, false, false), null);
         Assert.AreEqual(EditingText.Cut, ((MenuItem)inCode[0]).Header);
-        Assert.HasCount(4, inCode, "Dans le code, seulement le presse-papiers.");
+        Assert.HasCount(4, inCode.OfType<MenuItem>().ToList(), "Dans le code, seulement le presse-papiers.");
     }
 }

@@ -405,6 +405,76 @@ public sealed class ContextMenusTests
         }
     }
 
+    [STATestMethod]
+    public void A_tool_is_an_icon_with_its_name_in_a_tooltip()
+    {
+        using var ui = new UiThread();
+        var runs = 0;
+
+        var tool = ActionMenus.Tool("Gras", Icons.Bold, () => runs++);
+        Click(tool);
+
+        Assert.AreEqual(1, runs);
+        Assert.AreEqual("Gras", tool.Header, "le lecteur d'écran dit son nom");
+        Assert.AreEqual("Gras", tool.ToolTip);
+        Assert.AreEqual(Icons.Bold, ((Icon)tool.Icon).Text);
+    }
+
+    [STATestMethod]
+    public void Showing_a_hidden_passage_uncovers_it_and_makes_it_stand_out()
+    {
+        using var ui = new UiThread();
+        using var vault = new ReadingVault("La prophase précède la métaphase.\n", passage: false);
+        var id = vault.Annotate("La prophase");
+        var test = new TestShell();
+        var model = vault.Page(revising: true, activeRecall: () => true);
+        model.LoadCommand.Execute(null);
+        UiThread.Until(() => model.Reading is not null && !model.IsLoading);
+        var page = new SheetPage { DataContext = model, Width = 1700, Height = 900 };
+        var window = Window(test, page, 1700, 900);
+        try
+        {
+            UiThread.Until(() => model.Holes.HasHoles);
+            TestShell.Flush();
+            Assert.IsTrue(model.Holes.Masks(id));
+            var hole = TextRuns(page.SheetText.Document).First(run => run.Text.Contains("prophase", StringComparison.Ordinal));
+            Assert.AreEqual(System.Windows.Input.Cursors.Hand, hole.Cursor, "un trou se clique, et le curseur le dit");
+
+            Click(page.PassageMenuItems(model, model.Passages.Single())[0]);
+
+            Assert.IsFalse(model.Holes.Masks(id));
+            Assert.AreEqual(id, model.ActivePassage);
+            TestShell.Flush();
+            var shown = TextRuns(page.SheetText.Document).First(run => run.Text.Contains("prophase", StringComparison.Ordinal));
+            Assert.AreEqual(test.Design.Dictionary["Kyf.Brush.HighlightActive"], shown.Background, "le passage visé ressort du texte");
+            Assert.AreEqual(test.Design.Dictionary["Kyf.Brush.OnHighlight"], shown.Foreground);
+
+            model.ActivateCommand.Execute(id);
+            TestShell.Flush();
+            var other = TextRuns(page.SheetText.Document).First(run => run.Text.Contains("métaphase", StringComparison.Ordinal));
+            Assert.IsNull(other.ReadLocalValue(System.Windows.FrameworkContentElement.CursorProperty) as System.Windows.Input.Cursor, "le reste du texte garde son curseur");
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    private static IEnumerable<Run> TextRuns(DependencyObject root)
+    {
+        foreach (var child in LogicalTreeHelper.GetChildren(root).OfType<DependencyObject>())
+        {
+            if (child is Run run)
+            {
+                yield return run;
+            }
+            foreach (var nested in TextRuns(child))
+            {
+                yield return nested;
+            }
+        }
+    }
+
     private static List<string> Headers(IReadOnlyList<Control> items) =>
         [.. items.OfType<MenuItem>().Select(item => (string)item.Header)];
 

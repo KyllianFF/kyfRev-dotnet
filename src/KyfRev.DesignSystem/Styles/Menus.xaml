@@ -2,7 +2,6 @@
                     x:ClassModifier="internal"
                     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                    xmlns:ds="clr-namespace:KyfRev.DesignSystem"
                     xmlns:kyf="clr-namespace:KyfRev.DesignSystem.Controls">
 
   <!-- Menu contextuel : une carte flottante, ombre de l'élévation « Flyout ». Les actions rapides, s'il y en a, en tête. -->
@@ -111,6 +110,7 @@
   </ControlTemplate>
 
   <Style TargetType="MenuItem">
+    <Setter Property="Cursor" Value="Hand" />
     <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Text}" />
     <Setter Property="FocusVisualStyle" Value="{DynamicResource Kyf.FocusVisual.Inset}" />
     <Setter Property="Template" Value="{StaticResource Kyf.Template.MenuItem}" />
@@ -118,6 +118,7 @@
 
   <!-- Action rapide : l'icône au-dessus du libellé, une case de la rangée en tête du menu. -->
   <Style x:Key="Kyf.MenuItem.Quick" TargetType="MenuItem">
+    <Setter Property="Cursor" Value="Hand" />
     <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Text}" />
     <Setter Property="FocusVisualStyle" Value="{DynamicResource Kyf.FocusVisual.Inset}" />
     <Setter Property="kyf:ActionMenuPanel.IsQuick" Value="True" />
@@ -144,26 +145,32 @@
     </Setter>
   </Style>
 
-  <!-- Le menu d'un champ de texte : un seul pour tous, il agit sur le champ qui a le focus. -->
-  <ContextMenu x:Key="Kyf.ContextMenu.Field">
-    <MenuItem Command="Cut" Header="{x:Static ds:DesignText.Cut}" Style="{StaticResource Kyf.MenuItem.Quick}">
-      <MenuItem.Icon>
-        <kyf:Icon Text="{x:Static kyf:Icons.Cut}" />
-      </MenuItem.Icon>
-    </MenuItem>
-    <MenuItem Command="Copy" Header="{x:Static ds:DesignText.Copy}" Style="{StaticResource Kyf.MenuItem.Quick}">
-      <MenuItem.Icon>
-        <kyf:Icon Text="{x:Static kyf:Icons.Copy}" />
-      </MenuItem.Icon>
-    </MenuItem>
-    <MenuItem Command="Paste" Header="{x:Static ds:DesignText.Paste}" Style="{StaticResource Kyf.MenuItem.Quick}">
-      <MenuItem.Icon>
-        <kyf:Icon Text="{x:Static kyf:Icons.Paste}" />
-      </MenuItem.Icon>
-    </MenuItem>
-    <Separator />
-    <MenuItem Command="SelectAll" Header="{x:Static ds:DesignText.SelectAll}" />
-  </ContextMenu>
+  <!-- Outil : une icône seule, dans la seconde rangée du menu ; son nom est dans l'infobulle. -->
+  <Style x:Key="Kyf.MenuItem.Tool" TargetType="MenuItem">
+    <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Text}" />
+    <Setter Property="FocusVisualStyle" Value="{DynamicResource Kyf.FocusVisual.Inset}" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="kyf:ActionMenuPanel.IsTool" Value="True" />
+    <Setter Property="MinWidth" Value="40" />
+    <Setter Property="MinHeight" Value="36" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="MenuItem">
+          <Border x:Name="Cell" Background="Transparent" CornerRadius="{DynamicResource Kyf.Radius.Control}" SnapsToDevicePixels="True">
+            <ContentPresenter ContentSource="Icon" HorizontalAlignment="Center" VerticalAlignment="Center" />
+          </Border>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsHighlighted" Value="True">
+              <Setter TargetName="Cell" Property="Background" Value="{DynamicResource Kyf.Brush.SurfaceAlt}" />
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+              <Setter TargetName="Cell" Property="Opacity" Value="0.5" />
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
 
   <Style x:Key="{x:Static MenuItem.SeparatorStyleKey}" TargetType="Separator">
     <Setter Property="Template">
