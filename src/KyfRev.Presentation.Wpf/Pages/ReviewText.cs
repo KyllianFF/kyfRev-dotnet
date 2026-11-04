@@ -26,7 +26,7 @@ public static class ReviewText
     /// <summary>« Archiver la fiche ? ».</summary>
     public static string ArchiveTitle => Text(nameof(ArchiveTitle));
 
-    /// <summary>« Fiche archivée. Elle reste consultable dans « Archives » et n'est jamais supprimée. ».</summary>
+    /// <summary>« Fiche archivée. Elle reste consultable dans « Archives ». ».</summary>
     public static string ArchivedMessage => Text(nameof(ArchivedMessage));
 
     /// <summary>« le … ».</summary>

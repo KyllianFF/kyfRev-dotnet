@@ -200,7 +200,7 @@ public sealed class SheetsTests
 
         page.OpenCommand.Execute(page.Rows[0]);
         Assert.IsEmpty(opener.Opened, "un en-tête n'ouvre rien");
-        page.OpenCommand.Execute(page.Rows[1]);
+        page.OpenCommand.Execute(page.Rows.OfType<SheetRow>().Single());
         CollectionAssert.AreEqual(new object[] { "f_Mitose" }, opener.Opened);
     }
 

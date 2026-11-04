@@ -112,11 +112,21 @@
 
           <!-- La liste : virtualisée, pour qu'un grand coffre reste fluide. -->
           <kyf:Card x:Name="ListCard" Padding="8">
-            <pages:OpenableList x:Name="Items" ItemsSource="{Binding Rows}" SelectedItem="{Binding SelectedRow}" OpenCommand="{Binding OpenCommand}"
-                                AutomationProperties.Name="{x:Static pages:SheetsText.ListName}"
-                                ScrollViewer.CanContentScroll="True" VirtualizingPanel.IsVirtualizing="True"
-                                VirtualizingPanel.VirtualizationMode="Recycling" VirtualizingPanel.ScrollUnit="Pixel"
-                                PreviewKeyDown="OnItemsKeyDown" SelectionChanged="OnItemsSelectionChanged" MouseDoubleClick="OnItemsDoubleClick" />
+            <Grid>
+              <pages:OpenableList x:Name="Items" ItemsSource="{Binding Rows}" SelectedItem="{Binding SelectedRow}" OpenCommand="{Binding OpenCommand}"
+                                  AutomationProperties.Name="{x:Static pages:SheetsText.ListName}"
+                                  ScrollViewer.CanContentScroll="True" VirtualizingPanel.IsVirtualizing="True"
+                                  VirtualizingPanel.VirtualizationMode="Recycling" VirtualizingPanel.ScrollUnit="Pixel"
+                                  PreviewKeyDown="OnItemsKeyDown" SelectionChanged="OnItemsSelectionChanged" MouseDoubleClick="OnItemsDoubleClick"
+                                  AllowDrop="True" PreviewMouseLeftButtonDown="OnItemsPressed" PreviewMouseMove="OnItemsMoved"
+                                  DragOver="OnItemsDragOver" Drop="OnItemsDrop" DragLeave="OnItemsDragLeave" />
+              <!-- Pendant un glisser-déposer : où la fiche irait, même si l'en-tête du dossier n'est pas à l'écran. -->
+              <Border x:Name="DropHintBox" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="8" Padding="12,6" IsHitTestVisible="False"
+                      Background="{DynamicResource Kyf.Brush.Primary}" CornerRadius="{DynamicResource Kyf.Radius.Control}"
+                      Visibility="{Binding HasDropHint, Converter={StaticResource Visible}}">
+                <TextBlock Text="{Binding DropHint}" Foreground="{DynamicResource Kyf.Brush.OnPrimary}" TextWrapping="Wrap" />
+              </Border>
+            </Grid>
           </kyf:Card>
 
           <!-- L'aperçu de la fiche choisie, quand il y a la place. -->

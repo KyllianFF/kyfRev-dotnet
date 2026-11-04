@@ -36,7 +36,7 @@ public sealed class ArchivesTests
             Entry("Absente", status: ReminderStatus.Excluded, lastOn: new DateOnly(2026, 9, 3), last: ReminderOutcome.ReviewEntirely, present: false),
         ]);
 
-        StringAssert.StartsWith(page.Summary, "4 fiches archivées · rien n'est jamais supprimé", StringComparison.Ordinal);
+        StringAssert.StartsWith(page.Summary, "4 fiches archivées · elles restent ici", StringComparison.Ordinal);
         var mitosis = Row(page, "Mitose");
         Assert.AreEqual("Sciences › Biologie · archivée le ven. 18 sept. · 2 cycles terminés", mitosis.Meta);
         Assert.AreEqual("Au repos jusqu'au mer. 18 nov.", mitosis.Status);
@@ -382,7 +382,7 @@ public sealed class ArchivesTests
         Assert.IsTrue(page.Bar.ShowsFilters);
         Assert.IsFalse(page.Bar.ShowsToggle);
         Assert.IsFalse(page.Bar.ShowsActive);
-        StringAssert.Contains(page.Summary, "rien n'est jamais supprimé", StringComparison.Ordinal);
+        StringAssert.Contains(page.Summary, "elles restent ici", StringComparison.Ordinal);
 
         page.PageWidth = ArchivesPageViewModel.RoomMinimum - 1;
         Assert.IsFalse(page.Bar.ShowsFilters);

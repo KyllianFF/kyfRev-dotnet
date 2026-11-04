@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
+using System.Windows.Threading;
 using KyfRev.DesignSystem.Controls;
 using KyfRev.Presentation.Wpf.Editing;
 using KyfRev.Presentation.Wpf.Reading;
@@ -17,6 +18,7 @@ internal sealed partial class SheetPage : UserControl
     private const double ListenLabelWidth = 520;
 
     private IReadOnlyList<SpokenBlock> _spoken = [];
+    private object? _pressedOn;
 
     public SheetPage()
     {
@@ -96,6 +98,13 @@ internal sealed partial class SheetPage : UserControl
     /// <summary>Revenir au texte referme le volet ouvert par-dessus.</summary>
     private void OnTextPressed(object sender, MouseButtonEventArgs e)
     {
+        TextPressed(e.OriginalSource);
+    }
+
+    /// <summary>L'appui sur le texte : retient ce qu'il vise, et referme le volet ouvert par-dessus.</summary>
+    internal void TextPressed(object? source)
+    {
+        _pressedOn = source;
         if (DataContext is SheetPageViewModel page)
         {
             page.CloseOverlayCommand.Execute(null);
@@ -227,14 +236,31 @@ internal sealed partial class SheetPage : UserControl
     }
 
     /// <summary>Un clic sur un passage surligné le fait ressortir dans le panneau.</summary>
-    private void OnTextReleased(object sender, MouseButtonEventArgs e)
+    private void OnTextReleased(object sender, MouseButtonEventArgs e) => TextReleased(e.OriginalSource);
+
+    /// <summary>Le relâchement sur le texte.</summary>
+    internal void TextReleased(object? source)
     {
-        // Le relâchement reste au texte, même sur un trou : c'est lui qui rend la souris.
-        if (SheetText.RevealHoleAt(e.OriginalSource))
+        // Le texte prend la souris dès l'appui : au relâchement, seul l'appui dit ce qui est visé. Tirer pour sélectionner n'est
+        // pas un clic.
+        var target = _pressedOn ?? source;
+        _pressedOn = null;
+        if (SheetText.Selection is { IsEmpty: false })
         {
             return;
         }
-        if (DataContext is SheetPageViewModel page && SheetText.Selection is { IsEmpty: true } && SheetText.AnnotationsAt(e.OriginalSource) is [var id, ..])
+        // Le texte ne change qu'après : il ne rend la souris que si sa mise en page est encore valable à ce moment-là, et le
+        // clic suivant serait perdu.
+        Dispatcher.BeginInvoke(DispatcherPriority.Input, () => TextClicked(target));
+    }
+
+    private void TextClicked(object? target)
+    {
+        if (SheetText.RevealHoleAt(target))
+        {
+            return;
+        }
+        if (DataContext is SheetPageViewModel page && SheetText.AnnotationsAt(target) is [var id, ..])
         {
             page.ActivateCommand.Execute(id);
         }

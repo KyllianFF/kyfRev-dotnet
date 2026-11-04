@@ -110,7 +110,7 @@ public static class ArchivesText
     /// <summary>« Il y a plus de six mois ».</summary>
     public static string PeriodOlder => Text(nameof(PeriodOlder));
 
-    /// <summary>« rien n'est jamais supprimé ; les fiches reviennent de temps en temps en rappel de consolidation. ».</summary>
+    /// <summary>« elles restent ici, et reviennent de temps en temps en rappel de consolidation. ».</summary>
     public static string Promise => Text(nameof(Promise));
 
     /// <summary>« Remettre en révision… ».</summary>

@@ -689,6 +689,7 @@ public sealed class HighlightingTests
             var marked = Runs(viewer).First(run => run.Background is not null);
 
             viewer.RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, 0, MouseButton.Left) { RoutedEvent = UIElement.PreviewMouseLeftButtonUpEvent, Source = marked });
+            TestShell.Flush();
             Assert.AreEqual(page.Passages.Single(passage => passage.Title == "autre").Annotation.Id, page.ActivePassage);
 
             var entries = Descendants(Named<ContentControl>(window, "PassagesPane")).OfType<Button>().ToList();

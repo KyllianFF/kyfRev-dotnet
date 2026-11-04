@@ -198,6 +198,9 @@
   <data name="WeekNounMany" xml:space="preserve">
     <value>révisions validées</value>
   </data>
+  <data name="HistoryCount" xml:space="preserve">
+    <value>Historique · {0}</value>
+  </data>
   <data name="History" xml:space="preserve">
     <value>Historique</value>
   </data>

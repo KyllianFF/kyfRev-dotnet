@@ -27,6 +27,15 @@ internal sealed partial class ArchivesPage : UserControl
         ActionMenus.Fill(border.ContextMenu!, border.DataContext is ArchiveRow row ? RowMenuItems(row) : [], e);
     }
 
+    /// <summary>Un clic sur la ligne, hors de ses boutons qui gardent le leur, ouvre la fiche.</summary>
+    private void OnRowClicked(object sender, System.Windows.Input.MouseButtonEventArgs e)
+    {
+        if (DataContext is ArchivesPageViewModel page && ((FrameworkElement)sender).DataContext is ArchiveRow row)
+        {
+            page.OpenCommand.Execute(row);
+        }
+    }
+
     /// <summary>Les entrées du menu de cette fiche.</summary>
     internal IReadOnlyList<Control> RowMenuItems(ArchiveRow row)
     {

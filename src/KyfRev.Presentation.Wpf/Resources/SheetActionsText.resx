@@ -69,6 +69,12 @@
   <data name="MoveTitle" xml:space="preserve">
     <value>Déplacer « {0} »</value>
   </data>
+  <data name="DropIn" xml:space="preserve">
+    <value>Déplacer vers « {0} »</value>
+  </data>
+  <data name="DropAtRoot" xml:space="preserve">
+    <value>Déplacer hors des dossiers</value>
+  </data>
   <data name="Moved" xml:space="preserve">
     <value>Déplacé.</value>
   </data>

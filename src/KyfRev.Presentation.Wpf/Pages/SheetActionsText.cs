@@ -8,6 +8,12 @@ public static class SheetActionsText
 {
     private static readonly ResourceManager Resources = new("KyfRev.Presentation.Wpf.Resources.SheetActionsText", typeof(SheetActionsText).Assembly);
 
+    /// <summary>« Déplacer vers « {0} » ».</summary>
+    public static string DropInOf(object folder) => Format("DropIn", folder);
+
+    /// <summary>« Déplacer hors des dossiers ».</summary>
+    public static string DropAtRoot => Text(nameof(DropAtRoot));
+
     /// <summary>« Archiver… ».</summary>
     public static string Archive => Text(nameof(Archive));
 
