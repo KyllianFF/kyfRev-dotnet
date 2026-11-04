@@ -10,6 +10,7 @@ namespace KyfRev.Presentation.Wpf.Pages;
 internal sealed partial class SchemasPage : UserControl
 {
     private ShellViewModel? _shell;
+    private SchemasPageViewModel? _page;
 
     public SchemasPage()
     {
@@ -51,11 +52,33 @@ internal sealed partial class SchemasPage : UserControl
                 Close();
             };
             IslandHost.Content = island;
+            page.PropertyChanged += OnPageChanged;
+            _page = page;
+            OpenRequested();
+        }
+    }
+
+    private void OnPageChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(SchemasPageViewModel.ToOpen))
+        {
+            OpenRequested();
+        }
+    }
+
+    private void OpenRequested()
+    {
+        if (_page?.ToOpen is { } id && Island is { } island)
+        {
+            _page.ToOpen = null;
+            island.OpenSchema(id);
         }
     }
 
     private void Close()
     {
+        _page?.PropertyChanged -= OnPageChanged;
+        _page = null;
         Island?.Dispose();
         IslandHost.Content = null;
     }

@@ -9,7 +9,7 @@ type Attente = { resoudre: (valeur: never) => void; rejeter: (raison: unknown) =
 
 type Reponse = { kind: "answer"; id: number; ok: true; value: unknown } | { kind: "answer"; id: number; ok: false; error: string };
 
-export type DepuisHote = Reponse | { kind: "theme"; variables: Record<string, string> };
+export type DepuisHote = Reponse | { kind: "theme"; variables: Record<string, string> } | { kind: "open"; id: string };
 
 const attentes = new Map<number, Attente>();
 let suivant = 1;
@@ -42,6 +42,10 @@ export function recevoir(message: DepuisHote): void {
     document.dispatchEvent(new Event("theme"));
     return;
   }
+  if (message.kind === "open") {
+    document.dispatchEvent(new CustomEvent("ouvrir-schema", { detail: message.id }));
+    return;
+  }
   const attente = attentes.get(message.id);
   if (!attente) return;
   attentes.delete(message.id);
@@ -70,6 +74,7 @@ export const api = {
   choisirFichierSchema: () => appeler<string | null>("choisirFichierSchema"),
   lireImportSchema: (chemin: string) => appeler<string>("lireImportSchema", chemin),
   ouvrirFiche: (id: string) => appeler<null>("ouvrirFiche", id),
+  editeurFerme: () => appeler<null>("editeurFerme"),
 };
 
 export function messageErreur(erreur: unknown): string {

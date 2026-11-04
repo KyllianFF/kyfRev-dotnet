@@ -11,6 +11,27 @@ public static class SchemaText
     /// <summary>« Appel refusé. ».</summary>
     public static string BadCall => Text(nameof(BadCall));
 
+    /// <summary>« Le schéma réseau est illisible ou absent. ».</summary>
+    public static string Unavailable => Text(nameof(Unavailable));
+
+    /// <summary>« Schéma réseau : le module est désactivé… ».</summary>
+    public static string ModuleOff => Text(nameof(ModuleOff));
+
+    /// <summary>« Schéma réseau vide. ».</summary>
+    public static string EmptyBlock => Text(nameof(EmptyBlock));
+
+    /// <summary>« Double-cliquer pour le modifier ».</summary>
+    public static string EditHint => Text(nameof(EditHint));
+
+    /// <summary>« Ce schéma est encore rangé dans la fiche (format de la 0.x)… ».</summary>
+    public static string InlineHint => Text(nameof(InlineHint));
+
+    /// <summary>« Dessin du schéma réseau ».</summary>
+    public static string PictureName => Text(nameof(PictureName));
+
+    /// <summary>« Écrivez un nom, ou choisissez un schéma. ».</summary>
+    public static string NothingChosen => Text(nameof(NothingChosen));
+
     /// <summary>« Choisir un schéma à importer ».</summary>
     public static string ChooseFile => Text(nameof(ChooseFile));
 

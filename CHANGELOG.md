@@ -25,6 +25,8 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 - Écrire : la feuille se détache du fond, comme dans un traitement de texte, dans les deux thèmes.
 - Module Schémas réseau : la vue et l'éditeur de topologie de la 0.x (équipements, ports, câbles, VLAN, plan d'adressage,
   exports et import), dans un îlot du moteur web. Il s'active par coffre dans Paramètres, onglet « Modules et extensions ».
+- Un bloc ` ```reseau ` se dessine dans les fiches, en lecture comme en écriture. Il s'insère depuis le ruban (Insertion, Réseau),
+  et un double clic ou « Modifier » ouvre l'éditeur, qui revient à la fiche une fois fermé.
 - Vue « Fiches » : glisser-déposer d'une fiche ou d'un dossier vers un autre dossier, avec un défilement automatique près
   du haut et du bas de la liste.
 - Module Citations : la vue « Citations » (recherche, étiquettes, tri, ajout, modification, corbeille), la citation du jour

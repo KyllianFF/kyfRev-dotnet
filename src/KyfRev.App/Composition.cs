@@ -13,6 +13,7 @@ using KyfRev.Modules.Citations;
 using KyfRev.Modules.Schemas;
 using KyfRev.Presentation.Wpf.Editing;
 using KyfRev.Presentation.Wpf.Pages;
+using KyfRev.Presentation.Wpf.Schemas;
 using KyfRev.Presentation.Wpf.Shell;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -86,7 +87,11 @@ internal static class Composition
         services.AddSingleton<ISpeech, WindowsSpeech>();
         services.AddSingleton(provider => new EditorEnvironment(
             provider.GetRequiredService<ISpelling>(),
-            Path.Combine(provider.GetRequiredService<VaultLocations>().LocalData, "WebView2")));
+            Path.Combine(provider.GetRequiredService<VaultLocations>().LocalData, "WebView2"),
+            Schemas: () => provider.GetRequiredService<INetworkSchemas>()));
+        services.AddSingleton<INetworkSchemas>(provider => new NetworkSchemas(
+            () => provider.GetRequiredService<ActiveModules>().Find<SchemaUseCases>(),
+            () => provider.GetRequiredService<ShellViewModel>()));
         services.AddSingleton(provider => new MermaidEngine(Path.Combine(provider.GetRequiredService<VaultLocations>().LocalData, "WebView2")));
         services.AddSingleton(clock);
         services.AddSingleton<ReviewNavigation>();

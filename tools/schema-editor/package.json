@@ -6,7 +6,7 @@
   "type": "module",
   "description": "Module Schémas réseau de kyfRev : la vue et l'éditeur de topologie de la 0.x, en îlot WebView2.",
   "scripts": {
-    "build": "vite build && node avis-de-tiers.js",
+    "build": "vite build && vite build --config vite.reseau.config.ts && node avis-de-tiers.js",
     "test": "vitest run",
     "check": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings"
   },

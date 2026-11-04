@@ -11,6 +11,7 @@ using KyfRev.Application.Model;
 using KyfRev.Application.Ports;
 using KyfRev.Application.UseCases;
 using KyfRev.Presentation.Wpf.Pages;
+using KyfRev.Presentation.Wpf.Schemas;
 using KyfRev.Rendering;
 
 namespace KyfRev.Presentation.Wpf.Editing;
@@ -43,7 +44,8 @@ public sealed record TableSize(int Rows, int Columns);
 /// <param name="Spelling">Le correcteur d'orthographe.</param>
 /// <param name="WebDataFolder">Le dossier des données de WebView2.</param>
 /// <param name="StartsInMarkdown">Ouvrir sur le code, et non sur le texte mis en forme.</param>
-public sealed record EditorEnvironment(ISpelling Spelling, string WebDataFolder, bool StartsInMarkdown = false);
+/// <param name="Schemas">Le module Schémas réseau ; rien s'il n'y en a pas.</param>
+public sealed record EditorEnvironment(ISpelling Spelling, string WebDataFolder, bool StartsInMarkdown = false, Func<INetworkSchemas?>? Schemas = null);
 
 /// <summary>Ce que le ruban affiche de l'endroit du curseur.</summary>
 /// <param name="Bold">Gras.</param>
@@ -451,6 +453,17 @@ public sealed partial class SheetEditorViewModel : ObservableObject
 
     /// <summary>La galerie est ouverte.</summary>
     public bool IsGalleryOpen => Gallery is not null;
+
+    /// <summary>L'insertion d'un schéma réseau ouverte ; rien si elle est fermée.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsNetworkChoiceOpen))]
+    public partial NetworkChoiceViewModel? NetworkChoice { get; private set; }
+
+    /// <summary>L'insertion d'un schéma réseau est ouverte.</summary>
+    public bool IsNetworkChoiceOpen => NetworkChoice is not null;
+
+    /// <summary>Le module Schémas réseau est actif : on peut en insérer un.</summary>
+    public bool CanInsertNetwork => Environment.Schemas?.Invoke() is { IsActive: true };
 
     /// <summary>L'éditeur de hiérarchie ouvert ; rien s'il est fermé.</summary>
     [ObservableProperty]
@@ -999,6 +1012,46 @@ public sealed partial class SheetEditorViewModel : ObservableObject
         _surface?.Focus();
     }
 
+    /// <summary>Ouvre l'insertion d'un schéma réseau.</summary>
+    [RelayCommand]
+    private async Task OpenNetworkChoiceAsync()
+    {
+        if (Environment.Schemas?.Invoke() is { IsActive: true } schemas)
+        {
+            var choice = new NetworkChoiceViewModel(schemas);
+            await choice.LoadAsync().ConfigureAwait(true);
+            NetworkChoice = choice;
+        }
+    }
+
+    /// <summary>Insère le schéma choisi dans la fiche ; un nouveau s'ouvre aussitôt dans son éditeur.</summary>
+    [RelayCommand]
+    private async Task AnswerNetworkChoiceAsync(bool accepted)
+    {
+        if (NetworkChoice is not { } choice)
+        {
+            return;
+        }
+        if (!accepted)
+        {
+            NetworkChoice = null;
+            _surface?.Focus();
+            return;
+        }
+        if (await choice.ChooseAsync().ConfigureAwait(true) is not { } id)
+        {
+            return;
+        }
+        NetworkChoice = null;
+        _surface?.InsertDiagram(NetworkBlock.Language, NetworkBlock.Reference(id), null);
+        _surface?.Focus();
+        if (choice.OpensEditor)
+        {
+            await SaveAsync().ConfigureAwait(true);
+            Environment.Schemas?.Invoke()?.Open(id);
+        }
+    }
+
     /// <summary>Ferme l'éditeur de hiérarchie, et écrit ce qui y est composé, si l'utilisateur le veut.</summary>
     [RelayCommand]
     private void AnswerDiagramEditor(bool accepted)
@@ -1108,6 +1161,15 @@ public sealed partial class SheetEditorViewModel : ObservableObject
 
     private void OnDiagramAsked(object? sender, DiagramQuestion question)
     {
+        if (question.Info.Trim() == NetworkBlock.Language)
+        {
+            if (NetworkBlock.ReferenceOf(question.Code) is { } schema)
+            {
+                _ = SaveAsync();
+                Environment.Schemas?.Invoke()?.Open(schema);
+            }
+            return;
+        }
         if (DiagramEditorViewModel.ForExisting(question.Info, question.Code, question.Position) is { } editor)
         {
             DiagramEditor = editor;

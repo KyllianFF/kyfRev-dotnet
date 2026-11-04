@@ -368,6 +368,23 @@
       <editing:DiagramGalleryView x:Name="GalleryContent" DataContext="{Binding Gallery}" />
     </kyf:Dialog>
 
+    <kyf:Dialog x:Name="NetworkChoiceDialog" DataContext="{Binding Editor}" Title="{x:Static editing:EditingText.NetworkTitle}" IsOpen="{Binding IsNetworkChoiceOpen, Mode=OneWay}"
+                PrimaryButtonText="{x:Static editing:EditingText.GalleryInsert}" Closed="OnNetworkChoiceClosed">
+      <StackPanel DataContext="{Binding NetworkChoice}">
+        <kyf:Notification x:Name="NetworkChoiceError" Severity="Critical" Message="{Binding Error}" IsOpen="{Binding HasError, Mode=OneWay}" IsClosable="False" Margin="0,0,0,12" />
+        <TextBlock Text="{x:Static editing:EditingText.NetworkNewLabel}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,0,0,4" />
+        <TextBox x:Name="NetworkNewTitle" Text="{Binding NewTitle, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="{x:Static editing:EditingText.NetworkNewLabel}" />
+        <StackPanel Margin="0,12,0,0" Visibility="{Binding HasExisting, Converter={StaticResource Visible}}">
+          <TextBlock Text="{x:Static editing:EditingText.NetworkExistingLabel}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,0,0,4" />
+          <ListBox x:Name="NetworkExisting" ItemsSource="{Binding Existing}" SelectedItem="{Binding Selected}" MaxHeight="220" DisplayMemberPath="Title"
+                   ScrollViewer.HorizontalScrollBarVisibility="Disabled" AutomationProperties.Name="{x:Static editing:EditingText.NetworkExistingLabel}" />
+          <CheckBox x:Name="NetworkCopyBox" IsChecked="{Binding IsCopy}" Margin="0,8,0,0" AutomationProperties.Name="{x:Static editing:EditingText.NetworkCopy}">
+            <TextBlock Text="{x:Static editing:EditingText.NetworkCopy}" TextWrapping="Wrap" />
+          </CheckBox>
+        </StackPanel>
+      </StackPanel>
+    </kyf:Dialog>
+
     <kyf:Dialog x:Name="DiagramEditorDialog" DataContext="{Binding Editor}" Title="{Binding DiagramEditor.Title}" IsOpen="{Binding IsDiagramEditorOpen, Mode=OneWay}" CardMaxWidth="1040" IsWide="True"
                 PrimaryButtonText="{Binding DiagramEditor.ConfirmLabel}" Closed="OnDiagramEditorClosed">
       <editing:DiagramEditorView x:Name="DiagramEditorContent" DataContext="{Binding DiagramEditor}" />

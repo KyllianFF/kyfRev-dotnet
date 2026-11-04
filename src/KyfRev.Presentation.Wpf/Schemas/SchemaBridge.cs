@@ -11,7 +11,7 @@ namespace KyfRev.Presentation.Wpf.Schemas;
 /// Ce que l'îlot des schémas peut demander à l'application : une liste fermée d'appels. L'îlot ne voit ni le coffre ni le disque, et
 /// un appel inconnu ou mal formé est refusé. Les noms sont ceux de la 0.x, que l'éditeur repris attend tels quels.
 /// </summary>
-internal sealed class SchemaBridge(SchemaUseCases schemas, IFolderPicker folders, Func<string?> pickFile, Action<string> openSheet)
+internal sealed class SchemaBridge(SchemaUseCases schemas, IFolderPicker folders, Func<string?> pickFile, Action<string> openSheet, Action? editorClosed = null)
 {
     private const string Saved = "enregistre";
     private const string Conflict = "conflit";
@@ -119,6 +119,9 @@ internal sealed class SchemaBridge(SchemaUseCases schemas, IFolderPicker folders
                 return Answer(await Task.Run(() => schemas.ReadImport(imported)).ConfigureAwait(true), importedText => importedText);
             case "ouvrirFiche":
                 openSheet(Argument(args, 0));
+                return (null, null);
+            case "editeurFerme":
+                editorClosed?.Invoke();
                 return (null, null);
             default:
                 throw new ArgumentException(SchemaText.BadCall);

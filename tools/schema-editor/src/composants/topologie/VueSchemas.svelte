@@ -55,7 +55,15 @@
     }
   }
 
-  onMount(charger);
+  onMount(() => {
+    void charger();
+    // L'application ouvre un schéma depuis une fiche.
+    const ouvrir = (evenement: Event) => {
+      edite = (evenement as CustomEvent<string>).detail;
+    };
+    document.addEventListener("ouvrir-schema", ouvrir);
+    return () => document.removeEventListener("ouvrir-schema", ouvrir);
+  });
 
   const sansAccents = (t: string) => t.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
   const filtres = $derived.by(() => {
@@ -253,8 +261,7 @@
       <p class="vide" aria-busy="true">Chargement des schémas…</p>
     {:else if liste.length === 0}
       <p class="vide">
-        Aucun schéma réseau pour l'instant. Créez-en un ici, ou depuis une fiche (Écrire › Insérer › Diagramme ›
-        Schéma réseau).
+        Aucun schéma réseau pour l'instant. Créez-en un ici, ou depuis une fiche (Écrire › Insertion › Réseau).
       </p>
     {:else}
       <label class="recherche">
@@ -325,6 +332,7 @@
       onfermer={() => {
         edite = null;
         void charger();
+        void api.editeurFerme();
       }}
     />
   {/key}

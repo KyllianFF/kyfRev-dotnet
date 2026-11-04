@@ -401,6 +401,27 @@ public static class EditingText
     /// <summary>Supprimer un graphique de la fiche.</summary>
     public const string DeleteChart = "Supprimer ce graphique";
 
+    /// <summary>Retirer de la fiche le bloc d'un schéma réseau : le schéma reste dans le coffre.</summary>
+    public const string DeleteNetwork = "Retirer ce schéma de la fiche";
+
+    /// <summary>Le bouton du ruban.</summary>
+    public const string NetworkButton = "Réseau";
+
+    /// <summary>Son infobulle.</summary>
+    public const string NetworkTip = "Insérer un schéma réseau";
+
+    /// <summary>Titre de l'insertion d'un schéma réseau.</summary>
+    public const string NetworkTitle = "Insérer un schéma réseau";
+
+    /// <summary>Le nom d'un nouveau schéma.</summary>
+    public const string NetworkNewLabel = "Nom d'un nouveau schéma";
+
+    /// <summary>La liste des schémas du coffre.</summary>
+    public const string NetworkExistingLabel = "Ou un schéma du coffre";
+
+    /// <summary>Insérer une copie.</summary>
+    public const string NetworkCopy = "Insérer une copie indépendante, plutôt que le schéma lui-même";
+
     /// <summary>Supprimer un schéma de la fiche.</summary>
     public const string DeleteSchema = "Supprimer ce schéma";
 

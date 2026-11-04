@@ -59,6 +59,7 @@ internal sealed class SchemaIsland : UserControl, IDisposable
     private readonly Image _snapshot = new() { Visibility = Visibility.Collapsed, Stretch = Stretch.Fill };
     private readonly SchemaBridge _bridge;
     private readonly string _dataFolder;
+    private string? _toOpen;
     private bool _ready;
     private bool _covered;
     private bool _disposed;
@@ -84,6 +85,27 @@ internal sealed class SchemaIsland : UserControl, IDisposable
 
     /// <summary>L'îlot est recouvert, et remplacé par son image.</summary>
     internal bool IsCovered => _covered;
+
+    /// <summary>Les couleurs de l'application, sous les noms de la page ; pour dessiner un schéma hors de l'îlot aussi.</summary>
+    internal static Dictionary<string, string> ThemeOf(FrameworkElement element)
+    {
+        var colors = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var (variable, resource) in ThemeColors)
+        {
+            if (element.TryFindResource(resource) is SolidColorBrush brush)
+            {
+                colors[variable] = string.Create(CultureInfo.InvariantCulture, $"#{brush.Color.R:X2}{brush.Color.G:X2}{brush.Color.B:X2}");
+            }
+        }
+        return colors;
+    }
+
+    /// <summary>Ouvre l'éditeur sur ce schéma, dès que la page est prête.</summary>
+    internal void OpenSchema(string id)
+    {
+        _toOpen = id;
+        SendPendingOpen();
+    }
 
     /// <summary>Le moteur a sa propre fenêtre, au premier plan : pendant qu'un volet de l'application le recouvre, son image prend sa place.</summary>
     internal async Task SetCoveredAsync(bool covered)
@@ -199,6 +221,7 @@ internal sealed class SchemaIsland : UserControl, IDisposable
         {
             _ready = true;
             SendTheme();
+            SendPendingOpen();
             return;
         }
         var answer = await _bridge.ReceiveAsync(message).ConfigureAwait(true);
@@ -208,7 +231,16 @@ internal sealed class SchemaIsland : UserControl, IDisposable
         }
     }
 
-    /// <summary>Les couleurs de l'application, sous les noms de la page ; le thème peut changer pendant qu'elle est ouverte.</summary>
+    private void SendPendingOpen()
+    {
+        if (_ready && !_disposed && _toOpen is { } id)
+        {
+            _toOpen = null;
+            _view.CoreWebView2.PostWebMessageAsJson(new JsonObject { ["kind"] = "open", ["id"] = id }.ToJsonString());
+        }
+    }
+
+    /// <summary>Envoie les couleurs à la page ; le thème peut changer pendant qu'elle est ouverte.</summary>
     private void SendTheme()
     {
         if (!_ready || _disposed)
@@ -216,12 +248,9 @@ internal sealed class SchemaIsland : UserControl, IDisposable
             return;
         }
         var variables = new JsonObject();
-        foreach (var (variable, resource) in ThemeColors)
+        foreach (var (variable, color) in ThemeOf(this))
         {
-            if (TryFindResource(resource) is SolidColorBrush brush)
-            {
-                variables[variable] = string.Create(CultureInfo.InvariantCulture, $"#{brush.Color.R:X2}{brush.Color.G:X2}{brush.Color.B:X2}");
-            }
+            variables[variable] = color;
         }
         if (TryFindResource("Kyf.Brush.Background") is SolidColorBrush { Color: var ground })
         {

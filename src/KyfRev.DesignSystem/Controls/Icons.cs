@@ -228,6 +228,9 @@ public static class Icons
         _ => Error,
     };
 
+    /// <summary>Un réseau.</summary>
+    public static string Network { get; } = Glyph(0xE968);
+
     /// <summary>Ajouter.</summary>
     public static string Add { get; } = Glyph(0xE710);
 
