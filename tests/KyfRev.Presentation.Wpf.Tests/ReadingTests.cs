@@ -16,6 +16,7 @@ using KyfRev.DesignSystem.Tokens;
 using KyfRev.Presentation.Wpf.Editing;
 using KyfRev.Presentation.Wpf.Pages;
 using KyfRev.Presentation.Wpf.Reading;
+using KyfRev.Presentation.Wpf.Schemas;
 using KyfRev.Presentation.Wpf.Shell;
 using KyfRev.Rendering;
 using WpfMath.Controls;
@@ -1035,6 +1036,8 @@ internal sealed class FakePictures(byte[] png) : IMermaidEngine
 
     public Task<MermaidPicture?> DrawSvgAsync(ReadOnlyMemory<byte> svg) =>
         Task.FromResult(svg.Span[0] == 1 ? new MermaidPicture(png, "data:image/png;base64,", 12, 6) : null);
+
+    public Task<MermaidPicture?> DrawNetworkAsync(string schema, IReadOnlyDictionary<string, string> colors) => Task.FromResult<MermaidPicture?>(null);
 }
 
 internal sealed class ReadingVault : IDisposable
@@ -1066,7 +1069,7 @@ internal sealed class ReadingVault : IDisposable
 
     public FakeSpelling Spelling { get; } = new();
 
-    public SheetPageViewModel Page(bool markdown = true, bool revising = false, Func<bool>? activeRecall = null, ISpeech? speech = null) => new(App.Sheets, App.Annotations, Bar, SheetId, () => Backs++, OpenedSheets.Add, Links, sheet => new SheetEditorViewModel(sheet, App.Editing, App.Sheets, new EditorEnvironment(Spelling, FakeEnvironment.WebData, markdown)), revising, activeRecall) { ReadAloud = speech is null ? null : new ReadAloudViewModel(speech) };
+    public SheetPageViewModel Page(bool markdown = true, bool revising = false, Func<bool>? activeRecall = null, ISpeech? speech = null, INetworkSchemas? schemas = null) => new(App.Sheets, App.Annotations, Bar, SheetId, () => Backs++, OpenedSheets.Add, Links, sheet => new SheetEditorViewModel(sheet, App.Editing, App.Sheets, new EditorEnvironment(Spelling, FakeEnvironment.WebData, markdown, () => schemas)), revising, activeRecall) { ReadAloud = speech is null ? null : new ReadAloudViewModel(speech) };
 
     public SheetReading Reading()
     {

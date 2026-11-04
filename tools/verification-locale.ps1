@@ -36,7 +36,7 @@
 [CmdletBinding()]
 param(
     [string] $Base = 'origin/main',
-    [ValidateSet('Gouvernance', 'Construction', 'Tests', 'Qualite', 'Editeur', 'Installateur')]
+    [ValidateSet('Gouvernance', 'Construction', 'Tests', 'Qualite', 'Editeur', 'IlotSchemas', 'Installateur')]
     [string[]] $Sauter = @(),
     [switch] $SansClavier,
     [switch] $PosteVierge
@@ -231,6 +231,24 @@ function Invoke-Editeur {
     }
 }
 
+function Invoke-IlotSchemas {
+    Push-Location (Join-Path $racine 'tools\schema-editor')
+    try {
+        Invoke-Etape 'Îlot des schémas : dépendances verrouillées' { Exec npm ci --ignore-scripts }
+        Invoke-Etape 'Îlot des schémas : types' { Exec npm run check }
+        Invoke-Etape 'Îlot des schémas : topologie' { Exec npm test }
+        Invoke-Etape 'Îlot des schémas : le paquet correspond à ses sources' {
+            Exec npm run build
+            $paquet = '../../src/KyfRev.Presentation.Wpf/Schemas/Web', '../../src/KyfRev.Presentation.Wpf/Schemas/THIRD-PARTY-NOTICES.md'
+            $ecart = git status --porcelain -- @paquet
+            if ($ecart) { throw "Le paquet versionné diffère de ses sources : $ecart" }
+        }
+    }
+    finally {
+        Pop-Location
+    }
+}
+
 function Invoke-Installateur {
     $chemin = $null
     Invoke-Etape 'Construction de l''installateur' {
@@ -290,6 +308,7 @@ Invoke-Groupe 'Construction' { Invoke-Construction }
 Invoke-Groupe 'Tests' { Invoke-Tests }
 Invoke-Groupe 'Qualite' { Invoke-Qualite }
 Invoke-Groupe 'Editeur' { Invoke-Editeur }
+Invoke-Groupe 'IlotSchemas' { Invoke-IlotSchemas }
 Invoke-Groupe 'Installateur' { Invoke-Installateur }
 
 Write-Ligne ''

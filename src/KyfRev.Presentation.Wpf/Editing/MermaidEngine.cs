@@ -30,6 +30,11 @@ public interface IMermaidEngine
     /// <summary>Fait une image d'un fichier SVG, où ni script ni adresse n'agissent ; rien s'il ne se lit pas.</summary>
     /// <param name="svg">Le contenu du fichier.</param>
     Task<MermaidPicture?> DrawSvgAsync(ReadOnlyMemory<byte> svg);
+
+    /// <summary>Fait l'image d'un schéma réseau ; rien s'il ne se dessine pas.</summary>
+    /// <param name="schema">Le texte du schéma.</param>
+    /// <param name="colors">Ses couleurs, sous les noms de la page.</param>
+    Task<MermaidPicture?> DrawNetworkAsync(string schema, IReadOnlyDictionary<string, string> colors);
 }
 
 /// <summary>
@@ -139,6 +144,17 @@ public sealed class MermaidEngine : IMermaidEngine, IDisposable
         }
         var content = Convert.ToBase64String(svg.Span);
         return await AskAsync(content, id => new { id, svg = content }).ConfigureAwait(true);
+    }
+
+    /// <inheritdoc/>
+    public async Task<MermaidPicture?> DrawNetworkAsync(string schema, IReadOnlyDictionary<string, string> colors)
+    {
+        ArgumentNullException.ThrowIfNull(colors);
+        if (_disposed)
+        {
+            return null;
+        }
+        return await AskAsync(string.Join('\n', colors.Values) + '\n' + schema, id => new { id, reseau = schema, couleurs = colors }).ConfigureAwait(true);
     }
 
     private async Task<MermaidPicture?> AskAsync(string key, Func<int, object> request)

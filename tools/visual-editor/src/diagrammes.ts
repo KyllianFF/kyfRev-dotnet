@@ -14,7 +14,10 @@ declare const chrome: {
   };
 };
 
-type Demande = { id: number; code: string; theme: Record<string, string> } | { id: number; svg: string };
+type Demande =
+  | { id: number; code: string; theme: Record<string, string> }
+  | { id: number; svg: string }
+  | { id: number; reseau: string; couleurs: Record<string, string> };
 
 /** Une image deux fois plus fine que sa taille : elle reste nette sur un écran agrandi. */
 const FINESSE = 2;
@@ -148,6 +151,11 @@ function adresseSvg(source: string): string {
  * page : elle n'y est qu'analysée, puis montrée comme une image, où ni script ni adresse n'agissent.
  */
 async function sourceDe(demande: Demande): Promise<{ source: string; largeur: number; hauteur: number }> {
+  if ("reseau" in demande) {
+    const dessin = (window as unknown as { kyfRevReseau?: (texte: string, couleurs: Record<string, string>) => string }).kyfRevReseau;
+    if (!dessin) throw new Error("Le dessin des schémas réseau n'est pas chargé.");
+    return dimensionneFichier(dessin(demande.reseau, demande.couleurs));
+  }
   if ("svg" in demande) {
     return dimensionneFichier(texteDe(Uint8Array.from(atob(demande.svg), (lettre) => lettre.charCodeAt(0))));
   }

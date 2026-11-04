@@ -14,6 +14,7 @@
           "KyfRev.Infrastructure.Vault": "[1.0.0-alpha.0, )",
           "KyfRev.Infrastructure.Windows": "[1.0.0-alpha.0, )",
           "KyfRev.Modules.Citations": "[1.0.0-alpha.0, )",
+          "KyfRev.Modules.Schemas": "[1.0.0-alpha.0, )",
           "KyfRev.Presentation.Wpf": "[1.0.0-alpha.0, )",
           "Microsoft.Extensions.DependencyInjection": "[10.0.13, )"
         }
@@ -60,6 +61,13 @@
           "KyfRev.Domain": "[1.0.0-alpha.0, )"
         }
       },
+      "kyfrev.modules.schemas": {
+        "type": "Project",
+        "dependencies": {
+          "KyfRev.Application": "[1.0.0-alpha.0, )",
+          "KyfRev.Domain": "[1.0.0-alpha.0, )"
+        }
+      },
       "kyfrev.presentation.wpf": {
         "type": "Project",
         "dependencies": {
@@ -68,6 +76,7 @@
           "KyfRev.Application": "[1.0.0-alpha.0, )",
           "KyfRev.DesignSystem": "[1.0.0-alpha.0, )",
           "KyfRev.Modules.Citations": "[1.0.0-alpha.0, )",
+          "KyfRev.Modules.Schemas": "[1.0.0-alpha.0, )",
           "KyfRev.Rendering": "[1.0.0-alpha.0, )",
           "Microsoft.Web.WebView2": "[1.0.4258.31, )",
           "WpfMath": "[2.1.0, )"

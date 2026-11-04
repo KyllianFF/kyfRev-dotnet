@@ -60,6 +60,7 @@ public static class CorePages
         var glyph = entry.Id switch
         {
             "citations" => Icons.Quote,
+            "schemas" => Icons.Schema,
             _ => Icons.Puzzle,
         };
         return Placeholder(entry.Id, entry.Label, glyph, entry.Order);

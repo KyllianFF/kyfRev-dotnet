@@ -45,7 +45,7 @@
             </StackPanel>
           </StackPanel>
 
-          <CheckBox x:Name="SchemasBox" IsEnabled="False" AutomationProperties.Name="{x:Static pages:ModulesSettingsText.SchemasModule}">
+          <CheckBox x:Name="SchemasBox" IsChecked="{Binding SchemasActive}" AutomationProperties.Name="{x:Static pages:ModulesSettingsText.SchemasModule}">
             <TextBlock Text="{x:Static pages:ModulesSettingsText.SchemasModule}" Style="{DynamicResource Kyf.Text.BodyStrong}" TextWrapping="Wrap" />
           </CheckBox>
           <TextBlock Text="{x:Static pages:ModulesSettingsText.SchemasHelp}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="26,2,0,0" />

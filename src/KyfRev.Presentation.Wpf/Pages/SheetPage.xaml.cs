@@ -409,6 +409,9 @@ internal sealed partial class SheetPage : UserControl
         }
     }
 
+    private void OnNetworkChoiceClosed(object sender, DialogClosedEventArgs e) =>
+        (DataContext as SheetPageViewModel)?.Editor?.AnswerNetworkChoiceCommand.Execute(e.Choice == DialogChoice.Primary);
+
     private void OnDiagramEditorClosed(object sender, DialogClosedEventArgs e) =>
         (DataContext as SheetPageViewModel)?.Editor?.AnswerDiagramEditorCommand.Execute(e.Choice == DialogChoice.Primary);
 

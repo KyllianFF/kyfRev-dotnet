@@ -25,6 +25,7 @@
     <Project Path="src/KyfRev.Infrastructure.Vault/KyfRev.Infrastructure.Vault.csproj" />
     <Project Path="src/KyfRev.Infrastructure.Windows/KyfRev.Infrastructure.Windows.csproj" />
     <Project Path="src/KyfRev.Modules.Citations/KyfRev.Modules.Citations.csproj" />
+    <Project Path="src/KyfRev.Modules.Schemas/KyfRev.Modules.Schemas.csproj" />
     <Project Path="src/KyfRev.Presentation.Wpf/KyfRev.Presentation.Wpf.csproj" />
     <Project Path="src/KyfRev.Rendering/KyfRev.Rendering.csproj" />
   </Folder>
@@ -37,6 +38,7 @@
     <Project Path="tests/KyfRev.Infrastructure.Vault.Tests/KyfRev.Infrastructure.Vault.Tests.csproj" />
     <Project Path="tests/KyfRev.Infrastructure.Windows.Tests/KyfRev.Infrastructure.Windows.Tests.csproj" />
     <Project Path="tests/KyfRev.Modules.Citations.Tests/KyfRev.Modules.Citations.Tests.csproj" />
+    <Project Path="tests/KyfRev.Modules.Schemas.Tests/KyfRev.Modules.Schemas.Tests.csproj" />
     <Project Path="tests/KyfRev.Presentation.Wpf.Tests/KyfRev.Presentation.Wpf.Tests.csproj" />
     <Project Path="tests/KyfRev.Rendering.Tests/KyfRev.Rendering.Tests.csproj" />
   </Folder>

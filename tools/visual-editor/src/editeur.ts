@@ -506,7 +506,7 @@ function dessinSous(vue: EditorView, cible: EventTarget | null): DessinVise | nu
 }
 
 /** Un bloc qui se dessine : son code ne se montre que si l'on y entre. */
-const seDessine = (langage: string) => /^(smartart\s|mermaid\s*$)/.test(langage);
+const seDessine = (langage: string) => /^(smartart\s|mermaid\s*$|reseau\s*$)/.test(langage);
 
 /** Le dessin suit la frappe, sans la gêner. */
 const DELAI_DESSIN = 250;
@@ -591,8 +591,9 @@ class VueCode implements NodeView {
       bouton.addEventListener("click", faire);
       return bouton;
     };
-    if (/^smartart/.test(this.noeud.attrs.language as string)) this.entete.append(action("Modifier…", modifier));
-    else document.addEventListener("theme", this.suivreTheme);
+    const langage = this.noeud.attrs.language as string;
+    if (/^(smartart|reseau)/.test(langage)) this.entete.append(action("Modifier…", modifier));
+    if (!/^smartart/.test(langage)) document.addEventListener("theme", this.suivreTheme);
     this.entete.append(
       action(
         "Voir le code",

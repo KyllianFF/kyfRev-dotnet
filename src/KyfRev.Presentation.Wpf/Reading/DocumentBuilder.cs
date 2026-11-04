@@ -11,6 +11,7 @@ using KyfRev.DesignSystem.Controls;
 using KyfRev.DesignSystem.Tokens;
 using KyfRev.Presentation.Wpf.Editing;
 using KyfRev.Presentation.Wpf.Pages;
+using KyfRev.Presentation.Wpf.Schemas;
 using KyfRev.Rendering;
 using KyfRev.Rendering.Diagrams;
 using WpfMath.Controls;
@@ -626,7 +627,13 @@ internal sealed class DocumentBuilder
             blocks.Add(new BlockUIContainer(view) { Margin = new Thickness(0, 4, 0, 16) });
             return;
         }
-        if (code.Language is "mermaid" or "reseau")
+        if (code.Language == NetworkBlock.Language && DrawsMermaid)
+        {
+            var view = new NetworkView { Source = text, MaxWidth = DiagramWidth };
+            blocks.Add(new BlockUIContainer(view) { Margin = new Thickness(0, 4, 0, 16) });
+            return;
+        }
+        if (code.Language is "mermaid" or NetworkBlock.Language)
         {
             var note = new Paragraph(new Run(ReadingText.DiagramAsText)) { Margin = new Thickness(0, 0, 0, 4), FontSize = Typography.Caption.Size };
             note.SetResourceReference(TextElement.ForegroundProperty, TextSecondary);

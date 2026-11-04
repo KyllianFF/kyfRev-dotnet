@@ -1,0 +1,249 @@
+/*
+ * La page de l'îlot : les couleurs viennent du thème de l'application, reçu de l'hôte (variables CSS).
+ * Les classes communes sont celles de la 0.x, aux formes de kyfRev : l'éditeur les attend.
+ */
+
+@font-face {
+  font-family: "Atkinson Hyperlegible Next";
+  src: url("/polices/AtkinsonHyperlegibleNext-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "Atkinson Hyperlegible Next";
+  src: url("/polices/AtkinsonHyperlegibleNext-Italic.ttf") format("truetype");
+  font-weight: 400;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: "Atkinson Hyperlegible Next";
+  src: url("/polices/AtkinsonHyperlegibleNext-SemiBold.ttf") format("truetype");
+  font-weight: 600;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "Atkinson Hyperlegible Next";
+  src: url("/polices/AtkinsonHyperlegibleNext-SemiBoldItalic.ttf") format("truetype");
+  font-weight: 600;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: "Atkinson Hyperlegible Next";
+  src: url("/polices/AtkinsonHyperlegibleNext-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "Atkinson Hyperlegible Next";
+  src: url("/polices/AtkinsonHyperlegibleNext-BoldItalic.ttf") format("truetype");
+  font-weight: 700;
+  font-style: italic;
+}
+
+@font-face {
+  font-family: "Atkinson Hyperlegible Mono";
+  src: url("/polices/AtkinsonHyperlegibleMono-Regular.ttf") format("truetype");
+  font-weight: 400;
+}
+
+@font-face {
+  font-family: "Atkinson Hyperlegible Mono";
+  src: url("/polices/AtkinsonHyperlegibleMono-SemiBold.ttf") format("truetype");
+  font-weight: 600;
+}
+
+:root {
+  color-scheme: var(--schema, light);
+  scrollbar-color: var(--texte-secondaire) var(--fond);
+  --police: "Atkinson Hyperlegible Next", "Segoe UI", sans-serif;
+  --police-code: "Atkinson Hyperlegible Mono", Consolas, monospace;
+  --rayon: 8px;
+  --rayon-carte: 12px;
+  --duree: 0.15s;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: var(--fond);
+  color: var(--texte);
+  font-family: var(--police);
+  font-size: 14px;
+  overflow-x: hidden;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+a {
+  color: var(--lien);
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+dialog {
+  color: var(--texte);
+  background: var(--surface);
+  border: 1px solid var(--bordure);
+  border-radius: var(--rayon-carte);
+}
+
+dialog::backdrop {
+  background: var(--voile);
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-weight: 600;
+}
+
+td,
+th,
+kbd,
+time {
+  font-variant-numeric: tabular-nums;
+}
+
+.bouton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: var(--rayon);
+  border: 1px solid var(--bordure);
+  background: var(--surface);
+  color: var(--texte);
+  cursor: pointer;
+  transition:
+    background var(--duree),
+    border-color var(--duree);
+}
+
+.bouton:hover {
+  background: var(--surface-2);
+}
+
+.bouton.principal {
+  background: var(--principale);
+  border-color: var(--principale);
+  color: var(--sur-principale);
+  font-weight: 600;
+}
+
+.bouton.principal:hover {
+  background: var(--principale-survol);
+  border-color: var(--principale-survol);
+}
+
+.bouton.discret {
+  background: transparent;
+  border-color: transparent;
+}
+
+.bouton.discret:hover {
+  background: var(--surface-2);
+}
+
+.bouton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.bouton:disabled:hover {
+  background: var(--surface);
+}
+
+.bouton.discret:disabled:hover {
+  background: transparent;
+}
+
+.bouton.principal:disabled:hover {
+  background: var(--principale);
+}
+
+.champ {
+  height: 36px;
+  width: 100%;
+  padding: 0 10px;
+  border-radius: var(--rayon);
+  border: 1px solid var(--bordure);
+  background: var(--surface);
+}
+
+.champ:hover {
+  border-color: var(--texte-secondaire);
+}
+
+select.champ {
+  appearance: none;
+  padding-right: 28px;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--texte-secondaire) 50%),
+    linear-gradient(135deg, var(--texte-secondaire) 50%, transparent 50%);
+  background-position:
+    calc(100% - 15px) 50%,
+    calc(100% - 10px) 50%;
+  background-size: 5px 5px;
+  background-repeat: no-repeat;
+  cursor: pointer;
+}
+
+select.champ:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pastille {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.visuellement-cache {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

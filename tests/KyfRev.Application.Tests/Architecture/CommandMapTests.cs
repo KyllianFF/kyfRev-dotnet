@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using KyfRev.Application.UseCases;
 using KyfRev.Modules.Citations;
+using KyfRev.Modules.Schemas;
 
 namespace KyfRev.Application.Tests.Architecture;
 
@@ -25,7 +26,7 @@ public sealed partial class CommandMapTests
         Assert.HasCount(ZeroXCommands, table);
         Assert.HasCount(ZeroXCommands, table.Select(row => row.Command).Distinct());
 
-        var useCases = new[] { typeof(VaultHost).Assembly, typeof(CitationsModule).Assembly }
+        var useCases = new[] { typeof(VaultHost).Assembly, typeof(CitationsModule).Assembly, typeof(SchemasModule).Assembly }
             .SelectMany(assembly => assembly.GetExportedTypes())
             .SelectMany(type => type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly))
             .Select(method => (Method: method, Attribute: method.GetCustomAttribute<ZeroXCommandAttribute>()))

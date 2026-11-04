@@ -154,7 +154,7 @@ internal sealed partial class SheetEditorView : UserControl
     }
 
     private void UpdateCover() =>
-        _ = Visual?.SetCoveredAsync(_pageCovered || _shell is { IsPaletteOpen: true } or { IsHelpOpen: true } || _page is { IsLinkOpen: true } or { IsFormulaOpen: true } or { IsGalleryOpen: true } or { IsDiagramEditorOpen: true } or { IsHistoryOpen: true } or { IsComparingConflict: true });
+        _ = Visual?.SetCoveredAsync(_pageCovered || _shell is { IsPaletteOpen: true } or { IsHelpOpen: true } || _page is { IsLinkOpen: true } or { IsFormulaOpen: true } or { IsGalleryOpen: true } or { IsDiagramEditorOpen: true } or { IsNetworkChoiceOpen: true } or { IsHistoryOpen: true } or { IsComparingConflict: true });
 
     private void UpdateZoom()
     {
@@ -167,7 +167,7 @@ internal sealed partial class SheetEditorView : UserControl
     /// <summary>La liste des fiches s'ouvre sous « [[ ».</summary>
     private void OnPageChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is nameof(SheetEditorViewModel.IsLinkOpen) or nameof(SheetEditorViewModel.IsFormulaOpen) or nameof(SheetEditorViewModel.IsGalleryOpen) or nameof(SheetEditorViewModel.IsDiagramEditorOpen) or nameof(SheetEditorViewModel.IsHistoryOpen) or nameof(SheetEditorViewModel.IsComparingConflict))
+        if (e.PropertyName is nameof(SheetEditorViewModel.IsLinkOpen) or nameof(SheetEditorViewModel.IsFormulaOpen) or nameof(SheetEditorViewModel.IsGalleryOpen) or nameof(SheetEditorViewModel.IsDiagramEditorOpen) or nameof(SheetEditorViewModel.IsNetworkChoiceOpen) or nameof(SheetEditorViewModel.IsHistoryOpen) or nameof(SheetEditorViewModel.IsComparingConflict))
         {
             UpdateCover();
         }

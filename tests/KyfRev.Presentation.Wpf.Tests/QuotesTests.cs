@@ -507,7 +507,7 @@ public sealed class QuotesTests
         try
         {
             Assert.AreEqual(Visibility.Collapsed, page.QuotesOptions.Visibility);
-            Assert.IsFalse(page.SchemasBox.IsEnabled, "le module n'existe pas encore");
+            Assert.IsTrue(page.SchemasBox.IsEnabled);
 
             model.QuotesActive = true;
             model.QuotesOnline = true;
@@ -579,10 +579,26 @@ public sealed class QuotesTests
         var modules = new ActiveModules(new ModuleCatalog([new OtherModule()]), _ => { });
         modules.Load(Preferences(quotes: false));
 
-        var entry = KyfRev.App.Composition.ModuleEntries(modules, new RecordingLinks()).Single();
+        var entry = KyfRev.App.Composition.ModuleEntries(modules, new RecordingLinks(), _ => throw new InvalidOperationException()).Single();
 
         Assert.AreEqual("Autre", entry.Label);
         Assert.IsInstanceOfType<PlaceholderPageViewModel>(entry.Page);
+        modules.Dispose();
+    }
+
+    [STATestMethod]
+    public void The_schemas_module_brings_its_view_and_its_icon()
+    {
+        using var vaults = new TestVaults(AppMode.Development);
+        vaults.App.Vaults.Create(vaults.PathOf("Coffre"));
+        var modules = new ActiveModules(new ModuleCatalog([new KyfRev.Modules.Schemas.SchemasModule()]), services => services.AddSingleton(vaults.App.Host));
+        modules.Load(Preferences(quotes: false) with { SchemasActive = true });
+
+        var entry = KyfRev.App.Composition.ModuleEntries(modules, new RecordingLinks(), schemas => new SchemasPageViewModel(schemas, vaults.Picker, new FakeOpener(), FakeEnvironment.WebData)).Single();
+
+        Assert.AreEqual("Schémas réseau", entry.Label);
+        Assert.AreEqual(KyfRev.DesignSystem.Controls.Icons.Schema, entry.Glyph);
+        Assert.IsInstanceOfType<SchemasPageViewModel>(entry.Page);
         modules.Dispose();
     }
 

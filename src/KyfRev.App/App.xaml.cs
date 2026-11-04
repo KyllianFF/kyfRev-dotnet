@@ -2,6 +2,7 @@ using System.Windows;
 using KyfRev.Application.UseCases;
 using KyfRev.Infrastructure.Windows;
 using KyfRev.Presentation.Wpf.Editing;
+using KyfRev.Presentation.Wpf.Schemas;
 using KyfRev.Presentation.Wpf.Shell;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -33,6 +34,7 @@ internal sealed partial class App : System.Windows.Application
         WatchUnexpectedErrors(_services.GetRequiredService<ILoggerFactory>().CreateLogger("kyfRev"));
         Resources.MergedDictionaries.Add(_services.GetRequiredService<AppearanceController>().Resources);
         Resources[MermaidEngine.ResourceKey] = _services.GetRequiredService<MermaidEngine>();
+        Resources[NetworkBlock.ResourceKey] = _services.GetRequiredService<INetworkSchemas>();
         var shell = _services.GetRequiredService<ShellViewModel>();
         if (e.Args.Contains("--galerie", StringComparer.Ordinal))
         {

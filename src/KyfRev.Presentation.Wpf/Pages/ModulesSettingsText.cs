@@ -71,6 +71,12 @@ public static class ModulesSettingsText
     /// <summary>« Module Schémas réseau ».</summary>
     public static string SchemasModule => Text(nameof(SchemasModule));
 
+    /// <summary>« Module Schémas réseau activé. ».</summary>
+    public static string SchemasEnabled => Text(nameof(SchemasEnabled));
+
+    /// <summary>« Module Schémas réseau désactivé : ses schémas restent dans le coffre. ».</summary>
+    public static string SchemasDisabled => Text(nameof(SchemasDisabled));
+
     /// <summary>« Modules et extensions ».</summary>
     public static string Tab => Text(nameof(Tab));
 

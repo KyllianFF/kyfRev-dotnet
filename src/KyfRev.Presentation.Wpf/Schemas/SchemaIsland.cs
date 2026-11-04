@@ -1,0 +1,264 @@
+using System.Globalization;
+using System.IO;
+using System.Reflection;
+using System.Text.Json.Nodes;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using KyfRev.DesignSystem.Tokens;
+using KyfRev.Presentation.Wpf.Editing;
+using Microsoft.Web.WebView2.Core;
+using Microsoft.Web.WebView2.Wpf;
+
+namespace KyfRev.Presentation.Wpf.Schemas;
+
+/// <summary>
+/// L'îlot des schémas réseau : la vue et l'éditeur de topologie de la 0.x, dans le moteur web de l'application. Il est fermé comme
+/// l'éditeur de texte : pas de réseau, pas d'objet de l'hôte, et seuls ses propres fichiers lui sont servis. Tout passe par
+/// <see cref="SchemaBridge"/>.
+/// </summary>
+internal sealed class SchemaIsland : UserControl, IDisposable
+{
+    internal const string Host = "schemas.kyfrev.invalid";
+
+    private const string StartAddress = $"https://{Host}/index.html";
+    private const string ResourcePrefix = "kyfrev-schemas/";
+
+    /// <summary>Le nom de chaque couleur dans la page, et sa couleur dans l'application.</summary>
+    private static readonly (string Variable, string Resource)[] ThemeColors =
+    [
+        ("--fond", "Kyf.Brush.Background"),
+        ("--surface", "Kyf.Brush.Surface"),
+        ("--surface-2", "Kyf.Brush.SurfaceAlt"),
+        ("--bordure", "Kyf.Brush.Divider"),
+        ("--texte", "Kyf.Brush.Text"),
+        ("--texte-secondaire", "Kyf.Brush.TextSecondary"),
+        ("--navigation-active-fond", "Kyf.Brush.NavigationActiveBackground"),
+        ("--navigation-active-texte", "Kyf.Brush.NavigationActiveText"),
+        ("--pastille-fiche-fond", "Kyf.Brush.PillSheetBackground"),
+        ("--pastille-fiche-texte", "Kyf.Brush.PillSheetText"),
+        ("--lien", "Kyf.Brush.Link"),
+        ("--principale", "Kyf.Brush.Primary"),
+        ("--principale-survol", "Kyf.Brush.PrimaryHover"),
+        ("--sur-principale", "Kyf.Brush.OnPrimary"),
+        ("--graphique-1", "Kyf.Brush.Primary"),
+        ("--focus", "Kyf.Brush.Focus"),
+        ("--retard", "Kyf.Brush.Critical"),
+        ("--retard-fond", "Kyf.Brush.CriticalBackground"),
+        ("--avertissement", "Kyf.Brush.Warning"),
+        ("--avertissement-fond", "Kyf.Brush.WarningBackground"),
+        ("--succes", "Kyf.Brush.Success"),
+        ("--succes-fond", "Kyf.Brush.SuccessBackground"),
+    ];
+
+    private static readonly DependencyProperty ThemeProbeProperty = DependencyProperty.Register(
+        "ThemeProbe", typeof(Brush), typeof(SchemaIsland), new PropertyMetadata(null, (sender, _) => ((SchemaIsland)sender).SendTheme()));
+
+    private readonly WebView2 _view = new();
+    private readonly Image _snapshot = new() { Visibility = Visibility.Collapsed, Stretch = Stretch.Fill };
+    private readonly SchemaBridge _bridge;
+    private readonly string _dataFolder;
+    private string? _toOpen;
+    private bool _ready;
+    private bool _covered;
+    private bool _disposed;
+
+    public SchemaIsland(SchemaBridge bridge, string dataFolder)
+    {
+        _bridge = bridge;
+        _dataFolder = dataFolder;
+        Focusable = false;
+        IsTabStop = false;
+        System.Windows.Automation.AutomationProperties.SetAutomationId(_view, "SchemasIsland");
+        System.Windows.Automation.AutomationProperties.SetName(_view, SchemaText.IslandName);
+        Content = new Grid { Children = { _view, _snapshot } };
+        SetResourceReference(ThemeProbeProperty, "Kyf.Brush.Text");
+        Loaded += OnLoaded;
+    }
+
+    /// <summary>Le moteur n'a pas pu démarrer, ou s'est arrêté.</summary>
+    public event EventHandler<string>? Failed;
+
+    /// <summary>La page a chargé son code.</summary>
+    internal bool IsReady => _ready;
+
+    /// <summary>L'îlot est recouvert, et remplacé par son image.</summary>
+    internal bool IsCovered => _covered;
+
+    /// <summary>Les couleurs de l'application, sous les noms de la page ; pour dessiner un schéma hors de l'îlot aussi.</summary>
+    internal static Dictionary<string, string> ThemeOf(FrameworkElement element)
+    {
+        var colors = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var (variable, resource) in ThemeColors)
+        {
+            if (element.TryFindResource(resource) is SolidColorBrush brush)
+            {
+                colors[variable] = string.Create(CultureInfo.InvariantCulture, $"#{brush.Color.R:X2}{brush.Color.G:X2}{brush.Color.B:X2}");
+            }
+        }
+        return colors;
+    }
+
+    /// <summary>Ouvre l'éditeur sur ce schéma, dès que la page est prête.</summary>
+    internal void OpenSchema(string id)
+    {
+        _toOpen = id;
+        SendPendingOpen();
+    }
+
+    /// <summary>Le moteur a sa propre fenêtre, au premier plan : pendant qu'un volet de l'application le recouvre, son image prend sa place.</summary>
+    internal async Task SetCoveredAsync(bool covered)
+    {
+        if (covered == _covered || _disposed)
+        {
+            return;
+        }
+        _covered = covered;
+        if (covered)
+        {
+            if (_view.CoreWebView2 is { } web)
+            {
+                using var stream = new MemoryStream();
+                await web.CapturePreviewAsync(CoreWebView2CapturePreviewImageFormat.Png, stream).ConfigureAwait(true);
+                stream.Position = 0;
+                _snapshot.Source = BitmapFrame.Create(stream, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+                _snapshot.Visibility = Visibility.Visible;
+            }
+            if (_covered && !_disposed)
+            {
+                _view.Visibility = Visibility.Hidden;
+            }
+        }
+        else
+        {
+            _snapshot.Visibility = Visibility.Collapsed;
+            _snapshot.Source = null;
+            _view.Visibility = Visibility.Visible;
+        }
+    }
+
+    /// <summary>La taille de l'interface vaut aussi pour l'îlot.</summary>
+    internal void SetZoom(double zoom)
+    {
+        if (!_disposed)
+        {
+            _view.ZoomFactor = zoom;
+        }
+    }
+
+    /// <summary>Exécute un script dans la page, pour les essais.</summary>
+    internal Task<string> RunScriptAsync(string script) => _view.ExecuteScriptAsync(script);
+
+    /// <inheritdoc/>
+    public void Dispose()
+    {
+        if (!_disposed)
+        {
+            _disposed = true;
+            _view.Dispose();
+        }
+    }
+
+    /// <summary>Un fichier de la page, venu de l'application.</summary>
+    internal static byte[]? PageContent(string path)
+    {
+        if (path.StartsWith("/polices/", StringComparison.Ordinal))
+        {
+            return VisualEditor.PageContent(path);
+        }
+        using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(ResourcePrefix + path.TrimStart('/'));
+        if (stream is null)
+        {
+            return null;
+        }
+        using var memory = new MemoryStream();
+        stream.CopyTo(memory);
+        return memory.ToArray();
+    }
+
+    private async void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        Loaded -= OnLoaded;
+        if (_disposed)
+        {
+            return;
+        }
+        try
+        {
+            var environment = await VisualEditor.EnvironmentOf(_dataFolder).ConfigureAwait(true);
+            await _view.EnsureCoreWebView2Async(environment).ConfigureAwait(true);
+            if (_disposed)
+            {
+                return;
+            }
+            Configure(_view.CoreWebView2);
+            _view.CoreWebView2.Navigate(StartAddress);
+        }
+        catch (Exception exception) when (exception is WebView2RuntimeNotFoundException or InvalidOperationException or System.Runtime.InteropServices.COMException)
+        {
+            if (!_disposed)
+            {
+                Failed?.Invoke(this, exception.Message);
+            }
+        }
+    }
+
+    private void Configure(CoreWebView2 web)
+    {
+        VisualEditor.Harden(web);
+        web.AddWebResourceRequestedFilter("*", CoreWebView2WebResourceContext.All);
+        web.WebResourceRequested += (_, e) => VisualEditor.Serve(web, e, Host, PageContent);
+        web.WebMessageReceived += OnMessage;
+        web.NavigationStarting += (_, e) => e.Cancel = e.Uri != StartAddress;
+        web.ProcessFailed += (_, e) => Failed?.Invoke(this, e.ProcessFailedKind.ToString());
+    }
+
+    private async void OnMessage(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
+    {
+        var message = e.WebMessageAsJson;
+        if (message.Contains("\"ready\"", StringComparison.Ordinal))
+        {
+            _ready = true;
+            SendTheme();
+            SendPendingOpen();
+            return;
+        }
+        var answer = await _bridge.ReceiveAsync(message).ConfigureAwait(true);
+        if (answer is not null && !_disposed)
+        {
+            _view.CoreWebView2.PostWebMessageAsJson(answer);
+        }
+    }
+
+    private void SendPendingOpen()
+    {
+        if (_ready && !_disposed && _toOpen is { } id)
+        {
+            _toOpen = null;
+            _view.CoreWebView2.PostWebMessageAsJson(new JsonObject { ["kind"] = "open", ["id"] = id }.ToJsonString());
+        }
+    }
+
+    /// <summary>Envoie les couleurs à la page ; le thème peut changer pendant qu'elle est ouverte.</summary>
+    private void SendTheme()
+    {
+        if (!_ready || _disposed)
+        {
+            return;
+        }
+        var variables = new JsonObject();
+        foreach (var (variable, color) in ThemeOf(this))
+        {
+            variables[variable] = color;
+        }
+        if (TryFindResource("Kyf.Brush.Background") is SolidColorBrush { Color: var ground })
+        {
+            var dark = (0.2126 * ground.R) + (0.7152 * ground.G) + (0.0722 * ground.B) < 128;
+            variables["--schema"] = dark ? "dark" : "light";
+            variables["--voile"] = dark ? "rgb(0 0 0 / 60%)" : "rgb(20 30 25 / 35%)";
+            _view.DefaultBackgroundColor = new TokenColor(ground.A, ground.R, ground.G, ground.B).ToDrawingColor();
+        }
+        _view.CoreWebView2.PostWebMessageAsJson(new JsonObject { ["kind"] = "theme", ["variables"] = variables }.ToJsonString());
+    }
+}

@@ -109,11 +109,16 @@ public sealed partial class ModulesSettingsViewModel : ObservableObject, INaviga
         }
     }
 
+    /// <summary>Le module Schémas réseau est actif pour ce coffre.</summary>
+    [ObservableProperty]
+    public partial bool SchemasActive { get; set; }
+
     private void Show(VaultPreferences preferences)
     {
         _showing = true;
         QuotesActive = preferences.QuotesActive;
         QuotesOnline = preferences.QuotesOnline;
+        SchemasActive = preferences.SchemasActive;
         foreach (var domain in Domains)
         {
             domain.IsChosen = preferences.QuoteDomains.Contains(domain.Name);
@@ -157,6 +162,9 @@ public sealed partial class ModulesSettingsViewModel : ObservableObject, INaviga
 
     partial void OnQuotesActiveChanged(bool value) =>
         Save(preferences => preferences with { QuotesActive = value }, value ? ModulesSettingsText.QuotesEnabled : ModulesSettingsText.QuotesDisabled);
+
+    partial void OnSchemasActiveChanged(bool value) =>
+        Save(preferences => preferences with { SchemasActive = value }, value ? ModulesSettingsText.SchemasEnabled : ModulesSettingsText.SchemasDisabled);
 
     partial void OnQuotesOnlineChanged(bool value) =>
         Save(preferences => preferences with { QuotesOnline = value }, null);

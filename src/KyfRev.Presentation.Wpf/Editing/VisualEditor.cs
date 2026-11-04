@@ -15,6 +15,7 @@ using KyfRev.DesignSystem;
 using KyfRev.DesignSystem.Controls;
 using KyfRev.DesignSystem.Tokens;
 using KyfRev.Presentation.Wpf.Pages;
+using KyfRev.Presentation.Wpf.Schemas;
 using KyfRev.Rendering.Diagrams;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.Wpf;
@@ -513,7 +514,7 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
         var language = menu.DrawingLanguage ?? string.Empty;
         var code = menu.DrawingCode ?? string.Empty;
         var items = new List<Control>();
-        if (language.StartsWith(SmartArt.Language, StringComparison.Ordinal))
+        if (language.StartsWith(SmartArt.Language, StringComparison.Ordinal) || language.Trim() == NetworkBlock.Language)
         {
             items.Add(ActionMenus.Quick(EditingText.EditDrawing, Icons.Edit, () => Receive(new EditDiagramEvent(language, code, position))));
         }
@@ -531,6 +532,10 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
         if (language.StartsWith(SmartArt.Language, StringComparison.Ordinal))
         {
             return EditingText.DeleteSmartArt;
+        }
+        if (language.Trim() == NetworkBlock.Language)
+        {
+            return EditingText.DeleteNetwork;
         }
         return code.TrimStart().StartsWith("pie", StringComparison.Ordinal) || code.TrimStart().StartsWith("xychart", StringComparison.Ordinal) || code.TrimStart().StartsWith("treemap", StringComparison.Ordinal)
             ? EditingText.DeleteChart
@@ -620,9 +625,19 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
     {
         var svg = SvgOf(diagram.Language, diagram.Code);
         string? image = null;
-        if (diagram.Language.Trim() == MermaidTemplates.Language && TryFindResource(MermaidEngine.ResourceKey) is IMermaidEngine engine)
+        var language = diagram.Language.Trim();
+        if (TryFindResource(MermaidEngine.ResourceKey) is IMermaidEngine engine)
         {
-            image = (await engine.DrawAsync(diagram.Code, MermaidEngine.ThemeOf(this)).ConfigureAwait(true))?.Image;
+            if (language == MermaidTemplates.Language)
+            {
+                image = (await engine.DrawAsync(diagram.Code, MermaidEngine.ThemeOf(this)).ConfigureAwait(true))?.Image;
+            }
+            else if (language == NetworkBlock.Language
+                && TryFindResource(NetworkBlock.ResourceKey) is INetworkSchemas { IsActive: true } schemas
+                && await NetworkBlock.TextOfAsync(schemas, diagram.Code).ConfigureAwait(true) is { } network)
+            {
+                image = (await engine.DrawNetworkAsync(network, SchemaIsland.ThemeOf(this)).ConfigureAwait(true))?.Image;
+            }
         }
         Send(new DiagramRequest(diagram.Language, diagram.Code, svg, image));
     }
@@ -679,6 +694,10 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
         if (path.StartsWith("/polices/Atkinson", StringComparison.Ordinal))
         {
             return FontOf(path["/polices/".Length..]);
+        }
+        if (path == "/reseau.js")
+        {
+            return SchemaIsland.PageContent(path);
         }
         using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(ResourcePrefix + path.TrimStart('/'));
         if (stream is null)
