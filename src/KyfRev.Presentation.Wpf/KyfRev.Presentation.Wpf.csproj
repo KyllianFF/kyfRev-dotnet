@@ -11,6 +11,7 @@
     <ProjectReference Include="..\KyfRev.Application\KyfRev.Application.csproj" />
     <ProjectReference Include="..\KyfRev.DesignSystem\KyfRev.DesignSystem.csproj" />
     <ProjectReference Include="..\KyfRev.Modules.Citations\KyfRev.Modules.Citations.csproj" />
+    <ProjectReference Include="..\KyfRev.Modules.Schemas\KyfRev.Modules.Schemas.csproj" />
     <ProjectReference Include="..\KyfRev.Rendering\KyfRev.Rendering.csproj" />
   </ItemGroup>
 
@@ -24,6 +25,7 @@
   <!-- Le paquet de l'éditeur visuel, construit par tools/visual-editor. -->
   <ItemGroup>
     <EmbeddedResource Include="Editing\Web\**\*" LogicalName="kyfrev-web/%(RecursiveDir)%(Filename)%(Extension)" />
+    <EmbeddedResource Include="Schemas\Web\**\*" LogicalName="kyfrev-schemas/%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 
   <ItemGroup>

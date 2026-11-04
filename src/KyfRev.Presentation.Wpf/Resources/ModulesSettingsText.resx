@@ -70,7 +70,13 @@
     <value>Module Citations</value>
   </data>
   <data name="SchemasHelp" xml:space="preserve">
-    <value>Éditeur de topologie (équipements, câbles, VLAN, plan d'adressage), schémas insérés dans les fiches. Pas encore disponible dans cette version.</value>
+    <value>Éditeur de topologie : équipements, câbles, VLAN, plan d'adressage et exports. Le désactiver masque la vue, sans rien retirer du coffre.</value>
+  </data>
+  <data name="SchemasDisabled" xml:space="preserve">
+    <value>Module Schémas réseau désactivé : ses schémas restent dans le coffre.</value>
+  </data>
+  <data name="SchemasEnabled" xml:space="preserve">
+    <value>Module Schémas réseau activé.</value>
   </data>
   <data name="SchemasModule" xml:space="preserve">
     <value>Module Schémas réseau</value>

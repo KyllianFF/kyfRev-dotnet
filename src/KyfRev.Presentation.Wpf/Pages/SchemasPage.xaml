@@ -1,0 +1,15 @@
+<UserControl x:Class="KyfRev.Presentation.Wpf.Pages.SchemasPage"
+             x:ClassModifier="internal"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:kyf="clr-namespace:KyfRev.DesignSystem.Controls;assembly=KyfRev.DesignSystem"
+             xmlns:schemas="clr-namespace:KyfRev.Presentation.Wpf.Schemas">
+  <UserControl.Resources>
+    <BooleanToVisibilityConverter x:Key="Visible" />
+  </UserControl.Resources>
+  <Grid>
+    <kyf:Notification x:Name="ProblemMessage" Severity="Critical" Message="{Binding Problem}" IsOpen="{Binding HasProblem, Mode=OneWay}" IsClosable="False" Margin="16"
+                      VerticalAlignment="Top" />
+    <ContentControl x:Name="IslandHost" Focusable="False" IsTabStop="False" />
+  </Grid>
+</UserControl>

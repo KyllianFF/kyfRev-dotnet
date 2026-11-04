@@ -105,6 +105,7 @@ Source: "installation-donnees.json"; DestDir: "{app}"; DestName: "installation.j
 Source: "..\LICENSE"; DestDir: "{app}\licences"; DestName: "LICENSE.txt"; Flags: ignoreversion
 Source: "..\src\KyfRev.Rendering\THIRD-PARTY-NOTICES.md"; DestDir: "{app}\licences"; DestName: "THIRD-PARTY-NOTICES-rendu.md"; Flags: ignoreversion
 Source: "..\src\KyfRev.Presentation.Wpf\Editing\THIRD-PARTY-NOTICES.md"; DestDir: "{app}\licences"; DestName: "THIRD-PARTY-NOTICES-editeur.md"; Flags: ignoreversion
+Source: "..\src\KyfRev.Presentation.Wpf\Schemas\THIRD-PARTY-NOTICES.md"; DestDir: "{app}\licences"; DestName: "THIRD-PARTY-NOTICES-schemas.md"; Flags: ignoreversion
 Source: "..\src\KyfRev.DesignSystem\Fonts\OFL-*.txt"; DestDir: "{app}\licences"; Flags: ignoreversion
 
 [Icons]

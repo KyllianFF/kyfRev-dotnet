@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using KyfRev.Application.Text;
 using KyfRev.Infrastructure.Vault.Files;
 using KyfRev.Infrastructure.Vault.Json;
 using KyfRev.Infrastructure.Vault.Paths;
@@ -26,6 +27,91 @@ public sealed partial class VaultSession
 
     /// <summary>Dernier format de schéma connu de cette version.</summary>
     public const int SchemaFormat = 2;
+
+    private const int MaxSchemaExportBytes = 4 * MaxSchemaBytes;
+    private const string DefaultSchemaFileName = "Schéma réseau";
+
+    /// <summary>Les schémas lisibles du coffre, par titre, avec les fiches qui les insèrent.</summary>
+    public IReadOnlyList<SchemaSummary> Schemas()
+    {
+        var folder = VaultLayout.Absolute(Root, VaultLayout.Schemas);
+        if (!Directory.Exists(folder))
+        {
+            return [];
+        }
+        // Qui insère quoi : une seule lecture de chaque fiche.
+        var citations = new Dictionary<string, List<SchemaSheet>>(StringComparer.Ordinal);
+        foreach (var entry in _sheets.Values.Where(entry => entry.Presence == FilePresence.Present))
+        {
+            string text;
+            try
+            {
+                text = ReadSheet(entry.Sheet.Id).Text;
+            }
+            catch (VaultException)
+            {
+                continue;
+            }
+            foreach (var cited in References(text).Distinct(StringComparer.Ordinal))
+            {
+                if (!citations.TryGetValue(cited, out var sheets))
+                {
+                    citations[cited] = sheets = [];
+                }
+                sheets.Add(new SchemaSheet(entry.Sheet.Id, entry.Sheet.Title));
+            }
+        }
+        var schemas = new List<SchemaSummary>();
+        foreach (var file in Directory.EnumerateFiles(folder, "*.json"))
+        {
+            if (SummaryOf(file, citations) is { } summary)
+            {
+                schemas.Add(summary);
+            }
+        }
+        return [.. schemas.OrderBy(schema => RustText.ToLowercase(schema.Title), Utf8Order.Instance).ThenBy(schema => schema.Id, StringComparer.Ordinal)];
+    }
+
+    /// <summary>Écrit un export dans <paramref name="folder"/>, hors du coffre, sans jamais écraser ; rend le chemin écrit.</summary>
+    public string ExportSchema(string folder, string name, string extension, ReadOnlySpan<byte> content)
+    {
+        ArgumentNullException.ThrowIfNull(name);
+        if (extension is not ("json" or "svg" or "png" or "csv"))
+        {
+            throw VaultException.InvalidPath(extension, "export d'un schéma : JSON, SVG, PNG ou CSV seulement");
+        }
+        if (content.Length > MaxSchemaExportBytes)
+        {
+            throw VaultException.InvalidSchema("export de plus de 32 Mo");
+        }
+        CheckOutputFolder(folder);
+        var stem = FileNames.ForTitle(name.Trim());
+        return CreateWithoutOverwriting(folder, stem.Length == 0 ? DefaultSchemaFileName : stem, extension, content);
+    }
+
+    /// <summary>Lit un fichier choisi pour l'import d'un schéma : <c>.json</c>, au plus 8 Mo, en UTF-8. Rien n'est écrit ici.</summary>
+    public static string ReadSchemaToImport(string path)
+    {
+        ArgumentNullException.ThrowIfNull(path);
+        if (!string.Equals(Path.GetExtension(path), ".json", StringComparison.OrdinalIgnoreCase))
+        {
+            throw VaultException.InvalidPath(path, "un fichier .json est attendu");
+        }
+        byte[] bytes;
+        try
+        {
+            if (new FileInfo(path).Length > MaxSchemaBytes)
+            {
+                throw VaultException.InvalidSchema("fichier de plus de 8 Mo");
+            }
+            bytes = File.ReadAllBytes(path);
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            throw VaultException.Io(path, exception);
+        }
+        return TryDecode(bytes, out var text) ? text : throw VaultException.InvalidSchema("fichier non UTF-8");
+    }
 
     /// <summary>Lit un schéma.</summary>
     public SchemaContent ReadSchema(string id)
@@ -126,6 +212,51 @@ public sealed partial class VaultSession
     }
 
     /// <summary>Texte d'un schéma comme la version 0.x l'écrit : clés triées, indentation de deux espaces, saut de ligne final.</summary>
+    /// <summary>Le résumé d'un fichier de schéma ; rien s'il ne se lit pas : la vue Santé s'en occupe.</summary>
+    private static SchemaSummary? SummaryOf(string file, Dictionary<string, List<SchemaSheet>> citations)
+    {
+        var id = Path.GetFileNameWithoutExtension(file);
+        JsonObject schema;
+        DateTimeOffset modified;
+        try
+        {
+            schema = VerifySchema(File.ReadAllText(file), id);
+            modified = new DateTimeOffset(File.GetLastWriteTimeUtc(file), TimeSpan.Zero);
+        }
+        catch (Exception exception) when (exception is VaultException or IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+        var title = schema["titre"] is JsonValue value && value.GetValueKind() == JsonValueKind.String ? value.GetValue<string>() : string.Empty;
+        var devices = schema["equipements"] is JsonArray list ? list.Count : 0;
+        var sheets = citations.TryGetValue(id, out var citing) ? citing : [];
+        return new SchemaSummary(id, title, devices, modified, [.. sheets.OrderBy(sheet => RustText.ToLowercase(sheet.Title), Utf8Order.Instance)]);
+    }
+
+    /// <summary>Les identifiants de schéma cités par une fiche (<c>schema: s_…</c>).</summary>
+    private static IEnumerable<string> References(string text)
+    {
+        const string marker = "schema:";
+        for (var at = text.IndexOf(marker, StringComparison.Ordinal); at >= 0; at = text.IndexOf(marker, at + marker.Length, StringComparison.Ordinal))
+        {
+            var start = at + marker.Length;
+            while (start < text.Length && text[start] is ' ' or '\t')
+            {
+                start++;
+            }
+            var end = start;
+            while (end < text.Length && (char.IsAsciiLetterOrDigit(text[end]) || text[end] == '_'))
+            {
+                end++;
+            }
+            var id = text[start..end];
+            if (VaultIds.IsSchemaId(id))
+            {
+                yield return id;
+            }
+        }
+    }
+
     private static string SchemaText(JsonObject schema) => SerdeJson.Pretty(SerdeJson.Canonical(schema)) + "\n";
 
     private string SchemaPath(string id)

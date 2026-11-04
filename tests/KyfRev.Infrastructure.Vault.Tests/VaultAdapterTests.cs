@@ -37,6 +37,64 @@ public sealed class VaultAdapterTests
     }
 
     [TestMethod]
+    public void Schemas_reach_the_session_and_a_conflict_says_what_the_disk_holds()
+    {
+        using var folder = TemporaryVault.Empty();
+        using var vault = new VaultStore().Initialize(folder.Root, Now);
+        Assert.IsEmpty(vault.Schemas());
+
+        var created = vault.CreateSchema("{\"format\": 2, \"titre\": \"Réseau\", \"equipements\": [{}, {}]}");
+        var other = vault.DuplicateSchema(created.Id);
+        vault.CreateSheet(null, "Citante", $"```reseau\nschema: {created.Id}\n```\n", Now);
+        vault.CreateSheet(null, "Trompeuse", "schema: pas_un_identifiant\n", Now);
+        var saved = (SheetSaved)vault.SaveSchema(other.Id, other.Text, other.Fingerprint);
+
+        Assert.AreEqual(saved.Fingerprint, vault.ReadSchema(other.Id).Fingerprint);
+        var summaries = vault.Schemas();
+        Assert.HasCount(2, summaries);
+        var cited = summaries.Single(summary => summary.Id == created.Id);
+        Assert.AreEqual("Réseau", cited.Title);
+        Assert.AreEqual(2, cited.Devices);
+        Assert.AreEqual("Citante", cited.Sheets.Single().Title);
+        Assert.IsEmpty(summaries.Single(summary => summary.Id == other.Id).Sheets);
+
+        var changed = created.Text.Replace("Réseau", "Lycée", StringComparison.Ordinal);
+        vault.SaveSchema(created.Id, changed, created.Fingerprint);
+        var conflict = (SaveConflict)vault.SaveSchema(created.Id, created.Text, created.Fingerprint);
+        Assert.AreEqual(changed, conflict.DiskBody);
+
+        folder.Write("schemas/XXX.json", "{}");
+        folder.Write($"schemas/s_{new string('1', 26)}.json", "{ cassé");
+        Assert.HasCount(2, vault.Schemas(), "Un fichier illisible ne casse pas la liste.");
+
+        var outside = Path.Combine(Path.GetTempPath(), "kyfrev-schemas-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(outside);
+        try
+        {
+            var written = vault.ExportSchema(outside, "   ", "svg", [1]);
+            Assert.AreEqual(".svg", Path.GetExtension(written));
+            Assert.AreEqual(VaultErrorKind.InvalidPath, Assert.ThrowsExactly<VaultException>(() => vault.ExportSchema(outside, "n", "exe", [1])).Kind);
+            Assert.AreEqual(VaultErrorKind.InvalidSchema, Assert.ThrowsExactly<VaultException>(() => vault.ExportSchema(outside, "n", "png", new byte[(32 * 1024 * 1024) + 1])).Kind);
+            Assert.ThrowsExactly<ArgumentNullException>(() => vault.ExportSchema(outside, null!, "png", [1]));
+
+            var file = Path.Combine(outside, "import.json");
+            File.WriteAllText(file, "{}");
+            Assert.AreEqual("{}", vault.ReadSchemaToImport(file));
+            Assert.AreEqual(VaultErrorKind.InvalidPath, Assert.ThrowsExactly<VaultException>(() => vault.ReadSchemaToImport(Path.Combine(outside, "import.txt"))).Kind);
+            Assert.AreEqual(VaultErrorKind.Io, Assert.ThrowsExactly<VaultException>(() => vault.ReadSchemaToImport(Path.Combine(outside, "absent.json"))).Kind);
+            Assert.ThrowsExactly<ArgumentNullException>(() => vault.ReadSchemaToImport(null!));
+            File.WriteAllBytes(file, [0x7B, 0xE9, 0x7D]);
+            Assert.AreEqual(VaultErrorKind.InvalidSchema, Assert.ThrowsExactly<VaultException>(() => vault.ReadSchemaToImport(file)).Kind);
+            File.WriteAllBytes(file, new byte[VaultSession.MaxSchemaBytes + 1]);
+            Assert.AreEqual(VaultErrorKind.InvalidSchema, Assert.ThrowsExactly<VaultException>(() => vault.ReadSchemaToImport(file)).Kind);
+        }
+        finally
+        {
+            Directory.Delete(outside, recursive: true);
+        }
+    }
+
+    [TestMethod]
     public void Sheets_editing_folders_and_trash_reach_the_session()
     {
         using var folder = TemporaryVault.Empty();

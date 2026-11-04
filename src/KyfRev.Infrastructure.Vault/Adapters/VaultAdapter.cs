@@ -279,6 +279,40 @@ public sealed class VaultAdapter(VaultSession inner) : IVault
     public string SaveAsTemplate(string id, string name) => inner.SaveAsTemplate(id, name);
 
     /// <inheritdoc/>
+    public IReadOnlyList<SchemaSummary> Schemas() => inner.Schemas();
+
+    /// <inheritdoc/>
+    public SchemaDocument ReadSchema(string id) => Document(inner.ReadSchema(id));
+
+    /// <inheritdoc/>
+    public SchemaDocument CreateSchema(string text) => Document(inner.CreateSchema(text));
+
+    /// <inheritdoc/>
+    public SaveResult SaveSchema(string id, string text, string expectedFingerprint)
+    {
+        try
+        {
+            return new SheetSaved(inner.SaveSchema(id, text, expectedFingerprint));
+        }
+        catch (VaultException exception) when (exception.Kind == VaultErrorKind.Conflict)
+        {
+            var disk = inner.ReadSchema(id);
+            return new SaveConflict(disk.Fingerprint, disk.Text);
+        }
+    }
+
+    /// <inheritdoc/>
+    public SchemaDocument DuplicateSchema(string id) => Document(inner.DuplicateSchema(id));
+
+    /// <inheritdoc/>
+    public string ExportSchema(string folder, string name, string extension, ReadOnlySpan<byte> content) => inner.ExportSchema(folder, name, extension, content);
+
+    /// <inheritdoc/>
+    public string ReadSchemaToImport(string path) => VaultSession.ReadSchemaToImport(path);
+
+    private static SchemaDocument Document(SchemaContent content) => new(content.Id, content.Text, content.Fingerprint);
+
+    /// <inheritdoc/>
     public QuoteList Quotes() => inner.Quotes();
 
     /// <inheritdoc/>

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="BadCall" xml:space="preserve">
+    <value>Appel refusé.</value>
+  </data>
+  <data name="ChooseFile" xml:space="preserve">
+    <value>Choisir un schéma à importer</value>
+  </data>
+  <data name="EngineFailed" xml:space="preserve">
+    <value>Le moteur web n'a pas pu démarrer : {0}</value>
+  </data>
+  <data name="FileFilter" xml:space="preserve">
+    <value>Schémas (*.json)|*.json</value>
+  </data>
+  <data name="IslandName" xml:space="preserve">
+    <value>Schémas réseau</value>
+  </data>
+</root>

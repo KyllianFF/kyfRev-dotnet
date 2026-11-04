@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Description>Module Schémas réseau de kyfRev : les schémas du coffre, leurs exports et leur import. Son éditeur est un îlot web, hébergé par la présentation.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\KyfRev.Application\KyfRev.Application.csproj" />
+    <ProjectReference Include="..\KyfRev.Domain\KyfRev.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="KyfRev.Modules.Schemas.Tests" />
+  </ItemGroup>
+
+</Project>

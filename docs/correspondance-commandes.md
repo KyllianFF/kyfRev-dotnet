@@ -103,13 +103,13 @@ Ces cas d'usage ne sont chargés que si le coffre active le module Citations.
 | `chercher_dans_les_fiches` | — | J9 | Recherche dans les fiches. |
 | `recherche_globale` | — | J9 | Recherche globale. |
 | `liste_des_definitions` | `AnnotationUseCases.Definitions` | J7.6 | Vue « Définitions ». |
-| `schemas` | — | J10 | Module Schémas réseau. |
-| `lire_schema` | — | J10 | Module Schémas réseau (le coffre sait déjà lire un schéma). |
-| `creer_schema` | — | J10 | Module Schémas réseau (le coffre sait déjà créer un schéma). |
-| `enregistrer_schema` | — | J10 | Module Schémas réseau (le coffre sait déjà l'enregistrer). |
-| `dupliquer_schema` | — | J10 | Module Schémas réseau (le coffre sait déjà le copier). |
-| `exporter_schema` | — | J10 | Module Schémas réseau. |
-| `lire_import_schema` | — | J10 | Module Schémas réseau. |
+| `schemas` | `SchemaUseCases.Schemas` | J10 | Module Schémas réseau. |
+| `lire_schema` | `SchemaUseCases.Read` | J10 | Module Schémas réseau. |
+| `creer_schema` | `SchemaUseCases.Create` | J10 | Module Schémas réseau. |
+| `enregistrer_schema` | `SchemaUseCases.Save` | J10 | Module Schémas réseau. |
+| `dupliquer_schema` | `SchemaUseCases.Duplicate` | J10 | Module Schémas réseau. |
+| `exporter_schema` | `SchemaUseCases.Export` | J10 | Module Schémas réseau. |
+| `lire_import_schema` | `SchemaUseCases.ReadImport` | J10 | Module Schémas réseau. |
 | `rechercher_mise_a_jour` | — | J10 | Mise à jour avec manifeste signé. |
 | `extensions` | — | J10 | Hôte des extensions. |
 | `lire_extension` | — | J10 | Hôte des extensions. |

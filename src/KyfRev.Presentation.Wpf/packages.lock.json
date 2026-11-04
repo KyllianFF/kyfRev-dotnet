@@ -55,6 +55,13 @@
           "KyfRev.Domain": "[1.0.0-alpha.0, )"
         }
       },
+      "kyfrev.modules.schemas": {
+        "type": "Project",
+        "dependencies": {
+          "KyfRev.Application": "[1.0.0-alpha.0, )",
+          "KyfRev.Domain": "[1.0.0-alpha.0, )"
+        }
+      },
       "kyfrev.rendering": {
         "type": "Project",
         "dependencies": {

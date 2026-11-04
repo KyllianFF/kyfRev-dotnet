@@ -1,0 +1,25 @@
+{
+  "name": "kyfrev-schema-editor",
+  "private": true,
+  "version": "0.0.0",
+  "license": "MIT",
+  "type": "module",
+  "description": "Module Schémas réseau de kyfRev : la vue et l'éditeur de topologie de la 0.x, en îlot WebView2.",
+  "scripts": {
+    "build": "vite build && node avis-de-tiers.js",
+    "test": "vitest run",
+    "check": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings"
+  },
+  "dependencies": {
+    "@lucide/svelte": "1.59.0",
+    "dompurify": "3.4.17",
+    "svelte": "5.57.2"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "7.3.1",
+    "svelte-check": "4.7.7",
+    "typescript": "6.0.3",
+    "vite": "8.3.4",
+    "vitest": "5.0.5"
+  }
+}

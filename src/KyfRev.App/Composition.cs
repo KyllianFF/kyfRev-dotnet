@@ -10,6 +10,7 @@ using KyfRev.Infrastructure.Online;
 using KyfRev.Infrastructure.Vault.Adapters;
 using KyfRev.Infrastructure.Windows;
 using KyfRev.Modules.Citations;
+using KyfRev.Modules.Schemas;
 using KyfRev.Presentation.Wpf.Editing;
 using KyfRev.Presentation.Wpf.Pages;
 using KyfRev.Presentation.Wpf.Shell;
@@ -54,7 +55,7 @@ internal static class Composition
         services.AddSingleton<MachineSettings>();
         services.AddSingleton<IFolderPicker, FolderPicker>();
         services.AddSingleton<IOnlineReader>(_ => new OnlineReader(Version));
-        services.AddSingleton(_ => new ModuleCatalog([new CitationsModule()]));
+        services.AddSingleton(_ => new ModuleCatalog([new CitationsModule(), new SchemasModule()]));
         services.AddSingleton(provider => new ActiveModules(provider.GetRequiredService<ModuleCatalog>(), modules =>
         {
             // Ce que les modules attendent du cœur.
@@ -158,7 +159,11 @@ internal static class Composition
             provider.GetRequiredService<ReviewNavigation>().Attach(shell);
             provider.GetRequiredService<MachineSettings>().Follow(provider.GetRequiredService<AppearanceController>(), shell);
             var modules = provider.GetRequiredService<ActiveModules>();
-            modules.Changed += (_, _) => shell.SetModuleEntries(ModuleEntries(modules, provider.GetRequiredService<IExternalLinks>()));
+            modules.Changed += (_, _) => shell.SetModuleEntries(ModuleEntries(modules, provider.GetRequiredService<IExternalLinks>(), schemas => new SchemasPageViewModel(
+                schemas,
+                provider.GetRequiredService<IFolderPicker>(),
+                provider.GetRequiredService<IReviewOpener>(),
+                provider.GetRequiredService<EditorEnvironment>().WebDataFolder)));
             shell.WorkspaceOpening += (_, _) => modules.Load(provider.GetRequiredService<SettingsUseCases>().Get() is { Succeeded: true } settings ? settings.Value : null);
             return shell;
         });
@@ -167,11 +172,19 @@ internal static class Composition
     }
 
     /// <summary>Les entrées du menu apportées par les modules actifs, avec leurs vues.</summary>
-    internal static IReadOnlyList<NavigationItem> ModuleEntries(ActiveModules modules, IExternalLinks links) =>
+    internal static IReadOnlyList<NavigationItem> ModuleEntries(ActiveModules modules, IExternalLinks links, Func<SchemaUseCases, SchemasPageViewModel> schemasPage) =>
         [.. modules.All<INavigationContributor>().Select(contributor => contributor.Entry).Select(entry =>
-            entry.Id == CitationsModule.ModuleId && modules.Find<QuoteUseCases>() is { } quotes
-                ? CorePages.FromModule(entry) with { Page = new QuotesPageViewModel(quotes, links) }
-                : CorePages.FromModule(entry))];
+        {
+            var item = CorePages.FromModule(entry);
+            return entry.Id switch
+            {
+                CitationsModule.ModuleId when modules.Find<QuoteUseCases>() is { } quotes =>
+                    item with { Page = new QuotesPageViewModel(quotes, links) },
+                SchemasModule.ModuleId when modules.Find<SchemaUseCases>() is { } schemas =>
+                    item with { Page = schemasPage(schemas) },
+                _ => item,
+            };
+        })];
 
     /// <summary>La citation du jour, cherchée en ligne si le module et ses réglages le veulent ; vrai si elle a changé.</summary>
     private static async Task<bool> LookForQuoteAsync(ActiveModules modules) =>

@@ -24,7 +24,8 @@ public interface IVault :
     IBackupWriter,
     IExporter,
     ITemplateStore,
-    IQuoteStore
+    IQuoteStore,
+    ISchemaStore
 {
     /// <summary>Dossier du coffre.</summary>
     string Root { get; }
@@ -274,6 +275,31 @@ public interface ITemplateStore
 
     /// <summary>Enregistre le corps d'une fiche comme modèle du coffre ; rend le nom retenu.</summary>
     string SaveAsTemplate(string id, string name);
+}
+
+/// <summary>Schémas réseau du coffre (module Schémas réseau) : le coffre ne connaît pas leur modèle.</summary>
+public interface ISchemaStore
+{
+    /// <summary>Les schémas lisibles, par titre, avec les fiches qui les insèrent.</summary>
+    IReadOnlyList<SchemaSummary> Schemas();
+
+    /// <summary>Lit un schéma.</summary>
+    SchemaDocument ReadSchema(string id);
+
+    /// <summary>Crée un schéma (nouveau, importé) : vérifié, il reçoit un identifiant neuf.</summary>
+    SchemaDocument CreateSchema(string text);
+
+    /// <summary>Enregistre un schéma, s'il est toujours celui qui a été lu ; sinon, rend ce qu'il est devenu.</summary>
+    SaveResult SaveSchema(string id, string text, string expectedFingerprint);
+
+    /// <summary>Copie indépendante d'un schéma, titrée « … (copie) ».</summary>
+    SchemaDocument DuplicateSchema(string id);
+
+    /// <summary>Écrit un export (JSON, SVG, PNG ou CSV) hors du coffre, sans rien écraser ; rend le fichier créé.</summary>
+    string ExportSchema(string folder, string name, string extension, ReadOnlySpan<byte> content);
+
+    /// <summary>Lit un fichier choisi pour l'import : rien n'est écrit dans le coffre.</summary>
+    string ReadSchemaToImport(string path);
 }
 
 /// <summary>Citations du coffre (module Citations).</summary>
