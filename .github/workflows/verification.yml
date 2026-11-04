@@ -208,7 +208,7 @@ jobs:
       - name: Types
         run: npm run check
 
-      - name: Topologie : les cas de la 0.x
+      - name: Topologie, les cas de la 0.x
         run: npm test
 
       - name: Le paquet versionné correspond à ses sources
