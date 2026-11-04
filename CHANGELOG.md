@@ -9,6 +9,9 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- Module Citations : la vue « Citations » (recherche, étiquettes, tri, ajout, modification, corbeille), la citation du jour
+  sur « Aujourd'hui », cherchée sur Wikiquote si ce réglage est activé, l'onglet « Modules et extensions » de « Paramètres » pour
+  l'activer sans redémarrer, et, dans l'onglet « Données », les citations supprimées et leur export.
 - Vue « Paramètres », onglet « Général » : le thème, la taille de l'interface, le confort de lecture des fiches (largeur,
   taille du texte, interligne, police), les animations, le contraste élevé, les petits
   boutons agrandis, la voix et la vitesse de lecture. Ces réglages sont retenus sur l'ordinateur, hors du coffre, et le zoom

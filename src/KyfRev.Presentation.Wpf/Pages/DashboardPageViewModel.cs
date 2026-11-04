@@ -79,7 +79,7 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
     private readonly DashboardGroup _reminderGroup;
     private readonly DashboardGroup _upcoming;
     private readonly DashboardExtras _extras;
-    private readonly IReadOnlyList<IDashboardWidget> _widgets;
+    private readonly IEnumerable<IDashboardWidget> _widgets;
     private Dashboard? _dashboard;
     private IReadOnlyList<DueItem> _toStart = [];
 
@@ -99,7 +99,7 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
         _reminders = reminders;
         _sheets = sheets;
         _opener = opener;
-        _widgets = [.. (widgets ?? []).OrderBy(widget => widget.Order)];
+        _widgets = widgets ?? [];
         _extras = new DashboardExtras(this);
         _overdue = new DashboardGroup(DashboardText.Overdue, Icons.Clock, DashboardTone.Overdue, expanded: true, BuildRows);
         _today = new DashboardGroup(DashboardText.Today, Icons.Calendar, DashboardTone.Normal, expanded: true, BuildRows);
@@ -254,6 +254,9 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
     [ObservableProperty]
     public partial string WeekNoun { get; private set; }
 
+    /// <summary>Ce que les modules vont chercher au-dehors, une fois la vue affichée ; vrai si un encart a changé.</summary>
+    public Func<Task<bool>>? LookForNews { get; init; }
+
     /// <summary>Encarts des modules, ceux qui ont quelque chose à montrer aujourd'hui.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasCards))]
@@ -346,6 +349,10 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
         finally
         {
             IsLoading = false;
+        }
+        if (LookForNews is { } lookForNews && await lookForNews().ConfigureAwait(true))
+        {
+            Cards = await Task.Run(ReadCards).ConfigureAwait(true);
         }
     }
 
@@ -449,7 +456,7 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
         SelectedRow = candidates.Find(row => KeyOf(row) == key) ?? candidates.FirstOrDefault();
     }
 
-    private List<DashboardCard> ReadCards() => [.. _widgets.Select(widget => widget.Card()).OfType<DashboardCard>()];
+    private List<DashboardCard> ReadCards() => [.. _widgets.OrderBy(widget => widget.Order).Select(widget => widget.Card()).OfType<DashboardCard>()];
 
     private void BuildRows()
     {

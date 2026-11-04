@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="DomainArt" xml:space="preserve">
+    <value>Art</value>
+  </data>
+  <data name="DomainArtPages" xml:space="preserve">
+    <value>Pages de Wikiquote : Art, Peinture, Musique, Poésie, Littérature</value>
+  </data>
+  <data name="DomainComputing" xml:space="preserve">
+    <value>Informatique</value>
+  </data>
+  <data name="DomainComputingPages" xml:space="preserve">
+    <value>Pages de Wikiquote : Ordinateur, Internet, Technique</value>
+  </data>
+  <data name="DomainPhilosophy" xml:space="preserve">
+    <value>Philosophie</value>
+  </data>
+  <data name="DomainPhilosophyPages" xml:space="preserve">
+    <value>Pages de Wikiquote : Philosophie, Sagesse, Connaissance, Liberté</value>
+  </data>
+  <data name="DomainScience" xml:space="preserve">
+    <value>Science</value>
+  </data>
+  <data name="DomainSciencePages" xml:space="preserve">
+    <value>Pages de Wikiquote : Science, Mathématiques</value>
+  </data>
+  <data name="DomainsTitle" xml:space="preserve">
+    <value>Domaines de la citation du jour</value>
+  </data>
+  <data name="ExtensionsHelp" xml:space="preserve">
+    <value>L'installation d'extensions n'est pas encore disponible dans cette version.</value>
+  </data>
+  <data name="ExtensionsTitle" xml:space="preserve">
+    <value>Extensions</value>
+  </data>
+  <data name="ModulesHelp" xml:space="preserve">
+    <value>Des fonctions facultatives, pour ce coffre. Désactiver un module le retire des menus ; ce qu'il a créé reste dans le coffre, intact.</value>
+  </data>
+  <data name="ModulesTitle" xml:space="preserve">
+    <value>Modules</value>
+  </data>
+  <data name="Online" xml:space="preserve">
+    <value>Chercher chaque jour une citation sur Wikiquote</value>
+  </data>
+  <data name="OnlineHelp" xml:space="preserve">
+    <value>Une requête par jour vers fr.wikiquote.org, la seule de kyfRev. Chaque citation trouvée (source, œuvre, date, domaine) reste dans le coffre ; hors connexion, la citation du jour vient du coffre.</value>
+  </data>
+  <data name="QuotesDisabled" xml:space="preserve">
+    <value>Module Citations désactivé : rien n'a été supprimé.</value>
+  </data>
+  <data name="QuotesEnabled" xml:space="preserve">
+    <value>Module Citations activé.</value>
+  </data>
+  <data name="QuotesHelp" xml:space="preserve">
+    <value>Vos citations, et la citation du jour sur le tableau de bord.</value>
+  </data>
+  <data name="QuotesModule" xml:space="preserve">
+    <value>Module Citations</value>
+  </data>
+  <data name="SchemasHelp" xml:space="preserve">
+    <value>Éditeur de topologie (équipements, câbles, VLAN, plan d'adressage), schémas insérés dans les fiches. Pas encore disponible dans cette version.</value>
+  </data>
+  <data name="SchemasModule" xml:space="preserve">
+    <value>Module Schémas réseau</value>
+  </data>
+  <data name="Tab" xml:space="preserve">
+    <value>Modules et extensions</value>
+  </data>
+</root>

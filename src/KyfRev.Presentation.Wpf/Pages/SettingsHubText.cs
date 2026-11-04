@@ -44,6 +44,9 @@ public static class SettingsHubText
     /// <summary>« Annotations (Markdown) ».</summary>
     public static string ExportAnnotations => Text(nameof(ExportAnnotations));
 
+    /// <summary>« Citations (Markdown et CSV) ».</summary>
+    public static string ExportQuotes => Text(nameof(ExportQuotes));
+
     /// <summary>« Suivi des révisions (CSV) ».</summary>
     public static string ExportTracking => Text(nameof(ExportTracking));
 

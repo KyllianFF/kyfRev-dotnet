@@ -28,6 +28,9 @@
     <DataTemplate DataType="{x:Type pages:SheetsPageViewModel}">
       <pages:SheetsPage />
     </DataTemplate>
+    <DataTemplate DataType="{x:Type pages:QuotesPageViewModel}">
+      <pages:QuotesPage />
+    </DataTemplate>
     <DataTemplate DataType="{x:Type pages:SettingsHubViewModel}">
       <pages:SettingsHubPage />
     </DataTemplate>
@@ -67,7 +70,7 @@
         </StackPanel>
         <StackPanel x:Name="Stacked" Margin="-8,6" Visibility="Collapsed">
           <kyf:Icon Text="{Binding Glyph}" HorizontalAlignment="Center" />
-          <TextBlock Text="{Binding Label}" FontSize="12" TextAlignment="Center" TextWrapping="Wrap" Margin="0,2,0,0" />
+          <TextBlock Text="{Binding Label}" FontSize="12" TextAlignment="Center" TextWrapping="WrapWithOverflow" Margin="0,2,0,0" />
         </StackPanel>
       </Grid>
       <DataTemplate.Triggers>

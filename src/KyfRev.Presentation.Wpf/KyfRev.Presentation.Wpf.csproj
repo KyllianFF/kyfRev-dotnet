@@ -10,6 +10,7 @@
   <ItemGroup>
     <ProjectReference Include="..\KyfRev.Application\KyfRev.Application.csproj" />
     <ProjectReference Include="..\KyfRev.DesignSystem\KyfRev.DesignSystem.csproj" />
+    <ProjectReference Include="..\KyfRev.Modules.Citations\KyfRev.Modules.Citations.csproj" />
     <ProjectReference Include="..\KyfRev.Rendering\KyfRev.Rendering.csproj" />
   </ItemGroup>
 

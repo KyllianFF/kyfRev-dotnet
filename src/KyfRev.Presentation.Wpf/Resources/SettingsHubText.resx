@@ -48,6 +48,9 @@
   <data name="ExportAnnotations" xml:space="preserve">
     <value>Annotations (Markdown)</value>
   </data>
+  <data name="ExportQuotes" xml:space="preserve">
+    <value>Citations (Markdown et CSV)</value>
+  </data>
   <data name="ExportTracking" xml:space="preserve">
     <value>Suivi des révisions (CSV)</value>
   </data>
@@ -151,7 +154,7 @@
     <value>Thèmes des paramètres</value>
   </data>
   <data name="TrashHelp" xml:space="preserve">
-    <value>Les fiches, passages et définitions supprimés restent ici, restaurables ; rien n'est jamais purgé.</value>
+    <value>Les fiches, passages, définitions et citations supprimés restent ici, restaurables ; rien n'est jamais purgé.</value>
   </data>
   <data name="TrashTitle" xml:space="preserve">
     <value>Éléments supprimés</value>

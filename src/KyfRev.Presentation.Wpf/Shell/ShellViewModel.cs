@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -25,8 +26,10 @@ public sealed partial class ShellViewModel : ObservableObject
     /// <summary>Pas du zoom.</summary>
     public const double ZoomStep = 0.1;
 
-    private readonly IReadOnlyList<PaletteEntry> _commands;
+    private readonly IReadOnlyList<NavigationItem> _core;
     private readonly IReadOnlyList<PaletteEntry> _commandsWithoutVault;
+    private IReadOnlyList<PaletteEntry> _commands;
+    private IReadOnlyList<NavigationItem> _moduleEntries = [];
 
     /// <summary>Un coffre est ouvert : les pages ouvertes sont prévenues (<see cref="INavigationAware"/>).</summary>
     private bool _workspace;
@@ -36,9 +39,7 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         ArgumentNullException.ThrowIfNull(navigation);
         ArgumentNullException.ThrowIfNull(appearance);
-        var items = navigation.OrderBy(item => item.Order).ThenBy(item => item.Label, StringComparer.CurrentCulture).ToList();
-        MainNavigation = [.. items.Where(item => !item.IsSecondary)];
-        SecondaryNavigation = [.. items.Where(item => item.IsSecondary)];
+        _core = [.. navigation];
         Appearance = appearance;
         Gallery = new NavigationItem("galerie", ShellText.Gallery, Icons.Palette, int.MaxValue, gallery);
         Shortcuts =
@@ -54,13 +55,10 @@ public sealed partial class ShellViewModel : ObservableObject
             new("Ctrl+moins", ShellText.ShortcutZoomOut),
             new("Ctrl+0", ShellText.ShortcutZoomReset),
         ];
-        TabNavigation = [.. MainNavigation.Take(ShellLayout.TabCount)];
-        OverflowNavigation = [.. MainNavigation.Skip(ShellLayout.TabCount), .. SecondaryNavigation];
         Zoom = 1.0;
         WindowWidth = ShellLayout.SidebarMinimum;
-        var navigationCommands = NavigationCommands();
         _commandsWithoutVault = OtherCommands();
-        _commands = [.. navigationCommands, .. _commandsWithoutVault];
+        ArrangeMenu();
         PaletteResults = _commands;
         PaletteQuery = string.Empty;
         Home = MainNavigation.Count > 0 ? MainNavigation[0] : SecondaryNavigation.Count > 0 ? SecondaryNavigation[0] : Gallery;
@@ -68,17 +66,24 @@ public sealed partial class ShellViewModel : ObservableObject
         SelectedMain = MainNavigation.Contains(Current) ? Current : null;
     }
 
+    /// <summary>Un coffre va s'afficher : c'est le moment de charger ce qui dépend de lui.</summary>
+    public event EventHandler? WorkspaceOpening;
+
     /// <summary>Entrées du haut du menu.</summary>
-    public IReadOnlyList<NavigationItem> MainNavigation { get; }
+    [ObservableProperty]
+    public partial IReadOnlyList<NavigationItem> MainNavigation { get; private set; }
 
     /// <summary>Entrées du bas du menu.</summary>
-    public IReadOnlyList<NavigationItem> SecondaryNavigation { get; }
+    [ObservableProperty]
+    public partial IReadOnlyList<NavigationItem> SecondaryNavigation { get; private set; }
 
     /// <summary>Les premières vues, en onglets quand la fenêtre est étroite.</summary>
-    public IReadOnlyList<NavigationItem> TabNavigation { get; }
+    [ObservableProperty]
+    public partial IReadOnlyList<NavigationItem> TabNavigation { get; private set; }
 
     /// <summary>Les autres vues, sous « Plus » quand la fenêtre est étroite.</summary>
-    public IReadOnlyList<NavigationItem> OverflowNavigation { get; }
+    [ObservableProperty]
+    public partial IReadOnlyList<NavigationItem> OverflowNavigation { get; private set; }
 
     /// <summary>Largeur de la fenêtre, en pixels indépendants, avant zoom.</summary>
     [ObservableProperty]
@@ -181,9 +186,31 @@ public sealed partial class ShellViewModel : ObservableObject
         UpdateResults();
     }
 
+    /// <summary>
+    /// Un module vient de s'activer ou de se désactiver : le menu change, et la vue ouverte reste choisie, sauf si
+    /// c'était celle d'un module qui s'en va.
+    /// </summary>
+    public void SetModuleEntries(IEnumerable<NavigationItem> entries)
+    {
+        ArgumentNullException.ThrowIfNull(entries);
+        var left = _moduleEntries.Contains(Current);
+        _moduleEntries = [.. entries];
+        var current = Current;
+        ArrangeMenu();
+        UpdateResults();
+        if (left)
+        {
+            Navigate(Home);
+            return;
+        }
+        SelectedMain = MainNavigation.Contains(current) ? current : null;
+        SelectedSecondary = SecondaryNavigation.Contains(current) ? current : null;
+    }
+
     /// <summary>Un coffre est ouvert : le menu revient, sur sa première vue, qui est prévenue.</summary>
     public void ShowWorkspace()
     {
+        WorkspaceOpening?.Invoke(this, EventArgs.Empty);
         IsWelcome = false;
         _workspace = true;
         UpdateResults();
@@ -335,6 +362,17 @@ public sealed partial class ShellViewModel : ObservableObject
     }
 
     private static void Activate(NavigationItem item) => (item.Page as INavigationAware)?.OnNavigatedTo();
+
+    [MemberNotNull(nameof(MainNavigation), nameof(SecondaryNavigation), nameof(TabNavigation), nameof(OverflowNavigation), nameof(_commands))]
+    private void ArrangeMenu()
+    {
+        var items = _core.Concat(_moduleEntries).OrderBy(item => item.Order).ThenBy(item => item.Label, StringComparer.CurrentCulture).ToList();
+        MainNavigation = [.. items.Where(item => !item.IsSecondary)];
+        SecondaryNavigation = [.. items.Where(item => item.IsSecondary)];
+        TabNavigation = [.. MainNavigation.Take(ShellLayout.TabCount)];
+        OverflowNavigation = [.. MainNavigation.Skip(ShellLayout.TabCount), .. SecondaryNavigation];
+        _commands = [.. NavigationCommands(), .. _commandsWithoutVault];
+    }
 
     partial void OnSelectedMainChanged(NavigationItem? value)
     {

@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using KyfRev.Application.Model;
 using KyfRev.Application.UseCases;
+using KyfRev.Modules.Citations;
 using KyfRev.Presentation.Wpf.Shell;
 
 namespace KyfRev.Presentation.Wpf.Pages;
@@ -67,6 +68,7 @@ public sealed partial class DataSettingsViewModel : ObservableObject, INavigatio
     private readonly IFolderPicker _picker;
     private readonly IReviewOpener _opener;
     private readonly Action _vaultChanged;
+    private readonly Func<QuoteUseCases?> _quotes;
     private BackupRow? _restoring;
 
     /// <summary>L'onglet ; <paramref name="vaultChanged"/> ramène l'application sur le coffre qui vient d'être ouvert.</summary>
@@ -79,7 +81,8 @@ public sealed partial class DataSettingsViewModel : ObservableObject, INavigatio
         SettingsUseCases settings,
         IFolderPicker picker,
         IReviewOpener opener,
-        Action vaultChanged)
+        Action vaultChanged,
+        Func<QuoteUseCases?>? quotes = null)
     {
         ArgumentNullException.ThrowIfNull(vaults);
         ArgumentNullException.ThrowIfNull(backups);
@@ -99,6 +102,7 @@ public sealed partial class DataSettingsViewModel : ObservableObject, INavigatio
         _picker = picker;
         _opener = opener;
         _vaultChanged = vaultChanged;
+        _quotes = quotes ?? (() => null);
     }
 
     /// <summary>« Ouvert : … ».</summary>
@@ -146,6 +150,10 @@ public sealed partial class DataSettingsViewModel : ObservableObject, INavigatio
 
     /// <summary>Aucun élément supprimé.</summary>
     public bool HasNoTrash => IsLoaded && Trash.Count == 0;
+
+    /// <summary>Le module Citations est actif : ses citations s'exportent.</summary>
+    [ObservableProperty]
+    public partial bool ExportsQuotes { get; private set; }
 
     /// <summary>L'onglet a été lu.</summary>
     [ObservableProperty]
@@ -210,7 +218,9 @@ public sealed partial class DataSettingsViewModel : ObservableObject, INavigatio
         var state = _vaults.State();
         VaultLine = SettingsHubText.VaultOpenOf(state.Vault ?? string.Empty);
         VaultHelp = state.Mode == AppMode.Portable ? SettingsHubText.VaultHelpPortable : SettingsHubText.VaultHelpInstalled;
-        var (backups, sheets, passages) = await Task.Run(() => (_backups.List(), _trash.TrashedSheets(), _trash.TrashedAnnotations())).ConfigureAwait(true);
+        var quotes = _quotes();
+        ExportsQuotes = quotes is not null;
+        var (backups, sheets, passages, quoteList) = await Task.Run(() => (_backups.List(), _trash.TrashedSheets(), _trash.TrashedAnnotations(), quotes?.Quotes())).ConfigureAwait(true);
         if (!backups.Succeeded)
         {
             Error = backups.Error;
@@ -227,6 +237,10 @@ public sealed partial class DataSettingsViewModel : ObservableObject, INavigatio
         if (passages.Succeeded)
         {
             rows.AddRange(passages.Value.Select(PassageRow));
+        }
+        if (quoteList is { Succeeded: true } listed)
+        {
+            rows.AddRange(listed.Value.Trash.Select(quote => QuoteRow(quotes!, quote)));
         }
         Trash = rows;
         IsLoaded = true;
@@ -259,6 +273,11 @@ public sealed partial class DataSettingsViewModel : ObservableObject, INavigatio
             new AsyncRelayCommand(() => ActAsync(() => _annotations.Restore(passage.Id).Error, SettingsHubText.PassageRestored)),
             new RelayCommand(() => _opener.OpenSheet(passage.SheetId)));
     }
+
+    private TrashRow QuoteRow(QuoteUseCases quotes, Quote quote) => new(
+        SettingsHubText.QuotedOf(quote.Content.Text),
+        QuotesText.DataKindOf(quote.Content.Author ?? QuotesText.UnknownAuthor),
+        new AsyncRelayCommand(() => ActAsync(() => quotes.Restore(quote.Path).Error, QuotesText.Restored)));
 
     /// <summary>« Sauvegarder maintenant ».</summary>
     [RelayCommand]

@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using KyfRev.Application;
 using KyfRev.Application.Model;
+using KyfRev.Application.Modules;
 using KyfRev.Application.UseCases;
 using KyfRev.Presentation.Wpf.Shell;
 
@@ -102,11 +103,12 @@ public sealed partial class HealthPageViewModel : ObservableObject, INavigationA
     private readonly IReviewOpener _opener;
     private readonly Func<string> _diagnostic;
     private readonly Action<string> _copy;
+    private readonly IEnumerable<IVaultHealthCheck> _checks;
     private IReadOnlyList<BackupEntry> _backupList = [];
     private bool _shown;
 
     /// <summary>La vue ; <paramref name="diagnostic"/> rédige le diagnostic, <paramref name="copy"/> le met dans le presse-papiers.</summary>
-    public HealthPageViewModel(MaintenanceUseCases maintenance, BackupUseCases backups, SheetUseCases sheets, IReviewOpener opener, Func<string> diagnostic, Action<string> copy)
+    public HealthPageViewModel(MaintenanceUseCases maintenance, BackupUseCases backups, SheetUseCases sheets, IReviewOpener opener, Func<string> diagnostic, Action<string> copy, IEnumerable<IVaultHealthCheck>? checks = null)
     {
         ArgumentNullException.ThrowIfNull(maintenance);
         ArgumentNullException.ThrowIfNull(backups);
@@ -120,6 +122,7 @@ public sealed partial class HealthPageViewModel : ObservableObject, INavigationA
         _opener = opener;
         _diagnostic = diagnostic;
         _copy = copy;
+        _checks = checks ?? [];
     }
 
     /// <summary>« Santé du coffre ».</summary>
@@ -205,8 +208,8 @@ public sealed partial class HealthPageViewModel : ObservableObject, INavigationA
         RefreshCommand.Execute(null);
     }
 
-    /// <summary>Montre ce rapport ; <paramref name="backups"/> sont les sauvegardes d'où restaurer une fiche manquante.</summary>
-    public void Show(HealthDetails report, IReadOnlyList<BackupEntry> backups)
+    /// <summary>Montre ce rapport ; <paramref name="backups"/> sont les sauvegardes d'où restaurer une fiche manquante, <paramref name="notices"/> les remarques des modules.</summary>
+    public void Show(HealthDetails report, IReadOnlyList<BackupEntry> backups, IReadOnlyList<HealthNotice>? notices = null)
     {
         ArgumentNullException.ThrowIfNull(report);
         ArgumentNullException.ThrowIfNull(backups);
@@ -215,7 +218,7 @@ public sealed partial class HealthPageViewModel : ObservableObject, INavigationA
         Error = null;
         IsHealthy = report.Problems == 0;
         Summary = report.Problems == 0 ? HealthText.AllGood : Dates.Plural(report.Problems, HealthText.PointOneOf, HealthText.PointManyOf);
-        Sections = BuildSections(report);
+        Sections = BuildSections(report, notices ?? []);
         IsLoaded = true;
     }
 
@@ -224,7 +227,7 @@ public sealed partial class HealthPageViewModel : ObservableObject, INavigationA
 
     private static string BackupLabel(BackupEntry backup) => backup.Timestamp.ToString("d MMM yyyy, HH:mm", French);
 
-    private List<HealthSection> BuildSections(HealthDetails report)
+    private List<HealthSection> BuildSections(HealthDetails report, IReadOnlyList<HealthNotice> notices)
     {
         var sections = new List<HealthSection>();
         void Add(Func<object, string> title, string? help, IReadOnlyList<HealthRow> rows)
@@ -284,6 +287,7 @@ public sealed partial class HealthPageViewModel : ObservableObject, INavigationA
         [
             .. report.Moved.Select(moved => new HealthRow(moved.Title, HealthText.MovedOf(moved.To))),
             .. report.ModifiedOutside.Select(sheet => new HealthRow(sheet.Title, HealthText.ModifiedOutside)),
+            .. notices.Select(notice => new HealthRow(notice.Path, notice.Message)),
         ];
         if (information.Count > 0)
         {
@@ -347,10 +351,10 @@ public sealed partial class HealthPageViewModel : ObservableObject, INavigationA
 
     private async Task ReadAsync(Func<Outcome<HealthDetails>> read)
     {
-        var (report, backups) = await Task.Run(() => (read(), _backups.List())).ConfigureAwait(true);
+        var (report, backups, notices) = await Task.Run(() => (read(), _backups.List(), _checks.SelectMany(check => check.Notices()).ToList())).ConfigureAwait(true);
         if (report.Succeeded)
         {
-            Show(report.Value, backups.Succeeded ? backups.Value.Backups : []);
+            Show(report.Value, backups.Succeeded ? backups.Value.Backups : [], notices);
         }
         else
         {
