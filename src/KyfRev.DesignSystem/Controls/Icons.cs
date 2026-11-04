@@ -102,6 +102,12 @@ public static class Icons
     /// <summary>Presse-papiers : coller.</summary>
     public static string Paste { get; } = Glyph(0xE77F);
 
+    /// <summary>Chevron vers la droite : un dossier replié.</summary>
+    public static string ChevronRight { get; } = Glyph(0xE76C);
+
+    /// <summary>Poubelle : supprimer.</summary>
+    public static string Trash { get; } = Glyph(0xE74D);
+
     /// <summary>Crayon : modifier.</summary>
     public static string Edit { get; } = Glyph(0xE70F);
 

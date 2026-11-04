@@ -83,6 +83,17 @@ public sealed partial class VaultSession
         return inTrash ? MoveQuote(quote, QuotesFolder).Value : quote.Value;
     }
 
+    /// <summary>Efface pour de bon une citation déjà dans la corbeille.</summary>
+    public void PurgeQuote(string path)
+    {
+        var (quote, inTrash) = ExistingQuote(path);
+        if (!inTrash)
+        {
+            throw VaultException.UnknownQuote(quote.Value);
+        }
+        Erase(quote);
+    }
+
     /// <summary>
     /// Retient la citation du jour parmi celles trouvées sur une page en ligne : une citation pas
     /// encore dans le coffre (corbeille comprise), tirée au hasard du jour, enregistrée dans

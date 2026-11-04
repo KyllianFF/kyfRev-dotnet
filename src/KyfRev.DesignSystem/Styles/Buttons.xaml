@@ -78,6 +78,15 @@
     </Style.Triggers>
   </Style>
 
+  <!-- Bouton d'une action qui ne s'annule pas. -->
+  <Style x:Key="Kyf.Button.Danger" TargetType="ButtonBase" BasedOn="{StaticResource Kyf.Button}">
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="MinHeight" Value="44" />
+    <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Critical}" />
+    <Setter Property="Background" Value="{DynamicResource Kyf.Brush.CriticalBackground}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Kyf.Brush.Critical}" />
+  </Style>
+
   <!-- Bouton discret : sans fond ni contour au repos (barres d'outils, actions secondaires). -->
   <Style x:Key="Kyf.Button.Subtle" TargetType="ButtonBase" BasedOn="{StaticResource Kyf.Button}">
     <Setter Property="Background" Value="Transparent" />

@@ -18,6 +18,9 @@ public sealed partial class ArchitectureTests
     /// <summary>Morceaux de nom interdits pour une opération publique (français et anglais).</summary>
     private static readonly string[] DeletionWords = ["supprim", "effac", "detrui", "delete", "remove", "purge", "erase", "destroy"];
 
+    /// <summary>Les seules opérations qui effacent : depuis la corbeille, à la demande expresse de la personne.</summary>
+    private static readonly string[] Purges = ["Purge", "PurgeSheet", "PurgeFolder", "PurgeAnnotation", "PurgeQuote"];
+
     private static readonly string[] Layers = [Domain, Application, "KyfRev.Infrastructure.Online", "KyfRev.Infrastructure.Vault", "KyfRev.Modules.Citations", Rendering, "kyfrev-coffre"];
 
     /// <summary>Paquets permis au domaine, aux cas d'usage et aux modules, en plus du framework.</summary>
@@ -97,7 +100,7 @@ public sealed partial class ArchitectureTests
         Assert.HasCount(ids.Count, ids.Distinct(StringComparer.Ordinal));
     }
 
-    /// <summary>T1 : aucune opération publique ne porte un nom de suppression.</summary>
+    /// <summary>T1 : aucune opération publique ne porte un nom de suppression, hors les effacements demandés depuis la corbeille.</summary>
     [TestMethod]
     public void No_public_operation_is_named_after_a_deletion()
     {
@@ -107,7 +110,7 @@ public sealed partial class ArchitectureTests
             foreach (var method in type.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static | BindingFlags.DeclaredOnly).Where(m => !m.IsSpecialName))
             {
                 Assert.IsFalse(
-                    DeletionWords.Any(word => method.Name.Contains(word, StringComparison.OrdinalIgnoreCase)),
+                    !Purges.Contains(method.Name) && DeletionWords.Any(word => method.Name.Contains(word, StringComparison.OrdinalIgnoreCase)),
                     $"Opération suspecte : {type.FullName}.{method.Name}");
                 checkedMethods++;
             }
@@ -116,9 +119,9 @@ public sealed partial class ArchitectureTests
     }
 
     /// <summary>
-    /// T1 : rien n'est effacé, sauf trois exceptions : la rotation des copies de sauvegarde (le
-    /// nom et le dossier de la copie vérifiés) et les deux fichiers temporaires de l'écriture
-    /// atomique et de la sauvegarde.
+    /// T1 : rien n'est effacé, sauf quatre exceptions : la rotation des copies de sauvegarde (le
+    /// nom et le dossier de la copie vérifiés), les deux fichiers temporaires de l'écriture
+    /// atomique et de la sauvegarde, et l'effacement demandé depuis la corbeille.
     /// </summary>
     [TestMethod]
     public void Files_are_deleted_only_where_allowed()
@@ -129,6 +132,7 @@ public sealed partial class ArchitectureTests
             ["KyfRev.Infrastructure.Vault/Backups/VaultBackups.cs"] = 1,
             ["KyfRev.Infrastructure.Vault/Files/AtomicFile.cs"] = 1,
             ["KyfRev.Infrastructure.Vault/VaultSession.Backups.cs"] = 1,
+            ["KyfRev.Infrastructure.Vault/VaultSession.Trash.cs"] = 2,
         };
         var files = Directory.EnumerateFiles(src, "*.cs", SearchOption.AllDirectories)
             .Select(file => Path.GetRelativePath(src, file).Replace('\\', '/'))

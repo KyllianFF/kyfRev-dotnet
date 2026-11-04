@@ -67,6 +67,12 @@ public sealed class VaultAdapterTests
         vault.RestoreSheet(id, Now);
         vault.CreateSheet("Vieux", "Ancienne", string.Empty, Now);
         Assert.AreEqual(1, vault.TrashFolder("Vieux", Now));
+        vault.CreateSheet("Encore", "Ancienne", string.Empty, Now);
+        Assert.AreEqual(1, vault.PurgeFolder("Encore", Now));
+        var effacee = vault.CreateSheet(null, "Effacée", string.Empty, Now);
+        vault.TrashSheet(effacee, Now);
+        vault.PurgeSheet(effacee);
+        Assert.IsFalse(vault.TrashedSheets().Any(sheet => sheet.Id == effacee));
 
         File.WriteAllText(folder.PathOf("fiches/Libre.md"), "---\ncreee: pas une date\n---\nTexte.\n");
         var tracked = vault.TrackFile("fiches/Libre.md", Now);

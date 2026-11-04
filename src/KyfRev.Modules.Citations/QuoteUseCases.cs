@@ -38,6 +38,9 @@ public sealed class QuoteUseCases(VaultHost host, TimeProvider time, OnlineQuote
     [ZeroXCommand("restaurer_citation")]
     public Outcome<string> Restore(string path) => host.Use(vault => vault.RestoreQuote(path));
 
+    /// <summary>Efface pour de bon une citation déjà à la corbeille ; cela ne s'annule pas.</summary>
+    public Outcome<Done> Purge(string path) => host.Use(vault => vault.PurgeQuote(path));
+
     /// <summary>
     /// Cherche la citation du jour sur Wikiquote, si besoin ; rend la citation retenue, ou rien.
     /// Un échec n'est jamais un refus : la citation du jour reste celle du coffre.

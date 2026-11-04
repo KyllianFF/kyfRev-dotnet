@@ -11,14 +11,19 @@
       </ResourceDictionary.MergedDictionaries>
       <BooleanToVisibilityConverter x:Key="Visible" />
 
-      <!-- L'en-tête d'un dossier. -->
+      <!-- L'en-tête d'un dossier : décalé selon sa profondeur, il se plie et se déplie. -->
       <DataTemplate DataType="{x:Type pages:SheetFolderRow}">
-        <TextBlock Text="{Binding}" Style="{DynamicResource Kyf.Text.BodyStrong}" Margin="0,8,0,2" />
+        <DockPanel Margin="{Binding Indent}">
+          <kyf:Icon Text="{Binding Chevron}" FontSize="12" Margin="0,0,6,0" Visibility="{Binding IsFolder, Converter={StaticResource Visible}}" />
+          <kyf:Icon Text="{x:Static kyf:Icons.Warning}" Foreground="{DynamicResource Kyf.Brush.Warning}" FontSize="12" Margin="0,0,6,0"
+                    ToolTip="{x:Static pages:SheetActionsText.TooDeep}" Visibility="{Binding IsTooDeep, Converter={StaticResource Visible}}" />
+          <TextBlock Text="{Binding}" Style="{DynamicResource Kyf.Text.BodyStrong}" TextTrimming="CharacterEllipsis" />
+        </DockPanel>
       </DataTemplate>
 
       <!-- Une fiche. -->
       <DataTemplate DataType="{x:Type pages:SheetRow}">
-        <StackPanel Margin="0,6">
+        <StackPanel Margin="{Binding Indent}">
           <TextBlock Text="{Binding Title}" FontSize="{DynamicResource Kyf.FontSize.BodyLarge}" FontWeight="SemiBold" TextWrapping="Wrap" />
           <TextBlock x:Name="Meta" Text="{Binding Meta}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,2,0,0" />
           <StackPanel Orientation="Horizontal" Margin="0,2,0,0" Visibility="{Binding FileMissing, Converter={StaticResource Visible}}">
@@ -53,7 +58,10 @@
         </StackPanel>
       </DockPanel>
 
-      <kyf:Notification x:Name="ErrorMessage" Grid.Row="1" Severity="Critical" Message="{Binding Error}" IsOpen="{Binding HasError, Mode=OneWay}" IsClosable="False" Margin="0,12,0,0" />
+      <StackPanel Grid.Row="1">
+        <kyf:Notification x:Name="ErrorMessage" Severity="Critical" Message="{Binding Error}" IsOpen="{Binding HasError, Mode=OneWay}" IsClosable="False" Margin="0,12,0,0" />
+        <kyf:Notification x:Name="DoneMessage" Severity="Success" Message="{Binding Done}" IsOpen="{Binding HasDone, Mode=OneWay}" IsClosable="False" Margin="0,12,0,0" />
+      </StackPanel>
 
       <Grid Grid.Row="2" Margin="0,12,0,8" Visibility="{Binding HasSheets, Converter={StaticResource Visible}}">
         <pages:FilterBar x:Name="FilterBar" DataContext="{Binding Bar}" />
@@ -118,6 +126,28 @@
         </Grid>
       </Grid>
     </Grid>
+
+    <kyf:Dialog x:Name="ActionDialog" Title="{Binding ActionTitle}" IsOpen="{Binding IsActing, Mode=OneWay}" PrimaryButtonText="{Binding ActionConfirm}" IsDestructive="{Binding ErasesForGood}" Closed="OnActionClosed">
+      <StackPanel>
+        <kyf:Notification x:Name="ActionErrorMessage" Severity="Critical" Message="{Binding ActionError}" IsOpen="{Binding HasActionError, Mode=OneWay}" IsClosable="False" Margin="0,0,0,12" />
+        <TextBlock x:Name="ActionMessageText" Text="{Binding ActionMessage}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" Visibility="{Binding HasActionMessage, Converter={StaticResource Visible}}" />
+        <StackPanel Visibility="{Binding HasActionInput, Converter={StaticResource Visible}}">
+          <TextBlock Text="{Binding ActionInputLabel}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,0,0,4" />
+          <TextBox x:Name="ActionInputBox" IsVisibleChanged="OnActionInputShown" Text="{Binding ActionInput, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="{Binding ActionInputLabel}" />
+        </StackPanel>
+        <StackPanel Visibility="{Binding HasActionDestination, Converter={StaticResource Visible}}">
+          <TextBlock Text="{x:Static pages:SheetActionsText.MoveLabel}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,0,0,4" />
+          <ComboBox x:Name="ActionDestinationChoice" ItemsSource="{Binding ActionDestinations}" SelectedItem="{Binding ActionDestination}" DisplayMemberPath="Label" AutomationProperties.Name="{x:Static pages:SheetActionsText.MoveLabel}" />
+        </StackPanel>
+        <kyf:Notification x:Name="DepthWarningMessage" Severity="Warning" Message="{Binding DepthWarning}" IsOpen="{Binding HasDepthWarning, Mode=OneWay}" IsClosable="False" Margin="0,12,0,0" />
+        <StackPanel Margin="0,12,0,0" Visibility="{Binding CanErase, Converter={StaticResource Visible}}">
+          <CheckBox x:Name="EraseBox" IsChecked="{Binding ErasesForGood}" AutomationProperties.Name="{x:Static pages:SheetActionsText.EraseBox}">
+            <TextBlock Text="{x:Static pages:SheetActionsText.EraseBox}" TextWrapping="Wrap" />
+          </CheckBox>
+          <TextBlock Text="{x:Static pages:SheetActionsText.EraseHelp}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="26,2,0,0" />
+        </StackPanel>
+      </StackPanel>
+    </kyf:Dialog>
 
     <kyf:Dialog x:Name="NewSheet" Title="{x:Static pages:SheetsText.NewSheet}" IsOpen="{Binding IsCreating, Mode=OneWay}"
                 PrimaryButtonText="{x:Static pages:SheetsText.CreateSheet}" Closed="OnCreateClosed">

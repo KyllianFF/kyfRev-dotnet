@@ -21,12 +21,13 @@ public sealed record BackupRow(string Name, string Moment, string Size)
 /// <summary>Un élément supprimé, restaurable.</summary>
 public sealed class TrashRow
 {
-    internal TrashRow(string title, string detail, IRelayCommand restore, IRelayCommand? openSheet = null)
+    internal TrashRow(string title, string detail, IRelayCommand restore, IRelayCommand? openSheet = null, Func<string?>? eraser = null)
     {
         Title = title;
         Detail = detail;
         Restore = restore;
         OpenSheet = openSheet;
+        Eraser = eraser;
     }
 
     /// <summary>Le titre de la fiche, ou le passage.</summary>
@@ -49,6 +50,12 @@ public sealed class TrashRow
 
     /// <summary>Le nom du bouton « Fiche ».</summary>
     public string OpenSheetName => SettingsHubText.OpenSheetOf(Detail);
+
+    /// <summary>Le nom du bouton qui l'efface pour de bon.</summary>
+    public string EraseName => SettingsHubText.EraseItemOf(Title);
+
+    /// <summary>L'efface pour de bon ; rend son refus, ou rien.</summary>
+    internal Func<string?>? Eraser { get; }
 }
 
 /// <summary>
@@ -70,6 +77,7 @@ public sealed partial class DataSettingsViewModel : ObservableObject, INavigatio
     private readonly Action _vaultChanged;
     private readonly Func<QuoteUseCases?> _quotes;
     private BackupRow? _restoring;
+    private TrashRow? _erasing;
 
     /// <summary>L'onglet ; <paramref name="vaultChanged"/> ramène l'application sur le coffre qui vient d'être ouvert.</summary>
     public DataSettingsViewModel(
@@ -184,6 +192,14 @@ public sealed partial class DataSettingsViewModel : ObservableObject, INavigatio
     /// <summary>Une action vient d'aboutir.</summary>
     public bool HasMessage => Message is not null;
 
+    /// <summary>L'effacement d'un élément attend sa confirmation.</summary>
+    [ObservableProperty]
+    public partial bool IsConfirmingErase { get; private set; }
+
+    /// <summary>Ce que la confirmation de l'effacement annonce.</summary>
+    [ObservableProperty]
+    public partial string EraseMessage { get; private set; } = string.Empty;
+
     /// <summary>La restauration d'une sauvegarde attend sa confirmation.</summary>
     [ObservableProperty]
     public partial bool IsConfirming { get; private set; }
@@ -261,7 +277,8 @@ public sealed partial class DataSettingsViewModel : ObservableObject, INavigatio
         return new TrashRow(
             sheet.Title,
             string.Join(" · ", parts),
-            new AsyncRelayCommand(() => ActAsync(() => _trash.RestoreSheet(sheet.Id).Error, SettingsHubText.RestoredOf(sheet.Title))));
+            new AsyncRelayCommand(() => ActAsync(() => _trash.RestoreSheet(sheet.Id).Error, SettingsHubText.RestoredOf(sheet.Title))),
+            eraser: () => _trash.PurgeSheet(sheet.Id).Error);
     }
 
     private TrashRow PassageRow(TrashedAnnotation passage)
@@ -271,13 +288,35 @@ public sealed partial class DataSettingsViewModel : ObservableObject, INavigatio
             SettingsHubText.QuotedOf(passage.Exact),
             detail,
             new AsyncRelayCommand(() => ActAsync(() => _annotations.Restore(passage.Id).Error, SettingsHubText.PassageRestored)),
-            new RelayCommand(() => _opener.OpenSheet(passage.SheetId)));
+            new RelayCommand(() => _opener.OpenSheet(passage.SheetId)),
+            () => _annotations.Purge(passage.Id).Error);
     }
 
     private TrashRow QuoteRow(QuoteUseCases quotes, Quote quote) => new(
         SettingsHubText.QuotedOf(quote.Content.Text),
         QuotesText.DataKindOf(quote.Content.Author ?? QuotesText.UnknownAuthor),
-        new AsyncRelayCommand(() => ActAsync(() => quotes.Restore(quote.Path).Error, QuotesText.Restored)));
+        new AsyncRelayCommand(() => ActAsync(() => quotes.Restore(quote.Path).Error, QuotesText.Restored)),
+        eraser: () => quotes.Purge(quote.Path).Error);
+
+    /// <summary>Demande confirmation avant d'effacer un élément pour de bon.</summary>
+    [RelayCommand]
+    private void RequestErase(TrashRow row)
+    {
+        _erasing = row;
+        EraseMessage = SettingsHubText.EraseConfirmOf(row.Title);
+        IsConfirmingErase = true;
+    }
+
+    /// <summary>La réponse à l'effacement : rien n'est effacé sans un oui.</summary>
+    [RelayCommand]
+    private async Task AnswerEraseAsync(bool confirmed)
+    {
+        IsConfirmingErase = false;
+        if (confirmed && _erasing is { Eraser: { } eraser } row)
+        {
+            await ActAsync(eraser, SettingsHubText.ErasedOf(row.Title)).ConfigureAwait(true);
+        }
+    }
 
     /// <summary>« Sauvegarder maintenant ».</summary>
     [RelayCommand]

@@ -31,7 +31,8 @@ dotnet run --project src/KyfRev.App -- --galerie
 
 - **Vos données restent des fichiers ordinaires** : Markdown et JSON dans un dossier, le
   « coffre », lisible sans kyfRev. Chiffrement au repos en option.
-- **Rien ne s'efface** : une fiche supprimée va dans une corbeille restaurable, jamais purgée.
+- **Rien ne s'efface sans vous** : une fiche supprimée va dans une corbeille restaurable ; seule une
+  suppression définitive, demandée et confirmée, l'efface.
 - **Hors ligne par défaut** : aucune connexion sans action ou réglage explicite.
 - **Accessible** : contrastes vérifiés, clavier d'abord, clair, sombre et contraste élevé.
 

@@ -128,6 +128,18 @@ public sealed partial class VaultSession
     public void RestoreAnnotation(string id, Moment now) =>
         ModifyAnnotation(id, a => a with { TrashedAt = null, ModifiedAt = now.Instant });
 
+    /// <summary>Efface pour de bon une annotation déjà à la corbeille : elle quitte le fichier de sa fiche.</summary>
+    public void PurgeAnnotation(string id)
+    {
+        var annotation = Annotation(id);
+        if (annotation.TrashedAt is null)
+        {
+            throw VaultException.UnknownAnnotation(id);
+        }
+        var sheetId = annotation.SheetId;
+        SaveAnnotations(sheetId, ModifiableAnnotations(sheetId).RemoveAll(other => other.Id == id));
+    }
+
     /// <summary>
     /// Applique une opération de la méthode des J au calendrier d'un passage. Valider un passage
     /// ne touche jamais le suivi de sa fiche, et inversement.

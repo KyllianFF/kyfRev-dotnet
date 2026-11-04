@@ -162,6 +162,12 @@ public sealed class VaultAdapter(VaultSession inner) : IVault
     /// <inheritdoc/>
     public IReadOnlyList<TrashedAnnotation> TrashedAnnotations() => inner.TrashedAnnotations();
 
+    /// <inheritdoc/>
+    public void PurgeSheet(string id) => inner.PurgeSheet(id);
+
+    /// <inheritdoc/>
+    public int PurgeFolder(string folder, Moment now) => inner.PurgeFolder(folder, now);
+
     /// <summary>Valide la révision attendue : avec les règles de rappel du coffre pour une fiche, aucune pour un passage.</summary>
     public ReviewOutcome ValidateReview(ItemKind kind, string id, Moment now) => kind == ItemKind.Sheet
         ? inner.ApplyReview(id, tracking => tracking.ValidateReview(now, null, inner.Settings.Reminders))
@@ -214,6 +220,9 @@ public sealed class VaultAdapter(VaultSession inner) : IVault
 
     /// <inheritdoc/>
     public void RestoreAnnotation(string id, Moment now) => inner.RestoreAnnotation(id, now);
+
+    /// <inheritdoc/>
+    public void PurgeAnnotation(string id) => inner.PurgeAnnotation(id);
 
     /// <inheritdoc/>
     public void HandleReminder(string sheetId, ReminderOutcome outcome, Moment now) => inner.HandleReminder(sheetId, outcome, now);
@@ -283,6 +292,9 @@ public sealed class VaultAdapter(VaultSession inner) : IVault
 
     /// <inheritdoc/>
     public string RestoreQuote(string path) => inner.RestoreQuote(path);
+
+    /// <inheritdoc/>
+    public void PurgeQuote(string path) => inner.PurgeQuote(path);
 
     /// <inheritdoc/>
     public Quote? KeepOnlineQuote(string page, IReadOnlyList<QuoteContent> found, Moment now) => inner.KeepOnlineQuote(page, found, now);

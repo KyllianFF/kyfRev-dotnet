@@ -127,6 +127,12 @@ public interface ITrashStore
 
     /// <summary>Annotations à la corbeille, les plus récentes d'abord.</summary>
     IReadOnlyList<TrashedAnnotation> TrashedAnnotations();
+
+    /// <summary>Efface pour de bon une fiche déjà à la corbeille, avec ses images, son suivi et ses annotations.</summary>
+    void PurgeSheet(string id);
+
+    /// <summary>Efface pour de bon un dossier et tout ce qu'il contient ; rend le nombre de fiches effacées.</summary>
+    int PurgeFolder(string folder, Moment now);
 }
 
 /// <summary>Méthode des J d'une fiche ou d'un passage.</summary>
@@ -180,6 +186,9 @@ public interface IAnnotationStore
 
     /// <summary>Remet une annotation de la corbeille.</summary>
     void RestoreAnnotation(string id, Moment now);
+
+    /// <summary>Efface pour de bon une annotation déjà à la corbeille.</summary>
+    void PurgeAnnotation(string id);
 }
 
 /// <summary>Rappels de consolidation.</summary>
@@ -284,6 +293,9 @@ public interface IQuoteStore
 
     /// <summary>Remet une citation de la corbeille ; rend son nouveau chemin.</summary>
     string RestoreQuote(string path);
+
+    /// <summary>Efface pour de bon une citation déjà à la corbeille.</summary>
+    void PurgeQuote(string path);
 
     /// <summary>
     /// Retient la citation du jour parmi celles trouvées sur la page <paramref name="page"/> : une

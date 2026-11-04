@@ -106,9 +106,14 @@ public sealed class CitationsModuleTests
         var trashed = quotes.Trash(added.Path).Value;
         Assert.StartsWith("citations/.supprimees/", trashed);
         Assert.AreEqual(trashed, quotes.Quotes().Value.Trash.Single().Path);
+        Assert.IsFalse(quotes.Purge(added.Path).Succeeded, "seule une citation à la corbeille s'efface");
         Assert.AreEqual(added.Path, quotes.Restore(trashed).Value);
         Assert.AreEqual(added.Path, quotes.QuoteOfTheDay().Value!.Path);
         Assert.IsFalse(quotes.Add(Content("   ", null, null, null)).Succeeded);
+        var erased = quotes.Trash(quotes.Add(Content("À effacer.", null, null, null)).Value.Path).Value;
+        Assert.IsTrue(quotes.Purge(erased).Succeeded);
+        Assert.IsEmpty(quotes.Quotes().Value.Trash);
+        Assert.IsFalse(quotes.Purge(erased).Succeeded, "elle n'existe plus");
 
         test.Test.App.Host.Dispose();
         Assert.AreEqual(VaultHost.NoVaultOpen, quotes.Quotes().Error);
@@ -117,6 +122,7 @@ public sealed class CitationsModuleTests
         Assert.AreEqual(VaultHost.NoVaultOpen, quotes.Modify(added.Path, Content("x", null, null, null)).Error);
         Assert.AreEqual(VaultHost.NoVaultOpen, quotes.Trash(added.Path).Error);
         Assert.AreEqual(VaultHost.NoVaultOpen, quotes.Restore(added.Path).Error);
+        Assert.AreEqual(VaultHost.NoVaultOpen, quotes.Purge(added.Path).Error);
     }
 
     [TestMethod]

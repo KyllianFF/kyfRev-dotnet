@@ -166,7 +166,7 @@ La suite pour la ligne « Ponctuel » :
   4. sinon : `introuvable`.
 - **Modifier le passage** demande « Conserver la progression » ou « Recommencer à J0 ». Supprimer une annotation la met à la corbeille ; elle est restaurable et jamais purgée.
 
-**Règle « rien ne s'efface ».** Aucune commande ne supprime une fiche. « Supprimer » range la fiche, ses ressources, son suivi et ses annotations dans une corbeille restaurable, jamais purgée. La seule suppression automatique de toute l'application est la **rotation des sauvegardes** zip, hors du coffre. Des tests vérifient dans le code source qu'aucun autre appel d'effacement n'existe ; ce garde-fou est à transposer en C# (§2.7).
+**Règle « rien ne s'efface », amendée le 4 novembre 2026.** Après avoir essayé l'application, j'ai demandé une suppression définitive : depuis la corbeille, ou depuis le menu d'une fiche ou d'un dossier, toujours confirmée, jamais automatique. C'est la seule exception ; les sauvegardes déjà faites gardent l'élément. Pour le reste, aucune commande ne supprime une fiche. « Supprimer » range la fiche, ses ressources, son suivi et ses annotations dans une corbeille restaurable, jamais purgée. La seule suppression automatique de toute l'application est la **rotation des sauvegardes** zip, hors du coffre. Des tests vérifient dans le code source qu'aucun autre appel d'effacement n'existe ; ce garde-fou est à transposer en C# (§2.7).
 
 ### 1.4 Tirage quotidien des rappels de consolidation
 

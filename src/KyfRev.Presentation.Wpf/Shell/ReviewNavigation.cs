@@ -22,6 +22,12 @@ public interface IReviewOpener
     /// <summary>Ouvre une fiche, sur un de ses passages.</summary>
     void OpenPassageInSheet(string sheetId, string passageId);
 
+    /// <summary>Ouvre une fiche, pour la réviser.</summary>
+    void ReviseSheet(string sheetId);
+
+    /// <summary>Ouvre une fiche, pour l'écrire.</summary>
+    void WriteSheet(string sheetId);
+
     /// <summary>Lance une séance d'étude sur ces éléments, dans cet ordre.</summary>
     void StartSession(IReadOnlyList<DueItem> items, bool activeRecall);
 
@@ -122,13 +128,32 @@ public sealed class ReviewNavigation : IReviewOpener
     /// <inheritdoc/>
     public void OpenPassageInSheet(string sheetId, string passageId) => OpenSheet(sheetId, revising: false, passageId);
 
-    private void OpenSheet(string sheetId, bool revising, string? passageId = null)
+    /// <inheritdoc/>
+    public void ReviseSheet(string sheetId) => OpenSheet(sheetId, revising: true);
+
+    /// <inheritdoc/>
+    public void WriteSheet(string sheetId) => OpenSheet(sheetId, revising: false, writes: true);
+
+    private void OpenSheet(string sheetId, bool revising, string? passageId = null, bool writes = false)
     {
         var shell = Shell;
         var from = shell.Current;
         var page = new SheetPageViewModel(_sheets, _annotations, Bar, sheetId, () => shell.Navigate(from), OpenSheet, _links, Editor, revising, ActiveRecall) { PassageToShow = passageId, ReadAloud = _speech is null ? null : new ReadAloudViewModel(_speech, _machine), ReadingMaxWidth = _machine?.Current.Width == ReadingWidth.Full ? double.PositiveInfinity : SheetPageViewModel.TextMaxWidth };
         shell.Navigate(new NavigationItem("fiche", ReviewText.SheetPage, Icons.Document, int.MaxValue, page));
-        page.LoadCommand.Execute(null);
+        if (writes)
+        {
+            _ = LoadThenWriteAsync(page);
+        }
+        else
+        {
+            page.LoadCommand.Execute(null);
+        }
+    }
+
+    private static async Task LoadThenWriteAsync(SheetPageViewModel page)
+    {
+        await page.LoadCommand.ExecuteAsync(null).ConfigureAwait(true);
+        await page.StartWritingCommand.ExecuteAsync(null).ConfigureAwait(true);
     }
 
     private void OpenPassage(string passageId, string sheetId, bool activeRecall)

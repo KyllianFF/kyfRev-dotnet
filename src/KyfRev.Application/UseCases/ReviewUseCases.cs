@@ -197,4 +197,7 @@ public sealed class AnnotationUseCases(VaultHost host, TimeProvider time)
         var now = Present.Of(time).Now;
         return host.Use(vault => vault.RestoreAnnotation(id, now));
     }
+
+    /// <summary>Efface pour de bon une annotation déjà à la corbeille ; cela ne s'annule pas.</summary>
+    public Outcome<Done> Purge(string id) => host.Use(vault => vault.PurgeAnnotation(id));
 }

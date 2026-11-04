@@ -1,9 +1,11 @@
 using System.Globalization;
+using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using KyfRev.Application;
 using KyfRev.Application.Model;
 using KyfRev.Application.UseCases;
+using KyfRev.DesignSystem.Controls;
 using KyfRev.Presentation.Wpf.Shell;
 
 namespace KyfRev.Presentation.Wpf.Pages;
@@ -37,11 +39,34 @@ public enum SheetSort
     DueDate,
 }
 
-/// <summary>L'en-tête d'un dossier dans la liste : il se lit mais ne se choisit pas.</summary>
-/// <param name="Folder">« Sciences › Biologie » ou « Sans dossier ».</param>
-/// <param name="Count">Fiches montrées dans ce dossier.</param>
+/// <summary>L'en-tête d'un dossier dans la liste : il se plie et se déplie, mais ne se choisit pas.</summary>
+/// <param name="Folder">« Biologie » ou « Sans dossier ».</param>
+/// <param name="Count">Fiches montrées dans ce dossier et ses sous-dossiers.</param>
 public sealed record SheetFolderRow(string Folder, int Count)
 {
+    private const double IndentStep = 16;
+
+    /// <summary>Son chemin relatif à <c>fiches/</c> ; vide pour « Sans dossier ».</summary>
+    public string Path { get; init; } = string.Empty;
+
+    /// <summary>Sa profondeur dans l'arborescence, à partir de 0.</summary>
+    public int Depth { get; init; }
+
+    /// <summary>Ses fiches et sous-dossiers sont montrés.</summary>
+    public bool IsExpanded { get; init; } = true;
+
+    /// <summary>C'est un vrai dossier, et non « Sans dossier ».</summary>
+    public bool IsFolder => Path.Length > 0;
+
+    /// <summary>Il est plus profond que ce qui se parcourt bien.</summary>
+    public bool IsTooDeep => Path.Split('/').Length > SheetsPageViewModel.CalmDepth;
+
+    /// <summary>Son retrait dans la liste.</summary>
+    public Thickness Indent => new(Depth * IndentStep, 8, 0, 2);
+
+    /// <summary>Le chevron qui dit s'il est plié.</summary>
+    public string Chevron => IsExpanded ? Icons.ChevronDown : Icons.ChevronRight;
+
     /// <summary>Le nom lu par le lecteur d'écran, et ce qui s'affiche.</summary>
     public override string ToString() => SheetsText.FolderCountOf(Folder, Count);
 }
@@ -65,6 +90,12 @@ public sealed class SheetRow
 
     /// <summary>La fiche lue dans le coffre.</summary>
     public VaultSheet Sheet { get; }
+
+    /// <summary>Sa profondeur dans l'arborescence.</summary>
+    internal int Depth { get; init; }
+
+    /// <summary>Son retrait dans la liste.</summary>
+    public Thickness Indent => new(Depth * 16, 6, 0, 6);
 
     /// <summary>Titre.</summary>
     public string Title => Sheet.Title;
@@ -110,16 +141,21 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
     private readonly TemplateUseCases _templates;
     private readonly IReviewOpener _opener;
     private readonly TimeProvider _time;
+    private readonly ReviewUseCases? _reviews;
+    private readonly TrashUseCases? _trash;
+    private readonly HashSet<string> _collapsed = new(StringComparer.Ordinal);
     private readonly ListFilter _folder;
     private readonly ListFilter _state;
     private readonly ListFilter _sort;
     private IReadOnlyList<VaultSheet>? _entries;
+    private IReadOnlyList<string> _folderPaths = [];
+    private string? _createIn;
 
     /// <summary>Numéro du dernier aperçu demandé : une lecture dépassée est ignorée.</summary>
     private int _previewTicket;
 
     /// <summary>La vue, sur les cas d'usage des fiches, des dossiers et des modèles ; <paramref name="opener"/> ouvre ses fiches.</summary>
-    public SheetsPageViewModel(SheetUseCases sheets, FolderUseCases folders, TemplateUseCases templates, IReviewOpener opener, TimeProvider time)
+    public SheetsPageViewModel(SheetUseCases sheets, FolderUseCases folders, TemplateUseCases templates, IReviewOpener opener, TimeProvider time, ReviewUseCases? reviews = null, TrashUseCases? trash = null)
     {
         ArgumentNullException.ThrowIfNull(sheets);
         ArgumentNullException.ThrowIfNull(folders);
@@ -131,6 +167,8 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
         _templates = templates;
         _opener = opener;
         _time = time;
+        _reviews = reviews;
+        _trash = trash;
         Bar = new FilterBarViewModel(BuildRows);
         _folder = Bar.Add(SheetsText.FilterFolder, [new(string.Empty, SheetsText.AllFolders)]);
         _state = Bar.Add(
@@ -297,9 +335,10 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
         IsLoading = _entries is null;
         try
         {
-            var outcome = await Task.Run(_sheets.List).ConfigureAwait(true);
+            var (outcome, folders) = await Task.Run(() => (_sheets.List(), _folders.Folders())).ConfigureAwait(true);
             if (outcome.Succeeded)
             {
+                _folderPaths = folders.Succeeded ? folders.Value : [];
                 Show(outcome.Value);
             }
             else
@@ -354,7 +393,9 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
         NewFolderName = string.Empty;
         CreateError = null;
         NewFolder.Replace([new(string.Empty, SheetsText.AtRoot), .. FolderChoices(folders.Value), new(NewFolderChoice, SheetsText.NewFolderChoice)]);
-        NewFolder.Selected = NewFolder.Choices.FirstOrDefault(choice => Equals(choice.Value, _folder.Value)) ?? NewFolder.Choices[0];
+        var wanted = _createIn ?? _folder.Value;
+        _createIn = null;
+        NewFolder.Selected = NewFolder.Choices.FirstOrDefault(choice => Equals(choice.Value, wanted)) ?? NewFolder.Choices[0];
         NewTemplate.Replace([new(null, SheetsText.EmptyTemplate), .. templates.Value.Select(template => new Choice<object?>(template.Name, template.Name))]);
         NewTemplate.Selected = NewTemplate.Choices[0];
         IsCreating = true;
@@ -401,21 +442,64 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
         var day = Present.Of(_time).Now.Day;
         var sheets = entries.Where(sheet => Matches(sheet, wanted, day)).ToList();
         var sort = (SheetSort)_sort.Value!;
-        Rows = sort == SheetSort.Folder ? GroupedByFolder(sheets, day) : [.. Sorted(sheets, sort).Select(sheet => new SheetRow(sheet, day, showFolder: true))];
+        var isFiltered = wanted.Length > 0 || !Equals(_folder.Value, string.Empty) || (SheetState)_state.Value! != SheetState.All;
+        Rows = sort == SheetSort.Folder ? Tree(sheets, day, isFiltered) : [.. Sorted(sheets, sort).Select(sheet => new SheetRow(sheet, day, showFolder: true))];
         IsEmpty = entries.Count == 0;
         HasNoMatch = entries.Count > 0 && sheets.Count == 0;
         KeepSelection();
     }
 
-    private static List<object> GroupedByFolder(List<VaultSheet> sheets, DateOnly day)
+    /// <summary>
+    /// L'arborescence : chaque dossier, ses sous-dossiers, puis ses fiches. Sans filtre, les dossiers vides sont montrés :
+    /// on peut y ranger des fiches.
+    /// </summary>
+    private List<object> Tree(List<VaultSheet> sheets, DateOnly day, bool isFiltered)
     {
-        var rows = new List<object>();
-        foreach (var group in sheets.GroupBy(sheet => sheet.Folder))
+        var paths = new SortedSet<string>(FrenchTitles);
+        foreach (var path in sheets.Select(sheet => sheet.Folder).Concat(isFiltered ? [] : _folderPaths).Where(path => path.Length > 0))
         {
-            rows.Add(new SheetFolderRow(group.Key.Length == 0 ? SheetsText.NoFolder : SheetRow.DisplayFolder(group.Key), group.Count()));
-            rows.AddRange(group.Select(sheet => new SheetRow(sheet, day, showFolder: false)));
+            for (var ancestor = path; ancestor.Length > 0; ancestor = ParentOf(ancestor))
+            {
+                paths.Add(ancestor);
+            }
         }
+        var rows = new List<object>();
+        var atRoot = sheets.Where(sheet => sheet.Folder.Length == 0).ToList();
+        if (atRoot.Count > 0)
+        {
+            rows.Add(new SheetFolderRow(SheetsText.NoFolder, atRoot.Count));
+            rows.AddRange(atRoot.Select(sheet => new SheetRow(sheet, day, showFolder: false)));
+        }
+        AddChildren(string.Empty, 0);
         return rows;
+
+        void AddChildren(string parent, int depth)
+        {
+            foreach (var path in paths.Where(path => ParentOf(path) == parent))
+            {
+                var isExpanded = !_collapsed.Contains(path);
+                rows.Add(new SheetFolderRow(NameOf(path), sheets.Count(sheet => IsWithin(sheet.Folder, path))) { Path = path, Depth = depth, IsExpanded = isExpanded });
+                if (isExpanded)
+                {
+                    AddChildren(path, depth + 1);
+                    rows.AddRange(sheets.Where(sheet => sheet.Folder == path).Select(sheet => new SheetRow(sheet, day, showFolder: false) { Depth = depth + 1 }));
+                }
+            }
+        }
+    }
+
+    /// <summary>Plie ou déplie un dossier.</summary>
+    [RelayCommand]
+    private void ToggleFolder(SheetFolderRow row)
+    {
+        if (row.IsFolder)
+        {
+            if (!_collapsed.Add(row.Path))
+            {
+                _collapsed.Remove(row.Path);
+            }
+            BuildRows();
+        }
     }
 
     private static IEnumerable<VaultSheet> Sorted(List<VaultSheet> sheets, SheetSort sort) => sort == SheetSort.Title
