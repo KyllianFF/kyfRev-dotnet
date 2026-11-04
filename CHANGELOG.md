@@ -23,6 +23,8 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   Le bloc reste du texte lisible partout : une ligne par élément, décalée de deux espaces par niveau.
 - Écrire : clic droit sur un schéma, un graphique ou un SmartArt pour le modifier, voir son code ou le supprimer.
 - Écrire : la feuille se détache du fond, comme dans un traitement de texte, dans les deux thèmes.
+- Vue « Fiches » : glisser-déposer d'une fiche ou d'un dossier vers un autre dossier, avec un défilement automatique près
+  du haut et du bas de la liste.
 - Module Citations : la vue « Citations » (recherche, étiquettes, tri, ajout, modification, corbeille), la citation du jour
   sur « Aujourd'hui », cherchée sur Wikiquote si ce réglage est activé, l'onglet « Modules et extensions » de « Paramètres » pour
   l'activer sans redémarrer, et, dans l'onglet « Données », les citations supprimées et leur export.
@@ -382,6 +384,10 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 - Écrire : un document caché ne se construit plus (le rendu masqué se refaisait à chaque pause de frappe), et les images
   du coffre se lisent hors du fil de l'interface. Le passage en écriture bloque moins l'interface.
 - Les dialogues de suppression définitive montrent un bouton distinct, qu'Entrée ne déclenche pas.
+- Un clic sur un trou du texte l'affiche, et un clic sur un passage surligné le fait ressortir : le relâchement de la souris
+  n'arrivait plus sur le texte visé.
+- L'aperçu des fiches et d'« Aujourd'hui » replie son historique : il ne coupe plus le bas du texte.
+- Archives : le survol couvre toute la ligne, et l'état et les actions tiennent sur la ligne du titre.
 - Dans un champ de saisie, le texte commençait 12 pixels plus loin que le texte indicatif : il sautait à la première frappe.
 - Sur une fenêtre étroite, les boutons d'une fiche passaient les uns sous les autres : ils vont à la ligne.
 - Le texte d'un champ de plusieurs lignes ne colle plus au bord haut.

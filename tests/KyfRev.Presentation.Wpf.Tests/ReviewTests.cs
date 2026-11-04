@@ -128,7 +128,7 @@ public sealed class ReviewTests
         Assert.AreEqual("Archiver", bar.ConfirmLabel);
         StringAssert.StartsWith(bar.ConfirmMessage, "Elle quitte les révisions actives", StringComparison.Ordinal);
         await bar.AnswerCommand.ExecuteAsync(true);
-        Assert.AreEqual("Fiche archivée. Elle reste consultable dans « Archives » et n'est jamais supprimée.", bar.Message);
+        Assert.AreEqual("Fiche archivée. Elle reste consultable dans « Archives ».", bar.Message);
         Assert.IsTrue(bar.IsArchived);
         StringAssert.StartsWith(bar.ArchivedStatus, "Fiche archivée le samedi 3 octobre · ", StringComparison.Ordinal);
         StringAssert.Contains(bar.ArchivedStatus, "cycle(s) terminé(s)", StringComparison.Ordinal);

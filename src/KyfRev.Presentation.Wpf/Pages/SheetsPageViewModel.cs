@@ -465,7 +465,8 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
         }
         var rows = new List<object>();
         var atRoot = sheets.Where(sheet => sheet.Folder.Length == 0).ToList();
-        if (atRoot.Count > 0)
+        // Même vide, « Sans dossier » reste une destination pour une fiche qu'on glisse hors d'un dossier.
+        if (atRoot.Count > 0 || (!isFiltered && paths.Count > 0))
         {
             rows.Add(new SheetFolderRow(SheetsText.NoFolder, atRoot.Count));
             rows.AddRange(atRoot.Select(sheet => new SheetRow(sheet, day, showFolder: false)));

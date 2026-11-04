@@ -11,6 +11,17 @@ namespace KyfRev.Presentation.Wpf.Pages;
 /// <summary>Vue « Fiches ».</summary>
 internal sealed partial class SheetsPage : UserControl
 {
+    private const string DragFormat = "kyfrev/ligne-de-fiches";
+    private const double NearEdge = 48;
+    private const double CloseToEdge = 16;
+    private const int FastLines = 3;
+
+    private Point _pressedAt;
+    private object? _pressedRow;
+    private object? _dragged;
+    private ListBoxItem? _dropTarget;
+    private ScrollViewer? _scroller;
+
     public SheetsPage()
     {
         InitializeComponent();
@@ -26,6 +37,91 @@ internal sealed partial class SheetsPage : UserControl
                 page.PageWidth = e.NewSize.Width;
             }
         };
+    }
+
+    /// <summary>Lance le glisser-déposer ; remplacé dans les essais, où rien ne peut le conduire.</summary>
+    internal Func<DependencyObject, object, DragDropEffects, DragDropEffects> StartDrag { get; set; } = DragDrop.DoDragDrop;
+
+    /// <summary>Les lignes à faire défiler à cette hauteur du pointeur : près d'un bord, et d'autant plus qu'il en est près.</summary>
+    internal static int ScrollLinesAt(double y, double height)
+    {
+        if (y < CloseToEdge)
+        {
+            return -FastLines;
+        }
+        if (y < NearEdge)
+        {
+            return -1;
+        }
+        if (y > height - CloseToEdge)
+        {
+            return FastLines;
+        }
+        return y > height - NearEdge ? 1 : 0;
+    }
+
+    /// <summary>La souris a bougé, bouton appuyé ou non : au-delà du seuil, le glisser-déposer commence.</summary>
+    internal void Moved(Point position, bool isPressed)
+    {
+        if (!isPressed)
+        {
+            _pressedRow = null;
+            return;
+        }
+        if (_pressedRow is not { } row || DataContext is not SheetsPageViewModel { CanManage: true } page
+            || (Math.Abs(position.X - _pressedAt.X) < SystemParameters.MinimumHorizontalDragDistance
+                && Math.Abs(position.Y - _pressedAt.Y) < SystemParameters.MinimumVerticalDragDistance))
+        {
+            return;
+        }
+        _pressedRow = null;
+        _dragged = row;
+        // La liste garde la souris depuis l'appui : sans cela, elle change de ligne choisie sous le pointeur.
+        Items.ReleaseMouseCapture();
+        StartDrag(Items, new DataObject(DragFormat, DragFormat), DragDropEffects.Move);
+        _dragged = null;
+        Highlight(null);
+        page.ShowDrop(null, null);
+    }
+
+    /// <summary>Le pointeur passe au-dessus de cette ligne : fait défiler près des bords, et dit si l'on peut y déposer.</summary>
+    internal bool DraggedOver(object? target, double y)
+    {
+        _scroller ??= Inside<ScrollViewer>(Items);
+        if (_scroller is not null)
+        {
+            var lines = ScrollLinesAt(y, Items.ActualHeight);
+            for (var i = 0; i < Math.Abs(lines); i++)
+            {
+                if (lines < 0)
+                {
+                    _scroller.LineUp();
+                }
+                else
+                {
+                    _scroller.LineDown();
+                }
+            }
+        }
+        if (DataContext is not SheetsPageViewModel page)
+        {
+            return false;
+        }
+        var folder = page.ShowDrop(_dragged, target);
+        Highlight(folder);
+        // L'indication se tient loin du pointeur : elle ne cache pas la ligne visée.
+        DropHintBox.VerticalAlignment = y > Items.ActualHeight / 2 ? VerticalAlignment.Top : VerticalAlignment.Bottom;
+        return folder is not null;
+    }
+
+    /// <summary>Le dépôt sur cette ligne.</summary>
+    internal Task DroppedOn(object? target)
+    {
+        var dragged = _dragged;
+        Highlight(null);
+        return DataContext is SheetsPageViewModel page && page.DropFolderOf(dragged, target) is { } folder
+            ? page.DropAsync(dragged!, folder)
+            : Task.CompletedTask;
     }
 
     /// <summary>Un en-tête de dossier se lit mais ne se choisit pas : le choix précédent reste.</summary>
@@ -177,6 +273,58 @@ internal sealed partial class SheetsPage : UserControl
         {
             page.OpenCommand.Execute(row);
         }
+    }
+
+    private void OnItemsPressed(object sender, MouseButtonEventArgs e)
+    {
+        _pressedAt = e.GetPosition(Items);
+        _pressedRow = ContainerOf(e.OriginalSource as DependencyObject)?.DataContext;
+    }
+
+    private void OnItemsMoved(object sender, MouseEventArgs e) => Moved(e.GetPosition(Items), e.LeftButton == MouseButtonState.Pressed);
+
+    private void OnItemsDragOver(object sender, DragEventArgs e)
+    {
+        e.Effects = DraggedOver(ContainerOf(e.OriginalSource as DependencyObject)?.DataContext, e.GetPosition(Items).Y) ? DragDropEffects.Move : DragDropEffects.None;
+        e.Handled = true;
+    }
+
+    private void OnItemsDragLeave(object sender, DragEventArgs e)
+    {
+        Highlight(null);
+        (DataContext as SheetsPageViewModel)?.ShowDrop(null, null);
+    }
+
+    private void OnItemsDrop(object sender, DragEventArgs e)
+    {
+        e.Handled = true;
+        _ = DroppedOn(ContainerOf(e.OriginalSource as DependencyObject)?.DataContext);
+    }
+
+    /// <summary>Met en évidence l'en-tête du dossier visé, s'il est à l'écran.</summary>
+    private void Highlight(string? folder)
+    {
+        var container = folder is null ? null : Items.ItemContainerGenerator.ContainerFromItem(Items.Items.OfType<SheetFolderRow>().FirstOrDefault(row => row.Path == folder)) as ListBoxItem;
+        if (!ReferenceEquals(container, _dropTarget))
+        {
+            _dropTarget?.ClearValue(BackgroundProperty);
+            _dropTarget = container;
+            _dropTarget?.SetResourceReference(BackgroundProperty, "Kyf.Brush.NavigationActiveBackground");
+        }
+    }
+
+    private static T? Inside<T>(DependencyObject parent)
+        where T : DependencyObject
+    {
+        for (var i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, i);
+            if ((child as T ?? Inside<T>(child)) is { } found)
+            {
+                return found;
+            }
+        }
+        return null;
     }
 
     private void OnCreateClosed(object sender, DialogClosedEventArgs e)

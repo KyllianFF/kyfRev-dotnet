@@ -9,52 +9,67 @@
 
     <!-- Une fiche archivée : l'ouvrir, son état, l'exclure ou la remettre en révision. -->
     <DataTemplate DataType="{x:Type pages:ArchiveRow}">
-      <Border x:Name="RowBorder" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource Kyf.Brush.Divider}" Background="Transparent" Padding="0,6" ContextMenuOpening="OnRowMenu">
+      <Border x:Name="RowBorder" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource Kyf.Brush.Divider}" Padding="0,3" ContextMenuOpening="OnRowMenu">
         <Border.ContextMenu>
           <ContextMenu />
         </Border.ContextMenu>
-        <Grid>
-          <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="Auto" />
-          </Grid.ColumnDefinitions>
-          <Grid.RowDefinitions>
-            <RowDefinition Height="*" />
-            <RowDefinition Height="Auto" />
-          </Grid.RowDefinitions>
-          <Button x:Name="OpenRow" Style="{DynamicResource Kyf.Button.Subtle}" HorizontalContentAlignment="Stretch" VerticalAlignment="Top"
-                  Command="{Binding DataContext.OpenCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}"
-                  AutomationProperties.Name="{Binding Spoken}">
-            <StackPanel>
-              <TextBlock Text="{Binding Title}" FontSize="{DynamicResource Kyf.FontSize.BodyLarge}" FontWeight="SemiBold" TextWrapping="Wrap" />
-              <TextBlock Text="{Binding Meta}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,2,0,0" />
-              <StackPanel Orientation="Horizontal" Margin="0,2,0,0" Visibility="{Binding FileMissing, Converter={StaticResource Visible}}">
-                <kyf:Icon Text="{x:Static kyf:Icons.Warning}" Foreground="{DynamicResource Kyf.Brush.Warning}" FontSize="12" Margin="0,0,4,0" />
-                <TextBlock Text="{x:Static pages:DashboardText.FileMissing}" Style="{DynamicResource Kyf.Text.Caption}" Foreground="{DynamicResource Kyf.Brush.Warning}" />
+        <!-- Le survol couvre toute la ligne ; un clic hors des boutons ouvre la fiche. -->
+        <Border x:Name="RowHover" CornerRadius="{DynamicResource Kyf.Radius.Control}" Padding="0,0,8,0" Cursor="Hand" MouseLeftButtonUp="OnRowClicked">
+          <Border.Style>
+            <Style TargetType="Border">
+              <Setter Property="Background" Value="Transparent" />
+              <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                  <Setter Property="Background" Value="{DynamicResource Kyf.Brush.SurfaceAlt}" />
+                </Trigger>
+              </Style.Triggers>
+            </Style>
+          </Border.Style>
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+              <RowDefinition Height="*" />
+              <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <!-- Son fond reste transparent : c'est la ligne entière qui réagit au survol. -->
+            <Button x:Name="OpenRow" Style="{DynamicResource Kyf.Button.Subtle}" Background="Transparent" HorizontalContentAlignment="Stretch" VerticalAlignment="Center"
+                    Command="{Binding DataContext.OpenCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}"
+                    AutomationProperties.Name="{Binding Spoken}">
+              <StackPanel>
+                <TextBlock Text="{Binding Title}" FontSize="{DynamicResource Kyf.FontSize.BodyLarge}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding Meta}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,2,0,0" />
+                <StackPanel Orientation="Horizontal" Margin="0,2,0,0" Visibility="{Binding FileMissing, Converter={StaticResource Visible}}">
+                  <kyf:Icon Text="{x:Static kyf:Icons.Warning}" Foreground="{DynamicResource Kyf.Brush.Warning}" FontSize="12" Margin="0,0,4,0" />
+                  <TextBlock Text="{x:Static pages:DashboardText.FileMissing}" Style="{DynamicResource Kyf.Text.Caption}" Foreground="{DynamicResource Kyf.Brush.Warning}" />
+                </StackPanel>
               </StackPanel>
+            </Button>
+            <StackPanel x:Name="Side" Grid.Column="1" Orientation="Horizontal" Margin="12,0,0,0" HorizontalAlignment="Right" VerticalAlignment="Center">
+              <kyf:Pill x:Name="Status" Kind="{Binding StatusKind}" Text="{Binding Status}" VerticalAlignment="Center" Margin="0,0,8,0" />
+              <WrapPanel x:Name="Actions" VerticalAlignment="Center">
+                <Button x:Name="ToggleRow" Content="{Binding ToggleLabel}" Style="{DynamicResource Kyf.Button.Subtle}"
+                        Command="{Binding DataContext.ToggleRemindersCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}"
+                        AutomationProperties.Name="{Binding ToggleName}" />
+                <Button x:Name="RestartRow" Content="{x:Static pages:ArchivesText.Restart}" Style="{DynamicResource Kyf.Button.Subtle}" Margin="4,0,0,0"
+                        Command="{Binding DataContext.RequestRestartCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}"
+                        AutomationProperties.Name="{Binding RestartName}" />
+              </WrapPanel>
             </StackPanel>
-          </Button>
-          <StackPanel x:Name="Side" Grid.Column="1" Margin="12,4,0,0" HorizontalAlignment="Right">
-            <kyf:Pill x:Name="Status" Kind="{Binding StatusKind}" Text="{Binding Status}" HorizontalAlignment="Right" />
-            <WrapPanel HorizontalAlignment="Right" Margin="0,4,0,0">
-              <Button x:Name="ToggleRow" Content="{Binding ToggleLabel}" Style="{DynamicResource Kyf.Button.Subtle}"
-                      Command="{Binding DataContext.ToggleRemindersCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}"
-                      AutomationProperties.Name="{Binding ToggleName}" />
-              <Button x:Name="RestartRow" Content="{x:Static pages:ArchivesText.Restart}" Style="{DynamicResource Kyf.Button.Subtle}" Margin="4,0,0,0"
-                      Command="{Binding DataContext.RequestRestartCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}"
-                      AutomationProperties.Name="{Binding RestartName}" />
-            </WrapPanel>
-          </StackPanel>
-        </Grid>
+          </Grid>
+        </Border>
       </Border>
       <DataTemplate.Triggers>
         <DataTrigger Binding="{Binding DataContext.HasRoom, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="False">
           <Setter TargetName="Side" Property="Grid.Column" Value="0" />
           <Setter TargetName="Side" Property="Grid.Row" Value="1" />
+          <Setter TargetName="Side" Property="Orientation" Value="Vertical" />
           <Setter TargetName="Side" Property="HorizontalAlignment" Value="Left" />
-          <Setter TargetName="Side" Property="Margin" Value="12,4,0,0" />
+          <Setter TargetName="Side" Property="Margin" Value="12,4,0,4" />
           <Setter TargetName="Status" Property="HorizontalAlignment" Value="Left" />
-          <Setter TargetName="Status" Property="Margin" Value="4,0,0,0" />
+          <Setter TargetName="Status" Property="Margin" Value="4,0,0,4" />
           <Setter TargetName="ToggleRow" Property="Padding" Value="4,0" />
           <Setter TargetName="RestartRow" Property="Padding" Value="4,0" />
           <Setter TargetName="RestartRow" Property="Margin" Value="2,0,0,0" />

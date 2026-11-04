@@ -158,6 +158,9 @@ public static class DashboardText
     /// <summary>« Historique ».</summary>
     public static string History => Text(nameof(History));
 
+    /// <summary>« Historique · {0} ».</summary>
+    public static string HistoryCountOf(object count) => Format("HistoryCount", count);
+
     /// <summary>« Aperçu de l'élément choisi ».</summary>
     public static string Preview => Text(nameof(Preview));
 

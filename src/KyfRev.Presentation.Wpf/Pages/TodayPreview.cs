@@ -61,6 +61,9 @@ public sealed class TodayPreview
     /// <summary>Au moins une étape est validée.</summary>
     public bool HasHistory => History.Count > 0;
 
+    /// <summary>« Historique · 6 ».</summary>
+    public string HistoryLabel => DashboardText.HistoryCountOf(History.Count);
+
     /// <summary>L'aperçu de <paramref name="row"/>, dans la fiche <paramref name="sheet"/>.</summary>
     internal static TodayPreview Of(object row, OpenedSheet sheet, SheetUseCases sheets) => row switch
     {

@@ -8,6 +8,7 @@
   <Style TargetType="ListBoxItem">
     <Setter Property="Cursor" Value="Hand" />
     <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Text}" />
+    <Setter Property="Background" Value="Transparent" />
     <Setter Property="Padding" Value="12,0" />
     <Setter Property="MinHeight" Value="44" />
     <Setter Property="Margin" Value="0,0,0,4" />
@@ -16,7 +17,7 @@
     <Setter Property="Template">
       <Setter.Value>
         <ControlTemplate TargetType="ListBoxItem">
-          <Border x:Name="Row" Background="Transparent" CornerRadius="{DynamicResource Kyf.Radius.Control}"
+          <Border x:Name="Row" Background="{TemplateBinding Background}" CornerRadius="{DynamicResource Kyf.Radius.Control}"
                   Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
             <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" />
           </Border>

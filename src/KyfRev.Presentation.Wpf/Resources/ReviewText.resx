@@ -31,7 +31,7 @@
     <value>Archiver la fiche ?</value>
   </data>
   <data name="ArchivedMessage" xml:space="preserve">
-    <value>Fiche archivée. Elle reste consultable dans « Archives » et n'est jamais supprimée.</value>
+    <value>Fiche archivée. Elle reste consultable dans « Archives ».</value>
   </data>
   <data name="ArchivedOn" xml:space="preserve">
     <value>le {0}</value>

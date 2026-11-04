@@ -100,6 +100,14 @@ public sealed partial class SheetsPageViewModel
     /// <summary>Une action vient d'aboutir.</summary>
     public bool HasDone => Done is not null;
 
+    /// <summary>Pendant un glisser-déposer : où irait la ligne.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasDropHint))]
+    public partial string? DropHint { get; private set; }
+
+    /// <summary>Une ligne glissée peut être déposée ici.</summary>
+    public bool HasDropHint => DropHint is not null;
+
     /// <summary>Ce dossier serait trop profond : on le permet, on le dit.</summary>
     public string? DepthWarning => WantedDepth() is { } depth and > CalmDepth ? SheetActionsText.DepthWarningOf(depth) : null;
 
@@ -190,6 +198,65 @@ public sealed partial class SheetsPageViewModel
             : SheetActionsText.TrashFolderMessageOf(NameOf(row.Path), Dates.Plural(count, SheetActionsText.SheetCountOneOf, SheetActionsText.SheetCountManyOf));
         Ask(SheetAction.TrashFolder, null, row.Path, SheetActionsText.TrashFolderTitle, message, SheetActionsText.TrashConfirm);
         CanErase = true;
+    }
+
+    /// <summary>
+    /// Le dossier où irait une ligne déposée sur une autre : un dossier, ou celui d'une fiche quand la liste montre l'arborescence.
+    /// Rien si elle y est déjà, ou pour un dossier qu'on poserait en lui-même.
+    /// </summary>
+    internal string? DropFolderOf(object? dragged, object? target)
+    {
+        var folder = target switch
+        {
+            SheetFolderRow row => row.Path,
+            SheetRow row when Rows.OfType<SheetFolderRow>().Any() => row.Sheet.Folder,
+            _ => null,
+        };
+        if (folder is null)
+        {
+            return null;
+        }
+        return dragged switch
+        {
+            SheetRow sheet when sheet.Sheet.Folder != folder => folder,
+            SheetFolderRow { IsFolder: true } moved when ParentOf(moved.Path) != folder && !IsWithin(folder, moved.Path) => folder,
+            _ => null,
+        };
+    }
+
+    /// <summary>Dit où irait la ligne glissée, et rend ce dossier ; rien si elle ne peut pas aller là.</summary>
+    internal string? ShowDrop(object? dragged, object? target)
+    {
+        var folder = DropFolderOf(dragged, target);
+        DropHint = folder switch
+        {
+            null => null,
+            "" => SheetActionsText.DropAtRoot,
+            _ => SheetActionsText.DropInOf(SheetRow.DisplayFolder(folder)),
+        };
+        return folder;
+    }
+
+    /// <summary>Range la ligne déposée. Un dossier qui deviendrait trop profond passe par le dialogue et son avertissement.</summary>
+    internal async Task DropAsync(object dragged, string folder)
+    {
+        DropHint = null;
+        var (action, sheet, path) = dragged switch
+        {
+            SheetRow row => (SheetAction.Move, row.Sheet, string.Empty),
+            SheetFolderRow row => (SheetAction.MoveFolder, null, row.Path),
+            _ => throw new ArgumentOutOfRangeException(nameof(dragged)),
+        };
+        if (dragged is SheetFolderRow moved && Segments(Join(folder, NameOf(moved.Path))) > CalmDepth)
+        {
+            RequestMoveFolder(moved);
+            ActionDestination = ActionDestinations.First(choice => choice.Value == folder);
+            return;
+        }
+        var refusal = await Task.Run(() => Run(action, sheet, path, string.Empty, folder, erases: false)).ConfigureAwait(true);
+        await RefreshAsync().ConfigureAwait(true);
+        Error = refusal;
+        Done = refusal is null ? SheetActionsText.Moved : null;
     }
 
     /// <summary>« Nouvelle fiche » dans ce dossier.</summary>

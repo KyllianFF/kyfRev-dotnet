@@ -68,19 +68,33 @@
           </DataTemplate>
         </ItemsControl.ItemTemplate>
       </ItemsControl>
-      <StackPanel x:Name="PreviewHistory" Grid.Row="4" Margin="0,6,0,0" Visibility="{Binding HasHistory, Converter={StaticResource Visible}}">
-        <Separator Margin="0,0,0,8" />
-        <TextBlock Text="{x:Static pages:DashboardText.History}" Style="{DynamicResource Kyf.Text.BodyStrong}" AutomationProperties.HeadingLevel="Level3" />
-        <ItemsControl ItemsSource="{Binding History}" Focusable="False" Margin="0,4,0,0">
+      <!-- L'historique se replie : le texte passe avant, et chaque étape dit déjà sa date au survol. -->
+      <ScrollViewer x:Name="PreviewHistory" Grid.Row="4" MaxHeight="96" Margin="0,2,0,0" Focusable="False" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                    Visibility="{Binding IsChecked, ElementName=HistoryToggle, Converter={StaticResource Visible}}">
+        <ItemsControl ItemsSource="{Binding History}" Focusable="False">
           <ItemsControl.ItemTemplate>
             <DataTemplate>
               <TextBlock Text="{Binding}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" />
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
-      </StackPanel>
-      <Button x:Name="ReviewNow" Grid.Row="5" Content="{Binding OpenLabel}" Style="{DynamicResource Kyf.Button.Primary}" HorizontalAlignment="Left" Margin="0,12,0,0"
-              Command="{Binding DataContext.OpenCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding Row}" />
+      </ScrollViewer>
+      <DockPanel Grid.Row="5" Margin="0,8,0,0" LastChildFill="False">
+        <Button x:Name="ReviewNow" Content="{Binding OpenLabel}" Style="{DynamicResource Kyf.Button.Primary}"
+                Command="{Binding DataContext.OpenCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding Row}" />
+        <ToggleButton x:Name="HistoryToggle" Style="{DynamicResource Kyf.Button.Subtle}" Margin="8,0,0,0" AutomationProperties.Name="{Binding HistoryLabel}"
+                      Visibility="{Binding HasHistory, Converter={StaticResource Visible}}">
+          <StackPanel Orientation="Horizontal">
+            <TextBlock Text="{Binding HistoryLabel}" VerticalAlignment="Center" />
+            <kyf:Icon x:Name="HistoryChevron" Text="{x:Static kyf:Icons.ChevronRight}" FontSize="10" Margin="6,0,0,0" VerticalAlignment="Center" />
+          </StackPanel>
+        </ToggleButton>
+      </DockPanel>
     </Grid>
+    <DataTemplate.Triggers>
+      <DataTrigger Binding="{Binding IsChecked, ElementName=HistoryToggle}" Value="True">
+        <Setter TargetName="HistoryChevron" Property="Text" Value="{x:Static kyf:Icons.ChevronDown}" />
+      </DataTrigger>
+    </DataTemplate.Triggers>
   </DataTemplate>
 </ResourceDictionary>

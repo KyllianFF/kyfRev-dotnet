@@ -108,7 +108,7 @@ public sealed class TrashedQuoteRow
 
 /// <summary>
 /// La vue « Citations », du module du même nom, comme dans la 0.x : consultation, recherche, ajout et
-/// modification ; « Supprimer » range dans la corbeille, et rien n'est jamais effacé.
+/// modification ; « Supprimer » range dans la corbeille.
 /// </summary>
 public sealed partial class QuotesPageViewModel : ObservableObject, INavigationAware
 {

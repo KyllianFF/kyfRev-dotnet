@@ -208,7 +208,7 @@ public sealed partial class ArchivesPageViewModel : ObservableObject, INavigatio
     public FilterBarViewModel Bar { get; }
 
     /// <summary>
-    /// « 5 fiches archivées · rien n'est jamais supprimé… » ; le nombre seul en fenêtre étroite ; rien
+    /// « 5 fiches archivées · elles restent ici… » ; le nombre seul en fenêtre étroite ; rien
     /// avant la première lecture.
     /// </summary>
     public string Summary
