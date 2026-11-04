@@ -117,6 +117,9 @@
   <data name="Promise" xml:space="preserve">
     <value>rien n'est jamais supprimé ; les fiches reviennent de temps en temps en rappel de consolidation.</value>
   </data>
+  <data name="Open" xml:space="preserve">
+    <value>Ouvrir</value>
+  </data>
   <data name="Restart" xml:space="preserve">
     <value>Remettre en révision…</value>
   </data>

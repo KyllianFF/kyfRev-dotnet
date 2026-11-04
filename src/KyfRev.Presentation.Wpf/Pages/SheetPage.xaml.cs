@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
+using System.Windows.Documents;
 using System.Windows.Input;
 using KyfRev.DesignSystem.Controls;
 using KyfRev.Presentation.Wpf.Editing;
@@ -252,22 +253,9 @@ internal sealed partial class SheetPage : UserControl
         }
     }
 
-    private static void Fill(ContextMenu menu, IReadOnlyList<Control> items, ContextMenuEventArgs e)
-    {
-        menu.Items.Clear();
-        foreach (var item in items)
-        {
-            menu.Items.Add(item);
-        }
-        e.Handled = items.Count == 0;
-    }
+    private static void Fill(ContextMenu menu, IReadOnlyList<Control> items, ContextMenuEventArgs e) => ActionMenus.Fill(menu, items, e);
 
-    private static MenuItem Item(string header, Action action, string? shortcut = null)
-    {
-        var item = new MenuItem { Header = header, InputGestureText = shortcut ?? string.Empty };
-        item.Click += (_, _) => action();
-        return item;
-    }
+    private static MenuItem Item(string header, Action action, string? shortcut = null) => ActionMenus.Item(header, action, shortcut);
 
     /// <summary>La position sélectionnée, si elle peut devenir un passage.</summary>
     private TextPosition? SelectedPosition() =>
@@ -287,17 +275,34 @@ internal sealed partial class SheetPage : UserControl
             }
             return
             [
-                new MenuItem { Header = ReadingText.Copy, Command = ApplicationCommands.Copy, CommandTarget = SheetText },
+                ActionMenus.Quick(ReadingText.Copy, Icons.Copy, ApplicationCommands.Copy, SheetText),
+                ActionMenus.Quick(ReadingText.Highlight, Icons.Highlighter, () => page.HighlightCommand.Execute(position)),
+                ActionMenus.Quick(ReadingText.Annotate, Icons.Comment, () => page.StartAnnotatingCommand.Execute(position)),
+                ActionMenus.Quick(ReadingText.Define, Icons.Dictionary, () => page.StartDefiningCommand.Execute(position)),
                 new Separator(),
-                Item(ReadingText.Highlight, () => page.HighlightCommand.Execute(position), ReadingText.HighlightKey),
-                Item(ReadingText.Annotate, () => page.StartAnnotatingCommand.Execute(position)),
-                Item(ReadingText.Define, () => page.StartDefiningCommand.Execute(position)),
-                new Separator(),
+                .. ListenItems(page, SheetText.Selection?.Start),
                 EditSheetItem(page),
             ];
         }
         var entry = page.Passages.FirstOrDefault(candidate => SheetText.AnnotationsAt(source).Contains(candidate.Annotation.Id));
-        return entry is null ? [EditSheetItem(page)] : [.. PassageMenuItems(page, entry), new Separator(), EditSheetItem(page)];
+        return entry is null
+            ? [.. ListenItems(page, (source as TextElement)?.ContentStart), EditSheetItem(page)]
+            : [.. PassageMenuItems(page, entry), new Separator(), EditSheetItem(page)];
+    }
+
+    /// <summary>« Écouter d'ici », là où l'écoute a un sens.</summary>
+    private List<Control> ListenItems(SheetPageViewModel page, TextPointer? place) =>
+        page is { ReadAloud: not null, IsReading: true, Holes.IsActive: false } && place is not null
+            ? [Item(ReadingText.ListenFromHere, () => ListenFrom(page.ReadAloud, place))]
+            : [];
+
+    /// <summary>Ouvre le lecteur et lit à partir du bloc qui contient cet endroit.</summary>
+    internal void ListenFrom(ReadAloudViewModel reader, TextPointer place)
+    {
+        _spoken = SheetText.SpokenBlocks();
+        reader.Open([.. _spoken.Select(block => block.Text)]);
+        var index = _spoken.ToList().FindIndex(block => block.Block.ContentEnd.CompareTo(place) >= 0);
+        reader.PlayFrom(Math.Max(index, 0));
     }
 
     private static MenuItem EditSheetItem(SheetPageViewModel page) =>
@@ -308,9 +313,10 @@ internal sealed partial class SheetPage : UserControl
         var items = new List<Control>();
         if (entry.Position is not null)
         {
-            items.Add(Item(entry.IsDefinition ? ReadingText.ShowDefinition : ReadingText.ShowPassage, () => ShowPassage(page, entry)));
+            items.Add(ActionMenus.Quick(entry.IsDefinition ? ReadingText.ShowDefinition : ReadingText.ShowPassage, Icons.Show, () => ShowPassage(page, entry)));
         }
-        items.Add(Item(entry.IsDefinition ? ReadingText.EditDefinition : ReadingText.EditComment, () => page.StartEditingCommand.Execute(entry)));
+        items.Add(ActionMenus.Quick(entry.IsDefinition ? ReadingText.EditDefinition : ReadingText.EditComment, Icons.Comment, () => page.StartEditingCommand.Execute(entry)));
+        items.Add(new Separator());
         if (entry.IsCandidate)
         {
             items.Add(Item(ReadingText.ConfirmPosition, () => page.ConfirmPositionCommand.Execute(entry)));

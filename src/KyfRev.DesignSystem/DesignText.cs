@@ -8,6 +8,18 @@ public static class DesignText
 {
     private static readonly ResourceManager Resources = new("KyfRev.DesignSystem.Resources.DesignText", typeof(DesignText).Assembly);
 
+    /// <summary>« Copier ».</summary>
+    public static string Copy => Text(nameof(Copy));
+
+    /// <summary>« Couper ».</summary>
+    public static string Cut => Text(nameof(Cut));
+
+    /// <summary>« Coller ».</summary>
+    public static string Paste => Text(nameof(Paste));
+
+    /// <summary>« Tout sélectionner ».</summary>
+    public static string SelectAll => Text(nameof(SelectAll));
+
     /// <summary>« Annuler ».</summary>
     public static string Cancel => Text(nameof(Cancel));
 

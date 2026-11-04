@@ -9,7 +9,10 @@
 
     <!-- Une ligne : ce qui est concerné, et ce qu'on peut y faire. -->
     <DataTemplate DataType="{x:Type pages:HealthRow}">
-      <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource Kyf.Brush.Divider}" Padding="0,8" AutomationProperties.Name="{Binding Spoken}">
+      <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource Kyf.Brush.Divider}" Background="Transparent" Padding="0,8" AutomationProperties.Name="{Binding Spoken}" ContextMenuOpening="OnRowMenu">
+        <Border.ContextMenu>
+          <ContextMenu />
+        </Border.ContextMenu>
         <DockPanel>
           <WrapPanel DockPanel.Dock="Right" VerticalAlignment="Center" Margin="12,0,0,0">
             <ComboBox x:Name="BackupChoice" ItemsSource="{Binding Backups}" SelectedItem="{Binding SelectedBackup}" MinWidth="168" Margin="0,0,8,0"

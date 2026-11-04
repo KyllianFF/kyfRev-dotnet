@@ -301,6 +301,86 @@ public sealed class ComponentTests
     }
 
     [STATestMethod]
+    public void The_quick_actions_share_a_row_above_the_list()
+    {
+        var panel = new ActionMenuPanel();
+        var (first, second) = (new Border { Width = 60, Height = 50, HorizontalAlignment = HorizontalAlignment.Left }, new Border { Width = 100, Height = 40, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top });
+        ActionMenuPanel.SetIsQuick(first, true);
+        ActionMenuPanel.SetIsQuick(second, true);
+        var hidden = new Border { Width = 500, Height = 500, Visibility = Visibility.Collapsed };
+        ActionMenuPanel.SetIsQuick(hidden, true);
+        var (rule, entry) = (new Border { Height = 1 }, new Border { Width = 120, Height = 40 });
+        foreach (var child in new[] { first, rule, second, hidden, entry })
+        {
+            panel.Children.Add(child);
+        }
+
+        panel.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+
+        Assert.AreEqual(new Size(200, 91), panel.DesiredSize, "deux cases de la largeur de la plus grande, puis la liste");
+
+        panel.Arrange(new Rect(new Size(300, 91)));
+
+        Assert.AreEqual(new Point(0, 0), first.TranslatePoint(new Point(0, 0), panel));
+        Assert.AreEqual(150, second.TranslatePoint(new Point(0, 0), panel).X, 0.01);
+        Assert.AreEqual(0, second.TranslatePoint(new Point(0, 0), panel).Y, 0.01, "dans la même rangée, quel que soit l'ordre");
+        Assert.AreEqual(50, rule.TranslatePoint(new Point(0, 0), panel).Y, 0.01);
+        Assert.AreEqual(51, entry.TranslatePoint(new Point(0, 0), panel).Y, 0.01);
+        Assert.ThrowsExactly<ArgumentNullException>(() => ActionMenuPanel.GetIsQuick(null!));
+        Assert.ThrowsExactly<ArgumentNullException>(() => ActionMenuPanel.SetIsQuick(null!, true));
+    }
+
+    [STATestMethod]
+    public void A_menu_without_quick_action_is_a_plain_pile()
+    {
+        var panel = new ActionMenuPanel();
+        var (first, second) = (new Border { Width = 60, Height = 30 }, new Border { Width = 100, Height = 40 });
+        panel.Children.Add(first);
+        panel.Children.Add(second);
+
+        panel.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        panel.Arrange(new Rect(panel.DesiredSize));
+
+        Assert.AreEqual(new Size(100, 70), panel.DesiredSize);
+        Assert.AreEqual(30, second.TranslatePoint(new Point(0, 0), panel).Y, 0.01);
+    }
+
+    [STATestMethod]
+    public void A_text_field_has_its_own_menu_with_the_clipboard_on_top()
+    {
+        var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
+        var (one, two) = (new TextBox(), new TextBox());
+        Host.Of(design, new StackPanel { Children = { one, two } });
+
+        var menu = one.ContextMenu;
+
+        Assert.IsNotNull(menu);
+        Assert.IsNotNull(two.ContextMenu, "tous les champs l'ont");
+        var items = menu.Items.OfType<MenuItem>().ToList();
+        CollectionAssert.AreEqual(new[] { DesignText.Cut, DesignText.Copy, DesignText.Paste, DesignText.SelectAll }, items.Select(item => (string)item.Header).ToList());
+        Assert.AreEqual(ApplicationCommands.Cut, items[0].Command);
+        Assert.AreEqual(ApplicationCommands.Copy, items[1].Command);
+        Assert.AreEqual(ApplicationCommands.Paste, items[2].Command);
+        Assert.AreEqual(ApplicationCommands.SelectAll, items[3].Command);
+        Assert.IsTrue(ActionMenuPanel.GetIsQuick(items[0]));
+        Assert.IsFalse(ActionMenuPanel.GetIsQuick(items[3]));
+    }
+
+    [STATestMethod]
+    public void A_quick_action_shows_its_icon_and_label_and_answers_the_pointer()
+    {
+        var design = new DesignResources(ThemeKind.Dark, reducedMotion: false);
+        var quick = new MenuItem { Header = "Ouvrir", Icon = new Icon { Text = Icons.Document } };
+        quick.SetResourceReference(FrameworkElement.StyleProperty, "Kyf.MenuItem.Quick");
+        var host = Host.Of(design, quick);
+
+        Assert.IsTrue(ActionMenuPanel.GetIsQuick(quick));
+        quick.IsEnabled = false;
+        Host.Layout(host);
+        Assert.AreEqual(0.5, ((Border)VisualTreeHelper.GetChild(quick, 0)).Opacity, 0.01);
+    }
+
+    [STATestMethod]
     public void A_choice_list_shows_the_member_it_is_told_to()
     {
         var design = new DesignResources(ThemeKind.Light, reducedMotion: false);

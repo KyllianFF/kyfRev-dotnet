@@ -119,6 +119,15 @@ public sealed partial class ReadAloudViewModel : ObservableObject
         IsOpen = true;
     }
 
+    /// <summary>Lit à partir de ce bloc, s'il y a de quoi lire et une voix pour le faire.</summary>
+    public void PlayFrom(int index)
+    {
+        if (_blocks.Count > 0 && Voice is not null)
+        {
+            Read(Math.Clamp(index, 0, _blocks.Count - 1));
+        }
+    }
+
     /// <summary>Lit, met en pause ou reprend.</summary>
     [RelayCommand]
     private void PlayPause()

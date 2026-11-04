@@ -99,6 +99,7 @@
 
   <!-- Champ de saisie : contour à 3:1 au moins ; au focus, contour épaissi de la couleur du focus. -->
   <Style TargetType="TextBox">
+    <Setter Property="ContextMenu" Value="{DynamicResource Kyf.ContextMenu.Field}" />
     <Setter Property="FontFamily" Value="{DynamicResource Kyf.Font.Ui}" />
     <Setter Property="FontSize" Value="{DynamicResource Kyf.FontSize.Body}" />
     <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Text}" />

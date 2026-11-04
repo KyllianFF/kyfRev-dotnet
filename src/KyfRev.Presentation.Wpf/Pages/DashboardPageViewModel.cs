@@ -80,6 +80,8 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
     private readonly DashboardGroup _upcoming;
     private readonly DashboardExtras _extras;
     private readonly IEnumerable<IDashboardWidget> _widgets;
+    private readonly ReviewUseCases? _reviews;
+    private DueItemRow? _toArchive;
     private Dashboard? _dashboard;
     private IReadOnlyList<DueItem> _toStart = [];
 
@@ -91,7 +93,7 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
     /// nourrissent l'aperçu) ; <paramref name="opener"/> ouvre ses lignes, <paramref name="widgets"/> sont
     /// les encarts apportés par les modules.
     /// </summary>
-    public DashboardPageViewModel(ReminderUseCases reminders, SheetUseCases sheets, IReviewOpener opener, IEnumerable<IDashboardWidget>? widgets = null)
+    public DashboardPageViewModel(ReminderUseCases reminders, SheetUseCases sheets, IReviewOpener opener, IEnumerable<IDashboardWidget>? widgets = null, ReviewUseCases? reviews = null)
     {
         ArgumentNullException.ThrowIfNull(reminders);
         ArgumentNullException.ThrowIfNull(sheets);
@@ -100,6 +102,7 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
         _sheets = sheets;
         _opener = opener;
         _widgets = widgets ?? [];
+        _reviews = reviews;
         _extras = new DashboardExtras(this);
         _overdue = new DashboardGroup(DashboardText.Overdue, Icons.Clock, DashboardTone.Overdue, expanded: true, BuildRows);
         _today = new DashboardGroup(DashboardText.Today, Icons.Calendar, DashboardTone.Normal, expanded: true, BuildRows);
@@ -353,6 +356,54 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
         if (LookForNews is { } lookForNews && await lookForNews().ConfigureAwait(true))
         {
             Cards = await Task.Run(ReadCards).ConfigureAwait(true);
+        }
+    }
+
+    /// <summary>La mise aux archives attend sa confirmation.</summary>
+    [ObservableProperty]
+    public partial bool IsConfirmingArchive { get; private set; }
+
+    /// <summary>Les actions de révision sont disponibles depuis le menu d'une ligne.</summary>
+    internal bool CanAct => _reviews is not null;
+
+    /// <summary>Ouvre la fiche d'une ligne, pour la relire.</summary>
+    internal void OpenSheetOf(DueItemRow row) => _opener.OpenSheet(row.Item.SheetId);
+
+    /// <summary>Reporte une ligne à demain, puis relit le tableau de bord.</summary>
+    internal async Task PostponeTomorrowAsync(DueItemRow row)
+    {
+        if (_reviews is null || _dashboard is null)
+        {
+            return;
+        }
+        var (item, reviews, tomorrow) = (row.Item, _reviews, _dashboard.Day.AddDays(1));
+        await ActOnRowAsync(() => reviews.Postpone(item.Kind, item.Id, tomorrow).Error).ConfigureAwait(true);
+    }
+
+    /// <summary>Demande confirmation avant d'archiver la fiche d'une ligne.</summary>
+    internal void RequestArchive(DueItemRow row)
+    {
+        _toArchive = row;
+        IsConfirmingArchive = true;
+    }
+
+    /// <summary>La réponse à la mise aux archives.</summary>
+    [RelayCommand]
+    private async Task AnswerArchiveAsync(bool confirmed)
+    {
+        IsConfirmingArchive = false;
+        if (confirmed && _toArchive is { } row && _reviews is { } reviews)
+        {
+            await ActOnRowAsync(() => reviews.Archive(row.Item.SheetId).Error).ConfigureAwait(true);
+        }
+    }
+
+    private async Task ActOnRowAsync(Func<string?> action)
+    {
+        Error = await Task.Run(action).ConfigureAwait(true);
+        if (Error is null)
+        {
+            await RefreshAsync().ConfigureAwait(true);
         }
     }
 

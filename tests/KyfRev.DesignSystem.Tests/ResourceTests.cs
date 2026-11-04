@@ -105,7 +105,7 @@ public sealed partial class ResourceTests
         Assert.AreEqual(new Duration(TimeSpan.Zero), design.Dictionary[DesignKeys.NormalDuration]);
     }
 
-    [TestMethod]
+    [STATestMethod]
     public void Larger_targets_replace_the_small_heights()
     {
         var design = new DesignResources(ThemeKind.Light, reducedMotion: false);

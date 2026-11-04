@@ -226,6 +226,28 @@ public sealed class ReadAloudTests
     }
 
     [TestMethod]
+    public void Reading_can_start_on_any_block()
+    {
+        var speech = new FakeSpeech();
+        var reader = new ReadAloudViewModel(speech);
+        reader.PlayFrom(1);
+        Assert.IsEmpty(speech.Said, "rien à lire tant que le lecteur n'est pas ouvert");
+
+        reader.Open(Blocks);
+        reader.PlayFrom(1);
+        Assert.AreEqual(1, reader.Current);
+        Assert.AreEqual(Blocks[1], speech.Said[^1].Text);
+
+        reader.PlayFrom(99);
+        Assert.AreEqual(Blocks.Length - 1, reader.Current, "au-delà, le dernier bloc");
+
+        var silent = new ReadAloudViewModel(new FakeSpeech([]));
+        silent.Open(Blocks);
+        silent.PlayFrom(1);
+        Assert.IsFalse(silent.IsPlaying, "sans voix, rien ne se lit");
+    }
+
+    [TestMethod]
     public void A_voice_is_called_by_its_short_name()
     {
         var reader = new ReadAloudViewModel(new FakeSpeech("Microsoft Hortense Desktop"));

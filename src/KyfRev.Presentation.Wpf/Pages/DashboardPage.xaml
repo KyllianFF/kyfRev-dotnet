@@ -469,5 +469,10 @@
       </ContentControl>
       </UniformGrid>
     </DockPanel>
+
+    <kyf:Dialog x:Name="ArchiveConfirmation" Grid.RowSpan="9" Grid.ColumnSpan="9" Title="{x:Static pages:ReviewText.ArchiveTitle}" IsOpen="{Binding IsConfirmingArchive, Mode=OneWay}"
+                PrimaryButtonText="{x:Static pages:ReviewText.ArchiveConfirm}" Closed="OnArchiveClosed">
+      <TextBlock Text="{x:Static pages:ReviewText.ArchiveMessage}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" />
+    </kyf:Dialog>
   </Grid>
 </UserControl>

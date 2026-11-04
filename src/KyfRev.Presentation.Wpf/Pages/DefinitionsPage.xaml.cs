@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using KyfRev.DesignSystem.Controls;
 
 namespace KyfRev.Presentation.Wpf.Pages;
 
@@ -37,6 +38,38 @@ internal sealed partial class DefinitionsPage : UserControl
     }
 
     /// <summary>Quand la place manque, les dossiers passent au-dessus des définitions.</summary>
+    /// <summary>Le menu d'une définition : l'ouvrir, la modifier, la mettre à la corbeille.</summary>
+    private void OnRowMenu(object sender, ContextMenuEventArgs e)
+    {
+        var card = (FrameworkElement)sender;
+        ActionMenus.Fill(card.ContextMenu!, card.DataContext is DefinitionRow row ? RowMenuItems(row) : [], e);
+    }
+
+    /// <summary>Les entrées du menu de cette définition ; aucune pendant sa modification.</summary>
+    internal IReadOnlyList<Control> RowMenuItems(DefinitionRow row)
+    {
+        if (row.IsEditing || DataContext is not DefinitionsPageViewModel page)
+        {
+            return [];
+        }
+        return
+        [
+            ActionMenus.Quick(DefinitionsText.SeeInSheet, Icons.Document, () => row.OpenCommand.Execute(null)),
+            ActionMenus.Quick(DefinitionsText.Edit, Icons.Edit, () => row.EditCommand.Execute(null)),
+            new Separator(),
+            ActionMenus.Item(ReadingText.DeleteDefinition, () => page.RequestDelete(row)),
+        ];
+    }
+
+    /// <summary>La réponse à la mise à la corbeille part vers la vue.</summary>
+    private void OnDeleteClosed(object sender, DialogClosedEventArgs e)
+    {
+        if (DataContext is DefinitionsPageViewModel page)
+        {
+            page.AnswerDeleteCommand.Execute(e.Choice == DialogChoice.Primary);
+        }
+    }
+
     private void Arrange()
     {
         var narrow = ActualWidth < NarrowPage;

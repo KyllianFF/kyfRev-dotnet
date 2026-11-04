@@ -79,6 +79,9 @@ public static class ReadingText
     /// <summary>Mettre un passage à la corbeille.</summary>
     public const string DeletePassage = "Supprimer le passage…";
 
+    /// <summary>« Écouter d'ici ».</summary>
+    public const string ListenFromHere = "Écouter d'ici";
+
     /// <summary>Mettre une définition à la corbeille.</summary>
     public const string DeleteDefinition = "Supprimer la définition…";
 

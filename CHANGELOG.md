@@ -9,6 +9,8 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- Clic droit, avec les actions rapides en tête du menu : texte d'une fiche et passages (« Écouter d'ici » compris), lignes
+  d'« Aujourd'hui », fiches archivées, définitions, lignes de « Santé du coffre » et champs de texte.
 - Module Citations : la vue « Citations » (recherche, étiquettes, tri, ajout, modification, corbeille), la citation du jour
   sur « Aujourd'hui », cherchée sur Wikiquote si ce réglage est activé, l'onglet « Modules et extensions » de « Paramètres » pour
   l'activer sans redémarrer, et, dans l'onglet « Données », les citations supprimées et leur export.
