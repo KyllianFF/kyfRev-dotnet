@@ -1,11 +1,17 @@
 using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Shell;
+using KyfRev.Application.Model;
+using KyfRev.Application.Ports;
 using KyfRev.DesignSystem.Controls;
+using KyfRev.DesignSystem.Tokens;
+using KyfRev.Presentation.Wpf.Pages;
 using KyfRev.Presentation.Wpf.Shell;
 
 namespace KyfRev.Presentation.Wpf.Tests;
@@ -174,7 +180,6 @@ public sealed class ShellWindowTests
             var search = (Button)window.FindName("SearchButton");
             var main = (ListBox)window.FindName("MainNavigation");
             var tabBar = (Border)window.FindName("TabBar");
-            var topBar = (Border)window.FindName("TopBar");
 
             // La largeur vue par la coquille, sans dépendre de la taille de l'écran.
             shell.WindowWidth = 1600;
@@ -183,12 +188,11 @@ public sealed class ShellWindowTests
             Assert.AreEqual(HorizontalAlignment.Stretch, search.HorizontalContentAlignment);
             Assert.IsTrue(Named<StackPanel>(main, "Row").All(row => row.Visibility == Visibility.Visible));
             Assert.AreEqual(Visibility.Collapsed, tabBar.Visibility);
-            Assert.AreEqual(Visibility.Collapsed, topBar.Visibility);
 
             shell.WindowWidth = 1024;
             window.UpdateLayout();
             Assert.AreEqual(112, sidebar.ActualWidth);
-            Assert.AreEqual(HorizontalAlignment.Center, search.HorizontalContentAlignment);
+            Assert.AreEqual(HorizontalAlignment.Stretch, search.HorizontalContentAlignment);
             Assert.IsTrue(Named<StackPanel>(main, "Stacked").All(stacked => stacked.Visibility == Visibility.Visible));
 
             // La vraie fenêtre, rétrécie : la coquille suit.
@@ -198,13 +202,255 @@ public sealed class ShellWindowTests
             Assert.AreEqual(NavigationLayout.Tabs, shell.Layout);
             Assert.AreEqual(Visibility.Collapsed, sidebar.Visibility);
             Assert.AreEqual(Visibility.Visible, tabBar.Visibility);
-            Assert.AreEqual(Visibility.Visible, topBar.Visibility);
+            Assert.AreEqual(HorizontalAlignment.Right, ((Border)window.FindName("SearchHost")).HorizontalAlignment, "La recherche se réduit à son icône, à droite.");
+            Assert.AreEqual(Visibility.Collapsed, ((TextBlock)window.FindName("SearchLabel")).Visibility);
             window.FocusNavigation();
             Assert.AreSame(window.FindName("TabNavigation"), ItemsControl.ItemsControlFromItemContainer((DependencyObject)FocusManager.GetFocusedElement(window)));
 
             shell.ToggleFocusMode();
             Assert.AreEqual(Visibility.Collapsed, tabBar.Visibility);
-            Assert.AreEqual(Visibility.Collapsed, topBar.Visibility);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
+    public void The_window_draws_its_own_title_bar()
+    {
+        var test = new TestShell();
+        var window = Open(test);
+        try
+        {
+            var chrome = WindowChrome.GetWindowChrome(window);
+            var bar = (Border)window.FindName("TitleBar");
+            Assert.IsNotNull(chrome);
+            Assert.AreEqual(bar.Height, chrome.CaptionHeight, "Windows déplace la fenêtre sur toute la hauteur de la barre.");
+            foreach (var name in new[] { "SearchButton", "ThemeButton", "HelpButton", "MinimizeButton", "MaximizeButton", "CloseButton" })
+            {
+                var button = (Button)window.FindName(name);
+                Assert.IsTrue(button.IsVisible, name);
+                Assert.IsTrue(WindowChrome.GetIsHitTestVisibleInChrome(button), name);
+                Assert.IsFalse(string.IsNullOrEmpty(AutomationProperties.GetName(button)), name);
+                Assert.IsLessThanOrEqualTo(bar.ActualHeight, button.ActualHeight, name);
+            }
+            Assert.AreSame(test.Shell.OpenPaletteCommand, ((Button)window.FindName("SearchButton")).Command);
+            Assert.AreEqual(test.Design.Dictionary[DesignSystem.DesignKeys.Brush(DesignSystem.Tokens.ColorRole.Surface)], ((Button)window.FindName("SearchButton")).Background, "Le bouton prend le style de l'application.");
+            Assert.AreSame(test.Shell.ShowHelpCommand, ((Button)window.FindName("HelpButton")).Command);
+            Assert.IsFalse(((Button)window.FindName("MinimizeButton")).Focusable, "Comme ceux de Windows : Alt+Espace les remplace au clavier.");
+            Assert.AreEqual(bar.ActualHeight + ((Grid)window.FindName("Root")).ActualHeight, ((Grid)window.FindName("Frame")).ActualHeight, 0.5);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
+    public void The_buttons_of_the_title_bar_act_on_the_window()
+    {
+        var test = new TestShell();
+        var window = Open(test);
+        var closed = false;
+        window.Closed += (_, _) => closed = true;
+        try
+        {
+            var maximize = (Button)window.FindName("MaximizeButton");
+            var icon = (Icon)window.FindName("MaximizeIcon");
+            Assert.AreEqual(Icons.WindowMaximize, icon.Text);
+            Assert.AreEqual(ShellText.WindowMaximize, AutomationProperties.GetName(maximize));
+
+            Click(maximize);
+            Assert.AreEqual(WindowState.Maximized, window.WindowState);
+            Assert.AreEqual(Icons.WindowRestore, icon.Text);
+            Assert.AreEqual(ShellText.WindowRestore, AutomationProperties.GetName(maximize));
+            Assert.AreEqual(ShellText.WindowRestore, maximize.ToolTip);
+
+            Click(maximize);
+            Assert.AreEqual(WindowState.Normal, window.WindowState);
+            Assert.AreEqual(Icons.WindowMaximize, icon.Text);
+
+            Click((Button)window.FindName("MinimizeButton"));
+            Assert.AreEqual(WindowState.Minimized, window.WindowState);
+            window.WindowState = WindowState.Normal;
+            TestShell.Flush();
+
+            Click((Button)window.FindName("CloseButton"));
+            Assert.IsTrue(closed);
+        }
+        finally
+        {
+            if (!closed)
+            {
+                window.Close();
+            }
+        }
+    }
+
+    [STATestMethod]
+    public void The_maximize_button_is_the_real_one_for_windows()
+    {
+        var test = new TestShell();
+        var window = Open(test);
+        try
+        {
+            var handle = new WindowInteropHelper(window).Handle;
+            var maximize = (Button)window.FindName("MaximizeButton");
+            var center = maximize.PointToScreen(new Point(maximize.ActualWidth / 2, maximize.ActualHeight / 2));
+            var elsewhere = ((Button)window.FindName("CloseButton")).PointToScreen(new Point(4, 4));
+            nint Send(int message, nint wParam, nint lParam, out bool handled)
+            {
+                var taken = false;
+                var answer = window.OnWindowMessage(handle, message, wParam, lParam, ref taken);
+                handled = taken;
+                return answer;
+            }
+
+            Assert.AreEqual(9, Send(0x0084, 0, ScreenPosition(center), out var handled), "HTMAXBUTTON : Windows 11 y ouvre ses dispositions.");
+            Assert.IsTrue(handled);
+            Assert.AreEqual(bool.TrueString, maximize.Tag, "Le survol se montre, puisque WPF ne le voit plus.");
+
+            Assert.AreEqual(0, Send(0x0084, 0, ScreenPosition(elsewhere), out handled));
+            Assert.IsFalse(handled);
+            Assert.IsNull(maximize.Tag);
+
+            Send(0x0084, 0, ScreenPosition(center), out _);
+            Send(0x02A2, 0, 0, out _);
+            Assert.IsNull(maximize.Tag, "La souris quitte la fenêtre.");
+
+            Send(0x00A1, 9, 0, out handled);
+            Assert.IsTrue(handled);
+            Assert.AreEqual(WindowState.Normal, window.WindowState, "Comme un bouton, il agit au relâchement.");
+            Send(0x00A2, 9, 0, out handled);
+            Assert.IsTrue(handled);
+            TestShell.Flush();
+            Assert.AreEqual(WindowState.Maximized, window.WindowState);
+            window.WindowState = WindowState.Normal;
+            TestShell.Flush();
+
+            Send(0x00A1, 2, 0, out handled);
+            Assert.IsFalse(handled, "Sur le reste de la barre, c'est Windows qui déplace la fenêtre.");
+            Send(0x00A2, 2, 0, out handled);
+            Assert.IsFalse(handled);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
+    public void A_maximized_window_keeps_its_edges_on_the_screen()
+    {
+        var test = new TestShell();
+        test.Chrome.Overhang = new WindowOverhang(8, 8, 8, 8);
+        var window = Open(test);
+        try
+        {
+            var frame = (Grid)window.FindName("Frame");
+            var dpi = VisualTreeHelper.GetDpi(window);
+            var inside = new Thickness(8 / dpi.DpiScaleX, 8 / dpi.DpiScaleY, 8 / dpi.DpiScaleX, 8 / dpi.DpiScaleY);
+            Assert.AreEqual(default, frame.Margin);
+
+            window.WindowState = WindowState.Maximized;
+            TestShell.Flush();
+            Assert.AreEqual(inside, frame.Margin, "Ce qui dépasse de l'écran est rendu au contenu.");
+
+            test.Shell.ToggleFullScreen();
+            TestShell.Flush();
+            Assert.AreEqual(default, frame.Margin, "En plein écran, rien ne dépasse.");
+            Assert.AreEqual(ResizeMode.NoResize, window.ResizeMode, "Sans cadre épais, rien ne déborde de l'écran.");
+
+            test.Shell.ToggleFullScreen();
+            TestShell.Flush();
+            Assert.AreEqual(ResizeMode.CanResize, window.ResizeMode);
+            Assert.AreEqual(WindowState.Maximized, window.WindowState);
+            Assert.AreEqual(inside, frame.Margin, "De retour, agrandie comme avant.");
+
+            window.WindowState = WindowState.Normal;
+            TestShell.Flush();
+            Assert.AreEqual(default, frame.Margin);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
+    public void Full_screen_hides_the_title_bar_and_the_welcome_keeps_only_the_window()
+    {
+        var test = new TestShell();
+        var window = Open(test);
+        try
+        {
+            var bar = (Border)window.FindName("TitleBar");
+            var search = (Button)window.FindName("SearchButton");
+            var actions = (StackPanel)window.FindName("TitleActions");
+            var buttons = (StackPanel)window.FindName("WindowButtons");
+            Assert.AreEqual(Visibility.Visible, bar.Visibility);
+
+            test.Shell.ToggleFullScreen();
+            TestShell.Flush();
+            Assert.AreEqual(Visibility.Collapsed, bar.Visibility);
+            var maximize = (Button)window.FindName("MaximizeButton");
+            var taken = false;
+            Assert.AreEqual(0, window.OnWindowMessage(new WindowInteropHelper(window).Handle, 0x0084, 0, 0, ref taken), "Un bouton caché ne répond pas à Windows.");
+            Assert.IsFalse(maximize.IsVisible);
+            test.Shell.ToggleFullScreen();
+            TestShell.Flush();
+            Assert.AreEqual(Visibility.Visible, bar.Visibility);
+
+            test.Shell.ToggleFocusMode();
+            TestShell.Flush();
+            Assert.IsTrue(search.IsVisible, "En mode concentration, la barre reste : la fenêtre se déplace toujours.");
+            test.Shell.ToggleFocusMode();
+
+            test.Shell.ShowWelcome(new object());
+            TestShell.Flush();
+            Assert.IsFalse(search.IsVisible);
+            Assert.AreEqual(Visibility.Collapsed, actions.Visibility);
+            Assert.AreEqual(Visibility.Visible, buttons.Visibility);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
+    public void The_theme_changes_in_one_click_and_is_remembered()
+    {
+        var test = new TestShell();
+        var window = Open(test);
+        try
+        {
+            var shell = test.Shell;
+            var machine = new MachineSettings(new MemoryMachinePreferences());
+            machine.Follow(shell.Appearance, shell);
+            var general = new GeneralSettingsViewModel(machine, new FakeVoices("Hortense"));
+            var button = (Button)window.FindName("ThemeButton");
+            Assert.AreEqual(ThemeKind.Light, shell.Appearance.Theme);
+            Assert.AreEqual(Icons.Moon, button.Content);
+            Assert.AreEqual(ShellText.ThemeToDark, AutomationProperties.GetName(button));
+
+            shell.ToggleThemeCommand.Execute(null);
+            TestShell.Flush();
+
+            Assert.AreEqual(ThemeKind.Dark, shell.Appearance.Theme);
+            Assert.AreEqual(ThemePreference.Dark, machine.Current.Theme);
+            Assert.AreEqual(ThemePreference.Dark, general.Theme.Value, "L'onglet ouvert suit.");
+            Assert.AreEqual(Icons.Sun, button.Content);
+            Assert.AreEqual(ShellText.ThemeToLight, AutomationProperties.GetName(button));
+
+            shell.ToggleThemeCommand.Execute(null);
+            TestShell.Flush();
+            Assert.AreEqual(ThemePreference.Light, machine.Current.Theme);
+
+            shell.Appearance.ForcesHighContrast = true;
+            TestShell.Flush();
+            Assert.AreEqual(Visibility.Collapsed, button.Visibility, "Le contraste élevé passe avant.");
         }
         finally
         {
@@ -258,6 +504,14 @@ public sealed class ShellWindowTests
             window.Close();
         }
     }
+
+    private static void Click(ButtonBase button)
+    {
+        button.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+        TestShell.Flush();
+    }
+
+    private static nint ScreenPosition(Point point) => (((int)point.Y & 0xFFFF) << 16) | ((int)point.X & 0xFFFF);
 
     private static ShellWindow Open(TestShell test)
     {

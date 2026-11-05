@@ -35,11 +35,15 @@ internal sealed class FakeChrome : IWindowChrome
 {
     public List<(nint Handle, bool Dark)> Calls { get; } = [];
 
+    public WindowOverhang Overhang { get; set; }
+
     public bool UseDarkTitleBar(nint windowHandle, bool dark)
     {
         Calls.Add((windowHandle, dark));
         return true;
     }
+
+    public WindowOverhang MaximizedOverhang(nint windowHandle) => Overhang;
 }
 
 /// <summary>Une coquille assemblée comme dans l'application, avec des préférences de Windows simulées.</summary>

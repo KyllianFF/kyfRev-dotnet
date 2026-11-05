@@ -42,11 +42,6 @@ public sealed class ShellLayoutTests
         Assert.AreEqual(Visibility.Collapsed, shown.Convert(NavigationLayout.Sidebar, typeof(Visibility), null!, culture));
         Assert.ThrowsExactly<NotSupportedException>(() => shown.ConvertBack(Visibility.Visible, typeof(NavigationLayout), "Sidebar", culture));
 
-        var aligned = new LayoutAlignmentConverter();
-        Assert.AreEqual(HorizontalAlignment.Center, aligned.Convert(NavigationLayout.Rail, typeof(HorizontalAlignment), "Stretch", culture));
-        Assert.AreEqual(HorizontalAlignment.Stretch, aligned.Convert(NavigationLayout.Sidebar, typeof(HorizontalAlignment), "Stretch", culture));
-        Assert.AreEqual(HorizontalAlignment.Left, aligned.Convert(NavigationLayout.Tabs, typeof(HorizontalAlignment), null!, culture));
-        Assert.ThrowsExactly<NotSupportedException>(() => aligned.ConvertBack(HorizontalAlignment.Center, typeof(NavigationLayout), "Left", culture));
     }
 
     [TestMethod]

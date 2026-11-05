@@ -57,6 +57,24 @@
   <data name="More" xml:space="preserve">
     <value>Plus</value>
   </data>
+  <data name="WindowMinimize" xml:space="preserve">
+    <value>Réduire</value>
+  </data>
+  <data name="WindowMaximize" xml:space="preserve">
+    <value>Agrandir</value>
+  </data>
+  <data name="WindowRestore" xml:space="preserve">
+    <value>Restaurer</value>
+  </data>
+  <data name="WindowClose" xml:space="preserve">
+    <value>Fermer</value>
+  </data>
+  <data name="ThemeToDark" xml:space="preserve">
+    <value>Passer au thème sombre</value>
+  </data>
+  <data name="ThemeToLight" xml:space="preserve">
+    <value>Passer au thème clair</value>
+  </data>
   <data name="MoreViews" xml:space="preserve">
     <value>Autres vues</value>
   </data>

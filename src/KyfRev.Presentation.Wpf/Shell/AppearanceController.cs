@@ -100,6 +100,9 @@ public sealed partial class AppearanceController : ObservableObject, IDisposable
         OnPropertyChanged(nameof(Theme));
     }
 
+    /// <summary>Ce qui dépasse de l'écran d'une fenêtre agrandie, en pixels.</summary>
+    internal WindowOverhang MaximizedOverhang(nint window) => _chrome.MaximizedOverhang(window);
+
     private void ApplyTitleBar(Window window)
     {
         var handle = new WindowInteropHelper(window).Handle;

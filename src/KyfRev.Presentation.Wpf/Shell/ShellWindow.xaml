@@ -11,6 +11,11 @@
         Background="{DynamicResource Kyf.Brush.Background}" Foreground="{DynamicResource Kyf.Brush.Text}"
         FontFamily="{DynamicResource Kyf.Font.Ui}" FontSize="{DynamicResource Kyf.FontSize.Body}">
 
+  <!-- L'application dessine son en-tête. Windows garde le déplacement, le redimensionnement, le menu de la fenêtre et les coins arrondis. -->
+  <WindowChrome.WindowChrome>
+    <WindowChrome CaptionHeight="40" ResizeBorderThickness="6" GlassFrameThickness="0,0,0,1" CornerRadius="0" UseAeroCaptionButtons="False" NonClientFrameEdges="None" />
+  </WindowChrome.WindowChrome>
+
   <Window.Resources>
     <BooleanToVisibilityConverter x:Key="Visible" />
     <DataTemplate DataType="{x:Type pages:PlaceholderPageViewModel}">
@@ -62,7 +67,6 @@
       <pages:StudySessionPage />
     </DataTemplate>
     <shell:LayoutVisibilityConverter x:Key="ShownIn" />
-    <shell:LayoutAlignmentConverter x:Key="AlignedIn" />
     <!-- Entrée du menu : icône et libellé côte à côte dans la barre latérale, l'un sous l'autre
          dans la colonne d'icônes. -->
     <DataTemplate x:Key="NavigationItemTemplate">
@@ -90,7 +94,7 @@
         <TextBlock Text="{Binding Label}" FontSize="12" TextAlignment="Center" TextWrapping="Wrap" Margin="0,2,0,0" />
       </StackPanel>
     </DataTemplate>
-    <!-- Barre du haut et onglets : seulement en fenêtre étroite, menu affiché. -->
+    <!-- Onglets : seulement en fenêtre étroite, menu affiché. -->
     <Style x:Key="TabsOnly" TargetType="Border">
       <Setter Property="Visibility" Value="Collapsed" />
       <Style.Triggers>
@@ -128,7 +132,134 @@
     <KeyBinding Key="D9" Modifiers="Control" Command="{Binding NavigateToPositionCommand}" CommandParameter="9" />
   </Window.InputBindings>
 
-  <Grid x:Name="Root">
+  <Grid x:Name="Frame">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="*" />
+    </Grid.RowDefinitions>
+
+    <!-- La barre de titre : le nom, la recherche, le thème, l'aide et les boutons de la fenêtre. Le reste de la barre déplace la fenêtre.
+         Elle ne suit pas le zoom : sa hauteur est celle que Windows connaît. -->
+    <Border x:Name="TitleBar" Height="40" Background="{DynamicResource Kyf.Brush.Surface}" BorderBrush="{DynamicResource Kyf.Brush.Divider}" BorderThickness="0,0,0,1">
+      <Border.Style>
+        <Style TargetType="Border">
+          <Style.Triggers>
+            <DataTrigger Binding="{Binding IsFullScreen}" Value="True">
+              <Setter Property="Visibility" Value="Collapsed" />
+            </DataTrigger>
+          </Style.Triggers>
+        </Style>
+      </Border.Style>
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto" />
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="Auto" />
+          <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+
+        <Border x:Name="AppTitle" Padding="24,0,8,0">
+          <Border.Style>
+            <Style TargetType="Border">
+              <Setter Property="Width" Value="248" />
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding Layout}" Value="Rail">
+                  <Setter Property="Width" Value="112" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Layout}" Value="Tabs">
+                  <Setter Property="Width" Value="Auto" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsActive, RelativeSource={RelativeSource AncestorType=Window}}" Value="False">
+                  <Setter Property="Opacity" Value="0.6" />
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </Border.Style>
+          <TextBlock Text="{x:Static p:ShellText.AppName}" Style="{DynamicResource Kyf.Text.BodyStrong}" VerticalAlignment="Center" />
+        </Border>
+
+        <!-- La recherche : les règles d'affichage sont sur son conteneur, et le bouton garde le style de l'application. -->
+        <Border x:Name="SearchHost" Grid.Column="1" Margin="8,4" MaxWidth="460">
+          <Border.Style>
+            <Style TargetType="Border">
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding IsWelcome}" Value="True">
+                  <Setter Property="Visibility" Value="Collapsed" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Layout}" Value="Tabs">
+                  <Setter Property="HorizontalAlignment" Value="Right" />
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </Border.Style>
+        <Button x:Name="SearchButton" Command="{Binding OpenPaletteCommand}" MinHeight="0" HorizontalContentAlignment="Stretch"
+                WindowChrome.IsHitTestVisibleInChrome="True"
+                AutomationProperties.Name="{x:Static p:ShellText.SearchPlaceholder}"
+                AutomationProperties.AcceleratorKey="Ctrl+K" ToolTip="{x:Static p:ShellText.SearchPlaceholder}">
+          <DockPanel>
+            <TextBlock DockPanel.Dock="Right" Text="Ctrl+K" Style="{DynamicResource Kyf.Text.Caption}" VerticalAlignment="Center"
+                       Visibility="{Binding Layout, Converter={StaticResource ShownIn}, ConverterParameter=Sidebar}" />
+            <kyf:Icon x:Name="SearchIcon" Text="&#xE721;" />
+            <TextBlock x:Name="SearchLabel" Text="{x:Static p:ShellText.Search}" VerticalAlignment="Center" Margin="8,0,0,0">
+              <TextBlock.Style>
+                <Style TargetType="TextBlock">
+                  <Style.Triggers>
+                    <DataTrigger Binding="{Binding Layout}" Value="Tabs">
+                      <Setter Property="Visibility" Value="Collapsed" />
+                    </DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </TextBlock.Style>
+            </TextBlock>
+          </DockPanel>
+        </Button>
+        </Border>
+
+        <StackPanel x:Name="TitleActions" Grid.Column="2" Orientation="Horizontal" Margin="0,0,4,0">
+          <StackPanel.Style>
+            <Style TargetType="StackPanel">
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding IsWelcome}" Value="True">
+                  <Setter Property="Visibility" Value="Collapsed" />
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </StackPanel.Style>
+          <Button x:Name="ThemeButton" Command="{Binding ToggleThemeCommand}" Content="{Binding ThemeGlyph}" Style="{DynamicResource Kyf.Button.Icon}" Width="36" Height="32" FontSize="14"
+                  WindowChrome.IsHitTestVisibleInChrome="True" Visibility="{Binding CanToggleTheme, Converter={StaticResource Visible}}"
+                  ToolTip="{Binding ThemeLabel}" AutomationProperties.Name="{Binding ThemeLabel}" />
+          <Button x:Name="HelpButton" Command="{Binding ShowHelpCommand}" Content="&#xE897;" Style="{DynamicResource Kyf.Button.Icon}" Width="36" Height="32" FontSize="14"
+                  WindowChrome.IsHitTestVisibleInChrome="True"
+                  ToolTip="{x:Static p:ShellText.Help}" AutomationProperties.Name="{x:Static p:ShellText.Help}" AutomationProperties.AcceleratorKey="F1" />
+        </StackPanel>
+
+        <StackPanel x:Name="WindowButtons" Grid.Column="3" Orientation="Horizontal">
+          <StackPanel.Style>
+            <Style TargetType="StackPanel">
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding IsActive, RelativeSource={RelativeSource AncestorType=Window}}" Value="False">
+                  <Setter Property="Opacity" Value="0.6" />
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </StackPanel.Style>
+          <Button x:Name="MinimizeButton" Style="{DynamicResource Kyf.Button.Window}" Click="OnMinimizeClick" WindowChrome.IsHitTestVisibleInChrome="True"
+                  ToolTip="{x:Static p:ShellText.WindowMinimize}" AutomationProperties.Name="{x:Static p:ShellText.WindowMinimize}">
+            <kyf:Icon Text="{x:Static kyf:Icons.WindowMinimize}" FontSize="10" />
+          </Button>
+          <Button x:Name="MaximizeButton" Style="{DynamicResource Kyf.Button.Window}" Click="OnMaximizeClick" WindowChrome.IsHitTestVisibleInChrome="True"
+                  ToolTip="{x:Static p:ShellText.WindowMaximize}" AutomationProperties.Name="{x:Static p:ShellText.WindowMaximize}">
+            <kyf:Icon x:Name="MaximizeIcon" Text="{x:Static kyf:Icons.WindowMaximize}" FontSize="10" />
+          </Button>
+          <Button x:Name="CloseButton" Style="{DynamicResource Kyf.Button.WindowClose}" Click="OnCloseClick" WindowChrome.IsHitTestVisibleInChrome="True"
+                  ToolTip="{x:Static p:ShellText.WindowClose}" AutomationProperties.Name="{x:Static p:ShellText.WindowClose}">
+            <kyf:Icon Text="{x:Static kyf:Icons.WindowClose}" FontSize="10" />
+          </Button>
+        </StackPanel>
+      </Grid>
+    </Border>
+
+  <Grid x:Name="Root" Grid.Row="1">
     <!-- Espace de travail, agrandi ou réduit par le zoom. Le menu suit la largeur de la fenêtre
          (ShellLayout) : barre latérale, colonne d'icônes, ou onglets en bas ; le contenu ne défile
          jamais horizontalement. -->
@@ -137,7 +268,6 @@
         <ScaleTransform ScaleX="{Binding Zoom}" ScaleY="{Binding Zoom}" />
       </Grid.LayoutTransform>
       <Grid.RowDefinitions>
-        <RowDefinition Height="Auto" />
         <RowDefinition Height="*" />
         <RowDefinition Height="Auto" />
       </Grid.RowDefinitions>
@@ -146,21 +276,8 @@
         <ColumnDefinition Width="*" />
       </Grid.ColumnDefinitions>
 
-      <!-- Fenêtre étroite : le nom, la recherche et l'aide en haut. -->
-      <Border x:Name="TopBar" Grid.ColumnSpan="2" Padding="20,8,8,0" Style="{StaticResource TabsOnly}">
-        <DockPanel>
-          <Button x:Name="CompactHelpButton" DockPanel.Dock="Right" Command="{Binding ShowHelpCommand}" Style="{DynamicResource Kyf.Button.Icon}"
-                  Content="&#xE897;" ToolTip="{x:Static p:ShellText.Help}" AutomationProperties.Name="{x:Static p:ShellText.Help}"
-                  AutomationProperties.AcceleratorKey="F1" />
-          <Button x:Name="CompactSearchButton" DockPanel.Dock="Right" Command="{Binding OpenPaletteCommand}" Style="{DynamicResource Kyf.Button.Icon}"
-                  Content="&#xE721;" ToolTip="{x:Static p:ShellText.SearchPlaceholder}" AutomationProperties.Name="{x:Static p:ShellText.SearchPlaceholder}"
-                  AutomationProperties.AcceleratorKey="Ctrl+K" />
-          <TextBlock Text="{x:Static p:ShellText.AppName}" Style="{DynamicResource Kyf.Text.Subtitle}" VerticalAlignment="Center" />
-        </DockPanel>
-      </Border>
-
       <!-- Barre latérale (fenêtre large) ou colonne d'icônes (fenêtre moyenne). -->
-      <Border x:Name="Sidebar" Grid.Row="1" Background="{DynamicResource Kyf.Brush.Surface}"
+      <Border x:Name="Sidebar" Background="{DynamicResource Kyf.Brush.Surface}"
               BorderBrush="{DynamicResource Kyf.Brush.Divider}" BorderThickness="0,0,1,0">
         <Border.Style>
           <Style TargetType="Border">
@@ -178,45 +295,21 @@
             </Style.Triggers>
           </Style>
         </Border.Style>
-        <DockPanel Margin="12,16,12,12">
-          <TextBlock DockPanel.Dock="Top" Text="{x:Static p:ShellText.AppName}" Style="{DynamicResource Kyf.Text.Subtitle}"
-                     Margin="12,0,0,16" Visibility="{Binding Layout, Converter={StaticResource ShownIn}, ConverterParameter=Sidebar}" />
-          <Button x:Name="SearchButton" DockPanel.Dock="Top" Command="{Binding OpenPaletteCommand}" Margin="0,0,0,12"
-                  HorizontalContentAlignment="{Binding Layout, Converter={StaticResource AlignedIn}, ConverterParameter=Stretch}"
-                  AutomationProperties.Name="{x:Static p:ShellText.SearchPlaceholder}"
-                  AutomationProperties.AcceleratorKey="Ctrl+K" ToolTip="{x:Static p:ShellText.SearchPlaceholder}">
-            <DockPanel>
-              <TextBlock DockPanel.Dock="Right" Text="Ctrl+K" Style="{DynamicResource Kyf.Text.Caption}" VerticalAlignment="Center"
-                         Visibility="{Binding Layout, Converter={StaticResource ShownIn}, ConverterParameter=Sidebar}" />
-              <kyf:Icon Text="&#xE721;" Margin="0,0,8,0" />
-              <TextBlock Text="{x:Static p:ShellText.Search}" VerticalAlignment="Center"
-                         Visibility="{Binding Layout, Converter={StaticResource ShownIn}, ConverterParameter=Sidebar}" />
-            </DockPanel>
-          </Button>
+        <DockPanel Margin="12,12,12,12">
           <StackPanel DockPanel.Dock="Bottom">
             <Separator Margin="0,8" />
             <ListBox x:Name="SecondaryNavigation" ItemsSource="{Binding SecondaryNavigation}" SelectedItem="{Binding SelectedSecondary}"
                      ItemTemplate="{StaticResource NavigationItemTemplate}" AutomationProperties.Name="{x:Static p:ShellText.SecondaryNavigation}" />
-            <Button x:Name="HelpButton" Command="{Binding ShowHelpCommand}" Style="{DynamicResource Kyf.Button.Subtle}"
-                    HorizontalContentAlignment="{Binding Layout, Converter={StaticResource AlignedIn}, ConverterParameter=Left}"
-                    Padding="12,0" AutomationProperties.Name="{x:Static p:ShellText.Help}"
-                    AutomationProperties.AcceleratorKey="F1" ToolTip="{x:Static p:ShellText.Help}">
-              <StackPanel Orientation="Horizontal">
-                <kyf:Icon Text="&#xE897;" Margin="0,0,12,0" />
-                <TextBlock Text="{x:Static p:ShellText.Help}" VerticalAlignment="Center"
-                           Visibility="{Binding Layout, Converter={StaticResource ShownIn}, ConverterParameter=Sidebar}" />
-              </StackPanel>
-            </Button>
           </StackPanel>
           <ListBox x:Name="MainNavigation" ItemsSource="{Binding MainNavigation}" SelectedItem="{Binding SelectedMain}"
                    ItemTemplate="{StaticResource NavigationItemTemplate}" AutomationProperties.Name="{x:Static p:ShellText.MainNavigation}" />
         </DockPanel>
       </Border>
 
-      <ContentControl x:Name="Page" Grid.Row="1" Grid.Column="1" Content="{Binding Current.Page}" Focusable="False" IsTabStop="False" />
+      <ContentControl x:Name="Page" Grid.Column="1" Content="{Binding Current.Page}" Focusable="False" IsTabStop="False" />
 
       <!-- Fenêtre étroite : les premières vues en onglets, les autres sous « Plus ». -->
-      <Border x:Name="TabBar" Grid.Row="2" Grid.ColumnSpan="2" Padding="8,6,8,8" Style="{StaticResource TabsOnly}"
+      <Border x:Name="TabBar" Grid.Row="1" Grid.ColumnSpan="2" Padding="8,6,8,8" Style="{StaticResource TabsOnly}"
               Background="{DynamicResource Kyf.Brush.Surface}" BorderBrush="{DynamicResource Kyf.Brush.Divider}" BorderThickness="0,1,0,0">
         <Grid>
           <Grid.ColumnDefinitions>
@@ -330,5 +423,6 @@
         </Border>
       </Grid>
     </Grid>
+  </Grid>
   </Grid>
 </Window>
