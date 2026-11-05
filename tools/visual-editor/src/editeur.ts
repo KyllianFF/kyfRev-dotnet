@@ -102,7 +102,7 @@ export type EtatOutils = {
   canRedo: boolean;
 };
 
-export type Dessin = { svg: string | null; image: string | null };
+export type Dessin = { svg: string | null; image: string | null; editable: boolean };
 
 export type Formule = { position: number | null; tex: string; block: boolean };
 
@@ -508,9 +508,6 @@ function dessinSous(vue: EditorView, cible: EventTarget | null): DessinVise | nu
 /** Un bloc qui se dessine : son code ne se montre que si l'on y entre. */
 const seDessine = (langage: string) => /^(smartart\s|mermaid\s*$|reseau\s*$)/.test(langage);
 
-/** Ce bloc se rouvre dans un éditeur de l'application, et pas seulement dans son code. */
-const seModifie = (langage: string, code: string) => /^(smartart|reseau)/.test(langage) || code.startsWith("%% kyfrev ");
-
 /** Le dessin suit la frappe, sans la gêner. */
 const DELAI_DESSIN = 250;
 
@@ -596,9 +593,9 @@ class VueCode implements NodeView {
       return bouton;
     };
     const langage = this.noeud.attrs.language as string;
-    // Un schéma Mermaid ne se rouvre que s'il vient de l'éditeur : son premier commentaire le dit.
+    // L'hôte dit avec le dessin si le bloc se rouvre dans un éditeur.
     this.boutonModifier = action("Modifier…", modifier);
-    this.boutonModifier.hidden = !seModifie(langage, this.noeud.textContent);
+    this.boutonModifier.hidden = true;
     this.entete.append(this.boutonModifier);
     if (!/^smartart/.test(langage)) document.addEventListener("theme", this.suivreTheme);
     this.entete.append(
@@ -627,8 +624,9 @@ class VueCode implements NodeView {
   }
 
   /** Le dessin ; s'il n'y en a pas, c'est le code qui se lit. */
-  private montrerDessin({ svg, image }: Dessin): void {
+  private montrerDessin({ svg, image, editable }: Dessin): void {
     if (!this.apercu) return;
+    if (this.boutonModifier) this.boutonModifier.hidden = !editable;
     this.dom.classList.toggle("dessin-impossible", !svg && !image);
     if (image) {
       const dessin = document.createElement("img");
@@ -657,7 +655,6 @@ class VueCode implements NodeView {
     const change = noeud.textContent !== this.noeud.textContent;
     this.noeud = noeud;
     this.marquerEdition(decorations);
-    if (change && this.boutonModifier) this.boutonModifier.hidden = !seModifie(noeud.attrs.language as string, noeud.textContent);
     if (change && this.apercu) this.demanderDessin();
     return true;
   }

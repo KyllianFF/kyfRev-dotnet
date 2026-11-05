@@ -725,6 +725,8 @@ public sealed class VisualEditorTests
     public void A_schema_of_the_gallery_opens_again_and_the_same_one_retouched_stays_in_its_code()
     {
         using var scene = new Scene("Avant\n");
+        using var engine = new MermaidEngine(FakeEnvironment.WebData);
+        scene.Window.Resources[MermaidEngine.ResourceKey] = engine;
         UiThread.Until(() => scene.Shown.Contains("Avant", StringComparison.Ordinal));
         scene.Editor.OpenGalleryCommand.Execute(GalleryKind.Schema);
         scene.Editor.AnswerGalleryCommand.Execute(true);
@@ -732,7 +734,7 @@ public sealed class VisualEditorTests
         scene.Editor.AnswerDiagramEditorCommand.Execute(true);
 
         UiThread.Until(() => scene.OnDisk.Contains("```mermaid\n%% kyfrev etapes\n%% Début\n%% Fin\nflowchart LR\n", StringComparison.Ordinal));
-        UiThread.Until(() => scene.Script("document.querySelectorAll('.apercu-dessin svg').length") == "1" || scene.Script("document.querySelectorAll('.apercu-dessin img').length") == "1", TimeSpan.FromSeconds(25));
+        UiThread.Until(() => scene.Script("document.querySelectorAll('.apercu-dessin img').length") == "1", TimeSpan.FromSeconds(25));
         Assert.AreEqual("false", scene.Script("[...document.querySelectorAll('.action-dessin')].find((b) => b.textContent === 'Modifier…').hidden"));
 
         scene.Script("[...document.querySelectorAll('.action-dessin')].find((b) => b.textContent === 'Modifier…').click()");
@@ -747,8 +749,11 @@ public sealed class VisualEditorTests
 
         // Retouché à la main, il ne se rouvre plus dans l'éditeur : son code serait écrasé.
         var retouched = KyfRev.Rendering.Diagrams.MermaidTemplates.Source("etapes", "A\nB")!.Value.Code + "\n    n1 --> n0";
-        using var hand = new Scene($"```mermaid\n{retouched}\n```\n");
-        UiThread.Until(() => hand.Script("document.querySelectorAll('.bloc-dessin').length") == "1");
+        using var hand = new Scene($"Début\n\n```mermaid\n{retouched}\n```\n");
+        hand.Window.Resources[MermaidEngine.ResourceKey] = engine;
+        hand.Script("document.dispatchEvent(new Event('theme'))");
+        UiThread.Until(() => hand.Script("document.querySelectorAll('.apercu-dessin img').length") == "1", TimeSpan.FromSeconds(25));
+        Assert.AreEqual("\"none\"", hand.Script("getComputedStyle(document.querySelector('.bloc-dessin pre')).display"), "Dessiné, son code ne se voit pas encore.");
         Assert.AreEqual("true", hand.Script("[...document.querySelectorAll('.action-dessin')].find((b) => b.textContent === 'Modifier…').hidden"));
         var items = hand.Visual!.MenuItems(new MenuEvent(null, 0, false, false, false, false, 0, "mermaid", retouched), null).OfType<MenuItem>().Select(item => (string)item.Header).ToList();
         CollectionAssert.DoesNotContain(items, EditingText.EditDrawing);

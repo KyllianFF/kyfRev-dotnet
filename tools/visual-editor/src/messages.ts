@@ -31,7 +31,7 @@ export type VersEditeur =
   | { kind: "clipboard"; action: string }
   | { kind: "listOpen"; open: boolean }
   | { kind: "insertDiagram"; language: string; code: string; position: number | null }
-  | { kind: "diagram"; language: string; code: string; svg: string | null; image: string | null }
+  | { kind: "diagram"; language: string; code: string; svg: string | null; image: string | null; editable: boolean }
   | { kind: "deleteBlock"; position: number }
   | { kind: "showBlockCode"; position: number };
 

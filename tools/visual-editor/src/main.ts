@@ -147,7 +147,7 @@ function traiter(message: VersEditeur): void {
       break;
     case "diagram": {
       const cle = cleDessin(message.language, message.code);
-      dessins.get(cle)?.repondre({ svg: message.svg, image: message.image });
+      dessins.get(cle)?.repondre({ svg: message.svg, image: message.image, editable: message.editable });
       dessins.delete(cle);
       break;
     }
