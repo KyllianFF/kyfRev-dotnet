@@ -130,7 +130,31 @@
     <value>{0} fichier(s), {1}.</value>
   </data>
   <data name="ExtensionLimitsWriting" xml:space="preserve">
-    <value>Elle ne pourra ni accéder à Internet, ni supprimer de fiche.</value>
+    <value>Elle ne pourra ni accéder à Internet, ni supprimer de fiche. Le texte qu'elle remplace reste dans les versions de la fiche, et chacune de ses écritures est notée sous la liste des extensions.</value>
+  </data>
+  <data name="ExtensionJournalTitle" xml:space="preserve">
+    <value>Ce que les extensions ont écrit</value>
+  </data>
+  <data name="ExtensionJournalHelp" xml:space="preserve">
+    <value>Dans ce coffre, du plus récent au plus ancien. Un texte remplacé se remet depuis l'éditeur de la fiche, par « Versions ».</value>
+  </data>
+  <data name="ExtensionJournalCreated" xml:space="preserve">
+    <value>« {0} » : fiche créée</value>
+  </data>
+  <data name="ExtensionJournalCreatedIn" xml:space="preserve">
+    <value>« {0} » : fiche créée dans {1}</value>
+  </data>
+  <data name="ExtensionJournalTagged" xml:space="preserve">
+    <value>« {0} » : étiquettes changées ({1})</value>
+  </data>
+  <data name="ExtensionJournalUntagged" xml:space="preserve">
+    <value>« {0} » : étiquettes retirées</value>
+  </data>
+  <data name="ExtensionJournalWritten" xml:space="preserve">
+    <value>« {0} » : texte remplacé ({1}) ; l'ancien est dans ses versions</value>
+  </data>
+  <data name="ExtensionJournalWhen" xml:space="preserve">
+    <value>{0}, le {1:d MMMM yyyy} à {1:HH:mm}</value>
   </data>
   <data name="ExtensionAddsTitle" xml:space="preserve">
     <value>Elle ajoute</value>

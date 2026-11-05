@@ -161,8 +161,32 @@ public static class ModulesSettingsText
     /// <summary>« {0} fichier(s), {1}. ».</summary>
     public static string ExtensionFilesOf(int count, string size) => Format("ExtensionFiles", count, size);
 
-    /// <summary>« Elle ne pourra ni accéder à Internet, ni supprimer de fiche. ».</summary>
+    /// <summary>« Elle ne pourra ni accéder à Internet, ni supprimer de fiche… ».</summary>
     public static string ExtensionLimitsWriting => Text(nameof(ExtensionLimitsWriting));
+
+    /// <summary>« Ce que les extensions ont écrit ».</summary>
+    public static string ExtensionJournalTitle => Text(nameof(ExtensionJournalTitle));
+
+    /// <summary>« Dans ce coffre, du plus récent au plus ancien… ».</summary>
+    public static string ExtensionJournalHelp => Text(nameof(ExtensionJournalHelp));
+
+    /// <summary>« « {0} » : fiche créée ».</summary>
+    public static string ExtensionJournalCreatedOf(string title) => Format("ExtensionJournalCreated", title);
+
+    /// <summary>« « {0} » : fiche créée dans {1} ».</summary>
+    public static string ExtensionJournalCreatedInOf(string title, string folder) => Format("ExtensionJournalCreatedIn", title, folder);
+
+    /// <summary>« « {0} » : étiquettes changées ({1}) ».</summary>
+    public static string ExtensionJournalTaggedOf(string title, string tags) => Format("ExtensionJournalTagged", title, tags);
+
+    /// <summary>« « {0} » : étiquettes retirées ».</summary>
+    public static string ExtensionJournalUntaggedOf(string title) => Format("ExtensionJournalUntagged", title);
+
+    /// <summary>« « {0} » : texte remplacé ({1}) ; l'ancien est dans ses versions ».</summary>
+    public static string ExtensionJournalWrittenOf(string title, string detail) => Format("ExtensionJournalWritten", title, detail);
+
+    /// <summary>« {0}, le {1:d MMMM yyyy} à {1:HH:mm} ».</summary>
+    public static string ExtensionJournalWhenOf(string extension, DateTime at) => Format("ExtensionJournalWhen", extension, at);
 
     /// <summary>« Elle ajoute ».</summary>
     public static string ExtensionAddsTitle => Text(nameof(ExtensionAddsTitle));

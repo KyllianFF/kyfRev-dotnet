@@ -40,6 +40,16 @@ interface KyfrevTexteFiche {
   readonly texte: string;
 }
 
+/** Une fiche à créer : tout est facultatif, sauf son titre, donné à part. */
+interface KyfrevNouvelleFiche {
+  /** Son dossier, relatif au dossier des fiches ; vide ou absent : la racine. */
+  dossier?: string;
+  /** Son texte Markdown ; absent : une fiche vide. */
+  texte?: string;
+  /** Ses étiquettes, sans « # » (50 au plus). */
+  etiquettes?: readonly string[];
+}
+
 /** L'encart sur « Aujourd'hui » : un texte court, et un détail facultatif (300 caractères au plus chacun). */
 interface KyfrevEncart {
   texte: string;
@@ -88,6 +98,19 @@ interface Kyfrev {
     lister(): Promise<KyfrevFiche[]>;
     /** Le texte d'une fiche (permission « fiches:lecture »). */
     lire(id: string): Promise<KyfrevTexteFiche>;
+    /**
+     * Crée une fiche, et rend son identifiant (permission « fiches:creation »). Le titre fait 200 caractères au plus, le texte
+     * 1 Mo. La création est notée au journal de l'extension, que l'utilisateur voit dans les Paramètres.
+     */
+    creer(titre: string, fiche?: KyfrevNouvelleFiche): Promise<string>;
+    /** Remplace les étiquettes d'une fiche, et rend celles enregistrées : sans « # », sans doublon (permission « fiches:creation »). */
+    etiqueter(id: string, etiquettes: readonly string[]): Promise<string[]>;
+    /**
+     * Remplace le texte Markdown d'une fiche, son en-tête gardé (permission « fiches:ecriture »). Le texte d'avant reste dans les
+     * versions de la fiche, d'où l'utilisateur peut le remettre ; l'écriture est notée au journal de l'extension. Aucune
+     * extension ne peut supprimer une fiche. Au plus 60 écritures par minute, créations et étiquettes comprises.
+     */
+    ecrire(id: string, texte: string): Promise<null>;
   };
 
   readonly stockage: {

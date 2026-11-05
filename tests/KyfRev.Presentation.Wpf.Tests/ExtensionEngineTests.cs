@@ -116,6 +116,39 @@ public sealed class ExtensionEngineTests
     }
 
     [EngineTest]
+    public void An_extension_creates_tags_and_writes_sheets_through_the_host()
+    {
+        using var scene = new Scene();
+        var source = Path.Combine(Path.GetTempPath(), "kyfrev-ecrivain-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(source);
+        try
+        {
+            File.WriteAllText(Path.Combine(source, ExtensionManifest.FileName), """
+                {"api":2,"id":"ecrivain","nom":"Écrivain","version":"1","permissions":["fiches:creation","fiches:ecriture"],"vue":{"titre":"Écrivain"}}
+                """);
+            File.WriteAllText(Path.Combine(source, "extension.js"), """
+                kyfrev.vue(async () => {
+                  const id = await kyfrev.fiches.creer("Nouvelle", { dossier: "Cours", texte: "Bonjour", etiquettes: ["a", "b"] });
+                  const etiquettes = await kyfrev.fiches.etiqueter(id, ["c"]);
+                  const ecrit = await kyfrev.fiches.ecrire(id, "Au revoir");
+                  let supprimer = "absent";
+                  try { kyfrev.fiches.supprimer(id); supprimer = "présent"; } catch { }
+                  return `<p>${id} ${etiquettes.join(",")} ${ecrit} ${supprimer}</p>`;
+                });
+                """);
+            Assert.IsTrue(scene.Library.Install(source).Succeeded);
+            using var ui = new UiThread();
+
+            Assert.AreEqual("f_2 c null absent", TextOf(scene, "ecrivain"));
+            Assert.AreEqual("creer Nouvelle Cours Bonjour a,b | etiqueter f_2 c | ecrire f_2 Au revoir", string.Join(" | ", scene.Data.Writes));
+        }
+        finally
+        {
+            Directory.Delete(source, recursive: true);
+        }
+    }
+
+    [EngineTest]
     public void An_extension_reaches_no_network()
     {
         // De vrais écouteurs sur cette machine : ce qui sortirait du cadre arriverait ici, quelle que soit la raison qui l'a laissé passer.
@@ -640,5 +673,31 @@ public sealed class ExtensionEngineTests
             Stored = json;
             return Task.FromResult(Outcome.Done());
         }
+
+        public List<string> Writes { get; } = [];
+
+        public Task<Outcome<string>> CreateSheetAsync(string extension, ExtensionNewSheet sheet)
+        {
+            Calls++;
+            Writes.Add($"creer {sheet.Title} {sheet.Folder} {sheet.Text} {string.Join(",", sheet.Tags)}");
+            return Task.FromResult(Outcome.Of("f_2"));
+        }
+
+        public Task<Outcome<IReadOnlyList<string>>> SetTagsAsync(string extension, string id, IReadOnlyList<string> tags)
+        {
+            Calls++;
+            Writes.Add($"etiqueter {id} {string.Join(",", tags)}");
+            return Task.FromResult(Outcome.Of(tags));
+        }
+
+        public Task<Outcome<Done>> WriteSheetAsync(string extension, string id, string text)
+        {
+            Calls++;
+            Writes.Add($"ecrire {id} {text}");
+            return Task.FromResult(Outcome.Done());
+        }
+
+        public Task<Outcome<IReadOnlyList<ExtensionJournalEntry>>> JournalAsync(string extension) =>
+            Task.FromResult(Outcome.Of<IReadOnlyList<ExtensionJournalEntry>>([]));
     }
 }

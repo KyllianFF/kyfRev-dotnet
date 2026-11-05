@@ -16,7 +16,7 @@ public sealed partial class ExtensionTypesTests
         var described = types[types.IndexOf("interface Kyfrev {", StringComparison.Ordinal)..types.IndexOf("declare const kyfrev", StringComparison.Ordinal)];
 
         Assert.AreEqual(
-            "action bloc commande compteur encart fiches fiches.lire fiches.lister ouvrirVue rafraichir stockage stockage.ecrire stockage.lire vue",
+            "action bloc commande compteur encart fiches fiches.creer fiches.ecrire fiches.etiqueter fiches.lire fiches.lister ouvrirVue rafraichir stockage stockage.ecrire stockage.lire vue",
             Members(given, indent: 4));
         Assert.AreEqual(Members(given, indent: 4), Members(described, indent: 2));
     }

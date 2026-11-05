@@ -107,6 +107,20 @@
               </DataTemplate>
             </ItemsControl.ItemTemplate>
           </ItemsControl>
+          <StackPanel x:Name="ExtensionJournal" Margin="0,12,0,0" Visibility="{Binding HasJournal, Converter={StaticResource Visible}}">
+            <TextBlock Text="{x:Static pages:ModulesSettingsText.ExtensionJournalTitle}" Style="{DynamicResource Kyf.Text.BodyStrong}" TextWrapping="Wrap" AutomationProperties.HeadingLevel="Level3" />
+            <TextBlock Text="{x:Static pages:ModulesSettingsText.ExtensionJournalHelp}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,2,0,4" />
+            <ItemsControl x:Name="ExtensionJournalList" ItemsSource="{Binding Journal}" Focusable="False" AutomationProperties.Name="{x:Static pages:ModulesSettingsText.ExtensionJournalTitle}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate DataType="{x:Type pages:ExtensionJournalRow}">
+                  <StackPanel Margin="0,6,0,0" AutomationProperties.Name="{Binding Spoken}">
+                    <TextBlock Text="{Binding Text}" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding When}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" />
+                  </StackPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
         </StackPanel>
       </kyf:Card>
     </StackPanel>

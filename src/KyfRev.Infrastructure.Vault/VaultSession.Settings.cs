@@ -12,6 +12,12 @@ public sealed partial class VaultSession
     /// <summary>Taille maximale des données d'une extension : 1 Mo.</summary>
     public const int MaxExtensionDataBytes = 1024 * 1024;
 
+    /// <summary>Lignes gardées dans le journal d'une extension : les plus anciennes partent au-delà.</summary>
+    public const int MaxJournalLines = 1000;
+
+    /// <summary>Taille maximale d'une ligne du journal d'une extension : 4 Ko.</summary>
+    public const int MaxJournalLineBytes = 4096;
+
     private static readonly VaultPath SettingsPath = VaultPath.Parse(VaultLayout.SettingsFile);
 
     /// <summary>
@@ -134,6 +140,50 @@ public sealed partial class VaultSession
         {
             return false;
         }
+    }
+
+    /// <summary>Le journal de ce qu'une extension a écrit dans le coffre : une ligne JSON par écriture ; rien s'il est vide.</summary>
+    public string? ExtensionJournal(string id)
+    {
+        var path = Confine(ExtensionJournalPath(id));
+        if (!File.Exists(path))
+        {
+            return null;
+        }
+        var bytes = ReadAllBytes(path);
+        return TryDecode(bytes, out var text) ? text : throw VaultException.Io(path, new InvalidDataException("fichier non encodé en UTF-8"));
+    }
+
+    /// <summary>Ajoute une ligne au journal d'une extension : du JSON sur une ligne. Les plus anciennes partent au-delà de mille.</summary>
+    public void AppendExtensionJournal(string id, string line)
+    {
+        ArgumentNullException.ThrowIfNull(line);
+        if (line.Contains('\n', StringComparison.Ordinal) || Encoding.UTF8.GetByteCount(line) > MaxJournalLineBytes)
+        {
+            throw VaultException.InvalidSettings("ligne de journal sur plusieurs lignes, ou de plus de 4 Ko");
+        }
+        try
+        {
+            using var document = JsonDocument.Parse(line);
+        }
+        catch (JsonException exception)
+        {
+            throw VaultException.InvalidSettings($"ligne de journal illisible : {exception.Message}");
+        }
+        var lines = (ExtensionJournal(id) ?? string.Empty).Split('\n', StringSplitOptions.RemoveEmptyEntries).ToList();
+        lines.Add(line);
+        var kept = lines.Skip(Math.Max(0, lines.Count - MaxJournalLines));
+        var absolute = Confine(ExtensionJournalPath(id));
+        CreateDirectory(Path.GetDirectoryName(absolute)!);
+        ReplaceFile(absolute, Encoding.UTF8.GetBytes(string.Join('\n', kept) + "\n"));
+    }
+
+    private static VaultPath ExtensionJournalPath(string id)
+    {
+        ArgumentNullException.ThrowIfNull(id);
+        return VaultIds.IsExtensionId(id)
+            ? VaultPath.Create($"{VaultLayout.ExtensionJournals}/{id}.jsonl")
+            : throw VaultException.InvalidPath(id, "identifiant d'extension invalide");
     }
 
     private static VaultPath ExtensionDataPath(string id)

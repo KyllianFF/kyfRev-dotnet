@@ -35,6 +35,11 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 - Extensions : leurs blocs se dessinent dans les fiches, en lecture, en révision et dans l'aperçu, en éléments natifs comme leurs
   vues ; un bouton d'un bloc passe par l'extension, puis le bloc se redessine. Dans l'éditeur, le bloc s'affiche en image, et son
   langage se choisit dans la liste. Une extension qui ne répond pas laisse le bloc lisible, sous sa forme de texte, avec la raison.
+- Extensions : avec la permission « fiches:creation », une extension crée des fiches (titre, dossier, texte, étiquettes) et change
+  leurs étiquettes ; avec « fiches:ecriture », elle remplace leur texte, l'en-tête gardé. Aucune ne peut supprimer une fiche.
+  Chaque texte remplacé reste dans les versions de la fiche, d'où il se remet, et chaque écriture est notée au journal de
+  l'extension, dans le coffre : la carte « Extensions » montre les trente dernières. Une extension écrit au plus soixante fois
+  par minute.
 - Schéma réseau : le switch de cœur et le switch de distribution rejoignent la bibliothèque, avec leur icône.
 - Écrire : tous les dessins passent par le même éditeur, après le choix du modèle dans la galerie : les SmartArt en liste, la carte
   mentale sur plusieurs niveaux, les schémas Mermaid en liste, les graphiques en tableau de valeurs. Tout dessin inséré depuis la
