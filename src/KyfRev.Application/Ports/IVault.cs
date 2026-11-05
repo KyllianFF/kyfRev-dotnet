@@ -25,7 +25,8 @@ public interface IVault :
     IExporter,
     ITemplateStore,
     IQuoteStore,
-    ISchemaStore
+    ISchemaStore,
+    IExtensionDataStore
 {
     /// <summary>Dossier du coffre.</summary>
     string Root { get; }
@@ -275,6 +276,16 @@ public interface ITemplateStore
 
     /// <summary>Enregistre le corps d'une fiche comme modèle du coffre ; rend le nom retenu.</summary>
     string SaveAsTemplate(string id, string name);
+}
+
+/// <summary>Données des extensions dans le coffre : le coffre ne connaît pas leur contenu.</summary>
+public interface IExtensionDataStore
+{
+    /// <summary>Les données d'une extension, en JSON ; rien si elle n'en a pas.</summary>
+    string? ExtensionData(string id);
+
+    /// <summary>Remplace les données d'une extension : du JSON valide, 1 Mo au plus.</summary>
+    void SaveExtensionData(string id, string json);
 }
 
 /// <summary>Schémas réseau du coffre (module Schémas réseau) : le coffre ne connaît pas leur modèle.</summary>

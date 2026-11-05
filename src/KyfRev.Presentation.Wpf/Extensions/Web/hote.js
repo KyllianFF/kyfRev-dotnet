@@ -8,6 +8,52 @@
   const versHote = (message) => window.chrome.webview.postMessage(message);
   const texteOuRien = (valeur) => (typeof valeur === "string" ? valeur : null);
 
+  const TAILLE_MAX = 2 * 1024 * 1024;
+  const ELEMENTS_MAX = 20000;
+  const PROFONDEUR_MAX = 64;
+  const ATTRIBUTS = ["type", "value", "placeholder", "checked", "selected", "disabled", "open", "aria-label", "hidden"];
+
+  /**
+   * Fait un arbre du HTML d'une extension. DOMParser n'exécute rien et ne charge rien : le document qu'il rend n'a pas de fenêtre.
+   * L'application garde ensuite de cet arbre ce que dit sa liste blanche : ce HTML n'entre jamais dans aucune page.
+   */
+  function lire(html) {
+    if (html.length > TAILLE_MAX) throw new Error("rendu trop volumineux");
+    let elements = 0;
+    const noeud = (source, profondeur) => {
+      if (source.nodeType === Node.TEXT_NODE) return { texte: source.data };
+      if (source.nodeType !== Node.ELEMENT_NODE) return null;
+      elements += 1;
+      if (elements > ELEMENTS_MAX || profondeur > PROFONDEUR_MAX) throw new Error("rendu trop volumineux");
+      const attributs = {};
+      for (const nom of ATTRIBUTS) {
+        if (source.hasAttribute(nom)) attributs[nom] = source.getAttribute(nom);
+      }
+      return {
+        balise: source.localName,
+        classes: [...source.classList],
+        donnees: source.dataset ? { ...source.dataset } : {},
+        attributs,
+        alt: source.getAttribute("alt"),
+        enfants: enfants(source, profondeur + 1),
+      };
+    };
+    const enfants = (source, profondeur) => [...source.childNodes].map((n) => noeud(n, profondeur)).filter(Boolean);
+    return enfants(new DOMParser().parseFromString(html, "text/html").body, 0);
+  }
+
+  function resultat(id, message) {
+    const reponse = { kind: "resultat", id, n: message.n, ok: message.ok === true, erreur: texteOuRien(message.erreur), contenu: null };
+    if (typeof message.html === "string") {
+      try {
+        reponse.contenu = lire(message.html);
+      } catch (erreur) {
+        reponse.erreur = erreur.message;
+      }
+    }
+    versHote(reponse);
+  }
+
   function creer(id, url) {
     const cadre = document.createElement("iframe");
     cadre.setAttribute("sandbox", "allow-scripts");
@@ -45,9 +91,7 @@
         versHote({ kind: "erreur", id, erreur: texteOuRien(message.erreur) });
         break;
       case "resultat":
-        if (Number.isInteger(message.n)) {
-          versHote({ kind: "resultat", id, n: message.n, html: texteOuRien(message.html), ok: message.ok === true, erreur: texteOuRien(message.erreur) });
-        }
+        if (Number.isInteger(message.n)) resultat(id, message);
         break;
       case "requete":
         if (Number.isInteger(message.n) && typeof message.methode === "string") {

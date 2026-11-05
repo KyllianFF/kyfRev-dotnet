@@ -46,7 +46,10 @@
     <value>Extensions</value>
   </data>
   <data name="ExtensionsNotShownYet" xml:space="preserve">
-    <value>Leurs blocs et leurs vues ne s'affichent pas encore dans cette version.</value>
+    <value>Leurs blocs ne s'affichent pas encore dans les fiches.</value>
+  </data>
+  <data name="ExtensionDetails" xml:space="preserve">
+    <value>Détails</value>
   </data>
   <data name="ExtensionsNone" xml:space="preserve">
     <value>Aucune extension installée.</value>

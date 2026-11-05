@@ -26,15 +26,15 @@ public sealed class ExtensionEngineTests
 
         var block = Wait(scene.Engine.RenderBlockAsync("quiz", "quiz", "Q: Combien d'ordres ?\nR: Trois", dark: false));
         Assert.IsTrue(block.Succeeded, block.Error);
-        StringAssert.Contains(block.Html, "Quiz · 1 question", StringComparison.Ordinal);
-        StringAssert.Contains(block.Html, "Trois", StringComparison.Ordinal);
+        StringAssert.Contains(block.Content!.Text, "Quiz · 1 question", StringComparison.Ordinal);
+        StringAssert.Contains(block.Content!.Text, "Trois", StringComparison.Ordinal);
 
         var view = Wait(scene.Engine.RenderViewAsync("quiz", dark: false));
         Assert.IsTrue(view.Succeeded, view.Error);
-        StringAssert.Contains(view.Html, "Qui convoque", StringComparison.Ordinal);
+        StringAssert.Contains(view.Content!.Text, "Qui convoque", StringComparison.Ordinal);
 
         Assert.IsTrue(Wait(scene.Engine.ActAsync("quiz", "afficher", null, new Dictionary<string, string>())).Succeeded);
-        StringAssert.Contains(Wait(scene.Engine.RenderViewAsync("quiz", dark: false)).Html, "Louis XVI", StringComparison.Ordinal);
+        StringAssert.Contains(TextOf(scene, "quiz"), "Louis XVI", StringComparison.Ordinal);
 
         Assert.IsTrue(Wait(scene.Engine.ActAsync("quiz", "resultat", "su", new Dictionary<string, string> { ["valeur"] = "su" })).Succeeded);
         Assert.IsNotNull(scene.Data.Stored, "Le score passe par l'hôte, qui l'écrit dans le coffre.");
@@ -49,10 +49,10 @@ public sealed class ExtensionEngineTests
         using var ui = new UiThread();
 
         var block = Wait(scene.Engine.RenderBlockAsync("chronologie", "chronologie", "1789 : Prise de la Bastille", dark: true));
-        StringAssert.Contains(block.Html, "Prise de la Bastille", StringComparison.Ordinal);
+        StringAssert.Contains(block.Content!.Text, "Prise de la Bastille", StringComparison.Ordinal);
 
-        var html = Wait(scene.Engine.RenderViewAsync("chronologie", dark: false)).Html!;
-        Assert.IsLessThan(html.IndexOf("Proclamation", StringComparison.Ordinal), html.IndexOf("Bastille", StringComparison.Ordinal), "De la plus ancienne à la plus récente.");
+        var text = TextOf(scene, "chronologie");
+        Assert.IsLessThan(text.IndexOf("Proclamation", StringComparison.Ordinal), text.IndexOf("Bastille", StringComparison.Ordinal), "De la plus ancienne à la plus récente.");
     }
 
     [EngineTest]
@@ -63,11 +63,11 @@ public sealed class ExtensionEngineTests
         scene.Data.Text = "```vocabulaire\nthe cat = le chat\n```\n";
         using var ui = new UiThread();
 
-        StringAssert.Contains(Wait(scene.Engine.RenderBlockAsync("vocabulaire", "vocabulaire", "the cat = le chat", dark: false)).Html, "<details>", StringComparison.Ordinal);
-        StringAssert.Contains(Wait(scene.Engine.RenderViewAsync("vocabulaire", dark: false)).Html, "the cat", StringComparison.Ordinal);
+        Assert.IsTrue(Wait(scene.Engine.RenderBlockAsync("vocabulaire", "vocabulaire", "the cat = le chat", dark: false)).Content!.Descendants().Any(node => node.Tag == "details"));
+        StringAssert.Contains(TextOf(scene, "vocabulaire"), "the cat", StringComparison.Ordinal);
 
         Wait(scene.Engine.ActAsync("vocabulaire", "afficher", null, new Dictionary<string, string>()));
-        StringAssert.Contains(Wait(scene.Engine.RenderViewAsync("vocabulaire", dark: false)).Html, "le chat", StringComparison.Ordinal);
+        StringAssert.Contains(TextOf(scene, "vocabulaire"), "le chat", StringComparison.Ordinal);
 
         Assert.IsTrue(Wait(scene.Engine.ActAsync("vocabulaire", "resultat", "su", new Dictionary<string, string>())).Succeeded);
         StringAssert.Contains(scene.Data.Stored, "the cat", StringComparison.Ordinal);
@@ -83,14 +83,14 @@ public sealed class ExtensionEngineTests
 
         var view = Wait(scene.Engine.RenderViewAsync("bilan", dark: false));
         Assert.IsTrue(view.Succeeded, view.Error);
-        StringAssert.Contains(view.Html, "<h1>Bilan du coffre</h1>", StringComparison.Ordinal);
-        StringAssert.Contains(view.Html, "1 fiche(s) active(s)", StringComparison.Ordinal);
-        StringAssert.Contains(view.Html, "data-action=\"recalculer\"", StringComparison.Ordinal);
+        Assert.AreEqual("Bilan du coffre", view.Content!.Descendants().First(node => node.Tag == "h1").AllText);
+        StringAssert.Contains(view.Content!.Text, "1 fiche(s) active(s)", StringComparison.Ordinal);
+        Assert.IsTrue(view.Content!.Descendants().Any(node => node.Action == "recalculer"));
 
         scene.Data.Text = "Un texte de quelques mots, avec beaucoup plus de mots encore.";
-        StringAssert.Contains(Wait(scene.Engine.RenderViewAsync("bilan", dark: false)).Html, "5 mots", StringComparison.Ordinal);
+        StringAssert.Contains(TextOf(scene, "bilan"), "5 mots", StringComparison.Ordinal);
         Assert.IsTrue(Wait(scene.Engine.ActAsync("bilan", "recalculer", null, new Dictionary<string, string>())).Succeeded);
-        StringAssert.Contains(Wait(scene.Engine.RenderViewAsync("bilan", dark: false)).Html, "11 mots", StringComparison.Ordinal);
+        StringAssert.Contains(TextOf(scene, "bilan"), "11 mots", StringComparison.Ordinal);
     }
 
     [EngineTest]
@@ -108,7 +108,7 @@ public sealed class ExtensionEngineTests
             """);
         using var ui = new UiThread();
 
-        var html = Wait(scene.Engine.RenderViewAsync("sans-droit", dark: false)).Html!;
+        var html = TextOf(scene, "sans-droit");
 
         StringAssert.Contains(html, "permission « fiches:lecture »", StringComparison.Ordinal);
         StringAssert.Contains(html, "permission « stockage »", StringComparison.Ordinal);
@@ -166,7 +166,7 @@ public sealed class ExtensionEngineTests
         Assert.IsTrue(answer.Succeeded, answer.Error);
         foreach (var tried in new[] { "fetch", "xhr", "image", "prise", "script", "eval", "worker", "liaison", "liaison-interne" })
         {
-            StringAssert.Contains(answer.Html, $"{tried}: bloque", StringComparison.Ordinal);
+            StringAssert.Contains(answer.Content!.Text, $"{tried}: bloque", StringComparison.Ordinal);
         }
         Assert.IsFalse(tcp.Pending(), "Une connexion est sortie du cadre.");
         Assert.AreEqual(0, udp.Available, "Un paquet est sorti du cadre.");
@@ -191,7 +191,86 @@ public sealed class ExtensionEngineTests
         Wait(scene.Engine.RenderViewAsync("depart", dark: false));
 
         scene.Engine.Patience = TimeSpan.FromSeconds(30);
-        Assert.AreEqual("encore la", Wait(scene.Engine.RenderViewAsync("depart", dark: false)).Html);
+        Assert.AreEqual("encore la", TextOf(scene, "depart"));
+    }
+
+    [EngineTest]
+    public void What_an_extension_draws_goes_through_the_white_list_and_loads_nothing()
+    {
+        using var tcp = new TcpListener(IPAddress.Loopback, 0);
+        tcp.Start();
+        var address = $"http://127.0.0.1:{((IPEndPoint)tcp.LocalEndpoint).Port}";
+        using var scene = new Scene();
+        scene.Install("hostile", $$"""
+            kyfrev.vue(() => `
+              <h1 onclick="fuite()" style="position:fixed;inset:0;z-index:9999">Faux dialogue</h1>
+              <script>window.piege = 1;</script>
+              <style>body { display: none; }</style>
+              <img src="{{address}}/image.png?secret=1" alt="le texte de l'image" onerror="fuite()">
+              <a href="{{address}}/lien?secret=1" data-externe="{{address}}/externe?secret=1" target="_blank">un lien</a>
+              <iframe src="{{address}}/cadre" srcdoc="<script>fuite()</script>">secret du cadre</iframe>
+              <form action="{{address}}/formulaire"><input type="password" name="mot"><input type="file"><input type="hidden" value="x"><button formaction="{{address}}/b" data-action="ok">Envoyer</button></form>
+              <svg onload="fuite()"><text>secret du dessin</text></svg>
+              <object data="{{address}}/objet">secret de l'objet</object>
+              <link rel="stylesheet" href="{{address}}/style.css">
+              <p class="carte faux-dialogue" style="background:url({{address}}/fond.png)" hidden>secret cache</p>
+              <p>texte <b>gras</b> <unknown-tag>garde</unknown-tag></p>
+            `);
+            """);
+        using var ui = new UiThread();
+
+        var answer = Wait(scene.Engine.RenderViewAsync("hostile", dark: false));
+        Pump(TimeSpan.FromMilliseconds(500));
+
+        Assert.IsTrue(answer.Succeeded, answer.Error);
+        var nodes = answer.Content!.Descendants().ToList();
+        Assert.IsFalse(tcp.Pending(), "Rien ne se charge en lisant ce qu'elle a écrit.");
+        CollectionAssert.AreEquivalent(
+            new[] { "h1", "span", "button", "p", "strong", ExtensionNode.TextTag },
+            nodes.Select(node => node.Tag).Distinct().ToArray());
+        Assert.IsFalse(answer.Content.Text.Contains("secret", StringComparison.Ordinal), answer.Content.Text);
+        StringAssert.Contains(answer.Content.Text, "le texte de l'image", StringComparison.Ordinal);
+        StringAssert.Contains(answer.Content.Text, "un lien", StringComparison.Ordinal);
+        StringAssert.Contains(answer.Content.Text, "garde", StringComparison.Ordinal);
+        Assert.IsTrue(nodes.All(node => !node.Attributes.ContainsKey("style") && !node.Attributes.ContainsKey("href") && !node.Attributes.ContainsKey("onclick") && !node.Attributes.ContainsKey("formaction")));
+        Assert.IsTrue(nodes.Single(node => node.Tag == "span").Data.ContainsKey("externe"), "L'attribut reste une donnée, sans rien qui l'ouvre.");
+        Assert.IsTrue(nodes.All(node => node.Tag != "input"), "Ni mot de passe, ni fichier, ni champ caché.");
+    }
+
+    [EngineTest]
+    public void A_render_too_big_or_too_deep_is_refused_and_the_extension_goes_on()
+    {
+        using var scene = new Scene();
+        scene.Install("enorme", """
+            kyfrev.bloc("gros", () => "x".repeat(3 * 1024 * 1024));
+            kyfrev.bloc("nombreux", () => "<p>x</p>".repeat(20001));
+            kyfrev.bloc("profond", () => "<div>".repeat(80));
+            kyfrev.vue(() => "bien");
+            """);
+        using var ui = new UiThread();
+
+        foreach (var language in new[] { "gros", "nombreux", "profond" })
+        {
+            StringAssert.Contains(Wait(scene.Engine.RenderBlockAsync("enorme", language, string.Empty, dark: false)).Error, "trop volumineux", StringComparison.Ordinal);
+        }
+        Assert.AreEqual("bien", TextOf(scene, "enorme"));
+    }
+
+    [EngineTest]
+    public void Restarting_makes_an_extension_forget_what_it_read()
+    {
+        using var scene = new Scene();
+        scene.Install("memoire", """
+            let vues = 0;
+            kyfrev.vue(() => `vue ${++vues}`);
+            """);
+        using var ui = new UiThread();
+        Assert.AreEqual("vue 1", TextOf(scene, "memoire"));
+        Assert.AreEqual("vue 2", TextOf(scene, "memoire"));
+
+        scene.Engine.Restart();
+
+        Assert.AreEqual("vue 1", TextOf(scene, "memoire"));
     }
 
     [EngineTest]
@@ -218,7 +297,7 @@ public sealed class ExtensionEngineTests
         var refreshed = new List<string>();
         scene.Engine.RefreshAsked += (_, e) => refreshed.Add(e.Extension);
 
-        var html = Wait(scene.Engine.RenderViewAsync("hote", dark: false)).Html!;
+        var html = TextOf(scene, "hote");
         Assert.IsTrue(Wait(scene.Engine.ActAsync("hote", "canal", null, new Dictionary<string, string>())).Succeeded);
         Pump(TimeSpan.FromMilliseconds(300));
 
@@ -251,7 +330,7 @@ public sealed class ExtensionEngineTests
         File.WriteAllText(Path.Combine(scene.Library.FolderOf("voleuse"), "autre.js"), string.Empty);
         using var ui = new UiThread();
 
-        Assert.AreEqual("refuse | refuse | charge", Wait(scene.Engine.RenderViewAsync("voleuse", dark: false)).Html);
+        Assert.AreEqual("refuse | refuse | charge", TextOf(scene, "voleuse"));
     }
 
     [EngineTest]
@@ -286,8 +365,8 @@ public sealed class ExtensionEngineTests
         var slow = scene.Engine.RenderViewAsync("lente", dark: false);
         Wait(scene.Engine.ActAsync("usurpe", "usurper", null, new Dictionary<string, string>()));
 
-        Assert.IsFalse(slow.IsCompleted && slow.Result.Html != "la vraie reponse", "La réponse d'un autre cadre n'est pas prise.");
-        Assert.AreEqual("la vraie reponse", Wait(slow).Html);
+        Assert.IsFalse(slow.IsCompleted && slow.Result.Content?.Text != "la vraie reponse", "La réponse d'un autre cadre n'est pas prise.");
+        Assert.AreEqual("la vraie reponse", Wait(slow).Content!.Text);
     }
 
     [EngineTest]
@@ -322,7 +401,7 @@ public sealed class ExtensionEngineTests
             """);
         scene.Install("saine", """kyfrev.vue(() => "saine");""");
         using var ui = new UiThread();
-        Assert.AreEqual("saine", Wait(scene.Engine.RenderViewAsync("saine", dark: false)).Html);
+        Assert.AreEqual("saine", TextOf(scene, "saine"));
         scene.Engine.Patience = TimeSpan.FromSeconds(2);
 
         var silent = Wait(scene.Engine.ActAsync("bloquee", "silence", null, new Dictionary<string, string>()));
@@ -332,7 +411,7 @@ public sealed class ExtensionEngineTests
         StringAssert.Contains(stuck.Error, "pas de réponse", StringComparison.Ordinal);
 
         scene.Engine.Patience = TimeSpan.FromSeconds(30);
-        Assert.AreEqual("saine", Wait(scene.Engine.RenderViewAsync("saine", dark: false)).Html);
+        Assert.AreEqual("saine", TextOf(scene, "saine"));
     }
 
     [EngineTest]
@@ -358,13 +437,13 @@ public sealed class ExtensionEngineTests
         using var scene = new Scene();
         var source = scene.Install("change", """kyfrev.vue(() => "premiere");""");
         using var ui = new UiThread();
-        Assert.AreEqual("premiere", Wait(scene.Engine.RenderViewAsync("change", dark: false)).Html);
+        Assert.AreEqual("premiere", TextOf(scene, "change"));
 
         File.WriteAllText(Path.Combine(source, "extension.js"), """kyfrev.vue(() => "seconde");""");
         scene.Library.Install(source);
-        Assert.AreEqual("premiere", Wait(scene.Engine.RenderViewAsync("change", dark: false)).Html, "Son cadre reste jusqu'à ce qu'on l'oublie.");
+        Assert.AreEqual("premiere", TextOf(scene, "change"), "Son cadre reste jusqu'à ce qu'on l'oublie.");
         scene.Engine.Forget("change");
-        Assert.AreEqual("seconde", Wait(scene.Engine.RenderViewAsync("change", dark: false)).Html);
+        Assert.AreEqual("seconde", TextOf(scene, "change"));
 
         scene.Library.SetActive("change", false);
         Assert.AreEqual("extension inactive", Wait(scene.Engine.RenderViewAsync("change", dark: false)).Error);
@@ -407,6 +486,13 @@ public sealed class ExtensionEngineTests
         Assert.ThrowsExactly<ArgumentException>(() => new ExtensionEngine(string.Empty, library, requests));
         Assert.ThrowsExactly<ArgumentNullException>(() => new ExtensionEngine("x", null!, requests));
         Assert.ThrowsExactly<ArgumentNullException>(() => new ExtensionEngine("x", library, null!));
+    }
+
+    private static string TextOf(Scene scene, string id)
+    {
+        var answer = Wait(scene.Engine.RenderViewAsync(id, dark: false));
+        Assert.IsTrue(answer.Succeeded, answer.Error);
+        return answer.Content!.Text;
     }
 
     private static ExtensionAnswer Wait(Task<ExtensionAnswer> answer)

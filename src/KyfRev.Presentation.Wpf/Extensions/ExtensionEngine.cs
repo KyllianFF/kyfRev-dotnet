@@ -12,10 +12,10 @@ using Microsoft.Web.WebView2.Core;
 
 namespace KyfRev.Presentation.Wpf.Extensions;
 
-/// <summary>La réponse d'une extension : son HTML brut, ou la raison pour laquelle elle n'a pas répondu.</summary>
-/// <param name="Html">Son HTML, non encore filtré ; rien pour une action.</param>
+/// <summary>La réponse d'une extension : ce qu'elle affiche, passé par la liste blanche, ou la raison pour laquelle elle n'a pas répondu.</summary>
+/// <param name="Content">Ce qu'elle affiche ; rien pour une action.</param>
 /// <param name="Error">La raison de l'échec ; rien si elle a répondu.</param>
-public sealed record ExtensionAnswer(string? Html, string? Error)
+public sealed record ExtensionAnswer(ExtensionContent? Content, string? Error)
 {
     /// <summary>Elle a répondu.</summary>
     [MemberNotNullWhen(false, nameof(Error))]
@@ -58,6 +58,9 @@ public sealed class ExtensionEngine : IDisposable
     private const string FilePolicy = "default-src 'none'; sandbox";
     private const string HtmlType = "text/html; charset=utf-8";
     private const string ScriptType = "text/javascript; charset=utf-8";
+
+    /// <summary>L'arbre d'un rendu descend plus loin que la limite ordinaire.</summary>
+    private static readonly JsonDocumentOptions MessageOptions = new() { MaxDepth = 256 };
 
     private readonly string _dataFolder;
     private readonly ExtensionLibrary _library;
@@ -129,6 +132,9 @@ public sealed class ExtensionEngine : IDisposable
             Post(new { kind = "oublier", id });
         }
     }
+
+    /// <summary>Ferme le moteur : au prochain usage, chaque extension repart de zéro. Elles gardent en mémoire ce qu'elles ont lu d'un coffre : il le faut quand il change.</summary>
+    public void Restart() => Stop();
 
     /// <summary>Exécute un script dans la page cachée, pour les essais.</summary>
     internal async Task<string> RunScriptAsync(string script)
@@ -355,7 +361,7 @@ public sealed class ExtensionEngine : IDisposable
             Refused.Add(e.Source);
             return;
         }
-        using var message = JsonDocument.Parse(e.WebMessageAsJson);
+        using var message = JsonDocument.Parse(e.WebMessageAsJson, MessageOptions);
         var root = message.RootElement;
         var kind = TextOf(root, "kind");
         if (kind == "pret")
@@ -404,9 +410,20 @@ public sealed class ExtensionEngine : IDisposable
             return;
         }
         _pending.Remove(n);
-        pending.Answer.TrySetResult(TextOf(root, "erreur") is { } error
-            ? new ExtensionAnswer(null, $"extension « {pending.Name} » : {error}")
-            : new ExtensionAnswer(TextOf(root, "html"), null));
+        if (TextOf(root, "erreur") is { } error)
+        {
+            pending.Answer.TrySetResult(new ExtensionAnswer(null, $"extension « {pending.Name} » : {error}"));
+            return;
+        }
+        if (!root.TryGetProperty("contenu", out var tree) || tree.ValueKind != JsonValueKind.Array)
+        {
+            pending.Answer.TrySetResult(new ExtensionAnswer(null, null));
+            return;
+        }
+        var content = ExtensionContent.Read(tree);
+        pending.Answer.TrySetResult(content.Succeeded
+            ? new ExtensionAnswer(content.Value, null)
+            : new ExtensionAnswer(null, $"extension « {pending.Name} » : {content.Error}"));
     }
 
     private async Task AnswerRequestAsync(string id, int n, string method, JsonElement arguments)

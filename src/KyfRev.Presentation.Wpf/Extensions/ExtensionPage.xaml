@@ -1,0 +1,12 @@
+<UserControl x:Class="KyfRev.Presentation.Wpf.Extensions.ExtensionPage"
+             x:ClassModifier="internal"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:kyf="clr-namespace:KyfRev.DesignSystem.Controls;assembly=KyfRev.DesignSystem">
+  <ScrollViewer x:Name="Scroller" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
+    <StackPanel MaxWidth="1100">
+      <kyf:Notification x:Name="ErrorMessage" Severity="Critical" Message="{Binding Error}" IsOpen="{Binding HasError, Mode=OneWay}" IsClosable="False" Margin="0,0,0,8" />
+      <ContentControl x:Name="Body" Focusable="False" IsTabStop="False" />
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

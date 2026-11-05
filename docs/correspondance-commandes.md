@@ -111,13 +111,13 @@ Ces cas d'usage ne sont chargés que si le coffre active le module Citations.
 | `exporter_schema` | `SchemaUseCases.Export` | J10 | Module Schémas réseau. |
 | `lire_import_schema` | `SchemaUseCases.ReadImport` | J10 | Module Schémas réseau. |
 | `rechercher_mise_a_jour` | — | J10 | Mise à jour avec manifeste signé. |
-| `extensions` | — | J10 | Hôte des extensions. |
-| `lire_extension` | — | J10 | Hôte des extensions. |
-| `installer_extension` | — | J10 | Hôte des extensions. |
-| `activer_extension` | — | J10 | Hôte des extensions. |
-| `retirer_extension` | — | J10 | Hôte des extensions. |
-| `donnees_extension` | — | J10 | Hôte des extensions (le coffre sait déjà lire ces données). |
-| `enregistrer_donnees_extension` | — | J10 | Hôte des extensions (le coffre sait déjà les écrire). |
+| `extensions` | `ExtensionLibrary.Installed` | J10 | Hôte des extensions. |
+| `lire_extension` | `ExtensionLibrary.Read` | J10 | Hôte des extensions. |
+| `installer_extension` | `ExtensionLibrary.Install` | J10 | Hôte des extensions. |
+| `activer_extension` | `ExtensionLibrary.SetActive` | J10 | Hôte des extensions. |
+| `retirer_extension` | `ExtensionLibrary.Retire` | J10 | Hôte des extensions. |
+| `donnees_extension` | `ExtensionDataUseCases.Read` | J10 | Hôte des extensions. |
+| `enregistrer_donnees_extension` | `ExtensionDataUseCases.Save` | J10 | Hôte des extensions. |
 | `catalogue_extensions` | — | J10 | Catalogue signé. |
 | `installer_extension_du_catalogue` | — | J10 | Catalogue signé. |
 | `etat_jeton_github` | — | J10 | Jeton GitHub. |
