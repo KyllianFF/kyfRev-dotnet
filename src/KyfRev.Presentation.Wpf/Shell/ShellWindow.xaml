@@ -208,7 +208,11 @@
               </Style.Triggers>
             </Style>
           </Border.Style>
-          <TextBlock Text="{x:Static p:ShellText.AppName}" Style="{DynamicResource Kyf.Text.BodyStrong}" VerticalAlignment="Center" />
+          <!-- L'icône de l'application et son nom, côte à côte. -->
+          <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+            <Image x:Name="AppIcon" Width="16" Height="16" Margin="0,0,8,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality" />
+            <TextBlock Text="{x:Static p:ShellText.AppName}" Style="{DynamicResource Kyf.Text.BodyStrong}" VerticalAlignment="Center" />
+          </StackPanel>
         </Border>
 
         <!-- La recherche : un bouton, puis, ouverte, le champ où l'on tape, à la même place ; la liste s'ouvre juste dessous. Les règles
