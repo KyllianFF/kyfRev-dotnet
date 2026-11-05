@@ -8,26 +8,36 @@ using KyfRev.Rendering.Diagrams;
 
 namespace KyfRev.Presentation.Wpf.Editing;
 
-/// <summary>Un élément de la hiérarchie en cours d'écriture.</summary>
+/// <summary>Un élément du dessin en cours d'écriture.</summary>
 public sealed partial class DiagramNode : ObservableObject
 {
     private const double LevelWidth = 20;
 
-    /// <summary>Un élément à ce niveau, avec ce texte.</summary>
-    public DiagramNode(string text, int level)
+    /// <summary>Un élément à ce niveau, avec ce texte et ces valeurs.</summary>
+    public DiagramNode(string text, int level, string value = "", string secondValue = "")
     {
         Text = text;
         Level = level;
+        Value = value;
+        SecondValue = secondValue;
     }
 
     /// <summary>Son texte.</summary>
     [ObservableProperty]
     public partial string Text { get; set; }
 
-    /// <summary>Son niveau : 0 au sommet.</summary>
+    /// <summary>Son niveau : 0 au sommet, et pour tout élément d'une simple liste.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(Indent))]
     public partial int Level { get; set; }
+
+    /// <summary>Sa valeur, dans un graphique.</summary>
+    [ObservableProperty]
+    public partial string Value { get; set; }
+
+    /// <summary>Sa seconde valeur, dans un graphique qui en a deux.</summary>
+    [ObservableProperty]
+    public partial string SecondValue { get; set; }
 
     /// <summary>C'est l'élément sur lequel portent les actions.</summary>
     [ObservableProperty]
@@ -38,34 +48,40 @@ public sealed partial class DiagramNode : ObservableObject
 }
 
 /// <summary>
-/// L'éditeur d'une hiérarchie : la liste des éléments, décalés selon leur niveau, et leur dessin qui suit. Comme dans le volet de
-/// texte d'un SmartArt, tout se fait dans la liste ; ajouter sous un élément ne touche que lui. Il n'y a qu'un sommet.
+/// L'éditeur d'un dessin : la liste de ses éléments, et son dessin qui suit. Selon le modèle, c'est une simple liste, une hiérarchie où
+/// ajouter sous un élément ne touche que lui, ou un tableau de valeurs. Comme dans le volet de texte d'un SmartArt, tout se fait dans la liste.
 /// </summary>
 public sealed partial class DiagramEditorViewModel : ObservableObject
 {
-    private DiagramEditorViewModel(string layout, string text, int? position)
+    private DiagramEditorViewModel(GalleryKind kind, IReadOnlyList<GalleryItem> models, GalleryItem model, string text, int? position)
     {
+        Kind = kind;
+        Models = models;
         Position = position;
-        IsAcross = layout == SmartArt.HorizontalHierarchyId;
-        foreach (var item in DiagramOutline.Parse(text))
-        {
-            Insert(Nodes.Count, new DiagramNode(item.Label, item.Level));
-        }
-        if (Nodes.Count == 0)
-        {
-            Insert(0, new DiagramNode(string.Empty, 0));
-        }
+        SelectedModel = model;
+        Load(text);
         Select(Nodes[0]);
     }
 
     /// <summary>Un élément doit recevoir le focus : la liste vient de changer.</summary>
     internal event EventHandler<DiagramNode>? NodeToFocus;
 
+    /// <summary>Ce qui se dessine : un SmartArt, un schéma ou un graphique.</summary>
+    public GalleryKind Kind { get; }
+
     /// <summary>Le bloc qu'il remplace ; rien : il en insère un.</summary>
     public int? Position { get; }
 
+    /// <summary>Les modèles de la même famille, pour en changer sans rien perdre.</summary>
+    public IReadOnlyList<GalleryItem> Models { get; }
+
     /// <summary>Les éléments, dans l'ordre : chacun est suivi de ce qui en dépend.</summary>
     public ObservableCollection<DiagramNode> Nodes { get; } = [];
+
+    /// <summary>Le modèle choisi.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Title), nameof(ConfirmLabel), nameof(Description), nameof(ShowsLevels), nameof(ShowsDirection), nameof(IsAcross), nameof(IsDown), nameof(ShowsSecondValue), nameof(AddLabel), nameof(KeysHelp), nameof(HighlightedBox))]
+    public partial GalleryItem SelectedModel { get; set; }
 
     /// <summary>L'élément sur lequel portent les actions.</summary>
     [ObservableProperty]
@@ -73,10 +89,43 @@ public sealed partial class DiagramEditorViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(AddChildCommand), nameof(AddSiblingCommand), nameof(IndentCommand), nameof(OutdentCommand), nameof(MoveUpCommand), nameof(MoveDownCommand), nameof(DeleteCommand))]
     public partial DiagramNode? Selected { get; private set; }
 
-    /// <summary>Le dessin va de gauche à droite, plutôt que de haut en bas.</summary>
+    /// <summary>Le code du dessin se montre sous l'aperçu.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsDown), nameof(Preview))]
-    public partial bool IsAcross { get; set; }
+    public partial bool ShowsCode { get; set; }
+
+    /// <summary>Le titre de la fenêtre.</summary>
+    public string Title => Position is null ? EditingText.DiagramEditorNewOf(SelectedModel.Name) : EditingText.DiagramEditorEditOf(SelectedModel.Name);
+
+    /// <summary>Le libellé du bouton qui valide.</summary>
+    public string ConfirmLabel => Position is null ? EditingText.GalleryInsert : EditingText.DiagramEditorSave;
+
+    /// <summary>À quoi sert le modèle.</summary>
+    public string Description => SelectedModel.Description;
+
+    /// <summary>Le dessin s'écrit en Mermaid : c'est la page cachée qui le fait.</summary>
+    public bool IsMermaid => Kind != GalleryKind.SmartArt;
+
+    /// <summary>Le dessin est fait par kyfRev.</summary>
+    public bool IsDrawn => !IsMermaid;
+
+    /// <summary>Le modèle a des niveaux.</summary>
+    public bool ShowsLevels => SmartArt.IsHierarchy(SelectedModel.Id) || MermaidTemplates.IsHierarchy(SelectedModel.Id);
+
+    /// <summary>Le modèle peut aller de haut en bas ou de gauche à droite.</summary>
+    public bool ShowsDirection => SmartArt.IsHierarchy(SelectedModel.Id);
+
+    /// <summary>Chaque élément porte une valeur.</summary>
+    public bool ShowsValues => Kind == GalleryKind.Chart;
+
+    /// <summary>Chaque élément porte deux valeurs.</summary>
+    public bool ShowsSecondValue => MermaidTemplates.MeasureCount(SelectedModel.Id) == 2;
+
+    /// <summary>Le dessin va de gauche à droite, plutôt que de haut en bas.</summary>
+    public bool IsAcross
+    {
+        get => SelectedModel.Id == SmartArt.HorizontalHierarchyId;
+        set => SelectedModel = Models.First(model => model.Id == (value ? SmartArt.HorizontalHierarchyId : SmartArt.OrganizationChartId));
+    }
 
     /// <summary>Le dessin va de haut en bas.</summary>
     public bool IsDown
@@ -85,21 +134,24 @@ public sealed partial class DiagramEditorViewModel : ObservableObject
         set => IsAcross = !value;
     }
 
-    /// <summary>Le titre de la fenêtre.</summary>
-    public string Title => Position is null ? EditingText.DiagramEditorNew : EditingText.DiagramEditorEdit;
+    /// <summary>Le libellé du bouton qui ajoute un élément à côté de celui-ci.</summary>
+    public string AddLabel => ShowsLevels ? EditingText.DiagramAddSibling : ShowsValues ? EditingText.DiagramAddRow : EditingText.DiagramAddItem;
 
-    /// <summary>Le libellé du bouton qui valide.</summary>
-    public string ConfirmLabel => Position is null ? EditingText.GalleryInsert : EditingText.DiagramEditorSave;
+    /// <summary>Les touches de la liste.</summary>
+    public string KeysHelp => ShowsDirection ? EditingText.DiagramKeys : ShowsLevels ? EditingText.DiagramKeysNoClick : EditingText.DiagramListKeys;
 
-    /// <summary>Le dessin de ce qui est écrit.</summary>
-    public DiagramScene? Preview => SmartArt.Draw(Layout, Code);
+    /// <summary>Le dessin de ce qui est écrit, s'il est fait par kyfRev.</summary>
+    public DiagramScene? Preview => IsDrawn ? SmartArt.Draw(SelectedModel.Id, Code) : null;
 
-    /// <summary>La boîte de l'élément choisi dans le dessin ; rien s'il est vide.</summary>
+    /// <summary>Le code de ce qui est écrit, s'il s'écrit en Mermaid.</summary>
+    public string? MermaidCode => IsMermaid ? MermaidTemplates.Code(SelectedModel.Id, Code) : null;
+
+    /// <summary>La boîte de l'élément choisi dans le dessin ; rien s'il est vide, ou si le dessin n'en donne pas une par élément.</summary>
     public int? HighlightedBox
     {
         get
         {
-            if (Selected is not { } selected || string.IsNullOrWhiteSpace(selected.Text))
+            if (!ShowsDirection || Selected is not { } selected || string.IsNullOrWhiteSpace(selected.Text))
             {
                 return null;
             }
@@ -107,32 +159,75 @@ public sealed partial class DiagramEditorViewModel : ObservableObject
         }
     }
 
-    private string Layout => IsAcross ? SmartArt.HorizontalHierarchyId : SmartArt.OrganizationChartId;
+    /// <summary>Ce que le modèle ne pourra pas montrer ; rien si tout y tient.</summary>
+    public string? LimitWarning
+    {
+        get
+        {
+            var limit = SmartArt.Layouts.FirstOrDefault(layout => layout.Id == SelectedModel.Id)?.Maximum;
+            return limit is { } maximum && Written.Count() > maximum ? EditingText.DiagramLimitOf(maximum) : null;
+        }
+    }
+
+    /// <summary>Une limite est dépassée.</summary>
+    public bool HasLimitWarning => LimitWarning is not null;
+
+    /// <summary>Une valeur ne se lit pas : elle comptera pour 1.</summary>
+    public bool HasValueWarning =>
+        ShowsValues && Written.Any(node => !MermaidTemplates.IsMeasure(node.Value) || (ShowsSecondValue && !MermaidTemplates.IsMeasure(node.SecondValue)));
 
     private IEnumerable<DiagramNode> Written => Nodes.Where(node => !string.IsNullOrWhiteSpace(node.Text));
 
-    private string Code => DiagramOutline.Write(Nodes.Select(node => new OutlineItem(node.Level, node.Text)));
+    private string Code
+    {
+        get
+        {
+            if (ShowsValues)
+            {
+                return string.Join('\n', Written.Select(ValuesLine));
+            }
+            return ShowsLevels
+                ? DiagramOutline.Write(Nodes.Select(node => new OutlineItem(node.Level, node.Text)))
+                : string.Join('\n', Written.Select(node => node.Text.Trim()));
+        }
+    }
 
     private int Current => Selected is { } node ? Nodes.IndexOf(node) : -1;
 
     /// <summary>Un éditeur pour un nouveau bloc, ou pour remplacer celui qui est à cet endroit.</summary>
-    /// <param name="layout">Le nom du modèle dans le fichier.</param>
-    /// <param name="text">Le contenu du bloc.</param>
+    /// <param name="model">Le nom du modèle dans le fichier.</param>
+    /// <param name="text">Les éléments, un par ligne.</param>
     /// <param name="position">Où il se trouve ; rien : il est à insérer.</param>
-    public static DiagramEditorViewModel For(string layout, string text, int? position) => new(layout, text, position);
+    public static DiagramEditorViewModel For(string model, string text, int? position)
+    {
+        var kind = KindOf(model);
+        var models = DiagramGalleryViewModel.ItemsOf(kind);
+        return new(kind, models, models.First(item => item.Id == model), text, position);
+    }
 
-    /// <summary>Un éditeur ouvert sur un bloc de la fiche ; rien si ce bloc n'est pas une hiérarchie.</summary>
+    /// <summary>Un éditeur ouvert sur un bloc de la fiche ; rien si ce bloc n'a pas été écrit par un modèle, ou a été retouché à la main.</summary>
     /// <param name="info">Ce qui suit les accents graves de son bloc.</param>
     /// <param name="code">Le contenu de son bloc.</param>
     /// <param name="position">Où il se trouve.</param>
     public static DiagramEditorViewModel? ForExisting(string info, string code, int position)
     {
         var parts = (info ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        return parts is [SmartArt.Language, var layout] && SmartArt.IsHierarchy(layout) ? new(layout, code ?? string.Empty, position) : null;
+        if (parts is [SmartArt.Language, var layout] && SmartArt.Layouts.Any(candidate => candidate.Id == layout))
+        {
+            return For(layout, code ?? string.Empty, position);
+        }
+        return parts is [MermaidTemplates.Language] && MermaidTemplates.ReadBack(code) is { } read ? For(read.Template, read.Text, position) : null;
     }
 
     /// <summary>Ce qui s'écrit dans le fichier ; rien si tout est vide.</summary>
-    public (string Info, string Code)? Source() => Written.Any() ? SmartArt.Source(Layout, Code) : null;
+    public (string Info, string Code)? Source()
+    {
+        if (!Written.Any())
+        {
+            return null;
+        }
+        return IsDrawn ? SmartArt.Source(SelectedModel.Id, Code) : MermaidTemplates.Source(SelectedModel.Id, Code);
+    }
 
     /// <summary>Choisit l'élément sur lequel portent les actions.</summary>
     public void Select(DiagramNode node)
@@ -147,7 +242,7 @@ public sealed partial class DiagramEditorViewModel : ObservableObject
     /// <param name="box">Le rang de la boîte.</param>
     public void SelectBox(int box)
     {
-        var node = Written.ElementAtOrDefault(box);
+        var node = ShowsDirection ? Written.ElementAtOrDefault(box) : null;
         if (node is not null)
         {
             Focus(node);
@@ -195,6 +290,11 @@ public sealed partial class DiagramEditorViewModel : ObservableObject
         }
     }
 
+    private static GalleryKind KindOf(string model) =>
+        MermaidTemplates.All.FirstOrDefault(template => template.Id == model) is { } mermaid
+            ? (mermaid.Family == MermaidFamily.Chart ? GalleryKind.Chart : GalleryKind.Schema)
+            : GalleryKind.SmartArt;
+
     private static void Run(IRelayCommand command)
     {
         if (command.CanExecute(null))
@@ -203,7 +303,66 @@ public sealed partial class DiagramEditorViewModel : ObservableObject
         }
     }
 
-    private bool CanAddChild() => Selected is not null;
+    /// <summary>Changer de modèle garde ce qui est écrit, comme dans Office ; seuls les niveaux s'adaptent.</summary>
+    partial void OnSelectedModelChanged(GalleryItem value)
+    {
+        if (ShowsLevels && Nodes.Count > 1 && Nodes.All(node => node.Level == 0))
+        {
+            foreach (var node in Nodes.Skip(1))
+            {
+                node.Level = 1;
+            }
+        }
+        else if (!ShowsLevels)
+        {
+            foreach (var node in Nodes)
+            {
+                node.Level = 0;
+            }
+        }
+        Changed();
+    }
+
+    partial void OnShowsCodeChanged(bool value) => OnPropertyChanged(nameof(MermaidCode));
+
+    private void Load(string text)
+    {
+        if (ShowsValues)
+        {
+            foreach (var line in SmartArt.Items(text))
+            {
+                var parts = line.Split(':', StringSplitOptions.TrimEntries);
+                Insert(Nodes.Count, new DiagramNode(parts[0], 0, parts.Length > 1 ? parts[1] : string.Empty, parts.Length > 2 ? parts[2] : string.Empty));
+            }
+        }
+        else if (ShowsLevels)
+        {
+            foreach (var item in DiagramOutline.Parse(text))
+            {
+                Insert(Nodes.Count, new DiagramNode(item.Label, item.Level));
+            }
+        }
+        else
+        {
+            foreach (var item in SmartArt.Items(text))
+            {
+                Insert(Nodes.Count, new DiagramNode(item, 0));
+            }
+        }
+        if (Nodes.Count == 0)
+        {
+            Insert(0, new DiagramNode(string.Empty, 0));
+        }
+    }
+
+    /// <summary>« libellé : valeur : valeur » : un deux-points dans un libellé ne doit pas se lire comme une séparation.</summary>
+    private string ValuesLine(DiagramNode node)
+    {
+        var label = node.Text.Replace(':', ' ').Trim();
+        return ShowsSecondValue ? $"{label} : {node.Value.Trim()} : {node.SecondValue.Trim()}" : $"{label} : {node.Value.Trim()}";
+    }
+
+    private bool CanAddChild() => ShowsLevels && Selected is not null;
 
     /// <summary>Ajoute un élément sous celui-ci, et sous lui seul.</summary>
     [RelayCommand(CanExecute = nameof(CanAddChild))]
@@ -216,9 +375,9 @@ public sealed partial class DiagramEditorViewModel : ObservableObject
         Focus(node);
     }
 
-    private bool CanAddSibling() => Selected is { Level: > 0 };
+    private bool CanAddSibling() => Selected is { } node && (!ShowsLevels || node.Level > 0);
 
-    /// <summary>Ajoute un élément à côté de celui-ci, au même niveau. Le sommet reste seul.</summary>
+    /// <summary>Ajoute un élément à côté de celui-ci, au même niveau. Le sommet d'une hiérarchie reste seul.</summary>
     [RelayCommand(CanExecute = nameof(CanAddSibling))]
     private void AddSibling()
     {
@@ -229,13 +388,13 @@ public sealed partial class DiagramEditorViewModel : ObservableObject
         Focus(node);
     }
 
-    private bool CanIndent() => Current >= 0 && PreviousSibling(Current) is not null;
+    private bool CanIndent() => ShowsLevels && Current >= 0 && PreviousSibling(Current) is not null;
 
     /// <summary>Le place sous l'élément qui le précède, avec ce qui en dépend.</summary>
     [RelayCommand(CanExecute = nameof(CanIndent))]
     private void Indent() => Shift(1);
 
-    private bool CanOutdent() => Selected is { Level: > 1 };
+    private bool CanOutdent() => ShowsLevels && Selected is { Level: > 1 };
 
     /// <summary>Le remonte d'un niveau, avec ce qui en dépend.</summary>
     [RelayCommand(CanExecute = nameof(CanOutdent))]
@@ -281,8 +440,8 @@ public sealed partial class DiagramEditorViewModel : ObservableObject
         {
             return false;
         }
-        // Le sommet ne s'en va que s'il laisse un seul élément pour le remplacer.
-        return node.Level > 0 || Nodes.Skip(1).Count(other => other.Level == 1) <= 1;
+        // Le sommet d'une hiérarchie ne s'en va que s'il laisse un seul élément pour le remplacer.
+        return !ShowsLevels || node.Level > 0 || Nodes.Skip(1).Count(other => other.Level == 1) <= 1;
     }
 
     /// <summary>Le retire ; ce qui en dépend remonte d'un niveau, rien d'autre ne se perd.</summary>
@@ -321,7 +480,7 @@ public sealed partial class DiagramEditorViewModel : ObservableObject
 
     private void OnNodeChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(DiagramNode.Text))
+        if (e.PropertyName is nameof(DiagramNode.Text) or nameof(DiagramNode.Value) or nameof(DiagramNode.SecondValue))
         {
             Changed();
         }
@@ -330,7 +489,11 @@ public sealed partial class DiagramEditorViewModel : ObservableObject
     private void Changed()
     {
         OnPropertyChanged(nameof(Preview));
+        OnPropertyChanged(nameof(MermaidCode));
         OnPropertyChanged(nameof(HighlightedBox));
+        OnPropertyChanged(nameof(LimitWarning));
+        OnPropertyChanged(nameof(HasLimitWarning));
+        OnPropertyChanged(nameof(HasValueWarning));
         AddChildCommand.NotifyCanExecuteChanged();
         AddSiblingCommand.NotifyCanExecuteChanged();
         IndentCommand.NotifyCanExecuteChanged();

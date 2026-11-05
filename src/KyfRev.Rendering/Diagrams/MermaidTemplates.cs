@@ -32,6 +32,15 @@ public static class MermaidTemplates
     /// <summary>Le langage de ces blocs.</summary>
     public const string Language = "mermaid";
 
+    /// <summary>Le début du commentaire qui dit de quel modèle vient un bloc : Mermaid et les autres lecteurs l'ignorent.</summary>
+    private const string Marker = "%% kyfrev ";
+
+    /// <summary>Le début d'une ligne de commentaire où un élément est retenu.</summary>
+    private const string Kept = "%% ";
+
+    private const string MindMapId = "carte";
+    private const string TwoMeasuresId = "mixte";
+
     private const double ThumbnailWidth = 480;
     private const double ThumbnailHeight = 300;
 
@@ -45,7 +54,7 @@ public static class MermaidTemplates
         new("entites", "Entités", MermaidFamily.Schema, "Données", "Les tables d'une base.", "Fiche\nPassage"),
         new("planning", "Planning", MermaidFamily.Schema, "Organisation", "Des tâches sur un calendrier.", "Mitose\nMéiose\nRévision"),
         new("taches", "Tableau de tâches", MermaidFamily.Schema, "Organisation", "À faire, en cours, fait.", "À faire\nEn cours\nFait"),
-        new("carte", "Carte mentale", MermaidFamily.Schema, "Idées", "Un thème et ses branches.", "Cellule\nNoyau\nADN\nMembrane\nCytoplasme"),
+        new("carte", "Carte mentale", MermaidFamily.Schema, "Idées", "Un thème et ses branches.", "Cellule\n  Noyau\n    ADN\n  Membrane\n  Cytoplasme"),
         new("causes", "Causes et effet", MermaidFamily.Schema, "Idées", "Ce qui mène à un problème : le résultat, puis ses causes.", "Mauvaise note\nMéthode\nTemps"),
         new("secteurs", "Secteurs", MermaidFamily.Chart, "Secteurs", "Des parts d'un total.", "Clergé : 10\nNoblesse : 20\nTiers état : 70"),
         new("colonnes", "Colonnes", MermaidFamily.Chart, "Colonnes", "Comparer des valeurs.", "1700 : 21\n1750 : 24\n1789 : 28"),
@@ -74,7 +83,7 @@ public static class MermaidTemplates
             "entites" => Entities(items),
             "planning" => Schedule(items),
             "taches" => Board(items),
-            "carte" => MindMap(items),
+            MindMapId => MindMap(DiagramOutline.Parse(text)),
             "causes" => Causes(items),
             "secteurs" => Pie(items),
             "colonnes" => Xy(items, "xychart-beta", bars: true, line: false),
@@ -85,6 +94,66 @@ public static class MermaidTemplates
             _ => null,
         };
     }
+
+    /// <summary>
+    /// Ce qui s'écrit dans le fichier : le code, précédé en commentaire du modèle et de ses éléments, pour que le bloc se rouvre dans
+    /// l'éditeur. Rien si le modèle n'existe pas, ou s'il n'y a rien à dessiner.
+    /// </summary>
+    /// <param name="template">Le nom du modèle.</param>
+    /// <param name="text">Les éléments, un par ligne.</param>
+    /// <returns>Le texte après les accents graves, et le contenu du bloc.</returns>
+    public static (string Info, string Code)? Source(string? template, string text)
+    {
+        if (Code(template, text) is not { } code)
+        {
+            return null;
+        }
+        var marked = new StringBuilder(Marker).Append(template).Append('\n');
+        foreach (var line in text.Split('\n').Select(line => line.TrimEnd()).Where(line => line.Length > 0))
+        {
+            marked.Append(Kept).Append(line).Append('\n');
+        }
+        return (Language, marked.Append(code).ToString());
+    }
+
+    /// <summary>
+    /// Le modèle et les éléments d'un bloc écrit par <see cref="Source"/>. Rien pour un bloc écrit à la main, ou retouché depuis : le rouvrir
+    /// dans l'éditeur effacerait ce qui a été écrit, alors il reste dans son code.
+    /// </summary>
+    /// <param name="code">Le contenu du bloc.</param>
+    public static (string Template, string Text)? ReadBack(string? code)
+    {
+        var lines = (code ?? string.Empty).ReplaceLineEndings("\n").Split('\n');
+        if (!lines[0].StartsWith(Marker, StringComparison.Ordinal))
+        {
+            return null;
+        }
+        var template = lines[0][Marker.Length..].Trim();
+        var kept = lines.Skip(1).TakeWhile(line => line.StartsWith(Kept, StringComparison.Ordinal)).Select(line => line[Kept.Length..]).ToList();
+        var text = string.Join('\n', kept);
+        var rest = string.Join('\n', lines.Skip(1 + kept.Count));
+        return Code(template, text) == rest ? (template, text) : null;
+    }
+
+    /// <summary>Ce modèle a des niveaux : ses lignes se décalent.</summary>
+    /// <param name="template">Le nom du modèle.</param>
+    public static bool IsHierarchy(string? template) => template == MindMapId;
+
+    /// <summary>Le nombre de valeurs de chaque élément de ce modèle : 0 pour un schéma.</summary>
+    /// <param name="template">Le nom du modèle.</param>
+    public static int MeasureCount(string? template)
+    {
+        if (template == TwoMeasuresId)
+        {
+            return 2;
+        }
+        return All.Any(candidate => candidate.Id == template && candidate.Family == MermaidFamily.Chart) ? 1 : 0;
+    }
+
+    /// <summary>Cette valeur se lit ; sinon, elle comptera pour 1, pour que rien ne disparaisse.</summary>
+    /// <param name="text">La valeur écrite.</param>
+    public static bool IsMeasure(string? text) =>
+        double.TryParse((text ?? string.Empty).Trim().Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out var value) && double.IsFinite(value) && value > 0;
 
     /// <summary>La vignette d'un modèle : un dessin de kyfRev, immédiat, sans moteur.</summary>
     public static DiagramScene Thumbnail(MermaidTemplate template)
@@ -369,13 +438,15 @@ public static class MermaidTemplates
         return code.ToString().TrimEnd('\n');
     }
 
-    private static string MindMap(ImmutableArray<string> items)
+    private static string MindMap(ImmutableArray<OutlineItem> items)
     {
         var code = new StringBuilder("mindmap\n");
-        code.Append(Invariant($"    root(({Plain(items[0])}))\n"));
+        code.Append(Invariant($"    root(({Plain(items[0].Label)}))\n"));
         foreach (var item in items.Skip(1))
         {
-            code.Append(Invariant($"        {Plain(item)}\n"));
+            // Une carte n'a qu'un centre : un second sommet écrit à la main devient une de ses branches.
+            var indent = new string(' ', (Math.Max(1, item.Level) + 1) * 4);
+            code.Append(Invariant($"{indent}{Plain(item.Label)}\n"));
         }
         return code.ToString().TrimEnd('\n');
     }

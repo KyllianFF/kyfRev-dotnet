@@ -260,6 +260,9 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
     public void InsertDiagram(string info, string code, int? position) => Post(new InsertDiagramRequest(info, code, position));
 
     /// <inheritdoc/>
+    public void ShowDrawingCode(int position) => Post(new ShowBlockCodeRequest(position));
+
+    /// <inheritdoc/>
     public void SetColor(string? color) => Post(new ColorRequest(color));
 
     /// <inheritdoc/>
@@ -514,7 +517,7 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
         var language = menu.DrawingLanguage ?? string.Empty;
         var code = menu.DrawingCode ?? string.Empty;
         var items = new List<Control>();
-        if (language.StartsWith(SmartArt.Language, StringComparison.Ordinal) || language.Trim() == NetworkBlock.Language)
+        if (OpensInAnEditor(language, code))
         {
             items.Add(ActionMenus.Quick(EditingText.EditDrawing, Icons.Edit, () => Receive(new EditDiagramEvent(language, code, position))));
         }
@@ -527,8 +530,9 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
     private MenuItem DeleteDrawing(string language, string code, int position) =>
         ActionMenus.Item(DeleteDrawingLabel(language, code), () => Post(new DeleteBlockRequest(position)));
 
-    private static string DeleteDrawingLabel(string language, string code)
+    private static string DeleteDrawingLabel(string language, string text)
     {
+        var code = string.Join('\n', text.ReplaceLineEndings("\n").Split('\n').Where(line => !line.StartsWith("%%", StringComparison.Ordinal)));
         if (language.StartsWith(SmartArt.Language, StringComparison.Ordinal))
         {
             return EditingText.DeleteSmartArt;
@@ -639,8 +643,12 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
                 image = (await engine.DrawNetworkAsync(network, SchemaIsland.ThemeOf(this)).ConfigureAwait(true))?.Image;
             }
         }
-        Send(new DiagramRequest(diagram.Language, diagram.Code, svg, image));
+        Send(new DiagramRequest(diagram.Language, diagram.Code, svg, image, OpensInAnEditor(diagram.Language, diagram.Code)));
     }
+
+    /// <summary>Ce bloc se rouvre dans un éditeur de l'application. Un schéma retouché à la main ne se rouvre plus : il reste dans son code.</summary>
+    private static bool OpensInAnEditor(string language, string code) =>
+        language.StartsWith(SmartArt.Language, StringComparison.Ordinal) || language.Trim() == NetworkBlock.Language || MermaidTemplates.ReadBack(code) is not null;
 
     /// <summary>Le dessin d'un SmartArt, en SVG ; rien pour un autre bloc.</summary>
     private static string? SvgOf(string info, string code)

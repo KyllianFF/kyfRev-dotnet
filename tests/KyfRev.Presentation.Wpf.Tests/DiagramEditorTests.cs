@@ -9,7 +9,7 @@ using KyfRev.Rendering.Diagrams;
 
 namespace KyfRev.Presentation.Wpf.Tests;
 
-/// <summary>L'éditeur de hiérarchie : plusieurs niveaux, et ajouter sous un seul élément.</summary>
+/// <summary>L'éditeur des dessins : plusieurs niveaux et ajouter sous un seul élément, une simple liste, un tableau de valeurs.</summary>
 [TestClass]
 public sealed class DiagramEditorTests
 {
@@ -222,23 +222,195 @@ public sealed class DiagramEditorTests
     }
 
     [TestMethod]
-    public void Only_a_hierarchy_of_the_sheet_opens_here()
+    public void A_block_of_the_sheet_opens_here_unless_it_was_written_by_hand()
     {
         var editor = DiagramEditorViewModel.ForExisting("smartart  organigramme", Family, 12)!;
 
         Assert.AreEqual(12, editor.Position);
-        Assert.AreEqual(EditingText.DiagramEditorEdit, editor.Title);
+        Assert.AreEqual(EditingText.DiagramEditorEditOf(editor.SelectedModel.Name), editor.Title);
         Assert.AreEqual(EditingText.DiagramEditorSave, editor.ConfirmLabel);
         Assert.AreEqual(Family, editor.Source()!.Value.Code);
-        Assert.IsNull(DiagramEditorViewModel.ForExisting("smartart cycle", "a", 1));
-        Assert.IsNull(DiagramEditorViewModel.ForExisting("mermaid", "a", 1));
+        Assert.AreEqual("cycle", DiagramEditorViewModel.ForExisting("smartart cycle", "a", 1)!.SelectedModel.Id);
+        Assert.IsNull(DiagramEditorViewModel.ForExisting("smartart inconnu", "a", 1));
+        Assert.IsNull(DiagramEditorViewModel.ForExisting("mermaid", "flowchart LR\n    A --> B", 1));
         Assert.IsNull(DiagramEditorViewModel.ForExisting(null!, null!, 1));
 
+        var marked = MermaidTemplates.Source("etapes", "a\nb")!.Value;
+        Assert.AreEqual("etapes", DiagramEditorViewModel.ForExisting(marked.Info, marked.Code, 1)!.SelectedModel.Id);
+        Assert.IsNull(DiagramEditorViewModel.ForExisting(marked.Info, marked.Code + "\n    n1 --> n0", 1), "Retouché : il reste dans son code.");
+
         var empty = DiagramEditorViewModel.For(SmartArt.OrganizationChartId, " ", null);
-        Assert.AreEqual(EditingText.DiagramEditorNew, empty.Title);
+        Assert.AreEqual(EditingText.DiagramEditorNewOf(empty.SelectedModel.Name), empty.Title);
         Assert.AreEqual(EditingText.GalleryInsert, empty.ConfirmLabel);
         Assert.HasCount(1, empty.Nodes);
         Assert.IsNull(empty.Source(), "Rien d'écrit : rien à insérer.");
+    }
+
+    [TestMethod]
+    public void A_flat_model_is_a_simple_list()
+    {
+        var editor = DiagramEditorViewModel.For("cycle", "Un\nDeux\nTrois", null);
+
+        Assert.AreEqual(GalleryKind.SmartArt, editor.Kind);
+        Assert.IsFalse(editor.ShowsLevels);
+        Assert.IsFalse(editor.ShowsDirection);
+        Assert.IsFalse(editor.ShowsValues);
+        Assert.AreEqual(EditingText.DiagramAddItem, editor.AddLabel);
+        Assert.AreEqual(EditingText.DiagramListKeys, editor.KeysHelp);
+        Assert.IsFalse(editor.AddChildCommand.CanExecute(null));
+        Assert.IsFalse(editor.IndentCommand.CanExecute(null));
+        Assert.IsFalse(editor.OutdentCommand.CanExecute(null));
+        Assert.IsTrue(editor.AddSiblingCommand.CanExecute(null));
+        Assert.IsTrue(editor.DeleteCommand.CanExecute(null), "Une liste n'a pas de sommet à garder.");
+        Assert.IsNull(editor.HighlightedBox);
+        Assert.IsNull(editor.MermaidCode);
+        Assert.IsNotNull(editor.Preview);
+
+        Assert.IsTrue(editor.TakeKey(Key.Enter, ModifierKeys.None));
+        editor.Selected!.Text = "Après un";
+        Assert.AreEqual(("smartart cycle", "Un\nAprès un\nDeux\nTrois"), editor.Source());
+
+        DiagramNode? focused = null;
+        editor.NodeToFocus += (_, node) => focused = node;
+        editor.SelectBox(0);
+        Assert.IsNull(focused, "Un dessin à plat ne donne pas une boîte par élément.");
+
+        Assert.IsFalse(editor.TakeKey(Key.Enter, ModifierKeys.Control) && editor.Nodes.Any(node => node.Level > 0), "Pas d'enfant dans une liste.");
+    }
+
+    [TestMethod]
+    public void A_schema_writes_its_model_in_the_block_and_shows_only_its_code()
+    {
+        var editor = DiagramEditorViewModel.For("etapes", "Crise\nBastille", null);
+
+        Assert.AreEqual(GalleryKind.Schema, editor.Kind);
+        Assert.IsTrue(editor.IsMermaid);
+        Assert.IsFalse(editor.IsDrawn);
+        Assert.IsNull(editor.Preview);
+        Assert.AreEqual(MermaidTemplates.Code("etapes", "Crise\nBastille"), editor.MermaidCode);
+        Assert.AreEqual(MermaidTemplates.Source("etapes", "Crise\nBastille"), editor.Source());
+        Assert.IsNull(editor.LimitWarning);
+        Assert.IsFalse(editor.HasValueWarning);
+
+        var changes = new List<string?>();
+        editor.PropertyChanged += (_, e) => changes.Add(e.PropertyName);
+        editor.ShowsCode = true;
+        CollectionAssert.Contains(changes, nameof(DiagramEditorViewModel.MermaidCode));
+        changes.Clear();
+        editor.Nodes[1].Text = "Valmy";
+        CollectionAssert.Contains(changes, nameof(DiagramEditorViewModel.MermaidCode));
+        StringAssert.Contains(editor.MermaidCode, "Valmy", StringComparison.Ordinal);
+    }
+
+    [TestMethod]
+    public void A_mind_map_has_levels_and_opens_again_with_them()
+    {
+        var editor = DiagramEditorViewModel.For("carte", "Centre\n  Branche\n    Détail\n  Autre", null);
+
+        Assert.IsTrue(editor.ShowsLevels);
+        Assert.IsFalse(editor.ShowsDirection);
+        Assert.AreEqual(EditingText.DiagramAddSibling, editor.AddLabel);
+        Assert.AreEqual(EditingText.DiagramKeysNoClick, editor.KeysHelp);
+        Assert.IsNull(editor.HighlightedBox, "Le dessin est celui de Mermaid.");
+        editor.Select(editor.Nodes[2]);
+        editor.AddChildCommand.Execute(null);
+        editor.Selected!.Text = "Encore";
+
+        var source = editor.Source()!.Value;
+        StringAssert.Contains(source.Code, "\n%%     Détail\n%%       Encore\n", StringComparison.Ordinal);
+
+        var again = DiagramEditorViewModel.ForExisting(source.Info, source.Code, 4)!;
+        Assert.AreEqual("0 1 2 3 1", string.Join(' ', again.Nodes.Select(node => node.Level)));
+        Assert.AreEqual("Encore", again.Nodes[3].Text);
+    }
+
+    [TestMethod]
+    public void A_chart_is_a_table_of_values()
+    {
+        var editor = DiagramEditorViewModel.For("secteurs", "Un : 1,5\nDeux : 3", null);
+
+        Assert.AreEqual(GalleryKind.Chart, editor.Kind);
+        Assert.IsTrue(editor.ShowsValues);
+        Assert.IsFalse(editor.ShowsSecondValue);
+        Assert.AreEqual(EditingText.DiagramAddRow, editor.AddLabel);
+        Assert.AreEqual("Un", editor.Nodes[0].Text);
+        Assert.AreEqual("1,5", editor.Nodes[0].Value);
+        Assert.IsFalse(editor.HasValueWarning);
+
+        editor.Nodes[1].Value = "beaucoup";
+        Assert.IsTrue(editor.HasValueWarning, "Elle comptera pour 1 : autant le dire.");
+        StringAssert.Contains(editor.MermaidCode, "\"Deux\" : 1", StringComparison.Ordinal);
+
+        editor.Nodes[1].Value = "4";
+        editor.Nodes[1].Text = "Deux: et demi";
+        Assert.IsFalse(editor.HasValueWarning);
+        var source = editor.Source()!.Value;
+        StringAssert.Contains(source.Code, "%% Deux  et demi : 4\n", StringComparison.Ordinal);
+        var again = DiagramEditorViewModel.ForExisting(source.Info, source.Code, 1)!;
+        Assert.AreEqual("4", again.Nodes[1].Value);
+
+        var bare = DiagramEditorViewModel.For("secteurs", "Sans valeur", null);
+        Assert.AreEqual(string.Empty, bare.Nodes[0].Value);
+        Assert.IsTrue(bare.HasValueWarning);
+    }
+
+    [TestMethod]
+    public void A_chart_with_two_values_keeps_the_second_one()
+    {
+        var editor = DiagramEditorViewModel.For("mixte", "Jan : 21 : 18", null);
+
+        Assert.IsTrue(editor.ShowsSecondValue);
+        Assert.AreEqual("18", editor.Nodes[0].SecondValue);
+        Assert.AreEqual("Jan : 21 : 18", MermaidTemplates.ReadBack(editor.Source()!.Value.Code)!.Value.Text);
+
+        editor.Nodes[0].SecondValue = "aucune";
+        Assert.IsTrue(editor.HasValueWarning);
+
+        editor.SelectedModel = editor.Models.Single(model => model.Id == "colonnes");
+        Assert.IsFalse(editor.ShowsSecondValue);
+        Assert.IsFalse(editor.HasValueWarning, "La seconde valeur ne se dessine plus.");
+        Assert.AreEqual("Jan : 21", MermaidTemplates.ReadBack(editor.Source()!.Value.Code)!.Value.Text);
+    }
+
+    [TestMethod]
+    public void Changing_the_model_adapts_the_levels_without_losing_anything()
+    {
+        var editor = DiagramEditorViewModel.For("cycle", "Un\nDeux\nTrois", null);
+
+        editor.SelectedModel = editor.Models.Single(model => model.Id == SmartArt.OrganizationChartId);
+
+        Assert.AreEqual(("smartart organigramme", "Un\n  Deux\n  Trois"), editor.Source());
+        Assert.IsTrue(editor.ShowsDirection);
+        Assert.AreEqual(EditingText.DiagramKeys, editor.KeysHelp);
+        Assert.IsNotNull(editor.HighlightedBox);
+
+        editor.SelectedModel = editor.Models.Single(model => model.Id == "cycle");
+
+        Assert.AreEqual(("smartart cycle", "Un\nDeux\nTrois"), editor.Source());
+
+        var hierarchy = Opened();
+        hierarchy.IsAcross = true;
+        Assert.AreEqual(Family, hierarchy.Source()!.Value.Code, "D'une hiérarchie à l'autre, les niveaux restent.");
+
+        var alone = DiagramEditorViewModel.For("cycle", "Seul", null);
+        alone.SelectedModel = alone.Models.Single(model => model.Id == SmartArt.OrganizationChartId);
+        Assert.AreEqual("Seul", alone.Source()!.Value.Code);
+    }
+
+    [TestMethod]
+    public void Too_many_elements_are_said_and_kept()
+    {
+        var maximum = SmartArt.Layouts.Single(layout => layout.Id == "cycle").Maximum;
+        var editor = DiagramEditorViewModel.For("cycle", string.Join('\n', Enumerable.Range(0, maximum).Select(i => $"Élément {i}")), null);
+        Assert.IsFalse(editor.HasLimitWarning);
+        Assert.IsNull(editor.LimitWarning);
+
+        editor.AddSiblingCommand.Execute(null);
+        editor.Selected!.Text = "De trop";
+
+        Assert.IsTrue(editor.HasLimitWarning);
+        Assert.AreEqual(EditingText.DiagramLimitOf(maximum), editor.LimitWarning);
+        StringAssert.Contains(editor.Source()!.Value.Code, "De trop", StringComparison.Ordinal);
     }
 
     [TestMethod]
@@ -258,23 +430,29 @@ public sealed class DiagramEditorTests
         Assert.IsFalse(editor.DeleteCommand.CanExecute(null));
     }
 
-    [TestMethod]
-    public void The_gallery_passes_a_hierarchy_on_to_the_next_step()
+    [STATestMethod]
+    [DataRow(GalleryKind.SmartArt, "cycle")]
+    [DataRow(GalleryKind.Schema, "carte")]
+    [DataRow(GalleryKind.Chart, "secteurs")]
+    public void Every_model_of_the_gallery_goes_on_to_the_editor(GalleryKind kind, string model)
     {
-        var gallery = DiagramGalleryViewModel.For(GalleryKind.SmartArt);
-        gallery.SelectedItem = gallery.Items.Single(item => item.Id == "cycle");
-        Assert.IsFalse(gallery.IsHierarchy);
-        Assert.IsTrue(gallery.ShowsItems);
-        Assert.AreEqual(EditingText.GalleryInsert, gallery.ConfirmLabel);
+        using var ui = new UiThread();
+        using var scene = new Scene();
+        var editor = scene.Page.Editor!;
+        editor.OpenGalleryCommand.Execute(kind);
+        editor.Gallery!.SelectedItem = editor.Gallery.Items.Single(item => item.Id == model);
+        TestShell.Flush();
+        Assert.AreEqual(EditingText.GalleryContinue, scene.Sheet.GalleryDialog.PrimaryButtonText);
 
-        gallery.SelectedItem = gallery.Items.Single(item => item.Id == SmartArt.OrganizationChartId);
+        scene.Sheet.GalleryDialog.Close(DesignSystem.Controls.DialogChoice.Primary);
+        TestShell.Flush();
 
-        Assert.IsTrue(gallery.IsHierarchy);
-        Assert.IsFalse(gallery.ShowsItems);
-        Assert.AreEqual(EditingText.GalleryContinue, gallery.ConfirmLabel);
-        Assert.AreEqual(EditingText.GalleryNextStep, gallery.InputHelp);
-
-        Assert.IsFalse(DiagramGalleryViewModel.For(GalleryKind.Schema).IsHierarchy);
+        Assert.IsFalse(editor.IsGalleryOpen);
+        Assert.IsTrue(editor.IsDiagramEditorOpen);
+        Assert.AreEqual(model, editor.DiagramEditor!.SelectedModel.Id);
+        Assert.AreEqual(kind, editor.DiagramEditor.Kind);
+        Assert.HasCount(DiagramGalleryViewModel.For(kind).Items.Count, editor.DiagramEditor.Models);
+        Assert.IsNotNull(editor.DiagramEditor.Source(), "L'exemple du modèle sert de départ.");
     }
 
     [STATestMethod]
@@ -295,8 +473,8 @@ public sealed class DiagramEditorTests
         Assert.IsFalse(editor.IsGalleryOpen);
         Assert.IsTrue(editor.IsDiagramEditorOpen);
         Assert.IsTrue(scene.Sheet.DiagramEditorDialog.IsOpen);
-        Assert.AreEqual(EditingText.DiagramEditorNew, scene.Sheet.DiagramEditorDialog.Title);
-        Assert.AreEqual("Cellule", editor.DiagramEditor!.Nodes[0].Text, "L'exemple du modèle sert de départ.");
+        Assert.AreEqual(EditingText.DiagramEditorNewOf(editor.DiagramEditor!.SelectedModel.Name), scene.Sheet.DiagramEditorDialog.Title);
+        Assert.AreEqual("Cellule", editor.DiagramEditor.Nodes[0].Text, "L'exemple du modèle sert de départ.");
         editor.DiagramEditor.Select(editor.DiagramEditor.Nodes[3]);
         editor.DiagramEditor.AddChildCommand.Execute(null);
         editor.DiagramEditor.Selected!.Text = "Lipides";
@@ -400,6 +578,74 @@ public sealed class DiagramEditorTests
     }
 
     [STATestMethod]
+    public void The_view_shows_only_what_the_model_needs()
+    {
+        using var ui = new UiThread();
+        var test = new TestShell();
+        var view = new DiagramEditorView();
+        var host = new Border { Width = 980, Height = 560, Child = view };
+        host.Resources.MergedDictionaries.Add(test.Design.Dictionary);
+        var canvas = new Canvas();
+        canvas.Children.Add(host);
+        var window = new Window { Content = canvas, Left = -10000, Top = -10000, Width = 1000, Height = 600, ShowActivated = false, ShowInTaskbar = false };
+        window.Show();
+        try
+        {
+            // Une simple liste : ni niveaux ni direction, et le dessin ne choisit rien.
+            var list = DiagramEditorViewModel.For("cycle", "Un\nDeux", null);
+            view.DataContext = list;
+            TestShell.Flush();
+            Assert.HasCount(2, Fields(view));
+            Assert.IsFalse(view.AddChildButton.IsVisible);
+            Assert.IsFalse(view.IndentButton.IsVisible);
+            Assert.IsFalse(view.DownButton.IsVisible);
+            Assert.IsTrue(view.PreviewView.IsVisible);
+            Assert.IsFalse(view.MermaidPreview.IsVisible);
+            view.PreviewView.RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, 0, MouseButton.Left) { RoutedEvent = UIElement.MouseLeftButtonDownEvent });
+            Assert.AreEqual("Un", list.Selected!.Text);
+            var menu = view.NodeMenuItems(null).OfType<MenuItem>().Select(item => (string)item.Header).ToList();
+            CollectionAssert.Contains(menu, EditingText.DiagramAddItem);
+            CollectionAssert.DoesNotContain(menu, EditingText.DiagramChild);
+            CollectionAssert.DoesNotContain(menu, EditingText.DiagramIndent);
+
+            // Changer de modèle ici change ce qui se voit.
+            view.ModelChoice.SelectedItem = list.Models.Single(model => model.Id == SmartArt.OrganizationChartId);
+            TestShell.Flush();
+            Assert.IsTrue(view.AddChildButton.IsVisible);
+            Assert.IsTrue(view.DownButton.IsVisible);
+
+            // Un graphique : une valeur par ligne, et le code sous l'aperçu.
+            var chart = DiagramEditorViewModel.For("secteurs", "Un : 1\nDeux : 2", null);
+            view.DataContext = chart;
+            TestShell.Flush();
+            Assert.HasCount(4, Fields(view));
+            Assert.IsTrue(view.MermaidPreview.IsVisible);
+            Assert.IsFalse(view.PreviewView.IsVisible);
+            Assert.IsTrue(view.CodeToggle.IsVisible);
+            Assert.IsFalse(view.CodeBox.IsVisible);
+            Assert.IsFalse(view.ValueWarningMessage.IsOpen);
+            chart.Nodes[0].Value = "?";
+            TestShell.Flush();
+            Assert.IsTrue(view.ValueWarningMessage.IsOpen);
+
+            // Deux valeurs : une colonne de plus.
+            view.DataContext = DiagramEditorViewModel.For("mixte", "Un : 1 : 2", null);
+            TestShell.Flush();
+            Assert.HasCount(3, Fields(view));
+
+            // Une limite dépassée se dit.
+            var maximum = SmartArt.Layouts.Single(layout => layout.Id == "cycle").Maximum;
+            view.DataContext = DiagramEditorViewModel.For("cycle", string.Join('\n', Enumerable.Range(0, maximum + 1).Select(i => $"Élément {i}")), null);
+            TestShell.Flush();
+            Assert.IsTrue(view.LimitWarningMessage.IsOpen);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
     public void A_hidden_document_is_built_only_once_shown()
     {
         using var ui = new UiThread();
@@ -439,7 +685,10 @@ public sealed class DiagramEditorTests
             var child = VisualTreeHelper.GetChild(root, i);
             if (child is TextBox field)
             {
-                found.Add(field);
+                if (field.IsVisible)
+                {
+                    found.Add(field);
+                }
             }
             else
             {

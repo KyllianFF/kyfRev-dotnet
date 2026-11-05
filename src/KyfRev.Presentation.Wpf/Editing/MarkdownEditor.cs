@@ -254,6 +254,12 @@ internal sealed class MarkdownEditor : TextEditor, IEditorSurface
         Edit((text, start, _) => MarkdownEdits.Block(text, start, $"```{info}\n{code}\n```"));
 
     /// <inheritdoc/>
+    public void ShowDrawingCode(int position)
+    {
+        // Ici, tout est déjà du code.
+    }
+
+    /// <inheritdoc/>
     public void SetColor(string? color) => EditIfAny((text, start, end) => MarkdownEdits.Style(text, start, end, ColorProperty, color));
 
     /// <inheritdoc/>

@@ -7,6 +7,8 @@ import { ICONES_LUCIDE } from "./icones";
 const ICONES_KYFREV: Record<string, string> = {
   "kyfrev-switch":
     '<rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10.5h11M15 8.5l2 2-2 2M18 13.5H7M9 11.5l-2 2 2 2"/>',
+  "kyfrev-switch-coeur":
+    '<rect x="3" y="2" width="18" height="20" rx="2"/><path d="M3 8h18"/><path d="M7 5h3.5M6.5 5l1-1M6.5 5l1 1M17 5h-3.5M17.5 5l-1-1M17.5 5l-1 1"/><circle cx="12" cy="15" r="1.5"/><path d="M12 10.5v2M12 17.5v2M7.5 15h2M14.5 15h2M8.8 11.8l1.4 1.4M15.2 11.8l-1.4 1.4M8.8 18.2l1.4-1.4M15.2 18.2l-1.4-1.4"/>',
   "kyfrev-routeur":
     '<circle cx="12" cy="12" r="10"/><path d="M12 6v4M10.5 7.5 12 6l1.5 1.5M12 18v-4M10.5 16.5 12 18l1.5-1.5M6 12h4M7.5 10.5 6 12l1.5 1.5M18 12h-4M16.5 10.5 18 12l-1.5 1.5"/>',
   "kyfrev-modem":

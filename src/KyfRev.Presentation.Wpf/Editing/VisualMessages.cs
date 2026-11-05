@@ -132,8 +132,8 @@ internal sealed record ListOpenRequest(bool Open) : EditorRequest;
 /// <summary>Insère un dessin, ou remplace celui de cette position.</summary>
 internal sealed record InsertDiagramRequest(string Language, string Code, int? Position) : EditorRequest;
 
-/// <summary>Le dessin d'un bloc : un SVG, ou une image en adresse <c>data:</c> ; ni l'un ni l'autre : il ne se dessine pas.</summary>
-internal sealed record DiagramRequest(string Language, string Code, string? Svg, string? Image) : EditorRequest;
+/// <summary>Le dessin d'un bloc : un SVG, ou une image en adresse <c>data:</c> ; ni l'un ni l'autre : il ne se dessine pas. Et s'il se rouvre dans un éditeur.</summary>
+internal sealed record DiagramRequest(string Language, string Code, string? Svg, string? Image, bool Editable) : EditorRequest;
 
 /// <summary>Retire de la fiche le bloc à cet endroit.</summary>
 internal sealed record DeleteBlockRequest(int Position) : EditorRequest;

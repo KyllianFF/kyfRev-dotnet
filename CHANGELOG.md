@@ -18,6 +18,10 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   définitive, en le cochant.
 - Vue « Fiches » : une vraie arborescence, avec des dossiers dans les dossiers, qui se plient et se déplient, y compris les
   dossiers vides ; un avertissement au-delà de trois sous-dossiers.
+- Schéma réseau : le switch de cœur et le switch de distribution rejoignent la bibliothèque, avec leur icône.
+- Écrire : tous les dessins passent par le même éditeur, après le choix du modèle dans la galerie : les SmartArt en liste, la carte
+  mentale sur plusieurs niveaux, les schémas Mermaid en liste, les graphiques en tableau de valeurs. Tout dessin inséré depuis la
+  galerie se rouvre pour être modifié et peut changer de modèle ; un schéma écrit ou retouché à la main reste dans son code.
 - Écrire : un vrai éditeur d'organigramme. Les éléments se composent dans une liste, sur autant de niveaux qu'il faut, et un
   élément peut en avoir sous lui sans toucher aux autres ; le dessin suit la frappe, et un clic sur une boîte la choisit.
   Le bloc reste du texte lisible partout : une ligne par élément, décalée de deux espaces par niveau.

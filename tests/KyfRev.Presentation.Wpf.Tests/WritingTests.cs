@@ -434,23 +434,12 @@ public sealed class WritingTests
     [TestMethod]
     public void Changing_the_model_keeps_what_is_written()
     {
-        var existing = DiagramGalleryViewModel.ForExisting("smartart cycle", "Mes\nÉléments", 3)!;
-        existing.SelectedItem = existing.Items.First(item => item.Id == "pyramide");
-        Assert.AreEqual("Mes\nÉléments", existing.Text, "c'est ce que propose Office");
+        var existing = DiagramEditorViewModel.ForExisting("smartart cycle", "Mes\nÉléments", 3)!;
 
-        var fresh = DiagramGalleryViewModel.For(GalleryKind.SmartArt);
-        var untouched = fresh.Text;
-        fresh.SelectedItem = fresh.Items[^1];
-        Assert.AreEqual(fresh.Items[^1].Sample, fresh.Text, "un exemple intact suit le modèle");
-        Assert.AreNotEqual(string.Empty, untouched);
+        existing.SelectedModel = existing.Models.First(item => item.Id == "pyramide");
 
-        fresh.Text = "À moi";
-        fresh.SelectedItem = fresh.Items[0];
-        Assert.AreEqual("À moi", fresh.Text);
-
-        fresh.Text = "   ";
-        fresh.SelectedItem = fresh.Items[1];
-        Assert.AreEqual(fresh.Items[1].Sample, fresh.Text, "un champ vide reprend l'exemple");
+        Assert.AreEqual(("smartart pyramide", "Mes\nÉléments"), existing.Source(), "c'est ce que propose Office");
+        Assert.AreEqual(3, existing.Position);
     }
 
     [STATestMethod]
@@ -938,7 +927,7 @@ public sealed class WritingTests
     }
 
     [STATestMethod]
-    public void The_gallery_shows_its_models_by_category_and_follows_the_text()
+    public void The_gallery_shows_its_models_by_category_and_previews_the_chosen_one()
     {
         var gallery = DiagramGalleryViewModel.For(GalleryKind.SmartArt);
 
@@ -947,40 +936,35 @@ public sealed class WritingTests
         Assert.HasCount(17, gallery.Items);
         Assert.IsTrue(gallery.Items.All(item => item.Thumbnail.Shapes.Length > 0));
         Assert.AreEqual(gallery.Items[0], gallery.SelectedItem);
-        Assert.AreEqual(gallery.Items[0].Sample, gallery.Text);
 
         gallery.SelectedCategory = "Cycle";
         Assert.AreEqual("cycle radial", string.Join(' ', gallery.Items.Select(item => item.Id)));
         Assert.AreEqual("cycle", gallery.SelectedItem!.Id, "Le modèle choisi n'est plus montré : le premier le remplace.");
-        Assert.AreEqual(gallery.SelectedItem.Sample, gallery.Text);
 
         var previews = new List<string?>();
         gallery.PropertyChanged += (_, e) => previews.Add(e.PropertyName);
-        gallery.Text = "Une\nDeux";
+        gallery.SelectedItem = gallery.Items[1];
         Assert.Contains(nameof(DiagramGalleryViewModel.Preview), previews);
-        Assert.AreEqual("Cycle : Une, Deux", gallery.Preview!.Description);
-        Assert.AreEqual(("smartart cycle", "Une\nDeux"), gallery.Source());
+        Assert.AreEqual(KyfRev.Rendering.Diagrams.SmartArt.Draw("radial", gallery.Items[1].Sample)!.Description, gallery.Preview!.Description);
+        Assert.IsNull(gallery.MermaidCode);
 
         gallery.SelectedCategory = EditingText.GalleryAll;
-        Assert.AreEqual("cycle", gallery.SelectedItem!.Id, "Toujours montré : il reste choisi.");
-        Assert.AreEqual("Une\nDeux", gallery.Text);
+        Assert.AreEqual("radial", gallery.SelectedItem!.Id, "Toujours montré : il reste choisi.");
     }
 
     [STATestMethod]
-    [DataRow(GalleryKind.Schema, EditingText.GallerySchemaTitle, 9, EditingText.GalleryOnePerLine)]
-    [DataRow(GalleryKind.Chart, EditingText.GalleryChartTitle, 6, EditingText.GalleryOneValuePerLine)]
-    public void The_gallery_of_schemas_and_charts_writes_mermaid(GalleryKind kind, string title, int count, string help)
+    [DataRow(GalleryKind.Schema, EditingText.GallerySchemaTitle, 9)]
+    [DataRow(GalleryKind.Chart, EditingText.GalleryChartTitle, 6)]
+    public void The_gallery_of_schemas_and_charts_shows_mermaid(GalleryKind kind, string title, int count)
     {
         var gallery = DiagramGalleryViewModel.For(kind);
 
         Assert.AreEqual(title, gallery.Title);
         Assert.HasCount(count, gallery.Items);
-        Assert.AreEqual(help, gallery.InputHelp);
         Assert.IsTrue(gallery.IsMermaid);
         Assert.IsFalse(gallery.IsDrawn);
         Assert.IsNull(gallery.Preview);
         Assert.IsNotNull(gallery.MermaidCode);
-        Assert.AreEqual((KyfRev.Rendering.Diagrams.MermaidTemplates.Language, gallery.MermaidCode), gallery.Source());
     }
 
     [STATestMethod]
@@ -997,12 +981,21 @@ public sealed class WritingTests
         Assert.IsTrue(view.MermaidPreview.ShowsCode);
         Assert.AreEqual(scene.Editor.Gallery!.MermaidCode, view.MermaidPreview.Code);
 
-        scene.Editor.Gallery.ShowsCode = true;
-        TestShell.Flush();
-        Assert.IsTrue(view.CodeBox.IsVisible);
-
         scene.Editor.AnswerGalleryCommand.Execute(true);
-        Assert.Contains("```mermaid\nflowchart LR", scene.Source.Text);
+        TestShell.Flush();
+
+        var editor = scene.SheetPage.DiagramEditorContent;
+        Assert.AreEqual(scene.Editor.DiagramEditor, editor.DataContext);
+        Assert.IsTrue(editor.MermaidPreview.IsVisible);
+        Assert.IsFalse(editor.PreviewView.IsVisible);
+        scene.Editor.DiagramEditor!.ShowsCode = true;
+        TestShell.Flush();
+        Assert.IsTrue(editor.CodeBox.IsVisible);
+        Assert.AreEqual(scene.Editor.DiagramEditor.MermaidCode, editor.CodeBox.Text);
+
+        scene.Editor.AnswerDiagramEditorCommand.Execute(true);
+        Assert.Contains("```mermaid\n%% kyfrev etapes\n", scene.Source.Text);
+        Assert.Contains("\nflowchart LR\n", scene.Source.Text);
     }
 
     [STATestMethod]
@@ -1014,9 +1007,10 @@ public sealed class WritingTests
         scene.Test.Design.Theme = theme;
         TestShell.Flush();
         scene.Editor.OpenGalleryCommand.Execute(GalleryKind.Schema);
+        scene.Editor.AnswerGalleryCommand.Execute(true);
         TestShell.Flush();
 
-        var box = scene.SheetPage.GalleryContent.CodeToggle;
+        var box = scene.SheetPage.DiagramEditorContent.CodeToggle;
         box.ApplyTemplate();
         var text = (System.Windows.Media.SolidColorBrush)box.Foreground;
         var ground = ThemeColors.For(theme)[ColorRole.Surface];
@@ -1025,37 +1019,65 @@ public sealed class WritingTests
     }
 
     [STATestMethod]
-    public void The_gallery_has_nothing_to_write_without_text()
+    [DataRow(ThemeKind.Light)]
+    [DataRow(ThemeKind.Dark)]
+    public void A_combo_box_draws_its_chevron_in_the_text_color_of_the_theme(ThemeKind theme)
     {
-        var gallery = DiagramGalleryViewModel.For(GalleryKind.SmartArt);
+        using var scene = new Scene("Avant\n");
+        scene.Test.Design.Theme = theme;
+        TestShell.Flush();
+        scene.Editor.OpenGalleryCommand.Execute(GalleryKind.Schema);
+        scene.Editor.AnswerGalleryCommand.Execute(true);
+        TestShell.Flush();
 
-        gallery.Text = " \n ";
+        var choice = scene.SheetPage.DiagramEditorContent.ModelChoice;
+        choice.ApplyTemplate();
+        var toggle = (System.Windows.Controls.Primitives.ToggleButton)choice.Template.FindName("Toggle", choice);
+        var text = (System.Windows.Media.SolidColorBrush)toggle.Foreground;
+        var ground = ThemeColors.For(theme)[ColorRole.Surface];
 
-        Assert.IsNull(gallery.Source());
-        gallery.SelectedItem = null;
-        Assert.IsNull(gallery.Source());
-        Assert.IsNull(gallery.Preview);
+        Assert.IsGreaterThanOrEqualTo(4.5, new TokenColor(text.Color.A, text.Color.R, text.Color.G, text.Color.B).ContrastWith(ground));
     }
 
     [STATestMethod]
+    public void The_gallery_has_nothing_to_show_without_a_model()
+    {
+        using var scene = new Scene("Avant\n");
+        var drawn = DiagramGalleryViewModel.For(GalleryKind.SmartArt);
+        drawn.SelectedItem = null;
+        var written = DiagramGalleryViewModel.For(GalleryKind.Chart);
+        written.SelectedItem = null;
+
+        Assert.IsNull(drawn.Preview);
+        Assert.IsNull(written.MermaidCode);
+
+        scene.Editor.OpenGalleryCommand.Execute(GalleryKind.SmartArt);
+        scene.Editor.Gallery!.SelectedItem = null;
+        scene.Editor.AnswerGalleryCommand.Execute(true);
+
+        Assert.IsFalse(scene.Editor.IsGalleryOpen);
+        Assert.IsFalse(scene.Editor.IsDiagramEditorOpen, "Aucun modèle choisi : il n'y a rien à composer.");
+    }
+
+    [TestMethod]
     [DataRow("smartart cycle", "a\nb", "cycle")]
     [DataRow("smartart  matrice", "a", "matrice")]
-    public void The_gallery_opens_on_a_smartart_of_the_sheet(string info, string code, string layout)
+    public void The_editor_opens_on_a_smartart_of_the_sheet(string info, string code, string layout)
     {
-        var gallery = DiagramGalleryViewModel.ForExisting(info, code, 12)!;
+        var editor = DiagramEditorViewModel.ForExisting(info, code, 12)!;
 
-        Assert.AreEqual(layout, gallery.SelectedItem!.Id);
-        Assert.AreEqual(code, gallery.Text);
-        Assert.AreEqual(12, gallery.Position);
+        Assert.AreEqual(layout, editor.SelectedModel.Id);
+        Assert.AreEqual(code, editor.Source()!.Value.Code);
+        Assert.AreEqual(12, editor.Position);
     }
 
-    [STATestMethod]
+    [TestMethod]
     [DataRow("python")]
     [DataRow("smartart")]
     [DataRow("smartart inconnu")]
     [DataRow("mermaid")]
-    public void The_gallery_stays_closed_on_anything_else(string info) =>
-        Assert.IsNull(DiagramGalleryViewModel.ForExisting(info, "x", 0));
+    public void The_editor_stays_closed_on_anything_else(string info) =>
+        Assert.IsNull(DiagramEditorViewModel.ForExisting(info, "x", 0));
 
     [STATestMethod]
     public void The_gallery_writes_a_code_block_in_the_markdown()
@@ -1063,15 +1085,22 @@ public sealed class WritingTests
         using var scene = new Scene("Avant\n");
         scene.Editor.OpenGalleryCommand.Execute(GalleryKind.SmartArt);
         Assert.IsTrue(scene.Editor.IsGalleryOpen);
-        scene.Editor.Gallery!.Text = "Un\nDeux";
 
         scene.Editor.AnswerGalleryCommand.Execute(false);
         Assert.IsFalse(scene.Editor.IsGalleryOpen);
+        Assert.IsFalse(scene.Editor.IsDiagramEditorOpen);
         Assert.DoesNotContain("smartart", scene.Source.Text);
 
         scene.Editor.OpenGalleryCommand.Execute(GalleryKind.SmartArt);
-        scene.Editor.Gallery!.Text = "Un\nDeux";
         scene.Editor.AnswerGalleryCommand.Execute(true);
+        var editor = scene.Editor.DiagramEditor!;
+        foreach (var node in editor.Nodes)
+        {
+            node.Text = string.Empty;
+        }
+        editor.Nodes[0].Text = "Un";
+        editor.Nodes[1].Text = "Deux";
+        scene.Editor.AnswerDiagramEditorCommand.Execute(true);
         Assert.Contains("```smartart blocs\nUn\nDeux\n```", scene.Source.Text);
     }
 

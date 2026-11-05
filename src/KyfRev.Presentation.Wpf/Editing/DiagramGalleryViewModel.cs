@@ -30,17 +30,17 @@ public sealed record GalleryItem(string Id, string Name, string Category, string
 }
 
 /// <summary>
-/// La galerie, comme celle d'Office : des catégories, une vignette par modèle, et un aperçu qui suit le texte saisi.
+/// La galerie, comme celle d'Office : des catégories, une vignette par modèle, et un aperçu de son exemple. Elle sert à choisir le modèle :
+/// ses éléments s'écrivent ensuite dans l'éditeur.
 /// </summary>
 public sealed partial class DiagramGalleryViewModel : ObservableObject
 {
     private readonly IReadOnlyList<GalleryItem> _all;
 
-    private DiagramGalleryViewModel(GalleryKind kind, IReadOnlyList<GalleryItem> all, int? position)
+    private DiagramGalleryViewModel(GalleryKind kind, IReadOnlyList<GalleryItem> all)
     {
         Kind = kind;
         _all = all;
-        Position = position;
         Categories = [EditingText.GalleryAll, .. all.Select(item => item.Category).Distinct(StringComparer.Ordinal)];
         SelectedCategory = EditingText.GalleryAll;
         SelectedItem = all[0];
@@ -48,9 +48,6 @@ public sealed partial class DiagramGalleryViewModel : ObservableObject
 
     /// <summary>Ce que la galerie propose d'insérer.</summary>
     public GalleryKind Kind { get; }
-
-    /// <summary>Le bloc qu'elle remplace ; rien : elle en insère un.</summary>
-    public int? Position { get; }
 
     /// <summary>Le titre de la galerie.</summary>
     public string Title => Kind switch
@@ -76,17 +73,7 @@ public sealed partial class DiagramGalleryViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(Preview))]
     [NotifyPropertyChangedFor(nameof(MermaidCode))]
-    [NotifyPropertyChangedFor(nameof(IsHierarchy))]
-    [NotifyPropertyChangedFor(nameof(ShowsItems))]
-    [NotifyPropertyChangedFor(nameof(ConfirmLabel))]
-    [NotifyPropertyChangedFor(nameof(InputHelp))]
     public partial GalleryItem? SelectedItem { get; set; }
-
-    /// <summary>Le texte saisi, un élément par ligne.</summary>
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Preview))]
-    [NotifyPropertyChangedFor(nameof(MermaidCode))]
-    public partial string Text { get; set; } = string.Empty;
 
     /// <summary>Le modèle choisi s'écrit en Mermaid.</summary>
     public bool IsMermaid => Kind != GalleryKind.SmartArt;
@@ -94,83 +81,17 @@ public sealed partial class DiagramGalleryViewModel : ObservableObject
     /// <summary>Le modèle choisi est dessiné par kyfRev.</summary>
     public bool IsDrawn => !IsMermaid;
 
-    /// <summary>Le dessin du modèle choisi, avec le texte saisi ; rien pour un modèle Mermaid.</summary>
-    public DiagramScene? Preview => !IsMermaid && SelectedItem is { } item ? SmartArt.Draw(item.Id, Text) : null;
+    /// <summary>Le dessin de l'exemple du modèle choisi ; rien pour un modèle Mermaid.</summary>
+    public DiagramScene? Preview => !IsMermaid && SelectedItem is { } item ? SmartArt.Draw(item.Id, item.Sample) : null;
 
-    /// <summary>Le code du modèle choisi, avec le texte saisi ; rien pour un SmartArt.</summary>
-    public string? MermaidCode => IsMermaid ? MermaidTemplates.Code(SelectedItem?.Id, Text) : null;
+    /// <summary>Le code de l'exemple du modèle choisi ; rien pour un SmartArt.</summary>
+    public string? MermaidCode => IsMermaid && SelectedItem is { } item ? MermaidTemplates.Code(item.Id, item.Sample) : null;
 
-    /// <summary>Le code se montre sous l'aperçu.</summary>
-    [ObservableProperty]
-    public partial bool ShowsCode { get; set; }
+    /// <summary>Une galerie, pour insérer.</summary>
+    public static DiagramGalleryViewModel For(GalleryKind kind) => new(kind, ItemsOf(kind));
 
-    /// <summary>Le modèle choisi a plusieurs niveaux : ils s'écrivent dans son éditeur, à l'étape suivante.</summary>
-    public bool IsHierarchy => Kind == GalleryKind.SmartArt && SmartArt.IsHierarchy(SelectedItem?.Id);
-
-    /// <summary>La saisie d'une ligne par élément suffit au modèle choisi.</summary>
-    public bool ShowsItems => !IsHierarchy;
-
-    /// <summary>Le libellé du bouton qui valide.</summary>
-    public string ConfirmLabel => IsHierarchy ? EditingText.GalleryContinue : EditingText.GalleryInsert;
-
-    /// <summary>Ce qu'il faut écrire dans la saisie.</summary>
-    public string InputHelp => IsHierarchy
-        ? EditingText.GalleryNextStep
-        : Kind == GalleryKind.Chart ? EditingText.GalleryOneValuePerLine : EditingText.GalleryOnePerLine;
-
-    /// <summary>Une galerie vide, pour insérer.</summary>
-    public static DiagramGalleryViewModel For(GalleryKind kind) => new(kind, ItemsOf(kind), null);
-
-    /// <summary>Une galerie ouverte sur un SmartArt de la fiche, pour le modifier ; rien si ce bloc n'en est pas un.</summary>
-    /// <param name="info">Ce qui suit les accents graves de son bloc.</param>
-    /// <param name="code">Le contenu de son bloc.</param>
-    /// <param name="position">Où il se trouve.</param>
-    public static DiagramGalleryViewModel? ForExisting(string info, string code, int position)
-    {
-        var parts = (info ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (parts is not [SmartArt.Language, var layout])
-        {
-            return null;
-        }
-        var gallery = new DiagramGalleryViewModel(GalleryKind.SmartArt, ItemsOf(GalleryKind.SmartArt), position);
-        var item = gallery._all.FirstOrDefault(candidate => candidate.Id == layout);
-        if (item is null)
-        {
-            return null;
-        }
-        gallery.SelectedItem = item;
-        gallery.Text = code;
-        return gallery;
-    }
-
-    /// <summary>Ce qui s'écrit dans le fichier ; rien si aucun modèle n'est choisi, ou s'il n'y a rien à dessiner.</summary>
-    public (string Info, string Code)? Source()
-    {
-        if (SelectedItem is not { } item || SmartArt.Items(Text).IsEmpty)
-        {
-            return null;
-        }
-        return IsMermaid ? (MermaidTemplates.Language, MermaidCode!) : SmartArt.Source(item.Id, Text);
-    }
-
-    partial void OnSelectedCategoryChanged(string value)
-    {
-        if (SelectedItem is { } chosen && !Items.Contains(chosen))
-        {
-            SelectedItem = Items.FirstOrDefault();
-        }
-    }
-
-    /// <summary>Changer de modèle garde ce qui est écrit, comme dans Office : seul un exemple encore intact se remplace.</summary>
-    partial void OnSelectedItemChanged(GalleryItem? oldValue, GalleryItem? newValue)
-    {
-        if (newValue is not null && (string.IsNullOrWhiteSpace(Text) || Text == oldValue?.Sample))
-        {
-            Text = newValue.Sample;
-        }
-    }
-
-    private static List<GalleryItem> ItemsOf(GalleryKind kind)
+    /// <summary>Les modèles d'une famille.</summary>
+    internal static List<GalleryItem> ItemsOf(GalleryKind kind)
     {
         if (kind == GalleryKind.SmartArt)
         {
@@ -179,5 +100,13 @@ public sealed partial class DiagramGalleryViewModel : ObservableObject
         var family = kind == GalleryKind.Chart ? MermaidFamily.Chart : MermaidFamily.Schema;
         return [.. MermaidTemplates.All.Where(template => template.Family == family)
             .Select(template => new GalleryItem(template.Id, template.Name, template.Category, template.Description, template.Sample, MermaidTemplates.Thumbnail(template)))];
+    }
+
+    partial void OnSelectedCategoryChanged(string value)
+    {
+        if (SelectedItem is { } chosen && !Items.Contains(chosen))
+        {
+            SelectedItem = Items.FirstOrDefault();
+        }
     }
 }

@@ -37,18 +37,13 @@
       </ListBox.ItemTemplate>
     </ListBox>
 
-    <!-- À droite : l'aperçu, qui suit le texte saisi. -->
-    <DockPanel Grid.Column="2">
-      <reading:DiagramView x:Name="PreviewView" DockPanel.Dock="Top" Scene="{Binding Preview}" Width="280" Visibility="{Binding IsDrawn, Converter={StaticResource Visible}}" />
-      <reading:MermaidView x:Name="MermaidPreview" DockPanel.Dock="Top" Height="176" ClipToBounds="True" Code="{Binding MermaidCode}" Visibility="{Binding IsMermaid, Converter={StaticResource Visible}}" />
-      <TextBlock DockPanel.Dock="Top" Text="{Binding SelectedItem.Name}" Style="{DynamicResource Kyf.Text.BodyStrong}" Margin="0,8,0,0" />
-      <TextBlock DockPanel.Dock="Top" Text="{Binding SelectedItem.Description}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" />
-      <TextBlock DockPanel.Dock="Top" Text="{Binding InputHelp}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,8,0,4" />
-      <CheckBox x:Name="CodeToggle" DockPanel.Dock="Bottom" Content="{x:Static editing:EditingText.GalleryShowCode}" IsChecked="{Binding ShowsCode}" Margin="0,8,0,0" Visibility="{Binding IsMermaid, Converter={StaticResource Visible}}" />
-      <TextBox x:Name="CodeBox" DockPanel.Dock="Bottom" Text="{Binding MermaidCode, Mode=OneWay}" IsReadOnly="True" Height="96" Margin="0,8,0,0" VerticalContentAlignment="Top" VerticalScrollBarVisibility="Auto" FontFamily="{DynamicResource Kyf.Font.Code}"
-               AutomationProperties.Name="{x:Static editing:EditingText.GalleryShowCode}" Visibility="{Binding ShowsCode, Converter={StaticResource Visible}}" />
-      <TextBox x:Name="ItemsBox" Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True" TextWrapping="Wrap" VerticalContentAlignment="Top"
-               VerticalScrollBarVisibility="Auto" AutomationProperties.Name="{Binding InputHelp}" Visibility="{Binding ShowsItems, Converter={StaticResource Visible}}" />
-    </DockPanel>
+    <!-- À droite : l'aperçu de l'exemple ; les éléments s'écrivent à l'étape suivante. -->
+    <StackPanel Grid.Column="2">
+      <reading:DiagramView x:Name="PreviewView" Scene="{Binding Preview}" Width="280" Visibility="{Binding IsDrawn, Converter={StaticResource Visible}}" />
+      <reading:MermaidView x:Name="MermaidPreview" Height="176" ClipToBounds="True" Code="{Binding MermaidCode}" Visibility="{Binding IsMermaid, Converter={StaticResource Visible}}" />
+      <TextBlock Text="{Binding SelectedItem.Name}" Style="{DynamicResource Kyf.Text.BodyStrong}" Margin="0,8,0,0" />
+      <TextBlock Text="{Binding SelectedItem.Description}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" />
+      <TextBlock Text="{x:Static editing:EditingText.GalleryNextStep}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,8,0,0" />
+    </StackPanel>
   </Grid>
 </UserControl>

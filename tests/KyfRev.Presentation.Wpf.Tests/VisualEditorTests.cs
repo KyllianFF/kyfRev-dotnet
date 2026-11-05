@@ -674,6 +674,18 @@ public sealed class VisualEditorTests
         UiThread.Until(() => scene.Script("document.querySelectorAll('.apercu-dessin svg text').length") == "3");
     }
 
+    private static void Write(DiagramEditorViewModel editor, params string[] texts)
+    {
+        foreach (var node in editor.Nodes)
+        {
+            node.Text = string.Empty;
+        }
+        for (var i = 0; i < texts.Length; i++)
+        {
+            editor.Nodes[i].Text = texts[i];
+        }
+    }
+
     [EngineTest]
     public void The_gallery_inserts_a_smartart_and_opens_again_on_it()
     {
@@ -684,24 +696,72 @@ public sealed class VisualEditorTests
         Assert.IsTrue(scene.SheetPage.GalleryDialog.IsOpen);
         var gallery = scene.Editor.Gallery!;
         gallery.SelectedItem = gallery.Items.Single(item => item.Id == "pyramide");
-        gallery.Text = "Sommet\nBase";
 
         scene.Editor.AnswerGalleryCommand.Execute(true);
+        Assert.IsTrue(scene.Editor.IsDiagramEditorOpen);
+        Write(scene.Editor.DiagramEditor!, "Sommet", "Base");
+        scene.Editor.AnswerDiagramEditorCommand.Execute(true);
 
         UiThread.Until(() => scene.OnDisk.Contains("```smartart pyramide\nSommet\nBase\n```", StringComparison.Ordinal));
         UiThread.Until(() => !scene.Visual!.IsCovered);
-        Assert.IsFalse(scene.Editor.IsGalleryOpen);
+        Assert.IsFalse(scene.Editor.IsDiagramEditorOpen);
         UiThread.Until(() => scene.Script("document.querySelectorAll('.apercu-dessin svg text').length") == "2");
 
         scene.Script("[...document.querySelectorAll('.action-dessin')].find((b) => b.textContent === 'Modifier…').click()");
-        UiThread.Until(() => scene.Editor.IsGalleryOpen);
-        Assert.AreEqual("pyramide", scene.Editor.Gallery!.SelectedItem!.Id);
-        Assert.AreEqual("Sommet\nBase", scene.Editor.Gallery.Text);
-        scene.Editor.Gallery.Text = "Sommet\nMilieu\nBase";
-        scene.Editor.AnswerGalleryCommand.Execute(true);
+        UiThread.Until(() => scene.Editor.IsDiagramEditorOpen);
+        var editor = scene.Editor.DiagramEditor!;
+        Assert.AreEqual("pyramide", editor.SelectedModel.Id);
+        Assert.AreEqual("Sommet\nBase", editor.Source()!.Value.Code);
+        editor.Select(editor.Nodes[0]);
+        editor.AddSiblingCommand.Execute(null);
+        editor.Selected!.Text = "Milieu";
+        scene.Editor.AnswerDiagramEditorCommand.Execute(true);
 
         UiThread.Until(() => scene.OnDisk.Contains("```smartart pyramide\nSommet\nMilieu\nBase\n```", StringComparison.Ordinal));
         Assert.AreEqual(1, System.Text.RegularExpressions.Regex.Count(scene.OnDisk, "smartart"), "Il est remplacé, pas ajouté.");
+    }
+
+    [EngineTest]
+    public void A_schema_of_the_gallery_opens_again_and_the_same_one_retouched_stays_in_its_code()
+    {
+        using var scene = new Scene("Avant\n");
+        using var engine = new MermaidEngine(FakeEnvironment.WebData);
+        scene.Window.Resources[MermaidEngine.ResourceKey] = engine;
+        UiThread.Until(() => scene.Shown.Contains("Avant", StringComparison.Ordinal));
+        scene.Editor.OpenGalleryCommand.Execute(GalleryKind.Schema);
+        scene.Editor.AnswerGalleryCommand.Execute(true);
+        Write(scene.Editor.DiagramEditor!, "Début", "Fin");
+        scene.Editor.AnswerDiagramEditorCommand.Execute(true);
+
+        UiThread.Until(() => scene.OnDisk.Contains("```mermaid\n%% kyfrev etapes\n%% Début\n%% Fin\nflowchart LR\n", StringComparison.Ordinal));
+        UiThread.Until(() => scene.Script("document.querySelectorAll('.apercu-dessin img').length") == "1", TimeSpan.FromSeconds(25));
+        Assert.AreEqual("false", scene.Script("[...document.querySelectorAll('.action-dessin')].find((b) => b.textContent === 'Modifier…').hidden"));
+
+        scene.Script("[...document.querySelectorAll('.action-dessin')].find((b) => b.textContent === 'Modifier…').click()");
+        UiThread.Until(() => scene.Editor.IsDiagramEditorOpen);
+        var editor = scene.Editor.DiagramEditor!;
+        Assert.AreEqual("etapes", editor.SelectedModel.Id);
+        Assert.AreEqual("Fin", editor.Nodes[1].Text);
+        editor.Nodes[1].Text = "Arrivée";
+        scene.Editor.AnswerDiagramEditorCommand.Execute(true);
+        UiThread.Until(() => scene.OnDisk.Contains("%% Arrivée\n", StringComparison.Ordinal));
+        Assert.AreEqual(1, System.Text.RegularExpressions.Regex.Count(scene.OnDisk, "```mermaid"), "Il est remplacé, pas ajouté.");
+
+        // Retouché à la main, il ne se rouvre plus dans l'éditeur : son code serait écrasé.
+        var retouched = KyfRev.Rendering.Diagrams.MermaidTemplates.Source("etapes", "A\nB")!.Value.Code + "\n    n1 --> n0";
+        using var hand = new Scene($"Début\n\n```mermaid\n{retouched}\n```\n");
+        hand.Window.Resources[MermaidEngine.ResourceKey] = engine;
+        hand.Script("document.dispatchEvent(new Event('theme'))");
+        UiThread.Until(() => hand.Script("document.querySelectorAll('.apercu-dessin img').length") == "1", TimeSpan.FromSeconds(25));
+        Assert.AreEqual("\"none\"", hand.Script("getComputedStyle(document.querySelector('.bloc-dessin pre')).display"), "Dessiné, son code ne se voit pas encore.");
+        Assert.AreEqual("true", hand.Script("[...document.querySelectorAll('.action-dessin')].find((b) => b.textContent === 'Modifier…').hidden"));
+        var items = hand.Visual!.MenuItems(new MenuEvent(null, 0, false, false, false, false, 0, "mermaid", retouched), null).OfType<MenuItem>().Select(item => (string)item.Header).ToList();
+        CollectionAssert.DoesNotContain(items, EditingText.EditDrawing);
+
+        // Un double-clic mène à son code.
+        hand.Script("document.querySelector('.bloc-dessin').querySelector('.apercu-dessin').dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))");
+        UiThread.Until(() => hand.Script("getComputedStyle(document.querySelector('.bloc-dessin pre')).display") != "\"none\"");
+        Assert.IsFalse(hand.Editor.IsDiagramEditorOpen);
     }
 
     [EngineTest]
@@ -736,11 +796,15 @@ public sealed class VisualEditorTests
         var problems = new List<string>();
         foreach (var template in KyfRev.Rendering.Diagrams.MermaidTemplates.All)
         {
-            var drawing = engine.DrawAsync(KyfRev.Rendering.Diagrams.MermaidTemplates.Code(template.Id, template.Sample)!, MermaidEngine.ThemeOf(scene.SheetPage));
-            UiThread.Until(() => drawing.IsCompleted, TimeSpan.FromSeconds(25));
-            if (drawing.Result is not { } picture || picture.Png.Length < 500 || picture.Width < 10)
+            // Avec le commentaire qui retient son modèle : c'est lui qui s'écrit dans la fiche.
+            foreach (var code in new[] { KyfRev.Rendering.Diagrams.MermaidTemplates.Code(template.Id, template.Sample)!, KyfRev.Rendering.Diagrams.MermaidTemplates.Source(template.Id, template.Sample)!.Value.Code })
             {
-                problems.Add(template.Id);
+                var drawing = engine.DrawAsync(code, MermaidEngine.ThemeOf(scene.SheetPage));
+                UiThread.Until(() => drawing.IsCompleted, TimeSpan.FromSeconds(25));
+                if (drawing.Result is not { } picture || picture.Png.Length < 500 || picture.Width < 10)
+                {
+                    problems.Add(template.Id);
+                }
             }
         }
 
@@ -1045,11 +1109,11 @@ public sealed class VisualEditorTests
         CollectionAssert.AreEqual(new[] { EditingText.EditDrawing, EditingText.ShowDrawingCode, EditingText.DeleteSmartArt }, headers);
         Assert.AreEqual("\"none\"", scene.Script("getComputedStyle(document.querySelector('.bloc-dessin pre')).display"), "Le code reste caché.");
 
-        // Modifier : la galerie, sur ce bloc.
+        // Modifier : l'éditeur, sur ce bloc.
         menu.OfType<MenuItem>().First().RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
-        UiThread.Until(() => scene.Editor.IsGalleryOpen);
-        scene.Editor.AnswerGalleryCommand.Execute(false);
-        UiThread.Until(() => !scene.Editor.IsGalleryOpen);
+        UiThread.Until(() => scene.Editor.IsDiagramEditorOpen);
+        scene.Editor.AnswerDiagramEditorCommand.Execute(false);
+        UiThread.Until(() => !scene.Editor.IsDiagramEditorOpen);
 
         // Supprimer : le bloc s'en va, le reste ne bouge pas.
         menu.OfType<MenuItem>().Last().RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
@@ -1061,13 +1125,21 @@ public sealed class VisualEditorTests
         scene.Editor.UndoCommand.Execute(null);
         UiThread.Until(() => scene.OnDisk.Contains("```smartart cycle\nUne\nDeux\n```", StringComparison.Ordinal));
 
-        // Un schéma et un graphique disent ce qu'ils sont ; seul un SmartArt se modifie ici.
+        // Un schéma et un graphique disent ce qu'ils sont ; écrits à la main, ils ne se modifient qu'en code.
         var schema = visual.MenuItems(new MenuEvent(null, 0, false, false, false, false, 7, "mermaid", "flowchart TD"), null).OfType<MenuItem>().Select(item => (string)item.Header).ToList();
         CollectionAssert.AreEqual(new[] { EditingText.ShowDrawingCode, EditingText.DeleteSchema }, schema);
         foreach (var chart in new[] { "pie\n\"a\": 1", " xychart-beta", "treemap-beta" })
         {
             var labels = visual.MenuItems(new MenuEvent(null, 0, false, false, false, false, 7, "mermaid", chart), null).OfType<MenuItem>().Select(item => (string)item.Header).ToList();
             CollectionAssert.Contains(labels, EditingText.DeleteChart);
+        }
+
+        // Venus de la galerie, ils se rouvrent, et disent toujours ce qu'ils sont.
+        foreach (var (model, kind) in new[] { ("etapes", EditingText.DeleteSchema), ("secteurs", EditingText.DeleteChart) })
+        {
+            var source = KyfRev.Rendering.Diagrams.MermaidTemplates.Source(model, "a : 1\nb : 2")!.Value;
+            var labels = visual.MenuItems(new MenuEvent(null, 0, false, false, false, false, 7, source.Info, source.Code), null).OfType<MenuItem>().Select(item => (string)item.Header).ToList();
+            CollectionAssert.AreEqual(new[] { EditingText.EditDrawing, EditingText.ShowDrawingCode, kind }, labels);
         }
 
         // Dans son code, le menu du texte garde la suppression.

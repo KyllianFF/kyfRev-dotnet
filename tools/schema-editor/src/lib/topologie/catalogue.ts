@@ -83,6 +83,11 @@ const PORTS_SERVEUR = [
   cuivre("Gestion hors bande", "BMC", 1, { role: "gestion" }),
 ];
 const CHAMPS_MACHINE = [texte("cpu", "Processeur"), nombre("memoire", "Mémoire", "Go")];
+const CHAMPS_NIVEAU_3 = [
+  texte("routage", "Protocoles de routage", "OSPF, BGP, statique…"),
+  texte("redondance", "Redondance", "VSS, vPC, MLAG, VRRP…"),
+  texte("stp", "Spanning tree"),
+];
 
 export const TYPES: DefinitionType[] = [
   // --- Réseau et sécurité ---
@@ -116,6 +121,50 @@ export const TYPES: DefinitionType[] = [
     icone: "kyfrev-switch",
     ports: [cuivre("Ports", "{p}", 8)],
     champs: [ouiNon("poe", "PoE")],
+  },
+  {
+    type: "switch-coeur",
+    nom: "Switch de cœur (core)",
+    court: "CORE",
+    categorie: "reseau",
+    icone: "kyfrev-switch-coeur",
+    empilable: true,
+    ports: [
+      groupe("Vers la distribution", "{m}/{p}", 24, "fibre", {
+        connecteur: "SFP+",
+        vitesse: 10000,
+        role: "uplink",
+      }),
+      groupe("Entre cœurs", "{m}/{p}", 4, "fibre", {
+        premier: 25,
+        connecteur: "QSFP28",
+        vitesse: 100000,
+        role: "uplink",
+      }),
+    ],
+    champs: CHAMPS_NIVEAU_3,
+  },
+  {
+    type: "switch-distribution",
+    nom: "Switch de distribution",
+    court: "DIST",
+    categorie: "reseau",
+    icone: "kyfrev-switch-coeur",
+    empilable: true,
+    ports: [
+      groupe("Vers l'accès", "{m}/{p}", 24, "fibre", {
+        connecteur: "SFP+",
+        vitesse: 10000,
+        role: "acces",
+      }),
+      groupe("Vers le cœur", "{m}/{p}", 4, "fibre", {
+        premier: 25,
+        connecteur: "QSFP+",
+        vitesse: 40000,
+        role: "uplink",
+      }),
+    ],
+    champs: CHAMPS_NIVEAU_3,
   },
   {
     type: "routeur",

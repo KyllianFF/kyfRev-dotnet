@@ -154,6 +154,25 @@ function switchReseau(c: string, niveau3 = false): string {
   return b.svg + fleches + ports + voyants;
 }
 
+/** Switch de cœur ou de distribution : un bloc haut, les flèches du switch dessus, l'étoile du routage en façade. */
+function switchCoeur(c: string): string {
+  const b = boite(11, 22, 34, 32, 14, c);
+  const fleches = [
+    fleche([0.45, 0.27], [0.05, 0.27], b.dessus, 0.15, 0.1, 0.21),
+    fleche([0.55, 0.27], [0.95, 0.27], b.dessus, 0.15, 0.1, 0.21),
+    fleche([0.05, 0.73], [0.45, 0.73], b.dessus, 0.15, 0.1, 0.21),
+    fleche([0.95, 0.73], [0.55, 0.73], b.dessus, 0.15, 0.1, 0.21),
+  ].join("");
+  const [cx, cy] = [28, 38];
+  const depuisLeCentre = ([x, y]: P): P => [cx + x, cy + y];
+  const branches = Array.from({ length: 8 }, (_, i) => {
+    const angle = (i * Math.PI) / 4;
+    const [ux, uy] = [Math.cos(angle), Math.sin(angle)];
+    return fleche([ux * 5, uy * 5], [ux * 14, uy * 14], depuisLeCentre, 1.6, 3.4, 2.5);
+  }).join("");
+  return `${b.svg}${fleches}${branches}<circle cx="${cx}" cy="${cy}" r="4.4" fill="${BLANC}"/>`;
+}
+
 function parefeu(c: string): string {
   const b = boite(10, 22, 36, 30, 10, c);
   const mortier = teinte(c, -0.42);
@@ -551,6 +570,7 @@ function immeuble(c: string): string {
 const ILLUSTRATIONS: Record<string, (c: string) => string> = {
   "kyfrev-routeur": (c) => routeur(c),
   "kyfrev-switch": (c) => switchReseau(c),
+  "kyfrev-switch-coeur": switchCoeur,
   "brick-wall": parefeu,
   router: (c) => boitier(c, 2),
   "kyfrev-modem": (c) => boitier(c, 1),
@@ -631,6 +651,7 @@ const EMPRISES: Record<string, [number, number, number, number]> = {
   "kyfrev-point-acces": [9, 5, 55, 52],
   "kyfrev-routeur": [7, 15, 57, 52],
   "kyfrev-switch": [4, 21, 65, 50],
+  "kyfrev-switch-coeur": [10, 12, 60, 55],
   "kyfrev-telephone": [7, 17, 59, 51],
   "kyfrev-vm": [14, 6, 55, 58],
   laptop: [5, 11, 59, 51],

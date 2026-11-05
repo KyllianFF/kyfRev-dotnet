@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { definition, TYPES } from "./catalogue";
+import { chercherTypes, definition, TYPES } from "./catalogue";
 import {
   cadreAnnotation,
   descriptionDuSchema,
@@ -13,7 +13,8 @@ import {
 } from "./dessin";
 import { diagnostiquer } from "./diagnostic";
 import { ecrireSchema, lireSchema } from "./format";
-import { ILLUSTRES, illustration } from "./illustrations";
+import { ILLUSTRES, emprise, illustration } from "./illustrations";
+import { icone } from "./pictogrammes";
 import { interfaceOccupee, type Schema, schemaVide } from "./modele";
 import {
   aligner,
@@ -496,6 +497,34 @@ describe("illustrations (D43)", () => {
       expect(svg.length).toBeGreaterThan(50);
       expect(svg).not.toMatch(/<script|on[a-z]+=|NaN|undefined/);
     }
+  });
+});
+
+describe("cœur et distribution", () => {
+  it("ils partagent une illustration propre, et se trouvent par leurs deux noms", () => {
+    const coeur = definition("switch-coeur");
+    const distribution = definition("switch-distribution");
+    expect(coeur.icone).toBe(distribution.icone);
+    expect(illustration(coeur.icone, "#1f62b0")).not.toBe(illustration(definition("switch").icone, "#1f62b0"));
+    expect(emprise(coeur.icone)).toEqual([10, 12, 60, 55]);
+    expect(icone(coeur.icone)).not.toBe(icone("box"));
+    for (const mot of ["core", "cœur", "coeur"]) {
+      expect(chercherTypes(mot).map((t) => t.type)).toContain("switch-coeur");
+    }
+    expect(chercherTypes("distribution").map((t) => t.type)).toEqual(["switch-distribution"]);
+  });
+
+  it("ils se posent en stack, avec des liens rapides : le cœur en 10 et 100 G, la distribution en 10 et 40 G", () => {
+    const schema = schemaVide();
+    const coeur = creerEquipement(schema, "switch-coeur", { x: 0, y: 0 });
+    const distribution = creerEquipement(schema, "switch-distribution", { x: 0, y: 200 });
+
+    expect(coeur.nom).toMatch(/^CORE/);
+    expect(distribution.nom).toMatch(/^DIST/);
+    expect(coeur.interfaces.map((i) => i.nom)).toContain("1/28");
+    expect(coeur.interfaces.find((i) => i.nom === "1/28")?.vitesse).toBe(100000);
+    expect(distribution.interfaces.find((i) => i.nom === "1/28")?.vitesse).toBe(40000);
+    expect(definition("switch-coeur").empilable).toBe(true);
   });
 });
 

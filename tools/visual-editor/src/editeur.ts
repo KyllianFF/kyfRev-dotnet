@@ -102,7 +102,7 @@ export type EtatOutils = {
   canRedo: boolean;
 };
 
-export type Dessin = { svg: string | null; image: string | null };
+export type Dessin = { svg: string | null; image: string | null; editable: boolean };
 
 export type Formule = { position: number | null; tex: string; block: boolean };
 
@@ -517,6 +517,7 @@ class VueCode implements NodeView {
   contentDOM: HTMLElement;
   private entete: HTMLElement;
   private apercu: HTMLElement | null = null;
+  private boutonModifier: HTMLButtonElement | null = null;
   private minuterie: ReturnType<typeof setTimeout> | undefined;
 
   constructor(
@@ -592,7 +593,10 @@ class VueCode implements NodeView {
       return bouton;
     };
     const langage = this.noeud.attrs.language as string;
-    if (/^(smartart|reseau)/.test(langage)) this.entete.append(action("Modifier…", modifier));
+    // L'hôte dit avec le dessin si le bloc se rouvre dans un éditeur.
+    this.boutonModifier = action("Modifier…", modifier);
+    this.boutonModifier.hidden = true;
+    this.entete.append(this.boutonModifier);
     if (!/^smartart/.test(langage)) document.addEventListener("theme", this.suivreTheme);
     this.entete.append(
       action(
@@ -620,8 +624,9 @@ class VueCode implements NodeView {
   }
 
   /** Le dessin ; s'il n'y en a pas, c'est le code qui se lit. */
-  private montrerDessin({ svg, image }: Dessin): void {
+  private montrerDessin({ svg, image, editable }: Dessin): void {
     if (!this.apercu) return;
+    if (this.boutonModifier) this.boutonModifier.hidden = !editable;
     this.dom.classList.toggle("dessin-impossible", !svg && !image);
     if (image) {
       const dessin = document.createElement("img");

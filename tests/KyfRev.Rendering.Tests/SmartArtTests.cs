@@ -182,6 +182,80 @@ public sealed class SmartArtTests
     }
 
     [TestMethod]
+    [DynamicData(nameof(Templates))]
+    public void A_block_remembers_its_model_and_its_elements(string id)
+    {
+        var template = MermaidTemplates.All.Single(candidate => candidate.Id == id);
+
+        var source = MermaidTemplates.Source(id, template.Sample)!.Value;
+
+        Assert.AreEqual(MermaidTemplates.Language, source.Info);
+        Assert.StartsWith($"%% kyfrev {id}\n", source.Code);
+        Assert.EndsWith(MermaidTemplates.Code(id, template.Sample)!, source.Code);
+        Assert.AreEqual((id, template.Sample), MermaidTemplates.ReadBack(source.Code));
+    }
+
+    [TestMethod]
+    public void A_block_retouched_or_written_by_hand_does_not_read_back()
+    {
+        var code = MermaidTemplates.Source("etapes", "a\nb")!.Value.Code;
+
+        Assert.AreEqual(("etapes", "a\nb"), MermaidTemplates.ReadBack(code));
+        Assert.AreEqual(("etapes", "a\nb"), MermaidTemplates.ReadBack(code.Replace("\n", "\r\n", StringComparison.Ordinal)), "Windows ne change rien.");
+        Assert.IsNull(MermaidTemplates.ReadBack(code + "\n    n1 --> n0"), "Une flèche ajoutée serait perdue.");
+        Assert.IsNull(MermaidTemplates.ReadBack(code.Replace("%% a\n", "%% z\n", StringComparison.Ordinal)), "Le commentaire ne dit plus ce qui est dessiné.");
+        Assert.IsNull(MermaidTemplates.ReadBack("flowchart LR\n    A --> B"));
+        Assert.IsNull(MermaidTemplates.ReadBack("%% kyfrev inconnu\n%% a\nflowchart LR"));
+        Assert.IsNull(MermaidTemplates.ReadBack("%% kyfrev etapes\n"));
+        Assert.IsNull(MermaidTemplates.ReadBack(string.Empty));
+        Assert.IsNull(MermaidTemplates.ReadBack(null));
+    }
+
+    [TestMethod]
+    public void A_block_is_written_only_for_a_model_with_text()
+    {
+        Assert.IsNull(MermaidTemplates.Source("etapes", " \n "));
+        Assert.IsNull(MermaidTemplates.Source("inconnu", "a"));
+        Assert.IsNull(MermaidTemplates.Source(null, "a"));
+    }
+
+    [TestMethod]
+    public void A_mind_map_keeps_its_levels()
+    {
+        const string text = "Centre\n  Branche\n    Détail\n  Autre";
+
+        Assert.AreEqual("mindmap\n    root((Centre))\n        Branche\n            Détail\n        Autre", MermaidTemplates.Code("carte", text));
+        Assert.AreEqual(("carte", text), MermaidTemplates.ReadBack(MermaidTemplates.Source("carte", text)!.Value.Code));
+        Assert.AreEqual("mindmap\n    root((a))\n        b\n        c", MermaidTemplates.Code("carte", "a\nb\nc"), "Sans décalage : un centre et ses branches.");
+        Assert.AreEqual("mindmap\n    root((a))\n        b\n        c", MermaidTemplates.Code("carte", "a\n  b\nc"), "Une carte n'a qu'un centre.");
+    }
+
+    [TestMethod]
+    public void A_template_says_how_its_lines_are_written()
+    {
+        Assert.IsTrue(MermaidTemplates.IsHierarchy("carte"));
+        Assert.IsFalse(MermaidTemplates.IsHierarchy("etapes"));
+        Assert.IsFalse(MermaidTemplates.IsHierarchy(null));
+        Assert.AreEqual(2, MermaidTemplates.MeasureCount("mixte"));
+        Assert.AreEqual(1, MermaidTemplates.MeasureCount("secteurs"));
+        Assert.AreEqual(0, MermaidTemplates.MeasureCount("etapes"));
+        Assert.AreEqual(0, MermaidTemplates.MeasureCount(null));
+    }
+
+    [TestMethod]
+    [DataRow("1", true)]
+    [DataRow(" 1,5 ", true)]
+    [DataRow("2.5", true)]
+    [DataRow("0", false)]
+    [DataRow("-1", false)]
+    [DataRow("abc", false)]
+    [DataRow("Infinity", false)]
+    [DataRow("", false)]
+    [DataRow(null, false)]
+    public void A_value_says_whether_it_can_be_drawn(string? text, bool expected) =>
+        Assert.AreEqual(expected, MermaidTemplates.IsMeasure(text));
+
+    [TestMethod]
     public void The_flows_are_chained_in_quotes()
     {
         Assert.AreEqual("flowchart LR\n    n0[\"Crise\"]\n    n1[\"Bastille\"]\n    n0 --> n1", MermaidTemplates.Code("etapes", "Crise\nBastille"));
