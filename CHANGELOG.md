@@ -9,6 +9,9 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- Fenêtre : l'application dessine sa barre de titre, aux couleurs du thème, avec le nom, la recherche (Ctrl+K), le thème clair
+  ou sombre en un clic, les raccourcis clavier et les boutons de la fenêtre. Windows garde le déplacement, le redimensionnement,
+  son menu et ses dispositions sur « Agrandir ».
 - Clic droit, avec les actions rapides en tête du menu : texte d'une fiche et passages (« Écouter d'ici » compris), lignes
   d'« Aujourd'hui », fiches archivées, définitions, lignes de « Santé du coffre », champs de texte et éditeurs, dont les
   corrections restent dans le menu.
