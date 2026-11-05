@@ -534,13 +534,20 @@ public sealed class ExtensionEngineTests
             kyfrev.commande("ouvrir", () => kyfrev.fiches.ouvrir("f_1"));
             """);
         using var ui = new UiThread();
-        var screen = new FakeScreen { Delay = TimeSpan.FromSeconds(3) };
+        var user = new TaskCompletionSource();
+        var screen = new FakeScreen { Answered = user.Task };
 
         StringAssert.Contains(Wait(scene.Engine.CommandAsync("guidee", "demander", new Dictionary<string, string>())).Error, "ne montre rien", StringComparison.Ordinal);
         scene.Engine.Screen = screen;
         scene.Engine.Patience = TimeSpan.FromSeconds(1);
-        var asked = Wait(scene.Engine.CommandAsync("guidee", "demander", new Dictionary<string, string>()));
-        Assert.IsTrue(asked.Succeeded, "L'extension attend l'utilisateur trois secondes, au-delà de sa patience d'une seconde : " + asked.Error);
+        var asking = scene.Engine.CommandAsync("guidee", "demander", new Dictionary<string, string>());
+        UiThread.Until(() => screen.Asks.Count == 1, Long);
+        var waited = System.Diagnostics.Stopwatch.StartNew();
+        UiThread.Until(() => asking.IsCompleted || waited.Elapsed > scene.Engine.Patience * 3, Long);
+        Assert.IsFalse(asking.IsCompleted, "L'extension attend l'utilisateur au-delà de trois fois sa patience, sans être arrêtée.");
+        user.SetResult();
+        var asked = Wait(asking);
+        Assert.IsTrue(asked.Succeeded, asked.Error);
         Assert.AreEqual(new SelectionAsk("Guidée", "Sélectionnez la question", "f_1", AllowsTyping: false), screen.Asks.Single());
         scene.Engine.Patience = TimeSpan.FromSeconds(30);
         Assert.AreEqual("selection|la mitose|f_1|Mitose|3|9", TextOf(scene, "guidee"));
@@ -549,7 +556,6 @@ public sealed class ExtensionEngineTests
         Assert.IsTrue(Wait(scene.Engine.CommandAsync("guidee", "ouvrir-tout", new Dictionary<string, string>())).Succeeded);
         Assert.AreEqual("f_1 3 9 | f_2 - -", string.Join(" | ", screen.Opened));
 
-        screen.Delay = TimeSpan.Zero;
         screen.Refusal = "aucune fiche ouverte";
         StringAssert.Contains(Wait(scene.Engine.CommandAsync("guidee", "demander", new Dictionary<string, string>())).Error, "aucune fiche ouverte", StringComparison.Ordinal);
         screen.Refusal = null;
@@ -669,10 +675,10 @@ public sealed class ExtensionEngineTests
         public Outcome<InstalledExtension> Install(string source) => Library.Install(source);
     }
 
-    /// <summary>Un écran d'essai : il répond à la place de l'utilisateur, après un délai.</summary>
+    /// <summary>Un écran d'essai : il répond à la place de l'utilisateur, quand celui-ci a « répondu ».</summary>
     private sealed class FakeScreen : IExtensionScreen
     {
-        public TimeSpan Delay { get; set; }
+        public Task Answered { get; set; } = Task.CompletedTask;
 
         public string? Refusal { get; set; }
 
@@ -685,7 +691,7 @@ public sealed class ExtensionEngineTests
         public async Task<(GuidedSelection? Answer, string? Refusal)> AskSelectionAsync(SelectionAsk ask)
         {
             Asks.Add(ask);
-            await Task.Delay(Delay).ConfigureAwait(true);
+            await Answered.ConfigureAwait(true);
             return Refusal is { } refusal ? (null, refusal) : (new GuidedSelection(GuidedSelection.Taken, "la mitose", "f_1", "Mitose", 3, 9), null);
         }
 
