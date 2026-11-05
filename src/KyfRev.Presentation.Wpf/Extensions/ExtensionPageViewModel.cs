@@ -1,4 +1,7 @@
+using System.Globalization;
+using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
+using KyfRev.Application.Modules;
 using KyfRev.DesignSystem.Controls;
 using KyfRev.Extensions.Host;
 using KyfRev.Presentation.Wpf.Shell;
@@ -26,6 +29,9 @@ public sealed partial class ExtensionPageViewModel : ObservableObject, INavigati
         _engine = engine;
         _isDark = isDark;
     }
+
+    /// <summary>Une action vient d'aboutir : ce qu'elle a changé peut changer son compteur.</summary>
+    public event EventHandler? Acted;
 
     /// <summary>Le titre de sa vue.</summary>
     public string Title { get; }
@@ -89,18 +95,28 @@ public sealed partial class ExtensionPageViewModel : ObservableObject, INavigati
             Error = answer.Error;
         }
         IsBusy = false;
+        Acted?.Invoke(this, EventArgs.Empty);
     }
+
+    /// <summary>Dit un refus venu d'une commande lancée ailleurs (Ctrl+K, clic droit).</summary>
+    internal void Report(string error) => Error = error;
 }
 
-/// <summary>Les vues des extensions actives, et leurs entrées dans le menu.</summary>
+/// <summary>
+/// Ce que les extensions actives ajoutent à l'interface : leurs vues et leurs entrées du menu, avec leur icône et leur compteur, leurs
+/// commandes dans Ctrl+K, leurs entrées au clic droit et leurs encarts sur « Aujourd'hui ». Tout se lit dans leur manifeste : leur code
+/// ne démarre qu'au premier usage.
+/// </summary>
 public sealed class ExtensionPages
 {
     private const int FirstOrder = 70;
+    private const double PictureSize = 16;
 
     private readonly ExtensionLibrary _library;
     private readonly ExtensionEngine _engine;
     private readonly Func<bool> _isDark;
     private readonly Dictionary<string, ExtensionPageViewModel> _pages = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, NavigationBadge> _badges = new(StringComparer.Ordinal);
 
     /// <summary>Les vues de ces extensions.</summary>
     /// <param name="library">Les extensions installées.</param>
@@ -120,25 +136,74 @@ public sealed class ExtensionPages
             {
                 _ = page.RenderAsync();
             }
+            _ = RefreshCountAsync(e.Extension);
         };
+        engine.ViewAsked += (_, e) => ViewAsked?.Invoke(this, e);
     }
 
-    /// <summary>Les entrées du menu : une par extension active qui a une vue, après celles des modules.</summary>
+    /// <summary>Une extension demande d'ouvrir sa vue.</summary>
+    public event EventHandler<ExtensionEventArgs>? ViewAsked;
+
+    /// <summary>L'identifiant de l'entrée du menu d'une extension.</summary>
+    /// <param name="id">L'extension.</param>
+    public static string EntryId(string id) => $"extension:{id}";
+
+    /// <summary>Les entrées du menu : une par extension active qui a une vue, après celles des modules, avec son icône et son compteur.</summary>
     public IReadOnlyList<NavigationItem> Entries() =>
         [
-            .. _library.Installed()
-                .Where(extension => extension.IsActive && extension.Manifest.ViewTitle is not null)
-                .Select((extension, index) =>
+            .. Active()
+                .Where(manifest => manifest.ViewTitle is not null)
+                .Select((manifest, index) =>
                 {
-                    var manifest = extension.Manifest;
                     if (!_pages.TryGetValue(manifest.Id, out var page) || page.Title != manifest.ViewTitle)
                     {
                         page = new ExtensionPageViewModel(manifest.Id, manifest.ViewTitle!, _engine, _isDark);
+                        page.Acted += (_, _) => _ = RefreshCountAsync(manifest.Id);
                         _pages[manifest.Id] = page;
                     }
-                    return new NavigationItem($"extension:{manifest.Id}", manifest.ViewTitle!, Icons.Puzzle, FirstOrder + index, page);
+                    var badge = manifest.HasCounter ? BadgeOf(manifest.Id) : null;
+                    return new NavigationItem(EntryId(manifest.Id), manifest.ViewTitle!, Icons.Puzzle, FirstOrder + index, page, PictureOf(_library.Icon(manifest.Id)), badge);
                 }),
         ];
+
+    /// <summary>Les commandes des extensions actives, dans la recherche : « Quiz : Nouveau quiz ».</summary>
+    public IReadOnlyList<PaletteEntry> Commands() =>
+        [
+            .. Active().SelectMany(manifest => manifest.Commands.Select(command =>
+                new PaletteEntry($"{manifest.Name} : {command.Title}", null, Icons.Puzzle, () => _ = RunAsync(manifest.Id, command.Id, new Dictionary<string, string>())))),
+        ];
+
+    /// <summary>Les entrées que les extensions actives ajoutent à un clic droit, avec ce sur quoi il porte.</summary>
+    /// <param name="zone">Le clic droit : une fiche ou un dossier.</param>
+    /// <param name="context">Ce sur quoi il porte, transmis à la commande.</param>
+    public IReadOnlyList<MenuContribution> MenuEntries(ExtensionMenuZone zone, IReadOnlyDictionary<string, string> context) =>
+        [
+            .. Active().SelectMany(manifest => manifest.Menus.Where(menu => menu.Zone == zone).Select(menu =>
+                new MenuContribution(menu.Title, () => _ = RunAsync(manifest.Id, menu.Command, context)))),
+        ];
+
+    /// <summary>Les encarts des extensions actives sur « Aujourd'hui ». Une extension qui ne répond pas n'en a pas.</summary>
+    public async Task<IReadOnlyList<DashboardCard>> CardsAsync()
+    {
+        List<DashboardCard> cards = [];
+        foreach (var manifest in Active().Where(manifest => manifest.CardTitle is not null))
+        {
+            if (await _engine.CardAsync(manifest.Id).ConfigureAwait(true) is { } card)
+            {
+                cards.Add(new DashboardCard(manifest.CardTitle!, card.Text, card.Detail));
+            }
+        }
+        return cards;
+    }
+
+    /// <summary>Redemande leur compteur aux extensions qui en montrent un.</summary>
+    public async Task RefreshCountsAsync()
+    {
+        foreach (var manifest in Active().Where(manifest => manifest.HasCounter))
+        {
+            await RefreshCountAsync(manifest.Id).ConfigureAwait(true);
+        }
+    }
 
     /// <summary>Une extension vient de changer : son code sera rechargé au prochain usage.</summary>
     /// <param name="id">L'extension.</param>
@@ -146,4 +211,77 @@ public sealed class ExtensionPages
 
     /// <summary>Un coffre s'ouvre : les extensions oublient ce qu'elles ont lu du précédent.</summary>
     public void VaultChanged() => _engine.Restart();
+
+    /// <summary>L'icône d'une extension, en géométrie WPF ; rien si elle n'en a pas ou si aucun tracé ne se lit.</summary>
+    internal static NavigationPicture? PictureOf(ExtensionIcon? icon)
+    {
+        if (icon is null)
+        {
+            return null;
+        }
+        var group = new GeometryGroup();
+        foreach (var path in icon.Paths)
+        {
+            try
+            {
+                group.Children.Add(Geometry.Parse(path));
+            }
+            catch (Exception exception) when (exception is FormatException or InvalidOperationException)
+            {
+                continue;
+            }
+        }
+        if (group.Children.Count == 0)
+        {
+            return null;
+        }
+        // La boîte de vue de l'icône devient le carré de 16 pixels du menu, centrée : ses marges restent les siennes.
+        var scale = PictureSize / Math.Max(icon.Width, icon.Height);
+        var placed = new TransformGroup();
+        placed.Children.Add(new TranslateTransform(-icon.Left, -icon.Top));
+        placed.Children.Add(new ScaleTransform(scale, scale));
+        placed.Children.Add(new TranslateTransform((PictureSize - (icon.Width * scale)) / 2, (PictureSize - (icon.Height * scale)) / 2));
+        group.Transform = placed;
+        group.Freeze();
+        return new NavigationPicture(group, icon.Stroked);
+    }
+
+    private IEnumerable<ExtensionManifest> Active() => _library.Installed().Where(extension => extension.IsActive).Select(extension => extension.Manifest);
+
+    private NavigationBadge BadgeOf(string id)
+    {
+        if (!_badges.TryGetValue(id, out var badge))
+        {
+            badge = new NavigationBadge();
+            _badges[id] = badge;
+        }
+        return badge;
+    }
+
+    private async Task RefreshCountAsync(string id)
+    {
+        if (_library.Active(id) is { HasCounter: true })
+        {
+            var count = await _engine.CountAsync(id).ConfigureAwait(true);
+            BadgeOf(id).Text = count?.ToString(CultureInfo.CurrentCulture);
+        }
+    }
+
+    /// <summary>Lance une commande ; un refus se dit dans sa vue, qui se redessine, et son compteur suit.</summary>
+    private async Task RunAsync(string id, string command, IReadOnlyDictionary<string, string> context)
+    {
+        var answer = await _engine.CommandAsync(id, command, context).ConfigureAwait(true);
+        if (_pages.TryGetValue(id, out var page))
+        {
+            if (answer.Succeeded)
+            {
+                await page.RenderAsync().ConfigureAwait(true);
+            }
+            else
+            {
+                page.Report(answer.Error);
+            }
+        }
+        await RefreshCountAsync(id).ConfigureAwait(true);
+    }
 }

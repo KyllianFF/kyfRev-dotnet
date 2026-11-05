@@ -197,15 +197,31 @@ internal static class Composition
                 provider.GetRequiredService<IReviewOpener>(),
                 provider.GetRequiredService<EditorEnvironment>().WebDataFolder)), .. extensionPages.Entries()]);
             modules.Changed += (_, _) => ShowEntries();
+            void ShowExtensions()
+            {
+                ShowEntries();
+                shell.SetExtensionCommands(extensionPages.Commands());
+                _ = extensionPages.RefreshCountsAsync();
+            }
             provider.GetRequiredService<ExtensionSettingsViewModel>().Changed += (_, e) =>
             {
                 extensionPages.Forget(e.Extension);
-                ShowEntries();
+                ShowExtensions();
             };
+            extensionPages.ViewAsked += (_, e) =>
+            {
+                if (shell.MainNavigation.Concat(shell.SecondaryNavigation).FirstOrDefault(item => item.Id == ExtensionPages.EntryId(e.Extension)) is { } entry)
+                {
+                    shell.Navigate(entry);
+                }
+            };
+            provider.GetRequiredService<SheetsPageViewModel>().ExtensionMenus = extensionPages.MenuEntries;
+            provider.GetRequiredService<DashboardPageViewModel>().ExtensionCards = extensionPages.CardsAsync;
             shell.WorkspaceOpening += (_, _) =>
             {
                 extensionPages.VaultChanged();
                 modules.Load(provider.GetRequiredService<SettingsUseCases>().Get() is { Succeeded: true } settings ? settings.Value : null);
+                ShowExtensions();
             };
             return shell;
         });

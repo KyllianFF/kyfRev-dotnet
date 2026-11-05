@@ -63,6 +63,29 @@ public sealed class ShellViewModelTests
     }
 
     [STATestMethod]
+    public void The_commands_of_the_extensions_join_the_search()
+    {
+        var shell = new TestShell().Shell;
+        var ran = 0;
+        Assert.ThrowsExactly<ArgumentNullException>(() => shell.SetExtensionCommands(null!));
+
+        shell.SetExtensionCommands([new PaletteEntry("Quiz : Nouveau quiz", null, Icons.Puzzle, () => ran++)]);
+        shell.OpenPalette();
+        shell.PaletteQuery = "nouveau quiz";
+        Assert.AreEqual("Quiz : Nouveau quiz", shell.PaletteResults.Single().Label);
+        shell.RunSelected();
+        Assert.AreEqual(1, ran);
+
+        shell.SetModuleEntries([]);
+        shell.OpenPalette();
+        shell.PaletteQuery = "nouveau quiz";
+        Assert.HasCount(1, shell.PaletteResults, "Refaire le menu garde les commandes des extensions.");
+
+        shell.SetExtensionCommands([]);
+        Assert.IsEmpty(shell.PaletteResults);
+    }
+
+    [STATestMethod]
     public void The_search_finds_commands_without_case_or_accents()
     {
         var shell = new TestShell().Shell;

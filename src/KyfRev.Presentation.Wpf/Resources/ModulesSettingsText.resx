@@ -40,7 +40,7 @@
     <value>Domaines de la citation du jour</value>
   </data>
   <data name="ExtensionsHelp" xml:space="preserve">
-    <value>Des blocs et des vues ajoutés par vous ou par d'autres. Installées sur cet ordinateur, elles tournent isolées : ni accès à Internet, ni modification des fiches.</value>
+    <value>Des blocs, des vues et des commandes ajoutés par vous ou par d'autres. Installées sur cet ordinateur, elles tournent isolées, sans accès à Internet, et ne font que ce que vous leur permettez.</value>
   </data>
   <data name="ExtensionsTitle" xml:space="preserve">
     <value>Extensions</value>
@@ -60,15 +60,6 @@
   <data name="ExtensionPick" xml:space="preserve">
     <value>Choisissez le dossier de l'extension (avec son extension.json)</value>
   </data>
-  <data name="ExtensionAnd" xml:space="preserve">
-    <value> et </value>
-  </data>
-  <data name="ExtensionReadSheets" xml:space="preserve">
-    <value>lire vos fiches (sans pouvoir les modifier)</value>
-  </data>
-  <data name="ExtensionStorage" xml:space="preserve">
-    <value>garder ses propres données dans le coffre</value>
-  </data>
   <data name="ExtensionInstallTitle" xml:space="preserve">
     <value>Installer l'extension ?</value>
   </data>
@@ -85,7 +76,7 @@
     <value>Elle ne demande aucune permission.</value>
   </data>
   <data name="ExtensionLimits" xml:space="preserve">
-    <value>Elle ne pourra ni accéder à Internet, ni modifier vos fiches.</value>
+    <value>Elle ne pourra ni accéder à Internet, ni modifier vos fiches, ni en supprimer.</value>
   </data>
   <data name="ExtensionTrust" xml:space="preserve">
     <value>N'installez que des extensions dont vous connaissez l'auteur.</value>
@@ -105,23 +96,17 @@
   <data name="ExtensionAdds" xml:space="preserve">
     <value>Ajoute : {0}</value>
   </data>
-  <data name="ExtensionMay" xml:space="preserve">
-    <value>Elle peut {0}.</value>
-  </data>
   <data name="ExtensionBlock" xml:space="preserve">
     <value>bloc « {0} »</value>
   </data>
   <data name="ExtensionView" xml:space="preserve">
-    <value>vue « {0} »</value>
+    <value>vue « {0} » dans le menu</value>
   </data>
   <data name="ExtensionSummary" xml:space="preserve">
-    <value>{0} {1} : {2}.</value>
+    <value>{0} {1}</value>
   </data>
   <data name="ExtensionSummaryBy" xml:space="preserve">
-    <value>{0} {1}, par {2} : {3}.</value>
-  </data>
-  <data name="ExtensionWill" xml:space="preserve">
-    <value>Elle pourra {0}.</value>
+    <value>{0} {1}, par {2}</value>
   </data>
   <data name="ExtensionReplaces" xml:space="preserve">
     <value>Elle remplace la version {0}, rangée (et non effacée).</value>
@@ -146,6 +131,72 @@
   </data>
   <data name="ExtensionFiles" xml:space="preserve">
     <value>{0} fichier(s), {1}.</value>
+  </data>
+  <data name="ExtensionLimitsWriting" xml:space="preserve">
+    <value>Elle ne pourra ni accéder à Internet, ni supprimer de fiche.</value>
+  </data>
+  <data name="ExtensionAddsTitle" xml:space="preserve">
+    <value>Elle ajoute</value>
+  </data>
+  <data name="ExtensionRightsTitle" xml:space="preserve">
+    <value>Elle pourra</value>
+  </data>
+  <data name="ExtensionRightsHelp" xml:space="preserve">
+    <value>Décochez une permission pour la retirer : l'extension reçoit alors un refus quand elle s'en sert.</value>
+  </data>
+  <data name="ExtensionRightReadSheets" xml:space="preserve">
+    <value>Lire toutes vos fiches, sans pouvoir les modifier</value>
+  </data>
+  <data name="ExtensionRightStorage" xml:space="preserve">
+    <value>Garder ses propres données dans le coffre</value>
+  </data>
+  <data name="ExtensionRightSelection" xml:space="preserve">
+    <value>Voir le texte que vous sélectionnez, quand vous cliquez sur son bouton</value>
+  </data>
+  <data name="ExtensionRightCreateSheets" xml:space="preserve">
+    <value>Créer des fiches et changer leurs étiquettes</value>
+  </data>
+  <data name="ExtensionRightWriteSheets" xml:space="preserve">
+    <value>Modifier le texte de vos fiches</value>
+  </data>
+  <data name="ExtensionRiskNotable" xml:space="preserve">
+    <value>permission sensible</value>
+  </data>
+  <data name="ExtensionRiskHigh" xml:space="preserve">
+    <value>permission à risque</value>
+  </data>
+  <data name="ExtensionHighRisk" xml:space="preserve">
+    <value>Elle pourra modifier le texte de vos fiches. Chaque modification garde la version précédente de la fiche.</value>
+  </data>
+  <data name="ExtensionNewRights" xml:space="preserve">
+    <value>Cette version demande de nouvelles permissions, marquées « Nouvelle ».</value>
+  </data>
+  <data name="ExtensionRightNew" xml:space="preserve">
+    <value>Nouvelle</value>
+  </data>
+  <data name="ExtensionRightKeptWithdrawn" xml:space="preserve">
+    <value>Retirée par vous : elle le reste.</value>
+  </data>
+  <data name="ExtensionCommand" xml:space="preserve">
+    <value>commande « {0} » dans la recherche</value>
+  </data>
+  <data name="ExtensionCommands" xml:space="preserve">
+    <value>{0} commandes dans la recherche</value>
+  </data>
+  <data name="ExtensionSheetMenu" xml:space="preserve">
+    <value>« {0} » au clic droit des fiches</value>
+  </data>
+  <data name="ExtensionFolderMenu" xml:space="preserve">
+    <value>« {0} » au clic droit des dossiers</value>
+  </data>
+  <data name="ExtensionCard" xml:space="preserve">
+    <value>encart « {0} » sur Aujourd'hui</value>
+  </data>
+  <data name="ExtensionRightWithdrawn" xml:space="preserve">
+    <value>Permission retirée à « {0} » : « {1} ». Elle reçoit maintenant un refus.</value>
+  </data>
+  <data name="ExtensionRightGranted" xml:space="preserve">
+    <value>Permission rendue à « {0} » : « {1} ».</value>
   </data>
   <data name="ModulesHelp" xml:space="preserve">
     <value>Des fonctions facultatives, pour ce coffre. Désactiver un module le retire des menus ; ce qu'il a créé reste dans le coffre, intact.</value>

@@ -91,7 +91,7 @@ public sealed class ExtensionLibraryTests
     [DataRow("""{"id":"quiz","nom":"Q","version":"1","blocs":["quiz"],"entree":"x.exe"}""", "fichier .js")]
     [DataRow("""{"id":"quiz","nom":"Q","version":"1","blocs":["quiz"],"entree":".cache/x.js"}""", "caché")]
     [DataRow("""{"id":"quiz","nom":"Q","version":"1","vue":{"titre":" "}}""", "titre de vue")]
-    [DataRow("""{"id":"quiz","nom":"Q","version":"1"}""", "ni bloc ni vue")]
+    [DataRow("""{"id":"quiz","nom":"Q","version":"1"}""", "ni bloc, ni vue")]
     public void A_bad_manifest_is_refused(string json, string reason)
     {
         var outcome = ExtensionManifest.Parse(Encoding.UTF8.GetBytes(json));

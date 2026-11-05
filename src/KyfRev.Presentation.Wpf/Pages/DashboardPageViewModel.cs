@@ -81,6 +81,7 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
     private readonly DashboardExtras _extras;
     private readonly IEnumerable<IDashboardWidget> _widgets;
     private readonly ReviewUseCases? _reviews;
+    private IReadOnlyList<DashboardCard> _extensionCards = [];
     private DueItemRow? _toArchive;
     private Dashboard? _dashboard;
     private IReadOnlyList<DueItem> _toStart = [];
@@ -260,6 +261,9 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
     /// <summary>Ce que les modules vont chercher au-dehors, une fois la vue affichée ; vrai si un encart a changé.</summary>
     public Func<Task<bool>>? LookForNews { get; init; }
 
+    /// <summary>Les encarts des extensions, demandés à leur code après ceux des modules.</summary>
+    public Func<Task<IReadOnlyList<DashboardCard>>>? ExtensionCards { get; set; }
+
     /// <summary>Encarts des modules, ceux qui ont quelque chose à montrer aujourd'hui.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasCards))]
@@ -355,7 +359,13 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
         }
         if (LookForNews is { } lookForNews && await lookForNews().ConfigureAwait(true))
         {
-            Cards = await Task.Run(ReadCards).ConfigureAwait(true);
+            Cards = [.. await Task.Run(ReadCards).ConfigureAwait(true), .. _extensionCards];
+        }
+        if (ExtensionCards is { } extensionCards)
+        {
+            var added = await extensionCards().ConfigureAwait(true);
+            Cards = [.. Cards.Where(card => !_extensionCards.Contains(card)), .. added];
+            _extensionCards = added;
         }
     }
 

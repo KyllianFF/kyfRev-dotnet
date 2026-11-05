@@ -26,6 +26,12 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 - Extensions : elles s'installent depuis un dossier, s'activent et se retirent dans « Modules et extensions », après avoir montré
   ce qu'elles demandent ; celles de la 0.x sont reprises au premier lancement. Leur code tourne à part, sans réseau. Leur vue a son
   entrée dans le menu et s'affiche en éléments natifs : ni style, ni lien, ni image ne passent. Leurs blocs ne s'affichent pas encore.
+- Extensions, contrat 2 : une extension peut déclarer son icône et un compteur pour son entrée du menu, des commandes dans la
+  recherche (Ctrl+K), des entrées au clic droit des fiches et des dossiers, et un encart sur « Aujourd'hui ». Sa vue gagne les
+  formulaires (les champs partent ensemble à l'envoi) et les barres de progression. L'installation montre chaque permission sur sa
+  ligne, avec son poids : une alerte pour celles qui voient le contenu des fiches, une alerte rouge pour l'écriture, et une mise à
+  jour marque celles qui sont nouvelles. Chaque permission se retire ensuite d'une case, et le reste après une mise à jour. Les
+  types de l'objet `kyfrev` sont publiés dans `docs/extensions/kyfrev.d.ts`. Les extensions de la 0.x fonctionnent sans changement.
 - Schéma réseau : le switch de cœur et le switch de distribution rejoignent la bibliothèque, avec leur icône.
 - Écrire : tous les dessins passent par le même éditeur, après le choix du modèle dans la galerie : les SmartArt en liste, la carte
   mentale sur plusieurs niveaux, les schémas Mermaid en liste, les graphiques en tableau de valeurs. Tout dessin inséré depuis la

@@ -92,15 +92,6 @@ public static class ModulesSettingsText
     /// <summary>« Choisissez le dossier de l'extension (avec son extension.json) ».</summary>
     public static string ExtensionPick => Text(nameof(ExtensionPick));
 
-    /// <summary>« et ».</summary>
-    public static string ExtensionAnd => Text(nameof(ExtensionAnd));
-
-    /// <summary>« lire vos fiches (sans pouvoir les modifier) ».</summary>
-    public static string ExtensionReadSheets => Text(nameof(ExtensionReadSheets));
-
-    /// <summary>« garder ses propres données dans le coffre ».</summary>
-    public static string ExtensionStorage => Text(nameof(ExtensionStorage));
-
     /// <summary>« Installer l'extension ? ».</summary>
     public static string ExtensionInstallTitle => Text(nameof(ExtensionInstallTitle));
 
@@ -137,23 +128,17 @@ public static class ModulesSettingsText
     /// <summary>« Ajoute : {0} ».</summary>
     public static string ExtensionAddsOf(string adds) => Format("ExtensionAdds", adds);
 
-    /// <summary>« Elle peut {0}. ».</summary>
-    public static string ExtensionMayOf(string permissions) => Format("ExtensionMay", permissions);
-
     /// <summary>« bloc « {0} » ».</summary>
     public static string ExtensionBlockOf(string language) => Format("ExtensionBlock", language);
 
     /// <summary>« vue « {0} » ».</summary>
     public static string ExtensionViewOf(string title) => Format("ExtensionView", title);
 
-    /// <summary>« {0} {1} : {2}. ».</summary>
-    public static string ExtensionSummaryOf(string name, string version, string adds) => Format("ExtensionSummary", name, version, adds);
+    /// <summary>« {0} {1} ».</summary>
+    public static string ExtensionSummaryOf(string name, string version) => Format("ExtensionSummary", name, version);
 
-    /// <summary>« {0} {1}, par {2} : {3}. ».</summary>
-    public static string ExtensionSummaryByOf(string name, string version, string author, string adds) => Format("ExtensionSummaryBy", name, version, author, adds);
-
-    /// <summary>« Elle pourra {0}. ».</summary>
-    public static string ExtensionWillOf(string permissions) => Format("ExtensionWill", permissions);
+    /// <summary>« {0} {1}, par {2} ».</summary>
+    public static string ExtensionSummaryByOf(string name, string version, string author) => Format("ExtensionSummaryBy", name, version, author);
 
     /// <summary>« Elle remplace la version {0}, rangée (et non effacée). ».</summary>
     public static string ExtensionReplacesOf(string version) => Format("ExtensionReplaces", version);
@@ -178,6 +163,72 @@ public static class ModulesSettingsText
 
     /// <summary>« {0} fichier(s), {1}. ».</summary>
     public static string ExtensionFilesOf(int count, string size) => Format("ExtensionFiles", count, size);
+
+    /// <summary>« Elle ne pourra ni accéder à Internet, ni supprimer de fiche. ».</summary>
+    public static string ExtensionLimitsWriting => Text(nameof(ExtensionLimitsWriting));
+
+    /// <summary>« Elle ajoute ».</summary>
+    public static string ExtensionAddsTitle => Text(nameof(ExtensionAddsTitle));
+
+    /// <summary>« Elle pourra ».</summary>
+    public static string ExtensionRightsTitle => Text(nameof(ExtensionRightsTitle));
+
+    /// <summary>« Décochez une permission pour la retirer : l'extension reçoit alors un refus quand elle s'en sert. ».</summary>
+    public static string ExtensionRightsHelp => Text(nameof(ExtensionRightsHelp));
+
+    /// <summary>« Lire toutes vos fiches, sans pouvoir les modifier ».</summary>
+    public static string ExtensionRightReadSheets => Text(nameof(ExtensionRightReadSheets));
+
+    /// <summary>« Garder ses propres données dans le coffre ».</summary>
+    public static string ExtensionRightStorage => Text(nameof(ExtensionRightStorage));
+
+    /// <summary>« Voir le texte que vous sélectionnez, quand vous cliquez sur son bouton ».</summary>
+    public static string ExtensionRightSelection => Text(nameof(ExtensionRightSelection));
+
+    /// <summary>« Créer des fiches et changer leurs étiquettes ».</summary>
+    public static string ExtensionRightCreateSheets => Text(nameof(ExtensionRightCreateSheets));
+
+    /// <summary>« Modifier le texte de vos fiches ».</summary>
+    public static string ExtensionRightWriteSheets => Text(nameof(ExtensionRightWriteSheets));
+
+    /// <summary>« permission sensible ».</summary>
+    public static string ExtensionRiskNotable => Text(nameof(ExtensionRiskNotable));
+
+    /// <summary>« permission à risque ».</summary>
+    public static string ExtensionRiskHigh => Text(nameof(ExtensionRiskHigh));
+
+    /// <summary>« Elle pourra modifier le texte de vos fiches. Chaque modification garde la version précédente de la fiche. ».</summary>
+    public static string ExtensionHighRisk => Text(nameof(ExtensionHighRisk));
+
+    /// <summary>« Cette version demande de nouvelles permissions, marquées « Nouvelle ». ».</summary>
+    public static string ExtensionNewRights => Text(nameof(ExtensionNewRights));
+
+    /// <summary>« Nouvelle ».</summary>
+    public static string ExtensionRightNew => Text(nameof(ExtensionRightNew));
+
+    /// <summary>« Retirée par vous : elle le reste. ».</summary>
+    public static string ExtensionRightKeptWithdrawn => Text(nameof(ExtensionRightKeptWithdrawn));
+
+    /// <summary>« commande « {0} » dans la recherche ».</summary>
+    public static string ExtensionCommandOf(string title) => Format("ExtensionCommand", title);
+
+    /// <summary>« {0} commandes dans la recherche ».</summary>
+    public static string ExtensionCommandsOf(int count) => Format("ExtensionCommands", count);
+
+    /// <summary>« « {0} » au clic droit des fiches ».</summary>
+    public static string ExtensionSheetMenuOf(string title) => Format("ExtensionSheetMenu", title);
+
+    /// <summary>« « {0} » au clic droit des dossiers ».</summary>
+    public static string ExtensionFolderMenuOf(string title) => Format("ExtensionFolderMenu", title);
+
+    /// <summary>« encart « {0} » sur Aujourd'hui ».</summary>
+    public static string ExtensionCardOf(string title) => Format("ExtensionCard", title);
+
+    /// <summary>« Permission retirée à « {0} » : « {1} ». Elle reçoit maintenant un refus. ».</summary>
+    public static string ExtensionRightWithdrawnOf(string name, string right) => Format("ExtensionRightWithdrawn", name, right);
+
+    /// <summary>« Permission rendue à « {0} » : « {1} ». ».</summary>
+    public static string ExtensionRightGrantedOf(string name, string right) => Format("ExtensionRightGranted", name, right);
 
     /// <summary>« Modules et extensions ».</summary>
     public static string Tab => Text(nameof(Tab));

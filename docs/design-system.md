@@ -118,7 +118,9 @@ fois l'application installée. Elles viennent des dépôts officiels, à un comm
 | Menu | styles de `ContextMenu`, `Menu`, `MenuItem` | coche, raccourci, sous-menus ; au clic droit, les actions rapides en tête (`Kyf.MenuItem.Quick`), une rangée d'outils dessous (`Kyf.MenuItem.Tool`), disposées par `ActionMenuPanel` ; les champs de texte reçoivent le leur en se chargeant |
 | Listes | styles de `ListBox`, `ListBoxItem` | survol, élément choisi : fond vert pâle et texte en gras (menu de la coquille) |
 | Icône | `Icon` | décorative : police d'icônes de Windows, ignorée par le lecteur d'écran |
-| Dialogue | `Dialog` | voile, focus tenu à l'intérieur, Échap ferme, Entrée valide ; trop haut pour la fenêtre, son contenu défile entre le titre et les boutons |
+| Dialogue | `Dialog` | voile, focus tenu à l'intérieur, Échap ferme, Entrée valide ; trop haut pour la fenêtre, son contenu défile entre le titre et les boutons ; ce qui compte (`IsDestructive`) a un bouton rouge, qu'Entrée ne déclenche pas |
+| Case à cocher, bouton radio | styles de `CheckBox`, `RadioButton` | la case carrée, le bouton rond ; la couleur principale quand ils sont choisis, le contour épaissi au focus |
+| Barre de progression | style de `ProgressBar` | une piste discrète, la part faite à la couleur principale ; nommée pour le lecteur d'écran |
 | Notification | `Notification`, gravité `Severity` | annoncée par le lecteur d'écran (tout de suite pour une erreur) |
 | État vide | `EmptyState` | icône, titre, explication, action |
 | Squelette | `Skeleton` | chargement, immobile si les animations sont réduites |

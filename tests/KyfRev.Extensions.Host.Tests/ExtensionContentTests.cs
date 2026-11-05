@@ -41,7 +41,12 @@ public sealed class ExtensionContentTests
     [DataRow("tfoot", "tbody")]
     [DataRow("a", "span")]
     [DataRow("abbr", "span")]
-    [DataRow("label", "span")]
+    [DataRow("label", "label")]
+    [DataRow("form", "form")]
+    [DataRow("fieldset", "div")]
+    [DataRow("legend", "p")]
+    [DataRow("progress", "progress")]
+    [DataRow("meter", "progress")]
     [DataRow("b", "strong")]
     [DataRow("i", "em")]
     [DataRow("kbd", "code")]
@@ -81,7 +86,6 @@ public sealed class ExtensionContentTests
     }
 
     [TestMethod]
-    [DataRow("form")]
     [DataRow("font")]
     [DataRow("center")]
     [DataRow("mon-element")]
@@ -196,6 +200,24 @@ public sealed class ExtensionContentTests
 
         Assert.AreEqual("ul,li,#texte,li,hr", string.Join(',', content.Descendants().Select(node => node.Tag)));
         Assert.IsEmpty(ExtensionContent.Empty.Nodes);
+    }
+
+    [TestMethod]
+    public void A_form_keeps_the_names_of_its_fields_and_a_progress_its_maximum()
+    {
+        var content = Read("""
+            [{"balise":"form","donnees":{"action":"creer"},"enfants":[
+              {"balise":"input","attributs":{"name":"nom","required":"","onfocus":"x()"}},
+              {"balise":"progress","attributs":{"value":"3","max":"12","style":"width:9999px"}}]}]
+            """);
+
+        var form = content.Nodes.Single();
+        Assert.AreEqual("creer", form.Action);
+        Assert.AreEqual("nom", form.Children[0].Attribute("name"));
+        Assert.AreEqual(string.Empty, form.Children[0].Attribute("required"));
+        Assert.IsNull(form.Children[0].Attribute("onfocus"));
+        Assert.AreEqual("12", form.Children[1].Attribute("max"));
+        Assert.IsNull(form.Children[1].Attribute("style"));
     }
 
     private static ExtensionContent Read(string json)

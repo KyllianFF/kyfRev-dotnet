@@ -17,14 +17,17 @@ namespace KyfRev.Presentation.Wpf.Extensions;
 /// <param name="Error">La raison de l'échec ; rien si elle a répondu.</param>
 public sealed record ExtensionAnswer(ExtensionContent? Content, string? Error)
 {
+    /// <summary>Ce qu'elle a rendu d'autre qu'un affichage : un nombre, un encart.</summary>
+    public JsonElement? Value { get; init; }
+
     /// <summary>Elle a répondu.</summary>
     [MemberNotNullWhen(false, nameof(Error))]
     public bool Succeeded => Error is null;
 }
 
-/// <summary>Une extension demande de redessiner sa vue.</summary>
+/// <summary>Ce qu'une extension demande à l'application : redessiner sa vue, l'ouvrir.</summary>
 /// <param name="extension">L'extension.</param>
-public sealed class ExtensionRefreshEventArgs(string extension) : EventArgs
+public sealed class ExtensionEventArgs(string extension) : EventArgs
 {
     /// <summary>L'extension.</summary>
     public string Extension { get; } = extension;
@@ -43,6 +46,8 @@ public sealed class ExtensionEngine : IDisposable
     private const string FramePrefix = $"{Origin}/cadre/";
     private const string ResourcePrefix = "kyfrev-extensions/";
     private const int HiddenSize = 400;
+    private const int MaxCount = 999;
+    private const int MaxCardText = 300;
     private const int PopupWindow = unchecked((int)0x80000000);
 
     /// <summary>Aucune résolution d'adresse : ce moteur n'a aucune raison d'atteindre un réseau.</summary>
@@ -89,7 +94,10 @@ public sealed class ExtensionEngine : IDisposable
     }
 
     /// <summary>Une extension demande de redessiner sa vue.</summary>
-    public event EventHandler<ExtensionRefreshEventArgs>? RefreshAsked;
+    public event EventHandler<ExtensionEventArgs>? RefreshAsked;
+
+    /// <summary>Une extension demande d'ouvrir sa vue.</summary>
+    public event EventHandler<ExtensionEventArgs>? ViewAsked;
 
     /// <summary>Le temps qu'une extension a pour se charger et pour répondre.</summary>
     public TimeSpan Patience { get; set; } = TimeSpan.FromSeconds(10);
@@ -121,6 +129,36 @@ public sealed class ExtensionEngine : IDisposable
     /// <param name="data">Les attributs <c>data-</c> de l'élément.</param>
     public Task<ExtensionAnswer> ActAsync(string id, string name, object? value, IReadOnlyDictionary<string, string> data) =>
         AskAsync(id, n => new { type = "action", n, nom = name, valeur = value, donnees = data });
+
+    /// <summary>Lance une commande déclarée par une extension, avec ce sur quoi elle porte.</summary>
+    /// <param name="id">L'extension.</param>
+    /// <param name="command">La commande.</param>
+    /// <param name="context">Ce sur quoi elle porte : la fiche ou le dossier du clic droit.</param>
+    public Task<ExtensionAnswer> CommandAsync(string id, string command, IReadOnlyDictionary<string, string> context) =>
+        AskAsync(id, n => new { type = "commande", n, nom = command, contexte = context });
+
+    /// <summary>Le nombre qu'une extension montre près de son entrée du menu ; rien s'il n'y en a pas.</summary>
+    /// <param name="id">L'extension.</param>
+    public async Task<int?> CountAsync(string id)
+    {
+        var answer = await AskAsync(id, n => new { type = "compteur", n }).ConfigureAwait(true);
+        return answer.Value is { ValueKind: JsonValueKind.Number } value && value.TryGetDouble(out var count) && count >= 1
+            ? (int)Math.Min(count, MaxCount)
+            : null;
+    }
+
+    /// <summary>L'encart d'une extension sur « Aujourd'hui » : son texte et sa précision ; rien si elle n'a rien à dire.</summary>
+    /// <param name="id">L'extension.</param>
+    public async Task<(string Text, string? Detail)?> CardAsync(string id)
+    {
+        var answer = await AskAsync(id, n => new { type = "encart", n }).ConfigureAwait(true);
+        if (answer.Value is not { ValueKind: JsonValueKind.Object } card || TextOf(card, "texte") is not { Length: > 0 } text)
+        {
+            return null;
+        }
+        static string Short(string value) => value.Length > MaxCardText ? value[..MaxCardText] : value;
+        return (Short(text), TextOf(card, "detail") is { Length: > 0 } detail ? Short(detail) : null);
+    }
 
     /// <summary>Oublie le cadre d'une extension désactivée, retirée ou réinstallée : le prochain usage charge son nouveau script.</summary>
     /// <param name="id">L'extension.</param>
@@ -390,11 +428,15 @@ public sealed class ExtensionEngine : IDisposable
             case "resultat":
                 TakeResult(id, root);
                 break;
+            case "requete" when TextOf(root, "methode") == "vue.ouvrir":
+                ViewAsked?.Invoke(this, new ExtensionEventArgs(id));
+                Post(new { kind = "vers-cadre", id, message = new { type = "reponse", n = root.GetProperty("n").GetInt32(), resultat = (object?)null } });
+                break;
             case "requete":
                 _ = AnswerRequestAsync(id, root.GetProperty("n").GetInt32(), root.GetProperty("methode").GetString()!, root.GetProperty("args").Clone());
                 break;
             case "rafraichir":
-                RefreshAsked?.Invoke(this, new ExtensionRefreshEventArgs(id));
+                RefreshAsked?.Invoke(this, new ExtensionEventArgs(id));
                 break;
             default:
                 break;
@@ -417,12 +459,13 @@ public sealed class ExtensionEngine : IDisposable
         }
         if (!root.TryGetProperty("contenu", out var tree) || tree.ValueKind != JsonValueKind.Array)
         {
-            pending.Answer.TrySetResult(new ExtensionAnswer(null, null));
+            pending.Answer.TrySetResult(new ExtensionAnswer(null, null) { Value = root.TryGetProperty("valeur", out var only) && only.ValueKind != JsonValueKind.Null ? only.Clone() : null });
             return;
         }
+        var value = root.TryGetProperty("valeur", out var given) && given.ValueKind != JsonValueKind.Null ? given.Clone() : (JsonElement?)null;
         var content = ExtensionContent.Read(tree);
         pending.Answer.TrySetResult(content.Succeeded
-            ? new ExtensionAnswer(content.Value, null)
+            ? new ExtensionAnswer(content.Value, null) { Value = value }
             : new ExtensionAnswer(null, $"extension « {pending.Name} » : {content.Error}"));
     }
 

@@ -207,6 +207,62 @@
     </Setter>
   </Style>
 
+  <!-- Bouton radio : comme la case à cocher, en rond. -->
+  <Style TargetType="RadioButton">
+    <Setter Property="FontFamily" Value="{DynamicResource Kyf.Font.Ui}" />
+    <Setter Property="FontSize" Value="{DynamicResource Kyf.FontSize.Body}" />
+    <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Text}" />
+    <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="RadioButton">
+          <Grid Background="Transparent">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="Auto" />
+              <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+            <Grid VerticalAlignment="Top" Margin="0,3,0,0">
+              <Ellipse x:Name="Ring" Width="18" Height="18" StrokeThickness="1" Fill="{DynamicResource Kyf.Brush.Surface}" Stroke="{DynamicResource Kyf.Brush.ControlBorder}" />
+              <Ellipse x:Name="Dot" Width="8" Height="8" Fill="{DynamicResource Kyf.Brush.OnPrimary}" Visibility="Collapsed" />
+            </Grid>
+            <ContentPresenter Grid.Column="1" VerticalAlignment="Center" Margin="8,0,0,0" />
+          </Grid>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsChecked" Value="True">
+              <Setter TargetName="Ring" Property="Fill" Value="{DynamicResource Kyf.Brush.Primary}" />
+              <Setter TargetName="Ring" Property="Stroke" Value="{DynamicResource Kyf.Brush.Primary}" />
+              <Setter TargetName="Dot" Property="Visibility" Value="Visible" />
+            </Trigger>
+            <Trigger Property="IsKeyboardFocused" Value="True">
+              <Setter TargetName="Ring" Property="Stroke" Value="{DynamicResource Kyf.Brush.Focus}" />
+              <Setter TargetName="Ring" Property="StrokeThickness" Value="2" />
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+              <Setter Property="Opacity" Value="0.6" />
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <!-- Barre de progression : une piste discrète, la part faite à la couleur principale. -->
+  <Style TargetType="ProgressBar">
+    <Setter Property="Height" Value="6" />
+    <Setter Property="Minimum" Value="0" />
+    <Setter Property="Focusable" Value="False" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="ProgressBar">
+          <Border x:Name="PART_Track" CornerRadius="3" Background="{DynamicResource Kyf.Brush.Divider}" SnapsToDevicePixels="True">
+            <Border x:Name="PART_Indicator" CornerRadius="3" HorizontalAlignment="Left" Background="{DynamicResource Kyf.Brush.Primary}" />
+          </Border>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
   <!-- Dialogue : voile, carte au centre, ombre de l'élévation « Dialog », focus tenu à l'intérieur. -->
   <Style TargetType="kyf:Dialog">
     <Setter Property="FontFamily" Value="{DynamicResource Kyf.Font.Ui}" />

@@ -30,6 +30,7 @@ public sealed partial class ShellViewModel : ObservableObject
     private readonly IReadOnlyList<NavigationItem> _core;
     private readonly IReadOnlyList<PaletteEntry> _commandsWithoutVault;
     private IReadOnlyList<PaletteEntry> _commands;
+    private IReadOnlyList<PaletteEntry> _extensionCommands = [];
     private IReadOnlyList<NavigationItem> _moduleEntries = [];
 
     /// <summary>Un coffre est ouvert : les pages ouvertes sont prévenues (<see cref="INavigationAware"/>).</summary>
@@ -394,7 +395,16 @@ public sealed partial class ShellViewModel : ObservableObject
         SecondaryNavigation = [.. items.Where(item => item.IsSecondary)];
         TabNavigation = [.. MainNavigation.Take(ShellLayout.TabCount)];
         OverflowNavigation = [.. MainNavigation.Skip(ShellLayout.TabCount), .. SecondaryNavigation];
-        _commands = [.. NavigationCommands(), .. _commandsWithoutVault];
+        _commands = [.. NavigationCommands(), .. _extensionCommands, .. _commandsWithoutVault];
+    }
+
+    /// <summary>Les commandes des extensions actives, dans la recherche (Ctrl+K).</summary>
+    public void SetExtensionCommands(IEnumerable<PaletteEntry> commands)
+    {
+        ArgumentNullException.ThrowIfNull(commands);
+        _extensionCommands = [.. commands];
+        _commands = [.. NavigationCommands(), .. _extensionCommands, .. _commandsWithoutVault];
+        UpdateResults();
     }
 
     partial void OnSelectedMainChanged(NavigationItem? value)
