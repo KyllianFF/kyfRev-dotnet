@@ -6,6 +6,7 @@ using KyfRev.Application.Ports;
 using KyfRev.Application.UseCases;
 using KyfRev.DesignSystem;
 using KyfRev.DesignSystem.Tokens;
+using KyfRev.Extensions.Host;
 using KyfRev.Infrastructure.Online;
 using KyfRev.Infrastructure.Vault.Adapters;
 using KyfRev.Infrastructure.Windows;
@@ -128,9 +129,23 @@ internal static class Composition
                 provider.GetRequiredService<ShellViewModel>().ShowWorkspace();
             },
             () => provider.GetRequiredService<ActiveModules>().Find<QuoteUseCases>()));
+        services.AddSingleton(provider =>
+        {
+            var locations = provider.GetRequiredService<VaultLocations>();
+            var library = new ExtensionLibrary(Path.Combine(locations.LocalData, "extensions"), clock);
+            if (locations.LegacyLocalData is { } legacy)
+            {
+                library.Import(Path.Combine(legacy, "extensions"));
+            }
+            return library;
+        });
+        services.AddSingleton(provider => new ExtensionSettingsViewModel(
+            provider.GetRequiredService<ExtensionLibrary>(),
+            provider.GetRequiredService<IFolderPicker>()));
         services.AddSingleton(provider => new ModulesSettingsViewModel(
             provider.GetRequiredService<SettingsUseCases>(),
-            provider.GetRequiredService<ActiveModules>().Load));
+            provider.GetRequiredService<ActiveModules>().Load,
+            provider.GetRequiredService<ExtensionSettingsViewModel>()));
         services.AddSingleton<GeneralSettingsViewModel>();
         services.AddSingleton<AboutSettingsViewModel>();
         services.AddSingleton<SettingsHubViewModel>();

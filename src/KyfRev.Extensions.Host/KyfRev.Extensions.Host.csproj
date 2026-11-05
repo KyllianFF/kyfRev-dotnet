@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Description>Extensions tierces de kyfRev : leur manifeste, leur installation sur le poste et les permissions que l'hôte contrôle. Leur code tourne isolé, dans un moteur web hébergé par la présentation.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\KyfRev.Application\KyfRev.Application.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="KyfRev.Extensions.Host.Tests" />
+  </ItemGroup>
+
+</Project>

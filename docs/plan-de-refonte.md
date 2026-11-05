@@ -849,6 +849,16 @@ Ce jalon se découpe en sous-parties validées une à une, comme J6.
   - essai « sonde » porté et enrichi : fuite `data-externe`, usurpation entre cadres, faux dialogue ;
   - un catalogue altéré est refusé ;
   - les schémas existants s'ouvrent et se réenregistrent sans perte.
+- **Découpage des extensions** (amendement du 5 novembre 2026), en quatre lots essayés un à un :
+  1. installer et exécuter : `KyfRev.Extensions.Host` lit le manifeste et range les extensions sur le poste, la carte des Paramètres les active et les retire, et leur code tourne dans une page cachée, chacune dans son cadre ;
+  2. les vues : leur entrée dans le menu, la lecture des fiches et le stockage ;
+  3. les blocs dans les fiches, en lecture, en révision et dans l'éditeur, avec le rendu natif en liste blanche ;
+  4. le catalogue signé et le jeton GitHub. La vérification de mise à jour vient après.
+- **Ce que le lot 1 ajoute au contrat** (amendement du 5 novembre 2026) :
+  - le moteur des extensions a son propre processus et ses propres données, et il ne résout aucune adresse ;
+  - WebRTC est retiré de chaque document : la CSP ne l'arrête pas, et un essai avec un vrai écouteur UDP a reçu le paquet STUN d'une extension, y compris avec `webrtc 'block'`. La 0.x avait la même fuite. Les essais gardent ces écouteurs, TCP et UDP, parce qu'ils voient ce qui sort quelle qu'en soit la raison ;
+  - un résultat n'est pris que pour une demande faite à la même extension, et chaque cadre a son jeton ;
+  - `smartart` rejoint les langages de bloc réservés.
 
 ### J11. Livraison `1.0.0` (M)
 - **Livrables** :

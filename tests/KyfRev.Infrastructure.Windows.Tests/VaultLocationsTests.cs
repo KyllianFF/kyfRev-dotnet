@@ -70,6 +70,18 @@ public sealed class VaultLocationsTests
     }
 
     [TestMethod]
+    public void The_folder_of_the_0x_is_known_only_when_installed()
+    {
+        using var test = new TestFolder();
+        var program = test.Folder("Programs", "kyfRev");
+        Assert.IsNull(VaultLocations.From(program, test.Profile).LegacyLocalData);
+
+        File.WriteAllText(Path.Combine(program, "installation.json"), """{"coffre":"documents"}""");
+
+        Assert.AreEqual(test.PathOf("Local", "kyfRev"), VaultLocations.From(program, test.Profile).LegacyLocalData);
+    }
+
+    [TestMethod]
     public void The_vault_remembered_by_the_0x_is_reopened_and_left_untouched()
     {
         using var test = new TestFolder();

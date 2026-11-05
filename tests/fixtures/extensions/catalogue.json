@@ -1,0 +1,125 @@
+{
+  "format": 1,
+  "extensions": [
+    {
+      "manifeste": {
+        "id": "bilan",
+        "nom": "Bilan du coffre",
+        "version": "1.0.0",
+        "description": "Une vue qui fait le point sur vos fiches : volume par dossier, fiches courtes à étoffer, fiches sans étiquette ni intertitre. Lecture seule.",
+        "auteur": "kyfRev",
+        "permissions": [
+          "fiches:lecture"
+        ],
+        "vue": {
+          "titre": "Bilan du coffre"
+        }
+      },
+      "fichiers": [
+        {
+          "chemin": "extension.js",
+          "empreinte": "sha256:4227ce2fa2f3d606a77c158edd1d38288200db98d21b0abfed7292a37f2892d3",
+          "taille": 3486
+        },
+        {
+          "chemin": "extension.json",
+          "empreinte": "sha256:aedf1434ecb6dcb69ebca5498c28f242ea002458c6190a7422d9375efc4d5448",
+          "taille": 334
+        }
+      ]
+    },
+    {
+      "manifeste": {
+        "id": "chronologie",
+        "nom": "Chronologie",
+        "version": "1.0.0",
+        "description": "Des frises de dates dans les fiches (bloc ```chronologie) et une vue qui réunit toutes les dates du coffre, dans l'ordre.",
+        "auteur": "kyfRev",
+        "permissions": [
+          "fiches:lecture"
+        ],
+        "blocs": [
+          "chronologie"
+        ],
+        "vue": {
+          "titre": "Chronologie"
+        }
+      },
+      "fichiers": [
+        {
+          "chemin": "extension.js",
+          "empreinte": "sha256:0d7a74ef5b46012f694e019692e479531f5b6a425613f026f3cdf7fece9e83b1",
+          "taille": 3751
+        },
+        {
+          "chemin": "extension.json",
+          "empreinte": "sha256:74689b6d3c594828d8dbc22446db5ee9ea3c09164e1b6546d90ccb51370e40db",
+          "taille": 339
+        }
+      ]
+    },
+    {
+      "manifeste": {
+        "id": "quiz",
+        "nom": "Quiz",
+        "version": "1.0.0",
+        "description": "Des questions dans les fiches (bloc ```quiz) et une vue qui les reprend toutes.",
+        "auteur": "kyfRev",
+        "entree": "extension.js",
+        "permissions": [
+          "fiches:lecture",
+          "stockage"
+        ],
+        "blocs": [
+          "quiz"
+        ],
+        "vue": {
+          "titre": "Quiz"
+        }
+      },
+      "fichiers": [
+        {
+          "chemin": "extension.js",
+          "empreinte": "sha256:9a3a5849d809e05e7354a3a87d2c01293c160f0c407a9d8ce6abf853a3617f9f",
+          "taille": 3822
+        },
+        {
+          "chemin": "extension.json",
+          "empreinte": "sha256:51223dc5704bbf174c8a6120aeb7ca04fe57828f4a56a3fd2948799e8f4f8a6b",
+          "taille": 308
+        }
+      ]
+    },
+    {
+      "manifeste": {
+        "id": "vocabulaire",
+        "nom": "Vocabulaire",
+        "version": "1.0.0",
+        "description": "Des listes de mots dans les fiches (bloc ```vocabulaire), traductions cachées, et une vue pour s'interroger, qui revient plus souvent sur les mots à revoir.",
+        "auteur": "kyfRev",
+        "permissions": [
+          "fiches:lecture",
+          "stockage"
+        ],
+        "blocs": [
+          "vocabulaire"
+        ],
+        "vue": {
+          "titre": "Vocabulaire"
+        }
+      },
+      "fichiers": [
+        {
+          "chemin": "extension.js",
+          "empreinte": "sha256:6af52d8ae94f5caf127880d7e9fe1d6ee29c373c48262ede9d85968e9b88f832",
+          "taille": 4687
+        },
+        {
+          "chemin": "extension.json",
+          "empreinte": "sha256:ff4962980e538af847adf8ad9c39f97c80f3cc153fb6f00820b3fa71e3fcc546",
+          "taille": 387
+        }
+      ]
+    }
+  ]
+}

@@ -21,7 +21,7 @@ public sealed partial class ArchitectureTests
     /// <summary>Les seules opérations qui effacent : depuis la corbeille, à la demande expresse de la personne.</summary>
     private static readonly string[] Purges = ["Purge", "PurgeSheet", "PurgeFolder", "PurgeAnnotation", "PurgeQuote"];
 
-    private static readonly string[] Layers = [Domain, Application, "KyfRev.Infrastructure.Online", "KyfRev.Infrastructure.Vault", "KyfRev.Modules.Citations", "KyfRev.Modules.Schemas", Rendering, "kyfrev-coffre"];
+    private static readonly string[] Layers = [Domain, Application, "KyfRev.Extensions.Host", "KyfRev.Infrastructure.Online", "KyfRev.Infrastructure.Vault", "KyfRev.Modules.Citations", "KyfRev.Modules.Schemas", Rendering, "kyfrev-coffre"];
 
     /// <summary>Paquets permis au domaine, aux cas d'usage et aux modules, en plus du framework.</summary>
     private static readonly string[] Abstractions = ["Microsoft.Extensions.DependencyInjection.Abstractions", "Microsoft.Extensions.Logging.Abstractions"];
@@ -178,6 +178,8 @@ public sealed partial class ArchitectureTests
         _ when assembly.StartsWith("KyfRev.Infrastructure.", StringComparison.Ordinal) => reference is Domain or Application,
         // Aucun module ne référence un autre module, ni l'infrastructure.
         _ when assembly.StartsWith("KyfRev.Modules.", StringComparison.Ordinal) => reference is Domain or Application,
+        // Les extensions ne connaissent ni les modules, ni l'infrastructure, ni la présentation.
+        _ when assembly.StartsWith("KyfRev.Extensions.", StringComparison.Ordinal) => reference is Domain or Application,
         // La présentation ne référence aucune infrastructure concrète : seule la racine de composition les relie.
         _ when assembly.StartsWith("KyfRev.Presentation.", StringComparison.Ordinal) => !reference.StartsWith("KyfRev.Infrastructure.", StringComparison.Ordinal),
         _ => true,

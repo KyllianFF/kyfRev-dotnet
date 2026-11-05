@@ -1,0 +1,11 @@
+{
+  "id": "quiz",
+  "nom": "Quiz",
+  "version": "1.0.0",
+  "description": "Des questions dans les fiches (bloc ```quiz) et une vue qui les reprend toutes.",
+  "auteur": "kyfRev",
+  "entree": "extension.js",
+  "permissions": ["fiches:lecture", "stockage"],
+  "blocs": ["quiz"],
+  "vue": { "titre": "Quiz" }
+}

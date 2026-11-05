@@ -1,0 +1,10 @@
+{
+  "id": "vocabulaire",
+  "nom": "Vocabulaire",
+  "version": "1.0.0",
+  "description": "Des listes de mots dans les fiches (bloc ```vocabulaire), traductions cachées, et une vue pour s'interroger, qui revient plus souvent sur les mots à revoir.",
+  "auteur": "kyfRev",
+  "permissions": ["fiches:lecture", "stockage"],
+  "blocs": ["vocabulaire"],
+  "vue": { "titre": "Vocabulaire" }
+}
