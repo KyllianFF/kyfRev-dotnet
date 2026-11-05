@@ -44,6 +44,24 @@ public static class ShellText
     /// <summary>« Santé du coffre ».</summary>
     public static string Health => Text(nameof(Health));
 
+    /// <summary>« Réduire ».</summary>
+    public static string WindowMinimize => Text(nameof(WindowMinimize));
+
+    /// <summary>« Agrandir ».</summary>
+    public static string WindowMaximize => Text(nameof(WindowMaximize));
+
+    /// <summary>« Restaurer ».</summary>
+    public static string WindowRestore => Text(nameof(WindowRestore));
+
+    /// <summary>« Fermer ».</summary>
+    public static string WindowClose => Text(nameof(WindowClose));
+
+    /// <summary>« Passer au thème sombre ».</summary>
+    public static string ThemeToDark => Text(nameof(ThemeToDark));
+
+    /// <summary>« Passer au thème clair ».</summary>
+    public static string ThemeToLight => Text(nameof(ThemeToLight));
+
     /// <summary>« Raccourcis clavier ».</summary>
     public static string Help => Text(nameof(Help));
 

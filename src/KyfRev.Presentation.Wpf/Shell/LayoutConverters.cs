@@ -20,20 +20,3 @@ public sealed class LayoutVisibilityConverter : IValueConverter
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
         throw new NotSupportedException();
 }
-
-/// <summary>
-/// Alignement du contenu d'un bouton du menu : centré dans la colonne d'icônes, sinon celui donné
-/// en paramètre (« Left », « Stretch »).
-/// </summary>
-public sealed class LayoutAlignmentConverter : IValueConverter
-{
-    /// <inheritdoc/>
-    public object Convert(object value, Type targetType, object parameter, CultureInfo culture) =>
-        value is NavigationLayout.Rail
-            ? HorizontalAlignment.Center
-            : Enum.TryParse<HorizontalAlignment>(parameter as string, out var alignment) ? alignment : HorizontalAlignment.Left;
-
-    /// <inheritdoc/>
-    public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) =>
-        throw new NotSupportedException();
-}

@@ -157,4 +157,44 @@
     <Setter Property="Height" Value="40" />
   </Style>
 
+  <!-- Bouton de la fenêtre (réduire, agrandir), dans la barre de titre : carré, collé au bord, hors du parcours au clavier comme ceux de Windows.
+       « Tag » montre le survol quand c'est Windows qui le suit, sur « Agrandir » et ses dispositions. -->
+  <Style x:Key="Kyf.Button.Window" TargetType="Button" BasedOn="{StaticResource Kyf.Button.Subtle}">
+    <Setter Property="Width" Value="46" />
+    <Setter Property="MinWidth" Value="46" />
+    <Setter Property="MinHeight" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Focusable" Value="False" />
+    <Setter Property="IsTabStop" Value="False" />
+    <Setter Property="Cursor" Value="Arrow" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="Button">
+          <Border Background="{TemplateBinding Background}">
+            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+          </Border>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+    <Style.Triggers>
+      <Trigger Property="Tag" Value="{x:Static sys:Boolean.TrueString}">
+        <Setter Property="Background" Value="{DynamicResource Kyf.Brush.SurfaceAlt}" />
+      </Trigger>
+    </Style.Triggers>
+  </Style>
+
+  <!-- Bouton « Fermer » de la fenêtre : il devient rouge au survol. -->
+  <Style x:Key="Kyf.Button.WindowClose" TargetType="Button" BasedOn="{StaticResource Kyf.Button.Window}">
+    <Style.Triggers>
+      <Trigger Property="IsMouseOver" Value="True">
+        <Setter Property="Background" Value="{DynamicResource Kyf.Brush.Critical}" />
+        <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.OnPrimary}" />
+      </Trigger>
+      <Trigger Property="IsPressed" Value="True">
+        <Setter Property="Background" Value="{DynamicResource Kyf.Brush.Critical}" />
+        <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.OnPrimary}" />
+      </Trigger>
+    </Style.Triggers>
+  </Style>
+
 </ResourceDictionary>
