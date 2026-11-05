@@ -39,6 +39,11 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   sa consigne au-dessus de la fiche, et l'on prend la sélection, l'écrit à la main s'il n'y est pas, passe ou termine ; le temps ne
   court pas pendant qu'on répond. Elle peut aussi ouvrir une fiche à un passage, et ajouter ses entrées au clic droit d'un texte
   sélectionné, avec la permission « selection ».
+- Extension Quiz, version 2 (dossier `extensions/quiz`) : on crée un quiz depuis son menu, Ctrl+K ou le clic droit d'une fiche, puis
+  on prend chaque question et sa réponse dans la fiche, à la chaîne, ou on les écrit à la main. Un texte sélectionné en lecture
+  s'ajoute au quiz par le clic droit. En partie, les questions ratées reviennent en premier, « Voir dans la fiche » rouvre le
+  passage d'origine, et le menu comme « Aujourd'hui » disent combien sont à revoir. Les blocs ` ```quiz ` restent lisibles et
+  deviennent des quiz en un clic ; le score de la version 1 est gardé.
 - Schéma réseau : le switch de cœur et le switch de distribution rejoignent la bibliothèque, avec leur icône.
 - Écrire : tous les dessins passent par le même éditeur, après le choix du modèle dans la galerie : les SmartArt en liste, la carte
   mentale sur plusieurs niveaux, les schémas Mermaid en liste, les graphiques en tableau de valeurs. Tout dessin inséré depuis la

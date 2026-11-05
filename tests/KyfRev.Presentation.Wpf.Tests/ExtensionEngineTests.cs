@@ -16,6 +16,8 @@ public sealed class ExtensionEngineTests
 
     private static string Published => Path.Combine(Repository.Root, "tests", "fixtures", "extensions");
 
+    private static string Official => Path.Combine(Repository.Root, "extensions");
+
     [EngineTest]
     public void Quiz_draws_its_block_and_its_view_and_keeps_its_score()
     {
@@ -38,6 +40,105 @@ public sealed class ExtensionEngineTests
 
         Assert.IsTrue(Wait(scene.Engine.ActAsync("quiz", "resultat", "su", new Dictionary<string, string> { ["valeur"] = "su" })).Succeeded);
         Assert.IsNotNull(scene.Data.Stored, "Le score passe par l'hôte, qui l'écrit dans le coffre.");
+    }
+
+    [EngineTest]
+    public void Quiz_2_takes_its_questions_in_a_sheet_plays_them_and_brings_back_the_missed_ones()
+    {
+        using var scene = new Scene();
+        Assert.IsTrue(scene.Library.Install(Path.Combine(Official, "quiz")).Succeeded);
+        scene.Data.Text = "Qu'est-ce que l'autorité ?\n\nUn pouvoir.\n";
+        var screen = new FakeScreen();
+        screen.Answers.Enqueue(new GuidedSelection(GuidedSelection.Taken, "Qu'est-ce que l'autorité ?", "f_1", "Une fiche", 0, 26));
+        screen.Answers.Enqueue(new GuidedSelection(GuidedSelection.Typed, "Un pouvoir reconnu"));
+        screen.Answers.Enqueue(new GuidedSelection(GuidedSelection.Taken, "Un exemple ?", "f_1", "Une fiche", 28, 40));
+        screen.Answers.Enqueue(new GuidedSelection(GuidedSelection.Skipped));
+        screen.Answers.Enqueue(new GuidedSelection(GuidedSelection.Stopped));
+        scene.Engine.Screen = screen;
+        using var ui = new UiThread();
+        var none = new Dictionary<string, string>();
+
+        StringAssert.Contains(TextOf(scene, "quiz"), "Aucun quiz pour l'instant", StringComparison.Ordinal);
+        Assert.IsTrue(Wait(scene.Engine.CommandAsync("quiz", "nouveau", none)).Succeeded);
+        StringAssert.Contains(TextOf(scene, "quiz"), "Fiche de départ", StringComparison.Ordinal);
+
+        var form = new Dictionary<string, object?> { ["nom"] = "Autorité", ["etiquettes"] = "philo", ["fiche"] = "f_1", ["ordre"] = "fiche", ["mode"] = "fiche" };
+        var created = Wait(scene.Engine.ActAsync("quiz", "creer", form, none));
+
+        Assert.IsTrue(created.Succeeded, created.Error);
+        Assert.HasCount(5, screen.Asks);
+        Assert.AreEqual(new SelectionAsk("Quiz", "Autorité · question 1 : sélectionne la question", "f_1", AllowsTyping: true), screen.Asks[0]);
+        StringAssert.Contains(screen.Asks[1].Prompt, "sélectionne la réponse", StringComparison.Ordinal);
+        var edit = TextOf(scene, "quiz");
+        StringAssert.Contains(edit, "2 questions prises dans la fiche", StringComparison.Ordinal);
+        StringAssert.Contains(edit, "Un pouvoir reconnu", StringComparison.Ordinal);
+
+        using var stored = JsonDocument.Parse(scene.Data.Stored!);
+        var quiz = stored.RootElement.GetProperty("quiz")[0];
+        var data = new Dictionary<string, string> { ["quiz"] = quiz.GetProperty("id").GetString()! };
+        Assert.IsTrue(Wait(scene.Engine.ActAsync("quiz", "lancer", null, data)).Succeeded);
+        StringAssert.Contains(TextOf(scene, "quiz"), "Question 1 sur 2", StringComparison.Ordinal);
+        Wait(scene.Engine.ActAsync("quiz", "afficher", null, none));
+        Wait(scene.Engine.ActAsync("quiz", "a-revoir", null, none));
+        Wait(scene.Engine.ActAsync("quiz", "afficher", null, none));
+        Wait(scene.Engine.ActAsync("quiz", "savais", null, none));
+        StringAssert.Contains(TextOf(scene, "quiz"), "Terminé : 1 sur 2", StringComparison.Ordinal);
+        Assert.AreEqual(1, Wait(scene.Engine.CountAsync("quiz")));
+        Assert.AreEqual("1 question à revoir", Wait(scene.Engine.CardAsync("quiz"))!.Value.Text);
+
+        Wait(scene.Engine.ActAsync("quiz", "rejouer-ratees", null, none));
+        var again = TextOf(scene, "quiz");
+        StringAssert.Contains(again, "Question 1 sur 1", StringComparison.Ordinal);
+        StringAssert.Contains(again, "Qu'est-ce que l'autorité ?", StringComparison.Ordinal);
+        var question = quiz.GetProperty("questions")[0].GetProperty("id").GetString()!;
+        Assert.IsTrue(Wait(scene.Engine.ActAsync("quiz", "voir", null, new Dictionary<string, string>(data) { ["question"] = question })).Succeeded);
+        Assert.AreEqual("f_1 0 26", screen.Opened.Single(), "« Voir dans la fiche » rouvre le passage d'où vient la question.");
+        Wait(scene.Engine.ActAsync("quiz", "afficher", null, none));
+        Wait(scene.Engine.ActAsync("quiz", "savais", null, none));
+        Assert.IsNull(Wait(scene.Engine.CountAsync("quiz")));
+        Assert.IsNull(Wait(scene.Engine.CardAsync("quiz")));
+    }
+
+    [EngineTest]
+    public void Quiz_2_adds_a_selected_text_and_turns_the_old_blocks_into_quizzes()
+    {
+        using var scene = new Scene();
+        Assert.IsTrue(scene.Library.Install(Path.Combine(Official, "quiz")).Succeeded);
+        scene.Data.Text = "```quiz\nQ: Qui convoque les états généraux ?\nR: Louis XVI\n```\n";
+        scene.Data.Keep("""{"sues":3}""");
+        var screen = new FakeScreen();
+        screen.Answers.Enqueue(new GuidedSelection(GuidedSelection.Taken, "Le roi", "f_1", "Une fiche", 40, 46));
+        scene.Engine.Screen = screen;
+        using var ui = new UiThread();
+        var none = new Dictionary<string, string>();
+
+        var list = TextOf(scene, "quiz");
+        StringAssert.Contains(list, "Trouvés dans tes fiches", StringComparison.Ordinal);
+        StringAssert.Contains(list, "Une fiche · 1 question", StringComparison.Ordinal);
+        Assert.IsTrue(Wait(scene.Engine.ActAsync("quiz", "importer", null, new Dictionary<string, string> { ["fiche"] = "f_1" })).Succeeded);
+        var imported = TextOf(scene, "quiz");
+        StringAssert.Contains(imported, "Quiz « Une fiche » créé, avec 1 question", StringComparison.Ordinal);
+        Assert.IsFalse(imported.Contains("Trouvés dans tes fiches", StringComparison.Ordinal));
+
+        Assert.IsTrue(Wait(scene.Engine.CommandAsync("quiz", "ajouter", new Dictionary<string, string> { ["id"] = "f_1", ["titre"] = "Une fiche", ["texte"] = "Qui règne ?", ["debut"] = "20", ["fin"] = "31" })).Succeeded);
+        StringAssert.Contains(TextOf(scene, "quiz"), "Ajouter au quiz", StringComparison.Ordinal);
+        using (var before = JsonDocument.Parse(scene.Data.Stored!))
+        {
+            var id = before.RootElement.GetProperty("quiz")[0].GetProperty("id").GetString();
+            var added = Wait(scene.Engine.ActAsync("quiz", "ajout", new Dictionary<string, object?> { ["quiz"] = id, ["question"] = "Qui règne ?", ["reponse"] = "" }, none));
+            Assert.IsTrue(added.Succeeded, added.Error);
+        }
+
+        StringAssert.Contains(screen.Asks.Single().Prompt, "sélectionne la réponse à « Qui règne ? »", StringComparison.Ordinal);
+        StringAssert.Contains(TextOf(scene, "quiz"), "Question ajoutée au quiz « Une fiche » (2 questions)", StringComparison.Ordinal);
+        using var stored = JsonDocument.Parse(scene.Data.Stored!);
+        var question = stored.RootElement.GetProperty("quiz")[0].GetProperty("questions")[1];
+        Assert.AreEqual("Le roi", question.GetProperty("reponse").GetString());
+        Assert.AreEqual(20, question.GetProperty("debut").GetInt32(), "La question garde la place du texte sélectionné.");
+        Assert.AreEqual(3, stored.RootElement.GetProperty("ancien").GetProperty("sues").GetInt32(), "Le score de la version 1 est gardé à part.");
+
+        Assert.IsTrue(Wait(scene.Engine.CommandAsync("quiz", "ajouter", none)).Succeeded);
+        StringAssert.Contains(TextOf(scene, "quiz"), "Sélectionne un texte dans une fiche", StringComparison.Ordinal);
     }
 
     [EngineTest]
@@ -688,11 +789,16 @@ public sealed class ExtensionEngineTests
 
         public List<string> Opened { get; } = [];
 
+        /// <summary>Les réponses de l'utilisateur, dans l'ordre ; ensuite, toujours la même sélection.</summary>
+        public Queue<GuidedSelection> Answers { get; } = new();
+
         public async Task<(GuidedSelection? Answer, string? Refusal)> AskSelectionAsync(SelectionAsk ask)
         {
             Asks.Add(ask);
             await Answered.ConfigureAwait(true);
-            return Refusal is { } refusal ? (null, refusal) : (new GuidedSelection(GuidedSelection.Taken, "la mitose", "f_1", "Mitose", 3, 9), null);
+            return Refusal is { } refusal ? (null, refusal)
+                : Answers.Count > 0 ? (Answers.Dequeue(), null)
+                : (new GuidedSelection(GuidedSelection.Taken, "la mitose", "f_1", "Mitose", 3, 9), null);
         }
 
         public string? OpenSheet(string sheetId, int? passageStart, int? passageEnd)
@@ -735,5 +841,8 @@ public sealed class ExtensionEngineTests
             Stored = json;
             return Task.FromResult(Outcome.Done());
         }
+
+        /// <summary>Ce qu'une version précédente de l'extension a laissé dans le coffre.</summary>
+        public void Keep(string json) => Stored = json;
     }
 }

@@ -1,0 +1,23 @@
+{
+  "api": 2,
+  "id": "quiz",
+  "nom": "Quiz",
+  "version": "2.0.0",
+  "description": "Des quiz que tu composes depuis tes fiches : la question et la réponse se prennent dans le texte, à la chaîne, et ce qui manque s'écrit à la main. Les questions ratées reviennent en premier. Les blocs ```quiz restent lisibles.",
+  "auteur": "kyfRev",
+  "icone": "quiz.svg",
+  "permissions": ["fiches:lecture", "selection", "stockage"],
+  "blocs": ["quiz"],
+  "vue": { "titre": "Quiz", "compteur": true },
+  "commandes": [
+    { "id": "nouveau", "titre": "Nouveau quiz" },
+    { "id": "revoir", "titre": "Revoir les questions ratées" },
+    { "id": "ajouter", "titre": "Ajouter au quiz" },
+    { "id": "depuis-fiche", "titre": "Créer un quiz depuis cette fiche" }
+  ],
+  "menus": {
+    "selection": [{ "commande": "ajouter", "titre": "Ajouter au quiz" }],
+    "fiche": [{ "commande": "depuis-fiche", "titre": "Créer un quiz depuis cette fiche" }]
+  },
+  "encart": { "titre": "Quiz" }
+}

@@ -188,6 +188,24 @@ public sealed class ExtensionLibraryTests
     }
 
     [TestMethod]
+    public void The_official_extensions_are_of_contract_2_and_install_with_their_icon()
+    {
+        using var scene = new Scene();
+        var official = Path.Combine(Fixtures, "..", "..", "..", "extensions");
+        var folders = Directory.GetDirectories(official);
+        Assert.IsNotEmpty(folders);
+        foreach (var folder in folders)
+        {
+            var installed = scene.Library.Install(folder);
+            Assert.IsTrue(installed.Succeeded, installed.Error);
+            var manifest = installed.Value.Manifest;
+            Assert.AreEqual(ExtensionManifest.LatestApi, manifest.Api, manifest.Id);
+            Assert.AreEqual(Path.GetFileName(folder), manifest.Id);
+            Assert.IsNotNull(scene.Library.Icon(manifest.Id), manifest.Id);
+        }
+    }
+
+    [TestMethod]
     public void The_fixtures_are_the_published_extensions_without_a_change()
     {
         using var catalogue = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(Fixtures, "catalogue.json")));
