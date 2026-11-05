@@ -142,6 +142,69 @@ public sealed class ExtensionEngineTests
     }
 
     [EngineTest]
+    public void Chronology_2_composes_timelines_from_a_selection_and_from_the_dates_of_a_sheet()
+    {
+        using var scene = new Scene();
+        Assert.IsTrue(scene.Library.Install(Path.Combine(Official, "chronologie")).Succeeded);
+        scene.Data.Text = "Le 14 juillet 1789, prise de la Bastille. En 1792, la République est proclamée.\n\n```chronologie\n52 av. J.-C. : Bataille d'Alésia\n```\n";
+        var screen = new FakeScreen();
+        scene.Engine.Screen = screen;
+        using var ui = new UiThread();
+        var none = new Dictionary<string, string>();
+
+        StringAssert.Contains(TextOf(scene, "chronologie"), "Aucune frise pour l'instant", StringComparison.Ordinal);
+        Assert.IsTrue(Wait(scene.Engine.CommandAsync("chronologie", "extraire", new Dictionary<string, string> { ["id"] = "f_1", ["titre"] = "Une fiche" })).Succeeded);
+        var found = TextOf(scene, "chronologie");
+        StringAssert.Contains(found, "2 dates trouvées dans « Une fiche »", StringComparison.Ordinal);
+        var kept = Wait(scene.Engine.ActAsync("chronologie", "garder", new Dictionary<string, object?>
+        {
+            ["frise"] = "nouvelle",
+            ["nouvelle"] = "Révolution",
+            ["c0"] = true,
+            ["d0"] = "14 juillet 1789",
+            ["t0"] = "Prise de la Bastille",
+            ["c1"] = false,
+        }, none));
+        Assert.IsTrue(kept.Succeeded, kept.Error);
+        StringAssert.Contains(TextOf(scene, "chronologie"), "1 date ajoutée depuis « Une fiche »", StringComparison.Ordinal);
+
+        Assert.IsTrue(Wait(scene.Engine.CommandAsync("chronologie", "ajouter", new Dictionary<string, string>
+        {
+            ["id"] = "f_1",
+            ["titre"] = "Une fiche",
+            ["texte"] = "En 1792, la République est proclamée.",
+            ["debut"] = "42",
+            ["fin"] = "80",
+        })).Succeeded);
+        StringAssert.Contains(TextOf(scene, "chronologie"), "Ajouter à la frise", StringComparison.Ordinal);
+        using (var before = JsonDocument.Parse(scene.Data.Stored!))
+        {
+            var frise = before.RootElement.GetProperty("frises")[0].GetProperty("id").GetString();
+            Assert.IsTrue(Wait(scene.Engine.ActAsync("chronologie", "ajout", new Dictionary<string, object?> { ["frise"] = frise, ["date"] = "22 septembre 1792", ["texte"] = "Proclamation de la République" }, none)).Succeeded);
+        }
+
+        using var stored = JsonDocument.Parse(scene.Data.Stored!);
+        var timeline = stored.RootElement.GetProperty("frises")[0];
+        var dates = timeline.GetProperty("evenements").EnumerateArray().Select(e => e.GetProperty("date").GetString()).ToList();
+        Assert.AreEqual("14 juillet 1789 | 22 septembre 1792", string.Join(" | ", dates));
+        var data = new Dictionary<string, string> { ["frise"] = timeline.GetProperty("id").GetString()!, ["date"] = timeline.GetProperty("evenements")[1].GetProperty("id").GetString()! };
+        Assert.IsTrue(Wait(scene.Engine.ActAsync("chronologie", "voir", null, data)).Succeeded);
+        Assert.AreEqual("f_1 42 80", screen.Opened.Single(), "« Voir dans la fiche » rouvre le passage sélectionné.");
+
+        Wait(scene.Engine.ActAsync("chronologie", "jouer", null, data));
+        StringAssert.Contains(TextOf(scene, "chronologie"), "du plus ancien au plus récent", StringComparison.Ordinal);
+        var first = timeline.GetProperty("evenements")[0].GetProperty("id").GetString()!;
+        Wait(scene.Engine.ActAsync("chronologie", "placer", null, new Dictionary<string, string> { ["date"] = first }));
+        Wait(scene.Engine.ActAsync("chronologie", "placer", null, data));
+        StringAssert.Contains(TextOf(scene, "chronologie"), "Terminé : 2 sur 2 à la bonne place", StringComparison.Ordinal);
+
+        Wait(scene.Engine.ActAsync("chronologie", "blocs", null, none));
+        StringAssert.Contains(TextOf(scene, "chronologie"), "Bataille d'Alésia", StringComparison.Ordinal);
+        var block = Wait(scene.Engine.RenderBlockAsync("chronologie", "chronologie", "1789 : Prise de la Bastille", dark: false));
+        StringAssert.Contains(block.Content!.Text, "Prise de la Bastille", StringComparison.Ordinal);
+    }
+
+    [EngineTest]
     public void Chronology_gathers_the_dates_of_the_sheets()
     {
         using var scene = new Scene();

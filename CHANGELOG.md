@@ -44,6 +44,11 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   s'ajoute au quiz par le clic droit. En partie, les questions ratées reviennent en premier, « Voir dans la fiche » rouvre le
   passage d'origine, et le menu comme « Aujourd'hui » disent combien sont à revoir. Les blocs ` ```quiz ` restent lisibles et
   deviennent des quiz en un clic ; le score de la version 1 est gardé.
+- Extension Chronologie, version 2 (dossier `extensions/chronologie`) : des frises nommées. Un texte sélectionné s'y ajoute par le
+  clic droit, sa date déjà proposée ; le clic droit d'une fiche en extrait les dates, à cocher. Les dates se rangent d'elles-mêmes,
+  avant J.-C. comprises, chacune rouvre son passage, et « Remettre dans l'ordre » en fait un jeu. Sur « Aujourd'hui », « Ce
+  jour-là » rappelle un événement d'un jour comme celui-ci. Les blocs ` ```chronologie ` restent lisibles et font une frise en un
+  clic.
 - Schéma réseau : le switch de cœur et le switch de distribution rejoignent la bibliothèque, avec leur icône.
 - Écrire : tous les dessins passent par le même éditeur, après le choix du modèle dans la galerie : les SmartArt en liste, la carte
   mentale sur plusieurs niveaux, les schémas Mermaid en liste, les graphiques en tableau de valeurs. Tout dessin inséré depuis la
