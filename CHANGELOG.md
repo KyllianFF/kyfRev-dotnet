@@ -398,6 +398,8 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Corrigé
 
+- Schémas réseau et éditeur visuel : plus d'éclair blanc à l'ouverture, en thème sombre surtout ; le moteur prend le fond du
+  thème avant sa première page. L'îlot des schémas ne s'arrête plus quand il se ferme pendant qu'il répond.
 - Le curseur devient une main sur tout ce qui se clique, y compris les trous et les passages du texte.
 - En révision, « Afficher le passage » et un clic dans le volet découvrent le passage masqué.
 - Le passage visé depuis le volet ressort nettement dans le texte, dans les deux thèmes.

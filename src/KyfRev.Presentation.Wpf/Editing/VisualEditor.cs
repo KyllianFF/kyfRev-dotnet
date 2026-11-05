@@ -115,7 +115,9 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
         System.Windows.Automation.AutomationProperties.SetAutomationId(_view, "VisualText");
         System.Windows.Automation.AutomationProperties.SetName(_view, EditingText.VisualText);
         _snapshot.MouseLeftButtonDown += (_, _) => SnapshotClicked?.Invoke(this, EventArgs.Empty);
-        Content = new Grid { Children = { _view, _snapshot } };
+        var ground = new Grid { Children = { _view, _snapshot } };
+        ground.SetResourceReference(Panel.BackgroundProperty, "Kyf.Brush.Background");
+        Content = ground;
         SetResourceReference(ThemeProbeProperty, "Kyf.Brush.Text");
         Loaded += OnLoaded;
     }
@@ -576,6 +578,11 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
         }
         try
         {
+            // Le fond du moteur prend celui de l'application dès avant sa première page : aucun éclair blanc à l'ouverture.
+            if (TryFindResource("Kyf.Brush.Background") is SolidColorBrush { Color: var ground })
+            {
+                _view.DefaultBackgroundColor = new TokenColor(ground.A, ground.R, ground.G, ground.B).ToDrawingColor();
+            }
             var environment = await EnvironmentOf(_dataFolder).ConfigureAwait(true);
             await _view.EnsureCoreWebView2Async(environment).ConfigureAwait(true);
             if (_disposed)
