@@ -114,9 +114,10 @@ public sealed class ExtensionJournalRow
             ExtensionJournalEntry.Tagging => entry.Detail is { Length: > 0 } tags
                 ? ModulesSettingsText.ExtensionJournalTaggedOf(entry.Title, tags)
                 : ModulesSettingsText.ExtensionJournalUntaggedOf(entry.Title),
+            ExtensionJournalEntry.Unreadable => ModulesSettingsText.ExtensionJournalUnreadableOf(entry.Detail ?? string.Empty),
             _ => ModulesSettingsText.ExtensionJournalWrittenOf(entry.Title, entry.Detail ?? string.Empty),
         };
-        When = ModulesSettingsText.ExtensionJournalWhenOf(extension, entry.At.ToLocalTime().DateTime);
+        When = entry.Action == ExtensionJournalEntry.Unreadable ? extension : ModulesSettingsText.ExtensionJournalWhenOf(extension, entry.At.ToLocalTime().DateTime);
         Spoken = $"{Text}. {When}";
     }
 

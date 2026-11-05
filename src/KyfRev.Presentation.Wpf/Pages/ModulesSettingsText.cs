@@ -185,6 +185,9 @@ public static class ModulesSettingsText
     /// <summary>« « {0} » : texte remplacé ({1}) ; l'ancien est dans ses versions ».</summary>
     public static string ExtensionJournalWrittenOf(string title, string detail) => Format("ExtensionJournalWritten", title, detail);
 
+    /// <summary>« Ligne illisible du journal, laissée telle quelle : {0} ».</summary>
+    public static string ExtensionJournalUnreadableOf(string line) => Format("ExtensionJournalUnreadable", line);
+
     /// <summary>« {0}, le {1:d MMMM yyyy} à {1:HH:mm} ».</summary>
     public static string ExtensionJournalWhenOf(string extension, DateTime at) => Format("ExtensionJournalWhen", extension, at);
 

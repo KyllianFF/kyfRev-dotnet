@@ -153,6 +153,9 @@
   <data name="ExtensionJournalWritten" xml:space="preserve">
     <value>« {0} » : texte remplacé ({1}) ; l'ancien est dans ses versions</value>
   </data>
+  <data name="ExtensionJournalUnreadable" xml:space="preserve">
+    <value>Ligne illisible du journal, laissée telle quelle : {0}</value>
+  </data>
   <data name="ExtensionJournalWhen" xml:space="preserve">
     <value>{0}, le {1:d MMMM yyyy} à {1:HH:mm}</value>
   </data>

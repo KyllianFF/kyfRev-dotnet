@@ -370,7 +370,10 @@ public sealed class VaultExtensionDataTests
         await File.WriteAllTextAsync(
             Path.Combine(test.Vault, ".suivi", "extensions", "journaux", "quiz.jsonl"),
             "{ cassé\n{\"quand\":\"2026-11-05T18:00:00+00:00\",\"action\":\"ecriture\",\"fiche\":\"f_1\",\"titre\":\"Mitose\",\"detail\":null}\n{\"autre\":1}\n");
-        Assert.AreEqual("Mitose", (await test.Data.JournalAsync("quiz")).Value.Single().Title);
+        var journal = (await test.Data.JournalAsync("quiz")).Value;
+        Assert.AreEqual("Mitose", journal.Single(entry => entry.Action == ExtensionJournalEntry.Writing).Title);
+        Assert.AreEqual("{\"autre\":1} | { cassé", string.Join(" | ", journal.Where(entry => entry.Action == ExtensionJournalEntry.Unreadable).Select(entry => entry.Detail)));
+        Assert.HasCount(ExtensionJournalEntry.UnreadableShown, ExtensionJournalEntry.UnreadableLine(new string('x', 200)).Detail!);
     }
 
     private sealed class DataTest : IDisposable

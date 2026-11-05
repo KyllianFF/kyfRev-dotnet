@@ -41,6 +41,7 @@ public sealed class ExtensionSettingsTests
                 new(at.AddMinutes(1), ExtensionJournalEntry.Tagging, "f_2", "La mitose", "bio, cours"),
                 new(at.AddMinutes(-1), ExtensionJournalEntry.Tagging, "f_2", "La mitose", null),
                 new(at.AddMinutes(-2), ExtensionJournalEntry.Creation, "f_2", "La mitose", null),
+                ExtensionJournalEntry.UnreadableLine("{ cassé"),
             ],
         };
         using var scene = new Scene(id => journals.TryGetValue(id, out var entries) ? Outcome.Of(entries) : Outcome.Refused<IReadOnlyList<ExtensionJournalEntry>>("Aucun coffre n'est ouvert."));
@@ -58,11 +59,13 @@ public sealed class ExtensionSettingsTests
             « L'autorité » : fiche créée dans Philosophie
             « La mitose » : étiquettes retirées
             « La mitose » : fiche créée
+            Ligne illisible du journal, laissée telle quelle : { cassé
             """,
             string.Join(Environment.NewLine, scene.Page.Journal.Select(row => row.Text)).ReplaceLineEndings("\n"));
         StringAssert.StartsWith(scene.Page.Journal[0].When, "Quiz, le ", StringComparison.Ordinal);
         StringAssert.StartsWith(scene.Page.Journal[1].When, "Bilan du coffre, le ", StringComparison.Ordinal);
         Assert.AreEqual($"{scene.Page.Journal[0].Text}. {scene.Page.Journal[0].When}", scene.Page.Journal[0].Spoken);
+        Assert.AreEqual("Bilan du coffre", scene.Page.Journal[^1].When, "Une ligne illisible n'a pas de date.");
     }
 
     [STATestMethod]

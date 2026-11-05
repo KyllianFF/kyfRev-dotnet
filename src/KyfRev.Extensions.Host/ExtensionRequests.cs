@@ -35,7 +35,7 @@ public sealed record ExtensionNewSheet(string Title, string? Folder, string? Tex
 
 /// <summary>Une ligne du journal d'une extension : ce qu'elle a écrit dans le coffre, et quand.</summary>
 /// <param name="At">Quand.</param>
-/// <param name="Action">Ce qu'elle a fait : <see cref="Creation"/>, <see cref="Tagging"/> ou <see cref="Writing"/>.</param>
+/// <param name="Action">Ce qu'elle a fait : <see cref="Creation"/>, <see cref="Tagging"/> ou <see cref="Writing"/> ; <see cref="Unreadable"/> pour une ligne abîmée.</param>
 /// <param name="Sheet">L'identifiant de la fiche.</param>
 /// <param name="Title">Le titre de la fiche, à ce moment-là.</param>
 /// <param name="Detail">Un mot de plus : le dossier, les étiquettes, ou la taille du texte avant et après.</param>
@@ -54,6 +54,20 @@ public sealed record ExtensionJournalEntry(
 
     /// <summary>Elle a remplacé son texte ; le précédent est dans les versions.</summary>
     public const string Writing = "ecriture";
+
+    /// <summary>Une ligne du journal que kyfRev ne sait pas lire : elle reste telle quelle dans le fichier.</summary>
+    public const string Unreadable = "illisible";
+
+    /// <summary>La plus grande part d'une ligne illisible gardée pour la montrer.</summary>
+    public const int UnreadableShown = 80;
+
+    /// <summary>Une ligne illisible du journal, montrée pour ce qu'elle est, après les autres.</summary>
+    /// <param name="line">La ligne, telle qu'elle est dans le fichier.</param>
+    public static ExtensionJournalEntry UnreadableLine(string line)
+    {
+        ArgumentNullException.ThrowIfNull(line);
+        return new(DateTimeOffset.MinValue, Unreadable, string.Empty, string.Empty, line.Length > UnreadableShown ? line[..UnreadableShown] : line);
+    }
 }
 
 /// <summary>Ce qu'une extension peut obtenir du coffre, une fois ses permissions vérifiées.</summary>

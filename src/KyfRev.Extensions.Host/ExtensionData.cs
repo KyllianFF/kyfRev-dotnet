@@ -29,21 +29,23 @@ public sealed class ExtensionDataUseCases(VaultHost host)
         var entries = new List<ExtensionJournalEntry>(lines.Length);
         for (var index = lines.Length - 1; index >= 0; index--)
         {
-            var line = lines[index];
-            try
-            {
-                if (JsonSerializer.Deserialize<ExtensionJournalEntry>(line) is { Action: not null, Sheet: not null, Title: not null } entry)
-                {
-                    entries.Add(entry);
-                }
-            }
-            catch (JsonException)
-            {
-                // Une ligne abîmée à la main ne cache pas les autres.
-            }
+            entries.Add(Entry(lines[index]) ?? ExtensionJournalEntry.UnreadableLine(lines[index]));
         }
         return (IReadOnlyList<ExtensionJournalEntry>)entries;
     });
+
+    /// <summary>Une ligne du journal ; rien si elle n'en est pas une (abîmée à la main, par exemple).</summary>
+    private static ExtensionJournalEntry? Entry(string line)
+    {
+        try
+        {
+            return JsonSerializer.Deserialize<ExtensionJournalEntry>(line) is { Action: not null, Sheet: not null, Title: not null } entry ? entry : null;
+        }
+        catch (JsonException)
+        {
+            return null;
+        }
+    }
 
     /// <summary>Note une écriture au journal d'une extension.</summary>
     /// <param name="id">Son identifiant.</param>
