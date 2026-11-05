@@ -48,6 +48,13 @@ public sealed class MachineSettings
         ArgumentNullException.ThrowIfNull(shell);
         Apply(appearance, shell);
         Changed += (_, _) => Apply(appearance, shell);
+        appearance.PropertyChanged += (_, e) =>
+        {
+            if (e is PropertyChangedEventArgs { PropertyName: nameof(AppearanceController.Preference) })
+            {
+                Update(preferences => preferences with { Theme = appearance.Preference });
+            }
+        };
         shell.PropertyChanged += (_, e) =>
         {
             if (e is PropertyChangedEventArgs { PropertyName: nameof(ShellViewModel.Zoom) })

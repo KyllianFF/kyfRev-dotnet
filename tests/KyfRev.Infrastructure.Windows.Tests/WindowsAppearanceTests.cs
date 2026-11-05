@@ -53,6 +53,23 @@ public sealed class WindowsAppearanceTests
         }
     }
 
+    [STATestMethod]
+    public void What_a_window_puts_off_the_screen_is_measured()
+    {
+        var chrome = new WindowChrome();
+        Assert.AreEqual(default, chrome.MaximizedOverhang(0));
+
+        var work = SystemParameters.WorkArea;
+        using var inside = new HwndSource(new HwndSourceParameters("kyfRev essai") { WindowStyle = unchecked((int)0x00CF0000), PositionX = (int)work.Left + 50, PositionY = (int)work.Top + 50, Width = 300, Height = 200 });
+        Assert.AreEqual(default, chrome.MaximizedOverhang(inside.Handle), "Une fenêtre dans l'écran n'en dépasse pas.");
+
+        using var outside = new HwndSource(new HwndSourceParameters("kyfRev essai") { WindowStyle = unchecked((int)0x00CF0000), PositionX = -10000, PositionY = -10000, Width = 300, Height = 200 });
+        var overhang = chrome.MaximizedOverhang(outside.Handle);
+        Assert.IsGreaterThan(0, overhang.Left + overhang.Top, "Hors de l'écran, à gauche et en haut.");
+        Assert.AreEqual(0, overhang.Right);
+        Assert.AreEqual(0, overhang.Bottom);
+    }
+
     [TestMethod]
     public void Only_display_preferences_are_reported_as_changes()
     {
