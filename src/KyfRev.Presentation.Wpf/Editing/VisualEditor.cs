@@ -14,6 +14,7 @@ using KyfRev.Application.Ports;
 using KyfRev.DesignSystem;
 using KyfRev.DesignSystem.Controls;
 using KyfRev.DesignSystem.Tokens;
+using KyfRev.Presentation.Wpf.Extensions;
 using KyfRev.Presentation.Wpf.Pages;
 using KyfRev.Presentation.Wpf.Schemas;
 using KyfRev.Rendering.Diagrams;
@@ -244,7 +245,7 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
     {
         Text = text;
         _stale = false;
-        Post(new LoadRequest(text, _folder));
+        Post(new LoadRequest(text, _folder, TryFindResource(ExtensionBlocks.ResourceKey) is ExtensionBlocks blocks ? blocks.Languages : []));
     }
 
     /// <inheritdoc/>
@@ -630,7 +631,11 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
         var svg = SvgOf(diagram.Language, diagram.Code);
         string? image = null;
         var language = diagram.Language.Trim();
-        if (TryFindResource(MermaidEngine.ResourceKey) is IMermaidEngine engine)
+        if (TryFindResource(ExtensionBlocks.ResourceKey) is ExtensionBlocks blocks && blocks.Draws(language))
+        {
+            image = await ExtensionPicture.DrawAsync(blocks, language, diagram.Code, this).ConfigureAwait(true);
+        }
+        else if (TryFindResource(MermaidEngine.ResourceKey) is IMermaidEngine engine)
         {
             if (language == MermaidTemplates.Language)
             {

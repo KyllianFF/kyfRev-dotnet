@@ -6,7 +6,9 @@ using System.Windows.Media;
 using KyfRev.Application;
 using KyfRev.Application.Model;
 using KyfRev.DesignSystem.Tokens;
+using KyfRev.Extensions.Host;
 using KyfRev.Presentation.Wpf.Editing;
+using KyfRev.Presentation.Wpf.Extensions;
 using KyfRev.Presentation.Wpf.Pages;
 
 namespace KyfRev.Presentation.Wpf.Tests;
@@ -50,6 +52,45 @@ public sealed class VisualEditorTests
     }
 
     /// <summary>Une fiche ouverte en écriture, dans le vrai moteur.</summary>
+    [EngineTest]
+    public void An_extension_block_is_drawn_in_the_editor_as_a_picture()
+    {
+        var root = Path.Combine(Path.GetTempPath(), "kyfrev-blocs-" + Guid.NewGuid().ToString("N"));
+        var source = Path.Combine(root, "source");
+        Directory.CreateDirectory(source);
+        File.WriteAllText(Path.Combine(source, ExtensionManifest.FileName), """{"id":"bloc-quiz","nom":"Q","version":"1","blocs":["quiz"]}""");
+        File.WriteAllText(Path.Combine(source, "extension.js"), """kyfrev.bloc("quiz", (s) => `<p><strong>${s.split("\n").length} lignes</strong></p>`);""");
+        var library = new ExtensionLibrary(Path.Combine(root, "bibliotheque"), TimeProvider.System);
+        Assert.IsTrue(library.Install(source).Succeeded);
+        var engine = new ExtensionEngine(FakeEnvironment.ExtensionData, library, new ExtensionRequests(library, new NoData()));
+        try
+        {
+            var blocks = new ExtensionBlocks(library, engine, () => false);
+            using var scene = new Scene("Début\n\n```quiz\nQ: a\nR: b\n```\n", blocks: blocks);
+            UiThread.Until(
+                () => scene.Script("(document.querySelector('.ProseMirror .bloc-dessin img')?.getAttribute('src') ?? '').startsWith('data:image/png;base64,')") == "true",
+                TimeSpan.FromMinutes(2));
+            Assert.AreEqual("true", scene.Script("[...document.querySelectorAll('.entete-code select option')].some(option => option.value === 'quiz' && option.text.includes('extension'))"));
+            Assert.AreEqual("0", scene.Script("document.querySelectorAll('.ProseMirror .bloc-dessin strong').length"), "Le HTML de l'extension n'entre pas dans l'éditeur : seule son image.");
+        }
+        finally
+        {
+            engine.Dispose();
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    private sealed class NoData : IExtensionData
+    {
+        public Task<Outcome<IReadOnlyList<ExtensionSheet>>> SheetsAsync() => Task.FromResult(Outcome.Of<IReadOnlyList<ExtensionSheet>>([]));
+
+        public Task<Outcome<ExtensionSheetText>> SheetAsync(string id) => Task.FromResult(Outcome.Refused<ExtensionSheetText>("non"));
+
+        public Task<Outcome<string?>> StoredAsync(string extension) => Task.FromResult(Outcome.Of<string?>(null));
+
+        public Task<Outcome<Done>> StoreAsync(string extension, string json) => Task.FromResult(Outcome.Done());
+    }
+
     private sealed class Scene : IDisposable
     {
         // Le tout premier démarrage du moteur web sur une machine neuve dépasse largement 10 s sur le runner de la CI.
@@ -57,7 +98,7 @@ public sealed class VisualEditorTests
 
         private readonly UiThread _ui = new();
 
-        public Scene(string body = Body, double width = 1400, ThemeKind theme = ThemeKind.Light)
+        public Scene(string body = Body, double width = 1400, ThemeKind theme = ThemeKind.Light, ExtensionBlocks? blocks = null)
         {
             Vault = new ReadingVault(body, passage: false);
             Test = new TestShell();
@@ -68,6 +109,10 @@ public sealed class VisualEditorTests
             SheetPage = new SheetPage { DataContext = Page, Width = width, Height = 900 };
             Window = new Window { Content = new Canvas { Children = { SheetPage } }, Left = -10000, Top = -10000, Width = 800, Height = 600, ShowActivated = false, ShowInTaskbar = false };
             Window.Resources.MergedDictionaries.Add(Test.Design.Dictionary);
+            if (blocks is not null)
+            {
+                Window.Resources[ExtensionBlocks.ResourceKey] = blocks;
+            }
             Window.Show();
             TestShell.Flush();
             Page.ToggleWritingCommand.Execute(null);

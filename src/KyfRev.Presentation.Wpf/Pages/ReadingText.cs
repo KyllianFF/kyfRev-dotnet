@@ -148,6 +148,15 @@ public static class ReadingText
     /// <summary>Un diagramme, montré sous sa forme de texte.</summary>
     public const string DiagramAsText = "Diagramme, montré ici sous sa forme de texte";
 
+    /// <summary>Le nom d'un bloc dessiné par une extension, pour le lecteur d'écran.</summary>
+    public static string ExtensionBlockOf(string language) => $"Bloc « {language} »";
+
+    /// <summary>Un bloc d'extension qui ne s'est pas dessiné : son texte reste, avec la raison.</summary>
+    public static string ExtensionBlockFailedOf(string language, string reason) => $"Le bloc « {language} » ne s'affiche pas ({reason}) : le voici sous sa forme de texte.";
+
+    /// <summary>Plus aucune extension active ne dessine ce langage.</summary>
+    public static string NoExtensionBlockOf(string language) => $"aucune extension active ne dessine les blocs « {language} »";
+
     /// <summary>Une formule que le moteur natif ne sait pas dessiner.</summary>
     public const string FormulaAsText = "Cette formule est montrée sous sa forme de texte.";
 

@@ -1,7 +1,7 @@
 // Généré depuis VisualMessages.cs : ne pas modifier à la main.
 
 export type VersEditeur =
-  | { kind: "load"; text: string; folder: string }
+  | { kind: "load"; text: string; folder: string; drawn: string[] }
   | { kind: "theme"; variables: Record<string, string> }
   | { kind: "sync"; id: number }
   | { kind: "mark"; mark: "bold" | "italic" | "underline" | "strike" | "superscript" | "subscript" | "formula" }

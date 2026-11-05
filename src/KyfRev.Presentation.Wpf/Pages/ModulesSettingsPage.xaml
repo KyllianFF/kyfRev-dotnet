@@ -57,7 +57,6 @@
         <StackPanel>
           <TextBlock Text="{x:Static pages:ModulesSettingsText.ExtensionsTitle}" Style="{DynamicResource Kyf.Text.Subtitle}" AutomationProperties.HeadingLevel="Level2" />
           <TextBlock Text="{x:Static pages:ModulesSettingsText.ExtensionsHelp}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="0,4,0,0" />
-          <TextBlock x:Name="ExtensionsNotShownYet" Text="{x:Static pages:ModulesSettingsText.ExtensionsNotShownYet}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,4,0,0" />
           <kyf:Notification x:Name="ExtensionError" Severity="Critical" Message="{Binding Error}" IsOpen="{Binding HasError, Mode=OneWay}" IsClosable="False" Margin="0,8,0,0" />
           <kyf:Notification x:Name="ExtensionDone" Severity="Success" Message="{Binding Message}" IsOpen="{Binding HasMessage, Mode=OneWay}" IsClosable="False" Margin="0,8,0,0" />
           <Button x:Name="InstallExtension" Content="{x:Static pages:ModulesSettingsText.ExtensionInstallFromFolder}" Command="{Binding InstallCommand}" HorizontalAlignment="Left" Margin="0,12,0,8" />
