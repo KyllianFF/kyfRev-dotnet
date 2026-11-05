@@ -7,6 +7,7 @@
   <!-- Le bouton qui ouvre une liste de choix : tout le champ est cliquable, le contenu est dessiné par-dessus. -->
   <Style x:Key="Kyf.ComboBox.Toggle" TargetType="ToggleButton">
     <Setter Property="Focusable" Value="False" />
+    <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Text}" />
     <Setter Property="ClickMode" Value="Press" />
     <Setter Property="Template">
       <Setter.Value>

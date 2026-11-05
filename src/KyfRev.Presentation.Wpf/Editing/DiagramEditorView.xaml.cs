@@ -35,18 +35,24 @@ internal sealed partial class DiagramEditorView : UserControl
         {
             return [];
         }
-        var items = new List<Control>
+        var items = new List<Control>();
+        if (editor.ShowsLevels)
         {
-            ActionMenus.Quick(EditingText.DiagramChild, Icons.Add, editor.AddChildCommand, this),
-            ActionMenus.Quick(EditingText.DiagramSibling, Icons.Add, editor.AddSiblingCommand, this),
-            new Separator(),
-            Command(EditingText.DiagramIndent, editor.IndentCommand, EditingText.DiagramIndentShortcut),
-            Command(EditingText.DiagramOutdent, editor.OutdentCommand, EditingText.DiagramOutdentShortcut),
-            Command(EditingText.DiagramMoveUp, editor.MoveUpCommand, EditingText.DiagramMoveUpShortcut),
-            Command(EditingText.DiagramMoveDown, editor.MoveDownCommand, EditingText.DiagramMoveDownShortcut),
-            new Separator(),
-            Command(EditingText.DiagramDelete, editor.DeleteCommand, null),
-        };
+            items.Add(ActionMenus.Quick(EditingText.DiagramChild, Icons.Add, editor.AddChildCommand, this));
+            items.Add(ActionMenus.Quick(EditingText.DiagramSibling, Icons.Add, editor.AddSiblingCommand, this));
+            items.Add(new Separator());
+            items.Add(Command(EditingText.DiagramIndent, editor.IndentCommand, EditingText.DiagramIndentShortcut));
+            items.Add(Command(EditingText.DiagramOutdent, editor.OutdentCommand, EditingText.DiagramOutdentShortcut));
+        }
+        else
+        {
+            items.Add(ActionMenus.Quick(editor.AddLabel, Icons.Add, editor.AddSiblingCommand, this));
+            items.Add(new Separator());
+        }
+        items.Add(Command(EditingText.DiagramMoveUp, editor.MoveUpCommand, EditingText.DiagramMoveUpShortcut));
+        items.Add(Command(EditingText.DiagramMoveDown, editor.MoveDownCommand, EditingText.DiagramMoveDownShortcut));
+        items.Add(new Separator());
+        items.Add(Command(EditingText.DiagramDelete, editor.DeleteCommand, null));
         if (field is not null)
         {
             items.Add(new Separator());
@@ -116,7 +122,13 @@ internal sealed partial class DiagramEditorView : UserControl
         }
     }
 
-    private void OnPreviewClicked(object sender, MouseButtonEventArgs e) => SelectBoxAt(e.GetPosition(PreviewView));
+    private void OnPreviewClicked(object sender, MouseButtonEventArgs e)
+    {
+        if (_editor is { ShowsDirection: true })
+        {
+            SelectBoxAt(e.GetPosition(PreviewView));
+        }
+    }
 
     private void OnPreviewMenu(object sender, ContextMenuEventArgs e)
     {
@@ -124,9 +136,9 @@ internal sealed partial class DiagramEditorView : UserControl
         {
             return;
         }
-        if (PreviewView.BoxAt(new Point(e.CursorLeft, e.CursorTop)) is { } box)
+        if (_editor is { ShowsDirection: true } && PreviewView.BoxAt(new Point(e.CursorLeft, e.CursorTop)) is { } box)
         {
-            _editor?.SelectBox(box);
+            _editor.SelectBox(box);
             ActionMenus.Fill(menu, NodeMenuItems(null), e);
         }
         else

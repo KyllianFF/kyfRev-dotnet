@@ -139,6 +139,9 @@ internal interface IEditorSurface
     /// <summary>Insère un dessin, ou remplace celui de cette position.</summary>
     void InsertDiagram(string info, string code, int? position);
 
+    /// <summary>Entre dans le code du dessin de cette position.</summary>
+    void ShowDrawingCode(int position);
+
     /// <summary>Pose une couleur, écrite <c>#rrggbb</c> ; rien : celle du thème.</summary>
     void SetColor(string? color);
 
@@ -994,20 +997,16 @@ public sealed partial class SheetEditorViewModel : ObservableObject
     [RelayCommand]
     private void OpenGallery(GalleryKind kind) => Gallery = DiagramGalleryViewModel.For(kind);
 
-    /// <summary>Ferme la galerie, et insère ce qui y est choisi, si l'utilisateur le veut.</summary>
+    /// <summary>Ferme la galerie, et passe à l'éditeur du modèle choisi, si l'utilisateur le veut.</summary>
     [RelayCommand]
     private void AnswerGallery(bool accepted)
     {
-        var gallery = Gallery;
+        var chosen = Gallery?.SelectedItem;
         Gallery = null;
-        if (accepted && gallery is { IsHierarchy: true, SelectedItem: { } hierarchy })
+        if (accepted && chosen is not null)
         {
-            DiagramEditor = DiagramEditorViewModel.For(hierarchy.Id, gallery.Text, gallery.Position);
+            DiagramEditor = DiagramEditorViewModel.For(chosen.Id, chosen.Sample, null);
             return;
-        }
-        if (accepted && gallery?.Source() is { } source)
-        {
-            _surface?.InsertDiagram(source.Info, source.Code, gallery.Position);
         }
         _surface?.Focus();
     }
@@ -1175,10 +1174,8 @@ public sealed partial class SheetEditorViewModel : ObservableObject
             DiagramEditor = editor;
             return;
         }
-        if (DiagramGalleryViewModel.ForExisting(question.Info, question.Code, question.Position) is { } gallery)
-        {
-            Gallery = gallery;
-        }
+        // Écrit ou retouché à la main : il reste dans son code, qui ne doit pas être écrasé.
+        _surface?.ShowDrawingCode(question.Position);
     }
 
     private void OnFormulaAsked(object? sender, FormulaQuestion question)

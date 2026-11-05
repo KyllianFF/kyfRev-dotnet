@@ -364,7 +364,7 @@
     </kyf:Dialog>
 
     <kyf:Dialog x:Name="GalleryDialog" DataContext="{Binding Editor}" Title="{Binding Gallery.Title}" IsOpen="{Binding IsGalleryOpen, Mode=OneWay}" CardMaxWidth="980" IsWide="True"
-                PrimaryButtonText="{Binding Gallery.ConfirmLabel}" Closed="OnGalleryClosed">
+                PrimaryButtonText="{x:Static editing:EditingText.GalleryContinue}" Closed="OnGalleryClosed">
       <editing:DiagramGalleryView x:Name="GalleryContent" DataContext="{Binding Gallery}" />
     </kyf:Dialog>
 

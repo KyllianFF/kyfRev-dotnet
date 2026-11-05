@@ -269,9 +269,6 @@ public static class EditingText
     /// <summary>Insérer un graphique.</summary>
     public const string Chart = "Graphique";
 
-    /// <summary>La saisie de la galerie des graphiques.</summary>
-    public const string GalleryOneValuePerLine = "Une valeur par ligne (libellé : valeur)";
-
     /// <summary>Montrer le code d'un schéma ou d'un graphique.</summary>
     public const string GalleryShowCode = "Voir le code Mermaid";
 
@@ -296,23 +293,50 @@ public static class EditingText
     /// <summary>La liste des modèles de la galerie.</summary>
     public const string GalleryModels = "Modèles";
 
-    /// <summary>La saisie de la galerie.</summary>
-    public const string GalleryOnePerLine = "Un élément par ligne";
-
     /// <summary>Insérer ce qui est choisi dans la galerie.</summary>
     public const string GalleryInsert = "Insérer";
 
     /// <summary>Passer de la galerie à l'éditeur du modèle choisi.</summary>
     public const string GalleryContinue = "Continuer";
 
-    /// <summary>Ce qui attend après la galerie, pour une hiérarchie.</summary>
-    public const string GalleryNextStep = "Les niveaux et les éléments se composent à l'étape suivante.";
+    /// <summary>Ce qui attend après la galerie.</summary>
+    public const string GalleryNextStep = "Ses éléments se composent à l'étape suivante.";
 
-    /// <summary>Titre de l'éditeur, pour une nouvelle hiérarchie.</summary>
-    public const string DiagramEditorNew = "Nouvel organigramme";
+    /// <summary>Titre de l'éditeur, pour un nouveau dessin.</summary>
+    public static string DiagramEditorNewOf(string model) => $"Nouveau : {model}";
 
-    /// <summary>Titre de l'éditeur, pour une hiérarchie de la fiche.</summary>
-    public const string DiagramEditorEdit = "Modifier l'organigramme";
+    /// <summary>Titre de l'éditeur, pour un dessin de la fiche.</summary>
+    public static string DiagramEditorEditOf(string model) => $"Modifier : {model}";
+
+    /// <summary>Le choix du modèle, pour le lecteur d'écran.</summary>
+    public const string DiagramModel = "Modèle";
+
+    /// <summary>Ajouter un élément à une liste.</summary>
+    public const string DiagramAddItem = "Ajouter un élément";
+
+    /// <summary>Ajouter une ligne à un graphique.</summary>
+    public const string DiagramAddRow = "Ajouter une ligne";
+
+    /// <summary>La colonne du libellé.</summary>
+    public const string DiagramLabelHeader = "Libellé";
+
+    /// <summary>La colonne de la valeur.</summary>
+    public const string DiagramValueHeader = "Valeur";
+
+    /// <summary>La colonne de la seconde valeur.</summary>
+    public const string DiagramSecondValueHeader = "Courbe";
+
+    /// <summary>Une valeur illisible.</summary>
+    public const string DiagramValueWarning = "Une valeur absente, nulle ou qui n'est pas un nombre compte pour 1.";
+
+    /// <summary>Plus d'éléments que le modèle n'en montre.</summary>
+    public static string DiagramLimitOf(int maximum) => string.Create(CultureInfo.InvariantCulture, $"Ce modèle montre {maximum} éléments au plus : les suivants restent écrits, sans se dessiner.");
+
+    /// <summary>Les touches d'une hiérarchie sans clic sur le dessin.</summary>
+    public const string DiagramKeysNoClick = "Entrée : même niveau · Ctrl+Entrée : enfant · Alt+flèches : déplacer.";
+
+    /// <summary>Les touches d'une liste.</summary>
+    public const string DiagramListKeys = "Entrée : ajouter · Alt+↑ et Alt+↓ : déplacer · Suppr sur une ligne vide : la retirer.";
 
     /// <summary>Valider l'éditeur, pour une hiérarchie de la fiche.</summary>
     public const string DiagramEditorSave = "Enregistrer";
@@ -333,7 +357,7 @@ public static class EditingText
     public const string DiagramAddSibling = "Ajouter au même niveau";
 
     /// <summary>Le même, avec son raccourci.</summary>
-    public const string DiagramAddSiblingKey = "Ajouter à côté de cet élément (Entrée)";
+    public const string DiagramAddSiblingKey = "Ajouter après cet élément (Entrée)";
 
     /// <summary>L'action rapide : un enfant.</summary>
     public const string DiagramChild = "Enfant";

@@ -6,37 +6,40 @@
              xmlns:editing="clr-namespace:KyfRev.Presentation.Wpf.Editing"
              xmlns:reading="clr-namespace:KyfRev.Presentation.Wpf.Reading"
              Height="520">
+  <UserControl.Resources>
+    <BooleanToVisibilityConverter x:Key="Visible" />
+  </UserControl.Resources>
   <Grid>
     <Grid.ColumnDefinitions>
       <ColumnDefinition Width="2*" MinWidth="300" />
       <ColumnDefinition Width="3*" MinWidth="300" />
     </Grid.ColumnDefinitions>
 
-    <!-- À gauche : les éléments, décalés selon leur niveau. -->
+    <!-- À gauche : les éléments, décalés selon leur niveau, ou avec leurs valeurs. -->
     <DockPanel Margin="0,0,16,0">
       <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,4">
         <Button x:Name="AddChildButton" Command="{Binding AddChildCommand}" ToolTip="{x:Static editing:EditingText.DiagramAddChildKey}" Margin="0,0,8,4"
-                AutomationProperties.Name="{x:Static editing:EditingText.DiagramAddChild}">
+                AutomationProperties.Name="{x:Static editing:EditingText.DiagramAddChild}" Visibility="{Binding ShowsLevels, Converter={StaticResource Visible}}">
           <StackPanel Orientation="Horizontal">
             <kyf:Icon Text="{x:Static kyf:Icons.Add}" Margin="0,0,8,0" />
             <TextBlock Text="{x:Static editing:EditingText.DiagramAddChild}" />
           </StackPanel>
         </Button>
         <Button x:Name="AddSiblingButton" Command="{Binding AddSiblingCommand}" ToolTip="{x:Static editing:EditingText.DiagramAddSiblingKey}" Margin="0,0,8,4"
-                AutomationProperties.Name="{x:Static editing:EditingText.DiagramAddSibling}">
+                AutomationProperties.Name="{Binding AddLabel}">
           <StackPanel Orientation="Horizontal">
             <kyf:Icon Text="{x:Static kyf:Icons.Add}" Margin="0,0,8,0" />
-            <TextBlock Text="{x:Static editing:EditingText.DiagramAddSibling}" />
+            <TextBlock Text="{Binding AddLabel}" />
           </StackPanel>
         </Button>
       </WrapPanel>
       <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
         <Button x:Name="OutdentButton" Style="{DynamicResource Kyf.Button.Icon}" Command="{Binding OutdentCommand}" ToolTip="{x:Static editing:EditingText.DiagramOutdentKey}"
-                AutomationProperties.Name="{x:Static editing:EditingText.DiagramOutdent}">
+                AutomationProperties.Name="{x:Static editing:EditingText.DiagramOutdent}" Visibility="{Binding ShowsLevels, Converter={StaticResource Visible}}">
           <kyf:Icon Text="{x:Static kyf:Icons.Back}" />
         </Button>
         <Button x:Name="IndentButton" Style="{DynamicResource Kyf.Button.Icon}" Command="{Binding IndentCommand}" ToolTip="{x:Static editing:EditingText.DiagramIndentKey}"
-                AutomationProperties.Name="{x:Static editing:EditingText.DiagramIndent}">
+                AutomationProperties.Name="{x:Static editing:EditingText.DiagramIndent}" Visibility="{Binding ShowsLevels, Converter={StaticResource Visible}}">
           <kyf:Icon Text="{x:Static kyf:Icons.IndentMore}" />
         </Button>
         <Button x:Name="MoveUpButton" Style="{DynamicResource Kyf.Button.Icon}" Command="{Binding MoveUpCommand}" ToolTip="{x:Static editing:EditingText.DiagramMoveUpKey}"
@@ -52,7 +55,21 @@
           <kyf:Icon Text="{x:Static kyf:Icons.Trash}" />
         </Button>
       </StackPanel>
-      <TextBlock DockPanel.Dock="Bottom" Text="{x:Static editing:EditingText.DiagramKeys}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,8,0,0" />
+      <TextBlock DockPanel.Dock="Bottom" Text="{Binding KeysHelp}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,8,0,0" />
+      <kyf:Notification x:Name="ValueWarningMessage" DockPanel.Dock="Bottom" Severity="Warning" Message="{x:Static editing:EditingText.DiagramValueWarning}" IsOpen="{Binding HasValueWarning, Mode=OneWay}" IsClosable="False" Margin="0,8,0,0" />
+      <kyf:Notification x:Name="LimitWarningMessage" DockPanel.Dock="Bottom" Severity="Warning" Message="{Binding LimitWarning}" IsOpen="{Binding HasLimitWarning, Mode=OneWay}" IsClosable="False" Margin="0,8,0,0" />
+      <!-- Les noms des colonnes, pour un graphique. -->
+      <Grid DockPanel.Dock="Top" Margin="14,0,0,4" Visibility="{Binding ShowsValues, Converter={StaticResource Visible}}">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="Auto" />
+          <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <TextBlock Text="{x:Static editing:EditingText.DiagramLabelHeader}" Style="{DynamicResource Kyf.Text.Caption}" />
+        <TextBlock Grid.Column="1" Width="84" Text="{x:Static editing:EditingText.DiagramValueHeader}" Style="{DynamicResource Kyf.Text.Caption}" Margin="4,0,0,0" />
+        <TextBlock Grid.Column="2" Width="84" Text="{x:Static editing:EditingText.DiagramSecondValueHeader}" Style="{DynamicResource Kyf.Text.Caption}" Margin="4,0,0,0"
+                   Visibility="{Binding ShowsSecondValue, Converter={StaticResource Visible}}" />
+      </Grid>
       <ScrollViewer x:Name="NodesScroller" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
         <ItemsControl x:Name="NodesList" ItemsSource="{Binding Nodes}" Focusable="False" IsTabStop="False" AutomationProperties.Name="{x:Static editing:EditingText.DiagramItems}">
           <ItemsControl.ItemTemplate>
@@ -61,6 +78,8 @@
                 <Grid.ColumnDefinitions>
                   <ColumnDefinition Width="14" />
                   <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="Auto" />
+                  <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <Ellipse x:Name="Mark" Width="6" Height="6" HorizontalAlignment="Left" VerticalAlignment="Center" Fill="{DynamicResource Kyf.Brush.TextSecondary}" />
                 <TextBox x:Name="NodeText" Grid.Column="1" Margin="0,0,0,4" Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}"
@@ -70,6 +89,12 @@
                     <ContextMenu />
                   </TextBox.ContextMenu>
                 </TextBox>
+                <TextBox x:Name="NodeValue" Grid.Column="2" Width="84" Margin="4,0,0,4" Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
+                         AutomationProperties.Name="{x:Static editing:EditingText.DiagramValueHeader}" GotKeyboardFocus="OnNodeFocused" PreviewKeyDown="OnNodeKey"
+                         Visibility="{Binding DataContext.ShowsValues, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource Visible}}" />
+                <TextBox x:Name="NodeSecondValue" Grid.Column="3" Width="84" Margin="4,0,0,4" Text="{Binding SecondValue, UpdateSourceTrigger=PropertyChanged}"
+                         AutomationProperties.Name="{x:Static editing:EditingText.DiagramSecondValueHeader}" GotKeyboardFocus="OnNodeFocused" PreviewKeyDown="OnNodeKey"
+                         Visibility="{Binding DataContext.ShowsSecondValue, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource Visible}}" />
               </Grid>
               <DataTemplate.Triggers>
                 <DataTrigger Binding="{Binding IsSelected}" Value="True">
@@ -82,22 +107,40 @@
       </ScrollViewer>
     </DockPanel>
 
-    <!-- À droite : le dessin, qui suit la frappe ; un clic sur une boîte choisit son élément. -->
+    <!-- À droite : le modèle, et le dessin qui suit la frappe. -->
     <DockPanel Grid.Column="1">
-      <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
-        <ToggleButton x:Name="DownButton" Style="{DynamicResource Kyf.Button.Tab}" Content="{x:Static editing:EditingText.DiagramDown}" IsChecked="{Binding IsDown}" Margin="0,0,4,0" />
-        <ToggleButton x:Name="AcrossButton" Style="{DynamicResource Kyf.Button.Tab}" Content="{x:Static editing:EditingText.DiagramAcross}" IsChecked="{Binding IsAcross}" />
+      <Grid DockPanel.Dock="Top" Margin="0,0,0,8">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*" MinWidth="120" />
+          <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <ComboBox x:Name="ModelChoice" ItemsSource="{Binding Models}" SelectedItem="{Binding SelectedModel}" DisplayMemberPath="Name" MaxWidth="280" HorizontalAlignment="Left"
+                  AutomationProperties.Name="{x:Static editing:EditingText.DiagramModel}" />
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="8,0,0,0" Visibility="{Binding ShowsDirection, Converter={StaticResource Visible}}">
+          <ToggleButton x:Name="DownButton" Style="{DynamicResource Kyf.Button.Tab}" Content="{x:Static editing:EditingText.DiagramDown}" IsChecked="{Binding IsDown}" Margin="0,0,4,0" />
+          <ToggleButton x:Name="AcrossButton" Style="{DynamicResource Kyf.Button.Tab}" Content="{x:Static editing:EditingText.DiagramAcross}" IsChecked="{Binding IsAcross}" />
+        </StackPanel>
+      </Grid>
+      <TextBlock DockPanel.Dock="Top" Text="{Binding Description}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="0,0,0,8" />
+      <StackPanel DockPanel.Dock="Bottom" Visibility="{Binding IsMermaid, Converter={StaticResource Visible}}">
+        <CheckBox x:Name="CodeToggle" Content="{x:Static editing:EditingText.GalleryShowCode}" IsChecked="{Binding ShowsCode}" Margin="0,8,0,0" />
+        <TextBox x:Name="CodeBox" Text="{Binding MermaidCode, Mode=OneWay}" IsReadOnly="True" Height="96" Margin="0,8,0,0" VerticalContentAlignment="Top" VerticalScrollBarVisibility="Auto"
+                 FontFamily="{DynamicResource Kyf.Font.Code}" AutomationProperties.Name="{x:Static editing:EditingText.GalleryShowCode}" Visibility="{Binding ShowsCode, Converter={StaticResource Visible}}" />
       </StackPanel>
       <Border Background="{DynamicResource Kyf.Brush.Surface}" BorderBrush="{DynamicResource Kyf.Brush.Divider}" BorderThickness="1"
               CornerRadius="{DynamicResource Kyf.Radius.Control}" Padding="12">
-        <Viewbox Stretch="Uniform" VerticalAlignment="Center">
-          <reading:DiagramView x:Name="PreviewView" Scene="{Binding Preview}" HighlightedBox="{Binding HighlightedBox}"
-                               MouseLeftButtonDown="OnPreviewClicked" ContextMenuOpening="OnPreviewMenu" Cursor="Hand">
-            <reading:DiagramView.ContextMenu>
-              <ContextMenu />
-            </reading:DiagramView.ContextMenu>
-          </reading:DiagramView>
-        </Viewbox>
+        <Grid>
+          <Viewbox Stretch="Uniform" VerticalAlignment="Center" Visibility="{Binding IsDrawn, Converter={StaticResource Visible}}">
+            <reading:DiagramView x:Name="PreviewView" Scene="{Binding Preview}" HighlightedBox="{Binding HighlightedBox}"
+                                 MouseLeftButtonDown="OnPreviewClicked" ContextMenuOpening="OnPreviewMenu">
+              <reading:DiagramView.ContextMenu>
+                <ContextMenu />
+              </reading:DiagramView.ContextMenu>
+            </reading:DiagramView>
+          </Viewbox>
+          <!-- L'image se réduit pour tenir ici en entier : un dessin se juge d'un coup d'œil, sans défiler. -->
+          <reading:MermaidView x:Name="MermaidPreview" Code="{Binding MermaidCode}" ClipToBounds="True" Visibility="{Binding IsMermaid, Converter={StaticResource Visible}}" />
+        </Grid>
       </Border>
     </DockPanel>
   </Grid>

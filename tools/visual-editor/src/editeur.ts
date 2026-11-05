@@ -508,6 +508,9 @@ function dessinSous(vue: EditorView, cible: EventTarget | null): DessinVise | nu
 /** Un bloc qui se dessine : son code ne se montre que si l'on y entre. */
 const seDessine = (langage: string) => /^(smartart\s|mermaid\s*$|reseau\s*$)/.test(langage);
 
+/** Ce bloc se rouvre dans un éditeur de l'application, et pas seulement dans son code. */
+const seModifie = (langage: string, code: string) => /^(smartart|reseau)/.test(langage) || code.startsWith("%% kyfrev ");
+
 /** Le dessin suit la frappe, sans la gêner. */
 const DELAI_DESSIN = 250;
 
@@ -517,6 +520,7 @@ class VueCode implements NodeView {
   contentDOM: HTMLElement;
   private entete: HTMLElement;
   private apercu: HTMLElement | null = null;
+  private boutonModifier: HTMLButtonElement | null = null;
   private minuterie: ReturnType<typeof setTimeout> | undefined;
 
   constructor(
@@ -592,7 +596,10 @@ class VueCode implements NodeView {
       return bouton;
     };
     const langage = this.noeud.attrs.language as string;
-    if (/^(smartart|reseau)/.test(langage)) this.entete.append(action("Modifier…", modifier));
+    // Un schéma Mermaid ne se rouvre que s'il vient de l'éditeur : son premier commentaire le dit.
+    this.boutonModifier = action("Modifier…", modifier);
+    this.boutonModifier.hidden = !seModifie(langage, this.noeud.textContent);
+    this.entete.append(this.boutonModifier);
     if (!/^smartart/.test(langage)) document.addEventListener("theme", this.suivreTheme);
     this.entete.append(
       action(
@@ -650,6 +657,7 @@ class VueCode implements NodeView {
     const change = noeud.textContent !== this.noeud.textContent;
     this.noeud = noeud;
     this.marquerEdition(decorations);
+    if (change && this.boutonModifier) this.boutonModifier.hidden = !seModifie(noeud.attrs.language as string, noeud.textContent);
     if (change && this.apercu) this.demanderDessin();
     return true;
   }
