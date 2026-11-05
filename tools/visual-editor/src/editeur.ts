@@ -505,8 +505,11 @@ function dessinSous(vue: EditorView, cible: EventTarget | null): DessinVise | nu
     : null;
 }
 
+/** Les langages de bloc que dessinent les extensions actives : l'application les donne avec chaque fiche. */
+let blocsDesExtensions: ReadonlySet<string> = new Set();
+
 /** Un bloc qui se dessine : son code ne se montre que si l'on y entre. */
-const seDessine = (langage: string) => /^(smartart\s|mermaid\s*$|reseau\s*$)/.test(langage);
+const seDessine = (langage: string) => /^(smartart\s|mermaid\s*$|reseau\s*$)/.test(langage) || blocsDesExtensions.has(langage.trim());
 
 /** Le dessin suit la frappe, sans la gêner. */
 const DELAI_DESSIN = 250;
@@ -553,6 +556,7 @@ class VueCode implements NodeView {
       ...langages().map(({ id, nom }): [string, string] => [id, nom]),
       ["mermaid", "Diagramme (Mermaid)"],
       ["reseau", "Schéma réseau"],
+      ...[...blocsDesExtensions].map((id): [string, string] => [id, `Bloc « ${id} » (extension)`]),
     ];
     if (!options.some(([id]) => id === langue)) options.splice(1, 0, [langue, langue]);
     for (const [id, nom] of options) choix.add(new Option(nom, id, false, id === langue));
@@ -864,7 +868,8 @@ export class EditeurVisuel {
   }
 
   /** Contenu déjà connu de l'hôte : rien à enregistrer, historique remis à zéro. */
-  remplacer(texte: string, dossier: string): void {
+  remplacer(texte: string, dossier: string, dessines: readonly string[] = []): void {
+    blocsDesExtensions = new Set(dessines);
     this.dossier = dossier;
     this.origine = depuisMarkdown(texte);
     this.cache = null;

@@ -426,7 +426,6 @@ public sealed class ExtensionSettingsTests
 
             Assert.AreEqual(Visibility.Collapsed, page.NoExtension.Visibility);
             Assert.AreEqual(1, page.ExtensionsList.Items.Count);
-            Assert.AreEqual(Visibility.Visible, page.ExtensionsNotShownYet.Visibility);
             Assert.IsTrue(page.InstallExtension.IsEnabled);
 
             scene.Picker.Answers.Enqueue(Path.Combine(Published, "bilan"));

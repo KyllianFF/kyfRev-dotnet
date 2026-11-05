@@ -7,10 +7,13 @@ using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using KyfRev.Application;
+using KyfRev.Application.Model;
 using KyfRev.Application.Modules;
 using KyfRev.DesignSystem.Controls;
 using KyfRev.Extensions.Host;
 using KyfRev.Presentation.Wpf.Extensions;
+using KyfRev.Presentation.Wpf.Pages;
+using KyfRev.Presentation.Wpf.Reading;
 
 namespace KyfRev.Presentation.Wpf.Tests;
 
@@ -528,6 +531,83 @@ public sealed class ExtensionPageTests
         Assert.IsEmpty(pages.MenuEntries(ExtensionMenuZone.Sheet, new Dictionary<string, string>()));
         Wait(pages.RefreshCountsAsync());
         Assert.AreEqual("5", quiz.Badge.Text, "Une extension arrêtée n'est plus interrogée.");
+    }
+
+    [EngineTest]
+    public void A_block_of_a_sheet_is_drawn_by_its_extension_and_stays_text_without_it()
+    {
+        using var scene = new Scene();
+        scene.InstallWith("bloc-quiz", """{"id":"bloc-quiz","nom":"Q","version":"1","blocs":["quiz"]}""", """
+            let ouvertes = 0;
+            kyfrev.bloc("quiz", (source) => {
+              if (source.startsWith("casse")) throw new Error("bloc illisible");
+              return `<p>${source.split("\n").length} ligne(s), ${ouvertes} ouverte(s)</p><p class="actions"><button data-action="ouvrir">Ouvrir</button><button data-action="rate">Rater</button></p>`;
+            });
+            kyfrev.action("ouvrir", () => { ouvertes += 1; });
+            kyfrev.action("rate", () => { throw new Error("raté"); });
+            """);
+        using var ui = new UiThread();
+        var blocks = new ExtensionBlocks(scene.Library, scene.Engine, () => false);
+        Assert.IsTrue(blocks.Draws("quiz"));
+        Assert.IsFalse(blocks.Draws("python"));
+        Assert.IsFalse(blocks.Draws(null));
+        Assert.AreEqual("quiz", string.Join(',', blocks.Languages));
+        var sheet = new OpenedSheet("f_1", "Mitose", "fiches/Mitose.md", "Biologie", [], "```quiz\nQ: a\nR: b\n```\n\n```python\nx = 1\n```", 1, "sha256:essai", null, DateTimeOffset.UnixEpoch, null!, []);
+        var document = new DocumentBuilder(SheetReading.Of(sheet, _ => Outcome.Refused<byte[]>("non")), _ => { }, true, false) { ExtensionBlocks = blocks }.Build();
+        var container = document.Blocks.OfType<BlockUIContainer>().Single();
+        var view = (ExtensionBlockView)container.Child;
+        Assert.AreEqual("quiz", view.BlockLanguage);
+        Assert.AreEqual("Q: a\nR: b", view.Source);
+        Assert.AreEqual(1, document.Blocks.OfType<Paragraph>().Count(), "Un bloc d'un autre langage reste du code.");
+
+        var test = new TestShell();
+        var host = new Border { Width = 700, Child = new StackPanel() };
+        host.Resources.MergedDictionaries.Add(test.Design.Dictionary);
+        host.Resources[ExtensionBlocks.ResourceKey] = blocks;
+        container.Child = null;
+        ((StackPanel)host.Child).Children.Add(view);
+        var window = new Window { Content = host, Left = -10000, Top = -10000, Width = 750, Height = 500, ShowActivated = false };
+        window.Show();
+        try
+        {
+            UiThread.Until(() => view.ShowsContent, TimeSpan.FromMinutes(2));
+            Assert.IsTrue(Tree<TextBlock>(view).Any(text => TextOf(text) == "2 ligne(s), 0 ouverte(s)"));
+            Assert.AreEqual(ReadingText.ExtensionBlockOf("quiz"), AutomationProperties.GetName(view));
+
+            Click(Tree<Button>(view).Single(button => (string)button.Content == "Ouvrir"));
+            UiThread.Until(() => { TestShell.Flush(); return Tree<TextBlock>(view).Any(text => TextOf(text) == "2 ligne(s), 1 ouverte(s)"); }, TimeSpan.FromMinutes(2));
+
+            Click(Tree<Button>(view).Single(button => (string)button.Content == "Rater"));
+            UiThread.Until(() => { TestShell.Flush(); return !view.ShowsContent; }, TimeSpan.FromMinutes(2));
+            StringAssert.Contains(AutomationProperties.GetName(view), "raté", StringComparison.Ordinal);
+
+            view.Source = "casse";
+            UiThread.Until(() => view.Drawing.IsCompleted, TimeSpan.FromMinutes(2));
+            Assert.IsFalse(view.ShowsContent);
+            StringAssert.Contains(AutomationProperties.GetName(view), "bloc illisible", StringComparison.Ordinal);
+            Assert.IsTrue(Tree<TextBlock>(view).Any(text => TextOf(text) == "casse"), "Son texte reste lisible.");
+
+            scene.Library.SetActive("bloc-quiz", false);
+            blocks.Forget();
+            Assert.IsFalse(blocks.Draws("quiz"));
+            view.Source = "Q: c";
+            UiThread.Until(() => view.Drawing.IsCompleted, TimeSpan.FromMinutes(2));
+            StringAssert.Contains(AutomationProperties.GetName(view), ReadingText.NoExtensionBlockOf("quiz"), StringComparison.Ordinal);
+            Assert.IsFalse(Wait(blocks.ActAsync("quiz", new ExtensionAction("ouvrir", null, new Dictionary<string, string>()))).Succeeded);
+
+            host.Resources.Remove(ExtensionBlocks.ResourceKey);
+            view.BlockLanguage = "autre";
+            UiThread.Until(() => view.Drawing.IsCompleted, TimeSpan.FromMinutes(2));
+            Assert.IsFalse(view.ShowsContent);
+        }
+        finally
+        {
+            window.Close();
+        }
+        Assert.ThrowsExactly<ArgumentNullException>(() => new ExtensionBlocks(null!, scene.Engine, () => false));
+        Assert.ThrowsExactly<ArgumentNullException>(() => new ExtensionBlocks(scene.Library, null!, () => false));
+        Assert.ThrowsExactly<ArgumentNullException>(() => new ExtensionBlocks(scene.Library, scene.Engine, null!));
+        Assert.ThrowsExactly<ArgumentNullException>(() => blocks.ActAsync("quiz", null!));
     }
 
     [TestMethod]

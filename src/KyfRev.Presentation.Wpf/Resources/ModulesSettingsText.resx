@@ -45,9 +45,6 @@
   <data name="ExtensionsTitle" xml:space="preserve">
     <value>Extensions</value>
   </data>
-  <data name="ExtensionsNotShownYet" xml:space="preserve">
-    <value>Leurs blocs ne s'affichent pas encore dans les fiches.</value>
-  </data>
   <data name="ExtensionDetails" xml:space="preserve">
     <value>Détails</value>
   </data>

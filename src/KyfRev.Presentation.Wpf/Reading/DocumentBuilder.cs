@@ -10,6 +10,7 @@ using System.Windows.Threading;
 using KyfRev.DesignSystem.Controls;
 using KyfRev.DesignSystem.Tokens;
 using KyfRev.Presentation.Wpf.Editing;
+using KyfRev.Presentation.Wpf.Extensions;
 using KyfRev.Presentation.Wpf.Pages;
 using KyfRev.Presentation.Wpf.Schemas;
 using KyfRev.Rendering;
@@ -125,6 +126,9 @@ internal sealed class DocumentBuilder
 
     /// <summary>Les schémas se dessinent ; sinon, ils se lisent en code.</summary>
     public bool DrawsMermaid { get; init; }
+
+    /// <summary>Les blocs que dessinent les extensions actives ; sans eux, ces blocs restent du code.</summary>
+    public ExtensionBlocks? ExtensionBlocks { get; init; }
 
     /// <summary>Le lien entre le document et le texte affiché, et les surlignages.</summary>
     public TextLayer Layer { get; }
@@ -615,6 +619,12 @@ internal sealed class DocumentBuilder
         var code = element.Children.OfType<RenderElement>().First();
         var value = code.Children.OfType<RenderText>().FirstOrDefault();
         var text = value?.Value.TrimEnd('\n') ?? string.Empty;
+        if (ExtensionBlocks?.Draws(code.Language) == true)
+        {
+            var view = new ExtensionBlockView { BlockLanguage = code.Language!, Source = text, MaxWidth = DiagramWidth };
+            blocks.Add(new BlockUIContainer(view) { Margin = new Thickness(0, 4, 0, 16) });
+            return;
+        }
         if (code.Language == SmartArt.Language && SmartArt.Draw(code.CodeArguments, text) is { } scene)
         {
             var drawing = new DiagramView { Scene = scene, MaxWidth = DiagramWidth };

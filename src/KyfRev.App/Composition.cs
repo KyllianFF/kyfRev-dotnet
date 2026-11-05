@@ -150,6 +150,10 @@ internal static class Composition
             provider.GetRequiredService<ExtensionLibrary>(),
             provider.GetRequiredService<ExtensionEngine>(),
             () => provider.GetRequiredService<AppearanceController>().Theme == ThemeKind.Dark));
+        services.AddSingleton(provider => new ExtensionBlocks(
+            provider.GetRequiredService<ExtensionLibrary>(),
+            provider.GetRequiredService<ExtensionEngine>(),
+            () => provider.GetRequiredService<AppearanceController>().Theme == ThemeKind.Dark));
         services.AddSingleton(provider => new ExtensionSettingsViewModel(
             provider.GetRequiredService<ExtensionLibrary>(),
             provider.GetRequiredService<IFolderPicker>()));
@@ -206,6 +210,7 @@ internal static class Composition
             provider.GetRequiredService<ExtensionSettingsViewModel>().Changed += (_, e) =>
             {
                 extensionPages.Forget(e.Extension);
+                provider.GetRequiredService<ExtensionBlocks>().Forget();
                 ShowExtensions();
             };
             extensionPages.ViewAsked += (_, e) =>
@@ -220,6 +225,7 @@ internal static class Composition
             shell.WorkspaceOpening += (_, _) =>
             {
                 extensionPages.VaultChanged();
+                provider.GetRequiredService<ExtensionBlocks>().Forget();
                 modules.Load(provider.GetRequiredService<SettingsUseCases>().Get() is { Succeeded: true } settings ? settings.Value : null);
                 ShowExtensions();
             };

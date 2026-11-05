@@ -43,7 +43,7 @@ namespace KyfRev.Presentation.Wpf.Editing;
 internal abstract record EditorRequest;
 
 /// <summary>Ouvre ce Markdown : rien à enregistrer, rien à annuler.</summary>
-internal sealed record LoadRequest(string Text, string Folder) : EditorRequest;
+internal sealed record LoadRequest(string Text, string Folder, IReadOnlyList<string> Drawn) : EditorRequest;
 
 /// <summary>Les couleurs du thème, en variables CSS.</summary>
 internal sealed record ThemeRequest(IReadOnlyDictionary<string, string> Variables) : EditorRequest;
@@ -246,6 +246,7 @@ internal static class VisualContract
             _ when type == typeof(string) => "string",
             _ when type == typeof(int) || type == typeof(double) => "number",
             _ when type == typeof(bool) => "boolean",
+            _ when type == typeof(IReadOnlyList<string>) => "string[]",
             { IsEnum: true } => string.Join(" | ", Enum.GetNames(type).Select(name => $"\"{JsonNamingPolicy.CamelCase.ConvertName(name)}\"")),
             _ => "Record<string, string>",
         };

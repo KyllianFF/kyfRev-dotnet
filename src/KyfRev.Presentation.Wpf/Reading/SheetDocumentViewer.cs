@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Input;
 using KyfRev.Presentation.Wpf.Editing;
+using KyfRev.Presentation.Wpf.Extensions;
 using KyfRev.Presentation.Wpf.Pages;
 using KyfRev.Rendering;
 using LinkTarget = KyfRev.Rendering.LinkTarget;
@@ -277,7 +278,7 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
         if (Reading is { } reading)
         {
             var drawsMermaid = TryFindResource(MermaidEngine.ResourceKey) is not null;
-            _built = new DocumentBuilder(reading, Follow, OpenLinkCommand is not null, ShowsHeader, key => TryFindResource(key) as System.Windows.Media.Brush, TryFindResource(ReadingComfort.ResourceKey) as ReadingComfort) { DrawsMermaid = drawsMermaid, Pictures = TryFindResource(MermaidEngine.ResourceKey) as IMermaidEngine };
+            _built = new DocumentBuilder(reading, Follow, OpenLinkCommand is not null, ShowsHeader, key => TryFindResource(key) as System.Windows.Media.Brush, TryFindResource(ReadingComfort.ResourceKey) as ReadingComfort) { DrawsMermaid = drawsMermaid, Pictures = TryFindResource(MermaidEngine.ResourceKey) as IMermaidEngine, ExtensionBlocks = TryFindResource(ExtensionBlocks.ResourceKey) as ExtensionBlocks };
             _built.Layer.Set(Highlights ?? [], ActiveHighlight);
             Document = _built.Build();
             ComputeHoles();

@@ -143,7 +143,7 @@ function demanderLien(): void {
 function traiter(message: VersEditeur): void {
   switch (message.kind) {
     case "load":
-      editeur.remplacer(message.text, message.folder);
+      editeur.remplacer(message.text, message.folder, message.drawn);
       break;
     case "diagram": {
       const cle = cleDessin(message.language, message.code);
