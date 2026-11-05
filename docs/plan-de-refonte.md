@@ -859,6 +859,11 @@ Ce jalon se découpe en sous-parties validées une à une, comme J6.
   - WebRTC est retiré de chaque document : la CSP ne l'arrête pas, et un essai avec un vrai écouteur UDP a reçu le paquet STUN d'une extension, y compris avec `webrtc 'block'`. La 0.x avait la même fuite. Les essais gardent ces écouteurs, TCP et UDP, parce qu'ils voient ce qui sort quelle qu'en soit la raison ;
   - un résultat n'est pris que pour une demande faite à la même extension, et chaque cadre a son jeton ;
   - `smartart` rejoint les langages de bloc réservés.
+- **Ce que le lot 2 décide** (amendement du 5 novembre 2026) :
+  - le HTML d'une extension est lu par `DOMParser` dans la page cachée, sans rien exécuter ni charger, puis filtré par `ExtensionContent`, côté application, et jamais dans une page : le résultat devient des éléments natifs. Une balise dangereuse part avec son contenu, une balise inconnue part et son contenu reste, une image laisse son texte de remplacement. Un lien reste du texte, et `style` n'existe plus : une extension ne peut ni faire sortir une adresse, ni imiter un dialogue ;
+  - ni mot de passe, ni fichier, ni champ caché : ces champs sont retirés ;
+  - une extension garde en mémoire ce qu'elle a lu d'un coffre : le moteur repart quand un coffre s'ouvre ;
+  - une fiche dont le fichier manque n'est pas proposée aux extensions.
 
 ### J11. Livraison `1.0.0` (M)
 - **Livrables** :

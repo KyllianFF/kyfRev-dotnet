@@ -310,6 +310,12 @@ public sealed class VaultAdapter(VaultSession inner) : IVault
     /// <inheritdoc/>
     public string ReadSchemaToImport(string path) => VaultSession.ReadSchemaToImport(path);
 
+    /// <inheritdoc/>
+    public string? ExtensionData(string id) => inner.ExtensionData(id);
+
+    /// <inheritdoc/>
+    public void SaveExtensionData(string id, string json) => inner.SaveExtensionData(id, json);
+
     private static SchemaDocument Document(SchemaContent content) => new(content.Id, content.Text, content.Fingerprint);
 
     /// <inheritdoc/>

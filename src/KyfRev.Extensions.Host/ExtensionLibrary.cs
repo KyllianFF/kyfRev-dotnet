@@ -48,6 +48,7 @@ public sealed class ExtensionLibrary
     }
 
     /// <summary>Les extensions installées, par nom. Un dossier dont le manifeste ne va pas est ignoré.</summary>
+    [ZeroXCommand("extensions")]
     public IReadOnlyList<InstalledExtension> Installed()
     {
         if (!Directory.Exists(_folder))
@@ -98,6 +99,7 @@ public sealed class ExtensionLibrary
 
     /// <summary>Lit l'extension d'un dossier, sans rien installer.</summary>
     /// <param name="source">Le dossier choisi.</param>
+    [ZeroXCommand("lire_extension")]
     public Outcome<ExtensionPreview> Read(string source)
     {
         ArgumentException.ThrowIfNullOrEmpty(source);
@@ -124,6 +126,7 @@ public sealed class ExtensionLibrary
 
     /// <summary>Copie l'extension d'un dossier et l'active. Une version déjà installée est rangée.</summary>
     /// <param name="source">Le dossier choisi.</param>
+    [ZeroXCommand("installer_extension")]
     public Outcome<InstalledExtension> Install(string source)
     {
         ArgumentException.ThrowIfNullOrEmpty(source);
@@ -156,6 +159,7 @@ public sealed class ExtensionLibrary
     /// <summary>Active ou désactive une extension installée.</summary>
     /// <param name="id">Son identifiant.</param>
     /// <param name="active">Vrai pour l'activer.</param>
+    [ZeroXCommand("activer_extension")]
     public Outcome<Done> SetActive(string id, bool active)
     {
         ArgumentNullException.ThrowIfNull(id);
@@ -177,6 +181,7 @@ public sealed class ExtensionLibrary
 
     /// <summary>Retire une extension : son dossier est rangé dans <c>.anciennes</c>, ses données restent dans le coffre.</summary>
     /// <param name="id">Son identifiant.</param>
+    [ZeroXCommand("retirer_extension")]
     public Outcome<Done> Retire(string id)
     {
         ArgumentNullException.ThrowIfNull(id);

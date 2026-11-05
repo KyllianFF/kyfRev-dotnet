@@ -6,6 +6,14 @@ using KyfRev.Presentation.Wpf.Shell;
 
 namespace KyfRev.Presentation.Wpf.Pages;
 
+/// <summary>Une extension vient de changer.</summary>
+/// <param name="extension">Son identifiant.</param>
+public sealed class ExtensionChangedEventArgs(string extension) : EventArgs
+{
+    /// <summary>Son identifiant.</summary>
+    public string Extension { get; } = extension;
+}
+
 /// <summary>Une extension installée, dans la carte « Extensions ».</summary>
 public sealed partial class ExtensionRow : ObservableObject
 {
@@ -94,6 +102,9 @@ public sealed partial class ExtensionSettingsViewModel : ObservableObject
         _library = library;
         _picker = picker;
     }
+
+    /// <summary>Une extension vient de s'installer, de s'activer, de s'arrêter ou d'être retirée.</summary>
+    public event EventHandler<ExtensionChangedEventArgs>? Changed;
 
     /// <summary>Les extensions installées.</summary>
     public ObservableCollection<ExtensionRow> Rows { get; } = [];
@@ -199,6 +210,7 @@ public sealed partial class ExtensionSettingsViewModel : ObservableObject
         if (outcome.Succeeded)
         {
             Message = active ? ModulesSettingsText.ExtensionEnabledOf(row.Name) : ModulesSettingsText.ExtensionDisabledOf(row.Name);
+            Changed?.Invoke(this, new ExtensionChangedEventArgs(row.Id));
             return;
         }
         Error = outcome.Error;
@@ -248,6 +260,7 @@ public sealed partial class ExtensionSettingsViewModel : ObservableObject
         }
         Message = ModulesSettingsText.ExtensionInstalledOf(outcome.Value.Manifest.Name, outcome.Value.Manifest.Version);
         Show();
+        Changed?.Invoke(this, new ExtensionChangedEventArgs(outcome.Value.Manifest.Id));
     }
 
     [RelayCommand]
@@ -276,5 +289,6 @@ public sealed partial class ExtensionSettingsViewModel : ObservableObject
         }
         Message = ModulesSettingsText.ExtensionRemovedOf(row.Name);
         Show();
+        Changed?.Invoke(this, new ExtensionChangedEventArgs(row.Id));
     }
 }

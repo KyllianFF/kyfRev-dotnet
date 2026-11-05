@@ -13,6 +13,7 @@ using KyfRev.Infrastructure.Windows;
 using KyfRev.Modules.Citations;
 using KyfRev.Modules.Schemas;
 using KyfRev.Presentation.Wpf.Editing;
+using KyfRev.Presentation.Wpf.Extensions;
 using KyfRev.Presentation.Wpf.Pages;
 using KyfRev.Presentation.Wpf.Schemas;
 using KyfRev.Presentation.Wpf.Shell;
@@ -139,6 +140,16 @@ internal static class Composition
             }
             return library;
         });
+        services.AddSingleton(provider => new ExtensionEngine(
+            Path.Combine(provider.GetRequiredService<VaultLocations>().LocalData, "WebView2-extensions"),
+            provider.GetRequiredService<ExtensionLibrary>(),
+            new ExtensionRequests(
+                provider.GetRequiredService<ExtensionLibrary>(),
+                new VaultExtensionData(provider.GetRequiredService<SheetUseCases>(), new ExtensionDataUseCases(provider.GetRequiredService<KyfRevApplication>().Host)))));
+        services.AddSingleton(provider => new ExtensionPages(
+            provider.GetRequiredService<ExtensionLibrary>(),
+            provider.GetRequiredService<ExtensionEngine>(),
+            () => provider.GetRequiredService<AppearanceController>().Theme == ThemeKind.Dark));
         services.AddSingleton(provider => new ExtensionSettingsViewModel(
             provider.GetRequiredService<ExtensionLibrary>(),
             provider.GetRequiredService<IFolderPicker>()));
@@ -179,12 +190,23 @@ internal static class Composition
             provider.GetRequiredService<ReviewNavigation>().Attach(shell);
             provider.GetRequiredService<MachineSettings>().Follow(provider.GetRequiredService<AppearanceController>(), shell);
             var modules = provider.GetRequiredService<ActiveModules>();
-            modules.Changed += (_, _) => shell.SetModuleEntries(ModuleEntries(modules, provider.GetRequiredService<IExternalLinks>(), schemas => new SchemasPageViewModel(
+            var extensionPages = provider.GetRequiredService<ExtensionPages>();
+            void ShowEntries() => shell.SetModuleEntries([.. ModuleEntries(modules, provider.GetRequiredService<IExternalLinks>(), schemas => new SchemasPageViewModel(
                 schemas,
                 provider.GetRequiredService<IFolderPicker>(),
                 provider.GetRequiredService<IReviewOpener>(),
-                provider.GetRequiredService<EditorEnvironment>().WebDataFolder)));
-            shell.WorkspaceOpening += (_, _) => modules.Load(provider.GetRequiredService<SettingsUseCases>().Get() is { Succeeded: true } settings ? settings.Value : null);
+                provider.GetRequiredService<EditorEnvironment>().WebDataFolder)), .. extensionPages.Entries()]);
+            modules.Changed += (_, _) => ShowEntries();
+            provider.GetRequiredService<ExtensionSettingsViewModel>().Changed += (_, e) =>
+            {
+                extensionPages.Forget(e.Extension);
+                ShowEntries();
+            };
+            shell.WorkspaceOpening += (_, _) =>
+            {
+                extensionPages.VaultChanged();
+                modules.Load(provider.GetRequiredService<SettingsUseCases>().Get() is { Succeeded: true } settings ? settings.Value : null);
+            };
             return shell;
         });
         services.AddTransient<ShellWindow>();

@@ -6,6 +6,12 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\KyfRev.Extensions.Host\KyfRev.Extensions.Host.csproj" />
+    <ProjectReference Include="..\..\src\KyfRev.Infrastructure.Vault\KyfRev.Infrastructure.Vault.csproj" />
+  </ItemGroup>
+
+  <!-- Horloge, journal et dossiers d'essai, partagés avec la suite de KyfRev.Application. -->
+  <ItemGroup>
+    <Compile Include="..\KyfRev.Application.Tests\Support\TestDoubles.cs" Link="Support\TestDoubles.cs" />
   </ItemGroup>
 
 </Project>

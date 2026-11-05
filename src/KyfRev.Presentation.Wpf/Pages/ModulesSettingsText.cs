@@ -77,8 +77,11 @@ public static class ModulesSettingsText
     /// <summary>« Module Schémas réseau désactivé : ses schémas restent dans le coffre. ».</summary>
     public static string SchemasDisabled => Text(nameof(SchemasDisabled));
 
-    /// <summary>« Leurs blocs et leurs vues ne s'affichent pas encore dans cette version. ».</summary>
+    /// <summary>« Leurs blocs ne s'affichent pas encore dans les fiches. ».</summary>
     public static string ExtensionsNotShownYet => Text(nameof(ExtensionsNotShownYet));
+
+    /// <summary>« Détails » : le nom d'un <c>details</c> qui n'a pas de résumé, comme dans un navigateur.</summary>
+    public static string ExtensionDetails => Text(nameof(ExtensionDetails));
 
     /// <summary>« Aucune extension installée. ».</summary>
     public static string ExtensionsNone => Text(nameof(ExtensionsNone));
