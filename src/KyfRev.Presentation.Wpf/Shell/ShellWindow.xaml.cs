@@ -27,7 +27,11 @@ public sealed partial class ShellWindow : Window
     private const int OnMaximizeButton = 9;
 
     private readonly ShellViewModel _shell;
+    private const double PaletteEdge = 16;
+    private const double PaletteMinWidth = 360;
+
     private IInputElement? _focusBeforePalette;
+    private bool _paletteLeft;
     private WindowState _windowedState;
     private ResizeMode _windowedResize = ResizeMode.CanResize;
 
@@ -43,7 +47,12 @@ public sealed partial class ShellWindow : Window
         // MouseUp remonte jusqu'à la liste, même quand l'élément cliqué l'a déjà traité.
         PaletteResults.AddHandler(MouseUpEvent, new MouseButtonEventHandler(OnPaletteClick), handledEventsToo: true);
         MoreMenu.AddHandler(MenuItem.ClickEvent, new RoutedEventHandler(OnOverflowClick));
-        Root.SizeChanged += (_, e) => shell.WindowWidth = e.NewSize.Width;
+        Root.SizeChanged += (_, e) =>
+        {
+            shell.WindowWidth = e.NewSize.Width;
+            PlacePalette();
+        };
+        SearchHost.SizeChanged += (_, _) => PlacePalette();
         LocationChanged += (_, _) => FitFrame();
         Loaded += (_, _) => FocusNavigation();
     }
@@ -182,7 +191,15 @@ public sealed partial class ShellWindow : Window
         if (_shell.IsPaletteOpen)
         {
             _focusBeforePalette = Keyboard.FocusedElement;
-            Dispatcher.BeginInvoke(DispatcherPriority.Input, () => PaletteQuery.Focus());
+            Dispatcher.BeginInvoke(DispatcherPriority.Input, () =>
+            {
+                PlacePalette();
+                PaletteQuery.Focus();
+            });
+        }
+        else if (_paletteLeft)
+        {
+            return;
         }
         else if (_focusBeforePalette is UIElement { IsVisible: true } previous)
         {
@@ -232,6 +249,39 @@ public sealed partial class ShellWindow : Window
         {
             _shell.Navigate(item);
         }
+    }
+
+    /// <summary>
+    /// La liste se place sous le champ de la barre de titre, aussi large que lui (360 pixels au moins), sans sortir de la fenêtre.
+    /// </summary>
+    internal void PlacePalette()
+    {
+        if (!_shell.IsPaletteOpen || !SearchHost.IsVisible || !Palette.IsVisible)
+        {
+            return;
+        }
+        var left = SearchHost.TranslatePoint(default, Palette).X;
+        var room = Math.Max(0, Palette.ActualWidth - (2 * PaletteEdge));
+        var width = Math.Min(Math.Max(SearchHost.ActualWidth, PaletteMinWidth), room);
+        left = Math.Clamp(left, PaletteEdge, Math.Max(PaletteEdge, Palette.ActualWidth - PaletteEdge - width));
+        PaletteCard.Width = width;
+        PaletteCard.Margin = new Thickness(left, 2, PaletteEdge, PaletteEdge);
+    }
+
+    /// <summary>
+    /// Le champ perd le focus pour autre chose que la liste : la recherche se ferme, comme un menu, et le focus reste où l'on a cliqué.
+    /// Une fenêtre qui passe derrière une autre la garde ouverte.
+    /// </summary>
+    private void OnPaletteQueryLeft(object sender, KeyboardFocusChangedEventArgs e)
+    {
+        if (!_shell.IsPaletteOpen || !IsActive || e.NewFocus is not DependencyObject target || PaletteCard.IsAncestorOf(target))
+        {
+            return;
+        }
+        _focusBeforePalette = null;
+        _paletteLeft = true;
+        _shell.ClosePalette();
+        _paletteLeft = false;
     }
 
     private void OnPaletteClick(object sender, MouseButtonEventArgs e)

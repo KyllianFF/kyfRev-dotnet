@@ -144,9 +144,13 @@
       <Border.Style>
         <Style TargetType="Border">
           <Style.Triggers>
-            <DataTrigger Binding="{Binding IsFullScreen}" Value="True">
+            <MultiDataTrigger>
+              <MultiDataTrigger.Conditions>
+                <Condition Binding="{Binding IsFullScreen}" Value="True" />
+                <Condition Binding="{Binding IsPaletteOpen}" Value="False" />
+              </MultiDataTrigger.Conditions>
               <Setter Property="Visibility" Value="Collapsed" />
-            </DataTrigger>
+            </MultiDataTrigger>
           </Style.Triggers>
         </Style>
       </Border.Style>
@@ -178,16 +182,48 @@
           <TextBlock Text="{x:Static p:ShellText.AppName}" Style="{DynamicResource Kyf.Text.BodyStrong}" VerticalAlignment="Center" />
         </Border>
 
-        <!-- La recherche : les règles d'affichage sont sur son conteneur, et le bouton garde le style de l'application. -->
+        <!-- La recherche : un bouton, puis, ouverte, le champ où l'on tape, à la même place ; la liste s'ouvre juste dessous. Les règles
+             d'affichage sont sur son conteneur, et le bouton garde le style de l'application. -->
         <Border x:Name="SearchHost" Grid.Column="1" Margin="8,4" MaxWidth="460">
           <Border.Style>
             <Style TargetType="Border">
               <Style.Triggers>
-                <DataTrigger Binding="{Binding IsWelcome}" Value="True">
+                <MultiDataTrigger>
+                  <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding IsWelcome}" Value="True" />
+                    <Condition Binding="{Binding IsPaletteOpen}" Value="False" />
+                  </MultiDataTrigger.Conditions>
                   <Setter Property="Visibility" Value="Collapsed" />
-                </DataTrigger>
-                <DataTrigger Binding="{Binding Layout}" Value="Tabs">
+                </MultiDataTrigger>
+                <MultiDataTrigger>
+                  <MultiDataTrigger.Conditions>
+                    <Condition Binding="{Binding Layout}" Value="Tabs" />
+                    <Condition Binding="{Binding IsPaletteOpen}" Value="False" />
+                  </MultiDataTrigger.Conditions>
                   <Setter Property="HorizontalAlignment" Value="Right" />
+                </MultiDataTrigger>
+              </Style.Triggers>
+            </Style>
+          </Border.Style>
+        <Grid>
+        <TextBox x:Name="PaletteQuery" Text="{Binding PaletteQuery, UpdateSourceTrigger=PropertyChanged}" MinHeight="0" Padding="10,0"
+                 VerticalContentAlignment="Center" WindowChrome.IsHitTestVisibleInChrome="True" LostKeyboardFocus="OnPaletteQueryLeft"
+                 Visibility="{Binding IsPaletteOpen, Converter={StaticResource Visible}}"
+                 kyf:Field.Placeholder="{x:Static p:ShellText.SearchPlaceholder}" AutomationProperties.Name="{x:Static p:ShellText.SearchPlaceholder}">
+          <TextBox.InputBindings>
+            <KeyBinding Key="Down" Command="{Binding MoveSelectionCommand}" CommandParameter="1" />
+            <KeyBinding Key="Up" Command="{Binding MoveSelectionCommand}" CommandParameter="-1" />
+            <KeyBinding Key="Enter" Command="{Binding RunSelectedCommand}" />
+            <KeyBinding Key="Escape" Command="{Binding ClosePaletteCommand}" />
+          </TextBox.InputBindings>
+        </TextBox>
+        <!-- Le bouton s'efface devant le champ ; son conteneur porte la règle, pour que le bouton garde son style. -->
+        <Border x:Name="SearchButtonHost">
+          <Border.Style>
+            <Style TargetType="Border">
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding IsPaletteOpen}" Value="True">
+                  <Setter Property="Visibility" Value="Collapsed" />
                 </DataTrigger>
               </Style.Triggers>
             </Style>
@@ -213,6 +249,8 @@
             </TextBlock>
           </DockPanel>
         </Button>
+        </Border>
+        </Grid>
         </Border>
 
         <StackPanel x:Name="TitleActions" Grid.Column="2" Orientation="Horizontal" Margin="0,0,4,0">
@@ -374,32 +412,23 @@
       </ItemsControl>
     </kyf:Dialog>
 
-    <!-- Recherche de commandes (Ctrl+K). -->
-    <Grid x:Name="Palette" Visibility="{Binding IsPaletteOpen, Converter={StaticResource Visible}}" KeyboardNavigation.TabNavigation="Cycle">
-      <Rectangle x:Name="PaletteScrim" Fill="{DynamicResource Kyf.Brush.Scrim}">
+    <!-- Recherche de commandes (Ctrl+K) : on tape dans la barre de titre, la liste s'ouvre juste dessous, à son aplomb. -->
+    <Grid x:Name="Palette" Visibility="{Binding IsPaletteOpen, Converter={StaticResource Visible}}">
+      <Rectangle x:Name="PaletteScrim" Fill="Transparent">
         <Rectangle.InputBindings>
           <MouseBinding MouseAction="LeftClick" Command="{Binding ClosePaletteCommand}" />
         </Rectangle.InputBindings>
       </Rectangle>
-      <Grid VerticalAlignment="Top" HorizontalAlignment="Stretch" MaxWidth="560" Margin="16,64,16,16">
+      <Grid x:Name="PaletteCard" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="16,2,16,16">
         <Border Background="{DynamicResource Kyf.Brush.Surface}" CornerRadius="{DynamicResource Kyf.Radius.Card}"
                 Effect="{DynamicResource Kyf.Elevation.Dialog}" />
         <Border Background="{DynamicResource Kyf.Brush.Surface}" BorderBrush="{DynamicResource Kyf.Brush.Divider}" BorderThickness="1"
                 CornerRadius="{DynamicResource Kyf.Radius.Card}" Padding="8" AutomationProperties.Name="{x:Static p:ShellText.SearchPlaceholder}">
           <DockPanel>
-            <TextBox x:Name="PaletteQuery" DockPanel.Dock="Top" Text="{Binding PaletteQuery, UpdateSourceTrigger=PropertyChanged}"
-                     kyf:Field.Placeholder="{x:Static p:ShellText.SearchPlaceholder}" AutomationProperties.Name="{x:Static p:ShellText.SearchPlaceholder}">
-              <TextBox.InputBindings>
-                <KeyBinding Key="Down" Command="{Binding MoveSelectionCommand}" CommandParameter="1" />
-                <KeyBinding Key="Up" Command="{Binding MoveSelectionCommand}" CommandParameter="-1" />
-                <KeyBinding Key="Enter" Command="{Binding RunSelectedCommand}" />
-                <KeyBinding Key="Escape" Command="{Binding ClosePaletteCommand}" />
-              </TextBox.InputBindings>
-            </TextBox>
             <TextBlock x:Name="NoResult" DockPanel.Dock="Top" Text="{x:Static p:ShellText.NoCommand}" Style="{DynamicResource Kyf.Text.Secondary}"
-                       Margin="12,12,12,4" Visibility="{Binding HasNoResult, Converter={StaticResource Visible}}" />
-            <ListBox x:Name="PaletteResults" ItemsSource="{Binding PaletteResults}" SelectedItem="{Binding SelectedResult}"
-                     MaxHeight="360" Margin="0,8,0,0" AutomationProperties.Name="{x:Static p:ShellText.SearchPlaceholder}">
+                       Margin="12,8,12,8" Visibility="{Binding HasNoResult, Converter={StaticResource Visible}}" />
+            <ListBox x:Name="PaletteResults" ItemsSource="{Binding PaletteResults}" SelectedItem="{Binding SelectedResult}" Focusable="False"
+                     MaxHeight="360" AutomationProperties.Name="{x:Static p:ShellText.SearchPlaceholder}">
               <ListBox.InputBindings>
                 <KeyBinding Key="Enter" Command="{Binding RunSelectedCommand}" />
                 <KeyBinding Key="Escape" Command="{Binding ClosePaletteCommand}" />

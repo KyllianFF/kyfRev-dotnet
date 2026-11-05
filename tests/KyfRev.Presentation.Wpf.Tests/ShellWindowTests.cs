@@ -407,11 +407,23 @@ public sealed class ShellWindowTests
             Assert.IsTrue(search.IsVisible, "En mode concentration, la barre reste : la fenêtre se déplace toujours.");
             test.Shell.ToggleFocusMode();
 
+            test.Shell.ToggleFullScreen();
+            test.Shell.OpenPalette();
+            TestShell.Flush();
+            Assert.AreEqual(Visibility.Visible, bar.Visibility, "En plein écran, la barre revient le temps d'une recherche.");
+            test.Shell.ClosePalette();
+            TestShell.Flush();
+            Assert.AreEqual(Visibility.Collapsed, bar.Visibility);
+            test.Shell.ToggleFullScreen();
+
             test.Shell.ShowWelcome(new object());
             TestShell.Flush();
             Assert.IsFalse(search.IsVisible);
             Assert.AreEqual(Visibility.Collapsed, actions.Visibility);
             Assert.AreEqual(Visibility.Visible, buttons.Visibility);
+            test.Shell.OpenPalette();
+            TestShell.Flush();
+            Assert.IsTrue(((TextBox)window.FindName("PaletteQuery")).IsVisible, "Sur l'accueil aussi, on tape dans la barre.");
         }
         finally
         {
@@ -498,6 +510,60 @@ public sealed class ShellWindowTests
             Assert.AreEqual("Fiches", shell.Current.Label);
             Assert.AreEqual(FontWeights.Normal, TextElement.GetFontWeight(background));
             menu.IsOpen = false;
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
+    public void The_search_is_typed_in_the_title_bar_and_its_list_opens_below_it()
+    {
+        var test = new TestShell();
+        var window = Open(test);
+        try
+        {
+            var bar = (Border)window.FindName("TitleBar");
+            var host = (Border)window.FindName("SearchHost");
+            var button = (Button)window.FindName("SearchButton");
+            var query = (TextBox)window.FindName("PaletteQuery");
+            var card = (FrameworkElement)window.FindName("PaletteCard");
+            Assert.IsTrue(bar.IsAncestorOf(query), "On tape dans la barre de titre, pas dans une seconde barre.");
+            Assert.IsFalse(query.IsVisible);
+
+            button.Command.Execute(null);
+            TestShell.Flush();
+            Assert.IsTrue(test.Shell.IsPaletteOpen);
+            Assert.IsTrue(query.IsVisible);
+            Assert.IsFalse(button.IsVisible, "Le champ prend la place du bouton.");
+            Assert.IsTrue(query.IsKeyboardFocused);
+            Assert.AreEqual(host.TranslatePoint(default, window).X, card.TranslatePoint(default, window).X, 1, "La liste s'ouvre à l'aplomb de la recherche.");
+            Assert.AreEqual(bar.ActualHeight + 2, card.TranslatePoint(default, window).Y, 1, "Juste sous la barre.");
+            Assert.IsGreaterThanOrEqualTo(360, card.ActualWidth);
+
+            query.Text = "parametres";
+            Assert.AreEqual("Aller à : Paramètres", test.Shell.PaletteResults.Single().Label);
+            query.RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(query)!, 0, Key.Escape) { RoutedEvent = Keyboard.KeyDownEvent });
+            TestShell.Flush();
+            Assert.IsFalse(test.Shell.IsPaletteOpen);
+            Assert.IsTrue(button.IsVisible);
+
+            test.Shell.OpenPalette();
+            TestShell.Flush();
+            var navigation = (ListBox)window.FindName("MainNavigation");
+            var item = (ListBoxItem)navigation.ItemContainerGenerator.ContainerFromIndex(1);
+            item.Focus();
+            TestShell.Flush();
+            Assert.IsFalse(test.Shell.IsPaletteOpen, "Un clic ailleurs la ferme, comme un menu.");
+            Assert.IsTrue(item.IsKeyboardFocused, "Le focus reste où l'on a cliqué.");
+
+            window.Width = 520;
+            test.Shell.OpenPalette();
+            TestShell.Flush();
+            var right = card.TranslatePoint(new Point(card.ActualWidth, 0), window).X;
+            Assert.IsLessThanOrEqualTo(((FrameworkElement)window.Content).ActualWidth - 15, right, "Étroite, la fenêtre garde la liste entière.");
+            Assert.IsTrue(query.IsVisible);
         }
         finally
         {
