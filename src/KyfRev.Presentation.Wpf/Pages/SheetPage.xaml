@@ -173,6 +173,34 @@
           <TextBlock x:Name="RebindPrompt" Text="{Binding RebindingPrompt}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" VerticalAlignment="Center" AutomationProperties.LiveSetting="Polite" />
         </DockPanel>
 
+        <!-- Une extension demande un texte : sa consigne, puis de quoi le prendre dans la fiche, l'écrire, passer ou terminer. -->
+        <Border x:Name="GuidedBar" DataContext="{Binding Guided}" Margin="16,0,16,8" Padding="12,10" CornerRadius="8" BorderThickness="1"
+                BorderBrush="{DynamicResource Kyf.Brush.Primary}" Background="{DynamicResource Kyf.Brush.Surface}"
+                Visibility="{Binding IsActive, Converter={StaticResource Visible}, FallbackValue=Collapsed}" AutomationProperties.Name="{Binding Prompt}">
+          <StackPanel>
+            <DockPanel>
+              <WrapPanel x:Name="GuidedButtons" DockPanel.Dock="Right" VerticalAlignment="Center">
+                <Button x:Name="GuidedTake" Content="{x:Static pages:ReadingText.GuidedTake}" Style="{DynamicResource Kyf.Button.Primary}" Click="OnGuidedTake" Margin="8,0,8,0" />
+                <Button x:Name="GuidedSkip" Content="{x:Static pages:ReadingText.GuidedSkip}" Command="{Binding SkipCommand}" Margin="0,0,8,0" />
+                <Button x:Name="GuidedStop" Content="{x:Static pages:ReadingText.GuidedStop}" Command="{Binding StopSeriesCommand}" />
+              </WrapPanel>
+              <TextBlock x:Name="GuidedPrompt" Text="{Binding Prompt}" Style="{DynamicResource Kyf.Text.BodyStrong}" TextWrapping="Wrap" VerticalAlignment="Center"
+                         AutomationProperties.LiveSetting="Assertive" />
+            </DockPanel>
+            <TextBlock x:Name="GuidedHint" Text="{Binding Hint}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,6,0,0"
+                       Visibility="{Binding HasHint, Converter={StaticResource Visible}}" AutomationProperties.LiveSetting="Polite" />
+            <DockPanel Margin="0,8,0,0" Visibility="{Binding AllowsTyping, Converter={StaticResource Visible}}">
+              <Button x:Name="GuidedTypeConfirm" DockPanel.Dock="Right" Content="{x:Static pages:ReadingText.GuidedTypeConfirm}" Command="{Binding TakeTypedCommand}" Margin="8,0,0,0" />
+              <TextBox x:Name="GuidedTyped" Text="{Binding Typed, UpdateSourceTrigger=PropertyChanged}" kyf:Field.Placeholder="{x:Static pages:ReadingText.GuidedTypePlaceholder}"
+                       AutomationProperties.Name="{x:Static pages:ReadingText.GuidedTypePlaceholder}">
+                <TextBox.InputBindings>
+                  <KeyBinding Key="Enter" Command="{Binding TakeTypedCommand}" />
+                </TextBox.InputBindings>
+              </TextBox>
+            </DockPanel>
+          </StackPanel>
+        </Border>
+
         <!-- Écouter la fiche : la lecture et ses réglages. Sur une fenêtre étroite, ils passent à la ligne. -->
         <WrapPanel x:Name="ListenBar" Margin="16,0,16,8" DataContext="{Binding ReadAloud}" Visibility="{Binding IsOpen, Converter={StaticResource Visible}, FallbackValue=Collapsed}"
                    AutomationProperties.Name="{x:Static pages:ReadingText.ListenRegion}">

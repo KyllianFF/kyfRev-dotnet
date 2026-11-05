@@ -6,7 +6,9 @@ using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Threading;
 using KyfRev.DesignSystem.Controls;
+using KyfRev.Extensions.Host;
 using KyfRev.Presentation.Wpf.Editing;
+using KyfRev.Presentation.Wpf.Extensions;
 using KyfRev.Presentation.Wpf.Reading;
 using KyfRev.Rendering;
 
@@ -198,6 +200,11 @@ internal sealed partial class SheetPage : UserControl
     /// <summary>La fiche s'ouvre sur le passage demandé : elle peut être lue avant ou après que la vue la montre.</summary>
     private void ShowWantedPassage(SheetPageViewModel page)
     {
+        if (page is { Reading: not null, RangeToShow: { } range })
+        {
+            page.RangeToShow = null;
+            Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () => SheetText.Select(range.Start, range.End));
+        }
         if (page is { Reading: not null, PassageToShow: { } wanted })
         {
             page.PassageToShow = null;
@@ -301,12 +308,15 @@ internal sealed partial class SheetPage : UserControl
             {
                 return [Item(ReadingText.RebindHere, () => page.RebindAtCommand.Execute(position)), Item(ReadingText.RebindCancel, () => page.CancelRebindingCommand.Execute(null))];
             }
+            var guided = page.Guided.IsActive ? [Item(ReadingText.GuidedTakeFor(page.Guided.Extension), () => Take(page, position)), new Separator()] : new List<Control>();
             return
             [
+                .. guided,
                 ActionMenus.Quick(ReadingText.Copy, Icons.Copy, ApplicationCommands.Copy, SheetText),
                 ActionMenus.Quick(ReadingText.Highlight, Icons.Highlighter, () => page.HighlightCommand.Execute(position)),
                 ActionMenus.Quick(ReadingText.Annotate, Icons.Comment, () => page.StartAnnotatingCommand.Execute(position)),
                 ActionMenus.Quick(ReadingText.Define, Icons.Dictionary, () => page.StartDefiningCommand.Execute(position)),
+                .. ExtensionItems(page, position),
                 new Separator(),
                 .. ListenItems(page, SheetText.Selection?.Start),
                 EditSheetItem(page),
@@ -316,6 +326,50 @@ internal sealed partial class SheetPage : UserControl
         return entry is null
             ? [.. ListenItems(page, (source as TextElement)?.ContentStart), EditSheetItem(page)]
             : [.. PassageMenuItems(page, entry), new Separator(), EditSheetItem(page)];
+    }
+
+    /// <summary>Les entrées que les extensions ajoutent au clic droit d'un texte sélectionné, avec ce texte et sa place.</summary>
+    private List<Control> ExtensionItems(SheetPageViewModel page, TextPosition position)
+    {
+        if (page.Reading is not { } reading || TryFindResource(ExtensionPages.ResourceKey) is not ExtensionPages pages)
+        {
+            return [];
+        }
+        var context = new Dictionary<string, string>
+        {
+            ["id"] = page.SheetId,
+            ["titre"] = reading.Title,
+            ["dossier"] = reading.Folder,
+            ["texte"] = reading.Map.Text[position.Start..position.End],
+            ["debut"] = position.Start.ToString(CultureInfo.InvariantCulture),
+            ["fin"] = position.End.ToString(CultureInfo.InvariantCulture),
+        };
+        var entries = pages.MenuEntries(ExtensionMenuZone.Selection, context);
+        return entries.Count == 0 ? [] : [new Separator(), .. entries.Select(entry => Item(entry.Label, entry.Run))];
+    }
+
+    /// <summary>« Prendre la sélection » : le texte sélectionné part à l'extension qui l'attend.</summary>
+    private void OnGuidedTake(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is SheetPageViewModel page)
+        {
+            if (SheetText.CurrentSelection() is { } position && position.End > position.Start)
+            {
+                Take(page, position);
+            }
+            else
+            {
+                page.Guided.NeedsSelection();
+            }
+        }
+    }
+
+    private static void Take(SheetPageViewModel page, TextPosition position)
+    {
+        if (page.Reading is { } reading)
+        {
+            page.Guided.Take(page.SheetId, reading.Title, position.Start, position.End, reading.Map.Text[position.Start..position.End]);
+        }
     }
 
     /// <summary>« Écouter d'ici », là où l'écoute a un sens.</summary>

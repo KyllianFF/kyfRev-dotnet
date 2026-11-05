@@ -37,6 +37,7 @@ internal sealed partial class App : System.Windows.Application
         Resources[MermaidEngine.ResourceKey] = _services.GetRequiredService<MermaidEngine>();
         Resources[NetworkBlock.ResourceKey] = _services.GetRequiredService<INetworkSchemas>();
         Resources[ExtensionBlocks.ResourceKey] = _services.GetRequiredService<ExtensionBlocks>();
+        Resources[ExtensionPages.ResourceKey] = _services.GetRequiredService<ExtensionPages>();
         var shell = _services.GetRequiredService<ShellViewModel>();
         if (e.Args.Contains("--galerie", StringComparer.Ordinal))
         {

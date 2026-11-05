@@ -565,6 +565,12 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
     /// <summary>Le passage à montrer à l'ouverture, une seule fois ; rien pour la montrer depuis le début.</summary>
     public string? PassageToShow { get; set; }
 
+    /// <summary>Le texte à sélectionner à l'ouverture, une seule fois : là où une extension rouvre la fiche.</summary>
+    public (int Start, int End)? RangeToShow { get; set; }
+
+    /// <summary>La sélection guidée qu'une extension demande dans cette fiche.</summary>
+    public GuidedSelectionBar Guided { get; } = new();
+
     /// <summary>Le texte à trous de la révision.</summary>
     public TextHoles Holes { get; } = new();
 

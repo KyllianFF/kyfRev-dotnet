@@ -514,6 +514,57 @@ public sealed class ExtensionEngineTests
         Assert.IsNull(Wait(scene.Engine.CountAsync("jamais-installee")));
     }
 
+    [EngineTest]
+    public void A_guided_selection_waits_for_the_user_without_the_patience_running()
+    {
+        using var scene = new Scene();
+        scene.InstallWith("guidee", """{"api":2,"id":"guidee","nom":"Guidée","version":"1","vue":{"titre":"G"},"permissions":["selection","fiches:lecture"]}""", """
+            let recu = "rien";
+            kyfrev.vue(() => recu);
+            kyfrev.commande("demander", async () => {
+              const r = await kyfrev.selection.demander("Sélectionnez la question", { fiche: "f_1", saisie: false });
+              recu = `${r.choix}|${r.texte}|${r.fiche}|${r.titre}|${r.debut}|${r.fin}`;
+            });
+            kyfrev.commande("ouvrir", () => kyfrev.fiches.ouvrir("f_1", { debut: 3, fin: 9 }));
+            kyfrev.commande("ouvrir-tout", () => kyfrev.fiches.ouvrir("f_2"));
+            """);
+        scene.InstallWith("sans", """{"api":2,"id":"sans","nom":"Sans","version":"1","vue":{"titre":"S"}}""", """
+            kyfrev.vue(() => "sans");
+            kyfrev.commande("demander", () => kyfrev.selection.demander("x"));
+            kyfrev.commande("ouvrir", () => kyfrev.fiches.ouvrir("f_1"));
+            """);
+        using var ui = new UiThread();
+        var screen = new FakeScreen { Delay = TimeSpan.FromSeconds(3) };
+
+        StringAssert.Contains(Wait(scene.Engine.CommandAsync("guidee", "demander", new Dictionary<string, string>())).Error, "ne montre rien", StringComparison.Ordinal);
+        scene.Engine.Screen = screen;
+        scene.Engine.Patience = TimeSpan.FromSeconds(1);
+        var asked = Wait(scene.Engine.CommandAsync("guidee", "demander", new Dictionary<string, string>()));
+        Assert.IsTrue(asked.Succeeded, "L'extension attend l'utilisateur trois secondes, au-delà de sa patience d'une seconde : " + asked.Error);
+        Assert.AreEqual(new SelectionAsk("Guidée", "Sélectionnez la question", "f_1", AllowsTyping: false), screen.Asks.Single());
+        scene.Engine.Patience = TimeSpan.FromSeconds(30);
+        Assert.AreEqual("selection|la mitose|f_1|Mitose|3|9", TextOf(scene, "guidee"));
+
+        Assert.IsTrue(Wait(scene.Engine.CommandAsync("guidee", "ouvrir", new Dictionary<string, string>())).Succeeded);
+        Assert.IsTrue(Wait(scene.Engine.CommandAsync("guidee", "ouvrir-tout", new Dictionary<string, string>())).Succeeded);
+        Assert.AreEqual("f_1 3 9 | f_2 - -", string.Join(" | ", screen.Opened));
+
+        screen.Delay = TimeSpan.Zero;
+        screen.Refusal = "aucune fiche ouverte";
+        StringAssert.Contains(Wait(scene.Engine.CommandAsync("guidee", "demander", new Dictionary<string, string>())).Error, "aucune fiche ouverte", StringComparison.Ordinal);
+        screen.Refusal = null;
+        screen.Problem = "fiche introuvable";
+        StringAssert.Contains(Wait(scene.Engine.CommandAsync("guidee", "ouvrir", new Dictionary<string, string>())).Error, "fiche introuvable", StringComparison.Ordinal);
+
+        StringAssert.Contains(Wait(scene.Engine.CommandAsync("sans", "demander", new Dictionary<string, string>())).Error, "« selection » non demandée", StringComparison.Ordinal);
+        StringAssert.Contains(Wait(scene.Engine.CommandAsync("sans", "ouvrir", new Dictionary<string, string>())).Error, "« fiches:lecture » non demandée", StringComparison.Ordinal);
+        scene.Library.Library.SetGranted("guidee", ExtensionRight.Selection, false);
+        StringAssert.Contains(Wait(scene.Engine.CommandAsync("guidee", "demander", new Dictionary<string, string>())).Error, "retirée dans les Paramètres", StringComparison.Ordinal);
+        Assert.HasCount(2, screen.Asks, "Une permission retirée n'arrive pas jusqu'à l'écran.");
+        scene.Library.SetActive("guidee", false);
+        StringAssert.Contains(Wait(scene.Engine.CommandAsync("guidee", "demander", new Dictionary<string, string>())).Error, "inactive", StringComparison.Ordinal);
+    }
+
     [TestMethod]
     public void The_engine_needs_its_folder_its_library_and_its_requests()
     {
@@ -577,6 +628,17 @@ public sealed class ExtensionEngineTests
         /// <summary>Installe une extension publiée, telle quelle.</summary>
         public void Publish(string id) => Assert.IsTrue(Library.Library.Install(Path.Combine(Published, id)).Succeeded);
 
+        /// <summary>Installe une extension d'essai avec son manifeste.</summary>
+        public void InstallWith(string id, string manifest, string script)
+        {
+            var source = Path.Combine(_root, "sources", id);
+            Directory.CreateDirectory(source);
+            File.WriteAllText(Path.Combine(source, ExtensionManifest.FileName), manifest);
+            File.WriteAllText(Path.Combine(source, "extension.js"), script);
+            var installed = Library.Library.Install(source);
+            Assert.IsTrue(installed.Succeeded, installed.Error);
+        }
+
         /// <summary>Installe une extension d'essai, avec toutes les permissions si elle lit les fiches, et rend son dossier source.</summary>
         public string Install(string id, string script)
         {
@@ -605,6 +667,33 @@ public sealed class ExtensionEngineTests
         public Outcome<Done> SetActive(string id, bool active) => Library.SetActive(id, active);
 
         public Outcome<InstalledExtension> Install(string source) => Library.Install(source);
+    }
+
+    /// <summary>Un écran d'essai : il répond à la place de l'utilisateur, après un délai.</summary>
+    private sealed class FakeScreen : IExtensionScreen
+    {
+        public TimeSpan Delay { get; set; }
+
+        public string? Refusal { get; set; }
+
+        public string? Problem { get; set; }
+
+        public List<SelectionAsk> Asks { get; } = [];
+
+        public List<string> Opened { get; } = [];
+
+        public async Task<(GuidedSelection? Answer, string? Refusal)> AskSelectionAsync(SelectionAsk ask)
+        {
+            Asks.Add(ask);
+            await Task.Delay(Delay).ConfigureAwait(true);
+            return Refusal is { } refusal ? (null, refusal) : (new GuidedSelection(GuidedSelection.Taken, "la mitose", "f_1", "Mitose", 3, 9), null);
+        }
+
+        public string? OpenSheet(string sheetId, int? passageStart, int? passageEnd)
+        {
+            Opened.Add($"{sheetId} {passageStart?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "-"} {passageEnd?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? "-"}");
+            return Problem;
+        }
     }
 
     /// <summary>Le coffre tel que les extensions le voient : une fiche, dont le texte change à la demande.</summary>

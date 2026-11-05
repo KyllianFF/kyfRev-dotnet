@@ -154,6 +154,33 @@ public static class ReadingText
     /// <summary>Un bloc d'extension qui ne s'est pas dessiné : son texte reste, avec la raison.</summary>
     public static string ExtensionBlockFailedOf(string language, string reason) => $"Le bloc « {language} » ne s'affiche pas ({reason}) : le voici sous sa forme de texte.";
 
+    /// <summary>La consigne d'une sélection guidée, avec le nom de l'extension qui la demande.</summary>
+    public static string GuidedPromptOf(string extension, string prompt) => $"{extension} : {prompt}";
+
+    /// <summary>« Prendre la sélection » sans rien de sélectionné.</summary>
+    public const string GuidedNeedsSelection = "Sélectionnez d'abord un texte dans la fiche, ou écrivez-le ci-dessous.";
+
+    /// <summary>Une sélection guidée sans fiche ouverte.</summary>
+    public const string GuidedNoSheet = "aucune fiche ouverte : ouvrez-en une, ou donnez-la avec { fiche }";
+
+    /// <summary>Le bouton qui prend la sélection.</summary>
+    public const string GuidedTake = "Prendre la sélection";
+
+    /// <summary>Le clic droit sur un texte, pendant une sélection guidée.</summary>
+    public static string GuidedTakeFor(string extension) => $"Prendre pour « {extension} »";
+
+    /// <summary>Le champ pour écrire ce qui manque.</summary>
+    public const string GuidedTypePlaceholder = "Ou écrivez-le ici, s'il n'est pas dans la fiche";
+
+    /// <summary>Le bouton qui valide le texte écrit.</summary>
+    public const string GuidedTypeConfirm = "Valider le texte";
+
+    /// <summary>Le bouton qui passe.</summary>
+    public const string GuidedSkip = "Passer";
+
+    /// <summary>Le bouton qui termine la série.</summary>
+    public const string GuidedStop = "Terminer";
+
     /// <summary>Plus aucune extension active ne dessine ce langage.</summary>
     public static string NoExtensionBlockOf(string language) => $"aucune extension active ne dessine les blocs « {language} »";
 

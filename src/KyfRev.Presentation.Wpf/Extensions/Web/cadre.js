@@ -74,6 +74,15 @@
       lister: () => demander("fiches.lister", []),
       /** Texte Markdown d'une fiche (permission « fiches:lecture »). */
       lire: (id) => demander("fiches.lire", [String(id)]),
+      /** Ouvre une fiche en lecture, et y sélectionne un passage { debut, fin } s'il est donné (permission « fiches:lecture »). Contrat 2. */
+      ouvrir: (id, passage) => demander("fiches.ouvrir", [String(id), passage ?? {}]),
+    }),
+    selection: Object.freeze({
+      /**
+       * Demande à l'utilisateur de sélectionner un texte dans une fiche, sous une consigne (permission « selection ») : il le prend,
+       * l'écrit à la main, passe, ou termine. Options : { fiche, saisie }. Contrat 2.
+       */
+      demander: (consigne, options) => demander("selection.demander", [String(consigne), options ?? {}]),
     }),
     stockage: Object.freeze({
       /** Données de l'extension dans le coffre, ou null (permission « stockage »). */
