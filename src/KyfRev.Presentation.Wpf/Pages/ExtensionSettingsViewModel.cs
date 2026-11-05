@@ -38,6 +38,10 @@ public sealed partial class ExtensionRightRow : ObservableObject
     /// <summary>La permission.</summary>
     public ExtensionRight Right { get; }
 
+    /// <summary>Elle se coche ou se décoche : seulement pour une extension active.</summary>
+    [ObservableProperty]
+    public partial bool IsAvailable { get; set; } = true;
+
     /// <summary>Ce qu'elle permet, en clair.</summary>
     public string Text { get; }
 
@@ -102,12 +106,15 @@ public sealed partial class ExtensionRightRow : ObservableObject
 public sealed partial class ExtensionRow : ObservableObject
 {
     private readonly Action<ExtensionRow, bool> _changed;
+    private readonly HashSet<ExtensionRight> _withdrawn;
     private bool _showing;
 
     internal ExtensionRow(InstalledExtension extension, IReadOnlyList<ExtensionRight> withdrawn, Action<ExtensionRow, bool> changed, Action<ExtensionRow, ExtensionRightRow, bool> granted)
     {
         var manifest = extension.Manifest;
         _changed = changed;
+        _withdrawn = [.. withdrawn];
+        Manifest = manifest;
         Id = manifest.Id;
         Name = manifest.Name;
         Version = manifest.Author is { } author ? ModulesSettingsText.ExtensionVersionByOf(manifest.Version, author) : manifest.Version;
@@ -119,6 +126,9 @@ public sealed partial class ExtensionRow : ObservableObject
 
     /// <summary>Son identifiant.</summary>
     public string Id { get; }
+
+    /// <summary>Son manifeste : ce que redit la confirmation quand on la réactive.</summary>
+    internal ExtensionManifest Manifest { get; }
 
     /// <summary>Son nom.</summary>
     public string Name { get; }
@@ -146,15 +156,40 @@ public sealed partial class ExtensionRow : ObservableObject
 
     /// <summary>Elle est active.</summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsInactive))]
     public partial bool IsActive { get; set; }
 
-    /// <summary>Remontre l'état enregistré, sans le changer.</summary>
+    /// <summary>Désactivée, elle n'a plus aucune permission : la carte le dit.</summary>
+    public bool IsInactive => !IsActive;
+
+    /// <summary>Remontre l'état enregistré, sans le changer : désactivée, ses permissions se montrent décochées, et ne se cochent pas.</summary>
     internal void Show(bool active)
     {
         _showing = true;
         IsActive = active;
         _showing = false;
+        foreach (var right in Rights)
+        {
+            right.IsAvailable = active;
+            right.Show(active && !_withdrawn.Contains(right.Right));
+        }
     }
+
+    /// <summary>Une permission vient d'être retirée ou rendue.</summary>
+    internal void Remember(ExtensionRight right, bool granted)
+    {
+        if (granted)
+        {
+            _withdrawn.Remove(right);
+        }
+        else
+        {
+            _withdrawn.Add(right);
+        }
+    }
+
+    /// <summary>Réactivée, elle a de nouveau tout ce qu'elle demande : la confirmation vient de le montrer.</summary>
+    internal void GrantAll() => _withdrawn.Clear();
 
     partial void OnIsActiveChanged(bool value)
     {
@@ -176,6 +211,7 @@ public sealed partial class ExtensionSettingsViewModel : ObservableObject
     private readonly IFolderPicker _picker;
     private string? _source;
     private ExtensionRow? _toRemove;
+    private ExtensionRow? _toReactivate;
 
     /// <summary>La carte de cette bibliothèque.</summary>
     /// <param name="library">Les extensions installées.</param>
@@ -294,20 +330,26 @@ public sealed partial class ExtensionSettingsViewModel : ObservableObject
         Show();
     }
 
-    private void Prepare(ExtensionPreview preview)
+    private void Prepare(ExtensionPreview preview) =>
+        Prepare(
+            preview.Manifest,
+            preview.InstalledVersion is { } installed
+                ? ModulesSettingsText.ExtensionReplacesOf(installed)
+                : ModulesSettingsText.ExtensionFilesOf(preview.FileCount, DataSettingsViewModel.SizeOf(preview.Size)),
+            preview.InstalledVersion is null ? [] : _library.Withdrawn(preview.Manifest.Id),
+            preview.NewRights);
+
+    /// <summary>Ce que montre la confirmation : ce que l'extension ajoute, et chaque permission qu'elle demande, avec son poids.</summary>
+    private void Prepare(ExtensionManifest manifest, string? detail, IReadOnlyList<ExtensionRight> withdrawn, IReadOnlyList<ExtensionRight> newRights)
     {
-        var manifest = preview.Manifest;
         var summary = manifest.Author is { } author
             ? ModulesSettingsText.ExtensionSummaryByOf(manifest.Name, manifest.Version, author)
             : ModulesSettingsText.ExtensionSummaryOf(manifest.Name, manifest.Version);
-        InstallSummary = $"{summary}. " + (preview.InstalledVersion is { } installed
-            ? ModulesSettingsText.ExtensionReplacesOf(installed)
-            : ModulesSettingsText.ExtensionFilesOf(preview.FileCount, DataSettingsViewModel.SizeOf(preview.Size)));
+        InstallSummary = detail is null ? $"{summary}." : $"{summary}. {detail}";
         InstallAdds = [.. AddsOf(manifest).Select(add => char.ToUpper(add[0], CultureInfo.CurrentCulture) + add[1..])];
-        var withdrawn = preview.InstalledVersion is null ? [] : _library.Withdrawn(manifest.Id);
-        InstallRights = [.. manifest.Permissions.Select(right => new ExtensionRightRow(right, !withdrawn.Contains(right), preview.NewRights.Contains(right), null))];
+        InstallRights = [.. manifest.Permissions.Select(right => new ExtensionRightRow(right, !withdrawn.Contains(right), newRights.Contains(right), null))];
         InstallHasHighRisk = InstallRights.Any(right => right.Risk == ExtensionRisk.High && right.IsGranted);
-        InstallHasNewRights = preview.NewRights.Count > 0;
+        InstallHasNewRights = newRights.Count > 0;
         InstallLimits = InstallRights.Any(right => right.Right == ExtensionRight.WriteSheets && right.IsGranted)
             ? ModulesSettingsText.ExtensionLimitsWriting
             : ModulesSettingsText.ExtensionLimits;
@@ -323,19 +365,54 @@ public sealed partial class ExtensionSettingsViewModel : ObservableObject
         IsEmpty = Rows.Count == 0;
     }
 
+    /// <summary>
+    /// Désactivée, une extension perd ses permissions. La réactiver repose la question : la confirmation montre de nouveau ce qu'elle
+    /// demande, et rien ne change avant la réponse.
+    /// </summary>
     private void Toggle(ExtensionRow row, bool active)
     {
         Error = null;
         Message = null;
+        if (active && row.HasRights)
+        {
+            row.Show(false);
+            _source = null;
+            _toReactivate = row;
+            InstallTitle = ModulesSettingsText.ExtensionReactivateTitle;
+            InstallAction = ModulesSettingsText.ExtensionReactivate;
+            Prepare(row.Manifest, null, [], []);
+            IsConfirmingInstall = true;
+            return;
+        }
         var outcome = _library.SetActive(row.Id, active);
         if (outcome.Succeeded)
         {
             Message = active ? ModulesSettingsText.ExtensionEnabledOf(row.Name) : ModulesSettingsText.ExtensionDisabledOf(row.Name);
+            row.Show(active);
             Changed?.Invoke(this, new ExtensionChangedEventArgs(row.Id));
             return;
         }
         Error = outcome.Error;
         row.Show(!active);
+    }
+
+    /// <summary>La réactivation confirmée : active, et avec tout ce qu'elle demande.</summary>
+    private void Reactivate(ExtensionRow row)
+    {
+        var outcome = _library.SetActive(row.Id, true);
+        foreach (var right in _library.Withdrawn(row.Id))
+        {
+            outcome = outcome.Succeeded ? _library.SetGranted(row.Id, right, true) : outcome;
+        }
+        if (!outcome.Succeeded)
+        {
+            Error = outcome.Error;
+            return;
+        }
+        row.GrantAll();
+        row.Show(true);
+        Message = ModulesSettingsText.ExtensionReactivatedOf(row.Name);
+        Changed?.Invoke(this, new ExtensionChangedEventArgs(row.Id));
     }
 
     private void Grant(ExtensionRow row, ExtensionRightRow right, bool granted)
@@ -345,6 +422,7 @@ public sealed partial class ExtensionSettingsViewModel : ObservableObject
         var outcome = _library.SetGranted(row.Id, right.Right, granted);
         if (outcome.Succeeded)
         {
+            row.Remember(right.Right, granted);
             Message = granted ? ModulesSettingsText.ExtensionRightGrantedOf(row.Name, right.Text) : ModulesSettingsText.ExtensionRightWithdrawnOf(row.Name, right.Text);
             return;
         }
@@ -371,6 +449,7 @@ public sealed partial class ExtensionSettingsViewModel : ObservableObject
         }
         var updates = preview.Value.InstalledVersion is not null;
         _source = source;
+        _toReactivate = null;
         InstallTitle = updates ? ModulesSettingsText.ExtensionUpdateTitle : ModulesSettingsText.ExtensionInstallTitle;
         InstallAction = updates ? ModulesSettingsText.ExtensionUpdate : ModulesSettingsText.ExtensionInstall;
         Prepare(preview.Value);
@@ -381,6 +460,15 @@ public sealed partial class ExtensionSettingsViewModel : ObservableObject
     private async Task AnswerInstallAsync(bool confirmed)
     {
         IsConfirmingInstall = false;
+        if (_toReactivate is { } row)
+        {
+            _toReactivate = null;
+            if (confirmed)
+            {
+                Reactivate(row);
+            }
+            return;
+        }
         if (!confirmed || _source is not { } source)
         {
             return;

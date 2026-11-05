@@ -398,6 +398,8 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Corrigé
 
+- Extensions : désactivée, une extension n'a plus aucune permission, et la carte le montre ; la réactiver repose la question,
+  avec la même confirmation qu'à l'installation.
 - Le curseur devient une main sur tout ce qui se clique, y compris les trous et les passages du texte.
 - En révision, « Afficher le passage » et un clic dans le volet découvrent le passage masqué.
 - Le passage visé depuis le volet ressort nettement dans le texte, dans les deux thèmes.

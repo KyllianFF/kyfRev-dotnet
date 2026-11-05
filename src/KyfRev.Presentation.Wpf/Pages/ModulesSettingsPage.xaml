@@ -78,11 +78,13 @@
                       <TextBlock Text="{Binding Adds}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="26,2,0,0" />
                       <StackPanel x:Name="ExtensionRights" Margin="26,8,0,0" Visibility="{Binding HasRights, Converter={StaticResource Visible}}">
                         <TextBlock Text="{x:Static pages:ModulesSettingsText.ExtensionRightsTitle}" Style="{DynamicResource Kyf.Text.Caption}" FontWeight="SemiBold" />
+                        <TextBlock x:Name="ExtensionRightsInactive" Text="{x:Static pages:ModulesSettingsText.ExtensionRightsInactive}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap"
+                                   Visibility="{Binding IsInactive, Converter={StaticResource Visible}}" />
                         <ItemsControl ItemsSource="{Binding Rights}" Focusable="False" AutomationProperties.Name="{x:Static pages:ModulesSettingsText.ExtensionRightsTitle}"
                                       AutomationProperties.HelpText="{x:Static pages:ModulesSettingsText.ExtensionRightsHelp}">
                           <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="{x:Type pages:ExtensionRightRow}">
-                              <CheckBox x:Name="ExtensionRight" IsChecked="{Binding IsGranted}" Margin="0,4,0,0" AutomationProperties.Name="{Binding Spoken}"
+                              <CheckBox x:Name="ExtensionRight" IsChecked="{Binding IsGranted}" IsEnabled="{Binding IsAvailable}" Margin="0,4,0,0" AutomationProperties.Name="{Binding Spoken}"
                                         ToolTip="{x:Static pages:ModulesSettingsText.ExtensionRightsHelp}">
                                 <DockPanel>
                                   <kyf:Icon x:Name="RiskGlyph" DockPanel.Dock="Left" Text="{Binding Glyph}" Margin="0,1,6,0" VerticalAlignment="Top" Foreground="{DynamicResource Kyf.Brush.TextSecondary}" />

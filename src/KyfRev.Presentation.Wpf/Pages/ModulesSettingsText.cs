@@ -230,6 +230,18 @@ public static class ModulesSettingsText
     /// <summary>« Permission rendue à « {0} » : « {1} ». ».</summary>
     public static string ExtensionRightGrantedOf(string name, string right) => Format("ExtensionRightGranted", name, right);
 
+    /// <summary>« Réactiver l'extension ? ».</summary>
+    public static string ExtensionReactivateTitle => Text(nameof(ExtensionReactivateTitle));
+
+    /// <summary>« Réactiver ».</summary>
+    public static string ExtensionReactivate => Text(nameof(ExtensionReactivate));
+
+    /// <summary>« Désactivée, elle n'a plus aucune permission ; la réactiver les redemande. ».</summary>
+    public static string ExtensionRightsInactive => Text(nameof(ExtensionRightsInactive));
+
+    /// <summary>« Extension « {0} » réactivée, avec les permissions confirmées. ».</summary>
+    public static string ExtensionReactivatedOf(string name) => Format("ExtensionReactivated", name);
+
     /// <summary>« Modules et extensions ».</summary>
     public static string Tab => Text(nameof(Tab));
 

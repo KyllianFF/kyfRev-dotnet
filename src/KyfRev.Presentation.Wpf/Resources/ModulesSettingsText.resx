@@ -198,6 +198,18 @@
   <data name="ExtensionRightGranted" xml:space="preserve">
     <value>Permission rendue à « {0} » : « {1} ».</value>
   </data>
+  <data name="ExtensionReactivateTitle" xml:space="preserve">
+    <value>Réactiver l'extension ?</value>
+  </data>
+  <data name="ExtensionReactivate" xml:space="preserve">
+    <value>Réactiver</value>
+  </data>
+  <data name="ExtensionReactivated" xml:space="preserve">
+    <value>Extension « {0} » réactivée, avec les permissions confirmées.</value>
+  </data>
+  <data name="ExtensionRightsInactive" xml:space="preserve">
+    <value>Désactivée, elle n'a plus aucune permission ; la réactiver les redemande.</value>
+  </data>
   <data name="ModulesHelp" xml:space="preserve">
     <value>Des fonctions facultatives, pour ce coffre. Désactiver un module le retire des menus ; ce qu'il a créé reste dans le coffre, intact.</value>
   </data>
