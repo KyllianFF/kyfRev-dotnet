@@ -385,6 +385,28 @@ public sealed class DashboardTests
     }
 
     [TestMethod]
+    public async Task Extensions_bring_their_cards_after_those_of_the_modules()
+    {
+        var time = new FakeTime(new DateTimeOffset(2026, 10, 1, 8, 0, 0, TimeSpan.Zero));
+        using var test = new TestVaults(AppMode.Development, time);
+        Assert.IsNotNull(test.App.Vaults.Create(test.PathOf("Coffre")).Vault);
+        var answers = new Queue<IReadOnlyList<DashboardCard>>([[new DashboardCard("Quiz", "3 à revoir", null)], [new DashboardCard("Quiz", "2 à revoir", null)]]);
+        var page = new DashboardPageViewModel(test.App.Reminders, test.App.Sheets, new FakeOpener(), [new Widget(10, "Premier")])
+        {
+            LookForNews = () => Task.FromResult(true),
+            ExtensionCards = () => Task.FromResult(answers.Dequeue()),
+        };
+
+        await page.RefreshCommand.ExecuteAsync(null);
+        Same("Premier | Quiz", page.Cards.Select(card => card.Title));
+        Assert.AreEqual("3 à revoir", page.Cards[^1].Text);
+
+        await page.RefreshCommand.ExecuteAsync(null);
+        Same("Premier | Quiz", page.Cards.Select(card => card.Title), "L'encart d'une extension se remplace, il ne s'ajoute pas.");
+        Assert.AreEqual("2 à revoir", page.Cards[^1].Text);
+    }
+
+    [TestMethod]
     public async Task The_preview_shows_the_chosen_row_without_giving_away_a_passage()
     {
         var time = new FakeTime(new DateTimeOffset(2026, 10, 1, 8, 0, 0, TimeSpan.Zero));

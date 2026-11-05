@@ -5,7 +5,9 @@ using System.Windows.Input;
 using KyfRev.Application.Model;
 using KyfRev.Application.UseCases;
 using KyfRev.DesignSystem.Controls;
+using KyfRev.Extensions.Host;
 using KyfRev.Presentation.Wpf.Pages;
+using KyfRev.Presentation.Wpf.Shell;
 
 namespace KyfRev.Presentation.Wpf.Tests;
 
@@ -118,6 +120,37 @@ public sealed class SheetActionsTests
 
         view.DataContext = null;
         Assert.IsEmpty(view.RowMenuItems(row));
+    }
+
+    [STATestMethod]
+    public void Extensions_add_their_entries_after_those_of_kyfrev()
+    {
+        using var ui = new UiThread();
+        using var vault = new SheetsVault();
+        var page = vault.Loaded();
+        var asked = new List<string>();
+        var ran = 0;
+        page.ExtensionMenus = (zone, context) =>
+        {
+            asked.Add($"{zone} {string.Join(",", context.OrderBy(entry => entry.Key, StringComparer.Ordinal).Select(entry => $"{entry.Key}={entry.Value}"))}");
+            return zone == ExtensionMenuZone.Sheet ? [new MenuContribution("Créer un quiz", () => ran++)] : [];
+        };
+        var view = new SheetsPage { DataContext = page };
+        var row = page.Rows.OfType<SheetRow>().Single(line => line.Title == "Atomes");
+
+        var items = view.RowMenuItems(row);
+        CollectionAssert.AreEqual(SheetMenu.Append("Créer un quiz").ToList(), Headers(items));
+        Assert.IsInstanceOfType<Separator>(items[^2]);
+        Click(items[^1]);
+        Assert.AreEqual(1, ran);
+        Assert.AreEqual($"Sheet dossier={row.Sheet.Folder},id={row.Sheet.Id},titre=Atomes", asked[0]);
+
+        var folder = page.Rows.OfType<SheetFolderRow>().Single(line => line.Path == "Sciences");
+        CollectionAssert.AreEqual(FolderMenu, Headers(view.RowMenuItems(folder)));
+        Assert.AreEqual("Folder dossier=Sciences", asked[^1]);
+        var withExtensions = view.RowMenuItems(folder).Count;
+        page.ExtensionMenus = null;
+        Assert.AreEqual(view.RowMenuItems(folder).Count, withExtensions, "Rien à ajouter, aucun séparateur de plus.");
     }
 
     [STATestMethod]

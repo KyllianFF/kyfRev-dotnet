@@ -7,6 +7,7 @@ using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using KyfRev.Application;
+using KyfRev.Application.Modules;
 using KyfRev.DesignSystem.Controls;
 using KyfRev.Extensions.Host;
 using KyfRev.Presentation.Wpf.Extensions;
@@ -302,6 +303,8 @@ public sealed class ExtensionPageTests
 
         scene.Page.OnNavigatedTo();
         Assert.IsNull(scene.Page.LastAction);
+        Assert.IsTrue(page.Scroller.Focusable, "Sans contrôle dans un rendu, le focus reste sur la vue.");
+        Assert.IsFalse(page.Scroller.IsTabStop);
     }
 
     [TestMethod]
@@ -374,6 +377,177 @@ public sealed class ExtensionPageTests
         Until(scene, () => again.IsCompleted);
         Assert.AreEqual("nouvelle", page.Content!.Text);
     }
+
+    [EngineTest]
+    public void A_form_sends_its_named_fields_together_and_a_progress_shows_how_far()
+    {
+        using var scene = new Scene();
+        scene.Install("formulaire", """
+            let recu = "rien";
+            kyfrev.action("creer", (valeur, donnees) => { recu = JSON.stringify(valeur) + "|" + (donnees.zone ?? ""); });
+            kyfrev.action("annuler", () => { recu = "annulé"; });
+            kyfrev.vue(() => `
+              <p>Reçu : ${recu.replace(/</g, "")}</p>
+              <progress value="3" max="12" aria-label="Avancement"></progress>
+              <progress value="20"></progress>
+              <form data-action="creer" data-zone="z">
+                <label>Nom <input name="nom" required></label>
+                <label>Étiquettes <input name="etiquettes" value="a, b" placeholder="séparées par des virgules"></label>
+                <label>Thème <input name="theme" aria-label="Le thème" placeholder="facultatif"></label>
+                <label><input type="checkbox" name="hasard" checked> Au hasard</label>
+                <input type="radio" name="mode" value="fiche" checked aria-label="Dans la fiche">
+                <input type="radio" name="mode" value="ici" aria-label="Ici">
+                <input type="radio" name="vide" value="x" aria-label="Aucun">
+                <select name="ordre" aria-label="Ordre"><option value="h">Au hasard</option><option selected>Dans l'ordre</option></select>
+                <textarea name="note" aria-label="Note">n</textarea>
+                <button type="button">Rien</button>
+                <button data-action="annuler">Annuler</button>
+                <button class="principal">Commencer</button>
+              </form>
+              <form><input name="seul" aria-label="Seul"><button>Sans action</button></form>`);
+            """);
+        using var ui = new UiThread();
+        var page = scene.Open("formulaire");
+        Button Named(string name) => Tree<Button>(page).Single(button => (button.Content as string) == name);
+        TextBox Field(string name) => Tree<TextBox>(page).Single(box => AutomationProperties.GetName(box) == name);
+
+        var bars = Tree<ProgressBar>(page);
+        Assert.AreEqual((3d, 12d, "Avancement"), (bars[0].Value, bars[0].Maximum, AutomationProperties.GetName(bars[0])));
+        Assert.AreEqual((1d, 1d, "1 / 1"), (bars[1].Value, bars[1].Maximum, AutomationProperties.GetName(bars[1])));
+        Assert.IsTrue(AutomationProperties.GetIsRequiredForForm(Field("Nom")));
+        Assert.AreEqual("séparées par des virgules", AutomationProperties.GetHelpText(Field("Étiquettes")), "Le libellé nomme le champ, l'indication reste une aide.");
+        Assert.AreEqual("facultatif", KyfRev.DesignSystem.Controls.Field.GetPlaceholder(Field("Le thème")), "Un aria-label passe avant le libellé.");
+        Assert.AreEqual("Au hasard", Tree<CheckBox>(page).Single().Content);
+        Assert.IsFalse(Named("Rien").IsEnabled, "type=\"button\" n'envoie pas le formulaire.");
+        Assert.IsFalse(Named("Sans action").IsEnabled, "Un formulaire sans action n'a rien à envoyer.");
+
+        Click(Named("Commencer"));
+        TestShell.Flush();
+        Assert.IsNull(scene.Page!.LastAction, "Un champ obligatoire vide garde le formulaire.");
+
+        Field("Nom").Text = "Autorité";
+        Field("Étiquettes").RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(Field("Étiquettes"))!, 0, Key.Enter) { RoutedEvent = Keyboard.KeyDownEvent });
+        Until(scene, () => Says(page, """Reçu : {"etiquettes":"a, b","hasard":true,"mode":"fiche","nom":"Autorité","note":"n","ordre":"Dans l'ordre","theme":"","vide":null}|z"""));
+
+        Click(Named("Annuler"));
+        Until(scene, () => Says(page, "Reçu : annulé"));
+
+        Field("Nom").Text = "Autre";
+        var radios = Tree<RadioButton>(page);
+        radios.Single(radio => AutomationProperties.GetName(radio) == "Ici").IsChecked = true;
+        Assert.IsFalse(radios.Single(radio => AutomationProperties.GetName(radio) == "Dans la fiche").IsChecked, "Les boutons d'un même nom vont ensemble.");
+        Tree<CheckBox>(page).Single().IsChecked = false;
+        Click(Named("Commencer"));
+        Until(scene, () => Says(page, "\"hasard\":false,\"mode\":\"ici\",\"nom\":\"Autre\""));
+        Field("Seul").RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(Field("Seul"))!, 0, Key.Enter) { RoutedEvent = Keyboard.KeyDownEvent });
+    }
+
+    [EngineTest]
+    public void An_extension_adds_its_entry_its_commands_its_menus_and_its_card()
+    {
+        using var scene = new Scene();
+        scene.InstallWith(
+            "quiz",
+            """
+            {"api":2,"id":"quiz","nom":"Quiz","version":"2","icone":"quiz.svg",
+             "vue":{"titre":"Quiz","compteur":true},
+             "commandes":[{"id":"ajouter","titre":"Ajouter"},{"id":"casser","titre":"Casser"},{"id":"ouvrir","titre":"Ouvrir"}],
+             "menus":{"fiche":[{"commande":"ajouter","titre":"Ajouter ce quiz"}],"dossier":[{"commande":"ajouter","titre":"Quiz du dossier"}]},
+             "encart":{"titre":"Quiz"}}
+            """,
+            """
+            let n = 0;
+            let dernier = "";
+            kyfrev.vue(() => `${n} ${dernier}`);
+            kyfrev.action("plus", () => { n += 1; });
+            kyfrev.action("signaler", () => { n += 1; kyfrev.rafraichir(); });
+            kyfrev.commande("ajouter", (c) => { n += 1; dernier = c.titre ?? c.dossier ?? "recherche"; });
+            kyfrev.commande("casser", () => { throw new Error("elle casse"); });
+            kyfrev.commande("ouvrir", () => kyfrev.ouvrirVue());
+            kyfrev.compteur(() => n);
+            kyfrev.encart(() => n > 0 ? { texte: `${n} à revoir`, detail: "aujourd'hui" } : null);
+            """,
+            ("quiz.svg", """<svg viewBox="0 0 24 24" fill="none"><path d="M4 4h16v16H4Z"/></svg>"""));
+        scene.Install("simple", """kyfrev.vue(() => "simple");""");
+        using var ui = new UiThread();
+        var pages = new ExtensionPages(scene.Library, scene.Engine, () => false);
+        var opened = new List<string>();
+        pages.ViewAsked += (_, e) => opened.Add(e.Extension);
+
+        var entries = pages.Entries();
+        var quiz = entries.Single(entry => entry.Id == "extension:quiz");
+        var simple = entries.Single(entry => entry.Id == "extension:simple");
+        Assert.IsTrue(quiz.HasPicture);
+        Assert.IsTrue(quiz.Picture!.Stroked);
+        Assert.IsTrue(quiz.Picture.Geometry.IsFrozen);
+        Assert.IsFalse(quiz.Badge!.IsShown);
+        Assert.IsFalse(simple.HasPicture);
+        Assert.IsNull(simple.Badge);
+        Assert.AreSame(quiz.Badge, pages.Entries().Single(entry => entry.Id == "extension:quiz").Badge, "Le compteur reste le même d'un menu à l'autre.");
+        Wait(pages.RefreshCountsAsync());
+        Assert.IsNull(quiz.Badge.Text);
+        Assert.IsEmpty(Wait(pages.CardsAsync()));
+
+        var commands = pages.Commands();
+        Assert.AreEqual("Quiz : Ajouter, Quiz : Casser, Quiz : Ouvrir", string.Join(", ", commands.Select(command => command.Label)));
+        commands[0].Execute();
+        Until(scene, () => quiz.Badge.Text == "1");
+
+        var sheet = pages.MenuEntries(ExtensionMenuZone.Sheet, new Dictionary<string, string> { ["id"] = "f_1", ["titre"] = "Une fiche", ["dossier"] = "Histoire" });
+        Assert.AreEqual("Ajouter ce quiz", sheet.Single().Label);
+        sheet.Single().Run();
+        Until(scene, () => quiz.Badge.Text == "2");
+        var folder = pages.MenuEntries(ExtensionMenuZone.Folder, new Dictionary<string, string> { ["dossier"] = "Histoire" });
+        Assert.AreEqual("Quiz du dossier", folder.Single().Label);
+
+        var page = (ExtensionPageViewModel)quiz.Page;
+        page.OnNavigatedTo();
+        UiThread.Until(() => page.Content is not null, TimeSpan.FromMinutes(2));
+        Assert.AreEqual("2 Une fiche", page.Content!.Text.Trim());
+        folder.Single().Run();
+        Until(scene, () => quiz.Badge.Text == "3" && page.Content?.Text.Trim() == "3 Histoire");
+
+        var card = Wait(pages.CardsAsync()).Single();
+        Assert.AreEqual(new DashboardCard("Quiz", "3 à revoir", "aujourd'hui"), card);
+
+        commands[1].Execute();
+        UiThread.Until(() => page.HasError, TimeSpan.FromMinutes(2));
+        StringAssert.Contains(page.Error, "elle casse", StringComparison.Ordinal);
+
+        commands[2].Execute();
+        UiThread.Until(() => opened.Count == 1, TimeSpan.FromMinutes(2));
+        Assert.AreEqual("quiz", opened.Single());
+
+        var acting = page.ActAsync(new ExtensionAction("plus", null, new Dictionary<string, string>()));
+        Until(scene, () => acting.IsCompleted && quiz.Badge.Text == "4");
+        var telling = scene.Engine.ActAsync("quiz", "signaler", null, new Dictionary<string, string>());
+        Until(scene, () => telling.IsCompleted && quiz.Badge.Text == "5");
+
+        scene.Library.SetActive("quiz", false);
+        Assert.IsEmpty(pages.Commands());
+        Assert.IsEmpty(pages.MenuEntries(ExtensionMenuZone.Sheet, new Dictionary<string, string>()));
+        Wait(pages.RefreshCountsAsync());
+        Assert.AreEqual("5", quiz.Badge.Text, "Une extension arrêtée n'est plus interrogée.");
+    }
+
+    [TestMethod]
+    public void An_icon_becomes_a_geometry_and_a_path_that_does_not_read_is_left_out()
+    {
+        Assert.IsNull(ExtensionPages.PictureOf(null));
+        Assert.IsNull(ExtensionPages.PictureOf(new ExtensionIcon(0, 0, 1, 1, ["M0 0 L"], Stroked: false)));
+        var picture = ExtensionPages.PictureOf(new ExtensionIcon(0, 0, 1, 1, ["M0 0 L", "M0 0L1 1"], Stroked: false))!;
+        Assert.IsFalse(picture.Stroked);
+        Assert.AreEqual(1, ((GeometryGroup)picture.Geometry).Children.Count);
+        Assert.AreEqual("extension:quiz", ExtensionPages.EntryId("quiz"));
+    }
+
+    private static T Wait<T>(Task<T> task)
+    {
+        UiThread.Until(() => task.IsCompleted, TimeSpan.FromMinutes(2));
+        return task.Result;
+    }
+
+    private static void Wait(Task task) => UiThread.Until(() => task.IsCompleted, TimeSpan.FromMinutes(2));
 
     private static string TextOf(TextBlock text) => new TextRange(text.ContentStart, text.ContentEnd).Text.Trim();
 
@@ -454,6 +628,21 @@ public sealed class ExtensionPageTests
             File.WriteAllText(Path.Combine(source, "extension.js"), script);
             Assert.IsTrue(Library.Install(source).Succeeded);
             return source;
+        }
+
+        /// <summary>Installe une extension d'essai avec son manifeste et d'autres fichiers.</summary>
+        public void InstallWith(string id, string manifest, string script, params (string Name, string Content)[] files)
+        {
+            var source = Path.Combine(_root, "sources", id);
+            Directory.CreateDirectory(source);
+            File.WriteAllText(Path.Combine(source, ExtensionManifest.FileName), manifest);
+            File.WriteAllText(Path.Combine(source, "extension.js"), script);
+            foreach (var (name, content) in files)
+            {
+                File.WriteAllText(Path.Combine(source, name), content);
+            }
+            var installed = Library.Install(source);
+            Assert.IsTrue(installed.Succeeded, installed.Error);
         }
 
         /// <summary>Ouvre la vue d'une extension et attend qu'elle soit dessinée.</summary>

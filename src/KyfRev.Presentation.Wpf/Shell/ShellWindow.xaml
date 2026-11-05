@@ -67,17 +67,42 @@
     </DataTemplate>
     <shell:LayoutVisibilityConverter x:Key="ShownIn" />
     <shell:LayoutAlignmentConverter x:Key="AlignedIn" />
+    <!-- L'icône d'une entrée : un glyphe de kyfRev, ou l'icône dessinée d'une extension, de la couleur du texte comme lui. -->
+    <DataTemplate x:Key="NavigationGlyphTemplate" DataType="{x:Type shell:NavigationItem}">
+      <Grid>
+        <kyf:Icon x:Name="Glyph" Text="{Binding Glyph}" HorizontalAlignment="Center" />
+        <Path x:Name="Picture" Data="{Binding Picture.Geometry}" Width="16" Height="16" Visibility="Collapsed"
+              StrokeThickness="1.5" StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+              Stroke="{Binding (TextElement.Foreground), RelativeSource={RelativeSource Self}}" />
+      </Grid>
+      <DataTemplate.Triggers>
+        <DataTrigger Binding="{Binding HasPicture}" Value="True">
+          <Setter TargetName="Glyph" Property="Visibility" Value="Collapsed" />
+          <Setter TargetName="Picture" Property="Visibility" Value="Visible" />
+        </DataTrigger>
+        <DataTrigger Binding="{Binding Picture.Stroked}" Value="False">
+          <Setter TargetName="Picture" Property="Fill" Value="{Binding (TextElement.Foreground), RelativeSource={RelativeSource Self}}" />
+          <Setter TargetName="Picture" Property="StrokeThickness" Value="0" />
+        </DataTrigger>
+      </DataTemplate.Triggers>
+    </DataTemplate>
     <!-- Entrée du menu : icône et libellé côte à côte dans la barre latérale, l'un sous l'autre
-         dans la colonne d'icônes. -->
+         dans la colonne d'icônes ; le compteur d'une extension les suit. -->
     <DataTemplate x:Key="NavigationItemTemplate">
       <Grid>
         <StackPanel x:Name="Row" Orientation="Horizontal">
-          <kyf:Icon Text="{Binding Glyph}" Margin="0,0,12,0" />
+          <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource NavigationGlyphTemplate}" Margin="0,0,12,0" VerticalAlignment="Center" />
           <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
+          <Border x:Name="RowBadge" Margin="8,0,0,0" Padding="6,0" CornerRadius="8" VerticalAlignment="Center" Background="{DynamicResource Kyf.Brush.Primary}"
+                  Visibility="{Binding Badge.IsShown, Converter={StaticResource Visible}, FallbackValue=Collapsed}">
+            <TextBlock Text="{Binding Badge.Text}" FontSize="11" FontWeight="Bold" Foreground="{DynamicResource Kyf.Brush.OnPrimary}" />
+          </Border>
         </StackPanel>
         <StackPanel x:Name="Stacked" Margin="-8,6" Visibility="Collapsed">
-          <kyf:Icon Text="{Binding Glyph}" HorizontalAlignment="Center" />
+          <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource NavigationGlyphTemplate}" HorizontalAlignment="Center" />
           <TextBlock Text="{Binding Label}" FontSize="12" TextAlignment="Center" TextWrapping="WrapWithOverflow" Margin="0,2,0,0" />
+          <TextBlock x:Name="StackedBadge" Text="{Binding Badge.Text}" FontSize="11" FontWeight="Bold" TextAlignment="Center" Foreground="{DynamicResource Kyf.Brush.Primary}"
+                     Visibility="{Binding Badge.IsShown, Converter={StaticResource Visible}, FallbackValue=Collapsed}" />
         </StackPanel>
       </Grid>
       <DataTemplate.Triggers>
@@ -90,7 +115,7 @@
     <!-- Onglet : l'icône, le libellé dessous. -->
     <DataTemplate x:Key="TabItemTemplate">
       <StackPanel Margin="-8,6">
-        <kyf:Icon Text="{Binding Glyph}" HorizontalAlignment="Center" />
+        <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource NavigationGlyphTemplate}" HorizontalAlignment="Center" />
         <TextBlock Text="{Binding Label}" FontSize="12" TextAlignment="Center" TextWrapping="Wrap" Margin="0,2,0,0" />
       </StackPanel>
     </DataTemplate>

@@ -11,7 +11,7 @@
   const TAILLE_MAX = 2 * 1024 * 1024;
   const ELEMENTS_MAX = 20000;
   const PROFONDEUR_MAX = 64;
-  const ATTRIBUTS = ["type", "value", "placeholder", "checked", "selected", "disabled", "open", "aria-label", "hidden"];
+  const ATTRIBUTS = ["type", "value", "placeholder", "checked", "selected", "disabled", "open", "aria-label", "name", "max", "required", "hidden"];
 
   /**
    * Fait un arbre du HTML d'une extension. DOMParser n'exécute rien et ne charge rien : le document qu'il rend n'a pas de fenêtre.
@@ -43,7 +43,11 @@
   }
 
   function resultat(id, message) {
-    const reponse = { kind: "resultat", id, n: message.n, ok: message.ok === true, erreur: texteOuRien(message.erreur), contenu: null };
+    const reponse = { kind: "resultat", id, n: message.n, ok: message.ok === true, erreur: texteOuRien(message.erreur), contenu: null, valeur: null };
+    if (message.valeur !== undefined && message.valeur !== null) {
+      const texte = JSON.stringify(message.valeur);
+      if (texte !== undefined && texte.length <= 16384) reponse.valeur = JSON.parse(texte);
+    }
     if (typeof message.html === "string") {
       try {
         reponse.contenu = lire(message.html);

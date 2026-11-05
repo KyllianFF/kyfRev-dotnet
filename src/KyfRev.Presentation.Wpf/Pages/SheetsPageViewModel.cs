@@ -6,6 +6,7 @@ using KyfRev.Application;
 using KyfRev.Application.Model;
 using KyfRev.Application.UseCases;
 using KyfRev.DesignSystem.Controls;
+using KyfRev.Extensions.Host;
 using KyfRev.Presentation.Wpf.Shell;
 
 namespace KyfRev.Presentation.Wpf.Pages;
@@ -125,6 +126,9 @@ public sealed class SheetRow
 /// </summary>
 public sealed partial class SheetsPageViewModel : ObservableObject, INavigationAware
 {
+    /// <summary>Les entrées que les extensions ajoutent au clic droit d'une fiche ou d'un dossier.</summary>
+    public Func<ExtensionMenuZone, IReadOnlyDictionary<string, string>, IReadOnlyList<MenuContribution>>? ExtensionMenus { get; set; }
+
     /// <summary>Largeur sous laquelle les filtres se replient.</summary>
     public const double RoomMinimum = 600;
 

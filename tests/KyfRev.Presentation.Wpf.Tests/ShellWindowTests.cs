@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -6,6 +7,8 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using KyfRev.DesignSystem.Controls;
+using KyfRev.Extensions.Host;
+using KyfRev.Presentation.Wpf.Extensions;
 using KyfRev.Presentation.Wpf.Shell;
 
 namespace KyfRev.Presentation.Wpf.Tests;
@@ -258,6 +261,50 @@ public sealed class ShellWindowTests
             window.Close();
         }
     }
+
+    [STATestMethod]
+    public void An_extension_entry_shows_its_drawn_icon_and_its_counter()
+    {
+        var test = new TestShell();
+        var badge = new NavigationBadge();
+        var lines = ExtensionPages.PictureOf(new ExtensionIcon(0, 0, 24, 24, ["M4 4h16v16H4Z"], Stroked: true))!;
+        var shapes = ExtensionPages.PictureOf(new ExtensionIcon(0, 0, 32, 16, ["M0 0h32v16H0Z"], Stroked: false))!;
+        test.Shell.SetModuleEntries(
+        [
+            new NavigationItem("extension:quiz", "Quiz", Icons.Puzzle, 70, new object(), lines, badge),
+            new NavigationItem("extension:plein", "Plein", Icons.Puzzle, 71, new object(), shapes),
+        ]);
+        var window = Open(test);
+        try
+        {
+            var navigation = (ListBox)window.FindName("MainNavigation");
+            DependencyObject Container(string id) => navigation.ItemContainerGenerator.ContainerFromItem(test.Shell.MainNavigation.Single(item => item.Id == id));
+            var quiz = Container("extension:quiz");
+            var drawn = Descendants<System.Windows.Shapes.Path>(quiz).Single(path => path.IsVisible);
+            Assert.AreSame(lines.Geometry, drawn.Data);
+            Assert.AreEqual(1.5, drawn.StrokeThickness);
+            Assert.IsNull(drawn.Fill);
+            Assert.AreEqual(new Rect(2.6667, 2.6667, 10.6667, 10.6667).ToString(CultureInfo.InvariantCulture), Round(lines.Geometry.Bounds), "La boîte de vue devient le carré du menu.");
+            Assert.IsFalse(Descendants<Icon>(quiz).Any(icon => icon.IsVisible), "L'icône dessinée remplace le glyphe.");
+            Assert.IsFalse(Descendants<TextBlock>(quiz).Any(text => text.IsVisible && text.Text == "3"));
+
+            badge.Text = "3";
+            TestShell.Flush();
+            Assert.IsTrue(Descendants<TextBlock>(quiz).Any(text => text.IsVisible && text.Text == "3"));
+
+            var plein = Descendants<System.Windows.Shapes.Path>(Container("extension:plein")).Single(path => path.IsVisible);
+            Assert.AreEqual(0, plein.StrokeThickness);
+            Assert.IsNotNull(plein.Fill);
+            Assert.AreEqual(new Rect(0, 4, 16, 8).ToString(CultureInfo.InvariantCulture), Round(shapes.Geometry.Bounds), "Plus large que haute, elle se centre.");
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    private static string Round(Rect bounds) =>
+        new Rect(Math.Round(bounds.X, 4), Math.Round(bounds.Y, 4), Math.Round(bounds.Width, 4), Math.Round(bounds.Height, 4)).ToString(CultureInfo.InvariantCulture);
 
     private static ShellWindow Open(TestShell test)
     {

@@ -226,13 +226,13 @@ public sealed class ExtensionEngineTests
         var nodes = answer.Content!.Descendants().ToList();
         Assert.IsFalse(tcp.Pending(), "Rien ne se charge en lisant ce qu'elle a écrit.");
         CollectionAssert.AreEquivalent(
-            new[] { "h1", "span", "button", "p", "strong", ExtensionNode.TextTag },
+            new[] { "h1", "span", "form", "button", "p", "strong", ExtensionNode.TextTag },
             nodes.Select(node => node.Tag).Distinct().ToArray());
         Assert.IsFalse(answer.Content.Text.Contains("secret", StringComparison.Ordinal), answer.Content.Text);
         StringAssert.Contains(answer.Content.Text, "le texte de l'image", StringComparison.Ordinal);
         StringAssert.Contains(answer.Content.Text, "un lien", StringComparison.Ordinal);
         StringAssert.Contains(answer.Content.Text, "garde", StringComparison.Ordinal);
-        Assert.IsTrue(nodes.All(node => !node.Attributes.ContainsKey("style") && !node.Attributes.ContainsKey("href") && !node.Attributes.ContainsKey("onclick") && !node.Attributes.ContainsKey("formaction")));
+        Assert.IsTrue(nodes.All(node => !node.Attributes.ContainsKey("style") && !node.Attributes.ContainsKey("href") && !node.Attributes.ContainsKey("onclick") && !node.Attributes.ContainsKey("formaction") && !node.Attributes.ContainsKey("action")));
         Assert.IsTrue(nodes.Single(node => node.Tag == "span").Data.ContainsKey("externe"), "L'attribut reste une donnée, sans rien qui l'ouvre.");
         Assert.IsTrue(nodes.All(node => node.Tag != "input"), "Ni mot de passe, ni fichier, ni champ caché.");
     }
@@ -478,6 +478,42 @@ public sealed class ExtensionEngineTests
         Assert.AreEqual("{}", read, "La page elle-même ne lit rien par le réseau.");
     }
 
+    [EngineTest]
+    public void A_count_a_card_and_a_command_answer_within_their_limits()
+    {
+        using var scene = new Scene();
+        scene.Install("mesuree", """
+            let n = 0;
+            kyfrev.vue(() => "vue");
+            kyfrev.commande("ajouter", (contexte) => { n += contexte.combien === "beaucoup" ? 5000 : 1; });
+            kyfrev.compteur(() => n);
+            kyfrev.encart(() => n > 0 ? { texte: "x".repeat(400), detail: "y".repeat(400) } : { texte: "" });
+            """);
+        scene.Install("muette", """
+            kyfrev.vue(() => "vue");
+            kyfrev.compteur(() => "beaucoup");
+            kyfrev.encart(() => ({ texte: "Seul", detail: 3 }));
+            """);
+        scene.Install("absente", """kyfrev.vue(() => "vue");""");
+        using var ui = new UiThread();
+
+        Assert.IsNull(Wait(scene.Engine.CountAsync("mesuree")));
+        Assert.IsNull(Wait(scene.Engine.CardAsync("mesuree")));
+        Assert.IsTrue(Wait(scene.Engine.CommandAsync("mesuree", "ajouter", new Dictionary<string, string>())).Succeeded);
+        Assert.AreEqual(1, Wait(scene.Engine.CountAsync("mesuree")));
+        var card = Wait(scene.Engine.CardAsync("mesuree"))!.Value;
+        Assert.AreEqual((300, 300), (card.Text.Length, card.Detail!.Length));
+        Wait(scene.Engine.CommandAsync("mesuree", "ajouter", new Dictionary<string, string> { ["combien"] = "beaucoup" }));
+        Assert.AreEqual(999, Wait(scene.Engine.CountAsync("mesuree")));
+        StringAssert.Contains(Wait(scene.Engine.CommandAsync("mesuree", "autre", new Dictionary<string, string>())).Error, "inconnue", StringComparison.Ordinal);
+
+        Assert.IsNull(Wait(scene.Engine.CountAsync("muette")));
+        Assert.AreEqual(("Seul", (string?)null), Wait(scene.Engine.CardAsync("muette")));
+        Assert.IsNull(Wait(scene.Engine.CountAsync("absente")));
+        Assert.IsNull(Wait(scene.Engine.CardAsync("absente")));
+        Assert.IsNull(Wait(scene.Engine.CountAsync("jamais-installee")));
+    }
+
     [TestMethod]
     public void The_engine_needs_its_folder_its_library_and_its_requests()
     {
@@ -493,6 +529,12 @@ public sealed class ExtensionEngineTests
         var answer = Wait(scene.Engine.RenderViewAsync(id, dark: false));
         Assert.IsTrue(answer.Succeeded, answer.Error);
         return answer.Content!.Text;
+    }
+
+    private static T Wait<T>(Task<T> task)
+    {
+        UiThread.Until(() => task.IsCompleted, Long);
+        return task.Result;
     }
 
     private static ExtensionAnswer Wait(Task<ExtensionAnswer> answer)

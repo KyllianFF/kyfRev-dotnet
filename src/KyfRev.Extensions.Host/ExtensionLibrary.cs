@@ -15,7 +15,8 @@ public sealed record InstalledExtension(ExtensionManifest Manifest, bool IsActiv
 /// <param name="FileCount">Son nombre de fichiers.</param>
 /// <param name="Size">Sa taille totale, en octets.</param>
 /// <param name="InstalledVersion">La version déjà installée, qu'elle remplacerait.</param>
-public sealed record ExtensionPreview(ExtensionManifest Manifest, int FileCount, long Size, string? InstalledVersion);
+/// <param name="NewRights">Ce que cette version demande et que la version installée ne demandait pas.</param>
+public sealed record ExtensionPreview(ExtensionManifest Manifest, int FileCount, long Size, string? InstalledVersion, IReadOnlyList<ExtensionRight> NewRights);
 
 /// <summary>
 /// Les extensions installées, dans un dossier du poste et jamais dans le coffre : ouvrir un coffre reçu d'ailleurs n'exécute aucun
@@ -116,7 +117,8 @@ public sealed class ExtensionLibrary
                 return Outcome.Refused<ExtensionPreview>(inventory.Error!);
             }
             var installed = Installed().FirstOrDefault(extension => extension.Manifest.Id == manifest.Value.Id);
-            return Outcome.Of(new ExtensionPreview(manifest.Value, inventory.Value.Files.Count, inventory.Value.Size, installed?.Manifest.Version));
+            var newRights = installed is null ? [] : manifest.Value.Permissions.Except(installed.Manifest.Permissions).ToList();
+            return Outcome.Of(new ExtensionPreview(manifest.Value, inventory.Value.Files.Count, inventory.Value.Size, installed?.Manifest.Version, newRights));
         }
         catch (Exception exception) when (IsFileProblem(exception))
         {
@@ -147,7 +149,20 @@ public sealed class ExtensionLibrary
                 return Outcome.Refused<InstalledExtension>(inventory.Error!);
             }
             Place(source, manifest.Value.Id, inventory.Value.Files);
-            WriteActive(_folder, [.. ReadActive(_folder).Where(id => id != manifest.Value.Id), manifest.Value.Id]);
+            // Ce que l'utilisateur avait retiré le reste, tant que la nouvelle version le demande ; une permission nouvelle est accordée
+            // par la confirmation qui l'a montrée.
+            var state = ReadState(_folder);
+            var kept = (state.Withdrawn?.GetValueOrDefault(manifest.Value.Id) ?? []).Where(name => manifest.Value.Permissions.Any(right => ExtensionRights.NameOf(right) == name)).ToList();
+            var withdrawn = Without(state.Withdrawn, manifest.Value.Id);
+            if (kept.Count > 0)
+            {
+                withdrawn = new Dictionary<string, List<string>>(withdrawn ?? [], StringComparer.Ordinal) { [manifest.Value.Id] = kept };
+            }
+            WriteState(_folder, state with
+            {
+                Active = [.. ReadActive(_folder).Where(id => id != manifest.Value.Id), manifest.Value.Id],
+                Withdrawn = withdrawn,
+            });
             return Outcome.Of(new InstalledExtension(manifest.Value, true));
         }
         catch (Exception exception) when (IsFileProblem(exception))
@@ -176,6 +191,79 @@ public sealed class ExtensionLibrary
         catch (Exception exception) when (IsFileProblem(exception))
         {
             return Outcome.Refused<Done>(exception.Message);
+        }
+    }
+
+    /// <summary>Les permissions accordées à une extension active : celles qu'elle demande, moins celles que l'utilisateur a retirées.</summary>
+    /// <param name="id">Son identifiant.</param>
+    public IReadOnlyList<ExtensionRight> Granted(string id)
+    {
+        if (Active(id) is not { } manifest)
+        {
+            return [];
+        }
+        var withdrawn = Withdrawn(id);
+        return [.. manifest.Permissions.Except(withdrawn)];
+    }
+
+    /// <summary>Les permissions qu'une extension installée demande et que l'utilisateur lui a retirées, qu'elle soit active ou non.</summary>
+    /// <param name="id">Son identifiant.</param>
+    public IReadOnlyList<ExtensionRight> Withdrawn(string id)
+    {
+        ArgumentNullException.ThrowIfNull(id);
+        if (Installed().FirstOrDefault(extension => extension.Manifest.Id == id) is not { } extension)
+        {
+            return [];
+        }
+        var names = ReadState(_folder).Withdrawn?.GetValueOrDefault(id) ?? [];
+        return [.. extension.Manifest.Permissions.Where(right => names.Contains(ExtensionRights.NameOf(right)))];
+    }
+
+    /// <summary>Accorde de nouveau, ou retire, une permission qu'une extension demande. L'extension reçoit un refus quand elle s'en sert.</summary>
+    /// <param name="id">Son identifiant.</param>
+    /// <param name="right">La permission.</param>
+    /// <param name="granted">Vrai pour l'accorder.</param>
+    public Outcome<Done> SetGranted(string id, ExtensionRight right, bool granted)
+    {
+        ArgumentNullException.ThrowIfNull(id);
+        if (Installed().FirstOrDefault(extension => extension.Manifest.Id == id) is not { } extension || !extension.Manifest.Permissions.Contains(right))
+        {
+            return Outcome.Refused<Done>($"extension « {id} » introuvable, ou qui ne demande pas cette permission");
+        }
+        try
+        {
+            var state = ReadState(_folder);
+            var withdrawn = new Dictionary<string, List<string>>(state.Withdrawn ?? [], StringComparer.Ordinal);
+            var mine = withdrawn.GetValueOrDefault(id) ?? [];
+            mine = granted ? [.. mine.Where(name => name != ExtensionRights.NameOf(right))] : [.. mine.Where(name => name != ExtensionRights.NameOf(right)), ExtensionRights.NameOf(right)];
+            withdrawn[id] = mine;
+            WriteState(_folder, state with { Withdrawn = Without(withdrawn, mine.Count == 0 ? id : null) });
+            return Outcome.Done();
+        }
+        catch (Exception exception) when (IsFileProblem(exception))
+        {
+            return Outcome.Refused<Done>(exception.Message);
+        }
+    }
+
+    /// <summary>L'icône d'une extension installée ; rien si elle n'en déclare pas, ou si elle ne se lit pas.</summary>
+    /// <param name="id">Son identifiant.</param>
+    public ExtensionIcon? Icon(string id)
+    {
+        ArgumentNullException.ThrowIfNull(id);
+        var manifest = Installed().FirstOrDefault(extension => extension.Manifest.Id == id)?.Manifest;
+        if (manifest?.Icon is not { } icon)
+        {
+            return null;
+        }
+        try
+        {
+            var read = ExtensionIcon.Read(File.ReadAllBytes(Path.Combine([_folder, id, .. icon.Split('/')])));
+            return read.Succeeded ? read.Value : null;
+        }
+        catch (Exception exception) when (IsFileProblem(exception))
+        {
+            return null;
         }
     }
 
@@ -321,22 +409,36 @@ public sealed class ExtensionLibrary
         return null;
     }
 
-    private static HashSet<string> ReadActive(string folder)
+    private static HashSet<string> ReadActive(string folder) => [.. ReadState(folder).Active ?? []];
+
+    private static ExtensionState ReadState(string folder)
     {
         try
         {
-            return [.. JsonSerializer.Deserialize<ExtensionState>(File.ReadAllBytes(Path.Combine(folder, StateFile)))?.Active ?? []];
+            return JsonSerializer.Deserialize<ExtensionState>(File.ReadAllBytes(Path.Combine(folder, StateFile))) ?? new ExtensionState([], null);
         }
         catch (Exception exception) when (IsFileProblem(exception) || exception is JsonException)
         {
-            return [];
+            return new ExtensionState([], null);
         }
     }
 
-    private static void WriteActive(string folder, List<string> active)
+    private static void WriteActive(string folder, List<string> active) => WriteState(folder, ReadState(folder) with { Active = active });
+
+    private static void WriteState(string folder, ExtensionState state)
     {
         Directory.CreateDirectory(folder);
-        File.WriteAllBytes(Path.Combine(folder, StateFile), JsonSerializer.SerializeToUtf8Bytes(new ExtensionState(active), StateOptions));
+        File.WriteAllBytes(Path.Combine(folder, StateFile), JsonSerializer.SerializeToUtf8Bytes(state, StateOptions));
+    }
+
+    private static Dictionary<string, List<string>>? Without(Dictionary<string, List<string>>? withdrawn, string? id)
+    {
+        if (withdrawn is null)
+        {
+            return null;
+        }
+        var kept = withdrawn.Where(entry => entry.Key != id && entry.Value.Count > 0).ToDictionary(entry => entry.Key, entry => entry.Value, StringComparer.Ordinal);
+        return kept.Count == 0 ? null : kept;
     }
 
     /// <summary>Copie dans un dossier provisoire, puis met en place : une installation interrompue ne laisse rien de bancal.</summary>
@@ -374,5 +476,8 @@ public sealed class ExtensionLibrary
         Directory.Move(current, target);
     }
 
-    private sealed record ExtensionState([property: JsonPropertyName("actives")] List<string> Active);
+    /// <summary><c>etat.json</c> : les extensions actives, comme la 0.x, et les permissions retirées, qu'elle ignore.</summary>
+    private sealed record ExtensionState(
+        [property: JsonPropertyName("actives")] List<string>? Active,
+        [property: JsonPropertyName("retirees"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] Dictionary<string, List<string>>? Withdrawn);
 }

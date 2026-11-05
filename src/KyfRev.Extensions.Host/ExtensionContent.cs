@@ -87,7 +87,12 @@ public sealed class ExtensionContent
         ["span"] = "span",
         ["a"] = "span",
         ["abbr"] = "span",
-        ["label"] = "span",
+        ["label"] = "label",
+        ["form"] = "form",
+        ["fieldset"] = "div",
+        ["legend"] = "p",
+        ["progress"] = "progress",
+        ["meter"] = "progress",
         ["mark"] = "span",
         ["u"] = "span",
         ["s"] = "span",
@@ -119,7 +124,7 @@ public sealed class ExtensionContent
         StringComparer.Ordinal);
 
     private static readonly FrozenSet<string> KnownAttributes = FrozenSet.ToFrozenSet(
-        ["type", "value", "placeholder", "checked", "selected", "disabled", "open", "aria-label"],
+        ["type", "value", "placeholder", "checked", "selected", "disabled", "open", "aria-label", "name", "max", "required"],
         StringComparer.Ordinal);
 
     /// <summary>Les types de champ gardés : ni fichier, ni mot de passe, ni champ caché.</summary>

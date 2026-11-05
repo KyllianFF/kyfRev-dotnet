@@ -76,7 +76,32 @@
                       <TextBlock Text="{Binding Version}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="26,2,0,0" />
                       <TextBlock Text="{Binding Description}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="26,2,0,0" Visibility="{Binding HasDescription, Converter={StaticResource Visible}}" />
                       <TextBlock Text="{Binding Adds}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="26,2,0,0" />
-                      <TextBlock Text="{Binding Permissions}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="26,2,0,0" Visibility="{Binding HasPermissions, Converter={StaticResource Visible}}" />
+                      <StackPanel x:Name="ExtensionRights" Margin="26,8,0,0" Visibility="{Binding HasRights, Converter={StaticResource Visible}}">
+                        <TextBlock Text="{x:Static pages:ModulesSettingsText.ExtensionRightsTitle}" Style="{DynamicResource Kyf.Text.Caption}" FontWeight="SemiBold" />
+                        <ItemsControl ItemsSource="{Binding Rights}" Focusable="False" AutomationProperties.Name="{x:Static pages:ModulesSettingsText.ExtensionRightsTitle}"
+                                      AutomationProperties.HelpText="{x:Static pages:ModulesSettingsText.ExtensionRightsHelp}">
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type pages:ExtensionRightRow}">
+                              <CheckBox x:Name="ExtensionRight" IsChecked="{Binding IsGranted}" Margin="0,4,0,0" AutomationProperties.Name="{Binding Spoken}"
+                                        ToolTip="{x:Static pages:ModulesSettingsText.ExtensionRightsHelp}">
+                                <DockPanel>
+                                  <kyf:Icon x:Name="RiskGlyph" DockPanel.Dock="Left" Text="{Binding Glyph}" Margin="0,1,6,0" VerticalAlignment="Top" Foreground="{DynamicResource Kyf.Brush.TextSecondary}" />
+                                  <TextBlock x:Name="RightText" Text="{Binding Text}" TextWrapping="Wrap" />
+                                </DockPanel>
+                              </CheckBox>
+                              <DataTemplate.Triggers>
+                                <DataTrigger Binding="{Binding Risk}" Value="Notable">
+                                  <Setter TargetName="RiskGlyph" Property="Foreground" Value="{DynamicResource Kyf.Brush.Warning}" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding Risk}" Value="High">
+                                  <Setter TargetName="RiskGlyph" Property="Foreground" Value="{DynamicResource Kyf.Brush.Critical}" />
+                                  <Setter TargetName="RightText" Property="FontWeight" Value="SemiBold" />
+                                </DataTrigger>
+                              </DataTemplate.Triggers>
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                      </StackPanel>
                     </StackPanel>
                   </DockPanel>
                 </Border>
@@ -89,8 +114,56 @@
   </ScrollViewer>
 
   <kyf:Dialog x:Name="InstallConfirmation" DataContext="{Binding Extensions}" Title="{Binding InstallTitle}" IsOpen="{Binding IsConfirmingInstall, Mode=OneWay}"
-              PrimaryButtonText="{Binding InstallAction}" Closed="OnInstallClosed">
-    <TextBlock Text="{Binding InstallDetails}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" />
+              PrimaryButtonText="{Binding InstallAction}" IsDestructive="{Binding InstallHasHighRisk}" Closed="OnInstallClosed">
+    <StackPanel>
+      <TextBlock x:Name="InstallSummary" Text="{Binding InstallSummary}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" />
+      <kyf:Notification x:Name="InstallHighRisk" Severity="Critical" Message="{x:Static pages:ModulesSettingsText.ExtensionHighRisk}" IsOpen="{Binding InstallHasHighRisk, Mode=OneWay}" IsClosable="False" Margin="0,12,0,0" />
+      <kyf:Notification x:Name="InstallNewRights" Severity="Warning" Message="{x:Static pages:ModulesSettingsText.ExtensionNewRights}" IsOpen="{Binding InstallHasNewRights, Mode=OneWay}" IsClosable="False" Margin="0,12,0,0" />
+      <StackPanel Visibility="{Binding InstallHasAdds, Converter={StaticResource Visible}}">
+        <TextBlock Text="{x:Static pages:ModulesSettingsText.ExtensionAddsTitle}" Style="{DynamicResource Kyf.Text.BodyStrong}" Margin="0,16,0,4" />
+        <ItemsControl x:Name="InstallAdds" ItemsSource="{Binding InstallAdds}" Focusable="False" AutomationProperties.Name="{x:Static pages:ModulesSettingsText.ExtensionAddsTitle}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <DockPanel Margin="0,2,0,0">
+                <TextBlock DockPanel.Dock="Left" Text="•" Margin="4,0,10,0" Foreground="{DynamicResource Kyf.Brush.TextSecondary}" />
+                <TextBlock Text="{Binding}" TextWrapping="Wrap" />
+              </DockPanel>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+      <TextBlock Text="{x:Static pages:ModulesSettingsText.ExtensionRightsTitle}" Style="{DynamicResource Kyf.Text.BodyStrong}" Margin="0,16,0,4" />
+      <TextBlock x:Name="InstallNoRights" Text="{x:Static pages:ModulesSettingsText.ExtensionNoPermission}" TextWrapping="Wrap" Visibility="{Binding InstallHasNoRights, Converter={StaticResource Visible}}" />
+      <ItemsControl x:Name="InstallRights" ItemsSource="{Binding InstallRights}" Focusable="False" AutomationProperties.Name="{x:Static pages:ModulesSettingsText.ExtensionRightsTitle}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate DataType="{x:Type pages:ExtensionRightRow}">
+            <DockPanel Margin="0,3,0,0" AutomationProperties.Name="{Binding Spoken}">
+              <kyf:Icon x:Name="RiskGlyph" DockPanel.Dock="Left" Text="{Binding Glyph}" Margin="0,2,10,0" VerticalAlignment="Top" Foreground="{DynamicResource Kyf.Brush.TextSecondary}" />
+              <Border x:Name="NewPill" DockPanel.Dock="Right" VerticalAlignment="Top" Margin="8,0,0,0" Padding="6,1" CornerRadius="8" Background="{DynamicResource Kyf.Brush.WarningBackground}"
+                      Visibility="{Binding IsNew, Converter={StaticResource Visible}}">
+                <TextBlock Text="{x:Static pages:ModulesSettingsText.ExtensionRightNew}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource Kyf.Brush.Text}" />
+              </Border>
+              <StackPanel>
+                <TextBlock x:Name="RightText" Text="{Binding Text}" TextWrapping="Wrap" />
+                <TextBlock Text="{x:Static pages:ModulesSettingsText.ExtensionRightKeptWithdrawn}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap"
+                           Visibility="{Binding IsWithdrawn, Converter={StaticResource Visible}}" />
+              </StackPanel>
+            </DockPanel>
+            <DataTemplate.Triggers>
+              <DataTrigger Binding="{Binding Risk}" Value="Notable">
+                <Setter TargetName="RiskGlyph" Property="Foreground" Value="{DynamicResource Kyf.Brush.Warning}" />
+              </DataTrigger>
+              <DataTrigger Binding="{Binding Risk}" Value="High">
+                <Setter TargetName="RiskGlyph" Property="Foreground" Value="{DynamicResource Kyf.Brush.Critical}" />
+                <Setter TargetName="RightText" Property="FontWeight" Value="SemiBold" />
+              </DataTrigger>
+            </DataTemplate.Triggers>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+      <TextBlock x:Name="InstallLimits" Text="{Binding InstallLimits}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,16,0,0" />
+      <TextBlock Text="{x:Static pages:ModulesSettingsText.ExtensionTrust}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,4,0,0" />
+    </StackPanel>
   </kyf:Dialog>
 
   <kyf:Dialog x:Name="RemoveConfirmation" DataContext="{Binding Extensions}" Title="{x:Static pages:ModulesSettingsText.ExtensionRemoveTitle}" IsOpen="{Binding IsConfirmingRemove, Mode=OneWay}"

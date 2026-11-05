@@ -5,6 +5,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
 using KyfRev.DesignSystem.Controls;
+using KyfRev.Extensions.Host;
 
 namespace KyfRev.Presentation.Wpf.Pages;
 
@@ -170,7 +171,19 @@ internal sealed partial class SheetsPage : UserControl
             items.Add(ActionMenus.Item(row.Sheet.Archived ? SheetActionsText.Restart : SheetActionsText.Archive, () => page.RequestArchiveOrRestart(row)));
             items.Add(ActionMenus.Item(SheetActionsText.Delete, () => page.RequestTrash(row)));
         }
+        AddExtensions(items, page, ExtensionMenuZone.Sheet, new Dictionary<string, string> { ["id"] = row.Sheet.Id, ["titre"] = row.Sheet.Title, ["dossier"] = row.Sheet.Folder });
         return items;
+    }
+
+    /// <summary>Les entrées des extensions, après celles de kyfRev.</summary>
+    private static void AddExtensions(List<Control> items, SheetsPageViewModel page, ExtensionMenuZone zone, IReadOnlyDictionary<string, string> context)
+    {
+        if (page.ExtensionMenus?.Invoke(zone, context) is not { Count: > 0 } added)
+        {
+            return;
+        }
+        items.Add(new Separator());
+        items.AddRange(added.Select(entry => ActionMenus.Item(entry.Label, entry.Run)));
     }
 
     private static List<Control> FolderMenu(SheetsPageViewModel page, SheetFolderRow row)
@@ -188,6 +201,7 @@ internal sealed partial class SheetsPage : UserControl
             items.Add(new Separator());
             items.Add(ActionMenus.Item(SheetActionsText.Delete, () => page.RequestTrashFolder(row)));
         }
+        AddExtensions(items, page, ExtensionMenuZone.Folder, new Dictionary<string, string> { ["dossier"] = row.Path });
         return items;
     }
 

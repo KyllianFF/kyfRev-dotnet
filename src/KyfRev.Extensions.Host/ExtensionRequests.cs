@@ -82,20 +82,24 @@ public sealed class ExtensionRequests
         {
             return Outcome.Refused<string>("extension inactive");
         }
+        var granted = _library.Granted(extension);
         return method switch
         {
-            "fiches.lister" => Missing(manifest, ExtensionRight.ReadSheets) ?? Json(await _data.SheetsAsync().ConfigureAwait(false)),
-            "fiches.lire" => Missing(manifest, ExtensionRight.ReadSheets) ?? Json(await _data.SheetAsync(FirstText(arguments)).ConfigureAwait(false)),
-            "stockage.lire" => Missing(manifest, ExtensionRight.Storage) ?? Stored(await _data.StoredAsync(extension).ConfigureAwait(false)),
-            "stockage.ecrire" => Missing(manifest, ExtensionRight.Storage) ?? await StoreAsync(extension, arguments).ConfigureAwait(false),
+            "fiches.lister" => Missing(manifest, granted, ExtensionRight.ReadSheets) ?? Json(await _data.SheetsAsync().ConfigureAwait(false)),
+            "fiches.lire" => Missing(manifest, granted, ExtensionRight.ReadSheets) ?? Json(await _data.SheetAsync(FirstText(arguments)).ConfigureAwait(false)),
+            "stockage.lire" => Missing(manifest, granted, ExtensionRight.Storage) ?? Stored(await _data.StoredAsync(extension).ConfigureAwait(false)),
+            "stockage.ecrire" => Missing(manifest, granted, ExtensionRight.Storage) ?? await StoreAsync(extension, arguments).ConfigureAwait(false),
             _ => Outcome.Refused<string>($"« {method} » n'existe pas"),
         };
     }
 
-    private static Outcome<string>? Missing(ExtensionManifest manifest, ExtensionRight permission) =>
-        manifest.Permissions.Contains(permission)
-            ? null
-            : Outcome.Refused<string>($"permission « {(permission == ExtensionRight.ReadSheets ? "fiches:lecture" : "stockage")} » non demandée dans {ExtensionManifest.FileName}");
+    private static Outcome<string>? Missing(ExtensionManifest manifest, IReadOnlyList<ExtensionRight> granted, ExtensionRight permission)
+    {
+        var name = ExtensionRights.NameOf(permission);
+        return !manifest.Permissions.Contains(permission) ? Outcome.Refused<string>($"permission « {name} » non demandée dans {ExtensionManifest.FileName}")
+            : !granted.Contains(permission) ? Outcome.Refused<string>($"permission « {name} » retirée dans les Paramètres")
+            : null;
+    }
 
     private static string FirstText(JsonElement arguments) =>
         arguments.ValueKind == JsonValueKind.Array && arguments.GetArrayLength() > 0 && arguments[0].ValueKind == JsonValueKind.String

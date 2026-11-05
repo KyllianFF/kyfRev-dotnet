@@ -8,7 +8,10 @@
   const blocs = new Map();
   const actions = new Map();
   const attentes = new Map();
+  const commandes = new Map();
   let vue = null;
+  let fonctionCompteur = null;
+  let fonctionEncart = null;
   let compteur = 0;
   let jeton = null;
 
@@ -45,6 +48,23 @@
       if (typeof fonction !== "function") throw new TypeError("kyfrev.action : fonction attendue");
       actions.set(String(nom), fonction);
     },
+    /** Lance une commande déclarée dans extension.json (Ctrl+K, clic droit) : fonction(contexte). Contrat 2. */
+    commande(nom, fonction) {
+      if (typeof fonction !== "function") throw new TypeError("kyfrev.commande : fonction attendue");
+      commandes.set(String(nom), fonction);
+    },
+    /** Le nombre affiché près de l'entrée du menu : fonction() → nombre, ou 0 pour rien. Contrat 2. */
+    compteur(fonction) {
+      if (typeof fonction !== "function") throw new TypeError("kyfrev.compteur : fonction attendue");
+      fonctionCompteur = fonction;
+    },
+    /** L'encart sur « Aujourd'hui » : fonction() → { texte, detail } ou null. Contrat 2. */
+    encart(fonction) {
+      if (typeof fonction !== "function") throw new TypeError("kyfrev.encart : fonction attendue");
+      fonctionEncart = fonction;
+    },
+    /** Ouvre la vue de l'extension. Contrat 2. */
+    ouvrirVue: () => demander("vue.ouvrir", []),
     /** Redessine la vue (après un changement d'état hors d'une action). */
     rafraichir() {
       envoyer({ type: "rafraichir" });
@@ -96,6 +116,24 @@
         if (!fonction) throw new Error(`action « ${message.nom} » inconnue`);
         await fonction(message.valeur, message.donnees);
         return { ok: true };
+      }
+      case "commande": {
+        const fonction = commandes.get(message.nom);
+        if (!fonction) throw new Error(`commande « ${message.nom} » inconnue`);
+        await fonction(message.contexte ?? {});
+        return { ok: true };
+      }
+      case "compteur": {
+        const nombre = fonctionCompteur ? await fonctionCompteur() : null;
+        return { valeur: typeof nombre === "number" && Number.isFinite(nombre) ? nombre : null };
+      }
+      case "encart": {
+        const contenu = fonctionEncart ? await fonctionEncart() : null;
+        return {
+          valeur: contenu && typeof contenu.texte === "string"
+            ? { texte: contenu.texte, detail: typeof contenu.detail === "string" ? contenu.detail : null }
+            : null,
+        };
       }
       default:
         return undefined;

@@ -16,7 +16,7 @@ namespace KyfRev.Presentation.Wpf.Extensions;
 
 /// <summary>Un clic ou un changement sur un élément <c>data-action</c> : le nom de l'action, sa valeur et les attributs <c>data-</c> de l'élément.</summary>
 /// <param name="Name">Le nom de l'action.</param>
-/// <param name="Value">Un texte, un booléen ou rien.</param>
+/// <param name="Value">Un texte, un booléen, les champs d'un formulaire envoyé (par leur <c>name</c>) ou rien.</param>
 /// <param name="Data">Les attributs <c>data-</c> de l'élément.</param>
 public sealed record ExtensionAction(string Name, object? Value, IReadOnlyDictionary<string, string> Data);
 
@@ -31,6 +31,9 @@ internal sealed class ExtensionContentBuilder(Action<ExtensionAction> act)
     private const double ListMarkerWidth = 24;
     private const double FieldWidth = 280;
 
+    private FormScope? _form;
+    private int _forms;
+
     /// <summary>Les contrôles qui déclenchent une action, dans l'ordre : le focus y revient après un nouveau rendu.</summary>
     public List<(string Action, Control Control)> Interactive { get; } = [];
 
@@ -38,9 +41,12 @@ internal sealed class ExtensionContentBuilder(Action<ExtensionAction> act)
     public FrameworkElement Build(ExtensionContent content) => Blocks(content.Nodes, TextKind.Body);
 
     private static bool IsInline(ExtensionNode node) =>
-        node.Tag is ExtensionNode.TextTag or "span" or "time" or "small" or "strong" or "em" or "code" or "br" or "button" or "input" or "select" or "textarea";
+        node.Tag is ExtensionNode.TextTag or "span" or "time" or "small" or "strong" or "em" or "code" or "br" or "button" or "input" or "select" or "textarea"
+        || (node.Tag == "label" && !node.Children.Any(HoldsControl));
 
     private static bool IsControl(ExtensionNode node) => node.Tag is "button" or "input" or "select" or "textarea";
+
+    private static bool HoldsControl(ExtensionNode node) => IsControl(node) || node.Children.Any(HoldsControl);
 
     private static string KeyOf(TextKind kind) => kind switch
     {
@@ -120,8 +126,80 @@ internal sealed class ExtensionContentBuilder(Action<ExtensionAction> act)
         "details" => Details(node, kind),
         "pre" => Preformatted(node),
         "hr" => Line(new Thickness(0, 1, 0, 0)),
+        "form" => Form(node, kind),
+        "label" => Labelled(node, kind),
+        "progress" => Progress(node),
         _ => Container(node, kind),
     };
+
+    /// <summary>
+    /// Un formulaire : ses champs nommés partent ensemble, par leur <c>name</c>, quand on clique un bouton sans <c>data-action</c> ou
+    /// qu'on appuie sur Entrée dans un champ d'une ligne. Un champ obligatoire vide garde le formulaire et reçoit le focus.
+    /// </summary>
+    private StackPanel Form(ExtensionNode node, TextKind kind)
+    {
+        var outer = _form;
+        _form = new FormScope(node.Action, node.Data, ++_forms, act);
+        var inner = Blocks(node.Children, kind);
+        _form = outer;
+        return inner;
+    }
+
+    /// <summary>
+    /// Un libellé qui contient un champ : son texte au-dessus, le champ dessous, et le texte devient le nom du champ. Une case à
+    /// cocher ou un bouton radio seul le prend comme texte, à côté de lui.
+    /// </summary>
+    private StackPanel Labelled(ExtensionNode node, TextKind kind)
+    {
+        var label = string.Concat(node.Children.Where(child => !HoldsControl(child)).Select(child => child.AllText)).Trim();
+        var fields = Blocks(node.Children.Where(HoldsControl), kind);
+        if (label.Length > 0 && Descendants(fields).OfType<Control>().ToList() is [ToggleButton { Content: null } choice])
+        {
+            choice.Content = label;
+            AutomationProperties.SetName(choice, label);
+            return fields;
+        }
+        var panel = new StackPanel();
+        if (label.Length > 0)
+        {
+            var text = NewText(TextKind.Strong);
+            text.Text = label;
+            text.Margin = new Thickness(0, 0, 0, 4);
+            panel.Children.Add(text);
+        }
+        // Le libellé nomme le champ, comme en HTML ; son indication reste une aide. Seul un aria-label passe avant lui.
+        foreach (var field in Descendants(fields).OfType<Control>().Where(control => AutomationProperties.GetName(control) is var name
+            && (string.IsNullOrEmpty(name) || (control is TextBox box && name == Field.GetPlaceholder(box)))))
+        {
+            AutomationProperties.SetName(field, label);
+        }
+        panel.Children.Add(fields);
+        return panel;
+    }
+
+    private static IEnumerable<DependencyObject> Descendants(DependencyObject parent)
+    {
+        foreach (var child in LogicalTreeHelper.GetChildren(parent).OfType<DependencyObject>())
+        {
+            yield return child;
+            foreach (var inner in Descendants(child))
+            {
+                yield return inner;
+            }
+        }
+    }
+
+    /// <summary>Une barre de progression : <c>value</c> sur <c>max</c> (1 par défaut), sans jamais sortir de la piste.</summary>
+    private static ProgressBar Progress(ExtensionNode node)
+    {
+        static double Number(string? text) =>
+            double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out var value) && double.IsFinite(value) && value > 0 ? value : 0;
+        var max = Number(node.Attribute("max")) is var read && read > 0 ? read : 1;
+        var bar = new ProgressBar { Maximum = max, Value = Math.Min(Number(node.Attribute("value")), max), MinWidth = FieldWidth, HorizontalAlignment = HorizontalAlignment.Stretch };
+        var label = node.Attribute("aria-label") is { Length: > 0 } named ? named : node.AllText.Trim();
+        AutomationProperties.SetName(bar, label.Length > 0 ? label : string.Create(CultureInfo.CurrentCulture, $"{bar.Value} / {max}"));
+        return bar;
+    }
 
     /// <summary>Un paragraphe, un <c>div</c>, ou un élément hors de sa place (un <c>li</c> sans liste) : ce qu'il contient, avec ses classes.</summary>
     private FrameworkElement Container(ExtensionNode node, TextKind inherited)
@@ -285,7 +363,9 @@ internal sealed class ExtensionContentBuilder(Action<ExtensionAction> act)
 
     private Button BuildButton(ExtensionNode node)
     {
-        var button = new Button { Content = node.AllText.Trim(), IsEnabled = node.Action is not null && node.Attribute("disabled") is null };
+        // Dans un formulaire, un bouton sans action à lui l'envoie, comme en HTML ; type="button" l'en empêche.
+        var submits = _form is { Action: not null } && node.Action is null && node.Attribute("type") is null or "submit";
+        var button = new Button { Content = node.AllText.Trim(), IsEnabled = (node.Action is not null || submits) && node.Attribute("disabled") is null };
         var style = node.Has("principal") ? "Kyf.Button.Primary" : node.Has("discret") ? "Kyf.Button.Subtle" : "Kyf.Button";
         button.SetResourceReference(FrameworkElement.StyleProperty, style);
         if (node.Attribute("aria-label") is { Length: > 0 } label)
@@ -296,6 +376,11 @@ internal sealed class ExtensionContentBuilder(Action<ExtensionAction> act)
         {
             button.Click += (_, _) => act(new ExtensionAction(action, node.Data.GetValueOrDefault("valeur"), node.Data));
             Interactive.Add((action, button));
+        }
+        else if (submits && _form is { Action: { } submit } form)
+        {
+            button.Click += (_, _) => form.Submit();
+            Interactive.Add((submit, button));
         }
         return button;
     }
@@ -310,6 +395,20 @@ internal sealed class ExtensionContentBuilder(Action<ExtensionAction> act)
         ToggleButton choice = type == "RADIO" ? new RadioButton() : new CheckBox();
         choice.IsChecked = node.Attribute("checked") is not null;
         choice.IsEnabled = node.Attribute("disabled") is null;
+        if (_form is { } form && node.Attribute("name") is { Length: > 0 } name)
+        {
+            if (choice is RadioButton radio)
+            {
+                // Les boutons radio d'un même nom vont ensemble, dans ce formulaire seulement.
+                radio.GroupName = string.Create(CultureInfo.InvariantCulture, $"extension-{form.Number}-{name}");
+                var value = node.Attribute("value") ?? "on";
+                form.Add(name, () => radio.IsChecked == true ? value : null, radio, isMissing: null, choice: true);
+            }
+            else
+            {
+                form.Add(name, () => choice.IsChecked == true, choice, isMissing: null, choice: false);
+            }
+        }
         if (node.Attribute("aria-label") is { Length: > 0 } label)
         {
             choice.Content = label;
@@ -338,6 +437,24 @@ internal sealed class ExtensionContentBuilder(Action<ExtensionAction> act)
         var placeholder = node.Attribute("placeholder") ?? string.Empty;
         Field.SetPlaceholder(box, placeholder);
         AutomationProperties.SetName(box, node.Attribute("aria-label") is { Length: > 0 } label ? label : placeholder);
+        var form = _form;
+        if (form is not null && node.Attribute("name") is { Length: > 0 } name)
+        {
+            var required = node.Attribute("required") is not null;
+            AutomationProperties.SetIsRequiredForForm(box, required);
+            form.Add(name, () => box.Text, box, required ? () => string.IsNullOrWhiteSpace(box.Text) : null, choice: false);
+            if (!multiline && node.Action is null && form.Action is not null)
+            {
+                box.KeyDown += (_, e) =>
+                {
+                    if (e.Key == Key.Enter)
+                    {
+                        e.Handled = true;
+                        form.Submit();
+                    }
+                };
+            }
+        }
         if (node.Action is { } action)
         {
             var known = value;
@@ -373,6 +490,10 @@ internal sealed class ExtensionContentBuilder(Action<ExtensionAction> act)
             IsEnabled = node.Attribute("disabled") is null,
         };
         AutomationProperties.SetName(box, node.Attribute("aria-label") ?? string.Empty);
+        if (_form is { } form && node.Attribute("name") is { Length: > 0 } name && options.Count > 0)
+        {
+            form.Add(name, () => options[Math.Max(0, box.SelectedIndex)] is var option ? option.Attribute("value") ?? option.AllText.Trim() : null, box, isMissing: null, choice: false);
+        }
         if (node.Action is { } action)
         {
             box.SelectionChanged += (_, _) =>
@@ -528,6 +649,44 @@ internal sealed class ExtensionContentBuilder(Action<ExtensionAction> act)
         text.SetResourceReference(TextBlock.FontFamilyProperty, DesignKeys.CodeFont);
         text.Text = node.AllText;
         return text;
+    }
+
+    /// <summary>Un formulaire en cours de construction : ses champs nommés, et ce qui l'envoie.</summary>
+    private sealed class FormScope(string? action, IReadOnlyDictionary<string, string> data, int number, Action<ExtensionAction> act)
+    {
+        private readonly List<(string Name, Func<object?> Value, Control Control, Func<bool>? IsMissing, bool Choice)> _fields = [];
+
+        public string? Action => action;
+
+        public int Number => number;
+
+        public void Add(string name, Func<object?> value, Control control, Func<bool>? isMissing, bool choice) =>
+            _fields.Add((name, value, control, isMissing, choice));
+
+        /// <summary>Envoie les champs, par leur nom ; un champ obligatoire vide reçoit le focus à la place.</summary>
+        public void Submit()
+        {
+            if (action is null)
+            {
+                return;
+            }
+            if (_fields.FirstOrDefault(field => field.IsMissing?.Invoke() == true) is { Control: { } missing })
+            {
+                missing.Focus();
+                return;
+            }
+            var values = new Dictionary<string, object?>(StringComparer.Ordinal);
+            foreach (var field in _fields)
+            {
+                var value = field.Value();
+                // Un groupe de boutons radio vaut celui qui est coché ; aucun, rien.
+                if (!field.Choice || value is not null || !values.ContainsKey(field.Name))
+                {
+                    values[field.Name] = value;
+                }
+            }
+            act(new ExtensionAction(action, values, data));
+        }
     }
 
     private enum TextKind
