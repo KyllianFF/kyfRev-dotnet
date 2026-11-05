@@ -1,0 +1,10 @@
+{
+  "id": "chronologie",
+  "nom": "Chronologie",
+  "version": "1.0.0",
+  "description": "Des frises de dates dans les fiches (bloc ```chronologie) et une vue qui réunit toutes les dates du coffre, dans l'ordre.",
+  "auteur": "kyfRev",
+  "permissions": ["fiches:lecture"],
+  "blocs": ["chronologie"],
+  "vue": { "titre": "Chronologie" }
+}

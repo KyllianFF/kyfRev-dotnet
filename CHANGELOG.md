@@ -18,6 +18,9 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   définitive, en le cochant.
 - Vue « Fiches » : une vraie arborescence, avec des dossiers dans les dossiers, qui se plient et se déplient, y compris les
   dossiers vides ; un avertissement au-delà de trois sous-dossiers.
+- Extensions : elles s'installent depuis un dossier, s'activent et se retirent dans « Modules et extensions », après avoir montré
+  ce qu'elles demandent ; celles de la 0.x sont reprises au premier lancement. Leur code tourne à part, sans réseau. Leurs blocs et
+  leurs vues ne s'affichent pas encore.
 - Schéma réseau : le switch de cœur et le switch de distribution rejoignent la bibliothèque, avec leur icône.
 - Écrire : tous les dessins passent par le même éditeur, après le choix du modèle dans la galerie : les SmartArt en liste, la carte
   mentale sur plusieurs niveaux, les schémas Mermaid en liste, les graphiques en tableau de valeurs. Tout dessin inséré depuis la

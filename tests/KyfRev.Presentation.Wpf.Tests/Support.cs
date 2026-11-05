@@ -7,6 +7,7 @@ using KyfRev.Application.Ports;
 using KyfRev.Application.UseCases;
 using KyfRev.DesignSystem;
 using KyfRev.DesignSystem.Tokens;
+using KyfRev.Extensions.Host;
 using KyfRev.Infrastructure.Vault.Adapters;
 using KyfRev.Presentation.Wpf.Editing;
 using KyfRev.Presentation.Wpf.Pages;
@@ -124,6 +125,13 @@ internal sealed class FakeVoices(params string[] voices) : ISpeech
     public void ResumeSpeaking()
     {
     }
+}
+
+/// <summary>La carte des extensions, sur une bibliothèque qui n'existe pas encore.</summary>
+internal static class FakeExtensions
+{
+    public static ExtensionSettingsViewModel Settings() =>
+        new(new ExtensionLibrary(Path.Combine(Path.GetTempPath(), "kyfrev-essai-" + Guid.NewGuid().ToString("N")), TimeProvider.System), new FakePicker());
 }
 
 /// <summary>Sélecteur de dossiers simulé : rend les réponses prévues, note les titres.</summary>
@@ -368,6 +376,9 @@ internal sealed class EngineTestAttribute([CallerFilePath] string callerFilePath
 internal static class FakeEnvironment
 {
     public static string WebData { get; } = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "kyfrev-essais-webview2");
+
+    /// <summary>Le dossier du moteur des extensions, qui a le sien.</summary>
+    public static string ExtensionData { get; } = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "kyfrev-essais-webview2-extensions");
 
     /// <summary>Ouvrir sur le code : sans le moteur web, pour les essais qui n'en ont pas besoin.</summary>
     public static EditorEnvironment Markdown() => new(new FakeSpelling(), WebData, StartsInMarkdown: true);

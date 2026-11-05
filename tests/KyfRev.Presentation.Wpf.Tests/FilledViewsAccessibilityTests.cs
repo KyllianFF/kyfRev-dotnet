@@ -43,7 +43,7 @@ public sealed class FilledViewsAccessibilityTests
         var page = new SettingsPageViewModel(app.Settings, TimeProvider.System);
         var data = new DataSettingsViewModel(app.Vaults, app.Backups, app.Trash, app.Annotations, app.Exports, app.Settings, new FakePicker(), new FakeOpener(), () => { });
         var general = new GeneralSettingsViewModel(new MachineSettings(new MemoryMachinePreferences()), new FakeVoices("Hortense"));
-        var modules = new ModulesSettingsViewModel(app.Settings, _ => { });
+        var modules = new ModulesSettingsViewModel(app.Settings, _ => { }, FakeExtensions.Settings());
         var hub = new SettingsHubViewModel(general, page, modules, data, new AboutSettingsViewModel(app.Vaults));
 
         var names = Names(hub, () => hub.Selected.Page == general, null);

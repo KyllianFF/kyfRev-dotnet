@@ -62,6 +62,9 @@ public sealed class VaultLocations : IVaultLocations
     /// </summary>
     public string LocalData => _localData;
 
+    /// <summary>Dossier de la 0.x (<c>%LOCALAPPDATA%\kyfRev</c>) en mode installé, lu sans jamais être modifié ; rien sinon.</summary>
+    public string? LegacyLocalData => _legacyLocalData;
+
     /// <summary>Les emplacements de l'exécutable en cours, pour l'utilisateur en cours.</summary>
     public static VaultLocations Detect()
     {

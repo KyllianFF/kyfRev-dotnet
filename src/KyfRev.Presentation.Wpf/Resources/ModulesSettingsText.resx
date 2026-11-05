@@ -40,10 +40,109 @@
     <value>Domaines de la citation du jour</value>
   </data>
   <data name="ExtensionsHelp" xml:space="preserve">
-    <value>L'installation d'extensions n'est pas encore disponible dans cette version.</value>
+    <value>Des blocs et des vues ajoutés par vous ou par d'autres. Installées sur cet ordinateur, elles tournent isolées : ni accès à Internet, ni modification des fiches.</value>
   </data>
   <data name="ExtensionsTitle" xml:space="preserve">
     <value>Extensions</value>
+  </data>
+  <data name="ExtensionsNotShownYet" xml:space="preserve">
+    <value>Leurs blocs et leurs vues ne s'affichent pas encore dans cette version.</value>
+  </data>
+  <data name="ExtensionsNone" xml:space="preserve">
+    <value>Aucune extension installée.</value>
+  </data>
+  <data name="ExtensionInstallFromFolder" xml:space="preserve">
+    <value>Installer depuis un dossier…</value>
+  </data>
+  <data name="ExtensionPick" xml:space="preserve">
+    <value>Choisissez le dossier de l'extension (avec son extension.json)</value>
+  </data>
+  <data name="ExtensionAnd" xml:space="preserve">
+    <value> et </value>
+  </data>
+  <data name="ExtensionReadSheets" xml:space="preserve">
+    <value>lire vos fiches (sans pouvoir les modifier)</value>
+  </data>
+  <data name="ExtensionStorage" xml:space="preserve">
+    <value>garder ses propres données dans le coffre</value>
+  </data>
+  <data name="ExtensionInstallTitle" xml:space="preserve">
+    <value>Installer l'extension ?</value>
+  </data>
+  <data name="ExtensionUpdateTitle" xml:space="preserve">
+    <value>Mettre à jour l'extension ?</value>
+  </data>
+  <data name="ExtensionInstall" xml:space="preserve">
+    <value>Installer</value>
+  </data>
+  <data name="ExtensionUpdate" xml:space="preserve">
+    <value>Mettre à jour</value>
+  </data>
+  <data name="ExtensionNoPermission" xml:space="preserve">
+    <value>Elle ne demande aucune permission.</value>
+  </data>
+  <data name="ExtensionLimits" xml:space="preserve">
+    <value>Elle ne pourra ni accéder à Internet, ni modifier vos fiches.</value>
+  </data>
+  <data name="ExtensionTrust" xml:space="preserve">
+    <value>N'installez que des extensions dont vous connaissez l'auteur.</value>
+  </data>
+  <data name="ExtensionRemoveTitle" xml:space="preserve">
+    <value>Retirer l'extension ?</value>
+  </data>
+  <data name="ExtensionRemove" xml:space="preserve">
+    <value>Retirer</value>
+  </data>
+  <data name="ExtensionRemoveLabel" xml:space="preserve">
+    <value>Retirer…</value>
+  </data>
+  <data name="ExtensionVersionBy" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="ExtensionAdds" xml:space="preserve">
+    <value>Ajoute : {0}</value>
+  </data>
+  <data name="ExtensionMay" xml:space="preserve">
+    <value>Elle peut {0}.</value>
+  </data>
+  <data name="ExtensionBlock" xml:space="preserve">
+    <value>bloc « {0} »</value>
+  </data>
+  <data name="ExtensionView" xml:space="preserve">
+    <value>vue « {0} »</value>
+  </data>
+  <data name="ExtensionSummary" xml:space="preserve">
+    <value>{0} {1} : {2}.</value>
+  </data>
+  <data name="ExtensionSummaryBy" xml:space="preserve">
+    <value>{0} {1}, par {2} : {3}.</value>
+  </data>
+  <data name="ExtensionWill" xml:space="preserve">
+    <value>Elle pourra {0}.</value>
+  </data>
+  <data name="ExtensionReplaces" xml:space="preserve">
+    <value>Elle remplace la version {0}, rangée (et non effacée).</value>
+  </data>
+  <data name="ExtensionInstalled" xml:space="preserve">
+    <value>Extension « {0} » {1} installée et activée.</value>
+  </data>
+  <data name="ExtensionEnabled" xml:space="preserve">
+    <value>Extension « {0} » activée.</value>
+  </data>
+  <data name="ExtensionDisabled" xml:space="preserve">
+    <value>Extension « {0} » désactivée.</value>
+  </data>
+  <data name="ExtensionRemoved" xml:space="preserve">
+    <value>Extension « {0} » retirée ; ses données restent dans le coffre.</value>
+  </data>
+  <data name="ExtensionRemoveDetails" xml:space="preserve">
+    <value>« {0} » disparaît de kyfRev. Son dossier est rangé (et non effacé), ses données restent dans le coffre : la réinstaller les retrouve.</value>
+  </data>
+  <data name="ExtensionRemoveName" xml:space="preserve">
+    <value>Retirer {0}</value>
+  </data>
+  <data name="ExtensionFiles" xml:space="preserve">
+    <value>{0} fichier(s), {1}.</value>
   </data>
   <data name="ModulesHelp" xml:space="preserve">
     <value>Des fonctions facultatives, pour ce coffre. Désactiver un module le retire des menus ; ce qu'il a créé reste dans le coffre, intact.</value>

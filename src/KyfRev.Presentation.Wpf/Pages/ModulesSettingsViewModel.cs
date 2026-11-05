@@ -46,12 +46,14 @@ public sealed partial class ModulesSettingsViewModel : ObservableObject, INaviga
     private bool _showing = true;
 
     /// <summary>L'onglet ; <paramref name="applied"/> charge les modules que disent les réglages qui viennent de changer.</summary>
-    public ModulesSettingsViewModel(SettingsUseCases settings, Action<VaultPreferences> applied)
+    public ModulesSettingsViewModel(SettingsUseCases settings, Action<VaultPreferences> applied, ExtensionSettingsViewModel extensions)
     {
         ArgumentNullException.ThrowIfNull(settings);
         ArgumentNullException.ThrowIfNull(applied);
+        ArgumentNullException.ThrowIfNull(extensions);
         _settings = settings;
         _applied = applied;
+        Extensions = extensions;
         Domains =
         [
             new("philosophie", ModulesSettingsText.DomainPhilosophy, ModulesSettingsText.DomainPhilosophyPages, SaveDomains),
@@ -61,6 +63,9 @@ public sealed partial class ModulesSettingsViewModel : ObservableObject, INaviga
         ];
         _showing = false;
     }
+
+    /// <summary>La carte des extensions.</summary>
+    public ExtensionSettingsViewModel Extensions { get; }
 
     /// <summary>Les domaines de la citation du jour.</summary>
     public IReadOnlyList<QuoteDomainChoice> Domains { get; }
@@ -98,6 +103,7 @@ public sealed partial class ModulesSettingsViewModel : ObservableObject, INaviga
     {
         Error = null;
         Message = null;
+        Extensions.Reload();
         var outcome = _settings.Get();
         if (outcome.Succeeded)
         {

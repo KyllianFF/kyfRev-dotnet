@@ -408,8 +408,8 @@ public sealed class QuotesTests
     public void The_modules_tab_needs_its_settings_and_its_action()
     {
         using var vault = new QuotesVault();
-        Assert.ThrowsExactly<ArgumentNullException>(() => new ModulesSettingsViewModel(null!, _ => { }));
-        Assert.ThrowsExactly<ArgumentNullException>(() => new ModulesSettingsViewModel(vault.App.Settings, null!));
+        Assert.ThrowsExactly<ArgumentNullException>(() => new ModulesSettingsViewModel(null!, _ => { }, FakeExtensions.Settings()));
+        Assert.ThrowsExactly<ArgumentNullException>(() => new ModulesSettingsViewModel(vault.App.Settings, null!, FakeExtensions.Settings()));
     }
 
     [TestMethod]
@@ -418,7 +418,7 @@ public sealed class QuotesTests
         using var vault = new QuotesVault();
         vault.App.Settings.Update(preferences => preferences with { QuotesActive = true, QuotesOnline = true, QuoteDomains = ["art"] }).Value.ToString();
         var applied = new List<VaultPreferences>();
-        var page = new ModulesSettingsViewModel(vault.App.Settings, applied.Add);
+        var page = new ModulesSettingsViewModel(vault.App.Settings, applied.Add, FakeExtensions.Settings());
 
         page.OnNavigatedTo();
 
@@ -438,7 +438,7 @@ public sealed class QuotesTests
         using var vault = new QuotesVault();
         var path = vault.Add("Un texte.");
         var applied = new List<VaultPreferences>();
-        var page = new ModulesSettingsViewModel(vault.App.Settings, applied.Add);
+        var page = new ModulesSettingsViewModel(vault.App.Settings, applied.Add, FakeExtensions.Settings());
         page.OnNavigatedTo();
 
         page.QuotesActive = true;
@@ -459,7 +459,7 @@ public sealed class QuotesTests
     public void The_online_search_and_its_domains_are_kept_at_once()
     {
         using var vault = new QuotesVault();
-        var page = new ModulesSettingsViewModel(vault.App.Settings, _ => { });
+        var page = new ModulesSettingsViewModel(vault.App.Settings, _ => { }, FakeExtensions.Settings());
         page.OnNavigatedTo();
 
         page.QuotesOnline = true;
@@ -478,7 +478,7 @@ public sealed class QuotesTests
     public void A_refused_change_says_why_and_shows_what_is_kept()
     {
         using var vaults = new TestVaults(AppMode.Development);
-        var page = new ModulesSettingsViewModel(vaults.App.Settings, _ => { });
+        var page = new ModulesSettingsViewModel(vaults.App.Settings, _ => { }, FakeExtensions.Settings());
 
         page.OnNavigatedTo();
         Assert.IsTrue(page.HasError, "aucun coffre ouvert");
@@ -494,7 +494,7 @@ public sealed class QuotesTests
         using var ui = new UiThread();
         using var vault = new QuotesVault();
         var test = new TestShell();
-        var model = new ModulesSettingsViewModel(vault.App.Settings, _ => { });
+        var model = new ModulesSettingsViewModel(vault.App.Settings, _ => { }, FakeExtensions.Settings());
         model.OnNavigatedTo();
         var page = new ModulesSettingsPage { DataContext = model };
         var host = new Border { Width = 640, Height = 700, Child = page };

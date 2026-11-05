@@ -1,0 +1,8 @@
+{
+  "platformOptions": {
+    "Coverlet": {
+      "include": "[KyfRev.Extensions.Host]*",
+      "excludeByAttribute": "ExcludeFromCodeCoverage,ExcludeFromCodeCoverageAttribute,GeneratedCodeAttribute,CompilerGeneratedAttribute"
+    }
+  }
+}

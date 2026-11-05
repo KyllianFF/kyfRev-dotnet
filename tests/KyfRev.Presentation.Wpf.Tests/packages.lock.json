@@ -178,6 +178,7 @@
       "kyfRev": {
         "type": "Project",
         "dependencies": {
+          "KyfRev.Extensions.Host": "[1.0.0-alpha.0, )",
           "KyfRev.Infrastructure.Online": "[1.0.0-alpha.0, )",
           "KyfRev.Infrastructure.Vault": "[1.0.0-alpha.0, )",
           "KyfRev.Infrastructure.Windows": "[1.0.0-alpha.0, )",
@@ -200,6 +201,12 @@
       },
       "kyfrev.domain": {
         "type": "Project"
+      },
+      "kyfrev.extensions.host": {
+        "type": "Project",
+        "dependencies": {
+          "KyfRev.Application": "[1.0.0-alpha.0, )"
+        }
       },
       "kyfrev.infrastructure.online": {
         "type": "Project",
@@ -243,6 +250,7 @@
           "CommunityToolkit.Mvvm": "[8.4.2, )",
           "KyfRev.Application": "[1.0.0-alpha.0, )",
           "KyfRev.DesignSystem": "[1.0.0-alpha.0, )",
+          "KyfRev.Extensions.Host": "[1.0.0-alpha.0, )",
           "KyfRev.Modules.Citations": "[1.0.0-alpha.0, )",
           "KyfRev.Modules.Schemas": "[1.0.0-alpha.0, )",
           "KyfRev.Rendering": "[1.0.0-alpha.0, )",

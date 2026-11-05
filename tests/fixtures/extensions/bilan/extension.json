@@ -1,0 +1,9 @@
+{
+  "id": "bilan",
+  "nom": "Bilan du coffre",
+  "version": "1.0.0",
+  "description": "Une vue qui fait le point sur vos fiches : volume par dossier, fiches courtes à étoffer, fiches sans étiquette ni intertitre. Lecture seule.",
+  "auteur": "kyfRev",
+  "permissions": ["fiches:lecture"],
+  "vue": { "titre": "Bilan du coffre" }
+}

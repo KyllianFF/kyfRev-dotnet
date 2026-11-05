@@ -25,7 +25,7 @@ public sealed class SettingsHubTests
         var revisions = new SettingsPageViewModel(vault.App.Settings, TimeProvider.System);
         var about = new AboutSettingsViewModel(vault.App.Vaults);
         var general = DataVault.General();
-        var modules = new ModulesSettingsViewModel(vault.App.Settings, _ => { });
+        var modules = new ModulesSettingsViewModel(vault.App.Settings, _ => { }, FakeExtensions.Settings());
         Assert.ThrowsExactly<ArgumentNullException>(() => new SettingsHubViewModel(null!, revisions, modules, vault.Page, about));
         Assert.ThrowsExactly<ArgumentNullException>(() => new SettingsHubViewModel(general, null!, modules, vault.Page, about));
         Assert.ThrowsExactly<ArgumentNullException>(() => new SettingsHubViewModel(general, revisions, null!, vault.Page, about));
@@ -613,7 +613,7 @@ public sealed class SettingsHubTests
 
         public static GeneralSettingsViewModel General() => new(new MachineSettings(new MemoryMachinePreferences()), new FakeVoices("Microsoft Hortense Desktop"));
 
-        public SettingsHubViewModel Hub() => new(General(), new SettingsPageViewModel(App.Settings, TimeProvider.System), new ModulesSettingsViewModel(App.Settings, _ => { }), Page, new AboutSettingsViewModel(App.Vaults));
+        public SettingsHubViewModel Hub() => new(General(), new SettingsPageViewModel(App.Settings, TimeProvider.System), new ModulesSettingsViewModel(App.Settings, _ => { }, FakeExtensions.Settings()), Page, new AboutSettingsViewModel(App.Vaults));
 
         public async Task<DataSettingsViewModel> LoadedAsync()
         {
