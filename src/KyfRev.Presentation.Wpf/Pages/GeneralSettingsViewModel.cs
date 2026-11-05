@@ -39,6 +39,16 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, INaviga
         Font = Fonts[0];
         Rate = Rates[1];
         Show();
+        // Le thème se change aussi depuis la barre de titre, cet onglet ouvert.
+        machine.Changed += (_, _) =>
+        {
+            if (Theme.Value != machine.Current.Theme)
+            {
+                _showing = true;
+                Theme = Themes.First(choice => choice.Value == machine.Current.Theme);
+                _showing = false;
+            }
+        };
     }
 
     /// <summary>Les thèmes.</summary>

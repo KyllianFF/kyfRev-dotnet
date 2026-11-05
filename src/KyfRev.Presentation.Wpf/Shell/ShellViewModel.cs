@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using KyfRev.Application.Model;
 using KyfRev.DesignSystem.Controls;
+using KyfRev.DesignSystem.Tokens;
 
 namespace KyfRev.Presentation.Wpf.Shell;
 
@@ -42,6 +43,15 @@ public sealed partial class ShellViewModel : ObservableObject
         ArgumentNullException.ThrowIfNull(appearance);
         _core = [.. navigation];
         Appearance = appearance;
+        appearance.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(AppearanceController.Theme))
+            {
+                OnPropertyChanged(nameof(ThemeGlyph));
+                OnPropertyChanged(nameof(ThemeLabel));
+                OnPropertyChanged(nameof(CanToggleTheme));
+            }
+        };
         Gallery = new NavigationItem("galerie", ShellText.Gallery, Icons.Palette, int.MaxValue, gallery);
         Shortcuts =
         [
@@ -66,6 +76,15 @@ public sealed partial class ShellViewModel : ObservableObject
         Current = Home;
         SelectedMain = MainNavigation.Contains(Current) ? Current : null;
     }
+
+    /// <summary>L'icône du bouton de thème : le thème où il mène.</summary>
+    public string ThemeGlyph => Appearance.Theme == ThemeKind.Dark ? Icons.Sun : Icons.Moon;
+
+    /// <summary>Le nom du bouton de thème.</summary>
+    public string ThemeLabel => Appearance.Theme == ThemeKind.Dark ? ShellText.ThemeToLight : ShellText.ThemeToDark;
+
+    /// <summary>Le thème se change d'un clic, sauf en contraste élevé, qui passe avant.</summary>
+    public bool CanToggleTheme => Appearance.Theme != ThemeKind.HighContrast;
 
     /// <summary>Un coffre va s'afficher : c'est le moment de charger ce qui dépend de lui.</summary>
     public event EventHandler? WorkspaceOpening;
@@ -300,6 +319,10 @@ public sealed partial class ShellViewModel : ObservableObject
     /// <summary>Masque ou affiche le menu.</summary>
     [RelayCommand]
     public void ToggleFocusMode() => IsFocusMode = !IsFocusMode;
+
+    /// <summary>Passe du thème clair au thème sombre, ou l'inverse. Ce choix remplace « comme Windows » ; il se retrouve dans les Paramètres.</summary>
+    [RelayCommand]
+    private void ToggleTheme() => Appearance.Preference = Appearance.Theme == ThemeKind.Dark ? ThemePreference.Light : ThemePreference.Dark;
 
     /// <summary>Passe en plein écran, ou en sort (F11).</summary>
     [RelayCommand]

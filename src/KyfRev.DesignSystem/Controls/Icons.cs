@@ -144,6 +144,24 @@ public static class Icons
     /// <summary>Croix : fermer.</summary>
     public static string Close { get; } = Glyph(0xE711);
 
+    /// <summary>Le bouton « Réduire » d'une fenêtre.</summary>
+    public static string WindowMinimize { get; } = Glyph(0xE921);
+
+    /// <summary>Le bouton « Agrandir » d'une fenêtre.</summary>
+    public static string WindowMaximize { get; } = Glyph(0xE922);
+
+    /// <summary>Le bouton « Restaurer » d'une fenêtre.</summary>
+    public static string WindowRestore { get; } = Glyph(0xE923);
+
+    /// <summary>Le bouton « Fermer » d'une fenêtre.</summary>
+    public static string WindowClose { get; } = Glyph(0xE8BB);
+
+    /// <summary>Lune : passer au thème sombre.</summary>
+    public static string Moon { get; } = Glyph(0xE708);
+
+    /// <summary>Soleil : passer au thème clair.</summary>
+    public static string Sun { get; } = Glyph(0xE706);
+
     /// <summary>Écouter.</summary>
     public static string Speaker { get; } = Glyph(0xE767);
 
