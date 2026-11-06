@@ -337,9 +337,83 @@ public sealed class ExtensionSettingsTests
         Assert.AreEqual(ModulesSettingsText.ExtensionDisabledOf("Bilan du coffre"), scene.Page.Message);
         Assert.IsNull(scene.Library.Active("bilan"));
 
+        Assert.IsTrue(row.IsInactive);
+        Assert.IsTrue(row.Rights.All(right => !right.IsGranted && !right.IsAvailable), "Désactivée, elle n'a plus de permission, et rien ne se coche.");
+
         row.IsActive = true;
-        Assert.AreEqual(ModulesSettingsText.ExtensionEnabledOf("Bilan du coffre"), scene.Page.Message);
+        Assert.IsTrue(scene.Page.IsConfirmingInstall, "La réactiver repose la question de ses permissions.");
+        Assert.AreEqual(ModulesSettingsText.ExtensionReactivateTitle, scene.Page.InstallTitle);
+        Assert.AreEqual(ModulesSettingsText.ExtensionReactivate, scene.Page.InstallAction);
+        Assert.AreEqual(ModulesSettingsText.ExtensionRightReadSheets, scene.Page.InstallRights.Single().Text);
+        Assert.IsFalse(row.IsActive, "Rien ne change avant la réponse.");
+        Assert.IsNull(scene.Library.Active("bilan"));
+
+        scene.Answer(false);
+        Assert.IsFalse(row.IsActive);
+        Assert.IsNull(scene.Library.Active("bilan"));
+
+        row.IsActive = true;
+        scene.Answer(true);
+        Assert.AreEqual(ModulesSettingsText.ExtensionReactivatedOf("Bilan du coffre"), scene.Page.Message);
         Assert.IsNotNull(scene.Library.Active("bilan"));
+        Assert.IsTrue(row.IsActive);
+        Assert.IsTrue(row.Rights.All(right => right.IsGranted && right.IsAvailable));
+    }
+
+    [STATestMethod]
+    public void A_reactivation_gives_back_what_was_withdrawn_once_confirmed()
+    {
+        using var ui = new UiThread();
+        using var scene = new Scene();
+        scene.Library.Install(Path.Combine(Published, "quiz"));
+        scene.Page.Reload();
+        var row = scene.Page.Rows.Single();
+        row.Rights[0].IsGranted = false;
+        Assert.IsFalse(row.Rights[0].IsGranted);
+
+        row.IsActive = false;
+        row.IsActive = true;
+        Assert.IsTrue(scene.Page.InstallRights.All(right => right.IsGranted), "La confirmation montre tout ce qu'elle demande.");
+        scene.Answer(true);
+
+        Assert.IsEmpty(scene.Library.Withdrawn("quiz"));
+        Assert.IsTrue(row.Rights.All(right => right.IsGranted));
+        Assert.HasCount(2, scene.Library.Granted("quiz"));
+    }
+
+    [STATestMethod]
+    public void An_extension_without_permission_comes_back_at_once()
+    {
+        using var ui = new UiThread();
+        using var scene = new Scene();
+        scene.Library.Install(scene.Write("simple", """{"id":"simple","nom":"Simple","version":"1","blocs":["simple"]}"""));
+        scene.Page.Reload();
+        var row = scene.Page.Rows.Single();
+
+        row.IsActive = false;
+        row.IsActive = true;
+
+        Assert.IsFalse(scene.Page.IsConfirmingInstall, "Rien à confirmer.");
+        Assert.AreEqual(ModulesSettingsText.ExtensionEnabledOf("Simple"), scene.Page.Message);
+        Assert.IsNotNull(scene.Library.Active("simple"));
+    }
+
+    [STATestMethod]
+    public void A_reactivation_that_fails_says_why()
+    {
+        using var ui = new UiThread();
+        using var scene = new Scene();
+        scene.Library.Install(Path.Combine(Published, "bilan"));
+        scene.Page.Reload();
+        var row = scene.Page.Rows.Single();
+        row.IsActive = false;
+        row.IsActive = true;
+        scene.Library.Retire("bilan");
+
+        scene.Answer(true);
+
+        Assert.IsTrue(scene.Page.HasError);
+        Assert.IsFalse(row.IsActive);
     }
 
     [STATestMethod]

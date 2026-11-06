@@ -405,6 +405,8 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   thème avant sa première page. L'îlot des schémas ne s'arrête plus quand il se ferme pendant qu'il répond.
 - Recherche (Ctrl+K) : la liste reste sous le champ quand la fenêtre change de taille, et un clic ailleurs, même dans la barre
   de titre, la ferme ; l'icône de l'application accompagne son nom dans la barre de titre.
+- Extensions : désactivée, une extension n'a plus aucune permission, et la carte le montre ; la réactiver repose la question,
+  avec la même confirmation qu'à l'installation.
 - Le curseur devient une main sur tout ce qui se clique, y compris les trous et les passages du texte.
 - En révision, « Afficher le passage » et un clic dans le volet découvrent le passage masqué.
 - Le passage visé depuis le volet ressort nettement dans le texte, dans les deux thèmes.
