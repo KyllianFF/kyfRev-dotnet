@@ -41,7 +41,7 @@ export function changerApparence(apparence: Apparence, changement: string, valeu
     case "theme":
       return THEMES.includes(valeur as Theme) ? { ...nouvelle, theme: valeur as Theme } : null;
     case "largeur":
-      return { ...nouvelle, largeur: valeur === "page" ? "page" : "ajustee" };
+      return { ...nouvelle, largeur: valeur === "ajustee" ? "ajustee" : "page" };
     default:
       return null;
   }

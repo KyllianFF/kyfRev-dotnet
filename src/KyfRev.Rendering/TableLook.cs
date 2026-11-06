@@ -116,8 +116,11 @@ public sealed partial record TableLook
     /// <summary>La colonne cachée en révision, à partir de 1 : ses cases deviennent des trous ; rien si aucune ne l'est.</summary>
     public int? HiddenInReview { get; init; }
 
-    /// <summary>Le tableau prend toute la largeur du texte, au lieu de celle de son contenu.</summary>
-    public bool FullWidth { get; init; }
+    /// <summary>
+    /// Le tableau prend toute la largeur du texte (le défaut : on n'écrit ni à sa gauche ni à sa droite), ou seulement celle de
+    /// son contenu quand on l'a ajusté.
+    /// </summary>
+    public bool FullWidth { get; init; } = true;
 
     /// <summary>L'apparence écrite dans une ligne de la fiche ; rien si la ligne n'en est pas une.</summary>
     public static TableLook? FromLine(string line)
@@ -146,7 +149,7 @@ public sealed partial record TableLook
                 "traits" => look with { Lines = LineNames.FirstOrDefault(pair => pair.Value == value, new(TableLines.All, "tous")).Key },
                 "theme" => look with { Theme = ThemeNames.FirstOrDefault(pair => pair.Value == value, new(TableTheme.Sober, "sobre")).Key },
                 "reviser-cache" => look with { HiddenInReview = int.TryParse(value, NumberStyles.None, CultureInfo.InvariantCulture, out var column) && column > 0 ? column : null },
-                "largeur" => look with { FullWidth = value == "page" },
+                "largeur" => look with { FullWidth = value != "ajustee" },
                 _ => look,
             };
         }
@@ -186,9 +189,9 @@ public sealed partial record TableLook
         {
             words.Add("reviser-cache=" + column.ToString(CultureInfo.InvariantCulture));
         }
-        if (FullWidth)
+        if (!FullWidth)
         {
-            words.Add("largeur=page");
+            words.Add("largeur=ajustee");
         }
         return words.Count == 0 ? null : new StringBuilder("<!-- ").Append(Marker).Append(' ').AppendJoin(' ', words).Append(" -->").ToString();
     }

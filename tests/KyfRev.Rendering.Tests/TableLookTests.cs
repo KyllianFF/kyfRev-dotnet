@@ -19,12 +19,14 @@ public sealed class TableLookTests
             Lines = TableLines.Header,
             Theme = TableTheme.Slate,
             HiddenInReview = 2,
-            FullWidth = true,
+            FullWidth = false,
         };
 
         var line = all.ToLine();
 
-        Assert.AreEqual("<!-- kyfrev tableau entete=ligne,colonne total bandes=colonnes traits=entete theme=ardoise reviser-cache=2 largeur=page -->", line);
+        Assert.AreEqual("<!-- kyfrev tableau entete=ligne,colonne total bandes=colonnes traits=entete theme=ardoise reviser-cache=2 largeur=ajustee -->", line);
+        Assert.IsTrue(TableLook.Default.FullWidth, "un tableau prend toute la largeur du texte, sauf s'il est ajusté");
+        Assert.AreEqual(TableLook.Default, TableLook.FromLine("<!-- kyfrev tableau largeur=page -->"), "l'ancienne ligne qui la demandait se relit pareil");
         Assert.AreEqual(all, TableLook.FromLine(line!));
         Assert.AreEqual(TableLook.Default with { Theme = TableTheme.Plum }, TableLook.FromLine("   <!--kyfrev tableau theme=prune-->  "));
         Assert.AreEqual("<!-- kyfrev tableau entete=colonne -->", (TableLook.Default with { HeaderRow = false, HeaderColumn = true }).ToLine());

@@ -12,12 +12,13 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 - Écrire : un onglet « Tableau » apparaît dans le ruban quand le curseur est dans un tableau, et disparaît quand il en sort.
   Il règle l'en-tête (première ligne, première colonne, ou les deux), la dernière ligne qui ressort (une synthèse, un total),
   les bandes (lignes ou colonnes, qui suivent l'en-tête), les traits (tous, horizontaux, verticaux, contour, sous l'en-tête
-  ou aucun), le thème (Sobre, Forêt, Ambre, Ardoise, Prune, Encre, lisibles en clair comme en sombre) et la largeur (ajustée
-  au contenu ou pleine page). Pour la colonne du curseur : son alignement, la cacher en révision (ses cases deviennent des
+  ou aucun), le thème (Sobre, Forêt, Ambre, Ardoise, Prune, Encre, lisibles en clair comme en sombre) et la largeur (pleine
+  page par défaut, ou ajustée au contenu). Pour la colonne du curseur : son alignement, la cacher en révision (ses cases deviennent des
   trous, l'en-tête reste lisible) et trier les lignes de A à Z puis de Z à A. Il reprend aussi l'ajout et le retrait des
   lignes et des colonnes. L'apparence s'écrit dans une seule ligne au-dessus du tableau, `<!-- kyfrev tableau … -->`, que
   GitHub, Obsidian et VS Code n'affichent pas ; un tableau sans cette ligne garde son apparence, et la lecture, l'aperçu,
-  la révision et l'éditeur dessinent la même chose. En lecture, un tableau prend désormais la largeur de son contenu.
+  la révision et l'éditeur dessinent la même chose. Les flèches passent d'une case à l'autre, sans jamais poser le curseur
+  entre deux cases.
 - Fenêtre : l'application dessine sa barre de titre, aux couleurs du thème, avec le nom, la recherche (Ctrl+K), le thème clair
   ou sombre en un clic, les raccourcis clavier et les boutons de la fenêtre. Windows garde le déplacement, le redimensionnement,
   son menu et ses dispositions sur « Agrandir ».
