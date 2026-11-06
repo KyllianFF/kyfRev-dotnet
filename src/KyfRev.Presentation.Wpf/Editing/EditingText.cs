@@ -135,7 +135,7 @@ public static class EditingText
     public const string FormattingHelp = "Toute la mise en forme : Accueil, Insertion et, dans un tableau, Tableau";
 
     /// <summary>Le menu « ⋯ » de la barre courte.</summary>
-    public const string ViewMenu = "Affichage : historique, Markdown, aperçu";
+    public const string ViewMenu = "Affichage";
 
     /// <summary>Le groupe des en-têtes.</summary>
     public const string HeadersGroup = "En-têtes";

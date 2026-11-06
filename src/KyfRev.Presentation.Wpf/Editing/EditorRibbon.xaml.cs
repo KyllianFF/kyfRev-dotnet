@@ -13,11 +13,17 @@ internal sealed partial class EditorRibbon : UserControl
     /// <summary>En deçà de cette largeur, la barre courte remplace le ruban.</summary>
     internal const double CompactWidth = 760;
 
-    /// <summary>En deçà, la barre courte ne garde que les icônes de ses boutons de droite.</summary>
-    internal const double TightWidth = 600;
+    /// <summary>En deçà, le bouton « Tableau » ne garde que son icône.</summary>
+    internal const double TightWidth = 580;
 
     /// <summary>En deçà, « Rétablir » et « Lien » ne restent que dans le volet.</summary>
-    internal const double NarrowWidth = 480;
+    internal const double NarrowWidth = 520;
+
+    /// <summary>En deçà, la liste à puces ne reste que dans le volet.</summary>
+    internal const double BulletsWidth = 450;
+
+    /// <summary>En deçà, « Mise en forme » ne garde que son icône (la fenêtre la plus étroite lui laisse son libellé).</summary>
+    internal const double LabelWidth = 400;
 
     /// <summary>La hauteur du volet de la barre courte : au-delà, il défile, et le texte reste en vue dessous.</summary>
     internal const double CompactPanelHeight = 200;
@@ -176,9 +182,9 @@ internal sealed partial class EditorRibbon : UserControl
     internal void Fit(double width)
     {
         IsCompact = width < CompactWidth;
-        var labels = width < TightWidth ? Visibility.Collapsed : Visibility.Visible;
-        FormatLabel.Visibility = labels;
-        CompactTableLabel.Visibility = labels;
+        FormatLabel.Visibility = width < LabelWidth ? Visibility.Collapsed : Visibility.Visible;
+        CompactTableLabel.Visibility = width < TightWidth ? Visibility.Collapsed : Visibility.Visible;
+        CompactBulletsButton.Visibility = width < BulletsWidth ? Visibility.Collapsed : Visibility.Visible;
         var room = width < NarrowWidth ? Visibility.Collapsed : Visibility.Visible;
         CompactRedoButton.Visibility = room;
         CompactLinkButton.Visibility = room;

@@ -205,10 +205,10 @@ public sealed class TableLookTests
             Assert.AreEqual(Visibility.Collapsed, ribbon.TabRow.Visibility, "les onglets attendent le volet");
             Assert.AreEqual(Visibility.Collapsed, ribbon.Panels.Visibility);
             Assert.AreEqual(Visibility.Collapsed, ribbon.CompactTableButton.Visibility);
-            Assert.AreEqual(Visibility.Collapsed, ribbon.FormatLabel.Visibility, "étroite, la barre ne garde que les icônes à droite");
-            Assert.AreEqual(Visibility.Visible, ribbon.CompactLinkButton.Visibility);
+            Assert.AreEqual(Visibility.Visible, ribbon.FormatLabel.Visibility, "« Mise en forme » garde son libellé");
+            Assert.AreEqual(Visibility.Collapsed, ribbon.CompactTableLabel.Visibility, "le bouton « Tableau » se réduit à son icône");
             Assert.HasCount(5, ribbon.CompactStyleMenu.Items);
-            Assert.HasCount(3, ribbon.ViewMenu.Items, "historique, Markdown, aperçu");
+            Assert.HasCount(3, ribbon.ViewMenu.Items, "historique, Markdown, aperçu ; la page y ajoute le plan et les passages");
             Assert.IsLessThanOrEqualTo(window.ActualWidth, ribbon.ViewButton.TranslatePoint(new Point(ribbon.ViewButton.ActualWidth, 0), window).X, "rien ne passe sous un autre bouton");
 
             ribbon.FormatToggle.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
@@ -248,12 +248,20 @@ public sealed class TableLookTests
             ribbon.FormatToggle.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
             Assert.AreEqual(Visibility.Visible, ribbon.HomePanel.Visibility);
 
-            // Plus étroite encore : « Rétablir » et « Lien » ne restent que dans le volet.
+            // Ce qui cède la place d'abord, c'est ce qui est aussi dans le volet ; « Mise en forme » garde son libellé le plus longtemps.
             ribbon.Fit(EditorRibbon.NarrowWidth - 1);
             Assert.AreEqual(Visibility.Collapsed, ribbon.CompactRedoButton.Visibility);
             Assert.AreEqual(Visibility.Collapsed, ribbon.CompactLinkButton.Visibility);
+            Assert.AreEqual(Visibility.Visible, ribbon.CompactBulletsButton.Visibility);
+            ribbon.Fit(EditorRibbon.BulletsWidth - 1);
+            Assert.AreEqual(Visibility.Collapsed, ribbon.CompactBulletsButton.Visibility);
+            Assert.AreEqual(Visibility.Visible, ribbon.FormatLabel.Visibility);
+            ribbon.Fit(EditorRibbon.LabelWidth - 1);
+            Assert.AreEqual(Visibility.Collapsed, ribbon.FormatLabel.Visibility);
             ribbon.Fit(EditorRibbon.TightWidth);
             Assert.AreEqual(Visibility.Visible, ribbon.FormatLabel.Visibility);
+            Assert.AreEqual(Visibility.Visible, ribbon.CompactTableLabel.Visibility);
+            Assert.AreEqual(Visibility.Visible, ribbon.CompactLinkButton.Visibility);
 
             // Assez de place : le ruban entier revient, ses onglets et l'affichage à droite.
             window.Width = 1100;
