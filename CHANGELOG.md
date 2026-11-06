@@ -9,6 +9,12 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- Lecture : un terme défini dans une fiche se marque dans toutes les fiches qui le contiennent, d'un pointillé discret, distinct
+  de celui d'une définition posée à sa place. Il se trouve en mot entier, sans tenir compte des majuscules, au singulier ou au
+  pluriel, une fois par partie, ni dans un titre, ni dans du code, ni dans un lien. Le survol montre sa définition ; un clic
+  ou le clic droit ouvre sa fiche sur elle, ou cesse de le marquer. Rien n'est écrit dans les fiches, et rien ne se marque en
+  révision, où le mot donnerait la réponse. Le réglage est dans Paramètres › Général, et chaque définition a sa case dans
+  l'onglet Définitions, pour un mot trop courant (champ `partout` de la définition, écrit seulement quand il vaut faux).
 - Fenêtre : l'application dessine sa barre de titre, aux couleurs du thème, avec le nom, la recherche (Ctrl+K), le thème clair
   ou sombre en un clic, les raccourcis clavier et les boutons de la fenêtre. Windows garde le déplacement, le redimensionnement,
   son menu et ses dispositions sur « Agrandir ».

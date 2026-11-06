@@ -287,6 +287,7 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
     private readonly Func<bool> _activeRecall;
     private TextPosition? _editedPosition;
     private PassageEntry? _editedPassage;
+    private IReadOnlyList<VaultDefinition> _definitions = [];
 
     /// <summary>La fiche <paramref name="sheetId"/>.</summary>
     public SheetPageViewModel(SheetUseCases sheets, AnnotationUseCases annotations, Func<ItemKind, string, ReviewState, ReviewBarViewModel> reviewBar, string sheetId, Action back, Action<string> openSheet, IExternalLinks links, Func<OpenedSheet, SheetEditorViewModel> editor, bool revising = false, Func<bool>? activeRecall = null)
@@ -359,6 +360,16 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
     /// <summary>L'annotation qui ressort.</summary>
     [ObservableProperty]
     public partial string? ActivePassage { get; private set; }
+
+    /// <summary>Les mots définis du coffre, marqués dans le texte ; aucun en révision, où ils donneraient la réponse.</summary>
+    [ObservableProperty]
+    public partial IReadOnlyList<DefinedWordMark>? Words { get; private set; }
+
+    /// <summary>Les mots définis du coffre se marquent dans le texte : le réglage de cet ordinateur.</summary>
+    public bool MarksDefinedWords { get; init; }
+
+    /// <summary>Ouvre une fiche sur un passage : là où est défini un mot marqué d'une autre fiche.</summary>
+    public Action<string, string>? OpenPassage { get; init; }
 
     /// <summary>Une saisie est ouverte : un commentaire ou une définition.</summary>
     [ObservableProperty]
@@ -720,6 +731,7 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
                 return;
             }
             Reading = reading;
+            await ReadDefinitionsAsync().ConfigureAwait(true);
             ShowPassages();
             await SavePlacementsAsync().ConfigureAwait(true);
             Review = _reviewBar(ItemKind.Sheet, SheetId, outcome.Value.Review);
@@ -1016,6 +1028,44 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
         return null;
     }
 
+    /// <summary>Relit les définitions du coffre, si leurs mots se marquent ; un échec n'en marque aucun.</summary>
+    private async Task ReadDefinitionsAsync()
+    {
+        if (MarksDefinedWords)
+        {
+            var outcome = await Task.Run(_annotations.Definitions).ConfigureAwait(true);
+            _definitions = outcome.Succeeded ? outcome.Value : [];
+        }
+    }
+
+    /// <summary>Marque les mots définis, sauf en révision.</summary>
+    private void ShowWords() => Words = IsRevising || Reading is null ? [] : Reading.WordsOf(_definitions, SheetId);
+
+    partial void OnIsRevisingChanged(bool value) => ShowWords();
+
+    /// <summary>Montre où est défini un mot marqué : ici, la définition ressort ; ailleurs, sa fiche s'ouvre sur elle.</summary>
+    [RelayCommand]
+    private void OpenWordDefinition(DefinedWordMark word)
+    {
+        ArgumentNullException.ThrowIfNull(word);
+        if (word.SheetId == SheetId)
+        {
+            Activate(word.DefinitionId);
+        }
+        else
+        {
+            OpenPassage?.Invoke(word.SheetId, word.DefinitionId);
+        }
+    }
+
+    /// <summary>Le terme d'une définition ne se marque plus que là où il est défini ; l'onglet Définitions le remet.</summary>
+    [RelayCommand]
+    private async Task StopMarkingWordAsync(DefinedWordMark word)
+    {
+        ArgumentNullException.ThrowIfNull(word);
+        await RunAsync(() => _annotations.MarkEverywhere(word.DefinitionId, everywhere: false), ReadingText.WordNoLongerMarked(word.Term)).ConfigureAwait(true);
+    }
+
     /// <summary>Relit les passages après une modification, sans refaire le document.</summary>
     private async Task RefreshAsync()
     {
@@ -1031,6 +1081,7 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
             return;
         }
         Reading.Update(opened.Value.Annotations);
+        await ReadDefinitionsAsync().ConfigureAwait(true);
         ShowPassages();
         await SavePlacementsAsync().ConfigureAwait(true);
         if (Review is { } review)
@@ -1042,6 +1093,7 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
     private void ShowPassages()
     {
         Highlights = Reading!.Highlights;
+        ShowWords();
         Activate(Reading.Passages.Any(passage => passage.Annotation.Id == ActivePassage) ? ActivePassage : null);
         OnPropertyChanged(nameof(Passages));
         OnPropertyChanged(nameof(TrashedPassages));

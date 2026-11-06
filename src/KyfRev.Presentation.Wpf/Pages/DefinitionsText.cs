@@ -57,6 +57,12 @@ public static class DefinitionsText
     /// <summary>Le passage n'est plus dans la fiche.</summary>
     public const string Lost = "Passage introuvable dans la fiche ; la définition reste révisable.";
 
+    /// <summary>La case d'une définition : son terme se marque dans toutes les fiches.</summary>
+    public const string MarkEverywhere = "Marquer ce mot dans toutes les fiches";
+
+    /// <summary>Le clic droit d'une définition marquée partout : elle ne se marque plus qu'à sa place.</summary>
+    public const string MarkHereOnly = "Ne marquer ce mot que dans sa fiche";
+
     /// <summary>La culture des dates.</summary>
     public static CultureInfo Culture { get; } = CultureInfo.GetCultureInfo("fr-FR");
 

@@ -140,6 +140,7 @@ public sealed class GeneralSettingsTests
                 TextSize = ReadingTextSize.Large,
                 LineSpacing = ReadingLineSpacing.Airy,
                 Font = ReadingFont.Serif,
+                MarkDefinedWords = false,
                 ReducedMotion = true,
                 HighContrast = true,
                 LargerTargets = true,
@@ -164,6 +165,7 @@ public sealed class GeneralSettingsTests
         Assert.AreEqual(19.0, page.PreviewSize);
         Assert.AreEqual(19 * 1.9, page.PreviewLineHeight, 0.001);
         Assert.IsTrue(page.PreviewIsSerif);
+        Assert.IsFalse(page.MarkDefinedWords);
         Assert.AreEqual(0, store.Saves, "montrer n'écrit rien");
     }
 
@@ -179,6 +181,7 @@ public sealed class GeneralSettingsTests
         page.TextSize = GeneralSettingsViewModel.TextSizes[2];
         page.LineSpacing = GeneralSettingsViewModel.LineSpacings[1];
         page.Font = GeneralSettingsViewModel.Fonts[1];
+        page.MarkDefinedWords = false;
         page.ReducedMotion = true;
         page.HighContrast = true;
         page.LargerTargets = true;
@@ -194,6 +197,7 @@ public sealed class GeneralSettingsTests
                 TextSize = ReadingTextSize.ExtraLarge,
                 LineSpacing = ReadingLineSpacing.Airy,
                 Font = ReadingFont.Serif,
+                MarkDefinedWords = false,
                 ReducedMotion = true,
                 HighContrast = true,
                 LargerTargets = true,

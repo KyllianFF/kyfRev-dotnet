@@ -174,6 +174,9 @@ public interface IAnnotationStore
     /// <summary>Change le terme ou l'explication d'une définition.</summary>
     void ModifyDefinition(string id, Definition definition, Moment now);
 
+    /// <summary>Marque le terme d'une définition dans toutes les fiches, ou seulement à sa place ; l'historique ne change pas.</summary>
+    void MarkDefinitionEverywhere(string id, bool everywhere);
+
     /// <summary>Change ou retire le commentaire.</summary>
     void ModifyComment(string id, string? comment, Moment now);
 

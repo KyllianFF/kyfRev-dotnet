@@ -20,8 +20,11 @@ internal sealed class TextLayer(Func<string, Brush?> findBrush)
     private const string PassageText = "Kyf.Brush.PillPassageText";
     private const string PassageMarker = "Kyf.Brush.MarkerPassage";
     private const string DefinitionMarker = "Kyf.Brush.MarkerSheet";
+    private const string WordMarker = "Kyf.Brush.TextSecondary";
+    private const int WordTipLength = 400;
 
     private static readonly DashStyle Dots = FrozenDots();
+    private static readonly DashStyle WordDots = Frozen(new DashStyle([1, 3], 0));
 
     private readonly List<Segment> _segments = [];
     private readonly Dictionary<Run, Segment> _byRun = [];
@@ -29,12 +32,14 @@ internal sealed class TextLayer(Func<string, Brush?> findBrush)
     private IReadOnlyList<Highlight> _highlights = [];
     private string? _active;
     private IReadOnlyList<TextHole> _holes = [];
+    private IReadOnlyList<DefinedWordMark> _words = [];
 
-    private static DashStyle FrozenDots()
+    private static DashStyle FrozenDots() => Frozen(new DashStyle([1, 2], 0));
+
+    private static DashStyle Frozen(DashStyle dashes)
     {
-        var dots = new DashStyle([1, 2], 0);
-        dots.Freeze();
-        return dots;
+        dashes.Freeze();
+        return dashes;
     }
 
     /// <summary>Ajoute un morceau de texte, à sa position dans le texte affiché.</summary>
@@ -43,7 +48,7 @@ internal sealed class TextLayer(Func<string, Brush?> findBrush)
         var segment = new Segment(run, start, run.Text.Length);
         _segments.Add(segment);
         _byRun[run] = segment;
-        if (_highlights.Count > 0)
+        if (_highlights.Count > 0 || _words.Count > 0)
         {
             Apply(_segments.Count - 1);
         }
@@ -68,6 +73,20 @@ internal sealed class TextLayer(Func<string, Brush?> findBrush)
         }
         _formulas.ForEach(Style);
     }
+
+    /// <summary>Change les mots définis ailleurs dans le coffre, marqués d'un pointillé discret.</summary>
+    public void SetWords(IReadOnlyList<DefinedWordMark> words)
+    {
+        _words = words;
+        for (var i = 0; i < _segments.Count; i++)
+        {
+            i += Apply(i);
+        }
+    }
+
+    /// <summary>Le mot défini à l'endroit visé par la souris ; rien s'il n'y en a pas.</summary>
+    public DefinedWordMark? WordAt(object? source) =>
+        source is Run run && _byRun.TryGetValue(run, out var segment) ? WordOver(segment.Start, segment.End) : null;
 
     /// <summary>Change les trous encore masqués.</summary>
     public void SetHoles(IReadOnlyList<TextHole> holes)
@@ -150,6 +169,9 @@ internal sealed class TextLayer(Func<string, Brush?> findBrush)
     private TextHole? HoleOver(int start, int end) =>
         _holes.FirstOrDefault(hole => hole.Start < end && hole.End > start);
 
+    private DefinedWordMark? WordOver(int start, int end) =>
+        _words.FirstOrDefault(word => word.Start < end && word.End > start);
+
     private List<Highlight> Covering(int start, int end) =>
         [.. _highlights.Where(highlight => highlight.Start < end && highlight.End > start)];
 
@@ -159,6 +181,7 @@ internal sealed class TextLayer(Func<string, Brush?> findBrush)
         var segment = _segments[index];
         var covering = Covering(segment.Start, segment.End);
         var cuts = covering.SelectMany(highlight => new[] { highlight.Start, highlight.End })
+            .Concat(_words.Where(word => word.Start < segment.End && word.End > segment.Start).SelectMany(word => new[] { word.Start, word.End }))
             .Where(cut => cut > segment.Start && cut < segment.End)
             .Distinct()
             .Order()
@@ -191,14 +214,24 @@ internal sealed class TextLayer(Func<string, Brush?> findBrush)
     private void Style(Segment segment, List<Highlight> covering)
     {
         var hidden = HoleOver(segment.Start, segment.End) is not null;
-        if (covering.Count == 0 && !segment.IsStyled && !hidden)
+        // Un mot défini ailleurs ne se marque que hors des passages et des trous : il n'y ajouterait que du bruit.
+        var word = covering.Count == 0 && !hidden ? WordOver(segment.Start, segment.End) : null;
+        if (covering.Count == 0 && !segment.IsStyled && !hidden && word is null)
         {
             return;
         }
         var run = segment.Run;
-        segment.IsStyled = covering.Count > 0 || hidden;
-        // Ce qui répond au clic le montre : un trou se découvre, un passage ressort dans le volet.
-        if (covering.Count > 0 || hidden)
+        segment.IsStyled = covering.Count > 0 || hidden || word is not null;
+        if (word is not null)
+        {
+            run.ToolTip = WordTip(word);
+        }
+        else
+        {
+            run.ClearValue(FrameworkContentElement.ToolTipProperty);
+        }
+        // Ce qui répond au clic le montre : un trou se découvre, un passage ressort dans le volet, un mot dit sa définition.
+        if (covering.Count > 0 || hidden || word is not null)
         {
             run.Cursor = Cursors.Hand;
         }
@@ -231,6 +264,10 @@ internal sealed class TextLayer(Func<string, Brush?> findBrush)
             run.ClearValue(TextElement.ForegroundProperty);
         }
         var decorations = new TextDecorationCollection(covering.Select(Decoration));
+        if (word is not null)
+        {
+            decorations.Add(WordLine());
+        }
         if (decorations.Count > 0)
         {
             run.TextDecorations = decorations;
@@ -249,6 +286,32 @@ internal sealed class TextLayer(Func<string, Brush?> findBrush)
             decoration.Pen = new Pen(brush, 2) { DashStyle = DashStyles.Dash };
         }
         return decoration;
+    }
+
+    /// <summary>Le pointillé d'un mot défini ailleurs : plus fin, plus espacé et plus discret que celui d'une définition posée ici.</summary>
+    private TextDecoration WordLine()
+    {
+        var decoration = new TextDecoration { Location = TextDecorationLocation.Underline };
+        if (findBrush(WordMarker) is { } brush)
+        {
+            decoration.Pen = new Pen(brush, 1) { DashStyle = WordDots, DashCap = PenLineCap.Round };
+        }
+        return decoration;
+    }
+
+    /// <summary>Ce que montre le survol d'un mot défini : le terme, son explication et sa fiche.</summary>
+    private static ToolTip WordTip(DefinedWordMark word)
+    {
+        var explanation = word.Explanation.Length > WordTipLength
+            ? string.Concat(word.Explanation.AsSpan(0, WordTipLength).TrimEnd(), "…")
+            : word.Explanation;
+        var panel = new StackPanel { MaxWidth = 380 };
+        panel.Children.Add(new TextBlock { Text = word.Term, FontWeight = FontWeights.SemiBold, TextWrapping = TextWrapping.Wrap });
+        panel.Children.Add(new TextBlock { Text = explanation, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 2, 0, 0) });
+        var source = new TextBlock { Text = ReadingText.DefinedIn(word.SheetTitle), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 6, 0, 0) };
+        source.SetResourceReference(FrameworkElement.StyleProperty, "Kyf.Text.Caption");
+        panel.Children.Add(source);
+        return new ToolTip { Content = panel };
     }
 
     /// <summary>Un trait sous le texte : le fond ne suffit pas, il ne se voit pas en contraste élevé.</summary>

@@ -17,6 +17,12 @@ public static class GeneralSettingsText
     /// <summary>« Police des fiches ».</summary>
     public static string Font => Text(nameof(Font));
 
+    /// <summary>« Marquer les mots définis dans toutes les fiches ».</summary>
+    public static string DefinedWords => Text(nameof(DefinedWords));
+
+    /// <summary>« Un terme défini dans une fiche est souligné d'un pointillé discret partout où il apparaît… ».</summary>
+    public static string DefinedWordsHelp => Text(nameof(DefinedWordsHelp));
+
     /// <summary>« Sans empattements ».</summary>
     public static string FontSans => Text(nameof(FontSans));
 

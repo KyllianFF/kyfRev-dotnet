@@ -133,6 +133,10 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, INaviga
     [NotifyPropertyChangedFor(nameof(PreviewIsSerif))]
     public partial SettingChoice<ReadingFont> Font { get; set; }
 
+    /// <summary>Les mots définis se marquent dans toutes les fiches.</summary>
+    [ObservableProperty]
+    public partial bool MarkDefinedWords { get; set; }
+
     /// <summary>Animations réduites.</summary>
     [ObservableProperty]
     public partial bool ReducedMotion { get; set; }
@@ -188,6 +192,7 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, INaviga
         TextSize = TextSizes.First(choice => choice.Value == current.TextSize);
         LineSpacing = LineSpacings.First(choice => choice.Value == current.LineSpacing);
         Font = Fonts.First(choice => choice.Value == current.Font);
+        MarkDefinedWords = current.MarkDefinedWords;
         ReducedMotion = current.ReducedMotion;
         HighContrast = current.HighContrast;
         LargerTargets = current.LargerTargets;
@@ -222,6 +227,8 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, INaviga
     partial void OnLineSpacingChanged(SettingChoice<ReadingLineSpacing> value) => Remember(preferences => preferences with { LineSpacing = value.Value });
 
     partial void OnFontChanged(SettingChoice<ReadingFont> value) => Remember(preferences => preferences with { Font = value.Value });
+
+    partial void OnMarkDefinedWordsChanged(bool value) => Remember(preferences => preferences with { MarkDefinedWords = value });
 
     partial void OnReducedMotionChanged(bool value) => Remember(preferences => preferences with { ReducedMotion = value });
 

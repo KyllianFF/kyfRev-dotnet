@@ -16,6 +16,7 @@ public sealed class MachinePreferencesFileTests
         TextSize = ReadingTextSize.ExtraLarge,
         LineSpacing = ReadingLineSpacing.Airy,
         Font = ReadingFont.Serif,
+        MarkDefinedWords = false,
         ReducedMotion = true,
         HighContrast = true,
         LargerTargets = true,
@@ -42,6 +43,8 @@ public sealed class MachinePreferencesFileTests
         Assert.AreEqual(Chosen, store.Load());
         Assert.AreEqual(Chosen, new MachinePreferencesFile(Path.Combine(folder.Path, "v1")).Load(), "au prochain démarrage");
         StringAssert.Contains(File.ReadAllText(Path.Combine(folder.Path, "v1", "preferences.json")), "\"theme\": \"sombre\"", StringComparison.Ordinal);
+        StringAssert.Contains(File.ReadAllText(Path.Combine(folder.Path, "v1", "preferences.json")), "\"motsDefinis\": false", StringComparison.Ordinal);
+        Assert.IsTrue(new MachinePreferences().MarkDefinedWords, "les mots définis se marquent tant qu'on ne l'a pas coupé");
     }
 
     [TestMethod]
