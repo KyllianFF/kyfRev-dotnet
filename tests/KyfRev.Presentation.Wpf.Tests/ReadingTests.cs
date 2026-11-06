@@ -110,8 +110,8 @@ public sealed class ReadingTests
         Assert.AreEqual(3, lists[0].StartIndex);
         Assert.AreEqual(TextMarkerStyle.Disc, lists[1].MarkerStyle);
         var table = elements.OfType<Table>().Single();
-        Assert.AreEqual(4, table.Columns.Count);
-        var alignments = table.RowGroups[1].Rows[0].Cells.Select(cell => ((Paragraph)cell.Blocks.FirstBlock).TextAlignment).ToList();
+        Assert.AreEqual(5, table.Columns.Count, "quatre colonnes ajustées à leur contenu, et une vide qui prend le reste de la ligne");
+        var alignments = table.RowGroups[1].Rows[0].Cells.Take(4).Select(cell => ((Paragraph)cell.Blocks.FirstBlock).TextAlignment).ToList();
         Assert.AreEqual("Left Center Right Left", string.Join(' ', alignments));
         Assert.AreEqual(FontWeights.SemiBold, table.RowGroups[0].Rows[0].Cells[0].FontWeight);
         Assert.IsGreaterThanOrEqualTo(1, elements.OfType<Section>().Count(section => section.BorderThickness.Left > 0));

@@ -61,7 +61,31 @@ public sealed record EditorEnvironment(ISpelling Spelling, string WebDataFolder,
 /// <param name="Color">La couleur du texte, écrite <c>#rrggbb</c> ; rien : celle du thème.</param>
 /// <param name="Size">La taille du texte, écrite <c>1.25em</c> ; rien : la taille normale.</param>
 /// <param name="Align">L'alignement.</param>
-public sealed record EditorTools(bool Bold, bool Italic, bool Underline, bool Strike, bool Superscript, bool Subscript, int Heading, ListKind? List, bool CanUndo, bool CanRedo, string? Color = null, string? Size = null, TextAlign Align = TextAlign.Left);
+/// <param name="Table">Le tableau où est le curseur, dans le texte mis en forme ; rien ailleurs.</param>
+public sealed record EditorTools(bool Bold, bool Italic, bool Underline, bool Strike, bool Superscript, bool Subscript, int Heading, ListKind? List, bool CanUndo, bool CanRedo, string? Color = null, string? Size = null, TextAlign Align = TextAlign.Left, TableState? Table = null);
+
+/// <summary>Le tableau où est le curseur : son apparence, écrite comme dans la fiche, et sa colonne.</summary>
+/// <param name="Header">L'en-tête : <c>ligne</c>, <c>colonne</c>, <c>ligne,colonne</c> ou <c>aucune</c>.</param>
+/// <param name="Total">La dernière ligne ressort.</param>
+/// <param name="Bands">Les bandes : <c>aucune</c>, <c>lignes</c> ou <c>colonnes</c>.</param>
+/// <param name="Lines">Les traits : <c>tous</c>, <c>horizontaux</c>, <c>verticaux</c>, <c>contour</c>, <c>entete</c> ou <c>aucun</c>.</param>
+/// <param name="Theme">Le thème : <c>sobre</c>, <c>foret</c>, <c>ambre</c>, <c>ardoise</c>, <c>prune</c> ou <c>encre</c>.</param>
+/// <param name="Hidden">La colonne cachée en révision, à partir de 1 ; rien si aucune.</param>
+/// <param name="Width">La largeur : <c>ajustee</c> ou <c>page</c>.</param>
+/// <param name="Column">La colonne du curseur, à partir de 1.</param>
+/// <param name="ColumnAlign">Son alignement : <c>center</c>, <c>right</c>, ou rien à gauche.</param>
+/// <param name="Sortable">Ses lignes se trient : aucune case fusionnée.</param>
+public sealed record TableState(string Header, bool Total, string Bands, string Lines, string Theme, int? Hidden, string Width, int Column, string? ColumnAlign, bool Sortable)
+{
+    /// <summary>La première ligne est l'en-tête.</summary>
+    public bool HeaderRow => Header is "ligne" or "ligne,colonne";
+
+    /// <summary>La première colonne est un en-tête.</summary>
+    public bool HeaderColumn => Header is "colonne" or "ligne,colonne";
+
+    /// <summary>La colonne du curseur est cachée en révision.</summary>
+    public bool ColumnHidden => Hidden == Column;
+}
 
 /// <summary>Une saisie « [[… » au curseur.</summary>
 /// <param name="Query">Ce qui est cherché.</param>
@@ -156,6 +180,9 @@ internal interface IEditorSurface
 
     /// <summary>Insère un tableau vide.</summary>
     void InsertTable(int rows, int columns);
+
+    /// <summary>Change l'apparence du tableau où est le curseur, ou sa colonne (voir la demande « tableLook »).</summary>
+    void SetTableLook(string change, string? value);
 
     /// <summary>Crée un bloc de code, ou change le langage de celui où est le curseur.</summary>
     void InsertCode(string language);
@@ -344,7 +371,11 @@ public sealed partial class SheetEditorViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsBullets))]
     [NotifyPropertyChangedFor(nameof(IsNumbers))]
     [NotifyPropertyChangedFor(nameof(IsTasks))]
+    [NotifyPropertyChangedFor(nameof(IsInTable))]
     public partial EditorTools? Tools { get; private set; }
+
+    /// <summary>Le curseur est dans un tableau du texte mis en forme : l'onglet Tableau se montre.</summary>
+    public bool IsInTable => Tools?.Table is not null;
 
     /// <summary>La taille du texte, en pixels.</summary>
     public string SizeLabel => FontSizes.Pixels(Tools?.Size).ToString(CultureInfo.InvariantCulture);
@@ -914,6 +945,15 @@ public sealed partial class SheetEditorViewModel : ObservableObject
     /// <summary>Insère un tableau vide.</summary>
     [RelayCommand]
     private void InsertTable(TableSize size) => _surface?.InsertTable(size.Rows, size.Columns);
+
+    /// <summary>Change l'apparence du tableau : <c>nom</c>, ou <c>nom=valeur</c> (<c>theme=foret</c>, <c>aligner=center</c>…).</summary>
+    [RelayCommand]
+    private void ChangeTable(string change)
+    {
+        ArgumentNullException.ThrowIfNull(change);
+        var equal = change.IndexOf('=', StringComparison.Ordinal);
+        _surface?.SetTableLook(equal < 0 ? change : change[..equal], equal < 0 ? null : change[(equal + 1)..]);
+    }
 
     /// <summary>Crée un bloc de code, ou change le langage de celui où est le curseur.</summary>
     [RelayCommand]

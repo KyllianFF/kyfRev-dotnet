@@ -10,6 +10,7 @@ internal sealed partial class EditorRibbon : UserControl
     public EditorRibbon()
     {
         InitializeComponent();
+        TableTab.IsVisibleChanged += OnTableTabShown;
         Item(StyleMenu, EditingText.NormalText, page => page.SetHeadingCommand.Execute(0));
         for (var level = 1; level <= 4; level++)
         {
@@ -121,15 +122,30 @@ internal sealed partial class EditorRibbon : UserControl
 
     private void OnImagesButton(object sender, RoutedEventArgs e) => ChooseImages?.Invoke();
 
-    private void OnHomeTab(object sender, RoutedEventArgs e) => ShowTab(home: true);
+    private void OnHomeTab(object sender, RoutedEventArgs e) => ShowTab(HomePanel);
 
-    private void OnInsertTab(object sender, RoutedEventArgs e) => ShowTab(home: false);
+    private void OnInsertTab(object sender, RoutedEventArgs e) => ShowTab(InsertPanel);
 
-    private void ShowTab(bool home)
+    private void OnTableTab(object sender, RoutedEventArgs e) => ShowTab(TablePanel);
+
+    /// <summary>Le curseur sort du tableau : son onglet disparaît, et l'Accueil revient s'il était ouvert.</summary>
+    private void OnTableTabShown(object sender, DependencyPropertyChangedEventArgs e)
     {
-        HomeTab.IsChecked = home;
-        InsertTab.IsChecked = !home;
-        HomePanel.Visibility = home ? Visibility.Visible : Visibility.Collapsed;
-        InsertPanel.Visibility = home ? Visibility.Collapsed : Visibility.Visible;
+        if (e.NewValue is false && TablePanel.Visibility == Visibility.Visible)
+        {
+            ShowTab(HomePanel);
+        }
+    }
+
+    /// <summary>Montre un onglet du ruban.</summary>
+    internal void ShowTab(Panel shown)
+    {
+        HomeTab.IsChecked = shown == HomePanel;
+        InsertTab.IsChecked = shown == InsertPanel;
+        TableTab.IsChecked = shown == TablePanel;
+        foreach (var panel in new Panel[] { HomePanel, InsertPanel, TablePanel })
+        {
+            panel.Visibility = panel == shown ? Visibility.Visible : Visibility.Collapsed;
+        }
     }
 }

@@ -23,8 +23,8 @@ public static class ContrastRequirements
 
     private static readonly ColorRole[] Grounds = [ColorRole.Background, ColorRole.Surface, ColorRole.SurfaceAlt];
 
-    /// <summary>Rôles décoratifs, sans seuil : séparateurs et voile des dialogues.</summary>
-    public static ImmutableArray<ColorRole> Decorative { get; } = [ColorRole.Divider, ColorRole.Scrim];
+    /// <summary>Rôles décoratifs, sans seuil : séparateurs, voile des dialogues et traits des tableaux.</summary>
+    public static ImmutableArray<ColorRole> Decorative { get; } = [ColorRole.Divider, ColorRole.Scrim, ColorRole.TableForestLine, ColorRole.TableAmberLine, ColorRole.TableSlateLine, ColorRole.TablePlumLine, ColorRole.TableInkLine];
 
     /// <summary>Les paires exigées.</summary>
     public static ImmutableArray<ContrastRequirement> All { get; } =
@@ -35,6 +35,17 @@ public static class ContrastRequirements
         new(ColorRole.PillSheetText, ColorRole.PillSheetBackground, Text),
         new(ColorRole.PillPassageText, ColorRole.PillPassageBackground, Text),
         new(ColorRole.PillReminderText, ColorRole.PillReminderBackground, Text),
+        new(ColorRole.Text, ColorRole.TableSoberBand, Text),
+        new(ColorRole.TableForestHeaderText, ColorRole.TableForestHeader, Text),
+        new(ColorRole.Text, ColorRole.TableForestBand, Text),
+        new(ColorRole.TableAmberHeaderText, ColorRole.TableAmberHeader, Text),
+        new(ColorRole.Text, ColorRole.TableAmberBand, Text),
+        new(ColorRole.TableSlateHeaderText, ColorRole.TableSlateHeader, Text),
+        new(ColorRole.Text, ColorRole.TableSlateBand, Text),
+        new(ColorRole.TablePlumHeaderText, ColorRole.TablePlumHeader, Text),
+        new(ColorRole.Text, ColorRole.TablePlumBand, Text),
+        new(ColorRole.TableInkHeaderText, ColorRole.TableInkHeader, Text),
+        new(ColorRole.Text, ColorRole.TableInkBand, Text),
         new(ColorRole.OnSelection, ColorRole.Selection, Text),
         new(ColorRole.OnHighlight, ColorRole.Highlight, Text),
         new(ColorRole.OnHighlight, ColorRole.HighlightActive, Text),

@@ -259,7 +259,7 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
             return;
         }
         built.Complete();
-        holes.Set(TextHoles.Compute(Highlights ?? [], built.BoldRanges));
+        holes.Set(TextHoles.Compute(Highlights ?? [], built.BoldRanges, built.ReviewCells));
     }
 
     /// <summary>Affiche le trou visé par la souris ; rend faux s'il n'y en a pas.</summary>

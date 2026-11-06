@@ -282,6 +282,13 @@ internal sealed class MarkdownEditor : TextEditor, IEditorSurface
     public void InsertTable(int rows, int columns) => Edit((text, start, _) => MarkdownEdits.Block(text, start, MarkdownEdits.Table(rows, columns)));
 
     /// <inheritdoc/>
+    /// <remarks>Le code Markdown n'a pas d'onglet Tableau : sa ligne d'apparence s'écrit à la main.</remarks>
+    public void SetTableLook(string change, string? value)
+    {
+        ArgumentNullException.ThrowIfNull(change);
+    }
+
+    /// <inheritdoc/>
     public void InsertCode(string language) => Edit((text, start, end) => MarkdownEdits.Code(text, start, end, language));
 
     /// <inheritdoc/>

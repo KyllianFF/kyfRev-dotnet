@@ -16,6 +16,7 @@ internal static partial class MarkdownParser
         var tokens = new List<Token>();
         BlockParser.Parse(text, environment, tokens);
         tokens.RemoveAll(token => token.Kind == TokenKind.ReferenceDefinition);
+        AttachTableLooks(tokens);
         foreach (var token in tokens.Where(token => token.Kind == TokenKind.Inline))
         {
             InlineParser.Parse(token.Content, environment, token.Children);
@@ -34,6 +35,27 @@ internal static partial class MarkdownParser
             }
         }
         return tokens;
+    }
+
+    /// <summary>
+    /// La ligne d'apparence posée juste au-dessus d'un tableau quitte le texte et va au tableau : elle n'est ni affichée ni
+    /// comptée dans les positions. Ailleurs, la même ligne reste un paragraphe comme un autre.
+    /// </summary>
+    private static void AttachTableLooks(List<Token> tokens)
+    {
+        for (var i = tokens.Count - 4; i >= 0; i--)
+        {
+            if (tokens[i].Kind == TokenKind.ParagraphOpen
+                && tokens[i + 1].Kind == TokenKind.Inline
+                && tokens[i + 2].Kind == TokenKind.ParagraphClose
+                && tokens[i + 3] is { Kind: TokenKind.Element, Tag: "table", Nesting: 1 } table
+                && table.Level == tokens[i].Level
+                && TableLook.FromLine(tokens[i + 1].Content) is { } look)
+            {
+                table.Look = look;
+                tokens.RemoveRange(i, 3);
+            }
+        }
     }
 
     /// <summary>Range les définitions de notes appelées à la fin du document, dans l'ordre de leur premier appel.</summary>

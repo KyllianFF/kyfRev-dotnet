@@ -5,6 +5,7 @@
 
 import { type DOMOutputSpec, type MarkSpec, type Node, type NodeSpec, Schema } from "prosemirror-model";
 import { tableNodes } from "prosemirror-tables";
+import { APPARENCE, type Apparence, apparenceDuDom, attributsApparence } from "./apparence";
 
 type Alignement = "left" | "center" | "right" | null;
 
@@ -18,6 +19,12 @@ const alignement = {
     if (valeur) attrs.style = `text-align: ${valeur}`;
   },
 };
+
+const tableaux = tableNodes({
+  tableGroup: "block",
+  cellContent: "inline*",
+  cellAttributes: { align: alignement },
+}) as Record<"table" | "table_row" | "table_cell" | "table_header", NodeSpec>;
 
 type NomNoeud =
   | "doc"
@@ -189,11 +196,15 @@ const noeuds: Record<NomNoeud, NodeSpec> = {
     ],
   },
 
-  ...(tableNodes({
-    tableGroup: "block",
-    cellContent: "inline*",
-    cellAttributes: { align: alignement },
-  }) as Record<"table" | "table_row" | "table_cell" | "table_header", NodeSpec>),
+  ...tableaux,
+
+  // L'apparence du tableau vit sur lui : la ligne au-dessus de lui la donne, et la page la montre.
+  table: {
+    ...tableaux.table,
+    attrs: Object.fromEntries(Object.entries(APPARENCE).map(([nom, valeur]) => [nom, { default: valeur }])),
+    parseDOM: [{ tag: "table", getAttrs: (dom) => apparenceDuDom(dom as HTMLElement) }],
+    toDOM: (noeud) => ["table", attributsApparence(noeud.attrs as Apparence), ["tbody", 0]],
+  },
 
   text: { group: "inline" },
 

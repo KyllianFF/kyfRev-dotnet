@@ -71,6 +71,9 @@ public sealed class RenderElement : RenderNode
     /// </summary>
     public string? Alignment { get; internal set; }
 
+    /// <summary>L'apparence d'un tableau, si une ligne la donne au-dessus de lui ; rien pour l'apparence par défaut.</summary>
+    public TableLook? Look { get; internal set; }
+
     /// <summary>Couleur d'un passage, écrite <c>#rrggbb</c>.</summary>
     public string? TextColor { get; internal set; }
 
