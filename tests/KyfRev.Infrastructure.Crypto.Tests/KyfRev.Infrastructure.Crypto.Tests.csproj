@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+
+  <!-- Argon2id est aussi recalculé par une seconde implémentation, indépendante de libsodium. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\KyfRev.Infrastructure.Crypto\KyfRev.Infrastructure.Crypto.csproj" />
+    <PackageReference Include="Konscious.Security.Cryptography.Argon2" />
+  </ItemGroup>
+
+</Project>

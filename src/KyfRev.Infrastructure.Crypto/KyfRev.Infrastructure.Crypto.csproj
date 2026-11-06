@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Description>Le coffre chiffré de kyfRev : clé de données enveloppée par le mot de passe (Argon2id) et par la clé de récupération, chaque fichier en AES-256-GCM lié à son identifiant, et la clé retenue par Windows pour la session.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\KyfRev.Application\KyfRev.Application.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NSec.Cryptography" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="KyfRev.Infrastructure.Crypto.Tests" />
+  </ItemGroup>
+
+</Project>
