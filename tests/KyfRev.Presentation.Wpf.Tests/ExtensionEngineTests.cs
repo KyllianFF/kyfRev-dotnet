@@ -875,6 +875,8 @@ public sealed class ExtensionEngineTests
             kyfrev.vue(() => recu);
             kyfrev.commande("demander", async () => {
               const r = await kyfrev.selection.demander("Sélectionnez la question", { fiche: "f_1", saisie: false });
+              // Après la réponse, encore un peu de travail : il tient dans une patience entière, pas dans la fin de l'autre.
+              await new Promise((fini) => setTimeout(fini, 1200));
               recu = `${r.choix}|${r.texte}|${r.fiche}|${r.titre}|${r.debut}|${r.fin}`;
             });
             kyfrev.commande("ouvrir", () => kyfrev.fiches.ouvrir("f_1", { debut: 3, fin: 9 }));
@@ -891,7 +893,7 @@ public sealed class ExtensionEngineTests
 
         StringAssert.Contains(Wait(scene.Engine.CommandAsync("guidee", "demander", new Dictionary<string, string>())).Error, "ne montre rien", StringComparison.Ordinal);
         scene.Engine.Screen = screen;
-        scene.Engine.Patience = TimeSpan.FromSeconds(1);
+        scene.Engine.Patience = TimeSpan.FromSeconds(2);
         var asking = scene.Engine.CommandAsync("guidee", "demander", new Dictionary<string, string>());
         UiThread.Until(() => screen.Asks.Count == 1, Long);
         var waited = System.Diagnostics.Stopwatch.StartNew();
