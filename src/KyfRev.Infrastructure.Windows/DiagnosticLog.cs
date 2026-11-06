@@ -151,6 +151,10 @@ public sealed partial class DiagnosticLog : ILoggerFactory
     [LoggerMessage(Level = LogLevel.Error, Message = "Erreur d'une tâche de fond non observée.")]
     public static partial void UnobservedTask(ILogger logger, Exception exception);
 
+    /// <summary>Consigne un incident du moteur web : sa raison, jamais le contenu d'une fiche.</summary>
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Moteur web : {Reason}.")]
+    public static partial void WebEngineTrouble(ILogger logger, string reason);
+
     [LoggerMessage(Level = LogLevel.Information, Message = "Démarrage de kyfRev {Version} ({Mode}), {System} {Architecture}.")]
     private static partial void LogStarted(ILogger logger, string version, string mode, string system, Architecture architecture);
 

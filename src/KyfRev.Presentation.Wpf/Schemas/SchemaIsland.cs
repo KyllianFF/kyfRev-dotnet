@@ -82,6 +82,9 @@ internal sealed class SchemaIsland : UserControl, IDisposable
     /// <summary>Le moteur n'a pas pu démarrer, ou s'est arrêté.</summary>
     public event EventHandler<string>? Failed;
 
+    /// <summary>Un processus du moteur s'est arrêté puis a été relancé par WebView2 (le GPU, un utilitaire) : la page continue.</summary>
+    public event EventHandler<string>? Restarted;
+
     /// <summary>La page a chargé son code.</summary>
     internal bool IsReady => _ready;
 
@@ -217,7 +220,17 @@ internal sealed class SchemaIsland : UserControl, IDisposable
         web.WebResourceRequested += (_, e) => VisualEditor.Serve(web, e, Host, PageContent);
         web.WebMessageReceived += OnMessage;
         web.NavigationStarting += (_, e) => e.Cancel = e.Uri != StartAddress;
-        web.ProcessFailed += (_, e) => Failed?.Invoke(this, e.ProcessFailedKind.ToString());
+        web.ProcessFailed += (_, e) =>
+        {
+            if (WebProcesses.StopsThePage(e.ProcessFailedKind))
+            {
+                Failed?.Invoke(this, e.ProcessFailedKind.ToString());
+            }
+            else
+            {
+                Restarted?.Invoke(this, e.ProcessFailedKind.ToString());
+            }
+        };
     }
 
     private async void OnMessage(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
