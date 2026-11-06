@@ -17,8 +17,9 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   trous, l'en-tête reste lisible) et trier les lignes de A à Z puis de Z à A. Il reprend aussi l'ajout et le retrait des
   lignes et des colonnes. L'apparence s'écrit dans une seule ligne au-dessus du tableau, `<!-- kyfrev tableau … -->`, que
   GitHub, Obsidian et VS Code n'affichent pas ; un tableau sans cette ligne garde son apparence, et la lecture, l'aperçu,
-  la révision et l'éditeur dessinent la même chose. Les flèches passent d'une case à l'autre, sans jamais poser le curseur
-  entre deux cases.
+  la révision et l'éditeur dessinent la même chose. Les flèches passent d'une case à l'autre, ↑ et ↓ comprises, sans jamais
+  poser le curseur entre deux cases. Un tableau prend toute la largeur du texte (« Ajustée au contenu » reste un choix), et
+  ses colonnes gardent leurs mots entiers tant qu'il le permet, à l'écriture comme en lecture.
 - Fenêtre : l'application dessine sa barre de titre, aux couleurs du thème, avec le nom, la recherche (Ctrl+K), le thème clair
   ou sombre en un clic, les raccourcis clavier et les boutons de la fenêtre. Windows garde le déplacement, le redimensionnement,
   son menu et ses dispositions sur « Agrandir ».
