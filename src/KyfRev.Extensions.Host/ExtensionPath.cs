@@ -48,7 +48,8 @@ public static class ExtensionPath
             "JS" or "MJS" => "text/javascript; charset=utf-8",
             "CSS" => "text/css; charset=utf-8",
             "JSON" => "application/json",
-            "MD" or "TXT" => "text/plain; charset=utf-8",
+            // Les types TypeScript (kyfrev.d.ts) ne servent qu'à l'éditeur : du texte, jamais exécuté.
+            "MD" or "TXT" or "TS" => "text/plain; charset=utf-8",
             "SVG" => "image/svg+xml",
             "PNG" => "image/png",
             "JPG" or "JPEG" => "image/jpeg",

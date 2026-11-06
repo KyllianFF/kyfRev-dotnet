@@ -162,6 +162,7 @@ public sealed class ExtensionLibrary
             {
                 Active = [.. ReadActive(_folder).Where(id => id != manifest.Value.Id), manifest.Value.Id],
                 Withdrawn = withdrawn,
+                Sources = new Dictionary<string, string>(state.Sources ?? [], StringComparer.Ordinal) { [manifest.Value.Id] = Path.GetFullPath(source) },
             });
             return Outcome.Of(new InstalledExtension(manifest.Value, true));
         }
@@ -264,6 +265,32 @@ public sealed class ExtensionLibrary
         catch (Exception exception) when (IsFileProblem(exception))
         {
             return null;
+        }
+    }
+
+    /// <summary>Le dossier d'où une extension a été installée ; rien s'il n'est pas connu (une extension reprise de la 0.x).</summary>
+    /// <param name="id">Son identifiant.</param>
+    public string? Source(string id)
+    {
+        ArgumentNullException.ThrowIfNull(id);
+        return ReadState(_folder).Sources?.GetValueOrDefault(id);
+    }
+
+    /// <summary>Le mode développeur : dans les Paramètres, chaque extension a « Recharger » et ses dernières erreurs.</summary>
+    public bool IsDeveloperMode => ReadState(_folder).Developer == true;
+
+    /// <summary>Allume ou éteint le mode développeur, retenu sur ce poste.</summary>
+    /// <param name="on">Vrai pour l'allumer.</param>
+    public Outcome<Done> SetDeveloperMode(bool on)
+    {
+        try
+        {
+            WriteState(_folder, ReadState(_folder) with { Developer = on ? true : null });
+            return Outcome.Done();
+        }
+        catch (Exception exception) when (IsFileProblem(exception))
+        {
+            return Outcome.Refused<Done>(exception.Message);
         }
     }
 
@@ -476,8 +503,13 @@ public sealed class ExtensionLibrary
         Directory.Move(current, target);
     }
 
-    /// <summary><c>etat.json</c> : les extensions actives, comme la 0.x, et les permissions retirées, qu'elle ignore.</summary>
+    /// <summary>
+    /// <c>etat.json</c> : les extensions actives, comme la 0.x ; ce qu'elle ignore : les permissions retirées, le dossier d'où vient
+    /// chaque extension et le mode développeur.
+    /// </summary>
     private sealed record ExtensionState(
         [property: JsonPropertyName("actives")] List<string>? Active,
-        [property: JsonPropertyName("retirees"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] Dictionary<string, List<string>>? Withdrawn);
+        [property: JsonPropertyName("retirees"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] Dictionary<string, List<string>>? Withdrawn,
+        [property: JsonPropertyName("sources"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] Dictionary<string, string>? Sources = null,
+        [property: JsonPropertyName("developpeur"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] bool? Developer = null);
 }

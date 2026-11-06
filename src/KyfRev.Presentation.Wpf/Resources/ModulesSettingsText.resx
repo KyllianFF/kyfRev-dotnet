@@ -132,6 +132,54 @@
   <data name="ExtensionLimitsWriting" xml:space="preserve">
     <value>Elle ne pourra ni accéder à Internet, ni supprimer de fiche. Le texte qu'elle remplace reste dans les versions de la fiche, et chacune de ses écritures est notée sous la liste des extensions.</value>
   </data>
+  <data name="ExtensionCreate" xml:space="preserve">
+    <value>Créer une extension…</value>
+  </data>
+  <data name="ExtensionCreatePick" xml:space="preserve">
+    <value>Choisir le dossier où créer l'extension</value>
+  </data>
+  <data name="ExtensionCreateTitle" xml:space="preserve">
+    <value>Installer l'extension créée ?</value>
+  </data>
+  <data name="ExtensionCreated" xml:space="preserve">
+    <value>« {0} » est créée dans {1}, et installée. Modifiez son extension.js, puis « Recharger » ; son fichier LISEZMOI.md dit le reste.</value>
+  </data>
+  <data name="ExtensionDeveloper" xml:space="preserve">
+    <value>Mode développeur</value>
+  </data>
+  <data name="ExtensionDeveloperHelp" xml:space="preserve">
+    <value>Chaque extension montre le dossier d'où elle vient, « Recharger » pour reprendre ses fichiers, et ses dernières erreurs.</value>
+  </data>
+  <data name="ExtensionReload" xml:space="preserve">
+    <value>Recharger</value>
+  </data>
+  <data name="ExtensionReloadName" xml:space="preserve">
+    <value>Recharger {0}</value>
+  </data>
+  <data name="ExtensionReloaded" xml:space="preserve">
+    <value>« {0} » rechargée, version {1}.</value>
+  </data>
+  <data name="ExtensionSource" xml:space="preserve">
+    <value>Dossier : {0}</value>
+  </data>
+  <data name="ExtensionSourceUnknown" xml:space="preserve">
+    <value>Dossier d'origine inconnu : installez-la depuis son dossier pour pouvoir la recharger.</value>
+  </data>
+  <data name="ExtensionSourceMissing" xml:space="preserve">
+    <value>Le dossier de « {0} » est introuvable : installez-la de nouveau depuis son dossier.</value>
+  </data>
+  <data name="ExtensionIdChanged" xml:space="preserve">
+    <value>Le dossier contient maintenant l'extension « {0} » : installez-la par « Installer depuis un dossier… ».</value>
+  </data>
+  <data name="ExtensionFaultsTitle" xml:space="preserve">
+    <value>Dernières erreurs</value>
+  </data>
+  <data name="ExtensionNoFaults" xml:space="preserve">
+    <value>Aucune erreur depuis le lancement.</value>
+  </data>
+  <data name="ExtensionFault" xml:space="preserve">
+    <value>{0} : {1}</value>
+  </data>
   <data name="ExtensionJournalTitle" xml:space="preserve">
     <value>Ce que les extensions ont écrit</value>
   </data>

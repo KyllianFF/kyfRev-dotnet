@@ -38,8 +38,13 @@ public sealed class ExtensionEventArgs(string extension) : EventArgs
 /// propre processus et ses propres données : il ne résout aucune adresse, ne sert que ce que dit l'application, et n'est
 /// démarré qu'au premier besoin. Une extension qui ne répond pas ne bloque rien : le moteur est fermé, et il repartira.
 /// </summary>
-public sealed class ExtensionEngine : IDisposable
+public sealed class ExtensionEngine : IDisposable, IExtensionFaults
 {
+    /// <summary>Les erreurs gardées pour chaque extension : les plus récentes.</summary>
+    public const int MaxFaults = 20;
+
+    private readonly Dictionary<string, List<ExtensionFault>> _faults = new(StringComparer.Ordinal);
+
     private const string Host = "extensions.kyfrev.invalid";
     private const string Origin = $"https://{Host}";
     private const string StartAddress = $"{Origin}/hote.html";
@@ -100,6 +105,26 @@ public sealed class ExtensionEngine : IDisposable
     /// <summary>Une extension demande d'ouvrir sa vue.</summary>
     public event EventHandler<ExtensionEventArgs>? ViewAsked;
 
+    /// <inheritdoc/>
+    public event EventHandler<ExtensionEventArgs>? FaultsChanged;
+
+    /// <inheritdoc/>
+    public IReadOnlyList<ExtensionFault> Faults(string id)
+    {
+        ArgumentNullException.ThrowIfNull(id);
+        return _faults.TryGetValue(id, out var faults) ? [.. Enumerable.Reverse(faults)] : [];
+    }
+
+    /// <inheritdoc/>
+    public void ForgetFaults(string id)
+    {
+        ArgumentNullException.ThrowIfNull(id);
+        if (_faults.Remove(id))
+        {
+            FaultsChanged?.Invoke(this, new ExtensionEventArgs(id));
+        }
+    }
+
     /// <summary>Le temps qu'une extension a pour se charger et pour répondre. Il ne court pas pendant qu'elle attend l'utilisateur.</summary>
     public TimeSpan Patience { get; set; } = TimeSpan.FromSeconds(10);
 
@@ -116,7 +141,7 @@ public sealed class ExtensionEngine : IDisposable
     /// <param name="id">L'extension.</param>
     /// <param name="dark">Le thème est sombre.</param>
     public Task<ExtensionAnswer> RenderViewAsync(string id, bool dark) =>
-        AskAsync(id, n => new { type = "rendre-vue", n, contexte = Context(dark) });
+        AskAsync(id, "vue", n => new { type = "rendre-vue", n, contexte = Context(dark) });
 
     /// <summary>Demande le dessin d'un bloc à l'extension qui le déclare.</summary>
     /// <param name="id">L'extension.</param>
@@ -124,7 +149,7 @@ public sealed class ExtensionEngine : IDisposable
     /// <param name="source">Le texte du bloc.</param>
     /// <param name="dark">Le thème est sombre.</param>
     public Task<ExtensionAnswer> RenderBlockAsync(string id, string language, string source, bool dark) =>
-        AskAsync(id, n => new { type = "rendre-bloc", n, langage = language, source, contexte = Context(dark) });
+        AskAsync(id, $"bloc « {language} »", n => new { type = "rendre-bloc", n, langage = language, source, contexte = Context(dark) });
 
     /// <summary>Transmet un clic ou un changement sur un élément <c>data-action</c> de sa vue.</summary>
     /// <param name="id">L'extension.</param>
@@ -132,20 +157,20 @@ public sealed class ExtensionEngine : IDisposable
     /// <param name="value">Sa valeur : un texte, un booléen ou rien.</param>
     /// <param name="data">Les attributs <c>data-</c> de l'élément.</param>
     public Task<ExtensionAnswer> ActAsync(string id, string name, object? value, IReadOnlyDictionary<string, string> data) =>
-        AskAsync(id, n => new { type = "action", n, nom = name, valeur = value, donnees = data });
+        AskAsync(id, $"action « {name} »", n => new { type = "action", n, nom = name, valeur = value, donnees = data });
 
     /// <summary>Lance une commande déclarée par une extension, avec ce sur quoi elle porte.</summary>
     /// <param name="id">L'extension.</param>
     /// <param name="command">La commande.</param>
     /// <param name="context">Ce sur quoi elle porte : la fiche ou le dossier du clic droit.</param>
     public Task<ExtensionAnswer> CommandAsync(string id, string command, IReadOnlyDictionary<string, string> context) =>
-        AskAsync(id, n => new { type = "commande", n, nom = command, contexte = context });
+        AskAsync(id, $"commande « {command} »", n => new { type = "commande", n, nom = command, contexte = context });
 
     /// <summary>Le nombre qu'une extension montre près de son entrée du menu ; rien s'il n'y en a pas.</summary>
     /// <param name="id">L'extension.</param>
     public async Task<int?> CountAsync(string id)
     {
-        var answer = await AskAsync(id, n => new { type = "compteur", n }).ConfigureAwait(true);
+        var answer = await AskAsync(id, "compteur", n => new { type = "compteur", n }).ConfigureAwait(true);
         return answer.Value is { ValueKind: JsonValueKind.Number } value && value.TryGetDouble(out var count) && count >= 1
             ? (int)Math.Min(count, MaxCount)
             : null;
@@ -155,7 +180,7 @@ public sealed class ExtensionEngine : IDisposable
     /// <param name="id">L'extension.</param>
     public async Task<(string Text, string? Detail)?> CardAsync(string id)
     {
-        var answer = await AskAsync(id, n => new { type = "encart", n }).ConfigureAwait(true);
+        var answer = await AskAsync(id, "encart", n => new { type = "encart", n }).ConfigureAwait(true);
         if (answer.Value is not { ValueKind: JsonValueKind.Object } card || TextOf(card, "texte") is not { Length: > 0 } text)
         {
             return null;
@@ -216,7 +241,31 @@ public sealed class ExtensionEngine : IDisposable
     private static string Headers(string contentType, string policy) =>
         string.Create(CultureInfo.InvariantCulture, $"Content-Type: {contentType}\r\nCache-Control: no-store\r\nX-Content-Type-Options: nosniff\r\nX-DNS-Prefetch-Control: off\r\nContent-Security-Policy: {policy}");
 
-    private async Task<ExtensionAnswer> AskAsync(string id, Func<int, object> message)
+    /// <summary>Demande, et garde l'erreur s'il y en a une : le mode développeur la montre sous l'extension.</summary>
+    private async Task<ExtensionAnswer> AskAsync(string id, string where, Func<int, object> message)
+    {
+        var answer = await AskOnceAsync(id, message).ConfigureAwait(true);
+        if (answer.Error is { } error && _library.Active(id) is { } manifest)
+        {
+            // Sous l'extension, son nom en tête de l'erreur se répéterait.
+            var named = $"extension « {manifest.Name} » : ";
+            error = error.StartsWith(named, StringComparison.Ordinal) ? error[named.Length..] : error;
+            if (!_faults.TryGetValue(id, out var faults))
+            {
+                faults = [];
+                _faults[id] = faults;
+            }
+            faults.Add(new ExtensionFault(DateTimeOffset.Now, where, error));
+            if (faults.Count > MaxFaults)
+            {
+                faults.RemoveAt(0);
+            }
+            FaultsChanged?.Invoke(this, new ExtensionEventArgs(id));
+        }
+        return answer;
+    }
+
+    private async Task<ExtensionAnswer> AskOnceAsync(string id, Func<int, object> message)
     {
         if (_disposed)
         {

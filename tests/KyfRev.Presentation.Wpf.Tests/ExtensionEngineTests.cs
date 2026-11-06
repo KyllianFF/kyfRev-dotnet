@@ -300,6 +300,66 @@ public sealed class ExtensionEngineTests
     }
 
     [EngineTest]
+    public void A_created_extension_runs_as_it_is()
+    {
+        using var scene = new Scene();
+        var parent = Path.Combine(Path.GetTempPath(), "kyfrev-creee-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(parent);
+        try
+        {
+            var created = ExtensionTemplate.Create(parent, []);
+            Assert.IsTrue(scene.Library.Install(created.Value).Succeeded);
+            using var ui = new UiThread();
+
+            StringAssert.Contains(TextOf(scene, ExtensionTemplate.BaseId), "Votre coffre compte 1 fiche(s), dont 0 archivée(s).", StringComparison.Ordinal);
+            Assert.IsTrue(Wait(scene.Engine.ActAsync(ExtensionTemplate.BaseId, "compter", null, new Dictionary<string, string>())).Succeeded);
+            StringAssert.Contains(TextOf(scene, ExtensionTemplate.BaseId), "Le compteur vaut 1", StringComparison.Ordinal);
+            Assert.IsTrue(Wait(scene.Engine.CommandAsync(ExtensionTemplate.BaseId, "bonjour", new Dictionary<string, string>())).Succeeded);
+            StringAssert.Contains(TextOf(scene, ExtensionTemplate.BaseId), "Bonjour !", StringComparison.Ordinal);
+            Assert.IsEmpty(scene.Engine.Faults(ExtensionTemplate.BaseId));
+        }
+        finally
+        {
+            Directory.Delete(parent, recursive: true);
+        }
+    }
+
+    [EngineTest]
+    public void The_engine_keeps_the_last_faults_of_each_extension_for_the_developer()
+    {
+        using var scene = new Scene();
+        scene.Install("fautive", """
+            kyfrev.vue(() => { throw new Error("boum dans la vue"); });
+            kyfrev.action("casser", () => { throw new Error("boum dans l'action"); });
+            """);
+        using var ui = new UiThread();
+        var changed = new List<string>();
+        scene.Engine.FaultsChanged += (_, e) => changed.Add(e.Extension);
+
+        Assert.IsFalse(Wait(scene.Engine.RenderViewAsync("fautive", dark: false)).Succeeded);
+        Assert.IsFalse(Wait(scene.Engine.ActAsync("fautive", "casser", null, new Dictionary<string, string>())).Succeeded);
+
+        var faults = scene.Engine.Faults("fautive");
+        Assert.HasCount(2, faults);
+        Assert.AreEqual("action « casser »", faults[0].Where, "La plus récente d'abord.");
+        StringAssert.Contains(faults[0].Message, "boum dans l'action", StringComparison.Ordinal);
+        Assert.IsFalse(faults[0].Message.StartsWith("extension « fautive »", StringComparison.Ordinal), "Son nom ne se répète pas sous elle : " + faults[0].Message);
+        Assert.AreEqual("vue", faults[1].Where);
+        Assert.AreEqual("fautive fautive", string.Join(' ', changed));
+        Assert.IsEmpty(scene.Engine.Faults("absente"));
+
+        scene.Engine.ForgetFaults("fautive");
+        Assert.IsEmpty(scene.Engine.Faults("fautive"));
+        scene.Engine.ForgetFaults("fautive");
+        Assert.HasCount(3, changed, "Oublier ce qui n'y est plus ne dit rien.");
+        for (var i = 0; i < ExtensionEngine.MaxFaults + 3; i++)
+        {
+            Wait(scene.Engine.ActAsync("fautive", "casser", null, new Dictionary<string, string>()));
+        }
+        Assert.HasCount(ExtensionEngine.MaxFaults, scene.Engine.Faults("fautive"));
+    }
+
+    [EngineTest]
     public void Chronology_gathers_the_dates_of_the_sheets()
     {
         using var scene = new Scene();

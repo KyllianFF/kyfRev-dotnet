@@ -152,6 +152,7 @@ public sealed class ExtensionLibraryTests
     [DataRow("a.json", "application/json")]
     [DataRow("a.md", "text/plain; charset=utf-8")]
     [DataRow("a.txt", "text/plain; charset=utf-8")]
+    [DataRow("kyfrev.d.ts", "text/plain; charset=utf-8")]
     [DataRow("a.svg", "image/svg+xml")]
     [DataRow("a.png", "image/png")]
     [DataRow("a.jpg", "image/jpeg")]
@@ -203,6 +204,54 @@ public sealed class ExtensionLibraryTests
             Assert.AreEqual(Path.GetFileName(folder), manifest.Id);
             Assert.IsNotNull(scene.Library.Icon(manifest.Id), manifest.Id);
         }
+    }
+
+    [TestMethod]
+    public void A_created_extension_is_a_folder_ready_to_change_that_installs()
+    {
+        using var scene = new Scene();
+        var parent = Path.Combine(scene.Root, "mes-extensions");
+        Directory.CreateDirectory(parent);
+
+        var created = ExtensionTemplate.Create(parent, []);
+
+        Assert.IsTrue(created.Succeeded, created.Error);
+        Assert.AreEqual(Path.Combine(parent, ExtensionTemplate.BaseId), created.Value);
+        foreach (var file in new[] { ExtensionManifest.FileName, "extension.js", "icone.svg", "jsconfig.json", "LISEZMOI.md", ExtensionTemplate.TypesFile })
+        {
+            Assert.IsTrue(File.Exists(Path.Combine(created.Value, file)), file);
+        }
+        var types = Path.Combine(Fixtures, "..", "..", "..", "docs", "extensions", ExtensionTemplate.TypesFile);
+        Assert.AreEqual(File.ReadAllText(types).ReplaceLineEndings("\n"), File.ReadAllText(Path.Combine(created.Value, ExtensionTemplate.TypesFile)), "Les types copiés sont ceux publiés.");
+        var installed = scene.Library.Install(created.Value);
+        Assert.IsTrue(installed.Succeeded, installed.Error);
+        Assert.AreEqual(ExtensionManifest.LatestApi, installed.Value.Manifest.Api);
+        Assert.AreEqual(ExtensionTemplate.BaseName, installed.Value.Manifest.Name);
+        Assert.IsNotNull(scene.Library.Icon(ExtensionTemplate.BaseId));
+
+        var second = ExtensionTemplate.Create(parent, [ExtensionTemplate.BaseId]);
+        Assert.AreEqual(Path.Combine(parent, ExtensionTemplate.BaseId + "-2"), second.Value, "Un identifiant pris, ou un dossier qui existe, passe au numéro suivant.");
+        StringAssert.Contains(File.ReadAllText(Path.Combine(second.Value, ExtensionManifest.FileName)), "\"Mon extension 2\"", StringComparison.Ordinal);
+        Assert.IsFalse(ExtensionTemplate.Create(Path.Combine(scene.Root, "absent"), []).Succeeded);
+    }
+
+    [TestMethod]
+    public void The_library_remembers_where_an_extension_comes_from_and_the_developer_mode()
+    {
+        using var scene = new Scene();
+        var source = Path.Combine(Fixtures, "quiz");
+        Assert.IsNull(scene.Library.Source("quiz"));
+        Assert.IsFalse(scene.Library.IsDeveloperMode);
+
+        scene.Library.Install(source);
+        Assert.IsTrue(scene.Library.SetDeveloperMode(true).Succeeded);
+
+        var again = new ExtensionLibrary(scene.Folder, TimeProvider.System);
+        Assert.AreEqual(Path.GetFullPath(source), again.Source("quiz"));
+        Assert.IsTrue(again.IsDeveloperMode);
+        Assert.IsTrue(again.SetDeveloperMode(false).Succeeded);
+        Assert.IsFalse(scene.Library.IsDeveloperMode);
+        Assert.IsTrue(again.Active("quiz") is not null, "L'état garde aussi ce qu'il avait.");
     }
 
     [TestMethod]

@@ -164,7 +164,8 @@ internal static class Composition
         services.AddSingleton(provider => new ExtensionSettingsViewModel(
             provider.GetRequiredService<ExtensionLibrary>(),
             provider.GetRequiredService<IFolderPicker>(),
-            provider.GetRequiredService<ExtensionDataUseCases>().Journal));
+            provider.GetRequiredService<ExtensionDataUseCases>().Journal,
+            provider.GetRequiredService<ExtensionEngine>()));
         services.AddSingleton(provider => new ModulesSettingsViewModel(
             provider.GetRequiredService<SettingsUseCases>(),
             provider.GetRequiredService<ActiveModules>().Load,
