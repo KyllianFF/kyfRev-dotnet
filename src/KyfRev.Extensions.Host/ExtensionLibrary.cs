@@ -129,7 +129,16 @@ public sealed class ExtensionLibrary
     /// <summary>Copie l'extension d'un dossier et l'active. Une version déjà installée est rangée.</summary>
     /// <param name="source">Le dossier choisi.</param>
     [ZeroXCommand("installer_extension")]
-    public Outcome<InstalledExtension> Install(string source)
+    public Outcome<InstalledExtension> Install(string source) => Install(source, remembersSource: true);
+
+    /// <summary>
+    /// Installe une extension téléchargée du catalogue, et l'active. Son dossier, temporaire, n'est pas retenu : elle n'a rien
+    /// à recharger.
+    /// </summary>
+    /// <param name="downloaded">Le dossier où elle a été téléchargée et vérifiée.</param>
+    public Outcome<InstalledExtension> InstallDownloaded(string downloaded) => Install(downloaded, remembersSource: false);
+
+    private Outcome<InstalledExtension> Install(string source, bool remembersSource)
     {
         ArgumentException.ThrowIfNullOrEmpty(source);
         var manifest = ReadManifest(source);
@@ -162,7 +171,7 @@ public sealed class ExtensionLibrary
             {
                 Active = [.. ReadActive(_folder).Where(id => id != manifest.Value.Id), manifest.Value.Id],
                 Withdrawn = withdrawn,
-                Sources = new Dictionary<string, string>(state.Sources ?? [], StringComparer.Ordinal) { [manifest.Value.Id] = Path.GetFullPath(source) },
+                Sources = SourcesWith(state.Sources, manifest.Value.Id, remembersSource ? Path.GetFullPath(source) : null),
             });
             return Outcome.Of(new InstalledExtension(manifest.Value, true));
         }
@@ -286,6 +295,28 @@ public sealed class ExtensionLibrary
         try
         {
             WriteState(_folder, ReadState(_folder) with { Developer = on ? true : null });
+            return Outcome.Done();
+        }
+        catch (Exception exception) when (IsFileProblem(exception))
+        {
+            return Outcome.Refused<Done>(exception.Message);
+        }
+    }
+
+    /// <summary>Le numéro du dernier catalogue pris sur ce poste ; rien si aucun. Un catalogue plus ancien est refusé.</summary>
+    public int? CatalogueNumber => ReadState(_folder).Catalogue;
+
+    /// <summary>Retient le numéro du dernier catalogue pris ; il ne recule jamais.</summary>
+    /// <param name="number">Son numéro.</param>
+    public Outcome<Done> SetCatalogueNumber(int number)
+    {
+        try
+        {
+            var state = ReadState(_folder);
+            if (state.Catalogue is not { } seen || number > seen)
+            {
+                WriteState(_folder, state with { Catalogue = number });
+            }
             return Outcome.Done();
         }
         catch (Exception exception) when (IsFileProblem(exception))
@@ -458,6 +489,20 @@ public sealed class ExtensionLibrary
         File.WriteAllBytes(Path.Combine(folder, StateFile), JsonSerializer.SerializeToUtf8Bytes(state, StateOptions));
     }
 
+    private static Dictionary<string, string>? SourcesWith(Dictionary<string, string>? sources, string id, string? source)
+    {
+        var changed = new Dictionary<string, string>(sources ?? [], StringComparer.Ordinal);
+        if (source is null)
+        {
+            changed.Remove(id);
+        }
+        else
+        {
+            changed[id] = source;
+        }
+        return changed.Count == 0 ? null : changed;
+    }
+
     private static Dictionary<string, List<string>>? Without(Dictionary<string, List<string>>? withdrawn, string? id)
     {
         if (withdrawn is null)
@@ -505,11 +550,12 @@ public sealed class ExtensionLibrary
 
     /// <summary>
     /// <c>etat.json</c> : les extensions actives, comme la 0.x ; ce qu'elle ignore : les permissions retirées, le dossier d'où vient
-    /// chaque extension et le mode développeur.
+    /// chaque extension, le mode développeur et le numéro du dernier catalogue pris.
     /// </summary>
     private sealed record ExtensionState(
         [property: JsonPropertyName("actives")] List<string>? Active,
         [property: JsonPropertyName("retirees"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] Dictionary<string, List<string>>? Withdrawn,
         [property: JsonPropertyName("sources"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] Dictionary<string, string>? Sources = null,
-        [property: JsonPropertyName("developpeur"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] bool? Developer = null);
+        [property: JsonPropertyName("developpeur"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] bool? Developer = null,
+        [property: JsonPropertyName("catalogue"), JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] int? Catalogue = null);
 }

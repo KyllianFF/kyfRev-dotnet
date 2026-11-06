@@ -130,6 +130,7 @@ public sealed partial class ArchitectureTests
         var allowed = new Dictionary<string, int>(StringComparer.Ordinal)
         {
             ["KyfRev.Infrastructure.Vault/Backups/VaultBackups.cs"] = 1,
+            ["KyfRev.Extensions.Host/CatalogueReader.cs"] = 1,
             ["KyfRev.Infrastructure.Vault/Files/AtomicFile.cs"] = 1,
             ["KyfRev.Infrastructure.Vault/VaultSession.Backups.cs"] = 1,
             ["KyfRev.Infrastructure.Vault/VaultSession.Trash.cs"] = 2,
@@ -145,6 +146,8 @@ public sealed partial class ArchitectureTests
             Assert.AreEqual(allowed.GetValueOrDefault(file), count, $"Effacement dans {file}");
         }
 
+        var discard = File.ReadAllText(Path.Combine(src, "KyfRev.Extensions.Host/CatalogueReader.cs"));
+        Assert.Contains("Path.GetFullPath(folder).StartsWith(root", discard, "un dossier téléchargé ne s'efface que dans le dossier des téléchargements");
         var rotation = File.ReadAllText(Path.Combine(src, "KyfRev.Infrastructure.Vault/Backups/VaultBackups.cs"));
         var copy = rotation[rotation.IndexOf("private static void RemoveOutdatedCopy", StringComparison.Ordinal)..rotation.IndexOf("File.Delete(path)", StringComparison.Ordinal)];
         Assert.Contains("TimestampOf(name) is null", copy, "le nom de la copie doit être vérifié");

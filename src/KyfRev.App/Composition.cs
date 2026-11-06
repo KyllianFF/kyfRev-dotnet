@@ -165,7 +165,14 @@ internal static class Composition
             provider.GetRequiredService<ExtensionLibrary>(),
             provider.GetRequiredService<IFolderPicker>(),
             provider.GetRequiredService<ExtensionDataUseCases>().Journal,
-            provider.GetRequiredService<ExtensionEngine>()));
+            provider.GetRequiredService<ExtensionEngine>())
+        {
+            Catalogue = new CatalogueReader(
+                provider.GetRequiredService<IOnlineReader>(),
+                provider.GetRequiredService<ExtensionLibrary>(),
+                ExtensionCatalogue.KnownKeys,
+                Path.Combine(Path.GetTempPath(), "kyfRev", "catalogue")),
+        });
         services.AddSingleton(provider => new ModulesSettingsViewModel(
             provider.GetRequiredService<SettingsUseCases>(),
             provider.GetRequiredService<ActiveModules>().Load,

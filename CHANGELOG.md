@@ -9,6 +9,12 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- Extensions : le catalogue signé. « Voir le catalogue », dans Paramètres › Modules et extensions, lit à la demande le
+  catalogue publié dans le dépôt, et ne le prend que si sa signature (ECDSA P-256) est bonne, par une clé que
+  l'application connaît, et si son numéro n'est pas plus ancien que le dernier vu. Chaque fichier d'une extension est
+  vérifié par sa taille et son empreinte SHA-256 avant l'installation, qui montre ce qu'elle demande. La clé privée reste
+  sur le poste de la personne qui publie ; `tools/catalogue/catalogue.cs` la crée, signe et vérifie
+  (`docs/extensions/catalogue.md`). Aucune clé n'est encore livrée : le catalogue s'ouvrira avec la version qui la connaît.
 - Fenêtre : l'application dessine sa barre de titre, aux couleurs du thème, avec le nom, la recherche (Ctrl+K), le thème clair
   ou sombre en un clic, les raccourcis clavier et les boutons de la fenêtre. Windows garde le déplacement, le redimensionnement,
   son menu et ses dispositions sur « Agrandir ».

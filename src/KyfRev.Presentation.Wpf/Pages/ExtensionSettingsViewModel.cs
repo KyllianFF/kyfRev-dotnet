@@ -104,6 +104,61 @@ public sealed partial class ExtensionRightRow : ObservableObject
     }
 }
 
+/// <summary>Une extension du catalogue, dans la carte « Extensions » : ce qu'elle est, ce qu'elle demande, et sa version installée.</summary>
+public sealed partial class CatalogueRow : ObservableObject
+{
+    private readonly ExtensionSettingsViewModel _card;
+
+    internal CatalogueRow(CatalogueEntry entry, ExtensionSettingsViewModel card)
+    {
+        Entry = entry;
+        _card = card;
+    }
+
+    /// <summary>L'extension du catalogue.</summary>
+    public CatalogueEntry Entry { get; }
+
+    /// <summary>Son nom.</summary>
+    public string Name => Entry.Name;
+
+    /// <summary>Ce qu'elle fait.</summary>
+    public string Summary => Entry.Summary;
+
+    /// <summary>Elle dit ce qu'elle fait.</summary>
+    public bool HasSummary => Entry.Summary.Length > 0;
+
+    /// <summary>Ce qu'elle demande, en clair.</summary>
+    public string Permissions => Entry.Permissions.IsEmpty
+        ? ModulesSettingsText.CatalogueNoPermission
+        : ModulesSettingsText.CataloguePermissionsOf(string.Join(", ", Entry.Permissions.Select(name => ExtensionRights.Parse(name, 2) is { } right ? ExtensionRightRow.TextOf(right) : name)));
+
+    /// <summary>Sa version installée sur ce poste ; rien si elle ne l'est pas.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Version), nameof(Action), nameof(IsUpToDate), nameof(CanInstall))]
+    public partial string? InstalledVersion { get; set; }
+
+    /// <summary>Sa version, et celle installée si elle diffère.</summary>
+    public string Version => InstalledVersion is { } installed && installed != Entry.Version
+        ? ModulesSettingsText.CatalogueInstalledVersionOf(Entry.Version, installed)
+        : ModulesSettingsText.CatalogueVersionOf(Entry.Version);
+
+    /// <summary>Ce que fait son bouton.</summary>
+    public string Action => InstalledVersion is null ? ModulesSettingsText.CatalogueInstall : ModulesSettingsText.CatalogueUpdate;
+
+    /// <summary>La version du catalogue est installée.</summary>
+    public bool IsUpToDate => InstalledVersion == Entry.Version;
+
+    /// <summary>Elle s'installe, ou se met à jour.</summary>
+    public bool CanInstall => !IsUpToDate;
+
+    /// <summary>Le nom du bouton, pour un lecteur d'écran.</summary>
+    public string Spoken => $"{Action} {Name}";
+
+    /// <summary>La télécharge, vérifiée, et montre ce qu'elle demande avant de l'installer.</summary>
+    [RelayCommand]
+    private Task InstallAsync() => _card.InstallFromCatalogueAsync(this);
+}
+
 /// <summary>Une extension installée, dans la carte « Extensions ».</summary>
 /// <summary>Une erreur d'une extension, en mode développeur : où, ce qu'elle a dit, et quand.</summary>
 public sealed class ExtensionFaultRow
@@ -293,6 +348,7 @@ public sealed partial class ExtensionSettingsViewModel : ObservableObject
     private readonly Func<string, Outcome<IReadOnlyList<ExtensionJournalEntry>>> _journal;
     private readonly IExtensionFaults _faults;
     private string? _source;
+    private string? _downloaded;
     private bool _created;
     private readonly bool _starting;
     private ExtensionRow? _toRemove;
@@ -374,6 +430,23 @@ public sealed partial class ExtensionSettingsViewModel : ObservableObject
 
     /// <summary>Les extensions installées.</summary>
     public ObservableCollection<ExtensionRow> Rows { get; } = [];
+
+    /// <summary>Le catalogue en ligne ; rien sans lecteur en ligne.</summary>
+    public CatalogueReader? Catalogue { get; init; }
+
+    /// <summary>Le catalogue peut se lire.</summary>
+    public bool CanReadCatalogue => Catalogue is not null;
+
+    /// <summary>Ce qu'on sait du catalogue lu ; rien tant qu'il n'a pas été demandé.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasCatalogue))]
+    public partial string? CatalogueStatus { get; private set; }
+
+    /// <summary>Le catalogue a été demandé : sa partie se montre.</summary>
+    public bool HasCatalogue => CatalogueStatus is not null;
+
+    /// <summary>Les extensions du catalogue.</summary>
+    public ObservableCollection<CatalogueRow> CatalogueRows { get; } = [];
 
     /// <summary>Aucune extension n'est installée.</summary>
     [ObservableProperty]
@@ -622,10 +695,105 @@ public sealed partial class ExtensionSettingsViewModel : ObservableObject
         IsConfirmingInstall = true;
     }
 
+    /// <summary>Lit le catalogue en ligne : il n'est montré que vérifié.</summary>
+    [RelayCommand(CanExecute = nameof(CanInstall))]
+    private async Task ReadCatalogueAsync()
+    {
+        if (Catalogue is not { } catalogue)
+        {
+            return;
+        }
+        Error = null;
+        Message = null;
+        IsBusy = true;
+        CatalogueStatus = ModulesSettingsText.CatalogueReading;
+        var read = await Task.Run(() => catalogue.ReadAsync(CancellationToken.None)).ConfigureAwait(true);
+        IsBusy = false;
+        CatalogueRows.Clear();
+        if (!read.Succeeded)
+        {
+            CatalogueStatus = null;
+            Error = read.Error;
+            return;
+        }
+        var value = read.Value;
+        CatalogueStatus = value.Extensions.IsEmpty
+            ? ModulesSettingsText.CatalogueEmpty
+            : ModulesSettingsText.CatalogueStatusOf(value.Number.ToString(CultureInfo.CurrentCulture), value.PublishedOn.ToString("d MMMM yyyy", CultureInfo.GetCultureInfo("fr-FR")), value.KeyId);
+        foreach (var entry in value.Extensions)
+        {
+            CatalogueRows.Add(new CatalogueRow(entry, this));
+        }
+        RefreshCatalogue();
+    }
+
+    /// <summary>La version installée de chaque extension du catalogue.</summary>
+    private void RefreshCatalogue()
+    {
+        var installed = _library.Installed().ToDictionary(extension => extension.Manifest.Id, extension => extension.Manifest.Version, StringComparer.Ordinal);
+        foreach (var row in CatalogueRows)
+        {
+            row.InstalledVersion = installed.GetValueOrDefault(row.Entry.Id);
+        }
+    }
+
+    /// <summary>Télécharge une extension du catalogue, chaque fichier vérifié, puis montre ce qu'elle demande avant de l'installer.</summary>
+    internal async Task InstallFromCatalogueAsync(CatalogueRow row)
+    {
+        if (Catalogue is not { } catalogue || IsBusy)
+        {
+            return;
+        }
+        Error = null;
+        Message = ModulesSettingsText.CatalogueDownloadingOf(row.Entry.Name);
+        IsBusy = true;
+        var downloaded = await Task.Run(() => catalogue.DownloadAsync(row.Entry, CancellationToken.None)).ConfigureAwait(true);
+        IsBusy = false;
+        Message = null;
+        if (!downloaded.Succeeded)
+        {
+            Error = downloaded.Error;
+            return;
+        }
+        var preview = await Task.Run(() => _library.Read(downloaded.Value)).ConfigureAwait(true);
+        if (!preview.Succeeded)
+        {
+            Catalogue?.Discard(downloaded.Value);
+            Error = preview.Error;
+            return;
+        }
+        var updates = preview.Value.InstalledVersion is not null;
+        _source = downloaded.Value;
+        _downloaded = downloaded.Value;
+        _toReactivate = null;
+        InstallTitle = updates ? ModulesSettingsText.ExtensionUpdateTitle : ModulesSettingsText.ExtensionInstallTitle;
+        InstallAction = updates ? ModulesSettingsText.ExtensionUpdate : ModulesSettingsText.ExtensionInstall;
+        Prepare(preview.Value);
+        IsConfirmingInstall = true;
+    }
+
     [RelayCommand]
     private async Task AnswerInstallAsync(bool confirmed)
     {
         IsConfirmingInstall = false;
+        var downloaded = _downloaded;
+        _downloaded = null;
+        try
+        {
+            await AnswerAsync(confirmed, downloaded).ConfigureAwait(true);
+        }
+        finally
+        {
+            if (downloaded is not null)
+            {
+                Catalogue?.Discard(downloaded);
+                RefreshCatalogue();
+            }
+        }
+    }
+
+    private async Task AnswerAsync(bool confirmed, string? downloaded)
+    {
         if (_toReactivate is { } row)
         {
             _toReactivate = null;
@@ -642,7 +810,7 @@ public sealed partial class ExtensionSettingsViewModel : ObservableObject
             return;
         }
         IsBusy = true;
-        var outcome = await Task.Run(() => _library.Install(source)).ConfigureAwait(true);
+        var outcome = await Task.Run(() => downloaded is null ? _library.Install(source) : _library.InstallDownloaded(source)).ConfigureAwait(true);
         IsBusy = false;
         if (!outcome.Succeeded)
         {
