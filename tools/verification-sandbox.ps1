@@ -46,6 +46,25 @@ $OutputEncoding = [Console]::OutputEncoding
 $hoteSource = 'C:\host\source'
 $hoteSortie = 'C:\host\sortie'
 
+# Windows Sandbox recopie le moteur WebView2 du poste, mais son registre peut annoncer une version plus ancienne, absente du
+# dossier (le poste s'est mis à jour depuis) : aucun test du moteur web ne démarrerait (vu le 2026-11-06). Le registre du
+# bac à sable, jetable, annonce la version qui est vraiment là.
+function Repair-WebView2 {
+    $racine = Join-Path ${env:ProgramFiles(x86)} 'Microsoft\EdgeWebView\Application'
+    $moteur = Get-ChildItem $racine -Directory -ErrorAction SilentlyContinue |
+        Where-Object { Test-Path (Join-Path $_.FullName 'msedgewebview2.exe') } |
+        Sort-Object { [version] $_.Name } -Descending |
+        Select-Object -First 1
+    if (-not $moteur) { return }
+    $produit = '{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}'
+    $etat = "HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\ClientState\$produit"
+    foreach ($cle in "HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\$produit", $etat) {
+        if (-not (Test-Path $cle)) { New-Item $cle -Force | Out-Null }
+        Set-ItemProperty $cle -Name pv -Value $moteur.Name
+    }
+    Set-ItemProperty $etat -Name EBWebView -Value $moteur.FullName
+}
+
 # Dans le bac à sable : copie le clone sur un disque où écrire, vérifie, range le résultat, se referme.
 function Invoke-Invite {
     $code = 1
@@ -72,6 +91,7 @@ function Invoke-Invite {
                 if ($LASTEXITCODE -ge 8) { throw "La copie de l'outil $nom a échoué (code $LASTEXITCODE)." }
             }
         }
+        Repair-WebView2
         & pwsh -NoProfile -File (Join-Path $depot 'tools\verification-locale.ps1') -Base $Base -PosteVierge *> (Join-Path $hoteSortie 'sortie.log')
         $code = $LASTEXITCODE
         foreach ($dossier in 'artifacts\coverage', 'artifacts\verification-locale', 'artifacts\installer\essais') {
