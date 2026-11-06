@@ -401,6 +401,9 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Corrigé
 
+- Lecture : le plan marque la partie qui est en haut de la vue. En haut d'une fiche, il ne saute plus au titre suivant quand
+  celui-ci est proche ; tout en bas, le dernier titre, qui ne peut plus monter, est marqué.
+- Lecture : le numéro d'une liste n'est plus coupé à gauche, quels que soient sa longueur, la taille du texte et la police.
 - Le curseur devient une main sur tout ce qui se clique, y compris les trous et les passages du texte.
 - En révision, « Afficher le passage » et un clic dans le volet découvrent le passage masqué.
 - Le passage visé depuis le volet ressort nettement dans le texte, dans les deux thèmes.

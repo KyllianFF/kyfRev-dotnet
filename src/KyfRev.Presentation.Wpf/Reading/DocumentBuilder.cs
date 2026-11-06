@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO;
 using System.Text;
 using System.Windows;
@@ -79,6 +80,12 @@ internal sealed class DocumentBuilder
     private const double DiagramWidth = 640;
 
     private const double ListIndent = 24;
+
+    // La place d'un numéro de liste, en multiples de la taille du texte : chaque chiffre, puis le point et l'écart jusqu'au texte.
+    // Mesurée sur la police de l'application et sur Georgia, avec de la marge pour une police plus large : le numéro doit tenir
+    // dans le retrait, sinon le bord gauche du texte le coupe.
+    private const double MarkerDigitEm = 0.65;
+    private const double MarkerRestEm = 1.1;
 
     private readonly SheetReading _reading;
     private readonly Action<LinkTarget> _follow;
@@ -496,17 +503,17 @@ internal sealed class DocumentBuilder
             }
             return;
         }
+        var numbered = element.Tag == "ol";
+        var first = element.ListStart is { } start ? Math.Max(start, 1) : 1;
+        var indent = ListIndent * _comfort.Size / ReadingComfort.Default.Size;
         var list = new List
         {
-            MarkerStyle = element.Tag == "ol" ? TextMarkerStyle.Decimal : TextMarkerStyle.Disc,
+            MarkerStyle = numbered ? TextMarkerStyle.Decimal : TextMarkerStyle.Disc,
             Margin = new Thickness(0, 0, 0, 12),
-            // La puce grandit avec le texte : à retrait fixe, elle serait coupée à gauche.
-            Padding = new Thickness(ListIndent * _comfort.Size / ReadingComfort.Default.Size, 0, 0, 0),
+            StartIndex = first,
+            // La puce grandit avec le texte, et un numéro avec ses chiffres : à retrait fixe, ils seraient coupés à gauche.
+            Padding = new Thickness(numbered ? Math.Max(indent, MarkerRoom(first + items.Count - 1)) : indent, 0, 0, 0),
         };
-        if (element.ListStart is { } start)
-        {
-            list.StartIndex = Math.Max(start, 1);
-        }
         if (items.TrueForAll(item => item.Task is not null))
         {
             // Seulement des tâches : la case prend la place de la puce.
@@ -555,6 +562,10 @@ internal sealed class DocumentBuilder
     }
 
     /// <summary>La case d'une tâche devant son texte ; faite, le texte est barré.</summary>
+    /// <summary>La place que prend le numéro <paramref name="number"/> à gauche du texte de la liste.</summary>
+    private double MarkerRoom(int number) =>
+        _comfort.Size * ((MarkerDigitEm * number.ToString(CultureInfo.InvariantCulture).Length) + MarkerRestEm);
+
     private static void MarkTask(ListItem entry, bool done)
     {
         if (entry.Blocks.FirstBlock is not Paragraph paragraph)
