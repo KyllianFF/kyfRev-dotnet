@@ -18,12 +18,14 @@ describe("la ligne d'apparence", () => {
       traits: "entete",
       theme: "ardoise",
       reviser: 2,
-      largeur: "page",
+      largeur: "ajustee",
     };
     const ligne = ecrireApparence(toutes) as string;
     expect(ligne).toBe(
-      "<!-- kyfrev tableau entete=ligne,colonne total bandes=colonnes traits=entete theme=ardoise reviser-cache=2 largeur=page -->",
+      "<!-- kyfrev tableau entete=ligne,colonne total bandes=colonnes traits=entete theme=ardoise reviser-cache=2 largeur=ajustee -->",
     );
+    // Toute la largeur est le défaut : une ancienne ligne qui la demandait se relit pareil, et ne s'écrit plus.
+    expect(lireApparence("<!-- kyfrev tableau largeur=page -->")).toEqual(APPARENCE);
     expect(lireApparence(ligne)).toEqual(toutes);
     expect(lireApparence("   <!--kyfrev tableau theme=prune-->  ")).toEqual({ ...APPARENCE, theme: "prune" });
   });

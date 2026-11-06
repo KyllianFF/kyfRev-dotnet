@@ -30,7 +30,7 @@ export const APPARENCE: Apparence = {
   traits: "tous",
   theme: "sobre",
   reviser: null,
-  largeur: "ajustee",
+  largeur: "page",
 };
 
 const BANDES: Bandes[] = ["aucune", "lignes", "colonnes"];
@@ -73,7 +73,7 @@ export function lireApparence(ligne: string): Apparence | null {
         break;
       }
       case "largeur":
-        apparence.largeur = valeur === "page" ? "page" : "ajustee";
+        apparence.largeur = valeur === "ajustee" ? "ajustee" : "page";
         break;
     }
   }
@@ -89,7 +89,7 @@ export function ecrireApparence(apparence: Apparence): string | null {
   if (apparence.traits !== "tous") mots.push(`traits=${apparence.traits}`);
   if (apparence.theme !== "sobre") mots.push(`theme=${apparence.theme}`);
   if (apparence.reviser !== null) mots.push(`reviser-cache=${apparence.reviser}`);
-  if (apparence.largeur !== "ajustee") mots.push("largeur=page");
+  if (apparence.largeur !== "page") mots.push("largeur=ajustee");
   return mots.length === 0 ? null : `<!-- kyfrev tableau ${mots.join(" ")} -->`;
 }
 
@@ -118,7 +118,7 @@ export function apparenceDuDom(tableau: HTMLElement): Apparence {
     traits: parmi(TRAITS, lu("traits"), "tous"),
     theme: parmi(THEMES, lu("theme"), "sobre"),
     reviser: Number.isInteger(reviser) && reviser > 0 ? reviser : null,
-    largeur: lu("largeur") === "page" ? "page" : "ajustee",
+    largeur: lu("largeur") === "ajustee" ? "ajustee" : "page",
   };
 }
 

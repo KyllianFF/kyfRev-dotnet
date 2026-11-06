@@ -357,10 +357,10 @@
 
           <HeaderedContentControl Style="{StaticResource Group}" Header="{x:Static editing:EditingText.WidthGroup}">
             <StackPanel>
-                <RadioButton x:Name="WidthFitChoice" GroupName="TableWidth" Content="{x:Static editing:EditingText.WidthFit}" Margin="0,0,10,2" Command="{Binding ChangeTableCommand}" CommandParameter="largeur=ajustee"
-                             IsChecked="{Binding Tools.Table.Width, Mode=OneWay, Converter={StaticResource TableChoice}, ConverterParameter=ajustee}" />
                 <RadioButton x:Name="WidthPageChoice" GroupName="TableWidth" Content="{x:Static editing:EditingText.WidthPage}" Margin="0,0,10,2" Command="{Binding ChangeTableCommand}" CommandParameter="largeur=page"
                              IsChecked="{Binding Tools.Table.Width, Mode=OneWay, Converter={StaticResource TableChoice}, ConverterParameter=page}" />
+                <RadioButton x:Name="WidthFitChoice" GroupName="TableWidth" Content="{x:Static editing:EditingText.WidthFit}" Margin="0,0,10,2" Command="{Binding ChangeTableCommand}" CommandParameter="largeur=ajustee"
+                             IsChecked="{Binding Tools.Table.Width, Mode=OneWay, Converter={StaticResource TableChoice}, ConverterParameter=ajustee}" />
             </StackPanel>
           </HeaderedContentControl>
 

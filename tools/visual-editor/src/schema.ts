@@ -198,6 +198,10 @@ const noeuds: Record<NomNoeud, NodeSpec> = {
 
   ...tableaux,
 
+  // Une case de tableau est un bloc de texte : sans cette règle, le curseur de bloc (gapcursor) se poserait entre deux cases,
+  // ou à droite d'une ligne, au lieu de laisser les flèches passer d'une case à l'autre.
+  table_row: { ...tableaux.table_row, allowGapCursor: false },
+
   // L'apparence du tableau vit sur lui : la ligne au-dessus de lui la donne, et la page la montre.
   table: {
     ...tableaux.table,

@@ -40,7 +40,7 @@ public sealed class TableLookTests
             Assert.AreEqual(new Thickness(0, 2, 0, 1), rows[4].Cells[1].BorderThickness, "un trait épais au-dessus de la dernière ligne");
             Assert.AreEqual(Color(ColorRole.TableForestHeader), ((SolidColorBrush)rows[4].Cells[1].BorderBrush).Color);
             Assert.AreEqual(new Thickness(0, 1, 0, 1), rows[0].Cells[1].BorderThickness, "traits horizontaux : le haut du tableau, puis sous chaque ligne");
-            Assert.AreEqual(4, table.Columns.Count, "trois colonnes ajustées, et une vide qui prend le reste");
+            Assert.AreEqual(3, table.Columns.Count, "trois colonnes sur toute la largeur du texte, le défaut");
         }
         finally
         {
@@ -79,7 +79,7 @@ public sealed class TableLookTests
     [STATestMethod]
     public void The_outline_and_header_lines_trace_only_what_they_say()
     {
-        var (window, outline) = Show("<!-- kyfrev tableau traits=contour -->\n" + Table);
+        var (window, outline) = Show("<!-- kyfrev tableau traits=contour largeur=ajustee -->\n" + Table);
         var (other, header) = Show("<!-- kyfrev tableau entete=ligne,colonne traits=entete -->\n" + Table);
         var (third, vertical) = Show("<!-- kyfrev tableau traits=verticaux -->\n" + Table);
         try
