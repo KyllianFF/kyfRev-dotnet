@@ -16,4 +16,5 @@ de l'extension. kyfRev montre ce qu'elle ajoute et chaque permission avant d'ins
 Les extensions de la 0.x, telles qu'elles ont été publiées, sont gardées à l'octet près dans `tests/fixtures/extensions` :
 elles servent à vérifier qu'elles tournent toujours sans changement.
 
-Les types de l'objet `kyfrev` sont dans [`docs/extensions/kyfrev.d.ts`](../docs/extensions/kyfrev.d.ts).
+Pour écrire la vôtre : le [guide](../docs/extensions/guide.md), ou « Créer une extension… » dans les Paramètres. Les types de
+l'objet `kyfrev` sont dans [`docs/extensions/kyfrev.d.ts`](../docs/extensions/kyfrev.d.ts).

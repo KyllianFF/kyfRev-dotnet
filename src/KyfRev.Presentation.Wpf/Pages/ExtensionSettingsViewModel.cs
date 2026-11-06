@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.Input;
 using KyfRev.Application;
 using KyfRev.DesignSystem.Controls;
 using KyfRev.Extensions.Host;
+using KyfRev.Presentation.Wpf.Extensions;
 using KyfRev.Presentation.Wpf.Shell;
 
 namespace KyfRev.Presentation.Wpf.Pages;
@@ -100,6 +101,22 @@ public sealed partial class ExtensionRightRow : ObservableObject
 }
 
 /// <summary>Une extension installée, dans la carte « Extensions ».</summary>
+/// <summary>Une erreur d'une extension, en mode développeur : où, ce qu'elle a dit, et quand.</summary>
+public sealed class ExtensionFaultRow
+{
+    internal ExtensionFaultRow(ExtensionFault fault)
+    {
+        Text = ModulesSettingsText.ExtensionFaultOf(fault.Where, fault.Message);
+        When = fault.At.ToLocalTime().ToString("HH:mm:ss", CultureInfo.CurrentCulture);
+    }
+
+    /// <summary>Où, et ce qu'elle a dit.</summary>
+    public string Text { get; }
+
+    /// <summary>À quelle heure.</summary>
+    public string When { get; }
+}
+
 /// <summary>Une écriture d'une extension, sous la liste : ce qu'elle a fait à quelle fiche, puis qui et quand.</summary>
 public sealed class ExtensionJournalRow
 {
@@ -198,6 +215,32 @@ public sealed partial class ExtensionRow : ObservableObject
             _changed(this, value);
         }
     }
+
+    /// <summary>Le dossier d'où elle a été installée ; rien s'il n'est pas connu.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SourceText))]
+    public partial string? Source { get; internal set; }
+
+    /// <summary>D'où elle vient, à lire en mode développeur.</summary>
+    public string SourceText => Source is { } source ? ModulesSettingsText.ExtensionSourceOf(source) : ModulesSettingsText.ExtensionSourceUnknown;
+
+    /// <summary>Le mode développeur est allumé : son dossier, « Recharger » et ses erreurs se montrent.</summary>
+    [ObservableProperty]
+    public partial bool IsDeveloper { get; internal set; }
+
+    /// <summary>Ses dernières erreurs, de la plus récente à la plus ancienne.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasFaults), nameof(HasNoFaults))]
+    public partial IReadOnlyList<ExtensionFaultRow> Faults { get; internal set; } = [];
+
+    /// <summary>Elle a eu des erreurs depuis le lancement.</summary>
+    public bool HasFaults => Faults.Count > 0;
+
+    /// <summary>Elle n'en a pas eu.</summary>
+    public bool HasNoFaults => Faults.Count == 0;
+
+    /// <summary>Le nom du bouton qui la recharge.</summary>
+    public string ReloadName => ModulesSettingsText.ExtensionReloadNameOf(Name);
 }
 
 /// <summary>
@@ -213,7 +256,10 @@ public sealed partial class ExtensionSettingsViewModel : ObservableObject
     private readonly ExtensionLibrary _library;
     private readonly IFolderPicker _picker;
     private readonly Func<string, Outcome<IReadOnlyList<ExtensionJournalEntry>>> _journal;
+    private readonly IExtensionFaults _faults;
     private string? _source;
+    private bool _created;
+    private readonly bool _starting;
     private ExtensionRow? _toRemove;
 
     /// <summary>La carte de cette bibliothèque, sans journal.</summary>
@@ -229,13 +275,54 @@ public sealed partial class ExtensionSettingsViewModel : ObservableObject
     /// <param name="picker">Le choix du dossier à installer.</param>
     /// <param name="journal">Le journal d'une extension dans le coffre ouvert, du plus récent au plus ancien.</param>
     public ExtensionSettingsViewModel(ExtensionLibrary library, IFolderPicker picker, Func<string, Outcome<IReadOnlyList<ExtensionJournalEntry>>> journal)
+        : this(library, picker, journal, NoFaults.Instance)
+    {
+    }
+
+    /// <summary>La carte de cette bibliothèque, avec le journal des écritures et les erreurs des extensions, pour le mode développeur.</summary>
+    /// <param name="library">Les extensions installées.</param>
+    /// <param name="picker">Le choix du dossier à installer, ou de celui où créer une extension.</param>
+    /// <param name="journal">Le journal d'une extension dans le coffre ouvert, du plus récent au plus ancien.</param>
+    /// <param name="faults">Les dernières erreurs de chaque extension.</param>
+    public ExtensionSettingsViewModel(ExtensionLibrary library, IFolderPicker picker, Func<string, Outcome<IReadOnlyList<ExtensionJournalEntry>>> journal, IExtensionFaults faults)
     {
         ArgumentNullException.ThrowIfNull(library);
         ArgumentNullException.ThrowIfNull(picker);
         ArgumentNullException.ThrowIfNull(journal);
+        ArgumentNullException.ThrowIfNull(faults);
         _library = library;
         _picker = picker;
         _journal = journal;
+        _faults = faults;
+        faults.FaultsChanged += (_, e) =>
+        {
+            if (Rows.FirstOrDefault(row => row.Id == e.Extension) is { } row)
+            {
+                ShowFaults(row);
+            }
+        };
+        _starting = true;
+        IsDeveloperMode = library.IsDeveloperMode;
+        _starting = false;
+    }
+
+    /// <summary>
+    /// Le mode développeur, retenu sur ce poste : chaque extension montre le dossier d'où elle vient, « Recharger » pour reprendre ses
+    /// fichiers, et ses dernières erreurs.
+    /// </summary>
+    [ObservableProperty]
+    public partial bool IsDeveloperMode { get; set; }
+
+    partial void OnIsDeveloperModeChanged(bool value)
+    {
+        foreach (var row in Rows)
+        {
+            row.IsDeveloper = value;
+        }
+        if (!_starting && _library.SetDeveloperMode(value) is { Succeeded: false } refused)
+        {
+            Error = refused.Error;
+        }
     }
 
     /// <summary>Ce que les extensions installées ont écrit dans le coffre ouvert, du plus récent au plus ancien.</summary>
@@ -391,10 +478,16 @@ public sealed partial class ExtensionSettingsViewModel : ObservableObject
         Rows.Clear();
         foreach (var extension in _library.Installed())
         {
-            Rows.Add(new ExtensionRow(extension, _library.Withdrawn(extension.Manifest.Id), Toggle, Grant));
+            var row = new ExtensionRow(extension, _library.Withdrawn(extension.Manifest.Id), Toggle, Grant);
+            row.Source = _library.Source(row.Id);
+            row.IsDeveloper = IsDeveloperMode;
+            ShowFaults(row);
+            Rows.Add(row);
         }
         IsEmpty = Rows.Count == 0;
     }
+
+    private void ShowFaults(ExtensionRow row) => row.Faults = [.. _faults.Faults(row.Id).Select(fault => new ExtensionFaultRow(fault))];
 
     private void Toggle(ExtensionRow row, bool active)
     {
@@ -454,6 +547,8 @@ public sealed partial class ExtensionSettingsViewModel : ObservableObject
     private async Task AnswerInstallAsync(bool confirmed)
     {
         IsConfirmingInstall = false;
+        var created = _created;
+        _created = false;
         if (!confirmed || _source is not { } source)
         {
             return;
@@ -466,9 +561,111 @@ public sealed partial class ExtensionSettingsViewModel : ObservableObject
             Error = outcome.Error;
             return;
         }
-        Message = ModulesSettingsText.ExtensionInstalledOf(outcome.Value.Manifest.Name, outcome.Value.Manifest.Version);
+        var manifest = outcome.Value.Manifest;
+        _faults.ForgetFaults(manifest.Id);
+        if (created)
+        {
+            IsDeveloperMode = true;
+        }
+        Message = created ? ModulesSettingsText.ExtensionCreatedOf(manifest.Name, source) : ModulesSettingsText.ExtensionInstalledOf(manifest.Name, manifest.Version);
         Show();
-        Changed?.Invoke(this, new ExtensionChangedEventArgs(outcome.Value.Manifest.Id));
+        Changed?.Invoke(this, new ExtensionChangedEventArgs(manifest.Id));
+    }
+
+    /// <summary>« Créer une extension… » : un dossier prêt à modifier, dans le dossier choisi, puis son installation, confirmée.</summary>
+    [RelayCommand(CanExecute = nameof(CanInstall))]
+    private async Task CreateAsync()
+    {
+        Error = null;
+        Message = null;
+        if (_picker.Pick(ModulesSettingsText.ExtensionCreatePick) is not { } parent)
+        {
+            return;
+        }
+        var taken = _library.Installed().Select(extension => extension.Manifest.Id).ToList();
+        var created = await Task.Run(() => ExtensionTemplate.Create(parent, taken)).ConfigureAwait(true);
+        if (!created.Succeeded)
+        {
+            Error = created.Error;
+            return;
+        }
+        var preview = await Task.Run(() => _library.Read(created.Value)).ConfigureAwait(true);
+        if (!preview.Succeeded)
+        {
+            Error = preview.Error;
+            return;
+        }
+        _source = created.Value;
+        _created = true;
+        InstallTitle = ModulesSettingsText.ExtensionCreateTitle;
+        InstallAction = ModulesSettingsText.ExtensionInstall;
+        Prepare(preview.Value);
+        IsConfirmingInstall = true;
+    }
+
+    /// <summary>
+    /// Mode développeur : reprend les fichiers d'une extension dans le dossier d'où elle a été installée. Une permission nouvelle
+    /// passe par la confirmation ; sinon, l'extension repart tout de suite, ses erreurs oubliées.
+    /// </summary>
+    [RelayCommand]
+    private async Task ReloadAsync(ExtensionRow row)
+    {
+        ArgumentNullException.ThrowIfNull(row);
+        Error = null;
+        Message = null;
+        if (_library.Source(row.Id) is not { } source || !System.IO.Directory.Exists(source))
+        {
+            Error = ModulesSettingsText.ExtensionSourceMissingOf(row.Name);
+            return;
+        }
+        var preview = await Task.Run(() => _library.Read(source)).ConfigureAwait(true);
+        if (!preview.Succeeded)
+        {
+            Error = preview.Error;
+            return;
+        }
+        if (preview.Value.Manifest.Id != row.Id)
+        {
+            Error = ModulesSettingsText.ExtensionIdChangedOf(preview.Value.Manifest.Id);
+            return;
+        }
+        _source = source;
+        if (preview.Value.NewRights.Count > 0)
+        {
+            InstallTitle = ModulesSettingsText.ExtensionUpdateTitle;
+            InstallAction = ModulesSettingsText.ExtensionUpdate;
+            Prepare(preview.Value);
+            IsConfirmingInstall = true;
+            return;
+        }
+        var outcome = await Task.Run(() => _library.Install(source)).ConfigureAwait(true);
+        if (!outcome.Succeeded)
+        {
+            Error = outcome.Error;
+            return;
+        }
+        _faults.ForgetFaults(row.Id);
+        Message = ModulesSettingsText.ExtensionReloadedOf(outcome.Value.Manifest.Name, outcome.Value.Manifest.Version);
+        Show();
+        Changed?.Invoke(this, new ExtensionChangedEventArgs(row.Id));
+    }
+
+    /// <summary>Pas d'erreurs à montrer : la carte sans moteur d'extensions.</summary>
+    private sealed class NoFaults : IExtensionFaults
+    {
+        public static NoFaults Instance { get; } = new();
+
+        public event EventHandler<ExtensionEventArgs>? FaultsChanged
+        {
+            add { }
+            remove { }
+        }
+
+        public IReadOnlyList<ExtensionFault> Faults(string id) => [];
+
+        public void ForgetFaults(string id)
+        {
+        }
     }
 
     [RelayCommand]

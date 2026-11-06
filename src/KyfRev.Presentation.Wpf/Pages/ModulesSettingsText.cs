@@ -164,6 +164,54 @@ public static class ModulesSettingsText
     /// <summary>« Elle ne pourra ni accéder à Internet, ni supprimer de fiche… ».</summary>
     public static string ExtensionLimitsWriting => Text(nameof(ExtensionLimitsWriting));
 
+    /// <summary>« Créer une extension… ».</summary>
+    public static string ExtensionCreate => Text(nameof(ExtensionCreate));
+
+    /// <summary>« Choisir le dossier où créer l'extension ».</summary>
+    public static string ExtensionCreatePick => Text(nameof(ExtensionCreatePick));
+
+    /// <summary>« Installer l'extension créée ? ».</summary>
+    public static string ExtensionCreateTitle => Text(nameof(ExtensionCreateTitle));
+
+    /// <summary>« « {0} » est créée dans {1}, et installée… ».</summary>
+    public static string ExtensionCreatedOf(string name, string folder) => Format("ExtensionCreated", name, folder);
+
+    /// <summary>« Mode développeur ».</summary>
+    public static string ExtensionDeveloper => Text(nameof(ExtensionDeveloper));
+
+    /// <summary>« Chaque extension montre le dossier d'où elle vient… ».</summary>
+    public static string ExtensionDeveloperHelp => Text(nameof(ExtensionDeveloperHelp));
+
+    /// <summary>« Recharger ».</summary>
+    public static string ExtensionReload => Text(nameof(ExtensionReload));
+
+    /// <summary>« Recharger {0} ».</summary>
+    public static string ExtensionReloadNameOf(string name) => Format("ExtensionReloadName", name);
+
+    /// <summary>« « {0} » rechargée, version {1}. ».</summary>
+    public static string ExtensionReloadedOf(string name, string version) => Format("ExtensionReloaded", name, version);
+
+    /// <summary>« Dossier : {0} ».</summary>
+    public static string ExtensionSourceOf(string folder) => Format("ExtensionSource", folder);
+
+    /// <summary>« Dossier d'origine inconnu… ».</summary>
+    public static string ExtensionSourceUnknown => Text(nameof(ExtensionSourceUnknown));
+
+    /// <summary>« Le dossier de « {0} » est introuvable… ».</summary>
+    public static string ExtensionSourceMissingOf(string name) => Format("ExtensionSourceMissing", name);
+
+    /// <summary>« Le dossier contient maintenant l'extension « {0} »… ».</summary>
+    public static string ExtensionIdChangedOf(string id) => Format("ExtensionIdChanged", id);
+
+    /// <summary>« Dernières erreurs ».</summary>
+    public static string ExtensionFaultsTitle => Text(nameof(ExtensionFaultsTitle));
+
+    /// <summary>« Aucune erreur depuis le lancement. ».</summary>
+    public static string ExtensionNoFaults => Text(nameof(ExtensionNoFaults));
+
+    /// <summary>« {0} : {1} ».</summary>
+    public static string ExtensionFaultOf(string where, string message) => Format("ExtensionFault", where, message);
+
     /// <summary>« Ce que les extensions ont écrit ».</summary>
     public static string ExtensionJournalTitle => Text(nameof(ExtensionJournalTitle));
 

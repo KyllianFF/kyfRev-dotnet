@@ -6,6 +6,7 @@ using System.Windows.Media;
 using KyfRev.Application;
 using KyfRev.DesignSystem.Controls;
 using KyfRev.Extensions.Host;
+using KyfRev.Presentation.Wpf.Extensions;
 using KyfRev.Presentation.Wpf.Pages;
 
 namespace KyfRev.Presentation.Wpf.Tests;
@@ -115,6 +116,113 @@ public sealed class ExtensionSettingsTests
             Assert.AreEqual(1, page.ExtensionJournalList.Items.Count);
             Assert.IsTrue(page.ExtensionJournal.TranslatePoint(default, page.ExtensionsList).Y >= page.ExtensionsList.ActualHeight, "Le journal vient après la liste.");
             Assert.IsTrue(page.ExtensionJournal.ActualWidth <= 360, "Le journal tient dans une carte étroite.");
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
+    public void Creating_an_extension_shows_what_it_asks_installs_it_and_turns_on_the_developer_mode()
+    {
+        using var ui = new UiThread();
+        using var scene = new Scene();
+        var parent = Path.Combine(scene.Root, "mes-extensions");
+        Directory.CreateDirectory(parent);
+        scene.Picker.Answers.Enqueue(parent);
+
+        Run(scene.Page.CreateCommand.ExecuteAsync(null));
+
+        Assert.AreEqual(ModulesSettingsText.ExtensionCreatePick, scene.Picker.Titles.Single());
+        Assert.IsTrue(scene.Page.IsConfirmingInstall, "Rien ne s'installe sans avoir montré ce qu'elle demande.");
+        Assert.AreEqual(ModulesSettingsText.ExtensionCreateTitle, scene.Page.InstallTitle);
+        Assert.HasCount(2, scene.Page.InstallRights);
+        scene.Answer(confirmed: true);
+
+        var row = scene.Page.Rows.Single();
+        Assert.AreEqual(ExtensionTemplate.BaseName, row.Name);
+        Assert.IsTrue(scene.Page.IsDeveloperMode);
+        Assert.IsTrue(scene.Library.IsDeveloperMode);
+        Assert.IsTrue(row.IsDeveloper);
+        StringAssert.Contains(scene.Page.Message, Path.Combine(parent, ExtensionTemplate.BaseId), StringComparison.Ordinal);
+        StringAssert.Contains(row.SourceText, Path.Combine(parent, ExtensionTemplate.BaseId), StringComparison.Ordinal);
+    }
+
+    [STATestMethod]
+    public void Reloading_takes_the_files_again_and_asks_again_for_a_new_permission()
+    {
+        using var ui = new UiThread();
+        var faults = new FakeFaults();
+        using var scene = new Scene(faults: faults);
+        var source = scene.Write("rechargee", """{"api":2,"id":"rechargee","nom":"Rechargée","version":"1","vue":{"titre":"R"}}""");
+        scene.Library.Install(source);
+        scene.Page.IsDeveloperMode = true;
+        scene.Page.Reload();
+        faults.Add("rechargee", new ExtensionFault(DateTimeOffset.Now, "vue", "boum"));
+        var row = scene.Page.Rows.Single();
+        Assert.AreEqual("vue : boum", row.Faults.Single().Text);
+        Assert.IsTrue(row.HasFaults);
+
+        File.WriteAllText(Path.Combine(source, ExtensionManifest.FileName), """{"api":2,"id":"rechargee","nom":"Rechargée","version":"2","vue":{"titre":"R"}}""");
+        Run(scene.Page.ReloadCommand.ExecuteAsync(row));
+
+        Assert.AreEqual(ModulesSettingsText.ExtensionReloadedOf("Rechargée", "2"), scene.Page.Message);
+        Assert.IsTrue(scene.Page.Rows.Single().HasNoFaults, "Rechargée, ses erreurs sont oubliées.");
+        Assert.IsFalse(scene.Page.IsConfirmingInstall);
+
+        File.WriteAllText(Path.Combine(source, ExtensionManifest.FileName), """{"api":2,"id":"rechargee","nom":"Rechargée","version":"3","permissions":["stockage"],"vue":{"titre":"R"}}""");
+        Run(scene.Page.ReloadCommand.ExecuteAsync(scene.Page.Rows.Single()));
+        Assert.IsTrue(scene.Page.IsConfirmingInstall, "Une permission nouvelle passe par la confirmation.");
+        Assert.IsTrue(scene.Page.InstallHasNewRights);
+        scene.Answer(confirmed: true);
+        Assert.AreEqual("3", scene.Page.Rows.Single().Version, "Confirmée, la nouvelle version est installée.");
+
+        File.WriteAllText(Path.Combine(source, ExtensionManifest.FileName), """{"api":2,"id":"autre","nom":"Autre","version":"1","vue":{"titre":"A"}}""");
+        Run(scene.Page.ReloadCommand.ExecuteAsync(scene.Page.Rows.Single()));
+        Assert.AreEqual(ModulesSettingsText.ExtensionIdChangedOf("autre"), scene.Page.Error);
+
+        File.WriteAllText(Path.Combine(source, ExtensionManifest.FileName), "{ cassé");
+        Run(scene.Page.ReloadCommand.ExecuteAsync(scene.Page.Rows.Single()));
+        Assert.IsTrue(scene.Page.HasError, "Un manifeste abîmé dit pourquoi.");
+
+        Directory.Delete(source, recursive: true);
+        Run(scene.Page.ReloadCommand.ExecuteAsync(scene.Page.Rows.Single()));
+        Assert.AreEqual(ModulesSettingsText.ExtensionSourceMissingOf("Rechargée"), scene.Page.Error);
+    }
+
+    [STATestMethod]
+    public void The_developer_mode_is_remembered_and_shows_under_each_extension()
+    {
+        using var ui = new UiThread();
+        using var scene = new Scene();
+        using var vault = new ReadingVault("Texte", passage: false);
+        scene.Library.Install(Path.Combine(Published, "quiz"));
+        var test = new TestShell();
+        var model = new ModulesSettingsViewModel(vault.App.Settings, _ => { }, scene.Page);
+        var page = new ModulesSettingsPage { DataContext = model };
+        var host = new Border { Width = 360, Height = 1400, Child = page };
+        host.Resources.MergedDictionaries.Add(test.Design.Dictionary);
+        var window = new Window { Content = new Canvas { Children = { host } }, Left = -10000, Top = -10000, Width = 500, Height = 1500, ShowActivated = false };
+        window.Show();
+        TestShell.Flush();
+        try
+        {
+            model.OnNavigatedTo();
+            TestShell.Flush();
+            var developer = page.ExtensionsList.ItemContainerGenerator.ContainerFromIndex(0) is FrameworkElement container
+                ? Descendants(container).OfType<StackPanel>().First(panel => panel.Name == "ExtensionDeveloper")
+                : null;
+            Assert.AreEqual(Visibility.Collapsed, developer!.Visibility);
+
+            page.DeveloperMode.IsChecked = true;
+            TestShell.Flush();
+
+            Assert.IsTrue(scene.Library.IsDeveloperMode);
+            Assert.AreEqual(Visibility.Visible, developer.Visibility);
+            Assert.AreEqual(ModulesSettingsText.ExtensionSourceOf(Path.GetFullPath(Path.Combine(Published, "quiz"))), scene.Page.Rows.Single().SourceText);
+            Assert.IsTrue(new ExtensionSettingsViewModel(scene.Library, new FakePicker()).IsDeveloperMode, "Retenu sur ce poste.");
+            Assert.IsTrue(developer.ActualWidth <= 360, "Il tient dans une carte étroite.");
         }
         finally
         {
@@ -557,15 +665,55 @@ public sealed class ExtensionSettingsTests
         }
     }
 
+    private static void Run(Task task) => UiThread.Until(() => task.IsCompleted);
+
+    private static IEnumerable<DependencyObject> Descendants(DependencyObject root)
+    {
+        for (var i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)
+        {
+            var child = VisualTreeHelper.GetChild(root, i);
+            yield return child;
+            foreach (var below in Descendants(child))
+            {
+                yield return below;
+            }
+        }
+    }
+
+    /// <summary>Des erreurs d'extensions, données à la main.</summary>
+    private sealed class FakeFaults : IExtensionFaults
+    {
+        private readonly Dictionary<string, List<ExtensionFault>> _faults = new(StringComparer.Ordinal);
+
+        public event EventHandler<ExtensionEventArgs>? FaultsChanged;
+
+        public void Add(string id, ExtensionFault fault)
+        {
+            if (!_faults.TryGetValue(id, out var list))
+            {
+                list = [];
+                _faults[id] = list;
+            }
+            list.Add(fault);
+            FaultsChanged?.Invoke(this, new ExtensionEventArgs(id));
+        }
+
+        public IReadOnlyList<ExtensionFault> Faults(string id) => _faults.TryGetValue(id, out var list) ? list : [];
+
+        public void ForgetFaults(string id) => _faults.Remove(id);
+    }
+
     /// <summary>La carte, sur une bibliothèque d'essai.</summary>
     private sealed class Scene : IDisposable
     {
-        public Scene(Func<string, Outcome<IReadOnlyList<ExtensionJournalEntry>>>? journal = null)
+        public Scene(Func<string, Outcome<IReadOnlyList<ExtensionJournalEntry>>>? journal = null, IExtensionFaults? faults = null)
         {
             Root = Path.Combine(Path.GetTempPath(), "kyfrev-extensions-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(Root);
             Library = new ExtensionLibrary(Folder, TimeProvider.System);
-            Page = journal is null ? new ExtensionSettingsViewModel(Library, Picker) : new ExtensionSettingsViewModel(Library, Picker, journal);
+            Page = faults is not null ? new ExtensionSettingsViewModel(Library, Picker, journal ?? (_ => Outcome.Of<IReadOnlyList<ExtensionJournalEntry>>([])), faults)
+                : journal is null ? new ExtensionSettingsViewModel(Library, Picker)
+                : new ExtensionSettingsViewModel(Library, Picker, journal);
         }
 
         public string Root { get; }

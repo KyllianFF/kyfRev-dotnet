@@ -58,6 +58,11 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   à étoffer, sans étiquette ou sans intertitre s'ouvre d'un clic ; une étiquette s'ajoute sur place ; une fiche peut être ignorée,
   puis reprise. Le bilan de chaque semaine est gardé pour en montrer l'évolution, et « Aujourd'hui » dit combien de fiches sont à
   étoffer. Il change des étiquettes, jamais le texte.
+- Extensions, pour en écrire : « Créer une extension… » (Paramètres, « Modules et extensions ») crée un dossier prêt à modifier,
+  au contrat 2, avec un script d'exemple, les types de l'objet `kyfrev` pour l'éditeur et un mode d'emploi, puis l'installe après
+  confirmation. Le mode développeur, retenu sur ce poste, montre sous chaque extension le dossier d'où elle vient, « Recharger »,
+  qui reprend ses fichiers (une permission nouvelle passe par la confirmation), et ses vingt dernières erreurs. Le guide est
+  dans `docs/extensions/guide.md`.
 - Extensions : avec la permission « fiches:creation », une extension crée des fiches (titre, dossier, texte, étiquettes) et change
   leurs étiquettes ; avec « fiches:ecriture », elle remplace leur texte, l'en-tête gardé. Aucune ne peut supprimer une fiche.
   Chaque texte remplacé reste dans les versions de la fiche, d'où il se remet, et chaque écriture est notée au journal de

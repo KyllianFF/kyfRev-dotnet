@@ -13,4 +13,9 @@
     <InternalsVisibleTo Include="KyfRev.Extensions.Host.Tests" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Les types publiés, copiés dans le dossier d'une extension créée : une seule source, celle de la documentation. -->
+    <EmbeddedResource Include="..\..\docs\extensions\kyfrev.d.ts" LogicalName="kyfrev.d.ts" />
+  </ItemGroup>
+
 </Project>

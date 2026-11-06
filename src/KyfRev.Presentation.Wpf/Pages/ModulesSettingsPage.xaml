@@ -59,7 +59,16 @@
           <TextBlock Text="{x:Static pages:ModulesSettingsText.ExtensionsHelp}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="0,4,0,0" />
           <kyf:Notification x:Name="ExtensionError" Severity="Critical" Message="{Binding Error}" IsOpen="{Binding HasError, Mode=OneWay}" IsClosable="False" Margin="0,8,0,0" />
           <kyf:Notification x:Name="ExtensionDone" Severity="Success" Message="{Binding Message}" IsOpen="{Binding HasMessage, Mode=OneWay}" IsClosable="False" Margin="0,8,0,0" />
-          <Button x:Name="InstallExtension" Content="{x:Static pages:ModulesSettingsText.ExtensionInstallFromFolder}" Command="{Binding InstallCommand}" HorizontalAlignment="Left" Margin="0,12,0,8" />
+          <WrapPanel Margin="0,12,0,8">
+            <Button x:Name="InstallExtension" Content="{x:Static pages:ModulesSettingsText.ExtensionInstallFromFolder}" Command="{Binding InstallCommand}" Margin="0,0,8,4" />
+            <Button x:Name="CreateExtension" Content="{x:Static pages:ModulesSettingsText.ExtensionCreate}" Command="{Binding CreateCommand}" Style="{DynamicResource Kyf.Button.Subtle}" Margin="0,0,0,4" />
+          </WrapPanel>
+          <CheckBox x:Name="DeveloperMode" IsChecked="{Binding IsDeveloperMode}" Margin="0,0,0,8" AutomationProperties.HelpText="{x:Static pages:ModulesSettingsText.ExtensionDeveloperHelp}">
+            <StackPanel>
+              <TextBlock Text="{x:Static pages:ModulesSettingsText.ExtensionDeveloper}" TextWrapping="Wrap" />
+              <TextBlock Text="{x:Static pages:ModulesSettingsText.ExtensionDeveloperHelp}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" />
+            </StackPanel>
+          </CheckBox>
           <TextBlock x:Name="NoExtension" Text="{x:Static pages:ModulesSettingsText.ExtensionsNone}" Style="{DynamicResource Kyf.Text.Caption}" Visibility="{Binding IsEmpty, Converter={StaticResource Visible}}" />
           <ItemsControl x:Name="ExtensionsList" ItemsSource="{Binding Rows}" Focusable="False" AutomationProperties.Name="{x:Static pages:ModulesSettingsText.ExtensionsTitle}">
             <ItemsControl.ItemTemplate>
@@ -97,6 +106,23 @@
                                   <Setter TargetName="RightText" Property="FontWeight" Value="SemiBold" />
                                 </DataTrigger>
                               </DataTemplate.Triggers>
+                            </DataTemplate>
+                          </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                      </StackPanel>
+                      <StackPanel x:Name="ExtensionDeveloper" Margin="26,8,0,0" Visibility="{Binding IsDeveloper, Converter={StaticResource Visible}}">
+                        <TextBlock x:Name="ExtensionSource" Text="{Binding SourceText}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" />
+                        <Button x:Name="ReloadExtension" Content="{x:Static pages:ModulesSettingsText.ExtensionReload}" HorizontalAlignment="Left" Margin="0,6,0,0"
+                                Command="{Binding DataContext.ReloadCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" AutomationProperties.Name="{Binding ReloadName}" />
+                        <TextBlock Text="{x:Static pages:ModulesSettingsText.ExtensionFaultsTitle}" Style="{DynamicResource Kyf.Text.Caption}" FontWeight="SemiBold" Margin="0,8,0,0" />
+                        <TextBlock x:Name="ExtensionNoFaults" Text="{x:Static pages:ModulesSettingsText.ExtensionNoFaults}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Visibility="{Binding HasNoFaults, Converter={StaticResource Visible}}" />
+                        <ItemsControl x:Name="ExtensionFaults" ItemsSource="{Binding Faults}" Focusable="False" AutomationProperties.Name="{x:Static pages:ModulesSettingsText.ExtensionFaultsTitle}" Visibility="{Binding HasFaults, Converter={StaticResource Visible}}">
+                          <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type pages:ExtensionFaultRow}">
+                              <DockPanel Margin="0,2,0,0">
+                                <TextBlock DockPanel.Dock="Left" Text="{Binding When}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,0,8,0" />
+                                <TextBlock Text="{Binding Text}" TextWrapping="Wrap" Foreground="{DynamicResource Kyf.Brush.Critical}" />
+                              </DockPanel>
                             </DataTemplate>
                           </ItemsControl.ItemTemplate>
                         </ItemsControl>
