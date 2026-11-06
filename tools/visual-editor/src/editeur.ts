@@ -69,6 +69,7 @@ import { changementDeCasse } from "./casse-visuelle";
 import { colorer, langages, type Morceau } from "./coloration";
 import { motAutour } from "./correcteur";
 import { depuisMarkdown, type Origine, trancheBrute, trancheCollee, versMarkdown } from "./markdown";
+import { motsEntiers } from "./mots-entiers";
 import { schema } from "./schema";
 import { caseVoisine, changerApparence, triable, trierTableau } from "./tableaux";
 
@@ -880,6 +881,7 @@ export class EditeurVisuel {
         gapCursor(),
         tableEditing(),
         decorations(),
+        motsEntiers(),
         colorationDuCode(),
         paragrapheFinal(),
       ],
