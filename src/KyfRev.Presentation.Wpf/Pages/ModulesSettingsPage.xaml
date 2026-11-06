@@ -63,7 +63,7 @@
             <Button x:Name="InstallExtension" Content="{x:Static pages:ModulesSettingsText.ExtensionInstallFromFolder}" Command="{Binding InstallCommand}" Margin="0,0,8,4" />
             <Button x:Name="CreateExtension" Content="{x:Static pages:ModulesSettingsText.ExtensionCreate}" Command="{Binding CreateCommand}" Style="{DynamicResource Kyf.Button.Subtle}" Margin="0,0,0,4" />
           </WrapPanel>
-          <CheckBox x:Name="DeveloperMode" IsChecked="{Binding IsDeveloperMode}" Margin="0,0,0,8" AutomationProperties.HelpText="{x:Static pages:ModulesSettingsText.ExtensionDeveloperHelp}">
+          <CheckBox x:Name="DeveloperMode" IsChecked="{Binding IsDeveloperMode}" Margin="0,0,0,8" AutomationProperties.Name="{x:Static pages:ModulesSettingsText.ExtensionDeveloper}" AutomationProperties.HelpText="{x:Static pages:ModulesSettingsText.ExtensionDeveloperHelp}">
             <StackPanel>
               <TextBlock Text="{x:Static pages:ModulesSettingsText.ExtensionDeveloper}" TextWrapping="Wrap" />
               <TextBlock Text="{x:Static pages:ModulesSettingsText.ExtensionDeveloperHelp}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" />
