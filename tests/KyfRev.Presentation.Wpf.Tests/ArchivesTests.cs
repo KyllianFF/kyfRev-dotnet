@@ -351,14 +351,32 @@ public sealed class ArchivesTests
             TestShell.Flush();
             Assert.IsFalse(page.IsConfirming);
 
-            // Étroite : l'état et les actions passent sous le titre.
+            // Le titre garde sa place : quand l'état et les actions la lui prendraient (vu à 760 pixels, une lettre par ligne),
+            // ils passent dessous, alignés sur lui.
+            var layout = Descendants(window).OfType<AdaptiveRow>().First(row => row.Name == "RowLayout");
+            var side = Descendants(window).OfType<StackPanel>().First(panel => panel.Name == "Side");
+            var open = Descendants(window).OfType<Button>().First(button => button.Name == "OpenRow");
+            var title = Descendants(open).OfType<TextBlock>().First();
+            foreach (var width in new[] { 1400.0, 1000.0, 870.0, 760.0, 640.0 })
+            {
+                window.Width = width;
+                window.UpdateLayout();
+                TestShell.Flush();
+                Assert.IsTrue(layout.IsStacked || open.ActualWidth >= layout.MainMinWidth, $"à {width} pixels, le titre garde sa place");
+            }
+            Assert.IsTrue(layout.IsStacked);
+            Assert.IsGreaterThan(title.TranslatePoint(default, window).Y, side.TranslatePoint(default, window).Y, "l'état et les actions sous le titre");
+            Assert.AreEqual(HorizontalAlignment.Left, side.HorizontalAlignment);
+
+            // Très étroite : l'état au-dessus des actions.
+            window.Width = 1100;
+            window.UpdateLayout();
+            TestShell.Flush();
             Assert.IsTrue(page.HasRoom);
             page.PageWidth = ArchivesPageViewModel.RoomMinimum - 1;
             TestShell.Flush();
             Assert.IsFalse(page.HasRoom);
-            var side = Descendants(window).OfType<StackPanel>().First(panel => panel.Name == "Side");
-            Assert.AreEqual(1, Grid.GetRow(side));
-            Assert.AreEqual(0, Grid.GetColumn(side));
+            Assert.AreEqual(Orientation.Vertical, side.Orientation);
 
             // La page quittée perd son contexte sans rien lever.
             test.Shell.Navigate(test.Shell.Gallery);

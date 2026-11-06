@@ -24,18 +24,21 @@
 
     <DataTemplate DataType="{x:Type pages:TrashRow}">
       <Border BorderThickness="0,1,0,0" BorderBrush="{DynamicResource Kyf.Brush.Divider}" Padding="0,6">
-        <DockPanel>
-          <Button x:Name="EraseItem" DockPanel.Dock="Right" Content="{x:Static kyf:Icons.Trash}" Style="{DynamicResource Kyf.Button.Icon}" VerticalAlignment="Center" Margin="4,0,0,0"
-                  Command="{Binding DataContext.RequestEraseCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}"
-                  ToolTip="{x:Static pages:SettingsHubText.Erase}" AutomationProperties.Name="{Binding EraseName}" />
-          <Button x:Name="RestoreItem" DockPanel.Dock="Right" Content="{x:Static pages:SettingsHubText.Restore}" Command="{Binding Restore}" VerticalAlignment="Center" Margin="8,0,0,0" AutomationProperties.Name="{Binding RestoreName}" />
-          <Button x:Name="OpenItemSheet" DockPanel.Dock="Right" Content="{x:Static pages:SettingsHubText.SheetKind}" Command="{Binding OpenSheet}" Style="{DynamicResource Kyf.Button.Subtle}" VerticalAlignment="Center" Margin="12,0,0,0"
-                  AutomationProperties.Name="{Binding OpenSheetName}" Visibility="{Binding HasSheet, Converter={StaticResource Visible}}" />
+        <!-- Le titre garde sa place : quand les boutons la lui prendraient, ils passent dessous. -->
+        <kyf:AdaptiveRow MainMinWidth="220" Spacing="8" StackedSpacing="6">
           <StackPanel VerticalAlignment="Center">
             <TextBlock Text="{Binding Title}" Style="{DynamicResource Kyf.Text.BodyStrong}" TextWrapping="Wrap" />
             <TextBlock Text="{Binding Detail}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,2,0,0" />
           </StackPanel>
-        </DockPanel>
+          <StackPanel kyf:AdaptiveRow.Part="Trailing" Orientation="Horizontal">
+            <Button x:Name="OpenItemSheet" Content="{x:Static pages:SettingsHubText.SheetKind}" Command="{Binding OpenSheet}" Style="{DynamicResource Kyf.Button.Subtle}" VerticalAlignment="Center" Margin="12,0,0,0"
+                    AutomationProperties.Name="{Binding OpenSheetName}" Visibility="{Binding HasSheet, Converter={StaticResource Visible}}" />
+            <Button x:Name="RestoreItem" Content="{x:Static pages:SettingsHubText.Restore}" Command="{Binding Restore}" VerticalAlignment="Center" Margin="8,0,0,0" AutomationProperties.Name="{Binding RestoreName}" />
+            <Button x:Name="EraseItem" Content="{x:Static kyf:Icons.Trash}" Style="{DynamicResource Kyf.Button.Icon}" VerticalAlignment="Center" Margin="4,0,0,0"
+                    Command="{Binding DataContext.RequestEraseCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}"
+                    ToolTip="{x:Static pages:SettingsHubText.Erase}" AutomationProperties.Name="{Binding EraseName}" />
+          </StackPanel>
+        </kyf:AdaptiveRow>
       </Border>
     </DataTemplate>
   </UserControl.Resources>

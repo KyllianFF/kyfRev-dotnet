@@ -25,15 +25,8 @@
               </Style.Triggers>
             </Style>
           </Border.Style>
-          <Grid>
-            <Grid.ColumnDefinitions>
-              <ColumnDefinition Width="*" />
-              <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <Grid.RowDefinitions>
-              <RowDefinition Height="*" />
-              <RowDefinition Height="Auto" />
-            </Grid.RowDefinitions>
+          <!-- Le titre garde sa place : quand l'état et les actions la lui prendraient, ils passent dessous. -->
+          <kyf:AdaptiveRow x:Name="RowLayout" MainMinWidth="240" Spacing="12" StackedSpacing="4">
             <!-- Son fond reste transparent : c'est la ligne entière qui réagit au survol. -->
             <Button x:Name="OpenRow" Style="{DynamicResource Kyf.Button.Subtle}" Background="Transparent" HorizontalContentAlignment="Stretch" VerticalAlignment="Center"
                     Command="{Binding DataContext.OpenCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}"
@@ -47,7 +40,7 @@
                 </StackPanel>
               </StackPanel>
             </Button>
-            <StackPanel x:Name="Side" Grid.Column="1" Orientation="Horizontal" Margin="12,0,0,0" HorizontalAlignment="Right" VerticalAlignment="Center">
+            <StackPanel x:Name="Side" kyf:AdaptiveRow.Part="Trailing" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
               <kyf:Pill x:Name="Status" Kind="{Binding StatusKind}" Text="{Binding Status}" VerticalAlignment="Center" Margin="0,0,8,0" />
               <WrapPanel x:Name="Actions" VerticalAlignment="Center">
                 <Button x:Name="ToggleRow" Content="{Binding ToggleLabel}" Style="{DynamicResource Kyf.Button.Subtle}"
@@ -58,13 +51,15 @@
                         AutomationProperties.Name="{Binding RestartName}" />
               </WrapPanel>
             </StackPanel>
-          </Grid>
+          </kyf:AdaptiveRow>
         </Border>
       </Border>
       <DataTemplate.Triggers>
+        <!-- Empilés, l'état et les actions s'alignent sous le titre. -->
+        <DataTrigger Binding="{Binding IsStacked, ElementName=RowLayout}" Value="True">
+          <Setter TargetName="Side" Property="HorizontalAlignment" Value="Left" />
+        </DataTrigger>
         <DataTrigger Binding="{Binding DataContext.HasRoom, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="False">
-          <Setter TargetName="Side" Property="Grid.Column" Value="0" />
-          <Setter TargetName="Side" Property="Grid.Row" Value="1" />
           <Setter TargetName="Side" Property="Orientation" Value="Vertical" />
           <Setter TargetName="Side" Property="HorizontalAlignment" Value="Left" />
           <Setter TargetName="Side" Property="Margin" Value="12,4,0,4" />

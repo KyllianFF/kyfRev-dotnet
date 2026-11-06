@@ -708,13 +708,26 @@ public sealed class ReviewTests
             UiThread.Until(() => page.Review.HasMessage);
             StringAssert.StartsWith(page.Review.Message, "Nouveau cycle", StringComparison.Ordinal);
 
-            // Sur une ligne quand il y a la place, l'un sous l'autre sinon ; jamais de défilement horizontal.
-            var steps = Named<ItemsControl>(window, "Steps");
-            Assert.AreEqual(0, Grid.GetRow(steps));
+            // Sur une ligne tant que l'état y garde sa place, l'un sous l'autre sinon ; jamais de défilement horizontal, et jamais
+            // l'état réduit à quelques lettres par ligne (vu à 870 pixels : la frise et les boutons ne lui laissaient rien).
+            var layout = Named<AdaptiveRow>(window, "Layout");
+            var status = Named<TextBlock>(window, "Status");
+            foreach (var width in new[] { 1400.0, 1100.0, 870.0, 760.0 })
+            {
+                window.Width = width;
+                window.UpdateLayout();
+                TestShell.Flush();
+                Assert.IsTrue(layout.IsStacked || status.ActualWidth >= layout.MainMinWidth, $"à {width} pixels, l'état garde sa place");
+            }
+            window.Width = 1400;
+            window.UpdateLayout();
+            TestShell.Flush();
+            Assert.IsFalse(layout.IsStacked, "large, tout tient sur une ligne");
             window.Width = 420;
             window.UpdateLayout();
             TestShell.Flush();
-            Assert.AreEqual(1, Grid.GetRow(steps));
+            Assert.IsTrue(layout.IsStacked);
+            Assert.IsLessThan(Named<ItemsControl>(window, "Steps").TranslatePoint(default, window).Y, status.TranslatePoint(default, window).Y, "empilé, l'état d'abord");
             Assert.IsLessThanOrEqualTo(window.ActualWidth, Named<Button>(window, "ValidateButton").TranslatePoint(new Point(Named<Button>(window, "ValidateButton").ActualWidth, 0), window).X);
 
             // Ctrl+Entrée valide la révision.
