@@ -227,6 +227,9 @@ public sealed class TableLookTests
             Assert.AreEqual(Visibility.Visible, ribbon.TablePanel.Visibility);
             Assert.IsTrue(ribbon.CompactTableButton.IsChecked);
             Assert.IsFalse(ribbon.FormatToggle.IsChecked);
+            ribbon.UpdateLayout();
+            Assert.AreEqual(EditorRibbon.CompactPanelHeight, ribbon.Panels.ActualHeight, 0.5, "le volet du tableau défile au lieu de cacher le texte");
+            Assert.AreEqual(0, ribbon.Panels.ScrollableWidth, "jamais de défilement horizontal");
 
             // « Mise en forme » depuis le tableau revient à l'Accueil ; une seconde fois, le volet se replie.
             ribbon.FormatToggle.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
@@ -261,6 +264,7 @@ public sealed class TableLookTests
             Assert.AreEqual(Visibility.Visible, ribbon.TabRow.Visibility);
             Assert.AreEqual(Visibility.Visible, ribbon.ViewButtons.Visibility);
             Assert.AreEqual(Visibility.Visible, ribbon.Panels.Visibility);
+            Assert.AreEqual(double.PositiveInfinity, ribbon.Panels.MaxHeight, "le ruban entier ne défile pas");
         }
         finally
         {

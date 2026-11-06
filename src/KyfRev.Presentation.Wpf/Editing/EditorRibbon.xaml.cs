@@ -19,6 +19,9 @@ internal sealed partial class EditorRibbon : UserControl
     /// <summary>En deçà, « Rétablir » et « Lien » ne restent que dans le volet.</summary>
     internal const double NarrowWidth = 480;
 
+    /// <summary>La hauteur du volet de la barre courte : au-delà, il défile, et le texte reste en vue dessous.</summary>
+    internal const double CompactPanelHeight = 200;
+
     public EditorRibbon()
     {
         InitializeComponent();
@@ -179,6 +182,7 @@ internal sealed partial class EditorRibbon : UserControl
         var room = width < NarrowWidth ? Visibility.Collapsed : Visibility.Visible;
         CompactRedoButton.Visibility = room;
         CompactLinkButton.Visibility = room;
+        Panels.MaxHeight = IsCompact ? CompactPanelHeight : double.PositiveInfinity;
         Arrange();
     }
 

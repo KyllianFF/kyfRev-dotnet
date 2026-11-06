@@ -121,7 +121,9 @@
         </StackPanel>
       </DockPanel>
 
-      <Grid x:Name="Panels">
+      <!-- En barre courte, le volet garde une hauteur mesurée et défile verticalement : le texte reste en vue dessous. -->
+      <ScrollViewer x:Name="Panels" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" Focusable="False">
+      <Grid>
         <!-- Les groupes passent à la ligne : jamais de défilement horizontal. -->
         <WrapPanel x:Name="HomePanel">
           <HeaderedContentControl Style="{StaticResource Group}" Header="{x:Static editing:EditingText.HistoryGroup}">
@@ -515,6 +517,7 @@
           </HeaderedContentControl>
         </WrapPanel>
       </Grid>
+      </ScrollViewer>
     </DockPanel>
   </Border>
 </UserControl>

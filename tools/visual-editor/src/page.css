@@ -115,6 +115,15 @@ body {
 .editeur-visuel th,
 .editeur-visuel td {
   overflow-wrap: anywhere;
+  /* Un mot trop long se coupe d'abord à ses syllabes, avec un trait d'union ; n'importe où seulement en dernier recours. */
+  hyphens: auto;
+}
+
+/* Éditeur étroit (la fenêtre à son minimum) : des cases moins rembourrées, pour que les mots y tiennent entiers. */
+@media (max-width: 520px) {
+  .editeur-visuel table :is(th, td) {
+    padding: 4px 6px;
+  }
 }
 
 .contenu-fiche pre {
