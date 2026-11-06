@@ -36,7 +36,7 @@ public sealed class CatalogueReader(IOnlineReader reader, ExtensionLibrary libra
         }
         catch (OperationException exception)
         {
-            return Outcome.Refused<Catalogue>(exception.Message);
+            return Outcome.Refused<Catalogue>($"Le catalogue n'a pas pu être lu ({exception.Message.TrimEnd('.')}). S'il n'est pas encore publié, c'est normal.");
         }
         var verified = ExtensionCatalogue.Verify(catalogue, signature, keys, library.CatalogueNumber);
         if (verified.Succeeded)

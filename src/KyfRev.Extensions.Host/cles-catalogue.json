@@ -1,1 +1,10 @@
-[]
+[
+  {
+    "id": "kyfrev-1",
+    "publique": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE5DRitWrwdgBaPDdWpU7MB0X0SUkh\nHOaloluvPpVm94JFtuHsxUW5fvN4lSX7qSBjYD1VyTDWAAASQkJL9NB26Q==\n-----END PUBLIC KEY-----"
+  },
+  {
+    "id": "kyfrev-2",
+    "publique": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE+tLarOeYNiNi4l/tiaVvlD1hrA6I\nxRCN66OWvPwPE77IIte/h+3XRFNSWwK1XIG/93jerFXD8Ak7iJ2CFBtS5A==\n-----END PUBLIC KEY-----"
+  }
+]
