@@ -615,6 +615,7 @@ public sealed class QuotesTests
         shell.SetModuleEntries([quotes]);
 
         CollectionAssert.AreEqual(MenuWithQuotes, shell.MainNavigation.Select(item => item.Label).ToArray());
+        CollectionAssert.Contains(shell.OverflowNavigation.ToList(), quotes);
         Assert.AreSame(settings, shell.Current);
         Assert.AreSame(settings, shell.SelectedSecondary);
         Assert.IsNull(shell.SelectedMain);

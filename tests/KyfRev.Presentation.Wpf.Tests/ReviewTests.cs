@@ -711,7 +711,7 @@ public sealed class ReviewTests
             // Sur une ligne quand il y a la place, l'un sous l'autre sinon ; jamais de défilement horizontal.
             var steps = Named<ItemsControl>(window, "Steps");
             Assert.AreEqual(0, Grid.GetRow(steps));
-            window.Width = 600;
+            window.Width = 420;
             window.UpdateLayout();
             TestShell.Flush();
             Assert.AreEqual(1, Grid.GetRow(steps));

@@ -685,7 +685,7 @@ public sealed class DashboardTests
             menu.IsOpen = false;
 
             // Étroite : une colonne, le résumé sous le titre, jamais de défilement horizontal.
-            window.Width = 600;
+            window.Width = 420;
             window.UpdateLayout();
             TestShell.Flush();
             Assert.AreEqual(TodayLayout.OneColumn, page.Layout);

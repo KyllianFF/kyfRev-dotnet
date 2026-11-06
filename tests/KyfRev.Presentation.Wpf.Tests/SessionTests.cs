@@ -291,7 +291,7 @@ public sealed class SessionTests
             // Les boutons passent sous la progression quand la place manque.
             var actions = (WrapPanel)VisualTreeHelper.GetParent(Named<Button>(window, "EndButton"));
             Assert.AreEqual(Dock.Right, DockPanel.GetDock(actions));
-            window.Width = 600;
+            window.Width = 420;
             window.UpdateLayout();
             TestShell.Flush();
             Assert.AreEqual(Dock.Bottom, DockPanel.GetDock(actions));

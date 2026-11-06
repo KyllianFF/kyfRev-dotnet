@@ -4,18 +4,22 @@ using KyfRev.Presentation.Wpf.Shell;
 
 namespace KyfRev.Presentation.Wpf.Tests;
 
-/// <summary>La disposition du menu selon la largeur de la fenêtre, et la taille minimale de celle-ci selon le zoom et l'écran.</summary>
+/// <summary>La disposition du menu selon la largeur de la fenêtre : onglets, colonne d'icônes, barre latérale ; et la taille minimale de celle-ci.</summary>
 [TestClass]
 public sealed class ShellLayoutTests
 {
+    private static readonly string[] TabLabels = ["Aujourd'hui", "Fiches", "Définitions"];
+    private static readonly string[] OverflowLabels = ["Archives", "Statistiques", "Santé du coffre", "Paramètres"];
+
     [TestMethod]
-    [DataRow(360.0, 1.0, NavigationLayout.Rail)]
+    [DataRow(360.0, 1.0, NavigationLayout.Tabs)]
+    [DataRow(599.0, 1.0, NavigationLayout.Tabs)]
     [DataRow(600.0, 1.0, NavigationLayout.Rail)]
     [DataRow(1399.0, 1.0, NavigationLayout.Rail)]
     [DataRow(1400.0, 1.0, NavigationLayout.Sidebar)]
     [DataRow(2560.0, 1.0, NavigationLayout.Sidebar)]
     [DataRow(1400.0, 1.5, NavigationLayout.Rail)]
-    [DataRow(1000.0, 2.0, NavigationLayout.Rail)]
+    [DataRow(1000.0, 2.0, NavigationLayout.Tabs)]
     [DataRow(1200.0, 0.8, NavigationLayout.Sidebar)]
     public void The_layout_follows_the_width_seen_at_the_current_zoom(double width, double zoom, NavigationLayout expected) =>
         Assert.AreEqual(expected, ShellLayout.For(width, zoom));
@@ -63,6 +67,8 @@ public sealed class ShellLayoutTests
         shell.WindowWidth = 1024;
         Assert.AreEqual(NavigationLayout.Rail, shell.Layout);
         Assert.Contains(nameof(ShellViewModel.Layout), changes);
+        shell.WindowWidth = 390;
+        Assert.AreEqual(NavigationLayout.Tabs, shell.Layout);
 
         shell.WindowWidth = 1500;
         Assert.AreEqual(NavigationLayout.Sidebar, shell.Layout);
@@ -73,14 +79,15 @@ public sealed class ShellLayoutTests
     }
 
     [STATestMethod]
-    public void The_window_keeps_six_hundred_pixels_seen_whatever_the_zoom()
+    public void The_window_keeps_its_minimum_seen_whatever_the_zoom()
     {
         var shell = new TestShell().Shell;
-        Assert.AreEqual(600, shell.MinimumWindowWidth);
+        Assert.AreEqual(470, shell.MinimumWindowWidth);
         Assert.AreEqual(540, shell.MinimumWindowHeight);
+        Assert.AreEqual(NavigationLayout.Tabs, ShellLayout.For(ShellLayout.MinimumWidth, 1), "au minimum, les onglets en bas");
 
         shell.SetZoom(1.5);
-        Assert.AreEqual(900, shell.MinimumWindowWidth, 1e-9);
+        Assert.AreEqual(705, shell.MinimumWindowWidth, 1e-9);
         Assert.AreEqual(810, shell.MinimumWindowHeight, 1e-9);
     }
 
@@ -96,17 +103,17 @@ public sealed class ShellLayoutTests
 
         // Un portable de 1366 × 768 à 125 % : 1093 × 574 pixels indépendants, barre des tâches ôtée.
         shell.FitScreen(1093, 574);
-        Assert.AreEqual(1.8, shell.ZoomLimit, 1e-9);
+        Assert.AreEqual(ShellViewModel.MaximumZoom, shell.ZoomLimit);
         Assert.AreEqual(1.5, shell.Zoom);
         Assert.AreEqual(574, shell.MinimumWindowHeight, "jamais plus haute que l'écran");
         Assert.Contains(nameof(ShellViewModel.MinimumWindowHeight), changes);
 
-        shell.FitScreen(800, 600);
-        Assert.AreEqual(1.3, shell.ZoomLimit, 1e-9);
-        Assert.AreEqual(1.3, shell.Zoom, 1e-9);
-        Assert.AreEqual(780, shell.MinimumWindowWidth, 1e-9);
+        shell.FitScreen(600, 600);
+        Assert.AreEqual(1.2, shell.ZoomLimit, 1e-9);
+        Assert.AreEqual(1.2, shell.Zoom, 1e-9);
+        Assert.AreEqual(564, shell.MinimumWindowWidth, 1e-9);
         shell.ZoomIn();
-        Assert.AreEqual(1.3, shell.Zoom, 1e-9, "l'écran ne tient pas plus");
+        Assert.AreEqual(1.2, shell.Zoom, 1e-9, "l'écran ne tient pas plus");
         Assert.AreEqual(1.5, shell.ChosenZoom, "le zoom choisi n'est pas oublié");
 
         shell.FitScreen(1920, 1040);
@@ -114,10 +121,34 @@ public sealed class ShellLayoutTests
         shell.ZoomIn();
         Assert.AreEqual(1.6, shell.ChosenZoom, 1e-9);
 
-        shell.FitScreen(400, 300);
+        shell.FitScreen(300, 300);
         Assert.AreEqual(ShellViewModel.MinimumZoom, shell.ZoomLimit, "le zoom ne descend jamais sous son minimum");
         Assert.AreEqual(ShellViewModel.MinimumZoom, shell.Zoom);
         shell.ZoomOut();
         Assert.AreEqual(ShellViewModel.MinimumZoom, shell.ChosenZoom, "réduire, c'est choisir");
+    }
+
+    [STATestMethod]
+    public void Narrow_windows_show_three_tabs_and_the_other_views_under_more()
+    {
+        var shell = new TestShell().Shell;
+        CollectionAssert.AreEqual(TabLabels, shell.TabNavigation.Select(item => item.Label).ToList());
+        CollectionAssert.AreEqual(OverflowLabels, shell.OverflowNavigation.Select(item => item.Label).ToList());
+        Assert.AreSame(shell.TabNavigation[0], shell.SelectedTab);
+        Assert.IsFalse(shell.IsOverflowActive);
+
+        shell.SelectedTab = shell.TabNavigation[2];
+        Assert.AreSame(shell.TabNavigation[2], shell.Current);
+        Assert.AreSame(shell.Current, shell.SelectedMain);
+
+        shell.Navigate(shell.OverflowNavigation[^1]);
+        Assert.IsNull(shell.SelectedTab);
+        Assert.IsTrue(shell.IsOverflowActive);
+
+        shell.Navigate(shell.Gallery);
+        Assert.IsNull(shell.SelectedTab);
+        Assert.IsFalse(shell.IsOverflowActive);
+        shell.SelectedTab = null;
+        Assert.AreSame(shell.Gallery, shell.Current);
     }
 }

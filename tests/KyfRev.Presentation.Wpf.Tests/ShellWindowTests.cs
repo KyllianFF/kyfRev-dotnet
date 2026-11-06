@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -182,6 +183,7 @@ public sealed class ShellWindowTests
             var sidebar = (Border)window.FindName("Sidebar");
             var search = (Button)window.FindName("SearchButton");
             var main = (ListBox)window.FindName("MainNavigation");
+            var tabBar = (Border)window.FindName("TabBar");
 
             // La largeur vue par la coquille, sans dépendre de la taille de l'écran.
             shell.WindowWidth = 1600;
@@ -189,6 +191,7 @@ public sealed class ShellWindowTests
             Assert.AreEqual(248, sidebar.ActualWidth);
             Assert.AreEqual(HorizontalAlignment.Stretch, search.HorizontalContentAlignment);
             Assert.IsTrue(Named<StackPanel>(main, "Row").All(row => row.Visibility == Visibility.Visible));
+            Assert.AreEqual(Visibility.Collapsed, tabBar.Visibility);
 
             shell.WindowWidth = 1024;
             window.UpdateLayout();
@@ -196,20 +199,26 @@ public sealed class ShellWindowTests
             Assert.AreEqual(HorizontalAlignment.Stretch, search.HorizontalContentAlignment);
             Assert.IsTrue(Named<StackPanel>(main, "Stacked").All(stacked => stacked.Visibility == Visibility.Visible));
 
-            // La vraie fenêtre ne descend pas sous 600 pixels : la colonne d'icônes reste, sans onglets en bas.
+            // La vraie fenêtre, rétrécie : la coquille suit.
             window.Width = 420;
             window.UpdateLayout();
             TestShell.Flush();
-            Assert.AreEqual(ShellLayout.MinimumWidth, window.ActualWidth, 1);
-            Assert.AreEqual(NavigationLayout.Rail, shell.Layout);
-            Assert.AreEqual(Visibility.Visible, sidebar.Visibility);
+            Assert.AreEqual(NavigationLayout.Tabs, shell.Layout);
+            Assert.AreEqual(ShellLayout.MinimumWidth, window.ActualWidth, 1, "la fenêtre ne descend pas sous son minimum");
+            Assert.AreEqual(Visibility.Collapsed, sidebar.Visibility);
+            Assert.AreEqual(Visibility.Visible, tabBar.Visibility);
+            Assert.AreEqual(HorizontalAlignment.Right, ((Border)window.FindName("SearchHost")).HorizontalAlignment, "La recherche se réduit à son icône, à droite.");
+            Assert.AreEqual(Visibility.Collapsed, ((TextBlock)window.FindName("SearchLabel")).Visibility);
             window.FocusNavigation();
-            Assert.AreSame(main, ItemsControl.ItemsControlFromItemContainer((DependencyObject)FocusManager.GetFocusedElement(window)));
+            Assert.AreSame(window.FindName("TabNavigation"), ItemsControl.ItemsControlFromItemContainer((DependencyObject)FocusManager.GetFocusedElement(window)));
 
-            // Le zoom grandit la fenêtre avec lui.
+            shell.ToggleFocusMode();
+            Assert.AreEqual(Visibility.Collapsed, tabBar.Visibility);
+
+            // Le zoom grandit la fenêtre minimale avec lui.
             shell.SetZoom(1.2);
             window.UpdateLayout();
-            Assert.AreEqual(720, window.MinWidth, 1e-9);
+            Assert.AreEqual(564, window.MinWidth, 1e-9);
             Assert.AreEqual(648, window.MinHeight, 1e-9);
         }
         finally
@@ -472,6 +481,52 @@ public sealed class ShellWindowTests
         }
     }
 
+    [STATestMethod]
+    public void More_opens_the_other_views()
+    {
+        var test = new TestShell();
+        var window = Open(test);
+        try
+        {
+            var shell = test.Shell;
+            window.Width = 420;
+            window.UpdateLayout();
+            TestShell.Flush();
+            var more = (Button)window.FindName("MoreButton");
+            var menu = more.ContextMenu;
+            var background = (Border)window.FindName("MoreBackground");
+
+            more.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+            TestShell.Flush();
+            Assert.IsTrue(menu.IsOpen);
+            Assert.AreSame(more, menu.PlacementTarget);
+            Assert.AreEqual(PlacementMode.Top, menu.Placement);
+            Assert.AreEqual(shell.OverflowNavigation.Count, menu.Items.Count);
+
+            menu.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+            Assert.AreSame(shell.Home, shell.Current, "un clic hors d'une vue ne fait rien");
+            var settings = (MenuItem)menu.ItemContainerGenerator.ContainerFromItem(shell.OverflowNavigation[^1]);
+            settings.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+            Assert.AreEqual("Paramètres", shell.Current.Label);
+            Assert.AreEqual(FontWeights.SemiBold, TextElement.GetFontWeight(background));
+
+            // L'état actif couvre tout le bouton, comme son survol.
+            window.UpdateLayout();
+            Assert.AreEqual(more.ActualWidth - more.BorderThickness.Left - more.BorderThickness.Right, background.ActualWidth, 0.5);
+            Assert.AreEqual(more.ActualHeight - more.BorderThickness.Top - more.BorderThickness.Bottom, background.ActualHeight, 0.5);
+
+            var tabs = (ListBox)window.FindName("TabNavigation");
+            Assert.AreEqual(-1, tabs.SelectedIndex);
+            tabs.SelectedIndex = 1;
+            Assert.AreEqual("Fiches", shell.Current.Label);
+            Assert.AreEqual(FontWeights.Normal, TextElement.GetFontWeight(background));
+            menu.IsOpen = false;
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
 
     [STATestMethod]
     public void An_extension_entry_shows_its_drawn_icon_and_its_counter()
@@ -606,7 +661,7 @@ public sealed class ShellWindowTests
             Assert.IsFalse(test.Shell.IsPaletteOpen, "Un clic ailleurs la ferme, comme un menu.");
             Assert.IsTrue(item.IsKeyboardFocused, "Le focus reste où l'on a cliqué.");
 
-            window.Width = 600;
+            window.Width = 520;
             test.Shell.OpenPalette();
             TestShell.Flush();
             var right = card.TranslatePoint(new Point(card.ActualWidth, 0), window).X;

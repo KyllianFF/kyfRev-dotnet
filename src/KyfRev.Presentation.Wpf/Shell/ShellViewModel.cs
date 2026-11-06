@@ -99,13 +99,28 @@ public sealed partial class ShellViewModel : ObservableObject
     [ObservableProperty]
     public partial IReadOnlyList<NavigationItem> SecondaryNavigation { get; private set; }
 
+    /// <summary>Les premières vues, en onglets quand la fenêtre est étroite.</summary>
+    [ObservableProperty]
+    public partial IReadOnlyList<NavigationItem> TabNavigation { get; private set; }
+
+    /// <summary>Les autres vues, sous « Plus » quand la fenêtre est étroite.</summary>
+    [ObservableProperty]
+    public partial IReadOnlyList<NavigationItem> OverflowNavigation { get; private set; }
+
     /// <summary>Largeur de la fenêtre, en pixels indépendants, avant zoom.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(Layout))]
     public partial double WindowWidth { get; set; }
 
-    /// <summary>Disposition de la navigation : colonne d'icônes ou barre latérale.</summary>
+    /// <summary>Disposition de la navigation : onglets, colonne d'icônes ou barre latérale.</summary>
     public NavigationLayout Layout => ShellLayout.For(WindowWidth, Zoom);
+
+    /// <summary>Onglet choisi ; rien quand la vue ouverte est rangée sous « Plus ».</summary>
+    [ObservableProperty]
+    public partial NavigationItem? SelectedTab { get; set; }
+
+    /// <summary>La vue ouverte est rangée sous « Plus ».</summary>
+    public bool IsOverflowActive => OverflowNavigation.Contains(Current);
 
     /// <summary>La galerie des composants, ouverte depuis la recherche.</summary>
     public NavigationItem Gallery { get; }
@@ -401,20 +416,32 @@ public sealed partial class ShellViewModel : ObservableObject
 
     partial void OnCurrentChanged(NavigationItem value)
     {
+        SelectedTab = TabNavigation.Contains(value) ? value : null;
+        OnPropertyChanged(nameof(IsOverflowActive));
         if (_workspace)
         {
             Activate(value);
         }
     }
 
+    partial void OnSelectedTabChanged(NavigationItem? value)
+    {
+        if (value is not null)
+        {
+            Navigate(value);
+        }
+    }
+
     private static void Activate(NavigationItem item) => (item.Page as INavigationAware)?.OnNavigatedTo();
 
-    [MemberNotNull(nameof(MainNavigation), nameof(SecondaryNavigation), nameof(_commands))]
+    [MemberNotNull(nameof(MainNavigation), nameof(SecondaryNavigation), nameof(TabNavigation), nameof(OverflowNavigation), nameof(_commands))]
     private void ArrangeMenu()
     {
         var items = _core.Concat(_moduleEntries).OrderBy(item => item.Order).ThenBy(item => item.Label, StringComparer.CurrentCulture).ToList();
         MainNavigation = [.. items.Where(item => !item.IsSecondary)];
         SecondaryNavigation = [.. items.Where(item => item.IsSecondary)];
+        TabNavigation = [.. MainNavigation.Take(ShellLayout.TabCount)];
+        OverflowNavigation = [.. MainNavigation.Skip(ShellLayout.TabCount), .. SecondaryNavigation];
         _commands = [.. NavigationCommands(), .. _extensionCommands, .. _commandsWithoutVault];
     }
 
