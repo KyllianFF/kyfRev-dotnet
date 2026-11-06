@@ -131,14 +131,21 @@ public sealed class ReviewNavigation : IReviewOpener
     /// <inheritdoc/>
     public void ReviseSheet(string sheetId) => OpenSheet(sheetId, revising: true);
 
+    /// <summary>Ouvre une fiche en lecture, et y sélectionne un texte s'il est donné : là où une extension la rouvre.</summary>
+    /// <param name="sheetId">La fiche.</param>
+    /// <param name="start">Le début du texte, dans le texte affiché.</param>
+    /// <param name="end">Sa fin.</param>
+    public void OpenSheetAt(string sheetId, int? start, int? end) =>
+        OpenSheet(sheetId, revising: false, range: start is { } from && end is { } to && to > from ? (from, to) : null);
+
     /// <inheritdoc/>
     public void WriteSheet(string sheetId) => OpenSheet(sheetId, revising: false, writes: true);
 
-    private void OpenSheet(string sheetId, bool revising, string? passageId = null, bool writes = false)
+    private void OpenSheet(string sheetId, bool revising, string? passageId = null, bool writes = false, (int Start, int End)? range = null)
     {
         var shell = Shell;
         var from = shell.Current;
-        var page = new SheetPageViewModel(_sheets, _annotations, Bar, sheetId, () => shell.Navigate(from), OpenSheet, _links, Editor, revising, ActiveRecall) { PassageToShow = passageId, ReadAloud = _speech is null ? null : new ReadAloudViewModel(_speech, _machine), ReadingMaxWidth = _machine?.Current.Width == ReadingWidth.Full ? double.PositiveInfinity : SheetPageViewModel.TextMaxWidth };
+        var page = new SheetPageViewModel(_sheets, _annotations, Bar, sheetId, () => shell.Navigate(from), OpenSheet, _links, Editor, revising, ActiveRecall) { PassageToShow = passageId, RangeToShow = range, ReadAloud = _speech is null ? null : new ReadAloudViewModel(_speech, _machine), ReadingMaxWidth = _machine?.Current.Width == ReadingWidth.Full ? double.PositiveInfinity : SheetPageViewModel.TextMaxWidth };
         shell.Navigate(new NavigationItem("fiche", ReviewText.SheetPage, Icons.Document, int.MaxValue, page));
         if (writes)
         {

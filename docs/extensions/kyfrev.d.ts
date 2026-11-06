@@ -14,12 +14,16 @@ interface KyfrevContexteRendu {
 
 /**
  * Ce sur quoi porte une commande. Vide depuis la recherche (Ctrl+K) ; depuis le clic droit d'une fiche : son `id`, son `titre`, son
- * `dossier` ; depuis le clic droit d'un dossier : son `dossier`.
+ * `dossier` ; depuis le clic droit d'un dossier : son `dossier` ; depuis le clic droit d'un texte sélectionné en lecture (permission
+ * « selection ») : la fiche, le `texte`, son `debut` et sa `fin` dans le texte affiché.
  */
 interface KyfrevContexteCommande {
   readonly id?: string;
   readonly titre?: string;
   readonly dossier?: string;
+  readonly texte?: string;
+  readonly debut?: string;
+  readonly fin?: string;
 }
 
 /** Une fiche, dans la liste. */
@@ -38,6 +42,19 @@ interface KyfrevTexteFiche {
   readonly titre: string;
   /** Son texte Markdown, tel qu'il est enregistré. */
   readonly texte: string;
+}
+
+/** Ce que rend une sélection guidée. */
+interface KyfrevSelection {
+  /** « selection » : un texte pris dans une fiche ; « saisie » : écrit à la main ; « passer » ; « terminer » : la série s'arrête. */
+  readonly choix: "selection" | "saisie" | "passer" | "terminer";
+  /** Le texte pris ou écrit ; null pour « passer » et « terminer ». */
+  readonly texte: string | null;
+  /** La fiche d'où vient le texte pris, son titre, et sa place dans le texte affiché (pour la rouvrir là avec fiches.ouvrir). */
+  readonly fiche: string | null;
+  readonly titre: string | null;
+  readonly debut: number | null;
+  readonly fin: number | null;
 }
 
 /** L'encart sur « Aujourd'hui » : un texte court, et un détail facultatif (300 caractères au plus chacun). */
@@ -88,6 +105,17 @@ interface Kyfrev {
     lister(): Promise<KyfrevFiche[]>;
     /** Le texte d'une fiche (permission « fiches:lecture »). */
     lire(id: string): Promise<KyfrevTexteFiche>;
+    /** Ouvre une fiche en lecture, et y sélectionne un passage s'il est donné (permission « fiches:lecture »). */
+    ouvrir(id: string, passage?: { debut?: number; fin?: number }): Promise<null>;
+  };
+
+  readonly selection: {
+    /**
+     * Demande à l'utilisateur de sélectionner un texte dans une fiche, sous une consigne (permission « selection »). La fiche donnée
+     * s'ouvre en lecture ; sans elle, c'est la fiche ouverte. Une barre montre la consigne : « Prendre la sélection », un champ pour
+     * écrire ce qui manque (sauf `saisie: false`), « Passer » et « Terminer ». Le temps ne court pas pendant que l'utilisateur répond.
+     */
+    demander(consigne: string, options?: { fiche?: string; saisie?: boolean }): Promise<KyfrevSelection>;
   };
 
   readonly stockage: {

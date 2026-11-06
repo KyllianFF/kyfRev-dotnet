@@ -86,6 +86,7 @@ public sealed class ExtensionContractTests
     [DataRow("""{"api":2,"id":"quiz","nom":"Q","version":"1","commandes":[{"id":"n","titre":"N"}],"menus":{"fiche":[1]}}""", "« menus » est un objet")]
     [DataRow("""{"api":2,"id":"quiz","nom":"Q","version":"1","commandes":[{"id":"n","titre":"N"}],"menus":{"fiche":[{"commande":"autre","titre":"T"}]}}""", "entrée de menu « T »")]
     [DataRow("""{"api":2,"id":"quiz","nom":"Q","version":"1","commandes":[{"id":"n","titre":"N"}],"menus":{"dossier":[{"commande":"n","titre":" "}]}}""", "entrée de menu")]
+    [DataRow("""{"api":2,"id":"quiz","nom":"Q","version":"1","commandes":[{"id":"n","titre":"N"}],"menus":{"selection":[{"commande":"n","titre":"Ajouter au quiz"}]}}""", "demande la permission « selection »")]
     [DataRow("""{"api":2,"id":"quiz","nom":"Q","version":"1","encart":"À revoir"}""", "« encart » est un objet")]
     [DataRow("""{"api":2,"id":"quiz","nom":"Q","version":"1","encart":{}}""", "« encart » est un objet")]
     [DataRow("""{"api":2,"id":"quiz","nom":"Q","version":"1","encart":{"titre":" "}}""", "titre d'encart")]
@@ -96,6 +97,14 @@ public sealed class ExtensionContractTests
 
         Assert.IsFalse(outcome.Succeeded, json);
         StringAssert.Contains(outcome.Error, reason, StringComparison.Ordinal);
+    }
+
+    [TestMethod]
+    public void A_selected_text_can_have_its_entry_with_the_permission()
+    {
+        var manifest = Parse("""{"api":2,"id":"quiz","nom":"Q","version":"1","permissions":["selection"],"commandes":[{"id":"n","titre":"N"}],"menus":{"selection":[{"commande":"n","titre":"Ajouter au quiz"}]}}""").Value;
+
+        Assert.AreEqual(new ExtensionMenuEntry(ExtensionMenuZone.Selection, "n", "Ajouter au quiz"), manifest.Menus.Single());
     }
 
     [TestMethod]

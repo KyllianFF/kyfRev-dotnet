@@ -177,6 +177,23 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
         }
     }
 
+    /// <summary>Sélectionne un texte, en positions du texte affiché, et le fait venir à l'écran ; faux s'il n'est pas montré.</summary>
+    public bool Select(int start, int end)
+    {
+        if (_built is null || Reading is null)
+        {
+            return false;
+        }
+        _built.Complete();
+        if (_built.Layer.PointerAt(start, isStart: true) is not { } from || _built.Layer.PointerAt(end, isStart: false) is not { } to)
+        {
+            return false;
+        }
+        Selection?.Select(from, to);
+        Show(start);
+        return true;
+    }
+
     /// <summary>La sélection dans le texte affiché, sans ses espaces de bord ; rien si elle n'y mène à rien.</summary>
     public TextPosition? CurrentSelection()
     {

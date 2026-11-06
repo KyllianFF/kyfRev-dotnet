@@ -611,6 +611,19 @@ public sealed class ExtensionPageTests
     }
 
     [TestMethod]
+    public void A_selected_text_has_the_entries_of_the_extensions_that_may_see_it()
+    {
+        using var scene = new Scene();
+        scene.InstallWith("quiz-sel", """{"api":2,"id":"quiz-sel","nom":"Q","version":"1","permissions":["selection"],"commandes":[{"id":"ajouter","titre":"Ajouter"}],"menus":{"selection":[{"commande":"ajouter","titre":"Ajouter au quiz"}]}}""", "kyfrev.commande('ajouter', () => {});");
+        var pages = new ExtensionPages(scene.Library, scene.Engine, () => false);
+
+        Assert.AreEqual("Ajouter au quiz", pages.MenuEntries(ExtensionMenuZone.Selection, new Dictionary<string, string>()).Single().Label);
+        Assert.IsEmpty(pages.MenuEntries(ExtensionMenuZone.Sheet, new Dictionary<string, string>()));
+        scene.Library.SetGranted("quiz-sel", ExtensionRight.Selection, false);
+        Assert.IsEmpty(pages.MenuEntries(ExtensionMenuZone.Selection, new Dictionary<string, string>()), "Sans la permission, la sélection ne lui est pas proposée.");
+    }
+
+    [TestMethod]
     public void An_icon_becomes_a_geometry_and_a_path_that_does_not_read_is_left_out()
     {
         Assert.IsNull(ExtensionPages.PictureOf(null));

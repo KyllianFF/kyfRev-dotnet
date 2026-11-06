@@ -221,6 +221,7 @@ internal static class Composition
                 }
             };
             provider.GetRequiredService<SheetsPageViewModel>().ExtensionMenus = extensionPages.MenuEntries;
+            provider.GetRequiredService<ExtensionEngine>().Screen = new ExtensionScreen(shell, provider.GetRequiredService<ReviewNavigation>());
             provider.GetRequiredService<DashboardPageViewModel>().ExtensionCards = extensionPages.CardsAsync;
             shell.WorkspaceOpening += (_, _) =>
             {

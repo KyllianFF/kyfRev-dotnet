@@ -72,6 +72,7 @@ public sealed class ExtensionEngine : IDisposable
     private readonly ExtensionRequests _requests;
     private readonly Dictionary<int, Pending> _pending = [];
     private readonly Dictionary<string, TaskCompletionSource<string?>> _frames = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _waitingOnUser = new(StringComparer.Ordinal);
     private TaskCompletionSource? _ready;
     private Task? _starting;
     private HwndSource? _window;
@@ -99,8 +100,11 @@ public sealed class ExtensionEngine : IDisposable
     /// <summary>Une extension demande d'ouvrir sa vue.</summary>
     public event EventHandler<ExtensionEventArgs>? ViewAsked;
 
-    /// <summary>Le temps qu'une extension a pour se charger et pour répondre.</summary>
+    /// <summary>Le temps qu'une extension a pour se charger et pour répondre. Il ne court pas pendant qu'elle attend l'utilisateur.</summary>
     public TimeSpan Patience { get; set; } = TimeSpan.FromSeconds(10);
+
+    /// <summary>Ce que l'application montre pour les extensions : la sélection guidée, une fiche ouverte à un passage.</summary>
+    public IExtensionScreen? Screen { get; set; }
 
     /// <summary>Le temps que le moteur a pour démarrer : le tout premier démarrage sur une machine neuve est long.</summary>
     public TimeSpan StartPatience { get; set; } = TimeSpan.FromMinutes(2);
@@ -234,10 +238,14 @@ public sealed class ExtensionEngine : IDisposable
         var answer = new TaskCompletionSource<ExtensionAnswer>(TaskCreationOptions.RunContinuationsAsynchronously);
         _pending[n] = new Pending(id, manifest.Name, answer);
         Post(new { kind = "vers-cadre", id, message = message(n) });
-        if (await Task.WhenAny(answer.Task, Task.Delay(Patience)).ConfigureAwait(true) != answer.Task)
+        // Une extension qui attend l'utilisateur (une sélection guidée) n'est pas bloquée : le temps repart quand il a répondu.
+        while (await Task.WhenAny(answer.Task, Task.Delay(Patience)).ConfigureAwait(true) != answer.Task)
         {
-            Stop();
-            return new ExtensionAnswer(null, $"extension « {manifest.Name} » : pas de réponse");
+            if (!_waitingOnUser.Contains(id))
+            {
+                Stop();
+                return new ExtensionAnswer(null, $"extension « {manifest.Name} » : pas de réponse");
+            }
         }
         return await answer.Task.ConfigureAwait(true);
     }
@@ -432,6 +440,9 @@ public sealed class ExtensionEngine : IDisposable
                 ViewAsked?.Invoke(this, new ExtensionEventArgs(id));
                 Post(new { kind = "vers-cadre", id, message = new { type = "reponse", n = root.GetProperty("n").GetInt32(), resultat = (object?)null } });
                 break;
+            case "requete" when TextOf(root, "methode") is "selection.demander" or "fiches.ouvrir":
+                _ = AnswerScreenAsync(id, root.GetProperty("n").GetInt32(), TextOf(root, "methode")!, root.GetProperty("args").Clone());
+                break;
             case "requete":
                 _ = AnswerRequestAsync(id, root.GetProperty("n").GetInt32(), root.GetProperty("methode").GetString()!, root.GetProperty("args").Clone());
                 break;
@@ -481,6 +492,74 @@ public sealed class ExtensionEngine : IDisposable
                 : new { type = "reponse", n, erreur = answer.Error },
         });
     }
+
+    /// <summary>
+    /// Ce qui passe par l'écran, permissions vérifiées : la sélection guidée (« selection ») et une fiche ouverte à un passage
+    /// (« fiches:lecture »). Pendant que l'utilisateur répond, le temps ne court pas.
+    /// </summary>
+    private async Task AnswerScreenAsync(string id, int n, string method, JsonElement arguments)
+    {
+        var message = await ScreenAnswerAsync(id, n, method, arguments).ConfigureAwait(true);
+        Post(new { kind = "vers-cadre", id, message });
+    }
+
+    private async Task<object> ScreenAnswerAsync(string id, int n, string method, JsonElement arguments)
+    {
+        object refused(string error) => new { type = "reponse", n, erreur = error };
+        if (_library.Active(id) is not { } manifest)
+        {
+            return refused("extension inactive");
+        }
+        var right = method == "fiches.ouvrir" ? ExtensionRight.ReadSheets : ExtensionRight.Selection;
+        var name = ExtensionRights.NameOf(right);
+        if (!manifest.Permissions.Contains(right))
+        {
+            return refused($"permission « {name} » non demandée dans {ExtensionManifest.FileName}");
+        }
+        if (!_library.Granted(id).Contains(right))
+        {
+            return refused($"permission « {name} » retirée dans les Paramètres");
+        }
+        if (Screen is not { } screen)
+        {
+            return refused("l'application ne montre rien pour les extensions ici");
+        }
+        var first = TextAt(arguments, 0);
+        var options = arguments.ValueKind == JsonValueKind.Array && arguments.GetArrayLength() > 1 && arguments[1].ValueKind == JsonValueKind.Object ? arguments[1] : default;
+        if (method == "fiches.ouvrir")
+        {
+            var problem = screen.OpenSheet(first ?? string.Empty, NumberOf(options, "debut"), NumberOf(options, "fin"));
+            return problem is null ? new { type = "reponse", n, resultat = (object?)null } : refused(problem);
+        }
+        _waitingOnUser.Add(id);
+        try
+        {
+            var (answer, refusal) = await screen.AskSelectionAsync(new SelectionAsk(manifest.Name, first ?? string.Empty, options.ValueKind == JsonValueKind.Object ? TextOf(options, "fiche") : null, !IsFalse(options, "saisie"))).ConfigureAwait(true);
+            return answer is null
+                ? refused(refusal ?? "sélection impossible")
+                : new
+                {
+                    type = "reponse",
+                    n,
+                    resultat = new { choix = answer.Choice, texte = answer.Text, fiche = answer.SheetId, titre = answer.SheetTitle, debut = answer.Start, fin = answer.End },
+                };
+        }
+        finally
+        {
+            _waitingOnUser.Remove(id);
+        }
+    }
+
+    private static string? TextAt(JsonElement list, int index) =>
+        list.ValueKind == JsonValueKind.Array && list.GetArrayLength() > index && list[index].ValueKind == JsonValueKind.String ? list[index].GetString() : null;
+
+    private static int? NumberOf(JsonElement options, string name) =>
+        options.ValueKind == JsonValueKind.Object && options.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var number) && number >= 0
+            ? number
+            : null;
+
+    private static bool IsFalse(JsonElement options, string name) =>
+        options.ValueKind == JsonValueKind.Object && options.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.False;
 
     private sealed record Pending(string Extension, string Name, TaskCompletionSource<ExtensionAnswer> Answer);
 

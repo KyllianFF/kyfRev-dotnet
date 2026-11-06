@@ -82,6 +82,9 @@ public enum ExtensionMenuZone
 
     /// <summary>Un dossier, dans la vue « Fiches » (<c>dossier</c>).</summary>
     Folder,
+
+    /// <summary>Un texte sélectionné dans une fiche, en lecture (<c>selection</c>) : il faut la permission « selection ».</summary>
+    Selection,
 }
 
 /// <summary>Une commande d'une extension : dans Ctrl+K, et là où un menu la reprend.</summary>
@@ -350,7 +353,7 @@ public sealed record ExtensionManifest(
     private static bool TryMenus(JsonElement root, out ImmutableArray<ExtensionMenuEntry> menus, out string refused)
     {
         menus = [];
-        refused = "« menus » est un objet : « fiche » et « dossier », chacun une liste d'objets avec une « commande » et un « titre »";
+        refused = "« menus » est un objet : « fiche », « dossier » et « selection », chacun une liste d'objets avec une « commande » et un « titre »";
         if (!root.TryGetProperty("menus", out var zones))
         {
             return true;
@@ -366,6 +369,7 @@ public sealed record ExtensionManifest(
             {
                 "fiche" => ExtensionMenuZone.Sheet,
                 "dossier" => ExtensionMenuZone.Folder,
+                "selection" => ExtensionMenuZone.Selection,
                 _ => null,
             };
             if (where is null || zone.Value.ValueKind != JsonValueKind.Array)
@@ -470,6 +474,10 @@ public sealed record ExtensionManifest(
         if (Menus.FirstOrDefault(menu => !Commands.Any(command => command.Id == menu.Command) || !IsValidTitle(menu.Title, MaxTitleLength)) is { } lost)
         {
             return $"entrée de menu « {lost.Title} » : elle lance une commande déclarée, et son titre a 60 caractères au plus";
+        }
+        if (Menus.Any(menu => menu.Zone == ExtensionMenuZone.Selection) && !Permissions.Contains(ExtensionRight.Selection))
+        {
+            return "une entrée de menu « selection » demande la permission « selection »";
         }
         return CardTitle is not null && !IsValidTitle(CardTitle, MaxTitleLength) ? "titre d'encart vide ou de plus de 60 caractères" : null;
     }

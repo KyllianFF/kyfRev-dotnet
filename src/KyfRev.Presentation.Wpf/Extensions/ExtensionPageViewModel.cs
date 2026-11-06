@@ -109,6 +109,9 @@ public sealed partial class ExtensionPageViewModel : ObservableObject, INavigati
 /// </summary>
 public sealed class ExtensionPages
 {
+    /// <summary>La clé sous laquelle les vues trouvent les entrées des extensions dans les ressources de l'application.</summary>
+    public const string ResourceKey = "Kyf.ExtensionPages";
+
     private const int FirstOrder = 70;
     private const double PictureSize = 16;
 
@@ -178,7 +181,9 @@ public sealed class ExtensionPages
     /// <param name="context">Ce sur quoi il porte, transmis à la commande.</param>
     public IReadOnlyList<MenuContribution> MenuEntries(ExtensionMenuZone zone, IReadOnlyDictionary<string, string> context) =>
         [
-            .. Active().SelectMany(manifest => manifest.Menus.Where(menu => menu.Zone == zone).Select(menu =>
+            .. Active()
+                .Where(manifest => zone != ExtensionMenuZone.Selection || _library.Granted(manifest.Id).Contains(ExtensionRight.Selection))
+                .SelectMany(manifest => manifest.Menus.Where(menu => menu.Zone == zone).Select(menu =>
                 new MenuContribution(menu.Title, () => _ = RunAsync(manifest.Id, menu.Command, context)))),
         ];
 

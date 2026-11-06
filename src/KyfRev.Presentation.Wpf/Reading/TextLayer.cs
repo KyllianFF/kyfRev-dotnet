@@ -100,6 +100,17 @@ internal sealed class TextLayer(Func<string, Brush?> findBrush)
         return segment is not null && (formula is null || segment.Start < formula.Start) ? segment.Run : formula?.Element;
     }
 
+    /// <summary>L'endroit du document d'une position du texte affiché ; rien si elle n'est pas montrée.</summary>
+    /// <param name="position">La position.</param>
+    /// <param name="isStart">C'est le début d'une sélection : il se cherche dans le texte qui suit ; sinon, dans celui qui précède.</param>
+    public TextPointer? PointerAt(int position, bool isStart)
+    {
+        var segment = isStart
+            ? _segments.Find(candidate => candidate.Start <= position && position < candidate.End)
+            : _segments.Find(candidate => candidate.Start < position && position <= candidate.End);
+        return segment?.Run.ContentStart.GetPositionAtOffset(position - segment.Start);
+    }
+
     /// <summary>La position dans le texte affiché d'un endroit du document ; rien si aucun texte n'y mène.</summary>
     /// <param name="pointer">L'endroit du document.</param>
     /// <param name="isStart">C'est le début d'une sélection : on cherche vers la suite, sinon vers l'arrière.</param>
