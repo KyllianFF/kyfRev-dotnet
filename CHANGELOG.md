@@ -420,6 +420,9 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Modifié
 
+- Écrire : quand la place manque, le ruban laisse place à une barre courte (annuler, style, gras, italique, liste, lien).
+  « Mise en forme » ouvre le reste en volet, avec ses onglets ; dans un tableau, un bouton « Tableau » ouvre ses réglages.
+  L'historique, le Markdown et l'aperçu passent sous « ⋯ » : plus aucun bouton ne passe sous un autre.
 - L'application est compilée pour Windows x64 (`win-x64`), comme elle est livrée ; les
   bibliothèques restent indépendantes de la plateforme.
 - Un dialogue ou une notification qui se ferme de lui-même garde la liaison de son ouverture :

@@ -6,6 +6,9 @@ namespace KyfRev.DesignSystem.Controls;
 /// </summary>
 public static class Icons
 {
+    /// <summary>Des lettres : la mise en forme du texte.</summary>
+    public static string TextFormat { get; } = Glyph(0xE8D2);
+
     /// <summary>Des blocs assemblés : un SmartArt.</summary>
     public static string SmartArt { get; } = Glyph(0xE8A9);
 

@@ -128,6 +128,15 @@ public static class EditingText
     /// <summary>L'onglet du ruban qui n'apparaît que dans un tableau.</summary>
     public const string TableTab = "Tableau";
 
+    /// <summary>Le bouton de la barre courte qui ouvre toute la mise en forme.</summary>
+    public const string Formatting = "Mise en forme";
+
+    /// <summary>Ce que montre le volet de la barre courte.</summary>
+    public const string FormattingHelp = "Toute la mise en forme : Accueil, Insertion et, dans un tableau, Tableau";
+
+    /// <summary>Le menu « ⋯ » de la barre courte.</summary>
+    public const string ViewMenu = "Affichage : historique, Markdown, aperçu";
+
     /// <summary>Le groupe des en-têtes.</summary>
     public const string HeadersGroup = "En-têtes";
 

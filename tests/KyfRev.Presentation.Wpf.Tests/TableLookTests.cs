@@ -187,6 +187,87 @@ public sealed class TableLookTests
         }
     }
 
+    [STATestMethod]
+    public void A_narrow_ribbon_keeps_one_short_bar_and_opens_the_rest_on_demand()
+    {
+        using var ui = new UiThread();
+        var test = new TestShell();
+        var model = new RibbonModel();
+        var ribbon = new EditorRibbon { DataContext = model };
+        var window = new Window { Content = ribbon, Left = -10000, Top = -10000, Width = 520, Height = 600, ShowActivated = false, ShowInTaskbar = false };
+        window.Resources.MergedDictionaries.Add(test.Design.Dictionary);
+        window.Show();
+        try
+        {
+            TestShell.Flush();
+            Assert.IsTrue(ribbon.IsCompact);
+            Assert.AreEqual(Visibility.Visible, ribbon.CompactBar.Visibility);
+            Assert.AreEqual(Visibility.Collapsed, ribbon.TabRow.Visibility, "les onglets attendent le volet");
+            Assert.AreEqual(Visibility.Collapsed, ribbon.Panels.Visibility);
+            Assert.AreEqual(Visibility.Collapsed, ribbon.CompactTableButton.Visibility);
+            Assert.AreEqual(Visibility.Collapsed, ribbon.FormatLabel.Visibility, "étroite, la barre ne garde que les icônes à droite");
+            Assert.AreEqual(Visibility.Visible, ribbon.CompactLinkButton.Visibility);
+            Assert.HasCount(5, ribbon.CompactStyleMenu.Items);
+            Assert.HasCount(3, ribbon.ViewMenu.Items, "historique, Markdown, aperçu");
+            Assert.IsLessThanOrEqualTo(window.ActualWidth, ribbon.ViewButton.TranslatePoint(new Point(ribbon.ViewButton.ActualWidth, 0), window).X, "rien ne passe sous un autre bouton");
+
+            ribbon.FormatToggle.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+            Assert.IsTrue(ribbon.IsPanelOpen);
+            Assert.AreEqual(Visibility.Visible, ribbon.TabRow.Visibility);
+            Assert.AreEqual(Visibility.Collapsed, ribbon.ViewButtons.Visibility, "l'affichage reste sous « ⋯ »");
+            Assert.AreEqual(Visibility.Visible, ribbon.HomePanel.Visibility);
+            Assert.IsTrue(ribbon.FormatToggle.IsChecked);
+
+            // Dans un tableau : le bouton « Tableau » apparaît, sans ouvrir le volet sur lui.
+            model.Tools = Tools(new TableState("ligne", false, "aucune", "tous", "sobre", null, "ajustee", 2, null, true));
+            TestShell.Flush();
+            Assert.AreEqual(Visibility.Visible, ribbon.CompactTableButton.Visibility);
+            Assert.AreEqual(Visibility.Visible, ribbon.HomePanel.Visibility);
+            ribbon.CompactTableButton.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+            Assert.AreEqual(Visibility.Visible, ribbon.TablePanel.Visibility);
+            Assert.IsTrue(ribbon.CompactTableButton.IsChecked);
+            Assert.IsFalse(ribbon.FormatToggle.IsChecked);
+
+            // « Mise en forme » depuis le tableau revient à l'Accueil ; une seconde fois, le volet se replie.
+            ribbon.FormatToggle.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+            Assert.AreEqual(Visibility.Visible, ribbon.HomePanel.Visibility);
+            ribbon.FormatToggle.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+            Assert.IsFalse(ribbon.IsPanelOpen);
+            Assert.AreEqual(Visibility.Collapsed, ribbon.Panels.Visibility);
+
+            // Volet replié sur le tableau, puis le curseur en sort : l'Accueil reprend sa place à la réouverture.
+            ribbon.CompactTableButton.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+            ribbon.CompactTableButton.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+            Assert.IsFalse(ribbon.IsPanelOpen);
+            Assert.AreEqual(Visibility.Visible, ribbon.TablePanel.Visibility, "replié, le volet garde l'onglet du tableau");
+            model.Tools = null;
+            TestShell.Flush();
+            ribbon.FormatToggle.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+            Assert.AreEqual(Visibility.Visible, ribbon.HomePanel.Visibility);
+
+            // Plus étroite encore : « Rétablir » et « Lien » ne restent que dans le volet.
+            ribbon.Fit(EditorRibbon.NarrowWidth - 1);
+            Assert.AreEqual(Visibility.Collapsed, ribbon.CompactRedoButton.Visibility);
+            Assert.AreEqual(Visibility.Collapsed, ribbon.CompactLinkButton.Visibility);
+            ribbon.Fit(EditorRibbon.TightWidth);
+            Assert.AreEqual(Visibility.Visible, ribbon.FormatLabel.Visibility);
+
+            // Assez de place : le ruban entier revient, ses onglets et l'affichage à droite.
+            window.Width = 1100;
+            window.UpdateLayout();
+            TestShell.Flush();
+            Assert.IsFalse(ribbon.IsCompact);
+            Assert.AreEqual(Visibility.Collapsed, ribbon.CompactBar.Visibility);
+            Assert.AreEqual(Visibility.Visible, ribbon.TabRow.Visibility);
+            Assert.AreEqual(Visibility.Visible, ribbon.ViewButtons.Visibility);
+            Assert.AreEqual(Visibility.Visible, ribbon.Panels.Visibility);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
     private static EditorTools Tools(TableState table) => new(false, false, false, false, false, false, 0, null, false, false, Table: table);
 
     private static System.Windows.Media.Color Color(ColorRole role) => Light[role].ToColor();
