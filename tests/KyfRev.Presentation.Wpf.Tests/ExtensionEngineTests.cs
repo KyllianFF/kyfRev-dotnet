@@ -205,6 +205,70 @@ public sealed class ExtensionEngineTests
     }
 
     [EngineTest]
+    public void Vocabulary_2_adds_a_selected_word_with_its_sentence_and_brings_it_back_on_the_sheets_cycle()
+    {
+        using var scene = new Scene();
+        Assert.IsTrue(scene.Library.Install(Path.Combine(Official, "vocabulaire")).Succeeded);
+        scene.Data.Text = "Today the weather is nice. It rains.\n\n```vocabulaire\nthe cat = le chat\n```\n";
+        scene.Data.Keep("""{"the cat":{"sus":2,"aRevoir":1}}""");
+        var screen = new FakeScreen();
+        scene.Engine.Screen = screen;
+        using var ui = new UiThread();
+        var none = new Dictionary<string, string>();
+
+        StringAssert.Contains(TextOf(scene, "vocabulaire"), "Aucun carnet pour l'instant", StringComparison.Ordinal);
+        Assert.IsNull(Wait(scene.Engine.CountAsync("vocabulaire")));
+        Assert.IsTrue(Wait(scene.Engine.CommandAsync("vocabulaire", "ajouter", new Dictionary<string, string>
+        {
+            ["id"] = "f_1",
+            ["titre"] = "Une fiche",
+            ["texte"] = "the weather",
+            ["debut"] = "6",
+            ["fin"] = "17",
+        })).Succeeded);
+        var form = TextOf(scene, "vocabulaire");
+        StringAssert.Contains(form, "Today the weather is nice.", StringComparison.Ordinal);
+        var added = Wait(scene.Engine.ActAsync("vocabulaire", "ajout", new Dictionary<string, object?>
+        {
+            ["carnet"] = "nouveau",
+            ["nouveau"] = "Anglais",
+            ["terme"] = "the weather",
+            ["traduction"] = "le temps (qu'il fait)",
+            ["phrase"] = "Today the weather is nice.",
+        }, none));
+        Assert.IsTrue(added.Succeeded, added.Error);
+        StringAssert.Contains(TextOf(scene, "vocabulaire"), "« the weather » ajouté au carnet « Anglais »", StringComparison.Ordinal);
+        Assert.AreEqual(1, Wait(scene.Engine.CountAsync("vocabulaire")));
+        Assert.AreEqual("1 mot à revoir", Wait(scene.Engine.CardAsync("vocabulaire"))!.Value.Text);
+
+        using var stored = JsonDocument.Parse(scene.Data.Stored!);
+        var book = stored.RootElement.GetProperty("carnets")[0];
+        Assert.AreEqual(1, stored.RootElement.GetProperty("ancien").GetProperty("the cat").GetProperty("aRevoir").GetInt32(), "Les résultats de la version 1 sont gardés.");
+        var data = new Dictionary<string, string> { ["carnet"] = book.GetProperty("id").GetString()!, ["mot"] = book.GetProperty("mots")[0].GetProperty("id").GetString()! };
+        Wait(scene.Engine.ActAsync("vocabulaire", "mode", null, data));
+        Wait(scene.Engine.ActAsync("vocabulaire", "reviser", null, data));
+        StringAssert.Contains(TextOf(scene, "vocabulaire"), "Vérifier", StringComparison.Ordinal);
+        Wait(scene.Engine.ActAsync("vocabulaire", "verifier", new Dictionary<string, object?> { ["reponse"] = "Le temps !" }, none));
+        StringAssert.Contains(TextOf(scene, "vocabulaire"), "Juste.", StringComparison.Ordinal);
+        Wait(scene.Engine.ActAsync("vocabulaire", "suivant", null, none));
+        StringAssert.Contains(TextOf(scene, "vocabulaire"), "Terminé : 1 sur 1", StringComparison.Ordinal);
+        Assert.IsNull(Wait(scene.Engine.CountAsync("vocabulaire")), "Su, le mot revient à J1 : plus rien à revoir aujourd'hui.");
+        using (var after = JsonDocument.Parse(scene.Data.Stored!))
+        {
+            var word = after.RootElement.GetProperty("carnets")[0].GetProperty("mots")[0];
+            Assert.AreEqual(DateTime.Now.AddDays(1).ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture), word.GetProperty("prochaine").GetString());
+            Assert.AreEqual(1, word.GetProperty("etape").GetInt32());
+        }
+
+        Assert.IsTrue(Wait(scene.Engine.ActAsync("vocabulaire", "voir", null, data)).Succeeded);
+        Assert.AreEqual("f_1 6 17", screen.Opened.Single());
+        Wait(scene.Engine.ActAsync("vocabulaire", "blocs", null, none));
+        StringAssert.Contains(TextOf(scene, "vocabulaire"), "1 mot dans les blocs vocabulaire", StringComparison.Ordinal);
+        Assert.IsTrue(Wait(scene.Engine.ActAsync("vocabulaire", "importer", new Dictionary<string, object?> { ["carnet"] = data["carnet"] }, none)).Succeeded);
+        StringAssert.Contains(TextOf(scene, "vocabulaire"), "1 mot ajouté depuis les blocs", StringComparison.Ordinal);
+    }
+
+    [EngineTest]
     public void Chronology_gathers_the_dates_of_the_sheets()
     {
         using var scene = new Scene();

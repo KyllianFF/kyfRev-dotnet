@@ -1,0 +1,21 @@
+{
+  "api": 2,
+  "id": "vocabulaire",
+  "nom": "Vocabulaire",
+  "version": "2.0.0",
+  "description": "Un carnet par langue. Sélectionne un mot dans une fiche, « Ajouter au vocabulaire » demande sa traduction et garde la phrase d'où il vient. Les mots reviennent à J1, J3, J7, J14 et J30, comme tes fiches, à écrire ou à dévoiler, dans les deux sens. Les blocs ```vocabulaire restent lisibles.",
+  "auteur": "kyfRev",
+  "icone": "langue.svg",
+  "permissions": ["fiches:lecture", "selection", "stockage"],
+  "blocs": ["vocabulaire"],
+  "vue": { "titre": "Vocabulaire", "compteur": true },
+  "commandes": [
+    { "id": "reviser", "titre": "Réviser le vocabulaire" },
+    { "id": "ajouter", "titre": "Ajouter au vocabulaire" },
+    { "id": "nouveau", "titre": "Nouveau carnet de vocabulaire" }
+  ],
+  "menus": {
+    "selection": [{ "commande": "ajouter", "titre": "Ajouter au vocabulaire" }]
+  },
+  "encart": { "titre": "Vocabulaire" }
+}

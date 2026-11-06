@@ -49,6 +49,11 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   avant J.-C. comprises, chacune rouvre son passage, et « Remettre dans l'ordre » en fait un jeu. Sur « Aujourd'hui », « Ce
   jour-là » rappelle un événement d'un jour comme celui-ci. Les blocs ` ```chronologie ` restent lisibles et font une frise en un
   clic.
+- Extension Vocabulaire, version 2 (dossier `extensions/vocabulaire`) : un carnet par langue. Un mot sélectionné s'y ajoute par le
+  clic droit, sa traduction demandée et sa phrase d'origine gardée. Les mots reviennent à J1, J3, J7, J14 et J30, comme les fiches,
+  un mot raté le lendemain ; la réponse se dévoile ou s'écrit (sans compter casse, accents ni parenthèses), dans un sens ou dans
+  l'autre. Le menu et « Aujourd'hui » comptent les mots à revoir. Les mots des blocs ` ```vocabulaire ` entrent dans un carnet en
+  un clic, et les résultats de la version 1 sont gardés.
 - Schéma réseau : le switch de cœur et le switch de distribution rejoignent la bibliothèque, avec leur icône.
 - Écrire : tous les dessins passent par le même éditeur, après le choix du modèle dans la galerie : les SmartArt en liste, la carte
   mentale sur plusieurs niveaux, les schémas Mermaid en liste, les graphiques en tableau de valeurs. Tout dessin inséré depuis la
