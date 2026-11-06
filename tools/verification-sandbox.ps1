@@ -60,6 +60,18 @@ function Invoke-Invite {
         & robocopy $hoteSource $depot /MIR /NFL /NDL /NJH /NJS /NP | Out-Null
         if ($LASTEXITCODE -ge 8) { throw "La copie du clone a échoué (code $LASTEXITCODE)." }
         Set-Location $depot
+        # Les outils locaux viennent du cache du poste, déjà vérifiés : le réseau du bac à sable coupe parfois les gros
+        # téléchargements (vu le 2026-11-06 : dotnet-stryker interrompu à chaque essai, et dotnet tool restore sans fin).
+        $outils = Get-Content (Join-Path $depot '.config\dotnet-tools.json') -Raw | ConvertFrom-Json
+        $paquets = Join-Path $env:USERPROFILE '.nuget\packages'
+        foreach ($outil in $outils.tools.PSObject.Properties) {
+            $nom = $outil.Name.ToLowerInvariant()
+            $cache = Join-Path 'C:\host\nuget' (Join-Path $nom $outil.Value.version)
+            if (Test-Path $cache) {
+                & robocopy $cache (Join-Path $paquets (Join-Path $nom $outil.Value.version)) /E /NFL /NDL /NJH /NJS /NP | Out-Null
+                if ($LASTEXITCODE -ge 8) { throw "La copie de l'outil $nom a échoué (code $LASTEXITCODE)." }
+            }
+        }
         & pwsh -NoProfile -File (Join-Path $depot 'tools\verification-locale.ps1') -Base $Base -PosteVierge *> (Join-Path $hoteSortie 'sortie.log')
         $code = $LASTEXITCODE
         foreach ($dossier in 'artifacts\coverage', 'artifacts\verification-locale', 'artifacts\installer\essais') {
