@@ -11,6 +11,7 @@
     <File Path="CONTRIBUTING.md" />
     <File Path="README.md" />
     <File Path="SECURITY.md" />
+    <File Path="docs/chiffrement.md" />
     <File Path="docs/correspondance-commandes.md" />
     <File Path="docs/glossaire.md" />
     <File Path="docs/plan-de-refonte.md" />
@@ -21,6 +22,7 @@
     <Project Path="src/KyfRev.Cli/KyfRev.Cli.csproj" />
     <Project Path="src/KyfRev.DesignSystem/KyfRev.DesignSystem.csproj" />
     <Project Path="src/KyfRev.Domain/KyfRev.Domain.csproj" />
+    <Project Path="src/KyfRev.Infrastructure.Crypto/KyfRev.Infrastructure.Crypto.csproj" />
     <Project Path="src/KyfRev.Infrastructure.Online/KyfRev.Infrastructure.Online.csproj" />
     <Project Path="src/KyfRev.Infrastructure.Vault/KyfRev.Infrastructure.Vault.csproj" />
     <Project Path="src/KyfRev.Infrastructure.Windows/KyfRev.Infrastructure.Windows.csproj" />
@@ -36,6 +38,7 @@
     <Project Path="tests/KyfRev.DesignSystem.Tests/KyfRev.DesignSystem.Tests.csproj" />
     <Project Path="tests/KyfRev.Domain.Tests/KyfRev.Domain.Tests.csproj" />
     <Project Path="tests/KyfRev.Extensions.Host.Tests/KyfRev.Extensions.Host.Tests.csproj" />
+    <Project Path="tests/KyfRev.Infrastructure.Crypto.Tests/KyfRev.Infrastructure.Crypto.Tests.csproj" />
     <Project Path="tests/KyfRev.Infrastructure.Online.Tests/KyfRev.Infrastructure.Online.Tests.csproj" />
     <Project Path="tests/KyfRev.Infrastructure.Vault.Tests/KyfRev.Infrastructure.Vault.Tests.csproj" />
     <Project Path="tests/KyfRev.Infrastructure.Windows.Tests/KyfRev.Infrastructure.Windows.Tests.csproj" />
