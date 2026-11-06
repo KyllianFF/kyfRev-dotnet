@@ -343,6 +343,7 @@ public sealed class ExtensionEngineTests
         Assert.HasCount(2, faults);
         Assert.AreEqual("action « casser »", faults[0].Where, "La plus récente d'abord.");
         StringAssert.Contains(faults[0].Message, "boum dans l'action", StringComparison.Ordinal);
+        Assert.IsFalse(faults[0].Message.StartsWith("extension « fautive »", StringComparison.Ordinal), "Son nom ne se répète pas sous elle : " + faults[0].Message);
         Assert.AreEqual("vue", faults[1].Where);
         Assert.AreEqual("fautive fautive", string.Join(' ', changed));
         Assert.IsEmpty(scene.Engine.Faults("absente"));

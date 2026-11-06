@@ -245,8 +245,11 @@ public sealed class ExtensionEngine : IDisposable, IExtensionFaults
     private async Task<ExtensionAnswer> AskAsync(string id, string where, Func<int, object> message)
     {
         var answer = await AskOnceAsync(id, message).ConfigureAwait(true);
-        if (answer.Error is { } error && _library.Active(id) is not null)
+        if (answer.Error is { } error && _library.Active(id) is { } manifest)
         {
+            // Sous l'extension, son nom en tête de l'erreur se répéterait.
+            var named = $"extension « {manifest.Name} » : ";
+            error = error.StartsWith(named, StringComparison.Ordinal) ? error[named.Length..] : error;
             if (!_faults.TryGetValue(id, out var faults))
             {
                 faults = [];
