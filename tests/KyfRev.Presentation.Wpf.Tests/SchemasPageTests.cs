@@ -160,6 +160,17 @@ public sealed class SchemasPageTests
         var light = scene.Script("getComputedStyle(document.documentElement).getPropertyValue('--fond')");
         scene.Test.Design.Theme = ThemeKind.Dark;
         UiThread.Until(() => scene.Script("getComputedStyle(document.documentElement).getPropertyValue('--fond')") != light);
+        Assert.AreEqual(scene.Background, scene.Page.Island!.Ground, "Le fond du moteur suit le thème.");
+    }
+
+    [EngineTest]
+    public void The_engine_takes_the_background_of_the_theme_before_its_first_page()
+    {
+        using var scene = new IslandScene(waitsForTheIsland: false, theme: ThemeKind.Dark);
+        UiThread.Until(() => scene.Page.Island is { IsLoaded: true }, TimeSpan.FromMinutes(1));
+
+        Assert.AreEqual(scene.Background, scene.Page.Island!.Ground, "Pas d'éclair blanc pendant que la page se charge.");
+        UiThread.Until(() => scene.Page.Island.IsReady, TimeSpan.FromMinutes(2));
     }
 
     [EngineTest]
@@ -228,7 +239,7 @@ public sealed class SchemasPageTests
         private readonly TestVaults _vaults = new(AppMode.Development);
         private readonly Window _window;
 
-        public IslandScene(string? schema = null)
+        public IslandScene(string? schema = null, bool waitsForTheIsland = true, ThemeKind theme = ThemeKind.Light)
         {
             _vaults.App.Vaults.Create(_vaults.PathOf("Coffre"));
             Schemas = new SchemaUseCases(_vaults.App.Host);
@@ -237,15 +248,25 @@ public sealed class SchemasPageTests
                 Schemas.Create(schema).Value.ToString();
             }
             Test = new TestShell();
+            Test.Design.Theme = theme;
             Page = new SchemasPage { DataContext = new SchemasPageViewModel(Schemas, _vaults.Picker, new FakeOpener(), FakeEnvironment.WebData), Width = 1300, Height = 860 };
             _window = new Window { Content = new Canvas { Children = { Page } }, Left = -10000, Top = -10000, Width = 800, Height = 600, ShowActivated = false, ShowInTaskbar = false };
             _window.Resources.MergedDictionaries.Add(Test.Design.Dictionary);
             _window.Show();
             TestShell.Flush();
-            UiThread.Until(() => Page.Island?.IsReady == true, TimeSpan.FromMinutes(2));
+            if (waitsForTheIsland)
+            {
+                UiThread.Until(() => Page.Island?.IsReady == true, TimeSpan.FromMinutes(2));
+            }
         }
 
         public TestShell Test { get; }
+
+        /// <summary>Le fond du thème, tel que le moteur le reçoit.</summary>
+        public System.Drawing.Color Background =>
+            Test.Design.Dictionary["Kyf.Brush.Background"] is System.Windows.Media.SolidColorBrush { Color: var color }
+                ? System.Drawing.Color.FromArgb(color.A, color.R, color.G, color.B)
+                : System.Drawing.Color.Empty;
 
         public SchemasPage Page { get; }
 

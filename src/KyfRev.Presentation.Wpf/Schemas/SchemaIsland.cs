@@ -72,7 +72,9 @@ internal sealed class SchemaIsland : UserControl, IDisposable
         IsTabStop = false;
         System.Windows.Automation.AutomationProperties.SetAutomationId(_view, "SchemasIsland");
         System.Windows.Automation.AutomationProperties.SetName(_view, SchemaText.IslandName);
-        Content = new Grid { Children = { _view, _snapshot } };
+        var ground = new Grid { Children = { _view, _snapshot } };
+        ground.SetResourceReference(Panel.BackgroundProperty, "Kyf.Brush.Background");
+        Content = ground;
         SetResourceReference(ThemeProbeProperty, "Kyf.Brush.Text");
         Loaded += OnLoaded;
     }
@@ -85,6 +87,9 @@ internal sealed class SchemaIsland : UserControl, IDisposable
 
     /// <summary>L'îlot est recouvert, et remplacé par son image.</summary>
     internal bool IsCovered => _covered;
+
+    /// <summary>Le fond du moteur, avant même sa première page.</summary>
+    internal System.Drawing.Color Ground => _view.DefaultBackgroundColor;
 
     /// <summary>Les couleurs de l'application, sous les noms de la page ; pour dessiner un schéma hors de l'îlot aussi.</summary>
     internal static Dictionary<string, string> ThemeOf(FrameworkElement element)
@@ -186,6 +191,7 @@ internal sealed class SchemaIsland : UserControl, IDisposable
         }
         try
         {
+            PaintGround();
             var environment = await VisualEditor.EnvironmentOf(_dataFolder).ConfigureAwait(true);
             await _view.EnsureCoreWebView2Async(environment).ConfigureAwait(true);
             if (_disposed)
@@ -225,9 +231,30 @@ internal sealed class SchemaIsland : UserControl, IDisposable
             return;
         }
         var answer = await _bridge.ReceiveAsync(message).ConfigureAwait(true);
-        if (answer is not null && !_disposed)
+        if (answer is not null)
         {
-            _view.CoreWebView2.PostWebMessageAsJson(answer);
+            Post(answer);
+        }
+    }
+
+    /// <summary>
+    /// Envoie un message à la page. Le moteur a pu se fermer pendant que la réponse se préparait (la fenêtre s'est fermée) : il n'y a
+    /// alors plus personne à qui répondre, et rien ne doit lever d'exception dans un gestionnaire d'événement.
+    /// </summary>
+    private void Post(string json)
+    {
+        if (!_disposed && _view.CoreWebView2 is { } web)
+        {
+            web.PostWebMessageAsJson(json);
+        }
+    }
+
+    /// <summary>Le fond du moteur prend celui de l'application dès avant sa première page : aucun éclair blanc à l'ouverture, en sombre surtout.</summary>
+    private void PaintGround()
+    {
+        if (!_disposed && TryFindResource("Kyf.Brush.Background") is SolidColorBrush { Color: var ground })
+        {
+            _view.DefaultBackgroundColor = new TokenColor(ground.A, ground.R, ground.G, ground.B).ToDrawingColor();
         }
     }
 
@@ -236,13 +263,14 @@ internal sealed class SchemaIsland : UserControl, IDisposable
         if (_ready && !_disposed && _toOpen is { } id)
         {
             _toOpen = null;
-            _view.CoreWebView2.PostWebMessageAsJson(new JsonObject { ["kind"] = "open", ["id"] = id }.ToJsonString());
+            Post(new JsonObject { ["kind"] = "open", ["id"] = id }.ToJsonString());
         }
     }
 
     /// <summary>Envoie les couleurs à la page ; le thème peut changer pendant qu'elle est ouverte.</summary>
     private void SendTheme()
     {
+        PaintGround();
         if (!_ready || _disposed)
         {
             return;
@@ -259,6 +287,6 @@ internal sealed class SchemaIsland : UserControl, IDisposable
             variables["--voile"] = dark ? "rgb(0 0 0 / 60%)" : "rgb(20 30 25 / 35%)";
             _view.DefaultBackgroundColor = new TokenColor(ground.A, ground.R, ground.G, ground.B).ToDrawingColor();
         }
-        _view.CoreWebView2.PostWebMessageAsJson(new JsonObject { ["kind"] = "theme", ["variables"] = variables }.ToJsonString());
+        Post(new JsonObject { ["kind"] = "theme", ["variables"] = variables }.ToJsonString());
     }
 }
