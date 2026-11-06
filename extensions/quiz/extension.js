@@ -130,10 +130,10 @@ async function prendre(quiz, fiche) {
   let prises = 0;
   for (;;) {
     const numero = quiz.questions.length + 1;
-    const question = await kyfrev.selection.demander(`${quiz.nom} · question ${numero} : sélectionne la question`, { fiche });
+    const question = await kyfrev.selection.demander(`${quiz.nom} · question ${numero} : sélectionnez la question`, { fiche });
     if (question.choix === "terminer") break;
     if (question.choix === "passer" || !question.texte) continue;
-    const reponse = await kyfrev.selection.demander(`${quiz.nom} · question ${numero} : sélectionne la réponse, ou écris-la`, { fiche: question.fiche ?? fiche });
+    const reponse = await kyfrev.selection.demander(`${quiz.nom} · question ${numero} : sélectionnez la réponse, ou écrivez-la`, { fiche: question.fiche ?? fiche });
     if (reponse.choix === "terminer") break;
     ajouterQuestion(quiz, question.texte, reponse.choix === "passer" ? "" : reponse.texte, question);
     prises++;
@@ -150,7 +150,7 @@ async function commencer(quiz, fiche, mode) {
   }
   const prises = await prendre(quiz, fiche);
   ecran = { nom: "modifier", quiz: quiz.id };
-  message = `${pluriel(prises, "question prise", "questions prises")} dans la fiche. Tu peux les corriger ici.`;
+  message = `${pluriel(prises, "question prise", "questions prises")} dans la fiche.${prises > 1 ? " Vous pouvez les corriger ici." : prises === 1 ? " Vous pouvez la corriger ici." : ""}`;
   await kyfrev.ouvrirVue();
 }
 
@@ -227,7 +227,7 @@ kyfrev.commande("revoir", async () => {
 kyfrev.commande("ajouter", async (contexte) => {
   await charger();
   if (!contexte.texte) {
-    versListe("Sélectionne un texte dans une fiche, en lecture, puis fais un clic droit dessus : « Ajouter au quiz ».");
+    versListe("Sélectionnez un texte dans une fiche, en lecture, puis faites un clic droit dessus : « Ajouter au quiz ».");
   } else {
     ecran = {
       nom: "ajout",
@@ -357,7 +357,7 @@ action("ajout", async (champs) => {
   }
   let reponse = String(champs.reponse ?? "").trim();
   if (!reponse) {
-    const prise = await kyfrev.selection.demander(`${quiz.nom} : sélectionne la réponse à « ${champs.question} », ou écris-la`, { fiche: origine.fiche });
+    const prise = await kyfrev.selection.demander(`${quiz.nom} : sélectionnez la réponse à « ${champs.question} », ou écrivez-la`, { fiche: origine.fiche });
     if (prise.choix === "terminer") {
       versListe("Rien n'a été ajouté.");
       await kyfrev.ouvrirVue();
@@ -416,7 +416,7 @@ const bandeau = () => (message ? `<p><strong>${echapper(message)}</strong></p>` 
 
 function carteQuiz(quiz) {
   const ratees = aRevoir(quiz);
-  const etat = quiz.questions.length === 0 ? "" : ratees > 0 ? `<span class="pastille">${ratees} à revoir</span> ` : `<span class="pastille">À jour</span> `;
+  const etat = quiz.questions.length === 0 ? "" : ratees > 0 ? `<span class="pastille">${ratees} à revoir</span> · ` : `<span class="pastille">À jour</span> · `;
   const dernier = quiz.dernier ? ` · dernière fois : ${quiz.dernier.bonnes} sur ${quiz.dernier.total}, le ${enDate(quiz.dernier.date)}` : "";
   const etiquettes = quiz.etiquettes.length ? ` · ${quiz.etiquettes.map(echapper).join(", ")}` : "";
   return `
@@ -446,7 +446,7 @@ async function vueListe() {
     : "";
   const blocs = trouves.length
     ? `<div class="carte">
-        <h2>Trouvés dans tes fiches</h2>
+        <h2>Trouvés dans vos fiches</h2>
         <p class="secondaire">${pluriel(trouves.length, "fiche a", "fiches ont")} déjà des questions dans un bloc quiz. Elles restent lisibles ; chacune peut devenir un quiz.</p>
         <ul>${trouves
           .map((t) => `<li>${echapper(t.titre)} · ${pluriel(t.questions.length, "question", "questions")} <button class="discret" data-action="importer" data-fiche="${echapper(t.id)}">Créer ce quiz</button></li>`)
@@ -454,7 +454,7 @@ async function vueListe() {
       </div>`
     : "";
   const vide = donnees.quiz.length === 0
-    ? `<p class="secondaire">Aucun quiz pour l'instant. Crée le premier ici, par Ctrl+K « Nouveau quiz », par le clic droit d'une fiche, ou en sélectionnant un texte en lecture : clic droit, « Ajouter au quiz ».</p>`
+    ? `<p class="secondaire">Aucun quiz pour l'instant. Créez le premier ici, par Ctrl+K « Nouveau quiz », par le clic droit d'une fiche, ou en sélectionnant un texte en lecture : clic droit, « Ajouter au quiz ».</p>`
     : visibles.length === 0 ? `<p class="secondaire">Aucun quiz ne correspond.</p>` : "";
   return `
     <h1>Quiz</h1>
@@ -534,7 +534,7 @@ function vueModifier() {
       <label>Étiquettes <input name="etiquettes" value="${echapper(quiz.etiquettes.join(", "))}" placeholder="séparées par des virgules"></label>
       <label>Ordre des questions <select name="ordre" aria-label="Ordre des questions">${ordres(quiz.ordre)}</select></label>
       <h2>${pluriel(quiz.questions.length, "question", "questions")}</h2>
-      ${questions || `<p class="secondaire">Aucune question : ajoute-en depuis une fiche, ou écris-les.</p>`}
+      ${questions || `<p class="secondaire">Aucune question : ajoutez-en depuis une fiche, ou écrivez-les.</p>`}
       <p class="actions"><button class="principal">Enregistrer</button><button data-action="ajouter-questions" data-quiz="${quiz.id}">Ajouter des questions</button></p>
     </form>
     <p class="actions"><button class="discret" data-action="supprimer" data-quiz="${quiz.id}">Supprimer ce quiz</button></p>`;
@@ -558,7 +558,7 @@ function vueAjout() {
     <form data-action="ajout">
       <label>Quiz <select name="quiz" aria-label="Quiz">${liste}<option value="nouveau"${choisi === "nouveau" ? " selected" : ""}>Un nouveau quiz : « ${echapper(ecran.origine.titre ?? "Mon quiz")} »</option></select></label>
       <label>Question <textarea name="question" required>${echapper(ecran.texte)}</textarea></label>
-      <label>Réponse <textarea name="reponse" placeholder="Laisse vide pour la sélectionner ensuite dans la fiche"></textarea></label>
+      <label>Réponse <textarea name="reponse" placeholder="Laissez vide pour la sélectionner ensuite dans la fiche"></textarea></label>
       <p class="actions"><button data-action="liste">Annuler</button><button class="principal">Ajouter</button></p>
     </form>`;
 }

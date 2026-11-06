@@ -3,7 +3,7 @@
   "id": "quiz",
   "nom": "Quiz",
   "version": "2.0.0",
-  "description": "Des quiz que tu composes depuis tes fiches : la question et la réponse se prennent dans le texte, à la chaîne, et ce qui manque s'écrit à la main. Les questions ratées reviennent en premier. Les blocs ```quiz restent lisibles.",
+  "description": "Des quiz que vous composez depuis vos fiches : la question et la réponse se prennent dans le texte, à la chaîne, et ce qui manque s'écrit à la main. Les questions ratées reviennent en premier. Les blocs ```quiz restent lisibles.",
   "auteur": "kyfRev",
   "icone": "quiz.svg",
   "permissions": ["fiches:lecture", "selection", "stockage"],

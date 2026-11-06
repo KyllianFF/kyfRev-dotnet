@@ -54,6 +54,10 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   un mot raté le lendemain ; la réponse se dévoile ou s'écrit (sans compter casse, accents ni parenthèses), dans un sens ou dans
   l'autre. Le menu et « Aujourd'hui » comptent les mots à revoir. Les mots des blocs ` ```vocabulaire ` entrent dans un carnet en
   un clic, et les résultats de la version 1 sont gardés.
+- Extension Bilan du coffre, version 2 (dossier `extensions/bilan`) : il aide à corriger, plus seulement à constater. Chaque fiche
+  à étoffer, sans étiquette ou sans intertitre s'ouvre d'un clic ; une étiquette s'ajoute sur place ; une fiche peut être ignorée,
+  puis reprise. Le bilan de chaque semaine est gardé pour en montrer l'évolution, et « Aujourd'hui » dit combien de fiches sont à
+  étoffer. Il change des étiquettes, jamais le texte.
 - Extensions : avec la permission « fiches:creation », une extension crée des fiches (titre, dossier, texte, étiquettes) et change
   leurs étiquettes ; avec « fiches:ecriture », elle remplace leur texte, l'en-tête gardé. Aucune ne peut supprimer une fiche.
   Chaque texte remplacé reste dans les versions de la fiche, d'où il se remet, et chaque écriture est notée au journal de

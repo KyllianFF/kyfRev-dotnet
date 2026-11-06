@@ -225,7 +225,7 @@ kyfrev.commande("nouvelle", async () => {
 kyfrev.commande("ajouter", async (contexte) => {
   await charger();
   if (!contexte.texte) {
-    versListe("Sélectionne un texte dans une fiche, en lecture, puis fais un clic droit dessus : « Ajouter à la frise ».");
+    versListe("Sélectionnez un texte dans une fiche, en lecture, puis faites un clic droit dessus : « Ajouter à la frise ».");
   } else {
     const trouvee = dateDans(contexte.texte);
     ecran = {
@@ -234,7 +234,7 @@ kyfrev.commande("ajouter", async (contexte) => {
       texte: trouvee?.reste || contexte.texte,
       origine: { fiche: contexte.id, titre: contexte.titre, debut: Number(contexte.debut), fin: Number(contexte.fin) },
     };
-    message = trouvee ? "" : "Aucune date dans ce texte : écris-la.";
+    message = trouvee ? "" : "Aucune date dans ce texte : écrivez-la.";
   }
   await kyfrev.ouvrirVue();
 });
@@ -290,7 +290,7 @@ action("creer", async (champs) => {
   const f = creerFrise(String(champs.nom ?? ""));
   await garder();
   ecran = { nom: "frise", frise: f.id };
-  message = "Frise créée. Ajoute des dates depuis tes fiches : sélectionne un texte, clic droit, « Ajouter à la frise ».";
+  message = "Frise créée. Ajoutez des dates depuis vos fiches : sélectionnez un texte, clic droit, « Ajouter à la frise ».";
 });
 action("ouvrir", (_valeur, d) => {
   ecran = { nom: "frise", frise: d.frise };
@@ -415,7 +415,7 @@ function vueListe() {
     <h1>Chronologie</h1>
     ${bandeau()}
     <p class="actions"><button class="principal" data-action="nouvelle">Nouvelle frise</button><button class="discret" data-action="blocs">Dates des blocs</button></p>
-    ${cartes || `<p class="secondaire">Aucune frise pour l'instant. Crée la première ici, ou sélectionne un texte daté dans une fiche : clic droit, « Ajouter à la frise ». Le clic droit d'une fiche propose aussi d'en extraire les dates.</p>`}`;
+    ${cartes || `<p class="secondaire">Aucune frise pour l'instant. Créez la première ici, ou sélectionnez un texte daté dans une fiche : clic droit, « Ajouter à la frise ». Le clic droit d'une fiche propose aussi d'en extraire les dates.</p>`}`;
 }
 
 function vueNouvelle() {
@@ -500,7 +500,7 @@ function vueExtraire() {
     .join("");
   return `
     <h1>${pluriel(candidates.length, "date trouvée", "dates trouvées")} dans « ${echapper(titre)} »</h1>
-    <p class="secondaire">Décoche celles à laisser, corrige les autres si besoin.</p>
+    <p class="secondaire">Décochez celles à laisser, corrigez les autres si besoin.</p>
     <form data-action="garder">
       ${choixDeFrise(donnees.frises.at(-1)?.id ?? null, titre)}
       ${lignes}
@@ -514,7 +514,7 @@ function vueBlocs() {
   return `
     <p class="actions"><button class="discret" data-action="liste">Retour aux frises</button></p>
     <h1>Dates des blocs</h1>
-    <p class="secondaire">${pluriel(blocs.length, "date", "dates")} des blocs chronologie de tes fiches, de la plus ancienne à la plus récente.</p>
+    <p class="secondaire">${pluriel(blocs.length, "date", "dates")} des blocs chronologie de vos fiches, de la plus ancienne à la plus récente.</p>
     ${blocs.length
       ? `<input type="search" placeholder="Filtrer (date, événement, fiche)" value="${echapper(filtre)}" data-action="filtrer" aria-label="Filtrer les dates">
          <p class="actions"><button class="principal" data-action="frise-des-blocs">En faire une frise</button></p>
@@ -523,7 +523,7 @@ function vueBlocs() {
                .map((e) => `<li><time>${echapper(e.date)}</time><span>${echapper(e.texte)} <span class="secondaire">· ${echapper(e.titre)}</span> <button class="discret" data-action="voir" data-bloc="${blocs.indexOf(e)}">Voir dans la fiche</button></span></li>`)
                .join("")}</ol>`
            : `<p class="secondaire">Aucune date ne correspond.</p>`}`
-      : `<p class="secondaire">Aucun bloc chronologie dans tes fiches.</p>`}`;
+      : `<p class="secondaire">Aucun bloc chronologie dans vos fiches.</p>`}`;
 }
 
 function vueSupprimer() {
@@ -544,7 +544,7 @@ function vueJeu() {
   const fin = ecran.nom === "fin-du-jeu";
   return `
     <h1>${echapper(f.nom)} : remettre dans l'ordre</h1>
-    <p class="secondaire">${fin ? `Terminé : ${ecran.bonnes} sur ${total} à la bonne place.` : "Clique les événements du plus ancien au plus récent."}</p>
+    <p class="secondaire">${fin ? `Terminé : ${ecran.bonnes} sur ${total} à la bonne place.` : "Cliquez les événements du plus ancien au plus récent."}</p>
     <progress value="${ecran.places.length}" max="${total}" aria-label="${ecran.places.length} sur ${total} placés"></progress>
     ${places.length
       ? `<ol class="frise">${ecran.places

@@ -204,7 +204,7 @@ kyfrev.commande("nouveau", async () => {
 kyfrev.commande("ajouter", async (contexte) => {
   await charger();
   if (!contexte.texte) {
-    versListe("Sélectionne un mot dans une fiche, en lecture, puis fais un clic droit dessus : « Ajouter au vocabulaire ».");
+    versListe("Sélectionnez un mot dans une fiche, en lecture, puis faites un clic droit dessus : « Ajouter au vocabulaire ».");
   } else {
     const terme = contexte.texte.trim().slice(0, 120);
     ecran = {
@@ -253,7 +253,7 @@ action("creer", async (champs) => {
   const carnet = creerCarnet(String(champs.nom ?? ""));
   await garder();
   ecran = { nom: "carnet", carnet: carnet.id };
-  message = "Carnet créé. Ajoute des mots ici, ou sélectionne un mot dans une fiche : clic droit, « Ajouter au vocabulaire ».";
+  message = "Carnet créé. Ajoutez des mots ici, ou sélectionnez un mot dans une fiche : clic droit, « Ajouter au vocabulaire ».";
 });
 action("ouvrir", (_valeur, d) => {
   ecran = { nom: "carnet", carnet: d.carnet };
@@ -377,7 +377,7 @@ function vueListe() {
       return `
       <div class="carte">
         <h2>${echapper(c.nom)}</h2>
-        <p class="secondaire">${aRevoir ? `<span class="pastille">${aRevoir} à revoir</span> ` : `<span class="pastille">À jour</span> `}${pluriel(c.mots.length, "mot", "mots")}</p>
+        <p class="secondaire">${aRevoir ? `<span class="pastille">${aRevoir} à revoir</span> · ` : `<span class="pastille">À jour</span> · `}${pluriel(c.mots.length, "mot", "mots")}</p>
         <p class="actions">
           <button class="principal" data-action="reviser" data-carnet="${c.id}"${aRevoir ? "" : " disabled"}>Réviser</button>
           <button class="discret" data-action="ouvrir" data-carnet="${c.id}">Ouvrir</button>
@@ -389,7 +389,7 @@ function vueListe() {
     <h1>Vocabulaire</h1>
     ${bandeau()}
     <p class="actions"><button class="principal" data-action="nouveau">Nouveau carnet</button><button class="discret" data-action="blocs">Mots des blocs</button></p>
-    ${cartes || `<p class="secondaire">Aucun carnet pour l'instant. Crée le premier ici, ou sélectionne un mot dans une fiche : clic droit, « Ajouter au vocabulaire ».</p>`}`;
+    ${cartes || `<p class="secondaire">Aucun carnet pour l'instant. Créez le premier ici, ou sélectionnez un mot dans une fiche : clic droit, « Ajouter au vocabulaire ».</p>`}`;
 }
 
 function vueNouveau() {
@@ -451,7 +451,7 @@ function vueBlocs() {
     <p class="actions"><button class="discret" data-action="liste">Retour aux carnets</button></p>
     <h1>Mots des blocs</h1>
     ${blocs.length
-      ? `<p class="secondaire">${pluriel(blocs.length, "mot", "mots")} dans les blocs vocabulaire de tes fiches.</p>
+      ? `<p class="secondaire">${pluriel(blocs.length, "mot", "mots")} dans les blocs vocabulaire de vos fiches.</p>
          <table><thead><tr><th>Terme</th><th>Traduction</th><th>Fiche</th></tr></thead><tbody>${blocs
            .map((p) => `<tr><td>${echapper(p.terme)}</td><td>${echapper(p.traduction)}</td><td>${echapper(p.titre)}</td></tr>`)
            .join("")}</tbody></table>
@@ -459,7 +459,7 @@ function vueBlocs() {
            ${choixDeCarnet(donnees.carnets.at(-1)?.id ?? null)}
            <p class="actions"><button class="principal">Les ajouter au carnet</button></p>
          </form>`
-      : `<p class="secondaire">Aucun bloc vocabulaire dans tes fiches.</p>`}`;
+      : `<p class="secondaire">Aucun bloc vocabulaire dans vos fiches.</p>`}`;
 }
 
 function vueSupprimer() {
@@ -486,7 +486,7 @@ function vueRevision() {
   if (ecran.etat === "question" && carnet.mode === "ecrire") {
     corps = `
       <form data-action="verifier">
-        <label>${carnet.sens === "terme" ? "Traduction" : "Terme"} <input name="reponse" required placeholder="Écris la réponse"></label>
+        <label>${carnet.sens === "terme" ? "Traduction" : "Terme"} <input name="reponse" required placeholder="Écrivez la réponse"></label>
         <p class="actions"><button class="principal">Vérifier</button><button data-action="a-revoir">Je ne sais pas</button></p>
       </form>`;
   } else if (ecran.etat === "question") {
@@ -496,7 +496,7 @@ function vueRevision() {
       <p class="actions"><button class="principal" data-action="su">Je savais</button><button data-action="a-revoir">À revoir</button></p>`;
   } else {
     corps = `<p class="reponse">${echapper(reponse)}</p>
-      <p>${ecran.etat === "juste" ? "<strong>Juste.</strong>" : `<strong>Pas tout à fait :</strong> tu as écrit « ${echapper(ecran.ecrite)} ».`}</p>${origine}
+      <p>${ecran.etat === "juste" ? "<strong>Juste.</strong>" : `<strong>Pas tout à fait :</strong> vous avez écrit « ${echapper(ecran.ecrite)} ».`}</p>${origine}
       <p class="actions"><button class="principal" data-action="suivant">Suivant</button>${ecran.etat === "faux" ? `<button data-action="su">J'avais juste</button>` : ""}</p>`;
   }
   return `

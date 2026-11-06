@@ -67,8 +67,8 @@ public sealed class ExtensionEngineTests
 
         Assert.IsTrue(created.Succeeded, created.Error);
         Assert.HasCount(5, screen.Asks);
-        Assert.AreEqual(new SelectionAsk("Quiz", "Autorité · question 1 : sélectionne la question", "f_1", AllowsTyping: true), screen.Asks[0]);
-        StringAssert.Contains(screen.Asks[1].Prompt, "sélectionne la réponse", StringComparison.Ordinal);
+        Assert.AreEqual(new SelectionAsk("Quiz", "Autorité · question 1 : sélectionnez la question", "f_1", AllowsTyping: true), screen.Asks[0]);
+        StringAssert.Contains(screen.Asks[1].Prompt, "sélectionnez la réponse", StringComparison.Ordinal);
         var edit = TextOf(scene, "quiz");
         StringAssert.Contains(edit, "2 questions prises dans la fiche", StringComparison.Ordinal);
         StringAssert.Contains(edit, "Un pouvoir reconnu", StringComparison.Ordinal);
@@ -113,12 +113,12 @@ public sealed class ExtensionEngineTests
         var none = new Dictionary<string, string>();
 
         var list = TextOf(scene, "quiz");
-        StringAssert.Contains(list, "Trouvés dans tes fiches", StringComparison.Ordinal);
+        StringAssert.Contains(list, "Trouvés dans vos fiches", StringComparison.Ordinal);
         StringAssert.Contains(list, "Une fiche · 1 question", StringComparison.Ordinal);
         Assert.IsTrue(Wait(scene.Engine.ActAsync("quiz", "importer", null, new Dictionary<string, string> { ["fiche"] = "f_1" })).Succeeded);
         var imported = TextOf(scene, "quiz");
         StringAssert.Contains(imported, "Quiz « Une fiche » créé, avec 1 question", StringComparison.Ordinal);
-        Assert.IsFalse(imported.Contains("Trouvés dans tes fiches", StringComparison.Ordinal));
+        Assert.IsFalse(imported.Contains("Trouvés dans vos fiches", StringComparison.Ordinal));
 
         Assert.IsTrue(Wait(scene.Engine.CommandAsync("quiz", "ajouter", new Dictionary<string, string> { ["id"] = "f_1", ["titre"] = "Une fiche", ["texte"] = "Qui règne ?", ["debut"] = "20", ["fin"] = "31" })).Succeeded);
         StringAssert.Contains(TextOf(scene, "quiz"), "Ajouter au quiz", StringComparison.Ordinal);
@@ -129,7 +129,7 @@ public sealed class ExtensionEngineTests
             Assert.IsTrue(added.Succeeded, added.Error);
         }
 
-        StringAssert.Contains(screen.Asks.Single().Prompt, "sélectionne la réponse à « Qui règne ? »", StringComparison.Ordinal);
+        StringAssert.Contains(screen.Asks.Single().Prompt, "sélectionnez la réponse à « Qui règne ? »", StringComparison.Ordinal);
         StringAssert.Contains(TextOf(scene, "quiz"), "Question ajoutée au quiz « Une fiche » (2 questions)", StringComparison.Ordinal);
         using var stored = JsonDocument.Parse(scene.Data.Stored!);
         var question = stored.RootElement.GetProperty("quiz")[0].GetProperty("questions")[1];
@@ -138,7 +138,7 @@ public sealed class ExtensionEngineTests
         Assert.AreEqual(3, stored.RootElement.GetProperty("ancien").GetProperty("sues").GetInt32(), "Le score de la version 1 est gardé à part.");
 
         Assert.IsTrue(Wait(scene.Engine.CommandAsync("quiz", "ajouter", none)).Succeeded);
-        StringAssert.Contains(TextOf(scene, "quiz"), "Sélectionne un texte dans une fiche", StringComparison.Ordinal);
+        StringAssert.Contains(TextOf(scene, "quiz"), "Sélectionnez un texte dans une fiche", StringComparison.Ordinal);
     }
 
     [EngineTest]
@@ -266,6 +266,37 @@ public sealed class ExtensionEngineTests
         StringAssert.Contains(TextOf(scene, "vocabulaire"), "1 mot dans les blocs vocabulaire", StringComparison.Ordinal);
         Assert.IsTrue(Wait(scene.Engine.ActAsync("vocabulaire", "importer", new Dictionary<string, object?> { ["carnet"] = data["carnet"] }, none)).Succeeded);
         StringAssert.Contains(TextOf(scene, "vocabulaire"), "1 mot ajouté depuis les blocs", StringComparison.Ordinal);
+    }
+
+    [EngineTest]
+    public void Bilan_2_tags_a_sheet_in_place_ignores_another_and_counts_those_to_flesh_out()
+    {
+        using var scene = new Scene();
+        Assert.IsTrue(scene.Library.Install(Path.Combine(Official, "bilan")).Succeeded);
+        scene.Data.Text = "Trois petits mots.";
+        var screen = new FakeScreen();
+        scene.Engine.Screen = screen;
+        using var ui = new UiThread();
+
+        var text = TextOf(scene, "bilan");
+        StringAssert.Contains(text, "1 fiche active", StringComparison.Ordinal);
+        StringAssert.Contains(text, "À étoffer", StringComparison.Ordinal);
+        Assert.AreEqual("1 fiche à étoffer", Wait(scene.Engine.CardAsync("bilan"))!.Value.Text);
+
+        var tagged = Wait(scene.Engine.ActAsync("bilan", "etiqueter", "#révision", new Dictionary<string, string> { ["fiche"] = "f_1" }));
+        Assert.IsTrue(tagged.Succeeded, tagged.Error);
+        Assert.AreEqual("etiqueter f_1 révision", scene.Data.Writes.Single(), "Une étiquette s'ajoute sur place, par la permission « fiches:creation ».");
+        StringAssert.Contains(TextOf(scene, "bilan"), "Étiquette « révision » ajoutée à « Une fiche »", StringComparison.Ordinal);
+
+        Assert.IsTrue(Wait(scene.Engine.ActAsync("bilan", "ouvrir", null, new Dictionary<string, string> { ["fiche"] = "f_1" })).Succeeded);
+        Assert.AreEqual("f_1 - -", screen.Opened.Single());
+
+        Wait(scene.Engine.ActAsync("bilan", "ignorer", null, new Dictionary<string, string> { ["fiche"] = "f_1" }));
+        StringAssert.Contains(TextOf(scene, "bilan"), "« Une fiche » est ignorée", StringComparison.Ordinal);
+        Assert.IsNull(Wait(scene.Engine.CardAsync("bilan")), "Une fiche ignorée n'est plus à étoffer.");
+        using var stored = JsonDocument.Parse(scene.Data.Stored!);
+        Assert.AreEqual("f_1", stored.RootElement.GetProperty("ignorees")[0].GetString());
+        Assert.AreEqual(1, stored.RootElement.GetProperty("semaines").GetArrayLength(), "Le bilan de la semaine est gardé.");
     }
 
     [EngineTest]
