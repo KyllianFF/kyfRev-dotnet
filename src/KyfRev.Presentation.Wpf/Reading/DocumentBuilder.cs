@@ -70,7 +70,7 @@ internal sealed class DocumentBuilder
     private const double ColumnMinimum = 48;
     private const double ColumnMaximum = 360;
     private const double CellRoom = 20;
-    private const double StarUnit = 100;
+    internal const double StarUnit = 100;
 
     /// <summary>L'encre d'un texte qu'on ne fait que mesurer : elle n'est jamais dessinée.</summary>
     private static readonly SolidColorBrush MeasureInk = FrozenInk();
@@ -720,7 +720,7 @@ internal sealed class DocumentBuilder
         var groups = element.Children.OfType<RenderElement>().ToList();
         var columns = groups.SelectMany(group => group.Children.OfType<RenderElement>()).Max(row => row.Children.OfType<RenderElement>().Count());
         var count = groups.Sum(group => group.Children.OfType<RenderElement>().Count());
-        var natural = NaturalWidths(groups, columns);
+        var (natural, minimum) = ColumnWidths(groups, columns);
         // Des proportions, jamais des pixels : une fenêtre étroite resserre le tableau sans le faire déborder. WPF les veut
         // petites : de grandes valeurs d'étoile défont la mise en page du tableau.
         foreach (var width in natural)
@@ -730,6 +730,11 @@ internal sealed class DocumentBuilder
         // Ajusté à son contenu : une colonne élastique prend le reste de la ligne. Elle a des cases vides, sans trait ni
         // fond : une colonne sans case n'aurait aucune largeur.
         var rest = look.FullWidth ? 0 : TableBudget - natural.Sum();
+        if (look.FullWidth)
+        {
+            // Toute la largeur du texte : la vue la partage selon sa largeur réelle, voir TableSizing.
+            table.Tag = new TableSizing(minimum, natural);
+        }
         if (rest > 0)
         {
             table.Columns.Add(new TableColumn { Width = new GridLength(rest / StarUnit, GridUnitType.Star) });
@@ -766,22 +771,37 @@ internal sealed class DocumentBuilder
         return ink;
     }
 
-    /// <summary>La largeur de chaque colonne sur une seule ligne, sans dépasser <see cref="ColumnMaximum"/> : la part qu'elle demande.</summary>
-    private double[] NaturalWidths(List<RenderElement> groups, int columns)
+    /// <summary>
+    /// Pour chaque colonne, la largeur de sa plus longue case sur une seule ligne, sans dépasser <see cref="ColumnMaximum"/> : la
+    /// part qu'elle demande ; et celle de son plus long mot : en deçà, un mot se couperait.
+    /// </summary>
+    private (double[] Natural, double[] Minimum) ColumnWidths(List<RenderElement> groups, int columns)
     {
         var typeface = new Typeface(_comfort.Family ?? new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.SemiBold, FontStretches.Normal);
-        var widths = Enumerable.Repeat(ColumnMinimum, columns).ToArray();
+        var natural = Enumerable.Repeat(ColumnMinimum, columns).ToArray();
+        var minimum = Enumerable.Repeat(ColumnMinimum, columns).ToArray();
+        var words = new Dictionary<string, double>(StringComparer.Ordinal);
+        double Measure(string text) => new FormattedText(text, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, typeface, _comfort.Size, MeasureInk, 1.0).WidthIncludingTrailingWhitespace;
         foreach (var row in groups.SelectMany(group => group.Children.OfType<RenderElement>()))
         {
             var column = 0;
             foreach (var cell in row.Children.OfType<RenderElement>())
             {
-                var text = new FormattedText(cell.TextContent(), CultureInfo.CurrentCulture, FlowDirection.LeftToRight, typeface, _comfort.Size, MeasureInk, 1.0);
-                widths[column] = Math.Max(widths[column], Math.Min(ColumnMaximum, text.WidthIncludingTrailingWhitespace + CellRoom));
+                var content = cell.TextContent();
+                natural[column] = Math.Max(natural[column], Math.Min(ColumnMaximum, Measure(content) + CellRoom));
+                foreach (var word in content.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    if (!words.TryGetValue(word, out var width))
+                    {
+                        width = Measure(word);
+                        words[word] = width;
+                    }
+                    minimum[column] = Math.Max(minimum[column], Math.Min(ColumnMaximum, width + CellRoom));
+                }
                 column++;
             }
         }
-        return widths;
+        return (natural, minimum);
     }
 
     private TableCell BuildCell(RenderElement cell, TablePlace place)
