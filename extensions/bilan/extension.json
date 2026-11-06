@@ -1,0 +1,13 @@
+{
+  "api": 2,
+  "id": "bilan",
+  "nom": "Bilan du coffre",
+  "version": "2.0.0",
+  "description": "Le point sur vos fiches, pour les améliorer : celles à étoffer, sans étiquette ou sans intertitre, chacune s'ouvre d'un clic et une étiquette s'ajoute sur place. Une fiche peut être ignorée. L'évolution semaine après semaine, et un encart sur Aujourd'hui. Il change des étiquettes, jamais le texte.",
+  "auteur": "kyfRev",
+  "icone": "barres.svg",
+  "permissions": ["fiches:lecture", "fiches:creation", "stockage"],
+  "vue": { "titre": "Bilan du coffre" },
+  "commandes": [{ "id": "bilan", "titre": "Faire le bilan du coffre" }],
+  "encart": { "titre": "Bilan du coffre" }
+}

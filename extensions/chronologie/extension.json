@@ -1,0 +1,22 @@
+{
+  "api": 2,
+  "id": "chronologie",
+  "nom": "Chronologie",
+  "version": "2.0.0",
+  "description": "Des frises que vous composez depuis vos fiches : « Ajouter à la frise » sur un texte sélectionné, avec la date déjà proposée, ou les dates d'une fiche à cocher. Chaque date rouvre son passage, et un jeu demande de les remettre dans l'ordre. Les blocs ```chronologie restent lisibles.",
+  "auteur": "kyfRev",
+  "icone": "frise.svg",
+  "permissions": ["fiches:lecture", "selection", "stockage"],
+  "blocs": ["chronologie"],
+  "vue": { "titre": "Chronologie" },
+  "commandes": [
+    { "id": "nouvelle", "titre": "Nouvelle frise" },
+    { "id": "ajouter", "titre": "Ajouter à la frise" },
+    { "id": "extraire", "titre": "Extraire les dates de cette fiche" }
+  ],
+  "menus": {
+    "selection": [{ "commande": "ajouter", "titre": "Ajouter à la frise" }],
+    "fiche": [{ "commande": "extraire", "titre": "Extraire les dates de cette fiche" }]
+  },
+  "encart": { "titre": "Ce jour-là" }
+}

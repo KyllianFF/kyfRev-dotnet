@@ -39,6 +39,25 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   sa consigne au-dessus de la fiche, et l'on prend la sélection, l'écrit à la main s'il n'y est pas, passe ou termine ; le temps ne
   court pas pendant qu'on répond. Elle peut aussi ouvrir une fiche à un passage, et ajouter ses entrées au clic droit d'un texte
   sélectionné, avec la permission « selection ».
+- Extension Quiz, version 2 (dossier `extensions/quiz`) : on crée un quiz depuis son menu, Ctrl+K ou le clic droit d'une fiche, puis
+  on prend chaque question et sa réponse dans la fiche, à la chaîne, ou on les écrit à la main. Un texte sélectionné en lecture
+  s'ajoute au quiz par le clic droit. En partie, les questions ratées reviennent en premier, « Voir dans la fiche » rouvre le
+  passage d'origine, et le menu comme « Aujourd'hui » disent combien sont à revoir. Les blocs ` ```quiz ` restent lisibles et
+  deviennent des quiz en un clic ; le score de la version 1 est gardé.
+- Extension Chronologie, version 2 (dossier `extensions/chronologie`) : des frises nommées. Un texte sélectionné s'y ajoute par le
+  clic droit, sa date déjà proposée ; le clic droit d'une fiche en extrait les dates, à cocher. Les dates se rangent d'elles-mêmes,
+  avant J.-C. comprises, chacune rouvre son passage, et « Remettre dans l'ordre » en fait un jeu. Sur « Aujourd'hui », « Ce
+  jour-là » rappelle un événement d'un jour comme celui-ci. Les blocs ` ```chronologie ` restent lisibles et font une frise en un
+  clic.
+- Extension Vocabulaire, version 2 (dossier `extensions/vocabulaire`) : un carnet par langue. Un mot sélectionné s'y ajoute par le
+  clic droit, sa traduction demandée et sa phrase d'origine gardée. Les mots reviennent à J1, J3, J7, J14 et J30, comme les fiches,
+  un mot raté le lendemain ; la réponse se dévoile ou s'écrit (sans compter casse, accents ni parenthèses), dans un sens ou dans
+  l'autre. Le menu et « Aujourd'hui » comptent les mots à revoir. Les mots des blocs ` ```vocabulaire ` entrent dans un carnet en
+  un clic, et les résultats de la version 1 sont gardés.
+- Extension Bilan du coffre, version 2 (dossier `extensions/bilan`) : il aide à corriger, plus seulement à constater. Chaque fiche
+  à étoffer, sans étiquette ou sans intertitre s'ouvre d'un clic ; une étiquette s'ajoute sur place ; une fiche peut être ignorée,
+  puis reprise. Le bilan de chaque semaine est gardé pour en montrer l'évolution, et « Aujourd'hui » dit combien de fiches sont à
+  étoffer. Il change des étiquettes, jamais le texte.
 - Extensions : avec la permission « fiches:creation », une extension crée des fiches (titre, dossier, texte, étiquettes) et change
   leurs étiquettes ; avec « fiches:ecriture », elle remplace leur texte, l'en-tête gardé. Aucune ne peut supprimer une fiche.
   Chaque texte remplacé reste dans les versions de la fiche, d'où il se remet, et chaque écriture est notée au journal de
