@@ -2,7 +2,6 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -49,13 +48,16 @@ public sealed partial class ShellWindow : Window
         shell.PropertyChanged += OnShellChanged;
         // MouseUp remonte jusqu'à la liste, même quand l'élément cliqué l'a déjà traité.
         PaletteResults.AddHandler(MouseUpEvent, new MouseButtonEventHandler(OnPaletteClick), handledEventsToo: true);
-        MoreMenu.AddHandler(MenuItem.ClickEvent, new RoutedEventHandler(OnOverflowClick));
         Root.SizeChanged += (_, e) => shell.WindowWidth = e.NewSize.Width;
         PreviewMouseDown += OnClickAnywhere;
         Deactivated += (_, _) => _shell.ClosePalette();
         Loaded += (_, _) => ShowIcon();
         DpiChanged += (_, _) => ShowIcon();
-        LocationChanged += (_, _) => FitFrame();
+        LocationChanged += (_, _) =>
+        {
+            FitFrame();
+            FitScreen();
+        };
         Loaded += (_, _) => FocusNavigation();
     }
 
@@ -65,6 +67,7 @@ public sealed partial class ShellWindow : Window
         // Après la base : ce filtre passe donc avant celui du cadre, qui répondrait à sa place.
         base.OnSourceInitialized(e);
         HwndSource.FromHwnd(new WindowInteropHelper(this).Handle)?.AddHook(OnWindowMessage);
+        FitScreen();
     }
 
     /// <inheritdoc/>
@@ -84,6 +87,22 @@ public sealed partial class ShellWindow : Window
     {
         base.OnDpiChanged(oldDpi, newDpi);
         FitFrame();
+        FitScreen();
+    }
+
+    /// <summary>
+    /// Donne à la coquille l'espace de travail de l'écran où se trouve la fenêtre, en pixels indépendants : le zoom ne dépasse pas
+    /// ce que cet écran peut tenir, la fenêtre gardant ses 600 pixels vus.
+    /// </summary>
+    internal void FitScreen()
+    {
+        var area = _shell.Appearance.WorkArea(new WindowInteropHelper(this).Handle);
+        if (area.Width <= 0 || area.Height <= 0)
+        {
+            return;
+        }
+        var dpi = VisualTreeHelper.GetDpi(this);
+        _shell.FitScreen(area.Width / dpi.DpiScaleX, area.Height / dpi.DpiScaleY);
     }
 
     /// <summary>
@@ -169,11 +188,10 @@ public sealed partial class ShellWindow : Window
 
     private void OnCloseClick(object sender, RoutedEventArgs e) => SystemCommands.CloseWindow(this);
 
-    /// <summary>Met le focus sur l'entrée choisie du menu (sur les onglets en fenêtre étroite).</summary>
+    /// <summary>Met le focus sur l'entrée choisie du menu.</summary>
     internal void FocusNavigation()
     {
-        var list = _shell.Layout == NavigationLayout.Tabs ? TabNavigation
-            : _shell.SelectedSecondary is not null ? SecondaryNavigation : MainNavigation;
+        var list = _shell.SelectedSecondary is not null ? SecondaryNavigation : MainNavigation;
         if (list.ItemContainerGenerator.ContainerFromItem(list.SelectedItem) is ListBoxItem item)
         {
             item.Focus();
@@ -245,21 +263,6 @@ public sealed partial class ShellWindow : Window
         Dispatcher.BeginInvoke(DispatcherPriority.Loaded, FitFrame);
     }
 
-    /// <summary>« Plus » : les autres vues, dans un menu ouvert au-dessus de l'onglet.</summary>
-    private void OnMoreClick(object sender, RoutedEventArgs e)
-    {
-        MoreMenu.PlacementTarget = MoreButton;
-        MoreMenu.Placement = PlacementMode.Top;
-        MoreMenu.IsOpen = true;
-    }
-
-    private void OnOverflowClick(object sender, RoutedEventArgs e)
-    {
-        if (e.OriginalSource is MenuItem { DataContext: NavigationItem item })
-        {
-            _shell.Navigate(item);
-        }
-    }
 
     /// <summary>
     /// La liste se place sous le champ de la barre de titre, aussi large que lui (360 pixels au moins), sans sortir de la fenêtre.

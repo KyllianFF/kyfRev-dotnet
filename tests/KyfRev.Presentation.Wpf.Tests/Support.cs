@@ -44,6 +44,10 @@ internal sealed class FakeChrome : IWindowChrome
     }
 
     public WindowOverhang MaximizedOverhang(nint windowHandle) => Overhang;
+
+    public ScreenArea Work { get; set; }
+
+    public ScreenArea WorkArea(nint windowHandle) => Work;
 }
 
 /// <summary>Une coquille assemblée comme dans l'application, avec des préférences de Windows simulées.</summary>

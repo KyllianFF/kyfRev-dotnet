@@ -57,9 +57,9 @@ public sealed class MachineSettings
         };
         shell.PropertyChanged += (_, e) =>
         {
-            if (e is PropertyChangedEventArgs { PropertyName: nameof(ShellViewModel.Zoom) })
+            if (e is PropertyChangedEventArgs { PropertyName: nameof(ShellViewModel.ChosenZoom) })
             {
-                Update(preferences => preferences with { Zoom = shell.Zoom });
+                Update(preferences => preferences with { Zoom = shell.ChosenZoom });
             }
         };
     }

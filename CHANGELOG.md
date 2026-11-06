@@ -411,6 +411,9 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Modifié
 
+- Fenêtre : 600 × 540 au minimum à la taille normale. Le minimum grandit avec le zoom de l'interface, qui s'arrête à ce que
+  l'écran peut tenir et revient au zoom choisi sur un écran plus grand. La disposition à onglets en bas, faite pour les
+  fenêtres plus étroites, disparaît : la colonne d'icônes est la plus petite.
 - L'application est compilée pour Windows x64 (`win-x64`), comme elle est livrée ; les
   bibliothèques restent indépendantes de la plateforme.
 - Un dialogue ou une notification qui se ferme de lui-même garde la liaison de son ouverture :

@@ -32,6 +32,7 @@ public sealed partial class ShellViewModel : ObservableObject
     private IReadOnlyList<PaletteEntry> _commands;
     private IReadOnlyList<PaletteEntry> _extensionCommands = [];
     private IReadOnlyList<NavigationItem> _moduleEntries = [];
+    private double _screenHeight = double.PositiveInfinity;
 
     /// <summary>Un coffre est ouvert : les pages ouvertes sont prévenues (<see cref="INavigationAware"/>).</summary>
     private bool _workspace;
@@ -66,6 +67,7 @@ public sealed partial class ShellViewModel : ObservableObject
             new("Ctrl+moins", ShellText.ShortcutZoomOut),
             new("Ctrl+0", ShellText.ShortcutZoomReset),
         ];
+        ChosenZoom = 1.0;
         Zoom = 1.0;
         WindowWidth = ShellLayout.SidebarMinimum;
         _commandsWithoutVault = OtherCommands();
@@ -97,28 +99,13 @@ public sealed partial class ShellViewModel : ObservableObject
     [ObservableProperty]
     public partial IReadOnlyList<NavigationItem> SecondaryNavigation { get; private set; }
 
-    /// <summary>Les premières vues, en onglets quand la fenêtre est étroite.</summary>
-    [ObservableProperty]
-    public partial IReadOnlyList<NavigationItem> TabNavigation { get; private set; }
-
-    /// <summary>Les autres vues, sous « Plus » quand la fenêtre est étroite.</summary>
-    [ObservableProperty]
-    public partial IReadOnlyList<NavigationItem> OverflowNavigation { get; private set; }
-
     /// <summary>Largeur de la fenêtre, en pixels indépendants, avant zoom.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(Layout))]
     public partial double WindowWidth { get; set; }
 
-    /// <summary>Disposition de la navigation : onglets, colonne d'icônes ou barre latérale.</summary>
+    /// <summary>Disposition de la navigation : colonne d'icônes ou barre latérale.</summary>
     public NavigationLayout Layout => ShellLayout.For(WindowWidth, Zoom);
-
-    /// <summary>Onglet choisi ; rien quand la vue ouverte est rangée sous « Plus ».</summary>
-    [ObservableProperty]
-    public partial NavigationItem? SelectedTab { get; set; }
-
-    /// <summary>La vue ouverte est rangée sous « Plus ».</summary>
-    public bool IsOverflowActive => OverflowNavigation.Contains(Current);
 
     /// <summary>La galerie des composants, ouverte depuis la recherche.</summary>
     public NavigationItem Gallery { get; }
@@ -162,11 +149,26 @@ public sealed partial class ShellViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsMenuVisible))]
     public partial bool IsFocusMode { get; set; }
 
-    /// <summary>Zoom de l'interface (1 : taille normale).</summary>
+    /// <summary>Zoom de l'interface (1 : taille normale) : celui choisi, tant que l'écran de la fenêtre peut le tenir.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ZoomLabel))]
     [NotifyPropertyChangedFor(nameof(Layout))]
+    [NotifyPropertyChangedFor(nameof(MinimumWindowWidth))]
+    [NotifyPropertyChangedFor(nameof(MinimumWindowHeight))]
     public partial double Zoom { get; private set; }
+
+    /// <summary>Le zoom choisi, celui qu'on retient : un écran plus petit le réduit sans le faire oublier.</summary>
+    [ObservableProperty]
+    public partial double ChosenZoom { get; private set; }
+
+    /// <summary>Le plus fort zoom que l'écran de la fenêtre peut tenir, la fenêtre gardant sa largeur minimale.</summary>
+    public double ZoomLimit { get; private set; } = MaximumZoom;
+
+    /// <summary>La largeur minimale de la fenêtre : <see cref="ShellLayout.MinimumWidth"/> pixels vus, quel que soit le zoom.</summary>
+    public double MinimumWindowWidth => ShellLayout.MinimumWidth * Zoom;
+
+    /// <summary>La hauteur minimale de la fenêtre : <see cref="ShellLayout.MinimumHeight"/> pixels vus, jamais plus que l'écran.</summary>
+    public double MinimumWindowHeight => Math.Min(ShellLayout.MinimumHeight * Zoom, _screenHeight);
 
     /// <summary>« Zoom : 120 % ».</summary>
     public string ZoomLabel => ShellText.Zoom((int)Math.Round(Zoom * 100));
@@ -333,19 +335,49 @@ public sealed partial class ShellViewModel : ObservableObject
     public void ExitFullScreen() => IsFullScreen = false;
 
     /// <summary>Donne cette taille à l'interface, dans les limites du zoom.</summary>
-    public void SetZoom(double zoom) => Zoom = Math.Clamp(zoom, MinimumZoom, MaximumZoom);
+    public void SetZoom(double zoom) => Choose(Math.Clamp(zoom, MinimumZoom, MaximumZoom));
 
     /// <summary>Agrandit l'interface d'un pas.</summary>
     [RelayCommand]
-    public void ZoomIn() => Zoom = Math.Min(MaximumZoom, Math.Round(Zoom + ZoomStep, 1));
+    public void ZoomIn()
+    {
+        // Arrivé à ce que l'écran tient, rien ne bouge : le zoom choisi n'est pas oublié pour autant.
+        var next = Math.Min(Math.Min(MaximumZoom, ZoomLimit), Math.Round(Zoom + ZoomStep, 1));
+        if (next > Zoom)
+        {
+            Choose(next);
+        }
+    }
 
     /// <summary>Réduit l'interface d'un pas.</summary>
     [RelayCommand]
-    public void ZoomOut() => Zoom = Math.Max(MinimumZoom, Math.Round(Zoom - ZoomStep, 1));
+    public void ZoomOut() => Choose(Math.Max(MinimumZoom, Math.Round(Zoom - ZoomStep, 1)));
 
     /// <summary>Revient à la taille normale.</summary>
     [RelayCommand]
-    public void ResetZoom() => Zoom = 1.0;
+    public void ResetZoom() => Choose(1.0);
+
+    /// <summary>
+    /// L'espace de travail de l'écran où se trouve la fenêtre, en pixels indépendants. Le zoom s'arrête là où la fenêtre ne tiendrait
+    /// plus ses <see cref="ShellLayout.MinimumWidth"/> pixels vus, et revient au zoom choisi sur un écran assez grand.
+    /// </summary>
+    public void FitScreen(double width, double height)
+    {
+        if (width <= 0 || height <= 0)
+        {
+            return;
+        }
+        ZoomLimit = Math.Clamp(Math.Floor((width / ShellLayout.MinimumWidth * 10) + 1e-9) / 10, MinimumZoom, MaximumZoom);
+        _screenHeight = height;
+        Zoom = Math.Min(ChosenZoom, ZoomLimit);
+        OnPropertyChanged(nameof(MinimumWindowHeight));
+    }
+
+    private void Choose(double zoom)
+    {
+        ChosenZoom = zoom;
+        Zoom = Math.Min(zoom, ZoomLimit);
+    }
 
     /// <summary>Affiche l'aide des raccourcis.</summary>
     [RelayCommand]
@@ -369,32 +401,20 @@ public sealed partial class ShellViewModel : ObservableObject
 
     partial void OnCurrentChanged(NavigationItem value)
     {
-        SelectedTab = TabNavigation.Contains(value) ? value : null;
-        OnPropertyChanged(nameof(IsOverflowActive));
         if (_workspace)
         {
             Activate(value);
         }
     }
 
-    partial void OnSelectedTabChanged(NavigationItem? value)
-    {
-        if (value is not null)
-        {
-            Navigate(value);
-        }
-    }
-
     private static void Activate(NavigationItem item) => (item.Page as INavigationAware)?.OnNavigatedTo();
 
-    [MemberNotNull(nameof(MainNavigation), nameof(SecondaryNavigation), nameof(TabNavigation), nameof(OverflowNavigation), nameof(_commands))]
+    [MemberNotNull(nameof(MainNavigation), nameof(SecondaryNavigation), nameof(_commands))]
     private void ArrangeMenu()
     {
         var items = _core.Concat(_moduleEntries).OrderBy(item => item.Order).ThenBy(item => item.Label, StringComparer.CurrentCulture).ToList();
         MainNavigation = [.. items.Where(item => !item.IsSecondary)];
         SecondaryNavigation = [.. items.Where(item => item.IsSecondary)];
-        TabNavigation = [.. MainNavigation.Take(ShellLayout.TabCount)];
-        OverflowNavigation = [.. MainNavigation.Skip(ShellLayout.TabCount), .. SecondaryNavigation];
         _commands = [.. NavigationCommands(), .. _extensionCommands, .. _commandsWithoutVault];
     }
 

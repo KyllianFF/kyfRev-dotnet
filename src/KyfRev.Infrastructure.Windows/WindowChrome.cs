@@ -39,6 +39,17 @@ public sealed partial class WindowChrome : IWindowChrome
             Math.Max(0, window.Bottom - work.Bottom));
     }
 
+    /// <inheritdoc/>
+    public ScreenArea WorkArea(nint windowHandle)
+    {
+        var monitor = new MonitorInfo { Size = Marshal.SizeOf<MonitorInfo>() };
+        if (windowHandle == 0 || !GetMonitorInfoW(MonitorFromWindow(windowHandle, NearestMonitor), ref monitor))
+        {
+            return default;
+        }
+        return new ScreenArea(monitor.Work.Right - monitor.Work.Left, monitor.Work.Bottom - monitor.Work.Top);
+    }
+
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [LibraryImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
