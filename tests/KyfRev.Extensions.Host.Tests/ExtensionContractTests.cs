@@ -341,5 +341,13 @@ public sealed class ExtensionContractTests
         public Task<Outcome<string?>> StoredAsync(string extension) => throw new InvalidOperationException("rien ne doit être demandé");
 
         public Task<Outcome<Done>> StoreAsync(string extension, string json) => throw new InvalidOperationException("rien ne doit être demandé");
+
+        public Task<Outcome<string>> CreateSheetAsync(string extension, ExtensionNewSheet sheet) => throw new InvalidOperationException("rien ne doit être demandé");
+
+        public Task<Outcome<IReadOnlyList<string>>> SetTagsAsync(string extension, string id, IReadOnlyList<string> tags) => throw new InvalidOperationException("rien ne doit être demandé");
+
+        public Task<Outcome<Done>> WriteSheetAsync(string extension, string id, string text) => throw new InvalidOperationException("rien ne doit être demandé");
+
+        public Task<Outcome<IReadOnlyList<ExtensionJournalEntry>>> JournalAsync(string extension) => throw new InvalidOperationException("rien ne doit être demandé");
     }
 }

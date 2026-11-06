@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Media;
+using KyfRev.Application;
 using KyfRev.DesignSystem.Controls;
 using KyfRev.Extensions.Host;
 using KyfRev.Presentation.Wpf.Pages;
@@ -16,10 +17,109 @@ public sealed class ExtensionSettingsTests
     private static string Published => Path.Combine(Repository.Root, "tests", "fixtures", "extensions");
 
     [TestMethod]
-    public void The_card_needs_its_library_and_its_picker()
+    public void The_card_needs_its_library_its_picker_and_its_journal()
     {
         Assert.ThrowsExactly<ArgumentNullException>(() => new ExtensionSettingsViewModel(null!, new FakePicker()));
         Assert.ThrowsExactly<ArgumentNullException>(() => new ExtensionSettingsViewModel(new ExtensionLibrary("x", TimeProvider.System), null!));
+        Assert.ThrowsExactly<ArgumentNullException>(() => new ExtensionSettingsViewModel(new ExtensionLibrary("x", TimeProvider.System), new FakePicker(), null!));
+    }
+
+    [STATestMethod]
+    public void The_card_shows_what_the_extensions_wrote_most_recent_first()
+    {
+        using var ui = new UiThread();
+        var at = new DateTimeOffset(2026, 11, 6, 1, 0, 0, TimeSpan.Zero);
+        var journals = new Dictionary<string, IReadOnlyList<ExtensionJournalEntry>>
+        {
+            ["quiz"] =
+            [
+                new(at.AddMinutes(2), ExtensionJournalEntry.Writing, "f_1", "L'autorité", "10 → 20 caractères"),
+                new(at, ExtensionJournalEntry.Creation, "f_1", "L'autorité", "Philosophie"),
+            ],
+            ["bilan"] =
+            [
+                new(at.AddMinutes(1), ExtensionJournalEntry.Tagging, "f_2", "La mitose", "bio, cours"),
+                new(at.AddMinutes(-1), ExtensionJournalEntry.Tagging, "f_2", "La mitose", null),
+                new(at.AddMinutes(-2), ExtensionJournalEntry.Creation, "f_2", "La mitose", null),
+                ExtensionJournalEntry.UnreadableLine("{ cassé"),
+            ],
+        };
+        using var scene = new Scene(id => journals.TryGetValue(id, out var entries) ? Outcome.Of(entries) : Outcome.Refused<IReadOnlyList<ExtensionJournalEntry>>("Aucun coffre n'est ouvert."));
+        scene.Library.Install(Path.Combine(Published, "quiz"));
+        scene.Library.Install(Path.Combine(Published, "bilan"));
+        scene.Library.Install(scene.Write("muette", """{"id":"muette","nom":"Muette","version":"1","blocs":["muette"]}"""));
+
+        scene.Page.Reload();
+
+        Assert.IsTrue(scene.Page.HasJournal);
+        Assert.AreEqual(
+            """
+            « L'autorité » : texte remplacé (10 → 20 caractères) ; l'ancien est dans ses versions
+            « La mitose » : étiquettes changées (bio, cours)
+            « L'autorité » : fiche créée dans Philosophie
+            « La mitose » : étiquettes retirées
+            « La mitose » : fiche créée
+            Ligne illisible du journal, laissée telle quelle : { cassé
+            """,
+            string.Join(Environment.NewLine, scene.Page.Journal.Select(row => row.Text)).ReplaceLineEndings("\n"));
+        StringAssert.StartsWith(scene.Page.Journal[0].When, "Quiz, le ", StringComparison.Ordinal);
+        StringAssert.StartsWith(scene.Page.Journal[1].When, "Bilan du coffre, le ", StringComparison.Ordinal);
+        Assert.AreEqual($"{scene.Page.Journal[0].Text}. {scene.Page.Journal[0].When}", scene.Page.Journal[0].Spoken);
+        Assert.AreEqual("Bilan du coffre", scene.Page.Journal[^1].When, "Une ligne illisible n'a pas de date.");
+    }
+
+    [STATestMethod]
+    public void The_card_shows_the_last_thirty_writings_and_none_without_a_journal()
+    {
+        using var ui = new UiThread();
+        var at = new DateTimeOffset(2026, 11, 6, 1, 0, 0, TimeSpan.Zero);
+        IReadOnlyList<ExtensionJournalEntry> many = [.. Enumerable.Range(0, 40).Select(n => new ExtensionJournalEntry(at.AddMinutes(-n), ExtensionJournalEntry.Writing, "f_1", $"Fiche {n}", "1 → 2 caractères"))];
+        using var scene = new Scene(_ => Outcome.Of(many));
+        scene.Library.Install(Path.Combine(Published, "quiz"));
+
+        scene.Page.Reload();
+
+        Assert.HasCount(ExtensionSettingsViewModel.JournalShown, scene.Page.Journal);
+        StringAssert.Contains(scene.Page.Journal[^1].Text, "Fiche 29", StringComparison.Ordinal);
+
+        using var without = new Scene();
+        without.Library.Install(Path.Combine(Published, "quiz"));
+        without.Page.Reload();
+        Assert.IsFalse(without.Page.HasJournal);
+    }
+
+    [STATestMethod]
+    public void The_journal_is_under_the_list_of_extensions()
+    {
+        using var ui = new UiThread();
+        IReadOnlyList<ExtensionJournalEntry> one = [new(new DateTimeOffset(2026, 11, 6, 1, 0, 0, TimeSpan.Zero), ExtensionJournalEntry.Creation, "f_1", "L'autorité", null)];
+        using var scene = new Scene(_ => Outcome.Of(one));
+        using var vault = new ReadingVault("Texte", passage: false);
+        scene.Library.Install(Path.Combine(Published, "quiz"));
+        var test = new TestShell();
+        var model = new ModulesSettingsViewModel(vault.App.Settings, _ => { }, scene.Page);
+        var page = new ModulesSettingsPage { DataContext = model };
+        var host = new Border { Width = 360, Height = 1400, Child = page };
+        host.Resources.MergedDictionaries.Add(test.Design.Dictionary);
+        var canvas = new Canvas();
+        canvas.Children.Add(host);
+        var window = new Window { Content = canvas, Left = -10000, Top = -10000, Width = 500, Height = 1500, ShowActivated = false };
+        window.Show();
+        TestShell.Flush();
+        try
+        {
+            model.OnNavigatedTo();
+            TestShell.Flush();
+
+            Assert.AreEqual(Visibility.Visible, page.ExtensionJournal.Visibility);
+            Assert.AreEqual(1, page.ExtensionJournalList.Items.Count);
+            Assert.IsTrue(page.ExtensionJournal.TranslatePoint(default, page.ExtensionsList).Y >= page.ExtensionsList.ActualHeight, "Le journal vient après la liste.");
+            Assert.IsTrue(page.ExtensionJournal.ActualWidth <= 360, "Le journal tient dans une carte étroite.");
+        }
+        finally
+        {
+            window.Close();
+        }
     }
 
     [STATestMethod]
@@ -460,12 +560,12 @@ public sealed class ExtensionSettingsTests
     /// <summary>La carte, sur une bibliothèque d'essai.</summary>
     private sealed class Scene : IDisposable
     {
-        public Scene()
+        public Scene(Func<string, Outcome<IReadOnlyList<ExtensionJournalEntry>>>? journal = null)
         {
             Root = Path.Combine(Path.GetTempPath(), "kyfrev-extensions-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(Root);
             Library = new ExtensionLibrary(Folder, TimeProvider.System);
-            Page = new ExtensionSettingsViewModel(Library, Picker);
+            Page = journal is null ? new ExtensionSettingsViewModel(Library, Picker) : new ExtensionSettingsViewModel(Library, Picker, journal);
         }
 
         public string Root { get; }

@@ -1,5 +1,6 @@
 using KyfRev.Application.Text;
 using KyfRev.Domain.Calendar;
+using KyfRev.Infrastructure.Vault.Analysis;
 using KyfRev.Infrastructure.Vault.Format;
 using KyfRev.Infrastructure.Vault.Json;
 using KyfRev.Infrastructure.Vault.Quotes;
@@ -58,6 +59,47 @@ public sealed class VaultComplementsTests
         folder.Write(".suivi/extensions/latin.json", "x");
         File.WriteAllBytes(folder.PathOf(".suivi/extensions/latin.json"), [0x22, 0xE9, 0x22]);
         Assert.AreEqual(VaultErrorKind.Io, Assert.ThrowsExactly<VaultException>(() => vault.ExtensionData("latin")).Kind);
+    }
+
+    [TestMethod]
+    public void An_extension_journal_keeps_one_json_line_per_writing_beside_its_data()
+    {
+        using var folder = TemporaryVault.Empty();
+        using var vault = VaultSession.Initialize(folder.Root, Now);
+        Assert.IsNull(vault.ExtensionJournal("quiz"));
+
+        vault.AppendExtensionJournal("quiz", "{\"n\":1}");
+        vault.AppendExtensionJournal("quiz", "{\"n\":2}");
+
+        Assert.AreEqual("{\"n\":1}\n{\"n\":2}\n", vault.ExtensionJournal("quiz"));
+        Assert.AreEqual("{\"n\":1}\n{\"n\":2}\n", File.ReadAllText(folder.PathOf(".suivi/extensions/journaux/quiz.jsonl")));
+        Assert.Contains("plusieurs lignes", Refused(() => vault.AppendExtensionJournal("quiz", "{\n}")));
+        Assert.Contains("4 Ko", Refused(() => vault.AppendExtensionJournal("quiz", $"\"{new string('x', VaultSession.MaxJournalLineBytes)}\"")));
+        Assert.Contains("illisible", Refused(() => vault.AppendExtensionJournal("quiz", "{ cassé")));
+        Assert.AreEqual(VaultErrorKind.InvalidPath, Assert.ThrowsExactly<VaultException>(() => vault.AppendExtensionJournal("../dehors", "{}")).Kind);
+        Assert.AreEqual(VaultErrorKind.InvalidPath, Assert.ThrowsExactly<VaultException>(() => vault.ExtensionJournal("../dehors")).Kind);
+        Assert.AreEqual(2, vault.ExtensionJournal("quiz")!.Split('\n', StringSplitOptions.RemoveEmptyEntries).Length);
+
+        // Le dossier des journaux n'est pas un fichier de données inattendu pour la santé du coffre.
+        Assert.IsFalse(VaultInspector.Inspect(folder.Root).Findings.Any(finding => finding.Path?.Contains("journaux", StringComparison.Ordinal) == true));
+    }
+
+    [TestMethod]
+    public void An_extension_journal_forgets_its_oldest_lines()
+    {
+        using var folder = TemporaryVault.Empty();
+        using var vault = VaultSession.Initialize(folder.Root, Now);
+        folder.Write(".suivi/extensions/journaux/quiz.jsonl", string.Concat(Enumerable.Range(0, VaultSession.MaxJournalLines).Select(n => $"{{\"n\":{n}}}\n")));
+
+        vault.AppendExtensionJournal("quiz", "{\"n\":\"dernier\"}");
+
+        var lines = vault.ExtensionJournal("quiz")!.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        Assert.HasCount(VaultSession.MaxJournalLines, lines);
+        Assert.AreEqual("{\"n\":1}", lines[0]);
+        Assert.AreEqual("{\"n\":\"dernier\"}", lines[^1]);
+
+        File.WriteAllBytes(folder.PathOf(".suivi/extensions/journaux/quiz.jsonl"), [0x22, 0xE9, 0x22]);
+        Assert.AreEqual(VaultErrorKind.Io, Assert.ThrowsExactly<VaultException>(() => vault.ExtensionJournal("quiz")).Kind);
     }
 
     [TestMethod]

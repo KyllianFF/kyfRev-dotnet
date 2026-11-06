@@ -1,4 +1,5 @@
 using System.Text.Json;
+using KyfRev.Application.Model;
 using KyfRev.Application.Tests.Support;
 
 namespace KyfRev.Extensions.Host.Tests;
@@ -281,6 +282,98 @@ public sealed class VaultExtensionDataTests
 
         Assert.IsFalse((await test.Data.SheetsAsync()).Succeeded);
         Assert.IsFalse((await test.Data.StoredAsync("quiz")).Succeeded);
+        Assert.IsFalse((await test.Data.CreateSheetAsync("quiz", new ExtensionNewSheet("Titre", null, null, []))).Succeeded);
+        Assert.IsFalse((await test.Data.SetTagsAsync("quiz", "f_1", [])).Succeeded);
+        Assert.IsFalse((await test.Data.WriteSheetAsync("quiz", "f_1", "texte")).Succeeded);
+        Assert.IsFalse((await test.Data.JournalAsync("quiz")).Succeeded);
+    }
+
+    [TestMethod]
+    public async Task An_extension_creates_a_sheet_with_its_text_and_tags_and_it_is_noted()
+    {
+        using var test = new DataTest();
+
+        var created = await test.Data.CreateSheetAsync("quiz", new ExtensionNewSheet("Le quiz", "Philosophie", "Une question ?", ["quiz", "#philo"]));
+
+        Assert.IsTrue(created.Succeeded, created.Error);
+        var sheet = test.App.App.Sheets.Open(created.Value).Value;
+        Assert.AreEqual("Le quiz", sheet.Title);
+        Assert.AreEqual("Philosophie", sheet.Folder);
+        Assert.AreEqual("Une question ?", sheet.Body);
+        Assert.AreEqual("quiz philo", string.Join(' ', sheet.Tags));
+        var noted = (await test.Data.JournalAsync("quiz")).Value.Single();
+        Assert.AreEqual(new ExtensionJournalEntry(test.App.Time.GetUtcNow(), ExtensionJournalEntry.Creation, created.Value, "Le quiz", "Philosophie"), noted);
+        Assert.IsTrue(File.Exists(Path.Combine(test.Vault, ".suivi", "extensions", "journaux", "quiz.jsonl")));
+
+        var empty = await test.Data.CreateSheetAsync("quiz", new ExtensionNewSheet("Vide", null, null, []));
+        Assert.AreEqual(string.Empty, test.App.App.Sheets.Open(empty.Value).Value.Body.Trim());
+        Assert.IsNull((await test.Data.JournalAsync("quiz")).Value[0].Detail);
+        Assert.IsFalse((await test.Data.CreateSheetAsync("quiz", new ExtensionNewSheet("Dehors", "../dehors", null, []))).Succeeded);
+        Assert.HasCount(2, (await test.Data.JournalAsync("quiz")).Value);
+    }
+
+    [TestMethod]
+    public async Task Each_writing_keeps_the_text_it_replaces_in_the_versions_and_is_noted()
+    {
+        using var test = new DataTest();
+        var id = test.App.App.Sheets.Create("Biologie", "Mitose", null).Value;
+        var opened = test.App.App.Sheets.Open(id).Value;
+        Assert.IsTrue(test.App.App.Editing.Save(id, "Premier texte.", opened.Fingerprint, 1).Succeeded);
+        var editorFingerprint = test.App.App.Sheets.Open(id).Value.Fingerprint;
+        var before = test.App.App.Editing.Versions(id).Value.Count;
+
+        Assert.IsTrue((await test.Data.WriteSheetAsync("correcteur", id, "Deuxième texte.")).Succeeded);
+        test.App.Time.Advance(TimeSpan.FromMinutes(1));
+        Assert.IsTrue((await test.Data.WriteSheetAsync("correcteur", id, "Troisième texte.")).Succeeded);
+
+        Assert.AreEqual("Troisième texte.", test.App.App.Sheets.Open(id).Value.Body);
+        var versions = test.App.App.Editing.Versions(id).Value;
+        Assert.HasCount(before + 2, versions);
+        var kept = versions.Select(version => test.App.App.Editing.ReadVersion(id, version.Name).Value).ToList();
+        Assert.IsTrue(kept.Any(text => text.EndsWith("Premier texte.", StringComparison.Ordinal)), "Le texte d'avant la première écriture est gardé.");
+        Assert.IsTrue(kept.Any(text => text.EndsWith("Deuxième texte.", StringComparison.Ordinal)), "Celui d'avant la seconde aussi.");
+        var journal = (await test.Data.JournalAsync("correcteur")).Value;
+        Assert.AreEqual("15 → 16 caractères", journal[0].Detail);
+        Assert.AreEqual("14 → 15 caractères", journal[1].Detail);
+        Assert.IsTrue(journal.All(entry => entry.Action == ExtensionJournalEntry.Writing && entry.Title == "Mitose" && entry.Sheet == id));
+
+        // L'éditeur qui tenait l'ancien texte ne l'écrase pas : il voit le conflit.
+        Assert.IsInstanceOfType<SaveConflict>(test.App.App.Editing.Save(id, "Texte de l'éditeur.", editorFingerprint, 7).Value);
+        Assert.IsFalse((await test.Data.WriteSheetAsync("correcteur", "f_absente", "x")).Succeeded);
+        Assert.HasCount(2, (await test.Data.JournalAsync("correcteur")).Value);
+    }
+
+    [TestMethod]
+    public async Task Tags_set_by_an_extension_are_noted()
+    {
+        using var test = new DataTest();
+        var id = test.App.App.Sheets.Create(null, "Mitose", null).Value;
+
+        var tagged = await test.Data.SetTagsAsync("quiz", id, ["bio", "#cours", "bio"]);
+
+        Assert.AreEqual("bio cours", string.Join(' ', tagged.Value));
+        Assert.AreEqual("bio, cours", (await test.Data.JournalAsync("quiz")).Value.Single().Detail);
+        Assert.IsFalse((await test.Data.SetTagsAsync("quiz", "f_absente", ["a"])).Succeeded);
+    }
+
+    [TestMethod]
+    public async Task A_writing_that_cannot_be_noted_says_so_and_a_damaged_line_hides_no_other()
+    {
+        using var test = new DataTest();
+        var id = test.App.App.Sheets.Create(null, "Mitose", null).Value;
+        Directory.CreateDirectory(Path.Combine(test.Vault, ".suivi", "extensions", "journaux", "quiz.jsonl"));
+
+        var tagged = await test.Data.SetTagsAsync("quiz", id, ["bio"]);
+
+        StringAssert.Contains(tagged.Error, "pas noté au journal", StringComparison.Ordinal);
+        Directory.Delete(Path.Combine(test.Vault, ".suivi", "extensions", "journaux", "quiz.jsonl"));
+        await File.WriteAllTextAsync(
+            Path.Combine(test.Vault, ".suivi", "extensions", "journaux", "quiz.jsonl"),
+            "{ cassé\n{\"quand\":\"2026-11-05T18:00:00+00:00\",\"action\":\"ecriture\",\"fiche\":\"f_1\",\"titre\":\"Mitose\",\"detail\":null}\n{\"autre\":1}\n");
+        var journal = (await test.Data.JournalAsync("quiz")).Value;
+        Assert.AreEqual("Mitose", journal.Single(entry => entry.Action == ExtensionJournalEntry.Writing).Title);
+        Assert.AreEqual("{\"autre\":1} | { cassé", string.Join(" | ", journal.Where(entry => entry.Action == ExtensionJournalEntry.Unreadable).Select(entry => entry.Detail)));
+        Assert.HasCount(ExtensionJournalEntry.UnreadableShown, ExtensionJournalEntry.UnreadableLine(new string('x', 200)).Detail!);
     }
 
     private sealed class DataTest : IDisposable
@@ -293,7 +386,7 @@ public sealed class VaultExtensionDataTests
             {
                 Assert.IsNull(App.App.Vaults.Create(_folder.Vault).OpenError);
             }
-            Data = new VaultExtensionData(App.App.Sheets, new ExtensionDataUseCases(App.App.Host));
+            Data = Of(App);
         }
 
         /// <summary>Rouvre le coffre : c'est à l'ouverture qu'il voit les fichiers qui manquent.</summary>
@@ -302,8 +395,11 @@ public sealed class VaultExtensionDataTests
             App.Dispose();
             App = new TestApplication(FakeTime.AtLocal(2026, 11, 5, 18, 0));
             Assert.IsNull(App.App.Vaults.Open(_folder.Vault).OpenError);
-            Data = new VaultExtensionData(App.App.Sheets, new ExtensionDataUseCases(App.App.Host));
+            Data = Of(App);
         }
+
+        private static VaultExtensionData Of(TestApplication app) =>
+            new(app.App.Sheets, app.App.Editing, new ExtensionDataUseCases(app.App.Host), app.Time);
 
         public TestApplication App { get; private set; } = new(FakeTime.AtLocal(2026, 11, 5, 18, 0));
 

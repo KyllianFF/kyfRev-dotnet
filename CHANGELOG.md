@@ -54,6 +54,11 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   un mot raté le lendemain ; la réponse se dévoile ou s'écrit (sans compter casse, accents ni parenthèses), dans un sens ou dans
   l'autre. Le menu et « Aujourd'hui » comptent les mots à revoir. Les mots des blocs ` ```vocabulaire ` entrent dans un carnet en
   un clic, et les résultats de la version 1 sont gardés.
+- Extensions : avec la permission « fiches:creation », une extension crée des fiches (titre, dossier, texte, étiquettes) et change
+  leurs étiquettes ; avec « fiches:ecriture », elle remplace leur texte, l'en-tête gardé. Aucune ne peut supprimer une fiche.
+  Chaque texte remplacé reste dans les versions de la fiche, d'où il se remet, et chaque écriture est notée au journal de
+  l'extension, dans le coffre : la carte « Extensions » montre les trente dernières. Une extension écrit au plus soixante fois
+  par minute.
 - Schéma réseau : le switch de cœur et le switch de distribution rejoignent la bibliothèque, avec leur icône.
 - Écrire : tous les dessins passent par le même éditeur, après le choix du modèle dans la galerie : les SmartArt en liste, la carte
   mentale sur plusieurs niveaux, les schémas Mermaid en liste, les graphiques en tableau de valeurs. Tout dessin inséré depuis la

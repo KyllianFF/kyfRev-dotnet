@@ -74,6 +74,12 @@
       lister: () => demander("fiches.lister", []),
       /** Texte Markdown d'une fiche (permission « fiches:lecture »). */
       lire: (id) => demander("fiches.lire", [String(id)]),
+      /** Crée une fiche : titre, puis { dossier, texte, etiquettes } ; rend son id (permission « fiches:creation »). Contrat 2. */
+      creer: (titre, options) => demander("fiches.creer", [String(titre), options ?? {}]),
+      /** Remplace les étiquettes d'une fiche ; rend celles enregistrées (permission « fiches:creation »). Contrat 2. */
+      etiqueter: (id, etiquettes) => demander("fiches.etiqueter", [String(id), etiquettes]),
+      /** Remplace le texte d'une fiche ; le précédent reste dans ses versions (permission « fiches:ecriture »). Contrat 2. */
+      ecrire: (id, texte) => demander("fiches.ecrire", [String(id), String(texte)]),
       /** Ouvre une fiche en lecture, et y sélectionne un passage { debut, fin } s'il est donné (permission « fiches:lecture »). Contrat 2. */
       ouvrir: (id, passage) => demander("fiches.ouvrir", [String(id), passage ?? {}]),
     }),

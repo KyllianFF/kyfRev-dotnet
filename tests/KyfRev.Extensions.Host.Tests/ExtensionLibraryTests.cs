@@ -613,7 +613,7 @@ public sealed class ExtensionRequestsTests
     {
         using var scene = new Scene("""["fiches:lecture"]""");
 
-        StringAssert.Contains((await scene.Requests.AnswerAsync("essai", "fiches.ecrire", NoArguments)).Error, "n'existe pas", StringComparison.Ordinal);
+        StringAssert.Contains((await scene.Requests.AnswerAsync("essai", "fiches.supprimer", NoArguments)).Error, "n'existe pas", StringComparison.Ordinal);
 
         scene.Library.SetActive("essai", false);
         Assert.AreEqual("extension inactive", (await scene.Requests.AnswerAsync("essai", "fiches.lister", NoArguments)).Error);
@@ -633,28 +633,115 @@ public sealed class ExtensionRequestsTests
     }
 
     [TestMethod]
-    public void The_requests_need_their_library_and_their_data()
+    public void The_requests_need_their_library_their_data_and_their_clock()
     {
         using var scene = new Scene("[]");
         Assert.ThrowsExactly<ArgumentNullException>(() => new ExtensionRequests(null!, scene.Data));
         Assert.ThrowsExactly<ArgumentNullException>(() => new ExtensionRequests(scene.Library, null!));
+        Assert.ThrowsExactly<ArgumentNullException>(() => new ExtensionRequests(scene.Library, scene.Data, null!));
     }
+
+    [TestMethod]
+    public async Task Creating_and_tagging_need_the_creation_permission_and_writing_the_writing_one()
+    {
+        using var reader = new Scene("""["fiches:lecture"]""", api: 2);
+        StringAssert.Contains((await reader.Requests.AnswerAsync("essai", "fiches.creer", Arguments("""["Titre"]"""))).Error, "fiches:creation", StringComparison.Ordinal);
+        StringAssert.Contains((await reader.Requests.AnswerAsync("essai", "fiches.etiqueter", Arguments("""["f_1", ["a"]]"""))).Error, "fiches:creation", StringComparison.Ordinal);
+        StringAssert.Contains((await reader.Requests.AnswerAsync("essai", "fiches.ecrire", Arguments("""["f_1", "texte"]"""))).Error, "fiches:ecriture", StringComparison.Ordinal);
+        Assert.AreEqual(0, reader.Data.Calls);
+
+        using var creator = new Scene("""["fiches:creation"]""", api: 2);
+        StringAssert.Contains((await creator.Requests.AnswerAsync("essai", "fiches.ecrire", Arguments("""["f_1", "texte"]"""))).Error, "fiches:ecriture", StringComparison.Ordinal);
+        Assert.AreEqual("\"f_2\"", (await creator.Requests.AnswerAsync("essai", "fiches.creer", Arguments("""["  Nouvelle  ", {"dossier":"Cours","texte":"Bonjour","etiquettes":["a","b"]}]"""))).Value);
+        Assert.AreEqual(("Nouvelle", "Cours", "Bonjour"), (creator.Data.Created!.Title, creator.Data.Created.Folder, creator.Data.Created.Text));
+        Assert.AreEqual("a b", string.Join(' ', creator.Data.Created!.Tags));
+        Assert.AreEqual("""["x"]""", (await creator.Requests.AnswerAsync("essai", "fiches.etiqueter", Arguments("""["f_1", ["x"]]"""))).Value);
+        Assert.AreEqual("f_1", creator.Data.Tagged);
+
+        creator.Library.SetGranted("essai", ExtensionRight.CreateSheets, false);
+        StringAssert.Contains((await creator.Requests.AnswerAsync("essai", "fiches.creer", Arguments("""["Titre"]"""))).Error, "retirée", StringComparison.Ordinal);
+
+        using var writer = new Scene("""["fiches:ecriture"]""", api: 2);
+        Assert.AreEqual("null", (await writer.Requests.AnswerAsync("essai", "fiches.ecrire", Arguments("""["f_1", "Le nouveau texte"]"""))).Value);
+        Assert.AreEqual(("essai", "f_1", "Le nouveau texte"), writer.Data.Written);
+    }
+
+    [TestMethod]
+    public async Task What_an_extension_writes_is_checked_before_reaching_the_vault()
+    {
+        using var scene = new Scene("""["fiches:creation", "fiches:ecriture"]""", api: 2);
+        var huge = new string('a', ExtensionRequests.MaxSheetTextBytes + 1);
+
+        StringAssert.Contains((await scene.Requests.AnswerAsync("essai", "fiches.creer", Arguments("""["   "]"""))).Error, "titre", StringComparison.Ordinal);
+        StringAssert.Contains((await scene.Requests.AnswerAsync("essai", "fiches.creer", NoArguments)).Error, "titre", StringComparison.Ordinal);
+        StringAssert.Contains((await scene.Requests.AnswerAsync("essai", "fiches.creer", Arguments(JsonSerializer.Serialize(new[] { new string('t', ExtensionRequests.MaxTitleLength + 1) })))).Error, "200", StringComparison.Ordinal);
+        StringAssert.Contains((await scene.Requests.AnswerAsync("essai", "fiches.creer", Arguments(JsonSerializer.Serialize(new object[] { "T", new { texte = huge } })))).Error, "1 Mo", StringComparison.Ordinal);
+        StringAssert.Contains((await scene.Requests.AnswerAsync("essai", "fiches.creer", Arguments("""["T", {"etiquettes":"a"}]"""))).Error, "tableau", StringComparison.Ordinal);
+        StringAssert.Contains((await scene.Requests.AnswerAsync("essai", "fiches.creer", Arguments("""["T", {"etiquettes":[1]}]"""))).Error, "tableau", StringComparison.Ordinal);
+        StringAssert.Contains((await scene.Requests.AnswerAsync("essai", "fiches.etiqueter", Arguments(JsonSerializer.Serialize(new object[] { "f_1", Enumerable.Range(0, ExtensionRequests.MaxTags + 1).Select(n => $"e{n}") })))).Error, "50", StringComparison.Ordinal);
+        StringAssert.Contains((await scene.Requests.AnswerAsync("essai", "fiches.etiqueter", Arguments(JsonSerializer.Serialize(new object[] { "f_1", new[] { new string('e', 101) } })))).Error, "100", StringComparison.Ordinal);
+        StringAssert.Contains((await scene.Requests.AnswerAsync("essai", "fiches.ecrire", Arguments("""["f_1"]"""))).Error, "manque", StringComparison.Ordinal);
+        StringAssert.Contains((await scene.Requests.AnswerAsync("essai", "fiches.ecrire", Arguments("""["f_1", 3]"""))).Error, "manque", StringComparison.Ordinal);
+        StringAssert.Contains((await scene.Requests.AnswerAsync("essai", "fiches.ecrire", Arguments(JsonSerializer.Serialize(new[] { "f_1", huge })))).Error, "1 Mo", StringComparison.Ordinal);
+        Assert.AreEqual(0, scene.Data.Calls);
+
+        // Sans options, une fiche se crée vide, à la racine, sans étiquette.
+        Assert.IsTrue((await scene.Requests.AnswerAsync("essai", "fiches.creer", Arguments("""["T", null]"""))).Succeeded);
+        Assert.AreEqual(new ExtensionNewSheet("T", null, null, []).Title, scene.Data.Created!.Title);
+        Assert.IsNull(scene.Data.Created!.Folder);
+        Assert.IsEmpty(scene.Data.Created!.Tags);
+        Assert.IsTrue((await scene.Requests.AnswerAsync("essai", "fiches.etiqueter", Arguments("""["f_1"]"""))).Succeeded);
+        Assert.IsEmpty(scene.Data.TaggedWith);
+    }
+
+    [TestMethod]
+    public async Task A_refusal_of_the_vault_on_writing_comes_back_as_it_is()
+    {
+        using var scene = new Scene("""["fiches:creation", "fiches:ecriture"]""", api: 2);
+        scene.Data.Refusal = "coffre fermé";
+
+        Assert.AreEqual("coffre fermé", (await scene.Requests.AnswerAsync("essai", "fiches.creer", Arguments("""["T"]"""))).Error);
+        Assert.AreEqual("coffre fermé", (await scene.Requests.AnswerAsync("essai", "fiches.etiqueter", Arguments("""["f_1", []]"""))).Error);
+        Assert.AreEqual("coffre fermé", (await scene.Requests.AnswerAsync("essai", "fiches.ecrire", Arguments("""["f_1", ""]"""))).Error);
+    }
+
+    [TestMethod]
+    public async Task An_extension_writes_at_most_sixty_times_a_minute()
+    {
+        using var scene = new Scene("""["fiches:creation", "fiches:ecriture"]""", api: 2);
+        for (var write = 0; write < ExtensionRequests.MaxWritesPerMinute; write++)
+        {
+            Assert.IsTrue((await scene.Requests.AnswerAsync("essai", write % 2 == 0 ? "fiches.ecrire" : "fiches.creer", Arguments("""["f_1", "t"]"""))).Succeeded);
+        }
+
+        StringAssert.Contains((await scene.Requests.AnswerAsync("essai", "fiches.etiqueter", Arguments("""["f_1", []]"""))).Error, "60 écritures", StringComparison.Ordinal);
+        Assert.AreEqual(ExtensionRequests.MaxWritesPerMinute, scene.Data.Calls);
+
+        scene.Time.Advance(TimeSpan.FromSeconds(59));
+        Assert.IsFalse((await scene.Requests.AnswerAsync("essai", "fiches.ecrire", Arguments("""["f_1", "t"]"""))).Succeeded);
+        scene.Time.Advance(TimeSpan.FromSeconds(1));
+        Assert.IsTrue((await scene.Requests.AnswerAsync("essai", "fiches.ecrire", Arguments("""["f_1", "t"]"""))).Succeeded);
+    }
+
+    private static JsonElement Arguments(string json) => JsonDocument.Parse(json).RootElement;
 
     private sealed class Scene : IDisposable
     {
         private readonly string _root;
 
-        public Scene(string permissions)
+        public Scene(string permissions, int api = 1)
         {
             _root = Path.Combine(Path.GetTempPath(), "kyfrev-extensions-" + Guid.NewGuid().ToString("N"));
             var source = Path.Combine(_root, "source");
             Directory.CreateDirectory(source);
-            File.WriteAllText(Path.Combine(source, ExtensionManifest.FileName), $$"""{"id":"essai","nom":"Essai","version":"1","blocs":["essai"],"permissions":{{permissions}}}""");
+            File.WriteAllText(Path.Combine(source, ExtensionManifest.FileName), $$"""{"api":{{api}},"id":"essai","nom":"Essai","version":"1","blocs":["essai"],"permissions":{{permissions}}}""");
             File.WriteAllText(Path.Combine(source, "extension.js"), string.Empty);
             Library = new ExtensionLibrary(Path.Combine(_root, "bibliotheque"), TimeProvider.System);
-            Library.Install(source);
-            Requests = new ExtensionRequests(Library, Data);
+            Assert.IsTrue(Library.Install(source).Succeeded);
+            Requests = new ExtensionRequests(Library, Data, Time);
         }
+
+        public MovingTime Time { get; } = new();
 
         public ExtensionLibrary Library { get; }
 
@@ -708,5 +795,48 @@ public sealed class ExtensionRequestsTests
             Stored = json == "null" ? null : json;
             return Task.FromResult(Outcome.Done());
         }
+
+        public ExtensionNewSheet? Created { get; private set; }
+
+        public string? Tagged { get; private set; }
+
+        public IReadOnlyList<string> TaggedWith { get; private set; } = [];
+
+        public (string Extension, string Id, string Text)? Written { get; private set; }
+
+        public Task<Outcome<string>> CreateSheetAsync(string extension, ExtensionNewSheet sheet)
+        {
+            Calls++;
+            Created = sheet;
+            return Task.FromResult(Refusal is { } refusal ? Outcome.Refused<string>(refusal) : Outcome.Of("f_2"));
+        }
+
+        public Task<Outcome<IReadOnlyList<string>>> SetTagsAsync(string extension, string id, IReadOnlyList<string> tags)
+        {
+            Calls++;
+            Tagged = id;
+            TaggedWith = tags;
+            return Task.FromResult(Refusal is { } refusal ? Outcome.Refused<IReadOnlyList<string>>(refusal) : Outcome.Of(tags));
+        }
+
+        public Task<Outcome<Done>> WriteSheetAsync(string extension, string id, string text)
+        {
+            Calls++;
+            Written = (extension, id, text);
+            return Task.FromResult(Refusal is { } refusal ? Outcome.Refused<Done>(refusal) : Outcome.Done());
+        }
+
+        public Task<Outcome<IReadOnlyList<ExtensionJournalEntry>>> JournalAsync(string extension) =>
+            Task.FromResult(Outcome.Of<IReadOnlyList<ExtensionJournalEntry>>([]));
+    }
+
+    /// <summary>Une heure qui n'avance qu'à la demande.</summary>
+    private sealed class MovingTime : TimeProvider
+    {
+        private DateTimeOffset _now = new(2026, 11, 6, 1, 0, 0, TimeSpan.Zero);
+
+        public override DateTimeOffset GetUtcNow() => _now;
+
+        public void Advance(TimeSpan duration) => _now += duration;
     }
 }

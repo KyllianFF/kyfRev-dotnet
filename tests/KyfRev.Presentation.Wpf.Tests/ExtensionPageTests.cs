@@ -779,5 +779,13 @@ public sealed class ExtensionPageTests
         public Task<Outcome<string?>> StoredAsync(string extension) => Task.FromResult(Outcome.Of<string?>(null));
 
         public Task<Outcome<Done>> StoreAsync(string extension, string json) => Task.FromResult(Outcome.Done());
+
+        public Task<Outcome<string>> CreateSheetAsync(string extension, ExtensionNewSheet sheet) => Task.FromResult(Outcome.Refused<string>("non"));
+
+        public Task<Outcome<IReadOnlyList<string>>> SetTagsAsync(string extension, string id, IReadOnlyList<string> tags) => Task.FromResult(Outcome.Refused<IReadOnlyList<string>>("non"));
+
+        public Task<Outcome<Done>> WriteSheetAsync(string extension, string id, string text) => Task.FromResult(Outcome.Refused<Done>("non"));
+
+        public Task<Outcome<IReadOnlyList<ExtensionJournalEntry>>> JournalAsync(string extension) => Task.FromResult(Outcome.Of<IReadOnlyList<ExtensionJournalEntry>>([]));
     }
 }
