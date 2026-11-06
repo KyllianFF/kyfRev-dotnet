@@ -448,6 +448,97 @@ public sealed class ReadingTests
     }
 
     [STATestMethod]
+    public void The_outline_marks_the_part_at_the_top_of_the_view_from_the_top_to_the_end_of_the_sheet()
+    {
+        using var ui = new UiThread();
+        var body = "## Focus : La notion de l'autorité\n\nUne phrase.\n\n## Définitions :\n\n" + Long() + "\n\n## Fin\n\nCourt.\n";
+        using var vault = new ReadingVault(body, passage: false);
+        var test = new TestShell();
+        var page = vault.Page();
+        page.LoadCommand.Execute(null);
+        UiThread.Until(() => !page.IsLoading);
+        var window = ShowWide(test, page);
+        try
+        {
+            var viewer = Named<SheetDocumentViewer>(window, "SheetText");
+            UiThread.Until(() => !viewer.HasPendingWork);
+            TestShell.Flush();
+            var scroller = Scroller(viewer);
+            scroller.ScrollToTop();
+            TestShell.Flush();
+
+            Assert.AreEqual("Focus : La notion de l'autorité", page.Outline.Single(entry => entry.IsActive).Title, "En haut de la fiche, la partie en cours est celle du haut, même si la suivante est proche.");
+
+            scroller.ScrollToEnd();
+            TestShell.Flush();
+            Assert.AreEqual("Fin", page.Outline.Single(entry => entry.IsActive).Title, "Tout en bas, le dernier titre ne peut plus monter : il est la partie en cours.");
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
+    public void A_list_number_is_never_cut_by_the_left_edge_of_the_text()
+    {
+        using var ui = new UiThread();
+        var test = new TestShell();
+        foreach (var comfort in new[] { ReadingComfort.Default, new ReadingComfort(21, 1.9, null), new ReadingComfort(21, 1.6, new FontFamily("Georgia")) })
+        {
+            foreach (var list in new[] { "1. un\n2. deux\n3. trois\n4. quatre\n", "9. neuf\n10. dix\n", "99. un\n100. deux\n" })
+            {
+                var ink = InkLeftOfTheText(test, list, comfort);
+                Assert.IsGreaterThanOrEqualTo(0, ink, $"« {list.Split('\n')[^2]} » à {comfort.Size} px en {comfort.Family?.Source ?? "police de l'application"} : {ink} px à gauche du texte.");
+            }
+        }
+    }
+
+    /// <summary>
+    /// Où commence l'encre d'une liste, par rapport au bord gauche du texte : négatif, elle déborderait, et le lecteur, sans marge
+    /// à gauche, la couperait. La page est décalée pour voir ce qui dépasse.
+    /// </summary>
+    private static int InkLeftOfTheText(TestShell test, string markdown, ReadingComfort comfort)
+    {
+        const int shift = 60;
+        const int width = 500;
+        const int height = 300;
+        var sheet = new OpenedSheet("f_1", "Essai", "fiches/Essai.md", "", [], markdown, 1, "sha256:essai", null, DateTimeOffset.UnixEpoch, null!, []);
+        var reading = SheetReading.Of(sheet, _ => Outcome.Refused<byte[]>("non"));
+        var document = new DocumentBuilder(reading, _ => { }, opensLinks: true, showsHeader: false, comfort: comfort).Build();
+        document.PagePadding = new Thickness(shift, 4, 0, 24);
+        var host = new Border { Child = new FlowDocumentScrollViewer { Document = document, VerticalScrollBarVisibility = ScrollBarVisibility.Disabled }, Background = Brushes.White, Width = width, Height = height };
+        host.Resources.MergedDictionaries.Add(test.Design.Dictionary);
+        var window = new Window { Content = host, Left = -10000, Top = -10000, Width = width + 20, Height = height + 40, ShowActivated = false, ShowInTaskbar = false };
+        window.Show();
+        try
+        {
+            TestShell.Flush();
+            var image = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
+            image.Render(host);
+            var pixels = new byte[width * height * 4];
+            image.CopyPixels(pixels, width * 4, 0);
+            var left = width;
+            for (var y = 0; y < height; y++)
+            {
+                for (var x = 3; x < left; x++)
+                {
+                    var i = ((y * width) + x) * 4;
+                    if (pixels[i + 3] > 200 && pixels[i] < 100 && pixels[i + 1] < 100 && pixels[i + 2] < 100)
+                    {
+                        left = x;
+                    }
+                }
+            }
+            return left - shift;
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
     public void Clicking_the_outline_brings_the_part_to_the_top_and_marks_it()
     {
         using var ui = new UiThread();

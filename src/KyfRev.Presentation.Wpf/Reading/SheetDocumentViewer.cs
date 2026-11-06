@@ -19,6 +19,9 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
     /// <summary>Hauteur au-dessus d'un titre amené en haut de la vue.</summary>
     private const double TopMargin = 8;
 
+    // Un titre amené par le plan arrive à TopMargin ; à quelques pixels près, il est encore « en haut de la vue ».
+    private const double TopTolerance = 16;
+
     public static readonly DependencyProperty ReadingProperty = DependencyProperty.Register(
         nameof(Reading), typeof(SheetReading), typeof(SheetDocumentViewer), new PropertyMetadata(null, OnContentChanged));
 
@@ -318,7 +321,10 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
         _scroller.ScrollToVerticalOffset(_scroller.VerticalOffset + top - TopMargin);
     }
 
-    /// <summary>La partie en cours : le dernier titre passé en haut de la vue.</summary>
+    /// <summary>
+    /// La partie en cours : le dernier titre arrivé en haut de la vue, et le premier tant qu'aucun n'y est. Tout en bas de la
+    /// fiche, les derniers titres ne peuvent plus monter : le dernier titre visible est alors la partie en cours.
+    /// </summary>
     private void OnScrollChanged(object sender, ScrollChangedEventArgs e)
     {
         // Le document se remplit par morceaux : l'endroit gardé revient dès qu'il existe.
@@ -331,6 +337,8 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
         {
             return;
         }
+        var atEnd = e.ExtentHeight > e.ViewportHeight && e.VerticalOffset >= e.ExtentHeight - e.ViewportHeight - 1 && !HasPendingWork;
+        var line = atEnd ? ActualHeight : TopMargin + TopTolerance;
         OutlineEntry? current = null;
         foreach (var entry in Reading.Outline)
         {
@@ -338,7 +346,7 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
             {
                 continue;
             }
-            if (current is not null && paragraph.ContentStart.GetCharacterRect(LogicalDirection.Forward).Top > ActualHeight / 3)
+            if (current is not null && paragraph.ContentStart.GetCharacterRect(LogicalDirection.Forward).Top > line)
             {
                 break;
             }
