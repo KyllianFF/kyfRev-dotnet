@@ -105,11 +105,10 @@ body {
   font-family: var(--police-code);
 }
 
-/* Un tableau trop large se replie : jamais de défilement horizontal. */
+/* Un tableau trop large se replie : jamais de défilement horizontal. Sa largeur et le partage de ses colonnes viennent de
+   fiche.css (toute la page, ou ajustée au contenu) et de mots-entiers.ts (chaque colonne garde son plus long mot). */
 .editeur-visuel table {
   max-width: 100%;
-  table-layout: fixed;
-  width: 100%;
 }
 
 .editeur-visuel th,
