@@ -145,7 +145,14 @@ internal static class Composition
             provider.GetRequiredService<ExtensionLibrary>(),
             new ExtensionRequests(
                 provider.GetRequiredService<ExtensionLibrary>(),
-                new VaultExtensionData(provider.GetRequiredService<SheetUseCases>(), new ExtensionDataUseCases(provider.GetRequiredService<KyfRevApplication>().Host)))));
+                provider.GetRequiredService<VaultExtensionData>(),
+                clock)));
+        services.AddSingleton(provider => new ExtensionDataUseCases(provider.GetRequiredService<KyfRevApplication>().Host));
+        services.AddSingleton(provider => new VaultExtensionData(
+            provider.GetRequiredService<SheetUseCases>(),
+            provider.GetRequiredService<EditingUseCases>(),
+            provider.GetRequiredService<ExtensionDataUseCases>(),
+            clock));
         services.AddSingleton(provider => new ExtensionPages(
             provider.GetRequiredService<ExtensionLibrary>(),
             provider.GetRequiredService<ExtensionEngine>(),
@@ -156,7 +163,8 @@ internal static class Composition
             () => provider.GetRequiredService<AppearanceController>().Theme == ThemeKind.Dark));
         services.AddSingleton(provider => new ExtensionSettingsViewModel(
             provider.GetRequiredService<ExtensionLibrary>(),
-            provider.GetRequiredService<IFolderPicker>()));
+            provider.GetRequiredService<IFolderPicker>(),
+            provider.GetRequiredService<ExtensionDataUseCases>().Journal));
         services.AddSingleton(provider => new ModulesSettingsViewModel(
             provider.GetRequiredService<SettingsUseCases>(),
             provider.GetRequiredService<ActiveModules>().Load,

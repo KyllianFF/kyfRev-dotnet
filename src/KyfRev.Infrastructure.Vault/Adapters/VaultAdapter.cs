@@ -316,6 +316,12 @@ public sealed class VaultAdapter(VaultSession inner) : IVault
     /// <inheritdoc/>
     public void SaveExtensionData(string id, string json) => inner.SaveExtensionData(id, json);
 
+    /// <inheritdoc/>
+    public string? ExtensionJournal(string id) => inner.ExtensionJournal(id);
+
+    /// <inheritdoc/>
+    public void AppendExtensionJournal(string id, string line) => inner.AppendExtensionJournal(id, line);
+
     private static SchemaDocument Document(SchemaContent content) => new(content.Id, content.Text, content.Fingerprint);
 
     /// <inheritdoc/>

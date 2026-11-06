@@ -286,6 +286,12 @@ public interface IExtensionDataStore
 
     /// <summary>Remplace les données d'une extension : du JSON valide, 1 Mo au plus.</summary>
     void SaveExtensionData(string id, string json);
+
+    /// <summary>Le journal de ce qu'une extension a écrit dans le coffre, une ligne JSON par écriture ; rien s'il est vide.</summary>
+    string? ExtensionJournal(string id);
+
+    /// <summary>Ajoute une ligne au journal d'une extension ; les plus anciennes partent au-delà de mille.</summary>
+    void AppendExtensionJournal(string id, string line);
 }
 
 /// <summary>Schémas réseau du coffre (module Schémas réseau) : le coffre ne connaît pas leur modèle.</summary>

@@ -42,6 +42,9 @@ public static class VaultLayout
     /// <summary>Données des extensions, un fichier JSON par extension.</summary>
     public const string ExtensionData = ".suivi/extensions";
 
+    /// <summary>Journaux de ce que les extensions ont écrit dans les fiches, un fichier JSON Lines par extension.</summary>
+    public const string ExtensionJournals = ".suivi/extensions/journaux";
+
     /// <summary>Journal d'opération sur plusieurs fichiers.</summary>
     public const string OperationFile = ".suivi/operation.json";
 

@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using KyfRev.Application;
 using KyfRev.DesignSystem.Controls;
 using KyfRev.Extensions.Host;
 using KyfRev.Presentation.Wpf.Shell;
@@ -103,6 +104,40 @@ public sealed partial class ExtensionRightRow : ObservableObject
 }
 
 /// <summary>Une extension installée, dans la carte « Extensions ».</summary>
+/// <summary>Une écriture d'une extension, sous la liste : ce qu'elle a fait à quelle fiche, puis qui et quand.</summary>
+public sealed class ExtensionJournalRow
+{
+    internal ExtensionJournalRow(string extension, ExtensionJournalEntry entry)
+    {
+        At = entry.At;
+        Text = entry.Action switch
+        {
+            ExtensionJournalEntry.Creation => entry.Detail is { Length: > 0 } folder
+                ? ModulesSettingsText.ExtensionJournalCreatedInOf(entry.Title, folder)
+                : ModulesSettingsText.ExtensionJournalCreatedOf(entry.Title),
+            ExtensionJournalEntry.Tagging => entry.Detail is { Length: > 0 } tags
+                ? ModulesSettingsText.ExtensionJournalTaggedOf(entry.Title, tags)
+                : ModulesSettingsText.ExtensionJournalUntaggedOf(entry.Title),
+            ExtensionJournalEntry.Unreadable => ModulesSettingsText.ExtensionJournalUnreadableOf(entry.Detail ?? string.Empty),
+            _ => ModulesSettingsText.ExtensionJournalWrittenOf(entry.Title, entry.Detail ?? string.Empty),
+        };
+        When = entry.Action == ExtensionJournalEntry.Unreadable ? extension : ModulesSettingsText.ExtensionJournalWhenOf(extension, entry.At.ToLocalTime().DateTime);
+        Spoken = $"{Text}. {When}";
+    }
+
+    /// <summary>Quand.</summary>
+    public DateTimeOffset At { get; }
+
+    /// <summary>Ce qu'elle a fait, à quelle fiche.</summary>
+    public string Text { get; }
+
+    /// <summary>Quelle extension, et quand.</summary>
+    public string When { get; }
+
+    /// <summary>Les deux, pour un lecteur d'écran.</summary>
+    public string Spoken { get; }
+}
+
 public sealed partial class ExtensionRow : ObservableObject
 {
     private readonly Action<ExtensionRow, bool> _changed;
@@ -207,22 +242,45 @@ public sealed partial class ExtensionRow : ObservableObject
 /// </summary>
 public sealed partial class ExtensionSettingsViewModel : ObservableObject
 {
+    /// <summary>Les écritures montrées sous la liste : les plus récentes.</summary>
+    public const int JournalShown = 30;
+
     private readonly ExtensionLibrary _library;
     private readonly IFolderPicker _picker;
+    private readonly Func<string, Outcome<IReadOnlyList<ExtensionJournalEntry>>> _journal;
     private string? _source;
     private ExtensionRow? _toRemove;
     private ExtensionRow? _toReactivate;
 
-    /// <summary>La carte de cette bibliothèque.</summary>
+    /// <summary>La carte de cette bibliothèque, sans journal.</summary>
     /// <param name="library">Les extensions installées.</param>
     /// <param name="picker">Le choix du dossier à installer.</param>
     public ExtensionSettingsViewModel(ExtensionLibrary library, IFolderPicker picker)
+        : this(library, picker, _ => Outcome.Of<IReadOnlyList<ExtensionJournalEntry>>([]))
+    {
+    }
+
+    /// <summary>La carte de cette bibliothèque, avec ce que ses extensions ont écrit dans le coffre ouvert.</summary>
+    /// <param name="library">Les extensions installées.</param>
+    /// <param name="picker">Le choix du dossier à installer.</param>
+    /// <param name="journal">Le journal d'une extension dans le coffre ouvert, du plus récent au plus ancien.</param>
+    public ExtensionSettingsViewModel(ExtensionLibrary library, IFolderPicker picker, Func<string, Outcome<IReadOnlyList<ExtensionJournalEntry>>> journal)
     {
         ArgumentNullException.ThrowIfNull(library);
         ArgumentNullException.ThrowIfNull(picker);
+        ArgumentNullException.ThrowIfNull(journal);
         _library = library;
         _picker = picker;
+        _journal = journal;
     }
+
+    /// <summary>Ce que les extensions installées ont écrit dans le coffre ouvert, du plus récent au plus ancien.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasJournal))]
+    public partial IReadOnlyList<ExtensionJournalRow> Journal { get; private set; } = [];
+
+    /// <summary>Une extension a écrit dans ce coffre.</summary>
+    public bool HasJournal => Journal.Count > 0;
 
     /// <summary>Une extension vient de s'installer, de s'activer, de s'arrêter ou d'être retirée.</summary>
     public event EventHandler<ExtensionChangedEventArgs>? Changed;
@@ -322,12 +380,27 @@ public sealed partial class ExtensionSettingsViewModel : ObservableObject
             .. manifest.CardTitle is { } card ? [ModulesSettingsText.ExtensionCardOf(card)] : Array.Empty<string>(),
         ];
 
-    /// <summary>Relit les extensions installées, en arrivant sur l'onglet.</summary>
+    /// <summary>Relit les extensions installées, et leur journal, en arrivant sur l'onglet.</summary>
     public void Reload()
     {
         Error = null;
         Message = null;
         Show();
+        ReadJournal();
+    }
+
+    /// <summary>Relit le journal des extensions installées : sans coffre ouvert, il est vide.</summary>
+    private void ReadJournal()
+    {
+        var entries = new List<ExtensionJournalRow>();
+        foreach (var extension in _library.Installed())
+        {
+            if (_journal(extension.Manifest.Id) is { Succeeded: true } read)
+            {
+                entries.AddRange(read.Value.Select(entry => new ExtensionJournalRow(extension.Manifest.Name, entry)));
+            }
+        }
+        Journal = [.. entries.OrderByDescending(row => row.At).Take(JournalShown)];
     }
 
     private void Prepare(ExtensionPreview preview) =>
