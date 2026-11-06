@@ -7,6 +7,7 @@ using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Shell;
 using KyfRev.Application.Model;
 using KyfRev.Application.Ports;
@@ -554,6 +555,57 @@ public sealed class ShellWindowTests
             Assert.AreEqual(0, plein.StrokeThickness);
             Assert.IsNotNull(plein.Fill);
             Assert.AreEqual(new Rect(0, 4, 16, 8).ToString(CultureInfo.InvariantCulture), Round(shapes.Geometry.Bounds), "Plus large que haute, elle se centre.");
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
+    public void The_list_follows_the_field_and_any_click_elsewhere_closes_it()
+    {
+        var test = new TestShell();
+        var window = Open(test);
+        try
+        {
+            var host = (Border)window.FindName("SearchHost");
+            var card = (FrameworkElement)window.FindName("PaletteCard");
+            var query = (TextBox)window.FindName("PaletteQuery");
+            window.Width = 1600;
+            TestShell.Flush();
+            test.Shell.OpenPalette();
+            TestShell.Flush();
+            Assert.AreEqual(host.TranslatePoint(default, window).X, card.TranslatePoint(default, window).X, 1);
+
+            window.Width = 1200;
+            TestShell.Flush();
+            Assert.AreEqual(host.TranslatePoint(default, window).X, card.TranslatePoint(default, window).X, 1, "Redimensionnée, la fenêtre garde la liste sous le champ.");
+
+            query.RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, 0, MouseButton.Left) { RoutedEvent = Mouse.PreviewMouseDownEvent });
+            Assert.IsTrue(test.Shell.IsPaletteOpen, "Un clic dans le champ le garde ouvert.");
+            var theme = (Button)window.FindName("ThemeButton");
+            theme.RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, 0, MouseButton.Left) { RoutedEvent = Mouse.PreviewMouseDownEvent });
+            Assert.IsFalse(test.Shell.IsPaletteOpen, "Un clic ailleurs, même dans la barre de titre, le ferme.");
+
+            test.Shell.OpenPalette();
+            TestShell.Flush();
+            var taken = false;
+            window.OnWindowMessage(new WindowInteropHelper(window).Handle, 0x00A1, 2, 0, ref taken);
+            Assert.IsFalse(test.Shell.IsPaletteOpen, "Un clic sur le vide de la barre de titre le ferme.");
+            Assert.IsFalse(taken, "Windows déplace toujours la fenêtre.");
+            test.Shell.OpenPalette();
+            window.OnWindowMessage(new WindowInteropHelper(window).Handle, 0x00A4, 2, 0, ref taken);
+            Assert.IsFalse(test.Shell.IsPaletteOpen, "Le clic droit aussi.");
+            test.Shell.OpenPalette();
+            window.OnWindowMessage(new WindowInteropHelper(window).Handle, 0x00A1, 11, 0, ref taken);
+            Assert.IsTrue(test.Shell.IsPaletteOpen, "Un bord tiré pour redimensionner la garde ouverte.");
+            test.Shell.ClosePalette();
+
+            var icon = (Image)window.FindName("AppIcon");
+            Assert.IsInstanceOfType<BitmapSource>(icon.Source);
+            Assert.IsGreaterThanOrEqualTo(16, ((BitmapSource)icon.Source).PixelWidth, "L'icône vient de l'image du .ico à la taille de l'écran.");
+            Assert.IsLessThanOrEqualTo(48, ((BitmapSource)icon.Source).PixelWidth);
         }
         finally
         {

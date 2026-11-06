@@ -6,6 +6,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using KyfRev.DesignSystem.Controls;
 
@@ -24,6 +25,8 @@ public sealed partial class ShellWindow : Window
     private const int NonClientLeftButtonDown = 0x00A1;
     private const int NonClientLeftButtonUp = 0x00A2;
     private const int NonClientMouseLeave = 0x02A2;
+    private const int NonClientRightButtonDown = 0x00A4;
+    private const int OnCaption = 2;
     private const int OnMaximizeButton = 9;
 
     private readonly ShellViewModel _shell;
@@ -47,12 +50,11 @@ public sealed partial class ShellWindow : Window
         // MouseUp remonte jusqu'à la liste, même quand l'élément cliqué l'a déjà traité.
         PaletteResults.AddHandler(MouseUpEvent, new MouseButtonEventHandler(OnPaletteClick), handledEventsToo: true);
         MoreMenu.AddHandler(MenuItem.ClickEvent, new RoutedEventHandler(OnOverflowClick));
-        Root.SizeChanged += (_, e) =>
-        {
-            shell.WindowWidth = e.NewSize.Width;
-            PlacePalette();
-        };
-        SearchHost.SizeChanged += (_, _) => PlacePalette();
+        Root.SizeChanged += (_, e) => shell.WindowWidth = e.NewSize.Width;
+        PreviewMouseDown += OnClickAnywhere;
+        Deactivated += (_, _) => _shell.ClosePalette();
+        Loaded += (_, _) => ShowIcon();
+        DpiChanged += (_, _) => ShowIcon();
         LocationChanged += (_, _) => FitFrame();
         Loaded += (_, _) => FocusNavigation();
     }
@@ -128,6 +130,11 @@ public sealed partial class ShellWindow : Window
             case NonClientMouseLeave:
                 MaximizeButton.Tag = null;
                 break;
+            case NonClientLeftButtonDown or NonClientRightButtonDown when _shell.IsPaletteOpen && wParam == OnCaption:
+                // Un clic dans la barre de titre, hors de ses boutons : la recherche se ferme, comme sur un clic ailleurs. Un bord tiré pour
+                // redimensionner la fenêtre la garde ouverte : la liste suit le champ.
+                _shell.ClosePalette();
+                break;
             default:
                 break;
         }
@@ -191,17 +198,20 @@ public sealed partial class ShellWindow : Window
         if (_shell.IsPaletteOpen)
         {
             _focusBeforePalette = Keyboard.FocusedElement;
+            LayoutUpdated += OnLayoutUpdated;
             Dispatcher.BeginInvoke(DispatcherPriority.Input, () =>
             {
                 PlacePalette();
                 PaletteQuery.Focus();
             });
+            return;
         }
-        else if (_paletteLeft)
+        LayoutUpdated -= OnLayoutUpdated;
+        if (_paletteLeft)
         {
             return;
         }
-        else if (_focusBeforePalette is UIElement { IsVisible: true } previous)
+        if (_focusBeforePalette is UIElement { IsVisible: true } previous)
         {
             previous.Focus();
         }
@@ -282,6 +292,32 @@ public sealed partial class ShellWindow : Window
         _paletteLeft = true;
         _shell.ClosePalette();
         _paletteLeft = false;
+    }
+
+    /// <summary>Après chaque mise en page, la liste rejoint le champ, qui a pu bouger sans changer de taille.</summary>
+    private void OnLayoutUpdated(object? sender, EventArgs e) => PlacePalette();
+
+    /// <summary>Un clic ailleurs que dans le champ ou la liste ferme la recherche, comme un menu.</summary>
+    private void OnClickAnywhere(object sender, MouseButtonEventArgs e)
+    {
+        if (_shell.IsPaletteOpen && e.OriginalSource is DependencyObject target && !SearchHost.IsAncestorOf(target) && !PaletteCard.IsAncestorOf(target))
+        {
+            _shell.ClosePalette();
+        }
+    }
+
+    /// <summary>L'icône de l'application, dans l'image de son fichier .ico la plus proche de la taille à l'écran : nette à toutes les échelles.</summary>
+    internal void ShowIcon()
+    {
+        using var stream = typeof(ShellWindow).Assembly.GetManifestResourceStream("kyfrev-icone.ico");
+        if (stream is null)
+        {
+            return;
+        }
+        var pixels = AppIcon.Width * VisualTreeHelper.GetDpi(this).DpiScaleX;
+        var frames = new IconBitmapDecoder(stream, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad).Frames;
+        AppIcon.Source = frames.Where(frame => frame.PixelWidth >= pixels).OrderBy(frame => frame.PixelWidth).FirstOrDefault()
+            ?? frames.OrderByDescending(frame => frame.PixelWidth).First();
     }
 
     private void OnPaletteClick(object sender, MouseButtonEventArgs e)
