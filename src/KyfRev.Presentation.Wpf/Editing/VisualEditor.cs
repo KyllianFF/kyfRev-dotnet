@@ -153,6 +153,9 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
     /// <summary>Le moteur n'a pas pu démarrer, ou s'est arrêté.</summary>
     public event EventHandler<string>? Failed;
 
+    /// <summary>L'éditeur n'a pas démarré faute de moteur WebView2 sur l'ordinateur.</summary>
+    public bool MissesEngine { get; private set; }
+
     /// <summary>Un processus du moteur s'est arrêté puis a été relancé par WebView2 (le GPU, un utilitaire) : la page continue.</summary>
     public event EventHandler<string>? Restarted;
 
@@ -601,6 +604,7 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
         {
             if (!_disposed)
             {
+                MissesEngine = exception is WebView2RuntimeNotFoundException;
                 Failed?.Invoke(this, exception.Message);
             }
         }

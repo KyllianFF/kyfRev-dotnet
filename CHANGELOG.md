@@ -434,6 +434,8 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Corrigé
 
+- Écrire : un processus graphique ou utilitaire du moteur web, relancé par Windows, n'arrête plus le texte mis en forme ;
+  sans moteur WebView2 sur l'ordinateur, le message le dit, et le journal de diagnostic garde la raison de chaque arrêt.
 - Schémas réseau et éditeur visuel : plus d'éclair blanc à l'ouverture, en thème sombre surtout ; le moteur prend le fond du
   thème avant sa première page. L'îlot des schémas ne s'arrête plus quand il se ferme pendant qu'il répond.
 - Recherche (Ctrl+K) : la liste reste sous le champ quand la fenêtre change de taille, et un clic ailleurs, même dans la barre

@@ -10,6 +10,7 @@ using KyfRev.Extensions.Host;
 using KyfRev.Presentation.Wpf.Editing;
 using KyfRev.Presentation.Wpf.Extensions;
 using KyfRev.Presentation.Wpf.Pages;
+using Microsoft.Web.WebView2.Core;
 
 namespace KyfRev.Presentation.Wpf.Tests;
 
@@ -488,6 +489,30 @@ public sealed class VisualEditorTests
         Assert.AreEqual(Body, ((IEditorSurface)scene.SheetPage.EditorView.Source).Text);
         Assert.IsFalse(scene.SheetPage.Ribbon.MarkdownToggle.IsEnabled);
     }
+
+    [EngineTest]
+    public void A_missing_engine_is_named_and_the_sheet_is_written_in_markdown()
+    {
+        using var scene = new Scene();
+        UiThread.Until(() => scene.Shown.Contains("Un premier paragraphe.", StringComparison.Ordinal));
+
+        var failed = scene.Editor.VisualFailedAsync(missesEngine: true);
+        UiThread.Until(() => failed.IsCompleted);
+
+        Assert.IsTrue(scene.Editor.IsMarkdownShown);
+        Assert.AreEqual(EditingText.VisualEngineMissing, scene.Editor.Problem);
+        Assert.AreEqual(Body, ((IEditorSurface)scene.SheetPage.EditorView.Source).Text);
+    }
+
+    [TestMethod]
+    [DataRow(CoreWebView2ProcessFailedKind.BrowserProcessExited, true)]
+    [DataRow(CoreWebView2ProcessFailedKind.RenderProcessExited, true)]
+    [DataRow(CoreWebView2ProcessFailedKind.RenderProcessUnresponsive, true)]
+    [DataRow(CoreWebView2ProcessFailedKind.GpuProcessExited, false)]
+    [DataRow(CoreWebView2ProcessFailedKind.UtilityProcessExited, false)]
+    [DataRow(CoreWebView2ProcessFailedKind.FrameRenderProcessExited, false)]
+    public void Only_the_engine_or_the_page_stopping_stops_the_editor(CoreWebView2ProcessFailedKind kind, bool stops)
+        => Assert.AreEqual(stops, WebProcesses.StopsThePage(kind));
 
     [EngineTest]
     public void Leaving_the_view_saves_then_closes_the_engine_and_coming_back_reopens_it()

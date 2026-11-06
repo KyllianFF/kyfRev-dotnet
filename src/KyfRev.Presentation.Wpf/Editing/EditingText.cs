@@ -32,6 +32,9 @@ public static class EditingText
     /// <summary>L'éditeur visuel n'a pas démarré.</summary>
     public const string VisualUnavailable = "Le texte mis en forme n'a pas pu s'ouvrir : la fiche s'écrit ici en Markdown. Rien n'est perdu.";
 
+    /// <summary>Le moteur d'affichage de Windows manque sur cet ordinateur : l'éditeur visuel ne peut pas démarrer.</summary>
+    public const string VisualEngineMissing = "Le moteur d'affichage de Windows (WebView2) est introuvable sur cet ordinateur : la fiche s'écrit ici en Markdown. Rien n'est perdu.";
+
     /// <summary>Le presse-papiers est tenu par un autre programme.</summary>
     public const string ClipboardBusy = "Le presse-papiers est occupé par un autre programme : rien n'a été collé. Réessayez dans un instant.";
 

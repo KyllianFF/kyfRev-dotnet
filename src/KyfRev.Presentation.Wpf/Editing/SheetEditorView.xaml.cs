@@ -137,7 +137,7 @@ internal sealed partial class SheetEditorView : UserControl
         visual.Failed += (_, reason) =>
         {
             page.Environment.Report?.Invoke($"le texte mis en forme ne s'ouvre pas : {reason}");
-            _ = page.VisualFailedAsync();
+            _ = page.VisualFailedAsync(visual.MissesEngine);
         };
         visual.Restarted += (_, reason) => page.Environment.Report?.Invoke($"moteur web du texte mis en forme : {reason}, relancé");
         visual.SnapshotClicked += (_, _) => CoveredTextClicked?.Invoke();

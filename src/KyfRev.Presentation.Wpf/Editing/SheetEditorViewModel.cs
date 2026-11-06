@@ -547,12 +547,15 @@ public sealed partial class SheetEditorViewModel : ObservableObject
         Hook(surface, true);
     }
 
-    /// <summary>Le texte mis en forme s'est arrêté : l'écriture continue en Markdown, sans rien perdre.</summary>
-    internal async Task VisualFailedAsync()
+    /// <summary>
+    /// Le texte mis en forme s'est arrêté : l'écriture continue en Markdown, sans rien perdre. Si le moteur WebView2 manque à
+    /// l'ordinateur, le message le dit.
+    /// </summary>
+    internal async Task VisualFailedAsync(bool missesEngine = false)
     {
         IsVisualAvailable = false;
         _visualProvider = null;
-        Problem = EditingText.VisualUnavailable;
+        Problem = missesEngine ? EditingText.VisualEngineMissing : EditingText.VisualUnavailable;
         if (!IsMarkdownShown)
         {
             await ShowMarkdownAsync(true).ConfigureAwait(true);
