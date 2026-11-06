@@ -2,11 +2,39 @@
 // Des fonctions sur le modèle du document, sans la page : l'éditeur les applique.
 
 import { Fragment, type Node } from "prosemirror-model";
+import { type Command, Selection, TextSelection } from "prosemirror-state";
+import { nextCell } from "prosemirror-tables";
 import type { Apparence, Bandes, Theme, Traits } from "./apparence";
 
 const BANDES: Bandes[] = ["aucune", "lignes", "colonnes"];
 const TRAITS: Traits[] = ["tous", "horizontaux", "verticaux", "contour", "entete", "aucun"];
 const THEMES: Theme[] = ["sobre", "foret", "ambre", "ardoise", "prune", "encre"];
+
+/**
+ * ↑ et ↓ dans un tableau : la case du dessus ou du dessous, à la même place dans son texte autant qu'elle le permet ; au bord
+ * du tableau, le bloc d'avant ou d'après. Nos cases sont des blocs de texte, que les flèches de prosemirror-tables ne savent
+ * traverser qu'en largeur : en hauteur, le navigateur filait à la case d'à côté.
+ */
+export const caseVoisine =
+  (sens: 1 | -1): Command =>
+  (etat, dispatch, vue) => {
+    const { selection } = etat;
+    if (!(selection instanceof TextSelection) || !selection.empty) return false;
+    const $tete = selection.$head;
+    const role = $tete.parent.type.spec.tableRole;
+    if (role !== "cell" && role !== "header_cell") return false;
+    // Une case de plusieurs lignes : on y circule d'abord.
+    if (vue && !vue.endOfTextblock(sens > 0 ? "down" : "up")) return false;
+    const $case = etat.doc.resolve($tete.before());
+    const $voisine = nextCell($case, "vert", sens);
+    const voisine = $voisine?.nodeAfter;
+    const cible =
+      $voisine && voisine
+        ? TextSelection.create(etat.doc, $voisine.pos + 1 + Math.min($tete.parentOffset, voisine.content.size))
+        : Selection.near(etat.doc.resolve(sens > 0 ? $case.after(-1) : $case.before(-1)), sens);
+    dispatch?.(etat.tr.setSelection(cible).scrollIntoView());
+    return true;
+  };
 
 /** Un tri de mots français, les nombres dans leur ordre. */
 const ORDRE = new Intl.Collator("fr", { numeric: true, sensitivity: "base" });

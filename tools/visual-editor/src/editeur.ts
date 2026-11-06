@@ -70,7 +70,7 @@ import { colorer, langages, type Morceau } from "./coloration";
 import { motAutour } from "./correcteur";
 import { depuisMarkdown, type Origine, trancheBrute, trancheCollee, versMarkdown } from "./markdown";
 import { schema } from "./schema";
-import { changerApparence, triable, trierTableau } from "./tableaux";
+import { caseVoisine, changerApparence, triable, trierTableau } from "./tableaux";
 
 const n = schema.nodes;
 const m = schema.marks;
@@ -859,7 +859,9 @@ export class EditeurVisuel {
           "Mod-r": aligner("right"),
           "Mod-j": aligner("justify"),
           Enter: chainCommands(entreeDansLeCode, entreeDansListe),
-          ArrowUp: avantLePremierBloc,
+          // Au-dessus d'un tableau en tête de fiche, une ligne s'ouvre ; dans un tableau, ↑ et ↓ vont de case en case.
+          ArrowUp: chainCommands(avantLePremierBloc, caseVoisine(-1)),
+          ArrowDown: caseVoisine(1),
           "Shift-Enter": sautDeLigne,
           "Mod-Enter": sautDeLigne,
           Tab: chainCommands(retraitDuCode(1), tabulation(1)),
