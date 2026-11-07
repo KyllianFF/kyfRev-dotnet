@@ -130,6 +130,22 @@ public abstract class VaultStorage
     /// <param name="entries">Les entrées de l'archive.</param>
     /// <param name="backup">Le chemin de l'archive, pour les messages.</param>
     public virtual IReadOnlyList<StoredFile> FilesOfBackup(IReadOnlyList<StoredFile> entries, string backup) => entries;
+
+    /// <summary>
+    /// Parmi les fichiers posés sur le disque (<see cref="Raw"/>), ceux qu'une sauvegarde recopie : tous pour le disque ;
+    /// pour un coffre chiffré, tous sauf un objet que son index ne nomme plus.
+    /// </summary>
+    /// <param name="files">Les chemins complets des fichiers posés sur le disque.</param>
+    public virtual IEnumerable<string> FilesToBackUp(IEnumerable<string> files) => files;
+
+    /// <summary>
+    /// Relit ce que le stockage garde en mémoire, une fois le verrou du coffre pris : un autre processus a pu écrire depuis
+    /// l'ouverture du stockage. Rien à relire pour le disque ; l'index pour un coffre chiffré.
+    /// </summary>
+    /// <exception cref="IOException">Ce qu'il faut relire ne se lit plus ; le stockage reste tel qu'il était.</exception>
+    public virtual void Reload()
+    {
+    }
 }
 
 /// <summary>Un élément d'un dossier : fichier ou dossier, son nom, sa taille, sa date.</summary>

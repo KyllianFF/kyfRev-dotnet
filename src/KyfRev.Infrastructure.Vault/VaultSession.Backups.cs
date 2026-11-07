@@ -159,12 +159,13 @@ public sealed partial class VaultSession
 
     /// <summary>
     /// Tous les fichiers du coffre tels qu'ils sont posés sur le disque, sauf le verrou et les temporaires, triés : ceux
-    /// d'un coffre chiffré le restent dans la sauvegarde.
+    /// d'un coffre chiffré le restent dans la sauvegarde. Le stockage écarte ce qui n'est plus du coffre : pour un coffre
+    /// chiffré, un objet que son index ne nomme plus.
     /// </summary>
     private List<VaultPath> FilesToBackup()
     {
         var excluded = new HashSet<string>([VaultLayout.LockFile, VaultLayout.LockInfoFile], StringComparer.Ordinal);
-        var files = new List<VaultPath>();
+        var found = new List<string>();
         var toVisit = new Stack<string>([Root]);
         while (toVisit.TryPop(out var current))
         {
@@ -180,15 +181,20 @@ public sealed partial class VaultSession
                 }
                 else if (!entry.Name.StartsWith(AtomicFile.TemporaryPrefix, StringComparison.Ordinal))
                 {
-                    if (!VaultPath.TryFromAbsolute(Root, entry.FullName, out var path, out var reason))
-                    {
-                        throw VaultException.InvalidPath(Path.GetRelativePath(Root, entry.FullName).Replace('\\', '/'), reason);
-                    }
-                    if (!excluded.Contains(path.Value))
-                    {
-                        files.Add(path);
-                    }
+                    found.Add(entry.FullName);
                 }
+            }
+        }
+        var files = new List<VaultPath>();
+        foreach (var file in _storage.FilesToBackUp(found))
+        {
+            if (!VaultPath.TryFromAbsolute(Root, file, out var path, out var reason))
+            {
+                throw VaultException.InvalidPath(Path.GetRelativePath(Root, file).Replace('\\', '/'), reason);
+            }
+            if (!excluded.Contains(path.Value))
+            {
+                files.Add(path);
             }
         }
         files.Sort();

@@ -30,7 +30,14 @@ public abstract class VaultBackupsTests(StorageKind storage)
         Assert.AreEqual(Stamp, backup.Timestamp);
         CollectionAssert.AreEqual(new[] { Path.GetFileName(backup.Path) }, Directory.GetFiles(outside.PathOf("sauvegardes")).Select(Path.GetFileName).ToArray());
         using var archive = ZipFile.OpenRead(backup.Path);
-        Assert.HasCount(backup.FileCount, folder.Storage.FilesOfBackup(VaultBackups.Entries(archive, backup.Path), backup.Path), "chaque fichier du coffre, et lui seul");
+        var expected = folder.VaultFiles();
+        var backedUp = folder.Storage.FilesOfBackup(VaultBackups.Entries(archive, backup.Path), backup.Path).Select(file => file.Path).Order(StringComparer.Ordinal).ToList();
+        CollectionAssert.AreEqual(expected, backedUp, "chaque fichier du coffre, verrou exclu, et lui seul");
+        Assert.HasCount(backup.FileCount, expected);
+        if (storage == StorageKind.Disk)
+        {
+            Assert.HasCount(backup.FileCount, archive.Entries, "l'archive d'un coffre en clair recopie ses fichiers tels quels");
+        }
         Assert.IsFalse(archive.Entries.Any(e => e.FullName.StartsWith(".suivi/verrou", StringComparison.Ordinal)));
     }
 

@@ -25,6 +25,11 @@ public sealed class VaultStorageTests
         Assert.AreSame(storage, storage.Raw);
         StoredFile[] entries = [new("a.md", 1, () => [1])];
         Assert.AreSame(entries, storage.FilesOfBackup(entries, "sauvegarde.zip"));
+        string[] raw = [OneFileStorage.File, "dossier/autre"];
+        Assert.AreSame(raw, storage.FilesToBackUp(raw), "tout ce qui est posé sur le disque se sauvegarde");
+
+        storage.Reload();
+        Assert.IsTrue(storage.Exists(OneFileStorage.File), "rien à relire");
     }
 
     [TestMethod]

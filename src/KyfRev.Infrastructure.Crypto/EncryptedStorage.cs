@@ -223,9 +223,35 @@ public sealed class EncryptedStorage : VaultStorage, IDisposable
     public override bool SameEntry(string first, string second) =>
         Exists(first) && Exists(second) && TryInside(first) is { } a && TryInside(second) is { } b && SameName(a, b);
 
+    /// <summary>Relit l'index sur le disque (<see cref="EncryptedVault.Reload"/>).</summary>
+    /// <exception cref="IOException">L'index est absent, altéré, ou d'un autre coffre ; celui qu'on avait reste.</exception>
+    public override void Reload()
+    {
+        try
+        {
+            _vault.Reload();
+        }
+        catch (VaultCryptoException exception)
+        {
+            throw new IOException(exception.Message, exception);
+        }
+    }
+
+    /// <summary>
+    /// L'en-tête, l'index, et parmi les objets ceux que l'index nomme : un objet qu'un effacement n'a pas pu retirer n'est
+    /// plus du coffre, et ne part pas dans ses sauvegardes. Tout le reste est recopié tel quel.
+    /// </summary>
+    public override IEnumerable<string> FilesToBackUp(IEnumerable<string> files)
+    {
+        ArgumentNullException.ThrowIfNull(files);
+        var named = _vault.NamedObjects;
+        return files.Where(file => ObjectOf(file) is not { } objectId || named.Contains(objectId));
+    }
+
     /// <summary>
     /// Les fichiers d'une sauvegarde de ce coffre : son index, ouvert avec la clé du coffre, nomme chaque fichier et son
-    /// objet, déchiffré à la lecture. Une sauvegarde faite avant le chiffrement se lit telle quelle.
+    /// objet, déchiffré à la lecture. Un fichier dont l'objet manque à l'archive n'y est pas, comme dans la sauvegarde d'un
+    /// coffre en clair à qui manquait un fichier. Une sauvegarde faite avant le chiffrement se lit telle quelle.
     /// </summary>
     /// <exception cref="IOException">La sauvegarde est d'un autre coffre, ou son index est altéré ou absent.</exception>
     public override IReadOnlyList<StoredFile> FilesOfBackup(IReadOnlyList<StoredFile> entries, string backup)
@@ -256,11 +282,10 @@ public sealed class EncryptedStorage : VaultStorage, IDisposable
         var found = new List<StoredFile>();
         foreach (var (path, objectId) in files)
         {
-            if (!raw.TryGetValue($"{EncryptedVault.Objects}/{objectId}{EncryptedVault.ObjectExtension}", out var sealedEntry))
+            if (raw.TryGetValue($"{EncryptedVault.Objects}/{objectId}{EncryptedVault.ObjectExtension}", out var sealedEntry))
             {
-                throw new IOException($"l'objet de « {path} » manque");
+                found.Add(new StoredFile(path, Math.Max(0, sealedEntry.Length - SealedFile.Overhead), () => OpenObject(objectId, sealedEntry, path)));
             }
-            found.Add(new StoredFile(path, Math.Max(0, sealedEntry.Length - SealedFile.Overhead), () => OpenObject(objectId, sealedEntry, path)));
         }
         return found;
     }
@@ -305,6 +330,22 @@ public sealed class EncryptedStorage : VaultStorage, IDisposable
 
     private string Inside(string path) =>
         TryInside(path) ?? throw new UnauthorizedAccessException($"« {path} » n'est pas dans le coffre chiffré.");
+
+    /// <summary>L'identifiant de l'objet que le fichier posé sur le disque <paramref name="file"/> contient ; rien si ce n'est pas un objet.</summary>
+    private string? ObjectOf(string file)
+    {
+        var full = Path.GetFullPath(file);
+        foreach (var root in (string[])[_root, _realRoot])
+        {
+            var parent = Path.GetDirectoryName(full);
+            if (string.Equals(parent, Path.Combine(root, EncryptedVault.Objects), StringComparison.OrdinalIgnoreCase)
+                && full.EndsWith(EncryptedVault.ObjectExtension, StringComparison.OrdinalIgnoreCase))
+            {
+                return Path.GetFileNameWithoutExtension(full);
+            }
+        }
+        return null;
+    }
 
     private string ExistingFile(string path)
     {

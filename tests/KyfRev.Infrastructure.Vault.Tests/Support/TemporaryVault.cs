@@ -220,6 +220,19 @@ internal sealed class TemporaryVault : IDisposable
         return files;
     }
 
+    /// <summary>
+    /// Les chemins des fichiers du coffre tels que la session les voit, verrou exclu, dans l'ordre. Rien n'est lu : le coffre
+    /// peut être ouvert.
+    /// </summary>
+    public List<string> VaultFiles() =>
+    [
+        .. Storage.AllEntries(Root)
+            .Where(entry => !entry.IsDirectory)
+            .Select(entry => Relative(entry.FullName))
+            .Where(path => path is not VaultLayout.LockFile and not VaultLayout.LockInfoFile)
+            .Order(StringComparer.Ordinal),
+    ];
+
     /// <summary>Les dossiers, comme <see cref="Files"/>, dans l'ordre UTF-8.</summary>
     public List<string> Folders()
     {

@@ -160,6 +160,68 @@ public sealed class EncryptedStorageTests
     }
 
     [TestMethod]
+    public void Reloading_reads_what_another_writer_left_and_keeps_the_index_if_it_does_not_open()
+    {
+        using var folder = new TemporaryFolder();
+        using var storage = NewStorage(folder.Root);
+        var a = Path.Combine(folder.Root, "a.md");
+        var b = Path.Combine(folder.Root, "b.md");
+        storage.Replace(a, One);
+        using (var other = EncryptedStorage.Open(folder.Root, Shared.Value.Key, DiskStorage.Instance))
+        {
+            other.Replace(b, Two);
+            other.CreateDirectory(Path.Combine(folder.Root, "Vide"));
+        }
+        Assert.IsFalse(storage.FileExists(b), "lu avant l'autre écriture");
+
+        storage.Reload();
+
+        Assert.AreEqual("Vide/ a.md:2 b.md:4", Described(storage.Entries(folder.Root)));
+        CollectionAssert.AreEqual(Two, storage.ReadAllBytes(b));
+
+        var index = Path.Combine(folder.Root, EncryptedVault.IndexFile);
+        File.WriteAllBytes(index, [.. File.ReadAllBytes(index)[..^1], 0]);
+        Assert.ThrowsExactly<IOException>(storage.Reload);
+        Assert.AreEqual("Vide/ a.md:2 b.md:4", Described(storage.Entries(folder.Root)), "l'index en mémoire reste celui qu'il était");
+        File.Delete(index);
+        Assert.ThrowsExactly<IOException>(storage.Reload);
+    }
+
+    [TestMethod]
+    public void A_purge_says_which_objects_it_could_not_erase()
+    {
+        using var folder = new TemporaryFolder();
+        var disk = new FailingDisk();
+        using var storage = EncryptedStorage.Create(folder.Root, Shared.Value.Header, Shared.Value.Key, disk);
+        var cours = Path.Combine(folder.Root, "Cours");
+        storage.CreateDirectory(cours);
+        storage.Replace(Path.Combine(cours, "a.md"), One);
+        storage.Replace(Path.Combine(cours, "b.md"), Two);
+        string[] names = ["a.md", "b.md"];
+        var objects = names.Select(name => storage.ObjectFileOf(Path.Combine(cours, name))).ToList();
+
+        // L'index s'écrit, puis le premier objet ne s'efface pas : le dossier a quitté le coffre, l'objet resté est nommé.
+        disk.FailAt = disk.Writes + 2;
+        var error = Assert.ThrowsExactly<IOException>(() => storage.Purge(cours));
+
+        Assert.IsFalse(storage.DirectoryExists(cours));
+        Assert.AreEqual(1, objects.Count(File.Exists), "un objet reste, l'autre est effacé");
+        Assert.Contains(Path.GetFileName(objects.Single(File.Exists)), error.Message);
+        Assert.DoesNotContain(Path.GetFileName(objects.Single(path => !File.Exists(path))), error.Message);
+        Assert.AreEqual(string.Empty, Reopened(folder.Root), "le disque ne nomme plus rien");
+        CollectionAssert.AreEquivalent(new[] { EncryptedVault.HeaderFile, EncryptedVault.IndexFile }, storage.FilesToBackUp(RawFiles(folder.Root).Select(file => Path.Combine(folder.Root, file.Path))).Select(path => Path.GetRelativePath(folder.Root, path)).ToArray(), "une sauvegarde ne recopie que les objets que l'index nomme");
+
+        // Plus rien ne s'écrit après l'index : chaque objet resté est nommé.
+        var latin = Path.Combine(folder.Root, "Latin");
+        storage.CreateDirectory(latin);
+        storage.Replace(Path.Combine(latin, "c.md"), One);
+        storage.Replace(Path.Combine(latin, "d.md"), Two);
+        disk.FailAt = disk.Writes + 2;
+        disk.Cut = true;
+        Assert.Contains("2 de ses objets", Assert.ThrowsExactly<IOException>(() => storage.Purge(latin)).Message);
+    }
+
+    [TestMethod]
     public void A_backup_reads_through_its_index_and_refuses_another_vault()
     {
         using var folder = new TemporaryFolder();
@@ -178,7 +240,10 @@ public sealed class EncryptedStorageTests
         Assert.AreSame(plain, storage.FilesOfBackup(plain, "ancienne.zip"));
 
         Assert.ThrowsExactly<IOException>(() => storage.FilesOfBackup([.. raw.Where(file => file.Path != EncryptedVault.IndexFile)], "sans-index.zip"));
-        Assert.ThrowsExactly<IOException>(() => storage.FilesOfBackup([.. raw.Where(file => !file.Path.StartsWith(EncryptedVault.Objects, StringComparison.Ordinal) || file == raw[^1])], "incomplete.zip"));
+        // Un objet qui manque : son fichier n'y est pas, comme dans la sauvegarde d'un coffre en clair dont un fichier manquait.
+        var incomplete = storage.FilesOfBackup([.. raw.Where(file => !file.Path.StartsWith(EncryptedVault.Objects, StringComparison.Ordinal) || file == raw[^1])], "incomplete.zip");
+        var left = Assert.ContainsSingle(incomplete);
+        CollectionAssert.AreEqual(left.Path == "b.md" ? Two : One, left.Read());
         var altered = raw.Select(file => file.Path.StartsWith(EncryptedVault.Objects, StringComparison.Ordinal) ? file with { Read = () => [.. file.Read()[..^1], 0] } : file).ToList();
         Assert.ThrowsExactly<IOException>(() => storage.FilesOfBackup(altered, "alteree.zip")[0].Read());
 

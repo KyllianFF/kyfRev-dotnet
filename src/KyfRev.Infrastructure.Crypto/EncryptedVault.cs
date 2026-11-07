@@ -143,24 +143,7 @@ public sealed class EncryptedVault : IDisposable
         var vault = new EncryptedVault(root, disk, header.VaultId, dataKey);
         try
         {
-            byte[] sealedIndex;
-            try
-            {
-                sealedIndex = disk.ReadAllBytes(Path.Combine(root, IndexFile));
-            }
-            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
-            {
-                throw new VaultCryptoException("L'index du coffre chiffré est introuvable ou illisible.", exception);
-            }
-            var files = vault.OpenIndex(sealedIndex, out var folders);
-            foreach (var (path, objectId) in files)
-            {
-                if (!vault._files.TryAdd(path, new Entry(path, objectId)))
-                {
-                    throw new VaultCryptoException("L'index du coffre chiffré nomme deux fois le même fichier.");
-                }
-            }
-            vault._folders.UnionWith(folders);
+            vault.Reload();
             return vault;
         }
         catch
@@ -168,6 +151,36 @@ public sealed class EncryptedVault : IDisposable
             vault.Dispose();
             throw;
         }
+    }
+
+    /// <summary>
+    /// Relit l'index sur le disque : un autre processus a pu y écrire depuis l'ouverture. La session du coffre le relit
+    /// une fois son verrou pris. Si l'index ne s'ouvre pas, celui qu'on avait reste.
+    /// </summary>
+    /// <exception cref="VaultCryptoException">L'index est absent, altéré, ou d'un autre coffre.</exception>
+    public void Reload()
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        byte[] sealedIndex;
+        try
+        {
+            sealedIndex = Disk.ReadAllBytes(Path.Combine(Root, IndexFile));
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            throw new VaultCryptoException("L'index du coffre chiffré est introuvable ou illisible.", exception);
+        }
+        var files = new Dictionary<string, Entry>(StringComparer.OrdinalIgnoreCase);
+        var named = OpenIndex(sealedIndex, out var folders);
+        foreach (var (path, objectId) in named)
+        {
+            if (!files.TryAdd(path, new Entry(path, objectId)))
+            {
+                throw new VaultCryptoException("L'index du coffre chiffré nomme deux fois le même fichier.");
+            }
+        }
+        _files = files;
+        _folders = new SortedSet<string>(folders, StringComparer.OrdinalIgnoreCase);
     }
 
     /// <summary>Vrai si le fichier <paramref name="path"/> est dans le coffre.</summary>
@@ -335,6 +348,10 @@ public sealed class EncryptedVault : IDisposable
     /// objets sont effacés. Seul l'effacement demandé depuis la corbeille y recourt.
     /// </summary>
     /// <exception cref="VaultCryptoException">Ni fichier ni dossier ne porte ce chemin.</exception>
+    /// <exception cref="IOException">
+    /// Un objet n'a pas pu être effacé (un autre programme le tient ouvert) : le chemin a quitté le coffre, mais l'objet
+    /// reste sur le disque. Le message le nomme ; aucune sauvegarde ne le recopie.
+    /// </exception>
     public void Purge(string path)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
@@ -358,9 +375,13 @@ public sealed class EncryptedVault : IDisposable
                 _folders.RemoveWhere(other => IsWithin(other, folder));
             });
         }
-        foreach (var entry in files)
+        var left = files.Select(entry => TryPurgeObject(entry.Object)).OfType<string>().ToList();
+        if (left.Count > 0)
         {
-            _ = TryPurgeObject(entry.Object);
+            var objects = string.Join(" ; ", left);
+            throw new IOException(left.Count == 1
+                ? $"« {path} » a quitté le coffre, mais son objet n'a pas pu être effacé : {objects}. Il reste sur le disque ; aucune sauvegarde ne le recopie."
+                : $"« {path} » a quitté le coffre, mais {left.Count} de ses objets n'ont pas pu être effacés : {objects}. Ils restent sur le disque ; aucune sauvegarde ne les recopie.");
         }
     }
 
@@ -443,6 +464,9 @@ public sealed class EncryptedVault : IDisposable
         return SealedFile.Open(_key, VaultId, objectId, sealedBytes);
     }
 
+    /// <summary>Les objets que l'index nomme : les seuls qu'une sauvegarde recopie.</summary>
+    internal IReadOnlySet<string> NamedObjects => _files.Values.Select(entry => entry.Object).ToHashSet(StringComparer.Ordinal);
+
     /// <summary>Le fichier de l'objet de <paramref name="path"/>, pour les essais.</summary>
     internal string ObjectFileOf(string path) => ObjectPath(EntryOf(path).Object);
 
@@ -524,20 +548,20 @@ public sealed class EncryptedVault : IDisposable
         Disk.Replace(ObjectPath(objectId), SealedFile.Seal(_key, VaultId, objectId, content));
 
     /// <summary>
-    /// Le seul point du coffre chiffré qui efface : un objet que l'index ne nomme plus. S'il reste, il est ignoré : aucune
-    /// entrée ne le nomme, seule sa taille se voit.
+    /// Le seul point du coffre chiffré qui efface : un objet que l'index ne nomme plus. S'il reste, aucune entrée ne le
+    /// nomme et aucune sauvegarde ne le recopie ; seule sa taille se voit sur le disque.
     /// </summary>
-    /// <returns><see langword="false"/> si l'objet n'a pas pu être effacé.</returns>
-    private bool TryPurgeObject(string objectId)
+    /// <returns>Rien si l'objet est effacé ; sinon son fichier et la raison, pour le dire.</returns>
+    private string? TryPurgeObject(string objectId)
     {
         try
         {
             Disk.Purge(ObjectPath(objectId));
-            return true;
+            return null;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            return false;
+            return $"{Objects}/{objectId}{ObjectExtension} ({exception.Message})";
         }
     }
 

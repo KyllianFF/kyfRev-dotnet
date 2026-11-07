@@ -127,6 +127,28 @@ public sealed class EncryptedBackupTests
     }
 
     [TestMethod]
+    public void A_vault_missing_an_object_backs_up_and_restores_the_rest()
+    {
+        using var folder = TemporaryVault.Empty(StorageKind.Encrypted);
+        using var outside = TemporaryVault.Empty();
+        using var vault = folder.Initialize(Now);
+        var kept = vault.CreateSheet(null, "Mitose", "La prophase.\n", Now);
+        var lost = vault.CreateSheet(null, "Révolution", "1789.\n", Now);
+        var files = folder.VaultFiles().Count;
+
+        // L'objet d'une fiche a disparu du disque : la sauvegarde recopie le reste, comme pour un coffre en clair.
+        File.Delete(((EncryptedStorage)folder.Storage).ObjectFileOf(folder.PathOf("fiches/Révolution.md")));
+        var backup = vault.Backup(outside.PathOf("sauvegardes"), Stamp);
+        Assert.AreEqual(files - 1, backup.FileCount, "tout, sauf la fiche dont l'objet manque");
+
+        folder.Delete("fiches/Mitose.md");
+        folder.Delete("fiches/Révolution.md");
+        vault.Analyze(Now);
+        Assert.AreEqual("fiches/Mitose.md", vault.RestoreSheetFromBackup(kept, backup.Path, Now).Value);
+        Assert.AreEqual(VaultErrorKind.NotInBackup, Assert.ThrowsExactly<VaultException>(() => vault.RestoreSheetFromBackup(lost, backup.Path, Now)).Kind);
+    }
+
+    [TestMethod]
     public void A_storage_serves_only_its_own_folder()
     {
         using var folder = TemporaryVault.Empty(StorageKind.Encrypted);

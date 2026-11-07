@@ -124,6 +124,12 @@ public sealed partial class VaultSession : IDisposable
             ?? throw VaultException.AlreadyOpen(holder is null ? "par une autre fenêtre" : $"sur {holder.Machine} depuis {InstantText.Format(holder.Since)}"));
         try
         {
+            // Le stockage a pu lire ses fichiers avant le verrou : un autre processus a pu écrire depuis (l'index chiffré).
+            Io(absolute, () =>
+            {
+                storage.Reload();
+                return true;
+            });
             VaultSettingsFile settings;
             try
             {
