@@ -16,6 +16,7 @@
   <ItemGroup>
     <!-- Les types publiés, copiés dans le dossier d'une extension créée : une seule source, celle de la documentation. -->
     <EmbeddedResource Include="..\..\docs\extensions\kyfrev.d.ts" LogicalName="kyfrev.d.ts" />
+    <EmbeddedResource Include="cles-catalogue.json" LogicalName="cles-catalogue.json" />
   </ItemGroup>
 
 </Project>

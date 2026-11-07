@@ -56,16 +56,38 @@ public sealed partial class TextHoles : ObservableObject
     /// </summary>
     /// <param name="highlights">Les surlignages du texte.</param>
     /// <param name="bold">Les étendues de texte en gras.</param>
-    public static ImmutableArray<TextHole> Compute(IReadOnlyList<Highlight> highlights, IReadOnlyList<(int Start, int End)> bold)
+    public static ImmutableArray<TextHole> Compute(IReadOnlyList<Highlight> highlights, IReadOnlyList<(int Start, int End)> bold) =>
+        Compute(highlights, bold, []);
+
+    /// <summary>
+    /// Les trous du texte, avec les cases des colonnes de tableau cachées en révision. Une case qu'un passage couvre n'en
+    /// fait pas un de plus, et le gras d'une case cachée non plus.
+    /// </summary>
+    /// <param name="highlights">Les surlignages du texte.</param>
+    /// <param name="bold">Les étendues de texte en gras.</param>
+    /// <param name="cells">Les cases cachées en révision.</param>
+    public static ImmutableArray<TextHole> Compute(IReadOnlyList<Highlight> highlights, IReadOnlyList<(int Start, int End)> bold, IReadOnlyList<(int Start, int End)> cells)
     {
         ArgumentNullException.ThrowIfNull(highlights);
         ArgumentNullException.ThrowIfNull(bold);
+        ArgumentNullException.ThrowIfNull(cells);
         var passages = highlights.Where(highlight => !highlight.IsCandidate).ToList();
         var holes = passages.Select(highlight => new TextHole($"passage:{highlight.Id}", highlight.Start, highlight.End, highlight.Id)).ToList();
+        var shown = new List<(int Start, int End)>();
+        var cell = 0;
+        foreach (var (start, end) in cells)
+        {
+            if (!passages.Exists(passage => passage.Start < end && start < passage.End))
+            {
+                holes.Add(new TextHole(string.Create(CultureInfo.InvariantCulture, $"case:{cell}"), start, end, null));
+                shown.Add((start, end));
+            }
+            cell++;
+        }
         var rank = 0;
         foreach (var (start, end) in bold)
         {
-            if (!passages.Exists(passage => passage.Start <= start && end <= passage.End))
+            if (!passages.Exists(passage => passage.Start <= start && end <= passage.End) && !shown.Exists(hidden => hidden.Start <= start && end <= hidden.End))
             {
                 holes.Add(new TextHole(string.Create(CultureInfo.InvariantCulture, $"gras:{rank}"), start, end, null));
             }

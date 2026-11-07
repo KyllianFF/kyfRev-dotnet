@@ -77,6 +77,9 @@ public sealed record MachinePreferences
     /// <summary>Police du texte des fiches.</summary>
     public ReadingFont Font { get; init; } = ReadingFont.Sans;
 
+    /// <summary>Un mot défini dans le coffre se marque dans toutes les fiches qui le contiennent, hors révision.</summary>
+    public bool MarkDefinedWords { get; init; } = true;
+
     /// <summary>Animations réduites, même si Windows ne le demande pas.</summary>
     public bool ReducedMotion { get; init; }
 

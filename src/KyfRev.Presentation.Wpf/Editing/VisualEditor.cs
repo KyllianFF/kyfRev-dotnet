@@ -77,6 +77,27 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
         ("--repere-passage", "Kyf.Brush.MarkerPassage"),
         ("--pastille-fiche-fond", "Kyf.Brush.PillSheetBackground"),
         ("--pastille-passage-fond", "Kyf.Brush.PillPassageBackground"),
+        ("--tableau-sobre-bande", "Kyf.Brush.TableSoberBand"),
+        ("--tableau-foret-entete", "Kyf.Brush.TableForestHeader"),
+        ("--tableau-foret-entete-texte", "Kyf.Brush.TableForestHeaderText"),
+        ("--tableau-foret-bande", "Kyf.Brush.TableForestBand"),
+        ("--tableau-foret-trait", "Kyf.Brush.TableForestLine"),
+        ("--tableau-ambre-entete", "Kyf.Brush.TableAmberHeader"),
+        ("--tableau-ambre-entete-texte", "Kyf.Brush.TableAmberHeaderText"),
+        ("--tableau-ambre-bande", "Kyf.Brush.TableAmberBand"),
+        ("--tableau-ambre-trait", "Kyf.Brush.TableAmberLine"),
+        ("--tableau-ardoise-entete", "Kyf.Brush.TableSlateHeader"),
+        ("--tableau-ardoise-entete-texte", "Kyf.Brush.TableSlateHeaderText"),
+        ("--tableau-ardoise-bande", "Kyf.Brush.TableSlateBand"),
+        ("--tableau-ardoise-trait", "Kyf.Brush.TableSlateLine"),
+        ("--tableau-prune-entete", "Kyf.Brush.TablePlumHeader"),
+        ("--tableau-prune-entete-texte", "Kyf.Brush.TablePlumHeaderText"),
+        ("--tableau-prune-bande", "Kyf.Brush.TablePlumBand"),
+        ("--tableau-prune-trait", "Kyf.Brush.TablePlumLine"),
+        ("--tableau-encre-entete", "Kyf.Brush.TableInkHeader"),
+        ("--tableau-encre-entete-texte", "Kyf.Brush.TableInkHeaderText"),
+        ("--tableau-encre-bande", "Kyf.Brush.TableInkBand"),
+        ("--tableau-encre-trait", "Kyf.Brush.TableInkLine"),
     ];
 
     private const string VaultResources = "/coffre/";
@@ -152,6 +173,12 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
 
     /// <summary>Le moteur n'a pas pu démarrer, ou s'est arrêté.</summary>
     public event EventHandler<string>? Failed;
+
+    /// <summary>L'éditeur n'a pas démarré faute de moteur WebView2 sur l'ordinateur.</summary>
+    public bool MissesEngine { get; private set; }
+
+    /// <summary>Un processus du moteur s'est arrêté puis a été relancé par WebView2 (le GPU, un utilitaire) : la page continue.</summary>
+    public event EventHandler<string>? Restarted;
 
     /// <summary>Un clic sur l'image du texte, pendant qu'un volet le recouvre.</summary>
     public event EventHandler? SnapshotClicked;
@@ -281,6 +308,9 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
     public void InsertTable(int rows, int columns) => Post(new TableRequest(rows, columns));
 
     /// <inheritdoc/>
+    public void SetTableLook(string change, string? value) => Post(new TableLookRequest(change, value));
+
+    /// <inheritdoc/>
     public void InsertCode(string language) => Post(new CodeRequest(language));
 
     /// <inheritdoc/>
@@ -369,7 +399,7 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
                 SaveAsked?.Invoke(this, EventArgs.Empty);
                 break;
             case ToolsEvent tools:
-                ToolsChanged?.Invoke(this, new EditorTools(tools.Bold, tools.Italic, tools.Underline, tools.Strike, tools.Superscript, tools.Subscript, tools.Heading, tools.List, tools.CanUndo, tools.CanRedo, tools.Color, tools.Size, tools.Align));
+                ToolsChanged?.Invoke(this, new EditorTools(tools.Bold, tools.Italic, tools.Underline, tools.Strike, tools.Superscript, tools.Subscript, tools.Heading, tools.List, tools.CanUndo, tools.CanRedo, tools.Color, tools.Size, tools.Align, tools.TableLook));
                 break;
             case AskDiagramEvent diagram:
                 _ = AnswerDiagramAsync(diagram);
@@ -598,6 +628,7 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
         {
             if (!_disposed)
             {
+                MissesEngine = exception is WebView2RuntimeNotFoundException;
                 Failed?.Invoke(this, exception.Message);
             }
         }
@@ -611,7 +642,17 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
         web.WebMessageReceived += OnMessage;
         web.NavigationStarting += (_, e) => e.Cancel = e.Uri != StartAddress;
         web.PermissionRequested += (_, e) => e.State = e.PermissionKind == CoreWebView2PermissionKind.ClipboardRead ? CoreWebView2PermissionState.Allow : CoreWebView2PermissionState.Deny;
-        web.ProcessFailed += (_, e) => Failed?.Invoke(this, e.ProcessFailedKind.ToString());
+        web.ProcessFailed += (_, e) =>
+        {
+            if (WebProcesses.StopsThePage(e.ProcessFailedKind))
+            {
+                Failed?.Invoke(this, e.ProcessFailedKind.ToString());
+            }
+            else
+            {
+                Restarted?.Invoke(this, e.ProcessFailedKind.ToString());
+            }
+        };
     }
 
     /// <summary>Une image du coffre peut être lourde, ou loin : elle se lit sur un fil de travail, l'interface reste libre.</summary>

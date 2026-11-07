@@ -42,6 +42,40 @@ public sealed class DefinitionsTests
     }
 
     [TestMethod]
+    public async Task A_definition_can_be_kept_to_its_sheet_and_marked_everywhere_again()
+    {
+        using var glossary = new Glossary();
+        glossary.Filled();
+        var page = await glossary.LoadedAsync();
+        var row = page.Rows.Single(candidate => candidate.Term == "Noyau");
+        Assert.IsTrue(row.IsMarkedEverywhere);
+
+        row.IsMarkedEverywhere = false;
+        await Waiting.UntilAsync(() => !row.Definition.Everywhere);
+
+        Assert.IsFalse(glossary.App.Annotations.Definitions().Value.Single(definition => definition.Term == "Noyau").Everywhere);
+        Assert.AreSame(row, page.Rows.Single(candidate => candidate.Term == "Noyau"), "la liste ne se refait pas : la case garde le focus");
+        row.IsMarkedEverywhere = true;
+        await Waiting.UntilAsync(() => row.Definition.Everywhere);
+        Assert.IsTrue(glossary.App.Annotations.Definitions().Value.Single(definition => definition.Term == "Noyau").Everywhere);
+    }
+
+    [TestMethod]
+    public async Task A_choice_that_cannot_be_kept_gives_back_the_box_and_says_why()
+    {
+        using var glossary = new Glossary();
+        glossary.Filled();
+        var page = await glossary.LoadedAsync();
+        var row = new DefinitionRow(new VaultDefinition("a_absente", "fiche", "La cellule", "Sciences", "Noyau", "Il renferme l'ADN.", [], AnchorState.Anchored, null, null), page);
+
+        row.IsMarkedEverywhere = false;
+        await Waiting.UntilAsync(() => page.HasError);
+
+        Assert.IsTrue(row.IsMarkedEverywhere, "la case revient à ce que garde le coffre");
+        Assert.IsTrue(row.Definition.Everywhere);
+    }
+
+    [TestMethod]
     public async Task A_row_says_where_the_definition_comes_from()
     {
         using var glossary = new Glossary();

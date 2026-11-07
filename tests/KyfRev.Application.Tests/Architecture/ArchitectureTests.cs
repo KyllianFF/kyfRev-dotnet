@@ -119,9 +119,10 @@ public sealed partial class ArchitectureTests
     }
 
     /// <summary>
-    /// T1 : rien n'est effacé, sauf six exceptions : la rotation des copies de sauvegarde (le nom et
-    /// le dossier de la copie vérifiés), les deux fichiers temporaires de l'écriture atomique et de
-    /// la sauvegarde, le dossier temporaire d'une conversion et son marqueur, et l'effacement
+    /// T1 : rien n'est effacé, sauf sept exceptions : la rotation des copies de sauvegarde (le nom
+    /// et le dossier de la copie vérifiés), les deux fichiers temporaires de l'écriture atomique et
+    /// de la sauvegarde, le dossier d'une extension téléchargée du catalogue (dans le dossier des
+    /// téléchargements), le dossier temporaire d'une conversion et son marqueur, et l'effacement
     /// demandé depuis la corbeille. Deux comptes exacts, fichier par fichier : les effacements
     /// directs du disque (le disque applique <c>Purge</c> à un dossier ou à un fichier), et chaque
     /// appel <c>.Purge(</c>, quoi qui le reçoive : le coffre chiffré retire l'entrée de son index
@@ -135,6 +136,7 @@ public sealed partial class ArchitectureTests
         var deletions = new Dictionary<string, int>(StringComparer.Ordinal)
         {
             ["KyfRev.Infrastructure.Vault/Backups/VaultBackups.cs"] = 1,
+            ["KyfRev.Extensions.Host/CatalogueReader.cs"] = 1,
             ["KyfRev.Infrastructure.Vault/Files/AtomicFile.cs"] = 1,
             ["KyfRev.Infrastructure.Vault/Files/DiskStorage.cs"] = 2,
             ["KyfRev.Infrastructure.Vault/VaultSession.Backups.cs"] = 1,
@@ -159,6 +161,8 @@ public sealed partial class ArchitectureTests
             Assert.AreEqual(purges.GetValueOrDefault(file), PurgeCall().Count(text), $"Appel à Purge dans {file}");
         }
 
+        var discard = File.ReadAllText(Path.Combine(src, "KyfRev.Extensions.Host/CatalogueReader.cs"));
+        Assert.Contains("Path.GetFullPath(folder).StartsWith(root", discard, "un dossier téléchargé ne s'efface que dans le dossier des téléchargements");
         var rotation = File.ReadAllText(Path.Combine(src, "KyfRev.Infrastructure.Vault/Backups/VaultBackups.cs"));
         var copy = rotation[rotation.IndexOf("private static void RemoveOutdatedCopy", StringComparison.Ordinal)..rotation.IndexOf("File.Delete(path)", StringComparison.Ordinal)];
         Assert.Contains("TimestampOf(name) is null", copy, "le nom de la copie doit être vérifié");

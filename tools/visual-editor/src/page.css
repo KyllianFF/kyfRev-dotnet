@@ -105,16 +105,24 @@ body {
   font-family: var(--police-code);
 }
 
-/* Un tableau trop large se replie : jamais de défilement horizontal. */
+/* Un tableau trop large se replie : jamais de défilement horizontal. Sa largeur et le partage de ses colonnes viennent de
+   fiche.css (toute la page, ou ajustée au contenu) et de mots-entiers.ts (chaque colonne garde son plus long mot). */
 .editeur-visuel table {
   max-width: 100%;
-  table-layout: fixed;
-  width: 100%;
 }
 
 .editeur-visuel th,
 .editeur-visuel td {
   overflow-wrap: anywhere;
+  /* Un mot trop long se coupe d'abord à ses syllabes, avec un trait d'union ; n'importe où seulement en dernier recours. */
+  hyphens: auto;
+}
+
+/* Éditeur étroit (la fenêtre à son minimum) : des cases moins rembourrées, pour que les mots y tiennent entiers. */
+@media (max-width: 520px) {
+  .editeur-visuel table :is(th, td) {
+    padding: 4px 6px;
+  }
 }
 
 .contenu-fiche pre {

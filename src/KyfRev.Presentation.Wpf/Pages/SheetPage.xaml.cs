@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
@@ -18,6 +19,7 @@ namespace KyfRev.Presentation.Wpf.Pages;
 internal sealed partial class SheetPage : UserControl
 {
     private const double ListenLabelWidth = 520;
+    private const int WordCardLength = 600;
 
     private IReadOnlyList<SpokenBlock> _spoken = [];
     private object? _pressedOn;
@@ -26,6 +28,7 @@ internal sealed partial class SheetPage : UserControl
     {
         InitializeComponent();
         Ribbon.ChooseImages = EditorView.ChooseImages;
+        AddPanelsToRibbon();
         Unloaded += (_, _) => (DataContext as SheetPageViewModel)?.ReadAloud?.CloseCommand.Execute(null);
         EditorView.CoveredTextClicked = () => (DataContext as SheetPageViewModel)?.CloseOverlayCommand.Execute(null);
         SizeChanged += (_, e) =>
@@ -140,6 +143,35 @@ internal sealed partial class SheetPage : UserControl
     /// <summary>On écoute ce qu'on lit. Pendant une révision à trous, la voix dirait ce qui est masqué.</summary>
     private void UpdateListenToggle(SheetPageViewModel page) =>
         ListenToggle.Visibility = page is { ReadAloud: not null, IsReading: true, Holes.IsActive: false } ? Visibility.Visible : Visibility.Collapsed;
+
+    /// <summary>
+    /// À l'écriture, en barre courte, le plan et les passages passent sous le « ⋯ » du ruban, après l'affichage : l'en-tête
+    /// tient sur une ligne. Ils suivent la page, quelle qu'elle soit.
+    /// </summary>
+    private void AddPanelsToRibbon()
+    {
+        var visible = new BooleanToVisibilityConverter();
+        var separator = new Separator();
+        separator.SetBinding(VisibilityProperty, new Binding("DataContext.HasPanels") { Source = this, Converter = visible, FallbackValue = Visibility.Collapsed });
+        var outline = new MenuItem { Header = ReadingText.Outline, IsCheckable = true };
+        outline.SetBinding(MenuItem.IsCheckedProperty, new Binding("DataContext.IsOutlineOn") { Source = this, Mode = BindingMode.TwoWay });
+        outline.SetBinding(VisibilityProperty, new Binding("DataContext.HasOutline") { Source = this, Converter = visible, FallbackValue = Visibility.Collapsed });
+        var passages = new MenuItem { IsCheckable = true };
+        passages.SetBinding(HeaderedItemsControl.HeaderProperty, new Binding("DataContext.PassagesLabel") { Source = this });
+        passages.SetBinding(MenuItem.IsCheckedProperty, new Binding("DataContext.IsPassagesOn") { Source = this, Mode = BindingMode.TwoWay });
+        passages.SetBinding(VisibilityProperty, new Binding("DataContext.HasPassages") { Source = this, Converter = visible, FallbackValue = Visibility.Collapsed });
+        Ribbon.ViewMenu.Items.Add(separator);
+        Ribbon.ViewMenu.Items.Add(outline);
+        Ribbon.ViewMenu.Items.Add(passages);
+    }
+
+    /// <summary>« ⋯ » de l'en-tête étroit : le plan et les passages, dans un menu ouvert sous le bouton.</summary>
+    private void OnHeaderMore(object sender, RoutedEventArgs e)
+    {
+        HeaderMenu.PlacementTarget = HeaderMoreButton;
+        HeaderMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
+        HeaderMenu.IsOpen = true;
+    }
 
     private void OnListenToggle(object sender, RoutedEventArgs e)
     {
@@ -267,11 +299,77 @@ internal sealed partial class SheetPage : UserControl
         {
             return;
         }
-        if (DataContext is SheetPageViewModel page && SheetText.AnnotationsAt(target) is [var id, ..])
+        if (DataContext is not SheetPageViewModel page)
+        {
+            return;
+        }
+        if (SheetText.AnnotationsAt(target) is [var id, ..])
         {
             page.ActivateCommand.Execute(id);
         }
+        else if (SheetText.WordAt(target) is { } word)
+        {
+            ShowWord(page, word);
+        }
     }
+
+    /// <summary>La définition d'un mot marqué, montrée là où il a été cliqué, avec ce qu'on peut en faire.</summary>
+    internal void ShowWord(SheetPageViewModel page, DefinedWordMark word)
+    {
+        var panel = new StackPanel { MaxWidth = 380 };
+        var term = new TextBlock { Text = word.Term, TextWrapping = TextWrapping.Wrap };
+        term.SetResourceReference(StyleProperty, "Kyf.Text.BodyStrong");
+        panel.Children.Add(term);
+        var explanation = word.Explanation.Length > WordCardLength
+            ? string.Concat(word.Explanation.AsSpan(0, WordCardLength).TrimEnd(), "\u2026")
+            : word.Explanation;
+        var body = new TextBlock { Text = explanation, TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 4, 0, 0) };
+        body.SetResourceReference(StyleProperty, "Kyf.Text.Body");
+        panel.Children.Add(body);
+        var source = new TextBlock { Text = ReadingText.DefinedIn(word.SheetTitle), TextWrapping = TextWrapping.Wrap, Margin = new Thickness(0, 8, 0, 0) };
+        source.SetResourceReference(StyleProperty, "Kyf.Text.Caption");
+        panel.Children.Add(source);
+        var actions = new WrapPanel { Margin = new Thickness(-6, 8, 0, 0) };
+        var see = WordButton(ReadingText.SeeWordDefinition(word.Term), () => page.OpenWordDefinitionCommand.Execute(word));
+        actions.Children.Add(see);
+        actions.Children.Add(WordButton(ReadingText.StopMarkingWord(word.Term), () => page.StopMarkingWordCommand.Execute(word)));
+        panel.Children.Add(actions);
+        var card = new Card { Content = panel, Padding = new Thickness(14, 12, 14, 10) };
+        card.KeyDown += (_, e) =>
+        {
+            if (e.Key == Key.Escape && WordCard is { } open)
+            {
+                open.IsOpen = false;
+                e.Handled = true;
+            }
+        };
+        WordCard = new Popup { Child = card, StaysOpen = false, Placement = PlacementMode.MousePoint, PlacementTarget = SheetText, AllowsTransparency = true };
+        WordCard.IsOpen = true;
+        Dispatcher.BeginInvoke(DispatcherPriority.Input, () => see.Focus());
+    }
+
+    /// <summary>La carte d'un mot marqué, ouverte ou refermée ; rien avant le premier clic sur un mot.</summary>
+    internal Popup? WordCard { get; private set; }
+
+    private Button WordButton(string text, Action action)
+    {
+        var button = new Button { Content = text, Margin = new Thickness(0, 0, 4, 2) };
+        button.SetResourceReference(StyleProperty, "Kyf.Button.Subtle");
+        button.Click += (_, _) =>
+        {
+            WordCard?.IsOpen = false;
+            action();
+        };
+        return button;
+    }
+
+    /// <summary>Les entrées du clic droit sur un mot marqué.</summary>
+    private List<Control> WordMenuItems(SheetPageViewModel page, DefinedWordMark word) =>
+    [
+        ActionMenus.Quick(ReadingText.ShowDefinition, Icons.Show, () => ShowWord(page, word)),
+        Item(ReadingText.SeeWordDefinition(word.Term), () => page.OpenWordDefinitionCommand.Execute(word)),
+        Item(ReadingText.StopMarkingWord(word.Term), () => page.StopMarkingWordCommand.Execute(word)),
+    ];
 
     /// <summary>Le menu du texte : ce qu'on peut faire de la sélection, ou du passage visé.</summary>
     private void OnTextMenu(object sender, ContextMenuEventArgs e)
@@ -323,9 +421,14 @@ internal sealed partial class SheetPage : UserControl
             ];
         }
         var entry = page.Passages.FirstOrDefault(candidate => SheetText.AnnotationsAt(source).Contains(candidate.Annotation.Id));
-        return entry is null
-            ? [.. ListenItems(page, (source as TextElement)?.ContentStart), EditSheetItem(page)]
-            : [.. PassageMenuItems(page, entry), new Separator(), EditSheetItem(page)];
+        if (entry is not null)
+        {
+            return [.. PassageMenuItems(page, entry), new Separator(), EditSheetItem(page)];
+        }
+        var listen = ListenItems(page, (source as TextElement)?.ContentStart);
+        return SheetText.WordAt(source) is { } word
+            ? [.. WordMenuItems(page, word), new Separator(), .. listen, EditSheetItem(page)]
+            : [.. listen, EditSheetItem(page)];
     }
 
     /// <summary>Les entrées que les extensions ajoutent au clic droit d'un texte sélectionné, avec ce texte et sa place.</summary>

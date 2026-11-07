@@ -318,6 +318,48 @@
   <data name="SchemasModule" xml:space="preserve">
     <value>Module Schémas réseau</value>
   </data>
+  <data name="CatalogueOpen" xml:space="preserve">
+    <value>Voir le catalogue</value>
+  </data>
+  <data name="CatalogueTitle" xml:space="preserve">
+    <value>Catalogue</value>
+  </data>
+  <data name="CatalogueHelp" xml:space="preserve">
+    <value>Les extensions publiées avec kyfRev. Le catalogue n'est lu que quand vous le demandez, et n'est pris que si sa signature est bonne ; chaque fichier est vérifié avant l'installation, qui montre ce que l'extension demande.</value>
+  </data>
+  <data name="CatalogueReading" xml:space="preserve">
+    <value>Lecture du catalogue…</value>
+  </data>
+  <data name="CatalogueStatus" xml:space="preserve">
+    <value>Catalogue n° {0} du {1}, signé (clé « {2} »).</value>
+  </data>
+  <data name="CatalogueEmpty" xml:space="preserve">
+    <value>Le catalogue ne propose aucune extension pour l'instant.</value>
+  </data>
+  <data name="CatalogueInstall" xml:space="preserve">
+    <value>Installer</value>
+  </data>
+  <data name="CatalogueUpdate" xml:space="preserve">
+    <value>Mettre à jour</value>
+  </data>
+  <data name="CatalogueUpToDate" xml:space="preserve">
+    <value>À jour</value>
+  </data>
+  <data name="CatalogueVersion" xml:space="preserve">
+    <value>version {0}</value>
+  </data>
+  <data name="CatalogueInstalledVersion" xml:space="preserve">
+    <value>version {0}, installée : {1}</value>
+  </data>
+  <data name="CataloguePermissions" xml:space="preserve">
+    <value>Demande : {0}</value>
+  </data>
+  <data name="CatalogueNoPermission" xml:space="preserve">
+    <value>Ne demande rien.</value>
+  </data>
+  <data name="CatalogueDownloading" xml:space="preserve">
+    <value>Téléchargement et vérification de « {0} »…</value>
+  </data>
   <data name="Tab" xml:space="preserve">
     <value>Modules et extensions</value>
   </data>

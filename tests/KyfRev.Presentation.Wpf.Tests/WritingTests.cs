@@ -148,6 +148,19 @@ public sealed class WritingTests
         Assert.IsLessThan(text.X, code.X, "Le code est à gauche.");
         Assert.Contains("Un premier paragraphe.", scene.Editor.Preview!.Map.Text);
         Assert.Contains("Enregistré", scene.SheetPage.SaveStateText.Text);
+        Assert.IsTrue(scene.SheetPage.SaveStateText.IsVisible, "large, l'état s'écrit en toutes lettres");
+
+        // Étroite, une icône le remplace, sous le même identifiant : un lecteur d'écran la lit et l'annonce.
+        scene.SheetPage.Width = 600;
+        scene.SheetPage.UpdateLayout();
+        TestShell.Flush();
+        Assert.IsFalse(scene.SheetPage.SaveStateText.IsVisible);
+        var icon = scene.SheetPage.SaveStateIconHost;
+        Assert.IsTrue(icon.IsVisible);
+        var peer = System.Windows.Automation.Peers.UIElementAutomationPeer.CreatePeerForElement(icon);
+        Assert.AreEqual("SaveStateText", peer.GetAutomationId());
+        Assert.AreEqual(scene.Editor.StateLabel, peer.GetName());
+        Assert.AreEqual(System.Windows.Automation.AutomationLiveSetting.Polite, System.Windows.Automation.AutomationProperties.GetLiveSetting(icon));
         Assert.IsTrue(scene.SheetPage.WriteToggle.IsChecked);
         Assert.IsFalse(scene.SheetPage.ReadToggle.IsChecked);
     }

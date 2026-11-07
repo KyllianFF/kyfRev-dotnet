@@ -39,6 +39,16 @@ public sealed partial class OutlineEntry : ObservableObject
 /// <param name="IsCandidate">Une position approchée, à vérifier.</param>
 public sealed record Highlight(string Id, int Start, int End, bool IsDefinition, bool IsCandidate);
 
+/// <summary>Un mot défini ailleurs dans le coffre, marqué dans le texte affiché.</summary>
+/// <param name="DefinitionId">La définition.</param>
+/// <param name="Start">Son début dans le texte affiché.</param>
+/// <param name="End">Sa fin.</param>
+/// <param name="Term">Le terme défini.</param>
+/// <param name="Explanation">Son explication.</param>
+/// <param name="SheetId">La fiche où il est défini.</param>
+/// <param name="SheetTitle">Son titre.</param>
+public sealed record DefinedWordMark(string DefinitionId, int Start, int End, string Term, string Explanation, string SheetId, string SheetTitle);
+
 /// <summary>Un passage ou une définition à la corbeille de la fiche.</summary>
 /// <param name="Id">L'annotation.</param>
 /// <param name="Label">Ce qu'en montre le volet.</param>
@@ -161,6 +171,31 @@ public sealed class SheetReading
     public IReadOnlyList<Highlight> Highlights => [.. Passages
         .Where(passage => passage.Position is not null)
         .Select(passage => new Highlight(passage.Annotation.Id, passage.Position!.Value.Start, passage.Position.Value.End, passage.IsDefinition, passage.IsCandidate))];
+
+    /// <summary>
+    /// Les mots définis du coffre qui se marquent dans cette fiche : hors de ses passages, et, pour un terme défini
+    /// plusieurs fois, d'abord sa définition dans cette fiche.
+    /// </summary>
+    /// <param name="definitions">Les définitions du coffre.</param>
+    /// <param name="sheetId">Cette fiche.</param>
+    public IReadOnlyList<DefinedWordMark> WordsOf(IReadOnlyList<VaultDefinition> definitions, string sheetId)
+    {
+        ArgumentNullException.ThrowIfNull(definitions);
+        var marked = definitions.Where(definition => definition.Everywhere).OrderBy(definition => definition.SheetId == sheetId ? 0 : 1).ToList();
+        if (marked.Count == 0)
+        {
+            return [];
+        }
+        var byId = marked.ToDictionary(definition => definition.Id, StringComparer.Ordinal);
+        var taken = Highlights.Select(highlight => (highlight.Start, highlight.End)).ToList();
+        return
+        [
+            .. DefinedWords.Find(Map, [.. marked.Select(definition => new DefinedTerm(definition.Id, definition.Term))], taken)
+                .Select(found => (Found: found, Definition: byId[found.Id]))
+                .Select(pair => new DefinedWordMark(
+                    pair.Definition.Id, pair.Found.Start, pair.Found.End, pair.Definition.Term, pair.Definition.Explanation, pair.Definition.SheetId, pair.Definition.SheetTitle)),
+        ];
+    }
 
     /// <summary>Tire de la fiche ouverte ce qu'il faut pour la lire.</summary>
     public static SheetReading Of(OpenedSheet sheet, SheetUseCases sheets)

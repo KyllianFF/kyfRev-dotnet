@@ -204,6 +204,7 @@ public sealed class ShellWindowTests
             window.UpdateLayout();
             TestShell.Flush();
             Assert.AreEqual(NavigationLayout.Tabs, shell.Layout);
+            Assert.AreEqual(ShellLayout.MinimumWidth, window.ActualWidth, 1, "la fenêtre ne descend pas sous son minimum");
             Assert.AreEqual(Visibility.Collapsed, sidebar.Visibility);
             Assert.AreEqual(Visibility.Visible, tabBar.Visibility);
             Assert.AreEqual(HorizontalAlignment.Right, ((Border)window.FindName("SearchHost")).HorizontalAlignment, "La recherche se réduit à son icône, à droite.");
@@ -213,6 +214,12 @@ public sealed class ShellWindowTests
 
             shell.ToggleFocusMode();
             Assert.AreEqual(Visibility.Collapsed, tabBar.Visibility);
+
+            // Le zoom grandit la fenêtre minimale avec lui.
+            shell.SetZoom(1.2);
+            window.UpdateLayout();
+            Assert.AreEqual(564, window.MinWidth, 1e-9);
+            Assert.AreEqual(648, window.MinHeight, 1e-9);
         }
         finally
         {

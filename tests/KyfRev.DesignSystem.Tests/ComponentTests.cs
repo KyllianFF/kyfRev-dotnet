@@ -330,6 +330,46 @@ public sealed class ComponentTests
     }
 
     [STATestMethod]
+    public void An_adaptive_row_keeps_its_text_readable_or_stacks_it_first()
+    {
+        var leading = new Border { Width = 200, Height = 20 };
+        var main = new TextBlock { Text = "Étape attendue : J3, en retard de dix jours", TextWrapping = TextWrapping.Wrap };
+        var trailing = new Border { Width = 300, Height = 30 };
+        AdaptiveRow.SetPart(leading, AdaptiveRowPart.Leading);
+        AdaptiveRow.SetPart(trailing, AdaptiveRowPart.Trailing);
+        var row = new AdaptiveRow { MainMinWidth = 200 };
+        row.Children.Add(leading);
+        row.Children.Add(main);
+        row.Children.Add(trailing);
+        Assert.AreEqual(AdaptiveRowPart.Main, AdaptiveRow.GetPart(main), "le texte par défaut");
+
+        void Lay(double width)
+        {
+            row.Measure(new Size(width, double.PositiveInfinity));
+            row.Arrange(new Rect(0, 0, width, row.DesiredSize.Height));
+        }
+
+        Lay(1000);
+        Assert.IsFalse(row.IsStacked);
+        Assert.AreEqual(1000 - 200 - 300 - 32, main.ActualWidth, 0.5, "le texte prend ce qui reste");
+        Assert.AreEqual(700, VisualTreeHelper.GetOffset(trailing).X, 0.5, "ce qui suit est calé à droite");
+
+        Lay(700);
+        Assert.IsTrue(row.IsStacked, "168 pixels pour le texte : moins que les 200 qu'il doit garder");
+        Assert.AreEqual(0, VisualTreeHelper.GetOffset(main).Y, "le texte d'abord");
+        Assert.AreEqual(main.DesiredSize.Height + 12, VisualTreeHelper.GetOffset(leading).Y, 0.5);
+        Assert.IsGreaterThan(VisualTreeHelper.GetOffset(leading).Y, VisualTreeHelper.GetOffset(trailing).Y);
+        Assert.AreEqual(700, main.ActualWidth, 0.5);
+
+        trailing.Visibility = Visibility.Collapsed;
+        Lay(700);
+        Assert.IsFalse(row.IsStacked, "sans ce qui suit, le texte a de nouveau sa place");
+
+        row.Measure(new Size(double.PositiveInfinity, double.PositiveInfinity));
+        Assert.IsFalse(row.IsStacked, "sans limite de largeur, tout tient sur une ligne");
+    }
+
+    [STATestMethod]
     public void The_quick_actions_share_a_row_above_the_list()
     {
         var panel = new ActionMenuPanel();

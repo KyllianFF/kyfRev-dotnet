@@ -10,6 +10,7 @@ using KyfRev.Extensions.Host;
 using KyfRev.Presentation.Wpf.Editing;
 using KyfRev.Presentation.Wpf.Extensions;
 using KyfRev.Presentation.Wpf.Pages;
+using Microsoft.Web.WebView2.Core;
 
 namespace KyfRev.Presentation.Wpf.Tests;
 
@@ -488,6 +489,30 @@ public sealed class VisualEditorTests
         Assert.AreEqual(Body, ((IEditorSurface)scene.SheetPage.EditorView.Source).Text);
         Assert.IsFalse(scene.SheetPage.Ribbon.MarkdownToggle.IsEnabled);
     }
+
+    [EngineTest]
+    public void A_missing_engine_is_named_and_the_sheet_is_written_in_markdown()
+    {
+        using var scene = new Scene();
+        UiThread.Until(() => scene.Shown.Contains("Un premier paragraphe.", StringComparison.Ordinal));
+
+        var failed = scene.Editor.VisualFailedAsync(missesEngine: true);
+        UiThread.Until(() => failed.IsCompleted);
+
+        Assert.IsTrue(scene.Editor.IsMarkdownShown);
+        Assert.AreEqual(EditingText.VisualEngineMissing, scene.Editor.Problem);
+        Assert.AreEqual(Body, ((IEditorSurface)scene.SheetPage.EditorView.Source).Text);
+    }
+
+    [TestMethod]
+    [DataRow(CoreWebView2ProcessFailedKind.BrowserProcessExited, true)]
+    [DataRow(CoreWebView2ProcessFailedKind.RenderProcessExited, true)]
+    [DataRow(CoreWebView2ProcessFailedKind.RenderProcessUnresponsive, true)]
+    [DataRow(CoreWebView2ProcessFailedKind.GpuProcessExited, false)]
+    [DataRow(CoreWebView2ProcessFailedKind.UtilityProcessExited, false)]
+    [DataRow(CoreWebView2ProcessFailedKind.FrameRenderProcessExited, false)]
+    public void Only_the_engine_or_the_page_stopping_stops_the_editor(CoreWebView2ProcessFailedKind kind, bool stops)
+        => Assert.AreEqual(stops, WebProcesses.StopsThePage(kind));
 
     [EngineTest]
     public void Leaving_the_view_saves_then_closes_the_engine_and_coming_back_reopens_it()
@@ -1280,5 +1305,38 @@ public sealed class VisualEditorTests
         var inCode = visual.MenuItems(new MenuEvent(null, 0, false, true, false, false), null);
         Assert.AreEqual(EditingText.Cut, ((MenuItem)inCode[0]).Header);
         Assert.HasCount(4, inCode.OfType<MenuItem>().ToList(), "Dans le code, seulement le presse-papiers.");
+    }
+
+    [EngineTest]
+    public void The_table_tab_appears_in_a_table_and_writes_its_look_above_it()
+    {
+        using var scene = new Scene("Avant.\n\n| Notion | Auteur |\n|---|---|\n| Pouvoir | Arendt |\n| Domination | Weber |\n| Autorité | Arendt |\n");
+        UiThread.Until(() => scene.Shown.Contains("Pouvoir", StringComparison.Ordinal));
+        Assert.IsFalse(scene.Editor.IsInTable);
+        Assert.AreEqual(Visibility.Collapsed, scene.SheetPage.Ribbon.TableTab.Visibility);
+
+        scene.Select("const cellule = [...page.querySelectorAll('td')].find((td) => td.textContent === 'Pouvoir'); selection.selectAllChildren(cellule); selection.collapseToEnd();");
+        UiThread.Until(() => scene.Editor.IsInTable);
+        TestShell.Flush();
+        Assert.AreEqual(Visibility.Visible, scene.SheetPage.Ribbon.TableTab.Visibility);
+        Assert.AreEqual(1, scene.Editor.Tools!.Table!.Column);
+        Assert.IsTrue(scene.Editor.Tools.Table.Sortable);
+
+        scene.Editor.ChangeTableCommand.Execute("theme=foret");
+        UiThread.Until(() => scene.Editor.Tools?.Table?.Theme == "foret");
+        Assert.AreEqual("\"foret\"", scene.Script("document.querySelector('.ProseMirror table').dataset.theme"));
+        scene.Editor.ChangeTableCommand.Execute("trier");
+        scene.Editor.ChangeTableCommand.Execute("aligner=center");
+        scene.Editor.ChangeTableCommand.Execute("total");
+        UiThread.Until(() => scene.OnDisk.Contains("<!-- kyfrev tableau total theme=foret -->", StringComparison.Ordinal) && scene.OnDisk.Contains(":---:", StringComparison.Ordinal));
+
+        var written = scene.OnDisk;
+        Assert.StartsWith("Avant.\n\n<!-- kyfrev tableau total theme=foret -->\n| Notion | Auteur |", written);
+        Assert.IsLessThan(written.IndexOf("Domination", StringComparison.Ordinal), written.IndexOf("Autorité", StringComparison.Ordinal), "les lignes sont rangées de A à Z");
+
+        scene.PlaceCaretIn("Avant.");
+        UiThread.Until(() => !scene.Editor.IsInTable);
+        TestShell.Flush();
+        Assert.AreEqual(Visibility.Collapsed, scene.SheetPage.Ribbon.TableTab.Visibility, "hors du tableau, son onglet disparaît");
     }
 }

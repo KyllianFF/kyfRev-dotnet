@@ -123,23 +123,115 @@
             <TextBlock Text="{x:Static pages:ReviewText.Back}" VerticalAlignment="Center" />
           </StackPanel>
         </Button>
-        <!-- Quand la place manque, les volets passent au-dessus des modes : aucun bouton ne passe sous le retour. -->
+        <!-- Quand la place manque, l'en-tête tient sur une ligne, comme sur la maquette : l'enregistrement en icône, les modes
+             groupés, le plan et les passages sous « ⋯ ». Aucun bouton ne passe sous le retour. -->
         <WrapPanel DockPanel.Dock="Right" HorizontalAlignment="Right">
-          <StackPanel Orientation="Horizontal" Visibility="{Binding ShowsPanelToggles, Converter={StaticResource Visible}}">
+          <StackPanel Orientation="Horizontal">
+            <StackPanel.Style>
+              <Style TargetType="StackPanel">
+                <Style.Triggers>
+                  <DataTrigger Binding="{Binding ShowsPanelToggles}" Value="False">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                  </DataTrigger>
+                  <DataTrigger Binding="{Binding IsCompactHeader}" Value="True">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                  </DataTrigger>
+                </Style.Triggers>
+              </Style>
+            </StackPanel.Style>
             <ToggleButton x:Name="OutlineToggle" Content="{x:Static pages:ReadingText.Outline}" IsChecked="{Binding IsOutlineOn}" Margin="0,0,8,0"
                           Visibility="{Binding HasOutline, Converter={StaticResource Visible}}" />
             <ToggleButton x:Name="PassagesToggle" Content="{Binding PassagesLabel}" IsChecked="{Binding IsPassagesOn}" Margin="0,0,8,0"
                           Visibility="{Binding HasPassages, Converter={StaticResource Visible}}" />
           </StackPanel>
-          <TextBlock x:Name="SaveStateText" Text="{Binding Editor.StateLabel}" Style="{DynamicResource Kyf.Text.Secondary}" VerticalAlignment="Center" Margin="0,0,12,0"
-                     AutomationProperties.LiveSetting="Polite" Visibility="{Binding IsWriting, Converter={StaticResource Visible}}" />
+          <Border VerticalAlignment="Center" Margin="0,0,12,0">
+            <Border.Style>
+              <Style TargetType="Border">
+                <Setter Property="Visibility" Value="Collapsed" />
+                <Style.Triggers>
+                  <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                      <Condition Binding="{Binding IsWriting}" Value="True" />
+                      <Condition Binding="{Binding IsCompactHeader}" Value="False" />
+                    </MultiDataTrigger.Conditions>
+                    <Setter Property="Visibility" Value="Visible" />
+                  </MultiDataTrigger>
+                </Style.Triggers>
+              </Style>
+            </Border.Style>
+            <TextBlock x:Name="SaveStateText" Text="{Binding Editor.StateLabel}" Style="{DynamicResource Kyf.Text.Secondary}" AutomationProperties.LiveSetting="Polite" />
+          </Border>
+          <!-- L'icône a le même identifiant que le texte qu'elle remplace : un lecteur d'écran lit et annonce l'état. -->
+          <Label x:Name="SaveStateIconHost" AutomationProperties.AutomationId="SaveStateText" Padding="0" VerticalAlignment="Center" Margin="0,0,10,0" Background="Transparent"
+                  ToolTip="{Binding Editor.StateLabel}" AutomationProperties.Name="{Binding Editor.StateLabel}" AutomationProperties.LiveSetting="Polite">
+            <Label.Style>
+              <Style TargetType="Label">
+                <Setter Property="Visibility" Value="Collapsed" />
+                <Style.Triggers>
+                  <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                      <Condition Binding="{Binding IsWriting}" Value="True" />
+                      <Condition Binding="{Binding IsCompactHeader}" Value="True" />
+                    </MultiDataTrigger.Conditions>
+                    <Setter Property="Visibility" Value="Visible" />
+                  </MultiDataTrigger>
+                </Style.Triggers>
+              </Style>
+            </Label.Style>
+            <kyf:Icon x:Name="SaveStateIcon" FontSize="16">
+              <kyf:Icon.Style>
+                <Style TargetType="kyf:Icon">
+                  <Setter Property="Text" Value="{x:Static kyf:Icons.Success}" />
+                  <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Success}" />
+                  <Style.Triggers>
+                    <DataTrigger Binding="{Binding Editor.State}" Value="Modified">
+                      <Setter Property="Text" Value="{x:Static kyf:Icons.Sync}" />
+                      <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.TextSecondary}" />
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding Editor.State}" Value="Saving">
+                      <Setter Property="Text" Value="{x:Static kyf:Icons.Sync}" />
+                      <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.TextSecondary}" />
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding Editor.State}" Value="Conflict">
+                      <Setter Property="Text" Value="{x:Static kyf:Icons.Warning}" />
+                      <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Warning}" />
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding Editor.State}" Value="Failed">
+                      <Setter Property="Text" Value="{x:Static kyf:Icons.Warning}" />
+                      <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Warning}" />
+                    </DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </kyf:Icon.Style>
+            </kyf:Icon>
+          </Label>
           <StackPanel Orientation="Horizontal">
-            <ToggleButton x:Name="ReadToggle" Content="{x:Static editing:EditingText.Read}" IsChecked="{Binding IsReadOn}"
-                          Style="{DynamicResource Kyf.Button.Tool}" MinHeight="40" Padding="12,0" />
-            <ToggleButton x:Name="ReviseToggle" Content="{x:Static pages:ReadingText.Revise}" IsChecked="{Binding IsReviseOn}"
-                          Style="{DynamicResource Kyf.Button.Tool}" MinHeight="40" Padding="12,0" />
-            <ToggleButton x:Name="WriteToggle" Content="{x:Static editing:EditingText.Write}" IsChecked="{Binding IsWriteOn}"
-                          Style="{DynamicResource Kyf.Button.Tool}" MinHeight="40" Padding="12,0" ToolTip="{x:Static editing:EditingText.WriteKey}" />
+            <!-- Les trois modes, groupés : un seul est choisi. -->
+            <Border x:Name="ModeSwitch" BorderBrush="{DynamicResource Kyf.Brush.ControlBorder}" BorderThickness="1" CornerRadius="{DynamicResource Kyf.Radius.Control}" Padding="2">
+              <StackPanel Orientation="Horizontal">
+                <ToggleButton x:Name="ReadToggle" IsChecked="{Binding IsReadOn}" Style="{DynamicResource Kyf.Button.Tool}" MinHeight="36" Padding="10,0"
+                              AutomationProperties.Name="{x:Static editing:EditingText.Read}">
+                  <StackPanel Orientation="Horizontal">
+                    <kyf:Icon Text="{x:Static kyf:Icons.Read}" VerticalAlignment="Center" />
+                    <TextBlock Text="{x:Static editing:EditingText.Read}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                  </StackPanel>
+                </ToggleButton>
+                <ToggleButton x:Name="ReviseToggle" IsChecked="{Binding IsReviseOn}" Style="{DynamicResource Kyf.Button.Tool}" MinHeight="36" Padding="10,0"
+                              AutomationProperties.Name="{x:Static pages:ReadingText.Revise}">
+                  <StackPanel Orientation="Horizontal">
+                    <kyf:Icon Text="{x:Static kyf:Icons.Review}" VerticalAlignment="Center" />
+                    <TextBlock Text="{x:Static pages:ReadingText.Revise}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                  </StackPanel>
+                </ToggleButton>
+                <ToggleButton x:Name="WriteToggle" IsChecked="{Binding IsWriteOn}" Style="{DynamicResource Kyf.Button.Tool}" MinHeight="36" Padding="10,0"
+                              ToolTip="{x:Static editing:EditingText.WriteKey}" AutomationProperties.Name="{x:Static editing:EditingText.Write}">
+                  <StackPanel Orientation="Horizontal">
+                    <kyf:Icon Text="{x:Static kyf:Icons.Edit}" VerticalAlignment="Center" />
+                    <TextBlock Text="{x:Static editing:EditingText.Write}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                  </StackPanel>
+                </ToggleButton>
+              </StackPanel>
+            </Border>
             <ToggleButton x:Name="ListenToggle" IsChecked="{Binding ReadAloud.IsOpen, Mode=OneWay}" Click="OnListenToggle" Style="{DynamicResource Kyf.Button.Tool}" MinHeight="40" Padding="12,0" Margin="8,0,0,0" Visibility="Collapsed"
                           ToolTip="{x:Static pages:ReadingText.ListenRegion}" AutomationProperties.Name="{x:Static pages:ReadingText.Listen}">
               <StackPanel Orientation="Horizontal">
@@ -147,6 +239,36 @@
                 <TextBlock x:Name="ListenLabel" Text="{x:Static pages:ReadingText.Listen}" VerticalAlignment="Center" Margin="8,0,0,0" />
               </StackPanel>
             </ToggleButton>
+            <!-- En-tête étroit, hors de l'écriture : le plan et les passages sous « ⋯ » (à l'écriture, ils sont dans celui du ruban). -->
+            <Border Margin="4,0,0,0">
+              <Border.Style>
+                <Style TargetType="Border">
+                  <Setter Property="Visibility" Value="Collapsed" />
+                  <Style.Triggers>
+                    <MultiDataTrigger>
+                      <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding IsWriting}" Value="False" />
+                        <Condition Binding="{Binding IsCompactHeader}" Value="True" />
+                        <Condition Binding="{Binding HasPanels}" Value="True" />
+                      </MultiDataTrigger.Conditions>
+                      <Setter Property="Visibility" Value="Visible" />
+                    </MultiDataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </Border.Style>
+              <Button x:Name="HeaderMoreButton" Style="{DynamicResource Kyf.Button.Tool}" MinHeight="40" Padding="10,0" Click="OnHeaderMore"
+                      ToolTip="{Binding PanelsMenuName}" AutomationProperties.Name="{Binding PanelsMenuName}">
+                <kyf:Icon Text="{x:Static kyf:Icons.More}" />
+                <Button.ContextMenu>
+                  <ContextMenu x:Name="HeaderMenu" DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                    <MenuItem x:Name="OutlineItem" Header="{x:Static pages:ReadingText.Outline}" IsCheckable="True" IsChecked="{Binding IsOutlineOn}"
+                              Visibility="{Binding HasOutline, Converter={StaticResource Visible}, FallbackValue=Collapsed}" />
+                    <MenuItem x:Name="PassagesItem" Header="{Binding PassagesLabel}" IsCheckable="True" IsChecked="{Binding IsPassagesOn}"
+                              Visibility="{Binding HasPassages, Converter={StaticResource Visible}, FallbackValue=Collapsed}" />
+                  </ContextMenu>
+                </Button.ContextMenu>
+              </Button>
+            </Border>
           </StackPanel>
         </WrapPanel>
         <TextBlock x:Name="Notice" Text="{Binding Notice}" Style="{DynamicResource Kyf.Text.Secondary}" VerticalAlignment="Center" Margin="16,0" TextTrimming="CharacterEllipsis"
@@ -178,15 +300,16 @@
                 BorderBrush="{DynamicResource Kyf.Brush.Primary}" Background="{DynamicResource Kyf.Brush.Surface}"
                 Visibility="{Binding IsActive, Converter={StaticResource Visible}, FallbackValue=Collapsed}" AutomationProperties.Name="{Binding Prompt}">
           <StackPanel>
-            <DockPanel>
-              <WrapPanel x:Name="GuidedButtons" DockPanel.Dock="Right" VerticalAlignment="Center">
-                <Button x:Name="GuidedTake" Content="{x:Static pages:ReadingText.GuidedTake}" Style="{DynamicResource Kyf.Button.Primary}" Click="OnGuidedTake" Margin="8,0,8,0" />
+            <!-- La consigne garde sa place : quand les boutons la lui prendraient, ils passent dessous. -->
+            <kyf:AdaptiveRow MainMinWidth="240" Spacing="8" StackedSpacing="8">
+              <TextBlock x:Name="GuidedPrompt" Text="{Binding Prompt}" Style="{DynamicResource Kyf.Text.BodyStrong}" TextWrapping="Wrap" VerticalAlignment="Center"
+                         AutomationProperties.LiveSetting="Assertive" />
+              <WrapPanel x:Name="GuidedButtons" kyf:AdaptiveRow.Part="Trailing" VerticalAlignment="Center">
+                <Button x:Name="GuidedTake" Content="{x:Static pages:ReadingText.GuidedTake}" Style="{DynamicResource Kyf.Button.Primary}" Click="OnGuidedTake" Margin="0,0,8,0" />
                 <Button x:Name="GuidedSkip" Content="{x:Static pages:ReadingText.GuidedSkip}" Command="{Binding SkipCommand}" Margin="0,0,8,0" />
                 <Button x:Name="GuidedStop" Content="{x:Static pages:ReadingText.GuidedStop}" Command="{Binding StopSeriesCommand}" />
               </WrapPanel>
-              <TextBlock x:Name="GuidedPrompt" Text="{Binding Prompt}" Style="{DynamicResource Kyf.Text.BodyStrong}" TextWrapping="Wrap" VerticalAlignment="Center"
-                         AutomationProperties.LiveSetting="Assertive" />
-            </DockPanel>
+            </kyf:AdaptiveRow>
             <TextBlock x:Name="GuidedHint" Text="{Binding Hint}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,6,0,0"
                        Visibility="{Binding HasHint, Converter={StaticResource Visible}}" AutomationProperties.LiveSetting="Polite" />
             <DockPanel Margin="0,8,0,0" Visibility="{Binding AllowsTyping, Converter={StaticResource Visible}}">
@@ -273,7 +396,7 @@
             <editing:SheetEditorView x:Name="EditorView" Grid.Row="1" DataContext="{Binding Editor}"
                                      Visibility="{Binding DataContext.IsWriting, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource Visible}}" />
             <reading:SheetDocumentViewer x:Name="SheetText" Grid.Row="1" Visibility="{Binding IsReading, Converter={StaticResource Visible}}" Reading="{Binding Reading}" OpenLinkCommand="{Binding OpenLinkCommand}"
-                                         Highlights="{Binding Highlights}" ActiveHighlight="{Binding ActivePassage}" Holes="{Binding Holes}"
+                                         Highlights="{Binding Highlights}" ActiveHighlight="{Binding ActivePassage}" Holes="{Binding Holes}" Words="{Binding Words}"
                                          PreviewMouseLeftButtonDown="OnTextPressed" PreviewMouseLeftButtonUp="OnTextReleased" PreviewKeyDown="OnTextKey"
                                          ContextMenuOpening="OnTextMenu"
                                          AutomationProperties.Name="{x:Static pages:ReadingText.Document}">

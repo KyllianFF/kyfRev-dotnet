@@ -181,6 +181,7 @@ internal sealed partial class TreeBuilder
             element.Line = token.Line + 1;
             element.ListStart = token.Start;
             element.Alignment = token.Alignment;
+            element.Look = token.Look;
             element.Target = token.Href;
             ApplyStyle(element, token.Style);
             if (token.Tag == "li" && token.Nesting == 1)

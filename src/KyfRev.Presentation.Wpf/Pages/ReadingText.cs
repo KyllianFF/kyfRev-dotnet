@@ -34,6 +34,12 @@ public static class ReadingText
     /// <summary>Le plan de la fiche.</summary>
     public const string Outline = "Plan";
 
+    /// <summary>Le menu « ⋯ » de l'en-tête étroit : le plan et les passages.</summary>
+    public const string PanelsMenu = "Plan et passages";
+
+    /// <summary>Le nom du menu « ⋯ » de l'en-tête étroit, avec le décompte des passages qu'il cache : « Plan et passages (Passages · 2) ».</summary>
+    public static string PanelsMenuWith(string passages) => $"{PanelsMenu} ({passages})";
+
     /// <summary>Les passages et définitions de la fiche.</summary>
     public const string Passages = "Passages";
 
@@ -323,6 +329,18 @@ public static class ReadingText
 
     /// <summary>Une définition à la corbeille.</summary>
     public static string TrashedDefinition(string term) => $"Définition : {term}";
+
+    /// <summary>D'où vient la définition d'un mot marqué.</summary>
+    public static string DefinedIn(string sheetTitle) => sheetTitle.Length == 0 ? "Défini dans une fiche" : $"Défini dans « {sheetTitle} »";
+
+    /// <summary>Un mot ne se marque plus que là où il est défini.</summary>
+    public static string WordNoLongerMarked(string term) => $"« {term} » n'est plus marqué dans les fiches ; l'onglet Définitions le remet.";
+
+    /// <summary>« Voir où « terme » est défini ».</summary>
+    public static string SeeWordDefinition(string term) => $"Voir où « {term} » est défini";
+
+    /// <summary>« Ne plus marquer « terme » dans les fiches ».</summary>
+    public static string StopMarkingWord(string term) => $"Ne plus marquer « {term} » dans les fiches";
 
     /// <summary>Un passage à la corbeille.</summary>
     public static string TrashedPassage(string exact) => $"« {Short(exact)} »";

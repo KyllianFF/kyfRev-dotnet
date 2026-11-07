@@ -23,6 +23,30 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   entre-temps. Un effacement définitif qui ne peut pas retirer un objet va jusqu'au bout, puis nomme ce qui est resté ;
   les sauvegardes ne recopient que les objets que l'index nomme, quelle que soit la casse de leur nom. Un objet manquant
   n'empêche plus la sauvegarde, ni la restauration des autres fiches.
+- Lecture : un terme défini dans une fiche se marque dans toutes les fiches qui le contiennent, d'un pointillé discret, distinct
+  de celui d'une définition posée à sa place. Il se trouve en mot entier, sans tenir compte des majuscules, au singulier ou au
+  pluriel, une fois par partie, ni dans un titre, ni dans du code, ni dans un lien. Le survol montre sa définition ; un clic
+  ou le clic droit ouvre sa fiche sur elle, ou cesse de le marquer. Rien n'est écrit dans les fiches, et rien ne se marque en
+  révision, où le mot donnerait la réponse. Le réglage est dans Paramètres › Général, et chaque définition a sa case dans
+  l'onglet Définitions, pour un mot trop courant (champ `partout` de la définition, écrit seulement quand il vaut faux).
+- Extensions : le catalogue signé. « Voir le catalogue », dans Paramètres › Modules et extensions, lit à la demande le
+  catalogue publié dans le dépôt, et ne le prend que si sa signature (ECDSA P-256) est bonne, par une clé que
+  l'application connaît, et si son numéro n'est pas plus ancien que le dernier vu. Chaque fichier d'une extension est
+  vérifié par sa taille et son empreinte SHA-256 avant l'installation, qui montre ce qu'elle demande. La clé privée reste
+  sur le poste de la personne qui publie ; `tools/catalogue/catalogue.cs` la crée, signe et vérifie
+  (`docs/extensions/catalogue.md`). L'application connaît les clés publiques `kyfrev-1` et `kyfrev-2` (la seconde est celle
+  de secours).
+- Écrire : un onglet « Tableau » apparaît dans le ruban quand le curseur est dans un tableau, et disparaît quand il en sort.
+  Il règle l'en-tête (première ligne, première colonne, ou les deux), la dernière ligne qui ressort (une synthèse, un total),
+  les bandes (lignes ou colonnes, qui suivent l'en-tête), les traits (tous, horizontaux, verticaux, contour, sous l'en-tête
+  ou aucun), le thème (Sobre, Forêt, Ambre, Ardoise, Prune, Encre, lisibles en clair comme en sombre) et la largeur (pleine
+  page par défaut, ou ajustée au contenu). Pour la colonne du curseur : son alignement, la cacher en révision (ses cases deviennent des
+  trous, l'en-tête reste lisible) et trier les lignes de A à Z puis de Z à A. Il reprend aussi l'ajout et le retrait des
+  lignes et des colonnes. L'apparence s'écrit dans une seule ligne au-dessus du tableau, `<!-- kyfrev tableau … -->`, que
+  GitHub, Obsidian et VS Code n'affichent pas ; un tableau sans cette ligne garde son apparence, et la lecture, l'aperçu,
+  la révision et l'éditeur dessinent la même chose. Les flèches passent d'une case à l'autre, ↑ et ↓ comprises, sans jamais
+  poser le curseur entre deux cases. Un tableau prend toute la largeur du texte (« Ajustée au contenu » reste un choix), et
+  ses colonnes gardent leurs mots entiers tant qu'il le permet, à l'écriture comme en lecture.
 - Coffre chiffré : `kyfrev-coffre chiffrer` et `dechiffrer` convertissent un coffre vers un nouveau dossier, la source
   intacte. Chaque fichier est relu et vérifié par son SHA-256, et rien n'est écrit si un seul ne correspond pas. Le
   coffre chiffré ne garde aucun nom en clair : des objets opaques et un index chiffré. La clé de récupération s'affiche
@@ -434,6 +458,13 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Modifié
 
+- Fenêtre : 470 × 540 au minimum à la taille normale, la disposition à onglets en bas gardée. Le minimum grandit avec le
+  zoom de l'interface, qui s'arrête à ce que l'écran peut tenir et revient au zoom choisi sur un écran plus grand.
+- Écrire : quand la place manque, le ruban laisse place à une barre courte (annuler, style, gras, italique, et selon la
+  place la liste, rétablir et le lien). « Mise en forme » ouvre le reste dans un volet qui défile, avec ses onglets ; dans un
+  tableau, un bouton « Tableau » ouvre ses réglages. L'historique, le Markdown, l'aperçu, le plan et les passages passent
+  sous « ⋯ ». L'en-tête de la fiche tient alors sur une ligne : le retour, l'enregistrement en icône, les trois modes groupés
+  avec leur icône. Plus aucun bouton ne passe sous un autre.
 - L'application est compilée pour Windows x64 (`win-x64`), comme elle est livrée ; les
   bibliothèques restent indépendantes de la plateforme.
 - Un dialogue ou une notification qui se ferme de lui-même garde la liaison de son ouverture :
@@ -457,6 +488,13 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Corrigé
 
+- Extensions : après une sélection guidée, une extension a de nouveau toute sa patience pour finir. Elle n'avait que le
+  reste de celle qui courait, et pouvait être arrêtée à tort si la réponse tombait à la fin.
+- Écrire : un processus graphique ou utilitaire du moteur web, relancé par Windows, n'arrête plus le texte mis en forme ;
+  sans moteur WebView2 sur l'ordinateur, le message le dit, et le journal de diagnostic garde la raison de chaque arrêt.
+- Fenêtre redimensionnée : un texte n'est plus réduit à quelques lettres par ligne entre des voisins qui gardent toute
+  leur largeur. La barre de révision, les fiches archivées, la corbeille, la santé du coffre et la consigne d'une sélection
+  guidée passent l'un sous l'autre dès que le texte perdrait sa place, mesurée, et non plus à partir d'une largeur fixe.
 - Schémas réseau et éditeur visuel : plus d'éclair blanc à l'ouverture, en thème sombre surtout ; le moteur prend le fond du
   thème avant sa première page. L'îlot des schémas ne s'arrête plus quand il se ferme pendant qu'il répond.
 - Recherche (Ctrl+K) : la liste reste sous le champ quand la fenêtre change de taille, et un clic ailleurs, même dans la barre

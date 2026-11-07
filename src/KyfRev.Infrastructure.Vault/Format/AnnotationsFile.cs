@@ -77,7 +77,10 @@ public sealed record StoredAnnotation(
             Fields.Instant(obj, "creeeLe"),
             Fields.Instant(obj, "modifieeLe"),
             Fields.OptionalString(obj, "commentaire"),
-            definition is null ? null : new StoredDefinition(Fields.String(definition, "terme"), Fields.String(definition, "explication")),
+            definition is null ? null : new StoredDefinition(Fields.String(definition, "terme"), Fields.String(definition, "explication"))
+            {
+                Everywhere = Fields.OptionalBoolean(definition, "partout", fallback: true),
+            },
             StoredAnchor.Read(Fields.Object(obj, "ancre")),
             ReadState(Fields.String(obj, "etatAncrage")),
             Fields.OptionalInstant(obj, "corbeilleLe"),
@@ -100,7 +103,12 @@ public sealed record StoredAnnotation(
         }
         if (Definition is not null)
         {
-            obj["definition"] = new JsonObject { ["terme"] = Definition.Term, ["explication"] = Definition.Explanation };
+            var definition = new JsonObject { ["terme"] = Definition.Term, ["explication"] = Definition.Explanation };
+            if (!Definition.Everywhere)
+            {
+                definition["partout"] = false;
+            }
+            obj["definition"] = definition;
         }
         obj["ancre"] = Anchor.ToJson();
         obj["etatAncrage"] = AnchorState switch
@@ -128,7 +136,14 @@ public sealed record StoredAnnotation(
 }
 
 /// <summary>Terme et explication d'une définition.</summary>
-public sealed record StoredDefinition(string Term, string Explanation);
+public sealed record StoredDefinition(string Term, string Explanation)
+{
+    /// <summary>
+    /// Le terme se marque dans toutes les fiches qui le contiennent (<c>partout</c>, écrit seulement quand il vaut
+    /// <see langword="false"/> : la 0.x ignore ce champ).
+    /// </summary>
+    public bool Everywhere { get; init; } = true;
+}
 
 /// <summary>
 /// Repères d'un passage (modèle W3C Web Annotation) : citation exacte et contexte, position en

@@ -40,6 +40,9 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
     public static readonly DependencyProperty ActiveHighlightProperty = DependencyProperty.Register(
         nameof(ActiveHighlight), typeof(string), typeof(SheetDocumentViewer), new PropertyMetadata(null, OnHighlightsChanged));
 
+    public static readonly DependencyProperty WordsProperty = DependencyProperty.Register(
+        nameof(Words), typeof(IReadOnlyList<DefinedWordMark>), typeof(SheetDocumentViewer), new PropertyMetadata(null, OnWordsChanged));
+
     private DocumentBuilder? _built;
     /// <summary>Le texte à trous.</summary>
     public static readonly DependencyProperty HolesProperty = DependencyProperty.Register(
@@ -60,6 +63,7 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
         SetResourceReference(SelectionBrushProperty, "Kyf.Brush.Selection");
         // Les traits sous le texte prennent leur couleur du thème, connu une fois la vue en place.
         Loaded += (_, _) => ApplyHighlights();
+        SizeChanged += (_, _) => FitTables();
         IsVisibleChanged += (_, e) =>
         {
             if (e.NewValue is true && _rebuildsWhenShown)
@@ -116,6 +120,13 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
     {
         get => (string?)GetValue(ActiveHighlightProperty);
         set => SetValue(ActiveHighlightProperty, value);
+    }
+
+    /// <summary>Les mots définis ailleurs dans le coffre, à marquer dans le texte.</summary>
+    public IReadOnlyList<DefinedWordMark>? Words
+    {
+        get => (IReadOnlyList<DefinedWordMark>?)GetValue(WordsProperty);
+        set => SetValue(WordsProperty, value);
     }
 
     /// <summary>Se termine quand les images du document sont chargées.</summary>
@@ -209,6 +220,15 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
     /// <summary>Les annotations surlignées à l'endroit visé par la souris.</summary>
     public IReadOnlyList<string> AnnotationsAt(object? source) => _built?.Layer.IdsAt(source) ?? [];
 
+    /// <summary>Le mot défini ailleurs, marqué à l'endroit visé par la souris ; rien s'il n'y en a pas.</summary>
+    public DefinedWordMark? WordAt(object? source) => _built?.Layer.WordAt(source);
+
+    private static void OnWordsChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e)
+    {
+        var viewer = (SheetDocumentViewer)sender;
+        viewer._built?.Layer.SetWords(viewer.Words ?? []);
+    }
+
     private static void OnContentChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e) => ((SheetDocumentViewer)sender).Rebuild();
 
     private static void OnHighlightsChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e) => ((SheetDocumentViewer)sender).ApplyHighlights();
@@ -259,7 +279,7 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
             return;
         }
         built.Complete();
-        holes.Set(TextHoles.Compute(Highlights ?? [], built.BoldRanges));
+        holes.Set(TextHoles.Compute(Highlights ?? [], built.BoldRanges, built.ReviewCells));
     }
 
     /// <summary>Affiche le trou visé par la souris ; rend faux s'il n'y en a pas.</summary>
@@ -300,7 +320,9 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
             var drawsMermaid = TryFindResource(MermaidEngine.ResourceKey) is not null;
             _built = new DocumentBuilder(reading, Follow, OpenLinkCommand is not null, ShowsHeader, key => TryFindResource(key) as System.Windows.Media.Brush, TryFindResource(ReadingComfort.ResourceKey) as ReadingComfort) { DrawsMermaid = drawsMermaid, Pictures = TryFindResource(MermaidEngine.ResourceKey) as IMermaidEngine, ExtensionBlocks = TryFindResource(ExtensionBlocks.ResourceKey) as ExtensionBlocks };
             _built.Layer.Set(Highlights ?? [], ActiveHighlight);
+            _built.Layer.SetWords(Words ?? []);
             Document = _built.Build();
+            FitTables();
             ComputeHoles();
         }
         else
@@ -323,6 +345,50 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
         else
         {
             OpenLinkCommand?.Execute(target);
+        }
+    }
+
+    /// <summary>
+    /// Les tableaux pleine largeur se partagent la largeur réelle du texte : chaque colonne garde son plus long mot tant que le
+    /// tableau le permet. Des proportions d'étoiles ne le peuvent pas seules : une fenêtre étroite les resserrait toutes d'autant.
+    /// </summary>
+    internal void FitTables()
+    {
+        if (Document is not { } document || ActualWidth <= 0)
+        {
+            return;
+        }
+        var available = ActualWidth - Padding.Left - Padding.Right - SystemParameters.VerticalScrollBarWidth;
+        foreach (var table in Tables(document))
+        {
+            if (table.Tag is not TableSizing sizing)
+            {
+                continue;
+            }
+            var widths = sizing.For(available - table.Margin.Left - table.Margin.Right);
+            for (var column = 0; column < widths.Count && column < table.Columns.Count; column++)
+            {
+                var width = new GridLength(widths[column] / DocumentBuilder.StarUnit, GridUnitType.Star);
+                if (table.Columns[column].Width != width)
+                {
+                    table.Columns[column].Width = width;
+                }
+            }
+        }
+    }
+
+    private static IEnumerable<Table> Tables(DependencyObject parent)
+    {
+        foreach (var child in LogicalTreeHelper.GetChildren(parent).OfType<DependencyObject>())
+        {
+            if (child is Table table)
+            {
+                yield return table;
+            }
+            foreach (var inner in Tables(child))
+            {
+                yield return inner;
+            }
         }
     }
 

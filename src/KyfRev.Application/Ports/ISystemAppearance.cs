@@ -26,6 +26,11 @@ public interface ISystemAppearance
 /// <param name="Bottom">En bas.</param>
 public readonly record struct WindowOverhang(int Left, int Top, int Right, int Bottom);
 
+/// <summary>L'espace de travail d'un écran, sans la barre des tâches, en pixels.</summary>
+/// <param name="Width">Sa largeur.</param>
+/// <param name="Height">Sa hauteur.</param>
+public readonly record struct ScreenArea(int Width, int Height);
+
 /// <summary>Cadre des fenêtres dessiné par Windows.</summary>
 public interface IWindowChrome
 {
@@ -35,6 +40,10 @@ public interface IWindowChrome
     /// </summary>
     /// <param name="windowHandle">La fenêtre.</param>
     WindowOverhang MaximizedOverhang(nint windowHandle);
+
+    /// <summary>L'espace de travail de l'écran où se trouve la fenêtre <paramref name="windowHandle"/>, en pixels ; vide sans fenêtre.</summary>
+    /// <param name="windowHandle">La fenêtre.</param>
+    ScreenArea WorkArea(nint windowHandle);
 
     /// <summary>Barre de titre sombre ou claire pour la fenêtre <paramref name="windowHandle"/> ; faux si Windows ne le permet pas.</summary>
     bool UseDarkTitleBar(nint windowHandle, bool dark);

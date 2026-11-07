@@ -55,7 +55,11 @@ public sealed partial class ShellWindow : Window
         Deactivated += (_, _) => _shell.ClosePalette();
         Loaded += (_, _) => ShowIcon();
         DpiChanged += (_, _) => ShowIcon();
-        LocationChanged += (_, _) => FitFrame();
+        LocationChanged += (_, _) =>
+        {
+            FitFrame();
+            FitScreen();
+        };
         Loaded += (_, _) => FocusNavigation();
     }
 
@@ -65,6 +69,7 @@ public sealed partial class ShellWindow : Window
         // Après la base : ce filtre passe donc avant celui du cadre, qui répondrait à sa place.
         base.OnSourceInitialized(e);
         HwndSource.FromHwnd(new WindowInteropHelper(this).Handle)?.AddHook(OnWindowMessage);
+        FitScreen();
     }
 
     /// <inheritdoc/>
@@ -84,6 +89,22 @@ public sealed partial class ShellWindow : Window
     {
         base.OnDpiChanged(oldDpi, newDpi);
         FitFrame();
+        FitScreen();
+    }
+
+    /// <summary>
+    /// Donne à la coquille l'espace de travail de l'écran où se trouve la fenêtre, en pixels indépendants : le zoom ne dépasse pas
+    /// ce que cet écran peut tenir, la fenêtre gardant sa largeur minimale.
+    /// </summary>
+    internal void FitScreen()
+    {
+        var area = _shell.Appearance.WorkArea(new WindowInteropHelper(this).Handle);
+        if (area.Width <= 0 || area.Height <= 0)
+        {
+            return;
+        }
+        var dpi = VisualTreeHelper.GetDpi(this);
+        _shell.FitScreen(area.Width / dpi.DpiScaleX, area.Height / dpi.DpiScaleY);
     }
 
     /// <summary>
