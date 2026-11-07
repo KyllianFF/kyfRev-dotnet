@@ -64,6 +64,16 @@ internal sealed class DocumentBuilder
     private const int FormulasPerTurn = 8;
 
     private const string Text = "Kyf.Brush.Text";
+
+    /// <summary>La largeur d'un texte de fiche : un tableau ajusté plus étroit laisse le reste vide.</summary>
+    private const double TableBudget = SheetPageViewModel.TextMaxWidth;
+    private const double ColumnMinimum = 48;
+    private const double ColumnMaximum = 360;
+    private const double CellRoom = 20;
+    internal const double StarUnit = 100;
+
+    /// <summary>L'encre d'un texte qu'on ne fait que mesurer : elle n'est jamais dessinée.</summary>
+    private static readonly SolidColorBrush MeasureInk = FrozenInk();
     private const string TextSecondary = "Kyf.Brush.TextSecondary";
     private const string SurfaceAlt = "Kyf.Brush.SurfaceAlt";
     private const string Divider = "Kyf.Brush.Divider";
@@ -127,6 +137,9 @@ internal sealed class DocumentBuilder
 
     /// <summary>Les étendues de texte en gras, dans le texte affiché.</summary>
     public List<(int Start, int End)> BoldRanges { get; } = [];
+
+    /// <summary>Les cases des colonnes de tableau cachées en révision : des trous, comme le gras.</summary>
+    public List<(int Start, int End)> ReviewCells { get; } = [];
 
     /// <summary>Ce qui fait une image d'un SVG ; rien sans le moteur web.</summary>
     public IMermaidEngine? Pictures { get; init; }
@@ -695,34 +708,103 @@ internal sealed class DocumentBuilder
         }
     }
 
+    /// <summary>
+    /// Un tableau, dans son apparence : en-têtes, dernière ligne, bandes, traits et thème. Sans ligne d'apparence, il garde
+    /// celle qu'il a toujours eue : la première ligne en en-tête, tous les traits, les neutres de l'application.
+    /// </summary>
     private Table BuildTable(RenderElement element)
     {
-        var table = new Table { CellSpacing = 0, Margin = new Thickness(0, 0, 0, 12), BorderThickness = new Thickness(1, 1, 0, 0) };
-        table.SetResourceReference(Block.BorderBrushProperty, Divider);
+        var look = element.Look ?? TableLook.Default;
+        var colors = TableBrushes.Of(look.Theme);
+        var table = new Table { CellSpacing = 0, Margin = new Thickness(0, 0, 0, 12) };
         var groups = element.Children.OfType<RenderElement>().ToList();
         var columns = groups.SelectMany(group => group.Children.OfType<RenderElement>()).Max(row => row.Children.OfType<RenderElement>().Count());
-        for (var i = 0; i < columns; i++)
+        var count = groups.Sum(group => group.Children.OfType<RenderElement>().Count());
+        var (natural, minimum) = ColumnWidths(groups, columns);
+        // Des proportions, jamais des pixels : une fenêtre étroite resserre le tableau sans le faire déborder. WPF les veut
+        // petites : de grandes valeurs d'étoile défont la mise en page du tableau.
+        foreach (var width in natural)
         {
-            table.Columns.Add(new TableColumn());
+            table.Columns.Add(new TableColumn { Width = new GridLength(width / StarUnit, GridUnitType.Star) });
         }
+        // Ajusté à son contenu : une colonne élastique prend le reste de la ligne. Elle a des cases vides, sans trait ni
+        // fond : une colonne sans case n'aurait aucune largeur.
+        var rest = look.FullWidth ? 0 : TableBudget - natural.Sum();
+        if (look.FullWidth)
+        {
+            // Toute la largeur du texte : la vue la partage selon sa largeur réelle, voir TableSizing.
+            table.Tag = new TableSizing(minimum, natural);
+        }
+        if (rest > 0)
+        {
+            table.Columns.Add(new TableColumn { Width = new GridLength(rest / StarUnit, GridUnitType.Star) });
+        }
+        var index = 0;
         foreach (var group in groups)
         {
             var rows = new TableRowGroup();
             foreach (var row in group.Children.OfType<RenderElement>())
             {
                 var line = new TableRow();
+                var column = 0;
                 foreach (var cell in row.Children.OfType<RenderElement>())
                 {
-                    line.Cells.Add(BuildCell(cell));
+                    line.Cells.Add(BuildCell(cell, new TablePlace(look, colors, index, column, count, columns)));
+                    column++;
+                }
+                if (rest > 0)
+                {
+                    line.Cells.Add(new TableCell { ColumnSpan = columns - column + 1 });
                 }
                 rows.Rows.Add(line);
+                index++;
             }
             table.RowGroups.Add(rows);
         }
         return table;
     }
 
-    private TableCell BuildCell(RenderElement cell)
+    private static SolidColorBrush FrozenInk()
+    {
+        var ink = new SolidColorBrush();
+        ink.Freeze();
+        return ink;
+    }
+
+    /// <summary>
+    /// Pour chaque colonne, la largeur de sa plus longue case sur une seule ligne, sans dépasser <see cref="ColumnMaximum"/> : la
+    /// part qu'elle demande ; et celle de son plus long mot : en deçà, un mot se couperait.
+    /// </summary>
+    private (double[] Natural, double[] Minimum) ColumnWidths(List<RenderElement> groups, int columns)
+    {
+        var typeface = new Typeface(_comfort.Family ?? new FontFamily("Segoe UI"), FontStyles.Normal, FontWeights.SemiBold, FontStretches.Normal);
+        var natural = Enumerable.Repeat(ColumnMinimum, columns).ToArray();
+        var minimum = Enumerable.Repeat(ColumnMinimum, columns).ToArray();
+        var words = new Dictionary<string, double>(StringComparer.Ordinal);
+        double Measure(string text) => new FormattedText(text, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, typeface, _comfort.Size, MeasureInk, 1.0).WidthIncludingTrailingWhitespace;
+        foreach (var row in groups.SelectMany(group => group.Children.OfType<RenderElement>()))
+        {
+            var column = 0;
+            foreach (var cell in row.Children.OfType<RenderElement>())
+            {
+                var content = cell.TextContent();
+                natural[column] = Math.Max(natural[column], Math.Min(ColumnMaximum, Measure(content) + CellRoom));
+                foreach (var word in content.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries))
+                {
+                    if (!words.TryGetValue(word, out var width))
+                    {
+                        width = Measure(word);
+                        words[word] = width;
+                    }
+                    minimum[column] = Math.Max(minimum[column], Math.Min(ColumnMaximum, width + CellRoom));
+                }
+                column++;
+            }
+        }
+        return (natural, minimum);
+    }
+
+    private TableCell BuildCell(RenderElement cell, TablePlace place)
     {
         var paragraph = new Paragraph
         {
@@ -735,12 +817,25 @@ internal sealed class DocumentBuilder
             },
         };
         AddInlines(cell, paragraph.Inlines, 0, false);
-        var result = new TableCell(paragraph) { Padding = new Thickness(8, 4, 8, 4), BorderThickness = new Thickness(0, 0, 1, 1) };
-        result.SetResourceReference(TableCell.BorderBrushProperty, Divider);
-        if (cell.Tag == "th")
+        var result = new TableCell(paragraph) { Padding = new Thickness(8, 4, 8, 4), BorderThickness = place.Border };
+        result.SetResourceReference(TableCell.BorderBrushProperty, place.IsTotal || place.Look.Lines == TableLines.Header ? place.Paints.Total : place.Paints.Line);
+        if (place.IsHeader)
         {
             result.FontWeight = FontWeights.SemiBold;
-            result.SetResourceReference(TextElement.BackgroundProperty, SurfaceAlt);
+            result.SetResourceReference(TextElement.BackgroundProperty, place.Paints.Header);
+            result.SetResourceReference(TextElement.ForegroundProperty, place.Paints.HeaderText);
+        }
+        else if (place.IsBand)
+        {
+            result.SetResourceReference(TextElement.BackgroundProperty, place.Paints.Band);
+        }
+        if (place.IsTotal)
+        {
+            result.FontWeight = FontWeights.SemiBold;
+        }
+        if (place.IsHiddenInReview && Descendants(cell).OfType<RenderText>().Select(text => _pieces.GetValueOrDefault(text)).OfType<TextPiece>().ToList() is { Count: > 0 } pieces)
+        {
+            ReviewCells.Add((pieces[0].Start, pieces[^1].End));
         }
         return result;
     }

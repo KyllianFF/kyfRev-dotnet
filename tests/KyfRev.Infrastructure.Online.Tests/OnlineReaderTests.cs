@@ -84,6 +84,25 @@ public sealed class OnlineReaderTests
     }
 
     [TestMethod]
+    public async Task Bytes_are_read_exactly_even_when_they_are_not_text()
+    {
+        byte[] body = [0x7B, 0xE9, 0x00, 0xFF, 0x7D];
+        using var server = new FakeServer((_, _) => Answer(HttpStatusCode.OK, body));
+        using var reader = new OnlineReader("1.0.0", server, TimeSpan.FromSeconds(5), 1024);
+
+        CollectionAssert.AreEqual(body, await reader.ReadBytesAsync(Address, CancellationToken.None), "une empreinte se vérifie sur les octets exacts");
+        await Assert.ThrowsExactlyAsync<OnlineException>(() => reader.ReadBytesAsync(new Uri("http://exemple.fr/a.js"), CancellationToken.None));
+    }
+
+    [TestMethod]
+    public async Task A_text_only_reader_gives_its_text_as_utf8_bytes()
+    {
+        KyfRev.Application.Ports.IOnlineReader reader = new TextOnly();
+
+        CollectionAssert.AreEqual("é"u8.ToArray(), await reader.ReadBytesAsync(Address, CancellationToken.None));
+    }
+
+    [TestMethod]
     public async Task An_answer_not_in_utf8_is_refused()
     {
         using var server = new FakeServer((_, _) => Answer(HttpStatusCode.OK, [0x7B, 0xE9, 0x7D]));
@@ -165,6 +184,11 @@ public sealed class OnlineReaderTests
     }
 
     /// <summary>Serveur simulé : note chaque requête et répond comme le test le veut.</summary>
+    private sealed class TextOnly : KyfRev.Application.Ports.IOnlineReader
+    {
+        public Task<string> ReadTextAsync(Uri address, CancellationToken cancellationToken) => Task.FromResult("é");
+    }
+
     private sealed class FakeServer(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> respond) : HttpMessageHandler
     {
         private readonly Lock _gate = new();

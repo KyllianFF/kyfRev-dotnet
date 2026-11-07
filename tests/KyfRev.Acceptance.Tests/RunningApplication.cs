@@ -195,8 +195,9 @@ internal sealed class RunningApplication : IDisposable
     }
 
     /// <summary>Attend ce décompte sur le bouton des passages.</summary>
+    /// <remarks>Fenêtre étroite, le bouton des passages passe sous le « ⋯ » de l'en-tête, dont le nom donne le décompte.</remarks>
     public void WaitPassages(string count) =>
-        Retry.WhileFalse(() => Find("PassagesToggle")?.Name.Contains(count, StringComparison.Ordinal) == true, Patience, Interval, throwOnTimeout: true, timeoutMessage: $"Le décompte {count} des passages n'arrive pas.");
+        Retry.WhileFalse(() => (Find("PassagesToggle") ?? Find("HeaderMoreButton"))?.Name.Contains(count, StringComparison.Ordinal) == true, Patience, Interval, throwOnTimeout: true, timeoutMessage: $"Le décompte {count} des passages n'arrive pas.");
 
     /// <summary>Passe à l'écriture par le bouton « Écrire » : le texte mis en forme s'ouvre.</summary>
     public void StartWriting()
@@ -220,10 +221,21 @@ internal sealed class RunningApplication : IDisposable
         Keyboard.Type(text);
     }
 
-    /// <summary>Ouvre le code Markdown à gauche, par son bouton.</summary>
+    /// <summary>
+    /// Ouvre le code Markdown à gauche : par son bouton du ruban, ou, fenêtre étroite (celle des scénarios fait 800 pixels),
+    /// par son entrée du « ⋯ » de la barre courte.
+    /// </summary>
     public void ShowMarkdown()
     {
-        Wait("MarkdownToggle").Patterns.Toggle.Pattern.Toggle();
+        if (Find("MarkdownToggle") is { } toggle)
+        {
+            toggle.Patterns.Toggle.Pattern.Toggle();
+        }
+        else
+        {
+            Press("ViewButton");
+            MenuEntry("MarkdownItem").Patterns.Toggle.Pattern.Toggle();
+        }
         Wait("SheetSource");
     }
 

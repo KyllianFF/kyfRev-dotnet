@@ -41,8 +41,11 @@ import {
   deleteTable,
   goToNextCell,
   isInTable,
+  selectedRect,
+  type TableRect,
   tableEditing,
 } from "prosemirror-tables";
+import type { Apparence, Bandes, Largeur, Theme, Traits } from "./apparence";
 import {
   Decoration,
   DecorationSet,
@@ -66,7 +69,9 @@ import { changementDeCasse } from "./casse-visuelle";
 import { colorer, langages, type Morceau } from "./coloration";
 import { motAutour } from "./correcteur";
 import { depuisMarkdown, type Origine, trancheBrute, trancheCollee, versMarkdown } from "./markdown";
+import { motsEntiers } from "./mots-entiers";
 import { schema } from "./schema";
+import { caseVoisine, changerApparence, triable, trierTableau } from "./tableaux";
 
 const n = schema.nodes;
 const m = schema.marks;
@@ -81,6 +86,8 @@ export type ActionTableau =
   | "deleteColumn"
   | "deleteTable";
 
+const ACTIONS_TABLEAU: ActionTableau[] = ["rowBefore", "rowAfter", "columnBefore", "columnAfter", "deleteRow", "deleteColumn", "deleteTable"];
+
 /** Ce que le ruban affiche : mises en forme actives, type de bloc… */
 export type EtatOutils = {
   bold: boolean;
@@ -94,6 +101,8 @@ export type EtatOutils = {
   inCode: boolean;
   list: "bullets" | "numbers" | "tasks" | null;
   table: boolean;
+  /** Le tableau où est le curseur, pour l'onglet Tableau ; rien hors d'un tableau. */
+  tableLook: EtatTableau | null;
   /** Couleur et taille du texte, écrites comme dans le fichier ; `null` : celles du thème. */
   color: string | null;
   size: string | null;
@@ -103,6 +112,21 @@ export type EtatOutils = {
 };
 
 export type Dessin = { svg: string | null; image: string | null; editable: boolean };
+
+/** L'apparence du tableau où est le curseur, et sa colonne (à partir de 1). */
+export type EtatTableau = {
+  header: Apparence["entete"];
+  total: boolean;
+  bands: Bandes;
+  lines: Traits;
+  theme: Theme;
+  hidden: number | null;
+  width: Largeur;
+  column: number;
+  columnAlign: string | null;
+  sortable: boolean;
+};
+
 
 export type Formule = { position: number | null; tex: string; block: boolean };
 
@@ -836,7 +860,9 @@ export class EditeurVisuel {
           "Mod-r": aligner("right"),
           "Mod-j": aligner("justify"),
           Enter: chainCommands(entreeDansLeCode, entreeDansListe),
-          ArrowUp: avantLePremierBloc,
+          // Au-dessus d'un tableau en tête de fiche, une ligne s'ouvre ; dans un tableau, ↑ et ↓ vont de case en case.
+          ArrowUp: chainCommands(avantLePremierBloc, caseVoisine(-1)),
+          ArrowDown: caseVoisine(1),
           "Shift-Enter": sautDeLigne,
           "Mod-Enter": sautDeLigne,
           Tab: chainCommands(retraitDuCode(1), tabulation(1)),
@@ -855,6 +881,7 @@ export class EditeurVisuel {
         gapCursor(),
         tableEditing(),
         decorations(),
+        motsEntiers(),
         colorationDuCode(),
         paragrapheFinal(),
       ],
@@ -1052,6 +1079,85 @@ export class EditeurVisuel {
       }
       return wrapInList(type)(etat, dispatch);
     });
+  }
+
+  /** Le tableau autour du curseur, et sa position ; rien hors d'un tableau. */
+  private tableauCourant(etat: EditorState): { pos: number; noeud: Node } | null {
+    const { $from } = etat.selection;
+    for (let profondeur = $from.depth; profondeur > 0; profondeur--) {
+      if ($from.node(profondeur).type === n.table) return { pos: $from.before(profondeur), noeud: $from.node(profondeur) };
+    }
+    return null;
+  }
+
+  /** Ce que l'onglet Tableau montre : l'apparence du tableau et la colonne du curseur. */
+  private etatTableau(etat: EditorState): EtatTableau | null {
+    const tableau = isInTable(etat) ? this.tableauCourant(etat) : null;
+    if (!tableau) return null;
+    const rect = selectedRect(etat);
+    const apparence = tableau.noeud.attrs as Apparence;
+    const cellule = rect.table.nodeAt(rect.map.map[rect.top * rect.map.width + rect.left] ?? 0);
+    return {
+      header: apparence.entete,
+      total: apparence.total,
+      bands: apparence.bandes,
+      lines: apparence.traits,
+      theme: apparence.theme,
+      hidden: apparence.reviser,
+      width: apparence.largeur,
+      column: rect.left + 1,
+      columnAlign: (cellule?.attrs.align as string | null | undefined) ?? null,
+      sortable: triable(tableau.noeud),
+    };
+  }
+
+  /**
+   * Change l'apparence du tableau où est le curseur, ou sa colonne. Les en-têtes, la dernière ligne et la colonne cachée
+   * en révision s'inversent ; les bandes suivent l'en-tête ; le reste prend la valeur donnée.
+   */
+  apparenceTableau(changement: string, valeur: string | null): void {
+    const etat = this.vue.state;
+    const tableau = isInTable(etat) ? this.tableauCourant(etat) : null;
+    if (!tableau) return;
+    const rect = selectedRect(etat);
+    if (changement === "action") {
+      if (ACTIONS_TABLEAU.includes(valeur as ActionTableau)) this.tableau(valeur as ActionTableau);
+      return;
+    }
+    if (changement === "aligner") {
+      this.alignerColonne(rect, valeur === "center" || valeur === "right" ? valeur : null);
+      return;
+    }
+    if (changement === "trier") {
+      const trie = trierTableau(tableau.noeud, rect.left);
+      if (trie) {
+        // Le tableau trié a la même taille : le curseur reste à la même place, dans le tableau.
+        const tr = etat.tr.replaceWith(tableau.pos, tableau.pos + tableau.noeud.nodeSize, trie);
+        tr.setSelection(TextSelection.near(tr.doc.resolve(etat.selection.from)));
+        this.vue.dispatch(tr.scrollIntoView());
+      }
+      this.vue.focus();
+      return;
+    }
+    const apparence = changerApparence(tableau.noeud.attrs as Apparence, changement, valeur, rect.left + 1);
+    if (!apparence) return;
+    this.vue.dispatch(etat.tr.setNodeMarkup(tableau.pos, null, apparence));
+    this.vue.focus();
+  }
+
+  /** Aligne toute une colonne ; le Markdown l'écrit sous l'en-tête (« :---: »). */
+  private alignerColonne(rect: TableRect, align: "center" | "right" | null): void {
+    const tr = this.vue.state.tr;
+    const vues = new Set<number>();
+    for (let ligne = 0; ligne < rect.map.height; ligne++) {
+      const position = rect.map.map[ligne * rect.map.width + rect.left];
+      if (position === undefined || vues.has(position)) continue;
+      vues.add(position);
+      const cellule = rect.table.nodeAt(position);
+      if (cellule) tr.setNodeMarkup(rect.tableStart + position, null, { ...cellule.attrs, align });
+    }
+    this.vue.dispatch(tr);
+    this.vue.focus();
   }
 
   tableau(action: ActionTableau): void {
@@ -1336,6 +1442,7 @@ export class EditeurVisuel {
       inCode: parent.type === n.code_block,
       list,
       table: isInTable(etat),
+      tableLook: this.etatTableau(etat),
       color: valeur(m.couleur as MarkType),
       size: valeur(m.taille as MarkType),
       align: alignementCourant(etat),

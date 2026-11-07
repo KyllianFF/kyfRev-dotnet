@@ -68,6 +68,10 @@
               <TextBlock Text="{x:Static pages:GeneralSettingsText.Font}" Style="{StaticResource RowLabel}" />
               <ComboBox x:Name="FontChoice" Grid.Column="1" ItemsSource="{x:Static pages:GeneralSettingsViewModel.Fonts}" SelectedItem="{Binding Font}" DisplayMemberPath="Label" AutomationProperties.Name="{x:Static pages:GeneralSettingsText.Font}" />
             </Grid>
+            <CheckBox x:Name="DefinedWordsBox" IsChecked="{Binding MarkDefinedWords}" AutomationProperties.Name="{x:Static pages:GeneralSettingsText.DefinedWords}" Margin="0,8,0,0">
+              <TextBlock Text="{x:Static pages:GeneralSettingsText.DefinedWords}" TextWrapping="Wrap" />
+            </CheckBox>
+            <TextBlock Text="{x:Static pages:GeneralSettingsText.DefinedWordsHelp}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="26,2,0,4" />
 
           </StackPanel>
         </kyf:Card>

@@ -238,14 +238,30 @@ public sealed class EncryptedStorage : VaultStorage, IDisposable
     }
 
     /// <summary>
-    /// L'en-tête, l'index, et parmi les objets ceux que l'index nomme : un objet qu'un effacement n'a pas pu retirer n'est
-    /// plus du coffre, et ne part pas dans ses sauvegardes. Tout le reste est recopié tel quel.
+    /// L'en-tête, l'index, et parmi les objets ceux que l'index nomme, un seul par objet : un objet qu'un effacement n'a pas
+    /// pu retirer n'est plus du coffre, et ne part pas dans ses sauvegardes. Dans un dossier sensible à la casse (copié
+    /// depuis WSL), un objet peut avoir un jumeau qui ne diffère que par elle : l'écriture exacte de l'identifiant est
+    /// préférée, et le jumeau reste dehors. Tout le reste est recopié tel quel.
     /// </summary>
     public override IEnumerable<string> FilesToBackUp(IEnumerable<string> files)
     {
         ArgumentNullException.ThrowIfNull(files);
         var named = _vault.NamedObjects;
-        return files.Where(file => ObjectOf(file) is not { } objectId || named.Contains(objectId));
+        var objects = new Dictionary<string, string>(StringComparer.Ordinal);
+        var kept = new List<string>();
+        foreach (var file in files)
+        {
+            if (ObjectOf(file) is not { } objectId)
+            {
+                kept.Add(file);
+            }
+            else if (named.TryGetValue(objectId, out var exact)
+                && (!objects.TryGetValue(exact, out var other) || (!string.Equals(ObjectOf(other), exact, StringComparison.Ordinal) && string.Equals(objectId, exact, StringComparison.Ordinal))))
+            {
+                objects[exact] = file;
+            }
+        }
+        return [.. kept, .. objects.Values];
     }
 
     /// <summary>
@@ -257,16 +273,21 @@ public sealed class EncryptedStorage : VaultStorage, IDisposable
     public override IReadOnlyList<StoredFile> FilesOfBackup(IReadOnlyList<StoredFile> entries, string backup)
     {
         ArgumentNullException.ThrowIfNull(entries);
-        var raw = new Dictionary<string, StoredFile>(StringComparer.Ordinal);
+        // Comme sous Windows, la casse ne distingue pas deux noms : un objet renommé en minuscules reste le même. L'écriture
+        // exacte passe d'abord, si un jumeau qui ne diffère que par la casse est là aussi.
+        var exactly = new Dictionary<string, StoredFile>(StringComparer.Ordinal);
+        var loosely = new Dictionary<string, StoredFile>(StringComparer.OrdinalIgnoreCase);
         foreach (var entry in entries)
         {
-            raw.TryAdd(entry.Path, entry);
+            exactly.TryAdd(entry.Path, entry);
+            loosely.TryAdd(entry.Path, entry);
         }
-        if (!raw.ContainsKey(EncryptedVault.HeaderFile))
+        StoredFile? Find(string name) => exactly.TryGetValue(name, out var exact) ? exact : loosely.GetValueOrDefault(name);
+        if (Find(EncryptedVault.HeaderFile) is null)
         {
             return entries;
         }
-        if (!raw.TryGetValue(EncryptedVault.IndexFile, out var index))
+        if (Find(EncryptedVault.IndexFile) is not { } index)
         {
             throw new IOException("sauvegarde chiffrée sans index");
         }
@@ -282,7 +303,7 @@ public sealed class EncryptedStorage : VaultStorage, IDisposable
         var found = new List<StoredFile>();
         foreach (var (path, objectId) in files)
         {
-            if (raw.TryGetValue($"{EncryptedVault.Objects}/{objectId}{EncryptedVault.ObjectExtension}", out var sealedEntry))
+            if (Find($"{EncryptedVault.Objects}/{objectId}{EncryptedVault.ObjectExtension}") is { } sealedEntry)
             {
                 found.Add(new StoredFile(path, Math.Max(0, sealedEntry.Length - SealedFile.Overhead), () => OpenObject(objectId, sealedEntry, path)));
             }

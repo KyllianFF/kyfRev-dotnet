@@ -202,7 +202,7 @@ public sealed class EncryptedStorageTests
 
         // L'index s'écrit, puis le premier objet ne s'efface pas : le dossier a quitté le coffre, l'objet resté est nommé.
         disk.FailAt = disk.Writes + 2;
-        var error = Assert.ThrowsExactly<IOException>(() => storage.Purge(cours));
+        var error = Assert.ThrowsExactly<LeftOnDiskException>(() => storage.Purge(cours));
 
         Assert.IsFalse(storage.DirectoryExists(cours));
         Assert.AreEqual(1, objects.Count(File.Exists), "un objet reste, l'autre est effacé");
@@ -218,7 +218,57 @@ public sealed class EncryptedStorageTests
         storage.Replace(Path.Combine(latin, "d.md"), Two);
         disk.FailAt = disk.Writes + 2;
         disk.Cut = true;
-        Assert.Contains("2 de ses objets", Assert.ThrowsExactly<IOException>(() => storage.Purge(latin)).Message);
+        Assert.Contains("2 de ses objets", Assert.ThrowsExactly<LeftOnDiskException>(() => storage.Purge(latin)).Message);
+    }
+
+    [TestMethod]
+    public void An_object_renamed_in_lower_case_is_still_its_file()
+    {
+        using var folder = new TemporaryFolder();
+        using var storage = NewStorage(folder.Root);
+        var a = Path.Combine(folder.Root, "a.md");
+        storage.Replace(a, One);
+        var objectFile = storage.ObjectFileOf(a);
+        var lower = Path.Combine(Path.GetDirectoryName(objectFile)!, new string([.. Path.GetFileName(objectFile).Select(char.ToLowerInvariant)]));
+
+        // Un outil renomme l'objet en minuscules : NTFS le lit toujours sous son nom.
+        File.Move(objectFile, lower);
+
+        Assert.AreEqual("a.md:2", Described(storage.AllEntries(folder.Root)), "sa taille est celle de l'objet");
+        var raw = RawFiles(folder.Root);
+        CollectionAssert.Contains(storage.FilesToBackUp(raw.Select(file => Path.Combine(folder.Root, file.Path))).Select(Path.GetFileName).ToList(), Path.GetFileName(lower), "la sauvegarde le recopie");
+        var restored = Assert.ContainsSingle(storage.FilesOfBackup(raw, "minuscules.zip"));
+        CollectionAssert.AreEqual(One, restored.Read(), "la sauvegarde le relit");
+    }
+
+    [TestMethod]
+    public void A_lower_case_twin_of_an_object_stays_out_of_backups()
+    {
+        using var folder = new TemporaryFolder();
+        using var storage = NewStorage(folder.Root);
+        var a = Path.Combine(folder.Root, "a.md");
+        storage.Replace(a, One);
+        var objectFile = storage.ObjectFileOf(a);
+        var twin = Path.Combine(Path.GetDirectoryName(objectFile)!, new string([.. Path.GetFileName(objectFile).Select(char.ToLowerInvariant)]));
+        var header = Path.Combine(folder.Root, EncryptedVault.HeaderFile);
+        var index = Path.Combine(folder.Root, EncryptedVault.IndexFile);
+
+        // Dans un dossier sensible à la casse (copié depuis WSL), l'objet et un jumeau en minuscules sont côte à côte : un
+        // seul part dans la sauvegarde, l'écriture exacte d'abord.
+        CollectionAssert.AreEquivalent(new[] { header, index, objectFile }, storage.FilesToBackUp([header, index, twin, objectFile]).ToList());
+        CollectionAssert.AreEquivalent(new[] { header, index, twin }, storage.FilesToBackUp([header, index, twin]).ToList(), "sans l'écriture exacte, le jumeau la remplace");
+
+        // Une archive qui les contient tous deux se lit par l'écriture exacte.
+        var sealedObject = File.ReadAllBytes(objectFile);
+        var name = Path.GetRelativePath(folder.Root, objectFile).Replace('\\', '/');
+        var twinName = Path.GetRelativePath(folder.Root, twin).Replace('\\', '/');
+        List<StoredFile> archive =
+        [
+            .. RawFiles(folder.Root).Where(file => !file.Path.StartsWith(EncryptedVault.Objects, StringComparison.Ordinal)),
+            new(twinName, 3, () => [1, 2, 3]),
+            new(name, sealedObject.Length, () => sealedObject),
+        ];
+        CollectionAssert.AreEqual(One, Assert.ContainsSingle(storage.FilesOfBackup(archive, "jumeaux.zip")).Read());
     }
 
     [TestMethod]

@@ -44,6 +44,20 @@ public sealed class OnlineReader : IOnlineReader, IDisposable
     /// <inheritdoc/>
     public async Task<string> ReadTextAsync(Uri address, CancellationToken cancellationToken)
     {
+        var bytes = await ReadBytesAsync(address, cancellationToken).ConfigureAwait(false);
+        try
+        {
+            return new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true).GetString(bytes);
+        }
+        catch (DecoderFallbackException exception)
+        {
+            throw new OnlineException($"Réponse de {address.Host} illisible : pas en UTF-8.", exception);
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<byte[]> ReadBytesAsync(Uri address, CancellationToken cancellationToken)
+    {
         ArgumentNullException.ThrowIfNull(address);
         if (!address.IsAbsoluteUri || address.Scheme != Uri.UriSchemeHttps)
         {
@@ -88,7 +102,7 @@ public sealed class OnlineReader : IOnlineReader, IDisposable
     public void Dispose() => _client.Dispose();
 
     /// <summary>Lit la réponse sans dépasser la limite, quelle que soit la taille annoncée.</summary>
-    private async Task<string> ReadLimitedAsync(Stream stream, Uri address, CancellationToken cancellationToken)
+    private async Task<byte[]> ReadLimitedAsync(Stream stream, Uri address, CancellationToken cancellationToken)
     {
         using var buffer = new MemoryStream();
         var chunk = new byte[81920];
@@ -101,14 +115,7 @@ public sealed class OnlineReader : IOnlineReader, IDisposable
             }
             await buffer.WriteAsync(chunk.AsMemory(0, read), cancellationToken).ConfigureAwait(false);
         }
-        try
-        {
-            return new UTF8Encoding(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true).GetString(buffer.GetBuffer(), 0, (int)buffer.Length);
-        }
-        catch (DecoderFallbackException exception)
-        {
-            throw new OnlineException($"Réponse de {address.Host} illisible : pas en UTF-8.", exception);
-        }
+        return buffer.ToArray();
     }
 }
 

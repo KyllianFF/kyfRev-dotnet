@@ -192,8 +192,11 @@ internal sealed class TemporaryVault : IDisposable
     /// <summary>La date d'un fichier, ou celle de son objet dans un coffre chiffré.</summary>
     public void SetLastWriteTimeUtc(string relative, DateTime time) => File.SetLastWriteTimeUtc(OnDisk(relative), time);
 
-    /// <summary>Tient le fichier (ou son objet) ouvert, sans partage : personne d'autre ne peut l'écrire.</summary>
-    public FileStream Hold(string relative) => new(OnDisk(relative), FileMode.Open, FileAccess.Read, FileShare.None);
+    /// <summary>
+    /// Tient le fichier (ou son objet) ouvert, sans partage par défaut : personne d'autre ne peut l'écrire ; avec
+    /// <see cref="FileShare.Read"/>, comme un antivirus, il se lit encore mais ne s'efface pas.
+    /// </summary>
+    public FileStream Hold(string relative, FileShare share = FileShare.None) => new(OnDisk(relative), FileMode.Open, FileAccess.Read, share);
 
     /// <summary>
     /// Chaque fichier du coffre tel que la session le voit, et ce qui est posé à côté sur le disque (le verrou, un dossier de

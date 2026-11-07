@@ -348,7 +348,7 @@ public sealed class EncryptedVault : IDisposable
     /// objets sont effacés. Seul l'effacement demandé depuis la corbeille y recourt.
     /// </summary>
     /// <exception cref="VaultCryptoException">Ni fichier ni dossier ne porte ce chemin.</exception>
-    /// <exception cref="IOException">
+    /// <exception cref="LeftOnDiskException">
     /// Un objet n'a pas pu être effacé (un autre programme le tient ouvert) : le chemin a quitté le coffre, mais l'objet
     /// reste sur le disque. Le message le nomme ; aucune sauvegarde ne le recopie.
     /// </exception>
@@ -379,7 +379,7 @@ public sealed class EncryptedVault : IDisposable
         if (left.Count > 0)
         {
             var objects = string.Join(" ; ", left);
-            throw new IOException(left.Count == 1
+            throw new LeftOnDiskException(left.Count == 1
                 ? $"« {path} » a quitté le coffre, mais son objet n'a pas pu être effacé : {objects}. Il reste sur le disque ; aucune sauvegarde ne le recopie."
                 : $"« {path} » a quitté le coffre, mais {left.Count} de ses objets n'ont pas pu être effacés : {objects}. Ils restent sur le disque ; aucune sauvegarde ne les recopie.");
         }
@@ -394,11 +394,12 @@ public sealed class EncryptedVault : IDisposable
     /// <summary>La taille en clair et la date de chaque fichier, relevées en un seul parcours des objets.</summary>
     public IReadOnlyDictionary<string, (long Length, DateTime LastWriteTimeUtc)> Describe()
     {
-        var objects = new Dictionary<string, (long, DateTime)>(StringComparer.Ordinal);
+        // Un objet renommé en minuscules reste le même, comme pour NTFS.
+        var objects = new Dictionary<string, (long, DateTime)>(StringComparer.OrdinalIgnoreCase);
         var folder = Path.Combine(Root, Objects);
         if (Disk.DirectoryExists(folder))
         {
-            foreach (var entry in Disk.Entries(folder).Where(entry => !entry.IsDirectory && entry.Name.EndsWith(ObjectExtension, StringComparison.Ordinal)))
+            foreach (var entry in Disk.Entries(folder).Where(entry => !entry.IsDirectory && entry.Name.EndsWith(ObjectExtension, StringComparison.OrdinalIgnoreCase)))
             {
                 objects[entry.Name[..^ObjectExtension.Length]] = (Math.Max(0, entry.Length - SealedFile.Overhead), entry.LastWriteTimeUtc);
             }
@@ -464,8 +465,8 @@ public sealed class EncryptedVault : IDisposable
         return SealedFile.Open(_key, VaultId, objectId, sealedBytes);
     }
 
-    /// <summary>Les objets que l'index nomme : les seuls qu'une sauvegarde recopie.</summary>
-    internal IReadOnlySet<string> NamedObjects => _files.Values.Select(entry => entry.Object).ToHashSet(StringComparer.Ordinal);
+    /// <summary>Les objets que l'index nomme : les seuls qu'une sauvegarde recopie. Leur casse ne compte pas, comme pour NTFS.</summary>
+    internal HashSet<string> NamedObjects => _files.Values.Select(entry => entry.Object).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Le fichier de l'objet de <paramref name="path"/>, pour les essais.</summary>
     internal string ObjectFileOf(string path) => ObjectPath(EntryOf(path).Object);

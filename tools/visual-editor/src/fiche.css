@@ -110,8 +110,16 @@
   background: none;
 }
 
-/* Tableaux : défilement horizontal, lignes alternées. */
+/*
+ * Tableaux : défilement horizontal. Leur apparence vient de la ligne écrite au-dessus d'eux (apparence.ts) ; sans elle,
+ * la première ligne est l'en-tête, tous les traits sont là, aux neutres du thème. La lecture native dessine la même chose.
+ */
 .contenu-fiche table {
+  --t-entete: var(--surface-2);
+  --t-entete-texte: var(--texte);
+  --t-bande: var(--tableau-sobre-bande, var(--fond));
+  --t-trait: var(--bordure);
+  --t-fort: var(--texte-secondaire);
   display: block;
   max-width: 100%;
   overflow-x: auto;
@@ -119,19 +127,105 @@
   font-size: 0.94em;
 }
 
+.contenu-fiche table[data-theme="foret"] {
+  --t-entete: var(--tableau-foret-entete);
+  --t-entete-texte: var(--tableau-foret-entete-texte);
+  --t-bande: var(--tableau-foret-bande);
+  --t-trait: var(--tableau-foret-trait);
+  --t-fort: var(--tableau-foret-entete);
+}
+
+.contenu-fiche table[data-theme="ambre"] {
+  --t-entete: var(--tableau-ambre-entete);
+  --t-entete-texte: var(--tableau-ambre-entete-texte);
+  --t-bande: var(--tableau-ambre-bande);
+  --t-trait: var(--tableau-ambre-trait);
+  --t-fort: var(--tableau-ambre-entete);
+}
+
+.contenu-fiche table[data-theme="ardoise"] {
+  --t-entete: var(--tableau-ardoise-entete);
+  --t-entete-texte: var(--tableau-ardoise-entete-texte);
+  --t-bande: var(--tableau-ardoise-bande);
+  --t-trait: var(--tableau-ardoise-trait);
+  --t-fort: var(--tableau-ardoise-entete);
+}
+
+.contenu-fiche table[data-theme="prune"] {
+  --t-entete: var(--tableau-prune-entete);
+  --t-entete-texte: var(--tableau-prune-entete-texte);
+  --t-bande: var(--tableau-prune-bande);
+  --t-trait: var(--tableau-prune-trait);
+  --t-fort: var(--tableau-prune-entete);
+}
+
+.contenu-fiche table[data-theme="encre"] {
+  --t-entete: var(--tableau-encre-entete);
+  --t-entete-texte: var(--tableau-encre-entete-texte);
+  --t-bande: var(--tableau-encre-bande);
+  --t-trait: var(--tableau-encre-trait);
+  --t-fort: var(--tableau-encre-entete);
+}
+
 .contenu-fiche th,
 .contenu-fiche td {
   padding: 6px 12px;
-  border: 1px solid var(--bordure);
+  border: 1px solid var(--t-trait);
+  font-weight: 400;
   text-align: left;
 }
 
-.contenu-fiche th {
-  background: var(--surface-2);
+/* Une ligne ou une colonne sur deux, en comptant après l'en-tête ; la dernière ligne qui ressort n'en est pas. */
+.contenu-fiche table[data-bandes="lignes"]:is([data-entete="ligne"], [data-entete="ligne,colonne"]) tr:nth-child(2n + 3) > *,
+.contenu-fiche table[data-bandes="lignes"]:is([data-entete="colonne"], [data-entete="aucune"]) tr:nth-child(2n) > *,
+.contenu-fiche table[data-bandes="colonnes"]:is([data-entete="colonne"], [data-entete="ligne,colonne"]) tr > :nth-child(2n + 3),
+.contenu-fiche table[data-bandes="colonnes"]:is([data-entete="ligne"], [data-entete="aucune"]) tr > :nth-child(2n) {
+  background: var(--t-bande);
 }
 
-.contenu-fiche tr:nth-child(even) td {
-  background: var(--fond);
+.contenu-fiche table[data-total][data-bandes="lignes"] tr:last-child > * {
+  background: none;
+}
+
+/* L'en-tête : la première ligne, la première colonne, ou les deux. */
+.contenu-fiche table:is([data-entete="ligne"], [data-entete="ligne,colonne"], :not([data-entete])) tr:first-child > *,
+.contenu-fiche table:is([data-entete="colonne"], [data-entete="ligne,colonne"]) tr > :first-child {
+  color: var(--t-entete-texte);
+  font-weight: 600;
+  background: var(--t-entete);
+}
+
+/* Les traits. */
+.contenu-fiche table[data-traits="horizontaux"] :is(th, td) {
+  border-right: 0;
+  border-left: 0;
+}
+
+.contenu-fiche table[data-traits="verticaux"] :is(th, td) {
+  border-top: 0;
+  border-bottom: 0;
+}
+
+.contenu-fiche table[data-traits="contour"] {
+  border: 1px solid var(--t-trait);
+}
+
+.contenu-fiche table:is([data-traits="contour"], [data-traits="entete"], [data-traits="aucun"]) :is(th, td) {
+  border: 0;
+}
+
+.contenu-fiche table[data-traits="entete"]:is([data-entete="ligne"], [data-entete="ligne,colonne"]) tr:first-child > * {
+  border-bottom: 2px solid var(--t-fort);
+}
+
+.contenu-fiche table[data-traits="entete"]:is([data-entete="colonne"], [data-entete="ligne,colonne"]) tr > :first-child {
+  border-right: 2px solid var(--t-fort);
+}
+
+/* La dernière ligne qui ressort : une synthèse, un total. */
+.contenu-fiche table[data-total] tr:last-child:not(:first-child) > * {
+  font-weight: 600;
+  border-top: 2px solid var(--t-fort);
 }
 
 .contenu-fiche img {
@@ -702,12 +796,16 @@ figure.bloc-extension {
   );
 }
 
-/* Tableaux : largeur naturelle, cellules assez larges pour y cliquer. */
+/* Tableaux : largeur naturelle, ou toute la page ; cellules assez larges pour y cliquer. */
 .editeur-visuel table {
   display: table;
   width: auto;
   table-layout: auto;
   overflow: visible;
+}
+
+.editeur-visuel table[data-largeur="page"] {
+  width: 100%;
 }
 
 .editeur-visuel th,

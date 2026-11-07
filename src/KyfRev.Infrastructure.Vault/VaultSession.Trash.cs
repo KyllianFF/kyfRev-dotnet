@@ -1,4 +1,5 @@
 using System.Text.Json;
+using KyfRev.Application.Ports;
 using KyfRev.Domain.Calendar;
 using KyfRev.Infrastructure.Vault.Format;
 using KyfRev.Infrastructure.Vault.Json;
@@ -45,11 +46,9 @@ public sealed partial class VaultSession
     /// </summary>
     public void PurgeSheet(string id)
     {
-        ReadTrash(id);
-        // Le suivi d'abord : c'est lui qui fait exister la fiche à la corbeille.
-        Erase(VaultPath.Create($"{VaultLayout.TrashTracking}/{id}.json"));
-        Erase(VaultPath.Create($"{VaultLayout.TrashTracking}/{id}.annotations.json"));
-        Erase(VaultPath.Create($"{VaultLayout.SheetsTrash}/{id}"));
+        var left = new List<string>();
+        EraseSheet(id, left);
+        ThrowIfLeft(left);
     }
 
     /// <summary>Efface pour de bon un dossier : ses fiches passent par la corbeille, puis tout est effacé.</summary>
@@ -57,22 +56,61 @@ public sealed partial class VaultSession
     public int PurgeFolder(string folder, Moment now)
     {
         var (sheets, storage) = TrashFolderInto(folder, now);
+        var left = new List<string>();
         foreach (var id in sheets)
         {
-            PurgeSheet(id);
+            EraseSheet(id, left);
         }
-        Erase(storage);
+        Erase(storage, left);
+        ThrowIfLeft(left);
         return sheets.Count;
+    }
+
+    /// <summary>
+    /// Efface une fiche de la corbeille, le suivi d'abord : c'est lui qui la fait exister à la corbeille. Ce qui reste sur le
+    /// disque après un effacement (<see cref="LeftOnDiskException"/>) est noté dans <paramref name="left"/>, et les
+    /// effacements suivants ont lieu : la fiche ne reste jamais à moitié effacée, introuvable mais encore sauvegardée.
+    /// </summary>
+    private void EraseSheet(string id, List<string> left)
+    {
+        ReadTrash(id);
+        Erase(VaultPath.Create($"{VaultLayout.TrashTracking}/{id}.json"), left);
+        Erase(VaultPath.Create($"{VaultLayout.TrashTracking}/{id}.annotations.json"), left);
+        Erase(VaultPath.Create($"{VaultLayout.SheetsTrash}/{id}"), left);
     }
 
     private void Erase(VaultPath path)
     {
+        var left = new List<string>();
+        Erase(path, left);
+        ThrowIfLeft(left);
+    }
+
+    /// <summary>Efface pour de bon ; si une part reste sur le disque, l'effacement a eu lieu : elle est notée dans <paramref name="left"/>.</summary>
+    private void Erase(VaultPath path, List<string> left)
+    {
         var absolute = Confine(path);
         Io(absolute, () =>
         {
-            _storage.Purge(absolute);
+            try
+            {
+                _storage.Purge(absolute);
+            }
+            catch (LeftOnDiskException exception)
+            {
+                left.Add(exception.Message);
+            }
             return true;
         });
+    }
+
+    /// <summary>Tout a été effacé, mais une part est restée sur le disque : le dire, d'un seul message.</summary>
+    private static void ThrowIfLeft(List<string> left)
+    {
+        if (left.Count > 0)
+        {
+            throw VaultException.LeftOnDisk(left);
+        }
     }
 
     private (List<string> Sheets, VaultPath Storage) TrashFolderInto(string folder, Moment now)

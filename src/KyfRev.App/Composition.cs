@@ -100,7 +100,10 @@ internal static class Composition
         services.AddSingleton(provider => new EditorEnvironment(
             provider.GetRequiredService<ISpelling>(),
             Path.Combine(provider.GetRequiredService<VaultLocations>().LocalData, "WebView2"),
-            Schemas: () => provider.GetRequiredService<INetworkSchemas>()));
+            Schemas: () => provider.GetRequiredService<INetworkSchemas>())
+        {
+            Report = reason => DiagnosticLog.WebEngineTrouble(provider.GetRequiredService<ILoggerFactory>().CreateLogger("Éditeur"), reason),
+        });
         services.AddSingleton<INetworkSchemas>(provider => new NetworkSchemas(
             () => provider.GetRequiredService<ActiveModules>().Find<SchemaUseCases>(),
             () => provider.GetRequiredService<ShellViewModel>()));
@@ -188,7 +191,14 @@ internal static class Composition
             provider.GetRequiredService<ExtensionLibrary>(),
             provider.GetRequiredService<IFolderPicker>(),
             provider.GetRequiredService<ExtensionDataUseCases>().Journal,
-            provider.GetRequiredService<ExtensionEngine>()));
+            provider.GetRequiredService<ExtensionEngine>())
+        {
+            Catalogue = new CatalogueReader(
+                provider.GetRequiredService<IOnlineReader>(),
+                provider.GetRequiredService<ExtensionLibrary>(),
+                ExtensionCatalogue.KnownKeys,
+                Path.Combine(Path.GetTempPath(), "kyfRev", "catalogue")),
+        });
         services.AddSingleton(provider => new ModulesSettingsViewModel(
             provider.GetRequiredService<SettingsUseCases>(),
             provider.GetRequiredService<ActiveModules>().Load,

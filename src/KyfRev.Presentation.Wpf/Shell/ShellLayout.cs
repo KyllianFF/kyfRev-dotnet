@@ -21,6 +21,15 @@ public enum NavigationLayout
 /// </summary>
 public static class ShellLayout
 {
+    /// <summary>
+    /// La plus petite largeur vue de la fenêtre, quel que soit le zoom : la disposition à onglets y tient, et rien en deçà
+    /// n'est à prévoir.
+    /// </summary>
+    public const double MinimumWidth = 470;
+
+    /// <summary>La plus petite hauteur vue de la fenêtre, tant que l'écran la permet.</summary>
+    public const double MinimumHeight = 540;
+
     /// <summary>Largeur à partir de laquelle la colonne d'icônes remplace les onglets.</summary>
     public const double RailMinimum = 600;
 

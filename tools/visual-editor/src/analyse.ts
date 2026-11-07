@@ -7,6 +7,7 @@ import { katex } from "@mdit/plugin-katex";
 import DOMPurify from "dompurify";
 import MarkdownIt, { type MarkdownIt as Analyseur } from "markdown-it";
 import footnote from "markdown-it-footnote";
+import { apparenceDesTableaux } from "./apparence";
 import { balises } from "./balises";
 import { adresseRessource, decoder, estExterne, resoudre, separerSuffixe } from "./chemins";
 
@@ -16,6 +17,7 @@ export function analyseurMarkdown(): Analyseur {
   md.use(footnote);
   md.use(katex, { output: "htmlAndMathml", throwOnError: false, trust: false, strict: "ignore" });
   md.use(balises);
+  md.use(apparenceDesTableaux);
   return md;
 }
 

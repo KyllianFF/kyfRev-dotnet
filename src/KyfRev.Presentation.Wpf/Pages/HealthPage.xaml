@@ -13,8 +13,13 @@
         <Border.ContextMenu>
           <ContextMenu />
         </Border.ContextMenu>
-        <DockPanel>
-          <WrapPanel DockPanel.Dock="Right" VerticalAlignment="Center" Margin="12,0,0,0">
+        <!-- Le texte garde sa place : quand le choix et la réparation la lui prendraient, ils passent dessous. -->
+        <kyf:AdaptiveRow MainMinWidth="240" Spacing="12" StackedSpacing="8">
+          <StackPanel VerticalAlignment="Center">
+            <TextBlock Text="{Binding Title}" Style="{DynamicResource Kyf.Text.BodyStrong}" TextWrapping="Wrap" />
+            <TextBlock Text="{Binding Detail}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,2,0,0" />
+          </StackPanel>
+          <WrapPanel kyf:AdaptiveRow.Part="Trailing" VerticalAlignment="Center">
             <ComboBox x:Name="BackupChoice" ItemsSource="{Binding Backups}" SelectedItem="{Binding SelectedBackup}" MinWidth="168" Margin="0,0,8,0"
                       Visibility="{Binding HasBackups, Converter={StaticResource Visible}}" AutomationProperties.Name="{x:Static pages:HealthText.BackupToUse}" />
             <Button x:Name="Repair" Content="{Binding ActionLabel}" Command="{Binding Action}" AutomationProperties.Name="{Binding ActionName}"
@@ -24,11 +29,7 @@
             <TextBlock x:Name="Hint" Text="{Binding Hint}" Style="{DynamicResource Kyf.Text.Caption}" VerticalAlignment="Center"
                        Visibility="{Binding HasHint, Converter={StaticResource Visible}}" />
           </WrapPanel>
-          <StackPanel VerticalAlignment="Center">
-            <TextBlock Text="{Binding Title}" Style="{DynamicResource Kyf.Text.BodyStrong}" TextWrapping="Wrap" />
-            <TextBlock Text="{Binding Detail}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,2,0,0" />
-          </StackPanel>
-        </DockPanel>
+        </kyf:AdaptiveRow>
       </Border>
     </DataTemplate>
 

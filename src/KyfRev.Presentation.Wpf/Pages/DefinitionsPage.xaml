@@ -73,6 +73,10 @@
                         </StackPanel>
                       </StackPanel>
                       <TextBlock Text="{Binding Source}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,8,0,0" />
+                      <CheckBox IsChecked="{Binding IsMarkedEverywhere}" Margin="0,8,0,0" Visibility="{Binding IsShown, Converter={StaticResource Visible}}"
+                                AutomationProperties.Name="{x:Static pages:DefinitionsText.MarkEverywhere}">
+                        <TextBlock Text="{x:Static pages:DefinitionsText.MarkEverywhere}" TextWrapping="Wrap" />
+                      </CheckBox>
                       <StackPanel Orientation="Horizontal" Margin="0,4,0,0" Visibility="{Binding HasWarning, Converter={StaticResource Visible}}">
                         <kyf:Icon Text="{x:Static kyf:Icons.Warning}" Foreground="{DynamicResource Kyf.Brush.Warning}" FontSize="12" Margin="0,0,4,0" />
                         <TextBlock Text="{Binding Warning}" Style="{DynamicResource Kyf.Text.Caption}" Foreground="{DynamicResource Kyf.Brush.Warning}" TextWrapping="Wrap" />

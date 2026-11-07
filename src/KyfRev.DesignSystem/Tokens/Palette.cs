@@ -59,6 +59,19 @@ public static class Palette
     /// <summary>Les noms de fonction d'un bloc de code, sur fond sombre.</summary>
     public static TokenColor CodeTitleDark { get; } = TokenColor.FromHex("#c4a8ea");
 
+    /// <summary>
+    /// Les thèmes de tableau, en clair puis en sombre : fond et texte de l'en-tête, bande, traits. L'en-tête tient le
+    /// contraste d'un texte ; la bande aussi, sous le texte du thème.
+    /// </summary>
+    public static ImmutableArray<TableColors> TableThemes { get; } =
+    [
+        new("Forest", new("#2e6a4e", "#ffffff", "#eef5ef", "#c1daca"), new("#86c7a1", "#13201a", "#28322b", "#3d5446")),
+        new("Amber", new("#93540f", "#ffffff", "#fbf3e6", "#f0d3a8"), new("#eba458", "#1d1a14", "#30291e", "#5c4426")),
+        new("Slate", new("#1f5f99", "#ffffff", "#ecf2f8", "#c9d8e8"), new("#8fbce8", "#12202e", "#232a31", "#37495b")),
+        new("Plum", new("#6a3f9e", "#ffffff", "#f4eefa", "#ddd0ec"), new("#c4a8ea", "#1e1430", "#2b2533", "#4a3d5c")),
+        new("Ink", new("#1d2822", "#ffffff", "#e3e8e0", "#1d2822"), new("#efe9dc", "#191714", "#2e2a24", "#efe9dc")),
+    ];
+
     /// <summary>Neutres et couleurs fonctionnelles du thème clair, « Jour ».</summary>
     public static ThemeNeutrals Light { get; } = new(
         Background: TokenColor.FromHex("#edefe9"),
@@ -95,6 +108,25 @@ public static class Palette
         SuccessBackground: TokenColor.FromHex("#2a3a30"),
         Scrim: TokenColor.FromHex("#99000000"));
 }
+
+/// <summary>Les couleurs d'un thème de tableau, dans un thème de l'application.</summary>
+/// <param name="Header">Fond de l'en-tête.</param>
+/// <param name="HeaderText">Texte de l'en-tête.</param>
+/// <param name="Band">Fond d'une bande.</param>
+/// <param name="Line">Traits.</param>
+public sealed record TableShades(TokenColor Header, TokenColor HeaderText, TokenColor Band, TokenColor Line)
+{
+    internal TableShades(string header, string headerText, string band, string line)
+        : this(TokenColor.FromHex(header), TokenColor.FromHex(headerText), TokenColor.FromHex(band), TokenColor.FromHex(line))
+    {
+    }
+}
+
+/// <summary>Un thème de tableau : son nom (celui des rôles <c>Table…</c>), en clair et en sombre.</summary>
+/// <param name="Name">Son nom.</param>
+/// <param name="Light">En thème clair.</param>
+/// <param name="Dark">En thème sombre.</param>
+public sealed record TableColors(string Name, TableShades Light, TableShades Dark);
 
 /// <summary>Une gamme de dix nuances, de 50 (la plus claire) à 900 (la plus foncée).</summary>
 public sealed class ColorRamp

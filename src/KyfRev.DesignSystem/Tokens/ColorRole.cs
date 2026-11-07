@@ -132,4 +132,67 @@ public enum ColorRole
 
     /// <summary>Voile sous les dialogues (transparent, décoratif).</summary>
     Scrim,
+
+    /// <summary>Bande d'un tableau « Sobre » : une ligne ou une colonne sur deux.</summary>
+    TableSoberBand,
+
+    /// <summary>Fond de l'en-tête d'un tableau vert forêt.</summary>
+    TableForestHeader,
+
+    /// <summary>Texte de l'en-tête d'un tableau vert forêt.</summary>
+    TableForestHeaderText,
+
+    /// <summary>Bande d'un tableau vert forêt.</summary>
+    TableForestBand,
+
+    /// <summary>Traits d'un tableau vert forêt (décoratifs : l'en-tête se lit aussi à son fond et à sa graisse).</summary>
+    TableForestLine,
+
+    /// <summary>Fond de l'en-tête d'un tableau ambre.</summary>
+    TableAmberHeader,
+
+    /// <summary>Texte de l'en-tête d'un tableau ambre.</summary>
+    TableAmberHeaderText,
+
+    /// <summary>Bande d'un tableau ambre.</summary>
+    TableAmberBand,
+
+    /// <summary>Traits d'un tableau ambre (décoratifs : l'en-tête se lit aussi à son fond et à sa graisse).</summary>
+    TableAmberLine,
+
+    /// <summary>Fond de l'en-tête d'un tableau bleu ardoise.</summary>
+    TableSlateHeader,
+
+    /// <summary>Texte de l'en-tête d'un tableau bleu ardoise.</summary>
+    TableSlateHeaderText,
+
+    /// <summary>Bande d'un tableau bleu ardoise.</summary>
+    TableSlateBand,
+
+    /// <summary>Traits d'un tableau bleu ardoise (décoratifs : l'en-tête se lit aussi à son fond et à sa graisse).</summary>
+    TableSlateLine,
+
+    /// <summary>Fond de l'en-tête d'un tableau prune.</summary>
+    TablePlumHeader,
+
+    /// <summary>Texte de l'en-tête d'un tableau prune.</summary>
+    TablePlumHeaderText,
+
+    /// <summary>Bande d'un tableau prune.</summary>
+    TablePlumBand,
+
+    /// <summary>Traits d'un tableau prune (décoratifs : l'en-tête se lit aussi à son fond et à sa graisse).</summary>
+    TablePlumLine,
+
+    /// <summary>Fond de l'en-tête d'un tableau encre, le plus contrasté.</summary>
+    TableInkHeader,
+
+    /// <summary>Texte de l'en-tête d'un tableau encre, le plus contrasté.</summary>
+    TableInkHeaderText,
+
+    /// <summary>Bande d'un tableau encre, le plus contrasté.</summary>
+    TableInkBand,
+
+    /// <summary>Traits d'un tableau encre, le plus contrasté (décoratifs : l'en-tête se lit aussi à son fond et à sa graisse).</summary>
+    TableInkLine,
 }

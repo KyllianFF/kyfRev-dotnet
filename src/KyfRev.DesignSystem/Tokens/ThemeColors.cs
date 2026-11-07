@@ -94,6 +94,27 @@ public static class ThemeColors
         [ColorRole.CodeTitle] = SystemColor.WindowText,
         [ColorRole.InfoBackground] = SystemColor.Window,
         [ColorRole.Scrim] = SystemColor.Window,
+        [ColorRole.TableSoberBand] = SystemColor.Window,
+        [ColorRole.TableForestHeader] = SystemColor.Window,
+        [ColorRole.TableForestHeaderText] = SystemColor.WindowText,
+        [ColorRole.TableForestBand] = SystemColor.Window,
+        [ColorRole.TableForestLine] = SystemColor.WindowText,
+        [ColorRole.TableAmberHeader] = SystemColor.Window,
+        [ColorRole.TableAmberHeaderText] = SystemColor.WindowText,
+        [ColorRole.TableAmberBand] = SystemColor.Window,
+        [ColorRole.TableAmberLine] = SystemColor.WindowText,
+        [ColorRole.TableSlateHeader] = SystemColor.Window,
+        [ColorRole.TableSlateHeaderText] = SystemColor.WindowText,
+        [ColorRole.TableSlateBand] = SystemColor.Window,
+        [ColorRole.TableSlateLine] = SystemColor.WindowText,
+        [ColorRole.TablePlumHeader] = SystemColor.Window,
+        [ColorRole.TablePlumHeaderText] = SystemColor.WindowText,
+        [ColorRole.TablePlumBand] = SystemColor.Window,
+        [ColorRole.TablePlumLine] = SystemColor.WindowText,
+        [ColorRole.TableInkHeader] = SystemColor.Window,
+        [ColorRole.TableInkHeaderText] = SystemColor.WindowText,
+        [ColorRole.TableInkBand] = SystemColor.Window,
+        [ColorRole.TableInkLine] = SystemColor.WindowText,
     }.ToFrozenDictionary();
 
     /// <summary>Les couleurs du thème clair ou sombre.</summary>
@@ -114,7 +135,7 @@ public static class ThemeColors
         // Thème clair : la nuance 700 pour ce qui se détache sur fond clair, les nuances 100 en
         // fond de pastille ; thème sombre : les nuances claires sur fond sombre, et l'inverse.
         int Pick(int lightShade, int darkShade) => light ? lightShade : darkShade;
-        return new Dictionary<ColorRole, TokenColor>
+        var colors = new Dictionary<ColorRole, TokenColor>
         {
             [ColorRole.Background] = neutrals.Background,
             [ColorRole.Surface] = neutrals.Surface,
@@ -158,7 +179,17 @@ public static class ThemeColors
             [ColorRole.CodeNumber] = light ? Palette.CodeNumberLight : Palette.CodeNumberDark,
             [ColorRole.CodeTitle] = light ? Palette.CodeTitleLight : Palette.CodeTitleDark,
             [ColorRole.Scrim] = neutrals.Scrim,
-        }.ToFrozenDictionary();
+            [ColorRole.TableSoberBand] = neutrals.Background,
+        };
+        foreach (var table in Palette.TableThemes)
+        {
+            var shades = light ? table.Light : table.Dark;
+            colors[Enum.Parse<ColorRole>($"Table{table.Name}Header")] = shades.Header;
+            colors[Enum.Parse<ColorRole>($"Table{table.Name}HeaderText")] = shades.HeaderText;
+            colors[Enum.Parse<ColorRole>($"Table{table.Name}Band")] = shades.Band;
+            colors[Enum.Parse<ColorRole>($"Table{table.Name}Line")] = shades.Line;
+        }
+        return colors.ToFrozenDictionary();
     }
 
     /// <summary>Valeur actuelle d'une couleur de Windows.</summary>

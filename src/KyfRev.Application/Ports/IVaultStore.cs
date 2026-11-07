@@ -106,4 +106,11 @@ public interface IOnlineReader
 {
     /// <summary>Texte de la réponse à <paramref name="address"/>.</summary>
     Task<string> ReadTextAsync(Uri address, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Octets exacts de la réponse à <paramref name="address"/> : ce qu'une empreinte vérifie. Par défaut, le texte en UTF-8,
+    /// pour un lecteur qui ne sait lire que du texte.
+    /// </summary>
+    async Task<byte[]> ReadBytesAsync(Uri address, CancellationToken cancellationToken) =>
+        System.Text.Encoding.UTF8.GetBytes(await ReadTextAsync(address, cancellationToken).ConfigureAwait(false));
 }

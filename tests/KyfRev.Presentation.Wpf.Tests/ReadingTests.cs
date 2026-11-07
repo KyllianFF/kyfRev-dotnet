@@ -110,8 +110,8 @@ public sealed class ReadingTests
         Assert.AreEqual(3, lists[0].StartIndex);
         Assert.AreEqual(TextMarkerStyle.Disc, lists[1].MarkerStyle);
         var table = elements.OfType<Table>().Single();
-        Assert.AreEqual(4, table.Columns.Count);
-        var alignments = table.RowGroups[1].Rows[0].Cells.Select(cell => ((Paragraph)cell.Blocks.FirstBlock).TextAlignment).ToList();
+        Assert.AreEqual(4, table.Columns.Count, "quatre colonnes sur toute la largeur du texte : on n'écrit ni à gauche ni à droite d'un tableau");
+        var alignments = table.RowGroups[1].Rows[0].Cells.Take(4).Select(cell => ((Paragraph)cell.Blocks.FirstBlock).TextAlignment).ToList();
         Assert.AreEqual("Left Center Right Left", string.Join(' ', alignments));
         Assert.AreEqual(FontWeights.SemiBold, table.RowGroups[0].Rows[0].Cells[0].FontWeight);
         Assert.IsGreaterThanOrEqualTo(1, elements.OfType<Section>().Count(section => section.BorderThickness.Left > 0));
@@ -1062,6 +1062,62 @@ public sealed class ReadingTests
 
     private static ScrollViewer Scroller(SheetDocumentViewer viewer) => Descendants(viewer).OfType<ScrollViewer>().First();
 
+    [STATestMethod]
+    public void A_narrow_header_holds_on_one_line_and_puts_the_panels_under_more()
+    {
+        using var ui = new UiThread();
+        using var vault = new ReadingVault(Long(), passage: true);
+        var test = new TestShell();
+        var page = vault.Page();
+        page.LoadCommand.Execute(null);
+        UiThread.Until(() => !page.IsLoading);
+        var window = Show(test, page, 470, 700);
+        try
+        {
+            Assert.IsTrue(page.IsCompactHeader);
+            Assert.IsFalse(Named<ToggleButton>(window, "OutlineToggle").IsVisible);
+            Assert.IsFalse(Named<ToggleButton>(window, "PassagesToggle").IsVisible);
+            var back = Named<Button>(window, "BackButton");
+            var line = back.TranslatePoint(new Point(0, back.ActualHeight / 2), window).Y;
+            foreach (var name in new[] { "ReadToggle", "ReviseToggle", "WriteToggle", "HeaderMoreButton" })
+            {
+                var button = Named<ButtonBase>(window, name);
+                Assert.AreEqual(line, button.TranslatePoint(new Point(0, button.ActualHeight / 2), window).Y, 6, $"{name} : sur la ligne du retour");
+            }
+
+            var more = Named<Button>(window, "HeaderMoreButton");
+            Assert.AreEqual($"Plan et passages ({page.PassagesLabel})", System.Windows.Automation.AutomationProperties.GetName(more), "le « ⋯ » dit combien de passages il cache");
+            more.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+            TestShell.Flush();
+            Assert.IsTrue(more.ContextMenu.IsOpen);
+            var items = more.ContextMenu.Items.OfType<MenuItem>().ToList();
+            Assert.AreEqual(page.PassagesLabel, items[1].Header);
+            items[0].IsChecked = true;
+            Assert.IsTrue(page.IsOutlineOn, "le plan s'ouvre depuis le menu");
+            more.ContextMenu.IsOpen = false;
+
+            // À l'écriture, le « ⋯ » du ruban reçoit les mêmes choix.
+            var ribbon = Descendants(window).OfType<SheetPage>().Single().Ribbon;
+            var ribbonItems = ribbon.ViewMenu.Items.OfType<MenuItem>().ToList();
+            Assert.HasCount(5, ribbonItems);
+            Assert.IsTrue(ribbonItems[3].IsChecked, "le plan ouvert se voit aussi dans le menu du ruban");
+            ribbonItems[3].IsChecked = false;
+            Assert.IsFalse(page.IsOutlineOn);
+
+            // Assez de place : les boutons du plan et des passages reviennent dans l'en-tête.
+            window.Width = 1200;
+            window.UpdateLayout();
+            TestShell.Flush();
+            Assert.IsFalse(page.IsCompactHeader);
+            Assert.IsTrue(Named<ToggleButton>(window, "PassagesToggle").IsVisible);
+            Assert.IsFalse(more.IsVisible);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
     private static ShellWindow Show(TestShell test, object page, double width, double height)
     {
         var shell = test.Shell;
@@ -1160,7 +1216,25 @@ internal sealed class ReadingVault : IDisposable
 
     public FakeSpelling Spelling { get; } = new();
 
-    public SheetPageViewModel Page(bool markdown = true, bool revising = false, Func<bool>? activeRecall = null, ISpeech? speech = null, INetworkSchemas? schemas = null) => new(App.Sheets, App.Annotations, Bar, SheetId, () => Backs++, OpenedSheets.Add, Links, sheet => new SheetEditorViewModel(sheet, App.Editing, App.Sheets, new EditorEnvironment(Spelling, FakeEnvironment.WebData, markdown, () => schemas)), revising, activeRecall) { ReadAloud = speech is null ? null : new ReadAloudViewModel(speech) };
+    public SheetPageViewModel Page(bool markdown = true, bool revising = false, Func<bool>? activeRecall = null, ISpeech? speech = null, INetworkSchemas? schemas = null, bool words = false) => new(App.Sheets, App.Annotations, Bar, SheetId, () => Backs++, OpenedSheets.Add, Links, sheet => new SheetEditorViewModel(sheet, App.Editing, App.Sheets, new EditorEnvironment(Spelling, FakeEnvironment.WebData, markdown, () => schemas)), revising, activeRecall) { ReadAloud = speech is null ? null : new ReadAloudViewModel(speech), MarksDefinedWords = words, OpenPassage = (sheet, passage) => OpenedPassages.Add((sheet, passage)) };
+
+    /// <summary>Les fiches rouvertes sur un passage, avec ce passage.</summary>
+    public List<(string Sheet, string Passage)> OpenedPassages { get; } = [];
+
+    /// <summary>Une autre fiche du coffre, « La cellule », où se posent les définitions d'ailleurs ; rien avant la première.</summary>
+    public string? OtherSheet { get; private set; }
+
+    /// <summary>Définit un terme dans une autre fiche du coffre ; rend la définition.</summary>
+    public string DefineElsewhere(string term, string explanation)
+    {
+        OtherSheet ??= App.Sheets.Create("Biologie", "La cellule", null).Value;
+        var anchor = new Anchor(term, string.Empty, string.Empty, 0, term.Length, [], 1, "sha256:aa");
+        return App.Annotations.CreateDefinition(OtherSheet, anchor, new Definition(term, explanation)).Value;
+    }
+
+    /// <summary>Définit un terme sur un passage de cette fiche ; rend la définition.</summary>
+    public string DefineHere(string exact, string term, string explanation) =>
+        App.Annotations.CreateDefinition(SheetId, AnchorOn(exact), new Definition(term, explanation)).Value;
 
     public SheetReading Reading()
     {
