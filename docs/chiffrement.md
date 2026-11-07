@@ -193,7 +193,33 @@ kyfrev-coffre dechiffrer <coffre chiffré> <nouveau dossier>
 - **Le verrou** (`.suivi/verrou`, `.suivi/verrou-info.json`) n'est pas recopié : c'est l'état de l'application, pas du
   contenu.
 
-L'application n'ouvre pas encore un coffre chiffré : son écran de déverrouillage vient avec le lot suivant.
+## L'ouverture dans l'application
+
+- **Un coffre chiffré se reconnaît à son en-tête** (`kyfrev-chiffre.json`) : à son ouverture, au démarrage, depuis
+  l'accueil ou depuis Paramètres › Données, l'application lui demande sa clé avant de rien lire de lui. Le port
+  `IVaultKeys` (`KyfRev.Application`) reconnaît le coffre, tire sa clé et la retient ; `EncryptedVaults`
+  (`KyfRev.Infrastructure.Crypto`) l'implémente, et ouvre aussi les coffres en clair, sur le disque, comme avant. Le
+  coffre prévu du mode portable ou installé qui n'a que son en-tête (tout juste chiffré, son dossier de suivi n'est encore
+  que dans son index) est reconnu comme un coffre existant, et non proposé à la création.
+- **L'écran de déverrouillage** ne montre ni le menu ni la recherche. Il demande le mot de passe ou, s'il est perdu, la
+  clé de récupération, telle qu'elle a été recopiée (tirets, espaces et majuscules indifférents). Le mot de passe passe
+  du champ à la commande, et le champ est vidé aussitôt. La dérivation se fait hors du fil de l'interface. Un refus
+  (mauvais mot de passe, faute de frappe, index illisible) laisse le coffre en attente, avec sa raison. Un autre coffre
+  peut être ouvert à la place ; si le changement venait des paramètres, le coffre qui était ouvert le reste jusqu'au
+  déverrouillage, et l'écran propose d'y revenir.
+- **La session prend le stockage chiffré** : elle le libère en se fermant, et la copie de la clé qu'il gardait est
+  effacée. Une session qui ne s'ouvre pas le libère tout de suite.
+- **« Se souvenir sur cet ordinateur »**, décoché par défaut. Coché, la clé de données est protégée par Windows pour la
+  session de l'utilisateur (DPAPI) et rangée dans `cles-retenues.json`, dans le dossier des données du poste (celui de
+  l'application en mode portable) : l'identifiant du coffre, son dossier et la clé protégée, jamais la clé en clair. Elle
+  ne sert qu'à ce coffre, dans ce dossier, dans cette session de Windows : une copie du coffre ailleurs, un autre compte
+  ou un autre poste redemandent le mot de passe. Elle est vérifiée sur l'index avant de servir ; une clé qui ne l'ouvre
+  plus est oubliée. Déverrouiller sans cocher oublie celle qui était retenue. Oublier réécrit le fichier, sans l'effacer.
+  Coché, le coffre ne protège plus contre quelqu'un qui utilise la session de l'utilisateur, seulement contre un vol du
+  disque.
+
+Le verrouillage (Ctrl+Maj+L, et après 15 minutes d'inactivité), l'assistant « Chiffrer ce coffre » et la carte
+Chiffrement des paramètres viennent avec les lots suivants.
 
 ## Ce que les tests vérifient
 
@@ -206,7 +232,19 @@ L'application n'ouvre pas encore un coffre chiffré : son écran de déverrouill
   - un réglage ou l'identifiant changés dans le fichier, comme un en-tête illisible, sont refusés ;
   - un nouveau mot de passe garde la même clé de données et retire l'ancien ;
   - une nouvelle clé de récupération retire l'ancienne.
-- **La clé retenue** ne s'ouvre que pour son coffre, dans cette session.
+- **La clé retenue** ne s'ouvre que pour son coffre, dans cette session. Rangée par l'application, elle n'est écrite que
+  protégée ; elle ne sert qu'à son dossier, sous toute écriture du même chemin, et ni à une copie ni sur un autre poste ;
+  une clé que Windows ne rend pas, un en-tête illisible ou une clé qui n'ouvre plus l'index ne rendent rien, et la
+  dernière est oubliée. Un fichier des clés illisible ne retient rien, puis se réécrit.
+- **L'ouverture d'un coffre chiffré** : sans clé retenue, il attend sa clé et rien n'est ouvert ; un mauvais mot de passe
+  ou un index absent le laissent en attente avec la raison ; déverrouillé, il est le coffre ouvert comme un autre (sa
+  journée, sa sauvegarde du jour, retenu pour le démarrage suivant) et rien de lui n'est en clair sur le disque. Retenue,
+  sa clé l'ouvre au démarrage suivant sans rien demander ; une clé qui n'a pas pu être retenue n'empêche pas l'ouverture.
+  Fermée, la session a libéré son stockage chiffré ; une session qui ne s'ouvre pas aussi.
+- **L'écran de déverrouillage**, au démarrage, depuis l'accueil et depuis les paramètres : sans menu ni recherche, son
+  champ vidé après chaque essai, la clé de récupération à la place du mot de passe, un autre coffre (chiffré ou non) à
+  la place, et le retour au coffre resté ouvert. Il tient dans une fenêtre de 470 pixels de large, en clair et en
+  sombre, et chaque champ et bouton a son nom.
 - **Le coffre sur le disque** : rien ne nomme ni ne montre une fiche. Un objet altéré, un objet recopié sous un autre
   identifiant, un index d'un autre coffre ou une mauvaise clé sont refusés, et un chemin qui sortirait du coffre aussi. Un
   index qui nomme deux fois le même fichier, d'un format inconnu ou qui désigne un objet invalide est refusé.

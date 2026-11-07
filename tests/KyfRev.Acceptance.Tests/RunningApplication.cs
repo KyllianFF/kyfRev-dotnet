@@ -292,6 +292,19 @@ internal sealed class RunningApplication : IDisposable
         throwOnTimeout: true,
         timeoutMessage: "Le texte de la fiche ne se lit pas.").Result!;
 
+    /// <summary>Le titre de la vue affichée.</summary>
+    public string Heading() => Wait("Heading").Name;
+
+    /// <summary>
+    /// Déverrouille le coffre chiffré : son mot de passe passe par le motif de valeur du champ (rien n'est tapé au
+    /// clavier, et rien ne s'y relit), puis « Ouvrir ».
+    /// </summary>
+    public void Unlock(string password)
+    {
+        Wait("PasswordBox").Patterns.Value.Pattern.SetValue(password);
+        Press("UnlockButton");
+    }
+
     /// <summary>Ouvre une vue du menu, comme d'un clic sur son entrée, et attend son titre.</summary>
     public void OpenView(string name)
     {

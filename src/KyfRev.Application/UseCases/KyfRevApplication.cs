@@ -19,10 +19,11 @@ public sealed class KyfRevApplication : IDisposable
     /// <param name="time">Horloge : seule source de la date du jour.</param>
     /// <param name="logging">Journal de diagnostic.</param>
     /// <param name="version">Version de l'application.</param>
-    public KyfRevApplication(IVaultStore store, IBackupFiles backups, IVaultLocations locations, TimeProvider time, ILoggerFactory logging, string version)
+    /// <param name="keys">Les clés des coffres chiffrés ; rien : aucun coffre n'est chiffré.</param>
+    public KyfRevApplication(IVaultStore store, IBackupFiles backups, IVaultLocations locations, TimeProvider time, ILoggerFactory logging, string version, IVaultKeys? keys = null)
     {
         ArgumentNullException.ThrowIfNull(logging);
-        Vaults = new VaultUseCases(_host, store, backups, locations, time, logging.CreateLogger<VaultUseCases>(), version);
+        Vaults = new VaultUseCases(_host, store, keys ?? new NoVaultKeys(), backups, locations, time, logging.CreateLogger<VaultUseCases>(), version);
         Sheets = new SheetUseCases(_host, time, logging.CreateLogger<SheetUseCases>());
         Editing = new EditingUseCases(_host, time);
         Folders = new FolderUseCases(_host, time);

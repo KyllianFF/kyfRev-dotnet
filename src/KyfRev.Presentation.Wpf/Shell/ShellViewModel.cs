@@ -6,6 +6,7 @@ using CommunityToolkit.Mvvm.Input;
 using KyfRev.Application.Model;
 using KyfRev.DesignSystem.Controls;
 using KyfRev.DesignSystem.Tokens;
+using KyfRev.Presentation.Wpf.Pages;
 
 namespace KyfRev.Presentation.Wpf.Shell;
 
@@ -211,6 +212,23 @@ public sealed partial class ShellViewModel : ObservableObject
     /// <summary>Aide des raccourcis ouverte.</summary>
     [ObservableProperty]
     public partial bool IsHelpOpen { get; set; }
+
+    /// <summary>
+    /// Montre le déverrouillage d'un coffre chiffré (<paramref name="page"/>) : rien de lui n'est lu, ni menu ni
+    /// recherche ; un coffre resté ouvert derrière ne reçoit plus rien jusqu'au retour à l'espace de travail.
+    /// </summary>
+    public void ShowUnlock(object page)
+    {
+        ArgumentNullException.ThrowIfNull(page);
+        ClosePalette();
+        IsHelpOpen = false;
+        IsWelcome = true;
+        _workspace = false;
+        SelectedMain = null;
+        SelectedSecondary = null;
+        Current = new NavigationItem("deverrouillage", EncryptionText.LockedPage, Icons.Lock, int.MaxValue, page);
+        UpdateResults();
+    }
 
     /// <summary>Montre l'accueil (<paramref name="page"/>) : aucun coffre n'est ouvert.</summary>
     public void ShowWelcome(object page)

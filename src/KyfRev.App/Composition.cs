@@ -7,8 +7,10 @@ using KyfRev.Application.UseCases;
 using KyfRev.DesignSystem;
 using KyfRev.DesignSystem.Tokens;
 using KyfRev.Extensions.Host;
+using KyfRev.Infrastructure.Crypto;
 using KyfRev.Infrastructure.Online;
 using KyfRev.Infrastructure.Vault.Adapters;
+using KyfRev.Infrastructure.Vault.Files;
 using KyfRev.Infrastructure.Windows;
 using KyfRev.Modules.Citations;
 using KyfRev.Modules.Schemas;
@@ -68,14 +70,22 @@ internal static class Composition
             modules.AddSingleton(provider.GetRequiredService<ILoggerFactory>());
             modules.AddSingleton(typeof(ILogger<>), typeof(Logger<>));
         }));
+        // Les coffres en clair et chiffrés : un coffre chiffré s'ouvre sur son stockage, que sa session prend et libère
+        // avec elle (sa clé est alors effacée) ; sa clé peut être retenue sur ce poste, hors de tout coffre.
+        services.AddSingleton(provider => new EncryptedVaults(
+            new VaultStore(),
+            storage => new VaultStore(storage: storage, ownsStorage: true),
+            new RememberedKeys(provider.GetRequiredService<VaultLocations>().LocalData, DiskStorage.Instance),
+            DiskStorage.Instance));
         // Le coffre ouvert est fermé, et son verrou libéré, quand les services le sont.
         services.AddSingleton(provider => new KyfRevApplication(
-            new VaultStore(),
+            provider.GetRequiredService<EncryptedVaults>(),
             new BackupFiles(),
             provider.GetRequiredService<IVaultLocations>(),
             clock,
             provider.GetRequiredService<ILoggerFactory>(),
-            Version));
+            Version,
+            provider.GetRequiredService<EncryptedVaults>()));
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Vaults);
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Reminders);
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Sheets);
@@ -118,21 +128,34 @@ internal static class Composition
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Backups);
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Trash);
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Exports);
-        services.AddSingleton(provider => new DataSettingsViewModel(
-            provider.GetRequiredService<VaultUseCases>(),
-            provider.GetRequiredService<BackupUseCases>(),
-            provider.GetRequiredService<TrashUseCases>(),
-            provider.GetRequiredService<AnnotationUseCases>(),
-            provider.GetRequiredService<ExportUseCases>(),
-            provider.GetRequiredService<SettingsUseCases>(),
-            provider.GetRequiredService<IFolderPicker>(),
-            provider.GetRequiredService<IReviewOpener>(),
-            () =>
+        services.AddSingleton(provider =>
+        {
+            void VaultChanged()
             {
                 provider.GetRequiredService<SettingsPageViewModel>().Forget();
                 provider.GetRequiredService<ShellViewModel>().ShowWorkspace();
-            },
-            () => provider.GetRequiredService<ActiveModules>().Find<QuoteUseCases>()));
+            }
+            return new DataSettingsViewModel(
+                provider.GetRequiredService<VaultUseCases>(),
+                provider.GetRequiredService<BackupUseCases>(),
+                provider.GetRequiredService<TrashUseCases>(),
+                provider.GetRequiredService<AnnotationUseCases>(),
+                provider.GetRequiredService<ExportUseCases>(),
+                provider.GetRequiredService<SettingsUseCases>(),
+                provider.GetRequiredService<IFolderPicker>(),
+                provider.GetRequiredService<IReviewOpener>(),
+                VaultChanged,
+                () => provider.GetRequiredService<ActiveModules>().Find<QuoteUseCases>())
+            {
+                // Un coffre chiffré choisi d'ici attend sa clé : son écran la demande, l'actuel restant ouvert derrière.
+                VaultLocked = state => VaultStartup.ShowUnlock(
+                    provider.GetRequiredService<ShellViewModel>(),
+                    provider.GetRequiredService<VaultUseCases>(),
+                    provider.GetRequiredService<IFolderPicker>(),
+                    state,
+                    VaultChanged),
+            };
+        });
         services.AddSingleton(provider =>
         {
             var locations = provider.GetRequiredService<VaultLocations>();

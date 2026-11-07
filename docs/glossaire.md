@@ -139,3 +139,7 @@ Ce glossaire fixe la correspondance. Les **clés JSON du coffre restent celles d
 | Mode concentration | `ShellViewModel.IsFocusMode` | — | Menu masqué (Ctrl+Maj+F), comme dans la 0.x. |
 | Apparence | `AppearanceController`, `ISystemAppearance`, `ThemePreference` | — | Thème choisi ou celui de Windows ; contraste élevé et animations réduites suivis sans redémarrage. |
 | Racine de composition | `KyfRev.App` (`Composition`) | — | Seul endroit qui relie la présentation à l'infrastructure. |
+| Coffre chiffré | `EncryptedVault`, `EncryptedStorage` | fichier `kyfrev-chiffre.json` | Coffre dont chaque fichier est un objet chiffré ; il ne s'ouvre qu'avec sa clé. |
+| Déverrouiller | `VaultUseCases.Unlock`, `UnlockPageViewModel` | — | Ouvrir un coffre chiffré avec son mot de passe ou sa clé de récupération. |
+| Clé de récupération | `RecoveryKey`, `VaultSecret.RecoveryKey` | — | 14 groupes de quatre caractères, montrés une fois : ils ouvrent le coffre sans son mot de passe. |
+| Clé retenue | `RememberedKeys`, `IVaultKeys.Remember` | fichier `cles-retenues.json` (poste) | La clé d'un coffre chiffré, protégée par Windows pour la session, qui l'ouvre sans mot de passe sur ce poste. |

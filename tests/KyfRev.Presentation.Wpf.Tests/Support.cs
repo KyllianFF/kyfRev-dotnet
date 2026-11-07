@@ -7,8 +7,11 @@ using KyfRev.Application.Ports;
 using KyfRev.Application.UseCases;
 using KyfRev.DesignSystem;
 using KyfRev.DesignSystem.Tokens;
+using KyfRev.Domain.Calendar;
 using KyfRev.Extensions.Host;
+using KyfRev.Infrastructure.Crypto;
 using KyfRev.Infrastructure.Vault.Adapters;
+using KyfRev.Infrastructure.Vault.Files;
 using KyfRev.Presentation.Wpf.Editing;
 using KyfRev.Presentation.Wpf.Pages;
 using KyfRev.Presentation.Wpf.Shell;
@@ -165,7 +168,8 @@ internal sealed class FakeLocations(AppMode mode, string? planned) : IVaultLocat
 
     public string? VaultToOpen() => mode == AppMode.Portable ? planned : Remembered.LastOrDefault() ?? planned;
 
-    public string? VaultToCreate() => planned is not null && !Directory.Exists(Path.Combine(planned, ".suivi")) ? planned : null;
+    public string? VaultToCreate() =>
+        planned is not null && !Directory.Exists(Path.Combine(planned, ".suivi")) && !File.Exists(Path.Combine(planned, "kyfrev-chiffre.json")) ? planned : null;
 
     public bool Remember(string root)
     {
@@ -174,9 +178,19 @@ internal sealed class FakeLocations(AppMode mode, string? planned) : IVaultLocat
     }
 }
 
-/// <summary>Les cas d'usage sur un dossier d'essai jetable, avec une horloge au choix ; le coffre prévu y est « Prévu/Coffre ».</summary>
+/// <summary>
+/// Les cas d'usage sur un dossier d'essai jetable, avec une horloge au choix ; le coffre prévu y est « Prévu/Coffre ». Les
+/// coffres s'y ouvrent comme sur le poste, en clair ou chiffrés ; les clés retenues vont dans « Poste ».
+/// </summary>
 internal sealed class TestVaults : IDisposable
 {
+    /// <summary>Le mot de passe des coffres chiffrés des essais.</summary>
+    public const string Password = "un mot de passe d'essai";
+
+    /// <summary>Un en-tête, sa clé et sa clé de récupération pour tous les coffres chiffrés : dériver un vrai réglage prend une fraction de seconde.</summary>
+    private static readonly Lazy<(VaultHeader Header, byte[] Key, string Recovery)> Shared =
+        new(() => VaultHeader.Create("v_01M6A2PRES3NTAT10NWPF0TE5T", Password, PasswordKeys.NewPbkdf2()));
+
     public TestVaults(AppMode mode, TimeProvider? time = null)
     {
         Time = time ?? TimeProvider.System;
@@ -184,8 +198,14 @@ internal sealed class TestVaults : IDisposable
         Directory.CreateDirectory(Root);
         Planned = Path.Combine(Root, "Prévu", "Coffre");
         Locations = new FakeLocations(mode, mode == AppMode.Development ? null : Planned);
-        App = NewApplication(Locations, Time);
+        App = NewApplication(Locations, Time, LocalData);
     }
+
+    /// <summary>La clé de récupération des coffres chiffrés des essais.</summary>
+    public static string RecoveryKey => Shared.Value.Recovery;
+
+    /// <summary>Les données du poste : les clés retenues.</summary>
+    public string LocalData => Path.Combine(Root, "Poste");
 
     public string Root { get; }
 
@@ -209,10 +229,20 @@ internal sealed class TestVaults : IDisposable
     public string CreateVault(string name)
     {
         var root = PathOf(name);
-        using (var other = NewApplication(new FakeLocations(AppMode.Development, null), Time))
+        using (var other = NewApplication(new FakeLocations(AppMode.Development, null), Time, LocalData))
         {
             Assert.AreEqual(root, other.Vaults.Create(root).Vault);
         }
+        return root;
+    }
+
+    /// <summary>Un coffre chiffré vide, que sa session a créé puis refermé ; il s'ouvre avec <see cref="Password"/>.</summary>
+    public string CreateEncryptedVault(string root)
+    {
+        Directory.CreateDirectory(root);
+        var now = new Moment(DateOnly.FromDateTime(Time.GetUtcNow().UtcDateTime), Time.GetUtcNow());
+        using var storage = EncryptedStorage.Create(root, Shared.Value.Header, Shared.Value.Key, DiskStorage.Instance);
+        using var vault = new VaultStore(storage: storage).Initialize(root, now);
         return root;
     }
 
@@ -220,7 +250,7 @@ internal sealed class TestVaults : IDisposable
     public KyfRevApplication Restart()
     {
         App.Dispose();
-        App = NewApplication(Locations, Time);
+        App = NewApplication(Locations, Time, LocalData);
         return App;
     }
 
@@ -230,8 +260,16 @@ internal sealed class TestVaults : IDisposable
         Directory.Delete(Root, recursive: true);
     }
 
-    private static KyfRevApplication NewApplication(IVaultLocations locations, TimeProvider time) =>
-        new(new VaultStore(), new BackupFiles(), locations, time, NullLoggerFactory.Instance, "1.0.0-essai");
+    /// <summary>L'application assemblée comme sur le poste : les coffres en clair et chiffrés, et leurs clés.</summary>
+    private static KyfRevApplication NewApplication(IVaultLocations locations, TimeProvider time, string localData)
+    {
+        var vaults = new EncryptedVaults(
+            new VaultStore(),
+            storage => new VaultStore(storage: storage, ownsStorage: true),
+            new RememberedKeys(localData, DiskStorage.Instance),
+            DiskStorage.Instance);
+        return new(vaults, new BackupFiles(), locations, time, NullLoggerFactory.Instance, "1.0.0-essai", vaults);
+    }
 }
 
 /// <summary>Horloge simulée, en temps universel : l'instant avance à la demande.</summary>

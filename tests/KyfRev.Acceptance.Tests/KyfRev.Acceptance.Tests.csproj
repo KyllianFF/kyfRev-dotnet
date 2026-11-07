@@ -15,6 +15,8 @@
     <ProjectReference Include="..\..\src\KyfRev.Application\KyfRev.Application.csproj" />
     <ProjectReference Include="..\..\src\KyfRev.Rendering\KyfRev.Rendering.csproj" />
     <ProjectReference Include="..\..\src\KyfRev.Infrastructure.Vault\KyfRev.Infrastructure.Vault.csproj" />
+    <!-- Un coffre chiffré se prépare ici comme l'application l'ouvre. -->
+    <ProjectReference Include="..\..\src\KyfRev.Infrastructure.Crypto\KyfRev.Infrastructure.Crypto.csproj" />
     <!-- Compilé avant les scénarios, qui le lancent sans jamais le charger. -->
     <ProjectReference Include="..\..\tools\acceptance-host\KyfRev.Acceptance.Host.csproj" ReferenceOutputAssembly="false" Private="false" SetRuntimeIdentifier="RuntimeIdentifier=win-x64" />
   </ItemGroup>

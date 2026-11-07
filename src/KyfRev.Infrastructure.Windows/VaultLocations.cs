@@ -33,6 +33,12 @@ public sealed class VaultLocations : IVaultLocations
     /// <summary>Dossier de suivi d'un coffre au format 1 : présent, le coffre existe.</summary>
     private const string TrackingFolder = ".suivi";
 
+    /// <summary>
+    /// En-tête d'un coffre chiffré (<c>EncryptedVault.HeaderFile</c>, que cette couche ne voit pas) : présent, le coffre
+    /// existe, même si son dossier de suivi n'est encore que dans son index chiffré.
+    /// </summary>
+    private const string EncryptedHeader = "kyfrev-chiffre.json";
+
     private static readonly JsonWriterOptions WriterOptions = new()
     {
         Indented = true,
@@ -107,7 +113,9 @@ public sealed class VaultLocations : IVaultLocations
 
     /// <inheritdoc/>
     public string? VaultToCreate() =>
-        _planned is { } planned && !Path.Exists(Path.Combine(planned, TrackingFolder)) ? planned : null;
+        _planned is { } planned && !Path.Exists(Path.Combine(planned, TrackingFolder)) && !File.Exists(Path.Combine(planned, EncryptedHeader))
+            ? planned
+            : null;
 
     /// <summary>
     /// Retient le coffre ouvert (rien en mode portable). Comme dans la 0.x, un échec d'écriture ne

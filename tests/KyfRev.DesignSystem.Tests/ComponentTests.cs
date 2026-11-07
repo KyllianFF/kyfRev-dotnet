@@ -443,6 +443,28 @@ public sealed class ComponentTests
     }
 
     [STATestMethod]
+    public void A_password_field_has_a_menu_that_only_pastes()
+    {
+        var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
+        var password = new PasswordBox();
+        Host.Of(design, password);
+        Assert.IsNull(password.ContextMenu, "un menu n'existe que pour un champ chargé");
+
+        password.RaiseEvent(new RoutedEventArgs(FrameworkElement.LoadedEvent));
+
+        var item = password.ContextMenu!.Items.OfType<MenuItem>().Single();
+        Assert.AreEqual(ApplicationCommands.Paste, item.Command, "rien ne se coupe ni ne se copie d'un mot de passe");
+        Assert.AreEqual(DesignText.Paste, item.Header);
+
+        // Un menu donné reste.
+        var own = new ContextMenu();
+        var given = new PasswordBox { ContextMenu = own };
+        Host.Of(design, given);
+        given.RaiseEvent(new RoutedEventArgs(FrameworkElement.LoadedEvent));
+        Assert.AreSame(own, given.ContextMenu);
+    }
+
+    [STATestMethod]
     public void A_field_keeps_the_menu_it_was_given()
     {
         var design = new DesignResources(ThemeKind.Light, reducedMotion: false);

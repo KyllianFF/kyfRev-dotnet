@@ -9,8 +9,12 @@ namespace KyfRev.Infrastructure.Vault.Adapters;
 /// <summary>Ouverture et création des coffres au format 1.</summary>
 /// <param name="ids">Identifiants à attribuer ; rien : tirés au hasard (les tests les rejouent).</param>
 /// <param name="storage">Là où vivent les fichiers du coffre : le disque par défaut, ou le stockage d'un coffre chiffré
-/// déverrouillé, qui reste à l'appelant.</param>
-public sealed class VaultStore(UlidGenerator? ids = null, VaultStorage? storage = null) : IVaultStore
+/// déverrouillé.</param>
+/// <param name="ownsStorage">
+/// Vrai si le coffre ouvert prend <paramref name="storage"/> : il le libère en se fermant (la clé d'un coffre chiffré est
+/// alors effacée avec lui). Faux : le stockage reste à l'appelant.
+/// </param>
+public sealed class VaultStore(UlidGenerator? ids = null, VaultStorage? storage = null, bool ownsStorage = false) : IVaultStore
 {
     /// <inheritdoc/>
     public IVault Open(string root, Moment now) => Adapt(() => VaultSession.Open(root, now, ids, storage));
@@ -26,14 +30,17 @@ public sealed class VaultStore(UlidGenerator? ids = null, VaultStorage? storage 
         return RealPaths.Exists(first) && RealPaths.Exists(second) ? RealPaths.SameEntry(first, second) : first == second;
     }
 
-    /// <summary>La session passe à l'adaptateur, qui la fermera ; fermée tout de suite si cela échoue.</summary>
-    private static VaultAdapter Adapt(Func<VaultSession> open)
+    /// <summary>
+    /// La session passe à l'adaptateur, qui la fermera, et le stockage avec elle s'il est pris ; la session est fermée
+    /// tout de suite si cela échoue, et le stockage reste alors à l'appelant.
+    /// </summary>
+    private VaultAdapter Adapt(Func<VaultSession> open)
     {
         VaultSession? session = null;
         try
         {
             session = open();
-            var adapter = new VaultAdapter(session);
+            var adapter = new VaultAdapter(session, ownsStorage ? storage as IDisposable : null);
             session = null;
             return adapter;
         }

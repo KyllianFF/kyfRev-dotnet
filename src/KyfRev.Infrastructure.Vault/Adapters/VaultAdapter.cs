@@ -13,7 +13,9 @@ namespace KyfRev.Infrastructure.Vault.Adapters;
 /// sont validés (refus avec le message de la 0.x), les repères des passages convertis, et la vue
 /// d'une fiche ouverte composée comme le fait la 0.x (<c>lecture.rs</c>).
 /// </summary>
-public sealed class VaultAdapter(VaultSession inner) : IVault
+/// <param name="inner">La session, que l'adaptateur fermera.</param>
+/// <param name="owned">Ce que l'adaptateur libère après la session : le stockage chiffré qu'il a pris, et sa clé.</param>
+public sealed class VaultAdapter(VaultSession inner, IDisposable? owned = null) : IVault
 {
     /// <inheritdoc/>
     public string Root => inner.Root;
@@ -24,8 +26,18 @@ public sealed class VaultAdapter(VaultSession inner) : IVault
     /// <inheritdoc/>
     public string Id => inner.Settings.Id;
 
-    /// <summary>Ferme la session : son verrou est libéré.</summary>
-    public void Dispose() => inner.Dispose();
+    /// <summary>Ferme la session (son verrou est libéré), puis libère ce qu'elle avait pris : le stockage chiffré et sa clé.</summary>
+    public void Dispose()
+    {
+        try
+        {
+            inner.Dispose();
+        }
+        finally
+        {
+            owned?.Dispose();
+        }
+    }
 
     /// <inheritdoc/>
     public string CreateSheet(string? folder, string title, string body, Moment now) => inner.CreateSheet(folder, title, body, now);
