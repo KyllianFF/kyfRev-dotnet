@@ -62,6 +62,10 @@ public sealed class WindowsAppearanceTests
         var work = SystemParameters.WorkArea;
         using var inside = new HwndSource(new HwndSourceParameters("kyfRev essai") { WindowStyle = unchecked((int)0x00CF0000), PositionX = (int)work.Left + 50, PositionY = (int)work.Top + 50, Width = 300, Height = 200 });
         Assert.AreEqual(default, chrome.MaximizedOverhang(inside.Handle), "Une fenêtre dans l'écran n'en dépasse pas.");
+        Assert.AreEqual(default, chrome.WorkArea(0));
+        var area = chrome.WorkArea(inside.Handle);
+        Assert.IsGreaterThan(0, area.Width, "L'écran de la fenêtre a une largeur.");
+        Assert.IsGreaterThan(0, area.Height, "Et une hauteur.");
 
         using var outside = new HwndSource(new HwndSourceParameters("kyfRev essai") { WindowStyle = unchecked((int)0x00CF0000), PositionX = -10000, PositionY = -10000, Width = 300, Height = 200 });
         var overhang = chrome.MaximizedOverhang(outside.Handle);

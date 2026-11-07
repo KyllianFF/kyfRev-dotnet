@@ -7,7 +7,7 @@
         xmlns:extensions="clr-namespace:KyfRev.Presentation.Wpf.Extensions"
         xmlns:pages="clr-namespace:KyfRev.Presentation.Wpf.Pages"
         xmlns:shell="clr-namespace:KyfRev.Presentation.Wpf.Shell"
-        Title="{x:Static p:ShellText.AppName}" Width="1200" Height="780" MinWidth="360" MinHeight="400"
+        Title="{x:Static p:ShellText.AppName}" Width="1200" Height="780" MinWidth="{Binding MinimumWindowWidth}" MinHeight="{Binding MinimumWindowHeight}"
         WindowStartupLocation="CenterScreen" UseLayoutRounding="True"
         Background="{DynamicResource Kyf.Brush.Background}" Foreground="{DynamicResource Kyf.Brush.Text}"
         FontFamily="{DynamicResource Kyf.Font.Ui}" FontSize="{DynamicResource Kyf.FontSize.Body}">
