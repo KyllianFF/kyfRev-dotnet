@@ -22,13 +22,18 @@ namespace KyfRev.Presentation.Wpf.Shell;
 /// <param name="forget">Ce qui fait tout oublier aux vues (<see cref="IForgetsVault"/>) et aux moteurs.</param>
 /// <param name="changed">Ce qui suit la réouverture d'un coffre ; rien : l'espace de travail revient.</param>
 /// <param name="drafts">Les vues, hors de la page affichée, qui peuvent garder un brouillon à enregistrer ; rien : aucune.</param>
+/// <param name="starting">
+/// Ce qui oublie dès que le verrouillage est décidé, ce qui s'écrit enregistré, juste avant que l'écran de déverrouillage
+/// ne remplace les vues : une réponse qui arrive pendant la fermeture ne s'y montre plus ; rien : rien.
+/// </param>
 public sealed class VaultLocking(
     ShellViewModel shell,
     VaultUseCases vaults,
     IFolderPicker picker,
     Action forget,
     Action? changed = null,
-    Func<IEnumerable<ILeaving>>? drafts = null)
+    Func<IEnumerable<ILeaving>>? drafts = null,
+    Action? starting = null)
 {
     private bool _locking;
 
@@ -39,7 +44,8 @@ public sealed class VaultLocking(
     /// </summary>
     public async Task<bool> LockAsync()
     {
-        if (_locking || IsOpening() || vaults.State() is not { Encrypted: true, Vault: { } root })
+        // Le coffre ouvert n'est pas chiffré : rien à verrouiller, et rien ne le lit (une longue opération le tient peut-être).
+        if (_locking || !shell.CanLock || IsOpening() || vaults.State() is not { Encrypted: true, Vault: { } root })
         {
             return false;
         }
@@ -51,6 +57,7 @@ public sealed class VaultLocking(
                 return false;
             }
             var waiting = vaults.State() with { Vault = null, Locked = root, OpenError = null, Encrypted = false };
+            starting?.Invoke();
             VaultStartup.ShowUnlock(shell, vaults, picker, waiting, changed);
             shell.CanLock = false;
             // Les vues qui viennent de se fermer finissent ce qu'elles avaient commencé.

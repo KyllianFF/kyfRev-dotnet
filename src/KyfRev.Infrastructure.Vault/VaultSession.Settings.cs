@@ -38,11 +38,13 @@ public sealed partial class VaultSession
         Settings.Quotes.Active,
         Settings.Quotes.Online,
         Settings.Quotes.Domains,
-        SchemasActive);
+        SchemasActive,
+        Settings.LockAfterMinutes);
 
     /// <summary>
     /// Enregistre de nouveaux réglages, vérifiés par les règles de la méthode des J. Une séquence
-    /// modifiée ne touche pas les cycles en cours (ils en gardent une copie).
+    /// modifiée ne touche pas les cycles en cours (ils en gardent une copie). Le délai de verrouillage va de 0 (jamais)
+    /// à <see cref="VaultSettingsFile.MaxLockAfterMinutes"/> minutes.
     /// </summary>
     /// <exception cref="VaultException">Réglages refusés : rien n'est écrit.</exception>
     public void ChangePreferences(VaultPreferences preferences)
@@ -56,6 +58,10 @@ public sealed partial class VaultSession
         if (preferences.MaxPerDay == 0)
         {
             throw VaultException.InvalidSettings("il faut au moins un rappel par jour.");
+        }
+        if (preferences.LockAfterMinutes is < 0 or > VaultSettingsFile.MaxLockAfterMinutes)
+        {
+            throw VaultException.InvalidSettings($"le délai de verrouillage va de 1 à {VaultSettingsFile.MaxLockAfterMinutes} minutes, ou 0 pour jamais.");
         }
         var rules = Settings.Reminders with
         {
@@ -85,6 +91,7 @@ public sealed partial class VaultSession
             BackupRotation = preferences.BackupRotation,
             Quotes = new QuoteSettings(preferences.QuotesActive, preferences.QuotesOnline, domains),
             SchemasModule = schemas,
+            LockAfterMinutes = preferences.LockAfterMinutes,
         });
     }
 

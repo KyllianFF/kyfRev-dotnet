@@ -33,6 +33,11 @@ public sealed record ExamSetting(string Folder, string Name, DateOnly Day, Unkno
 /// <param name="BackupRotation">Rotation des sauvegardes (14 j / 8 sem. / 24 mois).</param>
 /// <param name="SchemasModule">Module Schémas réseau : choix enregistré, ou <see langword="null"/>.</param>
 /// <param name="Exams">Examens, du plus proche au plus lointain.</param>
+/// <param name="LockAfterMinutes">
+/// Verrouillage d'un coffre chiffré après ces minutes d'inactivité, de 0 (jamais) à <see cref="MaxLockAfterMinutes"/>.
+/// Absent, il vaut <see cref="VaultPreferences.DefaultLockAfterMinutes"/> ; il ne s'écrit que s'il en diffère, ce que la
+/// version 0.x n'a jamais fait.
+/// </param>
 /// <param name="SectionUnknown">Propriétés inconnues de chaque section (« revision », « rappels »…).</param>
 /// <param name="Unknown">Réglages inconnus du premier niveau, réécrits triés comme le fait la version 0.x.</param>
 public sealed record VaultSettingsFile(
@@ -46,10 +51,14 @@ public sealed record VaultSettingsFile(
     bool BackupRotation,
     bool? SchemasModule,
     ImmutableArray<ExamSetting> Exams,
+    int LockAfterMinutes,
     ImmutableDictionary<string, UnknownProperties> SectionUnknown,
     UnknownProperties Unknown)
 {
-    private static readonly string[] Known = ["format", "id", "creeLe", "revision", "rappels", "citations", "sauvegardes", "modules", "examens"];
+    /// <summary>Délai de verrouillage le plus long : 1440 minutes, un jour.</summary>
+    public const int MaxLockAfterMinutes = 1440;
+
+    private static readonly string[] Known = ["format", "id", "creeLe", "revision", "rappels", "citations", "sauvegardes", "modules", "examens", "verrouillage"];
 
     /// <summary>Lit le fichier.</summary>
     /// <exception cref="VaultFormatException">Le fichier est illisible : le coffre ne peut pas s'ouvrir.</exception>
@@ -114,6 +123,16 @@ public sealed record VaultSettingsFile(
                 UnknownProperties.From(Fields.Unknown(exam, "dossier", "nom", "jour"))))
             .ToImmutableArray();
 
+        var lockAfter = VaultPreferences.DefaultLockAfterMinutes;
+        if (Fields.OptionalObject(obj, "verrouillage") is { } locking)
+        {
+            if (locking.TryGetPropertyValue("apresMinutes", out var minutes) && minutes is not null)
+            {
+                lockAfter = (int)Fields.IntegerValue(minutes, "apresMinutes", 0, MaxLockAfterMinutes);
+            }
+            sections["verrouillage"] = UnknownProperties.From(Fields.Unknown(locking, "apresMinutes"));
+        }
+
         return new VaultSettingsFile(
             Fields.Integer(obj, "format", 0, uint.MaxValue),
             Fields.String(obj, "id"),
@@ -125,6 +144,7 @@ public sealed record VaultSettingsFile(
             rotation,
             schemas,
             exams,
+            lockAfter,
             sections.ToImmutable(),
             UnknownProperties.From(Fields.Unknown(obj, Known)));
     }
@@ -143,6 +163,7 @@ public sealed record VaultSettingsFile(
         BackupRotation: true,
         SchemasModule: null,
         Exams: [],
+        LockAfterMinutes: VaultPreferences.DefaultLockAfterMinutes,
         ImmutableDictionary.Create<string, UnknownProperties>(StringComparer.Ordinal),
         UnknownProperties.None);
 
@@ -201,6 +222,18 @@ public sealed record VaultSettingsFile(
                 Fields.AddUnknown(item, exam.Unknown.Properties);
                 return (JsonNode?)item;
             })]);
+        }
+
+        // Absent de la version 0.x : écrit seulement s'il n'est pas celui par défaut, avec ce que la section avait d'inconnu.
+        var locking = new JsonObject();
+        if (LockAfterMinutes != VaultPreferences.DefaultLockAfterMinutes)
+        {
+            locking["apresMinutes"] = LockAfterMinutes;
+        }
+        Section("verrouillage", locking);
+        if (locking.Count > 0)
+        {
+            obj["verrouillage"] = locking;
         }
 
         // Comme la version 0.x : les réglages inconnus suivent, triés par ordre des octets UTF-8.

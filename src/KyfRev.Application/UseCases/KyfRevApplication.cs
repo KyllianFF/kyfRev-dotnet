@@ -23,7 +23,9 @@ public sealed class KyfRevApplication : IDisposable
     public KyfRevApplication(IVaultStore store, IBackupFiles backups, IVaultLocations locations, TimeProvider time, ILoggerFactory logging, string version, IVaultKeys? keys = null)
     {
         ArgumentNullException.ThrowIfNull(logging);
-        Vaults = new VaultUseCases(_host, store, keys ?? new NoVaultKeys(), backups, locations, time, logging.CreateLogger<VaultUseCases>(), version);
+        var vaultKeys = keys ?? new NoVaultKeys();
+        Vaults = new VaultUseCases(_host, store, vaultKeys, backups, locations, time, logging.CreateLogger<VaultUseCases>(), version);
+        Encryption = new EncryptionUseCases(_host, vaultKeys);
         Sheets = new SheetUseCases(_host, time, logging.CreateLogger<SheetUseCases>());
         Editing = new EditingUseCases(_host, time);
         Folders = new FolderUseCases(_host, time);
@@ -44,6 +46,9 @@ public sealed class KyfRevApplication : IDisposable
 
     /// <summary>Ouverture et création du coffre.</summary>
     public VaultUseCases Vaults { get; }
+
+    /// <summary>Chiffrement du coffre ouvert : son mot de passe, sa clé de récupération, sa clé retenue sur ce poste.</summary>
+    public EncryptionUseCases Encryption { get; }
 
     /// <summary>Fiches.</summary>
     public SheetUseCases Sheets { get; }

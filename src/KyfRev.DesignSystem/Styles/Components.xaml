@@ -167,7 +167,9 @@
   </Style>
 
   <!-- Case à cocher : le texte et la case suivent le thème. -->
+  <!-- Espace coche ; Entrée va au bouton par défaut, comme partout sous Windows, et ne coche rien par mégarde. -->
   <Style TargetType="CheckBox">
+    <Setter Property="KeyboardNavigation.AcceptsReturn" Value="False" />
     <Setter Property="FontFamily" Value="{DynamicResource Kyf.Font.Ui}" />
     <Setter Property="FontSize" Value="{DynamicResource Kyf.FontSize.Body}" />
     <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Text}" />
@@ -290,19 +292,25 @@
               <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
                       BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{DynamicResource Kyf.Radius.Dialog}"
                       Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
-                <DockPanel>
-                  <TextBlock DockPanel.Dock="Top" Text="{TemplateBinding Title}" Style="{DynamicResource Kyf.Text.Subtitle}" Margin="0,0,0,12" />
-                  <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,24,0,0">
+                <!-- Le contenu vient avant les boutons, dans cet ordre aussi au clavier : le focus va d'abord à son premier champ. -->
+                <Grid>
+                  <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                  </Grid.RowDefinitions>
+                  <TextBlock Grid.Row="0" Text="{TemplateBinding Title}" Style="{DynamicResource Kyf.Text.Subtitle}" Margin="0,0,0,12" />
+                  <!-- Trop haut pour la fenêtre : le contenu défile, le titre et les boutons restent. -->
+                  <ScrollViewer x:Name="PART_Content" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
+                    <ContentPresenter />
+                  </ScrollViewer>
+                  <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,24,0,0">
                     <Button x:Name="PART_SecondaryButton" Content="{TemplateBinding SecondaryButtonText}" MinWidth="96"
                             Margin="0,0,8,0" IsCancel="True" />
                     <Button x:Name="PART_PrimaryButton" Content="{TemplateBinding PrimaryButtonText}" MinWidth="96"
                             Style="{DynamicResource Kyf.Button.Primary}" IsDefault="True" />
                   </StackPanel>
-                  <!-- Trop haut pour la fenêtre : le contenu défile, le titre et les boutons restent. -->
-                  <ScrollViewer x:Name="PART_Content" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
-                    <ContentPresenter />
-                  </ScrollViewer>
-                </DockPanel>
+                </Grid>
               </Border>
             </Grid>
           </Grid>

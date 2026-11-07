@@ -128,6 +128,7 @@ internal static class Composition
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Backups);
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Trash);
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Exports);
+        services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Encryption);
         services.AddSingleton(provider =>
         {
             void VaultChanged() => Composition.VaultChanged(provider);
@@ -150,6 +151,16 @@ internal static class Composition
                     provider.GetRequiredService<IFolderPicker>(),
                     state,
                     VaultChanged),
+                // La carte Chiffrement, pour un coffre chiffré : mot de passe, clé de récupération, clé retenue, délai.
+                Encryption = new EncryptionSettingsViewModel(
+                    provider.GetRequiredService<EncryptionUseCases>(),
+                    provider.GetRequiredService<SettingsUseCases>(),
+                    () => provider.GetRequiredService<VaultUseCases>().State().Encrypted,
+                    () => provider.GetRequiredService<ShellViewModel>().Locking?.Invoke() ?? Task.CompletedTask,
+                    SecretClipboard.Copy)
+                {
+                    LockDelay = provider.GetRequiredService<LockDelay>(),
+                },
             };
         });
         services.AddSingleton(provider =>
@@ -265,9 +276,26 @@ internal static class Composition
             {
                 extensionPages.VaultChanged();
                 provider.GetRequiredService<ExtensionBlocks>().Forget();
-                modules.Load(provider.GetRequiredService<SettingsUseCases>().Get() is { Succeeded: true } settings ? settings.Value : null);
+                var settings = provider.GetRequiredService<SettingsUseCases>().Get() is { Succeeded: true } read ? read.Value : null;
+                modules.Load(settings);
                 ShowExtensions();
-                shell.CanLock = provider.GetRequiredService<VaultUseCases>().State().Encrypted;
+                var encrypted = provider.GetRequiredService<VaultUseCases>().State().Encrypted;
+                shell.CanLock = encrypted;
+                // Le verrouillage automatique suit le délai du coffre chiffré, lu ici une fois, et non à chaque regard du
+                // minuteur ; un coffre en clair ne se verrouille pas, et l'inactivité ne le regarde pas.
+                var delay = provider.GetRequiredService<LockDelay>();
+                if (!encrypted)
+                {
+                    delay.Clear();
+                }
+                else if (settings is not null)
+                {
+                    delay.Set(settings.LockAfterMinutes);
+                }
+                else
+                {
+                    delay.Reset();
+                }
             };
             shell.Locking = () => provider.GetRequiredService<VaultLocking>().LockAsync();
             return shell;
@@ -275,17 +303,24 @@ internal static class Composition
         services.AddTransient<ShellWindow>();
         // Le coffre chiffré se verrouille, à la demande ou de lui-même : rien de lui ne reste dans les vues.
         services.AddSingleton<IUserPresence, UserPresence>();
+        services.AddSingleton<LockDelay>();
         services.AddSingleton(provider => new VaultLocking(
             provider.GetRequiredService<ShellViewModel>(),
             provider.GetRequiredService<VaultUseCases>(),
             provider.GetRequiredService<IFolderPicker>(),
             () => ForgetVault(provider),
             () => VaultChanged(provider),
-            () => DraftViews(provider)));
-        services.AddSingleton(provider => new AutoLock(
-            provider.GetRequiredService<IUserPresence>(),
-            () => AutoLock.DefaultDelay,
-            () => provider.GetRequiredService<VaultLocking>().LockAsync()));
+            () => DraftViews(provider),
+            // La carte Chiffrement oublie dès le début : une dérivation qui finit pendant la fermeture ne s'y montre plus.
+            () => provider.GetRequiredService<DataSettingsViewModel>().Encryption?.Forget()));
+        services.AddSingleton(provider =>
+        {
+            var delay = provider.GetRequiredService<LockDelay>();
+            return new AutoLock(
+                provider.GetRequiredService<IUserPresence>(),
+                () => delay.Value,
+                () => provider.GetRequiredService<VaultLocking>().LockAsync());
+        });
         return services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
     }
 
@@ -295,6 +330,8 @@ internal static class Composition
         provider.GetRequiredService<SettingsPageViewModel>().Forget();
         // Un brouillon de l'ancien coffre ne s'écrit jamais dans le nouveau.
         provider.GetRequiredService<DefinitionsPageViewModel>().Forget();
+        // Une clé de récupération préparée pour l'ancien coffre ne se montre pas dans le nouveau.
+        provider.GetRequiredService<DataSettingsViewModel>().Encryption?.Forget();
         provider.GetRequiredService<ShellViewModel>().ShowWorkspace();
     }
 
@@ -314,6 +351,7 @@ internal static class Composition
         provider.GetRequiredService<ExtensionEngine>().ForgetAllFaults();
         provider.GetRequiredService<MermaidEngine>().Reset();
         provider.GetRequiredService<ActiveModules>().Load(null);
+        provider.GetRequiredService<LockDelay>().Clear();
     }
 
     /// <summary>Les vues qui peuvent garder un brouillon à enregistrer avant le verrouillage, même quand elles ne sont pas affichées.</summary>
