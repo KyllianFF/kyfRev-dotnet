@@ -15,7 +15,8 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   veille, même derrière l'écran de déverrouillage d'un autre coffre ; un départ pendant une ouverture reste dû. Ce qui
   s'écrit s'enregistre d'abord : le texte de la fiche (le texte mis en forme compris, jusqu'à sa dernière frappe), le
   commentaire ou la définition en cours, un schéma (jusqu'au champ qu'on n'a pas quitté), un dessin, une formule ou un
-  lien en cours d'insertion, une définition en cours de modification ; une séance en cours se garde pour être reprise.
+  lien en cours d'insertion, une définition en cours de modification (abandonnée si elle ne peut pas l'être) ; une
+  séance en cours se garde pour être reprise.
   Si ce qui s'écrit n'a pas pu l'être, le coffre reste ouvert. Ce qui n'est qu'un formulaire (le titre d'une nouvelle
   fiche, un renommage, les réglages non enregistrés, la réponse d'une sélection guidée) est abandonné. Puis l'écran de
   déverrouillage remplace les vues, le coffre se ferme et sa clé est effacée, avec son index en clair, et chaque vue

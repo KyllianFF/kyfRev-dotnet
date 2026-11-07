@@ -293,6 +293,8 @@ internal static class Composition
     private static void VaultChanged(IServiceProvider provider)
     {
         provider.GetRequiredService<SettingsPageViewModel>().Forget();
+        // Un brouillon de l'ancien coffre ne s'écrit jamais dans le nouveau.
+        provider.GetRequiredService<DefinitionsPageViewModel>().Forget();
         provider.GetRequiredService<ShellViewModel>().ShowWorkspace();
     }
 

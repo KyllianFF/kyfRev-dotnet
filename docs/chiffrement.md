@@ -234,7 +234,8 @@ kyfrev-coffre dechiffrer <coffre chiffré> <nouveau dossier>
      (une frappe qui n'a pas été relue garde le coffre ouvert) ; le commentaire ou la définition en cours dans une fiche
      (s'il a changé depuis son ouverture) ; un dessin, une formule ou un lien en cours d'insertion ; un schéma, jusqu'au
      champ qu'on n'a pas encore quitté ; une définition en cours de modification dans la vue « Définitions », même si elle
-     n'est pas affichée. Une séance en cours se garde pour être reprise. Si ce qui s'écrit n'a pas pu l'être (un conflit,
+     n'est pas affichée (incomplète, refusée ou changée ailleurs depuis, elle est abandonnée : un brouillon que personne
+     ne voit ne garde pas le coffre ouvert). Une séance en cours se garde pour être reprise. Si ce qui s'écrit n'a pas pu l'être (un conflit,
      un refus, un disque plein), le coffre reste ouvert, et le verrouillage de lui-même réessaie. Ce qui n'est qu'un
      formulaire est abandonné : le titre d'une nouvelle fiche ou d'un nouveau schéma, un renommage ou un déplacement, les
      réglages non enregistrés, la réponse tapée pour une sélection guidée, les recherches ;

@@ -257,4 +257,27 @@ public sealed class UnansweredSyncTests
         Assert.IsTrue(Wait(sent));
         Assert.AreEqual(Body + "Suite et fin.\n", visual.Text);
     }
+
+    [STATestMethod]
+    public void An_insertion_is_not_in_the_text_until_the_page_gives_it_back()
+    {
+        using var ui = new UiThread();
+        using var visual = new VisualEditor(string.Empty, _ => Outcome.Refused<byte[]>("non"), new FakeSpelling(), FakeEnvironment.WebData);
+        visual.ReplaceAll(Body);
+
+        // La page n'est pas prête : la formule attend, le texte connu ne l'a pas.
+        visual.InsertFormula("E=mc^2", block: false, position: null);
+        Assert.IsFalse(Wait(visual.SyncAsync()), "une insertion en attente n'est pas encore dans le texte");
+
+        // Prête, elle reçoit la formule ; tant qu'elle n'a pas rendu son texte, il est en retard.
+        visual.Receive(new ReadyEvent());
+        Assert.IsFalse(Wait(visual.SyncAsync()));
+        var answered = visual.SyncAsync();
+        visual.Receive(new TextEvent(3, Body + "$E=mc^2$\n"));
+        Assert.IsTrue(Wait(answered));
+
+        // Une demande qui ne change rien au texte (son chargement) ne le rend pas en retard.
+        visual.ReplaceAll(Body);
+        Assert.IsTrue(Wait(visual.SyncAsync()));
+    }
 }

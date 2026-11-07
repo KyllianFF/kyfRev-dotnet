@@ -314,17 +314,21 @@ public sealed partial class DefinitionsPageViewModel : ObservableObject, IForget
             {
                 row.CancelCommand.Execute(null);
             }
-            else if (row.CanSave())
+            else if (row.CanSave() && !ChangedElsewhere(row))
             {
                 await SaveAsync(row).ConfigureAwait(true);
             }
         }
-        if (editing.Any(row => row.IsEditing && !row.CanSave()))
-        {
-            Error = ReadingText.DefinitionIncomplete;
-        }
-        return !editing.Any(row => row.IsEditing);
+        // Ce qui n'a pas pu s'enregistrer (incomplet, refusé, ou changé ailleurs depuis) est abandonné : la vue n'est
+        // peut-être pas affichée, et un brouillon que personne ne voit ne doit pas garder le coffre ouvert.
+        return true;
     }
+
+    /// <summary>La définition a changé dans le coffre depuis qu'on a commencé à la modifier ici : le brouillon l'écraserait.</summary>
+    private bool ChangedElsewhere(DefinitionRow row) =>
+        _annotations.Definitions() is { Succeeded: true, Value: var stored }
+        && stored.FirstOrDefault(definition => definition.Id == row.Definition.Id) is { } current
+        && (current.Term != row.Term || current.Explanation != row.Explanation);
 
     /// <summary>
     /// Oublie le glossaire quand le coffre se verrouille : définitions, brouillons, dossiers, recherche, confirmation et

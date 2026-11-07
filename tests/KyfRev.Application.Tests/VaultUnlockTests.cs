@@ -223,6 +223,25 @@ public sealed class VaultUnlockTests
     }
 
     [TestMethod]
+    public void Each_locked_vault_stays_locked_until_its_own_key_is_given()
+    {
+        using var scene = new Scene();
+        scene.CreateEncrypted();
+        var other = scene.Folder.PathOf("Autre");
+        scene.CreateEncrypted(other);
+        Assert.IsNull(scene.App.Vaults.Unlock(scene.Folder.Vault, VaultSecret.Password(Password), remember: true).Locked);
+        Assert.AreEqual(scene.Folder.Vault, scene.App.Vaults.Lock().Locked);
+        Assert.IsFalse(scene.App.Vaults.IsOpening);
+
+        // Un autre coffre déverrouillé puis verrouillé : le premier reste verrouillé, sa clé retenue ne le rouvre pas.
+        Assert.AreEqual(other, scene.App.Vaults.Unlock(other, VaultSecret.Password(Password), remember: false).Vault);
+        Assert.AreEqual(scene.Folder.Vault, scene.App.Vaults.Open(scene.Folder.Vault).Locked);
+        Assert.AreEqual(other, scene.App.Vaults.Lock().Locked);
+        Assert.AreEqual(scene.Folder.Vault, scene.App.Vaults.Open(scene.Folder.Vault).Locked);
+        Assert.AreEqual(other, scene.App.Vaults.Open(other).Locked);
+    }
+
+    [TestMethod]
     public void Without_keys_nothing_is_encrypted()
     {
         var keys = new NoVaultKeys();
@@ -297,13 +316,14 @@ public sealed class VaultUnlockTests
         /// <summary>Le même poste, rouvert : les mêmes dossiers, la même mémoire du dernier coffre.</summary>
         public Scene Restart() => new(Folder, Locations, ownsFolder: false);
 
-        /// <summary>Un coffre chiffré vide, à l'emplacement du coffre.</summary>
-        public void CreateEncrypted()
+        /// <summary>Un coffre chiffré vide, à l'emplacement du coffre ou à <paramref name="root"/>.</summary>
+        public void CreateEncrypted(string? root = null)
         {
-            Directory.CreateDirectory(Folder.Vault);
+            root ??= Folder.Vault;
+            Directory.CreateDirectory(root);
             var now = new Moment(new DateOnly(2026, 11, 7), new DateTimeOffset(2026, 11, 7, 8, 0, 0, TimeSpan.Zero));
-            using var storage = EncryptedStorage.Create(Folder.Vault, Shared.Value.Header, Shared.Value.Key, DiskStorage.Instance);
-            using var vault = new VaultStore(storage: storage).Initialize(Folder.Vault, now);
+            using var storage = EncryptedStorage.Create(root, Shared.Value.Header, Shared.Value.Key, DiskStorage.Instance);
+            using var vault = new VaultStore(storage: storage).Initialize(root, now);
         }
 
         public bool Backed() => Directory.Exists(Folder.Backups) && Directory.EnumerateFiles(Folder.Backups, "*.zip").Any();

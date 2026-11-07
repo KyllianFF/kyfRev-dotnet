@@ -195,26 +195,37 @@ public sealed class DraftsTests
     }
 
     [TestMethod]
-    public async Task A_definition_of_the_glossary_that_cannot_be_saved_keeps_the_vault_open()
+    public async Task A_definition_of_the_glossary_that_cannot_be_saved_does_not_hold_the_lock()
     {
+        // La vue n'est peut-être pas affichée : un brouillon que personne ne voit ne garde pas le coffre ouvert.
         using var glossary = new Glossary();
         var page = await glossary.LoadedAsync();
         var mitose = page.Rows.Single(row => row.Term == "Mitose");
         mitose.EditCommand.Execute(null);
         mitose.EditedExplanation = "   ";
 
-        Assert.IsFalse(await page.LeaveAsync());
-        Assert.IsTrue(mitose.IsEditing);
-        Assert.AreEqual(ReadingText.DefinitionIncomplete, page.Error);
+        Assert.IsTrue(await page.LeaveAsync(), "incomplet, il est abandonné");
+        Assert.AreEqual(mitose.Explanation, glossary.StoredExplanation("Mitose"), "rien n'a été écrit");
 
-        // Un refus du coffre aussi : le brouillon reste.
+        // Un refus du coffre aussi.
         mitose.EditedExplanation = "Une division.";
         glossary.Leave();
-        Assert.IsFalse(await page.LeaveAsync());
-        Assert.IsTrue(mitose.IsEditing);
-        Assert.IsTrue(page.HasError);
-        Assert.AreNotEqual(ReadingText.DefinitionIncomplete, page.Error);
-        Assert.AreEqual("Une division.", mitose.EditedExplanation);
+        Assert.IsTrue(await page.LeaveAsync());
+    }
+
+    [TestMethod]
+    public async Task A_definition_changed_elsewhere_since_its_draft_is_not_overwritten()
+    {
+        using var glossary = new Glossary();
+        var page = await glossary.LoadedAsync();
+        var mitose = page.Rows.Single(row => row.Term == "Mitose");
+        mitose.EditCommand.Execute(null);
+        mitose.EditedExplanation = "Le brouillon d'ici.";
+        glossary.ChangeExplanation("Mitose", "Changée dans la fiche.");
+
+        Assert.IsTrue(await page.LeaveAsync());
+
+        Assert.AreEqual("Changée dans la fiche.", glossary.StoredExplanation("Mitose"), "la modification la plus récente reste");
     }
 
     [TestMethod]
@@ -350,6 +361,16 @@ public sealed class DraftsTests
             var page = new DefinitionsPageViewModel(App.Annotations, new FakeOpener());
             await page.LoadCommand.ExecuteAsync(null);
             return page;
+        }
+
+        /// <summary>L'explication d'une définition, telle qu'elle est dans le coffre.</summary>
+        public string StoredExplanation(string term) => App.Annotations.Definitions().Value.Single(definition => definition.Term == term).Explanation;
+
+        /// <summary>Change une définition ailleurs, comme depuis sa fiche.</summary>
+        public void ChangeExplanation(string term, string explanation)
+        {
+            var definition = App.Annotations.Definitions().Value.Single(stored => stored.Term == term);
+            Assert.IsTrue(App.Annotations.ModifyDefinition(definition.Id, new Definition(term, explanation)).Succeeded);
         }
 
         /// <summary>Passe à un autre coffre : ce qui visait celui-ci est ensuite refusé.</summary>

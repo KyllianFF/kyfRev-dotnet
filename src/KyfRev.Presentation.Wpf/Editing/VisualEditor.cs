@@ -257,8 +257,13 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
     /// <inheritdoc/>
     public async Task<bool> SyncAsync()
     {
-        // Rien de tapé depuis le dernier texte reçu, ou plus de page où taper : Text est le dernier texte qu'il y aura.
-        if (!_ready || !_stale)
+        // Une modification attend que la page soit prête : le texte ne l'a pas encore.
+        if (!_ready)
+        {
+            return _disposed || !_pending.Any(IsEdit);
+        }
+        // Rien de tapé ni d'inséré depuis le dernier texte reçu : Text est le dernier texte qu'il y aura.
+        if (!_stale)
         {
             return true;
         }
@@ -803,11 +808,19 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
         }
     }
 
+    /// <summary>Ce qui change le texte de la page : tout sauf la demande du texte et son chargement.</summary>
+    private static bool IsEdit(EditorRequest request) => request is not (SyncRequest or LoadRequest);
+
     private void Post(EditorRequest request)
     {
         if (_disposed)
         {
             return;
+        }
+        if (IsEdit(request))
+        {
+            // Une insertion ou une mise en forme change le texte : il faudra le relire avant de dire qu'il est enregistré.
+            _stale = true;
         }
         if (_ready)
         {

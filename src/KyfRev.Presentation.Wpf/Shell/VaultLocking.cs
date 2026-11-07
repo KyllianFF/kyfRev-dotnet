@@ -63,9 +63,9 @@ public sealed class VaultLocking(
         }
     }
 
-    /// <summary>Une ouverture est en cours sur l'écran affiché : elle changera de coffre juste après.</summary>
+    /// <summary>Une ouverture est en cours, d'où qu'elle vienne (un écran, les paramètres) : elle changera de coffre juste après.</summary>
     private bool IsOpening() =>
-        shell.Current.Page is UnlockPageViewModel { IsBusy: true } or WelcomePageViewModel { IsBusy: true };
+        vaults.IsOpening || shell.Current.Page is UnlockPageViewModel { IsBusy: true } or WelcomePageViewModel { IsBusy: true };
 
     /// <summary>Ce qui s'écrit, sur la page affichée puis sur les vues qui gardent un brouillon, s'enregistre.</summary>
     private async Task<bool> FinishAsync()
@@ -90,29 +90,33 @@ public sealed class VaultLocking(
     /// </summary>
     private async Task<bool> CloseAsync(string root)
     {
+        AppState locked;
         try
         {
-            var locked = vaults.Lock();
-            // Une lecture finie juste avant la fermeture rend encore son résultat : il arrive avant l'oubli.
-            await Dispatcher.Yield(DispatcherPriority.Background);
-            if (locked.Locked is not { } closed)
-            {
-                // Rien n'a été fermé : le coffre ouvert maintenant est en clair, son espace de travail revient.
-                shell.ShowWorkspace();
-                return false;
-            }
-            if (closed != root)
-            {
-                VaultStartup.ShowUnlock(shell, vaults, picker, locked, changed);
-            }
-            return true;
+            locked = vaults.Lock();
         }
-        finally
+        catch
         {
+            // La fermeture a échoué, mais le coffre n'est plus joignable : les vues oublient quand même.
             if (vaults.State().Vault is null)
             {
                 forget();
             }
+            throw;
         }
+        // Une lecture finie juste avant la fermeture rend encore son résultat : il arrive avant l'oubli.
+        await Dispatcher.Yield(DispatcherPriority.Background);
+        if (locked.Locked is not { } closed)
+        {
+            // Rien n'a été fermé : le coffre ouvert maintenant est en clair, son espace de travail revient.
+            shell.ShowWorkspace();
+            return false;
+        }
+        forget();
+        if (closed != root)
+        {
+            VaultStartup.ShowUnlock(shell, vaults, picker, locked, changed);
+        }
+        return true;
     }
 }
