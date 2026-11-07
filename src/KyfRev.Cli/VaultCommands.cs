@@ -86,8 +86,17 @@ internal static class VaultCommands
             output.WriteLine();
             return line;
         }
+        var typed = ReadHidden(() => Console.ReadKey(intercept: true));
+        output.WriteLine();
+        return typed;
+    }
+
+    /// <summary>Une saisie au clavier, sans écho, jusqu'à Entrée : l'effacement retire le dernier caractère, les touches de contrôle ne comptent pas.</summary>
+    internal static string ReadHidden(Func<ConsoleKeyInfo> next)
+    {
+        ArgumentNullException.ThrowIfNull(next);
         var typed = new StringBuilder();
-        for (var key = Console.ReadKey(intercept: true); key.Key != ConsoleKey.Enter; key = Console.ReadKey(intercept: true))
+        for (var key = next(); key.Key != ConsoleKey.Enter; key = next())
         {
             if (key.Key == ConsoleKey.Backspace)
             {
@@ -101,7 +110,6 @@ internal static class VaultCommands
                 typed.Append(key.KeyChar);
             }
         }
-        output.WriteLine();
         return typed.ToString();
     }
 }

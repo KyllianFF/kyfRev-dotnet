@@ -32,7 +32,12 @@ internal static class VaultConversion
     private static readonly string[] Excluded = [VaultLayout.LockFile, VaultLayout.LockInfoFile];
 
     /// <summary>Chiffre le coffre <paramref name="source"/> dans le nouveau dossier <paramref name="destination"/>.</summary>
-    public static ConversionResult Encrypt(string source, string destination, string password, PasswordParameters parameters)
+    /// <param name="source">Le coffre en clair ; il reste intact.</param>
+    /// <param name="destination">Un nouveau dossier.</param>
+    /// <param name="password">Le mot de passe du coffre chiffré.</param>
+    /// <param name="parameters">Les réglages de la dérivation.</param>
+    /// <param name="beforeVerifying">Pour les essais : ce qui arrive au dossier temporaire entre l'écriture et la vérification.</param>
+    public static ConversionResult Encrypt(string source, string destination, string password, PasswordParameters parameters, Action<string>? beforeVerifying = null)
     {
         ArgumentNullException.ThrowIfNull(password);
         source = Path.GetFullPath(source);
@@ -77,6 +82,7 @@ internal static class VaultConversion
                 }
                 vault.Flush();
             }
+            beforeVerifying?.Invoke(temporary);
 
             // La vérification repart de l'en-tête écrit, avec le mot de passe : une erreur d'enveloppe se verrait ici.
             var reopenedKey = EncryptedVault.ReadHeader(temporary).Open(password);
@@ -107,7 +113,11 @@ internal static class VaultConversion
     /// Déchiffre le coffre <paramref name="source"/> dans le nouveau dossier <paramref name="destination"/>, avec son mot de passe
     /// ou sa clé de récupération : un coffre au format 1, en clair, que kyfRev ouvre comme avant.
     /// </summary>
-    public static ConversionResult Decrypt(string source, string destination, string secret)
+    /// <param name="source">Le coffre chiffré ; il reste intact.</param>
+    /// <param name="destination">Un nouveau dossier.</param>
+    /// <param name="secret">Le mot de passe, ou la clé de récupération.</param>
+    /// <param name="beforeVerifying">Pour les essais : ce qui arrive au dossier temporaire entre l'écriture et la vérification.</param>
+    public static ConversionResult Decrypt(string source, string destination, string secret, Action<string>? beforeVerifying = null)
     {
         ArgumentNullException.ThrowIfNull(secret);
         source = Path.GetFullPath(source);
@@ -147,6 +157,7 @@ internal static class VaultConversion
                 File.WriteAllBytes(target, content);
                 expected[path] = SHA256.HashData(content);
             }
+            beforeVerifying?.Invoke(temporary);
             foreach (var (path, hash) in expected)
             {
                 if (!CryptographicOperations.FixedTimeEquals(hash, SHA256.HashData(File.ReadAllBytes(VaultLayout.Absolute(temporary, path)))))

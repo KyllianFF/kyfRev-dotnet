@@ -96,6 +96,80 @@ public sealed partial class ConversionTests
         Assert.AreEqual(0, Leftovers(place));
     }
 
+    [TestMethod]
+    public void A_file_that_does_not_come_back_identical_is_refused_and_nothing_is_written()
+    {
+        using var vault = TemporaryVault.CopyOfReference();
+        using var place = new Place();
+
+        // Un objet altéré entre l'écriture et la vérification : le chiffrement ne rend rien.
+        var encrypted = VaultConversion.Encrypt(vault.Root, place.Encrypted, Password, PasswordKeys.NewPbkdf2(), temporary =>
+        {
+            var objet = Directory.EnumerateFiles(Path.Combine(temporary, EncryptedVault.Objects)).First();
+            var bytes = File.ReadAllBytes(objet);
+            bytes[^1] ^= 1;
+            File.WriteAllBytes(objet, bytes);
+        });
+        Assert.IsFalse(encrypted.Succeeded);
+        Assert.Contains("rien n'a été écrit", encrypted.Message);
+        Assert.IsFalse(Directory.Exists(place.Encrypted));
+
+        // Un fichier en clair altéré entre l'écriture et la vérification : le déchiffrement ne rend rien.
+        Assert.IsTrue(VaultConversion.Encrypt(vault.Root, place.Encrypted, Password, PasswordKeys.NewPbkdf2()).Succeeded);
+        var decrypted = VaultConversion.Decrypt(place.Encrypted, place.Decrypted, Password, temporary =>
+            File.AppendAllText(Path.Combine(temporary, ".suivi", "coffre.json"), " "));
+        Assert.IsFalse(decrypted.Succeeded);
+        Assert.Contains("ne se relit pas à l'identique", decrypted.Message);
+        Assert.IsFalse(Directory.Exists(place.Decrypted));
+        Assert.AreEqual(0, Leftovers(place));
+    }
+
+    [TestMethod]
+    public void An_unreadable_source_or_a_missing_parent_writes_nothing()
+    {
+        using var vault = TemporaryVault.CopyOfReference();
+        using var place = new Place();
+
+        // Un fichier de la source tenu par un autre programme : le chiffrement échoue sans rien laisser.
+        var sheet = Directory.EnumerateFiles(vault.PathOf(VaultLayout.Sheets), "*.md", SearchOption.AllDirectories).First();
+        using (new FileStream(sheet, FileMode.Open, FileAccess.Read, FileShare.None))
+        {
+            var result = VaultConversion.Encrypt(vault.Root, place.Encrypted, Password, PasswordKeys.NewPbkdf2());
+            Assert.IsFalse(result.Succeeded);
+            Assert.Contains("Le chiffrement a échoué", result.Message);
+        }
+        Assert.IsFalse(Directory.Exists(place.Encrypted));
+        Assert.AreEqual(0, Leftovers(place));
+
+        var missing = Path.Combine(place.Root, "absent", "chiffre");
+        Assert.Contains("n'existe pas", VaultConversion.Encrypt(vault.Root, missing, Password, PasswordKeys.NewPbkdf2()).Message);
+
+        Assert.IsTrue(VaultConversion.Encrypt(vault.Root, place.Encrypted, Password, PasswordKeys.NewPbkdf2()).Succeeded);
+        Directory.CreateDirectory(place.Decrypted);
+        Assert.Contains("existe déjà", VaultConversion.Decrypt(place.Encrypted, place.Decrypted, Password).Message);
+    }
+
+    [TestMethod]
+    public void A_hidden_entry_keeps_what_is_typed_and_erased()
+    {
+        var keys = new Queue<ConsoleKeyInfo>(
+        [
+            Key('\b', ConsoleKey.Backspace),
+            Key('m', ConsoleKey.M),
+            Key('o', ConsoleKey.O),
+            Key('x', ConsoleKey.X),
+            Key('\b', ConsoleKey.Backspace),
+            Key('\t', ConsoleKey.Tab),
+            Key('t', ConsoleKey.T),
+            Key('\r', ConsoleKey.Enter),
+        ]);
+
+        Assert.AreEqual("mot", VaultCommands.ReadHidden(keys.Dequeue));
+        Assert.IsEmpty(keys);
+    }
+
+    private static ConsoleKeyInfo Key(char character, ConsoleKey key) => new(character, key, shift: false, alt: false, control: false);
+
     /// <summary>Le contenu d'un coffre en clair : l'empreinte de chaque fichier, verrou exclu.</summary>
     private static SortedDictionary<string, string> Contents(string root)
     {
