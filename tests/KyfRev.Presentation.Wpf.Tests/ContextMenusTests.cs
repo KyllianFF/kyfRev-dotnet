@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Documents;
 using System.Windows.Media;
 using CommunityToolkit.Mvvm.Input;
@@ -275,7 +276,7 @@ public sealed class ContextMenusTests
             TestShell.Flush();
             var row = model.Rows.Single();
             var items = page.RowMenuItems(row);
-            CollectionAssert.AreEqual(new[] { DefinitionsText.SeeInSheet, DefinitionsText.Edit, ReadingText.DeleteDefinition }, Headers(items));
+            CollectionAssert.AreEqual(new[] { DefinitionsText.SeeInSheet, DefinitionsText.Edit, DefinitionsText.MarkHereOnly, ReadingText.DeleteDefinition }, Headers(items));
 
             Click(items[0]);
             Assert.AreEqual((sheet, id), opener.Opened.Single());
@@ -289,14 +290,14 @@ public sealed class ContextMenusTests
             card.RaiseEvent(opened);
             Assert.IsFalse(opened.Handled);
 
-            Click(page.RowMenuItems(row)[3]);
+            Click(page.RowMenuItems(row)[4]);
             Assert.IsTrue(model.IsConfirmingDelete);
             TestShell.Flush();
             page.DeleteConfirmation.Close(DialogChoice.Secondary);
             TestShell.Flush();
             Assert.HasCount(1, model.Rows, "le refus ne change rien");
 
-            Click(page.RowMenuItems(row)[3]);
+            Click(page.RowMenuItems(row)[4]);
             TestShell.Flush();
             page.DeleteConfirmation.Close(DialogChoice.Primary);
             UiThread.Until(() => model.Rows.Count == 0);
@@ -398,6 +399,46 @@ public sealed class ContextMenusTests
 
             model.ReadAloud.CloseCommand.Execute(null);
             CollectionAssert.AreEqual(new[] { EditingText.EditSheet }, Headers(page.TextMenuItems(new Border())), "hors du texte, rien à écouter");
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
+    public void A_marked_word_shows_its_definition_from_a_click_or_its_menu()
+    {
+        using var ui = new UiThread();
+        using var vault = new ReadingVault("La mitose partage le noyau de la cellule.\n", passage: false);
+        var definition = vault.DefineElsewhere("Noyau", "Il renferme l'ADN.");
+        var test = new TestShell();
+        var model = vault.Page(words: true);
+        model.LoadCommand.Execute(null);
+        UiThread.Until(() => model.Reading is not null && !model.IsLoading);
+        var page = new SheetPage { DataContext = model, Width = 1700, Height = 900 };
+        var window = Window(test, page, 800, 600);
+        try
+        {
+            UiThread.Until(() => TextRuns(page.SheetText.Document).Any(run => run.Text == "noyau"));
+            var word = TextRuns(page.SheetText.Document).First(run => run.Text == "noyau");
+
+            var items = page.TextMenuItems(word);
+            CollectionAssert.AreEqual(
+                new[] { ReadingText.ShowDefinition, ReadingText.SeeWordDefinition("Noyau"), ReadingText.StopMarkingWord("Noyau"), EditingText.EditSheet },
+                Headers(items));
+
+            Click(items[0]);
+            Assert.IsTrue(page.WordCard!.IsOpen);
+            var buttons = Descendants<Button>(page.WordCard.Child).ToList();
+            CollectionAssert.AreEqual(new[] { ReadingText.SeeWordDefinition("Noyau"), ReadingText.StopMarkingWord("Noyau") }, buttons.Select(button => (string)button.Content).ToArray());
+            buttons[0].RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+            Assert.IsFalse(page.WordCard.IsOpen);
+            Assert.AreEqual((vault.OtherSheet, definition), vault.OpenedPassages.Single());
+
+            Click(page.TextMenuItems(word)[2]);
+            UiThread.Until(() => model.Words is { Count: 0 });
+            Assert.IsFalse(vault.App.Annotations.Definitions().Value.Single().Everywhere);
         }
         finally
         {

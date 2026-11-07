@@ -1160,7 +1160,25 @@ internal sealed class ReadingVault : IDisposable
 
     public FakeSpelling Spelling { get; } = new();
 
-    public SheetPageViewModel Page(bool markdown = true, bool revising = false, Func<bool>? activeRecall = null, ISpeech? speech = null, INetworkSchemas? schemas = null) => new(App.Sheets, App.Annotations, Bar, SheetId, () => Backs++, OpenedSheets.Add, Links, sheet => new SheetEditorViewModel(sheet, App.Editing, App.Sheets, new EditorEnvironment(Spelling, FakeEnvironment.WebData, markdown, () => schemas)), revising, activeRecall) { ReadAloud = speech is null ? null : new ReadAloudViewModel(speech) };
+    public SheetPageViewModel Page(bool markdown = true, bool revising = false, Func<bool>? activeRecall = null, ISpeech? speech = null, INetworkSchemas? schemas = null, bool words = false) => new(App.Sheets, App.Annotations, Bar, SheetId, () => Backs++, OpenedSheets.Add, Links, sheet => new SheetEditorViewModel(sheet, App.Editing, App.Sheets, new EditorEnvironment(Spelling, FakeEnvironment.WebData, markdown, () => schemas)), revising, activeRecall) { ReadAloud = speech is null ? null : new ReadAloudViewModel(speech), MarksDefinedWords = words, OpenPassage = (sheet, passage) => OpenedPassages.Add((sheet, passage)) };
+
+    /// <summary>Les fiches rouvertes sur un passage, avec ce passage.</summary>
+    public List<(string Sheet, string Passage)> OpenedPassages { get; } = [];
+
+    /// <summary>Une autre fiche du coffre, « La cellule », où se posent les définitions d'ailleurs ; rien avant la première.</summary>
+    public string? OtherSheet { get; private set; }
+
+    /// <summary>Définit un terme dans une autre fiche du coffre ; rend la définition.</summary>
+    public string DefineElsewhere(string term, string explanation)
+    {
+        OtherSheet ??= App.Sheets.Create("Biologie", "La cellule", null).Value;
+        var anchor = new Anchor(term, string.Empty, string.Empty, 0, term.Length, [], 1, "sha256:aa");
+        return App.Annotations.CreateDefinition(OtherSheet, anchor, new Definition(term, explanation)).Value;
+    }
+
+    /// <summary>Définit un terme sur un passage de cette fiche ; rend la définition.</summary>
+    public string DefineHere(string exact, string term, string explanation) =>
+        App.Annotations.CreateDefinition(SheetId, AnchorOn(exact), new Definition(term, explanation)).Value;
 
     public SheetReading Reading()
     {

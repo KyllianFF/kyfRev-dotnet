@@ -56,6 +56,7 @@ internal sealed partial class DefinitionsPage : UserControl
         [
             ActionMenus.Quick(DefinitionsText.SeeInSheet, Icons.Document, () => row.OpenCommand.Execute(null)),
             ActionMenus.Quick(DefinitionsText.Edit, Icons.Edit, () => row.EditCommand.Execute(null)),
+            ActionMenus.Item(row.IsMarkedEverywhere ? DefinitionsText.MarkHereOnly : DefinitionsText.MarkEverywhere, () => row.IsMarkedEverywhere = !row.IsMarkedEverywhere),
             new Separator(),
             ActionMenus.Item(ReadingText.DeleteDefinition, () => page.RequestDelete(row)),
         ];

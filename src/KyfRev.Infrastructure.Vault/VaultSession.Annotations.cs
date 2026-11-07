@@ -53,8 +53,8 @@ public sealed partial class VaultSession
     /// <summary>Modifie le terme ou l'explication d'une définition ; la modification est inscrite dans l'historique.</summary>
     public void ModifyDefinition(string id, StoredDefinition definition, Moment now)
     {
-        var clean = CleanDefinition(definition);
         var current = Annotation(id).Definition ?? throw VaultException.NotADefinition();
+        var clean = CleanDefinition(definition) with { Everywhere = current.Everywhere };
         if (current == clean)
         {
             return;
@@ -65,6 +65,19 @@ public sealed partial class VaultSession
             ModifiedAt = now.Instant,
             Tracking = a.Tracking.RecordModification(now, ModifiedObject.Definition),
         });
+    }
+
+    /// <summary>
+    /// Marque le terme d'une définition dans toutes les fiches, ou seulement à sa place. C'est un choix d'affichage :
+    /// ni la date de modification ni l'historique ne changent.
+    /// </summary>
+    public void MarkDefinitionEverywhere(string id, bool everywhere)
+    {
+        var current = Annotation(id).Definition ?? throw VaultException.NotADefinition();
+        if (current.Everywhere != everywhere)
+        {
+            ModifyAnnotation(id, a => a with { Definition = current with { Everywhere = everywhere } });
+        }
     }
 
     /// <summary>Modifie le commentaire ; le calendrier ne change pas, la modification est inscrite dans l'historique.</summary>
@@ -326,7 +339,7 @@ public sealed partial class VaultSession
         {
             throw VaultException.InvalidDefinition("explication trop longue");
         }
-        return new StoredDefinition(term, explanation);
+        return new StoredDefinition(term, explanation) { Everywhere = definition.Everywhere };
     }
 
     private static string? CleanComment(string? comment)

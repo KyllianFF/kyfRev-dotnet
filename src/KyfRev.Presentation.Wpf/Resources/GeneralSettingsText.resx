@@ -18,6 +18,12 @@
   <data name="AppearanceTitle" xml:space="preserve">
     <value>Apparence</value>
   </data>
+  <data name="DefinedWords" xml:space="preserve">
+    <value>Marquer les mots définis dans toutes les fiches</value>
+  </data>
+  <data name="DefinedWordsHelp" xml:space="preserve">
+    <value>Un terme défini dans une fiche est souligné d'un pointillé discret partout où il apparaît, une fois par partie ; le survol montre sa définition. Jamais en révision, où il donnerait la réponse.</value>
+  </data>
   <data name="Font" xml:space="preserve">
     <value>Police des fiches</value>
   </data>

@@ -45,7 +45,7 @@ public sealed class VaultAdapter(VaultSession inner) : IVault
         var annotations = inner.Annotations(id).Select(annotation => new AnnotationView(
             annotation.Id,
             annotation.Comment,
-            annotation.Definition is { } definition ? new Definition(definition.Term, definition.Explanation) : null,
+            annotation.Definition is { } definition ? new Definition(definition.Term, definition.Explanation) { Everywhere = definition.Everywhere } : null,
             ToAnchor(annotation.Anchor),
             annotation.AnchorState,
             annotation.TrashedAt is not null,
@@ -150,7 +150,10 @@ public sealed class VaultAdapter(VaultSession inner) : IVault
                     ToAnchor(annotation.Anchor).Section,
                     annotation.AnchorState,
                     review.Step,
-                    review.DueDate);
+                    review.DueDate)
+                {
+                    Everywhere = annotation.Definition.Everywhere,
+                };
             })
             .OrderBy(definition => definition.Folder, StringComparer.Ordinal)
             .ThenBy(definition => definition.Term, Comparer<string>.Create((left, right) => french.Compare(left, right, CompareOptions.IgnoreCase)))];
@@ -205,6 +208,9 @@ public sealed class VaultAdapter(VaultSession inner) : IVault
 
     /// <inheritdoc/>
     public void ModifyDefinition(string id, Definition definition, Moment now) => inner.ModifyDefinition(id, ToStored(definition), now);
+
+    /// <inheritdoc/>
+    public void MarkDefinitionEverywhere(string id, bool everywhere) => inner.MarkDefinitionEverywhere(id, everywhere);
 
     /// <inheritdoc/>
     public void ModifyComment(string id, string? comment, Moment now) => inner.ModifyComment(id, comment, now);

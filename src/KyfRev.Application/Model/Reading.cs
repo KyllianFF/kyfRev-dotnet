@@ -140,7 +140,11 @@ public sealed record Anchor(
     string SheetFingerprint);
 
 /// <summary>Une définition : le terme et son explication.</summary>
-public sealed record Definition(string Term, string Explanation);
+public sealed record Definition(string Term, string Explanation)
+{
+    /// <summary>Le terme se marque dans toutes les fiches qui le contiennent, et pas seulement à sa place.</summary>
+    public bool Everywhere { get; init; } = true;
+}
 
 /// <summary>Une annotation de la fiche ouverte.</summary>
 /// <param name="Id">Identifiant.</param>
@@ -180,7 +184,11 @@ public sealed record VaultDefinition(
     ImmutableArray<string> Section,
     AnchorState AnchorState,
     string? Step,
-    DateOnly? DueDate);
+    DateOnly? DueDate)
+{
+    /// <summary>Le terme se marque dans toutes les fiches qui le contiennent.</summary>
+    public bool Everywhere { get; init; } = true;
+}
 
 /// <summary>Une fiche du coffre, active ou archivée.</summary>
 /// <param name="Id">Identifiant.</param>

@@ -37,6 +37,36 @@ public sealed class VaultAdapterTests
     }
 
     [TestMethod]
+    public void A_definition_kept_to_its_sheet_says_so_in_its_file_only_then_and_keeps_it_when_edited()
+    {
+        using var folder = TemporaryVault.Empty();
+        using var vault = new VaultStore().Initialize(folder.Root, Now);
+        var id = vault.CreateSheet(null, "Mitose", "La prophase précède la métaphase.\n", Now);
+        var definition = vault.CreateDefinition(id, Passage with { Exact = "prophase" }, new Definition("Prophase", "Première phase."), Now);
+        var file = Directory.GetFiles(folder.PathOf(".suivi"), "*.json", SearchOption.AllDirectories)
+            .Single(path => File.ReadAllText(path).Contains("\"terme\"", StringComparison.Ordinal));
+        var written = File.ReadAllText(file);
+        Assert.DoesNotContain("partout", written, "la 0.x n'a pas ce champ : il ne s'écrit que s'il vaut faux");
+        Assert.IsTrue(vault.Definitions(Now.Day).Single().Everywhere);
+
+        vault.MarkDefinitionEverywhere(definition, everywhere: false);
+        vault.MarkDefinitionEverywhere(definition, everywhere: false);
+        vault.ModifyDefinition(definition, new Definition("Prophase", "Condensation."), Now);
+
+        Assert.Contains("\"partout\": false", File.ReadAllText(file));
+        Assert.IsFalse(vault.Definitions(Now.Day).Single().Everywhere, "modifier la définition garde le choix");
+        Assert.IsFalse(vault.OpenSheet(id, Now.Day).Annotations.Single().Definition!.Everywhere);
+
+        vault.ModifyDefinition(definition, new Definition("Prophase", "Première phase."), Now);
+        var edited = File.ReadAllText(file);
+        vault.MarkDefinitionEverywhere(definition, everywhere: true);
+        Assert.DoesNotContain("partout", File.ReadAllText(file));
+        vault.MarkDefinitionEverywhere(definition, everywhere: false);
+        Assert.AreEqual(edited, File.ReadAllText(file), "un choix d'affichage ne change ni la date ni l'historique");
+        Assert.AreEqual(VaultErrorKind.NotADefinition, Assert.ThrowsExactly<VaultException>(() => vault.MarkDefinitionEverywhere(vault.CreateAnnotation(id, Passage, null, Now), everywhere: false)).Kind);
+    }
+
+    [TestMethod]
     public void Schemas_reach_the_session_and_a_conflict_says_what_the_disk_holds()
     {
         using var folder = TemporaryVault.Empty();

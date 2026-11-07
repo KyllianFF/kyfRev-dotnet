@@ -273,7 +273,7 @@
             <editing:SheetEditorView x:Name="EditorView" Grid.Row="1" DataContext="{Binding Editor}"
                                      Visibility="{Binding DataContext.IsWriting, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource Visible}}" />
             <reading:SheetDocumentViewer x:Name="SheetText" Grid.Row="1" Visibility="{Binding IsReading, Converter={StaticResource Visible}}" Reading="{Binding Reading}" OpenLinkCommand="{Binding OpenLinkCommand}"
-                                         Highlights="{Binding Highlights}" ActiveHighlight="{Binding ActivePassage}" Holes="{Binding Holes}"
+                                         Highlights="{Binding Highlights}" ActiveHighlight="{Binding ActivePassage}" Holes="{Binding Holes}" Words="{Binding Words}"
                                          PreviewMouseLeftButtonDown="OnTextPressed" PreviewMouseLeftButtonUp="OnTextReleased" PreviewKeyDown="OnTextKey"
                                          ContextMenuOpening="OnTextMenu"
                                          AutomationProperties.Name="{x:Static pages:ReadingText.Document}">

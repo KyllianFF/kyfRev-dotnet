@@ -40,6 +40,9 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
     public static readonly DependencyProperty ActiveHighlightProperty = DependencyProperty.Register(
         nameof(ActiveHighlight), typeof(string), typeof(SheetDocumentViewer), new PropertyMetadata(null, OnHighlightsChanged));
 
+    public static readonly DependencyProperty WordsProperty = DependencyProperty.Register(
+        nameof(Words), typeof(IReadOnlyList<DefinedWordMark>), typeof(SheetDocumentViewer), new PropertyMetadata(null, OnWordsChanged));
+
     private DocumentBuilder? _built;
     /// <summary>Le texte à trous.</summary>
     public static readonly DependencyProperty HolesProperty = DependencyProperty.Register(
@@ -116,6 +119,13 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
     {
         get => (string?)GetValue(ActiveHighlightProperty);
         set => SetValue(ActiveHighlightProperty, value);
+    }
+
+    /// <summary>Les mots définis ailleurs dans le coffre, à marquer dans le texte.</summary>
+    public IReadOnlyList<DefinedWordMark>? Words
+    {
+        get => (IReadOnlyList<DefinedWordMark>?)GetValue(WordsProperty);
+        set => SetValue(WordsProperty, value);
     }
 
     /// <summary>Se termine quand les images du document sont chargées.</summary>
@@ -209,6 +219,15 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
     /// <summary>Les annotations surlignées à l'endroit visé par la souris.</summary>
     public IReadOnlyList<string> AnnotationsAt(object? source) => _built?.Layer.IdsAt(source) ?? [];
 
+    /// <summary>Le mot défini ailleurs, marqué à l'endroit visé par la souris ; rien s'il n'y en a pas.</summary>
+    public DefinedWordMark? WordAt(object? source) => _built?.Layer.WordAt(source);
+
+    private static void OnWordsChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e)
+    {
+        var viewer = (SheetDocumentViewer)sender;
+        viewer._built?.Layer.SetWords(viewer.Words ?? []);
+    }
+
     private static void OnContentChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e) => ((SheetDocumentViewer)sender).Rebuild();
 
     private static void OnHighlightsChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e) => ((SheetDocumentViewer)sender).ApplyHighlights();
@@ -300,6 +319,7 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
             var drawsMermaid = TryFindResource(MermaidEngine.ResourceKey) is not null;
             _built = new DocumentBuilder(reading, Follow, OpenLinkCommand is not null, ShowsHeader, key => TryFindResource(key) as System.Windows.Media.Brush, TryFindResource(ReadingComfort.ResourceKey) as ReadingComfort) { DrawsMermaid = drawsMermaid, Pictures = TryFindResource(MermaidEngine.ResourceKey) as IMermaidEngine, ExtensionBlocks = TryFindResource(ExtensionBlocks.ResourceKey) as ExtensionBlocks };
             _built.Layer.Set(Highlights ?? [], ActiveHighlight);
+            _built.Layer.SetWords(Words ?? []);
             Document = _built.Build();
             ComputeHoles();
         }

@@ -28,10 +28,26 @@ public sealed partial class DefinitionRow : ObservableObject
         _page = page;
         EditedTerm = definition.Term;
         EditedExplanation = definition.Explanation;
+        IsMarkedEverywhere = definition.Everywhere;
     }
 
     /// <summary>La définition.</summary>
-    public VaultDefinition Definition { get; }
+    public VaultDefinition Definition { get; private set; }
+
+    /// <summary>Le terme se marque dans toutes les fiches qui le contiennent ; sinon, seulement là où il est défini.</summary>
+    [ObservableProperty]
+    public partial bool IsMarkedEverywhere { get; set; }
+
+    /// <summary>Le choix est enregistré : la définition le garde.</summary>
+    internal void Marked(VaultDefinition definition) => Definition = definition;
+
+    partial void OnIsMarkedEverywhereChanged(bool value)
+    {
+        if (value != Definition.Everywhere)
+        {
+            _ = _page.MarkAsync(this, value);
+        }
+    }
 
     /// <summary>Le terme.</summary>
     public string Term => Definition.Term;
@@ -204,6 +220,22 @@ public sealed partial class DefinitionsPageViewModel : ObservableObject
         {
             Error = outcome.Error;
         }
+    }
+
+    /// <summary>Marque le terme d'une définition dans toutes les fiches, ou seulement à sa place ; un refus rend la case.</summary>
+    internal async Task MarkAsync(DefinitionRow row, bool everywhere)
+    {
+        var id = row.Definition.Id;
+        var outcome = await Task.Run(() => _annotations.MarkEverywhere(id, everywhere)).ConfigureAwait(true);
+        if (!outcome.Succeeded)
+        {
+            Error = outcome.Error;
+            row.IsMarkedEverywhere = row.Definition.Everywhere;
+            return;
+        }
+        var marked = row.Definition with { Everywhere = everywhere };
+        _all = [.. _all.Select(definition => definition.Id == id ? marked : definition)];
+        row.Marked(marked);
     }
 
     /// <summary>La mise à la corbeille attend sa confirmation.</summary>

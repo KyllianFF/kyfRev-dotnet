@@ -158,6 +158,9 @@ public sealed class AnnotationUseCases(VaultHost host, TimeProvider time)
         return host.Use(vault => vault.ModifyDefinition(id, definition, now));
     }
 
+    /// <summary>Marque le terme d'une définition dans toutes les fiches, ou seulement à sa place.</summary>
+    public Outcome<Done> MarkEverywhere(string id, bool everywhere) => host.Use(vault => vault.MarkDefinitionEverywhere(id, everywhere));
+
     /// <summary>Change ou retire le commentaire.</summary>
     [ZeroXCommand("modifier_commentaire")]
     public Outcome<Done> ModifyComment(string id, string? comment)
