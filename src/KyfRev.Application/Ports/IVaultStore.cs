@@ -14,6 +14,13 @@ public interface IVaultStore
 
     /// <summary>Vrai si les deux chemins désignent le même dossier (liens résolus).</summary>
     bool SameLocation(string first, string second);
+
+    /// <summary>
+    /// Ouvre le coffre chiffré de <paramref name="root"/> avec sa clé de données (<see cref="IVaultKeys"/>). La session
+    /// garde sa propre copie de la clé, effacée à sa fermeture : <paramref name="key"/> reste à l'appelant.
+    /// </summary>
+    /// <exception cref="NotSupportedException">Ces coffres ne sont qu'en clair.</exception>
+    IVault Open(string root, VaultKey key, Moment now) => throw new NotSupportedException("Ces coffres ne sont qu'en clair.");
 }
 
 /// <summary>Fichiers de sauvegarde, hors de tout coffre.</summary>

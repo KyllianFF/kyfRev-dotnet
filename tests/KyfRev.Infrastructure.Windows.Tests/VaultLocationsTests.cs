@@ -70,6 +70,22 @@ public sealed class VaultLocationsTests
     }
 
     [TestMethod]
+    public void A_planned_vault_already_encrypted_is_opened_not_proposed()
+    {
+        // Tout juste chiffré, son dossier de suivi n'est encore que dans son index : son en-tête suffit à le reconnaître.
+        using var test = new TestFolder();
+        var program = test.Folder("Program Files", "kyfRev");
+        File.WriteAllText(Path.Combine(program, "installation.json"), """{"coffre":"documents"}""");
+        var planned = test.Folder("Documents", "kyfRev", "Coffre");
+        File.WriteAllText(Path.Combine(planned, "kyfrev-chiffre.json"), "{}");
+
+        var locations = VaultLocations.From(program, test.Profile);
+
+        Assert.IsNull(locations.VaultToCreate());
+        Assert.AreEqual(planned, locations.VaultToOpen());
+    }
+
+    [TestMethod]
     public void The_folder_of_the_0x_is_known_only_when_installed()
     {
         using var test = new TestFolder();
