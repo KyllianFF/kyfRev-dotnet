@@ -80,6 +80,7 @@ public sealed partial class VaultSession : IDisposable
         ArgumentNullException.ThrowIfNull(root);
         ids ??= UlidGenerator.System;
         storage ??= VaultStorage.Disk;
+        CheckServes(storage, Io(root, () => Path.GetFullPath(root)));
         if (storage.DirectoryExists(root) && Io(root, () => storage.Entries(root).Count > 0))
         {
             throw VaultException.FolderNotEmpty(root);
@@ -107,10 +108,7 @@ public sealed partial class VaultSession : IDisposable
         ArgumentNullException.ThrowIfNull(root);
         storage ??= VaultStorage.Disk;
         var absolute = Io(root, () => Path.GetFullPath(root));
-        if (storage.Root is { } served && !string.Equals(Path.TrimEndingDirectorySeparator(served), Path.TrimEndingDirectorySeparator(absolute), StringComparison.OrdinalIgnoreCase))
-        {
-            throw new ArgumentException($"Ce stockage sert « {served} », pas « {absolute} ».", nameof(storage));
-        }
+        CheckServes(storage, absolute);
         var settingsPath = VaultLayout.Absolute(absolute, VaultLayout.SettingsFile);
         if (!storage.FileExists(settingsPath))
         {
@@ -491,6 +489,15 @@ public sealed partial class VaultSession : IDisposable
         catch (Exception exception) when (IsIo(exception))
         {
             throw VaultException.Io(path, exception);
+        }
+    }
+
+    /// <summary>Un stockage lié à un dossier ne sert que celui-là.</summary>
+    private static void CheckServes(VaultStorage storage, string absolute)
+    {
+        if (storage.Root is { } served && !string.Equals(Path.TrimEndingDirectorySeparator(served), Path.TrimEndingDirectorySeparator(absolute), StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException($"Ce stockage sert « {served} », pas « {absolute} ».", nameof(storage));
         }
     }
 
