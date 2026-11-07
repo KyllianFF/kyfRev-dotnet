@@ -131,6 +131,7 @@ public sealed partial class ArchitectureTests
         {
             ["KyfRev.Infrastructure.Vault/Backups/VaultBackups.cs"] = 1,
             ["KyfRev.Extensions.Host/CatalogueReader.cs"] = 1,
+            ["KyfRev.Cli/VaultConversion.cs"] = 1,
             ["KyfRev.Infrastructure.Vault/Files/AtomicFile.cs"] = 1,
             ["KyfRev.Infrastructure.Vault/VaultSession.Backups.cs"] = 1,
             ["KyfRev.Infrastructure.Vault/VaultSession.Trash.cs"] = 2,

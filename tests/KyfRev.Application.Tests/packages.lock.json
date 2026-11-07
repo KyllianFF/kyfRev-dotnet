@@ -164,6 +164,7 @@
       "kyfrev-coffre": {
         "type": "Project",
         "dependencies": {
+          "KyfRev.Infrastructure.Crypto": "[1.0.0-alpha.0, )",
           "KyfRev.Infrastructure.Vault": "[1.0.0-alpha.0, )",
           "System.CommandLine": "[2.0.13, )"
         }
