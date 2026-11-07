@@ -61,8 +61,36 @@
           <kyf:Notification x:Name="ExtensionDone" Severity="Success" Message="{Binding Message}" IsOpen="{Binding HasMessage, Mode=OneWay}" IsClosable="False" Margin="0,8,0,0" />
           <WrapPanel Margin="0,12,0,8">
             <Button x:Name="InstallExtension" Content="{x:Static pages:ModulesSettingsText.ExtensionInstallFromFolder}" Command="{Binding InstallCommand}" Margin="0,0,8,4" />
-            <Button x:Name="CreateExtension" Content="{x:Static pages:ModulesSettingsText.ExtensionCreate}" Command="{Binding CreateCommand}" Style="{DynamicResource Kyf.Button.Subtle}" Margin="0,0,0,4" />
+            <Button x:Name="CreateExtension" Content="{x:Static pages:ModulesSettingsText.ExtensionCreate}" Command="{Binding CreateCommand}" Style="{DynamicResource Kyf.Button.Subtle}" Margin="0,0,8,4" />
+            <Button x:Name="OpenCatalogue" Content="{x:Static pages:ModulesSettingsText.CatalogueOpen}" Command="{Binding ReadCatalogueCommand}" Style="{DynamicResource Kyf.Button.Subtle}" Margin="0,0,0,4"
+                    Visibility="{Binding CanReadCatalogue, Converter={StaticResource Visible}}" />
           </WrapPanel>
+          <!-- Le catalogue : lu seulement à la demande, montré seulement vérifié. -->
+          <StackPanel x:Name="ExtensionCatalogue" Margin="0,0,0,8" Visibility="{Binding HasCatalogue, Converter={StaticResource Visible}}">
+            <TextBlock Text="{x:Static pages:ModulesSettingsText.CatalogueTitle}" Style="{DynamicResource Kyf.Text.BodyStrong}" TextWrapping="Wrap" AutomationProperties.HeadingLevel="Level3" />
+            <TextBlock Text="{x:Static pages:ModulesSettingsText.CatalogueHelp}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,2,0,0" />
+            <TextBlock x:Name="CatalogueState" Text="{Binding CatalogueStatus}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="0,4,0,0" />
+            <ItemsControl x:Name="CatalogueList" ItemsSource="{Binding CatalogueRows}" Focusable="False" AutomationProperties.Name="{x:Static pages:ModulesSettingsText.CatalogueTitle}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate DataType="{x:Type pages:CatalogueRow}">
+                  <DockPanel Margin="0,8,0,0">
+                    <StackPanel DockPanel.Dock="Right" VerticalAlignment="Top" Margin="8,0,0,0">
+                      <Button x:Name="CatalogueInstall" Content="{Binding Action}" Command="{Binding InstallCommand}" AutomationProperties.Name="{Binding Spoken}"
+                              Visibility="{Binding CanInstall, Converter={StaticResource Visible}}" />
+                      <TextBlock x:Name="CatalogueUpToDate" Text="{x:Static pages:ModulesSettingsText.CatalogueUpToDate}" Style="{DynamicResource Kyf.Text.Caption}"
+                                 Visibility="{Binding IsUpToDate, Converter={StaticResource Visible}}" />
+                    </StackPanel>
+                    <StackPanel>
+                      <TextBlock Text="{Binding Name}" Style="{DynamicResource Kyf.Text.BodyStrong}" TextWrapping="Wrap" />
+                      <TextBlock Text="{Binding Version}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" />
+                      <TextBlock Text="{Binding Summary}" TextWrapping="Wrap" Margin="0,2,0,0" Visibility="{Binding HasSummary, Converter={StaticResource Visible}}" />
+                      <TextBlock Text="{Binding Permissions}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,2,0,0" />
+                    </StackPanel>
+                  </DockPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
           <CheckBox x:Name="DeveloperMode" IsChecked="{Binding IsDeveloperMode}" Margin="0,0,0,8" AutomationProperties.Name="{x:Static pages:ModulesSettingsText.ExtensionDeveloper}" AutomationProperties.HelpText="{x:Static pages:ModulesSettingsText.ExtensionDeveloperHelp}">
             <StackPanel>
               <TextBlock Text="{x:Static pages:ModulesSettingsText.ExtensionDeveloper}" TextWrapping="Wrap" />

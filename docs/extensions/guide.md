@@ -156,3 +156,8 @@ Avec le mode développeur (Paramètres, « Modules et extensions »), chaque ext
 pourquoi. Une permission nouvelle passe par la confirmation, comme une mise à jour.
 
 Pour la partager, donnez son dossier : on l'installe par « Installer depuis un dossier… ».
+
+## Publier avec kyfRev
+
+Une extension publiée dans le dossier `extensions/` du dépôt arrive aux utilisateurs par le catalogue signé : voir
+[catalogue.md](catalogue.md).

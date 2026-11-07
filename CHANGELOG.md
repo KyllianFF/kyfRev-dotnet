@@ -15,6 +15,13 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   ou le clic droit ouvre sa fiche sur elle, ou cesse de le marquer. Rien n'est écrit dans les fiches, et rien ne se marque en
   révision, où le mot donnerait la réponse. Le réglage est dans Paramètres › Général, et chaque définition a sa case dans
   l'onglet Définitions, pour un mot trop courant (champ `partout` de la définition, écrit seulement quand il vaut faux).
+- Extensions : le catalogue signé. « Voir le catalogue », dans Paramètres › Modules et extensions, lit à la demande le
+  catalogue publié dans le dépôt, et ne le prend que si sa signature (ECDSA P-256) est bonne, par une clé que
+  l'application connaît, et si son numéro n'est pas plus ancien que le dernier vu. Chaque fichier d'une extension est
+  vérifié par sa taille et son empreinte SHA-256 avant l'installation, qui montre ce qu'elle demande. La clé privée reste
+  sur le poste de la personne qui publie ; `tools/catalogue/catalogue.cs` la crée, signe et vérifie
+  (`docs/extensions/catalogue.md`). L'application connaît les clés publiques `kyfrev-1` et `kyfrev-2` (la seconde est celle
+  de secours).
 - Fenêtre : l'application dessine sa barre de titre, aux couleurs du thème, avec le nom, la recherche (Ctrl+K), le thème clair
   ou sombre en un clic, les raccourcis clavier et les boutons de la fenêtre. Windows garde le déplacement, le redimensionnement,
   son menu et ses dispositions sur « Agrandir ».

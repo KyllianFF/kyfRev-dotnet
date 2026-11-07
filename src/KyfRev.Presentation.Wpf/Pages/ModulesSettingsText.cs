@@ -317,6 +317,48 @@ public static class ModulesSettingsText
     /// <summary>« Modules et extensions ».</summary>
     public static string Tab => Text(nameof(Tab));
 
+    /// <summary>« Voir le catalogue ».</summary>
+    public static string CatalogueOpen => Text(nameof(CatalogueOpen));
+
+    /// <summary>« Catalogue ».</summary>
+    public static string CatalogueTitle => Text(nameof(CatalogueTitle));
+
+    /// <summary>L'aide du catalogue.</summary>
+    public static string CatalogueHelp => Text(nameof(CatalogueHelp));
+
+    /// <summary>« Lecture du catalogue… ».</summary>
+    public static string CatalogueReading => Text(nameof(CatalogueReading));
+
+    /// <summary>« Catalogue n° {0} du {1}, signé (clé « {2} »). ».</summary>
+    public static string CatalogueStatusOf(string value0, string value1, string value2) => Format("CatalogueStatus", value0, value1, value2);
+
+    /// <summary>Le catalogue est vide.</summary>
+    public static string CatalogueEmpty => Text(nameof(CatalogueEmpty));
+
+    /// <summary>« Installer ».</summary>
+    public static string CatalogueInstall => Text(nameof(CatalogueInstall));
+
+    /// <summary>« Mettre à jour ».</summary>
+    public static string CatalogueUpdate => Text(nameof(CatalogueUpdate));
+
+    /// <summary>« À jour ».</summary>
+    public static string CatalogueUpToDate => Text(nameof(CatalogueUpToDate));
+
+    /// <summary>« version {0} ».</summary>
+    public static string CatalogueVersionOf(string value0) => Format("CatalogueVersion", value0);
+
+    /// <summary>« version {0}, installée : {1} ».</summary>
+    public static string CatalogueInstalledVersionOf(string value0, string value1) => Format("CatalogueInstalledVersion", value0, value1);
+
+    /// <summary>« Demande : {0} ».</summary>
+    public static string CataloguePermissionsOf(string value0) => Format("CataloguePermissions", value0);
+
+    /// <summary>« Ne demande rien. ».</summary>
+    public static string CatalogueNoPermission => Text(nameof(CatalogueNoPermission));
+
+    /// <summary>« Téléchargement et vérification de « {0} »… ».</summary>
+    public static string CatalogueDownloadingOf(string value0) => Format("CatalogueDownloading", value0);
+
     private static string Format(string name, params object[] values) => string.Format(CultureInfo.CurrentCulture, Text(name), values);
 
     private static string Text(string name) =>
