@@ -255,11 +255,12 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
     }
 
     /// <inheritdoc/>
-    public async Task SyncAsync()
+    public async Task<bool> SyncAsync()
     {
+        // Rien de tapé depuis le dernier texte reçu, ou plus de page où taper : Text est le dernier texte qu'il y aura.
         if (!_ready || !_stale)
         {
-            return;
+            return true;
         }
         var id = ++_lastSync;
         var answered = new TaskCompletionSource();
@@ -267,6 +268,8 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
         Post(new SyncRequest(id));
         await Task.WhenAny(answered.Task, Task.Delay(SyncPatience)).ConfigureAwait(true);
         _syncs.Remove(id);
+        // Sans la réponse, un texte que la page a envoyé d'elle-même vaut aussi, si rien n'a été tapé après.
+        return answered.Task.IsCompleted || !_stale;
     }
 
     /// <inheritdoc/>

@@ -207,6 +207,11 @@ public sealed class VaultUnlockTests
             Assert.AreEqual(scene.Folder.Vault, other.App.Vaults.Unlock(scene.Folder.Vault, VaultSecret.Password(Password), remember: true).Vault);
         }
 
+        // Verrouillé ici, la clé retenue ne le rouvre plus : son mot de passe, si, et la clé resservira ensuite.
+        Assert.AreEqual(scene.Folder.Vault, scene.App.Vaults.Open(scene.Folder.Vault).Locked);
+        Assert.AreEqual(scene.Folder.Vault, scene.App.Vaults.Unlock(scene.Folder.Vault, VaultSecret.Password(Password), remember: true).Vault);
+        Assert.AreEqual(scene.Folder.Vault, scene.App.Vaults.Lock().Locked);
+
         // Verrouiller sans coffre, ou un coffre en clair, ne fait rien.
         Assert.IsNull(scene.App.Vaults.Lock().Locked);
         var plain = scene.Folder.PathOf("Clair");

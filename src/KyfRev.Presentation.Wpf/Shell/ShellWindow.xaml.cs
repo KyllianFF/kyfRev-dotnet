@@ -228,11 +228,15 @@ public sealed partial class ShellWindow : Window
             return;
         }
         LayoutUpdated -= OnLayoutUpdated;
+        // L'élément d'avant n'est gardé que le temps de la recherche : retenu, il garderait en vie une vue fermée depuis
+        // (l'éditeur d'une fiche, son texte, son historique), même après le verrouillage du coffre.
+        var before = _focusBeforePalette;
+        _focusBeforePalette = null;
         if (_paletteLeft)
         {
             return;
         }
-        if (_focusBeforePalette is UIElement { IsVisible: true } previous)
+        if (before is UIElement { IsVisible: true } previous)
         {
             previous.Focus();
         }

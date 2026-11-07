@@ -149,8 +149,11 @@ internal interface IEditorSurface
     /// <summary>Où ouvrir la liste des fiches, dans le champ.</summary>
     Point InputPoint { get; }
 
-    /// <summary>Met <see cref="Text"/> à jour de la dernière frappe.</summary>
-    Task SyncAsync();
+    /// <summary>
+    /// Met <see cref="Text"/> à jour de la dernière frappe ; faux si le champ n'a pas répondu à temps : <see cref="Text"/>
+    /// peut alors manquer ses dernières frappes.
+    /// </summary>
+    Task<bool> SyncAsync();
 
     /// <summary>Remplace tout par un contenu déjà connu : rien à enregistrer, rien à annuler.</summary>
     void ReplaceAll(string text);
@@ -630,7 +633,10 @@ public sealed partial class SheetEditorViewModel : ObservableObject
         return loop;
     }
 
-    /// <summary>Avant de quitter l'écriture : vrai si tout est enregistré.</summary>
+    /// <summary>
+    /// Avant de quitter l'écriture : vrai si tout est enregistré. Faux aussi si le champ n'a pas donné son dernier texte : il
+    /// en tient peut-être un plus récent que celui enregistré.
+    /// </summary>
     public async Task<bool> FinishAsync()
     {
         _saveTimer.Stop();
@@ -639,13 +645,13 @@ public sealed partial class SheetEditorViewModel : ObservableObject
         {
             return true;
         }
-        await surface.SyncAsync().ConfigureAwait(true);
+        var synced = await surface.SyncAsync().ConfigureAwait(true);
         for (var attempt = 0; attempt < SaveAttempts && surface.Text != _saved && !HasConflict && !HasFailed; attempt++)
         {
             await SaveAsync().ConfigureAwait(true);
-            await surface.SyncAsync().ConfigureAwait(true);
+            synced = await surface.SyncAsync().ConfigureAwait(true);
         }
-        return surface.Text == _saved;
+        return synced && surface.Text == _saved;
     }
 
     /// <summary>Prépare le premier rendu, ou le refait.</summary>
@@ -995,8 +1001,7 @@ public sealed partial class SheetEditorViewModel : ObservableObject
         {
             return false;
         }
-        await FinishAsync().ConfigureAwait(true);
-        if (HasConflict || HasFailed || surface.Text != _saved)
+        if (!await FinishAsync().ConfigureAwait(true) || HasConflict || HasFailed)
         {
             return false;
         }

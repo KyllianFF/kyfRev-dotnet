@@ -26,6 +26,7 @@
   import ZoomOut from "@lucide/svelte/icons/zoom-out";
   import { onMount } from "svelte";
   import { api, messageErreur } from "../../lib/api";
+  import { inscrireEditeur } from "../../lib/fin";
   import { affichageDe, COTE, dessinerSchema, traitDuSupport } from "../../lib/topologie/dessin";
   import { EditeurSchema } from "../../lib/topologie/etat.svelte";
   import { ecrireSchema } from "../../lib/topologie/format";
@@ -197,6 +198,9 @@
       }
     })();
   });
+
+  // Avant le verrouillage du coffre, l'application demande de finir : le schéma ouvert s'enregistre, et dit ce qu'il en reste.
+  onMount(() => inscrireEditeur(() => editeur.finir()));
 
   // L'annonce disparaît d'elle-même.
   $effect(() => {

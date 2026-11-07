@@ -75,6 +75,9 @@ public sealed class MermaidEngine : IMermaidEngine, IDisposable
     /// <summary>Le temps qu'un dessin peut prendre.</summary>
     public TimeSpan Patience { get; set; } = TimeSpan.FromSeconds(20);
 
+    /// <summary>Le nombre de dessins gardés, pour les essais.</summary>
+    internal int CachedCount => _cache.Count;
+
     /// <summary>Les couleurs d'un thème, sous les noms de Mermaid.</summary>
     /// <param name="element">L'élément dont les ressources donnent le thème.</param>
     public static IReadOnlyDictionary<string, string> ThemeOf(FrameworkElement element)

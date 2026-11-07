@@ -37,8 +37,10 @@ public sealed class VaultHost : IDisposable
     {
         lock (_gate)
         {
-            _vault?.Dispose();
+            // Retiré d'abord : même si sa fermeture échoue, plus rien ne l'atteint.
+            var vault = _vault;
             _vault = null;
+            vault?.Dispose();
         }
     }
 

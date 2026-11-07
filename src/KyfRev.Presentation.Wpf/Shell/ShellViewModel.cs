@@ -162,7 +162,11 @@ public sealed partial class ShellViewModel : ObservableObject
     /// <summary>Ce qui verrouille le coffre (<see cref="VaultLocking"/>) : la racine de composition le donne.</summary>
     public Func<Task>? Locking { get; set; }
 
-    private bool IsLockable => CanLock && !IsWelcome && Locking is not null;
+    /// <summary>
+    /// Un coffre chiffré ouvert se verrouille, même derrière l'écran de déverrouillage d'un autre coffre choisi depuis les
+    /// paramètres.
+    /// </summary>
+    private bool IsLockable => CanLock && Locking is not null;
 
     /// <summary>Verrouille le coffre chiffré ouvert : son écran de déverrouillage remplace les vues.</summary>
     [RelayCommand(CanExecute = nameof(IsLockable))]

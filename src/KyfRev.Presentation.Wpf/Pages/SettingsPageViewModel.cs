@@ -26,6 +26,9 @@ public sealed partial class SettingsPageViewModel : ObservableObject
     private readonly TimeProvider _time;
     private VaultPreferences? _stored;
 
+    /// <summary>Compte les oublis : une lecture ou un enregistrement partis avant le dernier oubli n'y remettent rien.</summary>
+    private int _generation;
+
     /// <summary>La vue, sur ces cas d'usage.</summary>
     public SettingsPageViewModel(SettingsUseCases settings, TimeProvider time)
     {
@@ -137,10 +140,25 @@ public sealed partial class SettingsPageViewModel : ObservableObject
     /// <summary>La séquence saisie se lit : ce qu'elle donne se montre.</summary>
     public bool HasStepsPreview => StepsPreview.Length > 0;
 
-    /// <summary>Un autre coffre vient de s'ouvrir : ce qui était saisi ne le concerne pas.</summary>
+    /// <summary>
+    /// Oublie les réglages lus et ce qui était saisi, sans rien enregistrer : quand le coffre se verrouille, ou qu'un autre
+    /// s'ouvre, que ce formulaire ne concerne pas. La vue revient à son état d'avant toute lecture et relit le coffre à sa
+    /// prochaine ouverture ; une lecture ou un enregistrement partis avant l'oubli n'y remettent rien.
+    /// </summary>
     public void Forget()
     {
+        _generation++;
         _stored = null;
+        Steps = string.Empty;
+        RestMonths = string.Empty;
+        MaxPerDay = string.Empty;
+        MaxWaitDays = string.Empty;
+        ActiveRecall = false;
+        IncludeManualArchiving = false;
+        IsLoading = false;
+        IsReady = false;
+        IsSaved = false;
+        Error = null;
         OnPropertyChanged(nameof(HasChanges));
         SaveCommand.NotifyCanExecuteChanged();
     }
@@ -154,7 +172,12 @@ public sealed partial class SettingsPageViewModel : ObservableObject
             return;
         }
         IsLoading = _stored is null;
+        var generation = _generation;
         var outcome = await Task.Run(_settings.Get).ConfigureAwait(true);
+        if (generation != _generation)
+        {
+            return;
+        }
         IsLoading = false;
         if (!outcome.Succeeded)
         {
@@ -180,6 +203,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject
             return;
         }
         var (steps, rest, maxPerDay, maxWait, recall, manual) = (Numbers(Steps)!.Value, Numbers(RestMonths)!.Value, Number(MaxPerDay)!.Value, Number(MaxWaitDays)!.Value, ActiveRecall, IncludeManualArchiving);
+        var generation = _generation;
         var outcome = await Task.Run(() => _settings.Update(current => current with
         {
             Steps = steps,
@@ -189,6 +213,10 @@ public sealed partial class SettingsPageViewModel : ObservableObject
             ActiveRecall = recall,
             IncludeManualArchiving = manual,
         })).ConfigureAwait(true);
+        if (generation != _generation)
+        {
+            return;
+        }
         if (!outcome.Succeeded)
         {
             Error = outcome.Error;

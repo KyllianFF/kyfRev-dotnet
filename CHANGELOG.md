@@ -12,11 +12,16 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 - Coffre chiffré, lot 3 : le coffre chiffré se verrouille. Ctrl+Maj+L (ou « Verrouiller le coffre chiffré » dans la
   recherche) le fait à la demande ; il se verrouille de lui-même après 15 minutes sans rien toucher dans toute la session
   de Windows, ce qui se tape dans le texte mis en forme compris, et dès que Windows se verrouille ou que le poste se met en
-  veille. Ce qui s'écrit s'enregistre d'abord, et une séance en cours se garde pour être reprise ; si ce qui s'écrit n'a
-  pas pu l'être, le coffre reste ouvert. Puis l'écran de déverrouillage remplace les vues, le coffre se ferme et sa clé
-  est effacée, avec son index en clair, et chaque vue oublie ce qu'elle avait lu (listes, aperçus, définitions,
-  corbeille, journal et pages des extensions, dessins des schémas). Seul son mot de passe ou sa clé de récupération le
-  rouvre : la clé retenue sur ce poste ne sert qu'au démarrage.
+  veille, même derrière l'écran de déverrouillage d'un autre coffre ; un départ pendant une ouverture reste dû. Ce qui
+  s'écrit s'enregistre d'abord : le texte de la fiche (le texte mis en forme compris, jusqu'à sa dernière frappe), le
+  commentaire ou la définition en cours, un schéma (jusqu'au champ qu'on n'a pas quitté), un dessin, une formule ou un
+  lien en cours d'insertion, une définition en cours de modification ; une séance en cours se garde pour être reprise.
+  Si ce qui s'écrit n'a pas pu l'être, le coffre reste ouvert. Ce qui n'est qu'un formulaire (le titre d'une nouvelle
+  fiche, un renommage, les réglages non enregistrés, la réponse d'une sélection guidée) est abandonné. Puis l'écran de
+  déverrouillage remplace les vues, le coffre se ferme et sa clé est effacée, avec son index en clair, et chaque vue
+  oublie ce qu'elle avait lu (listes, aperçus, définitions, corbeille, réglages, journal et pages des extensions, dessins
+  des schémas). Seul son mot de passe ou sa clé de récupération le rouvre : la clé retenue sur ce poste ne sert qu'au
+  démarrage, et plus à ce coffre une fois verrouillé, jusqu'à ce qu'on le déverrouille.
 - Coffre chiffré, lot 3 : l'application ouvre un coffre chiffré. Au démarrage, depuis l'accueil ou depuis Paramètres ›
   Données, il attend son mot de passe sur un écran de déverrouillage, sans menu ni recherche : rien de lui n'est lu
   avant. Perdu, sa clé de récupération l'ouvre. « Se souvenir sur cet ordinateur », décoché par défaut, laisse Windows

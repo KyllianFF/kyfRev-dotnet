@@ -112,7 +112,11 @@ public sealed partial class DefinitionRow : ObservableObject
         EditedExplanation = Explanation;
     }
 
-    private bool CanSave() => EditedTerm.Trim().Length > 0 && EditedExplanation.Trim().Length > 0;
+    /// <summary>Le terme et l'explication sont écrits : la définition peut s'enregistrer.</summary>
+    internal bool CanSave() => EditedTerm.Trim().Length > 0 && EditedExplanation.Trim().Length > 0;
+
+    /// <summary>Rien n'a changé dans la modification : il n'y a rien à enregistrer.</summary>
+    internal bool IsUnchanged => EditedTerm.Trim() == Term && EditedExplanation.Trim() == Explanation;
 
     /// <summary>Enregistre la définition.</summary>
     [RelayCommand(CanExecute = nameof(CanSave))]
@@ -124,7 +128,7 @@ public sealed partial class DefinitionRow : ObservableObject
 }
 
 /// <summary>La vue « Définitions » : le glossaire du coffre, par dossier, avec une recherche.</summary>
-public sealed partial class DefinitionsPageViewModel : ObservableObject, IForgetsVault
+public sealed partial class DefinitionsPageViewModel : ObservableObject, IForgetsVault, ILeaving
 {
     private readonly AnnotationUseCases _annotations;
     private readonly IReviewOpener _opener;
@@ -295,6 +299,32 @@ public sealed partial class DefinitionsPageViewModel : ObservableObject, IForget
 
     /// <summary>Ouvre la fiche d'une définition, sur son passage.</summary>
     internal void Open(DefinitionRow row) => _opener.OpenPassageInSheet(row.Definition.SheetId, row.Definition.Id);
+
+    /// <summary>
+    /// Avant que le coffre se verrouille, chaque définition en cours de modification s'enregistre, comme avec son bouton ;
+    /// celle où rien n'a changé se referme. Faux si l'une n'a pas pu l'être (un terme ou une explication vide, un refus du
+    /// coffre) : elle reste en modification, avec ce qui bloque, et le coffre reste ouvert.
+    /// </summary>
+    public async Task<bool> LeaveAsync()
+    {
+        var editing = _rows.Values.Where(row => row.IsEditing).ToList();
+        foreach (var row in editing)
+        {
+            if (row.IsUnchanged)
+            {
+                row.CancelCommand.Execute(null);
+            }
+            else if (row.CanSave())
+            {
+                await SaveAsync(row).ConfigureAwait(true);
+            }
+        }
+        if (editing.Any(row => row.IsEditing && !row.CanSave()))
+        {
+            Error = ReadingText.DefinitionIncomplete;
+        }
+        return !editing.Any(row => row.IsEditing);
+    }
 
     /// <summary>
     /// Oublie le glossaire quand le coffre se verrouille : définitions, brouillons, dossiers, recherche, confirmation et

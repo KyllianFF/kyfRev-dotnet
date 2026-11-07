@@ -59,6 +59,8 @@ internal sealed class SchemaIsland : UserControl, IDisposable
     private readonly Image _snapshot = new() { Visibility = Visibility.Collapsed, Stretch = Stretch.Fill };
     private readonly SchemaBridge _bridge;
     private readonly string _dataFolder;
+    private readonly Dictionary<int, TaskCompletionSource<bool>> _finishing = [];
+    private int _lastFinish;
     private string? _toOpen;
     private bool _ready;
     private bool _covered;
@@ -77,6 +79,7 @@ internal sealed class SchemaIsland : UserControl, IDisposable
         Content = ground;
         SetResourceReference(ThemeProbeProperty, "Kyf.Brush.Text");
         Loaded += OnLoaded;
+        _bridge.Finished += OnFinished;
     }
 
     /// <summary>Le moteur n'a pas pu démarrer, ou s'est arrêté.</summary>
@@ -93,6 +96,9 @@ internal sealed class SchemaIsland : UserControl, IDisposable
 
     /// <summary>Le fond du moteur, avant même sa première page.</summary>
     internal System.Drawing.Color Ground => _view.DefaultBackgroundColor;
+
+    /// <summary>Le temps laissé à la page pour finir ce qui est en cours ; au-delà, rien n'est tenu pour enregistré.</summary>
+    internal TimeSpan FinishPatience { get; set; } = TimeSpan.FromSeconds(10);
 
     /// <summary>Les couleurs de l'application, sous les noms de la page ; pour dessiner un schéma hors de l'îlot aussi.</summary>
     internal static Dictionary<string, string> ThemeOf(FrameworkElement element)
@@ -155,6 +161,36 @@ internal sealed class SchemaIsland : UserControl, IDisposable
         }
     }
 
+    /// <summary>
+    /// Avant le verrouillage du coffre : le champ où l'on écrivait s'applique, et le schéma ouvert enregistre ce qui attendait.
+    /// Vrai si rien ne reste à enregistrer, ou si aucun schéma n'est ouvert ; faux si l'enregistrement a été refusé, s'est heurté à
+    /// une version modifiée ailleurs, ou si la page n'a pas répondu à temps.
+    /// </summary>
+    internal async Task<bool> FinishAsync()
+    {
+        if (!_ready || _disposed)
+        {
+            // Une page qui n'a pas encore chargé son code n'a rien pu modifier ; un îlot fermé n'a plus rien à enregistrer.
+            return true;
+        }
+        var request = ++_lastFinish;
+        var answered = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _finishing[request] = answered;
+        Post(new JsonObject { ["kind"] = "finir", ["numero"] = request }.ToJsonString());
+        try
+        {
+            return await answered.Task.WaitAsync(FinishPatience).ConfigureAwait(true);
+        }
+        catch (TimeoutException)
+        {
+            return false;
+        }
+        finally
+        {
+            _finishing.Remove(request);
+        }
+    }
+
     /// <summary>Exécute un script dans la page, pour les essais.</summary>
     internal Task<string> RunScriptAsync(string script) => _view.ExecuteScriptAsync(script);
 
@@ -164,6 +200,12 @@ internal sealed class SchemaIsland : UserControl, IDisposable
         if (!_disposed)
         {
             _disposed = true;
+            _bridge.Finished -= OnFinished;
+            // La page fermée ne répondra plus : ce qu'elle finissait n'est pas tenu pour enregistré.
+            foreach (var waiting in _finishing.Values)
+            {
+                waiting.TrySetResult(false);
+            }
             _view.Dispose();
         }
     }
@@ -247,6 +289,14 @@ internal sealed class SchemaIsland : UserControl, IDisposable
         if (answer is not null)
         {
             Post(answer);
+        }
+    }
+
+    private void OnFinished(object? sender, FinishReport report)
+    {
+        if (_finishing.Remove(report.Request, out var waiting))
+        {
+            waiting.TrySetResult(report.Done);
         }
     }
 

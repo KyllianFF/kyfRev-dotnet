@@ -1,10 +1,12 @@
 import { mount } from "svelte";
 import VueSchemas from "./composants/topologie/VueSchemas.svelte";
 import { api, type DepuisHote, recevoir, signaler } from "./lib/api";
+import { suivreLesChamps } from "./lib/fin";
 import "./page.css";
 
 const vue = (window as unknown as { chrome: { webview: EventTarget } }).chrome.webview;
 vue.addEventListener("message", (evenement) => recevoir((evenement as MessageEvent<DepuisHote>).data));
+suivreLesChamps(document);
 
 const ilot = document.getElementById("ilot");
 if (ilot) {

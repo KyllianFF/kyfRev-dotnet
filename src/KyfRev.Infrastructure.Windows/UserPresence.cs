@@ -23,14 +23,7 @@ public sealed partial class UserPresence : IUserPresence, IDisposable
     public event EventHandler? Away;
 
     /// <summary>Le temps depuis la dernière saisie ; zéro si Windows ne le dit pas (rien ne se verrouille alors pour cela).</summary>
-    public TimeSpan Idle
-    {
-        get
-        {
-            var info = new LastInputInfo { Size = (uint)Marshal.SizeOf<LastInputInfo>() };
-            return GetLastInputInfo(ref info) ? Elapsed((uint)Environment.TickCount, info.Time) : TimeSpan.Zero;
-        }
-    }
+    public TimeSpan Idle => TryReadIdle(out var idle) ? idle : TimeSpan.Zero;
 
     /// <summary>Cesse de suivre la session et la veille.</summary>
     public void Dispose()
@@ -48,6 +41,21 @@ public sealed partial class UserPresence : IUserPresence, IDisposable
     /// 49 jours, et la soustraction sur 32 bits reste juste par-dessus.
     /// </summary>
     internal static TimeSpan Elapsed(uint now, uint lastInput) => TimeSpan.FromMilliseconds(unchecked(now - lastInput));
+
+    /// <summary>Lit dans Windows le temps depuis la dernière saisie de la session ; faux, et zéro, s'il ne le dit pas.</summary>
+    /// <param name="idle">Le temps depuis la dernière saisie.</param>
+    internal static bool TryReadIdle(out TimeSpan idle)
+    {
+        var info = new LastInputInfo { Size = (uint)Marshal.SizeOf<LastInputInfo>() };
+        if (!GetLastInputInfo(ref info))
+        {
+            idle = TimeSpan.Zero;
+            return false;
+        }
+        // L'horloge est relevée après la saisie : l'écart ne passe jamais sous zéro, ce qui ferait 49 jours.
+        idle = Elapsed((uint)Environment.TickCount, info.Time);
+        return true;
+    }
 
     /// <summary>La session se verrouille : l'utilisateur s'en va.</summary>
     internal void OnSessionSwitch(object? sender, SessionSwitchEventArgs e)

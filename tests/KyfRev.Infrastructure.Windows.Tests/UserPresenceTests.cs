@@ -9,9 +9,13 @@ public sealed class UserPresenceTests
     [TestMethod]
     public void The_idle_time_is_read_from_windows()
     {
-        using var presence = new UserPresence();
+        // Windows le dit : ce n'est pas le zéro de repli.
+        Assert.IsTrue(UserPresence.TryReadIdle(out var idle));
 
-        // Le poste des essais a reçu une saisie un jour : le temps écoulé est positif et borné par celui depuis son démarrage.
+        // Le temps écoulé est positif et borné par celui depuis le démarrage du poste.
+        Assert.IsGreaterThanOrEqualTo(TimeSpan.Zero, idle);
+        Assert.IsLessThanOrEqualTo(TimeSpan.FromMilliseconds(Environment.TickCount64), idle);
+        using var presence = new UserPresence();
         Assert.IsGreaterThanOrEqualTo(TimeSpan.Zero, presence.Idle);
         Assert.IsLessThanOrEqualTo(TimeSpan.FromMilliseconds(Environment.TickCount64), presence.Idle);
     }

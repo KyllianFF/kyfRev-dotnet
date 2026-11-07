@@ -34,6 +34,14 @@ public sealed partial class VaultUseCases(
     ILogger<VaultUseCases> logger,
     string version)
 {
+    private readonly Lock _gate = new();
+
+    /// <summary>Le coffre ouvert, s'il a été ouvert chiffré (avec sa clé) : lui seul se verrouille.</summary>
+    private string? _encrypted;
+
+    /// <summary>Le coffre chiffré verrouillé dans cette session de l'application : seule sa clé, donnée de nouveau, le rouvre.</summary>
+    private string? _locked;
+
     /// <summary>Ce que montre l'accueil.</summary>
     [ZeroXCommand("etat_application")]
     public AppState State() => StateWith(null);
@@ -93,10 +101,17 @@ public sealed partial class VaultUseCases(
         }
         using (key)
         {
-            var state = Adopt(() => store.Open(root, key, present.Now), present, lockedOnFailure: root);
-            if (state.OpenError is null && !(remember ? keys.Remember(root, key) : keys.Forget(root)))
+            var state = Adopt(() => store.Open(root, key, present.Now), present, lockedOnFailure: root, encrypted: true);
+            if (state.OpenError is null)
             {
-                LogKeyNotRemembered(logger, root, remember);
+                lock (_gate)
+                {
+                    _locked = null;
+                }
+                if (!(remember ? keys.Remember(root, key) : keys.Forget(root)))
+                {
+                    LogKeyNotRemembered(logger, root, remember);
+                }
             }
             return state;
         }
@@ -112,6 +127,11 @@ public sealed partial class VaultUseCases(
         var present = Present.Of(time);
         if (!create && keys.IsEncrypted(root))
         {
+            if (WasLocked(root))
+            {
+                // Verrouillé ici, il ne se rouvre qu'avec son mot de passe : la clé retenue ne sert qu'au démarrage.
+                return LockedState(root, null);
+            }
             VaultKey? remembered;
             try
             {
@@ -127,10 +147,18 @@ public sealed partial class VaultUseCases(
             }
             using (remembered)
             {
-                return Adopt(() => store.Open(root, remembered, present.Now), present, lockedOnFailure: null);
+                return Adopt(() => store.Open(root, remembered, present.Now), present, lockedOnFailure: null, encrypted: true);
             }
         }
-        return Adopt(() => create ? store.Initialize(root, present.Now) : store.Open(root, present.Now), present, lockedOnFailure: null);
+        return Adopt(() => create ? store.Initialize(root, present.Now) : store.Open(root, present.Now), present, lockedOnFailure: null, encrypted: false);
+    }
+
+    private bool WasLocked(string root)
+    {
+        lock (_gate)
+        {
+            return _locked is { } locked && store.SameLocation(locked, root);
+        }
     }
 
     /// <summary>
@@ -138,7 +166,7 @@ public sealed partial class VaultUseCases(
     /// sauvegarde du jour faite, et il est retenu pour le prochain démarrage. Refusé, l'état le dit, en attente de sa clé
     /// si c'était un coffre chiffré (<paramref name="lockedOnFailure"/>).
     /// </summary>
-    private AppState Adopt(Func<IVault> open, Present present, string? lockedOnFailure)
+    private AppState Adopt(Func<IVault> open, Present present, string? lockedOnFailure, bool encrypted)
     {
         IVault vault;
         try
@@ -164,7 +192,11 @@ public sealed partial class VaultUseCases(
             vault.Dispose();
             throw;
         }
-        host.Replace(vault);
+        lock (_gate)
+        {
+            host.Replace(vault);
+            _encrypted = encrypted ? vault.Root : null;
+        }
         return State();
     }
 
@@ -175,11 +207,18 @@ public sealed partial class VaultUseCases(
     /// </summary>
     public AppState Lock()
     {
-        if (host.Root is not { } root || !keys.IsEncrypted(root))
+        string root;
+        lock (_gate)
         {
-            return State();
+            if (host.Root is not { } open || open != _encrypted)
+            {
+                return State();
+            }
+            root = open;
+            _locked = root;
+            _encrypted = null;
+            host.Close();
         }
-        host.Close();
         LogVaultLocked(logger, root);
         return LockedState(root, null);
     }
@@ -188,8 +227,14 @@ public sealed partial class VaultUseCases(
 
     private AppState StateWith(string? openError)
     {
-        var open = host.Root;
-        return new AppState(version, locations.Mode, open, open is null ? locations.VaultToCreate() : null, openError, Encrypted: open is not null && keys.IsEncrypted(open));
+        string? open;
+        bool encrypted;
+        lock (_gate)
+        {
+            open = host.Root;
+            encrypted = open is not null && open == _encrypted;
+        }
+        return new AppState(version, locations.Mode, open, open is null ? locations.VaultToCreate() : null, openError, Encrypted: encrypted);
     }
 
     private void PrepareDay(IVault vault, Present present)

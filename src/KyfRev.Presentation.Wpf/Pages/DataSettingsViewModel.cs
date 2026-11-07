@@ -427,12 +427,18 @@ public sealed partial class DataSettingsViewModel : ObservableObject, INavigatio
     private async Task ChangeVaultAsync(Func<AppState> opening)
     {
         var before = _vaults.State().Vault;
+        var generation = _generation;
         IsBusy = true;
         Error = null;
         Message = null;
         try
         {
             var state = await Task.Run(opening).ConfigureAwait(true);
+            if (generation != _generation)
+            {
+                // Le coffre s'est verrouillé pendant l'ouverture : son écran de déverrouillage reste, rien ne le remplace.
+                return;
+            }
             if (state.Locked is not null)
             {
                 // Un coffre chiffré attend sa clé : son écran la demande, l'actuel reste ouvert jusque-là.

@@ -280,7 +280,8 @@ internal static class Composition
             provider.GetRequiredService<VaultUseCases>(),
             provider.GetRequiredService<IFolderPicker>(),
             () => ForgetVault(provider),
-            () => VaultChanged(provider)));
+            () => VaultChanged(provider),
+            () => DraftViews(provider)));
         services.AddSingleton(provider => new AutoLock(
             provider.GetRequiredService<IUserPresence>(),
             () => AutoLock.DefaultDelay,
@@ -313,8 +314,14 @@ internal static class Composition
         provider.GetRequiredService<ActiveModules>().Load(null);
     }
 
+    /// <summary>Les vues qui peuvent garder un brouillon à enregistrer avant le verrouillage, même quand elles ne sont pas affichées.</summary>
+    private static ILeaving[] DraftViews(IServiceProvider provider) =>
+    [
+        provider.GetRequiredService<DefinitionsPageViewModel>(),
+    ];
+
     /// <summary>Les vues qui gardent ce qu'elles ont lu du coffre.</summary>
-    private static IForgetsVault[] ForgettingViews(IServiceProvider provider) =>
+    internal static IForgetsVault[] ForgettingViews(IServiceProvider provider) =>
     [
         provider.GetRequiredService<DashboardPageViewModel>(),
         provider.GetRequiredService<SheetsPageViewModel>(),
@@ -326,6 +333,7 @@ internal static class Composition
         provider.GetRequiredService<AboutSettingsViewModel>(),
         provider.GetRequiredService<ExtensionSettingsViewModel>(),
         provider.GetRequiredService<ExtensionPages>(),
+        provider.GetRequiredService<ModulesSettingsViewModel>(),
     ];
 
     /// <summary>Les entrées du menu apportées par les modules actifs, avec leurs vues.</summary>
