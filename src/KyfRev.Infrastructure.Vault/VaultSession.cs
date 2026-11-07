@@ -63,9 +63,6 @@ public sealed partial class VaultSession : IDisposable
     /// <summary>Réglages du coffre (<c>.suivi/coffre.json</c>).</summary>
     public VaultSettingsFile Settings { get; private set; }
 
-    /// <summary>Là où vivent les fichiers du coffre.</summary>
-    internal VaultStorage Storage => _storage;
-
     /// <summary>Résultat de la dernière analyse, complété par les opérations suivantes.</summary>
     public HealthReport Health { get; private set; } = new();
 

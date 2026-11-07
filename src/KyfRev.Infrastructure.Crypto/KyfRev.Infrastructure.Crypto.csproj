@@ -7,6 +7,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\KyfRev.Application\KyfRev.Application.csproj" />
+    <!-- Le stockage chiffré prend la place du disque sous la session du coffre. -->
+    <ProjectReference Include="..\KyfRev.Infrastructure.Vault\KyfRev.Infrastructure.Vault.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -16,6 +18,8 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="KyfRev.Infrastructure.Crypto.Tests" />
+    <!-- Les essais de la session sur le coffre chiffré y retrouvent l'objet d'un fichier. -->
+    <InternalsVisibleTo Include="KyfRev.Infrastructure.Vault.Tests" />
   </ItemGroup>
 
 </Project>

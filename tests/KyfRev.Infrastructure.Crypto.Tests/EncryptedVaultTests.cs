@@ -130,6 +130,66 @@ public sealed class EncryptedVaultTests
     }
 
     [TestMethod]
+    public void Paths_ignore_case_but_keep_the_one_written_first()
+    {
+        using var folder = new TemporaryFolder();
+        var (header, key) = Shared.Value;
+        using (var vault = EncryptedVault.Create(folder.Root, header, key))
+        {
+            vault.AddFolder("fiches/Cours");
+            vault.Write("FICHES/cours/Leçon.md", "un"u8);
+            vault.Write("fiches/cours/LEÇON.md", "deux"u8);
+            vault.Flush();
+            Assert.IsTrue(vault.ContainsFile("fiches/COURS/leçon.md"));
+            Assert.IsTrue(vault.ContainsFolder("Fiches"));
+        }
+
+        using var reopened = EncryptedVault.Open(folder.Root, key);
+        Assert.AreEqual("fiches/Cours/Leçon.md", Assert.ContainsSingle(reopened.Files));
+        Assert.AreEqual("deux", Encoding.UTF8.GetString(reopened.Read("fiches/cours/leçon.md")));
+        Assert.AreEqual("fiches|fiches/Cours", string.Join('|', reopened.Folders));
+    }
+
+    [TestMethod]
+    [DataRow("""{"format":2,"fichiers":{},"dossiers":[]}""", "format inconnu")]
+    [DataRow("""{"format":1,"fichiers":{"a.md":{"objet":"court"}},"dossiers":[]}""", "objet invalide")]
+    [DataRow("""{"format":1,"fichiers":{"a.md":{}},"dossiers":[]}""", "illisible")]
+    [DataRow("""{"format":1,"fichiers":{"a.md":{"objet":"0123456789ABCDEFGHJKMNPQRS"},"A.MD":{"objet":"0123456789ABCDEFGHJKMNPQRT"}},"dossiers":[]}""", "deux fois")]
+    [DataRow("""{"format":"un"}""", "illisible")]
+    [DataRow("""[1]""", "illisible")]
+    [DataRow("""pas du JSON""", "illisible")]
+    public void An_index_that_does_not_hold_together_is_refused(string json, string reason)
+    {
+        using var folder = new TemporaryFolder();
+        var (header, key) = Shared.Value;
+        EncryptedVault.Create(folder.Root, header, key).Dispose();
+        File.WriteAllBytes(Path.Combine(folder.Root, EncryptedVault.IndexFile), SealedFile.Seal(key, VaultId, EncryptedVault.IndexId, Encoding.UTF8.GetBytes(json)));
+
+        Assert.Contains(reason, Assert.ThrowsExactly<VaultCryptoException>(() => EncryptedVault.Open(folder.Root, key)).Message);
+    }
+
+    [TestMethod]
+    public void A_missing_index_or_object_and_a_cut_creation_are_refused()
+    {
+        using var folder = new TemporaryFolder();
+        var (header, key) = Shared.Value;
+        using (var vault = EncryptedVault.Create(folder.Root, header, key))
+        {
+            vault.Write("a.md", "un"u8);
+            vault.Flush();
+            File.Delete(vault.ObjectPath(Path.GetFileNameWithoutExtension(Directory.GetFiles(Path.Combine(folder.Root, EncryptedVault.Objects)).Single())));
+            Assert.Contains("introuvable", Assert.ThrowsExactly<VaultCryptoException>(() => vault.Read("a.md")).Message);
+            Assert.ThrowsExactly<VaultCryptoException>(() => vault.MoveFolder("absent", "ailleurs"));
+        }
+        File.Delete(Path.Combine(folder.Root, EncryptedVault.IndexFile));
+        Assert.Contains("index", Assert.ThrowsExactly<VaultCryptoException>(() => EncryptedVault.Open(folder.Root, key)).Message);
+
+        using var cut = new TemporaryFolder();
+        var disk = new KyfRev.Tests.Support.FailingDisk { FailAt = 3 };
+        Assert.ThrowsExactly<IOException>(() => EncryptedVault.Create(cut.Root, header, key, disk), "l'index ne s'écrit pas");
+    }
+
+    [TestMethod]
     [DataRow("../hors.md")]
     [DataRow("fiches//a.md")]
     [DataRow("C:/a.md")]

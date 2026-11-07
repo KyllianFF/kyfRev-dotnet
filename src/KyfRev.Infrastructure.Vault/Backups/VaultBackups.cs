@@ -154,7 +154,8 @@ public static class VaultBackups
 
     /// <summary>
     /// Restaure une sauvegarde dans un nouveau dossier « Coffre (restauré le AAAA-MM-JJ) » créé dans
-    /// <paramref name="parentFolder"/>. Tous les noms sont vérifiés avant la moindre écriture.
+    /// <paramref name="parentFolder"/>. Tous les noms sont vérifiés avant la moindre écriture. La sauvegarde d'un coffre
+    /// chiffré redevient un coffre chiffré, qui s'ouvre avec le même mot de passe : rien n'est déchiffré ici.
     /// </summary>
     /// <returns>Le dossier du coffre restauré.</returns>
     public static string Restore(string backup, string parentFolder, DateOnly day)
@@ -185,7 +186,9 @@ public static class VaultBackups
         {
             throw VaultException.InvalidBackup(backup, "contenu décompressé trop volumineux");
         }
-        if (!entries.Any(e => e.Path.Value == VaultLayout.SettingsFile))
+        // Une sauvegarde d'un coffre chiffré se restaure telle quelle, chiffrée : son en-tête et son index en font un coffre.
+        var encrypted = entries.Any(e => e.Path.Value == VaultLayout.EncryptedHeaderFile) && entries.Any(e => e.Path.Value == VaultLayout.EncryptedIndexFile);
+        if (!encrypted && !entries.Any(e => e.Path.Value == VaultLayout.SettingsFile))
         {
             throw VaultException.InvalidBackup(backup, "ce n'est pas une sauvegarde de coffre (coffre.json absent)");
         }

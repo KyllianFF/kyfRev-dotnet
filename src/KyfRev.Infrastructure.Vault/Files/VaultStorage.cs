@@ -141,16 +141,21 @@ public abstract class VaultStorage
 public sealed class StorageEntry
 {
     private readonly FileSystemInfo? _info;
+    private Func<(long Length, DateTime LastWriteTimeUtc)>? _facts;
+    private long _length;
+    private DateTime _lastWriteTimeUtc;
 
-    /// <summary>Un élément d'un stockage sans liens.</summary>
-    public StorageEntry(string fullName, bool isDirectory, long length, DateTime lastWriteTimeUtc)
+    /// <summary>Un élément d'un stockage sans liens, dont la taille et la date ne se lisent qu'à la demande.</summary>
+    /// <param name="fullName">Le chemin complet.</param>
+    /// <param name="isDirectory">Un dossier plutôt qu'un fichier.</param>
+    /// <param name="facts">Lit la taille et la date ; un dossier n'en a pas besoin.</param>
+    public StorageEntry(string fullName, bool isDirectory, Func<(long Length, DateTime LastWriteTimeUtc)>? facts = null)
     {
         ArgumentNullException.ThrowIfNull(fullName);
         FullName = fullName;
         Name = Path.GetFileName(fullName);
         IsDirectory = isDirectory;
-        Length = isDirectory ? 0 : length;
-        LastWriteTimeUtc = lastWriteTimeUtc;
+        _facts = isDirectory ? null : facts;
     }
 
     /// <summary>Un élément relevé sur le disque, sans relire ses attributs.</summary>
@@ -159,8 +164,8 @@ public sealed class StorageEntry
         FullName = fullName;
         Name = name;
         IsDirectory = isDirectory;
-        Length = length;
-        LastWriteTimeUtc = lastWriteTimeUtc;
+        _length = length;
+        _lastWriteTimeUtc = lastWriteTimeUtc;
         IsReparsePoint = isReparsePoint;
     }
 
@@ -171,8 +176,8 @@ public sealed class StorageEntry
         FullName = info.FullName;
         Name = info.Name;
         IsDirectory = info is DirectoryInfo;
-        Length = info is FileInfo file ? file.Length : 0;
-        LastWriteTimeUtc = info.LastWriteTimeUtc;
+        _length = info is FileInfo file ? file.Length : 0;
+        _lastWriteTimeUtc = info.LastWriteTimeUtc;
         IsReparsePoint = info.Attributes.HasFlag(FileAttributes.ReparsePoint);
     }
 
@@ -186,16 +191,39 @@ public sealed class StorageEntry
     public bool IsDirectory { get; }
 
     /// <summary>La taille d'un fichier ; 0 pour un dossier.</summary>
-    public long Length { get; }
+    public long Length
+    {
+        get
+        {
+            ReadFacts();
+            return _length;
+        }
+    }
 
     /// <summary>La date de dernière écriture.</summary>
-    public DateTime LastWriteTimeUtc { get; }
+    public DateTime LastWriteTimeUtc
+    {
+        get
+        {
+            ReadFacts();
+            return _lastWriteTimeUtc;
+        }
+    }
 
     /// <summary>Un point d'analyse du disque : lien, jonction, ou fichier en ligne d'un service de synchronisation.</summary>
     public bool IsReparsePoint { get; }
 
     /// <summary>Un lien symbolique ou une jonction, qui pourrait mener hors du coffre.</summary>
     public bool IsLink => _info?.LinkTarget is not null;
+
+    private void ReadFacts()
+    {
+        if (_facts is { } facts)
+        {
+            (_length, _lastWriteTimeUtc) = facts();
+            _facts = null;
+        }
+    }
 }
 
 /// <summary>Un fichier lu ailleurs que dans le coffre (une entrée de sauvegarde) : son chemin, sa taille, et de quoi le lire.</summary>

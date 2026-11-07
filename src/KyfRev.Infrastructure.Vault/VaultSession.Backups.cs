@@ -93,15 +93,22 @@ public sealed partial class VaultSession
         {
             throw VaultException.InvalidBackup(backup, "trop de fichiers");
         }
-        var files = _storage.FilesOfBackup(VaultBackups.Entries(archive, backup), backup);
-        static (VaultPath Path, byte[] Bytes)? Read(StoredFile file)
+        var files = FilesOfBackup(archive, backup);
+        (VaultPath Path, byte[] Bytes)? Read(StoredFile file)
         {
             if (file.Path.EndsWith('/') || file.Length > MaxRestoredFileBytes
                 || !VaultPath.TryParse(file.Path, out var path, out _))
             {
                 return null;
             }
-            return (path, file.Read());
+            try
+            {
+                return (path, file.Read());
+            }
+            catch (Exception exception) when (IsIo(exception))
+            {
+                throw VaultException.InvalidBackup(backup, exception.Message);
+            }
         }
 
         // 1. La fiche : un .md du dossier « fiches » qui porte cet identifiant.
@@ -203,6 +210,19 @@ public sealed partial class VaultSession
                 throw VaultException.InvalidBackup(backup, $"contenu différent pour « {entry.FullName} »");
             }
         }
-        return _storage.FilesOfBackup(VaultBackups.Entries(archive, backup), backup).Count;
+        return FilesOfBackup(archive, backup).Count;
+    }
+
+    /// <summary>Les fichiers du coffre que contient une sauvegarde, lus comme ce coffre les lit : déchiffrés s'il est chiffré.</summary>
+    private IReadOnlyList<StoredFile> FilesOfBackup(ZipArchive archive, string backup)
+    {
+        try
+        {
+            return _storage.FilesOfBackup(VaultBackups.Entries(archive, backup), backup);
+        }
+        catch (Exception exception) when (IsIo(exception))
+        {
+            throw VaultException.InvalidBackup(backup, exception.Message);
+        }
     }
 }

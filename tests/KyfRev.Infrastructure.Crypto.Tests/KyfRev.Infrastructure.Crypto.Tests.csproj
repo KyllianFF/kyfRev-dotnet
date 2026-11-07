@@ -10,4 +10,9 @@
     <PackageReference Include="Konscious.Security.Cryptography.Argon2" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Un disque qui échoue à la demande : le stockage chiffré coupé à chaque écriture. -->
+    <Compile Include="..\Support\FailingDisk.cs" Link="Support\FailingDisk.cs" />
+  </ItemGroup>
+
 </Project>

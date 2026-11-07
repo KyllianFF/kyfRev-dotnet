@@ -1,4 +1,5 @@
 using System.Text.Json;
+using KyfRev.Infrastructure.Crypto;
 using KyfRev.Infrastructure.Vault.Ids;
 using KyfRev.Infrastructure.Vault.Tests.Support;
 
@@ -17,20 +18,22 @@ public sealed class ScenarioTests
 
     private static string Folder => Path.Combine(AppContext.BaseDirectory, "fixtures", "scenarios");
 
+    /// <summary>Chaque scénario, joué sur le disque tel quel puis sur un coffre chiffré.</summary>
     public static IEnumerable<object[]> Scenarios =>
-        Directory.GetDirectories(Folder).Order(StringComparer.Ordinal).Select(path => new object[] { Path.GetFileName(path) });
+        Directory.GetDirectories(Folder).Order(StringComparer.Ordinal)
+            .SelectMany(path => Enum.GetValues<StorageKind>().Select(storage => new object[] { Path.GetFileName(path), storage }));
 
     [TestMethod]
     [DynamicData(nameof(Scenarios))]
-    public void Operations_give_the_same_vault_as_version_0x(string scenario)
+    public void Operations_give_the_same_vault_as_version_0x(string scenario, StorageKind storage)
     {
         var folder = Path.Combine(Folder, scenario);
         using var document = JsonDocument.Parse(File.ReadAllBytes(Path.Combine(folder, "scenario.json")));
         var ids = UlidGenerator.Replaying(File.ReadAllLines(Path.Combine(folder, "identifiants.txt")).Where(line => line.Length > 0));
-        using var vault = TemporaryVault.Empty();
+        using var vault = TemporaryVault.Empty(storage);
 
         var results = new List<string>();
-        using (var runner = new ScenarioRunner(vault.Root, ids))
+        using (var runner = new ScenarioRunner(vault, ids))
         {
             var n = 0;
             foreach (var operation in document.RootElement.GetProperty("operations").EnumerateArray())
@@ -46,13 +49,23 @@ public sealed class ScenarioTests
         Assert.HasCount(expected.Length, results);
 
         var expectedTree = Files(Path.Combine(folder, "attendu"));
-        var actualTree = Files(vault.Root);
+        var actualTree = vault.Files();
         CollectionAssert.AreEqual(expectedTree.Keys.ToList(), actualTree.Keys.ToList(), $"Fichiers différents.\n0.x : {string.Join(", ", expectedTree.Keys.Except(actualTree.Keys))}\nC#  : {string.Join(", ", actualTree.Keys.Except(expectedTree.Keys))}");
         foreach (var (path, bytes) in expectedTree)
         {
             CollectionAssert.AreEqual(bytes, actualTree[path], $"Contenu différent : {path}\n0.x : {Show(bytes)}\nC#  : {Show(actualTree[path])}");
         }
-        CollectionAssert.AreEqual(File.ReadAllLines(Path.Combine(folder, "dossiers.txt")), Directories(vault.Root), "Dossiers différents.");
+        CollectionAssert.AreEqual(File.ReadAllLines(Path.Combine(folder, "dossiers.txt")), vault.Folders(), "Dossiers différents.");
+
+        if (storage == StorageKind.Encrypted)
+        {
+            // Sur le disque, rien d'autre que l'en-tête, l'index, un objet par fichier du coffre et le verrou : aucun nom de
+            // fiche, aucun suivi en clair.
+            var onDisk = Directory.EnumerateFiles(vault.Root, "*", SearchOption.AllDirectories).Select(file => Relative(vault.Root, file)).ToList();
+            var objects = onDisk.Count(path => path.StartsWith(EncryptedVault.Objects + "/", StringComparison.Ordinal));
+            Assert.IsTrue(onDisk.All(path => path is EncryptedVault.HeaderFile or EncryptedVault.IndexFile or VaultLayout.LockFile || path.StartsWith(EncryptedVault.Objects + "/", StringComparison.Ordinal)), string.Join(", ", onDisk));
+            Assert.AreEqual(vault.Storage.AllEntries(vault.Root).Count(entry => !entry.IsDirectory), objects, "un objet par fichier du coffre");
+        }
     }
 
     private static SortedDictionary<string, byte[]> Files(string root)
@@ -64,9 +77,6 @@ public sealed class ScenarioTests
         }
         return files;
     }
-
-    private static List<string> Directories(string root) =>
-        [.. Directory.EnumerateDirectories(root, "*", SearchOption.AllDirectories).Select(path => Relative(root, path)).Order(KyfRev.Application.Text.Utf8Order.Instance)];
 
     private static string Relative(string root, string path) => Path.GetRelativePath(root, path).Replace('\\', '/');
 
