@@ -9,11 +9,12 @@ using KyfRev.Presentation.Wpf.Shell;
 namespace KyfRev.Presentation.Wpf.Extensions;
 
 /// <summary>La vue d'une extension : ce qu'elle affiche, redessiné après chaque action.</summary>
-public sealed partial class ExtensionPageViewModel : ObservableObject, INavigationAware
+public sealed partial class ExtensionPageViewModel : ObservableObject, INavigationAware, IForgetsVault
 {
     private readonly string _id;
     private readonly ExtensionEngine _engine;
     private readonly Func<bool> _isDark;
+    private int _generation;
 
     /// <summary>La vue de cette extension.</summary>
     /// <param name="id">L'extension.</param>
@@ -62,10 +63,28 @@ public sealed partial class ExtensionPageViewModel : ObservableObject, INavigati
         _ = RenderAsync();
     }
 
+    /// <summary>
+    /// Oublie ce que l'extension a affiché du coffre : son rendu, son refus et sa dernière action. Sa vue se redessine à sa
+    /// prochaine ouverture ; un rendu ou une action partis avant n'y remettent rien.
+    /// </summary>
+    public void Forget()
+    {
+        _generation++;
+        Content = null;
+        Error = null;
+        IsBusy = false;
+        LastAction = null;
+    }
+
     /// <summary>Demande à l'extension ce qu'elle affiche maintenant.</summary>
     public async Task RenderAsync()
     {
+        var generation = _generation;
         var answer = await _engine.RenderViewAsync(_id, _isDark()).ConfigureAwait(true);
+        if (generation != _generation)
+        {
+            return;
+        }
         if (answer.Succeeded)
         {
             Error = null;
@@ -85,10 +104,19 @@ public sealed partial class ExtensionPageViewModel : ObservableObject, INavigati
         }
         IsBusy = true;
         LastAction = action.Name;
+        var generation = _generation;
         var answer = await _engine.ActAsync(_id, action.Name, action.Value, action.Data).ConfigureAwait(true);
+        if (generation != _generation)
+        {
+            return;
+        }
         if (answer.Succeeded)
         {
             await RenderAsync().ConfigureAwait(true);
+            if (generation != _generation)
+            {
+                return;
+            }
         }
         else
         {
@@ -107,7 +135,7 @@ public sealed partial class ExtensionPageViewModel : ObservableObject, INavigati
 /// commandes dans Ctrl+K, leurs entrées au clic droit et leurs encarts sur « Aujourd'hui ». Tout se lit dans leur manifeste : leur code
 /// ne démarre qu'au premier usage.
 /// </summary>
-public sealed class ExtensionPages
+public sealed class ExtensionPages : IForgetsVault
 {
     /// <summary>La clé sous laquelle les vues trouvent les entrées des extensions dans les ressources de l'application.</summary>
     public const string ResourceKey = "Kyf.ExtensionPages";
@@ -120,6 +148,7 @@ public sealed class ExtensionPages
     private readonly Func<bool> _isDark;
     private readonly Dictionary<string, ExtensionPageViewModel> _pages = new(StringComparer.Ordinal);
     private readonly Dictionary<string, NavigationBadge> _badges = new(StringComparer.Ordinal);
+    private int _generation;
 
     /// <summary>Les vues de ces extensions.</summary>
     /// <param name="library">Les extensions installées.</param>
@@ -190,12 +219,17 @@ public sealed class ExtensionPages
     /// <summary>Les encarts des extensions actives sur « Aujourd'hui ». Une extension qui ne répond pas n'en a pas.</summary>
     public async Task<IReadOnlyList<DashboardCard>> CardsAsync()
     {
+        var generation = _generation;
         List<DashboardCard> cards = [];
         foreach (var manifest in Active().Where(manifest => manifest.CardTitle is not null))
         {
             if (await _engine.CardAsync(manifest.Id).ConfigureAwait(true) is { } card)
             {
                 cards.Add(new DashboardCard(manifest.CardTitle!, card.Text, card.Detail));
+            }
+            if (generation != _generation)
+            {
+                return [];
             }
         }
         return cards;
@@ -216,6 +250,25 @@ public sealed class ExtensionPages
 
     /// <summary>Un coffre s'ouvre : les extensions oublient ce qu'elles ont lu du précédent.</summary>
     public void VaultChanged() => _engine.Restart();
+
+    /// <summary>
+    /// Oublie tout ce qui vient du coffre : chaque vue efface son rendu, chaque compteur se tait, et le moteur s'arrête avec ce
+    /// que les extensions avaient lu. Les vues et les compteurs restent les mêmes objets, pour le menu ; une réponse partie avant
+    /// n'y remet rien, et tout se redemande au prochain usage.
+    /// </summary>
+    public void Forget()
+    {
+        _generation++;
+        foreach (var page in _pages.Values)
+        {
+            page.Forget();
+        }
+        foreach (var badge in _badges.Values)
+        {
+            badge.Text = null;
+        }
+        _engine.Restart();
+    }
 
     /// <summary>L'icône d'une extension, en géométrie WPF ; rien si elle n'en a pas ou si aucun tracé ne se lit.</summary>
     internal static NavigationPicture? PictureOf(ExtensionIcon? icon)
@@ -267,16 +320,21 @@ public sealed class ExtensionPages
     {
         if (_library.Active(id) is { HasCounter: true })
         {
+            var generation = _generation;
             var count = await _engine.CountAsync(id).ConfigureAwait(true);
-            BadgeOf(id).Text = count?.ToString(CultureInfo.CurrentCulture);
+            if (generation == _generation)
+            {
+                BadgeOf(id).Text = count?.ToString(CultureInfo.CurrentCulture);
+            }
         }
     }
 
     /// <summary>Lance une commande ; un refus se dit dans sa vue, qui se redessine, et son compteur suit.</summary>
     private async Task RunAsync(string id, string command, IReadOnlyDictionary<string, string> context)
     {
+        var generation = _generation;
         var answer = await _engine.CommandAsync(id, command, context).ConfigureAwait(true);
-        if (_pages.TryGetValue(id, out var page))
+        if (generation == _generation && _pages.TryGetValue(id, out var page))
         {
             if (answer.Succeeded)
             {
@@ -287,6 +345,9 @@ public sealed class ExtensionPages
                 page.Report(answer.Error);
             }
         }
-        await RefreshCountAsync(id).ConfigureAwait(true);
+        if (generation == _generation)
+        {
+            await RefreshCountAsync(id).ConfigureAwait(true);
+        }
     }
 }

@@ -132,7 +132,7 @@ public sealed class ArchiveRow
 /// Vue « Archives », comme dans la 0.x : rien n'y est supprimé ; une fiche peut être relue, remise
 /// en révision, exclue des rappels ou réincluse.
 /// </summary>
-public sealed partial class ArchivesPageViewModel : ObservableObject, INavigationAware
+public sealed partial class ArchivesPageViewModel : ObservableObject, INavigationAware, IForgetsVault
 {
     /// <summary>Largeur sous laquelle les actions passent sous le titre d'une ligne.</summary>
     public const double RoomMinimum = 600;
@@ -150,6 +150,9 @@ public sealed partial class ArchivesPageViewModel : ObservableObject, INavigatio
     private readonly ListFilter _sort;
     private IReadOnlyList<ArchivedSheetEntry>? _entries;
     private ArchiveRow? _restarting;
+
+    /// <summary>Change à chaque oubli du coffre : une lecture ou une action partie avant n'y remet rien.</summary>
+    private int _generation;
 
     /// <summary>La vue, sur les cas d'usage des rappels (qui rendent les archives) et des révisions ; <paramref name="opener"/> ouvre ses fiches.</summary>
     public ArchivesPageViewModel(ReminderUseCases reminders, ReviewUseCases reviews, IReviewOpener opener, TimeProvider time)
@@ -287,6 +290,30 @@ public sealed partial class ArchivesPageViewModel : ObservableObject, INavigatio
         RefreshCommand.Execute(null);
     }
 
+    /// <summary>
+    /// Oublie les archives lues, les dossiers du filtre, la recherche tapée, les messages et la remise en révision qui
+    /// attendait sa confirmation : la page revient à son état d'avant toute lecture. Les autres filtres, le tri et la
+    /// largeur restent.
+    /// </summary>
+    public void Forget()
+    {
+        _generation++;
+        _entries = null;
+        _restarting = null;
+        Bar.Search = string.Empty;
+        _folder.Replace([new(string.Empty, ArchivesText.AllFolders)]);
+        Rows = [];
+        IsEmpty = false;
+        HasNoMatch = false;
+        HasArchives = false;
+        IsLoading = false;
+        Error = null;
+        Message = null;
+        IsConfirming = false;
+        ConfirmMessage = string.Empty;
+        OnPropertyChanged(nameof(Summary));
+    }
+
     /// <summary>Montre ces fiches archivées.</summary>
     public void Show(IReadOnlyList<ArchivedSheetEntry> entries)
     {
@@ -310,10 +337,16 @@ public sealed partial class ArchivesPageViewModel : ObservableObject, INavigatio
     [RelayCommand]
     private async Task RefreshAsync()
     {
+        var generation = _generation;
         IsLoading = _entries is null;
         try
         {
             var outcome = await Task.Run(_reminders.Archives).ConfigureAwait(true);
+            if (generation != _generation)
+            {
+                // Le coffre a été oublié pendant la lecture : rien n'en revient.
+                return;
+            }
             if (outcome.Succeeded)
             {
                 Show(outcome.Value);
@@ -368,7 +401,13 @@ public sealed partial class ArchivesPageViewModel : ObservableObject, INavigatio
     {
         Error = null;
         Message = null;
+        var generation = _generation;
         var refused = await Task.Run(action).ConfigureAwait(true);
+        if (generation != _generation)
+        {
+            // Le coffre a été oublié pendant l'action : son message nommerait une fiche oubliée.
+            return;
+        }
         if (refused is not null)
         {
             Error = refused;

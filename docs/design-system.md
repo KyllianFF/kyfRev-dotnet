@@ -148,6 +148,7 @@ ne prennent pas le focus.
 | Recherche de commandes | Ctrl+K | aller à une vue, changer de thème, de zoom ou de mode ; sans tenir compte des accents ni de la casse |
 | Aide | F1 | les raccourcis clavier |
 | Mode concentration | Ctrl+Maj+F | masque le menu |
+| Verrouiller | Ctrl+Maj+L | verrouille le coffre chiffré ouvert : son écran de déverrouillage remplace les vues |
 | Zoom | Ctrl+plus, Ctrl+moins, Ctrl+0 | de 80 à 200 %, par pas de 10 % |
 | Vues du menu | Ctrl+1 à Ctrl+9 | les neuf premières vues |
 

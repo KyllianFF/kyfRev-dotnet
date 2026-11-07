@@ -253,8 +253,18 @@ public sealed partial class SheetsPageViewModel
             ActionDestination = ActionDestinations.First(choice => choice.Value == folder);
             return;
         }
+        var generation = _generation;
         var refusal = await Task.Run(() => Run(action, sheet, path, string.Empty, folder, erases: false)).ConfigureAwait(true);
+        if (generation != _generation)
+        {
+            // Le coffre a été oublié pendant le rangement : il n'est pas relu, et son refus nommerait ce qui est oublié.
+            return;
+        }
         await RefreshAsync().ConfigureAwait(true);
+        if (generation != _generation)
+        {
+            return;
+        }
         Error = refusal;
         Done = refusal is null ? SheetActionsText.Moved : null;
     }
@@ -292,6 +302,30 @@ public sealed partial class SheetsPageViewModel
         OnPropertyChanged(nameof(DepthWarning));
         OnPropertyChanged(nameof(HasDepthWarning));
         IsActing = true;
+    }
+
+    /// <summary>Ferme la fenêtre d'action, et oublie ce qu'elle visait, ce qui y est écrit, ce qui vient d'aboutir et l'indice du glisser-déposer.</summary>
+    private void ForgetAction()
+    {
+        _action = default;
+        _actionSheet = null;
+        _actionFolder = string.Empty;
+        _confirmLabel = string.Empty;
+        IsActing = false;
+        ActionTitle = string.Empty;
+        ActionMessage = null;
+        ActionInputLabel = null;
+        ActionInput = string.Empty;
+        ActionDestinations = [];
+        ActionDestination = null;
+        CanErase = false;
+        ErasesForGood = false;
+        ActionError = null;
+        Done = null;
+        DropHint = null;
+        OnPropertyChanged(nameof(ActionConfirm));
+        OnPropertyChanged(nameof(DepthWarning));
+        OnPropertyChanged(nameof(HasDepthWarning));
     }
 
     private void OfferDestinations(string current, IReadOnlyList<string> excluded)
@@ -335,7 +369,13 @@ public sealed partial class SheetsPageViewModel
             return;
         }
         var (action, sheet, folder, destination, erases) = (_action, _actionSheet, _actionFolder, ActionDestination?.Value ?? string.Empty, ErasesForGood);
+        var generation = _generation;
         var refusal = await Task.Run(() => Run(action, sheet, folder, input, destination, erases)).ConfigureAwait(true);
+        if (generation != _generation)
+        {
+            // Le coffre a été oublié pendant l'action : ni sa réponse ni la relecture qui la suit n'y reviennent.
+            return;
+        }
         if (refusal is not null)
         {
             ActionError = refusal;

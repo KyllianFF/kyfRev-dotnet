@@ -185,6 +185,39 @@ public sealed class VaultUnlockTests
     }
 
     [TestMethod]
+    public void Locking_closes_the_encrypted_vault_and_only_its_password_opens_it_again()
+    {
+        using var scene = new Scene();
+        scene.CreateEncrypted();
+        var opened = scene.App.Vaults.Unlock(scene.Folder.Vault, VaultSecret.Password(Password), remember: true);
+        Assert.IsTrue(opened.Encrypted, "le coffre ouvert se dit chiffré");
+        Assert.IsTrue(scene.App.Vaults.State().Encrypted);
+
+        var locked = scene.App.Vaults.Lock();
+
+        Assert.AreEqual(scene.Folder.Vault, locked.Locked);
+        Assert.IsNull(locked.Vault);
+        Assert.IsFalse(locked.Encrypted);
+        Assert.IsNull(scene.App.Host.Root);
+        Assert.IsFalse(scene.App.Sheets.Create(null, "Mitose", string.Empty).Succeeded, "fermé, plus rien ne s'y lit ni ne s'y écrit");
+        Assert.IsTrue(scene.Logs.Entries.Any(entry => entry.Message.Contains("verrouillé", StringComparison.Ordinal)));
+        // Le verrou est libéré : une autre application l'ouvrirait (avec sa clé).
+        using (var other = scene.Restart())
+        {
+            Assert.AreEqual(scene.Folder.Vault, other.App.Vaults.Unlock(scene.Folder.Vault, VaultSecret.Password(Password), remember: true).Vault);
+        }
+
+        // Verrouiller sans coffre, ou un coffre en clair, ne fait rien.
+        Assert.IsNull(scene.App.Vaults.Lock().Locked);
+        var plain = scene.Folder.PathOf("Clair");
+        scene.App.Vaults.Create(plain);
+        var state = scene.App.Vaults.Lock();
+        Assert.AreEqual(plain, state.Vault);
+        Assert.IsNull(state.Locked);
+        Assert.IsFalse(state.Encrypted);
+    }
+
+    [TestMethod]
     public void Without_keys_nothing_is_encrypted()
     {
         var keys = new NoVaultKeys();

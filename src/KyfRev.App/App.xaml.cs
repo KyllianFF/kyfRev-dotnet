@@ -51,6 +51,8 @@ internal sealed partial class App : System.Windows.Application
         var window = _services.GetRequiredService<ShellWindow>();
         MainWindow = window;
         window.Show();
+        // Le coffre chiffré se verrouille de lui-même après un temps d'inactivité, ou quand Windows se verrouille.
+        _services.GetRequiredService<AutoLock>().Start();
     }
 
     /// <summary>

@@ -124,7 +124,7 @@ public sealed partial class DefinitionRow : ObservableObject
 }
 
 /// <summary>La vue « Définitions » : le glossaire du coffre, par dossier, avec une recherche.</summary>
-public sealed partial class DefinitionsPageViewModel : ObservableObject
+public sealed partial class DefinitionsPageViewModel : ObservableObject, IForgetsVault
 {
     private readonly AnnotationUseCases _annotations;
     private readonly IReviewOpener _opener;
@@ -132,6 +132,9 @@ public sealed partial class DefinitionsPageViewModel : ObservableObject
     private DefinitionRow? _toDelete;
     private IReadOnlyList<VaultDefinition> _all = [];
     private string _folder = string.Empty;
+
+    /// <summary>Compte les oublis du coffre : une lecture partie avant le dernier oubli n'y remet rien.</summary>
+    private int _generation;
 
     /// <summary>Le glossaire, sur ces cas d'usage.</summary>
     public DefinitionsPageViewModel(AnnotationUseCases annotations, IReviewOpener opener)
@@ -184,7 +187,12 @@ public sealed partial class DefinitionsPageViewModel : ObservableObject
     private async Task LoadAsync()
     {
         IsLoading = _all.Count == 0;
+        var generation = _generation;
         var outcome = await Task.Run(_annotations.Definitions).ConfigureAwait(true);
+        if (generation != _generation)
+        {
+            return;
+        }
         IsLoading = false;
         if (!outcome.Succeeded)
         {
@@ -210,7 +218,12 @@ public sealed partial class DefinitionsPageViewModel : ObservableObject
     internal async Task SaveAsync(DefinitionRow row)
     {
         var (id, definition) = (row.Definition.Id, new Definition(row.EditedTerm.Trim(), row.EditedExplanation.Trim()));
+        var generation = _generation;
         var outcome = await Task.Run(() => _annotations.ModifyDefinition(id, definition)).ConfigureAwait(true);
+        if (generation != _generation)
+        {
+            return;
+        }
         if (outcome.Succeeded)
         {
             row.EndEditing();
@@ -226,7 +239,12 @@ public sealed partial class DefinitionsPageViewModel : ObservableObject
     internal async Task MarkAsync(DefinitionRow row, bool everywhere)
     {
         var id = row.Definition.Id;
+        var generation = _generation;
         var outcome = await Task.Run(() => _annotations.MarkEverywhere(id, everywhere)).ConfigureAwait(true);
+        if (generation != _generation)
+        {
+            return;
+        }
         if (!outcome.Succeeded)
         {
             Error = outcome.Error;
@@ -259,7 +277,12 @@ public sealed partial class DefinitionsPageViewModel : ObservableObject
             return;
         }
         var id = row.Definition.Id;
+        var generation = _generation;
         var outcome = await Task.Run(() => _annotations.Trash(id)).ConfigureAwait(true);
+        if (generation != _generation)
+        {
+            return;
+        }
         if (outcome.Succeeded)
         {
             await LoadAsync().ConfigureAwait(true);
@@ -272,6 +295,28 @@ public sealed partial class DefinitionsPageViewModel : ObservableObject
 
     /// <summary>Ouvre la fiche d'une définition, sur son passage.</summary>
     internal void Open(DefinitionRow row) => _opener.OpenPassageInSheet(row.Definition.SheetId, row.Definition.Id);
+
+    /// <summary>
+    /// Oublie le glossaire quand le coffre se verrouille : définitions, brouillons, dossiers, recherche, confirmation et
+    /// message ; la vue revient à son état d'avant toute lecture et relit le coffre à sa prochaine ouverture.
+    /// </summary>
+    public void Forget()
+    {
+        _generation++;
+        _all = [];
+        _rows.Clear();
+        _toDelete = null;
+        _folder = string.Empty;
+        Folders.Clear();
+        Folders.Add(new DefinitionFolder(string.Empty, DefinitionsText.WholeVault));
+        SelectedFolder = Folders[0];
+        Search = string.Empty;
+        IsConfirmingDelete = false;
+        IsLoading = false;
+        Error = null;
+        Refresh();
+        OnPropertyChanged(nameof(IsEmpty));
+    }
 
     partial void OnSelectedFolderChanged(DefinitionFolder? value)
     {

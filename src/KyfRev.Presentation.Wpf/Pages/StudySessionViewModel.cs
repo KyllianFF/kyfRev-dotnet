@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using KyfRev.Application.Model;
 using KyfRev.Application.Ports;
+using KyfRev.Presentation.Wpf.Shell;
 
 namespace KyfRev.Presentation.Wpf.Pages;
 
@@ -20,7 +21,7 @@ public interface IReviewPage : INotifyPropertyChanged
 /// interrompue (vue quittée, application fermée), elle se reprend le même jour. Le bilan de fin
 /// donne le temps passé, les éléments faits, reportés et restants.
 /// </summary>
-public sealed partial class StudySessionViewModel : ObservableObject
+public sealed partial class StudySessionViewModel : ObservableObject, ILeaving
 {
     private readonly IStudySessionStore _store;
     private readonly TimeProvider _time;
@@ -119,6 +120,20 @@ public sealed partial class StudySessionViewModel : ObservableObject
         {
             Keep();
         }
+    }
+
+    /// <summary>
+    /// Avant que le coffre se verrouille : ce qui s'écrit sur l'élément en cours s'enregistre, puis la séance est gardée
+    /// pour être reprise. Faux si ce qui s'écrit n'a pas pu être enregistré.
+    /// </summary>
+    public async Task<bool> LeaveAsync()
+    {
+        if (Current is ILeaving item && !await item.LeaveAsync().ConfigureAwait(true))
+        {
+            return false;
+        }
+        Interrupt();
+        return true;
     }
 
     /// <summary>Élément suivant (ou passer celui-ci) ; après le dernier, le bilan.</summary>

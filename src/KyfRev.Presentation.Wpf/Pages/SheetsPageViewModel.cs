@@ -124,7 +124,7 @@ public sealed class SheetRow
 /// Vue « Fiches » : toutes les fiches du coffre, à chercher, filtrer et trier ; la fiche choisie
 /// s'affiche à côté quand il y a la place, et s'ouvre sinon d'un clic. On y crée une fiche.
 /// </summary>
-public sealed partial class SheetsPageViewModel : ObservableObject, INavigationAware
+public sealed partial class SheetsPageViewModel : ObservableObject, INavigationAware, IForgetsVault
 {
     /// <summary>Les entrées que les extensions ajoutent au clic droit d'une fiche ou d'un dossier.</summary>
     public Func<ExtensionMenuZone, IReadOnlyDictionary<string, string>, IReadOnlyList<MenuContribution>>? ExtensionMenus { get; set; }
@@ -157,6 +157,9 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
 
     /// <summary>Numéro du dernier aperçu demandé : une lecture dépassée est ignorée.</summary>
     private int _previewTicket;
+
+    /// <summary>Change à chaque oubli du coffre : une lecture ou une action partie avant n'y remet rien.</summary>
+    private int _generation;
 
     /// <summary>La vue, sur les cas d'usage des fiches, des dossiers et des modèles ; <paramref name="opener"/> ouvre ses fiches.</summary>
     public SheetsPageViewModel(SheetUseCases sheets, FolderUseCases folders, TemplateUseCases templates, IReviewOpener opener, TimeProvider time, ReviewUseCases? reviews = null, TrashUseCases? trash = null)
@@ -305,6 +308,39 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
     /// <inheritdoc/>
     public void OnNavigatedTo() => RefreshCommand.Execute(null);
 
+    /// <summary>
+    /// Oublie les fiches lues, les dossiers pliés ou proposés, les modèles, la fiche choisie et son aperçu, la recherche,
+    /// ce qui est écrit dans les fenêtres, les messages et l'action qui attendait sa confirmation : la page revient à son
+    /// état d'avant toute lecture. L'état choisi, le tri et la largeur restent.
+    /// </summary>
+    public void Forget()
+    {
+        _generation++;
+        _previewTicket++;
+        _entries = null;
+        _folderPaths = [];
+        _createIn = null;
+        _collapsed.Clear();
+        Bar.Search = string.Empty;
+        _folder.Replace([new(string.Empty, SheetsText.AllFolders)]);
+        Rows = [];
+        SelectedRow = null;
+        Preview = null;
+        IsEmpty = false;
+        HasNoMatch = false;
+        HasSheets = false;
+        IsLoading = false;
+        Error = null;
+        IsCreating = false;
+        NewTitle = string.Empty;
+        NewFolderName = string.Empty;
+        NewFolder.Replace([new(string.Empty, SheetsText.AtRoot)]);
+        NewTemplate.Replace([new(null, SheetsText.EmptyTemplate)]);
+        CreateError = null;
+        ForgetAction();
+        OnPropertyChanged(nameof(Summary));
+    }
+
     /// <summary>Montre ces fiches.</summary>
     public void Show(IReadOnlyList<VaultSheet> entries)
     {
@@ -336,10 +372,16 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
     [RelayCommand]
     private async Task RefreshAsync()
     {
+        var generation = _generation;
         IsLoading = _entries is null;
         try
         {
             var (outcome, folders) = await Task.Run(() => (_sheets.List(), _folders.Folders())).ConfigureAwait(true);
+            if (generation != _generation)
+            {
+                // Le coffre a été oublié pendant la lecture : rien n'en revient.
+                return;
+            }
             if (outcome.Succeeded)
             {
                 _folderPaths = folders.Succeeded ? folders.Value : [];
@@ -352,7 +394,10 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
         }
         finally
         {
-            IsLoading = false;
+            if (generation == _generation)
+            {
+                IsLoading = false;
+            }
         }
     }
 
@@ -387,7 +432,13 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
     [RelayCommand]
     private async Task RequestCreateAsync()
     {
+        var generation = _generation;
         var (folders, templates) = await Task.Run(() => (_folders.Folders(), _templates.Templates())).ConfigureAwait(true);
+        if (generation != _generation)
+        {
+            // Le coffre a été oublié pendant la lecture : la fenêtre ne s'ouvre pas sur ses dossiers.
+            return;
+        }
         if (!folders.Succeeded || !templates.Succeeded)
         {
             Error = folders.Error ?? templates.Error;
@@ -424,7 +475,13 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
         }
         var folder = IsNewFolder ? NewFolderName.Trim() : (string)NewFolder.Value!;
         var template = (string?)NewTemplate.Value;
+        var generation = _generation;
         var outcome = await Task.Run(() => _sheets.Create(folder, title, template)).ConfigureAwait(true);
+        if (generation != _generation)
+        {
+            // Le coffre a été oublié pendant la création : la fenêtre ne se rouvre pas, et la fiche ne s'ouvre pas.
+            return;
+        }
         if (!outcome.Succeeded)
         {
             CreateError = outcome.Error;

@@ -130,11 +130,7 @@ internal static class Composition
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Exports);
         services.AddSingleton(provider =>
         {
-            void VaultChanged()
-            {
-                provider.GetRequiredService<SettingsPageViewModel>().Forget();
-                provider.GetRequiredService<ShellViewModel>().ShowWorkspace();
-            }
+            void VaultChanged() => Composition.VaultChanged(provider);
             return new DataSettingsViewModel(
                 provider.GetRequiredService<VaultUseCases>(),
                 provider.GetRequiredService<BackupUseCases>(),
@@ -271,12 +267,66 @@ internal static class Composition
                 provider.GetRequiredService<ExtensionBlocks>().Forget();
                 modules.Load(provider.GetRequiredService<SettingsUseCases>().Get() is { Succeeded: true } settings ? settings.Value : null);
                 ShowExtensions();
+                shell.CanLock = provider.GetRequiredService<VaultUseCases>().State().Encrypted;
             };
+            shell.Locking = () => provider.GetRequiredService<VaultLocking>().LockAsync();
             return shell;
         });
         services.AddTransient<ShellWindow>();
+        // Le coffre chiffré se verrouille, à la demande ou de lui-même : rien de lui ne reste dans les vues.
+        services.AddSingleton<IUserPresence, UserPresence>();
+        services.AddSingleton(provider => new VaultLocking(
+            provider.GetRequiredService<ShellViewModel>(),
+            provider.GetRequiredService<VaultUseCases>(),
+            provider.GetRequiredService<IFolderPicker>(),
+            () => ForgetVault(provider),
+            () => VaultChanged(provider)));
+        services.AddSingleton(provider => new AutoLock(
+            provider.GetRequiredService<IUserPresence>(),
+            () => AutoLock.DefaultDelay,
+            () => provider.GetRequiredService<VaultLocking>().LockAsync()));
         return services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
     }
+
+    /// <summary>Un autre coffre est ouvert : les réglages lus de l'ancien sont oubliés, et l'espace de travail revient.</summary>
+    private static void VaultChanged(IServiceProvider provider)
+    {
+        provider.GetRequiredService<SettingsPageViewModel>().Forget();
+        provider.GetRequiredService<ShellViewModel>().ShowWorkspace();
+    }
+
+    /// <summary>
+    /// Le coffre s'est verrouillé : chaque vue oublie ce qu'elle avait lu, les modules se déchargent, et les moteurs web
+    /// des extensions et des schémas repartent à vide.
+    /// </summary>
+    private static void ForgetVault(IServiceProvider provider)
+    {
+        foreach (var view in ForgettingViews(provider))
+        {
+            view.Forget();
+        }
+        provider.GetRequiredService<SettingsPageViewModel>().Forget();
+        provider.GetRequiredService<ExtensionBlocks>().Forget();
+        // Les pages des extensions ont relancé leur moteur, qui dit encore les réponses perdues : elles s'oublient aussi.
+        provider.GetRequiredService<ExtensionEngine>().ForgetAllFaults();
+        provider.GetRequiredService<MermaidEngine>().Reset();
+        provider.GetRequiredService<ActiveModules>().Load(null);
+    }
+
+    /// <summary>Les vues qui gardent ce qu'elles ont lu du coffre.</summary>
+    private static IForgetsVault[] ForgettingViews(IServiceProvider provider) =>
+    [
+        provider.GetRequiredService<DashboardPageViewModel>(),
+        provider.GetRequiredService<SheetsPageViewModel>(),
+        provider.GetRequiredService<DefinitionsPageViewModel>(),
+        provider.GetRequiredService<ArchivesPageViewModel>(),
+        provider.GetRequiredService<StatisticsPageViewModel>(),
+        provider.GetRequiredService<HealthPageViewModel>(),
+        provider.GetRequiredService<DataSettingsViewModel>(),
+        provider.GetRequiredService<AboutSettingsViewModel>(),
+        provider.GetRequiredService<ExtensionSettingsViewModel>(),
+        provider.GetRequiredService<ExtensionPages>(),
+    ];
 
     /// <summary>Les entrées du menu apportées par les modules actifs, avec leurs vues.</summary>
     internal static IReadOnlyList<NavigationItem> ModuleEntries(ActiveModules modules, IExternalLinks links, Func<SchemaUseCases, SchemasPageViewModel> schemasPage) =>

@@ -6,7 +6,7 @@ using KyfRev.Presentation.Wpf.Shell;
 namespace KyfRev.Presentation.Wpf.Pages;
 
 /// <summary>L'onglet « À propos » : ce qui tourne, où, et sous quelle licence.</summary>
-public sealed partial class AboutSettingsViewModel : ObservableObject, INavigationAware
+public sealed partial class AboutSettingsViewModel : ObservableObject, INavigationAware, IForgetsVault
 {
     private readonly VaultUseCases _vaults;
 
@@ -31,6 +31,9 @@ public sealed partial class AboutSettingsViewModel : ObservableObject, INavigati
 
     /// <inheritdoc/>
     public void OnNavigatedTo() => Show(_vaults.State());
+
+    /// <summary>Oublie le dossier du coffre ; ce qui tourne et sous quel mode reste affiché.</summary>
+    public void Forget() => Vault = string.Empty;
 
     /// <summary>Montre cet état de l'application.</summary>
     public void Show(AppState state)

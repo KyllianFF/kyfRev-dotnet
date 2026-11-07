@@ -211,10 +211,41 @@ kyfrev-coffre dechiffrer <coffre chiffré> <nouveau dossier>
   Coché, le coffre ne protège plus contre quelqu'un qui utilise la session de l'utilisateur, seulement contre un vol du
   disque.
 
-Le verrouillage (Ctrl+Maj+L, et après 15 minutes d'inactivité), l'assistant « Chiffrer ce coffre » et la carte
-Chiffrement des paramètres viennent avec les lots suivants.
+## Le verrouillage
+
+- **À la demande** : Ctrl+Maj+L, ou « Verrouiller le coffre chiffré » dans la recherche (Ctrl+K), tant qu'un coffre
+  chiffré est ouvert. Un coffre en clair ne se verrouille pas.
+- **De lui-même** : après 15 minutes sans rien toucher dans toute la session de Windows (`GetLastInputInfo` : ce qui se
+  tape dans le texte mis en forme compte aussi), et dès que la session de Windows se verrouille ou que le poste se met en
+  veille (`IUserPresence`, `AutoLock`).
+- **Dans cet ordre** (`VaultLocking`), pour que rien ne se perde ni ne reste :
+  1. ce qui s'écrit s'enregistre, et une séance en cours se garde pour être reprise ; si ce qui s'écrit n'a pas pu
+     l'être (un conflit, un disque plein), le coffre reste ouvert ;
+  2. l'écran de déverrouillage remplace les vues, qui se ferment : le texte mis en forme et les schémas, avec leur moteur
+     web ;
+  3. le coffre se ferme, une fois finie la lecture en cours : son verrou est libéré, sa clé effacée, et son index en clair
+     (les chemins, donc les titres) oublié ;
+  4. chaque vue oublie ce qu'elle avait lu (`IForgetsVault`) : « Aujourd'hui », les fiches et leur aperçu, les
+     définitions, les archives, les statistiques, la santé du coffre, la corbeille et les données des paramètres, le
+     journal, les erreurs et les pages des extensions (leur moteur repart à vide), les dessins des schémas ; les modules se
+     déchargent. Une lecture partie avant n'y remet rien.
+- **Seul son mot de passe ou sa clé de récupération le rouvre** : la clé retenue sur ce poste ne sert qu'au démarrage,
+  sinon verrouiller ne protégerait de rien.
+- **Ce que le verrouillage ne peut pas effacer** : les chaînes de .NET ne s'effacent pas (le mot de passe tapé, le texte
+  lu), seulement leurs références ; la mémoire libérée, le fichier d'échange et la mise en veille prolongée peuvent en
+  garder des traces, et le presse-papiers garde ce qui y a été copié. BitLocker reste recommandé.
+
+L'assistant « Chiffrer ce coffre » et la carte Chiffrement des paramètres viennent avec le lot suivant.
 
 ## Ce que les tests vérifient
+
+- **Le verrouillage** : il montre l'écran de déverrouillage, ferme le coffre (plus rien ne s'y lit ni ne s'y écrit, son
+  verrou est libéré) et fait tout oublier aux vues ; la clé retenue ne le rouvre pas, son mot de passe si. Rien ne se
+  verrouille sans coffre chiffré ouvert, ni deux fois à la fois ; ce qui s'écrit et n'a pas pu être enregistré garde le
+  coffre ouvert ; une séance en cours est gardée. L'inactivité verrouille après le délai (jamais, sans délai), le départ
+  de l'utilisateur tout de suite ; la session verrouillée ou le poste en veille, et rien d'autre, comptent comme un
+  départ. Chaque vue, chargée sur un vrai coffre, n'en garde rien une fois oubliée, et se remplit de nouveau à sa
+  prochaine ouverture ; une lecture partie avant l'oubli n'y remet rien. Le coffre chiffré libéré n'a plus d'index en clair.
 
 - **Les vecteurs publiés** : AES-256-GCM (McGrew et Viega, cas 13 et 14) et PBKDF2-HMAC-SHA256 (RFC 7914, §11).
 - **Argon2id** : recalculé par une seconde implémentation, indépendante de libsodium, qui doit rendre les mêmes octets.

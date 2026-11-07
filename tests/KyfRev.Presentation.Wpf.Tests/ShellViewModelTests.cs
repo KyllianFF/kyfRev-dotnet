@@ -203,7 +203,8 @@ public sealed class ShellViewModelTests
     public void Help_and_search_never_overlap()
     {
         var shell = new TestShell().Shell;
-        Assert.HasCount(10, shell.Shortcuts);
+        Assert.HasCount(11, shell.Shortcuts);
+        Assert.AreEqual("Ctrl+Maj+L", shell.Shortcuts[^1].Keys);
         Assert.AreEqual("F11 | Ctrl+Entrée | Ctrl+→", string.Join(" | ", shell.Shortcuts.Skip(3).Take(3).Select(shortcut => shortcut.Keys)));
         shell.OpenPalette();
         shell.ShowHelp();

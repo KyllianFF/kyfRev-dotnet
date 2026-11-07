@@ -145,6 +145,7 @@
     <KeyBinding Key="K" Modifiers="Control" Command="{Binding OpenPaletteCommand}" />
     <KeyBinding Key="F1" Command="{Binding ShowHelpCommand}" />
     <KeyBinding Key="F" Modifiers="Control+Shift" Command="{Binding ToggleFocusModeCommand}" />
+    <KeyBinding Key="L" Modifiers="Control+Shift" Command="{Binding LockCommand}" />
     <KeyBinding Key="F11" Command="{Binding ToggleFullScreenCommand}" />
     <KeyBinding Key="Escape" Command="{Binding ExitFullScreenCommand}" />
     <KeyBinding Key="OemPlus" Modifiers="Control" Command="{Binding ZoomInCommand}" />

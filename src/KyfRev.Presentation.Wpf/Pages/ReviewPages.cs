@@ -6,6 +6,7 @@ using KyfRev.Application.Model;
 using KyfRev.Application.Ports;
 using KyfRev.Application.UseCases;
 using KyfRev.Presentation.Wpf.Editing;
+using KyfRev.Presentation.Wpf.Shell;
 using KyfRev.Rendering;
 
 namespace KyfRev.Presentation.Wpf.Pages;
@@ -245,7 +246,7 @@ public sealed partial class PassagePageViewModel : ObservableObject, IReviewPage
 /// barre de révision. Ouvrir une fiche ne valide rien. Les volets se replient quand la fenêtre rétrécit, le
 /// plan d'abord ; ils s'ouvrent alors par-dessus le texte, avec les mêmes boutons.
 /// </summary>
-public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
+public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage, ILeaving
 {
     /// <summary>Largeur du plan à côté du texte.</summary>
     public const double OutlineWidth = 230;
@@ -984,6 +985,9 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
                 break;
         }
     }
+
+    /// <summary>Avant que le coffre se verrouille, ce qui s'écrit s'enregistre ; faux si cela n'a pas pu se faire.</summary>
+    public async Task<bool> LeaveAsync() => Editor is not { } editor || await editor.FinishAsync().ConfigureAwait(true);
 
     /// <summary>Revient à la vue d'où la fiche a été ouverte ; ce qui s'écrit est d'abord enregistré.</summary>
     [RelayCommand]

@@ -111,6 +111,9 @@
   <data name="ShortcutFullScreen" xml:space="preserve">
     <value>Plein écran</value>
   </data>
+  <data name="ShortcutLock" xml:space="preserve">
+    <value>Verrouiller le coffre chiffré</value>
+  </data>
   <data name="ShortcutGoTo" xml:space="preserve">
     <value>Aller à la vue 1 à 9 du menu</value>
   </data>

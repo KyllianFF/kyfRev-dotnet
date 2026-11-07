@@ -62,7 +62,7 @@ public sealed class TrashRow
 /// L'onglet « Données » : le coffre, ses sauvegardes, ce qui a été supprimé et les exports, comme dans la 0.x. Rien n'est
 /// jamais purgé, et un export ne remplace aucun fichier.
 /// </summary>
-public sealed partial class DataSettingsViewModel : ObservableObject, INavigationAware
+public sealed partial class DataSettingsViewModel : ObservableObject, INavigationAware, IForgetsVault
 {
     private static readonly CultureInfo French = CultureInfo.GetCultureInfo("fr-FR");
 
@@ -78,6 +78,9 @@ public sealed partial class DataSettingsViewModel : ObservableObject, INavigatio
     private readonly Func<QuoteUseCases?> _quotes;
     private BackupRow? _restoring;
     private TrashRow? _erasing;
+
+    /// <summary>Change à chaque oubli du coffre : une lecture ou une action partie avant n'y remet rien.</summary>
+    private int _generation;
 
     /// <summary>L'onglet ; <paramref name="vaultChanged"/> ramène l'application sur le coffre qui vient d'être ouvert.</summary>
     public DataSettingsViewModel(
@@ -217,6 +220,32 @@ public sealed partial class DataSettingsViewModel : ObservableObject, INavigatio
         ReloadCommand.Execute(null);
     }
 
+    /// <summary>
+    /// Oublie ce que l'onglet a lu du coffre : son chemin, ses sauvegardes, ce qui a été supprimé, les messages et les
+    /// confirmations en attente ; l'onglet se relit à sa prochaine ouverture.
+    /// </summary>
+    public void Forget()
+    {
+        _generation++;
+        _restoring = null;
+        _erasing = null;
+        VaultLine = string.Empty;
+        VaultHelp = string.Empty;
+        BackupHelp = string.Empty;
+        Backups = [];
+        Rotation = false;
+        RestoredVault = null;
+        Trash = [];
+        ExportsQuotes = false;
+        IsLoaded = false;
+        Error = null;
+        Message = null;
+        IsConfirmingErase = false;
+        EraseMessage = string.Empty;
+        IsConfirming = false;
+        ConfirmMessage = string.Empty;
+    }
+
     /// <summary>« 2,4 Mo » pour une taille en octets.</summary>
     internal static string SizeOf(long bytes) => bytes switch
     {
@@ -236,7 +265,13 @@ public sealed partial class DataSettingsViewModel : ObservableObject, INavigatio
         VaultHelp = state.Mode == AppMode.Portable ? SettingsHubText.VaultHelpPortable : SettingsHubText.VaultHelpInstalled;
         var quotes = _quotes();
         ExportsQuotes = quotes is not null;
+        var generation = _generation;
         var (backups, sheets, passages, quoteList) = await Task.Run(() => (_backups.List(), _trash.TrashedSheets(), _trash.TrashedAnnotations(), quotes?.Quotes())).ConfigureAwait(true);
+        if (generation != _generation)
+        {
+            // Le coffre a été oublié pendant la lecture : elle n'y remet rien.
+            return;
+        }
         if (!backups.Succeeded)
         {
             Error = backups.Error;
@@ -345,7 +380,13 @@ public sealed partial class DataSettingsViewModel : ObservableObject, INavigatio
         Message = null;
         try
         {
+            var generation = _generation;
             var outcome = await Task.Run(() => _backups.Restore(backup.Name)).ConfigureAwait(true);
+            if (generation != _generation)
+            {
+                // Le coffre a été oublié pendant l'extraction : son dossier ne se montre pas.
+                return;
+            }
             if (outcome.Succeeded)
             {
                 RestoredVault = outcome.Value;
@@ -470,7 +511,13 @@ public sealed partial class DataSettingsViewModel : ObservableObject, INavigatio
         Message = null;
         try
         {
+            var generation = _generation;
             var refusal = await Task.Run(action).ConfigureAwait(true);
+            if (generation != _generation)
+            {
+                // Le coffre a été oublié pendant l'action : ni son message ni la relecture.
+                return;
+            }
             if (refusal is not null)
             {
                 Error = refusal;

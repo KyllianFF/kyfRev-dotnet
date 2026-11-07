@@ -35,6 +35,7 @@ public sealed class ShellWindowTests
             Assert.AreSame(shell.OpenPaletteCommand, Binding(window, Key.K, ModifierKeys.Control).Command);
             Assert.AreSame(shell.ShowHelpCommand, Binding(window, Key.F1, ModifierKeys.None).Command);
             Assert.AreSame(shell.ToggleFocusModeCommand, Binding(window, Key.F, ModifierKeys.Control | ModifierKeys.Shift).Command);
+            Assert.AreSame(shell.LockCommand, Binding(window, Key.L, ModifierKeys.Control | ModifierKeys.Shift).Command);
             Assert.AreSame(shell.ZoomInCommand, Binding(window, Key.OemPlus, ModifierKeys.Control).Command);
             Assert.AreSame(shell.ZoomInCommand, Binding(window, Key.Add, ModifierKeys.Control).Command);
             Assert.AreSame(shell.ZoomOutCommand, Binding(window, Key.OemMinus, ModifierKeys.Control).Command);

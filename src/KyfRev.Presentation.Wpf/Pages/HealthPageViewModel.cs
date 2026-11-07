@@ -93,7 +93,7 @@ public sealed record HealthSection(string Title, string? Help, IReadOnlyList<Hea
 /// Vue « Santé du coffre », comme dans la 0.x : chaque problème attend une décision, et rien n'est réparé ni effacé sans
 /// la personne. En bas, le diagnostic à copier pour un signalement : rien ne part tout seul.
 /// </summary>
-public sealed partial class HealthPageViewModel : ObservableObject, INavigationAware
+public sealed partial class HealthPageViewModel : ObservableObject, INavigationAware, IForgetsVault
 {
     private static readonly CultureInfo French = CultureInfo.GetCultureInfo("fr-FR");
 
@@ -106,6 +106,9 @@ public sealed partial class HealthPageViewModel : ObservableObject, INavigationA
     private readonly IEnumerable<IVaultHealthCheck> _checks;
     private IReadOnlyList<BackupEntry> _backupList = [];
     private bool _shown;
+
+    // Change à chaque oubli : une lecture partie avant n'apporte plus rien.
+    private int _generation;
 
     /// <summary>La vue ; <paramref name="diagnostic"/> rédige le diagnostic, <paramref name="copy"/> le met dans le presse-papiers.</summary>
     public HealthPageViewModel(MaintenanceUseCases maintenance, BackupUseCases backups, SheetUseCases sheets, IReviewOpener opener, Func<string> diagnostic, Action<string> copy, IEnumerable<IVaultHealthCheck>? checks = null)
@@ -209,6 +212,26 @@ public sealed partial class HealthPageViewModel : ObservableObject, INavigationA
     {
         Message = null;
         RefreshCommand.Execute(null);
+    }
+
+    /// <summary>
+    /// Le coffre se verrouille : le rapport, les sauvegardes proposées, les messages et le diagnostic s'oublient ; la
+    /// prochaine ouverture relit tout, et une lecture encore en cours n'y remet rien.
+    /// </summary>
+    public void Forget()
+    {
+        _generation++;
+        _shown = false;
+        _backupList = [];
+        Summary = string.Empty;
+        IsHealthy = false;
+        Sections = [];
+        IsLoaded = false;
+        Error = null;
+        Message = null;
+        IsDiagnosticShown = false;
+        DiagnosticText = string.Empty;
+        DiagnosticMessage = null;
     }
 
     /// <summary>Montre ce rapport ; <paramref name="backups"/> sont les sauvegardes d'où restaurer une fiche manquante, <paramref name="notices"/> les remarques des modules.</summary>
@@ -354,7 +377,12 @@ public sealed partial class HealthPageViewModel : ObservableObject, INavigationA
 
     private async Task ReadAsync(Func<Outcome<HealthDetails>> read)
     {
+        var generation = _generation;
         var (report, backups, notices) = await Task.Run(() => (read(), _backups.List(), _checks.SelectMany(check => check.Notices()).ToList())).ConfigureAwait(true);
+        if (generation != _generation)
+        {
+            return;
+        }
         if (report.Succeeded)
         {
             Show(report.Value, backups.Succeeded ? backups.Value.Backups : [], notices);
@@ -373,7 +401,12 @@ public sealed partial class HealthPageViewModel : ObservableObject, INavigationA
         Message = null;
         try
         {
+            var generation = _generation;
             var refusal = await Task.Run(action).ConfigureAwait(true);
+            if (generation != _generation)
+            {
+                return;
+            }
             if (refusal is not null)
             {
                 Error = refusal;

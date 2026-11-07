@@ -14,7 +14,8 @@ namespace KyfRev.Application.UseCases;
 /// Dossier d'un coffre chiffré qui attend sa clé (son mot de passe ou sa clé de récupération) : l'écran de
 /// déverrouillage la demande. Le coffre ouvert, s'il y en a un, le reste.
 /// </param>
-public sealed record AppState(string Version, AppMode Mode, string? Vault, string? VaultToCreate, string? OpenError, string? Locked = null);
+/// <param name="Encrypted">Le coffre ouvert est chiffré : il se verrouille.</param>
+public sealed record AppState(string Version, AppMode Mode, string? Vault, string? VaultToCreate, string? OpenError, string? Locked = null, bool Encrypted = false);
 
 /// <summary>
 /// Ouverture et création du coffre. À chaque ouverture : la journée est préparée (tirage des
@@ -167,12 +168,28 @@ public sealed partial class VaultUseCases(
         return State();
     }
 
+    /// <summary>
+    /// Verrouille le coffre chiffré ouvert : il est fermé, une fois finie l'opération en cours, et sa clé effacée ; l'état
+    /// l'attend de nouveau (<see cref="AppState.Locked"/>). Il ne s'ouvre ensuite qu'avec son mot de passe ou sa clé de
+    /// récupération : la clé retenue sur ce poste ne sert qu'au démarrage. Un coffre en clair ne se verrouille pas.
+    /// </summary>
+    public AppState Lock()
+    {
+        if (host.Root is not { } root || !keys.IsEncrypted(root))
+        {
+            return State();
+        }
+        host.Close();
+        LogVaultLocked(logger, root);
+        return LockedState(root, null);
+    }
+
     private AppState LockedState(string root, string? error) => StateWith(error) with { Locked = root };
 
     private AppState StateWith(string? openError)
     {
         var open = host.Root;
-        return new AppState(version, locations.Mode, open, open is null ? locations.VaultToCreate() : null, openError);
+        return new AppState(version, locations.Mode, open, open is null ? locations.VaultToCreate() : null, openError, Encrypted: open is not null && keys.IsEncrypted(open));
     }
 
     private void PrepareDay(IVault vault, Present present)
@@ -236,6 +253,9 @@ public sealed partial class VaultUseCases(
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Coffre {Root} ouvert mais pas retenu : il ne sera pas rouvert au prochain démarrage.")]
     private static partial void LogVaultNotRemembered(ILogger logger, string root);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Coffre chiffré {Root} verrouillé.")]
+    private static partial void LogVaultLocked(ILogger logger, string root);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Coffre chiffré {Root} ouvert, mais sa clé n'a pas pu être retenue ou oubliée sur ce poste (retenir : {Remember}).")]
     private static partial void LogKeyNotRemembered(ILogger logger, string root, bool remember);
