@@ -77,6 +77,27 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
         ("--repere-passage", "Kyf.Brush.MarkerPassage"),
         ("--pastille-fiche-fond", "Kyf.Brush.PillSheetBackground"),
         ("--pastille-passage-fond", "Kyf.Brush.PillPassageBackground"),
+        ("--tableau-sobre-bande", "Kyf.Brush.TableSoberBand"),
+        ("--tableau-foret-entete", "Kyf.Brush.TableForestHeader"),
+        ("--tableau-foret-entete-texte", "Kyf.Brush.TableForestHeaderText"),
+        ("--tableau-foret-bande", "Kyf.Brush.TableForestBand"),
+        ("--tableau-foret-trait", "Kyf.Brush.TableForestLine"),
+        ("--tableau-ambre-entete", "Kyf.Brush.TableAmberHeader"),
+        ("--tableau-ambre-entete-texte", "Kyf.Brush.TableAmberHeaderText"),
+        ("--tableau-ambre-bande", "Kyf.Brush.TableAmberBand"),
+        ("--tableau-ambre-trait", "Kyf.Brush.TableAmberLine"),
+        ("--tableau-ardoise-entete", "Kyf.Brush.TableSlateHeader"),
+        ("--tableau-ardoise-entete-texte", "Kyf.Brush.TableSlateHeaderText"),
+        ("--tableau-ardoise-bande", "Kyf.Brush.TableSlateBand"),
+        ("--tableau-ardoise-trait", "Kyf.Brush.TableSlateLine"),
+        ("--tableau-prune-entete", "Kyf.Brush.TablePlumHeader"),
+        ("--tableau-prune-entete-texte", "Kyf.Brush.TablePlumHeaderText"),
+        ("--tableau-prune-bande", "Kyf.Brush.TablePlumBand"),
+        ("--tableau-prune-trait", "Kyf.Brush.TablePlumLine"),
+        ("--tableau-encre-entete", "Kyf.Brush.TableInkHeader"),
+        ("--tableau-encre-entete-texte", "Kyf.Brush.TableInkHeaderText"),
+        ("--tableau-encre-bande", "Kyf.Brush.TableInkBand"),
+        ("--tableau-encre-trait", "Kyf.Brush.TableInkLine"),
     ];
 
     private const string VaultResources = "/coffre/";
@@ -287,6 +308,9 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
     public void InsertTable(int rows, int columns) => Post(new TableRequest(rows, columns));
 
     /// <inheritdoc/>
+    public void SetTableLook(string change, string? value) => Post(new TableLookRequest(change, value));
+
+    /// <inheritdoc/>
     public void InsertCode(string language) => Post(new CodeRequest(language));
 
     /// <inheritdoc/>
@@ -375,7 +399,7 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
                 SaveAsked?.Invoke(this, EventArgs.Empty);
                 break;
             case ToolsEvent tools:
-                ToolsChanged?.Invoke(this, new EditorTools(tools.Bold, tools.Italic, tools.Underline, tools.Strike, tools.Superscript, tools.Subscript, tools.Heading, tools.List, tools.CanUndo, tools.CanRedo, tools.Color, tools.Size, tools.Align));
+                ToolsChanged?.Invoke(this, new EditorTools(tools.Bold, tools.Italic, tools.Underline, tools.Strike, tools.Superscript, tools.Subscript, tools.Heading, tools.List, tools.CanUndo, tools.CanRedo, tools.Color, tools.Size, tools.Align, tools.TableLook));
                 break;
             case AskDiagramEvent diagram:
                 _ = AnswerDiagramAsync(diagram);

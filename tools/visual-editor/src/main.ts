@@ -187,6 +187,9 @@ function traiter(message: VersEditeur): void {
     case "tableAction":
       editeur.tableau(message.action as ActionTableau);
       break;
+    case "tableLook":
+      editeur.apparenceTableau(message.change, message.value);
+      break;
     case "code":
       editeur.insererCode(message.language);
       break;

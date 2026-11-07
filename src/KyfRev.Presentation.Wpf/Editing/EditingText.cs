@@ -128,6 +128,132 @@ public static class EditingText
     /// <summary>Le deuxième onglet du ruban.</summary>
     public const string Insert = "Insertion";
 
+    /// <summary>L'onglet du ruban qui n'apparaît que dans un tableau.</summary>
+    public const string TableTab = "Tableau";
+
+    /// <summary>Le groupe des en-têtes.</summary>
+    public const string HeadersGroup = "En-têtes";
+
+    /// <summary>La première ligne est l'en-tête.</summary>
+    public const string HeaderRow = "Première ligne";
+
+    /// <summary>La première colonne est un en-tête.</summary>
+    public const string HeaderColumn = "Première colonne";
+
+    /// <summary>La dernière ligne ressort : une synthèse, un total.</summary>
+    public const string TotalRow = "Dernière ligne";
+
+    /// <summary>Le groupe des bandes.</summary>
+    public const string BandsGroup = "Bandes";
+
+    /// <summary>Aucune bande.</summary>
+    public const string BandsNone = "Aucune";
+
+    /// <summary>Une ligne sur deux.</summary>
+    public const string BandsRows = "Lignes";
+
+    /// <summary>Une colonne sur deux.</summary>
+    public const string BandsColumns = "Colonnes";
+
+    /// <summary>Le groupe des traits.</summary>
+    public const string LinesGroup = "Traits";
+
+    /// <summary>Tous les traits.</summary>
+    public const string LinesAll = "Tous";
+
+    /// <summary>Les traits entre les lignes.</summary>
+    public const string LinesHorizontal = "Horizontaux";
+
+    /// <summary>Les traits entre les colonnes.</summary>
+    public const string LinesVertical = "Verticaux";
+
+    /// <summary>Le seul contour.</summary>
+    public const string LinesOutline = "Contour";
+
+    /// <summary>Le seul trait sous l'en-tête.</summary>
+    public const string LinesHeader = "Sous l'en-tête";
+
+    /// <summary>Aucun trait.</summary>
+    public const string LinesNone = "Aucun";
+
+    /// <summary>Le groupe des thèmes de tableau.</summary>
+    public const string ThemeGroup = "Thème";
+
+    /// <summary>Les neutres de l'application.</summary>
+    public const string ThemeSober = "Sobre";
+
+    /// <summary>Vert forêt.</summary>
+    public const string ThemeForest = "Forêt";
+
+    /// <summary>Ambre.</summary>
+    public const string ThemeAmber = "Ambre";
+
+    /// <summary>Bleu ardoise.</summary>
+    public const string ThemeSlate = "Ardoise";
+
+    /// <summary>Prune.</summary>
+    public const string ThemePlum = "Prune";
+
+    /// <summary>Encre, le plus contrasté.</summary>
+    public const string ThemeInk = "Encre";
+
+    /// <summary>Le groupe de la colonne du curseur.</summary>
+    public const string ColumnGroup = "Colonne";
+
+    /// <summary>Aligner la colonne à gauche.</summary>
+    public const string ColumnLeft = "Aligner la colonne à gauche";
+
+    /// <summary>Centrer la colonne.</summary>
+    public const string ColumnCenter = "Centrer la colonne";
+
+    /// <summary>Aligner la colonne à droite.</summary>
+    public const string ColumnRight = "Aligner la colonne à droite";
+
+    /// <summary>Les cases de la colonne deviennent des trous en révision.</summary>
+    public const string HiddenInReview = "Cacher en révision";
+
+    /// <summary>L'aide de la colonne cachée en révision.</summary>
+    public const string HiddenInReviewHelp = "En révision, chaque case de cette colonne se cache et se découvre d'un clic ; l'en-tête reste lisible.";
+
+    /// <summary>Trier les lignes selon la colonne du curseur.</summary>
+    public const string SortRows = "Trier A → Z";
+
+    /// <summary>L'aide du tri.</summary>
+    public const string SortRowsHelp = "Range les lignes selon cette colonne, de A à Z ; un second clic, de Z à A. L'en-tête et la dernière ligne qui ressort restent à leur place.";
+
+    /// <summary>Insérer une ligne au-dessus, dans l'onglet Tableau.</summary>
+    public const string RowBeforeShort = "Ligne au-dessus";
+
+    /// <summary>Insérer une ligne en dessous, dans l'onglet Tableau.</summary>
+    public const string RowAfterShort = "Ligne en dessous";
+
+    /// <summary>Supprimer la ligne, dans l'onglet Tableau.</summary>
+    public const string DeleteRowShort = "Retirer la ligne";
+
+    /// <summary>Insérer une colonne à gauche, dans l'onglet Tableau.</summary>
+    public const string ColumnBeforeShort = "Colonne à gauche";
+
+    /// <summary>Insérer une colonne à droite, dans l'onglet Tableau.</summary>
+    public const string ColumnAfterShort = "Colonne à droite";
+
+    /// <summary>Supprimer la colonne, dans l'onglet Tableau.</summary>
+    public const string DeleteColumnShort = "Retirer la colonne";
+
+    /// <summary>Supprimer le tableau, dans l'onglet Tableau.</summary>
+    public const string DeleteTableShort = "Retirer le tableau";
+
+    /// <summary>Le groupe des lignes et colonnes.</summary>
+    public const string RowsColumnsGroup = "Lignes et colonnes";
+
+    /// <summary>Le groupe de la largeur.</summary>
+    public const string WidthGroup = "Largeur";
+
+    /// <summary>La largeur de son contenu.</summary>
+    public const string WidthFit = "Ajustée";
+
+    /// <summary>Toute la largeur du texte.</summary>
+    public const string WidthPage = "Pleine page";
+
     /// <summary>Annuler.</summary>
     public const string Undo = "Annuler (Ctrl+Z)";
 

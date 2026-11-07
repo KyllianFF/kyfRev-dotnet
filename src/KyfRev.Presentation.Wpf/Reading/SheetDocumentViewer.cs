@@ -63,6 +63,7 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
         SetResourceReference(SelectionBrushProperty, "Kyf.Brush.Selection");
         // Les traits sous le texte prennent leur couleur du thème, connu une fois la vue en place.
         Loaded += (_, _) => ApplyHighlights();
+        SizeChanged += (_, _) => FitTables();
         IsVisibleChanged += (_, e) =>
         {
             if (e.NewValue is true && _rebuildsWhenShown)
@@ -278,7 +279,7 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
             return;
         }
         built.Complete();
-        holes.Set(TextHoles.Compute(Highlights ?? [], built.BoldRanges));
+        holes.Set(TextHoles.Compute(Highlights ?? [], built.BoldRanges, built.ReviewCells));
     }
 
     /// <summary>Affiche le trou visé par la souris ; rend faux s'il n'y en a pas.</summary>
@@ -321,6 +322,7 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
             _built.Layer.Set(Highlights ?? [], ActiveHighlight);
             _built.Layer.SetWords(Words ?? []);
             Document = _built.Build();
+            FitTables();
             ComputeHoles();
         }
         else
@@ -343,6 +345,50 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
         else
         {
             OpenLinkCommand?.Execute(target);
+        }
+    }
+
+    /// <summary>
+    /// Les tableaux pleine largeur se partagent la largeur réelle du texte : chaque colonne garde son plus long mot tant que le
+    /// tableau le permet. Des proportions d'étoiles ne le peuvent pas seules : une fenêtre étroite les resserrait toutes d'autant.
+    /// </summary>
+    internal void FitTables()
+    {
+        if (Document is not { } document || ActualWidth <= 0)
+        {
+            return;
+        }
+        var available = ActualWidth - Padding.Left - Padding.Right - SystemParameters.VerticalScrollBarWidth;
+        foreach (var table in Tables(document))
+        {
+            if (table.Tag is not TableSizing sizing)
+            {
+                continue;
+            }
+            var widths = sizing.For(available - table.Margin.Left - table.Margin.Right);
+            for (var column = 0; column < widths.Count && column < table.Columns.Count; column++)
+            {
+                var width = new GridLength(widths[column] / DocumentBuilder.StarUnit, GridUnitType.Star);
+                if (table.Columns[column].Width != width)
+                {
+                    table.Columns[column].Width = width;
+                }
+            }
+        }
+    }
+
+    private static IEnumerable<Table> Tables(DependencyObject parent)
+    {
+        foreach (var child in LogicalTreeHelper.GetChildren(parent).OfType<DependencyObject>())
+        {
+            if (child is Table table)
+            {
+                yield return table;
+            }
+            foreach (var inner in Tables(child))
+            {
+                yield return inner;
+            }
         }
     }
 

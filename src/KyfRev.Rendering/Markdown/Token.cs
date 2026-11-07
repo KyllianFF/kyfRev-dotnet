@@ -71,6 +71,9 @@ internal sealed class Token(TokenKind kind, string tag, int nesting)
     /// <summary>Alignement d'une cellule de tableau, ou d'un passage aligné.</summary>
     public string? Alignment { get; set; }
 
+    /// <summary>L'apparence d'un tableau, donnée par la ligne posée juste au-dessus de lui.</summary>
+    public TableLook? Look { get; set; }
+
     /// <summary>Couleur ou taille d'un passage, écrite comme dans la fiche (<c>color:…</c>, <c>font-size:…em</c>).</summary>
     public string? Style { get; set; }
 

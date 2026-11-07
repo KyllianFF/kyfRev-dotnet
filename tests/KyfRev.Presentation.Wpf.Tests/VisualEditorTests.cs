@@ -1306,4 +1306,37 @@ public sealed class VisualEditorTests
         Assert.AreEqual(EditingText.Cut, ((MenuItem)inCode[0]).Header);
         Assert.HasCount(4, inCode.OfType<MenuItem>().ToList(), "Dans le code, seulement le presse-papiers.");
     }
+
+    [EngineTest]
+    public void The_table_tab_appears_in_a_table_and_writes_its_look_above_it()
+    {
+        using var scene = new Scene("Avant.\n\n| Notion | Auteur |\n|---|---|\n| Pouvoir | Arendt |\n| Domination | Weber |\n| Autorité | Arendt |\n");
+        UiThread.Until(() => scene.Shown.Contains("Pouvoir", StringComparison.Ordinal));
+        Assert.IsFalse(scene.Editor.IsInTable);
+        Assert.AreEqual(Visibility.Collapsed, scene.SheetPage.Ribbon.TableTab.Visibility);
+
+        scene.Select("const cellule = [...page.querySelectorAll('td')].find((td) => td.textContent === 'Pouvoir'); selection.selectAllChildren(cellule); selection.collapseToEnd();");
+        UiThread.Until(() => scene.Editor.IsInTable);
+        TestShell.Flush();
+        Assert.AreEqual(Visibility.Visible, scene.SheetPage.Ribbon.TableTab.Visibility);
+        Assert.AreEqual(1, scene.Editor.Tools!.Table!.Column);
+        Assert.IsTrue(scene.Editor.Tools.Table.Sortable);
+
+        scene.Editor.ChangeTableCommand.Execute("theme=foret");
+        UiThread.Until(() => scene.Editor.Tools?.Table?.Theme == "foret");
+        Assert.AreEqual("\"foret\"", scene.Script("document.querySelector('.ProseMirror table').dataset.theme"));
+        scene.Editor.ChangeTableCommand.Execute("trier");
+        scene.Editor.ChangeTableCommand.Execute("aligner=center");
+        scene.Editor.ChangeTableCommand.Execute("total");
+        UiThread.Until(() => scene.OnDisk.Contains("<!-- kyfrev tableau total theme=foret -->", StringComparison.Ordinal) && scene.OnDisk.Contains(":---:", StringComparison.Ordinal));
+
+        var written = scene.OnDisk;
+        Assert.StartsWith("Avant.\n\n<!-- kyfrev tableau total theme=foret -->\n| Notion | Auteur |", written);
+        Assert.IsLessThan(written.IndexOf("Domination", StringComparison.Ordinal), written.IndexOf("Autorité", StringComparison.Ordinal), "les lignes sont rangées de A à Z");
+
+        scene.PlaceCaretIn("Avant.");
+        UiThread.Until(() => !scene.Editor.IsInTable);
+        TestShell.Flush();
+        Assert.AreEqual(Visibility.Collapsed, scene.SheetPage.Ribbon.TableTab.Visibility, "hors du tableau, son onglet disparaît");
+    }
 }

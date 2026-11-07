@@ -22,6 +22,17 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   sur le poste de la personne qui publie ; `tools/catalogue/catalogue.cs` la crée, signe et vérifie
   (`docs/extensions/catalogue.md`). L'application connaît les clés publiques `kyfrev-1` et `kyfrev-2` (la seconde est celle
   de secours).
+- Écrire : un onglet « Tableau » apparaît dans le ruban quand le curseur est dans un tableau, et disparaît quand il en sort.
+  Il règle l'en-tête (première ligne, première colonne, ou les deux), la dernière ligne qui ressort (une synthèse, un total),
+  les bandes (lignes ou colonnes, qui suivent l'en-tête), les traits (tous, horizontaux, verticaux, contour, sous l'en-tête
+  ou aucun), le thème (Sobre, Forêt, Ambre, Ardoise, Prune, Encre, lisibles en clair comme en sombre) et la largeur (pleine
+  page par défaut, ou ajustée au contenu). Pour la colonne du curseur : son alignement, la cacher en révision (ses cases deviennent des
+  trous, l'en-tête reste lisible) et trier les lignes de A à Z puis de Z à A. Il reprend aussi l'ajout et le retrait des
+  lignes et des colonnes. L'apparence s'écrit dans une seule ligne au-dessus du tableau, `<!-- kyfrev tableau … -->`, que
+  GitHub, Obsidian et VS Code n'affichent pas ; un tableau sans cette ligne garde son apparence, et la lecture, l'aperçu,
+  la révision et l'éditeur dessinent la même chose. Les flèches passent d'une case à l'autre, ↑ et ↓ comprises, sans jamais
+  poser le curseur entre deux cases. Un tableau prend toute la largeur du texte (« Ajustée au contenu » reste un choix), et
+  ses colonnes gardent leurs mots entiers tant qu'il le permet, à l'écriture comme en lecture.
 - Fenêtre : l'application dessine sa barre de titre, aux couleurs du thème, avec le nom, la recherche (Ctrl+K), le thème clair
   ou sombre en un clic, les raccourcis clavier et les boutons de la fenêtre. Windows garde le déplacement, le redimensionnement,
   son menu et ses dispositions sur « Agrandir ».

@@ -10,6 +10,7 @@ export type VersEditeur =
   | { kind: "case"; style: "sentence" | "lower" | "upper" | "words" | "invert" | "alternate" | null }
   | { kind: "table"; rows: number; columns: number }
   | { kind: "tableAction"; action: string }
+  | { kind: "tableLook"; change: string; value: string | null }
   | { kind: "code"; language: string }
   | { kind: "rule" }
   | { kind: "askFormula" }
@@ -40,7 +41,7 @@ export type DepuisEditeur =
   | { kind: "edited" }
   | { kind: "text"; id: number | null; markdown: string }
   | { kind: "save" }
-  | { kind: "tools"; bold: boolean; italic: boolean; underline: boolean; strike: boolean; superscript: boolean; subscript: boolean; link: boolean; heading: number; inCode: boolean; list: "bullets" | "numbers" | "tasks" | null; table: boolean; color: string | null; size: string | null; align: "left" | "center" | "right" | "justify"; canUndo: boolean; canRedo: boolean }
+  | { kind: "tools"; bold: boolean; italic: boolean; underline: boolean; strike: boolean; superscript: boolean; subscript: boolean; link: boolean; heading: number; inCode: boolean; list: "bullets" | "numbers" | "tasks" | null; table: boolean; color: string | null; size: string | null; align: "left" | "center" | "right" | "justify"; canUndo: boolean; canRedo: boolean; tableLook: { header: string; total: boolean; bands: string; lines: string; theme: string; hidden: number | null; width: string; column: number; columnAlign: string | null; sortable: boolean } | null }
   | { kind: "askLink"; label: string; address: string }
   | { kind: "askFormula"; position: number | null; tex: string; block: boolean }
   | { kind: "linkInput"; query: string | null; start: number; x: number; y: number }

@@ -16,6 +16,7 @@ namespace KyfRev.Presentation.Wpf.Editing;
 [JsonDerivedType(typeof(CaseRequest), "case")]
 [JsonDerivedType(typeof(TableRequest), "table")]
 [JsonDerivedType(typeof(TableActionRequest), "tableAction")]
+[JsonDerivedType(typeof(TableLookRequest), "tableLook")]
 [JsonDerivedType(typeof(CodeRequest), "code")]
 [JsonDerivedType(typeof(RuleRequest), "rule")]
 [JsonDerivedType(typeof(AskFormulaRequest), "askFormula")]
@@ -68,6 +69,13 @@ internal sealed record TableRequest(int Rows, int Columns) : EditorRequest;
 
 /// <summary>Ajoute ou retire une ligne, une colonne, le tableau.</summary>
 internal sealed record TableActionRequest(string Action) : EditorRequest;
+
+/// <summary>
+/// Change l'apparence du tableau où est le curseur, ou sa colonne : <c>enteteLigne</c>, <c>enteteColonne</c>, <c>total</c>
+/// et <c>reviser</c> s'inversent ; <c>bandes</c>, <c>traits</c>, <c>theme</c>, <c>largeur</c> et <c>aligner</c> prennent
+/// la valeur donnée ; <c>trier</c> range les lignes selon la colonne.
+/// </summary>
+internal sealed record TableLookRequest(string Change, string? Value) : EditorRequest;
 
 /// <summary>Crée un bloc de code, ou change le langage de celui où est le curseur.</summary>
 internal sealed record CodeRequest(string Language) : EditorRequest;
@@ -171,7 +179,7 @@ internal sealed record TextEvent(int? Id, string Markdown) : EditorEvent;
 internal sealed record SaveEvent : EditorEvent;
 
 /// <summary>Ce que le ruban affiche.</summary>
-internal sealed record ToolsEvent(bool Bold, bool Italic, bool Underline, bool Strike, bool Superscript, bool Subscript, bool Link, int Heading, bool InCode, ListKind? List, bool Table, string? Color, string? Size, TextAlign Align, bool CanUndo, bool CanRedo) : EditorEvent;
+internal sealed record ToolsEvent(bool Bold, bool Italic, bool Underline, bool Strike, bool Superscript, bool Subscript, bool Link, int Heading, bool InCode, ListKind? List, bool Table, string? Color, string? Size, TextAlign Align, bool CanUndo, bool CanRedo, TableState? TableLook = null) : EditorEvent;
 
 /// <summary>Ctrl+K, ou la réponse à une demande : le lien à préremplir.</summary>
 internal sealed record AskLinkEvent(string Label, string Address) : EditorEvent;
@@ -248,6 +256,9 @@ internal static class VisualContract
             _ when type == typeof(bool) => "boolean",
             _ when type == typeof(IReadOnlyList<string>) => "string[]",
             { IsEnum: true } => string.Join(" | ", Enum.GetNames(type).Select(name => $"\"{JsonNamingPolicy.CamelCase.ConvertName(name)}\"")),
+            _ when type == typeof(TableState) => "{ " + string.Join("; ", type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+                .Where(inner => inner.CanWrite)
+                .Select(inner => $"{JsonNamingPolicy.CamelCase.ConvertName(inner.Name)}: {Shape(inner, context)}")) + " }",
             _ => "Record<string, string>",
         };
         return context.Create(property).ReadState == NullabilityState.Nullable || Nullable.GetUnderlyingType(property.PropertyType) is not null

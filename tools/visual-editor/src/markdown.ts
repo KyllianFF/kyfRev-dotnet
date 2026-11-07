@@ -23,6 +23,7 @@ import {
   Slice,
 } from "prosemirror-model";
 import { analyseurMarkdown, normaliserLiens } from "./analyse";
+import { type Apparence, ecrireApparence } from "./apparence";
 import { schema } from "./schema";
 
 /** Ce que l'analyse retient du texte d'origine, pour le réécrire à l'identique. */
@@ -234,7 +235,7 @@ function convertir(jetons: Token[]): Node {
         ouvrir(n.list_item, { tache: tacheDe(jetons, rang) });
         break;
       case "table_open":
-        ouvrir(n.table);
+        ouvrir(n.table, (jeton.meta?.apparence as Apparence | undefined) ?? null);
         break;
       case "tr_open":
         ouvrir(n.table_row);
@@ -548,7 +549,9 @@ function tableau(noeud: Node): string {
   const separation = alignements.map((a) =>
     a === "center" ? ":---:" : a === "right" ? "---:" : a === "left" ? ":---" : "---",
   );
-  return [rangee(lignes[0] ?? []), rangee(separation), ...lignes.slice(1).map(rangee)].join("\n");
+  const corps = [rangee(lignes[0] ?? []), rangee(separation), ...lignes.slice(1).map(rangee)].join("\n");
+  const apparence = ecrireApparence(noeud.attrs as Apparence);
+  return apparence ? `${apparence}\n${corps}` : corps;
 }
 
 type OptionsLigne = { uneLigne?: boolean; cellule?: boolean };
