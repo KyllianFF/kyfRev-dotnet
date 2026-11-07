@@ -132,7 +132,8 @@ public sealed partial class ArchitectureTests
     /// chiffré retire l'entrée de son index puis efface ses objets, et lui seul efface un objet que
     /// l'index ne nomme plus ; les deux effacements définitifs de « Éléments supprimés » passent par
     /// un cas d'usage) ; et chaque <c>.Delete</c> qui n'efface rien, nommé : un partage de fichier
-    /// (<c>FileShare.Delete</c>), une touche (<c>Key.Delete</c>), un libellé (<c>…Text.Delete</c>).
+    /// (<c>FileShare.Delete</c>), une touche (<c>Key.Delete</c>), un libellé (<c>SheetActionsText.Delete</c>) : une liste
+    /// fermée d'écritures exactes, et non un suffixe de nom, pour qu'un <c>backupText.Delete()</c> compte bien.
     /// </summary>
     [TestMethod]
     public void Files_are_deleted_only_where_allowed()
@@ -215,7 +216,7 @@ public sealed partial class ArchitectureTests
         {
             Assert.IsFalse(PurgeCall().IsMatch(code), code);
         }
-        foreach (var call in new[] { "File.Delete(path)", "Directory.Delete(path, recursive: true)", "info.Delete()", "FileSystem.DeleteFile(path)", "Array.ForEach(files, File.Delete)", "Action erase = Directory.Delete;", "FileOptions.DeleteOnClose", "Action erase = info.Delete;", "files.ForEach(new FileInfo(path).Delete)" })
+        foreach (var call in new[] { "File.Delete(path)", "Directory.Delete(path, recursive: true)", "info.Delete()", "FileSystem.DeleteFile(path)", "Array.ForEach(files, File.Delete)", "Action erase = Directory.Delete;", "FileOptions.DeleteOnClose", "Action erase = info.Delete;", "files.ForEach(new FileInfo(path).Delete)", "backupText.Delete()", "cacheKey.Delete();", "this.Key.Delete()" })
         {
             Assert.IsTrue(DiskDeletion().IsMatch(call), call);
         }
@@ -225,7 +226,10 @@ public sealed partial class ArchitectureTests
             Assert.IsTrue(HarmlessDelete().IsMatch(code), $"{code} : compté à part, et nommé");
         }
         Assert.AreEqual(1, PurgeCall().Count(CodeOnly("/// Un effacement (<see cref=\"VaultStorage.Purge\"/>).\n        _storage.Purge(path);")), "un commentaire n'efface rien");
-        Assert.AreEqual(0, PurgeCall().Count(CodeOnly("x();\r// a.Purge(b)\u0085// c.Purge(d)\u2028// e.Purge(f)\u2029// g.Purge(h)")), "un commentaire finit à toute fin de ligne, pas seulement au saut de ligne");
+        foreach (var end in new[] { "\n", "\r", "\r\n", "\u0085", "\u2028", "\u2029" })
+        {
+            Assert.AreEqual(0, PurgeCall().Count(CodeOnly($"x();{end}// a.Purge(b)")), $"un commentaire finit à toute fin de ligne (U+{(int)end[^1]:X4})");
+        }
     }
 
     /// <summary>Racine du dépôt : le dossier qui contient la solution.</summary>
@@ -268,11 +272,16 @@ public sealed partial class ArchitectureTests
     /// d'instance (<c>info.Delete</c>), ou un fichier ouvert pour s'effacer à sa fermeture. Seuls les <c>.Delete</c> qui
     /// n'effacent rien (<see cref="HarmlessDelete"/>) n'y sont pas.
     /// </summary>
-    [GeneratedRegex(@"(?<!FileShare|Key|Text)\.Delete\b|DeleteFile|DeleteDirectory|RemoveDirectory|FileSystem\.Delete|SendToRecycleBin|DeleteOnClose")]
+    [GeneratedRegex(@"(?<!(?<![\w.])(?:FileShare|Key|SheetActionsText))\.Delete\b|DeleteFile|DeleteDirectory|RemoveDirectory|FileSystem\.Delete|SendToRecycleBin|DeleteOnClose")]
     private static partial Regex DiskDeletion();
 
-    /// <summary>Un <c>.Delete</c> qui n'efface rien : un partage de fichier, une touche, un libellé.</summary>
-    [GeneratedRegex(@"(?<=FileShare|Key|Text)\.Delete\b")]
+    /// <summary>
+    /// Un <c>.Delete</c> qui n'efface rien, de la liste fermée trouvée dans <c>src</c> : un partage de fichier
+    /// (<c>FileShare.Delete</c>), une touche (<c>Key.Delete</c>), un libellé (<c>SheetActionsText.Delete</c>). L'écriture doit
+    /// être exacte : précédée d'un point ou d'une lettre (<c>cacheKey.Delete</c>, <c>this.Key.Delete</c>), elle compte comme
+    /// un effacement.
+    /// </summary>
+    [GeneratedRegex(@"(?<![\w.])(?:FileShare|Key|SheetActionsText)\.Delete\b")]
     private static partial Regex HarmlessDelete();
 
     /// <summary>
