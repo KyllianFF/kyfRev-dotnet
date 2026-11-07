@@ -240,8 +240,9 @@ public sealed class EncryptedStorage : VaultStorage, IDisposable
     /// <summary>
     /// L'en-tête, l'index, et parmi les objets ceux que l'index nomme, un seul par objet : un objet qu'un effacement n'a pas
     /// pu retirer n'est plus du coffre, et ne part pas dans ses sauvegardes. Dans un dossier sensible à la casse (copié
-    /// depuis WSL), un objet peut avoir un jumeau qui ne diffère que par elle : l'écriture exacte de l'identifiant est
-    /// préférée, et le jumeau reste dehors. Tout le reste est recopié tel quel.
+    /// depuis WSL), un objet peut avoir un jumeau qui ne diffère que par elle, dans son nom, son extension ou son dossier :
+    /// le fichier écrit exactement <c>objets/&lt;identifiant&gt;.kyf</c> passe d'abord, et un jumeau n'est pris que s'il
+    /// manque. Tout le reste est recopié tel quel.
     /// </summary>
     public override IEnumerable<string> FilesToBackUp(IEnumerable<string> files)
     {
@@ -256,7 +257,7 @@ public sealed class EncryptedStorage : VaultStorage, IDisposable
                 kept.Add(file);
             }
             else if (named.TryGetValue(objectId, out var exact)
-                && (!objects.TryGetValue(exact, out var other) || (!string.Equals(ObjectOf(other), exact, StringComparison.Ordinal) && string.Equals(objectId, exact, StringComparison.Ordinal))))
+                && (!objects.TryGetValue(exact, out var other) || (!IsObjectPath(other, exact) && IsObjectPath(file, exact))))
             {
                 objects[exact] = file;
             }
@@ -351,6 +352,17 @@ public sealed class EncryptedStorage : VaultStorage, IDisposable
 
     private string Inside(string path) =>
         TryInside(path) ?? throw new UnauthorizedAccessException($"« {path} » n'est pas dans le coffre chiffré.");
+
+    /// <summary>
+    /// Vrai si <paramref name="file"/> est écrit exactement <c>objets/&lt;identifiant&gt;.kyf</c> sous la racine, caractère
+    /// pour caractère : l'objet lui-même, et non un jumeau qui n'en diffère que par la casse.
+    /// </summary>
+    private bool IsObjectPath(string file, string objectId)
+    {
+        var full = Path.GetFullPath(file);
+        var expected = $"{EncryptedVault.Objects}/{objectId}{EncryptedVault.ObjectExtension}";
+        return ((string[])[_root, _realRoot]).Any(root => string.Equals(Path.GetRelativePath(root, full).Replace('\\', '/'), expected, StringComparison.Ordinal));
+    }
 
     /// <summary>L'identifiant de l'objet que le fichier posé sur le disque <paramref name="file"/> contient ; rien si ce n'est pas un objet.</summary>
     private string? ObjectOf(string file)
