@@ -1,4 +1,5 @@
 using System.Text;
+using KyfRev.Application.Ports;
 using KyfRev.Infrastructure.Vault.Files;
 using KyfRev.Tests.Support;
 
@@ -77,12 +78,11 @@ public sealed class EncryptedStorageTests
         pair.Same("le contenu d'un dossier", (s, p) => Described(s.Entries(p("fiches"))));
         pair.Same("le contenu d'un dossier absent", (s, p) => s.Entries(p("absent")));
         pair.Same("tout le contenu", (s, p) => Described(s.AllEntries(p(string.Empty)), p(string.Empty)));
-        pair.Same("l'effacement d'un absent", (s, p) => s.DeleteFile(p("fiches/absent.md")));
-        pair.Same("l'effacement sans dossier", (s, p) => s.DeleteFile(p("absent/x.md")));
-        pair.Same("l'effacement d'un dossier comme un fichier", (s, p) => s.DeleteFile(p("fiches/leçons")));
-        pair.Same("un effacement", (s, p) => s.DeleteFile(p("fiches/B.md")));
-        pair.Same("un dossier effacé", (s, p) => s.DeleteDirectory(p("fiches/leçons")));
-        pair.Same("un dossier absent effacé", (s, p) => s.DeleteDirectory(p("fiches/leçons")));
+        pair.Same("l'effacement d'un absent", (s, p) => s.Purge(p("fiches/absent.md")));
+        pair.Same("l'effacement sans dossier", (s, p) => s.Purge(p("absent/x.md")));
+        pair.Same("un effacement", (s, p) => s.Purge(p("fiches/B.md")));
+        pair.Same("un dossier effacé", (s, p) => s.Purge(p("fiches/leçons")));
+        pair.Same("un dossier absent effacé", (s, p) => s.Purge(p("fiches/leçons")));
         pair.Same("un texte annoncé par sa marque", (s, p) =>
         {
             s.Replace(p("fiches/utf16.txt"), [.. Encoding.Unicode.Preamble, .. Encoding.Unicode.GetBytes("é")]);
@@ -113,12 +113,12 @@ public sealed class EncryptedStorageTests
         Assert.AreEqual(EncryptedVault.Missing, storage.LastWriteTimeUtc(outside));
         Assert.ThrowsExactly<UnauthorizedAccessException>(() => storage.Replace(outside, One));
         Assert.ThrowsExactly<UnauthorizedAccessException>(() => storage.Replace(folder.Root, One));
-        Assert.ThrowsExactly<IOException>(() => storage.DeleteDirectory(folder.Root));
+        Assert.ThrowsExactly<IOException>(() => storage.Purge(folder.Root));
         storage.CreateDirectory(Path.Combine(folder.Root, "fiches"));
         Assert.ThrowsExactly<IOException>(() => storage.MoveDirectory(Path.Combine(folder.Root, "fiches"), folder.Root));
         Assert.AreEqual(folder.Root, storage.Root);
         Assert.AreEqual(VaultId, storage.VaultId);
-        Assert.AreSame(VaultStorage.Disk, storage.Raw);
+        Assert.AreSame(DiskStorage.Instance, storage.Raw);
         Assert.AreEqual(Path.Combine(folder.Root, "x"), storage.RealPath(Path.Combine(folder.Root, "x")));
         Assert.AreEqual(Path.Combine(folder.Root, "a", "b"), storage.RealPathBelow(folder.Root, Path.Combine("a", "b")));
     }
@@ -139,7 +139,7 @@ public sealed class EncryptedStorageTests
         var bytes = File.ReadAllBytes(objet);
         bytes[^1] ^= 1;
         File.WriteAllBytes(objet, bytes);
-        using var reopened = EncryptedStorage.Open(folder.Root, Shared.Value.Key);
+        using var reopened = EncryptedStorage.Open(folder.Root, Shared.Value.Key, DiskStorage.Instance);
         var sheet = Path.Combine(folder.Root, "fiches", "Révolution.md");
         Assert.AreEqual(11, reopened.LengthOf(sheet), "la taille en clair, en octets");
         Assert.Contains("ne s'ouvre pas", Assert.ThrowsExactly<IOException>(() => reopened.ReadAllBytes(sheet)).Message);
@@ -183,7 +183,7 @@ public sealed class EncryptedStorageTests
         Assert.ThrowsExactly<IOException>(() => storage.FilesOfBackup(altered, "alteree.zip")[0].Read());
 
         using var other = new TemporaryFolder();
-        using var otherStorage = EncryptedStorage.Create(other.Root, Shared.Value.Header, new byte[32]);
+        using var otherStorage = EncryptedStorage.Create(other.Root, Shared.Value.Header, new byte[32], DiskStorage.Instance);
         Assert.Contains("autre coffre", Assert.ThrowsExactly<IOException>(() => otherStorage.FilesOfBackup(raw, "autre.zip")).Message);
     }
 
@@ -209,9 +209,9 @@ public sealed class EncryptedStorageTests
             () => storage.MoveFile(P("fiches/b.md"), P("fiches/Cours/b.md")),
             () => storage.CreateDirectory(P("fiches/Vide/Sous")),
             () => storage.MoveDirectory(P("fiches/Cours"), P("fiches/Leçons")),
-            () => storage.DeleteFile(P("fiches/Leçons/a.md")),
+            () => storage.Purge(P("fiches/Leçons/a.md")),
             () => storage.Replace(P("fiches/Vide/c.md"), One),
-            () => storage.DeleteDirectory(P("fiches/Vide")),
+            () => storage.Purge(P("fiches/Vide")),
             () => storage.Replace(P("racine.md"), Two),
         ];
         foreach (var step in steps)
@@ -231,7 +231,7 @@ public sealed class EncryptedStorageTests
 
     private static string Reopened(string root)
     {
-        using var reopened = EncryptedStorage.Open(root, Shared.Value.Key);
+        using var reopened = EncryptedStorage.Open(root, Shared.Value.Key, DiskStorage.Instance);
         return Tree(reopened, root);
     }
 
@@ -251,7 +251,7 @@ public sealed class EncryptedStorageTests
         .Select(entry => $"{(root is null ? entry.Name : Path.GetRelativePath(root, entry.FullName))}{(entry.IsDirectory ? "/" : $":{entry.Length}")}")
         .Order(StringComparer.Ordinal));
 
-    private static EncryptedStorage NewStorage(string root) => EncryptedStorage.Create(root, Shared.Value.Header, Shared.Value.Key);
+    private static EncryptedStorage NewStorage(string root) => EncryptedStorage.Create(root, Shared.Value.Header, Shared.Value.Key, DiskStorage.Instance);
 
     /// <summary>Un dossier sur le disque et un coffre chiffré, où chaque opération est jouée deux fois.</summary>
     private sealed class Pair : IDisposable
@@ -274,7 +274,7 @@ public sealed class EncryptedStorageTests
 
         public void Same(string what, Func<VaultStorage, Func<string, string>, object?> action)
         {
-            var onDisk = Outcome(VaultStorage.Disk, _disk.Root, action);
+            var onDisk = Outcome(DiskStorage.Instance, _disk.Root, action);
             var encrypted = Outcome(_storage, _encrypted.Root, action);
             Assert.AreEqual(onDisk, encrypted, what);
         }

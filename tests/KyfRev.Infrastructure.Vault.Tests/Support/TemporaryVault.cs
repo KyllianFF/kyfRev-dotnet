@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using KyfRev.Application.Ports;
 using KyfRev.Application.Text;
 using KyfRev.Domain.Calendar;
 using KyfRev.Infrastructure.Crypto;
@@ -49,7 +50,7 @@ internal sealed class TemporaryVault : IDisposable
     public StorageKind Kind => _encrypted is null ? StorageKind.Disk : StorageKind.Encrypted;
 
     /// <summary>Là où vivent les fichiers du coffre : le disque, ou le stockage chiffré.</summary>
-    public VaultStorage Storage => _encrypted ?? VaultStorage.Disk;
+    public VaultStorage Storage => _encrypted ?? (VaultStorage)DiskStorage.Instance;
 
     public static TemporaryVault CopyOfReference(StorageKind kind = StorageKind.Disk)
     {
@@ -79,11 +80,11 @@ internal sealed class TemporaryVault : IDisposable
     {
         var root = Path.Combine(Path.GetTempPath(), "kyfrev-tests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
-        return new TemporaryVault(root, kind == StorageKind.Encrypted ? EncryptedStorage.Create(root, Shared.Value.Header, Shared.Value.Key) : null);
+        return new TemporaryVault(root, kind == StorageKind.Encrypted ? EncryptedStorage.Create(root, Shared.Value.Header, Shared.Value.Key, DiskStorage.Instance) : null);
     }
 
     /// <summary>Ouvre le coffre chiffré de <paramref name="root"/> avec la clé des essais.</summary>
-    public static EncryptedStorage OpenEncrypted(string root) => EncryptedStorage.Open(root, Key);
+    public static EncryptedStorage OpenEncrypted(string root) => EncryptedStorage.Open(root, Key, DiskStorage.Instance);
 
     /// <summary>Vrai si le coffre de <paramref name="root"/>, chiffré ou non, contient le fichier <paramref name="relative"/>.</summary>
     public static bool HasVaultFile(string root, string relative)
@@ -171,18 +172,7 @@ internal sealed class TemporaryVault : IDisposable
         [.. Storage.Entries(PathOf(relative)).Where(entry => entry.IsDirectory).Select(entry => entry.FullName)];
 
     /// <summary>Efface un fichier, ou un dossier et tout ce qu'il contient.</summary>
-    public void Delete(string relative)
-    {
-        var path = PathOf(relative);
-        if (Storage.DirectoryExists(path))
-        {
-            Storage.DeleteDirectory(path);
-        }
-        else
-        {
-            Storage.DeleteFile(path);
-        }
-    }
+    public void Delete(string relative) => Storage.Purge(PathOf(relative));
 
     /// <summary>Déplace un fichier ou un dossier, en créant le dossier qui le reçoit.</summary>
     public void Move(string from, string to)

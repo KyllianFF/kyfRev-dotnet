@@ -119,9 +119,12 @@ public sealed partial class ArchitectureTests
     }
 
     /// <summary>
-    /// T1 : rien n'est effacé, sauf quatre exceptions : la rotation des copies de sauvegarde (le
+    /// T1 : rien n'est effacé, sauf cinq exceptions : la rotation des copies de sauvegarde (le
     /// nom et le dossier de la copie vérifiés), les deux fichiers temporaires de l'écriture
-    /// atomique et de la sauvegarde, et l'effacement demandé depuis la corbeille.
+    /// atomique et de la sauvegarde, le dossier temporaire d'une conversion, et l'effacement
+    /// demandé depuis la corbeille. Celui-ci passe par le stockage du coffre (<c>Purge</c>) : le
+    /// disque l'applique (un dossier ou un fichier), le coffre chiffré retire l'entrée de son index
+    /// puis efface ses objets, et lui seul efface un objet que l'index ne nomme plus.
     /// </summary>
     [TestMethod]
     public void Files_are_deleted_only_where_allowed()
@@ -132,8 +135,12 @@ public sealed partial class ArchitectureTests
             ["KyfRev.Infrastructure.Vault/Backups/VaultBackups.cs"] = 1,
             ["KyfRev.Cli/VaultConversion.cs"] = 1,
             ["KyfRev.Infrastructure.Vault/Files/AtomicFile.cs"] = 1,
+            ["KyfRev.Infrastructure.Vault/Files/DiskStorage.cs"] = 2,
             ["KyfRev.Infrastructure.Vault/VaultSession.Backups.cs"] = 1,
-            ["KyfRev.Infrastructure.Vault/VaultSession.Trash.cs"] = 2,
+            ["KyfRev.Infrastructure.Vault/VaultSession.Trash.cs"] = 1,
+            ["KyfRev.Infrastructure.Crypto/EncryptedStorage.cs"] = 1,
+            ["KyfRev.Infrastructure.Crypto/EncryptedVault.cs"] = 1,
+            ["KyfRev.Presentation.Wpf/Pages/DataSettingsViewModel.cs"] = 2,
         };
         var files = Directory.EnumerateFiles(src, "*.cs", SearchOption.AllDirectories)
             .Select(file => Path.GetRelativePath(src, file).Replace('\\', '/'))
@@ -154,6 +161,9 @@ public sealed partial class ArchitectureTests
         {
             Assert.Contains("File.Delete(temporary)", File.ReadAllText(Path.Combine(src, file)), file);
         }
+        var conversion = File.ReadAllText(Path.Combine(src, "KyfRev.Cli/VaultConversion.cs"));
+        Assert.Contains("!IsTemporaryOf(destination, temporary)", conversion, "la conversion n'efface que son dossier temporaire, reconnu à son nom");
+        Assert.Contains("disk.Purge(temporary)", conversion);
     }
 
     /// <summary>Racine du dépôt : le dossier qui contient la solution.</summary>
@@ -191,7 +201,8 @@ public sealed partial class ArchitectureTests
     private static bool IsFramework(string name) =>
         name is "netstandard" or "mscorlib" || name.StartsWith("System.", StringComparison.Ordinal) || name.StartsWith("Microsoft.Win32.", StringComparison.Ordinal);
 
-    [GeneratedRegex(@"\.Delete\(|DeleteFile|DeleteDirectory|RemoveDirectory|FileSystem\.Delete|SendToRecycleBin")]
+    /// <summary>Un appel qui efface : celui du disque, ou l'effacement par un stockage du coffre ou par un cas d'usage (<c>.Purge(</c>).</summary>
+    [GeneratedRegex(@"\.Delete\(|DeleteFile|DeleteDirectory|RemoveDirectory|FileSystem\.Delete|SendToRecycleBin|\.Purge\(")]
     private static partial Regex DeletionCall();
 
     [GeneratedRegex(@"Assembly\.(Load|LoadFrom|LoadFile|UnsafeLoadFrom)\(|AssemblyLoadContext|AppDomain\.CurrentDomain\.Load|Type\.GetType\(")]

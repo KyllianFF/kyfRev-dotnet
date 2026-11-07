@@ -96,11 +96,17 @@ pas, comme sur un disque.
 
 ## La session sur un coffre chiffré
 
-La session du coffre ne lit et n'écrit ses fichiers que par une couche de stockage (`VaultStorage`, dans
-`KyfRev.Infrastructure.Vault`) : chaque lecture, écriture, création, déplacement, suppression, énumération, vérification
-d'existence ou de date. `VaultStorage.Disk` est le disque tel quel ; `EncryptedStorage` (dans
+La session du coffre ne lit et n'écrit ses fichiers que par une couche de stockage : le port `VaultStorage`, dans
+`KyfRev.Application` (la couche que les deux infrastructures partagent, sans dépendre l'une de l'autre). Chaque lecture,
+écriture, création, déplacement, effacement, énumération, vérification d'existence ou de date y passe.
+`DiskStorage.Instance` (dans `KyfRev.Infrastructure.Vault`) est le disque tel quel ; `EncryptedStorage` (dans
 `KyfRev.Infrastructure.Crypto`) fait d'un coffre chiffré un disque : chaque chemin du coffre est une entrée de l'index, chaque
-fichier un objet. La session, les sauvegardes et l'analyse en lecture seule s'y ouvrent sans rien savoir du chiffrement.
+fichier un objet, et il pose ses propres fichiers par le disque qu'on lui donne. La session, les sauvegardes et l'analyse en
+lecture seule s'y ouvrent sans rien savoir du chiffrement ; la racine de composition choisit le stockage.
+
+La règle « rien ne s'efface » tient toujours : le stockage n'efface que par `Purge`, à la demande expresse depuis la
+corbeille, et pour le dossier temporaire d'une conversion. Le coffre chiffré y retire l'entrée de son index, puis ses
+objets ; c'est le seul endroit où il efface un objet.
 
 Restent sur le disque, hors du coffre chiffré : le verrou, les dossiers des sauvegardes et des exports, les notes à
 importer. Le stockage chiffré reste à celui qui l'a ouvert, qui le libère après la session : sa clé de données est alors

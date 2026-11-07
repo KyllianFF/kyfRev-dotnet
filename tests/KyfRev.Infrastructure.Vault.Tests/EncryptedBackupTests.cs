@@ -1,9 +1,11 @@
 using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text;
+using KyfRev.Application.Ports;
 using KyfRev.Domain.Calendar;
 using KyfRev.Infrastructure.Crypto;
 using KyfRev.Infrastructure.Vault.Backups;
+using KyfRev.Infrastructure.Vault.Files;
 using KyfRev.Infrastructure.Vault.Tests.Support;
 
 namespace KyfRev.Infrastructure.Vault.Tests;
@@ -97,7 +99,7 @@ public sealed class EncryptedBackupTests
         // Le même coffre, déchiffré avec une autre clé : son index ne s'ouvre pas.
         using (var other = TemporaryVault.Empty())
         {
-            using var otherStorage = EncryptedStorage.Create(other.Root, EncryptedVault.ReadHeader(folder.Root), RandomNumberGenerator.GetBytes(32));
+            using var otherStorage = EncryptedStorage.Create(other.Root, EncryptedVault.ReadHeader(folder.Root), RandomNumberGenerator.GetBytes(32), DiskStorage.Instance);
             using var otherVault = VaultSession.Initialize(other.Root, Now, storage: otherStorage);
             var foreign = otherVault.Backup(outside.PathOf("autres"), Stamp).Path;
             var error = Assert.ThrowsExactly<VaultException>(() => vault.RestoreSheetFromBackup(id, foreign, Now));
@@ -137,8 +139,15 @@ public sealed class EncryptedBackupTests
         Assert.IsEmpty(reopened.Sheets, "le même dossier, quelle que soit la casse");
     }
 
+    [TestMethod]
+    public void The_vault_recognizes_the_files_of_an_encrypted_vault_by_their_names()
+    {
+        string[] names = [EncryptedVault.HeaderFile, EncryptedVault.IndexFile];
+        CollectionAssert.AreEqual(names, new[] { VaultLayout.EncryptedHeaderFile, VaultLayout.EncryptedIndexFile });
+    }
+
     /// <summary>Chaque fichier du coffre et son empreinte, tels que la session les lit.</summary>
-    private static List<string> Logical(Files.VaultStorage storage, string root) =>
+    private static List<string> Logical(VaultStorage storage, string root) =>
     [
         .. storage.AllEntries(root)
             .Where(entry => !entry.IsDirectory)

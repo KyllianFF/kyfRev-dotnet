@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text;
+using KyfRev.Infrastructure.Vault.Files;
 
 namespace KyfRev.Infrastructure.Crypto.Tests;
 
@@ -25,7 +26,7 @@ public sealed class EncryptedVaultTests
     {
         using var folder = new TemporaryFolder();
         var (header, key) = Shared.Value;
-        using (var vault = EncryptedVault.Create(folder.Root, header, key))
+        using (var vault = EncryptedVault.Create(folder.Root, header, key, DiskStorage.Instance))
         {
             vault.Write("fiches/Histoire/" + Title + ".md", Encoding.UTF8.GetBytes("# " + Title + "\n"));
             vault.Write(".suivi/coffre.json", "{}"u8);
@@ -33,7 +34,7 @@ public sealed class EncryptedVaultTests
             vault.Flush();
         }
 
-        using var reopened = EncryptedVault.Open(folder.Root, key);
+        using var reopened = EncryptedVault.Open(folder.Root, key, DiskStorage.Instance);
         Assert.AreEqual(VaultId, reopened.VaultId);
         CollectionAssert.AreEqual(ExpectedFiles, reopened.Files.ToArray());
         CollectionAssert.AreEqual(ExpectedFolders, reopened.Folders.ToArray());
@@ -47,7 +48,7 @@ public sealed class EncryptedVaultTests
     {
         using var folder = new TemporaryFolder();
         var (header, key) = Shared.Value;
-        using (var vault = EncryptedVault.Create(folder.Root, header, key))
+        using (var vault = EncryptedVault.Create(folder.Root, header, key, DiskStorage.Instance))
         {
             vault.Write("fiches/" + Title + ".md", Encoding.UTF8.GetBytes(Title));
             vault.Flush();
@@ -72,7 +73,7 @@ public sealed class EncryptedVaultTests
     {
         using var folder = new TemporaryFolder();
         var (header, key) = Shared.Value;
-        using var vault = EncryptedVault.Create(folder.Root, header, key);
+        using var vault = EncryptedVault.Create(folder.Root, header, key, DiskStorage.Instance);
         vault.Write("fiches/a.md", "même contenu"u8);
         var objects = Directory.GetFiles(Path.Combine(folder.Root, EncryptedVault.Objects));
         var before = File.ReadAllBytes(Assert.ContainsSingle(objects));
@@ -89,17 +90,17 @@ public sealed class EncryptedVaultTests
     {
         using var folder = new TemporaryFolder();
         var (header, key) = Shared.Value;
-        using (var vault = EncryptedVault.Create(folder.Root, header, key))
+        using (var vault = EncryptedVault.Create(folder.Root, header, key, DiskStorage.Instance))
         {
             vault.Write("a.md", "premier"u8);
             vault.Write("b.md", "second"u8);
             vault.Flush();
         }
 
-        Assert.ThrowsExactly<VaultCryptoException>(() => EncryptedVault.Open(folder.Root, RandomNumberGenerator.GetBytes(32)));
+        Assert.ThrowsExactly<VaultCryptoException>(() => EncryptedVault.Open(folder.Root, RandomNumberGenerator.GetBytes(32), DiskStorage.Instance));
 
         var objects = Directory.GetFiles(Path.Combine(folder.Root, EncryptedVault.Objects));
-        using (var vault = EncryptedVault.Open(folder.Root, key))
+        using (var vault = EncryptedVault.Open(folder.Root, key, DiskStorage.Instance))
         {
             var first = objects.Single(path => Path.GetFileNameWithoutExtension(path) == ObjectOf(vault, "a.md", objects));
             var second = objects.Single(path => path != first);
@@ -119,12 +120,12 @@ public sealed class EncryptedVaultTests
         using var second = new TemporaryFolder();
         var (header, key) = Shared.Value;
         var (otherHeader, _, _) = VaultHeader.Create("v_01M69JFV2A3WD8KH55EHWC1G7P", "un mot de passe d'essai", PasswordKeys.NewPbkdf2());
-        EncryptedVault.Create(first.Root, header, key).Dispose();
+        EncryptedVault.Create(first.Root, header, key, DiskStorage.Instance).Dispose();
         File.WriteAllBytes(Path.Combine(second.Root, EncryptedVault.HeaderFile), otherHeader.Write());
         File.Copy(Path.Combine(first.Root, EncryptedVault.IndexFile), Path.Combine(second.Root, EncryptedVault.IndexFile));
 
-        Assert.ThrowsExactly<VaultCryptoException>(() => EncryptedVault.Open(second.Root, key), "l'index est lié à son coffre");
-        Assert.ThrowsExactly<VaultCryptoException>(() => EncryptedVault.Create(first.Root, header, key), "jamais par-dessus un dossier qui n'est pas vide");
+        Assert.ThrowsExactly<VaultCryptoException>(() => EncryptedVault.Open(second.Root, key, DiskStorage.Instance), "l'index est lié à son coffre");
+        Assert.ThrowsExactly<VaultCryptoException>(() => EncryptedVault.Create(first.Root, header, key, DiskStorage.Instance), "jamais par-dessus un dossier qui n'est pas vide");
         Assert.IsTrue(EncryptedVault.IsEncrypted(first.Root));
         Assert.ThrowsExactly<VaultCryptoException>(() => EncryptedVault.ReadHeader(Path.Combine(first.Root, "absent")));
     }
@@ -134,7 +135,7 @@ public sealed class EncryptedVaultTests
     {
         using var folder = new TemporaryFolder();
         var (header, key) = Shared.Value;
-        using (var vault = EncryptedVault.Create(folder.Root, header, key))
+        using (var vault = EncryptedVault.Create(folder.Root, header, key, DiskStorage.Instance))
         {
             vault.AddFolder("fiches/Cours");
             vault.Write("FICHES/cours/Leçon.md", "un"u8);
@@ -144,7 +145,7 @@ public sealed class EncryptedVaultTests
             Assert.IsTrue(vault.ContainsFolder("Fiches"));
         }
 
-        using var reopened = EncryptedVault.Open(folder.Root, key);
+        using var reopened = EncryptedVault.Open(folder.Root, key, DiskStorage.Instance);
         Assert.AreEqual("fiches/Cours/Leçon.md", Assert.ContainsSingle(reopened.Files));
         Assert.AreEqual("deux", Encoding.UTF8.GetString(reopened.Read("fiches/cours/leçon.md")));
         Assert.AreEqual("fiches|fiches/Cours", string.Join('|', reopened.Folders));
@@ -162,10 +163,10 @@ public sealed class EncryptedVaultTests
     {
         using var folder = new TemporaryFolder();
         var (header, key) = Shared.Value;
-        EncryptedVault.Create(folder.Root, header, key).Dispose();
+        EncryptedVault.Create(folder.Root, header, key, DiskStorage.Instance).Dispose();
         File.WriteAllBytes(Path.Combine(folder.Root, EncryptedVault.IndexFile), SealedFile.Seal(key, VaultId, EncryptedVault.IndexId, Encoding.UTF8.GetBytes(json)));
 
-        Assert.Contains(reason, Assert.ThrowsExactly<VaultCryptoException>(() => EncryptedVault.Open(folder.Root, key)).Message);
+        Assert.Contains(reason, Assert.ThrowsExactly<VaultCryptoException>(() => EncryptedVault.Open(folder.Root, key, DiskStorage.Instance)).Message);
     }
 
     [TestMethod]
@@ -173,7 +174,7 @@ public sealed class EncryptedVaultTests
     {
         using var folder = new TemporaryFolder();
         var (header, key) = Shared.Value;
-        using (var vault = EncryptedVault.Create(folder.Root, header, key))
+        using (var vault = EncryptedVault.Create(folder.Root, header, key, DiskStorage.Instance))
         {
             vault.Write("a.md", "un"u8);
             vault.Flush();
@@ -182,7 +183,7 @@ public sealed class EncryptedVaultTests
             Assert.ThrowsExactly<VaultCryptoException>(() => vault.MoveFolder("absent", "ailleurs"));
         }
         File.Delete(Path.Combine(folder.Root, EncryptedVault.IndexFile));
-        Assert.Contains("index", Assert.ThrowsExactly<VaultCryptoException>(() => EncryptedVault.Open(folder.Root, key)).Message);
+        Assert.Contains("index", Assert.ThrowsExactly<VaultCryptoException>(() => EncryptedVault.Open(folder.Root, key, DiskStorage.Instance)).Message);
 
         using var cut = new TemporaryFolder();
         var disk = new KyfRev.Tests.Support.FailingDisk { FailAt = 3 };

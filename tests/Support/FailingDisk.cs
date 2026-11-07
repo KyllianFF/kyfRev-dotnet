@@ -1,3 +1,4 @@
+using KyfRev.Application.Ports;
 using KyfRev.Infrastructure.Vault.Files;
 
 namespace KyfRev.Tests.Support;
@@ -10,7 +11,7 @@ namespace KyfRev.Tests.Support;
 /// <remarks>Partagé par les projets d'essais du coffre et du chiffrement (fichier lié).</remarks>
 internal sealed class FailingDisk : VaultStorage
 {
-    private readonly VaultStorage _disk = Disk;
+    private readonly VaultStorage _disk = DiskStorage.Instance;
 
     /// <summary>Le nombre d'écritures tentées.</summary>
     public int Writes { get; private set; }
@@ -68,16 +69,10 @@ internal sealed class FailingDisk : VaultStorage
         _disk.MoveDirectory(source, destination);
     }
 
-    public override void DeleteFile(string path)
+    public override void Purge(string path)
     {
         Write(path);
-        _disk.DeleteFile(path);
-    }
-
-    public override void DeleteDirectory(string path)
-    {
-        Write(path);
-        _disk.DeleteDirectory(path);
+        _disk.Purge(path);
     }
 
     public override IReadOnlyList<StorageEntry> Entries(string folder) => _disk.Entries(folder);

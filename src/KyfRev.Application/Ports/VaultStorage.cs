@@ -1,11 +1,12 @@
 using System.Text;
 
-namespace KyfRev.Infrastructure.Vault.Files;
+namespace KyfRev.Application.Ports;
 
 /// <summary>
-/// Là où vivent les fichiers d'un coffre. Toute lecture, écriture, création, déplacement, suppression, énumération,
-/// vérification d'existence ou de date d'un fichier du coffre passe par ici : <see cref="Disk"/> pour un coffre en clair,
-/// le stockage d'un coffre chiffré sinon (<c>KyfRev.Infrastructure.Crypto</c>).
+/// Là où vivent les fichiers d'un coffre. Toute lecture, écriture, création, déplacement, effacement, énumération,
+/// vérification d'existence ou de date d'un fichier du coffre passe par ici : le disque tel quel pour un coffre en clair
+/// (<c>DiskStorage</c>, dans <c>KyfRev.Infrastructure.Vault</c>), le stockage d'un coffre chiffré sinon
+/// (<c>EncryptedStorage</c>, dans <c>KyfRev.Infrastructure.Crypto</c>). La racine de composition choisit lequel.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -21,9 +22,6 @@ namespace KyfRev.Infrastructure.Vault.Files;
 /// </remarks>
 public abstract class VaultStorage
 {
-    /// <summary>Le disque, tel quel : les fichiers d'un coffre en clair.</summary>
-    public static VaultStorage Disk { get; } = new DiskStorage();
-
     /// <summary>Le dossier que ce stockage sert ; rien pour le disque entier.</summary>
     public virtual string? Root => null;
 
@@ -76,11 +74,11 @@ public abstract class VaultStorage
     /// <summary>Comme <see cref="File.GetLastWriteTimeUtc(string)"/> : le 1er janvier 1601 pour un fichier absent.</summary>
     public abstract DateTime LastWriteTimeUtc(string path);
 
-    /// <summary>Crée le fichier de façon atomique, sans jamais écraser (<see cref="AtomicFile.TryCreateNew(string, ReadOnlySpan{byte})"/>).</summary>
+    /// <summary>Crée le fichier de façon atomique, sans jamais écraser.</summary>
     /// <returns><see langword="false"/> si le fichier existe déjà ; rien n'est alors modifié.</returns>
     public abstract bool TryCreateNew(string path, ReadOnlySpan<byte> content);
 
-    /// <summary>Remplace le fichier, ou le crée, de façon atomique (<see cref="AtomicFile.Replace(string, ReadOnlySpan{byte})"/>).</summary>
+    /// <summary>Remplace le fichier, ou le crée, de façon atomique : après une coupure, il est l'ancien ou le nouveau.</summary>
     public abstract void Replace(string path, ReadOnlySpan<byte> content);
 
     /// <summary>Comme <see cref="Directory.CreateDirectory(string)"/>.</summary>
@@ -92,11 +90,11 @@ public abstract class VaultStorage
     /// <summary>Comme <see cref="Directory.Move(string, string)"/>.</summary>
     public abstract void MoveDirectory(string source, string destination);
 
-    /// <summary>Comme <see cref="File.Delete(string)"/> : rien à faire pour un fichier absent.</summary>
-    public abstract void DeleteFile(string path);
-
-    /// <summary>Comme <see cref="Directory.Delete(string, bool)"/>, avec tout son contenu.</summary>
-    public abstract void DeleteDirectory(string path);
+    /// <summary>
+    /// Efface pour de bon un fichier, ou un dossier avec tout ce qu'il contient ; rien à faire s'il n'existe pas. Seuls
+    /// l'effacement demandé depuis la corbeille et le dossier temporaire d'une conversion y recourent.
+    /// </summary>
+    public abstract void Purge(string path);
 
     /// <summary>
     /// Ce que contient un dossier, sans y descendre, comme <see cref="DirectoryInfo.EnumerateFileSystemInfos()"/> : fichiers
@@ -116,16 +114,13 @@ public abstract class VaultStorage
     /// </summary>
     public abstract IReadOnlyList<StorageEntry> AllEntries(string folder);
 
-    /// <summary>Le chemin réel de la plus longue partie existante de <paramref name="path"/> (<see cref="RealPaths.OfExistingPart"/>).</summary>
+    /// <summary>Le chemin réel de la plus longue partie existante de <paramref name="path"/>, liens résolus.</summary>
     public abstract string RealPath(string path);
 
-    /// <summary>
-    /// Le chemin réel de <paramref name="relative"/> sous <paramref name="realBase"/>, déjà réel
-    /// (<see cref="RealPaths.OfExistingPartBelow"/>).
-    /// </summary>
+    /// <summary>Le chemin réel de <paramref name="relative"/> sous <paramref name="realBase"/>, déjà réel.</summary>
     public abstract string RealPathBelow(string realBase, string relative);
 
-    /// <summary>Vrai si les deux chemins désignent le même élément existant (<see cref="RealPaths.SameEntry"/>).</summary>
+    /// <summary>Vrai si les deux chemins désignent le même élément existant ; sous Windows, la casse ne les distingue pas.</summary>
     public abstract bool SameEntry(string first, string second);
 
     /// <summary>
@@ -158,9 +153,11 @@ public sealed class StorageEntry
         _facts = isDirectory ? null : facts;
     }
 
-    /// <summary>Un élément relevé sur le disque, sans relire ses attributs.</summary>
-    internal StorageEntry(string fullName, string name, bool isDirectory, long length, DateTime lastWriteTimeUtc, bool isReparsePoint)
+    /// <summary>Un élément relevé sur le disque en un parcours, sans relire ses attributs.</summary>
+    public StorageEntry(string fullName, string name, bool isDirectory, long length, DateTime lastWriteTimeUtc, bool isReparsePoint)
     {
+        ArgumentNullException.ThrowIfNull(fullName);
+        ArgumentNullException.ThrowIfNull(name);
         FullName = fullName;
         Name = name;
         IsDirectory = isDirectory;
@@ -170,8 +167,9 @@ public sealed class StorageEntry
     }
 
     /// <summary>Un élément du disque ; la cible d'un lien ne se lit qu'à la demande.</summary>
-    internal StorageEntry(FileSystemInfo info)
+    public StorageEntry(FileSystemInfo info)
     {
+        ArgumentNullException.ThrowIfNull(info);
         _info = info;
         FullName = info.FullName;
         Name = info.Name;

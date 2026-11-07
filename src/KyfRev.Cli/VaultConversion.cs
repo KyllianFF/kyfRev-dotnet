@@ -1,4 +1,5 @@
 using System.Security.Cryptography;
+using KyfRev.Application.Ports;
 using KyfRev.Infrastructure.Crypto;
 using KyfRev.Infrastructure.Vault;
 using KyfRev.Infrastructure.Vault.Analysis;
@@ -46,7 +47,7 @@ internal static class VaultConversion
     public static ConversionResult Encrypt(string source, string destination, string password, PasswordParameters parameters, Action<string>? beforeVerifying = null, VaultStorage? disk = null)
     {
         ArgumentNullException.ThrowIfNull(password);
-        disk ??= VaultStorage.Disk;
+        disk ??= DiskStorage.Instance;
         source = Path.GetFullPath(source);
         destination = Path.GetFullPath(destination);
         if (!File.Exists(VaultLayout.Absolute(source, VaultLayout.SettingsFile)))
@@ -95,12 +96,12 @@ internal static class VaultConversion
 
             // La vérification repart de l'en-tête écrit, avec le mot de passe : une erreur d'enveloppe se verrait ici.
             var reopenedKey = EncryptedVault.ReadHeader(temporary).Open(password);
-            using (var reopened = EncryptedVault.Open(temporary, reopenedKey))
+            using (var reopened = EncryptedVault.Open(temporary, reopenedKey, DiskStorage.Instance))
             {
                 PasswordKeys.Clear(reopenedKey);
                 if (Mismatch(expected, folders, reopened) is { } mismatch)
                 {
-                    return ConversionResult.Refused(mismatch + Discard(temporary, disk));
+                    return ConversionResult.Refused(mismatch + Discard(temporary, destination, disk));
                 }
             }
             disk.MoveDirectory(temporary, destination);
@@ -108,7 +109,7 @@ internal static class VaultConversion
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or VaultCryptoException)
         {
-            return ConversionResult.Refused($"Le chiffrement a échoué ({exception.Message}) : rien n'a été écrit dans « {destination} »." + Discard(temporary, disk));
+            return ConversionResult.Refused($"Le chiffrement a échoué ({exception.Message}) : rien n'a été écrit dans « {destination} »." + Discard(temporary, destination, disk));
         }
         finally
         {
@@ -128,7 +129,7 @@ internal static class VaultConversion
     public static ConversionResult Decrypt(string source, string destination, string secret, Action<string>? beforeVerifying = null, VaultStorage? disk = null)
     {
         ArgumentNullException.ThrowIfNull(secret);
-        disk ??= VaultStorage.Disk;
+        disk ??= DiskStorage.Instance;
         source = Path.GetFullPath(source);
         destination = Path.GetFullPath(destination);
         if (!EncryptedVault.IsEncrypted(source))
@@ -152,7 +153,7 @@ internal static class VaultConversion
         string? temporary = null;
         try
         {
-            using var vault = EncryptedVault.Open(source, dataKey);
+            using var vault = EncryptedVault.Open(source, dataKey, DiskStorage.Instance);
             RemoveLeftovers(destination, disk);
             temporary = Temporary(destination, disk);
             var expected = new SortedDictionary<string, byte[]>(StringComparer.Ordinal);
@@ -176,7 +177,7 @@ internal static class VaultConversion
             {
                 if (!CryptographicOperations.FixedTimeEquals(hash, SHA256.HashData(disk.ReadAllBytes(VaultLayout.Absolute(temporary, path)))))
                 {
-                    return ConversionResult.Refused($"« {path} » ne se relit pas à l'identique : rien n'a été écrit dans « {destination} »." + Discard(temporary, disk));
+                    return ConversionResult.Refused($"« {path} » ne se relit pas à l'identique : rien n'a été écrit dans « {destination} »." + Discard(temporary, destination, disk));
                 }
             }
             disk.MoveDirectory(temporary, destination);
@@ -184,7 +185,7 @@ internal static class VaultConversion
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or VaultCryptoException)
         {
-            return ConversionResult.Refused($"Le déchiffrement a échoué ({exception.Message}) : rien n'a été écrit dans « {destination} »." + Discard(temporary, disk));
+            return ConversionResult.Refused($"Le déchiffrement a échoué ({exception.Message}) : rien n'a été écrit dans « {destination} »." + Discard(temporary, destination, disk));
         }
         finally
         {
@@ -285,16 +286,19 @@ internal static class VaultConversion
         return random.Length == 12 && random[8] == '.' && random.Remove(8, 1).All(c => char.IsAsciiDigit(c) || char.IsAsciiLetterLower(c));
     }
 
-    /// <summary>Retire un dossier temporaire de conversion, et lui seul ; rend de quoi le dire s'il reste.</summary>
-    private static string Discard(string? temporary, VaultStorage disk)
+    /// <summary>
+    /// Le seul point de la conversion qui efface : un dossier temporaire d'une conversion vers <paramref name="destination"/>,
+    /// et lui seul, reconnu à son nom. Rend de quoi le dire s'il reste.
+    /// </summary>
+    private static string Discard(string? temporary, string destination, VaultStorage disk)
     {
-        if (temporary is null || !disk.DirectoryExists(temporary))
+        if (temporary is null || !IsTemporaryOf(destination, temporary) || !disk.DirectoryExists(temporary))
         {
             return string.Empty;
         }
         try
         {
-            disk.DeleteDirectory(temporary);
+            disk.Purge(temporary);
             return string.Empty;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
@@ -308,9 +312,9 @@ internal static class VaultConversion
     {
         foreach (var entry in disk.Entries(Path.GetDirectoryName(destination)!))
         {
-            if (entry.IsDirectory && !entry.IsLink && IsTemporaryOf(destination, entry.FullName))
+            if (entry.IsDirectory && !entry.IsLink && Discard(entry.FullName, destination, disk) is { Length: > 0 } left)
             {
-                disk.DeleteDirectory(entry.FullName);
+                throw new IOException(left.Trim());
             }
         }
     }

@@ -97,7 +97,7 @@ public sealed partial class VaultSession
         foreach (var (noteSource, target) in notes)
         {
             var relativeSource = Path.GetRelativePath(source, noteSource);
-            if (VaultStorage.Disk.TryReadAllBytes(noteSource) is not { } bytes)
+            if (DiskStorage.Instance.TryReadAllBytes(noteSource) is not { } bytes)
             {
                 ignored.Add($"{relativeSource} : illisible");
                 continue;
@@ -533,7 +533,7 @@ public sealed partial class VaultSession
                 Ignored.Add($"« {originalName} » : plus de 50 Mo, non copiée");
                 return null;
             }
-            if (VaultStorage.Disk.TryReadAllBytes(file) is not { } bytes)
+            if (DiskStorage.Instance.TryReadAllBytes(file) is not { } bytes)
             {
                 return null;
             }

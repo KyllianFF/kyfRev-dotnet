@@ -1,8 +1,7 @@
 using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using KyfRev.Infrastructure.Vault;
-using KyfRev.Infrastructure.Vault.Files;
+using KyfRev.Application.Ports;
 
 namespace KyfRev.Infrastructure.Crypto;
 
@@ -28,13 +27,13 @@ namespace KyfRev.Infrastructure.Crypto;
 public sealed class EncryptedVault : IDisposable
 {
     /// <summary>L'en-tête, à la racine : le format, l'identifiant du coffre, les enveloppes de la clé de données.</summary>
-    public const string HeaderFile = VaultLayout.EncryptedHeaderFile;
+    public const string HeaderFile = "kyfrev-chiffre.json";
 
     /// <summary>L'index chiffré, à la racine.</summary>
-    public const string IndexFile = VaultLayout.EncryptedIndexFile;
+    public const string IndexFile = "index.kyf";
 
     /// <summary>Le dossier des objets.</summary>
-    public const string Objects = VaultLayout.EncryptedObjects;
+    public const string Objects = "objets";
 
     /// <summary>L'extension d'un objet.</summary>
     public const string ObjectExtension = ".kyf";
@@ -79,16 +78,17 @@ public sealed class EncryptedVault : IDisposable
     public IReadOnlyCollection<string> Folders => _folders;
 
     /// <summary>Vrai si <paramref name="root"/> contient un coffre chiffré.</summary>
-    public static bool IsEncrypted(string root) => VaultStorage.Disk.FileExists(Path.Combine(root, HeaderFile));
+    public static bool IsEncrypted(string root) => File.Exists(Path.Combine(root, HeaderFile));
 
-    /// <summary>L'en-tête du coffre chiffré de <paramref name="root"/>.</summary>
+    /// <summary>L'en-tête du coffre chiffré de <paramref name="root"/>, lu sur le disque, ou par <paramref name="disk"/>.</summary>
     /// <exception cref="VaultCryptoException">L'en-tête est absent ou illisible.</exception>
     public static VaultHeader ReadHeader(string root, VaultStorage? disk = null)
     {
         ArgumentNullException.ThrowIfNull(root);
+        var path = Path.Combine(root, HeaderFile);
         try
         {
-            return VaultHeader.Read((disk ?? VaultStorage.Disk).ReadAllBytes(Path.Combine(root, HeaderFile)));
+            return VaultHeader.Read(disk is null ? File.ReadAllBytes(path) : disk.ReadAllBytes(path));
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
@@ -100,11 +100,15 @@ public sealed class EncryptedVault : IDisposable
     /// Crée un coffre chiffré vide dans <paramref name="root"/>, qui doit exister et être vide : son en-tête, puis un index sans
     /// fichier. La clé de données est celle que l'en-tête enveloppe.
     /// </summary>
-    public static EncryptedVault Create(string root, VaultHeader header, ReadOnlySpan<byte> dataKey, VaultStorage? disk = null)
+    /// <param name="root">Le dossier, vide.</param>
+    /// <param name="header">L'en-tête.</param>
+    /// <param name="dataKey">La clé de données que l'en-tête enveloppe ; le coffre en garde une copie, effacée à sa libération.</param>
+    /// <param name="disk">Le disque où poser l'en-tête, l'index et les objets.</param>
+    public static EncryptedVault Create(string root, VaultHeader header, ReadOnlySpan<byte> dataKey, VaultStorage disk)
     {
         ArgumentNullException.ThrowIfNull(root);
         ArgumentNullException.ThrowIfNull(header);
-        disk ??= VaultStorage.Disk;
+        ArgumentNullException.ThrowIfNull(disk);
         root = Path.GetFullPath(root);
         if (!disk.DirectoryExists(root) || disk.Entries(root).Count > 0)
         {
@@ -126,11 +130,14 @@ public sealed class EncryptedVault : IDisposable
     }
 
     /// <summary>Ouvre le coffre chiffré de <paramref name="root"/> avec sa clé de données, et lit son index. Rien n'est écrit.</summary>
+    /// <param name="root">Le dossier du coffre.</param>
+    /// <param name="dataKey">Sa clé de données ; le coffre en garde une copie, effacée à sa libération.</param>
+    /// <param name="disk">Le disque où sont posés l'en-tête, l'index et les objets.</param>
     /// <exception cref="VaultCryptoException">L'index est absent, altéré, ou d'un autre coffre.</exception>
-    public static EncryptedVault Open(string root, ReadOnlySpan<byte> dataKey, VaultStorage? disk = null)
+    public static EncryptedVault Open(string root, ReadOnlySpan<byte> dataKey, VaultStorage disk)
     {
         ArgumentNullException.ThrowIfNull(root);
-        disk ??= VaultStorage.Disk;
+        ArgumentNullException.ThrowIfNull(disk);
         root = Path.GetFullPath(root);
         var header = ReadHeader(root, disk);
         var vault = new EncryptedVault(root, disk, header.VaultId, dataKey);
@@ -261,7 +268,7 @@ public sealed class EncryptedVault : IDisposable
         }
         catch
         {
-            _ = TryDeleteObject(objectId);
+            _ = TryPurgeObject(objectId);
             throw;
         }
     }
@@ -323,32 +330,37 @@ public sealed class EncryptedVault : IDisposable
         });
     }
 
-    /// <summary>Retire un fichier de l'index, l'écrit, puis efface son objet.</summary>
-    public void DeleteFile(string path)
+    /// <summary>
+    /// Efface pour de bon un fichier, ou un dossier et tout ce qu'il contient : il quitte l'index, écrit aussitôt, puis ses
+    /// objets sont effacés. Seul l'effacement demandé depuis la corbeille y recourt.
+    /// </summary>
+    /// <exception cref="VaultCryptoException">Ni fichier ni dossier ne porte ce chemin.</exception>
+    public void Purge(string path)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
-        var entry = EntryOf(path);
-        Commit(() => _files.Remove(entry.Path));
-        _ = TryDeleteObject(entry.Object);
-    }
-
-    /// <summary>Retire un dossier et tout ce qu'il contient de l'index, l'écrit, puis efface leurs objets.</summary>
-    public void DeleteFolder(string path)
-    {
-        ObjectDisposedException.ThrowIf(_disposed, this);
-        var folder = FolderOf(path);
-        var files = _files.Values.Where(entry => IsWithin(entry.Path, folder)).ToList();
-        Commit(() =>
+        var key = Normalized(path);
+        List<Entry> files;
+        if (_files.TryGetValue(key, out var file))
         {
-            foreach (var entry in files)
+            files = [file];
+            Commit(() => _files.Remove(file.Path));
+        }
+        else
+        {
+            var folder = FolderOf(path);
+            files = [.. _files.Values.Where(entry => IsWithin(entry.Path, folder))];
+            Commit(() =>
             {
-                _files.Remove(entry.Path);
-            }
-            _folders.RemoveWhere(other => IsWithin(other, folder));
-        });
+                foreach (var entry in files)
+                {
+                    _files.Remove(entry.Path);
+                }
+                _folders.RemoveWhere(other => IsWithin(other, folder));
+            });
+        }
         foreach (var entry in files)
         {
-            _ = TryDeleteObject(entry.Object);
+            _ = TryPurgeObject(entry.Object);
         }
     }
 
@@ -512,15 +524,15 @@ public sealed class EncryptedVault : IDisposable
         Disk.Replace(ObjectPath(objectId), SealedFile.Seal(_key, VaultId, objectId, content));
 
     /// <summary>
-    /// Efface un objet que l'index ne nomme plus. S'il reste, il est ignoré : aucune entrée ne le nomme, seule sa taille se
-    /// voit.
+    /// Le seul point du coffre chiffré qui efface : un objet que l'index ne nomme plus. S'il reste, il est ignoré : aucune
+    /// entrée ne le nomme, seule sa taille se voit.
     /// </summary>
     /// <returns><see langword="false"/> si l'objet n'a pas pu être effacé.</returns>
-    private bool TryDeleteObject(string objectId)
+    private bool TryPurgeObject(string objectId)
     {
         try
         {
-            Disk.DeleteFile(ObjectPath(objectId));
+            Disk.Purge(ObjectPath(objectId));
             return true;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)

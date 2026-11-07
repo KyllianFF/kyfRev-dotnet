@@ -70,14 +70,7 @@ public sealed partial class VaultSession
         var absolute = Confine(path);
         Io(absolute, () =>
         {
-            if (_storage.DirectoryExists(absolute))
-            {
-                _storage.DeleteDirectory(absolute);
-            }
-            else if (_storage.FileExists(absolute))
-            {
-                _storage.DeleteFile(absolute);
-            }
+            _storage.Purge(absolute);
             return true;
         });
     }

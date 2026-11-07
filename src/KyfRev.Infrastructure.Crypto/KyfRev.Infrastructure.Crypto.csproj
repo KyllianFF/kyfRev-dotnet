@@ -7,8 +7,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\KyfRev.Application\KyfRev.Application.csproj" />
-    <!-- Le stockage chiffré prend la place du disque sous la session du coffre. -->
-    <ProjectReference Include="..\KyfRev.Infrastructure.Vault\KyfRev.Infrastructure.Vault.csproj" />
   </ItemGroup>
 
   <ItemGroup>

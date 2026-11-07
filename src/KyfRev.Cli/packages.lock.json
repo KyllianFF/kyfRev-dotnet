@@ -28,7 +28,6 @@
         "type": "Project",
         "dependencies": {
           "KyfRev.Application": "[1.0.0-alpha.0, )",
-          "KyfRev.Infrastructure.Vault": "[1.0.0-alpha.0, )",
           "NSec.Cryptography": "[26.4.0, )",
           "System.Security.Cryptography.ProtectedData": "[10.0.13, )"
         }

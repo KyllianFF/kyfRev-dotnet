@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Security.Cryptography;
+using KyfRev.Application.Ports;
 using KyfRev.Domain.Calendar;
 using KyfRev.Infrastructure.Vault.Backups;
 using KyfRev.Infrastructure.Vault.Files;
@@ -22,7 +23,7 @@ public sealed partial class VaultSession
     public BackupFile Backup(string folder, DateTime timestamp)
     {
         ArgumentNullException.ThrowIfNull(folder);
-        CreateDirectory(VaultStorage.Disk, folder);
+        CreateDirectory(DiskStorage.Instance, folder);
         if (RealPaths.IsWithin(Io(folder, () => RealPaths.OfExistingPart(folder)), _realRoot))
         {
             throw VaultException.BackupInsideVault(folder);

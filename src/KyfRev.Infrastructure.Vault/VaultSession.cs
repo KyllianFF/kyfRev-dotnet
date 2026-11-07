@@ -1,4 +1,5 @@
 using System.Text;
+using KyfRev.Application.Ports;
 using KyfRev.Domain.Calendar;
 using KyfRev.Infrastructure.Vault.Files;
 using KyfRev.Infrastructure.Vault.Format;
@@ -79,7 +80,7 @@ public sealed partial class VaultSession : IDisposable
     {
         ArgumentNullException.ThrowIfNull(root);
         ids ??= UlidGenerator.System;
-        storage ??= VaultStorage.Disk;
+        storage ??= DiskStorage.Instance;
         CheckServes(storage, Io(root, () => Path.GetFullPath(root)));
         if (storage.DirectoryExists(root) && Io(root, () => storage.Entries(root).Count > 0))
         {
@@ -106,7 +107,7 @@ public sealed partial class VaultSession : IDisposable
     public static VaultSession Open(string root, Moment now, UlidGenerator? ids = null, VaultStorage? storage = null)
     {
         ArgumentNullException.ThrowIfNull(root);
-        storage ??= VaultStorage.Disk;
+        storage ??= DiskStorage.Instance;
         var absolute = Io(root, () => Path.GetFullPath(root));
         CheckServes(storage, absolute);
         var settingsPath = VaultLayout.Absolute(absolute, VaultLayout.SettingsFile);

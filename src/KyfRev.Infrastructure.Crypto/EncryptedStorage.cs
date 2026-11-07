@@ -1,5 +1,5 @@
 using System.IO.Enumeration;
-using KyfRev.Infrastructure.Vault.Files;
+using KyfRev.Application.Ports;
 
 namespace KyfRev.Infrastructure.Crypto;
 
@@ -38,11 +38,11 @@ public sealed class EncryptedStorage : VaultStorage, IDisposable
     public string VaultId => _vault.VaultId;
 
     /// <summary>Crée un coffre chiffré vide dans le dossier vide <paramref name="root"/> (<see cref="EncryptedVault.Create"/>).</summary>
-    public static EncryptedStorage Create(string root, VaultHeader header, ReadOnlySpan<byte> dataKey, VaultStorage? disk = null) =>
+    public static EncryptedStorage Create(string root, VaultHeader header, ReadOnlySpan<byte> dataKey, VaultStorage disk) =>
         new(EncryptedVault.Create(root, header, dataKey, disk));
 
     /// <summary>Ouvre le coffre chiffré de <paramref name="root"/> avec sa clé de données (<see cref="EncryptedVault.Open"/>).</summary>
-    public static EncryptedStorage Open(string root, ReadOnlySpan<byte> dataKey, VaultStorage? disk = null) =>
+    public static EncryptedStorage Open(string root, ReadOnlySpan<byte> dataKey, VaultStorage disk) =>
         new(EncryptedVault.Open(root, dataKey, disk));
 
     /// <inheritdoc/>
@@ -154,35 +154,18 @@ public sealed class EncryptedStorage : VaultStorage, IDisposable
         _vault.MoveFolder(from, to);
     }
 
-    /// <inheritdoc/>
-    public override void DeleteFile(string path)
-    {
-        var relative = Inside(path);
-        if (IsFolder(relative))
-        {
-            throw new UnauthorizedAccessException($"« {path} » est un dossier.");
-        }
-        if (_vault.ContainsFile(relative))
-        {
-            _vault.DeleteFile(relative);
-            return;
-        }
-        CheckParent(relative, path);
-    }
-
-    /// <inheritdoc/>
-    public override void DeleteDirectory(string path)
+    /// <summary>Efface un fichier, ou un dossier avec tout ce qu'il contient : l'index d'abord, puis les objets. La racine reste.</summary>
+    public override void Purge(string path)
     {
         var relative = Inside(path);
         if (relative.Length == 0)
         {
             throw new IOException("La racine du coffre ne s'efface pas.");
         }
-        if (!IsFolder(relative))
+        if (_vault.ContainsFile(relative) || _vault.ContainsFolder(relative))
         {
-            throw new DirectoryNotFoundException($"Dossier introuvable : « {path} ».");
+            _vault.Purge(relative);
         }
-        _vault.DeleteFolder(relative);
     }
 
     /// <inheritdoc/>

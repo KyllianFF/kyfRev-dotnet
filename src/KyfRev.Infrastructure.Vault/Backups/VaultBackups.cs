@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.IO.Compression;
+using KyfRev.Application.Ports;
 using KyfRev.Infrastructure.Vault.Files;
 using KyfRev.Infrastructure.Vault.Paths;
 
@@ -73,12 +74,12 @@ public static class VaultBackups
     public static IReadOnlyList<(DateTime Timestamp, string Path)> List(string folder)
     {
         ArgumentNullException.ThrowIfNull(folder);
-        if (!VaultStorage.Disk.Exists(folder))
+        if (!DiskStorage.Instance.Exists(folder))
         {
             return [];
         }
         var backups = new List<(DateTime, string)>();
-        foreach (var file in VaultSession.Io(folder, () => VaultStorage.Disk.Entries(folder).Where(entry => !entry.IsDirectory).ToList()))
+        foreach (var file in VaultSession.Io(folder, () => DiskStorage.Instance.Entries(folder).Where(entry => !entry.IsDirectory).ToList()))
         {
             if (!file.IsLink && TimestampOf(file.Name) is { } timestamp)
             {
@@ -134,7 +135,7 @@ public static class VaultBackups
     public static IReadOnlyList<string> ApplyRotation(string folder, RotationPolicy policy)
     {
         ArgumentNullException.ThrowIfNull(folder);
-        if (VaultStorage.Disk.Exists(Path.Combine(folder, VaultLayout.Tracking)))
+        if (DiskStorage.Instance.Exists(Path.Combine(folder, VaultLayout.Tracking)))
         {
             throw VaultException.BackupInsideVault(folder);
         }
@@ -193,7 +194,7 @@ public static class VaultBackups
             throw VaultException.InvalidBackup(backup, "ce n'est pas une sauvegarde de coffre (coffre.json absent)");
         }
 
-        var disk = VaultStorage.Disk;
+        var disk = DiskStorage.Instance;
         VaultSession.CreateDirectory(disk, parentFolder);
         var name = $"Coffre (restauré le {day:yyyy-MM-dd})";
         var target = Path.Combine(parentFolder, name);
@@ -291,7 +292,7 @@ public static class VaultBackups
         }
         VaultSession.Io(path, () =>
         {
-            VaultStorage.Disk.DeleteFile(path);
+            File.Delete(path);
             return true;
         });
     }

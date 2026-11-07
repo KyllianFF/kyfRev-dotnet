@@ -1,6 +1,6 @@
 using System.Collections.Immutable;
+using KyfRev.Application.Ports;
 using KyfRev.Application.Text;
-using KyfRev.Infrastructure.Vault.Files;
 using KyfRev.Infrastructure.Vault.Links;
 using KyfRev.Infrastructure.Vault.Paths;
 

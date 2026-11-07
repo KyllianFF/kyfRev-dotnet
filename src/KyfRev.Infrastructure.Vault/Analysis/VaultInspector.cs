@@ -2,6 +2,7 @@ using System.Collections.Immutable;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using KyfRev.Application.Ports;
 using KyfRev.Domain.Reviews;
 using KyfRev.Infrastructure.Vault.Files;
 using KyfRev.Infrastructure.Vault.Format;
@@ -29,7 +30,7 @@ public static partial class VaultInspector
     public static VaultInspection Inspect(string root, VaultStorage? storage = null)
     {
         ArgumentNullException.ThrowIfNull(root);
-        var context = new Context(Path.GetFullPath(root), storage ?? VaultStorage.Disk);
+        var context = new Context(Path.GetFullPath(root), storage ?? DiskStorage.Instance);
         if (!context.Storage.DirectoryExists(context.Root) || !context.Storage.FileExists(VaultLayout.Absolute(context.Root, VaultLayout.SettingsFile)))
         {
             context.Add(FindingSeverity.Error, "pas-un-coffre", null, $"Ce dossier n'est pas un coffre kyfRev : {VaultLayout.SettingsFile} est introuvable.");
