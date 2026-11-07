@@ -153,6 +153,12 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
     /// <summary>Le moteur n'a pas pu démarrer, ou s'est arrêté.</summary>
     public event EventHandler<string>? Failed;
 
+    /// <summary>L'éditeur n'a pas démarré faute de moteur WebView2 sur l'ordinateur.</summary>
+    public bool MissesEngine { get; private set; }
+
+    /// <summary>Un processus du moteur s'est arrêté puis a été relancé par WebView2 (le GPU, un utilitaire) : la page continue.</summary>
+    public event EventHandler<string>? Restarted;
+
     /// <summary>Un clic sur l'image du texte, pendant qu'un volet le recouvre.</summary>
     public event EventHandler? SnapshotClicked;
 
@@ -598,6 +604,7 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
         {
             if (!_disposed)
             {
+                MissesEngine = exception is WebView2RuntimeNotFoundException;
                 Failed?.Invoke(this, exception.Message);
             }
         }
@@ -611,7 +618,17 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
         web.WebMessageReceived += OnMessage;
         web.NavigationStarting += (_, e) => e.Cancel = e.Uri != StartAddress;
         web.PermissionRequested += (_, e) => e.State = e.PermissionKind == CoreWebView2PermissionKind.ClipboardRead ? CoreWebView2PermissionState.Allow : CoreWebView2PermissionState.Deny;
-        web.ProcessFailed += (_, e) => Failed?.Invoke(this, e.ProcessFailedKind.ToString());
+        web.ProcessFailed += (_, e) =>
+        {
+            if (WebProcesses.StopsThePage(e.ProcessFailedKind))
+            {
+                Failed?.Invoke(this, e.ProcessFailedKind.ToString());
+            }
+            else
+            {
+                Restarted?.Invoke(this, e.ProcessFailedKind.ToString());
+            }
+        };
     }
 
     /// <summary>Une image du coffre peut être lourde, ou loin : elle se lit sur un fil de travail, l'interface reste libre.</summary>

@@ -45,7 +45,11 @@ public sealed record TableSize(int Rows, int Columns);
 /// <param name="WebDataFolder">Le dossier des données de WebView2.</param>
 /// <param name="StartsInMarkdown">Ouvrir sur le code, et non sur le texte mis en forme.</param>
 /// <param name="Schemas">Le module Schémas réseau ; rien s'il n'y en a pas.</param>
-public sealed record EditorEnvironment(ISpelling Spelling, string WebDataFolder, bool StartsInMarkdown = false, Func<INetworkSchemas?>? Schemas = null);
+public sealed record EditorEnvironment(ISpelling Spelling, string WebDataFolder, bool StartsInMarkdown = false, Func<INetworkSchemas?>? Schemas = null)
+{
+    /// <summary>Ce qui note un incident du moteur web dans le journal de diagnostic : sa raison, jamais le texte de la fiche.</summary>
+    public Action<string>? Report { get; init; }
+}
 
 /// <summary>Ce que le ruban affiche de l'endroit du curseur.</summary>
 /// <param name="Bold">Gras.</param>
@@ -543,12 +547,15 @@ public sealed partial class SheetEditorViewModel : ObservableObject
         Hook(surface, true);
     }
 
-    /// <summary>Le texte mis en forme s'est arrêté : l'écriture continue en Markdown, sans rien perdre.</summary>
-    internal async Task VisualFailedAsync()
+    /// <summary>
+    /// Le texte mis en forme s'est arrêté : l'écriture continue en Markdown, sans rien perdre. Si le moteur WebView2 manque à
+    /// l'ordinateur, le message le dit.
+    /// </summary>
+    internal async Task VisualFailedAsync(bool missesEngine = false)
     {
         IsVisualAvailable = false;
         _visualProvider = null;
-        Problem = EditingText.VisualUnavailable;
+        Problem = missesEngine ? EditingText.VisualEngineMissing : EditingText.VisualUnavailable;
         if (!IsMarkdownShown)
         {
             await ShowMarkdownAsync(true).ConfigureAwait(true);

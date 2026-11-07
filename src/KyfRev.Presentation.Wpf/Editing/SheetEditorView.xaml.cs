@@ -134,7 +134,12 @@ internal sealed partial class SheetEditorView : UserControl
     {
         var visual = new VisualEditor(page.Folder, page.ReadResource, page.Spelling, page.Environment.WebDataFolder);
         visual.ImageDropped += (name, content, position) => _ = page.InsertImageAsync(name, content, position);
-        visual.Failed += (_, _) => _ = page.VisualFailedAsync();
+        visual.Failed += (_, reason) =>
+        {
+            page.Environment.Report?.Invoke($"le texte mis en forme ne s'ouvre pas : {reason}");
+            _ = page.VisualFailedAsync(visual.MissesEngine);
+        };
+        visual.Restarted += (_, reason) => page.Environment.Report?.Invoke($"moteur web du texte mis en forme : {reason}, relancé");
         visual.SnapshotClicked += (_, _) => CoveredTextClicked?.Invoke();
         VisualHost.Content = visual;
         UpdateZoom();
