@@ -97,7 +97,7 @@ public sealed partial class VaultSession
         foreach (var (noteSource, target) in notes)
         {
             var relativeSource = Path.GetRelativePath(source, noteSource);
-            if (TryReadAllBytes(noteSource) is not { } bytes)
+            if (VaultStorage.Disk.TryReadAllBytes(noteSource) is not { } bytes)
             {
                 ignored.Add($"{relativeSource} : illisible");
                 continue;
@@ -318,7 +318,7 @@ public sealed partial class VaultSession
         for (var number = 1; number < 100; number++)
         {
             var path = FolderPath(number == 1 ? stem : $"{stem} ({number})");
-            if (!RealPaths.Exists(Confine(path)))
+            if (!_storage.Exists(Confine(path)))
             {
                 return path;
             }
@@ -533,14 +533,14 @@ public sealed partial class VaultSession
                 Ignored.Add($"« {originalName} » : plus de 50 Mo, non copiée");
                 return null;
             }
-            if (TryReadAllBytes(file) is not { } bytes)
+            if (VaultStorage.Disk.TryReadAllBytes(file) is not { } bytes)
             {
                 return null;
             }
             try
             {
                 var folder = FileNames.ResourcesFolder(note);
-                CreateDirectory(vault.Confine(folder));
+                vault.CreateDirectory(vault.Confine(folder));
                 var dot = name.LastIndexOf('.');
                 var (stem, extension) = dot < 0 ? (name, string.Empty) : (name[..dot], name[(dot + 1)..]);
                 for (var number = 1; number < 1000; number++)
@@ -550,7 +550,7 @@ public sealed partial class VaultSession
                     {
                         return null;
                     }
-                    if (TryCreateFile(vault.Confine(path), bytes))
+                    if (vault.TryCreateFile(vault.Confine(path), bytes))
                     {
                         var link = $"{folder.Name}/{candidate}";
                         Copied[file] = link;

@@ -1,6 +1,5 @@
 using System.Text.Json;
 using KyfRev.Domain.Calendar;
-using KyfRev.Infrastructure.Vault.Files;
 using KyfRev.Infrastructure.Vault.Format;
 using KyfRev.Infrastructure.Vault.Json;
 using KyfRev.Infrastructure.Vault.Paths;
@@ -71,13 +70,13 @@ public sealed partial class VaultSession
         var absolute = Confine(path);
         Io(absolute, () =>
         {
-            if (Directory.Exists(absolute))
+            if (_storage.DirectoryExists(absolute))
             {
-                Directory.Delete(absolute, recursive: true);
+                _storage.DeleteDirectory(absolute);
             }
-            else if (File.Exists(absolute))
+            else if (_storage.FileExists(absolute))
             {
-                File.Delete(absolute);
+                _storage.DeleteFile(absolute);
             }
             return true;
         });
@@ -86,7 +85,7 @@ public sealed partial class VaultSession
     private (List<string> Sheets, VaultPath Storage) TrashFolderInto(string folder, Moment now)
     {
         var path = FolderPath(folder);
-        if (!Directory.Exists(Confine(path)))
+        if (!_storage.DirectoryExists(Confine(path)))
         {
             throw VaultException.UnknownFolder(folder);
         }
@@ -125,22 +124,22 @@ public sealed partial class VaultSession
         var destination = FreePath(folder, WithoutMarkdownExtension(origin.Name), stored);
 
         var moves = new List<PlannedMove>();
-        if (RealPaths.Exists(Confine(stored)))
+        if (_storage.Exists(Confine(stored)))
         {
             moves.Add(new PlannedMove(stored, destination));
         }
         var resources = storage.Join(FileNames.ResourcesFolder(origin).Name);
-        if (RealPaths.Exists(Confine(resources)))
+        if (_storage.Exists(Confine(resources)))
         {
             moves.Add(new PlannedMove(resources, FileNames.ResourcesFolder(destination)));
         }
         var annotations = VaultPath.Create($"{VaultLayout.TrashTracking}/{id}.annotations.json");
-        if (RealPaths.Exists(Confine(annotations)))
+        if (_storage.Exists(Confine(annotations)))
         {
             moves.Add(new PlannedMove(annotations, VaultPath.Create($"{VaultLayout.Annotations}/{id}.json")));
         }
         var tracking = VaultPath.Create($"{VaultLayout.SheetTracking}/{id}.json");
-        if (RealPaths.Exists(Confine(tracking)))
+        if (_storage.Exists(Confine(tracking)))
         {
             throw VaultException.AlreadyExists(Confine(tracking));
         }
@@ -159,12 +158,12 @@ public sealed partial class VaultSession
     public IReadOnlyList<TrashedSheet> TrashedSheets()
     {
         var folder = VaultLayout.Absolute(Root, VaultLayout.TrashTracking);
-        if (!Directory.Exists(folder))
+        if (!_storage.DirectoryExists(folder))
         {
             return [];
         }
         var sheets = new List<TrashedSheet>();
-        foreach (var file in Io(folder, () => Directory.EnumerateFileSystemEntries(folder).Order(StringComparer.Ordinal).ToList()))
+        foreach (var file in Io(folder, () => _storage.Entries(folder).Select(entry => entry.FullName).Order(StringComparer.Ordinal).ToList()))
         {
             var name = Path.GetFileName(file);
             var id = name.EndsWith(".json", StringComparison.Ordinal) ? name[..^5] : string.Empty;
@@ -204,7 +203,7 @@ public sealed partial class VaultSession
         var moves = new List<PlannedMove>();
         void Plan(VaultPath from, VaultPath to)
         {
-            if (RealPaths.Exists(Confine(from)))
+            if (_storage.Exists(Confine(from)))
             {
                 moves.Add(new PlannedMove(from, to));
             }
@@ -225,7 +224,7 @@ public sealed partial class VaultSession
         }
         var tracking = Confine(VaultPath.Create($"{VaultLayout.TrashTracking}/{id}.json"));
         var infoFile = Confine(VaultPath.Create($"{VaultLayout.SheetsTrash}/{id}/corbeille.json"));
-        if (!RealPaths.Exists(tracking))
+        if (!_storage.Exists(tracking))
         {
             throw VaultException.UnknownSheet(id);
         }
@@ -267,7 +266,7 @@ public sealed partial class VaultSession
         }
     }
 
-    private static int CountAnnotations(string file)
+    private int CountAnnotations(string file)
     {
         if (TryReadAllBytes(file) is not { } bytes)
         {

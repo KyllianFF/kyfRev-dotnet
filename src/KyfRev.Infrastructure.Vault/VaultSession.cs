@@ -41,18 +41,20 @@ public sealed partial class VaultSession : IDisposable
     private static readonly VaultPath SheetsFolder = VaultPath.Parse(VaultLayout.Sheets);
 
     private readonly VaultLock _lock;
+    private readonly VaultStorage _storage;
     private readonly UlidGenerator _ids;
     private readonly string _realRoot;
     private readonly HashSet<(string Id, ulong Session)> _savedSessions = [];
     private SortedDictionary<string, SheetEntry> _sheets = new(StringComparer.Ordinal);
 
-    private VaultSession(string root, VaultLock vaultLock, VaultSettingsFile settings, UlidGenerator ids)
+    private VaultSession(string root, VaultStorage storage, VaultLock vaultLock, VaultSettingsFile settings, UlidGenerator ids)
     {
         Root = root;
+        _storage = storage;
         _lock = vaultLock;
         Settings = settings;
         _ids = ids;
-        _realRoot = RealPaths.OfExistingPart(root);
+        _realRoot = storage.Raw.RealPath(root);
     }
 
     /// <summary>Racine du coffre (chemin absolu).</summary>
@@ -60,6 +62,9 @@ public sealed partial class VaultSession : IDisposable
 
     /// <summary>Réglages du coffre (<c>.suivi/coffre.json</c>).</summary>
     public VaultSettingsFile Settings { get; private set; }
+
+    /// <summary>Là où vivent les fichiers du coffre.</summary>
+    internal VaultStorage Storage => _storage;
 
     /// <summary>Résultat de la dernière analyse, complété par les opérations suivantes.</summary>
     public HealthReport Health { get; private set; } = new();
@@ -71,22 +76,24 @@ public sealed partial class VaultSession : IDisposable
     /// <param name="root">Dossier du coffre.</param>
     /// <param name="now">Instant présent.</param>
     /// <param name="ids">Générateur d'identifiants (celui du système par défaut).</param>
+    /// <param name="storage">Là où vivent les fichiers du coffre : le disque par défaut. Il reste à l'appelant, qui le libère après la session.</param>
     /// <exception cref="VaultException">Dossier non vide, ou écriture impossible.</exception>
-    public static VaultSession Initialize(string root, Moment now, UlidGenerator? ids = null)
+    public static VaultSession Initialize(string root, Moment now, UlidGenerator? ids = null, VaultStorage? storage = null)
     {
         ArgumentNullException.ThrowIfNull(root);
         ids ??= UlidGenerator.System;
-        if (Directory.Exists(root) && Io(root, () => Directory.EnumerateFileSystemEntries(root).Any()))
+        storage ??= VaultStorage.Disk;
+        if (storage.DirectoryExists(root) && Io(root, () => storage.Entries(root).Count > 0))
         {
             throw VaultException.FolderNotEmpty(root);
         }
         foreach (var folder in new[] { VaultLayout.Sheets, VaultLayout.Quotes, VaultLayout.Tracking })
         {
-            CreateDirectory(VaultLayout.Absolute(root, folder));
+            CreateDirectory(storage, VaultLayout.Absolute(root, folder));
         }
-        CreateFile(VaultLayout.Absolute(root, ".suivi/LISEZMOI.txt"), Encoding.UTF8.GetBytes(Readme));
-        CreateFile(VaultLayout.Absolute(root, VaultLayout.SettingsFile), VaultSettingsFile.New($"v_{ids.Next()}", now.Day).Write());
-        return Open(root, now, ids);
+        CreateFile(storage, VaultLayout.Absolute(root, ".suivi/LISEZMOI.txt"), Encoding.UTF8.GetBytes(Readme));
+        CreateFile(storage, VaultLayout.Absolute(root, VaultLayout.SettingsFile), VaultSettingsFile.New($"v_{ids.Next()}", now.Day).Write());
+        return Open(root, now, ids, storage);
     }
 
     /// <summary>
@@ -96,15 +103,26 @@ public sealed partial class VaultSession : IDisposable
     /// <param name="root">Dossier du coffre.</param>
     /// <param name="now">Instant présent.</param>
     /// <param name="ids">Générateur d'identifiants (celui du système par défaut).</param>
+    /// <param name="storage">Là où vivent les fichiers du coffre : le disque par défaut. Il reste à l'appelant, qui le libère après la session.</param>
     /// <exception cref="VaultException">Pas un coffre, déjà ouvert, réglages illisibles, ou lecture impossible.</exception>
-    public static VaultSession Open(string root, Moment now, UlidGenerator? ids = null)
+    public static VaultSession Open(string root, Moment now, UlidGenerator? ids = null, VaultStorage? storage = null)
     {
         ArgumentNullException.ThrowIfNull(root);
+        storage ??= VaultStorage.Disk;
         var absolute = Io(root, () => Path.GetFullPath(root));
+        if (storage.Root is { } served && !string.Equals(Path.TrimEndingDirectorySeparator(served), Path.TrimEndingDirectorySeparator(absolute), StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ArgumentException($"Ce stockage sert « {served} », pas « {absolute} ».", nameof(storage));
+        }
         var settingsPath = VaultLayout.Absolute(absolute, VaultLayout.SettingsFile);
-        if (!File.Exists(settingsPath))
+        if (!storage.FileExists(settingsPath))
         {
             throw VaultException.NotAVault(absolute);
+        }
+        if (storage.Raw != storage)
+        {
+            // Le verrou reste sur le disque, dans un dossier .suivi que le coffre chiffré n'a pas encore.
+            CreateDirectory(storage.Raw, VaultLayout.Absolute(absolute, VaultLayout.Tracking));
         }
         var vaultLock = Io(absolute, () => VaultLock.TryAcquire(absolute, now.Instant, out var holder)
             ?? throw VaultException.AlreadyOpen(holder is null ? "par une autre fenêtre" : $"sur {holder.Machine} depuis {InstantText.Format(holder.Since)}"));
@@ -113,7 +131,7 @@ public sealed partial class VaultSession : IDisposable
             VaultSettingsFile settings;
             try
             {
-                settings = VaultSettingsFile.Read(ReadAllBytes(settingsPath));
+                settings = VaultSettingsFile.Read(ReadAllBytes(storage, settingsPath));
             }
             catch (VaultFormatException exception)
             {
@@ -121,9 +139,9 @@ public sealed partial class VaultSession : IDisposable
             }
             foreach (var folder in new[] { VaultLayout.Sheets, VaultLayout.Quotes, VaultLayout.SheetTracking, VaultLayout.Annotations, VaultLayout.Versions })
             {
-                CreateDirectory(VaultLayout.Absolute(absolute, folder));
+                CreateDirectory(storage, VaultLayout.Absolute(absolute, folder));
             }
-            var vault = new VaultSession(absolute, vaultLock, settings, ids ?? UlidGenerator.System);
+            var vault = new VaultSession(absolute, storage, vaultLock, settings, ids ?? UlidGenerator.System);
             // Une opération interrompue (arrêt brutal pendant un renommage) est terminée avant tout.
             var toCheck = vault.ResumeInterruptedOperation();
             vault.Analyze(now);
@@ -166,8 +184,8 @@ public sealed partial class VaultSession : IDisposable
             try
             {
                 // La date d'abord : un changement pendant la lecture fera relire la fiche (liens cassés).
-                modified = File.GetLastWriteTimeUtc(absolute);
-                bytes = File.ReadAllBytes(absolute);
+                modified = _storage.LastWriteTimeUtc(absolute);
+                bytes = _storage.ReadAllBytes(absolute);
             }
             catch (Exception exception) when (IsIo(exception))
             {
@@ -206,7 +224,7 @@ public sealed partial class VaultSession : IDisposable
         // 2. Les fichiers de suivi.
         var trackings = new List<TrackedSheetFile>();
         var trackingFolder = VaultLayout.Absolute(Root, VaultLayout.SheetTracking);
-        foreach (var file in Io(trackingFolder, () => Directory.EnumerateFileSystemEntries(trackingFolder).Order(StringComparer.Ordinal).ToList()))
+        foreach (var file in Io(trackingFolder, () => _storage.Entries(trackingFolder).Select(entry => entry.FullName).Order(StringComparer.Ordinal).ToList()))
         {
             var name = Path.GetFileName(file);
             if (Extension(name) != "json")
@@ -217,7 +235,7 @@ public sealed partial class VaultSession : IDisposable
             var shown = $"{VaultLayout.SheetTracking}/{stem}.json";
             try
             {
-                var tracking = TrackedSheetFile.Read(File.ReadAllBytes(file));
+                var tracking = TrackedSheetFile.Read(_storage.ReadAllBytes(file));
                 if (tracking.Id == stem && VaultIds.IsSheetId(stem))
                 {
                     trackings.Add(tracking);
@@ -314,7 +332,7 @@ public sealed partial class VaultSession : IDisposable
     {
         var absolute = path.ToAbsolute(Root);
         // La racine réelle est résolue à l'ouverture : seuls les composants du chemin dans le coffre sont examinés.
-        var real = Io(absolute, () => RealPaths.OfExistingPartBelow(_realRoot, path.Value.Replace('/', Path.DirectorySeparatorChar)));
+        var real = Io(absolute, () => _storage.RealPathBelow(_realRoot, path.Value.Replace('/', Path.DirectorySeparatorChar)));
         return RealPaths.IsWithin(real, _realRoot) ? absolute : throw VaultException.OutsideVault(absolute);
     }
 
@@ -360,14 +378,14 @@ public sealed partial class VaultSession : IDisposable
         var toVisit = new Stack<string>([folder.ToAbsolute(Root)]);
         while (toVisit.TryPop(out var current))
         {
-            foreach (var entry in Io(current, () => new DirectoryInfo(current).EnumerateFileSystemInfos().ToList()))
+            foreach (var entry in Io(current, () => _storage.Entries(current)))
             {
                 var name = entry.Name;
-                if (name.StartsWith('.') || entry.LinkTarget is not null)
+                if (name.StartsWith('.') || entry.IsLink)
                 {
                     continue;
                 }
-                if (entry is DirectoryInfo)
+                if (entry.IsDirectory)
                 {
                     if (!name.EndsWith(VaultLayout.ResourcesSuffix, StringComparison.Ordinal))
                     {
@@ -413,25 +431,41 @@ public sealed partial class VaultSession : IDisposable
         }
     }
 
-    internal static byte[] ReadAllBytes(string absolute) => Io(absolute, () => File.ReadAllBytes(absolute));
+    internal byte[] ReadAllBytes(string absolute) => ReadAllBytes(_storage, absolute);
 
-    internal static void CreateDirectory(string absolute) => Io(absolute, () => Directory.CreateDirectory(absolute));
+    internal static byte[] ReadAllBytes(VaultStorage storage, string absolute) => Io(absolute, () => storage.ReadAllBytes(absolute));
+
+    /// <summary>Le contenu d'un fichier du coffre, ou rien s'il ne se lit pas.</summary>
+    internal byte[]? TryReadAllBytes(string absolute) => _storage.TryReadAllBytes(absolute);
+
+    internal void CreateDirectory(string absolute) => CreateDirectory(_storage, absolute);
+
+    internal static void CreateDirectory(VaultStorage storage, string absolute) => Io(absolute, () =>
+    {
+        storage.CreateDirectory(absolute);
+        return true;
+    });
 
     /// <summary>Crée le fichier de façon atomique ; refusé s'il existe déjà.</summary>
-    internal static void CreateFile(string absolute, ReadOnlySpan<byte> content)
+    internal void CreateFile(string absolute, ReadOnlySpan<byte> content) => CreateFile(_storage, absolute, content);
+
+    /// <summary>Crée le fichier de façon atomique dans <paramref name="storage"/> ; refusé s'il existe déjà.</summary>
+    internal static void CreateFile(VaultStorage storage, string absolute, ReadOnlySpan<byte> content)
     {
-        if (!TryCreateFile(absolute, content))
+        if (!TryCreateFile(storage, absolute, content))
         {
             throw VaultException.AlreadyExists(absolute);
         }
     }
 
     /// <summary>Crée le fichier de façon atomique ; <see langword="false"/> s'il existe déjà.</summary>
-    internal static bool TryCreateFile(string absolute, ReadOnlySpan<byte> content)
+    internal bool TryCreateFile(string absolute, ReadOnlySpan<byte> content) => TryCreateFile(_storage, absolute, content);
+
+    private static bool TryCreateFile(VaultStorage storage, string absolute, ReadOnlySpan<byte> content)
     {
         try
         {
-            return AtomicFile.TryCreateNew(absolute, content);
+            return storage.TryCreateNew(absolute, content);
         }
         catch (Exception exception) when (IsIo(exception))
         {
@@ -439,11 +473,11 @@ public sealed partial class VaultSession : IDisposable
         }
     }
 
-    internal static void ReplaceFile(string absolute, ReadOnlySpan<byte> content)
+    internal void ReplaceFile(string absolute, ReadOnlySpan<byte> content)
     {
         try
         {
-            AtomicFile.Replace(absolute, content);
+            _storage.Replace(absolute, content);
         }
         catch (Exception exception) when (IsIo(exception))
         {
@@ -465,11 +499,11 @@ public sealed partial class VaultSession : IDisposable
 
     internal static bool IsIo(Exception exception) => exception is IOException or UnauthorizedAccessException;
 
-    private static DateTimeOffset? LastWrite(string absolute)
+    private DateTimeOffset? LastWrite(string absolute)
     {
         try
         {
-            return new DateTimeOffset(File.GetLastWriteTimeUtc(absolute), TimeSpan.Zero);
+            return new DateTimeOffset(_storage.LastWriteTimeUtc(absolute), TimeSpan.Zero);
         }
         catch (Exception exception) when (IsIo(exception))
         {

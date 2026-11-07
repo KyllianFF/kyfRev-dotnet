@@ -100,7 +100,7 @@ public sealed partial class VaultSession
                     continue;
                 }
                 var isSheet = RustText.ToLowercase(target).EndsWith(".md", StringComparison.Ordinal);
-                if (isSheet || !File.Exists(absolute) || new FileInfo(absolute).Length > MaxSharedBytes)
+                if (isSheet || !_storage.FileExists(absolute) || _storage.LengthOf(absolute) > MaxSharedBytes)
                 {
                     continue;
                 }
@@ -162,7 +162,7 @@ public sealed partial class VaultSession
         try
         {
             var absolute = Confine(vaultPath);
-            return File.Exists(absolute) && new FileInfo(absolute).Length <= MaxSharedBytes && TryReadAllBytes(absolute) is { } bytes
+            return _storage.FileExists(absolute) && _storage.LengthOf(absolute) <= MaxSharedBytes && TryReadAllBytes(absolute) is { } bytes
                 ? $"data:{mime};base64,{Convert.ToBase64String(bytes)}"
                 : null;
         }

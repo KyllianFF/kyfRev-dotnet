@@ -40,7 +40,7 @@ public sealed partial class VaultSession
     {
         var path = FolderPath(folder);
         var absolute = Confine(path);
-        if (RealPaths.Exists(absolute))
+        if (_storage.Exists(absolute))
         {
             throw VaultException.AlreadyExists(absolute);
         }
@@ -60,7 +60,7 @@ public sealed partial class VaultSession
         var from = FolderPath(folder);
         var target = FolderPath(to);
         var absolute = Confine(from);
-        if (!Directory.Exists(absolute))
+        if (!_storage.DirectoryExists(absolute))
         {
             throw VaultException.UnknownFolder(RelativeToSheets(from));
         }
@@ -76,7 +76,7 @@ public sealed partial class VaultSession
             throw VaultException.InvalidPath(RelativeToSheets(target), "un dossier ne peut pas aller dans l'un de ses propres sous-dossiers");
         }
         var targetAbsolute = Confine(target);
-        if (RealPaths.Exists(targetAbsolute) && !RealPaths.SameEntry(absolute, targetAbsolute))
+        if (_storage.Exists(targetAbsolute) && !_storage.SameEntry(absolute, targetAbsolute))
         {
             throw VaultException.AlreadyExists(targetAbsolute);
         }
@@ -133,10 +133,10 @@ public sealed partial class VaultSession
         var toVisit = new Stack<string>([SheetsFolder.ToAbsolute(Root)]);
         while (toVisit.TryPop(out var current))
         {
-            List<DirectoryInfo> entries;
+            List<StorageEntry> entries;
             try
             {
-                entries = [.. new DirectoryInfo(current).EnumerateDirectories()];
+                entries = [.. _storage.Entries(current).Where(entry => entry.IsDirectory)];
             }
             catch (Exception exception) when (IsIo(exception))
             {
@@ -145,7 +145,7 @@ public sealed partial class VaultSession
             }
             foreach (var entry in entries)
             {
-                if (entry.Name.StartsWith('.') || entry.Name.EndsWith(VaultLayout.ResourcesSuffix, StringComparison.Ordinal) || entry.LinkTarget is not null)
+                if (entry.Name.StartsWith('.') || entry.Name.EndsWith(VaultLayout.ResourcesSuffix, StringComparison.Ordinal) || entry.IsLink)
                 {
                     continue;
                 }

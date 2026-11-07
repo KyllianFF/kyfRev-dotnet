@@ -24,11 +24,13 @@ public static partial class VaultInspector
     private static readonly UTF8Encoding StrictUtf8 = new(encoderShouldEmitUTF8Identifier: false, throwOnInvalidBytes: true);
 
     /// <summary>Analyse le coffre situé à <paramref name="root"/>.</summary>
-    public static VaultInspection Inspect(string root)
+    /// <param name="root">Le dossier du coffre.</param>
+    /// <param name="storage">Là où vivent ses fichiers : le disque par défaut.</param>
+    public static VaultInspection Inspect(string root, VaultStorage? storage = null)
     {
         ArgumentNullException.ThrowIfNull(root);
-        var context = new Context(Path.GetFullPath(root));
-        if (!Directory.Exists(context.Root) || !File.Exists(VaultLayout.Absolute(context.Root, VaultLayout.SettingsFile)))
+        var context = new Context(Path.GetFullPath(root), storage ?? VaultStorage.Disk);
+        if (!context.Storage.DirectoryExists(context.Root) || !context.Storage.FileExists(VaultLayout.Absolute(context.Root, VaultLayout.SettingsFile)))
         {
             context.Add(FindingSeverity.Error, "pas-un-coffre", null, $"Ce dossier n'est pas un coffre kyfRev : {VaultLayout.SettingsFile} est introuvable.");
             return context.Result(isVault: false);
@@ -58,11 +60,11 @@ public static partial class VaultInspector
     {
         var found = new List<SheetFile>();
         var sheets = VaultLayout.Absolute(context.Root, VaultLayout.Sheets);
-        if (!Directory.Exists(sheets))
+        if (!context.Storage.DirectoryExists(sheets))
         {
             return found;
         }
-        foreach (var file in EnumerateSheets(sheets))
+        foreach (var file in EnumerateSheets(context.Storage, sheets))
         {
             if (!VaultPath.TryFromAbsolute(context.Root, file, out var path, out var reason))
             {
@@ -102,26 +104,26 @@ public static partial class VaultInspector
     }
 
     /// <summary>Fichiers <c>.md</c> de <c>fiches/</c>, sans les éléments cachés, les dossiers de ressources ni les liens.</summary>
-    private static IEnumerable<string> EnumerateSheets(string directory)
+    private static IEnumerable<string> EnumerateSheets(VaultStorage storage, string directory)
     {
-        foreach (var entry in new DirectoryInfo(directory).EnumerateFileSystemInfos())
+        foreach (var entry in storage.Entries(directory))
         {
-            if (entry.Name.StartsWith('.') || entry.Attributes.HasFlag(FileAttributes.ReparsePoint))
+            if (entry.Name.StartsWith('.') || entry.IsReparsePoint)
             {
                 continue;
             }
-            if (entry is DirectoryInfo sub)
+            if (entry.IsDirectory)
             {
-                if (sub.Name.EndsWith(VaultLayout.ResourcesSuffix, StringComparison.Ordinal))
+                if (entry.Name.EndsWith(VaultLayout.ResourcesSuffix, StringComparison.Ordinal))
                 {
                     continue;
                 }
-                foreach (var file in EnumerateSheets(sub.FullName))
+                foreach (var file in EnumerateSheets(storage, entry.FullName))
                 {
                     yield return file;
                 }
             }
-            else if (entry.Extension.Equals(".md", StringComparison.OrdinalIgnoreCase))
+            else if (Path.GetExtension(entry.Name).Equals(".md", StringComparison.OrdinalIgnoreCase))
             {
                 yield return entry.FullName;
             }
@@ -217,12 +219,12 @@ public static partial class VaultInspector
             }
         }
         var trash = VaultLayout.Absolute(context.Root, VaultLayout.SheetsTrash);
-        if (Directory.Exists(trash))
+        if (context.Storage.DirectoryExists(trash))
         {
-            foreach (var folder in Directory.EnumerateDirectories(trash).Where(d => VaultIds.IsSheetId(Path.GetFileName(d))))
+            foreach (var folder in context.Storage.Entries(trash).Where(entry => entry.IsDirectory).Select(entry => entry.FullName).Where(d => VaultIds.IsSheetId(Path.GetFileName(d))))
             {
                 var info = $"{VaultLayout.SheetsTrash}/{Path.GetFileName(folder)}/corbeille.json";
-                if (File.Exists(VaultLayout.Absolute(context.Root, info)) && context.Read(info, TrashInfoFile.Read, "corbeille-illisible", "Fiche de corbeille illisible") is { } trashInfo)
+                if (context.Exists(info) && context.Read(info, TrashInfoFile.Read, "corbeille-illisible", "Fiche de corbeille illisible") is { } trashInfo)
                 {
                     context.CheckFormat(info, trashInfo.Format);
                 }
@@ -275,7 +277,7 @@ public static partial class VaultInspector
         {
             context.CheckFormat(VaultLayout.OnlineQuoteFile, quote.Format);
         }
-        if (context.Exists(VaultLayout.LockInfoFile) && context.Read(VaultLayout.LockInfoFile, LockInfoFile.Read, "verrou-info-illisible", "Informations de verrou illisibles (sans conséquence)") is { } lockInfo)
+        if (context.Exists(VaultLayout.LockInfoFile, onDisk: true) && context.Read(VaultLayout.LockInfoFile, LockInfoFile.Read, "verrou-info-illisible", "Informations de verrou illisibles (sans conséquence)", onDisk: true) is { } lockInfo)
         {
             context.Add(FindingSeverity.Information, "derniere-ouverture", VaultLayout.LockInfoFile, $"Dernière ouverture : poste « {lockInfo.Machine} », depuis le {InstantText.Format(lockInfo.Since)}.");
         }
@@ -292,14 +294,14 @@ public static partial class VaultInspector
     private static void ScanVersions(Context context)
     {
         var versions = VaultLayout.Absolute(context.Root, VaultLayout.Versions);
-        if (!Directory.Exists(versions))
+        if (!context.Storage.DirectoryExists(versions))
         {
             return;
         }
         var count = 0;
-        foreach (var folder in Directory.EnumerateDirectories(versions))
+        foreach (var folder in context.Storage.Entries(versions).Where(entry => entry.IsDirectory).Select(entry => entry.FullName))
         {
-            foreach (var file in Directory.EnumerateFiles(folder))
+            foreach (var file in context.Storage.Files(folder, "*"))
             {
                 if (VersionName().IsMatch(Path.GetFileName(file)))
                 {
@@ -317,8 +319,8 @@ public static partial class VaultInspector
     private static void ScanQuotes(Context context)
     {
         var quotes = VaultLayout.Absolute(context.Root, VaultLayout.Quotes);
-        var count = Directory.Exists(quotes)
-            ? Directory.EnumerateFiles(quotes).Count(file => Path.GetExtension(file) == ".md")
+        var count = context.Storage.DirectoryExists(quotes)
+            ? context.Storage.Files(quotes, "*").Count(file => Path.GetExtension(file) == ".md")
             : 0;
         context.Summary = context.Summary with { Quotes = count };
     }
@@ -395,28 +397,30 @@ public static partial class VaultInspector
     private sealed record SheetFile(VaultPath Path, string Fingerprint, string? Id);
 
     /// <summary>État de l'analyse : constats, comptes et lectures partagées.</summary>
-    private sealed class Context(string root)
+    private sealed class Context(string root, VaultStorage storage)
     {
         private readonly ImmutableArray<Finding>.Builder _findings = ImmutableArray.CreateBuilder<Finding>();
         private int _filesRead;
 
         public string Root { get; } = root;
 
+        /// <summary>Là où vivent les fichiers du coffre.</summary>
+        public VaultStorage Storage { get; } = storage;
+
         public VaultSummary Summary { get; set; } = new();
 
         public void Add(FindingSeverity severity, string code, string? path, string message) =>
             _findings.Add(new Finding(severity, code, path, message));
 
-        public bool Exists(string relative) => File.Exists(VaultLayout.Absolute(Root, relative));
+        /// <summary>Le fichier existe, dans le coffre ou, pour le verrou, sur le disque (<paramref name="onDisk"/>).</summary>
+        public bool Exists(string relative, bool onDisk = false) => (onDisk ? Storage.Raw : Storage).FileExists(VaultLayout.Absolute(Root, relative));
 
         /// <summary>Lit un fichier en partage complet : une autre application peut l'avoir ouvert.</summary>
-        public byte[]? ReadBytes(string relative)
+        public byte[]? ReadBytes(string relative, bool onDisk = false)
         {
             try
             {
-                using var stream = new FileStream(VaultLayout.Absolute(Root, relative), FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
-                var buffer = new byte[stream.Length];
-                stream.ReadExactly(buffer);
+                var buffer = (onDisk ? Storage.Raw : Storage).ReadShared(VaultLayout.Absolute(Root, relative));
                 _filesRead++;
                 return buffer;
             }
@@ -427,10 +431,10 @@ public static partial class VaultInspector
             }
         }
 
-        public T? Read<T>(string relative, FileReader<T> reader, string code, string message)
+        public T? Read<T>(string relative, FileReader<T> reader, string code, string message, bool onDisk = false)
             where T : class
         {
-            var bytes = ReadBytes(relative);
+            var bytes = ReadBytes(relative, onDisk);
             if (bytes is null)
             {
                 return null;
@@ -461,11 +465,11 @@ public static partial class VaultInspector
         public IEnumerable<(string Relative, string Name)> JsonFilesIn(string relativeDirectory, Func<string, bool> isValidName)
         {
             var directory = VaultLayout.Absolute(Root, relativeDirectory);
-            if (!Directory.Exists(directory))
+            if (!Storage.DirectoryExists(directory))
             {
                 yield break;
             }
-            foreach (var file in Directory.EnumerateFiles(directory).Order(StringComparer.Ordinal))
+            foreach (var file in Storage.Files(directory, "*").Order(StringComparer.Ordinal))
             {
                 var fileName = Path.GetFileName(file);
                 if (fileName.StartsWith(AtomicFile.TemporaryPrefix, StringComparison.Ordinal))
