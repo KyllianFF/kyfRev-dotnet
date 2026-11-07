@@ -35,7 +35,8 @@ public static class VaultStartup
 
     /// <summary>
     /// Montre le déverrouillage du coffre chiffré qu'attend <paramref name="state"/>. Le coffre ouvert, s'il y en a un, reste
-    /// là derrière, et l'écran propose d'y revenir.
+    /// là derrière, et l'écran propose d'y revenir ; sinon, il propose l'accueil, pour créer ou ouvrir un autre coffre : sans
+    /// son mot de passe ni sa clé de récupération, on n'y reste pas bloqué.
     /// </summary>
     /// <param name="shell">La coquille.</param>
     /// <param name="vaults">Ouverture des coffres.</param>
@@ -47,12 +48,10 @@ public static class VaultStartup
         ArgumentNullException.ThrowIfNull(shell);
         ArgumentNullException.ThrowIfNull(state);
         var opened = changed ?? shell.ShowWorkspace;
-        shell.ShowUnlock(new UnlockPageViewModel(
-            vaults,
-            picker,
-            state,
-            _ => opened(),
-            other => ShowUnlock(shell, vaults, picker, other, changed),
-            state.Vault is null ? null : shell.ShowWorkspace));
+        void Locked(AppState other) => ShowUnlock(shell, vaults, picker, other, changed);
+        Action back = state.Vault is null
+            ? () => shell.ShowWelcome(new WelcomePageViewModel(vaults, picker, vaults.State(), _ => opened(), Locked))
+            : shell.ShowWorkspace;
+        shell.ShowUnlock(new UnlockPageViewModel(vaults, picker, state, _ => opened(), Locked, back));
     }
 }

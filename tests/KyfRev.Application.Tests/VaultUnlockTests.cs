@@ -99,6 +99,27 @@ public sealed class VaultUnlockTests
     }
 
     [TestMethod]
+    public void An_index_that_cannot_be_read_says_why_and_keeps_the_remembered_key()
+    {
+        using var scene = new Scene();
+        scene.CreateEncrypted();
+        Assert.IsNull(scene.App.Vaults.Unlock(scene.Folder.Vault, VaultSecret.Password(Password), remember: true).Locked);
+        scene.App.Host.Dispose();
+        var index = Path.Combine(scene.Folder.Vault, EncryptedVault.IndexFile);
+
+        using (var next = scene.Restart())
+        using (new FileStream(index, FileMode.Open, FileAccess.Read, FileShare.None))
+        {
+            var state = next.App.Vaults.OpenAtStartup();
+            Assert.AreEqual(scene.Folder.Vault, state.Locked);
+            Assert.Contains("index", state.OpenError ?? string.Empty, "le refus dit pourquoi");
+        }
+
+        using var last = scene.Restart();
+        Assert.AreEqual(scene.Folder.Vault, last.App.Vaults.OpenAtStartup().Vault, "la clé retenue est restée : l'index revenu, le coffre s'ouvre seul");
+    }
+
+    [TestMethod]
     public void A_key_that_cannot_be_remembered_does_not_stop_the_vault_opening()
     {
         using var scene = new Scene();

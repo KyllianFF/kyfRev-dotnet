@@ -28,28 +28,38 @@ public sealed class RememberedKeys(string folder, VaultStorage disk)
     {
         ArgumentNullException.ThrowIfNull(vaultId);
         var place = Place(root);
-        return Read().FirstOrDefault(entry => entry.VaultId == vaultId && SamePlace(entry.Root, place))?.Key;
+        return Read()?.FirstOrDefault(entry => entry.VaultId == vaultId && SamePlace(entry.Root, place))?.Key;
     }
 
-    /// <summary>Retient la clé protégée <paramref name="protectedKey"/> pour ce coffre et ce dossier ; faux si elle n'a pas pu l'être.</summary>
+    /// <summary>
+    /// Retient la clé protégée <paramref name="protectedKey"/> pour ce coffre et ce dossier ; faux si elle n'a pas pu
+    /// l'être, et rien n'est écrit sur un fichier qui ne se lit pas : les autres clés qu'il retient restent.
+    /// </summary>
     public bool Keep(string vaultId, string root, byte[] protectedKey)
     {
         ArgumentNullException.ThrowIfNull(vaultId);
         ArgumentNullException.ThrowIfNull(protectedKey);
         var place = Place(root);
-        var entries = Read().Where(entry => !SamePlace(entry.Root, place)).ToList();
-        entries.Add(new Entry(vaultId, place, protectedKey));
-        return Write(entries);
+        if (Read() is not { } entries)
+        {
+            return false;
+        }
+        var kept = entries.Where(entry => !SamePlace(entry.Root, place)).ToList();
+        kept.Add(new Entry(vaultId, place, protectedKey));
+        return Write(kept);
     }
 
     /// <summary>
     /// Oublie la clé retenue pour le dossier <paramref name="root"/>, quel que soit son coffre : le fichier est réécrit
-    /// sans elle. Vrai s'il n'y avait rien à oublier ; faux si le fichier n'a pas pu être réécrit.
+    /// sans elle. Vrai s'il n'y avait rien à oublier ; faux si le fichier ne se lit pas, ou n'a pas pu être réécrit.
     /// </summary>
     public bool Forget(string root)
     {
         var place = Place(root);
-        var entries = Read();
+        if (Read() is not { } entries)
+        {
+            return false;
+        }
         var kept = entries.Where(entry => !SamePlace(entry.Root, place)).ToList();
         return kept.Count == entries.Count || Write(kept);
     }
@@ -64,23 +74,37 @@ public sealed class RememberedKeys(string folder, VaultStorage disk)
     /// <summary>Comme Windows : deux chemins qui ne diffèrent que par la casse sont le même dossier.</summary>
     private static bool SamePlace(string first, string second) => string.Equals(first, second, StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>Les clés retenues ; aucune si le fichier manque ou se lit mal (une clé mal lue se redemande).</summary>
-    private List<Entry> Read()
+    /// <summary>
+    /// Les clés retenues : aucune si le fichier manque, ou s'il est abîmé (une clé mal lue se redemande, et le fichier se
+    /// réécrit) ; rien s'il ne se lit pas pour l'instant, ou s'il vient d'une version plus récente : il ne faut pas
+    /// l'écraser.
+    /// </summary>
+    private List<Entry>? Read()
     {
         byte[] bytes;
         try
         {
             bytes = disk.ReadAllBytes(Path);
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        catch (Exception exception) when (exception is FileNotFoundException or DirectoryNotFoundException)
         {
             return [];
         }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
         try
         {
-            if (JsonNode.Parse(bytes) is not JsonObject document
-                || document["format"]?.GetValue<int>() != Format
-                || document["cles"] is not JsonArray keys)
+            if (JsonNode.Parse(bytes) is not JsonObject document)
+            {
+                return [];
+            }
+            if (document["format"] is { } format && format.GetValue<int>() != Format)
+            {
+                return null;
+            }
+            if (document["cles"] is not JsonArray keys)
             {
                 return [];
             }

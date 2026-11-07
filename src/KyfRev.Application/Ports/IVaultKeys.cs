@@ -16,6 +16,7 @@ public interface IVaultKeys
     /// La clé que ce poste a retenue pour le coffre de <paramref name="root"/>, vérifiée sur son index ; rien s'il n'en a
     /// retenu aucune, si elle a été retenue dans une autre session de Windows, ou si elle n'ouvre plus ce coffre.
     /// </summary>
+    /// <exception cref="OperationException">L'index ne se lit pas : la clé reste retenue, et le refus dit pourquoi.</exception>
     VaultKey? Remembered(string root);
 
     /// <summary>La clé de données du coffre de <paramref name="root"/>, tirée de son mot de passe ou de sa clé de récupération.</summary>

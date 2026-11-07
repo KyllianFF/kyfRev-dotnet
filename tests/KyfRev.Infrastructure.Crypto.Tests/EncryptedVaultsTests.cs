@@ -165,6 +165,34 @@ public sealed class EncryptedVaultsTests
     }
 
     [TestMethod]
+    public void A_remembered_key_stays_remembered_while_the_index_cannot_be_read()
+    {
+        using var place = new Place();
+        place.CreateEncrypted();
+        var vaults = place.Vaults();
+        using (var key = vaults.KeyOf(place.Vault, VaultSecret.Password(Password)))
+        {
+            Assert.IsTrue(vaults.Remember(place.Vault, key));
+        }
+        var index = Path.Combine(place.Vault, EncryptedVault.IndexFile);
+        var saved = File.ReadAllBytes(index);
+
+        // L'index est tenu par un autre programme (ou absent un moment, ou d'une version plus récente) : ce n'est pas la
+        // clé qui est refusée. Le refus dit pourquoi, et la clé reste retenue.
+        using (new FileStream(index, FileMode.Open, FileAccess.Read, FileShare.None))
+        {
+            Assert.Contains("index", Assert.ThrowsExactly<VaultCryptoException>(() => vaults.Remembered(place.Vault)).Message);
+        }
+        File.Delete(index);
+        Assert.ThrowsExactly<VaultCryptoException>(() => vaults.Remembered(place.Vault));
+        Assert.IsNotNull(new RememberedKeys(place.LocalData, DiskStorage.Instance).Find(Shared.Value.Header.VaultId, place.Vault));
+
+        File.WriteAllBytes(index, saved);
+        using var back = vaults.Remembered(place.Vault);
+        Assert.IsNotNull(back, "l'index revenu, la clé retenue l'ouvre de nouveau");
+    }
+
+    [TestMethod]
     public void A_remembered_key_is_given_only_if_windows_and_the_header_give_it_back()
     {
         using var place = new Place();
@@ -224,6 +252,7 @@ public sealed class EncryptedVaultsTests
             "pas du JSON",
             "[]",
             """{"format":2,"cles":[]}""",
+            """{"format":"un","cles":[]}""",
             """{"format":1}""",
             """{"format":1,"cles":[{"coffre":"v_1","dossier":"C:\\x","cle":"pas du base64 !"}]}""",
             """{"format":1,"cles":[{"coffre":"v_1"},42]}""",
@@ -236,6 +265,36 @@ public sealed class EncryptedVaultsTests
         // Il se réécrit ensuite, lisible.
         Assert.IsTrue(keys.Keep("v_1", vault, [7]));
         CollectionAssert.AreEqual(new byte[] { 7 }, keys.Find("v_1", vault));
+    }
+
+    [TestMethod]
+    public void A_file_of_remembered_keys_that_cannot_be_read_now_or_comes_from_a_newer_version_is_never_overwritten()
+    {
+        using var place = new Place();
+        var keys = new RememberedKeys(place.LocalData, DiskStorage.Instance);
+        var vault = Path.Combine(place.Root, "Coffre");
+        Assert.IsTrue(keys.Keep("v_1", vault, [1]));
+
+        // Tenu par un autre programme : rien ne se lit, rien ne s'écrit, et l'autre clé reste.
+        using (new FileStream(keys.Path, FileMode.Open, FileAccess.Read, FileShare.None))
+        {
+            Assert.IsNull(keys.Find("v_1", vault));
+            Assert.IsFalse(keys.Keep("v_2", Path.Combine(place.Root, "Autre"), [2]));
+            Assert.IsFalse(keys.Forget(vault), "oublier n'a pas pu être écrit : on le dit");
+        }
+        CollectionAssert.AreEqual(new byte[] { 1 }, keys.Find("v_1", vault));
+
+        // Écrit par une version plus récente : il reste tel quel.
+        const string newer = """{"format":2,"cles":[]}""";
+        File.WriteAllText(keys.Path, newer);
+        Assert.IsFalse(keys.Keep("v_1", vault, [1]));
+        Assert.IsFalse(keys.Forget(vault));
+        Assert.AreEqual(newer, File.ReadAllText(keys.Path));
+
+        // Sans format : abîmé, il se réécrit.
+        File.WriteAllText(keys.Path, """{"cles":[]}""");
+        Assert.IsTrue(keys.Keep("v_1", vault, [3]));
+        CollectionAssert.AreEqual(new byte[] { 3 }, keys.Find("v_1", vault));
     }
 
     [TestMethod]

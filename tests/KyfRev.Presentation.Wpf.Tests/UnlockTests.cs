@@ -43,6 +43,8 @@ public sealed class UnlockTests
         Assert.AreEqual("Coffre", page.VaultName);
         Assert.AreEqual("Mot de passe incorrect.", page.Error, "la raison d'un refus s'affiche");
         Assert.IsFalse(page.CanGoBack);
+        Assert.AreEqual(EncryptionText.BackToWelcome, page.BackLabel, "aucun coffre n'est ouvert derrière");
+        Assert.AreEqual(EncryptionText.BackToVault, new UnlockPageViewModel(test.App.Vaults, test.Picker, locked with { Vault = test.PathOf("Autre") }, none, none).BackLabel);
         Assert.IsFalse(page.Remember, "décoché par défaut");
         Assert.AreEqual(@"C:\", new UnlockPageViewModel(test.App.Vaults, test.Picker, locked with { Locked = @"C:\" }, none, none).VaultName);
     }
@@ -179,9 +181,62 @@ public sealed class UnlockTests
 
         var page = (UnlockPageViewModel)shell.Current.Page;
         Assert.AreEqual(encrypted, page.Vault);
-        Assert.IsFalse(page.CanGoBack, "aucun coffre n'est ouvert derrière");
-        await page.UnlockCommand.ExecuteAsync(TestVaults.Password);
+
+        // Aucun coffre n'est ouvert derrière : l'écran ramène à l'accueil, d'où l'on peut créer ou ouvrir un autre coffre.
+        Assert.IsTrue(page.CanGoBack);
+        Assert.AreEqual(EncryptionText.BackToWelcome, page.BackLabel);
+        page.BackCommand.Execute(null);
+        var again = (WelcomePageViewModel)shell.Current.Page;
+        Assert.AreEqual(ShellText.Welcome, shell.Current.Label);
+
+        test.Picker.Answers.Enqueue(encrypted);
+        await again.OpenCommand.ExecuteAsync(null);
+        await ((UnlockPageViewModel)shell.Current.Page).UnlockCommand.ExecuteAsync(TestVaults.Password);
         Assert.IsFalse(shell.IsWelcome);
+    }
+
+    [TestMethod]
+    public async Task At_startup_without_its_password_the_unlock_screen_leads_to_the_welcome()
+    {
+        using var test = new TestVaults(AppMode.Portable);
+        test.CreateEncryptedVault(test.Planned);
+        var shell = new TestShell().Shell;
+        VaultStartup.Run(shell, test.App.Vaults, test.Picker);
+        var page = (UnlockPageViewModel)shell.Current.Page;
+
+        page.BackCommand.Execute(null);
+
+        var welcome = (WelcomePageViewModel)shell.Current.Page;
+        Assert.IsFalse(welcome.HasVaultToCreate, "le coffre prévu existe : il est chiffré");
+        Assert.IsTrue(welcome.CanOpenExisting);
+        var plain = test.Folder("Nouveau");
+        test.Picker.Answers.Enqueue(plain);
+        await welcome.CreateCommand.ExecuteAsync(null);
+        Assert.IsFalse(shell.IsWelcome);
+        Assert.AreEqual(plain, test.App.Vaults.State().Vault);
+    }
+
+    [TestMethod]
+    public async Task While_it_opens_nothing_else_on_the_screen_can_be_done()
+    {
+        using var test = new TestVaults(AppMode.Development);
+        test.App.Vaults.Create(test.PathOf("Coffre"));
+        var encrypted = test.CreateEncryptedVault(test.PathOf("Chiffré"));
+        var shell = new TestShell().Shell;
+        shell.ShowWorkspace();
+        VaultStartup.ShowUnlock(shell, test.App.Vaults, test.Picker, test.App.Vaults.Open(encrypted));
+        var page = (UnlockPageViewModel)shell.Current.Page;
+        Assert.IsTrue(page.BackCommand.CanExecute(null));
+
+        var opening = page.UnlockCommand.ExecuteAsync(TestVaults.Password);
+        Assert.IsTrue(page.IsBusy);
+        foreach (var command in new System.Windows.Input.ICommand[] { page.BackCommand, page.UseRecoveryKeyCommand, page.UsePasswordCommand, page.OtherVaultCommand, page.UnlockCommand })
+        {
+            Assert.IsFalse(command.CanExecute(null), "revenir ou changer de façon d'ouvrir changerait de coffre juste après");
+        }
+        await opening;
+        Assert.IsTrue(page.BackCommand.CanExecute(null));
+        Assert.AreEqual(encrypted, test.App.Vaults.State().Vault);
     }
 
     [TestMethod]
@@ -275,7 +330,7 @@ public sealed class UnlockTests
         {
             TestShell.Flush();
             var scroller = Named<ScrollViewer>(window, "Scroller");
-            Assert.IsLessThanOrEqualTo(scroller.ViewportWidth, scroller.ExtentWidth, "rien ne défile de côté");
+            AssertFits(scroller);
             Assert.AreEqual(AutomationHeadingLevel.Level1, AutomationProperties.GetHeadingLevel(Named<TextBlock>(window, "Heading")));
             Assert.AreEqual(test.Planned, Named<TextBlock>(window, "VaultPath").Text);
 
@@ -287,7 +342,9 @@ public sealed class UnlockTests
             {
                 Assert.IsFalse(string.IsNullOrWhiteSpace(AutomationProperties.GetName(Named<ButtonBase>(window, name))), name);
             }
-            Assert.AreEqual(Visibility.Collapsed, Named<Button>(window, "BackButton").Visibility, "aucun coffre n'est ouvert derrière");
+            var back = Named<Button>(window, "BackButton");
+            Assert.AreEqual(Visibility.Visible, back.Visibility, "on n'y reste jamais bloqué");
+            Assert.AreEqual(EncryptionText.BackToWelcome, AutomationProperties.GetName(back), "aucun coffre n'est ouvert derrière : l'accueil");
             Assert.AreEqual(EncryptionText.Remember, AutomationProperties.GetName(Named<CheckBox>(window, "RememberBox")));
             Assert.IsFalse(Named<CheckBox>(window, "RememberBox").IsChecked);
 
@@ -306,6 +363,14 @@ public sealed class UnlockTests
             Assert.AreEqual(Visibility.Collapsed, Named<StackPanel>(window, "PasswordPart").Visibility);
             UiThread.Until(() => recovery.IsFocused);
             Assert.AreEqual(EncryptionText.RecoveryHelp, AutomationProperties.GetHelpText(recovery));
+            AssertFits(scroller);
+
+            // Une clé refusée : le champ, de nouveau actif, reprend le focus.
+            recovery.Text = "ABCD-EFGH";
+            Press(Named<Button>(window, "UnlockButton"));
+            UiThread.Until(() => page.HasError && recovery.IsEnabled);
+            UiThread.Until(() => recovery.IsFocused);
+
             recovery.Text = TestVaults.RecoveryKey;
             Press(Named<Button>(window, "UnlockButton"));
             UiThread.Until(() => !shell.Shell.IsWelcome);
@@ -346,6 +411,51 @@ public sealed class UnlockTests
     }
 
     /// <summary>Comme un clic, ou un lecteur d'écran : le bouton est invoqué, sa commande ou son gestionnaire s'exécute.</summary>
+    [STATestMethod]
+    public void The_screen_of_another_encrypted_vault_keeps_nothing_typed_for_the_first()
+    {
+        using var ui = new UiThread();
+        using var test = new TestVaults(AppMode.Portable);
+        test.CreateEncryptedVault(test.Planned);
+        var other = test.CreateEncryptedVault(test.PathOf("Autre"));
+        var shell = new TestShell();
+        VaultStartup.Run(shell.Shell, test.App.Vaults, test.Picker);
+        var window = new ShellWindow(shell.Shell) { ShowActivated = false, Left = -10000, Top = -10000, Width = 800, Height = 700, WindowStartupLocation = WindowStartupLocation.Manual };
+        window.Resources.MergedDictionaries.Add(shell.Design.Dictionary);
+        window.Show();
+        try
+        {
+            TestShell.Flush();
+            Named<PasswordBox>(window, "PasswordBox").Password = "le début d'un mot de passe";
+            Named<TextBox>(window, "RecoveryBox").Text = "ABCD-EFGH";
+
+            test.Picker.Answers.Enqueue(other);
+            Press(Named<Button>(window, "OtherVaultButton"));
+            UiThread.Until(() => shell.Shell.Current.Page is UnlockPageViewModel { Vault: var vault } && vault == other);
+            TestShell.Flush();
+
+            var password = Named<PasswordBox>(window, "PasswordBox");
+            Assert.IsEmpty(password.Password, "rien de ce qui a été tapé pour l'un ne reste pour l'autre");
+            Assert.IsEmpty(Named<TextBox>(window, "RecoveryBox").Text);
+            UiThread.Until(() => password.IsFocused);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    /// <summary>Rien ne dépasse à droite : ni champ, ni bouton, ni texte.</summary>
+    private static void AssertFits(ScrollViewer scroller)
+    {
+        var content = (FrameworkElement)scroller.Content;
+        foreach (var element in Descendants(content).OfType<FrameworkElement>().Where(element => element.IsVisible && element is Control or TextBlock))
+        {
+            var right = element.TranslatePoint(new Point(element.ActualWidth, 0), scroller).X;
+            Assert.IsLessThanOrEqualTo(scroller.ViewportWidth + 0.5, right, $"{element.Name} dépasse à droite");
+        }
+    }
+
     private static void Press(ButtonBase button)
     {
         var peer = UIElementAutomationPeer.CreatePeerForElement(button);

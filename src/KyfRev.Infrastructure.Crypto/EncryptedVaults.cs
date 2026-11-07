@@ -62,8 +62,11 @@ public sealed class EncryptedVaults(IVaultStore plain, Func<VaultStorage, IVault
 
     /// <summary>
     /// La clé retenue pour ce coffre et ce dossier, si Windows la rend dans cette session et si elle ouvre l'index ; une
-    /// clé qui ne l'ouvre plus est oubliée. Un en-tête illisible ne rend rien : le mot de passe, demandé, dira pourquoi.
+    /// clé que l'index refuse est oubliée. Un en-tête illisible ne rend rien : le mot de passe, demandé, dira pourquoi.
     /// </summary>
+    /// <exception cref="VaultCryptoException">
+    /// L'index ne se lit pas (absent, illisible un moment, d'une version plus récente) : la clé reste retenue.
+    /// </exception>
     public VaultKey? Remembered(string root)
     {
         VaultHeader header;
@@ -85,9 +88,15 @@ public sealed class EncryptedVaults(IVaultStore plain, Func<VaultStorage, IVault
             EncryptedVault.Open(root, key.Bytes, disk).Dispose();
             return key;
         }
-        catch (VaultCryptoException)
+        catch (VaultCryptoException exception)
         {
             key.Dispose();
+            if (exception.InnerException is not AuthenticationTagMismatchException)
+            {
+                // Ce n'est pas la clé qui est refusée : elle reste retenue, et la raison se dit.
+                throw;
+            }
+            // L'index la refuse : le coffre a été remplacé, ou ce n'était plus sa clé.
             remembered.Forget(root);
             return null;
         }

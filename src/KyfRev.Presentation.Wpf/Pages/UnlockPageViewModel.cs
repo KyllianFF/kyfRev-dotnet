@@ -46,6 +46,7 @@ public sealed partial class UnlockPageViewModel : ObservableObject
         _back = back;
         Vault = vault;
         Error = state.OpenError;
+        BackLabel = state.Vault is null ? EncryptionText.BackToWelcome : EncryptionText.BackToVault;
     }
 
     /// <summary>Le dossier du coffre chiffré.</summary>
@@ -54,8 +55,11 @@ public sealed partial class UnlockPageViewModel : ObservableObject
     /// <summary>Le nom du coffre : son dossier.</summary>
     public string VaultName => Path.GetFileName(Path.TrimEndingDirectorySeparator(Vault)) is { Length: > 0 } name ? name : Vault;
 
-    /// <summary>Un coffre reste ouvert derrière cet écran : on peut y revenir.</summary>
+    /// <summary>On peut quitter cet écran : pour le coffre resté ouvert derrière, ou sinon pour l'accueil.</summary>
     public bool CanGoBack => _back is not null;
+
+    /// <summary>« Revenir au coffre ouvert », ou « Retour à l'accueil » quand aucun coffre ne l'est.</summary>
+    public string BackLabel { get; }
 
     /// <summary>La clé de récupération est demandée à la place du mot de passe.</summary>
     [ObservableProperty]
@@ -75,7 +79,7 @@ public sealed partial class UnlockPageViewModel : ObservableObject
     /// <summary>Une ouverture est en cours : la dérivation du mot de passe prend de l'ordre d'une seconde.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsIdle))]
-    [NotifyCanExecuteChangedFor(nameof(UnlockCommand), nameof(OtherVaultCommand))]
+    [NotifyCanExecuteChangedFor(nameof(UnlockCommand), nameof(OtherVaultCommand), nameof(BackCommand), nameof(UseRecoveryKeyCommand), nameof(UsePasswordCommand))]
     public partial bool IsBusy { get; private set; }
 
     /// <summary>Rien n'est en cours.</summary>
@@ -124,7 +128,7 @@ public sealed partial class UnlockPageViewModel : ObservableObject
     }
 
     /// <summary>Le mot de passe est perdu : la clé de récupération est demandée.</summary>
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(IsIdle))]
     private void UseRecoveryKey()
     {
         UsesRecoveryKey = true;
@@ -132,7 +136,7 @@ public sealed partial class UnlockPageViewModel : ObservableObject
     }
 
     /// <summary>Retour au mot de passe.</summary>
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(IsIdle))]
     private void UsePassword()
     {
         UsesRecoveryKey = false;
@@ -172,7 +176,10 @@ public sealed partial class UnlockPageViewModel : ObservableObject
         }
     }
 
-    /// <summary>Revient au coffre resté ouvert, sans rien changer.</summary>
-    [RelayCommand]
+    /// <summary>
+    /// Quitte cet écran sans rien changer : pour le coffre resté ouvert, ou pour l'accueil. Rien pendant une ouverture,
+    /// qui changerait de coffre juste après.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(IsIdle))]
     private void Back() => _back?.Invoke();
 }

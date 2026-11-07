@@ -25,6 +25,17 @@ internal sealed partial class Fields : ResourceDictionary
         }
     }
 
+    /// <summary>Un mot de passe reçoit le sien, qui ne fait que coller : rien ne sort d'un mot de passe.</summary>
+    private void OnPasswordLoaded(object sender, RoutedEventArgs e)
+    {
+        if (sender is PasswordBox { ContextMenu: null } field)
+        {
+            var menu = new ContextMenu();
+            menu.Items.Add(QuickCommand(ApplicationCommands.Paste, DesignText.Paste, Icons.Paste));
+            field.ContextMenu = menu;
+        }
+    }
+
     private static ContextMenu FieldMenu()
     {
         var menu = new ContextMenu();

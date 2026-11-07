@@ -11,6 +11,9 @@ public static class EncryptionText
     /// <summary>« Revenir au coffre ouvert ».</summary>
     public static string BackToVault => Text(nameof(BackToVault));
 
+    /// <summary>« Retour à l'accueil ».</summary>
+    public static string BackToWelcome => Text(nameof(BackToWelcome));
+
     /// <summary>« Saisissez le mot de passe du coffre. ».</summary>
     public static string EnterPassword => Text(nameof(EnterPassword));
 
