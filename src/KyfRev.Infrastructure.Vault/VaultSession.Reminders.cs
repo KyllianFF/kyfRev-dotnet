@@ -200,7 +200,7 @@ public sealed partial class VaultSession
     private DrawJournalFile ReadDraws()
     {
         var path = Confine(DrawsFile);
-        if (!File.Exists(path))
+        if (!_storage.FileExists(path))
         {
             return new DrawJournalFile(0, [], UnknownProperties.None);
         }

@@ -9,6 +9,21 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- Coffre chiffré, lot 2 : la session du coffre, ses sauvegardes et son analyse passent par une couche de stockage. Sur un
+  coffre chiffré, chaque fichier devient un objet chiffré et l'index chiffré tient les chemins et les dossiers : rien en
+  clair sur le disque, pas même un fichier temporaire. Ses sauvegardes restent chiffrées, se restaurent en un coffre
+  chiffré et rendent une fiche manquante. Les essais de la session, dont les treize scénarios comparés à la 0.x, tournent
+  sur les deux stockages. L'application n'ouvre pas encore un coffre chiffré : son écran de déverrouillage vient ensuite.
+- Coffre chiffré : une conversion coupée à n'importe quelle écriture laisse la source intacte et aucune destination. Elle
+  n'efface que son propre dossier temporaire, celui qu'elle a créé et trouvé vide ; le reste d'une autre conversion,
+  jamais. Tant qu'un dossier qui porte le nom exact d'un dossier temporaire de la destination est à côté d'elle, marqué ou
+  non, la conversion refuse sans rien écrire, le nomme et demande de le retirer à la main. Une source qui porte le
+  marqueur d'une conversion, ou dont un dossier parent le porte, est refusée, par une jonction, un nom court 8.3 ou un
+  lecteur substitué sur ce dossier. Un dossier temporaire qui ne s'efface qu'en partie reste, et le message le nomme.
+- Coffre chiffré : la session relit l'index une fois le verrou pris, et ne perd plus ce qu'un autre processus a écrit
+  entre-temps. Un effacement définitif qui ne peut pas retirer un objet va jusqu'au bout, puis nomme ce qui est resté ;
+  les sauvegardes ne recopient que les objets que l'index nomme, un seul par objet, quelle que soit la casse de leur nom.
+  Un objet manquant n'empêche plus la sauvegarde, ni la restauration des autres fiches.
 - Lecture : un terme défini dans une fiche se marque dans toutes les fiches qui le contiennent, d'un pointillé discret, distinct
   de celui d'une définition posée à sa place. Il se trouve en mot entier, sans tenir compte des majuscules, au singulier ou au
   pluriel, une fois par partie, ni dans un titre, ni dans du code, ni dans un lien. Le survol montre sa définition ; un clic

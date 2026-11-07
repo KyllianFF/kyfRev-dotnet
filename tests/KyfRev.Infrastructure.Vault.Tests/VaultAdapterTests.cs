@@ -10,18 +10,17 @@ namespace KyfRev.Infrastructure.Vault.Tests;
 /// <see cref="BackupFiles"/>) : chaque opération atteint la session du coffre, avec les chemins
 /// validés et les repères convertis.
 /// </summary>
-[TestClass]
-public sealed class VaultAdapterTests
+public abstract class VaultAdapterTests(StorageKind storage)
 {
-    private static readonly Moment Now = new(new DateOnly(2026, 10, 1), new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero));
-    private static readonly Moment Tomorrow = new(new DateOnly(2026, 10, 2), new DateTimeOffset(2026, 10, 2, 12, 0, 0, TimeSpan.Zero));
+    protected static readonly Moment Now = new(new DateOnly(2026, 10, 1), new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero));
+    protected static readonly Moment Tomorrow = new(new DateOnly(2026, 10, 2), new DateTimeOffset(2026, 10, 2, 12, 0, 0, TimeSpan.Zero));
     private static readonly Anchor Passage = new("La prophase", "", " précède", 0, 11, ["Mitose"], 5, "sha256:aa");
 
     [TestMethod]
     public void The_store_opens_creates_and_compares_vault_folders()
     {
-        using var folder = TemporaryVault.Empty();
-        var store = new VaultStore();
+        using var folder = TemporaryVault.Empty(storage);
+        var store = new VaultStore(storage: folder.Storage);
         using (var created = store.Initialize(folder.Root, Now))
         {
             Assert.AreEqual(folder.Root, created.Root);
@@ -69,8 +68,8 @@ public sealed class VaultAdapterTests
     [TestMethod]
     public void Schemas_reach_the_session_and_a_conflict_says_what_the_disk_holds()
     {
-        using var folder = TemporaryVault.Empty();
-        using var vault = new VaultStore().Initialize(folder.Root, Now);
+        using var folder = TemporaryVault.Empty(storage);
+        using var vault = new VaultStore(storage: folder.Storage).Initialize(folder.Root, Now);
         Assert.IsEmpty(vault.Schemas());
 
         var created = vault.CreateSchema("{\"format\": 2, \"titre\": \"Réseau\", \"equipements\": [{}, {}]}");
@@ -127,8 +126,8 @@ public sealed class VaultAdapterTests
     [TestMethod]
     public void Sheets_editing_folders_and_trash_reach_the_session()
     {
-        using var folder = TemporaryVault.Empty();
-        using var vault = new VaultStore().Initialize(folder.Root, Now);
+        using var folder = TemporaryVault.Empty(storage);
+        using var vault = new VaultStore(storage: folder.Storage).Initialize(folder.Root, Now);
         var id = vault.CreateSheet("Biologie", "Mitose", vault.TemplateBody("Cours", "Mitose", "Biologie", Now.Day), Now);
 
         var sheet = vault.OpenSheet(id, Now.Day);
@@ -162,7 +161,7 @@ public sealed class VaultAdapterTests
         vault.PurgeSheet(effacee);
         Assert.IsFalse(vault.TrashedSheets().Any(sheet => sheet.Id == effacee));
 
-        File.WriteAllText(folder.PathOf("fiches/Libre.md"), "---\ncreee: pas une date\n---\nTexte.\n");
+        folder.Write("fiches/Libre.md", "---\ncreee: pas une date\n---\nTexte.\n");
         var tracked = vault.TrackFile("fiches/Libre.md", Now);
         Assert.IsNull(vault.OpenSheet(tracked, Now.Day).CreatedOn);
         Assert.AreEqual(VaultErrorKind.InvalidPath, Assert.ThrowsExactly<VaultException>(() => vault.TrackFile("../hors.md", Now)).Kind);
@@ -173,8 +172,8 @@ public sealed class VaultAdapterTests
     [TestMethod]
     public void Reviews_annotations_reminders_exams_and_settings_reach_the_session()
     {
-        using var folder = TemporaryVault.Empty();
-        using var vault = new VaultStore().Initialize(folder.Root, Now);
+        using var folder = TemporaryVault.Empty(storage);
+        using var vault = new VaultStore(storage: folder.Storage).Initialize(folder.Root, Now);
         var id = vault.CreateSheet(null, "Mitose", "La prophase précède la métaphase.\n", Now);
 
         Assert.IsInstanceOfType<NextStepScheduled>(vault.ValidateReview(ItemKind.Sheet, id, Tomorrow));
@@ -214,8 +213,8 @@ public sealed class VaultAdapterTests
     [TestMethod]
     public void Dashboard_and_archives_reach_the_session()
     {
-        using var folder = TemporaryVault.Empty();
-        using var vault = new VaultStore().Initialize(folder.Root, Now);
+        using var folder = TemporaryVault.Empty(storage);
+        using var vault = new VaultStore(storage: folder.Storage).Initialize(folder.Root, Now);
         var id = vault.CreateSheet(null, "Mitose", "La prophase.\n", Now);
 
         Assert.AreEqual(id, vault.Dashboard(Tomorrow.Day).Today.Single().Id);
@@ -227,8 +226,8 @@ public sealed class VaultAdapterTests
     [TestMethod]
     public void The_sheet_list_goes_by_folder_then_title_and_says_where_each_sheet_is()
     {
-        using var folder = TemporaryVault.Empty();
-        using var vault = new VaultStore().Initialize(folder.Root, Now);
+        using var folder = TemporaryVault.Empty(storage);
+        using var vault = new VaultStore(storage: folder.Storage).Initialize(folder.Root, Now);
         var zebra = vault.CreateSheet("Histoire", "zèbre", "", Now);
         var atoms = vault.CreateSheet("Histoire", "Atomes", "", Now);
         var root = vault.CreateSheet(null, "À la racine", "", Now);
@@ -253,8 +252,8 @@ public sealed class VaultAdapterTests
     [TestMethod]
     public void Quotes_reach_the_session()
     {
-        using var folder = TemporaryVault.Empty();
-        using var vault = new VaultStore().Initialize(folder.Root, Now);
+        using var folder = TemporaryVault.Empty(storage);
+        using var vault = new VaultStore(storage: folder.Storage).Initialize(folder.Root, Now);
         Assert.StartsWith("v_", vault.Id);
 
         var quote = vault.AddQuote(new QuoteContent("Que sais-je ?", "Montaigne", "1580", QuoteSource.None, null, []), Now);
@@ -274,20 +273,20 @@ public sealed class VaultAdapterTests
     [TestMethod]
     public void Health_backups_exports_sharing_and_import_reach_the_session()
     {
-        using var folder = TemporaryVault.Empty();
+        using var folder = TemporaryVault.Empty(storage);
         using var outside = TemporaryVault.Empty();
-        using var vault = new VaultStore().Initialize(folder.Root, Now);
+        using var vault = new VaultStore(storage: folder.Storage).Initialize(folder.Root, Now);
         var id = vault.CreateSheet(null, "Mitose", "Texte.\n", Now);
 
-        File.WriteAllText(folder.PathOf("fiches/Orpheline.md"), "---\nid: f_01JQZ8S7ZK4V3H2N8M6X5W9PQR\n---\nTexte.\n");
-        File.Copy(folder.PathOf("fiches/Mitose.md"), folder.PathOf("fiches/Copie.md"));
+        folder.Write("fiches/Orpheline.md", "---\nid: f_01JQZ8S7ZK4V3H2N8M6X5W9PQR\n---\nTexte.\n");
+        folder.Copy("fiches/Mitose.md", "fiches/Copie.md");
         vault.Analyze(Now);
         Assert.IsGreaterThanOrEqualTo(2, vault.HealthDetails().Problems);
         Assert.AreEqual("f_01JQZ8S7ZK4V3H2N8M6X5W9PQR", vault.RecreateTracking("fiches/Orpheline.md", Now));
         Assert.HasCount(1, vault.KeepOriginal(id, "fiches/Mitose.md", Now));
 
         var backup = vault.Backup(outside.PathOf("Sauvegardes"), new DateTime(2026, 10, 1, 9, 0, 0));
-        File.Delete(folder.PathOf("fiches/Mitose.md"));
+        folder.Delete("fiches/Mitose.md");
         vault.Analyze(Now);
         Assert.AreEqual("fiches/Mitose.md", vault.RestoreSheetFromBackup(id, backup.Path, Now));
 
@@ -300,13 +299,13 @@ public sealed class VaultAdapterTests
     [TestMethod]
     public void Backup_files_are_listed_described_rotated_and_restored()
     {
-        using var folder = TemporaryVault.Empty();
+        using var folder = TemporaryVault.Empty(storage);
         using var outside = TemporaryVault.Empty();
         var files = new BackupFiles();
         var backups = outside.PathOf("Sauvegardes");
         Assert.IsEmpty(files.List(backups));
         Assert.IsTrue(files.DailyBackupNeeded(backups, Now.Day));
-        using (var vault = new VaultStore().Initialize(folder.Root, Now))
+        using (var vault = new VaultStore(storage: folder.Storage).Initialize(folder.Root, Now))
         {
             vault.Backup(backups, new DateTime(2026, 10, 1, 9, 0, 0));
             vault.Backup(backups, new DateTime(2026, 10, 1, 18, 0, 0));
@@ -323,6 +322,15 @@ public sealed class VaultAdapterTests
 
         Assert.AreEqual(Path.Combine(backups, listed[1].Name), files.ApplyRotation(backups, RotationPolicy.Default).Single());
         var restored = files.Restore(Path.Combine(backups, listed[0].Name), outside.Root, Now.Day);
-        Assert.IsTrue(File.Exists(Path.Combine(restored, ".suivi", "coffre.json")));
+        Assert.IsTrue(TemporaryVault.HasVaultFile(restored, ".suivi/coffre.json"), "un coffre chiffré revient chiffré");
+        Assert.AreEqual(storage == StorageKind.Encrypted, KyfRev.Infrastructure.Crypto.EncryptedVault.IsEncrypted(restored));
     }
 }
+
+/// <summary>Sur le disque tel quel.</summary>
+[TestClass]
+public sealed class VaultAdapterOnDiskTests() : VaultAdapterTests(StorageKind.Disk);
+
+/// <summary>Sur un coffre chiffré.</summary>
+[TestClass]
+public sealed class VaultAdapterEncryptedTests() : VaultAdapterTests(StorageKind.Encrypted);

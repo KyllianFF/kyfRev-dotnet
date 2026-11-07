@@ -65,9 +65,9 @@ public sealed partial class VaultSession
             throw VaultException.InvalidPath(target.Value, "une fiche n'est pas une ressource");
         }
         var absolute = Confine(target);
-        return Io(absolute, () => new FileInfo(absolute).Length > MaxResourceBytes
+        return Io(absolute, () => _storage.LengthOf(absolute) > MaxResourceBytes
             ? throw VaultException.InvalidPath(target.Value, "ressource trop volumineuse")
-            : File.ReadAllBytes(absolute));
+            : _storage.ReadAllBytes(absolute));
     }
 
     /// <summary>
@@ -104,7 +104,7 @@ public sealed partial class VaultSession
     private List<VaultPath> ResumeInterruptedOperation()
     {
         var journal = Confine(OperationFile);
-        if (!RealPaths.Exists(journal))
+        if (!_storage.Exists(journal))
         {
             return [];
         }
@@ -142,7 +142,7 @@ public sealed partial class VaultSession
             }
             var file = Confine(candidate);
             var resources = Confine(FileNames.ResourcesFolder(candidate));
-            if (RealPaths.SameEntry(file, except.ToAbsolute(Root)) || (!RealPaths.Exists(file) && !RealPaths.Exists(resources)))
+            if (_storage.SameEntry(file, except.ToAbsolute(Root)) || (!_storage.Exists(file) && !_storage.Exists(resources)))
             {
                 return candidate;
             }
@@ -214,7 +214,7 @@ public sealed partial class VaultSession
         if (target != current)
         {
             moves.Add(new PlannedMove(current, target));
-            if (Directory.Exists(Confine(resourcesBefore)))
+            if (_storage.DirectoryExists(Confine(resourcesBefore)))
             {
                 moves.Add(new PlannedMove(resourcesBefore, resourcesAfter));
             }
@@ -290,24 +290,24 @@ public sealed partial class VaultSession
         {
             var from = Confine(move.From);
             var to = Confine(move.To);
-            var free = !RealPaths.Exists(to) || RealPaths.SameEntry(from, to);
-            if (RealPaths.Exists(from) && free)
+            var free = !_storage.Exists(to) || _storage.SameEntry(from, to);
+            if (_storage.Exists(from) && free)
             {
                 CreateDirectory(Path.GetDirectoryName(to)!);
                 Io(from, () =>
                 {
-                    if (Directory.Exists(from))
+                    if (_storage.DirectoryExists(from))
                     {
-                        Directory.Move(from, to);
+                        _storage.MoveDirectory(from, to);
                     }
                     else
                     {
-                        File.Move(from, to);
+                        _storage.MoveFile(from, to);
                     }
                     return true;
                 });
             }
-            else if (RealPaths.Exists(from) || !RealPaths.Exists(to))
+            else if (_storage.Exists(from) || !_storage.Exists(to))
             {
                 // Destination prise entre-temps, ou les deux introuvables.
                 toCheck.Add(move.From);
@@ -364,18 +364,6 @@ public sealed partial class VaultSession
     /// <summary>Octets et texte d'un fichier Markdown du coffre ; rien s'il est illisible ou pas en UTF-8.</summary>
     private (byte[] Bytes, string Text)? TryReadText(VaultPath path) =>
         TryReadAllBytes(Confine(path)) is { } bytes && TryDecode(bytes, out var text) ? (bytes, text) : null;
-
-    private static byte[]? TryReadAllBytes(string absolute)
-    {
-        try
-        {
-            return File.ReadAllBytes(absolute);
-        }
-        catch (Exception exception) when (IsIo(exception))
-        {
-            return null;
-        }
-    }
 
     private static string WithoutMarkdownExtension(string name) =>
         name.EndsWith(".md", StringComparison.Ordinal) ? name[..^3] : name;

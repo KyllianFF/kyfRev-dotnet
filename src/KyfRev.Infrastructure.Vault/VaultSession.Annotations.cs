@@ -219,7 +219,7 @@ public sealed partial class VaultSession
         var annotations = new SortedDictionary<string, AnnotationsFile>(StringComparer.Ordinal);
         var unreadable = new HashSet<string>(StringComparer.Ordinal);
         var folder = VaultLayout.Absolute(Root, VaultLayout.Annotations);
-        foreach (var file in Io(folder, () => Directory.EnumerateFileSystemEntries(folder).Order(StringComparer.Ordinal).ToList()))
+        foreach (var file in Io(folder, () => _storage.Entries(folder).Select(entry => entry.FullName).Order(StringComparer.Ordinal).ToList()))
         {
             var name = Path.GetFileName(file);
             if (Extension(name) != "json")
@@ -230,7 +230,7 @@ public sealed partial class VaultSession
             var shown = $"{VaultLayout.Annotations}/{sheetId}.json";
             try
             {
-                var read = AnnotationsFile.Read(File.ReadAllBytes(file));
+                var read = AnnotationsFile.Read(_storage.ReadAllBytes(file));
                 if (read.SheetId != sheetId)
                 {
                     throw new VaultFormatException("le nom du fichier ne correspond pas à la fiche");

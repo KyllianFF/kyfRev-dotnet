@@ -115,7 +115,7 @@ public sealed partial class VaultSession
         }
         try
         {
-            return RealPaths.Exists(Confine(path));
+            return _storage.Exists(Confine(path));
         }
         catch (VaultException)
         {

@@ -16,6 +16,8 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="KyfRev.Infrastructure.Crypto.Tests" />
+    <!-- Les essais de la session sur le coffre chiffré y retrouvent l'objet d'un fichier. -->
+    <InternalsVisibleTo Include="KyfRev.Infrastructure.Vault.Tests" />
   </ItemGroup>
 
 </Project>

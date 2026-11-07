@@ -35,7 +35,7 @@ public sealed partial class VaultSession
     public IReadOnlyList<SchemaSummary> Schemas()
     {
         var folder = VaultLayout.Absolute(Root, VaultLayout.Schemas);
-        if (!Directory.Exists(folder))
+        if (!_storage.DirectoryExists(folder))
         {
             return [];
         }
@@ -62,7 +62,7 @@ public sealed partial class VaultSession
             }
         }
         var schemas = new List<SchemaSummary>();
-        foreach (var file in Directory.EnumerateFiles(folder, "*.json"))
+        foreach (var file in _storage.Files(folder, "*.json"))
         {
             if (SummaryOf(file, citations) is { } summary)
             {
@@ -117,7 +117,7 @@ public sealed partial class VaultSession
     public SchemaContent ReadSchema(string id)
     {
         var path = SchemaPath(id);
-        if (!File.Exists(path))
+        if (!_storage.FileExists(path))
         {
             throw VaultException.UnknownSchema(id);
         }
@@ -213,15 +213,15 @@ public sealed partial class VaultSession
 
     /// <summary>Texte d'un schéma comme la version 0.x l'écrit : clés triées, indentation de deux espaces, saut de ligne final.</summary>
     /// <summary>Le résumé d'un fichier de schéma ; rien s'il ne se lit pas : la vue Santé s'en occupe.</summary>
-    private static SchemaSummary? SummaryOf(string file, Dictionary<string, List<SchemaSheet>> citations)
+    private SchemaSummary? SummaryOf(string file, Dictionary<string, List<SchemaSheet>> citations)
     {
         var id = Path.GetFileNameWithoutExtension(file);
         JsonObject schema;
         DateTimeOffset modified;
         try
         {
-            schema = VerifySchema(File.ReadAllText(file), id);
-            modified = new DateTimeOffset(File.GetLastWriteTimeUtc(file), TimeSpan.Zero);
+            schema = VerifySchema(_storage.ReadAllText(file), id);
+            modified = new DateTimeOffset(_storage.LastWriteTimeUtc(file), TimeSpan.Zero);
         }
         catch (Exception exception) when (exception is VaultException or IOException or UnauthorizedAccessException)
         {

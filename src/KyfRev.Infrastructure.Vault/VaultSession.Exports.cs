@@ -195,7 +195,7 @@ public sealed partial class VaultSession
         for (var number = 1; number < 1000; number++)
         {
             var path = Path.Combine(folder, number == 1 ? $"{stem}.{extension}" : $"{stem} ({number}).{extension}");
-            if (TryCreateFile(path, content))
+            if (TryCreateFile(DiskStorage.Instance, path, content))
             {
                 return path;
             }

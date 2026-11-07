@@ -8,13 +8,15 @@ namespace KyfRev.Infrastructure.Vault.Adapters;
 
 /// <summary>Ouverture et création des coffres au format 1.</summary>
 /// <param name="ids">Identifiants à attribuer ; rien : tirés au hasard (les tests les rejouent).</param>
-public sealed class VaultStore(UlidGenerator? ids = null) : IVaultStore
+/// <param name="storage">Là où vivent les fichiers du coffre : le disque par défaut, ou le stockage d'un coffre chiffré
+/// déverrouillé, qui reste à l'appelant.</param>
+public sealed class VaultStore(UlidGenerator? ids = null, VaultStorage? storage = null) : IVaultStore
 {
     /// <inheritdoc/>
-    public IVault Open(string root, Moment now) => Adapt(() => VaultSession.Open(root, now, ids));
+    public IVault Open(string root, Moment now) => Adapt(() => VaultSession.Open(root, now, ids, storage));
 
     /// <inheritdoc/>
-    public IVault Initialize(string root, Moment now) => Adapt(() => VaultSession.Initialize(root, now, ids));
+    public IVault Initialize(string root, Moment now) => Adapt(() => VaultSession.Initialize(root, now, ids, storage));
 
     /// <summary>Même dossier une fois les liens résolus ; à défaut (dossier absent), même texte.</summary>
     public bool SameLocation(string first, string second)

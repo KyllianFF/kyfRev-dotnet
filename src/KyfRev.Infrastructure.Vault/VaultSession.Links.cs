@@ -1,5 +1,5 @@
 using System.Collections.Immutable;
-using System.IO.Enumeration;
+using KyfRev.Application.Ports;
 using KyfRev.Application.Text;
 using KyfRev.Infrastructure.Vault.Links;
 using KyfRev.Infrastructure.Vault.Paths;
@@ -23,7 +23,7 @@ public sealed partial class VaultSession
     /// </summary>
     public IReadOnlyList<BrokenLink> BrokenLinks()
     {
-        var snapshot = VaultSnapshot.Of(_realRoot);
+        var snapshot = VaultSnapshot.Of(_storage, _realRoot);
         var broken = new List<BrokenLink>();
         foreach (var (id, entry) in _sheets)
         {
@@ -102,28 +102,20 @@ public sealed partial class VaultSession
     {
         private static readonly StringComparer PathComparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
 
-        private readonly Dictionary<string, (FileAttributes Attributes, DateTime Modified, long Length)> _entries;
+        private readonly Dictionary<string, (bool IsReparsePoint, DateTime Modified, long Length)> _entries;
 
-        private VaultSnapshot(Dictionary<string, (FileAttributes Attributes, DateTime Modified, long Length)> entries)
+        private VaultSnapshot(Dictionary<string, (bool IsReparsePoint, DateTime Modified, long Length)> entries)
         {
             _entries = entries;
         }
 
-        public static VaultSnapshot Of(string realRoot)
+        public static VaultSnapshot Of(VaultStorage storage, string realRoot)
         {
-            var options = new EnumerationOptions { RecurseSubdirectories = true, AttributesToSkip = 0, IgnoreInaccessible = true };
-            var entries = new FileSystemEnumerable<(string Path, FileAttributes Attributes, DateTime Modified, long Length)>(
-                realRoot,
-                (ref FileSystemEntry entry) => (entry.ToFullPath(), entry.Attributes, entry.LastWriteTimeUtc.UtcDateTime, entry.Length),
-                options)
-            {
-                ShouldRecursePredicate = (ref FileSystemEntry entry) => (entry.Attributes & FileAttributes.ReparsePoint) == 0,
-            };
             var start = Path.TrimEndingDirectorySeparator(realRoot).Length + 1;
-            var found = new Dictionary<string, (FileAttributes, DateTime, long)>(PathComparer);
-            foreach (var (path, attributes, modified, length) in entries)
+            var found = new Dictionary<string, (bool, DateTime, long)>(PathComparer);
+            foreach (var entry in storage.AllEntries(realRoot))
             {
-                found[path[start..].Replace(Path.DirectorySeparatorChar, '/')] = (attributes, modified, length);
+                found[entry.FullName[start..].Replace(Path.DirectorySeparatorChar, '/')] = (entry.IsReparsePoint, entry.LastWriteTimeUtc, entry.Length);
             }
             return new VaultSnapshot(found);
         }
@@ -147,7 +139,7 @@ public sealed partial class VaultSession
                 {
                     return false;
                 }
-                if ((entry.Attributes & FileAttributes.ReparsePoint) != 0)
+                if (entry.IsReparsePoint)
                 {
                     return null;
                 }
