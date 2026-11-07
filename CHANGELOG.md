@@ -9,6 +9,10 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- Coffre chiffré : `kyfrev-coffre chiffrer` et `dechiffrer` convertissent un coffre vers un nouveau dossier, la source
+  intacte. Chaque fichier est relu et vérifié par son SHA-256, et rien n'est écrit si un seul ne correspond pas. Le
+  coffre chiffré ne garde aucun nom en clair : des objets opaques et un index chiffré. La clé de récupération s'affiche
+  une seule fois. L'application ne l'ouvre pas encore : son écran de déverrouillage vient ensuite.
 - Coffre chiffré, lot 1 : le noyau (`KyfRev.Infrastructure.Crypto`, sans écran pour l'instant). Une clé de données de
   256 bits par coffre, enveloppée en AES-256-GCM par la clé du mot de passe (Argon2id par libsodium, réglé sur le poste,
   64 Mio et 3 passes au moins ; PBKDF2-HMAC-SHA256 en option) et par une clé de récupération en 14 groupes base32 qui

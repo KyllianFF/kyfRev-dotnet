@@ -66,6 +66,42 @@ les réglages en cachette.
 Les données associées sont `KYF`, la version, puis l'identifiant du coffre et celui du fichier, chacun précédé de sa
 longueur. Un fichier recopié sous un autre identifiant, ou dans un autre coffre, ne s'ouvre plus.
 
+## Le coffre sur le disque
+
+Un coffre chiffré ne garde aucun nom en clair : ni les titres, ni les dossiers, ni les tailles exactes.
+
+| Chemin | Contenu |
+|---|---|
+| `kyfrev-chiffre.json` | L'en-tête ci-dessus, en clair, sans rien de secret. |
+| `index.kyf` | L'index, chiffré comme un fichier sous l'identifiant `index` : chaque chemin du coffre, son objet et sa taille en clair, puis les dossiers (vides compris). |
+| `objets/<identifiant>.kyf` | Un fichier du coffre, chiffré sous son identifiant : 26 caractères de base32 de Crockford, tirés au hasard. |
+
+Un fichier réécrit garde son objet, avec un nonce neuf. Un objet recopié sous un autre identifiant, ou un index venu d'un
+autre coffre, ne s'ouvre pas : leurs données associées les lient à leur place. Chaque écriture passe par un fichier
+temporaire voisin, puis un remplacement.
+
+## L'outil `kyfrev-coffre`
+
+```
+kyfrev-coffre chiffrer <coffre en clair> <nouveau dossier> [--pbkdf2]
+kyfrev-coffre dechiffrer <coffre chiffré> <nouveau dossier>
+```
+
+- **Toujours vers un nouveau dossier** : la destination ne doit pas exister, ni se trouver dans la source ou autour d'elle.
+  La source reste intacte, pas même son verrou n'est écrit.
+- **Le mot de passe** se tape deux fois, sans écho. Il fait au moins 12 caractères. `--pbkdf2` choisit PBKDF2 au lieu
+  d'Argon2id.
+- **La clé de récupération** s'affiche une seule fois, à la fin du chiffrement. `dechiffrer` accepte le mot de passe ou
+  cette clé.
+- **Le coffre ouvert dans kyfRev** est refusé : l'application tient son verrou.
+- **La vérification** : chaque fichier écrit est relu et comparé à l'original par son SHA-256, et le chiffrement repart du
+  mot de passe pour rouvrir l'en-tête écrit. Tout s'écrit d'abord dans un dossier temporaire voisin, qui ne prend le nom
+  de la destination qu'une fois vérifié. Une conversion refusée ou coupée ne laisse jamais de coffre à moitié écrit.
+- **Le verrou** (`.suivi/verrou`, `.suivi/verrou-info.json`) n'est pas recopié : c'est l'état de l'application, pas du
+  contenu.
+
+L'application n'ouvre pas encore un coffre chiffré : son écran de déverrouillage vient avec le lot suivant.
+
 ## Ce que les tests vérifient
 
 - **Les vecteurs publiés** : AES-256-GCM (McGrew et Viega, cas 13 et 14) et PBKDF2-HMAC-SHA256 (RFC 7914, §11).
@@ -78,3 +114,9 @@ longueur. Un fichier recopié sous un autre identifiant, ou dans un autre coffre
   - un nouveau mot de passe garde la même clé de données et retire l'ancien ;
   - une nouvelle clé de récupération retire l'ancienne.
 - **La clé retenue** ne s'ouvre que pour son coffre, dans cette session.
+- **Le coffre sur le disque** : rien ne nomme ni ne montre une fiche. Un objet altéré, un objet recopié sous un autre
+  identifiant, un index d'un autre coffre ou une mauvaise clé sont refusés, et un chemin qui sortirait du coffre aussi.
+- **La conversion** : le coffre de référence, chiffré puis déchiffré par le mot de passe et par la clé de récupération,
+  revient à l'octet près, et la source n'a pas changé. Deux saisies différentes, un mot de passe trop court, une
+  destination qui existe ou dans la source, un dossier qui n'est pas un coffre, un coffre ouvert dans kyfRev, un mauvais
+  secret ou un objet altéré : rien n'est écrit, et aucun dossier temporaire ne reste.
