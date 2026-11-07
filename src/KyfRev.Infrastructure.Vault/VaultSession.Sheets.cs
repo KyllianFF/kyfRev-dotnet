@@ -140,16 +140,16 @@ public sealed partial class VaultSession
     public IReadOnlyList<SheetVersion> Versions(string id)
     {
         var absolute = Confine(VersionsFolder(id));
-        if (!Directory.Exists(absolute))
+        if (!_storage.DirectoryExists(absolute))
         {
             return [];
         }
         var versions = new List<(int Number, SheetVersion Version)>();
-        foreach (var file in Io(absolute, () => new DirectoryInfo(absolute).EnumerateFileSystemInfos().ToList()))
+        foreach (var file in Io(absolute, () => _storage.Entries(absolute)))
         {
             if (ParseVersionName(file.Name) is { } parsed)
             {
-                var size = file is FileInfo info ? info.Length : 0;
+                var size = file.Length;
                 versions.Add((parsed.Number, new SheetVersion(file.Name, parsed.SavedAt, size)));
             }
         }
@@ -169,7 +169,7 @@ public sealed partial class VaultSession
         }
         var path = VersionsFolder(id).Join(name);
         var absolute = Confine(path);
-        if (!File.Exists(absolute))
+        if (!_storage.FileExists(absolute))
         {
             throw VaultException.UnknownVersion(name);
         }

@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.IO.Compression;
+using KyfRev.Application.Ports;
 using KyfRev.Infrastructure.Vault.Files;
 using KyfRev.Infrastructure.Vault.Paths;
 
@@ -73,14 +74,14 @@ public static class VaultBackups
     public static IReadOnlyList<(DateTime Timestamp, string Path)> List(string folder)
     {
         ArgumentNullException.ThrowIfNull(folder);
-        if (!RealPaths.Exists(folder))
+        if (!DiskStorage.Instance.Exists(folder))
         {
             return [];
         }
         var backups = new List<(DateTime, string)>();
-        foreach (var file in VaultSession.Io(folder, () => new DirectoryInfo(folder).EnumerateFiles().ToList()))
+        foreach (var file in VaultSession.Io(folder, () => DiskStorage.Instance.Entries(folder).Where(entry => !entry.IsDirectory).ToList()))
         {
-            if (file.LinkTarget is null && TimestampOf(file.Name) is { } timestamp)
+            if (!file.IsLink && TimestampOf(file.Name) is { } timestamp)
             {
                 backups.Add((timestamp, file.FullName));
             }
@@ -134,7 +135,7 @@ public static class VaultBackups
     public static IReadOnlyList<string> ApplyRotation(string folder, RotationPolicy policy)
     {
         ArgumentNullException.ThrowIfNull(folder);
-        if (RealPaths.Exists(Path.Combine(folder, VaultLayout.Tracking)))
+        if (DiskStorage.Instance.Exists(Path.Combine(folder, VaultLayout.Tracking)))
         {
             throw VaultException.BackupInsideVault(folder);
         }
@@ -154,7 +155,8 @@ public static class VaultBackups
 
     /// <summary>
     /// Restaure une sauvegarde dans un nouveau dossier « Coffre (restauré le AAAA-MM-JJ) » créé dans
-    /// <paramref name="parentFolder"/>. Tous les noms sont vérifiés avant la moindre écriture.
+    /// <paramref name="parentFolder"/>. Tous les noms sont vérifiés avant la moindre écriture. La sauvegarde d'un coffre
+    /// chiffré redevient un coffre chiffré, qui s'ouvre avec le même mot de passe : rien n'est déchiffré ici.
     /// </summary>
     /// <returns>Le dossier du coffre restauré.</returns>
     public static string Restore(string backup, string parentFolder, DateOnly day)
@@ -185,28 +187,39 @@ public static class VaultBackups
         {
             throw VaultException.InvalidBackup(backup, "contenu décompressé trop volumineux");
         }
-        if (!entries.Any(e => e.Path.Value == VaultLayout.SettingsFile))
+        // Une sauvegarde d'un coffre chiffré se restaure telle quelle, chiffrée : son en-tête et son index en font un coffre.
+        var encrypted = entries.Any(e => e.Path.Value == VaultLayout.EncryptedHeaderFile) && entries.Any(e => e.Path.Value == VaultLayout.EncryptedIndexFile);
+        if (!encrypted && !entries.Any(e => e.Path.Value == VaultLayout.SettingsFile))
         {
             throw VaultException.InvalidBackup(backup, "ce n'est pas une sauvegarde de coffre (coffre.json absent)");
         }
 
-        VaultSession.CreateDirectory(parentFolder);
+        var disk = DiskStorage.Instance;
+        VaultSession.CreateDirectory(disk, parentFolder);
         var name = $"Coffre (restauré le {day:yyyy-MM-dd})";
         var target = Path.Combine(parentFolder, name);
-        for (var number = 2; RealPaths.Exists(target); number++)
+        for (var number = 2; disk.Exists(target); number++)
         {
             target = Path.Combine(parentFolder, $"{name} ({number})");
         }
-        VaultSession.CreateDirectory(target);
+        VaultSession.CreateDirectory(disk, target);
         foreach (var (entry, path) in entries)
         {
             var bytes = ReadExactly(entry, backup, path.Value);
             var destination = path.ToAbsolute(target);
-            VaultSession.CreateDirectory(Path.GetDirectoryName(destination)!);
-            VaultSession.CreateFile(destination, bytes);
+            VaultSession.CreateDirectory(disk, Path.GetDirectoryName(destination)!);
+            VaultSession.CreateFile(disk, destination, bytes);
         }
         return target;
     }
+
+    /// <summary>Les entrées d'une archive, chacune lue dans la limite de sa taille annoncée et vérifiée par son CRC-32.</summary>
+    internal static IReadOnlyList<StoredFile> Entries(ZipArchive archive, string backup) =>
+        [.. archive.Entries.Select(entry =>
+        {
+            var name = entry.FullName.Replace('\\', '/');
+            return new StoredFile(name, entry.Length, () => ReadExactly(entry, backup, name));
+        })];
 
     internal static ZipArchive Open(string backup)
     {

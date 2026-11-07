@@ -20,4 +20,9 @@
     <Using Include="KyfRev.Application.Model" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Un disque qui échoue à la demande : la conversion coupée à chaque écriture. -->
+    <Compile Include="..\Support\FailingDisk.cs" Link="Support\FailingDisk.cs" />
+  </ItemGroup>
+
 </Project>

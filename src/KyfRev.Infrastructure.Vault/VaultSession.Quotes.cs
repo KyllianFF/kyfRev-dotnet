@@ -1,7 +1,6 @@
 using System.Text;
 using KyfRev.Domain.Calendar;
 using KyfRev.Domain.Randomness;
-using KyfRev.Infrastructure.Vault.Files;
 using KyfRev.Infrastructure.Vault.Format;
 using KyfRev.Infrastructure.Vault.Json;
 using KyfRev.Infrastructure.Vault.Paths;
@@ -204,7 +203,7 @@ public sealed partial class VaultSession
         var path = VaultPath.Create(text);
         var inTrash = path.Parent == QuotesTrash;
         var inPlace = path.Parent == QuotesFolder;
-        if (!(inTrash || inPlace) || !path.Name.EndsWith(".md", StringComparison.Ordinal) || !File.Exists(Confine(path)))
+        if (!(inTrash || inPlace) || !path.Name.EndsWith(".md", StringComparison.Ordinal) || !_storage.FileExists(Confine(path)))
         {
             throw VaultException.UnknownQuote(path.Value);
         }
@@ -221,14 +220,14 @@ public sealed partial class VaultSession
         {
             var target = folder.Join(number == 1 ? $"{stem}.md" : $"{stem} ({number}).md");
             var absolute = Confine(target);
-            if (RealPaths.Exists(absolute))
+            if (_storage.Exists(absolute))
             {
                 continue;
             }
             var source = Confine(quote);
             Io(source, () =>
             {
-                File.Move(source, absolute);
+                _storage.MoveFile(source, absolute);
                 return true;
             });
             return target;
@@ -239,13 +238,13 @@ public sealed partial class VaultSession
     private void ReadQuotes(VaultPath folder, bool inTrash, List<Quote> quotes, List<UnreadableFile> unreadable)
     {
         var absolute = Confine(folder);
-        if (!Directory.Exists(absolute))
+        if (!_storage.DirectoryExists(absolute))
         {
             return;
         }
-        foreach (var file in Io(absolute, () => new DirectoryInfo(absolute).EnumerateFiles().ToList()))
+        foreach (var file in Io(absolute, () => _storage.Entries(absolute).Where(entry => !entry.IsDirectory).ToList()))
         {
-            if (!file.Name.EndsWith(".md", StringComparison.Ordinal) || file.LinkTarget is not null)
+            if (!file.Name.EndsWith(".md", StringComparison.Ordinal) || file.IsLink)
             {
                 continue;
             }

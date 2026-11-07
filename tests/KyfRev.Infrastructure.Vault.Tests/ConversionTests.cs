@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using KyfRev.Cli;
 using KyfRev.Infrastructure.Crypto;
 using KyfRev.Infrastructure.Vault.Tests.Support;
+using KyfRev.Tests.Support;
 
 namespace KyfRev.Infrastructure.Vault.Tests;
 
@@ -150,6 +151,211 @@ public sealed partial class ConversionTests
     }
 
     [TestMethod]
+    public void An_encryption_cut_at_any_write_leaves_the_source_intact_and_nothing_half_written()
+    {
+        using var vault = SmallVault();
+        var before = vault.Snapshot();
+        var writes = Writes(place => VaultConversion.Encrypt(vault.Root, place.Encrypted, Password, PasswordKeys.NewPbkdf2(), disk: place.Disk));
+
+        for (var failAt = 1; failAt <= writes; failAt++)
+        {
+            using var place = new Place();
+            AssertCut(place, failAt, before, vault.Snapshot, disk => VaultConversion.Encrypt(vault.Root, place.Encrypted, Password, PasswordKeys.NewPbkdf2(), disk: disk), place.Encrypted);
+
+            var again = VaultConversion.Encrypt(vault.Root, place.Encrypted, Password, PasswordKeys.NewPbkdf2());
+            Assert.IsTrue(again.Succeeded, $"écriture {failAt} : {again.Message}");
+            Assert.AreEqual(0, Leftovers(place), "la conversion suivante retire ce qu'une coupure a laissé");
+            CollectionAssert.AreEqual(Contents(vault.Root), Decrypted(place), $"écriture {failAt}");
+        }
+    }
+
+    [TestMethod]
+    public void A_decryption_cut_at_any_write_leaves_the_source_intact_and_nothing_half_written()
+    {
+        using var vault = SmallVault();
+        using var source = new Place();
+        Assert.IsTrue(VaultConversion.Encrypt(vault.Root, source.Encrypted, Password, PasswordKeys.NewPbkdf2()).Succeeded);
+        var before = Snapshot(source.Encrypted);
+        var writes = Writes(place => VaultConversion.Decrypt(source.Encrypted, place.Decrypted, Password, disk: place.Disk));
+
+        for (var failAt = 1; failAt <= writes; failAt++)
+        {
+            using var place = new Place();
+            AssertCut(place, failAt, before, () => Snapshot(source.Encrypted), disk => VaultConversion.Decrypt(source.Encrypted, place.Decrypted, Password, disk: disk), place.Decrypted);
+
+            var again = VaultConversion.Decrypt(source.Encrypted, place.Decrypted, Password);
+            Assert.IsTrue(again.Succeeded, $"écriture {failAt} : {again.Message}");
+            Assert.AreEqual(0, Leftovers(place), "la conversion suivante retire ce qu'une coupure a laissé");
+            CollectionAssert.AreEqual(Contents(vault.Root), Contents(place.Decrypted), $"écriture {failAt}");
+        }
+    }
+
+    [TestMethod]
+    public void Only_a_conversion_folder_is_ever_removed()
+    {
+        using var vault = SmallVault();
+        using var place = new Place();
+        string[] kept = [".chiffre.conversion-pas-a-moi", ".chiffre.conversion-abcdefgh.ijk.bak", ".autre.conversion-abcdefgh.ijk", "chiffre.conversion-abcdefgh.ijk"];
+        foreach (var name in kept)
+        {
+            Directory.CreateDirectory(Path.Combine(place.Root, name));
+        }
+        Directory.CreateDirectory(Path.Combine(place.Root, ".chiffre.conversion-abcdefgh.ijk", "objets"));
+
+        Assert.IsTrue(VaultConversion.Encrypt(vault.Root, place.Encrypted, Password, PasswordKeys.NewPbkdf2()).Succeeded);
+
+        CollectionAssert.AreEquivalent(kept.Append("chiffre").ToArray(), Directory.GetDirectories(place.Root).Select(Path.GetFileName).ToArray());
+    }
+
+    [TestMethod]
+    public void A_vault_under_the_name_of_a_leftover_is_never_removed()
+    {
+        using var vault = SmallVault();
+        using var place = new Place();
+
+        // Un déchiffrement vers « Coffre », coupé net, a laissé un coffre en clair complet sous le nom de son reste : le
+        // chiffrer vers « Coffre » le prendrait pour ce reste.
+        var plain = CopyWithoutLock(vault.Root, Path.Combine(place.Root, ".Coffre.conversion-abcdefgh.ijk"));
+        var before = Snapshot(plain);
+        var refused = VaultConversion.Encrypt(plain, Path.Combine(place.Root, "Coffre"), Password, PasswordKeys.NewPbkdf2());
+        Assert.IsFalse(refused.Succeeded, refused.Message);
+        Assert.Contains("renommez-le", refused.Message);
+        CollectionAssert.AreEqual(before, Snapshot(plain), "la source est intacte");
+        Assert.IsFalse(Directory.Exists(Path.Combine(place.Root, "Coffre")));
+
+        // Dans l'autre sens : un coffre chiffré sous le nom d'un reste.
+        var encrypted = Path.Combine(place.Root, ".Clair.conversion-abcdefgh.ijk");
+        Assert.IsTrue(VaultConversion.Encrypt(vault.Root, encrypted, Password, PasswordKeys.NewPbkdf2()).Succeeded);
+        var encryptedBefore = Snapshot(encrypted);
+        Assert.Contains("renommez-le", VaultConversion.Decrypt(encrypted, Path.Combine(place.Root, "Clair"), Password).Message);
+        CollectionAssert.AreEqual(encryptedBefore, Snapshot(encrypted));
+
+        // Un coffre rangé dans un dossier qui porte le nom d'un reste : la conversion qui part de lui ne retire pas ce dossier.
+        var nested = CopyWithoutLock(vault.Root, Path.Combine(place.Root, ".Range.conversion-abcdefgh.ijk", "Coffre"));
+        var nestedBefore = Snapshot(nested);
+        var converted = VaultConversion.Encrypt(nested, Path.Combine(place.Root, "Range"), Password, PasswordKeys.NewPbkdf2());
+        Assert.IsTrue(converted.Succeeded, converted.Message);
+        CollectionAssert.AreEqual(nestedBefore, Snapshot(nested));
+    }
+
+    [TestMethod]
+    public void A_leftover_opened_in_kyfRev_since_is_kept()
+    {
+        using var vault = SmallVault();
+        using var place = new Place();
+        var leftover = CopyWithoutLock(vault.Root, Path.Combine(place.Root, ".chiffre.conversion-abcdefgh.ijk"));
+        var now = new KyfRev.Domain.Calendar.Moment(new DateOnly(2026, 11, 7), new DateTimeOffset(2026, 11, 7, 13, 0, 0, TimeSpan.Zero));
+
+        SortedDictionary<string, string> before;
+        using (VaultSession.Open(leftover, now))
+        {
+            before = Contents(leftover);
+            var open = VaultConversion.Encrypt(vault.Root, place.Encrypted, Password, PasswordKeys.NewPbkdf2());
+            Assert.IsTrue(open.Succeeded, open.Message);
+            CollectionAssert.AreEqual(before, Contents(leftover), "ouvert dans kyfRev : son verrou est tenu");
+        }
+
+        Directory.Delete(place.Encrypted, recursive: true);
+        var closed = VaultConversion.Encrypt(vault.Root, place.Encrypted, Password, PasswordKeys.NewPbkdf2());
+        Assert.IsTrue(closed.Succeeded, closed.Message);
+        CollectionAssert.AreEqual(before, Contents(leftover), "refermé : son verrou reste sur le disque, et dit qu'on y a travaillé");
+    }
+
+    [TestMethod]
+    public void The_key_of_the_check_is_cleared_even_when_the_check_fails()
+    {
+        using var place = new Place();
+        Directory.CreateDirectory(place.Encrypted);
+        var key = RandomNumberGenerator.GetBytes(PasswordKeys.KeyBytes);
+
+        Assert.ThrowsExactly<VaultCryptoException>(() => VaultConversion.Reread(place.Encrypted, key, new(StringComparer.Ordinal), new(StringComparer.Ordinal)));
+
+        Assert.IsTrue(key.All(value => value == 0), "la clé est effacée");
+    }
+
+    /// <summary>Une copie du coffre <paramref name="source"/>, sans son verrou : ce qu'une conversion écrit.</summary>
+    private static string CopyWithoutLock(string source, string target)
+    {
+        foreach (var file in Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories))
+        {
+            var relative = Path.GetRelativePath(source, file).Replace(Path.DirectorySeparatorChar, '/');
+            if (relative is VaultLayout.LockFile or VaultLayout.LockInfoFile)
+            {
+                continue;
+            }
+            var copy = Path.Combine(target, relative);
+            Directory.CreateDirectory(Path.GetDirectoryName(copy)!);
+            File.Copy(file, copy);
+        }
+        return target;
+    }
+
+    /// <summary>
+    /// Une conversion dont l'écriture <paramref name="failAt"/> échoue, une fois puis à partir d'elle (une coupure : plus rien
+    /// ne s'écrit, pas même le nettoyage) : refusée, la source intacte, pas de destination ; la première ne laisse rien.
+    /// </summary>
+    private static void AssertCut(Place place, int failAt, SortedDictionary<string, string> before, Func<SortedDictionary<string, string>> source, Func<FailingDisk, ConversionResult> convert, string destination)
+    {
+        foreach (var cut in new[] { false, true })
+        {
+            var disk = new FailingDisk { FailAt = failAt, Cut = cut };
+            var result = convert(disk);
+            var what = $"écriture {failAt}{(cut ? ", coupée net" : string.Empty)}";
+            Assert.IsFalse(result.Succeeded, what);
+            Assert.IsGreaterThan(0, disk.Failures, what);
+            Assert.Contains("Coupure simulée", result.Message, what);
+            CollectionAssert.AreEqual(before, source(), $"{what} : la source n'a pas changé");
+            Assert.IsFalse(Directory.Exists(destination), $"{what} : pas de destination");
+            if (!cut)
+            {
+                Assert.AreEqual(0, Leftovers(place), $"{what} : aucun dossier temporaire ne reste");
+            }
+        }
+    }
+
+    /// <summary>Le nombre d'écritures d'une conversion qui réussit.</summary>
+    private static int Writes(Func<Place, ConversionResult> convert)
+    {
+        using var place = new Place();
+        var result = convert(place);
+        Assert.IsTrue(result.Succeeded, result.Message);
+        Assert.IsGreaterThan(5, place.Disk.Writes, "chaque fichier, chaque dossier, l'index et le renommage final");
+        return place.Disk.Writes;
+    }
+
+    /// <summary>Un petit coffre fermé : deux fiches, une image, un dossier vide.</summary>
+    private static TemporaryVault SmallVault()
+    {
+        var vault = TemporaryVault.Empty();
+        var now = new KyfRev.Domain.Calendar.Moment(new DateOnly(2026, 11, 7), new DateTimeOffset(2026, 11, 7, 12, 0, 0, TimeSpan.Zero));
+        using var session = VaultSession.Initialize(vault.Root, now);
+        var id = session.CreateSheet("Biologie", "Mitose", "La prophase.\n", now);
+        session.AddResource(id, "cellule.png", [1, 2, 3]);
+        session.CreateSheet(null, "Révolution", "1789.\n", now);
+        session.CreateFolder("Vide");
+        return vault;
+    }
+
+    private static SortedDictionary<string, string> Decrypted(Place place)
+    {
+        var decrypted = Path.Combine(place.Root, "verifie");
+        Assert.IsTrue(VaultConversion.Decrypt(place.Encrypted, decrypted, Password).Succeeded);
+        var contents = Contents(decrypted);
+        Directory.Delete(decrypted, recursive: true);
+        return contents;
+    }
+
+    private static SortedDictionary<string, string> Snapshot(string root)
+    {
+        var snapshot = new SortedDictionary<string, string>(StringComparer.Ordinal);
+        foreach (var file in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+        {
+            snapshot[Path.GetRelativePath(root, file)] = $"{Convert.ToHexStringLower(SHA256.HashData(File.ReadAllBytes(file)))}|{File.GetLastWriteTimeUtc(file).Ticks}";
+        }
+        return snapshot;
+    }
+
+    [TestMethod]
     public void A_hidden_entry_keeps_what_is_typed_and_erased()
     {
         var keys = new Queue<ConsoleKeyInfo>(
@@ -201,10 +407,12 @@ public sealed partial class ConversionTests
     [GeneratedRegex(@"^    ([0-9A-Z]{4}(?:-[0-9A-Z]{4}){13})\s*$", RegexOptions.Multiline)]
     private static partial Regex RecoveryLine();
 
-    /// <summary>Un dossier jetable où les conversions écrivent leurs destinations.</summary>
+    /// <summary>Un dossier jetable où les conversions écrivent leurs destinations, et le disque qui compte leurs écritures.</summary>
     private sealed class Place : IDisposable
     {
         public string Root { get; } = Directory.CreateDirectory(Path.Combine(Path.GetTempPath(), "kyfrev-tests", Guid.NewGuid().ToString("N"))).FullName;
+
+        public FailingDisk Disk { get; } = new();
 
         public string Encrypted => Path.Combine(Root, "chiffre");
 

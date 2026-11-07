@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Security.Cryptography;
+using KyfRev.Application.Ports;
 using KyfRev.Domain.Calendar;
 using KyfRev.Infrastructure.Vault.Backups;
 using KyfRev.Infrastructure.Vault.Files;
@@ -22,7 +23,7 @@ public sealed partial class VaultSession
     public BackupFile Backup(string folder, DateTime timestamp)
     {
         ArgumentNullException.ThrowIfNull(folder);
-        CreateDirectory(folder);
+        CreateDirectory(DiskStorage.Instance, folder);
         if (RealPaths.IsWithin(Io(folder, () => RealPaths.OfExistingPart(folder)), _realRoot))
         {
             throw VaultException.BackupInsideVault(folder);
@@ -39,7 +40,7 @@ public sealed partial class VaultSession
                 {
                     foreach (var file in files)
                     {
-                        var bytes = ReadAllBytes(file.ToAbsolute(Root));
+                        var bytes = ReadAllBytes(_storage.Raw, file.ToAbsolute(Root));
                         var entry = archive.CreateEntry(file.Value, CompressionLevel.Optimal);
                         using (var entryStream = entry.Open())
                         {
@@ -62,8 +63,7 @@ public sealed partial class VaultSession
                 File.Move(temporary, target, overwrite: false);
                 return true;
             });
-            Verify(target, expected);
-            return new BackupFile(target, timestamp, files.Count);
+            return new BackupFile(target, timestamp, Verify(target, expected));
         }
         finally
         {
@@ -94,21 +94,29 @@ public sealed partial class VaultSession
         {
             throw VaultException.InvalidBackup(backup, "trop de fichiers");
         }
-        (VaultPath Path, byte[] Bytes)? Read(ZipArchiveEntry zipEntry)
+        var files = FilesOfBackup(archive, backup);
+        (VaultPath Path, byte[] Bytes)? Read(StoredFile file)
         {
-            if (zipEntry.FullName.EndsWith('/') || zipEntry.Length > MaxRestoredFileBytes
-                || !VaultPath.TryParse(zipEntry.FullName, out var path, out _))
+            if (file.Path.EndsWith('/') || file.Length > MaxRestoredFileBytes
+                || !VaultPath.TryParse(file.Path, out var path, out _))
             {
                 return null;
             }
-            return (path, VaultBackups.ReadExactly(zipEntry, backup, path.Value));
+            try
+            {
+                return (path, file.Read());
+            }
+            catch (Exception exception) when (IsIo(exception))
+            {
+                throw VaultException.InvalidBackup(backup, exception.Message);
+            }
         }
 
         // 1. La fiche : un .md du dossier « fiches » qui porte cet identifiant.
         (VaultPath Path, byte[] Bytes)? found = null;
-        foreach (var zipEntry in archive.Entries)
+        foreach (var file in files)
         {
-            if (Read(zipEntry) is not { } read || !read.Path.IsWithin(SheetsFolder) || !read.Path.Name.EndsWith(".md", StringComparison.Ordinal))
+            if (Read(file) is not { } read || !read.Path.IsWithin(SheetsFolder) || !read.Path.Name.EndsWith(".md", StringComparison.Ordinal))
             {
                 continue;
             }
@@ -122,12 +130,12 @@ public sealed partial class VaultSession
 
         // 2. Ses ressources, à leur place d'origine (les liens y mènent).
         var resources = FileNames.ResourcesFolder(origin);
-        var toRestore = archive.Entries.Select(Read).OfType<(VaultPath Path, byte[] Bytes)>().Where(r => r.Path.IsWithin(resources)).ToList();
+        var toRestore = files.Select(Read).OfType<(VaultPath Path, byte[] Bytes)>().Where(r => r.Path.IsWithin(resources)).ToList();
 
         // 3. Écriture, sans jamais écraser.
         var stem = WithoutMarkdownExtension(origin.Name);
         var target = origin;
-        for (var number = 1; RealPaths.Exists(Confine(target)); number++)
+        for (var number = 1; _storage.Exists(Confine(target)); number++)
         {
             var suffix = number == 1 ? " (restaurée)" : $" (restaurée {number})";
             target = origin.Parent is { } parent ? parent.Join($"{stem}{suffix}.md") : VaultPath.Create($"{stem}{suffix}.md");
@@ -138,7 +146,7 @@ public sealed partial class VaultSession
         foreach (var (path, content) in toRestore)
         {
             var destination = Confine(path);
-            if (RealPaths.Exists(destination))
+            if (_storage.Exists(destination))
             {
                 continue;
             }
@@ -149,43 +157,52 @@ public sealed partial class VaultSession
         return target;
     }
 
-    /// <summary>Tous les fichiers du coffre, sauf le verrou et les temporaires, triés.</summary>
+    /// <summary>
+    /// Tous les fichiers du coffre tels qu'ils sont posés sur le disque, sauf le verrou et les temporaires, triés : ceux
+    /// d'un coffre chiffré le restent dans la sauvegarde. Le stockage écarte ce qui n'est plus du coffre : pour un coffre
+    /// chiffré, un objet que son index ne nomme plus.
+    /// </summary>
     private List<VaultPath> FilesToBackup()
     {
         var excluded = new HashSet<string>([VaultLayout.LockFile, VaultLayout.LockInfoFile], StringComparer.Ordinal);
-        var files = new List<VaultPath>();
+        var found = new List<string>();
         var toVisit = new Stack<string>([Root]);
         while (toVisit.TryPop(out var current))
         {
-            foreach (var entry in Io(current, () => new DirectoryInfo(current).EnumerateFileSystemInfos().ToList()))
+            foreach (var entry in Io(current, () => _storage.Raw.Entries(current)))
             {
-                if (entry.LinkTarget is not null)
+                if (entry.IsLink)
                 {
                     continue;
                 }
-                if (entry is DirectoryInfo)
+                if (entry.IsDirectory)
                 {
                     toVisit.Push(entry.FullName);
                 }
                 else if (!entry.Name.StartsWith(AtomicFile.TemporaryPrefix, StringComparison.Ordinal))
                 {
-                    if (!VaultPath.TryFromAbsolute(Root, entry.FullName, out var path, out var reason))
-                    {
-                        throw VaultException.InvalidPath(Path.GetRelativePath(Root, entry.FullName).Replace('\\', '/'), reason);
-                    }
-                    if (!excluded.Contains(path.Value))
-                    {
-                        files.Add(path);
-                    }
+                    found.Add(entry.FullName);
                 }
+            }
+        }
+        var files = new List<VaultPath>();
+        foreach (var file in _storage.FilesToBackUp(found))
+        {
+            if (!VaultPath.TryFromAbsolute(Root, file, out var path, out var reason))
+            {
+                throw VaultException.InvalidPath(Path.GetRelativePath(Root, file).Replace('\\', '/'), reason);
+            }
+            if (!excluded.Contains(path.Value))
+            {
+                files.Add(path);
             }
         }
         files.Sort();
         return files;
     }
 
-    /// <summary>Relit l'archive : mêmes fichiers, même contenu.</summary>
-    private static void Verify(string backup, Dictionary<string, string> expected)
+    /// <summary>Relit l'archive : mêmes fichiers, même contenu. Rend le nombre de fichiers du coffre qu'elle contient.</summary>
+    private int Verify(string backup, Dictionary<string, string> expected)
     {
         using var archive = VaultBackups.Open(backup);
         if (archive.Entries.Count != expected.Count)
@@ -199,6 +216,20 @@ public sealed partial class VaultSession
             {
                 throw VaultException.InvalidBackup(backup, $"contenu différent pour « {entry.FullName} »");
             }
+        }
+        return FilesOfBackup(archive, backup).Count;
+    }
+
+    /// <summary>Les fichiers du coffre que contient une sauvegarde, lus comme ce coffre les lit : déchiffrés s'il est chiffré.</summary>
+    private IReadOnlyList<StoredFile> FilesOfBackup(ZipArchive archive, string backup)
+    {
+        try
+        {
+            return _storage.FilesOfBackup(VaultBackups.Entries(archive, backup), backup);
+        }
+        catch (Exception exception) when (IsIo(exception))
+        {
+            throw VaultException.InvalidBackup(backup, exception.Message);
         }
     }
 }

@@ -92,7 +92,7 @@ public sealed partial class VaultSession
     public string? ExtensionData(string id)
     {
         var path = Confine(ExtensionDataPath(id));
-        if (!File.Exists(path))
+        if (!_storage.FileExists(path))
         {
             return null;
         }
@@ -134,7 +134,7 @@ public sealed partial class VaultSession
         var folder = VaultLayout.Absolute(Root, VaultLayout.Schemas);
         try
         {
-            return Directory.Exists(folder) && Directory.EnumerateFileSystemEntries(folder).Any(entry => Extension(Path.GetFileName(entry)) == "json");
+            return _storage.DirectoryExists(folder) && _storage.Entries(folder).Any(entry => Extension(entry.Name) == "json");
         }
         catch (Exception exception) when (IsIo(exception))
         {
@@ -146,7 +146,7 @@ public sealed partial class VaultSession
     public string? ExtensionJournal(string id)
     {
         var path = Confine(ExtensionJournalPath(id));
-        if (!File.Exists(path))
+        if (!_storage.FileExists(path))
         {
             return null;
         }

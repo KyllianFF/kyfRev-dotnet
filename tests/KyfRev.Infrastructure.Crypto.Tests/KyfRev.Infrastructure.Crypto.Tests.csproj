@@ -7,7 +7,14 @@
   <!-- Argon2id est aussi recalculé par une seconde implémentation, indépendante de libsodium. -->
   <ItemGroup>
     <ProjectReference Include="..\..\src\KyfRev.Infrastructure.Crypto\KyfRev.Infrastructure.Crypto.csproj" />
+    <!-- Le disque sous le coffre chiffré, et le coffre en clair qu'il doit égaler. -->
+    <ProjectReference Include="..\..\src\KyfRev.Infrastructure.Vault\KyfRev.Infrastructure.Vault.csproj" />
     <PackageReference Include="Konscious.Security.Cryptography.Argon2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Un disque qui échoue à la demande : le stockage chiffré coupé à chaque écriture. -->
+    <Compile Include="..\Support\FailingDisk.cs" Link="Support\FailingDisk.cs" />
   </ItemGroup>
 
 </Project>

@@ -6,8 +6,7 @@ using KyfRev.Infrastructure.Vault.Tests.Support;
 namespace KyfRev.Infrastructure.Vault.Tests;
 
 /// <summary>Les statistiques de régularité, comme celles de la 0.x (<c>statistiques.rs</c>).</summary>
-[TestClass]
-public sealed class StatisticsTests
+public abstract class StatisticsTests(StorageKind storage)
 {
     private static readonly Anchor Passage = new("La prophase", "", " précède", 0, 11, ["Mitose"], 5, "sha256:aa");
 
@@ -18,8 +17,8 @@ public sealed class StatisticsTests
     [TestMethod]
     public void An_empty_vault_has_nothing_to_count()
     {
-        using var folder = TemporaryVault.Empty();
-        using var vault = new VaultStore().Initialize(folder.Root, On(October(1)));
+        using var folder = TemporaryVault.Empty(storage);
+        using var vault = new VaultStore(storage: folder.Storage).Initialize(folder.Root, On(October(1)));
 
         var statistics = vault.Statistics(October(13));
 
@@ -43,8 +42,8 @@ public sealed class StatisticsTests
     [TestMethod]
     public void Creating_a_sheet_is_not_a_review()
     {
-        using var folder = TemporaryVault.Empty();
-        using var vault = new VaultStore().Initialize(folder.Root, On(October(1)));
+        using var folder = TemporaryVault.Empty(storage);
+        using var vault = new VaultStore(storage: folder.Storage).Initialize(folder.Root, On(October(1)));
         vault.CreateSheet("Biologie", "Mitose", "La prophase.\n", On(October(1)));
 
         var statistics = vault.Statistics(October(1));
@@ -57,8 +56,8 @@ public sealed class StatisticsTests
     [TestMethod]
     public void Reviews_count_on_the_day_they_are_validated_with_their_delay()
     {
-        using var folder = TemporaryVault.Empty();
-        using var vault = new VaultStore().Initialize(folder.Root, On(October(1)));
+        using var folder = TemporaryVault.Empty(storage);
+        using var vault = new VaultStore(storage: folder.Storage).Initialize(folder.Root, On(October(1)));
         var sheet = vault.CreateSheet("Biologie", "Mitose", "La prophase.\n", On(October(1)));
         var passage = vault.CreateAnnotation(sheet, Passage, null, On(October(1)));
         vault.ValidateReview(ItemKind.Sheet, sheet, On(October(2)));
@@ -95,8 +94,8 @@ public sealed class StatisticsTests
     [TestMethod]
     public void A_streak_runs_until_yesterday_because_the_day_is_not_over()
     {
-        using var folder = TemporaryVault.Empty();
-        using var vault = new VaultStore().Initialize(folder.Root, On(October(1)));
+        using var folder = TemporaryVault.Empty(storage);
+        using var vault = new VaultStore(storage: folder.Storage).Initialize(folder.Root, On(October(1)));
         var sheet = vault.CreateSheet(null, "Mitose", "La prophase.\n", On(October(1)));
         vault.ValidateReview(ItemKind.Sheet, sheet, On(October(2)));
         vault.ValidateReview(ItemKind.Sheet, sheet, On(October(3)));
@@ -113,8 +112,8 @@ public sealed class StatisticsTests
     [TestMethod]
     public void The_calendar_only_counts_its_52_weeks_but_the_records_stay()
     {
-        using var folder = TemporaryVault.Empty();
-        using var vault = new VaultStore().Initialize(folder.Root, On(October(1)));
+        using var folder = TemporaryVault.Empty(storage);
+        using var vault = new VaultStore(storage: folder.Storage).Initialize(folder.Root, On(October(1)));
         var sheet = vault.CreateSheet(null, "Mitose", "La prophase.\n", On(October(1)));
         vault.ValidateReview(ItemKind.Sheet, sheet, On(October(2)));
 
@@ -131,8 +130,8 @@ public sealed class StatisticsTests
     [TestMethod]
     public void A_handled_reminder_counts_apart_from_the_reviews()
     {
-        using var folder = TemporaryVault.Empty();
-        using var vault = new VaultStore().Initialize(folder.Root, On(October(1)));
+        using var folder = TemporaryVault.Empty(storage);
+        using var vault = new VaultStore(storage: folder.Storage).Initialize(folder.Root, On(October(1)));
         var sheet = vault.CreateSheet(null, "Mitose", "La prophase.\n", On(October(1)));
         vault.ArchiveSheet(sheet, On(October(2)));
         var day = new DateOnly(2027, 2, 1);
@@ -152,8 +151,8 @@ public sealed class StatisticsTests
     [TestMethod]
     public void Folders_go_from_the_most_reviewed_then_by_name()
     {
-        using var folder = TemporaryVault.Empty();
-        using var vault = new VaultStore().Initialize(folder.Root, On(October(1)));
+        using var folder = TemporaryVault.Empty(storage);
+        using var vault = new VaultStore(storage: folder.Storage).Initialize(folder.Root, On(October(1)));
         var reviewed = vault.CreateSheet("Zoologie", "Le chat", "Le chat.\n", On(October(1)));
         vault.CreateSheet("histoire", "Rome", "Rome.\n", On(October(1)));
         vault.CreateSheet("Biologie", "Mitose", "La prophase.\n", On(October(1)));
@@ -166,3 +165,11 @@ public sealed class StatisticsTests
         Assert.AreEqual(0.0, folders[1].AverageDelay);
     }
 }
+
+/// <summary>Sur le disque tel quel.</summary>
+[TestClass]
+public sealed class StatisticsOnDiskTests() : StatisticsTests(StorageKind.Disk);
+
+/// <summary>Sur un coffre chiffré.</summary>
+[TestClass]
+public sealed class StatisticsEncryptedTests() : StatisticsTests(StorageKind.Encrypted);

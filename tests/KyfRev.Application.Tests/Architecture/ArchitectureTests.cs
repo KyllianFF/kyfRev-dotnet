@@ -119,9 +119,12 @@ public sealed partial class ArchitectureTests
     }
 
     /// <summary>
-    /// T1 : rien n'est effacé, sauf quatre exceptions : la rotation des copies de sauvegarde (le
+    /// T1 : rien n'est effacé, sauf cinq exceptions : la rotation des copies de sauvegarde (le
     /// nom et le dossier de la copie vérifiés), les deux fichiers temporaires de l'écriture
-    /// atomique et de la sauvegarde, et l'effacement demandé depuis la corbeille.
+    /// atomique et de la sauvegarde, le dossier temporaire d'une conversion, et l'effacement
+    /// demandé depuis la corbeille. Celui-ci passe par le stockage du coffre (<c>Purge</c>) : le
+    /// disque l'applique (un dossier ou un fichier), le coffre chiffré retire l'entrée de son index
+    /// puis efface ses objets, et lui seul efface un objet que l'index ne nomme plus.
     /// </summary>
     [TestMethod]
     public void Files_are_deleted_only_where_allowed()
@@ -132,8 +135,11 @@ public sealed partial class ArchitectureTests
             ["KyfRev.Infrastructure.Vault/Backups/VaultBackups.cs"] = 1,
             ["KyfRev.Cli/VaultConversion.cs"] = 1,
             ["KyfRev.Infrastructure.Vault/Files/AtomicFile.cs"] = 1,
+            ["KyfRev.Infrastructure.Vault/Files/DiskStorage.cs"] = 2,
             ["KyfRev.Infrastructure.Vault/VaultSession.Backups.cs"] = 1,
-            ["KyfRev.Infrastructure.Vault/VaultSession.Trash.cs"] = 2,
+            ["KyfRev.Infrastructure.Vault/VaultSession.Trash.cs"] = 1,
+            ["KyfRev.Infrastructure.Crypto/EncryptedStorage.cs"] = 1,
+            ["KyfRev.Infrastructure.Crypto/EncryptedVault.cs"] = 1,
         };
         var files = Directory.EnumerateFiles(src, "*.cs", SearchOption.AllDirectories)
             .Select(file => Path.GetRelativePath(src, file).Replace('\\', '/'))
@@ -153,6 +159,27 @@ public sealed partial class ArchitectureTests
         foreach (var file in new[] { "KyfRev.Infrastructure.Vault/Files/AtomicFile.cs", "KyfRev.Infrastructure.Vault/VaultSession.Backups.cs" })
         {
             Assert.Contains("File.Delete(temporary)", File.ReadAllText(Path.Combine(src, file)), file);
+        }
+        var conversion = File.ReadAllText(Path.Combine(src, "KyfRev.Cli/VaultConversion.cs"));
+        Assert.Contains("!IsTemporaryOf(destination, temporary)", conversion, "la conversion n'efface que son dossier temporaire, reconnu à son nom");
+        Assert.Contains("disk.Purge(temporary)", conversion);
+    }
+
+    /// <summary>
+    /// T1 : la règle compte l'effacement par un stockage du coffre (le disque, le coffre chiffré), pas l'effacement définitif
+    /// d'un cas d'usage : celui-ci passe lui-même par un stockage. Sinon, chaque appel d'un cas d'usage laisserait une place
+    /// où un effacement direct entrerait sans que la règle le voie.
+    /// </summary>
+    [TestMethod]
+    public void Only_the_purge_of_a_storage_counts_as_a_deletion()
+    {
+        foreach (var call in new[] { "_storage.Purge(absolute)", "disk.Purge(temporary)", "Disk.Purge(ObjectPath(objectId))", "_vault.Purge(relative)", "rawStorage.Purge(path)", "File.Delete(path)" })
+        {
+            Assert.IsTrue(DeletionCall().IsMatch(call), call);
+        }
+        foreach (var call in new[] { "_annotations.Purge(passage.Id)", "quotes.Purge(quote.Path)", "vault.PurgeSheet(id)" })
+        {
+            Assert.IsFalse(DeletionCall().IsMatch(call), call);
         }
     }
 
@@ -191,7 +218,11 @@ public sealed partial class ArchitectureTests
     private static bool IsFramework(string name) =>
         name is "netstandard" or "mscorlib" || name.StartsWith("System.", StringComparison.Ordinal) || name.StartsWith("Microsoft.Win32.", StringComparison.Ordinal);
 
-    [GeneratedRegex(@"\.Delete\(|DeleteFile|DeleteDirectory|RemoveDirectory|FileSystem\.Delete|SendToRecycleBin")]
+    /// <summary>
+    /// Un appel qui efface : celui du disque, ou l'effacement par un stockage du coffre (<c>_storage</c>, <c>disk</c>,
+    /// <c>_vault</c>… <c>.Purge(</c>). L'effacement définitif d'un cas d'usage n'en est pas un : il passe par un stockage.
+    /// </summary>
+    [GeneratedRegex(@"\.Delete\(|DeleteFile|DeleteDirectory|RemoveDirectory|FileSystem\.Delete|SendToRecycleBin|(?:[Ss]torage|[Dd]isk|_vault)\.Purge\(")]
     private static partial Regex DeletionCall();
 
     [GeneratedRegex(@"Assembly\.(Load|LoadFrom|LoadFile|UnsafeLoadFrom)\(|AssemblyLoadContext|AppDomain\.CurrentDomain\.Load|Type\.GetType\(")]

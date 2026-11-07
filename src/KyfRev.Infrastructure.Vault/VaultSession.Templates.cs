@@ -34,8 +34,8 @@ public sealed partial class VaultSession
         List<string> files;
         try
         {
-            files = Directory.Exists(folder)
-                ? [.. Directory.EnumerateFiles(folder)
+            files = _storage.DirectoryExists(folder)
+                ? [.. _storage.Files(folder, "*")
                     .Where(file => Extension(Path.GetFileName(file)) is { } extension && Ascii.EqualsIgnoreCase(extension, "md"))
                     .OrderBy(file => Path.GetFileName(file), Utf8Order.Instance)]
                 : [];

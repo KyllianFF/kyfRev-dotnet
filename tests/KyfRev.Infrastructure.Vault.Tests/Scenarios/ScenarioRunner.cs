@@ -7,6 +7,7 @@ using KyfRev.Domain.Calendar;
 using KyfRev.Infrastructure.Vault.Ids;
 using KyfRev.Infrastructure.Vault.Json;
 using KyfRev.Infrastructure.Vault.Paths;
+using KyfRev.Infrastructure.Vault.Tests.Support;
 
 namespace KyfRev.Infrastructure.Vault.Tests.Scenarios;
 
@@ -15,8 +16,9 @@ namespace KyfRev.Infrastructure.Vault.Tests.Scenarios;
 /// <c>tools/reference-vectors/src/scenarios.rs</c> le joue sur le crate <c>coffre</c> de la 0.x :
 /// même vocabulaire, mêmes lignes de résultat.
 /// </summary>
-internal sealed partial class ScenarioRunner(string root, UlidGenerator ids) : IDisposable
+internal sealed partial class ScenarioRunner(TemporaryVault vault, UlidGenerator ids) : IDisposable
 {
+    private readonly string _root = vault.Root;
     private readonly Dictionary<string, string> _names = new(StringComparer.Ordinal);
     private readonly Dictionary<string, string> _reads = new(StringComparer.Ordinal);
     private VaultSession? _vault;
@@ -53,12 +55,12 @@ internal sealed partial class ScenarioRunner(string root, UlidGenerator ids) : I
         switch (op)
         {
             case "initialiser":
-                _vault = VaultSession.Initialize(root, now, ids);
+                _vault = vault.Initialize(now, ids);
                 return string.Empty;
             case "ouvrir":
                 _vault?.Dispose();
                 _vault = null;
-                _vault = VaultSession.Open(root, now, ids);
+                _vault = vault.Open(now, ids);
                 return string.Empty;
             case "analyser":
                 Vault.Analyze(now);
@@ -164,43 +166,25 @@ internal sealed partial class ScenarioRunner(string root, UlidGenerator ids) : I
                 }
             case "ecrire":
                 {
-                    var path = Absolute(Text(operation, "chemin"));
-                    Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+                    var path = Text(operation, "chemin");
                     var bytes = operation.TryGetProperty("octets", out var raw)
                         ? [.. raw.EnumerateArray().Select(b => b.GetByte())]
                         : Encoding.UTF8.GetBytes(Text(operation, "contenu"));
-                    File.WriteAllBytes(path, bytes);
+                    vault.WriteBytes(path, bytes);
                     if (operation.TryGetProperty("modifie_le", out var modified))
                     {
-                        File.SetLastWriteTimeUtc(path, InstantText.Parse(modified.GetString()!, "modifie_le").UtcDateTime);
+                        vault.SetLastWriteTimeUtc(path, InstantText.Parse(modified.GetString()!, "modifie_le").UtcDateTime);
                     }
                     return string.Empty;
                 }
             case "supprimer":
                 {
-                    var path = Absolute(Text(operation, "chemin"));
-                    if (Directory.Exists(path))
-                    {
-                        Directory.Delete(path, recursive: true);
-                    }
-                    else
-                    {
-                        File.Delete(path);
-                    }
+                    vault.Delete(Text(operation, "chemin"));
                     return string.Empty;
                 }
             case "deplacer":
                 {
-                    var (from, to) = (Absolute(Text(operation, "de")), Absolute(Text(operation, "vers")));
-                    Directory.CreateDirectory(Path.GetDirectoryName(to)!);
-                    if (Directory.Exists(from))
-                    {
-                        Directory.Move(from, to);
-                    }
-                    else
-                    {
-                        File.Move(from, to);
-                    }
+                    vault.Move(Text(operation, "de"), Text(operation, "vers"));
                     return string.Empty;
                 }
             default:
@@ -314,8 +298,6 @@ internal sealed partial class ScenarioRunner(string root, UlidGenerator ids) : I
     }
 
     private static ulong Session(JsonElement operation) => operation.GetProperty("session").GetUInt64();
-
-    private string Absolute(string relative) => Path.Combine([root, .. relative.Split('/')]);
 
     private static Moment At(string day)
     {

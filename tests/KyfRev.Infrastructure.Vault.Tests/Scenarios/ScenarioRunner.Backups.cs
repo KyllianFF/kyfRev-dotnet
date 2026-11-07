@@ -4,9 +4,11 @@ using System.Text;
 using System.Text.Json;
 using KyfRev.Application.Text;
 using KyfRev.Domain.Calendar;
+using KyfRev.Infrastructure.Crypto;
 using KyfRev.Infrastructure.Vault.Backups;
 using KyfRev.Infrastructure.Vault.Json;
 using KyfRev.Infrastructure.Vault.Paths;
+using KyfRev.Infrastructure.Vault.Tests.Support;
 
 namespace KyfRev.Infrastructure.Vault.Tests.Scenarios;
 
@@ -17,7 +19,7 @@ namespace KyfRev.Infrastructure.Vault.Tests.Scenarios;
 /// </summary>
 internal sealed partial class ScenarioRunner
 {
-    private string Outside => root + ".dehors";
+    private string Outside => _root + ".dehors";
 
     private string ExecuteBackups(string op, JsonElement operation, Moment now)
     {
@@ -145,7 +147,7 @@ internal sealed partial class ScenarioRunner
     {
         var text = Text(operation, key);
         return text.StartsWith("coffre/", StringComparison.Ordinal)
-            ? Path.Combine([root, .. text["coffre/".Length..].Split('/')])
+            ? Path.Combine([_root, .. text["coffre/".Length..].Split('/')])
             : Path.Combine([Outside, .. text.Split('/')]);
     }
 
@@ -157,15 +159,24 @@ internal sealed partial class ScenarioRunner
     private static int Count(JsonElement operation, string key) => operation.GetProperty(key).GetInt32();
 
     /// <summary>Un fichier écrit hors du coffre : son nom, puis le contenu d'une archive ou le texte.</summary>
-    private static string Summary(string path) =>
+    private string Summary(string path) =>
         path.EndsWith(".zip", StringComparison.Ordinal)
             ? $"{Path.GetFileName(path)} [{ArchiveContent(path)}]"
             : $"{Path.GetFileName(path)} {Json(Encoding.UTF8.GetString(File.ReadAllBytes(path)))}";
 
-    /// <summary>Entrées d'une archive, dans leur ordre : « nom:empreinte ».</summary>
-    private static string ArchiveContent(string path)
+    /// <summary>
+    /// Entrées d'une archive, dans leur ordre : « nom:empreinte ». Une sauvegarde d'un coffre chiffré se lit par son index,
+    /// déchiffrée, dans l'ordre des chemins : celui d'une sauvegarde en clair.
+    /// </summary>
+    private string ArchiveContent(string path)
     {
         using var archive = ZipFile.OpenRead(path);
+        if (vault.Kind == StorageKind.Encrypted && archive.GetEntry(EncryptedVault.HeaderFile) is not null)
+        {
+            return string.Join(';', vault.Storage.FilesOfBackup(VaultBackups.Entries(archive, path), path)
+                .OrderBy(file => file.Path, Utf8Order.Instance)
+                .Select(file => $"{file.Path}:{Files.Fingerprint.Of(file.Read())}"));
+        }
         return string.Join(';', archive.Entries.Select(entry =>
         {
             using var stream = entry.Open();
@@ -175,9 +186,20 @@ internal sealed partial class ScenarioRunner
         }));
     }
 
-    /// <summary>Tous les fichiers sous <paramref name="folder"/>, triés : « chemin:empreinte ».</summary>
-    private static string Tree(string folder) => string.Join(';', Directory
-        .EnumerateFiles(folder, "*", SearchOption.AllDirectories)
-        .Select(file => $"{Path.GetRelativePath(folder, file).Replace('\\', '/')}:{Files.Fingerprint.Of(File.ReadAllBytes(file))}")
-        .Order(Utf8Order.Instance));
+    /// <summary>Tous les fichiers sous <paramref name="folder"/>, triés : « chemin:empreinte » ; ceux d'un coffre chiffré, déchiffrés.</summary>
+    private static string Tree(string folder)
+    {
+        if (EncryptedVault.IsEncrypted(folder))
+        {
+            using var storage = TemporaryVault.OpenEncrypted(folder);
+            return string.Join(';', storage.AllEntries(folder)
+                .Where(entry => !entry.IsDirectory)
+                .Select(entry => $"{Path.GetRelativePath(folder, entry.FullName).Replace('\\', '/')}:{Files.Fingerprint.Of(storage.ReadAllBytes(entry.FullName))}")
+                .Order(Utf8Order.Instance));
+        }
+        return string.Join(';', Directory
+            .EnumerateFiles(folder, "*", SearchOption.AllDirectories)
+            .Select(file => $"{Path.GetRelativePath(folder, file).Replace('\\', '/')}:{Files.Fingerprint.Of(File.ReadAllBytes(file))}")
+            .Order(Utf8Order.Instance));
+    }
 }

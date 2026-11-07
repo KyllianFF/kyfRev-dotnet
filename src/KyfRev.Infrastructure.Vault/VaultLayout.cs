@@ -60,6 +60,15 @@ public static class VaultLayout
     /// <summary>Qui tient le coffre ouvert.</summary>
     public const string LockInfoFile = ".suivi/verrou-info.json";
 
+    /// <summary>
+    /// En-tête d'un coffre chiffré, en clair et sans rien de secret : sa présence fait d'un dossier, ou d'une sauvegarde, un
+    /// coffre chiffré. Le même nom que dans <c>KyfRev.Infrastructure.Crypto</c>, ce que les essais vérifient.
+    /// </summary>
+    public const string EncryptedHeaderFile = "kyfrev-chiffre.json";
+
+    /// <summary>Index chiffré d'un coffre chiffré : chaque chemin du coffre et son objet.</summary>
+    public const string EncryptedIndexFile = "index.kyf";
+
     /// <summary>Chemin absolu d'un emplacement du coffre.</summary>
     public static string Absolute(string root, string relative) => Path.Combine([root, .. relative.Split('/')]);
 }
