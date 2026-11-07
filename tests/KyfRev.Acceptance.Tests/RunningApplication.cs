@@ -221,10 +221,21 @@ internal sealed class RunningApplication : IDisposable
         Keyboard.Type(text);
     }
 
-    /// <summary>Ouvre le code Markdown à gauche, par son bouton.</summary>
+    /// <summary>
+    /// Ouvre le code Markdown à gauche : par son bouton du ruban, ou, fenêtre étroite (celle des scénarios fait 800 pixels),
+    /// par son entrée du « ⋯ » de la barre courte.
+    /// </summary>
     public void ShowMarkdown()
     {
-        Wait("MarkdownToggle").Patterns.Toggle.Pattern.Toggle();
+        if (Find("MarkdownToggle") is { } toggle)
+        {
+            toggle.Patterns.Toggle.Pattern.Toggle();
+        }
+        else
+        {
+            Press("ViewButton");
+            MenuEntry("MarkdownItem").Patterns.Toggle.Pattern.Toggle();
+        }
         Wait("SheetSource");
     }
 
