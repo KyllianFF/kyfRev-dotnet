@@ -143,7 +143,7 @@ public sealed partial class ArchitectureTests
         };
         var purges = new Dictionary<string, int>(StringComparer.Ordinal)
         {
-            ["KyfRev.Cli/VaultConversion.cs"] = 2,
+            ["KyfRev.Cli/VaultConversion.cs"] = 3,
             ["KyfRev.Infrastructure.Vault/VaultSession.Trash.cs"] = 1,
             ["KyfRev.Infrastructure.Crypto/EncryptedStorage.cs"] = 1,
             ["KyfRev.Infrastructure.Crypto/EncryptedVault.cs"] = 1,
@@ -175,6 +175,7 @@ public sealed partial class ArchitectureTests
         Assert.Contains("!IsTemporaryOf(destination, temporary)", conversion, "la conversion n'efface que son dossier temporaire, reconnu à son nom");
         Assert.Contains("disk.Purge(temporary)", conversion);
         Assert.Contains("disk.Purge(_path)", conversion, "et son marqueur, juste avant de prendre le nom de la destination");
+        Assert.Contains("disk.Purge(entry.FullName)", conversion, "ce que contient le dossier temporaire, son marqueur excepté, qui part en dernier");
         var removed = File.ReadAllText(Path.Combine(src, "KyfRev.Presentation.Wpf/Pages/DataSettingsViewModel.cs"));
         Assert.Contains("_annotations.Purge(passage.Id)", removed, "« Éléments supprimés » efface une annotation par son cas d'usage");
         Assert.Contains("quotes.Purge(quote.Path)", removed, "et une citation par le sien");

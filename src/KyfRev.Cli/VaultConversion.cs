@@ -45,6 +45,9 @@ internal static class VaultConversion
     /// <summary>Les fichiers du coffre en clair qui ne sont pas du contenu : le verrou de l'application.</summary>
     private static readonly string[] Excluded = [VaultLayout.LockFile, VaultLayout.LockInfoFile];
 
+    /// <summary>Tous les sous-dossiers, sans entrer dans un point d'analyse (lien, jonction).</summary>
+    private static readonly EnumerationOptions BelowWithoutLinks = new() { RecurseSubdirectories = true, AttributesToSkip = FileAttributes.ReparsePoint, IgnoreInaccessible = true };
+
     /// <summary>Chiffre le coffre <paramref name="source"/> dans le nouveau dossier <paramref name="destination"/>.</summary>
     /// <param name="source">Le coffre en clair ; il reste intact.</param>
     /// <param name="destination">Un nouveau dossier.</param>
@@ -76,7 +79,7 @@ internal static class VaultConversion
         ConversionMark? mark = null;
         try
         {
-            RemoveLeftovers(destination, disk);
+            RemoveLeftovers(destination, disk, DiskIdentity.Of(source));
             temporary = Temporary(destination, disk);
             var expected = new SortedDictionary<string, byte[]>(StringComparer.Ordinal);
             var folders = new SortedSet<string>(StringComparer.Ordinal);
@@ -108,8 +111,7 @@ internal static class VaultConversion
             // La vérification repart de l'en-tête écrit, avec le mot de passe : une erreur d'enveloppe se verrait ici.
             if (Reread(temporary, EncryptedVault.ReadHeader(temporary).Open(password), expected, folders) is { } mismatch)
             {
-                mark.Dispose();
-                return ConversionResult.Refused(mismatch + Discard(temporary, destination, disk));
+                return ConversionResult.Refused(mismatch + Discard(temporary, destination, disk, mark));
             }
             mark.Remove(disk);
             disk.MoveDirectory(temporary, destination);
@@ -117,8 +119,7 @@ internal static class VaultConversion
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or VaultCryptoException)
         {
-            mark?.Dispose();
-            return ConversionResult.Refused($"Le chiffrement a échoué ({exception.Message}) : rien n'a été écrit dans « {destination} »." + Discard(temporary, destination, disk));
+            return ConversionResult.Refused($"Le chiffrement a échoué ({exception.Message}) : rien n'a été écrit dans « {destination} »." + Discard(temporary, destination, disk, mark));
         }
         finally
         {
@@ -165,7 +166,7 @@ internal static class VaultConversion
         try
         {
             using var vault = EncryptedVault.Open(source, dataKey, DiskStorage.Instance);
-            RemoveLeftovers(destination, disk);
+            RemoveLeftovers(destination, disk, DiskIdentity.Of(source));
             temporary = Temporary(destination, disk);
             mark = ConversionMark.Take(temporary);
             var expected = new SortedDictionary<string, byte[]>(StringComparer.Ordinal);
@@ -189,8 +190,7 @@ internal static class VaultConversion
             {
                 if (!CryptographicOperations.FixedTimeEquals(hash, SHA256.HashData(disk.ReadAllBytes(VaultLayout.Absolute(temporary, path)))))
                 {
-                    mark.Dispose();
-                    return ConversionResult.Refused($"« {path} » ne se relit pas à l'identique : rien n'a été écrit dans « {destination} »." + Discard(temporary, destination, disk));
+                    return ConversionResult.Refused($"« {path} » ne se relit pas à l'identique : rien n'a été écrit dans « {destination} »." + Discard(temporary, destination, disk, mark));
                 }
             }
             mark.Remove(disk);
@@ -199,8 +199,7 @@ internal static class VaultConversion
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or VaultCryptoException)
         {
-            mark?.Dispose();
-            return ConversionResult.Refused($"Le déchiffrement a échoué ({exception.Message}) : rien n'a été écrit dans « {destination} »." + Discard(temporary, destination, disk));
+            return ConversionResult.Refused($"Le déchiffrement a échoué ({exception.Message}) : rien n'a été écrit dans « {destination} »." + Discard(temporary, destination, disk, mark));
         }
         finally
         {
@@ -347,23 +346,36 @@ internal static class VaultConversion
     }
 
     /// <summary>
-    /// Le seul point de la conversion qui efface : un dossier temporaire d'une conversion vers <paramref name="destination"/>,
-    /// et lui seul, reconnu à son nom. Rend de quoi le dire s'il reste.
+    /// Le seul point de la conversion qui efface un dossier : un dossier temporaire d'une conversion vers
+    /// <paramref name="destination"/>, et lui seul, reconnu à son nom. Son marqueur part en dernier : tenu, ou repris, ou
+    /// reposé s'il manque, pendant que tout le reste s'efface, il n'est relâché qu'ensuite, et effacé avec le dossier. Un
+    /// retrait incomplet garde donc le marqueur, et la conversion suivante finit le travail. Le marqueur que la conversion
+    /// tient encore, s'il y en a un, est relâché dans tous les cas. Rend de quoi le dire s'il reste.
     /// </summary>
-    private static string Discard(string? temporary, string destination, VaultStorage disk)
+    private static string Discard(string? temporary, string destination, VaultStorage disk, ConversionMark? mark = null)
     {
         if (temporary is null || !IsTemporaryOf(destination, temporary) || !disk.DirectoryExists(temporary))
         {
+            mark?.Dispose();
             return string.Empty;
         }
         try
         {
+            mark = mark is { IsHeld: true } ? mark : ConversionMark.Hold(temporary);
+            foreach (var entry in disk.Entries(temporary).Where(entry => !string.Equals(entry.Name, MarkFile, StringComparison.OrdinalIgnoreCase)))
+            {
+                disk.Purge(entry.FullName);
+            }
+            mark.Dispose();
             disk.Purge(temporary);
             return string.Empty;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
-            return $" Le dossier temporaire « {temporary} » n'a pas pu être retiré ({exception.Message}) : la prochaine conversion vers la même destination le retirera.";
+            mark?.Dispose();
+            return File.Exists(Path.Combine(temporary, MarkFile))
+                ? $" Le dossier temporaire « {temporary} » n'a pas pu être retiré ({exception.Message}) : la prochaine conversion vers la même destination le retirera."
+                : $" Le dossier temporaire « {temporary} » n'a pas pu être retiré ({exception.Message}), et plus rien ne le désigne comme tel : retirez-le vous-même (après un déchiffrement, il est en clair).";
         }
     }
 
@@ -371,23 +383,49 @@ internal static class VaultConversion
     /// Retire les dossiers temporaires qu'une conversion vers la même destination, coupée net, a laissés : ceux qui ont son
     /// nom exact et son marqueur, que plus personne ne tient. Un dossier sans marqueur n'est pas un reste ; un marqueur tenu
     /// est celui d'une conversion en cours. Un dossier qu'on a ouvert dans kyfRev depuis a son verrou, qu'une conversion
-    /// n'écrit jamais : il reste aussi.
+    /// n'écrit jamais : il reste aussi. Un reste qui contient la source, reconnue à son identité sur le disque (<paramref name="source"/>),
+    /// refuse la conversion, quel que soit le chemin écrit de la source : un lecteur substitué ou un partage ne sont pas des
+    /// points d'analyse, et rien dans leur chemin ne mène au reste.
     /// </summary>
-    private static void RemoveLeftovers(string destination, VaultStorage disk)
+    private static void RemoveLeftovers(string destination, VaultStorage disk, DiskIdentity? source)
     {
         foreach (var entry in disk.Entries(Path.GetDirectoryName(destination)!))
         {
             if (!entry.IsDirectory || entry.IsLink || !IsTemporaryOf(destination, entry.FullName)
-                || disk.FileExists(VaultLayout.Absolute(entry.FullName, VaultLayout.LockFile)) || !ConversionMark.IsAbandoned(entry.FullName))
+                || disk.FileExists(VaultLayout.Absolute(entry.FullName, VaultLayout.LockFile)))
             {
                 continue;
             }
-            if (Discard(entry.FullName, destination, disk) is { Length: > 0 } left)
-            {
-                throw new IOException(left.Trim());
-            }
+            RemoveLeftover(entry.FullName, destination, disk, source);
         }
     }
+
+    /// <summary>Retire un reste dont le marqueur ne tient plus personne ; le refuse s'il contient la source.</summary>
+    private static void RemoveLeftover(string folder, string destination, VaultStorage disk, DiskIdentity? source)
+    {
+        using var mark = ConversionMark.TryHold(folder);
+        if (mark is null)
+        {
+            return;
+        }
+        if (source is { } identity && Holds(folder, identity))
+        {
+            throw new IOException($"la source est dans « {folder} », le dossier temporaire d'une conversion coupée ; pour en faire un coffre, retirez-en le fichier « {MarkFile} », puis renommez-le");
+        }
+        var left = Discard(folder, destination, disk, mark);
+        if (left.Length > 0)
+        {
+            throw new IOException(left.Trim());
+        }
+    }
+
+    /// <summary>
+    /// Vrai si <paramref name="folder"/>, ou l'un de ses sous-dossiers, est sur le disque le dossier d'identité
+    /// <paramref name="identity"/>. Les points d'analyse ne sont pas suivis : ce qu'ils désignent est ailleurs.
+    /// </summary>
+    private static bool Holds(string folder, DiskIdentity identity) =>
+        DiskIdentity.Of(folder) == identity
+        || Directory.EnumerateDirectories(folder, "*", BelowWithoutLinks).Any(below => DiskIdentity.Of(below) == identity);
 
     private static string Relative(string root, string path) => Path.GetRelativePath(root, path).Replace(Path.DirectorySeparatorChar, '/');
 
@@ -406,29 +444,32 @@ internal static class VaultConversion
             _stream = stream;
         }
 
-        /// <summary>Pose le marqueur dans <paramref name="folder"/> et le tient : personne d'autre ne l'ouvre.</summary>
-        public static ConversionMark Take(string folder)
-        {
-            var path = Path.Combine(folder, MarkFile);
-            return new ConversionMark(path, new FileStream(path, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Delete));
-        }
+        /// <summary>Vrai tant que le marqueur est tenu.</summary>
+        public bool IsHeld { get; private set; } = true;
 
-        /// <summary>Vrai si <paramref name="folder"/> a un marqueur que personne ne tient : une conversion l'y a laissé en s'arrêtant.</summary>
-        public static bool IsAbandoned(string folder)
+        /// <summary>Pose le marqueur dans <paramref name="folder"/> et le tient : personne d'autre ne l'ouvre.</summary>
+        public static ConversionMark Take(string folder) => Open(folder, FileMode.CreateNew);
+
+        /// <summary>Tient le marqueur du dossier temporaire de cette conversion, et le repose s'il manque.</summary>
+        public static ConversionMark Hold(string folder) => Open(folder, FileMode.OpenOrCreate);
+
+        /// <summary>
+        /// Tient le marqueur que <paramref name="folder"/> porte et que personne ne tient : une conversion l'y a laissé en
+        /// s'arrêtant. Rien si le dossier n'en a pas, ou si quelqu'un d'autre l'a ouvert.
+        /// </summary>
+        public static ConversionMark? TryHold(string folder)
         {
-            var path = Path.Combine(folder, MarkFile);
-            if (!File.Exists(path))
+            if (!File.Exists(Path.Combine(folder, MarkFile)))
             {
-                return false;
+                return null;
             }
             try
             {
-                using var probe = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.None);
-                return true;
+                return Open(folder, FileMode.Open);
             }
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
             {
-                return false;
+                return null;
             }
         }
 
@@ -439,7 +480,17 @@ internal static class VaultConversion
             Dispose();
         }
 
-        public void Dispose() => _stream.Dispose();
+        public void Dispose()
+        {
+            IsHeld = false;
+            _stream.Dispose();
+        }
+
+        private static ConversionMark Open(string folder, FileMode mode)
+        {
+            var path = Path.Combine(folder, MarkFile);
+            return new ConversionMark(path, new FileStream(path, mode, FileAccess.ReadWrite, FileShare.Delete));
+        }
     }
 
     private static bool Inside(string path, string folder)

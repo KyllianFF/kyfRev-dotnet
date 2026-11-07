@@ -164,7 +164,7 @@ public sealed partial class ConversionTests
 
             var again = VaultConversion.Encrypt(vault.Root, place.Encrypted, Password, PasswordKeys.NewPbkdf2());
             Assert.IsTrue(again.Succeeded, $"écriture {failAt} : {again.Message}");
-            AssertNoMarkedLeftover(place, failAt, writes);
+            Assert.AreEqual(0, Leftovers(place), $"écriture {failAt} : la conversion suivante retire ce qu'une coupure a laissé");
             CollectionAssert.AreEqual(Contents(vault.Root), Decrypted(place), $"écriture {failAt}");
         }
     }
@@ -185,7 +185,7 @@ public sealed partial class ConversionTests
 
             var again = VaultConversion.Decrypt(source.Encrypted, place.Decrypted, Password);
             Assert.IsTrue(again.Succeeded, $"écriture {failAt} : {again.Message}");
-            AssertNoMarkedLeftover(place, failAt, writes);
+            Assert.AreEqual(0, Leftovers(place), $"écriture {failAt} : la conversion suivante retire ce qu'une coupure a laissé");
             CollectionAssert.AreEqual(Contents(vault.Root), Contents(place.Decrypted), $"écriture {failAt}");
         }
     }
@@ -240,8 +240,15 @@ public sealed partial class ConversionTests
         var before = Snapshot(leftover);
         var link = Path.Combine(place.Root, "lien");
         FileLinks.CreateDirectoryLink(link, leftover);
+        using var drive = FileLinks.Subst(leftover);
 
-        foreach (var source in new[] { link, leftover })
+        // Par son chemin, par une jonction, par un lecteur substitué.
+        List<string> sources = [link, leftover];
+        if (drive is not null)
+        {
+            sources.Add(drive.Root);
+        }
+        foreach (var source in sources)
         {
             var refused = VaultConversion.Encrypt(source, Path.Combine(place.Root, "Coffre"), Password, PasswordKeys.NewPbkdf2());
             Assert.IsFalse(refused.Succeeded, $"{source} : {refused.Message}");
@@ -257,6 +264,10 @@ public sealed partial class ConversionTests
         var encryptedBefore = Snapshot(encrypted);
         Assert.Contains(VaultConversion.MarkFile, VaultConversion.Decrypt(encrypted, Path.Combine(place.Root, "Clair"), Password).Message);
         CollectionAssert.AreEqual(encryptedBefore, Snapshot(encrypted));
+        if (drive is null)
+        {
+            Assert.Inconclusive("Aucune lettre de lecteur n'est libre pour subst : seuls le chemin et la jonction sont vérifiés.");
+        }
     }
 
     [TestMethod]
@@ -270,12 +281,28 @@ public sealed partial class ConversionTests
         var link = Path.Combine(place.Root, "lien");
         FileLinks.CreateDirectoryLink(link, nested);
         var shortName = FileLinks.ShortPath(leftover);
+        using var drive = FileLinks.Subst(nested);
 
-        // Par son chemin, par une jonction vers lui, sous le nom court (8.3) du dossier temporaire.
+        // Par son chemin, par une jonction vers lui, sous le nom court (8.3) du dossier temporaire, et par un lecteur
+        // substitué sur lui : aucun point d'analyse ne relie ce dernier au dossier temporaire, seule l'identité du dossier
+        // sur le disque le fait.
         List<string> sources = [link, nested];
+        List<string> notChecked = [];
         if (!string.Equals(Path.GetFileName(shortName), Path.GetFileName(leftover), StringComparison.Ordinal))
         {
             sources.Add(Path.Combine(shortName, "Coffre"));
+        }
+        else
+        {
+            notChecked.Add("le nom court (8.3), que ce volume ne donne pas");
+        }
+        if (drive is not null)
+        {
+            sources.Add(drive.Root);
+        }
+        else
+        {
+            notChecked.Add("le lecteur substitué, faute de lettre libre");
         }
         foreach (var source in sources)
         {
@@ -283,9 +310,54 @@ public sealed partial class ConversionTests
             Assert.IsFalse(refused.Succeeded, $"{source} : {refused.Message}");
             CollectionAssert.AreEqual(before, Snapshot(nested), $"{source} : la source est intacte");
         }
-        if (sources.Count < 3)
+        if (notChecked.Count > 0)
         {
-            Assert.Inconclusive($"Ce volume ne donne pas de nom court (8.3) à « {leftover} » : seuls le chemin et la jonction sont vérifiés.");
+            Assert.Inconclusive($"Non vérifiés : {string.Join(", ", notChecked)}.");
+        }
+    }
+
+    [TestMethod]
+    public void A_temporary_folder_that_cannot_be_removed_keeps_its_mark_and_says_so()
+    {
+        using var vault = SmallVault();
+        using var source = new Place();
+        Assert.IsTrue(VaultConversion.Encrypt(vault.Root, source.Encrypted, Password, PasswordKeys.NewPbkdf2()).Succeeded);
+
+        foreach (var decrypting in new[] { false, true })
+        {
+            using var place = new Place();
+            var destination = decrypting ? place.Decrypted : place.Encrypted;
+            ConversionResult Conversion(Action<string>? beforeVerifying = null) => decrypting
+                ? VaultConversion.Decrypt(source.Encrypted, destination, Password, beforeVerifying)
+                : VaultConversion.Encrypt(vault.Root, destination, Password, PasswordKeys.NewPbkdf2(), beforeVerifying);
+
+            // Un aperçu de l'Explorateur tient un fichier du dossier temporaire sans le laisser effacer : la vérification le
+            // relit, puis le renommage final échoue, et le dossier ne s'efface qu'en partie.
+            FileStream? held = null;
+            ConversionResult refused;
+            try
+            {
+                refused = Conversion(temporary => held = new FileStream(
+                    Directory.EnumerateFiles(temporary, "*", SearchOption.AllDirectories).First(file => Path.GetFileName(file) != VaultConversion.MarkFile),
+                    FileMode.Open,
+                    FileAccess.Read,
+                    FileShare.Read));
+            }
+            finally
+            {
+                held?.Dispose();
+            }
+
+            var what = decrypting ? "déchiffrement" : "chiffrement";
+            Assert.IsFalse(refused.Succeeded, $"{what} : {refused.Message}");
+            Assert.Contains("la prochaine conversion vers la même destination le retirera", refused.Message, what);
+            var left = Directory.EnumerateDirectories(place.Root).Single(folder => Path.GetFileName(folder).Contains(".conversion-", StringComparison.Ordinal));
+            Assert.IsTrue(File.Exists(Path.Combine(left, VaultConversion.MarkFile)), $"{what} : le marqueur reste, et le message dit vrai");
+            Assert.IsFalse(Directory.Exists(destination), what);
+
+            var again = Conversion();
+            Assert.IsTrue(again.Succeeded, $"{what} : {again.Message}");
+            Assert.AreEqual(0, Leftovers(place), $"{what} : la conversion suivante l'a retiré");
         }
     }
 
@@ -369,22 +441,6 @@ public sealed partial class ConversionTests
         CopyWithoutLock(source, inside is null ? folder : Path.Combine(folder, inside));
         File.WriteAllBytes(Path.Combine(folder, VaultConversion.MarkFile), []);
         return folder;
-    }
-
-    /// <summary>
-    /// Après une conversion qui a réussi : aucun dossier temporaire marqué ne reste. Une coupure net avant que la conversion
-    /// pose son marqueur laisse un dossier sans marqueur et sans rien du coffre (l'en-tête et l'index d'un coffre chiffré vide,
-    /// au plus) ; une coupure au renommage final, le marqueur déjà retiré, laisse le coffre converti entier, sans marqueur.
-    /// Ni l'un ni l'autre n'est retiré : rien ne dit qu'une conversion les a laissés.
-    /// </summary>
-    private static void AssertNoMarkedLeftover(Place place, int failAt, int writes)
-    {
-        foreach (var folder in Directory.EnumerateDirectories(place.Root).Where(folder => Path.GetFileName(folder).Contains(".conversion-", StringComparison.Ordinal)))
-        {
-            Assert.IsFalse(File.Exists(Path.Combine(folder, VaultConversion.MarkFile)), $"écriture {failAt} : la conversion suivante retire ce qu'une coupure a laissé");
-            var files = Directory.EnumerateFiles(folder, "*", SearchOption.AllDirectories).Select(Path.GetFileName).ToList();
-            Assert.IsTrue(failAt == writes || files.All(name => name is EncryptedVault.HeaderFile or EncryptedVault.IndexFile), $"écriture {failAt} : rien du coffre dans « {folder} » ({string.Join(", ", files)})");
-        }
     }
 
     /// <summary>Une copie du coffre <paramref name="source"/>, sans son verrou : ce qu'une conversion écrit.</summary>

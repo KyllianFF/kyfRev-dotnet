@@ -6,6 +6,8 @@
     <AssemblyName>kyfrev-coffre</AssemblyName>
     <RootNamespace>KyfRev.Cli</RootNamespace>
     <Description>Outil en ligne de commande du coffre kyfRev : vérification, et bientôt conversion et export.</Description>
+    <!-- LibraryImport (DiskIdentity) génère du code non sûr. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
   <ItemGroup>
