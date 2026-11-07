@@ -178,15 +178,16 @@
                 BorderBrush="{DynamicResource Kyf.Brush.Primary}" Background="{DynamicResource Kyf.Brush.Surface}"
                 Visibility="{Binding IsActive, Converter={StaticResource Visible}, FallbackValue=Collapsed}" AutomationProperties.Name="{Binding Prompt}">
           <StackPanel>
-            <DockPanel>
-              <WrapPanel x:Name="GuidedButtons" DockPanel.Dock="Right" VerticalAlignment="Center">
-                <Button x:Name="GuidedTake" Content="{x:Static pages:ReadingText.GuidedTake}" Style="{DynamicResource Kyf.Button.Primary}" Click="OnGuidedTake" Margin="8,0,8,0" />
+            <!-- La consigne garde sa place : quand les boutons la lui prendraient, ils passent dessous. -->
+            <kyf:AdaptiveRow MainMinWidth="240" Spacing="8" StackedSpacing="8">
+              <TextBlock x:Name="GuidedPrompt" Text="{Binding Prompt}" Style="{DynamicResource Kyf.Text.BodyStrong}" TextWrapping="Wrap" VerticalAlignment="Center"
+                         AutomationProperties.LiveSetting="Assertive" />
+              <WrapPanel x:Name="GuidedButtons" kyf:AdaptiveRow.Part="Trailing" VerticalAlignment="Center">
+                <Button x:Name="GuidedTake" Content="{x:Static pages:ReadingText.GuidedTake}" Style="{DynamicResource Kyf.Button.Primary}" Click="OnGuidedTake" Margin="0,0,8,0" />
                 <Button x:Name="GuidedSkip" Content="{x:Static pages:ReadingText.GuidedSkip}" Command="{Binding SkipCommand}" Margin="0,0,8,0" />
                 <Button x:Name="GuidedStop" Content="{x:Static pages:ReadingText.GuidedStop}" Command="{Binding StopSeriesCommand}" />
               </WrapPanel>
-              <TextBlock x:Name="GuidedPrompt" Text="{Binding Prompt}" Style="{DynamicResource Kyf.Text.BodyStrong}" TextWrapping="Wrap" VerticalAlignment="Center"
-                         AutomationProperties.LiveSetting="Assertive" />
-            </DockPanel>
+            </kyf:AdaptiveRow>
             <TextBlock x:Name="GuidedHint" Text="{Binding Hint}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,6,0,0"
                        Visibility="{Binding HasHint, Converter={StaticResource Visible}}" AutomationProperties.LiveSetting="Polite" />
             <DockPanel Margin="0,8,0,0" Visibility="{Binding AllowsTyping, Converter={StaticResource Visible}}">
