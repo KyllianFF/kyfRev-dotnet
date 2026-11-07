@@ -254,7 +254,27 @@ kyfrev-coffre dechiffrer <coffre chiffré> <nouveau dossier>
   lu), seulement leurs références ; la mémoire libérée, le fichier d'échange et la mise en veille prolongée peuvent en
   garder des traces, et le presse-papiers garde ce qui y a été copié. BitLocker reste recommandé.
 
-L'assistant « Chiffrer ce coffre » et la carte Chiffrement des paramètres viennent avec le lot suivant.
+## La carte Chiffrement
+
+Dans Paramètres › Données, pour un coffre chiffré ouvert seulement :
+
+- **Changer le mot de passe** : le mot de passe actuel (ou la clé de récupération), puis le nouveau deux fois, de 12
+  caractères au moins. Seule l'enveloppe de la clé de données change, dans l'en-tête écrit de façon atomique : aucune
+  fiche n'est réécrite, la clé de récupération et la clé retenue sur ce poste restent valables, et l'ancien mot de passe
+  n'ouvre plus le coffre. La dérivation est réglée sur le poste (Argon2id), hors du fil de l'interface.
+- **Créer une nouvelle clé de récupération** : demande le mot de passe, puis montre la nouvelle clé une seule fois, à
+  copier et à ranger ; la fenêtre ne se ferme qu'une fois « J'ai rangé ma clé de récupération » coché, et la clé est alors
+  oubliée de l'écran. L'ancienne n'ouvre plus le coffre ; les sauvegardes déjà faites, qui gardent l'ancien en-tête,
+  s'ouvrent encore avec elle.
+- **Se souvenir sur cet ordinateur** : coché, le mot de passe est demandé et la clé retenue (voir plus haut) ; décoché,
+  elle est oubliée tout de suite.
+- **Verrouiller après** : 5, 15, 30 minutes, une heure, ou jamais (l'inactivité ne verrouille plus, le départ de
+  l'utilisateur si). Le réglage voyage avec le coffre : `"verrouillage": { "apresMinutes": … }` dans `.suivi/coffre.json`
+  (0 pour jamais), écrit seulement s'il diffère des 15 minutes par défaut, si bien qu'un coffre qui ne l'a jamais changé
+  reste identique, octet pour octet, à celui de la 0.x. Chiffré, ce fichier ne se lit ni ne se change sans la clé.
+- **Verrouiller maintenant** : comme Ctrl+Maj+L.
+
+L'assistant « Chiffrer ce coffre » et « Déchiffrer vers un dossier… » viennent avec la partie suivante.
 
 ## Ce que les tests vérifient
 

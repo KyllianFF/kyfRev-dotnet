@@ -1,5 +1,6 @@
 using System.Reflection;
 using KyfRev.Application.Model;
+using KyfRev.Application.Ports;
 using KyfRev.Application.Tests.Support;
 using KyfRev.Application.UseCases;
 using KyfRev.Domain.Reviews;
@@ -55,7 +56,8 @@ public sealed class UseCaseTests
         var tried = 0;
         foreach (var group in typeof(KyfRevApplication).GetProperties().Select(p => p.GetValue(test.App)!).Where(g => g is not VaultUseCases and not VaultHost))
         {
-            foreach (var method in group.GetType().GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly))
+            // Les opérations, pas les propriétés (« une clé est retenue ») : elles rendent un résultat.
+            foreach (var method in group.GetType().GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly).Where(method => !method.IsSpecialName))
             {
                 var outcome = method.Invoke(group, [.. method.GetParameters().Select(p => Sample(p.ParameterType))])!;
                 var error = (string?)outcome.GetType().GetProperty(nameof(Outcome<Done>.Error))!.GetValue(outcome);
@@ -317,6 +319,7 @@ public sealed class UseCaseTests
         _ when type == typeof(ReadOnlyMemory<byte>) => ReadOnlyMemory<byte>.Empty,
         _ when type == typeof(Anchor) => Passage,
         _ when type == typeof(Definition) => new Definition("Terme", "Explication."),
+        _ when type == typeof(VaultSecret) => VaultSecret.Password("un mot de passe d'essai"),
         _ when type == typeof(VaultPreferences) => new VaultPreferences([1, 3], true, 2, 30, [2, 4], false, true, true, false, [], false),
         _ when type == typeof(Func<VaultPreferences, VaultPreferences>) => (Func<VaultPreferences, VaultPreferences>)(preferences => preferences),
         _ when type.IsEnum => Enum.GetValues(type).GetValue(0),

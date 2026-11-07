@@ -12,17 +12,86 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <data name="BackToVault" xml:space="preserve">
+    <value>Revenir au coffre ouvert</value>
+  </data>
   <data name="BackToWelcome" xml:space="preserve">
     <value>Retour à l'accueil</value>
   </data>
-  <data name="BackToVault" xml:space="preserve">
-    <value>Revenir au coffre ouvert</value>
+  <data name="CardHelp" xml:space="preserve">
+    <value>Ce coffre est chiffré : sans son mot de passe ou sa clé de récupération, rien de lui ne se lit sur le disque.</value>
+  </data>
+  <data name="CardTitle" xml:space="preserve">
+    <value>Chiffrement</value>
+  </data>
+  <data name="Change" xml:space="preserve">
+    <value>Changer</value>
+  </data>
+  <data name="ChangePassword" xml:space="preserve">
+    <value>Changer le mot de passe…</value>
+  </data>
+  <data name="ChangePasswordHelp" xml:space="preserve">
+    <value>Aucune fiche n'est réécrite. La clé de récupération et la clé retenue sur cet ordinateur restent valables ; les sauvegardes déjà faites s'ouvrent encore avec l'ancien mot de passe.</value>
+  </data>
+  <data name="ChangePasswordTitle" xml:space="preserve">
+    <value>Changer le mot de passe</value>
+  </data>
+  <data name="Close" xml:space="preserve">
+    <value>Fermer</value>
+  </data>
+  <data name="ConfirmPassword" xml:space="preserve">
+    <value>Confirmez le nouveau mot de passe</value>
+  </data>
+  <data name="Copy" xml:space="preserve">
+    <value>Copier</value>
+  </data>
+  <data name="CopyRecoveryKey" xml:space="preserve">
+    <value>Copier la clé de récupération</value>
+  </data>
+  <data name="Create" xml:space="preserve">
+    <value>Créer</value>
+  </data>
+  <data name="CurrentPassword" xml:space="preserve">
+    <value>Mot de passe actuel</value>
+  </data>
+  <data name="Deriving" xml:space="preserve">
+    <value>Vérification du mot de passe…</value>
+  </data>
+  <data name="EnterCurrentPassword" xml:space="preserve">
+    <value>Saisissez le mot de passe actuel du coffre.</value>
   </data>
   <data name="EnterPassword" xml:space="preserve">
     <value>Saisissez le mot de passe du coffre.</value>
   </data>
   <data name="EnterRecoveryKey" xml:space="preserve">
     <value>Saisissez la clé de récupération du coffre.</value>
+  </data>
+  <data name="Forgotten" xml:space="preserve">
+    <value>La clé n'est plus retenue sur cet ordinateur : le mot de passe sera demandé au prochain démarrage.</value>
+  </data>
+  <data name="HourMany" xml:space="preserve">
+    <value>{0} heures</value>
+  </data>
+  <data name="HourOne" xml:space="preserve">
+    <value>{0} heure</value>
+  </data>
+  <data name="KeyCopied" xml:space="preserve">
+    <value>La clé est copiée. Le presse-papiers la garde jusqu'à la prochaine copie.</value>
+  </data>
+  <data name="KeyNotCopied" xml:space="preserve">
+    <value>La clé n'a pas pu être copiée : sélectionnez-la dans le champ et recopiez-la à la main.</value>
+  </data>
+  <data name="KeyStored" xml:space="preserve">
+    <value>J'ai rangé ma clé de récupération</value>
+  </data>
+  <data name="KeyStoredFirst" xml:space="preserve">
+    <value>Cochez « J'ai rangé ma clé de récupération » pour fermer : elle ne sera plus jamais affichée.</value>
+  </data>
+  <data name="LockAfter" xml:space="preserve">
+    <value>Verrouillage automatique</value>
+  </data>
+  <data name="LockAfterHelp" xml:space="preserve">
+    <value>Sans rien toucher pendant ce délai, le coffre se verrouille. Il se verrouille aussi dès que la session de Windows se verrouille ou que le poste se met en veille.</value>
   </data>
   <data name="LockedHeading" xml:space="preserve">
     <value>Ce coffre est chiffré</value>
@@ -33,11 +102,38 @@
   <data name="LockedPage" xml:space="preserve">
     <value>Coffre chiffré</value>
   </data>
+  <data name="LockNever" xml:space="preserve">
+    <value>Jamais</value>
+  </data>
+  <data name="LockNow" xml:space="preserve">
+    <value>Verrouiller maintenant (Ctrl+Maj+L)</value>
+  </data>
   <data name="LostPassword" xml:space="preserve">
     <value>J'ai perdu mon mot de passe…</value>
   </data>
+  <data name="MinuteMany" xml:space="preserve">
+    <value>{0} minutes</value>
+  </data>
+  <data name="MinuteOne" xml:space="preserve">
+    <value>{0} minute</value>
+  </data>
+  <data name="NewPassword" xml:space="preserve">
+    <value>Nouveau mot de passe</value>
+  </data>
+  <data name="NewRecoveryKey" xml:space="preserve">
+    <value>Créer une nouvelle clé de récupération…</value>
+  </data>
+  <data name="NewRecoveryKeyHelp" xml:space="preserve">
+    <value>Saisissez le mot de passe du coffre. La nouvelle clé remplace l'ancienne, qui n'ouvrira plus ce coffre.</value>
+  </data>
+  <data name="NewRecoveryKeyTitle" xml:space="preserve">
+    <value>Nouvelle clé de récupération</value>
+  </data>
   <data name="NotUnlocked" xml:space="preserve">
     <value>Ce coffre n'a pas pu être ouvert.</value>
+  </data>
+  <data name="OldRecoveryKey" xml:space="preserve">
+    <value>L'ancienne clé de récupération n'ouvre plus ce coffre. Les sauvegardes faites avant s'ouvrent encore avec elle : gardez-la tant que vous gardez ces sauvegardes.</value>
   </data>
   <data name="OtherVault" xml:space="preserve">
     <value>Ouvrir un autre coffre…</value>
@@ -45,17 +141,44 @@
   <data name="Password" xml:space="preserve">
     <value>Mot de passe</value>
   </data>
+  <data name="PasswordChanged" xml:space="preserve">
+    <value>Le mot de passe est changé : l'ancien n'ouvre plus ce coffre.</value>
+  </data>
+  <data name="PasswordLength" xml:space="preserve">
+    <value>Au moins {0} caractères.</value>
+  </data>
   <data name="RecoveryHelp" xml:space="preserve">
     <value>Les 14 groupes de 4 caractères notés quand le coffre a été chiffré. Les tirets, les espaces et les majuscules ne comptent pas.</value>
-  </data>
-  <data name="RecoveryKey" xml:space="preserve">
-    <value>Clé de récupération</value>
   </data>
   <data name="RecoveryIntro" xml:space="preserve">
     <value>Sans son mot de passe, sa clé de récupération l'ouvre.</value>
   </data>
+  <data name="RecoveryKey" xml:space="preserve">
+    <value>Clé de récupération</value>
+  </data>
+  <data name="RecoveryKeyCreated" xml:space="preserve">
+    <value>La nouvelle clé de récupération est créée : l'ancienne n'ouvre plus ce coffre.</value>
+  </data>
+  <data name="RecoveryKeyShown" xml:space="preserve">
+    <value>Notez-la ou imprimez-la, et rangez-la loin de cet ordinateur : elle ne sera plus jamais affichée. Sans le mot de passe, elle seule ouvre le coffre.</value>
+  </data>
+  <data name="RecoveryKeyShownTitle" xml:space="preserve">
+    <value>Votre clé de récupération</value>
+  </data>
+  <data name="RecoveryKeyUnseen" xml:space="preserve">
+    <value>Une nouvelle clé de récupération a été créée pendant le verrouillage, sans être affichée : l'ancienne n'ouvre plus ce coffre. Créez-en une autre pour la voir et la ranger.</value>
+  </data>
   <data name="Remember" xml:space="preserve">
     <value>Se souvenir sur cet ordinateur</value>
+  </data>
+  <data name="RememberAsk" xml:space="preserve">
+    <value>Saisissez le mot de passe du coffre : Windows en gardera la clé pour votre session.</value>
+  </data>
+  <data name="RememberButton" xml:space="preserve">
+    <value>Retenir</value>
+  </data>
+  <data name="Remembered" xml:space="preserve">
+    <value>La clé est retenue sur cet ordinateur : le coffre s'ouvrira sans mot de passe au démarrage.</value>
   </data>
   <data name="RememberHelp" xml:space="preserve">
     <value>Windows garde la clé pour votre session : le coffre s'ouvrira sans mot de passe. Un autre compte, ou ce coffre copié ailleurs, ne peut pas s'en servir ; quelqu'un qui utilise votre session, si.</value>

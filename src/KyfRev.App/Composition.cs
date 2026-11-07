@@ -128,6 +128,7 @@ internal static class Composition
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Backups);
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Trash);
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Exports);
+        services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Encryption);
         services.AddSingleton(provider =>
         {
             void VaultChanged() => Composition.VaultChanged(provider);
@@ -150,6 +151,13 @@ internal static class Composition
                     provider.GetRequiredService<IFolderPicker>(),
                     state,
                     VaultChanged),
+                // La carte Chiffrement, pour un coffre chiffré : mot de passe, clé de récupération, clé retenue, délai.
+                Encryption = new EncryptionSettingsViewModel(
+                    provider.GetRequiredService<EncryptionUseCases>(),
+                    provider.GetRequiredService<SettingsUseCases>(),
+                    () => provider.GetRequiredService<VaultUseCases>().State().Encrypted,
+                    () => provider.GetRequiredService<ShellViewModel>().Locking?.Invoke() ?? Task.CompletedTask,
+                    System.Windows.Clipboard.SetText),
             };
         });
         services.AddSingleton(provider =>
@@ -284,10 +292,19 @@ internal static class Composition
             () => DraftViews(provider)));
         services.AddSingleton(provider => new AutoLock(
             provider.GetRequiredService<IUserPresence>(),
-            () => AutoLock.DefaultDelay,
+            () => LockDelay(provider),
             () => provider.GetRequiredService<VaultLocking>().LockAsync()));
         return services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
     }
+
+    /// <summary>
+    /// Le délai d'inactivité avant le verrouillage, réglé dans le coffre ouvert (carte Chiffrement) ; rien : jamais. Sans
+    /// coffre lisible, le délai par défaut (un coffre en clair ne se verrouille pas de toute façon).
+    /// </summary>
+    private static TimeSpan? LockDelay(IServiceProvider provider) =>
+        provider.GetRequiredService<SettingsUseCases>().Get() is { Succeeded: true, Value: var preferences }
+            ? preferences.LockAfterMinutes == 0 ? null : TimeSpan.FromMinutes(preferences.LockAfterMinutes)
+            : AutoLock.DefaultDelay;
 
     /// <summary>Un autre coffre est ouvert : les réglages lus de l'ancien sont oubliés, et l'espace de travail revient.</summary>
     private static void VaultChanged(IServiceProvider provider)

@@ -102,6 +102,38 @@ public abstract class VaultComplementsTests(StorageKind storage)
     }
 
     [TestMethod]
+    public void The_lock_delay_is_a_vault_setting_written_only_when_it_is_not_the_default()
+    {
+        using var folder = TemporaryVault.Empty(storage);
+        string fresh;
+        using (var vault = folder.Initialize(Now))
+        {
+            fresh = folder.ReadText(".suivi/coffre.json");
+            Assert.AreEqual(VaultPreferences.DefaultLockAfterMinutes, vault.Preferences.LockAfterMinutes);
+            Assert.DoesNotContain("verrouillage", fresh, "un coffre neuf s'écrit comme avec la 0.x");
+
+            vault.ChangePreferences(vault.Preferences with { LockAfterMinutes = 30 });
+            Assert.AreEqual(30, vault.Preferences.LockAfterMinutes);
+            Assert.Contains("\"apresMinutes\": 30", folder.ReadText(".suivi/coffre.json"));
+
+            var written = folder.ReadText(".suivi/coffre.json");
+            Assert.Contains("1440", Refused(() => vault.ChangePreferences(vault.Preferences with { LockAfterMinutes = VaultSettingsFile.MaxLockAfterMinutes + 1 })));
+            Assert.AreEqual(VaultErrorKind.InvalidSettings, Assert.ThrowsExactly<VaultException>(() => vault.ChangePreferences(vault.Preferences with { LockAfterMinutes = -1 })).Kind);
+            Assert.AreEqual(30, vault.Preferences.LockAfterMinutes, "un délai refusé ne change rien");
+            Assert.AreEqual(written, folder.ReadText(".suivi/coffre.json"), "ni n'écrit rien");
+
+            vault.ChangePreferences(vault.Preferences with { LockAfterMinutes = 0 });
+        }
+
+        using (var reopened = folder.Open(Now))
+        {
+            Assert.AreEqual(0, reopened.Preferences.LockAfterMinutes, "jamais, relu à la réouverture");
+            reopened.ChangePreferences(reopened.Preferences with { LockAfterMinutes = VaultPreferences.DefaultLockAfterMinutes });
+        }
+        Assert.AreEqual(fresh, folder.ReadText(".suivi/coffre.json"), "revenu au défaut, le fichier redevient celui d'un coffre neuf");
+    }
+
+    [TestMethod]
     public void A_damaged_draw_journal_stops_the_daily_draw()
     {
         using var folder = TemporaryVault.Empty(storage);

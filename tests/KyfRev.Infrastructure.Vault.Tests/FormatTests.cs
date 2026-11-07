@@ -86,6 +86,76 @@ public sealed class FormatTests
     }
 
     [TestMethod]
+    [DataRow("")]
+    [DataRow(""", "verrouillage": {}""")]
+    [DataRow(""", "verrouillage": null""")]
+    [DataRow(""", "verrouillage": { "apresMinutes": null }""")]
+    [DataRow(""", "verrouillage": { "apresMinutes": 15 }""")]
+    public void The_lock_delay_is_15_minutes_by_default_and_then_not_written(string section)
+    {
+        var json = $$"""{ "format": 1, "id": "v_X", "creeLe": "2026-10-09"{{section}} }""";
+        var settings = VaultSettingsFile.Read(Encoding.UTF8.GetBytes(json));
+
+        Assert.AreEqual(VaultPreferences.DefaultLockAfterMinutes, settings.LockAfterMinutes);
+        Assert.DoesNotContain("verrouillage", Encoding.UTF8.GetString(settings.Write()), "un coffre de la 0.x se réécrit tel quel");
+        Assert.DoesNotContain("verrouillage", Encoding.UTF8.GetString(VaultSettingsFile.New("v_X", new DateOnly(2026, 10, 9)).Write()));
+    }
+
+    [TestMethod]
+    [DataRow(0)]
+    [DataRow(5)]
+    [DataRow(60)]
+    [DataRow(VaultSettingsFile.MaxLockAfterMinutes)]
+    public void A_lock_delay_other_than_the_default_is_written_after_the_known_sections_and_read_back(int minutes)
+    {
+        var written = (VaultSettingsFile.Read(Encoding.UTF8.GetBytes(Settings)) with { LockAfterMinutes = minutes }).Write();
+        var root = JsonNode.Parse(written)!.AsObject();
+
+        Assert.AreEqual("verrouillage", root.Last().Key);
+        Assert.AreEqual(minutes, (int?)root["verrouillage"]!["apresMinutes"]);
+        var read = VaultSettingsFile.Read(written);
+        Assert.AreEqual(minutes, read.LockAfterMinutes);
+        CollectionAssert.AreEqual(written, read.Write());
+    }
+
+    [TestMethod]
+    [DataRow("-1")]
+    [DataRow("1441")]
+    [DataRow("15.5")]
+    [DataRow("\"15\"")]
+    [DataRow("true")]
+    public void A_lock_delay_that_is_not_a_whole_number_of_minutes_up_to_a_day_is_refused(string minutes)
+    {
+        var json = $$"""{ "format": 1, "id": "v_X", "creeLe": "2026-10-09", "verrouillage": { "apresMinutes": {{minutes}} } }""";
+        var error = Assert.ThrowsExactly<VaultFormatException>(() => VaultSettingsFile.Read(Encoding.UTF8.GetBytes(json)));
+        Assert.Contains("apresMinutes", error.Message);
+    }
+
+    [TestMethod]
+    public void Unknown_properties_of_the_lock_section_are_kept_even_with_the_default_delay()
+    {
+        const string json = """
+            {
+              "format": 1, "id": "v_X", "creeLe": "2026-10-09",
+              "zeta": 1,
+              "verrouillage": { "enVeille": true, "apresMinutes": 60 }
+            }
+            """;
+        var settings = VaultSettingsFile.Read(Encoding.UTF8.GetBytes(json));
+        var written = JsonNode.Parse(settings.Write())!.AsObject();
+
+        Assert.AreEqual(60, settings.LockAfterMinutes);
+        string[] keys = ["format", "id", "creeLe", "revision", "rappels", "citations", "sauvegardes", "verrouillage", "zeta"];
+        Assert.AreSequenceEqual(keys, written.Select(pair => pair.Key));
+        string[] section = ["apresMinutes", "enVeille"];
+        Assert.AreSequenceEqual(section, written["verrouillage"]!.AsObject().Select(pair => pair.Key));
+
+        var byDefault = JsonNode.Parse((settings with { LockAfterMinutes = VaultPreferences.DefaultLockAfterMinutes }).Write())!.AsObject();
+        Assert.IsFalse(byDefault["verrouillage"]!.AsObject().ContainsKey("apresMinutes"));
+        Assert.IsTrue((bool?)byDefault["verrouillage"]!["enVeille"], "la section reste pour ce qu'elle a d'inconnu");
+    }
+
+    [TestMethod]
     public void A_tracking_is_read_whatever_the_key_order_offsets_and_precision()
     {
         var sheet = TrackedSheetFile.Read(Encoding.UTF8.GetBytes(Sheet));

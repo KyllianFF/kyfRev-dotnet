@@ -1,5 +1,6 @@
 using System.Runtime.Versioning;
 using System.Security.Cryptography;
+using KyfRev.Application;
 using KyfRev.Application.Ports;
 using KyfRev.Domain.Calendar;
 
@@ -133,4 +134,84 @@ public sealed class EncryptedVaults(IVaultStore plain, Func<VaultStorage, IVault
 
     /// <inheritdoc/>
     public bool Forget(string root) => remembered.Forget(root);
+
+    /// <summary>
+    /// Vrai si ce poste a retenu une clé pour ce coffre (l'identifiant de son en-tête) et ce dossier, sans la demander à
+    /// Windows ni l'essayer sur l'index ; faux si l'en-tête ne se lit pas.
+    /// </summary>
+    public bool IsRemembered(string root)
+    {
+        ArgumentNullException.ThrowIfNull(root);
+        try
+        {
+            return remembered.Find(EncryptedVault.ReadHeader(root, disk).VaultId, root) is not null;
+        }
+        catch (VaultCryptoException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Change le mot de passe : l'en-tête, ouvert par le secret actuel, enveloppe la même clé de données par le nouveau
+    /// mot de passe, avec des réglages tirés sur ce poste (<see cref="PasswordKeys.Calibrated"/>, de l'ordre d'une
+    /// seconde), puis il est réécrit d'un coup, par le disque. Aucun objet n'est réécrit, et la clé de récupération comme
+    /// la clé retenue ouvrent toujours le coffre.
+    /// </summary>
+    /// <exception cref="VaultCryptoException">
+    /// Le nouveau mot de passe est trop court, le secret actuel n'est pas le bon, ou l'en-tête ne se lit pas ou ne s'écrit
+    /// pas : l'en-tête n'a pas changé.
+    /// </exception>
+    public void ChangePassword(string root, VaultSecret current, string newPassword)
+    {
+        ArgumentNullException.ThrowIfNull(current);
+        ArgumentNullException.ThrowIfNull(newPassword);
+        if (newPassword.Length < VaultSecret.MinimumPasswordLength)
+        {
+            throw new VaultCryptoException($"Le mot de passe doit faire au moins {VaultSecret.MinimumPasswordLength} caractères.");
+        }
+        Rewrap(root, current, (header, dataKey) => (header.WithPassword(dataKey, newPassword, PasswordKeys.Calibrated()), default(Done)));
+    }
+
+    /// <summary>
+    /// Donne au coffre une clé de récupération neuve : l'en-tête, ouvert par le secret, enveloppe la même clé de données
+    /// par elle, puis il est réécrit d'un coup, par le disque. L'ancienne clé de récupération n'ouvre plus rien ; le mot de
+    /// passe et la clé retenue, si.
+    /// </summary>
+    /// <exception cref="VaultCryptoException">
+    /// Le secret n'est pas le bon, ou l'en-tête ne se lit pas ou ne s'écrit pas : l'en-tête n'a pas changé.
+    /// </exception>
+    public string NewRecoveryKey(string root, VaultSecret secret)
+    {
+        ArgumentNullException.ThrowIfNull(secret);
+        return Rewrap(root, secret, (header, dataKey) => header.WithNewRecovery(dataKey));
+    }
+
+    /// <summary>
+    /// Ouvre l'en-tête du coffre avec <paramref name="secret"/>, l'enveloppe de nouveau par <paramref name="rewrap"/> et
+    /// l'écrit à sa place, de façon atomique : par le disque tel quel, jamais par un stockage chiffré. La clé de données
+    /// est effacée ensuite, quoi qu'il arrive.
+    /// </summary>
+    private T Rewrap<T>(string root, VaultSecret secret, Func<VaultHeader, byte[], (VaultHeader Header, T Result)> rewrap)
+    {
+        var header = EncryptedVault.ReadHeader(root, disk);
+        var dataKey = secret.IsRecoveryKey ? header.OpenWithRecovery(secret.Text) : header.Open(secret.Text);
+        try
+        {
+            var (changed, result) = rewrap(header, dataKey);
+            try
+            {
+                disk.Replace(Path.Combine(root, EncryptedVault.HeaderFile), changed.Write());
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                throw new VaultCryptoException("L'en-tête du coffre chiffré n'a pas pu être écrit : rien n'a changé.", exception);
+            }
+            return result;
+        }
+        finally
+        {
+            PasswordKeys.Clear(dataKey);
+        }
+    }
 }

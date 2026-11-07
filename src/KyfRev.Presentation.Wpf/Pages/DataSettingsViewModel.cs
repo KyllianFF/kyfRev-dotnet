@@ -211,22 +211,27 @@ public sealed partial class DataSettingsViewModel : ObservableObject, INavigatio
     [ObservableProperty]
     public partial string ConfirmMessage { get; private set; } = string.Empty;
 
+    /// <summary>La carte « Chiffrement », qui ne se montre que pour un coffre chiffré ; rien : l'onglet ne la propose pas.</summary>
+    public EncryptionSettingsViewModel? Encryption { get; init; }
+
     /// <inheritdoc/>
     public void OnNavigatedTo()
     {
         Error = null;
         Message = null;
         RestoredVault = null;
+        Encryption?.Reload();
         ReloadCommand.Execute(null);
     }
 
     /// <summary>
     /// Oublie ce que l'onglet a lu du coffre : son chemin, ses sauvegardes, ce qui a été supprimé, les messages et les
-    /// confirmations en attente ; l'onglet se relit à sa prochaine ouverture.
+    /// confirmations en attente, et ce que la carte « Chiffrement » en montrait ; l'onglet se relit à sa prochaine ouverture.
     /// </summary>
     public void Forget()
     {
         _generation++;
+        Encryption?.Forget();
         _restoring = null;
         _erasing = null;
         VaultLine = string.Empty;

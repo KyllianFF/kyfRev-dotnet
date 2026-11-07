@@ -18,6 +18,9 @@ public sealed class EncryptedVaultsTests
 {
     private const string Password = "un mot de passe d'essai";
 
+    /// <summary>Exactement douze caractères : le moins permis.</summary>
+    private const string NewPassword = "douze carac.";
+
     private static readonly Moment Now = new(new DateOnly(2026, 11, 7), new DateTimeOffset(2026, 11, 7, 8, 0, 0, TimeSpan.Zero));
 
     /// <summary>Un en-tête, sa clé et sa clé de récupération pour tous ces essais : dériver un vrai réglage prend une fraction de seconde.</summary>
@@ -308,6 +311,187 @@ public sealed class EncryptedVaultsTests
 
         Assert.IsFalse(keys.Keep("v_1", place.Vault, [1]));
         Assert.IsNull(keys.Find("v_1", place.Vault));
+    }
+
+    [TestMethod]
+    public void A_new_password_keeps_the_data_key_and_retires_only_the_old_password()
+    {
+        using var place = new Place();
+        place.CreateEncrypted();
+        var vaults = place.Vaults();
+        using (var key = vaults.KeyOf(place.Vault, VaultSecret.Password(Password)))
+        {
+            Assert.IsTrue(vaults.Remember(place.Vault, key));
+        }
+        var before = FilesBesideTheHeader(place.Vault);
+
+        // Le nouveau mot de passe est réglé sur ce poste : de l'ordre d'une seconde.
+        vaults.ChangePassword(place.Vault, VaultSecret.Password(Password), NewPassword);
+
+        var header = EncryptedVault.ReadHeader(place.Vault);
+        Assert.AreEqual(Shared.Value.Header.VaultId, header.VaultId);
+        Assert.AreEqual(PasswordKeys.Argon2id, header.Password.Algorithm, "réglé sur ce poste, par Argon2id");
+        Assert.IsTrue(PasswordKeys.IsStrong(header.Password));
+        Assert.AreEqual("Mot de passe incorrect.", Assert.ThrowsExactly<VaultCryptoException>(() => vaults.KeyOf(place.Vault, VaultSecret.Password(Password))).Message, "l'ancien mot de passe n'ouvre plus rien");
+        using (var key = vaults.KeyOf(place.Vault, VaultSecret.RecoveryKey(Shared.Value.Recovery)))
+        {
+            CollectionAssert.AreEqual(Shared.Value.Key, key.Bytes.ToArray(), "la clé de récupération l'ouvre toujours");
+        }
+        Assert.IsTrue(vaults.IsRemembered(place.Vault));
+        using (var remembered = vaults.Remembered(place.Vault))
+        {
+            Assert.IsNotNull(remembered, "la clé retenue l'ouvre toujours");
+            CollectionAssert.AreEqual(Shared.Value.Key, remembered.Bytes.ToArray());
+        }
+        AssertSameFiles(before, FilesBesideTheHeader(place.Vault), "seul l'en-tête est réécrit");
+
+        // Le nouveau mot de passe donne la même clé de données, et le coffre s'ouvre comme avant.
+        using var opened = vaults.KeyOf(place.Vault, VaultSecret.Password(NewPassword));
+        CollectionAssert.AreEqual(Shared.Value.Key, opened.Bytes.ToArray());
+        using var vault = vaults.Open(place.Vault, opened, Now);
+        Assert.AreEqual(place.Vault, vault.Root);
+    }
+
+    [TestMethod]
+    public void A_wrong_secret_or_a_short_password_changes_nothing()
+    {
+        using var place = new Place();
+        place.CreateEncrypted();
+        var vaults = place.Vaults();
+        var header = Path.Combine(place.Vault, EncryptedVault.HeaderFile);
+        var before = File.ReadAllBytes(header);
+
+        Assert.AreEqual("Mot de passe incorrect.", Assert.ThrowsExactly<VaultCryptoException>(() => vaults.ChangePassword(place.Vault, VaultSecret.Password("pas le bon"), NewPassword)).Message);
+        Assert.Contains("faute de frappe", Assert.ThrowsExactly<VaultCryptoException>(() => vaults.ChangePassword(place.Vault, VaultSecret.RecoveryKey("ABCD-EFGH"), NewPassword)).Message);
+        Assert.AreEqual(
+            "Le mot de passe doit faire au moins 12 caractères.",
+            Assert.ThrowsExactly<VaultCryptoException>(() => vaults.ChangePassword(place.Vault, VaultSecret.Password(Password), "onze carac.")).Message);
+        Assert.AreEqual("Mot de passe incorrect.", Assert.ThrowsExactly<VaultCryptoException>(() => vaults.NewRecoveryKey(place.Vault, VaultSecret.Password("pas le bon"))).Message);
+        Assert.Contains("introuvable", Assert.ThrowsExactly<VaultCryptoException>(() => vaults.NewRecoveryKey(place.Root, VaultSecret.Password(Password))).Message);
+
+        CollectionAssert.AreEqual(before, File.ReadAllBytes(header), "l'en-tête n'a pas changé");
+        using var key = vaults.KeyOf(place.Vault, VaultSecret.Password(Password));
+        CollectionAssert.AreEqual(Shared.Value.Key, key.Bytes.ToArray());
+    }
+
+    [TestMethod]
+    public void A_header_that_cannot_be_written_changes_nothing_and_says_so()
+    {
+        using var place = new Place();
+        place.CreateEncrypted();
+        var vaults = place.Vaults();
+        var header = Path.Combine(place.Vault, EncryptedVault.HeaderFile);
+        var before = File.ReadAllBytes(header);
+
+        // Un autre programme le tient ouvert en lecture : il se lit, mais ne se remplace pas.
+        using (new FileStream(header, FileMode.Open, FileAccess.Read, FileShare.Read))
+        {
+            Assert.Contains("n'a pas pu être écrit", Assert.ThrowsExactly<VaultCryptoException>(() => vaults.NewRecoveryKey(place.Vault, VaultSecret.Password(Password))).Message);
+        }
+
+        CollectionAssert.AreEqual(before, File.ReadAllBytes(header));
+        Assert.IsEmpty(Directory.GetFiles(place.Vault, AtomicFile.TemporaryPrefix + "*"), "aucun temporaire ne reste");
+        using var key = vaults.KeyOf(place.Vault, VaultSecret.RecoveryKey(Shared.Value.Recovery));
+        CollectionAssert.AreEqual(Shared.Value.Key, key.Bytes.ToArray(), "l'ancienne clé de récupération l'ouvre toujours");
+    }
+
+    [TestMethod]
+    public void A_new_recovery_key_opens_the_vault_and_the_old_one_no_longer_does()
+    {
+        using var place = new Place();
+        place.CreateEncrypted();
+        var vaults = place.Vaults();
+        using (var key = vaults.KeyOf(place.Vault, VaultSecret.Password(Password)))
+        {
+            Assert.IsTrue(vaults.Remember(place.Vault, key));
+        }
+        var before = FilesBesideTheHeader(place.Vault);
+
+        var fresh = vaults.NewRecoveryKey(place.Vault, VaultSecret.Password(Password));
+
+        var groups = fresh.Split('-');
+        Assert.HasCount(14, groups);
+        Assert.IsTrue(groups.All(group => group.Length == 4), "14 groupes de quatre caractères");
+        Assert.AreNotEqual(Shared.Value.Recovery, fresh);
+        using (var key = vaults.KeyOf(place.Vault, VaultSecret.RecoveryKey(fresh)))
+        {
+            CollectionAssert.AreEqual(Shared.Value.Key, key.Bytes.ToArray(), "la même clé de données");
+        }
+        Assert.Contains("plus la bonne", Assert.ThrowsExactly<VaultCryptoException>(() => vaults.KeyOf(place.Vault, VaultSecret.RecoveryKey(Shared.Value.Recovery))).Message);
+        using (var key = vaults.KeyOf(place.Vault, VaultSecret.Password(Password)))
+        {
+            CollectionAssert.AreEqual(Shared.Value.Key, key.Bytes.ToArray(), "le mot de passe l'ouvre toujours");
+        }
+        using (var remembered = vaults.Remembered(place.Vault))
+        {
+            Assert.IsNotNull(remembered, "la clé retenue aussi");
+        }
+        AssertSameFiles(before, FilesBesideTheHeader(place.Vault), "seul l'en-tête est réécrit");
+
+        // La clé de récupération en donne elle-même une autre : elle n'ouvre plus rien ensuite.
+        var third = vaults.NewRecoveryKey(place.Vault, VaultSecret.RecoveryKey(fresh));
+        Assert.ThrowsExactly<VaultCryptoException>(() => vaults.KeyOf(place.Vault, VaultSecret.RecoveryKey(fresh)));
+        Assert.ThrowsExactly<VaultCryptoException>(() => vaults.NewRecoveryKey(place.Vault, VaultSecret.RecoveryKey(fresh)));
+        using var last = vaults.KeyOf(place.Vault, VaultSecret.RecoveryKey(third));
+        CollectionAssert.AreEqual(Shared.Value.Key, last.Bytes.ToArray());
+    }
+
+    [TestMethod]
+    public void A_key_is_said_remembered_from_remember_to_forget_without_being_tried()
+    {
+        using var place = new Place();
+        place.CreateEncrypted();
+        var vaults = place.Vaults();
+        Assert.IsFalse(vaults.IsRemembered(place.Vault), "rien n'est retenu au départ");
+
+        using (var key = vaults.KeyOf(place.Vault, VaultSecret.Password(Password)))
+        {
+            Assert.IsTrue(vaults.Remember(place.Vault, key));
+        }
+        Assert.IsTrue(vaults.IsRemembered(place.Vault));
+        Assert.IsTrue(vaults.IsRemembered(place.Vault.ToUpperInvariant() + Path.DirectorySeparatorChar), "sous une autre écriture du même dossier");
+
+        // Ni une copie du coffre ailleurs, ni un dossier sans en-tête.
+        var copy = Path.Combine(place.Root, "Copie");
+        CopyFolder(place.Vault, copy);
+        Assert.IsFalse(vaults.IsRemembered(copy));
+        Assert.IsFalse(vaults.IsRemembered(place.Root));
+
+        // Elle n'est pas essayée sur l'index : sans lui, elle reste dite retenue.
+        var index = Path.Combine(place.Vault, EncryptedVault.IndexFile);
+        var savedIndex = File.ReadAllBytes(index);
+        File.Delete(index);
+        Assert.IsTrue(vaults.IsRemembered(place.Vault));
+        File.WriteAllBytes(index, savedIndex);
+
+        // Un en-tête illisible ne dit rien retenu.
+        var header = Path.Combine(place.Vault, EncryptedVault.HeaderFile);
+        var savedHeader = File.ReadAllBytes(header);
+        File.WriteAllText(header, "{");
+        Assert.IsFalse(vaults.IsRemembered(place.Vault));
+        File.WriteAllBytes(header, savedHeader);
+
+        Assert.IsTrue(vaults.Forget(place.Vault));
+        Assert.IsFalse(vaults.IsRemembered(place.Vault));
+
+        // Une clé retenue dans ce dossier pour un autre coffre n'est pas la sienne.
+        Assert.IsTrue(new RememberedKeys(place.LocalData, DiskStorage.Instance).Keep("v_un_autre_coffre", place.Vault, [1, 2, 3]));
+        Assert.IsFalse(vaults.IsRemembered(place.Vault));
+    }
+
+    /// <summary>Chaque fichier du coffre, son en-tête excepté, et son contenu.</summary>
+    private static Dictionary<string, byte[]> FilesBesideTheHeader(string root) => Directory
+        .EnumerateFiles(root, "*", SearchOption.AllDirectories)
+        .Where(file => !string.Equals(Path.GetFileName(file), EncryptedVault.HeaderFile, StringComparison.OrdinalIgnoreCase))
+        .ToDictionary(file => Path.GetRelativePath(root, file), File.ReadAllBytes, StringComparer.OrdinalIgnoreCase);
+
+    private static void AssertSameFiles(Dictionary<string, byte[]> expected, Dictionary<string, byte[]> actual, string message)
+    {
+        CollectionAssert.AreEquivalent(expected.Keys.ToList(), actual.Keys.ToList(), message);
+        foreach (var (path, content) in expected)
+        {
+            CollectionAssert.AreEqual(content, actual[path], $"{message} : {path}");
+        }
     }
 
     private static void CopyFolder(string source, string destination)
