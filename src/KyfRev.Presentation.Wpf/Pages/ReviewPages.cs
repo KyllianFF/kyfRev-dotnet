@@ -451,6 +451,9 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
     /// <summary>Il y a un plan ou des passages à montrer.</summary>
     public bool HasPanels => ShowsPanelToggles && (HasOutline || HasPassages);
 
+    /// <summary>Le nom du « ⋯ » de l'en-tête étroit : il dit aussi combien de passages il cache.</summary>
+    public string PanelsMenuName => HasPassages ? ReadingText.PanelsMenuWith(PassagesLabel) : ReadingText.PanelsMenu;
+
     /// <summary>Le plan tient à côté du texte.</summary>
     public bool OutlineFits => PageWidth >= OutlineMinimum;
 
@@ -1063,6 +1066,7 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
         OnPropertyChanged(nameof(HasPassages));
         OnPropertyChanged(nameof(HasPanels));
         OnPropertyChanged(nameof(PassagesLabel));
+        OnPropertyChanged(nameof(PanelsMenuName));
         OnPropertyChanged(nameof(ShowsPassages));
         OnPropertyChanged(nameof(IsPassagesOn));
         OnPropertyChanged(nameof(HasOutline));

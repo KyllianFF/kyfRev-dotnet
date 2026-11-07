@@ -37,6 +37,9 @@ public static class ReadingText
     /// <summary>Le menu « ⋯ » de l'en-tête étroit : le plan et les passages.</summary>
     public const string PanelsMenu = "Plan et passages";
 
+    /// <summary>Le nom du menu « ⋯ » de l'en-tête étroit, avec le décompte des passages qu'il cache : « Plan et passages (Passages · 2) ».</summary>
+    public static string PanelsMenuWith(string passages) => $"{PanelsMenu} ({passages})";
+
     /// <summary>Les passages et définitions de la fiche.</summary>
     public const string Passages = "Passages";
 

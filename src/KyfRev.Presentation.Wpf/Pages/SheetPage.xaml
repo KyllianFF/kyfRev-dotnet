@@ -161,10 +161,11 @@
             </Border.Style>
             <TextBlock x:Name="SaveStateText" Text="{Binding Editor.StateLabel}" Style="{DynamicResource Kyf.Text.Secondary}" AutomationProperties.LiveSetting="Polite" />
           </Border>
-          <Border x:Name="SaveStateIconHost" VerticalAlignment="Center" Margin="0,0,10,0" Background="Transparent"
+          <!-- L'icône a le même identifiant que le texte qu'elle remplace : un lecteur d'écran lit et annonce l'état. -->
+          <Label x:Name="SaveStateIconHost" AutomationProperties.AutomationId="SaveStateText" Padding="0" VerticalAlignment="Center" Margin="0,0,10,0" Background="Transparent"
                   ToolTip="{Binding Editor.StateLabel}" AutomationProperties.Name="{Binding Editor.StateLabel}" AutomationProperties.LiveSetting="Polite">
-            <Border.Style>
-              <Style TargetType="Border">
+            <Label.Style>
+              <Style TargetType="Label">
                 <Setter Property="Visibility" Value="Collapsed" />
                 <Style.Triggers>
                   <MultiDataTrigger>
@@ -176,7 +177,7 @@
                   </MultiDataTrigger>
                 </Style.Triggers>
               </Style>
-            </Border.Style>
+            </Label.Style>
             <kyf:Icon x:Name="SaveStateIcon" FontSize="16">
               <kyf:Icon.Style>
                 <Style TargetType="kyf:Icon">
@@ -203,7 +204,7 @@
                 </Style>
               </kyf:Icon.Style>
             </kyf:Icon>
-          </Border>
+          </Label>
           <StackPanel Orientation="Horizontal">
             <!-- Les trois modes, groupés : un seul est choisi. -->
             <Border x:Name="ModeSwitch" BorderBrush="{DynamicResource Kyf.Brush.ControlBorder}" BorderThickness="1" CornerRadius="{DynamicResource Kyf.Radius.Control}" Padding="2">
@@ -256,7 +257,7 @@
                 </Style>
               </Border.Style>
               <Button x:Name="HeaderMoreButton" Style="{DynamicResource Kyf.Button.Tool}" MinHeight="40" Padding="10,0" Click="OnHeaderMore"
-                      ToolTip="{x:Static pages:ReadingText.PanelsMenu}" AutomationProperties.Name="{x:Static pages:ReadingText.PanelsMenu}">
+                      ToolTip="{Binding PanelsMenuName}" AutomationProperties.Name="{Binding PanelsMenuName}">
                 <kyf:Icon Text="{x:Static kyf:Icons.More}" />
                 <Button.ContextMenu>
                   <ContextMenu x:Name="HeaderMenu" DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">

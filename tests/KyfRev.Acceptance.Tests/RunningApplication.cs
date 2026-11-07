@@ -195,8 +195,9 @@ internal sealed class RunningApplication : IDisposable
     }
 
     /// <summary>Attend ce décompte sur le bouton des passages.</summary>
+    /// <remarks>Fenêtre étroite, le bouton des passages passe sous le « ⋯ » de l'en-tête, dont le nom donne le décompte.</remarks>
     public void WaitPassages(string count) =>
-        Retry.WhileFalse(() => Find("PassagesToggle")?.Name.Contains(count, StringComparison.Ordinal) == true, Patience, Interval, throwOnTimeout: true, timeoutMessage: $"Le décompte {count} des passages n'arrive pas.");
+        Retry.WhileFalse(() => (Find("PassagesToggle") ?? Find("HeaderMoreButton"))?.Name.Contains(count, StringComparison.Ordinal) == true, Patience, Interval, throwOnTimeout: true, timeoutMessage: $"Le décompte {count} des passages n'arrive pas.");
 
     /// <summary>Passe à l'écriture par le bouton « Écrire » : le texte mis en forme s'ouvre.</summary>
     public void StartWriting()
