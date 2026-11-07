@@ -67,7 +67,7 @@ internal static class VaultConversion
         string? temporary = null;
         try
         {
-            RemoveLeftovers(destination, disk);
+            RemoveLeftovers(source, destination, disk);
             temporary = Temporary(destination, disk);
             var expected = new SortedDictionary<string, byte[]>(StringComparer.Ordinal);
             var folders = new SortedSet<string>(StringComparer.Ordinal);
@@ -95,14 +95,9 @@ internal static class VaultConversion
             beforeVerifying?.Invoke(temporary);
 
             // La vérification repart de l'en-tête écrit, avec le mot de passe : une erreur d'enveloppe se verrait ici.
-            var reopenedKey = EncryptedVault.ReadHeader(temporary).Open(password);
-            using (var reopened = EncryptedVault.Open(temporary, reopenedKey, DiskStorage.Instance))
+            if (Reread(temporary, EncryptedVault.ReadHeader(temporary).Open(password), expected, folders) is { } mismatch)
             {
-                PasswordKeys.Clear(reopenedKey);
-                if (Mismatch(expected, folders, reopened) is { } mismatch)
-                {
-                    return ConversionResult.Refused(mismatch + Discard(temporary, destination, disk));
-                }
+                return ConversionResult.Refused(mismatch + Discard(temporary, destination, disk));
             }
             disk.MoveDirectory(temporary, destination);
             return new ConversionResult(true, $"Coffre chiffré dans « {destination} » : {expected.Count} fichiers, chacun relu et vérifié. La source n'a pas changé.", expected.Count, recovery);
@@ -154,7 +149,7 @@ internal static class VaultConversion
         try
         {
             using var vault = EncryptedVault.Open(source, dataKey, DiskStorage.Instance);
-            RemoveLeftovers(destination, disk);
+            RemoveLeftovers(source, destination, disk);
             temporary = Temporary(destination, disk);
             var expected = new SortedDictionary<string, byte[]>(StringComparer.Ordinal);
             foreach (var folder in vault.Folders)
@@ -214,6 +209,12 @@ internal static class VaultConversion
         {
             return ConversionResult.Refused("La destination ne peut être ni dans la source, ni autour d'elle.");
         }
+        if (IsTemporaryOf(destination, source))
+        {
+            // Une conversion coupée net a pu laisser un coffre complet sous ce nom : la conversion vers la même destination
+            // le prendrait pour son reste.
+            return ConversionResult.Refused($"« {source} » porte le nom d'un dossier temporaire de conversion vers « {destination} » : renommez-le, puis recommencez.");
+        }
         if (IsOpenElsewhere(source))
         {
             return ConversionResult.Refused("Ce coffre est ouvert dans kyfRev : fermez-le, puis recommencez.");
@@ -240,6 +241,23 @@ internal static class VaultConversion
         catch (IOException)
         {
             return true;
+        }
+    }
+
+    /// <summary>
+    /// Relit le coffre chiffré écrit dans <paramref name="temporary"/> avec la clé que son en-tête vient de rendre, puis
+    /// efface cette clé, que la relecture réussisse ou non. Rend ce qui manque ou diffère.
+    /// </summary>
+    internal static string? Reread(string temporary, byte[] key, SortedDictionary<string, byte[]> expected, SortedSet<string> folders)
+    {
+        try
+        {
+            using var reopened = EncryptedVault.Open(temporary, key, DiskStorage.Instance);
+            return Mismatch(expected, folders, reopened);
+        }
+        finally
+        {
+            PasswordKeys.Clear(key);
         }
     }
 
@@ -307,12 +325,20 @@ internal static class VaultConversion
         }
     }
 
-    /// <summary>Retire les dossiers temporaires qu'une conversion vers la même destination, coupée net, a laissés.</summary>
-    private static void RemoveLeftovers(string destination, VaultStorage disk)
+    /// <summary>
+    /// Retire les dossiers temporaires qu'une conversion vers la même destination, coupée net, a laissés. Un dossier qu'on a
+    /// ouvert dans kyfRev depuis n'en est plus un : il a son verrou, qu'une conversion n'écrit jamais. Il reste, comme celui
+    /// qui contient la source.
+    /// </summary>
+    private static void RemoveLeftovers(string source, string destination, VaultStorage disk)
     {
         foreach (var entry in disk.Entries(Path.GetDirectoryName(destination)!))
         {
-            if (entry.IsDirectory && !entry.IsLink && Discard(entry.FullName, destination, disk) is { Length: > 0 } left)
+            if (!entry.IsDirectory || entry.IsLink || Inside(source, entry.FullName) || disk.FileExists(VaultLayout.Absolute(entry.FullName, VaultLayout.LockFile)))
+            {
+                continue;
+            }
+            if (Discard(entry.FullName, destination, disk) is { Length: > 0 } left)
             {
                 throw new IOException(left.Trim());
             }

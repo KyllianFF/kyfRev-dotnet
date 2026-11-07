@@ -207,6 +207,89 @@ public sealed partial class ConversionTests
         CollectionAssert.AreEquivalent(kept.Append("chiffre").ToArray(), Directory.GetDirectories(place.Root).Select(Path.GetFileName).ToArray());
     }
 
+    [TestMethod]
+    public void A_vault_under_the_name_of_a_leftover_is_never_removed()
+    {
+        using var vault = SmallVault();
+        using var place = new Place();
+
+        // Un déchiffrement vers « Coffre », coupé net, a laissé un coffre en clair complet sous le nom de son reste : le
+        // chiffrer vers « Coffre » le prendrait pour ce reste.
+        var plain = CopyWithoutLock(vault.Root, Path.Combine(place.Root, ".Coffre.conversion-abcdefgh.ijk"));
+        var before = Snapshot(plain);
+        var refused = VaultConversion.Encrypt(plain, Path.Combine(place.Root, "Coffre"), Password, PasswordKeys.NewPbkdf2());
+        Assert.IsFalse(refused.Succeeded, refused.Message);
+        Assert.Contains("renommez-le", refused.Message);
+        CollectionAssert.AreEqual(before, Snapshot(plain), "la source est intacte");
+        Assert.IsFalse(Directory.Exists(Path.Combine(place.Root, "Coffre")));
+
+        // Dans l'autre sens : un coffre chiffré sous le nom d'un reste.
+        var encrypted = Path.Combine(place.Root, ".Clair.conversion-abcdefgh.ijk");
+        Assert.IsTrue(VaultConversion.Encrypt(vault.Root, encrypted, Password, PasswordKeys.NewPbkdf2()).Succeeded);
+        var encryptedBefore = Snapshot(encrypted);
+        Assert.Contains("renommez-le", VaultConversion.Decrypt(encrypted, Path.Combine(place.Root, "Clair"), Password).Message);
+        CollectionAssert.AreEqual(encryptedBefore, Snapshot(encrypted));
+
+        // Un coffre rangé dans un dossier qui porte le nom d'un reste : la conversion qui part de lui ne retire pas ce dossier.
+        var nested = CopyWithoutLock(vault.Root, Path.Combine(place.Root, ".Range.conversion-abcdefgh.ijk", "Coffre"));
+        var nestedBefore = Snapshot(nested);
+        var converted = VaultConversion.Encrypt(nested, Path.Combine(place.Root, "Range"), Password, PasswordKeys.NewPbkdf2());
+        Assert.IsTrue(converted.Succeeded, converted.Message);
+        CollectionAssert.AreEqual(nestedBefore, Snapshot(nested));
+    }
+
+    [TestMethod]
+    public void A_leftover_opened_in_kyfRev_since_is_kept()
+    {
+        using var vault = SmallVault();
+        using var place = new Place();
+        var leftover = CopyWithoutLock(vault.Root, Path.Combine(place.Root, ".chiffre.conversion-abcdefgh.ijk"));
+        var now = new KyfRev.Domain.Calendar.Moment(new DateOnly(2026, 11, 7), new DateTimeOffset(2026, 11, 7, 13, 0, 0, TimeSpan.Zero));
+
+        SortedDictionary<string, string> before;
+        using (VaultSession.Open(leftover, now))
+        {
+            before = Contents(leftover);
+            var open = VaultConversion.Encrypt(vault.Root, place.Encrypted, Password, PasswordKeys.NewPbkdf2());
+            Assert.IsTrue(open.Succeeded, open.Message);
+            CollectionAssert.AreEqual(before, Contents(leftover), "ouvert dans kyfRev : son verrou est tenu");
+        }
+
+        Directory.Delete(place.Encrypted, recursive: true);
+        var closed = VaultConversion.Encrypt(vault.Root, place.Encrypted, Password, PasswordKeys.NewPbkdf2());
+        Assert.IsTrue(closed.Succeeded, closed.Message);
+        CollectionAssert.AreEqual(before, Contents(leftover), "refermé : son verrou reste sur le disque, et dit qu'on y a travaillé");
+    }
+
+    [TestMethod]
+    public void The_key_of_the_check_is_cleared_even_when_the_check_fails()
+    {
+        using var place = new Place();
+        Directory.CreateDirectory(place.Encrypted);
+        var key = RandomNumberGenerator.GetBytes(PasswordKeys.KeyBytes);
+
+        Assert.ThrowsExactly<VaultCryptoException>(() => VaultConversion.Reread(place.Encrypted, key, new(StringComparer.Ordinal), new(StringComparer.Ordinal)));
+
+        Assert.IsTrue(key.All(value => value == 0), "la clé est effacée");
+    }
+
+    /// <summary>Une copie du coffre <paramref name="source"/>, sans son verrou : ce qu'une conversion écrit.</summary>
+    private static string CopyWithoutLock(string source, string target)
+    {
+        foreach (var file in Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories))
+        {
+            var relative = Path.GetRelativePath(source, file).Replace(Path.DirectorySeparatorChar, '/');
+            if (relative is VaultLayout.LockFile or VaultLayout.LockInfoFile)
+            {
+                continue;
+            }
+            var copy = Path.Combine(target, relative);
+            Directory.CreateDirectory(Path.GetDirectoryName(copy)!);
+            File.Copy(file, copy);
+        }
+        return target;
+    }
+
     /// <summary>
     /// Une conversion dont l'écriture <paramref name="failAt"/> échoue, une fois puis à partir d'elle (une coupure : plus rien
     /// ne s'écrit, pas même le nettoyage) : refusée, la source intacte, pas de destination ; la première ne laisse rien.
