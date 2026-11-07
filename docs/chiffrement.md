@@ -70,8 +70,8 @@ longueur. Un fichier recopié sous un autre identifiant, ou dans un autre coffre
 
 Un coffre chiffré ne garde aucun nom en clair : ni les titres, ni les dossiers, ni le texte. Ce qui se voit : le nombre
 d'objets, la taille de chacun (celle de son fichier, plus 32 octets) et sa date de dernière écriture. Se voient aussi la
-taille et la date de `index.kyf` : sa taille grandit avec le nombre de fichiers, la longueur totale de leurs chemins et le
-nombre de dossiers ; sa date est celle du dernier changement de l'arborescence (un fichier créé, déplacé, renommé ou
+taille et la date de `index.kyf` : sa taille grandit avec le nombre de fichiers et la longueur de leurs chemins, le
+nombre de dossiers et la longueur de leurs chemins ; sa date est celle du dernier changement de l'arborescence (un fichier créé, déplacé, renommé ou
 effacé, un dossier créé), qu'une simple réécriture ne change pas.
 
 | Chemin | Contenu |
@@ -110,9 +110,16 @@ fichier un objet, et il pose ses propres fichiers par le disque qu'on lui donne.
 lecture seule s'y ouvrent sans rien savoir du chiffrement ; la racine de composition choisit le stockage.
 
 La règle « rien ne s'efface » tient toujours : le stockage n'efface que par `Purge`, à la demande expresse depuis la
-corbeille, et pour le dossier temporaire d'une conversion. Le coffre chiffré y retire l'entrée de son index, puis ses
-objets ; c'est le seul endroit où il efface un objet. La règle des effacements compte ces appels d'un stockage, et eux
-seuls : l'effacement définitif d'un cas d'usage passe lui-même par un stockage.
+corbeille, et pour le dossier temporaire d'une conversion et son marqueur. Le coffre chiffré y retire l'entrée de son
+index, puis ses objets ; c'est le seul endroit où il efface un objet. La règle des effacements tient deux comptes exacts,
+fichier par fichier : les effacements directs du disque, et chaque appel `.Purge(`, quoi qui le reçoive (un stockage, ou
+l'effacement définitif d'un cas d'usage). Un effacement direct ne peut donc pas prendre la place d'un appel `Purge` sans
+qu'elle le voie.
+
+Un objet qui ne s'efface pas (un antivirus le tient ouvert) n'arrête pas l'effacement d'une fiche ou d'un dossier : le
+stockage le dit par une `LeftOnDiskException` (le port de `KyfRev.Application`), qui signifie « effacé du coffre, resté
+sur le disque », et non « rien n'a changé ». La session continue chaque effacement restant, puis dit en une fois ce qui
+reste : la fiche ne reste jamais à moitié effacée, introuvable dans la corbeille mais encore sauvegardée.
 
 Le stockage chiffré lit son index à l'ouverture, avant que la session prenne le verrou du coffre : un autre processus a
 pu écrire entre-temps. La session le relit donc une fois le verrou pris (`VaultStorage.Reload`, sans effet pour le
@@ -153,10 +160,22 @@ kyfrev-coffre dechiffrer <coffre chiffré> <nouveau dossier>
   mot de passe pour rouvrir l'en-tête écrit. Tout s'écrit d'abord dans un dossier temporaire voisin,
   `.<destination>.conversion-<nom tiré au hasard>`, qui ne prend le nom de la destination qu'une fois vérifié. Une
   conversion refusée ou coupée ne laisse jamais de coffre à moitié écrit.
+- **Le marqueur** : tant qu'elle travaille, une conversion tient dans son dossier temporaire le fichier
+  `.kyfrev-conversion`, créé et ouvert d'un même geste, que personne d'autre ne peut ouvrir. Elle le retire juste avant
+  de donner au dossier le nom de la destination.
 - **Une conversion coupée** : refusée, elle retire son dossier temporaire. Coupée net (arrêt brutal, disque perdu), elle
-  peut le laisser ; la conversion suivante vers la même destination le retire, et lui seul, reconnu à son nom. Un tel
-  dossier qu'on a ouvert dans kyfRev depuis (il a son verrou, qu'une conversion n'écrit jamais), ou qui contient la
-  source, reste. Une source qui porte le nom d'un dossier temporaire de la destination est refusée : il faut la renommer.
+  peut le laisser ; la conversion suivante vers la même destination le retire s'il a son nom exact et son marqueur, que
+  plus personne ne tient. Un dossier sans marqueur, ou dont le marqueur est tenu (une conversion en cours), ou qu'on a
+  ouvert dans kyfRev depuis (il a son verrou, qu'une conversion n'écrit jamais), reste. Coupée avant d'avoir posé son
+  marqueur (le temps de créer le dossier et, pour un chiffrement, l'en-tête d'un coffre vide), elle laisse un dossier qui
+  ne contient rien du coffre, et que la suivante ne retire pas. Coupée entre le retrait du marqueur et le renommage, un
+  instant, elle laisse le coffre converti entier, sans marqueur : la suivante ne le retire pas non plus, il faut le retirer
+  soi-même (après un déchiffrement, il est en clair). C'est le prix de la sûreté : un dossier sans marqueur n'est jamais
+  pris pour un reste.
+- **Une source dans un dossier temporaire** est refusée : la source, ou l'un de ses dossiers parents, porte le marqueur.
+  Le disque le dit, quel que soit le chemin pris (une jonction, un nom court 8.3, un lecteur substitué), et le chemin réel,
+  liens résolus, est remonté lui aussi. Pour garder un tel coffre, il faut retirer son marqueur, une fois sûr qu'aucune
+  conversion ne tourne, puis le renommer.
 - **Le verrou** (`.suivi/verrou`, `.suivi/verrou-info.json`) n'est pas recopié : c'est l'état de l'application, pas du
   contenu.
 
@@ -195,7 +214,13 @@ L'application n'ouvre pas encore un coffre chiffré : son écran de déverrouill
   destination qui existe ou dans la source, un dossier qui n'est pas un coffre, un coffre ouvert dans kyfRev, un mauvais
   secret ou un objet altéré : rien n'est écrit, et aucun dossier temporaire ne reste.
 - **La conversion coupée** : dans chaque sens, chaque écriture échoue à son tour, une fois puis net. La source n'a pas
-  changé, aucune destination n'existe, et la conversion suivante réussit sans laisser de dossier temporaire. Un dossier qui
-  n'a que le début du nom d'un dossier temporaire n'est jamais retiré, ni un coffre sous ce nom : refusé comme source,
-  gardé s'il a été ouvert dans kyfRev ou s'il contient la source. La clé qui relit le coffre écrit est effacée, même
-  quand la relecture échoue.
+  changé, aucune destination n'existe, et la conversion suivante réussit sans laisser de dossier temporaire marqué ; seul
+  reste, d'une coupure avant le marqueur, un dossier sans rien du coffre. Un dossier qui n'a que le début du nom d'un
+  dossier temporaire n'est jamais retiré, ni un dossier qui en a le nom sans le marqueur, ni celui d'une conversion en
+  cours (deux conversions vers la même destination ne se gênent pas), ni un dossier ouvert dans kyfRev depuis. Une source
+  dans un dossier marqué est refusée, atteinte par son chemin, par une jonction ou par un nom court. La clé qui relit le
+  coffre écrit est effacée, même quand la relecture échoue.
+- **L'effacement empêché** : un objet tenu par un autre programme, qu'il soit celui du suivi, des annotations ou du texte
+  d'une fiche, ou celui d'une fiche d'un dossier, n'arrête pas l'effacement : tout le reste est effacé, et l'erreur nomme
+  ce qui est resté.
+- **La casse des objets** : un objet renommé en minuscules garde sa taille, sa date, et sa place dans les sauvegardes.
