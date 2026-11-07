@@ -15,6 +15,15 @@ internal sealed class SchemaBridge(SchemaUseCases schemas, IFolderPicker folders
 {
     private const string Saved = "enregistre";
     private const string Conflict = "conflit";
+    private const string NoneOpen = "aucun";
+    private const string Refused = "erreur";
+    private const string Unsaved = "modifie";
+
+    /// <summary>
+    /// L'îlot a fini ce que l'application lui demandait de finir avant le verrouillage (<see cref="SchemaIsland.FinishAsync"/>), et
+    /// dit s'il reste quelque chose à enregistrer.
+    /// </summary>
+    public event EventHandler<FinishReport>? Finished;
 
     /// <summary>Traite un message de l'îlot ; rend la réponse à lui envoyer, s'il en attend une.</summary>
     /// <param name="message">Le message, en JSON.</param>
@@ -53,6 +62,19 @@ internal sealed class SchemaBridge(SchemaUseCases schemas, IFolderPicker folders
 
     private static string Argument(JsonArray args, int index) =>
         index < args.Count && Text(args[index]) is { } text ? text : throw new ArgumentException(SchemaText.BadCall);
+
+    private static int Number(JsonArray args, int index) =>
+        index < args.Count && args[index] is JsonValue value && value.TryGetValue<int>(out var number)
+            ? number
+            : throw new ArgumentException(SchemaText.BadCall);
+
+    /// <summary>Rien ne reste à enregistrer : le schéma l'est, ou aucun n'était ouvert. Un état inconnu est refusé.</summary>
+    private static bool IsDone(string state) => state switch
+    {
+        Saved or NoneOpen => true,
+        Refused or Conflict or Unsaved => false,
+        _ => throw new ArgumentException(SchemaText.BadCall),
+    };
 
     private static (JsonNode? Value, string? Error) Answer<T>(Outcome<T> outcome, Func<T, JsonNode?> map) =>
         outcome.Succeeded ? (map(outcome.Value), null) : (null, outcome.Error);
@@ -123,8 +145,17 @@ internal sealed class SchemaBridge(SchemaUseCases schemas, IFolderPicker folders
             case "editeurFerme":
                 editorClosed?.Invoke();
                 return (null, null);
+            case "etatSauvegarde":
+                var (request, state) = (Number(args, 0), Argument(args, 1));
+                Finished?.Invoke(this, new FinishReport(request, IsDone(state)));
+                return (null, null);
             default:
                 throw new ArgumentException(SchemaText.BadCall);
         }
     }
 }
+
+/// <summary>Ce que l'îlot dit avoir fini, à la demande de l'application.</summary>
+/// <param name="Request">Le numéro de la demande.</param>
+/// <param name="Done">Rien ne reste à enregistrer : le schéma l'est, ou aucun n'était ouvert.</param>
+internal readonly record struct FinishReport(int Request, bool Done);

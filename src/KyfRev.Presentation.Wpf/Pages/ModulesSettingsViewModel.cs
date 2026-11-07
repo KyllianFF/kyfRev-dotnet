@@ -39,7 +39,7 @@ public sealed partial class QuoteDomainChoice : ObservableObject
 /// L'onglet « Modules et extensions » : des fonctions facultatives, pour ce coffre. Désactiver un module le
 /// retire des menus ; ce qu'il a créé reste dans le coffre, intact.
 /// </summary>
-public sealed partial class ModulesSettingsViewModel : ObservableObject, INavigationAware
+public sealed partial class ModulesSettingsViewModel : ObservableObject, INavigationAware, IForgetsVault
 {
     private readonly SettingsUseCases _settings;
     private readonly Action<VaultPreferences> _applied;
@@ -118,6 +118,26 @@ public sealed partial class ModulesSettingsViewModel : ObservableObject, INaviga
     /// <summary>Le module Schémas réseau est actif pour ce coffre.</summary>
     [ObservableProperty]
     public partial bool SchemasActive { get; set; }
+
+    /// <summary>
+    /// Oublie les réglages lus du coffre quand il se verrouille : modules, citation en ligne, domaines et messages reviennent à
+    /// leur état d'avant toute lecture, sans rien enregistrer ; l'onglet relit le coffre à sa prochaine ouverture. La carte des
+    /// extensions oublie de son côté.
+    /// </summary>
+    public void Forget()
+    {
+        _showing = true;
+        QuotesActive = false;
+        QuotesOnline = false;
+        SchemasActive = false;
+        foreach (var domain in Domains)
+        {
+            domain.IsChosen = false;
+        }
+        _showing = false;
+        Error = null;
+        Message = null;
+    }
 
     private void Show(VaultPreferences preferences)
     {

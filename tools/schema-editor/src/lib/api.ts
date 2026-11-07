@@ -1,6 +1,7 @@
 // Ce que l'îlot demande à l'application : chaque appel part vers l'hôte WPF et sa réponse revient
 // sous son numéro. L'îlot ne voit ni le coffre ni le disque : il n'a que ces méthodes.
 
+import { type EtatFin, finir } from "./fin";
 import type { ResultatEnregistrement } from "./generes/ResultatEnregistrement";
 import type { SchemaLu } from "./generes/SchemaLu";
 import type { SchemaResume } from "./generes/SchemaResume";
@@ -9,7 +10,11 @@ type Attente = { resoudre: (valeur: never) => void; rejeter: (raison: unknown) =
 
 type Reponse = { kind: "answer"; id: number; ok: true; value: unknown } | { kind: "answer"; id: number; ok: false; error: string };
 
-export type DepuisHote = Reponse | { kind: "theme"; variables: Record<string, string> } | { kind: "open"; id: string };
+export type DepuisHote =
+  | Reponse
+  | { kind: "theme"; variables: Record<string, string> }
+  | { kind: "open"; id: string }
+  | { kind: "finir"; numero: number };
 
 const attentes = new Map<number, Attente>();
 let suivant = 1;
@@ -33,7 +38,7 @@ function appeler<T>(method: string, ...args: unknown[]): Promise<T> {
   });
 }
 
-/** Reçoit ce que l'hôte envoie : une réponse, ou le thème. */
+/** Reçoit ce que l'hôte envoie : une réponse, le thème, un schéma à ouvrir, ou ce qui est en cours à finir. */
 export function recevoir(message: DepuisHote): void {
   if (message.kind === "theme") {
     for (const [nom, valeur] of Object.entries(message.variables)) {
@@ -44,6 +49,14 @@ export function recevoir(message: DepuisHote): void {
   }
   if (message.kind === "open") {
     document.dispatchEvent(new CustomEvent("ouvrir-schema", { detail: message.id }));
+    return;
+  }
+  if (message.kind === "finir") {
+    // Le coffre va se verrouiller : l'application attend de savoir ce qu'il reste, sous le numéro de sa demande.
+    const numero = message.numero;
+    void finir()
+      .then((etat) => api.etatSauvegarde(numero, etat))
+      .catch(() => undefined);
     return;
   }
   const attente = attentes.get(message.id);
@@ -75,6 +88,7 @@ export const api = {
   lireImportSchema: (chemin: string) => appeler<string>("lireImportSchema", chemin),
   ouvrirFiche: (id: string) => appeler<null>("ouvrirFiche", id),
   editeurFerme: () => appeler<null>("editeurFerme"),
+  etatSauvegarde: (numero: number, etat: EtatFin) => appeler<null>("etatSauvegarde", numero, etat),
 };
 
 export function messageErreur(erreur: unknown): string {

@@ -64,7 +64,7 @@ public sealed record FolderRow(string Folder, int Sheets, int Reviews, string On
 }
 
 /// <summary>Vue « Statistiques », comme dans la 0.x : la régularité, sans filtre ni période à choisir.</summary>
-public sealed partial class StatisticsPageViewModel : ObservableObject, INavigationAware
+public sealed partial class StatisticsPageViewModel : ObservableObject, INavigationAware, IForgetsVault
 {
     /// <summary>Largeur sous laquelle les deux détails passent l'un sous l'autre.</summary>
     public const double SideBySideMinimum = 1000;
@@ -83,6 +83,9 @@ public sealed partial class StatisticsPageViewModel : ObservableObject, INavigat
 
     private readonly ReminderUseCases _reminders;
     private bool _shown;
+
+    /// <summary>Compte les oublis du coffre : une lecture partie avant le dernier oubli est ignorée.</summary>
+    private int _generation;
 
     /// <summary>La vue, sur les cas d'usage qui rendent les statistiques.</summary>
     public StatisticsPageViewModel(ReminderUseCases reminders)
@@ -180,6 +183,26 @@ public sealed partial class StatisticsPageViewModel : ObservableObject, INavigat
 
     /// <inheritdoc/>
     public void OnNavigatedTo() => RefreshCommand.Execute(null);
+
+    /// <summary>
+    /// Oublie les statistiques lues dans le coffre : la page revient à son état d'avant toute lecture, sans toucher à sa
+    /// largeur, et relit le coffre à sa prochaine ouverture ; une lecture en cours n'y remet rien.
+    /// </summary>
+    public void Forget()
+    {
+        _generation++;
+        _shown = false;
+        Summary = StatisticsText.Summary;
+        Tiles = [];
+        Weeks = [];
+        MonthLabels = [];
+        CalendarName = string.Empty;
+        Months = [];
+        Folders = [];
+        IsLoaded = false;
+        IsLoading = false;
+        Error = null;
+    }
 
     /// <summary>Montre ces statistiques.</summary>
     public void Show(Statistics statistics)
@@ -344,10 +367,16 @@ public sealed partial class StatisticsPageViewModel : ObservableObject, INavigat
     [RelayCommand]
     private async Task RefreshAsync()
     {
+        var generation = _generation;
         IsLoading = !_shown;
         try
         {
             var outcome = await Task.Run(_reminders.Statistics).ConfigureAwait(true);
+            if (generation != _generation)
+            {
+                // Le coffre a été oublié pendant la lecture : elle n'y remet rien.
+                return;
+            }
             if (outcome.Succeeded)
             {
                 Show(outcome.Value);
@@ -359,7 +388,10 @@ public sealed partial class StatisticsPageViewModel : ObservableObject, INavigat
         }
         finally
         {
-            IsLoading = false;
+            if (generation == _generation)
+            {
+                IsLoading = false;
+            }
         }
     }
 }

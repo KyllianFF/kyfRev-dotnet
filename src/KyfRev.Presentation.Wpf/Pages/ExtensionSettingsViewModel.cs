@@ -338,7 +338,7 @@ public sealed partial class ExtensionRow : ObservableObject
 /// installée sur cet ordinateur, pas dans le coffre ; rien ne s'installe sans avoir montré ce qu'elle ajoute et ce qu'elle demande, et
 /// une permission se retire à tout moment.
 /// </summary>
-public sealed partial class ExtensionSettingsViewModel : ObservableObject
+public sealed partial class ExtensionSettingsViewModel : ObservableObject, IForgetsVault
 {
     /// <summary>Les écritures montrées sous la liste : les plus récentes.</summary>
     public const int JournalShown = 30;
@@ -547,6 +547,19 @@ public sealed partial class ExtensionSettingsViewModel : ObservableObject
         Message = null;
         Show();
         ReadJournal();
+    }
+
+    /// <summary>
+    /// Oublie ce qui vient du coffre : le journal, qui nomme ses fiches, et les erreurs montrées sous chaque extension, qui peuvent
+    /// en citer. Les extensions installées restent : elles sont sur ce poste. Le prochain passage sur l'onglet relit le journal.
+    /// </summary>
+    public void Forget()
+    {
+        Journal = [];
+        foreach (var row in Rows)
+        {
+            row.Faults = [];
+        }
     }
 
     /// <summary>Relit le journal des extensions installées : sans coffre ouvert, il est vide.</summary>

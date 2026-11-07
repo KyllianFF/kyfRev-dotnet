@@ -218,10 +218,58 @@ kyfrev-coffre dechiffrer <coffre chiffré> <nouveau dossier>
   Coché, le coffre ne protège plus contre quelqu'un qui utilise la session de l'utilisateur, seulement contre un vol du
   disque.
 
-Le verrouillage (Ctrl+Maj+L, et après 15 minutes d'inactivité), l'assistant « Chiffrer ce coffre » et la carte
-Chiffrement des paramètres viennent avec les lots suivants.
+## Le verrouillage
+
+- **À la demande** : Ctrl+Maj+L, ou « Verrouiller le coffre chiffré » dans la recherche (Ctrl+K), tant qu'un coffre
+  chiffré est ouvert. Un coffre en clair ne se verrouille pas.
+- **De lui-même** : après 15 minutes sans rien toucher dans toute la session de Windows (`GetLastInputInfo` : ce qui se
+  tape dans le texte mis en forme compte aussi), et dès que la session de Windows se verrouille ou que le poste se met en
+  veille (`IUserPresence`, `AutoLock`). Un départ qui tombe pendant une ouverture reste dû : le coffre se verrouille dès
+  qu'il le peut, sauf si l'utilisateur est revenu entre-temps.
+- **Même derrière un autre écran** : un coffre chiffré resté ouvert derrière l'écran de déverrouillage d'un autre coffre
+  (choisi depuis les paramètres) se verrouille aussi, et c'est son écran qui s'affiche. Rien ne se verrouille pendant
+  qu'une ouverture est en cours.
+- **Dans cet ordre** (`VaultLocking`), pour que rien ne se perde ni ne reste :
+  1. ce qui s'écrit s'enregistre (`ILeaving`) : le texte de la fiche, jusqu'à la dernière frappe du texte mis en forme
+     (une frappe qui n'a pas été relue garde le coffre ouvert) ; le commentaire ou la définition en cours dans une fiche
+     (s'il a changé depuis son ouverture) ; un dessin, une formule ou un lien en cours d'insertion ; un schéma, jusqu'au
+     champ qu'on n'a pas encore quitté ; une définition en cours de modification dans la vue « Définitions », même si elle
+     n'est pas affichée (incomplète, refusée ou changée ailleurs depuis, elle est abandonnée : un brouillon que personne
+     ne voit ne garde pas le coffre ouvert). Une séance en cours se garde pour être reprise. Si ce qui s'écrit n'a pas pu l'être (un conflit,
+     un refus, un disque plein), le coffre reste ouvert, et le verrouillage de lui-même réessaie. Ce qui n'est qu'un
+     formulaire est abandonné : le titre d'une nouvelle fiche ou d'un nouveau schéma, un renommage ou un déplacement, les
+     réglages non enregistrés, la réponse tapée pour une sélection guidée, les recherches ;
+  2. l'écran de déverrouillage remplace les vues, qui se ferment : le texte mis en forme et les schémas, avec leur moteur
+     web ;
+  3. le coffre se ferme, une fois finie la lecture en cours : son verrou est libéré, sa clé effacée, et son index en clair
+     (les chemins, donc les titres) oublié ;
+  4. chaque vue oublie ce qu'elle avait lu (`IForgetsVault`) : « Aujourd'hui », les fiches et leur aperçu, les
+     définitions, les archives, les statistiques, la santé du coffre, la corbeille et les données des paramètres, le
+     journal, les erreurs et les pages des extensions (leur moteur repart à vide), les dessins des schémas ; les modules se
+     déchargent. Une lecture partie avant n'y remet rien.
+- **Seul son mot de passe ou sa clé de récupération le rouvre** : la clé retenue sur ce poste ne sert qu'au démarrage,
+  sinon verrouiller ne protégerait de rien. Une fois verrouillé, il n'est plus ouvert par elle, ni par « Ouvrir un autre
+  coffre… » ni par l'accueil, jusqu'à ce qu'on le déverrouille.
+- **Ce que le verrouillage ne peut pas effacer** : les chaînes de .NET ne s'effacent pas (le mot de passe tapé, le texte
+  lu), seulement leurs références ; la mémoire libérée, le fichier d'échange et la mise en veille prolongée peuvent en
+  garder des traces, et le presse-papiers garde ce qui y a été copié. BitLocker reste recommandé.
+
+L'assistant « Chiffrer ce coffre » et la carte Chiffrement des paramètres viennent avec le lot suivant.
 
 ## Ce que les tests vérifient
+
+- **Le verrouillage** : il montre l'écran de déverrouillage, ferme le coffre (plus rien ne s'y lit ni ne s'y écrit, son
+  verrou est libéré) et fait tout oublier aux vues ; la clé retenue ne le rouvre pas, même par « Ouvrir un autre
+  coffre… », son mot de passe si. Il se fait aussi derrière l'écran d'un autre coffre, jamais pendant une ouverture. Rien
+  ne se verrouille sans coffre chiffré ouvert, ni deux fois à la fois ; ce qui s'écrit et n'a pas pu être enregistré,
+  sur la page affichée ou dans une vue qui garde un brouillon, garde le coffre ouvert ; une séance en cours est gardée.
+  Le commentaire, la définition, le dessin et le lien en cours sont enregistrés, une frappe du texte mis en forme qui
+  n'a pas été relue garde le coffre ouvert, un schéma s'enregistre jusqu'au champ qu'on n'a pas quitté. Un départ
+  pendant une ouverture verrouille dès que possible, sauf retour de l'utilisateur. La composition fait oublier toutes
+  les vues qui gardent ce qu'elles ont lu. L'inactivité verrouille après le délai (jamais, sans délai), le départ
+  de l'utilisateur tout de suite ; la session verrouillée ou le poste en veille, et rien d'autre, comptent comme un
+  départ. Chaque vue, chargée sur un vrai coffre, n'en garde rien une fois oubliée, et se remplit de nouveau à sa
+  prochaine ouverture ; une lecture partie avant l'oubli n'y remet rien. Le coffre chiffré libéré n'a plus d'index en clair.
 
 - **Les vecteurs publiés** : AES-256-GCM (McGrew et Viega, cas 13 et 14) et PBKDF2-HMAC-SHA256 (RFC 7914, §11).
 - **Argon2id** : recalculé par une seconde implémentation, indépendante de libsodium, qui doit rendre les mêmes octets.

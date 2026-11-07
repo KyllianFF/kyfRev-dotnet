@@ -63,6 +63,7 @@ public sealed class MermaidEngine : IMermaidEngine, IDisposable
     private HwndSource? _window;
     private CoreWebView2Controller? _controller;
     private int _nextId;
+    private int _generation;
     private bool _disposed;
 
     /// <summary>Un moteur qui garde ses données dans ce dossier.</summary>
@@ -73,6 +74,9 @@ public sealed class MermaidEngine : IMermaidEngine, IDisposable
 
     /// <summary>Le temps qu'un dessin peut prendre.</summary>
     public TimeSpan Patience { get; set; } = TimeSpan.FromSeconds(20);
+
+    /// <summary>Le nombre de dessins gardés, pour les essais.</summary>
+    internal int CachedCount => _cache.Count;
 
     /// <summary>Les couleurs d'un thème, sous les noms de Mermaid.</summary>
     /// <param name="element">L'élément dont les ressources donnent le thème.</param>
@@ -157,13 +161,25 @@ public sealed class MermaidEngine : IMermaidEngine, IDisposable
         return await AskAsync(string.Join('\n', colors.Values) + '\n' + schema, id => new { id, reseau = schema, couleurs = colors }).ConfigureAwait(true);
     }
 
+    /// <summary>
+    /// Oublie les dessins gardés, dont les clés sont le texte des schémas, et ferme la page cachée avec ce qu'elle a vu ; le
+    /// moteur reste utilisable et repartira au prochain schéma. Un dessin demandé avant ne rend rien et n'est pas gardé.
+    /// </summary>
+    public void Reset()
+    {
+        _generation++;
+        _cache.Clear();
+        Stop();
+    }
+
     private async Task<MermaidPicture?> AskAsync(string key, Func<int, object> request)
     {
         if (_cache.TryGetValue(key, out var known))
         {
             return known;
         }
-        if (!await EnsureStartedAsync().ConfigureAwait(true) || _controller is null)
+        var generation = _generation;
+        if (!await EnsureStartedAsync().ConfigureAwait(true) || _controller is null || generation != _generation)
         {
             return null;
         }
@@ -172,6 +188,10 @@ public sealed class MermaidEngine : IMermaidEngine, IDisposable
         _pending[id] = answer;
         _controller.CoreWebView2.PostWebMessageAsJson(JsonSerializer.Serialize(request(id)));
         var first = await Task.WhenAny(answer.Task, Task.Delay(Patience)).ConfigureAwait(true);
+        if (generation != _generation)
+        {
+            return null;
+        }
         if (first != answer.Task)
         {
             Stop();
@@ -220,6 +240,7 @@ public sealed class MermaidEngine : IMermaidEngine, IDisposable
 
     private async Task<bool> EnsureStartedAsync()
     {
+        var generation = _generation;
         try
         {
             _starting ??= StartAsync();
@@ -228,14 +249,19 @@ public sealed class MermaidEngine : IMermaidEngine, IDisposable
         }
         catch (Exception exception) when (exception is TimeoutException or WebView2RuntimeNotFoundException or InvalidOperationException or COMException or ArgumentException or IOException or UnauthorizedAccessException)
         {
-            Stop();
+            // Un démarrage d'avant une remise à zéro n'arrête pas le moteur qui a pu repartir depuis.
+            if (generation == _generation)
+            {
+                Stop();
+            }
             return false;
         }
     }
 
     private async Task StartAsync()
     {
-        _window = new HwndSource(new HwndSourceParameters("kyfRev")
+        var generation = _generation;
+        var window = new HwndSource(new HwndSourceParameters("kyfRev")
         {
             WindowStyle = PopupWindow,
             PositionX = -32000,
@@ -243,8 +269,15 @@ public sealed class MermaidEngine : IMermaidEngine, IDisposable
             Width = HiddenWidth,
             Height = HiddenHeight,
         });
+        _window = window;
         var environment = await VisualEditor.EnvironmentOf(_dataFolder).ConfigureAwait(true);
-        var controller = await environment.CreateCoreWebView2ControllerAsync(_window.Handle).ConfigureAwait(true);
+        StillCurrent(generation);
+        var controller = await environment.CreateCoreWebView2ControllerAsync(window.Handle).ConfigureAwait(true);
+        if (generation != _generation)
+        {
+            controller.Close();
+        }
+        StillCurrent(generation);
         controller.Bounds = new Rectangle(0, 0, HiddenWidth, HiddenHeight);
         controller.IsVisible = true;
         _controller = controller;
@@ -258,6 +291,15 @@ public sealed class MermaidEngine : IMermaidEngine, IDisposable
         _ready = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         web.Navigate(StartAddress);
         await _ready.Task.WaitAsync(Patience).ConfigureAwait(true);
+    }
+
+    /// <summary>Un démarrage que <see cref="Reset"/> a interrompu s'arrête là : sa fenêtre est déjà fermée.</summary>
+    private void StillCurrent(int generation)
+    {
+        if (generation != _generation)
+        {
+            throw new InvalidOperationException("Le moteur de dessin a été remis à zéro pendant son démarrage.");
+        }
     }
 
     private void OnMessage(object? sender, CoreWebView2WebMessageReceivedEventArgs e)

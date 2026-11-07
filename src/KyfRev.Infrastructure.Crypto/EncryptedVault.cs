@@ -184,10 +184,20 @@ public sealed class EncryptedVault : IDisposable
     }
 
     /// <summary>Vrai si le fichier <paramref name="path"/> est dans le coffre.</summary>
-    public bool ContainsFile(string path) => _files.ContainsKey(Normalized(path));
+    /// <exception cref="ObjectDisposedException">Le coffre est libéré.</exception>
+    public bool ContainsFile(string path)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        return _files.ContainsKey(Normalized(path));
+    }
 
     /// <summary>Vrai si le dossier <paramref name="path"/> est dans le coffre.</summary>
-    public bool ContainsFolder(string path) => _folders.Contains(Normalized(path));
+    /// <exception cref="ObjectDisposedException">Le coffre est libéré.</exception>
+    public bool ContainsFolder(string path)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        return _folders.Contains(Normalized(path));
+    }
 
     /// <summary>Le contenu du fichier <paramref name="path"/>.</summary>
     /// <exception cref="VaultCryptoException">Le fichier n'est pas dans l'index, ou son objet manque ou a été altéré.</exception>
@@ -410,12 +420,17 @@ public sealed class EncryptedVault : IDisposable
             StringComparer.OrdinalIgnoreCase);
     }
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Libère le coffre : sa copie de la clé est effacée, et son index en clair (les chemins, donc les titres et les
+    /// dossiers) oublié.
+    /// </summary>
     public void Dispose()
     {
         if (!_disposed)
         {
             CryptographicOperations.ZeroMemory(_key);
+            _files = new Dictionary<string, Entry>(StringComparer.OrdinalIgnoreCase);
+            _folders = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
             _disposed = true;
         }
     }

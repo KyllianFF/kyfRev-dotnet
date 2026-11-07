@@ -7,6 +7,7 @@
 // réessayer ou reprendre la version du disque.
 
 import { api, messageErreur } from "../api";
+import type { EtatFin } from "../fin";
 import { diagnostiquer } from "./diagnostic";
 import { ecrireSchema, erreursStructurelles, lireSchema } from "./format";
 import type { Extremite, IdVue, Schema, Support } from "./modele";
@@ -25,6 +26,8 @@ export type EtatSauvegarde = "enregistre" | "modifie" | "enregistrement" | "erre
 
 const HISTORIQUE_MAX = 80;
 const DELAI_SAUVEGARDE = 700;
+/** Avant le verrouillage, les enregistrements tentés au plus : une modification arrivée pendant l'écriture part à son tour. */
+const ESSAIS_FIN = 3;
 
 export class EditeurSchema {
   schema = $state<Schema>(schemaVide());
@@ -180,6 +183,18 @@ export class EditeurSchema {
       this.#enCours = null;
     });
     await this.#enCours;
+  }
+
+  /**
+   * Avant le verrouillage du coffre : l'enregistrement qui attendait part tout de suite (un refusé est retenté), et
+   * l'état dit ce qu'il en reste. Un conflit attend le choix de l'utilisateur : rien ne le tranche ici.
+   */
+  async finir(): Promise<EtatFin> {
+    await this.enregistrer();
+    for (let essai = 1; essai < ESSAIS_FIN && (this.sauvegarde === "modifie" || this.sauvegarde === "enregistrement"); essai++) {
+      await this.enregistrer();
+    }
+    return this.sauvegarde === "enregistrement" ? "modifie" : this.sauvegarde;
   }
 
   async #ecrire(): Promise<void> {

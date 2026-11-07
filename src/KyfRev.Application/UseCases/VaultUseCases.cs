@@ -14,7 +14,8 @@ namespace KyfRev.Application.UseCases;
 /// Dossier d'un coffre chiffré qui attend sa clé (son mot de passe ou sa clé de récupération) : l'écran de
 /// déverrouillage la demande. Le coffre ouvert, s'il y en a un, le reste.
 /// </param>
-public sealed record AppState(string Version, AppMode Mode, string? Vault, string? VaultToCreate, string? OpenError, string? Locked = null);
+/// <param name="Encrypted">Le coffre ouvert est chiffré : il se verrouille.</param>
+public sealed record AppState(string Version, AppMode Mode, string? Vault, string? VaultToCreate, string? OpenError, string? Locked = null, bool Encrypted = false);
 
 /// <summary>
 /// Ouverture et création du coffre. À chaque ouverture : la journée est préparée (tirage des
@@ -33,6 +34,29 @@ public sealed partial class VaultUseCases(
     ILogger<VaultUseCases> logger,
     string version)
 {
+    private readonly Lock _gate = new();
+
+    /// <summary>Le coffre ouvert, s'il a été ouvert chiffré (avec sa clé) : lui seul se verrouille.</summary>
+    private string? _encrypted;
+
+    /// <summary>Les coffres chiffrés verrouillés dans cette session de l'application : seule leur clé, donnée de nouveau, les rouvre.</summary>
+    private readonly List<string> _locked = [];
+
+    /// <summary>Les ouvertures en cours : un verrouillage attend qu'elles aient fini, sinon l'une ouvrirait un coffre juste après.</summary>
+    private int _opening;
+
+    /// <summary>Une ouverture, une création ou un déverrouillage est en cours, sur un autre fil peut-être.</summary>
+    public bool IsOpening
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _opening > 0;
+            }
+        }
+    }
+
     /// <summary>Ce que montre l'accueil.</summary>
     [ZeroXCommand("etat_application")]
     public AppState State() => StateWith(null);
@@ -75,6 +99,7 @@ public sealed partial class VaultUseCases(
     {
         ArgumentNullException.ThrowIfNull(root);
         ArgumentNullException.ThrowIfNull(secret);
+        using var opening = Opening();
         if (host.IsOpen(root, store.SameLocation))
         {
             return State();
@@ -92,10 +117,13 @@ public sealed partial class VaultUseCases(
         }
         using (key)
         {
-            var state = Adopt(() => store.Open(root, key, present.Now), present, lockedOnFailure: root);
-            if (state.OpenError is null && !(remember ? keys.Remember(root, key) : keys.Forget(root)))
+            var state = Adopt(() => store.Open(root, key, present.Now), present, lockedOnFailure: root, encrypted: true, unlocked: root);
+            if (state.OpenError is null)
             {
-                LogKeyNotRemembered(logger, root, remember);
+                if (!(remember ? keys.Remember(root, key) : keys.Forget(root)))
+                {
+                    LogKeyNotRemembered(logger, root, remember);
+                }
             }
             return state;
         }
@@ -104,6 +132,7 @@ public sealed partial class VaultUseCases(
     private AppState OpenOrCreate(string root, bool create)
     {
         ArgumentNullException.ThrowIfNull(root);
+        using var opening = Opening();
         if (!create && host.IsOpen(root, store.SameLocation))
         {
             return State();
@@ -111,6 +140,11 @@ public sealed partial class VaultUseCases(
         var present = Present.Of(time);
         if (!create && keys.IsEncrypted(root))
         {
+            if (WasLocked(root))
+            {
+                // Verrouillé ici, il ne se rouvre qu'avec son mot de passe : la clé retenue ne sert qu'au démarrage.
+                return LockedState(root, null);
+            }
             VaultKey? remembered;
             try
             {
@@ -126,10 +160,42 @@ public sealed partial class VaultUseCases(
             }
             using (remembered)
             {
-                return Adopt(() => store.Open(root, remembered, present.Now), present, lockedOnFailure: null);
+                return Adopt(() => store.Open(root, remembered, present.Now), present, lockedOnFailure: null, encrypted: true);
             }
         }
-        return Adopt(() => create ? store.Initialize(root, present.Now) : store.Open(root, present.Now), present, lockedOnFailure: null);
+        return Adopt(() => create ? store.Initialize(root, present.Now) : store.Open(root, present.Now), present, lockedOnFailure: null, encrypted: false);
+    }
+
+    private bool WasLocked(string root)
+    {
+        string[] locked;
+        lock (_gate)
+        {
+            locked = [.. _locked];
+        }
+        // Les chemins se comparent sur le disque, hors du verrou : rien n'y attend pendant ce temps.
+        return locked.Any(other => store.SameLocation(other, root));
+    }
+
+    /// <summary>Compte une ouverture en cours, jusqu'à sa libération.</summary>
+    private OpeningScope Opening()
+    {
+        lock (_gate)
+        {
+            _opening++;
+        }
+        return new OpeningScope(this);
+    }
+
+    /// <summary>L'ouverture comptée par <see cref="Opening"/> est finie.</summary>
+    internal void OpenedScope() => Opened();
+
+    private void Opened()
+    {
+        lock (_gate)
+        {
+            _opening--;
+        }
     }
 
     /// <summary>
@@ -137,7 +203,7 @@ public sealed partial class VaultUseCases(
     /// sauvegarde du jour faite, et il est retenu pour le prochain démarrage. Refusé, l'état le dit, en attente de sa clé
     /// si c'était un coffre chiffré (<paramref name="lockedOnFailure"/>).
     /// </summary>
-    private AppState Adopt(Func<IVault> open, Present present, string? lockedOnFailure)
+    private AppState Adopt(Func<IVault> open, Present present, string? lockedOnFailure, bool encrypted, string? unlocked = null)
     {
         IVault vault;
         try
@@ -163,16 +229,54 @@ public sealed partial class VaultUseCases(
             vault.Dispose();
             throw;
         }
-        host.Replace(vault);
+        lock (_gate)
+        {
+            host.Replace(vault);
+            _encrypted = encrypted ? vault.Root : null;
+            if (unlocked is not null)
+            {
+                // Déverrouillé par sa clé : il n'est plus verrouillé ; les autres coffres verrouillés le restent.
+                _locked.RemoveAll(locked => string.Equals(locked, unlocked, StringComparison.OrdinalIgnoreCase) || locked == vault.Root);
+            }
+        }
         return State();
+    }
+
+    /// <summary>
+    /// Verrouille le coffre chiffré ouvert : il est fermé, une fois finie l'opération en cours, et sa clé effacée ; l'état
+    /// l'attend de nouveau (<see cref="AppState.Locked"/>). Il ne s'ouvre ensuite qu'avec son mot de passe ou sa clé de
+    /// récupération : la clé retenue sur ce poste ne sert qu'au démarrage. Un coffre en clair ne se verrouille pas.
+    /// </summary>
+    public AppState Lock()
+    {
+        string root;
+        lock (_gate)
+        {
+            if (_opening > 0 || host.Root is not { } open || open != _encrypted)
+            {
+                return State();
+            }
+            root = open;
+            _locked.Add(root);
+            _encrypted = null;
+            host.Close();
+        }
+        LogVaultLocked(logger, root);
+        return LockedState(root, null);
     }
 
     private AppState LockedState(string root, string? error) => StateWith(error) with { Locked = root };
 
     private AppState StateWith(string? openError)
     {
-        var open = host.Root;
-        return new AppState(version, locations.Mode, open, open is null ? locations.VaultToCreate() : null, openError);
+        string? open;
+        bool encrypted;
+        lock (_gate)
+        {
+            open = host.Root;
+            encrypted = open is not null && open == _encrypted;
+        }
+        return new AppState(version, locations.Mode, open, open is null ? locations.VaultToCreate() : null, openError, Encrypted: encrypted);
     }
 
     private void PrepareDay(IVault vault, Present present)
@@ -237,6 +341,9 @@ public sealed partial class VaultUseCases(
     [LoggerMessage(Level = LogLevel.Warning, Message = "Coffre {Root} ouvert mais pas retenu : il ne sera pas rouvert au prochain démarrage.")]
     private static partial void LogVaultNotRemembered(ILogger logger, string root);
 
+    [LoggerMessage(Level = LogLevel.Information, Message = "Coffre chiffré {Root} verrouillé.")]
+    private static partial void LogVaultLocked(ILogger logger, string root);
+
     [LoggerMessage(Level = LogLevel.Warning, Message = "Coffre chiffré {Root} ouvert, mais sa clé n'a pas pu être retenue ou oubliée sur ce poste (retenir : {Remember}).")]
     private static partial void LogKeyNotRemembered(ILogger logger, string root, bool remember);
 
@@ -257,6 +364,12 @@ public sealed partial class VaultUseCases(
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Rotation impossible : {Reason}")]
     private static partial void LogRotationFailed(ILogger logger, string reason);
+}
+
+/// <summary>Une ouverture en cours, comptée jusqu'à sa libération.</summary>
+internal readonly struct OpeningScope(VaultUseCases vaults) : IDisposable
+{
+    public void Dispose() => vaults.OpenedScope();
 }
 
 /// <summary>Où ranger les sauvegardes d'un coffre.</summary>

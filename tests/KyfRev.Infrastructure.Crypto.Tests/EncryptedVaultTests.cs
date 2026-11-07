@@ -44,6 +44,30 @@ public sealed class EncryptedVaultTests
     }
 
     [TestMethod]
+    public void A_released_vault_forgets_its_paths_and_its_key()
+    {
+        using var folder = new TemporaryFolder();
+        var (header, key) = Shared.Value;
+        using (var written = EncryptedVault.Create(folder.Root, header, key, DiskStorage.Instance))
+        {
+            written.Write("fiches/Histoire/" + Title + ".md", Encoding.UTF8.GetBytes("# " + Title + "\n"));
+            written.Flush();
+        }
+        using var vault = EncryptedVault.Open(folder.Root, key, DiskStorage.Instance);
+        Assert.IsNotEmpty(vault.Files);
+
+        vault.Dispose();
+
+        // Les titres et les dossiers de l'index en clair ne restent pas en mémoire, et plus rien ne se lit.
+        Assert.IsEmpty(vault.Files);
+        Assert.IsEmpty(vault.Folders);
+        Assert.ThrowsExactly<ObjectDisposedException>(() => vault.ContainsFile("fiches/Histoire/" + Title + ".md"));
+        Assert.ThrowsExactly<ObjectDisposedException>(() => vault.ContainsFolder("fiches/Histoire"));
+        Assert.ThrowsExactly<ObjectDisposedException>(() => vault.Read("fiches/Histoire/" + Title + ".md"));
+        vault.Dispose();
+    }
+
+    [TestMethod]
     public void Nothing_on_the_disk_names_or_shows_a_sheet()
     {
         using var folder = new TemporaryFolder();

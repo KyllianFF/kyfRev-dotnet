@@ -53,6 +53,8 @@ internal sealed partial class SchemasPage : UserControl
             };
             IslandHost.Content = island;
             page.PropertyChanged += OnPageChanged;
+            // Avant le verrouillage, ce qui s'écrit dans l'îlot s'enregistre (ILeaving).
+            page.FinishIsland = island.FinishAsync;
             _page = page;
             OpenRequested();
         }
@@ -78,6 +80,7 @@ internal sealed partial class SchemasPage : UserControl
     private void Close()
     {
         _page?.PropertyChanged -= OnPageChanged;
+        _page?.FinishIsland = null;
         _page = null;
         Island?.Dispose();
         IslandHost.Content = null;

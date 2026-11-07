@@ -227,7 +227,7 @@ internal sealed class MarkdownEditor : TextEditor, IEditorSurface
     }
 
     /// <inheritdoc/>
-    Task IEditorSurface.SyncAsync() => Task.CompletedTask;
+    Task<bool> IEditorSurface.SyncAsync() => Task.FromResult(true);
 
     /// <inheritdoc/>
     public void ReplaceAll(string text)

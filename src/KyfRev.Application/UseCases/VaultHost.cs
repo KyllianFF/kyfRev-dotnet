@@ -27,12 +27,20 @@ public sealed class VaultHost : IDisposable
     }
 
     /// <summary>Ferme le coffre ouvert (son verrou est libéré).</summary>
-    public void Dispose()
+    public void Dispose() => Close();
+
+    /// <summary>
+    /// Ferme le coffre ouvert, une fois finie l'opération en cours : son verrou est libéré, et la clé d'un coffre chiffré
+    /// effacée. Un autre coffre peut ensuite prendre sa place.
+    /// </summary>
+    internal void Close()
     {
         lock (_gate)
         {
-            _vault?.Dispose();
+            // Retiré d'abord : même si sa fermeture échoue, plus rien ne l'atteint.
+            var vault = _vault;
             _vault = null;
+            vault?.Dispose();
         }
     }
 

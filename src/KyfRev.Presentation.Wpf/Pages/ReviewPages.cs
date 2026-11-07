@@ -6,6 +6,7 @@ using KyfRev.Application.Model;
 using KyfRev.Application.Ports;
 using KyfRev.Application.UseCases;
 using KyfRev.Presentation.Wpf.Editing;
+using KyfRev.Presentation.Wpf.Shell;
 using KyfRev.Rendering;
 
 namespace KyfRev.Presentation.Wpf.Pages;
@@ -245,7 +246,7 @@ public sealed partial class PassagePageViewModel : ObservableObject, IReviewPage
 /// barre de révision. Ouvrir une fiche ne valide rien. Les volets se replient quand la fenêtre rétrécit, le
 /// plan d'abord ; ils s'ouvrent alors par-dessus le texte, avec les mêmes boutons.
 /// </summary>
-public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
+public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage, ILeaving
 {
     /// <summary>Largeur du plan à côté du texte.</summary>
     public const double OutlineWidth = 230;
@@ -287,6 +288,7 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
     private readonly Func<bool> _activeRecall;
     private TextPosition? _editedPosition;
     private PassageEntry? _editedPassage;
+    private (string Comment, string Term, string Explanation) _editorOpened = (string.Empty, string.Empty, string.Empty);
     private IReadOnlyList<VaultDefinition> _definitions = [];
 
     /// <summary>La fiche <paramref name="sheetId"/>.</summary>
@@ -985,6 +987,54 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
         }
     }
 
+    /// <summary>
+    /// Avant que le coffre se verrouille, ce qui s'écrit s'enregistre, comme avec « Enregistrer » ou « Insérer » : le
+    /// commentaire ou la définition de la saisie ouverte, le dessin, la formule ou le lien en cours, puis le texte. Une saisie
+    /// où rien n'a été écrit se referme sans rien créer ; la réponse tapée pour une extension ne se garde pas. Faux si quelque
+    /// chose n'a pas pu être enregistré : tout reste alors ouvert, avec ce qui bloque.
+    /// </summary>
+    public async Task<bool> LeaveAsync()
+    {
+        if (IsEditing)
+        {
+            await AnswerEditorAsync((EditorComment, EditorTerm, EditorExplanation) != _editorOpened).ConfigureAwait(true);
+            if (IsEditing)
+            {
+                return false;
+            }
+        }
+        if (Editor is { } editor)
+        {
+            InsertWhatIsComposed(editor);
+            if (!await editor.FinishAsync().ConfigureAwait(true))
+            {
+                return false;
+            }
+        }
+        if (Guided.IsActive)
+        {
+            Guided.Abandon();
+        }
+        return true;
+    }
+
+    /// <summary>Écrit dans le texte le dessin, la formule ou le lien composé dans une saisie encore ouverte, s'il y a quelque chose.</summary>
+    private static void InsertWhatIsComposed(SheetEditorViewModel editor)
+    {
+        if (editor.DiagramEditor?.Source() is not null)
+        {
+            editor.AnswerDiagramEditorCommand.Execute(true);
+        }
+        if (editor.IsFormulaOpen && editor.FormulaTex.Trim().Length > 0)
+        {
+            editor.AnswerFormulaCommand.Execute(true);
+        }
+        if (editor.IsLinkOpen && editor.LinkAddress.Trim().Length > 0)
+        {
+            editor.AnswerLinkCommand.Execute(true);
+        }
+    }
+
     /// <summary>Revient à la vue d'où la fiche a été ouverte ; ce qui s'écrit est d'abord enregistré.</summary>
     [RelayCommand]
     private async Task BackAsync()
@@ -997,6 +1047,7 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
 
     private void OpenEditor()
     {
+        _editorOpened = (EditorComment, EditorTerm, EditorExplanation);
         EditorProblem = null;
         IsEditing = true;
     }

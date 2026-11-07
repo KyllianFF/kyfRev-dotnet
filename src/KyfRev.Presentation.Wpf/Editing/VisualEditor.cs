@@ -255,11 +255,17 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
     }
 
     /// <inheritdoc/>
-    public async Task SyncAsync()
+    public async Task<bool> SyncAsync()
     {
-        if (!_ready || !_stale)
+        // Une modification attend que la page soit prête : le texte ne l'a pas encore.
+        if (!_ready)
         {
-            return;
+            return _disposed || !_pending.Any(IsEdit);
+        }
+        // Rien de tapé ni d'inséré depuis le dernier texte reçu : Text est le dernier texte qu'il y aura.
+        if (!_stale)
+        {
+            return true;
         }
         var id = ++_lastSync;
         var answered = new TaskCompletionSource();
@@ -267,6 +273,8 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
         Post(new SyncRequest(id));
         await Task.WhenAny(answered.Task, Task.Delay(SyncPatience)).ConfigureAwait(true);
         _syncs.Remove(id);
+        // Sans la réponse, un texte que la page a envoyé d'elle-même vaut aussi, si rien n'a été tapé après.
+        return answered.Task.IsCompleted || !_stale;
     }
 
     /// <inheritdoc/>
@@ -800,11 +808,19 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
         }
     }
 
+    /// <summary>Ce qui change le texte de la page : tout sauf la demande du texte et son chargement.</summary>
+    private static bool IsEdit(EditorRequest request) => request is not (SyncRequest or LoadRequest);
+
     private void Post(EditorRequest request)
     {
         if (_disposed)
         {
             return;
+        }
+        if (IsEdit(request))
+        {
+            // Une insertion ou une mise en forme change le texte : il faudra le relire avant de dire qu'il est enregistré.
+            _stale = true;
         }
         if (_ready)
         {

@@ -104,6 +104,9 @@ public static class ShellText
     /// <summary>« Plein écran ».</summary>
     public static string ShortcutFullScreen => Text(nameof(ShortcutFullScreen));
 
+    /// <summary>Raccourci du verrouillage du coffre chiffré.</summary>
+    public static string ShortcutLock => Text(nameof(ShortcutLock));
+
     /// <summary>Raccourci des vues du menu.</summary>
     public static string ShortcutGoTo => Text(nameof(ShortcutGoTo));
 

@@ -126,6 +126,18 @@ public sealed class ExtensionEngine : IDisposable, IExtensionFaults
         }
     }
 
+    /// <summary>
+    /// Oublie les erreurs de toutes les extensions : leurs messages peuvent citer ce qu'elles avaient lu du coffre, qui se
+    /// verrouille.
+    /// </summary>
+    public void ForgetAllFaults()
+    {
+        foreach (var id in _faults.Keys.ToList())
+        {
+            ForgetFaults(id);
+        }
+    }
+
     /// <summary>Le temps qu'une extension a pour se charger et pour répondre. Il ne court pas pendant qu'elle attend l'utilisateur.</summary>
     public TimeSpan Patience { get; set; } = TimeSpan.FromSeconds(10);
 

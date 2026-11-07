@@ -67,7 +67,7 @@ public enum TodayLayout
 /// pour qu'un grand coffre s'affiche vite. Sur les grands écrans, la ligne choisie se lit à côté de
 /// la liste (<see cref="TodayPreview"/>) ; sur les plus grands, la liste se partage en deux cartes.
 /// </summary>
-public sealed partial class DashboardPageViewModel : ObservableObject, INavigationAware
+public sealed partial class DashboardPageViewModel : ObservableObject, INavigationAware, IForgetsVault
 {
     private static readonly StringComparer FrenchTitles = StringComparer.Create(CultureInfo.GetCultureInfo("fr-FR"), ignoreCase: false);
 
@@ -88,6 +88,9 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
 
     /// <summary>Numéro du dernier aperçu demandé : une lecture dépassée est ignorée.</summary>
     private int _previewTicket;
+
+    /// <summary>Nombre d'oublis du coffre : une lecture partie avant le dernier n'y remet rien.</summary>
+    private int _generation;
 
     /// <summary>
     /// La vue, sur les cas d'usage des rappels (qui rendent le tableau de bord) et des fiches (qui
@@ -335,15 +338,66 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
     /// <inheritdoc/>
     public void OnNavigatedTo() => RefreshCommand.Execute(null);
 
+    /// <summary>
+    /// Oublie tout ce qui vient du coffre : la liste, la ligne choisie et son aperçu, le résumé du jour, les jours à venir,
+    /// la semaine, les encarts, les avertissements, la séance à commencer ou à reprendre et la mise aux archives en
+    /// attente. Le filtre, le tri, la largeur et les groupes repliés restent ; la prochaine ouverture relit le coffre.
+    /// </summary>
+    public void Forget()
+    {
+        _generation++;
+        _previewTicket++;
+        _dashboard = null;
+        OnPropertyChanged(nameof(Dashboard));
+        _toStart = [];
+        _toArchive = null;
+        _extensionCards = [];
+        IsConfirmingArchive = false;
+        SelectedRow = null;
+        Preview = null;
+        _overdue.Count = 0;
+        _today.Count = 0;
+        _reminderGroup.Count = 0;
+        _upcoming.Count = 0;
+        Rows = [];
+        SecondRows = [];
+        Subtitle = string.Empty;
+        DayLabel = string.Empty;
+        ReviewCount = 0;
+        ReviewNoun = string.Empty;
+        Chips = [];
+        SideReminders = [];
+        Forecast = [];
+        Week = [];
+        WeekTotal = 0;
+        WeekNoun = string.Empty;
+        Cards = [];
+        Footer = string.Empty;
+        HealthWarning = null;
+        PriorityWarning = null;
+        Error = null;
+        IsLoading = false;
+        StartLabel = string.Empty;
+        CanStart = false;
+        ResumeLabel = string.Empty;
+        CanResume = false;
+    }
+
     /// <summary>Relit le tableau de bord (la journée est préparée de nouveau après minuit).</summary>
     [RelayCommand]
     private async Task RefreshAsync()
     {
+        // Le coffre oublié pendant la lecture : elle n'y remet rien.
+        var generation = _generation;
         IsLoading = _dashboard is null;
         try
         {
             // Le calcul lit tout le coffre : hors du fil de l'interface.
             var (outcome, cards) = await Task.Run(() => (_reminders.Dashboard(), ReadCards())).ConfigureAwait(true);
+            if (generation != _generation)
+            {
+                return;
+            }
             if (outcome.Succeeded)
             {
                 Show(outcome.Value, cards);
@@ -355,15 +409,27 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
         }
         finally
         {
-            IsLoading = false;
+            if (generation == _generation)
+            {
+                IsLoading = false;
+            }
         }
         if (LookForNews is { } lookForNews && await lookForNews().ConfigureAwait(true))
         {
-            Cards = [.. await Task.Run(ReadCards).ConfigureAwait(true), .. _extensionCards];
+            var news = await Task.Run(ReadCards).ConfigureAwait(true);
+            if (generation != _generation)
+            {
+                return;
+            }
+            Cards = [.. news, .. _extensionCards];
         }
         if (ExtensionCards is { } extensionCards)
         {
             var added = await extensionCards().ConfigureAwait(true);
+            if (generation != _generation)
+            {
+                return;
+            }
             Cards = [.. Cards.Where(card => !_extensionCards.Contains(card)), .. added];
             _extensionCards = added;
         }
@@ -410,7 +476,14 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
 
     private async Task ActOnRowAsync(Func<string?> action)
     {
-        Error = await Task.Run(action).ConfigureAwait(true);
+        var generation = _generation;
+        var error = await Task.Run(action).ConfigureAwait(true);
+        // Le coffre oublié pendant l'action : sa réponse n'y remet rien, et rien n'est relu.
+        if (generation != _generation)
+        {
+            return;
+        }
+        Error = error;
         if (Error is null)
         {
             await RefreshAsync().ConfigureAwait(true);

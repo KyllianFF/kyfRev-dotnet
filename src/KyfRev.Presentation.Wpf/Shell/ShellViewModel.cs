@@ -67,6 +67,7 @@ public sealed partial class ShellViewModel : ObservableObject
             new("Ctrl+plus", ShellText.ShortcutZoomIn),
             new("Ctrl+moins", ShellText.ShortcutZoomOut),
             new("Ctrl+0", ShellText.ShortcutZoomReset),
+            new("Ctrl+Maj+L", ShellText.ShortcutLock),
         ];
         ChosenZoom = 1.0;
         Zoom = 1.0;
@@ -150,7 +151,32 @@ public sealed partial class ShellViewModel : ObservableObject
     /// <summary>L'accueil est affiché : aucun coffre n'est ouvert.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsMenuVisible))]
+    [NotifyCanExecuteChangedFor(nameof(LockCommand))]
     public partial bool IsWelcome { get; private set; }
+
+    /// <summary>Le coffre ouvert est chiffré : il se verrouille (Ctrl+Maj+L), et la recherche le propose.</summary>
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(LockCommand))]
+    public partial bool CanLock { get; set; }
+
+    /// <summary>Ce qui verrouille le coffre (<see cref="VaultLocking"/>) : la racine de composition le donne.</summary>
+    public Func<Task>? Locking { get; set; }
+
+    /// <summary>
+    /// Un coffre chiffré ouvert se verrouille, même derrière l'écran de déverrouillage d'un autre coffre choisi depuis les
+    /// paramètres.
+    /// </summary>
+    private bool IsLockable => CanLock && Locking is not null;
+
+    /// <summary>Verrouille le coffre chiffré ouvert : son écran de déverrouillage remplace les vues.</summary>
+    [RelayCommand(CanExecute = nameof(IsLockable))]
+    private Task LockAsync() => IsLockable ? Locking!() : Task.CompletedTask;
+
+    partial void OnCanLockChanged(bool value)
+    {
+        RebuildCommands();
+        UpdateResults();
+    }
 
     /// <summary>Le menu latéral est affiché : un coffre est ouvert, hors du mode concentration et du plein écran.</summary>
     public bool IsMenuVisible => !IsWelcome && !IsFocusMode && !IsFullScreen;
@@ -460,15 +486,23 @@ public sealed partial class ShellViewModel : ObservableObject
         SecondaryNavigation = [.. items.Where(item => item.IsSecondary)];
         TabNavigation = [.. MainNavigation.Take(ShellLayout.TabCount)];
         OverflowNavigation = [.. MainNavigation.Skip(ShellLayout.TabCount), .. SecondaryNavigation];
-        _commands = [.. NavigationCommands(), .. _extensionCommands, .. _commandsWithoutVault];
+        RebuildCommands();
     }
+
+    /// <summary>Les commandes avec un coffre ouvert : ses vues, celles des extensions, le verrouillage s'il est chiffré, et celles de la coquille.</summary>
+    [MemberNotNull(nameof(_commands))]
+    private void RebuildCommands() =>
+        _commands = [.. NavigationCommands(), .. _extensionCommands, .. LockCommands(), .. _commandsWithoutVault];
+
+    private List<PaletteEntry> LockCommands() =>
+        CanLock ? [new(ShellText.ShortcutLock, "Ctrl+Maj+L", Icons.Lock, () => LockCommand.Execute(null))] : [];
 
     /// <summary>Les commandes des extensions actives, dans la recherche (Ctrl+K).</summary>
     public void SetExtensionCommands(IEnumerable<PaletteEntry> commands)
     {
         ArgumentNullException.ThrowIfNull(commands);
         _extensionCommands = [.. commands];
-        _commands = [.. NavigationCommands(), .. _extensionCommands, .. _commandsWithoutVault];
+        RebuildCommands();
         UpdateResults();
     }
 

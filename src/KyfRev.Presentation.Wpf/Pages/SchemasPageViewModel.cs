@@ -7,7 +7,7 @@ using Microsoft.Win32;
 namespace KyfRev.Presentation.Wpf.Pages;
 
 /// <summary>Vue « Schémas réseau » : un îlot web, et ce qu'il faut pour qu'il parle au coffre.</summary>
-public sealed partial class SchemasPageViewModel : ObservableObject
+public sealed partial class SchemasPageViewModel : ObservableObject, ILeaving
 {
     private readonly SchemaUseCases _schemas;
     private readonly IFolderPicker _folders;
@@ -44,6 +44,15 @@ public sealed partial class SchemasPageViewModel : ObservableObject
     /// <summary>Le schéma à ouvrir dans l'éditeur, demandé depuis une fiche ; l'îlot le prend en charge.</summary>
     [ObservableProperty]
     public partial string? ToOpen { get; set; }
+
+    /// <summary>Finit ce qui est en cours dans l'îlot ouvert (<see cref="SchemaIsland.FinishAsync"/>) ; rien quand l'îlot n'est pas ouvert.</summary>
+    internal Func<Task<bool>>? FinishIsland { get; set; }
+
+    /// <summary>
+    /// Avant le verrouillage : le champ où l'on écrivait dans l'éditeur s'applique, et le schéma s'enregistre. Faux s'il n'a pas pu
+    /// l'être (refusé, modifié ailleurs, ou l'îlot n'a pas répondu) : le coffre reste alors ouvert. Vrai quand l'îlot n'est pas ouvert.
+    /// </summary>
+    public async Task<bool> LeaveAsync() => FinishIsland is not { } finish || await finish().ConfigureAwait(true);
 
     /// <summary>Le pont vers le coffre, pour un îlot.</summary>
     internal SchemaBridge Bridge() => new(_schemas, _folders, () => PickSchemaFile(), _opener.OpenSheet, EditorClosed);
