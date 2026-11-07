@@ -26,11 +26,14 @@ internal sealed record ConversionResult(bool Succeeded, string Message, int File
 /// essais un disque qui échoue à chaque écriture tour à tour), sauf la pose du marqueur, créé et tenu d'un même geste.
 /// </summary>
 /// <remarks>
-/// Tant qu'elle travaille, une conversion tient dans son dossier temporaire un marqueur (<see cref="MarkFile"/>), qu'elle
-/// retire juste avant de lui donner le nom de la destination. Elle n'efface que ce dossier-là, créé pendant cette exécution :
-/// refusée, elle le retire. Coupée net (arrêt brutal, disque perdu), elle peut le laisser, et rien ne l'efface ensuite : tant
-/// qu'il est là, une conversion vers la même destination refuse et le nomme, pour qu'on le retire à la main. Une source qui
-/// porte le marqueur, ou dont un dossier parent le porte, est refusée.
+/// Une conversion crée son dossier temporaire, vérifie qu'il est vide, puis y pose un marqueur (<see cref="MarkFile"/>),
+/// qu'elle tient et retire juste avant de lui donner le nom de la destination. Elle n'efface que ce dossier-là, le sien :
+/// refusée, elle le retire. Deux fenêtres restent sans marqueur : avant sa pose (pour un chiffrement, le temps de poser
+/// l'en-tête d'un coffre vide), et entre son retrait et le renommage. Coupée net (arrêt brutal, disque perdu), elle peut
+/// laisser son dossier, marqué ou non, et rien ne l'efface ensuite : tant qu'un dossier qui porte le nom exact d'un dossier
+/// temporaire de la destination est là, une conversion vers elle refuse et le nomme, pour qu'on le retire à la main. Une
+/// source qui porte le marqueur, ou dont un dossier parent le porte, est refusée. Une erreur imprévue laisse le dossier en
+/// place, marqué, et la conversion suivante le nomme.
 /// </remarks>
 internal static class VaultConversion
 {
@@ -114,7 +117,7 @@ internal static class VaultConversion
             disk.MoveDirectory(temporary, destination);
             return new ConversionResult(true, $"Coffre chiffré dans « {destination} » : {expected.Count} fichiers, chacun relu et vérifié. La source n'a pas changé.", expected.Count, recovery);
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or VaultCryptoException)
+        catch (Exception exception) when (IsRefusal(exception))
         {
             return ConversionResult.Refused($"Le chiffrement a échoué ({exception.Message}) : rien n'a été écrit dans « {destination} »." + Discard(temporary, destination, disk, mark));
         }
@@ -193,7 +196,7 @@ internal static class VaultConversion
             disk.MoveDirectory(temporary, destination);
             return new ConversionResult(true, $"Coffre déchiffré dans « {destination} » : {expected.Count} fichiers, chacun relu et vérifié. Il est en clair : rangez-le à l'abri.", expected.Count);
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or VaultCryptoException)
+        catch (Exception exception) when (IsRefusal(exception))
         {
             return ConversionResult.Refused($"Le déchiffrement a échoué ({exception.Message}) : rien n'a été écrit dans « {destination} »." + Discard(temporary, destination, disk, mark));
         }
@@ -210,8 +213,21 @@ internal static class VaultConversion
         return header.OpenWithRecovery(secret);
     }
 
-    /// <summary>Ce qui interdit la conversion, quel que soit son sens.</summary>
+    /// <summary>Ce qui interdit la conversion, quel que soit son sens ; un dossier qui ne se lit pas l'interdit aussi.</summary>
     private static ConversionResult? Refusal(string source, string destination)
+    {
+        try
+        {
+            return Checks(source, destination);
+        }
+        catch (Exception exception) when (IsRefusal(exception))
+        {
+            return ConversionResult.Refused($"La conversion ne peut pas vérifier « {destination} » et ce qui l'entoure ({exception.Message}) : rien n'a été écrit.");
+        }
+    }
+
+    /// <summary>Les contrôles de <see cref="Refusal"/>.</summary>
+    private static ConversionResult? Checks(string source, string destination)
     {
         if (Directory.Exists(destination) || File.Exists(destination))
         {
@@ -227,7 +243,8 @@ internal static class VaultConversion
         }
         if (LeftoverOf(destination) is { } leftover)
         {
-            return ConversionResult.Refused($"« {leftover} » est le dossier temporaire d'une conversion vers « {destination} », en cours ou coupée : il porte le marqueur « {MarkFile} ». Rien ne l'efface de lui-même. Si aucune conversion ne tourne, retirez-le à la main (après un déchiffrement, il contient le coffre en clair), puis recommencez.");
+            var sign = File.Exists(Path.Combine(leftover, MarkFile)) ? $"il porte le marqueur « {MarkFile} »" : "il en porte le nom exact, sans marqueur";
+            return ConversionResult.Refused($"« {leftover} » est le dossier temporaire d'une conversion vers « {destination} », en cours ou coupée : {sign}. Rien ne l'efface de lui-même. Si aucune conversion ne tourne, retirez-le à la main (après un déchiffrement, il contient le coffre en clair), puis recommencez.");
         }
         if (MarkedFolder(source) is { } marked)
         {
@@ -242,12 +259,20 @@ internal static class VaultConversion
     }
 
     /// <summary>
-    /// Un dossier temporaire marqué d'une conversion vers <paramref name="destination"/>, à côté d'elle : celui d'une
-    /// conversion en cours, ou coupée net. Une conversion n'efface jamais celui d'une autre : elle refuse tant qu'il est là.
+    /// Un dossier temporaire d'une conversion vers <paramref name="destination"/>, à côté d'elle : celui d'une conversion en
+    /// cours, ou coupée net. Son nom exact suffit, marqueur ou non : une conversion coupée avant la pose du marqueur, ou entre
+    /// son retrait et le renommage, n'en laisse pas. Une conversion n'efface jamais celui d'une autre : elle refuse tant qu'il
+    /// est là.
     /// </summary>
     private static string? LeftoverOf(string destination) =>
-        Directory.EnumerateDirectories(Path.GetDirectoryName(destination)!)
-            .FirstOrDefault(folder => IsTemporaryOf(destination, folder) && File.Exists(Path.Combine(folder, MarkFile)));
+        Directory.EnumerateDirectories(Path.GetDirectoryName(destination)!).FirstOrDefault(folder => IsTemporaryOf(destination, folder));
+
+    /// <summary>
+    /// Ce qui fait refuser la conversion plutôt qu'arrêter l'outil : le disque, les droits, le chiffrement, un chemin ou un
+    /// argument refusé. Le reste est une erreur imprévue : elle remonte, et laisse le dossier temporaire marqué.
+    /// </summary>
+    private static bool IsRefusal(Exception exception) =>
+        exception is IOException or UnauthorizedAccessException or VaultCryptoException or CryptographicException or ArgumentException or NotSupportedException;
 
     /// <summary>
     /// Le dossier temporaire de conversion que <paramref name="source"/> est, ou qui la contient : le premier qui porte le
@@ -326,11 +351,23 @@ internal static class VaultConversion
         return null;
     }
 
-    /// <summary>Un dossier temporaire voisin de la destination : <c>.&lt;destination&gt;.conversion-&lt;nom tiré au hasard&gt;</c>.</summary>
+    /// <summary>
+    /// Un dossier temporaire voisin de la destination : <c>.&lt;destination&gt;.conversion-&lt;nom tiré au hasard&gt;</c>. Il
+    /// n'est rendu, et la conversion ne le fait sien, qu'une fois créé par elle et trouvé vide : un dossier qui portait déjà ce
+    /// nom, ou qu'un autre programme a rempli entre-temps, n'est pas le sien, et elle n'y efface jamais rien.
+    /// </summary>
     private static string Temporary(string destination, VaultStorage disk)
     {
         var folder = Path.Combine(Path.GetDirectoryName(destination)!, $"{TemporaryPrefix(destination)}{Path.GetRandomFileName()}");
+        if (disk.Exists(folder))
+        {
+            throw new IOException($"« {folder} » existe déjà : ce n'est pas le dossier temporaire de cette conversion");
+        }
         disk.CreateDirectory(folder);
+        if (disk.Entries(folder).Count > 0)
+        {
+            throw new IOException($"« {folder} » n'est pas vide : ce n'est pas le dossier temporaire de cette conversion");
+        }
         return folder;
     }
 
@@ -338,26 +375,28 @@ internal static class VaultConversion
 
     /// <summary>
     /// Vrai si <paramref name="folder"/> est un dossier temporaire d'une conversion vers <paramref name="destination"/> : son
-    /// nom, et lui seul, le désigne. Un dossier qui n'en a que le début n'en est pas un.
+    /// nom, et lui seul, le désigne, sans tenir compte de la casse (sous Windows, « Coffre » et « coffre » sont le même
+    /// dossier). Un dossier qui n'en a que le début n'en est pas un.
     /// </summary>
     private static bool IsTemporaryOf(string destination, string folder)
     {
         var name = Path.GetFileName(folder);
         var prefix = TemporaryPrefix(destination);
-        if (!name.StartsWith(prefix, StringComparison.Ordinal))
+        if (!name.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
         {
             return false;
         }
         var random = name[prefix.Length..];
-        return random.Length == 12 && random[8] == '.' && random.Remove(8, 1).All(c => char.IsAsciiDigit(c) || char.IsAsciiLetterLower(c));
+        return random.Length == 12 && random[8] == '.' && random.Remove(8, 1).All(char.IsAsciiLetterOrDigit);
     }
 
     /// <summary>
-    /// Le seul point de la conversion qui efface un dossier : son propre dossier temporaire, créé pendant cette exécution et
-    /// marqué tout du long, reconnu aussi à son nom. Son marqueur part en dernier : tenu, ou repris, ou reposé s'il manque,
-    /// pendant que tout le reste s'efface, il n'est relâché qu'ensuite, et effacé avec le dossier. S'il ne peut être ni repris
-    /// ni reposé, le dossier est vidé tout de même : il n'appartient qu'à cette conversion. Le marqueur que la conversion tient
-    /// encore, s'il y en a un, est relâché dans tous les cas. Rend de quoi dire ce qui reste, et ce qu'il faut en faire.
+    /// Le seul point de la conversion qui efface un dossier : son propre dossier temporaire, créé par cette exécution et trouvé
+    /// vide (<see cref="Temporary"/> ne le rend qu'alors), reconnu aussi à son nom. Son marqueur part en dernier : tenu, ou
+    /// repris, ou reposé s'il manque, pendant que tout le reste s'efface, il n'est relâché qu'ensuite, et effacé avec le
+    /// dossier. S'il ne peut être ni repris ni reposé, le dossier est vidé tout de même : il n'appartient qu'à cette
+    /// conversion. Le marqueur que la conversion tient encore, s'il y en a un, est relâché dans tous les cas. Rend de quoi dire
+    /// ce qui reste, et ce qu'il faut en faire.
     /// </summary>
     private static string Discard(string? temporary, string destination, VaultStorage disk, ConversionMark? mark = null)
     {
@@ -380,10 +419,8 @@ internal static class VaultConversion
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {
             mark?.Dispose();
-            var left = $" Le dossier temporaire « {temporary} » n'a pas pu être retiré ({exception.Message}) : retirez-le à la main (après un déchiffrement, il contient le coffre en clair).";
-            return File.Exists(Path.Combine(temporary, MarkFile))
-                ? left + " Tant qu'il est là, une conversion vers la même destination refuse."
-                : left + " Plus rien ne le désigne comme dossier temporaire.";
+            // Marqué ou non, son nom suffit : la conversion suivante vers la même destination refuse tant qu'il est là.
+            return $" Le dossier temporaire « {temporary} » n'a pas pu être retiré ({exception.Message}) : retirez-le à la main (après un déchiffrement, il contient le coffre en clair). Tant qu'il est là, une conversion vers la même destination refuse.";
         }
     }
 
