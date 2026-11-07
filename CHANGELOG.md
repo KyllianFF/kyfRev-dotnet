@@ -9,6 +9,13 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- Coffre chiffré, lot 2 : la session du coffre, ses sauvegardes et son analyse passent par une couche de stockage. Sur un
+  coffre chiffré, chaque fichier devient un objet chiffré et l'index chiffré tient les chemins et les dossiers : rien en
+  clair sur le disque, pas même un fichier temporaire. Ses sauvegardes restent chiffrées, se restaurent en un coffre
+  chiffré et rendent une fiche manquante. Les essais de la session, dont les treize scénarios comparés à la 0.x, tournent
+  sur les deux stockages. L'application n'ouvre pas encore un coffre chiffré : son écran de déverrouillage vient ensuite.
+- Coffre chiffré : une conversion coupée à n'importe quelle écriture laisse la source intacte et aucune destination ;
+  coupée net, son dossier temporaire est retiré par la conversion suivante vers la même destination.
 - Coffre chiffré : `kyfrev-coffre chiffrer` et `dechiffrer` convertissent un coffre vers un nouveau dossier, la source
   intacte. Chaque fichier est relu et vérifié par son SHA-256, et rien n'est écrit si un seul ne correspond pas. Le
   coffre chiffré ne garde aucun nom en clair : des objets opaques et un index chiffré. La clé de récupération s'affiche
