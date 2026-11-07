@@ -21,12 +21,12 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   clair sur le disque, pas même un fichier temporaire. Ses sauvegardes restent chiffrées, se restaurent en un coffre
   chiffré et rendent une fiche manquante. Les essais de la session, dont les treize scénarios comparés à la 0.x, tournent
   sur les deux stockages.
-- Coffre chiffré : une conversion coupée à n'importe quelle écriture laisse la source intacte et aucune destination ;
-  coupée net, son dossier temporaire est retiré par la conversion suivante vers la même destination, s'il porte encore le
-  marqueur qu'elle y tenait et que plus personne ne le tient. Un dossier sans marqueur, celui d'une conversion en cours,
-  ou un dossier ouvert dans kyfRev depuis restent ; une source dans un dossier marqué est refusée, quel que soit le chemin
-  qui y mène (jonction, nom court 8.3, lecteur substitué, jusque dans un sous-dossier). Un dossier temporaire qui ne
-  s'efface qu'en partie garde son marqueur, et le message dit vrai sur ce qui le retirera.
+- Coffre chiffré : une conversion coupée à n'importe quelle écriture laisse la source intacte et aucune destination. Elle
+  n'efface que son propre dossier temporaire, celui qu'elle a créé et trouvé vide ; le reste d'une autre conversion,
+  jamais. Tant qu'un dossier qui porte le nom exact d'un dossier temporaire de la destination est à côté d'elle, marqué ou
+  non, la conversion refuse sans rien écrire, le nomme et demande de le retirer à la main. Une source qui porte le
+  marqueur d'une conversion, ou dont un dossier parent le porte, est refusée, par une jonction, un nom court 8.3 ou un
+  lecteur substitué sur ce dossier. Un dossier temporaire qui ne s'efface qu'en partie reste, et le message le nomme.
 - Coffre chiffré : la session relit l'index une fois le verrou pris, et ne perd plus ce qu'un autre processus a écrit
   entre-temps. Un effacement définitif qui ne peut pas retirer un objet va jusqu'au bout, puis nomme ce qui est resté ;
   les sauvegardes ne recopient que les objets que l'index nomme, un seul par objet, quelle que soit la casse de leur nom.
