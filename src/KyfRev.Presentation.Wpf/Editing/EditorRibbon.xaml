@@ -37,8 +37,71 @@
 
   <Border Background="{DynamicResource Kyf.Brush.SurfaceAlt}" BorderBrush="{DynamicResource Kyf.Brush.Divider}" BorderThickness="1" CornerRadius="{DynamicResource Kyf.Radius.Control}">
     <DockPanel>
-      <DockPanel DockPanel.Dock="Top" Margin="4,2,4,0">
+      <!-- Quand la place manque : une barre courte. Toute la mise en forme s'ouvre en volet, l'affichage passe sous « ⋯ ». -->
+      <DockPanel x:Name="CompactBar" DockPanel.Dock="Top" Margin="4,2" Visibility="Collapsed">
         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+          <ToggleButton x:Name="CompactTableButton" Style="{DynamicResource Kyf.Button.Tool}" Padding="8,0" Margin="0,0,2,0" Click="OnCompactTable"
+                        ToolTip="{x:Static editing:EditingText.TableTab}" AutomationProperties.Name="{x:Static editing:EditingText.TableTab}"
+                        Visibility="{Binding IsInTable, Converter={StaticResource Visible}, FallbackValue=Collapsed}">
+            <StackPanel Orientation="Horizontal">
+              <kyf:Icon Text="{x:Static kyf:Icons.Table}" FontSize="12" Foreground="{DynamicResource Kyf.Brush.Primary}" VerticalAlignment="Center" />
+              <TextBlock x:Name="CompactTableLabel" Text="{x:Static editing:EditingText.TableTab}" Margin="6,0,0,0" VerticalAlignment="Center" />
+            </StackPanel>
+          </ToggleButton>
+          <ToggleButton x:Name="FormatToggle" Style="{DynamicResource Kyf.Button.Tool}" Padding="8,0" Margin="0,0,2,0" Click="OnFormatToggle"
+                        ToolTip="{x:Static editing:EditingText.FormattingHelp}" AutomationProperties.Name="{x:Static editing:EditingText.Formatting}">
+            <StackPanel Orientation="Horizontal">
+              <kyf:Icon Text="{x:Static kyf:Icons.TextFormat}" VerticalAlignment="Center" />
+              <TextBlock x:Name="FormatLabel" Text="{x:Static editing:EditingText.Formatting}" Margin="6,0,0,0" VerticalAlignment="Center" />
+            </StackPanel>
+          </ToggleButton>
+          <Button x:Name="ViewButton" Style="{DynamicResource Kyf.Button.Tool}" Click="OnMenuButton" ToolTip="{x:Static editing:EditingText.ViewMenu}" AutomationProperties.Name="{x:Static editing:EditingText.ViewMenu}">
+            <kyf:Icon Text="{x:Static kyf:Icons.More}" />
+            <Button.ContextMenu>
+              <ContextMenu x:Name="ViewMenu" DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                <MenuItem x:Name="HistoryItem" Header="{x:Static editing:EditingText.History}" Command="{Binding OpenHistoryCommand}" />
+                <MenuItem x:Name="MarkdownItem" Header="{x:Static editing:EditingText.ShowMarkdown}" IsCheckable="True" IsChecked="{Binding IsMarkdownOn}" IsEnabled="{Binding IsVisualAvailable}" />
+                <MenuItem x:Name="PreviewItem" Header="{x:Static editing:EditingText.Preview}" IsCheckable="True" IsChecked="{Binding IsPreviewOn}"
+                          Visibility="{Binding IsMarkdownShown, Converter={StaticResource Visible}, FallbackValue=Collapsed}" />
+              </ContextMenu>
+            </Button.ContextMenu>
+          </Button>
+        </StackPanel>
+        <StackPanel Orientation="Horizontal" ClipToBounds="True">
+          <Button x:Name="CompactUndoButton" Style="{DynamicResource Kyf.Button.Tool}" Command="{Binding UndoCommand}" ToolTip="{x:Static editing:EditingText.Undo}" AutomationProperties.Name="{x:Static editing:EditingText.Undo}">
+            <kyf:Icon Text="{x:Static kyf:Icons.Undo}" />
+          </Button>
+          <Button x:Name="CompactRedoButton" Style="{DynamicResource Kyf.Button.Tool}" Command="{Binding RedoCommand}" ToolTip="{x:Static editing:EditingText.Redo}" AutomationProperties.Name="{x:Static editing:EditingText.Redo}">
+            <kyf:Icon Text="{x:Static kyf:Icons.Redo}" />
+          </Button>
+          <Button x:Name="CompactStyleButton" Style="{DynamicResource Kyf.Button.Tool}" Click="OnMenuButton" ToolTip="{x:Static editing:EditingText.StyleName}" AutomationProperties.Name="{x:Static editing:EditingText.StyleName}"
+                  MinWidth="96" MaxWidth="150" Margin="2,0" HorizontalContentAlignment="Stretch">
+            <DockPanel>
+              <kyf:Icon DockPanel.Dock="Right" Text="{x:Static kyf:Icons.ChevronDown}" FontSize="10" Margin="6,0,0,0" />
+              <TextBlock Text="{Binding StyleLabel}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+            </DockPanel>
+            <Button.ContextMenu>
+              <ContextMenu x:Name="CompactStyleMenu" />
+            </Button.ContextMenu>
+          </Button>
+          <Button x:Name="CompactBoldButton" Style="{DynamicResource Kyf.Button.Tool}" Tag="{Binding Tools.Bold}" Command="{Binding ToggleMarkCommand}" CommandParameter="{x:Static editing:InlineMark.Bold}" ToolTip="{x:Static editing:EditingText.Bold}" AutomationProperties.Name="{x:Static editing:EditingText.Bold}">
+            <kyf:Icon Text="{x:Static kyf:Icons.Bold}" />
+          </Button>
+          <Button x:Name="CompactItalicButton" Style="{DynamicResource Kyf.Button.Tool}" Tag="{Binding Tools.Italic}" Command="{Binding ToggleMarkCommand}" CommandParameter="{x:Static editing:InlineMark.Italic}" ToolTip="{x:Static editing:EditingText.Italic}" AutomationProperties.Name="{x:Static editing:EditingText.Italic}">
+            <kyf:Icon Text="{x:Static kyf:Icons.Italic}" />
+          </Button>
+          <Button x:Name="CompactBulletsButton" Style="{DynamicResource Kyf.Button.Tool}" Tag="{Binding IsBullets}" Command="{Binding ToggleListCommand}" CommandParameter="{x:Static editing:ListKind.Bullets}" ToolTip="{x:Static editing:EditingText.Bullets}" AutomationProperties.Name="{x:Static editing:EditingText.Bullets}">
+            <kyf:Icon Text="{x:Static kyf:Icons.Bullets}" />
+          </Button>
+          <Button x:Name="CompactLinkButton" Style="{DynamicResource Kyf.Button.Tool}" Command="{Binding StartLinkCommand}" ToolTip="{x:Static editing:EditingText.Link}" AutomationProperties.Name="{x:Static editing:EditingText.Link}">
+            <kyf:Icon Text="{x:Static kyf:Icons.Link}" />
+          </Button>
+        </StackPanel>
+      </DockPanel>
+
+      <!-- Les onglets ; quand la place manque, ils n'apparaissent qu'avec le volet, et l'affichage passe sous « ⋯ ». -->
+      <DockPanel x:Name="TabRow" DockPanel.Dock="Top" Margin="4,2,4,0">
+        <StackPanel x:Name="ViewButtons" DockPanel.Dock="Right" Orientation="Horizontal">
           <Button x:Name="HistoryButton" Style="{DynamicResource Kyf.Button.Tool}" Padding="10,0" Margin="0,0,4,0" Content="{x:Static editing:EditingText.History}" Command="{Binding OpenHistoryCommand}" />
           <ToggleButton x:Name="PreviewToggle" Style="{DynamicResource Kyf.Button.Tool}" Padding="10,0" Margin="0,0,4,0" Content="{x:Static editing:EditingText.Preview}" IsChecked="{Binding IsPreviewOn}"
                         Visibility="{Binding IsMarkdownShown, Converter={StaticResource Visible}}" />
@@ -58,6 +121,8 @@
         </StackPanel>
       </DockPanel>
 
+      <!-- En barre courte, le volet garde une hauteur mesurée et défile verticalement : le texte reste en vue dessous. -->
+      <ScrollViewer x:Name="Panels" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" Focusable="False">
       <Grid>
         <!-- Les groupes passent à la ligne : jamais de défilement horizontal. -->
         <WrapPanel x:Name="HomePanel">
@@ -452,6 +517,7 @@
           </HeaderedContentControl>
         </WrapPanel>
       </Grid>
+      </ScrollViewer>
     </DockPanel>
   </Border>
 </UserControl>

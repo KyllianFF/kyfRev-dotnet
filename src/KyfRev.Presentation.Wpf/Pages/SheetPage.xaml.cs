@@ -28,6 +28,7 @@ internal sealed partial class SheetPage : UserControl
     {
         InitializeComponent();
         Ribbon.ChooseImages = EditorView.ChooseImages;
+        AddPanelsToRibbon();
         Unloaded += (_, _) => (DataContext as SheetPageViewModel)?.ReadAloud?.CloseCommand.Execute(null);
         EditorView.CoveredTextClicked = () => (DataContext as SheetPageViewModel)?.CloseOverlayCommand.Execute(null);
         SizeChanged += (_, e) =>
@@ -142,6 +143,35 @@ internal sealed partial class SheetPage : UserControl
     /// <summary>On écoute ce qu'on lit. Pendant une révision à trous, la voix dirait ce qui est masqué.</summary>
     private void UpdateListenToggle(SheetPageViewModel page) =>
         ListenToggle.Visibility = page is { ReadAloud: not null, IsReading: true, Holes.IsActive: false } ? Visibility.Visible : Visibility.Collapsed;
+
+    /// <summary>
+    /// À l'écriture, en barre courte, le plan et les passages passent sous le « ⋯ » du ruban, après l'affichage : l'en-tête
+    /// tient sur une ligne. Ils suivent la page, quelle qu'elle soit.
+    /// </summary>
+    private void AddPanelsToRibbon()
+    {
+        var visible = new BooleanToVisibilityConverter();
+        var separator = new Separator();
+        separator.SetBinding(VisibilityProperty, new Binding("DataContext.HasPanels") { Source = this, Converter = visible, FallbackValue = Visibility.Collapsed });
+        var outline = new MenuItem { Header = ReadingText.Outline, IsCheckable = true };
+        outline.SetBinding(MenuItem.IsCheckedProperty, new Binding("DataContext.IsOutlineOn") { Source = this, Mode = BindingMode.TwoWay });
+        outline.SetBinding(VisibilityProperty, new Binding("DataContext.HasOutline") { Source = this, Converter = visible, FallbackValue = Visibility.Collapsed });
+        var passages = new MenuItem { IsCheckable = true };
+        passages.SetBinding(HeaderedItemsControl.HeaderProperty, new Binding("DataContext.PassagesLabel") { Source = this });
+        passages.SetBinding(MenuItem.IsCheckedProperty, new Binding("DataContext.IsPassagesOn") { Source = this, Mode = BindingMode.TwoWay });
+        passages.SetBinding(VisibilityProperty, new Binding("DataContext.HasPassages") { Source = this, Converter = visible, FallbackValue = Visibility.Collapsed });
+        Ribbon.ViewMenu.Items.Add(separator);
+        Ribbon.ViewMenu.Items.Add(outline);
+        Ribbon.ViewMenu.Items.Add(passages);
+    }
+
+    /// <summary>« ⋯ » de l'en-tête étroit : le plan et les passages, dans un menu ouvert sous le bouton.</summary>
+    private void OnHeaderMore(object sender, RoutedEventArgs e)
+    {
+        HeaderMenu.PlacementTarget = HeaderMoreButton;
+        HeaderMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
+        HeaderMenu.IsOpen = true;
+    }
 
     private void OnListenToggle(object sender, RoutedEventArgs e)
     {

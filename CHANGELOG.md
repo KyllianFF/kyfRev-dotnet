@@ -437,6 +437,11 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 - Fenêtre : 470 × 540 au minimum à la taille normale, la disposition à onglets en bas gardée. Le minimum grandit avec le
   zoom de l'interface, qui s'arrête à ce que l'écran peut tenir et revient au zoom choisi sur un écran plus grand.
+- Écrire : quand la place manque, le ruban laisse place à une barre courte (annuler, style, gras, italique, et selon la
+  place la liste, rétablir et le lien). « Mise en forme » ouvre le reste dans un volet qui défile, avec ses onglets ; dans un
+  tableau, un bouton « Tableau » ouvre ses réglages. L'historique, le Markdown, l'aperçu, le plan et les passages passent
+  sous « ⋯ ». L'en-tête de la fiche tient alors sur une ligne : le retour, l'enregistrement en icône, les trois modes groupés
+  avec leur icône. Plus aucun bouton ne passe sous un autre.
 - L'application est compilée pour Windows x64 (`win-x64`), comme elle est livrée ; les
   bibliothèques restent indépendantes de la plateforme.
 - Un dialogue ou une notification qui se ferme de lui-même garde la liaison de son ouverture :

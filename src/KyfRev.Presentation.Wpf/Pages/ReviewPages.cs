@@ -447,8 +447,23 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
 
     /// <summary>Largeur de la page.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(OutlineFits), nameof(PassagesFits), nameof(ShowsOutline), nameof(ShowsPassages), nameof(ShowsOutlineOverlay), nameof(ShowsPassagesOverlay), nameof(IsOutlineOn), nameof(IsPassagesOn))]
+    [NotifyPropertyChangedFor(nameof(OutlineFits), nameof(PassagesFits), nameof(ShowsOutline), nameof(ShowsPassages), nameof(ShowsOutlineOverlay), nameof(ShowsPassagesOverlay), nameof(IsOutlineOn), nameof(IsPassagesOn), nameof(IsCompactHeader))]
     public partial double PageWidth { get; set; }
+
+    /// <summary>
+    /// En deçà de cette largeur de page, l'en-tête tient sur une ligne : l'état de l'enregistrement en icône, le plan et les
+    /// passages sous « ⋯ ». C'est aussi là que le ruban laisse place à sa barre courte : sa largeur, plus les marges de la page.
+    /// </summary>
+    internal const double CompactHeaderWidth = Editing.EditorRibbon.CompactWidth + 32;
+
+    /// <summary>L'en-tête est étroit : voir <see cref="CompactHeaderWidth"/>.</summary>
+    public bool IsCompactHeader => PageWidth < CompactHeaderWidth;
+
+    /// <summary>Il y a un plan ou des passages à montrer.</summary>
+    public bool HasPanels => ShowsPanelToggles && (HasOutline || HasPassages);
+
+    /// <summary>Le nom du « ⋯ » de l'en-tête étroit : il dit aussi combien de passages il cache.</summary>
+    public string PanelsMenuName => HasPassages ? ReadingText.PanelsMenuWith(PassagesLabel) : ReadingText.PanelsMenu;
 
     /// <summary>Le plan tient à côté du texte.</summary>
     public bool OutlineFits => PageWidth >= OutlineMinimum;
@@ -652,6 +667,7 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
         OnPropertyChanged(nameof(HasOutline));
         OnPropertyChanged(nameof(ShowsCode));
         OnPropertyChanged(nameof(ShowsPanelToggles));
+        OnPropertyChanged(nameof(HasPanels));
         OnPropertyChanged(nameof(TextWidth));
         OnPropertyChanged(nameof(ShowsOutline));
         OnPropertyChanged(nameof(ShowsPassages));
@@ -1100,7 +1116,9 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage
         OnPropertyChanged(nameof(HasTrashedPassages));
         OnPropertyChanged(nameof(TrashLabel));
         OnPropertyChanged(nameof(HasPassages));
+        OnPropertyChanged(nameof(HasPanels));
         OnPropertyChanged(nameof(PassagesLabel));
+        OnPropertyChanged(nameof(PanelsMenuName));
         OnPropertyChanged(nameof(ShowsPassages));
         OnPropertyChanged(nameof(IsPassagesOn));
         OnPropertyChanged(nameof(HasOutline));
