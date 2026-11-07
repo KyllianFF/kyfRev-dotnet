@@ -32,8 +32,8 @@ public static class EncryptionText
     /// <summary>« Changer le mot de passe » : le titre de sa fenêtre.</summary>
     public static string ChangePasswordTitle => Text(nameof(ChangePasswordTitle));
 
-    /// <summary>« Fermer ».</summary>
-    public static string Close => Text(nameof(Close));
+    /// <summary>« Vérification de la clé de récupération… » : la carte dérive la clé tapée.</summary>
+    public static string CheckingRecoveryKey => Text(nameof(CheckingRecoveryKey));
 
     /// <summary>« Confirmez le nouveau mot de passe ».</summary>
     public static string ConfirmPassword => Text(nameof(ConfirmPassword));
@@ -143,6 +143,9 @@ public static class EncryptionText
     /// <summary>« Au moins 12 caractères. ».</summary>
     public static string PasswordLengthOf(object count) => Format("PasswordLength", count);
 
+    /// <summary>Un mot de passe changé juste avant un verrouillage : la lecture suivante du coffre le dit.</summary>
+    public static string PasswordChangedWhileLocking => Text(nameof(PasswordChangedWhileLocking));
+
     /// <summary>Comment recopier la clé de récupération.</summary>
     public static string RecoveryHelp => Text(nameof(RecoveryHelp));
 
@@ -155,14 +158,20 @@ public static class EncryptionText
     /// <summary>La nouvelle clé de récupération est créée.</summary>
     public static string RecoveryKeyCreated => Text(nameof(RecoveryKeyCreated));
 
+    /// <summary>La nouvelle clé de récupération annulée : l'ancienne reste la bonne.</summary>
+    public static string RecoveryKeyKept => Text(nameof(RecoveryKeyKept));
+
+    /// <summary>Une nouvelle clé de récupération qu'un verrouillage a empêché d'enregistrer : la lecture suivante du coffre le dit.</summary>
+    public static string RecoveryKeyNotSaved => Text(nameof(RecoveryKeyNotSaved));
+
+    /// <summary>Une nouvelle clé de récupération enregistrée juste avant un verrouillage : la lecture suivante du coffre le dit.</summary>
+    public static string RecoveryKeySavedWhileLocking => Text(nameof(RecoveryKeySavedWhileLocking));
+
     /// <summary>Que faire de la clé de récupération affichée : elle ne le sera plus.</summary>
     public static string RecoveryKeyShown => Text(nameof(RecoveryKeyShown));
 
     /// <summary>« Votre clé de récupération » : le titre de la fenêtre qui montre la nouvelle.</summary>
     public static string RecoveryKeyShownTitle => Text(nameof(RecoveryKeyShownTitle));
-
-    /// <summary>Une nouvelle clé de récupération a été créée pendant le verrouillage, sans être montrée.</summary>
-    public static string RecoveryKeyUnseen => Text(nameof(RecoveryKeyUnseen));
 
     /// <summary>« Se souvenir sur cet ordinateur ».</summary>
     public static string Remember => Text(nameof(Remember));
@@ -179,6 +188,12 @@ public static class EncryptionText
     /// <summary>Ce que retenir la clé permet, et ce qu'il ne protège plus.</summary>
     public static string RememberHelp => Text(nameof(RememberHelp));
 
+    /// <summary>« Enregistrer cette clé » : le bouton qui remplace l'ancienne clé de récupération par la nouvelle.</summary>
+    public static string SaveRecoveryKey => Text(nameof(SaveRecoveryKey));
+
+    /// <summary>« Enregistrement de la nouvelle clé de récupération… » : la carte écrit l'en-tête.</summary>
+    public static string SavingRecoveryKey => Text(nameof(SavingRecoveryKey));
+
     /// <summary>« Ouvrir ».</summary>
     public static string Unlock => Text(nameof(Unlock));
 
@@ -187,6 +202,9 @@ public static class EncryptionText
 
     /// <summary>« Ouvrir avec le mot de passe ».</summary>
     public static string UsePassword => Text(nameof(UsePassword));
+
+    /// <summary>« J'utilise la clé de récupération » : une fenêtre de la carte la demande au lieu du mot de passe.</summary>
+    public static string WithRecoveryKey => Text(nameof(WithRecoveryKey));
 
     private static string Text(string name) =>
         Resources.GetString(name, CultureInfo.CurrentUICulture) ?? throw new MissingManifestResourceException($"Texte « {name} » absent des ressources.");

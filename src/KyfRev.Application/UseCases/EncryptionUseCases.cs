@@ -15,6 +15,12 @@ public sealed class EncryptionUseCases(VaultHost host, IVaultKeys keys)
     /// <summary>Message de refus quand le coffre ouvert est en clair.</summary>
     public const string NotEncrypted = "Le coffre ouvert n'est pas chiffré.";
 
+    /// <summary>Message de refus quand la clé préparée est celle d'un autre coffre que l'ouvert.</summary>
+    public const string OtherVault = "Cette clé de récupération a été préparée pour un autre coffre : elle n'a pas été enregistrée.";
+
+    /// <summary>Le dossier du coffre ouvert ; rien sans coffre ouvert.</summary>
+    public string? Vault => host.Root;
+
     /// <summary>Vrai si ce poste a retenu une clé pour le coffre ouvert ; faux sans coffre ouvert.</summary>
     public bool IsRemembered => host.Root is { } root && keys.IsRemembered(root);
 
@@ -47,15 +53,35 @@ public sealed class EncryptionUseCases(VaultHost host, IVaultKeys keys)
     }
 
     /// <summary>
-    /// Donne au coffre ouvert une clé de récupération neuve, rendue écrite (14 groupes de quatre caractères) pour être
-    /// notée : elle ne se montre qu'une fois, et l'ancienne n'ouvre plus le coffre. Le mot de passe et la clé retenue sur ce
-    /// poste l'ouvrent toujours.
+    /// Prépare une clé de récupération neuve pour le coffre ouvert, rendue écrite (14 groupes de quatre caractères) pour
+    /// être notée, sans rien écrire : tant qu'elle n'est pas enregistrée (<see cref="SaveRecoveryKey"/>), l'ancienne reste
+    /// la seule qui ouvre le coffre.
     /// </summary>
     /// <param name="secret">Le mot de passe, ou la clé de récupération actuelle.</param>
-    public Outcome<string> NewRecoveryKey(VaultSecret secret)
+    public Outcome<RecoveryKeyDraft> DraftRecoveryKey(VaultSecret secret)
     {
         ArgumentNullException.ThrowIfNull(secret);
-        return OnEncrypted(root => Outcome.Of(keys.NewRecoveryKey(root, secret)));
+        return OnEncrypted(root => Outcome.Of(keys.DraftRecoveryKey(root, secret)));
+    }
+
+    /// <summary>
+    /// Enregistre la clé de récupération préparée, une fois notée : l'ancienne n'ouvre plus le coffre ; le mot de passe et
+    /// la clé retenue sur ce poste, si. Refusé si le coffre ouvert n'est plus le sien (un verrouillage, un autre coffre) ou
+    /// si son en-tête a changé depuis : rien ne change alors.
+    /// </summary>
+    /// <param name="draft">La clé préparée.</param>
+    public Outcome<Done> SaveRecoveryKey(RecoveryKeyDraft draft)
+    {
+        ArgumentNullException.ThrowIfNull(draft);
+        return OnEncrypted(root =>
+        {
+            if (!string.Equals(root, draft.Root, StringComparison.OrdinalIgnoreCase))
+            {
+                return Outcome.Refused<Done>(OtherVault);
+            }
+            keys.SaveRecoveryKey(draft);
+            return Outcome.Done();
+        });
     }
 
     /// <summary>

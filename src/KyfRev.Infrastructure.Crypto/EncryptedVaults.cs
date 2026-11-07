@@ -174,17 +174,65 @@ public sealed class EncryptedVaults(IVaultStore plain, Func<VaultStorage, IVault
     }
 
     /// <summary>
-    /// Donne au coffre une clé de récupération neuve : l'en-tête, ouvert par le secret, enveloppe la même clé de données
-    /// par elle, puis il est réécrit d'un coup, par le disque. L'ancienne clé de récupération n'ouvre plus rien ; le mot de
-    /// passe et la clé retenue, si.
+    /// Prépare une clé de récupération neuve, sans rien écrire : l'en-tête, ouvert par le secret, enveloppe la même clé de
+    /// données par elle. La clé de données est effacée aussitôt.
+    /// </summary>
+    /// <exception cref="VaultCryptoException">Le secret n'est pas le bon, ou l'en-tête ne se lit pas : rien n'est préparé.</exception>
+    public RecoveryKeyDraft DraftRecoveryKey(string root, VaultSecret secret)
+    {
+        ArgumentNullException.ThrowIfNull(root);
+        ArgumentNullException.ThrowIfNull(secret);
+        var read = ReadHeaderBytes(root, "L'en-tête du coffre chiffré est introuvable ou illisible.");
+        var header = VaultHeader.Read(read);
+        var dataKey = secret.IsRecoveryKey ? header.OpenWithRecovery(secret.Text) : header.Open(secret.Text);
+        try
+        {
+            var (changed, key) = header.WithNewRecovery(dataKey);
+            return new RecoveryKeyDraft(root, key, changed.Write(), read);
+        }
+        finally
+        {
+            PasswordKeys.Clear(dataKey);
+        }
+    }
+
+    /// <summary>
+    /// Enregistre la clé préparée : l'en-tête est réécrit d'un coup, par le disque, s'il est toujours celui qu'elle a lu.
+    /// L'ancienne clé de récupération n'ouvre plus rien ; le mot de passe et la clé retenue, si.
     /// </summary>
     /// <exception cref="VaultCryptoException">
-    /// Le secret n'est pas le bon, ou l'en-tête ne se lit pas ou ne s'écrit pas : l'en-tête n'a pas changé.
+    /// L'en-tête a changé depuis la préparation (un autre mot de passe, une autre clé), ou il ne se lit pas ou ne s'écrit
+    /// pas : l'en-tête n'a pas changé.
     /// </exception>
-    public string NewRecoveryKey(string root, VaultSecret secret)
+    public void SaveRecoveryKey(RecoveryKeyDraft draft)
     {
-        ArgumentNullException.ThrowIfNull(secret);
-        return Rewrap(root, secret, (header, dataKey) => header.WithNewRecovery(dataKey));
+        ArgumentNullException.ThrowIfNull(draft);
+        var now = ReadHeaderBytes(draft.Root, "L'en-tête du coffre chiffré ne se lit plus : la nouvelle clé n'a pas été enregistrée, et l'ancienne reste valable.");
+        if (!draft.Replaces.Span.SequenceEqual(now))
+        {
+            throw new VaultCryptoException("L'en-tête du coffre a changé depuis que la clé a été créée : elle n'a pas été enregistrée, et l'ancienne reste valable. Créez-en une autre.");
+        }
+        try
+        {
+            disk.Replace(Path.Combine(draft.Root, EncryptedVault.HeaderFile), draft.Header.ToArray());
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            throw new VaultCryptoException("L'en-tête du coffre chiffré n'a pas pu être écrit : la nouvelle clé n'a pas été enregistrée, et l'ancienne reste valable.", exception);
+        }
+    }
+
+    /// <summary>Les octets de l'en-tête du coffre, tels qu'ils sont sur le disque ; <paramref name="unreadable"/> s'ils ne se lisent pas.</summary>
+    private byte[] ReadHeaderBytes(string root, string unreadable)
+    {
+        try
+        {
+            return disk.ReadAllBytes(Path.Combine(root, EncryptedVault.HeaderFile));
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            throw new VaultCryptoException(unreadable, exception);
+        }
     }
 
     /// <summary>

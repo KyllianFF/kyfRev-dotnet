@@ -34,6 +34,7 @@ public sealed class LockTests
         Assert.AreEqual(EncryptionText.BackToWelcome, page.BackLabel, "le coffre est fermé : rien derrière");
         Assert.IsNull(scene.Vaults.App.Vaults.State().Vault);
         Assert.AreEqual(1, scene.Forgotten);
+        Assert.AreEqual("début : les vues, le coffre ouvert | oubli", string.Join(" | ", scene.Order), "ce qui oublie dès le début le fait avant l'écran de déverrouillage");
         Assert.IsFalse(scene.Shell.LockCommand.CanExecute(null), "rien à verrouiller sur l'écran de déverrouillage");
 
         // La clé retenue ne le rouvre pas, même par « Ouvrir un autre coffre… » : seul son mot de passe le fait.
@@ -84,6 +85,38 @@ public sealed class LockTests
         UiThread.Until(() => first.IsCompleted);
         Assert.IsTrue(first.Result);
         Assert.AreEqual(1, scene.Forgotten);
+    }
+
+    [STATestMethod]
+    public void A_plain_vault_is_not_even_asked_to_lock_while_a_long_operation_holds_it()
+    {
+        using var ui = new UiThread();
+        using var scene = new Scene();
+        var plain = scene.Vaults.CreateVault("Clair");
+        Assert.AreEqual(plain, scene.Vaults.App.Vaults.Open(plain).Vault);
+        scene.Shell.ShowWorkspace();
+        Assert.IsFalse(scene.Shell.CanLock);
+
+        // Une longue opération tient le coffre (un export, une restauration) quand l'utilisateur s'en va.
+        using var started = new ManualResetEventSlim();
+        using var release = new ManualResetEventSlim();
+        var holding = Task.Run(() => scene.Vaults.App.Settings.Update(preferences =>
+        {
+            started.Set();
+            release.Wait(TimeSpan.FromSeconds(10));
+            return preferences;
+        }));
+        Assert.IsTrue(started.Wait(TimeSpan.FromSeconds(10)));
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        var locking = scene.Locking.LockAsync();
+        var elapsed = clock.Elapsed;
+        release.Set();
+        Assert.IsTrue(holding.Wait(TimeSpan.FromSeconds(10)));
+
+        Assert.IsTrue(locking.IsCompleted);
+        Assert.IsFalse(locking.Result, "rien à verrouiller");
+        Assert.IsLessThan(TimeSpan.FromSeconds(5), elapsed, "le fil de l'interface n'attend pas le coffre");
+        Assert.AreEqual(0, scene.Forgotten);
     }
 
     [STATestMethod]
@@ -141,6 +174,7 @@ public sealed class LockTests
         Assert.AreSame(held, scene.Shell.Current.Page);
         Assert.AreEqual(scene.Vaults.Planned, scene.Vaults.App.Vaults.State().Vault, "rien ne se perd : le coffre reste ouvert");
         Assert.AreEqual(0, scene.Forgotten);
+        Assert.IsEmpty(scene.Order, "le verrouillage n'a pas commencé : rien n'oublie");
     }
 
     [STATestMethod]
@@ -216,6 +250,41 @@ public sealed class LockTests
         Assert.IsTrue(shell.LockCommand.CanExecute(null));
         shell.PaletteQuery = "verrouiller";
         Assert.IsTrue(shell.HasNoResult, "sur l'écran de déverrouillage, la recherche ne le propose plus");
+    }
+
+    [TestMethod]
+    public void The_delay_in_effect_is_kept_from_the_vault_minutes()
+    {
+        var delay = new LockDelay();
+        Assert.IsNull(delay.Value, "sans coffre chiffré ouvert, l'inactivité ne verrouille rien");
+
+        delay.Set(30);
+        Assert.AreEqual(TimeSpan.FromMinutes(30), delay.Value);
+        delay.Set(0);
+        Assert.IsNull(delay.Value, "0 : jamais");
+        Assert.ThrowsExactly<ArgumentOutOfRangeException>(() => delay.Set(-1));
+        Assert.IsNull(delay.Value);
+
+        delay.Reset();
+        Assert.AreEqual(AutoLock.DefaultDelay, delay.Value, "un coffre chiffré qui n'a pas pu dire le sien");
+        delay.Clear();
+        Assert.IsNull(delay.Value, "le coffre verrouillé, ou un coffre en clair");
+    }
+
+    [STATestMethod]
+    public void A_secret_is_copied_out_of_the_clipboard_history_and_the_cloud()
+    {
+        Assert.ThrowsExactly<ArgumentNullException>(() => SecretClipboard.DataOf(null!));
+
+        var data = SecretClipboard.DataOf("AAAA-BBBB");
+
+        Assert.AreEqual("AAAA-BBBB", data.GetText(System.Windows.TextDataFormat.UnicodeText));
+        foreach (var format in new[] { SecretClipboard.ExcludeFromMonitors, SecretClipboard.CanIncludeInHistory, SecretClipboard.CanUploadToCloud })
+        {
+            Assert.IsTrue(data.GetDataPresent(format), format);
+            var value = Assert.IsInstanceOfType<System.IO.MemoryStream>(data.GetData(format));
+            CollectionAssert.AreEqual(new byte[4], value.ToArray(), $"{format} : un DWORD à 0");
+        }
     }
 
     [STATestMethod]
@@ -340,11 +409,22 @@ public sealed class LockTests
         {
             Vaults = new TestVaults(AppMode.Portable);
             Shell = new TestShell().Shell;
-            Locking = new VaultLocking(Shell, Vaults.App.Vaults, Vaults.Picker, () => Forgotten++, () =>
-            {
-                Changes++;
-                Shell.ShowWorkspace();
-            }, () => Drafts);
+            Locking = new VaultLocking(
+                Shell,
+                Vaults.App.Vaults,
+                Vaults.Picker,
+                () =>
+                {
+                    Forgotten++;
+                    Order.Add("oubli");
+                },
+                () =>
+                {
+                    Changes++;
+                    Shell.ShowWorkspace();
+                },
+                () => Drafts,
+                () => Order.Add($"début : {(Shell.Current.Page is UnlockPageViewModel ? "l'écran" : "les vues")}, le coffre {(Vaults.App.Vaults.State().Vault is null ? "fermé" : "ouvert")}"));
             Shell.Locking = Locking.LockAsync;
         }
 
@@ -355,6 +435,9 @@ public sealed class LockTests
         public VaultLocking Locking { get; }
 
         public int Forgotten { get; private set; }
+
+        /// <summary>Le début du verrouillage, puis l'oubli, dans l'ordre où ils arrivent.</summary>
+        public List<string> Order { get; } = [];
 
         public int Changes { get; private set; }
 

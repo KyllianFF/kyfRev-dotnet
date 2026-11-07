@@ -16,7 +16,10 @@ modèle de menace complet viendra avec le dernier lot.
 ## Les clés
 
 - **La clé de données** : 256 bits aléatoires, une par coffre. Elle chiffre tous les fichiers et ne change jamais. Changer
-  le mot de passe ou la clé de récupération ne réécrit donc aucun fichier.
+  le mot de passe ou la clé de récupération ne réécrit donc aucun fichier. Il s'ensuit qu'une copie plus ancienne de
+  l'en-tête (une sauvegarde, l'historique d'un dossier synchronisé) s'ouvre encore avec l'ancien secret, et en tire la
+  clé qui lit aussi le coffre d'aujourd'hui : après la fuite d'un secret, en changer ne suffit pas, il faut déchiffrer le
+  coffre puis le chiffrer de nouveau, ce qui tire une nouvelle clé de données.
 - **La clé du mot de passe** : tirée du mot de passe et d'un sel de 16 octets propre au coffre. Elle enveloppe la clé de
   données.
 - **La clé de récupération** : 256 bits aléatoires, montrés une seule fois et écrits en base32 de Crockford (sans I, L,
@@ -252,27 +255,49 @@ kyfrev-coffre dechiffrer <coffre chiffré> <nouveau dossier>
   coffre… » ni par l'accueil, jusqu'à ce qu'on le déverrouille.
 - **Ce que le verrouillage ne peut pas effacer** : les chaînes de .NET ne s'effacent pas (le mot de passe tapé, le texte
   lu), seulement leurs références ; la mémoire libérée, le fichier d'échange et la mise en veille prolongée peuvent en
-  garder des traces, et le presse-papiers garde ce qui y a été copié. BitLocker reste recommandé.
+  garder des traces, et ce qui a été copié reste dans le presse-papiers, et dans son historique s'il est activé. La clé de
+  récupération copiée depuis la carte Chiffrement (par « Copier », le clavier ou le menu) est exclue de l'historique de
+  Windows et du partage entre appareils, et signalée aux programmes qui surveillent le presse-papiers, qui peuvent
+  l'ignorer ; elle reste jusqu'à la copie suivante. BitLocker reste recommandé.
 
 ## La carte Chiffrement
 
-Dans Paramètres › Données, pour un coffre chiffré ouvert seulement :
+Dans Paramètres › Données, pour un coffre chiffré ouvert seulement. Chaque fenêtre qui demande le mot de passe propose
+« J'utilise la clé de récupération » : la clé se saisit alors dans un champ qui la montre, comme sur l'écran de
+déverrouillage. Ce qui a été tapé est vidé dès que la fenêtre se ferme ou se cache.
 
-- **Changer le mot de passe** : le mot de passe actuel (ou la clé de récupération), puis le nouveau deux fois, de 12
-  caractères au moins. Seule l'enveloppe de la clé de données change, dans l'en-tête écrit de façon atomique : aucune
-  fiche n'est réécrite, la clé de récupération et la clé retenue sur ce poste restent valables, et l'ancien mot de passe
-  n'ouvre plus le coffre. La dérivation est réglée sur le poste (Argon2id), hors du fil de l'interface.
-- **Créer une nouvelle clé de récupération** : demande le mot de passe, puis montre la nouvelle clé une seule fois, à
-  copier et à ranger ; la fenêtre ne se ferme qu'une fois « J'ai rangé ma clé de récupération » coché, et la clé est alors
-  oubliée de l'écran. L'ancienne n'ouvre plus le coffre ; les sauvegardes déjà faites, qui gardent l'ancien en-tête,
-  s'ouvrent encore avec elle.
-- **Se souvenir sur cet ordinateur** : coché, le mot de passe est demandé et la clé retenue (voir plus haut) ; décoché,
-  elle est oubliée tout de suite.
-- **Verrouiller après** : 5, 15, 30 minutes, une heure, ou jamais (l'inactivité ne verrouille plus, le départ de
+- **Changer le mot de passe** : le mot de passe actuel (ou la clé de récupération, s'il est perdu), puis le nouveau deux
+  fois, de 12 caractères au moins. Seule l'enveloppe de la clé de données change, dans l'en-tête écrit de façon
+  atomique : aucune fiche n'est réécrite, la clé de récupération et la clé retenue sur ce poste restent valables, et
+  l'ancien mot de passe n'ouvre plus le coffre tel qu'il est ; les sauvegardes et les copies faites avant s'ouvrent encore
+  avec lui (voir « Les clés »). La dérivation est réglée sur le poste (Argon2id), hors du fil de l'interface.
+- **Créer une nouvelle clé de récupération** : demande le mot de passe (ou la clé de récupération actuelle), puis prépare
+  la nouvelle clé sans rien écrire et la montre une seule fois, à copier et à ranger. Elle ne remplace l'ancienne qu'une
+  fois « J'ai rangé ma clé de récupération » coché et « Enregistrer cette clé » choisi : l'en-tête est alors réécrit,
+  s'il est toujours celui qu'elle a lu, et la clé est oubliée de l'écran. « Annuler », Échap, un verrouillage ou
+  l'application fermée la laissent de côté : rien n'a changé, l'ancienne reste la seule qui ouvre le coffre. Ainsi, une
+  clé que personne n'a notée ne remplace jamais celle qui l'est, même quand le mot de passe est perdu. Enregistrée,
+  l'ancienne n'ouvre plus le coffre tel qu'il est ; les sauvegardes et les copies faites avant, qui gardent l'ancien
+  en-tête, s'ouvrent encore avec elle.
+- **Se souvenir sur cet ordinateur** : coché, le mot de passe (ou la clé de récupération) est demandé et la clé retenue
+  (voir plus haut) ; décoché, elle est oubliée tout de suite.
+- **Verrouillage automatique** : après 5, 15, 30 minutes, une heure, ou jamais (l'inactivité ne verrouille plus, le départ de
   l'utilisateur si). Le réglage voyage avec le coffre : `"verrouillage": { "apresMinutes": … }` dans `.suivi/coffre.json`
   (0 pour jamais), écrit seulement s'il diffère des 15 minutes par défaut, si bien qu'un coffre qui ne l'a jamais changé
-  reste identique, octet pour octet, à celui de la 0.x. Chiffré, ce fichier ne se lit ni ne se change sans la clé.
+  reste identique, octet pour octet, à celui de la 0.x. Chiffré, ce fichier ne se lit ni ne se change sans la clé. Le
+  délai est lu une fois à l'ouverture du coffre, puis repris de la carte à chaque réglage : le minuteur, qui regarde
+  l'inactivité toutes les 20 secondes, ne touche pas au coffre, et ne regarde rien pour un coffre en clair. Un réglage
+  refusé (le fichier tenu par un autre programme) le dit, chaque fois, et la liste remontre le délai toujours en
+  vigueur.
 - **Verrouiller maintenant** : comme Ctrl+Maj+L.
+
+Chaque fenêtre donne le focus à son premier champ ; un refus se dit chaque fois, même s'il est le même que le précédent.
+
+Un verrouillage peut tomber pendant une fenêtre de la carte : la carte oublie tout dès qu'il commence, avant que l'écran de
+déverrouillage ne remplace les vues. Ce qu'il interrompt après coup se dit à la prochaine lecture de la carte pour ce même
+coffre, et seulement pour lui, tant que l'application reste ouverte : un mot de passe changé pendant la dérivation (c'est
+le nouveau qui ouvre le coffre), une nouvelle clé de récupération enregistrée pendant la fermeture, ou que le
+verrouillage a empêché d'enregistrer (l'ancienne ouvre toujours le coffre).
 
 L'assistant « Chiffrer ce coffre » et « Déchiffrer vers un dossier… » viennent avec la partie suivante.
 
@@ -299,7 +324,8 @@ L'assistant « Chiffrer ce coffre » et « Déchiffrer vers un dossier… » vie
   - un mauvais mot de passe, une autre clé de récupération ou une faute de frappe sont refusés ;
   - un réglage ou l'identifiant changés dans le fichier, comme un en-tête illisible, sont refusés ;
   - un nouveau mot de passe garde la même clé de données et retire l'ancien ;
-  - une nouvelle clé de récupération retire l'ancienne.
+  - une nouvelle clé de récupération ne change rien tant qu'elle n'est pas enregistrée, ne s'enregistre que sur l'en-tête
+    qu'elle a lu, et retire alors l'ancienne.
 - **La clé retenue** ne s'ouvre que pour son coffre, dans cette session. Rangée par l'application, elle n'est écrite que
   protégée ; elle ne sert qu'à son dossier, sous toute écriture du même chemin, et ni à une copie ni sur un autre poste ;
   une clé que Windows ne rend pas, un en-tête illisible ou une clé qui n'ouvre plus l'index ne rendent rien, et la

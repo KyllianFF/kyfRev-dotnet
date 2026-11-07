@@ -320,6 +320,7 @@ public sealed class UseCaseTests
         _ when type == typeof(Anchor) => Passage,
         _ when type == typeof(Definition) => new Definition("Terme", "Explication."),
         _ when type == typeof(VaultSecret) => VaultSecret.Password("un mot de passe d'essai"),
+        _ when type == typeof(RecoveryKeyDraft) => new RecoveryKeyDraft(@"C:\Coffre", "clé", default, default),
         _ when type == typeof(VaultPreferences) => new VaultPreferences([1, 3], true, 2, 30, [2, 4], false, true, true, false, [], false),
         _ when type == typeof(Func<VaultPreferences, VaultPreferences>) => (Func<VaultPreferences, VaultPreferences>)(preferences => preferences),
         _ when type.IsEnum => Enum.GetValues(type).GetValue(0),

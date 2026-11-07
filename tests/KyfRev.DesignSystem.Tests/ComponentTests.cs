@@ -99,6 +99,45 @@ public sealed class ComponentTests
     }
 
     [STATestMethod]
+    public void An_open_dialog_gives_the_focus_to_its_content_then_to_its_buttons()
+    {
+        var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
+        var field = new TextBox();
+        var dialog = new Dialog { Title = "Renommer la fiche", Content = field };
+        var host = Host.Of(design, dialog);
+        using var source = new HwndSource(new HwndSourceParameters("kyfRev essai") { Width = 480, Height = 320 }) { RootVisual = host };
+
+        dialog.IsOpen = true;
+        Host.Layout(host);
+        Host.Flush();
+
+        Assert.AreSame(field, FocusedIn(field), "le premier champ du contenu, pas « Annuler »");
+        var secondary = Host.Part<Button>(dialog, Dialog.SecondaryButtonPart);
+        var primary = Host.Part<Button>(dialog, Dialog.PrimaryButtonPart);
+        Assert.IsTrue(field.MoveFocus(new TraversalRequest(FocusNavigationDirection.Next)));
+        Assert.AreSame(secondary, FocusedIn(field), "puis les boutons, dans l'ordre où ils se lisent");
+        Assert.IsTrue(secondary.MoveFocus(new TraversalRequest(FocusNavigationDirection.Next)));
+        Assert.AreSame(primary, FocusedIn(field));
+        Assert.IsTrue(primary.MoveFocus(new TraversalRequest(FocusNavigationDirection.Next)));
+        Assert.AreSame(field, FocusedIn(field), "le focus reste dans le dialogue");
+        Assert.IsTrue(secondary.TranslatePoint(default, host).Y > field.TranslatePoint(default, host).Y, "les boutons restent sous le contenu");
+    }
+
+    [STATestMethod]
+    public void Enter_on_a_check_box_does_not_tick_it()
+    {
+        var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
+        var box = new CheckBox { Content = "Effacer pour de bon" };
+        var host = Host.Of(design, box);
+        using var source = new HwndSource(new HwndSourceParameters("kyfRev essai") { Width = 480, Height = 320 }) { RootVisual = host };
+        Host.Flush();
+
+        Assert.IsFalse(KeyboardNavigation.GetAcceptsReturn(box), "Entrée va au bouton par défaut");
+        box.RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, source, 0, Key.Enter) { RoutedEvent = Keyboard.KeyDownEvent });
+        Assert.IsFalse(box.IsChecked, "Entrée ne coche rien par mégarde");
+    }
+
+    [STATestMethod]
     [DataRow(ThemeKind.Light)]
     [DataRow(ThemeKind.Dark)]
     public void What_cannot_be_undone_shows_and_enter_does_not_trigger_it(ThemeKind theme)
@@ -282,6 +321,9 @@ public sealed class ComponentTests
     }
 
     private static AutomationPeer Peer(UIElement element) => UIElementAutomationPeer.CreatePeerForElement(element);
+
+    /// <summary>L'élément qui a le focus dans la portée de <paramref name="element"/>.</summary>
+    private static IInputElement? FocusedIn(DependencyObject element) => FocusManager.GetFocusedElement(FocusManager.GetFocusScope(element));
 
     [STATestMethod]
     public void A_selected_list_item_is_filled_and_bold_never_the_color_alone()

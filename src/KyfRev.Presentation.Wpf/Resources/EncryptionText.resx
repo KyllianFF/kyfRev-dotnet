@@ -31,13 +31,13 @@
     <value>Changer le mot de passe…</value>
   </data>
   <data name="ChangePasswordHelp" xml:space="preserve">
-    <value>Aucune fiche n'est réécrite. La clé de récupération et la clé retenue sur cet ordinateur restent valables ; les sauvegardes déjà faites s'ouvrent encore avec l'ancien mot de passe.</value>
+    <value>Aucune fiche n'est réécrite : la clé qui les chiffre reste la même. La clé de récupération et la clé retenue sur cet ordinateur restent valables. Les sauvegardes et les copies de ce coffre déjà faites s'ouvrent encore avec l'ancien mot de passe : s'il a été découvert, en changer ne suffit pas, il faut déchiffrer le coffre puis le chiffrer de nouveau.</value>
   </data>
   <data name="ChangePasswordTitle" xml:space="preserve">
     <value>Changer le mot de passe</value>
   </data>
-  <data name="Close" xml:space="preserve">
-    <value>Fermer</value>
+  <data name="CheckingRecoveryKey" xml:space="preserve">
+    <value>Vérification de la clé de récupération…</value>
   </data>
   <data name="ConfirmPassword" xml:space="preserve">
     <value>Confirmez le nouveau mot de passe</value>
@@ -76,7 +76,7 @@
     <value>{0} heure</value>
   </data>
   <data name="KeyCopied" xml:space="preserve">
-    <value>La clé est copiée. Le presse-papiers la garde jusqu'à la prochaine copie.</value>
+    <value>La clé est copiée. Le presse-papiers la garde jusqu'à la prochaine copie, sans la mettre dans son historique ni l'envoyer à vos autres appareils.</value>
   </data>
   <data name="KeyNotCopied" xml:space="preserve">
     <value>La clé n'a pas pu être copiée : sélectionnez-la dans le champ et recopiez-la à la main.</value>
@@ -85,7 +85,7 @@
     <value>J'ai rangé ma clé de récupération</value>
   </data>
   <data name="KeyStoredFirst" xml:space="preserve">
-    <value>Cochez « J'ai rangé ma clé de récupération » pour fermer : elle ne sera plus jamais affichée.</value>
+    <value>Cochez « J'ai rangé ma clé de récupération » pour l'enregistrer : elle ne sera plus jamais affichée. « Annuler » garde l'ancienne.</value>
   </data>
   <data name="LockAfter" xml:space="preserve">
     <value>Verrouillage automatique</value>
@@ -124,7 +124,7 @@
     <value>Créer une nouvelle clé de récupération…</value>
   </data>
   <data name="NewRecoveryKeyHelp" xml:space="preserve">
-    <value>Saisissez le mot de passe du coffre. La nouvelle clé remplace l'ancienne, qui n'ouvrira plus ce coffre.</value>
+    <value>Saisissez le mot de passe du coffre, ou sa clé de récupération actuelle. La nouvelle clé ne remplacera l'ancienne qu'une fois notée et enregistrée ; les sauvegardes et les copies faites avant s'ouvriront encore avec l'ancienne. Si celle-ci a été découverte, cela ne suffit pas : il faut déchiffrer le coffre puis le chiffrer de nouveau.</value>
   </data>
   <data name="NewRecoveryKeyTitle" xml:space="preserve">
     <value>Nouvelle clé de récupération</value>
@@ -133,7 +133,7 @@
     <value>Ce coffre n'a pas pu être ouvert.</value>
   </data>
   <data name="OldRecoveryKey" xml:space="preserve">
-    <value>L'ancienne clé de récupération n'ouvre plus ce coffre. Les sauvegardes faites avant s'ouvrent encore avec elle : gardez-la tant que vous gardez ces sauvegardes.</value>
+    <value>Rien n'a changé tant que cette clé n'est pas enregistrée. Ensuite, l'ancienne n'ouvrira plus ce coffre ; les sauvegardes et les copies faites avant s'ouvriront encore avec elle : gardez-la tant que vous les gardez.</value>
   </data>
   <data name="OtherVault" xml:space="preserve">
     <value>Ouvrir un autre coffre…</value>
@@ -142,13 +142,16 @@
     <value>Mot de passe</value>
   </data>
   <data name="PasswordChanged" xml:space="preserve">
-    <value>Le mot de passe est changé : l'ancien n'ouvre plus ce coffre.</value>
+    <value>Le mot de passe est changé. L'ancien n'ouvre plus ce coffre, mais il ouvre encore les sauvegardes et les copies faites avant.</value>
+  </data>
+  <data name="PasswordChangedWhileLocking" xml:space="preserve">
+    <value>Le mot de passe a été changé juste avant le verrouillage : c'est le nouveau qui ouvre ce coffre. L'ancien ouvre encore les sauvegardes et les copies faites avant.</value>
   </data>
   <data name="PasswordLength" xml:space="preserve">
     <value>Au moins {0} caractères.</value>
   </data>
   <data name="RecoveryHelp" xml:space="preserve">
-    <value>Les 14 groupes de 4 caractères notés quand le coffre a été chiffré. Les tirets, les espaces et les majuscules ne comptent pas.</value>
+    <value>Les 14 groupes de 4 caractères de la dernière clé de récupération enregistrée : celle donnée au chiffrement du coffre, ou la dernière enregistrée depuis la carte Chiffrement. Les tirets, les espaces et les majuscules ne comptent pas.</value>
   </data>
   <data name="RecoveryIntro" xml:space="preserve">
     <value>Sans son mot de passe, sa clé de récupération l'ouvre.</value>
@@ -157,7 +160,16 @@
     <value>Clé de récupération</value>
   </data>
   <data name="RecoveryKeyCreated" xml:space="preserve">
-    <value>La nouvelle clé de récupération est créée : l'ancienne n'ouvre plus ce coffre.</value>
+    <value>La nouvelle clé de récupération est enregistrée. L'ancienne n'ouvre plus ce coffre, mais elle ouvre encore les sauvegardes et les copies faites avant.</value>
+  </data>
+  <data name="RecoveryKeyKept" xml:space="preserve">
+    <value>Rien n'a changé : l'ancienne clé de récupération ouvre toujours ce coffre.</value>
+  </data>
+  <data name="RecoveryKeyNotSaved" xml:space="preserve">
+    <value>La nouvelle clé de récupération n'a pas été enregistrée avant le verrouillage : l'ancienne ouvre toujours ce coffre. Créez-en une autre pour la remplacer.</value>
+  </data>
+  <data name="RecoveryKeySavedWhileLocking" xml:space="preserve">
+    <value>La nouvelle clé de récupération a été enregistrée juste avant le verrouillage. L'ancienne n'ouvre plus ce coffre, mais elle ouvre encore les sauvegardes et les copies faites avant.</value>
   </data>
   <data name="RecoveryKeyShown" xml:space="preserve">
     <value>Notez-la ou imprimez-la, et rangez-la loin de cet ordinateur : elle ne sera plus jamais affichée. Sans le mot de passe, elle seule ouvre le coffre.</value>
@@ -165,14 +177,11 @@
   <data name="RecoveryKeyShownTitle" xml:space="preserve">
     <value>Votre clé de récupération</value>
   </data>
-  <data name="RecoveryKeyUnseen" xml:space="preserve">
-    <value>Une nouvelle clé de récupération a été créée pendant le verrouillage, sans être affichée : l'ancienne n'ouvre plus ce coffre. Créez-en une autre pour la voir et la ranger.</value>
-  </data>
   <data name="Remember" xml:space="preserve">
     <value>Se souvenir sur cet ordinateur</value>
   </data>
   <data name="RememberAsk" xml:space="preserve">
-    <value>Saisissez le mot de passe du coffre : Windows en gardera la clé pour votre session.</value>
+    <value>Saisissez le mot de passe du coffre, ou sa clé de récupération : Windows en gardera la clé pour votre session.</value>
   </data>
   <data name="RememberButton" xml:space="preserve">
     <value>Retenir</value>
@@ -183,6 +192,12 @@
   <data name="RememberHelp" xml:space="preserve">
     <value>Windows garde la clé pour votre session : le coffre s'ouvrira sans mot de passe. Un autre compte, ou ce coffre copié ailleurs, ne peut pas s'en servir ; quelqu'un qui utilise votre session, si.</value>
   </data>
+  <data name="SaveRecoveryKey" xml:space="preserve">
+    <value>Enregistrer cette clé</value>
+  </data>
+  <data name="SavingRecoveryKey" xml:space="preserve">
+    <value>Enregistrement de la nouvelle clé de récupération…</value>
+  </data>
   <data name="Unlock" xml:space="preserve">
     <value>Ouvrir</value>
   </data>
@@ -191,5 +206,8 @@
   </data>
   <data name="UsePassword" xml:space="preserve">
     <value>Ouvrir avec le mot de passe</value>
+  </data>
+  <data name="WithRecoveryKey" xml:space="preserve">
+    <value>J'utilise la clé de récupération</value>
   </data>
 </root>

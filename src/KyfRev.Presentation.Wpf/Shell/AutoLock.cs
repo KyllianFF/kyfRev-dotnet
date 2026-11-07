@@ -29,7 +29,10 @@ public sealed class AutoLock : IDisposable
 
     /// <summary>Le verrouillage de lui-même, sur le fil de l'interface de <paramref name="dispatcher"/> (celui qui le crée par défaut).</summary>
     /// <param name="presence">La présence de l'utilisateur.</param>
-    /// <param name="delay">Le délai sans rien toucher ; rien : jamais sur l'inactivité (le départ de l'utilisateur verrouille toujours).</param>
+    /// <param name="delay">
+    /// Le délai sans rien toucher ; rien : jamais sur l'inactivité (le départ de l'utilisateur verrouille toujours). Il est lu
+    /// à chaque regard, sur le fil de l'interface : il ne touche pas au coffre (<see cref="LockDelay"/>).
+    /// </param>
     /// <param name="lockAsync">Ce qui verrouille (<see cref="VaultLocking.LockAsync"/>) ; faux s'il n'y avait rien à verrouiller.</param>
     /// <param name="dispatcher">Le fil de l'interface.</param>
     /// <param name="clock">L'horloge en millisecondes ; rien : celle du système.</param>

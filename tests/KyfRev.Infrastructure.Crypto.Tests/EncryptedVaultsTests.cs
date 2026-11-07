@@ -366,8 +366,8 @@ public sealed class EncryptedVaultsTests
         Assert.AreEqual(
             "Le mot de passe doit faire au moins 12 caractères.",
             Assert.ThrowsExactly<VaultCryptoException>(() => vaults.ChangePassword(place.Vault, VaultSecret.Password(Password), "onze carac.")).Message);
-        Assert.AreEqual("Mot de passe incorrect.", Assert.ThrowsExactly<VaultCryptoException>(() => vaults.NewRecoveryKey(place.Vault, VaultSecret.Password("pas le bon"))).Message);
-        Assert.Contains("introuvable", Assert.ThrowsExactly<VaultCryptoException>(() => vaults.NewRecoveryKey(place.Root, VaultSecret.Password(Password))).Message);
+        Assert.AreEqual("Mot de passe incorrect.", Assert.ThrowsExactly<VaultCryptoException>(() => vaults.DraftRecoveryKey(place.Vault, VaultSecret.Password("pas le bon"))).Message);
+        Assert.Contains("introuvable", Assert.ThrowsExactly<VaultCryptoException>(() => vaults.DraftRecoveryKey(place.Root, VaultSecret.Password(Password))).Message);
 
         CollectionAssert.AreEqual(before, File.ReadAllBytes(header), "l'en-tête n'a pas changé");
         using var key = vaults.KeyOf(place.Vault, VaultSecret.Password(Password));
@@ -386,7 +386,8 @@ public sealed class EncryptedVaultsTests
         // Un autre programme le tient ouvert en lecture : il se lit, mais ne se remplace pas.
         using (new FileStream(header, FileMode.Open, FileAccess.Read, FileShare.Read))
         {
-            Assert.Contains("n'a pas pu être écrit", Assert.ThrowsExactly<VaultCryptoException>(() => vaults.NewRecoveryKey(place.Vault, VaultSecret.Password(Password))).Message);
+            var draft = vaults.DraftRecoveryKey(place.Vault, VaultSecret.Password(Password));
+            Assert.Contains("l'ancienne reste valable", Assert.ThrowsExactly<VaultCryptoException>(() => vaults.SaveRecoveryKey(draft)).Message);
         }
 
         CollectionAssert.AreEqual(before, File.ReadAllBytes(header));
@@ -407,7 +408,7 @@ public sealed class EncryptedVaultsTests
         }
         var before = FilesBesideTheHeader(place.Vault);
 
-        var fresh = vaults.NewRecoveryKey(place.Vault, VaultSecret.Password(Password));
+        var fresh = Saved(vaults, place.Vault, VaultSecret.Password(Password));
 
         var groups = fresh.Split('-');
         Assert.HasCount(14, groups);
@@ -429,11 +430,59 @@ public sealed class EncryptedVaultsTests
         AssertSameFiles(before, FilesBesideTheHeader(place.Vault), "seul l'en-tête est réécrit");
 
         // La clé de récupération en donne elle-même une autre : elle n'ouvre plus rien ensuite.
-        var third = vaults.NewRecoveryKey(place.Vault, VaultSecret.RecoveryKey(fresh));
+        var third = Saved(vaults, place.Vault, VaultSecret.RecoveryKey(fresh));
         Assert.ThrowsExactly<VaultCryptoException>(() => vaults.KeyOf(place.Vault, VaultSecret.RecoveryKey(fresh)));
-        Assert.ThrowsExactly<VaultCryptoException>(() => vaults.NewRecoveryKey(place.Vault, VaultSecret.RecoveryKey(fresh)));
+        Assert.ThrowsExactly<VaultCryptoException>(() => vaults.DraftRecoveryKey(place.Vault, VaultSecret.RecoveryKey(fresh)));
         using var last = vaults.KeyOf(place.Vault, VaultSecret.RecoveryKey(third));
         CollectionAssert.AreEqual(Shared.Value.Key, last.Bytes.ToArray());
+    }
+
+    [TestMethod]
+    public void A_prepared_recovery_key_changes_nothing_until_saved_and_only_over_the_header_it_read()
+    {
+        using var place = new Place();
+        place.CreateEncrypted();
+        var vaults = place.Vaults();
+        var header = Path.Combine(place.Vault, EncryptedVault.HeaderFile);
+        var before = File.ReadAllBytes(header);
+
+        // Préparée : rien n'est écrit, l'ancienne clé ouvre toujours le coffre, et la nouvelle pas encore.
+        var draft = vaults.DraftRecoveryKey(place.Vault, VaultSecret.Password(Password));
+        Assert.AreEqual(place.Vault, draft.Root);
+        CollectionAssert.AreEqual(before, draft.Replaces.ToArray(), "l'en-tête lu à la préparation");
+        CollectionAssert.AreEqual(before, File.ReadAllBytes(header));
+        Assert.AreEqual("clé de récupération préparée", draft.ToString(), "la clé ne se lit pas dans un journal");
+        using (var key = vaults.KeyOf(place.Vault, VaultSecret.RecoveryKey(Shared.Value.Recovery)))
+        {
+            CollectionAssert.AreEqual(Shared.Value.Key, key.Bytes.ToArray());
+        }
+        Assert.ThrowsExactly<VaultCryptoException>(() => vaults.KeyOf(place.Vault, VaultSecret.RecoveryKey(draft.Key)));
+
+        // L'en-tête a changé depuis (un autre mot de passe, une autre clé) : elle n'est pas enregistrée.
+        var other = vaults.DraftRecoveryKey(place.Vault, VaultSecret.Password(Password));
+        vaults.SaveRecoveryKey(other);
+        var saved = File.ReadAllBytes(header);
+        Assert.Contains("a changé", Assert.ThrowsExactly<VaultCryptoException>(() => vaults.SaveRecoveryKey(draft)).Message);
+        CollectionAssert.AreEqual(saved, File.ReadAllBytes(header), "l'en-tête enregistré entre-temps reste");
+        Assert.ThrowsExactly<VaultCryptoException>(() => vaults.KeyOf(place.Vault, VaultSecret.RecoveryKey(draft.Key)));
+        using (var key = vaults.KeyOf(place.Vault, VaultSecret.RecoveryKey(other.Key)))
+        {
+            CollectionAssert.AreEqual(Shared.Value.Key, key.Bytes.ToArray());
+        }
+
+        // Un en-tête qui ne se lit plus : rien n'est enregistré.
+        var last = vaults.DraftRecoveryKey(place.Vault, VaultSecret.Password(Password));
+        File.Move(header, header + ".ailleurs");
+        Assert.Contains("ne se lit plus", Assert.ThrowsExactly<VaultCryptoException>(() => vaults.SaveRecoveryKey(last)).Message);
+        Assert.IsFalse(File.Exists(header), "rien n'est écrit à sa place");
+    }
+
+    /// <summary>Une clé de récupération préparée puis enregistrée : la clé à noter.</summary>
+    private static string Saved(EncryptedVaults vaults, string root, VaultSecret secret)
+    {
+        var draft = vaults.DraftRecoveryKey(root, secret);
+        vaults.SaveRecoveryKey(draft);
+        return draft.Key;
     }
 
     [TestMethod]

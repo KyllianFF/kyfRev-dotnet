@@ -30,16 +30,18 @@ public sealed class EncryptionUseCasesTests
         using var scene = new Scene();
         var encryption = scene.App.Encryption;
 
+        Assert.IsNull(encryption.Vault);
         Assert.IsFalse(encryption.IsRemembered);
         Assert.AreEqual(VaultHost.NoVaultOpen, encryption.ChangePassword(VaultSecret.Password(Password), NewPassword, NewPassword).Error);
-        Assert.AreEqual(VaultHost.NoVaultOpen, encryption.NewRecoveryKey(VaultSecret.Password(Password)).Error);
+        Assert.AreEqual(VaultHost.NoVaultOpen, encryption.DraftRecoveryKey(VaultSecret.Password(Password)).Error);
+        Assert.AreEqual(VaultHost.NoVaultOpen, encryption.SaveRecoveryKey(new RecoveryKeyDraft(scene.Folder.Vault, "clé", default, default)).Error);
         Assert.AreEqual(VaultHost.NoVaultOpen, encryption.Remember(VaultSecret.Password(Password)).Error);
         Assert.AreEqual(VaultHost.NoVaultOpen, encryption.Forget().Error);
 
         // Un coffre chiffré qui attend sa clé n'est pas ouvert.
         scene.CreateEncrypted();
         Assert.AreEqual(scene.Folder.Vault, scene.App.Vaults.Open(scene.Folder.Vault).Locked);
-        Assert.AreEqual(VaultHost.NoVaultOpen, encryption.NewRecoveryKey(VaultSecret.Password(Password)).Error);
+        Assert.AreEqual(VaultHost.NoVaultOpen, encryption.DraftRecoveryKey(VaultSecret.Password(Password)).Error);
         Assert.AreEqual(VaultHost.NoVaultOpen, encryption.Remember(VaultSecret.Password(Password)).Error);
         Assert.IsFalse(File.Exists(Path.Combine(scene.LocalData, RememberedKeys.FileName)), "rien n'est retenu");
     }
@@ -52,9 +54,11 @@ public sealed class EncryptionUseCasesTests
         Assert.AreEqual(plain, scene.App.Vaults.Create(plain).Vault);
         var encryption = scene.App.Encryption;
 
+        Assert.AreEqual(plain, encryption.Vault, "le coffre ouvert, même en clair");
         Assert.IsFalse(encryption.IsRemembered);
         Assert.AreEqual(EncryptionUseCases.NotEncrypted, encryption.ChangePassword(VaultSecret.Password(Password), NewPassword, NewPassword).Error);
-        Assert.AreEqual(EncryptionUseCases.NotEncrypted, encryption.NewRecoveryKey(VaultSecret.Password(Password)).Error);
+        Assert.AreEqual(EncryptionUseCases.NotEncrypted, encryption.DraftRecoveryKey(VaultSecret.Password(Password)).Error);
+        Assert.AreEqual(EncryptionUseCases.NotEncrypted, encryption.SaveRecoveryKey(new RecoveryKeyDraft(plain, "clé", default, default)).Error);
         Assert.AreEqual(EncryptionUseCases.NotEncrypted, encryption.Remember(VaultSecret.Password(Password)).Error);
         Assert.IsTrue(encryption.Forget().Succeeded, "rien à oublier n'est pas un refus");
         Assert.IsFalse(File.Exists(Path.Combine(plain, EncryptedVault.HeaderFile)), "rien n'a été écrit");
@@ -65,7 +69,7 @@ public sealed class EncryptionUseCasesTests
         Assert.AreEqual(folder.Vault, bare.App.Vaults.Create(folder.Vault).Vault);
         Assert.IsFalse(bare.App.Encryption.IsRemembered);
         Assert.AreEqual(EncryptionUseCases.NotEncrypted, bare.App.Encryption.ChangePassword(VaultSecret.Password(Password), NewPassword, NewPassword).Error);
-        Assert.AreEqual(EncryptionUseCases.NotEncrypted, bare.App.Encryption.NewRecoveryKey(VaultSecret.Password(Password)).Error);
+        Assert.AreEqual(EncryptionUseCases.NotEncrypted, bare.App.Encryption.DraftRecoveryKey(VaultSecret.Password(Password)).Error);
         Assert.AreEqual(EncryptionUseCases.NotEncrypted, bare.App.Encryption.Remember(VaultSecret.Password(Password)).Error);
         Assert.IsTrue(bare.App.Encryption.Forget().Succeeded);
     }
@@ -109,16 +113,22 @@ public sealed class EncryptionUseCasesTests
         Assert.AreEqual(scene.Folder.Vault, scene.App.Vaults.Unlock(scene.Folder.Vault, VaultSecret.Password(Password), remember: false).Vault);
         var encryption = scene.App.Encryption;
 
-        Assert.AreEqual("Mot de passe incorrect.", encryption.NewRecoveryKey(VaultSecret.Password("pas le bon")).Error);
-        Assert.Contains("faute de frappe", encryption.NewRecoveryKey(VaultSecret.RecoveryKey("ABCD-EFGH")).Error ?? string.Empty);
-        var fresh = encryption.NewRecoveryKey(VaultSecret.Password(Password));
+        Assert.AreEqual("Mot de passe incorrect.", encryption.DraftRecoveryKey(VaultSecret.Password("pas le bon")).Error);
+        Assert.Contains("faute de frappe", encryption.DraftRecoveryKey(VaultSecret.RecoveryKey("ABCD-EFGH")).Error ?? string.Empty);
+        var draft = encryption.DraftRecoveryKey(VaultSecret.Password(Password));
 
-        Assert.IsTrue(fresh.Succeeded);
-        Assert.HasCount(14, fresh.Value.Split('-'), "14 groupes de quatre caractères");
-        Assert.AreNotEqual(Shared.Value.Recovery, fresh.Value);
+        Assert.IsTrue(draft.Succeeded);
+        Assert.HasCount(14, draft.Value.Key.Split('-'), "14 groupes de quatre caractères");
+        Assert.AreNotEqual(Shared.Value.Recovery, draft.Value.Key);
+        // Préparée pour un autre coffre, elle n'est pas enregistrée dans celui-ci.
+        var elsewhere = new RecoveryKeyDraft(scene.Folder.PathOf("Ailleurs"), draft.Value.Key, draft.Value.Header, draft.Value.Replaces);
+        Assert.AreEqual(EncryptionUseCases.OtherVault, encryption.SaveRecoveryKey(elsewhere).Error);
+        Assert.IsTrue(encryption.SaveRecoveryKey(draft.Value).Succeeded);
+        Assert.Contains("a changé", encryption.SaveRecoveryKey(draft.Value).Error ?? string.Empty, "une seule fois : l'en-tête n'est plus celui qu'elle a lu");
+        var fresh = draft.Value.Key;
         Assert.AreEqual(scene.Folder.Vault, scene.App.Vaults.Lock().Locked);
         Assert.Contains("plus la bonne", scene.App.Vaults.Unlock(scene.Folder.Vault, VaultSecret.RecoveryKey(Shared.Value.Recovery), remember: false).OpenError ?? string.Empty);
-        Assert.AreEqual(scene.Folder.Vault, scene.App.Vaults.Unlock(scene.Folder.Vault, VaultSecret.RecoveryKey(fresh.Value), remember: false).Vault);
+        Assert.AreEqual(scene.Folder.Vault, scene.App.Vaults.Unlock(scene.Folder.Vault, VaultSecret.RecoveryKey(fresh), remember: false).Vault);
     }
 
     [TestMethod]
@@ -175,7 +185,10 @@ public sealed class EncryptionUseCasesTests
         var keys = new NoVaultKeys();
         Assert.IsFalse(keys.IsRemembered("C:\\Coffre"));
         Assert.ThrowsExactly<NotSupportedException>(() => keys.ChangePassword("C:\\Coffre", VaultSecret.Password(Password), NewPassword));
-        Assert.ThrowsExactly<NotSupportedException>(() => keys.NewRecoveryKey("C:\\Coffre", VaultSecret.Password(Password)));
+        Assert.ThrowsExactly<NotSupportedException>(() => keys.DraftRecoveryKey("C:\\Coffre", VaultSecret.Password(Password)));
+        Assert.ThrowsExactly<NotSupportedException>(() => keys.SaveRecoveryKey(new RecoveryKeyDraft("C:\\Coffre", "clé", default, default)));
+        Assert.ThrowsExactly<ArgumentNullException>(() => new RecoveryKeyDraft(null!, "clé", default, default));
+        Assert.ThrowsExactly<ArgumentNullException>(() => new RecoveryKeyDraft("C:\\Coffre", null!, default, default));
     }
 
     /// <summary>L'application assemblée comme celle du poste : les coffres en clair et chiffrés, et leurs clés.</summary>

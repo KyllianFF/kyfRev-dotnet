@@ -11,12 +11,17 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 - Coffre chiffré, lot 3 : la carte Chiffrement, dans Paramètres › Données, pour un coffre chiffré. « Changer le mot de
   passe… » ne réécrit aucune fiche : seule l'enveloppe de la clé change, et la clé de récupération comme la clé retenue
-  restent valables. « Créer une nouvelle clé de récupération… » la montre une seule fois, à copier et à ranger avant de
-  fermer ; l'ancienne n'ouvre plus le coffre, mais les sauvegardes déjà faites s'ouvrent encore avec elle. « Se souvenir
-  sur cet ordinateur » se coche (avec le mot de passe) ou se décoche. « Verrouiller après » se règle : 5, 15, 30 minutes,
-  une heure ou jamais ; le réglage est dans le coffre (`verrouillage.apresMinutes` de `.suivi/coffre.json`, écrit
-  seulement s'il diffère des 15 minutes par défaut), et le verrouillage de lui-même le suit. « Verrouiller maintenant »
-  fait comme Ctrl+Maj+L.
+  restent valables. « Créer une nouvelle clé de récupération… » la prépare sans rien écrire et la montre une seule fois :
+  elle ne remplace l'ancienne qu'une fois rangée et enregistrée ; annulée, ou interrompue par un verrouillage, elle ne
+  change rien. Enregistrée, l'ancienne n'ouvre plus le coffre, mais les sauvegardes et les copies faites avant s'ouvrent
+  encore avec elle. « Se souvenir sur cet ordinateur » se coche (avec le mot de passe) ou se décoche. Chaque fenêtre
+  accepte aussi la clé de récupération, quand le mot de passe est perdu. « Verrouillage automatique » se règle : 5, 15,
+  30 minutes, une heure ou jamais ; le réglage est dans le coffre (`verrouillage.apresMinutes` de `.suivi/coffre.json`,
+  écrit seulement s'il diffère des 15 minutes par défaut), et le verrouillage de lui-même le suit sans relire le coffre.
+  « Verrouiller maintenant » fait comme Ctrl+Maj+L. La clé copiée ne va ni dans l'historique du presse-papiers ni sur les
+  autres appareils. Un mot de passe changé pendant un verrouillage se dit à la prochaine lecture de ce coffre.
+- Les dialogues donnent le focus à leur premier champ, puis à leurs boutons : « Annuler » ne passe plus devant. Entrée
+  sur une case à cocher choisit le bouton par défaut au lieu de la cocher ; Espace la coche.
 - Coffre chiffré, lot 3 : le coffre chiffré se verrouille. Ctrl+Maj+L (ou « Verrouiller le coffre chiffré » dans la
   recherche) le fait à la demande ; il se verrouille de lui-même après 15 minutes sans rien toucher dans toute la session
   de Windows, ce qui se tape dans le texte mis en forme compris, et dès que Windows se verrouille ou que le poste se met en

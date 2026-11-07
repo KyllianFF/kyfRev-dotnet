@@ -53,16 +53,26 @@ public interface IVaultKeys
     void ChangePassword(string root, VaultSecret current, string newPassword);
 
     /// <summary>
-    /// Donne au coffre chiffré de <paramref name="root"/> une clé de récupération neuve, rendue écrite (14 groupes de
-    /// quatre caractères) pour être notée : l'ancienne ne l'ouvre plus. Seul son en-tête est réécrit, d'un coup ; le mot
-    /// de passe et la clé retenue sur ce poste l'ouvrent toujours.
+    /// Prépare une clé de récupération neuve pour le coffre chiffré de <paramref name="root"/>, sans rien écrire : le secret
+    /// ouvre son en-tête, et la même clé de données est enveloppée par la nouvelle clé, rendue écrite (14 groupes de quatre
+    /// caractères) pour être notée. Tant qu'elle n'est pas enregistrée (<see cref="SaveRecoveryKey"/>), l'ancienne reste
+    /// la seule qui ouvre le coffre : une préparation abandonnée (un verrouillage, l'application fermée) ne change rien.
     /// </summary>
     /// <param name="root">Le dossier du coffre chiffré.</param>
     /// <param name="secret">Son mot de passe, ou sa clé de récupération actuelle.</param>
+    /// <exception cref="OperationException">Le secret n'ouvre pas le coffre, ou l'en-tête ne se lit pas : rien n'est préparé.</exception>
+    RecoveryKeyDraft DraftRecoveryKey(string root, VaultSecret secret);
+
+    /// <summary>
+    /// Enregistre la clé de récupération préparée par <see cref="DraftRecoveryKey"/> : seul l'en-tête du coffre est
+    /// réécrit, d'un coup, et l'ancienne clé ne l'ouvre plus ; le mot de passe et la clé retenue sur ce poste, si.
+    /// </summary>
+    /// <param name="draft">La clé préparée.</param>
     /// <exception cref="OperationException">
-    /// Le secret n'ouvre pas le coffre, ou l'en-tête ne se lit pas ou ne s'écrit pas : rien n'a changé.
+    /// L'en-tête a changé depuis la préparation, ou il ne se lit pas ou ne s'écrit pas : rien n'a changé, l'ancienne clé
+    /// reste valable.
     /// </exception>
-    string NewRecoveryKey(string root, VaultSecret secret);
+    void SaveRecoveryKey(RecoveryKeyDraft draft);
 }
 
 /// <summary>Sans chiffrement : aucun coffre n'est chiffré (l'application assemblée sans lui, les essais).</summary>
@@ -93,7 +103,37 @@ public sealed class NoVaultKeys : IVaultKeys
 
     /// <summary>Jamais appelé : aucun coffre n'est chiffré.</summary>
     /// <exception cref="NotSupportedException">Toujours.</exception>
-    public string NewRecoveryKey(string root, VaultSecret secret) => throw new NotSupportedException("Aucun coffre chiffré ne s'ouvre ici.");
+    public RecoveryKeyDraft DraftRecoveryKey(string root, VaultSecret secret) => throw new NotSupportedException("Aucun coffre chiffré ne s'ouvre ici.");
+
+    /// <summary>Jamais appelé : aucun coffre n'est chiffré.</summary>
+    /// <exception cref="NotSupportedException">Toujours.</exception>
+    public void SaveRecoveryKey(RecoveryKeyDraft draft) => throw new NotSupportedException("Aucun coffre chiffré ne s'ouvre ici.");
+}
+
+/// <summary>
+/// Une clé de récupération préparée, pas encore enregistrée (<see cref="IVaultKeys.DraftRecoveryKey"/>) : la clé à noter,
+/// l'en-tête qui l'enveloppe, et l'en-tête qu'il remplacera, tel qu'il a été lu. Abandonnée, elle ne change rien.
+/// </summary>
+/// <param name="root">Le dossier du coffre chiffré.</param>
+/// <param name="key">La nouvelle clé de récupération, écrite en 14 groupes de quatre caractères.</param>
+/// <param name="header">L'en-tête qui l'enveloppe, à écrire tel quel.</param>
+/// <param name="replaces">L'en-tête lu à la préparation : il doit être toujours là pour être remplacé.</param>
+public sealed class RecoveryKeyDraft(string root, string key, ReadOnlyMemory<byte> header, ReadOnlyMemory<byte> replaces)
+{
+    /// <summary>Le dossier du coffre chiffré.</summary>
+    public string Root { get; } = root ?? throw new ArgumentNullException(nameof(root));
+
+    /// <summary>La nouvelle clé de récupération, à noter.</summary>
+    public string Key { get; } = key ?? throw new ArgumentNullException(nameof(key));
+
+    /// <summary>L'en-tête qui l'enveloppe.</summary>
+    public ReadOnlyMemory<byte> Header { get; } = header;
+
+    /// <summary>L'en-tête qu'il remplacera, tel qu'il a été lu.</summary>
+    public ReadOnlyMemory<byte> Replaces { get; } = replaces;
+
+    /// <summary>Ce que c'est, jamais la clé.</summary>
+    public override string ToString() => "clé de récupération préparée";
 }
 
 /// <summary>Ce qui ouvre un coffre chiffré : son mot de passe, ou sa clé de récupération. Son texte ne s'affiche jamais.</summary>
