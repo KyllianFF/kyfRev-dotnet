@@ -242,6 +242,36 @@ public sealed class EncryptedStorageTests
     }
 
     [TestMethod]
+    public void A_lower_case_twin_of_an_object_stays_out_of_backups()
+    {
+        using var folder = new TemporaryFolder();
+        using var storage = NewStorage(folder.Root);
+        var a = Path.Combine(folder.Root, "a.md");
+        storage.Replace(a, One);
+        var objectFile = storage.ObjectFileOf(a);
+        var twin = Path.Combine(Path.GetDirectoryName(objectFile)!, new string([.. Path.GetFileName(objectFile).Select(char.ToLowerInvariant)]));
+        var header = Path.Combine(folder.Root, EncryptedVault.HeaderFile);
+        var index = Path.Combine(folder.Root, EncryptedVault.IndexFile);
+
+        // Dans un dossier sensible à la casse (copié depuis WSL), l'objet et un jumeau en minuscules sont côte à côte : un
+        // seul part dans la sauvegarde, l'écriture exacte d'abord.
+        CollectionAssert.AreEquivalent(new[] { header, index, objectFile }, storage.FilesToBackUp([header, index, twin, objectFile]).ToList());
+        CollectionAssert.AreEquivalent(new[] { header, index, twin }, storage.FilesToBackUp([header, index, twin]).ToList(), "sans l'écriture exacte, le jumeau la remplace");
+
+        // Une archive qui les contient tous deux se lit par l'écriture exacte.
+        var sealedObject = File.ReadAllBytes(objectFile);
+        var name = Path.GetRelativePath(folder.Root, objectFile).Replace('\\', '/');
+        var twinName = Path.GetRelativePath(folder.Root, twin).Replace('\\', '/');
+        List<StoredFile> archive =
+        [
+            .. RawFiles(folder.Root).Where(file => !file.Path.StartsWith(EncryptedVault.Objects, StringComparison.Ordinal)),
+            new(twinName, 3, () => [1, 2, 3]),
+            new(name, sealedObject.Length, () => sealedObject),
+        ];
+        CollectionAssert.AreEqual(One, Assert.ContainsSingle(storage.FilesOfBackup(archive, "jumeaux.zip")).Read());
+    }
+
+    [TestMethod]
     public void A_backup_reads_through_its_index_and_refuses_another_vault()
     {
         using var folder = new TemporaryFolder();

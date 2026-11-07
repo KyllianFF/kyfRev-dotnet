@@ -466,7 +466,7 @@ public sealed class EncryptedVault : IDisposable
     }
 
     /// <summary>Les objets que l'index nomme : les seuls qu'une sauvegarde recopie. Leur casse ne compte pas, comme pour NTFS.</summary>
-    internal IReadOnlySet<string> NamedObjects => _files.Values.Select(entry => entry.Object).ToHashSet(StringComparer.OrdinalIgnoreCase);
+    internal HashSet<string> NamedObjects => _files.Values.Select(entry => entry.Object).ToHashSet(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>Le fichier de l'objet de <paramref name="path"/>, pour les essais.</summary>
     internal string ObjectFileOf(string path) => ObjectPath(EntryOf(path).Object);
