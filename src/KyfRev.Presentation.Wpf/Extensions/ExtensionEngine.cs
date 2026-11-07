@@ -78,6 +78,7 @@ public sealed class ExtensionEngine : IDisposable, IExtensionFaults
     private readonly Dictionary<int, Pending> _pending = [];
     private readonly Dictionary<string, TaskCompletionSource<string?>> _frames = new(StringComparer.Ordinal);
     private readonly HashSet<string> _waitingOnUser = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, TaskCompletionSource> _answeredByUser = new(StringComparer.Ordinal);
     private TaskCompletionSource? _ready;
     private Task? _starting;
     private HwndSource? _window;
@@ -287,16 +288,37 @@ public sealed class ExtensionEngine : IDisposable, IExtensionFaults
         var answer = new TaskCompletionSource<ExtensionAnswer>(TaskCreationOptions.RunContinuationsAsynchronously);
         _pending[n] = new Pending(id, manifest.Name, answer);
         Post(new { kind = "vers-cadre", id, message = message(n) });
-        // Une extension qui attend l'utilisateur (une sélection guidée) n'est pas bloquée : le temps repart quand il a répondu.
-        while (await Task.WhenAny(answer.Task, Task.Delay(Patience)).ConfigureAwait(true) != answer.Task)
+        // Une extension qui attend l'utilisateur (une sélection guidée) n'est pas bloquée, et quand il a répondu, elle a de
+        // nouveau toute sa patience : pas seulement le reste de celle qui courait.
+        var answered = AnsweredByUser(id);
+        while (true)
         {
-            if (!_waitingOnUser.Contains(id))
+            var finished = await Task.WhenAny(answer.Task, Task.Delay(Patience), answered).ConfigureAwait(true);
+            if (finished == answer.Task)
+            {
+                return await answer.Task.ConfigureAwait(true);
+            }
+            if (finished == answered)
+            {
+                answered = AnsweredByUser(id);
+            }
+            else if (!_waitingOnUser.Contains(id))
             {
                 Stop();
                 return new ExtensionAnswer(null, $"extension « {manifest.Name} » : pas de réponse");
             }
         }
-        return await answer.Task.ConfigureAwait(true);
+    }
+
+    /// <summary>Se termine la prochaine fois que l'utilisateur aura répondu à cette extension.</summary>
+    private Task AnsweredByUser(string id)
+    {
+        if (!_answeredByUser.TryGetValue(id, out var answered))
+        {
+            answered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            _answeredByUser[id] = answered;
+        }
+        return answered.Task;
     }
 
     /// <summary>Crée le cadre d'une extension au premier usage et charge son script ; rend ce qui l'en empêche.</summary>
@@ -596,6 +618,10 @@ public sealed class ExtensionEngine : IDisposable, IExtensionFaults
         finally
         {
             _waitingOnUser.Remove(id);
+            if (_answeredByUser.Remove(id, out var answered))
+            {
+                answered.TrySetResult();
+            }
         }
     }
 
