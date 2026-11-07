@@ -86,4 +86,62 @@ public sealed class EncryptedSessionTests
         Assert.DoesNotContain(Path.GetFileName(objectFile), objects, "l'objet que l'index ne nomme plus n'est pas sauvegardé");
         Assert.HasCount(backup.FileCount, objects, "un objet par fichier du coffre, et rien d'autre");
     }
+
+    [TestMethod]
+    public void A_purge_goes_on_past_an_object_that_stays_and_says_so_at_the_end()
+    {
+        foreach (var held in new[] { ".json", ".annotations.json" })
+        {
+            using var folder = TemporaryVault.Empty(StorageKind.Encrypted);
+            using var vault = folder.Initialize(Now);
+            var id = vault.CreateSheet(null, "Mitose", "Le corps.", Now);
+            vault.CreateAnnotation(id, new Format.StoredAnchor("Le", string.Empty, " corps.", 0, 2, [], null, "sha256:x", Format.UnknownProperties.None), null, Now);
+            vault.TrashSheet(id, Now);
+            var tracking = $".suivi/corbeille/{id}.json";
+            var annotations = $".suivi/corbeille/{id}.annotations.json";
+            var relative = $".suivi/corbeille/{id}{held}";
+            var objectFile = ObjectFileOf(folder, relative);
+
+            // Un antivirus tient l'objet : il se lit, mais ne s'efface pas.
+            VaultException error;
+            using (folder.Hold(relative, FileShare.Read))
+            {
+                error = Assert.ThrowsExactly<VaultException>(() => vault.PurgeSheet(id));
+            }
+
+            Assert.AreEqual(VaultErrorKind.Io, error.Kind, held);
+            Assert.Contains(Path.GetFileName(objectFile), error.Message, held);
+            Assert.IsFalse(folder.FileExists(tracking), held);
+            Assert.IsFalse(folder.FileExists(annotations), held);
+            Assert.IsFalse(folder.DirectoryExists($"fiches/.supprimees/{id}"), $"{held} : l'effacement est allé jusqu'au bout");
+            Assert.IsEmpty(vault.TrashedSheets(), held);
+            Assert.IsTrue(File.Exists(objectFile), held);
+        }
+    }
+
+    [TestMethod]
+    public void A_folder_purge_goes_on_past_an_object_that_stays()
+    {
+        using var folder = TemporaryVault.Empty(StorageKind.Encrypted);
+        using var vault = folder.Initialize(Now);
+        vault.CreateSheet("Cours", "A", "Texte.\n", Now);
+        vault.CreateSheet("Cours", "B", "Texte.\n", Now);
+        var held = ObjectFileOf(folder, "fiches/Cours/A.md");
+        var other = ObjectFileOf(folder, "fiches/Cours/B.md");
+
+        VaultException error;
+        using (folder.Hold("fiches/Cours/A.md", FileShare.Read))
+        {
+            error = Assert.ThrowsExactly<VaultException>(() => vault.PurgeFolder("Cours", Now));
+        }
+
+        Assert.Contains(Path.GetFileName(held), error.Message);
+        Assert.IsTrue(File.Exists(held));
+        Assert.IsFalse(File.Exists(other), "l'autre fiche est effacée");
+        Assert.IsEmpty(vault.TrashedSheets());
+        Assert.IsEmpty(folder.Storage.Entries(folder.PathOf("fiches/.supprimees/dossiers")), "ce qui restait du dossier est effacé");
+    }
+
+    private static string ObjectFileOf(TemporaryVault folder, string relative) =>
+        ((EncryptedStorage)folder.Storage).ObjectFileOf(folder.PathOf(relative));
 }

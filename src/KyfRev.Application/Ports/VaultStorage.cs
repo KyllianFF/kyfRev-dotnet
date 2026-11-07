@@ -94,6 +94,7 @@ public abstract class VaultStorage
     /// Efface pour de bon un fichier, ou un dossier avec tout ce qu'il contient ; rien à faire s'il n'existe pas. Seuls
     /// l'effacement demandé depuis la corbeille et le dossier temporaire d'une conversion y recourent.
     /// </summary>
+    /// <exception cref="LeftOnDiskException">L'effacement a eu lieu, mais une part est restée sur le disque.</exception>
     public abstract void Purge(string path);
 
     /// <summary>

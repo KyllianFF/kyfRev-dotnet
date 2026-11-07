@@ -202,7 +202,7 @@ public sealed class EncryptedStorageTests
 
         // L'index s'écrit, puis le premier objet ne s'efface pas : le dossier a quitté le coffre, l'objet resté est nommé.
         disk.FailAt = disk.Writes + 2;
-        var error = Assert.ThrowsExactly<IOException>(() => storage.Purge(cours));
+        var error = Assert.ThrowsExactly<LeftOnDiskException>(() => storage.Purge(cours));
 
         Assert.IsFalse(storage.DirectoryExists(cours));
         Assert.AreEqual(1, objects.Count(File.Exists), "un objet reste, l'autre est effacé");
@@ -218,7 +218,27 @@ public sealed class EncryptedStorageTests
         storage.Replace(Path.Combine(latin, "d.md"), Two);
         disk.FailAt = disk.Writes + 2;
         disk.Cut = true;
-        Assert.Contains("2 de ses objets", Assert.ThrowsExactly<IOException>(() => storage.Purge(latin)).Message);
+        Assert.Contains("2 de ses objets", Assert.ThrowsExactly<LeftOnDiskException>(() => storage.Purge(latin)).Message);
+    }
+
+    [TestMethod]
+    public void An_object_renamed_in_lower_case_is_still_its_file()
+    {
+        using var folder = new TemporaryFolder();
+        using var storage = NewStorage(folder.Root);
+        var a = Path.Combine(folder.Root, "a.md");
+        storage.Replace(a, One);
+        var objectFile = storage.ObjectFileOf(a);
+        var lower = Path.Combine(Path.GetDirectoryName(objectFile)!, new string([.. Path.GetFileName(objectFile).Select(char.ToLowerInvariant)]));
+
+        // Un outil renomme l'objet en minuscules : NTFS le lit toujours sous son nom.
+        File.Move(objectFile, lower);
+
+        Assert.AreEqual("a.md:2", Described(storage.AllEntries(folder.Root)), "sa taille est celle de l'objet");
+        var raw = RawFiles(folder.Root);
+        CollectionAssert.Contains(storage.FilesToBackUp(raw.Select(file => Path.Combine(folder.Root, file.Path))).Select(Path.GetFileName).ToList(), Path.GetFileName(lower), "la sauvegarde le recopie");
+        var restored = Assert.ContainsSingle(storage.FilesOfBackup(raw, "minuscules.zip"));
+        CollectionAssert.AreEqual(One, restored.Read(), "la sauvegarde le relit");
     }
 
     [TestMethod]

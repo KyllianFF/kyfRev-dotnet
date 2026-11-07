@@ -168,6 +168,9 @@ public sealed class VaultException : OperationException
     internal static VaultException Io(string path, Exception cause) =>
         new(VaultErrorKind.Io, $"Impossible d'accéder à « {path} » : {cause.Message}", cause);
 
+    internal static VaultException LeftOnDisk(IReadOnlyList<string> left) =>
+        new(VaultErrorKind.Io, $"L'effacement a eu lieu, mais une part est restée sur le disque. {string.Join(" ", left)}");
+
     internal static VaultException InvalidPath(string text, string reason) =>
         new(VaultErrorKind.InvalidPath, $"Chemin refusé « {text} » : {reason}.");
 

@@ -257,7 +257,8 @@ public sealed class EncryptedStorage : VaultStorage, IDisposable
     public override IReadOnlyList<StoredFile> FilesOfBackup(IReadOnlyList<StoredFile> entries, string backup)
     {
         ArgumentNullException.ThrowIfNull(entries);
-        var raw = new Dictionary<string, StoredFile>(StringComparer.Ordinal);
+        // Comme sous Windows, la casse ne distingue pas deux noms : un objet renommé en minuscules reste le même.
+        var raw = new Dictionary<string, StoredFile>(StringComparer.OrdinalIgnoreCase);
         foreach (var entry in entries)
         {
             raw.TryAdd(entry.Path, entry);

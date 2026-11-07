@@ -33,6 +33,16 @@ public sealed class VaultStorageTests
     }
 
     [TestMethod]
+    public void What_stays_on_the_disk_after_a_purge_is_an_input_output_error_of_its_own()
+    {
+        Assert.IsInstanceOfType<IOException>(new LeftOnDiskException());
+        Assert.Contains("restée sur le disque", new LeftOnDiskException().Message);
+        Assert.AreEqual("objets/A.kyf", new LeftOnDiskException("objets/A.kyf").Message);
+        var cause = new IOException("tenu ouvert");
+        Assert.AreSame(cause, new LeftOnDiskException("objets/A.kyf", cause).InnerException);
+    }
+
+    [TestMethod]
     public void An_entry_reads_its_size_and_date_once_and_only_when_asked()
     {
         var reads = 0;
