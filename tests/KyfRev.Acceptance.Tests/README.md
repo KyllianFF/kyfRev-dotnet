@@ -1,6 +1,8 @@
 # Scénarios d'acceptation
 
-Les scénarios T2 à T6, T9, T10, T11 et T18 de la conception, aux dates qu'elle donne.
+Les scénarios T2 à T6, T9, T10, T11 et T18 de la conception, aux dates qu'elle donne, et celui du coffre chiffré
+(étape J8) : sans sa clé, l'application n'en montre que l'écran de déverrouillage ; son mot de passe, donné par le
+motif de valeur du champ (rien n'est tapé au clavier), l'ouvre comme un autre.
 
 Chaque scénario lance la vraie application dans son propre processus et la pilote par UI Automation
 (FlaUI). Le programme lancé, `tools/acceptance-host`, est l'application telle quelle (ses services, sa

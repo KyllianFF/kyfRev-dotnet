@@ -376,6 +376,12 @@ public sealed partial class DataSettingsViewModel : ObservableObject, INavigatio
     private Task CreateVaultAsync() =>
         _picker.Pick(SettingsHubText.PickNewVault) is { } folder ? ChangeVaultAsync(() => _vaults.Create(folder)) : Task.CompletedTask;
 
+    /// <summary>
+    /// Ce qui montre le déverrouillage d'un coffre chiffré choisi ici, l'actuel restant ouvert derrière ; rien : un coffre
+    /// chiffré ne s'ouvre pas d'ici.
+    /// </summary>
+    public Action<AppState>? VaultLocked { get; init; }
+
     /// <summary>Ouvrir un coffre peut prendre du temps (la journée à préparer, sa sauvegarde) ; un refus laisse l'actuel ouvert.</summary>
     private async Task ChangeVaultAsync(Func<AppState> opening)
     {
@@ -386,7 +392,19 @@ public sealed partial class DataSettingsViewModel : ObservableObject, INavigatio
         try
         {
             var state = await Task.Run(opening).ConfigureAwait(true);
-            if (state.OpenError is { } problem)
+            if (state.Locked is not null)
+            {
+                // Un coffre chiffré attend sa clé : son écran la demande, l'actuel reste ouvert jusque-là.
+                if (VaultLocked is { } locked)
+                {
+                    locked(state);
+                }
+                else
+                {
+                    Error = state.OpenError ?? EncryptionText.NotUnlocked;
+                }
+            }
+            else if (state.OpenError is { } problem)
             {
                 Error = problem;
             }

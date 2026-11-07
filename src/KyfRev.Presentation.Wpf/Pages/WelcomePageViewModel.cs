@@ -17,9 +17,13 @@ public sealed partial class WelcomePageViewModel : ObservableObject
     private readonly VaultUseCases _vaults;
     private readonly IFolderPicker _picker;
     private readonly Action<AppState> _opened;
+    private readonly Action<AppState>? _locked;
 
-    /// <summary>L'accueil pour l'état <paramref name="state"/> ; <paramref name="opened"/> reçoit l'état une fois un coffre ouvert.</summary>
-    public WelcomePageViewModel(VaultUseCases vaults, IFolderPicker picker, AppState state, Action<AppState> opened)
+    /// <summary>
+    /// L'accueil pour l'état <paramref name="state"/> ; <paramref name="opened"/> reçoit l'état une fois un coffre ouvert,
+    /// <paramref name="locked"/> celui d'un coffre chiffré qui attend sa clé.
+    /// </summary>
+    public WelcomePageViewModel(VaultUseCases vaults, IFolderPicker picker, AppState state, Action<AppState> opened, Action<AppState>? locked = null)
     {
         ArgumentNullException.ThrowIfNull(vaults);
         ArgumentNullException.ThrowIfNull(picker);
@@ -28,6 +32,7 @@ public sealed partial class WelcomePageViewModel : ObservableObject
         _vaults = vaults;
         _picker = picker;
         _opened = opened;
+        _locked = locked;
         VaultToCreate = state.VaultToCreate;
         CanOpenExisting = state.VaultToCreate is null || state.Mode == AppMode.Installed;
         Error = state.OpenError;
@@ -84,7 +89,11 @@ public sealed partial class WelcomePageViewModel : ObservableObject
         {
             // L'ouverture lit tout le coffre : hors du fil de l'interface.
             var state = await Task.Run(() => create ? _vaults.Create(folder) : _vaults.Open(folder)).ConfigureAwait(true);
-            if (state.Vault is not null)
+            if (state.Locked is not null && _locked is not null)
+            {
+                _locked(state);
+            }
+            else if (state.Vault is not null)
             {
                 _opened(state);
             }

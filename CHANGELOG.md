@@ -9,11 +9,18 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- Coffre chiffré, lot 3 : l'application ouvre un coffre chiffré. Au démarrage, depuis l'accueil ou depuis Paramètres ›
+  Données, il attend son mot de passe sur un écran de déverrouillage, sans menu ni recherche : rien de lui n'est lu
+  avant. Perdu, sa clé de récupération l'ouvre. « Se souvenir sur cet ordinateur », décoché par défaut, laisse Windows
+  garder sa clé pour la session : le coffre s'ouvre ensuite sans rien demander, sur ce poste et dans ce dossier
+  seulement, et une clé qui ne l'ouvre plus est oubliée. Fermé, le coffre efface la copie de sa clé. Un autre coffre peut
+  être ouvert à la place, ou celui qui restait ouvert retrouvé. Le verrouillage (Ctrl+Maj+L, et après 15 minutes
+  d'inactivité) vient ensuite.
 - Coffre chiffré, lot 2 : la session du coffre, ses sauvegardes et son analyse passent par une couche de stockage. Sur un
   coffre chiffré, chaque fichier devient un objet chiffré et l'index chiffré tient les chemins et les dossiers : rien en
   clair sur le disque, pas même un fichier temporaire. Ses sauvegardes restent chiffrées, se restaurent en un coffre
   chiffré et rendent une fiche manquante. Les essais de la session, dont les treize scénarios comparés à la 0.x, tournent
-  sur les deux stockages. L'application n'ouvre pas encore un coffre chiffré : son écran de déverrouillage vient ensuite.
+  sur les deux stockages.
 - Coffre chiffré : une conversion coupée à n'importe quelle écriture laisse la source intacte et aucune destination ;
   coupée net, son dossier temporaire est retiré par la conversion suivante vers la même destination. Un coffre qui porte
   ce nom n'est jamais retiré : refusé comme source (il faut le renommer), gardé s'il a été ouvert dans kyfRev ou s'il
@@ -25,7 +32,7 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 - Coffre chiffré : `kyfrev-coffre chiffrer` et `dechiffrer` convertissent un coffre vers un nouveau dossier, la source
   intacte. Chaque fichier est relu et vérifié par son SHA-256, et rien n'est écrit si un seul ne correspond pas. Le
   coffre chiffré ne garde aucun nom en clair : des objets opaques et un index chiffré. La clé de récupération s'affiche
-  une seule fois. L'application ne l'ouvre pas encore : son écran de déverrouillage vient ensuite.
+  une seule fois.
 - Coffre chiffré, lot 1 : le noyau (`KyfRev.Infrastructure.Crypto`, sans écran pour l'instant). Une clé de données de
   256 bits par coffre, enveloppée en AES-256-GCM par la clé du mot de passe (Argon2id par libsodium, réglé sur le poste,
   64 Mio et 3 passes au moins ; PBKDF2-HMAC-SHA256 en option) et par une clé de récupération en 14 groupes base32 qui

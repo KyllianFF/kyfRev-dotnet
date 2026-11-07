@@ -87,6 +87,9 @@ public static class Icons
     /// <summary>Maison : l'accueil.</summary>
     public static string Home { get; } = Glyph(0xE80F);
 
+    /// <summary>Cadenas : un coffre chiffré, verrouillé.</summary>
+    public static string Lock { get; } = Glyph(0xE72E);
+
     /// <summary>Dossier ouvert : ouvrir un coffre existant.</summary>
     public static string FolderOpen { get; } = Glyph(0xE838);
 

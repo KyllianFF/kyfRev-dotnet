@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\KyfRev.Extensions.Host\KyfRev.Extensions.Host.csproj" />
+    <ProjectReference Include="..\KyfRev.Infrastructure.Crypto\KyfRev.Infrastructure.Crypto.csproj" />
     <ProjectReference Include="..\KyfRev.Infrastructure.Online\KyfRev.Infrastructure.Online.csproj" />
     <ProjectReference Include="..\KyfRev.Infrastructure.Vault\KyfRev.Infrastructure.Vault.csproj" />
     <ProjectReference Include="..\KyfRev.Infrastructure.Windows\KyfRev.Infrastructure.Windows.csproj" />

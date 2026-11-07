@@ -28,6 +28,9 @@
     <DataTemplate DataType="{x:Type pages:WelcomePageViewModel}">
       <pages:WelcomePage />
     </DataTemplate>
+    <DataTemplate DataType="{x:Type pages:UnlockPageViewModel}">
+      <pages:UnlockPage />
+    </DataTemplate>
     <DataTemplate DataType="{x:Type pages:DashboardPageViewModel}">
       <pages:DashboardPage />
     </DataTemplate>
