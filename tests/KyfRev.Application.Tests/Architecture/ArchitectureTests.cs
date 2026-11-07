@@ -156,7 +156,7 @@ public sealed partial class ArchitectureTests
         Assert.IsGreaterThan(50, files.Count);
         foreach (var file in files)
         {
-            var text = File.ReadAllText(Path.Combine(src, file));
+            var text = CodeOnly(File.ReadAllText(Path.Combine(src, file)));
             Assert.AreEqual(deletions.GetValueOrDefault(file), DiskDeletion().Count(text), $"Effacement direct du disque dans {file}");
             Assert.AreEqual(purges.GetValueOrDefault(file), PurgeCall().Count(text), $"Appel à Purge dans {file}");
         }
@@ -175,6 +175,9 @@ public sealed partial class ArchitectureTests
         Assert.Contains("!IsTemporaryOf(destination, temporary)", conversion, "la conversion n'efface que son dossier temporaire, reconnu à son nom");
         Assert.Contains("disk.Purge(temporary)", conversion);
         Assert.Contains("disk.Purge(_path)", conversion, "et son marqueur, juste avant de prendre le nom de la destination");
+        var removed = File.ReadAllText(Path.Combine(src, "KyfRev.Presentation.Wpf/Pages/DataSettingsViewModel.cs"));
+        Assert.Contains("_annotations.Purge(passage.Id)", removed, "« Éléments supprimés » efface une annotation par son cas d'usage");
+        Assert.Contains("quotes.Purge(quote.Path)", removed, "et une citation par le sien");
     }
 
     /// <summary>
@@ -185,19 +188,24 @@ public sealed partial class ArchitectureTests
     [TestMethod]
     public void Every_purge_is_counted_whatever_receives_it()
     {
-        foreach (var call in new[] { "_storage.Purge(absolute)", "disk.Purge(temporary)", "DiskStorage.Instance.Purge(x)", "_storage.Raw.Purge(x)", "_storage!.Purge(x)", "_files?.Purge(x)", "_annotations.Purge(passage.Id)" })
+        foreach (var call in new[] { "_storage.Purge(absolute)", "disk.Purge(temporary)", "DiskStorage.Instance.Purge(x)", "_storage.Raw.Purge(x)", "_storage!.Purge(x)", "_files?.Purge(x)", "_annotations.Purge(passage.Id)", "list.ForEach(_storage.Purge)", "Action purge = disk.Purge;" })
         {
             Assert.IsTrue(PurgeCall().IsMatch(call), call);
             Assert.IsFalse(DiskDeletion().IsMatch(call), $"{call} : une purge n'est pas un effacement direct");
         }
-        foreach (var code in new[] { "public override void Purge(string path)", "vault.PurgeSheet(id)", "TryPurgeObject(id)" })
+        foreach (var code in new[] { "public override void Purge(string path)", "vault.PurgeSheet(id)", "TryPurgeObject(id)", "settings.Purges" })
         {
             Assert.IsFalse(PurgeCall().IsMatch(code), code);
         }
-        foreach (var call in new[] { "File.Delete(path)", "Directory.Delete(path, recursive: true)", "info.Delete()", "FileSystem.DeleteFile(path)" })
+        foreach (var call in new[] { "File.Delete(path)", "Directory.Delete(path, recursive: true)", "info.Delete()", "FileSystem.DeleteFile(path)", "Array.ForEach(files, File.Delete)", "Action erase = Directory.Delete;", "FileOptions.DeleteOnClose" })
         {
             Assert.IsTrue(DiskDeletion().IsMatch(call), call);
         }
+        foreach (var code in new[] { "FileShare.ReadWrite | FileShare.Delete", "case Key.Delete:", "SheetActionsText.Delete" })
+        {
+            Assert.IsFalse(DiskDeletion().IsMatch(code), $"{code} : n'efface rien");
+        }
+        Assert.AreEqual(1, PurgeCall().Count(CodeOnly("/// Un effacement (<see cref=\"VaultStorage.Purge\"/>).\n        _storage.Purge(path);")), "un commentaire n'efface rien");
     }
 
     /// <summary>Racine du dépôt : le dossier qui contient la solution.</summary>
@@ -235,13 +243,23 @@ public sealed partial class ArchitectureTests
     private static bool IsFramework(string name) =>
         name is "netstandard" or "mscorlib" || name.StartsWith("System.", StringComparison.Ordinal) || name.StartsWith("Microsoft.Win32.", StringComparison.Ordinal);
 
-    /// <summary>Un effacement direct du disque.</summary>
-    [GeneratedRegex(@"\.Delete\(|DeleteFile|DeleteDirectory|RemoveDirectory|FileSystem\.Delete|SendToRecycleBin")]
+    /// <summary>
+    /// Un effacement direct du disque : un appel, ou une méthode passée comme délégué (<c>Array.ForEach(files, File.Delete)</c>),
+    /// ou un fichier ouvert pour s'effacer à sa fermeture.
+    /// </summary>
+    [GeneratedRegex(@"\.Delete\(|\b(?:File|Directory)\.Delete\b|DeleteFile|DeleteDirectory|RemoveDirectory|FileSystem\.Delete|SendToRecycleBin|DeleteOnClose")]
     private static partial Regex DiskDeletion();
 
-    /// <summary>Un appel à <c>Purge</c>, quoi qui le reçoive : un stockage du coffre, ou l'effacement définitif d'un cas d'usage.</summary>
-    [GeneratedRegex(@"\.Purge\(")]
+    /// <summary>
+    /// Une purge, quoi qui la reçoive : un stockage du coffre, ou l'effacement définitif d'un cas d'usage ; appelée, ou passée
+    /// comme délégué (<c>list.ForEach(_storage.Purge)</c>).
+    /// </summary>
+    [GeneratedRegex(@"\.Purge\b")]
     private static partial Regex PurgeCall();
+
+    /// <summary>Le code, sans les lignes de commentaire : un commentaire qui nomme une méthode n'efface rien.</summary>
+    private static string CodeOnly(string text) =>
+        string.Join('\n', text.Split('\n').Where(line => !line.TrimStart().StartsWith("//", StringComparison.Ordinal)));
 
     [GeneratedRegex(@"Assembly\.(Load|LoadFrom|LoadFile|UnsafeLoadFrom)\(|AssemblyLoadContext|AppDomain\.CurrentDomain\.Load|Type\.GetType\(")]
     private static partial Regex DynamicLoading();
