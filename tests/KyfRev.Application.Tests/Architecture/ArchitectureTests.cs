@@ -10,6 +10,9 @@ namespace KyfRev.Application.Tests.Architecture;
 [TestClass]
 public sealed partial class ArchitectureTests
 {
+    /// <summary>Les fins de ligne de C#.</summary>
+    private static readonly char[] LineEnds = ['\n', '\r', '\u0085', '\u2028', '\u2029'];
+
     private const string Domain = "KyfRev.Domain";
     private const string Application = "KyfRev.Application";
 
@@ -123,11 +126,14 @@ public sealed partial class ArchitectureTests
     /// et le dossier de la copie vérifiés), les deux fichiers temporaires de l'écriture atomique et
     /// de la sauvegarde, le dossier d'une extension téléchargée du catalogue (dans le dossier des
     /// téléchargements), le dossier temporaire d'une conversion et son marqueur, et l'effacement
-    /// demandé depuis la corbeille. Deux comptes exacts, fichier par fichier : les effacements
-    /// directs du disque (le disque applique <c>Purge</c> à un dossier ou à un fichier), et chaque
-    /// appel <c>.Purge(</c>, quoi qui le reçoive : le coffre chiffré retire l'entrée de son index
-    /// puis efface ses objets, et lui seul efface un objet que l'index ne nomme plus ; les deux
-    /// effacements définitifs de « Éléments supprimés » passent par un cas d'usage.
+    /// demandé depuis la corbeille. Trois comptes exacts, fichier par fichier, sur le code seul (les
+    /// lignes de commentaire n'effacent rien) : les effacements directs du disque (le disque applique
+    /// <c>Purge</c> à un dossier ou à un fichier) ; chaque purge, quoi qui la reçoive (le coffre
+    /// chiffré retire l'entrée de son index puis efface ses objets, et lui seul efface un objet que
+    /// l'index ne nomme plus ; les deux effacements définitifs de « Éléments supprimés » passent par
+    /// un cas d'usage) ; et chaque <c>.Delete</c> qui n'efface rien, nommé : un partage de fichier
+    /// (<c>FileShare.Delete</c>), une touche (<c>Key.Delete</c>), un libellé (<c>SheetActionsText.Delete</c>) : une liste
+    /// fermée d'écritures exactes, et non un suffixe de nom, pour qu'un <c>backupText.Delete()</c> compte bien.
     /// </summary>
     [TestMethod]
     public void Files_are_deleted_only_where_allowed()
@@ -149,6 +155,16 @@ public sealed partial class ArchitectureTests
             ["KyfRev.Infrastructure.Crypto/EncryptedVault.cs"] = 1,
             ["KyfRev.Presentation.Wpf/Pages/DataSettingsViewModel.cs"] = 2,
         };
+        var harmless = new Dictionary<string, int>(StringComparer.Ordinal)
+        {
+            ["KyfRev.Cli/VaultConversion.cs"] = 1,
+            ["KyfRev.Infrastructure.Vault/Files/DiskStorage.cs"] = 1,
+            ["KyfRev.Infrastructure.Vault/Files/VaultLock.cs"] = 1,
+            ["KyfRev.Infrastructure.Windows/DiagnosticLog.cs"] = 1,
+            ["KyfRev.Presentation.Wpf/Editing/DiagramEditorViewModel.cs"] = 1,
+            ["KyfRev.Presentation.Wpf/Pages/SheetsPage.xaml.cs"] = 2,
+        };
+        string Code(string file) => CodeOnly(File.ReadAllText(Path.Combine(src, file)));
         var files = Directory.EnumerateFiles(src, "*.cs", SearchOption.AllDirectories)
             .Select(file => Path.GetRelativePath(src, file).Replace('\\', '/'))
             .Where(file => !file.Contains("/obj/", StringComparison.Ordinal) && !file.Contains("/bin/", StringComparison.Ordinal))
@@ -156,27 +172,29 @@ public sealed partial class ArchitectureTests
         Assert.IsGreaterThan(50, files.Count);
         foreach (var file in files)
         {
-            var text = CodeOnly(File.ReadAllText(Path.Combine(src, file)));
+            var text = Code(file);
             Assert.AreEqual(deletions.GetValueOrDefault(file), DiskDeletion().Count(text), $"Effacement direct du disque dans {file}");
             Assert.AreEqual(purges.GetValueOrDefault(file), PurgeCall().Count(text), $"Appel à Purge dans {file}");
+            Assert.AreEqual(harmless.GetValueOrDefault(file), HarmlessDelete().Count(text), $"« .Delete » qui n'efface rien dans {file}");
         }
 
-        var discard = File.ReadAllText(Path.Combine(src, "KyfRev.Extensions.Host/CatalogueReader.cs"));
+        // Les contrôles lisent le code seul : un appel mis en commentaire ne les satisfait pas.
+        var discard = Code("KyfRev.Extensions.Host/CatalogueReader.cs");
         Assert.Contains("Path.GetFullPath(folder).StartsWith(root", discard, "un dossier téléchargé ne s'efface que dans le dossier des téléchargements");
-        var rotation = File.ReadAllText(Path.Combine(src, "KyfRev.Infrastructure.Vault/Backups/VaultBackups.cs"));
+        var rotation = Code("KyfRev.Infrastructure.Vault/Backups/VaultBackups.cs");
         var copy = rotation[rotation.IndexOf("private static void RemoveOutdatedCopy", StringComparison.Ordinal)..rotation.IndexOf("File.Delete(path)", StringComparison.Ordinal)];
         Assert.Contains("TimestampOf(name) is null", copy, "le nom de la copie doit être vérifié");
         Assert.Contains("Path.GetDirectoryName(path)", copy, "le dossier de la copie doit être vérifié");
         foreach (var file in new[] { "KyfRev.Infrastructure.Vault/Files/AtomicFile.cs", "KyfRev.Infrastructure.Vault/VaultSession.Backups.cs" })
         {
-            Assert.Contains("File.Delete(temporary)", File.ReadAllText(Path.Combine(src, file)), file);
+            Assert.Contains("File.Delete(temporary)", Code(file), file);
         }
-        var conversion = File.ReadAllText(Path.Combine(src, "KyfRev.Cli/VaultConversion.cs"));
+        var conversion = Code("KyfRev.Cli/VaultConversion.cs");
         Assert.Contains("!IsTemporaryOf(destination, temporary)", conversion, "la conversion n'efface que son dossier temporaire, reconnu à son nom");
         Assert.Contains("disk.Purge(temporary)", conversion);
         Assert.Contains("disk.Purge(_path)", conversion, "et son marqueur, juste avant de prendre le nom de la destination");
         Assert.Contains("disk.Purge(entry.FullName)", conversion, "ce que contient le dossier temporaire, son marqueur excepté, qui part en dernier");
-        var removed = File.ReadAllText(Path.Combine(src, "KyfRev.Presentation.Wpf/Pages/DataSettingsViewModel.cs"));
+        var removed = Code("KyfRev.Presentation.Wpf/Pages/DataSettingsViewModel.cs");
         Assert.Contains("_annotations.Purge(passage.Id)", removed, "« Éléments supprimés » efface une annotation par son cas d'usage");
         Assert.Contains("quotes.Purge(quote.Path)", removed, "et une citation par le sien");
     }
@@ -198,15 +216,20 @@ public sealed partial class ArchitectureTests
         {
             Assert.IsFalse(PurgeCall().IsMatch(code), code);
         }
-        foreach (var call in new[] { "File.Delete(path)", "Directory.Delete(path, recursive: true)", "info.Delete()", "FileSystem.DeleteFile(path)", "Array.ForEach(files, File.Delete)", "Action erase = Directory.Delete;", "FileOptions.DeleteOnClose" })
+        foreach (var call in new[] { "File.Delete(path)", "Directory.Delete(path, recursive: true)", "info.Delete()", "FileSystem.DeleteFile(path)", "Array.ForEach(files, File.Delete)", "Action erase = Directory.Delete;", "FileOptions.DeleteOnClose", "Action erase = info.Delete;", "files.ForEach(new FileInfo(path).Delete)", "backupText.Delete()", "cacheKey.Delete();", "this.Key.Delete()" })
         {
             Assert.IsTrue(DiskDeletion().IsMatch(call), call);
         }
         foreach (var code in new[] { "FileShare.ReadWrite | FileShare.Delete", "case Key.Delete:", "SheetActionsText.Delete" })
         {
             Assert.IsFalse(DiskDeletion().IsMatch(code), $"{code} : n'efface rien");
+            Assert.IsTrue(HarmlessDelete().IsMatch(code), $"{code} : compté à part, et nommé");
         }
         Assert.AreEqual(1, PurgeCall().Count(CodeOnly("/// Un effacement (<see cref=\"VaultStorage.Purge\"/>).\n        _storage.Purge(path);")), "un commentaire n'efface rien");
+        foreach (var end in new[] { "\n", "\r", "\r\n", "\u0085", "\u2028", "\u2029" })
+        {
+            Assert.AreEqual(0, PurgeCall().Count(CodeOnly($"x();{end}// a.Purge(b)")), $"un commentaire finit à toute fin de ligne (U+{(int)end[^1]:X4})");
+        }
     }
 
     /// <summary>Racine du dépôt : le dossier qui contient la solution.</summary>
@@ -245,11 +268,21 @@ public sealed partial class ArchitectureTests
         name is "netstandard" or "mscorlib" || name.StartsWith("System.", StringComparison.Ordinal) || name.StartsWith("Microsoft.Win32.", StringComparison.Ordinal);
 
     /// <summary>
-    /// Un effacement direct du disque : un appel, ou une méthode passée comme délégué (<c>Array.ForEach(files, File.Delete)</c>),
-    /// ou un fichier ouvert pour s'effacer à sa fermeture.
+    /// Un effacement direct du disque : un appel, ou une méthode passée comme délégué, statique (<c>File.Delete</c>) comme
+    /// d'instance (<c>info.Delete</c>), ou un fichier ouvert pour s'effacer à sa fermeture. Seuls les <c>.Delete</c> qui
+    /// n'effacent rien (<see cref="HarmlessDelete"/>) n'y sont pas.
     /// </summary>
-    [GeneratedRegex(@"\.Delete\(|\b(?:File|Directory)\.Delete\b|DeleteFile|DeleteDirectory|RemoveDirectory|FileSystem\.Delete|SendToRecycleBin|DeleteOnClose")]
+    [GeneratedRegex(@"(?<!(?<![\w.])(?:FileShare|Key|SheetActionsText))\.Delete\b|DeleteFile|DeleteDirectory|RemoveDirectory|FileSystem\.Delete|SendToRecycleBin|DeleteOnClose")]
     private static partial Regex DiskDeletion();
+
+    /// <summary>
+    /// Un <c>.Delete</c> qui n'efface rien, de la liste fermée trouvée dans <c>src</c> : un partage de fichier
+    /// (<c>FileShare.Delete</c>), une touche (<c>Key.Delete</c>), un libellé (<c>SheetActionsText.Delete</c>). L'écriture doit
+    /// être exacte : précédée d'un point ou d'une lettre (<c>cacheKey.Delete</c>, <c>this.Key.Delete</c>), elle compte comme
+    /// un effacement.
+    /// </summary>
+    [GeneratedRegex(@"(?<![\w.])(?:FileShare|Key|SheetActionsText)\.Delete\b")]
+    private static partial Regex HarmlessDelete();
 
     /// <summary>
     /// Une purge, quoi qui la reçoive : un stockage du coffre, ou l'effacement définitif d'un cas d'usage ; appelée, ou passée
@@ -259,8 +292,9 @@ public sealed partial class ArchitectureTests
     private static partial Regex PurgeCall();
 
     /// <summary>Le code, sans les lignes de commentaire : un commentaire qui nomme une méthode n'efface rien.</summary>
+    /// <remarks>Un commentaire <c>//</c> finit à toute fin de ligne de C# : saut de ligne, retour chariot, U+0085, U+2028, U+2029.</remarks>
     private static string CodeOnly(string text) =>
-        string.Join('\n', text.Split('\n').Where(line => !line.TrimStart().StartsWith("//", StringComparison.Ordinal)));
+        string.Join('\n', text.Split(LineEnds).Where(line => !line.TrimStart().StartsWith("//", StringComparison.Ordinal)));
 
     [GeneratedRegex(@"Assembly\.(Load|LoadFrom|LoadFile|UnsafeLoadFrom)\(|AssemblyLoadContext|AppDomain\.CurrentDomain\.Load|Type\.GetType\(")]
     private static partial Regex DynamicLoading();

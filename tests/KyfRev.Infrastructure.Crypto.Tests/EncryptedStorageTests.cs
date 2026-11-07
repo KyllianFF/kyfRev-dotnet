@@ -258,6 +258,12 @@ public sealed class EncryptedStorageTests
         CollectionAssert.AreEquivalent(new[] { header, index, objectFile }, storage.FilesToBackUp([header, index, twin, objectFile]).ToList());
         CollectionAssert.AreEquivalent(new[] { header, index, twin }, storage.FilesToBackUp([header, index, twin]).ToList(), "sans l'écriture exacte, le jumeau la remplace");
 
+        // Un jumeau qui ne diffère que par l'extension, ou par la casse du dossier, ne remplace pas non plus le vrai objet.
+        foreach (var lookalike in new[] { Path.ChangeExtension(objectFile, ".KYF"), Path.Combine(folder.Root, "Objets", Path.GetFileName(objectFile)) })
+        {
+            CollectionAssert.AreEquivalent(new[] { header, index, objectFile }, storage.FilesToBackUp([header, index, lookalike, objectFile]).ToList(), lookalike);
+        }
+
         // Une archive qui les contient tous deux se lit par l'écriture exacte.
         var sealedObject = File.ReadAllBytes(objectFile);
         var name = Path.GetRelativePath(folder.Root, objectFile).Replace('\\', '/');

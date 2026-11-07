@@ -25,6 +25,9 @@ internal sealed class FailingDisk : VaultStorage
     /// <summary>Les écritures échouées.</summary>
     public int Failures { get; private set; }
 
+    /// <summary>Ce qui arrive juste avant la création d'un dossier : un autre programme qui prend le même nom, par exemple.</summary>
+    public Action<string>? BeforeCreatingDirectory { get; set; }
+
     public override bool FileExists(string path) => _disk.FileExists(path);
 
     public override bool DirectoryExists(string path) => _disk.DirectoryExists(path);
@@ -53,6 +56,7 @@ internal sealed class FailingDisk : VaultStorage
 
     public override void CreateDirectory(string path)
     {
+        BeforeCreatingDirectory?.Invoke(path);
         Write(path);
         _disk.CreateDirectory(path);
     }
