@@ -719,10 +719,8 @@ public sealed class ReviewTests
                 TestShell.Flush();
                 Assert.IsTrue(layout.IsStacked || status.ActualWidth >= layout.MainMinWidth, $"à {width} pixels, l'état garde sa place");
             }
-            window.Width = 1400;
-            window.UpdateLayout();
-            TestShell.Flush();
-            Assert.IsFalse(layout.IsStacked, "large, tout tient sur une ligne");
+            // Sur une ligne quand la place le permet : cela dépend de l'écran (1 024 pixels en CI), c'est AdaptiveRow qui le
+            // vérifie. Étroite, en revanche, tout s'empile toujours.
             window.Width = 420;
             window.UpdateLayout();
             TestShell.Flush();
