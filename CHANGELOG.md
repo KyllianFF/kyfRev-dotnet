@@ -18,11 +18,12 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   coupée net, son dossier temporaire est retiré par la conversion suivante vers la même destination, s'il porte encore le
   marqueur qu'elle y tenait et que plus personne ne le tient. Un dossier sans marqueur, celui d'une conversion en cours,
   ou un dossier ouvert dans kyfRev depuis restent ; une source dans un dossier marqué est refusée, quel que soit le chemin
-  qui y mène (jonction, nom court 8.3, lecteur substitué).
+  qui y mène (jonction, nom court 8.3, lecteur substitué, jusque dans un sous-dossier). Un dossier temporaire qui ne
+  s'efface qu'en partie garde son marqueur, et le message dit vrai sur ce qui le retirera.
 - Coffre chiffré : la session relit l'index une fois le verrou pris, et ne perd plus ce qu'un autre processus a écrit
   entre-temps. Un effacement définitif qui ne peut pas retirer un objet va jusqu'au bout, puis nomme ce qui est resté ;
-  les sauvegardes ne recopient que les objets que l'index nomme, quelle que soit la casse de leur nom. Un objet manquant
-  n'empêche plus la sauvegarde, ni la restauration des autres fiches.
+  les sauvegardes ne recopient que les objets que l'index nomme, un seul par objet, quelle que soit la casse de leur nom.
+  Un objet manquant n'empêche plus la sauvegarde, ni la restauration des autres fiches.
 - Lecture : un terme défini dans une fiche se marque dans toutes les fiches qui le contiennent, d'un pointillé discret, distinct
   de celui d'une définition posée à sa place. Il se trouve en mot entier, sans tenir compte des majuscules, au singulier ou au
   pluriel, une fois par partie, ni dans un titre, ni dans du code, ni dans un lien. Le survol montre sa définition ; un clic
