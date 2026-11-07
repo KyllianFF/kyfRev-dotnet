@@ -15,7 +15,13 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   chiffré et rendent une fiche manquante. Les essais de la session, dont les treize scénarios comparés à la 0.x, tournent
   sur les deux stockages. L'application n'ouvre pas encore un coffre chiffré : son écran de déverrouillage vient ensuite.
 - Coffre chiffré : une conversion coupée à n'importe quelle écriture laisse la source intacte et aucune destination ;
-  coupée net, son dossier temporaire est retiré par la conversion suivante vers la même destination.
+  coupée net, son dossier temporaire est retiré par la conversion suivante vers la même destination. Un coffre qui porte
+  ce nom n'est jamais retiré : refusé comme source (il faut le renommer), gardé s'il a été ouvert dans kyfRev ou s'il
+  contient la source.
+- Coffre chiffré : la session relit l'index une fois le verrou pris, et ne perd plus ce qu'un autre processus a écrit
+  entre-temps. Un effacement définitif qui ne peut pas retirer un objet le dit et le nomme, comme pour un coffre en clair ;
+  les sauvegardes ne recopient que les objets que l'index nomme. Un objet manquant n'empêche plus la sauvegarde, ni la
+  restauration des autres fiches.
 - Coffre chiffré : `kyfrev-coffre chiffrer` et `dechiffrer` convertissent un coffre vers un nouveau dossier, la source
   intacte. Chaque fichier est relu et vérifié par son SHA-256, et rien n'est écrit si un seul ne correspond pas. Le
   coffre chiffré ne garde aucun nom en clair : des objets opaques et un index chiffré. La clé de récupération s'affiche

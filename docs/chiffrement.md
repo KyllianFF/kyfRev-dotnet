@@ -69,7 +69,10 @@ longueur. Un fichier recopié sous un autre identifiant, ou dans un autre coffre
 ## Le coffre sur le disque
 
 Un coffre chiffré ne garde aucun nom en clair : ni les titres, ni les dossiers, ni le texte. Ce qui se voit : le nombre
-d'objets, la taille de chacun (celle de son fichier, plus 32 octets) et sa date de dernière écriture.
+d'objets, la taille de chacun (celle de son fichier, plus 32 octets) et sa date de dernière écriture. Se voient aussi la
+taille et la date de `index.kyf` : sa taille grandit avec le nombre de fichiers, la longueur totale de leurs chemins et le
+nombre de dossiers ; sa date est celle du dernier changement de l'arborescence (un fichier créé, déplacé, renommé ou
+effacé, un dossier créé), qu'une simple réécriture ne change pas.
 
 | Chemin | Contenu |
 |---|---|
@@ -88,10 +91,12 @@ s'écrit en clair, même un instant. Chaque opération est l'ancienne ou la nouv
 - **un fichier réécrit** garde son objet, remplacé d'un coup, avec un nonce neuf ;
 - **un nouveau fichier** écrit son objet, puis l'index ; tant que l'index n'est pas écrit, le fichier n'existe pas ;
 - **un déplacement, un renommage, un nouveau dossier** ne réécrivent que l'index ;
-- **un effacement** réécrit l'index, puis efface les objets.
+- **un effacement** réécrit l'index, puis efface les objets. Un objet qui ne s'efface pas (un autre programme le tient
+  ouvert) reste sur le disque : l'effacement le dit et le nomme, comme un coffre en clair dit qu'un fichier n'a pas pu
+  être effacé.
 
 Si l'index ne s'écrit pas, l'index en mémoire redevient celui du disque. Un objet qu'aucune entrée ne nomme (une
-écriture coupée net) est ignoré. La taille et la date d'un fichier sont celles de son objet : un déplacement ne les change
+écriture coupée net, un effacement empêché) est ignoré, et aucune sauvegarde ne le recopie. La taille et la date d'un fichier sont celles de son objet : un déplacement ne les change
 pas, comme sur un disque.
 
 ## La session sur un coffre chiffré
@@ -106,7 +111,12 @@ lecture seule s'y ouvrent sans rien savoir du chiffrement ; la racine de composi
 
 La règle « rien ne s'efface » tient toujours : le stockage n'efface que par `Purge`, à la demande expresse depuis la
 corbeille, et pour le dossier temporaire d'une conversion. Le coffre chiffré y retire l'entrée de son index, puis ses
-objets ; c'est le seul endroit où il efface un objet.
+objets ; c'est le seul endroit où il efface un objet. La règle des effacements compte ces appels d'un stockage, et eux
+seuls : l'effacement définitif d'un cas d'usage passe lui-même par un stockage.
+
+Le stockage chiffré lit son index à l'ouverture, avant que la session prenne le verrou du coffre : un autre processus a
+pu écrire entre-temps. La session le relit donc une fois le verrou pris (`VaultStorage.Reload`, sans effet pour le
+disque) ; s'il ne s'ouvre plus, elle rend le verrou et refuse d'ouvrir le coffre.
 
 Restent sur le disque, hors du coffre chiffré : le verrou, les dossiers des sauvegardes et des exports, les notes à
 importer. Le stockage chiffré reste à celui qui l'a ouvert, qui le libère après la session : sa clé de données est alors
@@ -115,8 +125,9 @@ effacée de la mémoire.
 ## Les sauvegardes
 
 - **Une sauvegarde** recopie les fichiers tels qu'ils sont posés sur le disque : pour un coffre chiffré, son en-tête, son
-  index et ses objets, sans le verrou. Aucun titre, aucun dossier, aucun texte ne s'y lit. Le nombre de fichiers annoncé
-  est celui du coffre.
+  index et les objets que l'index nomme, sans le verrou. Aucun titre, aucun dossier, aucun texte ne s'y lit. Le nombre de
+  fichiers annoncé est celui du coffre. Un fichier dont l'objet manque sur le disque manque aussi à la sauvegarde, comme
+  pour un coffre en clair : la sauvegarde réussit, et la fiche manquante ne s'y trouve pas.
 - **Elle se restaure** telle quelle, en un coffre chiffré qui s'ouvre avec le même mot de passe : rien n'est déchiffré pour
   cela.
 - **Une fiche manquante** revient d'une sauvegarde chiffrée par son index, ouvert avec la clé du coffre ; ou d'une
@@ -143,7 +154,9 @@ kyfrev-coffre dechiffrer <coffre chiffré> <nouveau dossier>
   `.<destination>.conversion-<nom tiré au hasard>`, qui ne prend le nom de la destination qu'une fois vérifié. Une
   conversion refusée ou coupée ne laisse jamais de coffre à moitié écrit.
 - **Une conversion coupée** : refusée, elle retire son dossier temporaire. Coupée net (arrêt brutal, disque perdu), elle
-  peut le laisser ; la conversion suivante vers la même destination le retire, et lui seul, reconnu à son nom.
+  peut le laisser ; la conversion suivante vers la même destination le retire, et lui seul, reconnu à son nom. Un tel
+  dossier qu'on a ouvert dans kyfRev depuis (il a son verrou, qu'une conversion n'écrit jamais), ou qui contient la
+  source, reste. Une source qui porte le nom d'un dossier temporaire de la destination est refusée : il faut la renommer.
 - **Le verrou** (`.suivi/verrou`, `.suivi/verrou-info.json`) n'est pas recopié : c'est l'état de l'application, pas du
   contenu.
 
@@ -172,11 +185,17 @@ L'application n'ouvre pas encore un coffre chiffré : son écran de déverrouill
   scénarios comparés à la 0.x y donnent le même coffre, à l'octet près, et le disque d'un coffre chiffré n'y montre que
   son en-tête, son index, un objet par fichier et le verrou. Les exports du coffre de référence chiffré sont ceux de la 0.x.
 - **Les sauvegardes** : celle du coffre de référence chiffré ne laisse lire ni titre, ni dossier, ni texte, se restaure en un coffre
-  chiffré identique, et rend une fiche manquante ; une sauvegarde d'un autre coffre ou altérée ne rend rien.
+  chiffré identique, et rend une fiche manquante ; une sauvegarde d'un autre coffre ou altérée ne rend rien. Un objet
+  manquant n'empêche ni la sauvegarde, ni la restauration des autres fiches ; un objet qu'un effacement n'a pas pu retirer
+  est nommé, et ne part dans aucune sauvegarde.
+- **L'index relu** : une session ouverte sur un stockage qui a lu l'index avant l'écriture d'un autre processus voit cette
+  écriture et ne la perd pas ; un index qui ne s'ouvre plus laisse le verrou libre.
 - **La conversion** : le coffre de référence, chiffré puis déchiffré par le mot de passe et par la clé de récupération,
   revient à l'octet près, et la source n'a pas changé. Deux saisies différentes, un mot de passe trop court, une
   destination qui existe ou dans la source, un dossier qui n'est pas un coffre, un coffre ouvert dans kyfRev, un mauvais
   secret ou un objet altéré : rien n'est écrit, et aucun dossier temporaire ne reste.
 - **La conversion coupée** : dans chaque sens, chaque écriture échoue à son tour, une fois puis net. La source n'a pas
   changé, aucune destination n'existe, et la conversion suivante réussit sans laisser de dossier temporaire. Un dossier qui
-  n'a que le début du nom d'un dossier temporaire n'est jamais retiré.
+  n'a que le début du nom d'un dossier temporaire n'est jamais retiré, ni un coffre sous ce nom : refusé comme source,
+  gardé s'il a été ouvert dans kyfRev ou s'il contient la source. La clé qui relit le coffre écrit est effacée, même
+  quand la relecture échoue.
