@@ -21,7 +21,7 @@ public sealed partial class ArchitectureTests
     /// <summary>Les seules opérations qui effacent : depuis la corbeille, à la demande expresse de la personne.</summary>
     private static readonly string[] Purges = ["Purge", "PurgeSheet", "PurgeFolder", "PurgeAnnotation", "PurgeQuote"];
 
-    private static readonly string[] Layers = [Domain, Application, "KyfRev.Extensions.Host", "KyfRev.Infrastructure.Online", "KyfRev.Infrastructure.Vault", "KyfRev.Modules.Citations", "KyfRev.Modules.Schemas", Rendering, "kyfrev-coffre"];
+    private static readonly string[] Layers = [Domain, Application, "KyfRev.Extensions.Host", "KyfRev.Infrastructure.Crypto", "KyfRev.Infrastructure.Online", "KyfRev.Infrastructure.Vault", "KyfRev.Modules.Citations", "KyfRev.Modules.Schemas", Rendering, "kyfrev-coffre"];
 
     /// <summary>Paquets permis au domaine, aux cas d'usage et aux modules, en plus du framework.</summary>
     private static readonly string[] Abstractions = ["Microsoft.Extensions.DependencyInjection.Abstractions", "Microsoft.Extensions.Logging.Abstractions"];

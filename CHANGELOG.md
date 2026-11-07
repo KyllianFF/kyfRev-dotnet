@@ -33,6 +33,11 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   la révision et l'éditeur dessinent la même chose. Les flèches passent d'une case à l'autre, ↑ et ↓ comprises, sans jamais
   poser le curseur entre deux cases. Un tableau prend toute la largeur du texte (« Ajustée au contenu » reste un choix), et
   ses colonnes gardent leurs mots entiers tant qu'il le permet, à l'écriture comme en lecture.
+- Coffre chiffré, lot 1 : le noyau (`KyfRev.Infrastructure.Crypto`, sans écran pour l'instant). Une clé de données de
+  256 bits par coffre, enveloppée en AES-256-GCM par la clé du mot de passe (Argon2id par libsodium, réglé sur le poste,
+  64 Mio et 3 passes au moins ; PBKDF2-HMAC-SHA256 en option) et par une clé de récupération en 14 groupes base32 qui
+  refuse les fautes de frappe. Chaque fichier en AES-256-GCM, nonce neuf à chaque écriture, lié au coffre et à son
+  identifiant. La clé peut être retenue par Windows pour la session (DPAPI). Formats décrits dans `docs/chiffrement.md`.
 - Fenêtre : l'application dessine sa barre de titre, aux couleurs du thème, avec le nom, la recherche (Ctrl+K), le thème clair
   ou sombre en un clic, les raccourcis clavier et les boutons de la fenêtre. Windows garde le déplacement, le redimensionnement,
   son menu et ses dispositions sur « Agrandir ».
