@@ -119,9 +119,9 @@ public sealed partial class ArchitectureTests
     }
 
     /// <summary>
-    /// T1 : rien n'est effacé, sauf cinq exceptions : la rotation des copies de sauvegarde (le nom et
+    /// T1 : rien n'est effacé, sauf six exceptions : la rotation des copies de sauvegarde (le nom et
     /// le dossier de la copie vérifiés), les deux fichiers temporaires de l'écriture atomique et de
-    /// la sauvegarde, le dossier temporaire d'une conversion, et l'effacement
+    /// la sauvegarde, le dossier temporaire d'une conversion et son marqueur, et l'effacement
     /// demandé depuis la corbeille. Deux comptes exacts, fichier par fichier : les effacements
     /// directs du disque (le disque applique <c>Purge</c> à un dossier ou à un fichier), et chaque
     /// appel <c>.Purge(</c>, quoi qui le reçoive : le coffre chiffré retire l'entrée de son index
@@ -141,7 +141,7 @@ public sealed partial class ArchitectureTests
         };
         var purges = new Dictionary<string, int>(StringComparer.Ordinal)
         {
-            ["KyfRev.Cli/VaultConversion.cs"] = 1,
+            ["KyfRev.Cli/VaultConversion.cs"] = 2,
             ["KyfRev.Infrastructure.Vault/VaultSession.Trash.cs"] = 1,
             ["KyfRev.Infrastructure.Crypto/EncryptedStorage.cs"] = 1,
             ["KyfRev.Infrastructure.Crypto/EncryptedVault.cs"] = 1,
@@ -170,6 +170,7 @@ public sealed partial class ArchitectureTests
         var conversion = File.ReadAllText(Path.Combine(src, "KyfRev.Cli/VaultConversion.cs"));
         Assert.Contains("!IsTemporaryOf(destination, temporary)", conversion, "la conversion n'efface que son dossier temporaire, reconnu à son nom");
         Assert.Contains("disk.Purge(temporary)", conversion);
+        Assert.Contains("disk.Purge(_path)", conversion, "et son marqueur, juste avant de prendre le nom de la destination");
     }
 
     /// <summary>

@@ -25,4 +25,18 @@ internal static class FileLinks
             Assert.AreEqual(0, mklink.ExitCode, "jonction impossible à créer");
         }
     }
+
+    /// <summary>Le chemin écrit en noms courts (8.3), tel que Windows le donne ; le chemin tel quel si le volume n'en a pas.</summary>
+    public static string ShortPath(string path)
+    {
+        using var cmd = Process.Start(new ProcessStartInfo("cmd.exe", $"/c for %I in (\"{path}\") do @echo %~sI")
+        {
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+        })!;
+        var output = cmd.StandardOutput.ReadToEnd().Trim();
+        cmd.WaitForExit();
+        Assert.AreEqual(0, cmd.ExitCode, $"nom court de « {path} » introuvable");
+        return output;
+    }
 }
