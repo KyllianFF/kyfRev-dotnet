@@ -140,7 +140,6 @@ public sealed partial class ArchitectureTests
             ["KyfRev.Infrastructure.Vault/VaultSession.Trash.cs"] = 1,
             ["KyfRev.Infrastructure.Crypto/EncryptedStorage.cs"] = 1,
             ["KyfRev.Infrastructure.Crypto/EncryptedVault.cs"] = 1,
-            ["KyfRev.Presentation.Wpf/Pages/DataSettingsViewModel.cs"] = 2,
         };
         var files = Directory.EnumerateFiles(src, "*.cs", SearchOption.AllDirectories)
             .Select(file => Path.GetRelativePath(src, file).Replace('\\', '/'))
@@ -164,6 +163,24 @@ public sealed partial class ArchitectureTests
         var conversion = File.ReadAllText(Path.Combine(src, "KyfRev.Cli/VaultConversion.cs"));
         Assert.Contains("!IsTemporaryOf(destination, temporary)", conversion, "la conversion n'efface que son dossier temporaire, reconnu à son nom");
         Assert.Contains("disk.Purge(temporary)", conversion);
+    }
+
+    /// <summary>
+    /// T1 : la règle compte l'effacement par un stockage du coffre (le disque, le coffre chiffré), pas l'effacement définitif
+    /// d'un cas d'usage : celui-ci passe lui-même par un stockage. Sinon, chaque appel d'un cas d'usage laisserait une place
+    /// où un effacement direct entrerait sans que la règle le voie.
+    /// </summary>
+    [TestMethod]
+    public void Only_the_purge_of_a_storage_counts_as_a_deletion()
+    {
+        foreach (var call in new[] { "_storage.Purge(absolute)", "disk.Purge(temporary)", "Disk.Purge(ObjectPath(objectId))", "_vault.Purge(relative)", "rawStorage.Purge(path)", "File.Delete(path)" })
+        {
+            Assert.IsTrue(DeletionCall().IsMatch(call), call);
+        }
+        foreach (var call in new[] { "_annotations.Purge(passage.Id)", "quotes.Purge(quote.Path)", "vault.PurgeSheet(id)" })
+        {
+            Assert.IsFalse(DeletionCall().IsMatch(call), call);
+        }
     }
 
     /// <summary>Racine du dépôt : le dossier qui contient la solution.</summary>
@@ -201,8 +218,11 @@ public sealed partial class ArchitectureTests
     private static bool IsFramework(string name) =>
         name is "netstandard" or "mscorlib" || name.StartsWith("System.", StringComparison.Ordinal) || name.StartsWith("Microsoft.Win32.", StringComparison.Ordinal);
 
-    /// <summary>Un appel qui efface : celui du disque, ou l'effacement par un stockage du coffre ou par un cas d'usage (<c>.Purge(</c>).</summary>
-    [GeneratedRegex(@"\.Delete\(|DeleteFile|DeleteDirectory|RemoveDirectory|FileSystem\.Delete|SendToRecycleBin|\.Purge\(")]
+    /// <summary>
+    /// Un appel qui efface : celui du disque, ou l'effacement par un stockage du coffre (<c>_storage</c>, <c>disk</c>,
+    /// <c>_vault</c>… <c>.Purge(</c>). L'effacement définitif d'un cas d'usage n'en est pas un : il passe par un stockage.
+    /// </summary>
+    [GeneratedRegex(@"\.Delete\(|DeleteFile|DeleteDirectory|RemoveDirectory|FileSystem\.Delete|SendToRecycleBin|(?:[Ss]torage|[Dd]isk|_vault)\.Purge\(")]
     private static partial Regex DeletionCall();
 
     [GeneratedRegex(@"Assembly\.(Load|LoadFrom|LoadFile|UnsafeLoadFrom)\(|AssemblyLoadContext|AppDomain\.CurrentDomain\.Load|Type\.GetType\(")]
