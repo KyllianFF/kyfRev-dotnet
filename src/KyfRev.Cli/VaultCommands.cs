@@ -107,7 +107,16 @@ internal static class VaultCommands
     {
         try
         {
-            EncryptedVault.ReadHeader(root);
+            var header = EncryptedVault.ReadHeader(root);
+            var recovery = RecoveryKey.Parse(secret);
+            if (recovery is not null)
+            {
+                PasswordKeys.Clear(recovery);
+            }
+            else if (!PasswordKeys.IsReadable(header.Password))
+            {
+                throw new VaultCryptoException("Les réglages du mot de passe sont illisibles.");
+            }
         }
         catch (VaultCryptoException exception)
         {

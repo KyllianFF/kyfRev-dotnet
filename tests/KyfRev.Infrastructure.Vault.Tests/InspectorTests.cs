@@ -265,6 +265,22 @@ public sealed class InspectorOnDiskTests() : InspectorTests(StorageKind.Disk)
     }
 
     [TestMethod]
+    public void The_tool_says_when_the_password_settings_cannot_be_read()
+    {
+        using var vault = TemporaryVault.CopyOfReference(StorageKind.Encrypted);
+        var header = Path.Combine(vault.Root, EncryptedVault.HeaderFile);
+        var text = File.ReadAllText(header);
+        Assert.Contains(PasswordKeys.Pbkdf2, text);
+        File.WriteAllText(header, text.Replace(PasswordKeys.Pbkdf2, "scrypt", StringComparison.Ordinal));
+
+        var (exitCode, _, errors) = AskWithErrors(Password, "verifier", vault.Root, "--json");
+
+        Assert.AreEqual(VaultCommands.ErrorsFound, exitCode, errors);
+        Assert.Contains("illisibles", errors);
+        Assert.DoesNotContain(VaultConversion.WrongSecret, errors);
+    }
+
+    [TestMethod]
     public void The_tool_refuses_a_wrong_secret_or_an_unreadable_index_and_writes_nothing()
     {
         using var vault = TemporaryVault.CopyOfReference(StorageKind.Encrypted);

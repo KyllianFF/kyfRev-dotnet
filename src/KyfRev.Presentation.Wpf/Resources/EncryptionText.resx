@@ -88,7 +88,7 @@
     <value>Mot de passe actuel</value>
   </data>
   <data name="DecryptedNext" xml:space="preserve">
-    <value>Il se lit sans mot de passe : rangez-le à l'abri, et retirez-le quand vous n'en avez plus besoin.</value>
+    <value>Il se lit sans mot de passe : rangez-le à l'abri, et retirez-le quand vous n'en avez plus besoin. Si vous l'ouvrez, ses sauvegardes s'écriront en clair, elles aussi, dans le dossier « Sauvegardes » voisin.</value>
   </data>
   <data name="DecryptedParent" xml:space="preserve">
     <value>Le coffre en clair s'écrira dans ce dossier :</value>
@@ -167,6 +167,9 @@
   </data>
   <data name="KeyNotCopied" xml:space="preserve">
     <value>La clé n'a pas pu être copiée : sélectionnez-la dans le champ et recopiez-la à la main.</value>
+  </data>
+  <data name="KeyReplaced" xml:space="preserve">
+    <value>C'est une nouvelle clé : celle que vous auriez notée tout à l'heure n'ouvrira pas ce coffre.</value>
   </data>
   <data name="KeyStored" xml:space="preserve">
     <value>J'ai rangé ma clé de récupération</value>
@@ -265,7 +268,7 @@
     <value>Choisir un autre dossier…</value>
   </data>
   <data name="PlainBackups" xml:space="preserve">
-    <value>Ses sauvegardes, dans « {0} », restent en clair : retirez-les aussi, ou rangez-les à l'abri.</value>
+    <value>Les sauvegardes faites avant cette conversion, dans « {0} », restent en clair : retirez-les, ou rangez-les à l'abri. Ce dossier sert aussi au nouveau coffre et aux autres coffres rangés à côté : ne le retirez pas en entier.</value>
   </data>
   <data name="PortableNext" xml:space="preserve">
     <value>En mode portable, kyfRev rouvre toujours le même dossier au démarrage : pour que le nouveau coffre soit celui-là, retirez l'ancien dossier, puis donnez son nom au nouveau.</value>

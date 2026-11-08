@@ -61,7 +61,7 @@ public sealed class NewPassword(string password, string confirmation)
 /// fermé (ce qui s'écrit s'enregistre, et les vues oublient, comme à un verrouillage), pour que rien ne s'y écrive pendant
 /// la copie ; la source reste intacte, et la copie s'écrit toujours dans un nouveau dossier, chaque fichier relu et
 /// comparé. Ensuite, aucun coffre n'est ouvert : la page ouvre le nouveau, ou rouvre l'ancien. Un coffre chiffré s'ouvre
-/// avec son mot de passe, sur l'écran de déverrouillage.
+/// sur l'écran de déverrouillage, avec son mot de passe, sauf si ce poste a retenu sa clé.
 /// </summary>
 public sealed partial class ConversionPageViewModel : ObservableObject
 {
@@ -75,6 +75,9 @@ public sealed partial class ConversionPageViewModel : ObservableObject
 
     /// <summary>Le chiffrement préparé, tant que sa clé de récupération n'est pas rangée ; rien sinon.</summary>
     private EncryptionDraft? _draft;
+
+    /// <summary>« Retour » a oublié une clé déjà montrée : la suivante dit qu'elle est nouvelle.</summary>
+    private bool _keyReplaced;
 
     /// <summary>La page d'une conversion du coffre ouvert, <paramref name="source"/>.</summary>
     /// <param name="vaults">Ouverture, fermeture et conversion des coffres.</param>
@@ -300,7 +303,8 @@ public sealed partial class ConversionPageViewModel : ObservableObject
         _draft = outcome.Value;
         RecoveryKey = outcome.Value.RecoveryKey;
         IsKeyStored = false;
-        KeyMessage = null;
+        KeyMessage = _keyReplaced ? EncryptionText.KeyReplaced : null;
+        _keyReplaced = false;
         Stage = ConversionStage.RecoveryKey;
     }
 
@@ -333,6 +337,7 @@ public sealed partial class ConversionPageViewModel : ObservableObject
             return;
         }
         DropDraft();
+        _keyReplaced = true;
         Error = null;
         Stage = ConversionStage.Password;
     }

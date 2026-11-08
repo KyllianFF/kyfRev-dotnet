@@ -262,6 +262,37 @@ public sealed partial class ConversionTests
     }
 
     [TestMethod]
+    public void The_lock_of_the_source_is_held_for_the_whole_conversion()
+    {
+        using var vault = SmallVault();
+        using var place = new Place();
+        var lockFile = Path.Combine(vault.Root, VaultLayout.LockFile);
+        Assert.IsTrue(File.Exists(lockFile), "un coffre déjà ouvert a son verrou");
+        var before = File.ReadAllBytes(lockFile);
+        var taken = new List<bool>();
+
+        void Try(string root)
+        {
+            using var other = KyfRev.Infrastructure.Vault.Files.VaultLock.TryAcquire(root, DateTimeOffset.UnixEpoch, out _);
+            taken.Add(other is not null);
+        }
+
+        Assert.IsTrue(VaultConversion.Encrypt(vault.Root, place.Encrypted, Password, PasswordKeys.NewPbkdf2(), _ => Try(vault.Root)).Succeeded);
+        Assert.IsFalse(taken.Single(), "pendant le chiffrement, une autre fenêtre trouve le coffre pris");
+
+        // Le déchiffrement tient de même celui du coffre chiffré, qui reste sur le disque.
+        Directory.CreateDirectory(Path.Combine(place.Encrypted, ".suivi"));
+        File.WriteAllBytes(Path.Combine(place.Encrypted, VaultLayout.LockFile), []);
+        taken.Clear();
+        Assert.IsTrue(VaultConversion.Decrypt(place.Encrypted, place.Decrypted, Password, _ => Try(place.Encrypted)).Succeeded);
+        Assert.IsFalse(taken.Single(), "pendant le déchiffrement aussi");
+
+        CollectionAssert.AreEqual(before, File.ReadAllBytes(lockFile), "le verrou n'est pas écrit");
+        using var after = KyfRev.Infrastructure.Vault.Files.VaultLock.TryAcquire(vault.Root, DateTimeOffset.UnixEpoch, out _);
+        Assert.IsNotNull(after, "relâché, une fois la conversion finie");
+    }
+
+    [TestMethod]
     public void The_application_adapter_draws_a_new_salt_for_each_preparation()
     {
         using var vault = SmallVault();

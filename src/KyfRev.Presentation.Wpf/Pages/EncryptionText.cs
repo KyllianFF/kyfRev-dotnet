@@ -166,6 +166,9 @@ public static class EncryptionText
     /// <summary>La clé de récupération n'a pas pu être copiée : elle se recopie à la main.</summary>
     public static string KeyNotCopied => Text(nameof(KeyNotCopied));
 
+    /// <summary>La clé montrée après « Retour » n'est plus celle d'avant.</summary>
+    public static string KeyReplaced => Text(nameof(KeyReplaced));
+
     /// <summary>« J'ai rangé ma clé de récupération ».</summary>
     public static string KeyStored => Text(nameof(KeyStored));
 

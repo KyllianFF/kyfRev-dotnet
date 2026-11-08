@@ -63,6 +63,7 @@ public sealed class ConversionTests
         Run(page.PrepareCommand.ExecuteAsync(new NewPassword(NewPassword, NewPassword)));
         var key = page.RecoveryKey;
         Assert.AreNotEqual(first, key, "une nouvelle clé, la première étant oubliée");
+        Assert.AreEqual(EncryptionText.KeyReplaced, page.KeyMessage, "la page dit que c'est une autre clé");
         page.CopyRecoveryKeyCommand.Execute(null);
         Assert.AreEqual(key, scene.Copied.Single());
         Assert.AreEqual(EncryptionText.KeyCopied, page.KeyMessage);
@@ -306,6 +307,8 @@ public sealed class ConversionTests
             Assert.IsTrue(view.ProgressPart.IsVisible);
             Assert.IsTrue(view.DoneMessage.IsOpen, page.Result);
             Assert.IsTrue(view.OpenNewButton.IsVisible);
+            Assert.IsFalse(view.ConversionHelp.IsVisible, "« laissez kyfRev ouvert » ne vaut plus");
+            UiThread.Until(() => FocusedIn(view.OpenNewButton) == view.OpenNewButton);
             Assert.AreEqual(page.Maximum, view.WritingBar.Maximum);
             AssertFits(view.Scroller);
             AssertNamed(view);

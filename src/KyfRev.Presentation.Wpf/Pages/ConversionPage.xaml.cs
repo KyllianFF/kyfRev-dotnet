@@ -90,6 +90,19 @@ internal sealed partial class ConversionPage : UserControl
         }
     }
 
+    /// <summary>La conversion est finie : son résultat et ses boutons se voient, et le focus va au premier d'entre eux.</summary>
+    private void OnFinishedShown(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (e.NewValue is true)
+        {
+            Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () =>
+            {
+                FinishedActions.BringIntoView();
+                (OpenNewButton.IsVisible ? OpenNewButton : ReturnButton).Focus();
+            });
+        }
+    }
+
     /// <summary>Un refus ou un message paraît : même en bas d'une fenêtre étroite, il se voit.</summary>
     private void OnNoticeShown(object sender, DependencyPropertyChangedEventArgs e)
     {

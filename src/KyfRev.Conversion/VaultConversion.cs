@@ -69,6 +69,8 @@ public static class VaultConversion
     private const int MaximumDestinations = 1000;
 
     /// <summary>Les fichiers du coffre en clair qui ne sont pas du contenu : le verrou de l'application.</summary>
+    private const string OpenInKyfRev = "Ce coffre est ouvert dans kyfRev : fermez-le, puis recommencez.";
+
     private static readonly string[] Excluded = [VaultLayout.LockFile, VaultLayout.LockInfoFile];
 
     /// <summary>
@@ -188,6 +190,7 @@ public static class VaultConversion
         ConversionMark? mark = null;
         try
         {
+            using var held = HoldSource(source);
             using var vault = EncryptedVault.Open(source, dataKey, DiskStorage.Instance);
             temporary = Temporary(destination, disk);
             mark = ConversionMark.Take(temporary);
@@ -344,6 +347,7 @@ public static class VaultConversion
         ConversionMark? mark = null;
         try
         {
+            using var held = HoldSource(plan.Source);
             temporary = Temporary(destination, disk);
             var expected = new SortedDictionary<string, byte[]>(StringComparer.Ordinal);
             var folders = new SortedSet<string>(StringComparer.Ordinal);
@@ -448,7 +452,7 @@ public static class VaultConversion
         }
         if (IsOpenElsewhere(source))
         {
-            return ConversionResult.Refused("Ce coffre est ouvert dans kyfRev : fermez-le, puis recommencez.");
+            return ConversionResult.Refused(OpenInKyfRev);
         }
         return null;
     }
@@ -488,6 +492,35 @@ public static class VaultConversion
             }
         }
         return null;
+    }
+
+    /// <summary>
+    /// Tient le verrou du coffre source pendant toute la conversion : le même verrou, sur la même plage, que celui qu'une
+    /// session ouvre (<c>.suivi/verrou</c>). Une autre fenêtre de kyfRev, ou une autre conversion, trouve donc le coffre
+    /// pris, et rien ne s'y écrit pendant la copie. Rien n'y est écrit non plus : le fichier existe, ou la source n'en a pas,
+    /// et rien n'est tenu. Rend de quoi le relâcher.
+    /// </summary>
+    private static FileStream? HoldSource(string source)
+    {
+        var lockFile = VaultLayout.Absolute(source, VaultLayout.LockFile);
+        if (!File.Exists(lockFile))
+        {
+            return null;
+        }
+        var held = new FileStream(lockFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        try
+        {
+            if (OperatingSystem.IsWindows() || OperatingSystem.IsLinux())
+            {
+                held.Lock(0, long.MaxValue);
+            }
+            return held;
+        }
+        catch (IOException exception)
+        {
+            held.Dispose();
+            throw new IOException(OpenInKyfRev, exception);
+        }
     }
 
     /// <summary>

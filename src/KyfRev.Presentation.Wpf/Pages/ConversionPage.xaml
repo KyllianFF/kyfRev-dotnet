@@ -141,7 +141,8 @@
       <StackPanel x:Name="ProgressPart" Margin="0,16,0,0" Visibility="{Binding IsStepThree, Converter={StaticResource Visible}}">
         <TextBlock x:Name="ConversionTitle" Text="{Binding ConversionTitle}" Style="{DynamicResource Kyf.Text.Subtitle}"
                    TextWrapping="Wrap" AutomationProperties.HeadingLevel="Level2" />
-        <TextBlock x:Name="ConversionHelp" Text="{x:Static pages:EncryptionText.ConversionHelp}" Style="{DynamicResource Kyf.Text.Secondary}" Margin="0,4,0,0" TextWrapping="Wrap" />
+        <TextBlock x:Name="ConversionHelp" Text="{x:Static pages:EncryptionText.ConversionHelp}" Style="{DynamicResource Kyf.Text.Secondary}" Margin="0,4,0,0" TextWrapping="Wrap"
+                   Visibility="{Binding IsConverting, Converter={StaticResource Visible}}" />
         <kyf:AdaptiveRow MainMinWidth="200" Spacing="12" StackedSpacing="2" Margin="0,12,0,4">
           <TextBlock x:Name="WritingText" Text="{Binding WritingLabel}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" />
           <TextBlock x:Name="WritingCountText" kyf:AdaptiveRow.Part="Trailing" Text="{Binding WritingCount}" FontFamily="{DynamicResource Kyf.Font.Code}" Style="{DynamicResource Kyf.Text.Body}" />
@@ -157,7 +158,7 @@
 
         <kyf:Notification x:Name="DoneMessage" Severity="Success" Message="{Binding Result}" IsOpen="{Binding IsDone, Mode=OneWay}" IsClosable="False" Margin="0,16,0,0" />
         <kyf:Notification x:Name="FailedMessage" Severity="Critical" Message="{Binding Result}" IsOpen="{Binding IsFailed, Mode=OneWay}" IsClosable="False" Margin="0,16,0,0" />
-        <WrapPanel Margin="0,16,0,0" Visibility="{Binding IsFinished, Converter={StaticResource Visible}}">
+        <WrapPanel x:Name="FinishedActions" Margin="0,16,0,0" Visibility="{Binding IsFinished, Converter={StaticResource Visible}}" IsVisibleChanged="OnFinishedShown">
           <Button x:Name="OpenNewButton" Style="{DynamicResource Kyf.Button.Primary}" Command="{Binding OpenNewCommand}" IsEnabled="{Binding IsIdle}"
                   Visibility="{Binding IsDone, Converter={StaticResource Visible}}" Margin="0,0,8,8" AutomationProperties.Name="{Binding OpenNewLabel}">
             <StackPanel Orientation="Horizontal">
