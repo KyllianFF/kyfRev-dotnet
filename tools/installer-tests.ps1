@@ -150,6 +150,7 @@ try {
     Assert-Vrai (Test-Icone (Join-Path $dossier 'kyfRev.exe')) 'kyfRev.exe porte l''icône de kyfRev'
     Assert-Vrai (Test-Icone $Installateur) 'l''installateur porte l''icône de kyfRev'
     Assert-Vrai (-not (Get-ChildItem $dossier -Filter *.pdb)) 'aucun fichier de symboles'
+    Assert-Vrai ((Test-Path (Join-Path $dossier 'libsodium.dll')) -and (Test-Path (Join-Path $dossier 'vcruntime140.dll'))) 'libsodium.dll et le vcruntime140.dll qu''elle charge sont installés'
     Assert-Licences
     Assert-Vrai ((Get-Installation) -eq "{`"coffre`":`"donnees`"}`n") 'installation.json : fiches dans AppData'
     $inscription = Get-Inscription

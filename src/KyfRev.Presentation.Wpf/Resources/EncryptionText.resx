@@ -88,7 +88,7 @@
     <value>Mot de passe actuel</value>
   </data>
   <data name="DecryptedNext" xml:space="preserve">
-    <value>Il se lit sans mot de passe : rangez-le à l'abri, et retirez-le quand vous n'en avez plus besoin. Si vous l'ouvrez, ses sauvegardes s'écriront en clair, elles aussi, dans le dossier « Sauvegardes » voisin.</value>
+    <value>Il se lit sans mot de passe : retirez-le quand vous n'en avez plus besoin. Si vous l'ouvrez, ses sauvegardes s'écriront en clair, elles aussi, dans le dossier « Sauvegardes » voisin.</value>
   </data>
   <data name="DecryptedParent" xml:space="preserve">
     <value>Le coffre en clair s'écrira dans ce dossier :</value>
@@ -118,7 +118,7 @@
     <value>Vérification du mot de passe…</value>
   </data>
   <data name="EncryptedNext" xml:space="preserve">
-    <value>Ouvrez-le avec son mot de passe. Le coffre en clair n'a pas changé : retirez-le vous-même une fois satisfait. Sur un disque SSD, un fichier effacé peut encore se retrouver : BitLocker reste recommandé.</value>
+    <value>Ouvrez-le avec son mot de passe. Retirez vous-même le coffre en clair, une fois satisfait ; sur un disque SSD, un fichier effacé peut encore se retrouver : BitLocker reste recommandé.</value>
   </data>
   <data name="EncryptHeading" xml:space="preserve">
     <value>Chiffrer ce coffre</value>

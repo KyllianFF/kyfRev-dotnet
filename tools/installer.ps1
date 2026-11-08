@@ -78,6 +78,13 @@ dotnet @publication | Out-Host
 if ($LASTEXITCODE -ne 0) { throw 'Publication de l''application impossible.' }
 & (Join-Path $PSScriptRoot 'avis-nuget.ps1') -Publication $application
 
+# libsodium (le chiffrement des coffres, par NSec) charge VCRUNTIME140.dll, que seul le Redistribuable Visual C++ met dans
+# Windows ; la publication n'en porte qu'une copie renommée, pour .NET. Sans lui, sur un poste qui ne l'a pas, aucun coffre
+# chiffré ne se crée ni ne s'ouvre : il est livré à côté de l'application.
+$runtimeVc = Join-Path $env:SystemRoot 'System32\vcruntime140.dll'
+if (-not (Test-Path $runtimeVc)) { throw 'vcruntime140.dll est introuvable : installez le Redistribuable Visual C++ sur ce poste.' }
+Copy-Item $runtimeVc $application
+
 $compilation = @('/Qp', "/O$sortie", "/DVersion=$Version", "/DNumericVersion=$numerique", "/DSource=$application")
 if ($dateTexte) { $compilation += "/DReleaseDate=$dateTexte" }
 if ($Signature) { $compilation += "/Skyfrev=$Signature", '/DSignTool=kyfrev' }

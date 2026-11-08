@@ -27,6 +27,8 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   écrit seulement s'il diffère des 15 minutes par défaut), et le verrouillage de lui-même le suit sans relire le coffre.
   « Verrouiller maintenant » fait comme Ctrl+Maj+L. La clé copiée ne va ni dans l'historique du presse-papiers ni sur les
   autres appareils. Un mot de passe changé pendant un verrouillage se dit à la prochaine lecture de ce coffre.
+- L'installateur livre `vcruntime140.dll` à côté de l'application : sur un poste sans le Redistribuable Visual C++, la
+  bibliothèque de chiffrement ne se chargeait pas, et aucun coffre chiffré ne pouvait se créer ni s'ouvrir.
 - Les dialogues donnent le focus à leur premier champ, puis à leurs boutons : « Annuler » ne passe plus devant. Entrée
   sur une case à cocher choisit le bouton par défaut au lieu de la cocher ; Espace la coche.
 - Coffre chiffré, lot 3 : le coffre chiffré se verrouille. Ctrl+Maj+L (ou « Verrouiller le coffre chiffré » dans la
