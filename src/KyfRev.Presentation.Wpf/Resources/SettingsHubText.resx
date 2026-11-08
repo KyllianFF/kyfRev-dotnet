@@ -195,6 +195,9 @@
   <data name="Version" xml:space="preserve">
     <value>kyfRev {0}</value>
   </data>
+  <data name="LegacyShared" xml:space="preserve">
+    <value>kyfRev {0}, l'ancienne version, est inscrit dans le même dossier que celle-ci. Le désinstaller y effacerait aussi cette version : relancez ensuite l'installateur de kyfRev. Vos coffres ne seront pas touchés.</value>
+  </data>
   <data name="OpenInstalledApps" xml:space="preserve">
     <value>Ouvrir les applications installées</value>
   </data>

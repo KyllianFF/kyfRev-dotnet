@@ -86,6 +86,18 @@ public sealed class SettingsHubTests
     }
 
     [TestMethod]
+    public void An_old_version_in_this_folder_is_said_to_remove_this_one_too()
+    {
+        using var vault = new DataVault();
+        var legacy = new FakeLegacy { Installed = new LegacyInstall("0.7.0", @"C:\kyfRev", SharesThisFolder: true) };
+        var about = new AboutSettingsViewModel(vault.App.Vaults, legacy: legacy);
+
+        about.OnNavigatedTo();
+
+        Assert.AreEqual(SettingsHubText.LegacySharedOf("0.7.0"), about.LegacyMessage);
+    }
+
+    [TestMethod]
     public void Without_the_port_nothing_is_offered()
     {
         using var vault = new DataVault();

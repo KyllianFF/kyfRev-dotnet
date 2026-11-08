@@ -26,7 +26,8 @@
 ;   sont installés dans {app}\licences, et retirés avec l'application ;
 ; - la désinstallation ne touche jamais aux coffres, aux sauvegardes ni aux réglages des profils ;
 ; - WebView2 s'installe s'il manque, après vérification de la signature de son programme d'amorçage ;
-; - le dossier de la 0.x est refusé : sa désinstallation y retirerait kyfRev.exe.
+; - une nouvelle installation refuse le dossier de la 0.x : sa désinstallation y retirerait kyfRev.exe.
+;   Une version déjà installée là, elle, se met à jour.
 
 #ifndef Version
   #error Version manquante : /DVersion=<version SemVer>.
@@ -420,7 +421,7 @@ end;
 
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 begin
-  if InLegacyFolder then
+  if InLegacyFolder and not IsUpdate then
     Result := 'kyfRev 0.x est installé dans ce dossier, et le retirer plus tard y effacerait aussi cette version. Rien n''a été modifié. Installez kyfRev pour vous seul, ou choisissez un autre dossier.'
   else if NewerInstalled then
     Result := FmtMessage('Une version plus récente de kyfRev (%1) est déjà installée sur cet ordinateur. Cette installation, en version %2, ne la remplace pas : rien n''est modifié.', [InstalledVersion, '{#Version}'])

@@ -10,9 +10,9 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 ### Ajouté
 
 - L'installateur installe WebView2 s'il manque, après avoir vérifié que son programme d'amorçage est signé par Microsoft ; sans
-  réseau, l'installation finit quand même et le dit. Il livre `kyfrev-coffre`, et refuse le dossier de la 0.x, dont la
-  désinstallation y effacerait `kyfRev.exe`. Paramètres › À propos signale la 0.x encore installée et ouvre la page des
-  applications de Windows pour la retirer ; rien n'est retiré d'office.
+  réseau, l'installation finit quand même et le dit. Il livre `kyfrev-coffre`, et une nouvelle installation refuse le dossier de la
+  0.x, dont la désinstallation y effacerait `kyfRev.exe`. Paramètres › À propos signale la 0.x encore installée, avertit si elle
+  partage le dossier de cette version, et ouvre la page des applications de Windows pour la retirer ; rien n'est retiré d'office.
 - Rechercher une mise à jour, dans Paramètres › À propos, seulement à la demande. kyfRev lit dans le dépôt une annonce signée par les
   clés de publication, dit si une version plus récente existe et peut ouvrir sa page ; rien n'est téléchargé ni installé.
   `tools/catalogue/catalogue.cs version` écrit et signe cette annonce. Le jeton GitHub de la 0.x n'est pas repris : le dépôt est public.

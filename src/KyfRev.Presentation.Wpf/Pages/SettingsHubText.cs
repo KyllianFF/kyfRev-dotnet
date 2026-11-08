@@ -77,6 +77,9 @@ public static class SettingsHubText
     /// <summary>« Ouvrir les applications installées ».</summary>
     public static string OpenInstalledApps => Text(nameof(OpenInstalledApps));
 
+    /// <summary>« kyfRev {0}, l'ancienne version, est inscrit dans le même dossier… ».</summary>
+    public static string LegacySharedOf(object version) => Format("LegacyShared", version);
+
     /// <summary>« kyfRev {0}, l'ancienne version, est encore installé… ».</summary>
     public static string LegacyInstalledOf(object version) => Format("LegacyInstalled", version);
 

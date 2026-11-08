@@ -31,6 +31,17 @@ public sealed class LegacyInstallationTests
     }
 
     [TestMethod]
+    [DataRow(@"C:\Program Files\kyfRev", true)]
+    [DataRow(@"c:\program files\KYFREV\", true)]
+    [DataRow(@"C:\Programs\kyfRev", false)]
+    public void Sharing_this_folder_is_noticed(string application, bool shared)
+    {
+        var name = Written("0.7.0", "\"C:\\Program Files\\kyfRev\"");
+
+        Assert.AreEqual(shared, new LegacyInstallation([Registry.CurrentUser], name, _ => true, application).Find()!.SharesThisFolder);
+    }
+
+    [TestMethod]
     public void A_key_without_folder_gives_an_empty_folder()
     {
         Assert.AreEqual(string.Empty, Legacy(Written("0.8.0", null)).Find()!.Folder);

@@ -78,7 +78,12 @@ public sealed partial class AboutSettingsViewModel : ObservableObject, INavigati
     public void OnNavigatedTo()
     {
         Show(_vaults.State());
-        LegacyMessage = _legacy?.Find() is { } found ? SettingsHubText.LegacyInstalledOf(found.Version) : string.Empty;
+        LegacyMessage = _legacy?.Find() switch
+        {
+            null => string.Empty,
+            { SharesThisFolder: true } shared => SettingsHubText.LegacySharedOf(shared.Version),
+            var found => SettingsHubText.LegacyInstalledOf(found.Version),
+        };
     }
 
     /// <summary>Ouvre la page des applications installées de Windows : c'est là que la 0.x se retire.</summary>
