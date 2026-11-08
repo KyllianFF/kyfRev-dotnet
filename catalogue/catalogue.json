@@ -1,0 +1,119 @@
+{
+  "format": 1,
+  "numero": 1,
+  "publieLe": "2026-11-08",
+  "extensions": [
+    {
+      "id": "bilan",
+      "nom": "Bilan du coffre",
+      "version": "2.0.0",
+      "resume": "Le point sur vos fiches, pour les améliorer : celles à étoffer, sans étiquette ou sans intertitre, chacune s'ouvre d'un clic et une étiquette s'ajoute sur place. Une fiche peut être ignorée. L'évolution semaine après semaine, et un encart sur Aujourd'hui. Il change des étiquettes, jamais le texte.",
+      "permissions": [
+        "fiches:lecture",
+        "fiches:creation",
+        "stockage"
+      ],
+      "fichiers": [
+        {
+          "chemin": "barres.svg",
+          "taille": 207,
+          "sha256": "0a49f24f074a9fdca7beab25bc01d64c27773dc1c96e6c658a64eae58c0cb72f"
+        },
+        {
+          "chemin": "extension.js",
+          "taille": 9248,
+          "sha256": "1d8915056bc960f9c30400ef876d1dc5bf4cd1ec4c9715bf5d53da901dff6049"
+        },
+        {
+          "chemin": "extension.json",
+          "taille": 684,
+          "sha256": "588cbcd072ecf640f4f9700d3b5c9fd4aac92eccd5aa720e1b450f87da615e16"
+        }
+      ]
+    },
+    {
+      "id": "chronologie",
+      "nom": "Chronologie",
+      "version": "2.0.0",
+      "resume": "Des frises que vous composez depuis vos fiches : « Ajouter à la frise » sur un texte sélectionné, avec la date déjà proposée, ou les dates d'une fiche à cocher. Chaque date rouvre son passage, et un jeu demande de les remettre dans l'ordre. Les blocs ```chronologie restent lisibles.",
+      "permissions": [
+        "fiches:lecture",
+        "selection",
+        "stockage"
+      ],
+      "fichiers": [
+        {
+          "chemin": "extension.js",
+          "taille": 23737,
+          "sha256": "3f060be07080d1880b4e13fc4129fbde5e735bda7586c63a7721b14189589c42"
+        },
+        {
+          "chemin": "extension.json",
+          "taille": 997,
+          "sha256": "5324c160446f410a784d8cff69a2ea8819cab1c8790d2135ef9ea114782077db"
+        },
+        {
+          "chemin": "frise.svg",
+          "taille": 301,
+          "sha256": "229d3ce6f9905a3f243072297df031759d5e94714c463fb2030a088ddd96846d"
+        }
+      ]
+    },
+    {
+      "id": "quiz",
+      "nom": "Quiz",
+      "version": "2.0.0",
+      "resume": "Des quiz que vous composez depuis vos fiches : la question et la réponse se prennent dans le texte, à la chaîne, et ce qui manque s'écrit à la main. Les questions ratées reviennent en premier. Les blocs ```quiz restent lisibles.",
+      "permissions": [
+        "fiches:lecture",
+        "selection",
+        "stockage"
+      ],
+      "fichiers": [
+        {
+          "chemin": "extension.js",
+          "taille": 27722,
+          "sha256": "4da3eeac81f00ec4e7f6cbd7cd7257ad4f8ed8710dd96182921860592357066e"
+        },
+        {
+          "chemin": "extension.json",
+          "taille": 983,
+          "sha256": "d28ddaa8eefb5d2fbca6225fde2174cf8cd94206d035d8e7206e9bb21bb7d1b3"
+        },
+        {
+          "chemin": "quiz.svg",
+          "taille": 269,
+          "sha256": "dd09d26d822f0d689ece32f19e1022f5a82853d7cb04945ada50efa65b93a2d1"
+        }
+      ]
+    },
+    {
+      "id": "vocabulaire",
+      "nom": "Vocabulaire",
+      "version": "2.0.0",
+      "resume": "Un carnet par langue. Sélectionnez un mot dans une fiche, « Ajouter au vocabulaire » demande sa traduction et garde la phrase d'où il vient. Les mots reviennent à J1, J3, J7, J14 et J30, comme vos fiches, à écrire ou à dévoiler, dans les deux sens. Les blocs ```vocabulaire restent lisibles.",
+      "permissions": [
+        "fiches:lecture",
+        "selection",
+        "stockage"
+      ],
+      "fichiers": [
+        {
+          "chemin": "extension.js",
+          "taille": 22339,
+          "sha256": "5205c313aa6ba08c46a0ca6175261201c313fbb9be54cd2ae52c0ff7ce5325b5"
+        },
+        {
+          "chemin": "extension.json",
+          "taille": 944,
+          "sha256": "e418615279d6a37f5b27545dee7a83d40ce2b58de6b6d3ce2e43857a2d5482c2"
+        },
+        {
+          "chemin": "langue.svg",
+          "taille": 241,
+          "sha256": "e27909c73113711b9034df3d2de3765e8fbd4d7552d9ac3c07f9190fcce0c009"
+        }
+      ]
+    }
+  ]
+}
