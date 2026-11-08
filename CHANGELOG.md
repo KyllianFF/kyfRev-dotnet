@@ -9,6 +9,14 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- Les examens arrivent sur « Aujourd'hui » : un examen par dossier (ou pour tout le coffre), avec son compte à rebours, le
+  nombre d'éléments actifs et ceux prévus après lui ; « Examen… » en fixe un, « Modifier… » et « Retirer l'examen… » suivent,
+  et « Resserrer… » ramène, après confirmation, les échéances avant sa veille. Les lignes se pilotent au clavier : Entrée sur
+  un examen ouvre ses actions.
+- La charge des 30 prochains jours, depuis le bouton « Charge » d'« Aujourd'hui » : une colonne par jour, les échéances
+  connues pleines sous les étapes projetées dessinées, la moyenne, le jour le plus chargé. Un jour choisi montre ses
+  révisions ; « Déplacer… » reporte une échéance, sur le jour le moins chargé à trois jours au plus, comme dans la 0.x. À
+  l'étroit, les colonnes se rangent sur deux rangées pour rester visables.
 - La barre de révision propose « Valider à une date passée… », entre le lendemain de la dernière révision et aujourd'hui : le
   calendrier repart de ce jour-là, et une révision en avance sur ce jour demande confirmation. « Reporter à une date… »
   vient s'ajouter à demain et à dans 3 jours, comme dans la 0.x.

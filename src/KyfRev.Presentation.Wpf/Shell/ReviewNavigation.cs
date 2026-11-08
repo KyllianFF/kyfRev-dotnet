@@ -28,6 +28,9 @@ public interface IReviewOpener
     /// <summary>Ouvre une fiche, pour l'écrire.</summary>
     void WriteSheet(string sheetId);
 
+    /// <summary>Ouvre la charge des 30 prochains jours, réduite à ce que montre <paramref name="filter"/>.</summary>
+    void OpenWorkload(DashboardFilter filter);
+
     /// <summary>Lance une séance d'étude sur ces éléments, dans cet ordre.</summary>
     void StartSession(IReadOnlyList<DueItem> items, bool activeRecall);
 
@@ -89,6 +92,9 @@ public sealed class ReviewNavigation : IReviewOpener
         _time = time;
     }
 
+    /// <summary>La vue de la charge à venir, tenue par la composition.</summary>
+    public WorkloadPageViewModel? Workload { get; set; }
+
     private DateOnly Today => DateOnly.FromDateTime(_time.GetLocalNow().DateTime);
 
     private ShellViewModel Shell => _shell ?? throw new InvalidOperationException("La coquille n'est pas encore assemblée.");
@@ -140,6 +146,19 @@ public sealed class ReviewNavigation : IReviewOpener
 
     /// <inheritdoc/>
     public void WriteSheet(string sheetId) => OpenSheet(sheetId, revising: false, writes: true);
+
+    /// <inheritdoc/>
+    public void OpenWorkload(DashboardFilter filter)
+    {
+        if (Workload is not { } page)
+        {
+            return;
+        }
+        var shell = Shell;
+        var from = shell.Current;
+        page.Prepare(filter, () => shell.Navigate(from));
+        shell.Navigate(new NavigationItem("charge", WorkloadText.Title, Icons.Chart, int.MaxValue, page));
+    }
 
     private void OpenSheet(string sheetId, bool revising, string? passageId = null, bool writes = false, (int Start, int End)? range = null)
     {

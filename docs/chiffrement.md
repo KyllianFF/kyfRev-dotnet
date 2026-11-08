@@ -262,7 +262,7 @@ kyfrev-coffre cle-de-recuperation <coffre chiffré>
      web ;
   3. le coffre se ferme, une fois finie la lecture en cours : son verrou est libéré, sa clé effacée, et son index en clair
      (les chemins, donc les titres) oublié ;
-  4. chaque vue oublie ce qu'elle avait lu (`IForgetsVault`) : « Aujourd'hui », les fiches et leur aperçu, les
+  4. chaque vue oublie ce qu'elle avait lu (`IForgetsVault`) : « Aujourd'hui » et ses examens, la charge à venir, les fiches et leur aperçu, les
      définitions, les archives, les statistiques, la santé du coffre, la corbeille et les données des paramètres, le
      journal, les erreurs et les pages des extensions (leur moteur repart à vide), les dessins des schémas ; les modules se
      déchargent. Une lecture partie avant n'y remet rien.

@@ -117,11 +117,12 @@ internal static class Composition
         services.AddSingleton(provider =>
         {
             var modules = provider.GetRequiredService<ActiveModules>();
-            return new DashboardPageViewModel(provider.GetRequiredService<ReminderUseCases>(), provider.GetRequiredService<SheetUseCases>(), provider.GetRequiredService<IReviewOpener>(), modules.Widgets, provider.GetRequiredService<ReviewUseCases>())
+            return new DashboardPageViewModel(provider.GetRequiredService<ReminderUseCases>(), provider.GetRequiredService<SheetUseCases>(), provider.GetRequiredService<IReviewOpener>(), modules.Widgets, provider.GetRequiredService<ReviewUseCases>(), provider.GetRequiredService<KyfRevApplication>().Exams, provider.GetRequiredService<FolderUseCases>())
             {
                 LookForNews = () => LookForQuoteAsync(modules),
             };
         });
+        services.AddSingleton<WorkloadPageViewModel>();
         services.AddSingleton<SheetsPageViewModel>();
         services.AddSingleton<DefinitionsPageViewModel>();
         services.AddSingleton<SettingsPageViewModel>();
@@ -247,6 +248,7 @@ internal static class Composition
                 provider.GetRequiredService<GalleryPageViewModel>());
             // Les fiches et les passages s'ouvrent dans la coquille.
             provider.GetRequiredService<ReviewNavigation>().Attach(shell);
+            provider.GetRequiredService<ReviewNavigation>().Workload = provider.GetRequiredService<WorkloadPageViewModel>();
             provider.GetRequiredService<MachineSettings>().Follow(provider.GetRequiredService<AppearanceController>(), shell);
             var modules = provider.GetRequiredService<ActiveModules>();
             var extensionPages = provider.GetRequiredService<ExtensionPages>();
@@ -382,6 +384,7 @@ internal static class Composition
     internal static IForgetsVault[] ForgettingViews(IServiceProvider provider) =>
     [
         provider.GetRequiredService<DashboardPageViewModel>(),
+        provider.GetRequiredService<WorkloadPageViewModel>(),
         provider.GetRequiredService<SheetsPageViewModel>(),
         provider.GetRequiredService<DefinitionsPageViewModel>(),
         provider.GetRequiredService<ArchivesPageViewModel>(),

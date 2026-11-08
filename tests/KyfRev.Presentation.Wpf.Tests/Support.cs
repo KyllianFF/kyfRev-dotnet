@@ -306,6 +306,8 @@ internal sealed class FakeOpener : IReviewOpener
 
     public void OpenReminder(PendingReminder reminder) => Opened.Add(reminder);
 
+    public void OpenWorkload(DashboardFilter filter) => Opened.Add(("charge", filter));
+
     /// <summary>Éléments restants de la séance à reprendre, simulés.</summary>
     public int? Resumable { get; set; }
 

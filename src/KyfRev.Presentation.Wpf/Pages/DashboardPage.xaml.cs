@@ -10,6 +10,9 @@ namespace KyfRev.Presentation.Wpf.Pages;
 /// <summary>Vue « Aujourd'hui » : le tableau de bord.</summary>
 internal sealed partial class DashboardPage : UserControl
 {
+    /// <summary>Les actions d'un examen, ouvertes sous sa ligne ou son bouton.</summary>
+    private readonly ContextMenu _examMenu = new();
+
     public DashboardPage()
     {
         InitializeComponent();
@@ -50,6 +53,12 @@ internal sealed partial class DashboardPage : UserControl
         else if (e.Key == Key.Enter && row is DueItemRow or ReminderRow)
         {
             Page.OpenCommand.Execute(row);
+            e.Handled = true;
+        }
+        else if (row is ExamRow exam)
+        {
+            // Les boutons de la ligne ne prennent pas le focus : ses actions passent par ce menu.
+            OpenExamMenu(exam, (UIElement)Keyboard.FocusedElement);
             e.Handled = true;
         }
     }
@@ -139,10 +148,43 @@ internal sealed partial class DashboardPage : UserControl
                 return items;
             case ReminderRow:
                 return [ActionMenus.Quick(DashboardText.OpenSheet, Icons.Document, () => Page.OpenCommand.Execute(row))];
+            case ExamRow exam when Page.Exams is { } exams:
+                List<Control> entries = [];
+                if (exam.CanTighten)
+                {
+                    entries.Add(ActionMenus.Item(ExamText.TightenAction, () => exams.RequestTighten(exam)));
+                }
+                entries.Add(ActionMenus.Item(ExamText.EditAction, () => exams.EditCommand.Execute(exam)));
+                entries.Add(ActionMenus.Item(ExamText.WithdrawAction, () => exams.RequestWithdraw(exam)));
+                return entries;
             default:
                 return [];
         }
     }
+
+    /// <summary>« Resserrer… », sur la ligne d'un examen.</summary>
+    private void OnTightenClick(object sender, RoutedEventArgs e) => Page.Exams!.RequestTighten((ExamRow)((FrameworkElement)sender).DataContext);
+
+    /// <summary>« ⋯ », sur la ligne d'un examen : ses actions, sous le bouton.</summary>
+    private void OnExamMenuClick(object sender, RoutedEventArgs e) => OpenExamMenu((ExamRow)((FrameworkElement)sender).DataContext, (UIElement)sender);
+
+    private void OpenExamMenu(ExamRow exam, UIElement target)
+    {
+        _examMenu.Items.Clear();
+        foreach (var item in RowMenuItems(exam))
+        {
+            _examMenu.Items.Add(item);
+        }
+        _examMenu.PlacementTarget = target;
+        _examMenu.Placement = PlacementMode.Bottom;
+        _examMenu.IsOpen = _examMenu.Items.Count > 0;
+    }
+
+    /// <summary>La réponse au formulaire d'un examen part vers les examens.</summary>
+    private void OnExamEditorClosed(object sender, DialogClosedEventArgs e) => Page.Exams!.AnswerEditorCommand.Execute(e.Choice == DialogChoice.Primary);
+
+    /// <summary>La réponse à la confirmation d'un examen part vers les examens.</summary>
+    private void OnExamConfirmationClosed(object sender, DialogClosedEventArgs e) => Page.Exams!.AnswerCommand.Execute(e.Choice == DialogChoice.Primary);
 
     /// <summary>La réponse à la mise aux archives part vers la vue.</summary>
     private void OnArchiveClosed(object sender, DialogClosedEventArgs e) => Page.AnswerArchiveCommand.Execute(e.Choice == DialogChoice.Primary);
