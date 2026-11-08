@@ -88,7 +88,7 @@ Copy-Item $runtimeVc $application
 # kyfrev-coffre, l'outil en ligne de commande du coffre, est livré à côté de l'application.
 $outil = @(
     'publish', (Join-Path $racine 'src\KyfRev.Cli\KyfRev.Cli.csproj'),
-    '--configuration', 'Release', '--self-contained', '--runtime', 'win-x64', '--output', $application,
+    '--configuration', 'Release', '--self-contained', '--output', $application,
     "-p:Version=$Version"
 )
 dotnet @outil | Out-Host
