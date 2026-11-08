@@ -1,6 +1,7 @@
 using KyfRev.Domain.Calendar;
 using KyfRev.Infrastructure.Vault.Links;
 using KyfRev.Infrastructure.Vault.Tests.Support;
+using KyfRev.Tests.Support;
 
 namespace KyfRev.Infrastructure.Vault.Tests;
 
@@ -220,16 +221,33 @@ public sealed class BacklinksOnDiskTests() : BacklinksTests(StorageKind.Disk)
         var moment = new Moment(new DateOnly(2026, 10, 1), new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero));
         var target = vault.CreateSheet(null, "Cible", "Texte.\n", moment);
         vault.CreateSheet(null, "Source", "[c](Cible.md)\n", moment);
-        vault.CreateSheet(null, "Sans lien", "Rien.\n", moment);
+        vault.CreateSheet(null, "Sans lien", "Un texte sans aucun lien.\n", moment);
         Assert.HasCount(1, vault.Backlinks(target, CancellationToken.None), "ce passage relève les liens");
 
-        // Une fiche qui ne mène pas ici peut devenir illisible sans que la recherche la rouvre : ses liens sont déjà relevés.
-        var stamp = File.GetLastWriteTimeUtc(folder.PathOf("fiches/Sans lien.md"));
-        var length = new FileInfo(folder.PathOf("fiches/Sans lien.md")).Length;
-        File.WriteAllBytes(folder.PathOf("fiches/Sans lien.md"), new byte[length]);
-        File.SetLastWriteTimeUtc(folder.PathOf("fiches/Sans lien.md"), stamp);
+        // Même date, même taille, mais un lien de plus dans le fichier : une recherche qui le rouvrirait le trouverait.
+        var path = folder.PathOf("fiches/Sans lien.md");
+        var stamp = File.GetLastWriteTimeUtc(path);
+        var length = new FileInfo(path).Length;
+        File.WriteAllText(path, File.ReadAllText(path).Replace("Un texte sans aucun lien.", "[c](Cible.md) sans bruit.", StringComparison.Ordinal));
+        File.SetLastWriteTimeUtc(path, stamp);
+        Assert.AreEqual(length, new FileInfo(path).Length);
 
-        Assert.HasCount(1, vault.Backlinks(target, CancellationToken.None));
+        Assert.HasCount(1, vault.Backlinks(target, CancellationToken.None), "ses liens sont déjà relevés : elle n'est pas relue");
+    }
+
+    [TestMethod]
+    public void A_disk_that_can_no_longer_be_walked_is_a_refusal()
+    {
+        var moment = new Moment(new DateOnly(2026, 10, 1), new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero));
+        using var folder = TemporaryVault.Empty(StorageKind.Disk);
+        var disk = new FailingDisk();
+        using var vault = VaultSession.Initialize(folder.Root, moment, storage: disk);
+        var target = vault.CreateSheet(null, "Cible", "Texte.\n", moment);
+
+        disk.WalkFails = true;
+
+        Assert.AreEqual(VaultErrorKind.Io, Assert.ThrowsExactly<VaultException>(() => vault.Backlinks(target, CancellationToken.None)).Kind);
+        Assert.AreEqual(VaultErrorKind.Io, Assert.ThrowsExactly<VaultException>(vault.BrokenLinks).Kind);
     }
 }
 

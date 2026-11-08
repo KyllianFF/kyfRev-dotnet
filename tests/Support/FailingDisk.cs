@@ -6,7 +6,8 @@ namespace KyfRev.Tests.Support;
 /// <summary>
 /// Le disque, qui échoue à la demande : l'écriture numéro <see cref="FailAt"/> lève une <see cref="IOException"/>, et avec
 /// <see cref="Cut"/> toutes les suivantes aussi, comme après une coupure. Chaque appel qui peut écrire compte pour une
-/// écriture : création, remplacement, dossier, déplacement, effacement. Les lectures passent toujours.
+/// écriture : création, remplacement, dossier, déplacement, effacement. Les lectures passent toujours, sauf le parcours
+/// du coffre quand <see cref="WalkFails"/> le demande.
 /// </summary>
 /// <remarks>Partagé par les projets d'essais du coffre et du chiffrement (fichier lié).</remarks>
 internal sealed class FailingDisk : VaultStorage
@@ -27,6 +28,9 @@ internal sealed class FailingDisk : VaultStorage
 
     /// <summary>Ce qui arrive juste avant la création d'un dossier : un autre programme qui prend le même nom, par exemple.</summary>
     public Action<string>? BeforeCreatingDirectory { get; set; }
+
+    /// <summary>Vrai : parcourir le coffre lève une <see cref="IOException"/>, comme un disque débranché.</summary>
+    public bool WalkFails { get; set; }
 
     public override bool FileExists(string path) => _disk.FileExists(path);
 
@@ -83,7 +87,8 @@ internal sealed class FailingDisk : VaultStorage
 
     public override IReadOnlyList<string> Files(string folder, string pattern) => _disk.Files(folder, pattern);
 
-    public override IReadOnlyList<StorageEntry> AllEntries(string folder) => _disk.AllEntries(folder);
+    public override IReadOnlyList<StorageEntry> AllEntries(string folder) =>
+        WalkFails ? throw new IOException($"Disque débranché : « {folder} ».") : _disk.AllEntries(folder);
 
     public override string RealPath(string path) => _disk.RealPath(path);
 

@@ -7,6 +7,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using KyfRev.Application;
 using KyfRev.Application.Model;
+using KyfRev.DesignSystem.Controls;
 using KyfRev.Presentation.Wpf.Pages;
 using KyfRev.Presentation.Wpf.Reading;
 using KyfRev.Presentation.Wpf.Shell;
@@ -146,7 +147,7 @@ public sealed class BacklinksTests
 
         page.CloseOverlayCommand.Execute(null);
         Assert.IsFalse(page.IsBacklinksOn);
-        Assert.AreEqual("Plan et passages (Passages · 2, Rétroliens · 1)", page.PanelsMenuName);
+        Assert.AreEqual("Volets : Plan, Passages · 2, Rétroliens · 1", page.PanelsMenuName);
 
         page.IsBacklinksOn = true;
         page.OpenBacklinkCommand.Execute(page.Backlinks[0]);
@@ -162,7 +163,7 @@ public sealed class BacklinksTests
         await page.LoadCommand.ExecuteAsync(null);
 
         Assert.IsTrue(page.HasPanels);
-        Assert.AreEqual("Plan et passages (Rétroliens · 1)", page.PanelsMenuName);
+        Assert.AreEqual("Volets : Rétroliens · 1", page.PanelsMenuName, "le menu n'annonce ni plan ni passages qu'il n'a pas");
     }
 
     [TestMethod]
@@ -183,15 +184,97 @@ public sealed class BacklinksTests
     }
 
     [STATestMethod]
-    public void A_newer_search_stops_an_older_one()
+    public void A_search_that_fails_is_announced_by_a_notification()
     {
         using var ui = new UiThread();
         using var vault = new ReadingVault("Le texte.\n", passage: false);
         Source(vault, "Biologie", "Source", Linking);
+        var test = new TestShell();
+        var page = vault.Page();
+        page.LoadCommand.Execute(null);
+        UiThread.Until(() => page.Backlinks.Count == 1);
+        var window = Show(test, page, 1200, 700);
+        try
+        {
+            var message = Descendants(Named<ContentControl>(window, "BacklinksPane")).OfType<Notification>().Single();
+            Assert.IsFalse(message.IsVisible, "rien à dire tant que la recherche réussit");
+
+            vault.Leave();
+            page.IsReviseOn = true;
+            page.IsReadOn = true;
+            UiThread.Until(() => page.HasBacklinksError);
+            TestShell.Flush();
+
+            Assert.IsTrue(message.IsVisible, "une notification s'annonce d'elle-même au lecteur d'écran");
+            Assert.AreEqual(page.BacklinksError, message.Message);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [TestMethod]
+    public async Task A_result_that_did_not_change_keeps_the_list_in_place()
+    {
+        using var vault = new ReadingVault("Le texte.\n", passage: false);
+        var source = Source(vault, "Biologie", "Source", Linking);
+        var page = vault.Page();
+        await page.LoadCommand.ExecuteAsync(null);
+        var before = page.Backlinks;
+
+        await page.LoadCommand.ExecuteAsync(null);
+        Assert.AreSame(before, page.Backlinks, "rien n'a changé : rien à reconstruire");
+
+        Assert.IsTrue(vault.App.Editing.Save(source, "Voir [cette fiche](Mitose.md) autrement.\n", vault.App.Sheets.Open(source).Value.Fingerprint, 2).Succeeded);
+        await page.LoadCommand.ExecuteAsync(null);
+        Assert.AreNotSame(before, page.Backlinks, "un extrait qui change se relit");
+        Assert.AreEqual("Voir cette fiche autrement.", string.Concat(page.Backlinks.Single().Excerpt.Select(part => part.Text)));
+    }
+
+    [STATestMethod]
+    public void A_sheet_linked_by_many_others_only_builds_the_entries_on_screen()
+    {
+        using var ui = new UiThread();
+        using var vault = new ReadingVault("Le texte.\n", passage: false);
+        const int many = 150;
+        for (var n = 0; n < many; n++)
+        {
+            Source(vault, "Biologie", $"Source {n}", Linking);
+        }
+        var test = new TestShell();
+        var page = vault.Page();
+        page.LoadCommand.Execute(null);
+        UiThread.Until(() => page.Backlinks.Count == many);
+        var window = Show(test, page, 1200, 700);
+        try
+        {
+            var pane = Named<ContentControl>(window, "BacklinksPane");
+            var list = Descendants(pane).OfType<ItemsControl>().Single();
+
+            var realized = Enumerable.Range(0, many).Count(index => list.ItemContainerGenerator.ContainerFromIndex(index) is not null);
+
+            Assert.IsGreaterThan(0, realized);
+            Assert.IsLessThan(many / 2, realized, "la liste est virtualisée");
+            Assert.AreEqual(ScrollBarVisibility.Disabled, Descendants(pane).OfType<ScrollViewer>().Single().HorizontalScrollBarVisibility, "jamais de défilement horizontal");
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
+    public void A_newer_search_stops_an_older_one()
+    {
+        using var ui = new UiThread();
+        using var vault = new ReadingVault("Le texte.\n", passage: false);
+        var source = Source(vault, "Biologie", "Source", Linking);
         var page = vault.Page();
         page.LoadCommand.Execute(null);
         UiThread.Until(() => page.Backlinks.Count == 1);
         var before = page.Backlinks;
+        Assert.IsTrue(vault.App.Editing.Save(source, "Voir [cette fiche](Mitose.md) autrement.\n", vault.App.Sheets.Open(source).Value.Fingerprint, 2).Succeeded);
         using var held = new ManualResetEventSlim();
         using var release = new ManualResetEventSlim();
         var holder = Task.Run(() => vault.App.Host.Use(_ =>
@@ -263,7 +346,7 @@ public sealed class BacklinksTests
         {
             var pane = Named<ContentControl>(window, "BacklinksPane");
             Assert.AreEqual(Visibility.Visible, pane.Visibility);
-            var button = Descendants(pane).OfType<Button>().Single();
+            var button = Descendants(Descendants(pane).OfType<ItemsControl>().Single()).OfType<Button>().Single();
             Assert.AreEqual(page.Backlinks[0].Spoken, AutomationProperties.GetName(button));
             var excerpt = Descendants(pane).OfType<ExcerptText>().Single();
             CollectionAssert.AreEqual(
@@ -660,6 +743,95 @@ public sealed class BacklinksTests
             page.StartWritingCommand.Execute(null);
             UiThread.Until(() => !viewer.LinkPopup.IsOpen);
             Assert.IsFalse(page.LinkPreview.IsOpen, "la vue passe à l'écriture : l'aperçu n'a plus de lien où se poser");
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
+    public void Reaching_a_link_below_the_fold_by_the_keyboard_shows_its_preview_under_it()
+    {
+        using var ui = new UiThread();
+        var filler = string.Concat(Enumerable.Repeat("Un paragraphe assez long pour remplir la page.\n\n", 100));
+        using var vault = new ReadingVault($"{filler}Voir [la cible](Cible.md).\n\n{filler}", passage: false);
+        Target(vault, "Le texte.\n");
+        var (window, viewer, _) = Open(vault);
+        try
+        {
+            UiThread.Until(() => !viewer.HasPendingWork);
+            TestShell.Flush();
+            var link = Link(viewer);
+            var scroller = Descendants(viewer).OfType<ScrollViewer>().First();
+            Assert.AreEqual(0, scroller.VerticalOffset);
+
+            Assert.IsTrue(link.Focus());
+            UiThread.Until(() => scroller.VerticalOffset > 0 && viewer.LinkPopup?.IsOpen == true);
+            TestShell.Flush();
+
+            var popup = viewer.LinkPopup!;
+            Assert.IsTrue(popup.IsOpen, "le défilement dû au focus ne referme pas l'aperçu");
+            Assert.AreSame(link, viewer.PreviewedLink);
+            Assert.AreEqual(link.ContentStart.GetCharacterRect(LogicalDirection.Forward), popup.PlacementRectangle, "posé sous le lien, à sa nouvelle place");
+
+            // Le focus a amené le lien en haut de la vue : en remontant un peu, il se voit encore.
+            var before = popup.PlacementRectangle;
+            scroller.ScrollToVerticalOffset(scroller.VerticalOffset - 40);
+            UiThread.Until(() => popup.PlacementRectangle != before);
+            Assert.IsTrue(popup.IsOpen, "le lien se voit encore : l'aperçu le suit");
+            Assert.AreEqual(link.ContentStart.GetCharacterRect(LogicalDirection.Forward), popup.PlacementRectangle);
+
+            scroller.ScrollToVerticalOffset(0);
+            UiThread.Until(() => !popup.IsOpen);
+            Assert.IsTrue(link.IsKeyboardFocused, "le focus reste ; le lien n'est plus à l'écran, l'aperçu si");
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
+    public void A_link_under_a_hidden_hole_shows_no_preview_until_it_is_revealed()
+    {
+        using var ui = new UiThread();
+        using var vault = new ReadingVault("Le **[Cycle de Krebs](Cible.md)** et [une autre](Cible.md).\n", passage: false);
+        Target(vault, "Le texte.\n");
+        var test = new TestShell();
+        var page = vault.Page(revising: true, activeRecall: () => true);
+        page.LoadCommand.Execute(null);
+        UiThread.Until(() => !page.IsLoading);
+        var window = Show(test, page, 900, 700);
+        try
+        {
+            var viewer = Named<SheetDocumentViewer>(window, "SheetText");
+            UiThread.Until(() => viewer.Document is { } document && LogicalDescendants(document).OfType<Hyperlink>().Count() == 2 && page.Holes.HasHoles);
+            var links = LogicalDescendants(viewer.Document).OfType<Hyperlink>().ToList();
+            var run = LogicalDescendants(links[0]).OfType<Run>().Single();
+
+            viewer.PointAt(run);
+            WaitFor(LinkHover.ShowDelay + LinkHover.ShowDelay);
+            Assert.IsNull(viewer.PreviewedLink, "l'aperçu donnerait la réponse");
+            viewer.PointAt(viewer);
+            viewer.FocusReached(links[0]);
+            Assert.IsNull(viewer.PreviewedLink, "ni au pointeur, ni au clavier");
+            Assert.IsNull(viewer.LinkPopup);
+            Assert.AreEqual(string.Empty, AutomationProperties.GetHelpText(links[0]));
+
+            viewer.FocusReached(links[1]);
+            UiThread.Until(() => viewer.LinkPopup?.IsOpen == true);
+            viewer.FocusLeft(links[1]);
+            UiThread.Until(() => !viewer.LinkPopup!.IsOpen);
+
+            Assert.IsTrue(viewer.RevealHoleAt(run));
+            viewer.FocusReached(links[0]);
+            UiThread.Until(() => viewer.LinkPopup!.IsOpen);
+            Assert.AreSame(links[0], viewer.PreviewedLink, "le trou découvert, le lien a son aperçu");
+
+            page.Holes.HideAllCommand.Execute(null);
+            Assert.IsNull(viewer.PreviewedLink, "remasqué, l'aperçu part avec lui");
+            Assert.IsFalse(viewer.LinkPopup!.IsOpen);
         }
         finally
         {

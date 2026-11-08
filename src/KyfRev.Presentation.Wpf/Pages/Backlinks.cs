@@ -8,8 +8,11 @@ namespace KyfRev.Presentation.Wpf.Pages;
 /// <summary>Une fiche qui mène à la fiche ouverte, dans son panneau.</summary>
 public sealed class BacklinkEntry
 {
+    private readonly Backlink _backlink;
+
     internal BacklinkEntry(Backlink backlink)
     {
+        _backlink = backlink;
         SheetId = backlink.SheetId;
         Title = backlink.Title;
         Folder = ReadingText.FolderPath(backlink.Folder);
@@ -46,6 +49,10 @@ public sealed class BacklinkEntry
     public string Spoken => string.Join(
         ", ",
         new[] { Title, Folder, IsArchived ? ReadingText.Archived : string.Empty, SeveralLinks ?? string.Empty, string.Concat(Excerpt.Select(part => part.Text)) }.Where(text => text.Length > 0));
+
+    /// <summary>L'entrée dit déjà ce que dit <paramref name="backlink"/>.</summary>
+    internal bool Shows(Backlink backlink) =>
+        backlink with { Excerpt = _backlink.Excerpt } == _backlink && backlink.Excerpt.SequenceEqual(_backlink.Excerpt);
 }
 
 /// <summary>

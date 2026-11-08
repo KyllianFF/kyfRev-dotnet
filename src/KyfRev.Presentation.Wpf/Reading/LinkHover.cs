@@ -20,17 +20,20 @@ internal sealed class LinkHover
     private readonly Action<Hyperlink> _show;
     private readonly Action _hide;
     private readonly Func<bool> _isShown;
+    private readonly Func<Hyperlink, bool> _canShow;
     private Hyperlink? _waiting;
 
     /// <summary>Surveille les liens : <paramref name="show"/> lit et montre l'aperçu, <paramref name="hide"/> le referme, et annule sa lecture.</summary>
     /// <param name="show">Montre l'aperçu d'un lien.</param>
     /// <param name="hide">Referme l'aperçu.</param>
     /// <param name="isShown">Un aperçu est à l'écran.</param>
-    public LinkHover(Action<Hyperlink> show, Action hide, Func<bool> isShown)
+    /// <param name="canShow">Ce lien peut montrer son aperçu, au moment où il le ferait.</param>
+    public LinkHover(Action<Hyperlink> show, Action hide, Func<bool> isShown, Func<Hyperlink, bool> canShow)
     {
         _show = show;
         _hide = hide;
         _isShown = isShown;
+        _canShow = canShow;
         _showing.Tick += (_, _) => ShowWaiting();
         _hiding.Tick += (_, _) => Hide();
     }
@@ -98,9 +101,10 @@ internal sealed class LinkHover
     private void ShowWaiting()
     {
         _showing.Stop();
-        if (_waiting is { } link)
+        var link = _waiting;
+        _waiting = null;
+        if (link is not null && _canShow(link))
         {
-            _waiting = null;
             Current = link;
             _show(link);
         }

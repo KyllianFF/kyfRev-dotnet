@@ -496,14 +496,9 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage, 
     /// <summary>Il y a un plan, des passages ou des rétroliens à montrer.</summary>
     public bool HasPanels => ShowsPanelToggles && (HasOutline || HasPassages || HasBacklinks);
 
-    /// <summary>Le nom du « ⋯ » de l'en-tête étroit : il dit aussi combien de passages et de rétroliens il cache.</summary>
-    public string PanelsMenuName => (HasPassages, HasBacklinks) switch
-    {
-        (true, true) => ReadingText.PanelsMenuWith($"{PassagesLabel}, {BacklinksLabel}"),
-        (true, false) => ReadingText.PanelsMenuWith(PassagesLabel),
-        (false, true) => ReadingText.PanelsMenuWith(BacklinksLabel),
-        _ => ReadingText.PanelsMenu,
-    };
+    /// <summary>Le nom du « ⋯ » de l'en-tête étroit : les volets qu'il cache vraiment, avec le décompte des passages et des rétroliens.</summary>
+    public string PanelsMenuName => ReadingText.PanelsMenuOf(
+        new[] { HasOutline ? ReadingText.Outline : null, HasPassages ? PassagesLabel : null, HasBacklinks ? BacklinksLabel : null }.OfType<string>());
 
     /// <summary>Le plan tient à côté du texte.</summary>
     public bool OutlineFits => PageWidth >= OutlineMinimum;
@@ -813,7 +808,16 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage, 
         if (!token.IsCancellationRequested)
         {
             BacklinksError = outcome.Succeeded ? null : outcome.Error;
-            Backlinks = outcome.Succeeded ? [.. outcome.Value.Select(backlink => new BacklinkEntry(backlink))] : [];
+            ShowBacklinks(outcome.Succeeded ? outcome.Value : []);
+        }
+    }
+
+    /// <summary>Une liste inchangée reste en place : rien à reconstruire, et elle garde l'endroit où on l'a laissée.</summary>
+    private void ShowBacklinks(IReadOnlyList<Backlink> found)
+    {
+        if (found.Count != Backlinks.Count || !found.Zip(Backlinks).All(pair => pair.Second.Shows(pair.First)))
+        {
+            Backlinks = [.. found.Select(backlink => new BacklinkEntry(backlink))];
         }
     }
 

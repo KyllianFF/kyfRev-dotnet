@@ -34,11 +34,11 @@ public static class ReadingText
     /// <summary>Le plan de la fiche.</summary>
     public const string Outline = "Plan";
 
-    /// <summary>Le menu « ⋯ » de l'en-tête étroit : le plan et les passages.</summary>
-    public const string PanelsMenu = "Plan et passages";
+    /// <summary>Le menu « ⋯ » de l'en-tête étroit : le plan, les passages et les rétroliens.</summary>
+    public const string PanelsMenu = "Volets";
 
-    /// <summary>Le nom du menu « ⋯ » de l'en-tête étroit, avec le décompte des passages qu'il cache : « Plan et passages (Passages · 2) ».</summary>
-    public static string PanelsMenuWith(string passages) => $"{PanelsMenu} ({passages})";
+    /// <summary>Le nom du menu « ⋯ » de l'en-tête étroit, d'après ce qu'il cache : « Volets : Plan, Passages · 2 ».</summary>
+    public static string PanelsMenuOf(IEnumerable<string> panels) => string.Join(", ", panels) is { Length: > 0 } hidden ? $"{PanelsMenu} : {hidden}" : PanelsMenu;
 
     /// <summary>Les passages et définitions de la fiche.</summary>
     public const string Passages = "Passages";

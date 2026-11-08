@@ -113,7 +113,8 @@ public sealed partial class VaultSession
         {
             var start = Path.TrimEndingDirectorySeparator(realRoot).Length + 1;
             var found = new Dictionary<string, (bool, DateTime, long)>(PathComparer);
-            foreach (var entry in storage.AllEntries(realRoot))
+            // Un disque débranché ou un partage perdu : un refus comme un autre, pas une exception qui sort du cas d'usage.
+            foreach (var entry in Io(realRoot, () => storage.AllEntries(realRoot)))
             {
                 found[entry.FullName[start..].Replace(Path.DirectorySeparatorChar, '/')] = (entry.IsReparsePoint, entry.LastWriteTimeUtc, entry.Length);
             }
