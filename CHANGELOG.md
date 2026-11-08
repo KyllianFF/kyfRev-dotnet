@@ -9,6 +9,9 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- Rechercher une mise à jour, dans Paramètres › À propos, seulement à la demande. kyfRev lit dans le dépôt une annonce signée par les
+  clés de publication, dit si une version plus récente existe et peut ouvrir sa page ; rien n'est téléchargé ni installé.
+  `tools/catalogue/catalogue.cs version` écrit et signe cette annonce. Le jeton GitHub de la 0.x n'est pas repris : le dépôt est public.
 - Coffre chiffré, lot 4 : la preuve qu'aucun texte en clair ne reste sur le disque. Sur un coffre chiffré, le menu d'un mot
   propose « Accepter jusqu'à la fermeture de kyfRev », dans le code Markdown, au lieu d'écrire dans le dictionnaire de Windows. Le journal masque tout chemin
   qui entre dans le coffre, et ne nomme plus la citation trouvée. Les moteurs web ne téléversent plus de rapport de plantage,

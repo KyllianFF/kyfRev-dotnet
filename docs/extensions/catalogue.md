@@ -54,6 +54,17 @@ dotnet run tools/catalogue/catalogue.cs -- publier C:\chemin\hors\du\depot\kyfre
 L'outil relit chaque extension, écrit le catalogue avec le numéro suivant, le signe après avoir demandé la phrase de
 passe, et le vérifie comme le fera l'application. Il ne reste qu'à proposer `catalogue/` dans une PR.
 
+## Annoncer une version
+
+La recherche de mise à jour, dans Paramètres › À propos, lit `mise-a-jour/derniere.json` et sa signature, signés par les mêmes
+clés. Elle ne télécharge ni n'installe rien ; la page proposée se déduit de la version signée. À chaque version publiée :
+
+```bash
+dotnet run tools/catalogue/catalogue.cs -- version C:\chemin\hors\du\depot\kyfrev-1.pem 1.0.0
+```
+
+Il ne reste qu'à proposer `mise-a-jour/` dans une PR. Sans ce fichier, la recherche dit qu'elle n'a pas abouti.
+
 Pour vérifier le catalogue publié, sans clé :
 
 ```bash

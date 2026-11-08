@@ -23,8 +23,8 @@ l'impact estimé.
 - **Extensions** : isolées, sans réseau, permissions contrôlées par l'application, catalogue signé.
 - **Réseau** : aucune connexion sans action ou réglage explicite ; HTTPS uniquement, sans
   redirection, réponses de taille bornée.
-- **Secrets** : aucun secret dans le dépôt (gitleaks en crochet et en intégration continue) ;
-  jeton GitHub protégé par DPAPI sur le poste.
+- **Secrets** : aucun secret dans le dépôt (gitleaks en crochet et en intégration continue). Le
+  dépôt étant public, l'application n'a besoin d'aucun jeton GitHub.
 - **Chaîne d'approvisionnement** : versions figées, délai de 14 jours avant adoption, audit
   NuGet bloquant, actions épinglées par empreinte.
 
