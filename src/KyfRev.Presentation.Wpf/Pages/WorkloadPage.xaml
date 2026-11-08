@@ -61,7 +61,7 @@
       <Grid ToolTip="{Binding Name}" Background="Transparent">
         <Grid.RowDefinitions>
           <RowDefinition Height="{Binding PlotHeight}" />
-          <RowDefinition Height="32" />
+          <RowDefinition Height="42" />
         </Grid.RowDefinitions>
         <Border x:Name="Weekend" Grid.RowSpan="2" Background="{DynamicResource Kyf.Brush.SurfaceAlt}" Opacity="0.5" Visibility="{Binding IsWeekend, Converter={StaticResource Visible}}" />
         <Border x:Name="Average" Height="{Binding AverageHeight}" VerticalAlignment="Bottom" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource Kyf.Brush.TextSecondary}" Opacity="0.6" />
