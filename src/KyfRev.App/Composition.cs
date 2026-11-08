@@ -324,7 +324,8 @@ internal static class Composition
             () => VaultChanged(provider),
             () => DraftViews(provider),
             // La carte Chiffrement oublie dès le début : une dérivation qui finit pendant la fermeture ne s'y montre plus.
-            () => provider.GetRequiredService<DataSettingsViewModel>().Encryption?.Forget()));
+            () => provider.GetRequiredService<DataSettingsViewModel>().Encryption?.Forget(),
+            () => SearchingViews(provider)));
         services.AddSingleton(provider =>
         {
             var delay = provider.GetRequiredService<LockDelay>();
@@ -382,6 +383,13 @@ internal static class Composition
     private static ILeaving[] DraftViews(IServiceProvider provider) =>
     [
         provider.GetRequiredService<DefinitionsPageViewModel>(),
+    ];
+
+    /// <summary>Les vues dont une recherche peut tenir le coffre : elles s'arrêtent dès qu'une fermeture est demandée.</summary>
+    internal static IStopsSearch[] SearchingViews(IServiceProvider provider) =>
+    [
+        provider.GetRequiredService<ShellViewModel>(),
+        provider.GetRequiredService<SheetsPageViewModel>(),
     ];
 
     /// <summary>Les vues qui gardent ce qu'elles ont lu du coffre.</summary>

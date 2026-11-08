@@ -346,10 +346,21 @@ public sealed partial class ShellWindow : Window
     /// <summary>Un clic ailleurs que dans le champ ou la liste ferme la recherche, comme un menu.</summary>
     private void OnClickAnywhere(object sender, MouseButtonEventArgs e)
     {
-        if (_shell.IsPaletteOpen && e.OriginalSource is DependencyObject target && !SearchHost.IsAncestorOf(target) && !PaletteCard.IsAncestorOf(target))
+        if (_shell.IsPaletteOpen && e.OriginalSource is DependencyObject source && VisualOf(source) is { } target && !SearchHost.IsAncestorOf(target) && !PaletteCard.IsAncestorOf(target))
         {
             _shell.ClosePalette();
         }
+    }
+
+    /// <summary>Ce qu'on a cliqué, ou, pour un morceau de texte (un <c>Run</c>), le bloc qui le contient : seul un élément visuel a des ancêtres visuels.</summary>
+    private static DependencyObject? VisualOf(DependencyObject source)
+    {
+        var element = source;
+        while (element is ContentElement)
+        {
+            element = LogicalTreeHelper.GetParent(element);
+        }
+        return element;
     }
 
     /// <summary>L'icône de l'application, dans l'image de son fichier .ico la plus proche de la taille à l'écran : nette à toutes les échelles.</summary>

@@ -1,7 +1,10 @@
 using System.IO;
 using System.Net.Http;
 using System.Windows;
+using System.Windows.Automation.Peers;
+using System.Windows.Automation.Provider;
 using System.Windows.Controls;
+using System.Windows.Input;
 using CommunityToolkit.Mvvm.Input;
 using KyfRev.App;
 using KyfRev.Application.Model;
@@ -104,6 +107,48 @@ public sealed class QuotesTests
         Assert.AreSame(page, shell.Current.Page);
         Assert.IsTrue(page.HasTarget);
         Assert.AreEqual(path, page.Rows.Single().Quote.Path);
+    }
+
+    [STATestMethod]
+    public void The_quote_found_by_the_search_is_said_and_showing_all_keeps_the_focus_in_the_view()
+    {
+        using var ui = new UiThread();
+        using var vault = new QuotesVault();
+        var path = vault.Add("Le cœur a ses raisons.", "Pascal");
+        vault.Add("Connais-toi toi-même.", "Socrate");
+        var test = new TestShell();
+        var model = vault.Page();
+        var page = new QuotesPage { DataContext = model };
+        var host = new Border { Width = 1000, Height = 800, Child = page };
+        host.Resources.MergedDictionaries.Add(test.Design.Dictionary);
+        var window = new Window { Content = host, Left = -10000, Top = -10000, Width = 1000, Height = 800, ShowActivated = false };
+        window.Show();
+        model.OnNavigatedTo();
+        try
+        {
+            UiThread.Until(() => model.HasRows);
+            model.ShowOnly(path);
+            TestShell.Flush();
+
+            var status = Assert.IsInstanceOfType<StatusText>(page.FoundBySearch);
+            Assert.IsTrue(status.IsVisible);
+            Assert.AreEqual(QuotesText.FoundBySearch, status.Text);
+
+            Invoke(page.ShowAllQuotes);
+            Assert.IsFalse(page.ShowAllQuotes.IsVisible, "le bouton disparaît avec son panneau");
+            Assert.AreSame(page.SearchBox, FocusManager.GetFocusedElement(FocusManager.GetFocusScope(page.SearchBox)));
+
+            // Sans plus de champ à rejoindre, le bouton « Nouvelle citation », toujours là.
+            model.ShowOnly(path);
+            TestShell.Flush();
+            page.Filters.Visibility = Visibility.Collapsed;
+            Invoke(page.ShowAllQuotes);
+            Assert.AreSame(page.NewQuote, FocusManager.GetFocusedElement(FocusManager.GetFocusScope(page.NewQuote)));
+        }
+        finally
+        {
+            window.Close();
+        }
     }
 
     [TestMethod]
@@ -789,6 +834,13 @@ public sealed class QuotesTests
         var inactive = new DataSettingsViewModel(app.Vaults, app.Backups, app.Trash, app.Annotations, app.Exports, app.Settings, vault.Vaults.Picker, new FakeOpener(), () => { });
         await inactive.ReloadCommand.ExecuteAsync(null);
         Assert.IsFalse(inactive.ExportsQuotes);
+    }
+
+    /// <summary>Le bouton activé comme au clavier ou par un lecteur d'écran.</summary>
+    private static void Invoke(Button button)
+    {
+        ((IInvokeProvider)new ButtonAutomationPeer(button).GetPattern(PatternInterface.Invoke)).Invoke();
+        TestShell.Flush();
     }
 
     private static VaultPreferences Preferences(bool quotes) =>

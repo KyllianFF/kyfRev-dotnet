@@ -97,14 +97,17 @@ public sealed partial class VaultSession
         ];
     }
 
-    /// <summary>Le texte d'un fichier du coffre ; vide s'il est hors du coffre, illisible ou mal encodé : il n'est alors pas cherché.</summary>
+    /// <summary>
+    /// Le texte d'un fichier du coffre ; vide s'il est hors du coffre, illisible ou mal encodé : il n'est alors pas cherché.
+    /// Comme dans la 0.x, un fichier qu'un autre programme tient ouvert en écriture (un éditeur, une synchronisation) se lit.
+    /// </summary>
     private string TextToSearch(VaultPath path)
     {
         try
         {
-            return TryReadAllBytes(Confine(path)) is { } bytes && TryDecode(bytes, out var text) ? text : string.Empty;
+            return TryDecode(_storage.ReadShared(Confine(path)), out var text) ? text : string.Empty;
         }
-        catch (VaultException)
+        catch (Exception exception) when (exception is VaultException or IOException or UnauthorizedAccessException)
         {
             return string.Empty;
         }

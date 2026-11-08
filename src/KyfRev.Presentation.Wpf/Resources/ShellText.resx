@@ -96,6 +96,9 @@
   <data name="SearchPlaceholder" xml:space="preserve">
     <value>Rechercher partout</value>
   </data>
+  <data name="SearchCommandsPlaceholder" xml:space="preserve">
+    <value>Rechercher une commande</value>
+  </data>
   <data name="SecondaryNavigation" xml:space="preserve">
     <value>Navigation secondaire</value>
   </data>

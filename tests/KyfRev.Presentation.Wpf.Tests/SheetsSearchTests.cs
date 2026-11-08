@@ -156,11 +156,19 @@ public sealed class SheetsSearchTests
         using var scene = new Scene();
         scene.Sheet("Biologie", "Mitose", "La prophase.");
         scene.Load();
+        var root = scene.Vaults.App.Vaults.State().Vault!;
+
+        Assert.IsNull(scene.Vaults.App.Vaults.Close().Vault);
         scene.Page.Bar.Search = "prophase";
+        UiThread.Until(() => scene.Page.Error is not null);
+
+        Assert.AreEqual(root, scene.Vaults.App.Vaults.Open(root).Vault);
+        scene.Page.Bar.Search = "la prophase";
         var searching = scene.Page.SearchTextCommand.ExecutionTask!;
         UiThread.Until(() => searching.IsCompleted);
 
         Assert.IsNull(scene.Page.Error);
+        Assert.IsTrue(scene.Rows.Single().HasExcerpt);
     }
 
     [STATestMethod]
@@ -171,13 +179,62 @@ public sealed class SheetsSearchTests
         scene.Sheet("Biologie", "Mitose", "La prophase.");
         scene.Load();
 
-        scene.Page.Bar.Search = "prophase";
-        var searching = scene.Page.SearchTextCommand.ExecutionTask!;
-        scene.Page.Forget();
+        var searching = scene.SearchWhileTheVaultIsHeld("prophase", () => scene.Page.Forget());
         UiThread.Until(() => searching.IsCompleted);
 
         Assert.IsEmpty(scene.Page.Rows);
         Assert.AreEqual(string.Empty, scene.Page.Bar.Search);
+
+        // Rouvert : aucun extrait de l'ancienne réponse ne revient sur les lignes.
+        scene.Load();
+        Assert.IsFalse(scene.Rows.Single().HasExcerpt);
+    }
+
+    [STATestMethod]
+    public void A_stopped_search_gives_no_answer_and_starts_again_if_the_vault_stays_open()
+    {
+        using var ui = new UiThread();
+        using var scene = new Scene();
+        scene.Sheet("Biologie", "Mitose", "La prophase.");
+        scene.Load();
+
+        var stopped = scene.SearchWhileTheVaultIsHeld("prophase", scene.Page.StopSearch);
+        UiThread.Until(() => stopped.IsCompleted);
+        Assert.IsEmpty(scene.Rows, "arrêtée, elle ne dit rien : seuls les titres ont été regardés");
+        Assert.AreEqual("prophase", scene.Page.Bar.Search, "et rien n'est oublié");
+
+        scene.Page.ResumeSearch();
+        var resumed = scene.Page.SearchTextCommand.ExecutionTask!;
+        Assert.AreNotSame(stopped, resumed);
+        UiThread.Until(() => resumed.IsCompleted);
+
+        Assert.IsTrue(scene.Rows.Single().HasExcerpt);
+    }
+
+    [STATestMethod]
+    public void Only_a_search_that_was_stopped_starts_again()
+    {
+        using var ui = new UiThread();
+        using var scene = new Scene();
+        scene.Sheet("Biologie", "Mitose", "La prophase.");
+        scene.Load();
+        scene.Page.Bar.Search = "prophase";
+        var answered = scene.Page.SearchTextCommand.ExecutionTask!;
+        UiThread.Until(() => answered.IsCompleted);
+
+        scene.Page.StopSearch();
+        scene.Page.ResumeSearch();
+        Assert.AreSame(answered, scene.Page.SearchTextCommand.ExecutionTask, "elle avait répondu");
+
+        // Arrêtée, puis le champ vidé : plus rien à chercher.
+        var emptied = scene.SearchWhileTheVaultIsHeld("clergé", () =>
+        {
+            scene.Page.StopSearch();
+            scene.Page.Bar.Search = string.Empty;
+        });
+        UiThread.Until(() => emptied.IsCompleted);
+        scene.Page.ResumeSearch();
+        Assert.AreSame(emptied, scene.Page.SearchTextCommand.ExecutionTask);
     }
 
     [STATestMethod]
@@ -304,6 +361,25 @@ public sealed class SheetsSearchTests
     public void Cancelling_when_nothing_runs_does_nothing() => new LatestSearch().Cancel();
 
     [STATestMethod]
+    public void A_search_is_running_from_its_request_to_its_answer()
+    {
+        using var ui = new UiThread();
+        var latest = new LatestSearch();
+        Assert.IsFalse(latest.IsRunning);
+
+        var running = latest.RunAsync(TimeSpan.FromMilliseconds(1), _ => 7, _ => Assert.IsFalse(latest.IsRunning, "la réponse est là"));
+
+        Assert.IsTrue(latest.IsRunning, "même pendant sa pause");
+        UiThread.Until(() => running.IsCompleted);
+        Assert.IsFalse(latest.IsRunning);
+
+        running = latest.RunAsync(TimeSpan.FromMilliseconds(1), _ => 7, _ => { });
+        latest.Cancel();
+        Assert.IsFalse(latest.IsRunning);
+        UiThread.Until(() => running.IsCompleted);
+    }
+
+    [STATestMethod]
     public void A_search_after_its_pause_gives_its_answer()
     {
         using var ui = new UiThread();
@@ -358,6 +434,30 @@ public sealed class SheetsSearchTests
         {
             Page.OnNavigatedTo();
             UiThread.Until(() => Page.RefreshCommand.ExecutionTask is { IsCompleted: true });
+        }
+
+        /// <summary>
+        /// Lance une recherche sans pause pendant qu'une longue opération tient le coffre : elle attend de pouvoir lire.
+        /// <paramref name="meanwhile"/> se passe pendant cette attente, puis le coffre est rendu. Rend la recherche.
+        /// </summary>
+        public Task SearchWhileTheVaultIsHeld(string text, Action meanwhile)
+        {
+            using var started = new ManualResetEventSlim();
+            using var release = new ManualResetEventSlim();
+            var holding = Task.Run(() => Vaults.App.Settings.Update(preferences =>
+            {
+                started.Set();
+                release.Wait(TimeSpan.FromSeconds(10));
+                return preferences;
+            }));
+            Assert.IsTrue(started.Wait(TimeSpan.FromSeconds(10)));
+            Page.Bar.Search = text;
+            Page.SearchTextCommand.Execute(TimeSpan.Zero);
+            var searching = Page.SearchTextCommand.ExecutionTask!;
+            meanwhile();
+            release.Set();
+            UiThread.Until(() => holding.IsCompleted);
+            return searching;
         }
 
         public void Dispose() => Vaults.Dispose();

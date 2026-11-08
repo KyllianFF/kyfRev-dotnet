@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Documents;
+using System.Windows.Input;
 using System.Windows.Media;
 using KyfRev.Application;
 using KyfRev.Application.Model;
@@ -319,6 +320,150 @@ public sealed class GlobalSearchTests
     }
 
     [STATestMethod]
+    public void A_stopped_search_says_nothing_and_starts_again_if_the_vault_stays_open()
+    {
+        using var ui = new UiThread();
+        using var module = new HeldProvider();
+        using var scene = new Scene(module);
+
+        scene.Shell.OpenPalette();
+        scene.Shell.PaletteQuery = "mitose";
+        UiThread.Until(() => module.Asked.Count == 1);
+        var searching = scene.Shell.SearchVaultCommand.ExecutionTask!;
+
+        scene.Shell.StopSearch();
+
+        Assert.IsTrue(module.Asked.Single().Token.IsCancellationRequested);
+        Assert.IsTrue(scene.Shell.IsPaletteOpen, "rien n'est oublié : le coffre reste peut-être ouvert");
+        Assert.IsTrue(scene.Shell.IsSearching);
+        module.Release.Set();
+        UiThread.Until(() => searching.IsCompleted);
+        Assert.IsFalse(scene.Shell.ShowsKeyHelp, "sa réponse ne se montre pas");
+
+        scene.Shell.ResumeSearch();
+        UiThread.Until(() => !scene.Shell.IsSearching);
+
+        Assert.HasCount(2, module.Asked);
+        Assert.AreEqual("mitose", scene.Shell.PaletteResults.Single().Label);
+    }
+
+    [STATestMethod]
+    public void A_search_that_answered_or_was_abandoned_does_not_start_again()
+    {
+        using var ui = new UiThread();
+        var module = new AnswersWith(_ => Outcome.Of<IReadOnlyList<SearchHit>>([]));
+        using var scene = new Scene(module);
+        scene.Search("mitose");
+
+        scene.Shell.StopSearch();
+        scene.Shell.ResumeSearch();
+        TestShell.Flush();
+        Assert.HasCount(1, module.Asked, "elle avait répondu");
+
+        scene.Shell.PaletteQuery = "mitoses";
+        scene.Shell.StopSearch();
+        scene.Shell.ClosePalette();
+        scene.Shell.ResumeSearch();
+        TestShell.Flush();
+        Assert.HasCount(1, module.Asked, "fermée, elle est abandonnée");
+    }
+
+    [STATestMethod]
+    public void A_click_on_the_words_of_a_line_does_not_close_the_search()
+    {
+        using var ui = new UiThread();
+        using var scene = new Scene();
+        scene.Sheet("Sciences", "Mitose", "La prophase précède la métaphase.");
+        var window = new ShellWindow(scene.Test.Shell) { ShowActivated = false, Left = -10000, Top = -10000, Width = 800, Height = 600, WindowStartupLocation = WindowStartupLocation.Manual };
+        window.Resources.MergedDictionaries.Add(scene.Test.Design.Dictionary);
+        window.Show();
+        try
+        {
+            scene.Search(Query);
+            window.UpdateLayout();
+            TestShell.Flush();
+            var list = (ListBox)window.FindName("PaletteResults");
+            var item = (ListBoxItem)list.ItemContainerGenerator.ContainerFromIndex(0);
+
+            // WPF donne le morceau de texte (Run) comme source du clic : le titre, le dossier, l'extrait.
+            var label = Descendants(item).OfType<TextBlock>().SelectMany(text => text.Inlines.OfType<Run>()).First(run => run.Text == "Mitose");
+            var words = Descendants(item).OfType<ExcerptText>().Single().Inlines.OfType<Run>().First();
+            foreach (var clicked in new[] { label, words, new Run("sans bloc") })
+            {
+                Press(window, clicked);
+                Assert.IsTrue(scene.Shell.IsPaletteOpen, clicked.Text);
+            }
+
+            var elsewhere = new Run("ailleurs");
+            _ = new TextBlock(elsewhere);
+            Press(window, elsewhere);
+            Assert.IsFalse(scene.Shell.IsPaletteOpen, "du texte hors de la recherche : un clic ailleurs, qui la ferme");
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
+    public void An_empty_answer_is_a_status_for_the_screen_reader()
+    {
+        using var ui = new UiThread();
+        using var scene = new Scene();
+        var window = new ShellWindow(scene.Test.Shell) { ShowActivated = false, Left = -10000, Top = -10000, Width = 800, Height = 600, WindowStartupLocation = WindowStartupLocation.Manual };
+        window.Resources.MergedDictionaries.Add(scene.Test.Design.Dictionary);
+        window.Show();
+        try
+        {
+            scene.Shell.OpenPalette();
+            TestShell.Flush();
+            var message = Assert.IsInstanceOfType<StatusText>(window.FindName("NoResult"));
+            Assert.IsFalse(message.IsVisible);
+
+            scene.Search("xyzzy");
+            TestShell.Flush();
+
+            Assert.IsTrue(message.IsVisible);
+            Assert.AreEqual("Rien ne correspond à « xyzzy ».", message.Text);
+            Assert.AreEqual(AutomationLiveSetting.Polite, AutomationProperties.GetLiveSetting(message));
+            Assert.AreEqual(((SolidColorBrush)window.FindResource("Kyf.Brush.TextSecondary")).Color, ((SolidColorBrush)message.Foreground).Color, "le style du texte s'y applique");
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
+    public void The_field_says_what_is_searched()
+    {
+        using var ui = new UiThread();
+        using var scene = new Scene();
+        var window = new ShellWindow(scene.Test.Shell) { ShowActivated = false, Left = -10000, Top = -10000, Width = 800, Height = 600, WindowStartupLocation = WindowStartupLocation.Manual };
+        window.Resources.MergedDictionaries.Add(scene.Test.Design.Dictionary);
+        window.Show();
+        try
+        {
+            var field = (TextBox)window.FindName("PaletteQuery");
+            var list = (ListBox)window.FindName("PaletteResults");
+            TestShell.Flush();
+            Assert.AreEqual("Rechercher partout", AutomationProperties.GetName(field));
+            Assert.AreEqual("Rechercher partout", Field.GetPlaceholder(field));
+
+            scene.Shell.ShowWelcome(new object());
+            TestShell.Flush();
+
+            Assert.AreEqual("Rechercher une commande", AutomationProperties.GetName(field), "sans coffre, seules les commandes se cherchent");
+            Assert.AreEqual("Rechercher une commande", Field.GetPlaceholder(field));
+            Assert.AreEqual("Rechercher une commande", AutomationProperties.GetName(list));
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
     public void Without_a_vault_only_the_commands_are_searched()
     {
         using var ui = new UiThread();
@@ -334,6 +479,7 @@ public sealed class GlobalSearchTests
         Assert.IsFalse(scene.Shell.IsSearching);
         Assert.IsEmpty(module.Asked);
         Assert.AreEqual(ShellText.NoCommand, scene.Shell.NoResultText);
+        Assert.AreEqual(ShellText.SearchCommandsPlaceholder, scene.Shell.PaletteLabel);
     }
 
     [STATestMethod]
@@ -421,6 +567,10 @@ public sealed class GlobalSearchTests
             window.Close();
         }
     }
+
+    /// <summary>Un clic sur <paramref name="source"/>, tel que la fenêtre le reçoit d'abord.</summary>
+    private static void Press(Window window, DependencyObject source) =>
+        window.RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, Environment.TickCount, MouseButton.Left) { RoutedEvent = Mouse.PreviewMouseDownEvent, Source = source });
 
     private static IEnumerable<DependencyObject> Descendants(DependencyObject root)
     {

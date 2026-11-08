@@ -23,8 +23,8 @@
 
       <!-- La citation ouverte depuis la recherche globale, seule montrée. -->
       <WrapPanel x:Name="Target" DockPanel.Dock="Top" Margin="0,0,0,8" Visibility="{Binding HasTarget, Converter={StaticResource Visible}}">
-        <TextBlock Text="{x:Static pages:QuotesText.FoundBySearch}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,12,0" AutomationProperties.LiveSetting="Polite" />
-        <Button x:Name="ShowAllQuotes" Content="{x:Static pages:QuotesText.ShowAll}" Command="{Binding ShowAllCommand}" AutomationProperties.Name="{x:Static pages:QuotesText.ShowAll}" />
+        <kyf:StatusText x:Name="FoundBySearch" Text="{x:Static pages:QuotesText.FoundBySearch}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,12,0" />
+        <Button x:Name="ShowAllQuotes" Content="{x:Static pages:QuotesText.ShowAll}" Command="{Binding ShowAllCommand}" Click="OnShowAllClick" AutomationProperties.Name="{x:Static pages:QuotesText.ShowAll}" />
       </WrapPanel>
 
       <WrapPanel x:Name="Filters" DockPanel.Dock="Top" Margin="0,0,0,8" Visibility="{Binding HasQuotes, Converter={StaticResource Visible}}">

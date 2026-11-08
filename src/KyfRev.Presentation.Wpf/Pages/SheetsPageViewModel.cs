@@ -131,7 +131,7 @@ public sealed class SheetRow
 /// extrait), filtrer et trier ; la fiche choisie s'affiche à côté quand il y a la place, et s'ouvre
 /// sinon d'un clic. On y crée une fiche.
 /// </summary>
-public sealed partial class SheetsPageViewModel : ObservableObject, INavigationAware, IForgetsVault
+public sealed partial class SheetsPageViewModel : ObservableObject, INavigationAware, IForgetsVault, IStopsSearch
 {
     /// <summary>Les entrées que les extensions ajoutent au clic droit d'une fiche ou d'un dossier.</summary>
     public Func<ExtensionMenuZone, IReadOnlyDictionary<string, string>, IReadOnlyList<MenuContribution>>? ExtensionMenus { get; set; }
@@ -162,6 +162,7 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
     private readonly ListFilter _state;
     private readonly ListFilter _sort;
     private readonly LatestSearch _textSearch = new();
+    private bool _searchStopped;
     private IReadOnlyList<VaultSheet>? _entries;
     private IReadOnlyList<string> _folderPaths = [];
     private string? _createIn;
@@ -332,6 +333,7 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
         _generation++;
         _previewTicket++;
         _textSearch.Cancel();
+        _searchStopped = false;
         _found = null;
         _entries = null;
         _folderPaths = [];
@@ -355,6 +357,23 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
         CreateError = null;
         ForgetAction();
         OnPropertyChanged(nameof(Summary));
+    }
+
+    /// <inheritdoc/>
+    public void StopSearch()
+    {
+        _searchStopped |= _textSearch.IsRunning;
+        _textSearch.Cancel();
+    }
+
+    /// <inheritdoc/>
+    public void ResumeSearch()
+    {
+        if (_searchStopped && Bar.Search.Trim().Length > 0)
+        {
+            SearchTextCommand.Execute(TimeSpan.Zero);
+        }
+        _searchStopped = false;
     }
 
     /// <summary>Montre ces fiches.</summary>

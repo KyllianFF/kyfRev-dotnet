@@ -8,8 +8,10 @@ namespace KyfRev.Presentation.Wpf.Shell;
 /// Le verrouillage du coffre chiffré ouvert, à la demande (Ctrl+Maj+L) ou de lui-même (<see cref="AutoLock"/>). Dans cet
 /// ordre, pour que rien ne se perde ni ne reste :
 /// <list type="number">
+/// <item>les recherches s'arrêtent à la fiche en cours (<see cref="IStopsSearch"/>) : elles tiennent le coffre, et le fil de
+/// l'interface attendrait la fin de leur passage ;</item>
 /// <item>ce qui s'écrit s'enregistre, sur la page affichée et sur les vues qui gardent un brouillon (<see cref="ILeaving"/>),
-/// et la séance en cours se garde ; si ce qui s'écrit n'a pas pu l'être, le coffre reste ouvert ;</item>
+/// et la séance en cours se garde ; si ce qui s'écrit n'a pas pu l'être, le coffre reste ouvert, et les recherches repartent ;</item>
 /// <item>l'écran de déverrouillage remplace les vues, qui se ferment (le texte mis en forme et les schémas avec elles) ;</item>
 /// <item>le coffre se ferme, une fois finie la lecture en cours, et la clé de son stockage est effacée ;</item>
 /// <item>chaque vue oublie ce qu'elle avait lu du coffre, après les lectures qui finissaient.</item>
@@ -26,6 +28,7 @@ namespace KyfRev.Presentation.Wpf.Shell;
 /// Ce qui oublie dès que le verrouillage est décidé, ce qui s'écrit enregistré, juste avant que l'écran de déverrouillage
 /// ne remplace les vues : une réponse qui arrive pendant la fermeture ne s'y montre plus ; rien : rien.
 /// </param>
+/// <param name="searches">Les vues dont une recherche peut tenir le coffre ; rien : aucune.</param>
 public sealed class VaultLocking(
     ShellViewModel shell,
     VaultUseCases vaults,
@@ -33,7 +36,8 @@ public sealed class VaultLocking(
     Action forget,
     Action? changed = null,
     Func<IEnumerable<ILeaving>>? drafts = null,
-    Action? starting = null)
+    Action? starting = null,
+    Func<IEnumerable<IStopsSearch>>? searches = null)
 {
     private bool _locking;
 
@@ -45,17 +49,25 @@ public sealed class VaultLocking(
     public async Task<bool> LockAsync()
     {
         // Le coffre ouvert n'est pas chiffré : rien à verrouiller, et rien ne le lit (une longue opération le tient peut-être).
-        if (_locking || !shell.CanLock || IsOpening() || vaults.State() is not { Encrypted: true, Vault: { } root })
+        if (_locking || !shell.CanLock || IsOpening())
         {
             return false;
+        }
+        // Avant le premier regard sur le coffre : une recherche le tient, et ce regard l'attendrait.
+        StopSearches();
+        if (vaults.State() is not { Encrypted: true, Vault: { } root })
+        {
+            return KeepOpen();
         }
         _locking = true;
         try
         {
             if (!await FinishAsync().ConfigureAwait(true))
             {
-                return false;
+                return KeepOpen();
             }
+            // Le temps d'enregistrer, une autre recherche a pu partir.
+            StopSearches();
             var waiting = vaults.State() with { Vault = null, Locked = root, OpenError = null, Encrypted = false };
             starting?.Invoke();
             VaultStartup.ShowUnlock(shell, vaults, picker, waiting, changed);
@@ -82,24 +94,30 @@ public sealed class VaultLocking(
     public async Task<bool> CloseForAsync(object page)
     {
         ArgumentNullException.ThrowIfNull(page);
-        if (_locking || !ReferenceEquals(shell.Current.Page, page) || IsOpening() || vaults.State() is not { Vault: not null })
+        if (_locking || !ReferenceEquals(shell.Current.Page, page) || IsOpening())
         {
             return false;
+        }
+        StopSearches();
+        if (vaults.State() is not { Vault: not null })
+        {
+            return KeepOpen();
         }
         _locking = true;
         try
         {
             if (!await FinishAsync().ConfigureAwait(true) || (drafts?.Invoke() ?? []).Any(view => view.HasUnsavedDraft) || !ReferenceEquals(shell.Current.Page, page))
             {
-                return false;
+                return KeepOpen();
             }
+            StopSearches();
             starting?.Invoke();
             shell.CanLock = false;
             // Les vues qui viennent de se fermer finissent ce qu'elles avaient commencé.
             await Dispatcher.Yield(DispatcherPriority.Background);
             if (!ReferenceEquals(shell.Current.Page, page))
             {
-                return false;
+                return KeepOpen();
             }
             AppState closed;
             try
@@ -120,7 +138,7 @@ public sealed class VaultLocking(
             if (closed.Vault is not null)
             {
                 // Une ouverture a commencé entre-temps : le coffre reste ouvert.
-                return false;
+                return KeepOpen();
             }
             forget();
             return true;
@@ -134,6 +152,25 @@ public sealed class VaultLocking(
     /// <summary>Une ouverture est en cours, d'où qu'elle vienne (un écran, les paramètres) : elle changera de coffre juste après.</summary>
     private bool IsOpening() =>
         vaults.IsOpening || shell.Current.Page is UnlockPageViewModel { IsBusy: true } or WelcomePageViewModel { IsBusy: true };
+
+    /// <summary>Arrête les recherches, sans rien faire oublier : le coffre, qu'elles tenaient, se libère à la fiche en cours.</summary>
+    private void StopSearches()
+    {
+        foreach (var view in searches?.Invoke() ?? [])
+        {
+            view.StopSearch();
+        }
+    }
+
+    /// <summary>Le coffre reste ouvert : ce qui a été arrêté repart. Toujours faux, ce que rendent les refus.</summary>
+    private bool KeepOpen()
+    {
+        foreach (var view in searches?.Invoke() ?? [])
+        {
+            view.ResumeSearch();
+        }
+        return false;
+    }
 
     /// <summary>Ce qui s'écrit, sur la page affichée puis sur les vues qui gardent un brouillon, s'enregistre.</summary>
     private async Task<bool> FinishAsync()
@@ -178,7 +215,7 @@ public sealed class VaultLocking(
         {
             // Rien n'a été fermé : le coffre ouvert maintenant est en clair, son espace de travail revient.
             shell.ShowWorkspace();
-            return false;
+            return KeepOpen();
         }
         forget();
         if (closed != root)

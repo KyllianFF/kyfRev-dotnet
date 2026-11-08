@@ -17,7 +17,7 @@ namespace KyfRev.Presentation.Wpf.Shell;
 /// d'icônes, ou onglets en bas avec « Plus » pour les autres vues. Sans coffre ouvert, elle montre
 /// l'accueil : le menu est masqué et les vues ne s'ouvrent pas.
 /// </summary>
-public sealed partial class ShellViewModel : ObservableObject, IForgetsVault
+public sealed partial class ShellViewModel : ObservableObject, IForgetsVault, IStopsSearch
 {
     /// <summary>Plus petit zoom.</summary>
     public const double MinimumZoom = 0.8;
@@ -158,7 +158,7 @@ public sealed partial class ShellViewModel : ObservableObject, IForgetsVault
 
     /// <summary>L'accueil est affiché : aucun coffre n'est ouvert.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsMenuVisible), nameof(ShowsSearchHint), nameof(NoResultText))]
+    [NotifyPropertyChangedFor(nameof(IsMenuVisible), nameof(ShowsSearchHint), nameof(NoResultText), nameof(PaletteLabel))]
     [NotifyCanExecuteChangedFor(nameof(LockCommand))]
     public partial bool IsWelcome { get; private set; }
 
@@ -230,6 +230,9 @@ public sealed partial class ShellViewModel : ObservableObject, IForgetsVault
     /// <summary>Ce qui cherche dans le coffre (la racine de composition le donne) ; rien : seules les commandes se cherchent.</summary>
     public GlobalSearch? Search { get; set; }
 
+    /// <summary>Ce que dit le champ de recherche : « Rechercher partout », ou seulement les commandes quand aucun coffre n'est cherché.</summary>
+    public string PaletteLabel => CanSearch ? ShellText.SearchPlaceholder : ShellText.SearchCommandsPlaceholder;
+
     /// <summary>Texte cherché.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowsSearchHint), nameof(NoResultText))]
@@ -260,7 +263,7 @@ public sealed partial class ShellViewModel : ObservableObject, IForgetsVault
     public bool HasPaletteError => PaletteError is not null;
 
     /// <summary>Trop peu est écrit pour chercher dans le coffre : on dit comment faire.</summary>
-    public bool ShowsSearchHint => Search is not null && !IsWelcome && PaletteQuery.Trim().Length < MinimumSearch;
+    public bool ShowsSearchHint => CanSearch && PaletteQuery.Trim().Length < MinimumSearch;
 
     /// <summary>Des résultats du coffre sont montrés : on rappelle les touches.</summary>
     public bool ShowsKeyHelp => _hits.Count > 0;
@@ -416,6 +419,19 @@ public sealed partial class ShellViewModel : ObservableObject, IForgetsVault
         IsPaletteOpen = false;
         PaletteQuery = string.Empty;
         DropHits();
+    }
+
+    /// <inheritdoc/>
+    public void StopSearch() => _vaultSearch.Cancel();
+
+    /// <inheritdoc/>
+    public void ResumeSearch()
+    {
+        // Encore « en cours » : la recherche arrêtée n'a pas répondu, et personne ne l'a abandonnée depuis.
+        if (IsSearching)
+        {
+            SearchVaultCommand.Execute(PaletteQuery.Trim());
+        }
     }
 
     /// <summary>Déplace la mise en évidence dans les résultats (« 1 » ou « -1 »), en boucle.</summary>
@@ -624,8 +640,11 @@ public sealed partial class ShellViewModel : ObservableObject, IForgetsVault
         });
     }
 
+    /// <summary>Un coffre est ouvert, et de quoi le chercher est donné.</summary>
+    private bool CanSearch => Search is not null && !IsWelcome;
+
     /// <summary>Assez est écrit pour chercher dans le coffre, et un coffre est ouvert.</summary>
-    private bool CanSearchVault => Search is not null && !IsWelcome && PaletteQuery.Trim().Length >= MinimumSearch;
+    private bool CanSearchVault => CanSearch && PaletteQuery.Trim().Length >= MinimumSearch;
 
     /// <summary>Arrête la recherche dans le coffre, et oublie ce qu'elle avait trouvé.</summary>
     private void DropHits()

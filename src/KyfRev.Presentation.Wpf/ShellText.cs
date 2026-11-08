@@ -89,6 +89,9 @@ public static class ShellText
     /// <summary>« Rechercher partout ».</summary>
     public static string SearchPlaceholder => Text(nameof(SearchPlaceholder));
 
+    /// <summary>« Rechercher une commande ».</summary>
+    public static string SearchCommandsPlaceholder => Text(nameof(SearchCommandsPlaceholder));
+
     /// <summary>« archivée ».</summary>
     public static string SearchBadgeArchived => Text(nameof(SearchBadgeArchived));
 

@@ -8,6 +8,9 @@ internal sealed class LatestSearch
 {
     private CancellationTokenSource? _current;
 
+    /// <summary>Une recherche est en cours, ou attend la fin de sa pause : sa réponse n'est pas encore arrivée.</summary>
+    public bool IsRunning => _current is not null;
+
     /// <summary>Arrête la recherche en cours : sa réponse ne sera pas montrée.</summary>
     public void Cancel()
     {
@@ -37,6 +40,8 @@ internal sealed class LatestSearch
         var found = await Task.Run(() => search(token), CancellationToken.None).ConfigureAwait(true);
         if (!token.IsCancellationRequested)
         {
+            // Elle a répondu : plus rien n'est en cours.
+            Cancel();
             show(found);
         }
     }

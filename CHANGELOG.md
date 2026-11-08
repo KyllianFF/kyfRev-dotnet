@@ -13,7 +13,9 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   surlignés. Ctrl+K donne, sous les commandes et à partir de deux lettres, les fiches, les passages, les définitions et les
   citations qui contiennent tous les mots, sans tenir compte de la casse, des accents ni des ligatures ; un résultat ouvre
   la fiche, le passage ou la citation. La recherche relit le coffre par son stockage, en clair comme chiffré : aucun index
-  n'est écrit, les mots cherchés ne vont jamais au journal, et le verrouillage oublie ce qui a été cherché et trouvé.
+  n'est écrit, les mots cherchés ne vont jamais au journal, et le verrouillage arrête la recherche en cours puis oublie ce
+  qui a été cherché et trouvé. Une fiche ouverte en écriture par un autre programme est cherchée comme les autres, et le
+  lecteur d'écran dit quand rien ne correspond.
 - Coffre chiffré, lot 4 : la preuve qu'aucun texte en clair ne reste sur le disque. Sur un coffre chiffré, le menu d'un mot
   propose « Accepter jusqu'à la fermeture de kyfRev », dans le code Markdown, au lieu d'écrire dans le dictionnaire de Windows. Le journal masque tout chemin
   qui entre dans le coffre, et ne nomme plus la citation trouvée. Les moteurs web ne téléversent plus de rapport de plantage,

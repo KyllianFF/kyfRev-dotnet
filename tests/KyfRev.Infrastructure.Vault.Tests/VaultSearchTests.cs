@@ -357,6 +357,31 @@ public sealed class VaultSearchOnDiskTests() : VaultSearchTests(StorageKind.Disk
     private static readonly Moment At = new(new DateOnly(2026, 10, 12), new DateTimeOffset(2026, 10, 12, 12, 0, 0, TimeSpan.Zero));
 
     [TestMethod]
+    public void A_sheet_another_program_holds_open_for_writing_is_still_searched()
+    {
+        using var folder = TemporaryVault.Empty();
+        using var vault = folder.Initialize(At);
+        vault.CreateSheet("Bio", "Mitose", "La prophase.\n", At);
+
+        using var writer = new FileStream(folder.PathOf("fiches/Bio/Mitose.md"), FileMode.Open, FileAccess.Write, FileShare.Read);
+
+        Assert.HasCount(1, vault.SearchSheets("prophase", CancellationToken.None), "la 0.x la trouvait aussi");
+    }
+
+    [TestMethod]
+    public void A_sheet_another_program_locks_entirely_is_searched_by_its_title_only()
+    {
+        using var folder = TemporaryVault.Empty();
+        using var vault = folder.Initialize(At);
+        vault.CreateSheet("Bio", "Mitose", "La prophase.\n", At);
+
+        using var locked = new FileStream(folder.PathOf("fiches/Bio/Mitose.md"), FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+
+        Assert.HasCount(1, vault.SearchSheets("mitose", CancellationToken.None));
+        Assert.IsEmpty(vault.SearchSheets("prophase", CancellationToken.None), "ce qui ne se lit pas n'est pas cherché, sans erreur");
+    }
+
+    [TestMethod]
     public void A_sheet_that_leads_out_of_the_vault_is_searched_by_its_title_only()
     {
         using var folder = TemporaryVault.Empty();
