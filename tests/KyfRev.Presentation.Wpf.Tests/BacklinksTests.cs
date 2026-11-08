@@ -436,7 +436,7 @@ public sealed class BacklinksTests
             window.UpdateLayout();
             TestShell.Flush();
             viewer.FocusReached(Link(viewer));
-            UiThread.Until(() => viewer.LinkPopup?.IsOpen == true);
+            ShownPreview(viewer);
 
             var popup = viewer.LinkPopup!;
             var place = popup.PlacementRectangle.Left + popup.HorizontalOffset;
@@ -465,7 +465,7 @@ public sealed class BacklinksTests
             Assert.AreSame(page.LinkPreview, viewer.LinkPreview);
             Assert.IsNull(viewer.LinkPopup, "rien n'est lu tout de suite : le pointeur ne fait peut-être que passer");
 
-            UiThread.Until(() => viewer.LinkPopup?.IsOpen == true);
+            ShownPreview(viewer);
 
             Assert.IsTrue(page.LinkPreview.IsOpen);
             Assert.AreEqual(("Cible", "Biologie", "#bio  #cellule"), (page.LinkPreview.Title, page.LinkPreview.Folder, page.LinkPreview.Tags));
@@ -523,7 +523,7 @@ public sealed class BacklinksTests
             var link = Link(viewer);
             viewer.FocusReached(link);
             Assert.AreSame(link, viewer.PreviewedLink, "sans attendre");
-            UiThread.Until(() => viewer.LinkPopup?.IsOpen == true);
+            ShownPreview(viewer);
 
             viewer.RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(viewer)!, 0, Key.Escape) { RoutedEvent = Keyboard.PreviewKeyDownEvent });
 
@@ -655,7 +655,7 @@ public sealed class BacklinksTests
         {
             var link = Link(viewer);
             viewer.FocusReached(link);
-            UiThread.Until(() => viewer.LinkPopup?.IsOpen == true);
+            ShownPreview(viewer);
             var card = (LinkPreviewCard)viewer.LinkPopup!.Child;
 
             viewer.PointAt(viewer);
@@ -729,7 +729,7 @@ public sealed class BacklinksTests
             TestShell.Flush();
             var link = Link(viewer);
             viewer.FocusReached(link);
-            UiThread.Until(() => viewer.LinkPopup?.IsOpen == true);
+            ShownPreview(viewer);
             Descendants(viewer).OfType<ScrollViewer>().First().ScrollToVerticalOffset(200);
             UiThread.Until(() => !viewer.LinkPopup!.IsOpen);
 
@@ -820,7 +820,7 @@ public sealed class BacklinksTests
             Assert.AreEqual(string.Empty, AutomationProperties.GetHelpText(links[0]));
 
             viewer.FocusReached(links[1]);
-            UiThread.Until(() => viewer.LinkPopup?.IsOpen == true);
+            ShownPreview(viewer);
             viewer.FocusLeft(links[1]);
             UiThread.Until(() => !viewer.LinkPopup!.IsOpen);
 
@@ -848,7 +848,7 @@ public sealed class BacklinksTests
         var (window, viewer, page) = Open(vault);
         var link = Link(viewer);
         viewer.FocusReached(link);
-        UiThread.Until(() => viewer.LinkPopup?.IsOpen == true);
+        ShownPreview(viewer);
 
         window.Close();
         TestShell.Flush();
@@ -868,7 +868,7 @@ public sealed class BacklinksTests
         try
         {
             viewer.FocusReached(Link(viewer));
-            UiThread.Until(() => viewer.LinkPopup?.IsOpen == true);
+            ShownPreview(viewer);
 
             window.Left -= 40;
             TestShell.Flush();
@@ -952,6 +952,16 @@ public sealed class BacklinksTests
     }
 
     private static string Target(ReadingVault vault, string body) => Source(vault, "Biologie", "Cible", body);
+
+    /// <summary>
+    /// Attend l'aperçu. La fenêtre d'essai est hors de l'écran : l'aperçu, ramené dans l'écran, peut s'ouvrir sous le vrai pointeur
+    /// du poste, qui le garderait ouvert. Les essais disent eux-mêmes où est le pointeur.
+    /// </summary>
+    private static void ShownPreview(SheetDocumentViewer viewer)
+    {
+        UiThread.Until(() => viewer.LinkPopup?.IsOpen == true);
+        viewer.LinkPopup!.Child.IsHitTestVisible = false;
+    }
 
     private static (ShellWindow Window, SheetDocumentViewer Viewer, SheetPageViewModel Page) Open(ReadingVault vault)
     {
