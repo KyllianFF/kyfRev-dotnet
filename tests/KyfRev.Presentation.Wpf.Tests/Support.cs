@@ -5,6 +5,7 @@ using KyfRev.Application;
 using KyfRev.Application.Model;
 using KyfRev.Application.Ports;
 using KyfRev.Application.UseCases;
+using KyfRev.Conversion;
 using KyfRev.DesignSystem;
 using KyfRev.DesignSystem.Tokens;
 using KyfRev.Domain.Calendar;
@@ -268,7 +269,7 @@ internal sealed class TestVaults : IDisposable
             storage => new VaultStore(storage: storage, ownsStorage: true),
             new RememberedKeys(localData, DiskStorage.Instance),
             DiskStorage.Instance);
-        return new(vaults, new BackupFiles(), locations, time, NullLoggerFactory.Instance, "1.0.0-essai", vaults);
+        return new(vaults, new BackupFiles(), locations, time, NullLoggerFactory.Instance, "1.0.0-essai", vaults, new VaultConversions(PasswordKeys.NewPbkdf2()));
     }
 }
 

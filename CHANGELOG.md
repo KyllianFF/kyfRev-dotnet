@@ -9,6 +9,13 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- Coffre chiffré, lot 3 : « Chiffrer ce coffre… », dans Paramètres › Données, pour un coffre en clair. Une page en trois
+  étapes : le mot de passe, deux fois ; la clé de récupération, montrée une seule fois avant la conversion ; puis la
+  conversion, coffre fermé, vers un nouveau dossier voisin (« Coffre chiffré »), avec les fichiers écrits puis relus.
+  Le coffre en clair n'est pas touché, et c'est à l'utilisateur de le retirer. « Déchiffrer vers un dossier… », dans la
+  carte Chiffrement, fait le chemin inverse, dans le dossier choisi. La conversion de `kyfrev-coffre` passe dans
+  `KyfRev.Conversion`, avec sa progression et un chiffrement préparé en deux temps ; `kyfrev-coffre verifier` lit aussi
+  un coffre chiffré, avec son mot de passe ou sa clé de récupération, sans rien écrire.
 - Coffre chiffré, lot 3 : la carte Chiffrement, dans Paramètres › Données, pour un coffre chiffré. « Changer le mot de
   passe… » ne réécrit aucune fiche : seule l'enveloppe de la clé change, et la clé de récupération comme la clé retenue
   restent valables. « Créer une nouvelle clé de récupération… » la prépare sans rien écrire et la montre une seule fois :

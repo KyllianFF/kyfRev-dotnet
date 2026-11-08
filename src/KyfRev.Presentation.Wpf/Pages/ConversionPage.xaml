@@ -1,0 +1,181 @@
+<UserControl x:Class="KyfRev.Presentation.Wpf.Pages.ConversionPage"
+             x:ClassModifier="internal"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:kyf="clr-namespace:KyfRev.DesignSystem.Controls;assembly=KyfRev.DesignSystem"
+             xmlns:pages="clr-namespace:KyfRev.Presentation.Wpf.Pages">
+  <UserControl.Resources>
+    <BooleanToVisibilityConverter x:Key="Visible" />
+
+    <!-- Une étape du chiffrement : l'étape montrée se lit en couleur et en gras. -->
+    <Style x:Key="StepText" TargetType="TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.TextSecondary}" />
+      <Setter Property="FontSize" Value="{DynamicResource Kyf.FontSize.Caption}" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+      <Style.Triggers>
+        <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="True">
+          <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Primary}" />
+          <Setter Property="FontWeight" Value="SemiBold" />
+        </DataTrigger>
+      </Style.Triggers>
+    </Style>
+    <Style x:Key="StepPill" TargetType="Border">
+      <Setter Property="BorderBrush" Value="{DynamicResource Kyf.Brush.Divider}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="12" />
+      <Setter Property="Padding" Value="10,2" />
+      <Setter Property="Margin" Value="0,0,6,6" />
+    </Style>
+  </UserControl.Resources>
+
+  <!-- La conversion du coffre, hors de l'espace de travail : le coffre reste ouvert derrière tant qu'elle n'a pas commencé. -->
+  <ScrollViewer x:Name="Scroller" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
+    <StackPanel MaxWidth="560" Margin="16" HorizontalAlignment="Stretch" VerticalAlignment="Center">
+      <kyf:Icon Text="{x:Static kyf:Icons.Lock}" FontSize="32" HorizontalAlignment="Center" />
+      <TextBlock x:Name="Heading" Text="{Binding Heading}" Style="{DynamicResource Kyf.Text.Title}" Margin="0,12,0,0"
+                 HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" AutomationProperties.HeadingLevel="Level1" />
+      <TextBlock x:Name="SourcePath" Text="{Binding Source}" FontFamily="{DynamicResource Kyf.Font.Code}" Style="{DynamicResource Kyf.Text.Caption}"
+                 Margin="0,8,0,0" TextAlignment="Center" TextWrapping="Wrap" />
+      <TextBlock x:Name="Intro" Text="{Binding Intro}" Style="{DynamicResource Kyf.Text.Secondary}" Margin="0,16,0,0" TextWrapping="Wrap" />
+
+      <!-- Les trois étapes du chiffrement. -->
+      <WrapPanel x:Name="Steps" Margin="0,16,0,0" Visibility="{Binding ShowsSteps, Converter={StaticResource Visible}}">
+        <Border Style="{StaticResource StepPill}">
+          <TextBlock x:Name="StepOne" Text="{x:Static pages:EncryptionText.StepPassword}" Style="{StaticResource StepText}" Tag="{Binding IsStepOne}" />
+        </Border>
+        <Border Style="{StaticResource StepPill}">
+          <TextBlock x:Name="StepTwo" Text="{x:Static pages:EncryptionText.StepRecoveryKey}" Style="{StaticResource StepText}" Tag="{Binding IsStepTwo}" />
+        </Border>
+        <Border Style="{StaticResource StepPill}">
+          <TextBlock x:Name="StepThree" Text="{x:Static pages:EncryptionText.StepConversion}" Style="{StaticResource StepText}" Tag="{Binding IsStepThree}" />
+        </Border>
+      </WrapPanel>
+
+      <!-- Étape 1 : le mot de passe, deux fois. Il ne se lie pas : la vue le passe à la commande, puis vide les champs. -->
+      <StackPanel x:Name="PasswordPart" Margin="0,16,0,0" Visibility="{Binding IsPassword, Converter={StaticResource Visible}}" IsVisibleChanged="OnPartVisibleChanged">
+        <TextBlock x:Name="PasswordTitle" Text="{x:Static pages:EncryptionText.PasswordStepTitle}" Style="{DynamicResource Kyf.Text.Subtitle}"
+                   TextWrapping="Wrap" AutomationProperties.HeadingLevel="Level2" />
+        <TextBlock x:Name="PasswordStepHelp" Text="{x:Static pages:EncryptionText.PasswordStepHelp}" Style="{DynamicResource Kyf.Text.Secondary}"
+                   Margin="0,4,0,0" TextWrapping="Wrap" />
+        <TextBlock x:Name="NewPasswordLabel" Text="{x:Static pages:EncryptionText.NewPassword}" Style="{DynamicResource Kyf.Text.BodyStrong}" Margin="0,12,0,6" />
+        <PasswordBox x:Name="NewPasswordBox" IsEnabled="{Binding IsIdle}" IsVisibleChanged="OnSecretShown"
+                     AutomationProperties.Name="{x:Static pages:EncryptionText.NewPassword}"
+                     AutomationProperties.HelpText="{x:Static pages:ConversionPageViewModel.PasswordLength}"
+                     AutomationProperties.LabeledBy="{Binding ElementName=NewPasswordLabel}" />
+        <TextBlock x:Name="PasswordLengthHelp" Text="{x:Static pages:ConversionPageViewModel.PasswordLength}" Style="{DynamicResource Kyf.Text.Caption}"
+                   Margin="0,6,0,0" TextWrapping="Wrap" />
+        <TextBlock x:Name="ConfirmPasswordLabel" Text="{x:Static pages:EncryptionText.ConfirmPassword}" Style="{DynamicResource Kyf.Text.BodyStrong}" Margin="0,12,0,6" />
+        <PasswordBox x:Name="ConfirmPasswordBox" IsEnabled="{Binding IsIdle}"
+                     AutomationProperties.Name="{x:Static pages:EncryptionText.ConfirmPassword}"
+                     AutomationProperties.LabeledBy="{Binding ElementName=ConfirmPasswordLabel}" />
+        <WrapPanel Margin="0,16,0,0">
+          <Button x:Name="ContinueButton" Style="{DynamicResource Kyf.Button.Primary}" IsDefault="True" Click="OnPrepare" IsEnabled="{Binding IsIdle}"
+                  Content="{x:Static pages:EncryptionText.Continue}" Margin="0,0,8,8" AutomationProperties.Name="{x:Static pages:EncryptionText.Continue}" />
+          <Button x:Name="CancelPasswordButton" Command="{Binding CancelCommand}" IsEnabled="{Binding IsIdle}"
+                  Content="{x:Static pages:EncryptionText.Cancel}" Margin="0,0,8,8" AutomationProperties.Name="{x:Static pages:EncryptionText.Cancel}" />
+        </WrapPanel>
+      </StackPanel>
+
+      <!-- Étape 2 : la clé de récupération, montrée une seule fois ; la conversion ne commence qu'une fois la clé rangée. -->
+      <StackPanel x:Name="RecoveryPart" Margin="0,16,0,0" Visibility="{Binding IsRecoveryKey, Converter={StaticResource Visible}}">
+        <TextBlock x:Name="RecoveryTitle" Text="{x:Static pages:EncryptionText.RecoveryStepTitle}" Style="{DynamicResource Kyf.Text.Subtitle}"
+                   TextWrapping="Wrap" AutomationProperties.HeadingLevel="Level2" />
+        <TextBlock x:Name="RecoveryKeyHelp" Text="{x:Static pages:EncryptionText.RecoveryKeyShown}" Style="{DynamicResource Kyf.Text.Body}" Margin="0,4,0,0" TextWrapping="Wrap" />
+        <TextBox x:Name="RecoveryKeyText" Text="{Binding RecoveryKey, Mode=OneWay}" IsReadOnly="True" IsUndoEnabled="False" FontFamily="{DynamicResource Kyf.Font.Code}"
+                 TextWrapping="Wrap" Margin="0,12,0,0" AutomationProperties.Name="{x:Static pages:EncryptionText.RecoveryKey}" />
+        <Button x:Name="CopyRecoveryKeyButton" Content="{x:Static pages:EncryptionText.Copy}" Command="{Binding CopyRecoveryKeyCommand}" HorizontalAlignment="Left" Margin="0,8,0,0"
+                AutomationProperties.Name="{x:Static pages:EncryptionText.CopyRecoveryKey}" />
+        <kyf:Notification x:Name="RecoveryKeyStatus" Severity="Info" Message="{Binding KeyMessage}" IsOpen="{Binding HasKeyMessage, Mode=OneWay}" IsClosable="False" Margin="0,8,0,0" />
+        <CheckBox x:Name="KeyStoredBox" IsChecked="{Binding IsKeyStored}" Margin="0,12,0,0" AutomationProperties.Name="{x:Static pages:EncryptionText.KeyStored}">
+          <TextBlock Text="{x:Static pages:EncryptionText.KeyStored}" TextWrapping="Wrap" />
+        </CheckBox>
+        <WrapPanel Margin="0,16,0,0">
+          <Button x:Name="EncryptButton" Style="{DynamicResource Kyf.Button.Primary}" IsDefault="True" Command="{Binding EncryptCommand}" IsEnabled="{Binding IsIdle}"
+                  Margin="0,0,8,8" AutomationProperties.Name="{x:Static pages:EncryptionText.EncryptNow}">
+            <StackPanel Orientation="Horizontal">
+              <kyf:Icon Text="{x:Static kyf:Icons.Lock}" Margin="0,0,8,0" />
+              <TextBlock Text="{x:Static pages:EncryptionText.EncryptNow}" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+          <Button x:Name="BackToPasswordButton" Command="{Binding BackToPasswordCommand}" IsEnabled="{Binding IsIdle}"
+                  Content="{x:Static pages:EncryptionText.Back}" Margin="0,0,8,8" AutomationProperties.Name="{x:Static pages:EncryptionText.Back}" />
+          <Button x:Name="CancelRecoveryButton" Command="{Binding CancelCommand}" IsEnabled="{Binding IsIdle}"
+                  Content="{x:Static pages:EncryptionText.Cancel}" Margin="0,0,8,8" AutomationProperties.Name="{x:Static pages:EncryptionText.Cancel}" />
+        </WrapPanel>
+      </StackPanel>
+
+      <!-- Le déchiffrement : le secret du coffre, et le dossier où écrire le coffre en clair. -->
+      <StackPanel x:Name="SecretPart" Margin="0,16,0,0" Visibility="{Binding IsSecret, Converter={StaticResource Visible}}" IsVisibleChanged="OnPartVisibleChanged">
+        <kyf:Notification x:Name="DecryptWarning" Severity="Warning" Message="{x:Static pages:EncryptionText.DecryptWarning}" IsOpen="True" IsClosable="False" />
+        <TextBlock x:Name="DecryptSecretLabel" Text="{Binding SecretLabel}" Style="{DynamicResource Kyf.Text.BodyStrong}" Margin="0,12,0,6" />
+        <PasswordBox x:Name="DecryptPasswordBox" IsEnabled="{Binding IsIdle}" IsVisibleChanged="OnSecretShown" Visibility="{Binding UsesPassword, Converter={StaticResource Visible}}"
+                     AutomationProperties.Name="{x:Static pages:EncryptionText.Password}"
+                     AutomationProperties.LabeledBy="{Binding ElementName=DecryptSecretLabel}" />
+        <TextBox x:Name="DecryptRecoveryBox" IsEnabled="{Binding IsIdle}" IsVisibleChanged="OnSecretShown" IsUndoEnabled="False" FontFamily="{DynamicResource Kyf.Font.Code}" TextWrapping="Wrap"
+                 Visibility="{Binding UsesRecoveryKey, Converter={StaticResource Visible}}"
+                 AutomationProperties.Name="{x:Static pages:EncryptionText.RecoveryKey}"
+                 AutomationProperties.HelpText="{x:Static pages:EncryptionText.RecoveryHelp}"
+                 AutomationProperties.LabeledBy="{Binding ElementName=DecryptSecretLabel}" />
+        <CheckBox x:Name="DecryptWithRecoveryBox" IsChecked="{Binding UsesRecoveryKey}" IsEnabled="{Binding IsIdle}" Margin="0,8,0,0"
+                  AutomationProperties.Name="{x:Static pages:EncryptionText.WithRecoveryKey}">
+          <TextBlock Text="{x:Static pages:EncryptionText.WithRecoveryKey}" TextWrapping="Wrap" />
+        </CheckBox>
+        <TextBlock x:Name="ParentLabel" Text="{x:Static pages:EncryptionText.DecryptedParent}" Style="{DynamicResource Kyf.Text.BodyStrong}" Margin="0,16,0,6" />
+        <TextBlock x:Name="ParentPath" Text="{Binding Parent}" FontFamily="{DynamicResource Kyf.Font.Code}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" />
+        <Button x:Name="PickParentButton" Command="{Binding PickParentCommand}" IsEnabled="{Binding IsIdle}" HorizontalAlignment="Left" Margin="0,8,0,0"
+                AutomationProperties.Name="{x:Static pages:EncryptionText.PickOtherParent}">
+          <StackPanel Orientation="Horizontal">
+            <kyf:Icon Text="{x:Static kyf:Icons.FolderOpen}" Margin="0,0,8,0" />
+            <TextBlock Text="{x:Static pages:EncryptionText.PickOtherParent}" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+        <WrapPanel Margin="0,16,0,0">
+          <Button x:Name="DecryptButton" Style="{DynamicResource Kyf.Button.Primary}" IsDefault="True" Click="OnDecrypt" IsEnabled="{Binding IsIdle}"
+                  Content="{x:Static pages:EncryptionText.DecryptNow}" Margin="0,0,8,8" AutomationProperties.Name="{x:Static pages:EncryptionText.DecryptNow}" />
+          <Button x:Name="CancelSecretButton" Command="{Binding CancelCommand}" IsEnabled="{Binding IsIdle}"
+                  Content="{x:Static pages:EncryptionText.Cancel}" Margin="0,0,8,8" AutomationProperties.Name="{x:Static pages:EncryptionText.Cancel}" />
+        </WrapPanel>
+      </StackPanel>
+
+      <!-- La conversion, puis ce qu'elle a fait. -->
+      <StackPanel x:Name="ProgressPart" Margin="0,16,0,0" Visibility="{Binding IsStepThree, Converter={StaticResource Visible}}">
+        <TextBlock x:Name="ConversionTitle" Text="{Binding ConversionTitle}" Style="{DynamicResource Kyf.Text.Subtitle}"
+                   TextWrapping="Wrap" AutomationProperties.HeadingLevel="Level2" />
+        <TextBlock x:Name="ConversionHelp" Text="{x:Static pages:EncryptionText.ConversionHelp}" Style="{DynamicResource Kyf.Text.Secondary}" Margin="0,4,0,0" TextWrapping="Wrap" />
+        <kyf:AdaptiveRow MainMinWidth="200" Spacing="12" StackedSpacing="2" Margin="0,12,0,4">
+          <TextBlock x:Name="WritingText" Text="{Binding WritingLabel}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" />
+          <TextBlock x:Name="WritingCountText" kyf:AdaptiveRow.Part="Trailing" Text="{Binding WritingCount}" FontFamily="{DynamicResource Kyf.Font.Code}" Style="{DynamicResource Kyf.Text.Body}" />
+        </kyf:AdaptiveRow>
+        <ProgressBar x:Name="WritingBar" Value="{Binding Written, Mode=OneWay}" Maximum="{Binding Maximum, Mode=OneWay}"
+                     AutomationProperties.Name="{Binding WritingLabel}" />
+        <kyf:AdaptiveRow MainMinWidth="200" Spacing="12" StackedSpacing="2" Margin="0,12,0,4">
+          <TextBlock x:Name="VerifyingText" Text="{x:Static pages:EncryptionText.FilesVerified}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" />
+          <TextBlock x:Name="VerifyingCountText" kyf:AdaptiveRow.Part="Trailing" Text="{Binding VerifyingCount}" FontFamily="{DynamicResource Kyf.Font.Code}" Style="{DynamicResource Kyf.Text.Body}" />
+        </kyf:AdaptiveRow>
+        <ProgressBar x:Name="VerifyingBar" Value="{Binding Verified, Mode=OneWay}" Maximum="{Binding Maximum, Mode=OneWay}"
+                     AutomationProperties.Name="{x:Static pages:EncryptionText.FilesVerified}" />
+
+        <kyf:Notification x:Name="DoneMessage" Severity="Success" Message="{Binding Result}" IsOpen="{Binding IsDone, Mode=OneWay}" IsClosable="False" Margin="0,16,0,0" />
+        <kyf:Notification x:Name="FailedMessage" Severity="Critical" Message="{Binding Result}" IsOpen="{Binding IsFailed, Mode=OneWay}" IsClosable="False" Margin="0,16,0,0" />
+        <WrapPanel Margin="0,16,0,0" Visibility="{Binding IsFinished, Converter={StaticResource Visible}}">
+          <Button x:Name="OpenNewButton" Style="{DynamicResource Kyf.Button.Primary}" Command="{Binding OpenNewCommand}" IsEnabled="{Binding IsIdle}"
+                  Visibility="{Binding IsDone, Converter={StaticResource Visible}}" Margin="0,0,8,8" AutomationProperties.Name="{Binding OpenNewLabel}">
+            <StackPanel Orientation="Horizontal">
+              <kyf:Icon Text="{x:Static kyf:Icons.FolderOpen}" Margin="0,0,8,0" />
+              <TextBlock Text="{Binding OpenNewLabel}" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+          <Button x:Name="ReturnButton" Command="{Binding ReturnCommand}" IsEnabled="{Binding IsIdle}" Margin="0,0,8,8" AutomationProperties.Name="{Binding ReturnLabel}">
+            <StackPanel Orientation="Horizontal">
+              <kyf:Icon Text="{x:Static kyf:Icons.Back}" Margin="0,0,8,0" />
+              <TextBlock Text="{Binding ReturnLabel}" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
+        </WrapPanel>
+      </StackPanel>
+
+      <kyf:Notification x:Name="BusyMessage" Severity="Info" Message="{Binding BusyMessage}" IsOpen="{Binding IsBusy, Mode=OneWay}" IsClosable="False" Margin="0,8,0,0" />
+      <kyf:Notification x:Name="ErrorMessage" Severity="Critical" Message="{Binding Error}" IsOpen="{Binding HasError, Mode=OneWay}" IsClosable="False" Margin="0,8,0,0" />
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

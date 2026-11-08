@@ -496,6 +496,28 @@ public sealed class Scenarios
     }
 
     [TestMethod]
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+    public void J8_a_plain_vault_encrypts_into_a_new_folder_then_opens_with_its_password()
+    {
+        const string password = "un mot de passe de scénario";
+        using var trial = new Trial();
+        var created = new DateOnly(2026, 10, 9);
+        trial.On(created, app => NewSheet(app, Title));
+        using var running = trial.Launch(created.AddDays(1));
+        running.WaitRow(Today, Title);
+
+        var key = running.EncryptVault(password);
+
+        Assert.HasCount(14, key.Split('-'), "la clé de récupération, montrée une fois avant la conversion");
+        Assert.IsTrue(trial.HidesEverywhere("Révolution", "Coffre chiffré"), "dans le nouveau dossier, ni le titre ni le texte ne se lisent");
+        Assert.IsFalse(trial.HidesEverywhere("Révolution"), "le coffre en clair n'a pas changé");
+        running.OpenConverted();
+        Assert.AreEqual("Ce coffre est chiffré", running.Heading(), "le coffre chiffré attend son mot de passe");
+        running.Unlock(password);
+        running.WaitRow(Today, Title);
+    }
+
+    [TestMethod]
     public void T17_no_debugging_port_even_with_the_variables()
     {
         using var trial = new Trial();

@@ -18,13 +18,15 @@ public sealed partial class ArchitectureTests
 
     private const string Rendering = "KyfRev.Rendering";
 
+    private const string Conversion = "KyfRev.Conversion";
+
     /// <summary>Morceaux de nom interdits pour une opération publique (français et anglais).</summary>
     private static readonly string[] DeletionWords = ["supprim", "effac", "detrui", "delete", "remove", "purge", "erase", "destroy"];
 
     /// <summary>Les seules opérations qui effacent : depuis la corbeille, à la demande expresse de la personne.</summary>
     private static readonly string[] Purges = ["Purge", "PurgeSheet", "PurgeFolder", "PurgeAnnotation", "PurgeQuote"];
 
-    private static readonly string[] Layers = [Domain, Application, "KyfRev.Extensions.Host", "KyfRev.Infrastructure.Crypto", "KyfRev.Infrastructure.Online", "KyfRev.Infrastructure.Vault", "KyfRev.Modules.Citations", "KyfRev.Modules.Schemas", Rendering, "kyfrev-coffre"];
+    private static readonly string[] Layers = [Domain, Application, "KyfRev.Extensions.Host", "KyfRev.Infrastructure.Crypto", "KyfRev.Infrastructure.Online", "KyfRev.Infrastructure.Vault", "KyfRev.Modules.Citations", "KyfRev.Modules.Schemas", Rendering, "kyfrev-coffre", Conversion];
 
     /// <summary>Paquets permis au domaine, aux cas d'usage et aux modules, en plus du framework.</summary>
     private static readonly string[] Abstractions = ["Microsoft.Extensions.DependencyInjection.Abstractions", "Microsoft.Extensions.Logging.Abstractions"];
@@ -149,7 +151,7 @@ public sealed partial class ArchitectureTests
         };
         var purges = new Dictionary<string, int>(StringComparer.Ordinal)
         {
-            ["KyfRev.Cli/VaultConversion.cs"] = 3,
+            ["KyfRev.Conversion/VaultConversion.cs"] = 3,
             ["KyfRev.Infrastructure.Vault/VaultSession.Trash.cs"] = 1,
             ["KyfRev.Infrastructure.Crypto/EncryptedStorage.cs"] = 1,
             ["KyfRev.Infrastructure.Crypto/EncryptedVault.cs"] = 1,
@@ -157,7 +159,7 @@ public sealed partial class ArchitectureTests
         };
         var harmless = new Dictionary<string, int>(StringComparer.Ordinal)
         {
-            ["KyfRev.Cli/VaultConversion.cs"] = 1,
+            ["KyfRev.Conversion/VaultConversion.cs"] = 1,
             ["KyfRev.Infrastructure.Vault/Files/DiskStorage.cs"] = 1,
             ["KyfRev.Infrastructure.Vault/Files/VaultLock.cs"] = 1,
             ["KyfRev.Infrastructure.Windows/DiagnosticLog.cs"] = 1,
@@ -189,7 +191,7 @@ public sealed partial class ArchitectureTests
         {
             Assert.Contains("File.Delete(temporary)", Code(file), file);
         }
-        var conversion = Code("KyfRev.Cli/VaultConversion.cs");
+        var conversion = Code("KyfRev.Conversion/VaultConversion.cs");
         Assert.Contains("!IsTemporaryOf(destination, temporary)", conversion, "la conversion n'efface que son dossier temporaire, reconnu à son nom");
         Assert.Contains("disk.Purge(temporary)", conversion);
         Assert.Contains("disk.Purge(_path)", conversion, "et son marqueur, juste avant de prendre le nom de la destination");
@@ -252,13 +254,17 @@ public sealed partial class ArchitectureTests
         Application => reference == Domain,
         // Le moteur de rendu lit le modèle de l'application, et rien d'autre.
         Rendering => reference is Domain or Application,
+        // La conversion est le seul endroit qui relie les deux infrastructures du coffre, en clair et chiffré, comme la racine
+        // de composition et l'outil en ligne de commande.
+        Conversion => reference is Domain or Application or "KyfRev.Infrastructure.Crypto" or "KyfRev.Infrastructure.Vault",
         _ when assembly.StartsWith("KyfRev.Infrastructure.", StringComparison.Ordinal) => reference is Domain or Application,
         // Aucun module ne référence un autre module, ni l'infrastructure.
         _ when assembly.StartsWith("KyfRev.Modules.", StringComparison.Ordinal) => reference is Domain or Application,
         // Les extensions ne connaissent ni les modules, ni l'infrastructure, ni la présentation.
         _ when assembly.StartsWith("KyfRev.Extensions.", StringComparison.Ordinal) => reference is Domain or Application,
-        // La présentation ne référence aucune infrastructure concrète : seule la racine de composition les relie.
-        _ when assembly.StartsWith("KyfRev.Presentation.", StringComparison.Ordinal) => !reference.StartsWith("KyfRev.Infrastructure.", StringComparison.Ordinal),
+        // La présentation ne référence aucune infrastructure concrète, ni la conversion qui les relie : seule la racine de
+        // composition les relie.
+        _ when assembly.StartsWith("KyfRev.Presentation.", StringComparison.Ordinal) => !reference.StartsWith("KyfRev.Infrastructure.", StringComparison.Ordinal) && reference != Conversion,
         _ => true,
     };
 

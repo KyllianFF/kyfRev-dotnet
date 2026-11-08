@@ -31,6 +31,9 @@
     <DataTemplate DataType="{x:Type pages:UnlockPageViewModel}">
       <pages:UnlockPage />
     </DataTemplate>
+    <DataTemplate DataType="{x:Type pages:ConversionPageViewModel}">
+      <pages:ConversionPage />
+    </DataTemplate>
     <DataTemplate DataType="{x:Type pages:DashboardPageViewModel}">
       <pages:DashboardPage />
     </DataTemplate>

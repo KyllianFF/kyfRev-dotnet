@@ -65,9 +65,12 @@ internal sealed class Trial : IDisposable
         return action(app);
     }
 
-    /// <summary>Vrai si le coffre ne laisse lire <paramref name="text"/> dans aucun de ses fichiers.</summary>
-    public bool HidesEverywhere(string text) =>
-        Directory.EnumerateFiles(Vault, "*", SearchOption.AllDirectories).All(file => !File.ReadAllText(file).Contains(text, StringComparison.Ordinal));
+    /// <summary>
+    /// Vrai si le coffre, ou le dossier <paramref name="sibling"/> à côté de lui (une conversion), ne laisse lire
+    /// <paramref name="text"/> dans aucun de ses fichiers.
+    /// </summary>
+    public bool HidesEverywhere(string text, string? sibling = null) =>
+        Directory.EnumerateFiles(sibling is null ? Vault : Path.Combine(_folder, sibling), "*", SearchOption.AllDirectories).All(file => !File.ReadAllText(file).Contains(text, StringComparison.Ordinal));
 
     /// <summary>La vraie application, ouverte sur ce coffre le jour donné.</summary>
     public RunningApplication Launch(DateOnly day, IReadOnlyDictionary<string, string>? environment = null) => new(_folder, day, environment);

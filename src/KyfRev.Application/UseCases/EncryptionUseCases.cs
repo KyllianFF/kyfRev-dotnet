@@ -85,6 +85,21 @@ public sealed class EncryptionUseCases(VaultHost host, IVaultKeys keys)
     }
 
     /// <summary>
+    /// Vérifie que <paramref name="secret"/> ouvre le coffre ouvert, sans rien écrire ni retenir : avant de le fermer pour le
+    /// déchiffrer, par exemple. La clé tirée du secret est effacée aussitôt.
+    /// </summary>
+    /// <param name="secret">Le mot de passe, ou la clé de récupération.</param>
+    public Outcome<Done> Check(VaultSecret secret)
+    {
+        ArgumentNullException.ThrowIfNull(secret);
+        return OnEncrypted(root =>
+        {
+            using var key = keys.KeyOf(root, secret);
+            return Outcome.Done();
+        });
+    }
+
+    /// <summary>
     /// Retient la clé du coffre ouvert sur ce poste, protégée par Windows pour la session de l'utilisateur : elle l'ouvrira
     /// au démarrage sans rien demander. La clé tirée du secret est effacée aussitôt retenue.
     /// </summary>

@@ -21,6 +21,14 @@
           "Microsoft.Extensions.Logging.Abstractions": "[10.0.13, )"
         }
       },
+      "kyfrev.conversion": {
+        "type": "Project",
+        "dependencies": {
+          "KyfRev.Application": "[1.0.0-alpha.0, )",
+          "KyfRev.Infrastructure.Crypto": "[1.0.0-alpha.0, )",
+          "KyfRev.Infrastructure.Vault": "[1.0.0-alpha.0, )"
+        }
+      },
       "kyfrev.domain": {
         "type": "Project"
       },

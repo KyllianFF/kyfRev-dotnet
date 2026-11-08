@@ -4,6 +4,7 @@ using KyfRev.Application.Model;
 using KyfRev.Application.Modules;
 using KyfRev.Application.Ports;
 using KyfRev.Application.UseCases;
+using KyfRev.Conversion;
 using KyfRev.DesignSystem;
 using KyfRev.DesignSystem.Tokens;
 using KyfRev.Extensions.Host;
@@ -85,7 +86,9 @@ internal static class Composition
             clock,
             provider.GetRequiredService<ILoggerFactory>(),
             Version,
-            provider.GetRequiredService<EncryptedVaults>()));
+            provider.GetRequiredService<EncryptedVaults>(),
+            // Chiffrer, déchiffrer : toujours vers un nouveau dossier, la source intacte.
+            new VaultConversions()));
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Vaults);
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Reminders);
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Sheets);
@@ -160,7 +163,10 @@ internal static class Composition
                     SecretClipboard.Copy)
                 {
                     LockDelay = provider.GetRequiredService<LockDelay>(),
+                    DecryptionAsked = () => ShowConversion(provider, ConversionDirection.Decrypt, VaultChanged),
                 },
+                // « Chiffrer ce coffre… », pour un coffre en clair.
+                EncryptionAsked = () => ShowConversion(provider, ConversionDirection.Encrypt, VaultChanged),
             };
         });
         services.AddSingleton(provider =>
@@ -323,6 +329,18 @@ internal static class Composition
         });
         return services.BuildServiceProvider(new ServiceProviderOptions { ValidateOnBuild = true, ValidateScopes = true });
     }
+
+    /// <summary>La page de conversion du coffre ouvert, dans le sens <paramref name="direction"/>.</summary>
+    private static void ShowConversion(IServiceProvider provider, ConversionDirection direction, Action changed) =>
+        VaultConversionScreen.Show(
+            provider.GetRequiredService<ShellViewModel>(),
+            provider.GetRequiredService<VaultUseCases>(),
+            provider.GetRequiredService<EncryptionUseCases>(),
+            provider.GetRequiredService<VaultLocking>(),
+            provider.GetRequiredService<IFolderPicker>(),
+            SecretClipboard.Copy,
+            direction,
+            changed);
 
     /// <summary>Un autre coffre est ouvert : les réglages lus de l'ancien sont oubliés, et l'espace de travail revient.</summary>
     private static void VaultChanged(IServiceProvider provider)

@@ -12,11 +12,23 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <data name="Back" xml:space="preserve">
+    <value>Retour</value>
+  </data>
+  <data name="BackToEncrypted" xml:space="preserve">
+    <value>Revenir au coffre chiffré</value>
+  </data>
+  <data name="BackToPlain" xml:space="preserve">
+    <value>Revenir au coffre en clair</value>
+  </data>
   <data name="BackToVault" xml:space="preserve">
     <value>Revenir au coffre ouvert</value>
   </data>
   <data name="BackToWelcome" xml:space="preserve">
     <value>Retour à l'accueil</value>
+  </data>
+  <data name="Cancel" xml:space="preserve">
+    <value>Annuler</value>
   </data>
   <data name="CardHelp" xml:space="preserve">
     <value>Ce coffre est chiffré : sans son mot de passe ou sa clé de récupération, rien de lui ne se lit sur le disque.</value>
@@ -42,11 +54,29 @@
   <data name="ConfirmPassword" xml:space="preserve">
     <value>Confirmez le nouveau mot de passe</value>
   </data>
+  <data name="Continue" xml:space="preserve">
+    <value>Continuer</value>
+  </data>
+  <data name="ConversionHelp" xml:space="preserve">
+    <value>La copie s'écrit dans un nouveau dossier, puis chaque fichier est relu et comparé à l'original. Laissez kyfRev ouvert jusqu'au bout : coupée, la conversion ne perd rien, mais laisse un dossier temporaire caché, à retirer à la main.</value>
+  </data>
+  <data name="ConversionPage" xml:space="preserve">
+    <value>Conversion du coffre</value>
+  </data>
+  <data name="ConversionStepTitle" xml:space="preserve">
+    <value>Étape 3 sur 3 : la conversion</value>
+  </data>
+  <data name="Converting" xml:space="preserve">
+    <value>Conversion en cours…</value>
+  </data>
   <data name="Copy" xml:space="preserve">
     <value>Copier</value>
   </data>
   <data name="CopyRecoveryKey" xml:space="preserve">
     <value>Copier la clé de récupération</value>
+  </data>
+  <data name="Count" xml:space="preserve">
+    <value>{0} / {1}</value>
   </data>
   <data name="Create" xml:space="preserve">
     <value>Créer</value>
@@ -54,8 +84,53 @@
   <data name="CurrentPassword" xml:space="preserve">
     <value>Mot de passe actuel</value>
   </data>
+  <data name="DecryptedNext" xml:space="preserve">
+    <value>Il se lit sans mot de passe : rangez-le à l'abri, et retirez-le quand vous n'en avez plus besoin.</value>
+  </data>
+  <data name="DecryptedParent" xml:space="preserve">
+    <value>Le coffre en clair s'écrira dans ce dossier :</value>
+  </data>
+  <data name="DecryptHeading" xml:space="preserve">
+    <value>Déchiffrer ce coffre</value>
+  </data>
+  <data name="DecryptIntro" xml:space="preserve">
+    <value>Une copie en clair du coffre s'écrit dans un nouveau dossier, et chaque fichier y est relu et comparé à l'original. Le coffre chiffré n'est pas touché.</value>
+  </data>
+  <data name="DecryptionTitle" xml:space="preserve">
+    <value>La conversion</value>
+  </data>
+  <data name="DecryptNow" xml:space="preserve">
+    <value>Déchiffrer le coffre</value>
+  </data>
+  <data name="DecryptVault" xml:space="preserve">
+    <value>Déchiffrer vers un dossier…</value>
+  </data>
+  <data name="DecryptVaultHelp" xml:space="preserve">
+    <value>Une copie en clair, dans un nouveau dossier ; ce coffre chiffré n'est pas touché.</value>
+  </data>
+  <data name="DecryptWarning" xml:space="preserve">
+    <value>Le coffre en clair se lit sans mot de passe, par n'importe quel programme : rangez-le à l'abri, et retirez-le quand vous n'en avez plus besoin.</value>
+  </data>
   <data name="Deriving" xml:space="preserve">
     <value>Vérification du mot de passe…</value>
+  </data>
+  <data name="EncryptedNext" xml:space="preserve">
+    <value>Ouvrez-le avec son mot de passe. Le coffre en clair n'a pas changé : retirez-le vous-même une fois satisfait. Sur un disque SSD, un fichier effacé peut encore se retrouver : BitLocker reste recommandé.</value>
+  </data>
+  <data name="EncryptHeading" xml:space="preserve">
+    <value>Chiffrer ce coffre</value>
+  </data>
+  <data name="EncryptIntro" xml:space="preserve">
+    <value>Une copie chiffrée du coffre s'écrit dans un nouveau dossier, à côté de lui, et chaque fichier y est relu et comparé à l'original. Ce coffre-ci n'est pas touché : c'est vous qui le retirerez, une fois satisfait.</value>
+  </data>
+  <data name="EncryptNow" xml:space="preserve">
+    <value>Chiffrer le coffre</value>
+  </data>
+  <data name="EncryptVault" xml:space="preserve">
+    <value>Chiffrer ce coffre…</value>
+  </data>
+  <data name="EncryptVaultHelp" xml:space="preserve">
+    <value>Chiffré, le coffre ne se lit plus qu'avec son mot de passe ou sa clé de récupération. La copie chiffrée s'écrit à côté ; ce coffre-ci n'est pas touché.</value>
   </data>
   <data name="EnterCurrentPassword" xml:space="preserve">
     <value>Saisissez le mot de passe actuel du coffre.</value>
@@ -65,6 +140,15 @@
   </data>
   <data name="EnterRecoveryKey" xml:space="preserve">
     <value>Saisissez la clé de récupération du coffre.</value>
+  </data>
+  <data name="FilesDecrypted" xml:space="preserve">
+    <value>Fichiers déchiffrés</value>
+  </data>
+  <data name="FilesEncrypted" xml:space="preserve">
+    <value>Fichiers chiffrés</value>
+  </data>
+  <data name="FilesVerified" xml:space="preserve">
+    <value>Vérification : chaque fichier relu et comparé</value>
   </data>
   <data name="Forgotten" xml:space="preserve">
     <value>La clé n'est plus retenue sur cet ordinateur : le mot de passe sera demandé au prochain démarrage.</value>
@@ -83,6 +167,9 @@
   </data>
   <data name="KeyStored" xml:space="preserve">
     <value>J'ai rangé ma clé de récupération</value>
+  </data>
+  <data name="KeyStoredBeforeEncrypting" xml:space="preserve">
+    <value>Cochez « J'ai rangé ma clé de récupération » pour continuer : elle ne sera plus jamais affichée.</value>
   </data>
   <data name="KeyStoredFirst" xml:space="preserve">
     <value>Cochez « J'ai rangé ma clé de récupération » pour l'enregistrer : elle ne sera plus jamais affichée. « Annuler » garde l'ancienne.</value>
@@ -129,11 +216,23 @@
   <data name="NewRecoveryKeyTitle" xml:space="preserve">
     <value>Nouvelle clé de récupération</value>
   </data>
+  <data name="NotClosed" xml:space="preserve">
+    <value>Le coffre n'a pas pu être fermé (ce qui s'écrit n'a pas pu être enregistré, ou un coffre est en train de s'ouvrir) : rien n'a été converti.</value>
+  </data>
   <data name="NotUnlocked" xml:space="preserve">
     <value>Ce coffre n'a pas pu être ouvert.</value>
   </data>
   <data name="OldRecoveryKey" xml:space="preserve">
     <value>Rien n'a changé tant que cette clé n'est pas enregistrée. Ensuite, l'ancienne n'ouvrira plus ce coffre ; les sauvegardes et les copies faites avant s'ouvriront encore avec elle : gardez-la tant que vous les gardez.</value>
+  </data>
+  <data name="OpenDecrypted" xml:space="preserve">
+    <value>Ouvrir le coffre en clair</value>
+  </data>
+  <data name="OpenEncrypted" xml:space="preserve">
+    <value>Ouvrir le coffre chiffré</value>
+  </data>
+  <data name="Opening" xml:space="preserve">
+    <value>Ouverture du coffre…</value>
   </data>
   <data name="OtherVault" xml:space="preserve">
     <value>Ouvrir un autre coffre…</value>
@@ -149,6 +248,18 @@
   </data>
   <data name="PasswordLength" xml:space="preserve">
     <value>Au moins {0} caractères.</value>
+  </data>
+  <data name="PasswordStepHelp" xml:space="preserve">
+    <value>Il ouvrira le coffre chiffré. Sans lui, seule la clé de récupération l'ouvrira : choisissez-en un que vous retiendrez.</value>
+  </data>
+  <data name="PasswordStepTitle" xml:space="preserve">
+    <value>Étape 1 sur 3 : le mot de passe</value>
+  </data>
+  <data name="PickDecryptedParent" xml:space="preserve">
+    <value>Où écrire le coffre en clair</value>
+  </data>
+  <data name="PickOtherParent" xml:space="preserve">
+    <value>Choisir un autre dossier…</value>
   </data>
   <data name="RecoveryHelp" xml:space="preserve">
     <value>Les 14 groupes de 4 caractères de la dernière clé de récupération enregistrée : celle donnée au chiffrement du coffre, ou la dernière enregistrée depuis la carte Chiffrement. Les tirets, les espaces et les majuscules ne comptent pas.</value>
@@ -177,6 +288,9 @@
   <data name="RecoveryKeyShownTitle" xml:space="preserve">
     <value>Votre clé de récupération</value>
   </data>
+  <data name="RecoveryStepTitle" xml:space="preserve">
+    <value>Étape 2 sur 3 : la clé de récupération</value>
+  </data>
   <data name="Remember" xml:space="preserve">
     <value>Se souvenir sur cet ordinateur</value>
   </data>
@@ -197,6 +311,15 @@
   </data>
   <data name="SavingRecoveryKey" xml:space="preserve">
     <value>Enregistrement de la nouvelle clé de récupération…</value>
+  </data>
+  <data name="StepConversion" xml:space="preserve">
+    <value>3 · Conversion</value>
+  </data>
+  <data name="StepPassword" xml:space="preserve">
+    <value>1 · Mot de passe</value>
+  </data>
+  <data name="StepRecoveryKey" xml:space="preserve">
+    <value>2 · Clé de récupération</value>
   </data>
   <data name="Unlock" xml:space="preserve">
     <value>Ouvrir</value>

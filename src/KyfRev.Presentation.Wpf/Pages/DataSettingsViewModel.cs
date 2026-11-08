@@ -214,6 +214,13 @@ public sealed partial class DataSettingsViewModel : ObservableObject, INavigatio
     /// <summary>La carte « Chiffrement », qui ne se montre que pour un coffre chiffré ; rien : l'onglet ne la propose pas.</summary>
     public EncryptionSettingsViewModel? Encryption { get; init; }
 
+    /// <summary>« Chiffrer ce coffre… » : la page de la conversion s'ouvre ; rien : l'onglet ne le propose pas.</summary>
+    public Action? EncryptionAsked { get; init; }
+
+    /// <summary>Le coffre ouvert est en clair, et peut se chiffrer d'ici.</summary>
+    [ObservableProperty]
+    public partial bool CanEncrypt { get; private set; }
+
     /// <inheritdoc/>
     public void OnNavigatedTo()
     {
@@ -221,7 +228,18 @@ public sealed partial class DataSettingsViewModel : ObservableObject, INavigatio
         Message = null;
         RestoredVault = null;
         Encryption?.Reload();
+        CanEncrypt = EncryptionAsked is not null && _vaults.State() is { Vault: not null, Encrypted: false };
         ReloadCommand.Execute(null);
+    }
+
+    /// <summary>« Chiffrer ce coffre… » : la page de la conversion remplace les vues, le coffre restant ouvert derrière.</summary>
+    [RelayCommand]
+    private void RequestEncryption()
+    {
+        if (CanEncrypt && IsIdle)
+        {
+            EncryptionAsked?.Invoke();
+        }
     }
 
     /// <summary>
@@ -232,6 +250,7 @@ public sealed partial class DataSettingsViewModel : ObservableObject, INavigatio
     {
         _generation++;
         Encryption?.Forget();
+        CanEncrypt = false;
         _restoring = null;
         _erasing = null;
         VaultLine = string.Empty;

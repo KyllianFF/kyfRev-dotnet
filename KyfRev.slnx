@@ -20,6 +20,7 @@
     <Project Path="src/KyfRev.App/KyfRev.App.csproj" />
     <Project Path="src/KyfRev.Application/KyfRev.Application.csproj" />
     <Project Path="src/KyfRev.Cli/KyfRev.Cli.csproj" />
+    <Project Path="src/KyfRev.Conversion/KyfRev.Conversion.csproj" />
     <Project Path="src/KyfRev.DesignSystem/KyfRev.DesignSystem.csproj" />
     <Project Path="src/KyfRev.Domain/KyfRev.Domain.csproj" />
     <Project Path="src/KyfRev.Infrastructure.Crypto/KyfRev.Infrastructure.Crypto.csproj" />

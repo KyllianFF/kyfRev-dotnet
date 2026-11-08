@@ -1,6 +1,9 @@
 using System.Diagnostics;
+using System.Security.Cryptography;
 using System.Text;
 using KyfRev.Cli;
+using KyfRev.Conversion;
+using KyfRev.Infrastructure.Crypto;
 using KyfRev.Infrastructure.Vault.Analysis;
 using KyfRev.Infrastructure.Vault.Tests.Support;
 
@@ -196,10 +199,128 @@ public abstract class InspectorTests(StorageKind storage)
     private protected static List<string> Codes(VaultInspection inspection) => [.. inspection.Findings.Select(f => f.Code)];
 }
 
-/// <summary>L'analyse sur le disque tel quel, et l'outil <c>kyfrev-coffre verifier</c>, qui ne lit encore que les coffres en clair.</summary>
+/// <summary>
+/// L'analyse sur le disque tel quel, et l'outil <c>kyfrev-coffre verifier</c>, qui lit les coffres en clair et, avec leur mot
+/// de passe ou leur clé de récupération, les coffres chiffrés.
+/// </summary>
 [TestClass]
 public sealed class InspectorOnDiskTests() : InspectorTests(StorageKind.Disk)
 {
+    private const string Password = "un mot de passe d'essai";
+
+    private const string Question = "Mot de passe ou clé de récupération : ";
+
+    [TestMethod]
+    public void The_tool_reads_an_encrypted_vault_with_its_password_or_its_recovery_key_and_writes_nothing()
+    {
+        using var vault = TemporaryVault.CopyOfReference();
+        Break(vault);
+        using var place = TemporaryVault.Empty();
+        var encrypted = Path.Combine(place.Root, "chiffre");
+        var plain = Path.Combine(place.Root, "en-clair");
+        var prepared = VaultConversion.Prepare(vault.Root, Password, PasswordKeys.NewPbkdf2());
+        using var plan = prepared.Plan;
+        Assert.IsNotNull(plan, prepared.Refusal);
+        Assert.IsTrue(VaultConversion.Encrypt(plan, encrypted).Succeeded);
+        Assert.IsTrue(VaultConversion.Decrypt(encrypted, plain, Password).Succeeded);
+        var (plainExitCode, plainJson) = Run("verifier", plain, "--json");
+        Assert.AreEqual(VaultCommands.ErrorsFound, plainExitCode, "des constats de chaque sorte");
+        var before = Raw(encrypted);
+
+        // Le mot de passe, la clé de récupération, la même recopiée avec des espaces : le texte seul en décide.
+        foreach (var secret in new[] { Password, plan.RecoveryKey, plan.RecoveryKey.Replace('-', ' ') })
+        {
+            var (exitCode, json, errors) = AskWithErrors(secret, "verifier", encrypted, "--json");
+            Assert.AreEqual(VaultCommands.ErrorsFound, exitCode, secret);
+            CollectionAssert.AreEqual(Findings(plainJson), Findings(json), $"{secret} : les mêmes constats que le même coffre en clair");
+            Assert.AreEqual(encrypted, (string?)System.Text.Json.Nodes.JsonNode.Parse(json)!["coffre"]);
+            Assert.AreEqual(Question + "\n", errors.ReplaceLineEndings("\n"), "avec --json, la question passe par la sortie d'erreur");
+        }
+
+        var (textExitCode, text, silent) = AskWithErrors(Password, "verifier", encrypted);
+        Assert.AreEqual(VaultCommands.ErrorsFound, textExitCode, text);
+        Assert.StartsWith(Question, text, "sans --json, la question passe par la sortie, comme pour déchiffrer");
+        Assert.Contains("Identifiant : v_01M69JFV2A3WD8KH55EHWC1G7N", text);
+        Assert.Contains("7 point(s) à examiner", text);
+        Assert.Contains("rien n'a été écrit dans le coffre", text);
+        Assert.IsEmpty(silent);
+
+        CollectionAssert.AreEqual(before, Raw(encrypted), "aucun octet écrit dans le coffre chiffré, aucun fichier ajouté");
+    }
+
+    [TestMethod]
+    public void The_tool_refuses_a_wrong_secret_or_an_unreadable_index_and_writes_nothing()
+    {
+        using var vault = TemporaryVault.CopyOfReference(StorageKind.Encrypted);
+        var before = Raw(vault.Root);
+
+        var (wrong, output) = Ask("un mauvais mot de passe", TextWriter.Null, "verifier", vault.Root);
+        Assert.AreEqual(VaultCommands.Refused, wrong, output);
+        Assert.AreEqual($"{Question}\n{VaultConversion.WrongSecret}\n", output.ReplaceLineEndings("\n"), "le refus du déchiffrement, et aucun rapport");
+
+        // La clé de récupération d'un autre coffre, et une entrée vide : refusées de même, la sortie sans rapport.
+        var otherKey = RecoveryKey.Create();
+        foreach (var secret in new[] { RecoveryKey.Format(otherKey), string.Empty })
+        {
+            var (exitCode, json, errors) = AskWithErrors(secret, "verifier", vault.Root, "--json");
+            Assert.AreEqual(VaultCommands.Refused, exitCode, secret);
+            Assert.IsEmpty(json, "avec --json, la sortie ne porte que le rapport");
+            Assert.AreEqual($"{Question}\n{VaultConversion.WrongSecret}\n", errors.ReplaceLineEndings("\n"));
+        }
+        PasswordKeys.Clear(otherKey);
+        CollectionAssert.AreEqual(before, Raw(vault.Root), "un refus n'écrit rien");
+
+        // Un index altéré : la clé s'ouvre, mais le coffre ne se lit pas.
+        var index = Path.Combine(vault.Root, EncryptedVault.IndexFile);
+        var bytes = File.ReadAllBytes(index);
+        bytes[^1] ^= 1;
+        File.WriteAllBytes(index, bytes);
+        var altered = Raw(vault.Root);
+        var (unreadable, report) = Ask(Password, TextWriter.Null, "verifier", vault.Root);
+        Assert.AreEqual(VaultCommands.ErrorsFound, unreadable, report);
+        Assert.Contains("Le coffre ne peut pas être analysé ; rien n'y a été écrit.", report);
+        CollectionAssert.AreEqual(altered, Raw(vault.Root));
+    }
+
+    /// <summary>Ce que dit un rapport JSON, sans le dossier analysé : son bilan, son résumé et ses constats, dans un ordre fixe.</summary>
+    private static List<string> Findings(string json)
+    {
+        var report = System.Text.Json.Nodes.JsonNode.Parse(json)!.AsObject();
+        List<string> said = [report["estUnCoffre"]!.ToJsonString(), report["erreurs"]!.ToJsonString(), report["resume"]!.ToJsonString()];
+        said.AddRange(report["constats"]!.AsArray().Select(finding => finding!.ToJsonString()).Order(StringComparer.Ordinal));
+        return said;
+    }
+
+    /// <summary>Chaque entrée du dossier, sur le disque, telle quelle : l'empreinte, la taille et la date de chaque fichier, et chaque dossier.</summary>
+    private static SortedDictionary<string, string> Raw(string root)
+    {
+        var raw = new SortedDictionary<string, string>(StringComparer.Ordinal);
+        foreach (var entry in new DirectoryInfo(root).EnumerateFileSystemInfos("*", SearchOption.AllDirectories))
+        {
+            raw[Path.GetRelativePath(root, entry.FullName)] = entry is FileInfo file
+                ? $"{Convert.ToHexStringLower(SHA256.HashData(File.ReadAllBytes(file.FullName)))}|{file.Length}|{file.LastWriteTimeUtc.Ticks}"
+                : "dossier";
+        }
+        return raw;
+    }
+
+    /// <summary>L'outil, le secret tapé sur une ligne ; la question, avec <c>--json</c>, sur <paramref name="errors"/>.</summary>
+    private static (int ExitCode, string Output) Ask(string secret, TextWriter errors, params string[] args)
+    {
+        using var output = new StringWriter();
+        using var input = new StringReader(secret + "\n");
+        var exitCode = VaultCommands.Build(output, input, errors).Parse(args).Invoke();
+        return (exitCode, output.ToString());
+    }
+
+    /// <summary>Comme <see cref="Ask"/>, et ce que l'outil a écrit sur la sortie d'erreur.</summary>
+    private static (int ExitCode, string Output, string Errors) AskWithErrors(string secret, params string[] args)
+    {
+        using var errors = new StringWriter();
+        var (exitCode, output) = Ask(secret, errors, args);
+        return (exitCode, output, errors.ToString());
+    }
+
     [TestMethod]
     public void The_tool_writes_nothing_in_the_vault()
     {

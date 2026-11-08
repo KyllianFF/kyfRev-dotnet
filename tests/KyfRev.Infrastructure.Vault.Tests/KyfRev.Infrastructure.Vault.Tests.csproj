@@ -6,6 +6,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\KyfRev.Cli\KyfRev.Cli.csproj" />
+    <!-- La conversion des coffres, essayée ici sur de vrais coffres, en clair et chiffrés. -->
+    <ProjectReference Include="..\..\src\KyfRev.Conversion\KyfRev.Conversion.csproj" />
     <ProjectReference Include="..\..\src\KyfRev.Infrastructure.Vault\KyfRev.Infrastructure.Vault.csproj" />
     <!-- Citation du jour et pages à lire, rejouées dans les scénarios. -->
     <ProjectReference Include="..\..\src\KyfRev.Modules.Citations\KyfRev.Modules.Citations.csproj" />
