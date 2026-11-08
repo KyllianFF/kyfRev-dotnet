@@ -308,7 +308,7 @@
                     <Button x:Name="PART_SecondaryButton" Content="{TemplateBinding SecondaryButtonText}" MinWidth="96"
                             Margin="0,0,8,0" IsCancel="True" />
                     <Button x:Name="PART_PrimaryButton" Content="{TemplateBinding PrimaryButtonText}" MinWidth="96"
-                            Style="{DynamicResource Kyf.Button.Primary}" IsDefault="True" />
+                            Style="{DynamicResource Kyf.Button.Primary}" IsDefault="True" IsEnabled="{TemplateBinding IsPrimaryEnabled}" />
                   </StackPanel>
                 </Grid>
               </Border>

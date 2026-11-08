@@ -69,6 +69,10 @@ public class Dialog : ContentControl
     public static readonly DependencyProperty SecondaryButtonTextProperty =
         DependencyProperty.Register(nameof(SecondaryButtonText), typeof(string), typeof(Dialog), new PropertyMetadata(DesignText.Cancel));
 
+    /// <summary>Le bouton principal répond : faux, par exemple, tant qu'il manque un choix ou qu'une action est en cours.</summary>
+    public static readonly DependencyProperty IsPrimaryEnabledProperty =
+        DependencyProperty.Register(nameof(IsPrimaryEnabled), typeof(bool), typeof(Dialog), new PropertyMetadata(true));
+
     /// <summary>Événement <see cref="Closed"/>.</summary>
     public static readonly RoutedEvent ClosedEvent =
         EventManager.RegisterRoutedEvent(nameof(Closed), RoutingStrategy.Bubble, typeof(EventHandler<DialogClosedEventArgs>), typeof(Dialog));
@@ -128,6 +132,13 @@ public class Dialog : ContentControl
     {
         get => (string)GetValue(PrimaryButtonTextProperty);
         set => SetValue(PrimaryButtonTextProperty, value);
+    }
+
+    /// <inheritdoc cref="IsPrimaryEnabledProperty"/>
+    public bool IsPrimaryEnabled
+    {
+        get => (bool)GetValue(IsPrimaryEnabledProperty);
+        set => SetValue(IsPrimaryEnabledProperty, value);
     }
 
     /// <summary>Libellé du bouton secondaire (« Annuler » par défaut) ; vide, il n'est pas proposé.</summary>
