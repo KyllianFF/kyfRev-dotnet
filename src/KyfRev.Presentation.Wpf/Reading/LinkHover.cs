@@ -38,6 +38,9 @@ internal sealed class LinkHover
     /// <summary>Le lien dont l'aperçu est montré, ou en cours de lecture.</summary>
     public Hyperlink? Current { get; private set; }
 
+    /// <summary>L'aperçu partira bientôt, faute de pointeur.</summary>
+    public bool IsHiding => _hiding.IsEnabled;
+
     /// <summary>Le pointeur ou le focus arrive sur un lien.</summary>
     public void Enter(Hyperlink link, bool atOnce)
     {

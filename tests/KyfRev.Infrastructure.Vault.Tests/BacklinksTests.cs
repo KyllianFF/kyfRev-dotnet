@@ -113,6 +113,35 @@ public abstract class BacklinksTests(StorageKind storage)
     }
 
     [TestMethod]
+    public void Searching_and_previewing_write_nothing_in_the_vault()
+    {
+        using var folder = TemporaryVault.Empty(storage);
+        using var vault = folder.Initialize(Now);
+        var target = vault.CreateSheet(null, "Cible", "Texte.\n", Now);
+        vault.CreateSheet(null, "Source", "[c](Cible.md)\n", Now);
+        var before = OnDisk(folder);
+
+        vault.Backlinks(target, CancellationToken.None);
+        vault.PreviewAt("fiches/Cible.md", Day);
+
+        CollectionAssert.AreEqual(before, OnDisk(folder));
+    }
+
+    [TestMethod]
+    public void A_sheet_that_cannot_be_read_is_left_out()
+    {
+        using var folder = TemporaryVault.Empty(storage);
+        using var vault = folder.Initialize(Now);
+        var target = vault.CreateSheet(null, "Cible", "Texte.\n", Now);
+        vault.CreateSheet(null, "Source", "[c](Cible.md)\n", Now);
+        Assert.HasCount(1, vault.Backlinks(target, CancellationToken.None), "ses liens sont maintenant relevés");
+
+        using var held = folder.Hold("fiches/Source.md");
+
+        Assert.IsEmpty(vault.Backlinks(target, CancellationToken.None));
+    }
+
+    [TestMethod]
     public void A_newer_request_stops_the_search()
     {
         using var folder = TemporaryVault.Empty(storage);
@@ -170,6 +199,13 @@ public abstract class BacklinksTests(StorageKind storage)
 
         Assert.AreEqual(("Partie", string.Empty), (preview.Title, preview.Excerpt));
     }
+
+    /// <summary>Tous les fichiers posés sur le disque, avec leur date et leur taille ; le verrou, tenu par la session, n'en dit rien.</summary>
+    private static List<(string File, DateTime Modified, long Length)> OnDisk(TemporaryVault folder) =>
+        [.. Directory.EnumerateFiles(folder.Root, "*", SearchOption.AllDirectories)
+            .Where(file => Path.GetFileName(file) != "verrou")
+            .Order(StringComparer.Ordinal)
+            .Select(file => (file, File.GetLastWriteTimeUtc(file), new FileInfo(file).Length))];
 }
 
 /// <summary>Sur le disque.</summary>

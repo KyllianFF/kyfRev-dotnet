@@ -242,7 +242,7 @@ public sealed partial class PassagePageViewModel : ObservableObject, IReviewPage
 }
 
 /// <summary>
-/// Une fiche ouverte pour la lire et la réviser : son plan à gauche, son texte, ses passages à droite, et la
+/// Une fiche ouverte pour la lire et la réviser : son plan à gauche, son texte, ses passages et ses rétroliens à droite, et la
 /// barre de révision. Ouvrir une fiche ne valide rien. Les volets se replient quand la fenêtre rétrécit, le
 /// plan d'abord ; ils s'ouvrent alors par-dessus le texte, avec les mêmes boutons.
 /// </summary>

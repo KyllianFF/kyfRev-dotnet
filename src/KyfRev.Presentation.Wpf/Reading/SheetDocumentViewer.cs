@@ -121,6 +121,9 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
     /// <summary>Le lien vers une fiche que la souris vise.</summary>
     internal Hyperlink? PointedLink => _pointed;
 
+    /// <summary>L'aperçu partira bientôt, faute de pointeur.</summary>
+    internal bool IsHidingPreview => _hover.IsHiding;
+
     /// <inheritdoc cref="HolesProperty"/>
     public TextHoles? Holes
     {
@@ -208,7 +211,6 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
     /// <summary>Échap referme l'aperçu d'abord.</summary>
     protected override void OnPreviewKeyDown(KeyEventArgs e)
     {
-        ArgumentNullException.ThrowIfNull(e);
         if (e.Key == Key.Escape && _hover.Current is not null)
         {
             _hover.Hide();

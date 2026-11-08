@@ -182,6 +182,38 @@ public sealed class BacklinksTests
         Assert.IsTrue(page.HasBacklinks, "le panneau dit pourquoi il est vide");
     }
 
+    [STATestMethod]
+    public void A_newer_search_stops_an_older_one()
+    {
+        using var ui = new UiThread();
+        using var vault = new ReadingVault("Le texte.\n", passage: false);
+        Source(vault, "Biologie", "Source", Linking);
+        var page = vault.Page();
+        page.LoadCommand.Execute(null);
+        UiThread.Until(() => page.Backlinks.Count == 1);
+        var before = page.Backlinks;
+        using var held = new ManualResetEventSlim();
+        using var release = new ManualResetEventSlim();
+        var holder = Task.Run(() => vault.App.Host.Use(_ =>
+        {
+            held.Set();
+            release.Wait();
+        }));
+        held.Wait();
+
+        // Le coffre est occupé : la première recherche attend son tour, et la seconde l'annule.
+        page.IsReviseOn = true;
+        page.IsReadOn = true;
+        page.IsReviseOn = true;
+        page.IsReadOn = true;
+        release.Set();
+        holder.GetAwaiter().GetResult();
+
+        UiThread.Until(() => !ReferenceEquals(before, page.Backlinks));
+        Assert.HasCount(1, page.Backlinks);
+        Assert.IsFalse(page.HasBacklinksError, "une recherche annulée n'est pas un échec");
+    }
+
     [TestMethod]
     public async Task Coming_back_to_the_sheet_reads_again_what_leads_to_it()
     {
@@ -546,11 +578,12 @@ public sealed class BacklinksTests
             viewer.PointAt(viewer);
             viewer.PointAt(link);
             viewer.PointAt(viewer);
+            Assert.IsTrue(viewer.IsHidingPreview, "le pointeur a quitté le lien : l'aperçu va partir");
             card.RaiseEvent(new MouseEventArgs(Mouse.PrimaryDevice, 0) { RoutedEvent = Mouse.MouseEnterEvent });
-            WaitFor(LinkHover.HideDelay + LinkHover.HideDelay);
-            Assert.IsTrue(viewer.LinkPopup.IsOpen, "le pointeur est dans l'aperçu : il reste");
+            Assert.IsFalse(viewer.IsHidingPreview, "le pointeur est dans l'aperçu : il reste");
 
             card.RaiseEvent(new MouseEventArgs(Mouse.PrimaryDevice, 0) { RoutedEvent = Mouse.MouseLeaveEvent });
+            Assert.IsTrue(viewer.IsHidingPreview, "le pointeur a quitté l'aperçu");
             UiThread.Until(() => !viewer.LinkPopup.IsOpen);
 
             viewer.FocusReached(link);
@@ -608,6 +641,9 @@ public sealed class BacklinksTests
         var (window, viewer, page) = Open(vault);
         try
         {
+            // La suite du texte s'ajoute peu à peu : elle ne doit pas bouger l'aperçu pendant l'essai.
+            UiThread.Until(() => !viewer.HasPendingWork);
+            TestShell.Flush();
             var link = Link(viewer);
             viewer.FocusReached(link);
             UiThread.Until(() => viewer.LinkPopup?.IsOpen == true);
@@ -769,7 +805,7 @@ public sealed class BacklinksTests
     {
         var shell = test.Shell;
         shell.Navigate(new NavigationItem("revision", "Révision", KyfRev.DesignSystem.Controls.Icons.Document, int.MaxValue, page));
-        var window = new ShellWindow(shell) { ShowActivated = true, Left = -10000, Top = -10000, Width = width, Height = height };
+        var window = new ShellWindow(shell) { ShowActivated = false, Left = -10000, Top = -10000, Width = width, Height = height };
         window.Resources.MergedDictionaries.Add(test.Design.Dictionary);
         window.Show();
         TestShell.Flush();
