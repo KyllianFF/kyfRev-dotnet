@@ -287,7 +287,13 @@ public sealed class MermaidEngine : IMermaidEngine, IDisposable
         web.WebResourceRequested += (_, e) => VisualEditor.Serve(web, e, Host, path => VisualEditor.PageContent(path));
         web.WebMessageReceived += OnMessage;
         web.NavigationStarting += (_, e) => e.Cancel = e.Uri != StartAddress;
-        web.ProcessFailed += (_, _) => Stop();
+        web.ProcessFailed += (_, e) =>
+        {
+            if (WebProcesses.StopsThePage(e.ProcessFailedKind))
+            {
+                Stop();
+            }
+        };
         _ready = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         web.Navigate(StartAddress);
         await _ready.Task.WaitAsync(Patience).ConfigureAwait(true);

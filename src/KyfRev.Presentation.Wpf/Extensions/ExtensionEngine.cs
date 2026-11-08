@@ -404,7 +404,7 @@ public sealed class ExtensionEngine : IDisposable, IExtensionFaults
             Width = HiddenSize,
             Height = HiddenSize,
         });
-        var environment = await CoreWebView2Environment.CreateAsync(null, _dataFolder, new CoreWebView2EnvironmentOptions { Language = "fr-FR", AdditionalBrowserArguments = NoNetwork }).ConfigureAwait(true);
+        var environment = await CoreWebView2Environment.CreateAsync(null, _dataFolder, VisualEditor.EngineOptions(NoNetwork)).ConfigureAwait(true);
         var controller = await environment.CreateCoreWebView2ControllerAsync(_window.Handle).ConfigureAwait(true);
         controller.Bounds = new Rectangle(0, 0, HiddenSize, HiddenSize);
         controller.IsVisible = true;

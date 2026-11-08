@@ -441,6 +441,8 @@ internal sealed class FakeSpelling : ISpelling
 
     public List<string> Added { get; } = [];
 
+    public bool AddsUntilClosing { get; set; }
+
     public IReadOnlyList<SpellingMistake> Check(string text)
     {
         var found = new List<SpellingMistake>();

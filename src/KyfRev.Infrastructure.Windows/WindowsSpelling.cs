@@ -15,15 +15,18 @@ public sealed class WindowsSpelling : ISpelling
     private const string SpellCheckerFactoryClass = "7AB36653-1796-484B-BDFA-E74F1DB7C1DC";
 
     private readonly Lazy<ISpellChecker?> _checker;
+    private readonly Func<bool> _untilClosing;
 
-    /// <summary>Le correcteur français.</summary>
-    public WindowsSpelling()
-        : this("fr-FR")
+    /// <summary>Le correcteur français ; <paramref name="untilClosing"/> dit si le coffre ouvert refuse qu'un mot aille dans le dictionnaire de Windows.</summary>
+    public WindowsSpelling(Func<bool> untilClosing)
+        : this("fr-FR", untilClosing)
     {
     }
 
-    internal WindowsSpelling(string language)
+    internal WindowsSpelling(string language, Func<bool> untilClosing)
     {
+        ArgumentNullException.ThrowIfNull(untilClosing);
+        _untilClosing = untilClosing;
         _checker = new Lazy<ISpellChecker?>(() => Create(language));
     }
 
@@ -65,6 +68,8 @@ public sealed class WindowsSpelling : ISpelling
         IEnumString Suggest([MarshalAs(UnmanagedType.LPWStr)] string word);
 
         void Add([MarshalAs(UnmanagedType.LPWStr)] string word);
+
+        void Ignore([MarshalAs(UnmanagedType.LPWStr)] string word);
     }
 
     [ComImport]
@@ -93,6 +98,9 @@ public sealed class WindowsSpelling : ISpelling
             get;
         }
     }
+
+    /// <inheritdoc/>
+    public bool AddsUntilClosing => _untilClosing();
 
     /// <inheritdoc/>
     public IReadOnlyList<SpellingMistake> Check(string text)
@@ -129,7 +137,15 @@ public sealed class WindowsSpelling : ISpelling
         ArgumentNullException.ThrowIfNull(word);
         return IsWordLike(word) && !word.Any(char.IsWhiteSpace) && Guarded(checker =>
         {
-            checker.Add(word);
+            // « Add » écrit dans %APPDATA%\Microsoft\Spelling, en clair ; « Ignore » ne dure que le temps de la session.
+            if (AddsUntilClosing)
+            {
+                checker.Ignore(word);
+            }
+            else
+            {
+                checker.Add(word);
+            }
             return true;
         }, false);
     }

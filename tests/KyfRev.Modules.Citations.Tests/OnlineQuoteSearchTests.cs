@@ -51,7 +51,8 @@ public sealed class OnlineQuoteSearchTests
         Assert.AreEqual(first.Address, found.Content.Source.Address);
         Assert.Contains(first.Domain, found.Content.Tags);
         Assert.AreEqual(found.Path, quotes.QuoteOfTheDay().Value!.Path);
-        Assert.Contains($"Citation du jour trouvée sur Wikiquote : {found.Path}", test.Test.Logs.Entries.Select(entry => entry.Message));
+        Assert.Contains("Citation du jour trouvée sur Wikiquote.", test.Test.Logs.Entries.Select(entry => entry.Message));
+        Assert.IsFalse(test.Test.Logs.Entries.Any(entry => entry.Message.Contains(found.Path, StringComparison.OrdinalIgnoreCase)), "Le journal ne nomme pas la citation.");
 
         // Trouvée : plus aucune requête ce jour-là.
         Assert.IsNull((await quotes.SearchQuoteOfTheDayAsync(CancellationToken.None)).Value);

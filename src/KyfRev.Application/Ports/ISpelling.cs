@@ -23,6 +23,15 @@ public interface ISpelling
     /// <summary>La faute d'un mot et ses remplacements ; rien si le mot est juste.</summary>
     SpellingCorrection? Correct(string word);
 
-    /// <summary>Ajoute un mot au dictionnaire de l'utilisateur ; rend faux si ce n'est pas un mot, ou si c'est impossible.</summary>
+    /// <summary>
+    /// Un mot ajouté ne vaut que jusqu'à la fermeture de l'application : le dictionnaire de Windows est un fichier en clair,
+    /// qu'un coffre chiffré ne nourrit pas.
+    /// </summary>
+    bool AddsUntilClosing { get; }
+
+    /// <summary>
+    /// Ajoute un mot au dictionnaire de l'utilisateur, ou seulement jusqu'à la fermeture si <see cref="AddsUntilClosing"/> ;
+    /// rend faux si ce n'est pas un mot, ou si c'est impossible.
+    /// </summary>
     bool Add(string word);
 }

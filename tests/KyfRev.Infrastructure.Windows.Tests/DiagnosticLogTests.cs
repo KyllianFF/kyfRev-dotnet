@@ -126,6 +126,45 @@ public sealed class DiagnosticLogTests
     }
 
     [TestMethod]
+    [DataRow(@"Accès refusé à 'C:\Coffre\fiches\Histoire\L'été secret.md'.", @"Accès refusé à 'C:\Coffre\fiches/…")]
+    [DataRow("Introuvable : citations/Une pensée.md", "Introuvable : citations/…")]
+    [DataRow(@"D:\x\.suivi\annotations\f_1.json", @"D:\x\.suivi/…")]
+    [DataRow("Fichier « modeles/Cours privé.md » absent", "Fichier « modeles/…")]
+    [DataRow("schemas/Réseau.json\nligne suivante", "schemas/…\nligne suivante")]
+    public void A_path_inside_a_vault_loses_its_names(string text, string masked)
+    {
+        using var folder = new Folder();
+        using var log = new DiagnosticLog(folder.Path, string.Empty, new Clock(Morning));
+
+        Assert.AreEqual(masked, log.Mask(text));
+    }
+
+    [TestMethod]
+    [DataRow("/_/src/KyfRev.Modules.Citations/OnlineQuoteSearch.cs:line 90")]
+    [DataRow("mes.fiches/classeur")]
+    [DataRow("deux fiches sans chemin")]
+    public void What_is_not_a_vault_path_stays(string text)
+    {
+        using var folder = new Folder();
+        using var log = new DiagnosticLog(folder.Path, string.Empty, new Clock(Morning));
+
+        Assert.AreEqual(text, log.Mask(text));
+    }
+
+    [TestMethod]
+    public void An_exception_does_not_carry_a_title_into_the_log()
+    {
+        using var folder = new Folder();
+        using var log = new DiagnosticLog(folder.Path, @"C:\Users\Élève", new Clock(Morning));
+
+        log.CreateLogger("essai").Log(LogLevel.Error, default, "échec", new FileNotFoundException("absent", "fiches/Titre confidentiel.md"), (text, _) => text);
+
+        var written = File.ReadAllText(log.LogFile, Encoding.UTF8);
+        Assert.Contains("fiches/…", written);
+        Assert.DoesNotContain("Titre confidentiel", written);
+    }
+
+    [TestMethod]
     public void The_log_factory_needs_its_parameters_and_ignores_providers()
     {
         using var folder = new Folder();

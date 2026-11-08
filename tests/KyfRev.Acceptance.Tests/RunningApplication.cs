@@ -325,6 +325,24 @@ internal sealed class RunningApplication : IDisposable
         return key;
     }
 
+    /// <summary>« Verrouiller maintenant », depuis Paramètres › Données, et attend l'écran de déverrouillage.</summary>
+    public void LockNow()
+    {
+        OpenView("Paramètres");
+        OpenSettingsTab("Données");
+        Press("LockNowButton");
+        Wait("UnlockButton");
+    }
+
+    /// <summary>Attend l'image d'un dessin qui porte ce texte : tant qu'il n'est pas dessiné, son code seul est affiché, en texte.</summary>
+    public void WaitDrawing(string text) =>
+        Retry.WhileNull(
+            () => _window.FindAllDescendants(condition => condition.ByControlType(ControlType.Image)).FirstOrDefault(element => element.Name.Contains(text, StringComparison.Ordinal)),
+            EnginePatience,
+            Interval,
+            throwOnTimeout: true,
+            timeoutMessage: $"Le dessin de « {text} » n'est pas apparu.");
+
     /// <summary>« Ouvrir le coffre chiffré » (ou en clair), une fois la conversion faite.</summary>
     public void OpenConverted()
     {

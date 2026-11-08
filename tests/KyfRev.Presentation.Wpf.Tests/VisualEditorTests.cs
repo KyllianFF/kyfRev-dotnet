@@ -1283,6 +1283,23 @@ public sealed class VisualEditorTests
     }
 
     [EngineTest]
+    public void On_an_encrypted_vault_the_formatted_text_does_not_offer_to_accept_a_word()
+    {
+        using var scene = new Scene("Une ékole ici.\n");
+        scene.Vault.Spelling.AddsUntilClosing = true;
+
+        var items = scene.Visual!.MenuItems(new MenuEvent("ékole", 5, false, false, true, true), new KyfRev.Application.Ports.SpellingCorrection(0, 5, ["école"]));
+
+        var headers = items.OfType<MenuItem>().Select(item => (string)item.Header).ToList();
+        CollectionAssert.Contains(headers, "école");
+        CollectionAssert.DoesNotContain(headers, EditingText.AddToDictionary);
+        CollectionAssert.DoesNotContain(headers, EditingText.AcceptUntilClosing);
+
+        var bare = scene.Visual!.MenuItems(new MenuEvent("ékole", 5, false, false, true, true), new KyfRev.Application.Ports.SpellingCorrection(0, 5, []));
+        Assert.IsFalse(bare.Zip(bare.Skip(1)).Any(pair => pair.First is Separator && pair.Second is Separator), "Sans remplacement, pas deux séparateurs de suite.");
+    }
+
+    [EngineTest]
     public void A_menu_offers_the_replacements_of_a_wrong_word()
     {
         using var scene = new Scene("Une ékole ici.\n");

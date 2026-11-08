@@ -160,6 +160,7 @@ public sealed partial class ArchitectureTests
         var harmless = new Dictionary<string, int>(StringComparer.Ordinal)
         {
             ["KyfRev.Conversion/VaultConversion.cs"] = 1,
+            ["KyfRev.Conversion/VaultKeyChanges.cs"] = 1,
             ["KyfRev.Infrastructure.Vault/Files/DiskStorage.cs"] = 1,
             ["KyfRev.Infrastructure.Vault/Files/VaultLock.cs"] = 1,
             ["KyfRev.Infrastructure.Windows/DiagnosticLog.cs"] = 1,

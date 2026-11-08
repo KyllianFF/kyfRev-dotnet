@@ -1,8 +1,8 @@
 # Le coffre chiffré
 
 Le chiffrement au repos est une option par coffre (plan de refonte, §2.8 et étape J8). Ce document décrit les formats du
-noyau (`src/KyfRev.Infrastructure.Crypto`) : ce qui est écrit sur le disque, et ce que chaque vérification refuse. Le
-modèle de menace complet viendra avec le dernier lot.
+noyau (`src/KyfRev.Infrastructure.Crypto`) : ce qui est écrit sur le disque, et ce que chaque vérification refuse. Ce
+contre quoi il protège, et ce contre quoi il ne protège pas, se lit dans [Le modèle de menace](#le-modèle-de-menace).
 
 ## Les choix
 
@@ -147,7 +147,8 @@ effacée de la mémoire.
 - **Une fiche manquante** revient d'une sauvegarde chiffrée par son index, ouvert avec la clé du coffre ; ou d'une
   sauvegarde faite avant le chiffrement, lue telle quelle. Celle d'un autre coffre, ou un objet altéré, est une sauvegarde
   inutilisable : rien n'est écrit.
-- **Les exports et les partages** sont en clair : ils sont faits pour être lus ailleurs, et seulement à la demande.
+- **Les exports et les partages** sont en clair : ils sont faits pour être lus ailleurs, et seulement à la demande. Seul
+  « Coffre complet (.zip) », qui est une sauvegarde, garde le chiffrement du coffre.
 
 ## L'outil `kyfrev-coffre`
 
@@ -155,7 +156,17 @@ effacée de la mémoire.
 kyfrev-coffre chiffrer <coffre en clair> <nouveau dossier> [--pbkdf2]
 kyfrev-coffre dechiffrer <coffre chiffré> <nouveau dossier>
 kyfrev-coffre verifier <coffre> [--json]
+kyfrev-coffre changer-mot-de-passe <coffre chiffré> [--pbkdf2]
+kyfrev-coffre cle-de-recuperation <coffre chiffré>
 ```
+
+- **`changer-mot-de-passe`** et **`cle-de-recuperation`** ne réécrivent que l'en-tête, d'un seul geste, coffre fermé : un
+  coffre ouvert dans kyfRev est refusé. Elles tiennent le verrou du coffre tout du long, en créant `.suivi/verrou` s'il n'existe
+  pas encore : l'application ne l'ouvre pas pendant ce temps. Les deux acceptent le mot de passe ou la clé de récupération
+  actuels ; si les réglages du mot de passe ne se lisent plus, seule la clé de récupération est essayée, et le dit. La nouvelle
+  clé s'affiche une fois et ne remplace l'ancienne qu'après la réponse « oui » : une clé que personne n'a notée ne remplace
+  jamais l'ancienne. Sur un refus, le code de sortie est 3 et l'en-tête n'a pas changé. Une sauvegarde faite avant garde son
+  ancien en-tête, donc ses anciens secrets.
 
 - **`verifier`** lit un coffre en clair comme un coffre chiffré. Pour un coffre chiffré, il demande son mot de passe ou sa
   clé de récupération (une ligne, sans écho), lit le coffre par sa clé et fait les mêmes contrôles qu'en clair ; il
@@ -345,6 +356,79 @@ en clair et le chiffrement ; la présentation n'y accède que par le port `IVaul
   converti, et, à la différence d'un verrouillage, aucun brouillon n'est abandonné.
 - **Si le coffre ne se rouvre pas** après la conversion (un disque retiré, par exemple), l'accueil dit pourquoi et propose
   d'en ouvrir un autre.
+
+## Le modèle de menace
+
+Le chiffrement au repos protège **un coffre lu hors de l'application** : un disque volé, une copie dans le nuage ou sur une
+clé USB, une sauvegarde égarée, un poste dont on a retiré le disque. Celui qui n'a ni le mot de passe, ni la clé de
+récupération, ni la session Windows qui a retenu la clé, ne lit ni les titres, ni les textes, ni les annotations, ni les
+noms des dossiers et des fiches.
+
+### Ce qui se voit quand même
+
+- **Le nombre et la taille des fichiers** : un objet par fichier du coffre, de la taille de ce fichier plus 32 octets, ni
+  rembourré ni regroupé ; la taille de `index.kyf` grandit avec le nombre de chemins et leur longueur.
+- **Les dates d'écriture** des objets et de l'index : on voit quand le coffre a changé, pas ce qui a changé.
+- **L'en-tête** `kyfrev-chiffre.json` : l'identifiant du coffre, les réglages de la dérivation, les enveloppes de la clé.
+  Rien qui permette de l'ouvrir sans secret.
+- **Le verrou** `.suivi/verrou-info.json` : le poste, le processus et l'heure de la dernière ouverture.
+
+### Ce contre quoi il ne protège pas
+
+- **Un poste compromis pendant que le coffre est ouvert** : un logiciel espion, un administrateur, un enregistreur de frappe.
+  Le texte déchiffré est en mémoire, et le mot de passe passe par le clavier.
+- **La mémoire de l'application.** La clé de données et les textes y sont tant que le coffre est ouvert ; le verrouillage
+  fait oublier les vues et efface la clé, mais le moteur web et le ramasse-miettes ne promettent pas d'effacer leurs copies.
+  L'hibernation et le fichier d'échange de Windows peuvent en écrire une partie : seul **BitLocker** couvre ce cas.
+- **Un mot de passe faible.** Argon2id en ralentit l'essai, il ne le rend pas impossible.
+- **Celui qui peut écrire dans le dossier.** Un objet modifié, ou recopié sous un autre identifiant, est refusé, pas réparé.
+  Mais un objet est lié à son coffre et à son identifiant, pas à une version : un objet, ou un index, plus ancien du même
+  coffre remis à sa place s'ouvre sans erreur. Et rien n'empêche d'effacer le dossier : le chiffrement ne remplace pas les
+  sauvegardes.
+- **Ce que l'utilisateur sort lui-même du coffre** : un export, un copier-coller (le presse-papiers et son historique), le
+  coffre déchiffré. Le suivi, les annotations et les citations exportés sont en clair, et l'application le dit ; un schéma
+  exporté aussi, sans avertissement. « Coffre complet (.zip) » est une sauvegarde, il garde le chiffrement du coffre.
+- **Ce que le coffre en clair a laissé derrière lui.** Après « Chiffrer ce coffre… », le coffre d'origine et ses sauvegardes
+  restent en clair jusqu'à ce que l'utilisateur les retire ; sur un SSD, un fichier effacé peut encore se retrouver.
+- **Les anciens secrets dans les sauvegardes.** Une sauvegarde garde l'en-tête de son jour : l'ancien mot de passe et
+  l'ancienne clé de récupération l'ouvrent encore. Après la fuite d'un secret, les changer ne suffit pas : il faut déchiffrer
+  puis chiffrer de nouveau, ce qui tire une nouvelle clé de données. Cela ne protège que le nouveau coffre : l'ancien coffre
+  chiffré et les sauvegardes d'avant s'ouvrent toujours avec le secret fuité, et le dossier déchiffré reste en clair. Il faut
+  les retirer aussi.
+
+### Ce qui reste sur le poste, hors du coffre
+
+| Emplacement | Ce qu'on y trouve | Ce qui y est fait |
+|---|---|---|
+| Le journal, `kyfRev.log` et `kyfRev.precedent.log` | Des événements, des erreurs | Le dossier du profil est masqué, et tout chemin qui entre dans le coffre s'arrête à son premier dossier (`fiches/…`). |
+| Le profil du moteur web, `WebView2` | Ses réglages, ses caches de scripts | Le texte d'une fiche lui parvient par la mémoire, en `no-store`, jamais par un fichier ni par le stockage d'une page. Aucun rapport de plantage ne part chez Microsoft ; un plantage du moteur peut en laisser un dans ce dossier, avec un morceau de sa mémoire. |
+| Le profil du moteur des extensions, `WebView2-extensions` | Ses réglages, un éventuel rapport de plantage | Comme `WebView2` : un plantage peut y laisser un morceau de sa mémoire, donc du texte donné à une extension. |
+| Le dictionnaire de Windows, `%APPDATA%\Microsoft\Spelling` | Les mots ajoutés par l'utilisateur | Sur un coffre chiffré, le menu d'un mot, dans le code Markdown, propose « Accepter jusqu'à la fermeture de kyfRev », qui n'écrit rien et vaut, dans ce code, pour tous les coffres jusqu'à ce que l'application se ferme. Le texte mis en forme, souligné par le moteur web, ne le propose pas, continue de souligner un mot ainsi accepté et n'a plus de remplacement à proposer pour lui. Ce qui a été ajouté depuis un coffre en clair y reste. |
+| `cles-retenues.json` | La clé retenue, si l'utilisateur l'a demandé | Protégée par Windows (DPAPI) : elle s'ouvre dans sa session, sur ce poste ; quiconque ouvre cette session ouvre donc le coffre. |
+| `seance.json` | Le chemin du coffre et des identifiants, pendant une séance | Aucun texte de fiche. |
+| `preferences.json` | L'apparence | Aucun texte de fiche. |
+| `config-locale.json` | Le chemin du dernier coffre ouvert | Aucun texte de fiche. |
+| Le dossier temporaire | Le cache du catalogue d'extensions | Aucun texte de fiche. |
+
+Le correcteur d'orthographe de Windows reçoit le texte par la mémoire, à la demande, sur ce poste. La lecture à voix haute
+aussi, par le moteur de voix de Windows.
+
+Un dessin et un schéma passent par le moteur web comme le reste. Une extension installée lit ce que ses permissions lui
+donnent, dans son propre profil, le réseau coupé : lui accorder la lecture d'un coffre chiffré, c'est lui faire confiance.
+
+### La preuve, et ses limites
+
+Le scénario `J8_nothing_of_an_encrypted_vault_stays_readable_on_the_disk` lance la vraie application sur un coffre chiffré
+qui porte un marqueur unique par endroit (titre, texte, dessin, passage, commentaire, terme, explication, frappe). Elle
+lit, écrit, cherche, verrouille, se ferme. Avant le lancement, fiche écrite, coffre verrouillé et application fermée, les octets
+du dossier d'essai (coffre, sauvegardes, journal, profil du moteur web, dossier temporaire) sont cherchés : en UTF-8 et en
+UTF-16 sans tenir compte de la casse, et en base64 aux trois alignements. Les noms de fichiers sont cherchés tels quels, sans
+tenir compte de la casse. Un fichier que le moteur tient est passé tant que l'application tourne ; le dernier passage attend
+que tout soit lâché, et exige de tout avoir lu. Un témoin laissé en clair doit être trouvé, faute de quoi la preuve serait vide.
+
+Elle ne voit pas ce qui est compressé (un marqueur court reste en général entier dans le format des caches de Chromium, sans
+garantie), ni ce qui est écrit hors du dossier d'essai : le dictionnaire de Windows a son propre essai, et le fichier
+d'échange reste du ressort de BitLocker.
 
 ## Ce que les tests vérifient
 

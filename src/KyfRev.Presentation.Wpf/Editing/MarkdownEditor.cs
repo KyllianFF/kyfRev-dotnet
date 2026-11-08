@@ -578,7 +578,7 @@ internal sealed class MarkdownEditor : TextEditor, IEditorSurface
                     };
                     items.Add(item);
                 }
-                var add = new MenuItem { Header = EditingText.AddToDictionary };
+                var add = new MenuItem { Header = EditingText.AddWord(spelling) };
                 add.Click += (_, _) =>
                 {
                     _ = Task.Run(() => spelling.Add(word)).ContinueWith(_ => Dispatcher.BeginInvoke(_spellingLayer.Forget), TaskScheduler.Default);

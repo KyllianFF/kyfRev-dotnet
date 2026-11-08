@@ -87,7 +87,7 @@ public sealed partial class OnlineQuoteSearch(VaultHost host, IOnlineReader read
             else
             {
                 _lastFailure = null;
-                LogFound(logger, quote.Path);
+                LogFound(logger);
             }
         }
         return quote;
@@ -152,8 +152,8 @@ public sealed partial class OnlineQuoteSearch(VaultHost host, IOnlineReader read
     [LoggerMessage(Level = LogLevel.Information, Message = "Page « {Page} » de Wikiquote lue : {Count} citation(s).")]
     private static partial void LogPageRead(ILogger logger, string page, int count);
 
-    [LoggerMessage(Level = LogLevel.Information, Message = "Citation du jour trouvée sur Wikiquote : {Path}")]
-    private static partial void LogFound(ILogger logger, string path);
+    [LoggerMessage(Level = LogLevel.Information, Message = "Citation du jour trouvée sur Wikiquote.")]
+    private static partial void LogFound(ILogger logger);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Rien de nouveau sur Wikiquote aujourd'hui.")]
     private static partial void LogNothingNew(ILogger logger);

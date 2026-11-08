@@ -69,7 +69,7 @@ public static class VaultConversion
     private const int MaximumDestinations = 1000;
 
     /// <summary>Les fichiers du coffre en clair qui ne sont pas du contenu : le verrou de l'application.</summary>
-    private const string OpenInKyfRev = "Ce coffre est ouvert dans kyfRev : fermez-le, puis recommencez.";
+    internal const string OpenInKyfRev = "Ce coffre est ouvert dans kyfRev : fermez-le, puis recommencez.";
 
     private static readonly string[] Excluded = [VaultLayout.LockFile, VaultLayout.LockInfoFile];
 
@@ -406,10 +406,18 @@ public static class VaultConversion
             .Where(entry => !Excluded.Contains(entry.Relative, StringComparer.Ordinal) && !Path.GetFileName(entry.File).StartsWith(AtomicFile.TemporaryPrefix, StringComparison.Ordinal)),
     ];
 
+    /// <summary>Une clé de récupération, ou un mot de passe qui en a la forme : si elle n'ouvre pas l'en-tête, il reste à l'essayer comme tel.</summary>
     private static byte[] Opened(VaultHeader header, byte[] recovery, string secret)
     {
         PasswordKeys.Clear(recovery);
-        return header.OpenWithRecovery(secret);
+        try
+        {
+            return header.OpenWithRecovery(secret);
+        }
+        catch (VaultCryptoException)
+        {
+            return header.Open(secret);
+        }
     }
 
     /// <summary>Ce qui interdit la conversion, quel que soit son sens ; un dossier qui ne se lit pas l'interdit aussi.</summary>
@@ -527,7 +535,7 @@ public static class VaultConversion
     /// Le coffre est ouvert dans kyfRev : l'application tient son verrou ouvert. Le vérifier n'écrit rien : on tente seulement
     /// de l'ouvrir pour soi seul.
     /// </summary>
-    private static bool IsOpenElsewhere(string source)
+    internal static bool IsOpenElsewhere(string source)
     {
         var lockFile = VaultLayout.Absolute(source, VaultLayout.LockFile);
         if (!File.Exists(lockFile))

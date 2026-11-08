@@ -478,10 +478,18 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
                 item.FontWeight = FontWeights.SemiBold;
                 items.Add(item);
             }
-            var add = new MenuItem { Header = EditingText.AddToDictionary };
-            add.Click += (_, _) => _ = Task.Run(() => _spelling.Add(word));
-            items.Add(add);
-            items.Add(new Separator());
+            // Ici, le soulignement vient du moteur web, qu'un mot accepté pour la session n'atteint pas : sur un coffre chiffré,
+            // accepter un mot se propose dans le code Markdown, dont le correcteur est le nôtre.
+            if (!_spelling.AddsUntilClosing)
+            {
+                var add = new MenuItem { Header = EditingText.AddToDictionary };
+                add.Click += (_, _) => _ = Task.Run(() => _spelling.Add(word));
+                items.Add(add);
+            }
+            if (items[^1] is not Separator)
+            {
+                items.Add(new Separator());
+            }
         }
         items.Add(Item(EditingText.PastePlain, new ClipboardRequest("pastePlain")));
         if (!menu.InCode)
@@ -543,13 +551,22 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
     {
         if (_environment is null)
         {
-            foreach (var variable in NeutralizedVariables)
-            {
-                Environment.SetEnvironmentVariable(variable, null);
-            }
-            _environment = CoreWebView2Environment.CreateAsync(null, dataFolder, new CoreWebView2EnvironmentOptions { Language = "fr-FR" });
+            _environment = CoreWebView2Environment.CreateAsync(null, dataFolder, EngineOptions());
         }
         return _environment;
+    }
+
+    /// <summary>
+    /// Les options de tout moteur web de l'application, variables d'environnement neutralisées. Aucun rapport de plantage ne
+    /// part chez Microsoft : il pourrait porter la mémoire du moteur, donc le texte d'une fiche.
+    /// </summary>
+    internal static CoreWebView2EnvironmentOptions EngineOptions(string? browserArguments = null)
+    {
+        foreach (var variable in NeutralizedVariables)
+        {
+            Environment.SetEnvironmentVariable(variable, null);
+        }
+        return new CoreWebView2EnvironmentOptions { Language = "fr-FR", IsCustomCrashReportingEnabled = true, AdditionalBrowserArguments = browserArguments };
     }
 
     /// <summary>Le menu d'un dessin : le modifier si kyfRev sait le faire, voir son code, le retirer de la fiche.</summary>
