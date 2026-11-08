@@ -73,7 +73,7 @@ jobs:
         run: |
           set -eu
           archive="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
-          curl -fsSL -o "$RUNNER_TEMP/$archive" \
+          curl -fsSL --retry 6 --retry-delay 20 --retry-all-errors -o "$RUNNER_TEMP/$archive" \
             "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${archive}"
           echo "${GITLEAKS_SHA256}  $RUNNER_TEMP/$archive" | sha256sum -c -
           tar -xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP" gitleaks
@@ -245,7 +245,7 @@ jobs:
           $nom = "innosetup-$env:INNO_SETUP_VERSION.exe"
           $etiquette = 'is-' + $env:INNO_SETUP_VERSION.Replace('.', '_')
           $programme = Join-Path $env:RUNNER_TEMP $nom
-          Invoke-WebRequest "https://github.com/jrsoftware/issrc/releases/download/$etiquette/$nom" -OutFile $programme
+          Invoke-WebRequest "https://github.com/jrsoftware/issrc/releases/download/$etiquette/$nom" -OutFile $programme -MaximumRetryCount 6 -RetryIntervalSec 20
           if ((Get-FileHash $programme -Algorithm SHA256).Hash -ne $env:INNO_SETUP_SHA256) { throw 'Empreinte d''Inno Setup inattendue.' }
           $dossier = Join-Path $env:RUNNER_TEMP 'inno-setup'
           $installation = Start-Process $programme -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', '/CURRENTUSER', "/DIR=`"$dossier`"" -Wait -PassThru
