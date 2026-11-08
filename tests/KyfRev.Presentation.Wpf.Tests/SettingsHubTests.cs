@@ -1,10 +1,13 @@
 using System.IO;
+using System.Security.Cryptography;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using KyfRev.Application.Model;
+using KyfRev.Application.Ports;
 using KyfRev.Application.UseCases;
 using KyfRev.DesignSystem.Controls;
+using KyfRev.Extensions.Host;
 using KyfRev.Presentation.Wpf.Pages;
 using KyfRev.Presentation.Wpf.Shell;
 
@@ -17,6 +20,52 @@ public sealed class SettingsHubTests
     private static readonly Anchor Passage = new("La prophase", "", " précède", 0, 11, ["Mitose", "Étapes"], 5, "sha256:aa");
 
     private static readonly string[] Tabs = ["Général", "Révisions", "Modules et extensions", "Données", "À propos"];
+
+    [TestMethod]
+    public async Task Looking_for_an_update_says_what_exists_and_opens_only_its_page()
+    {
+        using var vault = new DataVault();
+        using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        var manifest = UpdateChecker.Write("9.0.0", new DateOnly(2026, 11, 8));
+        var online = new AnnouncedVersion(manifest, ExtensionCatalogue.Sign(manifest, key, "essai"));
+        var links = new RecordingLinks();
+        var about = new AboutSettingsViewModel(vault.App.Vaults, new UpdateChecker(online, [new("essai", key.ExportSubjectPublicKeyInfoPem())], "1.0.0"), links);
+        Assert.IsTrue(about.CanCheckUpdates);
+        Assert.AreEqual(0, online.Reads, "rien n'est lu sans le demander");
+
+        await about.CheckUpdateCommand.ExecuteAsync(null);
+
+        Assert.AreEqual(SettingsHubText.UpdateAvailableOf("9.0.0", "1.0.0"), about.UpdateMessage);
+        Assert.IsTrue(about.HasRelease && about.HasUpdateMessage);
+        Assert.AreEqual(SettingsHubText.CheckUpdate, about.CheckLabel);
+        about.OpenReleaseCommand.Execute(null);
+        Assert.AreEqual("https://github.com/KyllianFF/kyfRev-dotnet/releases/tag/v9.0.0", links.Opened.Single());
+    }
+
+    [TestMethod]
+    public async Task An_update_search_that_fails_says_why_and_offers_nothing()
+    {
+        using var vault = new DataVault();
+        using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        var about = new AboutSettingsViewModel(vault.App.Vaults, new UpdateChecker(new AnnouncedVersion([], []), [new("essai", key.ExportSubjectPublicKeyInfoPem())], "1.0.0"), new RecordingLinks());
+
+        await about.CheckUpdateCommand.ExecuteAsync(null);
+
+        Assert.IsTrue(about.HasUpdateError);
+        Assert.IsFalse(about.HasRelease || about.HasUpdateMessage);
+    }
+
+    [TestMethod]
+    public async Task Without_a_checker_nothing_is_searched()
+    {
+        using var vault = new DataVault();
+        var about = new AboutSettingsViewModel(vault.App.Vaults);
+
+        await about.CheckUpdateCommand.ExecuteAsync(null);
+        about.OpenReleaseCommand.Execute(null);
+
+        Assert.IsFalse(about.CanCheckUpdates || about.HasUpdateMessage || about.HasUpdateError);
+    }
 
     [TestMethod]
     public void The_view_needs_its_tabs()
@@ -622,5 +671,19 @@ public sealed class SettingsHubTests
         }
 
         public void Dispose() => Vaults.Dispose();
+    }
+}
+
+/// <summary>Le dépôt, qui sert une annonce de version.</summary>
+internal sealed class AnnouncedVersion(byte[] manifest, byte[] signature) : IOnlineReader
+{
+    public int Reads { get; private set; }
+
+    public Task<string> ReadTextAsync(Uri address, CancellationToken cancellationToken) => throw new NotSupportedException();
+
+    public Task<byte[]> ReadBytesAsync(Uri address, CancellationToken cancellationToken)
+    {
+        Reads++;
+        return Task.FromResult(address.AbsolutePath.EndsWith(".sig", StringComparison.Ordinal) ? signature : manifest);
     }
 }

@@ -230,6 +230,7 @@ internal static class Composition
             provider.GetRequiredService<ActiveModules>().Load,
             provider.GetRequiredService<ExtensionSettingsViewModel>()));
         services.AddSingleton<GeneralSettingsViewModel>();
+        services.AddSingleton(provider => new UpdateChecker(provider.GetRequiredService<IOnlineReader>(), ExtensionCatalogue.KnownKeys, Version));
         services.AddSingleton<AboutSettingsViewModel>();
         services.AddSingleton<SettingsHubViewModel>();
         services.AddSingleton(provider => new HealthPageViewModel(

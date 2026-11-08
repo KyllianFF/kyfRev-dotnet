@@ -74,6 +74,24 @@ public static class SettingsHubText
     /// <summary>« Dans le dossier de votre choix, hors du coffre ; aucun fichier exis… ».</summary>
     public static string ExportsHelp => Text(nameof(ExportsHelp));
 
+    /// <summary>« Rechercher une mise à jour ».</summary>
+    public static string CheckUpdate => Text(nameof(CheckUpdate));
+
+    /// <summary>« Recherche… ».</summary>
+    public static string CheckingUpdate => Text(nameof(CheckingUpdate));
+
+    /// <summary>« La recherche n'a lieu que si vous la demandez… ».</summary>
+    public static string UpdateHelp => Text(nameof(UpdateHelp));
+
+    /// <summary>« Ouvrir la page de cette version ».</summary>
+    public static string OpenRelease => Text(nameof(OpenRelease));
+
+    /// <summary>« kyfRev {0} est disponible (vous avez la {1}). ».</summary>
+    public static string UpdateAvailableOf(object latest, object current) => Format("UpdateAvailable", latest, current);
+
+    /// <summary>« Vous avez la dernière version ({0}). ».</summary>
+    public static string UpToDateOf(object current) => Format("UpToDate", current);
+
     /// <summary>« Exports ».</summary>
     public static string ExportsTitle => Text(nameof(ExportsTitle));
 

@@ -4,6 +4,9 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:kyf="clr-namespace:KyfRev.DesignSystem.Controls;assembly=KyfRev.DesignSystem"
              xmlns:pages="clr-namespace:KyfRev.Presentation.Wpf.Pages">
+  <UserControl.Resources>
+    <BooleanToVisibilityConverter x:Key="Visible" />
+  </UserControl.Resources>
   <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
     <StackPanel MaxWidth="1100">
       <kyf:Card x:Name="AboutCard" Padding="16,12">
@@ -15,6 +18,16 @@
           <TextBlock x:Name="VaultLine" Text="{Binding Vault}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" />
           <TextBlock Text="{x:Static pages:SettingsHubText.LicenseLabel}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,12,0,0" />
           <TextBlock Text="{x:Static pages:SettingsHubText.LicenseText}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" />
+          <StackPanel x:Name="UpdatePanel" Margin="0,16,0,0" Visibility="{Binding CanCheckUpdates, Converter={StaticResource Visible}}">
+            <TextBlock Text="{x:Static pages:SettingsHubText.UpdateHelp}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" />
+            <WrapPanel Margin="0,8,0,0">
+              <Button x:Name="CheckUpdateButton" Content="{Binding CheckLabel}" Command="{Binding CheckUpdateCommand}" Margin="0,0,8,8" />
+              <Button x:Name="OpenReleaseButton" Content="{x:Static pages:SettingsHubText.OpenRelease}" Command="{Binding OpenReleaseCommand}" Margin="0,0,8,8"
+                      Visibility="{Binding HasRelease, Converter={StaticResource Visible}}" />
+            </WrapPanel>
+            <kyf:Notification x:Name="UpdateNotice" Severity="Success" Message="{Binding UpdateMessage}" IsOpen="{Binding HasUpdateMessage, Mode=OneWay}" IsClosable="False" />
+            <kyf:Notification x:Name="UpdateErrorNotice" Severity="Critical" Message="{Binding UpdateError}" IsOpen="{Binding HasUpdateError, Mode=OneWay}" IsClosable="False" />
+          </StackPanel>
         </StackPanel>
       </kyf:Card>
     </StackPanel>
