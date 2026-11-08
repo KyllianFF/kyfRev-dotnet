@@ -167,6 +167,24 @@ public sealed class ComponentTests
     }
 
     [STATestMethod]
+    public void The_primary_button_of_a_dialog_can_wait()
+    {
+        var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
+        var dialog = new Dialog { Title = "Importer", IsOpen = true };
+        Host.Of(design, dialog);
+        Host.Flush();
+        var button = Host.Part<Button>(dialog, Dialog.PrimaryButtonPart);
+        Assert.IsTrue(dialog.IsPrimaryEnabled);
+        Assert.IsTrue(button.IsEnabled);
+
+        dialog.IsPrimaryEnabled = false;
+        Host.Flush();
+
+        Assert.IsFalse(button.IsEnabled);
+        Assert.IsTrue(Host.Part<Button>(dialog, Dialog.SecondaryButtonPart).IsEnabled, "on peut toujours renoncer");
+    }
+
+    [STATestMethod]
     public void A_dialog_closes_with_the_chosen_button_or_escape()
     {
         var design = new DesignResources(ThemeKind.Light, reducedMotion: false);

@@ -9,7 +9,9 @@ internal sealed partial class FolderImportDialog : UserControl
     public FolderImportDialog()
     {
         InitializeComponent();
+        // La page quittée perd souvent son contexte avant de se décharger : l'un ou l'autre ferme la fenêtre.
         Unloaded += (_, _) => (DataContext as FolderImportViewModel)?.Dismiss();
+        DataContextChanged += (_, e) => (e.OldValue as FolderImportViewModel)?.Dismiss();
     }
 
     /// <summary>La réponse à la fenêtre part vers sa vue.</summary>

@@ -1,5 +1,4 @@
 using System.Drawing;
-using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -118,7 +117,4 @@ public sealed class SheetPrinter : ISheetPrinter
         await printed.CopyToAsync(pdf, cancellation).ConfigureAwait(true);
         return pdf.Length == 0 ? null : pdf.ToArray();
     }
-
-    /// <summary>L'adresse de la page, pour les essais.</summary>
-    internal static string PageAddress => string.Create(CultureInfo.InvariantCulture, $"{Address}");
 }

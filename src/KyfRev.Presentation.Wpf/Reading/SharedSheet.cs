@@ -216,9 +216,6 @@ internal static partial class SharedSheet
                 case "section":
                     Wrap(element, "section", " class=\"footnotes\"");
                     break;
-                case "article":
-                    WriteChildren(element);
-                    break;
                 default:
                     Wrap(element, element.Tag, string.Empty);
                     break;

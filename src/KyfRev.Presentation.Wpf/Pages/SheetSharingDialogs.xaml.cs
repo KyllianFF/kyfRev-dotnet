@@ -11,7 +11,9 @@ internal sealed partial class SheetSharingDialogs : UserControl
     public SheetSharingDialogs()
     {
         InitializeComponent();
+        // La page quittée perd souvent son contexte avant de se décharger : l'un ou l'autre ferme les fenêtres.
         Unloaded += (_, _) => (DataContext as SheetSharingViewModel)?.Dismiss();
+        DataContextChanged += (_, e) => (e.OldValue as SheetSharingViewModel)?.Dismiss();
     }
 
     private void OnShareClosed(object sender, DialogClosedEventArgs e) =>

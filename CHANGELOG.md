@@ -9,6 +9,14 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- Partager une fiche : au clic droit dans la vue « Fiches » et dans le texte, et par le bouton « Partager » de la fiche, sous « ⋯ » quand
+  la fenêtre est étroite. Page web d'un seul fichier, images et formules comprises ; PDF au format A4, enregistré directement dans le
+  dossier choisi ; Markdown ; Markdown avec ses images (.zip) ; texte brut ; ou presse-papiers, avec la mise en forme. Le contenu est
+  préparé comme la lecture, et rien n'y est chargé d'ailleurs. Le fichier créé est donné. Sur un coffre chiffré, la fenêtre dit que ce
+  qui sort est en clair, et la fiche copiée ne va ni dans l'historique du presse-papiers ni sur les autres appareils.
+- « Enregistrer comme modèle… » : au clic droit d'une fiche ou de son texte, sous le nom proposé, celui de la fiche.
+- Importer un dossier de notes (Obsidian, Typora, VS Code…) : un bouton dans la vue « Fiches », le clic droit sur la place libre de la
+  liste, et la liste vide. On choisit d'entrer ou non en révision ; le bilan dit les fiches, les images, les liens et ce qui n'a pas été repris.
 - Coffre chiffré, lot 4 : la preuve qu'aucun texte en clair ne reste sur le disque. Sur un coffre chiffré, le menu d'un mot
   propose « Accepter jusqu'à la fermeture de kyfRev », dans le code Markdown, au lieu d'écrire dans le dictionnaire de Windows. Le journal masque tout chemin
   qui entre dans le coffre, et ne nomme plus la citation trouvée. Les moteurs web ne téléversent plus de rapport de plantage,

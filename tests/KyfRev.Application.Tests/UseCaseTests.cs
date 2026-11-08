@@ -292,6 +292,9 @@ public sealed class UseCaseTests
         Assert.HasCount(1, app.Exports.Export(ExportKind.Annotations, outside).Value);
         Assert.AreEqual("Choisissez un dossier où enregistrer la fiche.", app.Sheets.Share(id, ShareFormat.Markdown, "relatif", null).Error);
         Assert.IsTrue(File.Exists(app.Sheets.Share(id, ShareFormat.Markdown, outside, null).Value));
+        Assert.AreEqual("Choisissez un dossier où enregistrer la fiche.", app.Sheets.SharePdf(id, "relatif", new byte[] { 37 }).Error);
+        Assert.IsTrue(File.Exists(app.Sheets.SharePdf(id, outside, new byte[] { 37 }).Value));
+        Assert.AreEqual("<p>Sans image.</p>", app.Sheets.EmbedSharedImages("<p>Sans image.</p>").Value);
 
         var source = folder.PathOf("Notes");
         Directory.CreateDirectory(source);

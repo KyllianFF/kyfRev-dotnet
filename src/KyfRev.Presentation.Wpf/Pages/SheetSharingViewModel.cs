@@ -314,6 +314,7 @@ public sealed partial class SheetSharingViewModel : ObservableObject, IForgetsVa
         if (!confirmed)
         {
             TemplateError = null;
+            _templateDone = null;
             return;
         }
         var name = TemplateName.Trim();
@@ -337,12 +338,18 @@ public sealed partial class SheetSharingViewModel : ObservableObject, IForgetsVa
             return;
         }
         TemplateError = null;
+        _templateDone = null;
         done?.Invoke(SharingText.TemplateDoneOf(outcome.Value));
     }
 
-    private static string? Refusal<T>(Outcome<T> outcome) => outcome.Succeeded ? null : outcome.Error;
-
-    private void Choose(ShareChoice choice) => Selected = choice;
+    private void Choose(ShareChoice choice)
+    {
+        Selected = choice;
+        foreach (var other in Choices.Where(other => !ReferenceEquals(other, choice)))
+        {
+            other.IsChecked = false;
+        }
+    }
 
     /// <summary>Annule ce qui est en cours, et rend de quoi annuler ce qui commence.</summary>
     private CancellationTokenSource Renew()
