@@ -132,6 +132,7 @@ internal static class Composition
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Trash);
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Exports);
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Encryption);
+        services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Search);
         services.AddSingleton(provider =>
         {
             void VaultChanged() => Composition.VaultChanged(provider);
@@ -249,6 +250,11 @@ internal static class Composition
             provider.GetRequiredService<ReviewNavigation>().Attach(shell);
             provider.GetRequiredService<MachineSettings>().Follow(provider.GetRequiredService<AppearanceController>(), shell);
             var modules = provider.GetRequiredService<ActiveModules>();
+            // La recherche (Ctrl+K) couvre le cœur et les modules actifs ; un résultat s'ouvre dans la coquille.
+            shell.Search = new GlobalSearch(
+                provider.GetRequiredService<SearchUseCases>(),
+                () => [.. modules.All<ISearchProvider>()],
+                new SearchHitOpener(provider.GetRequiredService<IReviewOpener>(), shell).Open);
             var extensionPages = provider.GetRequiredService<ExtensionPages>();
             void ShowEntries() => shell.SetModuleEntries([.. ModuleEntries(modules, provider.GetRequiredService<IExternalLinks>(), schemas => new SchemasPageViewModel(
                 schemas,
@@ -381,6 +387,7 @@ internal static class Composition
     /// <summary>Les vues qui gardent ce qu'elles ont lu du coffre.</summary>
     internal static IForgetsVault[] ForgettingViews(IServiceProvider provider) =>
     [
+        provider.GetRequiredService<ShellViewModel>(),
         provider.GetRequiredService<DashboardPageViewModel>(),
         provider.GetRequiredService<SheetsPageViewModel>(),
         provider.GetRequiredService<DefinitionsPageViewModel>(),

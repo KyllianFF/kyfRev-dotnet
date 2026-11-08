@@ -32,6 +32,11 @@ public sealed partial class ShellWindow : Window
     private readonly ShellViewModel _shell;
     private const double PaletteEdge = 16;
     private const double PaletteMinWidth = 360;
+    private const double PaletteMinHeight = 120;
+    private const double PaletteMaxHeight = 520;
+
+    /// <summary>Ce qui entoure la liste de la recherche, en hauteur : les marges de sa carte, et la ligne d'aide.</summary>
+    private const double PaletteAround = 120;
 
     private IInputElement? _focusBeforePalette;
     private bool _paletteLeft;
@@ -222,6 +227,11 @@ public sealed partial class ShellWindow : Window
             ApplyFullScreen(_shell.IsFullScreen);
             return;
         }
+        if (e.PropertyName == nameof(ShellViewModel.SelectedResult) && _shell.SelectedResult is { } selected)
+        {
+            // Aux flèches, la ligne choisie reste à l'écran : la liste peut être plus haute que sa place.
+            PaletteResults.ScrollIntoView(selected);
+        }
         if (e.PropertyName != nameof(ShellViewModel.IsPaletteOpen))
         {
             return;
@@ -311,6 +321,7 @@ public sealed partial class ShellWindow : Window
         left = Math.Clamp(left, PaletteEdge, Math.Max(PaletteEdge, Palette.ActualWidth - PaletteEdge - width));
         PaletteCard.Width = width;
         PaletteCard.Margin = new Thickness(left, 2, PaletteEdge, PaletteEdge);
+        PaletteResults.MaxHeight = Math.Clamp(Palette.ActualHeight - PaletteAround, PaletteMinHeight, PaletteMaxHeight);
     }
 
     /// <summary>

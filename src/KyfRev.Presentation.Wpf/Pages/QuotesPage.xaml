@@ -21,6 +21,12 @@
       <kyf:Notification x:Name="ErrorMessage" DockPanel.Dock="Top" Severity="Critical" Message="{Binding Error}" IsOpen="{Binding HasError, Mode=OneWay}" IsClosable="False" Margin="0,0,0,8" />
       <kyf:Notification x:Name="DoneMessage" DockPanel.Dock="Top" Severity="Success" Message="{Binding Message}" IsOpen="{Binding HasMessage, Mode=OneWay}" IsClosable="False" Margin="0,0,0,8" />
 
+      <!-- La citation ouverte depuis la recherche globale, seule montrée. -->
+      <WrapPanel x:Name="Target" DockPanel.Dock="Top" Margin="0,0,0,8" Visibility="{Binding HasTarget, Converter={StaticResource Visible}}">
+        <TextBlock Text="{x:Static pages:QuotesText.FoundBySearch}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" VerticalAlignment="Center" Margin="0,0,12,0" AutomationProperties.LiveSetting="Polite" />
+        <Button x:Name="ShowAllQuotes" Content="{x:Static pages:QuotesText.ShowAll}" Command="{Binding ShowAllCommand}" AutomationProperties.Name="{x:Static pages:QuotesText.ShowAll}" />
+      </WrapPanel>
+
       <WrapPanel x:Name="Filters" DockPanel.Dock="Top" Margin="0,0,0,8" Visibility="{Binding HasQuotes, Converter={StaticResource Visible}}">
         <TextBox x:Name="SearchBox" Width="280" Text="{Binding Search, UpdateSourceTrigger=PropertyChanged}" kyf:Field.Placeholder="{x:Static pages:QuotesText.SearchPlaceholder}"
                  AutomationProperties.Name="{x:Static pages:QuotesText.SearchLabel}" Margin="0,0,8,8" />

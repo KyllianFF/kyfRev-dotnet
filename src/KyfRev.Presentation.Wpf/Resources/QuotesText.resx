@@ -222,4 +222,10 @@
   <data name="WithPage" xml:space="preserve">
     <value>{0}, p. {1}</value>
   </data>
+  <data name="FoundBySearch" xml:space="preserve">
+    <value>Citation trouvée par la recherche.</value>
+  </data>
+  <data name="ShowAll" xml:space="preserve">
+    <value>Afficher toutes les citations</value>
+  </data>
 </root>

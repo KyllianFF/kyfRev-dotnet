@@ -1,5 +1,6 @@
 using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
+using KyfRev.Application.Model;
 
 namespace KyfRev.Presentation.Wpf.Shell;
 
@@ -26,15 +27,34 @@ public sealed record NavigationItem(string Id, string Label, string Glyph, int O
     public override string ToString() => Label;
 }
 
-/// <summary>Une commande de la recherche (Ctrl+K).</summary>
+/// <summary>Une ligne de la recherche (Ctrl+K) : une commande, ou ce qui a été trouvé dans le coffre.</summary>
 /// <param name="Label">Libellé, cherché sans tenir compte de la casse ni des accents.</param>
-/// <param name="Detail">Raccourci clavier, ou rien.</param>
+/// <param name="Detail">Raccourci clavier d'une commande, nature d'un résultat (« définition ») ; ou rien.</param>
 /// <param name="Glyph">Icône.</param>
 /// <param name="Execute">Ce que fait la commande.</param>
 public sealed record PaletteEntry(string Label, string? Detail, string Glyph, Action Execute)
 {
-    /// <summary>Le libellé : c'est aussi le nom lu par le lecteur d'écran.</summary>
-    public override string ToString() => Label;
+    /// <summary>Son groupe.</summary>
+    public PaletteGroup Group { get; init; } = PaletteGroup.Commands;
+
+    /// <summary>Où se trouve un résultat : le dossier d'une fiche, la fiche d'un passage.</summary>
+    public string? Place { get; init; }
+
+    /// <summary>« · Histoire », à la suite du libellé ; vide sans lieu.</summary>
+    public string PlaceText => Place is { Length: > 0 } place ? ShellText.SearchPlaceOf(place) : string.Empty;
+
+    /// <summary>Ce qui se met en avant dans son libellé.</summary>
+    public PaletteAccent Accent { get; init; }
+
+    /// <summary>Le texte autour des mots trouvés.</summary>
+    public IReadOnlyList<ExcerptPiece> Excerpt { get; init; } = [];
+
+    /// <summary>Elle a un extrait à montrer.</summary>
+    public bool HasExcerpt => Excerpt.Count > 0;
+
+    /// <summary>Le libellé, puis où cela se trouve, sa nature et son extrait : c'est aussi le nom lu par le lecteur d'écran.</summary>
+    public override string ToString() =>
+        string.Join(", ", new[] { Label, Place, Excerpt.Count > 0 ? Detail : null, string.Concat(Excerpt.Select(piece => piece.Text)) }.Where(part => part is { Length: > 0 }));
 }
 
 /// <summary>Un raccourci clavier, tel que l'aide le présente.</summary>

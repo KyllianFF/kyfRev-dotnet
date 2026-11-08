@@ -11,13 +11,13 @@ using KyfRev.Presentation.Wpf.Pages;
 namespace KyfRev.Presentation.Wpf.Shell;
 
 /// <summary>
-/// La coquille : menu, recherche de commandes (Ctrl+K), aide des raccourcis (F1), mode
-/// concentration (Ctrl+Maj+F) et zoom de l'interface (Ctrl+plus, Ctrl+moins, Ctrl+0). Le menu
+/// La coquille : menu, recherche (Ctrl+K) des commandes et dans le coffre, aide des raccourcis (F1),
+/// mode concentration (Ctrl+Maj+F) et zoom de l'interface (Ctrl+plus, Ctrl+moins, Ctrl+0). Le menu
 /// s'adapte à la largeur de la fenêtre (<see cref="ShellLayout"/>) : barre latérale, colonne
 /// d'icônes, ou onglets en bas avec « Plus » pour les autres vues. Sans coffre ouvert, elle montre
 /// l'accueil : le menu est masqué et les vues ne s'ouvrent pas.
 /// </summary>
-public sealed partial class ShellViewModel : ObservableObject
+public sealed partial class ShellViewModel : ObservableObject, IForgetsVault
 {
     /// <summary>Plus petit zoom.</summary>
     public const double MinimumZoom = 0.8;
@@ -28,10 +28,18 @@ public sealed partial class ShellViewModel : ObservableObject
     /// <summary>Pas du zoom.</summary>
     public const double ZoomStep = 0.1;
 
+    /// <summary>Caractères à écrire, au moins, pour chercher dans le coffre.</summary>
+    private const int MinimumSearch = 2;
+
+    /// <summary>Le temps d'attendre la frappe suivante avant de chercher dans le coffre.</summary>
+    private static readonly TimeSpan SearchPause = TimeSpan.FromMilliseconds(150);
+
     private readonly IReadOnlyList<NavigationItem> _core;
     private readonly IReadOnlyList<PaletteEntry> _commandsWithoutVault;
+    private readonly LatestSearch _vaultSearch = new();
     private IReadOnlyList<PaletteEntry> _commands;
     private IReadOnlyList<PaletteEntry> _extensionCommands = [];
+    private List<PaletteEntry> _hits = [];
     private IReadOnlyList<NavigationItem> _moduleEntries = [];
     private double _screenHeight = double.PositiveInfinity;
 
@@ -150,7 +158,7 @@ public sealed partial class ShellViewModel : ObservableObject
 
     /// <summary>L'accueil est affiché : aucun coffre n'est ouvert.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsMenuVisible))]
+    [NotifyPropertyChangedFor(nameof(IsMenuVisible), nameof(ShowsSearchHint), nameof(NoResultText))]
     [NotifyCanExecuteChangedFor(nameof(LockCommand))]
     public partial bool IsWelcome { get; private set; }
 
@@ -215,21 +223,47 @@ public sealed partial class ShellViewModel : ObservableObject
     /// <summary>« Zoom : 120 % ».</summary>
     public string ZoomLabel => ShellText.Zoom((int)Math.Round(Zoom * 100));
 
-    /// <summary>Recherche de commandes ouverte.</summary>
+    /// <summary>Recherche ouverte.</summary>
     [ObservableProperty]
     public partial bool IsPaletteOpen { get; private set; }
 
+    /// <summary>Ce qui cherche dans le coffre (la racine de composition le donne) ; rien : seules les commandes se cherchent.</summary>
+    public GlobalSearch? Search { get; set; }
+
     /// <summary>Texte cherché.</summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsSearchHint), nameof(NoResultText))]
     public partial string PaletteQuery { get; set; }
 
-    /// <summary>Commandes qui correspondent au texte cherché.</summary>
+    /// <summary>Commandes qui correspondent au texte cherché, puis ce qui a été trouvé dans le coffre.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasNoResult))]
+    [NotifyPropertyChangedFor(nameof(HasNoResult), nameof(ShowsKeyHelp))]
     public partial IReadOnlyList<PaletteEntry> PaletteResults { get; private set; }
 
-    /// <summary>Aucune commande ne correspond.</summary>
-    public bool HasNoResult => PaletteResults.Count == 0;
+    /// <summary>Rien ne correspond, et aucune recherche n'est en cours.</summary>
+    public bool HasNoResult => PaletteResults.Count == 0 && !IsSearching && PaletteError is null;
+
+    /// <summary>« Aucune commande ne correspond. », ou « Rien ne correspond à « … ». » quand le coffre a été cherché.</summary>
+    public string NoResultText => CanSearchVault ? ShellText.SearchNothingOf(PaletteQuery.Trim()) : ShellText.NoCommand;
+
+    /// <summary>Une recherche dans le coffre est en cours.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasNoResult))]
+    public partial bool IsSearching { get; private set; }
+
+    /// <summary>Refus de la dernière recherche dans le coffre.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasPaletteError), nameof(HasNoResult))]
+    public partial string? PaletteError { get; private set; }
+
+    /// <summary>La dernière recherche dans le coffre a été refusée.</summary>
+    public bool HasPaletteError => PaletteError is not null;
+
+    /// <summary>Trop peu est écrit pour chercher dans le coffre : on dit comment faire.</summary>
+    public bool ShowsSearchHint => Search is not null && !IsWelcome && PaletteQuery.Trim().Length < MinimumSearch;
+
+    /// <summary>Des résultats du coffre sont montrés : on rappelle les touches.</summary>
+    public bool ShowsKeyHelp => _hits.Count > 0;
 
     /// <summary>Commande mise en évidence (Entrée l'exécute).</summary>
     [ObservableProperty]
@@ -368,9 +402,21 @@ public sealed partial class ShellViewModel : ObservableObject
         IsPaletteOpen = true;
     }
 
-    /// <summary>Ferme la recherche de commandes.</summary>
+    /// <summary>Ferme la recherche : ce qu'elle avait trouvé dans le coffre n'est pas gardé.</summary>
     [RelayCommand]
-    public void ClosePalette() => IsPaletteOpen = false;
+    public void ClosePalette()
+    {
+        IsPaletteOpen = false;
+        DropHits();
+    }
+
+    /// <summary>Oublie ce qui a été cherché et trouvé ; une recherche partie avant n'y remet rien.</summary>
+    public void Forget()
+    {
+        IsPaletteOpen = false;
+        PaletteQuery = string.Empty;
+        DropHits();
+    }
 
     /// <summary>Déplace la mise en évidence dans les résultats (« 1 » ou « -1 »), en boucle.</summary>
     [RelayCommand]
@@ -390,7 +436,7 @@ public sealed partial class ShellViewModel : ObservableObject
     {
         if (SelectedResult is { } entry)
         {
-            IsPaletteOpen = false;
+            ClosePalette();
             entry.Execute();
         }
     }
@@ -542,7 +588,57 @@ public sealed partial class ShellViewModel : ObservableObject
         }
     }
 
-    partial void OnPaletteQueryChanged(string value) => UpdateResults();
+    partial void OnPaletteQueryChanged(string value)
+    {
+        if (CanSearchVault)
+        {
+            IsSearching = true;
+            SearchVaultCommand.Execute(value.Trim());
+        }
+        else
+        {
+            DropHits();
+        }
+        UpdateResults();
+    }
+
+    /// <summary>Cherche dans le coffre, une fois la frappe arrêtée un instant ; les résultats d'avant restent jusqu'à la réponse.</summary>
+    [RelayCommand(AllowConcurrentExecutions = true)]
+    private Task SearchVaultAsync(string text)
+    {
+        var search = Search!;
+        // Les services des modules se lisent ici, sur le fil de l'interface : ils changent quand un module s'active.
+        var providers = search.Providers();
+        return _vaultSearch.RunAsync(SearchPause, token => search.UseCases.Everywhere(text, providers, token), outcome =>
+        {
+            IsSearching = false;
+            PaletteError = outcome.Error;
+            _hits = outcome.Succeeded ? SearchEntries.Of(outcome.Value, search.Open) : [];
+            var selected = SelectedResult;
+            UpdateResults();
+            // Une ligne déjà choisie, que la réponse n'a pas remplacée, le reste.
+            if (selected is not null && IndexOf(selected) >= 0)
+            {
+                SelectedResult = selected;
+            }
+        });
+    }
+
+    /// <summary>Assez est écrit pour chercher dans le coffre, et un coffre est ouvert.</summary>
+    private bool CanSearchVault => Search is not null && !IsWelcome && PaletteQuery.Trim().Length >= MinimumSearch;
+
+    /// <summary>Arrête la recherche dans le coffre, et oublie ce qu'elle avait trouvé.</summary>
+    private void DropHits()
+    {
+        _vaultSearch.Cancel();
+        IsSearching = false;
+        PaletteError = null;
+        if (_hits.Count > 0)
+        {
+            _hits = [];
+            UpdateResults();
+        }
+    }
 
     private int IndexOf(PaletteEntry entry)
     {
@@ -559,7 +655,7 @@ public sealed partial class ShellViewModel : ObservableObject
     private void UpdateResults()
     {
         var words = Fold(PaletteQuery).Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        PaletteResults = [.. (IsWelcome ? _commandsWithoutVault : _commands).Where(entry => words.All(Fold(entry.Label).Contains))];
+        PaletteResults = [.. (IsWelcome ? _commandsWithoutVault : _commands).Where(entry => words.All(Fold(entry.Label).Contains)), .. _hits];
         SelectedResult = PaletteResults.Count > 0 ? PaletteResults[0] : null;
     }
 

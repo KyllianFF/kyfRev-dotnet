@@ -19,6 +19,12 @@
 
   <Window.Resources>
     <BooleanToVisibilityConverter x:Key="Visible" />
+    <!-- Les lignes de la recherche, par groupe : les commandes, puis ce qui a été trouvé dans le coffre. -->
+    <CollectionViewSource x:Key="PaletteGroups" Source="{Binding PaletteResults}">
+      <CollectionViewSource.GroupDescriptions>
+        <PropertyGroupDescription PropertyName="Group" />
+      </CollectionViewSource.GroupDescriptions>
+    </CollectionViewSource>
     <DataTemplate DataType="{x:Type pages:PlaceholderPageViewModel}">
       <pages:PlaceholderPage />
     </DataTemplate>
@@ -452,7 +458,7 @@
       </ItemsControl>
     </kyf:Dialog>
 
-    <!-- Recherche de commandes (Ctrl+K) : on tape dans la barre de titre, la liste s'ouvre juste dessous, à son aplomb. -->
+    <!-- Recherche (Ctrl+K) : on tape dans la barre de titre, la liste s'ouvre juste dessous, à son aplomb. -->
     <Grid x:Name="Palette" Visibility="{Binding IsPaletteOpen, Converter={StaticResource Visible}}">
       <Rectangle x:Name="PaletteScrim" Fill="Transparent">
         <Rectangle.InputBindings>
@@ -465,24 +471,64 @@
         <Border Background="{DynamicResource Kyf.Brush.Surface}" BorderBrush="{DynamicResource Kyf.Brush.Divider}" BorderThickness="1"
                 CornerRadius="{DynamicResource Kyf.Radius.Card}" Padding="8" AutomationProperties.Name="{x:Static p:ShellText.SearchPlaceholder}">
           <DockPanel>
-            <TextBlock x:Name="NoResult" DockPanel.Dock="Top" Text="{x:Static p:ShellText.NoCommand}" Style="{DynamicResource Kyf.Text.Secondary}"
+            <kyf:Notification x:Name="PaletteErrorMessage" DockPanel.Dock="Top" Severity="Critical" Message="{Binding PaletteError}" IsOpen="{Binding HasPaletteError, Mode=OneWay}" IsClosable="False" Margin="4" />
+            <TextBlock x:Name="NoResult" DockPanel.Dock="Top" Text="{Binding NoResultText}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap"
                        Margin="12,8,12,8" Visibility="{Binding HasNoResult, Converter={StaticResource Visible}}" />
-            <ListBox x:Name="PaletteResults" ItemsSource="{Binding PaletteResults}" SelectedItem="{Binding SelectedResult}" Focusable="False"
+            <TextBlock x:Name="SearchHint" DockPanel.Dock="Bottom" Text="{x:Static p:ShellText.SearchHint}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap"
+                       Margin="12,8,12,4" Visibility="{Binding ShowsSearchHint, Converter={StaticResource Visible}}" />
+            <TextBlock x:Name="SearchKeys" DockPanel.Dock="Bottom" Text="{x:Static p:ShellText.SearchKeys}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap"
+                       Margin="12,8,12,4" Visibility="{Binding ShowsKeyHelp, Converter={StaticResource Visible}}" />
+            <ListBox x:Name="PaletteResults" ItemsSource="{Binding Source={StaticResource PaletteGroups}}" SelectedItem="{Binding SelectedResult}" Focusable="False"
                      MaxHeight="360" AutomationProperties.Name="{x:Static p:ShellText.SearchPlaceholder}">
               <ListBox.InputBindings>
                 <KeyBinding Key="Enter" Command="{Binding RunSelectedCommand}" />
                 <KeyBinding Key="Escape" Command="{Binding ClosePaletteCommand}" />
               </ListBox.InputBindings>
+              <!-- Chaque groupe : son titre et son nombre, ses lignes, et ce qui reste à préciser. Les commandes n'ont pas de titre. -->
+              <ListBox.GroupStyle>
+                <GroupStyle>
+                  <GroupStyle.ContainerStyle>
+                    <Style TargetType="GroupItem">
+                      <Setter Property="AutomationProperties.Name" Value="{Binding Name.Label}" />
+                      <Setter Property="Template">
+                        <Setter.Value>
+                          <ControlTemplate TargetType="GroupItem">
+                            <StackPanel>
+                              <TextBlock Text="{Binding Name.Heading}" Style="{DynamicResource Kyf.Text.Caption}" FontWeight="SemiBold" Margin="12,8,12,4"
+                                         AutomationProperties.HeadingLevel="Level2" Visibility="{Binding Name.HasHeading, Converter={StaticResource Visible}}" />
+                              <ItemsPresenter />
+                              <TextBlock Text="{Binding Name.MoreHits}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="12,2,12,6"
+                                         Visibility="{Binding Name.HasMoreHits, Converter={StaticResource Visible}}" />
+                            </StackPanel>
+                          </ControlTemplate>
+                        </Setter.Value>
+                      </Setter>
+                    </Style>
+                  </GroupStyle.ContainerStyle>
+                </GroupStyle>
+              </ListBox.GroupStyle>
               <ListBox.ItemTemplate>
+                <!-- Le texte d'une ligne prend la couleur de la ligne, choisie ou non : lisible dans chaque thème. -->
                 <DataTemplate>
-                  <DockPanel>
-                    <TextBlock x:Name="Detail" DockPanel.Dock="Right" Text="{Binding Detail}" Style="{DynamicResource Kyf.Text.Caption}" VerticalAlignment="Center" Margin="12,0,0,0" />
-                    <kyf:Icon Text="{Binding Glyph}" Margin="0,0,12,0" />
-                    <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
+                  <DockPanel Margin="0,6">
+                    <TextBlock x:Name="Detail" DockPanel.Dock="Right" Text="{Binding Detail}" FontSize="{DynamicResource Kyf.FontSize.Caption}" FontWeight="Normal" VerticalAlignment="Top" Margin="12,2,0,0" />
+                    <kyf:Icon Text="{Binding Glyph}" VerticalAlignment="Top" Margin="0,2,12,0" />
+                    <StackPanel>
+                      <TextBlock TextTrimming="CharacterEllipsis">
+                        <Run x:Name="LabelRun" Text="{Binding Label, Mode=OneWay}" /><Run x:Name="PlaceRun" Text="{Binding PlaceText, Mode=OneWay}" FontWeight="Normal" FontStyle="Normal" FontSize="{DynamicResource Kyf.FontSize.Caption}" />
+                      </TextBlock>
+                      <pages:ExcerptText x:Name="Excerpt" Pieces="{Binding Excerpt}" Margin="0,2,0,0" Visibility="{Binding HasExcerpt, Converter={StaticResource Visible}}" />
+                    </StackPanel>
                   </DockPanel>
                   <DataTemplate.Triggers>
                     <DataTrigger Binding="{Binding Detail}" Value="{x:Null}">
                       <Setter TargetName="Detail" Property="Visibility" Value="Collapsed" />
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding Accent}" Value="{x:Static shell:PaletteAccent.Term}">
+                      <Setter TargetName="LabelRun" Property="FontWeight" Value="SemiBold" />
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding Accent}" Value="{x:Static shell:PaletteAccent.Passage}">
+                      <Setter TargetName="LabelRun" Property="FontStyle" Value="Italic" />
                     </DataTrigger>
                   </DataTemplate.Triggers>
                 </DataTemplate>

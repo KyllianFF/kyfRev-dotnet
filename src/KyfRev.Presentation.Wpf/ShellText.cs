@@ -86,8 +86,44 @@ public static class ShellText
     /// <summary>« Rechercher ».</summary>
     public static string Search => Text(nameof(Search));
 
-    /// <summary>« Rechercher une commande ou une vue ».</summary>
+    /// <summary>« Rechercher partout ».</summary>
     public static string SearchPlaceholder => Text(nameof(SearchPlaceholder));
+
+    /// <summary>« archivée ».</summary>
+    public static string SearchBadgeArchived => Text(nameof(SearchBadgeArchived));
+
+    /// <summary>« définition ».</summary>
+    public static string SearchBadgeDefinition => Text(nameof(SearchBadgeDefinition));
+
+    /// <summary>« passage ».</summary>
+    public static string SearchBadgePassage => Text(nameof(SearchBadgePassage));
+
+    /// <summary>« Passages et définitions ».</summary>
+    public static string SearchGroupAnnotations => Text(nameof(SearchGroupAnnotations));
+
+    /// <summary>« Fiches · 12 ».</summary>
+    public static string SearchGroupOf(object label, object total) => Format("SearchGroup", label, total);
+
+    /// <summary>Comment chercher dans le coffre.</summary>
+    public static string SearchHint => Text(nameof(SearchHint));
+
+    /// <summary>« ↑ ↓ pour choisir · Entrée pour ouvrir ».</summary>
+    public static string SearchKeys => Text(nameof(SearchKeys));
+
+    /// <summary>« … autres résultats : précisez la recherche. ».</summary>
+    public static string SearchMoreManyOf(object count) => Format("SearchMoreMany", count);
+
+    /// <summary>« … autre résultat : précisez la recherche. ».</summary>
+    public static string SearchMoreOneOf(object count) => Format("SearchMoreOne", count);
+
+    /// <summary>« Rien ne correspond à « … ». ».</summary>
+    public static string SearchNothingOf(object text) => Format("SearchNothing", text);
+
+    /// <summary>«  · Histoire », à la suite d'un titre.</summary>
+    public static string SearchPlaceOf(object place) => Format("SearchPlace", place);
+
+    /// <summary>« « … » » : un passage cité.</summary>
+    public static string SearchQuotedOf(object passage) => Format("SearchQuoted", passage);
 
     /// <summary>« Navigation secondaire ».</summary>
     public static string SecondaryNavigation => Text(nameof(SecondaryNavigation));
@@ -168,6 +204,8 @@ public static class ShellText
     public static string Zoom(int percent) => Format(nameof(Zoom), percent);
 
     private static string Format(string name, object value) => string.Format(CultureInfo.CurrentCulture, Text(name), value);
+
+    private static string Format(string name, object first, object second) => string.Format(CultureInfo.CurrentCulture, Text(name), first, second);
 
     private static string Text(string name) =>
         Resources.GetString(name, CultureInfo.CurrentUICulture) ?? throw new MissingManifestResourceException($"Texte « {name} » absent des ressources.");
