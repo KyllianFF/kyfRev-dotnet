@@ -18,6 +18,7 @@ using KyfRev.Modules.Schemas;
 using KyfRev.Presentation.Wpf.Editing;
 using KyfRev.Presentation.Wpf.Extensions;
 using KyfRev.Presentation.Wpf.Pages;
+using KyfRev.Presentation.Wpf.Reading;
 using KyfRev.Presentation.Wpf.Schemas;
 using KyfRev.Presentation.Wpf.Shell;
 using Microsoft.Extensions.DependencyInjection;
@@ -122,6 +123,16 @@ internal static class Composition
                 LookForNews = () => LookForQuoteAsync(modules),
             };
         });
+        // Partager une fiche et enregistrer un modèle, depuis la vue « Fiches » comme depuis la lecture : une seule demande à la fois.
+        services.AddSingleton(provider => new SheetSharingViewModel(
+            provider.GetRequiredService<SheetUseCases>(),
+            provider.GetRequiredService<TemplateUseCases>(),
+            provider.GetRequiredService<VaultUseCases>(),
+            provider.GetRequiredService<IFolderPicker>(),
+            new SharedSheetPictures(provider.GetRequiredService<MermaidEngine>(), () => provider.GetRequiredService<INetworkSchemas>()),
+            new SheetPrinter(Path.Combine(provider.GetRequiredService<VaultLocations>().LocalData, "WebView2")),
+            clock));
+        services.AddSingleton<FolderImportViewModel>();
         services.AddSingleton<SheetsPageViewModel>();
         services.AddSingleton<DefinitionsPageViewModel>();
         services.AddSingleton<SettingsPageViewModel>();
@@ -357,6 +368,9 @@ internal static class Composition
         provider.GetRequiredService<DefinitionsPageViewModel>().Forget();
         // Une clé de récupération préparée pour l'ancien coffre ne se montre pas dans le nouveau.
         provider.GetRequiredService<DataSettingsViewModel>().Encryption?.Forget();
+        // Un partage ou un import partis de l'ancien coffre ne disent rien dans le nouveau.
+        provider.GetRequiredService<SheetSharingViewModel>().Forget();
+        provider.GetRequiredService<FolderImportViewModel>().Forget();
         provider.GetRequiredService<ShellViewModel>().ShowWorkspace();
     }
 
@@ -398,6 +412,8 @@ internal static class Composition
         provider.GetRequiredService<ShellViewModel>(),
         provider.GetRequiredService<DashboardPageViewModel>(),
         provider.GetRequiredService<SheetsPageViewModel>(),
+        provider.GetRequiredService<SheetSharingViewModel>(),
+        provider.GetRequiredService<FolderImportViewModel>(),
         provider.GetRequiredService<DefinitionsPageViewModel>(),
         provider.GetRequiredService<ArchivesPageViewModel>(),
         provider.GetRequiredService<StatisticsPageViewModel>(),

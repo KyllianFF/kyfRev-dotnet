@@ -114,6 +114,18 @@ public sealed partial class SheetUseCases(VaultHost host, TimeProvider time, ILo
             : Outcome.Refused<string>("Choisissez un dossier où enregistrer la fiche.");
     }
 
+    /// <summary>Partage en PDF : le document, préparé par l'interface, écrit dans <paramref name="folder"/>, hors du coffre ; rend son chemin.</summary>
+    public Outcome<string> SharePdf(string id, string folder, ReadOnlyMemory<byte> pdf)
+    {
+        ArgumentNullException.ThrowIfNull(folder);
+        return Path.IsPathFullyQualified(folder)
+            ? host.Use(vault => vault.ShareSheetAsPdf(id, folder, pdf))
+            : Outcome.Refused<string>("Choisissez un dossier où enregistrer la fiche.");
+    }
+
+    /// <summary>Une page préparée pour le partage, ses images du coffre intégrées : pour l'imprimer ou la copier.</summary>
+    public Outcome<string> EmbedSharedImages(string page) => host.Use(vault => vault.EmbedSharedImages(page));
+
     [LoggerMessage(Level = LogLevel.Information, Message = "Dossier importé : {Sheets} fiche(s), {Tracked} suivie(s), {Resources} ressource(s), {Ignored} élément(s) ignoré(s).")]
     private static partial void LogImported(ILogger logger, int sheets, int tracked, int resources, int ignored);
 }

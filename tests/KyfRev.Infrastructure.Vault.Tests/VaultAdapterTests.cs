@@ -292,6 +292,8 @@ public abstract class VaultAdapterTests(StorageKind storage)
 
         Assert.HasCount(2, vault.Export(ExportKind.Tracking, outside.Root, new DateTime(2026, 10, 1, 9, 0, 0), TimeZoneInfo.Utc));
         Assert.IsTrue(File.Exists(vault.ShareSheet(id, ShareFormat.Markdown, outside.Root, null)));
+        Assert.IsTrue(File.Exists(vault.ShareSheetAsPdf(id, outside.Root, new byte[] { 37, 80, 68, 70 })));
+        Assert.AreEqual("<p>Rien à intégrer.</p>", vault.EmbedSharedImages("<p>Rien à intégrer.</p>"));
         outside.Write("Notes/Note.md", "Une note.\n");
         Assert.AreEqual(1, vault.ImportFolder(outside.PathOf("Notes"), "Notes", track: false, Now).Sheets);
     }

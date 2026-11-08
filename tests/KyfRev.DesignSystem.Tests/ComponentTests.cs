@@ -242,6 +242,118 @@ public sealed class ComponentTests
     }
 
     [STATestMethod]
+    public void The_primary_button_of_a_dialog_can_wait()
+    {
+        var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
+        var dialog = new Dialog { Title = "Importer", IsOpen = true };
+        Host.Of(design, dialog);
+        Host.Flush();
+        var button = Host.Part<Button>(dialog, Dialog.PrimaryButtonPart);
+        Assert.IsTrue(dialog.IsPrimaryEnabled);
+        Assert.IsTrue(button.IsEnabled);
+
+        dialog.IsPrimaryEnabled = false;
+        Host.Flush();
+
+        Assert.IsFalse(button.IsEnabled);
+        Assert.IsTrue(Host.Part<Button>(dialog, Dialog.SecondaryButtonPart).IsEnabled, "on peut toujours renoncer");
+    }
+
+    [STATestMethod]
+    public void While_a_dialog_works_the_focus_waits_where_enter_does_nothing_and_comes_back_at_the_end()
+    {
+        var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
+        var field = new TextBox();
+        var dialog = new Dialog { Title = "Importer", Content = field };
+        var host = Host.Of(design, dialog);
+        using var source = new HwndSource(new HwndSourceParameters("kyfRev essai") { Width = 480, Height = 320 }) { RootVisual = host };
+        dialog.IsOpen = true;
+        Host.Layout(host);
+        Host.Flush();
+        var secondary = Host.Part<Button>(dialog, Dialog.SecondaryButtonPart);
+        var primary = Host.Part<Button>(dialog, Dialog.PrimaryButtonPart);
+        Assert.AreSame(field, FocusedIn(field));
+        var closed = new List<DialogChoice>();
+        dialog.Closed += (_, e) => closed.Add(e.Choice);
+
+        dialog.IsWorking = true;
+        field.IsEnabled = false;
+        dialog.IsPrimaryEnabled = false;
+        Host.Flush();
+
+        Assert.AreSame(secondary, FocusedIn(secondary), "ce qui avait le focus est désactivé : il reste dans le dialogue");
+        Press(secondary, source, Key.Enter);
+        Assert.IsEmpty(closed, "un second appui sur Entrée ne met pas fin au dialogue");
+        Assert.IsTrue(dialog.IsOpen);
+
+        dialog.IsWorking = false;
+        field.IsEnabled = true;
+        dialog.IsPrimaryEnabled = true;
+        Host.Flush();
+
+        Assert.AreSame(primary, FocusedIn(primary), "le travail fini, Entrée vaut de nouveau le bouton principal");
+        Press(primary, source, Key.Enter);
+        CollectionAssert.AreEqual(new[] { DialogChoice.Primary }, closed);
+    }
+
+    [STATestMethod]
+    public void A_dialog_that_cannot_give_the_focus_to_its_button_gives_it_to_its_content()
+    {
+        var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
+        var field = new TextBox();
+        var dialog = new Dialog { Title = "Importer", Content = field, IsPrimaryEnabled = false, IsWorking = true, SecondaryButtonText = string.Empty };
+        var host = Host.Of(design, dialog);
+        using var source = new HwndSource(new HwndSourceParameters("kyfRev essai") { Width = 480, Height = 320 }) { RootVisual = host };
+        dialog.IsOpen = true;
+        Host.Layout(host);
+        Host.Flush();
+        var other = Host.Part<Button>(dialog, Dialog.PrimaryButtonPart);
+        Assert.IsFalse(other.IsEnabled);
+
+        dialog.IsWorking = false;
+        Host.Flush();
+
+        Assert.AreSame(field, FocusedIn(field));
+
+        dialog.IsOpen = false;
+        dialog.IsWorking = true;
+        dialog.IsOpen = true;
+        dialog.IsOpen = false;
+        Host.Flush();
+        Assert.IsFalse(dialog.IsOpen, "fermé entre-temps, il ne reprend pas le focus");
+    }
+
+    [STATestMethod]
+    public void A_notification_asked_to_is_brought_into_view_when_it_appears()
+    {
+        var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
+        var plain = new Notification { Message = "Sans plus.", IsOpen = false };
+        var result = new Notification { Message = "Fichier créé.", IsOpen = false, ScrollsIntoView = true };
+        var content = new StackPanel { Children = { new Border { Height = 900 }, plain, new Border { Height = 900 }, result } };
+        var scroller = new ScrollViewer { Content = content, VerticalScrollBarVisibility = ScrollBarVisibility.Auto };
+        var host = Host.Of(design, scroller);
+        using var source = new HwndSource(new HwndSourceParameters("kyfRev essai") { Width = 480, Height = 320 }) { RootVisual = host };
+        Host.Layout(host);
+        Host.Flush();
+
+        plain.IsOpen = true;
+        Host.Flush();
+        Assert.AreEqual(0, scroller.VerticalOffset, "seulement si elle le demande");
+
+        result.IsOpen = true;
+        Host.Flush();
+        var top = result.TranslatePoint(default, scroller).Y;
+        Assert.IsGreaterThanOrEqualTo(-0.5, top);
+        Assert.IsLessThanOrEqualTo(scroller.ViewportHeight + 0.5, top + result.ActualHeight);
+
+        result.IsOpen = false;
+        result.IsOpen = true;
+        result.IsOpen = false;
+        Host.Flush();
+        Assert.IsFalse(result.IsVisible, "refermée entre-temps, elle ne fait plus rien");
+    }
+
+    [STATestMethod]
     public void A_dialog_closes_with_the_chosen_button_or_escape()
     {
         var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
@@ -419,6 +531,9 @@ public sealed class ComponentTests
 
     /// <summary>L'élément qui a le focus dans la portée de <paramref name="element"/>.</summary>
     private static IInputElement? FocusedIn(DependencyObject element) => FocusManager.GetFocusedElement(FocusManager.GetFocusScope(element));
+
+    private static void Press(UIElement element, PresentationSource source, Key key) =>
+        element.RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, source, 0, key) { RoutedEvent = Keyboard.KeyDownEvent });
 
     [STATestMethod]
     public void A_selected_list_item_is_filled_and_bold_never_the_color_alone()

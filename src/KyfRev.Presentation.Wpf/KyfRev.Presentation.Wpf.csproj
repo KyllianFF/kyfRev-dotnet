@@ -28,6 +28,7 @@
     <EmbeddedResource Include="Editing\Web\**\*" LogicalName="kyfrev-web/%(RecursiveDir)%(Filename)%(Extension)" />
     <EmbeddedResource Include="Schemas\Web\**\*" LogicalName="kyfrev-schemas/%(RecursiveDir)%(Filename)%(Extension)" />
     <EmbeddedResource Include="Extensions\Web\**\*" LogicalName="kyfrev-extensions/%(RecursiveDir)%(Filename)%(Extension)" />
+    <EmbeddedResource Include="Reading\partage.css" LogicalName="kyfrev-partage.css" />
     <EmbeddedResource Include="..\..\assets\icon\kyfrev.ico" LogicalName="kyfrev-icone.ico" />
   </ItemGroup>
 

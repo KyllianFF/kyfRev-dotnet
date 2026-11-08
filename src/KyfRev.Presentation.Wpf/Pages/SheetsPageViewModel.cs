@@ -177,7 +177,7 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
     private int _generation;
 
     /// <summary>La vue, sur les cas d'usage des fiches, des dossiers et des modèles ; <paramref name="opener"/> ouvre ses fiches.</summary>
-    public SheetsPageViewModel(SheetUseCases sheets, FolderUseCases folders, TemplateUseCases templates, IReviewOpener opener, TimeProvider time, ReviewUseCases? reviews = null, TrashUseCases? trash = null)
+    public SheetsPageViewModel(SheetUseCases sheets, FolderUseCases folders, TemplateUseCases templates, IReviewOpener opener, TimeProvider time, ReviewUseCases? reviews = null, TrashUseCases? trash = null, SheetSharingViewModel? sharing = null, FolderImportViewModel? import = null)
     {
         ArgumentNullException.ThrowIfNull(sheets);
         ArgumentNullException.ThrowIfNull(folders);
@@ -191,6 +191,10 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
         _time = time;
         _reviews = reviews;
         _trash = trash;
+        Sharing = sharing;
+        Import = import;
+        Import?.Imported = OnImported;
+        Import?.RefusedUnseen = ShowUnreadRefusal;
         Bar = new FilterBarViewModel(BuildRows) { SearchPlaceholder = SheetsText.SearchPlaceholder, SearchName = SheetsText.SearchName, SearchChanged = OnSearchTextChanged };
         _folder = Bar.Add(SheetsText.FilterFolder, [new(string.Empty, SheetsText.AllFolders)]);
         _state = Bar.Add(
@@ -381,7 +385,7 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
     {
         ArgumentNullException.ThrowIfNull(entries);
         _entries = entries;
-        Error = null;
+        ShowUnreadRefusal();
         HasSheets = entries.Count > 0;
         OnPropertyChanged(nameof(Summary));
         _folder.Replace([new(string.Empty, SheetsText.AllFolders), .. FolderChoices(entries.Select(sheet => sheet.Folder))]);

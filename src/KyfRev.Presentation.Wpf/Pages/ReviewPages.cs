@@ -350,9 +350,23 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage, 
     [ObservableProperty]
     public partial string? Notice { get; private set; }
 
+    /// <summary>Partager la fiche, ou l'enregistrer comme modèle ; rien sans cas d'usage.</summary>
+    public SheetSharingViewModel? Sharing { get; init; }
+
+    /// <summary>La fiche est lue, et peut partir.</summary>
+    public bool CanShare => Sharing is not null && Reading is not null;
+
+    /// <summary>Un modèle vient d'être enregistré.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasDone))]
+    public partial string? Done { get; private set; }
+
+    /// <summary>Il y a de quoi le dire.</summary>
+    public bool HasDone => Done is not null;
+
     /// <summary>La fiche prête à lire.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Outline))]
+    [NotifyPropertyChangedFor(nameof(Outline), nameof(CanShare))]
     public partial SheetReading? Reading { get; private set; }
 
     /// <summary>Ce qui se surligne dans le texte.</summary>
@@ -465,7 +479,7 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage, 
     public bool HasPanels => ShowsPanelToggles && (HasOutline || HasPassages);
 
     /// <summary>Le nom du « ⋯ » de l'en-tête étroit : il dit aussi combien de passages il cache.</summary>
-    public string PanelsMenuName => HasPassages ? ReadingText.PanelsMenuWith(PassagesLabel) : ReadingText.PanelsMenu;
+    public string PanelsMenuName => HasPassages ? ReadingText.PanelsMenuWith(PassagesLabel) : Sharing is null ? ReadingText.PanelsMenu : SharingText.MoreActions;
 
     /// <summary>Le plan tient à côté du texte.</summary>
     public bool OutlineFits => PageWidth >= OutlineMinimum;
@@ -1016,6 +1030,37 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage, 
             Guided.Abandon();
         }
         return true;
+    }
+
+    /// <summary>Partager la fiche : ce qui vient d'être écrit part aussi. Un enregistrement refusé se voit dans l'écriture.</summary>
+    [RelayCommand]
+    private async Task RequestShareAsync()
+    {
+        if (Sharing is { } sharing && Reading is { } reading)
+        {
+            if (Editor is { } editor)
+            {
+                await editor.FinishAsync().ConfigureAwait(true);
+            }
+            sharing.RequestShare(SheetId, reading.Title);
+        }
+    }
+
+    /// <summary>Enregistrer la fiche comme modèle : ce qui en est dit s'affiche au-dessus du texte.</summary>
+    [RelayCommand]
+    private void RequestSaveAsTemplate()
+    {
+        if (Reading is { } reading)
+        {
+            Sharing?.RequestSaveAsTemplate(SheetId, reading.Title, ShowDone);
+        }
+    }
+
+    /// <summary>Le message se montre à nouveau, même identique à un message refermé entre-temps.</summary>
+    private void ShowDone(string message)
+    {
+        Done = null;
+        Done = message;
     }
 
     /// <summary>Écrit dans le texte le dessin, la formule ou le lien composé dans une saisie encore ouverte, s'il y a quelque chose.</summary>

@@ -239,7 +239,31 @@
                 <TextBlock x:Name="ListenLabel" Text="{x:Static pages:ReadingText.Listen}" VerticalAlignment="Center" Margin="8,0,0,0" />
               </StackPanel>
             </ToggleButton>
-            <!-- En-tête étroit, hors de l'écriture : le plan et les passages sous « ⋯ » (à l'écriture, ils sont dans celui du ruban). -->
+            <!-- Toujours à portée, même la fiche défilée, comme dans la 0.x ; en-tête étroit, il passe sous « ⋯ ». -->
+            <Border Margin="8,0,0,0">
+              <Border.Style>
+                <Style TargetType="Border">
+                  <Setter Property="Visibility" Value="Collapsed" />
+                  <Style.Triggers>
+                    <MultiDataTrigger>
+                      <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding CanShare}" Value="True" />
+                        <Condition Binding="{Binding IsCompactHeader}" Value="False" />
+                      </MultiDataTrigger.Conditions>
+                      <Setter Property="Visibility" Value="Visible" />
+                    </MultiDataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </Border.Style>
+              <Button x:Name="ShareButton" Command="{Binding RequestShareCommand}" Style="{DynamicResource Kyf.Button.Tool}" MinHeight="40" Padding="12,0"
+                      ToolTip="{x:Static pages:SharingText.ShareSheet}" AutomationProperties.Name="{x:Static pages:SharingText.ShareSheet}">
+                <StackPanel Orientation="Horizontal">
+                  <kyf:Icon Text="{x:Static kyf:Icons.Share}" VerticalAlignment="Center" />
+                  <TextBlock x:Name="ShareLabel" Text="{x:Static pages:SharingText.ShareShort}" VerticalAlignment="Center" Margin="8,0,0,0" />
+                </StackPanel>
+              </Button>
+            </Border>
+            <!-- En-tête étroit, hors de l'écriture : le plan, les passages et le partage sous « ⋯ » (à l'écriture, ils sont dans celui du ruban). -->
             <Border Margin="4,0,0,0">
               <Border.Style>
                 <Style TargetType="Border">
@@ -250,6 +274,14 @@
                         <Condition Binding="{Binding IsWriting}" Value="False" />
                         <Condition Binding="{Binding IsCompactHeader}" Value="True" />
                         <Condition Binding="{Binding HasPanels}" Value="True" />
+                      </MultiDataTrigger.Conditions>
+                      <Setter Property="Visibility" Value="Visible" />
+                    </MultiDataTrigger>
+                    <MultiDataTrigger>
+                      <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding IsWriting}" Value="False" />
+                        <Condition Binding="{Binding IsCompactHeader}" Value="True" />
+                        <Condition Binding="{Binding CanShare}" Value="True" />
                       </MultiDataTrigger.Conditions>
                       <Setter Property="Visibility" Value="Visible" />
                     </MultiDataTrigger>
@@ -265,6 +297,11 @@
                               Visibility="{Binding HasOutline, Converter={StaticResource Visible}, FallbackValue=Collapsed}" />
                     <MenuItem x:Name="PassagesItem" Header="{Binding PassagesLabel}" IsCheckable="True" IsChecked="{Binding IsPassagesOn}"
                               Visibility="{Binding HasPassages, Converter={StaticResource Visible}, FallbackValue=Collapsed}" />
+                    <Separator Visibility="{Binding HasPanels, Converter={StaticResource Visible}, FallbackValue=Collapsed}" />
+                    <MenuItem x:Name="ShareItem" Header="{x:Static pages:SharingText.Share}" Command="{Binding RequestShareCommand}"
+                              Visibility="{Binding CanShare, Converter={StaticResource Visible}, FallbackValue=Collapsed}" />
+                    <MenuItem x:Name="TemplateItem" Header="{x:Static pages:SharingText.SaveAsTemplate}" Command="{Binding RequestSaveAsTemplateCommand}"
+                              Visibility="{Binding CanShare, Converter={StaticResource Visible}, FallbackValue=Collapsed}" />
                   </ContextMenu>
                 </Button.ContextMenu>
               </Button>
@@ -392,6 +429,7 @@
                                 IsClosable="False" Margin="0,0,0,12" />
               <kyf:Notification x:Name="ProblemMessage" Severity="Warning" Message="{Binding Problem}" IsOpen="{Binding HasProblem, Mode=OneWay}"
                                 IsClosable="False" Margin="0,0,0,12" />
+              <kyf:Notification x:Name="DoneMessage" Severity="Success" Message="{Binding Done}" IsOpen="{Binding HasDone, Mode=OneWay}" Margin="0,0,0,12" />
             </StackPanel>
             <editing:SheetEditorView x:Name="EditorView" Grid.Row="1" DataContext="{Binding Editor}"
                                      Visibility="{Binding DataContext.IsWriting, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource Visible}}" />
@@ -578,5 +616,7 @@
         </ItemsControl>
       </StackPanel>
     </kyf:Dialog>
+
+    <pages:SheetSharingDialogs x:Name="SharingDialogs" DataContext="{Binding Sharing}" />
   </Grid>
 </UserControl>

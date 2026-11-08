@@ -73,6 +73,12 @@ public interface ISheetStore
 
     /// <summary>Écrit la fiche au format demandé dans un dossier hors du coffre ; rend le fichier écrit.</summary>
     string ShareSheet(string id, ShareFormat format, string folder, string? content);
+
+    /// <summary>Écrit le PDF de la fiche, préparé par l'interface, dans un dossier hors du coffre ; rend le fichier écrit.</summary>
+    string ShareSheetAsPdf(string id, string folder, ReadOnlyMemory<byte> pdf);
+
+    /// <summary>Une page préparée pour le partage, ses images du coffre intégrées : rien d'autre n'en sort.</summary>
+    string EmbedSharedImages(string page);
 }
 
 /// <summary>

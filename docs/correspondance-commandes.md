@@ -17,7 +17,7 @@ un test (`CommandMapTests`) vérifie que ce tableau et le code restent d'accord.
 | `resserrer_avant_examen` | `ExamUseCases.Tighten` | J4.1 | |
 | `creer_fiche` | `SheetUseCases.Create` | J4.1 | |
 | `modeles` | `TemplateUseCases.Templates` | J4.1 | |
-| `enregistrer_modele` | `TemplateUseCases.SaveAsTemplate` | J4.1 | |
+| `enregistrer_modele` | `TemplateUseCases.SaveAsTemplate` | J4.1 | Dans l'interface : « Enregistrer comme modèle… », au clic droit d'une fiche et de son texte. |
 | `dossiers` | `FolderUseCases.Folders` | J4.1 | |
 | `ouvrir_fiche` | `SheetUseCases.Open` | J4.1 | |
 | `id_de_fiche` | `SheetUseCases.IdAt` | J4.1 | |
@@ -33,14 +33,14 @@ un test (`CommandMapTests`) vérifie que ce tableau et le code restent d'accord.
 | `modifier_passage` | `AnnotationUseCases.ModifyPassage` | J4.1 | |
 | `mettre_annotation_a_la_corbeille` | `AnnotationUseCases.Trash` | J4.1 | |
 | `restaurer_annotation` | `AnnotationUseCases.Restore` | J4.1 | |
-| `importer_dossier` | `SheetUseCases.Import` | J4.1 | |
+| `importer_dossier` | `SheetUseCases.Import` | J4.1 | Dans l'interface : vue « Fiches » (bouton, place libre de la liste, liste vide) ; le bilan est montré. |
 | `changer_titre_fiche` | `SheetUseCases.ChangeTitle` | J4.1 | |
 | `modifier_etiquettes_fiche` | `SheetUseCases.SetTags` | J4.1 | |
 | `deplacer_fiche` | `SheetUseCases.Move` | J4.1 | |
 | `mettre_fiche_a_la_corbeille` | `TrashUseCases.TrashSheet` | J4.1 | |
 | `restaurer_fiche_de_la_corbeille` | `TrashUseCases.RestoreSheet` | J4.1 | |
 | `fiches_a_la_corbeille` | `TrashUseCases.TrashedSheets` | J4.1 | |
-| `partager_fiche` | `SheetUseCases.Share` | J4.1 | |
+| `partager_fiche` | `SheetUseCases.Share` | J4.1 | Dans l'interface : fenêtre « Partager », préparée comme la lecture. Le PDF passe par `SheetUseCases.SharePdf`, et le presse-papiers et le PDF par `SheetUseCases.EmbedSharedImages`. |
 | `creer_dossier` | `FolderUseCases.Create` | J4.1 | |
 | `deplacer_dossier` | `FolderUseCases.Move` | J4.1 | |
 | `mettre_dossier_a_la_corbeille` | `TrashUseCases.TrashFolder` | J4.1 | |

@@ -293,6 +293,9 @@ public sealed class UseCaseTests
         Assert.HasCount(1, app.Exports.Export(ExportKind.Annotations, outside).Value);
         Assert.AreEqual("Choisissez un dossier où enregistrer la fiche.", app.Sheets.Share(id, ShareFormat.Markdown, "relatif", null).Error);
         Assert.IsTrue(File.Exists(app.Sheets.Share(id, ShareFormat.Markdown, outside, null).Value));
+        Assert.AreEqual("Choisissez un dossier où enregistrer la fiche.", app.Sheets.SharePdf(id, "relatif", new byte[] { 37 }).Error);
+        Assert.IsTrue(File.Exists(app.Sheets.SharePdf(id, outside, new byte[] { 37 }).Value));
+        Assert.AreEqual("<p>Sans image.</p>", app.Sheets.EmbedSharedImages("<p>Sans image.</p>").Value);
 
         var source = folder.PathOf("Notes");
         Directory.CreateDirectory(source);
@@ -301,6 +304,29 @@ public sealed class UseCaseTests
         var report = app.Sheets.Import(source + Path.DirectorySeparatorChar, track: true).Value;
         Assert.AreEqual(("Notes", 1, 1), (report.Folder, report.Sheets, report.Tracked));
         Assert.HasCount(1, test.Logs.Entries.Where(e => e.Message.StartsWith("Dossier importé : 1 fiche(s), 1 suivie(s)", StringComparison.Ordinal)));
+    }
+
+    [TestMethod]
+    public void The_open_vault_is_known_without_waiting_for_a_long_operation()
+    {
+        using var folder = new TestFolder();
+        using var test = Opened(folder);
+        using var started = new ManualResetEventSlim();
+        using var release = new ManualResetEventSlim();
+        var holding = Task.Run(() => test.App.Host.Use(_ =>
+        {
+            started.Set();
+            release.Wait(TimeSpan.FromSeconds(30));
+        }));
+        Assert.IsTrue(started.Wait(TimeSpan.FromSeconds(10)));
+
+        var reading = Task.Run(() => test.App.Vaults.State());
+        var answered = reading.Wait(TimeSpan.FromSeconds(5));
+        release.Set();
+        Assert.IsTrue(holding.Wait(TimeSpan.FromSeconds(10)));
+
+        Assert.IsTrue(answered, "l'état ne prend pas la file derrière l'opération en cours");
+        Assert.AreEqual(folder.Vault, reading.Result.Vault);
     }
 
     private static TestApplication Opened(TestFolder folder)

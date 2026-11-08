@@ -148,7 +148,10 @@ effacée de la mémoire.
   sauvegarde faite avant le chiffrement, lue telle quelle. Celle d'un autre coffre, ou un objet altéré, est une sauvegarde
   inutilisable : rien n'est écrit.
 - **Les exports et les partages** sont en clair : ils sont faits pour être lus ailleurs, et seulement à la demande. Seul
-  « Coffre complet (.zip) », qui est une sauvegarde, garde le chiffrement du coffre.
+  « Coffre complet (.zip) », qui est une sauvegarde, garde le chiffrement du coffre. La fenêtre « Partager » le dit sur un
+  coffre chiffré. Un PDF se met en page dans une page cachée du moteur web, en navigation privée : elle reçoit la fiche par
+  la mémoire, ne charge rien d'autre, et rend le document en mémoire ; seul le fichier choisi est écrit. Une fiche copiée
+  ne va ni dans l'historique du presse-papiers ni sur les autres appareils.
 
 ## L'outil `kyfrev-coffre`
 
