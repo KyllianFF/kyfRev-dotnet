@@ -7,8 +7,11 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ## [Non publié]
 
+## [1.0.0-beta.1] - 2026-11-08
+
 ### Ajouté
 
+- Paramètres › À propos dit le jour où la version a été publiée ; une construction hors publication n'affiche que son numéro.
 - L'installateur installe WebView2 s'il manque, après avoir vérifié que son programme d'amorçage est signé par Microsoft ; sans
   réseau, l'installation finit quand même et le dit. Il livre `kyfrev-coffre`, et une nouvelle installation refuse le dossier de la
   0.x, dont la désinstallation y effacerait `kyfRev.exe`. Paramètres › À propos signale la 0.x encore installée, avertit si elle
@@ -585,8 +588,6 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   9.0.5, qui corrige une faille critique de lecture des archives (GHSA-m665-v7pm-7grj), comme
   dans la version 0.x.
 
-[Non publié]: https://github.com/KyllianFF/kyfRev-dotnet/commits/main
-
 ### Corrigé
 
 - Extensions : après une sélection guidée, une extension a de nouveau toute sa patience pour finir. Elle n'avait que le
@@ -621,3 +622,6 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 - Sur une fenêtre étroite, les boutons d'une fiche passaient les uns sous les autres : ils vont à la ligne.
 - Le texte d'un champ de plusieurs lignes ne colle plus au bord haut.
 - Le libellé long d'une case à cocher était coupé : il passe maintenant à la ligne, en face de sa case.
+
+[Non publié]: https://github.com/KyllianFF/kyfRev-dotnet/compare/v1.0.0-beta.1...HEAD
+[1.0.0-beta.1]: https://github.com/KyllianFF/kyfRev-dotnet/releases/tag/v1.0.0-beta.1

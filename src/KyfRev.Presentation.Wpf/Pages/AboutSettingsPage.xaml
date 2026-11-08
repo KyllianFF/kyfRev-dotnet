@@ -17,7 +17,7 @@
       </kyf:Card>
       <kyf:Card x:Name="AboutCard" Padding="16,12">
         <StackPanel>
-          <TextBlock x:Name="VersionLine" Text="{Binding Version}" Style="{DynamicResource Kyf.Text.Subtitle}" AutomationProperties.HeadingLevel="Level2" />
+          <TextBlock x:Name="VersionLine" Text="{Binding Version}" Style="{DynamicResource Kyf.Text.Subtitle}" TextWrapping="Wrap" AutomationProperties.HeadingLevel="Level2" />
           <TextBlock Text="{x:Static pages:SettingsHubText.ModeLabel}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,12,0,0" />
           <TextBlock x:Name="ModeLine" Text="{Binding Mode}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" />
           <TextBlock Text="{x:Static pages:SettingsHubText.VaultTitle}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,12,0,0" />

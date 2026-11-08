@@ -58,6 +58,15 @@ public sealed class CompositionTests
     }
 
     [TestMethod]
+    public void The_release_date_comes_from_the_metadata_of_the_executable()
+    {
+        Assert.AreEqual(new DateOnly(2026, 11, 8), KyfRev.App.Composition.ReleaseDateOf([new("Autre", "2020-01-01"), new("ReleaseDate", "2026-11-08")]));
+        Assert.IsNull(KyfRev.App.Composition.ReleaseDateOf([new("Autre", "2020-01-01")]), "une construction hors publication n'a pas de date");
+        Assert.IsNull(KyfRev.App.Composition.ReleaseDateOf([new("ReleaseDate", "8 novembre")]), "une date illisible n'est pas affichée");
+        Assert.IsNull(KyfRev.App.Composition.ReleasedOn, "les essais ne sont pas une publication");
+    }
+
+    [TestMethod]
     public void The_application_writes_its_diagnostic_log_next_to_its_local_data()
     {
         using var services = KyfRev.App.Composition.Build();

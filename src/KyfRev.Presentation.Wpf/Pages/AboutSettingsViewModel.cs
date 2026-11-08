@@ -15,16 +15,18 @@ public sealed partial class AboutSettingsViewModel : ObservableObject, INavigati
     private readonly UpdateChecker? _updates;
     private readonly IExternalLinks? _links;
     private readonly ILegacyInstallation? _legacy;
+    private readonly DateOnly? _released;
     private Uri? _release;
 
-    /// <summary>L'onglet, sur le cas d'usage qui rend l'état de l'application ; la recherche de mise à jour s'y ajoute si elle est là, et la 0.x y est signalée si elle est encore installée.</summary>
-    public AboutSettingsViewModel(VaultUseCases vaults, UpdateChecker? updates = null, IExternalLinks? links = null, ILegacyInstallation? legacy = null)
+    /// <summary>L'onglet, sur le cas d'usage qui rend l'état de l'application ; la recherche de mise à jour s'y ajoute si elle est là, et la 0.x y est signalée si elle est encore installée, et le jour de publication s'affiche s'il est connu.</summary>
+    public AboutSettingsViewModel(VaultUseCases vaults, UpdateChecker? updates = null, IExternalLinks? links = null, ILegacyInstallation? legacy = null, DateOnly? released = null)
     {
         ArgumentNullException.ThrowIfNull(vaults);
         _vaults = vaults;
         _updates = updates;
         _links = links;
         _legacy = legacy;
+        _released = released;
     }
 
     /// <summary>La 0.x est encore installée : le message qui propose de la retirer, sinon vide.</summary>
@@ -35,7 +37,7 @@ public sealed partial class AboutSettingsViewModel : ObservableObject, INavigati
     /// <inheritdoc cref="LegacyMessage"/>
     public bool HasLegacy => LegacyMessage.Length > 0;
 
-    /// <summary>« kyfRev 1.0.0-alpha.0 ».</summary>
+    /// <summary>« kyfRev 1.0.0-beta.1, publiée le 8 novembre 2026 » ; le numéro seul pour une construction hors publication.</summary>
     [ObservableProperty]
     public partial string Version { get; private set; } = string.Empty;
 
@@ -97,7 +99,7 @@ public sealed partial class AboutSettingsViewModel : ObservableObject, INavigati
     public void Show(AppState state)
     {
         ArgumentNullException.ThrowIfNull(state);
-        Version = SettingsHubText.VersionOf(state.Version);
+        Version = _released is { } day ? SettingsHubText.VersionReleasedOf(state.Version, Dates.Spelled(day)) : SettingsHubText.VersionOf(state.Version);
         Mode = state.Mode switch
         {
             AppMode.Portable => SettingsHubText.ModePortable,
