@@ -7,6 +7,7 @@ using KyfRev.Application.Ports;
 using KyfRev.Presentation.Wpf.Editing;
 using KyfRev.Presentation.Wpf.Pages;
 using KyfRev.Presentation.Wpf.Reading;
+using KyfRev.Presentation.Wpf.Shell;
 
 namespace KyfRev.Presentation.Wpf.Tests;
 
@@ -302,6 +303,31 @@ public sealed class SharingTests
     }
 
     [STATestMethod]
+    public void A_vault_locked_while_the_folder_is_asked_shares_nothing()
+    {
+        using var ui = new UiThread();
+        using var scene = new SharingScene();
+        var outside = scene.Outside;
+        var app = scene.App;
+        SheetSharingViewModel? sharing = null;
+        var picker = new CallingPicker(() =>
+        {
+            sharing!.Forget();
+            return outside;
+        });
+        sharing = new SheetSharingViewModel(app.Sheets, app.Templates, app.Vaults, picker, new SharedSheetPictures(null), scene.Printer, TimeProvider.System);
+        sharing.RequestShare(scene.SheetId, "Mitose");
+        sharing.Choices.Single(choice => choice.Kind == ShareKind.Markdown).IsChecked = true;
+
+        var running = sharing.AnswerShareCommand.ExecuteAsync(true);
+        UiThread.Until(() => running.IsCompleted);
+
+        Assert.IsEmpty(Directory.GetFiles(outside));
+        Assert.IsFalse(sharing.IsBusy, "rien ne reste en cours");
+        Assert.IsFalse(sharing.IsSharing);
+    }
+
+    [STATestMethod]
     public void Leaving_the_page_closes_the_windows()
     {
         using var ui = new UiThread();
@@ -406,6 +432,12 @@ public sealed class SharingTests
         Assert.ThrowsExactly<ArgumentNullException>(() => new SheetSharingViewModel(app.Sheets, app.Templates, app.Vaults, picker, pictures, printer, null!));
         Assert.HasCount(6, new SheetSharingViewModel(app.Sheets, app.Templates, app.Vaults, picker, pictures, printer, time).Choices);
     }
+}
+
+/// <summary>Un sélecteur de dossiers qui fait quelque chose pendant qu'il est ouvert.</summary>
+internal sealed class CallingPicker(Func<string?> answer) : IFolderPicker
+{
+    public string? Pick(string title) => answer();
 }
 
 /// <summary>Une mise en page pour le PDF, qui répond ce qu'on lui dit, et quand.</summary>

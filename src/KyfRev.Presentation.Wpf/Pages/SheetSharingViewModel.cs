@@ -288,8 +288,9 @@ public sealed partial class SheetSharingViewModel : ObservableObject, IForgetsVa
         Message = null;
         Error = null;
         var folder = choice.Kind == ShareKind.Clipboard ? null : _picker.Pick(SharingText.PickFolder);
-        if (choice.Kind != ShareKind.Clipboard && folder is null)
+        if ((choice.Kind != ShareKind.Clipboard && folder is null) || work.IsCancellationRequested)
         {
+            // Renoncé ; ou bien le coffre s'est verrouillé pendant que la question était ouverte : plus rien ne part.
             return;
         }
         IsBusy = true;

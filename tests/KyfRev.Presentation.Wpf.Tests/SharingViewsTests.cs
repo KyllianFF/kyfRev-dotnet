@@ -10,6 +10,7 @@ using KyfRev.DesignSystem.Controls;
 using KyfRev.DesignSystem.Tokens;
 using KyfRev.Presentation.Wpf.Pages;
 using KyfRev.Presentation.Wpf.Shell;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace KyfRev.Presentation.Wpf.Tests;
 
@@ -238,6 +239,21 @@ public sealed class SharingViewsTests
         {
             window.Close();
         }
+    }
+
+    [STATestMethod]
+    public void The_application_wires_them_to_the_list_and_forgets_them_with_the_vault()
+    {
+        using var ui = new UiThread();
+        using var services = KyfRev.App.Composition.Build();
+
+        var page = services.GetRequiredService<SheetsPageViewModel>();
+
+        Assert.AreSame(services.GetRequiredService<SheetSharingViewModel>(), page.Sharing);
+        Assert.AreSame(services.GetRequiredService<FolderImportViewModel>(), page.Import);
+        var forgetting = KyfRev.App.Composition.ForgettingViews(services);
+        CollectionAssert.Contains(forgetting, page.Sharing);
+        CollectionAssert.Contains(forgetting, page.Import);
     }
 
     [STATestMethod]

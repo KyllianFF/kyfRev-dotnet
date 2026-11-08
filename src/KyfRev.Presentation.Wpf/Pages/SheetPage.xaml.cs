@@ -19,6 +19,7 @@ namespace KyfRev.Presentation.Wpf.Pages;
 internal sealed partial class SheetPage : UserControl
 {
     private const double ListenLabelWidth = 520;
+    private const double ShareLabelWidth = 1000;
     private const int WordCardLength = 600;
 
     private IReadOnlyList<SpokenBlock> _spoken = [];
@@ -35,6 +36,9 @@ internal sealed partial class SheetPage : UserControl
         {
             // Quand la place manque, « Écouter » se réduit à son icône : les autres boutons restent lisibles.
             ListenLabel.Visibility = e.NewSize.Width < ListenLabelWidth ? Visibility.Collapsed : Visibility.Visible;
+
+            // « Partager » aussi, plutôt que de faire passer les modes à la ligne.
+            ShareLabel.Visibility = e.NewSize.Width < ShareLabelWidth ? Visibility.Collapsed : Visibility.Visible;
 
             // Et les boutons du rattachement passent sous leur consigne, plutôt que de l'écraser.
             DockPanel.SetDock(RebindButtons, e.NewSize.Width < ListenLabelWidth ? Dock.Bottom : Dock.Right);

@@ -42,7 +42,7 @@ public sealed partial class FolderImportViewModel : ObservableObject, IForgetsVa
     public partial string? Source { get; private set; }
 
     /// <summary>Le nom de ce dossier.</summary>
-    public string SourceName => Source is null ? string.Empty : Path.GetFileName(Path.TrimEndingDirectorySeparator(Source));
+    public string SourceName => Source is null ? string.Empty : Path.GetFileName(Path.TrimEndingDirectorySeparator(Source)) is { Length: > 0 } name ? name : Source;
 
     /// <summary>Un dossier est choisi.</summary>
     public bool HasSource => Source is not null;
@@ -165,7 +165,8 @@ public sealed partial class FolderImportViewModel : ObservableObject, IForgetsVa
     private void Choose()
     {
         Error = null;
-        if (_picker.Pick(SharingText.ImportPick) is { } folder)
+        var generation = _generation;
+        if (_picker.Pick(SharingText.ImportPick) is { } folder && generation == _generation)
         {
             Source = folder;
         }

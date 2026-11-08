@@ -259,7 +259,7 @@
                       ToolTip="{x:Static pages:SharingText.ShareSheet}" AutomationProperties.Name="{x:Static pages:SharingText.ShareSheet}">
                 <StackPanel Orientation="Horizontal">
                   <kyf:Icon Text="{x:Static kyf:Icons.Share}" VerticalAlignment="Center" />
-                  <TextBlock Text="{x:Static pages:SharingText.ShareShort}" VerticalAlignment="Center" Margin="8,0,0,0" />
+                  <TextBlock x:Name="ShareLabel" Text="{x:Static pages:SharingText.ShareShort}" VerticalAlignment="Center" Margin="8,0,0,0" />
                 </StackPanel>
               </Button>
             </Border>

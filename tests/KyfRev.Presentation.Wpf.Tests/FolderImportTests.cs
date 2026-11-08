@@ -58,6 +58,37 @@ public sealed class FolderImportTests
     }
 
     [STATestMethod]
+    public void A_vault_locked_while_the_folder_is_asked_keeps_no_folder()
+    {
+        using var ui = new UiThread();
+        using var scene = new ImportScene();
+        FolderImportViewModel? import = null;
+        import = new FolderImportViewModel(scene.App.Sheets, new CallingPicker(() =>
+        {
+            import!.Forget();
+            return scene.Source;
+        }));
+        import.Request();
+
+        import.ChooseCommand.Execute(null);
+
+        Assert.IsNull(import.Source);
+    }
+
+    [STATestMethod]
+    public void A_drive_keeps_its_whole_name()
+    {
+        using var ui = new UiThread();
+        using var scene = new ImportScene();
+        scene.Import.Request();
+        scene.Picker.Answers.Enqueue(@"D:\");
+
+        scene.Import.ChooseCommand.Execute(null);
+
+        Assert.AreEqual(@"D:\", scene.Import.SourceName);
+    }
+
+    [STATestMethod]
     public void Confirming_without_a_folder_stays_put()
     {
         using var ui = new UiThread();
