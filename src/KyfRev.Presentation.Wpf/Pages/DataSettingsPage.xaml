@@ -58,8 +58,18 @@
             <WrapPanel IsEnabled="{Binding IsIdle}">
               <Button x:Name="OpenVaultButton" Content="{x:Static pages:SettingsHubText.OpenVault}" Command="{Binding OpenVaultCommand}" Margin="0,0,8,8" />
               <Button x:Name="CreateVaultButton" Content="{x:Static pages:SettingsHubText.CreateVault}" Command="{Binding CreateVaultCommand}" Margin="0,0,8,8" />
+              <Button x:Name="EncryptVaultButton" Command="{Binding RequestEncryptionCommand}" Margin="0,0,8,8"
+                      Visibility="{Binding CanEncrypt, Converter={StaticResource Visible}}" AutomationProperties.Name="{x:Static pages:EncryptionText.EncryptVault}"
+                      AutomationProperties.HelpText="{x:Static pages:EncryptionText.EncryptVaultHelp}">
+                <StackPanel Orientation="Horizontal">
+                  <kyf:Icon Text="{x:Static kyf:Icons.Lock}" Margin="0,0,8,0" />
+                  <TextBlock Text="{x:Static pages:EncryptionText.EncryptVault}" VerticalAlignment="Center" />
+                </StackPanel>
+              </Button>
             </WrapPanel>
             <TextBlock Text="{Binding VaultHelp}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" />
+            <TextBlock x:Name="EncryptVaultHelp" Text="{x:Static pages:EncryptionText.EncryptVaultHelp}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap"
+                       Margin="0,4,0,0" Visibility="{Binding CanEncrypt, Converter={StaticResource Visible}}" />
           </StackPanel>
         </kyf:Card>
 
@@ -98,6 +108,9 @@
                         AutomationProperties.Name="{x:Static pages:EncryptionText.ChangePassword}" />
                 <Button x:Name="NewRecoveryKeyButton" Content="{x:Static pages:EncryptionText.NewRecoveryKey}" Command="{Binding RequestNewRecoveryKeyCommand}" Margin="0,0,8,8"
                         AutomationProperties.Name="{x:Static pages:EncryptionText.NewRecoveryKey}" />
+                <Button x:Name="DecryptVaultButton" Content="{x:Static pages:EncryptionText.DecryptVault}" Command="{Binding RequestDecryptionCommand}" Margin="0,0,8,8"
+                        Visibility="{Binding CanDecrypt, Converter={StaticResource Visible}}"
+                        AutomationProperties.Name="{x:Static pages:EncryptionText.DecryptVault}" AutomationProperties.HelpText="{x:Static pages:EncryptionText.DecryptVaultHelp}" />
               </WrapPanel>
             </StackPanel>
             <kyf:Notification x:Name="EncryptionBusy" Severity="Info" Message="{Binding BusyMessage}" IsOpen="{Binding IsBusy, Mode=OneWay}" IsClosable="False" />

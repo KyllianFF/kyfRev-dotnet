@@ -70,6 +70,67 @@ public sealed class VaultLocking(
         }
     }
 
+    /// <summary>
+    /// Ferme le coffre ouvert pour la page <paramref name="page"/>, déjà affichée hors de l'espace de travail (une
+    /// conversion) : ce qui s'écrit s'enregistre, le coffre se ferme, une fois finie la lecture en cours, puis chaque vue
+    /// oublie, comme à un verrouillage. Rien de lui n'est retenu : chiffré, il n'attend pas sa clé. Faux, le coffre restant
+    /// ouvert, si la page n'est plus affichée, si un verrouillage ou une ouverture est en cours, s'il n'y a pas de coffre
+    /// ouvert, ou si ce qui s'écrit n'a pas pu être enregistré : à la différence d'un verrouillage, une conversion peut
+    /// attendre, et aucun brouillon n'est abandonné pour elle.
+    /// </summary>
+    /// <param name="page">La page qui reste affichée pendant et après la fermeture.</param>
+    public async Task<bool> CloseForAsync(object page)
+    {
+        ArgumentNullException.ThrowIfNull(page);
+        if (_locking || !ReferenceEquals(shell.Current.Page, page) || IsOpening() || vaults.State() is not { Vault: not null })
+        {
+            return false;
+        }
+        _locking = true;
+        try
+        {
+            if (!await FinishAsync().ConfigureAwait(true) || (drafts?.Invoke() ?? []).Any(view => view.HasUnsavedDraft) || !ReferenceEquals(shell.Current.Page, page))
+            {
+                return false;
+            }
+            starting?.Invoke();
+            shell.CanLock = false;
+            // Les vues qui viennent de se fermer finissent ce qu'elles avaient commencé.
+            await Dispatcher.Yield(DispatcherPriority.Background);
+            if (!ReferenceEquals(shell.Current.Page, page))
+            {
+                return false;
+            }
+            AppState closed;
+            try
+            {
+                closed = vaults.Close();
+            }
+            catch
+            {
+                // La fermeture a échoué, mais le coffre n'est plus joignable : les vues oublient quand même.
+                if (vaults.State().Vault is null)
+                {
+                    forget();
+                }
+                throw;
+            }
+            // Une lecture finie juste avant la fermeture rend encore son résultat : il arrive avant l'oubli.
+            await Dispatcher.Yield(DispatcherPriority.Background);
+            if (closed.Vault is not null)
+            {
+                // Une ouverture a commencé entre-temps : le coffre reste ouvert.
+                return false;
+            }
+            forget();
+            return true;
+        }
+        finally
+        {
+            _locking = false;
+        }
+    }
+
     /// <summary>Une ouverture est en cours, d'où qu'elle vienne (un écran, les paramètres) : elle changera de coffre juste après.</summary>
     private bool IsOpening() =>
         vaults.IsOpening || shell.Current.Page is UnlockPageViewModel { IsBusy: true } or WelcomePageViewModel { IsBusy: true };

@@ -8,11 +8,23 @@ public static class EncryptionText
 {
     private static readonly ResourceManager Resources = new("KyfRev.Presentation.Wpf.Resources.EncryptionText", typeof(EncryptionText).Assembly);
 
+    /// <summary>« Retour » : l'étape d'avant.</summary>
+    public static string Back => Text(nameof(Back));
+
+    /// <summary>« Revenir au coffre chiffré » : après un déchiffrement.</summary>
+    public static string BackToEncrypted => Text(nameof(BackToEncrypted));
+
+    /// <summary>« Revenir au coffre en clair » : après un chiffrement.</summary>
+    public static string BackToPlain => Text(nameof(BackToPlain));
+
     /// <summary>« Revenir au coffre ouvert ».</summary>
     public static string BackToVault => Text(nameof(BackToVault));
 
     /// <summary>« Retour à l'accueil ».</summary>
     public static string BackToWelcome => Text(nameof(BackToWelcome));
+
+    /// <summary>« Annuler » : la conversion n'a pas commencé, le coffre revient.</summary>
+    public static string Cancel => Text(nameof(Cancel));
 
     /// <summary>Ce que protège le chiffrement : le texte de la carte « Chiffrement ».</summary>
     public static string CardHelp => Text(nameof(CardHelp));
@@ -38,6 +50,29 @@ public static class EncryptionText
     /// <summary>« Confirmez le nouveau mot de passe ».</summary>
     public static string ConfirmPassword => Text(nameof(ConfirmPassword));
 
+    /// <summary>« Fermeture du coffre… » : avant la conversion.</summary>
+    public static string Closing => Text(nameof(Closing));
+
+    /// <summary>« Continuer » : l'étape suivante.</summary>
+    public static string Continue => Text(nameof(Continue));
+
+    /// <summary>Ce que fait la conversion, et ce qu'une coupure laisse.</summary>
+    public static string ConversionHelp => Text(nameof(ConversionHelp));
+
+    /// <summary>« Conversion du coffre » : le titre de sa page.</summary>
+    public static string ConversionPage => Text(nameof(ConversionPage));
+
+    /// <summary>« Étape 3 sur 3 : la conversion ».</summary>
+    public static string ConversionStepTitle => Text(nameof(ConversionStepTitle));
+
+    /// <summary>« 12 / 412 » : <paramref name="done"/> fichiers sur <paramref name="total"/>.</summary>
+    /// <param name="done">Les fichiers faits.</param>
+    /// <param name="total">Les fichiers à faire.</param>
+    public static string CountOf(int done, int total) => Format("Count", done, total);
+
+    /// <summary>« Conversion en cours… ».</summary>
+    public static string Converting => Text(nameof(Converting));
+
     /// <summary>« Copier ».</summary>
     public static string Copy => Text(nameof(Copy));
 
@@ -50,8 +85,53 @@ public static class EncryptionText
     /// <summary>« Mot de passe actuel ».</summary>
     public static string CurrentPassword => Text(nameof(CurrentPassword));
 
+    /// <summary>Ce qu'il faut faire d'un coffre déchiffré.</summary>
+    public static string DecryptedNext => Text(nameof(DecryptedNext));
+
+    /// <summary>Le dossier où le coffre déchiffré s'écrira.</summary>
+    public static string DecryptedParent => Text(nameof(DecryptedParent));
+
+    /// <summary>« Déchiffrer ce coffre » : le titre de la page.</summary>
+    public static string DecryptHeading => Text(nameof(DecryptHeading));
+
+    /// <summary>Ce que fait un déchiffrement.</summary>
+    public static string DecryptIntro => Text(nameof(DecryptIntro));
+
+    /// <summary>« La conversion » : le titre de la progression d'un déchiffrement.</summary>
+    public static string DecryptionTitle => Text(nameof(DecryptionTitle));
+
+    /// <summary>« Déchiffrer le coffre » : le bouton qui commence le déchiffrement.</summary>
+    public static string DecryptNow => Text(nameof(DecryptNow));
+
+    /// <summary>« Déchiffrer vers un dossier… » : la carte Chiffrement.</summary>
+    public static string DecryptVault => Text(nameof(DecryptVault));
+
+    /// <summary>Ce que fait « Déchiffrer vers un dossier… ».</summary>
+    public static string DecryptVaultHelp => Text(nameof(DecryptVaultHelp));
+
+    /// <summary>Ce que protège encore un coffre déchiffré : rien.</summary>
+    public static string DecryptWarning => Text(nameof(DecryptWarning));
+
     /// <summary>« Vérification du mot de passe… » : la dérivation prend de l'ordre d'une seconde.</summary>
     public static string Deriving => Text(nameof(Deriving));
+
+    /// <summary>Ce qu'il faut faire après un chiffrement.</summary>
+    public static string EncryptedNext => Text(nameof(EncryptedNext));
+
+    /// <summary>« Chiffrer ce coffre » : le titre de la page.</summary>
+    public static string EncryptHeading => Text(nameof(EncryptHeading));
+
+    /// <summary>Ce que fait un chiffrement, et ce qu'il ne fait pas.</summary>
+    public static string EncryptIntro => Text(nameof(EncryptIntro));
+
+    /// <summary>« Chiffrer le coffre » : le bouton qui commence la conversion.</summary>
+    public static string EncryptNow => Text(nameof(EncryptNow));
+
+    /// <summary>« Chiffrer ce coffre… » : la carte du coffre, pour un coffre en clair.</summary>
+    public static string EncryptVault => Text(nameof(EncryptVault));
+
+    /// <summary>Ce que fait « Chiffrer ce coffre… ».</summary>
+    public static string EncryptVaultHelp => Text(nameof(EncryptVaultHelp));
 
     /// <summary>« Saisissez le mot de passe actuel du coffre. ».</summary>
     public static string EnterCurrentPassword => Text(nameof(EnterCurrentPassword));
@@ -61,6 +141,15 @@ public static class EncryptionText
 
     /// <summary>« Saisissez la clé de récupération du coffre. ».</summary>
     public static string EnterRecoveryKey => Text(nameof(EnterRecoveryKey));
+
+    /// <summary>« Fichiers déchiffrés » : la première barre d'un déchiffrement.</summary>
+    public static string FilesDecrypted => Text(nameof(FilesDecrypted));
+
+    /// <summary>« Fichiers chiffrés » : la première barre d'un chiffrement.</summary>
+    public static string FilesEncrypted => Text(nameof(FilesEncrypted));
+
+    /// <summary>La seconde barre de la conversion.</summary>
+    public static string FilesVerified => Text(nameof(FilesVerified));
 
     /// <summary>La clé n'est plus retenue sur ce poste.</summary>
     public static string Forgotten => Text(nameof(Forgotten));
@@ -77,8 +166,14 @@ public static class EncryptionText
     /// <summary>La clé de récupération n'a pas pu être copiée : elle se recopie à la main.</summary>
     public static string KeyNotCopied => Text(nameof(KeyNotCopied));
 
+    /// <summary>La clé montrée après « Retour » n'est plus celle d'avant.</summary>
+    public static string KeyReplaced => Text(nameof(KeyReplaced));
+
     /// <summary>« J'ai rangé ma clé de récupération ».</summary>
     public static string KeyStored => Text(nameof(KeyStored));
+
+    /// <summary>Ce qui manque pour commencer le chiffrement.</summary>
+    public static string KeyStoredBeforeEncrypting => Text(nameof(KeyStoredBeforeEncrypting));
 
     /// <summary>La fenêtre de la clé ne se ferme qu'une fois la clé rangée.</summary>
     public static string KeyStoredFirst => Text(nameof(KeyStoredFirst));
@@ -125,11 +220,23 @@ public static class EncryptionText
     /// <summary>« Nouvelle clé de récupération » : le titre de la fenêtre qui demande le mot de passe.</summary>
     public static string NewRecoveryKeyTitle => Text(nameof(NewRecoveryKeyTitle));
 
+    /// <summary>Le coffre n'a pas pu être fermé pour la conversion.</summary>
+    public static string NotClosed => Text(nameof(NotClosed));
+
     /// <summary>« Ce coffre n'a pas pu être ouvert. ».</summary>
     public static string NotUnlocked => Text(nameof(NotUnlocked));
 
     /// <summary>L'ancienne clé de récupération n'ouvre plus le coffre, mais encore ses anciennes sauvegardes.</summary>
     public static string OldRecoveryKey => Text(nameof(OldRecoveryKey));
+
+    /// <summary>« Ouvrir le coffre en clair » : après un déchiffrement.</summary>
+    public static string OpenDecrypted => Text(nameof(OpenDecrypted));
+
+    /// <summary>« Ouvrir le coffre chiffré » : après un chiffrement.</summary>
+    public static string OpenEncrypted => Text(nameof(OpenEncrypted));
+
+    /// <summary>« Ouverture du coffre… » : après la conversion.</summary>
+    public static string Opening => Text(nameof(Opening));
 
     /// <summary>« Ouvrir un autre coffre… ».</summary>
     public static string OtherVault => Text(nameof(OtherVault));
@@ -145,6 +252,25 @@ public static class EncryptionText
 
     /// <summary>Un mot de passe changé juste avant un verrouillage : la lecture suivante du coffre le dit.</summary>
     public static string PasswordChangedWhileLocking => Text(nameof(PasswordChangedWhileLocking));
+
+    /// <summary>Ce que fait le mot de passe d'un coffre chiffré.</summary>
+    public static string PasswordStepHelp => Text(nameof(PasswordStepHelp));
+
+    /// <summary>« Étape 1 sur 3 : le mot de passe ».</summary>
+    public static string PasswordStepTitle => Text(nameof(PasswordStepTitle));
+
+    /// <summary>Le titre du choix du dossier d'un coffre déchiffré.</summary>
+    public static string PickDecryptedParent => Text(nameof(PickDecryptedParent));
+
+    /// <summary>« Choisir un autre dossier… ».</summary>
+    public static string PickOtherParent => Text(nameof(PickOtherParent));
+
+    /// <summary>Le dossier des sauvegardes en clair d'un coffre qu'on vient de chiffrer.</summary>
+    /// <param name="folder">Le dossier des sauvegardes.</param>
+    public static string PlainBackupsOf(string folder) => Format("PlainBackups", folder);
+
+    /// <summary>En mode portable, ce qu'il faut faire pour que le nouveau coffre soit celui du démarrage.</summary>
+    public static string PortableNext => Text(nameof(PortableNext));
 
     /// <summary>Comment recopier la clé de récupération.</summary>
     public static string RecoveryHelp => Text(nameof(RecoveryHelp));
@@ -173,6 +299,9 @@ public static class EncryptionText
     /// <summary>« Votre clé de récupération » : le titre de la fenêtre qui montre la nouvelle.</summary>
     public static string RecoveryKeyShownTitle => Text(nameof(RecoveryKeyShownTitle));
 
+    /// <summary>« Étape 2 sur 3 : la clé de récupération ».</summary>
+    public static string RecoveryStepTitle => Text(nameof(RecoveryStepTitle));
+
     /// <summary>« Se souvenir sur cet ordinateur ».</summary>
     public static string Remember => Text(nameof(Remember));
 
@@ -193,6 +322,15 @@ public static class EncryptionText
 
     /// <summary>« Enregistrement de la nouvelle clé de récupération… » : la carte écrit l'en-tête.</summary>
     public static string SavingRecoveryKey => Text(nameof(SavingRecoveryKey));
+
+    /// <summary>« 3 · Conversion » : la troisième étape du chiffrement.</summary>
+    public static string StepConversion => Text(nameof(StepConversion));
+
+    /// <summary>« 1 · Mot de passe » : la première étape du chiffrement.</summary>
+    public static string StepPassword => Text(nameof(StepPassword));
+
+    /// <summary>« 2 · Clé de récupération » : la deuxième étape du chiffrement.</summary>
+    public static string StepRecoveryKey => Text(nameof(StepRecoveryKey));
 
     /// <summary>« Ouvrir ».</summary>
     public static string Unlock => Text(nameof(Unlock));

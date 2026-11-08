@@ -1,7 +1,7 @@
 {
   "platformOptions": {
     "Coverlet": {
-      "include": "[KyfRev.Infrastructure.Vault]*,[kyfrev*coffre]*",
+      "include": "[KyfRev.Infrastructure.Vault]*,[kyfrev*coffre]*,[KyfRev.Conversion]*",
       "excludeByAttribute": "ExcludeFromCodeCoverage,ExcludeFromCodeCoverageAttribute,GeneratedCodeAttribute,CompilerGeneratedAttribute"
     }
   }

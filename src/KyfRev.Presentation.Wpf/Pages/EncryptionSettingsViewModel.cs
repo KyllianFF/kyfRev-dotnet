@@ -111,6 +111,12 @@ public sealed partial class EncryptionSettingsViewModel : ObservableObject, IFor
     /// <summary>Le coffre peut être verrouillé d'ici.</summary>
     public bool CanLockNow => _lockNow is not null;
 
+    /// <summary>« Déchiffrer vers un dossier… » : la page de la conversion s'ouvre ; rien : la carte ne le propose pas.</summary>
+    public Action? DecryptionAsked { get; init; }
+
+    /// <summary>Le coffre peut être déchiffré d'ici.</summary>
+    public bool CanDecrypt => DecryptionAsked is not null;
+
     /// <summary>Une dérivation ou une écriture est en cours : elle prend de l'ordre d'une seconde.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsIdle))]
@@ -578,6 +584,16 @@ public sealed partial class EncryptionSettingsViewModel : ObservableObject, IFor
         KeyMessage = null;
         DropDraft();
         Message = EncryptionText.RecoveryKeyKept;
+    }
+
+    /// <summary>« Déchiffrer vers un dossier… » : la page de la conversion remplace les vues, le coffre restant ouvert derrière.</summary>
+    [RelayCommand(CanExecute = nameof(CanDecrypt))]
+    private void RequestDecryption()
+    {
+        if (IsEncrypted && IsIdle)
+        {
+            DecryptionAsked?.Invoke();
+        }
     }
 
     /// <summary>« Verrouiller maintenant (Ctrl+Maj+L) ».</summary>

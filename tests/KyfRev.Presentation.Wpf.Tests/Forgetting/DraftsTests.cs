@@ -206,6 +206,7 @@ public sealed class DraftsTests
 
         Assert.IsTrue(await page.LeaveAsync(), "incomplet, il est abandonné");
         Assert.AreEqual(mitose.Explanation, glossary.StoredExplanation("Mitose"), "rien n'a été écrit");
+        Assert.IsTrue(page.HasUnsavedDraft, "il reste en cours : une conversion attendra, sans le perdre");
 
         // Un refus du coffre aussi.
         mitose.EditedExplanation = "Une division.";

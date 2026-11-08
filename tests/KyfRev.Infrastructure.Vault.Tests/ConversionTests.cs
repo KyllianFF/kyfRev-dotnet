@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text.RegularExpressions;
 using KyfRev.Cli;
+using KyfRev.Conversion;
 using KyfRev.Infrastructure.Crypto;
 using KyfRev.Infrastructure.Vault.Tests.Support;
 using KyfRev.Tests.Support;

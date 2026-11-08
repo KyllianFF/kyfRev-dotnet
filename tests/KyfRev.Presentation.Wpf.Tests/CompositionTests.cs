@@ -72,6 +72,7 @@ public sealed class CompositionTests
     {
         var references = typeof(ShellViewModel).Assembly.GetReferencedAssemblies().Select(reference => reference.Name!).ToList();
         Assert.IsFalse(references.Any(name => name.StartsWith("KyfRev.Infrastructure.", StringComparison.Ordinal)), string.Join(", ", references));
+        CollectionAssert.DoesNotContain(references, "KyfRev.Conversion", "la conversion passe par le port de l'application");
         CollectionAssert.Contains(references, "KyfRev.Application");
         CollectionAssert.Contains(references, "KyfRev.DesignSystem");
         var designSystem = typeof(KyfRev.DesignSystem.DesignResources).Assembly.GetReferencedAssemblies().Select(reference => reference.Name!);

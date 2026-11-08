@@ -154,7 +154,12 @@ effacée de la mémoire.
 ```
 kyfrev-coffre chiffrer <coffre en clair> <nouveau dossier> [--pbkdf2]
 kyfrev-coffre dechiffrer <coffre chiffré> <nouveau dossier>
+kyfrev-coffre verifier <coffre> [--json]
 ```
+
+- **`verifier`** lit un coffre en clair comme un coffre chiffré. Pour un coffre chiffré, il demande son mot de passe ou sa
+  clé de récupération (une ligne, sans écho), lit le coffre par sa clé et fait les mêmes contrôles qu'en clair ; il
+  n'écrit aucun octet, pas même le verrou. Un mauvais secret est refusé, avec le code de sortie 3.
 
 - **Toujours vers un nouveau dossier** : la destination ne doit pas exister, ni se trouver dans la source ou autour d'elle.
   La source reste intacte, pas même son verrou n'est écrit.
@@ -299,7 +304,47 @@ coffre, et seulement pour lui, tant que l'application reste ouverte : un mot de 
 le nouveau qui ouvre le coffre), une nouvelle clé de récupération enregistrée pendant la fermeture, ou que le
 verrouillage a empêché d'enregistrer (l'ancienne ouvre toujours le coffre).
 
-L'assistant « Chiffrer ce coffre » et « Déchiffrer vers un dossier… » viennent avec la partie suivante.
+## Chiffrer et déchiffrer depuis l'application
+
+La conversion de l'outil sert aussi à l'application, sans changer de règles : toujours vers un nouveau dossier, la source
+intacte, chaque fichier relu et comparé à l'original, un dossier temporaire voisin qui ne prend son nom qu'une fois
+vérifié. Elle vit dans `KyfRev.Conversion`, le seul endroit, avec l'outil et la racine de composition, qui relie le coffre
+en clair et le chiffrement ; la présentation n'y accède que par le port `IVaultConversion`.
+
+- **« Chiffrer ce coffre… »**, dans la carte Coffre de Paramètres › Données, pour un coffre en clair. Une page remplace les
+  vues, le coffre restant ouvert derrière elle tant que la conversion n'a pas commencé (« Annuler » y revient) :
+  1. **le mot de passe**, deux fois, de 12 caractères au moins. Le chiffrement est alors préparé, sans rien écrire : la
+     clé de données est tirée au hasard et enveloppée par le mot de passe (Argon2id, réglé sur le poste) et par une clé
+     de récupération neuve ;
+  2. **la clé de récupération**, montrée une seule fois, à copier (hors de l'historique du presse-papiers) et à ranger.
+     « Retour » l'oublie : une autre viendra ;
+  3. **la conversion**, une fois « J'ai rangé ma clé de récupération » coché. Le coffre se ferme d'abord, comme à un
+     verrouillage (ce qui s'écrit s'enregistre, puis les vues oublient) : rien ne s'y écrit pendant la copie. La copie
+     s'écrit dans « Coffre chiffré », à côté du coffre (« Coffre chiffré (2) » si le nom est pris), et la page montre
+     les fichiers écrits puis relus.
+
+  Ensuite, aucun coffre n'est ouvert : « Ouvrir le coffre chiffré » montre l'écran de déverrouillage, qui demande le mot
+  de passe ; « Revenir au coffre en clair » le rouvre, intact. C'est à l'utilisateur de retirer le coffre en clair, une
+  fois satisfait, **ainsi que ses sauvegardes d'avant** : le dossier `Sauvegardes`, à côté du coffre, garde des copies en
+  clair du coffre d'avant, et la page le nomme. Ce dossier sert aussi au nouveau coffre et aux autres coffres rangés à
+  côté : il ne se retire pas en entier. Sur un disque SSD, un fichier effacé peut encore se retrouver, et BitLocker
+  reste recommandé. En mode portable, kyfRev rouvre toujours le même dossier au démarrage : pour que le nouveau coffre
+  soit celui-là, il faut retirer l'ancien dossier, puis donner son nom au nouveau, et la page le dit.
+- **« Déchiffrer vers un dossier… »**, dans la carte Chiffrement. La page demande le mot de passe ou la clé de
+  récupération, et le dossier où écrire le coffre en clair (à côté du coffre chiffré par défaut). Le secret est vérifié
+  avant que le coffre ne se ferme ; la copie s'écrit dans « Coffre (en clair) » (« (2) » si le nom est pris). Ensuite,
+  « Ouvrir le coffre en clair » l'ouvre, et « Revenir au coffre chiffré » montre l'écran de déverrouillage, sauf si ce
+  poste a retenu sa clé. Le coffre en clair se lit sans mot de passe, ses sauvegardes aussi : la page le dit.
+- **Le verrou du coffre source** est tenu pendant toute la conversion, sans y rien écrire : une autre fenêtre de kyfRev le
+  trouve pris, comme s'il était ouvert.
+- **Ce qui reste comme à l'outil** : un dossier temporaire laissé par une conversion coupée (l'application fermée pendant
+  la copie, par exemple) n'est jamais effacé, et une conversion vers le même nom refuse en le nommant, pour qu'on le
+  retire à la main ; le coffre de départ, lui, n'a pas changé. Le dossier temporaire porte un nom qui commence par un
+  point, à côté de la destination. La fenêtre ne se ferme pas pendant la conversion. Un coffre qui s'ouvre au même moment,
+  ou un brouillon qui ne s'enregistre pas (une définition incomplète, par exemple), garde le coffre ouvert : rien n'est
+  converti, et, à la différence d'un verrouillage, aucun brouillon n'est abandonné.
+- **Si le coffre ne se rouvre pas** après la conversion (un disque retiré, par exemple), l'accueil dit pourquoi et propose
+  d'en ouvrir un autre.
 
 ## Ce que les tests vérifient
 

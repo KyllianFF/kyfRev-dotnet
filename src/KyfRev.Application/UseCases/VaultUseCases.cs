@@ -32,9 +32,13 @@ public sealed partial class VaultUseCases(
     IVaultLocations locations,
     TimeProvider time,
     ILogger<VaultUseCases> logger,
-    string version)
+    string version,
+    IVaultConversion? conversion = null)
 {
     private readonly Lock _gate = new();
+
+    /// <summary>La conversion des coffres ; sans elle, rien ne se convertit.</summary>
+    private readonly IVaultConversion _conversion = conversion ?? new NoVaultConversion();
 
     /// <summary>Le coffre ouvert, s'il a été ouvert chiffré (avec sa clé) : lui seul se verrouille.</summary>
     private string? _encrypted;

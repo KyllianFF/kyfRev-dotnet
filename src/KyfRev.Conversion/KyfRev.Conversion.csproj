@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>KyfRev.Conversion</AssemblyName>
+    <RootNamespace>KyfRev.Conversion</RootNamespace>
+    <Description>La conversion d'un coffre kyfRev, toujours vers un nouveau dossier vérifié fichier par fichier : chiffrer un coffre en clair, déchiffrer un coffre chiffré. Elle seule relie le coffre en clair et le coffre chiffré.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\KyfRev.Application\KyfRev.Application.csproj" />
+    <ProjectReference Include="..\KyfRev.Infrastructure.Crypto\KyfRev.Infrastructure.Crypto.csproj" />
+    <ProjectReference Include="..\KyfRev.Infrastructure.Vault\KyfRev.Infrastructure.Vault.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- L'outil en ligne de commande y ouvre la clé d'un coffre chiffré comme le déchiffrement. -->
+    <InternalsVisibleTo Include="kyfrev-coffre" />
+    <InternalsVisibleTo Include="KyfRev.Infrastructure.Vault.Tests" />
+  </ItemGroup>
+
+</Project>

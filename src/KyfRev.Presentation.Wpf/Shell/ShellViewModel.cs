@@ -256,6 +256,24 @@ public sealed partial class ShellViewModel : ObservableObject
         UpdateResults();
     }
 
+    /// <summary>
+    /// Montre la conversion du coffre ouvert (<paramref name="page"/>), hors de l'espace de travail : ni menu ni recherche.
+    /// Le coffre reste ouvert derrière jusqu'au début de la conversion, sans rien recevoir ; il se ferme ensuite pour être
+    /// converti.
+    /// </summary>
+    public void ShowConversion(object page)
+    {
+        ArgumentNullException.ThrowIfNull(page);
+        ClosePalette();
+        IsHelpOpen = false;
+        IsWelcome = true;
+        _workspace = false;
+        SelectedMain = null;
+        SelectedSecondary = null;
+        Current = new NavigationItem("conversion", EncryptionText.ConversionPage, Icons.Lock, int.MaxValue, page);
+        UpdateResults();
+    }
+
     /// <summary>Montre l'accueil (<paramref name="page"/>) : aucun coffre n'est ouvert.</summary>
     public void ShowWelcome(object page)
     {

@@ -183,6 +183,7 @@
       "kyfRev": {
         "type": "Project",
         "dependencies": {
+          "KyfRev.Conversion": "[1.0.0-alpha.0, )",
           "KyfRev.Extensions.Host": "[1.0.0-alpha.0, )",
           "KyfRev.Infrastructure.Crypto": "[1.0.0-alpha.0, )",
           "KyfRev.Infrastructure.Online": "[1.0.0-alpha.0, )",
@@ -200,6 +201,14 @@
           "KyfRev.Domain": "[1.0.0-alpha.0, )",
           "Microsoft.Extensions.DependencyInjection.Abstractions": "[10.0.13, )",
           "Microsoft.Extensions.Logging.Abstractions": "[10.0.13, )"
+        }
+      },
+      "kyfrev.conversion": {
+        "type": "Project",
+        "dependencies": {
+          "KyfRev.Application": "[1.0.0-alpha.0, )",
+          "KyfRev.Infrastructure.Crypto": "[1.0.0-alpha.0, )",
+          "KyfRev.Infrastructure.Vault": "[1.0.0-alpha.0, )"
         }
       },
       "kyfrev.designsystem": {

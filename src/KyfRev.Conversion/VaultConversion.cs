@@ -6,16 +6,21 @@ using KyfRev.Infrastructure.Vault.Analysis;
 using KyfRev.Infrastructure.Vault.Files;
 using KyfRev.Infrastructure.Vault.Ids;
 
-namespace KyfRev.Cli;
+namespace KyfRev.Conversion;
 
 /// <summary>Ce qu'une conversion a fait, ou pourquoi elle a refusé.</summary>
 /// <param name="Succeeded">La destination est écrite et vérifiée.</param>
-/// <param name="Message">Ce qui s'est passé, pour la console.</param>
+/// <param name="Message">Ce qui s'est passé, à montrer tel quel.</param>
 /// <param name="Files">Le nombre de fichiers convertis et vérifiés.</param>
 /// <param name="RecoveryKey">La clé de récupération d'un coffre qu'on vient de chiffrer, à montrer une seule fois.</param>
-internal sealed record ConversionResult(bool Succeeded, string Message, int Files = 0, string? RecoveryKey = null)
+public sealed record ConversionResult(bool Succeeded, string Message, int Files = 0, string? RecoveryKey = null)
 {
+    /// <summary>Un refus : rien n'a été écrit.</summary>
+    /// <param name="message">Pourquoi, à montrer tel quel.</param>
     public static ConversionResult Refused(string message) => new(false, message);
+
+    /// <summary>Le message, jamais la clé de récupération.</summary>
+    public override string ToString() => Message;
 }
 
 /// <summary>
@@ -26,6 +31,7 @@ internal sealed record ConversionResult(bool Succeeded, string Message, int File
 /// essais un disque qui échoue à chaque écriture tour à tour), sauf la pose du marqueur, créé et tenu d'un même geste.
 /// </summary>
 /// <remarks>
+/// <para>
 /// Une conversion crée son dossier temporaire, vérifie qu'il est vide, puis y pose un marqueur (<see cref="MarkFile"/>),
 /// qu'elle tient et retire juste avant de lui donner le nom de la destination. Elle n'efface que ce dossier-là, le sien :
 /// refusée, elle le retire. Deux fenêtres restent sans marqueur : avant sa pose (pour un chiffrement, le temps de poser
@@ -34,11 +40,18 @@ internal sealed record ConversionResult(bool Succeeded, string Message, int File
 /// temporaire de la destination est là, une conversion vers elle refuse et le nomme, pour qu'on le retire à la main. Une
 /// source qui porte le marqueur, ou dont un dossier parent le porte, est refusée. Une erreur imprévue laisse le dossier en
 /// place, marqué, et la conversion suivante le nomme.
+/// </para>
+/// <para>
+/// Un chiffrement se fait d'un coup (<see cref="Encrypt(string, string, string, PasswordParameters, Action{string}, VaultStorage, IProgress{ConversionProgress})"/>),
+/// ou en deux temps : <see cref="Prepare"/> tire la clé de données et la clé de récupération sans rien écrire, pour qu'on
+/// note celle-ci, puis <see cref="Encrypt(EncryptionPlan, string, IProgress{ConversionProgress}, Action{string}, VaultStorage)"/>
+/// écrit le coffre chiffré. Chaque conversion dit où elle en est : les fichiers écrits, puis les fichiers relus.
+/// </para>
 /// </remarks>
-internal static class VaultConversion
+public static class VaultConversion
 {
     /// <summary>La longueur minimale d'un mot de passe de coffre.</summary>
-    public const int MinimumPasswordLength = 12;
+    public const int MinimumPasswordLength = VaultSecret.MinimumPasswordLength;
 
     /// <summary>
     /// Le marqueur d'une conversion, dans son dossier temporaire : elle le crée et le tient ouvert, seule, tant qu'elle y
@@ -46,8 +59,39 @@ internal static class VaultConversion
     /// </summary>
     internal const string MarkFile = ".kyfrev-conversion";
 
+    /// <summary>Le refus d'un secret qui n'ouvre pas le coffre chiffré, au déchiffrement comme à la vérification.</summary>
+    internal const string WrongSecret = "Ce mot de passe, ou cette clé de récupération, n'ouvre pas ce coffre.";
+
+    /// <summary>Le refus d'un chiffrement préparé déjà libéré : sa clé de données est effacée.</summary>
+    internal const string Abandoned = "Ce chiffrement préparé a été abandonné et sa clé effacée : préparez-le de nouveau. Rien n'a été écrit.";
+
+    /// <summary>Le plus de noms qu'essaie <see cref="FreeDestination"/> : le nom voulu, puis « (2) » à « (1000) ».</summary>
+    private const int MaximumDestinations = 1000;
+
     /// <summary>Les fichiers du coffre en clair qui ne sont pas du contenu : le verrou de l'application.</summary>
+    private const string OpenInKyfRev = "Ce coffre est ouvert dans kyfRev : fermez-le, puis recommencez.";
+
     private static readonly string[] Excluded = [VaultLayout.LockFile, VaultLayout.LockInfoFile];
+
+    /// <summary>
+    /// Prépare le chiffrement du coffre en clair <paramref name="source"/>, sans rien écrire : la clé de données est tirée au
+    /// hasard et enveloppée par le mot de passe (une dérivation) et par une clé de récupération neuve, à noter avant la
+    /// conversion (<see cref="Encrypt(EncryptionPlan, string, IProgress{ConversionProgress}, Action{string}, VaultStorage)"/>).
+    /// </summary>
+    /// <param name="source">Le coffre en clair ; rien n'y est écrit.</param>
+    /// <param name="password">Le mot de passe du coffre chiffré, d'au moins <see cref="MinimumPasswordLength"/> caractères.</param>
+    /// <param name="parameters">Les réglages de la dérivation.</param>
+    /// <returns>
+    /// Le chiffrement préparé, à libérer par qui le reçoit ; ou le refus, si ce n'est pas un coffre en clair ou si le mot de
+    /// passe est trop court.
+    /// </returns>
+    /// <exception cref="ArgumentException">Les réglages sont trop faibles.</exception>
+    public static EncryptionPreparation Prepare(string source, string password, PasswordParameters parameters)
+    {
+        ArgumentNullException.ThrowIfNull(password);
+        source = Path.GetFullPath(source);
+        return NotPlain(source) is { } notPlain ? EncryptionPreparation.Refused(notPlain) : Planned(source, password, parameters);
+    }
 
     /// <summary>Chiffre le coffre <paramref name="source"/> dans le nouveau dossier <paramref name="destination"/>.</summary>
     /// <param name="source">Le coffre en clair ; il reste intact.</param>
@@ -56,74 +100,59 @@ internal static class VaultConversion
     /// <param name="parameters">Les réglages de la dérivation.</param>
     /// <param name="beforeVerifying">Pour les essais : ce qui arrive au dossier temporaire entre l'écriture et la vérification.</param>
     /// <param name="disk">Là où la conversion écrit : le disque par défaut.</param>
-    public static ConversionResult Encrypt(string source, string destination, string password, PasswordParameters parameters, Action<string>? beforeVerifying = null, VaultStorage? disk = null)
+    /// <param name="progress">Les fichiers écrits, puis relus ; rien : rien n'est dit.</param>
+    public static ConversionResult Encrypt(string source, string destination, string password, PasswordParameters parameters, Action<string>? beforeVerifying = null, VaultStorage? disk = null, IProgress<ConversionProgress>? progress = null)
     {
         ArgumentNullException.ThrowIfNull(password);
-        disk ??= DiskStorage.Instance;
         source = Path.GetFullPath(source);
         destination = Path.GetFullPath(destination);
-        if (!File.Exists(VaultLayout.Absolute(source, VaultLayout.SettingsFile)))
+        if (NotPlain(source) is { } notPlain)
         {
-            return ConversionResult.Refused($"« {source} » n'est pas un coffre kyfRev en clair (il n'a pas de {VaultLayout.SettingsFile}).");
+            return ConversionResult.Refused(notPlain);
         }
         if (Refusal(source, destination) is { } refusal)
         {
             return refusal;
         }
-        if (password.Length < MinimumPasswordLength)
+        var prepared = Planned(source, password, parameters);
+        using var plan = prepared.Plan;
+        return plan is null ? ConversionResult.Refused(prepared.Refusal) : Encrypt(plan, destination, progress, beforeVerifying, disk);
+    }
+
+    /// <summary>
+    /// Chiffre le coffre préparé (<see cref="Prepare"/>) dans le nouveau dossier <paramref name="destination"/>. La conversion
+    /// travaille sur sa propre copie de la clé de données : refusée ou échouée, elle laisse le chiffrement préparé tel quel,
+    /// prêt pour un nouvel essai. Un chiffrement préparé déjà libéré est refusé.
+    /// </summary>
+    /// <param name="plan">Le chiffrement préparé ; il reste à qui l'a reçu, qui le libère.</param>
+    /// <param name="destination">Un nouveau dossier.</param>
+    /// <param name="progress">Les fichiers écrits, puis relus ; rien : rien n'est dit.</param>
+    /// <param name="beforeVerifying">Pour les essais : ce qui arrive au dossier temporaire entre l'écriture et la vérification.</param>
+    /// <param name="disk">Là où la conversion écrit : le disque par défaut.</param>
+    public static ConversionResult Encrypt(EncryptionPlan plan, string destination, IProgress<ConversionProgress>? progress = null, Action<string>? beforeVerifying = null, VaultStorage? disk = null)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        disk ??= DiskStorage.Instance;
+        destination = Path.GetFullPath(destination);
+        if (plan.CopyOfDataKey() is not { } dataKey)
         {
-            return ConversionResult.Refused($"Le mot de passe doit faire au moins {MinimumPasswordLength} caractères.");
+            return ConversionResult.Refused(Abandoned);
         }
-        var vaultId = VaultInspector.Inspect(source).Summary.VaultId ?? "v_" + UlidGenerator.System.Next();
-        var (header, dataKey, recovery) = VaultHeader.Create(vaultId, password, parameters);
-        string? temporary = null;
-        ConversionMark? mark = null;
         try
         {
-            temporary = Temporary(destination, disk);
-            var expected = new SortedDictionary<string, byte[]>(StringComparer.Ordinal);
-            var folders = new SortedSet<string>(StringComparer.Ordinal);
-            using (var vault = EncryptedVault.Create(temporary, header, dataKey, disk))
+            // Le coffre a pu changer depuis la préparation : les contrôles se refont au moment d'écrire.
+            if (NotPlain(plan.Source) is { } notPlain)
             {
-                // Un coffre chiffré se crée dans un dossier vide : le marqueur vient aussitôt après, avant tout fichier du coffre.
-                mark = ConversionMark.Take(temporary);
-                foreach (var folder in Directory.EnumerateDirectories(source, "*", SearchOption.AllDirectories))
-                {
-                    var relative = Relative(source, folder);
-                    vault.AddFolder(relative);
-                    folders.Add(relative);
-                }
-                foreach (var file in Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories))
-                {
-                    var relative = Relative(source, file);
-                    if (Excluded.Contains(relative, StringComparer.Ordinal) || Path.GetFileName(file).StartsWith(AtomicFile.TemporaryPrefix, StringComparison.Ordinal))
-                    {
-                        continue;
-                    }
-                    var content = File.ReadAllBytes(file);
-                    vault.Write(relative, content);
-                    expected[relative] = SHA256.HashData(content);
-                }
-                vault.Flush();
+                return ConversionResult.Refused(notPlain);
             }
-            beforeVerifying?.Invoke(temporary);
-
-            // La vérification repart de l'en-tête écrit, avec le mot de passe : une erreur d'enveloppe se verrait ici.
-            if (Reread(temporary, EncryptedVault.ReadHeader(temporary).Open(password), expected, folders) is { } mismatch)
+            if (Refusal(plan.Source, destination) is { } refusal)
             {
-                return ConversionResult.Refused(mismatch + Discard(temporary, destination, disk, mark));
+                return refusal;
             }
-            mark.Remove(disk);
-            disk.MoveDirectory(temporary, destination);
-            return new ConversionResult(true, $"Coffre chiffré dans « {destination} » : {expected.Count} fichiers, chacun relu et vérifié. La source n'a pas changé.", expected.Count, recovery);
-        }
-        catch (Exception exception) when (IsRefusal(exception))
-        {
-            return ConversionResult.Refused($"Le chiffrement a échoué ({exception.Message}) : rien n'a été écrit dans « {destination} »." + Discard(temporary, destination, disk, mark));
+            return Encrypted(plan, dataKey, destination, progress, beforeVerifying, disk);
         }
         finally
         {
-            mark?.Dispose();
             PasswordKeys.Clear(dataKey);
         }
     }
@@ -137,7 +166,9 @@ internal static class VaultConversion
     /// <param name="secret">Le mot de passe, ou la clé de récupération.</param>
     /// <param name="beforeVerifying">Pour les essais : ce qui arrive au dossier temporaire entre l'écriture et la vérification.</param>
     /// <param name="disk">Là où la conversion écrit : le disque par défaut.</param>
-    public static ConversionResult Decrypt(string source, string destination, string secret, Action<string>? beforeVerifying = null, VaultStorage? disk = null)
+    /// <param name="progress">Les fichiers écrits, puis relus ; rien : rien n'est dit.</param>
+    /// <param name="isRecoveryKey">Ce qu'est le secret, quand l'appelant le sait ; rien : sa forme le dit.</param>
+    public static ConversionResult Decrypt(string source, string destination, string secret, Action<string>? beforeVerifying = null, VaultStorage? disk = null, IProgress<ConversionProgress>? progress = null, bool? isRecoveryKey = null)
     {
         ArgumentNullException.ThrowIfNull(secret);
         disk ??= DiskStorage.Instance;
@@ -151,20 +182,15 @@ internal static class VaultConversion
         {
             return refusal;
         }
-        byte[] dataKey;
-        try
+        if (OpenDataKey(source, secret, isRecoveryKey) is not { } dataKey)
         {
-            var header = EncryptedVault.ReadHeader(source);
-            dataKey = RecoveryKey.Parse(secret) is { } recovery ? Opened(header, recovery, secret) : header.Open(secret);
-        }
-        catch (VaultCryptoException)
-        {
-            return ConversionResult.Refused("Ce mot de passe, ou cette clé de récupération, n'ouvre pas ce coffre.");
+            return ConversionResult.Refused(WrongSecret);
         }
         string? temporary = null;
         ConversionMark? mark = null;
         try
         {
+            using var held = HoldSource(source);
             using var vault = EncryptedVault.Open(source, dataKey, DiskStorage.Instance);
             temporary = Temporary(destination, disk);
             mark = ConversionMark.Take(temporary);
@@ -173,7 +199,9 @@ internal static class VaultConversion
             {
                 disk.CreateDirectory(VaultLayout.Absolute(temporary, folder));
             }
-            foreach (var path in vault.Files)
+            var files = vault.Files;
+            var written = 0;
+            foreach (var path in files)
             {
                 var content = vault.Read(path);
                 var target = VaultLayout.Absolute(temporary, path);
@@ -183,14 +211,19 @@ internal static class VaultConversion
                     throw new IOException($"« {path} » existe déjà dans le dossier temporaire.");
                 }
                 expected[path] = SHA256.HashData(content);
+                written++;
+                progress?.Report(new ConversionProgress(ConversionStep.Writing, written, files.Count));
             }
             beforeVerifying?.Invoke(temporary);
+            var verified = 0;
             foreach (var (path, hash) in expected)
             {
                 if (!CryptographicOperations.FixedTimeEquals(hash, SHA256.HashData(disk.ReadAllBytes(VaultLayout.Absolute(temporary, path)))))
                 {
                     return ConversionResult.Refused($"« {path} » ne se relit pas à l'identique : rien n'a été écrit dans « {destination} »." + Discard(temporary, destination, disk, mark));
                 }
+                verified++;
+                progress?.Report(new ConversionProgress(ConversionStep.Verifying, verified, expected.Count));
             }
             mark.Remove(disk);
             disk.MoveDirectory(temporary, destination);
@@ -206,6 +239,172 @@ internal static class VaultConversion
             PasswordKeys.Clear(dataKey);
         }
     }
+
+    /// <summary>
+    /// Le premier dossier libre pour une conversion dans <paramref name="parent"/> : <paramref name="name"/>, puis
+    /// « <paramref name="name"/> (2) », « (3) »… jusqu'à « (1000) ». Libre : ni dossier ni fichier de ce nom. Rien n'est
+    /// écrit : la conversion vérifie de nouveau, au moment d'écrire, que sa destination n'existe pas.
+    /// </summary>
+    /// <param name="parent">Le dossier qui contiendra la conversion.</param>
+    /// <param name="name">Le nom voulu.</param>
+    /// <exception cref="IOException">Les mille noms sont pris.</exception>
+    public static string FreeDestination(string parent, string name)
+    {
+        ArgumentNullException.ThrowIfNull(parent);
+        ArgumentNullException.ThrowIfNull(name);
+        for (var number = 1; number <= MaximumDestinations; number++)
+        {
+            var candidate = Path.Combine(parent, number == 1 ? name : $"{name} ({number})");
+            if (!Directory.Exists(candidate) && !File.Exists(candidate))
+            {
+                return candidate;
+            }
+        }
+        throw new IOException($"« {name} » et ses variantes numérotées jusqu'à « {name} ({MaximumDestinations}) » sont tous pris dans « {parent} ».");
+    }
+
+    /// <summary>
+    /// La clé de données du coffre chiffré <paramref name="source"/>, ouverte par son mot de passe ou par sa clé de
+    /// récupération : un texte qui se lit comme une clé de récupération en est une. Rien si le secret n'ouvre pas le coffre,
+    /// ou si son en-tête ne se lit pas. Rien n'est écrit ; la clé rendue est à effacer après usage.
+    /// </summary>
+    internal static byte[]? OpenDataKey(string source, string secret, bool? isRecoveryKey = null)
+    {
+        try
+        {
+            var header = EncryptedVault.ReadHeader(source);
+            if (isRecoveryKey is { } known)
+            {
+                return known ? header.OpenWithRecovery(secret) : header.Open(secret);
+            }
+            return RecoveryKey.Parse(secret) is { } recovery ? Opened(header, recovery, secret) : header.Open(secret);
+        }
+        catch (VaultCryptoException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Relit le coffre chiffré écrit dans <paramref name="temporary"/> avec la clé que son en-tête vient de rendre, puis
+    /// efface cette clé, que la relecture réussisse ou non. Rend ce qui manque ou diffère.
+    /// </summary>
+    internal static string? Reread(string temporary, byte[] key, SortedDictionary<string, byte[]> expected, SortedSet<string> folders, IProgress<ConversionProgress>? progress = null)
+    {
+        try
+        {
+            using var reopened = EncryptedVault.Open(temporary, key, DiskStorage.Instance);
+            return Mismatch(expected, folders, reopened, progress);
+        }
+        finally
+        {
+            PasswordKeys.Clear(key);
+        }
+    }
+
+    /// <summary>Ce qui fait refuser un chiffrement : la source n'est pas un coffre en clair.</summary>
+    private static string? NotPlain(string source) =>
+        File.Exists(VaultLayout.Absolute(source, VaultLayout.SettingsFile))
+            ? null
+            : $"« {source} » n'est pas un coffre kyfRev en clair (il n'a pas de {VaultLayout.SettingsFile}).";
+
+    /// <summary>
+    /// Le chiffrement préparé du coffre en clair <paramref name="source"/>, déjà reconnu : le mot de passe est vérifié, puis
+    /// l'en-tête créé. L'original de la clé de données est effacé : seul le chiffrement préparé en garde une copie.
+    /// </summary>
+    private static EncryptionPreparation Planned(string source, string password, PasswordParameters parameters)
+    {
+        if (password.Length < MinimumPasswordLength)
+        {
+            return EncryptionPreparation.Refused($"Le mot de passe doit faire au moins {MinimumPasswordLength} caractères.");
+        }
+        var vaultId = VaultInspector.Inspect(source).Summary.VaultId ?? "v_" + UlidGenerator.System.Next();
+        var (header, dataKey, recovery) = VaultHeader.Create(vaultId, password, parameters);
+        EncryptionPlan? plan = null;
+        try
+        {
+            plan = new EncryptionPlan(source, header, dataKey, password, recovery);
+            var prepared = EncryptionPreparation.Ready(plan);
+            plan = null;
+            return prepared;
+        }
+        finally
+        {
+            plan?.Dispose();
+            PasswordKeys.Clear(dataKey);
+        }
+    }
+
+    /// <summary>
+    /// Écrit le coffre chiffré de <paramref name="plan"/> dans un dossier temporaire, le relit, puis lui donne le nom de
+    /// <paramref name="destination"/>. Les contrôles sont faits ; <paramref name="dataKey"/> est la copie de la clé que la
+    /// conversion efface ensuite.
+    /// </summary>
+    private static ConversionResult Encrypted(EncryptionPlan plan, byte[] dataKey, string destination, IProgress<ConversionProgress>? progress, Action<string>? beforeVerifying, VaultStorage disk)
+    {
+        var source = plan.Source;
+        string? temporary = null;
+        ConversionMark? mark = null;
+        try
+        {
+            using var held = HoldSource(plan.Source);
+            temporary = Temporary(destination, disk);
+            var expected = new SortedDictionary<string, byte[]>(StringComparer.Ordinal);
+            var folders = new SortedSet<string>(StringComparer.Ordinal);
+            using (var vault = EncryptedVault.Create(temporary, plan.Header, dataKey, disk))
+            {
+                // Un coffre chiffré se crée dans un dossier vide : le marqueur vient aussitôt après, avant tout fichier du coffre.
+                mark = ConversionMark.Take(temporary);
+                foreach (var folder in Directory.EnumerateDirectories(source, "*", SearchOption.AllDirectories))
+                {
+                    var relative = Relative(source, folder);
+                    vault.AddFolder(relative);
+                    folders.Add(relative);
+                }
+                // Les fichiers sont comptés avant d'être écrits : la progression dit combien il en reste.
+                var files = ContentsOf(source);
+                var written = 0;
+                foreach (var (file, relative) in files)
+                {
+                    var content = File.ReadAllBytes(file);
+                    vault.Write(relative, content);
+                    expected[relative] = SHA256.HashData(content);
+                    written++;
+                    progress?.Report(new ConversionProgress(ConversionStep.Writing, written, files.Count));
+                }
+                vault.Flush();
+            }
+            beforeVerifying?.Invoke(temporary);
+
+            // La vérification repart de l'en-tête écrit, avec le mot de passe : une erreur d'enveloppe se verrait ici.
+            if (Reread(temporary, EncryptedVault.ReadHeader(temporary).Open(plan.Password), expected, folders, progress) is { } mismatch)
+            {
+                return ConversionResult.Refused(mismatch + Discard(temporary, destination, disk, mark));
+            }
+            mark.Remove(disk);
+            disk.MoveDirectory(temporary, destination);
+            return new ConversionResult(true, $"Coffre chiffré dans « {destination} » : {expected.Count} fichiers, chacun relu et vérifié. La source n'a pas changé.", expected.Count, plan.RecoveryKey);
+        }
+        catch (Exception exception) when (IsRefusal(exception))
+        {
+            return ConversionResult.Refused($"Le chiffrement a échoué ({exception.Message}) : rien n'a été écrit dans « {destination} »." + Discard(temporary, destination, disk, mark));
+        }
+        finally
+        {
+            mark?.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// Les fichiers de contenu du coffre en clair <paramref name="source"/>, et leur chemin dans le coffre : ni son verrou, ni
+    /// le fichier temporaire d'une écriture atomique.
+    /// </summary>
+    private static List<(string File, string Relative)> ContentsOf(string source) =>
+    [
+        .. Directory.EnumerateFiles(source, "*", SearchOption.AllDirectories)
+            .Select(file => (File: file, Relative: Relative(source, file)))
+            .Where(entry => !Excluded.Contains(entry.Relative, StringComparer.Ordinal) && !Path.GetFileName(entry.File).StartsWith(AtomicFile.TemporaryPrefix, StringComparison.Ordinal)),
+    ];
 
     private static byte[] Opened(VaultHeader header, byte[] recovery, string secret)
     {
@@ -253,7 +452,7 @@ internal static class VaultConversion
         }
         if (IsOpenElsewhere(source))
         {
-            return ConversionResult.Refused("Ce coffre est ouvert dans kyfRev : fermez-le, puis recommencez.");
+            return ConversionResult.Refused(OpenInKyfRev);
         }
         return null;
     }
@@ -271,7 +470,7 @@ internal static class VaultConversion
     /// Ce qui fait refuser la conversion plutôt qu'arrêter l'outil : le disque, les droits, le chiffrement, un chemin ou un
     /// argument refusé. Le reste est une erreur imprévue : elle remonte, et laisse le dossier temporaire marqué.
     /// </summary>
-    private static bool IsRefusal(Exception exception) =>
+    internal static bool IsRefusal(Exception exception) =>
         exception is IOException or UnauthorizedAccessException or VaultCryptoException or CryptographicException or ArgumentException or NotSupportedException;
 
     /// <summary>
@@ -296,6 +495,35 @@ internal static class VaultConversion
     }
 
     /// <summary>
+    /// Tient le verrou du coffre source pendant toute la conversion : le même verrou, sur la même plage, que celui qu'une
+    /// session ouvre (<c>.suivi/verrou</c>). Une autre fenêtre de kyfRev, ou une autre conversion, trouve donc le coffre
+    /// pris, et rien ne s'y écrit pendant la copie. Rien n'y est écrit non plus : le fichier existe, ou la source n'en a pas,
+    /// et rien n'est tenu. Rend de quoi le relâcher.
+    /// </summary>
+    private static FileStream? HoldSource(string source)
+    {
+        var lockFile = VaultLayout.Absolute(source, VaultLayout.LockFile);
+        if (!File.Exists(lockFile))
+        {
+            return null;
+        }
+        var held = new FileStream(lockFile, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        try
+        {
+            if (OperatingSystem.IsWindows() || OperatingSystem.IsLinux())
+            {
+                held.Lock(0, long.MaxValue);
+            }
+            return held;
+        }
+        catch (IOException exception)
+        {
+            held.Dispose();
+            throw new IOException(OpenInKyfRev, exception);
+        }
+    }
+
+    /// <summary>
     /// Le coffre est ouvert dans kyfRev : l'application tient son verrou ouvert. Le vérifier n'écrit rien : on tente seulement
     /// de l'ouvrir pour soi seul.
     /// </summary>
@@ -317,36 +545,22 @@ internal static class VaultConversion
         }
     }
 
-    /// <summary>
-    /// Relit le coffre chiffré écrit dans <paramref name="temporary"/> avec la clé que son en-tête vient de rendre, puis
-    /// efface cette clé, que la relecture réussisse ou non. Rend ce qui manque ou diffère.
-    /// </summary>
-    internal static string? Reread(string temporary, byte[] key, SortedDictionary<string, byte[]> expected, SortedSet<string> folders)
-    {
-        try
-        {
-            using var reopened = EncryptedVault.Open(temporary, key, DiskStorage.Instance);
-            return Mismatch(expected, folders, reopened);
-        }
-        finally
-        {
-            PasswordKeys.Clear(key);
-        }
-    }
-
-    /// <summary>Ce qui manque ou diffère entre le coffre relu et la source.</summary>
-    private static string? Mismatch(SortedDictionary<string, byte[]> expected, SortedSet<string> folders, EncryptedVault reopened)
+    /// <summary>Ce qui manque ou diffère entre le coffre relu et la source ; chaque fichier relu fait avancer la progression.</summary>
+    private static string? Mismatch(SortedDictionary<string, byte[]> expected, SortedSet<string> folders, EncryptedVault reopened, IProgress<ConversionProgress>? progress)
     {
         if (!expected.Keys.SequenceEqual(reopened.Files, StringComparer.Ordinal) || !folders.SetEquals(reopened.Folders))
         {
             return "Le coffre chiffré ne contient pas exactement les fichiers et les dossiers de la source : rien n'a été écrit.";
         }
+        var verified = 0;
         foreach (var (path, hash) in expected)
         {
             if (!CryptographicOperations.FixedTimeEquals(hash, SHA256.HashData(reopened.Read(path))))
             {
                 return $"« {path} » ne se relit pas à l'identique : rien n'a été écrit.";
             }
+            verified++;
+            progress?.Report(new ConversionProgress(ConversionStep.Verifying, verified, expected.Count));
         }
         return null;
     }

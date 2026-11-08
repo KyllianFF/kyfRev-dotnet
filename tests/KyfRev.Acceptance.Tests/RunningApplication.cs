@@ -305,6 +305,33 @@ internal sealed class RunningApplication : IDisposable
         Press("UnlockButton");
     }
 
+    /// <summary>
+    /// « Chiffrer ce coffre… », depuis Paramètres › Données : le mot de passe deux fois (par le motif de valeur des
+    /// champs), « Continuer », la clé de récupération lue puis dite rangée, « Chiffrer le coffre », et l'attente de la
+    /// conversion. Rend la clé de récupération montrée.
+    /// </summary>
+    public string EncryptVault(string password)
+    {
+        OpenView("Paramètres");
+        OpenSettingsTab("Données");
+        Press("EncryptVaultButton");
+        Wait("NewPasswordBox").Patterns.Value.Pattern.SetValue(password);
+        Wait("ConfirmPasswordBox").Patterns.Value.Pattern.SetValue(password);
+        Press("ContinueButton");
+        var key = Retry.WhileEmpty(() => Find("RecoveryKeyText")?.Patterns.Value.Pattern.Value.Value ?? string.Empty, Patience, Interval, throwOnTimeout: true, timeoutMessage: "La clé de récupération ne s'est pas montrée.").Result!;
+        Wait("KeyStoredBox").Patterns.Toggle.Pattern.Toggle();
+        Press("EncryptButton");
+        Wait("OpenNewButton");
+        return key;
+    }
+
+    /// <summary>« Ouvrir le coffre chiffré » (ou en clair), une fois la conversion faite.</summary>
+    public void OpenConverted()
+    {
+        Press("OpenNewButton");
+        Wait("UnlockButton");
+    }
+
     /// <summary>Ouvre une vue du menu, comme d'un clic sur son entrée, et attend son titre.</summary>
     public void OpenView(string name)
     {

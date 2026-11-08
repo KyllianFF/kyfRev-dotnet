@@ -8,6 +8,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\KyfRev.Application\KyfRev.Application.csproj" />
     <ProjectReference Include="..\..\src\KyfRev.Cli\KyfRev.Cli.csproj" />
+    <ProjectReference Include="..\..\src\KyfRev.Conversion\KyfRev.Conversion.csproj" />
     <ProjectReference Include="..\..\src\KyfRev.Domain\KyfRev.Domain.csproj" />
     <ProjectReference Include="..\..\src\KyfRev.Extensions.Host\KyfRev.Extensions.Host.csproj" />
     <ProjectReference Include="..\..\src\KyfRev.Infrastructure.Crypto\KyfRev.Infrastructure.Crypto.csproj" />

@@ -5,10 +5,11 @@
     <TargetFramework>net10.0</TargetFramework>
     <AssemblyName>kyfrev-coffre</AssemblyName>
     <RootNamespace>KyfRev.Cli</RootNamespace>
-    <Description>Outil en ligne de commande du coffre kyfRev : vérification, et bientôt conversion et export.</Description>
+    <Description>Outil en ligne de commande du coffre kyfRev : vérification d'un coffre en clair ou chiffré, conversion (chiffrer, déchiffrer), et bientôt export.</Description>
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\KyfRev.Conversion\KyfRev.Conversion.csproj" />
     <ProjectReference Include="..\KyfRev.Infrastructure.Crypto\KyfRev.Infrastructure.Crypto.csproj" />
     <ProjectReference Include="..\KyfRev.Infrastructure.Vault\KyfRev.Infrastructure.Vault.csproj" />
   </ItemGroup>

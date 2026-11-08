@@ -1,7 +1,9 @@
 using System.CommandLine;
 using System.Text;
+using KyfRev.Conversion;
 using KyfRev.Infrastructure.Crypto;
 using KyfRev.Infrastructure.Vault.Analysis;
+using KyfRev.Infrastructure.Vault.Files;
 
 namespace KyfRev.Cli;
 
@@ -17,24 +19,31 @@ internal static class VaultCommands
     /// <summary>Le dossier n'est pas un coffre kyfRev.</summary>
     public const int NotAVault = 2;
 
-    /// <summary>La conversion a refusé ou échoué : rien n'a été écrit.</summary>
+    /// <summary>La conversion a refusé ou échoué, ou le secret n'ouvre pas le coffre chiffré à vérifier : rien n'a été écrit.</summary>
     public const int Refused = 3;
 
     /// <summary>
     /// Les commandes, écrivant sur <paramref name="output"/>. Les mots de passe se lisent dans <paramref name="input"/> s'il est
-    /// donné (les essais), sinon au clavier sans écho, ou ligne à ligne si l'entrée est redirigée.
+    /// donné (les essais), sinon au clavier sans écho, ou ligne à ligne si l'entrée est redirigée. Avec <c>--json</c>, la
+    /// question du mot de passe et le refus s'écrivent sur <paramref name="errors"/> (la sortie d'erreur par défaut) :
+    /// <paramref name="output"/> ne porte que le rapport.
     /// </summary>
-    public static RootCommand Build(TextWriter output, TextReader? input = null)
+    public static RootCommand Build(TextWriter output, TextReader? input = null, TextWriter? errors = null)
     {
         ArgumentNullException.ThrowIfNull(output);
-        var vault = new Argument<DirectoryInfo>("coffre") { Description = "Dossier du coffre (celui qui contient .suivi/coffre.json)." };
+        var vault = new Argument<DirectoryInfo>("coffre") { Description = $"Dossier du coffre (celui qui contient .suivi/coffre.json, ou {EncryptedVault.HeaderFile} s'il est chiffré)." };
         var json = new Option<bool>("--json") { Description = "Rapport au format JSON, pour un traitement automatique." };
-        var verify = new Command("verifier", "Analyse le coffre en lecture seule : rien n'y est écrit ni verrouillé.") { vault, json };
+        var verify = new Command("verifier", "Analyse le coffre, en clair ou chiffré, en lecture seule : rien n'y est écrit ni verrouillé. Un coffre chiffré demande son mot de passe ou sa clé de récupération.") { vault, json };
         verify.SetAction(parseResult =>
         {
-            var inspection = VaultInspector.Inspect(parseResult.GetValue(vault)!.FullName);
-            output.Write(parseResult.GetValue(json) ? InspectionReport.ToJson(inspection) : InspectionReport.ToText(inspection));
-            return !inspection.IsVault ? NotAVault : inspection.HasErrors ? ErrorsFound : Success;
+            var root = parseResult.GetValue(vault)!.FullName;
+            var asJson = parseResult.GetValue(json);
+            if (!EncryptedVault.IsEncrypted(root))
+            {
+                return Report(VaultInspector.Inspect(root), asJson, output);
+            }
+            var said = asJson ? errors ?? Console.Error : output;
+            return VerifyEncrypted(root, Secret(said, input, "Mot de passe ou clé de récupération : "), asJson, output, said);
         });
 
         var source = new Argument<DirectoryInfo>("source") { Description = "Le coffre à convertir ; il reste intact." };
@@ -74,6 +83,71 @@ internal static class VaultCommands
         });
 
         return new RootCommand("Outil du coffre kyfRev.") { verify, encrypt, decrypt };
+    }
+
+    /// <summary>Écrit le rapport de l'analyse, en texte ou en JSON, et rend le code de sortie qui la résume.</summary>
+    private static int Report(VaultInspection inspection, bool asJson, TextWriter output)
+    {
+        output.Write(asJson ? InspectionReport.ToJson(inspection) : InspectionReport.ToText(inspection));
+        return !inspection.IsVault ? NotAVault : inspection.HasErrors ? ErrorsFound : Success;
+    }
+
+    /// <summary>
+    /// Analyse le coffre chiffré <paramref name="root"/>, en lecture seule : sa clé s'ouvre comme pour le déchiffrer, par le mot
+    /// de passe ou par la clé de récupération, et ses fichiers se lisent par son index, sans que rien ne soit écrit, ni sur le
+    /// disque, ni ailleurs qu'en mémoire. La clé est effacée ensuite. Un secret qui n'ouvre pas le coffre est refusé comme au
+    /// déchiffrement ; un index qui ne s'ouvre pas est une erreur.
+    /// </summary>
+    /// <param name="root">Le dossier du coffre chiffré.</param>
+    /// <param name="secret">Son mot de passe, ou sa clé de récupération.</param>
+    /// <param name="asJson">Vrai : le rapport en JSON.</param>
+    /// <param name="output">Là où s'écrit le rapport.</param>
+    /// <param name="said">Là où s'écrivent les refus : la sortie, ou la sortie d'erreur avec <c>--json</c>.</param>
+    private static int VerifyEncrypted(string root, string secret, bool asJson, TextWriter output, TextWriter said)
+    {
+        try
+        {
+            var header = EncryptedVault.ReadHeader(root);
+            var recovery = RecoveryKey.Parse(secret);
+            if (recovery is not null)
+            {
+                PasswordKeys.Clear(recovery);
+            }
+            else if (!PasswordKeys.IsReadable(header.Password))
+            {
+                throw new VaultCryptoException("Les réglages du mot de passe sont illisibles.");
+            }
+        }
+        catch (VaultCryptoException exception)
+        {
+            // Un en-tête abîmé, ou d'un format plus récent : ce n'est pas le secret qui est en cause.
+            said.WriteLine($"{exception.Message} Le coffre ne peut pas être analysé ; rien n'y a été écrit.");
+            return ErrorsFound;
+        }
+        if (VaultConversion.OpenDataKey(root, secret) is not { } key)
+        {
+            said.WriteLine(VaultConversion.WrongSecret);
+            return Refused;
+        }
+        EncryptedStorage? storage = null;
+        try
+        {
+            try
+            {
+                storage = EncryptedStorage.Open(root, key, DiskStorage.Instance);
+            }
+            catch (VaultCryptoException exception)
+            {
+                said.WriteLine($"{exception.Message} Le coffre ne peut pas être analysé ; rien n'y a été écrit.");
+                return ErrorsFound;
+            }
+            return Report(VaultInspector.Inspect(root, storage), asJson, output);
+        }
+        finally
+        {
+            storage?.Dispose();
+            PasswordKeys.Clear(key);
+        }
     }
 
     /// <summary>Une saisie secrète : jamais affichée, jamais écrite ailleurs que dans la mémoire du processus.</summary>
