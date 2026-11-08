@@ -98,6 +98,19 @@ public sealed class SettingsHubTests
     }
 
     [TestMethod]
+    [DataRow(8, "kyfRev 1.0.0-essai, publiée le 8 novembre 2026")]
+    [DataRow(1, "kyfRev 1.0.0-essai, publiée le 1er novembre 2026")]
+    public void The_tab_says_the_day_the_version_was_published(int day, string expected)
+    {
+        using var vault = new DataVault();
+        var about = new AboutSettingsViewModel(vault.App.Vaults, released: new DateOnly(2026, 11, day));
+
+        about.OnNavigatedTo();
+
+        Assert.AreEqual(expected, about.Version);
+    }
+
+    [TestMethod]
     public void Without_the_port_nothing_is_offered()
     {
         using var vault = new DataVault();

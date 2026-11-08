@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO;
 using System.Reflection;
 using KyfRev.Application.Model;
@@ -35,6 +36,13 @@ internal static class Composition
     /// <summary>Version de l'application, sans l'empreinte du commit.</summary>
     public static string Version { get; } =
         typeof(Composition).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion.Split('+')[0] ?? "0.0.0";
+
+    /// <summary>Jour de publication inscrit dans l'exécutable ; rien pour une construction hors publication.</summary>
+    public static DateOnly? ReleasedOn { get; } = ReleaseDateOf(typeof(Composition).Assembly.GetCustomAttributes<AssemblyMetadataAttribute>());
+
+    /// <summary>Le jour que portent ces métadonnées, s'il y est écrit en AAAA-MM-JJ.</summary>
+    internal static DateOnly? ReleaseDateOf(IEnumerable<AssemblyMetadataAttribute> metadata) =>
+        DateOnly.TryParseExact(metadata.FirstOrDefault(entry => entry.Key == "ReleaseDate")?.Value, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var day) ? day : null;
 
     /// <summary>Les services de l'application.</summary>
     /// <param name="time">Horloge ; celle du système par défaut.</param>
@@ -233,7 +241,12 @@ internal static class Composition
             provider.GetRequiredService<ExtensionSettingsViewModel>()));
         services.AddSingleton<GeneralSettingsViewModel>();
         services.AddSingleton(provider => new UpdateChecker(provider.GetRequiredService<IOnlineReader>(), ExtensionCatalogue.KnownKeys, Version));
-        services.AddSingleton<AboutSettingsViewModel>();
+        services.AddSingleton(provider => new AboutSettingsViewModel(
+            provider.GetRequiredService<VaultUseCases>(),
+            provider.GetRequiredService<UpdateChecker>(),
+            provider.GetRequiredService<IExternalLinks>(),
+            provider.GetRequiredService<ILegacyInstallation>(),
+            ReleasedOn));
         services.AddSingleton<SettingsHubViewModel>();
         services.AddSingleton(provider => new HealthPageViewModel(
             provider.GetRequiredService<MaintenanceUseCases>(),

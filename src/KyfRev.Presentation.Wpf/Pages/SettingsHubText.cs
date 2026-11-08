@@ -218,6 +218,9 @@ public static class SettingsHubText
     /// <summary>« kyfRev {0} ».</summary>
     public static string VersionOf(object version) => Format("Version", version);
 
+    /// <summary>« kyfRev {0}, publiée le {1} ».</summary>
+    public static string VersionReleasedOf(object version, object day) => Format("VersionReleased", version, day);
+
     private static string Format(string name, params object[] values) => string.Format(CultureInfo.CurrentCulture, Text(name), values);
 
     private static string Text(string name) =>

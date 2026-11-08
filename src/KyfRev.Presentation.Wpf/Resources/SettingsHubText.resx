@@ -192,6 +192,9 @@
   <data name="VaultTitle" xml:space="preserve">
     <value>Coffre</value>
   </data>
+  <data name="VersionReleased" xml:space="preserve">
+    <value>kyfRev {0}, publiée le {1}</value>
+  </data>
   <data name="Version" xml:space="preserve">
     <value>kyfRev {0}</value>
   </data>

@@ -15,6 +15,9 @@ internal static class Dates
     /// <summary>« vendredi 9 octobre ».</summary>
     public static string Long(DateOnly day) => day.ToString("dddd d MMMM", French);
 
+    /// <summary>« 8 novembre 2026 », et « 1er novembre 2026 » le premier du mois.</summary>
+    public static string Spelled(DateOnly day) => day.Day == 1 ? day.ToString("'1er' MMMM yyyy", French) : day.ToString("d MMMM yyyy", French);
+
     /// <summary>« ven. 9 oct. ».</summary>
     public static string Short(DateOnly day) => day.ToString("ddd d MMM", French);
 
