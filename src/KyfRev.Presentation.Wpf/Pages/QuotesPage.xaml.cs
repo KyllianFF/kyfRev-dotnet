@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Threading;
 using KyfRev.DesignSystem.Controls;
 
 namespace KyfRev.Presentation.Wpf.Pages;
@@ -36,6 +37,13 @@ internal sealed partial class QuotesPage : UserControl
         var columns = Math.Max(1, (int)(available / (WantedCardWidth + CardMargin)));
         CardWidth = Math.Max(120, (available / columns) - CardMargin);
     }
+
+    /// <summary>
+    /// « Afficher toutes les citations » disparaît avec son panneau, et le focus avec lui : il va au champ de recherche, qui
+    /// reste (au bouton « Nouvelle citation » s'il n'y a plus de citation, donc plus de champ).
+    /// </summary>
+    private void OnShowAllClick(object sender, RoutedEventArgs e) =>
+        Dispatcher.BeginInvoke(DispatcherPriority.Input, () => (SearchBox.IsVisible ? SearchBox : (UIElement)NewQuote).Focus());
 
     /// <summary>La réponse au formulaire part vers la vue.</summary>
     private void OnFormClosed(object sender, DialogClosedEventArgs e)

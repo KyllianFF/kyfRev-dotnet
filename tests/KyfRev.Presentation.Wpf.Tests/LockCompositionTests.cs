@@ -12,6 +12,24 @@ namespace KyfRev.Presentation.Wpf.Tests;
 public sealed class LockCompositionTests
 {
     [STATestMethod]
+    public void Every_view_that_searches_the_vault_stops_when_it_closes()
+    {
+        using var services = KyfRev.App.Composition.Build();
+        var registered = services.GetRequiredService<IServiceProviderIsService>();
+        var stopping = KyfRev.App.Composition.SearchingViews(services);
+
+        var searching = typeof(IStopsSearch).Assembly.GetTypes()
+            .Where(type => type is { IsClass: true, IsAbstract: false } && typeof(IStopsSearch).IsAssignableFrom(type) && registered.IsService(type))
+            .ToList();
+
+        Assert.IsNotEmpty(searching);
+        foreach (var type in searching)
+        {
+            Assert.IsTrue(stopping.Any(view => ReferenceEquals(view, services.GetRequiredService(type))), $"{type.Name} tiendrait le coffre pendant un verrouillage");
+        }
+    }
+
+    [STATestMethod]
     public void Every_view_the_application_keeps_forgets_the_vault_when_it_locks()
     {
         using var services = KyfRev.App.Composition.Build();

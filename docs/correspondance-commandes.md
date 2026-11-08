@@ -100,8 +100,8 @@ Ces cas d'usage ne sont chargés que si le coffre active le module Citations.
 | `retroliens` | — | J9 | Rétroliens. |
 | `apercu_fiche` | — | J9 | Aperçu au survol. |
 | `liste_des_fiches` | `SheetUseCases.List` | J7.1 | Vue « Fiches » ; l'arborescence reste à J9. |
-| `chercher_dans_les_fiches` | — | J9 | Recherche dans les fiches. |
-| `recherche_globale` | — | J9 | Recherche globale. |
+| `chercher_dans_les_fiches` | `SheetUseCases.Search` | J9 | Recherche dans les fiches. |
+| `recherche_globale` | `SearchUseCases.Everywhere` | J9 | Recherche globale : le cœur, puis les modules actifs (`ISearchProvider`). |
 | `liste_des_definitions` | `AnnotationUseCases.Definitions` | J7.6 | Vue « Définitions ». |
 | `schemas` | `SchemaUseCases.Schemas` | J10 | Module Schémas réseau. |
 | `lire_schema` | `SchemaUseCases.Read` | J10 | Module Schémas réseau. |

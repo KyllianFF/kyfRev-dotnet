@@ -261,9 +261,10 @@ kyfrev-coffre cle-de-recuperation <coffre chiffré>
   2. l'écran de déverrouillage remplace les vues, qui se ferment : le texte mis en forme et les schémas, avec leur moteur
      web ;
   3. le coffre se ferme, une fois finie la lecture en cours : son verrou est libéré, sa clé effacée, et son index en clair
-     (les chemins, donc les titres) oublié ;
-  4. chaque vue oublie ce qu'elle avait lu (`IForgetsVault`) : « Aujourd'hui », les fiches et leur aperçu, les
-     définitions, les archives, les statistiques, la santé du coffre, la corbeille et les données des paramètres, le
+     (les chemins, donc les titres) oublié. Une recherche ne le retient pas : elle s'arrête à la fiche en cours dès que le
+     verrouillage est demandé, et repart si le coffre reste ouvert ;
+  4. chaque vue oublie ce qu'elle avait lu (`IForgetsVault`) : « Aujourd'hui », les fiches et leur aperçu, la recherche et
+     ce qu'elle a trouvé, les définitions, les archives, les statistiques, la santé du coffre, la corbeille et les données des paramètres, le
      journal, les erreurs et les pages des extensions (leur moteur repart à vide), les dessins des schémas ; les modules se
      déchargent. Une lecture partie avant n'y remet rien.
 - **Seul son mot de passe ou sa clé de récupération le rouvre** : la clé retenue sur ce poste ne sert qu'au démarrage,
@@ -409,6 +410,9 @@ noms des dossiers et des fiches.
 | `preferences.json` | L'apparence | Aucun texte de fiche. |
 | `config-locale.json` | Le chemin du dernier coffre ouvert | Aucun texte de fiche. |
 | Le dossier temporaire | Le cache du catalogue d'extensions | Aucun texte de fiche. |
+
+La recherche n'y ajoute rien : elle relit le coffre de bout en bout, par son stockage, sans index ni cache, et les mots
+cherchés ne vont jamais au journal.
 
 Le correcteur d'orthographe de Windows reçoit le texte par la mémoire, à la demande, sur ce poste. La lecture à voix haute
 aussi, par le moteur de voix de Windows.

@@ -81,6 +81,15 @@ public sealed class VaultAdapter(VaultSession inner, IDisposable? owned = null) 
     public IReadOnlyList<VaultSheet> SheetList() => inner.SheetList();
 
     /// <inheritdoc/>
+    public IReadOnlyList<SheetHit> SearchSheets(string query, CancellationToken cancellationToken) => inner.SearchSheets(query, cancellationToken);
+
+    /// <inheritdoc/>
+    public IReadOnlyList<AnnotationHit> SearchAnnotations(string query, CancellationToken cancellationToken) => inner.SearchAnnotations(query, cancellationToken);
+
+    /// <inheritdoc/>
+    public IReadOnlyList<QuoteHit> SearchQuotes(string query, CancellationToken cancellationToken) => inner.SearchQuotes(query, cancellationToken);
+
+    /// <inheritdoc/>
     public string? SheetIdAt(string path) => inner.Sheets.FirstOrDefault(entry => entry.Sheet.Path.Value == path)?.Sheet.Id;
 
     /// <inheritdoc/>

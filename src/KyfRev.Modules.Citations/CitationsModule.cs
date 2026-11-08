@@ -1,4 +1,5 @@
 using System.Globalization;
+using KyfRev.Application;
 using KyfRev.Application.Model;
 using KyfRev.Application.Modules;
 using KyfRev.Application.UseCases;
@@ -8,8 +9,9 @@ namespace KyfRev.Modules.Citations;
 
 /// <summary>
 /// Module Citations : actif quand le coffre l'active (<c>coffre.json</c>, réglage du module). Il
-/// apporte ses cas d'usage, une entrée du menu, l'encart « Citation du jour » du tableau de bord
-/// et le signalement des fichiers de citation illisibles. Il attend du cœur : le coffre ouvert
+/// apporte ses cas d'usage, une entrée du menu, l'encart « Citation du jour » du tableau de bord,
+/// ses résultats pour la recherche globale et le signalement des fichiers de citation illisibles.
+/// Il attend du cœur : le coffre ouvert
 /// (<see cref="VaultHost"/>), l'horloge, le lecteur en ligne et le journal.
 /// </summary>
 public sealed class CitationsModule : IKyfRevModule
@@ -38,6 +40,7 @@ public sealed class CitationsModule : IKyfRevModule
         services.AddSingleton<INavigationContributor, QuotesNavigation>();
         services.AddSingleton<IDashboardWidget, QuoteOfTheDayCard>();
         services.AddSingleton<IVaultHealthCheck, UnreadableQuotes>();
+        services.AddSingleton<ISearchProvider, QuoteSearch>();
     }
 }
 
@@ -69,6 +72,16 @@ internal sealed class QuoteOfTheDayCard(QuoteUseCases quotes) : IDashboardWidget
         }
         return credit.Length == 0 ? null : credit;
     }
+}
+
+/// <summary>Les citations hors corbeille, dans la recherche globale : le texte se lit à la place de l'extrait quand l'auteur, l'œuvre ou les étiquettes ont suffi.</summary>
+internal sealed class QuoteSearch(VaultHost host) : ISearchProvider
+{
+    public Outcome<IReadOnlyList<SearchHit>> Search(string query, CancellationToken cancellationToken) => host.Use<IReadOnlyList<SearchHit>>(vault =>
+    [
+        .. vault.SearchQuotes(query, cancellationToken)
+            .Select(hit => new SearchHit(SearchKinds.Quote, hit.Path, hit.Author ?? string.Empty, hit.Excerpt) { Text = hit.Excerpt.IsEmpty ? hit.Text : null }),
+    ]);
 }
 
 /// <summary>Les fichiers de citation illisibles, signalés dans « Santé du coffre » (ils ne sont jamais réécrits).</summary>

@@ -113,18 +113,25 @@ public sealed class SheetRow
     /// <summary>Le fichier de la fiche est introuvable ou en double.</summary>
     public bool FileMissing => !Sheet.FilePresent;
 
+    /// <summary>Le passage de son texte où se trouvent les mots cherchés ; vide si le titre ou les étiquettes ont suffi.</summary>
+    public IReadOnlyList<ExcerptPiece> Excerpt { get; init; } = [];
+
+    /// <summary>Elle a un extrait à montrer.</summary>
+    public bool HasExcerpt => Excerpt.Count > 0;
+
     /// <summary>Le nom lu par le lecteur d'écran.</summary>
-    public override string ToString() => string.Join(", ", new[] { Title, Meta, FileMissing ? DashboardText.FileMissing : string.Empty }.Where(part => part.Length > 0));
+    public override string ToString() => string.Join(", ", new[] { Title, Meta, FileMissing ? DashboardText.FileMissing : string.Empty, string.Concat(Excerpt.Select(piece => piece.Text)) }.Where(part => part.Length > 0));
 
     /// <summary>« Sciences › Biologie » ; rien à la racine.</summary>
     internal static string DisplayFolder(string folder) => folder.Replace("/", " › ", StringComparison.Ordinal);
 }
 
 /// <summary>
-/// Vue « Fiches » : toutes les fiches du coffre, à chercher, filtrer et trier ; la fiche choisie
-/// s'affiche à côté quand il y a la place, et s'ouvre sinon d'un clic. On y crée une fiche.
+/// Vue « Fiches » : toutes les fiches du coffre, à chercher (titre, étiquettes et texte, avec un
+/// extrait), filtrer et trier ; la fiche choisie s'affiche à côté quand il y a la place, et s'ouvre
+/// sinon d'un clic. On y crée une fiche.
 /// </summary>
-public sealed partial class SheetsPageViewModel : ObservableObject, INavigationAware, IForgetsVault
+public sealed partial class SheetsPageViewModel : ObservableObject, INavigationAware, IForgetsVault, IStopsSearch
 {
     /// <summary>Les entrées que les extensions ajoutent au clic droit d'une fiche ou d'un dossier.</summary>
     public Func<ExtensionMenuZone, IReadOnlyDictionary<string, string>, IReadOnlyList<MenuContribution>>? ExtensionMenus { get; set; }
@@ -140,6 +147,9 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
     /// <summary>Le choix « Nouveau dossier… » du menu des dossiers.</summary>
     private static readonly object NewFolderChoice = new();
 
+    /// <summary>Le temps d'attendre la frappe suivante avant de chercher dans les fiches.</summary>
+    private static readonly TimeSpan SearchPause = TimeSpan.FromMilliseconds(200);
+
     private readonly SheetUseCases _sheets;
     private readonly FolderUseCases _folders;
     private readonly TemplateUseCases _templates;
@@ -151,9 +161,14 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
     private readonly ListFilter _folder;
     private readonly ListFilter _state;
     private readonly ListFilter _sort;
+    private readonly LatestSearch _textSearch = new();
+    private bool _searchStopped;
     private IReadOnlyList<VaultSheet>? _entries;
     private IReadOnlyList<string> _folderPaths = [];
     private string? _createIn;
+
+    /// <summary>La réponse à la recherche : l'extrait de chaque fiche trouvée ; rien tant qu'aucune réponse n'est arrivée.</summary>
+    private Dictionary<string, IReadOnlyList<ExcerptPiece>>? _found;
 
     /// <summary>Numéro du dernier aperçu demandé : une lecture dépassée est ignorée.</summary>
     private int _previewTicket;
@@ -176,7 +191,7 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
         _time = time;
         _reviews = reviews;
         _trash = trash;
-        Bar = new FilterBarViewModel(BuildRows);
+        Bar = new FilterBarViewModel(BuildRows) { SearchPlaceholder = SheetsText.SearchPlaceholder, SearchName = SheetsText.SearchName, SearchChanged = OnSearchTextChanged };
         _folder = Bar.Add(SheetsText.FilterFolder, [new(string.Empty, SheetsText.AllFolders)]);
         _state = Bar.Add(
             SheetsText.FilterState,
@@ -317,6 +332,9 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
     {
         _generation++;
         _previewTicket++;
+        _textSearch.Cancel();
+        _searchStopped = false;
+        _found = null;
         _entries = null;
         _folderPaths = [];
         _createIn = null;
@@ -339,6 +357,23 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
         CreateError = null;
         ForgetAction();
         OnPropertyChanged(nameof(Summary));
+    }
+
+    /// <inheritdoc/>
+    public void StopSearch()
+    {
+        _searchStopped |= _textSearch.IsRunning;
+        _textSearch.Cancel();
+    }
+
+    /// <inheritdoc/>
+    public void ResumeSearch()
+    {
+        if (_searchStopped && Bar.Search.Trim().Length > 0)
+        {
+            SearchTextCommand.Execute(TimeSpan.Zero);
+        }
+        _searchStopped = false;
     }
 
     /// <summary>Montre ces fiches.</summary>
@@ -386,6 +421,11 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
             {
                 _folderPaths = folders.Succeeded ? folders.Value : [];
                 Show(outcome.Value);
+                // Une fiche renommée, déplacée ou modifiée : la recherche en cours est refaite.
+                if (Bar.Search.Trim().Length > 0)
+                {
+                    await SearchTextAsync(TimeSpan.Zero).ConfigureAwait(true);
+                }
             }
             else
             {
@@ -399,6 +439,38 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
                 IsLoading = false;
             }
         }
+    }
+
+    /// <summary>Le texte cherché change : la recherche part une fois la frappe arrêtée un instant ; sans texte, on en oublie la réponse.</summary>
+    private void OnSearchTextChanged()
+    {
+        if (Bar.Search.Trim().Length > 0)
+        {
+            SearchTextCommand.Execute(SearchPause);
+        }
+        else
+        {
+            _textSearch.Cancel();
+            _found = null;
+        }
+    }
+
+    /// <summary>Cherche le texte dans les fiches, hors du fil de l'interface : la liste garde sa réponse précédente jusqu'à la nouvelle.</summary>
+    [RelayCommand(AllowConcurrentExecutions = true)]
+    private Task SearchTextAsync(TimeSpan pause)
+    {
+        var text = Bar.Search.Trim();
+        return _textSearch.RunAsync(pause, token => _sheets.Search(text, token), outcome =>
+        {
+            if (!outcome.Succeeded)
+            {
+                Error = outcome.Error;
+                return;
+            }
+            Error = null;
+            _found = outcome.Value.ToDictionary(hit => hit.Id, IReadOnlyList<ExcerptPiece> (hit) => hit.Excerpt, StringComparer.Ordinal);
+            BuildRows();
+        });
     }
 
     /// <summary>Ouvre une fiche ; un en-tête n'ouvre rien.</summary>
@@ -504,7 +576,7 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
         var sheets = entries.Where(sheet => Matches(sheet, wanted, day)).ToList();
         var sort = (SheetSort)_sort.Value!;
         var isFiltered = wanted.Length > 0 || !Equals(_folder.Value, string.Empty) || (SheetState)_state.Value! != SheetState.All;
-        Rows = sort == SheetSort.Folder ? Tree(sheets, day, isFiltered) : [.. Sorted(sheets, sort).Select(sheet => new SheetRow(sheet, day, showFolder: true))];
+        Rows = sort == SheetSort.Folder ? Tree(sheets, day, isFiltered, expandAll: wanted.Length > 0) : [.. Sorted(sheets, sort).Select(sheet => RowOf(sheet, day, showFolder: true))];
         IsEmpty = entries.Count == 0;
         HasNoMatch = entries.Count > 0 && sheets.Count == 0;
         KeepSelection();
@@ -512,9 +584,9 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
 
     /// <summary>
     /// L'arborescence : chaque dossier, ses sous-dossiers, puis ses fiches. Sans filtre, les dossiers vides sont montrés :
-    /// on peut y ranger des fiches.
+    /// on peut y ranger des fiches. Pendant une recherche, tous les dossiers sont dépliés : ce qui est trouvé se voit.
     /// </summary>
-    private List<object> Tree(List<VaultSheet> sheets, DateOnly day, bool isFiltered)
+    private List<object> Tree(List<VaultSheet> sheets, DateOnly day, bool isFiltered, bool expandAll)
     {
         var paths = new SortedSet<string>(FrenchTitles);
         foreach (var path in sheets.Select(sheet => sheet.Folder).Concat(isFiltered ? [] : _folderPaths).Where(path => path.Length > 0))
@@ -530,7 +602,7 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
         if (atRoot.Count > 0 || (!isFiltered && paths.Count > 0))
         {
             rows.Add(new SheetFolderRow(SheetsText.NoFolder, atRoot.Count));
-            rows.AddRange(atRoot.Select(sheet => new SheetRow(sheet, day, showFolder: false)));
+            rows.AddRange(atRoot.Select(sheet => RowOf(sheet, day, showFolder: false)));
         }
         AddChildren(string.Empty, 0);
         return rows;
@@ -539,16 +611,19 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
         {
             foreach (var path in paths.Where(path => ParentOf(path) == parent))
             {
-                var isExpanded = !_collapsed.Contains(path);
+                var isExpanded = expandAll || !_collapsed.Contains(path);
                 rows.Add(new SheetFolderRow(NameOf(path), sheets.Count(sheet => IsWithin(sheet.Folder, path))) { Path = path, Depth = depth, IsExpanded = isExpanded });
                 if (isExpanded)
                 {
                     AddChildren(path, depth + 1);
-                    rows.AddRange(sheets.Where(sheet => sheet.Folder == path).Select(sheet => new SheetRow(sheet, day, showFolder: false) { Depth = depth + 1 }));
+                    rows.AddRange(sheets.Where(sheet => sheet.Folder == path).Select(sheet => RowOf(sheet, day, showFolder: false, depth + 1)));
                 }
             }
         }
     }
+
+    private SheetRow RowOf(VaultSheet sheet, DateOnly day, bool showFolder, int depth = 0) =>
+        new(sheet, day, showFolder) { Depth = depth, Excerpt = _found?.GetValueOrDefault(sheet.Id) ?? [] };
 
     /// <summary>Plie ou déplie un dossier.</summary>
     [RelayCommand]
@@ -570,7 +645,8 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
 
     private bool Matches(VaultSheet sheet, string wanted, DateOnly day)
     {
-        if (wanted.Length > 0 && !ShellViewModel.Fold($"{sheet.Title} {string.Join(' ', sheet.Tags)}").Contains(wanted, StringComparison.Ordinal))
+        // Tant que la réponse de la recherche n'est pas arrivée, le titre et les étiquettes suffisent.
+        if (wanted.Length > 0 && !(_found?.ContainsKey(sheet.Id) ?? ShellViewModel.Fold($"{sheet.Title} {string.Join(' ', sheet.Tags)}").Contains(wanted, StringComparison.Ordinal)))
         {
             return false;
         }

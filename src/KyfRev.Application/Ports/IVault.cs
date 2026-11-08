@@ -12,6 +12,7 @@ namespace KyfRev.Application.Ports;
 public interface IVault :
     IDisposable,
     ISheetStore,
+    ISearchStore,
     ISheetEditor,
     IFolderStore,
     ITrashStore,
@@ -72,6 +73,22 @@ public interface ISheetStore
 
     /// <summary>Écrit la fiche au format demandé dans un dossier hors du coffre ; rend le fichier écrit.</summary>
     string ShareSheet(string id, ShareFormat format, string folder, string? content);
+}
+
+/// <summary>
+/// Recherche dans le coffre : une lecture de bout en bout, par le stockage du coffre, en clair comme chiffré. Aucun index
+/// n'est écrit, et rien de ce qui est cherché ou trouvé ne quitte le coffre. Annulée, une recherche rend ce qu'elle a déjà trouvé.
+/// </summary>
+public interface ISearchStore
+{
+    /// <summary>Les fiches qui contiennent tous les mots, dans leur titre, leurs étiquettes ou leur texte, par identifiant.</summary>
+    IReadOnlyList<SheetHit> SearchSheets(string query, CancellationToken cancellationToken);
+
+    /// <summary>Les passages et les définitions hors corbeille qui contiennent tous les mots, par titre de fiche, puis par terme ; rien sans mot.</summary>
+    IReadOnlyList<AnnotationHit> SearchAnnotations(string query, CancellationToken cancellationToken);
+
+    /// <summary>Les citations hors corbeille qui contiennent tous les mots, par auteur, puis par texte ; rien sans mot.</summary>
+    IReadOnlyList<QuoteHit> SearchQuotes(string query, CancellationToken cancellationToken);
 }
 
 /// <summary>Édition : enregistrement avec détection de conflit, versions, ressources.</summary>

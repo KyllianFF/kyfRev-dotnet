@@ -57,6 +57,81 @@ public sealed class ComponentTests
     }
 
     [STATestMethod]
+    public void A_status_text_is_announced_each_time_it_appears_with_its_text_in_place()
+    {
+        var text = new RecordingStatus { Text = "Avant", Visibility = Visibility.Collapsed };
+        var window = InWindow(text);
+        try
+        {
+            Host.Flush();
+            Assert.IsEmpty(text.Announced, "caché, il ne dit rien");
+
+            text.Visibility = Visibility.Visible;
+            text.Text = "Rien ne correspond.";
+            Assert.IsEmpty(text.Announced, "pas avant la mise en page");
+            Host.Flush();
+            Assert.AreEqual("Rien ne correspond.", text.Announced.Single());
+
+            text.Visibility = Visibility.Collapsed;
+            Host.Flush();
+            text.Visibility = Visibility.Visible;
+            Host.Flush();
+            Assert.HasCount(2, text.Announced, "il reparaît : il se redit");
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
+    public void A_status_text_that_only_flashes_is_not_announced()
+    {
+        var text = new RecordingStatus { Text = "Rien ne correspond.", Visibility = Visibility.Collapsed };
+        var window = InWindow(text);
+        try
+        {
+            Host.Flush();
+
+            text.Visibility = Visibility.Visible;
+            text.Visibility = Visibility.Collapsed;
+            Host.Flush();
+            Assert.IsEmpty(text.Announced, "le temps qu'une réponse s'installe");
+
+            text.Visibility = Visibility.Visible;
+            text.Visibility = Visibility.Collapsed;
+            text.Visibility = Visibility.Visible;
+            Host.Flush();
+            Assert.HasCount(1, text.Announced, "une seule fois, même paru deux fois avant la mise en page");
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
+    public void A_status_text_is_a_polite_text_that_keeps_its_style()
+    {
+        var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
+        var text = new StatusText { Text = "Citation trouvée.", Style = (Style)design.Dictionary["Kyf.Text.Secondary"] };
+        var window = InWindow(text);
+        try
+        {
+            Host.Flush();
+
+            Assert.AreEqual(AutomationLiveSetting.Polite, AutomationProperties.GetLiveSetting(text));
+            Assert.AreEqual("Citation trouvée.", Peer(text).GetName());
+            Assert.AreEqual(AutomationLiveSetting.Polite, Peer(text).GetLiveSetting());
+            Assert.AreEqual(AutomationControlType.Text, Peer(text).GetAutomationControlType());
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
     public void A_notification_is_announced_and_closes()
     {
         var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
@@ -321,6 +396,26 @@ public sealed class ComponentTests
     }
 
     private static AutomationPeer Peer(UIElement element) => UIElementAutomationPeer.CreatePeerForElement(element);
+
+    /// <summary>Une fenêtre hors de l'écran : seul un élément dans une vraie fenêtre est visible.</summary>
+    private static Window InWindow(UIElement element)
+    {
+        var window = new Window { Content = element, Left = -10000, Top = -10000, Width = 300, Height = 200, ShowActivated = false };
+        window.Show();
+        return window;
+    }
+
+    /// <summary>Note ce qui serait annoncé : sans lecteur d'écran, UI Automation n'écoute rien.</summary>
+    private sealed class RecordingStatus : StatusText
+    {
+        public List<string> Announced { get; } = [];
+
+        protected override void Announce()
+        {
+            base.Announce();
+            Announced.Add(Text);
+        }
+    }
 
     /// <summary>L'élément qui a le focus dans la portée de <paramref name="element"/>.</summary>
     private static IInputElement? FocusedIn(DependencyObject element) => FocusManager.GetFocusedElement(FocusManager.GetFocusScope(element));

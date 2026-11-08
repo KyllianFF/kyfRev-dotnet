@@ -253,6 +253,38 @@ public sealed class ConversionTests
     }
 
     [STATestMethod]
+    public void Closing_for_a_conversion_stops_the_searches_and_they_start_again_if_it_stays_open()
+    {
+        using var ui = new UiThread();
+        using var scene = new Scene(encrypted: false);
+        var search = new CountedSearch();
+        scene.Searches.Add(search);
+        var page = scene.Show(ConversionDirection.Encrypt);
+
+        // Un brouillon ne s'enregistre pas : le coffre reste ouvert, la recherche repart.
+        scene.Drafts.Add(new RefusingDraft());
+        Assert.IsFalse(Run(scene.Locking.CloseForAsync(page)));
+        Assert.AreEqual(1, search.Stops);
+        Assert.AreEqual(1, search.Resumes);
+        scene.Drafts.Clear();
+
+        // La fermeture se fait : arrêtées une fois encore juste avant, les recherches ne repartent pas.
+        Assert.IsTrue(Run(scene.Locking.CloseForAsync(page)));
+        Assert.AreEqual(3, search.Stops);
+        Assert.AreEqual(1, search.Resumes);
+
+        // Plus de coffre ouvert : rien à fermer.
+        Assert.IsFalse(Run(scene.Locking.CloseForAsync(page)));
+        Assert.AreEqual(4, search.Stops);
+        Assert.AreEqual(2, search.Resumes);
+
+        // La page n'est plus affichée : rien n'est arrêté pour elle.
+        scene.Shell.ShowWorkspace();
+        Assert.IsFalse(Run(scene.Locking.CloseForAsync(page)));
+        Assert.AreEqual(4, search.Stops);
+    }
+
+    [STATestMethod]
     [DataRow(false)]
     [DataRow(true)]
     public void The_page_fits_a_narrow_window_names_its_controls_and_keeps_nothing_typed(bool dark)
@@ -659,6 +691,18 @@ public sealed class ConversionTests
         public ConversionReport Decrypt(string source, string destination, VaultSecret secret, IProgress<ConversionProgress>? progress = null) => throw new NotSupportedException();
     }
 
+    /// <summary>Une vue qui cherche : l'essai compte ses arrêts et ses reprises.</summary>
+    private sealed class CountedSearch : IStopsSearch
+    {
+        public int Stops { get; private set; }
+
+        public int Resumes { get; private set; }
+
+        public void StopSearch() => Stops++;
+
+        public void ResumeSearch() => Resumes++;
+    }
+
     /// <summary>Un brouillon qui ne s'enregistre pas : il garde le coffre ouvert.</summary>
     private sealed class RefusingDraft : ILeaving
     {
@@ -693,7 +737,7 @@ public sealed class ConversionTests
             {
                 Changes++;
                 Shell.ShowWorkspace();
-            }, () => Drafts);
+            }, () => Drafts, searches: () => Searches);
         }
 
         public TestVaults Vaults { get; }
@@ -717,6 +761,8 @@ public sealed class ConversionTests
         public int Changes { get; private set; }
 
         public List<ILeaving> Drafts { get; } = [];
+
+        public List<IStopsSearch> Searches { get; } = [];
 
         public List<string> Copied { get; } = [];
 

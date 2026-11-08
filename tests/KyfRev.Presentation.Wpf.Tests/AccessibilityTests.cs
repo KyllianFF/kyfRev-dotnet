@@ -62,7 +62,7 @@ public sealed class AccessibilityTests
             Check("aide");
             Invoke(Named(Named(window, ControlType.Pane, "Raccourcis clavier"), ControlType.Button, "Fermer"));
 
-            Invoke(Named(window, ControlType.Button, "Rechercher une commande ou une vue"));
+            Invoke(Named(window, ControlType.Button, "Rechercher partout"));
             WaitUntil(window, () => window.FindFirst(TreeScope.Descendants, new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit)) is not null);
             Check("recherche");
 

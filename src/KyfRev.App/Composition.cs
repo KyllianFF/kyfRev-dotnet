@@ -132,6 +132,7 @@ internal static class Composition
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Trash);
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Exports);
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Encryption);
+        services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Search);
         services.AddSingleton(provider =>
         {
             void VaultChanged() => Composition.VaultChanged(provider);
@@ -249,6 +250,11 @@ internal static class Composition
             provider.GetRequiredService<ReviewNavigation>().Attach(shell);
             provider.GetRequiredService<MachineSettings>().Follow(provider.GetRequiredService<AppearanceController>(), shell);
             var modules = provider.GetRequiredService<ActiveModules>();
+            // La recherche (Ctrl+K) couvre le cœur et les modules actifs ; un résultat s'ouvre dans la coquille.
+            shell.Search = new GlobalSearch(
+                provider.GetRequiredService<SearchUseCases>(),
+                () => [.. modules.All<ISearchProvider>()],
+                new SearchHitOpener(provider.GetRequiredService<IReviewOpener>(), shell).Open);
             var extensionPages = provider.GetRequiredService<ExtensionPages>();
             void ShowEntries() => shell.SetModuleEntries([.. ModuleEntries(modules, provider.GetRequiredService<IExternalLinks>(), schemas => new SchemasPageViewModel(
                 schemas,
@@ -318,7 +324,8 @@ internal static class Composition
             () => VaultChanged(provider),
             () => DraftViews(provider),
             // La carte Chiffrement oublie dès le début : une dérivation qui finit pendant la fermeture ne s'y montre plus.
-            () => provider.GetRequiredService<DataSettingsViewModel>().Encryption?.Forget()));
+            () => provider.GetRequiredService<DataSettingsViewModel>().Encryption?.Forget(),
+            () => SearchingViews(provider)));
         services.AddSingleton(provider =>
         {
             var delay = provider.GetRequiredService<LockDelay>();
@@ -378,9 +385,17 @@ internal static class Composition
         provider.GetRequiredService<DefinitionsPageViewModel>(),
     ];
 
+    /// <summary>Les vues dont une recherche peut tenir le coffre : elles s'arrêtent dès qu'une fermeture est demandée.</summary>
+    internal static IStopsSearch[] SearchingViews(IServiceProvider provider) =>
+    [
+        provider.GetRequiredService<ShellViewModel>(),
+        provider.GetRequiredService<SheetsPageViewModel>(),
+    ];
+
     /// <summary>Les vues qui gardent ce qu'elles ont lu du coffre.</summary>
     internal static IForgetsVault[] ForgettingViews(IServiceProvider provider) =>
     [
+        provider.GetRequiredService<ShellViewModel>(),
         provider.GetRequiredService<DashboardPageViewModel>(),
         provider.GetRequiredService<SheetsPageViewModel>(),
         provider.GetRequiredService<DefinitionsPageViewModel>(),

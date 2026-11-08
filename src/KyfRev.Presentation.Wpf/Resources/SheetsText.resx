@@ -123,4 +123,10 @@
   <data name="TitleRequired" xml:space="preserve">
     <value>Donnez un titre à la fiche.</value>
   </data>
+  <data name="SearchPlaceholder" xml:space="preserve">
+    <value>Rechercher dans les fiches</value>
+  </data>
+  <data name="SearchName" xml:space="preserve">
+    <value>Rechercher dans les fiches (titre, étiquettes et texte)</value>
+  </data>
 </root>

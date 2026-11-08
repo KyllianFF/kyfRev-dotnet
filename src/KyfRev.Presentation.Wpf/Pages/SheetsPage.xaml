@@ -26,6 +26,8 @@
         <StackPanel Margin="{Binding Indent}">
           <TextBlock Text="{Binding Title}" FontSize="{DynamicResource Kyf.FontSize.BodyLarge}" FontWeight="SemiBold" TextWrapping="Wrap" />
           <TextBlock x:Name="Meta" Text="{Binding Meta}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,2,0,0" />
+          <!-- La fiche a été trouvée par son texte : le passage où se trouvent les mots. -->
+          <pages:ExcerptText Pieces="{Binding Excerpt}" Margin="0,2,0,0" Visibility="{Binding HasExcerpt, Converter={StaticResource Visible}}" />
           <StackPanel Orientation="Horizontal" Margin="0,2,0,0" Visibility="{Binding FileMissing, Converter={StaticResource Visible}}">
             <kyf:Icon Text="{x:Static kyf:Icons.Warning}" Foreground="{DynamicResource Kyf.Brush.Warning}" FontSize="12" Margin="0,0,4,0" />
             <TextBlock Text="{x:Static pages:DashboardText.FileMissing}" Style="{DynamicResource Kyf.Text.Caption}" Foreground="{DynamicResource Kyf.Brush.Warning}" />
