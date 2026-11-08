@@ -44,6 +44,21 @@ public sealed partial class SheetUseCases(VaultHost host, TimeProvider time, ILo
     [ZeroXCommand("id_de_fiche")]
     public Outcome<string?> IdAt(string path) => host.Use(vault => vault.SheetIdAt(path));
 
+    /// <summary>Les fiches qui mènent à la fiche <paramref name="id"/>, par titre, avec le texte autour de leur premier lien.</summary>
+    /// <param name="id">La fiche.</param>
+    /// <param name="cancellation">Annule la recherche : une demande plus récente la remplace.</param>
+    /// <exception cref="OperationCanceledException">La recherche a été annulée.</exception>
+    [ZeroXCommand("retroliens")]
+    public Outcome<IReadOnlyList<Backlink>> Backlinks(string id, CancellationToken cancellation) => host.Use(vault => vault.Backlinks(id, cancellation));
+
+    /// <summary>Le début de la fiche située à <paramref name="path"/>, pour l'aperçu au survol d'un lien ; rien si aucune fiche n'y est.</summary>
+    [ZeroXCommand("apercu_fiche")]
+    public Outcome<SheetPreview?> Preview(string path)
+    {
+        var day = Present.Of(time).Now.Day;
+        return host.Use(vault => vault.PreviewOf(path, day));
+    }
+
     /// <summary>Nouveau titre : l'en-tête est mis à jour et le fichier renommé, liens compris.</summary>
     [ZeroXCommand("changer_titre_fiche")]
     public Outcome<Done> ChangeTitle(string id, string title)

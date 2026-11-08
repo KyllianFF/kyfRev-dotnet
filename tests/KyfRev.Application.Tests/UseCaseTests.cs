@@ -175,6 +175,30 @@ public sealed class UseCaseTests
     }
 
     [TestMethod]
+    public void A_sheet_knows_what_leads_to_it_and_a_link_previews_what_it_leads_to()
+    {
+        using var folder = new TestFolder();
+        using var test = Opened(folder);
+        var app = test.App;
+        var target = app.Sheets.Create("Biologie", "Mitose", null).Value;
+        var source = app.Sheets.Create("Histoire", "Révolution", null).Value;
+        var read = app.Sheets.Open(source).Value;
+        Assert.IsInstanceOfType<SheetSaved>(app.Editing.Save(source, "Voir [la mitose](<../Biologie/Mitose.md>) ici.\n", read.Fingerprint, 1).Value);
+
+        var backlink = app.Sheets.Backlinks(target, CancellationToken.None).Value.Single();
+
+        Assert.AreEqual((source, "Révolution", "Histoire", 1), (backlink.SheetId, backlink.Title, backlink.Folder, backlink.Links));
+        Assert.IsEmpty(app.Sheets.Backlinks(source, CancellationToken.None).Value);
+        Assert.Contains("f_inconnue", app.Sheets.Backlinks("f_inconnue", CancellationToken.None).Error!);
+        using var cancelled = new CancellationTokenSource();
+        cancelled.Cancel();
+        Assert.ThrowsExactly<OperationCanceledException>(() => app.Sheets.Backlinks(target, cancelled.Token));
+
+        Assert.AreEqual(target, app.Sheets.Preview("fiches/Biologie/Mitose.md").Value!.Id);
+        Assert.IsNull(app.Sheets.Preview("fiches/Biologie/Absente.md").Value);
+    }
+
+    [TestMethod]
     public void Editing_and_versions()
     {
         using var folder = new TestFolder();
@@ -314,6 +338,7 @@ public sealed class UseCaseTests
         _ when type == typeof(string) => "x",
         _ when type == typeof(bool) => false,
         _ when type == typeof(ulong) => 0UL,
+        _ when type == typeof(CancellationToken) => CancellationToken.None,
         _ when type == typeof(DateOnly) => new DateOnly(2026, 10, 1),
         _ when type == typeof(IReadOnlyList<string>) => Array.Empty<string>(),
         _ when type == typeof(ReadOnlyMemory<byte>) => ReadOnlyMemory<byte>.Empty,

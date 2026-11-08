@@ -49,11 +49,16 @@ public sealed partial class VaultSession
     private static ImmutableArray<string> LinkTargets(string text) =>
     [
         .. MarkdownLinks.Find(text)
-            .Select(link => text[link.Start..link.End])
-            .Select(raw => raw.IndexOfAny(['#', '?']) is var cut and >= 0 ? raw[..cut] : raw)
-            .Where(raw => !MarkdownLinks.IsExternal(raw))
-            .Select(MarkdownLinks.Decode),
+            .Select(link => LocalTarget(text[link.Start..link.End]))
+            .OfType<string>(),
     ];
+
+    /// <summary>La destination locale d'un lien, décodée, sans ancre ni paramètres ; rien pour une adresse externe.</summary>
+    private static string? LocalTarget(string raw)
+    {
+        var path = raw.IndexOfAny(['#', '?']) is var cut and >= 0 ? raw[..cut] : raw;
+        return MarkdownLinks.IsExternal(path) ? null : MarkdownLinks.Decode(path);
+    }
 
     /// <summary>Destinations des liens de la fiche ; relue seulement si son fichier a changé. Rien si elle est illisible.</summary>
     private ImmutableArray<string>? TargetsOf(string id, VaultPath path, VaultSnapshot snapshot)
@@ -63,12 +68,7 @@ public sealed partial class VaultSession
         {
             return links.Targets;
         }
-        string text;
-        try
-        {
-            text = ReadSheet(id).Text;
-        }
-        catch (VaultException)
+        if (TextOf(id) is not { } text)
         {
             return null;
         }

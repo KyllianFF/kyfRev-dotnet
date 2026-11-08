@@ -84,6 +84,12 @@ public sealed class VaultAdapter(VaultSession inner, IDisposable? owned = null) 
     public string? SheetIdAt(string path) => inner.Sheets.FirstOrDefault(entry => entry.Sheet.Path.Value == path)?.Sheet.Id;
 
     /// <inheritdoc/>
+    public IReadOnlyList<Backlink> Backlinks(string id, CancellationToken cancellation) => inner.Backlinks(id, cancellation);
+
+    /// <inheritdoc/>
+    public SheetPreview? PreviewOf(string path, DateOnly day) => inner.PreviewAt(path, day);
+
+    /// <inheritdoc/>
     public void ChangeTitle(string id, string title, Moment now) => inner.ChangeTitle(id, title, now);
 
     /// <inheritdoc/>
