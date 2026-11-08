@@ -46,6 +46,67 @@ public sealed class QuotesTests
     }
 
     [TestMethod]
+    public async Task A_quote_found_by_the_search_is_shown_alone_until_all_are_asked_for()
+    {
+        using var vault = new QuotesVault();
+        var path = vault.Add("Le cœur a ses raisons.", "Pascal");
+        vault.Add("Connais-toi toi-même.", "Socrate");
+        var page = await vault.LoadedAsync();
+        Assert.HasCount(2, page.Rows);
+        Assert.IsFalse(page.HasTarget);
+
+        page.ShowOnly(path);
+
+        Assert.IsTrue(page.HasTarget);
+        Assert.AreEqual(path, page.Rows.Single().Quote.Path);
+
+        page.ShowAllCommand.Execute(null);
+
+        Assert.IsFalse(page.HasTarget);
+        Assert.HasCount(2, page.Rows);
+        Assert.ThrowsExactly<ArgumentNullException>(() => page.ShowOnly(null!));
+    }
+
+    [TestMethod]
+    public async Task Coming_back_to_the_view_shows_every_quote_again()
+    {
+        using var vault = new QuotesVault();
+        var path = vault.Add("Le cœur a ses raisons.", "Pascal");
+        vault.Add("Connais-toi toi-même.", "Socrate");
+        var page = await vault.LoadedAsync();
+        page.ShowOnly(path);
+
+        page.OnNavigatedTo();
+        await page.ReloadCommand.ExecutionTask!;
+
+        Assert.IsFalse(page.HasTarget);
+        Assert.HasCount(2, page.Rows);
+    }
+
+    [STATestMethod]
+    public void A_quote_opened_from_the_search_goes_to_its_view()
+    {
+        using var ui = new UiThread();
+        using var vault = new QuotesVault();
+        var path = vault.Add("Le cœur a ses raisons.", "Pascal");
+        vault.Add("Connais-toi toi-même.", "Socrate");
+        var test = new TestShell();
+        var page = vault.Page();
+        var shell = new ShellViewModel(
+            CorePages.All().Append(CorePages.FromModule(new NavigationEntry("citations", "Citations", 60)) with { Page = page }),
+            test.Appearance,
+            test.Gallery);
+        shell.ShowWorkspace();
+
+        new SearchHitOpener(new FakeOpener(), shell).Open(new SearchHit(SearchKinds.Quote, path, "Pascal", []));
+        UiThread.Until(() => page.ReloadCommand.ExecutionTask is { IsCompleted: true } && page.HasRows);
+
+        Assert.AreSame(page, shell.Current.Page);
+        Assert.IsTrue(page.HasTarget);
+        Assert.AreEqual(path, page.Rows.Single().Quote.Path);
+    }
+
+    [TestMethod]
     public async Task An_empty_vault_says_only_the_text_is_needed()
     {
         using var vault = new QuotesVault();

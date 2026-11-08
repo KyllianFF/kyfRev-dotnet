@@ -392,7 +392,7 @@ public sealed partial class ShellViewModel : ObservableObject, IForgetsVault
         }
     }
 
-    /// <summary>Ouvre la recherche de commandes, vide.</summary>
+    /// <summary>Ouvre la recherche, vide.</summary>
     [RelayCommand]
     public void OpenPalette()
     {

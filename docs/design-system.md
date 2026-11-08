@@ -145,7 +145,7 @@ ne prennent pas le focus.
 | Élément | Clavier | Rôle |
 |---|---|---|
 | Menu | flèches, Tab | les vues de la 0.x dans le même ordre, celles des modules actifs à leur rang, Santé du coffre et Paramètres en bas |
-| Recherche de commandes | Ctrl+K | aller à une vue, changer de thème, de zoom ou de mode ; sans tenir compte des accents ni de la casse |
+| Recherche | Ctrl+K | aller à une vue, changer de thème, de zoom ou de mode ; à partir de deux lettres, ouvrir une fiche, un passage, une définition ou une citation du coffre : tous les mots, sans tenir compte des accents ni de la casse |
 | Aide | F1 | les raccourcis clavier |
 | Mode concentration | Ctrl+Maj+F | masque le menu |
 | Verrouiller | Ctrl+Maj+L | verrouille le coffre chiffré ouvert : son écran de déverrouillage remplace les vues |

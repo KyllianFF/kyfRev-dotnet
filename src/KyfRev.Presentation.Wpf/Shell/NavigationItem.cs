@@ -54,7 +54,7 @@ public sealed record PaletteEntry(string Label, string? Detail, string Glyph, Ac
 
     /// <summary>Le libellé, puis où cela se trouve, sa nature et son extrait : c'est aussi le nom lu par le lecteur d'écran.</summary>
     public override string ToString() =>
-        string.Join(", ", new[] { Label, Place, Excerpt.Count > 0 ? Detail : null, string.Concat(Excerpt.Select(piece => piece.Text)) }.Where(part => part is { Length: > 0 }));
+        string.Join(", ", new[] { Label, Place, Group.HasHeading ? Detail : null, string.Concat(Excerpt.Select(piece => piece.Text)) }.Where(part => part is { Length: > 0 }));
 }
 
 /// <summary>Un raccourci clavier, tel que l'aide le présente.</summary>

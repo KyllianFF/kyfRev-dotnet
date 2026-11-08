@@ -19,7 +19,7 @@ public sealed class SearchUseCasesTests
     {
         using var folder = new TestFolder();
         using var test = Opened(folder);
-        var id = test.App.Sheets.Create("Biologie", "Mitose", "La prophase précède la métaphase.").Value;
+        var id = Sheet(test, "Biologie", "Mitose", "La prophase précède la métaphase.");
 
         var hit = test.App.Sheets.Search("METAPHASE", None).Value.Single();
 
@@ -34,7 +34,7 @@ public sealed class SearchUseCasesTests
     {
         using var folder = new TestFolder();
         using var test = Opened(folder);
-        var byText = test.App.Sheets.Create(string.Empty, "Alpha", "Une mitose.").Value;
+        var byText = Sheet(test, string.Empty, "Alpha", "Une mitose.");
         var second = test.App.Sheets.Create(string.Empty, "Zêta mitose", string.Empty).Value;
         var first = test.App.Sheets.Create("Bio/Cellule", "Mitose", string.Empty).Value;
 
@@ -137,12 +137,20 @@ public sealed class SearchUseCasesTests
     {
         using var folder = new TestFolder();
         using var test = Opened(folder);
-        test.App.Sheets.Create(string.Empty, "Mitose", Secret);
+        Sheet(test, string.Empty, "Mitose", Secret);
 
         Assert.IsNotEmpty(test.App.Sheets.Search(Secret, None).Value);
         Assert.IsNotEmpty(Everywhere(test, Secret).Value);
 
         Assert.IsEmpty(test.Logs.Entries.Where(entry => entry.Message.Contains(Secret, StringComparison.OrdinalIgnoreCase)));
+    }
+
+    /// <summary>Une fiche écrite ; rend son identifiant.</summary>
+    private static string Sheet(TestApplication test, string folder, string title, string body)
+    {
+        var id = test.App.Sheets.Create(folder, title, null).Value;
+        Assert.IsTrue(test.App.Editing.Save(id, body, test.App.Sheets.Open(id).Value.Fingerprint, 1).Succeeded);
+        return id;
     }
 
     private static Outcome<IReadOnlyList<SearchHit>> Everywhere(TestApplication test, string query) => test.App.Search.Everywhere(query, [], None);

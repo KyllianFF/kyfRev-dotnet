@@ -26,7 +26,7 @@ public sealed class SearchWordsTests
     {
         Assert.AreEqual("l'a'b'", FoldedText.Of("l‘aʼb’").Text);
         Assert.AreEqual("oeoeaeae", FoldedText.Of("œŒæÆ").Text);
-        Assert.AreEqual("ecole", FoldedText.Of("école").Text);
+        Assert.AreEqual("ecole", FoldedText.Of("e\u0301cole").Text);
     }
 
     [TestMethod]
@@ -49,7 +49,7 @@ public sealed class SearchWordsTests
         var folded = characters.Select(FoldedText.Of).ToList();
 
         Assert.HasCount(0x10F800, folded);
-        Assert.AreEqual("￾", folded[0xFFFE - 0x800].Text, "un non-caractère reste tel quel");
+        Assert.AreEqual("\uFFFE", folded[0xFFFE - 0x800].Text, "un non-caractère reste tel quel");
     }
 
     [TestMethod]
@@ -57,7 +57,7 @@ public sealed class SearchWordsTests
     {
         var text = "a\uD83Db";
 
-        Assert.AreEqual("a�b", FoldedText.Of(text).Text);
+        Assert.AreEqual("a\uFFFDb", FoldedText.Of(text).Text);
         Assert.AreEqual((2, 3), FoldedText.Of(text).InOriginal(text, 2, 3));
     }
 

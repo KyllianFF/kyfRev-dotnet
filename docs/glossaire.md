@@ -135,7 +135,9 @@ Ce glossaire fixe la correspondance. Les **clés JSON du coffre restent celles d
 | Squelette | `Skeleton` | — | Place d'un contenu en cours de chargement. |
 | État vide | `EmptyState` | — | Ce qu'affiche une vue sans contenu, avec l'action qui la remplit. |
 | Coquille | `ShellWindow`, `ShellViewModel` | — | Fenêtre de l'application : menu latéral, page affichée, recherche, aide, mode concentration, zoom. |
-| Recherche de commandes | `ShellViewModel.PaletteResults` | — | Liste filtrée (Ctrl+K) des vues et des commandes, sans tenir compte des accents ni de la casse. |
+| Recherche (Ctrl+K) | `ShellViewModel.PaletteResults`, `GlobalSearch` | recherche globale | Les vues et les commandes qui correspondent, puis ce qui est trouvé dans le coffre (fiches, passages, définitions, citations), sans tenir compte des accents ni de la casse. |
+| Extrait | `ExcerptPiece`, `ExcerptText` | extrait | Le texte autour des mots trouvés, ceux-ci surlignés, sur deux lignes au plus. |
+| Recherche dans le texte | `SearchWords`, `ISearchStore` | recherche dans les fiches | Tous les mots, dans le titre ou le texte ; le coffre se relit de bout en bout, par son stockage : aucun index n'est écrit. |
 | Mode concentration | `ShellViewModel.IsFocusMode` | — | Menu masqué (Ctrl+Maj+F), comme dans la 0.x. |
 | Apparence | `AppearanceController`, `ISystemAppearance`, `ThemePreference` | — | Thème choisi ou celui de Windows ; contraste élevé et animations réduites suivis sans redémarrage. |
 | Racine de composition | `KyfRev.App` (`Composition`) | — | Seul endroit qui relie la présentation à l'infrastructure. |
