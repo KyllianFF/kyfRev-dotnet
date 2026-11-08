@@ -82,7 +82,46 @@ internal static class VaultCommands
             return result.Succeeded ? Success : Refused;
         });
 
-        return new RootCommand("Outil du coffre kyfRev.") { verify, encrypt, decrypt };
+        var changePassword = new Command("changer-mot-de-passe", "Change le mot de passe d'un coffre chiffré fermé : seul son en-tête est réécrit.") { vault, pbkdf2 };
+        changePassword.SetAction(parseResult =>
+        {
+            var secret = Secret(output, input, "Mot de passe actuel ou clé de récupération : ");
+            var chosen = Secret(output, input, "Nouveau mot de passe : ");
+            if (chosen != Secret(output, input, "Le même, une seconde fois : "))
+            {
+                output.WriteLine("Les deux saisies diffèrent : rien n'a été écrit.");
+                return Refused;
+            }
+            var parameters = parseResult.GetValue(pbkdf2) ? PasswordKeys.NewPbkdf2() : PasswordKeys.Calibrated();
+            return Said(VaultKeyChanges.ChangePassword(parseResult.GetValue(vault)!.FullName, secret, chosen, parameters), output);
+        });
+        var newRecovery = new Command("cle-de-recuperation", "Remplace la clé de récupération d'un coffre chiffré fermé ; l'ancienne reste valable tant que la nouvelle n'est pas confirmée.") { vault };
+        newRecovery.SetAction(parseResult =>
+        {
+            var secret = Secret(output, input, "Mot de passe ou clé de récupération : ");
+            return Said(VaultKeyChanges.NewRecoveryKey(parseResult.GetValue(vault)!.FullName, secret, key => Noted(key, output, input)), output);
+        });
+
+        return new RootCommand("Outil du coffre kyfRev.") { verify, encrypt, decrypt, changePassword, newRecovery };
+    }
+
+    private static int Said(ConversionResult result, TextWriter output)
+    {
+        output.WriteLine(result.Message);
+        return result.Succeeded ? Success : Refused;
+    }
+
+    /// <summary>Montre la nouvelle clé de récupération, une seule fois ; vrai si l'utilisateur répond qu'elle est rangée.</summary>
+    private static bool Noted(string key, TextWriter output, TextReader? input)
+    {
+        output.WriteLine("Nouvelle clé de récupération : notez-la maintenant, elle ne sera plus jamais affichée.");
+        output.WriteLine();
+        output.WriteLine("    " + key);
+        output.WriteLine();
+        output.Write("Écrivez « oui » une fois la clé rangée (autrement, l'ancienne reste valable) : ");
+        var answer = (input ?? Console.In).ReadLine();
+        output.WriteLine();
+        return string.Equals(answer?.Trim(), "oui", StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>Écrit le rapport de l'analyse, en texte ou en JSON, et rend le code de sortie qui la résume.</summary>

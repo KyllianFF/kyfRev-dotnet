@@ -9,6 +9,12 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- Coffre chiffré, lot 4 : la preuve qu'aucun texte en clair ne reste sur le disque. Sur un coffre chiffré, le menu d'un mot
+  propose « Accepter jusqu'à la fermeture » au lieu d'écrire dans le dictionnaire de Windows. Le journal masque tout chemin
+  qui entre dans le coffre, et ne nomme plus la citation trouvée. Les moteurs web ne téléversent plus de rapport de plantage,
+  et le moteur des extensions ignore à son tour les variables d'environnement `WEBVIEW2_*`. L'aide des exports dit qu'ils sont
+  en clair. `kyfrev-coffre` gagne `changer-mot-de-passe` et `cle-de-recuperation`, sur un coffre fermé. `docs/chiffrement.md`
+  écrit le modèle de menace.
 - Coffre chiffré, lot 3 : « Chiffrer ce coffre… », dans Paramètres › Données, pour un coffre en clair. Une page en trois
   étapes : le mot de passe, deux fois ; la clé de récupération, montrée une seule fois avant la conversion ; puis la
   conversion, coffre fermé, vers un nouveau dossier voisin (« Coffre chiffré »), avec les fichiers écrits puis relus.

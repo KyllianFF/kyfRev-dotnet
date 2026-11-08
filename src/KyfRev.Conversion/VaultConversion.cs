@@ -69,7 +69,7 @@ public static class VaultConversion
     private const int MaximumDestinations = 1000;
 
     /// <summary>Les fichiers du coffre en clair qui ne sont pas du contenu : le verrou de l'application.</summary>
-    private const string OpenInKyfRev = "Ce coffre est ouvert dans kyfRev : fermez-le, puis recommencez.";
+    internal const string OpenInKyfRev = "Ce coffre est ouvert dans kyfRev : fermez-le, puis recommencez.";
 
     private static readonly string[] Excluded = [VaultLayout.LockFile, VaultLayout.LockInfoFile];
 
@@ -500,7 +500,7 @@ public static class VaultConversion
     /// pris, et rien ne s'y écrit pendant la copie. Rien n'y est écrit non plus : le fichier existe, ou la source n'en a pas,
     /// et rien n'est tenu. Rend de quoi le relâcher.
     /// </summary>
-    private static FileStream? HoldSource(string source)
+    internal static FileStream? HoldSource(string source)
     {
         var lockFile = VaultLayout.Absolute(source, VaultLayout.LockFile);
         if (!File.Exists(lockFile))
@@ -527,7 +527,7 @@ public static class VaultConversion
     /// Le coffre est ouvert dans kyfRev : l'application tient son verrou ouvert. Le vérifier n'écrit rien : on tente seulement
     /// de l'ouvrir pour soi seul.
     /// </summary>
-    private static bool IsOpenElsewhere(string source)
+    internal static bool IsOpenElsewhere(string source)
     {
         var lockFile = VaultLayout.Absolute(source, VaultLayout.LockFile);
         if (!File.Exists(lockFile))
