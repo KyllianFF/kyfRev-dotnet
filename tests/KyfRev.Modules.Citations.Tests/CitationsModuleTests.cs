@@ -35,6 +35,43 @@ public sealed class CitationsModuleTests
     }
 
     [TestMethod]
+    public void T19_a_module_turned_off_then_on_loses_no_quote_and_a_quote_needs_no_author_nor_date()
+    {
+        using var test = new CitationsTest();
+        test.Activate(online: false);
+        string[] written;
+        using (var services = test.Services(out _))
+        {
+            var quotes = services.GetRequiredService<QuoteUseCases>();
+            Assert.IsTrue(quotes.Add(Content("Le cœur a ses raisons.", "Blaise Pascal", "1670", "Pensées")).Succeeded);
+            var bare = quotes.Add(Content("Une phrase sans auteur ni date.", null, null, null));
+            Assert.IsTrue(bare.Succeeded, bare.Error);
+            written = [.. quotes.Quotes().Value.Quotes.Select(quote => quote.Path).Order(StringComparer.Ordinal)];
+        }
+        Assert.HasCount(2, written);
+
+        var preferences = test.Test.App.Settings.Get().Value;
+        Assert.IsTrue(test.Test.App.Settings.Change(preferences with { QuotesActive = false }).Succeeded);
+        using (var off = test.Services(out var none))
+        {
+            Assert.IsEmpty(none);
+            Assert.IsNull(off.GetService<QuoteUseCases>());
+        }
+        foreach (var path in written)
+        {
+            Assert.IsTrue(File.Exists(Path.Combine([test.VaultFolder, .. path.Split('/')])), $"{path} reste dans le coffre");
+        }
+
+        test.Activate(online: false);
+        using var again = test.Services(out var loaded);
+        Assert.AreEqual(CitationsModule.ModuleId, loaded.Single().Id);
+        var restored = again.GetRequiredService<QuoteUseCases>().Quotes().Value;
+        CollectionAssert.AreEqual(written, restored.Quotes.Select(quote => quote.Path).Order(StringComparer.Ordinal).ToArray());
+        Assert.IsEmpty(restored.Trash);
+        Assert.IsNotNull(again.GetServices<IDashboardWidget>().Single().Card());
+    }
+
+    [TestMethod]
     public void An_active_module_brings_its_use_cases_and_extension_points()
     {
         using var test = new CitationsTest();
