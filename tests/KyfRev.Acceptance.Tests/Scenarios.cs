@@ -584,6 +584,46 @@ public sealed class Scenarios
     }
 
     [TestMethod]
+    public void T7_a_vault_copied_elsewhere_keeps_its_archives_images_links_and_anchors()
+    {
+        using var trial = new Trial();
+        var created = new DateOnly(2026, 10, 9);
+        const string target = "Une fiche liée";
+        const string archived = "Une fiche archivée";
+        var sheet = trial.On(created, app =>
+        {
+            var linked = NewSheet(app, target, "La mitose commence par la prophase.\n");
+            var image = app.Editing.AddImage(linked, "Carte.png", new byte[] { 1, 2, 3 }).Value;
+            var opened = app.Sheets.Open(linked).Value;
+            Assert.IsTrue(app.Editing.Save(linked, $"{opened.Body}\n![carte]({image})\n", opened.Fingerprint, 1).Succeeded);
+            NewPassage(app, linked, "la prophase");
+            Succeed(app.Reviews.Archive(NewSheet(app, archived, $"Voir [la fiche]({Uri.EscapeDataString(target)}.md).\n")));
+            return linked;
+        });
+
+        using var copy = trial.CopiedElsewhere();
+
+        Assert.IsEmpty(copy.AbsolutePaths(), "un coffre ne contient aucun chemin absolu");
+        using (var running = copy.Launch(created.AddDays(1)))
+        {
+            running.OpenView("Archives");
+            running.ArchivedRow(archived);
+            running.OpenView("Fiches");
+            running.OpenSheetRow(target);
+            Assert.Contains("La mitose commence", running.SheetText());
+        }
+        copy.On(created.AddDays(1), app =>
+        {
+            var opened = app.Sheets.Open(sheet).Value;
+            Assert.AreEqual(AnchorState.Anchored, opened.Annotations.Single().AnchorState, "le passage reste ancré");
+            Assert.IsTrue(File.Exists(copy.SheetPath(Path.ChangeExtension(opened.Path, ".ressources") + "/carte.png")), "l'image a suivi");
+            var health = app.Maintenance.Health().Value;
+            Assert.AreEqual(0, health.Problems, string.Join(" | ", health.BrokenLinks));
+            return health;
+        });
+    }
+
+    [TestMethod]
     public void T17_no_debugging_port_even_with_the_variables()
     {
         using var trial = new Trial();
