@@ -2,7 +2,8 @@
                     x:ClassModifier="internal"
                     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                    xmlns:kyf="clr-namespace:KyfRev.DesignSystem.Controls">
+                    xmlns:kyf="clr-namespace:KyfRev.DesignSystem.Controls"
+                    xmlns:ds="clr-namespace:KyfRev.DesignSystem">
 
   <!-- Le bouton qui ouvre une liste de choix : tout le champ est cliquable, le contenu est dessiné par-dessus. -->
   <Style x:Key="Kyf.ComboBox.Toggle" TargetType="ToggleButton">
@@ -194,6 +195,273 @@
             </Trigger>
             <Trigger Property="IsKeyboardFocused" Value="True">
               <Setter TargetName="Frame" Property="BorderBrush" Value="{DynamicResource Kyf.Brush.Focus}" />
+              <Setter TargetName="Frame" Property="BorderThickness" Value="2" />
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+              <Setter TargetName="Frame" Property="Opacity" Value="0.5" />
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <!-- Un jour du calendrier : le jour choisi est plein, aujourd'hui entouré, ceux qu'on ne peut pas choisir s'effacent. -->
+  <Style x:Key="Kyf.CalendarDayButton" TargetType="CalendarDayButton">
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="FontFamily" Value="{DynamicResource Kyf.Font.Ui}" />
+    <Setter Property="FontSize" Value="{DynamicResource Kyf.FontSize.Body}" />
+    <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Text}" />
+    <Setter Property="MinWidth" Value="36" />
+    <Setter Property="MinHeight" Value="36" />
+    <Setter Property="FocusVisualStyle" Value="{DynamicResource Kyf.FocusVisual.Inset}" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="CalendarDayButton">
+          <Border x:Name="Cell" Margin="1" Background="Transparent" BorderBrush="Transparent" BorderThickness="2"
+                  CornerRadius="{DynamicResource Kyf.Radius.Control}" SnapsToDevicePixels="True">
+            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+          </Border>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsInactive" Value="True">
+              <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.TextSecondary}" />
+            </Trigger>
+            <Trigger Property="IsMouseOver" Value="True">
+              <Setter TargetName="Cell" Property="Background" Value="{DynamicResource Kyf.Brush.SurfaceAlt}" />
+            </Trigger>
+            <Trigger Property="IsToday" Value="True">
+              <Setter TargetName="Cell" Property="BorderBrush" Value="{DynamicResource Kyf.Brush.Primary}" />
+            </Trigger>
+            <Trigger Property="IsSelected" Value="True">
+              <Setter TargetName="Cell" Property="Background" Value="{DynamicResource Kyf.Brush.Primary}" />
+              <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.OnPrimary}" />
+              <Setter Property="FontWeight" Value="SemiBold" />
+            </Trigger>
+            <Trigger Property="IsBlackedOut" Value="True">
+              <Setter Property="Cursor" Value="Arrow" />
+              <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.TextSecondary}" />
+              <Setter TargetName="Cell" Property="Background" Value="Transparent" />
+              <Setter TargetName="Cell" Property="Opacity" Value="0.5" />
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+              <Setter TargetName="Cell" Property="Opacity" Value="0.5" />
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <!-- Un mois ou une année du calendrier. -->
+  <Style x:Key="Kyf.CalendarMonthButton" TargetType="CalendarButton">
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="FontFamily" Value="{DynamicResource Kyf.Font.Ui}" />
+    <Setter Property="FontSize" Value="{DynamicResource Kyf.FontSize.Body}" />
+    <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Text}" />
+    <Setter Property="MinWidth" Value="60" />
+    <Setter Property="MinHeight" Value="44" />
+    <Setter Property="FocusVisualStyle" Value="{DynamicResource Kyf.FocusVisual.Inset}" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="CalendarButton">
+          <Border x:Name="Cell" Margin="1" Background="Transparent" CornerRadius="{DynamicResource Kyf.Radius.Control}" SnapsToDevicePixels="True">
+            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+          </Border>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsInactive" Value="True">
+              <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.TextSecondary}" />
+            </Trigger>
+            <Trigger Property="IsMouseOver" Value="True">
+              <Setter TargetName="Cell" Property="Background" Value="{DynamicResource Kyf.Brush.SurfaceAlt}" />
+            </Trigger>
+            <Trigger Property="HasSelectedDays" Value="True">
+              <Setter TargetName="Cell" Property="Background" Value="{DynamicResource Kyf.Brush.NavigationActiveBackground}" />
+              <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.NavigationActiveText}" />
+              <Setter Property="FontWeight" Value="SemiBold" />
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+              <Setter TargetName="Cell" Property="Opacity" Value="0.5" />
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <!-- L'en-tête (mois précédent, le mois, mois suivant) et les jours, ou les mois, ou les années. -->
+  <Style x:Key="Kyf.CalendarItem" TargetType="CalendarItem">
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="CalendarItem">
+          <ControlTemplate.Resources>
+            <DataTemplate x:Key="{x:Static CalendarItem.DayTitleTemplateResourceKey}">
+              <TextBlock Text="{Binding}" Style="{DynamicResource Kyf.Text.Caption}" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,4" />
+            </DataTemplate>
+          </ControlTemplate.Resources>
+          <Grid x:Name="PART_Root">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="Auto" />
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+              <RowDefinition Height="Auto" />
+              <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <Button x:Name="PART_PreviousButton" Style="{DynamicResource Kyf.Button.Icon}" Content="&#xE76B;" Focusable="False"
+                    ToolTip="{x:Static ds:DesignText.PreviousPeriod}" AutomationProperties.Name="{x:Static ds:DesignText.PreviousPeriod}" />
+            <Button x:Name="PART_HeaderButton" Grid.Column="1" Style="{DynamicResource Kyf.Button.Subtle}" Focusable="False" FontWeight="SemiBold" HorizontalAlignment="Center" />
+            <Button x:Name="PART_NextButton" Grid.Column="2" Style="{DynamicResource Kyf.Button.Icon}" Content="&#xE76C;" Focusable="False"
+                    ToolTip="{x:Static ds:DesignText.NextPeriod}" AutomationProperties.Name="{x:Static ds:DesignText.NextPeriod}" />
+            <Grid x:Name="PART_MonthView" Grid.Row="1" Grid.ColumnSpan="3" Margin="0,4,0,0">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+              </Grid.RowDefinitions>
+            </Grid>
+            <Grid x:Name="PART_YearView" Grid.Row="1" Grid.ColumnSpan="3" Margin="0,4,0,0" Visibility="Hidden">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+              </Grid.ColumnDefinitions>
+              <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+              </Grid.RowDefinitions>
+            </Grid>
+            <Border x:Name="PART_DisabledVisual" Grid.RowSpan="2" Grid.ColumnSpan="3" Visibility="Collapsed" />
+          </Grid>
+          <ControlTemplate.Triggers>
+            <DataTrigger Binding="{Binding DisplayMode, RelativeSource={RelativeSource AncestorType=Calendar}}" Value="Year">
+              <Setter TargetName="PART_MonthView" Property="Visibility" Value="Hidden" />
+              <Setter TargetName="PART_YearView" Property="Visibility" Value="Visible" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding DisplayMode, RelativeSource={RelativeSource AncestorType=Calendar}}" Value="Decade">
+              <Setter TargetName="PART_MonthView" Property="Visibility" Value="Hidden" />
+              <Setter TargetName="PART_YearView" Property="Visibility" Value="Visible" />
+            </DataTrigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <!-- Le calendrier, comme un menu : la marge laisse la place de l'ombre. -->
+  <Style x:Key="Kyf.Calendar" TargetType="Calendar">
+    <Setter Property="FontFamily" Value="{DynamicResource Kyf.Font.Ui}" />
+    <Setter Property="FontSize" Value="{DynamicResource Kyf.FontSize.Body}" />
+    <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Text}" />
+    <Setter Property="Background" Value="{DynamicResource Kyf.Brush.Surface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Kyf.Brush.Divider}" />
+    <Setter Property="IsTabStop" Value="False" />
+    <Setter Property="AutomationProperties.Name" Value="{x:Static ds:DesignText.Calendar}" />
+    <Setter Property="CalendarItemStyle" Value="{StaticResource Kyf.CalendarItem}" />
+    <Setter Property="CalendarDayButtonStyle" Value="{StaticResource Kyf.CalendarDayButton}" />
+    <Setter Property="CalendarButtonStyle" Value="{StaticResource Kyf.CalendarMonthButton}" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="Calendar">
+          <Grid x:Name="PART_Root" Margin="8,4,8,12">
+            <Border Background="{TemplateBinding Background}" CornerRadius="{DynamicResource Kyf.Radius.Card}" Effect="{DynamicResource Kyf.Elevation.Flyout}" />
+            <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1"
+                    CornerRadius="{DynamicResource Kyf.Radius.Card}" Padding="8" SnapsToDevicePixels="True">
+              <CalendarItem x:Name="PART_CalendarItem" Style="{TemplateBinding CalendarItemStyle}" />
+            </Border>
+          </Grid>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <!-- Le texte du champ de date : sans cadre, le cadre est celui du champ. Vide, il rappelle le format. -->
+  <Style TargetType="DatePickerTextBox">
+    <EventSetter Event="Loaded" Handler="OnFieldLoaded" />
+    <Setter Property="FontFamily" Value="{DynamicResource Kyf.Font.Ui}" />
+    <Setter Property="FontSize" Value="{DynamicResource Kyf.FontSize.Body}" />
+    <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Text}" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="CaretBrush" Value="{DynamicResource Kyf.Brush.Text}" />
+    <Setter Property="SelectionBrush" Value="{DynamicResource Kyf.Brush.Selection}" />
+    <Setter Property="VerticalContentAlignment" Value="Center" />
+    <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="DatePickerTextBox">
+          <Grid Background="{TemplateBinding Background}">
+            <TextBlock x:Name="Placeholder" Padding="2,0" IsHitTestVisible="False" Visibility="Collapsed" VerticalAlignment="Center"
+                       Foreground="{DynamicResource Kyf.Brush.TextSecondary}" Text="{x:Static ds:DesignText.DatePlaceholder}" />
+            <ScrollViewer x:Name="PART_ContentHost" Focusable="False" VerticalAlignment="Center"
+                          HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden" />
+          </Grid>
+          <ControlTemplate.Triggers>
+            <Trigger Property="Text" Value="">
+              <Setter TargetName="Placeholder" Property="Visibility" Value="Visible" />
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <!-- Champ de date : le même cadre que le texte, un bouton pour le calendrier ; une date refusée le rougit. -->
+  <Style TargetType="kyf:DateField">
+    <Setter Property="FontFamily" Value="{DynamicResource Kyf.Font.Ui}" />
+    <Setter Property="FontSize" Value="{DynamicResource Kyf.FontSize.Body}" />
+    <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Text}" />
+    <Setter Property="Background" Value="{DynamicResource Kyf.Brush.Surface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Kyf.Brush.ControlBorder}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Padding" Value="12,0,0,0" />
+    <Setter Property="MinHeight" Value="40" />
+    <Setter Property="MinWidth" Value="176" />
+    <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+    <Setter Property="CalendarStyle" Value="{StaticResource Kyf.Calendar}" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="kyf:DateField">
+          <Grid x:Name="PART_Root">
+            <Border x:Name="Frame" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
+                    CornerRadius="{DynamicResource Kyf.Radius.Control}" SnapsToDevicePixels="True">
+              <Grid>
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="*" />
+                  <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <DatePickerTextBox x:Name="PART_TextBox" Margin="{TemplateBinding Padding}" AutomationProperties.Name="{TemplateBinding AutomationProperties.Name}" />
+                <Button x:Name="PART_Button" Grid.Column="1" Style="{DynamicResource Kyf.Button.Icon}" Content="{x:Static kyf:Icons.Calendar}"
+                        ToolTip="{x:Static ds:DesignText.OpenCalendar}" AutomationProperties.Name="{x:Static ds:DesignText.OpenCalendar}" />
+              </Grid>
+            </Border>
+            <Popup x:Name="PART_Popup" Placement="Bottom" PlacementTarget="{Binding ElementName=Frame}" StaysOpen="False" AllowsTransparency="True" PopupAnimation="None" />
+          </Grid>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+              <Setter TargetName="Frame" Property="BorderBrush" Value="{DynamicResource Kyf.Brush.Text}" />
+            </Trigger>
+            <Trigger Property="IsKeyboardFocusWithin" Value="True">
+              <Setter TargetName="Frame" Property="BorderBrush" Value="{DynamicResource Kyf.Brush.Focus}" />
+              <Setter TargetName="Frame" Property="BorderThickness" Value="2" />
+            </Trigger>
+            <Trigger Property="HasRefusedDate" Value="True">
+              <Setter TargetName="Frame" Property="BorderBrush" Value="{DynamicResource Kyf.Brush.Critical}" />
               <Setter TargetName="Frame" Property="BorderThickness" Value="2" />
             </Trigger>
             <Trigger Property="IsEnabled" Value="False">
