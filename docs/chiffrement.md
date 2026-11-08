@@ -408,7 +408,7 @@ noms des dossiers et des fiches.
 | `seance.json` | Le chemin du coffre et des identifiants, pendant une séance | Aucun texte de fiche. |
 | `preferences.json` | L'apparence | Aucun texte de fiche. |
 | `config-locale.json` | Le chemin du dernier coffre ouvert | Aucun texte de fiche. |
-| Le dossier temporaire | Le cache du catalogue d'extensions | Aucun texte de fiche. |
+| `catalogue`, dans les données locales | Les extensions téléchargées qui attendent leur installation | Aucun texte de fiche. |
 
 Le correcteur d'orthographe de Windows reçoit le texte par la mémoire, à la demande, sur ce poste. La lecture à voix haute
 aussi, par le moteur de voix de Windows.

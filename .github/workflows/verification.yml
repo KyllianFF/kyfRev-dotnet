@@ -257,6 +257,24 @@ jobs:
           $installateur = ./tools/installer.ps1 -Iscc $env:ISCC
           "INSTALLATEUR=$installateur" >> $env:GITHUB_ENV
 
+      - name: Construction de la version portable
+        run: |
+          $portable = ./tools/portable.ps1 -Publication artifacts/installer/application
+          "PORTABLE=$portable" >> $env:GITHUB_ENV
+
+      - name: Version portable
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: portable
+          path: |
+            ${{ env.PORTABLE }}
+            ${{ env.PORTABLE }}.sha256
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Essai de la version portable
+        run: ./tools/portable-tests.ps1 -Archive $env:PORTABLE
+
       - name: Installateur
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

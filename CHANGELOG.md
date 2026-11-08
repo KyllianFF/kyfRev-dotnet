@@ -9,6 +9,10 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- La version portable : `tools/portable.ps1` écrit `kyfRev-<version>-portable.zip`, avec `MesRévisions\Application` et son
+  `portable.json`, un `LISEZMOI.txt` et l'empreinte SHA-256 de l'archive. Elle n'écrit rien dans le profil : un mot accepté
+  reste en mémoire au lieu d'aller dans le dictionnaire de Windows, et les extensions téléchargées attendent dans ses
+  données locales, comme en version installée, au lieu du dossier temporaire.
 - Coffre chiffré, lot 4 : la preuve qu'aucun texte en clair ne reste sur le disque. Sur un coffre chiffré, le menu d'un mot
   propose « Accepter jusqu'à la fermeture de kyfRev », dans le code Markdown, au lieu d'écrire dans le dictionnaire de Windows. Le journal masque tout chemin
   qui entre dans le coffre, et ne nomme plus la citation trouvée. Les moteurs web ne téléversent plus de rapport de plantage,

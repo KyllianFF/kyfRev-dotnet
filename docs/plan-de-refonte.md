@@ -668,7 +668,7 @@ La livraison n'est déclenchée que sur étiquette. Toutes les actions sont épi
 
 > **Attention : signature.** Un certificat de signature de code (Azure Trusted Signing, par exemple) affiche le nom **légal** vérifié, et non « KyllianFF ». Sans signature, SmartScreen avertit au premier lancement.
 
-**Version portable** : `kyfRev-<version>-portable.zip`, avec la structure `MesRévisions\Application\kyfRev.exe` et `portable.json` de la 0.x. Rien n'est écrit hors du dossier.
+**Version portable** : `kyfRev-<version>-portable.zip`, avec la structure `MesRévisions\Application\kyfRev.exe` et `portable.json` de la 0.x. kyfRev n'écrit rien hors du dossier. Windows et WebView2 gardent de leur côté quelques traces techniques : le nom du programme (`MuiCache`), des réglages du moteur (`HKCU\Software\Microsoft\EdgeWebView`) et les fichiers vides du correcteur, constatés dans Windows Sandbox le 8 novembre 2026 ; aucune ne contient le texte d'une fiche.
 
 ---
 
@@ -878,7 +878,7 @@ Ce jalon se découpe en sous-parties validées une à une, comme J6.
   - en installation silencieuse, codes de sortie conformes ;
   - nom, éditeur, version, date et icône visibles dans l'assistant et dans Paramètres › Applications ;
   - coffre intact après désinstallation ;
-  - version portable : rien d'écrit hors du dossier (comparaison du registre et d'AppData avant et après) ;
+  - version portable : rien d'écrit par kyfRev hors du dossier (comparaison du registre et d'AppData avant et après ; seules restent les traces de Windows et de WebView2, §5.5) ;
   - parité fonctionnelle avec 0.8.0 vérifiée sur la liste du §1.1.
 
 ### Après la 1.0
