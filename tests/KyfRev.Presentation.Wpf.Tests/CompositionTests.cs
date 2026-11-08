@@ -2,6 +2,7 @@ using System.IO;
 using KyfRev.Application.Model;
 using KyfRev.Application.Ports;
 using KyfRev.Application.UseCases;
+using KyfRev.Infrastructure.Vault;
 using KyfRev.Infrastructure.Windows;
 using KyfRev.Presentation.Wpf.Pages;
 using KyfRev.Presentation.Wpf.Shell;
@@ -65,6 +66,27 @@ public sealed class CompositionTests
         Assert.AreEqual("portable", KyfRev.App.Composition.ModeName(AppMode.Portable));
         Assert.AreEqual("installée", KyfRev.App.Composition.ModeName(AppMode.Installed));
         Assert.AreEqual("développement", KyfRev.App.Composition.ModeName(AppMode.Development));
+    }
+
+    [TestMethod]
+    public void Every_top_level_folder_of_a_vault_is_masked_in_the_log()
+    {
+        var folder = Directory.CreateTempSubdirectory("kyfrev-journal-").FullName;
+        try
+        {
+            using var log = new DiagnosticLog(folder, string.Empty, TimeProvider.System);
+            var logger = log.CreateLogger("essai");
+            foreach (var name in new[] { VaultLayout.Sheets, VaultLayout.Quotes, VaultLayout.Schemas, VaultLayout.Tracking })
+            {
+                logger.Log(LogLevel.Error, default, $@"C:\Coffre\{name}\Titre confidentiel.md", null, (text, _) => text);
+            }
+
+            Assert.DoesNotContain("confidentiel", File.ReadAllText(log.LogFile));
+        }
+        finally
+        {
+            Directory.Delete(folder, recursive: true);
+        }
     }
 
     [TestMethod]

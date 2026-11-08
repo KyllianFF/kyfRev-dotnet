@@ -1,4 +1,5 @@
 using System.Globalization;
+using KyfRev.Application.Ports;
 
 namespace KyfRev.Presentation.Wpf.Editing;
 
@@ -683,6 +684,9 @@ public static class EditingText
     /// <summary>Ajouter un mot au dictionnaire.</summary>
     public const string AddToDictionary = "Ajouter au dictionnaire";
 
+    /// <summary>Accepter un mot sans l'écrire dans le dictionnaire de Windows : un coffre chiffré ne le nourrit pas.</summary>
+    public const string AcceptUntilClosing = "Accepter jusqu'à la fermeture";
+
     /// <summary>Couper.</summary>
     public const string Cut = "Couper";
 
@@ -698,6 +702,13 @@ public static class EditingText
 
     /// <summary>Une image trop lourde pour être ajoutée.</summary>
     public static string ImageTooLarge(string name) => $"« {name} » dépasse 50 Mo : image non ajoutée.";
+
+    /// <summary>Ce que le menu d'un mot propose, selon ce que le correcteur en fera.</summary>
+    public static string AddWord(ISpelling spelling)
+    {
+        ArgumentNullException.ThrowIfNull(spelling);
+        return spelling.AddsUntilClosing ? AcceptUntilClosing : AddToDictionary;
+    }
 
     /// <summary>Le nom d'un titre.</summary>
     public static string Heading(int level) => string.Create(CultureInfo.InvariantCulture, $"Titre {level}");

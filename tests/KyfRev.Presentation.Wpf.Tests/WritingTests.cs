@@ -1341,6 +1341,18 @@ public sealed class WritingTests
     }
 
     [STATestMethod]
+    public void On_an_encrypted_vault_the_menu_says_the_word_lasts_until_closing()
+    {
+        using var scene = new Scene("Une ékole ici.");
+        scene.Vault.Spelling.AddsUntilClosing = true;
+
+        var headers = scene.Source.MenuItemsAt(5).OfType<MenuItem>().Select(item => (string)item.Header).ToList();
+
+        Assert.Contains(EditingText.AcceptUntilClosing, headers);
+        Assert.DoesNotContain(EditingText.AddToDictionary, headers);
+    }
+
+    [STATestMethod]
     public void In_code_and_outside_a_word_the_menu_only_offers_the_clipboard()
     {
         using var scene = new Scene("```\nékole\n```\n\n  ");

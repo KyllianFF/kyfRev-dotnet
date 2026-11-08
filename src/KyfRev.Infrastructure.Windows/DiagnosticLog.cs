@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 
 namespace KyfRev.Infrastructure.Windows;
@@ -11,8 +12,9 @@ namespace KyfRev.Infrastructure.Windows;
 /// relance ; chaque démarrage y commence par une ligne repère. Au-delà de 1 Mo, il devient
 /// <c>kyfRev.precedent.log</c> (le précédent est remplacé) : deux fichiers au plus. Comme le
 /// prévoit le plan, la rotation se fait aussi en cours d'exécution, et le dossier du profil de
-/// l'utilisateur est masqué (<c>%USERPROFILE%</c>). Le journal ne bloque jamais l'application :
-/// s'il ne peut plus être écrit, il se tait.
+/// l'utilisateur est masqué (<c>%USERPROFILE%</c>), comme tout ce qui suit un dossier du coffre :
+/// le titre d'une fiche ne sort pas d'un coffre chiffré par une erreur écrite ici. Le journal ne
+/// bloque jamais l'application : s'il ne peut plus être écrit, il se tait.
 /// </summary>
 public sealed partial class DiagnosticLog : ILoggerFactory
 {
@@ -94,9 +96,13 @@ public sealed partial class DiagnosticLog : ILoggerFactory
     {
     }
 
-    /// <summary>Le texte avec le dossier du profil masqué.</summary>
+    /// <summary>Le texte avec le dossier du profil masqué, et la fin de ligne dès qu'un chemin entre dans le coffre.</summary>
     internal string Mask(string text) =>
-        _profile.Length == 0 ? text : text.Replace(_profile, ProfileMask, StringComparison.OrdinalIgnoreCase);
+        VaultPath().Replace(_profile.Length == 0 ? text : text.Replace(_profile, ProfileMask, StringComparison.OrdinalIgnoreCase), "$1/…");
+
+    // Jusqu'à la fin de la ligne, et pas jusqu'au guillemet : un titre français contient des apostrophes et des espaces.
+    [GeneratedRegex(@"(?<![\p{L}\p{N}_.\-])(fiches|citations|modeles|schemas|\.suivi)[\\/][^\r\n]*")]
+    private static partial Regex VaultPath();
 
     private void Append(LogLevel level, string category, string message, Exception? exception)
     {
