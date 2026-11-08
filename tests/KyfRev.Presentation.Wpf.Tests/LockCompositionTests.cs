@@ -42,4 +42,19 @@ public sealed class LockCompositionTests
             Assert.AreSame(services.GetRequiredService(view.GetType()), view);
         }
     }
+
+    [STATestMethod]
+    public void Another_vault_forgets_what_the_views_read_from_the_previous_one()
+    {
+        using var ui = new UiThread();
+        using var services = KyfRev.App.Composition.Build();
+        var workload = services.GetRequiredService<KyfRev.Presentation.Wpf.Pages.WorkloadPageViewModel>();
+        var read = workload.RefreshCommand.ExecuteAsync(null);
+        UiThread.Until(() => read.IsCompleted);
+        Assert.IsTrue(workload.HasError, "sans coffre ouvert, la lecture est refusée, et la vue le garde");
+
+        KyfRev.App.Composition.VaultChanged(services);
+
+        Assert.IsFalse(workload.HasError);
+    }
 }

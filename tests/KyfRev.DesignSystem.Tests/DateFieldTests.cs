@@ -73,22 +73,23 @@ public sealed class DateFieldTests
 
         Text(field).Text = "21/11/2026";
         Press(field, source, Text(field), Key.Enter);
-        Assert.AreEqual(Day, field.Day, "la date refusée ne remplace pas la date en cours");
-        Assert.AreEqual("12/11/2026", Text(field).Text);
+        Assert.IsNull(field.Day, "une date refusée n'est pas une date : celle d'avant ne reste pas à sa place");
+        Assert.IsNull(field.SelectedDate);
+        Assert.AreEqual(string.Empty, Text(field).Text);
         Assert.IsTrue(field.HasRefusedDate);
         Assert.AreEqual(DesignText.DateRefused, AutomationProperties.GetItemStatus(field));
         var frame = Host.Part<Border>(field, "Frame");
         field.ApplyTemplate();
         Assert.AreEqual(((SolidColorBrush)design.Dictionary[DesignKeys.Brush(ColorRole.Critical)]).Color, ((SolidColorBrush)frame.BorderBrush).Color);
 
-        // La frappe suivante efface le refus.
-        Tunnel(field, source, Key.D1);
+        // Écrire à nouveau efface le refus.
+        Text(field).Text = "1";
         Assert.IsFalse(field.HasRefusedDate);
         Assert.AreEqual(string.Empty, AutomationProperties.GetItemStatus(field));
 
         Text(field).Text = "pas une date";
         Press(field, source, Text(field), Key.Enter);
-        Assert.AreEqual(Day, field.Day);
+        Assert.IsNull(field.Day);
         Assert.IsTrue(field.HasRefusedDate);
         Text(field).Text = "13/11/2026";
         Press(field, source, Text(field), Key.Enter);
@@ -125,6 +126,96 @@ public sealed class DateFieldTests
         Assert.IsFalse(pressed.Handled);
         var other = Press(field, source, field, Key.Enter, handled: true);
         Assert.IsTrue(other.Handled, "une touche qui vient d'ailleurs n'est pas rendue");
+    }
+
+    [STATestMethod]
+    public void Enter_on_a_refused_date_stays_in_the_field()
+    {
+        var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
+        var field = new DateField { Maximum = new DateOnly(2026, 11, 20), Day = Day };
+        Host.Of(design, field);
+        using var source = new HwndSource(new HwndSourceParameters("kyfRev essai"));
+
+        Text(field).Text = "30/02/2027";
+        var pressed = Press(field, source, Text(field), Key.Enter);
+
+        Assert.IsTrue(field.HasRefusedDate);
+        Assert.IsTrue(pressed.Handled, "le bouton par défaut ne part pas sur la date d'avant, et le refus se lit");
+    }
+
+    [STATestMethod]
+    [DataRow(ThemeKind.Light)]
+    [DataRow(ThemeKind.Dark)]
+    [DataRow(ThemeKind.HighContrast)]
+    public void A_refused_date_is_written_and_read_aloud(ThemeKind theme)
+    {
+        var design = new DesignResources(theme, reducedMotion: false);
+        var field = new DateField { Day = Day, Maximum = new DateOnly(2026, 11, 20) };
+        Host.Of(design, field);
+        using var source = new HwndSource(new HwndSourceParameters("kyfRev essai"));
+        var message = Host.Part<LiveText>(field, "Refusal");
+        Assert.AreEqual(Visibility.Collapsed, message.Visibility, "rien tant que la date n'est pas refusée");
+
+        Text(field).Text = "21/11/2026";
+        Press(field, source, Text(field), Key.Enter);
+
+        Assert.AreEqual(Visibility.Visible, message.Visibility, "la couleur du cadre ne suffit pas : le contraste élevé ne la change pas");
+        Assert.AreEqual(DesignText.DateRefused, message.Text);
+        Assert.AreEqual(((SolidColorBrush)design.Dictionary[DesignKeys.Brush(ColorRole.Critical)]).Color, ((SolidColorBrush)message.Foreground).Color);
+        Assert.AreEqual(AutomationLiveSetting.Assertive, AutomationProperties.GetLiveSetting(message));
+        var peer = UIElementAutomationPeer.CreatePeerForElement(message);
+        Assert.AreEqual(DesignText.DateRefused, peer.GetName());
+        Assert.IsTrue(peer.IsControlElement(), "un texte du modèle reste atteignable par le lecteur d'écran");
+        Assert.AreEqual(DesignText.DateRefused, AutomationProperties.GetItemStatus(Text(field)), "le champ qui a le focus le dit aussi");
+
+        Text(field).Text = "1";
+        Assert.AreEqual(Visibility.Collapsed, message.Visibility);
+        Assert.AreEqual(string.Empty, AutomationProperties.GetItemStatus(Text(field)));
+    }
+
+    [STATestMethod]
+    public void A_date_given_after_a_refusal_clears_it()
+    {
+        var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
+        var field = new DateField { Day = Day, Maximum = new DateOnly(2026, 11, 20) };
+        Host.Of(design, field);
+        using var source = new HwndSource(new HwndSourceParameters("kyfRev essai"));
+        Text(field).Text = "21/11/2026";
+        Press(field, source, Text(field), Key.Enter);
+        Assert.IsTrue(field.HasRefusedDate);
+
+        field.Day = new DateOnly(2026, 11, 14);
+
+        Assert.IsFalse(field.HasRefusedDate);
+        Assert.AreEqual("14/11/2026", Text(field).Text);
+    }
+
+    [STATestMethod]
+    public void A_click_on_a_button_the_refusal_disables_gives_the_focus_back_to_the_field()
+    {
+        var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
+        var field = new DateField { Day = Day, Maximum = new DateOnly(2026, 11, 20) };
+        var confirm = new Button { Content = "Valider" };
+        confirm.SetBinding(UIElement.IsEnabledProperty, new Binding(nameof(DateField.Day)) { Source = field, Converter = new HasValue() });
+        var window = new Window { Content = new StackPanel { Children = { field, confirm } }, Resources = design.Dictionary, ShowActivated = true, Left = -10000, Top = -10000, Width = 480, Height = 320, WindowStartupLocation = WindowStartupLocation.Manual };
+        window.Show();
+        window.Activate();
+        Host.Flush();
+        try
+        {
+            Assert.IsTrue(Text(field).Focus());
+            Text(field).Text = "21/11/2026";
+
+            // Le clic prend le focus : le champ perd le sien, refuse la date, et le bouton se désactive.
+            Assert.IsTrue(confirm.Focus());
+            Assert.IsNull(field.Day);
+            Assert.IsFalse(confirm.IsEnabled);
+            Until(() => field.IsKeyboardFocusWithin);
+        }
+        finally
+        {
+            window.Close();
+        }
     }
 
     [STATestMethod]
@@ -266,6 +357,24 @@ public sealed class DateFieldTests
                 yield return deeper;
             }
         }
+    }
+
+    private static void Until(Func<bool> condition)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(10);
+        while (!condition())
+        {
+            Assert.IsLessThan(deadline, DateTime.UtcNow, "délai dépassé");
+            Host.Flush();
+        }
+    }
+
+    /// <summary>Vrai s'il y a une date.</summary>
+    private sealed class HasValue : IValueConverter
+    {
+        public object Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture) => value is not null;
+
+        public object ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture) => throw new NotSupportedException();
     }
 
     /// <summary>Une source de liaison dont la date se lit et se change.</summary>

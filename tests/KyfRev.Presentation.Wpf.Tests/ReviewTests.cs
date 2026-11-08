@@ -259,6 +259,162 @@ public sealed class ReviewTests
         }
     }
 
+    [STATestMethod]
+    public void A_refused_date_cannot_be_replaced_by_yesterday()
+    {
+        using var ui = new UiThread();
+        using var vault = new ReviewVault();
+        var test = new TestShell();
+        var page = vault.SheetPage(vault.SheetId);
+        page.LoadCommand.Execute(null);
+        UiThread.Until(() => !page.IsLoading);
+        var window = Show(test, page);
+        try
+        {
+            var bar = page.Review!;
+            bar.ChooseValidationDayCommand.Execute(null);
+            TestShell.Flush();
+            var field = Named<DateField>(window, "ChosenDay");
+            UiThread.Until(() => field.IsKeyboardFocusWithin);
+            Assert.IsTrue(bar.ConfirmDayCommand.CanExecute(null));
+            var last = bar.State.LastReview;
+
+            // Tapée puis abandonnée pour « Valider à cette date » : refusée, elle ne laisse pas hier à sa place.
+            Descendants(field).OfType<DatePickerTextBox>().Single().Text = "01/10/2026";
+            var confirm = Named<Button>(window, "ConfirmDay");
+            Assert.IsTrue(confirm.Focus());
+
+            Assert.IsTrue(field.HasRefusedDate);
+            Assert.IsNull(bar.ChosenDay);
+            Assert.IsFalse(bar.ConfirmDayCommand.CanExecute(null));
+            Assert.IsFalse(confirm.IsEnabled);
+            Assert.AreEqual(last, bar.State.LastReview);
+            UiThread.Until(() => field.IsKeyboardFocusWithin);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
+    public void Closing_the_field_of_a_chosen_day_gives_the_focus_back_to_the_button_that_opened_it()
+    {
+        using var ui = new UiThread();
+        using var vault = new ReviewVault();
+        var test = new TestShell();
+        var page = vault.SheetPage(vault.SheetId);
+        page.LoadCommand.Execute(null);
+        UiThread.Until(() => !page.IsLoading);
+        var window = Show(test, page);
+        try
+        {
+            var bar = page.Review!;
+            var field = Named<DateField>(window, "ChosenDay");
+            var cancel = Named<Button>(window, "CancelDay");
+
+            // Sans menu ouvert d'abord : « ⋯ », d'où vient la date passée.
+            bar.ChooseValidationDayCommand.Execute(null);
+            TestShell.Flush();
+            UiThread.Until(() => field.IsKeyboardFocusWithin);
+            Assert.IsTrue(cancel.Focus());
+            bar.CancelDayCommand.Execute(null);
+            var more = Named<Button>(window, "MoreButton");
+            UiThread.Until(() => more.IsKeyboardFocused);
+
+            // Par « Reporter » : le focus y revient.
+            var postpone = Named<Button>(window, "PostponeButton");
+            postpone.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+            postpone.ContextMenu.IsOpen = false;
+            TestShell.Flush();
+            bar.ChoosePostponeDayCommand.Execute(null);
+            TestShell.Flush();
+            UiThread.Until(() => field.IsKeyboardFocusWithin);
+            Assert.IsTrue(Named<Button>(window, "ConfirmDay").Focus());
+            var done = bar.ConfirmDayCommand.ExecuteAsync(null);
+            UiThread.Until(() => done.IsCompleted && !bar.IsChoosingDay);
+            UiThread.Until(() => postpone.IsKeyboardFocused);
+
+            // Le focus déjà ailleurs y reste.
+            bar.ChooseValidationDayCommand.Execute(null);
+            TestShell.Flush();
+            UiThread.Until(() => field.IsKeyboardFocusWithin);
+            Assert.IsTrue(more.Focus());
+            bar.CancelDayCommand.Execute(null);
+            TestShell.Flush();
+            Assert.IsTrue(more.IsKeyboardFocused, "et non « Reporter », qui a ouvert le champ");
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
+    public void A_refused_date_of_the_vault_keeps_the_field_open_with_the_focus()
+    {
+        using var ui = new UiThread();
+        using var vault = new ReviewVault();
+        var test = new TestShell();
+        var page = vault.SheetPage(vault.SheetId);
+        page.LoadCommand.Execute(null);
+        UiThread.Until(() => !page.IsLoading);
+        var window = Show(test, page);
+        try
+        {
+            var bar = page.Review!;
+            bar.ChoosePostponeDayCommand.Execute(null);
+            TestShell.Flush();
+            var field = Named<DateField>(window, "ChosenDay");
+            UiThread.Until(() => field.IsKeyboardFocusWithin);
+
+            // Le coffre ne répond plus : le refus s'écrit, le champ reste, et il reprend le focus que son bouton a perdu.
+            vault.App.Vaults.Close();
+            Assert.IsTrue(Named<Button>(window, "ConfirmDay").Focus());
+            var done = bar.ConfirmDayCommand.ExecuteAsync(null);
+            UiThread.Until(() => done.IsCompleted && bar.HasError);
+
+            Assert.IsTrue(bar.IsChoosingDay);
+            UiThread.Until(() => field.IsKeyboardFocusWithin);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
+    public void An_archive_with_the_field_open_leaves_the_focus_on_the_restart()
+    {
+        using var ui = new UiThread();
+        using var vault = new ReviewVault();
+        var test = new TestShell();
+        var page = vault.SheetPage(vault.SheetId);
+        page.LoadCommand.Execute(null);
+        UiThread.Until(() => !page.IsLoading);
+        var window = Show(test, page);
+        try
+        {
+            var bar = page.Review!;
+            bar.ChoosePostponeDayCommand.Execute(null);
+            TestShell.Flush();
+            var field = Named<DateField>(window, "ChosenDay");
+            UiThread.Until(() => field.IsKeyboardFocusWithin);
+
+            // Archivée pendant que le champ est ouvert : les boutons de la révision sont partis.
+            bar.RequestArchiveCommand.Execute(null);
+            var archived = bar.AnswerCommand.ExecuteAsync(true);
+            UiThread.Until(() => archived.IsCompleted && !bar.IsChoosingDay);
+
+            var restart = Named<Button>(window, "RestartArchived");
+            UiThread.Until(() => restart.IsKeyboardFocused);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
     [TestMethod]
     public async Task An_early_review_is_confirmed_first()
     {

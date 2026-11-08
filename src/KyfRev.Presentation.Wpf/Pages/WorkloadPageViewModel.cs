@@ -177,6 +177,9 @@ public sealed partial class WorkloadPageViewModel : ObservableObject, INavigatio
     /// <summary>La liste se refait : le jour choisi reste, avec ce qui est écrit dessous.</summary>
     private bool _rebuilding;
 
+    /// <summary>La ligne du dernier « Déplacer… » : le focus y revient quand le formulaire se referme.</summary>
+    private DueItemRow? _lastMoved;
+
     /// <summary>La vue, sur le tableau de bord (les rappels le rendent), les reports, et l'ouverture des révisions.</summary>
     public WorkloadPageViewModel(ReminderUseCases reminders, ReviewUseCases reviews, IReviewOpener opener)
     {
@@ -196,6 +199,7 @@ public sealed partial class WorkloadPageViewModel : ObservableObject, INavigatio
         ProjectedRows = [];
         Message = string.Empty;
         Error = string.Empty;
+        MoveError = string.Empty;
     }
 
     /// <summary>Filtres proposés.</summary>
@@ -324,13 +328,24 @@ public sealed partial class WorkloadPageViewModel : ObservableObject, INavigatio
     /// <summary>Un message est affiché.</summary>
     public bool HasMessage => Message.Length > 0;
 
-    /// <summary>Pourquoi la lecture ou le déplacement a été refusé.</summary>
+    /// <summary>Pourquoi la lecture a été refusée.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasError))]
     public partial string Error { get; private set; }
 
-    /// <summary>Un refus est affiché.</summary>
+    /// <summary>Un refus de lecture est affiché.</summary>
     public bool HasError => Error.Length > 0;
+
+    /// <summary>Pourquoi le déplacement a été refusé : cela s'écrit à côté du formulaire, là où l'on regarde.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasMoveError))]
+    public partial string MoveError { get; private set; }
+
+    /// <summary>Un déplacement refusé est affiché.</summary>
+    public bool HasMoveError => MoveError.Length > 0;
+
+    /// <summary>La ligne du dernier « Déplacer… », si elle est encore dans le jour choisi.</summary>
+    internal DueItemRow? RowOfLastMove => _lastMoved is { } last ? DueRows.FirstOrDefault(row => row.Item.Kind == last.Item.Kind && row.Item.Id == last.Item.Id) : null;
 
     private bool CanMove => IsMoving && MoveTo is not null && !IsBusy;
 
@@ -376,14 +391,22 @@ public sealed partial class WorkloadPageViewModel : ObservableObject, INavigatio
         _back = back;
         SelectedFilter = Filters.First(choice => choice.Value == filter);
         SelectedDay = null;
-        ToMove = null;
-        MoveTo = null;
+        CloseMoveForm();
         Message = string.Empty;
         Error = string.Empty;
     }
 
-    /// <inheritdoc/>
-    public void OnNavigatedTo() => RefreshCommand.Execute(null);
+    /// <summary>
+    /// Relit le coffre. Le formulaire ne survit pas à la vue, comme dans la 0.x : au retour d'une révision, l'échéance à
+    /// déplacer peut avoir changé d'étape, et « Déplacer » emporterait la suivante.
+    /// </summary>
+    public void OnNavigatedTo()
+    {
+        CloseMoveForm();
+        Message = string.Empty;
+        Error = string.Empty;
+        RefreshCommand.Execute(null);
+    }
 
     /// <summary>Oublie tout ce qui vient du coffre ; le filtre et la largeur restent, la prochaine ouverture relit le coffre.</summary>
     public void Forget()
@@ -391,6 +414,7 @@ public sealed partial class WorkloadPageViewModel : ObservableObject, INavigatio
         _generation++;
         _reading++;
         _dashboard = null;
+        _lastMoved = null;
         SelectedDay = null;
         Days = [];
         Total = 0;
@@ -400,8 +424,7 @@ public sealed partial class WorkloadPageViewModel : ObservableObject, INavigatio
         DayTitle = string.Empty;
         DueRows = [];
         ProjectedRows = [];
-        ToMove = null;
-        MoveTo = null;
+        CloseMoveForm();
         EarliestMove = null;
         Message = string.Empty;
         Error = string.Empty;
@@ -445,20 +468,18 @@ public sealed partial class WorkloadPageViewModel : ObservableObject, INavigatio
     private void PrepareMove(DueItemRow row)
     {
         var tomorrow = _dashboard!.Day.AddDays(1);
+        _lastMoved = row;
         EarliestMove = tomorrow;
         ToMove = row;
         MoveTo = (SelectedDay is { } day ? ProposedDay(Days, day.Day) : null) ?? tomorrow;
+        MoveError = string.Empty;
         Message = string.Empty;
         Error = string.Empty;
     }
 
     /// <summary>Referme le choix d'un jour.</summary>
     [RelayCommand]
-    private void CancelMove()
-    {
-        ToMove = null;
-        MoveTo = null;
-    }
+    private void CancelMove() => CloseMoveForm();
 
     /// <summary>Déplace l'échéance au jour visé (un report), puis relit le tableau de bord.</summary>
     [RelayCommand(CanExecute = nameof(CanMove))]
@@ -466,6 +487,9 @@ public sealed partial class WorkloadPageViewModel : ObservableObject, INavigatio
     {
         var (row, day, generation) = (ToMove!, MoveTo!.Value, _generation);
         IsBusy = true;
+        // Le message d'avant se ferme : le suivant, même identique, sera annoncé.
+        Message = string.Empty;
+        MoveError = string.Empty;
         Error = string.Empty;
         try
         {
@@ -476,12 +500,11 @@ public sealed partial class WorkloadPageViewModel : ObservableObject, INavigatio
             }
             if (!outcome.Succeeded)
             {
-                Error = outcome.Error!;
+                MoveError = outcome.Error!;
                 return;
             }
             Message = WorkloadText.MovedOf(row.Step, NameOf(row.Item, row.ActiveRecall), Dates.Long(day));
-            ToMove = null;
-            MoveTo = null;
+            CloseMoveForm();
             await RefreshAsync().ConfigureAwait(true);
         }
         finally
@@ -495,7 +518,7 @@ public sealed partial class WorkloadPageViewModel : ObservableObject, INavigatio
 
     partial void OnSelectedFilterChanged(Choice<DashboardFilter> value)
     {
-        ToMove = null;
+        CloseMoveForm();
         Rebuild();
     }
 
@@ -514,11 +537,17 @@ public sealed partial class WorkloadPageViewModel : ObservableObject, INavigatio
         ShowDetail();
         if (!_rebuilding)
         {
-            ToMove = null;
-            MoveTo = null;
+            CloseMoveForm();
             Message = string.Empty;
             Error = string.Empty;
         }
+    }
+
+    private void CloseMoveForm()
+    {
+        ToMove = null;
+        MoveTo = null;
+        MoveError = string.Empty;
     }
 
     private static int ColumnsFor(double width) => width >= OneRowMinimum ? WideColumns : NarrowColumns;

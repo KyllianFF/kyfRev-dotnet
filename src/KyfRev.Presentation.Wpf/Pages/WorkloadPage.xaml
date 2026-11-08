@@ -212,16 +212,19 @@
                 </ItemsPanelTemplate>
               </ListBox.ItemsPanel>
             </ListBox>
-
-            <TextBlock x:Name="Note" Text="{Binding Note}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,8,0,0" Visibility="{Binding HasNote, Converter={StaticResource Visible}}" />
           </StackPanel>
         </kyf:Card>
+
+        <!-- Hors de la carte : les rappels s'ajoutent aussi quand aucune révision n'est prévue. -->
+        <TextBlock x:Name="Note" Text="{Binding Note}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,8,0,0" Visibility="{Binding HasNote, Converter={StaticResource Visible}}" />
 
         <!-- Le jour choisi : ses échéances, à déplacer, et ses étapes projetées. -->
         <kyf:Card x:Name="DetailCard" Padding="16,12" Margin="0,12,0,0" Visibility="{Binding HasSelection, Converter={StaticResource Visible}}">
           <StackPanel>
             <TextBlock x:Name="DayTitle" Text="{Binding DayTitle}" Style="{DynamicResource Kyf.Text.Subtitle}" TextWrapping="Wrap" AutomationProperties.HeadingLevel="Level2" />
             <kyf:Notification x:Name="Message" Severity="Success" Message="{Binding Message}" IsOpen="{Binding HasMessage, Mode=OneWay}" IsClosable="False" Margin="0,8,0,0" />
+            <kyf:Notification x:Name="MoveErrorMessage" Severity="Critical" Message="{Binding MoveError}" IsOpen="{Binding HasMoveError, Mode=OneWay}" IsClosable="False" Margin="0,8,0,0"
+                              IsVisibleChanged="OnMoveErrorVisibleChanged" />
 
             <Border x:Name="MoveForm" Margin="0,8,0,0" Padding="12" CornerRadius="{DynamicResource Kyf.Radius.Control}" Background="{DynamicResource Kyf.Brush.SurfaceAlt}"
                     Visibility="{Binding IsMoving, Converter={StaticResource Visible}}" IsVisibleChanged="OnMoveFormVisibleChanged">
@@ -229,10 +232,10 @@
                 <TextBlock x:Name="MoveLabel" Text="{Binding MoveLabel}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" Margin="0,0,0,4" />
                 <WrapPanel>
                   <kyf:DateField x:Name="MoveDay" Width="200" Margin="0,0,8,4" Day="{Binding MoveTo}" Minimum="{Binding EarliestMove}" AutomationProperties.Name="{Binding MoveLabel}" />
-                  <Button x:Name="CancelMove" Content="{x:Static pages:WorkloadText.MoveCancel}" Command="{Binding CancelMoveCommand}" Margin="0,0,8,4" />
-                  <Button x:Name="ConfirmMove" Content="{x:Static pages:WorkloadText.MoveConfirm}" Command="{Binding MoveCommand}" Style="{DynamicResource Kyf.Button.Primary}" Margin="0,0,0,4" />
+                  <Button x:Name="CancelMove" Content="{x:Static pages:WorkloadText.MoveCancel}" Command="{Binding CancelMoveCommand}" VerticalAlignment="Top" Margin="0,0,8,4" />
+                  <Button x:Name="ConfirmMove" Content="{x:Static pages:WorkloadText.MoveConfirm}" Command="{Binding MoveCommand}" Style="{DynamicResource Kyf.Button.Primary}" VerticalAlignment="Top" Margin="0,0,0,4" />
                 </WrapPanel>
-                <TextBlock x:Name="MoveHint" Text="{Binding MoveHint}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
+                <kyf:LiveText x:Name="MoveHint" Text="{Binding MoveHint}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" />
               </StackPanel>
             </Border>
 

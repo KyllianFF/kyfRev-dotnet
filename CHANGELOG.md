@@ -21,7 +21,9 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   calendrier repart de ce jour-là, et une révision en avance sur ce jour demande confirmation. « Reporter à une date… »
   vient s'ajouter à demain et à dans 3 jours, comme dans la 0.x.
 - Un champ de date dans le design system (`DateField`) : une date qui se tape ou se choisit dans un calendrier en français,
-  aux couleurs de chaque thème, nommé pour le lecteur d'écran ; hors des jours permis, elle est refusée et le champ le montre.
+  aux couleurs de chaque thème, nommé pour le lecteur d'écran ; hors des jours permis, elle est refusée : le champ se vide,
+  dit pourquoi, par écrit et au lecteur d'écran, et aucune action ne part sur la date d'avant.
+- Un dialogue refermé rend le focus à ce qui le tenait, et changer de coffre efface tout ce que les vues avaient lu de l'ancien.
 - Coffre chiffré, lot 4 : la preuve qu'aucun texte en clair ne reste sur le disque. Sur un coffre chiffré, le menu d'un mot
   propose « Accepter jusqu'à la fermeture de kyfRev », dans le code Markdown, au lieu d'écrire dans le dictionnaire de Windows. Le journal masque tout chemin
   qui entre dans le coffre, et ne nomme plus la citation trouvée. Les moteurs web ne téléversent plus de rapport de plantage,

@@ -4,14 +4,16 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Markup;
+using System.Windows.Threading;
 
 namespace KyfRev.DesignSystem.Controls;
 
 /// <summary>
 /// Champ de date : un champ de saisie et son calendrier, en français (la semaine commence le lundi). La date se tape
-/// (jj/mm/aaaa) ou se choisit ; hors de <see cref="Minimum"/> et <see cref="Maximum"/>, elle est refusée, et le champ
-/// le montre. Le calendrier s'ouvre avec Alt+Bas ou son bouton, se parcourt aux flèches et se referme avec Échap, qui
-/// ne ferme pas le dialogue autour de lui. Entrée valide la date, et reste au bouton par défaut d'un dialogue.
+/// (jj/mm/aaaa) ou se choisit ; hors de <see cref="Minimum"/> et <see cref="Maximum"/>, elle est refusée : le champ se
+/// vide, il dit pourquoi, et <see cref="Day"/> ne vaut plus rien tant qu'une date valable n'est pas donnée. Le calendrier
+/// s'ouvre avec Alt+Bas ou son bouton, se parcourt aux flèches et se referme avec Échap, qui ne ferme pas le dialogue
+/// autour de lui. Entrée valide la date, et reste au bouton par défaut d'un dialogue, sauf si elle vient d'être refusée.
 /// </summary>
 public sealed class DateField : DatePicker
 {
@@ -50,8 +52,9 @@ public sealed class DateField : DatePicker
         Language = XmlLanguage.GetLanguage("fr-FR");
         FirstDayOfWeek = DayOfWeek.Monday;
         SelectedDateFormat = DatePickerFormat.Short;
-        DateValidationError += (_, _) => SetValue(HasRefusedDateKey, true);
+        DateValidationError += (_, _) => Refuse();
         AddHandler(KeyDownEvent, new KeyEventHandler(OnKeyDownSeen), handledEventsToo: true);
+        AddHandler(TextBoxBase.TextChangedEvent, new TextChangedEventHandler(OnTextEdited), handledEventsToo: true);
     }
 
     /// <summary>La date choisie ; rien tant qu'il n'y en a pas.</summary>
@@ -75,7 +78,7 @@ public sealed class DateField : DatePicker
         set => SetValue(MaximumProperty, value);
     }
 
-    /// <summary>La date tapée vient d'être refusée : le champ le montre jusqu'à la prochaine frappe.</summary>
+    /// <summary>La date tapée vient d'être refusée : le champ le dit jusqu'à ce qu'on y écrive ou qu'une date lui soit donnée.</summary>
     public bool HasRefusedDate => (bool)GetValue(HasRefusedDateProperty);
 
     /// <inheritdoc/>
@@ -95,14 +98,30 @@ public sealed class DateField : DatePicker
         ArgumentNullException.ThrowIfNull(e);
         // Le calendrier se referme avant que la touche ne remonte : c'est ici qu'on sait qu'il était ouvert.
         _closingCalendar = e.Key == Key.Escape && IsDropDownOpen;
-        if (e.Key != Key.Enter)
-        {
-            SetValue(HasRefusedDateKey, false);
-        }
         base.OnPreviewKeyDown(e);
     }
 
     private static DateTime ToDate(DateOnly day) => day.ToDateTime(TimeOnly.MinValue);
+
+    /// <summary>
+    /// Une date refusée n'est pas une date : celle d'avant ne reste pas à sa place, pour qu'aucune action ne parte sur un
+    /// jour que l'on vient de remplacer.
+    /// </summary>
+    private void Refuse()
+    {
+        SetCurrentValue(DayProperty, null);
+        SetValue(HasRefusedDateKey, true);
+        Dispatcher.BeginInvoke(DispatcherPriority.Input, TakeBackFocus);
+    }
+
+    /// <summary>Le bouton cliqué dépendait de cette date : désactivé, il perd le focus, et le champ le reprend pour qu'on la corrige.</summary>
+    private void TakeBackFocus()
+    {
+        if (KeyboardFocus.IsLost())
+        {
+            Focus();
+        }
+    }
 
     private void OnKeyDownSeen(object sender, KeyEventArgs e)
     {
@@ -111,10 +130,19 @@ public sealed class DateField : DatePicker
             _closingCalendar = false;
             e.Handled = true;
         }
-        else if (e.Key == Key.Enter && e.OriginalSource is DatePickerTextBox)
+        else if (e.Key == Key.Enter && e.OriginalSource is DatePickerTextBox && !HasRefusedDate)
         {
             // La date tapée est prise en compte : Entrée reste au bouton par défaut d'un dialogue.
             e.Handled = false;
+        }
+    }
+
+    /// <summary>On écrit à nouveau : le refus s'efface. Le champ qui se vide en refusant une date n'en est pas une nouvelle saisie.</summary>
+    private void OnTextEdited(object sender, TextChangedEventArgs e)
+    {
+        if (e.OriginalSource is DatePickerTextBox { Text.Length: > 0 })
+        {
+            SetValue(HasRefusedDateKey, false);
         }
     }
 

@@ -421,7 +421,7 @@
     </Setter>
   </Style>
 
-  <!-- Champ de date : le même cadre que le texte, un bouton pour le calendrier ; une date refusée le rougit. -->
+  <!-- Champ de date : le même cadre que le texte, un bouton pour le calendrier ; une date refusée le rougit, et le champ dit pourquoi. -->
   <Style TargetType="kyf:DateField">
     <Setter Property="FontFamily" Value="{DynamicResource Kyf.Font.Ui}" />
     <Setter Property="FontSize" Value="{DynamicResource Kyf.FontSize.Body}" />
@@ -439,6 +439,10 @@
       <Setter.Value>
         <ControlTemplate TargetType="kyf:DateField">
           <Grid x:Name="PART_Root">
+            <Grid.RowDefinitions>
+              <RowDefinition Height="*" />
+              <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
             <Border x:Name="Frame" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
                     CornerRadius="{DynamicResource Kyf.Radius.Control}" SnapsToDevicePixels="True">
               <Grid>
@@ -446,11 +450,15 @@
                   <ColumnDefinition Width="*" />
                   <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <DatePickerTextBox x:Name="PART_TextBox" Margin="{TemplateBinding Padding}" AutomationProperties.Name="{TemplateBinding AutomationProperties.Name}" />
+                <DatePickerTextBox x:Name="PART_TextBox" Margin="{TemplateBinding Padding}" AutomationProperties.Name="{TemplateBinding AutomationProperties.Name}"
+                                   AutomationProperties.ItemStatus="{TemplateBinding AutomationProperties.ItemStatus}" />
                 <Button x:Name="PART_Button" Grid.Column="1" Style="{DynamicResource Kyf.Button.Icon}" Width="36" Height="36" Content="{x:Static kyf:Icons.Calendar}"
                         ToolTip="{x:Static ds:DesignText.OpenCalendar}" AutomationProperties.Name="{x:Static ds:DesignText.OpenCalendar}" />
               </Grid>
             </Border>
+            <!-- Le refus s'écrit : ni la couleur ni le contour ne suffisent, en contraste élevé surtout ; il est annoncé aussitôt. -->
+            <kyf:LiveText x:Name="Refusal" Grid.Row="1" Style="{DynamicResource Kyf.Text.Caption}" Foreground="{DynamicResource Kyf.Brush.Critical}" TextWrapping="Wrap" Margin="0,4,0,0"
+                          Visibility="Collapsed" AutomationProperties.LiveSetting="Assertive" />
             <Popup x:Name="PART_Popup" Placement="Bottom" PlacementTarget="{Binding ElementName=Frame}" StaysOpen="False" AllowsTransparency="True" PopupAnimation="None" />
           </Grid>
           <ControlTemplate.Triggers>
@@ -464,6 +472,8 @@
             <Trigger Property="HasRefusedDate" Value="True">
               <Setter TargetName="Frame" Property="BorderBrush" Value="{DynamicResource Kyf.Brush.Critical}" />
               <Setter TargetName="Frame" Property="BorderThickness" Value="2" />
+              <Setter TargetName="Refusal" Property="Visibility" Value="Visible" />
+              <Setter TargetName="Refusal" Property="Text" Value="{x:Static ds:DesignText.DateRefused}" />
             </Trigger>
             <Trigger Property="IsEnabled" Value="False">
               <Setter TargetName="Frame" Property="Opacity" Value="0.5" />

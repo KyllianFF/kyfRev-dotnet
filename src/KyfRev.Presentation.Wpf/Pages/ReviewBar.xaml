@@ -190,8 +190,8 @@
           <WrapPanel>
             <kyf:DateField x:Name="ChosenDay" Width="200" Margin="0,0,8,4" Day="{Binding ChosenDay}" Minimum="{Binding EarliestDay}" Maximum="{Binding LatestDay}"
                            AutomationProperties.Name="{Binding DayChoiceLabel}" />
-            <Button x:Name="ConfirmDay" Content="{Binding DayChoiceConfirm}" Command="{Binding ConfirmDayCommand}" Style="{DynamicResource Kyf.Button.Primary}" Margin="0,0,8,4" />
-            <Button x:Name="CancelDay" Content="{x:Static pages:ReviewText.CancelDay}" Command="{Binding CancelDayCommand}" Margin="0,0,0,4" />
+            <Button x:Name="ConfirmDay" Content="{Binding DayChoiceConfirm}" Command="{Binding ConfirmDayCommand}" Style="{DynamicResource Kyf.Button.Primary}" VerticalAlignment="Top" Margin="0,0,8,4" />
+            <Button x:Name="CancelDay" Content="{x:Static pages:ReviewText.CancelDay}" Command="{Binding CancelDayCommand}" VerticalAlignment="Top" Margin="0,0,0,4" />
           </WrapPanel>
         </StackPanel>
         <!-- Les passages de la fiche, à remettre à J0. -->
@@ -221,7 +221,7 @@
         <kyf:Notification x:Name="Message" Severity="Success" Message="{Binding Message}" IsOpen="{Binding HasMessage, Mode=OneWay}"
                           IsClosable="False" Margin="0,12,0,0" />
         <kyf:Notification x:Name="Error" Severity="Critical" Message="{Binding Error}" IsOpen="{Binding HasError, Mode=OneWay}"
-                          IsClosable="False" Margin="0,12,0,0" />
+                          IsClosable="False" Margin="0,12,0,0" IsVisibleChanged="OnErrorVisibleChanged" />
       </StackPanel>
     </Grid>
   </kyf:Card>

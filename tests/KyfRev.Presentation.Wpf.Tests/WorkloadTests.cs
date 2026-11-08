@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using KyfRev.Application.Model;
@@ -287,13 +288,57 @@ public sealed class WorkloadTests
         page.MoveTo = new DateOnly(2026, 10, 2);
         await page.MoveCommand.ExecuteAsync(null);
 
-        Assert.AreEqual("Cette révision est déjà prévue le 2026-10-02.", page.Error);
-        Assert.IsTrue(page.HasError);
+        Assert.AreEqual("Cette révision est déjà prévue le 2026-10-02.", page.MoveError);
+        Assert.IsTrue(page.HasMoveError);
+        Assert.IsFalse(page.HasError, "le bandeau du haut de la page reste pour la lecture");
         Assert.IsTrue(page.IsMoving);
 
         page.CancelMoveCommand.Execute(null);
         Assert.IsFalse(page.IsMoving);
         Assert.IsNull(page.MoveTo);
+        Assert.AreEqual(string.Empty, page.MoveLabel);
+        Assert.IsFalse(page.HasMoveError, "le refus part avec le formulaire");
+    }
+
+    [TestMethod]
+    public async Task A_new_move_closes_the_message_of_the_last_one()
+    {
+        using var vault = new LoadVault();
+        var page = await vault.PageAsync();
+        page.SelectedDay = page.Days[1];
+        page.PrepareMoveCommand.Execute(page.DueRows.Single());
+        page.MoveTo = new DateOnly(2026, 10, 3);
+        await page.MoveCommand.ExecuteAsync(null);
+        Assert.IsTrue(page.HasMessage);
+
+        // Le second jour porte l'échéance déplacée : un autre essai, sur elle, refusé.
+        page.SelectedDay = page.Days[2];
+        page.PrepareMoveCommand.Execute(page.DueRows.Single());
+        page.MoveTo = new DateOnly(2026, 10, 3);
+        await page.MoveCommand.ExecuteAsync(null);
+
+        Assert.IsFalse(page.HasMessage);
+        Assert.IsTrue(page.HasMoveError);
+    }
+
+    [TestMethod]
+    public async Task Coming_back_from_a_review_closes_the_form_of_the_step_just_validated()
+    {
+        using var vault = new LoadVault();
+        var page = await vault.PageAsync();
+        page.SelectedDay = page.Days[1];
+        page.PrepareMoveCommand.Execute(page.DueRows.Single());
+        Assert.IsTrue(page.IsMoving);
+
+        // La fiche s'ouvre et se valide ; puis « Retour ».
+        vault.Time.AdvanceDays(1);
+        Assert.IsTrue(vault.App.Reviews.Validate(ItemKind.Sheet, vault.SheetId, null).Succeeded);
+        page.OnNavigatedTo();
+        await page.RefreshCommand.ExecutionTask!;
+
+        Assert.IsFalse(page.IsMoving, "« Déplacer » emporterait l'étape suivante");
+        Assert.IsNull(page.MoveTo);
+        Assert.IsFalse(page.MoveCommand.CanExecute(null));
         Assert.AreEqual(string.Empty, page.MoveLabel);
     }
 
@@ -507,13 +552,20 @@ public sealed class WorkloadTests
             TestShell.Flush();
             Assert.AreEqual(Visibility.Collapsed, Named<Card>(window, "DetailCard").Visibility);
 
-            // Au clavier : les flèches parcourent les jours, Entrée amène le détail.
-            first.IsSelected = true;
+            // Au clavier : Entrée choisit la colonne où la tabulation est arrivée.
             Assert.IsTrue(first.Focus());
+            Assert.IsNull(page.SelectedDay);
+            KeyOn(first, Key.Enter);
+            TestShell.Flush();
+            Assert.AreEqual(page.Days[1], page.SelectedDay);
+            Assert.AreEqual(Visibility.Visible, Named<Card>(window, "DetailCard").Visibility);
+
+            // Les flèches parcourent les jours, Entrée amène le détail, sans rien désélectionner.
             KeyOn(first, Key.Right);
             UiThread.Until(() => page.SelectedDay == page.Days[2]);
             KeyOn((UIElement)Keyboard.FocusedElement, Key.Enter);
             TestShell.Flush();
+            Assert.AreEqual(page.Days[2], page.SelectedDay);
 
             page.SelectedDay = page.Days[1];
             TestShell.Flush();
@@ -537,6 +589,219 @@ public sealed class WorkloadTests
             Assert.AreEqual(page.DueRows[0].Spoken, AutomationProperties.GetName(open));
             open.Command.Execute(open.CommandParameter);
             Assert.HasCount(1, vault.Opener.Opened);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
+    public void A_refused_date_cannot_be_replaced_by_the_day_proposed()
+    {
+        using var ui = new UiThread();
+        using var vault = new LoadVault();
+        var page = vault.Page();
+        var test = new TestShell();
+        var window = Show(test, page, 470, 540);
+        try
+        {
+            page.RefreshCommand.Execute(null);
+            UiThread.Until(() => page.Days.Count > 0);
+            page.SelectedDay = page.Days[1];
+            TestShell.Flush();
+            page.PrepareMoveCommand.Execute(page.DueRows.Single());
+            TestShell.Flush();
+            var field = Named<DateField>(window, "MoveDay");
+            UiThread.Until(() => field.IsKeyboardFocusWithin);
+            var proposed = page.MoveTo;
+            Assert.IsNotNull(proposed);
+
+            // Tapée puis abandonnée pour le bouton : avant demain, elle est refusée, et le jour proposé ne la remplace pas.
+            var text = Descendants(field).OfType<DatePickerTextBox>().Single();
+            text.Text = "01/10/2026";
+            var confirm = Named<Button>(window, "ConfirmMove");
+            Assert.IsTrue(confirm.Focus());
+
+            Assert.IsTrue(field.HasRefusedDate);
+            Assert.IsNull(page.MoveTo);
+            Assert.IsFalse(page.MoveCommand.CanExecute(null));
+            Assert.IsFalse(confirm.IsEnabled);
+            Assert.AreEqual(1, page.Days[1].DueCount, "rien n'a bougé");
+            UiThread.Until(() => field.IsKeyboardFocusWithin);
+            var message = Descendants(field).OfType<LiveText>().Single(block => block.Name == "Refusal");
+            Assert.IsLessThanOrEqualTo(window.ActualWidth, message.TranslatePoint(new Point(message.ActualWidth, 0), window).X, "le refus tient dans la largeur");
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
+    public void A_refused_move_is_said_next_to_the_form_even_at_the_smallest_window()
+    {
+        using var ui = new UiThread();
+        using var vault = new LoadVault();
+        var page = vault.Page();
+        var test = new TestShell();
+        var window = Show(test, page, 470, 540);
+        try
+        {
+            page.RefreshCommand.Execute(null);
+            UiThread.Until(() => page.Days.Count > 0);
+            page.SelectedDay = page.Days[1];
+            TestShell.Flush();
+            page.PrepareMoveCommand.Execute(page.DueRows.Single());
+            TestShell.Flush();
+            var field = Named<DateField>(window, "MoveDay");
+            UiThread.Until(() => field.IsKeyboardFocusWithin);
+            var scroller = Named<ScrollViewer>(window, "Scroller");
+            var confirm = Named<Button>(window, "ConfirmMove");
+            confirm.BringIntoView();
+            TestShell.Flush();
+
+            // Le même jour : le coffre le refuse.
+            page.MoveTo = new DateOnly(2026, 10, 2);
+            TestShell.Flush();
+            Assert.IsTrue(confirm.Focus());
+            var move = page.MoveCommand.ExecuteAsync(null);
+            UiThread.Until(() => move.IsCompleted && page.HasMoveError);
+            TestShell.Flush();
+
+            var error = Named<Notification>(window, "MoveErrorMessage");
+            Assert.IsTrue(error.IsOpen);
+            Assert.AreEqual(page.MoveError, error.Message);
+            Assert.IsFalse(Named<Notification>(window, "ErrorMessage").IsOpen);
+            var card = Named<Card>(window, "DetailCard");
+            Assert.IsTrue(error.IsDescendantOf(card), "dans le détail du jour, comme dans la 0.x");
+            var top = error.TranslatePoint(default, scroller).Y;
+            Assert.IsGreaterThanOrEqualTo(0.0, top, "pas au-dessus de ce qu'on voit");
+            Assert.IsLessThanOrEqualTo(scroller.ViewportHeight, top + error.ActualHeight, "ni en dessous");
+            UiThread.Until(() => confirm.IsEnabled);
+            UiThread.Until(() => field.IsKeyboardFocusWithin);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
+    public void Closing_the_form_gives_the_focus_back_to_the_row_or_to_the_day()
+    {
+        using var ui = new UiThread();
+        using var vault = new LoadVault();
+        var page = vault.Page();
+        var test = new TestShell();
+        var window = Show(test, page, 1200, 800);
+        try
+        {
+            page.RefreshCommand.Execute(null);
+            UiThread.Until(() => page.Days.Count > 0);
+            page.SelectedDay = page.Days[1];
+            TestShell.Flush();
+            var rows = Named<ItemsControl>(window, "DueList");
+            var move = Descendants(rows).OfType<Button>().First(button => button.Name == "MoveRow");
+
+            // « Annuler » : le focus revient au bouton de la ligne.
+            move.Command.Execute(move.CommandParameter);
+            TestShell.Flush();
+            var field = Named<DateField>(window, "MoveDay");
+            UiThread.Until(() => field.IsKeyboardFocusWithin);
+            var cancel = Named<Button>(window, "CancelMove");
+            Assert.IsTrue(cancel.Focus());
+            page.CancelMoveCommand.Execute(null);
+            UiThread.Until(() => move.IsKeyboardFocused);
+
+            // Un déplacement réussi emporte la ligne : le focus va au jour choisi.
+            move.Command.Execute(move.CommandParameter);
+            TestShell.Flush();
+            UiThread.Until(() => field.IsKeyboardFocusWithin);
+            page.MoveTo = new DateOnly(2026, 10, 3);
+            TestShell.Flush();
+            var confirm = Named<Button>(window, "ConfirmMove");
+            Assert.IsTrue(confirm.Focus());
+            var moved = page.MoveCommand.ExecuteAsync(null);
+            UiThread.Until(() => moved.IsCompleted && !page.IsMoving);
+            TestShell.Flush();
+            var chart = Named<ListBox>(window, "Chart");
+            UiThread.Until(() => chart.ItemContainerGenerator.ContainerFromItem(page.SelectedDay!) is ListBoxItem { IsKeyboardFocused: true });
+            Assert.IsEmpty(page.DueRows, "l'échéance est partie");
+
+            // Le formulaire fermé alors que le focus est ailleurs ne le déplace pas.
+            page.SelectedDay = page.Days[2];
+            TestShell.Flush();
+            var again = Descendants(rows).OfType<Button>().First(button => button.Name == "MoveRow");
+            again.Command.Execute(again.CommandParameter);
+            TestShell.Flush();
+            UiThread.Until(() => field.IsKeyboardFocusWithin);
+            var back = Named<Button>(window, "BackButton");
+            Assert.IsTrue(back.Focus());
+            page.CancelMoveCommand.Execute(null);
+            TestShell.Flush();
+            Assert.IsTrue(back.IsKeyboardFocused);
+
+            // Le jour désélectionné ferme le formulaire : il n'y a plus ni ligne ni jour à qui rendre le focus.
+            page.PrepareMoveCommand.Execute(page.DueRows.Single());
+            TestShell.Flush();
+            page.SelectedDay = null;
+            TestShell.Flush();
+            Assert.IsFalse(page.IsMoving);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
+    public void The_reminders_note_stays_under_an_empty_load()
+    {
+        using var ui = new UiThread();
+        using var vault = new LoadVault(sheet: false);
+        var archived = vault.App.Sheets.Create(null, "Archivée", null).Value;
+        Assert.IsTrue(vault.App.Reviews.Archive(archived).Succeeded);
+        var page = vault.Page();
+        var test = new TestShell();
+        var window = Show(test, page, 470, 540);
+        try
+        {
+            page.RefreshCommand.Execute(null);
+            UiThread.Until(() => page.Days.Count > 0);
+            TestShell.Flush();
+
+            Assert.AreEqual(0, page.Total);
+            Assert.AreEqual(Visibility.Collapsed, Named<Card>(window, "ChartCard").Visibility);
+            Assert.IsTrue(Named<TextBlock>(window, "EmptyLabel").IsVisible);
+            Assert.IsTrue(Named<TextBlock>(window, "Note").IsVisible, "les rappels s'ajoutent même sans révision prévue");
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
+    public void The_load_of_the_day_aimed_at_is_read_aloud_when_it_changes()
+    {
+        using var ui = new UiThread();
+        using var vault = new LoadVault();
+        var page = vault.Page();
+        var test = new TestShell();
+        var window = Show(test, page, 470, 540);
+        try
+        {
+            page.RefreshCommand.Execute(null);
+            UiThread.Until(() => page.Days.Count > 0);
+            page.SelectedDay = page.Days[1];
+            TestShell.Flush();
+            page.PrepareMoveCommand.Execute(page.DueRows.Single());
+            TestShell.Flush();
+
+            var hint = Named<LiveText>(window, "MoveHint");
+            Assert.AreEqual(page.MoveHint, hint.Text);
+            Assert.AreEqual(AutomationLiveSetting.Polite, AutomationProperties.GetLiveSetting(hint));
         }
         finally
         {

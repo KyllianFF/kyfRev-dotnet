@@ -114,16 +114,17 @@ fois l'application installée. Elles viennent des dépôts officiels, à un comm
 | Champ | style de `TextBox`, indication `Field.Placeholder` | contour à 3:1, contour épaissi au focus, indication lue comme aide |
 | Mot de passe | style de `PasswordBox` | le même champ, caractères masqués ; pas d'indication dans le champ (son nom, à côté, le dit), et un menu qui ne fait que coller |
 | Liste de choix | style de `ComboBox` | comme un champ, et sa liste comme un menu ; suit le thème |
-| Champ de date | `DateField` (`Day`, `Minimum`, `Maximum`) | une date qui se tape (jj/mm/aaaa) ou se choisit dans un calendrier en français, la semaine commençant le lundi ; hors des limites, elle est refusée et le champ le montre ; Alt+Bas ouvre le calendrier, Échap le ferme sans fermer le dialogue autour, Entrée reste au bouton par défaut |
+| Champ de date | `DateField` (`Day`, `Minimum`, `Maximum`) | une date qui se tape (jj/mm/aaaa) ou se choisit dans un calendrier en français, la semaine commençant le lundi ; hors des limites, elle est refusée : le champ se vide, dit pourquoi par écrit et au lecteur d'écran, et `Day` ne vaut plus rien, pour qu'aucune action ne parte sur la date d'avant ; Alt+Bas ouvre le calendrier, Échap le ferme sans fermer le dialogue autour, Entrée reste au bouton par défaut, sauf sur une date refusée |
 | Carte | `Card`, repère `Marker` (fiche, passage, rappel) | ombre douce ; le repère est un court trait en haut |
 | Pastille | `Pill`, sorte `Kind` | icône et libellé : fiche, passage, rappel, retard, archivée, à vérifier, aujourd'hui |
 | Menu | styles de `ContextMenu`, `Menu`, `MenuItem` | coche, raccourci, sous-menus ; au clic droit, les actions rapides en tête (`Kyf.MenuItem.Quick`), une rangée d'outils dessous (`Kyf.MenuItem.Tool`), disposées par `ActionMenuPanel` ; les champs de texte reçoivent le leur en se chargeant |
 | Listes | styles de `ListBox`, `ListBoxItem` | survol, élément choisi : fond vert pâle et texte en gras (menu de la coquille) |
 | Icône | `Icon` | décorative : police d'icônes de Windows, ignorée par le lecteur d'écran |
-| Dialogue | `Dialog` | voile, focus tenu à l'intérieur, Échap ferme, Entrée valide ; trop haut pour la fenêtre, son contenu défile entre le titre et les boutons ; ce qui compte (`IsDestructive`) a un bouton rouge, qu'Entrée ne déclenche pas |
+| Dialogue | `Dialog` | voile, focus tenu à l'intérieur et rendu à la fermeture à ce qui le tenait, Échap ferme, Entrée valide ; trop haut pour la fenêtre, son contenu défile entre le titre et les boutons ; ce qui compte (`IsDestructive`) a un bouton rouge, qu'Entrée ne déclenche pas |
 | Case à cocher, bouton radio | styles de `CheckBox`, `RadioButton` | la case carrée, le bouton rond ; la couleur principale quand ils sont choisis, le contour épaissi au focus |
 | Barre de progression | style de `ProgressBar` | une piste discrète, la part faite à la couleur principale ; nommée pour le lecteur d'écran |
 | Notification | `Notification`, gravité `Severity` | annoncée par le lecteur d'écran (tout de suite pour une erreur) |
+| Texte annoncé | `LiveText` | un texte qui change et que le lecteur d'écran dit aussitôt : déclarer une région active ne suffit pas à WPF ; poli par défaut |
 | État vide | `EmptyState` | icône, titre, explication, action |
 | Squelette | `Skeleton` | chargement, immobile si les animations sont réduites |
 | Texte | styles `Kyf.Text.*` | l'échelle typographique |

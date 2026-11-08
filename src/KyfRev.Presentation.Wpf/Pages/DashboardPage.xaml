@@ -217,9 +217,11 @@
         </StackPanel>
         <StackPanel kyf:AdaptiveRow.Part="Trailing" Orientation="Horizontal" VerticalAlignment="Center">
           <Button x:Name="Tighten" Content="{x:Static pages:ExamText.TightenAction}" Click="OnTightenClick" Focusable="False" Margin="0,0,4,0"
-                  AutomationProperties.Name="{Binding TightenName}" Visibility="{Binding CanTighten, Converter={StaticResource Visible}}" />
+                  AutomationProperties.Name="{Binding TightenName}" Visibility="{Binding CanTighten, Converter={StaticResource Visible}}"
+                  IsEnabled="{Binding DataContext.Exams.IsIdle, RelativeSource={RelativeSource AncestorType=ListBox}, FallbackValue=False}" />
           <Button x:Name="More" Style="{DynamicResource Kyf.Button.Icon}" Content="{x:Static kyf:Icons.More}" Click="OnExamMenuClick" Focusable="False"
-                  ToolTip="{Binding MoreName}" AutomationProperties.Name="{Binding MoreName}" Visibility="{Binding DataContext.CanPlanExams, RelativeSource={RelativeSource AncestorType=ListBox}, Converter={StaticResource Visible}}" />
+                  ToolTip="{Binding MoreName}" AutomationProperties.Name="{Binding MoreName}" Visibility="{Binding DataContext.CanPlanExams, RelativeSource={RelativeSource AncestorType=ListBox}, Converter={StaticResource Visible}}"
+                  IsEnabled="{Binding DataContext.Exams.IsIdle, RelativeSource={RelativeSource AncestorType=ListBox}, FallbackValue=False}" />
         </StackPanel>
       </kyf:AdaptiveRow>
       <DataTemplate.Triggers>

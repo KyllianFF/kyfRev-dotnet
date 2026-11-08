@@ -117,7 +117,7 @@ internal static class Composition
         services.AddSingleton(provider =>
         {
             var modules = provider.GetRequiredService<ActiveModules>();
-            return new DashboardPageViewModel(provider.GetRequiredService<ReminderUseCases>(), provider.GetRequiredService<SheetUseCases>(), provider.GetRequiredService<IReviewOpener>(), modules.Widgets, provider.GetRequiredService<ReviewUseCases>(), provider.GetRequiredService<KyfRevApplication>().Exams, provider.GetRequiredService<FolderUseCases>())
+            return new DashboardPageViewModel(provider.GetRequiredService<ReminderUseCases>(), provider.GetRequiredService<SheetUseCases>(), provider.GetRequiredService<IReviewOpener>(), modules.Widgets, provider.GetRequiredService<ReviewUseCases>(), provider.GetRequiredService<KyfRevApplication>().Exams, provider.GetRequiredService<FolderUseCases>(), provider.GetRequiredService<TimeProvider>())
             {
                 LookForNews = () => LookForQuoteAsync(modules),
             };
@@ -344,14 +344,18 @@ internal static class Composition
             direction,
             changed);
 
-    /// <summary>Un autre coffre est ouvert : les réglages lus de l'ancien sont oubliés, et l'espace de travail revient.</summary>
-    private static void VaultChanged(IServiceProvider provider)
+    /// <summary>
+    /// Un autre coffre est ouvert : tout ce que les vues avaient lu de l'ancien est oublié, comme à un verrouillage. Rien de
+    /// lui ne se montre sous le nouveau, pas même le temps d'une lecture ; un brouillon ne s'écrit jamais dans le nouveau, et
+    /// une clé de récupération préparée pour l'ancien ne s'y montre pas.
+    /// </summary>
+    internal static void VaultChanged(IServiceProvider provider)
     {
+        foreach (var view in ForgettingViews(provider))
+        {
+            view.Forget();
+        }
         provider.GetRequiredService<SettingsPageViewModel>().Forget();
-        // Un brouillon de l'ancien coffre ne s'écrit jamais dans le nouveau.
-        provider.GetRequiredService<DefinitionsPageViewModel>().Forget();
-        // Une clé de récupération préparée pour l'ancien coffre ne se montre pas dans le nouveau.
-        provider.GetRequiredService<DataSettingsViewModel>().Encryption?.Forget();
         provider.GetRequiredService<ShellViewModel>().ShowWorkspace();
     }
 

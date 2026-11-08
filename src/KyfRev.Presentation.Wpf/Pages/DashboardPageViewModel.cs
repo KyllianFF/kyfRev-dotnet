@@ -96,9 +96,9 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
     /// <summary>
     /// La vue, sur les cas d'usage des rappels (qui rendent le tableau de bord) et des fiches (qui
     /// nourrissent l'aperçu) ; <paramref name="opener"/> ouvre ses lignes, <paramref name="widgets"/> sont
-    /// les encarts apportés par les modules.
+    /// les encarts apportés par les modules, <paramref name="time"/> l'horloge d'où part le formulaire d'un examen.
     /// </summary>
-    public DashboardPageViewModel(ReminderUseCases reminders, SheetUseCases sheets, IReviewOpener opener, IEnumerable<IDashboardWidget>? widgets = null, ReviewUseCases? reviews = null, ExamUseCases? exams = null, FolderUseCases? folders = null)
+    public DashboardPageViewModel(ReminderUseCases reminders, SheetUseCases sheets, IReviewOpener opener, IEnumerable<IDashboardWidget>? widgets = null, ReviewUseCases? reviews = null, ExamUseCases? exams = null, FolderUseCases? folders = null, TimeProvider? time = null)
     {
         ArgumentNullException.ThrowIfNull(reminders);
         ArgumentNullException.ThrowIfNull(sheets);
@@ -109,7 +109,7 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
         _widgets = widgets ?? [];
         _reviews = reviews;
         _extras = new DashboardExtras(this);
-        Exams = exams is not null && folders is not null ? new DashboardExams(exams, folders, RefreshAsync) : null;
+        Exams = exams is not null && folders is not null ? new DashboardExams(exams, folders, RefreshAsync, time ?? TimeProvider.System) : null;
         _examGroup = new DashboardGroup(ExamText.Exams, Icons.Calendar, DashboardTone.Normal, expanded: true, BuildRows);
         _overdue = new DashboardGroup(DashboardText.Overdue, Icons.Clock, DashboardTone.Overdue, expanded: true, BuildRows);
         _today = new DashboardGroup(DashboardText.Today, Icons.Calendar, DashboardTone.Normal, expanded: true, BuildRows);
@@ -609,6 +609,11 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
         SelectedRow = candidates.Find(row => KeyOf(row) == key) ?? candidates.FirstOrDefault();
     }
 
+    /// <summary>La ligne à qui rendre le focus après une action sur un examen : celle de son dossier ; retiré, l'en-tête du groupe s'il en reste d'autres.</summary>
+    internal object? ExamRowToFocus() =>
+        (object?)Rows.OfType<ExamRow>().FirstOrDefault(row => row.Exam.Folder == Exams?.LastFolder)
+        ?? (Rows.Contains(_examGroup) ? _examGroup : null);
+
     private List<DashboardCard> ReadCards() => [.. _widgets.OrderBy(widget => widget.Order).Select(widget => widget.Card()).OfType<DashboardCard>()];
 
     private void BuildRows()
@@ -631,7 +636,6 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
         StartLabel = SessionText.StartOf(_toStart.Count);
 
         var rows = new List<object>();
-        Exams?.SetToday(dashboard.Day);
         Add(rows, _examGroup, dashboard.Exams.Select(exam => new ExamRow(exam)));
         if (total == 0)
         {

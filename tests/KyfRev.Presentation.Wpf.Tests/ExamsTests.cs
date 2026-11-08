@@ -144,6 +144,232 @@ public sealed class ExamsTests
     }
 
     [TestMethod]
+    public async Task The_form_starts_from_today_even_before_the_dashboard_is_read()
+    {
+        using var vault = new ExamVault();
+        var exams = vault.Page().Exams!;
+
+        await exams.NewCommand.ExecuteAsync(null);
+
+        Assert.AreEqual(October1, exams.Earliest, "aujourd'hui, pas l'an 1");
+        Assert.AreEqual(new DateOnly(2026, 10, 15), exams.Day);
+    }
+
+    [TestMethod]
+    public async Task A_failed_action_leaves_no_old_success_beside_it()
+    {
+        using var vault = new ExamVault();
+        Assert.IsTrue(vault.App.Exams.Define("Biologie", "Partiel", new DateOnly(2026, 10, 15)).Succeeded);
+        var page = vault.Page();
+        await page.RefreshCommand.ExecuteAsync(null);
+        var exams = page.Exams!;
+        var row = page.Rows.OfType<ExamRow>().Single();
+        exams.RequestWithdraw(row);
+        await exams.AnswerCommand.ExecuteAsync(true);
+        Assert.IsTrue(exams.HasMessage);
+
+        // L'examen n'est plus là : resserrer est refusé.
+        exams.RequestTighten(row);
+        await exams.AnswerCommand.ExecuteAsync(true);
+
+        Assert.IsTrue(exams.HasError);
+        Assert.IsFalse(exams.HasMessage);
+    }
+
+    [STATestMethod]
+    public void Nothing_starts_on_the_exams_while_an_action_runs()
+    {
+        using var ui = new UiThread();
+        using var vault = new ExamVault();
+        Assert.IsTrue(vault.App.Reviews.Postpone(ItemKind.Sheet, vault.SheetId, new DateOnly(2026, 11, 20)).Succeeded);
+        Assert.IsTrue(vault.App.Exams.Define("Biologie", "Partiel", new DateOnly(2026, 10, 15)).Succeeded);
+        var page = vault.Page();
+        var test = new TestShell();
+        var window = Show(test, page, 1200, 800);
+        try
+        {
+            page.RefreshCommand.Execute(null);
+            UiThread.Until(() => page.Dashboard is not null);
+            TestShell.Flush();
+            var exams = page.Exams!;
+            var row = page.Rows.OfType<ExamRow>().Single();
+            var list = Named<ListBox>(window, "Items");
+            var container = (ListBoxItem)list.ItemContainerGenerator.ContainerFromItem(row);
+            var tighten = Descendants(container).OfType<Button>().First(button => button.Name == "Tighten");
+            var more = Descendants(container).OfType<Button>().First(button => button.Name == "More");
+            var view = Descendants(window).OfType<DashboardPage>().Single();
+            Assert.IsTrue(exams.IsIdle);
+            Assert.IsTrue(tighten.IsEnabled);
+            Assert.IsNotEmpty(view.RowMenuItems(row));
+
+            exams.RequestTighten(row);
+            var answer = exams.AnswerCommand.ExecuteAsync(true);
+
+            Assert.IsTrue(exams.IsBusy);
+            Assert.IsFalse(exams.IsIdle);
+            Assert.IsFalse(exams.HasMessage, "le message d'avant se ferme : le suivant sera annoncé");
+            Assert.IsFalse(tighten.IsEnabled);
+            Assert.IsFalse(more.IsEnabled);
+            Assert.IsFalse(exams.NewCommand.CanExecute(null));
+            Assert.IsFalse(Named<Button>(window, "NewExamButton").IsEnabled);
+            Assert.IsFalse(exams.EditCommand.CanExecute(row));
+            Assert.IsEmpty(view.RowMenuItems(row), "le menu de la ligne n'a rien à proposer");
+            exams.RequestTighten(row);
+            Assert.IsFalse(exams.IsConfirming, "une seconde confirmation dirait « Rien à resserrer »");
+            exams.RequestWithdraw(row);
+            Assert.IsFalse(exams.IsConfirming);
+            var opening = exams.NewCommand.ExecuteAsync(null);
+            Assert.IsTrue(opening.IsCompleted);
+            Assert.IsFalse(exams.IsEditing);
+
+            UiThread.Until(() => answer.IsCompleted);
+            TestShell.Flush();
+            StringAssert.StartsWith(exams.Message, "1 échéance ramenée", StringComparison.Ordinal);
+            Assert.IsTrue(exams.IsIdle);
+            Assert.IsTrue(exams.NewCommand.CanExecute(null));
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
+    public void Saving_an_exam_also_waits_its_turn()
+    {
+        using var ui = new UiThread();
+        using var vault = new ExamVault();
+        var page = vault.Page();
+        var refresh = page.RefreshCommand.ExecuteAsync(null);
+        UiThread.Until(() => refresh.IsCompleted);
+        var exams = page.Exams!;
+        var opening = exams.NewCommand.ExecuteAsync(null);
+        UiThread.Until(() => opening.IsCompleted);
+        exams.ExamName = "Bac";
+
+        var saved = exams.AnswerEditorCommand.ExecuteAsync(true);
+
+        Assert.IsTrue(exams.IsBusy);
+        UiThread.Until(() => saved.IsCompleted);
+        Assert.IsFalse(exams.IsBusy);
+    }
+
+    [STATestMethod]
+    public void A_refused_date_keeps_the_form_open_and_saves_nothing()
+    {
+        using var ui = new UiThread();
+        using var vault = new ExamVault();
+        Assert.IsTrue(vault.App.Exams.Define("Biologie", "Partiel", new DateOnly(2026, 10, 15)).Succeeded);
+        var page = vault.Page();
+        var test = new TestShell();
+        var window = Show(test, page, 470, 540);
+        try
+        {
+            page.RefreshCommand.Execute(null);
+            UiThread.Until(() => page.Dashboard is not null);
+            TestShell.Flush();
+            var exams = page.Exams!;
+            exams.EditCommand.Execute(page.Rows.OfType<ExamRow>().Single());
+            UiThread.Until(() => exams.IsEditing);
+            TestShell.Flush();
+            var field = Named<DateField>(window, "ExamDay");
+            UiThread.Until(() => Named<Dialog>(window, "ExamEditor").IsKeyboardFocusWithin);
+            var text = Descendants(field).OfType<DatePickerTextBox>().Single();
+            Assert.IsTrue(text.Focus());
+
+            // Entrée sur une date passée : le champ la refuse, et le bouton par défaut ne part pas sur l'ancienne.
+            text.Text = "30/09/2026";
+            var enter = new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(text), 0, Key.Enter) { RoutedEvent = Keyboard.KeyDownEvent };
+            text.RaiseEvent(enter);
+
+            Assert.IsTrue(enter.Handled);
+            Assert.IsTrue(exams.IsEditing);
+            Assert.IsTrue(field.HasRefusedDate);
+            Assert.IsNull(exams.Day);
+            Assert.IsTrue(Descendants(field).OfType<LiveText>().Single(block => block.Name == "Refusal").IsVisible, "le refus se lit");
+
+            // « Enregistrer » après un refus : la date manque, le formulaire reste ouvert, et l'examen ne change pas.
+            Named<Dialog>(window, "ExamEditor").Close(DialogChoice.Primary);
+            UiThread.Until(() => exams.HasEditorError);
+            TestShell.Flush();
+            Assert.AreEqual(ExamText.DayRequired, exams.EditorError);
+            Assert.IsTrue(exams.IsEditing);
+            Assert.AreEqual(new DateOnly(2026, 10, 15), vault.App.Reminders.Dashboard().Value.Exams.Single().Day);
+            Named<Dialog>(window, "ExamEditor").Close(DialogChoice.None);
+            UiThread.Until(() => !exams.IsEditing);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
+    public void After_a_dialog_the_focus_comes_back_to_the_exam()
+    {
+        using var ui = new UiThread();
+        using var vault = new ExamVault();
+        Assert.IsTrue(vault.App.Exams.Define("Biologie", "Partiel", new DateOnly(2026, 10, 15)).Succeeded);
+        Assert.IsTrue(vault.App.Exams.Define(string.Empty, "Bac", new DateOnly(2026, 10, 20)).Succeeded);
+        var page = vault.Page();
+        var test = new TestShell();
+        var window = Show(test, page, 1200, 800);
+        try
+        {
+            page.RefreshCommand.Execute(null);
+            UiThread.Until(() => page.Dashboard is not null);
+            TestShell.Flush();
+            var exams = page.Exams!;
+            var list = Named<ListBox>(window, "Items");
+            ListBoxItem Container(object row) => (ListBoxItem)list.ItemContainerGenerator.ContainerFromItem(row);
+            ExamRow Exam(string folder) => page.Rows.OfType<ExamRow>().Single(row => row.Exam.Folder == folder);
+            var editor = Named<Dialog>(window, "ExamEditor");
+            var confirmation = Named<Dialog>(window, "ExamConfirmation");
+
+            // Annuler : la ligne n'a pas été refaite.
+            var biology = Exam("Biologie");
+            Assert.IsTrue(Container(biology).Focus());
+            exams.RequestWithdraw(biology);
+            TestShell.Flush();
+            UiThread.Until(() => confirmation.IsKeyboardFocusWithin);
+            confirmation.Close(DialogChoice.Secondary);
+            UiThread.Until(() => Container(biology).IsKeyboardFocused);
+
+            // Enregistrer : la liste est relue, le focus revient à la ligne refaite.
+            exams.EditCommand.Execute(biology);
+            UiThread.Until(() => exams.IsEditing);
+            TestShell.Flush();
+            UiThread.Until(() => editor.IsKeyboardFocusWithin);
+            editor.Close(DialogChoice.Primary);
+            UiThread.Until(() => !exams.IsBusy && !ReferenceEquals(Exam("Biologie"), biology));
+            TestShell.Flush();
+            UiThread.Until(() => Keyboard.FocusedElement is ListBoxItem { DataContext: ExamRow { Exam.Folder: "Biologie" } });
+
+            // Retiré : le focus va à l'en-tête du groupe.
+            exams.RequestWithdraw(Exam("Biologie"));
+            TestShell.Flush();
+            UiThread.Until(() => confirmation.IsKeyboardFocusWithin);
+            confirmation.Close(DialogChoice.Primary);
+            UiThread.Until(() => !page.Rows.OfType<ExamRow>().Any(row => row.Exam.Folder == "Biologie"));
+            TestShell.Flush();
+            UiThread.Until(() => Keyboard.FocusedElement is ListBoxItem { DataContext: DashboardGroup });
+
+            // Le dernier retiré : plus de groupe, le focus va au bouton qui en crée un.
+            exams.RequestWithdraw(Exam(string.Empty));
+            TestShell.Flush();
+            UiThread.Until(() => confirmation.IsKeyboardFocusWithin);
+            confirmation.Close(DialogChoice.Primary);
+            UiThread.Until(() => !page.Rows.OfType<ExamRow>().Any());
+            TestShell.Flush();
+            UiThread.Until(() => Named<Button>(window, "NewExamButton").IsKeyboardFocused);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [TestMethod]
     public async Task Cancelling_the_form_fixes_nothing_and_forgets_its_refusal()
     {
         using var vault = new ExamVault();
@@ -594,7 +820,7 @@ public sealed class ExamsTests
 
         public string SheetId { get; }
 
-        public DashboardPageViewModel Page() => new(App.Reminders, App.Sheets, Opener, null, App.Reviews, App.Exams, App.Folders);
+        public DashboardPageViewModel Page() => new(App.Reminders, App.Sheets, Opener, null, App.Reviews, App.Exams, App.Folders, Time);
 
         public void Dispose() => _vaults.Dispose();
     }

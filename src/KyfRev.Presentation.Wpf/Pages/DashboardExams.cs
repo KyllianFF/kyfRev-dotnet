@@ -117,6 +117,7 @@ public sealed partial class DashboardExams : ObservableObject
     private readonly ExamUseCases _exams;
     private readonly FolderUseCases _folders;
     private readonly Func<Task> _refresh;
+    private readonly TimeProvider _time;
 
     /// <summary>Nombre d'oublis du coffre : une réponse partie avant le dernier n'y remet rien.</summary>
     private int _generation;
@@ -124,14 +125,14 @@ public sealed partial class DashboardExams : ObservableObject
     /// <summary>Numéro de la dernière ouverture du formulaire : seule elle compte.</summary>
     private int _opening;
 
-    private DateOnly _today;
     private ExamRow? _target;
 
-    internal DashboardExams(ExamUseCases exams, FolderUseCases folders, Func<Task> refresh)
+    internal DashboardExams(ExamUseCases exams, FolderUseCases folders, Func<Task> refresh, TimeProvider time)
     {
         _exams = exams;
         _folders = folders;
         _refresh = refresh;
+        _time = time;
         EditorTitle = ExamText.EditorNew;
         ExamName = string.Empty;
         Folders = [];
@@ -218,9 +219,19 @@ public sealed partial class DashboardExams : ObservableObject
     /// <summary>Un refus est affiché.</summary>
     public bool HasError => Error.Length > 0;
 
-    /// <summary>Une action est en cours.</summary>
+    /// <summary>Une action est en cours : les autres attendent qu'elle ait fini.</summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsIdle))]
+    [NotifyCanExecuteChangedFor(nameof(NewCommand), nameof(EditCommand))]
     public partial bool IsBusy { get; private set; }
+
+    /// <summary>Aucune action en cours : on peut en lancer une.</summary>
+    public bool IsIdle => !IsBusy;
+
+    /// <summary>Le dossier de la dernière action : le focus revient à sa ligne.</summary>
+    internal string? LastFolder { get; private set; }
+
+    private DateOnly Today => DateOnly.FromDateTime(_time.GetLocalNow().DateTime);
 
     /// <summary>Oublie ce qui vient du coffre : le formulaire, l'examen en attente de confirmation, les messages et les dossiers.</summary>
     public void Forget()
@@ -228,6 +239,7 @@ public sealed partial class DashboardExams : ObservableObject
         _generation++;
         _opening++;
         _target = null;
+        LastFolder = null;
         IsEditing = false;
         ExamName = string.Empty;
         Folders = [];
@@ -239,9 +251,6 @@ public sealed partial class DashboardExams : ObservableObject
         IsBusy = false;
         ClearFeedback();
     }
-
-    /// <summary>Le jour du tableau de bord, lu de l'horloge : le formulaire en part.</summary>
-    internal void SetToday(DateOnly today) => _today = today;
 
     /// <summary>La vue se rouvre : les messages de la fois d'avant s'en vont.</summary>
     internal void ClearFeedback()
@@ -257,11 +266,11 @@ public sealed partial class DashboardExams : ObservableObject
     internal void RequestWithdraw(ExamRow row) => Ask(row, ExamConfirmation.Withdraw);
 
     /// <summary>Ouvre le formulaire, sur un nouvel examen.</summary>
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(IsIdle))]
     private Task NewAsync() => OpenEditorAsync(null);
 
     /// <summary>Ouvre le formulaire, sur un examen à modifier.</summary>
-    [RelayCommand]
+    [RelayCommand(CanExecute = nameof(IsIdle))]
     private Task EditAsync(ExamRow row) => OpenEditorAsync(row);
 
     /// <summary>La réponse au formulaire : un refus le laisse ouvert, avec ce qui a été saisi.</summary>
@@ -286,21 +295,33 @@ public sealed partial class DashboardExams : ObservableObject
             return;
         }
         var folder = Folder?.Value ?? string.Empty;
+        LastFolder = folder;
         var generation = _generation;
-        var outcome = await Task.Run(() => _exams.Define(folder, name, day)).ConfigureAwait(true);
-        if (generation != _generation)
-        {
-            return;
-        }
-        if (!outcome.Succeeded)
-        {
-            Refuse(outcome.Error!);
-            return;
-        }
-        EditorError = null;
+        IsBusy = true;
         Message = string.Empty;
         Error = string.Empty;
-        await _refresh().ConfigureAwait(true);
+        try
+        {
+            var outcome = await Task.Run(() => _exams.Define(folder, name, day)).ConfigureAwait(true);
+            if (generation != _generation)
+            {
+                return;
+            }
+            if (!outcome.Succeeded)
+            {
+                Refuse(outcome.Error!);
+                return;
+            }
+            EditorError = null;
+            await _refresh().ConfigureAwait(true);
+        }
+        finally
+        {
+            if (generation == _generation)
+            {
+                IsBusy = false;
+            }
+        }
     }
 
     /// <summary>La réponse à la confirmation : l'action est faite si elle est confirmée, abandonnée sinon.</summary>
@@ -330,7 +351,12 @@ public sealed partial class DashboardExams : ObservableObject
 
     private void Ask(ExamRow row, ExamConfirmation confirmation)
     {
+        if (IsBusy)
+        {
+            return;
+        }
         _target = row;
+        LastFolder = row.Exam.Folder;
         Confirmation = confirmation;
     }
 
@@ -344,6 +370,8 @@ public sealed partial class DashboardExams : ObservableObject
     {
         var generation = _generation;
         IsBusy = true;
+        // Le message d'avant se ferme : le suivant sera annoncé, et un refus ne restera pas à côté d'une réussite.
+        Message = string.Empty;
         Error = string.Empty;
         try
         {
@@ -373,6 +401,10 @@ public sealed partial class DashboardExams : ObservableObject
 
     private async Task OpenEditorAsync(ExamRow? row)
     {
+        if (IsBusy)
+        {
+            return;
+        }
         var opening = ++_opening;
         var outcome = await Task.Run(_folders.Folders).ConfigureAwait(true);
         if (opening != _opening)
@@ -391,9 +423,12 @@ public sealed partial class DashboardExams : ObservableObject
         EditorTitle = row is null ? ExamText.EditorNew : ExamText.EditorEdit;
         ExamName = row?.Name ?? string.Empty;
         EditorError = null;
+        LastFolder = folder;
+        // Lu de l'horloge, à chaque ouverture : le tableau de bord n'est pas toujours déjà lu.
+        var today = Today;
         // Un examen déjà passé garde sa date le temps qu'on la change.
-        Earliest = row?.Exam.Day < _today ? row.Exam.Day : _today;
-        Day = row?.Exam.Day ?? _today.AddDays(DefaultDaysAhead);
+        Earliest = row?.Exam.Day < today ? row.Exam.Day : today;
+        Day = row?.Exam.Day ?? today.AddDays(DefaultDaysAhead);
         IsEditing = true;
     }
 }

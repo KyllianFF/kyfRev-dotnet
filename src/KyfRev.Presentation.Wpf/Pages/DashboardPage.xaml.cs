@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 using KyfRev.DesignSystem.Controls;
 
 namespace KyfRev.Presentation.Wpf.Pages;
@@ -148,7 +149,7 @@ internal sealed partial class DashboardPage : UserControl
                 return items;
             case ReminderRow:
                 return [ActionMenus.Quick(DashboardText.OpenSheet, Icons.Document, () => Page.OpenCommand.Execute(row))];
-            case ExamRow exam when Page.Exams is { } exams:
+            case ExamRow exam when Page.Exams is { IsBusy: false } exams:
                 List<Control> entries = [];
                 if (exam.CanTighten)
                 {
@@ -181,10 +182,38 @@ internal sealed partial class DashboardPage : UserControl
     }
 
     /// <summary>La réponse au formulaire d'un examen part vers les examens.</summary>
-    private void OnExamEditorClosed(object sender, DialogClosedEventArgs e) => Page.Exams!.AnswerEditorCommand.Execute(e.Choice == DialogChoice.Primary);
+    private void OnExamEditorClosed(object sender, DialogClosedEventArgs e) => _ = FocusExamAfterAsync(Page.Exams!.AnswerEditorCommand.ExecuteAsync(e.Choice == DialogChoice.Primary));
 
     /// <summary>La réponse à la confirmation d'un examen part vers les examens.</summary>
-    private void OnExamConfirmationClosed(object sender, DialogClosedEventArgs e) => Page.Exams!.AnswerCommand.Execute(e.Choice == DialogChoice.Primary);
+    private void OnExamConfirmationClosed(object sender, DialogClosedEventArgs e) => _ = FocusExamAfterAsync(Page.Exams!.AnswerCommand.ExecuteAsync(e.Choice == DialogChoice.Primary));
+
+    /// <summary>La réponse relit le tableau de bord, ce qui refait les lignes : le focus attend qu'elle ait fini.</summary>
+    private async Task FocusExamAfterAsync(Task answer)
+    {
+        await answer.ConfigureAwait(true);
+        await Dispatcher.InvokeAsync(FocusExam, DispatcherPriority.Input);
+    }
+
+    /// <summary>
+    /// Le focus perdu avec la ligne refaite (il remonte alors à la liste) revient à l'examen ; retiré, à l'en-tête de son
+    /// groupe, ou au bouton qui en crée un.
+    /// </summary>
+    private void FocusExam()
+    {
+        var lost = KeyboardFocus.IsLost() || ReferenceEquals(Keyboard.FocusedElement, Items);
+        if (!IsVisible || !lost || DataContext is not DashboardPageViewModel { Exams: { IsEditing: false, IsConfirming: false } } page)
+        {
+            return;
+        }
+        if (page.ExamRowToFocus() is not { } row)
+        {
+            NewExamButton.Focus();
+            return;
+        }
+        Items.ScrollIntoView(row);
+        Items.UpdateLayout();
+        (Items.ItemContainerGenerator.ContainerFromItem(row) as ListBoxItem)?.Focus();
+    }
 
     /// <summary>La réponse à la mise aux archives part vers la vue.</summary>
     private void OnArchiveClosed(object sender, DialogClosedEventArgs e) => Page.AnswerArchiveCommand.Execute(e.Choice == DialogChoice.Primary);
