@@ -58,7 +58,7 @@
         <TextBlock x:Name="PasswordStepHelp" Text="{x:Static pages:EncryptionText.PasswordStepHelp}" Style="{DynamicResource Kyf.Text.Secondary}"
                    Margin="0,4,0,0" TextWrapping="Wrap" />
         <TextBlock x:Name="NewPasswordLabel" Text="{x:Static pages:EncryptionText.NewPassword}" Style="{DynamicResource Kyf.Text.BodyStrong}" Margin="0,12,0,6" />
-        <PasswordBox x:Name="NewPasswordBox" IsEnabled="{Binding IsIdle}" IsVisibleChanged="OnSecretShown"
+        <PasswordBox x:Name="NewPasswordBox" IsEnabled="{Binding IsIdle}" IsVisibleChanged="OnSecretShown" IsEnabledChanged="OnSecretEnabled"
                      AutomationProperties.Name="{x:Static pages:EncryptionText.NewPassword}"
                      AutomationProperties.HelpText="{x:Static pages:ConversionPageViewModel.PasswordLength}"
                      AutomationProperties.LabeledBy="{Binding ElementName=NewPasswordLabel}" />
@@ -77,7 +77,7 @@
       </StackPanel>
 
       <!-- Étape 2 : la clé de récupération, montrée une seule fois ; la conversion ne commence qu'une fois la clé rangée. -->
-      <StackPanel x:Name="RecoveryPart" Margin="0,16,0,0" Visibility="{Binding IsRecoveryKey, Converter={StaticResource Visible}}">
+      <StackPanel x:Name="RecoveryPart" Margin="0,16,0,0" Visibility="{Binding IsRecoveryKey, Converter={StaticResource Visible}}" IsVisibleChanged="OnRecoveryKeyShown">
         <TextBlock x:Name="RecoveryTitle" Text="{x:Static pages:EncryptionText.RecoveryStepTitle}" Style="{DynamicResource Kyf.Text.Subtitle}"
                    TextWrapping="Wrap" AutomationProperties.HeadingLevel="Level2" />
         <TextBlock x:Name="RecoveryKeyHelp" Text="{x:Static pages:EncryptionText.RecoveryKeyShown}" Style="{DynamicResource Kyf.Text.Body}" Margin="0,4,0,0" TextWrapping="Wrap" />
@@ -85,7 +85,7 @@
                  TextWrapping="Wrap" Margin="0,12,0,0" AutomationProperties.Name="{x:Static pages:EncryptionText.RecoveryKey}" />
         <Button x:Name="CopyRecoveryKeyButton" Content="{x:Static pages:EncryptionText.Copy}" Command="{Binding CopyRecoveryKeyCommand}" HorizontalAlignment="Left" Margin="0,8,0,0"
                 AutomationProperties.Name="{x:Static pages:EncryptionText.CopyRecoveryKey}" />
-        <kyf:Notification x:Name="RecoveryKeyStatus" Severity="Info" Message="{Binding KeyMessage}" IsOpen="{Binding HasKeyMessage, Mode=OneWay}" IsClosable="False" Margin="0,8,0,0" />
+        <kyf:Notification x:Name="RecoveryKeyStatus" Severity="Info" Message="{Binding KeyMessage}" IsOpen="{Binding HasKeyMessage, Mode=OneWay}" IsClosable="False" Margin="0,8,0,0" IsVisibleChanged="OnNoticeShown" />
         <CheckBox x:Name="KeyStoredBox" IsChecked="{Binding IsKeyStored}" Margin="0,12,0,0" AutomationProperties.Name="{x:Static pages:EncryptionText.KeyStored}">
           <TextBlock Text="{x:Static pages:EncryptionText.KeyStored}" TextWrapping="Wrap" />
         </CheckBox>
@@ -106,12 +106,12 @@
 
       <!-- Le déchiffrement : le secret du coffre, et le dossier où écrire le coffre en clair. -->
       <StackPanel x:Name="SecretPart" Margin="0,16,0,0" Visibility="{Binding IsSecret, Converter={StaticResource Visible}}" IsVisibleChanged="OnPartVisibleChanged">
-        <kyf:Notification x:Name="DecryptWarning" Severity="Warning" Message="{x:Static pages:EncryptionText.DecryptWarning}" IsOpen="True" IsClosable="False" />
+        <kyf:Notification x:Name="DecryptWarning" Severity="Warning" Message="{x:Static pages:EncryptionText.DecryptWarning}" IsOpen="{Binding IsSecret, Mode=OneWay}" IsClosable="False" />
         <TextBlock x:Name="DecryptSecretLabel" Text="{Binding SecretLabel}" Style="{DynamicResource Kyf.Text.BodyStrong}" Margin="0,12,0,6" />
-        <PasswordBox x:Name="DecryptPasswordBox" IsEnabled="{Binding IsIdle}" IsVisibleChanged="OnSecretShown" Visibility="{Binding UsesPassword, Converter={StaticResource Visible}}"
+        <PasswordBox x:Name="DecryptPasswordBox" IsEnabled="{Binding IsIdle}" IsVisibleChanged="OnSecretShown" IsEnabledChanged="OnSecretEnabled" Visibility="{Binding UsesPassword, Converter={StaticResource Visible}}"
                      AutomationProperties.Name="{x:Static pages:EncryptionText.Password}"
                      AutomationProperties.LabeledBy="{Binding ElementName=DecryptSecretLabel}" />
-        <TextBox x:Name="DecryptRecoveryBox" IsEnabled="{Binding IsIdle}" IsVisibleChanged="OnSecretShown" IsUndoEnabled="False" FontFamily="{DynamicResource Kyf.Font.Code}" TextWrapping="Wrap"
+        <TextBox x:Name="DecryptRecoveryBox" IsEnabled="{Binding IsIdle}" IsVisibleChanged="OnSecretShown" IsEnabledChanged="OnSecretEnabled" IsUndoEnabled="False" FontFamily="{DynamicResource Kyf.Font.Code}" TextWrapping="Wrap"
                  Visibility="{Binding UsesRecoveryKey, Converter={StaticResource Visible}}"
                  AutomationProperties.Name="{x:Static pages:EncryptionText.RecoveryKey}"
                  AutomationProperties.HelpText="{x:Static pages:EncryptionText.RecoveryHelp}"
@@ -175,7 +175,7 @@
       </StackPanel>
 
       <kyf:Notification x:Name="BusyMessage" Severity="Info" Message="{Binding BusyMessage}" IsOpen="{Binding IsBusy, Mode=OneWay}" IsClosable="False" Margin="0,8,0,0" />
-      <kyf:Notification x:Name="ErrorMessage" Severity="Critical" Message="{Binding Error}" IsOpen="{Binding HasError, Mode=OneWay}" IsClosable="False" Margin="0,8,0,0" />
+      <kyf:Notification x:Name="ErrorMessage" Severity="Critical" Message="{Binding Error}" IsOpen="{Binding HasError, Mode=OneWay}" IsClosable="False" Margin="0,8,0,0" IsVisibleChanged="OnNoticeShown" />
     </StackPanel>
   </ScrollViewer>
 </UserControl>

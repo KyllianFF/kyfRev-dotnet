@@ -22,6 +22,10 @@ public sealed partial class VaultUseCases
     /// <summary>Message de refus quand un coffre est encore ouvert au moment de le convertir.</summary>
     public const string StillOpen = "Le coffre est encore ouvert : il se ferme avant d'être converti.";
 
+    /// <summary>Le dossier des sauvegardes du coffre <paramref name="root"/> : à côté de lui, et en clair pour un coffre en clair.</summary>
+    /// <param name="root">Le dossier du coffre.</param>
+    public static string BackupsFolderOf(string root) => BackupFolders.For(root);
+
     /// <summary>
     /// Prépare le chiffrement du coffre ouvert, en clair, sans rien écrire : la clé de récupération du futur coffre chiffré
     /// est rendue pour être notée avant la conversion. Refusé sans coffre ouvert, pour un coffre déjà chiffré, si les deux

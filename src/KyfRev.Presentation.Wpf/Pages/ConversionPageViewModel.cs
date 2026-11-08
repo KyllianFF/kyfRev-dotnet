@@ -3,6 +3,7 @@ using System.Runtime.InteropServices;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using KyfRev.Application;
+using KyfRev.Application.Model;
 using KyfRev.Application.Ports;
 using KyfRev.Application.UseCases;
 using KyfRev.Presentation.Wpf.Shell;
@@ -81,7 +82,7 @@ public sealed partial class ConversionPageViewModel : ObservableObject
     /// <param name="direction">Chiffrer, ou déchiffrer.</param>
     /// <param name="source">Le coffre ouvert, à convertir.</param>
     /// <param name="close">Ferme le coffre pour la page qu'on lui donne, affichée (<see cref="VaultLocking.CloseForAsync"/>) ; faux s'il reste ouvert.</param>
-    /// <param name="opened">Ce qui suit l'ouverture d'un coffre : l'espace de travail, ou l'écran de déverrouillage.</param>
+    /// <param name="opened">Ce qui suit une ouverture : l'espace de travail, l'écran de déverrouillage, ou, le coffre refusé, l'accueil.</param>
     /// <param name="cancel">Le retour au coffre ouvert, la conversion annulée avant d'avoir commencé.</param>
     /// <param name="picker">Le choix du dossier où écrire un coffre déchiffré.</param>
     /// <param name="copy">Copie la clé de récupération dans le presse-papiers ; peut lever <see cref="ExternalException"/>.</param>
@@ -443,13 +444,25 @@ public sealed partial class ConversionPageViewModel : ObservableObject
     [RelayCommand]
     private Task ReturnAsync() => IsFinished ? OpenAsync(Source) : Task.CompletedTask;
 
-    /// <summary>Ferme le coffre pour cette page ; faux, et la page le dit, s'il reste ouvert.</summary>
+    /// <summary>
+    /// Ferme le coffre pour cette page ; faux, et la page le dit, s'il reste ouvert. La page est occupée pendant ce temps :
+    /// rien ne l'annule une fois la fermeture commencée.
+    /// </summary>
     private async Task<bool> CloseAsync()
     {
         Error = null;
-        if (await _close(this).ConfigureAwait(true))
+        BusyMessage = EncryptionText.Closing;
+        IsBusy = true;
+        try
         {
-            return true;
+            if (await _close(this).ConfigureAwait(true))
+            {
+                return true;
+            }
+        }
+        finally
+        {
+            IsBusy = false;
         }
         Error = EncryptionText.NotClosed;
         return false;
@@ -458,6 +471,7 @@ public sealed partial class ConversionPageViewModel : ObservableObject
     /// <summary>La conversion, hors du fil de l'interface, avec sa progression ; puis ce qu'elle a fait.</summary>
     private async Task ConvertAsync(Func<IProgress<ConversionProgress>, ConversionReport> convert)
     {
+        Error = null;
         Stage = ConversionStage.Converting;
         Written = 0;
         Verified = 0;
@@ -467,7 +481,7 @@ public sealed partial class ConversionPageViewModel : ObservableObject
         Destination = report.Value.Succeeded ? report.Value.Destination : null;
         if (report.Value.Succeeded)
         {
-            Result = report.Value.Message + " " + (Direction == ConversionDirection.Encrypt ? EncryptionText.EncryptedNext : EncryptionText.DecryptedNext);
+            Result = WhatComesNext(report.Value.Message);
             Stage = ConversionStage.Done;
         }
         else
@@ -475,6 +489,24 @@ public sealed partial class ConversionPageViewModel : ObservableObject
             Result = report.Value.Message;
             Stage = ConversionStage.Failed;
         }
+    }
+
+    /// <summary>
+    /// Ce que la conversion a fait, et ce qui reste à faire : le coffre de départ à retirer, ses sauvegardes en clair à côté,
+    /// et, en mode portable, le dossier que kyfRev rouvrira.
+    /// </summary>
+    private string WhatComesNext(string message)
+    {
+        var next = new List<string> { message, Direction == ConversionDirection.Encrypt ? EncryptionText.EncryptedNext : EncryptionText.DecryptedNext };
+        if (Direction == ConversionDirection.Encrypt && Directory.Exists(VaultUseCases.BackupsFolderOf(Source)))
+        {
+            next.Add(EncryptionText.PlainBackupsOf(VaultUseCases.BackupsFolderOf(Source)));
+        }
+        if (_vaults.State().Mode == AppMode.Portable)
+        {
+            next.Add(EncryptionText.PortableNext);
+        }
+        return string.Join(" ", next);
     }
 
     /// <summary>Montre où en est la conversion.</summary>
@@ -501,13 +533,7 @@ public sealed partial class ConversionPageViewModel : ObservableObject
         }
         Error = null;
         var outcome = await RunAsync(EncryptionText.Opening, () => Outcome.Of(_vaults.Open(folder))).ConfigureAwait(true);
-        var state = outcome.Value;
-        if (state.Locked is null && state.OpenError is { } error)
-        {
-            Error = error;
-            return;
-        }
-        _opened(state);
+        _opened(outcome.Value);
     }
 
     /// <summary>Le travail <paramref name="work"/>, hors du fil de l'interface.</summary>

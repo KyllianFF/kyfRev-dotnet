@@ -203,6 +203,7 @@ public sealed class ConversionTests
         Assert.IsTrue(File.Exists(Path.Combine(page.Destination!, ".suivi", "coffre.json")), "un coffre en clair");
         Assert.IsTrue(File.Exists(Path.Combine(scene.Source, "kyfrev-chiffre.json")), "le coffre chiffré reste");
         Assert.Contains(EncryptionText.DecryptedNext, page.Result);
+        Assert.DoesNotContain(EncryptionText.PortableNext, page.Result);
         Assert.AreEqual(EncryptionText.FilesDecrypted, page.WritingLabel);
 
         // « Revenir au coffre chiffré » : l'écran de déverrouillage le demande ; « Ouvrir le coffre en clair » l'ouvre.
@@ -228,6 +229,14 @@ public sealed class ConversionTests
         Run(page.EncryptCommand.ExecuteAsync(null));
         Assert.AreEqual(EncryptionText.NotClosed, page.Error);
         Assert.AreEqual(ConversionStage.RecoveryKey, page.Stage, "l'étape reste : rien n'a commencé");
+        Assert.AreEqual(scene.Source, scene.App.Vaults.State().Vault);
+        Assert.AreEqual(0, scene.Forgotten);
+        scene.Drafts.Clear();
+
+        // Un brouillon qu'un verrouillage abandonnerait : une conversion peut attendre, et il n'est pas perdu.
+        scene.Drafts.Add(new UnsavedDraft());
+        Run(page.EncryptCommand.ExecuteAsync(null));
+        Assert.AreEqual(EncryptionText.NotClosed, page.Error);
         Assert.AreEqual(scene.Source, scene.App.Vaults.State().Vault);
         Assert.AreEqual(0, scene.Forgotten);
         scene.Drafts.Clear();
@@ -273,6 +282,8 @@ public sealed class ConversionTests
             UiThread.Until(() => page.IsRecoveryKey, Slow);
             TestShell.Flush();
             Assert.IsTrue(view.RecoveryPart.IsVisible);
+            UiThread.Until(() => FocusedIn(view.RecoveryKeyText) == view.RecoveryKeyText);
+            Assert.IsFalse(view.DecryptWarning.IsOpen, "l'avertissement du déchiffrement n'est pas pour un chiffrement");
             Assert.AreEqual(page.RecoveryKey, view.RecoveryKeyText.Text);
             Assert.AreEqual(view.FindResource("Kyf.Font.Code"), view.RecoveryKeyText.FontFamily);
             Assert.IsTrue(view.StepTwo.Tag is true, "l'étape montrée se distingue");
@@ -331,6 +342,7 @@ public sealed class ConversionTests
             UiThread.Until(() => page.IsIdle && page.HasError, Slow);
             TestShell.Flush();
             Assert.IsTrue(view.ErrorMessage.IsOpen);
+            UiThread.Until(() => FocusedIn(view.DecryptPasswordBox) == view.DecryptPasswordBox);
 
             // La clé de récupération : son champ la montre, puis se vide.
             view.DecryptWithRecoveryBox.IsChecked = true;
@@ -390,6 +402,109 @@ public sealed class ConversionTests
         var bare = new EncryptionSettingsViewModel(encrypted.App.Encryption, encrypted.App.Settings, () => true, null, _ => { });
         Assert.IsFalse(bare.CanDecrypt);
         Assert.IsFalse(bare.RequestDecryptionCommand.CanExecute(null));
+    }
+
+    [STATestMethod]
+    public void What_comes_next_names_the_plain_backups_and_the_portable_folder()
+    {
+        using var ui = new UiThread();
+        using var scene = new Scene(encrypted: false, mode: AppMode.Portable);
+        var backups = Path.Combine(scene.Root, "Sauvegardes");
+        Directory.CreateDirectory(backups);
+        var page = scene.Show(ConversionDirection.Encrypt);
+
+        Encrypt(page);
+
+        Assert.AreEqual(ConversionStage.Done, page.Stage, page.Result);
+        Assert.Contains(EncryptionText.PlainBackupsOf(backups), page.Result);
+        Assert.Contains(EncryptionText.PortableNext, page.Result);
+    }
+
+    [STATestMethod]
+    public void A_vault_that_no_longer_opens_leads_to_the_welcome_page_which_says_why()
+    {
+        using var ui = new UiThread();
+        using var scene = new Scene(encrypted: false);
+        var page = scene.Show(ConversionDirection.Encrypt);
+        Encrypt(page);
+        Assert.AreEqual(ConversionStage.Done, page.Stage, page.Result);
+        Directory.Move(scene.Source, scene.Source + " déplacé");
+
+        Run(page.ReturnCommand.ExecuteAsync(null));
+
+        var welcome = (WelcomePageViewModel)scene.Shell.Current.Page;
+        Assert.IsTrue(welcome.HasError, "l'accueil dit pourquoi");
+        Assert.IsNull(scene.App.Vaults.State().Vault);
+    }
+
+    [STATestMethod]
+    public void Nothing_cancels_the_page_once_the_vault_is_closing()
+    {
+        using var ui = new UiThread();
+        using var scene = new Scene(encrypted: false);
+        var closing = new TaskCompletionSource<bool>();
+        var cancelled = 0;
+        var page = new ConversionPageViewModel(scene.App.Vaults, scene.App.Encryption, ConversionDirection.Encrypt, scene.Source, _ => closing.Task, _ => { }, () => cancelled++, scene.Vaults.Picker, _ => { });
+        Run(page.PrepareCommand.ExecuteAsync(new NewPassword(NewPassword, NewPassword)));
+        var key = page.RecoveryKey;
+        page.IsKeyStored = true;
+
+        var encrypting = page.EncryptCommand.ExecuteAsync(null);
+
+        Assert.IsTrue(page.IsBusy, "la fermeture occupe la page");
+        Assert.AreEqual(EncryptionText.Closing, page.BusyMessage);
+        page.CancelCommand.Execute(null);
+        page.BackToPasswordCommand.Execute(null);
+        Assert.AreEqual(0, cancelled);
+        Assert.AreEqual(ConversionStage.RecoveryKey, page.Stage);
+        Assert.AreEqual(key, page.RecoveryKey, "la clé préparée reste");
+
+        closing.SetResult(false);
+        Run(encrypting);
+        Assert.IsFalse(page.IsBusy);
+        Assert.AreEqual(EncryptionText.NotClosed, page.Error);
+        Assert.AreEqual(ConversionStage.RecoveryKey, page.Stage);
+    }
+
+    [STATestMethod]
+    public void The_window_stays_open_while_a_conversion_runs()
+    {
+        using var ui = new UiThread();
+        using var blocking = new BlockingConversion();
+        using var scene = new Scene(encrypted: false, conversion: blocking);
+        var page = scene.Show(ConversionDirection.Encrypt);
+        var window = new ShellWindow(scene.Shell) { ShowActivated = false, Left = -10000, Top = -10000, Width = 800, Height = 700, WindowStartupLocation = WindowStartupLocation.Manual };
+        window.Resources.MergedDictionaries.Add(scene.Test.Design.Dictionary);
+        window.Show();
+        try
+        {
+            Run(page.PrepareCommand.ExecuteAsync(new NewPassword(NewPassword, NewPassword)));
+            page.IsKeyStored = true;
+            var converting = page.EncryptCommand.ExecuteAsync(null);
+            UiThread.Until(() => page.IsConverting && blocking.Started, Slow);
+
+            blocking.Show(new ConversionProgress(ConversionStep.Writing, 1, 2));
+            UiThread.Until(() => page.Written == 1);
+            Assert.AreEqual("1 / 2", page.WritingCount);
+            Assert.AreEqual(2, page.Maximum);
+
+            window.Close();
+            TestShell.Flush();
+            Assert.IsTrue(window.IsVisible, "coupée, une conversion laisse un dossier temporaire");
+
+            blocking.Show(new ConversionProgress(ConversionStep.Verifying, 2, 2));
+            UiThread.Until(() => page.Verified == 2);
+            Assert.AreEqual(2, page.Written, "l'écriture est finie quand la relecture commence");
+            blocking.Release();
+            Run(converting);
+            Assert.AreEqual(ConversionStage.Done, page.Stage, page.Result);
+        }
+        finally
+        {
+            window.Close();
+        }
+        TestShell.Flush();
+        Assert.IsFalse(window.IsVisible, "une fois la conversion finie, la fenêtre se ferme");
     }
 
     [TestMethod]
@@ -497,6 +612,50 @@ public sealed class ConversionTests
         }
     }
 
+    /// <summary>Un brouillon que <see cref="ILeaving.LeaveAsync"/> n'a pas pu enregistrer, et qui reste en cours.</summary>
+    private sealed class UnsavedDraft : ILeaving
+    {
+        public bool HasUnsavedDraft => true;
+
+        public Task<bool> LeaveAsync() => Task.FromResult(true);
+    }
+
+    /// <summary>Un chiffrement préparé qui ne garde rien.</summary>
+    private sealed class FakeDraft(string source) : EncryptionDraft(source, "ABCD")
+    {
+        protected override void Dispose(bool disposing)
+        {
+        }
+    }
+
+    /// <summary>Une conversion qui attend qu'on la laisse finir, et qui dit où elle en est à la demande.</summary>
+    private sealed class BlockingConversion : IVaultConversion, IDisposable
+    {
+        private readonly ManualResetEventSlim _released = new();
+        private IProgress<ConversionProgress>? _progress;
+
+        public bool Started => Volatile.Read(ref _progress) is not null;
+
+        public void Show(ConversionProgress progress) => _progress!.Report(progress);
+
+        public void Release() => _released.Set();
+
+        public void Dispose() => _released.Dispose();
+
+        public EncryptionDraft PrepareEncryption(string source, string password) => new FakeDraft(source);
+
+        public string FreeDestination(string parent, string name) => Path.Combine(parent, name);
+
+        public ConversionReport Encrypt(EncryptionDraft draft, string destination, IProgress<ConversionProgress>? progress = null)
+        {
+            Volatile.Write(ref _progress, progress);
+            _released.Wait(Slow);
+            return new ConversionReport(true, "Fait.", destination, 2);
+        }
+
+        public ConversionReport Decrypt(string source, string destination, VaultSecret secret, IProgress<ConversionProgress>? progress = null) => throw new NotSupportedException();
+    }
+
     /// <summary>Un brouillon qui ne s'enregistre pas : il garde le coffre ouvert.</summary>
     private sealed class RefusingDraft : ILeaving
     {
@@ -508,9 +667,9 @@ public sealed class ConversionTests
     {
         public const string Title = "La Révolution française";
 
-        public Scene(bool encrypted, bool dark = false)
+        public Scene(bool encrypted, bool dark = false, AppMode mode = AppMode.Development, IVaultConversion? conversion = null)
         {
-            Vaults = new TestVaults(AppMode.Development);
+            Vaults = new TestVaults(mode, conversion: conversion);
             Root = Vaults.Root;
             if (encrypted)
             {

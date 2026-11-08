@@ -8,4 +8,7 @@ public interface ILeaving
 {
     /// <summary>Finit ce qui est en cours ; faux si ce qui s'écrit n'a pas pu être enregistré (le coffre reste alors ouvert).</summary>
     Task<bool> LeaveAsync();
+
+    /// <summary>Un brouillon reste en cours, que <see cref="LeaveAsync"/> n'a pas pu enregistrer : un verrouillage l'abandonne, une conversion attend.</summary>
+    bool HasUnsavedDraft => false;
 }

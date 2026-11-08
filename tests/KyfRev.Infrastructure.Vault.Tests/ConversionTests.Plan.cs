@@ -237,6 +237,31 @@ public sealed partial class ConversionTests
     }
 
     [TestMethod]
+    public void The_application_adapter_refuses_what_it_cannot_prepare_and_keeps_the_kind_of_secret()
+    {
+        using var vault = SmallVault();
+        using var place = new Place();
+
+        // Une erreur à la préparation (ici des réglages refusés, comme un disque qui lâche) est un refus, que l'écran sait dire.
+        var refused = Assert.Throws<OperationException>(() => new VaultConversions(PasswordKeys.NewPbkdf2() with { Passes = 1 }).PrepareEncryption(vault.Root, Password).Dispose());
+        Assert.Contains("rien n'a été préparé", refused.Message);
+        Assert.IsNotNull(refused.InnerException);
+
+        // Un mot de passe qui a la forme d'une clé de récupération reste un mot de passe : l'adaptateur dit ce que c'est.
+        var conversions = new VaultConversions(PasswordKeys.NewPbkdf2());
+        var random = RecoveryKey.Create();
+        var lookalike = RecoveryKey.Format(random);
+        PasswordKeys.Clear(random);
+        using var draft = conversions.PrepareEncryption(vault.Root, lookalike);
+        Assert.IsTrue(conversions.Encrypt(draft, place.Encrypted).Succeeded);
+
+        var decrypted = conversions.Decrypt(place.Encrypted, place.Decrypted, VaultSecret.Password(lookalike));
+
+        Assert.IsTrue(decrypted.Succeeded, decrypted.Message);
+        Assert.IsTrue(conversions.Decrypt(place.Encrypted, place.Recovered, VaultSecret.RecoveryKey(draft.RecoveryKey)).Succeeded);
+    }
+
+    [TestMethod]
     public void The_application_adapter_draws_a_new_salt_for_each_preparation()
     {
         using var vault = SmallVault();

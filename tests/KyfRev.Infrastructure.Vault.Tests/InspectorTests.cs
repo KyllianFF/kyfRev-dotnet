@@ -249,6 +249,22 @@ public sealed class InspectorOnDiskTests() : InspectorTests(StorageKind.Disk)
     }
 
     [TestMethod]
+    public void The_tool_does_not_take_a_damaged_header_for_a_wrong_secret()
+    {
+        using var vault = TemporaryVault.CopyOfReference(StorageKind.Encrypted);
+        File.WriteAllText(Path.Combine(vault.Root, EncryptedVault.HeaderFile), "{ pas un en-tête");
+        var before = Raw(vault.Root);
+
+        var (exitCode, json, errors) = AskWithErrors(Password, "verifier", vault.Root, "--json");
+
+        Assert.AreEqual(VaultCommands.ErrorsFound, exitCode, errors);
+        Assert.IsEmpty(json, "avec --json, la sortie ne porte que le rapport");
+        Assert.Contains("Le coffre ne peut pas être analysé", errors);
+        Assert.DoesNotContain(VaultConversion.WrongSecret, errors, "le mot de passe n'est pas en cause");
+        CollectionAssert.AreEqual(before, Raw(vault.Root));
+    }
+
+    [TestMethod]
     public void The_tool_refuses_a_wrong_secret_or_an_unreadable_index_and_writes_nothing()
     {
         using var vault = TemporaryVault.CopyOfReference(StorageKind.Encrypted);

@@ -324,6 +324,9 @@ public sealed partial class DefinitionsPageViewModel : ObservableObject, IForget
         return true;
     }
 
+    /// <summary>Une définition reste en cours de modification, avec des changements que <see cref="LeaveAsync"/> n'a pas pu enregistrer.</summary>
+    public bool HasUnsavedDraft => _rows.Values.Any(row => row.IsEditing && !row.IsUnchanged);
+
     /// <summary>La définition a changé dans le coffre depuis qu'on a commencé à la modifier ici : le brouillon l'écraserait.</summary>
     private bool ChangedElsewhere(DefinitionRow row) =>
         _annotations.Definitions() is { Succeeded: true, Value: var stored }

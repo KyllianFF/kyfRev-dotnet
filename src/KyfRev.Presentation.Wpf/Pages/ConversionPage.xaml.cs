@@ -72,6 +72,34 @@ internal sealed partial class ConversionPage : UserControl
         }
     }
 
+    /// <summary>Après un essai refusé, le champ, de nouveau actif, reprend le focus : on retape tout de suite.</summary>
+    private void OnSecretEnabled(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (e.NewValue is true && ((UIElement)sender).IsVisible)
+        {
+            OnSecretShown(sender, e);
+        }
+    }
+
+    /// <summary>La clé de récupération paraît : le focus va à son champ, et un lecteur d'écran la lit.</summary>
+    private void OnRecoveryKeyShown(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (e.NewValue is true)
+        {
+            OnSecretShown(RecoveryKeyText, e);
+        }
+    }
+
+    /// <summary>Un refus ou un message paraît : même en bas d'une fenêtre étroite, il se voit.</summary>
+    private void OnNoticeShown(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (e.NewValue is true)
+        {
+            var notice = (FrameworkElement)sender;
+            Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () => notice.BringIntoView());
+        }
+    }
+
     /// <summary>Ce qui est copié d'un champ de clé de récupération reste hors de l'historique du presse-papiers.</summary>
     private static void OnSecretCopying(object sender, DataObjectCopyingEventArgs e) => SecretClipboard.Protect(e.DataObject);
 

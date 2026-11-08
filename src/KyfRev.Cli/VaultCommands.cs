@@ -105,6 +105,16 @@ internal static class VaultCommands
     /// <param name="said">Là où s'écrivent les refus : la sortie, ou la sortie d'erreur avec <c>--json</c>.</param>
     private static int VerifyEncrypted(string root, string secret, bool asJson, TextWriter output, TextWriter said)
     {
+        try
+        {
+            EncryptedVault.ReadHeader(root);
+        }
+        catch (VaultCryptoException exception)
+        {
+            // Un en-tête abîmé, ou d'un format plus récent : ce n'est pas le secret qui est en cause.
+            said.WriteLine($"{exception.Message} Le coffre ne peut pas être analysé ; rien n'y a été écrit.");
+            return ErrorsFound;
+        }
         if (VaultConversion.OpenDataKey(root, secret) is not { } key)
         {
             said.WriteLine(VaultConversion.WrongSecret);

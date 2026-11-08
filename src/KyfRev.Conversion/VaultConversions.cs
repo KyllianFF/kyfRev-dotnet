@@ -15,10 +15,19 @@ namespace KyfRev.Conversion;
 public sealed class VaultConversions(PasswordParameters? parameters = null) : IVaultConversion
 {
     /// <summary>Prépare le chiffrement du coffre en clair <paramref name="source"/> (<see cref="VaultConversion.Prepare"/>).</summary>
-    /// <exception cref="VaultCryptoException">Ce n'est pas un coffre en clair, ou le mot de passe est trop court : rien n'est préparé.</exception>
+    /// <exception cref="VaultCryptoException">Ce n'est pas un coffre en clair, il ne se lit pas, ou le mot de passe est trop court : rien n'est préparé.</exception>
     public EncryptionDraft PrepareEncryption(string source, string password)
     {
-        var prepared = VaultConversion.Prepare(source, password, Parameters());
+        EncryptionPreparation prepared;
+        try
+        {
+            prepared = VaultConversion.Prepare(source, password, Parameters());
+        }
+        catch (Exception exception) when (exception is not VaultCryptoException && VaultConversion.IsRefusal(exception))
+        {
+            // Le coffre ne se lit plus (un disque retiré, un dossier interdit) : un refus, pas une panne de l'application.
+            throw new VaultCryptoException($"Le coffre ne se lit pas ({exception.Message}) : rien n'a été préparé.", exception);
+        }
         return prepared.Plan ?? throw new VaultCryptoException(prepared.Refusal);
     }
 
@@ -44,7 +53,7 @@ public sealed class VaultConversions(PasswordParameters? parameters = null) : IV
     public ConversionReport Decrypt(string source, string destination, VaultSecret secret, IProgress<ConversionProgress>? progress = null)
     {
         ArgumentNullException.ThrowIfNull(secret);
-        return Report(VaultConversion.Decrypt(source, destination, secret.Text, progress: progress), destination);
+        return Report(VaultConversion.Decrypt(source, destination, secret.Text, progress: progress, isRecoveryKey: secret.IsRecoveryKey), destination);
     }
 
     private static ConversionReport Report(ConversionResult result, string destination) =>

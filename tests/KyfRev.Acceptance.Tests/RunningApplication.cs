@@ -326,7 +326,11 @@ internal sealed class RunningApplication : IDisposable
     }
 
     /// <summary>« Ouvrir le coffre chiffré » (ou en clair), une fois la conversion faite.</summary>
-    public void OpenConverted() => Press("OpenNewButton");
+    public void OpenConverted()
+    {
+        Press("OpenNewButton");
+        Wait("UnlockButton");
+    }
 
     /// <summary>Ouvre une vue du menu, comme d'un clic sur son entrée, et attend son titre.</summary>
     public void OpenView(string name)

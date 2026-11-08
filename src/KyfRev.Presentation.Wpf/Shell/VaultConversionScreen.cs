@@ -44,17 +44,19 @@ public static class VaultConversionScreen
             locking.CloseForAsync,
             state =>
             {
+                var workspace = changed ?? shell.ShowWorkspace;
                 if (state.Locked is not null)
                 {
                     VaultStartup.ShowUnlock(shell, vaults, picker, state, changed);
                 }
-                else if (changed is not null)
+                else if (state.Vault is null)
                 {
-                    changed();
+                    // Le coffre n'a pas pu s'ouvrir, et aucun autre ne l'est : l'accueil dit pourquoi et en propose un autre.
+                    shell.ShowWelcome(new WelcomePageViewModel(vaults, picker, state, _ => workspace(), locked => VaultStartup.ShowUnlock(shell, vaults, picker, locked, changed)));
                 }
                 else
                 {
-                    shell.ShowWorkspace();
+                    workspace();
                 }
             },
             shell.ShowWorkspace,

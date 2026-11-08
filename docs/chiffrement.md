@@ -325,7 +325,10 @@ en clair et le chiffrement ; la présentation n'y accède que par le port `IVaul
 
   Ensuite, aucun coffre n'est ouvert : « Ouvrir le coffre chiffré » montre l'écran de déverrouillage, qui demande le mot
   de passe ; « Revenir au coffre en clair » le rouvre, intact. C'est à l'utilisateur de retirer le coffre en clair, une
-  fois satisfait ; sur un disque SSD, un fichier effacé peut encore se retrouver, et BitLocker reste recommandé.
+  fois satisfait, **ainsi que ses sauvegardes** : le dossier `Sauvegardes`, à côté du coffre, garde des copies en clair
+  du coffre d'avant, et la page le nomme. Sur un disque SSD, un fichier effacé peut encore se retrouver, et BitLocker
+  reste recommandé. En mode portable, kyfRev rouvre toujours le même dossier au démarrage : pour que le nouveau coffre
+  soit celui-là, il faut retirer l'ancien dossier, puis donner son nom au nouveau, et la page le dit.
 - **« Déchiffrer vers un dossier… »**, dans la carte Chiffrement. La page demande le mot de passe ou la clé de
   récupération, et le dossier où écrire le coffre en clair (à côté du coffre chiffré par défaut). Le secret est vérifié
   avant que le coffre ne se ferme ; la copie s'écrit dans « Coffre (en clair) » (« (2) » si le nom est pris). Ensuite,
@@ -333,8 +336,12 @@ en clair et le chiffrement ; la présentation n'y accède que par le port `IVaul
   clair se lit sans mot de passe : la page le dit.
 - **Ce qui reste comme à l'outil** : un dossier temporaire laissé par une conversion coupée (l'application fermée pendant
   la copie, par exemple) n'est jamais effacé, et une conversion vers le même nom refuse en le nommant, pour qu'on le
-  retire à la main ; le coffre de départ, lui, n'a pas changé. Un coffre qui s'ouvre au même moment, ou un brouillon qui
-  ne s'enregistre pas, garde le coffre ouvert : rien n'est converti.
+  retire à la main ; le coffre de départ, lui, n'a pas changé. Le dossier temporaire porte un nom qui commence par un
+  point, à côté de la destination. La fenêtre ne se ferme pas pendant la conversion. Un coffre qui s'ouvre au même moment,
+  ou un brouillon qui ne s'enregistre pas (une définition incomplète, par exemple), garde le coffre ouvert : rien n'est
+  converti, et, à la différence d'un verrouillage, aucun brouillon n'est abandonné.
+- **Si le coffre ne se rouvre pas** après la conversion (un disque retiré, par exemple), l'accueil dit pourquoi et propose
+  d'en ouvrir un autre.
 
 ## Ce que les tests vérifient
 

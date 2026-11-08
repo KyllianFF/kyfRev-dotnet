@@ -64,6 +64,16 @@ public sealed partial class ShellWindow : Window
     }
 
     /// <inheritdoc/>
+    protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
+    {
+        ArgumentNullException.ThrowIfNull(e);
+        // Coupée, une conversion laisse un dossier temporaire, le coffre en clair s'il s'agit d'un déchiffrement : la page
+        // demande de laisser kyfRev ouvert jusqu'au bout.
+        e.Cancel = e.Cancel || _shell.Current.Page is Pages.ConversionPageViewModel { IsConverting: true };
+        base.OnClosing(e);
+    }
+
+    /// <inheritdoc/>
     protected override void OnSourceInitialized(EventArgs e)
     {
         // Après la base : ce filtre passe donc avant celui du cadre, qui répondrait à sa place.

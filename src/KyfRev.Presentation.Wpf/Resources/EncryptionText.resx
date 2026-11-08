@@ -51,6 +51,9 @@
   <data name="CheckingRecoveryKey" xml:space="preserve">
     <value>Vérification de la clé de récupération…</value>
   </data>
+  <data name="Closing" xml:space="preserve">
+    <value>Fermeture du coffre…</value>
+  </data>
   <data name="ConfirmPassword" xml:space="preserve">
     <value>Confirmez le nouveau mot de passe</value>
   </data>
@@ -58,7 +61,7 @@
     <value>Continuer</value>
   </data>
   <data name="ConversionHelp" xml:space="preserve">
-    <value>La copie s'écrit dans un nouveau dossier, puis chaque fichier est relu et comparé à l'original. Laissez kyfRev ouvert jusqu'au bout : coupée, la conversion ne perd rien, mais laisse un dossier temporaire caché, à retirer à la main.</value>
+    <value>La copie s'écrit dans un nouveau dossier, puis chaque fichier est relu et comparé à l'original. Laissez kyfRev ouvert jusqu'au bout : coupée, la conversion ne perd rien, mais laisse à côté de la destination un dossier temporaire dont le nom commence par un point, à retirer à la main.</value>
   </data>
   <data name="ConversionPage" xml:space="preserve">
     <value>Conversion du coffre</value>
@@ -217,7 +220,7 @@
     <value>Nouvelle clé de récupération</value>
   </data>
   <data name="NotClosed" xml:space="preserve">
-    <value>Le coffre n'a pas pu être fermé (ce qui s'écrit n'a pas pu être enregistré, ou un coffre est en train de s'ouvrir) : rien n'a été converti.</value>
+    <value>Le coffre n'a pas pu être fermé : une modification en cours (une définition, par exemple) n'a pas pu être enregistrée, ou un coffre est en train de s'ouvrir. Terminez-la, puis recommencez : rien n'a été converti.</value>
   </data>
   <data name="NotUnlocked" xml:space="preserve">
     <value>Ce coffre n'a pas pu être ouvert.</value>
@@ -260,6 +263,12 @@
   </data>
   <data name="PickOtherParent" xml:space="preserve">
     <value>Choisir un autre dossier…</value>
+  </data>
+  <data name="PlainBackups" xml:space="preserve">
+    <value>Ses sauvegardes, dans « {0} », restent en clair : retirez-les aussi, ou rangez-les à l'abri.</value>
+  </data>
+  <data name="PortableNext" xml:space="preserve">
+    <value>En mode portable, kyfRev rouvre toujours le même dossier au démarrage : pour que le nouveau coffre soit celui-là, retirez l'ancien dossier, puis donnez son nom au nouveau.</value>
   </data>
   <data name="RecoveryHelp" xml:space="preserve">
     <value>Les 14 groupes de 4 caractères de la dernière clé de récupération enregistrée : celle donnée au chiffrement du coffre, ou la dernière enregistrée depuis la carte Chiffrement. Les tirets, les espaces et les majuscules ne comptent pas.</value>

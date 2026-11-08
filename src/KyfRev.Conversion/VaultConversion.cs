@@ -165,7 +165,8 @@ public static class VaultConversion
     /// <param name="beforeVerifying">Pour les essais : ce qui arrive au dossier temporaire entre l'écriture et la vérification.</param>
     /// <param name="disk">Là où la conversion écrit : le disque par défaut.</param>
     /// <param name="progress">Les fichiers écrits, puis relus ; rien : rien n'est dit.</param>
-    public static ConversionResult Decrypt(string source, string destination, string secret, Action<string>? beforeVerifying = null, VaultStorage? disk = null, IProgress<ConversionProgress>? progress = null)
+    /// <param name="isRecoveryKey">Ce qu'est le secret, quand l'appelant le sait ; rien : sa forme le dit.</param>
+    public static ConversionResult Decrypt(string source, string destination, string secret, Action<string>? beforeVerifying = null, VaultStorage? disk = null, IProgress<ConversionProgress>? progress = null, bool? isRecoveryKey = null)
     {
         ArgumentNullException.ThrowIfNull(secret);
         disk ??= DiskStorage.Instance;
@@ -179,7 +180,7 @@ public static class VaultConversion
         {
             return refusal;
         }
-        if (OpenDataKey(source, secret) is not { } dataKey)
+        if (OpenDataKey(source, secret, isRecoveryKey) is not { } dataKey)
         {
             return ConversionResult.Refused(WrongSecret);
         }
@@ -264,11 +265,15 @@ public static class VaultConversion
     /// récupération : un texte qui se lit comme une clé de récupération en est une. Rien si le secret n'ouvre pas le coffre,
     /// ou si son en-tête ne se lit pas. Rien n'est écrit ; la clé rendue est à effacer après usage.
     /// </summary>
-    internal static byte[]? OpenDataKey(string source, string secret)
+    internal static byte[]? OpenDataKey(string source, string secret, bool? isRecoveryKey = null)
     {
         try
         {
             var header = EncryptedVault.ReadHeader(source);
+            if (isRecoveryKey is { } known)
+            {
+                return known ? header.OpenWithRecovery(secret) : header.Open(secret);
+            }
             return RecoveryKey.Parse(secret) is { } recovery ? Opened(header, recovery, secret) : header.Open(secret);
         }
         catch (VaultCryptoException)
@@ -461,7 +466,7 @@ public static class VaultConversion
     /// Ce qui fait refuser la conversion plutôt qu'arrêter l'outil : le disque, les droits, le chiffrement, un chemin ou un
     /// argument refusé. Le reste est une erreur imprévue : elle remonte, et laisse le dossier temporaire marqué.
     /// </summary>
-    private static bool IsRefusal(Exception exception) =>
+    internal static bool IsRefusal(Exception exception) =>
         exception is IOException or UnauthorizedAccessException or VaultCryptoException or CryptographicException or ArgumentException or NotSupportedException;
 
     /// <summary>

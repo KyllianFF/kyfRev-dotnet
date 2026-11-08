@@ -75,7 +75,8 @@ public sealed class VaultLocking(
     /// conversion) : ce qui s'écrit s'enregistre, le coffre se ferme, une fois finie la lecture en cours, puis chaque vue
     /// oublie, comme à un verrouillage. Rien de lui n'est retenu : chiffré, il n'attend pas sa clé. Faux, le coffre restant
     /// ouvert, si la page n'est plus affichée, si un verrouillage ou une ouverture est en cours, s'il n'y a pas de coffre
-    /// ouvert, ou si ce qui s'écrit n'a pas pu être enregistré.
+    /// ouvert, ou si ce qui s'écrit n'a pas pu être enregistré : à la différence d'un verrouillage, une conversion peut
+    /// attendre, et aucun brouillon n'est abandonné pour elle.
     /// </summary>
     /// <param name="page">La page qui reste affichée pendant et après la fermeture.</param>
     public async Task<bool> CloseForAsync(object page)
@@ -88,7 +89,7 @@ public sealed class VaultLocking(
         _locking = true;
         try
         {
-            if (!await FinishAsync().ConfigureAwait(true) || !ReferenceEquals(shell.Current.Page, page))
+            if (!await FinishAsync().ConfigureAwait(true) || (drafts?.Invoke() ?? []).Any(view => view.HasUnsavedDraft) || !ReferenceEquals(shell.Current.Page, page))
             {
                 return false;
             }
@@ -96,6 +97,10 @@ public sealed class VaultLocking(
             shell.CanLock = false;
             // Les vues qui viennent de se fermer finissent ce qu'elles avaient commencé.
             await Dispatcher.Yield(DispatcherPriority.Background);
+            if (!ReferenceEquals(shell.Current.Page, page))
+            {
+                return false;
+            }
             AppState closed;
             try
             {

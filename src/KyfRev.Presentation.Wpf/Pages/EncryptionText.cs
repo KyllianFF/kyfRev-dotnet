@@ -50,6 +50,9 @@ public static class EncryptionText
     /// <summary>« Confirmez le nouveau mot de passe ».</summary>
     public static string ConfirmPassword => Text(nameof(ConfirmPassword));
 
+    /// <summary>« Fermeture du coffre… » : avant la conversion.</summary>
+    public static string Closing => Text(nameof(Closing));
+
     /// <summary>« Continuer » : l'étape suivante.</summary>
     public static string Continue => Text(nameof(Continue));
 
@@ -258,6 +261,13 @@ public static class EncryptionText
 
     /// <summary>« Choisir un autre dossier… ».</summary>
     public static string PickOtherParent => Text(nameof(PickOtherParent));
+
+    /// <summary>Le dossier des sauvegardes en clair d'un coffre qu'on vient de chiffrer.</summary>
+    /// <param name="folder">Le dossier des sauvegardes.</param>
+    public static string PlainBackupsOf(string folder) => Format("PlainBackups", folder);
+
+    /// <summary>En mode portable, ce qu'il faut faire pour que le nouveau coffre soit celui du démarrage.</summary>
+    public static string PortableNext => Text(nameof(PortableNext));
 
     /// <summary>Comment recopier la clé de récupération.</summary>
     public static string RecoveryHelp => Text(nameof(RecoveryHelp));
