@@ -120,6 +120,9 @@ public sealed partial class QuotesPageViewModel : ObservableObject, INavigationA
     private Quote? _editing;
     private Quote? _toTrash;
 
+    /// <summary>La citation ouverte depuis la recherche globale : seule montrée.</summary>
+    private string? _target;
+
     /// <summary>La vue, sur les cas d'usage du module.</summary>
     public QuotesPageViewModel(QuoteUseCases quotes, IExternalLinks links)
     {
@@ -208,6 +211,9 @@ public sealed partial class QuotesPageViewModel : ObservableObject, INavigationA
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsEmpty))]
     public partial bool IsLoaded { get; private set; }
+
+    /// <summary>La vue ne montre que la citation ouverte depuis la recherche globale.</summary>
+    public bool HasTarget => _target is not null;
 
     /// <summary>Le texte cherché.</summary>
     [ObservableProperty]
@@ -304,9 +310,29 @@ public sealed partial class QuotesPageViewModel : ObservableObject, INavigationA
     /// <inheritdoc/>
     public void OnNavigatedTo()
     {
+        _target = null;
+        OnPropertyChanged(nameof(HasTarget));
         Error = null;
         Message = null;
         ReloadCommand.Execute(null);
+    }
+
+    /// <summary>Ne montre que la citation <paramref name="path"/>, ouverte depuis la recherche globale.</summary>
+    public void ShowOnly(string path)
+    {
+        ArgumentNullException.ThrowIfNull(path);
+        _target = path;
+        OnPropertyChanged(nameof(HasTarget));
+        Filter();
+    }
+
+    /// <summary>« Afficher toutes les citations ».</summary>
+    [RelayCommand]
+    private void ShowAll()
+    {
+        _target = null;
+        OnPropertyChanged(nameof(HasTarget));
+        Filter();
     }
 
     /// <summary>« Livre : Traité, p. 12 · 1789 · #chimie » : ce qui manque est dit.</summary>
@@ -384,6 +410,10 @@ public sealed partial class QuotesPageViewModel : ObservableObject, INavigationA
         var tag = Tag?.Value ?? string.Empty;
         var kept = _all.Where(row =>
         {
+            if (_target is not null)
+            {
+                return row.Quote.Path == _target;
+            }
             var content = row.Quote.Content;
             if (tag.Length > 0 && !content.Tags.Contains(tag))
             {

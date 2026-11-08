@@ -306,6 +306,8 @@ internal sealed class FakeOpener : IReviewOpener
 
     public void OpenReminder(PendingReminder reminder) => Opened.Add(reminder);
 
+    public void OpenWorkload(DashboardFilter filter) => Opened.Add(("charge", filter));
+
     /// <summary>Éléments restants de la séance à reprendre, simulés.</summary>
     public int? Resumable { get; set; }
 
@@ -327,6 +329,33 @@ internal static class Waiting
             Assert.IsLessThan(deadline, DateTime.UtcNow, "délai dépassé");
             await Task.Yield();
         }
+    }
+}
+
+/// <summary>Une longue opération qui tient le coffre, comme un gros import, jusqu'à <see cref="Release"/> ; et au plus dix secondes.</summary>
+internal sealed class VaultHold : IDisposable
+{
+    private readonly ManualResetEventSlim _release = new();
+    private readonly Task _holding;
+
+    public VaultHold(KyfRev.Application.UseCases.KyfRevApplication app)
+    {
+        using var started = new ManualResetEventSlim();
+        _holding = Task.Run(() => app.Host.Use(_ =>
+        {
+            started.Set();
+            _release.Wait(TimeSpan.FromSeconds(10));
+        }));
+        Assert.IsTrue(started.Wait(TimeSpan.FromSeconds(10)));
+    }
+
+    public void Release() => _release.Set();
+
+    public void Dispose()
+    {
+        Release();
+        Assert.IsTrue(_holding.Wait(TimeSpan.FromSeconds(20)));
+        _release.Dispose();
     }
 }
 

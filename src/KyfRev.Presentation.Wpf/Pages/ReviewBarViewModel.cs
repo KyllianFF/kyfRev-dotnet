@@ -29,6 +29,19 @@ public enum ReviewConfirmation
     NoPassageMarked,
 }
 
+/// <summary>Le jour que la barre demande de choisir.</summary>
+public enum ReviewDayChoice
+{
+    /// <summary>Aucun.</summary>
+    None,
+
+    /// <summary>Le jour où la révision a été faite, pour l'antidater.</summary>
+    Validate,
+
+    /// <summary>Le jour où l'échéance est reportée.</summary>
+    Postpone,
+}
+
 /// <summary>Ce que la dernière action de la barre a fait.</summary>
 public enum ReviewAction
 {
@@ -101,7 +114,8 @@ public sealed record StepMark(string Label, bool IsDone, bool IsCurrent, bool Wa
 /// <summary>
 /// La barre de révision d'une fiche ou d'un passage, comme dans la 0.x (<c>BarreRevision.svelte</c>) :
 /// l'étape attendue et son échéance, « Valider la révision » (Ctrl+Entrée), une confirmation avant
-/// une révision en avance, le report (demain, dans 3 jours), « Recommencer à J0… » et, pour une
+/// une révision en avance, le report (demain, dans 3 jours, à une date), la validation à une date passée (entre le
+/// lendemain de la dernière révision et aujourd'hui), « Recommencer à J0… » et, pour une
 /// fiche, « Archiver… » ; archivé, « Remettre en révision (J0) » et l'inclusion dans les rappels.
 /// Valider est toujours une action explicite. Quand un rappel de consolidation attend sa réponse
 /// (<c>BarreRappel.svelte</c>) : « Fiche connue », « Certains points sont à revoir » (les passages à
@@ -114,6 +128,9 @@ public sealed partial class ReviewBarViewModel : ObservableObject
     private readonly ReminderUseCases _reminders;
     private readonly SheetUseCases _sheets;
     private readonly TimeProvider _time;
+
+    /// <summary>Le jour choisi d'une révision en avance, le temps de la confirmer ; rien : aujourd'hui.</summary>
+    private DateOnly? _earlyDay;
 
     /// <summary>La barre d'un élément, dans l'état <paramref name="state"/>.</summary>
     public ReviewBarViewModel(ReviewUseCases reviews, ReminderUseCases reminders, SheetUseCases sheets, TimeProvider time, ItemKind kind, string id, ReviewState state)
@@ -150,7 +167,7 @@ public sealed partial class ReviewBarViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsActive), nameof(IsArchived), nameof(IsEarly), nameof(StepLabel), nameof(DueText), nameof(IsLate), nameof(CanValidate),
         nameof(ValidateLabel), nameof(ArchivedStatus), nameof(Steps), nameof(ReminderToggleLabel), nameof(ShowsReviewedToday),
-        nameof(IsReminder), nameof(ShowsArchivedActions), nameof(ShowsSteps), nameof(ShowsReminderChoices), nameof(ReminderIntro))]
+        nameof(IsReminder), nameof(ShowsArchivedActions), nameof(ShowsSteps), nameof(ShowsReminderChoices), nameof(ReminderIntro), nameof(CanAntedate), nameof(EarliestDay), nameof(LatestDay))]
     [NotifyCanExecuteChangedFor(nameof(ValidateCommand))]
     public partial ReviewState State { get; private set; }
 
@@ -177,6 +194,43 @@ public sealed partial class ReviewBarViewModel : ObservableObject
 
     /// <summary>La révision du jour est faite : plus rien à valider aujourd'hui.</summary>
     public bool CanValidate => IsActive && !State.ReviewedToday;
+
+    /// <summary>
+    /// La révision peut être antidatée : valider se fait au plus tard aujourd'hui et après la dernière révision, une
+    /// seule par jour. Il faut donc au moins un jour libre avant aujourd'hui.
+    /// </summary>
+    public bool CanAntedate => CanValidate && State.LastReview is { } last && last < Today.AddDays(-1);
+
+    /// <summary>Quel jour la barre demande de choisir.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsChoosingDay), nameof(DayChoiceLabel), nameof(DayChoiceConfirm), nameof(EarliestDay), nameof(LatestDay))]
+    [NotifyCanExecuteChangedFor(nameof(ConfirmDayCommand), nameof(ValidateCommand))]
+    public partial ReviewDayChoice DayChoice { get; private set; }
+
+    /// <summary>Le champ de date est affiché.</summary>
+    public bool IsChoosingDay => DayChoice != ReviewDayChoice.None;
+
+    /// <summary>« Date de la révision » ou « Date du report ».</summary>
+    public string DayChoiceLabel => DayChoice == ReviewDayChoice.Validate ? ReviewText.ValidationDay : ReviewText.PostponeDay;
+
+    /// <summary>« Valider à cette date » ou « Reporter à cette date ».</summary>
+    public string DayChoiceConfirm => DayChoice == ReviewDayChoice.Validate ? ReviewText.ValidateOnThatDay : ReviewText.PostponeOnThatDay;
+
+    /// <summary>Le jour choisi.</summary>
+    [ObservableProperty]
+    [NotifyCanExecuteChangedFor(nameof(ConfirmDayCommand))]
+    public partial DateOnly? ChosenDay { get; set; }
+
+    /// <summary>Le premier jour permis : le lendemain de la dernière révision, ou demain pour un report.</summary>
+    public DateOnly? EarliestDay => DayChoice switch
+    {
+        ReviewDayChoice.Validate => State.LastReview?.AddDays(1),
+        ReviewDayChoice.Postpone => Today.AddDays(1),
+        _ => null,
+    };
+
+    /// <summary>Le dernier jour permis : aujourd'hui pour une révision faite ; pas de limite pour un report.</summary>
+    public DateOnly? LatestDay => DayChoice == ReviewDayChoice.Validate ? Today : null;
 
     /// <summary>« Révision du jour enregistrée » est affiché.</summary>
     public bool ShowsReviewedToday => IsActive && State.ReviewedToday;
@@ -259,7 +313,7 @@ public sealed partial class ReviewBarViewModel : ObservableObject
 
     /// <summary>Une action est en cours.</summary>
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(ValidateCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ValidateCommand), nameof(ConfirmDayCommand))]
     public partial bool IsBusy { get; private set; }
 
     /// <summary>Ce que la dernière action a fait.</summary>
@@ -300,7 +354,7 @@ public sealed partial class ReviewBarViewModel : ObservableObject
     /// <summary>Explication de la confirmation.</summary>
     public string ConfirmMessage => Confirmation switch
     {
-        ReviewConfirmation.Early => ReviewText.EarlyMessageOf(State.DueDate is { } due ? Dates.Long(due) : string.Empty),
+        ReviewConfirmation.Early => EarlyMessage(),
         ReviewConfirmation.Restart => IsSheet ? ReviewText.RestartSheetMessage : ReviewText.RestartPassageMessage,
         ReviewConfirmation.Archive => ReviewText.ArchiveMessage,
         ReviewConfirmation.ReviewEntirely => ReviewText.EntirelyMessage,
@@ -311,7 +365,7 @@ public sealed partial class ReviewBarViewModel : ObservableObject
     /// <summary>Libellé du bouton qui confirme.</summary>
     public string ConfirmLabel => Confirmation switch
     {
-        ReviewConfirmation.Early => ReviewText.EarlyConfirm,
+        ReviewConfirmation.Early => IsAntedating ? ReviewText.ValidateOnThatDay : ReviewText.EarlyConfirm,
         ReviewConfirmation.Restart => ReviewText.RestartConfirm,
         ReviewConfirmation.Archive => ReviewText.ArchiveConfirm,
         ReviewConfirmation.ReviewEntirely => ReviewText.EntirelyConfirm,
@@ -321,18 +375,63 @@ public sealed partial class ReviewBarViewModel : ObservableObject
 
     private DateOnly Today => DateOnly.FromDateTime(_time.GetLocalNow().DateTime);
 
-    private bool CanValidateNow => CanValidate && !IsBusy;
+    /// <summary>Le jour se choisit : Ctrl+Entrée, tapé dans la date, ne valide pas aujourd'hui à sa place.</summary>
+    private bool CanValidateNow => CanValidate && !IsBusy && !IsChoosingDay;
+
+    private bool CanConfirmDay => IsChoosingDay && ChosenDay is not null && !IsBusy;
+
+    /// <summary>La révision à confirmer est faite un autre jour qu'aujourd'hui.</summary>
+    private bool IsAntedating => _earlyDay is { } chosen && chosen != Today;
 
     /// <summary>Valide la révision attendue ; en avance, demande d'abord confirmation.</summary>
     [RelayCommand(CanExecute = nameof(CanValidateNow))]
     private Task ValidateAsync()
     {
+        _earlyDay = null;
         if (IsEarly)
         {
             Confirmation = ReviewConfirmation.Early;
             return Task.CompletedTask;
         }
-        return ValidateNowAsync();
+        return ValidateNowAsync(null);
+    }
+
+    /// <summary>« Valider à une date passée… » : le champ de date s'ouvre sur hier.</summary>
+    [RelayCommand]
+    private void ChooseValidationDay()
+    {
+        DayChoice = ReviewDayChoice.Validate;
+        ChosenDay = Today.AddDays(-1);
+    }
+
+    /// <summary>« Reporter à une date… » : le champ de date s'ouvre sur demain.</summary>
+    [RelayCommand]
+    private void ChoosePostponeDay()
+    {
+        DayChoice = ReviewDayChoice.Postpone;
+        ChosenDay = Today.AddDays(1);
+    }
+
+    /// <summary>Referme le champ de date, sans rien faire.</summary>
+    [RelayCommand]
+    private void CancelDay() => CloseDayChoice();
+
+    /// <summary>Valide ou reporte au jour choisi ; une révision en avance sur ce jour demande d'abord confirmation.</summary>
+    [RelayCommand(CanExecute = nameof(CanConfirmDay))]
+    private Task ConfirmDayAsync()
+    {
+        var day = ChosenDay!.Value;
+        if (DayChoice == ReviewDayChoice.Postpone)
+        {
+            return PostponeAsync(day);
+        }
+        _earlyDay = day;
+        if (State.DueDate is { } due && due > day)
+        {
+            Confirmation = ReviewConfirmation.Early;
+            return Task.CompletedTask;
+        }
+        return ValidateNowAsync(day);
     }
 
     /// <summary>Réponse à la confirmation : l'action est faite si elle est confirmée, abandonnée sinon (Annuler, Échap).</summary>
@@ -347,7 +446,7 @@ public sealed partial class ReviewBarViewModel : ObservableObject
         }
         return asked switch
         {
-            ReviewConfirmation.Early => ValidateNowAsync(),
+            ReviewConfirmation.Early => ValidateNowAsync(_earlyDay),
             ReviewConfirmation.Restart => RestartAsync(),
             ReviewConfirmation.Archive => ActAsync(ReviewAction.Archived, () => _reviews.Archive(Id), _ => ReviewText.ArchivedMessage),
             ReviewConfirmation.ReviewEntirely => AnswerReminderAsync(ReminderOutcome.ReviewEntirely),
@@ -503,15 +602,30 @@ public sealed partial class ReviewBarViewModel : ObservableObject
         };
     }
 
-    private Task ValidateNowAsync()
+    private string EarlyMessage()
+    {
+        var due = State.DueDate is { } date ? Dates.Long(date) : string.Empty;
+        return IsAntedating ? ReviewText.EarlyOnDayMessageOf(due, Dates.Long(_earlyDay!.Value)) : ReviewText.EarlyMessageOf(due);
+    }
+
+    private void CloseDayChoice()
+    {
+        DayChoice = ReviewDayChoice.None;
+        ChosenDay = null;
+    }
+
+    private Task ValidateNowAsync(DateOnly? day)
     {
         var step = State.Step ?? string.Empty;
+        var antedated = day is { } chosen && chosen != Today;
         return ActAsync(
             ReviewAction.Validated,
-            () => _reviews.Validate(Kind, Id),
+            () => _reviews.Validate(Kind, Id, day),
             next => next.Status == ReviewStatus.Archived
                 ? IsSheet ? ReviewText.ValidatedLastSheetOf(step) : ReviewText.ValidatedLastPassageOf(step)
-                : ReviewText.ValidatedOf(step, next.Step ?? string.Empty, next.DueDate is { } due ? Dates.Long(due) : string.Empty));
+                : antedated
+                    ? ReviewText.ValidatedOnDayOf(step, Dates.Long(day!.Value), next.Step ?? string.Empty, next.DueDate is { } due ? Dates.Long(due) : string.Empty)
+                    : ReviewText.ValidatedOf(step, next.Step ?? string.Empty, next.DueDate is { } dueDate ? Dates.Long(dueDate) : string.Empty));
     }
 
     private Task PostponeAsync(DateOnly day)
@@ -535,6 +649,7 @@ public sealed partial class ReviewBarViewModel : ObservableObject
                 State = outcome.Value;
                 LastAction = kind;
                 Message = message(outcome.Value);
+                CloseDayChoice();
                 Changed?.Invoke(this, EventArgs.Empty);
             }
             else

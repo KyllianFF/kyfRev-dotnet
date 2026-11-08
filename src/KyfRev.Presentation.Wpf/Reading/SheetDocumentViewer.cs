@@ -1,5 +1,7 @@
 using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Documents;
 using System.Windows.Input;
 using KyfRev.Presentation.Wpf.Editing;
@@ -22,6 +24,9 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
     // Un titre amené par le plan arrive à TopMargin ; à quelques pixels près, il est encore « en haut de la vue ».
     private const double TopTolerance = 16;
 
+    /// <summary>L'écart entre un lien et son aperçu, que le pointeur franchit sans le perdre.</summary>
+    private const double LinkPopupGap = 6;
+
     public static readonly DependencyProperty ReadingProperty = DependencyProperty.Register(
         nameof(Reading), typeof(SheetReading), typeof(SheetDocumentViewer), new PropertyMetadata(null, OnContentChanged));
 
@@ -43,7 +48,16 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
     public static readonly DependencyProperty WordsProperty = DependencyProperty.Register(
         nameof(Words), typeof(IReadOnlyList<DefinedWordMark>), typeof(SheetDocumentViewer), new PropertyMetadata(null, OnWordsChanged));
 
+    /// <summary>L'aperçu des liens vers une fiche ; rien : ils n'en ont pas.</summary>
+    public static readonly DependencyProperty LinkPreviewProperty = DependencyProperty.Register(
+        nameof(LinkPreview), typeof(LinkPreviewViewModel), typeof(SheetDocumentViewer), new PropertyMetadata(null, OnLinkPreviewChanged));
+
+    private readonly LinkHover _hover;
     private DocumentBuilder? _built;
+    private Hyperlink? _pointed;
+    private Hyperlink? _described;
+    private Window? _window;
+
     /// <summary>Le texte à trous.</summary>
     public static readonly DependencyProperty HolesProperty = DependencyProperty.Register(
         nameof(Holes), typeof(TextHoles), typeof(SheetDocumentViewer), new PropertyMetadata(null, OnHolesChanged));
@@ -61,8 +75,22 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
         VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
         HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled;
         SetResourceReference(SelectionBrushProperty, "Kyf.Brush.Selection");
+        _hover = new LinkHover(ReadLinkPreview, HideLinkPreview, () => LinkPopup?.IsOpen == true, link => !IsMasked(link));
+        // Le texte prend pour lui les mouvements de souris et le focus : ces événements-là sont suivis même traités.
+        AddHandler(Mouse.MouseMoveEvent, new MouseEventHandler((_, e) => PointAt(e.LeftButton == MouseButtonState.Pressed ? null : e.OriginalSource)), handledEventsToo: true);
+        AddHandler(Keyboard.GotKeyboardFocusEvent, new KeyboardFocusChangedEventHandler((_, e) => FocusReached(e.NewFocus)), handledEventsToo: true);
+        AddHandler(Keyboard.LostKeyboardFocusEvent, new KeyboardFocusChangedEventHandler((_, e) => FocusLeft(e.OldFocus)), handledEventsToo: true);
         // Les traits sous le texte prennent leur couleur du thème, connu une fois la vue en place.
-        Loaded += (_, _) => ApplyHighlights();
+        Loaded += (_, _) =>
+        {
+            ApplyHighlights();
+            WatchWindow(Window.GetWindow(this));
+        };
+        Unloaded += (_, _) =>
+        {
+            _hover.Hide();
+            WatchWindow(null);
+        };
         SizeChanged += (_, _) => FitTables();
         IsVisibleChanged += (_, e) =>
         {
@@ -70,8 +98,31 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
             {
                 Rebuild();
             }
+            if (e.NewValue is false)
+            {
+                _hover.Hide();
+            }
         };
     }
+
+    /// <inheritdoc cref="LinkPreviewProperty"/>
+    public LinkPreviewViewModel? LinkPreview
+    {
+        get => (LinkPreviewViewModel?)GetValue(LinkPreviewProperty);
+        set => SetValue(LinkPreviewProperty, value);
+    }
+
+    /// <summary>La fenêtre de l'aperçu d'un lien ; rien avant le premier.</summary>
+    internal Popup? LinkPopup { get; private set; }
+
+    /// <summary>Le lien dont l'aperçu est montré, ou en cours de lecture.</summary>
+    internal Hyperlink? PreviewedLink => _hover.Current;
+
+    /// <summary>Le lien vers une fiche que la souris vise.</summary>
+    internal Hyperlink? PointedLink => _pointed;
+
+    /// <summary>L'aperçu partira bientôt, faute de pointeur.</summary>
+    internal bool IsHidingPreview => _hover.IsHiding;
 
     /// <inheritdoc cref="HolesProperty"/>
     public TextHoles? Holes
@@ -142,6 +193,214 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
         _scroller = GetTemplateChild("PART_ContentHost") as ScrollViewer;
         _scroller?.ScrollChanged += OnScrollChanged;
     }
+
+    /// <summary>La souris sort du texte.</summary>
+    protected override void OnMouseLeave(MouseEventArgs e)
+    {
+        base.OnMouseLeave(e);
+        PointAt(null);
+    }
+
+    /// <summary>Un clic dans le texte referme l'aperçu.</summary>
+    protected override void OnPreviewMouseDown(MouseButtonEventArgs e)
+    {
+        _hover.Hide();
+        base.OnPreviewMouseDown(e);
+    }
+
+    /// <summary>Échap referme l'aperçu d'abord.</summary>
+    protected override void OnPreviewKeyDown(KeyEventArgs e)
+    {
+        if (e.Key == Key.Escape && _hover.Current is not null)
+        {
+            _hover.Hide();
+            e.Handled = true;
+        }
+        base.OnPreviewKeyDown(e);
+    }
+
+    /// <summary>La souris vise <paramref name="source"/> : ce qu'elle a sous elle dans le texte, ou rien hors de lui.</summary>
+    internal void PointAt(object? source)
+    {
+        if (LinkPreview is null)
+        {
+            return;
+        }
+        var link = SheetLinkAt(source);
+        if (ReferenceEquals(link, _pointed))
+        {
+            return;
+        }
+        if (_pointed is not null)
+        {
+            _hover.Leave();
+        }
+        _pointed = link;
+        if (link is not null)
+        {
+            _hover.Enter(link, atOnce: false);
+        }
+    }
+
+    /// <summary>Le focus arrive sur <paramref name="element"/> : un lien vers une fiche montre son aperçu sans attendre.</summary>
+    internal void FocusReached(object? element)
+    {
+        if (LinkPreview is not null && SheetLinkAt(element) is { } link)
+        {
+            _hover.Enter(link, atOnce: true);
+        }
+    }
+
+    /// <summary>Le focus quitte <paramref name="element"/>.</summary>
+    internal void FocusLeft(object? element)
+    {
+        if (LinkPreview is not null && SheetLinkAt(element) is not null)
+        {
+            _hover.Leave();
+        }
+    }
+
+    /// <summary>Le lien vers une fiche qui contient <paramref name="source"/> ; rien s'il n'y en a pas.</summary>
+    private static Hyperlink? SheetLinkAt(object? source)
+    {
+        for (var element = source as DependencyObject; element is not null and not FlowDocument; element = LogicalTreeHelper.GetParent(element))
+        {
+            if (element is Hyperlink { Tag: SheetLink } link)
+            {
+                return link;
+            }
+        }
+        return null;
+    }
+
+    private static void OnLinkPreviewChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e)
+    {
+        var viewer = (SheetDocumentViewer)sender;
+        viewer._hover.Hide();
+        if (e.OldValue is LinkPreviewViewModel old)
+        {
+            old.PropertyChanged -= viewer.OnLinkPreviewContentChanged;
+        }
+        if (e.NewValue is LinkPreviewViewModel preview)
+        {
+            preview.PropertyChanged += viewer.OnLinkPreviewContentChanged;
+        }
+    }
+
+    /// <summary>L'aperçu s'est vidé (la fiche a été ouverte, ou il n'y en a pas) : sa fenêtre se referme.</summary>
+    private void OnLinkPreviewContentChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (sender is LinkPreviewViewModel { IsOpen: false })
+        {
+            _hover.Hide();
+        }
+    }
+
+    private void ReadLinkPreview(Hyperlink link)
+    {
+        if (LinkPreview is { } preview && link.Tag is SheetLink target)
+        {
+            _ = ReadLinkPreviewAsync(preview, link, target);
+        }
+    }
+
+    private async Task ReadLinkPreviewAsync(LinkPreviewViewModel preview, Hyperlink link, SheetLink target)
+    {
+        // Le pointeur est peut-être parti pendant la lecture, ou passé à un autre lien.
+        if (!await preview.ShowAsync(target.Path).ConfigureAwait(true) || !ReferenceEquals(link, _hover.Current))
+        {
+            return;
+        }
+        if (preview.IsOpen)
+        {
+            ShowLinkPopup(preview, link);
+        }
+        else
+        {
+            _hover.Hide();
+        }
+    }
+
+    /// <summary>Le lecteur d'écran a l'aperçu comme description du lien.</summary>
+    private void ShowLinkPopup(LinkPreviewViewModel preview, Hyperlink link)
+    {
+        var popup = LinkPopup ??= BuildLinkPopup();
+        popup.DataContext = preview;
+        Place(popup, link);
+        popup.IsOpen = true;
+        Describe(link, preview.Description);
+    }
+
+    /// <summary>L'aperçu se pose sous le lien, dans la largeur du texte.</summary>
+    private void Place(Popup popup, Hyperlink link)
+    {
+        var target = (FrameworkElement?)_scroller ?? this;
+        var place = link.ContentStart.GetCharacterRect(LogicalDirection.Forward);
+        popup.PlacementTarget = target;
+        popup.PlacementRectangle = place;
+        popup.HorizontalOffset = place.IsEmpty ? 0 : Math.Max(-place.Left, Math.Min(0, target.ActualWidth - LinkPreviewCard.CardWidth - place.Left));
+    }
+
+    /// <summary>
+    /// Le focus amène son lien à l'écran, et le défilement n'arrive qu'après le début de l'aperçu : celui-ci reste, posé sous
+    /// le lien à sa nouvelle place, tant que le lien se voit.
+    /// </summary>
+    private bool FollowsFocusedLink(double viewportHeight)
+    {
+        if (_hover.Current is not { IsKeyboardFocused: true } link)
+        {
+            return false;
+        }
+        var place = link.ContentStart.GetCharacterRect(LogicalDirection.Forward);
+        if (place.IsEmpty || place.Bottom <= 0 || place.Top >= viewportHeight)
+        {
+            return false;
+        }
+        if (LinkPopup is { IsOpen: true } popup)
+        {
+            Place(popup, link);
+        }
+        return true;
+    }
+
+    /// <summary>Un trou encore masqué couvre une partie de cet élément : l'aperçu d'un lien masqué donnerait la réponse.</summary>
+    private bool IsMasked(DependencyObject element) =>
+        _built?.Layer.HoleAt(element) is not null
+        || LogicalTreeHelper.GetChildren(element).OfType<DependencyObject>().Any(IsMasked);
+
+    private void Describe(Hyperlink? link, string? description)
+    {
+        _described?.ClearValue(AutomationProperties.HelpTextProperty);
+        _described = link;
+        _described?.SetValue(AutomationProperties.HelpTextProperty, description);
+    }
+
+    private Popup BuildLinkPopup()
+    {
+        var card = new LinkPreviewCard();
+        card.MouseEnter += (_, _) => _hover.Keep();
+        card.MouseLeave += (_, _) => _hover.Release();
+        return new Popup { Child = card, Placement = PlacementMode.Bottom, VerticalOffset = LinkPopupGap, AllowsTransparency = true, StaysOpen = true };
+    }
+
+    private void HideLinkPreview()
+    {
+        LinkPreview?.Hide();
+        LinkPopup?.IsOpen = false;
+        Describe(null, null);
+    }
+
+    /// <summary>Déplacer la fenêtre ou la quitter referme l'aperçu : il n'en fait pas partie, et resterait à sa place.</summary>
+    private void WatchWindow(Window? window)
+    {
+        _window?.Deactivated -= OnWindowLeft;
+        _window?.LocationChanged -= OnWindowLeft;
+        _window = window;
+        _window?.Deactivated += OnWindowLeft;
+        _window?.LocationChanged += OnWindowLeft;
+    }
+
+    private void OnWindowLeft(object? sender, EventArgs e) => _hover.Hide();
 
     /// <summary>Amène un titre en haut de la vue.</summary>
     public void Show(RenderElement heading)
@@ -264,7 +523,15 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
         }
     }
 
-    private void OnHolesChanged(object? sender, EventArgs e) => _built?.Layer.SetHoles(Holes?.Hidden ?? []);
+    private void OnHolesChanged(object? sender, EventArgs e)
+    {
+        _built?.Layer.SetHoles(Holes?.Hidden ?? []);
+        // Un trou vient de se poser sur le lien dont l'aperçu est montré.
+        if (_hover.Current is { } link && IsMasked(link))
+        {
+            _hover.Hide();
+        }
+    }
 
     /// <summary>Les trous dépendent de tout le texte : il se termine d'abord.</summary>
     private void ComputeHoles()
@@ -313,6 +580,8 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
             return;
         }
         _spoken = null;
+        _hover.Hide();
+        _pointed = null;
         _restoreOffset = KeepsScroll && _scroller is { VerticalOffset: > 0 } scroller ? scroller.VerticalOffset : null;
         _built?.Cancel();
         if (Reading is { } reading)
@@ -410,6 +679,11 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
     /// </summary>
     private void OnScrollChanged(object sender, ScrollChangedEventArgs e)
     {
+        // L'aperçu est posé sous un lien qui vient de bouger ; seul celui du focus le suit.
+        if (e.VerticalChange != 0 && !FollowsFocusedLink(e.ViewportHeight))
+        {
+            _hover.Hide();
+        }
         // Le document se remplit par morceaux : l'endroit gardé revient dès qu'il existe.
         if (_restoreOffset is { } offset && _scroller is { } scroller && (e.ExtentHeight >= offset + e.ViewportHeight || !HasPendingWork))
         {

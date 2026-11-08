@@ -94,7 +94,10 @@
     <value>Rechercher</value>
   </data>
   <data name="SearchPlaceholder" xml:space="preserve">
-    <value>Rechercher une commande ou une vue</value>
+    <value>Rechercher partout</value>
+  </data>
+  <data name="SearchCommandsPlaceholder" xml:space="preserve">
+    <value>Rechercher une commande</value>
   </data>
   <data name="SecondaryNavigation" xml:space="preserve">
     <value>Navigation secondaire</value>
@@ -124,7 +127,7 @@
     <value>Élément suivant de la séance, ou le passer</value>
   </data>
   <data name="ShortcutSearch" xml:space="preserve">
-    <value>Rechercher une commande ou une vue</value>
+    <value>Rechercher dans le coffre, une commande ou une vue</value>
   </data>
   <data name="ShortcutValidate" xml:space="preserve">
     <value>Valider la révision</value>
@@ -170,5 +173,41 @@
   </data>
   <data name="Zoom" xml:space="preserve">
     <value>Zoom : {0} %</value>
+  </data>
+  <data name="SearchBadgeArchived" xml:space="preserve">
+    <value>archivée</value>
+  </data>
+  <data name="SearchBadgeDefinition" xml:space="preserve">
+    <value>définition</value>
+  </data>
+  <data name="SearchBadgePassage" xml:space="preserve">
+    <value>passage</value>
+  </data>
+  <data name="SearchGroupAnnotations" xml:space="preserve">
+    <value>Passages et définitions</value>
+  </data>
+  <data name="SearchGroup" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="SearchHint" xml:space="preserve">
+    <value>Tapez au moins deux lettres pour chercher aussi dans les fiches, passages, définitions et citations. Tous les mots doivent se trouver dans l'élément ; majuscules et accents ne comptent pas.</value>
+  </data>
+  <data name="SearchKeys" xml:space="preserve">
+    <value>↑ ↓ pour choisir · Entrée pour ouvrir</value>
+  </data>
+  <data name="SearchMoreMany" xml:space="preserve">
+    <value>{0} autres résultats : précisez la recherche.</value>
+  </data>
+  <data name="SearchMoreOne" xml:space="preserve">
+    <value>{0} autre résultat : précisez la recherche.</value>
+  </data>
+  <data name="SearchNothing" xml:space="preserve">
+    <value>Rien ne correspond à « {0} ».</value>
+  </data>
+  <data name="SearchPlace" xml:space="preserve">
+    <value> · {0}</value>
+  </data>
+  <data name="SearchQuoted" xml:space="preserve">
+    <value>« {0} »</value>
   </data>
 </root>

@@ -97,6 +97,23 @@ public sealed class FilledViewsAccessibilityTests
         CollectionAssert.Contains(names, ReadingText.RebindHere);
     }
 
+    [STATestMethod]
+    public void The_panel_of_the_backlinks_names_its_controls()
+    {
+        using var ui = new UiThread();
+        using var vault = new ReadingVault(Body, passage: true);
+        var source = vault.App.Sheets.Create("Histoire", "La source", null).Value;
+        Assert.IsTrue(vault.App.Editing.Save(source, "Voir [la mitose](../Biologie/Mitose.md).\n", vault.App.Sheets.Open(source).Value.Fingerprint, 1).Succeeded);
+        var page = vault.Page();
+        page.LoadCommand.Execute(null);
+        UiThread.Until(() => page.Backlinks.Count == 1);
+
+        var names = Names(page, () => page.ShowsBacklinks, null);
+
+        CollectionAssert.Contains(names, page.PanelsMenuName);
+        CollectionAssert.Contains(names, "La source, Histoire, Voir la mitose.");
+    }
+
     /// <summary>Montre une vue, attend qu'elle soit prête, vérifie le nom de chaque commande, et rend ces noms.</summary>
     private static List<string> Names(object page, Func<bool> ready, Action<DependencyObject>? adjust)
     {

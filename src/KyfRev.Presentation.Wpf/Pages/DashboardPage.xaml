@@ -194,6 +194,58 @@
       </StackPanel>
     </DataTemplate>
 
+    <Style x:Key="ExamDayLabel" TargetType="Run">
+      <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.TextSecondary}" />
+      <Setter Property="FontSize" Value="{DynamicResource Kyf.FontSize.Caption}" />
+    </Style>
+
+    <!-- Un examen : son nom, le compte à rebours, son dossier et ce qui tombe après lui ; ses boutons à côté, ou dessous à l'étroit.
+         Ils ne prennent pas le focus : au clavier, Entrée sur la ligne ouvre son menu. -->
+    <DataTemplate DataType="{x:Type pages:ExamRow}">
+      <kyf:AdaptiveRow Margin="0,8" MainMinWidth="200">
+        <StackPanel kyf:AdaptiveRow.Part="Main">
+          <TextBlock TextWrapping="Wrap" FontSize="{DynamicResource Kyf.FontSize.BodyLarge}">
+            <Run Text="{Binding Name, Mode=OneWay}" FontWeight="SemiBold" />
+            <InlineUIContainer BaselineAlignment="Center">
+              <Border x:Name="Countdown" Padding="8,0" Margin="4,0,0,0" CornerRadius="{DynamicResource Kyf.Radius.Control}" Background="{DynamicResource Kyf.Brush.PillSheetBackground}">
+                <TextBlock x:Name="CountdownText" Text="{Binding Countdown}" Style="{DynamicResource Kyf.Text.Caption}" FontWeight="SemiBold" Foreground="{DynamicResource Kyf.Brush.PillSheetText}" />
+              </Border>
+            </InlineUIContainer>
+            <Run x:Name="DayLabel" Text="{Binding DayLabel, Mode=OneWay}" Style="{StaticResource ExamDayLabel}" />
+          </TextBlock>
+          <TextBlock x:Name="ExamDetail" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,2,0,0"><Run Text="{Binding Detail, Mode=OneWay}" /><Run x:Name="After" Text="{Binding AfterExam, Mode=OneWay}" /></TextBlock>
+        </StackPanel>
+        <StackPanel kyf:AdaptiveRow.Part="Trailing" Orientation="Horizontal" VerticalAlignment="Center">
+          <Button x:Name="Tighten" Content="{x:Static pages:ExamText.TightenAction}" Click="OnTightenClick" Focusable="False" Margin="0,0,4,0"
+                  AutomationProperties.Name="{Binding TightenName}" Visibility="{Binding CanTighten, Converter={StaticResource Visible}}"
+                  IsEnabled="{Binding DataContext.Exams.IsIdle, RelativeSource={RelativeSource AncestorType=ListBox}, FallbackValue=False}" />
+          <Button x:Name="More" Style="{DynamicResource Kyf.Button.Icon}" Content="{x:Static kyf:Icons.More}" Click="OnExamMenuClick" Focusable="False"
+                  ToolTip="{Binding MoreName}" AutomationProperties.Name="{Binding MoreName}" Visibility="{Binding DataContext.CanPlanExams, RelativeSource={RelativeSource AncestorType=ListBox}, Converter={StaticResource Visible}}"
+                  IsEnabled="{Binding DataContext.Exams.IsIdle, RelativeSource={RelativeSource AncestorType=ListBox}, FallbackValue=False}" />
+        </StackPanel>
+      </kyf:AdaptiveRow>
+      <DataTemplate.Triggers>
+        <DataTrigger Binding="{Binding Urgency}" Value="Soon">
+          <Setter TargetName="Countdown" Property="Background" Value="{DynamicResource Kyf.Brush.WarningBackground}" />
+          <Setter TargetName="CountdownText" Property="Foreground" Value="{DynamicResource Kyf.Brush.Warning}" />
+        </DataTrigger>
+        <DataTrigger Binding="{Binding Urgency}" Value="Past">
+          <Setter TargetName="Countdown" Property="Background" Value="{DynamicResource Kyf.Brush.SurfaceAlt}" />
+          <Setter TargetName="CountdownText" Property="Foreground" Value="{DynamicResource Kyf.Brush.TextSecondary}" />
+        </DataTrigger>
+        <DataTrigger Binding="{Binding HasAlert}" Value="True">
+          <Setter TargetName="After" Property="Foreground" Value="{DynamicResource Kyf.Brush.Warning}" />
+          <Setter TargetName="After" Property="FontWeight" Value="SemiBold" />
+        </DataTrigger>
+        <!-- La ligne choisie a son propre fond : le texte secondaire prend la couleur qui s'y lit, dans chaque thème. -->
+        <DataTrigger Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Value="True">
+          <Setter TargetName="DayLabel" Property="Foreground" Value="{DynamicResource Kyf.Brush.NavigationActiveText}" />
+          <Setter TargetName="ExamDetail" Property="Foreground" Value="{DynamicResource Kyf.Brush.NavigationActiveText}" />
+          <Setter TargetName="After" Property="Foreground" Value="{DynamicResource Kyf.Brush.NavigationActiveText}" />
+        </DataTrigger>
+      </DataTemplate.Triggers>
+    </DataTemplate>
+
     <!-- Un encart apporté par un module (la citation du jour). -->
     <DataTemplate DataType="{x:Type modules:DashboardCard}">
       <Border CornerRadius="{DynamicResource Kyf.Radius.Card}" Padding="16" Margin="0,16,0,0" Background="{DynamicResource Kyf.Brush.NavigationActiveBackground}">
@@ -363,6 +415,10 @@
                         IsClosable="False" Margin="0,12,0,0" />
       <kyf:Notification x:Name="PriorityWarning" Severity="Warning" Message="{Binding PriorityWarning}" IsOpen="{Binding HasPriorityWarning, Mode=OneWay}"
                         IsClosable="False" Margin="0,12,0,0" />
+      <kyf:Notification x:Name="ExamMessage" Severity="Success" Message="{Binding Exams.Message}" IsOpen="{Binding Exams.HasMessage, Mode=OneWay, FallbackValue=False}"
+                        IsClosable="False" Margin="0,12,0,0" />
+      <kyf:Notification x:Name="ExamError" Severity="Critical" Message="{Binding Exams.Error}" IsOpen="{Binding Exams.HasError, Mode=OneWay, FallbackValue=False}"
+                        IsClosable="False" Margin="0,12,0,0" />
     </StackPanel>
 
     <DockPanel Grid.Row="3" Grid.ColumnSpan="2" Margin="0,16,0,0">
@@ -435,6 +491,21 @@
                 </StackPanel>
               </StackPanel>
             </Button>
+            <!-- Les examens et la charge à venir : le nom se réduit à son icône à l'étroit. -->
+            <Button x:Name="NewExamButton" Style="{DynamicResource Kyf.Button.Subtle}" Command="{Binding Exams.NewCommand}" VerticalAlignment="Center" Margin="4,0,0,0"
+                    ToolTip="{x:Static pages:ExamText.NewExamName}" AutomationProperties.Name="{x:Static pages:ExamText.NewExamName}" Visibility="{Binding CanPlanExams, Converter={StaticResource Visible}}">
+              <StackPanel Orientation="Horizontal">
+                <kyf:Icon Text="{x:Static kyf:Icons.Calendar}" />
+                <TextBlock Text="{x:Static pages:ExamText.NewExam}" VerticalAlignment="Center" Margin="8,0,0,0" Visibility="{Binding HasRoom, Converter={StaticResource Visible}}" />
+              </StackPanel>
+            </Button>
+            <Button x:Name="WorkloadButton" Style="{DynamicResource Kyf.Button.Subtle}" Command="{Binding OpenWorkloadCommand}" VerticalAlignment="Center" Margin="4,0,0,0"
+                    ToolTip="{x:Static pages:WorkloadText.Title}" AutomationProperties.Name="{x:Static pages:WorkloadText.Title}">
+              <StackPanel Orientation="Horizontal">
+                <kyf:Icon Text="{x:Static kyf:Icons.Chart}" />
+                <TextBlock Text="{x:Static pages:WorkloadText.ShortTitle}" VerticalAlignment="Center" Margin="8,0,0,0" Visibility="{Binding HasRoom, Converter={StaticResource Visible}}" />
+              </StackPanel>
+            </Button>
           </WrapPanel>
 
           <!-- Squelettes pendant la première lecture. -->
@@ -473,6 +544,26 @@
     <kyf:Dialog x:Name="ArchiveConfirmation" Grid.RowSpan="9" Grid.ColumnSpan="9" Title="{x:Static pages:ReviewText.ArchiveTitle}" IsOpen="{Binding IsConfirmingArchive, Mode=OneWay}"
                 PrimaryButtonText="{x:Static pages:ReviewText.ArchiveConfirm}" Closed="OnArchiveClosed">
       <TextBlock Text="{x:Static pages:ReviewText.ArchiveMessage}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" />
+    </kyf:Dialog>
+
+    <kyf:Dialog x:Name="ExamConfirmation" Grid.RowSpan="9" Grid.ColumnSpan="9" DataContext="{Binding Exams}" Title="{Binding ConfirmTitle}" IsOpen="{Binding IsConfirming, Mode=OneWay, FallbackValue=False}"
+                PrimaryButtonText="{Binding ConfirmLabel}" Closed="OnExamConfirmationClosed">
+      <TextBlock Text="{Binding ConfirmMessage}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" />
+    </kyf:Dialog>
+
+    <kyf:Dialog x:Name="ExamEditor" Grid.RowSpan="9" Grid.ColumnSpan="9" DataContext="{Binding Exams}" Title="{Binding EditorTitle}" IsOpen="{Binding IsEditing, Mode=OneWay, FallbackValue=False}"
+                PrimaryButtonText="{x:Static pages:ExamText.Save}" Closed="OnExamEditorClosed">
+      <StackPanel>
+        <TextBlock Text="{x:Static pages:ExamText.EditorHelp}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="0,0,0,12" />
+        <kyf:Notification x:Name="ExamEditorError" Severity="Critical" Message="{Binding EditorError}" IsOpen="{Binding HasEditorError, Mode=OneWay}" IsClosable="False" Margin="0,0,0,12" />
+        <TextBlock Text="{x:Static pages:ExamText.NameLabel}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,0,0,4" />
+        <TextBox x:Name="ExamNameBox" Text="{Binding ExamName, UpdateSourceTrigger=PropertyChanged}" kyf:Field.Placeholder="{x:Static pages:ExamText.NamePlaceholder}"
+                 AutomationProperties.Name="{x:Static pages:ExamText.NameLabel}" />
+        <TextBlock Text="{x:Static pages:ExamText.FolderLabel}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,8,0,4" />
+        <ComboBox x:Name="ExamFolderChoice" ItemsSource="{Binding Folders}" SelectedItem="{Binding Folder}" DisplayMemberPath="Label" AutomationProperties.Name="{x:Static pages:ExamText.FolderLabel}" />
+        <TextBlock Text="{x:Static pages:ExamText.DateLabel}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,8,0,4" />
+        <kyf:DateField x:Name="ExamDay" Width="200" HorizontalAlignment="Left" Day="{Binding Day}" Minimum="{Binding Earliest}" AutomationProperties.Name="{x:Static pages:ExamText.DateLabel}" />
+      </StackPanel>
     </kyf:Dialog>
   </Grid>
 </UserControl>

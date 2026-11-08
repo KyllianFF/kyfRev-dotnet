@@ -102,6 +102,12 @@ public static class Icons
     /// <summary>Nouveau dossier : créer un coffre.</summary>
     public static string NewFolder { get; } = Glyph(0xE8F4);
 
+    /// <summary>Flèche qui entre dans un plateau : importer.</summary>
+    public static string Import { get; } = Glyph(0xE8B5);
+
+    /// <summary>Flèche qui s'échappe : partager.</summary>
+    public static string Share { get; } = Glyph(0xE72D);
+
     /// <summary>Deux feuilles : copier.</summary>
     public static string Copy { get; } = Glyph(0xE8C8);
 

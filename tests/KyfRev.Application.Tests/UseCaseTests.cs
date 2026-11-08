@@ -1,5 +1,6 @@
 using System.Reflection;
 using KyfRev.Application.Model;
+using KyfRev.Application.Modules;
 using KyfRev.Application.Ports;
 using KyfRev.Application.Tests.Support;
 using KyfRev.Application.UseCases;
@@ -175,6 +176,30 @@ public sealed class UseCaseTests
     }
 
     [TestMethod]
+    public void A_sheet_knows_what_leads_to_it_and_a_link_previews_what_it_leads_to()
+    {
+        using var folder = new TestFolder();
+        using var test = Opened(folder);
+        var app = test.App;
+        var target = app.Sheets.Create("Biologie", "Mitose", null).Value;
+        var source = app.Sheets.Create("Histoire", "Révolution", null).Value;
+        var read = app.Sheets.Open(source).Value;
+        Assert.IsInstanceOfType<SheetSaved>(app.Editing.Save(source, "Voir [la mitose](<../Biologie/Mitose.md>) ici.\n", read.Fingerprint, 1).Value);
+
+        var backlink = app.Sheets.Backlinks(target, CancellationToken.None).Value.Single();
+
+        Assert.AreEqual((source, "Révolution", "Histoire", 1), (backlink.SheetId, backlink.Title, backlink.Folder, backlink.Links));
+        Assert.IsEmpty(app.Sheets.Backlinks(source, CancellationToken.None).Value);
+        Assert.Contains("f_inconnue", app.Sheets.Backlinks("f_inconnue", CancellationToken.None).Error!);
+        using var cancelled = new CancellationTokenSource();
+        cancelled.Cancel();
+        Assert.ThrowsExactly<OperationCanceledException>(() => app.Sheets.Backlinks(target, cancelled.Token));
+
+        Assert.AreEqual(target, app.Sheets.Preview("fiches/Biologie/Mitose.md").Value!.Id);
+        Assert.IsNull(app.Sheets.Preview("fiches/Biologie/Absente.md").Value);
+    }
+
+    [TestMethod]
     public void Editing_and_versions()
     {
         using var folder = new TestFolder();
@@ -195,6 +220,27 @@ public sealed class UseCaseTests
         Assert.Contains("carte.png", app.Editing.AddImage(id, "Carte.PNG", new byte[] { 1, 2, 3 }).Value);
         Assert.Contains("n'est pas une image reconnue", app.Editing.AddImage(id, "outil.exe", new byte[] { 1 }).Error!);
         Assert.Contains("n'est pas une image reconnue", app.Editing.AddImage(id, "sans-extension", new byte[] { 1 }).Error!);
+    }
+
+    [TestMethod]
+    public void A_review_can_be_dated_from_the_day_after_the_last_one_to_today()
+    {
+        using var folder = new TestFolder();
+        using var test = Opened(folder);
+        var app = test.App;
+        var id = app.Sheets.Create(null, "Mitose", null).Value;
+        test.Time.Advance(TimeSpan.FromDays(3));
+
+        Assert.AreEqual("Une révision est déjà enregistrée le 2026-10-01.", app.Reviews.Validate(ItemKind.Sheet, id, new DateOnly(2026, 10, 1)).Error);
+        Assert.IsNotNull(app.Reviews.Validate(ItemKind.Sheet, id, new DateOnly(2026, 9, 30)).Error);
+        Assert.IsNotNull(app.Reviews.Validate(ItemKind.Sheet, id, new DateOnly(2026, 10, 5)).Error);
+
+        var state = app.Reviews.Validate(ItemKind.Sheet, id, new DateOnly(2026, 10, 2)).Value;
+
+        Assert.AreEqual(new DateOnly(2026, 10, 2), state.LastReview);
+        Assert.AreEqual(new DateOnly(2026, 10, 5), state.DueDate, "J3 se compte depuis le jour choisi");
+        Assert.IsFalse(state.ReviewedToday);
+        Assert.AreEqual(new DateOnly(2026, 10, 2), state.Steps[1].DoneOn);
     }
 
     [TestMethod]
@@ -292,6 +338,9 @@ public sealed class UseCaseTests
         Assert.HasCount(1, app.Exports.Export(ExportKind.Annotations, outside).Value);
         Assert.AreEqual("Choisissez un dossier où enregistrer la fiche.", app.Sheets.Share(id, ShareFormat.Markdown, "relatif", null).Error);
         Assert.IsTrue(File.Exists(app.Sheets.Share(id, ShareFormat.Markdown, outside, null).Value));
+        Assert.AreEqual("Choisissez un dossier où enregistrer la fiche.", app.Sheets.SharePdf(id, "relatif", new byte[] { 37 }).Error);
+        Assert.IsTrue(File.Exists(app.Sheets.SharePdf(id, outside, new byte[] { 37 }).Value));
+        Assert.AreEqual("<p>Sans image.</p>", app.Sheets.EmbedSharedImages("<p>Sans image.</p>").Value);
 
         var source = folder.PathOf("Notes");
         Directory.CreateDirectory(source);
@@ -300,6 +349,29 @@ public sealed class UseCaseTests
         var report = app.Sheets.Import(source + Path.DirectorySeparatorChar, track: true).Value;
         Assert.AreEqual(("Notes", 1, 1), (report.Folder, report.Sheets, report.Tracked));
         Assert.HasCount(1, test.Logs.Entries.Where(e => e.Message.StartsWith("Dossier importé : 1 fiche(s), 1 suivie(s)", StringComparison.Ordinal)));
+    }
+
+    [TestMethod]
+    public void The_open_vault_is_known_without_waiting_for_a_long_operation()
+    {
+        using var folder = new TestFolder();
+        using var test = Opened(folder);
+        using var started = new ManualResetEventSlim();
+        using var release = new ManualResetEventSlim();
+        var holding = Task.Run(() => test.App.Host.Use(_ =>
+        {
+            started.Set();
+            release.Wait(TimeSpan.FromSeconds(30));
+        }));
+        Assert.IsTrue(started.Wait(TimeSpan.FromSeconds(10)));
+
+        var reading = Task.Run(() => test.App.Vaults.State());
+        var answered = reading.Wait(TimeSpan.FromSeconds(5));
+        release.Set();
+        Assert.IsTrue(holding.Wait(TimeSpan.FromSeconds(10)));
+
+        Assert.IsTrue(answered, "l'état ne prend pas la file derrière l'opération en cours");
+        Assert.AreEqual(folder.Vault, reading.Result.Vault);
     }
 
     private static TestApplication Opened(TestFolder folder)
@@ -314,8 +386,12 @@ public sealed class UseCaseTests
         _ when type == typeof(string) => "x",
         _ when type == typeof(bool) => false,
         _ when type == typeof(ulong) => 0UL,
+        _ when type == typeof(CancellationToken) => CancellationToken.None,
         _ when type == typeof(DateOnly) => new DateOnly(2026, 10, 1),
+        _ when type == typeof(DateOnly?) => null,
         _ when type == typeof(IReadOnlyList<string>) => Array.Empty<string>(),
+        _ when type == typeof(IReadOnlyList<ISearchProvider>) => Array.Empty<ISearchProvider>(),
+        _ when type == typeof(CancellationToken) => CancellationToken.None,
         _ when type == typeof(ReadOnlyMemory<byte>) => ReadOnlyMemory<byte>.Empty,
         _ when type == typeof(Anchor) => Passage,
         _ when type == typeof(Definition) => new Definition("Terme", "Explication."),

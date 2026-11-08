@@ -39,6 +39,30 @@ public sealed partial class VaultSession
         };
     }
 
+    /// <summary>Écrit le PDF de la fiche <paramref name="id"/>, préparé par l'interface, dans <paramref name="folder"/> (hors du coffre).</summary>
+    /// <param name="id">Identifiant de la fiche.</param>
+    /// <param name="folder">Dossier existant, hors du coffre.</param>
+    /// <param name="pdf">Le document.</param>
+    /// <returns>Le fichier écrit.</returns>
+    public string ShareSheetAsPdf(string id, string folder, ReadOnlyMemory<byte> pdf)
+    {
+        CheckOutputFolder(folder);
+        var stem = FileNames.ForTitle(Sheet(id).Sheet.Title);
+        return pdf.IsEmpty || pdf.Length > MaxSharedBytes
+            ? throw VaultException.InvalidPath("Pdf", "document à partager absent ou trop volumineux")
+            : CreateWithoutOverwriting(folder, stem, "pdf", pdf.Span);
+    }
+
+    /// <summary>Une page préparée pour le partage, ses images du coffre intégrées, sans rien écrire : pour l'imprimer ou la copier.</summary>
+    /// <param name="page">La page, ses images marquées <c>data-coffre</c>.</param>
+    public string EmbedSharedImages(string page)
+    {
+        ArgumentNullException.ThrowIfNull(page);
+        return Encoding.UTF8.GetByteCount(page) <= MaxSharedBytes
+            ? EmbedImages(page)
+            : throw VaultException.InvalidPath("Html", "contenu à partager absent ou trop volumineux");
+    }
+
     /// <summary>Le corps de la fiche, précédé de son titre s'il n'y est pas déjà.</summary>
     private string MarkdownToShare(string id)
     {

@@ -1086,7 +1086,7 @@ public sealed class ReadingTests
             }
 
             var more = Named<Button>(window, "HeaderMoreButton");
-            Assert.AreEqual($"Plan et passages ({page.PassagesLabel})", System.Windows.Automation.AutomationProperties.GetName(more), "le « ⋯ » dit combien de passages il cache");
+            Assert.AreEqual($"Volets : Plan, {page.PassagesLabel}", System.Windows.Automation.AutomationProperties.GetName(more), "le « ⋯ » dit ce qu'il cache, et combien de passages");
             more.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
             TestShell.Flush();
             Assert.IsTrue(more.ContextMenu.IsOpen);
@@ -1099,7 +1099,7 @@ public sealed class ReadingTests
             // À l'écriture, le « ⋯ » du ruban reçoit les mêmes choix.
             var ribbon = Descendants(window).OfType<SheetPage>().Single().Ribbon;
             var ribbonItems = ribbon.ViewMenu.Items.OfType<MenuItem>().ToList();
-            Assert.HasCount(5, ribbonItems);
+            Assert.HasCount(6, ribbonItems, "avec « Partager… », qui suit ce choix");
             Assert.IsTrue(ribbonItems[3].IsChecked, "le plan ouvert se voit aussi dans le menu du ruban");
             ribbonItems[3].IsChecked = false;
             Assert.IsFalse(page.IsOutlineOn);
@@ -1216,7 +1216,7 @@ internal sealed class ReadingVault : IDisposable
 
     public FakeSpelling Spelling { get; } = new();
 
-    public SheetPageViewModel Page(bool markdown = true, bool revising = false, Func<bool>? activeRecall = null, ISpeech? speech = null, INetworkSchemas? schemas = null, bool words = false) => new(App.Sheets, App.Annotations, Bar, SheetId, () => Backs++, OpenedSheets.Add, Links, sheet => new SheetEditorViewModel(sheet, App.Editing, App.Sheets, new EditorEnvironment(Spelling, FakeEnvironment.WebData, markdown, () => schemas)), revising, activeRecall) { ReadAloud = speech is null ? null : new ReadAloudViewModel(speech), MarksDefinedWords = words, OpenPassage = (sheet, passage) => OpenedPassages.Add((sheet, passage)) };
+    public SheetPageViewModel Page(bool markdown = true, bool revising = false, Func<bool>? activeRecall = null, ISpeech? speech = null, INetworkSchemas? schemas = null, bool words = false, SheetSharingViewModel? sharing = null) => new(App.Sheets, App.Annotations, Bar, SheetId, () => Backs++, OpenedSheets.Add, Links, sheet => new SheetEditorViewModel(sheet, App.Editing, App.Sheets, new EditorEnvironment(Spelling, FakeEnvironment.WebData, markdown, () => schemas)), revising, activeRecall) { ReadAloud = speech is null ? null : new ReadAloudViewModel(speech), MarksDefinedWords = words, OpenPassage = (sheet, passage) => OpenedPassages.Add((sheet, passage)), Sharing = sharing };
 
     /// <summary>Les fiches rouvertes sur un passage, avec ce passage.</summary>
     public List<(string Sheet, string Passage)> OpenedPassages { get; } = [];

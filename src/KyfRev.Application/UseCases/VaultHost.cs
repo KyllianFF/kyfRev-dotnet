@@ -14,17 +14,14 @@ public sealed class VaultHost : IDisposable
     private readonly Lock _gate = new();
     private IVault? _vault;
 
-    /// <summary>Dossier du coffre ouvert ; rien si aucun ne l'est.</summary>
-    public string? Root
-    {
-        get
-        {
-            lock (_gate)
-            {
-                return _vault?.Root;
-            }
-        }
-    }
+    /// <summary>Le dossier de <see cref="_vault"/>, tenu à part : il se lit sans passer par <see cref="_gate"/>.</summary>
+    private volatile string? _root;
+
+    /// <summary>
+    /// Dossier du coffre ouvert ; rien si aucun ne l'est. Se lit sans attendre : une longue opération (un import) tient le
+    /// coffre, et le fil de l'interface n'a pas à la laisser finir pour savoir lequel est ouvert.
+    /// </summary>
+    public string? Root => _root;
 
     /// <summary>Ferme le coffre ouvert (son verrou est libéré).</summary>
     public void Dispose() => Close();
@@ -40,6 +37,7 @@ public sealed class VaultHost : IDisposable
             // Retiré d'abord : même si sa fermeture échoue, plus rien ne l'atteint.
             var vault = _vault;
             _vault = null;
+            _root = null;
             vault?.Dispose();
         }
     }
@@ -91,6 +89,7 @@ public sealed class VaultHost : IDisposable
         {
             previous = _vault;
             _vault = vault;
+            _root = vault.Root;
         }
         previous?.Dispose();
     }

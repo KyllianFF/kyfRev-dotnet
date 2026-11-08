@@ -27,6 +27,7 @@ public sealed class CitationsModuleTests
         Assert.IsEmpty(services.GetServices<INavigationContributor>());
         Assert.IsEmpty(services.GetServices<IDashboardWidget>());
         Assert.IsEmpty(services.GetServices<IVaultHealthCheck>());
+        Assert.IsEmpty(services.GetServices<ISearchProvider>(), "ses citations ne sont pas cherchées");
         var id = test.Test.App.Sheets.Create(string.Empty, "Mitose", string.Empty);
         Assert.IsTrue(id.Succeeded);
         Assert.AreEqual("fiches/Mitose.md", test.Test.App.Sheets.Open(id.Value).Value.Path);
@@ -73,6 +74,38 @@ public sealed class CitationsModuleTests
 
         test.Test.App.Host.Dispose();
         Assert.IsNull(widget.Card());
+    }
+
+    [TestMethod]
+    public void The_global_search_finds_quotes_by_their_author_or_their_text()
+    {
+        using var test = new CitationsTest();
+        test.Activate();
+        using var services = test.Services(out _);
+        var quotes = services.GetRequiredService<QuoteUseCases>();
+        var search = services.GetServices<ISearchProvider>().Single();
+        var path = quotes.Add(Content("Le cœur a ses raisons.", "Blaise Pascal", "1670", "Pensées")).Value.Path;
+        quotes.Add(Content("Connais-toi toi-même.", null, null, null));
+
+        // L'auteur et l'œuvre ont suffi : le texte se lit à la place de l'extrait.
+        var byAuthor = search.Search("pascal pensees", CancellationToken.None).Value.Single();
+        Assert.AreEqual(SearchKinds.Quote, byAuthor.Kind);
+        Assert.AreEqual(path, byAuthor.Id);
+        Assert.AreEqual("Blaise Pascal", byAuthor.Title);
+        Assert.IsTrue(byAuthor.Excerpt.IsEmpty);
+        Assert.AreEqual("Le cœur a ses raisons.", byAuthor.Text);
+
+        // Trouvée par son texte : l'extrait montre les mots.
+        var byText = search.Search("COEUR", CancellationToken.None).Value.Single();
+        Assert.AreEqual("cœur", byText.Excerpt.Single(piece => piece.Found).Text);
+        Assert.IsNull(byText.Text);
+
+        // Sans auteur, le titre est vide : la vue dit « Auteur inconnu ».
+        Assert.AreEqual(string.Empty, search.Search("connais", CancellationToken.None).Value.Single().Title);
+
+        Assert.IsEmpty(search.Search("  ", CancellationToken.None).Value);
+        test.Test.App.Host.Dispose();
+        Assert.AreEqual(VaultHost.NoVaultOpen, search.Search("pascal", CancellationToken.None).Error);
     }
 
     [TestMethod]

@@ -11,6 +11,12 @@ public static class SheetsText
     /// <summary>« Tous ».</summary>
     public static string AllFolders => Text(nameof(AllFolders));
 
+    /// <summary>« Rechercher dans les fiches ».</summary>
+    public static string SearchPlaceholder => Text(nameof(SearchPlaceholder));
+
+    /// <summary>« Rechercher dans les fiches (titre, étiquettes et texte) ».</summary>
+    public static string SearchName => Text(nameof(SearchName));
+
     /// <summary>« Archivée ».</summary>
     public static string ArchivedRow => Text(nameof(ArchivedRow));
 

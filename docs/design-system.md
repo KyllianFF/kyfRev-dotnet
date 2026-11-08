@@ -114,15 +114,18 @@ fois l'application installée. Elles viennent des dépôts officiels, à un comm
 | Champ | style de `TextBox`, indication `Field.Placeholder` | contour à 3:1, contour épaissi au focus, indication lue comme aide |
 | Mot de passe | style de `PasswordBox` | le même champ, caractères masqués ; pas d'indication dans le champ (son nom, à côté, le dit), et un menu qui ne fait que coller |
 | Liste de choix | style de `ComboBox` | comme un champ, et sa liste comme un menu ; suit le thème |
+| Champ de date | `DateField` (`Day`, `Minimum`, `Maximum`) | une date qui se tape (jj/mm/aaaa) ou se choisit dans un calendrier en français, la semaine commençant le lundi ; hors des limites, elle est refusée : le champ se vide, dit pourquoi par écrit et au lecteur d'écran, et `Day` ne vaut plus rien, pour qu'aucune action ne parte sur la date d'avant ; Alt+Bas ouvre le calendrier, Échap le ferme sans fermer le dialogue autour, Entrée reste au bouton par défaut, sauf sur une date refusée |
 | Carte | `Card`, repère `Marker` (fiche, passage, rappel) | ombre douce ; le repère est un court trait en haut |
 | Pastille | `Pill`, sorte `Kind` | icône et libellé : fiche, passage, rappel, retard, archivée, à vérifier, aujourd'hui |
 | Menu | styles de `ContextMenu`, `Menu`, `MenuItem` | coche, raccourci, sous-menus ; au clic droit, les actions rapides en tête (`Kyf.MenuItem.Quick`), une rangée d'outils dessous (`Kyf.MenuItem.Tool`), disposées par `ActionMenuPanel` ; les champs de texte reçoivent le leur en se chargeant |
 | Listes | styles de `ListBox`, `ListBoxItem` | survol, élément choisi : fond vert pâle et texte en gras (menu de la coquille) |
 | Icône | `Icon` | décorative : police d'icônes de Windows, ignorée par le lecteur d'écran |
-| Dialogue | `Dialog` | voile, focus tenu à l'intérieur, Échap ferme, Entrée valide ; trop haut pour la fenêtre, son contenu défile entre le titre et les boutons ; ce qui compte (`IsDestructive`) a un bouton rouge, qu'Entrée ne déclenche pas |
+| Dialogue | `Dialog` | voile, focus tenu à l'intérieur et rendu à la fermeture à ce qui le tenait, Échap ferme, Entrée valide ; trop haut pour la fenêtre, son contenu défile entre le titre et les boutons ; ce qui compte (`IsDestructive`) a un bouton rouge, qu'Entrée ne déclenche pas ; pendant un travail lancé de là (`IsWorking`), le focus attend sur le bouton secondaire, qu'Entrée ne déclenche pas, et revient au bouton principal à la fin |
 | Case à cocher, bouton radio | styles de `CheckBox`, `RadioButton` | la case carrée, le bouton rond ; la couleur principale quand ils sont choisis, le contour épaissi au focus |
 | Barre de progression | style de `ProgressBar` | une piste discrète, la part faite à la couleur principale ; nommée pour le lecteur d'écran |
-| Notification | `Notification`, gravité `Severity` | annoncée par le lecteur d'écran (tout de suite pour une erreur) |
+| Notification | `Notification`, gravité `Severity` | annoncée par le lecteur d'écran quand elle paraît (tout de suite pour une erreur) ; avec `ScrollsIntoView`, la zone qui défile l'amène à la vue |
+| Texte d'état | `StatusText`, avec un style `Kyf.Text.*` | un message sans cadre, dit par le lecteur d'écran chaque fois qu'il paraît |
+| Texte annoncé | `LiveText` | un texte qui change et que le lecteur d'écran dit aussitôt : déclarer une région active ne suffit pas à WPF ; poli par défaut |
 | État vide | `EmptyState` | icône, titre, explication, action |
 | Squelette | `Skeleton` | chargement, immobile si les animations sont réduites |
 | Texte | styles `Kyf.Text.*` | l'échelle typographique |
@@ -145,7 +148,7 @@ ne prennent pas le focus.
 | Élément | Clavier | Rôle |
 |---|---|---|
 | Menu | flèches, Tab | les vues de la 0.x dans le même ordre, celles des modules actifs à leur rang, Santé du coffre et Paramètres en bas |
-| Recherche de commandes | Ctrl+K | aller à une vue, changer de thème, de zoom ou de mode ; sans tenir compte des accents ni de la casse |
+| Recherche | Ctrl+K | aller à une vue, changer de thème, de zoom ou de mode ; à partir de deux lettres, ouvrir une fiche, un passage, une définition ou une citation du coffre : tous les mots, sans tenir compte des accents ni de la casse |
 | Aide | F1 | les raccourcis clavier |
 | Mode concentration | Ctrl+Maj+F | masque le menu |
 | Verrouiller | Ctrl+Maj+L | verrouille le coffre chiffré ouvert : son écran de déverrouillage remplace les vues |

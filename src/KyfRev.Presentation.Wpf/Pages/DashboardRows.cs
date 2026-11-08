@@ -18,6 +18,9 @@ internal static class Dates
     /// <summary>« ven. 9 oct. ».</summary>
     public static string Short(DateOnly day) => day.ToString("ddd d MMM", French);
 
+    /// <summary>« nov. » : le mois, sous une petite colonne.</summary>
+    public static string MonthName(DateOnly day) => day.ToString("MMM", French);
+
     /// <summary>« ven » : le jour, pour une petite colonne.</summary>
     public static string DayName(DateOnly day) => day.ToString("ddd", French).TrimEnd('.');
 
@@ -159,6 +162,12 @@ public sealed class DueItemRow
 
     /// <summary>« Fiche · Biologie · #partiel · cycle 1 · … » : sous le titre.</summary>
     public string Meta => string.Join(" · ", [KindLabel, .. Details]);
+
+    /// <summary>Le nom lu par le lecteur d'écran, pour un bouton.</summary>
+    public string Spoken => ToString();
+
+    /// <summary>« Déplacer J7 : Mitose », le nom du bouton qui déplace cette échéance.</summary>
+    public string MoveName => WorkloadText.MoveNameOf(Step, HeadingText);
 
     /// <summary>Le fichier de la fiche est introuvable.</summary>
     public bool FileMissing => !Item.FilePresent;
