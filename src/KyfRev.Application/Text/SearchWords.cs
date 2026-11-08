@@ -233,7 +233,10 @@ internal sealed class FoldedText
         {
             var before = folded.Length;
             Append(folded, rune);
-            origins.AddRange(Enumerable.Repeat(position, folded.Length - before));
+            for (var unit = before; unit < folded.Length; unit++)
+            {
+                origins.Add(position);
+            }
             position += rune.Utf16SequenceLength;
         }
         return new FoldedText(folded.ToString(), [.. origins]);
@@ -262,6 +265,10 @@ internal sealed class FoldedText
                 break;
             case '’' or '‘' or 'ʼ':
                 folded.Append('\'');
+                break;
+            case 0xFFFE or 0xFFFF:
+                // Des non-caractères, permis dans un fichier : ils n'ont pas de décomposition, et la normalisation les refuse.
+                folded.Append((char)rune.Value);
                 break;
             default:
                 foreach (var part in rune.ToString().Normalize(NormalizationForm.FormD).EnumerateRunes())
