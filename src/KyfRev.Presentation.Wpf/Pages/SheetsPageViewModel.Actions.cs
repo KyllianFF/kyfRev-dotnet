@@ -117,6 +117,32 @@ public sealed partial class SheetsPageViewModel
     /// <summary>Les actions sur les fiches sont disponibles : la vue a ses cas d'usage.</summary>
     internal bool CanManage => _reviews is not null && _trash is not null;
 
+    /// <summary>Partager une fiche, ou l'enregistrer comme modèle ; rien sans cas d'usage.</summary>
+    public SheetSharingViewModel? Sharing { get; }
+
+    /// <summary>Importer un dossier de notes ; rien sans cas d'usage.</summary>
+    public FolderImportViewModel? Import { get; }
+
+    /// <summary>La vue sait importer : le bouton, le clic droit et l'état vide le proposent.</summary>
+    public bool CanImport => Import is not null;
+
+    /// <summary>Partager une fiche.</summary>
+    internal void RequestShare(SheetRow row) => Sharing?.RequestShare(row.Sheet.Id, row.Title);
+
+    /// <summary>Enregistrer une fiche comme modèle : ce qui en est dit s'affiche dans la vue.</summary>
+    internal void RequestSaveAsTemplate(SheetRow row) => Sharing?.RequestSaveAsTemplate(row.Sheet.Id, row.Title, message => Done = message);
+
+    /// <summary>Importer un dossier de notes.</summary>
+    [RelayCommand]
+    private void RequestImport() => Import?.Request();
+
+    /// <summary>Un dossier a été importé : la liste est relue, et il est dit où, comme dans la 0.x.</summary>
+    private void OnImported(ImportReport report)
+    {
+        Done = report.Sheets > 0 ? SharingText.ImportedOf(report.Folder) : null;
+        RefreshCommand.Execute(null);
+    }
+
     /// <summary>Ouvre une fiche pour la réviser.</summary>
     internal void Revise(SheetRow row) => _opener.ReviseSheet(row.Sheet.Id);
 

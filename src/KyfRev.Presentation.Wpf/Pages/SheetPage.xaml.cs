@@ -49,6 +49,7 @@ internal sealed partial class SheetPage : UserControl
             if (e.OldValue is SheetPageViewModel previous)
             {
                 previous.PropertyChanged -= OnPageChanged;
+                previous.Sharing?.PropertyChanged -= OnSharingChanged;
                 if (previous.ReadAloud is { } reader)
                 {
                     reader.PropertyChanged -= OnReadAloudChanged;
@@ -59,6 +60,7 @@ internal sealed partial class SheetPage : UserControl
             {
                 page.PageWidth = ActualWidth;
                 page.PropertyChanged += OnPageChanged;
+                page.Sharing?.PropertyChanged += OnSharingChanged;
                 page.ReadAloud?.PropertyChanged += OnReadAloudChanged;
                 UpdateListenToggle(page);
                 ShowWantedPassage(page);
@@ -86,10 +88,21 @@ internal sealed partial class SheetPage : UserControl
         if (e.PropertyName is nameof(SheetPageViewModel.IsEditing) or nameof(SheetPageViewModel.IsDeleting)
             or nameof(SheetPageViewModel.ShowsOutlineOverlay) or nameof(SheetPageViewModel.ShowsPassagesOverlay))
         {
-            var page = (SheetPageViewModel)sender!;
-            EditorView.PageCovered = page.IsEditing || page.IsDeleting || page.ShowsOutlineOverlay || page.ShowsPassagesOverlay;
+            UpdateCovered((SheetPageViewModel)sender!);
         }
     }
+
+    /// <summary>Les fenêtres de partage se posent aussi sur le texte mis en forme.</summary>
+    private void OnSharingChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(SheetSharingViewModel.IsShowing) && DataContext is SheetPageViewModel page)
+        {
+            UpdateCovered(page);
+        }
+    }
+
+    private void UpdateCovered(SheetPageViewModel page) =>
+        EditorView.PageCovered = page.IsEditing || page.IsDeleting || page.ShowsOutlineOverlay || page.ShowsPassagesOverlay || page.Sharing is { IsShowing: true };
 
     /// <summary>La réponse à la confirmation (révision en avance, J0, archivage) part vers la barre de révision.</summary>
     private void OnConfirmationClosed(object sender, DialogClosedEventArgs e)
@@ -163,6 +176,10 @@ internal sealed partial class SheetPage : UserControl
         Ribbon.ViewMenu.Items.Add(separator);
         Ribbon.ViewMenu.Items.Add(outline);
         Ribbon.ViewMenu.Items.Add(passages);
+        var share = new MenuItem { Header = SharingText.Share };
+        share.SetBinding(MenuItem.CommandProperty, new Binding("DataContext.RequestShareCommand") { Source = this });
+        share.SetBinding(VisibilityProperty, new Binding("DataContext.CanShare") { Source = this, Converter = visible, FallbackValue = Visibility.Collapsed });
+        Ribbon.ViewMenu.Items.Add(share);
     }
 
     /// <summary>« ⋯ » de l'en-tête étroit : le plan et les passages, dans un menu ouvert sous le bouton.</summary>
@@ -418,18 +435,28 @@ internal sealed partial class SheetPage : UserControl
                 new Separator(),
                 .. ListenItems(page, SheetText.Selection?.Start),
                 EditSheetItem(page),
+                .. SharingItems(page),
             ];
         }
         var entry = page.Passages.FirstOrDefault(candidate => SheetText.AnnotationsAt(source).Contains(candidate.Annotation.Id));
         if (entry is not null)
         {
-            return [.. PassageMenuItems(page, entry), new Separator(), EditSheetItem(page)];
+            return [.. PassageMenuItems(page, entry), new Separator(), EditSheetItem(page), .. SharingItems(page)];
         }
         var listen = ListenItems(page, (source as TextElement)?.ContentStart);
         return SheetText.WordAt(source) is { } word
-            ? [.. WordMenuItems(page, word), new Separator(), .. listen, EditSheetItem(page)]
-            : [.. listen, EditSheetItem(page)];
+            ? [.. WordMenuItems(page, word), new Separator(), .. listen, EditSheetItem(page), .. SharingItems(page)]
+            : [.. listen, EditSheetItem(page), .. SharingItems(page)];
     }
+
+    /// <summary>« Partager… » et « Enregistrer comme modèle… », à la fin du menu du texte, comme dans la 0.x.</summary>
+    private static List<Control> SharingItems(SheetPageViewModel page) => page.CanShare
+        ?
+        [
+            Item(SharingText.Share, () => page.RequestShareCommand.Execute(null)),
+            Item(SharingText.SaveAsTemplate, () => page.RequestSaveAsTemplateCommand.Execute(null)),
+        ]
+        : [];
 
     /// <summary>Les entrées que les extensions ajoutent au clic droit d'un texte sélectionné, avec ce texte et sa place.</summary>
     private List<Control> ExtensionItems(SheetPageViewModel page, TextPosition position)

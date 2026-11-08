@@ -51,7 +51,10 @@
 
       <DockPanel>
         <Button x:Name="NewSheetButton" DockPanel.Dock="Right" Content="{x:Static pages:SheetsText.NewSheet}" Style="{DynamicResource Kyf.Button.Primary}"
-                VerticalAlignment="Top" Margin="12,0,0,0" Command="{Binding RequestCreateCommand}" />
+                VerticalAlignment="Top" Margin="8,0,0,0" Command="{Binding RequestCreateCommand}" />
+        <Button x:Name="ImportButton" DockPanel.Dock="Right" Content="{x:Static kyf:Icons.Import}" Style="{DynamicResource Kyf.Button.Icon}" VerticalAlignment="Top" Margin="12,0,0,0"
+                Command="{Binding RequestImportCommand}" ToolTip="{x:Static pages:SharingText.ImportAction}" AutomationProperties.Name="{x:Static pages:SharingText.ImportTitle}"
+                Visibility="{Binding CanImport, Converter={StaticResource Visible}}" />
         <StackPanel>
           <TextBlock x:Name="Heading" Text="{Binding Title}" Style="{DynamicResource Kyf.Text.Title}" AutomationProperties.HeadingLevel="Level1" />
           <TextBlock x:Name="Summary" Text="{Binding Summary}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="0,4,0,0" />
@@ -77,7 +80,12 @@
         </StackPanel>
 
         <kyf:EmptyState x:Name="Empty" Glyph="{x:Static kyf:Icons.Document}" Title="{x:Static pages:SheetsText.EmptyTitle}"
-                        Description="{x:Static pages:SheetsText.EmptyDescription}" Visibility="{Binding IsEmpty, Converter={StaticResource Visible}}" />
+                        Description="{x:Static pages:SheetsText.EmptyDescription}" Visibility="{Binding IsEmpty, Converter={StaticResource Visible}}">
+          <kyf:EmptyState.Action>
+            <Button x:Name="EmptyImportButton" Content="{x:Static pages:SharingText.ImportEmptyAction}" Command="{Binding RequestImportCommand}"
+                    Visibility="{Binding CanImport, Converter={StaticResource Visible}}" />
+          </kyf:EmptyState.Action>
+        </kyf:EmptyState>
 
         <TextBlock x:Name="NoMatch" Text="{x:Static pages:SheetsText.NoMatch}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="0,12,0,0"
                    Visibility="{Binding HasNoMatch, Converter={StaticResource Visible}}" />
@@ -172,5 +180,8 @@
         <pages:ListFilterButton x:Name="NewTemplateMenu" DataContext="{Binding NewTemplate}" HorizontalAlignment="Left" Margin="-16,4,0,0" />
       </StackPanel>
     </kyf:Dialog>
+
+    <pages:SheetSharingDialogs x:Name="SharingDialogs" DataContext="{Binding Sharing}" />
+    <pages:FolderImportDialog x:Name="ImportDialog" DataContext="{Binding Import}" />
   </Grid>
 </UserControl>
