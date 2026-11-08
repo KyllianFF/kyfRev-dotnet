@@ -1,0 +1,25 @@
+name: Étiquette
+
+# Une étiquette de version doit correspondre à la version du dépôt et à une section datée du CHANGELOG.
+# La publication elle-même se fait en local (tools/publier-version.ps1), sous l'identité de KyllianFF.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+jobs:
+  coherence:
+    name: Étiquette = version = CHANGELOG
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Récupération du dépôt
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Comparaison
+        shell: pwsh
+        run: ./tools/verifier-version.ps1 -Etiquette $env:GITHUB_REF_NAME

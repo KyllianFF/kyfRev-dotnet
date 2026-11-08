@@ -13,6 +13,9 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   réseau, l'installation finit quand même et le dit. Il livre `kyfrev-coffre`, et une nouvelle installation refuse le dossier de la
   0.x, dont la désinstallation y effacerait `kyfRev.exe`. Paramètres › À propos signale la 0.x encore installée, avertit si elle
   partage le dossier de cette version, et ouvre la page des applications de Windows pour la retirer ; rien n'est retiré d'office.
+- La publication d'une version : `tools/publier-version.ps1` vérifie que l'étiquette, la version et le CHANGELOG concordent, reprend les
+  fichiers construits par la CI et publie sous l'identité de la personne qui le lance. `docs/publier-une-version.md` en donne les
+  étapes, et le workflow « Étiquette » refuse une étiquette qui ne concorde pas. `docs/guide-utilisateur.md` : le guide de kyfRev.
 - Rechercher une mise à jour, dans Paramètres › À propos, seulement à la demande. kyfRev lit dans le dépôt une annonce signée par les
   clés de publication, dit si une version plus récente existe et peut ouvrir sa page ; rien n'est téléchargé ni installé.
   `tools/catalogue/catalogue.cs version` écrit et signe cette annonce. Le jeton GitHub de la 0.x n'est pas repris : le dépôt est public.
