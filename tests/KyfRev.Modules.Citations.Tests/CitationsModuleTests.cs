@@ -27,10 +27,48 @@ public sealed class CitationsModuleTests
         Assert.IsEmpty(services.GetServices<INavigationContributor>());
         Assert.IsEmpty(services.GetServices<IDashboardWidget>());
         Assert.IsEmpty(services.GetServices<IVaultHealthCheck>());
+        Assert.IsEmpty(services.GetServices<ISearchProvider>(), "ses citations ne sont pas cherchées");
         var id = test.Test.App.Sheets.Create(string.Empty, "Mitose", string.Empty);
         Assert.IsTrue(id.Succeeded);
         Assert.AreEqual("fiches/Mitose.md", test.Test.App.Sheets.Open(id.Value).Value.Path);
         Assert.IsEmpty(test.Reader.Requests);
+    }
+
+    [TestMethod]
+    public void T19_a_module_turned_off_then_on_loses_no_quote_and_a_quote_needs_no_author_nor_date()
+    {
+        using var test = new CitationsTest();
+        test.Activate(online: false);
+        string[] written;
+        using (var services = test.Services(out _))
+        {
+            var quotes = services.GetRequiredService<QuoteUseCases>();
+            Assert.IsTrue(quotes.Add(Content("Le cœur a ses raisons.", "Blaise Pascal", "1670", "Pensées")).Succeeded);
+            var bare = quotes.Add(Content("Une phrase sans auteur ni date.", null, null, null));
+            Assert.IsTrue(bare.Succeeded, bare.Error);
+            written = [.. quotes.Quotes().Value.Quotes.Select(quote => quote.Path).Order(StringComparer.Ordinal)];
+        }
+        Assert.HasCount(2, written);
+
+        var preferences = test.Test.App.Settings.Get().Value;
+        Assert.IsTrue(test.Test.App.Settings.Change(preferences with { QuotesActive = false }).Succeeded);
+        using (var off = test.Services(out var none))
+        {
+            Assert.IsEmpty(none);
+            Assert.IsNull(off.GetService<QuoteUseCases>());
+        }
+        foreach (var path in written)
+        {
+            Assert.IsTrue(File.Exists(Path.Combine([test.VaultFolder, .. path.Split('/')])), $"{path} reste dans le coffre");
+        }
+
+        test.Activate(online: false);
+        using var again = test.Services(out var loaded);
+        Assert.AreEqual(CitationsModule.ModuleId, loaded.Single().Id);
+        var restored = again.GetRequiredService<QuoteUseCases>().Quotes().Value;
+        CollectionAssert.AreEqual(written, restored.Quotes.Select(quote => quote.Path).Order(StringComparer.Ordinal).ToArray());
+        Assert.IsEmpty(restored.Trash);
+        Assert.IsNotNull(again.GetServices<IDashboardWidget>().Single().Card());
     }
 
     [TestMethod]
@@ -73,6 +111,38 @@ public sealed class CitationsModuleTests
 
         test.Test.App.Host.Dispose();
         Assert.IsNull(widget.Card());
+    }
+
+    [TestMethod]
+    public void The_global_search_finds_quotes_by_their_author_or_their_text()
+    {
+        using var test = new CitationsTest();
+        test.Activate();
+        using var services = test.Services(out _);
+        var quotes = services.GetRequiredService<QuoteUseCases>();
+        var search = services.GetServices<ISearchProvider>().Single();
+        var path = quotes.Add(Content("Le cœur a ses raisons.", "Blaise Pascal", "1670", "Pensées")).Value.Path;
+        quotes.Add(Content("Connais-toi toi-même.", null, null, null));
+
+        // L'auteur et l'œuvre ont suffi : le texte se lit à la place de l'extrait.
+        var byAuthor = search.Search("pascal pensees", CancellationToken.None).Value.Single();
+        Assert.AreEqual(SearchKinds.Quote, byAuthor.Kind);
+        Assert.AreEqual(path, byAuthor.Id);
+        Assert.AreEqual("Blaise Pascal", byAuthor.Title);
+        Assert.IsTrue(byAuthor.Excerpt.IsEmpty);
+        Assert.AreEqual("Le cœur a ses raisons.", byAuthor.Text);
+
+        // Trouvée par son texte : l'extrait montre les mots.
+        var byText = search.Search("COEUR", CancellationToken.None).Value.Single();
+        Assert.AreEqual("cœur", byText.Excerpt.Single(piece => piece.Found).Text);
+        Assert.IsNull(byText.Text);
+
+        // Sans auteur, le titre est vide : la vue dit « Auteur inconnu ».
+        Assert.AreEqual(string.Empty, search.Search("connais", CancellationToken.None).Value.Single().Title);
+
+        Assert.IsEmpty(search.Search("  ", CancellationToken.None).Value);
+        test.Test.App.Host.Dispose();
+        Assert.AreEqual(VaultHost.NoVaultOpen, search.Search("pascal", CancellationToken.None).Error);
     }
 
     [TestMethod]

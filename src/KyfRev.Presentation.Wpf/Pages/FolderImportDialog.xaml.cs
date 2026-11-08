@@ -1,0 +1,20 @@
+using System.Windows.Controls;
+using KyfRev.DesignSystem.Controls;
+
+namespace KyfRev.Presentation.Wpf.Pages;
+
+/// <summary>La fenêtre « Importer un dossier de notes », posée sur la vue « Fiches ».</summary>
+internal sealed partial class FolderImportDialog : UserControl
+{
+    public FolderImportDialog()
+    {
+        InitializeComponent();
+        // La page quittée perd souvent son contexte avant de se décharger : l'un ou l'autre ferme la fenêtre.
+        Unloaded += (_, _) => (DataContext as FolderImportViewModel)?.Dismiss();
+        DataContextChanged += (_, e) => (e.OldValue as FolderImportViewModel)?.Dismiss();
+    }
+
+    /// <summary>La réponse à la fenêtre part vers sa vue.</summary>
+    private void OnClosed(object sender, DialogClosedEventArgs e) =>
+        (DataContext as FolderImportViewModel)?.AnswerCommand.Execute(e.Choice == DialogChoice.Primary);
+}

@@ -17,11 +17,11 @@ un test (`CommandMapTests`) vérifie que ce tableau et le code restent d'accord.
 | `resserrer_avant_examen` | `ExamUseCases.Tighten` | J4.1 | |
 | `creer_fiche` | `SheetUseCases.Create` | J4.1 | |
 | `modeles` | `TemplateUseCases.Templates` | J4.1 | |
-| `enregistrer_modele` | `TemplateUseCases.SaveAsTemplate` | J4.1 | |
+| `enregistrer_modele` | `TemplateUseCases.SaveAsTemplate` | J4.1 | Dans l'interface : « Enregistrer comme modèle… », au clic droit d'une fiche et de son texte. |
 | `dossiers` | `FolderUseCases.Folders` | J4.1 | |
 | `ouvrir_fiche` | `SheetUseCases.Open` | J4.1 | |
 | `id_de_fiche` | `SheetUseCases.IdAt` | J4.1 | |
-| `valider_revision` | `ReviewUseCases.Validate` | J4.1 | |
+| `valider_revision` | `ReviewUseCases.Validate` | J4.1 | Le jour choisi, pour antidater, est son dernier paramètre : rien, aujourd'hui. La 0.x ne le proposait pas à son interface ; le domaine si. |
 | `reporter_revision` | `ReviewUseCases.Postpone` | J4.1 | La date arrive typée : l'interface la valide. |
 | `recommencer_cycle` | `ReviewUseCases.Restart` | J4.1 | |
 | `archiver_fiche` | `ReviewUseCases.Archive` | J4.1 | |
@@ -33,14 +33,14 @@ un test (`CommandMapTests`) vérifie que ce tableau et le code restent d'accord.
 | `modifier_passage` | `AnnotationUseCases.ModifyPassage` | J4.1 | |
 | `mettre_annotation_a_la_corbeille` | `AnnotationUseCases.Trash` | J4.1 | |
 | `restaurer_annotation` | `AnnotationUseCases.Restore` | J4.1 | |
-| `importer_dossier` | `SheetUseCases.Import` | J4.1 | |
+| `importer_dossier` | `SheetUseCases.Import` | J4.1 | Dans l'interface : vue « Fiches » (bouton, place libre de la liste, liste vide) ; le bilan est montré. |
 | `changer_titre_fiche` | `SheetUseCases.ChangeTitle` | J4.1 | |
 | `modifier_etiquettes_fiche` | `SheetUseCases.SetTags` | J4.1 | |
 | `deplacer_fiche` | `SheetUseCases.Move` | J4.1 | |
 | `mettre_fiche_a_la_corbeille` | `TrashUseCases.TrashSheet` | J4.1 | |
 | `restaurer_fiche_de_la_corbeille` | `TrashUseCases.RestoreSheet` | J4.1 | |
 | `fiches_a_la_corbeille` | `TrashUseCases.TrashedSheets` | J4.1 | |
-| `partager_fiche` | `SheetUseCases.Share` | J4.1 | |
+| `partager_fiche` | `SheetUseCases.Share` | J4.1 | Dans l'interface : fenêtre « Partager », préparée comme la lecture. Le PDF passe par `SheetUseCases.SharePdf`, et le presse-papiers et le PDF par `SheetUseCases.EmbedSharedImages`. |
 | `creer_dossier` | `FolderUseCases.Create` | J4.1 | |
 | `deplacer_dossier` | `FolderUseCases.Move` | J4.1 | |
 | `mettre_dossier_a_la_corbeille` | `TrashUseCases.TrashFolder` | J4.1 | |
@@ -97,11 +97,11 @@ Ces cas d'usage ne sont chargés que si le coffre active le module Citations.
 | `corriger_mot` | — | J7 | Correcteur de Windows : `ISpelling.Correct`, hors des cas d'usage. |
 | `ajouter_au_dictionnaire` | — | J7 | Correcteur de Windows : `ISpelling.Add`, hors des cas d'usage. |
 | `statistiques` | `ReminderUseCases.Statistics` | J9 | Statistiques de régularité. |
-| `retroliens` | — | J9 | Rétroliens. |
-| `apercu_fiche` | — | J9 | Aperçu au survol. |
+| `retroliens` | `SheetUseCases.Backlinks` | J9 | Rétroliens : panneau de la vue d'une fiche. Seules les fiches qui mènent ici sont lues. |
+| `apercu_fiche` | `SheetUseCases.Preview` | J9 | Aperçu au survol ou au focus d'un lien vers une fiche. |
 | `liste_des_fiches` | `SheetUseCases.List` | J7.1 | Vue « Fiches » ; l'arborescence reste à J9. |
-| `chercher_dans_les_fiches` | — | J9 | Recherche dans les fiches. |
-| `recherche_globale` | — | J9 | Recherche globale. |
+| `chercher_dans_les_fiches` | `SheetUseCases.Search` | J9 | Recherche dans les fiches. |
+| `recherche_globale` | `SearchUseCases.Everywhere` | J9 | Recherche globale : le cœur, puis les modules actifs (`ISearchProvider`). |
 | `liste_des_definitions` | `AnnotationUseCases.Definitions` | J7.6 | Vue « Définitions ». |
 | `schemas` | `SchemaUseCases.Schemas` | J10 | Module Schémas réseau. |
 | `lire_schema` | `SchemaUseCases.Read` | J10 | Module Schémas réseau. |

@@ -40,6 +40,7 @@ public sealed class KyfRevApplication : IDisposable
         Maintenance = new MaintenanceUseCases(_host, backups, time);
         Backups = new BackupUseCases(_host, backups, time);
         Exports = new ExportUseCases(_host, time);
+        Search = new SearchUseCases(_host);
     }
 
     /// <summary>Le coffre ouvert, que les modules partagent avec les cas d'usage du cœur.</summary>
@@ -89,6 +90,9 @@ public sealed class KyfRevApplication : IDisposable
 
     /// <summary>Exports.</summary>
     public ExportUseCases Exports { get; }
+
+    /// <summary>Recherche globale.</summary>
+    public SearchUseCases Search { get; }
 
     /// <summary>Ferme le coffre ouvert.</summary>
     public void Dispose() => _host.Dispose();

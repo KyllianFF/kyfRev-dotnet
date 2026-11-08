@@ -36,4 +36,22 @@
   <data name="Ok" xml:space="preserve">
     <value>OK</value>
   </data>
+  <data name="Calendar" xml:space="preserve">
+    <value>Calendrier</value>
+  </data>
+  <data name="OpenCalendar" xml:space="preserve">
+    <value>Ouvrir le calendrier</value>
+  </data>
+  <data name="PreviousPeriod" xml:space="preserve">
+    <value>Précédent</value>
+  </data>
+  <data name="NextPeriod" xml:space="preserve">
+    <value>Suivant</value>
+  </data>
+  <data name="DatePlaceholder" xml:space="preserve">
+    <value>jj/mm/aaaa</value>
+  </data>
+  <data name="DateRefused" xml:space="preserve">
+    <value>Date refusée : elle n'existe pas ou sort des jours permis.</value>
+  </data>
 </root>

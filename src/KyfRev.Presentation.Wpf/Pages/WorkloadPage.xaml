@@ -1,0 +1,259 @@
+<UserControl x:Class="KyfRev.Presentation.Wpf.Pages.WorkloadPage"
+             x:ClassModifier="internal"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:kyf="clr-namespace:KyfRev.DesignSystem.Controls;assembly=KyfRev.DesignSystem"
+             xmlns:pages="clr-namespace:KyfRev.Presentation.Wpf.Pages">
+  <UserControl.Resources>
+    <BooleanToVisibilityConverter x:Key="Visible" />
+
+    <ItemsPanelTemplate x:Key="InLine">
+      <StackPanel Orientation="Horizontal" />
+    </ItemsPanelTemplate>
+
+    <!-- Les échéances connues : pleines. -->
+    <Style x:Key="DueBar" TargetType="Border">
+      <Setter Property="Width" Value="14" />
+      <Setter Property="Background" Value="{DynamicResource Kyf.Brush.Primary}" />
+    </Style>
+
+    <!-- Les étapes projetées : seulement dessinées, pour ne pas dépendre de la couleur. -->
+    <Style x:Key="ProjectedBar" TargetType="Border">
+      <Setter Property="Width" Value="14" />
+      <Setter Property="Background" Value="{DynamicResource Kyf.Brush.Surface}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource Kyf.Brush.Primary}" />
+      <Setter Property="BorderThickness" Value="1" />
+    </Style>
+
+    <!-- Une colonne : choisie, elle s'entoure, sans fond qui gênerait la lecture des barres. -->
+    <Style x:Key="DayColumn" TargetType="ListBoxItem">
+      <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Text}" />
+      <Setter Property="Margin" Value="0" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="MinHeight" Value="0" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="FocusVisualStyle" Value="{DynamicResource Kyf.FocusVisual.Inset}" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="ListBoxItem">
+            <Grid Background="Transparent">
+              <Border x:Name="Hover" Background="{DynamicResource Kyf.Brush.SurfaceAlt}" CornerRadius="4,4,0,0" Visibility="Collapsed" />
+              <ContentPresenter />
+              <Border x:Name="Mark" BorderBrush="{DynamicResource Kyf.Brush.Text}" BorderThickness="2" CornerRadius="4,4,0,0" Visibility="Collapsed" IsHitTestVisible="False" />
+            </Grid>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="Hover" Property="Visibility" Value="Visible" />
+              </Trigger>
+              <Trigger Property="IsSelected" Value="True">
+                <Setter TargetName="Hover" Property="Visibility" Value="Visible" />
+                <Setter TargetName="Mark" Property="Visibility" Value="Visible" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <!-- Un jour : les étapes projetées au-dessus, les échéances connues en dessous, le trait de la moyenne derrière. -->
+    <DataTemplate DataType="{x:Type pages:LoadDay}">
+      <Grid ToolTip="{Binding Name}" Background="Transparent">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="{Binding PlotHeight}" />
+          <RowDefinition Height="42" />
+        </Grid.RowDefinitions>
+        <Border x:Name="Weekend" Grid.RowSpan="2" Background="{DynamicResource Kyf.Brush.SurfaceAlt}" Opacity="0.5" Visibility="{Binding IsWeekend, Converter={StaticResource Visible}}" />
+        <Border x:Name="Average" Height="{Binding AverageHeight}" VerticalAlignment="Bottom" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource Kyf.Brush.TextSecondary}" Opacity="0.6" />
+        <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Center">
+          <TextBlock x:Name="Value" Text="{Binding Total}" Style="{DynamicResource Kyf.Text.Caption}" FontWeight="SemiBold" Foreground="{DynamicResource Kyf.Brush.Text}" HorizontalAlignment="Center"
+                     Visibility="{Binding ShowsValue, Converter={StaticResource Visible}}" />
+          <Border x:Name="Projected" Style="{StaticResource ProjectedBar}" Height="{Binding ProjectedHeight}" />
+          <Border x:Name="Gap" Height="2" Visibility="{Binding HasBoth, Converter={StaticResource Visible}}" />
+          <Border x:Name="Due" Style="{StaticResource DueBar}" Height="{Binding DueHeight}" />
+        </StackPanel>
+        <Border VerticalAlignment="Bottom" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource Kyf.Brush.Divider}" />
+        <StackPanel Grid.Row="1" Margin="0,3,0,0">
+          <TextBlock x:Name="Label" Text="{Binding Label}" Style="{DynamicResource Kyf.Text.Caption}" HorizontalAlignment="Center" FontSize="11" />
+          <TextBlock x:Name="Month" Text="{Binding Month}" Style="{DynamicResource Kyf.Text.Caption}" HorizontalAlignment="Center" FontSize="10" />
+        </StackPanel>
+      </Grid>
+      <DataTemplate.Triggers>
+        <DataTrigger Binding="{Binding IsSelected}" Value="True">
+          <Setter TargetName="Label" Property="FontWeight" Value="SemiBold" />
+          <Setter TargetName="Label" Property="Foreground" Value="{DynamicResource Kyf.Brush.Text}" />
+        </DataTrigger>
+        <DataTrigger Binding="{Binding ProjectedCount}" Value="0">
+          <Setter TargetName="Projected" Property="Visibility" Value="Collapsed" />
+        </DataTrigger>
+        <DataTrigger Binding="{Binding DueCount}" Value="0">
+          <Setter TargetName="Due" Property="Visibility" Value="Collapsed" />
+        </DataTrigger>
+      </DataTemplate.Triggers>
+    </DataTemplate>
+
+    <!-- Une échéance du jour choisi : l'ouvrir pour la réviser, ou la déplacer. -->
+    <DataTemplate DataType="{x:Type pages:DueItemRow}">
+      <kyf:AdaptiveRow Margin="0,2" MainMinWidth="180" StackedSpacing="0">
+        <Button x:Name="OpenRow" kyf:AdaptiveRow.Part="Main" Style="{DynamicResource Kyf.Button.Subtle}" Padding="8,0" HorizontalContentAlignment="Stretch" HorizontalAlignment="Stretch"
+                Command="{Binding DataContext.OpenCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"
+                AutomationProperties.Name="{Binding Spoken}">
+          <StackPanel Margin="0,4">
+            <TextBlock TextWrapping="Wrap">
+              <Run x:Name="Heading" Text="{Binding HeadingText, Mode=OneWay}" FontWeight="SemiBold" />
+              <Run Text="{Binding Source, Mode=OneWay}" Foreground="{DynamicResource Kyf.Brush.TextSecondary}" />
+            </TextBlock>
+            <TextBlock Text="{Binding Meta}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" />
+          </StackPanel>
+        </Button>
+        <StackPanel kyf:AdaptiveRow.Part="Trailing" Orientation="Horizontal" VerticalAlignment="Center" Margin="8,0,0,0">
+          <TextBlock x:Name="Late" Text="{Binding Late}" Style="{DynamicResource Kyf.Text.Caption}" FontWeight="SemiBold" Foreground="{DynamicResource Kyf.Brush.Warning}" VerticalAlignment="Center" Margin="0,0,8,0" />
+          <Border MinWidth="44" Padding="8,2" Margin="0,0,8,0" VerticalAlignment="Center" CornerRadius="{DynamicResource Kyf.Radius.Control}" Background="{DynamicResource Kyf.Brush.PillSheetBackground}">
+            <TextBlock Text="{Binding Step}" FontFamily="{DynamicResource Kyf.Font.Code}" FontWeight="SemiBold" HorizontalAlignment="Center" Foreground="{DynamicResource Kyf.Brush.PillSheetText}" />
+          </Border>
+          <Button x:Name="MoveRow" Content="{x:Static pages:WorkloadText.MoveAction}" Style="{DynamicResource Kyf.Button.Subtle}"
+                  Command="{Binding DataContext.PrepareMoveCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"
+                  AutomationProperties.Name="{Binding MoveName}" />
+        </StackPanel>
+      </kyf:AdaptiveRow>
+      <DataTemplate.Triggers>
+        <DataTrigger Binding="{Binding Late}" Value="{x:Null}">
+          <Setter TargetName="Late" Property="Visibility" Value="Collapsed" />
+        </DataTrigger>
+        <DataTrigger Binding="{Binding Heading}" Value="Hidden">
+          <Setter TargetName="Heading" Property="FontStyle" Value="Italic" />
+          <Setter TargetName="Heading" Property="FontWeight" Value="Normal" />
+        </DataTrigger>
+      </DataTemplate.Triggers>
+    </DataTemplate>
+
+    <!-- Une étape projetée : elle suit l'échéance, elle ne se déplace pas. -->
+    <DataTemplate DataType="{x:Type pages:ProjectedRow}">
+      <DockPanel Margin="8,2" Background="Transparent" AutomationProperties.Name="{Binding Spoken}">
+        <TextBlock Text="{Binding Step}" DockPanel.Dock="Left" MinWidth="40" FontFamily="{DynamicResource Kyf.Font.Code}" FontWeight="SemiBold" Style="{DynamicResource Kyf.Text.Caption}" />
+        <TextBlock TextWrapping="Wrap">
+          <Run x:Name="Heading" Text="{Binding Heading, Mode=OneWay}" />
+          <Run Text="{Binding Source, Mode=OneWay}" Foreground="{DynamicResource Kyf.Brush.TextSecondary}" />
+        </TextBlock>
+      </DockPanel>
+      <DataTemplate.Triggers>
+        <DataTrigger Binding="{Binding IsHidden}" Value="True">
+          <Setter TargetName="Heading" Property="FontStyle" Value="Italic" />
+        </DataTrigger>
+      </DataTemplate.Triggers>
+    </DataTemplate>
+  </UserControl.Resources>
+
+  <Grid Margin="16,12,16,8">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="*" />
+    </Grid.RowDefinitions>
+
+    <!-- Le retour reste à portée, même la page défilée. -->
+    <Button x:Name="BackButton" Command="{Binding BackCommand}" Style="{DynamicResource Kyf.Button.Subtle}" HorizontalAlignment="Left" Margin="-8,0,0,0"
+            AutomationProperties.Name="{x:Static pages:ReviewText.Back}">
+      <StackPanel Orientation="Horizontal">
+        <kyf:Icon Text="{x:Static kyf:Icons.Back}" Margin="0,0,8,0" />
+        <TextBlock Text="{x:Static pages:ReviewText.Back}" VerticalAlignment="Center" />
+      </StackPanel>
+    </Button>
+
+    <ScrollViewer x:Name="Scroller" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
+      <StackPanel Margin="0,4,8,8" MaxWidth="1200">
+        <DockPanel>
+          <TextBlock x:Name="Heading" Text="{x:Static pages:WorkloadText.Title}" Style="{DynamicResource Kyf.Text.Title}" TextWrapping="Wrap" AutomationProperties.HeadingLevel="Level1" />
+          <Border VerticalAlignment="Center" HorizontalAlignment="Left" Margin="12,0,0,0" Padding="8,0" MinWidth="24" CornerRadius="{DynamicResource Kyf.Radius.Control}" Background="{DynamicResource Kyf.Brush.SurfaceAlt}">
+            <TextBlock x:Name="TotalLabel" Text="{Binding Total}" Style="{DynamicResource Kyf.Text.Caption}" HorizontalAlignment="Center" />
+          </Border>
+        </DockPanel>
+
+        <ListBox x:Name="Filters" ItemsPanel="{StaticResource InLine}" ItemsSource="{Binding Filters}" SelectedItem="{Binding SelectedFilter}" HorizontalAlignment="Left" Margin="-4,8,0,0"
+                 AutomationProperties.Name="{x:Static pages:DashboardText.Show}" />
+
+        <kyf:Notification x:Name="ErrorMessage" Severity="Critical" Message="{Binding Error}" IsOpen="{Binding HasError, Mode=OneWay}" IsClosable="False" Margin="0,12,0,0" />
+
+        <StackPanel x:Name="Loading" Margin="0,12,0,0" Visibility="{Binding IsLoading, Converter={StaticResource Visible}}" AutomationProperties.Name="{x:Static pages:WorkloadText.Loading}">
+          <kyf:Skeleton Width="220" Height="20" HorizontalAlignment="Left" Margin="0,0,0,12" />
+          <kyf:Skeleton Height="120" />
+        </StackPanel>
+
+        <TextBlock x:Name="EmptyLabel" Text="{x:Static pages:WorkloadText.Empty}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="0,12,0,0" Visibility="{Binding ShowsEmpty, Converter={StaticResource Visible}}" />
+
+        <kyf:Card x:Name="ChartCard" Padding="16,12" Margin="0,12,0,0" Visibility="{Binding HasLoad, Converter={StaticResource Visible}}" AutomationProperties.Name="{x:Static pages:WorkloadText.Title}">
+          <StackPanel>
+            <TextBlock x:Name="Summary" Text="{Binding Summary}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" />
+            <WrapPanel x:Name="Legend" Margin="0,4,0,8" AutomationProperties.Name="{x:Static pages:WorkloadText.Legend}">
+              <StackPanel Orientation="Horizontal" Margin="0,0,16,4">
+                <Border Style="{StaticResource DueBar}" Width="10" Height="10" CornerRadius="2" Margin="0,0,6,0" />
+                <TextBlock Text="{x:Static pages:WorkloadText.LegendDue}" Style="{DynamicResource Kyf.Text.Caption}" />
+              </StackPanel>
+              <StackPanel Orientation="Horizontal" Margin="0,0,16,4">
+                <Border Style="{StaticResource ProjectedBar}" Width="10" Height="10" CornerRadius="2" Margin="0,0,6,0" />
+                <TextBlock Text="{x:Static pages:WorkloadText.LegendProjected}" Style="{DynamicResource Kyf.Text.Caption}" />
+              </StackPanel>
+              <StackPanel Orientation="Horizontal" Margin="0,0,16,4">
+                <Border Width="12" Height="1" VerticalAlignment="Center" Background="{DynamicResource Kyf.Brush.TextSecondary}" Margin="0,0,6,0" />
+                <TextBlock Text="{x:Static pages:WorkloadText.LegendAverage}" Style="{DynamicResource Kyf.Text.Caption}" />
+              </StackPanel>
+            </WrapPanel>
+
+            <!-- Pas de défilement : les colonnes tiennent toujours dans la largeur, sur une rangée ou sur deux. -->
+            <ListBox x:Name="Chart" ItemsSource="{Binding Days}" SelectedItem="{Binding SelectedDay}" ItemContainerStyle="{StaticResource DayColumn}" AutomationProperties.Name="{x:Static pages:WorkloadText.Days}"
+                     SizeChanged="OnChartSizeChanged" PreviewMouseLeftButtonDown="OnColumnPressed" KeyDown="OnColumnKeyDown">
+              <ListBox.Template>
+                <ControlTemplate TargetType="ListBox">
+                  <ItemsPresenter />
+                </ControlTemplate>
+              </ListBox.Template>
+              <ListBox.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <UniformGrid Columns="{Binding DataContext.ChartColumns, RelativeSource={RelativeSource AncestorType=ListBox}}" />
+                </ItemsPanelTemplate>
+              </ListBox.ItemsPanel>
+            </ListBox>
+          </StackPanel>
+        </kyf:Card>
+
+        <!-- Hors de la carte : les rappels s'ajoutent aussi quand aucune révision n'est prévue. -->
+        <TextBlock x:Name="Note" Text="{Binding Note}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,8,0,0" Visibility="{Binding HasNote, Converter={StaticResource Visible}}" />
+
+        <!-- Le jour choisi : ses échéances, à déplacer, et ses étapes projetées. -->
+        <kyf:Card x:Name="DetailCard" Padding="16,12" Margin="0,12,0,0" Visibility="{Binding HasSelection, Converter={StaticResource Visible}}">
+          <StackPanel>
+            <TextBlock x:Name="DayTitle" Text="{Binding DayTitle}" Style="{DynamicResource Kyf.Text.Subtitle}" TextWrapping="Wrap" AutomationProperties.HeadingLevel="Level2" />
+            <kyf:Notification x:Name="Message" Severity="Success" Message="{Binding Message}" IsOpen="{Binding HasMessage, Mode=OneWay}" IsClosable="False" Margin="0,8,0,0" />
+            <kyf:Notification x:Name="MoveErrorMessage" Severity="Critical" Message="{Binding MoveError}" IsOpen="{Binding HasMoveError, Mode=OneWay}" IsClosable="False" Margin="0,8,0,0"
+                              IsVisibleChanged="OnMoveErrorVisibleChanged" />
+
+            <Border x:Name="MoveForm" Margin="0,8,0,0" Padding="12" CornerRadius="{DynamicResource Kyf.Radius.Control}" Background="{DynamicResource Kyf.Brush.SurfaceAlt}"
+                    Visibility="{Binding IsMoving, Converter={StaticResource Visible}}" IsVisibleChanged="OnMoveFormVisibleChanged">
+              <StackPanel>
+                <TextBlock x:Name="MoveLabel" Text="{Binding MoveLabel}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" Margin="0,0,0,4" />
+                <WrapPanel>
+                  <kyf:DateField x:Name="MoveDay" Width="200" Margin="0,0,8,4" Day="{Binding MoveTo}" Minimum="{Binding EarliestMove}" AutomationProperties.Name="{Binding MoveLabel}" />
+                  <Button x:Name="CancelMove" Content="{x:Static pages:WorkloadText.MoveCancel}" Command="{Binding CancelMoveCommand}" VerticalAlignment="Top" Margin="0,0,8,4" />
+                  <Button x:Name="ConfirmMove" Content="{x:Static pages:WorkloadText.MoveConfirm}" Command="{Binding MoveCommand}" Style="{DynamicResource Kyf.Button.Primary}" VerticalAlignment="Top" Margin="0,0,0,4" />
+                </WrapPanel>
+                <kyf:LiveText x:Name="MoveHint" Text="{Binding MoveHint}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
+
+            <StackPanel Margin="0,8,0,0" Visibility="{Binding HasDue, Converter={StaticResource Visible}}">
+              <TextBlock Text="{x:Static pages:WorkloadText.Due}" Style="{DynamicResource Kyf.Text.BodyStrong}" AutomationProperties.HeadingLevel="Level3" />
+              <ItemsControl x:Name="DueList" ItemsSource="{Binding DueRows}" Focusable="False" Margin="-8,4,-8,0" />
+            </StackPanel>
+
+            <StackPanel Margin="0,8,0,0" Visibility="{Binding HasProjected, Converter={StaticResource Visible}}">
+              <TextBlock Style="{DynamicResource Kyf.Text.BodyStrong}" TextWrapping="Wrap" AutomationProperties.HeadingLevel="Level3">
+                <Run Text="{x:Static pages:WorkloadText.Projected}" />
+                <Run Text="{x:Static pages:WorkloadText.ProjectedHelp}" FontWeight="Normal" Foreground="{DynamicResource Kyf.Brush.TextSecondary}" />
+              </TextBlock>
+              <ItemsControl x:Name="ProjectedList" ItemsSource="{Binding ProjectedRows}" Focusable="False" Margin="-8,4,-8,0" />
+            </StackPanel>
+          </StackPanel>
+        </kyf:Card>
+      </StackPanel>
+    </ScrollViewer>
+  </Grid>
+</UserControl>

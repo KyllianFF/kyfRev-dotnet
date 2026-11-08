@@ -167,6 +167,11 @@ internal sealed partial class SheetsPage : UserControl
             items.Add(ActionMenus.Item(SheetActionsText.Rename, () => page.RequestRename(row)));
             items.Add(ActionMenus.Item(SheetActionsText.Tags, () => page.RequestTags(row)));
             items.Add(ActionMenus.Item(SheetActionsText.Move, () => page.RequestMove(row)));
+            if (page.Sharing is not null)
+            {
+                items.Add(ActionMenus.Item(SharingText.Share, () => page.RequestShare(row)));
+                items.Add(ActionMenus.Item(SharingText.SaveAsTemplate, () => page.RequestSaveAsTemplate(row)));
+            }
             items.Add(new Separator());
             items.Add(ActionMenus.Item(row.Sheet.Archived ? SheetActionsText.Restart : SheetActionsText.Archive, () => page.RequestArchiveOrRestart(row)));
             items.Add(ActionMenus.Item(SheetActionsText.Delete, () => page.RequestTrash(row)));
@@ -205,11 +210,20 @@ internal sealed partial class SheetsPage : UserControl
         return items;
     }
 
-    private static List<Control> FreeSpaceMenu(SheetsPageViewModel page) =>
-    [
-        ActionMenus.Quick(SheetActionsText.NewSheet, Icons.Document, () => _ = page.CreateInAsync(string.Empty)),
-        ActionMenus.Quick(SheetActionsText.NewFolder, Icons.NewFolder, () => page.RequestNewFolder(string.Empty)),
-    ];
+    private static List<Control> FreeSpaceMenu(SheetsPageViewModel page)
+    {
+        List<Control> items =
+        [
+            ActionMenus.Quick(SheetActionsText.NewSheet, Icons.Document, () => _ = page.CreateInAsync(string.Empty)),
+            ActionMenus.Quick(SheetActionsText.NewFolder, Icons.NewFolder, () => page.RequestNewFolder(string.Empty)),
+        ];
+        if (page.CanImport)
+        {
+            items.Add(new Separator());
+            items.Add(ActionMenus.Item(SharingText.ImportFolder, () => page.RequestImportCommand.Execute(null)));
+        }
+        return items;
+    }
 
     /// <summary>La réponse à la fenêtre d'action part vers la vue.</summary>
     private void OnActionClosed(object sender, DialogClosedEventArgs e)

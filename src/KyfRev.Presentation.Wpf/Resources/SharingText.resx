@@ -1,0 +1,225 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="ActionCopy" xml:space="preserve">
+    <value>Copier</value>
+  </data>
+  <data name="ActionSave" xml:space="preserve">
+    <value>Enregistrer…</value>
+  </data>
+  <data name="Cancel" xml:space="preserve">
+    <value>Annuler</value>
+  </data>
+  <data name="ClearWarning" xml:space="preserve">
+    <value>Ce coffre est chiffré, mais pas ce que vous partagez : le fichier créé ou le contenu copié est en clair, lisible par quiconque y accède.</value>
+  </data>
+  <data name="Close" xml:space="preserve">
+    <value>Fermer</value>
+  </data>
+  <data name="CopyFailed" xml:space="preserve">
+    <value>Le presse-papiers est pris par un autre programme. Réessayez dans un instant.</value>
+  </data>
+  <data name="Copied" xml:space="preserve">
+    <value>Fiche copiée : collez-la où vous voulez (Ctrl+V).</value>
+  </data>
+  <data name="Created" xml:space="preserve">
+    <value>Fichier créé : {0}</value>
+  </data>
+  <data name="Diagram" xml:space="preserve">
+    <value>[Diagramme]</value>
+  </data>
+  <data name="DiagramName" xml:space="preserve">
+    <value>Schéma</value>
+  </data>
+  <data name="Footer" xml:space="preserve">
+    <value>Fiche partagée depuis kyfRev le {0}.</value>
+  </data>
+  <data name="FormatArchive" xml:space="preserve">
+    <value>Markdown avec images (.zip)</value>
+  </data>
+  <data name="FormatArchiveHelp" xml:space="preserve">
+    <value>La fiche et ses images, réunies dans une archive.</value>
+  </data>
+  <data name="FormatCopy" xml:space="preserve">
+    <value>Copier dans le presse-papiers</value>
+  </data>
+  <data name="FormatCopyHelp" xml:space="preserve">
+    <value>Pour coller dans un e-mail, Teams, Word… mise en forme comprise.</value>
+  </data>
+  <data name="FormatHtml" xml:space="preserve">
+    <value>Page web (.html)</value>
+  </data>
+  <data name="FormatHtmlHelp" xml:space="preserve">
+    <value>Un seul fichier, images, formules et diagrammes compris. S'ouvre dans un navigateur, et dans Word (qui peut l'enregistrer en .docx).</value>
+  </data>
+  <data name="FormatLegend" xml:space="preserve">
+    <value>Format</value>
+  </data>
+  <data name="FormatMarkdown" xml:space="preserve">
+    <value>Markdown (.md)</value>
+  </data>
+  <data name="FormatMarkdownHelp" xml:space="preserve">
+    <value>Le texte de la fiche, lisible par Obsidian, Typora, GitHub…</value>
+  </data>
+  <data name="FormatPdf" xml:space="preserve">
+    <value>PDF (.pdf)</value>
+  </data>
+  <data name="FormatPdfHelp" xml:space="preserve">
+    <value>Un document à envoyer ou à imprimer, mis en page au format A4.</value>
+  </data>
+  <data name="FormatText" xml:space="preserve">
+    <value>Texte brut (.txt)</value>
+  </data>
+  <data name="FormatTextHelp" xml:space="preserve">
+    <value>Sans mise en forme ; les formules restent en notation TeX.</value>
+  </data>
+  <data name="Image" xml:space="preserve">
+    <value>[Image]</value>
+  </data>
+  <data name="ImageNamed" xml:space="preserve">
+    <value>[Image : {0}]</value>
+  </data>
+  <data name="ImportAction" xml:space="preserve">
+    <value>Importer un dossier de notes (Obsidian, Markdown…)</value>
+  </data>
+  <data name="ImportBusy" xml:space="preserve">
+    <value>Import…</value>
+  </data>
+  <data name="ImportChange" xml:space="preserve">
+    <value>Changer de dossier…</value>
+  </data>
+  <data name="ImportChoose" xml:space="preserve">
+    <value>Choisir le dossier…</value>
+  </data>
+  <data name="ImportConfirm" xml:space="preserve">
+    <value>Importer</value>
+  </data>
+  <data name="ImportCopyOnly" xml:space="preserve">
+    <value>Les copier seulement</value>
+  </data>
+  <data name="ImportCopyOnlyHelp" xml:space="preserve">
+    <value>Vous choisirez ensuite lesquelles réviser (Santé du coffre › Fichiers non suivis).</value>
+  </data>
+  <data name="ImportEmptyAction" xml:space="preserve">
+    <value>Importer des notes existantes</value>
+  </data>
+  <data name="ImportFolder" xml:space="preserve">
+    <value>Importer un dossier de notes…</value>
+  </data>
+  <data name="ImportHelp" xml:space="preserve">
+    <value>Un coffre Obsidian, un dossier de notes Typora ou VS Code… Il est copié dans « Fiches », sous-dossiers compris : les liens [[…]] deviennent des liens ordinaires et les images suivent leur fiche. Le dossier d'origine n'est pas modifié.</value>
+  </data>
+  <data name="ImportPick" xml:space="preserve">
+    <value>Choisissez le dossier de notes à importer</value>
+  </data>
+  <data name="ImportRefused" xml:space="preserve">
+    <value>L'import n'a pas abouti : {0}</value>
+  </data>
+  <data name="ImportReview" xml:space="preserve">
+    <value>Révision des fiches importées</value>
+  </data>
+  <data name="ImportRunning" xml:space="preserve">
+    <value>Import en cours. Il continue si vous fermez cette fenêtre.</value>
+  </data>
+  <data name="ImportTitle" xml:space="preserve">
+    <value>Importer un dossier de notes</value>
+  </data>
+  <data name="ImportTrack" xml:space="preserve">
+    <value>Les mettre toutes en révision</value>
+  </data>
+  <data name="ImportTrackHelp" xml:space="preserve">
+    <value>Aujourd'hui vaut J0 pour chacune : toutes seront à revoir demain (J1).</value>
+  </data>
+  <data name="Imported" xml:space="preserve">
+    <value>Dossier « {0} » importé.</value>
+  </data>
+  <data name="MoreActions" xml:space="preserve">
+    <value>Plus d'actions</value>
+  </data>
+  <data name="Network" xml:space="preserve">
+    <value>[Schéma réseau]</value>
+  </data>
+  <data name="NetworkNamed" xml:space="preserve">
+    <value>[Schéma réseau : {0}]</value>
+  </data>
+  <data name="PdfFailed" xml:space="preserve">
+    <value>Le PDF n'a pas pu être préparé : le moteur web n'a pas répondu. Essayez la page web, puis imprimez-la depuis un navigateur.</value>
+  </data>
+  <data name="PickFolder" xml:space="preserve">
+    <value>Où enregistrer la fiche partagée ?</value>
+  </data>
+  <data name="Preparing" xml:space="preserve">
+    <value>Préparation de la fiche…</value>
+  </data>
+  <data name="ReportFollow" xml:space="preserve">
+    <value>Pour les mettre en révision une à une : Santé du coffre › Fichiers non suivis.</value>
+  </data>
+  <data name="ReportIgnoredMany" xml:space="preserve">
+    <value>{0} éléments non repris</value>
+  </data>
+  <data name="ReportIgnoredOne" xml:space="preserve">
+    <value>{0} élément non repris</value>
+  </data>
+  <data name="ReportIn" xml:space="preserve">
+    <value>{0} dans « {1} »</value>
+  </data>
+  <data name="ReportLinksMany" xml:space="preserve">
+    <value>{0} liens [[…]] convertis.</value>
+  </data>
+  <data name="ReportLinksOne" xml:space="preserve">
+    <value>{0} lien [[…]] converti.</value>
+  </data>
+  <data name="ReportResourcesMany" xml:space="preserve">
+    <value>{0} images ou pièces jointes copiées.</value>
+  </data>
+  <data name="ReportResourcesOne" xml:space="preserve">
+    <value>{0} image ou pièce jointe copiée.</value>
+  </data>
+  <data name="ReportSheetsMany" xml:space="preserve">
+    <value>{0} fiches importées</value>
+  </data>
+  <data name="ReportSheetsOne" xml:space="preserve">
+    <value>{0} fiche importée</value>
+  </data>
+  <data name="ReportTracked" xml:space="preserve">
+    <value>, dont {0} en révision (J1 demain)</value>
+  </data>
+  <data name="SaveAsTemplate" xml:space="preserve">
+    <value>Enregistrer comme modèle…</value>
+  </data>
+  <data name="Share" xml:space="preserve">
+    <value>Partager…</value>
+  </data>
+  <data name="ShareShort" xml:space="preserve">
+    <value>Partager</value>
+  </data>
+  <data name="ShareSheet" xml:space="preserve">
+    <value>Partager la fiche</value>
+  </data>
+  <data name="ShareTitle" xml:space="preserve">
+    <value>Partager « {0} »</value>
+  </data>
+  <data name="TemplateConfirm" xml:space="preserve">
+    <value>Enregistrer</value>
+  </data>
+  <data name="TemplateDone" xml:space="preserve">
+    <value>Modèle « {0} » enregistré dans le dossier « modeles » du coffre : il est proposé à la création d'une fiche.</value>
+  </data>
+  <data name="TemplateLabel" xml:space="preserve">
+    <value>Nom du modèle</value>
+  </data>
+  <data name="TemplateTitle" xml:space="preserve">
+    <value>Enregistrer comme modèle</value>
+  </data>
+</root>

@@ -150,6 +150,42 @@ public abstract class VaultBackupsTests(StorageKind storage)
         Assert.Contains("![a](images/carte.png) ![b](images/2-carte.png)", reader.ReadToEnd());
     }
 
+    [TestMethod]
+    public void A_shared_pdf_is_written_outside_the_vault_and_overwrites_nothing()
+    {
+        using var folder = TemporaryVault.Empty(storage);
+        using var outside = TemporaryVault.Empty();
+        using var vault = folder.Initialize(Now);
+        var id = vault.CreateSheet("Cours", "Carte", "Du texte.\n", Now);
+        byte[] pdf = [37, 80, 68, 70];
+
+        var first = vault.ShareSheetAsPdf(id, outside.Root, pdf);
+        var second = vault.ShareSheetAsPdf(id, outside.Root, pdf);
+
+        Assert.AreEqual("Carte.pdf", Path.GetFileName(first));
+        Assert.AreEqual("Carte (2).pdf", Path.GetFileName(second));
+        CollectionAssert.AreEqual(pdf, File.ReadAllBytes(first));
+        Assert.AreEqual(VaultErrorKind.InvalidPath, Assert.ThrowsExactly<VaultException>(() => vault.ShareSheetAsPdf(id, outside.Root, ReadOnlyMemory<byte>.Empty)).Kind);
+        Assert.AreEqual(VaultErrorKind.InvalidPath, Assert.ThrowsExactly<VaultException>(() => vault.ShareSheetAsPdf(id, outside.Root, new byte[VaultSession.MaxSharedBytes + 1])).Kind);
+        Assert.ThrowsExactly<VaultException>(() => vault.ShareSheetAsPdf(id, folder.Root, pdf), "rien ne se partage dans le coffre");
+    }
+
+    [TestMethod]
+    public void The_images_of_a_prepared_page_are_embedded_without_anything_written()
+    {
+        using var folder = TemporaryVault.Empty(storage);
+        using var vault = folder.Initialize(Now);
+        folder.Write("fiches/Cours/carte.png", "image");
+
+        var embedded = vault.EmbedSharedImages("<img data-coffre=\"fiches/Cours/carte.png\" alt=\"a\"><img data-coffre=\"fiches/Cours/absente.png\" alt=\"b\">");
+
+        Assert.Contains("src=\"data:image/png;base64,aW1hZ2U=\"", embedded);
+        Assert.Contains("data-introuvable=\"fiches/Cours/absente.png\"", embedded);
+        Assert.DoesNotContain("data-coffre", embedded, "aucune image ne reste à chercher dans le coffre");
+        Assert.ThrowsExactly<ArgumentNullException>(() => vault.EmbedSharedImages(null!));
+        Assert.AreEqual(VaultErrorKind.InvalidPath, Assert.ThrowsExactly<VaultException>(() => vault.EmbedSharedImages(new string('a', VaultSession.MaxSharedBytes + 1))).Kind);
+    }
+
     protected static string Zip(string path, params (string Name, byte[] Content)[] entries)
     {
         using var archive = ZipFile.Open(path, ZipArchiveMode.Create);

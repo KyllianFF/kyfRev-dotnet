@@ -12,6 +12,7 @@ namespace KyfRev.Application.Ports;
 public interface IVault :
     IDisposable,
     ISheetStore,
+    ISearchStore,
     ISheetEditor,
     IFolderStore,
     ITrashStore,
@@ -51,6 +52,13 @@ public interface ISheetStore
     /// <summary>Toutes les fiches, par dossier puis par titre.</summary>
     IReadOnlyList<VaultSheet> SheetList();
 
+    /// <summary>Les fiches qui mènent à la fiche <paramref name="id"/>, par titre.</summary>
+    /// <exception cref="OperationCanceledException">La demande a été annulée.</exception>
+    IReadOnlyList<Backlink> Backlinks(string id, CancellationToken cancellation);
+
+    /// <summary>Le début de la fiche située à <paramref name="path"/> (chemin dans le coffre) ; rien s'il n'y en a pas.</summary>
+    SheetPreview? PreviewOf(string path, DateOnly day);
+
     /// <summary>Le glossaire : les définitions hors corbeille, par dossier, puis par terme.</summary>
     IReadOnlyList<VaultDefinition> Definitions(DateOnly day);
 
@@ -72,6 +80,28 @@ public interface ISheetStore
 
     /// <summary>Écrit la fiche au format demandé dans un dossier hors du coffre ; rend le fichier écrit.</summary>
     string ShareSheet(string id, ShareFormat format, string folder, string? content);
+
+    /// <summary>Écrit le PDF de la fiche, préparé par l'interface, dans un dossier hors du coffre ; rend le fichier écrit.</summary>
+    string ShareSheetAsPdf(string id, string folder, ReadOnlyMemory<byte> pdf);
+
+    /// <summary>Une page préparée pour le partage, ses images du coffre intégrées : rien d'autre n'en sort.</summary>
+    string EmbedSharedImages(string page);
+}
+
+/// <summary>
+/// Recherche dans le coffre : une lecture de bout en bout, par le stockage du coffre, en clair comme chiffré. Aucun index
+/// n'est écrit, et rien de ce qui est cherché ou trouvé ne quitte le coffre. Annulée, une recherche rend ce qu'elle a déjà trouvé.
+/// </summary>
+public interface ISearchStore
+{
+    /// <summary>Les fiches qui contiennent tous les mots, dans leur titre, leurs étiquettes ou leur texte, par identifiant.</summary>
+    IReadOnlyList<SheetHit> SearchSheets(string query, CancellationToken cancellationToken);
+
+    /// <summary>Les passages et les définitions hors corbeille qui contiennent tous les mots, par titre de fiche, puis par terme ; rien sans mot.</summary>
+    IReadOnlyList<AnnotationHit> SearchAnnotations(string query, CancellationToken cancellationToken);
+
+    /// <summary>Les citations hors corbeille qui contiennent tous les mots, par auteur, puis par texte ; rien sans mot.</summary>
+    IReadOnlyList<QuoteHit> SearchQuotes(string query, CancellationToken cancellationToken);
 }
 
 /// <summary>Édition : enregistrement avec détection de conflit, versions, ressources.</summary>
@@ -140,8 +170,11 @@ public interface ITrashStore
 /// <summary>Méthode des J d'une fiche ou d'un passage.</summary>
 public interface IReviewStore
 {
-    /// <summary>Valide la révision attendue (une seule par élément et par jour).</summary>
-    ReviewOutcome ValidateReview(ItemKind kind, string id, Moment now);
+    /// <summary>
+    /// Valide la révision attendue (une seule par élément et par jour). <paramref name="reviewDate"/> antidate la
+    /// révision (« je l'ai révisée hier ») ; rien : aujourd'hui.
+    /// </summary>
+    ReviewOutcome ValidateReview(ItemKind kind, string id, Moment now, DateOnly? reviewDate = null);
 
     /// <summary>Reporte l'échéance au jour <paramref name="newDueDate"/>.</summary>
     void Postpone(ItemKind kind, string id, Moment now, DateOnly newDueDate);

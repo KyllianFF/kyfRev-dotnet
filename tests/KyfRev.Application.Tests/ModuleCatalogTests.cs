@@ -45,7 +45,7 @@ public sealed class ModuleCatalogTests
     [TestMethod]
     public void Extension_points_are_plain_values()
     {
-        Assert.AreEqual(new SearchHit("fiche", "f_1", "Mitose", "…prophase…"), new SearchHit("fiche", "f_1", "Mitose", "…prophase…"));
+        Assert.AreEqual(new SearchHit(SearchKinds.Sheet, "f_1", "Mitose", []), new SearchHit(SearchKinds.Sheet, "f_1", "Mitose", []));
         Assert.AreEqual("citations/x.md", new HealthNotice("citations/x.md", "illisible").Path);
         Assert.IsNull(new DashboardCard("Titre", "Texte", null).Detail);
         Assert.AreEqual(60, new NavigationEntry("citations", "Citations", 60).Order);

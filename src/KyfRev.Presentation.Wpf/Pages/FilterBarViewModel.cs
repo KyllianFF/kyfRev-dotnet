@@ -75,6 +75,15 @@ public sealed partial class FilterBarViewModel : ObservableObject
     /// <summary>Les filtres, dans l'ordre de la barre.</summary>
     public IReadOnlyList<ListFilter> Filters => _filters;
 
+    /// <summary>Ce que le champ de recherche dit, vide.</summary>
+    public string SearchPlaceholder { get; init; } = ListText.SearchPlaceholder;
+
+    /// <summary>Le nom du champ de recherche.</summary>
+    public string SearchName { get; init; } = ListText.SearchName;
+
+    /// <summary>Ce qui s'ajoute au filtrage quand le texte cherché change : relire le coffre, pour une recherche dans le texte.</summary>
+    internal Action? SearchChanged { get; init; }
+
     /// <summary>Le texte cherché.</summary>
     [ObservableProperty]
     public partial string Search { get; set; }
@@ -117,7 +126,11 @@ public sealed partial class FilterBarViewModel : ObservableObject
         return filter;
     }
 
-    partial void OnSearchChanged(string value) => _changed();
+    partial void OnSearchChanged(string value)
+    {
+        SearchChanged?.Invoke();
+        _changed();
+    }
 
     private void OnFilterChanged()
     {

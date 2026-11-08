@@ -308,7 +308,7 @@
                     <Button x:Name="PART_SecondaryButton" Content="{TemplateBinding SecondaryButtonText}" MinWidth="96"
                             Margin="0,0,8,0" IsCancel="True" />
                     <Button x:Name="PART_PrimaryButton" Content="{TemplateBinding PrimaryButtonText}" MinWidth="96"
-                            Style="{DynamicResource Kyf.Button.Primary}" IsDefault="True" />
+                            Style="{DynamicResource Kyf.Button.Primary}" IsDefault="True" IsEnabled="{TemplateBinding IsPrimaryEnabled}" />
                   </StackPanel>
                 </Grid>
               </Border>
@@ -320,6 +320,10 @@
             </Trigger>
             <Trigger Property="SecondaryButtonText" Value="">
               <Setter TargetName="PART_SecondaryButton" Property="Visibility" Value="Collapsed" />
+            </Trigger>
+            <!-- Pendant le travail, le focus attend ici : un second appui sur Entrée ne ferme rien. -->
+            <Trigger Property="IsWorking" Value="True">
+              <Setter TargetName="PART_SecondaryButton" Property="KeyboardNavigation.AcceptsReturn" Value="False" />
             </Trigger>
             <!-- Ce qui ne s'annule pas se voit, et Entrée ne le déclenche pas. -->
             <Trigger Property="IsDestructive" Value="True">

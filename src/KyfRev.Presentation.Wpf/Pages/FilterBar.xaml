@@ -31,7 +31,7 @@
         <ColumnDefinition Width="Auto" />
       </Grid.ColumnDefinitions>
       <TextBox x:Name="SearchBox" Text="{Binding Search, UpdateSourceTrigger=PropertyChanged}"
-               kyf:Field.Placeholder="{x:Static pages:ListText.SearchPlaceholder}" AutomationProperties.Name="{x:Static pages:ListText.SearchName}" />
+               kyf:Field.Placeholder="{Binding SearchPlaceholder}" AutomationProperties.Name="{Binding SearchName}" />
       <ToggleButton x:Name="FiltersToggle" Grid.Column="1" Margin="8,0,0,0" Padding="0" Style="{DynamicResource Kyf.Button.Subtle}"
                     HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" IsChecked="{Binding AreOpen}"
                     Visibility="{Binding ShowsToggle, Converter={StaticResource Visible}}" AutomationProperties.Name="{Binding ToggleLabel}">

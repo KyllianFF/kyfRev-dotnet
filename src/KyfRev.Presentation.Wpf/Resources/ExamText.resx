@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Exams" xml:space="preserve">
+    <value>Examens</value>
+  </data>
+  <data name="NewExam" xml:space="preserve">
+    <value>Examen…</value>
+  </data>
+  <data name="NewExamName" xml:space="preserve">
+    <value>Fixer une date d'examen</value>
+  </data>
+  <data name="EditorNew" xml:space="preserve">
+    <value>Date d'examen</value>
+  </data>
+  <data name="EditorEdit" xml:space="preserve">
+    <value>Modifier l'examen</value>
+  </data>
+  <data name="EditorHelp" xml:space="preserve">
+    <value>Le tableau de bord compte les jours qui restent et signale les révisions qui tomberaient après l'examen.</value>
+  </data>
+  <data name="NameLabel" xml:space="preserve">
+    <value>Nom</value>
+  </data>
+  <data name="NamePlaceholder" xml:space="preserve">
+    <value>Bac blanc</value>
+  </data>
+  <data name="FolderLabel" xml:space="preserve">
+    <value>Dossier concerné</value>
+  </data>
+  <data name="DateLabel" xml:space="preserve">
+    <value>Date</value>
+  </data>
+  <data name="Save" xml:space="preserve">
+    <value>Enregistrer</value>
+  </data>
+  <data name="WholeVault" xml:space="preserve">
+    <value>Tout le coffre</value>
+  </data>
+  <data name="NameRequired" xml:space="preserve">
+    <value>Donnez un nom à l'examen (« Bac blanc », « Partiel de janvier »…).</value>
+  </data>
+  <data name="DayRequired" xml:space="preserve">
+    <value>Choisissez la date de l'examen.</value>
+  </data>
+  <data name="Today" xml:space="preserve">
+    <value>aujourd'hui</value>
+  </data>
+  <data name="Tomorrow" xml:space="preserve">
+    <value>demain</value>
+  </data>
+  <data name="DaysLeft" xml:space="preserve">
+    <value>J-{0}</value>
+  </data>
+  <data name="PastOne" xml:space="preserve">
+    <value>passé depuis {0} jour</value>
+  </data>
+  <data name="PastMany" xml:space="preserve">
+    <value>passé depuis {0} jours</value>
+  </data>
+  <data name="ItemsOne" xml:space="preserve">
+    <value>{0} élément actif</value>
+  </data>
+  <data name="ItemsMany" xml:space="preserve">
+    <value>{0} éléments actifs</value>
+  </data>
+  <data name="WithIncluding" xml:space="preserve">
+    <value>{0}, dont </value>
+  </data>
+  <data name="AfterOne" xml:space="preserve">
+    <value>{0} prévu après l'examen</value>
+  </data>
+  <data name="AfterMany" xml:space="preserve">
+    <value>{0} prévus après l'examen</value>
+  </data>
+  <data name="Spoken" xml:space="preserve">
+    <value>Examen {0}, {1}, {2}, {3}</value>
+  </data>
+  <data name="TightenAction" xml:space="preserve">
+    <value>Resserrer…</value>
+  </data>
+  <data name="TightenName" xml:space="preserve">
+    <value>Resserrer avant l'examen {0}</value>
+  </data>
+  <data name="EditAction" xml:space="preserve">
+    <value>Modifier…</value>
+  </data>
+  <data name="WithdrawAction" xml:space="preserve">
+    <value>Retirer l'examen…</value>
+  </data>
+  <data name="MoreActions" xml:space="preserve">
+    <value>Autres actions de l'examen {0}</value>
+  </data>
+  <data name="TightenTitle" xml:space="preserve">
+    <value>Resserrer avant l'examen ?</value>
+  </data>
+  <data name="TightenFallsOne" xml:space="preserve">
+    <value>{0} échéance tombe</value>
+  </data>
+  <data name="TightenFallsMany" xml:space="preserve">
+    <value>{0} échéances tombent</value>
+  </data>
+  <data name="TightenMessage" xml:space="preserve">
+    <value>{0} après la veille de « {1} » ({2}). Elles seront ramenées avant, réparties de demain à la veille, comme des reports : l'historique les garde, et chaque échéance peut être déplacée de nouveau.</value>
+  </data>
+  <data name="TightenConfirm" xml:space="preserve">
+    <value>Resserrer</value>
+  </data>
+  <data name="NothingToTighten" xml:space="preserve">
+    <value>Rien à resserrer : aucune échéance ne tombe après l'examen.</value>
+  </data>
+  <data name="TightenedOne" xml:space="preserve">
+    <value>{0} échéance ramenée avant « {1} », réparties jusqu'à la veille.</value>
+  </data>
+  <data name="TightenedMany" xml:space="preserve">
+    <value>{0} échéances ramenées avant « {1} », réparties jusqu'à la veille.</value>
+  </data>
+  <data name="WithdrawTitle" xml:space="preserve">
+    <value>Retirer l'examen ?</value>
+  </data>
+  <data name="WithdrawMessage" xml:space="preserve">
+    <value>« {0} » ne sera plus affiché. Les calendriers de révision ne changent pas.</value>
+  </data>
+  <data name="WithdrawConfirm" xml:space="preserve">
+    <value>Retirer</value>
+  </data>
+  <data name="Withdrawn" xml:space="preserve">
+    <value>Examen « {0} » retiré ; les calendriers ne changent pas.</value>
+  </data>
+</root>

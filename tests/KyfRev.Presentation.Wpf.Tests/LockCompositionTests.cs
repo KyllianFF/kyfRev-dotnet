@@ -12,6 +12,24 @@ namespace KyfRev.Presentation.Wpf.Tests;
 public sealed class LockCompositionTests
 {
     [STATestMethod]
+    public void Every_view_that_searches_the_vault_stops_when_it_closes()
+    {
+        using var services = KyfRev.App.Composition.Build();
+        var registered = services.GetRequiredService<IServiceProviderIsService>();
+        var stopping = KyfRev.App.Composition.SearchingViews(services);
+
+        var searching = typeof(IStopsSearch).Assembly.GetTypes()
+            .Where(type => type is { IsClass: true, IsAbstract: false } && typeof(IStopsSearch).IsAssignableFrom(type) && registered.IsService(type))
+            .ToList();
+
+        Assert.IsNotEmpty(searching);
+        foreach (var type in searching)
+        {
+            Assert.IsTrue(stopping.Any(view => ReferenceEquals(view, services.GetRequiredService(type))), $"{type.Name} tiendrait le coffre pendant un verrouillage");
+        }
+    }
+
+    [STATestMethod]
     public void Every_view_the_application_keeps_forgets_the_vault_when_it_locks()
     {
         using var services = KyfRev.App.Composition.Build();
@@ -41,5 +59,20 @@ public sealed class LockCompositionTests
         {
             Assert.AreSame(services.GetRequiredService(view.GetType()), view);
         }
+    }
+
+    [STATestMethod]
+    public void Another_vault_forgets_what_the_views_read_from_the_previous_one()
+    {
+        using var ui = new UiThread();
+        using var services = KyfRev.App.Composition.Build();
+        var workload = services.GetRequiredService<KyfRev.Presentation.Wpf.Pages.WorkloadPageViewModel>();
+        var read = workload.RefreshCommand.ExecuteAsync(null);
+        UiThread.Until(() => read.IsCompleted);
+        Assert.IsTrue(workload.HasError, "sans coffre ouvert, la lecture est refusée, et la vue le garde");
+
+        KyfRev.App.Composition.VaultChanged(services);
+
+        Assert.IsFalse(workload.HasError);
     }
 }

@@ -4,6 +4,9 @@ Les scénarios T2 à T6, T9, T10, T11 et T18 de la conception, aux dates qu'elle
 (étape J8) : sans sa clé, l'application n'en montre que l'écran de déverrouillage ; son mot de passe, donné par le
 motif de valeur du champ (rien n'est tapé au clavier), l'ouvre comme un autre.
 
+`T7_a_vault_copied_elsewhere_keeps_its_archives_images_links_and_anchors` copie tout le dossier portable ailleurs. La comparaison du
+registre et d'AppData avant et après revient à l'essai de la version portable (J11) : l'hôte des scénarios redirige déjà ces dossiers.
+
 `J8_nothing_of_an_encrypted_vault_stays_readable_on_the_disk` vaut preuve pour le coffre chiffré : des marqueurs uniques
 dans le titre, le texte, un dessin, une annotation, une définition et la frappe ; la lecture, l'écriture, la recherche, le
 verrouillage et la fermeture ; et, avant le lancement, fiche écrite, coffre verrouillé et application fermée, les octets du
