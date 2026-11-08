@@ -685,7 +685,7 @@ public static class EditingText
     public const string AddToDictionary = "Ajouter au dictionnaire";
 
     /// <summary>Accepter un mot sans l'écrire dans le dictionnaire de Windows : un coffre chiffré ne le nourrit pas.</summary>
-    public const string AcceptUntilClosing = "Accepter jusqu'à la fermeture";
+    public const string AcceptUntilClosing = "Accepter jusqu'à la fermeture de kyfRev";
 
     /// <summary>Couper.</summary>
     public const string Cut = "Couper";

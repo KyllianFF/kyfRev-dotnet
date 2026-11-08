@@ -500,7 +500,7 @@ public static class VaultConversion
     /// pris, et rien ne s'y écrit pendant la copie. Rien n'y est écrit non plus : le fichier existe, ou la source n'en a pas,
     /// et rien n'est tenu. Rend de quoi le relâcher.
     /// </summary>
-    internal static FileStream? HoldSource(string source)
+    private static FileStream? HoldSource(string source)
     {
         var lockFile = VaultLayout.Absolute(source, VaultLayout.LockFile);
         if (!File.Exists(lockFile))

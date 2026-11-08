@@ -53,6 +53,23 @@ internal sealed class DiskScan
         return new ScanResult(files, skipped, findings);
     }
 
+    /// <summary>Vrai si plus aucun programme ne tient un fichier de <paramref name="folder"/> ouvert, en lecture comme en écriture.</summary>
+    public static bool IsReleased(string folder)
+    {
+        try
+        {
+            foreach (var file in Directory.EnumerateFiles(folder, "*", new EnumerationOptions { RecurseSubdirectories = true, AttributesToSkip = FileAttributes.ReparsePoint, IgnoreInaccessible = false }))
+            {
+                using var alone = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.None);
+            }
+            return true;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
+    }
+
     /// <summary>Le marqueur tel que l'écriraient l'UTF-8, l'UTF-16 et leur base64, à chacun des trois alignements.</summary>
     private static IEnumerable<(string Name, byte[] Bytes, bool AnyCase)> FormsOf(string marker)
     {

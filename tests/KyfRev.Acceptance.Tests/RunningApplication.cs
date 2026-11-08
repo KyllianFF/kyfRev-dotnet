@@ -334,9 +334,14 @@ internal sealed class RunningApplication : IDisposable
         Wait("UnlockButton");
     }
 
-    /// <summary>Attend qu'un élément de la fenêtre porte ce texte dans son nom : un dessin dessiné s'annonce par son code.</summary>
-    public void WaitNamed(string text) =>
-        Retry.WhileNull(() => _window.FindAllDescendants().FirstOrDefault(element => element.Name.Contains(text, StringComparison.Ordinal)), EnginePatience, Interval, throwOnTimeout: true, timeoutMessage: $"Rien ne s'annonce avec « {text} ».");
+    /// <summary>Attend l'image d'un dessin qui porte ce texte : tant qu'il n'est pas dessiné, son code seul est affiché, en texte.</summary>
+    public void WaitDrawing(string text) =>
+        Retry.WhileNull(
+            () => _window.FindAllDescendants(condition => condition.ByControlType(ControlType.Image)).FirstOrDefault(element => element.Name.Contains(text, StringComparison.Ordinal)),
+            EnginePatience,
+            Interval,
+            throwOnTimeout: true,
+            timeoutMessage: $"Le dessin de « {text} » n'est pas apparu.");
 
     /// <summary>« Ouvrir le coffre chiffré » (ou en clair), une fois la conversion faite.</summary>
     public void OpenConverted()

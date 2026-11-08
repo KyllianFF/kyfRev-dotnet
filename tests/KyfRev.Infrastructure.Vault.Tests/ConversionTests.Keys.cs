@@ -1,6 +1,7 @@
 using KyfRev.Cli;
 using KyfRev.Conversion;
 using KyfRev.Infrastructure.Crypto;
+using KyfRev.Infrastructure.Vault.Files;
 using KyfRev.Infrastructure.Vault.Tests.Support;
 
 namespace KyfRev.Infrastructure.Vault.Tests;
@@ -141,6 +142,65 @@ public sealed partial class ConversionTests
     }
 
     [TestMethod]
+    public void A_vault_that_never_opened_is_held_while_its_key_is_shown()
+    {
+        using var vault = TemporaryVault.CopyOfReference();
+        using var place = new Place();
+        Encrypt(vault, place);
+        Assert.IsFalse(File.Exists(VaultLayout.Absolute(place.Encrypted, VaultLayout.LockFile)), "un coffre tout juste chiffré n'a pas de verrou");
+
+        var result = VaultKeyChanges.NewRecoveryKey(place.Encrypted, Password, shown =>
+        {
+            using var taken = VaultLock.TryAcquire(place.Encrypted, DateTimeOffset.UnixEpoch, out _);
+            Assert.IsNull(taken, "l'application ne l'ouvre pas pendant la question");
+            return true;
+        });
+
+        Assert.IsTrue(result.Succeeded, result.Message);
+        using var free = VaultLock.TryAcquire(place.Encrypted, DateTimeOffset.UnixEpoch, out _);
+        Assert.IsNotNull(free, "le verrou est rendu ensuite");
+    }
+
+    [TestMethod]
+    public void A_header_changed_during_the_question_is_not_overwritten()
+    {
+        using var vault = TemporaryVault.CopyOfReference();
+        using var place = new Place();
+        Encrypt(vault, place);
+        var header = Path.Combine(place.Encrypted, EncryptedVault.HeaderFile);
+        var changed = File.ReadAllText(header) + " ";
+
+        var result = VaultKeyChanges.NewRecoveryKey(place.Encrypted, Password, _ =>
+        {
+            File.WriteAllText(header, changed);
+            return true;
+        });
+
+        Assert.IsFalse(result.Succeeded);
+        Assert.AreEqual(VaultKeyChanges.HeaderChanged, result.Message);
+        Assert.AreEqual(changed, File.ReadAllText(header));
+    }
+
+    [TestMethod]
+    public void Unreadable_password_settings_do_not_blame_the_password_and_the_recovery_key_repairs_them()
+    {
+        using var vault = TemporaryVault.CopyOfReference();
+        using var place = new Place();
+        var recovery = Encrypt(vault, place);
+        var header = Path.Combine(place.Encrypted, EncryptedVault.HeaderFile);
+        File.WriteAllText(header, File.ReadAllText(header).Replace(PasswordKeys.Pbkdf2, "scrypt", StringComparison.Ordinal));
+
+        var (refused, output) = Run(Lines(Password, OtherPassword, OtherPassword), "changer-mot-de-passe", place.Encrypted, "--pbkdf2");
+
+        Assert.AreEqual(VaultCommands.Refused, refused, output);
+        Assert.Contains(VaultKeyChanges.UnreadableSettings, output);
+        Assert.DoesNotContain(VaultConversion.WrongSecret, output);
+
+        Assert.AreEqual(VaultCommands.Success, Run(Lines(recovery, OtherPassword, OtherPassword), "changer-mot-de-passe", place.Encrypted, "--pbkdf2").ExitCode);
+        Assert.AreEqual(VaultCommands.Success, Run(Lines(OtherPassword), "dechiffrer", place.Encrypted, place.Decrypted).ExitCode);
+    }
+
+    [TestMethod]
     public void A_damaged_header_is_refused_without_being_rewritten()
     {
         using var vault = TemporaryVault.CopyOfReference();
@@ -166,7 +226,7 @@ public sealed partial class ConversionTests
 
     private static string[] ObjectsOf(Place place) =>
         [.. Directory.EnumerateFiles(place.Encrypted, "*", SearchOption.AllDirectories)
-            .Where(file => Path.GetFileName(file) != EncryptedVault.HeaderFile)
+            .Where(file => Path.GetFileName(file) != EncryptedVault.HeaderFile && !Path.GetRelativePath(place.Encrypted, file).StartsWith(VaultLayout.Tracking, StringComparison.Ordinal))
             .Order(StringComparer.Ordinal)
             .Select(file => file + ":" + Convert.ToHexString(File.ReadAllBytes(file)))];
 }

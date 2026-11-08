@@ -100,6 +100,20 @@ public sealed class DiskScanTests
         Assert.AreEqual("tenu.lock", result.Skipped.Single());
     }
 
+    [TestMethod]
+    public void A_file_still_open_for_writing_is_readable_but_not_released()
+    {
+        using var folder = new Disposable();
+        var file = folder.File("cache");
+        using (new FileStream(file, FileMode.Create, FileAccess.Write, FileShare.ReadWrite | FileShare.Delete))
+        {
+            Assert.IsEmpty(Scan.Of(folder.Path).Skipped, "le scan le lit malgré tout");
+            Assert.IsFalse(DiskScan.IsReleased(folder.Path));
+        }
+
+        Assert.IsTrue(DiskScan.IsReleased(folder.Path));
+    }
+
     private sealed class Disposable : IDisposable
     {
         public string Path { get; } = Directory.CreateTempSubdirectory("kyfrev-scan-").FullName;

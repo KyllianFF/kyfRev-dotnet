@@ -1,12 +1,13 @@
 using KyfRev.Infrastructure.Crypto;
+using KyfRev.Infrastructure.Vault;
 using KyfRev.Infrastructure.Vault.Files;
 
 namespace KyfRev.Conversion;
 
 /// <summary>
 /// Changer les clés d'un coffre chiffré fermé : seul son en-tête est réécrit, d'un seul geste ; ses fichiers et sa clé de
-/// données ne changent pas. Le coffre reste tenu tout du long, comme pendant une conversion : l'application ne l'ouvre pas
-/// pendant ce temps.
+/// données ne changent pas. Le verrou du coffre est tenu tout du long, créé s'il n'existe pas encore (un coffre tout juste
+/// chiffré n'en a pas) : ni l'application ni une autre commande ne l'ouvrent pendant ce temps.
 /// </summary>
 public static class VaultKeyChanges
 {
@@ -15,6 +16,12 @@ public static class VaultKeyChanges
 
     /// <summary>La nouvelle clé n'a pas été confirmée.</summary>
     internal const string NotNoted = "La nouvelle clé n'a pas été enregistrée : l'ancienne reste valable.";
+
+    /// <summary>L'en-tête a changé entre sa lecture et sa réécriture.</summary>
+    internal const string HeaderChanged = "L'en-tête du coffre a changé pendant l'opération : rien n'a été écrit.";
+
+    /// <summary>Les réglages du mot de passe ne se lisent plus : seule la clé de récupération ouvre encore l'en-tête.</summary>
+    internal const string UnreadableSettings = "Les réglages du mot de passe de ce coffre sont illisibles : ce mot de passe ne peut pas être essayé. La clé de récupération ouvre encore l'en-tête. Rien n'a été écrit.";
 
     /// <summary>
     /// Change le mot de passe du coffre chiffré <paramref name="root"/>. La clé de récupération et la clé retenue sur un poste
@@ -72,18 +79,29 @@ public static class VaultKeyChanges
             {
                 return ConversionResult.Refused(VaultConversion.OpenInKyfRev);
             }
-            using var held = VaultConversion.HoldSource(root);
-            var header = EncryptedVault.ReadHeader(root);
+            using var held = Hold(root);
+            var path = Path.Combine(root, EncryptedVault.HeaderFile);
+            var read = File.ReadAllBytes(path);
+            var header = VaultHeader.Read(read);
+            if (!CanTry(header, secret))
+            {
+                return ConversionResult.Refused(UnreadableSettings);
+            }
             dataKey = VaultConversion.OpenDataKey(root, secret);
             if (dataKey is null)
             {
                 return ConversionResult.Refused(VaultConversion.WrongSecret);
             }
             var (changed, result) = change(header, dataKey);
-            if (changed is not null)
+            if (changed is null)
             {
-                DiskStorage.Instance.Replace(Path.Combine(root, EncryptedVault.HeaderFile), changed.Write());
+                return result;
             }
+            if (!read.AsSpan().SequenceEqual(File.ReadAllBytes(path)))
+            {
+                return ConversionResult.Refused(HeaderChanged);
+            }
+            DiskStorage.Instance.Replace(path, changed.Write());
             return result;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or VaultCryptoException)
@@ -96,6 +114,39 @@ public static class VaultKeyChanges
             {
                 PasswordKeys.Clear(dataKey);
             }
+        }
+    }
+
+    /// <summary>Faux si <paramref name="secret"/> est un mot de passe et que l'en-tête ne dit plus comment le dériver.</summary>
+    private static bool CanTry(VaultHeader header, string secret)
+    {
+        var recovery = RecoveryKey.Parse(secret);
+        if (recovery is null)
+        {
+            return PasswordKeys.IsReadable(header.Password);
+        }
+        PasswordKeys.Clear(recovery);
+        return true;
+    }
+
+    /// <summary>Tient le verrou du coffre, comme l'application, en le créant au besoin ; un verrou déjà pris dit que le coffre est ouvert.</summary>
+    private static FileStream Hold(string root)
+    {
+        var lockFile = VaultLayout.Absolute(root, VaultLayout.LockFile);
+        Directory.CreateDirectory(Path.GetDirectoryName(lockFile)!);
+        var held = new FileStream(lockFile, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.ReadWrite | FileShare.Delete);
+        try
+        {
+            if (OperatingSystem.IsWindows() || OperatingSystem.IsLinux())
+            {
+                held.Lock(0, long.MaxValue);
+            }
+            return held;
+        }
+        catch (IOException exception)
+        {
+            held.Dispose();
+            throw new IOException(VaultConversion.OpenInKyfRev, exception);
         }
     }
 }

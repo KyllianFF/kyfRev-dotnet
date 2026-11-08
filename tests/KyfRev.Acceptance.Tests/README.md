@@ -6,8 +6,10 @@ motif de valeur du champ (rien n'est tapé au clavier), l'ouvre comme un autre.
 
 `J8_nothing_of_an_encrypted_vault_stays_readable_on_the_disk` vaut preuve pour le coffre chiffré : des marqueurs uniques
 dans le titre, le texte, un dessin, une annotation, une définition et la frappe ; la lecture, l'écriture, la recherche, le
-verrouillage et la fermeture ; et, à chaque étape, tous les octets du dossier d'essai (`DiskScan`), profil du moteur web
-et dossier temporaire compris. Il tape au clavier : il tourne dans le bac à sable et en intégration continue.
+verrouillage et la fermeture ; et, avant le lancement, fiche écrite, coffre verrouillé et application fermée, les octets du
+dossier d'essai (`DiskScan`), profil du moteur web et dossier temporaire compris. Un fichier tenu par le moteur est passé tant
+que l'application tourne ; le dernier passage attend qu'il soit lâché, et exige de tout avoir lu. Il tape au clavier : il
+tourne dans le bac à sable et en intégration continue.
 
 Chaque scénario lance la vraie application dans son propre processus et la pilote par UI Automation
 (FlaUI). Le programme lancé, `tools/acceptance-host`, est l'application telle quelle (ses services, sa

@@ -478,9 +478,14 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
                 item.FontWeight = FontWeights.SemiBold;
                 items.Add(item);
             }
-            var add = new MenuItem { Header = EditingText.AddWord(_spelling) };
-            add.Click += (_, _) => _ = Task.Run(() => _spelling.Add(word));
-            items.Add(add);
+            // Ici, le soulignement vient du moteur web, qu'un mot accepté pour la session n'atteint pas : sur un coffre chiffré,
+            // accepter un mot se propose dans le code Markdown, dont le correcteur est le nôtre.
+            if (!_spelling.AddsUntilClosing)
+            {
+                var add = new MenuItem { Header = EditingText.AddToDictionary };
+                add.Click += (_, _) => _ = Task.Run(() => _spelling.Add(word));
+                items.Add(add);
+            }
             items.Add(new Separator());
         }
         items.Add(Item(EditingText.PastePlain, new ClipboardRequest("pastePlain")));

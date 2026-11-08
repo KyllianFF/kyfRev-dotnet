@@ -555,7 +555,7 @@ public sealed class Scenarios
             running.OpenView("Fiches");
             running.OpenSheetRow(title);
             Assert.Contains(marks["texte"], running.SheetText(), "le texte est passé par la lecture");
-            running.WaitNamed(marks["dessin"]);
+            running.WaitDrawing(marks["dessin"]);
 
             running.StartWriting();
             running.TypeInSheet($"{marks["frappe"]} ");
