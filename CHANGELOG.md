@@ -13,6 +13,44 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   `portable.json`, un `LISEZMOI.txt` et l'empreinte SHA-256 de l'archive. Elle n'écrit rien dans le profil : un mot accepté
   reste en mémoire au lieu d'aller dans le dictionnaire de Windows, et les extensions téléchargées attendent dans ses
   données locales, comme en version installée, au lieu du dossier temporaire.
+- Recherche dans le coffre, comme la 0.x. La vue Fiches cherche aussi dans le texte, avec un extrait où les mots sont
+  surlignés. Ctrl+K donne, sous les commandes et à partir de deux lettres, les fiches, les passages, les définitions et les
+  citations qui contiennent tous les mots, sans tenir compte de la casse, des accents ni des ligatures ; un résultat ouvre
+  la fiche, le passage ou la citation. La recherche relit le coffre par son stockage, en clair comme chiffré : aucun index
+  n'est écrit, les mots cherchés ne vont jamais au journal, et le verrouillage arrête la recherche en cours puis oublie ce
+  qui a été cherché et trouvé. Une fiche ouverte en écriture par un autre programme est cherchée comme les autres, et le
+  lecteur d'écran dit quand rien ne correspond.
+- Partager une fiche : au clic droit dans la vue « Fiches » et dans le texte, et par le bouton « Partager » de la fiche, sous « ⋯ » quand
+  la fenêtre est étroite. Page web d'un seul fichier, images et formules comprises ; PDF au format A4, enregistré directement dans le
+  dossier choisi ; Markdown ; Markdown avec ses images (.zip) ; texte brut ; ou presse-papiers, avec la mise en forme. Le contenu est
+  préparé comme la lecture, et rien n'y est chargé d'ailleurs. Le fichier créé est donné. Sur un coffre chiffré, la fenêtre dit que ce
+  qui sort est en clair, et la fiche copiée ne va ni dans l'historique du presse-papiers ni sur les autres appareils.
+- « Enregistrer comme modèle… » : au clic droit d'une fiche ou de son texte, sous le nom proposé, celui de la fiche.
+- Importer un dossier de notes (Obsidian, Typora, VS Code…) : un bouton dans la vue « Fiches », le clic droit sur la place libre de la
+  liste, et la liste vide. On choisit d'entrer ou non en révision ; le bilan dit les fiches, les images, les liens et ce qui n'a pas été repris.
+  Fermer la fenêtre laisse l'import finir : un refus est dit dans la vue, et son bilan attend la prochaine ouverture.
+- Rétroliens et aperçu d'une fiche liée, comme dans la 0.x. Dans la vue d'une fiche, en lecture, le panneau « Fiches qui
+  mènent ici » suit les passages : chaque fiche, son dossier, le texte autour de son lien, et un clic pour l'ouvrir. Faute
+  de place, il s'ouvre par-dessus le texte, depuis le bouton « Rétroliens » ou le menu « ⋯ ». Au survol d'un lien vers une
+  fiche, ou quand il reçoit le focus, un aperçu dit son dossier, son titre, ses étiquettes, le début de son texte et son
+  étape ; Échap le referme, et un clic dessus ouvre la fiche. Un lien encore masqué par un trou, en révision, n'en montre
+  aucun. Seules les fiches qui mènent ici sont lues, rien n'est enregistré, et le tout se relit quand on revient sur la
+  fiche : un texte modifié, un renommage ou un déplacement se voient. Un disque devenu inaccessible se dit dans le panneau.
+- Les examens arrivent sur « Aujourd'hui » : un examen par dossier (ou pour tout le coffre), avec son compte à rebours, le
+  nombre d'éléments actifs et ceux prévus après lui ; « Examen… » en fixe un, « Modifier… » et « Retirer l'examen… » suivent,
+  et « Resserrer… » ramène, après confirmation, les échéances avant sa veille. Les lignes se pilotent au clavier : Entrée sur
+  un examen ouvre ses actions.
+- La charge des 30 prochains jours, depuis le bouton « Charge » d'« Aujourd'hui » : une colonne par jour, les échéances
+  connues pleines sous les étapes projetées dessinées, la moyenne, le jour le plus chargé. Un jour choisi montre ses
+  révisions ; « Déplacer… » reporte une échéance, sur le jour le moins chargé à trois jours au plus, comme dans la 0.x. À
+  l'étroit, les colonnes se rangent sur deux rangées pour rester visables.
+- La barre de révision propose « Valider à une date passée… », entre le lendemain de la dernière révision et aujourd'hui : le
+  calendrier repart de ce jour-là, et une révision en avance sur ce jour demande confirmation. « Reporter à une date… »
+  vient s'ajouter à demain et à dans 3 jours, comme dans la 0.x.
+- Un champ de date dans le design system (`DateField`) : une date qui se tape ou se choisit dans un calendrier en français,
+  aux couleurs de chaque thème, nommé pour le lecteur d'écran ; hors des jours permis, elle est refusée : le champ se vide,
+  dit pourquoi, par écrit et au lecteur d'écran, et aucune action ne part sur la date d'avant.
+- Un dialogue refermé rend le focus à ce qui le tenait, et changer de coffre efface tout ce que les vues avaient lu de l'ancien.
 - Coffre chiffré, lot 4 : la preuve qu'aucun texte en clair ne reste sur le disque. Sur un coffre chiffré, le menu d'un mot
   propose « Accepter jusqu'à la fermeture de kyfRev », dans le code Markdown, au lieu d'écrire dans le dictionnaire de Windows. Le journal masque tout chemin
   qui entre dans le coffre, et ne nomme plus la citation trouvée. Les moteurs web ne téléversent plus de rapport de plantage,

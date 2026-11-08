@@ -81,7 +81,22 @@ public sealed class VaultAdapter(VaultSession inner, IDisposable? owned = null) 
     public IReadOnlyList<VaultSheet> SheetList() => inner.SheetList();
 
     /// <inheritdoc/>
+    public IReadOnlyList<SheetHit> SearchSheets(string query, CancellationToken cancellationToken) => inner.SearchSheets(query, cancellationToken);
+
+    /// <inheritdoc/>
+    public IReadOnlyList<AnnotationHit> SearchAnnotations(string query, CancellationToken cancellationToken) => inner.SearchAnnotations(query, cancellationToken);
+
+    /// <inheritdoc/>
+    public IReadOnlyList<QuoteHit> SearchQuotes(string query, CancellationToken cancellationToken) => inner.SearchQuotes(query, cancellationToken);
+
+    /// <inheritdoc/>
     public string? SheetIdAt(string path) => inner.Sheets.FirstOrDefault(entry => entry.Sheet.Path.Value == path)?.Sheet.Id;
+
+    /// <inheritdoc/>
+    public IReadOnlyList<Backlink> Backlinks(string id, CancellationToken cancellation) => inner.Backlinks(id, cancellation);
+
+    /// <inheritdoc/>
+    public SheetPreview? PreviewOf(string path, DateOnly day) => inner.PreviewAt(path, day);
 
     /// <inheritdoc/>
     public void ChangeTitle(string id, string title, Moment now) => inner.ChangeTitle(id, title, now);
@@ -100,6 +115,12 @@ public sealed class VaultAdapter(VaultSession inner, IDisposable? owned = null) 
 
     /// <inheritdoc/>
     public string ShareSheet(string id, ShareFormat format, string folder, string? content) => inner.ShareSheet(id, format, folder, content);
+
+    /// <inheritdoc/>
+    public string ShareSheetAsPdf(string id, string folder, ReadOnlyMemory<byte> pdf) => inner.ShareSheetAsPdf(id, folder, pdf);
+
+    /// <inheritdoc/>
+    public string EmbedSharedImages(string page) => inner.EmbedSharedImages(page);
 
     /// <inheritdoc/>
     public SaveResult SaveBody(string id, string body, string expectedFingerprint, ulong session, Moment now) =>
@@ -184,9 +205,9 @@ public sealed class VaultAdapter(VaultSession inner, IDisposable? owned = null) 
     public int PurgeFolder(string folder, Moment now) => inner.PurgeFolder(folder, now);
 
     /// <summary>Valide la révision attendue : avec les règles de rappel du coffre pour une fiche, aucune pour un passage.</summary>
-    public ReviewOutcome ValidateReview(ItemKind kind, string id, Moment now) => kind == ItemKind.Sheet
-        ? inner.ApplyReview(id, tracking => tracking.ValidateReview(now, null, inner.Settings.Reminders))
-        : inner.ApplyAnnotationReview(id, tracking => tracking.ValidateReview(now, null, null));
+    public ReviewOutcome ValidateReview(ItemKind kind, string id, Moment now, DateOnly? reviewDate = null) => kind == ItemKind.Sheet
+        ? inner.ApplyReview(id, tracking => tracking.ValidateReview(now, reviewDate, inner.Settings.Reminders))
+        : inner.ApplyAnnotationReview(id, tracking => tracking.ValidateReview(now, reviewDate, null));
 
     /// <inheritdoc/>
     public void Postpone(ItemKind kind, string id, Moment now, DateOnly newDueDate) =>

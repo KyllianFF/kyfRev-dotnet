@@ -32,6 +32,13 @@ public sealed partial class SheetUseCases(VaultHost host, TimeProvider time, ILo
     [ZeroXCommand("liste_des_fiches")]
     public Outcome<IReadOnlyList<VaultSheet>> List() => host.Use(vault => vault.SheetList());
 
+    /// <summary>
+    /// Les fiches qui contiennent tous les mots de <paramref name="query"/> (titre, étiquettes et texte), chacune avec un
+    /// extrait de son texte. Annulée, la recherche rend ce qu'elle a déjà trouvé : à qui l'a annulée de ne pas s'en servir.
+    /// </summary>
+    [ZeroXCommand("chercher_dans_les_fiches")]
+    public Outcome<IReadOnlyList<SheetHit>> Search(string query, CancellationToken cancellationToken) => host.Use(vault => vault.SearchSheets(query, cancellationToken));
+
     /// <summary>Ouvre une fiche pour la lire ou la réviser.</summary>
     [ZeroXCommand("ouvrir_fiche")]
     public Outcome<OpenedSheet> Open(string id)
@@ -43,6 +50,21 @@ public sealed partial class SheetUseCases(VaultHost host, TimeProvider time, ILo
     /// <summary>Identifiant de la fiche située à <paramref name="path"/> (lien d'une fiche vers une autre).</summary>
     [ZeroXCommand("id_de_fiche")]
     public Outcome<string?> IdAt(string path) => host.Use(vault => vault.SheetIdAt(path));
+
+    /// <summary>Les fiches qui mènent à la fiche <paramref name="id"/>, par titre, avec le texte autour de leur premier lien.</summary>
+    /// <param name="id">La fiche.</param>
+    /// <param name="cancellation">Annule la recherche : une demande plus récente la remplace.</param>
+    /// <exception cref="OperationCanceledException">La recherche a été annulée.</exception>
+    [ZeroXCommand("retroliens")]
+    public Outcome<IReadOnlyList<Backlink>> Backlinks(string id, CancellationToken cancellation) => host.Use(vault => vault.Backlinks(id, cancellation));
+
+    /// <summary>Le début de la fiche située à <paramref name="path"/>, pour l'aperçu au survol d'un lien ; rien si aucune fiche n'y est.</summary>
+    [ZeroXCommand("apercu_fiche")]
+    public Outcome<SheetPreview?> Preview(string path)
+    {
+        var day = Present.Of(time).Now.Day;
+        return host.Use(vault => vault.PreviewOf(path, day));
+    }
 
     /// <summary>Nouveau titre : l'en-tête est mis à jour et le fichier renommé, liens compris.</summary>
     [ZeroXCommand("changer_titre_fiche")]
@@ -106,6 +128,18 @@ public sealed partial class SheetUseCases(VaultHost host, TimeProvider time, ILo
             ? host.Use(vault => vault.ShareSheet(id, format, folder, content))
             : Outcome.Refused<string>("Choisissez un dossier où enregistrer la fiche.");
     }
+
+    /// <summary>Partage en PDF : le document, préparé par l'interface, écrit dans <paramref name="folder"/>, hors du coffre ; rend son chemin.</summary>
+    public Outcome<string> SharePdf(string id, string folder, ReadOnlyMemory<byte> pdf)
+    {
+        ArgumentNullException.ThrowIfNull(folder);
+        return Path.IsPathFullyQualified(folder)
+            ? host.Use(vault => vault.ShareSheetAsPdf(id, folder, pdf))
+            : Outcome.Refused<string>("Choisissez un dossier où enregistrer la fiche.");
+    }
+
+    /// <summary>Une page préparée pour le partage, ses images du coffre intégrées : pour l'imprimer ou la copier.</summary>
+    public Outcome<string> EmbedSharedImages(string page) => host.Use(vault => vault.EmbedSharedImages(page));
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Dossier importé : {Sheets} fiche(s), {Tracked} suivie(s), {Resources} ressource(s), {Ignored} élément(s) ignoré(s).")]
     private static partial void LogImported(ILogger logger, int sheets, int tracked, int resources, int ignored);

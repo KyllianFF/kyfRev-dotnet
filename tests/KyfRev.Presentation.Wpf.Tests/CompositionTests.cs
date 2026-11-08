@@ -30,6 +30,8 @@ public sealed class CompositionTests
         Assert.IsInstanceOfType<ArchivesPageViewModel>(shell.MainNavigation.Single(item => item.Id == CorePages.Archives).Page);
         Assert.HasCount(2, shell.SecondaryNavigation);
         Assert.IsNotNull(shell.Locking, "Ctrl+Maj+L verrouille le coffre chiffré");
+        Assert.IsNotNull(shell.Search, "Ctrl+K cherche dans le coffre");
+        Assert.IsEmpty(shell.Search.Providers(), "aucun module actif");
         Assert.IsInstanceOfType<UserPresence>(services.GetRequiredService<IUserPresence>());
         Assert.IsNotNull(services.GetRequiredService<VaultLocking>());
         Assert.IsNotNull(services.GetRequiredService<AutoLock>());

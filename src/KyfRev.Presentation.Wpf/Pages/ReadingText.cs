@@ -34,14 +34,48 @@ public static class ReadingText
     /// <summary>Le plan de la fiche.</summary>
     public const string Outline = "Plan";
 
-    /// <summary>Le menu « ⋯ » de l'en-tête étroit : le plan et les passages.</summary>
-    public const string PanelsMenu = "Plan et passages";
+    /// <summary>Le menu « ⋯ » de l'en-tête étroit : le plan, les passages et les rétroliens.</summary>
+    public const string PanelsMenu = "Volets";
 
-    /// <summary>Le nom du menu « ⋯ » de l'en-tête étroit, avec le décompte des passages qu'il cache : « Plan et passages (Passages · 2) ».</summary>
-    public static string PanelsMenuWith(string passages) => $"{PanelsMenu} ({passages})";
+    /// <summary>Le nom du menu « ⋯ » de l'en-tête étroit, d'après ce qu'il cache : « Volets : Plan, Passages · 2 ».</summary>
+    public static string PanelsMenuOf(IEnumerable<string> panels) => string.Join(", ", panels) is { Length: > 0 } hidden ? $"{PanelsMenu} : {hidden}" : PanelsMenu;
 
     /// <summary>Les passages et définitions de la fiche.</summary>
     public const string Passages = "Passages";
+
+    /// <summary>Les fiches qui mènent à celle-ci, sur leur bouton.</summary>
+    public const string Backlinks = "Rétroliens";
+
+    /// <summary>Le titre du panneau des rétroliens, comme dans la 0.x.</summary>
+    public const string BacklinksTitle = "Fiches qui mènent ici";
+
+    /// <summary>« Rétroliens · 2 ».</summary>
+    public static string BacklinksOf(int count) => string.Create(CultureInfo.InvariantCulture, $"{Backlinks} · {count}");
+
+    /// <summary>« Fiches qui mènent ici · 2 ».</summary>
+    public static string BacklinksTitleOf(int count) => string.Create(CultureInfo.InvariantCulture, $"{BacklinksTitle} · {count}");
+
+    /// <summary>Une fiche archivée, dans un rétrolien ou un aperçu.</summary>
+    public const string Archived = "archivée";
+
+    /// <summary>« 2 liens ».</summary>
+    public static string LinksOf(int count) => string.Create(CultureInfo.InvariantCulture, $"{count} liens");
+
+    /// <summary>« Histoire › XVIIIe », pour le dossier « Histoire/XVIIIe ».</summary>
+    public static string FolderPath(string folder)
+    {
+        ArgumentNullException.ThrowIfNull(folder);
+        return folder.Replace("/", " › ", StringComparison.Ordinal);
+    }
+
+    /// <summary>L'aperçu d'une fiche sans texte.</summary>
+    public const string PreviewEmpty = "Fiche vide pour l'instant.";
+
+    /// <summary>« J7 · prévue ven. 9 oct. ».</summary>
+    public static string PreviewDue(string step, string day) => $"{step} · prévue {day}";
+
+    /// <summary>Le nom du bouton d'un aperçu, pour un lecteur d'écran.</summary>
+    public static string PreviewOpen(string title) => $"Ouvrir la fiche « {title} »";
 
     /// <summary>Un passage dont le texte a disparu de la fiche.</summary>
     public const string LostPassage = "Son texte n'est plus dans la fiche.";

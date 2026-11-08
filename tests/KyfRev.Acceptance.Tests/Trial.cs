@@ -15,7 +15,7 @@ namespace KyfRev.Acceptance.Tests;
 /// prépare par les cas d'usage pour ce qu'elle ne sait pas encore faire. Ses fichiers de suivi, relus
 /// tels quels, disent ce qui a été enregistré.
 /// </summary>
-internal sealed class Trial : IDisposable
+internal sealed partial class Trial : IDisposable
 {
     private readonly string _folder = Path.Combine(Path.GetTempPath(), "kyfrev-scenarios", Guid.NewGuid().ToString("N"));
 
@@ -71,6 +71,26 @@ internal sealed class Trial : IDisposable
     /// </summary>
     public bool HidesEverywhere(string text, string? sibling = null) =>
         Directory.EnumerateFiles(sibling is null ? Vault : Path.Combine(_folder, sibling), "*", SearchOption.AllDirectories).All(file => !File.ReadAllText(file).Contains(text, StringComparison.Ordinal));
+
+    /// <summary>Une copie de ce dossier ailleurs, comme un dossier portable emporté sur un autre lecteur : un nouvel essai.</summary>
+    public Trial CopiedElsewhere()
+    {
+        var copy = new Trial();
+        foreach (var file in Directory.EnumerateFiles(_folder, "*", SearchOption.AllDirectories))
+        {
+            var target = Path.Combine(copy._folder, Path.GetRelativePath(_folder, file));
+            Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+            File.Copy(file, target, overwrite: true);
+        }
+        return copy;
+    }
+
+    /// <summary>Les fichiers texte du coffre qui contiennent un chemin absolu : un coffre doit pouvoir changer de place.</summary>
+    public IReadOnlyList<string> AbsolutePaths() =>
+        [.. Directory.EnumerateFiles(Vault, "*", SearchOption.AllDirectories)
+            .Where(file => Path.GetExtension(file) is ".md" or ".json")
+            .Where(file => AbsolutePath().IsMatch(File.ReadAllText(file)))
+            .Select(file => Path.GetRelativePath(Vault, file))];
 
     /// <summary>Un dossier neuf de cet essai.</summary>
     public string NewFolder(string name) => Directory.CreateDirectory(Path.Combine(_folder, name)).FullName;
@@ -132,6 +152,10 @@ internal sealed class Trial : IDisposable
             FlaUI.Core.Tools.Retry.WhileException(() => Directory.Delete(_folder, recursive: true), TimeSpan.FromSeconds(20), TimeSpan.FromMilliseconds(250), throwOnTimeout: true);
         }
     }
+
+    // Une lettre de lecteur (pas le « s:/ » de https://), un chemin réseau ou un dossier d'utilisateur.
+    [System.Text.RegularExpressions.GeneratedRegex(@"(?<![A-Za-z])[A-Za-z]:[\\/]|\\\\|/Users/")]
+    private static partial System.Text.RegularExpressions.Regex AbsolutePath();
 
     private static JsonElement Parse(string text)
     {

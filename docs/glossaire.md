@@ -50,6 +50,8 @@ Ce glossaire fixe la correspondance. Les **clés JSON du coffre restent celles d
 | Dossier | `Folder` | — | Sous-dossier de `fiches/`. |
 | Étiquette | `Tag` | `etiquettes` (ou `tags`) | Mot-clé de classement, écrit dans l'en-tête. |
 | Ressource | `Attachment` | dossier `<Titre>.ressources/` | Image ou pièce jointe d'une fiche. |
+| Rétrolien | `Backlink` | — | Fiche qui contient un lien vers la fiche ouverte. Rien n'est enregistré. |
+| Aperçu d'une fiche | `SheetPreview` | — | Début d'une fiche liée, montré au survol ou au focus d'un lien. |
 | Passage annoté | `Passage` | `annotations` | Surlignage, avec ou sans commentaire, révisé par la méthode des J. |
 | Définition | `Definition` | `definition` | Annotation qui porte un terme et son explication. |
 | Annotation | `Annotation` | `.suivi/annotations/<id>.json` | Passage ou définition rattaché à une fiche par son identifiant. |
@@ -113,7 +115,7 @@ Ce glossaire fixe la correspondance. Les **clés JSON du coffre restent celles d
 | Fiche ouverte | `OpenedSheet` | — | Fiche lue pour la lecture ou la révision ; l'ouvrir ne valide rien. |
 | État de révision | `ReviewState` | — | Où en est une fiche ou un passage dans son calendrier, un jour donné. |
 | Tableau de bord | `Dashboard`, `DueItem` | — | Retards, révisions du jour, rappels en attente, sept jours à venir et charge des 30 jours. |
-| Charge | `WorkloadDay`, `ProjectedItem` | — | Par jour, les échéances connues et les étapes attendues si chaque révision est faite à son échéance. |
+| Charge | `WorkloadDay`, `ProjectedItem`, `WorkloadPageViewModel` | — | Par jour, les échéances connues et les étapes attendues si chaque révision est faite à son échéance. |
 | Archives | `ArchivedSheetEntry`, `ReminderStatus` | — | Fiches archivées et où elles en sont des rappels : au repos, éligible, en attente, exclue. |
 | Module | `IKyfRevModule`, `ModuleCatalog` | réglages du coffre (`citations.active`…) | Fonction facultative compilée avec l'application : ses services ne sont déclarés que si le coffre l'active. |
 | Point d'extension | `INavigationContributor`, `IDashboardWidget`, `IVaultHealthCheck`, `ISearchProvider`, `IExportFormat`, `IBlockRenderer` | — | Ce qu'un module peut apporter : entrée du menu, encart du tableau de bord, remarque de santé, résultats de recherche, export, rendu d'un bloc. |
@@ -135,7 +137,9 @@ Ce glossaire fixe la correspondance. Les **clés JSON du coffre restent celles d
 | Squelette | `Skeleton` | — | Place d'un contenu en cours de chargement. |
 | État vide | `EmptyState` | — | Ce qu'affiche une vue sans contenu, avec l'action qui la remplit. |
 | Coquille | `ShellWindow`, `ShellViewModel` | — | Fenêtre de l'application : menu latéral, page affichée, recherche, aide, mode concentration, zoom. |
-| Recherche de commandes | `ShellViewModel.PaletteResults` | — | Liste filtrée (Ctrl+K) des vues et des commandes, sans tenir compte des accents ni de la casse. |
+| Recherche (Ctrl+K) | `ShellViewModel.PaletteResults`, `GlobalSearch` | recherche globale | Les vues et les commandes qui correspondent, puis ce qui est trouvé dans le coffre (fiches, passages, définitions, citations), sans tenir compte des accents ni de la casse. |
+| Extrait | `ExcerptPiece`, `ExcerptText` | extrait | Le texte autour des mots trouvés, ceux-ci surlignés, sur deux lignes au plus. |
+| Recherche dans le texte | `SearchWords`, `ISearchStore` | recherche dans les fiches | Tous les mots, dans le titre ou le texte ; le coffre se relit de bout en bout, par son stockage : aucun index n'est écrit. |
 | Mode concentration | `ShellViewModel.IsFocusMode` | — | Menu masqué (Ctrl+Maj+F), comme dans la 0.x. |
 | Apparence | `AppearanceController`, `ISystemAppearance`, `ThemePreference` | — | Thème choisi ou celui de Windows ; contraste élevé et animations réduites suivis sans redémarrage. |
 | Racine de composition | `KyfRev.App` (`Composition`) | — | Seul endroit qui relie la présentation à l'infrastructure. |

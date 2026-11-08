@@ -291,4 +291,31 @@
   <data name="SomeDoneMany" xml:space="preserve">
     <value>{0} passages à revoir dès demain (J1). La fiche reste archivée.</value>
   </data>
+  <data name="CancelDay" xml:space="preserve">
+    <value>Annuler</value>
+  </data>
+  <data name="ChoosePostponeDay" xml:space="preserve">
+    <value>Reporter à une date…</value>
+  </data>
+  <data name="ChooseValidationDay" xml:space="preserve">
+    <value>Valider à une date passée…</value>
+  </data>
+  <data name="EarlyOnDayMessage" xml:space="preserve">
+    <value>Cette révision est prévue {0}. La valider au {1} fera repartir le calendrier de ce jour-là.</value>
+  </data>
+  <data name="PostponeDay" xml:space="preserve">
+    <value>Date du report</value>
+  </data>
+  <data name="PostponeOnThatDay" xml:space="preserve">
+    <value>Reporter à cette date</value>
+  </data>
+  <data name="ValidateOnThatDay" xml:space="preserve">
+    <value>Valider à cette date</value>
+  </data>
+  <data name="ValidatedOnDay" xml:space="preserve">
+    <value>{0} validée au {1}. Prochaine étape : {2}, {3}.</value>
+  </data>
+  <data name="ValidationDay" xml:space="preserve">
+    <value>Date de la révision</value>
+  </data>
 </root>

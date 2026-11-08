@@ -35,6 +35,33 @@ public static class ReviewText
     /// <summary>« Retour ».</summary>
     public static string Back => Text(nameof(Back));
 
+    /// <summary>« Annuler ».</summary>
+    public static string CancelDay => Text(nameof(CancelDay));
+
+    /// <summary>« Reporter à une date… ».</summary>
+    public static string ChoosePostponeDay => Text(nameof(ChoosePostponeDay));
+
+    /// <summary>« Valider à une date passée… ».</summary>
+    public static string ChooseValidationDay => Text(nameof(ChooseValidationDay));
+
+    /// <summary>« Cette révision est prévue …. La valider au … fera repartir le calendrier de ce jour-là. ».</summary>
+    public static string EarlyOnDayMessageOf(object due, object day) => Format("EarlyOnDayMessage", due, day);
+
+    /// <summary>« Date du report ».</summary>
+    public static string PostponeDay => Text(nameof(PostponeDay));
+
+    /// <summary>« Reporter à cette date ».</summary>
+    public static string PostponeOnThatDay => Text(nameof(PostponeOnThatDay));
+
+    /// <summary>« Valider à cette date ».</summary>
+    public static string ValidateOnThatDay => Text(nameof(ValidateOnThatDay));
+
+    /// <summary>« … validée au …. Prochaine étape : …, …. ».</summary>
+    public static string ValidatedOnDayOf(object step, object day, object next, object due) => Format("ValidatedOnDay", step, day, next, due);
+
+    /// <summary>« Date de la révision ».</summary>
+    public static string ValidationDay => Text(nameof(ValidationDay));
+
     /// <summary>« … cycle(s) terminé(s) ».</summary>
     public static string CyclesCompletedOf(object count) => Format("CyclesCompleted", count);
 

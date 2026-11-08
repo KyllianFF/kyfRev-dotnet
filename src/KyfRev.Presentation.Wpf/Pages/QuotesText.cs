@@ -11,6 +11,12 @@ public static class QuotesText
     /// <summary>« Citation ajoutée. ».</summary>
     public static string Added => Text(nameof(Added));
 
+    /// <summary>« Citation trouvée par la recherche. ».</summary>
+    public static string FoundBySearch => Text(nameof(FoundBySearch));
+
+    /// <summary>« Afficher toutes les citations ».</summary>
+    public static string ShowAll => Text(nameof(ShowAll));
+
     /// <summary>« ajoutée le {0} ».</summary>
     public static string AddedOnOf(object day) => Format("AddedOn", day);
 

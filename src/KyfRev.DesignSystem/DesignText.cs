@@ -32,6 +32,24 @@ public static class DesignText
     /// <summary>« OK ».</summary>
     public static string Ok => Text(nameof(Ok));
 
+    /// <summary>« Calendrier ».</summary>
+    public static string Calendar => Text(nameof(Calendar));
+
+    /// <summary>« Ouvrir le calendrier ».</summary>
+    public static string OpenCalendar => Text(nameof(OpenCalendar));
+
+    /// <summary>« Précédent ».</summary>
+    public static string PreviousPeriod => Text(nameof(PreviousPeriod));
+
+    /// <summary>« Suivant ».</summary>
+    public static string NextPeriod => Text(nameof(NextPeriod));
+
+    /// <summary>« jj/mm/aaaa ».</summary>
+    public static string DatePlaceholder => Text(nameof(DatePlaceholder));
+
+    /// <summary>« Date refusée : elle n'existe pas ou sort des jours permis. ».</summary>
+    public static string DateRefused => Text(nameof(DateRefused));
+
     private static string Text(string name) =>
         Resources.GetString(name, CultureInfo.CurrentUICulture) ?? throw new MissingManifestResourceException($"Texte « {name} » absent des ressources.");
 }

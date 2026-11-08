@@ -28,8 +28,10 @@ public sealed class DialogClosedEventArgs(RoutedEvent routedEvent, object source
 }
 
 /// <summary>
-/// Dialogue posé sur un voile, au-dessus de la page. Le focus y entre à l'ouverture et n'en sort
-/// pas au clavier ; Échap le ferme, Entrée choisit le bouton principal.
+/// Dialogue posé sur un voile, au-dessus de la page. Le focus y entre à l'ouverture, n'en sort pas
+/// au clavier, et revient à la fermeture à ce qui le tenait ; Échap le ferme, Entrée choisit le
+/// bouton principal. Pendant un travail lancé de là (<see cref="IsWorking"/>), le focus attend sur le
+/// bouton secondaire ; le travail fini, il revient au bouton principal.
 /// </summary>
 [TemplatePart(Name = PrimaryButtonPart, Type = typeof(ButtonBase))]
 [TemplatePart(Name = SecondaryButtonPart, Type = typeof(ButtonBase))]
@@ -69,12 +71,26 @@ public class Dialog : ContentControl
     public static readonly DependencyProperty SecondaryButtonTextProperty =
         DependencyProperty.Register(nameof(SecondaryButtonText), typeof(string), typeof(Dialog), new PropertyMetadata(DesignText.Cancel));
 
+    /// <summary>Le bouton principal répond : faux, par exemple, tant qu'il manque un choix ou qu'une action est en cours.</summary>
+    public static readonly DependencyProperty IsPrimaryEnabledProperty =
+        DependencyProperty.Register(nameof(IsPrimaryEnabled), typeof(bool), typeof(Dialog), new PropertyMetadata(true));
+
+    /// <summary>
+    /// Un travail lancé depuis le dialogue est en cours : ses champs sont désactivés, le focus attend donc sur le bouton
+    /// secondaire, qu'Entrée ne déclenche pas (un second appui n'y met pas fin). Il revient au bouton principal à la fin.
+    /// </summary>
+    public static readonly DependencyProperty IsWorkingProperty =
+        DependencyProperty.Register(nameof(IsWorking), typeof(bool), typeof(Dialog), new PropertyMetadata(false, (dialog, _) => ((Dialog)dialog).OnIsWorkingChanged()));
+
     /// <summary>Événement <see cref="Closed"/>.</summary>
     public static readonly RoutedEvent ClosedEvent =
         EventManager.RegisterRoutedEvent(nameof(Closed), RoutingStrategy.Bubble, typeof(EventHandler<DialogClosedEventArgs>), typeof(Dialog));
 
     private ButtonBase? _primaryButton;
     private ButtonBase? _secondaryButton;
+
+    /// <summary>Ce qui tenait le focus à l'ouverture.</summary>
+    private IInputElement? _focusBefore;
 
     static Dialog()
     {
@@ -130,6 +146,20 @@ public class Dialog : ContentControl
         set => SetValue(PrimaryButtonTextProperty, value);
     }
 
+    /// <inheritdoc cref="IsPrimaryEnabledProperty"/>
+    public bool IsPrimaryEnabled
+    {
+        get => (bool)GetValue(IsPrimaryEnabledProperty);
+        set => SetValue(IsPrimaryEnabledProperty, value);
+    }
+
+    /// <inheritdoc cref="IsWorkingProperty"/>
+    public bool IsWorking
+    {
+        get => (bool)GetValue(IsWorkingProperty);
+        set => SetValue(IsWorkingProperty, value);
+    }
+
     /// <summary>Libellé du bouton secondaire (« Annuler » par défaut) ; vide, il n'est pas proposé.</summary>
     public string SecondaryButtonText
     {
@@ -175,10 +205,63 @@ public class Dialog : ContentControl
     {
         if (isOpen)
         {
+            // Rouvert aussitôt après un refus, il a encore le focus : ce qu'on retient reste ce d'où l'on venait.
+            if (!IsKeyboardFocusWithin)
+            {
+                _focusBefore = Keyboard.FocusedElement;
+            }
             // Une fois le dialogue affiché, le focus va au premier élément qui le prend.
-            Dispatcher.BeginInvoke(DispatcherPriority.Input, () => MoveFocus(new TraversalRequest(FocusNavigationDirection.First)));
+            Dispatcher.BeginInvoke(DispatcherPriority.Input, FocusFirst);
+        }
+        else
+        {
+            Dispatcher.BeginInvoke(DispatcherPriority.Input, GiveFocusBack);
         }
     }
+
+    /// <summary>Le focus resté dans le dialogue revient à ce qui le tenait ; s'il est déjà allé ailleurs, il y reste.</summary>
+    private void GiveFocusBack()
+    {
+        if (IsOpen)
+        {
+            return;
+        }
+        var before = _focusBefore;
+        _focusBefore = null;
+        if (KeyboardFocus.IsLost())
+        {
+            before?.Focus();
+        }
+    }
+
+    private void OnIsWorkingChanged()
+    {
+        if (IsOpen)
+        {
+            // Une fois les boutons et les champs à jour : ce qui avait le focus vient d'être désactivé, ou masqué.
+            Dispatcher.BeginInvoke(DispatcherPriority.Input, SettleFocus);
+        }
+    }
+
+    /// <summary>Le focus reste dans le dialogue : il attend le travail sur le bouton secondaire, et sa fin sur le principal.</summary>
+    private void SettleFocus()
+    {
+        if (!IsOpen)
+        {
+            return;
+        }
+        var button = IsWorking ? _secondaryButton : _primaryButton;
+        if (button is { IsEnabled: true, IsVisible: true })
+        {
+            button.Focus();
+        }
+        else
+        {
+            FocusFirst();
+        }
+    }
+
+    private void FocusFirst() => MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
 
     private void OnPrimary(object sender, RoutedEventArgs e) => Close(DialogChoice.Primary);
 

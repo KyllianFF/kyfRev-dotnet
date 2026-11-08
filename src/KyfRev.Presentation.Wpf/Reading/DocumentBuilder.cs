@@ -885,11 +885,14 @@ internal sealed class DocumentBuilder
         }
     }
 
+    /// <summary>Deux écritures de KaTeX que ce moteur ne connaît pas, et qui se lisent très bien comme une fraction.</summary>
+    internal static string Drawable(string source) =>
+        source.Replace("\\tfrac", "\\frac", StringComparison.Ordinal).Replace("\\dfrac", "\\frac", StringComparison.Ordinal);
+
     /// <summary>Une formule dessinée ; une large se réduit plutôt que de faire défiler la page. Inconnue, elle reste lisible.</summary>
     internal static UIElement FormulaOrText(string source, double size, bool block)
     {
-        // Deux écritures de KaTeX que ce moteur ne connaît pas, et qui se lisent très bien comme une fraction.
-        var drawn = source.Replace("\\tfrac", "\\frac", StringComparison.Ordinal).Replace("\\dfrac", "\\frac", StringComparison.Ordinal);
+        var drawn = Drawable(source);
         try
         {
             WpfTeXFormulaParser.Instance.Parse(drawn);

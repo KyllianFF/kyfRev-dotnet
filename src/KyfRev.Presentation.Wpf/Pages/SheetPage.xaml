@@ -98,6 +98,53 @@
         </DockPanel>
       </Border>
     </DataTemplate>
+
+    <!-- Les fiches qui mènent ici : un clic ouvre celle d'où part le lien. -->
+    <DataTemplate x:Key="BacklinksPanel">
+      <Border Background="{DynamicResource Kyf.Brush.SurfaceAlt}" BorderBrush="{DynamicResource Kyf.Brush.Divider}" BorderThickness="1" CornerRadius="{DynamicResource Kyf.Radius.Card}" Padding="12">
+        <DockPanel>
+          <TextBlock DockPanel.Dock="Top" Text="{Binding BacklinksHeading}" Style="{DynamicResource Kyf.Text.BodyStrong}" TextWrapping="Wrap" Margin="4,0,0,8"
+                     AutomationProperties.HeadingLevel="Level2" />
+          <kyf:Notification x:Name="BacklinksErrorMessage" DockPanel.Dock="Top" Severity="Warning" Message="{Binding BacklinksError}" IsOpen="{Binding HasBacklinksError, Mode=OneWay}" IsClosable="False" />
+          <!-- Virtualisée : une fiche d'index, liée par des milliers d'autres, ne crée que ce qui se voit. -->
+          <ItemsControl ItemsSource="{Binding Backlinks}" Focusable="False" VirtualizingPanel.IsVirtualizing="True"
+                        VirtualizingPanel.VirtualizationMode="Recycling" VirtualizingPanel.ScrollUnit="Pixel">
+            <ItemsControl.Template>
+              <ControlTemplate TargetType="ItemsControl">
+                <ScrollViewer CanContentScroll="True" Focusable="False" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                  <ItemsPresenter />
+                </ScrollViewer>
+              </ControlTemplate>
+            </ItemsControl.Template>
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <VirtualizingStackPanel />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate DataType="{x:Type pages:BacklinkEntry}">
+                <Button FocusVisualStyle="{DynamicResource Kyf.FocusVisual.Inset}" Style="{DynamicResource Kyf.Button.Subtle}" HorizontalContentAlignment="Stretch" HorizontalAlignment="Stretch" Padding="4,6"
+                        Command="{Binding DataContext.OpenBacklinkCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"
+                        AutomationProperties.Name="{Binding Spoken}">
+                  <StackPanel>
+                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    <WrapPanel Margin="0,2,0,0">
+                      <TextBlock Text="{Binding Folder}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,0,8,0" VerticalAlignment="Center"
+                                 Visibility="{Binding HasFolder, Converter={StaticResource Visible}}" />
+                      <kyf:Pill Kind="Archived" Text="{x:Static pages:ReadingText.Archived}" Margin="0,0,8,0" VerticalAlignment="Center"
+                                Visibility="{Binding IsArchived, Converter={StaticResource Visible}}" />
+                      <TextBlock Text="{Binding SeveralLinks}" Style="{DynamicResource Kyf.Text.Caption}" VerticalAlignment="Center"
+                                 Visibility="{Binding HasSeveralLinks, Converter={StaticResource Visible}}" />
+                    </WrapPanel>
+                    <reading:BacklinkExcerpt Parts="{Binding Excerpt}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,2,0,0" />
+                  </StackPanel>
+                </Button>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </DockPanel>
+      </Border>
+    </DataTemplate>
   </UserControl.Resources>
   <UserControl.InputBindings>
     <KeyBinding Key="Enter" Modifiers="Control" Command="{Binding ValidateShortcut}" />
@@ -124,7 +171,7 @@
           </StackPanel>
         </Button>
         <!-- Quand la place manque, l'en-tête tient sur une ligne, comme sur la maquette : l'enregistrement en icône, les modes
-             groupés, le plan et les passages sous « ⋯ ». Aucun bouton ne passe sous le retour. -->
+             groupés, les volets sous « ⋯ ». Aucun bouton ne passe sous le retour. -->
         <WrapPanel DockPanel.Dock="Right" HorizontalAlignment="Right">
           <StackPanel Orientation="Horizontal">
             <StackPanel.Style>
@@ -143,6 +190,8 @@
                           Visibility="{Binding HasOutline, Converter={StaticResource Visible}}" />
             <ToggleButton x:Name="PassagesToggle" Content="{Binding PassagesLabel}" IsChecked="{Binding IsPassagesOn}" Margin="0,0,8,0"
                           Visibility="{Binding HasPassages, Converter={StaticResource Visible}}" />
+            <ToggleButton x:Name="BacklinksToggle" Content="{Binding BacklinksLabel}" IsChecked="{Binding IsBacklinksOn}" Margin="0,0,8,0"
+                          ToolTip="{x:Static pages:ReadingText.BacklinksTitle}" Visibility="{Binding HasBacklinks, Converter={StaticResource Visible}}" />
           </StackPanel>
           <Border VerticalAlignment="Center" Margin="0,0,12,0">
             <Border.Style>
@@ -239,7 +288,31 @@
                 <TextBlock x:Name="ListenLabel" Text="{x:Static pages:ReadingText.Listen}" VerticalAlignment="Center" Margin="8,0,0,0" />
               </StackPanel>
             </ToggleButton>
-            <!-- En-tête étroit, hors de l'écriture : le plan et les passages sous « ⋯ » (à l'écriture, ils sont dans celui du ruban). -->
+            <!-- Toujours à portée, même la fiche défilée, comme dans la 0.x ; en-tête étroit, il passe sous « ⋯ ». -->
+            <Border Margin="8,0,0,0">
+              <Border.Style>
+                <Style TargetType="Border">
+                  <Setter Property="Visibility" Value="Collapsed" />
+                  <Style.Triggers>
+                    <MultiDataTrigger>
+                      <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding CanShare}" Value="True" />
+                        <Condition Binding="{Binding IsCompactHeader}" Value="False" />
+                      </MultiDataTrigger.Conditions>
+                      <Setter Property="Visibility" Value="Visible" />
+                    </MultiDataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </Border.Style>
+              <Button x:Name="ShareButton" Command="{Binding RequestShareCommand}" Style="{DynamicResource Kyf.Button.Tool}" MinHeight="40" Padding="12,0"
+                      ToolTip="{x:Static pages:SharingText.ShareSheet}" AutomationProperties.Name="{x:Static pages:SharingText.ShareSheet}">
+                <StackPanel Orientation="Horizontal">
+                  <kyf:Icon Text="{x:Static kyf:Icons.Share}" VerticalAlignment="Center" />
+                  <TextBlock x:Name="ShareLabel" Text="{x:Static pages:SharingText.ShareShort}" VerticalAlignment="Center" Margin="8,0,0,0" />
+                </StackPanel>
+              </Button>
+            </Border>
+            <!-- En-tête étroit, hors de l'écriture : le plan, les passages, les rétroliens et le partage sous « ⋯ » (à l'écriture, le plan, les passages et le partage sont dans celui du ruban). -->
             <Border Margin="4,0,0,0">
               <Border.Style>
                 <Style TargetType="Border">
@@ -250,6 +323,14 @@
                         <Condition Binding="{Binding IsWriting}" Value="False" />
                         <Condition Binding="{Binding IsCompactHeader}" Value="True" />
                         <Condition Binding="{Binding HasPanels}" Value="True" />
+                      </MultiDataTrigger.Conditions>
+                      <Setter Property="Visibility" Value="Visible" />
+                    </MultiDataTrigger>
+                    <MultiDataTrigger>
+                      <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding IsWriting}" Value="False" />
+                        <Condition Binding="{Binding IsCompactHeader}" Value="True" />
+                        <Condition Binding="{Binding CanShare}" Value="True" />
                       </MultiDataTrigger.Conditions>
                       <Setter Property="Visibility" Value="Visible" />
                     </MultiDataTrigger>
@@ -265,6 +346,13 @@
                               Visibility="{Binding HasOutline, Converter={StaticResource Visible}, FallbackValue=Collapsed}" />
                     <MenuItem x:Name="PassagesItem" Header="{Binding PassagesLabel}" IsCheckable="True" IsChecked="{Binding IsPassagesOn}"
                               Visibility="{Binding HasPassages, Converter={StaticResource Visible}, FallbackValue=Collapsed}" />
+                    <MenuItem x:Name="BacklinksItem" Header="{Binding BacklinksLabel}" IsCheckable="True" IsChecked="{Binding IsBacklinksOn}"
+                              Visibility="{Binding HasBacklinks, Converter={StaticResource Visible}, FallbackValue=Collapsed}" />
+                    <Separator Visibility="{Binding HasPanels, Converter={StaticResource Visible}, FallbackValue=Collapsed}" />
+                    <MenuItem x:Name="ShareItem" Header="{x:Static pages:SharingText.Share}" Command="{Binding RequestShareCommand}"
+                              Visibility="{Binding CanShare, Converter={StaticResource Visible}, FallbackValue=Collapsed}" />
+                    <MenuItem x:Name="TemplateItem" Header="{x:Static pages:SharingText.SaveAsTemplate}" Command="{Binding RequestSaveAsTemplateCommand}"
+                              Visibility="{Binding CanShare, Converter={StaticResource Visible}, FallbackValue=Collapsed}" />
                   </ContextMenu>
                 </Button.ContextMenu>
               </Button>
@@ -376,8 +464,24 @@
         <DockPanel>
           <ContentControl x:Name="OutlinePane" DockPanel.Dock="Left" Width="{x:Static pages:SheetPageViewModel.OutlineWidth}" Margin="0,0,16,0" Focusable="False" IsTabStop="False"
                           Content="{Binding}" ContentTemplate="{StaticResource OutlinePanel}" Visibility="{Binding ShowsOutline, Converter={StaticResource Visible}}" />
-          <ContentControl x:Name="PassagesPane" DockPanel.Dock="Right" Width="{x:Static pages:SheetPageViewModel.PassagesWidth}" Margin="16,0,0,0" Focusable="False" IsTabStop="False"
-                          Content="{Binding}" ContentTemplate="{StaticResource PassagesPanel}" Visibility="{Binding ShowsPassages, Converter={StaticResource Visible}}" />
+          <!-- Les passages et les rétroliens se partagent la colonne de droite ; seul, l'un des deux la prend toute. -->
+          <UniformGrid DockPanel.Dock="Right" Columns="1">
+            <ContentControl x:Name="PassagesPane" Width="{x:Static pages:SheetPageViewModel.PassagesWidth}" Margin="16,0,0,0" Focusable="False" IsTabStop="False"
+                            Content="{Binding}" ContentTemplate="{StaticResource PassagesPanel}" Visibility="{Binding ShowsPassages, Converter={StaticResource Visible}}" />
+            <ContentControl x:Name="BacklinksPane" Width="{x:Static pages:SheetPageViewModel.PassagesWidth}" Focusable="False" IsTabStop="False"
+                            Content="{Binding}" ContentTemplate="{StaticResource BacklinksPanel}" Visibility="{Binding ShowsBacklinks, Converter={StaticResource Visible}}">
+              <ContentControl.Style>
+                <Style TargetType="ContentControl">
+                  <Setter Property="Margin" Value="16,0,0,0" />
+                  <Style.Triggers>
+                    <DataTrigger Binding="{Binding ShowsPassages}" Value="True">
+                      <Setter Property="Margin" Value="16,12,0,0" />
+                    </DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </ContentControl.Style>
+            </ContentControl>
+          </UniformGrid>
 
           <!-- La fiche, à largeur de lecture ; elle défile seule, avec son titre. -->
           <Grid MaxWidth="{Binding TextWidth}">
@@ -392,10 +496,11 @@
                                 IsClosable="False" Margin="0,0,0,12" />
               <kyf:Notification x:Name="ProblemMessage" Severity="Warning" Message="{Binding Problem}" IsOpen="{Binding HasProblem, Mode=OneWay}"
                                 IsClosable="False" Margin="0,0,0,12" />
+              <kyf:Notification x:Name="DoneMessage" Severity="Success" Message="{Binding Done}" IsOpen="{Binding HasDone, Mode=OneWay}" Margin="0,0,0,12" />
             </StackPanel>
             <editing:SheetEditorView x:Name="EditorView" Grid.Row="1" DataContext="{Binding Editor}"
                                      Visibility="{Binding DataContext.IsWriting, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource Visible}}" />
-            <reading:SheetDocumentViewer x:Name="SheetText" Grid.Row="1" Visibility="{Binding IsReading, Converter={StaticResource Visible}}" Reading="{Binding Reading}" OpenLinkCommand="{Binding OpenLinkCommand}"
+            <reading:SheetDocumentViewer x:Name="SheetText" Grid.Row="1" Visibility="{Binding IsReading, Converter={StaticResource Visible}}" Reading="{Binding Reading}" OpenLinkCommand="{Binding OpenLinkCommand}" LinkPreview="{Binding LinkPreview}"
                                          Highlights="{Binding Highlights}" ActiveHighlight="{Binding ActivePassage}" Holes="{Binding Holes}" Words="{Binding Words}"
                                          PreviewMouseLeftButtonDown="OnTextPressed" PreviewMouseLeftButtonUp="OnTextReleased" PreviewKeyDown="OnTextKey"
                                          ContextMenuOpening="OnTextMenu"
@@ -412,6 +517,8 @@
                         Content="{Binding}" ContentTemplate="{StaticResource OutlinePanel}" Visibility="{Binding ShowsOutlineOverlay, Converter={StaticResource Visible}}" />
         <ContentControl x:Name="PassagesOverlay" HorizontalAlignment="Right" VerticalAlignment="Top" Width="{x:Static pages:SheetPageViewModel.PassagesOverlayWidth}" Focusable="False" IsTabStop="False"
                         Content="{Binding}" ContentTemplate="{StaticResource PassagesPanel}" Visibility="{Binding ShowsPassagesOverlay, Converter={StaticResource Visible}}" />
+        <ContentControl x:Name="BacklinksOverlay" HorizontalAlignment="Right" VerticalAlignment="Top" Width="{x:Static pages:SheetPageViewModel.PassagesOverlayWidth}" Focusable="False" IsTabStop="False"
+                        Content="{Binding}" ContentTemplate="{StaticResource BacklinksPanel}" Visibility="{Binding ShowsBacklinksOverlay, Converter={StaticResource Visible}}" />
       </Grid>
 
       <Border Grid.Row="3" Height="16" Visibility="{Binding IsWriting, Converter={StaticResource Visible}}" />
@@ -578,5 +685,7 @@
         </ItemsControl>
       </StackPanel>
     </kyf:Dialog>
+
+    <pages:SheetSharingDialogs x:Name="SharingDialogs" DataContext="{Binding Sharing}" />
   </Grid>
 </UserControl>

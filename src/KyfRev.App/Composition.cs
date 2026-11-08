@@ -18,6 +18,7 @@ using KyfRev.Modules.Schemas;
 using KyfRev.Presentation.Wpf.Editing;
 using KyfRev.Presentation.Wpf.Extensions;
 using KyfRev.Presentation.Wpf.Pages;
+using KyfRev.Presentation.Wpf.Reading;
 using KyfRev.Presentation.Wpf.Schemas;
 using KyfRev.Presentation.Wpf.Shell;
 using Microsoft.Extensions.DependencyInjection;
@@ -118,11 +119,22 @@ internal static class Composition
         services.AddSingleton(provider =>
         {
             var modules = provider.GetRequiredService<ActiveModules>();
-            return new DashboardPageViewModel(provider.GetRequiredService<ReminderUseCases>(), provider.GetRequiredService<SheetUseCases>(), provider.GetRequiredService<IReviewOpener>(), modules.Widgets, provider.GetRequiredService<ReviewUseCases>())
+            return new DashboardPageViewModel(provider.GetRequiredService<ReminderUseCases>(), provider.GetRequiredService<SheetUseCases>(), provider.GetRequiredService<IReviewOpener>(), modules.Widgets, provider.GetRequiredService<ReviewUseCases>(), provider.GetRequiredService<KyfRevApplication>().Exams, provider.GetRequiredService<FolderUseCases>(), provider.GetRequiredService<TimeProvider>())
             {
                 LookForNews = () => LookForQuoteAsync(modules),
             };
         });
+        // Partager une fiche et enregistrer un modèle, depuis la vue « Fiches » comme depuis la lecture : une seule demande à la fois.
+        services.AddSingleton(provider => new SheetSharingViewModel(
+            provider.GetRequiredService<SheetUseCases>(),
+            provider.GetRequiredService<TemplateUseCases>(),
+            provider.GetRequiredService<VaultUseCases>(),
+            provider.GetRequiredService<IFolderPicker>(),
+            new SharedSheetPictures(provider.GetRequiredService<MermaidEngine>(), () => provider.GetRequiredService<INetworkSchemas>()),
+            new SheetPrinter(Path.Combine(provider.GetRequiredService<VaultLocations>().LocalData, "WebView2")),
+            clock));
+        services.AddSingleton<FolderImportViewModel>();
+        services.AddSingleton<WorkloadPageViewModel>();
         services.AddSingleton<SheetsPageViewModel>();
         services.AddSingleton<DefinitionsPageViewModel>();
         services.AddSingleton<SettingsPageViewModel>();
@@ -133,6 +145,7 @@ internal static class Composition
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Trash);
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Exports);
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Encryption);
+        services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Search);
         services.AddSingleton(provider =>
         {
             void VaultChanged() => Composition.VaultChanged(provider);
@@ -248,8 +261,14 @@ internal static class Composition
                 provider.GetRequiredService<GalleryPageViewModel>());
             // Les fiches et les passages s'ouvrent dans la coquille.
             provider.GetRequiredService<ReviewNavigation>().Attach(shell);
+            provider.GetRequiredService<ReviewNavigation>().Workload = provider.GetRequiredService<WorkloadPageViewModel>();
             provider.GetRequiredService<MachineSettings>().Follow(provider.GetRequiredService<AppearanceController>(), shell);
             var modules = provider.GetRequiredService<ActiveModules>();
+            // La recherche (Ctrl+K) couvre le cœur et les modules actifs ; un résultat s'ouvre dans la coquille.
+            shell.Search = new GlobalSearch(
+                provider.GetRequiredService<SearchUseCases>(),
+                () => [.. modules.All<ISearchProvider>()],
+                new SearchHitOpener(provider.GetRequiredService<IReviewOpener>(), shell).Open);
             var extensionPages = provider.GetRequiredService<ExtensionPages>();
             void ShowEntries() => shell.SetModuleEntries([.. ModuleEntries(modules, provider.GetRequiredService<IExternalLinks>(), schemas => new SchemasPageViewModel(
                 schemas,
@@ -319,7 +338,8 @@ internal static class Composition
             () => VaultChanged(provider),
             () => DraftViews(provider),
             // La carte Chiffrement oublie dès le début : une dérivation qui finit pendant la fermeture ne s'y montre plus.
-            () => provider.GetRequiredService<DataSettingsViewModel>().Encryption?.Forget()));
+            () => provider.GetRequiredService<DataSettingsViewModel>().Encryption?.Forget(),
+            () => SearchingViews(provider)));
         services.AddSingleton(provider =>
         {
             var delay = provider.GetRequiredService<LockDelay>();
@@ -343,14 +363,18 @@ internal static class Composition
             direction,
             changed);
 
-    /// <summary>Un autre coffre est ouvert : les réglages lus de l'ancien sont oubliés, et l'espace de travail revient.</summary>
-    private static void VaultChanged(IServiceProvider provider)
+    /// <summary>
+    /// Un autre coffre est ouvert : tout ce que les vues avaient lu de l'ancien est oublié, comme à un verrouillage. Rien de
+    /// lui ne se montre sous le nouveau, pas même le temps d'une lecture ; un brouillon ne s'écrit jamais dans le nouveau, et
+    /// une clé de récupération préparée pour l'ancien ne s'y montre pas.
+    /// </summary>
+    internal static void VaultChanged(IServiceProvider provider)
     {
+        foreach (var view in ForgettingViews(provider))
+        {
+            view.Forget();
+        }
         provider.GetRequiredService<SettingsPageViewModel>().Forget();
-        // Un brouillon de l'ancien coffre ne s'écrit jamais dans le nouveau.
-        provider.GetRequiredService<DefinitionsPageViewModel>().Forget();
-        // Une clé de récupération préparée pour l'ancien coffre ne se montre pas dans le nouveau.
-        provider.GetRequiredService<DataSettingsViewModel>().Encryption?.Forget();
         provider.GetRequiredService<ShellViewModel>().ShowWorkspace();
     }
 
@@ -379,11 +403,22 @@ internal static class Composition
         provider.GetRequiredService<DefinitionsPageViewModel>(),
     ];
 
+    /// <summary>Les vues dont une recherche peut tenir le coffre : elles s'arrêtent dès qu'une fermeture est demandée.</summary>
+    internal static IStopsSearch[] SearchingViews(IServiceProvider provider) =>
+    [
+        provider.GetRequiredService<ShellViewModel>(),
+        provider.GetRequiredService<SheetsPageViewModel>(),
+    ];
+
     /// <summary>Les vues qui gardent ce qu'elles ont lu du coffre.</summary>
     internal static IForgetsVault[] ForgettingViews(IServiceProvider provider) =>
     [
+        provider.GetRequiredService<ShellViewModel>(),
         provider.GetRequiredService<DashboardPageViewModel>(),
+        provider.GetRequiredService<WorkloadPageViewModel>(),
         provider.GetRequiredService<SheetsPageViewModel>(),
+        provider.GetRequiredService<SheetSharingViewModel>(),
+        provider.GetRequiredService<FolderImportViewModel>(),
         provider.GetRequiredService<DefinitionsPageViewModel>(),
         provider.GetRequiredService<ArchivesPageViewModel>(),
         provider.GetRequiredService<StatisticsPageViewModel>(),

@@ -178,6 +178,97 @@ public sealed class LockTests
     }
 
     [STATestMethod]
+    public void The_searches_stop_before_the_lock_waits_for_the_vault()
+    {
+        using var ui = new UiThread();
+        using var scene = new Scene();
+        scene.OpenEncrypted(remember: false);
+        using var search = new StoppableSearch();
+        scene.Searches.Add(search);
+
+        // Une recherche tient le coffre, et ne le rend que lorsqu'on l'arrête ; sans cela, le fil de l'interface l'attendrait.
+        using var started = new ManualResetEventSlim();
+        var gaveBack = false;
+        var holding = Task.Run(() => scene.Vaults.App.Settings.Update(preferences =>
+        {
+            started.Set();
+            gaveBack = search.Stopped.Wait(TimeSpan.FromSeconds(5));
+            return preferences;
+        }));
+        Assert.IsTrue(started.Wait(TimeSpan.FromSeconds(10)));
+
+        var locking = scene.Locking.LockAsync();
+        UiThread.Until(() => locking.IsCompleted);
+
+        Assert.IsTrue(holding.Wait(TimeSpan.FromSeconds(10)));
+        Assert.IsTrue(gaveBack, "la recherche s'arrête avant que le verrouillage ne regarde le coffre");
+        Assert.IsTrue(locking.Result);
+        Assert.AreEqual(0, search.Resumes, "le coffre s'est fermé : rien ne repart");
+    }
+
+    [STATestMethod]
+    public void A_search_started_while_the_lock_saves_is_stopped_too()
+    {
+        using var ui = new UiThread();
+        using var scene = new Scene();
+        scene.OpenEncrypted(remember: false);
+        using var search = new StoppableSearch();
+        scene.Searches.Add(search);
+        var held = new HeldPage();
+        scene.Shell.Navigate(new NavigationItem("vue", "Vue", "", int.MaxValue, held));
+
+        var locking = scene.Locking.LockAsync();
+        Assert.AreEqual(1, search.Stops);
+        held.Finish(true);
+        UiThread.Until(() => locking.IsCompleted);
+
+        Assert.IsTrue(locking.Result);
+        Assert.AreEqual(2, search.Stops);
+    }
+
+    [STATestMethod]
+    public void A_lock_that_keeps_the_vault_open_starts_the_stopped_searches_again()
+    {
+        using var ui = new UiThread();
+        using var scene = new Scene();
+        scene.OpenEncrypted(remember: false);
+        using var search = new StoppableSearch();
+        scene.Searches.Add(search);
+        var held = new HeldPage();
+        scene.Shell.Navigate(new NavigationItem("vue", "Vue", "", int.MaxValue, held));
+
+        var locking = scene.Locking.LockAsync();
+        Assert.AreEqual(0, search.Resumes, "on ne sait pas encore");
+        held.Finish(false);
+        UiThread.Until(() => locking.IsCompleted);
+
+        Assert.IsFalse(locking.Result);
+        Assert.AreEqual(1, search.Stops);
+        Assert.AreEqual(1, search.Resumes);
+    }
+
+    [STATestMethod]
+    public void Nothing_to_lock_stops_no_search_unless_it_takes_a_look_at_the_vault()
+    {
+        using var ui = new UiThread();
+        using var scene = new Scene();
+        using var search = new StoppableSearch();
+        scene.Searches.Add(search);
+        var plain = scene.Vaults.CreateVault("Clair");
+        Assert.AreEqual(plain, scene.Vaults.App.Vaults.Open(plain).Vault);
+        scene.Shell.ShowWorkspace();
+
+        Assert.IsFalse(Run(scene.Locking.LockAsync()));
+        Assert.AreEqual(0, search.Stops, "un coffre en clair ne se verrouille pas : sa recherche continue");
+
+        // Annoncé verrouillable, il ne l'est plus quand on le regarde : ce qui a été arrêté repart.
+        scene.Shell.CanLock = true;
+        Assert.IsFalse(Run(scene.Locking.LockAsync()));
+        Assert.AreEqual(1, search.Stops);
+        Assert.AreEqual(1, search.Resumes);
+    }
+
+    [STATestMethod]
     public void A_running_session_is_kept_to_be_resumed_after_the_lock()
     {
         using var ui = new UiThread();
@@ -393,6 +484,26 @@ public sealed class LockTests
         public void Finish(bool saved) => _done.TrySetResult(saved);
     }
 
+    /// <summary>Une vue qui cherche : l'essai sait quand on l'arrête, et combien de fois elle repart.</summary>
+    private sealed class StoppableSearch : IStopsSearch, IDisposable
+    {
+        public ManualResetEventSlim Stopped { get; } = new();
+
+        public int Stops { get; private set; }
+
+        public int Resumes { get; private set; }
+
+        public void StopSearch()
+        {
+            Stops++;
+            Stopped.Set();
+        }
+
+        public void ResumeSearch() => Resumes++;
+
+        public void Dispose() => Stopped.Dispose();
+    }
+
     private sealed class FakePresence : IUserPresence
     {
         public event EventHandler? Away;
@@ -424,7 +535,8 @@ public sealed class LockTests
                     Shell.ShowWorkspace();
                 },
                 () => Drafts,
-                () => Order.Add($"début : {(Shell.Current.Page is UnlockPageViewModel ? "l'écran" : "les vues")}, le coffre {(Vaults.App.Vaults.State().Vault is null ? "fermé" : "ouvert")}"));
+                () => Order.Add($"début : {(Shell.Current.Page is UnlockPageViewModel ? "l'écran" : "les vues")}, le coffre {(Vaults.App.Vaults.State().Vault is null ? "fermé" : "ouvert")}"),
+                () => Searches);
             Shell.Locking = Locking.LockAsync;
         }
 
@@ -443,6 +555,9 @@ public sealed class LockTests
 
         /// <summary>Les vues non affichées qui gardent un brouillon.</summary>
         public List<ILeaving> Drafts { get; } = [];
+
+        /// <summary>Les vues dont une recherche peut tenir le coffre.</summary>
+        public List<IStopsSearch> Searches { get; } = [];
 
         /// <summary>Le coffre prévu, chiffré et déverrouillé ; l'espace de travail affiché.</summary>
         public void OpenEncrypted(bool remember)
