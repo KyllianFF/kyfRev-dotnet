@@ -165,6 +165,7 @@ public sealed class DateFieldTests
         Assert.AreEqual(DesignText.OpenCalendar, AutomationProperties.GetName(button));
         Assert.AreEqual(Icons.Calendar, button.Content);
         Assert.IsTrue(button.Focusable);
+        Assert.AreEqual(KeyboardNavigationMode.Continue, KeyboardNavigation.GetTabNavigation(field), "la tabulation passe du texte au bouton");
         Assert.AreEqual(design.Dictionary["Kyf.Button.Icon"], button.Style);
     }
 

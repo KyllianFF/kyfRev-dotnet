@@ -204,7 +204,7 @@ public sealed partial class ReviewBarViewModel : ObservableObject
     /// <summary>Quel jour la barre demande de choisir.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsChoosingDay), nameof(DayChoiceLabel), nameof(DayChoiceConfirm), nameof(EarliestDay), nameof(LatestDay))]
-    [NotifyCanExecuteChangedFor(nameof(ConfirmDayCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ConfirmDayCommand), nameof(ValidateCommand))]
     public partial ReviewDayChoice DayChoice { get; private set; }
 
     /// <summary>Le champ de date est affiché.</summary>
@@ -375,7 +375,8 @@ public sealed partial class ReviewBarViewModel : ObservableObject
 
     private DateOnly Today => DateOnly.FromDateTime(_time.GetLocalNow().DateTime);
 
-    private bool CanValidateNow => CanValidate && !IsBusy;
+    /// <summary>Le jour se choisit : Ctrl+Entrée, tapé dans la date, ne valide pas aujourd'hui à sa place.</summary>
+    private bool CanValidateNow => CanValidate && !IsBusy && !IsChoosingDay;
 
     private bool CanConfirmDay => IsChoosingDay && ChosenDay is not null && !IsBusy;
 

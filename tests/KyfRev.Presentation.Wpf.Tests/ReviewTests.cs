@@ -85,6 +85,7 @@ public sealed class ReviewTests
         // Fiche créée le 1er, on est le 3 : le 2 ou aujourd'hui sont possibles, jamais avant ni après.
         Assert.IsTrue(bar.CanAntedate);
         bar.ChooseValidationDayCommand.Execute(null);
+        Assert.IsFalse(bar.ValidateCommand.CanExecute(null), "Ctrl+Entrée ne valide pas aujourd'hui à la place du jour choisi");
         Assert.AreEqual(ReviewDayChoice.Validate, bar.DayChoice);
         Assert.IsTrue(bar.IsChoosingDay);
         Assert.AreEqual(ReviewText.ValidationDay, bar.DayChoiceLabel);
@@ -126,6 +127,7 @@ public sealed class ReviewTests
         Assert.IsFalse(bar.ConfirmDayCommand.CanExecute(null));
         bar.CancelDayCommand.Execute(null);
         Assert.AreEqual(ReviewDayChoice.None, bar.DayChoice);
+        Assert.IsTrue(bar.ValidateCommand.CanExecute(null));
     }
 
     [TestMethod]

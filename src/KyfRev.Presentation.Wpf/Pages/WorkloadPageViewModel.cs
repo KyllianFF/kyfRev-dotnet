@@ -198,9 +198,6 @@ public sealed partial class WorkloadPageViewModel : ObservableObject, INavigatio
         Error = string.Empty;
     }
 
-    /// <summary>« Charge — 30 prochains jours ».</summary>
-    public static string Title => WorkloadText.Title;
-
     /// <summary>Filtres proposés.</summary>
     public IReadOnlyList<Choice<DashboardFilter>> Filters { get; }
 

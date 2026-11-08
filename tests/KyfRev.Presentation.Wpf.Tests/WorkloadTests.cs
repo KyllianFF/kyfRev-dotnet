@@ -140,6 +140,12 @@ public sealed class WorkloadTests
 
         page.SelectedFilter = page.Filters[2];
         Assert.IsFalse(page.HasNote);
+
+        var settings = vault.App.Settings.Get().Value;
+        Assert.IsTrue(vault.App.Settings.Change(settings with { MaxPerDay = 1 }).Succeeded);
+        page.SelectedFilter = page.Filters[0];
+        await page.RefreshCommand.ExecuteAsync(null);
+        Assert.AreEqual("S'y ajoutent les rappels de consolidation : 1 fiche archivée par jour au plus, tirées au hasard.", page.Note);
     }
 
     [TestMethod]
@@ -173,6 +179,12 @@ public sealed class WorkloadTests
         var hidden = rows.Single(row => row.IsHidden);
         Assert.AreEqual(DashboardText.PassageToRecall, hidden.Heading);
         Assert.AreEqual("· Mitose › Étapes", hidden.Source);
+
+        // Le passage caché n'est nommé que par sa fiche, même pour le déplacer.
+        page.SelectedDay = page.Days[1];
+        page.PrepareMoveCommand.Execute(page.DueRows.Single(row => row.Heading == DueItemHeading.Hidden));
+        Assert.AreEqual("Déplacer J1 (passage de « Mitose ») au", page.MoveLabel);
+        page.SelectedDay = page.Days[4];
 
         page.SelectedDay = null;
         Assert.IsFalse(page.HasSelection);

@@ -433,6 +433,7 @@
     <Setter Property="MinHeight" Value="40" />
     <Setter Property="MinWidth" Value="176" />
     <Setter Property="FocusVisualStyle" Value="{x:Null}" />
+    <Setter Property="KeyboardNavigation.TabNavigation" Value="Continue" />
     <Setter Property="CalendarStyle" Value="{StaticResource Kyf.Calendar}" />
     <Setter Property="Template">
       <Setter.Value>
@@ -446,7 +447,7 @@
                   <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <DatePickerTextBox x:Name="PART_TextBox" Margin="{TemplateBinding Padding}" AutomationProperties.Name="{TemplateBinding AutomationProperties.Name}" />
-                <Button x:Name="PART_Button" Grid.Column="1" Style="{DynamicResource Kyf.Button.Icon}" Content="{x:Static kyf:Icons.Calendar}"
+                <Button x:Name="PART_Button" Grid.Column="1" Style="{DynamicResource Kyf.Button.Icon}" Width="36" Height="36" Content="{x:Static kyf:Icons.Calendar}"
                         ToolTip="{x:Static ds:DesignText.OpenCalendar}" AutomationProperties.Name="{x:Static ds:DesignText.OpenCalendar}" />
               </Grid>
             </Border>

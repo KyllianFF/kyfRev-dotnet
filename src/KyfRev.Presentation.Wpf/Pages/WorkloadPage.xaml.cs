@@ -12,12 +12,21 @@ internal sealed partial class WorkloadPage : UserControl
     public WorkloadPage()
     {
         InitializeComponent();
+        // Un clic sur une colonne : la liste le traite d'abord pour la choisir.
+        Chart.AddHandler(MouseUpEvent, new MouseButtonEventHandler(OnColumnReleased), handledEventsToo: true);
     }
 
     private WorkloadPageViewModel Page => (WorkloadPageViewModel)DataContext;
 
     /// <summary>La largeur des colonnes décide d'une rangée ou de deux.</summary>
-    private void OnChartSizeChanged(object sender, SizeChangedEventArgs e) => Page.ChartWidth = e.NewSize.Width;
+    private void OnChartSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        // La page qu'on quitte perd son contexte avant de disparaître.
+        if (DataContext is WorkloadPageViewModel page)
+        {
+            page.ChartWidth = e.NewSize.Width;
+        }
+    }
 
     /// <summary>Un clic sur le jour déjà choisi le désélectionne, comme dans la 0.x.</summary>
     private void OnColumnPressed(object sender, MouseButtonEventArgs e)
@@ -30,7 +39,13 @@ internal sealed partial class WorkloadPage : UserControl
     }
 
     /// <summary>Le détail du jour choisi se montre, même s'il est sous la ligne de flottaison à l'étroit.</summary>
-    private void OnColumnReleased(object sender, MouseButtonEventArgs e) => ShowDetail();
+    private void OnColumnReleased(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton == MouseButton.Left)
+        {
+            ShowDetail();
+        }
+    }
 
     private void OnColumnKeyDown(object sender, KeyEventArgs e)
     {

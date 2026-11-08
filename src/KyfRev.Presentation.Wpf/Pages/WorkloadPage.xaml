@@ -200,7 +200,7 @@
 
             <!-- Pas de défilement : les colonnes tiennent toujours dans la largeur, sur une rangée ou sur deux. -->
             <ListBox x:Name="Chart" ItemsSource="{Binding Days}" SelectedItem="{Binding SelectedDay}" ItemContainerStyle="{StaticResource DayColumn}" AutomationProperties.Name="{x:Static pages:WorkloadText.Days}"
-                     SizeChanged="OnChartSizeChanged" PreviewMouseLeftButtonDown="OnColumnPressed" MouseLeftButtonUp="OnColumnReleased" KeyDown="OnColumnKeyDown">
+                     SizeChanged="OnChartSizeChanged" PreviewMouseLeftButtonDown="OnColumnPressed" KeyDown="OnColumnKeyDown">
               <ListBox.Template>
                 <ControlTemplate TargetType="ListBox">
                   <ItemsPresenter />
