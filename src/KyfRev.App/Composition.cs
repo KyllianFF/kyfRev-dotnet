@@ -118,7 +118,7 @@ internal static class Composition
         services.AddSingleton(provider =>
         {
             var modules = provider.GetRequiredService<ActiveModules>();
-            return new DashboardPageViewModel(provider.GetRequiredService<ReminderUseCases>(), provider.GetRequiredService<SheetUseCases>(), provider.GetRequiredService<IReviewOpener>(), modules.Widgets, provider.GetRequiredService<ReviewUseCases>())
+            return new DashboardPageViewModel(provider.GetRequiredService<ReminderUseCases>(), provider.GetRequiredService<SheetUseCases>(), provider.GetRequiredService<IReviewOpener>(), modules.Widgets, provider.GetRequiredService<ReviewUseCases>(), provider.GetRequiredService<KyfRevApplication>().Exams, provider.GetRequiredService<FolderUseCases>(), provider.GetRequiredService<TimeProvider>())
             {
                 LookForNews = () => LookForQuoteAsync(modules),
             };
@@ -133,6 +133,7 @@ internal static class Composition
             new SheetPrinter(Path.Combine(provider.GetRequiredService<VaultLocations>().LocalData, "WebView2")),
             clock));
         services.AddSingleton<FolderImportViewModel>();
+        services.AddSingleton<WorkloadPageViewModel>();
         services.AddSingleton<SheetsPageViewModel>();
         services.AddSingleton<DefinitionsPageViewModel>();
         services.AddSingleton<SettingsPageViewModel>();
@@ -259,6 +260,7 @@ internal static class Composition
                 provider.GetRequiredService<GalleryPageViewModel>());
             // Les fiches et les passages s'ouvrent dans la coquille.
             provider.GetRequiredService<ReviewNavigation>().Attach(shell);
+            provider.GetRequiredService<ReviewNavigation>().Workload = provider.GetRequiredService<WorkloadPageViewModel>();
             provider.GetRequiredService<MachineSettings>().Follow(provider.GetRequiredService<AppearanceController>(), shell);
             var modules = provider.GetRequiredService<ActiveModules>();
             // La recherche (Ctrl+K) couvre le cœur et les modules actifs ; un résultat s'ouvre dans la coquille.
@@ -360,17 +362,18 @@ internal static class Composition
             direction,
             changed);
 
-    /// <summary>Un autre coffre est ouvert : les réglages lus de l'ancien sont oubliés, et l'espace de travail revient.</summary>
-    private static void VaultChanged(IServiceProvider provider)
+    /// <summary>
+    /// Un autre coffre est ouvert : tout ce que les vues avaient lu de l'ancien est oublié, comme à un verrouillage. Rien de
+    /// lui ne se montre sous le nouveau, pas même le temps d'une lecture ; un brouillon ne s'écrit jamais dans le nouveau, et
+    /// une clé de récupération préparée pour l'ancien ne s'y montre pas.
+    /// </summary>
+    internal static void VaultChanged(IServiceProvider provider)
     {
+        foreach (var view in ForgettingViews(provider))
+        {
+            view.Forget();
+        }
         provider.GetRequiredService<SettingsPageViewModel>().Forget();
-        // Un brouillon de l'ancien coffre ne s'écrit jamais dans le nouveau.
-        provider.GetRequiredService<DefinitionsPageViewModel>().Forget();
-        // Une clé de récupération préparée pour l'ancien coffre ne se montre pas dans le nouveau.
-        provider.GetRequiredService<DataSettingsViewModel>().Encryption?.Forget();
-        // Un partage ou un import partis de l'ancien coffre ne disent rien dans le nouveau.
-        provider.GetRequiredService<SheetSharingViewModel>().Forget();
-        provider.GetRequiredService<FolderImportViewModel>().Forget();
         provider.GetRequiredService<ShellViewModel>().ShowWorkspace();
     }
 
@@ -411,6 +414,7 @@ internal static class Composition
     [
         provider.GetRequiredService<ShellViewModel>(),
         provider.GetRequiredService<DashboardPageViewModel>(),
+        provider.GetRequiredService<WorkloadPageViewModel>(),
         provider.GetRequiredService<SheetsPageViewModel>(),
         provider.GetRequiredService<SheetSharingViewModel>(),
         provider.GetRequiredService<FolderImportViewModel>(),

@@ -211,6 +211,22 @@ public abstract class VaultAdapterTests(StorageKind storage)
     }
 
     [TestMethod]
+    public void A_review_dated_by_hand_reaches_the_session()
+    {
+        using var folder = TemporaryVault.Empty(storage);
+        using var vault = new VaultStore(storage: folder.Storage).Initialize(folder.Root, Now);
+        var id = vault.CreateSheet(null, "Mitose", "La prophase précède la métaphase.\n", Now);
+        var passage = vault.CreateAnnotation(id, Passage, null, Now);
+        var later = new Moment(Now.Day.AddDays(5), Now.Instant.AddDays(5));
+
+        Assert.IsInstanceOfType<NextStepScheduled>(vault.ValidateReview(ItemKind.Sheet, id, later, Now.Day.AddDays(2)));
+        Assert.IsInstanceOfType<NextStepScheduled>(vault.ValidateReview(ItemKind.Passage, passage, later, Now.Day.AddDays(3)));
+
+        Assert.AreEqual(Now.Day.AddDays(2), vault.ReviewStateOf(ItemKind.Sheet, id, later.Day).LastReview);
+        Assert.AreEqual(Now.Day.AddDays(3), vault.ReviewStateOf(ItemKind.Passage, passage, later.Day).LastReview);
+    }
+
+    [TestMethod]
     public void Dashboard_and_archives_reach_the_session()
     {
         using var folder = TemporaryVault.Empty(storage);

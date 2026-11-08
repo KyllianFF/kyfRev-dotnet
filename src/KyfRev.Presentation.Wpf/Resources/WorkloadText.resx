@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Title" xml:space="preserve">
+    <value>Charge — 30 prochains jours</value>
+  </data>
+  <data name="ShortTitle" xml:space="preserve">
+    <value>Charge</value>
+  </data>
+  <data name="Empty" xml:space="preserve">
+    <value>Aucune révision prévue d'ici 30 jours.</value>
+  </data>
+  <data name="Loading" xml:space="preserve">
+    <value>Chargement de la charge à venir</value>
+  </data>
+  <data name="Average" xml:space="preserve">
+    <value>En moyenne {0} par jour</value>
+  </data>
+  <data name="Peak" xml:space="preserve">
+    <value>{0} · le plus chargé : {1} ({2})</value>
+  </data>
+  <data name="Legend" xml:space="preserve">
+    <value>Légende</value>
+  </data>
+  <data name="LegendDue" xml:space="preserve">
+    <value>Échéances</value>
+  </data>
+  <data name="LegendProjected" xml:space="preserve">
+    <value>Projetées, si vous révisez à temps</value>
+  </data>
+  <data name="LegendAverage" xml:space="preserve">
+    <value>Moyenne</value>
+  </data>
+  <data name="Days" xml:space="preserve">
+    <value>Révisions par jour : choisissez un jour pour le détail</value>
+  </data>
+  <data name="TodayShort" xml:space="preserve">
+    <value>auj.</value>
+  </data>
+  <data name="NoReview" xml:space="preserve">
+    <value>aucune révision</value>
+  </data>
+  <data name="ReviewsOne" xml:space="preserve">
+    <value>{0} révision</value>
+  </data>
+  <data name="ReviewsMany" xml:space="preserve">
+    <value>{0} révisions</value>
+  </data>
+  <data name="WithProjectedOne" xml:space="preserve">
+    <value>{0}, dont {1} projetée</value>
+  </data>
+  <data name="WithProjectedMany" xml:space="preserve">
+    <value>{0}, dont {1} projetées</value>
+  </data>
+  <data name="DayName" xml:space="preserve">
+    <value>{0} : {1}</value>
+  </data>
+  <data name="DayTitle" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="RemindersOne" xml:space="preserve">
+    <value>S'y ajoutent les rappels de consolidation : {0} fiche archivée par jour au plus, tirées au hasard.</value>
+  </data>
+  <data name="RemindersMany" xml:space="preserve">
+    <value>S'y ajoutent les rappels de consolidation : {0} fiches archivées par jour au plus, tirées au hasard.</value>
+  </data>
+  <data name="Due" xml:space="preserve">
+    <value>Échéances</value>
+  </data>
+  <data name="Projected" xml:space="preserve">
+    <value>Projetées</value>
+  </data>
+  <data name="ProjectedHelp" xml:space="preserve">
+    <value>si les révisions d'ici là sont faites à temps ; elles suivent l'échéance qu'on déplace</value>
+  </data>
+  <data name="MoveAction" xml:space="preserve">
+    <value>Déplacer…</value>
+  </data>
+  <data name="MoveName" xml:space="preserve">
+    <value>Déplacer {0} : {1}</value>
+  </data>
+  <data name="MoveLabel" xml:space="preserve">
+    <value>Déplacer {0} ({1}) au</value>
+  </data>
+  <data name="MoveConfirm" xml:space="preserve">
+    <value>Déplacer</value>
+  </data>
+  <data name="MoveCancel" xml:space="preserve">
+    <value>Annuler</value>
+  </data>
+  <data name="BeyondChart" xml:space="preserve">
+    <value>Au-delà des 30 jours affichés.</value>
+  </data>
+  <data name="HintEmpty" xml:space="preserve">
+    <value>Ce jour-là : aucune révision.</value>
+  </data>
+  <data name="Hint" xml:space="preserve">
+    <value>Ce jour-là : {0}.</value>
+  </data>
+  <data name="Moved" xml:space="preserve">
+    <value>{0} ({1}) déplacée au {2}.</value>
+  </data>
+  <data name="HiddenPassage" xml:space="preserve">
+    <value>passage de « {0} »</value>
+  </data>
+</root>

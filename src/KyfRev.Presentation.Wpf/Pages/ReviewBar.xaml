@@ -131,6 +131,7 @@
               <ContextMenu x:Name="PostponeMenu" DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
                 <MenuItem x:Name="PostponeTomorrow" Header="{x:Static pages:ReviewText.PostponeTomorrow}" Command="{Binding PostponeTomorrowCommand}" />
                 <MenuItem x:Name="PostponeThreeDays" Header="{x:Static pages:ReviewText.PostponeThreeDays}" Command="{Binding PostponeThreeDaysCommand}" />
+                <MenuItem x:Name="PostponeOnDay" Header="{x:Static pages:ReviewText.ChoosePostponeDay}" Command="{Binding ChoosePostponeDayCommand}" />
               </ContextMenu>
             </Button.ContextMenu>
           </Button>
@@ -138,6 +139,8 @@
                   ToolTip="{x:Static pages:ReviewText.MoreActions}" AutomationProperties.Name="{x:Static pages:ReviewText.MoreActions}">
             <Button.ContextMenu>
               <ContextMenu x:Name="MoreMenu" DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                <MenuItem x:Name="ValidateOnDay" Header="{x:Static pages:ReviewText.ChooseValidationDay}" Command="{Binding ChooseValidationDayCommand}"
+                          Visibility="{Binding CanAntedate, Converter={StaticResource Visible}}" />
                 <MenuItem x:Name="Restart" Header="{x:Static pages:ReviewText.RestartAction}" Command="{Binding RequestRestartCommand}" />
                 <MenuItem x:Name="Archive" Header="{x:Static pages:ReviewText.ArchiveAction}" Command="{Binding RequestArchiveCommand}"
                           Visibility="{Binding IsSheet, Converter={StaticResource Visible}}" />
@@ -181,6 +184,16 @@
       </kyf:AdaptiveRow>
 
       <StackPanel Grid.Row="1">
+        <!-- Le jour d'une révision déjà faite, ou d'un report. -->
+        <StackPanel x:Name="DayForm" Margin="0,12,0,0" Visibility="{Binding IsChoosingDay, Converter={StaticResource Visible}}" IsVisibleChanged="OnDayFormVisibleChanged">
+          <TextBlock Text="{Binding DayChoiceLabel}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,0,0,4" />
+          <WrapPanel>
+            <kyf:DateField x:Name="ChosenDay" Width="200" Margin="0,0,8,4" Day="{Binding ChosenDay}" Minimum="{Binding EarliestDay}" Maximum="{Binding LatestDay}"
+                           AutomationProperties.Name="{Binding DayChoiceLabel}" />
+            <Button x:Name="ConfirmDay" Content="{Binding DayChoiceConfirm}" Command="{Binding ConfirmDayCommand}" Style="{DynamicResource Kyf.Button.Primary}" VerticalAlignment="Top" Margin="0,0,8,4" />
+            <Button x:Name="CancelDay" Content="{x:Static pages:ReviewText.CancelDay}" Command="{Binding CancelDayCommand}" VerticalAlignment="Top" Margin="0,0,0,4" />
+          </WrapPanel>
+        </StackPanel>
         <!-- Les passages de la fiche, à remettre à J0. -->
         <StackPanel x:Name="Marking" Margin="0,12,0,0" Visibility="{Binding IsMarking, Converter={StaticResource Visible}}">
           <TextBlock x:Name="NoPassage" Text="{x:Static pages:ReviewText.ReminderNoPassage}" Style="{DynamicResource Kyf.Text.Secondary}"
@@ -208,7 +221,7 @@
         <kyf:Notification x:Name="Message" Severity="Success" Message="{Binding Message}" IsOpen="{Binding HasMessage, Mode=OneWay}"
                           IsClosable="False" Margin="0,12,0,0" />
         <kyf:Notification x:Name="Error" Severity="Critical" Message="{Binding Error}" IsOpen="{Binding HasError, Mode=OneWay}"
-                          IsClosable="False" Margin="0,12,0,0" />
+                          IsClosable="False" Margin="0,12,0,0" IsVisibleChanged="OnErrorVisibleChanged" />
       </StackPanel>
     </Grid>
   </kyf:Card>

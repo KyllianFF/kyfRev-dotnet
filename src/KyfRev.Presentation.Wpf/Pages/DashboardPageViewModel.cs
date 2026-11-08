@@ -74,6 +74,7 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
     private readonly ReminderUseCases _reminders;
     private readonly SheetUseCases _sheets;
     private readonly IReviewOpener _opener;
+    private readonly DashboardGroup _examGroup;
     private readonly DashboardGroup _overdue;
     private readonly DashboardGroup _today;
     private readonly DashboardGroup _reminderGroup;
@@ -95,9 +96,9 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
     /// <summary>
     /// La vue, sur les cas d'usage des rappels (qui rendent le tableau de bord) et des fiches (qui
     /// nourrissent l'aperçu) ; <paramref name="opener"/> ouvre ses lignes, <paramref name="widgets"/> sont
-    /// les encarts apportés par les modules.
+    /// les encarts apportés par les modules, <paramref name="time"/> l'horloge d'où part le formulaire d'un examen.
     /// </summary>
-    public DashboardPageViewModel(ReminderUseCases reminders, SheetUseCases sheets, IReviewOpener opener, IEnumerable<IDashboardWidget>? widgets = null, ReviewUseCases? reviews = null)
+    public DashboardPageViewModel(ReminderUseCases reminders, SheetUseCases sheets, IReviewOpener opener, IEnumerable<IDashboardWidget>? widgets = null, ReviewUseCases? reviews = null, ExamUseCases? exams = null, FolderUseCases? folders = null, TimeProvider? time = null)
     {
         ArgumentNullException.ThrowIfNull(reminders);
         ArgumentNullException.ThrowIfNull(sheets);
@@ -108,6 +109,8 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
         _widgets = widgets ?? [];
         _reviews = reviews;
         _extras = new DashboardExtras(this);
+        Exams = exams is not null && folders is not null ? new DashboardExams(exams, folders, RefreshAsync, time ?? TimeProvider.System) : null;
+        _examGroup = new DashboardGroup(ExamText.Exams, Icons.Calendar, DashboardTone.Normal, expanded: true, BuildRows);
         _overdue = new DashboardGroup(DashboardText.Overdue, Icons.Clock, DashboardTone.Overdue, expanded: true, BuildRows);
         _today = new DashboardGroup(DashboardText.Today, Icons.Calendar, DashboardTone.Normal, expanded: true, BuildRows);
         _reminderGroup = new DashboardGroup(DashboardText.Reminders, Icons.Sync, DashboardTone.Reminder, expanded: true, BuildRows);
@@ -141,6 +144,12 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
 
     /// <summary>« Aujourd'hui ».</summary>
     public static string Title => DashboardText.Today;
+
+    /// <summary>Les examens : les fixer, les retirer, resserrer les échéances ; rien sans leurs cas d'usage.</summary>
+    public DashboardExams? Exams { get; }
+
+    /// <summary>« Examen… » est proposé.</summary>
+    public bool CanPlanExams => Exams is not null;
 
     /// <summary>Filtres proposés.</summary>
     public IReadOnlyList<Choice<DashboardFilter>> Filters { get; }
@@ -336,7 +345,11 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
     public Dashboard? Dashboard => _dashboard;
 
     /// <inheritdoc/>
-    public void OnNavigatedTo() => RefreshCommand.Execute(null);
+    public void OnNavigatedTo()
+    {
+        Exams?.ClearFeedback();
+        RefreshCommand.Execute(null);
+    }
 
     /// <summary>
     /// Oublie tout ce qui vient du coffre : la liste, la ligne choisie et son aperçu, le résumé du jour, les jours à venir,
@@ -355,6 +368,8 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
         IsConfirmingArchive = false;
         SelectedRow = null;
         Preview = null;
+        Exams?.Forget();
+        _examGroup.Count = 0;
         _overdue.Count = 0;
         _today.Count = 0;
         _reminderGroup.Count = 0;
@@ -441,6 +456,10 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
 
     /// <summary>Les actions de révision sont disponibles depuis le menu d'une ligne.</summary>
     internal bool CanAct => _reviews is not null;
+
+    /// <summary>Ouvre la charge des 30 prochains jours, avec le filtre de la liste.</summary>
+    [RelayCommand]
+    private void OpenWorkload() => _opener.OpenWorkload(SelectedFilter.Value);
 
     /// <summary>Ouvre la fiche d'une ligne, pour la relire.</summary>
     internal void OpenSheetOf(DueItemRow row) => _opener.OpenSheet(row.Item.SheetId);
@@ -590,6 +609,11 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
         SelectedRow = candidates.Find(row => KeyOf(row) == key) ?? candidates.FirstOrDefault();
     }
 
+    /// <summary>La ligne à qui rendre le focus après une action sur un examen : celle de son dossier ; retiré, l'en-tête du groupe s'il en reste d'autres.</summary>
+    internal object? ExamRowToFocus() =>
+        (object?)Rows.OfType<ExamRow>().FirstOrDefault(row => row.Exam.Folder == Exams?.LastFolder)
+        ?? (Rows.Contains(_examGroup) ? _examGroup : null);
+
     private List<DashboardCard> ReadCards() => [.. _widgets.OrderBy(widget => widget.Order).Select(widget => widget.Card()).OfType<DashboardCard>()];
 
     private void BuildRows()
@@ -612,6 +636,7 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
         StartLabel = SessionText.StartOf(_toStart.Count);
 
         var rows = new List<object>();
+        Add(rows, _examGroup, dashboard.Exams.Select(exam => new ExamRow(exam)));
         if (total == 0)
         {
             rows.Add(new EmptyDashboardRow(

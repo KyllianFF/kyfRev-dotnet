@@ -32,6 +32,14 @@ internal static class AutomationPeers
         protected override string GetHelpTextCore() => NameOr(AutomationProperties.GetHelpText(owner), owner.Message);
     }
 
+    /// <summary>Texte annoncé : présent dans la vue « contrôle », même placé dans le modèle d'un champ.</summary>
+    internal sealed class LiveTextPeer(LiveText owner) : TextBlockAutomationPeer(owner)
+    {
+        protected override string GetClassNameCore() => nameof(LiveText);
+
+        protected override bool IsControlElementCore() => true;
+    }
+
     /// <summary>Pastille : un texte, son libellé.</summary>
     internal sealed class PillPeer(Pill owner) : FrameworkElementAutomationPeer(owner)
     {

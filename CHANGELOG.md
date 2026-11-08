@@ -32,6 +32,21 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   étape ; Échap le referme, et un clic dessus ouvre la fiche. Un lien encore masqué par un trou, en révision, n'en montre
   aucun. Seules les fiches qui mènent ici sont lues, rien n'est enregistré, et le tout se relit quand on revient sur la
   fiche : un texte modifié, un renommage ou un déplacement se voient. Un disque devenu inaccessible se dit dans le panneau.
+- Les examens arrivent sur « Aujourd'hui » : un examen par dossier (ou pour tout le coffre), avec son compte à rebours, le
+  nombre d'éléments actifs et ceux prévus après lui ; « Examen… » en fixe un, « Modifier… » et « Retirer l'examen… » suivent,
+  et « Resserrer… » ramène, après confirmation, les échéances avant sa veille. Les lignes se pilotent au clavier : Entrée sur
+  un examen ouvre ses actions.
+- La charge des 30 prochains jours, depuis le bouton « Charge » d'« Aujourd'hui » : une colonne par jour, les échéances
+  connues pleines sous les étapes projetées dessinées, la moyenne, le jour le plus chargé. Un jour choisi montre ses
+  révisions ; « Déplacer… » reporte une échéance, sur le jour le moins chargé à trois jours au plus, comme dans la 0.x. À
+  l'étroit, les colonnes se rangent sur deux rangées pour rester visables.
+- La barre de révision propose « Valider à une date passée… », entre le lendemain de la dernière révision et aujourd'hui : le
+  calendrier repart de ce jour-là, et une révision en avance sur ce jour demande confirmation. « Reporter à une date… »
+  vient s'ajouter à demain et à dans 3 jours, comme dans la 0.x.
+- Un champ de date dans le design system (`DateField`) : une date qui se tape ou se choisit dans un calendrier en français,
+  aux couleurs de chaque thème, nommé pour le lecteur d'écran ; hors des jours permis, elle est refusée : le champ se vide,
+  dit pourquoi, par écrit et au lecteur d'écran, et aucune action ne part sur la date d'avant.
+- Un dialogue refermé rend le focus à ce qui le tenait, et changer de coffre efface tout ce que les vues avaient lu de l'ancien.
 - Coffre chiffré, lot 4 : la preuve qu'aucun texte en clair ne reste sur le disque. Sur un coffre chiffré, le menu d'un mot
   propose « Accepter jusqu'à la fermeture de kyfRev », dans le code Markdown, au lieu d'écrire dans le dictionnaire de Windows. Le journal masque tout chemin
   qui entre dans le coffre, et ne nomme plus la citation trouvée. Les moteurs web ne téléversent plus de rapport de plantage,

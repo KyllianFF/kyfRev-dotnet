@@ -39,6 +39,7 @@
       <WrapPanel>
         <TextBox Width="240" Margin="0,0,12,12" kyf:Field.Placeholder="Rechercher une fiche" AutomationProperties.Name="Recherche" />
         <TextBox Width="240" Margin="0,0,12,12" Text="Mitose et méiose" AutomationProperties.Name="Titre" />
+        <kyf:DateField Width="200" Margin="0,0,12,12" AutomationProperties.Name="Date de l'examen" />
       </WrapPanel>
 
       <TextBlock Text="Pastilles" Style="{DynamicResource Kyf.Text.Subtitle}" Margin="0,24,0,12" AutomationProperties.HeadingLevel="Level2" />

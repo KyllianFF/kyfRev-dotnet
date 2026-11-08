@@ -82,6 +82,9 @@
     <DataTemplate DataType="{x:Type pages:StudySessionViewModel}">
       <pages:StudySessionPage />
     </DataTemplate>
+    <DataTemplate DataType="{x:Type pages:WorkloadPageViewModel}">
+      <pages:WorkloadPage />
+    </DataTemplate>
     <shell:LayoutVisibilityConverter x:Key="ShownIn" />
     <!-- L'icône d'une entrée : un glyphe de kyfRev, ou l'icône dessinée d'une extension, de la couleur du texte comme lui. -->
     <DataTemplate x:Key="NavigationGlyphTemplate" DataType="{x:Type shell:NavigationItem}">

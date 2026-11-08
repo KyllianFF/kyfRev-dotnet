@@ -21,7 +21,7 @@ un test (`CommandMapTests`) vérifie que ce tableau et le code restent d'accord.
 | `dossiers` | `FolderUseCases.Folders` | J4.1 | |
 | `ouvrir_fiche` | `SheetUseCases.Open` | J4.1 | |
 | `id_de_fiche` | `SheetUseCases.IdAt` | J4.1 | |
-| `valider_revision` | `ReviewUseCases.Validate` | J4.1 | |
+| `valider_revision` | `ReviewUseCases.Validate` | J4.1 | Le jour choisi, pour antidater, est son dernier paramètre : rien, aujourd'hui. La 0.x ne le proposait pas à son interface ; le domaine si. |
 | `reporter_revision` | `ReviewUseCases.Postpone` | J4.1 | La date arrive typée : l'interface la valide. |
 | `recommencer_cycle` | `ReviewUseCases.Restart` | J4.1 | |
 | `archiver_fiche` | `ReviewUseCases.Archive` | J4.1 | |

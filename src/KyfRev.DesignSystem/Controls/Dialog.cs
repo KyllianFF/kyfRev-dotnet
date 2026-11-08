@@ -28,9 +28,10 @@ public sealed class DialogClosedEventArgs(RoutedEvent routedEvent, object source
 }
 
 /// <summary>
-/// Dialogue posé sur un voile, au-dessus de la page. Le focus y entre à l'ouverture et n'en sort
-/// pas au clavier ; Échap le ferme, Entrée choisit le bouton principal. Pendant un travail lancé de
-/// là (<see cref="IsWorking"/>), le focus attend sur le bouton secondaire ; le travail fini, il revient au bouton principal.
+/// Dialogue posé sur un voile, au-dessus de la page. Le focus y entre à l'ouverture, n'en sort pas
+/// au clavier, et revient à la fermeture à ce qui le tenait ; Échap le ferme, Entrée choisit le
+/// bouton principal. Pendant un travail lancé de là (<see cref="IsWorking"/>), le focus attend sur le
+/// bouton secondaire ; le travail fini, il revient au bouton principal.
 /// </summary>
 [TemplatePart(Name = PrimaryButtonPart, Type = typeof(ButtonBase))]
 [TemplatePart(Name = SecondaryButtonPart, Type = typeof(ButtonBase))]
@@ -87,6 +88,9 @@ public class Dialog : ContentControl
 
     private ButtonBase? _primaryButton;
     private ButtonBase? _secondaryButton;
+
+    /// <summary>Ce qui tenait le focus à l'ouverture.</summary>
+    private IInputElement? _focusBefore;
 
     static Dialog()
     {
@@ -201,8 +205,32 @@ public class Dialog : ContentControl
     {
         if (isOpen)
         {
+            // Rouvert aussitôt après un refus, il a encore le focus : ce qu'on retient reste ce d'où l'on venait.
+            if (!IsKeyboardFocusWithin)
+            {
+                _focusBefore = Keyboard.FocusedElement;
+            }
             // Une fois le dialogue affiché, le focus va au premier élément qui le prend.
             Dispatcher.BeginInvoke(DispatcherPriority.Input, FocusFirst);
+        }
+        else
+        {
+            Dispatcher.BeginInvoke(DispatcherPriority.Input, GiveFocusBack);
+        }
+    }
+
+    /// <summary>Le focus resté dans le dialogue revient à ce qui le tenait ; s'il est déjà allé ailleurs, il y reste.</summary>
+    private void GiveFocusBack()
+    {
+        if (IsOpen)
+        {
+            return;
+        }
+        var before = _focusBefore;
+        _focusBefore = null;
+        if (KeyboardFocus.IsLost())
+        {
+            before?.Focus();
         }
     }
 

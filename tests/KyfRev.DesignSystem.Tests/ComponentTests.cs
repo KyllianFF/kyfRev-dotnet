@@ -507,6 +507,74 @@ public sealed class ComponentTests
         Assert.ThrowsExactly<ArgumentNullException>(() => Field.SetPlaceholder(null!, "x"));
     }
 
+    [STATestMethod]
+    public void A_closed_dialog_gives_the_focus_back_to_what_held_it()
+    {
+        var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
+        var opener = new Button { Content = "Ouvrir" };
+        var other = new Button { Content = "Autre" };
+        var dialog = new Dialog { Title = "Renommer", Content = new TextBox() };
+        var content = new Grid { Children = { new StackPanel { Children = { opener, other } }, dialog } };
+        var window = new Window { Content = content, Resources = design.Dictionary, ShowActivated = true, Left = -10000, Top = -10000, Width = 480, Height = 320, WindowStartupLocation = WindowStartupLocation.Manual };
+        window.Show();
+        window.Activate();
+        Host.Flush();
+        try
+        {
+            Assert.IsTrue(opener.Focus());
+            dialog.IsOpen = true;
+            Host.Flush();
+            Assert.IsTrue(dialog.IsKeyboardFocusWithin);
+
+            // Un refus referme puis rouvre aussitôt : ce d'où l'on vient reste retenu.
+            dialog.Close(DialogChoice.Primary);
+            dialog.IsOpen = true;
+            Host.Flush();
+            Assert.IsTrue(dialog.IsKeyboardFocusWithin);
+
+            dialog.Close(DialogChoice.Primary);
+            Host.Flush();
+            Assert.IsTrue(opener.IsKeyboardFocused);
+
+            // Le focus déjà ailleurs y reste.
+            dialog.IsOpen = true;
+            Host.Flush();
+            dialog.IsOpen = false;
+            Assert.IsTrue(other.Focus());
+            Host.Flush();
+            Assert.IsTrue(other.IsKeyboardFocused);
+
+            // Ce qui tenait le focus a disparu : rien à lui rendre, sans erreur.
+            Assert.IsTrue(other.Focus());
+            dialog.IsOpen = true;
+            Host.Flush();
+            other.Visibility = Visibility.Collapsed;
+            dialog.Close(DialogChoice.None);
+            Host.Flush();
+            Assert.IsFalse(other.IsKeyboardFocused);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
+    public void A_live_text_declares_itself_to_the_screen_reader()
+    {
+        var text = new LiveText { Text = "Ce jour-là : 3 révisions." };
+        Host.Of(new DesignResources(ThemeKind.Light, reducedMotion: false), text);
+
+        Assert.AreEqual(AutomationLiveSetting.Polite, AutomationProperties.GetLiveSetting(text));
+        Assert.AreEqual(AutomationLiveSetting.Polite, Peer(text).GetLiveSetting());
+        Assert.AreEqual("Ce jour-là : 3 révisions.", Peer(text).GetName());
+        Assert.AreEqual(nameof(LiveText), Peer(text).GetClassName());
+        Assert.IsTrue(Peer(text).IsControlElement());
+
+        text.Text = "Un autre jour.";
+        Assert.AreEqual("Un autre jour.", Peer(text).GetName());
+    }
+
     private static AutomationPeer Peer(UIElement element) => UIElementAutomationPeer.CreatePeerForElement(element);
 
     /// <summary>Une fenêtre hors de l'écran : seul un élément dans une vraie fenêtre est visible.</summary>
