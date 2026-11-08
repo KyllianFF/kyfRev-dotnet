@@ -136,7 +136,7 @@
                       <TextBlock Text="{Binding SeveralLinks}" Style="{DynamicResource Kyf.Text.Caption}" VerticalAlignment="Center"
                                  Visibility="{Binding HasSeveralLinks, Converter={StaticResource Visible}}" />
                     </WrapPanel>
-                    <reading:ExcerptText Parts="{Binding Excerpt}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,2,0,0" />
+                    <reading:BacklinkExcerpt Parts="{Binding Excerpt}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,2,0,0" />
                   </StackPanel>
                 </Button>
               </DataTemplate>

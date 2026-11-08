@@ -6,10 +6,10 @@ using KyfRev.Application.Model;
 namespace KyfRev.Presentation.Wpf.Reading;
 
 /// <summary>L'extrait d'un rétrolien : le texte autour d'un lien, le texte du lien ressorti sur la couleur des passages.</summary>
-internal sealed class ExcerptText : TextBlock
+internal sealed class BacklinkExcerpt : TextBlock
 {
     public static readonly DependencyProperty PartsProperty = DependencyProperty.Register(
-        nameof(Parts), typeof(IReadOnlyList<ExcerptPart>), typeof(ExcerptText), new PropertyMetadata(null, OnPartsChanged));
+        nameof(Parts), typeof(IReadOnlyList<ExcerptPart>), typeof(BacklinkExcerpt), new PropertyMetadata(null, OnPartsChanged));
 
     /// <summary>Les morceaux de l'extrait.</summary>
     public IReadOnlyList<ExcerptPart>? Parts
@@ -20,7 +20,7 @@ internal sealed class ExcerptText : TextBlock
 
     private static void OnPartsChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e)
     {
-        var excerpt = (ExcerptText)sender;
+        var excerpt = (BacklinkExcerpt)sender;
         excerpt.Inlines.Clear();
         foreach (var part in excerpt.Parts ?? [])
         {

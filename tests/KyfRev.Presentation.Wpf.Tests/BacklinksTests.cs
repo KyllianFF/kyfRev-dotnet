@@ -348,7 +348,7 @@ public sealed class BacklinksTests
             Assert.AreEqual(Visibility.Visible, pane.Visibility);
             var button = Descendants(Descendants(pane).OfType<ItemsControl>().Single()).OfType<Button>().Single();
             Assert.AreEqual(page.Backlinks[0].Spoken, AutomationProperties.GetName(button));
-            var excerpt = Descendants(pane).OfType<ExcerptText>().Single();
+            var excerpt = Descendants(pane).OfType<BacklinkExcerpt>().Single();
             CollectionAssert.AreEqual(
                 ExcerptRuns,
                 excerpt.Inlines.OfType<Run>().Select(run => run.Text).ToArray());
@@ -934,7 +934,7 @@ public sealed class BacklinksTests
     {
         var thread = new Thread(() =>
         {
-            var excerpt = new ExcerptText { Parts = [new ExcerptPart("a", false)] };
+            var excerpt = new BacklinkExcerpt { Parts = [new ExcerptPart("a", false)] };
             Assert.HasCount(1, excerpt.Inlines);
             excerpt.Parts = null;
             Assert.IsEmpty(excerpt.Inlines);
