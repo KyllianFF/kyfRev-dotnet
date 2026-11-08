@@ -48,6 +48,7 @@ internal static class Composition
         services.AddSingleton<ISystemAppearance, WindowsAppearance>();
         services.AddSingleton<IWindowChrome, WindowChrome>();
         services.AddSingleton<IExternalLinks, ShellLinks>();
+        services.AddSingleton<ILegacyInstallation, LegacyInstallation>();
         services.AddSingleton(_ => locations ?? VaultLocations.Detect());
         services.AddSingleton<IVaultLocations>(provider => provider.GetRequiredService<VaultLocations>());
         services.AddSingleton<IStudySessionStore>(provider => new StudySessionFile(provider.GetRequiredService<VaultLocations>().LocalData));

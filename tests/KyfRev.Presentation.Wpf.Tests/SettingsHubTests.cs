@@ -68,6 +68,48 @@ public sealed class SettingsHubTests
     }
 
     [TestMethod]
+    public void The_old_version_is_offered_for_removal_and_only_through_windows()
+    {
+        using var vault = new DataVault();
+        var legacy = new FakeLegacy { Installed = new LegacyInstall("0.7.0", @"C:\kyfRev") };
+        var about = new AboutSettingsViewModel(vault.App.Vaults, legacy: legacy);
+
+        about.OnNavigatedTo();
+        Assert.AreEqual(SettingsHubText.LegacyInstalledOf("0.7.0"), about.LegacyMessage);
+        Assert.IsTrue(about.HasLegacy);
+        about.OpenInstalledAppsCommand.Execute(null);
+        Assert.AreEqual(1, legacy.Opened);
+
+        legacy.Installed = null;
+        about.OnNavigatedTo();
+        Assert.IsFalse(about.HasLegacy, "une fois retirée, plus rien ne la propose");
+    }
+
+    [TestMethod]
+    public void An_old_version_in_this_folder_is_said_to_remove_this_one_too()
+    {
+        using var vault = new DataVault();
+        var legacy = new FakeLegacy { Installed = new LegacyInstall("0.7.0", @"C:\kyfRev", SharesThisFolder: true) };
+        var about = new AboutSettingsViewModel(vault.App.Vaults, legacy: legacy);
+
+        about.OnNavigatedTo();
+
+        Assert.AreEqual(SettingsHubText.LegacySharedOf("0.7.0"), about.LegacyMessage);
+    }
+
+    [TestMethod]
+    public void Without_the_port_nothing_is_offered()
+    {
+        using var vault = new DataVault();
+        var about = new AboutSettingsViewModel(vault.App.Vaults);
+
+        about.OnNavigatedTo();
+        about.OpenInstalledAppsCommand.Execute(null);
+
+        Assert.IsFalse(about.HasLegacy);
+    }
+
+    [TestMethod]
     public void The_view_needs_its_tabs()
     {
         using var vault = new DataVault();
@@ -685,5 +727,21 @@ internal sealed class AnnouncedVersion(byte[] manifest, byte[] signature) : IOnl
     {
         Reads++;
         return Task.FromResult(address.AbsolutePath.EndsWith(".sig", StringComparison.Ordinal) ? signature : manifest);
+    }
+}
+
+/// <summary>La 0.x, simulée.</summary>
+internal sealed class FakeLegacy : ILegacyInstallation
+{
+    public LegacyInstall? Installed { get; set; }
+
+    public int Opened { get; private set; }
+
+    public LegacyInstall? Find() => Installed;
+
+    public bool OpenInstalledApps()
+    {
+        Opened++;
+        return true;
     }
 }

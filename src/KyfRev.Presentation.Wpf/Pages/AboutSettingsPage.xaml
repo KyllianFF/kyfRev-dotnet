@@ -9,6 +9,12 @@
   </UserControl.Resources>
   <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
     <StackPanel MaxWidth="1100">
+      <kyf:Card x:Name="LegacyCard" Padding="16,12" Margin="0,0,0,12" Visibility="{Binding HasLegacy, Converter={StaticResource Visible}}">
+        <StackPanel>
+          <TextBlock x:Name="LegacyLine" Text="{Binding LegacyMessage}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" />
+          <Button x:Name="InstalledAppsButton" Content="{x:Static pages:SettingsHubText.OpenInstalledApps}" Command="{Binding OpenInstalledAppsCommand}" HorizontalAlignment="Left" Margin="0,8,0,0" />
+        </StackPanel>
+      </kyf:Card>
       <kyf:Card x:Name="AboutCard" Padding="16,12">
         <StackPanel>
           <TextBlock x:Name="VersionLine" Text="{Binding Version}" Style="{DynamicResource Kyf.Text.Subtitle}" AutomationProperties.HeadingLevel="Level2" />

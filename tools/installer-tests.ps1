@@ -147,6 +147,8 @@ try {
     $code = Invoke-Silencieux $Installateur @('/CURRENTUSER', "/DIR=`"$dossier`"", '/NOICONS', '/COFFRE=donnees')
     Assert-Vrai ($code -eq 0) "installation terminée (code $code)"
     Assert-Vrai (Test-Path (Join-Path $dossier 'kyfRev.exe')) 'kyfRev.exe installé'
+    & (Join-Path $dossier 'kyfrev-coffre.exe') --help | Out-Null
+    Assert-Vrai ($LASTEXITCODE -eq 0) 'kyfrev-coffre installé et utilisable'
     Assert-Vrai (Test-Icone (Join-Path $dossier 'kyfRev.exe')) 'kyfRev.exe porte l''icône de kyfRev'
     Assert-Vrai (Test-Icone $Installateur) 'l''installateur porte l''icône de kyfRev'
     Assert-Vrai (-not (Get-ChildItem $dossier -Filter *.pdb)) 'aucun fichier de symboles'

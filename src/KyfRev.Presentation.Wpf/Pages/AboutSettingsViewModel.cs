@@ -14,16 +14,26 @@ public sealed partial class AboutSettingsViewModel : ObservableObject, INavigati
     private readonly VaultUseCases _vaults;
     private readonly UpdateChecker? _updates;
     private readonly IExternalLinks? _links;
+    private readonly ILegacyInstallation? _legacy;
     private Uri? _release;
 
-    /// <summary>L'onglet, sur le cas d'usage qui rend l'état de l'application ; la recherche de mise à jour s'y ajoute si elle est là.</summary>
-    public AboutSettingsViewModel(VaultUseCases vaults, UpdateChecker? updates = null, IExternalLinks? links = null)
+    /// <summary>L'onglet, sur le cas d'usage qui rend l'état de l'application ; la recherche de mise à jour s'y ajoute si elle est là, et la 0.x y est signalée si elle est encore installée.</summary>
+    public AboutSettingsViewModel(VaultUseCases vaults, UpdateChecker? updates = null, IExternalLinks? links = null, ILegacyInstallation? legacy = null)
     {
         ArgumentNullException.ThrowIfNull(vaults);
         _vaults = vaults;
         _updates = updates;
         _links = links;
+        _legacy = legacy;
     }
+
+    /// <summary>La 0.x est encore installée : le message qui propose de la retirer, sinon vide.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasLegacy))]
+    public partial string LegacyMessage { get; private set; } = string.Empty;
+
+    /// <inheritdoc cref="LegacyMessage"/>
+    public bool HasLegacy => LegacyMessage.Length > 0;
 
     /// <summary>« kyfRev 1.0.0-alpha.0 ».</summary>
     [ObservableProperty]
@@ -65,7 +75,20 @@ public sealed partial class AboutSettingsViewModel : ObservableObject, INavigati
     public bool HasUpdateError => UpdateError.Length > 0;
 
     /// <inheritdoc/>
-    public void OnNavigatedTo() => Show(_vaults.State());
+    public void OnNavigatedTo()
+    {
+        Show(_vaults.State());
+        LegacyMessage = _legacy?.Find() switch
+        {
+            null => string.Empty,
+            { SharesThisFolder: true } shared => SettingsHubText.LegacySharedOf(shared.Version),
+            var found => SettingsHubText.LegacyInstalledOf(found.Version),
+        };
+    }
+
+    /// <summary>Ouvre la page des applications installées de Windows : c'est là que la 0.x se retire.</summary>
+    [RelayCommand]
+    private void OpenInstalledApps() => _legacy?.OpenInstalledApps();
 
     /// <summary>Oublie le dossier du coffre ; ce qui tourne et sous quel mode reste affiché.</summary>
     public void Forget() => Vault = string.Empty;
