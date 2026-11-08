@@ -10,8 +10,9 @@ les coffres de la version 0.x et vise la parité fonctionnelle en version 1.0.0.
 
 ## État
 
-Refonte en cours, jalon **J5 : design system et coquille WPF**. Le plan complet, les
-décisions et les critères de validation de chaque jalon sont dans [docs/plan-de-refonte.md](docs/plan-de-refonte.md).
+Refonte presque terminée : le dernier jalon, **J11, la livraison de la 1.0.0**, est en cours. Pour utiliser kyfRev, voir le
+[guide](docs/guide-utilisateur.md). Le plan complet, les décisions et les critères de validation de chaque jalon sont dans
+[docs/plan-de-refonte.md](docs/plan-de-refonte.md).
 
 Vérifier un coffre existant, sans rien y écrire :
 

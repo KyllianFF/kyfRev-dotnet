@@ -9,6 +9,9 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- La publication d'une version : `tools/publier-version.ps1` vérifie que l'étiquette, la version et le CHANGELOG concordent, reprend les
+  fichiers construits par la CI et publie sous l'identité de la personne qui le lance. `docs/publier-une-version.md` en donne les
+  étapes, et le workflow « Étiquette » refuse une étiquette qui ne concorde pas. `docs/guide-utilisateur.md` : le guide de kyfRev.
 - Recherche dans le coffre, comme la 0.x. La vue Fiches cherche aussi dans le texte, avec un extrait où les mots sont
   surlignés. Ctrl+K donne, sous les commandes et à partir de deux lettres, les fiches, les passages, les définitions et les
   citations qui contiennent tous les mots, sans tenir compte de la casse, des accents ni des ligatures ; un résultat ouvre
