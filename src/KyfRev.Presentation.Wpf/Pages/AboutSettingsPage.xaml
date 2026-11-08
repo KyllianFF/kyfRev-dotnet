@@ -4,8 +4,17 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:kyf="clr-namespace:KyfRev.DesignSystem.Controls;assembly=KyfRev.DesignSystem"
              xmlns:pages="clr-namespace:KyfRev.Presentation.Wpf.Pages">
+  <UserControl.Resources>
+    <BooleanToVisibilityConverter x:Key="Visible" />
+  </UserControl.Resources>
   <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
     <StackPanel MaxWidth="1100">
+      <kyf:Card x:Name="LegacyCard" Padding="16,12" Margin="0,0,0,12" Visibility="{Binding HasLegacy, Converter={StaticResource Visible}}">
+        <StackPanel>
+          <TextBlock x:Name="LegacyLine" Text="{Binding LegacyMessage}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" />
+          <Button x:Name="InstalledAppsButton" Content="{x:Static pages:SettingsHubText.OpenInstalledApps}" Command="{Binding OpenInstalledAppsCommand}" HorizontalAlignment="Left" Margin="0,8,0,0" />
+        </StackPanel>
+      </kyf:Card>
       <kyf:Card x:Name="AboutCard" Padding="16,12">
         <StackPanel>
           <TextBlock x:Name="VersionLine" Text="{Binding Version}" Style="{DynamicResource Kyf.Text.Subtitle}" AutomationProperties.HeadingLevel="Level2" />

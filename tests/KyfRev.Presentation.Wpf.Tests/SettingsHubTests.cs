@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using KyfRev.Application.Model;
+using KyfRev.Application.Ports;
 using KyfRev.Application.UseCases;
 using KyfRev.DesignSystem.Controls;
 using KyfRev.Presentation.Wpf.Pages;
@@ -17,6 +18,36 @@ public sealed class SettingsHubTests
     private static readonly Anchor Passage = new("La prophase", "", " précède", 0, 11, ["Mitose", "Étapes"], 5, "sha256:aa");
 
     private static readonly string[] Tabs = ["Général", "Révisions", "Modules et extensions", "Données", "À propos"];
+
+    [TestMethod]
+    public void The_old_version_is_offered_for_removal_and_only_through_windows()
+    {
+        using var vault = new DataVault();
+        var legacy = new FakeLegacy { Installed = new LegacyInstall("0.7.0", @"C:\kyfRev") };
+        var about = new AboutSettingsViewModel(vault.App.Vaults, legacy);
+
+        about.OnNavigatedTo();
+        Assert.AreEqual(SettingsHubText.LegacyInstalledOf("0.7.0"), about.LegacyMessage);
+        Assert.IsTrue(about.HasLegacy);
+        about.OpenInstalledAppsCommand.Execute(null);
+        Assert.AreEqual(1, legacy.Opened);
+
+        legacy.Installed = null;
+        about.OnNavigatedTo();
+        Assert.IsFalse(about.HasLegacy, "une fois retirée, plus rien ne la propose");
+    }
+
+    [TestMethod]
+    public void Without_the_port_nothing_is_offered()
+    {
+        using var vault = new DataVault();
+        var about = new AboutSettingsViewModel(vault.App.Vaults);
+
+        about.OnNavigatedTo();
+        about.OpenInstalledAppsCommand.Execute(null);
+
+        Assert.IsFalse(about.HasLegacy);
+    }
 
     [TestMethod]
     public void The_view_needs_its_tabs()
@@ -622,5 +653,21 @@ public sealed class SettingsHubTests
         }
 
         public void Dispose() => Vaults.Dispose();
+    }
+}
+
+/// <summary>La 0.x, simulée.</summary>
+internal sealed class FakeLegacy : ILegacyInstallation
+{
+    public LegacyInstall? Installed { get; set; }
+
+    public int Opened { get; private set; }
+
+    public LegacyInstall? Find() => Installed;
+
+    public bool OpenInstalledApps()
+    {
+        Opened++;
+        return true;
     }
 }

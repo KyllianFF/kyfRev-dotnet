@@ -8,7 +8,9 @@
       datée du CHANGELOG ;
     - publie l'application autonome (runtime .NET inclus, Windows x64), la date de publication
       inscrite dans les métadonnées de l'exécutable (ReleaseDate) ;
+    - y ajoute kyfrev-coffre, l'outil en ligne de commande du coffre ;
     - écrit dans la publication les avis des paquets NuGet publiés (tools/avis-nuget.ps1) ;
+    - télécharge le programme d'amorçage de WebView2 et vérifie qu'il est signé par Microsoft ;
     - compile l'installateur avec Inno Setup 6 : artifacts/installer/kyfRev-<version>-installation.exe,
       dont le chemin est le résultat du script.
 
@@ -76,8 +78,6 @@ $publication = @(
 if ($date) { $publication += "-p:ReleaseDate=$date" }
 dotnet @publication | Out-Host
 if ($LASTEXITCODE -ne 0) { throw 'Publication de l''application impossible.' }
-& (Join-Path $PSScriptRoot 'avis-nuget.ps1') -Publication $application
-
 # libsodium (le chiffrement des coffres, par NSec) charge VCRUNTIME140.dll, que seul le Redistribuable Visual C++ met dans
 # Windows ; la publication n'en porte qu'une copie renommée, pour .NET. Sans lui, sur un poste qui ne l'a pas, aucun coffre
 # chiffré ne se crée ni ne s'ouvre : il est livré à côté de l'application.
@@ -85,7 +85,25 @@ $runtimeVc = Join-Path $env:SystemRoot 'System32\vcruntime140.dll'
 if (-not (Test-Path $runtimeVc)) { throw 'vcruntime140.dll est introuvable : installez le Redistribuable Visual C++ sur ce poste.' }
 Copy-Item $runtimeVc $application
 
-$compilation = @('/Qp', "/O$sortie", "/DVersion=$Version", "/DNumericVersion=$numerique", "/DSource=$application")
+# kyfrev-coffre, l'outil en ligne de commande du coffre, est livré à côté de l'application.
+$outil = @(
+    'publish', (Join-Path $racine 'src\KyfRev.Cli\KyfRev.Cli.csproj'),
+    '--configuration', 'Release', '--self-contained', '--runtime', 'win-x64', '--output', $application,
+    "-p:Version=$Version"
+)
+dotnet @outil | Out-Host
+if ($LASTEXITCODE -ne 0) { throw 'Publication de kyfrev-coffre impossible.' }
+& (Join-Path $PSScriptRoot 'avis-nuget.ps1') -Publication $application
+
+# Le programme d'amorçage de WebView2 : Microsoft le met à jour à la même adresse, seule sa signature le vérifie.
+$amorcage = Join-Path $sortie 'MicrosoftEdgeWebview2Setup.exe'
+Invoke-WebRequest 'https://go.microsoft.com/fwlink/p/?LinkId=2124703' -OutFile $amorcage -MaximumRetryCount 6 -RetryIntervalSec 20
+$signature = Get-AuthenticodeSignature -LiteralPath $amorcage
+if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'O=Microsoft Corporation') {
+    throw "Le programme d'amorçage de WebView2 n'est pas signé par Microsoft : $($signature.StatusMessage)"
+}
+
+$compilation = @('/Qp', "/O$sortie", "/DVersion=$Version", "/DNumericVersion=$numerique", "/DSource=$application", "/DWebView2Setup=$amorcage")
 if ($dateTexte) { $compilation += "/DReleaseDate=$dateTexte" }
 if ($Signature) { $compilation += "/Skyfrev=$Signature", '/DSignTool=kyfrev' }
 & $Iscc @compilation (Join-Path $racine 'installer\kyfRev.iss') | Out-Host

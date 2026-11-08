@@ -553,7 +553,7 @@ L'audit du format a relevé 19 pièges, tous traités et testés.
    Ses propres fichiers locaux (journal, données WebView2) vont dans des sous-dossiers distincts de `%LOCALAPPDATA%\kyfRev`, pour ne pas entrer en collision avec la 0.x : `%LOCALAPPDATA%\kyfRev\v1`, où elle retient aussi son dernier coffre (J6.2).
 3. **Contrôle croisé** : le coffre écrit par la nouvelle application est rouvert par Tauri 0.8.0. Son panneau Santé ne doit signaler **aucun** problème.
 4. **Chiffrement (facultatif)** : `chiffrer` vers un nouveau dossier, puis bascule de l'application vers ce dossier. Le dossier en clair est conservé jusqu'à confirmation explicite, puis retiré **par l'utilisateur**, avec un avertissement : sur un SSD, l'effacement sûr n'est pas garanti, d'où la recommandation BitLocker.
-5. **Retrait de la 0.x** : l'installateur détecte kyfRev 0.x (clé de désinstallation, éditeur « kyfRev ») et propose de le désinstaller **après** un premier lancement réussi, jamais d'office. Le coffre n'est jamais touché par une désinstallation.
+5. **Retrait de la 0.x** : l'application détecte kyfRev 0.x (clé de désinstallation) et propose, dans Paramètres › À propos, d'ouvrir la page des applications de Windows pour le retirer : après un premier lancement réussi, donc, et jamais d'office. L'installateur, qui passe avant ce premier lancement, refuse seulement le dossier de la 0.x : sa désinstallation y effacerait `kyfRev.exe` (amendement du 8 novembre 2026). Le coffre n'est jamais touché par une désinstallation.
 
 ### 4.5 Corpus de référence (preuve du « zéro perte »)
 

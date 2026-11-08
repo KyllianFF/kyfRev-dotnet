@@ -74,6 +74,12 @@ public static class SettingsHubText
     /// <summary>« Dans le dossier de votre choix, hors du coffre ; aucun fichier exis… ».</summary>
     public static string ExportsHelp => Text(nameof(ExportsHelp));
 
+    /// <summary>« Ouvrir les applications installées ».</summary>
+    public static string OpenInstalledApps => Text(nameof(OpenInstalledApps));
+
+    /// <summary>« kyfRev {0}, l'ancienne version, est encore installé… ».</summary>
+    public static string LegacyInstalledOf(object version) => Format("LegacyInstalled", version);
+
     /// <summary>« Exports ».</summary>
     public static string ExportsTitle => Text(nameof(ExportsTitle));
 

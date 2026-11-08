@@ -30,6 +30,8 @@ $licencesDuDepot = @{
     'Microsoft.Extensions.DependencyInjection'              = 'dotnet.txt'
     'Microsoft.Extensions.DependencyInjection.Abstractions' = 'dotnet.txt'
     'Microsoft.Extensions.Logging.Abstractions'             = 'dotnet.txt'
+    'System.CommandLine'                                    = 'dotnet.txt'
+    'System.Security.Cryptography.ProtectedData'            = 'dotnet.txt'
     'System.Speech'                                         = 'dotnet.txt'
     'WpfMath'                                               = 'XamlMath.txt'
     'XamlMath.Shared'                                       = 'XamlMath.txt'
@@ -99,10 +101,13 @@ function Format-Paquet([string] $Id, [string] $Version) {
 
 $actifs = Get-Content -Raw (Join-Path $racine 'src\KyfRev.App\obj\project.assets.json') | ConvertFrom-Json -AsHashtable
 $depots = @($actifs.packageFolders.Keys)
-$deps = Get-Content -Raw (Join-Path $Publication 'kyfRev.deps.json') | ConvertFrom-Json -AsHashtable
-$paquets = @($deps.libraries.GetEnumerator() | Where-Object { $_.Value.type -in 'package', 'runtimepack' } |
-        ForEach-Object { $_.Key -replace '^runtimepack\.', '' } | Sort-Object)
-if ($paquets.Count -eq 0) { throw "Aucun paquet dans $Publication\kyfRev.deps.json." }
+# L'application et, s'il est publié avec elle, kyfrev-coffre.
+$paquets = @(Get-ChildItem $Publication -Filter '*.deps.json' | ForEach-Object {
+        (Get-Content -Raw $_.FullName | ConvertFrom-Json -AsHashtable).libraries.GetEnumerator() |
+            Where-Object { $_.Value.type -in 'package', 'runtimepack' } |
+            ForEach-Object { $_.Key -replace '^runtimepack\.', '' }
+    } | Sort-Object -Unique)
+if ($paquets.Count -eq 0) { throw "Aucun paquet dans les .deps.json de $Publication." }
 
 $avis = @($paquets | ForEach-Object {
         $id, $version = $_ -split '/'

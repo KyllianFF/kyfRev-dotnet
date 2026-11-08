@@ -8,6 +8,7 @@
 ;                             de la section datée du CHANGELOG ; absente si la version n'est pas
 ;                             publiée ;
 ;   /DSource=…                dossier de l'application publiée ;
+;   /DWebView2Setup=…         programme d'amorçage de WebView2, signé par Microsoft ;
 ;   /DSignTool=…              facultatif : outil de signature déclaré à ISCC par /S.
 ;
 ; Comme l'installeur de la 0.x :
@@ -23,7 +24,9 @@
 ; - kyfRev ouvert est détecté avant l'installation comme avant la désinstallation (AppMutex) ;
 ; - la licence de kyfRev, les avis de tiers, les avis des paquets NuGet et les licences des polices
 ;   sont installés dans {app}\licences, et retirés avec l'application ;
-; - la désinstallation ne touche jamais aux coffres, aux sauvegardes ni aux réglages des profils.
+; - la désinstallation ne touche jamais aux coffres, aux sauvegardes ni aux réglages des profils ;
+; - WebView2 s'installe s'il manque, après vérification de la signature de son programme d'amorçage ;
+; - le dossier de la 0.x est refusé : sa désinstallation y retirerait kyfRev.exe.
 
 #ifndef Version
   #error Version manquante : /DVersion=<version SemVer>.
@@ -33,6 +36,9 @@
 #endif
 #ifndef Source
   #error Dossier de l'application publiée manquant : /DSource=<dossier>.
+#endif
+#ifndef WebView2Setup
+  #error Programme d'amorçage de WebView2 manquant : /DWebView2Setup=<fichier>.
 #endif
 
 ; Identité de l'application pour Windows : ne change jamais.
@@ -107,6 +113,8 @@ Source: "..\src\KyfRev.Rendering\THIRD-PARTY-NOTICES.md"; DestDir: "{app}\licenc
 Source: "..\src\KyfRev.Presentation.Wpf\Editing\THIRD-PARTY-NOTICES.md"; DestDir: "{app}\licences"; DestName: "THIRD-PARTY-NOTICES-editeur.md"; Flags: ignoreversion
 Source: "..\src\KyfRev.Presentation.Wpf\Schemas\THIRD-PARTY-NOTICES.md"; DestDir: "{app}\licences"; DestName: "THIRD-PARTY-NOTICES-schemas.md"; Flags: ignoreversion
 Source: "..\src\KyfRev.DesignSystem\Fonts\OFL-*.txt"; DestDir: "{app}\licences"; Flags: ignoreversion
+; Extrait seulement s'il faut installer WebView2.
+Source: "{#WebView2Setup}"; DestName: "MicrosoftEdgeWebview2Setup.exe"; Flags: dontcopy
 
 [Icons]
 Name: "{autoprograms}\kyfRev"; Filename: "{app}\kyfRev.exe"; Check: ShortcutWanted(0)
@@ -118,6 +126,8 @@ Filename: "{app}\kyfRev.exe"; Description: "{cm:LaunchProgram,kyfRev}"; Flags: n
 [Code]
 const
   UninstallKey = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\{' + '{#AppGuid}' + '}_is1';
+  LegacyKey = 'Software\Microsoft\Windows\CurrentVersion\Uninstall\kyfRev';
+  WebView2Clients = 'Software\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}';
 
 var
   { Raccourcis (menu Démarrer, Bureau) et emplacement des fiches : pages de l'assistant, gardées
@@ -344,9 +354,75 @@ begin
     Result := False;
 end;
 
+{ Le dossier de la 0.x, pour l'utilisateur en cours ou pour tous ; vide si elle n'est pas installée. }
+function LegacyFolder: String;
+begin
+  if not RegQueryStringValue(HKCU, LegacyKey, 'InstallLocation', Result) then
+    if not RegQueryStringValue(HKLM, LegacyKey, 'InstallLocation', Result) then
+      Result := '';
+  Result := RemoveBackslashUnlessRoot(RemoveQuotes(Result));
+end;
+
+function InLegacyFolder: Boolean;
+begin
+  Result := (LegacyFolder <> '') and (CompareText(LegacyFolder, RemoveBackslashUnlessRoot(ExpandConstant('{app}'))) = 0);
+end;
+
+function WebView2Listed(const RootKey: Integer): Boolean;
+var
+  Version: String;
+begin
+  Result := RegQueryStringValue(RootKey, WebView2Clients, 'pv', Version) and (Version <> '') and (Version <> '0.0.0.0');
+end;
+
+{ Vrai si Windows reconnaît au fichier une signature valide de Microsoft. }
+function SignedByMicrosoft(const FileName: String): Boolean;
+var
+  Code: Integer;
+begin
+  Result := Exec(ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'),
+    '-NoProfile -NonInteractive -Command "$s = Get-AuthenticodeSignature -LiteralPath ''' + FileName + '''; ' +
+    'if ($s.Status -eq ''Valid'' -and $s.SignerCertificate.Subject -match ''O=Microsoft Corporation'') { exit 0 } else { exit 1 }"',
+    '', SW_HIDE, ewWaitUntilTerminated, Code) and (Code = 0);
+end;
+
+procedure WebView2Missing(const Reason: String);
+begin
+  Log('WebView2 non installé : ' + Reason);
+  SuppressibleMsgBox('WebView2 n''a pas pu être installé (' + Reason + '). kyfRev fonctionne sans lui, mais l''écriture s''ouvrira en Markdown, sans texte mis en forme, tant qu''il manque. Windows Update l''installe en général de lui-même.',
+    mbInformation, MB_OK, IDOK);
+end;
+
+{ WebView2 est livré avec Windows 11 et par Windows Update : seul un poste qui ne l'a pas lance le programme d'amorçage. }
+procedure InstallWebView2;
+var
+  Setup: String;
+  Code: Integer;
+begin
+  if WebView2Listed(HKLM32) or WebView2Listed(HKCU) then
+    Exit;
+  WizardForm.StatusLabel.Caption := 'Installation de WebView2…';
+  ExtractTemporaryFile('MicrosoftEdgeWebview2Setup.exe');
+  Setup := ExpandConstant('{tmp}\MicrosoftEdgeWebview2Setup.exe');
+  if not SignedByMicrosoft(Setup) then
+    WebView2Missing('la signature de son programme d''installation n''est pas valide')
+  else if not Exec(Setup, '/silent /install', '', SW_HIDE, ewWaitUntilTerminated, Code) then
+    WebView2Missing('son programme d''installation n''a pas démarré')
+  else if Code <> 0 then
+    WebView2Missing('code ' + IntToStr(Code) + ', le réseau est peut-être coupé');
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+begin
+  if CurStep = ssPostInstall then
+    InstallWebView2;
+end;
+
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 begin
-  if NewerInstalled then
+  if InLegacyFolder then
+    Result := 'kyfRev 0.x est installé dans ce dossier, et le retirer plus tard y effacerait aussi cette version. Rien n''a été modifié. Installez kyfRev pour vous seul, ou choisissez un autre dossier.'
+  else if NewerInstalled then
     Result := FmtMessage('Une version plus récente de kyfRev (%1) est déjà installée sur cet ordinateur. Cette installation, en version %2, ne la remplace pas : rien n''est modifié.', [InstalledVersion, '{#Version}'])
   else
     Result := '';

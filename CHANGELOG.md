@@ -9,6 +9,10 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- L'installateur installe WebView2 s'il manque, après avoir vérifié que son programme d'amorçage est signé par Microsoft ; sans
+  réseau, l'installation finit quand même et le dit. Il livre `kyfrev-coffre`, et refuse le dossier de la 0.x, dont la
+  désinstallation y effacerait `kyfRev.exe`. Paramètres › À propos signale la 0.x encore installée et ouvre la page des
+  applications de Windows pour la retirer ; rien n'est retiré d'office.
 - Recherche dans le coffre, comme la 0.x. La vue Fiches cherche aussi dans le texte, avec un extrait où les mots sont
   surlignés. Ctrl+K donne, sous les commandes et à partir de deux lettres, les fiches, les passages, les définitions et les
   citations qui contiennent tous les mots, sans tenir compte de la casse, des accents ni des ligatures ; un résultat ouvre

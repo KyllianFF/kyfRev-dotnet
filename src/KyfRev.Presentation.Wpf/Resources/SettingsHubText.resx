@@ -195,4 +195,10 @@
   <data name="Version" xml:space="preserve">
     <value>kyfRev {0}</value>
   </data>
+  <data name="OpenInstalledApps" xml:space="preserve">
+    <value>Ouvrir les applications installées</value>
+  </data>
+  <data name="LegacyInstalled" xml:space="preserve">
+    <value>kyfRev {0}, l'ancienne version, est encore installé. Si celle-ci vous convient, vous pouvez le désinstaller depuis Windows : vos coffres ne seront pas touchés.</value>
+  </data>
 </root>
