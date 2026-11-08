@@ -102,6 +102,12 @@ public sealed class VaultAdapter(VaultSession inner, IDisposable? owned = null) 
     public string ShareSheet(string id, ShareFormat format, string folder, string? content) => inner.ShareSheet(id, format, folder, content);
 
     /// <inheritdoc/>
+    public string ShareSheetAsPdf(string id, string folder, ReadOnlyMemory<byte> pdf) => inner.ShareSheetAsPdf(id, folder, pdf);
+
+    /// <inheritdoc/>
+    public string EmbedSharedImages(string page) => inner.EmbedSharedImages(page);
+
+    /// <inheritdoc/>
     public SaveResult SaveBody(string id, string body, string expectedFingerprint, ulong session, Moment now) =>
         inner.SaveBody(id, body, expectedFingerprint, session, now);
 
