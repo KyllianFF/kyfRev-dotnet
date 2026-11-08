@@ -73,6 +73,191 @@ public sealed class ReviewTests
     }
 
     [TestMethod]
+    public async Task A_review_done_on_an_earlier_day_counts_from_that_day()
+    {
+        using var vault = new ReviewVault();
+        var bar = await vault.SheetBarAsync();
+        Assert.IsFalse(bar.IsChoosingDay);
+        Assert.IsNull(bar.EarliestDay);
+        Assert.IsNull(bar.LatestDay);
+        Assert.IsFalse(bar.ConfirmDayCommand.CanExecute(null));
+
+        // Fiche créée le 1er, on est le 3 : le 2 ou aujourd'hui sont possibles, jamais avant ni après.
+        Assert.IsTrue(bar.CanAntedate);
+        bar.ChooseValidationDayCommand.Execute(null);
+        Assert.AreEqual(ReviewDayChoice.Validate, bar.DayChoice);
+        Assert.IsTrue(bar.IsChoosingDay);
+        Assert.AreEqual(ReviewText.ValidationDay, bar.DayChoiceLabel);
+        Assert.AreEqual(ReviewText.ValidateOnThatDay, bar.DayChoiceConfirm);
+        Assert.AreEqual(new DateOnly(2026, 10, 2), bar.ChosenDay);
+        Assert.AreEqual(new DateOnly(2026, 10, 2), bar.EarliestDay);
+        Assert.AreEqual(new DateOnly(2026, 10, 3), bar.LatestDay);
+        Assert.IsTrue(bar.ConfirmDayCommand.CanExecute(null));
+
+        await bar.ConfirmDayCommand.ExecuteAsync(null);
+
+        Assert.IsNull(bar.Error);
+        Assert.AreEqual("J1 validée au vendredi 2 octobre. Prochaine étape : J3, lundi 5 octobre.", bar.Message);
+        Assert.AreEqual(new DateOnly(2026, 10, 2), bar.State.LastReview);
+        Assert.AreEqual(ReviewAction.Validated, bar.LastAction);
+        Assert.IsFalse(bar.IsChoosingDay, "le champ se referme");
+        Assert.IsNull(bar.ChosenDay);
+        Assert.IsTrue(bar.CanValidate, "la révision d'aujourd'hui reste à faire");
+        Assert.IsFalse(bar.CanAntedate, "plus aucun jour libre avant aujourd'hui");
+        Assert.AreEqual("J1 : validée le ven. 2 oct.", bar.Steps[1].Description);
+    }
+
+    [TestMethod]
+    public async Task A_day_the_review_cannot_take_is_refused_and_the_field_stays_open()
+    {
+        using var vault = new ReviewVault();
+        var bar = await vault.SheetBarAsync();
+        bar.ChooseValidationDayCommand.Execute(null);
+        bar.ChosenDay = new DateOnly(2026, 10, 1);
+
+        await bar.ConfirmDayCommand.ExecuteAsync(null);
+        await bar.AnswerCommand.ExecuteAsync(true);
+
+        Assert.IsTrue(bar.HasError);
+        Assert.IsTrue(bar.IsChoosingDay);
+        Assert.AreEqual("J1", bar.State.Step);
+
+        bar.ChosenDay = null;
+        Assert.IsFalse(bar.ConfirmDayCommand.CanExecute(null));
+        bar.CancelDayCommand.Execute(null);
+        Assert.AreEqual(ReviewDayChoice.None, bar.DayChoice);
+    }
+
+    [TestMethod]
+    public async Task Today_chosen_in_the_field_is_an_ordinary_review()
+    {
+        using var vault = new ReviewVault();
+        var bar = await vault.SheetBarAsync();
+        bar.ChooseValidationDayCommand.Execute(null);
+        bar.ChosenDay = new DateOnly(2026, 10, 3);
+
+        await bar.ConfirmDayCommand.ExecuteAsync(null);
+
+        Assert.AreEqual("J1 validée. Prochaine étape : J3, mardi 6 octobre.", bar.Message);
+        Assert.IsTrue(bar.ShowsReviewedToday);
+    }
+
+    [TestMethod]
+    public async Task A_review_ahead_of_its_chosen_day_is_confirmed_with_that_day()
+    {
+        using var vault = new ReviewVault();
+        var bar = await vault.SheetBarAsync();
+        await bar.ValidateCommand.ExecuteAsync(null);
+        vault.Time.AdvanceDays(5);
+        bar = await vault.SheetBarAsync();
+        Assert.AreEqual(new DateOnly(2026, 10, 6), bar.State.DueDate);
+
+        // Le 8, on dit l'avoir révisée le 5 : un jour avant son échéance du 6.
+        bar.ChooseValidationDayCommand.Execute(null);
+        bar.ChosenDay = new DateOnly(2026, 10, 5);
+        await bar.ConfirmDayCommand.ExecuteAsync(null);
+
+        Assert.AreEqual(ReviewConfirmation.Early, bar.Confirmation);
+        Assert.AreEqual("Cette révision est prévue mardi 6 octobre. La valider au lundi 5 octobre fera repartir le calendrier de ce jour-là.", bar.ConfirmMessage);
+        Assert.AreEqual(ReviewText.ValidateOnThatDay, bar.ConfirmLabel);
+
+        await bar.AnswerCommand.ExecuteAsync(true);
+
+        Assert.AreEqual(new DateOnly(2026, 10, 5), bar.State.LastReview);
+        Assert.AreEqual("J3 : validée le lun. 5 oct. (1 j en avance)", bar.Steps[2].Description);
+    }
+
+    [TestMethod]
+    public async Task A_due_date_moves_to_a_chosen_day()
+    {
+        using var vault = new ReviewVault();
+        var bar = await vault.SheetBarAsync();
+
+        bar.ChoosePostponeDayCommand.Execute(null);
+
+        Assert.AreEqual(ReviewDayChoice.Postpone, bar.DayChoice);
+        Assert.AreEqual(ReviewText.PostponeDay, bar.DayChoiceLabel);
+        Assert.AreEqual(ReviewText.PostponeOnThatDay, bar.DayChoiceConfirm);
+        Assert.AreEqual(new DateOnly(2026, 10, 4), bar.ChosenDay);
+        Assert.AreEqual(new DateOnly(2026, 10, 4), bar.EarliestDay);
+        Assert.IsNull(bar.LatestDay);
+
+        bar.ChosenDay = new DateOnly(2026, 10, 12);
+        await bar.ConfirmDayCommand.ExecuteAsync(null);
+
+        Assert.AreEqual(new DateOnly(2026, 10, 12), bar.State.DueDate);
+        Assert.AreEqual("J1 reportée au lundi 12 octobre.", bar.Message);
+        Assert.IsFalse(bar.IsChoosingDay);
+    }
+
+    [TestMethod]
+    public async Task An_earlier_day_is_not_offered_when_there_is_none()
+    {
+        using var vault = new ReviewVault();
+        var bar = await vault.SheetBarAsync();
+        await bar.ValidateCommand.ExecuteAsync(null);
+        Assert.IsFalse(bar.CanAntedate, "révisée aujourd'hui");
+
+        vault.Time.AdvanceDays(1);
+        bar = await vault.SheetBarAsync();
+        Assert.IsFalse(bar.CanAntedate, "révisée hier : seul aujourd'hui reste");
+
+        vault.Time.AdvanceDays(1);
+        bar = await vault.SheetBarAsync();
+        Assert.IsTrue(bar.CanAntedate);
+
+        Assert.IsTrue(vault.App.Reviews.Archive(vault.SheetId).Succeeded);
+        var archived = await vault.SheetBarAsync();
+        Assert.IsFalse(archived.CanAntedate);
+    }
+
+    [STATestMethod]
+    public void The_field_of_a_chosen_day_opens_with_the_focus_inside_the_bar()
+    {
+        using var ui = new UiThread();
+        using var vault = new ReviewVault();
+        var test = new TestShell();
+        var page = vault.SheetPage(vault.SheetId);
+        page.LoadCommand.Execute(null);
+        UiThread.Until(() => !page.IsLoading);
+        var window = Show(test, page);
+        try
+        {
+            Assert.AreEqual(Visibility.Collapsed, Named<StackPanel>(window, "DayForm").Visibility);
+
+            page.Review!.ChooseValidationDayCommand.Execute(null);
+            TestShell.Flush();
+
+            var field = Named<DateField>(window, "ChosenDay");
+            Assert.AreEqual(Visibility.Visible, Named<StackPanel>(window, "DayForm").Visibility);
+            Assert.AreEqual(ReviewText.ValidationDay, AutomationProperties.GetName(field));
+            Assert.AreEqual(new DateOnly(2026, 10, 2), field.Day);
+            Assert.AreEqual(new DateOnly(2026, 10, 2), field.Minimum);
+            Assert.AreEqual(new DateOnly(2026, 10, 3), field.Maximum);
+            UiThread.Until(() => field.IsKeyboardFocusWithin);
+
+            // À l'étroit, le champ et ses boutons passent à la ligne, sans déborder.
+            window.Width = 420;
+            window.UpdateLayout();
+            TestShell.Flush();
+            var cancel = Named<Button>(window, "CancelDay");
+            Assert.IsLessThanOrEqualTo(window.ActualWidth, cancel.TranslatePoint(new Point(cancel.ActualWidth, 0), window).X);
+
+            // Le menu propose la date passée tant qu'il reste un jour libre.
+            Assert.AreEqual(Visibility.Visible, Named<Button>(window, "MoreButton").ContextMenu.Items.OfType<MenuItem>().First(item => item.Name == "ValidateOnDay").Visibility);
+            Assert.AreEqual(ReviewText.ChoosePostponeDay, Named<Button>(window, "PostponeButton").ContextMenu.Items.OfType<MenuItem>().First(item => item.Name == "PostponeOnDay").Header);
+
+            page.Review.CancelDayCommand.Execute(null);
+            TestShell.Flush();
+            Assert.AreEqual(Visibility.Collapsed, Named<StackPanel>(window, "DayForm").Visibility);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [TestMethod]
     public async Task An_early_review_is_confirmed_first()
     {
         using var vault = new ReviewVault();

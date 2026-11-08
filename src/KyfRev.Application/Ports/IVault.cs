@@ -140,8 +140,11 @@ public interface ITrashStore
 /// <summary>Méthode des J d'une fiche ou d'un passage.</summary>
 public interface IReviewStore
 {
-    /// <summary>Valide la révision attendue (une seule par élément et par jour).</summary>
-    ReviewOutcome ValidateReview(ItemKind kind, string id, Moment now);
+    /// <summary>
+    /// Valide la révision attendue (une seule par élément et par jour). <paramref name="reviewDate"/> antidate la
+    /// révision (« je l'ai révisée hier ») ; rien : aujourd'hui.
+    /// </summary>
+    ReviewOutcome ValidateReview(ItemKind kind, string id, Moment now, DateOnly? reviewDate = null);
 
     /// <summary>Reporte l'échéance au jour <paramref name="newDueDate"/>.</summary>
     void Postpone(ItemKind kind, string id, Moment now, DateOnly newDueDate);

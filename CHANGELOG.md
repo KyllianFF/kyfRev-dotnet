@@ -9,6 +9,9 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- La barre de révision propose « Valider à une date passée… », entre le lendemain de la dernière révision et aujourd'hui : le
+  calendrier repart de ce jour-là, et une révision en avance sur ce jour demande confirmation. « Reporter à une date… »
+  vient s'ajouter à demain et à dans 3 jours, comme dans la 0.x.
 - Un champ de date dans le design system (`DateField`) : une date qui se tape ou se choisit dans un calendrier en français,
   aux couleurs de chaque thème, nommé pour le lecteur d'écran ; hors des jours permis, elle est refusée et le champ le montre.
 - Coffre chiffré, lot 4 : la preuve qu'aucun texte en clair ne reste sur le disque. Sur un coffre chiffré, le menu d'un mot

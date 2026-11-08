@@ -198,6 +198,27 @@ public sealed class UseCaseTests
     }
 
     [TestMethod]
+    public void A_review_can_be_dated_from_the_day_after_the_last_one_to_today()
+    {
+        using var folder = new TestFolder();
+        using var test = Opened(folder);
+        var app = test.App;
+        var id = app.Sheets.Create(null, "Mitose", null).Value;
+        test.Time.Advance(TimeSpan.FromDays(3));
+
+        Assert.AreEqual("Une révision est déjà enregistrée le 2026-10-01.", app.Reviews.Validate(ItemKind.Sheet, id, new DateOnly(2026, 10, 1)).Error);
+        Assert.IsNotNull(app.Reviews.Validate(ItemKind.Sheet, id, new DateOnly(2026, 9, 30)).Error);
+        Assert.IsNotNull(app.Reviews.Validate(ItemKind.Sheet, id, new DateOnly(2026, 10, 5)).Error);
+
+        var state = app.Reviews.Validate(ItemKind.Sheet, id, new DateOnly(2026, 10, 2)).Value;
+
+        Assert.AreEqual(new DateOnly(2026, 10, 2), state.LastReview);
+        Assert.AreEqual(new DateOnly(2026, 10, 5), state.DueDate, "J3 se compte depuis le jour choisi");
+        Assert.IsFalse(state.ReviewedToday);
+        Assert.AreEqual(new DateOnly(2026, 10, 2), state.Steps[1].DoneOn);
+    }
+
+    [TestMethod]
     public void Reviews_annotations_reminders_exams_and_settings()
     {
         using var folder = new TestFolder();
@@ -315,6 +336,7 @@ public sealed class UseCaseTests
         _ when type == typeof(bool) => false,
         _ when type == typeof(ulong) => 0UL,
         _ when type == typeof(DateOnly) => new DateOnly(2026, 10, 1),
+        _ when type == typeof(DateOnly?) => null,
         _ when type == typeof(IReadOnlyList<string>) => Array.Empty<string>(),
         _ when type == typeof(ReadOnlyMemory<byte>) => ReadOnlyMemory<byte>.Empty,
         _ when type == typeof(Anchor) => Passage,
