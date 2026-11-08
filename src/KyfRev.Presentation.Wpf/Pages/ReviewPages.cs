@@ -246,7 +246,7 @@ public sealed partial class PassagePageViewModel : ObservableObject, IReviewPage
 /// barre de révision. Ouvrir une fiche ne valide rien. Les volets se replient quand la fenêtre rétrécit, le
 /// plan d'abord ; ils s'ouvrent alors par-dessus le texte, avec les mêmes boutons.
 /// </summary>
-public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage, ILeaving
+public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage, ILeaving, INavigationAware
 {
     /// <summary>Largeur du plan à côté du texte.</summary>
     public const double OutlineWidth = 230;
@@ -290,6 +290,7 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage, 
     private PassageEntry? _editedPassage;
     private (string Comment, string Term, string Explanation) _editorOpened = (string.Empty, string.Empty, string.Empty);
     private IReadOnlyList<VaultDefinition> _definitions = [];
+    private CancellationTokenSource? _backlinksRequest;
 
     /// <summary>La fiche <paramref name="sheetId"/>.</summary>
     public SheetPageViewModel(SheetUseCases sheets, AnnotationUseCases annotations, Func<ItemKind, string, ReviewState, ReviewBarViewModel> reviewBar, string sheetId, Action back, Action<string> openSheet, IExternalLinks links, Func<OpenedSheet, SheetEditorViewModel> editor, bool revising = false, Func<bool>? activeRecall = null)
@@ -319,12 +320,40 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage, 
         EditorExplanation = string.Empty;
         WantsOutline = true;
         WantsPassages = true;
+        WantsBacklinks = true;
+        Backlinks = [];
+        LinkPreview = new LinkPreviewViewModel(sheets.Preview, openSheet);
         PageWidth = double.PositiveInfinity;
         IsLoading = true;
     }
 
     /// <summary>La fiche.</summary>
     public string SheetId { get; }
+
+    /// <summary>L'aperçu des liens vers d'autres fiches.</summary>
+    public LinkPreviewViewModel LinkPreview { get; }
+
+    /// <summary>Les fiches qui mènent à celle-ci, relues à chaque ouverture.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(BacklinksLabel), nameof(BacklinksHeading))]
+    public partial IReadOnlyList<BacklinkEntry> Backlinks { get; private set; }
+
+    /// <summary>Elles n'ont pas pu être cherchées.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasBacklinksError))]
+    public partial string? BacklinksError { get; private set; }
+
+    /// <summary>Un refus est à dire dans le panneau.</summary>
+    public bool HasBacklinksError => BacklinksError is not null;
+
+    /// <summary>Le panneau a quelque chose à dire ; comme dans la 0.x, seulement en lecture.</summary>
+    public bool HasBacklinks => IsReading && !IsRevising && (Backlinks.Count > 0 || HasBacklinksError);
+
+    /// <summary>« Rétroliens · 2 ».</summary>
+    public string BacklinksLabel => ReadingText.BacklinksOf(Backlinks.Count);
+
+    /// <summary>« Fiches qui mènent ici · 2 ».</summary>
+    public string BacklinksHeading => ReadingText.BacklinksTitleOf(Backlinks.Count);
 
     /// <summary>Lecture en cours.</summary>
     [ObservableProperty]
@@ -449,7 +478,7 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage, 
 
     /// <summary>Largeur de la page.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(OutlineFits), nameof(PassagesFits), nameof(ShowsOutline), nameof(ShowsPassages), nameof(ShowsOutlineOverlay), nameof(ShowsPassagesOverlay), nameof(IsOutlineOn), nameof(IsPassagesOn), nameof(IsCompactHeader))]
+    [NotifyPropertyChangedFor(nameof(OutlineFits), nameof(PassagesFits), nameof(ShowsOutline), nameof(ShowsPassages), nameof(ShowsBacklinks), nameof(ShowsOutlineOverlay), nameof(ShowsPassagesOverlay), nameof(ShowsBacklinksOverlay), nameof(IsOutlineOn), nameof(IsPassagesOn), nameof(IsBacklinksOn), nameof(IsCompactHeader))]
     public partial double PageWidth { get; set; }
 
     /// <summary>
@@ -458,14 +487,23 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage, 
     /// </summary>
     internal const double CompactHeaderWidth = Editing.EditorRibbon.CompactWidth + 32;
 
+    /// <summary>La place du bouton des rétroliens dans l'en-tête : avec lui, les boutons passent plus tôt sous « ⋯ ».</summary>
+    internal const double BacklinksToggleRoom = 130;
+
     /// <summary>L'en-tête est étroit : voir <see cref="CompactHeaderWidth"/>.</summary>
-    public bool IsCompactHeader => PageWidth < CompactHeaderWidth;
+    public bool IsCompactHeader => PageWidth < CompactHeaderWidth + (HasBacklinks ? BacklinksToggleRoom : 0);
 
-    /// <summary>Il y a un plan ou des passages à montrer.</summary>
-    public bool HasPanels => ShowsPanelToggles && (HasOutline || HasPassages);
+    /// <summary>Il y a un plan, des passages ou des rétroliens à montrer.</summary>
+    public bool HasPanels => ShowsPanelToggles && (HasOutline || HasPassages || HasBacklinks);
 
-    /// <summary>Le nom du « ⋯ » de l'en-tête étroit : il dit aussi combien de passages il cache.</summary>
-    public string PanelsMenuName => HasPassages ? ReadingText.PanelsMenuWith(PassagesLabel) : ReadingText.PanelsMenu;
+    /// <summary>Le nom du « ⋯ » de l'en-tête étroit : il dit aussi combien de passages et de rétroliens il cache.</summary>
+    public string PanelsMenuName => (HasPassages, HasBacklinks) switch
+    {
+        (true, true) => ReadingText.PanelsMenuWith($"{PassagesLabel}, {BacklinksLabel}"),
+        (true, false) => ReadingText.PanelsMenuWith(PassagesLabel),
+        (false, true) => ReadingText.PanelsMenuWith(BacklinksLabel),
+        _ => ReadingText.PanelsMenu,
+    };
 
     /// <summary>Le plan tient à côté du texte.</summary>
     public bool OutlineFits => PageWidth >= OutlineMinimum;
@@ -482,6 +520,16 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage, 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowsPassages), nameof(IsPassagesOn))]
     private partial bool WantsPassages { get; set; }
+
+    /// <summary>Les rétroliens sont voulus à côté du texte, quand ils y tiennent.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsBacklinks), nameof(IsBacklinksOn))]
+    private partial bool WantsBacklinks { get; set; }
+
+    /// <summary>Les rétroliens sont ouverts par-dessus le texte.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsBacklinksOverlay), nameof(IsBacklinksOn))]
+    private partial bool BacklinksOverlaid { get; set; }
 
     /// <summary>Le plan est ouvert par-dessus le texte.</summary>
     [ObservableProperty]
@@ -505,6 +553,12 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage, 
     /// <summary>Les passages sont montrés par-dessus le texte.</summary>
     public bool ShowsPassagesOverlay => PassagesOverlaid && !PassagesFits && !ShowsCode;
 
+    /// <summary>Les rétroliens sont montrés à côté du texte, dans la colonne des passages.</summary>
+    public bool ShowsBacklinks => HasBacklinks && WantsBacklinks && PassagesFits && !ShowsCode;
+
+    /// <summary>Les rétroliens sont montrés par-dessus le texte.</summary>
+    public bool ShowsBacklinksOverlay => HasBacklinks && BacklinksOverlaid && !PassagesFits && !ShowsCode;
+
     /// <summary>Le bouton du plan : à côté du texte s'il y tient, sinon par-dessus.</summary>
     public bool IsOutlineOn
     {
@@ -518,6 +572,7 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage, 
             else
             {
                 PassagesOverlaid = false;
+                BacklinksOverlaid = false;
                 OutlineOverlaid = value;
             }
         }
@@ -536,7 +591,27 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage, 
             else
             {
                 OutlineOverlaid = false;
+                BacklinksOverlaid = false;
                 PassagesOverlaid = value;
+            }
+        }
+    }
+
+    /// <summary>Le bouton des rétroliens : à côté du texte s'ils y tiennent, sinon par-dessus.</summary>
+    public bool IsBacklinksOn
+    {
+        get => ShowsBacklinks || ShowsBacklinksOverlay;
+        set
+        {
+            if (PassagesFits)
+            {
+                WantsBacklinks = value;
+            }
+            else
+            {
+                OutlineOverlaid = false;
+                PassagesOverlaid = false;
+                BacklinksOverlaid = value;
             }
         }
     }
@@ -677,6 +752,87 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage, 
         OnPropertyChanged(nameof(ShowsPassagesOverlay));
         OnPropertyChanged(nameof(IsOutlineOn));
         OnPropertyChanged(nameof(IsPassagesOn));
+        NotifyBacklinks();
+    }
+
+    private void NotifyBacklinks()
+    {
+        OnPropertyChanged(nameof(HasBacklinks));
+        OnPropertyChanged(nameof(ShowsBacklinks));
+        OnPropertyChanged(nameof(ShowsBacklinksOverlay));
+        OnPropertyChanged(nameof(IsBacklinksOn));
+        OnPropertyChanged(nameof(HasPanels));
+        OnPropertyChanged(nameof(PanelsMenuName));
+        OnPropertyChanged(nameof(IsCompactHeader));
+    }
+
+    partial void OnBacklinksChanged(IReadOnlyList<BacklinkEntry> value) => NotifyBacklinks();
+
+    partial void OnBacklinksErrorChanged(string? value) => NotifyBacklinks();
+
+    /// <summary>De retour sur la fiche : ce qui a changé pendant qu'on était ailleurs se relit.</summary>
+    public void OnNavigatedTo()
+    {
+        if (Reading is not null && IsReading)
+        {
+            _ = CatchUpAsync();
+        }
+    }
+
+    /// <summary>Le texte se relit s'il a changé (un lien réécrit par un renommage) ; les rétroliens, toujours.</summary>
+    private async Task CatchUpAsync()
+    {
+        var opened = await Task.Run(() => _sheets.Open(SheetId)).ConfigureAwait(true);
+        if (opened.Succeeded && opened.Value.Fingerprint != Reading?.Fingerprint)
+        {
+            await LoadAsync().ConfigureAwait(true);
+        }
+        else
+        {
+            await ReadBacklinksAsync().ConfigureAwait(true);
+        }
+    }
+
+    /// <summary>Cherche les fiches qui mènent ici, hors du fil de l'interface ; la recherche précédente s'arrête.</summary>
+    private async Task ReadBacklinksAsync()
+    {
+        if (IsRevising)
+        {
+            return;
+        }
+        var token = NewBacklinksRequest();
+        Outcome<IReadOnlyList<Backlink>> outcome;
+        try
+        {
+            outcome = await Task.Run(() => _sheets.Backlinks(SheetId, token), token).ConfigureAwait(true);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        if (!token.IsCancellationRequested)
+        {
+            BacklinksError = outcome.Succeeded ? null : outcome.Error;
+            Backlinks = outcome.Succeeded ? [.. outcome.Value.Select(backlink => new BacklinkEntry(backlink))] : [];
+        }
+    }
+
+    private CancellationToken NewBacklinksRequest()
+    {
+        _backlinksRequest?.Cancel();
+        _backlinksRequest?.Dispose();
+        var request = new CancellationTokenSource();
+        _backlinksRequest = request;
+        return request.Token;
+    }
+
+    /// <summary>Ouvre la fiche d'où part un rétrolien.</summary>
+    [RelayCommand]
+    private void OpenBacklink(BacklinkEntry backlink)
+    {
+        ArgumentNullException.ThrowIfNull(backlink);
+        CloseOverlay();
+        _openSheet(backlink.SheetId);
     }
 
     /// <summary>Passe à l'écriture : le texte du disque, relu maintenant.</summary>
@@ -758,6 +914,7 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage, 
         {
             IsLoading = false;
         }
+        await ReadBacklinksAsync().ConfigureAwait(true);
     }
 
     /// <summary>Surligne une position du texte, sans commentaire.</summary>
@@ -888,6 +1045,7 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage, 
     [RelayCommand]
     private void Escape()
     {
+        LinkPreview.Hide();
         CloseOverlay();
         CancelRebinding();
     }
@@ -961,6 +1119,7 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage, 
     {
         OutlineOverlaid = false;
         PassagesOverlaid = false;
+        BacklinksOverlaid = false;
     }
 
     /// <summary>Suit un lien de la fiche : vers le navigateur du système, ou vers une autre fiche.</summary>
@@ -1108,7 +1267,16 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage, 
     /// <summary>Marque les mots définis, sauf en révision.</summary>
     private void ShowWords() => Words = IsRevising || Reading is null ? [] : Reading.WordsOf(_definitions, SheetId);
 
-    partial void OnIsRevisingChanged(bool value) => ShowWords();
+    partial void OnIsRevisingChanged(bool value)
+    {
+        ShowWords();
+        NotifyBacklinks();
+        // Retour à la lecture, seul mode où le panneau se montre : il se relit, comme dans la 0.x.
+        if (!value && Reading is not null)
+        {
+            _ = ReadBacklinksAsync();
+        }
+    }
 
     /// <summary>Montre où est défini un mot marqué : ici, la définition ressort ; ailleurs, sa fiche s'ouvre sur elle.</summary>
     [RelayCommand]

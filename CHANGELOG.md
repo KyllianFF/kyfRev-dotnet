@@ -9,6 +9,12 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- Rétroliens et aperçu d'une fiche liée, comme dans la 0.x. Dans la vue d'une fiche, en lecture, le panneau « Fiches qui
+  mènent ici » suit les passages : chaque fiche, son dossier, le texte autour de son lien, et un clic pour l'ouvrir. Faute
+  de place, il s'ouvre par-dessus le texte, depuis le bouton « Rétroliens » ou le menu « ⋯ ». Au survol d'un lien vers une
+  fiche, ou quand il reçoit le focus, un aperçu dit son dossier, son titre, ses étiquettes, le début de son texte et son
+  étape ; Échap le referme, et un clic dessus ouvre la fiche. Seules les fiches qui mènent ici sont lues, rien n'est
+  enregistré, et le tout se relit quand on revient sur la fiche : un texte modifié, un renommage ou un déplacement se voient.
 - Coffre chiffré, lot 4 : la preuve qu'aucun texte en clair ne reste sur le disque. Sur un coffre chiffré, le menu d'un mot
   propose « Accepter jusqu'à la fermeture de kyfRev », dans le code Markdown, au lieu d'écrire dans le dictionnaire de Windows. Le journal masque tout chemin
   qui entre dans le coffre, et ne nomme plus la citation trouvée. Les moteurs web ne téléversent plus de rapport de plantage,
