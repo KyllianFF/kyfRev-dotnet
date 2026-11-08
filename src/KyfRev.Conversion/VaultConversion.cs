@@ -406,10 +406,18 @@ public static class VaultConversion
             .Where(entry => !Excluded.Contains(entry.Relative, StringComparer.Ordinal) && !Path.GetFileName(entry.File).StartsWith(AtomicFile.TemporaryPrefix, StringComparison.Ordinal)),
     ];
 
+    /// <summary>Une clé de récupération, ou un mot de passe qui en a la forme : si elle n'ouvre pas l'en-tête, il reste à l'essayer comme tel.</summary>
     private static byte[] Opened(VaultHeader header, byte[] recovery, string secret)
     {
         PasswordKeys.Clear(recovery);
-        return header.OpenWithRecovery(secret);
+        try
+        {
+            return header.OpenWithRecovery(secret);
+        }
+        catch (VaultCryptoException)
+        {
+            return header.Open(secret);
+        }
     }
 
     /// <summary>Ce qui interdit la conversion, quel que soit son sens ; un dossier qui ne se lit pas l'interdit aussi.</summary>

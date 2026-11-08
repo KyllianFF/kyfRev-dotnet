@@ -486,7 +486,10 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
                 add.Click += (_, _) => _ = Task.Run(() => _spelling.Add(word));
                 items.Add(add);
             }
-            items.Add(new Separator());
+            if (items[^1] is not Separator)
+            {
+                items.Add(new Separator());
+            }
         }
         items.Add(Item(EditingText.PastePlain, new ClipboardRequest("pastePlain")));
         if (!menu.InCode)

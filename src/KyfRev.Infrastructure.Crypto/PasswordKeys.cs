@@ -158,7 +158,8 @@ public static class PasswordKeys
     /// <param name="parameters">Les réglages.</param>
     public static bool IsReadable(PasswordParameters parameters) => parameters.Salt.Length == SaltBytes && parameters.Algorithm switch
     {
-        Argon2id => parameters.MemoryKib is > 0 and <= MaximumMemoryKib && parameters.Passes is > 0 and <= MaximumPasses,
+        // libsodium refuse moins de 8 Kio.
+        Argon2id => parameters.MemoryKib is >= 8 and <= MaximumMemoryKib && parameters.Passes is > 0 and <= MaximumPasses,
         Pbkdf2 => parameters.MemoryKib == 0 && parameters.Passes is > 0 and <= MaximumIterations,
         _ => false,
     };

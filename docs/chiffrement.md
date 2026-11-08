@@ -386,8 +386,8 @@ noms des dossiers et des fiches.
   coffre remis à sa place s'ouvre sans erreur. Et rien n'empêche d'effacer le dossier : le chiffrement ne remplace pas les
   sauvegardes.
 - **Ce que l'utilisateur sort lui-même du coffre** : un export, un copier-coller (le presse-papiers et son historique), le
-  coffre déchiffré. Le suivi, les annotations, les citations et un schéma exportés sont en clair, et l'application le dit ;
-  « Coffre complet (.zip) » est une sauvegarde, il garde le chiffrement du coffre.
+  coffre déchiffré. Le suivi, les annotations et les citations exportés sont en clair, et l'application le dit ; un schéma
+  exporté aussi, sans avertissement. « Coffre complet (.zip) » est une sauvegarde, il garde le chiffrement du coffre.
 - **Ce que le coffre en clair a laissé derrière lui.** Après « Chiffrer ce coffre… », le coffre d'origine et ses sauvegardes
   restent en clair jusqu'à ce que l'utilisateur les retire ; sur un SSD, un fichier effacé peut encore se retrouver.
 - **Les anciens secrets dans les sauvegardes.** Une sauvegarde garde l'en-tête de son jour : l'ancien mot de passe et
@@ -403,7 +403,7 @@ noms des dossiers et des fiches.
 | Le journal, `kyfRev.log` et `kyfRev.precedent.log` | Des événements, des erreurs | Le dossier du profil est masqué, et tout chemin qui entre dans le coffre s'arrête à son premier dossier (`fiches/…`). |
 | Le profil du moteur web, `WebView2` | Ses réglages, ses caches de scripts | Le texte d'une fiche lui parvient par la mémoire, en `no-store`, jamais par un fichier ni par le stockage d'une page. Aucun rapport de plantage ne part chez Microsoft ; un plantage du moteur peut en laisser un dans ce dossier, avec un morceau de sa mémoire. |
 | Le profil du moteur des extensions, `WebView2-extensions` | Ses réglages, un éventuel rapport de plantage | Comme `WebView2` : un plantage peut y laisser un morceau de sa mémoire, donc du texte donné à une extension. |
-| Le dictionnaire de Windows, `%APPDATA%\Microsoft\Spelling` | Les mots ajoutés par l'utilisateur | Sur un coffre chiffré, le menu d'un mot, dans le code Markdown, propose « Accepter jusqu'à la fermeture de kyfRev », qui n'écrit rien : le mot reste accepté dans tous les coffres jusqu'à ce que l'application se ferme. Le texte mis en forme, souligné par le moteur web, ne le propose pas. Ce qui a été ajouté depuis un coffre en clair y reste. |
+| Le dictionnaire de Windows, `%APPDATA%\Microsoft\Spelling` | Les mots ajoutés par l'utilisateur | Sur un coffre chiffré, le menu d'un mot, dans le code Markdown, propose « Accepter jusqu'à la fermeture de kyfRev », qui n'écrit rien et vaut, dans ce code, pour tous les coffres jusqu'à ce que l'application se ferme. Le texte mis en forme, souligné par le moteur web, ne le propose pas, continue de souligner un mot ainsi accepté et n'a plus de remplacement à proposer pour lui. Ce qui a été ajouté depuis un coffre en clair y reste. |
 | `cles-retenues.json` | La clé retenue, si l'utilisateur l'a demandé | Protégée par Windows (DPAPI) : elle s'ouvre dans sa session, sur ce poste ; quiconque ouvre cette session ouvre donc le coffre. |
 | `seance.json` | Le chemin du coffre et des identifiants, pendant une séance | Aucun texte de fiche. |
 | `preferences.json` | L'apparence | Aucun texte de fiche. |

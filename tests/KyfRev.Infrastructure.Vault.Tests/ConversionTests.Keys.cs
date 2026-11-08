@@ -201,6 +201,44 @@ public sealed partial class ConversionTests
     }
 
     [TestMethod]
+    public void A_header_with_a_repeated_key_is_refused_like_a_damaged_one()
+    {
+        using var vault = TemporaryVault.CopyOfReference();
+        using var place = new Place();
+        Encrypt(vault, place);
+        var header = Path.Combine(place.Encrypted, EncryptedVault.HeaderFile);
+        var repeated = "{\"format\":1," + File.ReadAllText(header).TrimStart()[1..];
+        File.WriteAllText(header, repeated);
+
+        var result = VaultKeyChanges.ChangePassword(place.Encrypted, Password, OtherPassword, PasswordKeys.NewPbkdf2());
+
+        Assert.IsFalse(result.Succeeded, result.Message);
+        Assert.Contains("illisible", result.Message);
+        Assert.AreEqual(repeated, File.ReadAllText(header));
+    }
+
+    [TestMethod]
+    [DataRow(7, false)]
+    [DataRow(8, true)]
+    public void Argon2_settings_under_its_minimum_are_unreadable(int memoryKib, bool readable) =>
+        Assert.AreEqual(readable, PasswordKeys.IsReadable(PasswordKeys.Calibrated() with { MemoryKib = memoryKib }));
+
+    [TestMethod]
+    public void A_password_shaped_like_a_recovery_key_still_opens_the_vault()
+    {
+        using var vault = TemporaryVault.CopyOfReference();
+        using var place = new Place();
+        using var other = new Place();
+        Encrypt(vault, place);
+        var shaped = Encrypt(vault, other);
+
+        Assert.AreEqual(VaultCommands.Success, Run(Lines(Password, shaped, shaped), "changer-mot-de-passe", place.Encrypted, "--pbkdf2").ExitCode);
+
+        var (exitCode, output) = Run(Lines(shaped), "dechiffrer", place.Encrypted, place.Decrypted);
+        Assert.AreEqual(VaultCommands.Success, exitCode, output);
+    }
+
+    [TestMethod]
     public void A_damaged_header_is_refused_without_being_rewritten()
     {
         using var vault = TemporaryVault.CopyOfReference();

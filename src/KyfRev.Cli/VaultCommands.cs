@@ -19,7 +19,7 @@ internal static class VaultCommands
     /// <summary>Le dossier n'est pas un coffre kyfRev.</summary>
     public const int NotAVault = 2;
 
-    /// <summary>La conversion a refusé ou échoué, ou le secret n'ouvre pas le coffre chiffré à vérifier : rien n'a été écrit.</summary>
+    /// <summary>La conversion ou le changement de clés a refusé ou échoué, ou le secret n'ouvre pas le coffre chiffré à vérifier : ni le coffre ni son en-tête n'ont changé.</summary>
     public const int Refused = 3;
 
     /// <summary>

@@ -76,7 +76,7 @@
     <value>Exporté dans « {0} ».</value>
   </data>
   <data name="ExportsHelp" xml:space="preserve">
-    <value>Dans le dossier de votre choix, hors du coffre ; aucun fichier existant n'est remplacé. Le suivi, les annotations et les citations sortent en clair, même d'un coffre chiffré. « Coffre complet (.zip) » garde le chiffrement du coffre.</value>
+    <value>Dans le dossier de votre choix, hors du coffre ; aucun fichier existant n'est remplacé. Le suivi, les annotations et les citations sortent en clair, même d'un coffre chiffré. « Coffre complet (.zip) » reste chiffré si le coffre l'est.</value>
   </data>
   <data name="ExportsTitle" xml:space="preserve">
     <value>Exports</value>

@@ -1294,6 +1294,9 @@ public sealed class VisualEditorTests
         CollectionAssert.Contains(headers, "école");
         CollectionAssert.DoesNotContain(headers, EditingText.AddToDictionary);
         CollectionAssert.DoesNotContain(headers, EditingText.AcceptUntilClosing);
+
+        var bare = scene.Visual!.MenuItems(new MenuEvent("ékole", 5, false, false, true, true), new KyfRev.Application.Ports.SpellingCorrection(0, 5, []));
+        Assert.IsFalse(bare.Zip(bare.Skip(1)).Any(pair => pair.First is Separator && pair.Second is Separator), "Sans remplacement, pas deux séparateurs de suite.");
     }
 
     [EngineTest]

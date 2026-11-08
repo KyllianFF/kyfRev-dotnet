@@ -77,8 +77,9 @@ public sealed class VaultHeader
             }
             return new VaultHeader(Value<string>(root, "coffre"), parameters, passwordEnvelope, recoveryEnvelope);
         }
-        catch (Exception exception) when (exception is JsonException or FormatException or InvalidOperationException)
+        catch (Exception exception) when (exception is JsonException or FormatException or InvalidOperationException or ArgumentException)
         {
+            // Une clé en double ne se révèle qu'au parcours de l'objet, par une ArgumentException.
             throw new VaultCryptoException("L'en-tête du coffre chiffré est illisible : le coffre ne s'ouvre pas.", exception);
         }
     }

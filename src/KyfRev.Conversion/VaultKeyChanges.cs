@@ -18,10 +18,10 @@ public static class VaultKeyChanges
     internal const string NotNoted = "La nouvelle clé n'a pas été enregistrée : l'ancienne reste valable.";
 
     /// <summary>L'en-tête a changé entre sa lecture et sa réécriture.</summary>
-    internal const string HeaderChanged = "L'en-tête du coffre a changé pendant l'opération : rien n'a été écrit.";
+    internal const string HeaderChanged = "L'en-tête du coffre a changé pendant l'opération : il n'a pas été réécrit.";
 
     /// <summary>Les réglages du mot de passe ne se lisent plus : seule la clé de récupération ouvre encore l'en-tête.</summary>
-    internal const string UnreadableSettings = "Les réglages du mot de passe de ce coffre sont illisibles : ce mot de passe ne peut pas être essayé. La clé de récupération ouvre encore l'en-tête. Rien n'a été écrit.";
+    internal const string UnreadableSettings = "Les réglages du mot de passe de ce coffre sont illisibles : ce mot de passe ne peut pas être essayé. La clé de récupération ouvre encore l'en-tête. L'en-tête n'a pas changé.";
 
     /// <summary>
     /// Change le mot de passe du coffre chiffré <paramref name="root"/>. La clé de récupération et la clé retenue sur un poste
@@ -104,7 +104,7 @@ public static class VaultKeyChanges
             DiskStorage.Instance.Replace(path, changed.Write());
             return result;
         }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or VaultCryptoException)
+        catch (Exception exception) when (VaultConversion.IsRefusal(exception))
         {
             return ConversionResult.Refused($"{exception.Message} L'en-tête n'a pas changé.");
         }
