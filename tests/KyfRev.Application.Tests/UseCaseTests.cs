@@ -1,5 +1,6 @@
 using System.Reflection;
 using KyfRev.Application.Model;
+using KyfRev.Application.Modules;
 using KyfRev.Application.Ports;
 using KyfRev.Application.Tests.Support;
 using KyfRev.Application.UseCases;
@@ -316,6 +317,8 @@ public sealed class UseCaseTests
         _ when type == typeof(ulong) => 0UL,
         _ when type == typeof(DateOnly) => new DateOnly(2026, 10, 1),
         _ when type == typeof(IReadOnlyList<string>) => Array.Empty<string>(),
+        _ when type == typeof(IReadOnlyList<ISearchProvider>) => Array.Empty<ISearchProvider>(),
+        _ when type == typeof(CancellationToken) => CancellationToken.None,
         _ when type == typeof(ReadOnlyMemory<byte>) => ReadOnlyMemory<byte>.Empty,
         _ when type == typeof(Anchor) => Passage,
         _ when type == typeof(Definition) => new Definition("Terme", "Explication."),

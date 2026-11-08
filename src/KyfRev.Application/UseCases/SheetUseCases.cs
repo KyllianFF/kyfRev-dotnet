@@ -32,6 +32,13 @@ public sealed partial class SheetUseCases(VaultHost host, TimeProvider time, ILo
     [ZeroXCommand("liste_des_fiches")]
     public Outcome<IReadOnlyList<VaultSheet>> List() => host.Use(vault => vault.SheetList());
 
+    /// <summary>
+    /// Les fiches qui contiennent tous les mots de <paramref name="query"/> (titre, étiquettes et texte), chacune avec un
+    /// extrait de son texte. Annulée, la recherche rend ce qu'elle a déjà trouvé : à qui l'a annulée de ne pas s'en servir.
+    /// </summary>
+    [ZeroXCommand("chercher_dans_les_fiches")]
+    public Outcome<IReadOnlyList<SheetHit>> Search(string query, CancellationToken cancellationToken) => host.Use(vault => vault.SearchSheets(query, cancellationToken));
+
     /// <summary>Ouvre une fiche pour la lire ou la réviser.</summary>
     [ZeroXCommand("ouvrir_fiche")]
     public Outcome<OpenedSheet> Open(string id)
