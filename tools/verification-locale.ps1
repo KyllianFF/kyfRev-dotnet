@@ -52,7 +52,7 @@ $OutputEncoding = [Console]::OutputEncoding
 $racine = Split-Path -Parent $PSScriptRoot
 Set-Location $racine
 $cleInstallation = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\{69A07F65-7110-4520-A128-737A61015928}_is1'
-$scenariosAuClavier = 'T5_a_new_passage', 'T11_a_new_sheet', 'T14_a_change', 'T17_no_debugging'
+$scenariosAuClavier = 'T5_a_new_passage', 'T11_a_new_sheet', 'T14_a_change', 'T17_no_debugging', 'J8_nothing_of_an_encrypted'
 $sortie = Join-Path $racine 'artifacts\verification-locale'
 New-Item -ItemType Directory -Force $sortie | Out-Null
 $journal = Join-Path $sortie ((Get-Date -Format 'yyyyMMdd-HHmmss') + '.log')

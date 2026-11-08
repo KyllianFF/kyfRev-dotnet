@@ -26,6 +26,8 @@ public sealed class Scenarios
         En 1789, la société d'Ancien Régime est divisée en trois ordres : le clergé, la noblesse et le tiers état.
         """;
 
+    private static readonly string[] MarkedPlaces = ["titre", "texte", "dessin", "passage", "commentaire", "terme", "explication", "frappe"];
+
     private static readonly string[] FirstCycleReviews = ["2026-10-09 J0", "2026-10-10 J1", "2026-10-13 J3", "2026-10-20 J7", "2026-11-03 J14", "2026-12-03 J30"];
 
     private static readonly DateOnly Reminder = new(2027, 2, 8);
@@ -518,6 +520,70 @@ public sealed class Scenarios
     }
 
     [TestMethod]
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+    public void J8_nothing_of_an_encrypted_vault_stays_readable_on_the_disk()
+    {
+        const string password = "un mot de passe de scénario";
+        using var trial = new Trial();
+        var created = new DateOnly(2026, 10, 9);
+        var marks = MarkedPlaces.ToDictionary(place => place, place => "kyf" + place + Guid.NewGuid().ToString("N"));
+        var title = $"Fiche {marks["titre"]}";
+        var body = $$"""
+            # Le cours
+
+            Un mot {{marks["texte"]}} à définir, et un passage {{marks["passage"]}} à retenir.
+
+            ```mermaid
+            graph TD
+              A["{{marks["dessin"]}}"] --> B
+            ```
+            """;
+        trial.Encrypted(created, password, app =>
+        {
+            var sheet = NewSheet(app, title, body);
+            Succeed(app.Annotations.Create(sheet, AnchorOn(app, sheet, marks["passage"]), $"Mon commentaire {marks["commentaire"]}"));
+            Succeed(app.Annotations.CreateDefinition(sheet, AnchorOn(app, sheet, marks["texte"]), new Definition(marks["terme"], $"Elle dit {marks["explication"]}")));
+            return sheet;
+        });
+        var temporary = trial.NewFolder("tmp");
+        var scan = new DiskScan(marks.Values);
+        AssertNoTrace(trial.Scan(scan), "avant le lancement");
+
+        using (var running = trial.Launch(created.AddDays(1), new Dictionary<string, string> { ["TMP"] = temporary, ["TEMP"] = temporary }))
+        {
+            running.Unlock(password);
+            running.OpenView("Fiches");
+            running.OpenSheetRow(title);
+            Assert.Contains(marks["texte"], running.SheetText(), "le texte est passé par la lecture");
+            running.WaitNamed(marks["dessin"]);
+
+            running.StartWriting();
+            running.TypeInSheet($"{marks["frappe"]} ");
+            running.WaitSaved();
+            running.StopWriting();
+            Assert.Contains(marks["frappe"], running.SheetText(), "la frappe est passée par l'écriture");
+            AssertNoTrace(trial.Scan(scan), "fiche écrite, coffre ouvert");
+
+            running.Back();
+            running.Search(marks["titre"]);
+            running.WaitSheetRow(title);
+            running.LockNow();
+            AssertNoTrace(trial.Scan(scan), "coffre verrouillé");
+        }
+
+        var last = trial.ScanOnceReleased(scan);
+        AssertNoTrace(last, "application fermée");
+        Assert.IsEmpty(last.Skipped, string.Join(" | ", last.Skipped));
+        Assert.Contains("kyfRev.log", last.Files, "le journal fait partie du scan");
+        Assert.Contains(Path.Combine("Coffre", "index.kyf"), last.Files, "le coffre fait partie du scan");
+        Assert.IsTrue(last.Files.Any(file => file.StartsWith("WebView2" + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)), "le profil du moteur web fait partie du scan");
+
+        // Le témoin : le même scan, sur le même dossier, voit un marqueur laissé en clair.
+        File.WriteAllText(Path.Combine(temporary, "temoin.txt"), marks["titre"]);
+        Assert.HasCount(1, trial.Scan(scan).Findings);
+    }
+
+    [TestMethod]
     public void T17_no_debugging_port_even_with_the_variables()
     {
         using var trial = new Trial();
@@ -535,6 +601,9 @@ public sealed class Scenarios
         // Le moteur tourne : rien n'écoute sur le port demandé, ni sur le port habituel.
         Assert.IsFalse(IsListening(port), "Le port de débogage demandé par la variable est fermé.");
     }
+
+    private static void AssertNoTrace(ScanResult result, string moment) =>
+        Assert.IsEmpty(result.Findings, $"{moment} : {string.Join(" | ", result.Findings)}");
 
     private static int FreePort()
     {
@@ -687,14 +756,16 @@ public sealed class Scenarios
         return id;
     }
 
-    private static string NewPassage(KyfRevApplication app, string sheet, string exact)
+    private static string NewPassage(KyfRevApplication app, string sheet, string exact) =>
+        app.Annotations.Create(sheet, AnchorOn(app, sheet, exact), null).Value;
+
+    private static Anchor AnchorOn(KyfRevApplication app, string sheet, string exact)
     {
         // Comme dans l'application : sur le texte affiché. Une ancre juste n'est plus réécrite à l'ouverture.
         var opened = app.Sheets.Open(sheet).Value;
         var map = TextMap.Of(SheetRenderer.Render(opened.Body, opened.Title));
         var start = map.Text.IndexOf(exact, StringComparison.Ordinal);
-        var anchor = Anchoring.AnchorOf(map.Text, new TextPosition(start, start + exact.Length), map.SectionAt(start), map.SourceLineAt(start, opened.FirstBodyLine), opened.Fingerprint);
-        return app.Annotations.Create(sheet, anchor, null).Value;
+        return Anchoring.AnchorOf(map.Text, new TextPosition(start, start + exact.Length), map.SectionAt(start), map.SourceLineAt(start, opened.FirstBodyLine), opened.Fingerprint);
     }
 
     // Les dates d'un premier cycle fait à temps : J1, J3, J7, J14 et J30, chacun compté depuis le précédent.

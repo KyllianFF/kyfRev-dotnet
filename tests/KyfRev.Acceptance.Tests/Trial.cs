@@ -72,6 +72,27 @@ internal sealed class Trial : IDisposable
     public bool HidesEverywhere(string text, string? sibling = null) =>
         Directory.EnumerateFiles(sibling is null ? Vault : Path.Combine(_folder, sibling), "*", SearchOption.AllDirectories).All(file => !File.ReadAllText(file).Contains(text, StringComparison.Ordinal));
 
+    /// <summary>Un dossier neuf de cet essai.</summary>
+    public string NewFolder(string name) => Directory.CreateDirectory(Path.Combine(_folder, name)).FullName;
+
+    /// <summary>Tout ce que cet essai a mis sur le disque, passé au scan ; seul ce dossier est lu, jamais le profil de l'utilisateur.</summary>
+    public ScanResult Scan(DiskScan scan) => scan.Of(_folder);
+
+    /// <summary>Le scan, une fois que le moteur web, qui met un instant à finir, a lâché tous ses fichiers.</summary>
+    public ScanResult ScanOnceReleased(DiskScan scan)
+    {
+        var result = Scan(scan);
+        FlaUI.Core.Tools.Retry.WhileFalse(
+            () =>
+            {
+                result = Scan(scan);
+                return result.Skipped.Count == 0;
+            },
+            TimeSpan.FromSeconds(45),
+            TimeSpan.FromMilliseconds(500));
+        return result;
+    }
+
     /// <summary>La vraie application, ouverte sur ce coffre le jour donné.</summary>
     public RunningApplication Launch(DateOnly day, IReadOnlyDictionary<string, string>? environment = null) => new(_folder, day, environment);
 
