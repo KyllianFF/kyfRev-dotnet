@@ -9,8 +9,9 @@ namespace KyfRev.Presentation.Wpf.Pages;
 
 /// <summary>
 /// La fenêtre « Importer un dossier de notes », comme dans la 0.x : le dossier à copier, le choix d'entrer ou non en révision,
-/// puis le bilan. L'import écrit dans le coffre et ne s'interrompt pas : fermer la fenêtre le laisse finir. Le bilan cite des
-/// noms de fichiers : un coffre verrouillé l'oublie, et un import parti avant ne remet rien à l'écran.
+/// puis le bilan. L'import écrit dans le coffre et ne s'interrompt pas : fermer la fenêtre le laisse finir, et ce qu'il a donné
+/// attend la prochaine ouverture. Le bilan cite des noms de fichiers : un coffre verrouillé l'oublie, et un import parti avant
+/// ne remet rien à l'écran.
 /// </summary>
 public sealed partial class FolderImportViewModel : ObservableObject, IForgetsVault
 {
@@ -19,6 +20,9 @@ public sealed partial class FolderImportViewModel : ObservableObject, IForgetsVa
 
     /// <summary>Change à chaque oubli du coffre : un import parti avant ne remet rien à l'écran.</summary>
     private int _generation;
+
+    /// <summary>L'import a fini fenêtre fermée : son bilan ou son refus n'a pas encore été lu.</summary>
+    private bool _unread;
 
     /// <summary>La fenêtre, sur les cas d'usage des fiches ; <paramref name="picker"/> demande le dossier.</summary>
     public FolderImportViewModel(SheetUseCases sheets, IFolderPicker picker)
@@ -31,6 +35,12 @@ public sealed partial class FolderImportViewModel : ObservableObject, IForgetsVa
 
     /// <summary>Un dossier vient d'être importé : la vue relit ses fiches.</summary>
     public Action<ImportReport>? Imported { get; set; }
+
+    /// <summary>Un import a été refusé fenêtre fermée : la vue le dit (<see cref="UnreadRefusal"/>).</summary>
+    public Action? RefusedUnseen { get; set; }
+
+    /// <summary>« L'import n'a pas abouti : … », tant que la fenêtre n'a pas montré ce refus ; rien sinon.</summary>
+    public string? UnreadRefusal => _unread && Error is { } reason ? SharingText.ImportRefusedOf(reason) : null;
 
     /// <summary>La fenêtre est ouverte.</summary>
     [ObservableProperty]
@@ -64,7 +74,7 @@ public sealed partial class FolderImportViewModel : ObservableObject, IForgetsVa
 
     /// <summary>Un import est en cours.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsIdle), nameof(CanConfirm), nameof(ConfirmLabel))]
+    [NotifyPropertyChangedFor(nameof(IsIdle), nameof(CanConfirm), nameof(ConfirmLabel), nameof(CancelLabel))]
     public partial bool IsBusy { get; private set; }
 
     /// <summary>Rien n'est en cours : le dossier et le choix de révision répondent.</summary>
@@ -78,7 +88,7 @@ public sealed partial class FolderImportViewModel : ObservableObject, IForgetsVa
     /// <summary>L'import a été refusé.</summary>
     public bool HasError => Error is not null;
 
-    /// <summary>Le bilan du dernier import, tant que la fenêtre le montre.</summary>
+    /// <summary>Le bilan du dernier import, tant que la fenêtre le montre ou qu'il attend d'y être lu.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasReport), nameof(IsChoosing), nameof(Summary), nameof(Follow), nameof(HasFollow), nameof(Ignored), nameof(HasIgnored), nameof(IgnoredLabel), nameof(ConfirmLabel), nameof(CancelLabel), nameof(CanConfirm))]
     public partial ImportReport? Report { get; private set; }
@@ -110,22 +120,23 @@ public sealed partial class FolderImportViewModel : ObservableObject, IForgetsVa
     /// <summary>Le libellé du bouton principal : « Importer », « Import… » pendant le travail, « Fermer » sur le bilan.</summary>
     public string ConfirmLabel => HasReport ? SharingText.Close : IsBusy ? SharingText.ImportBusy : SharingText.ImportConfirm;
 
-    /// <summary>« Annuler » ; rien sur le bilan, qui n'a plus que « Fermer ».</summary>
-    public string CancelLabel => HasReport ? string.Empty : SharingText.Cancel;
+    /// <summary>« Annuler » ; « Fermer » pendant l'import, qui ne s'annule pas ; rien sur le bilan, qui n'a plus que « Fermer ».</summary>
+    public string CancelLabel => HasReport ? string.Empty : IsBusy ? SharingText.Close : SharingText.Cancel;
 
     /// <summary>Le bouton principal répond : il faut un dossier, et rien en cours.</summary>
     public bool CanConfirm => HasReport || (HasSource && !IsBusy);
 
-    /// <summary>Ouvre la fenêtre ; un import encore en cours s'y montre, sinon elle repart à vide.</summary>
+    /// <summary>Ouvre la fenêtre ; un import encore en cours, ou fini sans avoir été lu, s'y montre ; sinon elle repart à vide.</summary>
     public void Request()
     {
-        if (!IsBusy)
+        if (!IsBusy && !_unread)
         {
             Source = null;
             Tracks = false;
             Error = null;
             Report = null;
         }
+        _unread = false;
         IsOpen = true;
     }
 
@@ -136,6 +147,7 @@ public sealed partial class FolderImportViewModel : ObservableObject, IForgetsVa
     public void Forget()
     {
         _generation++;
+        _unread = false;
         IsOpen = false;
         Source = null;
         Tracks = false;
@@ -197,9 +209,14 @@ public sealed partial class FolderImportViewModel : ObservableObject, IForgetsVa
             return;
         }
         IsBusy = false;
+        _unread = !IsOpen;
         if (!outcome.Succeeded)
         {
             Error = outcome.Error;
+            if (_unread)
+            {
+                RefusedUnseen?.Invoke();
+            }
             return;
         }
         Report = outcome.Value;

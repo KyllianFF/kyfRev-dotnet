@@ -305,6 +305,29 @@ public sealed class UseCaseTests
         Assert.HasCount(1, test.Logs.Entries.Where(e => e.Message.StartsWith("Dossier importé : 1 fiche(s), 1 suivie(s)", StringComparison.Ordinal)));
     }
 
+    [TestMethod]
+    public void The_open_vault_is_known_without_waiting_for_a_long_operation()
+    {
+        using var folder = new TestFolder();
+        using var test = Opened(folder);
+        using var started = new ManualResetEventSlim();
+        using var release = new ManualResetEventSlim();
+        var holding = Task.Run(() => test.App.Host.Use(_ =>
+        {
+            started.Set();
+            release.Wait(TimeSpan.FromSeconds(30));
+        }));
+        Assert.IsTrue(started.Wait(TimeSpan.FromSeconds(10)));
+
+        var reading = Task.Run(() => test.App.Vaults.State());
+        var answered = reading.Wait(TimeSpan.FromSeconds(5));
+        release.Set();
+        Assert.IsTrue(holding.Wait(TimeSpan.FromSeconds(10)));
+
+        Assert.IsTrue(answered, "l'état ne prend pas la file derrière l'opération en cours");
+        Assert.AreEqual(folder.Vault, reading.Result.Vault);
+    }
+
     private static TestApplication Opened(TestFolder folder)
     {
         var test = new TestApplication(FakeTime.AtLocal(2026, 10, 1, 9, 0));

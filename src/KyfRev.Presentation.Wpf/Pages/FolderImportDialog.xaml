@@ -9,11 +9,11 @@
   </UserControl.Resources>
 
   <kyf:Dialog x:Name="ImportDialog" Title="{x:Static pages:SharingText.ImportTitle}" IsOpen="{Binding IsOpen, Mode=OneWay}"
-              PrimaryButtonText="{Binding ConfirmLabel}" SecondaryButtonText="{Binding CancelLabel}" IsPrimaryEnabled="{Binding CanConfirm}" Closed="OnClosed">
+              PrimaryButtonText="{Binding ConfirmLabel}" SecondaryButtonText="{Binding CancelLabel}" IsPrimaryEnabled="{Binding CanConfirm}" IsWorking="{Binding IsBusy}" Closed="OnClosed">
     <StackPanel>
       <!-- Le bilan : ce qui a été copié, et ce qui ne l'a pas été. -->
       <StackPanel x:Name="ReportPanel" Visibility="{Binding HasReport, Converter={StaticResource Visible}}">
-        <TextBlock x:Name="ReportSummary" Text="{Binding Summary}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
+        <kyf:Notification x:Name="ReportSummary" Message="{Binding Summary}" IsOpen="{Binding HasReport, Mode=OneWay}" IsClosable="False" ScrollsIntoView="True" />
         <TextBlock x:Name="ReportFollow" Text="{Binding Follow}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="0,8,0,0"
                    Visibility="{Binding HasFollow, Converter={StaticResource Visible}}" />
         <StackPanel Margin="0,12,0,0" Visibility="{Binding HasIgnored, Converter={StaticResource Visible}}">
@@ -29,8 +29,10 @@
         </StackPanel>
       </StackPanel>
 
-      <!-- Ce qu'il faut importer, et ce que deviennent les fiches. -->
+      <!-- Ce qu'il faut importer, et ce que deviennent les fiches ; ce qui se passe d'abord, pour se voir en fenêtre étroite. -->
       <StackPanel x:Name="ChoicePanel" Visibility="{Binding IsChoosing, Converter={StaticResource Visible}}">
+        <kyf:Notification x:Name="ImportRunning" Message="{x:Static pages:SharingText.ImportRunning}" IsOpen="{Binding IsBusy, Mode=OneWay}" IsClosable="False" ScrollsIntoView="True" Margin="0,0,0,12" />
+        <kyf:Notification x:Name="ImportError" Severity="Critical" Message="{Binding Error}" IsOpen="{Binding HasError, Mode=OneWay}" IsClosable="False" ScrollsIntoView="True" Margin="0,0,0,12" />
         <TextBlock x:Name="ImportHelp" Text="{x:Static pages:SharingText.ImportHelp}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" />
         <DockPanel Margin="0,12,0,0">
           <Button x:Name="ChooseButton" DockPanel.Dock="Left" Content="{Binding ChooseLabel}" Command="{Binding ChooseCommand}" IsEnabled="{Binding IsIdle}" />
@@ -52,7 +54,6 @@
             <TextBlock Text="{x:Static pages:SharingText.ImportTrackHelp}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" />
           </StackPanel>
         </RadioButton>
-        <kyf:Notification x:Name="ImportError" Severity="Critical" Message="{Binding Error}" IsOpen="{Binding HasError, Mode=OneWay}" IsClosable="False" Margin="0,12,0,0" />
       </StackPanel>
     </StackPanel>
   </kyf:Dialog>

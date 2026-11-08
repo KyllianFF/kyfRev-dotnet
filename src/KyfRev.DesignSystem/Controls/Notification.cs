@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Automation.Peers;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Threading;
 
 namespace KyfRev.DesignSystem.Controls;
 
@@ -49,7 +50,11 @@ public class Notification : Control
 
     /// <summary>Propriété <see cref="IsOpen"/>.</summary>
     public static readonly DependencyProperty IsOpenProperty =
-        DependencyProperty.Register(nameof(IsOpen), typeof(bool), typeof(Notification), new FrameworkPropertyMetadata(true, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, (notification, e) => ((Notification)notification).OnIsOpenChanged((bool)e.NewValue)));
+        DependencyProperty.Register(nameof(IsOpen), typeof(bool), typeof(Notification), new FrameworkPropertyMetadata(true, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
+
+    /// <summary>Quand elle paraît, la zone qui défile autour d'elle l'amène à la vue : un résultat se voit, même au bas d'une fenêtre étroite.</summary>
+    public static readonly DependencyProperty ScrollsIntoViewProperty =
+        DependencyProperty.Register(nameof(ScrollsIntoView), typeof(bool), typeof(Notification), new PropertyMetadata(false));
 
     private static readonly DependencyPropertyKey GlyphPropertyKey =
         DependencyProperty.RegisterReadOnly(nameof(Glyph), typeof(string), typeof(Notification), new PropertyMetadata(Icons.Of(NotificationSeverity.Info)));
@@ -66,7 +71,7 @@ public class Notification : Control
     /// <summary>Une notification ; le lecteur d'écran l'annonce dès qu'elle paraît.</summary>
     public Notification()
     {
-        Loaded += (_, _) => Announce();
+        IsVisibleChanged += (_, e) => OnAppearing((bool)e.NewValue);
     }
 
     static Notification()
@@ -116,6 +121,13 @@ public class Notification : Control
         set => SetValue(IsOpenProperty, value);
     }
 
+    /// <inheritdoc cref="ScrollsIntoViewProperty"/>
+    public bool ScrollsIntoView
+    {
+        get => (bool)GetValue(ScrollsIntoViewProperty);
+        set => SetValue(ScrollsIntoViewProperty, value);
+    }
+
     /// <summary>Icône de la gravité.</summary>
     public string Glyph => (string)GetValue(GlyphProperty);
 
@@ -137,18 +149,27 @@ public class Notification : Control
 
     private void OnClose(object sender, RoutedEventArgs e) => Close();
 
-    private void OnIsOpenChanged(bool isOpen)
+    private void OnAppearing(bool isVisible)
     {
-        if (isOpen)
+        if (isVisible)
         {
-            Announce();
+            // Après la mise en page et le focus : un lecteur d'écran coupe ce qu'il dit quand le focus change.
+            Dispatcher.BeginInvoke(DispatcherPriority.ContextIdle, Appear);
         }
     }
 
-    /// <summary>Annonce la notification comme une région active, si un client d'UI Automation écoute.</summary>
-    private void Announce()
+    /// <summary>La notification paraît : elle se montre si elle le doit, et s'annonce comme une région active, si un client d'UI Automation écoute.</summary>
+    private void Appear()
     {
-        if (IsOpen && AutomationPeer.ListenerExists(AutomationEvents.LiveRegionChanged))
+        if (!IsVisible)
+        {
+            return;
+        }
+        if (ScrollsIntoView)
+        {
+            BringIntoView();
+        }
+        if (AutomationPeer.ListenerExists(AutomationEvents.LiveRegionChanged))
         {
             UIElementAutomationPeer.CreatePeerForElement(this).RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
         }

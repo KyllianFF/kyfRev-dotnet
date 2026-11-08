@@ -227,6 +227,7 @@ public sealed class FolderImportTests
         Assert.IsFalse(import.IsIdle);
         Assert.AreEqual(SharingText.ImportBusy, import.ConfirmLabel);
         Assert.IsFalse(import.CanConfirm);
+        Assert.AreEqual(SharingText.Close, import.CancelLabel, "l'import ne s'annule pas : le bouton ferme seulement la fenêtre");
 
         import.AnswerCommand.Execute(false);
         Assert.IsFalse(import.IsOpen);
@@ -240,6 +241,109 @@ public sealed class FolderImportTests
         UiThread.Until(() => running.IsCompleted);
         Assert.HasCount(1, scene.Reports, "un seul import");
         Assert.IsTrue(import.HasReport);
+    }
+
+    [STATestMethod]
+    public void A_report_that_ends_with_the_window_closed_waits_for_the_next_opening_only()
+    {
+        using var ui = new UiThread();
+        using var scene = new ImportScene();
+        var import = scene.Import;
+        scene.Fill();
+        import.Request();
+        scene.Choose();
+        using var hold = new VaultHold(scene.App);
+        var running = import.AnswerCommand.ExecuteAsync(true);
+        import.AnswerCommand.Execute(false);
+
+        hold.Release();
+        UiThread.Until(() => running.IsCompleted);
+        Assert.IsFalse(import.IsOpen);
+        Assert.IsNull(import.UnreadRefusal, "un bilan n'est pas un refus");
+
+        import.Request();
+        Assert.IsTrue(import.IsOpen);
+        Assert.IsTrue(import.HasReport, "le bilan se lit encore");
+        StringAssert.Contains(import.Summary, "1 image ou pièce jointe copiée.", StringComparison.Ordinal);
+        Assert.IsTrue(import.HasIgnored);
+
+        import.AnswerCommand.Execute(true);
+        import.Request();
+        Assert.IsFalse(import.HasReport, "lu une fois, il n'est plus montré");
+        Assert.IsFalse(import.HasSource);
+    }
+
+    [STATestMethod]
+    public void A_refusal_that_ends_with_the_window_closed_is_said_by_the_list_and_kept_by_the_window()
+    {
+        using var ui = new UiThread();
+        using var scene = new ImportScene();
+        var page = new SheetsPageViewModel(scene.App.Sheets, scene.App.Folders, scene.App.Templates, new FakeOpener(), TimeProvider.System, scene.App.Reviews, scene.App.Trash, null, scene.Import);
+        var import = scene.Import;
+        page.RequestImportCommand.Execute(null);
+        scene.Choose();
+        using var hold = new VaultHold(scene.App);
+        var running = import.AnswerCommand.ExecuteAsync(true);
+        import.Dismiss();
+
+        hold.Release();
+        UiThread.Until(() => running.IsCompleted);
+        Assert.IsFalse(import.IsOpen);
+        Assert.IsTrue(import.HasError);
+        StringAssert.StartsWith(page.Error, SharingText.ImportRefusedOf(string.Empty), StringComparison.Ordinal);
+        StringAssert.EndsWith(page.Error, import.Error, StringComparison.Ordinal);
+
+        page.Show([]);
+        Assert.IsTrue(page.HasError, "relire la liste ne le tait pas");
+
+        page.RequestImportCommand.Execute(null);
+        Assert.IsTrue(import.IsOpen);
+        Assert.IsTrue(import.HasError, "le refus se lit dans la fenêtre");
+        Assert.AreEqual(scene.Source, import.Source);
+        Assert.IsNull(import.UnreadRefusal);
+        Assert.IsFalse(page.HasError, "il n'est plus à dire deux fois");
+
+        import.AnswerCommand.Execute(false);
+        import.Request();
+        Assert.IsFalse(import.HasError, "lu une fois, il n'est plus montré");
+    }
+
+    [STATestMethod]
+    public void A_refusal_seen_in_the_open_window_stays_out_of_the_list()
+    {
+        using var ui = new UiThread();
+        using var scene = new ImportScene();
+        var page = new SheetsPageViewModel(scene.App.Sheets, scene.App.Folders, scene.App.Templates, new FakeOpener(), TimeProvider.System, scene.App.Reviews, scene.App.Trash, null, scene.Import);
+        page.RequestImportCommand.Execute(null);
+        scene.Choose();
+
+        scene.Answer(true);
+
+        Assert.IsTrue(scene.Import.HasError);
+        Assert.IsFalse(page.HasError);
+    }
+
+    [STATestMethod]
+    public void Forgetting_the_vault_drops_what_was_waiting_to_be_read()
+    {
+        using var ui = new UiThread();
+        using var scene = new ImportScene();
+        var import = scene.Import;
+        import.Request();
+        scene.Choose();
+        using var hold = new VaultHold(scene.App);
+        var running = import.AnswerCommand.ExecuteAsync(true);
+        import.Dismiss();
+        hold.Release();
+        UiThread.Until(() => running.IsCompleted);
+        Assert.IsNotNull(import.UnreadRefusal);
+
+        import.Forget();
+
+        Assert.IsNull(import.UnreadRefusal);
+        import.Request();
+        Assert.IsFalse(import.HasError);
+        Assert.IsFalse(import.HasSource);
     }
 
     [STATestMethod]

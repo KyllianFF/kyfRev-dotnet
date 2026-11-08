@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Input;
 using System.Windows.Media;
 using KyfRev.Application.Model;
 using KyfRev.Application.Ports;
@@ -211,6 +212,173 @@ public sealed class SharingViewsTests
             scene.Import.ChooseCommand.Execute(null);
             TestShell.Flush();
             AssertFits(window, Named<Dialog>(window, "ImportDialog"), theme);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
+    public void At_the_smallest_window_what_a_share_gives_is_in_view()
+    {
+        using var ui = new UiThread();
+        using var scene = new SheetsScene(encrypted: true);
+        var window = scene.Show(470, 540);
+        try
+        {
+            scene.Sharing.RequestShare(scene.SheetId, "Mitose");
+            TestShell.Flush();
+            var dialog = Named<Dialog>(window, "ShareDialog");
+            Descendants(Named<ItemsControl>(window, "Formats")).OfType<RadioButton>().ElementAt(2).IsChecked = true;
+            var scroller = (ScrollViewer)dialog.Template.FindName("PART_Content", dialog);
+            Assert.IsGreaterThan(0, scroller.ScrollableHeight, "c'est bien le cas où le contenu défile");
+
+            // Sans avoir touché au défilement.
+            scene.Vaults.Picker.Answers.Enqueue(scene.Vaults.Folder("Dehors"));
+            dialog.Close(DialogChoice.Primary);
+            UiThread.Until(() => scene.Sharing.HasMessage);
+            TestShell.Flush();
+            AssertInView(scroller, Named<Notification>(window, "ShareMessage"));
+
+            // Descendu jusqu'au dernier format : un résultat paru plus haut se voit quand même.
+            scroller.ScrollToEnd();
+            TestShell.Flush();
+            scene.Vaults.Picker.Answers.Enqueue(scene.App.Vaults.State().Vault);
+            dialog.Close(DialogChoice.Primary);
+            UiThread.Until(() => scene.Sharing.HasError);
+            TestShell.Flush();
+            AssertInView(scroller, Named<Notification>(window, "ShareError"));
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
+    public void At_the_smallest_window_what_an_import_gives_is_in_view()
+    {
+        using var ui = new UiThread();
+        using var scene = new SheetsScene(encrypted: true);
+        var window = scene.Show(470, 540);
+        try
+        {
+            scene.Import.Request();
+            var source = scene.Vaults.Folder("Notes");
+            scene.Vaults.Picker.Answers.Enqueue(source);
+            scene.Import.ChooseCommand.Execute(null);
+            TestShell.Flush();
+            var dialog = Named<Dialog>(window, "ImportDialog");
+            var scroller = (ScrollViewer)dialog.Template.FindName("PART_Content", dialog);
+            Assert.IsGreaterThan(0, scroller.ScrollableHeight, "c'est bien le cas où le contenu défile");
+
+            // Un dossier sans notes est refusé : sans avoir touché au défilement, puis descendu jusqu'au dernier choix.
+            dialog.Close(DialogChoice.Primary);
+            UiThread.Until(() => scene.Import.HasError);
+            TestShell.Flush();
+            AssertInView(scroller, Named<Notification>(window, "ImportError"));
+
+            scroller.ScrollToEnd();
+            TestShell.Flush();
+            dialog.Close(DialogChoice.Primary);
+            UiThread.Until(() => scene.Import.HasError);
+            TestShell.Flush();
+            AssertInView(scroller, Named<Notification>(window, "ImportError"));
+
+            File.WriteAllText(Path.Combine(source, "Note.md"), "Une note.\n");
+            scroller.ScrollToEnd();
+            TestShell.Flush();
+            dialog.Close(DialogChoice.Primary);
+            UiThread.Until(() => scene.Import.HasReport);
+            TestShell.Flush();
+            AssertInView(scroller, Named<Notification>(window, "ReportSummary"));
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
+    public void During_an_import_the_focus_stays_in_the_window_and_comes_back_on_the_report()
+    {
+        using var ui = new UiThread();
+        using var scene = new SheetsScene();
+        var source = scene.Vaults.Folder("Notes");
+        File.WriteAllText(Path.Combine(source, "Note.md"), "Une note.\n");
+        var window = scene.Show(1100, 800);
+        try
+        {
+            scene.Import.Request();
+            scene.Vaults.Picker.Answers.Enqueue(source);
+            scene.Import.ChooseCommand.Execute(null);
+            TestShell.Flush();
+            var dialog = Named<Dialog>(window, "ImportDialog");
+            var secondary = (Button)dialog.Template.FindName(Dialog.SecondaryButtonPart, dialog);
+            var primary = (Button)dialog.Template.FindName(Dialog.PrimaryButtonPart, dialog);
+            using var hold = new VaultHold(scene.App);
+
+            dialog.Close(DialogChoice.Primary);
+            TestShell.Flush();
+
+            Assert.IsTrue(scene.Import.IsBusy);
+            Assert.AreSame(secondary, Focused(dialog), "le seul bouton qui répond");
+            Assert.AreEqual(SharingText.Close, secondary.Content, "l'import ne s'annule pas");
+            Assert.IsFalse(KeyboardNavigation.GetAcceptsReturn(secondary), "un second appui sur Entrée ne ferme pas la fenêtre");
+            Assert.IsTrue(Named<Notification>(window, "ImportRunning").IsVisible, "il se dit : un bouton désactivé ne s'entend pas");
+
+            hold.Release();
+            UiThread.Until(() => scene.Import.HasReport);
+            TestShell.Flush();
+
+            Assert.AreSame(primary, Focused(dialog), "le bouton qui avait le focus a disparu avec le bilan");
+            Assert.IsTrue(primary.IsVisible);
+            Assert.AreEqual(Visibility.Collapsed, secondary.Visibility);
+            Assert.IsTrue(KeyboardNavigation.GetAcceptsReturn(secondary));
+            var report = Named<Notification>(window, "ReportSummary");
+            Assert.IsTrue(report.IsVisible, "une notification s'annonce d'elle-même");
+            Assert.AreEqual(scene.Import.Summary, report.Message);
+            Assert.IsFalse(Named<Notification>(window, "ImportRunning").IsVisible);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
+    public void During_a_share_the_focus_stays_in_the_window_and_comes_back_to_the_result()
+    {
+        using var ui = new UiThread();
+        using var scene = new SheetsScene();
+        var window = scene.Show(1100, 800);
+        try
+        {
+            scene.Sharing.RequestShare(scene.SheetId, "Mitose");
+            TestShell.Flush();
+            var dialog = Named<Dialog>(window, "ShareDialog");
+            var secondary = (Button)dialog.Template.FindName(Dialog.SecondaryButtonPart, dialog);
+            var primary = (Button)dialog.Template.FindName(Dialog.PrimaryButtonPart, dialog);
+            Descendants(Named<ItemsControl>(window, "Formats")).OfType<RadioButton>().ElementAt(2).IsChecked = true;
+            using var hold = new VaultHold(scene.App);
+
+            scene.Vaults.Picker.Answers.Enqueue(scene.Vaults.Folder("Dehors"));
+            dialog.Close(DialogChoice.Primary);
+            TestShell.Flush();
+
+            Assert.IsTrue(scene.Sharing.IsBusy);
+            Assert.AreSame(secondary, Focused(dialog), "les formats sont désactivés");
+            Assert.IsFalse(KeyboardNavigation.GetAcceptsReturn(secondary));
+            Assert.IsTrue(Named<Notification>(window, "Preparing").IsVisible, "il se dit : un bouton désactivé ne s'entend pas");
+
+            hold.Release();
+            UiThread.Until(() => scene.Sharing.HasMessage && !scene.Sharing.IsBusy);
+            TestShell.Flush();
+
+            Assert.AreSame(primary, Focused(dialog));
+            Assert.IsTrue(KeyboardNavigation.GetAcceptsReturn(secondary));
+            Assert.IsFalse(Named<Notification>(window, "Preparing").IsVisible);
         }
         finally
         {
@@ -444,6 +612,16 @@ public sealed class SharingViewsTests
             Assert.IsGreaterThanOrEqualTo(4.5, new TokenColor(ink.A, ink.R, ink.G, ink.B).ContrastWith(ground), $"« {text.Text} » en thème {theme}");
         }
     }
+
+    private static void AssertInView(ScrollViewer scroller, FrameworkElement element)
+    {
+        Assert.IsTrue(element.IsVisible, element.Name);
+        var top = element.TranslatePoint(new Point(0, 0), scroller).Y;
+        Assert.IsGreaterThanOrEqualTo(-0.5, top, $"{element.Name} : au-dessus de ce qui se voit");
+        Assert.IsLessThanOrEqualTo(scroller.ViewportHeight + 0.5, top + element.ActualHeight, $"{element.Name} : sous ce qui se voit");
+    }
+
+    private static IInputElement Focused(Dialog dialog) => FocusManager.GetFocusedElement(FocusManager.GetFocusScope(dialog));
 
     private static bool Inside<T>(DependencyObject element)
         where T : DependencyObject

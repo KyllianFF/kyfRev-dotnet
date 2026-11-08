@@ -17,6 +17,7 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 - « Enregistrer comme modèle… » : au clic droit d'une fiche ou de son texte, sous le nom proposé, celui de la fiche.
 - Importer un dossier de notes (Obsidian, Typora, VS Code…) : un bouton dans la vue « Fiches », le clic droit sur la place libre de la
   liste, et la liste vide. On choisit d'entrer ou non en révision ; le bilan dit les fiches, les images, les liens et ce qui n'a pas été repris.
+  Fermer la fenêtre laisse l'import finir : un refus est dit dans la vue, et son bilan attend la prochaine ouverture.
 - Coffre chiffré, lot 4 : la preuve qu'aucun texte en clair ne reste sur le disque. Sur un coffre chiffré, le menu d'un mot
   propose « Accepter jusqu'à la fermeture de kyfRev », dans le code Markdown, au lieu d'écrire dans le dictionnaire de Windows. Le journal masque tout chemin
   qui entre dans le coffre, et ne nomme plus la citation trouvée. Les moteurs web ne téléversent plus de rapport de plantage,

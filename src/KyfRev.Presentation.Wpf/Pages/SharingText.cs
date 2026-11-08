@@ -119,8 +119,14 @@ public static class SharingText
     /// <summary>« Choisissez le dossier de notes à importer ».</summary>
     public static string ImportPick => Text(nameof(ImportPick));
 
+    /// <summary>« L'import n'a pas abouti : … ».</summary>
+    public static string ImportRefusedOf(object reason) => Format("ImportRefused", reason);
+
     /// <summary>« Révision des fiches importées ».</summary>
     public static string ImportReview => Text(nameof(ImportReview));
+
+    /// <summary>« Import en cours. Il continue si vous fermez cette fenêtre. ».</summary>
+    public static string ImportRunning => Text(nameof(ImportRunning));
 
     /// <summary>« Importer un dossier de notes ».</summary>
     public static string ImportTitle => Text(nameof(ImportTitle));

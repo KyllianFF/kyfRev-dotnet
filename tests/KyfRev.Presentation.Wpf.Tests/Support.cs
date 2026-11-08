@@ -330,6 +330,33 @@ internal static class Waiting
     }
 }
 
+/// <summary>Une longue opération qui tient le coffre, comme un gros import, jusqu'à <see cref="Release"/> ; et au plus dix secondes.</summary>
+internal sealed class VaultHold : IDisposable
+{
+    private readonly ManualResetEventSlim _release = new();
+    private readonly Task _holding;
+
+    public VaultHold(KyfRev.Application.UseCases.KyfRevApplication app)
+    {
+        using var started = new ManualResetEventSlim();
+        _holding = Task.Run(() => app.Host.Use(_ =>
+        {
+            started.Set();
+            _release.Wait(TimeSpan.FromSeconds(10));
+        }));
+        Assert.IsTrue(started.Wait(TimeSpan.FromSeconds(10)));
+    }
+
+    public void Release() => _release.Set();
+
+    public void Dispose()
+    {
+        Release();
+        Assert.IsTrue(_holding.Wait(TimeSpan.FromSeconds(20)));
+        _release.Dispose();
+    }
+}
+
 /// <summary>
 /// Fait tourner le fil de l'interface d'un essai STA jusqu'à ce qu'une condition soit vraie : les
 /// suites des tâches de fond y reviennent, comme dans l'application.

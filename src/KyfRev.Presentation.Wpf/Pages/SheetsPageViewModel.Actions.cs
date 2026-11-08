@@ -134,7 +134,15 @@ public sealed partial class SheetsPageViewModel
 
     /// <summary>Importer un dossier de notes.</summary>
     [RelayCommand]
-    private void RequestImport() => Import?.Request();
+    private void RequestImport()
+    {
+        // Le refus resté dit dans la vue se lit désormais dans la fenêtre.
+        if (Error == Import?.UnreadRefusal)
+        {
+            Error = null;
+        }
+        Import?.Request();
+    }
 
     /// <summary>Un dossier a été importé : la liste est relue, et il est dit où, comme dans la 0.x.</summary>
     private void OnImported(ImportReport report)
@@ -142,6 +150,9 @@ public sealed partial class SheetsPageViewModel
         Done = report.Sheets > 0 ? SharingText.ImportedOf(report.Folder) : null;
         RefreshCommand.Execute(null);
     }
+
+    /// <summary>Un import refusé fenêtre fermée reste dit dans la vue, même relue, tant que sa fenêtre ne l'a pas montré.</summary>
+    private void ShowUnreadRefusal() => Error = Import?.UnreadRefusal;
 
     /// <summary>Ouvre une fiche pour la réviser.</summary>
     internal void Revise(SheetRow row) => _opener.ReviseSheet(row.Sheet.Id);

@@ -179,6 +179,7 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
         Sharing = sharing;
         Import = import;
         Import?.Imported = OnImported;
+        Import?.RefusedUnseen = ShowUnreadRefusal;
         Bar = new FilterBarViewModel(BuildRows);
         _folder = Bar.Add(SheetsText.FilterFolder, [new(string.Empty, SheetsText.AllFolders)]);
         _state = Bar.Add(
@@ -349,7 +350,7 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
     {
         ArgumentNullException.ThrowIfNull(entries);
         _entries = entries;
-        Error = null;
+        ShowUnreadRefusal();
         HasSheets = entries.Count > 0;
         OnPropertyChanged(nameof(Summary));
         _folder.Replace([new(string.Empty, SheetsText.AllFolders), .. FolderChoices(entries.Select(sheet => sheet.Folder))]);

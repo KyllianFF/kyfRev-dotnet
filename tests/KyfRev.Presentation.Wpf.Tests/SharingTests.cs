@@ -170,6 +170,23 @@ public sealed class SharingTests
     }
 
     [STATestMethod]
+    public void Asking_to_share_does_not_wait_for_a_long_operation_and_still_warns()
+    {
+        using var ui = new UiThread();
+        using var scene = new SharingScene(encrypted: true);
+        using var hold = new VaultHold(scene.App);
+
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+        scene.Open();
+        var elapsed = clock.Elapsed;
+        hold.Release();
+
+        Assert.IsLessThan(TimeSpan.FromSeconds(5), elapsed, "le fil de l'interface n'attend pas le coffre");
+        Assert.IsTrue(scene.Sharing.IsSharing);
+        Assert.IsTrue(scene.Sharing.IsEncrypted, "l'avertissement ne peut pas manquer");
+    }
+
+    [STATestMethod]
     public void A_shared_file_cannot_land_inside_the_vault()
     {
         using var ui = new UiThread();

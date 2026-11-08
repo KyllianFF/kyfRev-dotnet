@@ -123,8 +123,14 @@
   <data name="ImportPick" xml:space="preserve">
     <value>Choisissez le dossier de notes à importer</value>
   </data>
+  <data name="ImportRefused" xml:space="preserve">
+    <value>L'import n'a pas abouti : {0}</value>
+  </data>
   <data name="ImportReview" xml:space="preserve">
     <value>Révision des fiches importées</value>
+  </data>
+  <data name="ImportRunning" xml:space="preserve">
+    <value>Import en cours. Il continue si vous fermez cette fenêtre.</value>
   </data>
   <data name="ImportTitle" xml:space="preserve">
     <value>Importer un dossier de notes</value>

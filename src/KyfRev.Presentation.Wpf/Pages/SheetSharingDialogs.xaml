@@ -4,16 +4,15 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:kyf="clr-namespace:KyfRev.DesignSystem.Controls;assembly=KyfRev.DesignSystem"
              xmlns:pages="clr-namespace:KyfRev.Presentation.Wpf.Pages">
-  <UserControl.Resources>
-    <BooleanToVisibilityConverter x:Key="Visible" />
-  </UserControl.Resources>
-
   <Grid>
-    <!-- « Partager » : le format, et, s'il y a un fichier, le dossier ; le résultat se lit ici, fenêtre ouverte. -->
+    <!-- « Partager » : le format, et, s'il y a un fichier, le dossier ; le résultat se lit ici, fenêtre ouverte, au-dessus des formats pour se voir en fenêtre étroite. -->
     <kyf:Dialog x:Name="ShareDialog" Title="{Binding ShareTitle}" IsOpen="{Binding IsSharing, Mode=OneWay}"
-                PrimaryButtonText="{Binding ActionLabel}" SecondaryButtonText="{Binding CloseLabel}" IsPrimaryEnabled="{Binding IsIdle}" Closed="OnShareClosed">
+                PrimaryButtonText="{Binding ActionLabel}" SecondaryButtonText="{Binding CloseLabel}" IsPrimaryEnabled="{Binding IsIdle}" IsWorking="{Binding IsBusy}" Closed="OnShareClosed">
       <StackPanel>
         <kyf:Notification x:Name="ClearWarning" Severity="Warning" Message="{x:Static pages:SharingText.ClearWarning}" IsOpen="{Binding IsEncrypted, Mode=OneWay}" IsClosable="False" Margin="0,0,0,12" />
+        <kyf:Notification x:Name="Preparing" Message="{x:Static pages:SharingText.Preparing}" IsOpen="{Binding IsBusy, Mode=OneWay}" IsClosable="False" ScrollsIntoView="True" Margin="0,0,0,12" />
+        <kyf:Notification x:Name="ShareMessage" Severity="Success" Message="{Binding Message}" IsOpen="{Binding HasMessage, Mode=OneWay}" IsClosable="False" ScrollsIntoView="True" Margin="0,0,0,12" />
+        <kyf:Notification x:Name="ShareError" Severity="Critical" Message="{Binding Error}" IsOpen="{Binding HasError, Mode=OneWay}" IsClosable="False" ScrollsIntoView="True" Margin="0,0,0,12" />
         <TextBlock Text="{x:Static pages:SharingText.FormatLegend}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,0,0,6" AutomationProperties.HeadingLevel="Level3" />
         <ItemsControl x:Name="Formats" ItemsSource="{Binding Choices}" Focusable="False" IsEnabled="{Binding IsIdle}" AutomationProperties.Name="{x:Static pages:SharingText.FormatLegend}">
           <ItemsControl.ItemTemplate>
@@ -28,10 +27,6 @@
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
-        <TextBlock x:Name="Preparing" Text="{x:Static pages:SharingText.Preparing}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="0,4,0,0"
-                   Visibility="{Binding IsBusy, Converter={StaticResource Visible}}" AutomationProperties.LiveSetting="Polite" />
-        <kyf:Notification x:Name="ShareMessage" Severity="Success" Message="{Binding Message}" IsOpen="{Binding HasMessage, Mode=OneWay}" IsClosable="False" Margin="0,4,0,0" />
-        <kyf:Notification x:Name="ShareError" Severity="Critical" Message="{Binding Error}" IsOpen="{Binding HasError, Mode=OneWay}" IsClosable="False" Margin="0,4,0,0" />
       </StackPanel>
     </kyf:Dialog>
 
