@@ -6,6 +6,7 @@
 // à la racine du dépôt :
 //   dotnet run tools/catalogue/catalogue.cs -- cle <fichier.pem> [nom]   crée une clé de publication, hors du dépôt
 //   dotnet run tools/catalogue/catalogue.cs -- publier <fichier.pem>     signe catalogue/ d'après extensions/
+//   dotnet run tools/catalogue/catalogue.cs -- version <fichier.pem> <v> signe l'annonce de la version publiée
 //   dotnet run tools/catalogue/catalogue.cs -- verifier                  vérifie catalogue/ comme l'application
 // La clé privée ne quitte jamais son fichier, chiffré par une phrase de passe demandée au clavier. Le dépôt, lui, ne
 // reçoit que la clé publique (src/KyfRev.Extensions.Host/cles-catalogue.json) et le catalogue signé.
@@ -24,8 +25,9 @@ return args switch
     ["cle", var fichier] => Cle(fichier, "kyfrev-1"),
     ["cle", var fichier, var nom] => Cle(fichier, nom),
     ["publier", var fichier] => Publier(fichier),
+    ["version", var fichier, var numero] => Version(fichier, numero),
     ["verifier"] => Verifier(),
-    _ => Echec("usage : cle <fichier.pem> [nom] | publier <fichier.pem> | verifier"),
+    _ => Echec("usage : cle <fichier.pem> [nom] | publier <fichier.pem> | version <fichier.pem> <numero> | verifier"),
 };
 
 int Cle(string fichier, string nom)
@@ -105,6 +107,49 @@ int Publier(string fichier)
     File.WriteAllBytes(actuel, catalogue);
     File.WriteAllBytes(Path.Combine(racine, "catalogue", "catalogue.sig"), signature);
     Console.WriteLine($"Catalogue n° {precedent + 1} signé par « {connue.Id} » : {entrees.Count} extension(s). Il ne reste qu'à le proposer dans une PR.");
+    return 0;
+}
+
+int Version(string fichier, string numero)
+{
+    if (!File.Exists(fichier))
+    {
+        return Echec($"{fichier} est introuvable.");
+    }
+    using var cle = ECDsa.Create();
+    try
+    {
+        cle.ImportFromEncryptedPem(File.ReadAllText(fichier), Phrase("Phrase de passe de la clé : "));
+    }
+    catch (CryptographicException)
+    {
+        return Echec("la phrase de passe ne correspond pas à cette clé.");
+    }
+    var publique = cle.ExportSubjectPublicKeyInfoPem().ReplaceLineEndings("\n").Trim();
+    if (ExtensionCatalogue.KnownKeys.FirstOrDefault(connue => connue.PublicKey.ReplaceLineEndings("\n").Trim() == publique) is not { } connue)
+    {
+        return Echec("cette clé n'est pas dans cles-catalogue.json : l'application refuserait sa signature.");
+    }
+    byte[] annonce;
+    try
+    {
+        annonce = UpdateChecker.Write(numero, DateOnly.FromDateTime(DateTime.Now));
+    }
+    catch (ArgumentException erreur)
+    {
+        return Echec(erreur.Message);
+    }
+    var signature = ExtensionCatalogue.Sign(annonce, cle, connue.Id);
+    var verifie = UpdateChecker.Verify(annonce, signature, ExtensionCatalogue.KnownKeys);
+    if (!verifie.Succeeded)
+    {
+        return Echec($"l'annonce signée ne se vérifie pas : {verifie.Error}");
+    }
+    var chemin = Path.Combine(racine, UpdateChecker.ManifestFile);
+    Directory.CreateDirectory(Path.GetDirectoryName(chemin)!);
+    File.WriteAllBytes(chemin, annonce);
+    File.WriteAllBytes(Path.Combine(racine, UpdateChecker.SignatureFile), signature);
+    Console.WriteLine($"Version {numero} annoncée et signée par « {connue.Id} ». Il ne reste qu'à proposer mise-a-jour/ dans une PR.");
     return 0;
 }
 

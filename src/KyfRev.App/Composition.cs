@@ -99,7 +99,8 @@ internal static class Composition
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Reviews);
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Editing);
         services.AddSingleton(provider => provider.GetRequiredService<KyfRevApplication>().Settings);
-        services.AddSingleton<ISpelling>(provider => new WindowsSpelling(() => provider.GetRequiredService<VaultUseCases>().State().Encrypted));
+        services.AddSingleton<ISpelling>(provider => new WindowsSpelling(
+            () => WordsStayInMemory(provider.GetRequiredService<VaultLocations>().Mode, provider.GetRequiredService<VaultUseCases>().State().Encrypted)));
         services.AddSingleton<ISpeech, WindowsSpeech>();
         services.AddSingleton(provider => new EditorEnvironment(
             provider.GetRequiredService<ISpelling>(),
@@ -223,13 +224,14 @@ internal static class Composition
                 provider.GetRequiredService<IOnlineReader>(),
                 provider.GetRequiredService<ExtensionLibrary>(),
                 ExtensionCatalogue.KnownKeys,
-                Path.Combine(Path.GetTempPath(), "kyfRev", "catalogue")),
+                Path.Combine(provider.GetRequiredService<VaultLocations>().LocalData, "catalogue")),
         });
         services.AddSingleton(provider => new ModulesSettingsViewModel(
             provider.GetRequiredService<SettingsUseCases>(),
             provider.GetRequiredService<ActiveModules>().Load,
             provider.GetRequiredService<ExtensionSettingsViewModel>()));
         services.AddSingleton<GeneralSettingsViewModel>();
+        services.AddSingleton(provider => new UpdateChecker(provider.GetRequiredService<IOnlineReader>(), ExtensionCatalogue.KnownKeys, Version));
         services.AddSingleton<AboutSettingsViewModel>();
         services.AddSingleton<SettingsHubViewModel>();
         services.AddSingleton(provider => new HealthPageViewModel(
@@ -469,6 +471,12 @@ internal static class Composition
             return $"introuvable ({problem.Message})";
         }
     }
+
+    /// <summary>
+    /// Un mot accepté ne va pas dans le dictionnaire de Windows, un fichier du profil, ni depuis un coffre chiffré, ni en mode
+    /// portable, qui n'écrit rien hors de son dossier.
+    /// </summary>
+    internal static bool WordsStayInMemory(AppMode mode, bool encrypted) => encrypted || mode == AppMode.Portable;
 
     internal static string ModeName(AppMode mode) => mode switch
     {

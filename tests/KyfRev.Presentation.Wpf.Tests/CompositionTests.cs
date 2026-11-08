@@ -92,6 +92,14 @@ public sealed class CompositionTests
     }
 
     [TestMethod]
+    [DataRow(AppMode.Portable, false, true)]
+    [DataRow(AppMode.Installed, true, true)]
+    [DataRow(AppMode.Installed, false, false)]
+    [DataRow(AppMode.Development, false, false)]
+    public void A_word_stays_in_memory_on_an_encrypted_vault_and_in_portable_mode(AppMode mode, bool encrypted, bool inMemory) =>
+        Assert.AreEqual(inMemory, KyfRev.App.Composition.WordsStayInMemory(mode, encrypted));
+
+    [TestMethod]
     public void The_presentation_references_no_infrastructure()
     {
         var references = typeof(ShellViewModel).Assembly.GetReferencedAssemblies().Select(reference => reference.Name!).ToList();

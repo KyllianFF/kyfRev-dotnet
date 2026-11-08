@@ -24,8 +24,8 @@ public interface ISpelling
     SpellingCorrection? Correct(string word);
 
     /// <summary>
-    /// Un mot ajouté ne vaut que jusqu'à la fermeture de l'application : le dictionnaire de Windows est un fichier en clair,
-    /// qu'un coffre chiffré ne nourrit pas.
+    /// Un mot ajouté ne vaut que jusqu'à la fermeture de l'application : le dictionnaire de Windows est un fichier en clair du
+    /// profil, qu'un coffre chiffré ne nourrit pas, et où la version portable n'écrit rien.
     /// </summary>
     bool AddsUntilClosing { get; }
 
