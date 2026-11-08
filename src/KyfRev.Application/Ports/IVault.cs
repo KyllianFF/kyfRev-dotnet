@@ -52,6 +52,13 @@ public interface ISheetStore
     /// <summary>Toutes les fiches, par dossier puis par titre.</summary>
     IReadOnlyList<VaultSheet> SheetList();
 
+    /// <summary>Les fiches qui mènent à la fiche <paramref name="id"/>, par titre.</summary>
+    /// <exception cref="OperationCanceledException">La demande a été annulée.</exception>
+    IReadOnlyList<Backlink> Backlinks(string id, CancellationToken cancellation);
+
+    /// <summary>Le début de la fiche située à <paramref name="path"/> (chemin dans le coffre) ; rien s'il n'y en a pas.</summary>
+    SheetPreview? PreviewOf(string path, DateOnly day);
+
     /// <summary>Le glossaire : les définitions hors corbeille, par dossier, puis par terme.</summary>
     IReadOnlyList<VaultDefinition> Definitions(DateOnly day);
 

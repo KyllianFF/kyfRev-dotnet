@@ -211,6 +211,45 @@ public sealed record VaultSheet(
     string? Step,
     DateOnly? DueDate);
 
+/// <summary>Un morceau de l'extrait d'un rétrolien.</summary>
+/// <param name="Text">Son texte.</param>
+/// <param name="IsLink">Le texte du lien : il ressort.</param>
+public sealed record ExcerptPart(string Text, bool IsLink);
+
+/// <summary>Une fiche qui contient un lien vers la fiche ouverte.</summary>
+/// <param name="SheetId">Son identifiant.</param>
+/// <param name="Title">Son titre.</param>
+/// <param name="Folder">Son dossier relatif à <c>fiches/</c>, vide à la racine.</param>
+/// <param name="Archived">Archivée.</param>
+/// <param name="Excerpt">Le texte autour de son premier lien, sur une ligne.</param>
+/// <param name="Links">Ses liens vers la fiche ouverte.</param>
+public sealed record Backlink(
+    string SheetId,
+    string Title,
+    string Folder,
+    bool Archived,
+    ImmutableArray<ExcerptPart> Excerpt,
+    int Links);
+
+/// <summary>Le début d'une fiche, pour l'aperçu au survol d'un lien.</summary>
+/// <param name="Id">Son identifiant.</param>
+/// <param name="Title">Son titre.</param>
+/// <param name="Folder">Son dossier relatif à <c>fiches/</c>, vide à la racine.</param>
+/// <param name="Tags">Ses étiquettes.</param>
+/// <param name="Archived">Archivée.</param>
+/// <param name="Excerpt">Le début du texte, sans mise en forme ; « … » s'il continue.</param>
+/// <param name="Step">Étape attendue d'une fiche active.</param>
+/// <param name="DueDate">Son échéance.</param>
+public sealed record SheetPreview(
+    string Id,
+    string Title,
+    string Folder,
+    ImmutableArray<string> Tags,
+    bool Archived,
+    string Excerpt,
+    string? Step,
+    DateOnly? DueDate);
+
 /// <summary>Une fiche ouverte pour la lire ou la réviser. Ouvrir ne valide rien.</summary>
 /// <param name="Id">Identifiant.</param>
 /// <param name="Title">Titre.</param>

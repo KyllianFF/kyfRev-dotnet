@@ -1086,7 +1086,7 @@ public sealed class ReadingTests
             }
 
             var more = Named<Button>(window, "HeaderMoreButton");
-            Assert.AreEqual($"Plan et passages ({page.PassagesLabel})", System.Windows.Automation.AutomationProperties.GetName(more), "le « ⋯ » dit combien de passages il cache");
+            Assert.AreEqual($"Volets : Plan, {page.PassagesLabel}", System.Windows.Automation.AutomationProperties.GetName(more), "le « ⋯ » dit ce qu'il cache, et combien de passages");
             more.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
             TestShell.Flush();
             Assert.IsTrue(more.ContextMenu.IsOpen);

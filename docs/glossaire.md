@@ -50,6 +50,8 @@ Ce glossaire fixe la correspondance. Les **clés JSON du coffre restent celles d
 | Dossier | `Folder` | — | Sous-dossier de `fiches/`. |
 | Étiquette | `Tag` | `etiquettes` (ou `tags`) | Mot-clé de classement, écrit dans l'en-tête. |
 | Ressource | `Attachment` | dossier `<Titre>.ressources/` | Image ou pièce jointe d'une fiche. |
+| Rétrolien | `Backlink` | — | Fiche qui contient un lien vers la fiche ouverte. Rien n'est enregistré. |
+| Aperçu d'une fiche | `SheetPreview` | — | Début d'une fiche liée, montré au survol ou au focus d'un lien. |
 | Passage annoté | `Passage` | `annotations` | Surlignage, avec ou sans commentaire, révisé par la méthode des J. |
 | Définition | `Definition` | `definition` | Annotation qui porte un terme et son explication. |
 | Annotation | `Annotation` | `.suivi/annotations/<id>.json` | Passage ou définition rattaché à une fiche par son identifiant. |
