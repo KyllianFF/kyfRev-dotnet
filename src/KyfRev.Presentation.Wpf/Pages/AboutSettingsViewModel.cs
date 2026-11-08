@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using KyfRev.Application.Model;
 using KyfRev.Application.Ports;
 using KyfRev.Application.UseCases;
+using KyfRev.Extensions.Host;
 using KyfRev.Presentation.Wpf.Shell;
 
 namespace KyfRev.Presentation.Wpf.Pages;
@@ -11,13 +12,18 @@ namespace KyfRev.Presentation.Wpf.Pages;
 public sealed partial class AboutSettingsViewModel : ObservableObject, INavigationAware, IForgetsVault
 {
     private readonly VaultUseCases _vaults;
+    private readonly UpdateChecker? _updates;
+    private readonly IExternalLinks? _links;
     private readonly ILegacyInstallation? _legacy;
+    private Uri? _release;
 
-    /// <summary>L'onglet, sur le cas d'usage qui rend l'état de l'application ; la 0.x y est signalée si elle est encore là.</summary>
-    public AboutSettingsViewModel(VaultUseCases vaults, ILegacyInstallation? legacy = null)
+    /// <summary>L'onglet, sur le cas d'usage qui rend l'état de l'application ; la recherche de mise à jour s'y ajoute si elle est là, et la 0.x y est signalée si elle est encore installée.</summary>
+    public AboutSettingsViewModel(VaultUseCases vaults, UpdateChecker? updates = null, IExternalLinks? links = null, ILegacyInstallation? legacy = null)
     {
         ArgumentNullException.ThrowIfNull(vaults);
         _vaults = vaults;
+        _updates = updates;
+        _links = links;
         _legacy = legacy;
     }
 
@@ -40,6 +46,33 @@ public sealed partial class AboutSettingsViewModel : ObservableObject, INavigati
     /// <summary>Le dossier du coffre ouvert.</summary>
     [ObservableProperty]
     public partial string Vault { get; private set; } = string.Empty;
+
+    /// <summary>La recherche de mise à jour est proposée.</summary>
+    public bool CanCheckUpdates => _updates is not null;
+
+    /// <summary>Le libellé du bouton de recherche.</summary>
+    [ObservableProperty]
+    public partial string CheckLabel { get; private set; } = SettingsHubText.CheckUpdate;
+
+    /// <summary>Ce que la recherche a trouvé.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasUpdateMessage))]
+    public partial string UpdateMessage { get; private set; } = string.Empty;
+
+    /// <summary>Pourquoi la recherche n'a pas abouti.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasUpdateError))]
+    public partial string UpdateError { get; private set; } = string.Empty;
+
+    /// <summary>Une version plus récente attend : sa page peut s'ouvrir.</summary>
+    [ObservableProperty]
+    public partial bool HasRelease { get; private set; }
+
+    /// <inheritdoc cref="UpdateMessage"/>
+    public bool HasUpdateMessage => UpdateMessage.Length > 0;
+
+    /// <inheritdoc cref="UpdateError"/>
+    public bool HasUpdateError => UpdateError.Length > 0;
 
     /// <inheritdoc/>
     public void OnNavigatedTo()
@@ -67,5 +100,39 @@ public sealed partial class AboutSettingsViewModel : ObservableObject, INavigati
             _ => SettingsHubText.ModeDevelopment,
         };
         Vault = state.Vault ?? string.Empty;
+    }
+
+    /// <summary>Cherche une mise à jour, seulement à la demande : rien n'est téléchargé ni installé.</summary>
+    [RelayCommand]
+    private async Task CheckUpdateAsync()
+    {
+        if (_updates is null)
+        {
+            return;
+        }
+        CheckLabel = SettingsHubText.CheckingUpdate;
+        UpdateMessage = string.Empty;
+        UpdateError = string.Empty;
+        HasRelease = false;
+        var result = await _updates.CheckAsync(CancellationToken.None).ConfigureAwait(true);
+        CheckLabel = SettingsHubText.CheckUpdate;
+        if (!result.Succeeded)
+        {
+            UpdateError = result.Error!;
+            return;
+        }
+        _release = result.Value.Page;
+        HasRelease = result.Value.IsNewer;
+        UpdateMessage = result.Value.IsNewer ? SettingsHubText.UpdateAvailableOf(result.Value.Latest, result.Value.Current) : SettingsHubText.UpToDateOf(result.Value.Current);
+    }
+
+    /// <summary>Ouvre la page de la version trouvée, dans le navigateur.</summary>
+    [RelayCommand]
+    private void OpenRelease()
+    {
+        if (_release is { } page)
+        {
+            _links?.Open(page.ToString());
+        }
     }
 }

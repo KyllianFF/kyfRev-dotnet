@@ -99,6 +99,18 @@ public static class ExtensionCatalogue
         return Outcome.Of(read);
     }
 
+    /// <summary>Vrai si <paramref name="signature"/> est celle de <paramref name="content"/> par une clé connue.</summary>
+    internal static bool IsSignedBy(byte[] content, byte[] signature, IReadOnlyList<CatalogueKey> keys)
+    {
+        if (ReadSignature(signature) is not var (keyId, bytes) || keys.FirstOrDefault(key => key.Id == keyId) is not { } known)
+        {
+            return false;
+        }
+        using var key = ECDsa.Create();
+        key.ImportFromPem(known.PublicKey);
+        return key.VerifyData(content, bytes, HashAlgorithmName.SHA256, DSASignatureFormat.IeeeP1363FixedFieldConcatenation);
+    }
+
     /// <summary>Vérifie un fichier téléchargé : sa taille et son empreinte doivent être celles du catalogue.</summary>
     public static bool Matches(CatalogueFile file, byte[] content)
     {

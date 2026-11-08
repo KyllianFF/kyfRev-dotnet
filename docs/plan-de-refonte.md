@@ -67,7 +67,7 @@ Les **décisions** sont regroupées au §7.
 | **Schémas réseau** (module) | Éditeur de topologie (équipements, ports, VLAN, câbles routés, plan IP, exports SVG, PNG et JSON) dans `schemas/*.json`, cité par les fiches | D39 à D55 |
 | **Échanges** | Partage d'une fiche (HTML autonome, PDF, Markdown, zip, texte) ; exports CSV, Markdown et zip ; import d'un dossier Obsidian | D22, D58 |
 | **Coffre** | Sauvegarde quotidienne zip vérifiée, rotation 14 j / 8 sem. / 24 mois, restauration dans un nouveau dossier ; panneau Santé (rien n'est réparé en silence) ; verrou entre instances | D11, §9 |
-| **Extensions** | Blocs et vues ajoutés par des extensions HTML/JS isolées ; catalogue vérifié par empreintes SHA-256 ; jeton GitHub chiffré par DPAPI | D61 à D64 |
+| **Extensions** | Blocs et vues ajoutés par des extensions HTML/JS isolées ; catalogue vérifié par empreintes SHA-256 ; jeton GitHub chiffré par DPAPI (abandonné par l'amendement du 8 novembre 2026 : le dépôt est public, le catalogue et la recherche de mise à jour se lisent sans jeton) | D61 à D64 |
 | **Distribution** | Version portable (`MesRévisions\`) et installeur NSIS ; signature de code facultative ; recherche de mise à jour à la demande | D23, D59 |
 
 ### 1.2 L'algorithme des J (source : `crates/noyau`)
@@ -264,7 +264,7 @@ Il existe **deux niveaux**.
 |---|---|---|---|
 | Moyenne | Sécurité | Exfiltration par un `data-externe` produit par une extension ; `style` autorisé dans le HTML d'extension | HTML d'extension converti en éléments natifs depuis une liste blanche stricte : ni `style`, ni lien externe produit par une extension |
 | Moyenne | Sécurité | Catalogue sans signature, lu sur `main` (branche mutable) | Catalogue **signé Ed25519**, clé publique dans l'exécutable, lu sur une étiquette de version |
-| Moyenne | Sécurité | Jeton DPAPI sans entropie, transmis une fois en clair à l'interface, dépôt codé en dur | Entropie propre à l'application ; saisie dans un champ natif (jamais dans le web) ; dépôt configurable |
+| Moyenne | Sécurité | Jeton DPAPI sans entropie, transmis une fois en clair à l'interface, dépôt codé en dur | Sans objet : abandonné par l'amendement du 8 novembre 2026 : le dépôt est public, le catalogue et la recherche de mise à jour se lisent sans jeton |
 | Faible | Sécurité | `fiches:lecture` contrôlé seulement dans l'interface ; réponses usurpables d'un cadre à l'autre ; pas de CSP sur `extension:` | Contrôle par l'hôte C#, jeton de session par cadre, CSP et `sandbox` sur toutes les réponses |
 | Faible | Sécurité | Chemins absolus acceptés de l'interface (export, import) | L'hôte ouvre lui-même la boîte de dialogue : aucun chemin ne vient de la couche web |
 | Faible | Sécurité | Journal contenant le nom d'utilisateur Windows ; rotation seulement au démarrage | Masquage de `%USERPROFILE%`, rotation pendant l'exécution |
@@ -292,7 +292,7 @@ Il existe **deux niveaux**.
 | Import Obsidian, exports CSV (anti-injection), partage zip et HTML | `import.rs`, `exports.rs`, `partage.rs` | |
 | Citations, extraction Wikiquote, examens, statistiques, santé | crates `coffre` | |
 | Contrats d'extension (manifeste, protocole, catalogue format 1) | `src-tauri/extensions.rs`, `catalogue.rs` | Compatibles, avec les durcissements |
-| `portable.json`, `installation.json`, `config-locale.json`, `jeton-github.bin` | `emplacements.rs`, `github.rs` | `ProtectedData.Unprotect` relit le jeton existant |
+| `portable.json`, `installation.json`, `config-locale.json`, `jeton-github.bin` | `emplacements.rs`, `github.rs` | `jeton-github.bin` n'est plus repris (amendement du 8 novembre 2026) |
 | Logique pure du module topologie (~3 500 l. TypeScript) | `src/lib/topologie` | Si le module passe en natif (§6, J10) |
 | Identité visuelle : 3 gammes OKLCH, rôles, contrastes | Conception §12, `theme.css` | Rôles et exigences de contraste repris ; couleurs et polices remplacées par l'identité « Veillée », choisie en novembre 2026 |
 
@@ -547,7 +547,6 @@ L'audit du format a relevé 19 pièges, tous traités et testés.
    - `kyfrev-coffre verifier Documents\kyfRev\Coffre`, avec un rapport de comptage par entité.
 2. **Premier lancement de kyfRev .NET**. Il importe les réglages propres à la machine, sans les modifier :
    - `config-locale.json` (dernier coffre) ;
-   - `jeton-github.bin` (relu par DPAPI, puis protégé de nouveau avec l'entropie de l'application) ;
    - l'état des extensions.
    
    Ses propres fichiers locaux (journal, données WebView2) vont dans des sous-dossiers distincts de `%LOCALAPPDATA%\kyfRev`, pour ne pas entrer en collision avec la 0.x : `%LOCALAPPDATA%\kyfRev\v1`, où elle retient aussi son dernier coffre (J6.2).
@@ -668,7 +667,7 @@ La livraison n'est déclenchée que sur étiquette. Toutes les actions sont épi
 
 > **Attention : signature.** Un certificat de signature de code (Azure Trusted Signing, par exemple) affiche le nom **légal** vérifié, et non « KyllianFF ». Sans signature, SmartScreen avertit au premier lancement.
 
-**Version portable** : `kyfRev-<version>-portable.zip`, avec la structure `MesRévisions\Application\kyfRev.exe` et `portable.json` de la 0.x. Rien n'est écrit hors du dossier.
+**Version portable** : `kyfRev-<version>-portable.zip`, avec la structure `MesRévisions\Application\kyfRev.exe` et `portable.json` de la 0.x. kyfRev n'écrit rien hors du dossier. Windows et WebView2 gardent de leur côté quelques traces techniques : le nom du programme (`MuiCache`), des réglages du moteur (`HKCU\Software\Microsoft\EdgeWebView`) et les fichiers vides du correcteur, constatés dans Windows Sandbox le 8 novembre 2026 ; aucune ne contient le texte d'une fiche.
 
 ---
 
@@ -840,7 +839,7 @@ Ce jalon se découpe en sous-parties validées une à une, comme J6.
 ### J10. Extensions et schémas réseau : `beta.2` (L)
 - **Livrables** :
   - `Extensions.Host` : contrat identique ; code exécuté dans le moteur web caché ; HTML rendu en éléments natifs depuis une liste blanche stricte ; durcissements du §2.2 ;
-  - catalogue **signé** ; jeton GitHub saisi dans un champ natif, avec entropie ;
+  - catalogue **signé** ;
   - vérification de mise à jour avec manifeste signé ;
   - module Schémas en îlot WebView2 : compatibilité des formats 1 et 2, plan IP, exports ;
   - vue « Paramètres » : extensions et module Schémas.
@@ -853,7 +852,8 @@ Ce jalon se découpe en sous-parties validées une à une, comme J6.
   1. installer et exécuter : `KyfRev.Extensions.Host` lit le manifeste et range les extensions sur le poste, la carte des Paramètres les active et les retire, et leur code tourne dans une page cachée, chacune dans son cadre ;
   2. les vues : leur entrée dans le menu, la lecture des fiches et le stockage ;
   3. les blocs dans les fiches, en lecture, en révision et dans l'éditeur, avec le rendu natif en liste blanche ;
-  4. le catalogue signé et le jeton GitHub. La vérification de mise à jour vient après.
+  4. le catalogue signé. La vérification de mise à jour vient après, avec un manifeste signé par les mêmes clés.
+- **Jeton GitHub abandonné** (amendement du 8 novembre 2026) : il servait à lire un dépôt privé. Le dépôt est public depuis le 2 novembre : le catalogue et la recherche de mise à jour se lisent sans lui.
 - **Ce que le lot 1 ajoute au contrat** (amendement du 5 novembre 2026) :
   - le moteur des extensions a son propre processus et ses propres données, et il ne résout aucune adresse ;
   - WebRTC est retiré de chaque document : la CSP ne l'arrête pas, et un essai avec un vrai écouteur UDP a reçu le paquet STUN d'une extension, y compris avec `webrtc 'block'`. La 0.x avait la même fuite. Les essais gardent ces écouteurs, TCP et UDP, parce qu'ils voient ce qui sort quelle qu'en soit la raison ;
@@ -878,7 +878,7 @@ Ce jalon se découpe en sous-parties validées une à une, comme J6.
   - en installation silencieuse, codes de sortie conformes ;
   - nom, éditeur, version, date et icône visibles dans l'assistant et dans Paramètres › Applications ;
   - coffre intact après désinstallation ;
-  - version portable : rien d'écrit hors du dossier (comparaison du registre et d'AppData avant et après) ;
+  - version portable : rien d'écrit par kyfRev hors du dossier (comparaison du registre et d'AppData avant et après ; seules restent les traces de Windows et de WebView2, §5.5) ;
   - parité fonctionnelle avec 0.8.0 vérifiée sur la liste du §1.1.
 
 ### Après la 1.0
@@ -926,7 +926,7 @@ L'option que j'ai retenue est en gras.
 | Citations (6) | module Citations |
 | Orthographe (2) | `ISpellChecker` (Windows) |
 | Schémas réseau (7) | module Schémas |
-| Extensions (9), GitHub et mises à jour (4) | `Extensions.Host`, `UpdateService`, `ISecretStore` |
+| Extensions (9), GitHub et mises à jour (4) | `Extensions.Host`, `UpdateChecker` (jeton GitHub abandonné) |
 
 ## Annexe B : scénarios d'acceptation repris de la conception
 

@@ -201,4 +201,22 @@
   <data name="LegacyInstalled" xml:space="preserve">
     <value>kyfRev {0}, l'ancienne version, est encore installé. Si celle-ci vous convient, vous pouvez le désinstaller depuis Windows : vos coffres ne seront pas touchés.</value>
   </data>
+  <data name="CheckUpdate" xml:space="preserve">
+    <value>Rechercher une mise à jour</value>
+  </data>
+  <data name="CheckingUpdate" xml:space="preserve">
+    <value>Recherche…</value>
+  </data>
+  <data name="UpdateHelp" xml:space="preserve">
+    <value>La recherche n'a lieu que si vous la demandez. Rien n'est téléchargé ni installé : kyfRev dit seulement si une version plus récente existe, et peut ouvrir sa page.</value>
+  </data>
+  <data name="OpenRelease" xml:space="preserve">
+    <value>Ouvrir la page de cette version</value>
+  </data>
+  <data name="UpdateAvailable" xml:space="preserve">
+    <value>kyfRev {0} est disponible (vous avez la {1}).</value>
+  </data>
+  <data name="UpToDate" xml:space="preserve">
+    <value>Vous avez la dernière version ({0}).</value>
+  </data>
 </root>

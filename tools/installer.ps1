@@ -98,9 +98,9 @@ if ($LASTEXITCODE -ne 0) { throw 'Publication de kyfrev-coffre impossible.' }
 # Le programme d'amorçage de WebView2 : Microsoft le met à jour à la même adresse, seule sa signature le vérifie.
 $amorcage = Join-Path $sortie 'MicrosoftEdgeWebview2Setup.exe'
 Invoke-WebRequest 'https://go.microsoft.com/fwlink/p/?LinkId=2124703' -OutFile $amorcage -MaximumRetryCount 6 -RetryIntervalSec 20
-$signature = Get-AuthenticodeSignature -LiteralPath $amorcage
-if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'O=Microsoft Corporation') {
-    throw "Le programme d'amorçage de WebView2 n'est pas signé par Microsoft : $($signature.StatusMessage)"
+$authenticode = Get-AuthenticodeSignature -LiteralPath $amorcage
+if ($authenticode.Status -ne 'Valid' -or $authenticode.SignerCertificate.Subject -notmatch 'O=Microsoft Corporation') {
+    throw "Le programme d'amorçage de WebView2 n'est pas signé par Microsoft : $($authenticode.StatusMessage)"
 }
 
 $compilation = @('/Qp', "/O$sortie", "/DVersion=$Version", "/DNumericVersion=$numerique", "/DSource=$application", "/DWebView2Setup=$amorcage")
