@@ -412,7 +412,7 @@ noms des dossiers et des fiches.
 | `seance.json` | Le chemin du coffre et des identifiants, pendant une séance | Aucun texte de fiche. |
 | `preferences.json` | L'apparence | Aucun texte de fiche. |
 | `config-locale.json` | Le chemin du dernier coffre ouvert | Aucun texte de fiche. |
-| Le dossier temporaire | Le cache du catalogue d'extensions | Aucun texte de fiche. |
+| `catalogue`, dans les données locales | Les extensions téléchargées qui attendent leur installation | Aucun texte de fiche. |
 
 La recherche n'y ajoute rien : elle relit le coffre de bout en bout, par son stockage, sans index ni cache, et les mots
 cherchés ne vont jamais au journal.

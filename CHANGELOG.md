@@ -12,6 +12,10 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 - Rechercher une mise à jour, dans Paramètres › À propos, seulement à la demande. kyfRev lit dans le dépôt une annonce signée par les
   clés de publication, dit si une version plus récente existe et peut ouvrir sa page ; rien n'est téléchargé ni installé.
   `tools/catalogue/catalogue.cs version` écrit et signe cette annonce. Le jeton GitHub de la 0.x n'est pas repris : le dépôt est public.
+- La version portable : `tools/portable.ps1` écrit `kyfRev-<version>-portable.zip`, avec `MesRévisions\Application` et son
+  `portable.json`, un `LISEZMOI.txt` et l'empreinte SHA-256 de l'archive. Elle n'écrit rien dans le profil : un mot accepté
+  reste en mémoire au lieu d'aller dans le dictionnaire de Windows, et les extensions téléchargées attendent dans ses
+  données locales, comme en version installée, au lieu du dossier temporaire.
 - Recherche dans le coffre, comme la 0.x. La vue Fiches cherche aussi dans le texte, avec un extrait où les mots sont
   surlignés. Ctrl+K donne, sous les commandes et à partir de deux lettres, les fiches, les passages, les définitions et les
   citations qui contiennent tous les mots, sans tenir compte de la casse, des accents ni des ligatures ; un résultat ouvre
