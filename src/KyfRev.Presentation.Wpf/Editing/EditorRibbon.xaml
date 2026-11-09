@@ -214,6 +214,9 @@
                 <Button x:Name="SubscriptButton" Style="{DynamicResource Kyf.Button.Tool}" Tag="{Binding Tools.Subscript}" Command="{Binding ToggleMarkCommand}" CommandParameter="{x:Static editing:InlineMark.Subscript}" ToolTip="{x:Static editing:EditingText.Subscript}" AutomationProperties.Name="{x:Static editing:EditingText.Subscript}">
                   <TextBlock Text="x₂" Style="{StaticResource Letter}" />
                 </Button>
+                <Button x:Name="InlineCodeButton" Style="{DynamicResource Kyf.Button.Tool}" Tag="{Binding Tools.Code}" Command="{Binding ToggleMarkCommand}" CommandParameter="{x:Static editing:InlineMark.Code}" ToolTip="{x:Static editing:EditingText.InlineCode}" AutomationProperties.Name="{x:Static editing:EditingText.InlineCode}">
+                  <kyf:Icon Text="{x:Static kyf:Icons.Code}" />
+                </Button>
               </StackPanel>
             </StackPanel>
           </HeaderedContentControl>
@@ -232,6 +235,9 @@
                 </Button>
                 <Button x:Name="TasksButton" Style="{DynamicResource Kyf.Button.Tool}" Tag="{Binding IsTasks}" Command="{Binding ToggleListCommand}" CommandParameter="{x:Static editing:ListKind.Tasks}" ToolTip="{x:Static editing:EditingText.Tasks}" AutomationProperties.Name="{x:Static editing:EditingText.Tasks}">
                   <kyf:Icon Text="{x:Static kyf:Icons.TaskList}" />
+                </Button>
+                <Button x:Name="QuoteButton" Style="{DynamicResource Kyf.Button.Tool}" Tag="{Binding Tools.Quote}" Command="{Binding ToggleQuoteCommand}" ToolTip="{x:Static editing:EditingText.Quote}" AutomationProperties.Name="{x:Static editing:EditingText.Quote}">
+                  <kyf:Icon Text="{x:Static kyf:Icons.Quote}" />
                 </Button>
               </StackPanel>
               <StackPanel Orientation="Horizontal" Margin="0,2,0,0">

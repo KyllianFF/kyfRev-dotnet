@@ -250,6 +250,9 @@ internal sealed class MarkdownEditor : TextEditor, IEditorSurface
     public void ToggleList(ListKind kind) => Edit((text, start, end) => MarkdownEdits.List(text, start, end, kind));
 
     /// <inheritdoc/>
+    public void ToggleQuote() => Edit(MarkdownEdits.Quote);
+
+    /// <inheritdoc/>
     public void InsertDiagram(string info, string code, int? position) =>
         Edit((text, start, _) => MarkdownEdits.Block(text, start, $"```{info}\n{code}\n```"));
 
@@ -451,7 +454,7 @@ internal sealed class MarkdownEditor : TextEditor, IEditorSurface
     {
         var text = Document.Text;
         var (selectionStart, selectionEnd) = Range;
-        ToolsChanged?.Invoke(this, new EditorTools(false, false, false, false, false, false, MarkdownEdits.HeadingLevel(CaretLine, 0), null, CanUndo, CanRedo)
+        ToolsChanged?.Invoke(this, new EditorTools(false, false, false, false, false, false, MarkdownEdits.HeadingLevel(CaretLine, 0), null, CanUndo, CanRedo, Quote: MarkdownEdits.IsQuoted(CaretLine))
         {
             Color = MarkdownEdits.StyleAround(text, selectionStart, selectionEnd, ColorProperty),
             Size = MarkdownEdits.StyleAround(text, selectionStart, selectionEnd, SizeProperty),

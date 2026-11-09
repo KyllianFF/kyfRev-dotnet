@@ -42,6 +42,18 @@
   <data name="EmptyTitle" xml:space="preserve">
     <value>Aucune fiche pour l'instant</value>
   </data>
+  <data name="TagsFilterName" xml:space="preserve">
+    <value>Filtrer par étiquettes</value>
+  </data>
+  <data name="TagFilterAdd" xml:space="preserve">
+    <value>Seulement les fiches qui portent cette étiquette</value>
+  </data>
+  <data name="TagFilterRemove" xml:space="preserve">
+    <value>Retirer ce filtre</value>
+  </data>
+  <data name="TagsClear" xml:space="preserve">
+    <value>Tout afficher</value>
+  </data>
   <data name="FilterFolder" xml:space="preserve">
     <value>Dossier</value>
   </data>

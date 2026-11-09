@@ -651,6 +651,31 @@ public sealed class ReviewTests
         Assert.AreEqual(1, page.Review.MarkedCount);
     }
 
+    [STATestMethod]
+    public void The_focus_mode_keeps_the_reading_width_and_the_sheet_commands_it()
+    {
+        using var vault = new ReviewVault();
+        var test = new TestShell();
+        var machine = new MachineSettings(new MemoryMachinePreferences { Stored = new MachinePreferences { Width = ReadingWidth.Full } });
+        var navigation = new ReviewNavigation(vault.App.Sheets, vault.App.Annotations, vault.App.Reviews, vault.App.Reminders, vault.App.Vaults, new MemorySessions(), vault.Time, new RecordingLinks(), vault.App.Editing, FakeEnvironment.Markdown(), machine: machine);
+        navigation.Attach(test.Shell);
+        test.Shell.ShowWorkspace();
+        navigation.OpenSheet(vault.SheetId);
+        var page = (SheetPageViewModel)test.Shell.Current.Page;
+        Assert.IsTrue(page.CanFocus);
+        Assert.AreEqual(double.PositiveInfinity, page.TextWidth);
+
+        page.IsFocusMode = true;
+
+        Assert.IsTrue(test.Shell.IsFocusMode, "le bouton de la fiche commande la coquille");
+        Assert.AreEqual(SheetPageViewModel.TextMaxWidth, page.TextWidth, "même si la pleine largeur est choisie");
+
+        test.Shell.ToggleFocusMode();
+
+        Assert.IsFalse(page.IsFocusMode, "Ctrl+Maj+F se voit sur le bouton de la fiche");
+        Assert.AreEqual(double.PositiveInfinity, page.TextWidth);
+    }
+
     [TestMethod]
     [DataRow(ReadingWidth.Comfortable, SheetPageViewModel.TextMaxWidth)]
     [DataRow(ReadingWidth.Full, double.PositiveInfinity)]

@@ -309,6 +309,12 @@ public static class EditingText
     /// <summary>Barré.</summary>
     public const string Strike = "Barré";
 
+    /// <summary>Le bouton du code dans le texte.</summary>
+    public const string InlineCode = "Code dans le texte";
+
+    /// <summary>Le bouton de la citation.</summary>
+    public const string Quote = "Citation";
+
     /// <summary>Exposant.</summary>
     public const string Superscript = "Exposant";
 

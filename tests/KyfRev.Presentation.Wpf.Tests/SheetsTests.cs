@@ -21,6 +21,16 @@ public sealed class SheetsTests
 
     private static readonly string[] NewFolderLabels = ["À la racine", "Histoire", "Nouveau dossier…"];
 
+    private static readonly string[] AllTagged = ["Quatre", "Un", "Deux", "Trois"];
+
+    private static readonly string[] Chips = ["#bio 2", "#maths 1", "#partiel 1"];
+
+    private static readonly string[] BothBio = ["Deux", "Un"];
+
+    private static readonly string[] OnlyOne = ["Un"];
+
+    private static readonly string[] Vanished = ["#vieux 1", "#maths 0"];
+
     [TestMethod]
     public void A_row_says_where_the_sheet_stands()
     {
@@ -479,6 +489,90 @@ public sealed class SheetsTests
             window.Close();
         }
     }
+
+    [TestMethod]
+    public void The_tag_filter_counts_each_tag_and_keeps_the_sheets_that_carry_them_all()
+    {
+        using var vaults = new TestVaults(AppMode.Development);
+        var page = Page(vaults, new FakeOpener());
+        page.Show(Tagged());
+        CollectionAssert.AreEqual(Chips, page.Tags.Select(chip => chip.Text).ToArray(), "la casse ne les distingue pas");
+        var bio = page.Tags[0];
+        Assert.AreEqual("#bio, 2 fiches", bio.Name);
+        Assert.AreEqual(SheetsText.TagFilterAdd, bio.Hint);
+        Assert.IsFalse(page.HasChosenTags);
+
+        bio.IsChosen = true;
+
+        CollectionAssert.AreEquivalent(BothBio, Titles(page));
+        Assert.AreSame(bio, page.Tags[0], "la pastille pressée garde le focus");
+        Assert.AreEqual(SheetsText.TagFilterRemove, bio.Hint);
+        Assert.IsTrue(page.HasChosenTags);
+
+        page.Tags[2].IsChosen = true;
+        CollectionAssert.AreEquivalent(OnlyOne, Titles(page), "une fiche doit les porter toutes");
+
+        page.Tags[2].IsChosen = false;
+        CollectionAssert.AreEquivalent(BothBio, Titles(page));
+
+        page.ClearTagsCommand.Execute(null);
+
+        Assert.IsFalse(page.HasChosenTags);
+        Assert.IsFalse(bio.IsChosen);
+        CollectionAssert.AreEquivalent(AllTagged, Titles(page));
+    }
+
+    [TestMethod]
+    public void A_chosen_tag_stays_when_no_sheet_carries_it_any_more()
+    {
+        using var vaults = new TestVaults(AppMode.Development);
+        var page = Page(vaults, new FakeOpener());
+        page.Show([.. Tagged(), Sheet("Archivée", "", tags: ["vieux"], archived: true)]);
+        page.Tags.Single(chip => chip.Label == "maths").IsChosen = true;
+        var state = page.Bar.Filters[1];
+
+        state.Selected = state.Choices[3];
+
+        CollectionAssert.AreEqual(Vanished, page.Tags.Select(chip => chip.Text).ToArray());
+        Assert.IsEmpty(Titles(page));
+
+        page.ClearTagsCommand.Execute(null);
+
+        Assert.HasCount(1, page.Tags, "sans fiche et sans choix, elle s'en va");
+    }
+
+    [TestMethod]
+    public void On_a_narrow_window_the_tag_filter_folds_away_unless_it_acts()
+    {
+        using var vaults = new TestVaults(AppMode.Development);
+        var page = Page(vaults, new FakeOpener());
+        page.Show(Tagged());
+        Assert.IsTrue(page.ShowsTags);
+
+        page.Bar.HasRoom = false;
+        Assert.IsFalse(page.ShowsTags);
+
+        page.Bar.AreOpen = true;
+        Assert.IsTrue(page.ShowsTags);
+        page.Tags[0].IsChosen = true;
+        page.Bar.AreOpen = false;
+
+        Assert.IsTrue(page.ShowsTags, "un filtre qui agit reste visible");
+
+        page.Forget();
+
+        Assert.IsEmpty(page.Tags);
+        Assert.IsFalse(page.HasChosenTags);
+        Assert.IsFalse(page.ShowsTags);
+    }
+
+    private static ImmutableArray<VaultSheet> Tagged() =>
+    [
+        Sheet("Un", "", tags: ["bio", "partiel"]),
+        Sheet("Deux", "", tags: ["Bio"]),
+        Sheet("Trois", "", tags: ["maths"]),
+        Sheet("Quatre", ""),
+    ];
 
     private static SheetsPageViewModel Page(TestVaults vaults, FakeOpener opener, TimeProvider? time = null) =>
         new(vaults.App.Sheets, vaults.App.Folders, vaults.App.Templates, opener, time ?? new FakeTime(new DateTimeOffset(2026, 10, 1, 8, 0, 0, TimeSpan.Zero)));

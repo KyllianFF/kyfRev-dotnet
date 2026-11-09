@@ -295,6 +295,9 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
     public void ToggleList(ListKind kind) => Post(new ListRequest(kind));
 
     /// <inheritdoc/>
+    public void ToggleQuote() => Post(new QuoteRequest());
+
+    /// <inheritdoc/>
     public void InsertDiagram(string info, string code, int? position) => Post(new InsertDiagramRequest(info, code, position));
 
     /// <inheritdoc/>
@@ -407,7 +410,7 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
                 SaveAsked?.Invoke(this, EventArgs.Empty);
                 break;
             case ToolsEvent tools:
-                ToolsChanged?.Invoke(this, new EditorTools(tools.Bold, tools.Italic, tools.Underline, tools.Strike, tools.Superscript, tools.Subscript, tools.Heading, tools.List, tools.CanUndo, tools.CanRedo, tools.Color, tools.Size, tools.Align, tools.TableLook));
+                ToolsChanged?.Invoke(this, new EditorTools(tools.Bold, tools.Italic, tools.Underline, tools.Strike, tools.Superscript, tools.Subscript, tools.Heading, tools.List, tools.CanUndo, tools.CanRedo, tools.Color, tools.Size, tools.Align, tools.TableLook, tools.Code, tools.Quote));
                 break;
             case AskDiagramEvent diagram:
                 _ = AnswerDiagramAsync(diagram);
@@ -497,6 +500,8 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
             var format = new MenuItem { Header = EditingText.MoreFormat };
             format.Items.Add(Item(EditingText.Superscript, new MarkRequest(InlineMark.Superscript)));
             format.Items.Add(Item(EditingText.Subscript, new MarkRequest(InlineMark.Subscript)));
+            format.Items.Add(Item(EditingText.InlineCode, new MarkRequest(InlineMark.Code)));
+            format.Items.Add(Item(EditingText.Quote, new QuoteRequest()));
             format.Items.Add(Item(EditingText.ClearFormat, new ClearFormatRequest()));
             items.Add(format);
             items.Add(Item(menu.OnLink ? EditingText.EditLink : EditingText.Link, new AskLinkRequest()));

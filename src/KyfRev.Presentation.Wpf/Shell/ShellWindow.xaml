@@ -312,6 +312,9 @@
               </Style.Triggers>
             </Style>
           </StackPanel.Style>
+          <Button x:Name="ExitFocusButton" Command="{Binding ToggleFocusModeCommand}" Content="{x:Static kyf:Icons.FocusMode}" Style="{DynamicResource Kyf.Button.Icon}" Width="36" Height="32" FontSize="14"
+                  WindowChrome.IsHitTestVisibleInChrome="True" Visibility="{Binding IsFocusMode, Converter={StaticResource Visible}}"
+                  ToolTip="{x:Static p:ShellText.ExitFocusMode}" AutomationProperties.Name="{x:Static p:ShellText.ExitFocusMode}" AutomationProperties.AcceleratorKey="Ctrl+Maj+F" />
           <Button x:Name="ThemeButton" Command="{Binding ToggleThemeCommand}" Content="{Binding ThemeGlyph}" Style="{DynamicResource Kyf.Button.Icon}" Width="36" Height="32" FontSize="14"
                   WindowChrome.IsHitTestVisibleInChrome="True" Visibility="{Binding CanToggleTheme, Converter={StaticResource Visible}}"
                   ToolTip="{Binding ThemeLabel}" AutomationProperties.Name="{Binding ThemeLabel}" />

@@ -24,6 +24,9 @@ public enum InlineMark
     /// <summary>Indice.</summary>
     Subscript,
 
+    /// <summary>Code dans le texte.</summary>
+    Code,
+
     /// <summary>Formule dans le texte.</summary>
     Formula,
 }
@@ -89,6 +92,7 @@ internal static partial class MarkdownEdits
             InlineMark.Strike => ("~~", "~~"),
             InlineMark.Superscript => ("<sup>", "</sup>"),
             InlineMark.Subscript => ("<sub>", "</sub>"),
+            InlineMark.Code => ("`", "`"),
             _ => ("$", "$"),
         };
         var selected = text[start..end];
@@ -110,6 +114,25 @@ internal static partial class MarkdownEdits
         var (lineStart, lineEnd) = LineAround(text, position);
         var match = HeadingPrefix().Match(text, lineStart, lineEnd - lineStart);
         return match.Success ? match.Value.Count(c => c == '#') : 0;
+    }
+
+    /// <summary>La ligne fait partie d'une citation.</summary>
+    public static bool IsQuoted(string line) => QuotePrefix().IsMatch(line);
+
+    /// <summary>Met les lignes de la sélection en citation, d'un seul bloc, ou les en sort si elles y sont déjà.</summary>
+    public static TextChange Quote(string text, int start, int end)
+    {
+        var (from, to) = LinesOf(text, start, end);
+        var written = text[from..to].Split('\n').Where(line => line.Trim().Length > 0).ToList();
+        var removing = written.Count > 0 && written.All(IsQuoted);
+        return RewriteLines(text, start, end, line =>
+        {
+            if (removing)
+            {
+                return QuotePrefix().Replace(line, string.Empty, 1);
+            }
+            return line.Trim().Length == 0 ? ">" : "> " + line;
+        });
     }
 
     /// <summary>Met les lignes de la sélection en liste, ou les en sort si elles y sont déjà.</summary>
@@ -442,6 +465,9 @@ internal static partial class MarkdownEdits
         var selectionEnd = Math.Max(selectionStart, Math.Min(end + delta, from + result.Length));
         return new TextChange(from, to - from, result, selectionStart, selectionEnd - selectionStart);
     }
+
+    [GeneratedRegex(@"^ {0,3}> ?")]
+    private static partial Regex QuotePrefix();
 
     [GeneratedRegex(@"^ {0,3}#{1,6}(?:[ \t]+|$)")]
     private static partial Regex HeadingPrefix();

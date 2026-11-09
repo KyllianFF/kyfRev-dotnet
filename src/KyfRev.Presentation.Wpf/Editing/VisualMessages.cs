@@ -13,6 +13,7 @@ namespace KyfRev.Presentation.Wpf.Editing;
 [JsonDerivedType(typeof(MarkRequest), "mark")]
 [JsonDerivedType(typeof(HeadingRequest), "heading")]
 [JsonDerivedType(typeof(ListRequest), "list")]
+[JsonDerivedType(typeof(QuoteRequest), "quote")]
 [JsonDerivedType(typeof(CaseRequest), "case")]
 [JsonDerivedType(typeof(TableRequest), "table")]
 [JsonDerivedType(typeof(TableActionRequest), "tableAction")]
@@ -60,6 +61,9 @@ internal sealed record HeadingRequest(int Level) : EditorRequest;
 
 /// <summary>Met en liste, ou en sort.</summary>
 internal sealed record ListRequest(ListKind List) : EditorRequest;
+
+/// <summary>Met en citation, ou en sort.</summary>
+internal sealed record QuoteRequest : EditorRequest;
 
 /// <summary>Change la casse ; sans style, la suivante.</summary>
 internal sealed record CaseRequest(CaseStyle? Style) : EditorRequest;
@@ -179,7 +183,7 @@ internal sealed record TextEvent(int? Id, string Markdown) : EditorEvent;
 internal sealed record SaveEvent : EditorEvent;
 
 /// <summary>Ce que le ruban affiche.</summary>
-internal sealed record ToolsEvent(bool Bold, bool Italic, bool Underline, bool Strike, bool Superscript, bool Subscript, bool Link, int Heading, bool InCode, ListKind? List, bool Table, string? Color, string? Size, TextAlign Align, bool CanUndo, bool CanRedo, TableState? TableLook = null) : EditorEvent;
+internal sealed record ToolsEvent(bool Bold, bool Italic, bool Underline, bool Strike, bool Superscript, bool Subscript, bool Link, int Heading, bool InCode, ListKind? List, bool Table, string? Color, string? Size, TextAlign Align, bool CanUndo, bool CanRedo, TableState? TableLook = null, bool Code = false, bool Quote = false) : EditorEvent;
 
 /// <summary>Ctrl+K, ou la réponse à une demande : le lien à préremplir.</summary>
 internal sealed record AskLinkEvent(string Label, string Address) : EditorEvent;

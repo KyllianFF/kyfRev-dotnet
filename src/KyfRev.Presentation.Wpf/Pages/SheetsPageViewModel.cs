@@ -160,6 +160,7 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
     private readonly HashSet<string> _collapsed = new(StringComparer.Ordinal);
     private readonly ListFilter _folder;
     private readonly ListFilter _state;
+    private readonly HashSet<string> _chosenTags = new(StringComparer.OrdinalIgnoreCase);
     private readonly ListFilter _sort;
     private readonly LatestSearch _textSearch = new();
     private bool _searchStopped;
@@ -213,6 +214,13 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
                 new(SheetSort.DueDate, SheetsText.SortDueDate),
             ],
             counts: false);
+        Bar.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(FilterBarViewModel.ShowsFilters))
+            {
+                OnPropertyChanged(nameof(ShowsTags));
+            }
+        };
         NewFolder = new ListFilter(SheetsText.FilterFolder, [new(string.Empty, SheetsText.AtRoot)], counts: false, () => OnPropertyChanged(nameof(IsNewFolder)));
         NewTemplate = new ListFilter(SheetsText.Template, [new(null, SheetsText.EmptyTemplate)], counts: false, () => { });
         Rows = [];
@@ -243,6 +251,17 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
                 : SheetsText.SummaryOneOf(count, active, archived);
         }
     }
+
+    /// <summary>Les étiquettes des fiches du dossier et de l'état choisis : une fiche doit porter toutes celles qui sont choisies.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsTags))]
+    public partial IReadOnlyList<TagChip> Tags { get; private set; } = [];
+
+    /// <summary>Au moins une étiquette est choisie.</summary>
+    public bool HasChosenTags => _chosenTags.Count > 0;
+
+    /// <summary>Le filtre se voit : sur une fenêtre étroite, il se replie avec les autres, sauf s'il agit.</summary>
+    public bool ShowsTags => Tags.Count > 0 && (Bar.ShowsFilters || HasChosenTags);
 
     /// <summary>Les lignes : des fiches (<see cref="SheetRow"/>), et leurs en-têtes (<see cref="SheetFolderRow"/>) dans le tri par dossier.</summary>
     [ObservableProperty]
@@ -343,6 +362,9 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
         _folderPaths = [];
         _createIn = null;
         _collapsed.Clear();
+        _chosenTags.Clear();
+        Tags = [];
+        OnPropertyChanged(nameof(HasChosenTags));
         Bar.Search = string.Empty;
         _folder.Replace([new(string.Empty, SheetsText.AllFolders)]);
         Rows = [];
@@ -577,10 +599,11 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
         }
         var wanted = ShellViewModel.Fold(Bar.Search.Trim());
         var day = Present.Of(_time).Now.Day;
+        RefreshTags(entries, day);
         var sheets = entries.Where(sheet => Matches(sheet, wanted, day)).ToList();
         var sort = (SheetSort)_sort.Value!;
-        var isFiltered = wanted.Length > 0 || !Equals(_folder.Value, string.Empty) || (SheetState)_state.Value! != SheetState.All;
-        Rows = sort == SheetSort.Folder ? Tree(sheets, day, isFiltered, expandAll: wanted.Length > 0) : [.. Sorted(sheets, sort).Select(sheet => RowOf(sheet, day, showFolder: true))];
+        var isFiltered = wanted.Length > 0 || HasChosenTags || !Equals(_folder.Value, string.Empty) || (SheetState)_state.Value! != SheetState.All;
+        Rows = sort == SheetSort.Folder ? Tree(sheets, day, isFiltered, expandAll: wanted.Length > 0 || HasChosenTags) : [.. Sorted(sheets, sort).Select(sheet => RowOf(sheet, day, showFolder: true))];
         IsEmpty = entries.Count == 0;
         HasNoMatch = entries.Count > 0 && sheets.Count == 0;
         KeepSelection();
@@ -626,6 +649,50 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
         }
     }
 
+    /// <summary>Retire tous les filtres d'étiquette.</summary>
+    [RelayCommand]
+    private void ClearTags()
+    {
+        _chosenTags.Clear();
+        foreach (var chip in Tags)
+        {
+            chip.IsChosen = false;
+        }
+        OnPropertyChanged(nameof(HasChosenTags));
+        OnPropertyChanged(nameof(ShowsTags));
+        BuildRows();
+    }
+
+    private void OnTagToggled(TagChip chip)
+    {
+        if (_chosenTags.Contains(chip.Label) == chip.IsChosen)
+        {
+            return;
+        }
+        if (!_chosenTags.Add(chip.Label))
+        {
+            _chosenTags.Remove(chip.Label);
+        }
+        OnPropertyChanged(nameof(HasChosenTags));
+        OnPropertyChanged(nameof(ShowsTags));
+        BuildRows();
+    }
+
+    /// <summary>
+    /// Les pastilles, à partir des fiches du dossier et de l'état choisis ; une étiquette choisie reste, même sans fiche, pour
+    /// pouvoir la retirer. Rien ne change si les comptes sont les mêmes : la pastille qu'on vient de presser garde le focus.
+    /// </summary>
+    private void RefreshTags(IEnumerable<VaultSheet> entries, DateOnly day)
+    {
+        var tally = TagChip.Tally(entries.Where(sheet => IsInFolderAndState(sheet, day)), FrenchTitles);
+        var known = tally.Select(tag => tag.Label).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        List<(string Label, int Count)> wanted = [.. tally, .. _chosenTags.Where(tag => !known.Contains(tag)).Select(tag => (tag, 0))];
+        if (!wanted.SequenceEqual(Tags.Select(chip => (chip.Label, chip.Count))))
+        {
+            Tags = [.. wanted.Select(tag => new TagChip(tag.Label, tag.Count, _chosenTags.Contains(tag.Label), OnTagToggled))];
+        }
+    }
+
     private SheetRow RowOf(VaultSheet sheet, DateOnly day, bool showFolder, int depth = 0) =>
         new(sheet, day, showFolder) { Depth = depth, Excerpt = _found?.GetValueOrDefault(sheet.Id) ?? [] };
 
@@ -654,6 +721,11 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
         {
             return false;
         }
+        return _chosenTags.All(tag => sheet.Tags.Contains(tag, StringComparer.OrdinalIgnoreCase)) && IsInFolderAndState(sheet, day);
+    }
+
+    private bool IsInFolderAndState(VaultSheet sheet, DateOnly day)
+    {
         var folder = (string)_folder.Value!;
         if (folder.Length > 0 && sheet.Folder != folder && !sheet.Folder.StartsWith(folder + "/", StringComparison.Ordinal))
         {

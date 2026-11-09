@@ -82,6 +82,7 @@ ou depuis le catalogue signé. Une extension n'a jamais le réseau, et demande c
 |---|---|
 | Ctrl+K | Chercher partout |
 | Ctrl+E | Passer de la lecture à l'écriture |
+| Ctrl+Maj+F | Mode concentration : masquer ou rendre le menu |
 | Ctrl+Maj+L | Verrouiller un coffre chiffré |
 | F1 | Aide |
 

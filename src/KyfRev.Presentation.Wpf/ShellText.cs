@@ -35,6 +35,9 @@ public static class ShellText
     /// <summary>« Mode concentration ».</summary>
     public static string FocusMode => Text(nameof(FocusMode));
 
+    /// <summary>« Afficher le menu (Ctrl+Maj+F) ».</summary>
+    public static string ExitFocusMode => Text(nameof(ExitFocusMode));
+
     /// <summary>« Galerie des composants ».</summary>
     public static string Gallery => Text(nameof(Gallery));
 

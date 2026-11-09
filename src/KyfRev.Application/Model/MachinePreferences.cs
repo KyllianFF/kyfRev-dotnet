@@ -59,6 +59,9 @@ public enum ReadingFont
 /// <summary>Ce qui est retenu sur cet ordinateur, jamais dans le coffre : l'apparence, le confort de lecture et la voix.</summary>
 public sealed record MachinePreferences
 {
+    /// <summary>Mode concentration : le menu est masqué, et le texte des fiches garde la largeur de lecture.</summary>
+    public bool FocusMode { get; init; }
+
     /// <summary>Thème d'affichage.</summary>
     public ThemePreference Theme { get; init; } = ThemePreference.System;
 

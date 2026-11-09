@@ -8,7 +8,7 @@ import "prosemirror-gapcursor/style/gapcursor.css";
 import "katex/dist/katex.min.css";
 import "./fiche.css";
 import "./page.css";
-import { baseKeymap, chainCommands, exitCode, setBlockType, toggleMark } from "prosemirror-commands";
+import { baseKeymap, chainCommands, exitCode, lift, setBlockType, toggleMark, wrapIn } from "prosemirror-commands";
 import { dropCursor } from "prosemirror-dropcursor";
 import { gapCursor } from "prosemirror-gapcursor";
 import { history, redo, redoDepth, undo, undoDepth } from "prosemirror-history";
@@ -96,6 +96,8 @@ export type EtatOutils = {
   strike: boolean;
   superscript: boolean;
   subscript: boolean;
+  code: boolean;
+  quote: boolean;
   link: boolean;
   heading: number;
   inCode: boolean;
@@ -1000,6 +1002,17 @@ export class EditeurVisuel {
     this.executer(toggleMark(m[nom] as MarkType));
   }
 
+  /** Met les blocs de la sélection en citation, ou les en sort. */
+  citation(): void {
+    this.executer((etat, dispatch) => {
+      const { $from } = etat.selection;
+      for (let profondeur = $from.depth; profondeur > 0; profondeur--) {
+        if ($from.node(profondeur).type === n.blockquote) return lift(etat, dispatch);
+      }
+      return wrapIn(n.blockquote)(etat, dispatch);
+    });
+  }
+
   effacerMiseEnForme(): void {
     this.executer((etat, dispatch) => {
       const { from, to, empty } = etat.selection;
@@ -1424,6 +1437,10 @@ export class EditeurVisuel {
     };
     const parent = $from.parent;
     let list: EtatOutils["list"] = null;
+    let quote = false;
+    for (let profondeur = $from.depth; profondeur > 0; profondeur--) {
+      if ($from.node(profondeur).type === n.blockquote) quote = true;
+    }
     for (let profondeur = $from.depth; profondeur > 0 && !list; profondeur--) {
       const noeud = $from.node(profondeur);
       if (noeud.type === n.list_item && noeud.attrs.tache !== null) list = "tasks";
@@ -1437,6 +1454,8 @@ export class EditeurVisuel {
       strike: actif(m.strike),
       superscript: actif(m.sup),
       subscript: actif(m.sub),
+      code: actif(m.code),
+      quote,
       link: actif(m.link),
       heading: parent.type === n.heading ? (parent.attrs.level as number) : 0,
       inCode: parent.type === n.code_block,

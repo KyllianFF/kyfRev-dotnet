@@ -109,6 +109,10 @@ public sealed class UnansweredSyncTests
         {
         }
 
+        void IEditorSurface.ToggleQuote()
+        {
+        }
+
         void IEditorSurface.InsertDiagram(string info, string code, int? position)
         {
         }

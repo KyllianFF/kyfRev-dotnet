@@ -61,6 +61,10 @@ public sealed class MachineSettings
             {
                 Update(preferences => preferences with { Zoom = shell.ChosenZoom });
             }
+            if (e is PropertyChangedEventArgs { PropertyName: nameof(ShellViewModel.IsFocusMode) })
+            {
+                Update(preferences => preferences with { FocusMode = shell.IsFocusMode });
+            }
         };
     }
 
@@ -73,5 +77,6 @@ public sealed class MachineSettings
         appearance.LargerTargets = preferences.LargerTargets;
         appearance.Resources[ReadingComfort.ResourceKey] = ReadingComfort.Of(preferences);
         shell.SetZoom(preferences.Zoom);
+        shell.IsFocusMode = preferences.FocusMode;
     }
 }
