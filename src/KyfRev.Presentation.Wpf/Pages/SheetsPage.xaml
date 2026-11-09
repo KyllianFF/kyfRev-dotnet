@@ -68,9 +68,27 @@
         <kyf:Notification x:Name="DoneMessage" Severity="Success" Message="{Binding Done}" IsOpen="{Binding HasDone, Mode=OneWay}" IsClosable="False" Margin="0,12,0,0" />
       </StackPanel>
 
-      <Grid Grid.Row="2" Margin="0,12,0,8" Visibility="{Binding HasSheets, Converter={StaticResource Visible}}">
+      <StackPanel Grid.Row="2" Margin="0,12,0,8" Visibility="{Binding HasSheets, Converter={StaticResource Visible}}">
         <pages:FilterBar x:Name="FilterBar" DataContext="{Binding Bar}" />
-      </Grid>
+        <ItemsControl x:Name="TagFilter" ItemsSource="{Binding Tags}" Focusable="False" Margin="0,4,0,0" Visibility="{Binding ShowsTags, Converter={StaticResource Visible}}"
+                      AutomationProperties.Name="{x:Static pages:SheetsText.TagsFilterName}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <WrapPanel />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate DataType="{x:Type pages:TagChip}">
+              <ToggleButton IsChecked="{Binding IsChosen}" Style="{DynamicResource Kyf.Button.Tool}" Padding="8,0" Margin="0,0,4,4" MaxWidth="260"
+                            ToolTip="{Binding Hint}" AutomationProperties.Name="{Binding Name}">
+                <TextBlock Text="{Binding Text}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+              </ToggleButton>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <Button x:Name="ClearTagsButton" Content="{x:Static pages:SheetsText.TagsClear}" Command="{Binding ClearTagsCommand}" Style="{DynamicResource Kyf.Button.Subtle}"
+                HorizontalAlignment="Left" Visibility="{Binding HasChosenTags, Converter={StaticResource Visible}}" />
+      </StackPanel>
 
       <Grid Grid.Row="3">
         <!-- Squelettes pendant la première lecture. -->

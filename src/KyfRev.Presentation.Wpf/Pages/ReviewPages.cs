@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Text.RegularExpressions;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -280,6 +281,7 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage, 
 
     private readonly SheetUseCases _sheets;
     private readonly Func<ItemKind, string, ReviewState, ReviewBarViewModel> _reviewBar;
+    private readonly IFocusMode? _focusMode;
     private readonly Action _back;
     private readonly Action<string> _openSheet;
     private readonly IExternalLinks _links;
@@ -504,8 +506,11 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage, 
     /// <summary>La place du bouton des rétroliens dans l'en-tête : avec lui, les boutons passent plus tôt sous « ⋯ ».</summary>
     internal const double BacklinksToggleRoom = 130;
 
+    /// <summary>La place du bouton du mode concentration dans l'en-tête.</summary>
+    internal const double FocusToggleRoom = 52;
+
     /// <summary>L'en-tête est étroit : voir <see cref="CompactHeaderWidth"/>.</summary>
-    public bool IsCompactHeader => PageWidth < CompactHeaderWidth + (HasBacklinks ? BacklinksToggleRoom : 0);
+    public bool IsCompactHeader => PageWidth < CompactHeaderWidth + (HasBacklinks ? BacklinksToggleRoom : 0) + (CanFocus ? FocusToggleRoom : 0);
 
     /// <summary>Il y a un plan, des passages ou des rétroliens à montrer.</summary>
     public bool HasPanels => ShowsPanelToggles && (HasOutline || HasPassages || HasBacklinks);
@@ -729,7 +734,43 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage, 
     public bool ShowsPanelToggles => !ShowsCode;
 
     /// <summary>La largeur du texte : celle de la lecture, ou toute la place pour le code et son rendu.</summary>
-    public double TextWidth => ShowsCode ? double.PositiveInfinity : ReadingMaxWidth;
+    public double TextWidth => ShowsCode ? double.PositiveInfinity : IsFocusMode ? TextMaxWidth : ReadingMaxWidth;
+
+    /// <summary>Le mode concentration de la coquille : le bouton de la fiche le commande, et il garde le texte à la largeur de lecture.</summary>
+    public IFocusMode? FocusMode
+    {
+        get => _focusMode;
+        init
+        {
+            _focusMode = value;
+            if (value is not null)
+            {
+                PropertyChangedEventManager.AddHandler(value, OnFocusModeChanged, nameof(IFocusMode.IsFocusMode));
+            }
+        }
+    }
+
+    /// <summary>Le bouton du mode concentration a un sens.</summary>
+    public bool CanFocus => _focusMode is not null;
+
+    /// <summary>Le mode concentration est actif.</summary>
+    public bool IsFocusMode
+    {
+        get => _focusMode?.IsFocusMode == true;
+        set
+        {
+            if (_focusMode is { } focus)
+            {
+                focus.IsFocusMode = value;
+            }
+        }
+    }
+
+    private void OnFocusModeChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        OnPropertyChanged(nameof(IsFocusMode));
+        OnPropertyChanged(nameof(TextWidth));
+    }
 
     /// <summary>La largeur du texte en lecture : celle qui reste lisible, ou toute la place si elle est préférée.</summary>
     public double ReadingMaxWidth { get; init; } = TextMaxWidth;

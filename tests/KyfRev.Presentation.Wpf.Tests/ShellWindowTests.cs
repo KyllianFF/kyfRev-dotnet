@@ -703,6 +703,31 @@ public sealed class ShellWindowTests
     private static void Press(Window window, Key key) =>
         window.RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(window), 0, key) { RoutedEvent = Keyboard.KeyDownEvent });
 
+    [STATestMethod]
+    public void In_focus_mode_the_title_bar_brings_the_menu_back()
+    {
+        var test = new TestShell();
+        var window = Open(test);
+        try
+        {
+            var exit = (Button)window.FindName("ExitFocusButton");
+            Assert.AreEqual(Visibility.Collapsed, exit.Visibility);
+
+            test.Shell.ToggleFocusMode();
+            TestShell.Flush();
+
+            Assert.AreEqual(Visibility.Visible, exit.Visibility);
+
+            exit.Command.Execute(null);
+
+            Assert.IsFalse(test.Shell.IsFocusMode);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
     private static IEnumerable<T> Named<T>(DependencyObject root, string name)
         where T : FrameworkElement => Descendants<T>(root).Where(element => element.Name == name);
 

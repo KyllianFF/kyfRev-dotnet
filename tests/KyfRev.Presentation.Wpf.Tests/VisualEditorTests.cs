@@ -280,6 +280,29 @@ public sealed class VisualEditorTests
     }
 
     [EngineTest]
+    public void The_ribbon_marks_code_in_the_text_and_quotes_a_paragraph()
+    {
+        using var scene = new Scene("un mot ici\n");
+        UiThread.Until(() => scene.Shown.Contains("un mot ici", StringComparison.Ordinal));
+        scene.Select("""
+            const texte = page.querySelector('p').firstChild;
+            selection.setBaseAndExtent(texte, 3, texte, 6);
+            """);
+
+        scene.Editor.ToggleMarkCommand.Execute(InlineMark.Code);
+        UiThread.Until(() => scene.Editor.Tools?.Code == true);
+        UiThread.Until(() => scene.OnDisk == "un `mot` ici\n");
+
+        scene.Editor.ToggleQuoteCommand.Execute(null);
+        UiThread.Until(() => scene.Editor.Tools?.Quote == true);
+        UiThread.Until(() => scene.OnDisk == "> un `mot` ici\n");
+
+        scene.Editor.ToggleQuoteCommand.Execute(null);
+        UiThread.Until(() => scene.Editor.Tools?.Quote == false);
+        UiThread.Until(() => scene.OnDisk == "un `mot` ici\n");
+    }
+
+    [EngineTest]
     public void Inserting_from_the_ribbon_writes_ordinary_markdown()
     {
         using var scene = new Scene("Texte\n");

@@ -98,6 +98,21 @@ public sealed class MarkdownEditingTests
     }
 
     /// <summary>Applique un remplacement au texte où « | » marque le curseur et « [ ] » la sélection ; rend le résultat marqué de même.</summary>
+    [TestMethod]
+    [DataRow("«un\n\ndeux»", "«> un\n>\n> deux»")]
+    [DataRow("«> un\n>\n> deux»", "«un\n\ndeux»")]
+    [DataRow("a|", "> a|")]
+    [DataRow("|", ">|")]
+    public void A_quote_takes_whole_lines_and_comes_off_again(string model, string expected) =>
+        Assert.AreEqual(expected, Apply(model, MarkdownEdits.Quote));
+
+    [TestMethod]
+    public void A_line_says_if_it_is_quoted()
+    {
+        Assert.IsTrue(MarkdownEdits.IsQuoted("> un"));
+        Assert.IsFalse(MarkdownEdits.IsQuoted("un > deux"));
+    }
+
     private static string Apply(string model, Func<string, int, int, TextChange> edit)
     {
         var (text, start, end) = Parse(model);
@@ -135,6 +150,8 @@ public sealed class MarkdownEditingTests
     [DataRow("un «mot» ici", InlineMark.Strike, "un ~~«mot»~~ ici")]
     [DataRow("x«2»", InlineMark.Superscript, "x<sup>«2»</sup>")]
     [DataRow("H«2»O", InlineMark.Subscript, "H<sub>«2»</sub>O")]
+    [DataRow("un «mot» ici", InlineMark.Code, "un `«mot»` ici")]
+    [DataRow("un `«mot»` ici", InlineMark.Code, "un «mot» ici")]
     [DataRow("«x»", InlineMark.Formula, "$«x»$")]
     [DataRow("$«x»$", InlineMark.Formula, "«x»")]
     [DataRow("un |mot", InlineMark.Bold, "un **|**mot")]

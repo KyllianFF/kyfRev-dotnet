@@ -4,9 +4,10 @@ export type VersEditeur =
   | { kind: "load"; text: string; folder: string; drawn: string[] }
   | { kind: "theme"; variables: Record<string, string> }
   | { kind: "sync"; id: number }
-  | { kind: "mark"; mark: "bold" | "italic" | "underline" | "strike" | "superscript" | "subscript" | "formula" }
+  | { kind: "mark"; mark: "bold" | "italic" | "underline" | "strike" | "superscript" | "subscript" | "code" | "formula" }
   | { kind: "heading"; level: number }
   | { kind: "list"; list: "bullets" | "numbers" | "tasks" }
+  | { kind: "quote" }
   | { kind: "case"; style: "sentence" | "lower" | "upper" | "words" | "invert" | "alternate" | null }
   | { kind: "table"; rows: number; columns: number }
   | { kind: "tableAction"; action: string }
@@ -41,7 +42,7 @@ export type DepuisEditeur =
   | { kind: "edited" }
   | { kind: "text"; id: number | null; markdown: string }
   | { kind: "save" }
-  | { kind: "tools"; bold: boolean; italic: boolean; underline: boolean; strike: boolean; superscript: boolean; subscript: boolean; link: boolean; heading: number; inCode: boolean; list: "bullets" | "numbers" | "tasks" | null; table: boolean; color: string | null; size: string | null; align: "left" | "center" | "right" | "justify"; canUndo: boolean; canRedo: boolean; tableLook: { header: string; total: boolean; bands: string; lines: string; theme: string; hidden: number | null; width: string; column: number; columnAlign: string | null; sortable: boolean } | null }
+  | { kind: "tools"; bold: boolean; italic: boolean; underline: boolean; strike: boolean; superscript: boolean; subscript: boolean; link: boolean; heading: number; inCode: boolean; list: "bullets" | "numbers" | "tasks" | null; table: boolean; color: string | null; size: string | null; align: "left" | "center" | "right" | "justify"; canUndo: boolean; canRedo: boolean; tableLook: { header: string; total: boolean; bands: string; lines: string; theme: string; hidden: number | null; width: string; column: number; columnAlign: string | null; sortable: boolean } | null; code: boolean; quote: boolean }
   | { kind: "askLink"; label: string; address: string }
   | { kind: "askFormula"; position: number | null; tex: string; block: boolean }
   | { kind: "linkInput"; query: string | null; start: number; x: number; y: number }

@@ -7,6 +7,14 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ## [Non publié]
 
+### Ajouté
+
+- Fiches : un filtre par étiquettes, comme la 0.x. Chaque pastille dit son nombre de fiches, on peut en choisir plusieurs, et
+  « Tout afficher » les retire ; sur une fenêtre étroite, il se replie avec les autres filtres.
+- Écrire : les boutons « Code dans le texte » et « Citation », dans le ruban et dans le clic droit.
+- Mode concentration, comme la 0.x : un bouton dans la fiche, un autre dans la barre de la fenêtre pour en sortir, le texte
+  garde la largeur de lecture même si la pleine largeur est choisie, et le mode est retenu sur l'ordinateur.
+
 ## [1.0.0-beta.1] - 2026-11-08
 
 ### Ajouté

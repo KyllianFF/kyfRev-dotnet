@@ -26,6 +26,7 @@ const MARQUES: Record<string, NomMarque> = {
   strike: "strike",
   superscript: "sup",
   subscript: "sub",
+  code: "code",
 };
 
 const CASSES: Record<string, Casse> = {
@@ -174,6 +175,9 @@ function traiter(message: VersEditeur): void {
       break;
     case "heading":
       editeur.titre(message.level);
+      break;
+    case "quote":
+      editeur.citation();
       break;
     case "list":
       editeur.liste(message.list);

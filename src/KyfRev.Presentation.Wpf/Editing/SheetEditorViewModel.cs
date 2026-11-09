@@ -66,7 +66,9 @@ public sealed record EditorEnvironment(ISpelling Spelling, string WebDataFolder,
 /// <param name="Size">La taille du texte, écrite <c>1.25em</c> ; rien : la taille normale.</param>
 /// <param name="Align">L'alignement.</param>
 /// <param name="Table">Le tableau où est le curseur, dans le texte mis en forme ; rien ailleurs.</param>
-public sealed record EditorTools(bool Bold, bool Italic, bool Underline, bool Strike, bool Superscript, bool Subscript, int Heading, ListKind? List, bool CanUndo, bool CanRedo, string? Color = null, string? Size = null, TextAlign Align = TextAlign.Left, TableState? Table = null);
+/// <param name="Code">Du code dans le texte.</param>
+/// <param name="Quote">Une citation.</param>
+public sealed record EditorTools(bool Bold, bool Italic, bool Underline, bool Strike, bool Superscript, bool Subscript, int Heading, ListKind? List, bool CanUndo, bool CanRedo, string? Color = null, string? Size = null, TextAlign Align = TextAlign.Left, TableState? Table = null, bool Code = false, bool Quote = false);
 
 /// <summary>Le tableau où est le curseur : son apparence, écrite comme dans la fiche, et sa colonne.</summary>
 /// <param name="Header">L'en-tête : <c>ligne</c>, <c>colonne</c>, <c>ligne,colonne</c> ou <c>aucune</c>.</param>
@@ -166,6 +168,9 @@ internal interface IEditorSurface
 
     /// <summary>Met en liste, ou en sort.</summary>
     void ToggleList(ListKind kind);
+
+    /// <summary>Met en citation, ou en sort.</summary>
+    void ToggleQuote();
 
     /// <summary>Insère un dessin, ou remplace celui de cette position.</summary>
     void InsertDiagram(string info, string code, int? position);
@@ -926,6 +931,10 @@ public sealed partial class SheetEditorViewModel : ObservableObject
     /// <summary>Met les lignes de la sélection en liste, ou les en sort.</summary>
     [RelayCommand]
     private void ToggleList(ListKind kind) => _surface?.ToggleList(kind);
+
+    /// <summary>Met les lignes de la sélection en citation, ou les en sort.</summary>
+    [RelayCommand]
+    private void ToggleQuote() => _surface?.ToggleQuote();
 
     /// <summary>Pose une couleur sur la sélection, écrite <c>#rrggbb</c> ; rien : celle du thème.</summary>
     [RelayCommand]

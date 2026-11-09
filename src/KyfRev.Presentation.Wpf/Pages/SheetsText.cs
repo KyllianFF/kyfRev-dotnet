@@ -47,6 +47,18 @@ public static class SheetsText
     /// <summary>« Dossier ».</summary>
     public static string FilterFolder => Text(nameof(FilterFolder));
 
+    /// <summary>« Filtrer par étiquettes ».</summary>
+    public static string TagsFilterName => Text(nameof(TagsFilterName));
+
+    /// <summary>« Seulement les fiches qui portent cette étiquette ».</summary>
+    public static string TagFilterAdd => Text(nameof(TagFilterAdd));
+
+    /// <summary>« Retirer ce filtre ».</summary>
+    public static string TagFilterRemove => Text(nameof(TagFilterRemove));
+
+    /// <summary>« Tout afficher ».</summary>
+    public static string TagsClear => Text(nameof(TagsClear));
+
     /// <summary>« Tri ».</summary>
     public static string FilterSort => Text(nameof(FilterSort));
 

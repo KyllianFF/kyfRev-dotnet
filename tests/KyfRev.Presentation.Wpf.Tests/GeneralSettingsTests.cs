@@ -111,6 +111,24 @@ public sealed class GeneralSettingsTests
     }
 
     [STATestMethod]
+    public void The_focus_mode_is_kept_on_this_computer()
+    {
+        var store = new MemoryMachinePreferences { Stored = new MachinePreferences { FocusMode = true } };
+        var machine = new MachineSettings(store);
+        var test = new TestShell();
+
+        machine.Follow(test.Appearance, test.Shell);
+
+        Assert.IsTrue(test.Shell.IsFocusMode, "retrouvé au démarrage");
+
+        test.Shell.ToggleFocusMode();
+
+        Assert.IsFalse(machine.Current.FocusMode);
+        Assert.IsFalse(store.Stored.FocusMode);
+        Assert.IsFalse(test.Shell.IsFocusMode);
+    }
+
+    [STATestMethod]
     public void The_menu_keeps_its_size_in_every_view()
     {
         var test = new TestShell();

@@ -288,6 +288,27 @@
                 <TextBlock x:Name="ListenLabel" Text="{x:Static pages:ReadingText.Listen}" VerticalAlignment="Center" Margin="8,0,0,0" />
               </StackPanel>
             </ToggleButton>
+            <!-- En-tête étroit : il passe sous « ⋯ ». -->
+            <Border Margin="8,0,0,0">
+              <Border.Style>
+                <Style TargetType="Border">
+                  <Setter Property="Visibility" Value="Collapsed" />
+                  <Style.Triggers>
+                    <MultiDataTrigger>
+                      <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding CanFocus}" Value="True" />
+                        <Condition Binding="{Binding IsCompactHeader}" Value="False" />
+                      </MultiDataTrigger.Conditions>
+                      <Setter Property="Visibility" Value="Visible" />
+                    </MultiDataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </Border.Style>
+              <ToggleButton x:Name="FocusToggle" IsChecked="{Binding IsFocusMode}" Style="{DynamicResource Kyf.Button.Tool}" MinHeight="40" Padding="12,0"
+                            ToolTip="{x:Static pages:ReadingText.FocusToggle}" AutomationProperties.Name="{x:Static pages:ReadingText.FocusToggleName}" AutomationProperties.AcceleratorKey="Ctrl+Maj+F">
+                <kyf:Icon Text="{x:Static kyf:Icons.FocusMode}" VerticalAlignment="Center" />
+              </ToggleButton>
+            </Border>
             <!-- Toujours à portée, même la fiche défilée, comme dans la 0.x ; en-tête étroit, il passe sous « ⋯ ». -->
             <Border Margin="8,0,0,0">
               <Border.Style>
@@ -349,6 +370,8 @@
                     <MenuItem x:Name="BacklinksItem" Header="{Binding BacklinksLabel}" IsCheckable="True" IsChecked="{Binding IsBacklinksOn}"
                               Visibility="{Binding HasBacklinks, Converter={StaticResource Visible}, FallbackValue=Collapsed}" />
                     <Separator Visibility="{Binding HasPanels, Converter={StaticResource Visible}, FallbackValue=Collapsed}" />
+                    <MenuItem x:Name="FocusItem" Header="{x:Static pages:ReadingText.FocusToggleName}" IsCheckable="True" IsChecked="{Binding IsFocusMode}"
+                              Visibility="{Binding CanFocus, Converter={StaticResource Visible}}" />
                     <MenuItem x:Name="ShareItem" Header="{x:Static pages:SharingText.Share}" Command="{Binding RequestShareCommand}"
                               Visibility="{Binding CanShare, Converter={StaticResource Visible}, FallbackValue=Collapsed}" />
                     <MenuItem x:Name="TemplateItem" Header="{x:Static pages:SharingText.SaveAsTemplate}" Command="{Binding RequestSaveAsTemplateCommand}"

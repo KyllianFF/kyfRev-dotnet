@@ -17,7 +17,7 @@ namespace KyfRev.Presentation.Wpf.Shell;
 /// d'icônes, ou onglets en bas avec « Plus » pour les autres vues. Sans coffre ouvert, elle montre
 /// l'accueil : le menu est masqué et les vues ne s'ouvrent pas.
 /// </summary>
-public sealed partial class ShellViewModel : ObservableObject, IForgetsVault, IStopsSearch
+public sealed partial class ShellViewModel : ObservableObject, IForgetsVault, IStopsSearch, IFocusMode
 {
     /// <summary>Plus petit zoom.</summary>
     public const double MinimumZoom = 0.8;

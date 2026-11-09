@@ -36,6 +36,9 @@
   <data name="Definitions" xml:space="preserve">
     <value>Définitions</value>
   </data>
+  <data name="ExitFocusMode" xml:space="preserve">
+    <value>Afficher le menu (Ctrl+Maj+F)</value>
+  </data>
   <data name="FocusMode" xml:space="preserve">
     <value>Mode concentration</value>
   </data>
