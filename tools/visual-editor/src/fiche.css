@@ -15,7 +15,7 @@
 
 /* Bloc lu à voix haute (D38). */
 .contenu-fiche .en-lecture {
-  border-radius: 3px;
+  border-radius: 4px;
   outline: 2px solid var(--principale);
   outline-offset: 4px;
   background: var(--pastille-fiche-fond);
@@ -91,7 +91,7 @@
 }
 
 .contenu-fiche code {
-  padding: 1px 5px;
+  padding: 1px 4px;
   border-radius: 4px;
   background: var(--surface-2);
   font-family: var(--police-code);
@@ -261,7 +261,7 @@
 .contenu-fiche figure.reseau {
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .contenu-fiche figure.reseau svg {
@@ -290,12 +290,12 @@
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  gap: 4px 10px;
+  gap: 4px 8px;
 }
 
 .contenu-fiche figure.reseau .modifier-schema {
-  height: 26px;
-  padding: 0 10px;
+  height: 28px;
+  padding: 0 12px;
   font-size: 0.8em;
   font-weight: 400;
 }
@@ -459,7 +459,7 @@
    même force (« [data-trou] » en plus de la classe). */
 .contenu-fiche [data-trou].trou:not(.revele) {
   border-bottom: 2px dashed var(--repere-passage);
-  border-radius: 3px;
+  border-radius: 4px;
   background: var(--pastille-passage-fond);
   color: transparent;
   text-decoration: none;
@@ -526,13 +526,13 @@ figure.bloc-extension {
 }
 
 .extension-rendu .titre-extension {
-  margin: 0 0 6px;
+  margin: 0 0 8px;
   font-weight: 600;
 }
 
 .extension-rendu .carte {
   margin: 12px 0;
-  padding: 16px 18px;
+  padding: 16px 20px;
   border: 1px solid var(--bordure);
   border-radius: var(--rayon-carte);
   background: var(--surface);
@@ -565,8 +565,8 @@ figure.bloc-extension {
 }
 
 .extension-rendu .reponse {
-  margin: 10px 0 0;
-  padding-top: 10px;
+  margin: 12px 0 0;
+  padding-top: 12px;
   border-top: 1px solid var(--bordure);
 }
 
@@ -584,7 +584,7 @@ figure.bloc-extension {
 }
 
 .extension-rendu:not(.bloc-extension) :is(th, td) {
-  padding: 6px 10px;
+  padding: 6px 12px;
   border-bottom: 1px solid var(--bordure);
   text-align: left;
 }
@@ -602,7 +602,7 @@ figure.bloc-extension {
 
 /* Frise (extension Chronologie, ou toute liste <ol class="frise">). */
 .extension-rendu .frise {
-  margin: 8px 0 16px 6px;
+  margin: 8px 0 16px 8px;
   padding: 0;
   border-left: 2px solid var(--bordure);
   list-style: none;
@@ -612,8 +612,8 @@ figure.bloc-extension {
   position: relative;
   display: grid;
   grid-template-columns: 9.5em 1fr;
-  gap: 14px;
-  padding: 6px 0 6px 18px;
+  gap: 16px;
+  padding: 6px 0 6px 20px;
 }
 
 .extension-rendu .frise li::before {
@@ -680,7 +680,7 @@ figure.bloc-extension {
 .editeur-visuel .ProseMirror-selectednode {
   outline: 2px solid var(--focus);
   outline-offset: 2px;
-  border-radius: 3px;
+  border-radius: 4px;
 }
 
 .editeur-visuel .serree > li > p,
@@ -735,7 +735,7 @@ figure.bloc-extension {
 }
 
 .editeur-visuel .action-dessin {
-  margin-left: 6px;
+  margin-left: 8px;
   padding: 1px 8px;
   color: var(--texte);
   font: inherit;
@@ -838,8 +838,8 @@ figure.bloc-extension {
 .editeur-visuel .entete-code {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 4px 6px;
+  gap: 8px;
+  padding: 4px 8px;
   border: 1px solid var(--bordure);
   border-bottom: 0;
   border-radius: var(--rayon) var(--rayon) 0 0;
@@ -849,7 +849,7 @@ figure.bloc-extension {
 }
 
 .editeur-visuel .entete-code select {
-  height: 26px;
+  height: 24px;
   padding: 0 4px;
   border: 1px solid var(--bordure);
   border-radius: 4px;
@@ -899,7 +899,7 @@ figure.bloc-extension {
 /* Markdown que l'éditeur visuel ne sait pas présenter : modifiable tel quel. */
 .editeur-visuel pre.bloc-brut {
   position: relative;
-  padding-top: 22px;
+  padding-top: 24px;
   border: 1px dashed var(--bordure);
   background: transparent;
   font-size: 0.85em;
@@ -908,7 +908,7 @@ figure.bloc-extension {
 .editeur-visuel pre.bloc-brut::before {
   position: absolute;
   top: 4px;
-  right: 10px;
+  right: 12px;
   content: "Markdown";
   color: var(--texte-secondaire);
   font-family: var(--police);

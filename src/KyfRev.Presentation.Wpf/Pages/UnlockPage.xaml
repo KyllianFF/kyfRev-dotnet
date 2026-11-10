@@ -24,7 +24,7 @@
       <StackPanel x:Name="PasswordPart" Margin="0,24,0,0" Visibility="{Binding UsesPassword, Converter={StaticResource Visible}}"
                   IsVisibleChanged="OnSecretShown">
         <TextBlock x:Name="PasswordLabel" Text="{x:Static pages:EncryptionText.Password}" Style="{DynamicResource Kyf.Text.BodyStrong}"
-                   Margin="0,0,0,6" />
+                   Margin="0,0,0,8" />
         <PasswordBox x:Name="PasswordBox" IsEnabled="{Binding IsIdle}" IsEnabledChanged="OnSecretEnabled"
                      AutomationProperties.Name="{x:Static pages:EncryptionText.Password}"
                      AutomationProperties.LabeledBy="{Binding ElementName=PasswordLabel}" />
@@ -32,13 +32,13 @@
       <StackPanel x:Name="RecoveryPart" Margin="0,24,0,0" Visibility="{Binding UsesRecoveryKey, Converter={StaticResource Visible}}"
                   IsVisibleChanged="OnSecretShown">
         <TextBlock x:Name="RecoveryLabel" Text="{x:Static pages:EncryptionText.RecoveryKey}" Style="{DynamicResource Kyf.Text.BodyStrong}"
-                   Margin="0,0,0,6" />
+                   Margin="0,0,0,8" />
         <TextBox x:Name="RecoveryBox" IsEnabled="{Binding IsIdle}" IsEnabledChanged="OnSecretEnabled" FontFamily="{DynamicResource Kyf.Font.Code}" TextWrapping="Wrap"
                  AutomationProperties.Name="{x:Static pages:EncryptionText.RecoveryKey}"
                  AutomationProperties.HelpText="{x:Static pages:EncryptionText.RecoveryHelp}"
                  AutomationProperties.LabeledBy="{Binding ElementName=RecoveryLabel}" />
         <TextBlock x:Name="RecoveryHelp" Text="{x:Static pages:EncryptionText.RecoveryHelp}" Style="{DynamicResource Kyf.Text.Caption}"
-                   Margin="0,6,0,0" TextWrapping="Wrap" />
+                   Margin="0,4,0,0" TextWrapping="Wrap" />
       </StackPanel>
 
       <CheckBox x:Name="RememberBox" IsChecked="{Binding Remember}" IsEnabled="{Binding IsIdle}" Margin="0,16,0,0"

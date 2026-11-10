@@ -78,6 +78,7 @@ public static class Palette
         Surface: TokenColor.FromHex("#fafbf7"),
         SurfaceAlt: TokenColor.FromHex("#e3e8e0"),
         Divider: TokenColor.FromHex("#d3d9d0"),
+        Hairline: TokenColor.FromHex("#1a1d2822"),
         ControlBorder: TokenColor.FromHex("#77837a"),
         Text: TokenColor.FromHex("#1d2822"),
         TextSecondary: TokenColor.FromHex("#4f5c54"),
@@ -96,6 +97,7 @@ public static class Palette
         Surface: TokenColor.FromHex("#24211c"),
         SurfaceAlt: TokenColor.FromHex("#2e2a24"),
         Divider: TokenColor.FromHex("#38332b"),
+        Hairline: TokenColor.FromHex("#1aefe9dc"),
         ControlBorder: TokenColor.FromHex("#877e70"),
         Text: TokenColor.FromHex("#efe9dc"),
         TextSecondary: TokenColor.FromHex("#b4ab9b"),
@@ -157,6 +159,7 @@ public sealed class ColorRamp
 /// <param name="Surface">Fond des cartes et des champs.</param>
 /// <param name="SurfaceAlt">Fond secondaire : survol, blocs de code, squelettes.</param>
 /// <param name="Divider">Séparateurs décoratifs.</param>
+/// <param name="Hairline">Filet discret : le texte du thème à 10 %, qui prend la teinte de n'importe quel fond.</param>
 /// <param name="ControlBorder">Contour des contrôles (au moins 3:1 sur tous les fonds).</param>
 /// <param name="Text">Texte.</param>
 /// <param name="TextSecondary">Texte secondaire.</param>
@@ -173,6 +176,7 @@ public sealed record ThemeNeutrals(
     TokenColor Surface,
     TokenColor SurfaceAlt,
     TokenColor Divider,
+    TokenColor Hairline,
     TokenColor ControlBorder,
     TokenColor Text,
     TokenColor TextSecondary,

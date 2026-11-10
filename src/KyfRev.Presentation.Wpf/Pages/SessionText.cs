@@ -11,11 +11,11 @@ public static class SessionText
     /// <summary>« Revenir à Aujourd'hui ».</summary>
     public static string BackToToday => Text(nameof(BackToToday));
 
-    /// <summary>« Faits : … ».</summary>
-    public static string DoneOf(object count) => Format("Done", count);
+    /// <summary>« Faits », devant le nombre d'éléments faits du bilan.</summary>
+    public static string Done => Text(nameof(Done));
 
-    /// <summary>« Durée : … ».</summary>
-    public static string DurationOf(object duration) => Format("Duration", duration);
+    /// <summary>« Durée », devant la durée du bilan.</summary>
+    public static string Duration => Text(nameof(Duration));
 
     /// <summary>« Quitter le plein écran ».</summary>
     public static string ExitFullScreen => Text(nameof(ExitFullScreen));
@@ -32,8 +32,8 @@ public static class SessionText
     /// <summary>« Suivant ».</summary>
     public static string Next => Text(nameof(Next));
 
-    /// <summary>« Reportés : … ».</summary>
-    public static string PostponedOf(object count) => Format("Postponed", count);
+    /// <summary>« Reportés », devant le nombre d'éléments reportés du bilan.</summary>
+    public static string Postponed => Text(nameof(Postponed));
 
     /// <summary>« Séance : … / … ».</summary>
     public static string ProgressOf(object position, object total) => Format("Progress", position, total);
@@ -41,8 +41,8 @@ public static class SessionText
     /// <summary>« Progression de la séance : élément … sur … ».</summary>
     public static string ProgressNameOf(object position, object total) => Format("ProgressName", position, total);
 
-    /// <summary>« Restants : … ».</summary>
-    public static string RemainingOf(object count) => Format("Remaining", count);
+    /// <summary>« Restants », devant le nombre d'éléments restants du bilan.</summary>
+    public static string Remaining => Text(nameof(Remaining));
 
     /// <summary>« Reprendre la séance (… restants) ».</summary>
     public static string ResumeManyOf(object count) => Format("ResumeMany", count);

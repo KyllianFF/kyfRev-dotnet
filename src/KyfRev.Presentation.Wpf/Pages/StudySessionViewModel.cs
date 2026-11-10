@@ -52,7 +52,7 @@ public sealed partial class StudySessionViewModel : ObservableObject, ILeaving
         _toggleFullScreen = toggleFullScreen;
         _since = time.GetUtcNow();
         Summary = string.Empty;
-        DurationText = string.Empty;
+        Duration = string.Empty;
         ShowCurrent();
     }
 
@@ -95,18 +95,18 @@ public sealed partial class StudySessionViewModel : ObservableObject, ILeaving
     [ObservableProperty]
     public partial string Summary { get; private set; }
 
-    /// <summary>« Durée : 12 min 30 s ».</summary>
+    /// <summary>La durée de la séance, « 12 min 30 s ».</summary>
     [ObservableProperty]
-    public partial string DurationText { get; private set; }
+    public partial string Duration { get; private set; }
 
-    /// <summary>« Faits : 9 ».</summary>
-    public string DoneText => SessionText.DoneOf(_session.Done);
+    /// <summary>Les éléments faits.</summary>
+    public int DoneCount => _session.Done;
 
-    /// <summary>« Reportés : 1 ».</summary>
-    public string PostponedText => SessionText.PostponedOf(_session.Postponed);
+    /// <summary>Les éléments reportés.</summary>
+    public int PostponedCount => _session.Postponed;
 
-    /// <summary>« Restants : 2 » : les éléments passés et ceux que la séance n'a pas atteints.</summary>
-    public string RemainingText => SessionText.RemainingOf(_session.Skipped + _session.Remaining);
+    /// <summary>Les éléments restants : ceux qui ont été passés et ceux que la séance n'a pas atteints.</summary>
+    public int RemainingCount => _session.Skipped + _session.Remaining;
 
     private int Total => _session.Items.Length;
 
@@ -243,14 +243,14 @@ public sealed partial class StudySessionViewModel : ObservableObject, ILeaving
         var reviewed = _session.Done + _session.Postponed + _session.Skipped;
         Summary = Dates.Plural(reviewed, SessionText.ReviewedOneOf, SessionText.ReviewedManyOf);
         var elapsed = _session.Elapsed;
-        DurationText = SessionText.DurationOf(elapsed.TotalMinutes >= 1
+        Duration = elapsed.TotalMinutes >= 1
             ? SessionText.MinutesSecondsOf((int)elapsed.TotalMinutes, elapsed.Seconds)
-            : SessionText.SecondsOf(elapsed.Seconds));
+            : SessionText.SecondsOf(elapsed.Seconds);
         Current = null;
         IsFinished = true;
-        OnPropertyChanged(nameof(DoneText));
-        OnPropertyChanged(nameof(PostponedText));
-        OnPropertyChanged(nameof(RemainingText));
+        OnPropertyChanged(nameof(DoneCount));
+        OnPropertyChanged(nameof(PostponedCount));
+        OnPropertyChanged(nameof(RemainingCount));
         OnPropertyChanged(nameof(Progress));
         NextCommand.NotifyCanExecuteChanged();
         EndCommand.NotifyCanExecuteChanged();

@@ -21,12 +21,32 @@
       "kyfrev.domain": {
         "type": "Project"
       },
+      "kyfrev.extensions.host": {
+        "type": "Project",
+        "dependencies": {
+          "KyfRev.Application": "[1.0.0-beta.1, )"
+        }
+      },
       "kyfrev.infrastructure.vault": {
         "type": "Project",
         "dependencies": {
           "KyfRev.Application": "[1.0.0-beta.1, )",
           "KyfRev.Domain": "[1.0.0-beta.1, )",
           "YamlDotNet": "[18.1.0, )"
+        }
+      },
+      "kyfrev.modules.citations": {
+        "type": "Project",
+        "dependencies": {
+          "KyfRev.Application": "[1.0.0-beta.1, )",
+          "KyfRev.Domain": "[1.0.0-beta.1, )"
+        }
+      },
+      "kyfrev.modules.schemas": {
+        "type": "Project",
+        "dependencies": {
+          "KyfRev.Application": "[1.0.0-beta.1, )",
+          "KyfRev.Domain": "[1.0.0-beta.1, )"
         }
       },
       "kyfrev.presentation.wpf": {
@@ -36,6 +56,9 @@
           "CommunityToolkit.Mvvm": "[8.4.2, )",
           "KyfRev.Application": "[1.0.0-beta.1, )",
           "KyfRev.DesignSystem": "[1.0.0-beta.1, )",
+          "KyfRev.Extensions.Host": "[1.0.0-beta.1, )",
+          "KyfRev.Modules.Citations": "[1.0.0-beta.1, )",
+          "KyfRev.Modules.Schemas": "[1.0.0-beta.1, )",
           "KyfRev.Rendering": "[1.0.0-beta.1, )",
           "Microsoft.Web.WebView2": "[1.0.4258.31, )",
           "WpfMath": "[2.1.0, )"

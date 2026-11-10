@@ -15,6 +15,21 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 - Mode concentration, comme la 0.x : un bouton dans la fiche, un autre dans la barre de la fenêtre pour en sortir, le texte
   garde la largeur de lecture même si la pleine largeur est choisie, et le mode est retenu sur l'ordinateur.
 
+### Modifié
+
+- Une passe de finition sur toute l'interface. Les notifications perdent leur trait de couleur pour un filet discret, l'icône
+  gardant la couleur de la gravité ; en thème sombre, les cartes se détachent par leur surface, sans ombre. Les espacements
+  arbitraires passent sur la grille de 4 px, dans les vues comme dans l'éditeur visuel. Plus d'italique pour signaler un passage
+  caché ou un aperçu vide : la couleur secondaire suffit. Le compteur d'une entrée du menu devient un nombre discret, et une
+  permission nouvelle d'extension un mot plutôt qu'une pastille. Les chiffres des statistiques prennent la police à chasse fixe
+  des autres compteurs, et le bilan de séance aligne ses chiffres à droite. Le texte des boutons des cartes Définitions et
+  Citations s'aligne sur celui de la carte.
+
+### Corrigé
+
+- `tools/design-captures` compile de nouveau, et une attente qui n'aboutit pas ne bloque plus l'outil : elle le dit au bout de
+  20 secondes et passe à la suite.
+
 ## [1.0.0-beta.1] - 2026-11-08
 
 ### Ajouté

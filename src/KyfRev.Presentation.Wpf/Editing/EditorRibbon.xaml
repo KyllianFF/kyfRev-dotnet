@@ -45,14 +45,14 @@
                         Visibility="{Binding IsInTable, Converter={StaticResource Visible}, FallbackValue=Collapsed}">
             <StackPanel Orientation="Horizontal">
               <kyf:Icon Text="{x:Static kyf:Icons.Table}" FontSize="12" Foreground="{DynamicResource Kyf.Brush.Primary}" VerticalAlignment="Center" />
-              <TextBlock x:Name="CompactTableLabel" Text="{x:Static editing:EditingText.TableTab}" Margin="6,0,0,0" VerticalAlignment="Center" />
+              <TextBlock x:Name="CompactTableLabel" Text="{x:Static editing:EditingText.TableTab}" Margin="8,0,0,0" VerticalAlignment="Center" />
             </StackPanel>
           </ToggleButton>
           <ToggleButton x:Name="FormatToggle" Style="{DynamicResource Kyf.Button.Tool}" Padding="8,0" Margin="0,0,2,0" Click="OnFormatToggle"
                         ToolTip="{x:Static editing:EditingText.FormattingHelp}" AutomationProperties.Name="{x:Static editing:EditingText.Formatting}">
             <StackPanel Orientation="Horizontal">
               <kyf:Icon Text="{x:Static kyf:Icons.TextFormat}" VerticalAlignment="Center" />
-              <TextBlock x:Name="FormatLabel" Text="{x:Static editing:EditingText.Formatting}" Margin="6,0,0,0" VerticalAlignment="Center" />
+              <TextBlock x:Name="FormatLabel" Text="{x:Static editing:EditingText.Formatting}" Margin="8,0,0,0" VerticalAlignment="Center" />
             </StackPanel>
           </ToggleButton>
           <Button x:Name="ViewButton" Style="{DynamicResource Kyf.Button.Tool}" Click="OnMenuButton" ToolTip="{x:Static editing:EditingText.ViewMenu}" AutomationProperties.Name="{x:Static editing:EditingText.ViewMenu}">
@@ -75,9 +75,9 @@
             <kyf:Icon Text="{x:Static kyf:Icons.Redo}" />
           </Button>
           <Button x:Name="CompactStyleButton" Style="{DynamicResource Kyf.Button.Tool}" Click="OnMenuButton" ToolTip="{x:Static editing:EditingText.StyleName}" AutomationProperties.Name="{x:Static editing:EditingText.StyleName}"
-                  MinWidth="96" MaxWidth="150" Margin="2,0" HorizontalContentAlignment="Stretch">
+                  MinWidth="96" MaxWidth="152" Margin="2,0" HorizontalContentAlignment="Stretch">
             <DockPanel>
-              <kyf:Icon DockPanel.Dock="Right" Text="{x:Static kyf:Icons.ChevronDown}" FontSize="10" Margin="6,0,0,0" />
+              <kyf:Icon DockPanel.Dock="Right" Text="{x:Static kyf:Icons.ChevronDown}" FontSize="10" Margin="8,0,0,0" />
               <TextBlock Text="{Binding StyleLabel}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
             </DockPanel>
             <Button.ContextMenu>
@@ -102,10 +102,10 @@
       <!-- Les onglets ; quand la place manque, ils n'apparaissent qu'avec le volet, et l'affichage passe sous « ⋯ ». -->
       <DockPanel x:Name="TabRow" DockPanel.Dock="Top" Margin="4,2,4,0">
         <StackPanel x:Name="ViewButtons" DockPanel.Dock="Right" Orientation="Horizontal">
-          <Button x:Name="HistoryButton" Style="{DynamicResource Kyf.Button.Tool}" Padding="10,0" Margin="0,0,4,0" Content="{x:Static editing:EditingText.History}" Command="{Binding OpenHistoryCommand}" />
-          <ToggleButton x:Name="PreviewToggle" Style="{DynamicResource Kyf.Button.Tool}" Padding="10,0" Margin="0,0,4,0" Content="{x:Static editing:EditingText.Preview}" IsChecked="{Binding IsPreviewOn}"
+          <Button x:Name="HistoryButton" Style="{DynamicResource Kyf.Button.Tool}" Padding="12,0" Margin="0,0,4,0" Content="{x:Static editing:EditingText.History}" Command="{Binding OpenHistoryCommand}" />
+          <ToggleButton x:Name="PreviewToggle" Style="{DynamicResource Kyf.Button.Tool}" Padding="12,0" Margin="0,0,4,0" Content="{x:Static editing:EditingText.Preview}" IsChecked="{Binding IsPreviewOn}"
                         Visibility="{Binding IsMarkdownShown, Converter={StaticResource Visible}}" />
-          <ToggleButton x:Name="MarkdownToggle" Style="{DynamicResource Kyf.Button.Tool}" Padding="10,0" Content="{x:Static editing:EditingText.ShowMarkdown}" IsChecked="{Binding IsMarkdownOn}" IsEnabled="{Binding IsVisualAvailable}" />
+          <ToggleButton x:Name="MarkdownToggle" Style="{DynamicResource Kyf.Button.Tool}" Padding="12,0" Content="{x:Static editing:EditingText.ShowMarkdown}" IsChecked="{Binding IsMarkdownOn}" IsEnabled="{Binding IsVisualAvailable}" />
         </StackPanel>
         <StackPanel Orientation="Horizontal">
           <ToggleButton x:Name="HomeTab" Style="{DynamicResource Kyf.Button.Tab}" Content="{x:Static editing:EditingText.Home}" IsChecked="True" Click="OnHomeTab" />
@@ -114,7 +114,7 @@
           <ToggleButton x:Name="TableTab" Style="{DynamicResource Kyf.Button.Tab}" Click="OnTableTab" AutomationProperties.Name="{x:Static editing:EditingText.TableTab}"
                         Visibility="{Binding IsInTable, Converter={StaticResource Visible}, FallbackValue=Collapsed}">
             <StackPanel Orientation="Horizontal">
-              <kyf:Icon Text="{x:Static kyf:Icons.Table}" FontSize="12" Foreground="{DynamicResource Kyf.Brush.Primary}" Margin="0,0,6,0" VerticalAlignment="Center" />
+              <kyf:Icon Text="{x:Static kyf:Icons.Table}" FontSize="12" Foreground="{DynamicResource Kyf.Brush.Primary}" Margin="0,0,8,0" VerticalAlignment="Center" />
               <TextBlock Text="{x:Static editing:EditingText.TableTab}" VerticalAlignment="Center" />
             </StackPanel>
           </ToggleButton>
@@ -138,9 +138,9 @@
           </HeaderedContentControl>
 
           <HeaderedContentControl Style="{StaticResource Group}" Header="{x:Static editing:EditingText.StyleGroup}">
-            <Button x:Name="StyleButton" Style="{DynamicResource Kyf.Button.Tool}" Click="OnMenuButton" ToolTip="{x:Static editing:EditingText.StyleName}" AutomationProperties.Name="{x:Static editing:EditingText.StyleName}" MinWidth="110" HorizontalContentAlignment="Stretch">
+            <Button x:Name="StyleButton" Style="{DynamicResource Kyf.Button.Tool}" Click="OnMenuButton" ToolTip="{x:Static editing:EditingText.StyleName}" AutomationProperties.Name="{x:Static editing:EditingText.StyleName}" MinWidth="112" HorizontalContentAlignment="Stretch">
               <DockPanel>
-                <kyf:Icon DockPanel.Dock="Right" Text="{x:Static kyf:Icons.ChevronDown}" FontSize="10" Margin="6,0,0,0" />
+                <kyf:Icon DockPanel.Dock="Right" Text="{x:Static kyf:Icons.ChevronDown}" FontSize="10" Margin="8,0,0,0" />
                 <TextBlock Text="{Binding StyleLabel}" VerticalAlignment="Center" />
               </DockPanel>
               <Button.ContextMenu>
@@ -272,38 +272,38 @@
 
           <HeaderedContentControl Style="{StaticResource Group}" Header="{x:Static editing:EditingText.BandsGroup}">
             <StackPanel>
-                <RadioButton x:Name="BandsNoneChoice" GroupName="TableBands" Content="{x:Static editing:EditingText.BandsNone}" Margin="0,0,10,2" Command="{Binding ChangeTableCommand}" CommandParameter="bandes=aucune"
+                <RadioButton x:Name="BandsNoneChoice" GroupName="TableBands" Content="{x:Static editing:EditingText.BandsNone}" Margin="0,0,12,2" Command="{Binding ChangeTableCommand}" CommandParameter="bandes=aucune"
                              IsChecked="{Binding Tools.Table.Bands, Mode=OneWay, Converter={StaticResource TableChoice}, ConverterParameter=aucune}" />
-                <RadioButton x:Name="BandsRowsChoice" GroupName="TableBands" Content="{x:Static editing:EditingText.BandsRows}" Margin="0,0,10,2" Command="{Binding ChangeTableCommand}" CommandParameter="bandes=lignes"
+                <RadioButton x:Name="BandsRowsChoice" GroupName="TableBands" Content="{x:Static editing:EditingText.BandsRows}" Margin="0,0,12,2" Command="{Binding ChangeTableCommand}" CommandParameter="bandes=lignes"
                              IsChecked="{Binding Tools.Table.Bands, Mode=OneWay, Converter={StaticResource TableChoice}, ConverterParameter=lignes}" />
-                <RadioButton x:Name="BandsColumnsChoice" GroupName="TableBands" Content="{x:Static editing:EditingText.BandsColumns}" Margin="0,0,10,2" Command="{Binding ChangeTableCommand}" CommandParameter="bandes=colonnes"
+                <RadioButton x:Name="BandsColumnsChoice" GroupName="TableBands" Content="{x:Static editing:EditingText.BandsColumns}" Margin="0,0,12,2" Command="{Binding ChangeTableCommand}" CommandParameter="bandes=colonnes"
                              IsChecked="{Binding Tools.Table.Bands, Mode=OneWay, Converter={StaticResource TableChoice}, ConverterParameter=colonnes}" />
             </StackPanel>
           </HeaderedContentControl>
 
           <HeaderedContentControl Style="{StaticResource Group}" Header="{x:Static editing:EditingText.LinesGroup}">
             <UniformGrid Columns="2">
-                <RadioButton x:Name="LinesAllChoice" GroupName="TableLines" Content="{x:Static editing:EditingText.LinesAll}" Margin="0,0,10,2" Command="{Binding ChangeTableCommand}" CommandParameter="traits=tous"
+                <RadioButton x:Name="LinesAllChoice" GroupName="TableLines" Content="{x:Static editing:EditingText.LinesAll}" Margin="0,0,12,2" Command="{Binding ChangeTableCommand}" CommandParameter="traits=tous"
                              IsChecked="{Binding Tools.Table.Lines, Mode=OneWay, Converter={StaticResource TableChoice}, ConverterParameter=tous}" />
-                <RadioButton x:Name="LinesHorizontalChoice" GroupName="TableLines" Content="{x:Static editing:EditingText.LinesHorizontal}" Margin="0,0,10,2" Command="{Binding ChangeTableCommand}" CommandParameter="traits=horizontaux"
+                <RadioButton x:Name="LinesHorizontalChoice" GroupName="TableLines" Content="{x:Static editing:EditingText.LinesHorizontal}" Margin="0,0,12,2" Command="{Binding ChangeTableCommand}" CommandParameter="traits=horizontaux"
                              IsChecked="{Binding Tools.Table.Lines, Mode=OneWay, Converter={StaticResource TableChoice}, ConverterParameter=horizontaux}" />
-                <RadioButton x:Name="LinesVerticalChoice" GroupName="TableLines" Content="{x:Static editing:EditingText.LinesVertical}" Margin="0,0,10,2" Command="{Binding ChangeTableCommand}" CommandParameter="traits=verticaux"
+                <RadioButton x:Name="LinesVerticalChoice" GroupName="TableLines" Content="{x:Static editing:EditingText.LinesVertical}" Margin="0,0,12,2" Command="{Binding ChangeTableCommand}" CommandParameter="traits=verticaux"
                              IsChecked="{Binding Tools.Table.Lines, Mode=OneWay, Converter={StaticResource TableChoice}, ConverterParameter=verticaux}" />
-                <RadioButton x:Name="LinesOutlineChoice" GroupName="TableLines" Content="{x:Static editing:EditingText.LinesOutline}" Margin="0,0,10,2" Command="{Binding ChangeTableCommand}" CommandParameter="traits=contour"
+                <RadioButton x:Name="LinesOutlineChoice" GroupName="TableLines" Content="{x:Static editing:EditingText.LinesOutline}" Margin="0,0,12,2" Command="{Binding ChangeTableCommand}" CommandParameter="traits=contour"
                              IsChecked="{Binding Tools.Table.Lines, Mode=OneWay, Converter={StaticResource TableChoice}, ConverterParameter=contour}" />
-                <RadioButton x:Name="LinesHeaderChoice" GroupName="TableLines" Content="{x:Static editing:EditingText.LinesHeader}" Margin="0,0,10,2" Command="{Binding ChangeTableCommand}" CommandParameter="traits=entete"
+                <RadioButton x:Name="LinesHeaderChoice" GroupName="TableLines" Content="{x:Static editing:EditingText.LinesHeader}" Margin="0,0,12,2" Command="{Binding ChangeTableCommand}" CommandParameter="traits=entete"
                              IsChecked="{Binding Tools.Table.Lines, Mode=OneWay, Converter={StaticResource TableChoice}, ConverterParameter=entete}" />
-                <RadioButton x:Name="LinesNoneChoice" GroupName="TableLines" Content="{x:Static editing:EditingText.LinesNone}" Margin="0,0,10,2" Command="{Binding ChangeTableCommand}" CommandParameter="traits=aucun"
+                <RadioButton x:Name="LinesNoneChoice" GroupName="TableLines" Content="{x:Static editing:EditingText.LinesNone}" Margin="0,0,12,2" Command="{Binding ChangeTableCommand}" CommandParameter="traits=aucun"
                              IsChecked="{Binding Tools.Table.Lines, Mode=OneWay, Converter={StaticResource TableChoice}, ConverterParameter=aucun}" />
             </UniformGrid>
           </HeaderedContentControl>
 
           <HeaderedContentControl Style="{StaticResource Group}" Header="{x:Static editing:EditingText.ThemeGroup}">
             <UniformGrid Columns="3">
-                <RadioButton x:Name="ThemeSoberChoice" GroupName="TableTheme" Margin="0,0,10,2" Command="{Binding ChangeTableCommand}" CommandParameter="theme=sobre"
+                <RadioButton x:Name="ThemeSoberChoice" GroupName="TableTheme" Margin="0,0,12,2" Command="{Binding ChangeTableCommand}" CommandParameter="theme=sobre"
                              IsChecked="{Binding Tools.Table.Theme, Mode=OneWay, Converter={StaticResource TableChoice}, ConverterParameter=sobre}" AutomationProperties.Name="{x:Static editing:EditingText.ThemeSober}">
                   <StackPanel Orientation="Horizontal">
-                    <Border Width="22" Height="16" BorderThickness="1" BorderBrush="{DynamicResource Kyf.Brush.Divider}" Margin="0,0,6,0" VerticalAlignment="Center">
+                    <Border Width="24" Height="16" BorderThickness="1" BorderBrush="{DynamicResource Kyf.Brush.Divider}" Margin="0,0,8,0" VerticalAlignment="Center">
                       <Grid>
                         <Grid.RowDefinitions><RowDefinition Height="6" /><RowDefinition Height="*" /></Grid.RowDefinitions>
                         <Border Background="{DynamicResource Kyf.Brush.SurfaceAlt}" />
@@ -313,10 +313,10 @@
                     <TextBlock Text="{x:Static editing:EditingText.ThemeSober}" VerticalAlignment="Center" />
                   </StackPanel>
                 </RadioButton>
-                <RadioButton x:Name="ThemeForestChoice" GroupName="TableTheme" Margin="0,0,10,2" Command="{Binding ChangeTableCommand}" CommandParameter="theme=foret"
+                <RadioButton x:Name="ThemeForestChoice" GroupName="TableTheme" Margin="0,0,12,2" Command="{Binding ChangeTableCommand}" CommandParameter="theme=foret"
                              IsChecked="{Binding Tools.Table.Theme, Mode=OneWay, Converter={StaticResource TableChoice}, ConverterParameter=foret}" AutomationProperties.Name="{x:Static editing:EditingText.ThemeForest}">
                   <StackPanel Orientation="Horizontal">
-                    <Border Width="22" Height="16" BorderThickness="1" BorderBrush="{DynamicResource Kyf.Brush.TableForestLine}" Margin="0,0,6,0" VerticalAlignment="Center">
+                    <Border Width="24" Height="16" BorderThickness="1" BorderBrush="{DynamicResource Kyf.Brush.TableForestLine}" Margin="0,0,8,0" VerticalAlignment="Center">
                       <Grid>
                         <Grid.RowDefinitions><RowDefinition Height="6" /><RowDefinition Height="*" /></Grid.RowDefinitions>
                         <Border Background="{DynamicResource Kyf.Brush.TableForestHeader}" />
@@ -326,10 +326,10 @@
                     <TextBlock Text="{x:Static editing:EditingText.ThemeForest}" VerticalAlignment="Center" />
                   </StackPanel>
                 </RadioButton>
-                <RadioButton x:Name="ThemeAmberChoice" GroupName="TableTheme" Margin="0,0,10,2" Command="{Binding ChangeTableCommand}" CommandParameter="theme=ambre"
+                <RadioButton x:Name="ThemeAmberChoice" GroupName="TableTheme" Margin="0,0,12,2" Command="{Binding ChangeTableCommand}" CommandParameter="theme=ambre"
                              IsChecked="{Binding Tools.Table.Theme, Mode=OneWay, Converter={StaticResource TableChoice}, ConverterParameter=ambre}" AutomationProperties.Name="{x:Static editing:EditingText.ThemeAmber}">
                   <StackPanel Orientation="Horizontal">
-                    <Border Width="22" Height="16" BorderThickness="1" BorderBrush="{DynamicResource Kyf.Brush.TableAmberLine}" Margin="0,0,6,0" VerticalAlignment="Center">
+                    <Border Width="24" Height="16" BorderThickness="1" BorderBrush="{DynamicResource Kyf.Brush.TableAmberLine}" Margin="0,0,8,0" VerticalAlignment="Center">
                       <Grid>
                         <Grid.RowDefinitions><RowDefinition Height="6" /><RowDefinition Height="*" /></Grid.RowDefinitions>
                         <Border Background="{DynamicResource Kyf.Brush.TableAmberHeader}" />
@@ -339,10 +339,10 @@
                     <TextBlock Text="{x:Static editing:EditingText.ThemeAmber}" VerticalAlignment="Center" />
                   </StackPanel>
                 </RadioButton>
-                <RadioButton x:Name="ThemeSlateChoice" GroupName="TableTheme" Margin="0,0,10,2" Command="{Binding ChangeTableCommand}" CommandParameter="theme=ardoise"
+                <RadioButton x:Name="ThemeSlateChoice" GroupName="TableTheme" Margin="0,0,12,2" Command="{Binding ChangeTableCommand}" CommandParameter="theme=ardoise"
                              IsChecked="{Binding Tools.Table.Theme, Mode=OneWay, Converter={StaticResource TableChoice}, ConverterParameter=ardoise}" AutomationProperties.Name="{x:Static editing:EditingText.ThemeSlate}">
                   <StackPanel Orientation="Horizontal">
-                    <Border Width="22" Height="16" BorderThickness="1" BorderBrush="{DynamicResource Kyf.Brush.TableSlateLine}" Margin="0,0,6,0" VerticalAlignment="Center">
+                    <Border Width="24" Height="16" BorderThickness="1" BorderBrush="{DynamicResource Kyf.Brush.TableSlateLine}" Margin="0,0,8,0" VerticalAlignment="Center">
                       <Grid>
                         <Grid.RowDefinitions><RowDefinition Height="6" /><RowDefinition Height="*" /></Grid.RowDefinitions>
                         <Border Background="{DynamicResource Kyf.Brush.TableSlateHeader}" />
@@ -352,10 +352,10 @@
                     <TextBlock Text="{x:Static editing:EditingText.ThemeSlate}" VerticalAlignment="Center" />
                   </StackPanel>
                 </RadioButton>
-                <RadioButton x:Name="ThemePlumChoice" GroupName="TableTheme" Margin="0,0,10,2" Command="{Binding ChangeTableCommand}" CommandParameter="theme=prune"
+                <RadioButton x:Name="ThemePlumChoice" GroupName="TableTheme" Margin="0,0,12,2" Command="{Binding ChangeTableCommand}" CommandParameter="theme=prune"
                              IsChecked="{Binding Tools.Table.Theme, Mode=OneWay, Converter={StaticResource TableChoice}, ConverterParameter=prune}" AutomationProperties.Name="{x:Static editing:EditingText.ThemePlum}">
                   <StackPanel Orientation="Horizontal">
-                    <Border Width="22" Height="16" BorderThickness="1" BorderBrush="{DynamicResource Kyf.Brush.TablePlumLine}" Margin="0,0,6,0" VerticalAlignment="Center">
+                    <Border Width="24" Height="16" BorderThickness="1" BorderBrush="{DynamicResource Kyf.Brush.TablePlumLine}" Margin="0,0,8,0" VerticalAlignment="Center">
                       <Grid>
                         <Grid.RowDefinitions><RowDefinition Height="6" /><RowDefinition Height="*" /></Grid.RowDefinitions>
                         <Border Background="{DynamicResource Kyf.Brush.TablePlumHeader}" />
@@ -365,10 +365,10 @@
                     <TextBlock Text="{x:Static editing:EditingText.ThemePlum}" VerticalAlignment="Center" />
                   </StackPanel>
                 </RadioButton>
-                <RadioButton x:Name="ThemeInkChoice" GroupName="TableTheme" Margin="0,0,10,2" Command="{Binding ChangeTableCommand}" CommandParameter="theme=encre"
+                <RadioButton x:Name="ThemeInkChoice" GroupName="TableTheme" Margin="0,0,12,2" Command="{Binding ChangeTableCommand}" CommandParameter="theme=encre"
                              IsChecked="{Binding Tools.Table.Theme, Mode=OneWay, Converter={StaticResource TableChoice}, ConverterParameter=encre}" AutomationProperties.Name="{x:Static editing:EditingText.ThemeInk}">
                   <StackPanel Orientation="Horizontal">
-                    <Border Width="22" Height="16" BorderThickness="1" BorderBrush="{DynamicResource Kyf.Brush.TableInkLine}" Margin="0,0,6,0" VerticalAlignment="Center">
+                    <Border Width="24" Height="16" BorderThickness="1" BorderBrush="{DynamicResource Kyf.Brush.TableInkLine}" Margin="0,0,8,0" VerticalAlignment="Center">
                       <Grid>
                         <Grid.RowDefinitions><RowDefinition Height="6" /><RowDefinition Height="*" /></Grid.RowDefinitions>
                         <Border Background="{DynamicResource Kyf.Brush.TableInkHeader}" />
@@ -409,28 +409,28 @@
 
           <HeaderedContentControl Style="{StaticResource Group}" Header="{x:Static editing:EditingText.RowsColumnsGroup}">
             <UniformGrid Columns="3">
-                <Button x:Name="RowBeforeButton" Style="{DynamicResource Kyf.Button.Tool}" Content="{x:Static editing:EditingText.RowBeforeShort}" Padding="6,2" Margin="0,0,2,2" HorizontalContentAlignment="Left"
+                <Button x:Name="RowBeforeButton" Style="{DynamicResource Kyf.Button.Tool}" Content="{x:Static editing:EditingText.RowBeforeShort}" Padding="8,2" Margin="0,0,2,2" HorizontalContentAlignment="Left"
                         ToolTip="{x:Static editing:EditingText.RowBefore}" AutomationProperties.Name="{x:Static editing:EditingText.RowBefore}" Command="{Binding ChangeTableCommand}" CommandParameter="action=rowBefore" />
-                <Button x:Name="RowAfterButton" Style="{DynamicResource Kyf.Button.Tool}" Content="{x:Static editing:EditingText.RowAfterShort}" Padding="6,2" Margin="0,0,2,2" HorizontalContentAlignment="Left"
+                <Button x:Name="RowAfterButton" Style="{DynamicResource Kyf.Button.Tool}" Content="{x:Static editing:EditingText.RowAfterShort}" Padding="8,2" Margin="0,0,2,2" HorizontalContentAlignment="Left"
                         ToolTip="{x:Static editing:EditingText.RowAfter}" AutomationProperties.Name="{x:Static editing:EditingText.RowAfter}" Command="{Binding ChangeTableCommand}" CommandParameter="action=rowAfter" />
-                <Button x:Name="DeleteRowButton" Style="{DynamicResource Kyf.Button.Tool}" Content="{x:Static editing:EditingText.DeleteRowShort}" Padding="6,2" Margin="0,0,2,2" HorizontalContentAlignment="Left"
+                <Button x:Name="DeleteRowButton" Style="{DynamicResource Kyf.Button.Tool}" Content="{x:Static editing:EditingText.DeleteRowShort}" Padding="8,2" Margin="0,0,2,2" HorizontalContentAlignment="Left"
                         ToolTip="{x:Static editing:EditingText.DeleteRow}" AutomationProperties.Name="{x:Static editing:EditingText.DeleteRow}" Command="{Binding ChangeTableCommand}" CommandParameter="action=deleteRow" />
-                <Button x:Name="ColumnBeforeButton" Style="{DynamicResource Kyf.Button.Tool}" Content="{x:Static editing:EditingText.ColumnBeforeShort}" Padding="6,2" Margin="0,0,2,2" HorizontalContentAlignment="Left"
+                <Button x:Name="ColumnBeforeButton" Style="{DynamicResource Kyf.Button.Tool}" Content="{x:Static editing:EditingText.ColumnBeforeShort}" Padding="8,2" Margin="0,0,2,2" HorizontalContentAlignment="Left"
                         ToolTip="{x:Static editing:EditingText.ColumnBefore}" AutomationProperties.Name="{x:Static editing:EditingText.ColumnBefore}" Command="{Binding ChangeTableCommand}" CommandParameter="action=columnBefore" />
-                <Button x:Name="ColumnAfterButton" Style="{DynamicResource Kyf.Button.Tool}" Content="{x:Static editing:EditingText.ColumnAfterShort}" Padding="6,2" Margin="0,0,2,2" HorizontalContentAlignment="Left"
+                <Button x:Name="ColumnAfterButton" Style="{DynamicResource Kyf.Button.Tool}" Content="{x:Static editing:EditingText.ColumnAfterShort}" Padding="8,2" Margin="0,0,2,2" HorizontalContentAlignment="Left"
                         ToolTip="{x:Static editing:EditingText.ColumnAfter}" AutomationProperties.Name="{x:Static editing:EditingText.ColumnAfter}" Command="{Binding ChangeTableCommand}" CommandParameter="action=columnAfter" />
-                <Button x:Name="DeleteColumnButton" Style="{DynamicResource Kyf.Button.Tool}" Content="{x:Static editing:EditingText.DeleteColumnShort}" Padding="6,2" Margin="0,0,2,2" HorizontalContentAlignment="Left"
+                <Button x:Name="DeleteColumnButton" Style="{DynamicResource Kyf.Button.Tool}" Content="{x:Static editing:EditingText.DeleteColumnShort}" Padding="8,2" Margin="0,0,2,2" HorizontalContentAlignment="Left"
                         ToolTip="{x:Static editing:EditingText.DeleteColumn}" AutomationProperties.Name="{x:Static editing:EditingText.DeleteColumn}" Command="{Binding ChangeTableCommand}" CommandParameter="action=deleteColumn" />
-                <Button x:Name="DeleteTableButton" Style="{DynamicResource Kyf.Button.Tool}" Content="{x:Static editing:EditingText.DeleteTableShort}" Padding="6,2" Margin="0,0,2,2" HorizontalContentAlignment="Left"
+                <Button x:Name="DeleteTableButton" Style="{DynamicResource Kyf.Button.Tool}" Content="{x:Static editing:EditingText.DeleteTableShort}" Padding="8,2" Margin="0,0,2,2" HorizontalContentAlignment="Left"
                         ToolTip="{x:Static editing:EditingText.DeleteTable}" AutomationProperties.Name="{x:Static editing:EditingText.DeleteTable}" Command="{Binding ChangeTableCommand}" CommandParameter="action=deleteTable" />
             </UniformGrid>
           </HeaderedContentControl>
 
           <HeaderedContentControl Style="{StaticResource Group}" Header="{x:Static editing:EditingText.WidthGroup}">
             <StackPanel>
-                <RadioButton x:Name="WidthPageChoice" GroupName="TableWidth" Content="{x:Static editing:EditingText.WidthPage}" Margin="0,0,10,2" Command="{Binding ChangeTableCommand}" CommandParameter="largeur=page"
+                <RadioButton x:Name="WidthPageChoice" GroupName="TableWidth" Content="{x:Static editing:EditingText.WidthPage}" Margin="0,0,12,2" Command="{Binding ChangeTableCommand}" CommandParameter="largeur=page"
                              IsChecked="{Binding Tools.Table.Width, Mode=OneWay, Converter={StaticResource TableChoice}, ConverterParameter=page}" />
-                <RadioButton x:Name="WidthFitChoice" GroupName="TableWidth" Content="{x:Static editing:EditingText.WidthFit}" Margin="0,0,10,2" Command="{Binding ChangeTableCommand}" CommandParameter="largeur=ajustee"
+                <RadioButton x:Name="WidthFitChoice" GroupName="TableWidth" Content="{x:Static editing:EditingText.WidthFit}" Margin="0,0,12,2" Command="{Binding ChangeTableCommand}" CommandParameter="largeur=ajustee"
                              IsChecked="{Binding Tools.Table.Width, Mode=OneWay, Converter={StaticResource TableChoice}, ConverterParameter=ajustee}" />
             </StackPanel>
           </HeaderedContentControl>

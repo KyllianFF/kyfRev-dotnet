@@ -59,7 +59,7 @@
       <kyf:Notification x:Name="ValueWarningMessage" DockPanel.Dock="Bottom" Severity="Warning" Message="{x:Static editing:EditingText.DiagramValueWarning}" IsOpen="{Binding HasValueWarning, Mode=OneWay}" IsClosable="False" Margin="0,8,0,0" />
       <kyf:Notification x:Name="LimitWarningMessage" DockPanel.Dock="Bottom" Severity="Warning" Message="{Binding LimitWarning}" IsOpen="{Binding HasLimitWarning, Mode=OneWay}" IsClosable="False" Margin="0,8,0,0" />
       <!-- Les noms des colonnes, pour un graphique. -->
-      <Grid DockPanel.Dock="Top" Margin="14,0,0,4" Visibility="{Binding ShowsValues, Converter={StaticResource Visible}}">
+      <Grid DockPanel.Dock="Top" Margin="16,0,0,4" Visibility="{Binding ShowsValues, Converter={StaticResource Visible}}">
         <Grid.ColumnDefinitions>
           <ColumnDefinition Width="*" />
           <ColumnDefinition Width="Auto" />
@@ -76,7 +76,7 @@
             <DataTemplate DataType="{x:Type editing:DiagramNode}">
               <Grid Margin="{Binding Indent}">
                 <Grid.ColumnDefinitions>
-                  <ColumnDefinition Width="14" />
+                  <ColumnDefinition Width="16" />
                   <ColumnDefinition Width="*" />
                   <ColumnDefinition Width="Auto" />
                   <ColumnDefinition Width="Auto" />

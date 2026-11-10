@@ -83,13 +83,39 @@
       <TextBlock x:Name="SummaryTitle" Text="{x:Static pages:SessionText.SummaryTitle}" Style="{DynamicResource Kyf.Text.Title}" HorizontalAlignment="Center"
                  Margin="0,12,0,0" AutomationProperties.HeadingLevel="Level1" />
       <TextBlock x:Name="Summary" Text="{Binding Summary}" Style="{DynamicResource Kyf.Text.Secondary}" HorizontalAlignment="Center" Margin="0,4,0,16" />
-      <kyf:Card>
-        <StackPanel>
-          <TextBlock x:Name="Duration" Text="{Binding DurationText}" Style="{DynamicResource Kyf.Text.Body}" />
-          <TextBlock x:Name="Done" Text="{Binding DoneText}" Style="{DynamicResource Kyf.Text.Body}" Margin="0,4,0,0" />
-          <TextBlock x:Name="Postponed" Text="{Binding PostponedText}" Style="{DynamicResource Kyf.Text.Body}" Margin="0,4,0,0" />
-          <TextBlock x:Name="Remaining" Text="{Binding RemainingText}" Style="{DynamicResource Kyf.Text.Body}" Margin="0,4,0,0" />
-        </StackPanel>
+      <!-- Les libellés à gauche, les chiffres alignés à droite, en chasse fixe. -->
+      <kyf:Card MinWidth="280">
+        <Grid>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+          </Grid.ColumnDefinitions>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+          </Grid.RowDefinitions>
+          <Grid.Resources>
+            <Style x:Key="Figure" TargetType="TextBlock">
+              <Setter Property="Grid.Column" Value="1" />
+              <Setter Property="FontFamily" Value="{DynamicResource Kyf.Font.Code}" />
+              <Setter Property="FontSize" Value="{DynamicResource Kyf.FontSize.Body}" />
+              <Setter Property="LineHeight" Value="{DynamicResource Kyf.LineHeight.Body}" />
+              <Setter Property="LineStackingStrategy" Value="BlockLineHeight" />
+              <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Text}" />
+              <Setter Property="TextAlignment" Value="Right" />
+            </Style>
+          </Grid.Resources>
+          <TextBlock Text="{x:Static pages:SessionText.Duration}" Style="{DynamicResource Kyf.Text.Secondary}" />
+          <TextBlock x:Name="Duration" Text="{Binding Duration}" Style="{StaticResource Figure}" Margin="24,0,0,0" />
+          <TextBlock Grid.Row="1" Text="{x:Static pages:SessionText.Done}" Style="{DynamicResource Kyf.Text.Secondary}" Margin="0,8,0,0" />
+          <TextBlock x:Name="Done" Grid.Row="1" Text="{Binding DoneCount}" Style="{StaticResource Figure}" Margin="24,8,0,0" />
+          <TextBlock Grid.Row="2" Text="{x:Static pages:SessionText.Postponed}" Style="{DynamicResource Kyf.Text.Secondary}" Margin="0,8,0,0" />
+          <TextBlock x:Name="Postponed" Grid.Row="2" Text="{Binding PostponedCount}" Style="{StaticResource Figure}" Margin="24,8,0,0" />
+          <TextBlock Grid.Row="3" Text="{x:Static pages:SessionText.Remaining}" Style="{DynamicResource Kyf.Text.Secondary}" Margin="0,8,0,0" />
+          <TextBlock x:Name="Remaining" Grid.Row="3" Text="{Binding RemainingCount}" Style="{StaticResource Figure}" Margin="24,8,0,0" />
+        </Grid>
       </kyf:Card>
       <Button x:Name="BackToToday" Content="{x:Static pages:SessionText.BackToToday}" Command="{Binding LeaveCommand}"
               Style="{DynamicResource Kyf.Button.Primary}" HorizontalAlignment="Center" Margin="0,16,0,0" />

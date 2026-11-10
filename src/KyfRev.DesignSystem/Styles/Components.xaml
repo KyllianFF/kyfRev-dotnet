@@ -65,8 +65,8 @@
     <Setter Property="Template">
       <Setter.Value>
         <ControlTemplate TargetType="kyf:Pill">
-          <Border Background="{TemplateBinding Background}" CornerRadius="13" Padding="{TemplateBinding Padding}"
-                  MinHeight="26" SnapsToDevicePixels="True">
+          <Border Background="{TemplateBinding Background}" CornerRadius="12" Padding="{TemplateBinding Padding}"
+                  MinHeight="24" SnapsToDevicePixels="True">
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
               <TextBlock Text="{TemplateBinding Glyph}" Style="{DynamicResource Kyf.Text.Icon}" FontSize="12"
                          Foreground="{TemplateBinding Foreground}" Margin="0,0,4,0" />
@@ -100,13 +100,14 @@
     </Style.Triggers>
   </Style>
 
-  <!-- Notification : fond et icône selon la gravité, texte toujours dans la couleur du texte. -->
+  <!-- Notification : fond et icône selon la gravité, texte toujours dans la couleur du texte ; un filet
+       discret la borde, jamais un trait de couleur (le contraste élevé en fait un vrai contour). -->
   <Style TargetType="kyf:Notification">
     <Setter Property="FontFamily" Value="{DynamicResource Kyf.Font.Ui}" />
     <Setter Property="FontSize" Value="{DynamicResource Kyf.FontSize.Body}" />
     <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Text}" />
     <Setter Property="Background" Value="{DynamicResource Kyf.Brush.InfoBackground}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource Kyf.Brush.Info}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Kyf.Brush.Hairline}" />
     <Setter Property="BorderThickness" Value="1" />
     <Setter Property="Padding" Value="12" />
     <Setter Property="IsTabStop" Value="False" />
@@ -124,8 +125,8 @@
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
               </Grid.ColumnDefinitions>
-              <TextBlock Text="{TemplateBinding Glyph}" Style="{DynamicResource Kyf.Text.Icon}"
-                         Foreground="{TemplateBinding BorderBrush}" VerticalAlignment="Top" Margin="0,2,12,0" />
+              <TextBlock x:Name="SeverityGlyph" Text="{TemplateBinding Glyph}" Style="{DynamicResource Kyf.Text.Icon}"
+                         Foreground="{DynamicResource Kyf.Brush.Info}" VerticalAlignment="Top" Margin="0,2,12,0" />
               <StackPanel Grid.Column="1" VerticalAlignment="Center">
                 <TextBlock x:Name="Title" Text="{TemplateBinding Title}" Style="{DynamicResource Kyf.Text.BodyStrong}" />
                 <TextBlock Text="{TemplateBinding Message}" Style="{DynamicResource Kyf.Text.Body}" />
@@ -142,6 +143,15 @@
             <Trigger Property="IsClosable" Value="False">
               <Setter TargetName="PART_CloseButton" Property="Visibility" Value="Collapsed" />
             </Trigger>
+            <Trigger Property="Severity" Value="Success">
+              <Setter TargetName="SeverityGlyph" Property="Foreground" Value="{DynamicResource Kyf.Brush.Success}" />
+            </Trigger>
+            <Trigger Property="Severity" Value="Warning">
+              <Setter TargetName="SeverityGlyph" Property="Foreground" Value="{DynamicResource Kyf.Brush.Warning}" />
+            </Trigger>
+            <Trigger Property="Severity" Value="Critical">
+              <Setter TargetName="SeverityGlyph" Property="Foreground" Value="{DynamicResource Kyf.Brush.Critical}" />
+            </Trigger>
           </ControlTemplate.Triggers>
         </ControlTemplate>
       </Setter.Value>
@@ -152,15 +162,12 @@
       </Trigger>
       <Trigger Property="Severity" Value="Success">
         <Setter Property="Background" Value="{DynamicResource Kyf.Brush.SuccessBackground}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource Kyf.Brush.Success}" />
       </Trigger>
       <Trigger Property="Severity" Value="Warning">
         <Setter Property="Background" Value="{DynamicResource Kyf.Brush.WarningBackground}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource Kyf.Brush.Warning}" />
       </Trigger>
       <Trigger Property="Severity" Value="Critical">
         <Setter Property="Background" Value="{DynamicResource Kyf.Brush.CriticalBackground}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource Kyf.Brush.Critical}" />
         <Setter Property="AutomationProperties.LiveSetting" Value="Assertive" />
       </Trigger>
     </Style.Triggers>

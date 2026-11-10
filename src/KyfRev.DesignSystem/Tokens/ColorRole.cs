@@ -19,6 +19,9 @@ public enum ColorRole
     /// <summary>Séparateurs décoratifs : jamais le seul repère d'un contrôle.</summary>
     Divider,
 
+    /// <summary>Filet transparent, pour border un fond teinté (une notification) sans trait de couleur.</summary>
+    Hairline,
+
     /// <summary>Contour d'un contrôle (champ, bouton secondaire, case) : au moins 3:1.</summary>
     ControlBorder,
 

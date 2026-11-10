@@ -9,7 +9,7 @@
 
     <!-- Une fiche archivée : l'ouvrir, son état, l'exclure ou la remettre en révision. -->
     <DataTemplate DataType="{x:Type pages:ArchiveRow}">
-      <Border x:Name="RowBorder" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource Kyf.Brush.Divider}" Padding="0,3" ContextMenuOpening="OnRowMenu">
+      <Border x:Name="RowBorder" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource Kyf.Brush.Divider}" Padding="0,4" ContextMenuOpening="OnRowMenu">
         <Border.ContextMenu>
           <ContextMenu />
         </Border.ContextMenu>

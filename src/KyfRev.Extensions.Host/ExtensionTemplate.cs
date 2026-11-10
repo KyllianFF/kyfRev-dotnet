@@ -121,7 +121,7 @@ public static class ExtensionTemplate
 
         // Une commande déclarée dans extension.json : elle paraît dans la recherche (Ctrl+K).
         kyfrev.commande("bonjour", async () => {
-          message = "Bonjour ! Cette commande vient de la recherche (Ctrl+K).";
+          message = "Cette commande vient de la recherche (Ctrl+K).";
           await kyfrev.ouvrirVue();
         });
 

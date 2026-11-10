@@ -39,7 +39,7 @@
           <TextBlock x:Name="SourceName" Text="{Binding SourceName}" Style="{DynamicResource Kyf.Text.BodyStrong}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" Margin="12,0,0,0"
                      ToolTip="{Binding Source}" Visibility="{Binding HasSource, Converter={StaticResource Visible}}" />
         </DockPanel>
-        <TextBlock Text="{x:Static pages:SharingText.ImportReview}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,16,0,6" AutomationProperties.HeadingLevel="Level3" />
+        <TextBlock Text="{x:Static pages:SharingText.ImportReview}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,16,0,8" AutomationProperties.HeadingLevel="Level3" />
         <RadioButton x:Name="CopyOnlyChoice" GroupName="SuiviImport" IsChecked="{Binding CopiesOnly}" IsEnabled="{Binding IsIdle}" Margin="0,0,0,8"
                      AutomationProperties.Name="{x:Static pages:SharingText.ImportCopyOnly}" AutomationProperties.HelpText="{x:Static pages:SharingText.ImportCopyOnlyHelp}">
           <StackPanel>

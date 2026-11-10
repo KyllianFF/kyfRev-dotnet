@@ -315,7 +315,7 @@ public sealed class ExtensionEngineTests
             Assert.IsTrue(Wait(scene.Engine.ActAsync(ExtensionTemplate.BaseId, "compter", null, new Dictionary<string, string>())).Succeeded);
             StringAssert.Contains(TextOf(scene, ExtensionTemplate.BaseId), "Le compteur vaut 1", StringComparison.Ordinal);
             Assert.IsTrue(Wait(scene.Engine.CommandAsync(ExtensionTemplate.BaseId, "bonjour", new Dictionary<string, string>())).Succeeded);
-            StringAssert.Contains(TextOf(scene, ExtensionTemplate.BaseId), "Bonjour !", StringComparison.Ordinal);
+            StringAssert.Contains(TextOf(scene, ExtensionTemplate.BaseId), "vient de la recherche", StringComparison.Ordinal);
             Assert.IsEmpty(scene.Engine.Faults(ExtensionTemplate.BaseId));
         }
         finally
