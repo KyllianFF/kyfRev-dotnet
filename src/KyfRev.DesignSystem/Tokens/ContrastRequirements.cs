@@ -23,8 +23,8 @@ public static class ContrastRequirements
 
     private static readonly ColorRole[] Grounds = [ColorRole.Background, ColorRole.Surface, ColorRole.SurfaceAlt];
 
-    /// <summary>Rôles décoratifs, sans seuil : séparateurs, voile des dialogues et traits des tableaux.</summary>
-    public static ImmutableArray<ColorRole> Decorative { get; } = [ColorRole.Divider, ColorRole.Scrim, ColorRole.TableForestLine, ColorRole.TableAmberLine, ColorRole.TableSlateLine, ColorRole.TablePlumLine, ColorRole.TableInkLine];
+    /// <summary>Rôles décoratifs, sans seuil : séparateurs, filets, voile des dialogues et traits des tableaux.</summary>
+    public static ImmutableArray<ColorRole> Decorative { get; } = [ColorRole.Divider, ColorRole.Hairline, ColorRole.Scrim, ColorRole.TableForestLine, ColorRole.TableAmberLine, ColorRole.TableSlateLine, ColorRole.TablePlumLine, ColorRole.TableInkLine];
 
     /// <summary>Les paires exigées.</summary>
     public static ImmutableArray<ContrastRequirement> All { get; } =

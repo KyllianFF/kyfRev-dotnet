@@ -32,7 +32,7 @@
               <ItemsControl.ItemTemplate>
                 <DataTemplate DataType="{x:Type pages:OutlineEntry}">
                   <Button FocusVisualStyle="{DynamicResource Kyf.FocusVisual.Inset}" Style="{DynamicResource Kyf.Button.Subtle}" HorizontalContentAlignment="Left" HorizontalAlignment="Stretch" Click="OnOutlineEntryClick"
-                          AutomationProperties.Name="{Binding Title}" Padding="4,3">
+                          AutomationProperties.Name="{Binding Title}" Padding="4">
                     <TextBlock Text="{Binding Title}" Style="{StaticResource OutlineTitle}" Margin="{Binding Indent, Converter={x:Static pages:IndentConverter.Instance}}" />
                   </Button>
                 </DataTemplate>
@@ -211,7 +211,7 @@
             <TextBlock x:Name="SaveStateText" Text="{Binding Editor.StateLabel}" Style="{DynamicResource Kyf.Text.Secondary}" AutomationProperties.LiveSetting="Polite" />
           </Border>
           <!-- L'icône a le même identifiant que le texte qu'elle remplace : un lecteur d'écran lit et annonce l'état. -->
-          <Label x:Name="SaveStateIconHost" AutomationProperties.AutomationId="SaveStateText" Padding="0" VerticalAlignment="Center" Margin="0,0,10,0" Background="Transparent"
+          <Label x:Name="SaveStateIconHost" AutomationProperties.AutomationId="SaveStateText" Padding="0" VerticalAlignment="Center" Margin="0,0,12,0" Background="Transparent"
                   ToolTip="{Binding Editor.StateLabel}" AutomationProperties.Name="{Binding Editor.StateLabel}" AutomationProperties.LiveSetting="Polite">
             <Label.Style>
               <Style TargetType="Label">
@@ -258,25 +258,25 @@
             <!-- Les trois modes, groupés : un seul est choisi. -->
             <Border x:Name="ModeSwitch" BorderBrush="{DynamicResource Kyf.Brush.ControlBorder}" BorderThickness="1" CornerRadius="{DynamicResource Kyf.Radius.Control}" Padding="2">
               <StackPanel Orientation="Horizontal">
-                <ToggleButton x:Name="ReadToggle" IsChecked="{Binding IsReadOn}" Style="{DynamicResource Kyf.Button.Tool}" MinHeight="36" Padding="10,0"
+                <ToggleButton x:Name="ReadToggle" IsChecked="{Binding IsReadOn}" Style="{DynamicResource Kyf.Button.Tool}" MinHeight="36" Padding="12,0"
                               AutomationProperties.Name="{x:Static editing:EditingText.Read}">
                   <StackPanel Orientation="Horizontal">
                     <kyf:Icon Text="{x:Static kyf:Icons.Read}" VerticalAlignment="Center" />
-                    <TextBlock Text="{x:Static editing:EditingText.Read}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                    <TextBlock Text="{x:Static editing:EditingText.Read}" VerticalAlignment="Center" Margin="8,0,0,0" />
                   </StackPanel>
                 </ToggleButton>
-                <ToggleButton x:Name="ReviseToggle" IsChecked="{Binding IsReviseOn}" Style="{DynamicResource Kyf.Button.Tool}" MinHeight="36" Padding="10,0"
+                <ToggleButton x:Name="ReviseToggle" IsChecked="{Binding IsReviseOn}" Style="{DynamicResource Kyf.Button.Tool}" MinHeight="36" Padding="12,0"
                               AutomationProperties.Name="{x:Static pages:ReadingText.Revise}">
                   <StackPanel Orientation="Horizontal">
                     <kyf:Icon Text="{x:Static kyf:Icons.Review}" VerticalAlignment="Center" />
-                    <TextBlock Text="{x:Static pages:ReadingText.Revise}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                    <TextBlock Text="{x:Static pages:ReadingText.Revise}" VerticalAlignment="Center" Margin="8,0,0,0" />
                   </StackPanel>
                 </ToggleButton>
-                <ToggleButton x:Name="WriteToggle" IsChecked="{Binding IsWriteOn}" Style="{DynamicResource Kyf.Button.Tool}" MinHeight="36" Padding="10,0"
+                <ToggleButton x:Name="WriteToggle" IsChecked="{Binding IsWriteOn}" Style="{DynamicResource Kyf.Button.Tool}" MinHeight="36" Padding="12,0"
                               ToolTip="{x:Static editing:EditingText.WriteKey}" AutomationProperties.Name="{x:Static editing:EditingText.Write}">
                   <StackPanel Orientation="Horizontal">
                     <kyf:Icon Text="{x:Static kyf:Icons.Edit}" VerticalAlignment="Center" />
-                    <TextBlock Text="{x:Static editing:EditingText.Write}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                    <TextBlock Text="{x:Static editing:EditingText.Write}" VerticalAlignment="Center" Margin="8,0,0,0" />
                   </StackPanel>
                 </ToggleButton>
               </StackPanel>
@@ -358,7 +358,7 @@
                   </Style.Triggers>
                 </Style>
               </Border.Style>
-              <Button x:Name="HeaderMoreButton" Style="{DynamicResource Kyf.Button.Tool}" MinHeight="40" Padding="10,0" Click="OnHeaderMore"
+              <Button x:Name="HeaderMoreButton" Style="{DynamicResource Kyf.Button.Tool}" MinHeight="40" Padding="12,0" Click="OnHeaderMore"
                       ToolTip="{Binding PanelsMenuName}" AutomationProperties.Name="{Binding PanelsMenuName}">
                 <kyf:Icon Text="{x:Static kyf:Icons.More}" />
                 <Button.ContextMenu>
@@ -407,7 +407,7 @@
         </DockPanel>
 
         <!-- Une extension demande un texte : sa consigne, puis de quoi le prendre dans la fiche, l'écrire, passer ou terminer. -->
-        <Border x:Name="GuidedBar" DataContext="{Binding Guided}" Margin="16,0,16,8" Padding="12,10" CornerRadius="8" BorderThickness="1"
+        <Border x:Name="GuidedBar" DataContext="{Binding Guided}" Margin="16,0,16,8" Padding="12" CornerRadius="{DynamicResource Kyf.Radius.Control}" BorderThickness="1"
                 BorderBrush="{DynamicResource Kyf.Brush.Primary}" Background="{DynamicResource Kyf.Brush.Surface}"
                 Visibility="{Binding IsActive, Converter={StaticResource Visible}, FallbackValue=Collapsed}" AutomationProperties.Name="{Binding Prompt}">
           <StackPanel>
@@ -421,7 +421,7 @@
                 <Button x:Name="GuidedStop" Content="{x:Static pages:ReadingText.GuidedStop}" Command="{Binding StopSeriesCommand}" />
               </WrapPanel>
             </kyf:AdaptiveRow>
-            <TextBlock x:Name="GuidedHint" Text="{Binding Hint}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,6,0,0"
+            <TextBlock x:Name="GuidedHint" Text="{Binding Hint}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,8,0,0"
                        Visibility="{Binding HasHint, Converter={StaticResource Visible}}" AutomationProperties.LiveSetting="Polite" />
             <DockPanel Margin="0,8,0,0" Visibility="{Binding AllowsTyping, Converter={StaticResource Visible}}">
               <Button x:Name="GuidedTypeConfirm" DockPanel.Dock="Right" Content="{x:Static pages:ReadingText.GuidedTypeConfirm}" Command="{Binding TakeTypedCommand}" Margin="8,0,0,0" />
@@ -596,7 +596,7 @@
           <RowDefinition Height="*" />
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
-          <ColumnDefinition Width="210" />
+          <ColumnDefinition Width="208" />
           <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
         <TextBlock x:Name="HistorySummary" Grid.ColumnSpan="2" Text="{Binding Summary}" Style="{DynamicResource Kyf.Text.Secondary}" Margin="0,0,0,8"

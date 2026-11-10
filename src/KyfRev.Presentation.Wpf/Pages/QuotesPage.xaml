@@ -55,11 +55,11 @@
                     <DockPanel>
                       <StackPanel DockPanel.Dock="Bottom" Margin="0,8,0,0">
                         <TextBlock Text="{Binding Added}" Style="{DynamicResource Kyf.Text.Caption}" Visibility="{Binding HasAdded, Converter={StaticResource Visible}}" />
-                        <WrapPanel Margin="-6,4,0,0">
-                          <Button x:Name="OpenSource" Content="{Binding SourceLabel}" Command="{Binding OpenSource}" Style="{DynamicResource Kyf.Button.Subtle}" Margin="0,0,4,0"
+                        <WrapPanel Margin="-8,4,0,0">
+                          <Button x:Name="OpenSource" Content="{Binding SourceLabel}" Command="{Binding OpenSource}" Style="{DynamicResource Kyf.Button.Subtle}" Padding="8,0" Margin="0,0,8,0"
                                   AutomationProperties.Name="{Binding SourceName}" Visibility="{Binding HasSource, Converter={StaticResource Visible}}" />
-                          <Button x:Name="EditQuote" Content="{x:Static pages:QuotesText.Edit}" Command="{Binding Edit}" Style="{DynamicResource Kyf.Button.Subtle}" Margin="0,0,4,0" AutomationProperties.Name="{Binding EditName}" />
-                          <Button x:Name="TrashQuote" Content="{x:Static pages:QuotesText.Trash}" Command="{Binding Trash}" Style="{DynamicResource Kyf.Button.Subtle}" AutomationProperties.Name="{Binding TrashName}" />
+                          <Button x:Name="EditQuote" Content="{x:Static pages:QuotesText.Edit}" Command="{Binding Edit}" Style="{DynamicResource Kyf.Button.Subtle}" Padding="8,0" Margin="0,0,8,0" AutomationProperties.Name="{Binding EditName}" />
+                          <Button x:Name="TrashQuote" Content="{x:Static pages:QuotesText.Trash}" Command="{Binding Trash}" Style="{DynamicResource Kyf.Button.Subtle}" Padding="8,0" AutomationProperties.Name="{Binding TrashName}" />
                         </WrapPanel>
                       </StackPanel>
                       <StackPanel>

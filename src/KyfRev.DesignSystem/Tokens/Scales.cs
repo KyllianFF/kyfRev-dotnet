@@ -105,19 +105,31 @@ public static class Radii
 /// <param name="BlurRadius">Flou de l'ombre.</param>
 /// <param name="Depth">Décalage vers le bas.</param>
 /// <param name="Opacity">Opacité de l'ombre.</param>
-public sealed record Elevation(string Name, double BlurRadius, double Depth, double Opacity)
+/// <param name="Floats">Vrai pour ce qui flotte au-dessus de la page (menus, dialogues), faux pour une carte posée dessus.</param>
+public sealed record Elevation(string Name, double BlurRadius, double Depth, double Opacity, bool Floats)
 {
-    /// <summary>Cartes posées sur le fond : une ombre douce et large, à peine visible.</summary>
-    public static Elevation Card { get; } = new("Card", 20, 4, 0.08);
+    /// <summary>Cartes posées sur le fond : une ombre douce et large, à peine visible ; aucune en thème sombre.</summary>
+    public static Elevation Card { get; } = new("Card", 20, 4, 0.08, Floats: false);
 
     /// <summary>Menus, infobulles, listes déroulantes.</summary>
-    public static Elevation Flyout { get; } = new("Flyout", 16, 4, 0.16);
+    public static Elevation Flyout { get; } = new("Flyout", 16, 4, 0.16, Floats: true);
 
     /// <summary>Dialogues.</summary>
-    public static Elevation Dialog { get; } = new("Dialog", 40, 12, 0.24);
+    public static Elevation Dialog { get; } = new("Dialog", 40, 12, 0.24, Floats: true);
 
-    /// <summary>Les élévations : tout le reste est à plat ; en contraste élevé, aucune ombre, le contour suffit.</summary>
+    /// <summary>
+    /// Les élévations : tout le reste est à plat. En thème sombre, une carte se détache par sa surface et son filet, pas par
+    /// une ombre ; seul ce qui flotte en garde une. En contraste élevé, aucune ombre, le contour suffit.
+    /// </summary>
     public static ImmutableArray<Elevation> All { get; } = [Card, Flyout, Dialog];
+
+    /// <summary>Vrai si l'élévation porte une ombre dans le thème <paramref name="theme"/>.</summary>
+    public bool CastsShadowIn(ThemeKind theme) => theme switch
+    {
+        ThemeKind.HighContrast => false,
+        ThemeKind.Dark => Floats,
+        _ => true,
+    };
 }
 
 /// <summary>

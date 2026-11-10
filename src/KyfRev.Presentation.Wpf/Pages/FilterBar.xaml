@@ -49,7 +49,7 @@
             </Style>
           </Border.Style>
           <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-            <kyf:Icon Text="&#xE71C;" Margin="0,0,6,0" />
+            <kyf:Icon Text="&#xE71C;" Margin="0,0,8,0" />
             <TextBlock x:Name="ToggleLabel" Text="{Binding ToggleLabel}" VerticalAlignment="Center" />
           </StackPanel>
         </Border>
@@ -63,7 +63,7 @@
         </ItemsPanelTemplate>
       </ItemsControl.ItemsPanel>
     </ItemsControl>
-    <ItemsControl x:Name="ActiveFilters" ItemsSource="{Binding ActiveFilters}" Focusable="False" Margin="0,6,0,0"
+    <ItemsControl x:Name="ActiveFilters" ItemsSource="{Binding ActiveFilters}" Focusable="False" Margin="0,8,0,0"
                   Visibility="{Binding ShowsActive, Converter={StaticResource Visible}}">
       <ItemsControl.ItemsPanel>
         <ItemsPanelTemplate>
@@ -72,13 +72,13 @@
       </ItemsControl.ItemsPanel>
       <ItemsControl.ItemTemplate>
         <DataTemplate>
-          <Button x:Name="RemoveFilter" Style="{DynamicResource Kyf.Button.Subtle}" Padding="0" Margin="0,0,6,4" MinHeight="32"
+          <Button x:Name="RemoveFilter" Style="{DynamicResource Kyf.Button.Subtle}" Padding="0" Margin="0,0,8,8" MinHeight="32"
                   HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
                   Command="{Binding ClearCommand}" AutomationProperties.Name="{Binding RemoveName}">
-            <Border Background="{DynamicResource Kyf.Brush.NavigationActiveBackground}" CornerRadius="{DynamicResource Kyf.Radius.Control}" Padding="10,0">
+            <Border Background="{DynamicResource Kyf.Brush.NavigationActiveBackground}" CornerRadius="{DynamicResource Kyf.Radius.Control}" Padding="12,0">
               <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                 <TextBlock Text="{Binding Name}" FontSize="{DynamicResource Kyf.FontSize.Caption}" Foreground="{DynamicResource Kyf.Brush.NavigationActiveText}" VerticalAlignment="Center" />
-                <kyf:Icon Text="&#xE711;" FontSize="10" Foreground="{DynamicResource Kyf.Brush.NavigationActiveText}" Margin="6,0,0,0" />
+                <kyf:Icon Text="&#xE711;" FontSize="10" Foreground="{DynamicResource Kyf.Brush.NavigationActiveText}" Margin="8,0,0,0" />
               </StackPanel>
             </Border>
           </Button>

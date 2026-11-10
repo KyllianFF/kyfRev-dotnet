@@ -110,7 +110,6 @@
           <Setter TargetName="Heading" Property="Background" Value="{DynamicResource Kyf.Brush.PillPassageBackground}" />
         </DataTrigger>
         <DataTrigger Binding="{Binding Heading}" Value="Hidden">
-          <Setter TargetName="Heading" Property="FontStyle" Value="Italic" />
           <Setter TargetName="Heading" Property="FontWeight" Value="Normal" />
           <Setter TargetName="Heading" Property="Foreground" Value="{DynamicResource Kyf.Brush.TextSecondary}" />
         </DataTrigger>
@@ -252,7 +251,7 @@
         <StackPanel>
           <TextBlock Text="{Binding Text}" Style="{DynamicResource Kyf.Text.BodyLarge}" TextWrapping="Wrap"
                      Foreground="{DynamicResource Kyf.Brush.NavigationActiveText}" />
-          <TextBlock x:Name="Credit" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,6,0,0"
+          <TextBlock x:Name="Credit" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,8,0,0"
                      Foreground="{DynamicResource Kyf.Brush.NavigationActiveText}"><Run x:Name="Detail" Text="{Binding Detail, Mode=OneWay}" /><Run x:Name="Separator" Text=" · " /><Run Text="{Binding Title, Mode=OneWay}" /></TextBlock>
         </StackPanel>
       </Border>
@@ -399,7 +398,7 @@
               </ItemsControl.ItemsPanel>
               <ItemsControl.ItemTemplate>
                 <DataTemplate DataType="{x:Type pages:HeroChip}">
-                  <kyf:Pill Kind="{Binding Kind}" Text="{Binding Text}" Margin="0,4,6,0" />
+                  <kyf:Pill Kind="{Binding Kind}" Text="{Binding Text}" Margin="0,4,8,0" />
                 </DataTemplate>
               </ItemsControl.ItemTemplate>
             </ItemsControl>

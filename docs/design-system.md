@@ -44,7 +44,7 @@ hexadécimale ou couleur nommée).
 
 ### Rôles
 
-Les composants n'emploient que des rôles (`ColorRole`, 38 rôles), traduits en couleur par le
+Les composants n'emploient que des rôles (`ColorRole`, 64 rôles), traduits en couleur par le
 thème (`ThemeColors`) :
 
 | Rôle | Clair (Jour) | Sombre (Veillée) | Contraste élevé |
@@ -56,6 +56,7 @@ thème (`ThemeColors`) :
 | `Link`, `Focus` | forêt 700 | forêt 300 | lien, texte de fenêtre |
 | `ControlBorder` | `#77837a` | `#877e70` | texte de fenêtre |
 | `Divider` (décoratif) | `#d3d9d0` | `#38332b` | texte de fenêtre |
+| `Hairline` (décoratif, filet) | texte à 10 % | texte à 10 % | texte de fenêtre |
 | Repères Fiche, Passage, Rappel | forêt 700, ambre 700, texte secondaire | forêt 300, ambre 300, texte secondaire | texte de fenêtre |
 | Pastilles Fiche, Passage | texte 800 sur fond 100 | texte 100 sur fond 900 | texte sur fenêtre |
 | `Selection`, `Highlight`, `HighlightActive` | forêt 200, ambre 200, ambre 300 | forêt 800, ambre 800, ambre 700 | mise en évidence |
@@ -90,7 +91,7 @@ vérifient toutes, dans chaque thème :
 | Polices | Atkinson Hyperlegible Next (interface, titres, fiches) et Atkinson Hyperlegible Mono (étapes, dates, compteurs, code), livrées avec kyfRev ; Segoe Fluent Icons ou Segoe MDL2 Assets (icônes) |
 | Espacements | grille de 4 px : 4, 8, 12, 16, 20, 24, 32, 40, 48 |
 | Rayons | 12 (contrôles), 20 (cartes, menus), 24 (dialogues) ; pastilles en arrondi complet |
-| Élévations | « Card » (ombre douce des cartes), « Flyout » (menus) et « Dialog » ; aucune en contraste élevé |
+| Élévations | « Card » (ombre douce des cartes, en thème clair seulement : en sombre, la surface et son filet suffisent), « Flyout » (menus) et « Dialog » ; aucune en contraste élevé |
 | Tailles | contrôles de 40 px de haut au moins, 44 pour le bouton principal et les éléments de liste |
 | Durées | 120 et 220 ms, décélération douce ; nulles, et squelettes immobiles, si Windows demande de réduire les animations |
 
@@ -106,6 +107,20 @@ fois l'application installée. Elles viennent des dépôts officiels, à un comm
 | Atkinson Hyperlegible Next | Regular, Italic, SemiBold, SemiBoldItalic, Bold, BoldItalic | `googlefonts/atkinson-hyperlegible-next` à `7925f50f` |
 | Atkinson Hyperlegible Mono | Regular, SemiBold | `googlefonts/atkinson-hyperlegible-next-mono` à `154d5036` |
 
+## Finition
+
+- Tout espacement et toute hauteur fixe tombent sur la grille de 4 px. Restent hors grille les valeurs
+  qui centrent ou alignent exactement : une case de 18 px sur une ligne de 24, l'aide alignée sous le
+  libellé d'une case (26 px), la géométrie de la frise.
+- Entre une icône et son libellé, 8 px dans un bouton, 12 dans une ligne de liste ou de menu.
+- Les chiffres (compteurs, durées, statistiques) sont en Atkinson Hyperlegible Mono, alignés à droite
+  quand ils forment une colonne.
+- Pas d'italique pour distinguer un élément : la couleur secondaire le fait (un passage caché, un
+  aperçu vide).
+- Un compteur est un nombre discret, pas une pastille pleine ; une nouveauté est un mot, pas un badge.
+- Un trait de couleur ne borde que les contrôles et le focus ; un encadré teinté a un filet (`Hairline`).
+- Le texte d'un bouton discret s'aligne sur le texte de la carte qui le porte.
+
 ## Composants
 
 | Composant | Code | Rôle |
@@ -116,14 +131,14 @@ fois l'application installée. Elles viennent des dépôts officiels, à un comm
 | Liste de choix | style de `ComboBox` | comme un champ, et sa liste comme un menu ; suit le thème |
 | Champ de date | `DateField` (`Day`, `Minimum`, `Maximum`) | une date qui se tape (jj/mm/aaaa) ou se choisit dans un calendrier en français, la semaine commençant le lundi ; hors des limites, elle est refusée : le champ se vide, dit pourquoi par écrit et au lecteur d'écran, et `Day` ne vaut plus rien, pour qu'aucune action ne parte sur la date d'avant ; Alt+Bas ouvre le calendrier, Échap le ferme sans fermer le dialogue autour, Entrée reste au bouton par défaut, sauf sur une date refusée |
 | Carte | `Card`, repère `Marker` (fiche, passage, rappel) | ombre douce ; le repère est un court trait en haut |
-| Pastille | `Pill`, sorte `Kind` | icône et libellé : fiche, passage, rappel, retard, archivée, à vérifier, aujourd'hui |
+| Pastille | `Pill`, sorte `Kind` | icône et libellé, 24 px de haut : fiche, passage, rappel, retard, archivée, à vérifier, aujourd'hui |
 | Menu | styles de `ContextMenu`, `Menu`, `MenuItem` | coche, raccourci, sous-menus ; au clic droit, les actions rapides en tête (`Kyf.MenuItem.Quick`), une rangée d'outils dessous (`Kyf.MenuItem.Tool`), disposées par `ActionMenuPanel` ; les champs de texte reçoivent le leur en se chargeant |
 | Listes | styles de `ListBox`, `ListBoxItem` | survol, élément choisi : fond vert pâle et texte en gras (menu de la coquille) |
 | Icône | `Icon` | décorative : police d'icônes de Windows, ignorée par le lecteur d'écran |
 | Dialogue | `Dialog` | voile, focus tenu à l'intérieur et rendu à la fermeture à ce qui le tenait, Échap ferme, Entrée valide ; trop haut pour la fenêtre, son contenu défile entre le titre et les boutons ; ce qui compte (`IsDestructive`) a un bouton rouge, qu'Entrée ne déclenche pas ; pendant un travail lancé de là (`IsWorking`), le focus attend sur le bouton secondaire, qu'Entrée ne déclenche pas, et revient au bouton principal à la fin |
 | Case à cocher, bouton radio | styles de `CheckBox`, `RadioButton` | la case carrée, le bouton rond ; la couleur principale quand ils sont choisis, le contour épaissi au focus |
 | Barre de progression | style de `ProgressBar` | une piste discrète, la part faite à la couleur principale ; nommée pour le lecteur d'écran |
-| Notification | `Notification`, gravité `Severity` | annoncée par le lecteur d'écran quand elle paraît (tout de suite pour une erreur) ; avec `ScrollsIntoView`, la zone qui défile l'amène à la vue |
+| Notification | `Notification`, gravité `Severity` | le fond et l'icône disent la gravité, un filet discret la borde (jamais un trait de couleur) ; annoncée par le lecteur d'écran quand elle paraît (tout de suite pour une erreur) ; avec `ScrollsIntoView`, la zone qui défile l'amène à la vue |
 | Texte d'état | `StatusText`, avec un style `Kyf.Text.*` | un message sans cadre, dit par le lecteur d'écran chaque fois qu'il paraît |
 | Texte annoncé | `LiveText` | un texte qui change et que le lecteur d'écran dit aussitôt : déclarer une région active ne suffit pas à WPF ; poli par défaut |
 | État vide | `EmptyState` | icône, titre, explication, action |

@@ -46,6 +46,7 @@ public sealed partial class ResourceTests
         Assert.AreEqual(Typography.Title.LineHeight, (double)resources[DesignKeys.LineHeight(Typography.Title)]);
         Assert.AreEqual(new CornerRadius(Radii.Card), (CornerRadius)resources[DesignKeys.CardRadius]);
         Assert.IsNotNull(resources[DesignKeys.Shadow(Elevation.Dialog)]);
+        Assert.IsNull(resources[DesignKeys.Shadow(Elevation.Card)], "en thème sombre, une carte se détache par sa surface et son filet");
     }
 
     [STATestMethod]

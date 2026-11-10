@@ -12,7 +12,7 @@
   <!-- Toute la carte ouvre la fiche : au clavier, Entrée sur le lien fait la même chose, et le focus reste dans le texte. -->
   <kyf:Card x:Name="Card" Padding="0">
     <Button x:Name="OpenButton" Style="{DynamicResource Kyf.Button.Subtle}" Command="{Binding OpenCommand}" Focusable="False" IsTabStop="False"
-            HorizontalContentAlignment="Stretch" Padding="14,12" AutomationProperties.Name="{Binding OpenName}">
+            HorizontalContentAlignment="Stretch" Padding="16,12" AutomationProperties.Name="{Binding OpenName}">
       <StackPanel>
         <TextBlock Text="{Binding Folder}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,0,0,4"
                    Visibility="{Binding HasFolder, Converter={StaticResource Visible}}" />
@@ -21,10 +21,10 @@
                    Visibility="{Binding HasTags, Converter={StaticResource Visible}}" />
         <TextBlock x:Name="PreviewExcerpt" Text="{Binding Excerpt}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" Margin="0,4,0,0"
                    Visibility="{Binding HasText, Converter={StaticResource Visible}}" />
-        <TextBlock x:Name="PreviewNoText" Text="{Binding Excerpt}" Style="{DynamicResource Kyf.Text.Secondary}" FontStyle="Italic" TextWrapping="Wrap" Margin="0,4,0,0"
+        <TextBlock x:Name="PreviewNoText" Text="{Binding Excerpt}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="0,4,0,0"
                    Visibility="{Binding IsEmpty, Converter={StaticResource Visible}}" />
-        <kyf:Pill Kind="Archived" Text="{x:Static pages:ReadingText.Archived}" HorizontalAlignment="Left" Margin="0,6,0,0" Visibility="{Binding IsArchived, Converter={StaticResource Visible}}" />
-        <TextBlock x:Name="PreviewStep" Text="{Binding Step}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,6,0,0"
+        <kyf:Pill Kind="Archived" Text="{x:Static pages:ReadingText.Archived}" HorizontalAlignment="Left" Margin="0,8,0,0" Visibility="{Binding IsArchived, Converter={StaticResource Visible}}" />
+        <TextBlock x:Name="PreviewStep" Text="{Binding Step}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,8,0,0"
                    Visibility="{Binding HasStep, Converter={StaticResource Visible}}" />
       </StackPanel>
     </Button>

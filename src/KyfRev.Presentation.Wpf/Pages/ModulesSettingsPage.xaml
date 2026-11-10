@@ -123,7 +123,7 @@
                               <CheckBox x:Name="ExtensionRight" IsChecked="{Binding IsGranted}" IsEnabled="{Binding IsAvailable}" Margin="0,4,0,0" AutomationProperties.Name="{Binding Spoken}"
                                         ToolTip="{x:Static pages:ModulesSettingsText.ExtensionRightsHelp}">
                                 <DockPanel>
-                                  <kyf:Icon x:Name="RiskGlyph" DockPanel.Dock="Left" Text="{Binding Glyph}" Margin="0,1,6,0" VerticalAlignment="Top" Foreground="{DynamicResource Kyf.Brush.TextSecondary}" />
+                                  <kyf:Icon x:Name="RiskGlyph" DockPanel.Dock="Left" Text="{Binding Glyph}" Margin="0,2,8,0" VerticalAlignment="Top" Foreground="{DynamicResource Kyf.Brush.TextSecondary}" />
                                   <TextBlock x:Name="RightText" Text="{Binding Text}" TextWrapping="Wrap" />
                                 </DockPanel>
                               </CheckBox>
@@ -142,7 +142,7 @@
                       </StackPanel>
                       <StackPanel x:Name="ExtensionDeveloper" Margin="26,8,0,0" Visibility="{Binding IsDeveloper, Converter={StaticResource Visible}}">
                         <TextBlock x:Name="ExtensionSource" Text="{Binding SourceText}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" />
-                        <Button x:Name="ReloadExtension" Content="{x:Static pages:ModulesSettingsText.ExtensionReload}" HorizontalAlignment="Left" Margin="0,6,0,0"
+                        <Button x:Name="ReloadExtension" Content="{x:Static pages:ModulesSettingsText.ExtensionReload}" HorizontalAlignment="Left" Margin="0,8,0,0"
                                 Command="{Binding DataContext.ReloadCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" AutomationProperties.Name="{Binding ReloadName}" />
                         <TextBlock Text="{x:Static pages:ModulesSettingsText.ExtensionFaultsTitle}" Style="{DynamicResource Kyf.Text.Caption}" FontWeight="SemiBold" Margin="0,8,0,0" />
                         <TextBlock x:Name="ExtensionNoFaults" Text="{x:Static pages:ModulesSettingsText.ExtensionNoFaults}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Visibility="{Binding HasNoFaults, Converter={StaticResource Visible}}" />
@@ -169,7 +169,7 @@
             <ItemsControl x:Name="ExtensionJournalList" ItemsSource="{Binding Journal}" Focusable="False" AutomationProperties.Name="{x:Static pages:ModulesSettingsText.ExtensionJournalTitle}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate DataType="{x:Type pages:ExtensionJournalRow}">
-                  <StackPanel Margin="0,6,0,0" AutomationProperties.Name="{Binding Spoken}">
+                  <StackPanel Margin="0,8,0,0" AutomationProperties.Name="{Binding Spoken}">
                     <TextBlock Text="{Binding Text}" TextWrapping="Wrap" />
                     <TextBlock Text="{Binding When}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" />
                   </StackPanel>
@@ -194,7 +194,7 @@
           <ItemsControl.ItemTemplate>
             <DataTemplate>
               <DockPanel Margin="0,2,0,0">
-                <TextBlock DockPanel.Dock="Left" Text="•" Margin="4,0,10,0" Foreground="{DynamicResource Kyf.Brush.TextSecondary}" />
+                <TextBlock DockPanel.Dock="Left" Text="•" Margin="4,0,8,0" Foreground="{DynamicResource Kyf.Brush.TextSecondary}" />
                 <TextBlock Text="{Binding}" TextWrapping="Wrap" />
               </DockPanel>
             </DataTemplate>
@@ -206,12 +206,10 @@
       <ItemsControl x:Name="InstallRights" ItemsSource="{Binding InstallRights}" Focusable="False" AutomationProperties.Name="{x:Static pages:ModulesSettingsText.ExtensionRightsTitle}">
         <ItemsControl.ItemTemplate>
           <DataTemplate DataType="{x:Type pages:ExtensionRightRow}">
-            <DockPanel Margin="0,3,0,0" AutomationProperties.Name="{Binding Spoken}">
-              <kyf:Icon x:Name="RiskGlyph" DockPanel.Dock="Left" Text="{Binding Glyph}" Margin="0,2,10,0" VerticalAlignment="Top" Foreground="{DynamicResource Kyf.Brush.TextSecondary}" />
-              <Border x:Name="NewPill" DockPanel.Dock="Right" VerticalAlignment="Top" Margin="8,0,0,0" Padding="6,1" CornerRadius="8" Background="{DynamicResource Kyf.Brush.WarningBackground}"
-                      Visibility="{Binding IsNew, Converter={StaticResource Visible}}">
-                <TextBlock Text="{x:Static pages:ModulesSettingsText.ExtensionRightNew}" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource Kyf.Brush.Text}" />
-              </Border>
+            <DockPanel Margin="0,4,0,0" AutomationProperties.Name="{Binding Spoken}">
+              <kyf:Icon x:Name="RiskGlyph" DockPanel.Dock="Left" Text="{Binding Glyph}" Margin="0,2,8,0" VerticalAlignment="Top" Foreground="{DynamicResource Kyf.Brush.TextSecondary}" />
+              <TextBlock x:Name="NewRight" DockPanel.Dock="Right" VerticalAlignment="Top" Margin="8,0,0,0" Text="{x:Static pages:ModulesSettingsText.ExtensionRightNew}"
+                         Style="{DynamicResource Kyf.Text.Caption}" Foreground="{DynamicResource Kyf.Brush.Warning}" Visibility="{Binding IsNew, Converter={StaticResource Visible}}" />
               <StackPanel>
                 <TextBlock x:Name="RightText" Text="{Binding Text}" TextWrapping="Wrap" />
                 <TextBlock Text="{x:Static pages:ModulesSettingsText.ExtensionRightKeptWithdrawn}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap"

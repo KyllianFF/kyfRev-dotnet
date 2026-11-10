@@ -96,8 +96,7 @@ public sealed class DesignResources
         }
         foreach (var elevation in Elevation.All)
         {
-            // Contraste élevé : pas d'ombre, le contour suffit.
-            dictionary[DesignKeys.Shadow(elevation)] = theme == ThemeKind.HighContrast ? null : Shadow(elevation);
+            dictionary[DesignKeys.Shadow(elevation)] = elevation.CastsShadowIn(theme) ? Shadow(elevation) : null;
         }
         return dictionary;
     }

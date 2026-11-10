@@ -53,10 +53,10 @@
                     <ContextMenu />
                   </kyf:Card.ContextMenu>
                   <DockPanel>
-                    <!-- En bas de la carte : d'une carte à l'autre, les boutons d'une rangée s'alignent. -->
-                    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="-6,6,0,0" Visibility="{Binding IsShown, Converter={StaticResource Visible}}">
-                      <Button Content="{x:Static pages:DefinitionsText.SeeInSheet}" Command="{Binding OpenCommand}" Style="{DynamicResource Kyf.Button.Subtle}" />
-                      <Button Content="{x:Static pages:DefinitionsText.Edit}" Command="{Binding EditCommand}" Style="{DynamicResource Kyf.Button.Subtle}" Margin="4,0,0,0" />
+                    <!-- En bas de la carte : d'une carte à l'autre, les boutons d'une rangée s'alignent, et leur texte sur celui de la carte. -->
+                    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="-8,8,0,0" Visibility="{Binding IsShown, Converter={StaticResource Visible}}">
+                      <Button Content="{x:Static pages:DefinitionsText.SeeInSheet}" Command="{Binding OpenCommand}" Style="{DynamicResource Kyf.Button.Subtle}" Padding="8,0" />
+                      <Button Content="{x:Static pages:DefinitionsText.Edit}" Command="{Binding EditCommand}" Style="{DynamicResource Kyf.Button.Subtle}" Padding="8,0" Margin="8,0,0,0" />
                     </StackPanel>
                     <StackPanel>
                       <StackPanel Visibility="{Binding IsShown, Converter={StaticResource Visible}}">

@@ -16,10 +16,10 @@
     <value>Revenir à Aujourd'hui</value>
   </data>
   <data name="Done" xml:space="preserve">
-    <value>Faits : {0}</value>
+    <value>Faits</value>
   </data>
   <data name="Duration" xml:space="preserve">
-    <value>Durée : {0}</value>
+    <value>Durée</value>
   </data>
   <data name="ExitFullScreen" xml:space="preserve">
     <value>Quitter le plein écran</value>
@@ -37,7 +37,7 @@
     <value>Suivant</value>
   </data>
   <data name="Postponed" xml:space="preserve">
-    <value>Reportés : {0}</value>
+    <value>Reportés</value>
   </data>
   <data name="Progress" xml:space="preserve">
     <value>Séance : {0} / {1}</value>
@@ -46,7 +46,7 @@
     <value>Progression de la séance : élément {0} sur {1}</value>
   </data>
   <data name="Remaining" xml:space="preserve">
-    <value>Restants : {0}</value>
+    <value>Restants</value>
   </data>
   <data name="ResumeMany" xml:space="preserve">
     <value>Reprendre la séance ({0} restants)</value>

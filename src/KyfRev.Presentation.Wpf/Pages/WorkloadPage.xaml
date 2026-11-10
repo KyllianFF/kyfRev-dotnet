@@ -61,7 +61,7 @@
       <Grid ToolTip="{Binding Name}" Background="Transparent">
         <Grid.RowDefinitions>
           <RowDefinition Height="{Binding PlotHeight}" />
-          <RowDefinition Height="42" />
+          <RowDefinition Height="40" />
         </Grid.RowDefinitions>
         <Border x:Name="Weekend" Grid.RowSpan="2" Background="{DynamicResource Kyf.Brush.SurfaceAlt}" Opacity="0.5" Visibility="{Binding IsWeekend, Converter={StaticResource Visible}}" />
         <Border x:Name="Average" Height="{Binding AverageHeight}" VerticalAlignment="Bottom" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource Kyf.Brush.TextSecondary}" Opacity="0.6" />
@@ -73,7 +73,7 @@
           <Border x:Name="Due" Style="{StaticResource DueBar}" Height="{Binding DueHeight}" />
         </StackPanel>
         <Border VerticalAlignment="Bottom" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource Kyf.Brush.Divider}" />
-        <StackPanel Grid.Row="1" Margin="0,3,0,0">
+        <StackPanel Grid.Row="1" Margin="0,4,0,0">
           <TextBlock x:Name="Label" Text="{Binding Label}" Style="{DynamicResource Kyf.Text.Caption}" HorizontalAlignment="Center" FontSize="11" />
           <TextBlock x:Name="Month" Text="{Binding Month}" Style="{DynamicResource Kyf.Text.Caption}" HorizontalAlignment="Center" FontSize="10" />
         </StackPanel>
@@ -121,8 +121,8 @@
           <Setter TargetName="Late" Property="Visibility" Value="Collapsed" />
         </DataTrigger>
         <DataTrigger Binding="{Binding Heading}" Value="Hidden">
-          <Setter TargetName="Heading" Property="FontStyle" Value="Italic" />
           <Setter TargetName="Heading" Property="FontWeight" Value="Normal" />
+          <Setter TargetName="Heading" Property="Foreground" Value="{DynamicResource Kyf.Brush.TextSecondary}" />
         </DataTrigger>
       </DataTemplate.Triggers>
     </DataTemplate>
@@ -138,7 +138,7 @@
       </DockPanel>
       <DataTemplate.Triggers>
         <DataTrigger Binding="{Binding IsHidden}" Value="True">
-          <Setter TargetName="Heading" Property="FontStyle" Value="Italic" />
+          <Setter TargetName="Heading" Property="Foreground" Value="{DynamicResource Kyf.Brush.TextSecondary}" />
         </DataTrigger>
       </DataTemplate.Triggers>
     </DataTemplate>
@@ -185,15 +185,15 @@
             <TextBlock x:Name="Summary" Text="{Binding Summary}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" />
             <WrapPanel x:Name="Legend" Margin="0,4,0,8" AutomationProperties.Name="{x:Static pages:WorkloadText.Legend}">
               <StackPanel Orientation="Horizontal" Margin="0,0,16,4">
-                <Border Style="{StaticResource DueBar}" Width="10" Height="10" CornerRadius="2" Margin="0,0,6,0" />
+                <Border Style="{StaticResource DueBar}" Width="10" Height="10" CornerRadius="2" Margin="0,0,8,0" />
                 <TextBlock Text="{x:Static pages:WorkloadText.LegendDue}" Style="{DynamicResource Kyf.Text.Caption}" />
               </StackPanel>
               <StackPanel Orientation="Horizontal" Margin="0,0,16,4">
-                <Border Style="{StaticResource ProjectedBar}" Width="10" Height="10" CornerRadius="2" Margin="0,0,6,0" />
+                <Border Style="{StaticResource ProjectedBar}" Width="10" Height="10" CornerRadius="2" Margin="0,0,8,0" />
                 <TextBlock Text="{x:Static pages:WorkloadText.LegendProjected}" Style="{DynamicResource Kyf.Text.Caption}" />
               </StackPanel>
               <StackPanel Orientation="Horizontal" Margin="0,0,16,4">
-                <Border Width="12" Height="1" VerticalAlignment="Center" Background="{DynamicResource Kyf.Brush.TextSecondary}" Margin="0,0,6,0" />
+                <Border Width="12" Height="1" VerticalAlignment="Center" Background="{DynamicResource Kyf.Brush.TextSecondary}" Margin="0,0,8,0" />
                 <TextBlock Text="{x:Static pages:WorkloadText.LegendAverage}" Style="{DynamicResource Kyf.Text.Caption}" />
               </StackPanel>
             </WrapPanel>

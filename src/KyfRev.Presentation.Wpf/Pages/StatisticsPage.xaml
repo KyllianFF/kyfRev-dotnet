@@ -7,12 +7,12 @@
   <UserControl.Resources>
     <BooleanToVisibilityConverter x:Key="Visible" />
 
-    <!-- Un chiffre clé. -->
+    <!-- Un chiffre clé, en chasse fixe comme tous les compteurs. -->
     <DataTemplate DataType="{x:Type pages:StatisticsTile}">
       <kyf:Card Margin="0,0,8,8" Padding="16,12" AutomationProperties.Name="{Binding Spoken}">
         <StackPanel>
           <TextBlock Text="{Binding Label}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" />
-          <TextBlock Text="{Binding Value}" FontSize="28" FontWeight="SemiBold" Foreground="{DynamicResource Kyf.Brush.Text}" Margin="0,2,0,2" TextWrapping="Wrap" />
+          <TextBlock Text="{Binding Value}" FontFamily="{DynamicResource Kyf.Font.Code}" FontSize="28" FontWeight="SemiBold" Foreground="{DynamicResource Kyf.Brush.Text}" Margin="0,4" TextWrapping="Wrap" />
           <ItemsControl ItemsSource="{Binding Details}" Focusable="False">
             <ItemsControl.ItemTemplate>
               <DataTemplate>

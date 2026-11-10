@@ -14,8 +14,8 @@
       <!-- L'en-tête d'un dossier : décalé selon sa profondeur, il se plie et se déplie. -->
       <DataTemplate DataType="{x:Type pages:SheetFolderRow}">
         <DockPanel Margin="{Binding Indent}">
-          <kyf:Icon Text="{Binding Chevron}" FontSize="12" Margin="0,0,6,0" Visibility="{Binding IsFolder, Converter={StaticResource Visible}}" />
-          <kyf:Icon Text="{x:Static kyf:Icons.Warning}" Foreground="{DynamicResource Kyf.Brush.Warning}" FontSize="12" Margin="0,0,6,0"
+          <kyf:Icon Text="{Binding Chevron}" FontSize="12" Margin="0,0,8,0" Visibility="{Binding IsFolder, Converter={StaticResource Visible}}" />
+          <kyf:Icon Text="{x:Static kyf:Icons.Warning}" Foreground="{DynamicResource Kyf.Brush.Warning}" FontSize="12" Margin="0,0,8,0"
                     ToolTip="{x:Static pages:SheetActionsText.TooDeep}" Visibility="{Binding IsTooDeep, Converter={StaticResource Visible}}" />
           <TextBlock Text="{Binding}" Style="{DynamicResource Kyf.Text.BodyStrong}" TextTrimming="CharacterEllipsis" />
         </DockPanel>
@@ -149,7 +149,7 @@
                                   AllowDrop="True" PreviewMouseLeftButtonDown="OnItemsPressed" PreviewMouseMove="OnItemsMoved"
                                   DragOver="OnItemsDragOver" Drop="OnItemsDrop" DragLeave="OnItemsDragLeave" />
               <!-- Pendant un glisser-déposer : où la fiche irait, même si l'en-tête du dossier n'est pas à l'écran. -->
-              <Border x:Name="DropHintBox" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="8" Padding="12,6" IsHitTestVisible="False"
+              <Border x:Name="DropHintBox" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="8" Padding="12,8" IsHitTestVisible="False"
                       Background="{DynamicResource Kyf.Brush.Primary}" CornerRadius="{DynamicResource Kyf.Radius.Control}"
                       Visibility="{Binding HasDropHint, Converter={StaticResource Visible}}">
                 <TextBlock Text="{Binding DropHint}" Foreground="{DynamicResource Kyf.Brush.OnPrimary}" TextWrapping="Wrap" />

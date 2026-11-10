@@ -59,10 +59,10 @@ public sealed class SessionTests
         Assert.IsNull(session.Current);
         Assert.AreEqual(1, session.Progress);
         Assert.AreEqual("3 éléments passés en revue.", session.Summary);
-        Assert.AreEqual("Durée : 1 min 20 s", session.DurationText);
-        Assert.AreEqual("Faits : 1", session.DoneText);
-        Assert.AreEqual("Reportés : 1", session.PostponedText);
-        Assert.AreEqual("Restants : 1", session.RemainingText);
+        Assert.AreEqual("1 min 20 s", session.Duration);
+        Assert.AreEqual(1, session.DoneCount);
+        Assert.AreEqual(1, session.PostponedCount);
+        Assert.AreEqual(1, session.RemainingCount);
         Assert.IsTrue(vault.Sessions.Forgotten, "une séance terminée est oubliée");
         Assert.IsFalse(session.NextCommand.CanExecute(null));
         Assert.IsFalse(session.EndCommand.CanExecute(null));
@@ -100,10 +100,10 @@ public sealed class SessionTests
 
         // Terminée tout de suite : l'élément en cours et le suivant restent à faire.
         resumed.EndCommand.Execute(null);
-        Assert.AreEqual("Faits : 1", resumed.DoneText);
-        Assert.AreEqual("Restants : 2", resumed.RemainingText);
+        Assert.AreEqual(1, resumed.DoneCount);
+        Assert.AreEqual(2, resumed.RemainingCount);
         Assert.AreEqual("1 élément passé en revue.", resumed.Summary);
-        Assert.AreEqual("Durée : 20 s", resumed.DurationText);
+        Assert.AreEqual("20 s", resumed.Duration);
         Assert.IsNull(vault.Navigation.ResumableItems());
         vault.Navigation.ResumeSession();
         Assert.AreSame(resumed, vault.Shell.Current.Page, "rien à reprendre");
@@ -119,8 +119,8 @@ public sealed class SessionTests
 
         session.EndCommand.Execute(null);
 
-        Assert.AreEqual("Reportés : 1", session.PostponedText);
-        Assert.AreEqual("Restants : 2", session.RemainingText);
+        Assert.AreEqual(1, session.PostponedCount);
+        Assert.AreEqual(2, session.RemainingCount);
     }
 
     [TestMethod]
@@ -180,7 +180,7 @@ public sealed class SessionTests
         plain.ToggleFullScreenCommand.Execute(null);
         Assert.AreEqual(1, fullScreen);
         plain.NextCommand.Execute(null);
-        Assert.AreEqual("Restants : 1", plain.RemainingText);
+        Assert.AreEqual(1, plain.RemainingCount);
         plain.Interrupt();
         Assert.IsTrue(store.Forgotten, "une séance terminée n'est plus gardée");
     }
@@ -300,7 +300,7 @@ public sealed class SessionTests
             TestShell.Flush();
             Assert.IsTrue(Named<StackPanel>(window, "SummaryPanel").IsVisible);
             Assert.IsFalse(Named<Border>(window, "SessionBar").IsVisible);
-            Assert.AreEqual("Restants : 1", Named<TextBlock>(window, "Remaining").Text);
+            Assert.AreEqual("1", Named<TextBlock>(window, "Remaining").Text);
             var shortcut = Descendants(window).OfType<StudySessionPage>().Single().InputBindings.OfType<KeyBinding>().Single();
             Assert.AreEqual((Key.Right, ModifierKeys.Control), (shortcut.Key, shortcut.Modifiers));
         }

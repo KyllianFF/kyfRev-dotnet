@@ -57,14 +57,14 @@
                    TextWrapping="Wrap" AutomationProperties.HeadingLevel="Level2" />
         <TextBlock x:Name="PasswordStepHelp" Text="{x:Static pages:EncryptionText.PasswordStepHelp}" Style="{DynamicResource Kyf.Text.Secondary}"
                    Margin="0,4,0,0" TextWrapping="Wrap" />
-        <TextBlock x:Name="NewPasswordLabel" Text="{x:Static pages:EncryptionText.NewPassword}" Style="{DynamicResource Kyf.Text.BodyStrong}" Margin="0,12,0,6" />
+        <TextBlock x:Name="NewPasswordLabel" Text="{x:Static pages:EncryptionText.NewPassword}" Style="{DynamicResource Kyf.Text.BodyStrong}" Margin="0,12,0,8" />
         <PasswordBox x:Name="NewPasswordBox" IsEnabled="{Binding IsIdle}" IsVisibleChanged="OnSecretShown" IsEnabledChanged="OnSecretEnabled"
                      AutomationProperties.Name="{x:Static pages:EncryptionText.NewPassword}"
                      AutomationProperties.HelpText="{x:Static pages:ConversionPageViewModel.PasswordLength}"
                      AutomationProperties.LabeledBy="{Binding ElementName=NewPasswordLabel}" />
         <TextBlock x:Name="PasswordLengthHelp" Text="{x:Static pages:ConversionPageViewModel.PasswordLength}" Style="{DynamicResource Kyf.Text.Caption}"
-                   Margin="0,6,0,0" TextWrapping="Wrap" />
-        <TextBlock x:Name="ConfirmPasswordLabel" Text="{x:Static pages:EncryptionText.ConfirmPassword}" Style="{DynamicResource Kyf.Text.BodyStrong}" Margin="0,12,0,6" />
+                   Margin="0,4,0,0" TextWrapping="Wrap" />
+        <TextBlock x:Name="ConfirmPasswordLabel" Text="{x:Static pages:EncryptionText.ConfirmPassword}" Style="{DynamicResource Kyf.Text.BodyStrong}" Margin="0,12,0,8" />
         <PasswordBox x:Name="ConfirmPasswordBox" IsEnabled="{Binding IsIdle}"
                      AutomationProperties.Name="{x:Static pages:EncryptionText.ConfirmPassword}"
                      AutomationProperties.LabeledBy="{Binding ElementName=ConfirmPasswordLabel}" />
@@ -107,7 +107,7 @@
       <!-- Le déchiffrement : le secret du coffre, et le dossier où écrire le coffre en clair. -->
       <StackPanel x:Name="SecretPart" Margin="0,16,0,0" Visibility="{Binding IsSecret, Converter={StaticResource Visible}}" IsVisibleChanged="OnPartVisibleChanged">
         <kyf:Notification x:Name="DecryptWarning" Severity="Warning" Message="{x:Static pages:EncryptionText.DecryptWarning}" IsOpen="{Binding IsSecret, Mode=OneWay}" IsClosable="False" />
-        <TextBlock x:Name="DecryptSecretLabel" Text="{Binding SecretLabel}" Style="{DynamicResource Kyf.Text.BodyStrong}" Margin="0,12,0,6" />
+        <TextBlock x:Name="DecryptSecretLabel" Text="{Binding SecretLabel}" Style="{DynamicResource Kyf.Text.BodyStrong}" Margin="0,12,0,8" />
         <PasswordBox x:Name="DecryptPasswordBox" IsEnabled="{Binding IsIdle}" IsVisibleChanged="OnSecretShown" IsEnabledChanged="OnSecretEnabled" Visibility="{Binding UsesPassword, Converter={StaticResource Visible}}"
                      AutomationProperties.Name="{x:Static pages:EncryptionText.Password}"
                      AutomationProperties.LabeledBy="{Binding ElementName=DecryptSecretLabel}" />
@@ -120,7 +120,7 @@
                   AutomationProperties.Name="{x:Static pages:EncryptionText.WithRecoveryKey}">
           <TextBlock Text="{x:Static pages:EncryptionText.WithRecoveryKey}" TextWrapping="Wrap" />
         </CheckBox>
-        <TextBlock x:Name="ParentLabel" Text="{x:Static pages:EncryptionText.DecryptedParent}" Style="{DynamicResource Kyf.Text.BodyStrong}" Margin="0,16,0,6" />
+        <TextBlock x:Name="ParentLabel" Text="{x:Static pages:EncryptionText.DecryptedParent}" Style="{DynamicResource Kyf.Text.BodyStrong}" Margin="0,16,0,8" />
         <TextBlock x:Name="ParentPath" Text="{Binding Parent}" FontFamily="{DynamicResource Kyf.Font.Code}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" />
         <Button x:Name="PickParentButton" Command="{Binding PickParentCommand}" IsEnabled="{Binding IsIdle}" HorizontalAlignment="Left" Margin="0,8,0,0"
                 AutomationProperties.Name="{x:Static pages:EncryptionText.PickOtherParent}">
