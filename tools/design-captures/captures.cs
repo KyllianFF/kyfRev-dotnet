@@ -863,10 +863,18 @@ static void ReviewCaptures(string folder)
 }
 
 // Fait tourner le fil de l'interface jusqu'à ce que la page soit lue.
-static void Pump(Func<bool> done)
+static void Pump(Func<bool> done, [System.Runtime.CompilerServices.CallerLineNumber] int line = 0)
 {
+    // Une attente qui n'aboutit pas ne bloque plus tout l'outil : elle le dit et laisse passer à la suite.
+    var deadline = DateTime.UtcNow.AddSeconds(20);
     while (!done())
     {
+        if (DateTime.UtcNow > deadline)
+        {
+            Console.Error.WriteLine($"Attente abandonnée après 20 s (captures.cs, ligne {line}).");
+            return;
+        }
+
         var frame = new System.Windows.Threading.DispatcherFrame();
         System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Background, () => frame.Continue = false);
         System.Windows.Threading.Dispatcher.PushFrame(frame);
@@ -1013,6 +1021,10 @@ internal sealed class StillAppearance(bool highContrast) : ISystemAppearance
 
 internal sealed class NoChrome : IWindowChrome
 {
+    public WindowOverhang MaximizedOverhang(nint windowHandle) => default;
+
+    public ScreenArea WorkArea(nint windowHandle) => default;
+
     public bool UseDarkTitleBar(nint windowHandle, bool dark) => false;
 }
 
@@ -1108,6 +1120,8 @@ internal sealed class OneMistake : KyfRev.Application.Ports.ISpelling
     }
 
     public KyfRev.Application.Ports.SpellingCorrection? Correct(string word) => null;
+
+    public bool AddsUntilClosing => false;
 
     public bool Add(string word) => false;
 }
