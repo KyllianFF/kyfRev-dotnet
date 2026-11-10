@@ -205,9 +205,9 @@ public sealed class VaultAdapter(VaultSession inner, IDisposable? owned = null) 
     public int PurgeFolder(string folder, Moment now) => inner.PurgeFolder(folder, now);
 
     /// <summary>Valide la révision attendue : avec les règles de rappel du coffre pour une fiche, aucune pour un passage.</summary>
-    public ReviewOutcome ValidateReview(ItemKind kind, string id, Moment now, DateOnly? reviewDate = null) => kind == ItemKind.Sheet
-        ? inner.ApplyReview(id, tracking => tracking.ValidateReview(now, reviewDate, inner.Settings.Reminders))
-        : inner.ApplyAnnotationReview(id, tracking => tracking.ValidateReview(now, reviewDate, null));
+    public ReviewOutcome ValidateReview(ItemKind kind, string id, Moment now, DateOnly? reviewDate = null, ReviewRecall recall = ReviewRecall.Remembered) => kind == ItemKind.Sheet
+        ? inner.ApplyReview(id, tracking => tracking.ValidateReview(now, reviewDate, inner.Settings.Reminders, recall))
+        : inner.ApplyAnnotationReview(id, tracking => tracking.ValidateReview(now, reviewDate, null, recall));
 
     /// <inheritdoc/>
     public void Postpone(ItemKind kind, string id, Moment now, DateOnly newDueDate) =>
@@ -283,6 +283,9 @@ public sealed class VaultAdapter(VaultSession inner, IDisposable? owned = null) 
 
     /// <inheritdoc/>
     public int TightenBeforeExam(string folder, Moment now) => inner.TightenBeforeExam(folder, now);
+
+    /// <inheritdoc/>
+    public SpreadPlan SpreadDueDates(SpreadRequest request, Moment now, bool apply) => inner.SpreadDueDates(request, now, apply);
 
     /// <inheritdoc/>
     public void ChangePreferences(VaultPreferences preferences) => inner.ChangePreferences(preferences);

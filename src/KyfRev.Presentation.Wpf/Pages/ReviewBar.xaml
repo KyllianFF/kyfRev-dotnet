@@ -147,6 +147,10 @@
               </ContextMenu>
             </Button.ContextMenu>
           </Button>
+          <!-- L'oubli se dit sans honte : un bouton ordinaire, à côté de la validation. -->
+          <Button x:Name="ForgotButton" Content="{x:Static pages:ReviewText.Forgot}" Command="{Binding ForgotCommand}" Margin="0,0,8,0"
+                  Visibility="{Binding CanForget, Converter={StaticResource Visible}}" ToolTip="{x:Static pages:ReviewText.ForgotHelp}"
+                  AutomationProperties.Name="{x:Static pages:ReviewText.Forgot}" AutomationProperties.HelpText="{x:Static pages:ReviewText.ForgotHelp}" />
           <Button x:Name="ValidateButton" Command="{Binding ValidateCommand}" Style="{DynamicResource Kyf.Button.Primary}"
                   Visibility="{Binding CanValidate, Converter={StaticResource Visible}}" ToolTip="Ctrl+Entrée"
                   AutomationProperties.Name="{Binding ValidateLabel}" AutomationProperties.AcceleratorKey="Ctrl+Entrée">

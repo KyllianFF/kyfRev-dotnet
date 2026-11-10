@@ -77,6 +77,9 @@ public sealed record Statistics(
     ImmutableArray<MonthStatistics> ByMonth,
     ImmutableArray<FolderStatistics> ByFolder)
 {
+    /// <summary>Parmi les révisions du calendrier, celles où l'utilisateur a dit « J'avais oublié ».</summary>
+    public int Forgotten { get; init; }
+
     /// <summary>Semaines entières du calendrier, avant la semaine en cours.</summary>
     public const int WeeksShown = 52;
 

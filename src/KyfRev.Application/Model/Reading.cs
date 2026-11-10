@@ -108,14 +108,22 @@ public sealed record ReviewState(
             return [];
         }
         var done = reviews.Where(review => review.CycleNumber == number).ToList();
-        var labels = tracking.Cycle is { } current
-            ? Enumerable.Range(0, current.Sequence.LastStep + 1).Select(current.Sequence.Label)
-            : done.Select(review => review.StepLabel);
+        if (tracking.Cycle is not { } current)
+        {
+            // Après un oubli, une étape a été revue deux fois : la frise garde la dernière.
+            return [.. done.GroupBy(review => review.StepLabel).Select(group => new CycleStep(group.Key, group.Last().Day, group.Last().DaysLate))];
+        }
+        // Une étape n'est faite que si elle précède l'étape attendue : après un oubli, celle qui a
+        // reculé et les suivantes sont de nouveau à faire, même si l'historique les a déjà vues.
         return
         [
-            .. labels.Select(label => done.FirstOrDefault(review => review.StepLabel == label) is { } review
-                ? new CycleStep(label, review.Day, review.DaysLate)
-                : new CycleStep(label, null, 0)),
+            .. Enumerable.Range(0, current.Sequence.LastStep + 1).Select(step =>
+            {
+                var label = current.Sequence.Label(step);
+                return step < current.Step && done.LastOrDefault(review => review.StepLabel == label) is { } review
+                    ? new CycleStep(label, review.Day, review.DaysLate)
+                    : new CycleStep(label, null, 0);
+            }),
         ];
     }
 }

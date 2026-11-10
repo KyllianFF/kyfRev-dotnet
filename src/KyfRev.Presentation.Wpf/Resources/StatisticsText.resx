@@ -39,6 +39,12 @@
   <data name="BestDay" xml:space="preserve">
     <value>meilleur jour : {0}, {1}</value>
   </data>
+  <data name="ForgottenOne" xml:space="preserve">
+    <value>dont {0} oubliée</value>
+  </data>
+  <data name="ForgottenMany" xml:space="preserve">
+    <value>dont {0} oubliées</value>
+  </data>
   <data name="ByFolder" xml:space="preserve">
     <value>Par dossier</value>
   </data>

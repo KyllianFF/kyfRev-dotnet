@@ -28,6 +28,10 @@ public abstract record TrackingEvent
 /// <param name="PlannedOn">Échéance prévue de cette étape.</param>
 /// <param name="DaysLate">Jours de retard ; négatif pour une révision faite en avance.</param>
 /// <param name="Origin">Ce qui a ouvert le cycle, pour un J0 seulement.</param>
+/// <param name="Forgotten">
+/// « J'avais oublié ». Seul l'oubli s'inscrit : une révision validée garde la forme qu'elle a
+/// toujours eue, celle que la 0.x écrit aussi, et le passé n'est jamais complété après coup.
+/// </param>
 public sealed record ReviewEvent(
     DateTimeOffset At,
     DateOnly Day,
@@ -35,7 +39,8 @@ public sealed record ReviewEvent(
     string StepLabel,
     DateOnly PlannedOn,
     int DaysLate,
-    StartOrigin? Origin) : TrackingEvent(At);
+    StartOrigin? Origin,
+    bool Forgotten = false) : TrackingEvent(At);
 
 /// <summary>Une échéance déplacée. Ne compte pas comme une révision.</summary>
 public sealed record PostponementEvent(
@@ -84,6 +89,16 @@ public enum StartOrigin
 
     /// <summary>« Recommencer à J0 » ou « Remettre en révision ».</summary>
     Restart,
+}
+
+/// <summary>Ce que l'utilisateur dit de sa mémoire en validant une révision.</summary>
+public enum ReviewRecall
+{
+    /// <summary>« Valider » : il s'en souvenait.</summary>
+    Remembered,
+
+    /// <summary>« J'avais oublié » : la révision compte, et l'étape recule d'un cran.</summary>
+    Forgotten,
 }
 
 /// <summary>Ce qu'une modification a changé dans un passage annoté.</summary>

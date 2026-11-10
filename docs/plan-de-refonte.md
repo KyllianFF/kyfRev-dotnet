@@ -89,6 +89,7 @@ Un retard décale donc tout le reste du calendrier. L'écart entre deux révisio
 |---|---|---|
 | **Démarrer** (création, adoption d'un `.md`, rappel « à revoir entièrement », redémarrage) | — | Nouveau cycle k : `etape = 1`, `derniereRevision = d`, `echeance = d + s₁`. Événement `revision` J0 avec `origine`. |
 | **Valider** au jour `v` (aujourd'hui par défaut, ou antidaté) | actif ; `v ≤ aujourd'hui` ; `v > derniereRevision` (une seule révision par jour) | Événement `revision` (`prevuLe` = échéance, `retardJours = v − échéance`, négatif en avance). Si c'était la dernière étape : archivage `fin_de_cycle`, `cyclesTermines + 1`. Sinon : `etape + 1`, `echeance = v + s[etape]`. |
+| **Valider en disant « J'avais oublié »** (ajout du 10 novembre 2026, hors 0.x) | celles de Valider ; l'interface ne le propose pas en avance | Événement `revision` avec `"souvenir": "oublie"`. L'étape recule d'un cran, sans descendre sous J1 : `etape = max(etape − 1, 1)`, `echeance = v + s[etape]`. Jamais d'archivage, aucun compteur ne change. Une validation ordinaire n'écrit pas `souvenir` : son événement reste celui de la 0.x, octet pour octet. |
 | **Reporter** vers `r` | actif ; `r > aujourd'hui` ; `r ≠ échéance` | `echeance = r` ; événement `report`. Ce n'est pas une révision. |
 | **Recommencer** | actif ou archivé | Si actif : `interruption` (`cyclesInterrompus + 1`) ; si archivé : `reactivation`. Puis nouveau J0 (`redemarrage`) avec la séquence **actuelle** des réglages. |
 | **Archiver manuellement** | actif | `interruption`, puis `archivage` `manuelle`. |

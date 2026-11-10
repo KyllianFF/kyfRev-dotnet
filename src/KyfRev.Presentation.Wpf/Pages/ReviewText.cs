@@ -230,6 +230,15 @@ public static class ReviewText
     /// <summary>« Étapes du cycle ».</summary>
     public static string Steps => Text(nameof(Steps));
 
+    /// <summary>« J'avais oublié ».</summary>
+    public static string Forgot => Text(nameof(Forgot));
+
+    /// <summary>« La révision compte, et l'étape recule d'un cran au lieu d'avancer. ».</summary>
+    public static string ForgotHelp => Text(nameof(ForgotHelp));
+
+    /// <summary>« … revue, oubli noté. Elle reviendra à l'étape …, …. ».</summary>
+    public static string ForgotDoneOf(object done, object step, object day) => Format("ForgotDone", done, step, day);
+
     /// <summary>« Valider la révision … ».</summary>
     public static string ValidateOf(object step) => Format("Validate", step);
 

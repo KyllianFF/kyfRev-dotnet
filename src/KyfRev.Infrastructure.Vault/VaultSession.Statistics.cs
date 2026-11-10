@@ -102,7 +102,10 @@ public sealed partial class VaultSession
                     .Select(pair => new FolderStatistics(pair.Key, pair.Value.Sheets, pair.Value.Reviews, pair.Value.OnTime + pair.Value.Early, pair.Value.Late, pair.Value.AverageDelay))
                     .OrderByDescending(folder => folder.Reviews)
                     .ThenBy(folder => RustText.ToLowercase(folder.Folder), Utf8Order.Instance),
-            ]);
+            ])
+        {
+            Forgotten = total.Forgotten,
+        };
     }
 
     /// <summary>« 2026-10 » pour le mois de <paramref name="day"/>, décalé de <paramref name="back"/> mois en arrière.</summary>
@@ -146,8 +149,8 @@ public sealed partial class VaultSession
                     }
                     if (review.Day >= from)
                     {
-                        total.AddReview(review.DaysLate);
-                        folder.AddReview(review.DaysLate);
+                        total.AddReview(review.DaysLate, review.Forgotten);
+                        folder.AddReview(review.DaysLate, review.Forgotten);
                     }
                     break;
                 case ReminderEvent reminder:
@@ -193,11 +196,14 @@ public sealed partial class VaultSession
 
         public int Reminders { get; set; }
 
+        public int Forgotten { get; private set; }
+
         public double AverageDelay => Late == 0 ? 0 : (double)_totalDelay / Late;
 
-        public void AddReview(int daysLate)
+        public void AddReview(int daysLate, bool forgotten)
         {
             Reviews++;
+            Forgotten += forgotten ? 1 : 0;
             if (daysLate > 0)
             {
                 Late++;

@@ -42,6 +42,45 @@ public sealed class ReviewTests
     }
 
     [TestMethod]
+    public async Task Forgetting_counts_the_review_and_steps_back()
+    {
+        using var vault = new ReviewVault();
+        var bar = await vault.SheetBarAsync();
+        await bar.ValidateCommand.ExecuteAsync(null);
+        vault.Time.AdvanceDays(3);
+        bar = await vault.SheetBarAsync();
+        Assert.AreEqual("Valider la révision J3", bar.ValidateLabel);
+        Assert.IsTrue(bar.CanForget);
+        Assert.IsTrue(bar.ForgotCommand.CanExecute(null));
+
+        await bar.ForgotCommand.ExecuteAsync(null);
+
+        Assert.AreEqual("J3 revue, oubli noté. Elle reviendra à l'étape J1, mercredi 7 octobre.", bar.Message);
+        Assert.AreEqual(ReviewAction.Validated, bar.LastAction, "une séance la compte comme faite");
+        Assert.IsTrue(bar.ShowsReviewedToday);
+        Assert.IsFalse(bar.CanForget);
+        Assert.IsFalse(bar.ForgotCommand.CanExecute(null));
+        Assert.IsTrue(bar.Steps[1].IsCurrent, "J1 est de nouveau l'étape attendue");
+        Assert.IsFalse(bar.Steps[1].IsDone);
+        Assert.AreEqual(1, vault.App.Reminders.Statistics().Value.Forgotten);
+    }
+
+    [TestMethod]
+    public async Task Forgetting_is_not_offered_ahead_of_time()
+    {
+        using var vault = new ReviewVault();
+        var bar = await vault.SheetBarAsync();
+        await bar.ValidateCommand.ExecuteAsync(null);
+        vault.Time.AdvanceDays(1);
+        bar = await vault.SheetBarAsync();
+
+        Assert.IsTrue(bar.IsEarly);
+        Assert.IsTrue(bar.CanValidate);
+        Assert.IsFalse(bar.CanForget);
+        Assert.IsFalse(bar.ForgotCommand.CanExecute(null));
+    }
+
+    [TestMethod]
     public async Task Validating_moves_to_the_next_step_and_says_so()
     {
         using var vault = new ReviewVault();

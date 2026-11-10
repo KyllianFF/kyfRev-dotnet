@@ -72,10 +72,17 @@ public sealed class Tracking
     /// Valide la révision de l'étape attendue. L'étape suivante est due n jours après la date de
     /// révision (D7) ; valider la dernière étape termine le cycle et archive l'élément.
     /// </summary>
+    /// <remarks>
+    /// Avec <see cref="ReviewRecall.Forgotten"/>, la révision compte de la même façon (elle a eu
+    /// lieu, et la relecture a servi de correction), mais l'étape attendue recule d'un cran au lieu
+    /// d'avancer : après un oubli à J7, c'est J3 qui est attendu trois jours plus tard. Elle ne
+    /// descend jamais sous J1, et un oubli ne termine jamais un cycle.
+    /// </remarks>
     /// <param name="now">Moment présent.</param>
     /// <param name="reviewDate">Date de la révision, pour antidater (« je l'ai révisée hier ») ; aujourd'hui par défaut.</param>
     /// <param name="rules">Règles des rappels ; <see langword="null"/> pour un passage, qui n'a pas de rappels.</param>
-    public ReviewResult ValidateReview(Moment now, DateOnly? reviewDate, ReminderRules? rules)
+    /// <param name="recall">Ce que l'utilisateur dit de sa mémoire.</param>
+    public ReviewResult ValidateReview(Moment now, DateOnly? reviewDate, ReminderRules? rules, ReviewRecall recall = ReviewRecall.Remembered)
     {
         var day = reviewDate ?? now.Day;
         if (day > now.Day)
@@ -102,7 +109,22 @@ public sealed class Tracking
             cycle.StepLabel,
             cycle.DueDate,
             CivilCalendar.DaysBetween(cycle.DueDate, day),
-            Origin: null);
+            Origin: null,
+            Forgotten: recall == ReviewRecall.Forgotten);
+
+        if (recall == ReviewRecall.Forgotten)
+        {
+            var previous = Math.Max(cycle.Step - 1, 1);
+            if (!CivilCalendar.TryAddDays(day, cycle.Sequence.IntervalBefore(previous), out var again))
+            {
+                return ReviewResult.Failure(TrackingError.DateOutOfRange());
+            }
+            var steppedBack = new Tracking(
+                new ActiveState(cycle with { Step = previous, LastReview = day, DueDate = again }),
+                Counters,
+                History.Add(review));
+            return ReviewResult.Success(steppedBack, new NextStepScheduled(cycle.Sequence.Label(previous), again));
+        }
 
         if (cycle.Step >= cycle.Sequence.LastStep)
         {

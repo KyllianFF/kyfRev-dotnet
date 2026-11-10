@@ -341,6 +341,10 @@ public sealed partial class StatisticsPageViewModel : ObservableObject, INavigat
         {
             reviews.Add(StatisticsText.BestDayOf(best.Total, Dates.Short(best.Day)));
         }
+        if (statistics.Forgotten > 0)
+        {
+            reviews.Add(Dates.Plural(statistics.Forgotten, StatisticsText.ForgottenOneOf, StatisticsText.ForgottenManyOf));
+        }
         var calendarDays = statistics.Day.DayNumber - statistics.From.DayNumber + 1;
         return
         [

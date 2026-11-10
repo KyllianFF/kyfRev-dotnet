@@ -181,6 +181,19 @@ internal sealed partial class DashboardPage : UserControl
         _examMenu.IsOpen = _examMenu.Items.Count > 0;
     }
 
+    /// <summary>La réponse à la fenêtre d'étalement ; le focus revient au bouton qui l'a ouverte.</summary>
+    private void OnSpreadClosed(object sender, DialogClosedEventArgs e)
+    {
+        _ = Page.Spread!.AnswerCommand.ExecuteAsync(e.Choice == DialogChoice.Primary);
+        Dispatcher.BeginInvoke(DispatcherPriority.Input, () =>
+        {
+            if (IsVisible && KeyboardFocus.IsLost())
+            {
+                SpreadButton.Focus();
+            }
+        });
+    }
+
     /// <summary>La réponse au formulaire d'un examen part vers les examens.</summary>
     private void OnExamEditorClosed(object sender, DialogClosedEventArgs e) => _ = FocusExamAfterAsync(Page.Exams!.AnswerEditorCommand.ExecuteAsync(e.Choice == DialogChoice.Primary));
 

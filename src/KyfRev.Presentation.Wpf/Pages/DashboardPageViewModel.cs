@@ -110,6 +110,7 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
         _reviews = reviews;
         _extras = new DashboardExtras(this);
         Exams = exams is not null && folders is not null ? new DashboardExams(exams, folders, RefreshAsync, time ?? TimeProvider.System) : null;
+        Spread = exams is not null ? new DashboardSpread(exams, RefreshAsync, time ?? TimeProvider.System) : null;
         _examGroup = new DashboardGroup(ExamText.Exams, Icons.Calendar, DashboardTone.Normal, expanded: true, BuildRows);
         _overdue = new DashboardGroup(DashboardText.Overdue, Icons.Clock, DashboardTone.Overdue, expanded: true, BuildRows);
         _today = new DashboardGroup(DashboardText.Today, Icons.Calendar, DashboardTone.Normal, expanded: true, BuildRows);
@@ -147,6 +148,12 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
 
     /// <summary>Les examens : les fixer, les retirer, resserrer les échéances ; rien sans leurs cas d'usage.</summary>
     public DashboardExams? Exams { get; }
+
+    /// <summary>L'étalement des échéances : un retard à rattraper, une pause à prévoir ; rien sans ses cas d'usage.</summary>
+    public DashboardSpread? Spread { get; }
+
+    /// <summary>« Étaler… » est proposé.</summary>
+    public bool CanSpread => Spread is not null;
 
     /// <summary>« Examen… » est proposé.</summary>
     public bool CanPlanExams => Exams is not null;
@@ -348,6 +355,7 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
     public void OnNavigatedTo()
     {
         Exams?.ClearFeedback();
+        Spread?.ClearFeedback();
         RefreshCommand.Execute(null);
     }
 
@@ -369,6 +377,7 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
         SelectedRow = null;
         Preview = null;
         Exams?.Forget();
+        Spread?.Forget();
         _examGroup.Count = 0;
         _overdue.Count = 0;
         _today.Count = 0;
