@@ -148,6 +148,12 @@ internal sealed class DocumentBuilder
     /// <summary>La longueur du texte affiché : la fin de la dernière partie.</summary>
     public int TextLength { get; }
 
+    /// <summary>
+    /// Les images qui portent des masques, avec leur cache et l'endroit du texte où elles viennent : chaque masque est un
+    /// trou de plus, en révision.
+    /// </summary>
+    public List<(ImageMaskOverlay Overlay, int Position)> MaskedImages { get; } = [];
+
     /// <summary>Les cases des colonnes de tableau cachées en révision : des trous, comme le gras.</summary>
     public List<(int Start, int End)> ReviewCells { get; } = [];
 
@@ -1043,6 +1049,7 @@ internal sealed class DocumentBuilder
         if (_pieces.TryGetValue(text, out var piece))
         {
             Layer.AddRun(run, piece.Start + skipped);
+            _lastTextEnd = piece.End;
         }
     }
 
@@ -1084,8 +1091,15 @@ internal sealed class DocumentBuilder
         AddSpan(element, link, inlines, depth, inLink);
     }
 
+    /// <summary>Fin du dernier texte posé : la place, dans le texte affiché, de l'image qui le suit.</summary>
+    private int _lastTextEnd;
+
+    /// <summary>Rang de la prochaine image, parmi toutes celles de la fiche, affichables ou non.</summary>
+    private int _imageCount;
+
     private Inline BuildImage(RenderElement element)
     {
+        var index = _imageCount++;
         var target = ContentTargets.OfImage(element.Target ?? string.Empty, _reading.Folder);
         if (target is BlockedImage blocked)
         {
@@ -1096,12 +1110,30 @@ internal sealed class DocumentBuilder
         {
             return BuildNotice($"{ReadingText.SvgLater} : {svg[(svg.LastIndexOf('/') + 1)..]}");
         }
-        var image = new Image { Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly, MaxHeight = ImageMaxHeight };
+        // Son rang la désigne quand on pose ou retire ses masques.
+        var image = new Image { Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly, MaxHeight = ImageMaxHeight, Tag = index };
         AutomationProperties.SetName(image, element.AlternativeText ?? string.Empty);
-        var container = new InlineUIContainer(image) { BaselineAlignment = BaselineAlignment.Center };
+        UIElement shown = image;
+        if (!element.Masks.IsDefaultOrEmpty)
+        {
+            // Le cache partage la case de l'image : il prend sa taille, et ses zones gardent leur place.
+            var overlay = new ImageMaskOverlay(index, element.Masks);
+            overlay.SetResourceReference(ImageMaskOverlay.FillProperty, MaskFill);
+            overlay.SetResourceReference(ImageMaskOverlay.StrokeProperty, TextSecondary);
+            AutomationProperties.SetName(overlay, ReadingText.MaskedZones(element.Masks.Length));
+            var stack = new Grid { HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top };
+            stack.Children.Add(image);
+            stack.Children.Add(overlay);
+            shown = stack;
+            MaskedImages.Add((overlay, _lastTextEnd));
+        }
+        var container = new InlineUIContainer(shown) { BaselineAlignment = BaselineAlignment.Center };
         _images.Add(svg is not null ? LoadSvgAsync(container, image, svg) : LoadImageAsync(container, image, target));
         return container;
     }
+
+    /// <summary>La couleur d'un masque : celle d'un trou du texte.</summary>
+    private const string MaskFill = "Kyf.Brush.PillPassageBackground";
 
     private static Span BuildNotice(string message)
     {

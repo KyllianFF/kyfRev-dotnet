@@ -62,6 +62,9 @@ public sealed class RenderElement : RenderNode
     /// <summary>Texte de remplacement d'une image.</summary>
     public string? AlternativeText { get; internal set; }
 
+    /// <summary>Les zones d'une image cachées en révision (voir <see cref="ImageMasks"/>) ; aucune pour une image ordinaire.</summary>
+    public System.Collections.Immutable.ImmutableArray<ImageMask> Masks { get; internal set; } = [];
+
     /// <summary>Numéro de départ d'une liste numérotée qui ne commence pas à 1.</summary>
     public int? ListStart { get; internal set; }
 

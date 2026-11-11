@@ -178,6 +178,7 @@ internal static partial class InlineParser
     private static bool Image(InlineState state, bool silent)
     {
         var href = string.Empty;
+        string? imageTitle = null;
         var oldPosition = state.Position;
         var max = state.PositionMax;
         if (state.At(state.Position) != '!' || state.At(state.Position + 1) != '[')
@@ -216,6 +217,7 @@ internal static partial class InlineParser
             var title = LinkScanner.ParseTitle(state.Source, pos, state.PositionMax, null);
             if (pos < max && start != pos && title.Ok)
             {
+                imageTitle = title.Text;
                 pos = SkipLinkSpaces(state, title.Position);
             }
             if (pos >= max || state.At(pos) != ')')
@@ -250,6 +252,7 @@ internal static partial class InlineParser
             Parse(content, state.Environment, children);
             var token = state.Push(TokenKind.Image, "img", 0);
             token.Href = href;
+            token.Title = imageTitle;
             token.Children = children;
             token.Content = content;
         }

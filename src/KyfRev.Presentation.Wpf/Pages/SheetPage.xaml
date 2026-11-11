@@ -712,5 +712,6 @@
     </kyf:Dialog>
 
     <pages:SheetSharingDialogs x:Name="SharingDialogs" DataContext="{Binding Sharing}" />
+    <pages:ImageMaskDialog x:Name="MaskDialogs" DataContext="{Binding Masks}" />
   </Grid>
 </UserControl>

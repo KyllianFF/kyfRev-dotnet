@@ -42,6 +42,8 @@ main. Paramètres › Données permet d'en ouvrir ou d'en créer un autre.
 - **« J'avais oublié »**, à côté de « Valider » : la révision compte, mais l'étape recule d'un cran au lieu d'avancer (après un
   oubli à J7, la fiche revient à J3 trois jours plus tard). « Recommencer à J0 » reste pour repartir de zéro.
 - **Surlignez un passage** ou **créez une définition** depuis le texte : ils ont leur propre calendrier.
+- **Masquez des zones d'une image** : clic droit sur l'image, en lecture, puis « Masquer des zones… ». Tracez un rectangle
+  sur chaque zone à retrouver ; en révision, elles sont cachées et se dévoilent une à une.
 - La barre de révision permet aussi de valider à une date passée, ou de reporter à une date choisie.
 - **Examens** : sur Aujourd'hui, « Examen… » fixe une date pour un dossier. « Resserrer… » ramène les échéances avant la veille,
   et peut remettre en révision les fiches archivées du dossier. Tant que l'examen n'est pas passé, une révision ne place

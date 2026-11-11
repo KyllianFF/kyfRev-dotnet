@@ -447,6 +447,18 @@ internal sealed partial class SheetPage : UserControl
         {
             return [.. PassageMenuItems(page, entry), new Separator(), EditSheetItem(page), .. SharingItems(page)];
         }
+        // Une image : on peut y masquer des zones à retrouver en révision.
+        var picture = source as Image ?? ((source as Reading.ImageMaskOverlay)?.Parent as Panel)?.Children.OfType<Image>().FirstOrDefault();
+        if (picture is { Tag: int imageIndex } && page.CanMaskImages)
+        {
+            return
+            [
+                ActionMenus.Quick(ImageMaskText.Action, Icons.Edit, () => _ = page.EditMasksAsync(imageIndex, picture.Source)),
+                new Separator(),
+                EditSheetItem(page),
+                .. SharingItems(page),
+            ];
+        }
         var listen = ListenItems(page, (source as TextElement)?.ContentStart);
         return SheetText.WordAt(source) is { } word
             ? [.. WordMenuItems(page, word), new Separator(), .. listen, EditSheetItem(page), .. SharingItems(page)]

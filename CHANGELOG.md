@@ -65,6 +65,12 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   oubliée. Elles sont maintenant reconnues à leur nom, parmi les fiches, les citations, les schémas et dans le suivi, où
   une copie garde des révisions faites ailleurs. Elles comptent dans l'avertissement d'Aujourd'hui. Rien n'est ouvert,
   fusionné ni supprimé à votre place.
+- Occlusion d'image : un clic droit sur une image, en lecture, propose « Masquer des zones… ». On y trace à la souris un
+  rectangle sur chaque zone à retrouver (une étiquette d'anatomie, une région d'une carte, un nom sur un schéma) ; un clic
+  sur un rectangle le retire. En révision, ces zones sont masquées et se dévoilent une à une, d'un clic ou avec Entrée,
+  comme les trous du texte ; hors révision, l'image se voit entière. Les masques s'écrivent dans le titre Markdown de
+  l'image (`![Cellule](cellule.png "kyfrev-masques:10,20,30,15")`, en pourcentages de l'image), que l'éditeur visuel et les
+  autres outils gardent. Une image écrite par référence, ou qui a déjà un titre, ne peut pas en porter, et la fenêtre le dit.
 - Fiches : un filtre par étiquettes, comme la 0.x. Chaque pastille dit son nombre de fiches, on peut en choisir plusieurs, et
   « Tout afficher » les retire ; sur une fenêtre étroite, il se replie avec les autres filtres.
 - Écrire : les boutons « Code dans le texte » et « Citation », dans le ruban et dans le clic droit.
