@@ -257,6 +257,15 @@ public static class ReadingText
     public static string SectionsSummary(int revealed, int total) =>
         string.Create(System.Globalization.CultureInfo.InvariantCulture, $"Rappelez-vous chaque partie avant de l'afficher (Entrée) : {revealed} sur {total} affichées.");
 
+    /// <summary>La date de création, dans la ligne sous le titre.</summary>
+    public static string CreatedOn(string day) => $"créée le {day}";
+
+    /// <summary>Le numéro du cycle, dans la ligne sous le titre.</summary>
+    public static string Cycle(int number) => string.Create(System.Globalization.CultureInfo.InvariantCulture, $"cycle {number}");
+
+    /// <summary>Le temps de lecture, dans la ligne sous le titre.</summary>
+    public static string ReadingTime(int minutes) => string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{minutes} min de lecture");
+
     private const int ShortLength = 60;
 
     /// <summary>Écouter la fiche.</summary>

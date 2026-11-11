@@ -315,6 +315,22 @@ public sealed class TextHolesTests
     }
 
     [TestMethod]
+    public void The_line_under_the_title_says_the_creation_the_cycle_and_the_reading_time()
+    {
+        static string Details(string folder, string body, DateOnly? created, int? cycle)
+        {
+            var review = new KyfRev.Application.Model.ReviewState(KyfRev.Application.Model.ReviewStatus.Active, [], "J1", new DateOnly(2026, 10, 2), cycle, null, 0, false, null, false, false, null, false, cycle ?? 1, 0);
+            var sheet = new KyfRev.Application.Model.OpenedSheet("f_1", "Mitose", "fiches/Mitose.md", folder, ["bio"], body, 1, "sha256:essai", created, DateTimeOffset.UnixEpoch, review, []);
+            return SheetReading.Of(sheet, _ => Outcome.Refused<byte[]>("non")).Details;
+        }
+        var longText = string.Join(' ', Enumerable.Repeat("mot", 500));
+
+        Assert.AreEqual("#bio", Details(string.Empty, "Court.", null, 1), "ni date, ni premier cycle, ni temps sous une minute");
+        Assert.AreEqual("Biologie  ·  #bio  ·  créée le 3 octobre 2026  ·  cycle 2  ·  3 min de lecture", Details("Biologie", longText, new DateOnly(2026, 10, 3), 2));
+        Assert.AreEqual("#bio  ·  1 min de lecture", Details(string.Empty, string.Join(' ', Enumerable.Repeat("mot", 200)), null, null));
+    }
+
+    [TestMethod]
     public void A_new_passage_does_not_change_which_bold_is_revealed()
     {
         (int, int)[] bold = [(0, 5), (10, 15), (20, 25)];

@@ -899,9 +899,12 @@ internal sealed class DocumentBuilder
         }
     }
 
-    /// <summary>Deux écritures de KaTeX que ce moteur ne connaît pas, et qui se lisent très bien comme une fraction.</summary>
+    /// <summary>
+    /// Ce que ce moteur ne connaît pas et qui se traduit : deux fractions de KaTeX, qui se lisent très bien comme une fraction
+    /// ordinaire, et l'écriture chimique <c>\ce{…}</c> (voir <see cref="ChemicalFormula"/>).
+    /// </summary>
     internal static string Drawable(string source) =>
-        source.Replace("\\tfrac", "\\frac", StringComparison.Ordinal).Replace("\\dfrac", "\\frac", StringComparison.Ordinal);
+        ChemicalFormula.Expand(source).Replace("\\tfrac", "\\frac", StringComparison.Ordinal).Replace("\\dfrac", "\\frac", StringComparison.Ordinal);
 
     /// <summary>Une formule dessinée ; une large se réduit plutôt que de faire défiler la page. Inconnue, elle reste lisible.</summary>
     internal static UIElement FormulaOrText(string source, double size, bool block)

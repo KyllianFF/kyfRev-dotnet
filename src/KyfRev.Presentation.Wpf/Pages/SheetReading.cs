@@ -129,10 +129,10 @@ public sealed class SheetReading
         _firstBodyLine = sheet.FirstBodyLine;
         Fingerprint = sheet.Fingerprint;
         Title = sheet.Title;
-        Details = string.Join("  ·  ", (sheet.Folder.Length > 0 ? [sheet.Folder] : Array.Empty<string>()).Concat(sheet.Tags.Select(tag => $"#{tag}")));
         Folder = ContentTargets.FolderOf(sheet.Path);
         Root = SheetRenderer.Render(sheet.Body, sheet.Title);
         Map = TextMap.Of(Root);
+        Details = string.Join("  ·  ", DetailsOf(sheet, Map.Text));
         var headings = Map.Headings.Where(heading => heading.TextContent().Trim().Length > 0).ToList();
         var top = headings.Count > 0 ? headings.Min(heading => heading.HeadingLevel) : 0;
         Outline = [.. headings.Select(heading => new OutlineEntry(heading, heading.HeadingLevel - top))];
@@ -146,8 +146,41 @@ public sealed class SheetReading
     /// <summary>Le titre de la fiche.</summary>
     public string Title { get; }
 
-    /// <summary>Son dossier et ses étiquettes.</summary>
+    /// <summary>Son dossier, ses étiquettes, sa date de création, son cycle et son temps de lecture.</summary>
     public string Details { get; }
+
+    /// <summary>Mots lus par minute, pour le temps de lecture : une lecture attentive, pas un survol.</summary>
+    private const int WordsPerMinute = 200;
+
+    /// <summary>
+    /// La ligne sous le titre, comme la 0.x : le dossier, les étiquettes, puis la date de création si l'en-tête la donne, le
+    /// cycle à partir du deuxième, et le temps de lecture dès qu'il atteint une minute.
+    /// </summary>
+    private static IEnumerable<string> DetailsOf(OpenedSheet sheet, string text)
+    {
+        if (sheet.Folder.Length > 0)
+        {
+            yield return sheet.Folder;
+        }
+        foreach (var tag in sheet.Tags)
+        {
+            yield return $"#{tag}";
+        }
+        if (sheet.CreatedOn is { } created)
+        {
+            yield return ReadingText.CreatedOn(Dates.Spelled(created));
+        }
+        // Le premier cycle va de soi : le numéro ne se dit que quand la fiche a été recommencée.
+        if (sheet.Review?.Cycle is > 1 and var cycle)
+        {
+            yield return ReadingText.Cycle(cycle);
+        }
+        var words = text.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries).Length;
+        if (words >= WordsPerMinute)
+        {
+            yield return ReadingText.ReadingTime((int)Math.Round((double)words / WordsPerMinute, MidpointRounding.AwayFromZero));
+        }
+    }
 
     /// <summary>Son dossier dans le coffre, d'où partent ses liens et ses images.</summary>
     public string Folder { get; }
