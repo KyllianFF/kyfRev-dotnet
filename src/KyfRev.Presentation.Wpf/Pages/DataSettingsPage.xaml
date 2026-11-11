@@ -149,6 +149,10 @@
               <Button x:Name="ExportTracking" Content="{x:Static pages:SettingsHubText.ExportTracking}" Command="{Binding ExportCommand}" CommandParameter="{x:Static model:ExportKind.Tracking}" Margin="0,0,8,8" />
               <Button x:Name="ExportAnnotations" Content="{x:Static pages:SettingsHubText.ExportAnnotations}" Command="{Binding ExportCommand}" CommandParameter="{x:Static model:ExportKind.Annotations}" Margin="0,0,8,8" />
               <Button x:Name="ExportVault" Content="{x:Static pages:SettingsHubText.ExportVault}" Command="{Binding ExportCommand}" CommandParameter="{x:Static model:ExportKind.Vault}" Margin="0,0,8,8" />
+              <Button x:Name="ExportAnki" Content="{x:Static pages:SettingsHubText.ExportAnki}" Command="{Binding ExportCommand}" CommandParameter="{x:Static model:ExportKind.Anki}" Margin="0,0,8,8"
+                      ToolTip="{x:Static pages:SettingsHubText.ExportAnkiHelp}" AutomationProperties.HelpText="{x:Static pages:SettingsHubText.ExportAnkiHelp}" />
+              <Button x:Name="ExportCalendar" Content="{x:Static pages:SettingsHubText.ExportCalendar}" Command="{Binding ExportCommand}" CommandParameter="{x:Static model:ExportKind.Calendar}" Margin="0,0,8,8"
+                      ToolTip="{x:Static pages:SettingsHubText.ExportCalendarHelp}" AutomationProperties.HelpText="{x:Static pages:SettingsHubText.ExportCalendarHelp}" />
               <Button x:Name="ExportQuotes" Content="{x:Static pages:SettingsHubText.ExportQuotes}" Command="{Binding ExportCommand}" CommandParameter="{x:Static model:ExportKind.Quotes}" Margin="0,0,8,8"
                       Visibility="{Binding ExportsQuotes, Converter={StaticResource Visible}}" />
             </WrapPanel>

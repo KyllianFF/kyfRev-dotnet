@@ -39,6 +39,14 @@ public sealed partial class VaultSession
                 return [CreateWithoutOverwriting(folder, $"kyfRev - annotations {day:yyyy-MM-dd}", "md", utf8.GetBytes(AnnotationsMarkdown(day)))];
             case ExportKind.Vault:
                 return [Backup(folder, timestamp).Path];
+            case ExportKind.Anki:
+                return [CreateWithoutOverwriting(folder, $"kyfRev - anki {day:yyyy-MM-dd}", "txt", utf8.GetBytes(AnkiNotes()))];
+            case ExportKind.Calendar:
+                {
+                    var local = zone ?? TimeZoneInfo.Local;
+                    var stamp = new DateTimeOffset(DateTime.SpecifyKind(timestamp, DateTimeKind.Unspecified), local.GetUtcOffset(timestamp));
+                    return [CreateWithoutOverwriting(folder, $"kyfRev - échéances {day:yyyy-MM-dd}", "ics", utf8.GetBytes(DueDatesCalendar(day, stamp)))];
+                }
             default:
                 {
                     var (markdown, csv) = QuotesExport(day);

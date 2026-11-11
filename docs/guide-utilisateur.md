@@ -74,6 +74,9 @@ automatique, et l'historique garde les versions précédentes. Le ruban insère 
 - **Importer** un dossier de notes, Obsidian par exemple, depuis la vue Fiches. Les liens `[[…]]`, les encadrés `> [!note]` et le
   surlignage `==…==` sont convertis ; les commentaires `%%…%%` ne sont pas repris, et le bilan le dit.
 - **Exporter** le suivi, les annotations, les citations ou le coffre complet depuis Paramètres › Données.
+- **Réviser ailleurs** : au même endroit, « Passages et définitions pour Anki » donne un fichier à importer dans Anki ou
+  AnkiDroid, et « Échéances pour un agenda » un fichier `.ics`. Ce sont des copies à sens unique : ce que vous faites
+  ailleurs ne revient pas dans kyfRev. L'agenda contient les titres de vos fiches.
 
 Ce qui sort est en clair, même depuis un coffre chiffré, sauf le coffre complet.
 

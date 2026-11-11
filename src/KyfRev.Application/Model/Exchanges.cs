@@ -23,6 +23,12 @@ public enum ExportKind
 
     /// <summary>Citations hors corbeille (Markdown et CSV).</summary>
     Quotes,
+
+    /// <summary>Passages et définitions pour Anki (texte à tabulations, avec leur identifiant).</summary>
+    Anki,
+
+    /// <summary>Échéances et examens pour un agenda (<c>.ics</c>).</summary>
+    Calendar,
 }
 
 /// <summary>Format d'une fiche partagée.</summary>

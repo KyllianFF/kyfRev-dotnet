@@ -42,6 +42,13 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   hydrates et flèches de réaction (`\ce{2H2 + O2 -> 2H2O}`, `\ce{SO4^2-}`, `\ce{N2 + 3H2 <=> 2NH3}`). C'est le cœur de
   mhchem, traduit pour le moteur de formules de kyfRev, pas tout mhchem.
 - Sous le titre d'une fiche : sa date de création, son cycle à partir du deuxième, et son temps de lecture dès une minute.
+- Paramètres › Données : « Passages et définitions pour Anki », un fichier à importer dans Anki ou AnkiDroid pour réviser
+  en déplacement. Une définition donne son terme au recto, un passage son contexte troué ; chaque carte porte l'identifiant
+  du passage, si bien qu'un nouvel import la met à jour sans la doubler. Ce qui est fait dans Anki ne revient pas.
+- Paramètres › Données : « Échéances pour un agenda (.ics) ». Un événement d'une journée par jour de révision, qui dit
+  combien de révisions tombent et lesquelles, et un par examen à venir. Les retards sont comptés aujourd'hui, les éléments
+  suspendus n'y figurent pas, et un nouvel import met l'agenda à jour. Le texte des passages n'y est jamais écrit, mais
+  les titres des fiches le sont : dans un agenda en ligne, ils quittent l'ordinateur, et le bouton le dit.
 - Fiches : un filtre par étiquettes, comme la 0.x. Chaque pastille dit son nombre de fiches, on peut en choisir plusieurs, et
   « Tout afficher » les retire ; sur une fenêtre étroite, il se replie avec les autres filtres.
 - Écrire : les boutons « Code dans le texte » et « Citation », dans le ruban et dans le clic droit.
