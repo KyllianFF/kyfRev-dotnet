@@ -22,6 +22,18 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   tombe déjà ces jours-là compris. Pour une pause annoncée, de 90 jours au plus : ce qui tombait pendant ces jours part après
   le retour. Le plan s'affiche avant d'être accepté et se recalcule à chaque changement. Ce sont des reports ordinaires,
   inscrits dans l'historique : rien ne recommence à J0, rien n'est validé.
+- Aujourd'hui : une liste « dossier ou étiquette » restreint ce qui est à réviser, donc la séance que « Commencer » lance.
+  Elle ne propose que les dossiers et les étiquettes de ce qui est dû ou à venir.
+- « Suspendre », dans les autres actions de la barre de révision : la fiche ou le passage garde son étape et son échéance,
+  mais ne se présente plus à réviser, ni dans la liste du jour, ni dans la charge, ni dans une séance, un étalement ou un
+  resserrement. Il attend dans le groupe « Suspendues » d'Aujourd'hui, replié, et « Reprendre » le remet où il en était. Rien
+  ne s'ajoute à l'historique ; dans le coffre, seule une clé `suspendueLe` paraît sur le cycle d'un élément suspendu.
+- Paramètres › Révisions : « Lisser les échéances », coupé par défaut. Actif, à partir de J7, la prochaine étape peut se
+  poser un jour avant ou après sa date exacte (deux à partir de J14, trois à partir de J30), sur le jour le moins chargé.
+  Coupé, l'écart entre deux révisions vaut exactement le J, et rien ne s'écrit dans le coffre.
+- Examens : une révision faite avant un examen ne place plus l'étape suivante après sa veille. La ligne d'un examen dit
+  combien de fiches du dossier sont archivées, et « Resserrer… » propose, par une case jamais cochée d'office, de les
+  remettre en révision.
 - Fiches : un filtre par étiquettes, comme la 0.x. Chaque pastille dit son nombre de fiches, on peut en choisir plusieurs, et
   « Tout afficher » les retire ; sur une fenêtre étroite, il se replie avec les autres filtres.
 - Écrire : les boutons « Code dans le texte » et « Citation », dans le ruban et dans le clic droit.
@@ -30,6 +42,8 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Modifié
 
+- Statistiques : « Série en cours » laisse la place à « Cette semaine », le nombre de révisions depuis lundi, avec la
+  moyenne des quatre semaines d'avant. Un jour sans révision ne fait plus rien perdre.
 - Une passe de finition sur toute l'interface. Les notifications perdent leur trait de couleur pour un filet discret, l'icône
   gardant la couleur de la gravité ; en thème sombre, les cartes se détachent par leur surface, sans ombre. Les espacements
   arbitraires passent sur la grille de 4 px, dans les vues comme dans l'éditeur visuel. Plus d'italique pour signaler un passage

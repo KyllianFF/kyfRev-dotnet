@@ -16,4 +16,8 @@ public sealed record DayPreparation(DateOnly Day, bool AlreadyPrepared, Immutabl
 /// <param name="DaysLeft">Jours avant l'examen (0 le jour même, négatif après).</param>
 /// <param name="Items">Fiches et passages actifs du dossier.</param>
 /// <param name="AfterExam">Dont l'étape attendue tombe après la veille de l'examen.</param>
-public sealed record UpcomingExam(string Folder, string Name, DateOnly Day, int DaysLeft, int Items, int AfterExam);
+public sealed record UpcomingExam(string Folder, string Name, DateOnly Day, int DaysLeft, int Items, int AfterExam)
+{
+    /// <summary>Fiches archivées du dossier : hors des révisions, elles ne seront pas revues avant l'examen.</summary>
+    public int Archived { get; init; }
+}

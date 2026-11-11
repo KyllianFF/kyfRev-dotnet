@@ -66,6 +66,37 @@ public sealed class ReviewTests
     }
 
     [TestMethod]
+    public async Task Suspending_leaves_only_resuming_and_resuming_gives_the_actions_back()
+    {
+        using var vault = new ReviewVault();
+        var bar = await vault.SheetBarAsync();
+        Assert.IsFalse(bar.IsSuspended);
+        Assert.IsTrue(bar.ShowsActiveActions);
+
+        await bar.SuspendCommand.ExecuteAsync(null);
+
+        Assert.AreEqual(ReviewAction.Suspended, bar.LastAction);
+        Assert.AreEqual("Fiche suspendue. Elle attend dans « Suspendues », sur Aujourd'hui.", bar.Message);
+        Assert.IsTrue(bar.IsSuspended);
+        Assert.IsFalse(bar.ShowsActiveActions);
+        Assert.IsFalse(bar.CanValidate);
+        Assert.IsFalse(bar.CanForget);
+        Assert.IsFalse(bar.IsLate, "suspendue, elle n'est plus en retard");
+        Assert.AreEqual("suspendue depuis le samedi 3 octobre : elle ne se présente plus à réviser", bar.DueText);
+        Assert.IsTrue(bar.IsActive, "elle reste en révision : ni archivée, ni recommencée");
+
+        var reopened = await vault.SheetBarAsync();
+        Assert.IsTrue(reopened.IsSuspended, "la suspension tient d'une ouverture à l'autre");
+
+        await reopened.ResumeCommand.ExecuteAsync(null);
+
+        Assert.AreEqual(ReviewAction.Resumed, reopened.LastAction);
+        Assert.IsFalse(reopened.IsSuspended);
+        Assert.IsTrue(reopened.CanValidate);
+        StringAssert.StartsWith(reopened.Message, "Reprise à l'étape J1 : en retard de 1 j", StringComparison.Ordinal);
+    }
+
+    [TestMethod]
     public async Task Forgetting_is_not_offered_ahead_of_time()
     {
         using var vault = new ReviewVault();

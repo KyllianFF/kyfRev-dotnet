@@ -188,11 +188,11 @@ public static class StatisticsText
     /// <summary>« Fiches ».</summary>
     public static string SheetsColumn => Text(nameof(SheetsColumn));
 
-    /// <summary>« une révision aujourd'hui lance la série ».</summary>
-    public static string StreakHint => Text(nameof(StreakHint));
+    /// <summary>« Cette semaine ».</summary>
+    public static string WeekLabel => Text(nameof(WeekLabel));
 
-    /// <summary>« Série en cours ».</summary>
-    public static string StreakLabel => Text(nameof(StreakLabel));
+    /// <summary>« moyenne des 4 semaines d'avant : {0} par semaine ».</summary>
+    public static string WeekAverageOf(object average) => Format("WeekAverage", average);
 
     /// <summary>« Votre régularité : révisions validées (fiches, passages, définition… ».</summary>
     public static string Summary => Text(nameof(Summary));

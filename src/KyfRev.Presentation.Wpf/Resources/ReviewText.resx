@@ -207,6 +207,27 @@
   <data name="Steps" xml:space="preserve">
     <value>Étapes du cycle</value>
   </data>
+  <data name="SuspendAction" xml:space="preserve">
+    <value>Suspendre</value>
+  </data>
+  <data name="ResumeAction" xml:space="preserve">
+    <value>Reprendre</value>
+  </data>
+  <data name="SuspendHelp" xml:space="preserve">
+    <value>L'élément garde son étape et son échéance, mais ne se présente plus à réviser tant qu'il n'est pas repris.</value>
+  </data>
+  <data name="SuspendedSince" xml:space="preserve">
+    <value>suspendue depuis le {0} : elle ne se présente plus à réviser</value>
+  </data>
+  <data name="SuspendedSheet" xml:space="preserve">
+    <value>Fiche suspendue. Elle attend dans « Suspendues », sur Aujourd'hui.</value>
+  </data>
+  <data name="SuspendedPassage" xml:space="preserve">
+    <value>Passage suspendu. Il attend dans « Suspendues », sur Aujourd'hui.</value>
+  </data>
+  <data name="Resumed" xml:space="preserve">
+    <value>Reprise à l'étape {0} : {1}.</value>
+  </data>
   <data name="Forgot" xml:space="preserve">
     <value>J'avais oublié</value>
   </data>

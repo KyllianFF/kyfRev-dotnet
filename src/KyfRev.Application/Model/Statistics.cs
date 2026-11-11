@@ -77,6 +77,15 @@ public sealed record Statistics(
     ImmutableArray<MonthStatistics> ByMonth,
     ImmutableArray<FolderStatistics> ByFolder)
 {
+    /// <summary>Révisions validées depuis le lundi de la semaine en cours, aujourd'hui compris.</summary>
+    public int ThisWeek { get; init; }
+
+    /// <summary>Révisions validées par semaine, en moyenne, sur les quatre semaines entières d'avant.</summary>
+    public double WeeklyAverage { get; init; }
+
+    /// <summary>Semaines entières de la moyenne.</summary>
+    public const int AverageWeeks = 4;
+
     /// <summary>Parmi les révisions du calendrier, celles où l'utilisateur a dit « J'avais oublié ».</summary>
     public int Forgotten { get; init; }
 

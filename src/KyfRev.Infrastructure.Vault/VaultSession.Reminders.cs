@@ -132,7 +132,10 @@ public sealed partial class VaultSession
             }
             var eve = exam.Day.AddDays(-1);
             var items = ItemsInFolder(exam.Folder);
-            upcoming.Add(new UpcomingExam(exam.Folder, exam.Name, exam.Day, daysLeft, items.Count, items.Count(item => item.Due > eve)));
+            upcoming.Add(new UpcomingExam(exam.Folder, exam.Name, exam.Day, daysLeft, items.Count, items.Count(item => item.Due > eve))
+            {
+                Archived = ArchivedInFolder(exam.Folder).Count,
+            });
         }
         return [.. upcoming.OrderBy(exam => exam.Day).ThenBy(exam => RustText.ToLowercase(exam.Name), Utf8Order.Instance)];
     }
@@ -168,6 +171,58 @@ public sealed partial class VaultSession
         return toMove.Count;
     }
 
+    /// <summary>
+    /// Remet en révision les fiches archivées du dossier d'un examen (sous-dossiers compris) : un nouveau cycle, J0
+    /// aujourd'hui, comme « Remettre en révision » fiche par fiche. Leurs étapes ne dépasseront pas la veille de l'examen.
+    /// </summary>
+    /// <returns>Nombre de fiches remises en révision.</returns>
+    public int RestartArchivedBeforeExam(string folder, Moment now)
+    {
+        ArgumentNullException.ThrowIfNull(folder);
+        var cleanFolder = folder.Trim().Trim('/');
+        if (!Settings.Exams.Any(exam => exam.Folder == cleanFolder))
+        {
+            throw VaultException.InvalidSettings("aucun examen pour ce dossier.");
+        }
+        var archived = ArchivedInFolder(cleanFolder);
+        foreach (var id in archived)
+        {
+            ApplyTo(ItemKind.Sheet, id, (tracking, _) => tracking.Restart(now, Settings.Sequence));
+        }
+        return archived.Count;
+    }
+
+    /// <summary>
+    /// La veille du prochain examen qui couvre une fiche ou un passage, après le jour donné : la limite de sa prochaine
+    /// étape. Rien sans examen à venir.
+    /// </summary>
+    public DateOnly? ExamEve(ItemKind kind, string id, DateOnly day)
+    {
+        var sheetId = kind == ItemKind.Sheet ? id : AllAnnotations.FirstOrDefault(annotation => annotation.Id == id)?.SheetId;
+        if (sheetId is null || !_sheets.TryGetValue(sheetId, out var entry))
+        {
+            return null;
+        }
+        var sheetFolder = DisplayFolder(entry.Sheet.Path);
+        var exam = Settings.Exams
+            .Where(candidate => candidate.Day > day && Covers(candidate.Folder, sheetFolder))
+            .OrderBy(candidate => candidate.Day)
+            .FirstOrDefault();
+        return exam?.Day.AddDays(-1);
+    }
+
+    private static bool Covers(string folder, string sheetFolder) =>
+        folder.Length == 0 || sheetFolder == folder || sheetFolder.StartsWith(folder + "/", StringComparison.Ordinal);
+
+    /// <summary>Fiches archivées d'un dossier (sous-dossiers compris) dont le fichier est là, dans l'ordre des identifiants.</summary>
+    private List<string> ArchivedInFolder(string folder) =>
+    [
+        .. _sheets.Values
+            .Where(entry => entry.Presence != FilePresence.Missing && entry.Sheet.Tracking.Status == TrackingStatus.Archived && Covers(folder, DisplayFolder(entry.Sheet.Path)))
+            .Select(entry => entry.Sheet.Id)
+            .Order(StringComparer.Ordinal),
+    ];
+
     /// <summary>Fiches et passages actifs d'un dossier (sous-dossiers compris), avec leur échéance.</summary>
     private List<(ItemKind Kind, string Id, DateOnly Due)> ItemsInFolder(string folder)
     {
@@ -182,13 +237,13 @@ public sealed partial class VaultSession
             {
                 continue;
             }
-            if (entry.Sheet.Tracking.Cycle is { } cycle)
+            if (entry.Sheet.Tracking.DueCycle is { } cycle)
             {
                 items.Add((ItemKind.Sheet, entry.Sheet.Id, cycle.DueDate));
             }
             foreach (var annotation in Annotations(entry.Sheet.Id).Where(a => a.TrashedAt is null).OrderBy(a => a.Anchor.Start))
             {
-                if (annotation.Tracking.Cycle is { } passageCycle)
+                if (annotation.Tracking.DueCycle is { } passageCycle)
                 {
                     items.Add((ItemKind.Passage, annotation.Id, passageCycle.DueDate));
                 }

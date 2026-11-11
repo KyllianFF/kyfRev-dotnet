@@ -467,6 +467,64 @@ public sealed class ExamsTests
     }
 
     [TestMethod]
+    public async Task Archived_sheets_are_shown_and_can_come_back_before_the_exam()
+    {
+        using var vault = new ExamVault();
+        var page = vault.Page();
+        Assert.IsTrue(vault.App.Reviews.Archive(vault.SheetId).Succeeded);
+        Assert.IsTrue(vault.App.Exams.Define("Biologie", "Partiel", new DateOnly(2026, 10, 15)).Succeeded);
+        await page.RefreshCommand.ExecuteAsync(null);
+        var exams = page.Exams!;
+        var row = page.Rows.OfType<ExamRow>().Single();
+
+        Assert.AreEqual(" · 1 fiche archivée", row.ArchivedNote);
+        Assert.IsTrue(row.CanTighten, "rien ne tombe après, mais une fiche du dossier est hors des révisions");
+        StringAssert.EndsWith(row.ToString(), "0 prévu après l'examen · 1 fiche archivée", StringComparison.Ordinal);
+
+        exams.RequestTighten(row);
+        Assert.IsTrue(exams.CanIncludeArchived);
+        Assert.IsFalse(exams.IncludeArchived, "jamais d'office");
+        Assert.AreEqual("Remettre aussi en révision la fiche archivée du dossier", exams.IncludeArchivedLabel);
+        Assert.AreEqual("Aucune échéance ne tombe après la veille de « Partiel » (jeu. 15 oct.).", exams.ConfirmMessage);
+
+        // Sans la case : la fiche reste archivée.
+        await exams.AnswerCommand.ExecuteAsync(true);
+        Assert.AreEqual(ExamText.NothingToTighten, exams.Message);
+        Assert.AreEqual(ReviewStatus.Archived, vault.App.Sheets.Open(vault.SheetId).Value.Review.Status);
+
+        exams.RequestTighten(page.Rows.OfType<ExamRow>().Single());
+        exams.IncludeArchived = true;
+        await exams.AnswerCommand.ExecuteAsync(true);
+
+        Assert.AreEqual("1 fiche archivée remise en révision.", exams.Message);
+        Assert.IsFalse(exams.IncludeArchived);
+        var state = vault.App.Sheets.Open(vault.SheetId).Value.Review;
+        Assert.AreEqual((ReviewStatus.Active, "J1", new DateOnly(2026, 10, 2)), (state.Status, state.Step, state.DueDate!.Value));
+        var after = page.Rows.OfType<ExamRow>().Single();
+        Assert.AreEqual(string.Empty, after.ArchivedNote);
+        Assert.IsFalse(after.CanTighten);
+    }
+
+    [TestMethod]
+    public async Task A_review_before_an_exam_never_schedules_the_next_step_after_its_eve()
+    {
+        using var vault = new ExamVault();
+        Assert.IsTrue(vault.App.Exams.Define("Biologie", "Partiel", new DateOnly(2026, 10, 6)).Succeeded);
+
+        // J1 le 2 : J3 tombe le 5, la veille même. Validé le 4, J7 tomberait le 11 : il est ramené au 5.
+        vault.Time.AdvanceDays(1);
+        Assert.AreEqual(new DateOnly(2026, 10, 5), vault.App.Reviews.Validate(ItemKind.Sheet, vault.SheetId).Value.DueDate);
+        vault.Time.AdvanceDays(2);
+        var capped = vault.App.Reviews.Validate(ItemKind.Sheet, vault.SheetId).Value;
+        Assert.AreEqual(("J7", new DateOnly(2026, 10, 5)), (capped.Step, capped.DueDate!.Value));
+
+        // Le jour de l'examen, plus rien à préparer : les étapes reprennent leur écart exact.
+        vault.Time.AdvanceDays(2);
+        var free = vault.App.Reviews.Validate(ItemKind.Sheet, vault.SheetId).Value;
+        Assert.AreEqual(("J14", new DateOnly(2026, 10, 20)), (free.Step, free.DueDate!.Value));
+    }
+
+    [TestMethod]
     public async Task Tightening_several_due_dates_counts_them()
     {
         using var vault = new ExamVault();

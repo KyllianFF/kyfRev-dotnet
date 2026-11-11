@@ -183,6 +183,12 @@ public interface IReviewStore
     /// <summary>Recommence le cycle à J0, avec la séquence du coffre.</summary>
     void Restart(ItemKind kind, string id, Moment now);
 
+    /// <summary>Suspend un élément actif : il garde son étape et son échéance, mais ne se présente plus à réviser.</summary>
+    void Suspend(ItemKind kind, string id, Moment now);
+
+    /// <summary>Reprend un élément suspendu, là où il en était.</summary>
+    void ResumeReview(ItemKind kind, string id);
+
     /// <summary>Archive une fiche à la main.</summary>
     void ArchiveSheet(string id, Moment now);
 
@@ -257,6 +263,9 @@ public interface IExamStore
 
     /// <summary>Ramène avant l'examen les échéances qui tombent après ; rend leur nombre.</summary>
     int TightenBeforeExam(string folder, Moment now);
+
+    /// <summary>Remet en révision les fiches archivées du dossier d'un examen ; rend leur nombre.</summary>
+    int RestartArchivedBeforeExam(string folder, Moment now);
 
     /// <summary>
     /// Étale un retard sur les jours suivants, ou libère des jours de pause. Sans <paramref name="apply"/>, rien n'est

@@ -119,6 +119,11 @@ public sealed record Dashboard(
     bool QuotesActive,
     bool SchemasActive)
 {
+    /// <summary>
+    /// Fiches et passages suspendus, fiches d'abord : ils ne sont ni dus ni dans la charge, et attendent d'être repris.
+    /// </summary>
+    public ImmutableArray<DueItem> Suspended { get; init; } = [];
+
     /// <summary>Jours affichés dans « À venir ».</summary>
     public const int UpcomingDays = 7;
 

@@ -354,16 +354,11 @@ public sealed partial class StatisticsPageViewModel : ObservableObject, INavigat
                 statistics.ActiveDays > 1 ? StatisticsText.ActiveMany : StatisticsText.ActiveOne,
                 StatisticsText.ActiveValueOf(statistics.ActiveDays, calendarDays),
                 [StatisticsText.RecentDetailOf(Dates.Plural(statistics.LastSevenDays, StatisticsText.ReviewOneOf, StatisticsText.ReviewManyOf), statistics.LastThirtyDays)]),
+            // Un volume par semaine, pas une série : il dit le travail fait sans rien faire perdre un jour sans révision.
             new(
-                StatisticsText.StreakLabel,
-                Days(statistics.CurrentStreak, StatisticsText.DayOneOf, StatisticsText.DayManyOf),
-                [
-                    statistics.LongestStreak <= 0
-                        ? StatisticsText.StreakHint
-                        : StatisticsText.RecordOf(
-                            Days(statistics.LongestStreak, StatisticsText.DayOneOf, StatisticsText.DayManyOf),
-                            Dates.Short(statistics.LongestStreakEnd.GetValueOrDefault())),
-                ]),
+                StatisticsText.WeekLabel,
+                Dates.Plural(statistics.ThisWeek, StatisticsText.ReviewOneOf, StatisticsText.ReviewManyOf),
+                [StatisticsText.WeekAverageOf(Number(statistics.WeeklyAverage))]),
         ];
     }
 

@@ -55,6 +55,10 @@
                 <TextBlock Text="{x:Static pages:SettingsText.ActiveRecall}" TextWrapping="Wrap" />
               </CheckBox>
               <TextBlock Text="{x:Static pages:SettingsText.ActiveRecallHelp}" Style="{StaticResource Hint}" />
+              <CheckBox x:Name="SmoothDueDatesBox" IsChecked="{Binding SmoothDueDates}" Margin="0,16,0,0" AutomationProperties.Name="{x:Static pages:SettingsText.SmoothDueDates}" AutomationProperties.HelpText="{x:Static pages:SettingsText.SmoothDueDatesHelp}">
+                <TextBlock Text="{x:Static pages:SettingsText.SmoothDueDates}" TextWrapping="Wrap" />
+              </CheckBox>
+              <TextBlock Text="{x:Static pages:SettingsText.SmoothDueDatesHelp}" Style="{StaticResource Hint}" />
             </StackPanel>
           </kyf:Card>
           <kyf:Card x:Name="RemindersCard" Padding="16" Margin="0,0,0,8">

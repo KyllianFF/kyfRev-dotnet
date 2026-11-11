@@ -212,7 +212,7 @@
             </InlineUIContainer>
             <Run x:Name="DayLabel" Text="{Binding DayLabel, Mode=OneWay}" Style="{StaticResource ExamDayLabel}" />
           </TextBlock>
-          <TextBlock x:Name="ExamDetail" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,2,0,0"><Run Text="{Binding Detail, Mode=OneWay}" /><Run x:Name="After" Text="{Binding AfterExam, Mode=OneWay}" /></TextBlock>
+          <TextBlock x:Name="ExamDetail" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,2,0,0"><Run Text="{Binding Detail, Mode=OneWay}" /><Run x:Name="After" Text="{Binding AfterExam, Mode=OneWay}" /><Run x:Name="ArchivedNote" Text="{Binding ArchivedNote, Mode=OneWay}" /></TextBlock>
         </StackPanel>
         <StackPanel kyf:AdaptiveRow.Part="Trailing" Orientation="Horizontal" VerticalAlignment="Center">
           <Button x:Name="Tighten" Content="{x:Static pages:ExamText.TightenAction}" Click="OnTightenClick" Focusable="False" Margin="0,0,4,0"
@@ -479,6 +479,10 @@
           <WrapPanel Margin="4,0,4,4">
             <ListBox x:Name="Filters" ItemsPanel="{StaticResource InLine}" ItemsSource="{Binding Filters}" SelectedItem="{Binding SelectedFilter}"
                      AutomationProperties.Name="{x:Static pages:DashboardText.Show}" />
+            <!-- Un dossier ou une étiquette : la liste s'y restreint, et la séance avec elle. -->
+            <ComboBox x:Name="ScopeChoice" ItemsSource="{Binding Scopes}" SelectedItem="{Binding SelectedScope}" DisplayMemberPath="Label" VerticalAlignment="Center" Margin="4,0,0,0" MaxWidth="260"
+                      ToolTip="{x:Static pages:DashboardText.ScopeName}" AutomationProperties.Name="{x:Static pages:DashboardText.ScopeName}"
+                      Visibility="{Binding HasScopes, Converter={StaticResource Visible}}" />
             <!-- Le tri : le choix en cours, les autres dans un menu. -->
             <Button x:Name="SortButton" Style="{DynamicResource Kyf.Button.Subtle}" Click="OnSortClick" VerticalAlignment="Center" Margin="4,0,0,0"
                     AutomationProperties.Name="{Binding SortName}">
@@ -559,7 +563,16 @@
 
     <kyf:Dialog x:Name="ExamConfirmation" Grid.RowSpan="9" Grid.ColumnSpan="9" DataContext="{Binding Exams}" Title="{Binding ConfirmTitle}" IsOpen="{Binding IsConfirming, Mode=OneWay, FallbackValue=False}"
                 PrimaryButtonText="{Binding ConfirmLabel}" Closed="OnExamConfirmationClosed">
-      <TextBlock Text="{Binding ConfirmMessage}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" />
+      <StackPanel>
+        <TextBlock Text="{Binding ConfirmMessage}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" />
+        <!-- Les fiches archivées du dossier échappent aux révisions : on peut les y remettre avant l'examen. -->
+        <StackPanel x:Name="IncludeArchived" Margin="0,12,0,0" Visibility="{Binding CanIncludeArchived, Converter={StaticResource Visible}}">
+          <CheckBox x:Name="IncludeArchivedBox" IsChecked="{Binding IncludeArchived}" AutomationProperties.Name="{Binding IncludeArchivedLabel}" AutomationProperties.HelpText="{x:Static pages:ExamText.IncludeArchivedHelp}">
+            <TextBlock Text="{Binding IncludeArchivedLabel}" TextWrapping="Wrap" />
+          </CheckBox>
+          <TextBlock Text="{x:Static pages:ExamText.IncludeArchivedHelp}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,4,0,0" />
+        </StackPanel>
+      </StackPanel>
     </kyf:Dialog>
 
     <kyf:Dialog x:Name="SpreadDialog" Grid.RowSpan="9" Grid.ColumnSpan="9" DataContext="{Binding Spread}" Title="{x:Static pages:SpreadText.Title}" IsOpen="{Binding IsOpen, Mode=OneWay, FallbackValue=False}"

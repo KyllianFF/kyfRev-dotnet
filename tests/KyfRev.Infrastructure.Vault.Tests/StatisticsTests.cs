@@ -100,6 +100,11 @@ public abstract class StatisticsTests(StorageKind storage)
         vault.ValidateReview(ItemKind.Sheet, sheet, On(October(2)));
         vault.ValidateReview(ItemKind.Sheet, sheet, On(October(3)));
 
+        // Le 2 et le 3 octobre 2026 sont un vendredi et un samedi ; le lundi suivant ouvre une autre semaine.
+        Assert.AreEqual(2, vault.Statistics(October(4)).ThisWeek);
+        Assert.AreEqual(0, vault.Statistics(October(5)).ThisWeek);
+        Assert.AreEqual(0.5, vault.Statistics(October(5)).WeeklyAverage);
+        Assert.AreEqual(0, vault.Statistics(October(4)).WeeklyAverage);
         Assert.AreEqual(2, vault.Statistics(October(3)).CurrentStreak);
         Assert.AreEqual(2, vault.Statistics(October(4)).CurrentStreak);
         Assert.AreEqual(0, vault.Statistics(October(5)).CurrentStreak);

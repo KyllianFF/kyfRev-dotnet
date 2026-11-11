@@ -43,7 +43,14 @@ main. Paramètres › Données permet d'en ouvrir ou d'en créer un autre.
   oubli à J7, la fiche revient à J3 trois jours plus tard). « Recommencer à J0 » reste pour repartir de zéro.
 - **Surlignez un passage** ou **créez une définition** depuis le texte : ils ont leur propre calendrier.
 - La barre de révision permet aussi de valider à une date passée, ou de reporter à une date choisie.
-- **Examens** : sur Aujourd'hui, « Examen… » fixe une date pour un dossier. « Resserrer… » ramène les échéances avant la veille.
+- **Examens** : sur Aujourd'hui, « Examen… » fixe une date pour un dossier. « Resserrer… » ramène les échéances avant la veille,
+  et peut remettre en révision les fiches archivées du dossier. Tant que l'examen n'est pas passé, une révision ne place
+  jamais l'étape suivante après sa veille.
+- **Dossier ou étiquette** : sur Aujourd'hui, la liste à côté de « Tout / Fiches / Passages » restreint ce qui est à réviser,
+  et la séance avec.
+- **Suspendre** (dans « ⋯ » de la barre de révision) met une fiche ou un passage de côté sans rien perdre : il ne se présente
+  plus à réviser, et attend dans « Suspendues », sur Aujourd'hui, jusqu'à « Reprendre ».
+- **Lisser les échéances** (Paramètres › Révisions, coupé par défaut) pose les étapes longues sur un jour voisin moins chargé.
 - **Charge** montre les 30 prochains jours, et permet de déplacer une échéance vers un jour moins chargé.
 - **Étaler…**, sur Aujourd'hui : après une absence, gardez pour aujourd'hui les révisions les plus fragiles et répartissez les
   autres sur les jours suivants, sans dépasser le nombre par jour que vous donnez ; ou annoncez une pause, et ce qui tombait

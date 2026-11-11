@@ -230,6 +230,27 @@ public static class ReviewText
     /// <summary>« Étapes du cycle ».</summary>
     public static string Steps => Text(nameof(Steps));
 
+    /// <summary>« Suspendre ».</summary>
+    public static string SuspendAction => Text(nameof(SuspendAction));
+
+    /// <summary>« Reprendre ».</summary>
+    public static string ResumeAction => Text(nameof(ResumeAction));
+
+    /// <summary>« L'élément garde son étape et son échéance, mais ne se présente plus à réviser tant qu'il n'est pas repris. ».</summary>
+    public static string SuspendHelp => Text(nameof(SuspendHelp));
+
+    /// <summary>« suspendue depuis le {0} : elle ne se présente plus à réviser ».</summary>
+    public static string SuspendedSinceOf(object day) => Format("SuspendedSince", day);
+
+    /// <summary>« Fiche suspendue. Elle attend dans « Suspendues », sur Aujourd'hui. ».</summary>
+    public static string SuspendedSheet => Text(nameof(SuspendedSheet));
+
+    /// <summary>« Passage suspendu. Il attend dans « Suspendues », sur Aujourd'hui. ».</summary>
+    public static string SuspendedPassage => Text(nameof(SuspendedPassage));
+
+    /// <summary>« Reprise à l'étape {0} : {1}. ».</summary>
+    public static string ResumedOf(object step, object due) => Format("Resumed", step, due);
+
     /// <summary>« J'avais oublié ».</summary>
     public static string Forgot => Text(nameof(Forgot));
 

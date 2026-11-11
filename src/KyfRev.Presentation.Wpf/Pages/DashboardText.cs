@@ -206,6 +206,21 @@ public static class DashboardText
     /// <summary>« révisions validées ».</summary>
     public static string WeekNounMany => Text(nameof(WeekNounMany));
 
+    /// <summary>« Suspendues ».</summary>
+    public static string Suspended => Text(nameof(Suspended));
+
+    /// <summary>« Tous les dossiers ».</summary>
+    public static string AllScopes => Text(nameof(AllScopes));
+
+    /// <summary>« Restreindre à un dossier ou à une étiquette ».</summary>
+    public static string ScopeName => Text(nameof(ScopeName));
+
+    /// <summary>« Dossier : {0} ».</summary>
+    public static string FolderScopeOf(object folder) => Format("FolderScope", folder);
+
+    /// <summary>« Étiquette : {0} ».</summary>
+    public static string TagScopeOf(object tag) => Format("TagScope", tag);
+
     private static string Format(string name, params object[] values) => string.Format(CultureInfo.CurrentCulture, Text(name), values);
 
     private static string Text(string name) =>

@@ -53,6 +53,11 @@ internal static class TrackingJson
                     ["echeance"] = Fields.DayText(cycle.DueDate),
                     ["derniereRevision"] = Fields.DayText(cycle.LastReview),
                 };
+                // Absent de la version 0.x : écrit seulement pour un élément suspendu.
+                if (cycle.SuspendedOn is { } suspendedOn)
+                {
+                    target["cycle"]!["suspendueLe"] = Fields.DayText(suspendedOn);
+                }
                 break;
             case ArchivedState { Archive: var archive }:
                 target["statut"] = "archivee";
@@ -92,7 +97,8 @@ internal static class TrackingJson
             Fields.Day(obj, "demarreLe"),
             (int)Fields.Integer(obj, "etape", 0, int.MaxValue),
             Fields.Day(obj, "echeance"),
-            Fields.Day(obj, "derniereRevision"));
+            Fields.Day(obj, "derniereRevision"),
+            Fields.OptionalDay(obj, "suspendueLe"));
     }
 
     private static ArchiveInfo ReadArchive(JsonObject obj) => new(

@@ -52,6 +52,9 @@ public sealed record ReviewState(
     int CyclesStarted,
     int CyclesCompleted)
 {
+    /// <summary>Jour où l'élément a été suspendu ; rien s'il ne l'est pas.</summary>
+    public DateOnly? SuspendedOn { get; init; }
+
     /// <summary>État de révision de <paramref name="tracking"/> au <paramref name="day"/> donné.</summary>
     public static ReviewState Of(Tracking tracking, DateOnly day)
     {
@@ -71,6 +74,7 @@ public sealed record ReviewState(
                 DaysLate = cycle.DaysLate(day),
                 ReviewedToday = cycle.LastReview == day,
                 StartedToday = cycle.StartedOn == day,
+                SuspendedOn = cycle.SuspendedOn,
             };
         }
         if (tracking.Archive is { } archive)

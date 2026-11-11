@@ -153,6 +153,21 @@
   <data name="Today" xml:space="preserve">
     <value>Aujourd'hui</value>
   </data>
+  <data name="Suspended" xml:space="preserve">
+    <value>Suspendues</value>
+  </data>
+  <data name="AllScopes" xml:space="preserve">
+    <value>Tous les dossiers</value>
+  </data>
+  <data name="ScopeName" xml:space="preserve">
+    <value>Restreindre à un dossier ou à une étiquette</value>
+  </data>
+  <data name="FolderScope" xml:space="preserve">
+    <value>Dossier : {0}</value>
+  </data>
+  <data name="TagScope" xml:space="preserve">
+    <value>Étiquette : {0}</value>
+  </data>
   <data name="Upcoming" xml:space="preserve">
     <value>À venir — 7 jours</value>
   </data>

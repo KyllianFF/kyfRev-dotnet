@@ -50,6 +50,12 @@ public sealed partial class SettingsPageViewModel : ObservableObject
     [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
     public partial bool ActiveRecall { get; set; }
 
+    /// <summary>Le lissage des échéances.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasChanges))]
+    [NotifyCanExecuteChangedFor(nameof(SaveCommand))]
+    public partial bool SmoothDueDates { get; set; }
+
     /// <summary>Le nombre de rappels par jour, tel que saisi.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasChanges))]
@@ -108,6 +114,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject
                 || Number(MaxPerDay) != _stored.MaxPerDay
                 || Number(MaxWaitDays) != _stored.MaxWaitDays
                 || ActiveRecall != _stored.ActiveRecall
+                || SmoothDueDates != _stored.SmoothDueDates
                 || IncludeManualArchiving != _stored.IncludeManualArchiving;
         }
     }
@@ -154,6 +161,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject
         MaxPerDay = string.Empty;
         MaxWaitDays = string.Empty;
         ActiveRecall = false;
+        SmoothDueDates = false;
         IncludeManualArchiving = false;
         IsLoading = false;
         IsReady = false;
@@ -202,7 +210,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject
             Error = refused;
             return;
         }
-        var (steps, rest, maxPerDay, maxWait, recall, manual) = (Numbers(Steps)!.Value, Numbers(RestMonths)!.Value, Number(MaxPerDay)!.Value, Number(MaxWaitDays)!.Value, ActiveRecall, IncludeManualArchiving);
+        var (steps, rest, maxPerDay, maxWait, recall, manual, smooth) = (Numbers(Steps)!.Value, Numbers(RestMonths)!.Value, Number(MaxPerDay)!.Value, Number(MaxWaitDays)!.Value, ActiveRecall, IncludeManualArchiving, SmoothDueDates);
         var generation = _generation;
         var outcome = await Task.Run(() => _settings.Update(current => current with
         {
@@ -212,6 +220,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject
             MaxWaitDays = maxWait,
             ActiveRecall = recall,
             IncludeManualArchiving = manual,
+            SmoothDueDates = smooth,
         })).ConfigureAwait(true);
         if (generation != _generation)
         {
@@ -248,6 +257,7 @@ public sealed partial class SettingsPageViewModel : ObservableObject
         MaxPerDay = preferences.MaxPerDay.ToString(CultureInfo.InvariantCulture);
         MaxWaitDays = preferences.MaxWaitDays.ToString(CultureInfo.InvariantCulture);
         ActiveRecall = preferences.ActiveRecall;
+        SmoothDueDates = preferences.SmoothDueDates;
         IncludeManualArchiving = preferences.IncludeManualArchiving;
         OnPropertyChanged(nameof(HasChanges));
         SaveCommand.NotifyCanExecuteChanged();
@@ -276,6 +286,8 @@ public sealed partial class SettingsPageViewModel : ObservableObject
     partial void OnStepsChanged(string value) => IsSaved = false;
 
     partial void OnActiveRecallChanged(bool value) => IsSaved = false;
+
+    partial void OnSmoothDueDatesChanged(bool value) => IsSaved = false;
 
     partial void OnMaxPerDayChanged(string value) => IsSaved = false;
 

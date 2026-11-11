@@ -55,6 +55,12 @@ public sealed record VaultSettingsFile(
     ImmutableDictionary<string, UnknownProperties> SectionUnknown,
     UnknownProperties Unknown)
 {
+    /// <summary>
+    /// Lissage des échéances : une étape longue peut se poser sur un jour voisin moins chargé. Absent, il est coupé ; il ne
+    /// s'écrit que s'il est actif, ce que la version 0.x n'a jamais fait.
+    /// </summary>
+    public bool SmoothDueDates { get; init; }
+
     /// <summary>Délai de verrouillage le plus long : 1440 minutes, un jour.</summary>
     public const int MaxLockAfterMinutes = 1440;
 
@@ -69,13 +75,15 @@ public sealed record VaultSettingsFile(
 
         var sequence = ReviewSequence.Default;
         var activeRecall = true;
+        var smooth = false;
         if (Fields.OptionalObject(obj, "revision") is { } revision)
         {
+            smooth = Fields.OptionalBoolean(revision, "lissage", fallback: false);
             var creation = ReviewSequence.Create(Fields.Array(revision, "sequence")
                 .Select(item => (int)Fields.IntegerValue(item ?? throw new VaultFormatException("« sequence » contient null"), "sequence", 0, ushort.MaxValue)));
             sequence = creation.IsSuccess ? creation.Sequence : throw new VaultFormatException(creation.Error.Message);
             activeRecall = Fields.OptionalBoolean(revision, "rappelActif", fallback: true);
-            sections["revision"] = UnknownProperties.From(Fields.Unknown(revision, "sequence", "rappelActif"));
+            sections["revision"] = UnknownProperties.From(Fields.Unknown(revision, "sequence", "rappelActif", "lissage"));
         }
 
         var reminders = ReminderRules.Default;
@@ -146,7 +154,10 @@ public sealed record VaultSettingsFile(
             exams,
             lockAfter,
             sections.ToImmutable(),
-            UnknownProperties.From(Fields.Unknown(obj, Known)));
+            UnknownProperties.From(Fields.Unknown(obj, Known)))
+        {
+            SmoothDueDates = smooth,
+        };
     }
 
     /// <summary>Réglages d'un nouveau coffre : les défauts de la version 0.x.</summary>
@@ -175,13 +186,7 @@ public sealed record VaultSettingsFile(
             ["format"] = Format,
             ["id"] = Id,
             ["creeLe"] = Fields.DayText(CreatedOn),
-            ["revision"] = Section(
-                "revision",
-                new JsonObject
-                {
-                    ["sequence"] = new JsonArray([.. Sequence.Values.Select(value => (JsonNode?)JsonValue.Create(value))]),
-                    ["rappelActif"] = ActiveRecall,
-                }),
+            ["revision"] = Section("revision", Revision()),
             ["rappels"] = Section(
                 "rappels",
                 new JsonObject
@@ -239,6 +244,21 @@ public sealed record VaultSettingsFile(
         // Comme la version 0.x : les réglages inconnus suivent, triés par ordre des octets UTF-8.
         Fields.AddUnknown(obj, Unknown.Properties.OrderBy(pair => pair.Key, Utf8Order.Instance));
         return SerdeJson.PrettyFile(obj);
+    }
+
+    /// <summary>« lissage » ne s'écrit qu'actif : coupé, la section reste celle de la version 0.x, octet pour octet.</summary>
+    private JsonObject Revision()
+    {
+        var revision = new JsonObject
+        {
+            ["sequence"] = new JsonArray([.. Sequence.Values.Select(value => (JsonNode?)JsonValue.Create(value))]),
+            ["rappelActif"] = ActiveRecall,
+        };
+        if (SmoothDueDates)
+        {
+            revision["lissage"] = true;
+        }
+        return revision;
     }
 
     private JsonObject Section(string name, JsonObject section)

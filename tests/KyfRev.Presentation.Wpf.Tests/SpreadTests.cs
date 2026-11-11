@@ -108,6 +108,69 @@ public sealed class SpreadTests
         Assert.AreEqual(string.Empty, page.Spread.Plan);
     }
 
+    [TestMethod]
+    public async Task A_folder_or_a_tag_restricts_the_list_and_the_session()
+    {
+        using var vault = new LateVault(sheets: 2, daysAway: 2);
+        var history = vault.App.Sheets.Create("Histoire/Révolution", "1789", null).Value;
+        Assert.IsTrue(vault.App.Sheets.SetTags(history, ["partiel"]).Succeeded);
+        vault.Time.AdvanceDays(2);
+        var opener = new FakeOpener();
+        var page = new DashboardPageViewModel(vault.App.Reminders, vault.App.Sheets, opener, null, vault.App.Reviews, vault.App.Exams, vault.App.Folders, vault.Time);
+        await page.RefreshCommand.ExecuteAsync(null);
+
+        Assert.IsTrue(page.HasScopes);
+        Assert.AreEqual(
+            "Tous les dossiers | Dossier : Biologie | Dossier : Histoire | Dossier : Histoire › Révolution | Étiquette : partiel",
+            string.Join(" | ", page.Scopes.Select(scope => scope.Label)));
+        Assert.AreEqual("Commencer (3)", page.StartLabel);
+
+        page.SelectedScope = page.Scopes[2];
+        Assert.AreEqual("Commencer (1)", page.StartLabel);
+        Assert.AreEqual("1789", page.Rows.OfType<DueItemRow>().Single().Item.Title);
+
+        page.SelectedScope = page.Scopes[4];
+        Assert.AreEqual("Commencer (1)", page.StartLabel);
+
+        page.SelectedScope = page.Scopes[1];
+        Assert.AreEqual("Commencer (2)", page.StartLabel);
+
+        // Le choix tient quand le tableau se relit ; il revient à « Tout » si son dossier n'a plus rien à réviser.
+        await page.RefreshCommand.ExecuteAsync(null);
+        Assert.AreEqual("Dossier : Biologie", page.SelectedScope!.Label);
+        page.SelectedScope = page.Scopes[2];
+        Assert.IsTrue(vault.App.Reviews.Archive(history).Succeeded);
+        await page.RefreshCommand.ExecuteAsync(null);
+        Assert.AreEqual("Tous les dossiers", page.SelectedScope!.Label);
+        Assert.AreEqual("Commencer (2)", page.StartLabel);
+    }
+
+    [TestMethod]
+    public async Task Suspended_items_wait_in_their_own_folded_group()
+    {
+        using var vault = new LateVault(sheets: 2, daysAway: 2);
+        var page = vault.Page();
+        await page.RefreshCommand.ExecuteAsync(null);
+        var first = page.Dashboard!.Overdue[0];
+
+        Assert.IsTrue(vault.App.Reviews.Suspend(first.Kind, first.Id).Succeeded);
+        await page.RefreshCommand.ExecuteAsync(null);
+
+        Assert.AreEqual("Commencer (1)", page.StartLabel);
+        var group = page.Rows.OfType<DashboardGroup>().Single(candidate => candidate.Title == "Suspendues");
+        Assert.AreEqual(1, group.Count);
+        Assert.IsFalse(group.IsExpanded, "replié : ils ne sont pas à réviser");
+        Assert.AreEqual(1, page.Rows.OfType<DueItemRow>().Count());
+
+        group.ToggleCommand.Execute(null);
+        Assert.IsTrue(page.Rows.OfType<DueItemRow>().Any(row => row.Item.Id == first.Id));
+
+        Assert.IsTrue(vault.App.Reviews.Resume(first.Kind, first.Id).Succeeded);
+        await page.RefreshCommand.ExecuteAsync(null);
+        Assert.IsFalse(page.Rows.OfType<DashboardGroup>().Any(candidate => candidate.Title == "Suspendues"));
+        Assert.AreEqual("Commencer (2)", page.StartLabel);
+    }
+
     /// <summary>Un coffre d'essai : des fiches créées le jeudi 1er octobre 2026, et l'horloge avancée de quelques jours.</summary>
     private sealed class LateVault : IDisposable
     {

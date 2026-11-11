@@ -102,6 +102,30 @@
   <data name="MoreActions" xml:space="preserve">
     <value>Autres actions de l'examen {0}</value>
   </data>
+  <data name="ArchivedOne" xml:space="preserve">
+    <value> · {0} fiche archivée</value>
+  </data>
+  <data name="ArchivedMany" xml:space="preserve">
+    <value> · {0} fiches archivées</value>
+  </data>
+  <data name="IncludeArchivedOne" xml:space="preserve">
+    <value>Remettre aussi en révision la fiche archivée du dossier</value>
+  </data>
+  <data name="IncludeArchivedMany" xml:space="preserve">
+    <value>Remettre aussi en révision les {0} fiches archivées du dossier</value>
+  </data>
+  <data name="IncludeArchivedHelp" xml:space="preserve">
+    <value>Elles repartent de J0 aujourd'hui, et leurs étapes ne dépasseront pas la veille de l'examen.</value>
+  </data>
+  <data name="TightenNoneMessage" xml:space="preserve">
+    <value>Aucune échéance ne tombe après la veille de « {0} » ({1}).</value>
+  </data>
+  <data name="RestartedOne" xml:space="preserve">
+    <value>{0} fiche archivée remise en révision.</value>
+  </data>
+  <data name="RestartedMany" xml:space="preserve">
+    <value>{0} fiches archivées remises en révision.</value>
+  </data>
   <data name="TightenTitle" xml:space="preserve">
     <value>Resserrer avant l'examen ?</value>
   </data>
