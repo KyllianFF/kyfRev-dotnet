@@ -116,6 +116,10 @@ Ctrl+Alt+N, qui fait la même chose depuis une autre application tant que kyfRev
 
 ## En cas de problème
 
+**Coffre dans un dossier synchronisé** (Dropbox, OneDrive, Syncthing, Nextcloud) : si deux postes modifient la même fiche
+sans se voir, l'outil garde deux fichiers. « Santé du coffre » les liste sous « Copies de conflit » : comparez-les dans
+l'Explorateur, reportez ce qui manque, puis supprimez la copie. N'ouvrez pas le même coffre sur deux postes à la fois.
+
 Le journal `kyfRev.log` garde la trace des derniers démarrages : dans `%LOCALAPPDATA%\kyfRev\v1` pour une version installée, à côté
 de `kyfRev.exe` pour la version portable. Il ne contient pas le texte de vos fiches.
 

@@ -31,6 +31,7 @@ public sealed partial class VaultSession
             .ToList();
         var toCheck = AllAnnotations.Where(a => a.TrashedAt is null && a.AnchorState != AnchorState.Anchored).Select(Passage).ToList();
         var brokenLinks = BrokenLinks();
+        var conflicts = ConflictCopyPaths();
         return new HealthDetails(
             [.. health.Moved.Select(move => new MovedSheet(TitleOf(move.Id), move.From.Value, move.To.Value))],
             [.. health.ModifiedOutside.Select(Concerned)],
@@ -43,8 +44,62 @@ public sealed partial class VaultSession
             brokenLinks,
             orphans,
             toCheck,
-            health.Problems + toCheck.Count + brokenLinks.Count);
+            health.Problems + toCheck.Count + brokenLinks.Count + conflicts.Count)
+        {
+            ConflictCopies = conflicts,
+        };
     }
+
+    /// <summary>
+    /// Les copies de conflit laissées par un outil de synchronisation, reconnues à leur nom (voir
+    /// <see cref="Analysis.ConflictCopies"/>) : parmi les fiches, les citations et les schémas, et dans le suivi, où une
+    /// copie du fichier d'une fiche ne serait jamais relue. Rien n'est ouvert ni modifié. Les versions, la corbeille et les
+    /// données d'extensions ne sont pas regardées : leurs noms ne sont pas ceux de kyfRev.
+    /// </summary>
+    /// <returns>Leurs chemins dans le coffre, triés.</returns>
+    public IReadOnlyList<string> ConflictCopyPaths()
+    {
+        var found = new List<string>();
+        void Scan(string folder, bool tracking)
+        {
+            var absolute = Path.Combine(Root, folder.Replace('/', Path.DirectorySeparatorChar));
+            if (!_storage.DirectoryExists(absolute))
+            {
+                return;
+            }
+            IReadOnlyList<KyfRev.Application.Ports.StorageEntry> entries;
+            try
+            {
+                entries = _storage.AllEntries(absolute);
+            }
+            catch (Exception exception) when (IsIo(exception))
+            {
+                // Un dossier illisible n'empêche pas le reste du rapport : il est déjà signalé ailleurs.
+                return;
+            }
+            foreach (var entry in entries.Where(entry => !entry.IsDirectory && !entry.IsLink))
+            {
+                var relative = Path.GetRelativePath(Root, entry.FullName).Replace('\\', '/');
+                if (tracking && Skipped.Any(skipped => relative.StartsWith(skipped + "/", StringComparison.Ordinal)))
+                {
+                    continue;
+                }
+                if (Analysis.ConflictCopies.IsConflictName(entry.Name) || (tracking && Analysis.ConflictCopies.IsTrackingCopy(entry.Name)))
+                {
+                    found.Add(relative);
+                }
+            }
+        }
+        Scan(VaultLayout.Sheets, tracking: false);
+        Scan(VaultLayout.Quotes, tracking: false);
+        Scan(VaultLayout.Schemas, tracking: false);
+        Scan(VaultLayout.Tracking, tracking: true);
+        found.Sort(StringComparer.Ordinal);
+        return found;
+    }
+
+    /// <summary>Dans le suivi, ce que kyfRev ne nomme pas lui-même ou garde exprès : on n'y cherche pas de copie de conflit.</summary>
+    private static readonly string[] Skipped = [VaultLayout.Versions, VaultLayout.TrashTracking, VaultLayout.ExtensionData];
 
     /// <summary>
     /// Doublon d'identifiant : <paramref name="original"/> garde l'identifiant et son suivi ;

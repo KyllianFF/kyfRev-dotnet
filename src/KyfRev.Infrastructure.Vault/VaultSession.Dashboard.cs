@@ -148,7 +148,7 @@ public sealed partial class VaultSession
             next,
             active,
             archived,
-            Health.Problems + AnnotationsToCheck + BrokenLinks().Count,
+            Health.Problems + AnnotationsToCheck + BrokenLinks().Count + ConflictCopyPaths().Count,
             ReadDraws().Draws is { Length: > 0 } draws ? (int)draws[^1].UnservedPriority : 0,
             Settings.Quotes.Active,
             SchemasActive)

@@ -49,4 +49,11 @@ public sealed record HealthDetails(
     IReadOnlyList<BrokenLink> BrokenLinks,
     IReadOnlyList<ConcernedPassage> OrphanAnnotations,
     IReadOnlyList<ConcernedPassage> AnnotationsToCheck,
-    int Problems);
+    int Problems)
+{
+    /// <summary>
+    /// Copies de conflit laissées par un outil de synchronisation (Dropbox, OneDrive, Syncthing, Nextcloud), reconnues à
+    /// leur nom : chemins dans le coffre. Elles comptent parmi les problèmes.
+    /// </summary>
+    public IReadOnlyList<string> ConflictCopies { get; init; } = [];
+}

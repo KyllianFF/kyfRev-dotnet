@@ -258,6 +258,41 @@ public abstract class VaultAdapterTests(StorageKind storage)
     }
 
     [TestMethod]
+    public void Conflict_copies_left_by_a_sync_tool_are_reported_by_their_name()
+    {
+        using var folder = TemporaryVault.Empty(storage);
+        using var vault = new VaultStore(storage: folder.Storage).Initialize(folder.Root, Now);
+        var id = vault.CreateSheet("Biologie", "Mitose", "Texte.\n", Now);
+        vault.CreateSheet(null, "Mitose", "Autre.\n", Now);
+        Assert.IsEmpty(vault.HealthDetails().ConflictCopies, "« Mitose (2).md » est un nom que kyfRev donne lui-même");
+        var before = vault.HealthDetails().Problems;
+
+        // Ce que chaque outil pose à côté du fichier d'origine.
+        folder.Write("fiches/Biologie/Mitose (conflicted copy 2026-11-10).md", "Dropbox.\n");
+        folder.Write("fiches/Biologie/Mitose (Copie en conflit de PORTABLE 2026-11-10).md", "Dropbox, en français.\n");
+        folder.Write("fiches/Mitose.sync-conflict-20261110-101500-ABCDEFG.md", "Syncthing.\n");
+        folder.Write($".suivi/fiches/{id}-PORTABLE.json", "{}");
+        folder.Write($".suivi/annotations/{id} (conflicted copy).json", "{}");
+        folder.Write(".suivi/coffre (conflicted copy 2026-11-10).json", "{}");
+        // Ce qui n'en est pas : un titre qui parle de conflit sans la marque, et ce que kyfRev garde exprès.
+        folder.Write("fiches/Histoire/Le conflit israélo-arabe.md", "Une fiche.\n");
+        folder.Write($".suivi/versions/{id}/2026-11-10 (conflicted copy).md", "Une version.\n");
+
+        var report = vault.HealthDetails();
+
+        Assert.AreEqual(
+            string.Join('\n',
+                ".suivi/annotations/" + id + " (conflicted copy).json",
+                ".suivi/coffre (conflicted copy 2026-11-10).json",
+                ".suivi/fiches/" + id + "-PORTABLE.json",
+                "fiches/Biologie/Mitose (Copie en conflit de PORTABLE 2026-11-10).md",
+                "fiches/Biologie/Mitose (conflicted copy 2026-11-10).md",
+                "fiches/Mitose.sync-conflict-20261110-101500-ABCDEFG.md"),
+            string.Join('\n', report.ConflictCopies));
+        Assert.AreEqual(6, report.Problems - before, "elles comptent parmi les problèmes");
+    }
+
+    [TestMethod]
     public void A_quick_note_goes_to_a_suspended_inbox_created_once()
     {
         using var folder = TemporaryVault.Empty(storage);

@@ -267,6 +267,8 @@ public sealed partial class HealthPageViewModel : ObservableObject, INavigationA
         var choices = _backupList.Select(backup => new BackupChoice(backup.Name, BackupLabel(backup))).ToList();
         Add(HealthText.MissingTitleOf, HealthText.MissingHelp, [.. report.Missing.Select(sheet => MissingRow(sheet, choices))]);
         Add(HealthText.DuplicatesTitleOf, HealthText.DuplicatesHelp, [.. report.Duplicates.SelectMany(DuplicateRows)]);
+        // Rien n'est fait à leur place : l'une des deux versions est la bonne, et seul l'utilisateur sait laquelle.
+        Add(HealthText.ConflictsTitleOf, HealthText.ConflictsHelp, [.. report.ConflictCopies.Select(path => new HealthRow(FileName(path), path))]);
         Add(
             HealthText.UntrackedTitleOf,
             HealthText.UntrackedHelp,

@@ -60,6 +60,11 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 - Étiquettes d'une fiche : celles déjà utilisées dans le coffre sont proposées pendant la saisie, la plus utilisée d'abord.
 - Ctrl+P, dans une fiche, ouvre « Partager », d'où elle sort en PDF ou en page web à imprimer.
 - L'aide (F1) liste cinq raccourcis de plus : afficher un trou, surligner, écrire, partager, noter une idée.
+- Santé du coffre : une rubrique « Copies de conflit ». Quand un outil de synchronisation (Dropbox, OneDrive, Syncthing,
+  Nextcloud) garde deux versions d'un fichier modifié sur deux postes, kyfRev ne lisait que l'original et la copie restait
+  oubliée. Elles sont maintenant reconnues à leur nom, parmi les fiches, les citations, les schémas et dans le suivi, où
+  une copie garde des révisions faites ailleurs. Elles comptent dans l'avertissement d'Aujourd'hui. Rien n'est ouvert,
+  fusionné ni supprimé à votre place.
 - Fiches : un filtre par étiquettes, comme la 0.x. Chaque pastille dit son nombre de fiches, on peut en choisir plusieurs, et
   « Tout afficher » les retire ; sur une fenêtre étroite, il se replie avec les autres filtres.
 - Écrire : les boutons « Code dans le texte » et « Citation », dans le ruban et dans le clic droit.
