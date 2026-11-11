@@ -12,13 +12,16 @@ namespace KyfRev.Presentation.Wpf.Reading;
 /// </summary>
 internal sealed class ImageMaskOverlay : FrameworkElement
 {
-    /// <summary>La couleur d'un masque : celle d'un trou du texte.</summary>
+    /// <summary>
+    /// La couleur d'un masque : celle d'un trou du texte. Elle vient du thème, jamais d'ici ; tant qu'il ne l'a pas donnée,
+    /// rien n'est dessiné.
+    /// </summary>
     public static readonly DependencyProperty FillProperty = DependencyProperty.Register(
-        nameof(Fill), typeof(Brush), typeof(ImageMaskOverlay), new FrameworkPropertyMetadata(Brushes.Gray, FrameworkPropertyMetadataOptions.AffectsRender));
+        nameof(Fill), typeof(Brush), typeof(ImageMaskOverlay), new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender));
 
     /// <summary>Le contour d'un masque : il se voit encore sur une image de la même couleur que lui.</summary>
     public static readonly DependencyProperty StrokeProperty = DependencyProperty.Register(
-        nameof(Stroke), typeof(Brush), typeof(ImageMaskOverlay), new FrameworkPropertyMetadata(Brushes.Black, FrameworkPropertyMetadataOptions.AffectsRender));
+        nameof(Stroke), typeof(Brush), typeof(ImageMaskOverlay), new FrameworkPropertyMetadata(null, FrameworkPropertyMetadataOptions.AffectsRender));
 
     private ImmutableHashSet<int> _hidden = [];
 
@@ -40,16 +43,16 @@ internal sealed class ImageMaskOverlay : FrameworkElement
     public IReadOnlyCollection<int> Hidden => _hidden;
 
     /// <summary>La couleur d'un masque.</summary>
-    public Brush Fill
+    public Brush? Fill
     {
-        get => (Brush)GetValue(FillProperty);
+        get => (Brush?)GetValue(FillProperty);
         set => SetValue(FillProperty, value);
     }
 
     /// <summary>Le contour d'un masque.</summary>
-    public Brush Stroke
+    public Brush? Stroke
     {
-        get => (Brush)GetValue(StrokeProperty);
+        get => (Brush?)GetValue(StrokeProperty);
         set => SetValue(StrokeProperty, value);
     }
 
@@ -88,10 +91,14 @@ internal sealed class ImageMaskOverlay : FrameworkElement
     /// <inheritdoc/>
     protected override void OnRender(DrawingContext drawingContext)
     {
-        var pen = new Pen(Stroke, 1);
+        if (Fill is not { } fill)
+        {
+            return;
+        }
+        var pen = Stroke is { } stroke ? new Pen(stroke, 1) : null;
         foreach (var index in _hidden.Order())
         {
-            drawingContext.DrawRectangle(Fill, pen, RectOf(Masks[index]));
+            drawingContext.DrawRectangle(fill, pen, RectOf(Masks[index]));
         }
     }
 
