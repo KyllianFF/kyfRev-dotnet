@@ -205,9 +205,15 @@ public sealed class VaultAdapter(VaultSession inner, IDisposable? owned = null) 
     public int PurgeFolder(string folder, Moment now) => inner.PurgeFolder(folder, now);
 
     /// <summary>Valide la révision attendue : avec les règles de rappel du coffre pour une fiche, aucune pour un passage.</summary>
-    public ReviewOutcome ValidateReview(ItemKind kind, string id, Moment now, DateOnly? reviewDate = null, ReviewRecall recall = ReviewRecall.Remembered) => kind == ItemKind.Sheet
-        ? inner.ApplyReview(id, tracking => tracking.ValidateReview(now, reviewDate, inner.Settings.Reminders, recall))
-        : inner.ApplyAnnotationReview(id, tracking => tracking.ValidateReview(now, reviewDate, null, recall));
+    public ReviewOutcome ValidateReview(ItemKind kind, string id, Moment now, DateOnly? reviewDate = null, ReviewRecall recall = ReviewRecall.Remembered)
+    {
+        // La prochaine étape ne dépasse pas la veille d'un examen à venir, et se lisse si le coffre le demande.
+        var eve = inner.ExamEve(kind, id, reviewDate ?? now.Day);
+        var load = inner.SmoothingLoad();
+        return kind == ItemKind.Sheet
+            ? inner.ApplyReview(id, tracking => tracking.ValidateReview(now, reviewDate, inner.Settings.Reminders, recall, load, eve))
+            : inner.ApplyAnnotationReview(id, tracking => tracking.ValidateReview(now, reviewDate, null, recall, load, eve));
+    }
 
     /// <inheritdoc/>
     public void Postpone(ItemKind kind, string id, Moment now, DateOnly newDueDate) =>
@@ -216,6 +222,12 @@ public sealed class VaultAdapter(VaultSession inner, IDisposable? owned = null) 
     /// <inheritdoc/>
     public void Restart(ItemKind kind, string id, Moment now) =>
         inner.ApplyTo(kind, id, (tracking, _) => tracking.Restart(now, inner.Settings.Sequence));
+
+    /// <inheritdoc/>
+    public void Suspend(ItemKind kind, string id, Moment now) => inner.ApplyTo(kind, id, (tracking, _) => tracking.Suspend(now));
+
+    /// <inheritdoc/>
+    public void ResumeReview(ItemKind kind, string id) => inner.ApplyTo(kind, id, (tracking, _) => tracking.Resume());
 
     /// <inheritdoc/>
     public void ArchiveSheet(string id, Moment now) =>
@@ -283,6 +295,9 @@ public sealed class VaultAdapter(VaultSession inner, IDisposable? owned = null) 
 
     /// <inheritdoc/>
     public int TightenBeforeExam(string folder, Moment now) => inner.TightenBeforeExam(folder, now);
+
+    /// <inheritdoc/>
+    public int RestartArchivedBeforeExam(string folder, Moment now) => inner.RestartArchivedBeforeExam(folder, now);
 
     /// <inheritdoc/>
     public SpreadPlan SpreadDueDates(SpreadRequest request, Moment now, bool apply) => inner.SpreadDueDates(request, now, apply);

@@ -39,7 +39,10 @@ public sealed partial class VaultSession
         Settings.Quotes.Online,
         Settings.Quotes.Domains,
         SchemasActive,
-        Settings.LockAfterMinutes);
+        Settings.LockAfterMinutes)
+    {
+        SmoothDueDates = Settings.SmoothDueDates,
+    };
 
     /// <summary>
     /// Enregistre de nouveaux réglages, vérifiés par les règles de la méthode des J. Une séquence
@@ -92,6 +95,7 @@ public sealed partial class VaultSession
             Quotes = new QuoteSettings(preferences.QuotesActive, preferences.QuotesOnline, domains),
             SchemasModule = schemas,
             LockAfterMinutes = preferences.LockAfterMinutes,
+            SmoothDueDates = preferences.SmoothDueDates,
         });
     }
 

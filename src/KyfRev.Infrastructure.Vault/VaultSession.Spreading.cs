@@ -52,19 +52,32 @@ public sealed partial class VaultSession
         return new SpreadPlan(result.Kept, result.Moves.Length, result.LastDay);
     }
 
-    /// <summary>Les fiches présentes et leurs passages hors corbeille, en révision, avec l'étape attendue.</summary>
+    /// <summary>
+    /// Ce qui tombe déjà chaque jour, pour le lissage ; rien si l'option est coupée, et l'échéance reste alors exacte.
+    /// </summary>
+    public Func<DateOnly, int>? SmoothingLoad()
+    {
+        if (!Settings.SmoothDueDates)
+        {
+            return null;
+        }
+        var load = ActiveDueDates().GroupBy(item => item.Candidate.DueDate).ToDictionary(group => group.Key, group => group.Count());
+        return day => load.GetValueOrDefault(day);
+    }
+
+    /// <summary>Les fiches présentes et leurs passages hors corbeille, en révision et pas suspendus, avec l'étape attendue.</summary>
     private List<(ItemKind Kind, string Id, SpreadCandidate Candidate)> ActiveDueDates()
     {
         var items = new List<(ItemKind, string, SpreadCandidate)>();
         foreach (var entry in _sheets.Values.Where(entry => entry.Presence != FilePresence.Missing))
         {
-            if (entry.Sheet.Tracking.Cycle is { } cycle)
+            if (entry.Sheet.Tracking.DueCycle is { } cycle)
             {
                 items.Add((ItemKind.Sheet, entry.Sheet.Id, Candidate(entry.Sheet.Id, cycle)));
             }
             foreach (var annotation in Annotations(entry.Sheet.Id).Where(a => a.TrashedAt is null))
             {
-                if (annotation.Tracking.Cycle is { } passageCycle)
+                if (annotation.Tracking.DueCycle is { } passageCycle)
                 {
                     items.Add((ItemKind.Passage, annotation.Id, Candidate(annotation.Id, passageCycle)));
                 }

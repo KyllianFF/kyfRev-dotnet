@@ -192,11 +192,11 @@
   <data name="SheetsColumn" xml:space="preserve">
     <value>Fiches</value>
   </data>
-  <data name="StreakHint" xml:space="preserve">
-    <value>une révision aujourd'hui lance la série</value>
+  <data name="WeekLabel" xml:space="preserve">
+    <value>Cette semaine</value>
   </data>
-  <data name="StreakLabel" xml:space="preserve">
-    <value>Série en cours</value>
+  <data name="WeekAverage" xml:space="preserve">
+    <value>moyenne des 4 semaines d'avant : {0} par semaine</value>
   </data>
   <data name="Summary" xml:space="preserve">
     <value>Votre régularité : révisions validées (fiches, passages, définitions) et rappels de consolidation traités.</value>

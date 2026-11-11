@@ -15,13 +15,18 @@ namespace KyfRev.Domain.Reviews;
 /// <param name="Step">Index de l'étape attendue, c'est-à-dire la prochaine à valider.</param>
 /// <param name="DueDate">Échéance de l'étape attendue.</param>
 /// <param name="LastReview">Jour de la dernière révision validée.</param>
+/// <param name="SuspendedOn">
+/// Jour où l'élément a été suspendu ; rien s'il ne l'est pas. Suspendu, il garde son étape et son échéance, mais ne se
+/// présente plus à réviser tant qu'il n'est pas repris.
+/// </param>
 public sealed record Cycle(
     int Number,
     ReviewSequence Sequence,
     DateOnly StartedOn,
     int Step,
     DateOnly DueDate,
-    DateOnly LastReview)
+    DateOnly LastReview,
+    DateOnly? SuspendedOn = null)
 {
     /// <summary>« J7 » si l'étape attendue est J7.</summary>
     public string StepLabel => Sequence.Label(Step);

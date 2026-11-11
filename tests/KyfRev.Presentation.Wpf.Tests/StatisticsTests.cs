@@ -40,8 +40,8 @@ public sealed class StatisticsTests
         Assert.AreEqual("sur 52 semaines", page.Tiles[1].Details.Single());
         Assert.AreEqual("Jour actif", page.Tiles[2].Label);
         Assert.AreEqual("0 / 366", page.Tiles[2].Value);
-        Assert.AreEqual("0 jour", page.Tiles[3].Value);
-        Assert.AreEqual("une révision aujourd'hui lance la série", page.Tiles[3].Details.Single());
+        Assert.AreEqual("0 révision", page.Tiles[3].Value);
+        Assert.AreEqual("moyenne des 4 semaines d'avant : 0 par semaine", page.Tiles[3].Details.Single());
         Assert.IsTrue(page.HasNoMonth);
         Assert.IsTrue(page.HasNoFolder);
         Assert.IsFalse(page.HasMonths);
@@ -72,11 +72,11 @@ public sealed class StatisticsTests
         Assert.AreEqual("Jours actifs", active.Label);
         Assert.AreEqual("3 / 366", active.Value[..7]);
         Assert.AreEqual("7 derniers jours : 2 révisions · 30 derniers : 12", active.Details[0]);
-        var streak = page.Tiles[3];
-        Assert.AreEqual("Série en cours", streak.Label);
-        Assert.AreEqual("2 jours", streak.Value);
-        Assert.AreEqual("record : 3 jours, jusqu'au sam. 3 oct.", streak.Details[0]);
-        StringAssert.StartsWith(streak.Spoken, "Série en cours, 2 jours, record", StringComparison.Ordinal);
+        var week = page.Tiles[3];
+        Assert.AreEqual("Cette semaine", week.Label);
+        Assert.AreEqual("2 révisions", week.Value);
+        Assert.AreEqual("moyenne des 4 semaines d'avant : 2,5 par semaine", week.Details[0]);
+        StringAssert.StartsWith(week.Spoken, "Cette semaine, 2 révisions, moyenne", StringComparison.Ordinal);
         Assert.AreEqual("Calendrier d'activité : 3 jours actifs sur 52 semaines", page.CalendarName);
     }
 
@@ -300,6 +300,8 @@ public sealed class StatisticsTests
         CurrentStreak = 2,
         LongestStreak = 3,
         LongestStreakEnd = new DateOnly(2026, 10, 3),
+        ThisWeek = 2,
+        WeeklyAverage = 2.5,
         OnTime = 8,
         Early = 2,
         Late = 2,

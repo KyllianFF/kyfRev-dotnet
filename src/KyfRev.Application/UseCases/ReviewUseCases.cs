@@ -49,6 +49,31 @@ public sealed class ReviewUseCases(VaultHost host, TimeProvider time)
         });
     }
 
+    /// <summary>
+    /// Suspend une fiche ou un passage : il garde son étape et son échéance, mais ne se présente plus à réviser tant qu'il
+    /// n'est pas repris.
+    /// </summary>
+    public Outcome<ReviewState> Suspend(ItemKind kind, string id)
+    {
+        var now = Present.Of(time).Now;
+        return host.Use(vault =>
+        {
+            vault.Suspend(kind, id, now);
+            return vault.ReviewStateOf(kind, id, now.Day);
+        });
+    }
+
+    /// <summary>Reprend une fiche ou un passage suspendu, là où il en était.</summary>
+    public Outcome<ReviewState> Resume(ItemKind kind, string id)
+    {
+        var now = Present.Of(time).Now;
+        return host.Use(vault =>
+        {
+            vault.ResumeReview(kind, id);
+            return vault.ReviewStateOf(kind, id, now.Day);
+        });
+    }
+
     /// <summary>Archive une fiche à la main.</summary>
     [ZeroXCommand("archiver_fiche")]
     public Outcome<ReviewState> Archive(string id)

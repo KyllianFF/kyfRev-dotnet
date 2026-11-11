@@ -26,6 +26,12 @@ public static class SettingsText
     /// <summary>Ce que fait le rappel actif.</summary>
     public const string ActiveRecallHelp = "À la révision d'un passage, votre commentaire et le texte qui l'entoure viennent d'abord : le passage reste caché jusqu'à « Afficher le passage ». À la révision d'une fiche, ses passages surlignés et son texte en gras sont masqués jusqu'au clic. Se le rappeler avant de le relire aide à le retenir.";
 
+    /// <summary>Le lissage des échéances.</summary>
+    public const string SmoothDueDates = "Lisser les échéances";
+
+    /// <summary>Ce que fait le lissage.</summary>
+    public const string SmoothDueDatesHelp = "À partir de J7, la prochaine étape peut se poser un à trois jours avant ou après sa date exacte, sur le jour le moins chargé : des fiches créées ensemble ne reviennent plus toutes le même jour. Coupé, l'écart entre deux révisions vaut exactement le J. Les échéances déjà fixées ne bougent pas.";
+
     /// <summary>La seconde section.</summary>
     public const string Reminders = "Rappels de consolidation";
 

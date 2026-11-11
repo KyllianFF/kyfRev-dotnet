@@ -118,8 +118,14 @@
       </StackPanel>
 
       <Grid Style="{StaticResource ActionsSlot}" kyf:AdaptiveRow.Part="Trailing">
+        <!-- Suspendu : il n'a qu'à être repris. -->
+        <WrapPanel Visibility="{Binding IsSuspended, Converter={StaticResource Visible}}">
+          <Button x:Name="ResumeButton" Content="{x:Static pages:ReviewText.ResumeAction}" Command="{Binding ResumeCommand}" Style="{DynamicResource Kyf.Button.Primary}"
+                  AutomationProperties.Name="{x:Static pages:ReviewText.ResumeAction}" />
+        </WrapPanel>
+
         <!-- En révision : reporter, les autres actions, valider. -->
-        <WrapPanel Visibility="{Binding IsActive, Converter={StaticResource Visible}}">
+        <WrapPanel Visibility="{Binding ShowsActiveActions, Converter={StaticResource Visible}}">
           <StackPanel x:Name="Done" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0"
                       Visibility="{Binding ShowsReviewedToday, Converter={StaticResource Visible}}">
             <kyf:Icon Text="{x:Static kyf:Icons.Success}" Foreground="{DynamicResource Kyf.Brush.Success}" Margin="0,0,8,0" />
@@ -141,6 +147,7 @@
               <ContextMenu x:Name="MoreMenu" DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
                 <MenuItem x:Name="ValidateOnDay" Header="{x:Static pages:ReviewText.ChooseValidationDay}" Command="{Binding ChooseValidationDayCommand}"
                           Visibility="{Binding CanAntedate, Converter={StaticResource Visible}}" />
+                <MenuItem x:Name="Suspend" Header="{x:Static pages:ReviewText.SuspendAction}" Command="{Binding SuspendCommand}" ToolTip="{x:Static pages:ReviewText.SuspendHelp}" />
                 <MenuItem x:Name="Restart" Header="{x:Static pages:ReviewText.RestartAction}" Command="{Binding RequestRestartCommand}" />
                 <MenuItem x:Name="Archive" Header="{x:Static pages:ReviewText.ArchiveAction}" Command="{Binding RequestArchiveCommand}"
                           Visibility="{Binding IsSheet, Converter={StaticResource Visible}}" />

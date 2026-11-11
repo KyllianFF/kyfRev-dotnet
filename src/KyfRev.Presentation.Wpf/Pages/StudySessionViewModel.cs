@@ -182,7 +182,7 @@ public sealed partial class StudySessionViewModel : ObservableObject, ILeaving
         _session = (_bar?.LastAction ?? ReviewAction.None) switch
         {
             ReviewAction.Validated or ReviewAction.Restarted or ReviewAction.Archived => _session with { Done = _session.Done + 1 },
-            ReviewAction.Postponed => _session with { Postponed = _session.Postponed + 1 },
+            ReviewAction.Postponed or ReviewAction.Suspended => _session with { Postponed = _session.Postponed + 1 },
             _ => _session with { Skipped = _session.Skipped + 1 },
         };
     }

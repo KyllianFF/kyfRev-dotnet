@@ -60,11 +60,13 @@ public sealed class ExamRow
         {
             Detail = ExamText.WithIncludingOf(items);
             AfterExam = Dates.Plural(exam.AfterExam, ExamText.AfterOneOf, ExamText.AfterManyOf);
+            ArchivedNote = exam.Archived > 0 ? Dates.Plural(exam.Archived, ExamText.ArchivedOneOf, ExamText.ArchivedManyOf) : string.Empty;
         }
         else
         {
             Detail = items;
             AfterExam = string.Empty;
+            ArchivedNote = string.Empty;
         }
     }
 
@@ -89,11 +91,17 @@ public sealed class ExamRow
     /// <summary>« 3 prévus après l'examen » ; vide une fois l'examen arrivé.</summary>
     public string AfterExam { get; }
 
+    /// <summary>«  · 3 fiches archivées » : hors des révisions, elles ne seront pas revues avant l'examen ; vide sans elles.</summary>
+    public string ArchivedNote { get; }
+
     /// <summary>Des échéances tombent après la veille de l'examen : c'est à signaler.</summary>
     public bool HasAlert => Exam.DaysLeft > 0 && Exam.AfterExam > 0;
 
-    /// <summary>« Resserrer… » est proposé : des échéances tombent après, et il reste au moins un jour avant la veille.</summary>
-    public bool CanTighten => Exam.AfterExam > 0 && Exam.DaysLeft > 1;
+    /// <summary>
+    /// « Resserrer… » est proposé : des échéances tombent après ou des fiches du dossier sont archivées, et il reste au
+    /// moins un jour avant la veille.
+    /// </summary>
+    public bool CanTighten => (Exam.AfterExam > 0 || Exam.Archived > 0) && Exam.DaysLeft > 1;
 
     /// <summary>« Resserrer avant l'examen Bac blanc ».</summary>
     public string TightenName => ExamText.TightenNameOf(Name);
@@ -102,7 +110,7 @@ public sealed class ExamRow
     public string MoreName => ExamText.MoreActionsOf(Name);
 
     /// <summary>Le nom lu par le lecteur d'écran.</summary>
-    public override string ToString() => ExamText.SpokenOf(Name, Countdown, DayLabel, $"{Detail}{AfterExam}");
+    public override string ToString() => ExamText.SpokenOf(Name, Countdown, DayLabel, $"{Detail}{AfterExam}{ArchivedNote}");
 }
 
 /// <summary>
@@ -178,8 +186,20 @@ public sealed partial class DashboardExams : ObservableObject
 
     /// <summary>La confirmation demandée.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsConfirming), nameof(ConfirmTitle), nameof(ConfirmMessage), nameof(ConfirmLabel))]
+    [NotifyPropertyChangedFor(nameof(IsConfirming), nameof(ConfirmTitle), nameof(ConfirmMessage), nameof(ConfirmLabel), nameof(CanIncludeArchived), nameof(IncludeArchivedLabel))]
     public partial ExamConfirmation Confirmation { get; private set; }
+
+    /// <summary>« Resserrer » remet aussi en révision les fiches archivées du dossier.</summary>
+    [ObservableProperty]
+    public partial bool IncludeArchived { get; set; }
+
+    /// <summary>Le dossier de l'examen à resserrer a des fiches archivées : la case est proposée.</summary>
+    public bool CanIncludeArchived => Confirmation == ExamConfirmation.Tighten && _target is { Exam.Archived: > 0 };
+
+    /// <summary>« Remettre aussi en révision les 3 fiches archivées du dossier ».</summary>
+    public string IncludeArchivedLabel => _target is { Exam.Archived: > 0 and var archived }
+        ? Dates.Plural(archived, ExamText.IncludeArchivedOneOf, ExamText.IncludeArchivedManyOf)
+        : string.Empty;
 
     /// <summary>Une confirmation est affichée.</summary>
     public bool IsConfirming => Confirmation != ExamConfirmation.None;
@@ -195,6 +215,7 @@ public sealed partial class DashboardExams : ObservableObject
     /// <summary>Explication de la confirmation.</summary>
     public string ConfirmMessage => (Confirmation, _target) switch
     {
+        (ExamConfirmation.Tighten, { Exam.AfterExam: 0 } row) => ExamText.TightenNoneMessageOf(row.Name, row.DayLabel),
         (ExamConfirmation.Tighten, { } row) => ExamText.TightenMessageOf(Dates.Plural(row.Exam.AfterExam, ExamText.TightenFallsOneOf, ExamText.TightenFallsManyOf), row.Name, row.DayLabel),
         (ExamConfirmation.Withdraw, { } row) => ExamText.WithdrawMessageOf(row.Name),
         _ => string.Empty,
@@ -339,9 +360,29 @@ public sealed partial class DashboardExams : ObservableObject
         var name = target.Name;
         if (asked == ExamConfirmation.Tighten)
         {
-            await ActAsync(() => _exams.Tighten(folder), moved => moved == 0
-                ? ExamText.NothingToTighten
-                : Dates.Plural(moved, count => ExamText.TightenedOneOf(count, name), count => ExamText.TightenedManyOf(count, name))).ConfigureAwait(true);
+            var revive = IncludeArchived && target.Exam.Archived > 0;
+            IncludeArchived = false;
+            await ActAsync(
+                () =>
+                {
+                    // Les archives d'abord : remises en révision, leurs échéances comptent pour le resserrement.
+                    var restarted = revive ? _exams.RestartArchived(folder) : Outcome.Of(0);
+                    if (!restarted.Succeeded)
+                    {
+                        return Outcome.Refused<(int Moved, int Restarted)>(restarted.Error!);
+                    }
+                    var moved = _exams.Tighten(folder);
+                    return moved.Succeeded ? Outcome.Of<(int Moved, int Restarted)>((moved.Value, restarted.Value)) : Outcome.Refused<(int Moved, int Restarted)>(moved.Error!);
+                },
+                done =>
+                {
+                    var moved = done.Moved == 0
+                        ? ExamText.NothingToTighten
+                        : Dates.Plural(done.Moved, count => ExamText.TightenedOneOf(count, name), count => ExamText.TightenedManyOf(count, name));
+                    return done.Restarted == 0
+                        ? moved
+                        : $"{Dates.Plural(done.Restarted, ExamText.RestartedOneOf, ExamText.RestartedManyOf)} {(done.Moved == 0 ? string.Empty : moved)}".TrimEnd();
+                }).ConfigureAwait(true);
         }
         else
         {
@@ -357,6 +398,7 @@ public sealed partial class DashboardExams : ObservableObject
         }
         _target = row;
         LastFolder = row.Exam.Folder;
+        IncludeArchived = false;
         Confirmation = confirmation;
     }
 

@@ -85,6 +85,9 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
     private IReadOnlyList<DashboardCard> _extensionCards = [];
     private DueItemRow? _toArchive;
     private Dashboard? _dashboard;
+    private static readonly Choice<string> AllScopes = new(string.Empty, DashboardText.AllScopes);
+
+    private readonly DashboardGroup _suspended;
     private IReadOnlyList<DueItem> _toStart = [];
 
     /// <summary>Numéro du dernier aperçu demandé : une lecture dépassée est ignorée.</summary>
@@ -116,6 +119,9 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
         _today = new DashboardGroup(DashboardText.Today, Icons.Calendar, DashboardTone.Normal, expanded: true, BuildRows);
         _reminderGroup = new DashboardGroup(DashboardText.Reminders, Icons.Sync, DashboardTone.Reminder, expanded: true, BuildRows);
         _upcoming = new DashboardGroup(DashboardText.Upcoming, Icons.Calendar, DashboardTone.Normal, expanded: true, BuildRows);
+        _suspended = new DashboardGroup(DashboardText.Suspended, Icons.Clock, DashboardTone.Normal, expanded: false, BuildRows);
+        Scopes = [AllScopes];
+        SelectedScope = AllScopes;
         Filters = [new(DashboardFilter.All, DashboardText.All), new(DashboardFilter.Sheets, DashboardText.Sheets), new(DashboardFilter.Passages, DashboardText.Passages)];
         Sorts =
         [
@@ -160,6 +166,20 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
 
     /// <summary>Filtres proposés.</summary>
     public IReadOnlyList<Choice<DashboardFilter>> Filters { get; }
+
+    /// <summary>
+    /// Dossiers et étiquettes de ce qui est à réviser, « Tout » d'abord : en choisir un y restreint la liste, donc la séance.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasScopes))]
+    public partial IReadOnlyList<Choice<string>> Scopes { get; private set; }
+
+    /// <summary>Le dossier ou l'étiquette choisi ; « Tout » sinon.</summary>
+    [ObservableProperty]
+    public partial Choice<string>? SelectedScope { get; set; }
+
+    /// <summary>Il y a de quoi restreindre : au moins un dossier ou une étiquette.</summary>
+    public bool HasScopes => Scopes.Count > 1;
 
     /// <summary>Tris proposés.</summary>
     public IReadOnlyList<Choice<DashboardSort>> Sorts { get; }
@@ -383,6 +403,9 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
         _today.Count = 0;
         _reminderGroup.Count = 0;
         _upcoming.Count = 0;
+        _suspended.Count = 0;
+        Scopes = [AllScopes];
+        SelectedScope = AllScopes;
         Rows = [];
         SecondRows = [];
         Subtitle = string.Empty;
@@ -558,6 +581,74 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
 
     partial void OnSelectedFilterChanged(Choice<DashboardFilter> value) => BuildRows();
 
+    partial void OnSelectedScopeChanged(Choice<string>? value)
+    {
+        // Pendant que la liste des choix se refait, la sélection passe par rien : les lignes attendent.
+        if (!_buildingScopes && value is not null)
+        {
+            BuildRows();
+        }
+    }
+
+    /// <summary>
+    /// Refait les choix de dossier et d'étiquette d'après ce qui est à réviser, sans perdre celui qui est fait s'il existe
+    /// encore ; disparu, on revient à « Tout ».
+    /// </summary>
+    private void BuildScopes(Dashboard dashboard)
+    {
+        var items = dashboard.Overdue.Concat(dashboard.Today).Concat(dashboard.Upcoming).ToList();
+        var folders = items
+            .SelectMany(item => Ancestors(item.Folder))
+            .Distinct(StringComparer.Ordinal)
+            .Order(StringComparer.CurrentCulture)
+            .Select(folder => new Choice<string>(FolderScope + folder, DashboardText.FolderScopeOf(folder.Replace("/", " › ", StringComparison.Ordinal))));
+        var tags = items
+            .SelectMany(item => item.Tags)
+            .Distinct(StringComparer.Ordinal)
+            .Order(StringComparer.CurrentCulture)
+            .Select(tag => new Choice<string>(TagScope + tag, DashboardText.TagScopeOf(tag)));
+        var kept = SelectedScope?.Value ?? string.Empty;
+        Choice<string>[] scopes = [AllScopes, .. folders, .. tags];
+        if (scopes.SequenceEqual(Scopes) && SelectedScope is not null)
+        {
+            return;
+        }
+        _buildingScopes = true;
+        try
+        {
+            Scopes = scopes;
+            SelectedScope = Scopes.FirstOrDefault(scope => scope.Value == kept) ?? AllScopes;
+        }
+        finally
+        {
+            _buildingScopes = false;
+        }
+    }
+
+    /// <summary>Un dossier et ceux qui le contiennent : « Biologie/Cellule » donne « Biologie » et « Biologie/Cellule ».</summary>
+    private static IEnumerable<string> Ancestors(string folder)
+    {
+        for (var end = folder.IndexOf('/', StringComparison.Ordinal); end >= 0; end = folder.IndexOf('/', end + 1))
+        {
+            yield return folder[..end];
+        }
+        if (folder.Length > 0)
+        {
+            yield return folder;
+        }
+    }
+
+    private bool InScope(DueItem item)
+    {
+        var scope = SelectedScope?.Value ?? string.Empty;
+        if (scope.StartsWith(FolderScope, StringComparison.Ordinal))
+        {
+            var folder = scope[FolderScope.Length..];
+            return item.Folder == folder || item.Folder.StartsWith(folder + "/", StringComparison.Ordinal);
+        }
+        return !scope.StartsWith(TagScope, StringComparison.Ordinal) || item.Tags.Contains(scope[TagScope.Length..], StringComparer.Ordinal);
+    }
+
     partial void OnSelectedSortChanged(Choice<DashboardSort> value) => BuildRows();
 
     partial void OnPageWidthChanged(double oldValue, double newValue)
@@ -635,6 +726,7 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
 
     private void BuildRows(Dashboard dashboard)
     {
+        BuildScopes(dashboard);
         var overdue = Prepare(dashboard.Overdue);
         var today = Prepare(dashboard.Today);
         var upcoming = Prepare(dashboard.Upcoming);
@@ -660,6 +752,8 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
         var hasSide = Layout is TodayLayout.WithSide or TodayLayout.WithPreview;
         Add(rows, _reminderGroup, (hasSide ? [] : reminders).Select(reminder => new ReminderRow(reminder)));
         Add(second, _upcoming, upcoming.Select(item => new DueItemRow(item, dashboard.ActiveRecall, showDueDate: true)));
+        // Les suspendus ne sont ni dus ni comptés : repliés, ils attendent qu'on les ouvre pour les reprendre.
+        Add(second, _suspended, Prepare(dashboard.Suspended).Select(item => new DueItemRow(item, dashboard.ActiveRecall, showDueDate: true)));
         SideReminders = hasSide ? [.. reminders.Select(reminder => new ReminderRow(reminder))] : [];
         var comingDays = Layout == TodayLayout.WithSplit ? 2 * Application.Model.Dashboard.UpcomingDays : Application.Model.Dashboard.UpcomingDays;
         Forecast = [.. dashboard.Workload.Skip(1).Take(comingDays).Select(day => new ForecastDay(day.Day, day.Due.Length))];
@@ -718,12 +812,12 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
     /// <summary>Filtre puis trie, comme la 0.x : l'échéance garde l'ordre du coffre, les autres tris sont stables.</summary>
     private List<DueItem> Prepare(IEnumerable<DueItem> items)
     {
-        var filtered = SelectedFilter.Value switch
+        var filtered = (SelectedFilter.Value switch
         {
             DashboardFilter.Sheets => items.Where(item => item.Kind == ItemKind.Sheet),
             DashboardFilter.Passages => items.Where(item => item.Kind == ItemKind.Passage),
             _ => items,
-        };
+        }).Where(InScope);
         return SelectedSort.Value switch
         {
             DashboardSort.Step => [.. filtered.OrderBy(item => StepValue(item.Step))],
@@ -733,6 +827,10 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
             _ => [.. filtered],
         };
     }
+
+    private const string FolderScope = "d:";
+    private const string TagScope = "t:";
+    private bool _buildingScopes;
 
     /// <summary>Le nombre d'une étape (« J14 » → 14), 0 sans chiffre.</summary>
     internal static int StepValue(string step)

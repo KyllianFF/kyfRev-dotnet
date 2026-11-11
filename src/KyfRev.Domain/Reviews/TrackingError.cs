@@ -49,6 +49,12 @@ public enum TrackingErrorCode
 
     /// <summary>Date hors des limites du calendrier.</summary>
     DateOutOfRange,
+
+    /// <summary>L'élément est suspendu : il se reprend d'abord.</summary>
+    Suspended,
+
+    /// <summary>L'élément n'est pas suspendu.</summary>
+    NotSuspended,
 }
 
 /// <summary>Opération refusée, avec un message destiné à l'utilisateur.</summary>
@@ -95,6 +101,12 @@ public sealed record TrackingError(TrackingErrorCode Code, string Message)
 
     internal static TrackingError Inconsistent(string reason) =>
         new(TrackingErrorCode.Inconsistent, $"Le suivi est incohérent : {reason}");
+
+    internal static TrackingError Suspended() =>
+        new(TrackingErrorCode.Suspended, "Cet élément est suspendu : reprenez-le d'abord.");
+
+    internal static TrackingError NotSuspended() =>
+        new(TrackingErrorCode.NotSuspended, "Cet élément n'est pas suspendu.");
 
     internal static TrackingError DateOutOfRange() =>
         new(TrackingErrorCode.DateOutOfRange, "Date hors des limites du calendrier.");

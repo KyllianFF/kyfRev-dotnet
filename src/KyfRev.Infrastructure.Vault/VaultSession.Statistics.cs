@@ -67,6 +67,10 @@ public sealed partial class VaultSession
             return days.Where(pair => pair.Key >= start && pair.Key <= day).Sum(pair => pair.Value.Reviews);
         }
 
+        var thisWeek = days.Where(pair => pair.Key >= monday && pair.Key <= day).Sum(pair => pair.Value.Reviews);
+        var before = monday.AddDays(-7 * Application.Model.Statistics.AverageWeeks);
+        var weeklyAverage = (double)days.Where(pair => pair.Key >= before && pair.Key < monday).Sum(pair => pair.Value.Reviews) / Application.Model.Statistics.AverageWeeks;
+
         ActivityDay? best = null;
         foreach (var candidate in activity)
         {
@@ -105,6 +109,8 @@ public sealed partial class VaultSession
             ])
         {
             Forgotten = total.Forgotten,
+            ThisWeek = thisWeek,
+            WeeklyAverage = weeklyAverage,
         };
     }
 

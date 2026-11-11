@@ -39,6 +39,12 @@ public sealed class Tracking
     /// <summary>Cycle en cours, si l'élément est actif.</summary>
     public Cycle? Cycle => (State as ActiveState)?.Cycle;
 
+    /// <summary>Le cycle en cours s'il se présente à réviser : l'élément est actif, et pas suspendu.</summary>
+    public Cycle? DueCycle => Cycle is { SuspendedOn: null } cycle ? cycle : null;
+
+    /// <summary>L'élément est actif, mais suspendu : il ne se présente plus à réviser.</summary>
+    public bool IsSuspended => Cycle is { SuspendedOn: not null };
+
     /// <summary>Informations d'archivage, si l'élément est archivé.</summary>
     public ArchiveInfo? Archive => (State as ArchivedState)?.Archive;
 
@@ -82,7 +88,15 @@ public sealed class Tracking
     /// <param name="reviewDate">Date de la révision, pour antidater (« je l'ai révisée hier ») ; aujourd'hui par défaut.</param>
     /// <param name="rules">Règles des rappels ; <see langword="null"/> pour un passage, qui n'a pas de rappels.</param>
     /// <param name="recall">Ce que l'utilisateur dit de sa mémoire.</param>
-    public ReviewResult ValidateReview(Moment now, DateOnly? reviewDate, ReminderRules? rules, ReviewRecall recall = ReviewRecall.Remembered)
+    /// <param name="load">
+    /// Lissage, en option : ce qui tombe déjà un jour donné. Avec lui, une étape longue peut se poser sur un jour voisin moins
+    /// chargé (voir <see cref="DueSmoothing"/>) ; sans lui, l'échéance est exacte.
+    /// </param>
+    /// <param name="notAfter">
+    /// La veille d'un examen à venir : l'étape suivante ne tombe pas après elle, tant que la révision la précède. Une étape
+    /// qui tomberait après l'examen ne servirait plus à le préparer.
+    /// </param>
+    public ReviewResult ValidateReview(Moment now, DateOnly? reviewDate, ReminderRules? rules, ReviewRecall recall = ReviewRecall.Remembered, Func<DateOnly, int>? load = null, DateOnly? notAfter = null)
     {
         var day = reviewDate ?? now.Day;
         if (day > now.Day)
@@ -92,6 +106,10 @@ public sealed class Tracking
         if (State is not ActiveState { Cycle: var cycle })
         {
             return ReviewResult.Failure(TrackingError.NotActive());
+        }
+        if (cycle.SuspendedOn is not null)
+        {
+            return ReviewResult.Failure(TrackingError.Suspended());
         }
         if (day == cycle.LastReview)
         {
@@ -119,6 +137,7 @@ public sealed class Tracking
             {
                 return ReviewResult.Failure(TrackingError.DateOutOfRange());
             }
+            again = Capped(Smoothed(again, cycle.Sequence.IntervalBefore(previous), load), day, notAfter);
             var steppedBack = new Tracking(
                 new ActiveState(cycle with { Step = previous, LastReview = day, DueDate = again }),
                 Counters,
@@ -144,6 +163,7 @@ public sealed class Tracking
         {
             return ReviewResult.Failure(TrackingError.DateOutOfRange());
         }
+        dueDate = Capped(Smoothed(dueDate, cycle.Sequence.IntervalBefore(next), load), day, notAfter);
         var advanced = new Tracking(
             new ActiveState(cycle with { Step = next, LastReview = day, DueDate = dueDate }),
             Counters,
@@ -158,6 +178,10 @@ public sealed class Tracking
         {
             return TrackingResult.Failure(TrackingError.NotActive());
         }
+        if (cycle.SuspendedOn is not null)
+        {
+            return TrackingResult.Failure(TrackingError.Suspended());
+        }
         if (to <= now.Day)
         {
             return TrackingResult.Failure(TrackingError.PostponeInPast(now.Day));
@@ -170,6 +194,37 @@ public sealed class Tracking
             new ActiveState(cycle with { DueDate = to }),
             Counters,
             History.Add(new PostponementEvent(now.Instant, cycle.Number, cycle.StepLabel, cycle.DueDate, to))));
+    }
+
+    /// <summary>
+    /// Suspend un élément actif : il garde son étape et son échéance, mais ne se présente plus à réviser (ni dans la liste
+    /// du jour, ni dans la charge, ni dans une séance) tant qu'il n'est pas repris. Rien ne s'ajoute à l'historique : ce
+    /// n'est ni une révision ni un report.
+    /// </summary>
+    public TrackingResult Suspend(Moment now)
+    {
+        if (State is not ActiveState { Cycle: var cycle })
+        {
+            return TrackingResult.Failure(TrackingError.NotActive());
+        }
+        return cycle.SuspendedOn is not null
+            ? TrackingResult.Failure(TrackingError.Suspended())
+            : TrackingResult.Success(new Tracking(new ActiveState(cycle with { SuspendedOn = now.Day }), Counters, History));
+    }
+
+    /// <summary>
+    /// Reprend un élément suspendu, là où il en était : même étape, même échéance. Si elle est passée entre-temps, il
+    /// revient parmi les retards.
+    /// </summary>
+    public TrackingResult Resume()
+    {
+        if (State is not ActiveState { Cycle: var cycle })
+        {
+            return TrackingResult.Failure(TrackingError.NotActive());
+        }
+        return cycle.SuspendedOn is null
+            ? TrackingResult.Failure(TrackingError.NotSuspended())
+            : TrackingResult.Success(new Tracking(new ActiveState(cycle with { SuspendedOn = null }), Counters, History));
     }
 
     /// <summary>
@@ -448,6 +503,13 @@ public sealed class Tracking
         error = null;
         return true;
     }
+
+    private static DateOnly Smoothed(DateOnly exact, int interval, Func<DateOnly, int>? load) =>
+        load is null ? exact : DueSmoothing.Choose(exact, interval, load);
+
+    /// <summary>Ramène une échéance à la limite, si la révision la précède ; l'échéance reste après la révision.</summary>
+    private static DateOnly Capped(DateOnly dueDate, DateOnly reviewed, DateOnly? notAfter) =>
+        notAfter is { } limit && limit > reviewed && dueDate > limit ? limit : dueDate;
 
     private static ReviewEvent StartReview(Moment now, Cycle cycle, StartOrigin origin) =>
         new(now.Instant, now.Day, cycle.Number, cycle.Sequence.Label(0), now.Day, DaysLate: 0, origin);

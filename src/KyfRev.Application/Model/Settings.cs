@@ -31,6 +31,12 @@ public sealed record VaultPreferences(
     bool SchemasActive,
     int LockAfterMinutes = VaultPreferences.DefaultLockAfterMinutes)
 {
+    /// <summary>
+    /// Lissage des échéances : à partir de J7, la prochaine étape peut se poser un à trois jours avant ou après son échéance
+    /// exacte, sur le jour le moins chargé. Coupé par défaut : l'écart entre deux révisions vaut alors exactement le J.
+    /// </summary>
+    public bool SmoothDueDates { get; init; }
+
     /// <summary>Délai du verrouillage automatique par défaut : 15 minutes d'inactivité.</summary>
     public const int DefaultLockAfterMinutes = 15;
 

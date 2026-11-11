@@ -94,6 +94,16 @@ public sealed class ExamUseCases(VaultHost host, TimeProvider time)
     }
 
     /// <summary>
+    /// Remet en révision les fiches archivées du dossier d'un examen, pour qu'elles soient revues avant lui ; rend leur
+    /// nombre. C'est « Remettre en révision », fiche par fiche : un nouveau cycle, J0 aujourd'hui.
+    /// </summary>
+    public Outcome<int> RestartArchived(string folder)
+    {
+        var now = Present.Of(time).Now;
+        return host.Use(vault => vault.RestartArchivedBeforeExam(folder, now));
+    }
+
+    /// <summary>
     /// Ce que donnerait un étalement, sans rien écrire : combien d'échéances restent aujourd'hui, combien partent, et
     /// jusqu'à quel jour. Sans jours de pause, c'est le retard qui s'étale.
     /// </summary>

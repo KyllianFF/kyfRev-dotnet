@@ -8,6 +8,30 @@ public static class ExamText
 {
     private static readonly ResourceManager Resources = new("KyfRev.Presentation.Wpf.Resources.ExamText", typeof(ExamText).Assembly);
 
+    /// <summary>«  · {0} fiche archivée ».</summary>
+    public static string ArchivedOneOf(object count) => Format("ArchivedOne", count);
+
+    /// <summary>«  · {0} fiches archivées ».</summary>
+    public static string ArchivedManyOf(object count) => Format("ArchivedMany", count);
+
+    /// <summary>« Remettre aussi en révision la fiche archivée du dossier ».</summary>
+    public static string IncludeArchivedOneOf(object count) => Format("IncludeArchivedOne", count);
+
+    /// <summary>« Remettre aussi en révision les {0} fiches archivées du dossier ».</summary>
+    public static string IncludeArchivedManyOf(object count) => Format("IncludeArchivedMany", count);
+
+    /// <summary>« Elles repartent de J0 aujourd'hui, et leurs étapes ne dépasseront pas la veille de l'examen. ».</summary>
+    public static string IncludeArchivedHelp => Text(nameof(IncludeArchivedHelp));
+
+    /// <summary>« Aucune échéance ne tombe après la veille de « {0} » ({1}). ».</summary>
+    public static string TightenNoneMessageOf(object name, object day) => Format("TightenNoneMessage", name, day);
+
+    /// <summary>« {0} fiche archivée remise en révision. ».</summary>
+    public static string RestartedOneOf(object count) => Format("RestartedOne", count);
+
+    /// <summary>« {0} fiches archivées remises en révision. ».</summary>
+    public static string RestartedManyOf(object count) => Format("RestartedMany", count);
+
     /// <summary>« Examens ».</summary>
     public static string Exams => Text(nameof(Exams));
 

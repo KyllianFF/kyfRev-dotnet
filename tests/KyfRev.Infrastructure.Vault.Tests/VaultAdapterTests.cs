@@ -194,6 +194,70 @@ public abstract class VaultAdapterTests(StorageKind storage)
     }
 
     [TestMethod]
+    public void Smoothing_is_off_by_default_written_only_when_on_and_picks_a_lighter_day()
+    {
+        using var folder = TemporaryVault.Empty(storage);
+        var store = new VaultStore(storage: folder.Storage);
+        var day = new DateOnly(2026, 10, 1);
+        Moment On(int offset) => new(day.AddDays(offset), new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero).AddDays(offset));
+        string first;
+        string second;
+        using (var vault = store.Initialize(folder.Root, Now))
+        {
+            Assert.IsFalse(vault.Preferences.SmoothDueDates);
+            first = vault.CreateSheet(null, "Une", "Texte.\n", Now);
+            second = vault.CreateSheet(null, "Deux", "Texte.\n", Now);
+            // J1 le 2, J3 le 5 : J7 tombe exactement le 12 pour les deux, sans lissage.
+            foreach (var id in new[] { first, second })
+            {
+                vault.ValidateReview(ItemKind.Sheet, id, On(1));
+            }
+            vault.ValidateReview(ItemKind.Sheet, first, On(4));
+            Assert.AreEqual(day.AddDays(11), vault.ReviewStateOf(ItemKind.Sheet, first, On(4).Day).DueDate);
+
+            vault.ChangePreferences(vault.Preferences with { SmoothDueDates = true });
+            // Le 12 est déjà pris par la première : la seconde se pose la veille.
+            vault.ValidateReview(ItemKind.Sheet, second, On(4));
+            Assert.AreEqual(day.AddDays(10), vault.ReviewStateOf(ItemKind.Sheet, second, On(4).Day).DueDate);
+        }
+
+        using var reopened = store.Open(folder.Root, On(4));
+        Assert.IsTrue(reopened.Preferences.SmoothDueDates, "le réglage est relu");
+        reopened.ChangePreferences(reopened.Preferences with { SmoothDueDates = false });
+        Assert.IsFalse(reopened.Preferences.SmoothDueDates);
+    }
+
+    [TestMethod]
+    public void A_suspended_item_leaves_the_day_and_the_load_and_comes_back_when_resumed()
+    {
+        using var folder = TemporaryVault.Empty(storage);
+        var store = new VaultStore(storage: folder.Storage);
+        string kept;
+        string paused;
+        using (var vault = store.Initialize(folder.Root, Now))
+        {
+            kept = vault.CreateSheet(null, "Gardée", "Texte.\n", Now);
+            paused = vault.CreateSheet(null, "Suspendue", "Texte.\n", Now);
+            vault.Suspend(ItemKind.Sheet, paused, Now);
+            Assert.AreEqual(VaultErrorKind.Tracking, Assert.ThrowsExactly<VaultException>(() => vault.ValidateReview(ItemKind.Sheet, paused, Tomorrow)).Kind);
+        }
+
+        using var reopened = store.Open(folder.Root, Tomorrow);
+        Assert.AreEqual(Now.Day, reopened.ReviewStateOf(ItemKind.Sheet, paused, Tomorrow.Day).SuspendedOn, "la suspension est relue");
+        var dashboard = reopened.Dashboard(Tomorrow.Day);
+        Assert.AreEqual(kept, dashboard.Today.Single().Id);
+        Assert.AreEqual(paused, dashboard.Suspended.Single().Id);
+        Assert.IsFalse(dashboard.Workload.SelectMany(day => day.Due).Any(item => item.Id == paused));
+        Assert.AreEqual(new SpreadPlan(1, 0, null), reopened.SpreadDueDates(new SpreadRequest(1), Tomorrow, apply: false), "elle ne compte pas dans un étalement");
+
+        reopened.ResumeReview(ItemKind.Sheet, paused);
+        var resumed = reopened.Dashboard(Tomorrow.Day);
+        Assert.IsEmpty(resumed.Suspended);
+        Assert.HasCount(2, resumed.Today);
+        Assert.IsNull(reopened.ReviewStateOf(ItemKind.Sheet, paused, Tomorrow.Day).SuspendedOn);
+    }
+
+    [TestMethod]
     public void Spreading_shows_its_plan_first_then_postpones_without_restarting()
     {
         using var folder = TemporaryVault.Empty(storage);

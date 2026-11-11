@@ -22,6 +22,7 @@ public sealed partial class VaultSession
         var horizon = day.AddDays(Application.Model.Dashboard.UpcomingDays);
         var workloadEnd = day.AddDays(Application.Model.Dashboard.WorkloadDays);
         var items = new List<DueItem>();
+        var suspended = new List<DueItem>();
         var projected = new List<(DateOnly Date, ProjectedItem Item)>();
         void Project(DueItem item, Cycle cycle)
         {
@@ -41,6 +42,12 @@ public sealed partial class VaultSession
             var item = new DueItem(
                 ItemKind.Sheet, sheet.Id, sheet.Id, sheet.Title, null, null, [], null, DisplayFolder(sheet.Path), sheet.Tags,
                 cycle.StepLabel, cycle.DueDate, cycle.DaysLate(day), cycle.LastReview, cycle.Number, entry.Presence == FilePresence.Present);
+            if (cycle.SuspendedOn is not null)
+            {
+                // Suspendue : ni due, ni dans la charge ; elle attend d'être reprise.
+                suspended.Add(item);
+                continue;
+            }
             items.Add(item);
             Project(item, cycle);
         }
@@ -68,6 +75,11 @@ public sealed partial class VaultSession
                 cycle.LastReview,
                 cycle.Number,
                 sheet?.Presence == FilePresence.Present);
+            if (cycle.SuspendedOn is not null)
+            {
+                suspended.Add(item);
+                continue;
+            }
             items.Add(item);
             Project(item, cycle);
         }
@@ -139,7 +151,10 @@ public sealed partial class VaultSession
             Health.Problems + AnnotationsToCheck + BrokenLinks().Count,
             ReadDraws().Draws is { Length: > 0 } draws ? (int)draws[^1].UnservedPriority : 0,
             Settings.Quotes.Active,
-            SchemasActive);
+            SchemasActive)
+        {
+            Suspended = [.. suspended.OrderBy(item => item.Kind == ItemKind.Passage).ThenBy(item => item, TitleOrder.Instance)],
+        };
     }
 
     /// <summary>

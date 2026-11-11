@@ -60,6 +60,12 @@ public enum ReviewAction
     /// <summary>Fiche archivée.</summary>
     Archived,
 
+    /// <summary>Élément suspendu : il ne se présente plus à réviser.</summary>
+    Suspended,
+
+    /// <summary>Élément suspendu repris.</summary>
+    Resumed,
+
     /// <summary>Fiche exclue des rappels, ou réincluse.</summary>
     RemindersChanged,
 
@@ -168,7 +174,7 @@ public sealed partial class ReviewBarViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsActive), nameof(IsArchived), nameof(IsEarly), nameof(StepLabel), nameof(DueText), nameof(IsLate), nameof(CanValidate),
         nameof(ValidateLabel), nameof(ArchivedStatus), nameof(Steps), nameof(ReminderToggleLabel), nameof(ShowsReviewedToday),
         nameof(IsReminder), nameof(ShowsArchivedActions), nameof(ShowsSteps), nameof(ShowsReminderChoices), nameof(ReminderIntro), nameof(CanAntedate), nameof(EarliestDay), nameof(LatestDay),
-        nameof(CanForget))]
+        nameof(CanForget), nameof(IsSuspended), nameof(ShowsActiveActions), nameof(SuspendedText))]
     [NotifyCanExecuteChangedFor(nameof(ValidateCommand), nameof(ForgotCommand))]
     public partial ReviewState State { get; private set; }
 
@@ -178,6 +184,15 @@ public sealed partial class ReviewBarViewModel : ObservableObject
     /// <summary>Archivé.</summary>
     public bool IsArchived => !IsActive;
 
+    /// <summary>Suspendu : en révision, mais il ne se présente plus tant qu'il n'est pas repris.</summary>
+    public bool IsSuspended => IsActive && State.SuspendedOn is not null;
+
+    /// <summary>Reporter, valider et les autres actions d'un élément en révision ; suspendu, il n'a que « Reprendre ».</summary>
+    public bool ShowsActiveActions => IsActive && !IsSuspended;
+
+    /// <summary>« Suspendue depuis le lundi 12 octobre : elle ne se présente plus à réviser. ».</summary>
+    public string SuspendedText => State.SuspendedOn is { } since ? ReviewText.SuspendedSinceOf(Dates.Long(since)) : string.Empty;
+
     /// <summary>L'échéance n'est pas encore arrivée : valider demandera confirmation.</summary>
     public bool IsEarly => State.DueDate is { } due && due > Today;
 
@@ -186,15 +201,16 @@ public sealed partial class ReviewBarViewModel : ObservableObject
 
     /// <summary>« en retard de 2 j (prévue ven. 9 oct.) », « prévue aujourd'hui », « prévue lundi 12 octobre ».</summary>
     public string DueText => State.DueDate is not { } due ? string.Empty
+        : IsSuspended ? SuspendedText
         : State.DaysLate > 0 ? ReviewText.DueLateOf(State.DaysLate, Dates.Short(due))
         : due == Today ? ReviewText.DueToday
         : ReviewText.DueOnOf(Dates.Long(due));
 
     /// <summary>L'échéance est dépassée.</summary>
-    public bool IsLate => State.DaysLate > 0;
+    public bool IsLate => State.DaysLate > 0 && !IsSuspended;
 
     /// <summary>La révision du jour est faite : plus rien à valider aujourd'hui.</summary>
-    public bool CanValidate => IsActive && !State.ReviewedToday;
+    public bool CanValidate => ShowsActiveActions && !State.ReviewedToday;
 
     /// <summary>
     /// « J'avais oublié » se dit d'une révision attendue : en avance, rien n'était encore à savoir, et
@@ -240,7 +256,7 @@ public sealed partial class ReviewBarViewModel : ObservableObject
     public DateOnly? LatestDay => DayChoice == ReviewDayChoice.Validate ? Today : null;
 
     /// <summary>« Révision du jour enregistrée » est affiché.</summary>
-    public bool ShowsReviewedToday => IsActive && State.ReviewedToday;
+    public bool ShowsReviewedToday => ShowsActiveActions && State.ReviewedToday;
 
     /// <summary>« Valider la révision J3 ».</summary>
     public string ValidateLabel => ReviewText.ValidateOf(State.Step ?? string.Empty);
@@ -486,6 +502,16 @@ public sealed partial class ReviewBarViewModel : ObservableObject
     /// <summary>Demande confirmation avant de recommencer le cycle à J0.</summary>
     [RelayCommand]
     private void RequestRestart() => Confirmation = ReviewConfirmation.Restart;
+
+    /// <summary>Suspend l'élément : il garde son étape et son échéance, et attend d'être repris.</summary>
+    [RelayCommand]
+    private Task SuspendAsync() =>
+        ActAsync(ReviewAction.Suspended, () => _reviews.Suspend(Kind, Id), _ => IsSheet ? ReviewText.SuspendedSheet : ReviewText.SuspendedPassage);
+
+    /// <summary>Reprend l'élément suspendu, là où il en était.</summary>
+    [RelayCommand]
+    private Task ResumeAsync() =>
+        ActAsync(ReviewAction.Resumed, () => _reviews.Resume(Kind, Id), next => ReviewText.ResumedOf(next.Step ?? string.Empty, DueText));
 
     /// <summary>Demande confirmation avant d'archiver la fiche.</summary>
     [RelayCommand]
