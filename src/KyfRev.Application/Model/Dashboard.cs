@@ -175,3 +175,22 @@ public sealed record ArchivedSheetEntry(
     DateOnly? LastReminderOn,
     ReminderOutcome? LastReminderOutcome,
     bool FilePresent);
+
+/// <summary>Une demande d'étalement des échéances.</summary>
+/// <param name="PerDay">Révisions par jour, au plus.</param>
+/// <param name="PauseFrom">Premier jour d'une pause ; rien : c'est le retard qui s'étale.</param>
+/// <param name="PauseTo">Dernier jour de la pause ; rien : un seul jour.</param>
+public sealed record SpreadRequest(int PerDay, DateOnly? PauseFrom = null, DateOnly? PauseTo = null)
+{
+    /// <summary>Le plus grand plafond accepté.</summary>
+    public const int MaxPerDay = 500;
+
+    /// <summary>La plus longue pause acceptée, en jours.</summary>
+    public const int MaxPauseDays = 90;
+}
+
+/// <summary>Ce que fait un étalement.</summary>
+/// <param name="Kept">Échéances gardées aujourd'hui (rattrapage seulement).</param>
+/// <param name="Moved">Échéances déplacées.</param>
+/// <param name="LastDay">Le dernier jour où il en pose ; rien si rien ne bouge.</param>
+public sealed record SpreadPlan(int Kept, int Moved, DateOnly? LastDay);

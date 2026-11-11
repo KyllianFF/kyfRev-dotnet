@@ -5,12 +5,19 @@ using CommunityToolkit.Mvvm.Input;
 
 namespace KyfRev.Presentation.Wpf.Pages;
 
-/// <summary>Un trou du texte, en révision : un passage bien ancré, ou du gras.</summary>
+/// <summary>Un trou du texte, en révision : un passage bien ancré, du gras, ou toute une partie sous son titre.</summary>
 /// <param name="Key">Son nom, stable d'un affichage à l'autre.</param>
 /// <param name="Start">Son début dans le texte affiché.</param>
 /// <param name="End">Sa fin dans le texte affiché.</param>
 /// <param name="PassageId">Le passage qu'il cache ; rien pour du gras.</param>
-public sealed record TextHole(string Key, int Start, int End, string? PassageId);
+public sealed record TextHole(string Key, int Start, int End, string? PassageId)
+{
+    /// <summary>Le début du nom d'une partie masquée sous son titre.</summary>
+    internal const string SectionPrefix = "partie:";
+
+    /// <summary>Le trou est toute une partie de la fiche, sous son titre.</summary>
+    public bool IsSection => Key.StartsWith(SectionPrefix, StringComparison.Ordinal);
+}
 
 /// <summary>
 /// Le texte à trous d'une fiche en révision : ses passages et son gras restent masqués jusqu'au clic, pour se les rappeler
@@ -41,8 +48,11 @@ public sealed partial class TextHoles : ObservableObject
     /// <summary>Le nombre de trous déjà affichés.</summary>
     public int RevealedCount => _all.Count(hole => _revealed.Contains(hole.Key));
 
+    /// <summary>Les trous sont les parties de la fiche : elle n'a ni gras ni passage.</summary>
+    public bool IsBySection => !_all.IsEmpty && _all[0].IsSection;
+
     /// <summary>Où l'on en est.</summary>
-    public string Summary => ReadingText.HolesSummary(RevealedCount, _all.Length);
+    public string Summary => IsBySection ? ReadingText.SectionsSummary(RevealedCount, _all.Length) : ReadingText.HolesSummary(RevealedCount, _all.Length);
 
     /// <summary>Il reste quelque chose à afficher.</summary>
     public bool CanRevealAll => RevealedCount < _all.Length;
@@ -94,6 +104,30 @@ public sealed partial class TextHoles : ObservableObject
             rank++;
         }
         return [.. holes.OrderBy(hole => hole.Start)];
+    }
+
+    /// <summary>
+    /// Les parties d'une fiche sans gras ni passage : le texte entre un titre et le suivant, à se rappeler avant de le relire.
+    /// Les titres restent lisibles, ce sont les indices ; ce qui précède le premier titre aussi. Une fiche sans titre n'a pas
+    /// de partie : elle se relit.
+    /// </summary>
+    /// <param name="headings">L'étendue de chaque titre dans le texte affiché, dans l'ordre.</param>
+    /// <param name="textLength">La longueur du texte affiché.</param>
+    public static ImmutableArray<TextHole> Sections(IReadOnlyList<(int Start, int End)> headings, int textLength)
+    {
+        ArgumentNullException.ThrowIfNull(headings);
+        var sections = ImmutableArray.CreateBuilder<TextHole>();
+        for (var rank = 0; rank < headings.Count; rank++)
+        {
+            var start = headings[rank].End;
+            var end = rank + 1 < headings.Count ? headings[rank + 1].Start : textLength;
+            // Deux titres qui se suivent ne sont séparés que par un saut de ligne : il n'y a rien à se rappeler.
+            if (end - start > 1)
+            {
+                sections.Add(new TextHole(string.Create(CultureInfo.InvariantCulture, $"{TextHole.SectionPrefix}{rank}"), start, end, null));
+            }
+        }
+        return sections.ToImmutable();
     }
 
     /// <summary>Les passages encore masqués : le volet des passages les tait aussi.</summary>
@@ -170,6 +204,7 @@ public sealed partial class TextHoles : ObservableObject
     private void Notify()
     {
         OnPropertyChanged(nameof(HasHoles));
+        OnPropertyChanged(nameof(IsBySection));
         OnPropertyChanged(nameof(Summary));
         OnPropertyChanged(nameof(CanRevealAll));
         OnPropertyChanged(nameof(CanHideAll));

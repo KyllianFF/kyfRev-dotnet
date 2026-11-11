@@ -37,10 +37,17 @@ main. Paramètres › Données permet d'en ouvrir ou d'en créer un autre.
 - **Aujourd'hui** liste ce qui est à réviser : fiches, passages, définitions, rappels. « Commencer » enchaîne le tout.
 - En révision, le texte surligné et les mots en gras peuvent être masqués, pour vous forcer à les retrouver. Validez une fois la
   fiche relue, ou reportez-la.
+- Une fiche sans gras ni passage ne montre d'abord que ses titres : rappelez-vous chaque partie, puis affichez-la (Entrée,
+  Espace ou un clic). « Tout afficher » sert à relire seulement.
+- **« J'avais oublié »**, à côté de « Valider » : la révision compte, mais l'étape recule d'un cran au lieu d'avancer (après un
+  oubli à J7, la fiche revient à J3 trois jours plus tard). « Recommencer à J0 » reste pour repartir de zéro.
 - **Surlignez un passage** ou **créez une définition** depuis le texte : ils ont leur propre calendrier.
 - La barre de révision permet aussi de valider à une date passée, ou de reporter à une date choisie.
 - **Examens** : sur Aujourd'hui, « Examen… » fixe une date pour un dossier. « Resserrer… » ramène les échéances avant la veille.
 - **Charge** montre les 30 prochains jours, et permet de déplacer une échéance vers un jour moins chargé.
+- **Étaler…**, sur Aujourd'hui : après une absence, gardez pour aujourd'hui les révisions les plus fragiles et répartissez les
+  autres sur les jours suivants, sans dépasser le nombre par jour que vous donnez ; ou annoncez une pause, et ce qui tombait
+  pendant ces jours part après votre retour. Le plan s'affiche avant d'être appliqué. Ce sont des reports : rien ne recommence.
 
 ## Écrire
 

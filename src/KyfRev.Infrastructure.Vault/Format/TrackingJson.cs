@@ -115,7 +115,8 @@ internal static class TrackingJson
                 Fields.String(obj, "etape"),
                 Fields.Day(obj, "prevuLe"),
                 (int)Fields.Integer(obj, "retardJours", int.MinValue, int.MaxValue),
-                Fields.OptionalString(obj, "origine") is { } origin ? ReadOrigin(origin) : null),
+                Fields.OptionalString(obj, "origine") is { } origin ? ReadOrigin(origin) : null,
+                Fields.OptionalString(obj, "souvenir") is { } recall && ReadForgotten(recall)),
             "report" => new PostponementEvent(
                 at,
                 (int)Fields.Integer(obj, "cycle", 0, U32),
@@ -137,7 +138,7 @@ internal static class TrackingJson
         var at = InstantText.Format(trackingEvent.At);
         return trackingEvent switch
         {
-            ReviewEvent e => WithOrigin(
+            ReviewEvent e => WithRecall(WithOrigin(
                 new JsonObject
                 {
                     ["evt"] = "revision",
@@ -148,7 +149,7 @@ internal static class TrackingJson
                     ["prevuLe"] = Fields.DayText(e.PlannedOn),
                     ["retardJours"] = e.DaysLate,
                 },
-                e.Origin),
+                e.Origin), e.Forgotten),
             PostponementEvent e => new JsonObject
             {
                 ["evt"] = "report",
@@ -183,6 +184,25 @@ internal static class TrackingJson
         }
         return review;
     }
+
+    /// <summary>
+    /// « souvenir » n'est écrit que pour un oubli : une révision validée s'écrit comme avant, octet
+    /// pour octet, et la 0.x, qui ignore cette clé, relit le fichier.
+    /// </summary>
+    private static JsonObject WithRecall(JsonObject review, bool forgotten)
+    {
+        if (forgotten)
+        {
+            review["souvenir"] = "oublie";
+        }
+        return review;
+    }
+
+    private static bool ReadForgotten(string text) => text switch
+    {
+        "oublie" => true,
+        _ => throw new VaultFormatException($"souvenir « {text} » inconnu"),
+    };
 
     private static string Origin(StartOrigin origin) => origin switch
     {

@@ -71,7 +71,10 @@ public sealed class TrashUseCases(VaultHost host, TimeProvider time)
     }
 }
 
-/// <summary>Examens par dossier, et échéances ramenées avant l'examen.</summary>
+/// <summary>
+/// Examens par dossier, et échéances déplacées en nombre : ramenées avant un examen, étalées après une absence, ou
+/// sorties d'une pause annoncée.
+/// </summary>
 public sealed class ExamUseCases(VaultHost host, TimeProvider time)
 {
     /// <summary>Fixe ou remplace l'examen d'un dossier (vide : tout le coffre).</summary>
@@ -88,6 +91,23 @@ public sealed class ExamUseCases(VaultHost host, TimeProvider time)
     {
         var now = Present.Of(time).Now;
         return host.Use(vault => vault.TightenBeforeExam(folder, now));
+    }
+
+    /// <summary>
+    /// Ce que donnerait un étalement, sans rien écrire : combien d'échéances restent aujourd'hui, combien partent, et
+    /// jusqu'à quel jour. Sans jours de pause, c'est le retard qui s'étale.
+    /// </summary>
+    public Outcome<SpreadPlan> PlanSpread(SpreadRequest request)
+    {
+        var now = Present.Of(time).Now;
+        return host.Use(vault => vault.SpreadDueDates(request, now, apply: false));
+    }
+
+    /// <summary>Étale pour de bon : chaque échéance déplacée est un report ordinaire, inscrit dans l'historique.</summary>
+    public Outcome<SpreadPlan> Spread(SpreadRequest request)
+    {
+        var now = Present.Of(time).Now;
+        return host.Use(vault => vault.SpreadDueDates(request, now, apply: true));
     }
 }
 

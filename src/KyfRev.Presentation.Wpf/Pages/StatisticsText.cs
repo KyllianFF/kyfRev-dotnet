@@ -35,6 +35,12 @@ public static class StatisticsText
     /// <summary>« meilleur jour : {0}, {1} ».</summary>
     public static string BestDayOf(object total, object day) => Format("BestDay", total, day);
 
+    /// <summary>« dont {0} oubliée ».</summary>
+    public static string ForgottenOneOf(object count) => Format("ForgottenOne", count);
+
+    /// <summary>« dont {0} oubliées ».</summary>
+    public static string ForgottenManyOf(object count) => Format("ForgottenMany", count);
+
     /// <summary>« Par dossier ».</summary>
     public static string ByFolder => Text(nameof(ByFolder));
 

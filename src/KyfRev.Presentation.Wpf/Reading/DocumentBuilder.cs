@@ -123,6 +123,7 @@ internal sealed class DocumentBuilder
         _inlineSize = _comfort.Size;
         _reading = reading;
         _pieces = reading.Map.Pieces.ToDictionary(piece => piece.Node);
+        TextLength = reading.Map.Text.Length;
         Layer = new TextLayer(findBrush ?? (_ => null));
         _follow = follow;
         _opensLinks = opensLinks;
@@ -137,6 +138,15 @@ internal sealed class DocumentBuilder
 
     /// <summary>Les étendues de texte en gras, dans le texte affiché.</summary>
     public List<(int Start, int End)> BoldRanges { get; } = [];
+
+    /// <summary>
+    /// L'étendue de chaque titre dans le texte affiché, dans l'ordre : ce qui les sépare est une partie de la fiche, à se
+    /// rappeler avant de la relire.
+    /// </summary>
+    public List<(int Start, int End)> HeadingRanges { get; } = [];
+
+    /// <summary>La longueur du texte affiché : la fin de la dernière partie.</summary>
+    public int TextLength { get; }
 
     /// <summary>Les cases des colonnes de tableau cachées en révision : des trous, comme le gras.</summary>
     public List<(int Start, int End)> ReviewCells { get; } = [];
@@ -502,6 +512,10 @@ internal sealed class DocumentBuilder
         AddInlines(element, heading.Inlines, 0, false);
         _inlineSize = _comfort.Size;
         Headings[element] = heading;
+        if (Descendants(element).OfType<RenderText>().Select(text => _pieces.GetValueOrDefault(text)).OfType<TextPiece>().ToList() is { Count: > 0 } pieces)
+        {
+            HeadingRanges.Add((pieces[0].Start, pieces[^1].End));
+        }
         blocks.Add(heading);
     }
 

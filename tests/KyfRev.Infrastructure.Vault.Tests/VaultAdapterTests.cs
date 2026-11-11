@@ -170,6 +170,58 @@ public abstract class VaultAdapterTests(StorageKind storage)
     }
 
     [TestMethod]
+    public void A_forgotten_review_is_written_read_back_and_steps_back()
+    {
+        using var folder = TemporaryVault.Empty(storage);
+        var store = new VaultStore(storage: folder.Storage);
+        string id;
+        var third = new Moment(new DateOnly(2026, 10, 5), new DateTimeOffset(2026, 10, 5, 12, 0, 0, TimeSpan.Zero));
+        using (var vault = store.Initialize(folder.Root, Now))
+        {
+            id = vault.CreateSheet(null, "Mitose", "La prophase précède la métaphase.\n", Now);
+            vault.ValidateReview(ItemKind.Sheet, id, Tomorrow);
+            Assert.AreEqual(new NextStepScheduled("J1", new DateOnly(2026, 10, 6)), vault.ValidateReview(ItemKind.Sheet, id, third, recall: ReviewRecall.Forgotten));
+        }
+
+        using var reopened = store.Open(folder.Root, third);
+        var state = reopened.ReviewStateOf(ItemKind.Sheet, id, third.Day);
+        Assert.AreEqual("J1", state.Step);
+        Assert.IsTrue(state.ReviewedToday);
+        // La frise : J0 fait, J1 de nouveau à faire, bien qu'il ait déjà été validé une fois.
+        Assert.AreEqual("J0 fait, J1 à faire, J3 à faire", string.Join(", ", state.Steps.Take(3).Select(step => $"{step.Label} {(step.DoneOn is null ? "à faire" : "fait")}")));
+        var statistics = reopened.Statistics(third.Day);
+        Assert.AreEqual((2, 1), (statistics.Reviews, statistics.Forgotten));
+    }
+
+    [TestMethod]
+    public void Spreading_shows_its_plan_first_then_postpones_without_restarting()
+    {
+        using var folder = TemporaryVault.Empty(storage);
+        using var vault = new VaultStore(storage: folder.Storage).Initialize(folder.Root, Now);
+        var ids = Enumerable.Range(1, 5).Select(rank => vault.CreateSheet(null, $"Fiche {rank}", "Texte.\n", Now)).ToList();
+        var later = new Moment(new DateOnly(2026, 10, 9), new DateTimeOffset(2026, 10, 9, 12, 0, 0, TimeSpan.Zero));
+
+        // Créées le 1er, toutes dues le 2 : le 9, cinq J1 en retard.
+        var plan = vault.SpreadDueDates(new SpreadRequest(2), later, apply: false);
+        Assert.AreEqual(new SpreadPlan(2, 3, new DateOnly(2026, 10, 11)), plan);
+        Assert.IsTrue(ids.All(id => vault.ReviewStateOf(ItemKind.Sheet, id, later.Day).DueDate == new DateOnly(2026, 10, 2)), "Le plan n'écrit rien.");
+
+        Assert.AreEqual(plan, vault.SpreadDueDates(new SpreadRequest(2), later, apply: true));
+        var states = ids.Select(id => vault.ReviewStateOf(ItemKind.Sheet, id, later.Day)).ToList();
+        Assert.AreEqual("2,2,1", string.Join(',', states.GroupBy(state => state.DueDate).OrderBy(group => group.Key).Select(group => group.Count())));
+        Assert.IsTrue(states.All(state => state is { Step: "J1", Cycle: 1 }), "Aucun cycle ne recommence.");
+        Assert.AreEqual(new SpreadPlan(2, 0, null), vault.SpreadDueDates(new SpreadRequest(2), later, apply: false), "Le retard restant tient dans la journée.");
+
+        // Une pause du 10 au 11 : ce qui y tombait part après le retour.
+        var pause = vault.SpreadDueDates(new SpreadRequest(5, new DateOnly(2026, 10, 10), new DateOnly(2026, 10, 11)), later, apply: true);
+        Assert.AreEqual(new SpreadPlan(0, 3, new DateOnly(2026, 10, 12)), pause);
+
+        Assert.AreEqual(VaultErrorKind.InvalidSettings, Assert.ThrowsExactly<VaultException>(() => vault.SpreadDueDates(new SpreadRequest(0), later, apply: false)).Kind);
+        Assert.AreEqual(VaultErrorKind.InvalidSettings, Assert.ThrowsExactly<VaultException>(() => vault.SpreadDueDates(new SpreadRequest(2, later.Day), later, apply: false)).Kind);
+        Assert.AreEqual(VaultErrorKind.InvalidSettings, Assert.ThrowsExactly<VaultException>(() => vault.SpreadDueDates(new SpreadRequest(2, later.Day.AddDays(3), later.Day.AddDays(2)), later, apply: false)).Kind);
+    }
+
+    [TestMethod]
     public void Reviews_annotations_reminders_exams_and_settings_reach_the_session()
     {
         using var folder = TemporaryVault.Empty(storage);

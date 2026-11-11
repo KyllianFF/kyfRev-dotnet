@@ -13,6 +13,7 @@ public sealed class PropertyTests(TestContext testContext)
     private enum Operation
     {
         Validate,
+        Forget,
         ValidateBackdated,
         Postpone,
         Restart,
@@ -24,6 +25,7 @@ public sealed class PropertyTests(TestContext testContext)
 
     private static readonly Gen<(Operation Kind, int Argument)> OperationGen = Gen.Frequency(
         (6, Gen.Const((Operation.Validate, 0))),
+        (2, Gen.Const((Operation.Forget, 0))),
         (1, Gen.Int[1, 4].Select(n => (Operation.ValidateBackdated, n))),
         (1, Gen.Int[1, 19].Select(n => (Operation.Postpone, n))),
         (1, Gen.Const((Operation.Restart, 0))),
@@ -56,6 +58,7 @@ public sealed class PropertyTests(TestContext testContext)
                 var (next, outcome) = kind switch
                 {
                     Operation.Validate => Review(before.ValidateReview(now, null, rules)),
+                    Operation.Forget => Review(before.ValidateReview(now, null, rules, ReviewRecall.Forgotten)),
                     Operation.ValidateBackdated => Review(before.ValidateReview(now, day.AddDays(-argument), rules)),
                     Operation.Postpone => (before.Postpone(now, day.AddDays(argument)).Tracking, null),
                     Operation.Restart => (before.Restart(now, ReviewSequence.Default).Tracking, null),
@@ -84,6 +87,14 @@ public sealed class PropertyTests(TestContext testContext)
                 if (outcome is NextStepScheduled scheduled && kind == Operation.Validate)
                 {
                     Assert.AreEqual(tracking.Cycle!.Sequence.IntervalBefore(tracking.Cycle.Step), CivilCalendar.DaysBetween(day, scheduled.DueDate));
+                }
+                if (kind == Operation.Forget)
+                {
+                    // Un oubli ne termine jamais un cycle, ne fait jamais avancer, et ne descend pas sous J1.
+                    Assert.IsInstanceOfType<NextStepScheduled>(outcome);
+                    Assert.AreEqual(Math.Max(before.Cycle!.Step - 1, 1), tracking.Cycle!.Step);
+                    Assert.AreEqual(tracking.Cycle.Sequence.IntervalBefore(tracking.Cycle.Step), CivilCalendar.DaysBetween(day, tracking.Cycle.DueDate));
+                    Assert.AreEqual(before.Counters, tracking.Counters);
                 }
                 if (kind == Operation.Reminder)
                 {

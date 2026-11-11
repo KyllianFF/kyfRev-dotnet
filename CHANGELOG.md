@@ -9,6 +9,19 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Ajouté
 
+- « J'avais oublié », à côté de « Valider », pour une fiche, un passage ou une définition. La révision compte, et l'étape
+  recule d'un cran au lieu d'avancer : après un oubli à J7, c'est J3 qui revient trois jours plus tard, jamais en dessous de
+  J1, et un oubli ne termine pas un cycle. La frise remet à faire les étapes revenues. Seul l'oubli s'écrit dans le coffre
+  (`"souvenir": "oublie"` sur l'événement) : une validation ordinaire garde sa forme d'avant. Les statistiques comptent les
+  révisions oubliées, et l'export de l'historique les signale. « Recommencer à J0 » reste, pour repartir de zéro.
+- Rappel partie par partie : en révision, une fiche sans gras ni passage ne montre d'abord que ses titres et ce qui les
+  précède. Entrée, Espace ou un clic affichent la partie suivante ; « Tout afficher » sert à relire seulement. Une fiche qui a
+  du gras ou des passages garde son texte à trous. Les images et les schémas d'une partie masquée restent visibles.
+- « Étaler… », sur Aujourd'hui. Après une absence : les révisions les plus fragiles restent aujourd'hui (celles dont le retard
+  pèse le plus face à leur étape), les autres partent sur les jours suivants, sans dépasser le nombre par jour choisi, ce qui
+  tombe déjà ces jours-là compris. Pour une pause annoncée, de 90 jours au plus : ce qui tombait pendant ces jours part après
+  le retour. Le plan s'affiche avant d'être accepté et se recalcule à chaque changement. Ce sont des reports ordinaires,
+  inscrits dans l'historique : rien ne recommence à J0, rien n'est validé.
 - Fiches : un filtre par étiquettes, comme la 0.x. Chaque pastille dit son nombre de fiches, on peut en choisir plusieurs, et
   « Tout afficher » les retire ; sur une fenêtre étroite, il se replie avec les autres filtres.
 - Écrire : les boutons « Code dans le texte » et « Citation », dans le ruban et dans le clic droit.

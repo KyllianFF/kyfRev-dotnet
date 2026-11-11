@@ -418,6 +418,10 @@
                         IsClosable="False" Margin="0,12,0,0" />
       <kyf:Notification x:Name="ExamError" Severity="Critical" Message="{Binding Exams.Error}" IsOpen="{Binding Exams.HasError, Mode=OneWay, FallbackValue=False}"
                         IsClosable="False" Margin="0,12,0,0" />
+      <kyf:Notification x:Name="SpreadMessage" Severity="Success" Message="{Binding Spread.Message}" IsOpen="{Binding Spread.HasMessage, Mode=OneWay, FallbackValue=False}"
+                        IsClosable="False" Margin="0,12,0,0" />
+      <kyf:Notification x:Name="SpreadError" Severity="Critical" Message="{Binding Spread.Error}" IsOpen="{Binding Spread.HasError, Mode=OneWay, FallbackValue=False}"
+                        IsClosable="False" Margin="0,12,0,0" />
     </StackPanel>
 
     <DockPanel Grid.Row="3" Grid.ColumnSpan="2" Margin="0,16,0,0">
@@ -505,6 +509,14 @@
                 <TextBlock Text="{x:Static pages:WorkloadText.ShortTitle}" VerticalAlignment="Center" Margin="8,0,0,0" Visibility="{Binding HasRoom, Converter={StaticResource Visible}}" />
               </StackPanel>
             </Button>
+            <!-- Un retard à rattraper, une pause à prévoir : des reports, montrés avant d'être faits. -->
+            <Button x:Name="SpreadButton" Style="{DynamicResource Kyf.Button.Subtle}" Command="{Binding Spread.OpenCommand}" VerticalAlignment="Center" Margin="4,0,0,0"
+                    ToolTip="{x:Static pages:SpreadText.ActionName}" AutomationProperties.Name="{x:Static pages:SpreadText.ActionName}" Visibility="{Binding CanSpread, Converter={StaticResource Visible}}">
+              <StackPanel Orientation="Horizontal">
+                <kyf:Icon Text="{x:Static kyf:Icons.Clock}" />
+                <TextBlock Text="{x:Static pages:SpreadText.Action}" VerticalAlignment="Center" Margin="8,0,0,0" Visibility="{Binding HasRoom, Converter={StaticResource Visible}}" />
+              </StackPanel>
+            </Button>
           </WrapPanel>
 
           <!-- Squelettes pendant la première lecture. -->
@@ -548,6 +560,35 @@
     <kyf:Dialog x:Name="ExamConfirmation" Grid.RowSpan="9" Grid.ColumnSpan="9" DataContext="{Binding Exams}" Title="{Binding ConfirmTitle}" IsOpen="{Binding IsConfirming, Mode=OneWay, FallbackValue=False}"
                 PrimaryButtonText="{Binding ConfirmLabel}" Closed="OnExamConfirmationClosed">
       <TextBlock Text="{Binding ConfirmMessage}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" />
+    </kyf:Dialog>
+
+    <kyf:Dialog x:Name="SpreadDialog" Grid.RowSpan="9" Grid.ColumnSpan="9" DataContext="{Binding Spread}" Title="{x:Static pages:SpreadText.Title}" IsOpen="{Binding IsOpen, Mode=OneWay, FallbackValue=False}"
+                PrimaryButtonText="{x:Static pages:SpreadText.Confirm}" Closed="OnSpreadClosed">
+      <StackPanel>
+        <TextBlock Text="{x:Static pages:SpreadText.Help}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="0,0,0,12" />
+        <RadioButton x:Name="CatchUpChoice" GroupName="SpreadKind" IsChecked="{Binding IsCatchUp}" Margin="0,0,0,8" AutomationProperties.HelpText="{x:Static pages:SpreadText.CatchUpHelp}">
+          <StackPanel>
+            <TextBlock Text="{x:Static pages:SpreadText.CatchUp}" />
+            <TextBlock Text="{x:Static pages:SpreadText.CatchUpHelp}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" />
+          </StackPanel>
+        </RadioButton>
+        <RadioButton x:Name="PauseChoice" GroupName="SpreadKind" IsChecked="{Binding IsPause}" AutomationProperties.HelpText="{x:Static pages:SpreadText.PauseHelp}">
+          <StackPanel>
+            <TextBlock Text="{x:Static pages:SpreadText.Pause}" />
+            <TextBlock Text="{x:Static pages:SpreadText.PauseHelp}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" />
+          </StackPanel>
+        </RadioButton>
+        <StackPanel x:Name="PauseDays" Margin="0,8,0,0" Visibility="{Binding IsPause, Converter={StaticResource Visible}}">
+          <TextBlock Text="{x:Static pages:SpreadText.From}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,0,0,4" />
+          <kyf:DateField x:Name="PauseFromDay" Width="200" HorizontalAlignment="Left" Day="{Binding PauseFrom}" Minimum="{Binding Earliest}" AutomationProperties.Name="{x:Static pages:SpreadText.From}" />
+          <TextBlock Text="{x:Static pages:SpreadText.To}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,8,0,4" />
+          <kyf:DateField x:Name="PauseToDay" Width="200" HorizontalAlignment="Left" Day="{Binding PauseTo}" Minimum="{Binding PauseFrom}" AutomationProperties.Name="{x:Static pages:SpreadText.To}" />
+        </StackPanel>
+        <TextBlock Text="{x:Static pages:SpreadText.PerDay}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,12,0,4" />
+        <TextBox x:Name="SpreadPerDay" Width="80" HorizontalAlignment="Left" Text="{Binding PerDay, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="{x:Static pages:SpreadText.PerDay}" />
+        <!-- Le plan, recalculé à chaque changement : ce qui sera fait si on accepte. -->
+        <TextBlock x:Name="SpreadPlan" Text="{Binding Plan}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" Margin="0,12,0,0" AutomationProperties.LiveSetting="Polite" />
+      </StackPanel>
     </kyf:Dialog>
 
     <kyf:Dialog x:Name="ExamEditor" Grid.RowSpan="9" Grid.ColumnSpan="9" DataContext="{Binding Exams}" Title="{Binding EditorTitle}" IsOpen="{Binding IsEditing, Mode=OneWay, FallbackValue=False}"

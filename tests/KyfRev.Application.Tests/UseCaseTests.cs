@@ -395,6 +395,7 @@ public sealed class UseCaseTests
         _ when type == typeof(ReadOnlyMemory<byte>) => ReadOnlyMemory<byte>.Empty,
         _ when type == typeof(Anchor) => Passage,
         _ when type == typeof(Definition) => new Definition("Terme", "Explication."),
+        _ when type == typeof(SpreadRequest) => new SpreadRequest(10),
         _ when type == typeof(VaultSecret) => VaultSecret.Password("un mot de passe d'essai"),
         _ when type == typeof(RecoveryKeyDraft) => new RecoveryKeyDraft(@"C:\Coffre", "clé", default, default),
         _ when type == typeof(VaultPreferences) => new VaultPreferences([1, 3], true, 2, 30, [2, 4], false, true, true, false, [], false),

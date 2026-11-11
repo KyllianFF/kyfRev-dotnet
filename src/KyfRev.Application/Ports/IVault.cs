@@ -172,9 +172,10 @@ public interface IReviewStore
 {
     /// <summary>
     /// Valide la révision attendue (une seule par élément et par jour). <paramref name="reviewDate"/> antidate la
-    /// révision (« je l'ai révisée hier ») ; rien : aujourd'hui.
+    /// révision (« je l'ai révisée hier ») ; rien : aujourd'hui. Avec <see cref="ReviewRecall.Forgotten"/>, l'étape
+    /// recule d'un cran au lieu d'avancer.
     /// </summary>
-    ReviewOutcome ValidateReview(ItemKind kind, string id, Moment now, DateOnly? reviewDate = null);
+    ReviewOutcome ValidateReview(ItemKind kind, string id, Moment now, DateOnly? reviewDate = null, ReviewRecall recall = ReviewRecall.Remembered);
 
     /// <summary>Reporte l'échéance au jour <paramref name="newDueDate"/>.</summary>
     void Postpone(ItemKind kind, string id, Moment now, DateOnly newDueDate);
@@ -256,6 +257,12 @@ public interface IExamStore
 
     /// <summary>Ramène avant l'examen les échéances qui tombent après ; rend leur nombre.</summary>
     int TightenBeforeExam(string folder, Moment now);
+
+    /// <summary>
+    /// Étale un retard sur les jours suivants, ou libère des jours de pause. Sans <paramref name="apply"/>, rien n'est
+    /// écrit : c'est le plan. Appliqué, chaque échéance déplacée est un report ordinaire.
+    /// </summary>
+    SpreadPlan SpreadDueDates(SpreadRequest request, Moment now, bool apply);
 }
 
 /// <summary>Réglages du coffre.</summary>

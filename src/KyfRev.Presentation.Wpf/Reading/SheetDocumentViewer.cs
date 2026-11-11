@@ -546,7 +546,9 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
             return;
         }
         built.Complete();
-        holes.Set(TextHoles.Compute(Highlights ?? [], built.BoldRanges, built.ReviewCells));
+        var marked = TextHoles.Compute(Highlights ?? [], built.BoldRanges, built.ReviewCells);
+        // Sans gras ni passage, la fiche se relirait simplement : ses parties se rappellent alors une à une, sous leur titre.
+        holes.Set(marked.IsEmpty ? TextHoles.Sections(built.HeadingRanges, built.TextLength) : marked);
     }
 
     /// <summary>Affiche le trou visé par la souris ; rend faux s'il n'y en a pas.</summary>

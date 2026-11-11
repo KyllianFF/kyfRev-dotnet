@@ -167,8 +167,9 @@ public sealed partial class ReviewBarViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsActive), nameof(IsArchived), nameof(IsEarly), nameof(StepLabel), nameof(DueText), nameof(IsLate), nameof(CanValidate),
         nameof(ValidateLabel), nameof(ArchivedStatus), nameof(Steps), nameof(ReminderToggleLabel), nameof(ShowsReviewedToday),
-        nameof(IsReminder), nameof(ShowsArchivedActions), nameof(ShowsSteps), nameof(ShowsReminderChoices), nameof(ReminderIntro), nameof(CanAntedate), nameof(EarliestDay), nameof(LatestDay))]
-    [NotifyCanExecuteChangedFor(nameof(ValidateCommand))]
+        nameof(IsReminder), nameof(ShowsArchivedActions), nameof(ShowsSteps), nameof(ShowsReminderChoices), nameof(ReminderIntro), nameof(CanAntedate), nameof(EarliestDay), nameof(LatestDay),
+        nameof(CanForget))]
+    [NotifyCanExecuteChangedFor(nameof(ValidateCommand), nameof(ForgotCommand))]
     public partial ReviewState State { get; private set; }
 
     /// <summary>Un cycle est en cours.</summary>
@@ -196,6 +197,12 @@ public sealed partial class ReviewBarViewModel : ObservableObject
     public bool CanValidate => IsActive && !State.ReviewedToday;
 
     /// <summary>
+    /// « J'avais oublié » se dit d'une révision attendue : en avance, rien n'était encore à savoir, et
+    /// l'étape n'a pas à reculer.
+    /// </summary>
+    public bool CanForget => CanValidate && !IsEarly;
+
+    /// <summary>
     /// La révision peut être antidatée : valider se fait au plus tard aujourd'hui et après la dernière révision, une
     /// seule par jour. Il faut donc au moins un jour libre avant aujourd'hui.
     /// </summary>
@@ -204,7 +211,7 @@ public sealed partial class ReviewBarViewModel : ObservableObject
     /// <summary>Quel jour la barre demande de choisir.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsChoosingDay), nameof(DayChoiceLabel), nameof(DayChoiceConfirm), nameof(EarliestDay), nameof(LatestDay))]
-    [NotifyCanExecuteChangedFor(nameof(ConfirmDayCommand), nameof(ValidateCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ConfirmDayCommand), nameof(ValidateCommand), nameof(ForgotCommand))]
     public partial ReviewDayChoice DayChoice { get; private set; }
 
     /// <summary>Le champ de date est affiché.</summary>
@@ -313,7 +320,7 @@ public sealed partial class ReviewBarViewModel : ObservableObject
 
     /// <summary>Une action est en cours.</summary>
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(ValidateCommand), nameof(ConfirmDayCommand))]
+    [NotifyCanExecuteChangedFor(nameof(ValidateCommand), nameof(ConfirmDayCommand), nameof(ForgotCommand))]
     public partial bool IsBusy { get; private set; }
 
     /// <summary>Ce que la dernière action a fait.</summary>
@@ -382,6 +389,19 @@ public sealed partial class ReviewBarViewModel : ObservableObject
 
     /// <summary>La révision à confirmer est faite un autre jour qu'aujourd'hui.</summary>
     private bool IsAntedating => _earlyDay is { } chosen && chosen != Today;
+
+    private bool CanForgetNow => CanForget && CanValidateNow;
+
+    /// <summary>« J'avais oublié » : la révision est enregistrée comme oubliée, et l'étape recule d'un cran.</summary>
+    [RelayCommand(CanExecute = nameof(CanForgetNow))]
+    private Task ForgotAsync()
+    {
+        var step = State.Step ?? string.Empty;
+        return ActAsync(
+            ReviewAction.Validated,
+            () => _reviews.Validate(Kind, Id, null, ReviewRecall.Forgotten),
+            next => ReviewText.ForgotDoneOf(step, next.Step ?? string.Empty, next.DueDate is { } due ? Dates.Long(due) : string.Empty));
+    }
 
     /// <summary>Valide la révision attendue ; en avance, demande d'abord confirmation.</summary>
     [RelayCommand(CanExecute = nameof(CanValidateNow))]

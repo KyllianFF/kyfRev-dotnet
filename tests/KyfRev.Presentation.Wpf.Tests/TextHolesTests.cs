@@ -28,6 +28,29 @@ public sealed class TextHolesTests
     }
 
     [TestMethod]
+    public void A_sheet_without_bold_or_passage_is_recalled_part_by_part()
+    {
+        // « Intro\nTitre A\nCorps A\nTitre B\nTitre C\nCorps C » : B n'a pas de corps.
+        var sections = TextHoles.Sections([(6, 13), (22, 29), (30, 37)], 45);
+
+        Assert.AreEqual("partie:0 partie:2", string.Join(' ', sections.Select(hole => hole.Key)));
+        Assert.AreEqual((13, 22), (sections[0].Start, sections[0].End));
+        Assert.AreEqual((37, 45), (sections[1].Start, sections[1].End));
+        Assert.IsTrue(sections[0].IsSection);
+        Assert.IsEmpty(TextHoles.Sections([], 45));
+
+        var state = new TextHoles { IsActive = true };
+        state.Set(sections);
+        Assert.IsTrue(state.IsBySection);
+        Assert.AreEqual("Rappelez-vous chaque partie avant de l'afficher (Entrée) : 0 sur 2 affichées.", state.Summary);
+        Assert.AreEqual("partie:0", state.RevealNext()!.Key);
+        Assert.AreEqual("Rappelez-vous chaque partie avant de l'afficher (Entrée) : 1 sur 2 affichées.", state.Summary);
+
+        state.Set(TextHoles.Compute([], [(10, 12)]));
+        Assert.IsFalse(state.IsBySection);
+    }
+
+    [TestMethod]
     public void Revealing_counts_and_what_is_revealed_stays_when_the_text_changes()
     {
         var state = new TextHoles { IsActive = true };
@@ -237,6 +260,53 @@ public sealed class TextHolesTests
 
             Assert.IsTrue(holes.HasHoles, "le texte devient à trous sans attendre");
             Assert.IsNotEmpty(holes.Hidden);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
+    public void Without_bold_each_part_is_hidden_under_its_title_and_comes_back_in_order()
+    {
+        var (window, viewer, holes) = Host("Une entrée en matière.\n\n## Prophase\n\nLes chromosomes se condensent.\n\n- un point\n\n## Métaphase\n\nIls s'alignent.\n");
+        try
+        {
+            static bool IsHidden(Run run) => Equals(run.Background, run.Foreground);
+            Run Find(string start) => LogicalRuns(viewer).Single(run => run.Text.StartsWith(start, StringComparison.Ordinal));
+
+            Assert.IsTrue(holes.IsBySection);
+            Assert.HasCount(2, holes.All);
+            Assert.IsFalse(IsHidden(Find("Une entrée")), "Ce qui précède le premier titre reste lisible.");
+            Assert.IsFalse(IsHidden(Find("Prophase")), "Les titres sont les indices.");
+            Assert.IsFalse(IsHidden(Find("Métaphase")));
+            Assert.IsTrue(IsHidden(Find("Les chromosomes")));
+            Assert.IsTrue(IsHidden(Find("un point")));
+            Assert.IsTrue(IsHidden(Find("Ils s'alignent")));
+
+            Assert.IsTrue(viewer.RevealNextHole());
+            Assert.IsFalse(IsHidden(Find("Les chromosomes")));
+            Assert.IsFalse(IsHidden(Find("un point")), "Toute la partie revient d'un coup.");
+            Assert.IsTrue(IsHidden(Find("Ils s'alignent")));
+
+            Assert.IsTrue(viewer.RevealHoleAt(Find("Ils s'alignent")));
+            Assert.IsFalse(viewer.RevealNextHole());
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
+    public void With_bold_the_parts_stay_readable()
+    {
+        var (window, _, holes) = Host("## Prophase\n\nLes **chromosomes** se condensent.\n");
+        try
+        {
+            Assert.IsFalse(holes.IsBySection);
+            Assert.AreEqual("gras:0", string.Join(' ', holes.All.Select(hole => hole.Key)));
         }
         finally
         {

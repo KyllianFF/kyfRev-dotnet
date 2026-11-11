@@ -207,6 +207,15 @@
   <data name="Steps" xml:space="preserve">
     <value>Étapes du cycle</value>
   </data>
+  <data name="Forgot" xml:space="preserve">
+    <value>J'avais oublié</value>
+  </data>
+  <data name="ForgotHelp" xml:space="preserve">
+    <value>La révision compte, et l'étape recule d'un cran au lieu d'avancer.</value>
+  </data>
+  <data name="ForgotDone" xml:space="preserve">
+    <value>{0} revue, oubli noté. Elle reviendra à l'étape {1}, {2}.</value>
+  </data>
   <data name="Validate" xml:space="preserve">
     <value>Valider la révision {0}</value>
   </data>

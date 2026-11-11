@@ -253,6 +253,10 @@ public static class ReadingText
     public static string HolesSummary(int revealed, int total) =>
         string.Create(System.Globalization.CultureInfo.InvariantCulture, $"Texte à trous : {revealed} sur {total} affichés.");
 
+    /// <summary>Où l'on en est dans le rappel des parties d'une fiche.</summary>
+    public static string SectionsSummary(int revealed, int total) =>
+        string.Create(System.Globalization.CultureInfo.InvariantCulture, $"Rappelez-vous chaque partie avant de l'afficher (Entrée) : {revealed} sur {total} affichées.");
+
     private const int ShortLength = 60;
 
     /// <summary>Écouter la fiche.</summary>

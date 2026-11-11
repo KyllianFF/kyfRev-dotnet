@@ -11,15 +11,16 @@ public sealed class ReviewUseCases(VaultHost host, TimeProvider time)
 {
     /// <summary>
     /// Valide la révision attendue (une seule par élément et par jour). <paramref name="day"/> antidate la révision,
-    /// entre le lendemain de la dernière révision et aujourd'hui ; rien : aujourd'hui.
+    /// entre le lendemain de la dernière révision et aujourd'hui ; rien : aujourd'hui. <paramref name="recall"/> dit
+    /// si l'utilisateur s'en souvenait : après un oubli, la révision compte et l'étape recule d'un cran.
     /// </summary>
     [ZeroXCommand("valider_revision")]
-    public Outcome<ReviewState> Validate(ItemKind kind, string id, DateOnly? day = null)
+    public Outcome<ReviewState> Validate(ItemKind kind, string id, DateOnly? day = null, ReviewRecall recall = ReviewRecall.Remembered)
     {
         var now = Present.Of(time).Now;
         return host.Use(vault =>
         {
-            vault.ValidateReview(kind, id, now, day);
+            vault.ValidateReview(kind, id, now, day, recall);
             return vault.ReviewStateOf(kind, id, now.Day);
         });
     }
