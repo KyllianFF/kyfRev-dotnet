@@ -695,7 +695,7 @@ public sealed class ReviewTests
         await page.LoadCommand.ExecuteAsync(null);
 
         Assert.AreEqual("Mitose", page.Reading!.Title);
-        Assert.AreEqual("Biologie  ·  #bio  ·  #partiel", page.Reading.Details);
+        Assert.AreEqual("Biologie  ·  #bio  ·  #partiel  ·  créée le 1er octobre 2026", page.Reading.Details);
         Assert.AreEqual(vault.App.Sheets.Open(vault.SheetId).Value.Body.Trim(), page.Reading.Map.Text.Trim());
         Assert.AreEqual(ItemKind.Sheet, page.Review!.Kind);
         Assert.AreEqual(vault.SheetId, page.Review.Id);

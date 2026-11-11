@@ -60,6 +60,7 @@ main. Paramètres › Données permet d'en ouvrir ou d'en créer un autre.
 
 Dans une fiche, « Écrire » ouvre le texte mis en forme ; le code Markdown s'affiche à côté si vous le demandez. L'enregistrement est
 automatique, et l'historique garde les versions précédentes. Le ruban insère images, tableaux, formules, dessins et schémas.
+- Dans une formule, `\ce{…}` écrit de la chimie : `$\ce{2H2 + O2 -> 2H2O}$`, `$\ce{SO4^2-}$`.
 
 ## Retrouver
 
@@ -70,7 +71,8 @@ automatique, et l'historique garde les versions précédentes. Le ruban insère 
 ## Échanger
 
 - **Partager** une fiche : page web, PDF, Markdown, archive avec images, texte, presse-papiers.
-- **Importer** un dossier de notes, Obsidian par exemple, depuis la vue Fiches.
+- **Importer** un dossier de notes, Obsidian par exemple, depuis la vue Fiches. Les liens `[[…]]`, les encadrés `> [!note]` et le
+  surlignage `==…==` sont convertis ; les commentaires `%%…%%` ne sont pas repris, et le bilan le dit.
 - **Exporter** le suivi, les annotations, les citations ou le coffre complet depuis Paramètres › Données.
 
 Ce qui sort est en clair, même depuis un coffre chiffré, sauf le coffre complet.

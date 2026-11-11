@@ -11,6 +11,8 @@
     <ApplicationIcon>..\..\assets\icon\kyfrev.ico</ApplicationIcon>
     <!-- Windows x64 seulement ; les bibliothèques restent indépendantes de la plateforme. -->
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <!-- Précompilé à la publication : au démarrage, le code de kyfRev n'attend plus le compilateur à la volée. -->
+    <PublishReadyToRun>true</PublishReadyToRun>
     <Description>kyfRev : l'application de bureau. Racine de composition : relie la présentation, le design system et l'infrastructure.</Description>
   </PropertyGroup>
 

@@ -118,6 +118,24 @@ public abstract class VaultImportTests(StorageKind storage)
 public sealed class VaultImportOnDiskTests() : VaultImportTests(StorageKind.Disk)
 {
     [TestMethod]
+    [DataRow("> [!note] À retenir@> Le texte.@", "> Note : À retenir@> Le texte.@", 1, 0, 0)]
+    [DataRow("> [!warning]- Piège@", "> Attention : Piège@", 1, 0, 0)]
+    [DataRow(">[!tip]+@> > [!perso] Mien@", ">Astuce@> > Perso : Mien@", 2, 0, 0)]
+    [DataRow("> [!] vide et [!note] en plein texte@", "> [!] vide et [!note] en plein texte@", 0, 0, 0)]
+    [DataRow("Un ==mot clé== et ==deux==.@", "Un **mot clé** et **deux**.@", 0, 2, 0)]
+    [DataRow("==déjà **gras**== mais a == b == c et x==y@", "<u>déjà **gras**</u> mais a == b == c et x==y@", 0, 1, 0)]
+    [DataRow("Avant %%privé%% après.@%%@sur@plusieurs lignes@%%@Suite.@", "Avant  après.@Suite.@", 0, 0, 2)]
+    [DataRow("`==code==` et `%%code%%`@```@==bloc== %%bloc%%@> [!note] bloc@```@", "`==code==` et `%%code%%`@```@==bloc== %%bloc%%@> [!note] bloc@```@", 0, 0, 0)]
+    [DataRow("%%seul%%@Texte %%jamais fermé@perdu", "Texte ", 0, 0, 2)]
+    [DataRow("# Titre@@Un paragraphe.@  @    @Un autre.@@", "# Titre@@Un paragraphe.@  @    @Un autre.@@", 0, 0, 0)]
+    public void Obsidian_callouts_highlights_and_comments_are_converted_outside_code(string text, string expected, int callouts, int highlights, int comments)
+    {
+        var result = ObsidianSyntax.Convert(text.Replace('@', '\n'));
+
+        Assert.AreEqual((expected.Replace('@', '\n'), callouts, highlights, comments), (result.Text, result.Callouts, result.Highlights, result.Comments));
+    }
+
+    [TestMethod]
     [DataRow("Voir [[Mitose]] et [[Biologie/Mitose|la mitose]].\n", "Voir [Mitose](<Biologie/Mitose.md>) et [la mitose](<Biologie/Mitose.md>).\n", 2)]
     [DataRow("[[Mitose#Prophase]]", "[Mitose › Prophase](<Biologie/Mitose.md>)", 1)]
     [DataRow("[[Langage C]]", "[Langage C](<Langages/C%23.md>)", 1)]

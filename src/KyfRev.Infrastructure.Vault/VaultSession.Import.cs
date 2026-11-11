@@ -114,7 +114,15 @@ public sealed partial class VaultSession
                 FindNote(linked, notes, byName, source) is { } index ? MarkdownLinks.RelativeFrom(noteFolder, notes[index].Target.Value) : null;
             string? ResolveAttachment(string linked) =>
                 FindAttachment(linked, sourceFolder, source, attachments) is { } file ? resources.Copy(file) : null;
-            var (converted, links) = ConvertObsidianLinks(text, ResolveNote, ResolveAttachment);
+            // L'écriture propre à Obsidian d'abord : un commentaire retiré n'a plus de liens à convertir.
+            var marks = ObsidianSyntax.Convert(text);
+            if (marks.Comments > 0)
+            {
+                ignored.Add(marks.Comments > 1
+                    ? $"{relativeSource} : {marks.Comments} commentaires %% non repris (Obsidian ne les montre pas à la lecture)"
+                    : $"{relativeSource} : 1 commentaire %% non repris (Obsidian ne le montre pas à la lecture)");
+            }
+            var (converted, links) = ConvertObsidianLinks(marks.Text, ResolveNote, ResolveAttachment);
             converted = TakeAttachments(converted, sourceFolder, source, resources);
             report.Links += links;
             report.Resources += resources.Copied.Count;

@@ -34,6 +34,14 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 - Examens : une révision faite avant un examen ne place plus l'étape suivante après sa veille. La ligne d'un examen dit
   combien de fiches du dossier sont archivées, et « Resserrer… » propose, par une case jamais cochée d'office, de les
   remettre en révision.
+- Importer un dossier de notes : ce qu'Obsidian écrit à sa façon est converti. Un encadré `> [!note] Titre` devient une
+  citation qui commence par « Note : Titre » (les types courants sont traduits). Un surlignage `==texte==` devient du gras,
+  que la révision masque comme un trou. Un commentaire `%%…%%`, qu'Obsidian ne montre pas à la lecture, n'est pas repris, et
+  le bilan de l'import le dit note par note. Rien n'est touché dans le code, ni à la source.
+- Formules : l'écriture chimique `\ce{…}` se dessine, en lecture comme au partage : symboles en romain, indices, charges,
+  hydrates et flèches de réaction (`\ce{2H2 + O2 -> 2H2O}`, `\ce{SO4^2-}`, `\ce{N2 + 3H2 <=> 2NH3}`). C'est le cœur de
+  mhchem, traduit pour le moteur de formules de kyfRev, pas tout mhchem.
+- Sous le titre d'une fiche : sa date de création, son cycle à partir du deuxième, et son temps de lecture dès une minute.
 - Fiches : un filtre par étiquettes, comme la 0.x. Chaque pastille dit son nombre de fiches, on peut en choisir plusieurs, et
   « Tout afficher » les retire ; sur une fenêtre étroite, il se replie avec les autres filtres.
 - Écrire : les boutons « Code dans le texte » et « Citation », dans le ruban et dans le clic droit.
@@ -42,6 +50,8 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ### Modifié
 
+- L'application installée est précompilée (ReadyToRun) : au démarrage, son code n'attend plus le compilateur à la volée.
+  L'installation pèse 7 Mo de plus (185 Mo au lieu de 178).
 - Statistiques : « Série en cours » laisse la place à « Cette semaine », le nombre de révisions depuis lundi, avec la
   moyenne des quatre semaines d'avant. Un jour sans révision ne fait plus rien perdre.
 - Une passe de finition sur toute l'interface. Les notifications perdent leur trait de couleur pour un filet discret, l'icône
