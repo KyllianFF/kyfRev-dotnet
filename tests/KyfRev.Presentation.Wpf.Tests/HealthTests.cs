@@ -40,6 +40,22 @@ public sealed class HealthTests
     }
 
     [TestMethod]
+    public void Conflict_copies_have_their_own_section_and_no_action()
+    {
+        using var vaults = new TestVaults(AppMode.Development);
+        var page = Page(vaults, new FakeOpener());
+
+        page.Show(Report(2) with { ConflictCopies = ["fiches/Bio/Mitose (conflicted copy 2026-11-10).md", ".suivi/fiches/f_1-PORTABLE.json"] }, []);
+
+        Assert.IsTrue(page.HasProblems);
+        var section = page.Sections.Single();
+        Assert.AreEqual("Copies de conflit (2)", section.Title);
+        Assert.AreEqual(HealthText.ConflictsHelp, section.Help);
+        Assert.AreEqual("Mitose (conflicted copy 2026-11-10).md | fiches/Bio/Mitose (conflicted copy 2026-11-10).md", $"{section.Rows[0].Title} | {section.Rows[0].Detail}");
+        Assert.IsTrue(section.Rows.All(row => row.Action is null), "l'une des deux versions est la bonne : kyfRev ne choisit pas");
+    }
+
+    [TestMethod]
     public void A_healthy_vault_says_so()
     {
         using var vaults = new TestVaults(AppMode.Development);

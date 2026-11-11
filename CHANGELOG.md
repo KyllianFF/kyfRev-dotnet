@@ -42,6 +42,35 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   hydrates et flèches de réaction (`\ce{2H2 + O2 -> 2H2O}`, `\ce{SO4^2-}`, `\ce{N2 + 3H2 <=> 2NH3}`). C'est le cœur de
   mhchem, traduit pour le moteur de formules de kyfRev, pas tout mhchem.
 - Sous le titre d'une fiche : sa date de création, son cycle à partir du deuxième, et son temps de lecture dès une minute.
+- Paramètres › Données : « Passages et définitions pour Anki », un fichier à importer dans Anki ou AnkiDroid pour réviser
+  en déplacement. Une définition donne son terme au recto, un passage son contexte troué ; chaque carte porte l'identifiant
+  du passage, si bien qu'un nouvel import la met à jour sans la doubler. Ce qui est fait dans Anki ne revient pas.
+- Paramètres › Données : « Échéances pour un agenda (.ics) ». Un événement d'une journée par jour de révision, qui dit
+  combien de révisions tombent et lesquelles, et un par examen à venir. Les retards sont comptés aujourd'hui, les éléments
+  suspendus n'y figurent pas, et un nouvel import met l'agenda à jour. Le texte des passages n'y est jamais écrit, mais
+  les titres des fiches le sont : dans un agenda en ligne, ils quittent l'ordinateur, et le bouton le dit.
+- Capture rapide : Ctrl+Maj+N, depuis n'importe quelle vue, ou « Capture rapide » dans Ctrl+K. La note s'ajoute, datée,
+  à la fiche « Boîte de réception », à la racine des fiches ; créée au besoin, cette fiche est suspendue : elle n'entre pas
+  dans les révisions. Sans coffre ouvert, ou coffre verrouillé, la capture ne s'ouvre pas.
+- Paramètres › Général : « Capture rapide depuis n'importe quelle application (Ctrl+Alt+N) », coupé par défaut. Actif, le
+  raccourci ramène la fenêtre de kyfRev devant et ouvre la capture. Il n'est demandé à Windows que si le réglage est actif,
+  et rendu dès qu'on le coupe.
+- Aujourd'hui : « Nouvelle fiche », qui la crée dans le dossier choisi dans la liste (la racine sinon) et l'ouvre en
+  écriture.
+- Étiquettes d'une fiche : celles déjà utilisées dans le coffre sont proposées pendant la saisie, la plus utilisée d'abord.
+- Ctrl+P, dans une fiche, ouvre « Partager », d'où elle sort en PDF ou en page web à imprimer.
+- L'aide (F1) liste cinq raccourcis de plus : afficher un trou, surligner, écrire, partager, noter une idée.
+- Santé du coffre : une rubrique « Copies de conflit ». Quand un outil de synchronisation (Dropbox, OneDrive, Syncthing,
+  Nextcloud) garde deux versions d'un fichier modifié sur deux postes, kyfRev ne lisait que l'original et la copie restait
+  oubliée. Elles sont maintenant reconnues à leur nom, parmi les fiches, les citations, les schémas et dans le suivi, où
+  une copie garde des révisions faites ailleurs. Elles comptent dans l'avertissement d'Aujourd'hui. Rien n'est ouvert,
+  fusionné ni supprimé à votre place.
+- Occlusion d'image : un clic droit sur une image, en lecture, propose « Masquer des zones… ». On y trace à la souris un
+  rectangle sur chaque zone à retrouver (une étiquette d'anatomie, une région d'une carte, un nom sur un schéma) ; un clic
+  sur un rectangle le retire. En révision, ces zones sont masquées et se dévoilent une à une, d'un clic ou avec Entrée,
+  comme les trous du texte ; hors révision, l'image se voit entière. Les masques s'écrivent dans le titre Markdown de
+  l'image (`![Cellule](cellule.png "kyfrev-masques:10,20,30,15")`, en pourcentages de l'image), que l'éditeur visuel et les
+  autres outils gardent. Une image écrite par référence, ou qui a déjà un titre, ne peut pas en porter, et la fenêtre le dit.
 - Fiches : un filtre par étiquettes, comme la 0.x. Chaque pastille dit son nombre de fiches, on peut en choisir plusieurs, et
   « Tout afficher » les retire ; sur une fenêtre étroite, il se replie avec les autres filtres.
 - Écrire : les boutons « Code dans le texte » et « Citation », dans le ruban et dans le clic droit.

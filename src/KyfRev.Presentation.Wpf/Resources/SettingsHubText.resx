@@ -66,6 +66,18 @@
   <data name="ExportQuotes" xml:space="preserve">
     <value>Citations (Markdown et CSV)</value>
   </data>
+  <data name="ExportAnki" xml:space="preserve">
+    <value>Passages et définitions pour Anki</value>
+  </data>
+  <data name="ExportAnkiHelp" xml:space="preserve">
+    <value>Un fichier à importer dans Anki ou AnkiDroid, pour réviser en déplacement. Réimporté, il met les cartes à jour sans les doubler. Ce qui est fait dans Anki ne revient pas dans kyfRev.</value>
+  </data>
+  <data name="ExportCalendar" xml:space="preserve">
+    <value>Échéances pour un agenda (.ics)</value>
+  </data>
+  <data name="ExportCalendarHelp" xml:space="preserve">
+    <value>Un événement par jour de révision, et un par examen. Les titres des fiches y sont écrits : importé dans un agenda en ligne, ils quittent votre ordinateur.</value>
+  </data>
   <data name="ExportTracking" xml:space="preserve">
     <value>Suivi des révisions (CSV)</value>
   </data>
@@ -76,7 +88,7 @@
     <value>Exporté dans « {0} ».</value>
   </data>
   <data name="ExportsHelp" xml:space="preserve">
-    <value>Dans le dossier de votre choix, hors du coffre ; aucun fichier existant n'est remplacé. Le suivi, les annotations et les citations sortent en clair, même d'un coffre chiffré. « Coffre complet (.zip) » reste chiffré si le coffre l'est.</value>
+    <value>Dans le dossier de votre choix, hors du coffre ; aucun fichier existant n'est remplacé. Le suivi, les annotations, les citations, les cartes pour Anki et les échéances sortent en clair, même d'un coffre chiffré. « Coffre complet (.zip) » reste chiffré si le coffre l'est.</value>
   </data>
   <data name="ExportsTitle" xml:space="preserve">
     <value>Exports</value>

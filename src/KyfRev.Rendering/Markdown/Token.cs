@@ -65,6 +65,9 @@ internal sealed class Token(TokenKind kind, string tag, int nesting)
     /// <summary>Destination d'un lien ou d'une image.</summary>
     public string? Href { get; set; }
 
+    /// <summary>Titre d'une image (<c>![alt](image "titre")</c>) ; il porte ses masques, s'il en a.</summary>
+    public string? Title { get; set; }
+
     /// <summary>Numéro de départ d'une liste qui ne commence pas à 1.</summary>
     public int? Start { get; set; }
 

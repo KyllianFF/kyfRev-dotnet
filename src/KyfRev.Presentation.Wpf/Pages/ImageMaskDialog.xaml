@@ -1,0 +1,34 @@
+<UserControl x:Class="KyfRev.Presentation.Wpf.Pages.ImageMaskDialog"
+             x:ClassModifier="internal"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:kyf="clr-namespace:KyfRev.DesignSystem.Controls;assembly=KyfRev.DesignSystem"
+             xmlns:pages="clr-namespace:KyfRev.Presentation.Wpf.Pages">
+  <UserControl.Resources>
+    <BooleanToVisibilityConverter x:Key="Visible" />
+  </UserControl.Resources>
+  <Grid>
+    <!-- « Masquer des zones » : on trace sur l'image les rectangles à retrouver en révision. -->
+    <kyf:Dialog x:Name="MaskDialog" Title="{x:Static pages:ImageMaskText.Title}" IsOpen="{Binding IsOpen, Mode=OneWay}"
+                PrimaryButtonText="{x:Static pages:ImageMaskText.Save}" IsPrimaryEnabled="{Binding CanDraw}" Closed="OnClosed">
+      <StackPanel>
+        <kyf:Notification x:Name="MaskError" Severity="Critical" Message="{Binding Error}" IsOpen="{Binding HasError, Mode=OneWay}" IsClosable="False" Margin="0,0,0,12" />
+        <TextBlock Text="{x:Static pages:ImageMaskText.Help}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="0,0,0,12" />
+        <!-- L'image et sa surface de tracé ont la même taille : un rectangle tracé se lit en parts de l'image. -->
+        <Grid x:Name="Stage" HorizontalAlignment="Center">
+          <Image x:Name="Picture" Source="{Binding Picture}" Stretch="Uniform" StretchDirection="DownOnly" MaxHeight="420" MaxWidth="640" />
+          <Canvas x:Name="Surface" Background="Transparent" ClipToBounds="True" Cursor="Cross" IsEnabled="{Binding CanDraw}"
+                  MouseLeftButtonDown="OnSurfaceDown" MouseMove="OnSurfaceMove" MouseLeftButtonUp="OnSurfaceUp" LostMouseCapture="OnSurfaceLostCapture"
+                  SizeChanged="OnSurfaceSizeChanged" AutomationProperties.Name="{x:Static pages:ImageMaskText.Surface}" />
+        </Grid>
+        <DockPanel Margin="0,12,0,0">
+          <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+            <Button x:Name="UndoButton" Content="{x:Static pages:ImageMaskText.Undo}" Command="{Binding UndoLastCommand}" Style="{DynamicResource Kyf.Button.Subtle}" />
+            <Button x:Name="ClearButton" Content="{x:Static pages:ImageMaskText.Clear}" Command="{Binding ClearCommand}" Style="{DynamicResource Kyf.Button.Subtle}" Margin="4,0,0,0" />
+          </StackPanel>
+          <TextBlock x:Name="Count" Text="{Binding Summary}" Style="{DynamicResource Kyf.Text.Secondary}" VerticalAlignment="Center" AutomationProperties.LiveSetting="Polite" />
+        </DockPanel>
+      </StackPanel>
+    </kyf:Dialog>
+  </Grid>
+</UserControl>

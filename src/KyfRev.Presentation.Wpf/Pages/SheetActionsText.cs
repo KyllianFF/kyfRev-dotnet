@@ -140,6 +140,9 @@ public static class SheetActionsText
     /// <summary>« Étiquettes, séparées par des virgules ».</summary>
     public static string TagsLabel => Text(nameof(TagsLabel));
 
+    /// <summary>« Étiquettes déjà utilisées ».</summary>
+    public static string TagSuggestions => Text(nameof(TagSuggestions));
+
     /// <summary>« Étiquettes enregistrées. ».</summary>
     public static string TagsSaved => Text(nameof(TagsSaved));
 

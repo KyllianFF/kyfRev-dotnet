@@ -94,6 +94,7 @@ public sealed class MachinePreferencesFile : IMachinePreferencesStore
             writer.WriteString("police", Name(Fonts, preferences.Font));
             writer.WriteBoolean("concentration", preferences.FocusMode);
             writer.WriteBoolean("motsDefinis", preferences.MarkDefinedWords);
+            writer.WriteBoolean("captureGlobale", preferences.GlobalCapture);
             writer.WriteBoolean("animationsReduites", preferences.ReducedMotion);
             writer.WriteBoolean("contrasteEleve", preferences.HighContrast);
             writer.WriteBoolean("ciblesAgrandies", preferences.LargerTargets);
@@ -129,6 +130,7 @@ public sealed class MachinePreferencesFile : IMachinePreferencesStore
             Font = Choice(root, "police", Fonts, defaults.Font),
             FocusMode = Flag(root, "concentration", defaults.FocusMode),
             MarkDefinedWords = Flag(root, "motsDefinis", defaults.MarkDefinedWords),
+            GlobalCapture = Flag(root, "captureGlobale", defaults.GlobalCapture),
             ReducedMotion = Flag(root, "animationsReduites", defaults.ReducedMotion),
             HighContrast = Flag(root, "contrasteEleve", defaults.HighContrast),
             LargerTargets = Flag(root, "ciblesAgrandies", defaults.LargerTargets),

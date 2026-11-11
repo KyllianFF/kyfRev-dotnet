@@ -132,6 +132,33 @@
   <data name="ShortcutSearch" xml:space="preserve">
     <value>Rechercher dans le coffre, une commande ou une vue</value>
   </data>
+  <data name="ShortcutReveal" xml:space="preserve">
+    <value>Afficher le trou ou la partie suivante, en révision</value>
+  </data>
+  <data name="ShortcutHighlight" xml:space="preserve">
+    <value>Surligner le texte sélectionné, en lecture</value>
+  </data>
+  <data name="ShortcutWrite" xml:space="preserve">
+    <value>Écrire dans la fiche, ou revenir à la lecture</value>
+  </data>
+  <data name="ShortcutShare" xml:space="preserve">
+    <value>Partager la fiche : PDF, page web à imprimer, Markdown</value>
+  </data>
+  <data name="Capture" xml:space="preserve">
+    <value>Capture rapide</value>
+  </data>
+  <data name="ShortcutCapture" xml:space="preserve">
+    <value>Noter une idée dans la boîte de réception</value>
+  </data>
+  <data name="CaptureLabel" xml:space="preserve">
+    <value>Votre note</value>
+  </data>
+  <data name="CaptureHelp" xml:space="preserve">
+    <value>Elle s'ajoute, datée, à la fiche « Boîte de réception », à la racine de vos fiches. Cette fiche n'entre pas dans vos révisions : triez-la quand vous voulez.</value>
+  </data>
+  <data name="CaptureConfirm" xml:space="preserve">
+    <value>Noter</value>
+  </data>
   <data name="ShortcutValidate" xml:space="preserve">
     <value>Valider la révision</value>
   </data>

@@ -513,6 +513,14 @@
                 <TextBlock Text="{x:Static pages:WorkloadText.ShortTitle}" VerticalAlignment="Center" Margin="8,0,0,0" Visibility="{Binding HasRoom, Converter={StaticResource Visible}}" />
               </StackPanel>
             </Button>
+            <!-- Une idée de fiche vient souvent ici : on la crée sans passer par la vue Fiches. -->
+            <Button x:Name="NewSheetButton" Style="{DynamicResource Kyf.Button.Subtle}" Command="{Binding NewSheetCommand}" VerticalAlignment="Center" Margin="4,0,0,0"
+                    ToolTip="{x:Static pages:DashboardText.NewSheet}" AutomationProperties.Name="{x:Static pages:DashboardText.NewSheet}">
+              <StackPanel Orientation="Horizontal">
+                <kyf:Icon Text="{x:Static kyf:Icons.Document}" />
+                <TextBlock Text="{x:Static pages:DashboardText.NewSheet}" VerticalAlignment="Center" Margin="8,0,0,0" Visibility="{Binding HasRoom, Converter={StaticResource Visible}}" />
+              </StackPanel>
+            </Button>
             <!-- Un retard à rattraper, une pause à prévoir : des reports, montrés avant d'être faits. -->
             <Button x:Name="SpreadButton" Style="{DynamicResource Kyf.Button.Subtle}" Command="{Binding Spread.OpenCommand}" VerticalAlignment="Center" Margin="4,0,0,0"
                     ToolTip="{x:Static pages:SpreadText.ActionName}" AutomationProperties.Name="{x:Static pages:SpreadText.ActionName}" Visibility="{Binding CanSpread, Converter={StaticResource Visible}}">
@@ -572,6 +580,16 @@
           </CheckBox>
           <TextBlock Text="{x:Static pages:ExamText.IncludeArchivedHelp}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,4,0,0" />
         </StackPanel>
+      </StackPanel>
+    </kyf:Dialog>
+
+    <kyf:Dialog x:Name="NewSheetDialog" Grid.RowSpan="9" Grid.ColumnSpan="9" Title="{x:Static pages:DashboardText.NewSheet}" IsOpen="{Binding IsCreatingSheet, Mode=OneWay, FallbackValue=False}"
+                PrimaryButtonText="{x:Static pages:DashboardText.NewSheetCreate}" Closed="OnNewSheetClosed">
+      <StackPanel>
+        <kyf:Notification x:Name="NewSheetErrorMessage" Severity="Critical" Message="{Binding NewSheetError}" IsOpen="{Binding HasNewSheetError, Mode=OneWay}" IsClosable="False" Margin="0,0,0,12" />
+        <TextBlock Text="{x:Static pages:DashboardText.NewSheetTitleLabel}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,0,0,4" />
+        <TextBox x:Name="NewSheetTitleBox" Text="{Binding NewSheetTitle, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="{x:Static pages:DashboardText.NewSheetTitleLabel}" />
+        <TextBlock x:Name="NewSheetPlaceText" Text="{Binding NewSheetPlace}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,8,0,0" />
       </StackPanel>
     </kyf:Dialog>
 

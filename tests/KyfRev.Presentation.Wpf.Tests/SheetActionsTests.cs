@@ -253,6 +253,43 @@ public sealed class SheetActionsTests
     }
 
     [TestMethod]
+    public async Task Tags_already_used_are_offered_while_typing()
+    {
+        using var vault = new SheetsVault();
+        foreach (var (title, tags) in new[] { ("Membrane", new[] { "bio", "partiel" }), ("Lois", ["bio", "Physique"]), ("À la racine", ["brouillon"]) })
+        {
+            var id = vault.App.Sheets.List().Value.Single(sheet => sheet.Title == title).Id;
+            Assert.IsTrue(vault.App.Sheets.SetTags(id, tags).Succeeded);
+        }
+        var page = await vault.LoadedAsync();
+        var row = page.Rows.OfType<SheetRow>().Single(line => line.Title == "Atomes");
+        Assert.IsFalse(page.HasTagSuggestions, "rien hors de la fenêtre des étiquettes");
+
+        page.RequestTags(row);
+        Assert.AreEqual("bio, brouillon, partiel, Physique", string.Join(", ", page.TagSuggestions), "la plus utilisée d'abord, puis l'ordre alphabétique");
+
+        page.ActionInput = "B";
+        Assert.AreEqual("bio, brouillon", string.Join(", ", page.TagSuggestions), "sans tenir compte de la casse");
+
+        page.TakeTagCommand.Execute("bio");
+        Assert.AreEqual("bio, ", page.ActionInput);
+        Assert.AreEqual("brouillon, partiel, Physique", string.Join(", ", page.TagSuggestions), "celle qui est écrite n'est plus proposée");
+
+        page.ActionInput = "bio, phy";
+        Assert.AreEqual("Physique", page.TagSuggestions.Single());
+        page.TakeTagCommand.Execute("Physique");
+        Assert.AreEqual("bio, Physique, ", page.ActionInput);
+
+        page.ActionInput = "bio, physique";
+        Assert.IsFalse(page.HasTagSuggestions, "entièrement tapée, elle n'a plus à être proposée");
+
+        await page.AnswerActionCommand.ExecuteAsync(false);
+        Assert.IsFalse(page.HasTagSuggestions);
+        page.RequestRename(row);
+        Assert.IsFalse(page.HasTagSuggestions, "le nom d'une fiche n'a pas d'étiquettes à proposer");
+    }
+
+    [TestMethod]
     public async Task A_sheet_moves_to_any_folder_and_to_the_root()
     {
         using var vault = new SheetsVault();

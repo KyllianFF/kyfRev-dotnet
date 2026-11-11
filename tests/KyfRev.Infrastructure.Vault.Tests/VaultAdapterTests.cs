@@ -258,6 +258,132 @@ public abstract class VaultAdapterTests(StorageKind storage)
     }
 
     [TestMethod]
+    public void Conflict_copies_left_by_a_sync_tool_are_reported_by_their_name()
+    {
+        using var folder = TemporaryVault.Empty(storage);
+        using var vault = new VaultStore(storage: folder.Storage).Initialize(folder.Root, Now);
+        var id = vault.CreateSheet("Biologie", "Mitose", "Texte.\n", Now);
+        vault.CreateSheet(null, "Mitose", "Autre.\n", Now);
+        Assert.IsEmpty(vault.HealthDetails().ConflictCopies, "« Mitose (2).md » est un nom que kyfRev donne lui-même");
+        var before = vault.HealthDetails().Problems;
+
+        // Ce que chaque outil pose à côté du fichier d'origine.
+        folder.Write("fiches/Biologie/Mitose (conflicted copy 2026-11-10).md", "Dropbox.\n");
+        folder.Write("fiches/Biologie/Mitose (Copie en conflit de PORTABLE 2026-11-10).md", "Dropbox, en français.\n");
+        folder.Write("fiches/Mitose.sync-conflict-20261110-101500-ABCDEFG.md", "Syncthing.\n");
+        folder.Write($".suivi/fiches/{id}-PORTABLE.json", "{}");
+        folder.Write($".suivi/annotations/{id} (conflicted copy).json", "{}");
+        folder.Write(".suivi/coffre (conflicted copy 2026-11-10).json", "{}");
+        // Ce qui n'en est pas : un titre qui parle de conflit sans la marque, et ce que kyfRev garde exprès.
+        folder.Write("fiches/Histoire/Le conflit israélo-arabe.md", "Une fiche.\n");
+        folder.Write($".suivi/versions/{id}/2026-11-10 (conflicted copy).md", "Une version.\n");
+
+        var report = vault.HealthDetails();
+
+        Assert.AreEqual(
+            string.Join('\n',
+                ".suivi/annotations/" + id + " (conflicted copy).json",
+                ".suivi/coffre (conflicted copy 2026-11-10).json",
+                ".suivi/fiches/" + id + "-PORTABLE.json",
+                "fiches/Biologie/Mitose (Copie en conflit de PORTABLE 2026-11-10).md",
+                "fiches/Biologie/Mitose (conflicted copy 2026-11-10).md",
+                "fiches/Mitose.sync-conflict-20261110-101500-ABCDEFG.md"),
+            string.Join('\n', report.ConflictCopies));
+        Assert.AreEqual(6, report.Problems - before, "elles comptent parmi les problèmes");
+    }
+
+    [TestMethod]
+    public void A_quick_note_goes_to_a_suspended_inbox_created_once()
+    {
+        using var folder = TemporaryVault.Empty(storage);
+        using var vault = new VaultStore(storage: folder.Storage).Initialize(folder.Root, Now);
+
+        var inbox = vault.CaptureToInbox("  Revoir la\tprophase\n et la métaphase  ", Now);
+
+        var opened = vault.OpenSheet(inbox, Now.Day);
+        Assert.AreEqual((VaultSession.InboxTitle, string.Empty), (opened.Title, opened.Folder));
+        Assert.AreEqual("- 2026-10-01 : Revoir la prophase et la métaphase\n", opened.Body, "sur une ligne, datée");
+        Assert.AreEqual(Now.Day, opened.Review.SuspendedOn, "un bloc-notes à trier, pas une leçon à réviser");
+        Assert.IsEmpty(vault.Dashboard(Tomorrow.Day).Today);
+
+        Assert.AreEqual(inbox, vault.CaptureToInbox("Seconde idée", Tomorrow), "la même fiche, pas une autre");
+        Assert.AreEqual("- 2026-10-01 : Revoir la prophase et la métaphase\n- 2026-10-02 : Seconde idée\n", vault.OpenSheet(inbox, Tomorrow.Day).Body);
+        Assert.AreEqual(1, vault.SheetList().Count);
+
+        // Reprise par l'utilisateur, elle reste reprise ; et ce qu'il y a écrit reste.
+        vault.ResumeReview(ItemKind.Sheet, inbox);
+        vault.CaptureToInbox("Troisième", Tomorrow);
+        Assert.IsNull(vault.OpenSheet(inbox, Tomorrow.Day).Review.SuspendedOn);
+        StringAssert.EndsWith(vault.OpenSheet(inbox, Tomorrow.Day).Body, "- 2026-10-02 : Seconde idée\n- 2026-10-02 : Troisième\n", StringComparison.Ordinal);
+
+        Assert.AreEqual(VaultErrorKind.InvalidSettings, Assert.ThrowsExactly<VaultException>(() => vault.CaptureToInbox("  \n ", Now)).Kind);
+        Assert.AreEqual(VaultErrorKind.InvalidSettings, Assert.ThrowsExactly<VaultException>(() => vault.CaptureToInbox(new string('x', VaultSession.MaxCaptureLength + 1), Now)).Kind);
+    }
+
+    [TestMethod]
+    public void Passages_and_definitions_go_to_anki_with_their_identifier()
+    {
+        using var folder = TemporaryVault.Empty(storage);
+        using var outside = TemporaryVault.Empty();
+        using var vault = new VaultStore(storage: folder.Storage).Initialize(folder.Root, Now);
+        var id = vault.CreateSheet(null, "Mitose <1>", "La prophase précède la métaphase.\n", Now);
+        vault.SetTags(id, ["bio", "partiel blanc"], Now);
+        var passage = vault.CreateAnnotation(id, Passage, "Avant\tla suite", Now);
+        var definition = vault.CreateDefinition(id, Passage with { Exact = "prophase", Start = 3 }, new Definition("Prophase", "Première phase.\nLes chromosomes se condensent."), Now);
+        var trashed = vault.CreateAnnotation(id, Passage with { Exact = "jetée", Start = 20, End = 25 }, null, Now);
+        vault.TrashAnnotation(trashed, Now);
+
+        var file = vault.Export(ExportKind.Anki, outside.Root, new DateTime(2026, 10, 1, 9, 0, 0), TimeZoneInfo.Utc).Single();
+
+        Assert.AreEqual("kyfRev - anki 2026-10-01.txt", Path.GetFileName(file));
+        var lines = File.ReadAllText(file).Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        Assert.AreEqual("#separator:tab|#html:true|#guid column:1|#notetype:Basic|#deck:kyfRev|#tags column:4", string.Join('|', lines.Take(6)));
+        Assert.HasCount(8, lines, "la corbeille ne part pas");
+        Assert.AreEqual(
+            $"{passage}\t<b>[…]</b>précède<br><i>Avant la suite</i><br><small>Mitose &lt;1&gt;</small>\tLa prophase\tkyfRev bio partiel_blanc",
+            lines.Single(line => line.StartsWith(passage, StringComparison.Ordinal)));
+        Assert.AreEqual(
+            $"{definition}\tProphase<br><small>Mitose &lt;1&gt;</small>\tPremière phase.<br>Les chromosomes se condensent.\tkyfRev bio partiel_blanc",
+            lines.Single(line => line.StartsWith(definition, StringComparison.Ordinal)));
+        Assert.IsTrue(lines.Skip(6).All(line => line.Split('\t').Length == 4), "quatre colonnes, jamais plus");
+    }
+
+    [TestMethod]
+    public void Due_dates_and_exams_go_to_a_calendar_without_the_suspended_ones()
+    {
+        using var folder = TemporaryVault.Empty(storage);
+        using var outside = TemporaryVault.Empty();
+        using var vault = new VaultStore(storage: folder.Storage).Initialize(folder.Root, Now);
+        var first = vault.CreateSheet(null, "Mitose; la suite, et \\ fin", "Texte.\n", Now);
+        vault.CreateSheet(null, "Méiose", "Texte.\n", Now);
+        var paused = vault.CreateSheet(null, "Suspendue", "Texte.\n", Now);
+        vault.Suspend(ItemKind.Sheet, paused, Now);
+        vault.CreateDefinition(first, Passage with { Exact = "prophase", Start = 3 }, new Definition("Prophase", "Première phase."), Now);
+        vault.DefineExam(string.Empty, "Partiels", new DateOnly(2026, 11, 30));
+
+        // Le 5 : tout ce qui était dû le 2 est en retard, donc compté aujourd'hui.
+        var file = vault.Export(ExportKind.Calendar, outside.Root, new DateTime(2026, 10, 5, 9, 0, 0), TimeZoneInfo.Utc).Single();
+
+        Assert.AreEqual("kyfRev - échéances 2026-10-05.ics", Path.GetFileName(file));
+        var text = File.ReadAllText(file);
+        Assert.IsTrue(text.Split("\r\n").All(line => System.Text.Encoding.UTF8.GetByteCount(line) <= 75), "aucune ligne ne dépasse 75 octets");
+        Assert.IsFalse(text.Replace("\r\n", string.Empty, StringComparison.Ordinal).Contains('\n', StringComparison.Ordinal), "des fins de ligne CRLF seulement");
+        var unfolded = text.Replace("\r\n ", string.Empty, StringComparison.Ordinal);
+        StringAssert.StartsWith(unfolded, "BEGIN:VCALENDAR\r\nVERSION:2.0\r\n", StringComparison.Ordinal);
+        StringAssert.EndsWith(unfolded, "END:VCALENDAR\r\n", StringComparison.Ordinal);
+        StringAssert.Contains(unfolded, "DTSTAMP:20261005T090000Z\r\nDTSTART;VALUE=DATE:20261005\r\nDTEND;VALUE=DATE:20261006\r\nSUMMARY:kyfRev : 3 révisions\r\n", StringComparison.Ordinal);
+        StringAssert.Contains(unfolded, @"DESCRIPTION:J1 · Mitose\; la suite\, et \\ fin\nJ1 · Mitose\; la suite\, et \\ fin (définition : Prophase)\nJ1 · Méiose", StringComparison.Ordinal);
+        StringAssert.Contains(unfolded, "DTSTART;VALUE=DATE:20261130\r\nDTEND;VALUE=DATE:20261201\r\nSUMMARY:Examen : Partiels\r\nDESCRIPTION:Tout le coffre\r\n", StringComparison.Ordinal);
+        Assert.IsFalse(unfolded.Contains("Suspendue", StringComparison.Ordinal));
+        Assert.AreEqual(2, unfolded.Split("BEGIN:VEVENT").Length - 1);
+
+        // Les identifiants ne changent pas d'un export à l'autre : l'agenda se met à jour au lieu de doubler.
+        static string[] Uids(string calendar) => [.. calendar.Replace("\r\n ", string.Empty, StringComparison.Ordinal).Split("\r\n").Where(line => line.StartsWith("UID:", StringComparison.Ordinal))];
+        var again = vault.Export(ExportKind.Calendar, outside.Root, new DateTime(2026, 10, 5, 18, 0, 0), TimeZoneInfo.Utc).Single();
+        CollectionAssert.AreEqual(Uids(text), Uids(File.ReadAllText(again)));
+    }
+
+    [TestMethod]
     public void Spreading_shows_its_plan_first_then_postpones_without_restarting()
     {
         using var folder = TemporaryVault.Empty(storage);

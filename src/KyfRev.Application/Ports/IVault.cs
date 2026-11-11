@@ -110,6 +110,12 @@ public interface ISheetEditor
     /// <summary>Enregistre le corps (l'en-tête est conservé), sauf si la fiche a changé depuis sa lecture.</summary>
     SaveResult SaveBody(string id, string body, string expectedFingerprint, ulong session, Moment now);
 
+    /// <summary>
+    /// Ajoute une note prise à la volée à la fiche « Boîte de réception », créée et suspendue au besoin ; rend son
+    /// identifiant.
+    /// </summary>
+    string CaptureToInbox(string text, Moment now);
+
     /// <summary>Range un texte dans les versions de la fiche, sans toucher au fichier.</summary>
     void KeepAsVersion(string id, string body, Moment now);
 

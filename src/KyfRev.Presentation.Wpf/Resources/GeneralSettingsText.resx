@@ -18,6 +18,12 @@
   <data name="AppearanceTitle" xml:space="preserve">
     <value>Apparence</value>
   </data>
+  <data name="GlobalCapture" xml:space="preserve">
+    <value>Capture rapide depuis n'importe quelle application (Ctrl+Alt+N)</value>
+  </data>
+  <data name="GlobalCaptureHelp" xml:space="preserve">
+    <value>Tant que kyfRev est ouvert, ce raccourci amène sa fenêtre devant et ouvre la capture, même si vous travaillez ailleurs. Dans kyfRev, Ctrl+Maj+N fait la même chose sans ce réglage. Si une autre application utilise déjà Ctrl+Alt+N, Windows le lui laisse.</value>
+  </data>
   <data name="DefinedWords" xml:space="preserve">
     <value>Marquer les mots définis dans toutes les fiches</value>
   </data>

@@ -35,6 +35,55 @@ public sealed class ShellViewModelTests
     }
 
     [STATestMethod]
+    public async Task A_quick_note_is_taken_from_any_view_once_a_vault_is_open()
+    {
+        var shell = new TestShell().Shell;
+        var notes = new List<string>();
+        string? refusal = null;
+        shell.Capture = text =>
+        {
+            notes.Add(text);
+            return refusal is null ? KyfRev.Application.Outcome.Of("f_boite") : KyfRev.Application.Outcome.Refused<string>(refusal);
+        };
+
+        Assert.IsFalse(shell.CanCapture, "sans coffre ouvert, il n'y a nulle part où ranger une note");
+        Assert.IsFalse(shell.OpenCapture());
+        shell.RequestCaptureCommand.Execute(null);
+        Assert.IsFalse(shell.IsCaptureOpen);
+
+        shell.ShowWorkspace();
+        shell.ShowHelp();
+        Assert.IsTrue(shell.OpenCapture());
+        Assert.IsTrue(shell.IsCaptureOpen);
+        Assert.IsFalse(shell.IsHelpOpen, "une seule fenêtre à la fois");
+
+        shell.CaptureText = "Revoir la mitose";
+        await shell.AnswerCaptureCommand.ExecuteAsync(false);
+        Assert.IsFalse(shell.IsCaptureOpen);
+        Assert.IsEmpty(notes, "fermer ne note rien");
+
+        shell.OpenCapture();
+        Assert.AreEqual(string.Empty, shell.CaptureText, "chaque capture repart d'une note vide");
+        shell.CaptureText = "Revoir la mitose";
+        refusal = "il n'y a rien à noter.";
+        await shell.AnswerCaptureCommand.ExecuteAsync(true);
+        Assert.IsTrue(shell.IsCaptureOpen, "un refus laisse la fenêtre ouverte");
+        Assert.AreEqual(refusal, shell.CaptureError);
+        Assert.AreEqual("Revoir la mitose", shell.CaptureText, "et le texte tapé reste");
+
+        refusal = null;
+        await shell.AnswerCaptureCommand.ExecuteAsync(true);
+        Assert.IsFalse(shell.IsCaptureOpen);
+        Assert.IsFalse(shell.HasCaptureError);
+        Assert.AreEqual("Revoir la mitose", notes[^1]);
+
+        shell.OpenPaletteCommand.Execute(null);
+        shell.PaletteQuery = "capture";
+        Assert.AreEqual("Capture rapide", shell.PaletteResults.Single().Label);
+        Assert.IsTrue(shell.Shortcuts.Any(shortcut => shortcut.Keys == "Ctrl+Maj+N"));
+    }
+
+    [STATestMethod]
     public void Navigating_selects_the_entry_in_its_part_of_the_menu()
     {
         var shell = new TestShell().Shell;
@@ -203,9 +252,9 @@ public sealed class ShellViewModelTests
     public void Help_and_search_never_overlap()
     {
         var shell = new TestShell().Shell;
-        Assert.HasCount(11, shell.Shortcuts);
+        Assert.HasCount(16, shell.Shortcuts);
         Assert.AreEqual("Ctrl+Maj+L", shell.Shortcuts[^1].Keys);
-        Assert.AreEqual("F11 | Ctrl+Entrée | Ctrl+→", string.Join(" | ", shell.Shortcuts.Skip(3).Take(3).Select(shortcut => shortcut.Keys)));
+        Assert.AreEqual("F11 | Ctrl+Entrée | Entrée, Espace | H | Ctrl+E | Ctrl+P | Ctrl+Maj+N | Ctrl+→", string.Join(" | ", shell.Shortcuts.Skip(3).Take(8).Select(shortcut => shortcut.Keys)));
         shell.OpenPalette();
         shell.ShowHelp();
         Assert.IsTrue(shell.IsHelpOpen);

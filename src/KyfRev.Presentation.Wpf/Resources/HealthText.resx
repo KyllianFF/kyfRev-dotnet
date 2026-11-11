@@ -57,6 +57,12 @@
   <data name="DuplicatesHelp" xml:space="preserve">
     <value>Plusieurs fichiers portent le même identifiant (une fiche copiée hors de kyfRev). Choisissez l'original : il garde le suivi, chaque copie devient une nouvelle fiche (J0).</value>
   </data>
+  <data name="ConflictsTitle" xml:space="preserve">
+    <value>Copies de conflit ({0})</value>
+  </data>
+  <data name="ConflictsHelp" xml:space="preserve">
+    <value>Votre outil de synchronisation (Dropbox, OneDrive, Syncthing, Nextcloud…) a gardé deux versions d'un même fichier, modifié sur deux postes sans qu'ils se voient. kyfRev ne lit que le fichier d'origine : ce que contient la copie reste de côté. Comparez-les dans l'Explorateur, reportez ce qui manque, puis supprimez la copie. Dans le dossier « .suivi », une copie garde des révisions faites sur l'autre poste.</value>
+  </data>
   <data name="DuplicatesTitle" xml:space="preserve">
     <value>Fichiers en double ({0})</value>
   </data>

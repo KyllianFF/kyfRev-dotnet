@@ -53,6 +53,12 @@ public static class HealthText
     /// <summary>« Plusieurs fichiers portent le même identifiant (une fiche copiée ho… ».</summary>
     public static string DuplicatesHelp => Text(nameof(DuplicatesHelp));
 
+    /// <summary>« Copies de conflit ({0}) ».</summary>
+    public static string ConflictsTitleOf(object count) => Format("ConflictsTitle", count);
+
+    /// <summary>« Votre outil de synchronisation a gardé deux versions… ».</summary>
+    public static string ConflictsHelp => Text(nameof(ConflictsHelp));
+
     /// <summary>« Fichiers en double ({0}) ».</summary>
     public static string DuplicatesTitleOf(object count) => Format("DuplicatesTitle", count);
 

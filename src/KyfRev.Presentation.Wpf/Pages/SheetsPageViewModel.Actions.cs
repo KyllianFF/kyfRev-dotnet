@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using KyfRev.Application.Model;
+using KyfRev.Presentation.Wpf.Shell;
 
 namespace KyfRev.Presentation.Wpf.Pages;
 
@@ -58,6 +59,57 @@ public sealed partial class SheetsPageViewModel
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(DepthWarning), nameof(HasDepthWarning))]
     public partial string ActionInput { get; set; } = string.Empty;
+
+    /// <summary>Étiquettes déjà utilisées dans le coffre, proposées pendant qu'on en saisit ; vide hors de cette fenêtre.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasTagSuggestions))]
+    public partial IReadOnlyList<string> TagSuggestions { get; private set; } = [];
+
+    /// <summary>Il y a des étiquettes à proposer.</summary>
+    public bool HasTagSuggestions => TagSuggestions.Count > 0;
+
+    /// <summary>Au plus autant d'étiquettes proposées à la fois.</summary>
+    private const int MaxTagSuggestions = 8;
+
+    partial void OnActionInputChanged(string value) => SuggestTags();
+
+    /// <summary>
+    /// Propose les étiquettes du coffre qui commencent comme celle en cours de saisie (toutes, si rien n'est commencé), sans
+    /// celles déjà écrites. Réutiliser une étiquette existante évite d'en créer deux pour la même chose.
+    /// </summary>
+    private void SuggestTags()
+    {
+        if (_action != SheetAction.Tags || _entries is not { } entries)
+        {
+            TagSuggestions = [];
+            return;
+        }
+        var typed = ActionInput.Split(',').Select(tag => tag.Trim().TrimStart('#')).ToList();
+        var current = ShellViewModel.Fold(typed.Count > 0 ? typed[^1] : string.Empty);
+        var written = typed.Take(Math.Max(typed.Count - 1, 0)).Select(ShellViewModel.Fold).ToHashSet(StringComparer.Ordinal);
+        TagSuggestions =
+        [
+            .. entries
+                .SelectMany(sheet => sheet.Tags)
+                .GroupBy(tag => tag, StringComparer.Ordinal)
+                .Where(group => !written.Contains(ShellViewModel.Fold(group.Key))
+                    && ShellViewModel.Fold(group.Key).StartsWith(current, StringComparison.Ordinal)
+                    && ShellViewModel.Fold(group.Key) != current)
+                .OrderByDescending(group => group.Count())
+                .ThenBy(group => group.Key, StringComparer.CurrentCulture)
+                .Take(MaxTagSuggestions)
+                .Select(group => group.Key),
+        ];
+    }
+
+    /// <summary>Prend une étiquette proposée : elle remplace celle en cours de saisie, et la suivante peut se taper.</summary>
+    [RelayCommand]
+    private void TakeTag(string tag)
+    {
+        var cut = ActionInput.LastIndexOf(',');
+        var kept = cut < 0 ? string.Empty : ActionInput[..(cut + 1)].TrimEnd() + " ";
+        ActionInput = $"{kept}{tag}, ";
+    }
 
     /// <summary>Les destinations proposées ; aucune hors déplacement.</summary>
     [ObservableProperty]
@@ -174,6 +226,7 @@ public sealed partial class SheetsPageViewModel
         Ask(SheetAction.Tags, row.Sheet, string.Empty, SheetActionsText.TagsTitleOf(row.Title), null, SheetActionsText.SaveConfirm);
         ActionInputLabel = SheetActionsText.TagsLabel;
         ActionInput = string.Join(", ", row.Sheet.Tags);
+        SuggestTags();
     }
 
     /// <summary>Déplacer une fiche.</summary>
@@ -345,6 +398,7 @@ public sealed partial class SheetsPageViewModel
     private void ForgetAction()
     {
         _action = default;
+        TagSuggestions = [];
         _actionSheet = null;
         _actionFolder = string.Empty;
         _confirmLabel = string.Empty;

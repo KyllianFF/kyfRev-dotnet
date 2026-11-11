@@ -266,6 +266,11 @@ public static class ReadingText
     /// <summary>Le temps de lecture, dans la ligne sous le titre.</summary>
     public static string ReadingTime(int minutes) => string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{minutes} min de lecture");
 
+    /// <summary>Le nom du cache d'une image, pour le lecteur d'écran.</summary>
+    public static string MaskedZones(int count) => count > 1
+        ? string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{count} zones masquées sur cette image, en révision")
+        : "1 zone masquée sur cette image, en révision";
+
     private const int ShortLength = 60;
 
     /// <summary>Écouter la fiche.</summary>

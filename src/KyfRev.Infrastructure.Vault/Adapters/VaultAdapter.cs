@@ -123,6 +123,9 @@ public sealed class VaultAdapter(VaultSession inner, IDisposable? owned = null) 
     public string EmbedSharedImages(string page) => inner.EmbedSharedImages(page);
 
     /// <inheritdoc/>
+    public string CaptureToInbox(string text, Moment now) => inner.CaptureToInbox(text, now);
+
+    /// <inheritdoc/>
     public SaveResult SaveBody(string id, string body, string expectedFingerprint, ulong session, Moment now) =>
         inner.SaveBody(id, body, expectedFingerprint, session, now);
 

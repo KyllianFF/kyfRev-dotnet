@@ -300,6 +300,45 @@ public sealed class TextHolesTests
     }
 
     [STATestMethod]
+    public void The_masks_of_an_image_are_holes_revealed_one_by_one_and_gone_outside_review()
+    {
+        var (window, viewer, holes) = Host("## Cellule\n\nUn **noyau** au centre.\n\n![Cellule](cellule.png \"kyfrev-masques:10,20,30,20;50,50,20,10\")\n\n![Sans masque](autre.png)\n");
+        try
+        {
+            var overlay = viewer.MaskOverlays.Single();
+            Assert.AreEqual(0, overlay.ImageIndex);
+            Assert.AreEqual("gras:0 masque:0:0 masque:0:1", string.Join(' ', holes.All.Select(hole => hole.Key)), "dans l'ordre de la fiche");
+            Assert.IsFalse(holes.IsBySection, "une fiche qui a des masques n'est pas masquée partie par partie");
+            Assert.AreEqual("0,1", string.Join(',', overlay.Hidden.Order()));
+
+            // Le cache a la taille de l'image : ses zones, en parts de l'image, y gardent leur place.
+            overlay.Arrange(new Rect(0, 0, 200, 100));
+            var first = overlay.RectOf(overlay.Masks[0]);
+            Assert.AreEqual("20 20 60 20", FormattableString.Invariant($"{first.X:0.##} {first.Y:0.##} {first.Width:0.##} {first.Height:0.##}"));
+            Assert.AreEqual(0, overlay.MaskAt(new Point(30, 30)));
+            Assert.AreEqual(1, overlay.MaskAt(new Point(110, 55)));
+            Assert.IsNull(overlay.MaskAt(new Point(190, 90)), "hors d'un masque, l'image reste cliquable");
+
+            Assert.IsTrue(viewer.RevealNextHole(), "le gras d'abord");
+            Assert.IsTrue(viewer.RevealNextHole());
+            Assert.AreEqual("1", string.Join(',', overlay.Hidden));
+            Assert.IsNull(overlay.MaskAt(new Point(30, 30)), "dévoilé, un masque ne reçoit plus le clic");
+
+            holes.RevealAllCommand.Execute(null);
+            Assert.IsEmpty(overlay.Hidden);
+            holes.HideAllCommand.Execute(null);
+            Assert.HasCount(2, overlay.Hidden);
+
+            holes.IsActive = false;
+            Assert.IsEmpty(overlay.Hidden, "hors révision, l'image se voit entière");
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
     public void With_bold_the_parts_stay_readable()
     {
         var (window, _, holes) = Host("## Prophase\n\nLes **chromosomes** se condensent.\n");

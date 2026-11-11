@@ -42,6 +42,8 @@ main. Paramètres › Données permet d'en ouvrir ou d'en créer un autre.
 - **« J'avais oublié »**, à côté de « Valider » : la révision compte, mais l'étape recule d'un cran au lieu d'avancer (après un
   oubli à J7, la fiche revient à J3 trois jours plus tard). « Recommencer à J0 » reste pour repartir de zéro.
 - **Surlignez un passage** ou **créez une définition** depuis le texte : ils ont leur propre calendrier.
+- **Masquez des zones d'une image** : clic droit sur l'image, en lecture, puis « Masquer des zones… ». Tracez un rectangle
+  sur chaque zone à retrouver ; en révision, elles sont cachées et se dévoilent une à une.
 - La barre de révision permet aussi de valider à une date passée, ou de reporter à une date choisie.
 - **Examens** : sur Aujourd'hui, « Examen… » fixe une date pour un dossier. « Resserrer… » ramène les échéances avant la veille,
   et peut remettre en révision les fiches archivées du dossier. Tant que l'examen n'est pas passé, une révision ne place
@@ -74,6 +76,9 @@ automatique, et l'historique garde les versions précédentes. Le ruban insère 
 - **Importer** un dossier de notes, Obsidian par exemple, depuis la vue Fiches. Les liens `[[…]]`, les encadrés `> [!note]` et le
   surlignage `==…==` sont convertis ; les commentaires `%%…%%` ne sont pas repris, et le bilan le dit.
 - **Exporter** le suivi, les annotations, les citations ou le coffre complet depuis Paramètres › Données.
+- **Réviser ailleurs** : au même endroit, « Passages et définitions pour Anki » donne un fichier à importer dans Anki ou
+  AnkiDroid, et « Échéances pour un agenda » un fichier `.ics`. Ce sont des copies à sens unique : ce que vous faites
+  ailleurs ne revient pas dans kyfRev. L'agenda contient les titres de vos fiches.
 
 Ce qui sort est en clair, même depuis un coffre chiffré, sauf le coffre complet.
 
@@ -92,17 +97,30 @@ Ce qui sort est en clair, même depuis un coffre chiffré, sauf le coffre comple
 Paramètres › Modules et extensions active les citations du jour et les schémas réseau, et installe des extensions, depuis un dossier
 ou depuis le catalogue signé. Une extension n'a jamais le réseau, et demande chaque permission.
 
+## Noter une idée
+
+Ctrl+Maj+N ouvre la capture rapide depuis n'importe quelle vue. Votre note s'ajoute, datée, à la fiche « Boîte de
+réception », qui reste hors de vos révisions : triez-la quand vous voulez. Dans Paramètres › Général, vous pouvez activer
+Ctrl+Alt+N, qui fait la même chose depuis une autre application tant que kyfRev est ouvert.
+
 ## Raccourcis utiles
 
 | Touche | Effet |
 |---|---|
 | Ctrl+K | Chercher partout |
 | Ctrl+E | Passer de la lecture à l'écriture |
+| Ctrl+P | Partager la fiche : PDF, page web à imprimer |
+| Ctrl+Maj+N | Noter une idée dans la boîte de réception |
+| Entrée, Espace | En révision, afficher le trou ou la partie suivante |
 | Ctrl+Maj+F | Mode concentration : masquer ou rendre le menu |
 | Ctrl+Maj+L | Verrouiller un coffre chiffré |
 | F1 | Aide |
 
 ## En cas de problème
+
+**Coffre dans un dossier synchronisé** (Dropbox, OneDrive, Syncthing, Nextcloud) : si deux postes modifient la même fiche
+sans se voir, l'outil garde deux fichiers. « Santé du coffre » les liste sous « Copies de conflit » : comparez-les dans
+l'Explorateur, reportez ce qui manque, puis supprimez la copie. N'ouvrez pas le même coffre sur deux postes à la fois.
 
 Le journal `kyfRev.log` garde la trace des derniers démarrages : dans `%LOCALAPPDATA%\kyfRev\v1` pour une version installée, à côté
 de `kyfRev.exe` pour la version portable. Il ne contient pas le texte de vos fiches.

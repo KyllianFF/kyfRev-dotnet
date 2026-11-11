@@ -65,6 +65,18 @@ public static class SettingsHubText
     /// <summary>« Suivi des révisions (CSV) ».</summary>
     public static string ExportTracking => Text(nameof(ExportTracking));
 
+    /// <summary>« Passages et définitions pour Anki ».</summary>
+    public static string ExportAnki => Text(nameof(ExportAnki));
+
+    /// <summary>« Un fichier à importer dans Anki ou AnkiDroid, pour réviser en déplacement. Réimporté, il met les cartes à jour sans les doubler. Ce qui est fait dans Anki ne revient pas dans kyfRev. ».</summary>
+    public static string ExportAnkiHelp => Text(nameof(ExportAnkiHelp));
+
+    /// <summary>« Échéances pour un agenda (.ics) ».</summary>
+    public static string ExportCalendar => Text(nameof(ExportCalendar));
+
+    /// <summary>« Un événement par jour de révision, et un par examen. Les titres des fiches y sont écrits : importé dans un agenda en ligne, ils quittent votre ordinateur. ».</summary>
+    public static string ExportCalendarHelp => Text(nameof(ExportCalendarHelp));
+
     /// <summary>« Coffre complet (.zip) ».</summary>
     public static string ExportVault => Text(nameof(ExportVault));
 

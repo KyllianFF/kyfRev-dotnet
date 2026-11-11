@@ -387,6 +387,33 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage, 
     /// <summary>La fiche est lue, et peut partir.</summary>
     public bool CanShare => Sharing is not null && Reading is not null;
 
+    /// <summary>La pose de masques sur les images de la fiche ; rien sans cas d'usage.</summary>
+    public ImageMaskEditorViewModel? Masks { get; init; }
+
+    /// <summary>On peut poser des masques : la fiche est lue, en lecture, et pas en train d'être révisée.</summary>
+    public bool CanMaskImages => Masks is not null && Reading is not null && IsReading && !IsRevising;
+
+    /// <summary>
+    /// Ouvre la pose de masques sur l'image de rang <paramref name="imageIndex"/> ; enregistrés, la fiche se relit et le
+    /// dit.
+    /// </summary>
+    internal Task EditMasksAsync(int imageIndex, System.Windows.Media.ImageSource? picture)
+    {
+        if (Masks is not { } masks || !CanMaskImages)
+        {
+            return Task.CompletedTask;
+        }
+        masks.Saved -= OnMasksSaved;
+        masks.Saved += OnMasksSaved;
+        return masks.OpenAsync(SheetId, imageIndex, picture);
+    }
+
+    private void OnMasksSaved(object? sender, EventArgs e)
+    {
+        Notice = Masks?.LastSaved;
+        LoadCommand.Execute(null);
+    }
+
     /// <summary>Un modèle vient d'être enregistré.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasDone))]

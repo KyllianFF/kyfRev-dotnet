@@ -141,6 +141,9 @@
   <data name="Tags" xml:space="preserve">
     <value>Étiquettes…</value>
   </data>
+  <data name="TagSuggestions" xml:space="preserve">
+    <value>Étiquettes déjà utilisées</value>
+  </data>
   <data name="TagsLabel" xml:space="preserve">
     <value>Étiquettes, séparées par des virgules</value>
   </data>

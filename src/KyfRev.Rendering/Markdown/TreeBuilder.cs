@@ -125,6 +125,7 @@ internal sealed partial class TreeBuilder
                 var image = Leaf("img");
                 image.Target = token.Href;
                 image.AlternativeText = AlternativeText(token.Children);
+                image.Masks = ImageMasks.FromTitle(token.Title);
                 break;
             case TokenKind.FootnoteRef:
                 WriteFootnoteReference(token);

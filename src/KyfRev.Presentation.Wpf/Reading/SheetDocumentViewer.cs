@@ -526,6 +526,7 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
     private void OnHolesChanged(object? sender, EventArgs e)
     {
         _built?.Layer.SetHoles(Holes?.Hidden ?? []);
+        ShowMasks();
         // Un trou vient de se poser sur le lien dont l'aperçu est montré.
         if (_hover.Current is { } link && IsMasked(link))
         {
@@ -543,17 +544,47 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
         if (Holes is not { IsActive: true } holes)
         {
             built.Layer.SetHoles([]);
+            ShowMasks();
             return;
         }
         built.Complete();
-        var marked = TextHoles.Compute(Highlights ?? [], built.BoldRanges, built.ReviewCells);
+        // Les masques des images sont des trous comme les autres, à la place de leur image dans le texte.
+        var masks = built.MaskedImages.SelectMany(image => Enumerable.Range(0, image.Overlay.Masks.Length)
+            .Select(mask => new TextHole(ImageMaskOverlay.KeyOf(image.Overlay.ImageIndex, mask), image.Position, image.Position, null)));
+        var marked = TextHoles.Compute(Highlights ?? [], built.BoldRanges, built.ReviewCells).Concat(masks).OrderBy(hole => hole.Start);
         // Sans gras ni passage, la fiche se relirait simplement : ses parties se rappellent alors une à une, sous leur titre.
-        holes.Set(marked.IsEmpty ? TextHoles.Sections(built.HeadingRanges, built.TextLength) : marked);
+        holes.Set(marked.Any() ? [.. marked] : TextHoles.Sections(built.HeadingRanges, built.TextLength));
     }
+
+    /// <summary>Pose sur chaque image les masques encore cachés ; hors révision, aucun.</summary>
+    private void ShowMasks()
+    {
+        if (_built is not { } built)
+        {
+            return;
+        }
+        var hidden = Holes is { IsActive: true } holes ? holes.Hidden.Select(hole => hole.Key).ToHashSet(StringComparer.Ordinal) : [];
+        foreach (var (overlay, _) in built.MaskedImages)
+        {
+            overlay.SetHidden(Enumerable.Range(0, overlay.Masks.Length).Where(mask => hidden.Contains(ImageMaskOverlay.KeyOf(overlay.ImageIndex, mask))));
+        }
+    }
+
+    /// <summary>Les caches des images masquées de la fiche, dans l'ordre.</summary>
+    internal IReadOnlyList<ImageMaskOverlay> MaskOverlays => _built is { } built ? [.. built.MaskedImages.Select(image => image.Overlay)] : [];
 
     /// <summary>Affiche le trou visé par la souris ; rend faux s'il n'y en a pas.</summary>
     internal bool RevealHoleAt(object? source)
     {
+        if (source is ImageMaskOverlay overlay)
+        {
+            if (overlay.MaskAt(Mouse.GetPosition(overlay)) is not { } mask)
+            {
+                return false;
+            }
+            Holes?.Reveal(ImageMaskOverlay.KeyOf(overlay.ImageIndex, mask));
+            return true;
+        }
         if (_built?.Layer.HoleAt(source) is not { } hole)
         {
             return false;
