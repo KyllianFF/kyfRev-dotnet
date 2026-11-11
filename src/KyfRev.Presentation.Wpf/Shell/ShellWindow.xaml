@@ -156,6 +156,7 @@
     <KeyBinding Key="F1" Command="{Binding ShowHelpCommand}" />
     <KeyBinding Key="F" Modifiers="Control+Shift" Command="{Binding ToggleFocusModeCommand}" />
     <KeyBinding Key="L" Modifiers="Control+Shift" Command="{Binding LockCommand}" />
+    <KeyBinding Key="N" Modifiers="Control+Shift" Command="{Binding RequestCaptureCommand}" />
     <KeyBinding Key="F11" Command="{Binding ToggleFullScreenCommand}" />
     <KeyBinding Key="Escape" Command="{Binding ExitFullScreenCommand}" />
     <KeyBinding Key="OemPlus" Modifiers="Control" Command="{Binding ZoomInCommand}" />
@@ -438,6 +439,18 @@
         </Grid>
       </Border>
     </Grid>
+
+    <!-- Capture rapide (Ctrl+Maj+N, ou le raccourci global) : une idée notée sans quitter la vue en cours. -->
+    <kyf:Dialog x:Name="CaptureDialog" Title="{x:Static p:ShellText.Capture}" IsOpen="{Binding IsCaptureOpen, Mode=OneWay}"
+                PrimaryButtonText="{x:Static p:ShellText.CaptureConfirm}" Closed="OnCaptureClosed">
+      <StackPanel>
+        <kyf:Notification x:Name="CaptureErrorMessage" Severity="Critical" Message="{Binding CaptureError}" IsOpen="{Binding HasCaptureError, Mode=OneWay}" IsClosable="False" Margin="0,0,0,12" />
+        <TextBlock Text="{x:Static p:ShellText.CaptureLabel}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,0,0,4" />
+        <TextBox x:Name="CaptureBox" Text="{Binding CaptureText, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="False" TextWrapping="Wrap" MinHeight="64" MaxHeight="160"
+                 VerticalScrollBarVisibility="Auto" IsVisibleChanged="OnCaptureBoxShown" AutomationProperties.Name="{x:Static p:ShellText.CaptureLabel}" AutomationProperties.HelpText="{x:Static p:ShellText.CaptureHelp}" />
+        <TextBlock Text="{x:Static p:ShellText.CaptureHelp}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,8,0,0" />
+      </StackPanel>
+    </kyf:Dialog>
 
     <!-- Aide des raccourcis (F1). -->
     <kyf:Dialog x:Name="HelpDialog" Title="{x:Static p:ShellText.Help}" IsOpen="{Binding IsHelpOpen}"

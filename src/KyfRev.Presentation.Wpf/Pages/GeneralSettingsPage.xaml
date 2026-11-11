@@ -72,6 +72,10 @@
               <TextBlock Text="{x:Static pages:GeneralSettingsText.DefinedWords}" TextWrapping="Wrap" />
             </CheckBox>
             <TextBlock Text="{x:Static pages:GeneralSettingsText.DefinedWordsHelp}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="26,2,0,4" />
+            <CheckBox x:Name="GlobalCaptureBox" IsChecked="{Binding GlobalCapture}" AutomationProperties.Name="{x:Static pages:GeneralSettingsText.GlobalCapture}" AutomationProperties.HelpText="{x:Static pages:GeneralSettingsText.GlobalCaptureHelp}" Margin="0,8,0,0">
+              <TextBlock Text="{x:Static pages:GeneralSettingsText.GlobalCapture}" TextWrapping="Wrap" />
+            </CheckBox>
+            <TextBlock Text="{x:Static pages:GeneralSettingsText.GlobalCaptureHelp}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="26,2,0,4" />
 
           </StackPanel>
         </kyf:Card>

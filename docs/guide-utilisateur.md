@@ -95,12 +95,21 @@ Ce qui sort est en clair, même depuis un coffre chiffré, sauf le coffre comple
 Paramètres › Modules et extensions active les citations du jour et les schémas réseau, et installe des extensions, depuis un dossier
 ou depuis le catalogue signé. Une extension n'a jamais le réseau, et demande chaque permission.
 
+## Noter une idée
+
+Ctrl+Maj+N ouvre la capture rapide depuis n'importe quelle vue. Votre note s'ajoute, datée, à la fiche « Boîte de
+réception », qui reste hors de vos révisions : triez-la quand vous voulez. Dans Paramètres › Général, vous pouvez activer
+Ctrl+Alt+N, qui fait la même chose depuis une autre application tant que kyfRev est ouvert.
+
 ## Raccourcis utiles
 
 | Touche | Effet |
 |---|---|
 | Ctrl+K | Chercher partout |
 | Ctrl+E | Passer de la lecture à l'écriture |
+| Ctrl+P | Partager la fiche : PDF, page web à imprimer |
+| Ctrl+Maj+N | Noter une idée dans la boîte de réception |
+| Entrée, Espace | En révision, afficher le trou ou la partie suivante |
 | Ctrl+Maj+F | Mode concentration : masquer ou rendre le menu |
 | Ctrl+Maj+L | Verrouiller un coffre chiffré |
 | F1 | Aide |

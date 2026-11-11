@@ -51,6 +51,7 @@ internal sealed partial class App : System.Windows.Application
         var window = _services.GetRequiredService<ShellWindow>();
         MainWindow = window;
         window.Show();
+        FollowCaptureKey(window, shell, _services.GetRequiredService<MachineSettings>());
         // Le coffre chiffré se verrouille de lui-même après un temps d'inactivité, ou quand Windows se verrouille.
         _services.GetRequiredService<AutoLock>().Start();
     }
@@ -64,6 +65,29 @@ internal sealed partial class App : System.Windows.Application
         DispatcherUnhandledException += (_, args) => DiagnosticLog.UnexpectedStop(log, args.Exception);
         AppDomain.CurrentDomain.UnhandledException += (_, args) => DiagnosticLog.UnexpectedStop(log, args.ExceptionObject as Exception);
         TaskScheduler.UnobservedTaskException += (_, args) => DiagnosticLog.UnobservedTask(log, args.Exception);
+    }
+
+    /// <summary>
+    /// Le raccourci global de la capture rapide : demandé à Windows seulement si le réglage est actif, maintenant et à
+    /// chaque changement. Tapé, il ramène la fenêtre devant et ouvre la capture ; sans coffre ouvert, seule la fenêtre
+    /// revient.
+    /// </summary>
+    private static void FollowCaptureKey(Window window, ShellViewModel shell, MachineSettings machine)
+    {
+        var captureKey = new GlobalHotKey(window, () =>
+        {
+            if (window.WindowState == WindowState.Minimized)
+            {
+                window.WindowState = WindowState.Normal;
+            }
+            window.Activate();
+            shell.OpenCapture();
+        });
+        void Apply() => captureKey.Set(machine.Current.GlobalCapture);
+        Apply();
+        machine.Changed += (_, _) => Apply();
+        // Rendu à Windows avec la fenêtre : il ne lui survit pas.
+        window.Closed += (_, _) => captureKey.Release();
     }
 
     /// <inheritdoc/>

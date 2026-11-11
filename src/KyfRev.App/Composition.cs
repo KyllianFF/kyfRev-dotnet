@@ -274,6 +274,8 @@ internal static class Composition
                 }),
                 provider.GetRequiredService<AppearanceController>(),
                 provider.GetRequiredService<GalleryPageViewModel>());
+            // La capture rapide range une note dans la boîte de réception du coffre ouvert.
+            shell.Capture = text => provider.GetRequiredService<EditingUseCases>().Capture(text);
             // Les fiches et les passages s'ouvrent dans la coquille.
             provider.GetRequiredService<ReviewNavigation>().Attach(shell);
             provider.GetRequiredService<ReviewNavigation>().Workload = provider.GetRequiredService<WorkloadPageViewModel>();

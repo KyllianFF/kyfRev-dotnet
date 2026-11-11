@@ -235,6 +235,17 @@ internal sealed partial class SheetsPage : UserControl
     }
 
     /// <summary>Un nom se saisit tout de suite : le champ prend le focus, son texte sélectionné, après l'ouverture du dialogue.</summary>
+    /// <summary>Une étiquette proposée est prise ; la saisie reprend à sa suite.</summary>
+    private void OnTagSuggestionClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: string tag } && DataContext is SheetsPageViewModel page)
+        {
+            page.TakeTagCommand.Execute(tag);
+            ActionInputBox.Focus();
+            ActionInputBox.CaretIndex = ActionInputBox.Text.Length;
+        }
+    }
+
     private void OnActionInputShown(object sender, DependencyPropertyChangedEventArgs e)
     {
         if (e.NewValue is true)

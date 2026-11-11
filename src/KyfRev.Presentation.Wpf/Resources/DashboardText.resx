@@ -168,6 +168,21 @@
   <data name="TagScope" xml:space="preserve">
     <value>Étiquette : {0}</value>
   </data>
+  <data name="NewSheet" xml:space="preserve">
+    <value>Nouvelle fiche</value>
+  </data>
+  <data name="NewSheetTitleLabel" xml:space="preserve">
+    <value>Titre</value>
+  </data>
+  <data name="NewSheetCreate" xml:space="preserve">
+    <value>Créer et écrire</value>
+  </data>
+  <data name="NewSheetAtRoot" xml:space="preserve">
+    <value>Elle sera créée à la racine des fiches, et entre en révision aujourd'hui (J0).</value>
+  </data>
+  <data name="NewSheetIn" xml:space="preserve">
+    <value>Elle sera créée dans « {0} », et entre en révision aujourd'hui (J0).</value>
+  </data>
   <data name="Upcoming" xml:space="preserve">
     <value>À venir — 7 jours</value>
   </data>

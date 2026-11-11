@@ -83,6 +83,12 @@ public sealed record MachinePreferences
     /// <summary>Un mot défini dans le coffre se marque dans toutes les fiches qui le contiennent, hors révision.</summary>
     public bool MarkDefinedWords { get; init; } = true;
 
+    /// <summary>
+    /// Le raccourci global de la capture rapide (Ctrl+Alt+N) est demandé à Windows : il ouvre la capture même quand une
+    /// autre application est au premier plan. Coupé par défaut : un raccourci global se choisit.
+    /// </summary>
+    public bool GlobalCapture { get; init; }
+
     /// <summary>Animations réduites, même si Windows ne le demande pas.</summary>
     public bool ReducedMotion { get; init; }
 

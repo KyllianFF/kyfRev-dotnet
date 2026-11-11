@@ -181,6 +181,9 @@ internal sealed partial class DashboardPage : UserControl
         _examMenu.IsOpen = _examMenu.Items.Count > 0;
     }
 
+    /// <summary>La réponse à la fenêtre « Nouvelle fiche ».</summary>
+    private void OnNewSheetClosed(object sender, DialogClosedEventArgs e) => _ = Page.AnswerNewSheetCommand.ExecuteAsync(e.Choice == DialogChoice.Primary);
+
     /// <summary>La réponse à la fenêtre d'étalement ; le focus revient au bouton qui l'a ouverte.</summary>
     private void OnSpreadClosed(object sender, DialogClosedEventArgs e)
     {

@@ -149,6 +149,8 @@
   <UserControl.InputBindings>
     <KeyBinding Key="Enter" Modifiers="Control" Command="{Binding ValidateShortcut}" />
     <KeyBinding Key="E" Modifiers="Control" Command="{Binding ToggleWritingCommand}" />
+    <!-- Ctrl+P mène à « Partager », où la fiche sort en PDF A4 ou en page web à imprimer. -->
+    <KeyBinding Key="P" Modifiers="Control" Command="{Binding RequestShareCommand}" />
     <KeyBinding Key="Escape" Command="{Binding EscapeCommand}" />
   </UserControl.InputBindings>
 

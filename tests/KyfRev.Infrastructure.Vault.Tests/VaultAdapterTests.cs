@@ -258,6 +258,34 @@ public abstract class VaultAdapterTests(StorageKind storage)
     }
 
     [TestMethod]
+    public void A_quick_note_goes_to_a_suspended_inbox_created_once()
+    {
+        using var folder = TemporaryVault.Empty(storage);
+        using var vault = new VaultStore(storage: folder.Storage).Initialize(folder.Root, Now);
+
+        var inbox = vault.CaptureToInbox("  Revoir la\tprophase\n et la métaphase  ", Now);
+
+        var opened = vault.OpenSheet(inbox, Now.Day);
+        Assert.AreEqual((VaultSession.InboxTitle, string.Empty), (opened.Title, opened.Folder));
+        Assert.AreEqual("- 2026-10-01 : Revoir la prophase et la métaphase\n", opened.Body, "sur une ligne, datée");
+        Assert.AreEqual(Now.Day, opened.Review.SuspendedOn, "un bloc-notes à trier, pas une leçon à réviser");
+        Assert.IsEmpty(vault.Dashboard(Tomorrow.Day).Today);
+
+        Assert.AreEqual(inbox, vault.CaptureToInbox("Seconde idée", Tomorrow), "la même fiche, pas une autre");
+        Assert.AreEqual("- 2026-10-01 : Revoir la prophase et la métaphase\n- 2026-10-02 : Seconde idée\n", vault.OpenSheet(inbox, Tomorrow.Day).Body);
+        Assert.AreEqual(1, vault.SheetList().Count);
+
+        // Reprise par l'utilisateur, elle reste reprise ; et ce qu'il y a écrit reste.
+        vault.ResumeReview(ItemKind.Sheet, inbox);
+        vault.CaptureToInbox("Troisième", Tomorrow);
+        Assert.IsNull(vault.OpenSheet(inbox, Tomorrow.Day).Review.SuspendedOn);
+        StringAssert.EndsWith(vault.OpenSheet(inbox, Tomorrow.Day).Body, "- 2026-10-02 : Seconde idée\n- 2026-10-02 : Troisième\n", StringComparison.Ordinal);
+
+        Assert.AreEqual(VaultErrorKind.InvalidSettings, Assert.ThrowsExactly<VaultException>(() => vault.CaptureToInbox("  \n ", Now)).Kind);
+        Assert.AreEqual(VaultErrorKind.InvalidSettings, Assert.ThrowsExactly<VaultException>(() => vault.CaptureToInbox(new string('x', VaultSession.MaxCaptureLength + 1), Now)).Kind);
+    }
+
+    [TestMethod]
     public void Passages_and_definitions_go_to_anki_with_their_identifier()
     {
         using var folder = TemporaryVault.Empty(storage);

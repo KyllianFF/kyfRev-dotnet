@@ -146,6 +146,40 @@ public sealed class SpreadTests
     }
 
     [TestMethod]
+    public async Task A_new_sheet_is_created_from_today_and_opens_for_writing()
+    {
+        using var vault = new LateVault(sheets: 1, daysAway: 2);
+        var opener = new FakeOpener();
+        var page = new DashboardPageViewModel(vault.App.Reminders, vault.App.Sheets, opener, null, vault.App.Reviews, vault.App.Exams, vault.App.Folders, vault.Time);
+        await page.RefreshCommand.ExecuteAsync(null);
+
+        page.NewSheetCommand.Execute(null);
+        Assert.IsTrue(page.IsCreatingSheet);
+        Assert.AreEqual(DashboardText.NewSheetAtRoot, page.NewSheetPlace);
+
+        await page.AnswerNewSheetCommand.ExecuteAsync(true);
+        Assert.IsTrue(page.IsCreatingSheet, "sans titre, la fenêtre reste ouverte");
+        Assert.AreEqual(SheetsText.TitleRequired, page.NewSheetError);
+
+        await page.AnswerNewSheetCommand.ExecuteAsync(false);
+        Assert.IsFalse(page.IsCreatingSheet);
+        Assert.IsFalse(page.HasNewSheetError);
+        Assert.HasCount(1, vault.App.Sheets.List().Value);
+
+        // Avec un dossier choisi dans la liste, la fiche y est créée.
+        page.SelectedScope = page.Scopes.Single(scope => scope.Label == "Dossier : Biologie");
+        page.NewSheetCommand.Execute(null);
+        Assert.AreEqual("Elle sera créée dans « Biologie », et entre en révision aujourd'hui (J0).", page.NewSheetPlace);
+        page.NewSheetTitle = "  Méiose ";
+        await page.AnswerNewSheetCommand.ExecuteAsync(true);
+
+        Assert.IsFalse(page.IsCreatingSheet);
+        var created = vault.App.Sheets.List().Value.Single(sheet => sheet.Title == "Méiose");
+        Assert.AreEqual("Biologie", created.Folder);
+        Assert.IsTrue(opener.Opened.Count > 0, "la fiche s'ouvre");
+    }
+
+    [TestMethod]
     public async Task Suspended_items_wait_in_their_own_folded_group()
     {
         using var vault = new LateVault(sheets: 2, daysAway: 2);

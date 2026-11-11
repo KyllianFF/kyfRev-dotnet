@@ -161,6 +161,33 @@ public static class ShellText
     /// <summary>Raccourci de la recherche.</summary>
     public static string ShortcutSearch => Text(nameof(ShortcutSearch));
 
+    /// <summary>« Afficher le trou ou la partie suivante, en révision ».</summary>
+    public static string ShortcutReveal => Text(nameof(ShortcutReveal));
+
+    /// <summary>« Surligner le texte sélectionné, en lecture ».</summary>
+    public static string ShortcutHighlight => Text(nameof(ShortcutHighlight));
+
+    /// <summary>« Écrire dans la fiche, ou revenir à la lecture ».</summary>
+    public static string ShortcutWrite => Text(nameof(ShortcutWrite));
+
+    /// <summary>« Partager la fiche : PDF, page web à imprimer, Markdown ».</summary>
+    public static string ShortcutShare => Text(nameof(ShortcutShare));
+
+    /// <summary>« Capture rapide ».</summary>
+    public static string Capture => Text(nameof(Capture));
+
+    /// <summary>« Noter une idée dans la boîte de réception ».</summary>
+    public static string ShortcutCapture => Text(nameof(ShortcutCapture));
+
+    /// <summary>« Votre note ».</summary>
+    public static string CaptureLabel => Text(nameof(CaptureLabel));
+
+    /// <summary>« Elle s'ajoute, datée, à la fiche « Boîte de réception », à la racine de vos fiches. Cette fiche n'entre pas dans vos révisions : triez-la quand vous voulez. ».</summary>
+    public static string CaptureHelp => Text(nameof(CaptureHelp));
+
+    /// <summary>« Noter ».</summary>
+    public static string CaptureConfirm => Text(nameof(CaptureConfirm));
+
     /// <summary>« Valider la révision ».</summary>
     public static string ShortcutValidate => Text(nameof(ShortcutValidate));
 

@@ -161,6 +161,76 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
     /// <summary>« Étaler… » est proposé.</summary>
     public bool CanSpread => Spread is not null;
 
+    /// <summary>La fenêtre « Nouvelle fiche » est ouverte.</summary>
+    [ObservableProperty]
+    public partial bool IsCreatingSheet { get; private set; }
+
+    /// <summary>Le titre de la fiche à créer.</summary>
+    [ObservableProperty]
+    public partial string NewSheetTitle { get; set; } = string.Empty;
+
+    /// <summary>Le refus de la création ; rien si elle n'a pas été refusée.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasNewSheetError))]
+    public partial string? NewSheetError { get; private set; }
+
+    /// <summary>La création a été refusée.</summary>
+    public bool HasNewSheetError => NewSheetError is not null;
+
+    /// <summary>
+    /// Où la fiche sera créée : le dossier choisi dans la liste « dossier ou étiquette », sinon la racine. La fenêtre le dit.
+    /// </summary>
+    public string NewSheetPlace => NewSheetFolder.Length == 0
+        ? DashboardText.NewSheetAtRoot
+        : DashboardText.NewSheetInOf(NewSheetFolder.Replace("/", " › ", StringComparison.Ordinal));
+
+    private string NewSheetFolder => SelectedScope?.Value is { } scope && scope.StartsWith(FolderScope, StringComparison.Ordinal) ? scope[FolderScope.Length..] : string.Empty;
+
+    /// <summary>Ouvre la fenêtre « Nouvelle fiche ».</summary>
+    [RelayCommand]
+    private void NewSheet()
+    {
+        NewSheetTitle = string.Empty;
+        NewSheetError = null;
+        OnPropertyChanged(nameof(NewSheetPlace));
+        IsCreatingSheet = true;
+    }
+
+    /// <summary>La réponse de la fenêtre : la fiche créée s'ouvre en écriture ; un refus laisse la fenêtre ouverte, avec sa raison.</summary>
+    [RelayCommand]
+    private async Task AnswerNewSheetAsync(bool confirmed)
+    {
+        IsCreatingSheet = false;
+        if (!confirmed)
+        {
+            NewSheetError = null;
+            return;
+        }
+        var title = NewSheetTitle.Trim();
+        if (title.Length == 0)
+        {
+            NewSheetError = SheetsText.TitleRequired;
+            IsCreatingSheet = true;
+            return;
+        }
+        var folder = NewSheetFolder;
+        var generation = _generation;
+        var outcome = await Task.Run(() => _sheets.Create(folder.Length == 0 ? null : folder, title, null)).ConfigureAwait(true);
+        if (generation != _generation)
+        {
+            // Le coffre a été oublié pendant la création : la fenêtre ne se rouvre pas, et la fiche ne s'ouvre pas.
+            return;
+        }
+        if (!outcome.Succeeded)
+        {
+            NewSheetError = outcome.Error;
+            IsCreatingSheet = true;
+            return;
+        }
+        NewSheetError = null;
+        _opener.WriteSheet(outcome.Value);
+    }
+
     /// <summary>« Examen… » est proposé.</summary>
     public bool CanPlanExams => Exams is not null;
 
@@ -398,6 +468,9 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
         Preview = null;
         Exams?.Forget();
         Spread?.Forget();
+        IsCreatingSheet = false;
+        NewSheetTitle = string.Empty;
+        NewSheetError = null;
         _examGroup.Count = 0;
         _overdue.Count = 0;
         _today.Count = 0;

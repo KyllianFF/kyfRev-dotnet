@@ -137,6 +137,10 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, INaviga
     [ObservableProperty]
     public partial bool MarkDefinedWords { get; set; }
 
+    /// <summary>Le raccourci global de la capture rapide est demandé à Windows.</summary>
+    [ObservableProperty]
+    public partial bool GlobalCapture { get; set; }
+
     /// <summary>Animations réduites.</summary>
     [ObservableProperty]
     public partial bool ReducedMotion { get; set; }
@@ -193,6 +197,7 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, INaviga
         LineSpacing = LineSpacings.First(choice => choice.Value == current.LineSpacing);
         Font = Fonts.First(choice => choice.Value == current.Font);
         MarkDefinedWords = current.MarkDefinedWords;
+        GlobalCapture = current.GlobalCapture;
         ReducedMotion = current.ReducedMotion;
         HighContrast = current.HighContrast;
         LargerTargets = current.LargerTargets;
@@ -229,6 +234,8 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, INaviga
     partial void OnFontChanged(SettingChoice<ReadingFont> value) => Remember(preferences => preferences with { Font = value.Value });
 
     partial void OnMarkDefinedWordsChanged(bool value) => Remember(preferences => preferences with { MarkDefinedWords = value });
+
+    partial void OnGlobalCaptureChanged(bool value) => Remember(preferences => preferences with { GlobalCapture = value });
 
     partial void OnReducedMotionChanged(bool value) => Remember(preferences => preferences with { ReducedMotion = value });
 

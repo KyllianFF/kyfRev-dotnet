@@ -221,6 +221,21 @@ public static class DashboardText
     /// <summary>« Étiquette : {0} ».</summary>
     public static string TagScopeOf(object tag) => Format("TagScope", tag);
 
+    /// <summary>« Nouvelle fiche ».</summary>
+    public static string NewSheet => Text(nameof(NewSheet));
+
+    /// <summary>« Titre ».</summary>
+    public static string NewSheetTitleLabel => Text(nameof(NewSheetTitleLabel));
+
+    /// <summary>« Créer et écrire ».</summary>
+    public static string NewSheetCreate => Text(nameof(NewSheetCreate));
+
+    /// <summary>« Elle sera créée à la racine des fiches, et entre en révision aujourd'hui (J0). ».</summary>
+    public static string NewSheetAtRoot => Text(nameof(NewSheetAtRoot));
+
+    /// <summary>« Elle sera créée dans « {0} », et entre en révision aujourd'hui (J0). ».</summary>
+    public static string NewSheetInOf(object folder) => Format("NewSheetIn", folder);
+
     private static string Format(string name, params object[] values) => string.Format(CultureInfo.CurrentCulture, Text(name), values);
 
     private static string Text(string name) =>

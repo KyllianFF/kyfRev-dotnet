@@ -24,6 +24,16 @@ public sealed class EditingUseCases(VaultHost host, TimeProvider time)
         return host.Use(vault => vault.SaveBody(id, body, fingerprint, session, now));
     }
 
+    /// <summary>
+    /// Capture rapide : ajoute une ligne datée à la fiche « Boîte de réception », créée et suspendue au besoin ; rend son
+    /// identifiant. Refusé sans coffre ouvert, ou sur un coffre verrouillé.
+    /// </summary>
+    public Outcome<string> Capture(string text)
+    {
+        var now = Present.Of(time).Now;
+        return host.Use(vault => vault.CaptureToInbox(text, now));
+    }
+
     /// <summary>Range le texte en cours d'édition dans les versions, avant de recharger celui du disque.</summary>
     [ZeroXCommand("garder_en_version")]
     public Outcome<Done> KeepAsVersion(string id, string body)

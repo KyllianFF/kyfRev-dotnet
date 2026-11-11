@@ -384,4 +384,16 @@ public sealed partial class ShellWindow : Window
             _shell.RunSelected();
         }
     }
+
+    /// <summary>La réponse à la capture rapide part vers la coquille.</summary>
+    private void OnCaptureClosed(object sender, DialogClosedEventArgs e) => _ = _shell.AnswerCaptureCommand.ExecuteAsync(e.Choice == DialogChoice.Primary);
+
+    /// <summary>La note se tape dès que la fenêtre de capture paraît.</summary>
+    private void OnCaptureBoxShown(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (e.NewValue is true)
+        {
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Input, () => CaptureBox.Focus());
+        }
+    }
 }

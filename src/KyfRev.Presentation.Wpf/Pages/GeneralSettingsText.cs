@@ -23,6 +23,12 @@ public static class GeneralSettingsText
     /// <summary>« Un terme défini dans une fiche est souligné d'un pointillé discret partout où il apparaît… ».</summary>
     public static string DefinedWordsHelp => Text(nameof(DefinedWordsHelp));
 
+    /// <summary>« Capture rapide depuis n'importe quelle application (Ctrl+Alt+N) ».</summary>
+    public static string GlobalCapture => Text(nameof(GlobalCapture));
+
+    /// <summary>« Tant que kyfRev est ouvert… ».</summary>
+    public static string GlobalCaptureHelp => Text(nameof(GlobalCaptureHelp));
+
     /// <summary>« Sans empattements ».</summary>
     public static string FontSans => Text(nameof(FontSans));
 

@@ -70,6 +70,11 @@ public sealed partial class ShellViewModel : ObservableObject, IForgetsVault, IS
             new("Ctrl+Maj+F", ShellText.ShortcutFocusMode),
             new("F11", ShellText.ShortcutFullScreen),
             new("Ctrl+Entrée", ShellText.ShortcutValidate),
+            new("Entrée, Espace", ShellText.ShortcutReveal),
+            new("H", ShellText.ShortcutHighlight),
+            new("Ctrl+E", ShellText.ShortcutWrite),
+            new("Ctrl+P", ShellText.ShortcutShare),
+            new("Ctrl+Maj+N", ShellText.ShortcutCapture),
             new("Ctrl+→", ShellText.ShortcutNext),
             new("Ctrl+1 … Ctrl+9", ShellText.ShortcutGoTo),
             new("Ctrl+plus", ShellText.ShortcutZoomIn),
@@ -572,7 +577,7 @@ public sealed partial class ShellViewModel : ObservableObject, IForgetsVault, IS
     /// <summary>Les commandes avec un coffre ouvert : ses vues, celles des extensions, le verrouillage s'il est chiffré, et celles de la coquille.</summary>
     [MemberNotNull(nameof(_commands))]
     private void RebuildCommands() =>
-        _commands = [.. NavigationCommands(), .. _extensionCommands, .. LockCommands(), .. _commandsWithoutVault];
+        _commands = [.. NavigationCommands(), .. CaptureCommands(), .. _extensionCommands, .. LockCommands(), .. _commandsWithoutVault];
 
     private List<PaletteEntry> LockCommands() =>
         CanLock ? [new(ShellText.ShortcutLock, "Ctrl+Maj+L", Icons.Lock, () => LockCommand.Execute(null))] : [];

@@ -49,6 +49,17 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   combien de révisions tombent et lesquelles, et un par examen à venir. Les retards sont comptés aujourd'hui, les éléments
   suspendus n'y figurent pas, et un nouvel import met l'agenda à jour. Le texte des passages n'y est jamais écrit, mais
   les titres des fiches le sont : dans un agenda en ligne, ils quittent l'ordinateur, et le bouton le dit.
+- Capture rapide : Ctrl+Maj+N, depuis n'importe quelle vue, ou « Capture rapide » dans Ctrl+K. La note s'ajoute, datée,
+  à la fiche « Boîte de réception », à la racine des fiches ; créée au besoin, cette fiche est suspendue : elle n'entre pas
+  dans les révisions. Sans coffre ouvert, ou coffre verrouillé, la capture ne s'ouvre pas.
+- Paramètres › Général : « Capture rapide depuis n'importe quelle application (Ctrl+Alt+N) », coupé par défaut. Actif, le
+  raccourci ramène la fenêtre de kyfRev devant et ouvre la capture. Il n'est demandé à Windows que si le réglage est actif,
+  et rendu dès qu'on le coupe.
+- Aujourd'hui : « Nouvelle fiche », qui la crée dans le dossier choisi dans la liste (la racine sinon) et l'ouvre en
+  écriture.
+- Étiquettes d'une fiche : celles déjà utilisées dans le coffre sont proposées pendant la saisie, la plus utilisée d'abord.
+- Ctrl+P, dans une fiche, ouvre « Partager », d'où elle sort en PDF ou en page web à imprimer.
+- L'aide (F1) liste cinq raccourcis de plus : afficher un trou, surligner, écrire, partager, noter une idée.
 - Fiches : un filtre par étiquettes, comme la 0.x. Chaque pastille dit son nombre de fiches, on peut en choisir plusieurs, et
   « Tout afficher » les retire ; sur une fenêtre étroite, il se replie avec les autres filtres.
 - Écrire : les boutons « Code dans le texte » et « Citation », dans le ruban et dans le clic droit.
