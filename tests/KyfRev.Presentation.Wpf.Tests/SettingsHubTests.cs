@@ -809,7 +809,7 @@ public sealed class SettingsHubTests
         var host = new Border { Width = 1460, Height = 900, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Child = new SettingsHubPage { DataContext = hub } };
         host.Resources.MergedDictionaries.Add(design.Dictionary);
         host.SetResourceReference(Border.BackgroundProperty, "Kyf.Brush.Background");
-        var window = new Window { Content = host, Left = -10000, Top = -10000, Width = 1500, Height = 960, ShowActivated = false, ShowInTaskbar = false };
+        var window = new Window { Content = new Canvas { Children = { host } }, Left = -10000, Top = -10000, Width = 800, Height = 600, ShowActivated = false, ShowInTaskbar = false };
         window.Show();
         TestShell.Flush();
         try

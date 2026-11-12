@@ -376,7 +376,9 @@ public sealed class RuledPaperTests
             _host.Resources[ReadingComfort.ResourceKey] = ReadingComfort.Of(new MachinePreferences { Font = font });
             _host.SetResourceReference(Border.BackgroundProperty, "Kyf.Brush.Background");
             Ink = ((SolidColorBrush)design.Dictionary["Kyf.Brush.Text"]).Color;
-            _window = new Window { Content = _host, Left = -10000, Top = -10000, Width = width + 40, Height = 960, ShowActivated = false, ShowInTaskbar = false };
+            // Dans un canevas, et une fenêtre plus petite que la vue : un canevas ne rogne pas ce qu'il porte, si bien que
+            // l'image ne dépend ni de la fenêtre ni de l'écran du poste (celui de la CI est plus petit que la vue).
+            _window = new Window { Content = new Canvas { Children = { _host } }, Left = -10000, Top = -10000, Width = 400, Height = 300, ShowActivated = false, ShowInTaskbar = false };
             _window.Show();
             Viewer.Reading = SheetReading.Of(
                 new OpenedSheet("f_1", "Mitose", "fiches/Biologie/Mitose.md", "Biologie", [], body.ReplaceLineEndings("\n"), 1, "sha256:essai", null, DateTimeOffset.UnixEpoch, null!, []),
