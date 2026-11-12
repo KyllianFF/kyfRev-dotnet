@@ -668,6 +668,41 @@ figure.bloc-extension {
   max-width: 100%;
 }
 
+/* Les poignées d'une image choisie : aux coins et sur les côtés, dans l'image pour rester visibles quand elle est rognée. */
+.editeur-visuel .image.reglable {
+  position: relative;
+}
+
+.editeur-visuel .image .poignee {
+  display: none;
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  box-sizing: border-box;
+  background: var(--surface);
+  border: 2px solid var(--principale);
+  border-radius: 3px;
+  touch-action: none;
+  z-index: 1;
+}
+
+.editeur-visuel .image.ProseMirror-selectednode .poignee {
+  display: block;
+}
+
+.editeur-visuel .image .poignee.no { left: 0; top: 0; cursor: nwse-resize; }
+.editeur-visuel .image .poignee.ne { right: 0; top: 0; cursor: nesw-resize; }
+.editeur-visuel .image .poignee.so { left: 0; bottom: 0; cursor: nesw-resize; }
+.editeur-visuel .image .poignee.se { right: 0; bottom: 0; cursor: nwse-resize; }
+.editeur-visuel .image .poignee.o { left: 0; top: calc(50% - 6px); cursor: ew-resize; }
+.editeur-visuel .image .poignee.e { right: 0; top: calc(50% - 6px); cursor: ew-resize; }
+
+/* Une image réglée garde ses coins arrondis même rognée, et ne dépasse jamais le texte. */
+.editeur-visuel .image[style] {
+  border-radius: var(--rayon);
+  box-sizing: border-box;
+}
+
 .editeur-visuel .formule {
   cursor: pointer;
 }
@@ -675,6 +710,12 @@ figure.bloc-extension {
 .editeur-visuel .appel-note {
   color: var(--lien);
   font-size: 0.75em;
+}
+
+/* Une image choisie n'est pas teintée par la couleur de sélection du moteur : son contour suffit à la désigner. */
+.editeur-visuel .ProseMirror-hideselection *::selection,
+.editeur-visuel .image img::selection {
+  background: transparent;
 }
 
 .editeur-visuel .ProseMirror-selectednode {

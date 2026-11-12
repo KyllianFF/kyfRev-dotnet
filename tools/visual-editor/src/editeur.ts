@@ -62,6 +62,7 @@ import {
   basculerTaches,
   insertionDeBloc,
   insertionDeLigne,
+  insertionDeSaut,
   sansTaches,
 } from "./blocs";
 import type { Casse } from "./casse";
@@ -69,7 +70,9 @@ import { changementDeCasse } from "./casse-visuelle";
 import { colorer, langages, type Morceau } from "./coloration";
 import { motAutour } from "./correcteur";
 import { depuisMarkdown, type Origine, trancheBrute, trancheCollee, versMarkdown } from "./markdown";
+import { type ApparenceImage, changerTitre, lireTitre } from "./image";
 import { motsEntiers } from "./mots-entiers";
+import { MiseEnPage, pages, refairePages } from "./pages";
 import { schema } from "./schema";
 import { caseVoisine, changerApparence, triable, trierTableau } from "./tableaux";
 
@@ -105,6 +108,8 @@ export type EtatOutils = {
   table: boolean;
   /** Le tableau où est le curseur, pour l'onglet Tableau ; rien hors d'un tableau. */
   tableLook: EtatTableau | null;
+  /** L'image choisie, pour l'onglet Image ; rien si la sélection n'est pas une image. */
+  imageLook: EtatImage | null;
   /** Couleur et taille du texte, écrites comme dans le fichier ; `null` : celles du thème. */
   color: string | null;
   size: string | null;
@@ -149,11 +154,13 @@ export type Reactions = {
   /** Touche pendant une saisie : vrai si la liste la prend. */
   clavierlien: (touche: string) => boolean;
   /** Clic droit : le menu est natif. */
-  onmenu: (dessin: DessinVise | null) => void;
+  onmenu: (dessin: DessinVise | null, image: ImageVisee | null) => void;
   /** Le dessin d'un bloc : un SVG, ou une image ; ni l'un ni l'autre : il ne se dessine pas. */
   dessin: (langage: string, code: string) => Promise<Dessin>;
   /** Modifier ce dessin : c'est la galerie de l'application. */
   ondessin: (langage: string, code: string, position: number) => void;
+  /** Le nombre de pages de la fiche a changé ; 0 : la feuille sans fin. */
+  onpages: (pages: number) => void;
 };
 
 /** Touches que la liste des fiches peut prendre à l'éditeur. */
@@ -467,7 +474,7 @@ class VuePoint implements NodeView {
 
 /** Image du coffre, ou encadré qui explique pourquoi elle ne s'affiche pas. */
 function vueImage(dossier: () => string) {
-  return (noeud: Node): NodeView => {
+  return (noeud: Node, vue: EditorView, position: () => number | undefined): NodeView => {
     const dom = document.createElement("span");
     dom.className = "image";
     const bloquee = (message: string, detail: string) => {
@@ -485,14 +492,27 @@ function vueImage(dossier: () => string) {
       image.src = affichage.adresse;
       image.alt = noeud.attrs.alt as string;
       if (noeud.attrs.title) image.title = noeud.attrs.title as string;
+      positionsDesImages.set(image, position);
+      const apparence = lireTitre(noeud.attrs.title as string | null);
+      if (apparence) {
+        // L'infobulle d'une image réglée serait la liste de ses réglages : elle ne dit rien à qui écrit.
+        image.removeAttribute("title");
+        appliquerApparence(dom, image, apparence);
+      }
       image.addEventListener(
         "error",
         () => image.replaceWith(bloquee("Image introuvable", noeud.attrs.src as string)),
         { once: true },
       );
       dom.append(image);
+      if (apparence) poserPoignees(dom, image, vue, position);
     }
-    return { dom, ignoreMutation: () => true };
+    return {
+      dom,
+      ignoreMutation: () => true,
+      // Une poignée se tire : le moteur n'a pas à y voir le début d'un glisser-déposer de l'image.
+      stopEvent: (evenement) => evenement.target instanceof Element && evenement.target.classList.contains("poignee"),
+    };
   };
 }
 
@@ -513,6 +533,126 @@ function vueFormule(bloc: boolean, onformule: (formule: Formule) => void) {
     });
     return { dom, ignoreMutation: () => true };
   };
+}
+
+/** L'image choisie, telle que le ruban la décrit. */
+export type EtatImage = {
+  position: number;
+  /** L'adresse d'où elle est servie : c'est par elle que l'application retrouve son fichier. */
+  address: string;
+  title: string | null;
+  alt: string;
+  /** Faux si son titre est une légende écrite à la main : il ne peut pas porter de réglages. */
+  editable: boolean;
+  /** Largeur en pourcentage du texte ; null : sa taille d'origine. */
+  width: number | null;
+  align: "fil" | "gauche" | "centre" | "droite";
+  /** Son cadre, « x,y,largeur,hauteur » en pourcentages ; null : l'image entière. */
+  crop: string | null;
+  masks: number;
+  /** Sa taille à l'écran et la largeur du texte autour d'elle, en pixels de la fiche : de quoi la dire en centimètres. */
+  shownWidth: number;
+  shownHeight: number;
+  room: number;
+};
+
+/**
+ * Donne à une image sa largeur, sa place et son cadre. Le cadre ne rogne pas le fichier : l'image est agrandie et
+ * décalée dans une boîte qui cache ce qui dépasse, à ses proportions une fois qu'elle est chargée.
+ */
+function appliquerApparence(boite: HTMLElement, image: HTMLImageElement, apparence: ApparenceImage): void {
+  if (apparence.position !== "fil") {
+    boite.style.display = "block";
+    boite.style.marginLeft = apparence.position === "gauche" ? "0" : "auto";
+    boite.style.marginRight = apparence.position === "droite" ? "0" : "auto";
+  }
+  if (apparence.largeur !== null) {
+    boite.style.width = `${apparence.largeur}%`;
+    image.style.width = "100%";
+  }
+  const cadre = apparence.cadre;
+  if (!cadre) return;
+  boite.style.overflow = "hidden";
+  boite.style.verticalAlign = "bottom";
+  const cadrer = () => {
+    const { naturalWidth: largeur, naturalHeight: hauteur } = image;
+    if (largeur === 0 || hauteur === 0) return;
+    if (apparence.largeur === null) boite.style.width = `${cadre.largeur * largeur}px`;
+    boite.style.aspectRatio = `${cadre.largeur * largeur} / ${cadre.hauteur * hauteur}`;
+    image.style.display = "block";
+    image.style.maxWidth = "none";
+    image.style.width = `${100 / cadre.largeur}%`;
+    image.style.marginLeft = `${(-cadre.x / cadre.largeur) * 100}%`;
+    // Une marge en pourcentage se compte sur la largeur de la boîte, même vers le haut.
+    image.style.marginTop = `${(-cadre.y / cadre.largeur) * (hauteur / largeur) * 100}%`;
+  };
+  if (image.complete) cadrer();
+  else image.addEventListener("load", cadrer, { once: true });
+}
+
+/** Les poignées d'une image : les quatre coins et les deux côtés. Celles de gauche tirent dans l'autre sens. */
+const POIGNEES = ["no", "ne", "so", "se", "o", "e"] as const;
+
+/**
+ * Pose sur une image choisie les poignées qui la redimensionnent à la souris. La largeur se compte en pourcentage de celle
+ * du texte, la hauteur suit : l'image garde toujours ses proportions. Rien n'est écrit pendant le geste ; au relâcher, la
+ * largeur va dans le titre de l'image, comme depuis l'onglet Image.
+ */
+function poserPoignees(boite: HTMLElement, image: HTMLImageElement, vue: EditorView, position: () => number | undefined): void {
+  boite.classList.add("reglable");
+  for (const place of POIGNEES) {
+    const poignee = document.createElement("span");
+    poignee.className = `poignee ${place}`;
+    poignee.contentEditable = "false";
+    poignee.addEventListener("pointerdown", (appui) => {
+      appui.preventDefault();
+      appui.stopPropagation();
+      poignee.setPointerCapture(appui.pointerId);
+      const depart = appui.clientX;
+      const largeur = boite.getBoundingClientRect().width;
+      const texte = boite.parentElement?.getBoundingClientRect().width ?? largeur;
+      const sens = place.includes("o") ? -1 : 1;
+      let pourcent: number | null = null;
+      const tirer = (geste: PointerEvent) => {
+        if (texte <= 0) return;
+        pourcent = Math.min(Math.max(Math.round(((largeur + sens * (geste.clientX - depart)) / texte) * 100), 5), 100);
+        boite.style.width = `${pourcent}%`;
+        // Rognée, l'image a déjà sa largeur, comptée sur sa boîte.
+        if (boite.style.overflow !== "hidden") image.style.width = "100%";
+      };
+      const lacher = () => {
+        poignee.removeEventListener("pointermove", tirer);
+        poignee.removeEventListener("pointerup", lacher);
+        poignee.removeEventListener("pointercancel", lacher);
+        const ici = position();
+        const noeud = ici === undefined ? null : vue.state.doc.nodeAt(ici);
+        if (pourcent === null || ici === undefined || noeud?.type !== n.image) return;
+        const titre = changerTitre((noeud.attrs.title as string | null) ?? null, "width", String(pourcent));
+        if (titre === undefined) return;
+        const tr = vue.state.tr.setNodeMarkup(ici, undefined, { ...noeud.attrs, title: titre });
+        vue.dispatch(tr.setSelection(NodeSelection.create(tr.doc, ici)));
+      };
+      poignee.addEventListener("pointermove", tirer);
+      poignee.addEventListener("pointerup", lacher);
+      poignee.addEventListener("pointercancel", lacher);
+    });
+    boite.append(poignee);
+  }
+}
+
+/** Où se trouve chaque image affichée : son nœud le sait, son élément non. */
+const positionsDesImages = new WeakMap<Element, () => number | undefined>();
+
+/** L'image visée par un clic droit : sa place, l'adresse d'où elle est servie et son titre Markdown. */
+export type ImageVisee = { position: number; address: string; title: string | null };
+
+/** L'image sous la souris. */
+function imageSous(vue: EditorView, cible: EventTarget | null): ImageVisee | null {
+  const position = cible instanceof HTMLImageElement ? positionsDesImages.get(cible)?.() : undefined;
+  const noeud = position === undefined ? null : vue.state.doc.nodeAt(position);
+  return noeud?.type === n.image && position !== undefined && cible instanceof HTMLImageElement
+    ? { position, address: cible.getAttribute("src") ?? "", title: (noeud.attrs.title as string | null) ?? null }
+    : null;
 }
 
 /** Le dessin visé par un clic droit. */
@@ -743,11 +883,13 @@ export class EditeurVisuel {
   private origine: Origine;
   private cache: { doc: Node; texte: string } | null = null;
   private dossier = "";
+  private miseEnPage: MiseEnPage;
 
   constructor(
     parent: HTMLElement,
     private reactions: Reactions,
   ) {
+    this.miseEnPage = new MiseEnPage(reactions.onpages);
     this.origine = depuisMarkdown("");
     this.vue = new Vue(parent, {
       state: this.etatInitial(),
@@ -778,7 +920,14 @@ export class EditeurVisuel {
           evenement.preventDefault();
           const dessin = dessinSous(vue, evenement.target);
           if (dessin) {
-            reactions.onmenu(dessin);
+            reactions.onmenu(dessin, null);
+            return true;
+          }
+          const image = imageSous(vue, evenement.target);
+          if (image) {
+            // Le clic droit choisit l'image : l'onglet Image s'ouvre sur elle, comme après un clic gauche.
+            vue.dispatch(vue.state.tr.setSelection(NodeSelection.create(vue.state.doc, image.position)));
+            reactions.onmenu(null, image);
             return true;
           }
           const lieu = vue.posAtCoords({ left: evenement.clientX, top: evenement.clientY });
@@ -786,7 +935,7 @@ export class EditeurVisuel {
           if (lieu && (empty || lieu.pos < from || lieu.pos > to)) {
             vue.dispatch(vue.state.tr.setSelection(TextSelection.near(vue.state.doc.resolve(lieu.pos))));
           }
-          reactions.onmenu(null);
+          reactions.onmenu(null, image);
           return true;
         },
         blur: () => {
@@ -886,6 +1035,7 @@ export class EditeurVisuel {
         motsEntiers(),
         colorationDuCode(),
         paragrapheFinal(),
+        pages(this.miseEnPage),
       ],
     });
   }
@@ -904,6 +1054,17 @@ export class EditeurVisuel {
     this.cache = null;
     this.vue.updateState(this.etatInitial());
     this.reactions.onetat(this.etatOutils());
+  }
+
+  /** La feuille en pixels, marges comprises ; une largeur nulle : la feuille sans fin, sans pages. */
+  page(largeur: number, hauteur: number, marge: number): void {
+    if (this.miseEnPage.regler(largeur, hauteur, marge)) refairePages(this.vue);
+    if (!this.miseEnPage.feuille) this.miseEnPage.signaler(0);
+  }
+
+  /** Le pas des lignes d'écriture du papier, en pixels : le texte s'y pose ; 0 : il ne suit aucune ligne. */
+  lignes(pas: number): void {
+    if (this.miseEnPage.reglerLigne(pas)) refairePages(this.vue);
   }
 
   insererImage(lien: string, alt: string, position: number | null): void {
@@ -930,6 +1091,12 @@ export class EditeurVisuel {
   /** Ligne horizontale ; l'écriture reprend dans un paragraphe juste dessous. */
   insererLigne(): void {
     this.vue.dispatch(insertionDeLigne(this.vue.state));
+    this.vue.focus();
+  }
+
+  /** Un saut de page après le bloc du curseur, ou une page blanche : ce qui suit commence une nouvelle page. */
+  sautDePage(blanche: boolean): void {
+    this.vue.dispatch(insertionDeSaut(this.vue.state, blanche));
     this.vue.focus();
   }
 
@@ -961,11 +1128,82 @@ export class EditeurVisuel {
   supprimerBloc(position: number): void {
     const etat = this.vue.state;
     const noeud = etat.doc.nodeAt(position);
+    if (noeud?.type === n.image) {
+      // Une image s'en va seule : le paragraphe qui la porte reste, même vide.
+      this.vue.dispatch(etat.tr.delete(position, position + noeud.nodeSize).scrollIntoView());
+      this.vue.focus();
+      return;
+    }
     if (noeud?.type !== n.code_block) return;
     const fin = position + noeud.nodeSize;
     const tr = etat.doc.childCount === 1 ? etat.tr.replaceWith(position, fin, n.paragraph.create()) : etat.tr.delete(position, fin);
     this.vue.dispatch(tr.scrollIntoView());
     this.vue.focus();
+  }
+
+  /** Où commence le bloc de code qui contient le curseur ; null hors d'un bloc de code. */
+  positionDuCode(): number | null {
+    const { $from } = this.vue.state.selection;
+    for (let profondeur = $from.depth; profondeur > 0; profondeur--) {
+      if ($from.node(profondeur).type === n.code_block) return $from.before(profondeur);
+    }
+    return null;
+  }
+
+  /** Change le titre Markdown d'une image : c'est lui qui porte ses masques. Rien si l'image n'est plus là. */
+  titreImage(position: number, titre: string | null): void {
+    const etat = this.vue.state;
+    const noeud = etat.doc.nodeAt(position);
+    if (noeud?.type !== n.image) return;
+    const tr = etat.tr.setNodeMarkup(position, undefined, { ...noeud.attrs, title: titre || null });
+    // L'image reste choisie : l'onglet Image ne se ferme pas à chaque réglage.
+    this.vue.dispatch(tr.setSelection(NodeSelection.create(tr.doc, position)));
+    this.vue.focus();
+  }
+
+  /** L'image choisie, pour l'onglet Image. */
+  private etatImage(etat: EditorState): EtatImage | null {
+    const { selection } = etat;
+    if (!(selection instanceof NodeSelection) || selection.node.type !== n.image) return null;
+    const titre = (selection.node.attrs.title as string | null) ?? null;
+    const apparence = lireTitre(titre);
+    const element = this.vue.nodeDOM(selection.from);
+    const image = element instanceof HTMLElement ? element.querySelector("img") : null;
+    const cadre = apparence?.cadre;
+    const boite = element instanceof HTMLElement ? element.getBoundingClientRect() : null;
+    return {
+      position: selection.from,
+      address: image?.getAttribute("src") ?? "",
+      title: titre,
+      alt: selection.node.attrs.alt as string,
+      editable: apparence !== null,
+      width: apparence?.largeur ?? null,
+      align: apparence?.position ?? "fil",
+      crop: cadre ? [cadre.x, cadre.y, cadre.largeur, cadre.hauteur].map((part) => Math.round(part * 1000) / 10).join(",") : null,
+      masks: apparence?.masques ? apparence.masques.split(";").filter((zone) => zone !== "").length : 0,
+      shownWidth: Math.round(boite?.width ?? 0),
+      shownHeight: Math.round(boite?.height ?? 0),
+      room: Math.round(element instanceof HTMLElement ? (element.parentElement?.getBoundingClientRect().width ?? 0) : 0),
+    };
+  }
+
+  /**
+   * Change l'apparence de l'image choisie (voir « changerTitre »), ou sa description avec « alt ». Rien si aucune image
+   * n'est choisie, si son titre est une légende, ou si la demande n'est pas comprise.
+   */
+  apparenceImage(changement: string, valeur: string | null): void {
+    const etat = this.vue.state;
+    const { selection } = etat;
+    if (!(selection instanceof NodeSelection) || selection.node.type !== n.image) return;
+    const attrs = selection.node.attrs;
+    if (changement === "alt") {
+      const tr = etat.tr.setNodeMarkup(selection.from, undefined, { ...attrs, alt: valeur ?? "" });
+      this.vue.dispatch(tr.setSelection(NodeSelection.create(tr.doc, selection.from)));
+      return;
+    }
+    const titre = changerTitre((attrs.title as string | null) ?? null, changement, valeur);
+    if (titre === undefined || titre === ((attrs.title as string | null) ?? null)) return;
+    this.titreImage(selection.from, titre);
   }
 
   /** Entre dans le code d'un bloc. */
@@ -1462,6 +1700,7 @@ export class EditeurVisuel {
       list,
       table: isInTable(etat),
       tableLook: this.etatTableau(etat),
+      imageLook: this.etatImage(etat),
       color: valeur(m.couleur as MarkType),
       size: valeur(m.taille as MarkType),
       align: alignementCourant(etat),

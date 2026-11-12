@@ -65,7 +65,7 @@ internal static class SearchEntries
             entries.AddRange(found.Take(MaximumPerGroup).Select(hit => entry(hit) with { Group = heading, Excerpt = ExcerptOf(hit) }));
         }
 
-        AddGroup(ShellText.Sheets, hits.Where(hit => hit.Kind == SearchKinds.Sheet), hit => SheetEntry(hit, open));
+        AddGroup(ShellText.SheetsGroup, hits.Where(hit => hit.Kind == SearchKinds.Sheet), hit => SheetEntry(hit, open));
         AddGroup(ShellText.SearchGroupAnnotations, hits.Where(hit => hit.Kind is SearchKinds.Passage or SearchKinds.Definition), hit => AnnotationEntry(hit, open));
         AddGroup(QuotesText.Title, hits.Where(hit => hit.Kind == SearchKinds.Quote), hit => QuoteEntry(hit, open));
         return entries;

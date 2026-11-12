@@ -125,7 +125,8 @@ internal sealed partial class TreeBuilder
                 var image = Leaf("img");
                 image.Target = token.Href;
                 image.AlternativeText = AlternativeText(token.Children);
-                image.Masks = ImageMasks.FromTitle(token.Title);
+                image.ImageLook = ImageLooks.FromTitle(token.Title) ?? ImageLook.Plain;
+                image.Masks = image.ImageLook.Masks;
                 break;
             case TokenKind.FootnoteRef:
                 WriteFootnoteReference(token);
@@ -183,6 +184,7 @@ internal sealed partial class TreeBuilder
             element.ListStart = token.Start;
             element.Alignment = token.Alignment;
             element.Look = token.Look;
+            element.PageMark = token.PageMark;
             element.Target = token.Href;
             ApplyStyle(element, token.Style);
             if (token.Tag == "li" && token.Nesting == 1)

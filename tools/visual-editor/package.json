@@ -5,6 +5,7 @@
   "type": "module",
   "description": "Éditeur visuel des fiches de kyfRev : le paquet est écrit dans src/KyfRev.Presentation.Wpf/Editing/Web.",
   "scripts": {
+    "dev": "vite",
     "build": "vite build && vite build --config vite.diagrammes.config.ts && node avis-de-tiers.js",
     "test": "vitest run",
     "check": "tsc --noEmit"

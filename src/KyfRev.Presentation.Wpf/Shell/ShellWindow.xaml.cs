@@ -49,6 +49,8 @@ public sealed partial class ShellWindow : Window
         ArgumentNullException.ThrowIfNull(shell);
         _shell = shell;
         InitializeComponent();
+        // Les raccourcis marqués prennent les touches choisies dans les paramètres.
+        KyfRev.Presentation.Wpf.Shell.ShortcutMap.Follow(this);
         DataContext = shell;
         shell.Appearance.Attach(this);
         shell.PropertyChanged += OnShellChanged;
@@ -220,8 +222,124 @@ public sealed partial class ShellWindow : Window
         }
     }
 
+    /// <summary>Le délai avant de refermer le menu montré au survol : le temps d'aller du bouton au menu.</summary>
+    private static readonly TimeSpan PeekGrace = TimeSpan.FromMilliseconds(250);
+
+    private System.Windows.Threading.DispatcherTimer? _peekTimer;
+
+    /// <summary>Menu masqué, survoler son bouton le montre par-dessus la page.</summary>
+    private void OnMenuButtonEnter(object sender, MouseEventArgs e)
+    {
+        if (_shell.IsFocusMode && _shell.CanToggleMenu && !_shell.IsWelcome)
+        {
+            _peekTimer?.Stop();
+            OpenPeek();
+        }
+    }
+
+    /// <summary>La souris quitte le bouton ou le menu : il se referme si elle n'est plus sur aucun des deux.</summary>
+    private void OnMenuPeekLeave(object sender, MouseEventArgs e)
+    {
+        if (!IsMenuPeekOpen)
+        {
+            return;
+        }
+        _peekTimer ??= new System.Windows.Threading.DispatcherTimer(PeekGrace, System.Windows.Threading.DispatcherPriority.Background, (_, _) => ClosePeekIfLeft(), Dispatcher);
+        _peekTimer.Stop();
+        _peekTimer.Start();
+    }
+
+    private void ClosePeekIfLeft()
+    {
+        _peekTimer?.Stop();
+        if (!ExitFocusButton.IsMouseOver && !MenuPeekCard.IsMouseOver)
+        {
+            ClosePeek();
+        }
+    }
+
+    /// <summary>Un clic sur le bouton rend le menu pour de bon : celui du survol n'a plus lieu d'être.</summary>
+    private void OnMenuButtonClick(object sender, RoutedEventArgs e) => ClosePeek();
+
+    private void ClosePeek()
+    {
+        _peekTimer?.Stop();
+        if (_peekWindow is { IsVisible: true } peek)
+        {
+            peek.Hide();
+        }
+    }
+
+    /// <summary>La largeur du menu montré au survol, celle de la barre latérale.</summary>
+    private const double PeekWidth = 248;
+
+    /// <summary>L'épaisseur du contour que Windows dessine autour d'une fenêtre, en pixels de l'écran.</summary>
+    private const int WindowOutline = 1;
+
+    private Window? _peekWindow;
+
+    /// <summary>Le menu montré au survol est à l'écran.</summary>
+    internal bool IsMenuPeekOpen => _peekWindow is { IsVisible: true };
+
+    /// <summary>
+    /// Pose le menu dans sa fenêtre, contre le bord gauche de la page et sur toute sa hauteur. La fenêtre ne prend pas le
+    /// clavier en s'ouvrant : survoler un bouton ne doit pas interrompre une frappe.
+    /// </summary>
+    private void OpenPeek()
+    {
+        if (_peekWindow is null)
+        {
+            MenuPeek.Child = null;
+            _peekWindow = new Window
+            {
+                WindowStyle = WindowStyle.None,
+                ResizeMode = ResizeMode.NoResize,
+                ShowInTaskbar = false,
+                ShowActivated = false,
+                // Une fenêtre sans fond ni cadre : Windows n'en arrondit pas les angles et ne lui donne pas d'ombre, la carte seule se voit.
+                AllowsTransparency = true,
+                Background = null,
+                Owner = this,
+                Content = MenuPeekCard,
+                DataContext = _shell,
+                Title = ShellText.MainNavigation,
+            };
+            _peekWindow.Resources.MergedDictionaries.Add(Resources);
+        }
+        // En pixels de l'écran : le coin haut gauche de la page et son bas, ramenés dans ce qui se voit de la fenêtre. Windows
+        // garde autour d'elle une bordure invisible pour la redimensionner, où le menu dépasserait de quelques pixels.
+        var top = Workspace.PointToScreen(default);
+        var bottom = Workspace.PointToScreen(new Point(0, Workspace.ActualHeight));
+        var visible = _shell.Appearance.VisibleBounds(new WindowInteropHelper(this).Handle);
+        if (!visible.IsEmpty)
+        {
+            // Un pixel en retrait : Windows dessine le contour de la fenêtre sur son dernier pixel, que le menu ne doit pas couvrir.
+            top.X = Math.Max(top.X, visible.Left + WindowOutline);
+            bottom.Y = Math.Min(bottom.Y, visible.Bottom - WindowOutline);
+        }
+        if (PresentationSource.FromVisual(this)?.CompositionTarget is { } target)
+        {
+            top = target.TransformFromDevice.Transform(top);
+            bottom = target.TransformFromDevice.Transform(bottom);
+        }
+        _peekWindow.Left = top.X;
+        _peekWindow.Top = top.Y;
+        _peekWindow.Width = PeekWidth * _shell.Zoom;
+        _peekWindow.Height = Math.Max(bottom.Y - top.Y, 1);
+        _peekWindow.Show();
+    }
+
     private void OnShellChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (e.PropertyName == nameof(ShellViewModel.Current))
+        {
+            // Une vue choisie dans le menu montré au survol le referme.
+            ClosePeek();
+        }
+        if (e.PropertyName is nameof(ShellViewModel.IsFocusMode) or nameof(ShellViewModel.IsFullScreen) or nameof(ShellViewModel.Layout))
+        {
+            ClosePeek();
+        }
         if (e.PropertyName == nameof(ShellViewModel.IsFullScreen))
         {
             ApplyFullScreen(_shell.IsFullScreen);

@@ -18,7 +18,8 @@ public readonly record struct ImageMask(double X, double Y, double Width, double
 /// Les masques d'une image, écrits dans son titre Markdown :
 /// <c>![Cellule](cellule.png "kyfrev-masques:10,20,30,15;50,50,20,10")</c>, en pourcentages de l'image (gauche, haut,
 /// largeur, hauteur). Un titre est du Markdown ordinaire : un autre outil l'affiche en infobulle et le garde, l'éditeur
-/// visuel de kyfRev aussi. Une image sans ce titre n'a pas de masque.
+/// visuel de kyfRev aussi. Une image sans ce titre n'a pas de masque. Le titre peut porter d'autres réglages de l'image
+/// (voir <see cref="ImageLooks"/>), que les masques ne font pas perdre.
 /// </summary>
 public static class ImageMasks
 {
@@ -35,14 +36,13 @@ public static class ImageMasks
     /// Les masques écrits dans un titre ; aucun si le titre n'en parle pas. Un masque mal écrit, vide ou hors de l'image
     /// est laissé de côté plutôt que de faire perdre les autres.
     /// </summary>
-    public static ImmutableArray<ImageMask> FromTitle(string? title)
+    public static ImmutableArray<ImageMask> FromTitle(string? title) => ImageLooks.FromTitle(title)?.Masks ?? [];
+
+    /// <summary>Les zones d'une liste « 10,20,30,15;50,50,20,10 », en pourcentages ; les mal écrites sont laissées de côté.</summary>
+    internal static ImmutableArray<ImageMask> Parse(string list)
     {
-        if (title is null || !title.StartsWith(Prefix, StringComparison.Ordinal))
-        {
-            return [];
-        }
         var masks = ImmutableArray.CreateBuilder<ImageMask>();
-        foreach (var part in title[Prefix.Length..].Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        foreach (var part in list.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
         {
             var numbers = part.Split(',');
             if (numbers.Length != 4 || masks.Count >= Maximum)
@@ -67,7 +67,13 @@ public static class ImageMasks
     public static string? ToTitle(IEnumerable<ImageMask> masks)
     {
         ArgumentNullException.ThrowIfNull(masks);
-        var text = new StringBuilder(Prefix);
+        return Written(masks) is { Length: > 0 } list ? Prefix + list : null;
+    }
+
+    /// <summary>La liste qui écrit ces zones, au dixième de pourcent ; vide s'il n'en reste aucune de visible.</summary>
+    internal static string Written(IEnumerable<ImageMask> masks)
+    {
+        var text = new StringBuilder();
         var count = 0;
         foreach (var raw in masks)
         {
@@ -81,7 +87,7 @@ public static class ImageMasks
             }
             text.Append(Percent(mask.X)).Append(',').Append(Percent(mask.Y)).Append(',').Append(Percent(mask.Width)).Append(',').Append(Percent(mask.Height));
         }
-        return count == 0 ? null : text.ToString();
+        return text.ToString();
     }
 
     /// <summary>

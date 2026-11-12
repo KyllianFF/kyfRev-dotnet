@@ -408,6 +408,19 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage, 
         return masks.OpenAsync(SheetId, imageIndex, picture);
     }
 
+    /// <summary>
+    /// Ouvre la pose de masques sur une image de la fiche en cours d'écriture : le titre rendu s'écrit dans le texte, sans
+    /// relire la fiche du disque.
+    /// </summary>
+    internal void EditMasksWhileWriting(System.Windows.Media.ImageSource? picture, string? title, Action<string?> apply, bool crop = false)
+    {
+        if (Masks is { } masks)
+        {
+            masks.Saved -= OnMasksSaved;
+            masks.OpenFor(picture, title, apply, crop);
+        }
+    }
+
     private void OnMasksSaved(object? sender, EventArgs e)
     {
         Notice = Masks?.LastSaved;
@@ -424,7 +437,7 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage, 
 
     /// <summary>La fiche prête à lire.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Outline), nameof(CanShare))]
+    [NotifyPropertyChangedFor(nameof(Outline), nameof(CanShare), nameof(CanPrint))]
     public partial SheetReading? Reading { get; private set; }
 
     /// <summary>Ce qui se surligne dans le texte.</summary>
@@ -761,7 +774,92 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage, 
     public bool ShowsPanelToggles => !ShowsCode;
 
     /// <summary>La largeur du texte : celle de la lecture, ou toute la place pour le code et son rendu.</summary>
-    public double TextWidth => ShowsCode ? double.PositiveInfinity : IsFocusMode ? TextMaxWidth : ReadingMaxWidth;
+    public double TextWidth => ShowsCode ? double.PositiveInfinity : PageSetup is { IsPaged: true } paged ? paged.Layout.WidthPixels + PageScrollRoom : IsFocusMode ? TextMaxWidth : ReadingMaxWidth;
+
+    /// <summary>À côté d'une feuille, un peu de bureau de chaque côté et la place de la barre de défilement : la feuille garde sa largeur exacte.</summary>
+    public const double PageScrollRoom = 52;
+
+    /// <summary>
+    /// La mise en page de la fiche : sa feuille, son orientation, ses marges. Sans elle, la fiche est une feuille sans fin.
+    /// </summary>
+    public PageSetupViewModel? PageSetup
+    {
+        get;
+        init
+        {
+            field = value;
+            value?.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName == nameof(PageSetupViewModel.Layout))
+                {
+                    OnPropertyChanged(nameof(TextWidth));
+                    OnPropertyChanged(nameof(ZoomedTextWidth));
+                }
+            };
+        }
+    }
+
+    /// <summary>Le plus petit zoom de la fiche.</summary>
+    public const double MinimumSheetZoom = 0.5;
+
+    /// <summary>Le plus grand.</summary>
+    public const double MaximumSheetZoom = 2;
+
+    /// <summary>Le pas des boutons − et +, et celui du curseur.</summary>
+    public const double SheetZoomStep = 0.1;
+
+    /// <summary>
+    /// Le zoom de la fiche (1 : taille normale), en lecture, en révision et en écriture : la fiche grandit ou rétrécit, le
+    /// reste de l'interface ne bouge pas.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SheetZoomPercent), nameof(SheetZoomLabel), nameof(ZoomedTextWidth))]
+    [NotifyCanExecuteChangedFor(nameof(ZoomSheetInCommand), nameof(ZoomSheetOutCommand))]
+    public partial double SheetZoom { get; set; } = 1;
+
+    partial void OnSheetZoomChanged(double value)
+    {
+        var bounded = Math.Clamp(Math.Round(value / SheetZoomStep) * SheetZoomStep, MinimumSheetZoom, MaximumSheetZoom);
+        bounded = Math.Round(bounded, 2);
+        if (bounded != value)
+        {
+            SheetZoom = bounded;
+            return;
+        }
+        SheetZoomChanged?.Invoke(value);
+    }
+
+    /// <summary>Ce qui retient le zoom choisi, d'une fiche à l'autre et d'une séance à l'autre.</summary>
+    public Action<double>? SheetZoomChanged { get; init; }
+
+    /// <summary>Le zoom en pourcentage, pour le curseur.</summary>
+    public double SheetZoomPercent
+    {
+        get => Math.Round(SheetZoom * 100);
+        set => SheetZoom = value / 100;
+    }
+
+    /// <summary>« 100 % ».</summary>
+    public string SheetZoomLabel => string.Create(System.Globalization.CultureInfo.GetCultureInfo("fr-FR"), $"{SheetZoomPercent:0} %");
+
+    /// <summary>La largeur du texte, zoom compris : la fiche zoomée s'élargit, au lieu de se resserrer dans la même place.</summary>
+    public double ZoomedTextWidth => TextWidth * SheetZoom;
+
+    private bool CanZoomSheetIn => SheetZoom < MaximumSheetZoom;
+
+    private bool CanZoomSheetOut => SheetZoom > MinimumSheetZoom;
+
+    /// <summary>Agrandit la fiche d'un pas.</summary>
+    [RelayCommand(CanExecute = nameof(CanZoomSheetIn))]
+    private void ZoomSheetIn() => SheetZoom += SheetZoomStep;
+
+    /// <summary>Rétrécit la fiche d'un pas.</summary>
+    [RelayCommand(CanExecute = nameof(CanZoomSheetOut))]
+    private void ZoomSheetOut() => SheetZoom -= SheetZoomStep;
+
+    /// <summary>Revient à 100 %.</summary>
+    [RelayCommand]
+    private void ResetSheetZoom() => SheetZoom = 1;
 
     /// <summary>Le mode concentration de la coquille : le bouton de la fiche le commande, et il garde le texte à la largeur de lecture.</summary>
     public IFocusMode? FocusMode
@@ -797,6 +895,7 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage, 
     {
         OnPropertyChanged(nameof(IsFocusMode));
         OnPropertyChanged(nameof(TextWidth));
+        OnPropertyChanged(nameof(ZoomedTextWidth));
     }
 
     /// <summary>La largeur du texte en lecture : celle qui reste lisible, ou toute la place si elle est préférée.</summary>
@@ -829,6 +928,7 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage, 
         OnPropertyChanged(nameof(ShowsPanelToggles));
         OnPropertyChanged(nameof(HasPanels));
         OnPropertyChanged(nameof(TextWidth));
+        OnPropertyChanged(nameof(ZoomedTextWidth));
         OnPropertyChanged(nameof(ShowsOutline));
         OnPropertyChanged(nameof(ShowsPassages));
         OnPropertyChanged(nameof(ShowsOutlineOverlay));
@@ -927,22 +1027,35 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage, 
         _openSheet(backlink.SheetId);
     }
 
+    /// <summary>Une ouverture de l'écriture est en cours : une seconde demande ne fait pas un second éditeur.</summary>
+    private bool _startsWriting;
+
     /// <summary>Passe à l'écriture : le texte du disque, relu maintenant.</summary>
     [RelayCommand]
     private async Task StartWritingAsync()
     {
-        if (Editor is null)
+        // Deux demandes coup sur coup (« Écrire » puis Ctrl+E, ou un clic répété) ne font qu'un éditeur : la seconde
+        // attend la première, qui n'a pas encore rendu le sien.
+        if (Editor is null && !_startsWriting)
         {
-            CloseOverlay();
-            CancelRebinding();
-            var opened = await Task.Run(() => _sheets.Open(SheetId)).ConfigureAwait(true);
-            if (opened.Succeeded)
+            _startsWriting = true;
+            try
             {
-                Editor = _editor(opened.Value);
+                CloseOverlay();
+                CancelRebinding();
+                var opened = await Task.Run(() => _sheets.Open(SheetId)).ConfigureAwait(true);
+                if (!opened.Succeeded)
+                {
+                    Problem = opened.Error;
+                }
+                else if (Editor is null)
+                {
+                    Editor = _editor(opened.Value);
+                }
             }
-            else
+            finally
             {
-                Problem = opened.Error;
+                _startsWriting = false;
             }
         }
         OnPropertyChanged(nameof(IsReadOn));
@@ -953,7 +1066,8 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage, 
     [RelayCommand]
     private async Task StopWritingAsync()
     {
-        if (Editor is { } editor && await editor.FinishAsync().ConfigureAwait(true))
+        // « Lire » puis « Réviser » pendant un enregistrement : un seul retour à la lecture, et une seule relecture.
+        if (Editor is { } editor && await editor.FinishAsync().ConfigureAwait(true) && ReferenceEquals(Editor, editor))
         {
             Editor = null;
             if (editor.HasChanged)
@@ -1267,6 +1381,36 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage, 
             Guided.Abandon();
         }
         return true;
+    }
+
+    /// <summary>La fenêtre « Imprimer » ; sans elle, la fiche ne s'imprime pas d'ici.</summary>
+    public PrintViewModel? Print { get; init; }
+
+    /// <summary>La fiche peut s'imprimer d'ici : elle est lue, et la fenêtre existe.</summary>
+    public bool CanPrint => Print is not null && Reading is not null;
+
+    /// <summary>
+    /// Imprimer la fiche (Ctrl+P) : ce qui vient d'être écrit est d'abord enregistré, puis la fiche est relue telle qu'elle
+    /// est dans le coffre, et la fenêtre s'ouvre sur sa mise en page.
+    /// </summary>
+    [RelayCommand]
+    private async Task RequestPrintAsync()
+    {
+        if (Print is not { } print || Reading is null)
+        {
+            return;
+        }
+        if (Editor is { } editor && IsWriting)
+        {
+            await editor.FinishAsync().ConfigureAwait(true);
+        }
+        var reading = await Task.Run(() => _sheets.Open(SheetId) is { Succeeded: true } opened ? SheetReading.Of(opened.Value, _sheets) : null).ConfigureAwait(true);
+        if (reading is null)
+        {
+            return;
+        }
+        print.Printed = ShowDone;
+        print.Open(reading, PageSetup?.Layout);
     }
 
     /// <summary>Partager la fiche : ce qui vient d'être écrit part aussi. Un enregistrement refusé se voit dans l'écriture.</summary>

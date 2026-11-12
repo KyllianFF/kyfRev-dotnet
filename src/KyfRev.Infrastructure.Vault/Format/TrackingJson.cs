@@ -58,6 +58,11 @@ internal static class TrackingJson
                 {
                     target["cycle"]!["suspendueLe"] = Fields.DayText(suspendedOn);
                 }
+                // Absent lui aussi de la version 0.x : écrit seulement pour une note.
+                if (cycle.IsNote)
+                {
+                    target["cycle"]!["horsRevision"] = true;
+                }
                 break;
             case ArchivedState { Archive: var archive }:
                 target["statut"] = "archivee";
@@ -98,7 +103,9 @@ internal static class TrackingJson
             (int)Fields.Integer(obj, "etape", 0, int.MaxValue),
             Fields.Day(obj, "echeance"),
             Fields.Day(obj, "derniereRevision"),
-            Fields.OptionalDay(obj, "suspendueLe"));
+            Fields.OptionalDay(obj, "suspendueLe"),
+            // Une note est toujours suspendue : sans ce jour, la marque seule ne la sort pas des révisions.
+            Fields.OptionalBoolean(obj, "horsRevision", fallback: false) && Fields.OptionalDay(obj, "suspendueLe") is not null);
     }
 
     private static ArchiveInfo ReadArchive(JsonObject obj) => new(

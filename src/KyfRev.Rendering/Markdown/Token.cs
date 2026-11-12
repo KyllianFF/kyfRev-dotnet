@@ -65,6 +65,9 @@ internal sealed class Token(TokenKind kind, string tag, int nesting)
     /// <summary>Destination d'un lien ou d'une image.</summary>
     public string? Href { get; set; }
 
+    /// <summary>Un saut de page ou une page blanche, porté par un filet.</summary>
+    public PageMark PageMark { get; set; }
+
     /// <summary>Titre d'une image (<c>![alt](image "titre")</c>) ; il porte ses masques, s'il en a.</summary>
     public string? Title { get; set; }
 

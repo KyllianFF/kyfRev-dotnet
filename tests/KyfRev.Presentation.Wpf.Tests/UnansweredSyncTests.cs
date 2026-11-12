@@ -145,11 +145,19 @@ public sealed class UnansweredSyncTests
         {
         }
 
+        void IEditorSurface.SetImageLook(string change, string? value)
+        {
+        }
+
         void IEditorSurface.InsertCode(string language)
         {
         }
 
         void IEditorSurface.InsertRule()
+        {
+        }
+
+        void IEditorSurface.InsertPageBreak(bool blank)
         {
         }
 

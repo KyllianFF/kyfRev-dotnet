@@ -308,8 +308,10 @@
                   </Grid.RowDefinitions>
                   <TextBlock Grid.Row="0" Text="{TemplateBinding Title}" Style="{DynamicResource Kyf.Text.Subtitle}" Margin="0,0,0,12" />
                   <!-- Trop haut pour la fenêtre : le contenu défile, le titre et les boutons restent. -->
-                  <ScrollViewer x:Name="PART_Content" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
-                    <ContentPresenter />
+                  <!-- La zone qui défile coupe ce qui en dépasse : 4 px de marge rendus au contenu laissent voir l'anneau de focus
+                       d'un bouton posé contre son bord, sans déplacer le contenu. -->
+                  <ScrollViewer x:Name="PART_Content" Grid.Row="1" Margin="-4" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
+                    <ContentPresenter Margin="4" />
                   </ScrollViewer>
                   <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,24,0,0">
                     <Button x:Name="PART_SecondaryButton" Content="{TemplateBinding SecondaryButtonText}" MinWidth="96"

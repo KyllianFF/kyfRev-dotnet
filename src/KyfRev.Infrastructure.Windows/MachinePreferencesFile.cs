@@ -52,6 +52,9 @@ public sealed class MachinePreferencesFile : IMachinePreferencesStore
     {
         ["sans"] = ReadingFont.Sans,
         ["serif"] = ReadingFont.Serif,
+        ["manuscrite"] = ReadingFont.Handwriting,
+        ["feutre"] = ReadingFont.Marker,
+        ["machine"] = ReadingFont.Typewriter,
     };
 
     private readonly string _file;
@@ -88,6 +91,39 @@ public sealed class MachinePreferencesFile : IMachinePreferencesStore
             writer.WriteNumber("format", Format);
             writer.WriteString("theme", Name(Themes, preferences.Theme));
             writer.WriteNumber("zoom", preferences.Zoom);
+            writer.WriteNumber("zoomFiche", preferences.SheetZoom);
+            // La mise en page ne s'écrit que si elle a été choisie : un fichier sans elle se lit comme avant.
+            if (preferences.Page.IsPaged)
+            {
+                writer.WriteString("miseEnPage", preferences.Page.Written());
+            }
+            if (preferences.SheetPages.Items.Count > 0)
+            {
+                writer.WriteStartObject("misesEnPage");
+                foreach (var (sheet, layout) in preferences.SheetPages.Items)
+                {
+                    writer.WriteString(sheet, layout.Written());
+                }
+                writer.WriteEndObject();
+            }
+            if (preferences.Paper != PaperChoices.Default)
+            {
+                writer.WriteBoolean("papier", preferences.Paper.IsOn);
+                writer.WriteStartObject("papiers");
+                foreach (var format in PaperStyles.Formats)
+                {
+                    writer.WriteString(PaperStyles.FormatName(format), PaperStyles.Name(preferences.Paper.Of(format)));
+                }
+                writer.WriteEndObject();
+            }
+            if (preferences.MenuOrder.Length > 0)
+            {
+                writer.WriteString("menu", preferences.MenuOrder);
+            }
+            if (preferences.Shortcuts.Length > 0)
+            {
+                writer.WriteString("raccourcis", preferences.Shortcuts);
+            }
             writer.WriteString("largeur", Name(Widths, preferences.Width));
             writer.WriteString("taille", Name(TextSizes, preferences.TextSize));
             writer.WriteString("interligne", Name(LineSpacings, preferences.LineSpacing));
@@ -124,6 +160,12 @@ public sealed class MachinePreferencesFile : IMachinePreferencesStore
         {
             Theme = Choice(root, "theme", Themes, defaults.Theme),
             Zoom = Number(root, "zoom", defaults.Zoom),
+            SheetZoom = Number(root, "zoomFiche", defaults.SheetZoom),
+            Page = PageLayout.Parse(root.TryGetProperty("miseEnPage", out var page) && page.ValueKind == JsonValueKind.String ? page.GetString() : null),
+            SheetPages = SheetPages(root),
+            Paper = Paper(root),
+            MenuOrder = Text(root, "menu"),
+            Shortcuts = Text(root, "raccourcis"),
             Width = Choice(root, "largeur", Widths, defaults.Width),
             TextSize = Choice(root, "taille", TextSizes, defaults.TextSize),
             LineSpacing = Choice(root, "interligne", LineSpacings, defaults.LineSpacing),
@@ -146,6 +188,38 @@ public sealed class MachinePreferencesFile : IMachinePreferencesStore
     private static T Choice<T>(JsonElement root, string name, Dictionary<string, T> names, T fallback)
         where T : struct, Enum =>
         root.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String && names.TryGetValue(value.GetString()!, out var known) ? known : fallback;
+
+    private static string Text(JsonElement root, string name) =>
+        root.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String ? value.GetString() ?? string.Empty : string.Empty;
+
+    private static PaperChoices Paper(JsonElement root)
+    {
+        var choices = PaperChoices.Default with { IsOn = Flag(root, "papier", false) };
+        if (root.TryGetProperty("papiers", out var papers) && papers.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var format in PaperStyles.Formats)
+            {
+                if (papers.TryGetProperty(PaperStyles.FormatName(format), out var name) && name.ValueKind == JsonValueKind.String)
+                {
+                    choices = choices.With(format, PaperStyles.Parse(name.GetString()));
+                }
+            }
+        }
+        return choices;
+    }
+
+    private static SheetPageLayouts SheetPages(JsonElement root)
+    {
+        var layouts = SheetPageLayouts.None;
+        if (root.TryGetProperty("misesEnPage", out var pages) && pages.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var entry in pages.EnumerateObject().Where(entry => entry.Name.Length > 0 && entry.Value.ValueKind == JsonValueKind.String))
+            {
+                layouts = layouts.With(entry.Name, PageLayout.Parse(entry.Value.GetString()));
+            }
+        }
+        return layouts;
+    }
 
     private static double Number(JsonElement root, string name, double fallback) =>
         root.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.Number && value.GetDouble() > 0 ? value.GetDouble() : fallback;

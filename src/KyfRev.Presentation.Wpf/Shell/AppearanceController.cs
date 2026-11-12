@@ -103,6 +103,9 @@ public sealed partial class AppearanceController : ObservableObject, IDisposable
     /// <summary>Ce qui dépasse de l'écran d'une fenêtre agrandie, en pixels.</summary>
     internal WindowOverhang MaximizedOverhang(nint window) => _chrome.MaximizedOverhang(window);
 
+    /// <summary>Ce qui se voit vraiment de la fenêtre, en pixels ; vide si Windows ne le dit pas.</summary>
+    internal ScreenBounds VisibleBounds(nint window) => _chrome.VisibleBounds(window);
+
     /// <summary>L'espace de travail de l'écran où se trouve la fenêtre, en pixels.</summary>
     internal ScreenArea WorkArea(nint window) => _chrome.WorkArea(window);
 

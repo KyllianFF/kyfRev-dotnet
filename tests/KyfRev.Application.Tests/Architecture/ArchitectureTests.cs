@@ -165,6 +165,7 @@ public sealed partial class ArchitectureTests
             ["KyfRev.Infrastructure.Vault/Files/VaultLock.cs"] = 1,
             ["KyfRev.Infrastructure.Windows/DiagnosticLog.cs"] = 1,
             ["KyfRev.Presentation.Wpf/Editing/DiagramEditorViewModel.cs"] = 1,
+            ["KyfRev.Presentation.Wpf/Pages/ImageMaskDialog.xaml.cs"] = 1,
             ["KyfRev.Presentation.Wpf/Pages/SheetsPage.xaml.cs"] = 2,
         };
         string Code(string file) => CodeOnly(File.ReadAllText(Path.Combine(src, file)));

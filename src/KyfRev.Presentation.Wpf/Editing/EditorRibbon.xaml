@@ -4,7 +4,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:kyf="clr-namespace:KyfRev.DesignSystem.Controls;assembly=KyfRev.DesignSystem"
              xmlns:sys="clr-namespace:System;assembly=mscorlib"
-             xmlns:editing="clr-namespace:KyfRev.Presentation.Wpf.Editing">
+             xmlns:editing="clr-namespace:KyfRev.Presentation.Wpf.Editing"
+             x:Name="Root">
   <UserControl.Resources>
     <BooleanToVisibilityConverter x:Key="Visible" />
     <editing:ColorBrushConverter x:Key="ColorBrush" />
@@ -108,16 +109,15 @@
           <ToggleButton x:Name="MarkdownToggle" Style="{DynamicResource Kyf.Button.Tool}" Padding="12,0" Content="{x:Static editing:EditingText.ShowMarkdown}" IsChecked="{Binding IsMarkdownOn}" IsEnabled="{Binding IsVisualAvailable}" />
         </StackPanel>
         <StackPanel Orientation="Horizontal">
-          <ToggleButton x:Name="HomeTab" Style="{DynamicResource Kyf.Button.Tab}" Content="{x:Static editing:EditingText.Home}" IsChecked="True" Click="OnHomeTab" />
-          <ToggleButton x:Name="InsertTab" Style="{DynamicResource Kyf.Button.Tab}" Content="{x:Static editing:EditingText.Insert}" Click="OnInsertTab" />
+          <ToggleButton x:Name="HomeTab" Style="{DynamicResource Kyf.Button.Tab}" Height="{DynamicResource Kyf.Target.Tab}" VerticalAlignment="Bottom" Content="{x:Static editing:EditingText.Home}" IsChecked="True" Click="OnHomeTab" />
+          <ToggleButton x:Name="InsertTab" Style="{DynamicResource Kyf.Button.Tab}" Height="{DynamicResource Kyf.Target.Tab}" VerticalAlignment="Bottom" Content="{x:Static editing:EditingText.Insert}" Click="OnInsertTab" />
+          <ToggleButton x:Name="PageTab" Style="{DynamicResource Kyf.Button.Tab}" Height="{DynamicResource Kyf.Target.Tab}" VerticalAlignment="Bottom" Content="{x:Static editing:EditingText.PageTab}" Click="OnPageTab" Visibility="Collapsed" />
           <!-- L'onglet du tableau : il n'existe que le curseur dans un tableau, comme dans Word. -->
-          <ToggleButton x:Name="TableTab" Style="{DynamicResource Kyf.Button.Tab}" Click="OnTableTab" AutomationProperties.Name="{x:Static editing:EditingText.TableTab}"
-                        Visibility="{Binding IsInTable, Converter={StaticResource Visible}, FallbackValue=Collapsed}">
-            <StackPanel Orientation="Horizontal">
-              <kyf:Icon Text="{x:Static kyf:Icons.Table}" FontSize="12" Foreground="{DynamicResource Kyf.Brush.Primary}" Margin="0,0,8,0" VerticalAlignment="Center" />
-              <TextBlock Text="{x:Static editing:EditingText.TableTab}" VerticalAlignment="Center" />
-            </StackPanel>
-          </ToggleButton>
+          <ToggleButton x:Name="TableTab" Style="{DynamicResource Kyf.Button.Tab}" Height="{DynamicResource Kyf.Target.Tab}" VerticalAlignment="Bottom" Click="OnTableTab" AutomationProperties.Name="{x:Static editing:EditingText.TableTab}"
+                        Visibility="{Binding IsInTable, Converter={StaticResource Visible}, FallbackValue=Collapsed}" Content="{x:Static editing:EditingText.TableTab}" />
+          <!-- L'onglet de l'image : il n'existe qu'une image choisie. -->
+          <ToggleButton x:Name="ImageTab" Style="{DynamicResource Kyf.Button.Tab}" Height="{DynamicResource Kyf.Target.Tab}" VerticalAlignment="Bottom" Click="OnImageTab" AutomationProperties.Name="{x:Static editing:EditingText.ImageTab}"
+                        Visibility="{Binding IsOnImage, Converter={StaticResource Visible}, FallbackValue=Collapsed}" Content="{x:Static editing:EditingText.ImageTab}" />
         </StackPanel>
       </DockPanel>
 
@@ -260,130 +260,148 @@
 
         <WrapPanel x:Name="TablePanel" Visibility="Collapsed">
           <HeaderedContentControl Style="{StaticResource Group}" Header="{x:Static editing:EditingText.HeadersGroup}">
-            <StackPanel>
-                <CheckBox x:Name="HeaderRowBox" Content="{x:Static editing:EditingText.HeaderRow}" Margin="0,0,0,2" Command="{Binding ChangeTableCommand}" CommandParameter="enteteLigne"
-                          IsChecked="{Binding Tools.Table.HeaderRow, Mode=OneWay}" />
-                <CheckBox x:Name="HeaderColumnBox" Content="{x:Static editing:EditingText.HeaderColumn}" Margin="0,0,0,2" Command="{Binding ChangeTableCommand}" CommandParameter="enteteColonne"
-                          IsChecked="{Binding Tools.Table.HeaderColumn, Mode=OneWay}" />
-                <CheckBox x:Name="TotalRowBox" Content="{x:Static editing:EditingText.TotalRow}" Margin="0,0,0,2" Command="{Binding ChangeTableCommand}" CommandParameter="total"
-                          IsChecked="{Binding Tools.Table.Total, Mode=OneWay}" />
-            </StackPanel>
+            <UniformGrid HorizontalAlignment="Left" Rows="2" Columns="2">
+                <CheckBox x:Name="HeaderRowBox" Style="{DynamicResource Kyf.Button.Tool}" Margin="0,0,2,0" AutomationProperties.Name="{x:Static editing:EditingText.HeaderRow}" ToolTip="{x:Static editing:EditingText.HeaderRow}" Command="{Binding ChangeTableCommand}" CommandParameter="enteteLigne"
+                          IsChecked="{Binding Tools.Table.HeaderRow, Mode=OneWay}">
+                  <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.HeaderRow}" />
+                </CheckBox>
+                <CheckBox x:Name="HeaderColumnBox" Style="{DynamicResource Kyf.Button.Tool}" Margin="0,0,2,0" AutomationProperties.Name="{x:Static editing:EditingText.HeaderColumn}" ToolTip="{x:Static editing:EditingText.HeaderColumn}" Command="{Binding ChangeTableCommand}" CommandParameter="enteteColonne"
+                          IsChecked="{Binding Tools.Table.HeaderColumn, Mode=OneWay}">
+                  <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.HeaderColumn}" />
+                </CheckBox>
+                <CheckBox x:Name="TotalRowBox" Style="{DynamicResource Kyf.Button.Tool}" Margin="0,0,2,0" AutomationProperties.Name="{x:Static editing:EditingText.TotalRow}" ToolTip="{x:Static editing:EditingText.TotalRow}" Command="{Binding ChangeTableCommand}" CommandParameter="total"
+                          IsChecked="{Binding Tools.Table.Total, Mode=OneWay}">
+                  <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.TotalRow}" />
+                </CheckBox>
+            </UniformGrid>
           </HeaderedContentControl>
 
           <HeaderedContentControl Style="{StaticResource Group}" Header="{x:Static editing:EditingText.BandsGroup}">
-            <StackPanel>
-                <RadioButton x:Name="BandsNoneChoice" GroupName="TableBands" Content="{x:Static editing:EditingText.BandsNone}" Margin="0,0,12,2" Command="{Binding ChangeTableCommand}" CommandParameter="bandes=aucune"
-                             IsChecked="{Binding Tools.Table.Bands, Mode=OneWay, Converter={StaticResource TableChoice}, ConverterParameter=aucune}" />
-                <RadioButton x:Name="BandsRowsChoice" GroupName="TableBands" Content="{x:Static editing:EditingText.BandsRows}" Margin="0,0,12,2" Command="{Binding ChangeTableCommand}" CommandParameter="bandes=lignes"
-                             IsChecked="{Binding Tools.Table.Bands, Mode=OneWay, Converter={StaticResource TableChoice}, ConverterParameter=lignes}" />
-                <RadioButton x:Name="BandsColumnsChoice" GroupName="TableBands" Content="{x:Static editing:EditingText.BandsColumns}" Margin="0,0,12,2" Command="{Binding ChangeTableCommand}" CommandParameter="bandes=colonnes"
-                             IsChecked="{Binding Tools.Table.Bands, Mode=OneWay, Converter={StaticResource TableChoice}, ConverterParameter=colonnes}" />
-            </StackPanel>
+            <UniformGrid HorizontalAlignment="Left" Rows="2" Columns="2">
+                <RadioButton x:Name="BandsNoneChoice" Style="{DynamicResource Kyf.Button.Tool}" Margin="0,0,2,0" AutomationProperties.Name="{x:Static editing:EditingText.BandsNone}" ToolTip="{x:Static editing:EditingText.BandsNone}" GroupName="TableBands" Command="{Binding ChangeTableCommand}" CommandParameter="bandes=aucune"
+                             IsChecked="{Binding Tools.Table.Bands, Mode=OneWay, Converter={StaticResource TableChoice}, ConverterParameter=aucune}">
+                  <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.BandsNone}" />
+                </RadioButton>
+                <RadioButton x:Name="BandsRowsChoice" Style="{DynamicResource Kyf.Button.Tool}" Margin="0,0,2,0" AutomationProperties.Name="{x:Static editing:EditingText.BandsRows}" ToolTip="{x:Static editing:EditingText.BandsRows}" GroupName="TableBands" Command="{Binding ChangeTableCommand}" CommandParameter="bandes=lignes"
+                             IsChecked="{Binding Tools.Table.Bands, Mode=OneWay, Converter={StaticResource TableChoice}, ConverterParameter=lignes}">
+                  <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.BandsRows}" />
+                </RadioButton>
+                <RadioButton x:Name="BandsColumnsChoice" Style="{DynamicResource Kyf.Button.Tool}" Margin="0,0,2,0" AutomationProperties.Name="{x:Static editing:EditingText.BandsColumns}" ToolTip="{x:Static editing:EditingText.BandsColumns}" GroupName="TableBands" Command="{Binding ChangeTableCommand}" CommandParameter="bandes=colonnes"
+                             IsChecked="{Binding Tools.Table.Bands, Mode=OneWay, Converter={StaticResource TableChoice}, ConverterParameter=colonnes}">
+                  <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.BandsColumns}" />
+                </RadioButton>
+            </UniformGrid>
           </HeaderedContentControl>
 
           <HeaderedContentControl Style="{StaticResource Group}" Header="{x:Static editing:EditingText.LinesGroup}">
-            <UniformGrid Columns="2">
-                <RadioButton x:Name="LinesAllChoice" GroupName="TableLines" Content="{x:Static editing:EditingText.LinesAll}" Margin="0,0,12,2" Command="{Binding ChangeTableCommand}" CommandParameter="traits=tous"
-                             IsChecked="{Binding Tools.Table.Lines, Mode=OneWay, Converter={StaticResource TableChoice}, ConverterParameter=tous}" />
-                <RadioButton x:Name="LinesHorizontalChoice" GroupName="TableLines" Content="{x:Static editing:EditingText.LinesHorizontal}" Margin="0,0,12,2" Command="{Binding ChangeTableCommand}" CommandParameter="traits=horizontaux"
-                             IsChecked="{Binding Tools.Table.Lines, Mode=OneWay, Converter={StaticResource TableChoice}, ConverterParameter=horizontaux}" />
-                <RadioButton x:Name="LinesVerticalChoice" GroupName="TableLines" Content="{x:Static editing:EditingText.LinesVertical}" Margin="0,0,12,2" Command="{Binding ChangeTableCommand}" CommandParameter="traits=verticaux"
-                             IsChecked="{Binding Tools.Table.Lines, Mode=OneWay, Converter={StaticResource TableChoice}, ConverterParameter=verticaux}" />
-                <RadioButton x:Name="LinesOutlineChoice" GroupName="TableLines" Content="{x:Static editing:EditingText.LinesOutline}" Margin="0,0,12,2" Command="{Binding ChangeTableCommand}" CommandParameter="traits=contour"
-                             IsChecked="{Binding Tools.Table.Lines, Mode=OneWay, Converter={StaticResource TableChoice}, ConverterParameter=contour}" />
-                <RadioButton x:Name="LinesHeaderChoice" GroupName="TableLines" Content="{x:Static editing:EditingText.LinesHeader}" Margin="0,0,12,2" Command="{Binding ChangeTableCommand}" CommandParameter="traits=entete"
-                             IsChecked="{Binding Tools.Table.Lines, Mode=OneWay, Converter={StaticResource TableChoice}, ConverterParameter=entete}" />
-                <RadioButton x:Name="LinesNoneChoice" GroupName="TableLines" Content="{x:Static editing:EditingText.LinesNone}" Margin="0,0,12,2" Command="{Binding ChangeTableCommand}" CommandParameter="traits=aucun"
-                             IsChecked="{Binding Tools.Table.Lines, Mode=OneWay, Converter={StaticResource TableChoice}, ConverterParameter=aucun}" />
+            <UniformGrid HorizontalAlignment="Left" Rows="2" Columns="3">
+                <RadioButton x:Name="LinesAllChoice" Style="{DynamicResource Kyf.Button.Tool}" Margin="0,0,2,0" AutomationProperties.Name="{x:Static editing:EditingText.LinesAll}" ToolTip="{x:Static editing:EditingText.LinesAll}" GroupName="TableLines" Command="{Binding ChangeTableCommand}" CommandParameter="traits=tous"
+                             IsChecked="{Binding Tools.Table.Lines, Mode=OneWay, Converter={StaticResource TableChoice}, ConverterParameter=tous}">
+                  <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.LinesAll}" />
+                </RadioButton>
+                <RadioButton x:Name="LinesHorizontalChoice" Style="{DynamicResource Kyf.Button.Tool}" Margin="0,0,2,0" AutomationProperties.Name="{x:Static editing:EditingText.LinesHorizontal}" ToolTip="{x:Static editing:EditingText.LinesHorizontal}" GroupName="TableLines" Command="{Binding ChangeTableCommand}" CommandParameter="traits=horizontaux"
+                             IsChecked="{Binding Tools.Table.Lines, Mode=OneWay, Converter={StaticResource TableChoice}, ConverterParameter=horizontaux}">
+                  <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.LinesHorizontal}" />
+                </RadioButton>
+                <RadioButton x:Name="LinesVerticalChoice" Style="{DynamicResource Kyf.Button.Tool}" Margin="0,0,2,0" AutomationProperties.Name="{x:Static editing:EditingText.LinesVertical}" ToolTip="{x:Static editing:EditingText.LinesVertical}" GroupName="TableLines" Command="{Binding ChangeTableCommand}" CommandParameter="traits=verticaux"
+                             IsChecked="{Binding Tools.Table.Lines, Mode=OneWay, Converter={StaticResource TableChoice}, ConverterParameter=verticaux}">
+                  <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.LinesVertical}" />
+                </RadioButton>
+                <RadioButton x:Name="LinesOutlineChoice" Style="{DynamicResource Kyf.Button.Tool}" Margin="0,0,2,0" AutomationProperties.Name="{x:Static editing:EditingText.LinesOutline}" ToolTip="{x:Static editing:EditingText.LinesOutline}" GroupName="TableLines" Command="{Binding ChangeTableCommand}" CommandParameter="traits=contour"
+                             IsChecked="{Binding Tools.Table.Lines, Mode=OneWay, Converter={StaticResource TableChoice}, ConverterParameter=contour}">
+                  <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.LinesOutline}" />
+                </RadioButton>
+                <RadioButton x:Name="LinesHeaderChoice" Style="{DynamicResource Kyf.Button.Tool}" Margin="0,0,2,0" AutomationProperties.Name="{x:Static editing:EditingText.LinesHeader}" ToolTip="{x:Static editing:EditingText.LinesHeader}" GroupName="TableLines" Command="{Binding ChangeTableCommand}" CommandParameter="traits=entete"
+                             IsChecked="{Binding Tools.Table.Lines, Mode=OneWay, Converter={StaticResource TableChoice}, ConverterParameter=entete}">
+                  <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.LinesHeader}" />
+                </RadioButton>
+                <RadioButton x:Name="LinesNoneChoice" Style="{DynamicResource Kyf.Button.Tool}" Margin="0,0,2,0" AutomationProperties.Name="{x:Static editing:EditingText.LinesNone}" ToolTip="{x:Static editing:EditingText.LinesNone}" GroupName="TableLines" Command="{Binding ChangeTableCommand}" CommandParameter="traits=aucun"
+                             IsChecked="{Binding Tools.Table.Lines, Mode=OneWay, Converter={StaticResource TableChoice}, ConverterParameter=aucun}">
+                  <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.LinesNone}" />
+                </RadioButton>
             </UniformGrid>
           </HeaderedContentControl>
 
           <HeaderedContentControl Style="{StaticResource Group}" Header="{x:Static editing:EditingText.ThemeGroup}">
-            <UniformGrid Columns="3">
-                <RadioButton x:Name="ThemeSoberChoice" GroupName="TableTheme" Margin="0,0,12,2" Command="{Binding ChangeTableCommand}" CommandParameter="theme=sobre"
+            <UniformGrid HorizontalAlignment="Left" Columns="3">
+                <RadioButton x:Name="ThemeSoberChoice" GroupName="TableTheme" Style="{DynamicResource Kyf.Button.Tool}" Margin="0,0,2,0" ToolTip="{x:Static editing:EditingText.ThemeSober}" Command="{Binding ChangeTableCommand}" CommandParameter="theme=sobre"
                              IsChecked="{Binding Tools.Table.Theme, Mode=OneWay, Converter={StaticResource TableChoice}, ConverterParameter=sobre}" AutomationProperties.Name="{x:Static editing:EditingText.ThemeSober}">
                   <StackPanel Orientation="Horizontal">
-                    <Border Width="24" Height="16" BorderThickness="1" BorderBrush="{DynamicResource Kyf.Brush.Divider}" Margin="0,0,8,0" VerticalAlignment="Center">
+                    <Border Width="24" Height="16" BorderThickness="1" BorderBrush="{DynamicResource Kyf.Brush.Divider}" VerticalAlignment="Center">
                       <Grid>
                         <Grid.RowDefinitions><RowDefinition Height="6" /><RowDefinition Height="*" /></Grid.RowDefinitions>
                         <Border Background="{DynamicResource Kyf.Brush.SurfaceAlt}" />
                         <Border Grid.Row="1" Background="{DynamicResource Kyf.Brush.TableSoberBand}" />
                       </Grid>
                     </Border>
-                    <TextBlock Text="{x:Static editing:EditingText.ThemeSober}" VerticalAlignment="Center" />
                   </StackPanel>
                 </RadioButton>
-                <RadioButton x:Name="ThemeForestChoice" GroupName="TableTheme" Margin="0,0,12,2" Command="{Binding ChangeTableCommand}" CommandParameter="theme=foret"
+                <RadioButton x:Name="ThemeForestChoice" GroupName="TableTheme" Style="{DynamicResource Kyf.Button.Tool}" Margin="0,0,2,0" ToolTip="{x:Static editing:EditingText.ThemeForest}" Command="{Binding ChangeTableCommand}" CommandParameter="theme=foret"
                              IsChecked="{Binding Tools.Table.Theme, Mode=OneWay, Converter={StaticResource TableChoice}, ConverterParameter=foret}" AutomationProperties.Name="{x:Static editing:EditingText.ThemeForest}">
                   <StackPanel Orientation="Horizontal">
-                    <Border Width="24" Height="16" BorderThickness="1" BorderBrush="{DynamicResource Kyf.Brush.TableForestLine}" Margin="0,0,8,0" VerticalAlignment="Center">
+                    <Border Width="24" Height="16" BorderThickness="1" BorderBrush="{DynamicResource Kyf.Brush.TableForestLine}" VerticalAlignment="Center">
                       <Grid>
                         <Grid.RowDefinitions><RowDefinition Height="6" /><RowDefinition Height="*" /></Grid.RowDefinitions>
                         <Border Background="{DynamicResource Kyf.Brush.TableForestHeader}" />
                         <Border Grid.Row="1" Background="{DynamicResource Kyf.Brush.TableForestBand}" />
                       </Grid>
                     </Border>
-                    <TextBlock Text="{x:Static editing:EditingText.ThemeForest}" VerticalAlignment="Center" />
                   </StackPanel>
                 </RadioButton>
-                <RadioButton x:Name="ThemeAmberChoice" GroupName="TableTheme" Margin="0,0,12,2" Command="{Binding ChangeTableCommand}" CommandParameter="theme=ambre"
+                <RadioButton x:Name="ThemeAmberChoice" GroupName="TableTheme" Style="{DynamicResource Kyf.Button.Tool}" Margin="0,0,2,0" ToolTip="{x:Static editing:EditingText.ThemeAmber}" Command="{Binding ChangeTableCommand}" CommandParameter="theme=ambre"
                              IsChecked="{Binding Tools.Table.Theme, Mode=OneWay, Converter={StaticResource TableChoice}, ConverterParameter=ambre}" AutomationProperties.Name="{x:Static editing:EditingText.ThemeAmber}">
                   <StackPanel Orientation="Horizontal">
-                    <Border Width="24" Height="16" BorderThickness="1" BorderBrush="{DynamicResource Kyf.Brush.TableAmberLine}" Margin="0,0,8,0" VerticalAlignment="Center">
+                    <Border Width="24" Height="16" BorderThickness="1" BorderBrush="{DynamicResource Kyf.Brush.TableAmberLine}" VerticalAlignment="Center">
                       <Grid>
                         <Grid.RowDefinitions><RowDefinition Height="6" /><RowDefinition Height="*" /></Grid.RowDefinitions>
                         <Border Background="{DynamicResource Kyf.Brush.TableAmberHeader}" />
                         <Border Grid.Row="1" Background="{DynamicResource Kyf.Brush.TableAmberBand}" />
                       </Grid>
                     </Border>
-                    <TextBlock Text="{x:Static editing:EditingText.ThemeAmber}" VerticalAlignment="Center" />
                   </StackPanel>
                 </RadioButton>
-                <RadioButton x:Name="ThemeSlateChoice" GroupName="TableTheme" Margin="0,0,12,2" Command="{Binding ChangeTableCommand}" CommandParameter="theme=ardoise"
+                <RadioButton x:Name="ThemeSlateChoice" GroupName="TableTheme" Style="{DynamicResource Kyf.Button.Tool}" Margin="0,0,2,0" ToolTip="{x:Static editing:EditingText.ThemeSlate}" Command="{Binding ChangeTableCommand}" CommandParameter="theme=ardoise"
                              IsChecked="{Binding Tools.Table.Theme, Mode=OneWay, Converter={StaticResource TableChoice}, ConverterParameter=ardoise}" AutomationProperties.Name="{x:Static editing:EditingText.ThemeSlate}">
                   <StackPanel Orientation="Horizontal">
-                    <Border Width="24" Height="16" BorderThickness="1" BorderBrush="{DynamicResource Kyf.Brush.TableSlateLine}" Margin="0,0,8,0" VerticalAlignment="Center">
+                    <Border Width="24" Height="16" BorderThickness="1" BorderBrush="{DynamicResource Kyf.Brush.TableSlateLine}" VerticalAlignment="Center">
                       <Grid>
                         <Grid.RowDefinitions><RowDefinition Height="6" /><RowDefinition Height="*" /></Grid.RowDefinitions>
                         <Border Background="{DynamicResource Kyf.Brush.TableSlateHeader}" />
                         <Border Grid.Row="1" Background="{DynamicResource Kyf.Brush.TableSlateBand}" />
                       </Grid>
                     </Border>
-                    <TextBlock Text="{x:Static editing:EditingText.ThemeSlate}" VerticalAlignment="Center" />
                   </StackPanel>
                 </RadioButton>
-                <RadioButton x:Name="ThemePlumChoice" GroupName="TableTheme" Margin="0,0,12,2" Command="{Binding ChangeTableCommand}" CommandParameter="theme=prune"
+                <RadioButton x:Name="ThemePlumChoice" GroupName="TableTheme" Style="{DynamicResource Kyf.Button.Tool}" Margin="0,0,2,0" ToolTip="{x:Static editing:EditingText.ThemePlum}" Command="{Binding ChangeTableCommand}" CommandParameter="theme=prune"
                              IsChecked="{Binding Tools.Table.Theme, Mode=OneWay, Converter={StaticResource TableChoice}, ConverterParameter=prune}" AutomationProperties.Name="{x:Static editing:EditingText.ThemePlum}">
                   <StackPanel Orientation="Horizontal">
-                    <Border Width="24" Height="16" BorderThickness="1" BorderBrush="{DynamicResource Kyf.Brush.TablePlumLine}" Margin="0,0,8,0" VerticalAlignment="Center">
+                    <Border Width="24" Height="16" BorderThickness="1" BorderBrush="{DynamicResource Kyf.Brush.TablePlumLine}" VerticalAlignment="Center">
                       <Grid>
                         <Grid.RowDefinitions><RowDefinition Height="6" /><RowDefinition Height="*" /></Grid.RowDefinitions>
                         <Border Background="{DynamicResource Kyf.Brush.TablePlumHeader}" />
                         <Border Grid.Row="1" Background="{DynamicResource Kyf.Brush.TablePlumBand}" />
                       </Grid>
                     </Border>
-                    <TextBlock Text="{x:Static editing:EditingText.ThemePlum}" VerticalAlignment="Center" />
                   </StackPanel>
                 </RadioButton>
-                <RadioButton x:Name="ThemeInkChoice" GroupName="TableTheme" Margin="0,0,12,2" Command="{Binding ChangeTableCommand}" CommandParameter="theme=encre"
+                <RadioButton x:Name="ThemeInkChoice" GroupName="TableTheme" Style="{DynamicResource Kyf.Button.Tool}" Margin="0,0,2,0" ToolTip="{x:Static editing:EditingText.ThemeInk}" Command="{Binding ChangeTableCommand}" CommandParameter="theme=encre"
                              IsChecked="{Binding Tools.Table.Theme, Mode=OneWay, Converter={StaticResource TableChoice}, ConverterParameter=encre}" AutomationProperties.Name="{x:Static editing:EditingText.ThemeInk}">
                   <StackPanel Orientation="Horizontal">
-                    <Border Width="24" Height="16" BorderThickness="1" BorderBrush="{DynamicResource Kyf.Brush.TableInkLine}" Margin="0,0,8,0" VerticalAlignment="Center">
+                    <Border Width="24" Height="16" BorderThickness="1" BorderBrush="{DynamicResource Kyf.Brush.TableInkLine}" VerticalAlignment="Center">
                       <Grid>
                         <Grid.RowDefinitions><RowDefinition Height="6" /><RowDefinition Height="*" /></Grid.RowDefinitions>
                         <Border Background="{DynamicResource Kyf.Brush.TableInkHeader}" />
                         <Border Grid.Row="1" Background="{DynamicResource Kyf.Brush.TableInkBand}" />
                       </Grid>
                     </Border>
-                    <TextBlock Text="{x:Static editing:EditingText.ThemeInk}" VerticalAlignment="Center" />
                   </StackPanel>
                 </RadioButton>
             </UniformGrid>
           </HeaderedContentControl>
 
           <HeaderedContentControl Style="{StaticResource Group}" Header="{x:Static editing:EditingText.ColumnGroup}">
-            <StackPanel>
-              <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
+            <UniformGrid HorizontalAlignment="Left" Rows="2" Columns="3">
+              
                   <RadioButton x:Name="ColumnLeftChoice" GroupName="TableAlign" Style="{DynamicResource Kyf.Button.Tool}" Command="{Binding ChangeTableCommand}" CommandParameter="aligner=left"
                                IsChecked="{Binding Tools.Table.ColumnAlign, Mode=OneWay, Converter={StaticResource TableChoice}, ConverterParameter=left}"
                                ToolTip="{x:Static editing:EditingText.ColumnLeft}" AutomationProperties.Name="{x:Static editing:EditingText.ColumnLeft}">
@@ -399,42 +417,257 @@
                                ToolTip="{x:Static editing:EditingText.ColumnRight}" AutomationProperties.Name="{x:Static editing:EditingText.ColumnRight}">
                     <kyf:Icon Text="{x:Static kyf:Icons.AlignRight}" />
                   </RadioButton>
-              </StackPanel>
-                <CheckBox x:Name="HiddenInReviewBox" Content="{x:Static editing:EditingText.HiddenInReview}" ToolTip="{x:Static editing:EditingText.HiddenInReviewHelp}" Margin="0,0,0,2"
-                          Command="{Binding ChangeTableCommand}" CommandParameter="reviser" IsChecked="{Binding Tools.Table.ColumnHidden, Mode=OneWay}" />
-                <Button x:Name="SortButton" Style="{DynamicResource Kyf.Button.Subtle}" Content="{x:Static editing:EditingText.SortRows}" ToolTip="{x:Static editing:EditingText.SortRowsHelp}"
-                        HorizontalAlignment="Left" Command="{Binding ChangeTableCommand}" CommandParameter="trier" IsEnabled="{Binding Tools.Table.Sortable, FallbackValue=False}" />
-            </StackPanel>
+              
+                <CheckBox x:Name="HiddenInReviewBox" Style="{DynamicResource Kyf.Button.Tool}" Margin="0,0,2,0" AutomationProperties.Name="{x:Static editing:EditingText.HiddenInReview}" ToolTip="{x:Static editing:EditingText.HiddenInReviewHelp}"
+                          Command="{Binding ChangeTableCommand}" CommandParameter="reviser" IsChecked="{Binding Tools.Table.ColumnHidden, Mode=OneWay}">
+                  <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.HideColumn}" />
+                </CheckBox>
+                <Button x:Name="SortButton" Style="{DynamicResource Kyf.Button.Tool}" Margin="0,0,2,0" AutomationProperties.Name="{x:Static editing:EditingText.SortRows}" ToolTip="{x:Static editing:EditingText.SortRowsHelp}" Command="{Binding ChangeTableCommand}" CommandParameter="trier" IsEnabled="{Binding Tools.Table.Sortable, FallbackValue=False}">
+                  <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.Sort}" />
+                </Button>
+            </UniformGrid>
           </HeaderedContentControl>
 
           <HeaderedContentControl Style="{StaticResource Group}" Header="{x:Static editing:EditingText.RowsColumnsGroup}">
-            <UniformGrid Columns="3">
-                <Button x:Name="RowBeforeButton" Style="{DynamicResource Kyf.Button.Tool}" Content="{x:Static editing:EditingText.RowBeforeShort}" Padding="8,2" Margin="0,0,2,2" HorizontalContentAlignment="Left"
-                        ToolTip="{x:Static editing:EditingText.RowBefore}" AutomationProperties.Name="{x:Static editing:EditingText.RowBefore}" Command="{Binding ChangeTableCommand}" CommandParameter="action=rowBefore" />
-                <Button x:Name="RowAfterButton" Style="{DynamicResource Kyf.Button.Tool}" Content="{x:Static editing:EditingText.RowAfterShort}" Padding="8,2" Margin="0,0,2,2" HorizontalContentAlignment="Left"
-                        ToolTip="{x:Static editing:EditingText.RowAfter}" AutomationProperties.Name="{x:Static editing:EditingText.RowAfter}" Command="{Binding ChangeTableCommand}" CommandParameter="action=rowAfter" />
-                <Button x:Name="DeleteRowButton" Style="{DynamicResource Kyf.Button.Tool}" Content="{x:Static editing:EditingText.DeleteRowShort}" Padding="8,2" Margin="0,0,2,2" HorizontalContentAlignment="Left"
-                        ToolTip="{x:Static editing:EditingText.DeleteRow}" AutomationProperties.Name="{x:Static editing:EditingText.DeleteRow}" Command="{Binding ChangeTableCommand}" CommandParameter="action=deleteRow" />
-                <Button x:Name="ColumnBeforeButton" Style="{DynamicResource Kyf.Button.Tool}" Content="{x:Static editing:EditingText.ColumnBeforeShort}" Padding="8,2" Margin="0,0,2,2" HorizontalContentAlignment="Left"
-                        ToolTip="{x:Static editing:EditingText.ColumnBefore}" AutomationProperties.Name="{x:Static editing:EditingText.ColumnBefore}" Command="{Binding ChangeTableCommand}" CommandParameter="action=columnBefore" />
-                <Button x:Name="ColumnAfterButton" Style="{DynamicResource Kyf.Button.Tool}" Content="{x:Static editing:EditingText.ColumnAfterShort}" Padding="8,2" Margin="0,0,2,2" HorizontalContentAlignment="Left"
-                        ToolTip="{x:Static editing:EditingText.ColumnAfter}" AutomationProperties.Name="{x:Static editing:EditingText.ColumnAfter}" Command="{Binding ChangeTableCommand}" CommandParameter="action=columnAfter" />
-                <Button x:Name="DeleteColumnButton" Style="{DynamicResource Kyf.Button.Tool}" Content="{x:Static editing:EditingText.DeleteColumnShort}" Padding="8,2" Margin="0,0,2,2" HorizontalContentAlignment="Left"
-                        ToolTip="{x:Static editing:EditingText.DeleteColumn}" AutomationProperties.Name="{x:Static editing:EditingText.DeleteColumn}" Command="{Binding ChangeTableCommand}" CommandParameter="action=deleteColumn" />
-                <Button x:Name="DeleteTableButton" Style="{DynamicResource Kyf.Button.Tool}" Content="{x:Static editing:EditingText.DeleteTableShort}" Padding="8,2" Margin="0,0,2,2" HorizontalContentAlignment="Left"
-                        ToolTip="{x:Static editing:EditingText.DeleteTable}" AutomationProperties.Name="{x:Static editing:EditingText.DeleteTable}" Command="{Binding ChangeTableCommand}" CommandParameter="action=deleteTable" />
+            <UniformGrid HorizontalAlignment="Left" Rows="2" Columns="4">
+                <Button x:Name="RowBeforeButton" Style="{DynamicResource Kyf.Button.Tool}" Margin="0,0,2,0"
+                        ToolTip="{x:Static editing:EditingText.RowBefore}" AutomationProperties.Name="{x:Static editing:EditingText.RowBefore}" Command="{Binding ChangeTableCommand}" CommandParameter="action=rowBefore">
+                  <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.RowAbove}" />
+                </Button>
+                <Button x:Name="RowAfterButton" Style="{DynamicResource Kyf.Button.Tool}" Margin="0,0,2,0"
+                        ToolTip="{x:Static editing:EditingText.RowAfter}" AutomationProperties.Name="{x:Static editing:EditingText.RowAfter}" Command="{Binding ChangeTableCommand}" CommandParameter="action=rowAfter">
+                  <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.RowBelow}" />
+                </Button>
+                <Button x:Name="DeleteRowButton" Style="{DynamicResource Kyf.Button.Tool}" Margin="0,0,2,0"
+                        ToolTip="{x:Static editing:EditingText.DeleteRow}" AutomationProperties.Name="{x:Static editing:EditingText.DeleteRow}" Command="{Binding ChangeTableCommand}" CommandParameter="action=deleteRow">
+                  <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.RowDelete}" />
+                </Button>
+                <Button x:Name="ColumnBeforeButton" Style="{DynamicResource Kyf.Button.Tool}" Margin="0,0,2,0"
+                        ToolTip="{x:Static editing:EditingText.ColumnBefore}" AutomationProperties.Name="{x:Static editing:EditingText.ColumnBefore}" Command="{Binding ChangeTableCommand}" CommandParameter="action=columnBefore">
+                  <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.ColumnLeft}" />
+                </Button>
+                <Button x:Name="ColumnAfterButton" Style="{DynamicResource Kyf.Button.Tool}" Margin="0,0,2,0"
+                        ToolTip="{x:Static editing:EditingText.ColumnAfter}" AutomationProperties.Name="{x:Static editing:EditingText.ColumnAfter}" Command="{Binding ChangeTableCommand}" CommandParameter="action=columnAfter">
+                  <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.ColumnRight}" />
+                </Button>
+                <Button x:Name="DeleteColumnButton" Style="{DynamicResource Kyf.Button.Tool}" Margin="0,0,2,0"
+                        ToolTip="{x:Static editing:EditingText.DeleteColumn}" AutomationProperties.Name="{x:Static editing:EditingText.DeleteColumn}" Command="{Binding ChangeTableCommand}" CommandParameter="action=deleteColumn">
+                  <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.ColumnDelete}" />
+                </Button>
+                <Button x:Name="DeleteTableButton" Style="{DynamicResource Kyf.Button.Tool}" Margin="0,0,2,0"
+                        ToolTip="{x:Static editing:EditingText.DeleteTable}" AutomationProperties.Name="{x:Static editing:EditingText.DeleteTable}" Command="{Binding ChangeTableCommand}" CommandParameter="action=deleteTable">
+                  <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.TableDelete}" />
+                </Button>
             </UniformGrid>
           </HeaderedContentControl>
 
           <HeaderedContentControl Style="{StaticResource Group}" Header="{x:Static editing:EditingText.WidthGroup}">
             <StackPanel>
-                <RadioButton x:Name="WidthPageChoice" GroupName="TableWidth" Content="{x:Static editing:EditingText.WidthPage}" Margin="0,0,12,2" Command="{Binding ChangeTableCommand}" CommandParameter="largeur=page"
-                             IsChecked="{Binding Tools.Table.Width, Mode=OneWay, Converter={StaticResource TableChoice}, ConverterParameter=page}" />
-                <RadioButton x:Name="WidthFitChoice" GroupName="TableWidth" Content="{x:Static editing:EditingText.WidthFit}" Margin="0,0,12,2" Command="{Binding ChangeTableCommand}" CommandParameter="largeur=ajustee"
-                             IsChecked="{Binding Tools.Table.Width, Mode=OneWay, Converter={StaticResource TableChoice}, ConverterParameter=ajustee}" />
+                <RadioButton x:Name="WidthPageChoice" Style="{DynamicResource Kyf.Button.Tool}" Margin="0,0,2,0" AutomationProperties.Name="{x:Static editing:EditingText.WidthPage}" ToolTip="{x:Static editing:EditingText.WidthPage}" GroupName="TableWidth" Command="{Binding ChangeTableCommand}" CommandParameter="largeur=page"
+                             IsChecked="{Binding Tools.Table.Width, Mode=OneWay, Converter={StaticResource TableChoice}, ConverterParameter=page}">
+                  <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.WidthPage}" />
+                </RadioButton>
+                <RadioButton x:Name="WidthFitChoice" Style="{DynamicResource Kyf.Button.Tool}" Margin="0,0,2,0" AutomationProperties.Name="{x:Static editing:EditingText.WidthFit}" ToolTip="{x:Static editing:EditingText.WidthFit}" GroupName="TableWidth" Command="{Binding ChangeTableCommand}" CommandParameter="largeur=ajustee"
+                             IsChecked="{Binding Tools.Table.Width, Mode=OneWay, Converter={StaticResource TableChoice}, ConverterParameter=ajustee}">
+                  <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.WidthFit}" />
+                </RadioButton>
             </StackPanel>
           </HeaderedContentControl>
 
+        </WrapPanel>
+
+        <!-- L'image choisie : sa taille, sa place, son cadre, ses masques et sa description. Tout s'écrit dans son titre Markdown. -->
+        <!-- Mise en page : la feuille de la fiche, son orientation, ses marges, et pour quelles fiches le choix vaut. -->
+        <WrapPanel x:Name="PagePanel" Visibility="Collapsed" DataContext="{Binding PageSetup, ElementName=Root}">
+          <HeaderedContentControl Style="{StaticResource Group}" Header="{x:Static editing:EditingText.PageSheetGroup}">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+              <Button x:Name="PageEndlessChoice" Style="{DynamicResource Kyf.Button.Tool}" Margin="0,0,2,0" Tag="{Binding IsEndless}" Command="{Binding SetFormatCommand}" CommandParameter="Endless"
+                      ToolTip="{x:Static editing:EditingText.PageEndless}" AutomationProperties.Name="{x:Static editing:EditingText.PageEndless}">
+                <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.PageEndless}" />
+              </Button>
+              <Button x:Name="PageA4Choice" Style="{DynamicResource Kyf.Button.Tool}" Margin="0,0,2,0" Tag="{Binding IsA4}" Command="{Binding SetFormatCommand}" CommandParameter="A4"
+                      ToolTip="{x:Static editing:EditingText.PageA4}" AutomationProperties.Name="{x:Static editing:EditingText.PageA4}">
+                <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.PageA4}" />
+              </Button>
+              <Button x:Name="PageA5Choice" Style="{DynamicResource Kyf.Button.Tool}" Margin="0,0,2,0" Tag="{Binding IsA5}" Command="{Binding SetFormatCommand}" CommandParameter="A5"
+                      ToolTip="{x:Static editing:EditingText.PageA5}" AutomationProperties.Name="{x:Static editing:EditingText.PageA5}">
+                <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.PageA5}" />
+              </Button>
+              <Button x:Name="PageA6Choice" Style="{DynamicResource Kyf.Button.Tool}" Margin="0,0,2,0" Tag="{Binding IsA6}" Command="{Binding SetFormatCommand}" CommandParameter="A6"
+                      ToolTip="{x:Static editing:EditingText.PageA6}" AutomationProperties.Name="{x:Static editing:EditingText.PageA6}">
+                <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.PageA6}" />
+              </Button>
+            </StackPanel>
+          </HeaderedContentControl>
+          <HeaderedContentControl Style="{StaticResource Group}" Header="{x:Static editing:EditingText.PageOrientationGroup}" IsEnabled="{Binding IsPaged, FallbackValue=False}">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+              <Button x:Name="PagePortraitChoice" Style="{DynamicResource Kyf.Button.Tool}" Margin="0,0,2,0" Tag="{Binding IsPortrait}" Command="{Binding SetOrientationCommand}" CommandParameter="portrait"
+                      ToolTip="{x:Static editing:EditingText.PagePortrait}" AutomationProperties.Name="{x:Static editing:EditingText.PagePortrait}">
+                <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.PagePortrait}" />
+              </Button>
+              <Button x:Name="PageLandscapeChoice" Style="{DynamicResource Kyf.Button.Tool}" Margin="0,0,2,0" Tag="{Binding IsLandscape}" Command="{Binding SetOrientationCommand}" CommandParameter="landscape"
+                      ToolTip="{x:Static editing:EditingText.PageLandscape}" AutomationProperties.Name="{x:Static editing:EditingText.PageLandscape}">
+                <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.PageLandscape}" />
+              </Button>
+            </StackPanel>
+          </HeaderedContentControl>
+          <HeaderedContentControl Style="{StaticResource Group}" Header="{x:Static editing:EditingText.PageMarginsGroup}" IsEnabled="{Binding IsPaged, FallbackValue=False}">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+              <Button x:Name="MarginsNarrowChoice" Style="{DynamicResource Kyf.Button.Tool}" Margin="0,0,2,0" Tag="{Binding IsNarrow}" Command="{Binding SetMarginCommand}" CommandParameter="narrow"
+                      ToolTip="{x:Static editing:EditingText.PageMarginsNarrow}" AutomationProperties.Name="{x:Static editing:EditingText.PageMarginsNarrow}">
+                <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.MarginsNarrow}" />
+              </Button>
+              <Button x:Name="MarginsNormalChoice" Style="{DynamicResource Kyf.Button.Tool}" Margin="0,0,2,0" Tag="{Binding IsNormal}" Command="{Binding SetMarginCommand}" CommandParameter="normal"
+                      ToolTip="{x:Static editing:EditingText.PageMarginsNormal}" AutomationProperties.Name="{x:Static editing:EditingText.PageMarginsNormal}">
+                <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.MarginsNormal}" />
+              </Button>
+              <Button x:Name="MarginsWideChoice" Style="{DynamicResource Kyf.Button.Tool}" Margin="0,0,2,0" Tag="{Binding IsWide}" Command="{Binding SetMarginCommand}" CommandParameter="wide"
+                      ToolTip="{x:Static editing:EditingText.PageMarginsWide}" AutomationProperties.Name="{x:Static editing:EditingText.PageMarginsWide}">
+                <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.MarginsWide}" />
+              </Button>
+              <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.MarginsCustom}" VerticalAlignment="Center" Margin="10,0,6,0" ToolTip="{x:Static editing:EditingText.PageMarginsCustom}" IsHitTestVisible="True" />
+              <Button x:Name="MarginLessButton" Style="{DynamicResource Kyf.Button.Tool}" Content="−" Command="{Binding NudgeMarginCommand}" CommandParameter="-"
+                      ToolTip="{x:Static editing:EditingText.PageMarginLess}" AutomationProperties.Name="{x:Static editing:EditingText.PageMarginLess}" />
+              <TextBox x:Name="MarginBox" Width="64" MinHeight="0" Padding="8,2" VerticalAlignment="Center" Text="{Binding MarginText, UpdateSourceTrigger=LostFocus}" KeyDown="OnSizeBoxKey"
+                       FontFamily="{DynamicResource Kyf.Font.Code}" ToolTip="{x:Static editing:EditingText.PageMarginsCustom}" AutomationProperties.Name="{x:Static editing:EditingText.PageMarginsCustom}" />
+              <Button x:Name="MarginMoreButton" Style="{DynamicResource Kyf.Button.Tool}" Content="+" Command="{Binding NudgeMarginCommand}" CommandParameter="+"
+                      ToolTip="{x:Static editing:EditingText.PageMarginMore}" AutomationProperties.Name="{x:Static editing:EditingText.PageMarginMore}" />
+              <TextBlock Text="{x:Static editing:EditingText.PageCentimetres}" Style="{DynamicResource Kyf.Text.Secondary}" VerticalAlignment="Center" Margin="4,0,0,0" />
+            </StackPanel>
+          </HeaderedContentControl>
+          <!-- Le papier derrière le texte : un décor de l'écran, réglé une fois pour chaque type de feuille. Le premier bouton l'allume ou l'éteint. -->
+          <HeaderedContentControl x:Name="PaperGroup" Style="{StaticResource Group}" Header="{x:Static editing:EditingText.PaperGroup}">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+              <Button x:Name="PaperToggleButton" Style="{DynamicResource Kyf.Button.Tool}" Margin="0,0,2,0" Tag="{Binding IsPaperOn}" Command="{Binding TogglePaperCommand}"
+                      ToolTip="{x:Static editing:EditingText.PaperToggle}" AutomationProperties.Name="{x:Static editing:EditingText.PaperToggle}">
+                <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.PaperToggle}" />
+              </Button>
+              <Border Width="1" Margin="6,4,8,4" Background="{DynamicResource Kyf.Brush.Divider}" />
+              <Button x:Name="PaperPlainChoice" Style="{DynamicResource Kyf.Button.Tool}" Margin="0,0,2,0" Tag="{Binding IsPaperPlain}" Command="{Binding SetPaperCommand}" CommandParameter="uni"
+                      ToolTip="{x:Static editing:EditingText.PaperPlain}" AutomationProperties.Name="{x:Static editing:EditingText.PaperPlain}">
+                <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.PaperPlain}" />
+              </Button>
+              <Button x:Name="PaperSmallSquaresChoice" Style="{DynamicResource Kyf.Button.Tool}" Margin="0,0,2,0" Tag="{Binding IsPaperSmallSquares}" Command="{Binding SetPaperCommand}" CommandParameter="petits-carreaux"
+                      ToolTip="{x:Static editing:EditingText.PaperSmallSquares}" AutomationProperties.Name="{x:Static editing:EditingText.PaperSmallSquares}">
+                <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.PaperSmallSquares}" />
+              </Button>
+              <Button x:Name="PaperLargeSquaresChoice" Style="{DynamicResource Kyf.Button.Tool}" Margin="0,0,2,0" Tag="{Binding IsPaperLargeSquares}" Command="{Binding SetPaperCommand}" CommandParameter="grands-carreaux"
+                      ToolTip="{x:Static editing:EditingText.PaperLargeSquares}" AutomationProperties.Name="{x:Static editing:EditingText.PaperLargeSquares}">
+                <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.PaperLargeSquares}" />
+              </Button>
+              <Button x:Name="PaperLinesChoice" Style="{DynamicResource Kyf.Button.Tool}" Margin="0,0,2,0" Tag="{Binding IsPaperLines}" Command="{Binding SetPaperCommand}" CommandParameter="lignes"
+                      ToolTip="{x:Static editing:EditingText.PaperLines}" AutomationProperties.Name="{x:Static editing:EditingText.PaperLines}">
+                <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.PaperLines}" />
+              </Button>
+              <Button x:Name="PaperDotsChoice" Style="{DynamicResource Kyf.Button.Tool}" Margin="0,0,2,0" Tag="{Binding IsPaperDots}" Command="{Binding SetPaperCommand}" CommandParameter="points"
+                      ToolTip="{x:Static editing:EditingText.PaperDots}" AutomationProperties.Name="{x:Static editing:EditingText.PaperDots}">
+                <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.PaperDots}" />
+              </Button>
+              <Button x:Name="PaperGraphChoice" Style="{DynamicResource Kyf.Button.Tool}" Margin="0,0,2,0" Tag="{Binding IsPaperGraph}" Command="{Binding SetPaperCommand}" CommandParameter="millimetre"
+                      ToolTip="{x:Static editing:EditingText.PaperGraph}" AutomationProperties.Name="{x:Static editing:EditingText.PaperGraph}">
+                <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.PaperGraph}" />
+              </Button>
+            </StackPanel>
+          </HeaderedContentControl>
+          <HeaderedContentControl Style="{StaticResource Group}" Header="{x:Static editing:EditingText.PageScopeGroup}">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+              <Button x:Name="PageScopeSheetChoice" Style="{DynamicResource Kyf.Button.Tool}" Padding="12,0" Margin="0,0,2,0" Tag="{Binding AppliesToSheet}" Command="{Binding SetScopeCommand}" CommandParameter="sheet"
+                      Content="{x:Static editing:EditingText.PageScopeSheet}" ToolTip="{x:Static editing:EditingText.PageScopeSheetHelp}" />
+              <Button x:Name="PageScopeAllChoice" Style="{DynamicResource Kyf.Button.Tool}" Padding="12,0" Tag="{Binding AppliesToAll}" Command="{Binding SetScopeCommand}" CommandParameter="all"
+                      Content="{x:Static editing:EditingText.PageScopeAll}" ToolTip="{x:Static editing:EditingText.PageScopeAllHelp}" />
+            </StackPanel>
+          </HeaderedContentControl>
+        </WrapPanel>
+
+        <WrapPanel x:Name="ImagePanel" Visibility="Collapsed">
+          <TextBlock x:Name="ImageCaptionNotice" Text="{x:Static editing:EditingText.ImageCaption}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" MaxWidth="520" Margin="8,4,16,4"
+                     Visibility="{Binding ShowsImageCaption, Converter={StaticResource Visible}, FallbackValue=Collapsed}" />
+          <!-- Taille, comme dans un traitement de texte : rogner, puis la hauteur et la largeur, en centimètres. -->
+          <HeaderedContentControl Style="{StaticResource Group}" Header="{x:Static editing:EditingText.ImageSizeGroup}" IsEnabled="{Binding CanChangeImage}">
+            <StackPanel Orientation="Horizontal">
+              <Button x:Name="ImageCropButton" Style="{DynamicResource Kyf.Button.ToolLarge}" Command="{Binding CropImageCommand}" Margin="0,0,8,0"
+                      ToolTip="{x:Static editing:EditingText.ImageCrop}" AutomationProperties.Name="{x:Static editing:EditingText.ImageCrop}">
+                <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.Crop}" Width="28" Height="28" />
+              </Button>
+              <Grid VerticalAlignment="Center">
+                <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="Auto" />
+                  <ColumnDefinition Width="Auto" />
+                  <ColumnDefinition Width="Auto" />
+                  <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                  <RowDefinition Height="Auto" />
+                  <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+                <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.Height}" VerticalAlignment="Center" Margin="0,0,8,0" ToolTip="{x:Static editing:EditingText.ImageHeight}" IsHitTestVisible="True" />
+                <TextBox x:Name="ImageHeightBox" Grid.Column="1" Width="84" MinHeight="0" Padding="8,2" Margin="0,0,0,2" Text="{Binding ImageHeightCm, UpdateSourceTrigger=LostFocus}" KeyDown="OnSizeBoxKey"
+                         FontFamily="{DynamicResource Kyf.Font.Code}" ToolTip="{x:Static editing:EditingText.ImageSizeHelp}" AutomationProperties.Name="{x:Static editing:EditingText.ImageHeight}" />
+                <editing:RibbonGlyph Grid.Row="1" Icon="{x:Static editing:RibbonIcons.Width}" VerticalAlignment="Center" Margin="0,0,8,0" ToolTip="{x:Static editing:EditingText.ImageWidth}" IsHitTestVisible="True" />
+                <TextBox x:Name="ImageWidthBox" Grid.Row="1" Grid.Column="1" Width="84" MinHeight="0" Padding="8,2" Text="{Binding ImageWidthCm, UpdateSourceTrigger=LostFocus}" KeyDown="OnSizeBoxKey"
+                         FontFamily="{DynamicResource Kyf.Font.Code}" ToolTip="{x:Static editing:EditingText.ImageSizeHelp}" AutomationProperties.Name="{x:Static editing:EditingText.ImageWidth}" />
+                <Button x:Name="ImageNarrowerButton" Grid.RowSpan="2" Grid.Column="2" Style="{DynamicResource Kyf.Button.Tool}" Content="−" Margin="4,0,0,0" Command="{Binding NudgeImageWidthCommand}" CommandParameter="-5"
+                        ToolTip="{x:Static editing:EditingText.ImageNarrower}" AutomationProperties.Name="{x:Static editing:EditingText.ImageNarrower}" />
+                <Button x:Name="ImageWiderButton" Grid.RowSpan="2" Grid.Column="3" Style="{DynamicResource Kyf.Button.Tool}" Content="+" Command="{Binding NudgeImageWidthCommand}" CommandParameter="5"
+                        ToolTip="{x:Static editing:EditingText.ImageWider}" AutomationProperties.Name="{x:Static editing:EditingText.ImageWider}" />
+              </Grid>
+            </StackPanel>
+          </HeaderedContentControl>
+
+          <!-- Position : dans le texte, ou seule sur sa ligne, à gauche, au centre ou à droite. Le choix en cours ressort. -->
+          <HeaderedContentControl Style="{StaticResource Group}" Header="{x:Static editing:EditingText.ImagePlaceGroup}" IsEnabled="{Binding CanChangeImage}">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+              <Button x:Name="ImageInlineChoice" Style="{DynamicResource Kyf.Button.Tool}" Tag="{Binding Tools.Image.IsInline}" Command="{Binding ChangeImageCommand}" CommandParameter="align=fil"
+                      ToolTip="{x:Static editing:EditingText.ImageInline}" AutomationProperties.Name="{x:Static editing:EditingText.ImageInline}">
+                <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.PlaceInline}" />
+              </Button>
+              <Button x:Name="ImageLeftChoice" Style="{DynamicResource Kyf.Button.Tool}" Tag="{Binding Tools.Image.IsLeft}" Command="{Binding ChangeImageCommand}" CommandParameter="align=gauche"
+                      ToolTip="{x:Static editing:EditingText.ImageLeft}" AutomationProperties.Name="{x:Static editing:EditingText.ImageLeft}">
+                <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.PlaceLeft}" />
+              </Button>
+              <Button x:Name="ImageCenterChoice" Style="{DynamicResource Kyf.Button.Tool}" Tag="{Binding Tools.Image.IsCenter}" Command="{Binding ChangeImageCommand}" CommandParameter="align=centre"
+                      ToolTip="{x:Static editing:EditingText.ImageCenter}" AutomationProperties.Name="{x:Static editing:EditingText.ImageCenter}">
+                <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.PlaceCenter}" />
+              </Button>
+              <Button x:Name="ImageRightChoice" Style="{DynamicResource Kyf.Button.Tool}" Tag="{Binding Tools.Image.IsRight}" Command="{Binding ChangeImageCommand}" CommandParameter="align=droite"
+                      ToolTip="{x:Static editing:EditingText.ImageRight}" AutomationProperties.Name="{x:Static editing:EditingText.ImageRight}">
+                <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.PlaceRight}" />
+              </Button>
+            </StackPanel>
+          </HeaderedContentControl>
+
+          <HeaderedContentControl Style="{StaticResource Group}" Header="{x:Static editing:EditingText.ImageReviewGroup}" IsEnabled="{Binding CanChangeImage}">
+            <StackPanel Orientation="Horizontal">
+              <Button x:Name="ImageMaskButton" Style="{DynamicResource Kyf.Button.ToolLarge}" Command="{Binding MaskImageCommand}"
+                      ToolTip="{x:Static editing:EditingText.ImageMask}" AutomationProperties.Name="{x:Static editing:EditingText.ImageMask}">
+                <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.Masks}" Width="28" Height="28" />
+              </Button>
+              <TextBlock x:Name="ImageMasksLabel" Text="{Binding Tools.Image.MasksLabel}" Style="{DynamicResource Kyf.Text.Caption}" VerticalAlignment="Center" Margin="8,0,0,0" />
+            </StackPanel>
+          </HeaderedContentControl>
+
+          <HeaderedContentControl Style="{StaticResource Group}" Header="{x:Static editing:EditingText.ImageResetGroup}" IsEnabled="{Binding CanChangeImage}">
+            <UniformGrid Rows="2" Columns="2" VerticalAlignment="Center">
+              <Button x:Name="ImageNaturalButton" Style="{DynamicResource Kyf.Button.Tool}" Margin="0,0,2,0" Command="{Binding ChangeImageCommand}" CommandParameter="width="
+                      ToolTip="{x:Static editing:EditingText.ImageNatural}" AutomationProperties.Name="{x:Static editing:EditingText.ImageNatural}">
+                <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.Natural}" />
+              </Button>
+              <Button x:Name="ImageUncropButton" Style="{DynamicResource Kyf.Button.Tool}" Margin="0,0,2,0" Command="{Binding ChangeImageCommand}" CommandParameter="crop="
+                      IsEnabled="{Binding Tools.Image.IsCropped, FallbackValue=False}"
+                      ToolTip="{x:Static editing:EditingText.ImageUncrop}" AutomationProperties.Name="{x:Static editing:EditingText.ImageUncrop}">
+                <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.Whole}" />
+              </Button>
+              <Button x:Name="ImageResetButton" Style="{DynamicResource Kyf.Button.Tool}" Margin="0,0,2,0" Command="{Binding ChangeImageCommand}" CommandParameter="reset"
+                      ToolTip="{x:Static editing:EditingText.ImageReset}" AutomationProperties.Name="{x:Static editing:EditingText.ImageReset}">
+                <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.Reset}" />
+              </Button>
+            </UniformGrid>
+          </HeaderedContentControl>
+
+          <HeaderedContentControl Style="{StaticResource Group}" Header="{x:Static editing:EditingText.ImageAltGroup}">
+            <TextBox x:Name="ImageAltBox" Width="240" Text="{Binding ImageAlt, UpdateSourceTrigger=LostFocus}" ToolTip="{x:Static editing:EditingText.ImageAltHelp}"
+                     AutomationProperties.Name="{x:Static editing:EditingText.ImageAltGroup}" AutomationProperties.HelpText="{x:Static editing:EditingText.ImageAltHelp}" />
+          </HeaderedContentControl>
         </WrapPanel>
 
         <WrapPanel x:Name="InsertPanel" Visibility="Collapsed">
@@ -517,6 +750,24 @@
                 <StackPanel>
                   <kyf:Icon Text="{x:Static kyf:Icons.Rule}" FontSize="20" HorizontalAlignment="Center" />
                   <TextBlock Text="{x:Static editing:EditingText.Rule}" Style="{DynamicResource Kyf.Text.Caption}" Foreground="{DynamicResource Kyf.Brush.Text}" HorizontalAlignment="Center" />
+                </StackPanel>
+              </Button>
+            </StackPanel>
+          </HeaderedContentControl>
+          <!-- Les pages : seulement quand la fiche a une feuille (A4, A5, A6). -->
+          <HeaderedContentControl x:Name="PagesGroup" Style="{StaticResource Group}" Header="{x:Static editing:EditingText.PagesGroup}"
+                                  Visibility="{Binding PageSetup.IsPaged, ElementName=Root, Converter={StaticResource Visible}, FallbackValue=Collapsed}">
+            <StackPanel Orientation="Horizontal">
+              <Button x:Name="PageBreakButton" Style="{DynamicResource Kyf.Button.ToolLarge}" Command="{Binding InsertPageBreakCommand}" CommandParameter="break" ToolTip="{x:Static editing:EditingText.PageBreakHelp}" AutomationProperties.Name="{x:Static editing:EditingText.PageBreak}">
+                <StackPanel>
+                  <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.PageBreak}" Width="20" Height="20" HorizontalAlignment="Center" />
+                  <TextBlock Text="{x:Static editing:EditingText.PageBreak}" Style="{DynamicResource Kyf.Text.Caption}" Foreground="{DynamicResource Kyf.Brush.Text}" HorizontalAlignment="Center" />
+                </StackPanel>
+              </Button>
+              <Button x:Name="BlankPageButton" Style="{DynamicResource Kyf.Button.ToolLarge}" Command="{Binding InsertPageBreakCommand}" CommandParameter="blank" ToolTip="{x:Static editing:EditingText.BlankPageHelp}" AutomationProperties.Name="{x:Static editing:EditingText.BlankPage}">
+                <StackPanel>
+                  <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.BlankPage}" Width="20" Height="20" HorizontalAlignment="Center" />
+                  <TextBlock Text="{x:Static editing:EditingText.BlankPage}" Style="{DynamicResource Kyf.Text.Caption}" Foreground="{DynamicResource Kyf.Brush.Text}" HorizontalAlignment="Center" />
                 </StackPanel>
               </Button>
             </StackPanel>

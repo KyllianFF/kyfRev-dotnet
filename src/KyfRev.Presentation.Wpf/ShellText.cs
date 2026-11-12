@@ -35,6 +35,12 @@ public static class ShellText
     /// <summary>« Mode concentration ».</summary>
     public static string FocusMode => Text(nameof(FocusMode));
 
+    /// <summary>« Fiches » : le groupe des fiches et des notes trouvées par la recherche, qui ne porte pas le nom de la vue.</summary>
+    public static string SheetsGroup => Text(nameof(SheetsGroup));
+
+    /// <summary>« Masquer le menu (Ctrl+Maj+F) ».</summary>
+    public static string EnterFocusMode => Text(nameof(EnterFocusMode));
+
     /// <summary>« Afficher le menu (Ctrl+Maj+F) ».</summary>
     public static string ExitFocusMode => Text(nameof(ExitFocusMode));
 
@@ -169,6 +175,9 @@ public static class ShellText
 
     /// <summary>« Écrire dans la fiche, ou revenir à la lecture ».</summary>
     public static string ShortcutWrite => Text(nameof(ShortcutWrite));
+
+    /// <summary>« Imprimer la fiche : aperçu feuille par feuille, recto verso, copies ».</summary>
+    public static string ShortcutPrint => Text(nameof(ShortcutPrint));
 
     /// <summary>« Partager la fiche : PDF, page web à imprimer, Markdown ».</summary>
     public static string ShortcutShare => Text(nameof(ShortcutShare));

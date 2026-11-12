@@ -115,12 +115,15 @@
           <TextBlock x:Name="RowBadge" Text="{Binding Badge.Text}" Margin="8,0,0,0" VerticalAlignment="Center" FontFamily="{DynamicResource Kyf.Font.Code}"
                      FontSize="{DynamicResource Kyf.FontSize.Caption}" Visibility="{Binding Badge.IsShown, Converter={StaticResource Visible}, FallbackValue=Collapsed}" />
         </StackPanel>
-        <StackPanel x:Name="Stacked" Margin="-8,4" Visibility="Collapsed">
-          <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource NavigationGlyphTemplate}" HorizontalAlignment="Center" />
-          <TextBlock Text="{Binding Label}" FontSize="12" TextAlignment="Center" TextWrapping="WrapWithOverflow" Margin="0,2,0,0" />
-          <TextBlock x:Name="StackedBadge" Text="{Binding Badge.Text}" FontFamily="{DynamicResource Kyf.Font.Code}" FontSize="12" TextAlignment="Center"
-                     Visibility="{Binding Badge.IsShown, Converter={StaticResource Visible}, FallbackValue=Collapsed}" />
-        </StackPanel>
+        <!-- Dans la colonne d'icônes : l'icône seule, en grand, dans un carré ; le nom se lit au survol, le compteur d'une extension
+             se pose dans l'angle. Toutes les entrées ont ainsi la même taille. -->
+        <Grid x:Name="Stacked" Margin="-12,0" Width="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Height="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" Background="Transparent" ToolTip="{Binding Label}" Visibility="Collapsed">
+          <Viewbox Width="24" Height="24" HorizontalAlignment="Center" VerticalAlignment="Center">
+            <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource NavigationGlyphTemplate}" />
+          </Viewbox>
+          <TextBlock x:Name="StackedBadge" Text="{Binding Badge.Text}" FontFamily="{DynamicResource Kyf.Font.Code}" FontSize="10" HorizontalAlignment="Right" VerticalAlignment="Top"
+                     Margin="0,2,4,0" Visibility="{Binding Badge.IsShown, Converter={StaticResource Visible}, FallbackValue=Collapsed}" />
+        </Grid>
       </Grid>
       <DataTemplate.Triggers>
         <DataTrigger Binding="{Binding DataContext.Layout, RelativeSource={RelativeSource AncestorType=ListBox}}" Value="Rail">
@@ -128,6 +131,15 @@
           <Setter TargetName="Stacked" Property="Visibility" Value="Visible" />
         </DataTrigger>
       </DataTemplate.Triggers>
+    </DataTemplate>
+    <!-- Entrée du menu montré au survol : toujours l'icône et le libellé côte à côte. -->
+    <DataTemplate x:Key="PeekNavigationItemTemplate">
+      <StackPanel Orientation="Horizontal">
+        <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource NavigationGlyphTemplate}" Margin="0,0,12,0" VerticalAlignment="Center" />
+        <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
+        <TextBlock Text="{Binding Badge.Text}" Margin="8,0,0,0" VerticalAlignment="Center" FontFamily="{DynamicResource Kyf.Font.Code}"
+                   FontSize="{DynamicResource Kyf.FontSize.Caption}" Visibility="{Binding Badge.IsShown, Converter={StaticResource Visible}, FallbackValue=Collapsed}" />
+      </StackPanel>
     </DataTemplate>
     <!-- Onglet : l'icône, le libellé dessous. -->
     <DataTemplate x:Key="TabItemTemplate">
@@ -152,12 +164,12 @@
   </Window.Resources>
 
   <Window.InputBindings>
-    <KeyBinding Key="K" Modifiers="Control" Command="{Binding OpenPaletteCommand}" />
-    <KeyBinding Key="F1" Command="{Binding ShowHelpCommand}" />
-    <KeyBinding Key="F" Modifiers="Control+Shift" Command="{Binding ToggleFocusModeCommand}" />
-    <KeyBinding Key="L" Modifiers="Control+Shift" Command="{Binding LockCommand}" />
-    <KeyBinding Key="N" Modifiers="Control+Shift" Command="{Binding RequestCaptureCommand}" />
-    <KeyBinding Key="F11" Command="{Binding ToggleFullScreenCommand}" />
+    <KeyBinding shell:ShortcutMap.Id="recherche" Key="K" Modifiers="Control" Command="{Binding OpenPaletteCommand}" />
+    <KeyBinding shell:ShortcutMap.Id="aide" Key="F1" Command="{Binding ShowHelpCommand}" />
+    <KeyBinding shell:ShortcutMap.Id="concentration" Key="F" Modifiers="Control+Shift" Command="{Binding ToggleFocusModeCommand}" />
+    <KeyBinding shell:ShortcutMap.Id="verrouiller" Key="L" Modifiers="Control+Shift" Command="{Binding LockCommand}" />
+    <KeyBinding shell:ShortcutMap.Id="capture" Key="N" Modifiers="Control+Shift" Command="{Binding RequestCaptureCommand}" />
+    <KeyBinding shell:ShortcutMap.Id="plein-ecran" Key="F11" Command="{Binding ToggleFullScreenCommand}" />
     <KeyBinding Key="Escape" Command="{Binding ExitFullScreenCommand}" />
     <KeyBinding Key="OemPlus" Modifiers="Control" Command="{Binding ZoomInCommand}" />
     <KeyBinding Key="Add" Modifiers="Control" Command="{Binding ZoomInCommand}" />
@@ -206,13 +218,13 @@
           <ColumnDefinition Width="Auto" />
         </Grid.ColumnDefinitions>
 
-        <Border x:Name="AppTitle" Padding="24,0,8,0">
+        <Border x:Name="AppTitle" Padding="8,0,4,0">
           <Border.Style>
             <Style TargetType="Border">
               <Setter Property="Width" Value="248" />
               <Style.Triggers>
                 <DataTrigger Binding="{Binding Layout}" Value="Rail">
-                  <Setter Property="Width" Value="112" />
+                  <Setter Property="Width" Value="77" />
                 </DataTrigger>
                 <DataTrigger Binding="{Binding Layout}" Value="Tabs">
                   <Setter Property="Width" Value="Auto" />
@@ -225,8 +237,45 @@
           </Border.Style>
           <!-- L'icône de l'application et son nom, côte à côte. -->
           <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+            <!-- Masque le menu latéral ou le rend, juste au-dessus de lui. Menu masqué, le survoler le montre par-dessus la page, le
+                 temps que la souris y reste. Absent en plein écran et en fenêtre étroite, où il n'y a pas de menu latéral. -->
+            <Border x:Name="MenuButtonHost" Margin="0,0,4,0">
+              <Border.Style>
+                <Style TargetType="Border">
+                  <Style.Triggers>
+                    <DataTrigger Binding="{Binding CanToggleMenu}" Value="False">
+                      <Setter Property="Visibility" Value="Collapsed" />
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding IsWelcome}" Value="True">
+                      <Setter Property="Visibility" Value="Collapsed" />
+                    </DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </Border.Style>
+              <Button x:Name="ExitFocusButton" Command="{Binding ToggleFocusModeCommand}" Style="{DynamicResource Kyf.Button.Icon}" Width="36" Height="32"
+                      WindowChrome.IsHitTestVisibleInChrome="True" MouseEnter="OnMenuButtonEnter" MouseLeave="OnMenuPeekLeave" Click="OnMenuButtonClick"
+                      ToolTip="{Binding MenuToggleLabel}" AutomationProperties.Name="{Binding MenuToggleLabel}" AutomationProperties.AcceleratorKey="Ctrl+Maj+F">
+                <!-- Une fenêtre et son volet de gauche : dessinée ici, la police d'icônes n'a pas ce signe. -->
+                <Grid x:Name="MenuGlyph" Width="18" Height="14" SnapsToDevicePixels="True">
+                  <Border BorderThickness="1.5" CornerRadius="3" BorderBrush="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+                  <Border Width="3" HorizontalAlignment="Left" Margin="4,4,0,4" CornerRadius="1" Background="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+                </Grid>
+              </Button>
+            </Border>
             <Image x:Name="AppIcon" Width="16" Height="16" Margin="0,0,8,0" VerticalAlignment="Center" RenderOptions.BitmapScalingMode="HighQuality" />
-            <TextBlock Text="{x:Static p:ShellText.AppName}" Style="{DynamicResource Kyf.Text.BodyStrong}" VerticalAlignment="Center" />
+            <Border x:Name="AppNameHost" VerticalAlignment="Center">
+              <Border.Style>
+                <Style TargetType="Border">
+                  <Style.Triggers>
+                    <!-- Au-dessus de la colonne d'icônes, la place manque pour le nom à côté du bouton. -->
+                    <DataTrigger Binding="{Binding Layout}" Value="Rail">
+                      <Setter Property="Visibility" Value="Collapsed" />
+                    </DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </Border.Style>
+              <TextBlock x:Name="AppName" Text="{x:Static p:ShellText.AppName}" Style="{DynamicResource Kyf.Text.BodyStrong}" />
+            </Border>
           </StackPanel>
         </Border>
 
@@ -311,9 +360,6 @@
               </Style.Triggers>
             </Style>
           </StackPanel.Style>
-          <Button x:Name="ExitFocusButton" Command="{Binding ToggleFocusModeCommand}" Content="{x:Static kyf:Icons.FocusMode}" Style="{DynamicResource Kyf.Button.Icon}" Width="36" Height="32" FontSize="14"
-                  WindowChrome.IsHitTestVisibleInChrome="True" Visibility="{Binding IsFocusMode, Converter={StaticResource Visible}}"
-                  ToolTip="{x:Static p:ShellText.ExitFocusMode}" AutomationProperties.Name="{x:Static p:ShellText.ExitFocusMode}" AutomationProperties.AcceleratorKey="Ctrl+Maj+F" />
           <Button x:Name="ThemeButton" Command="{Binding ToggleThemeCommand}" Content="{Binding ThemeGlyph}" Style="{DynamicResource Kyf.Button.Icon}" Width="36" Height="32" FontSize="14"
                   WindowChrome.IsHitTestVisibleInChrome="True" Visibility="{Binding CanToggleTheme, Converter={StaticResource Visible}}"
                   ToolTip="{Binding ThemeLabel}" AutomationProperties.Name="{Binding ThemeLabel}" />
@@ -373,7 +419,7 @@
             <Setter Property="Width" Value="248" />
             <Style.Triggers>
               <DataTrigger Binding="{Binding Layout}" Value="Rail">
-                <Setter Property="Width" Value="112" />
+                <Setter Property="Width" Value="77" />
               </DataTrigger>
               <DataTrigger Binding="{Binding Layout}" Value="Tabs">
                 <Setter Property="Visibility" Value="Collapsed" />
@@ -396,6 +442,28 @@
       </Border>
 
       <ContentControl x:Name="Page" Grid.Column="1" Content="{Binding Current.Page}" Focusable="False" IsTabStop="False" />
+
+      <!-- Le menu masqué, montré le temps d'un survol de son bouton. Il est décrit ici, mais se pose dans une fenêtre à lui (voir
+           OpenPeek) : par-dessus la page, donc aussi devant le texte mis en forme, et sur toute la hauteur, ce qu'un Popup ne
+           permet pas (Windows le limite aux trois quarts de l'écran). -->
+      <Popup x:Name="MenuPeek" IsOpen="False">
+        <!-- L'angle bas gauche suit celui de la fenêtre, que Windows arrondit ; les autres restent droits, contre la barre de titre et la page. -->
+        <Border x:Name="MenuPeekCard" Background="{DynamicResource Kyf.Brush.Surface}" BorderBrush="{DynamicResource Kyf.Brush.Divider}" BorderThickness="0,0,1,0"
+                CornerRadius="0,0,0,7" MouseLeave="OnMenuPeekLeave">
+          <Border.LayoutTransform>
+            <ScaleTransform ScaleX="{Binding Zoom}" ScaleY="{Binding Zoom}" />
+          </Border.LayoutTransform>
+          <DockPanel Margin="12,12,12,12">
+            <StackPanel DockPanel.Dock="Bottom">
+              <Separator Margin="0,8" />
+              <ListBox x:Name="PeekSecondaryNavigation" ItemsSource="{Binding SecondaryNavigation}" SelectedItem="{Binding SelectedSecondary}"
+                       ItemTemplate="{StaticResource PeekNavigationItemTemplate}" AutomationProperties.Name="{x:Static p:ShellText.SecondaryNavigation}" />
+            </StackPanel>
+            <ListBox x:Name="PeekMainNavigation" ItemsSource="{Binding MainNavigation}" SelectedItem="{Binding SelectedMain}"
+                     ItemTemplate="{StaticResource PeekNavigationItemTemplate}" AutomationProperties.Name="{x:Static p:ShellText.MainNavigation}" />
+          </DockPanel>
+        </Border>
+      </Popup>
 
       <!-- Fenêtre étroite : les premières vues en onglets, les autres sous « Plus ». -->
       <Border x:Name="TabBar" Grid.Row="1" Grid.ColumnSpan="2" Padding="8" Style="{StaticResource TabsOnly}"

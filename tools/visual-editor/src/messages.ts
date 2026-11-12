@@ -12,6 +12,7 @@ export type VersEditeur =
   | { kind: "table"; rows: number; columns: number }
   | { kind: "tableAction"; action: string }
   | { kind: "tableLook"; change: string; value: string | null }
+  | { kind: "imageLook"; change: string; value: string | null }
   | { kind: "code"; language: string }
   | { kind: "rule" }
   | { kind: "askFormula" }
@@ -35,19 +36,25 @@ export type VersEditeur =
   | { kind: "insertDiagram"; language: string; code: string; position: number | null }
   | { kind: "diagram"; language: string; code: string; svg: string | null; image: string | null; editable: boolean }
   | { kind: "deleteBlock"; position: number }
-  | { kind: "showBlockCode"; position: number };
+  | { kind: "showBlockCode"; position: number }
+  | { kind: "setImageTitle"; position: number; title: string | null }
+  | { kind: "page"; width: number; height: number; margin: number }
+  | { kind: "pageBreak"; blank: boolean }
+  | { kind: "paper"; style: string; step: number };
 
 export type DepuisEditeur =
   | { kind: "ready" }
   | { kind: "edited" }
   | { kind: "text"; id: number | null; markdown: string }
   | { kind: "save" }
-  | { kind: "tools"; bold: boolean; italic: boolean; underline: boolean; strike: boolean; superscript: boolean; subscript: boolean; link: boolean; heading: number; inCode: boolean; list: "bullets" | "numbers" | "tasks" | null; table: boolean; color: string | null; size: string | null; align: "left" | "center" | "right" | "justify"; canUndo: boolean; canRedo: boolean; tableLook: { header: string; total: boolean; bands: string; lines: string; theme: string; hidden: number | null; width: string; column: number; columnAlign: string | null; sortable: boolean } | null; code: boolean; quote: boolean }
+  | { kind: "tools"; bold: boolean; italic: boolean; underline: boolean; strike: boolean; superscript: boolean; subscript: boolean; link: boolean; heading: number; inCode: boolean; list: "bullets" | "numbers" | "tasks" | null; table: boolean; color: string | null; size: string | null; align: "left" | "center" | "right" | "justify"; canUndo: boolean; canRedo: boolean; tableLook: { header: string; total: boolean; bands: string; lines: string; theme: string; hidden: number | null; width: string; column: number; columnAlign: string | null; sortable: boolean } | null; code: boolean; quote: boolean; imageLook: { position: number; address: string; title: string | null; alt: string; editable: boolean; width: number | null; align: string; crop: string | null; masks: number; shownWidth: number; shownHeight: number; room: number } | null }
   | { kind: "askLink"; label: string; address: string }
   | { kind: "askFormula"; position: number | null; tex: string; block: boolean }
   | { kind: "linkInput"; query: string | null; start: number; x: number; y: number }
   | { kind: "listKey"; key: string }
-  | { kind: "menu"; word: string | null; wordStart: number; hasSelection: boolean; inCode: boolean; inTable: boolean; onLink: boolean; drawingPosition: number | null; drawingLanguage: string | null; drawingCode: string | null }
+  | { kind: "menu"; word: string | null; wordStart: number; hasSelection: boolean; inCode: boolean; inTable: boolean; onLink: boolean; drawingPosition: number | null; drawingLanguage: string | null; drawingCode: string | null; imagePosition: number | null; imageAddress: string | null; imageTitle: string | null; bold: boolean; italic: boolean; underline: boolean; strike: boolean; codePosition: number | null }
   | { kind: "dropped"; name: string; base64: string | null; position: number | null }
+  | { kind: "zoom"; step: number }
+  | { kind: "pages"; count: number }
   | { kind: "askDiagram"; language: string; code: string }
   | { kind: "editDiagram"; language: string; code: string; position: number };

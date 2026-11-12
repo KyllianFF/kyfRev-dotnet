@@ -251,6 +251,60 @@ public static class ReviewText
     /// <summary>« Reprise à l'étape {0} : {1}. ».</summary>
     public static string ResumedOf(object step, object due) => Format("Resumed", step, due);
 
+    /// <summary>Le curseur du zoom de la fiche, pour un lecteur d'écran.</summary>
+    public const string SheetZoom = "Zoom de la fiche";
+
+    /// <summary>Le bouton qui rétrécit la fiche.</summary>
+    public const string SheetZoomOut = "Rétrécir la fiche";
+
+    /// <summary>Le bouton qui agrandit la fiche.</summary>
+    public const string SheetZoomIn = "Agrandir la fiche";
+
+    /// <summary>« A4 portrait · marges de 2 cm » : le format, l'orientation, les marges.</summary>
+    public const string PageSummary = "{0} {1} · marges de {2} cm";
+
+    /// <summary>L'orientation en hauteur, dans la ligne d'état.</summary>
+    public const string PagePortrait = "portrait";
+
+    /// <summary>L'orientation en largeur, dans la ligne d'état.</summary>
+    public const string PageLandscape = "paysage";
+
+    /// <summary>La ligne d'état d'une fiche d'une seule page.</summary>
+    public const string PageStatusOne = "{0} · 1 page";
+
+    /// <summary>La ligne d'état d'une fiche de plusieurs pages.</summary>
+    public const string PageStatusMany = "{0} · {1} pages";
+
+    /// <summary>Sous un bloc coupé par la fin d'une page.</summary>
+    public const string PageContinues = "suite page suivante";
+
+    /// <summary>Au-dessus d'un bloc qui reprend en haut d'une page.</summary>
+    public const string PageContinued = "suite";
+
+    /// <summary>Le bouton qui règle le zoom pour que la feuille tienne dans la largeur.</summary>
+    public const string PageFitWidth = "Ajuster à la largeur";
+
+    /// <summary>Le pourcentage, qui ramène à 100 % d'un clic.</summary>
+    public const string SheetZoomReset = "Revenir à 100 %";
+
+    /// <summary>« En faire une note ».</summary>
+    public static string MakeNoteAction => Text(nameof(MakeNoteAction));
+
+    /// <summary>« La fiche reste dans le coffre, mais sort des révisions. « Mettre en révision » l'y remet. ».</summary>
+    public static string MakeNoteHelp => Text(nameof(MakeNoteHelp));
+
+    /// <summary>« Mettre en révision ».</summary>
+    public static string PutInReviewAction => Text(nameof(PutInReviewAction));
+
+    /// <summary>« Note : elle n'entre pas dans les révisions. ».</summary>
+    public static string NoteStatus => Text(nameof(NoteStatus));
+
+    /// <summary>« C'est maintenant une note : elle n'entre plus dans les révisions. ».</summary>
+    public static string MadeNote => Text(nameof(MadeNote));
+
+    /// <summary>« En révision à l'étape {0} : {1}. ».</summary>
+    public static string PutInReviewOf(object step, object due) => Format("PutInReview", step, due);
+
     /// <summary>« J'avais oublié ».</summary>
     public static string Forgot => Text(nameof(Forgot));
 

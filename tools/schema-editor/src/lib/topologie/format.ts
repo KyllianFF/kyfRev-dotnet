@@ -19,6 +19,7 @@ import {
   GENRES_GROUPE,
   GENRES_INTERFACE,
   GENRES_RELATION,
+  type Ensemble,
   type Groupe,
   type GroupePorts,
   type IdVue,
@@ -356,6 +357,12 @@ function lireAffichage(valeur: unknown): Schema["affichage"] {
   return Object.keys(resultat).length ? resultat : undefined;
 }
 
+/** Un ensemble d'éléments groupés : au moins deux membres, sans doublon. */
+const lireEnsemble = (e: Brut): Ensemble => ({
+  id: identifiant(e.id),
+  membres: [...new Set(textes(e.membres, ELEMENTS_MAX).map(identifiant).filter(Boolean))],
+});
+
 const lireAnnotation = (n: Brut): Annotation => {
   const forme = parmi(n.forme, FORMES_ANNOTATION);
   return propre({
@@ -449,6 +456,7 @@ export function erreursStructurelles(schema: Schema): string[] {
       erreurs.push(`Groupe « ${g.nom} » : groupe parent absent.`);
   }
   for (const n of schema.annotations) unique(n.id, "annotation");
+  for (const e of schema.ensembles ?? []) unique(e.id, "ensemble groupé");
   return erreurs;
 }
 
@@ -456,6 +464,14 @@ export function erreursStructurelles(schema: Schema): string[] {
 function ranger(schema: Schema): void {
   const equipements = new Set(schema.equipements.map((e) => e.id));
   for (const g of schema.groupes) g.membres = g.membres.filter((m) => equipements.has(m));
+  // Un ensemble ne garde que ce qui existe encore, et chaque élément une seule fois ; à moins de deux, il n'est plus.
+  const groupables = new Set([...equipements, ...schema.annotations.map((n) => n.id), ...schema.groupes.map((g) => g.id)]);
+  const pris = new Set<string>();
+  const ensembles = (schema.ensembles ?? [])
+    .map((e) => ({ ...e, membres: e.membres.filter((m) => groupables.has(m) && !pris.has(m) && pris.add(m)) }))
+    .filter((e) => e.id && e.membres.length >= 2);
+  if (ensembles.length > 0) schema.ensembles = ensembles;
+  else delete schema.ensembles;
   const interfaces = new Set(schema.equipements.flatMap((e) => e.interfaces.map((i) => `${e.id}/${i.id}`)));
   for (const a of schema.agregats)
     a.membres = a.membres.filter((m) => interfaces.has(`${a.equipement}/${m}`));
@@ -512,6 +528,7 @@ export function lireSchema(source: string | unknown): Lecture {
     agregats: objets(brut.agregats).map(lireAgregat),
     groupes: objets(brut.groupes).map(lireGroupe),
     annotations: objets(brut.annotations).map(lireAnnotation),
+    ensembles: Array.isArray(brut.ensembles) ? objets(brut.ensembles).map(lireEnsemble) : undefined,
     vue: VUES.find((v) => v === brut.vue) ?? "physique",
     cablesCoudes: booleen(brut.cablesCoudes),
     affichage: lireAffichage(brut.affichage),

@@ -1,0 +1,154 @@
+<UserControl x:Class="KyfRev.Presentation.Wpf.Pages.PrintView"
+             x:ClassModifier="internal"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:kyf="clr-namespace:KyfRev.DesignSystem.Controls;assembly=KyfRev.DesignSystem"
+             xmlns:editing="clr-namespace:KyfRev.Presentation.Wpf.Editing"
+             xmlns:pages="clr-namespace:KyfRev.Presentation.Wpf.Pages">
+  <UserControl.Resources>
+    <BooleanToVisibilityConverter x:Key="Visible" />
+  </UserControl.Resources>
+
+  <!-- La fenêtre compacte : les réglages à gauche, une feuille à droite, que l'on feuillette. -->
+  <Grid>
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="340" />
+      <ColumnDefinition Width="*" MinWidth="300" />
+    </Grid.ColumnDefinitions>
+
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False" Margin="0,0,16,0">
+      <StackPanel Margin="2,0,8,0">
+        <kyf:Notification x:Name="PrintError" Severity="Critical" Message="{Binding Error}" IsOpen="{Binding HasError, Mode=OneWay}" IsClosable="False" Margin="0,0,0,12" />
+
+        <TextBlock Text="{x:Static pages:PrintText.Printer}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,0,0,4" />
+        <ComboBox x:Name="PrinterBox" ItemsSource="{Binding Printers}" SelectedItem="{Binding Printer}" AutomationProperties.Name="{x:Static pages:PrintText.Printer}" />
+        <TextBlock x:Name="LookingText" Text="{x:Static pages:PrintText.LookingForPrinters}" Style="{DynamicResource Kyf.Text.Secondary}" Margin="0,4,0,0"
+                   Visibility="{Binding IsLookingForPrinters, Converter={StaticResource Visible}}" />
+        <TextBlock x:Name="NoPrinterText" Text="{x:Static pages:PrintText.NoPrinter}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="0,4,0,0"
+                   Visibility="{Binding HasNoPrinter, Converter={StaticResource Visible}}" />
+
+        <Grid Margin="0,14,0,0">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="16" />
+            <ColumnDefinition Width="*" />
+          </Grid.ColumnDefinitions>
+          <StackPanel>
+            <TextBlock Text="{x:Static pages:PrintText.Copies}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,0,0,4" />
+            <StackPanel Orientation="Horizontal">
+              <Button x:Name="FewerCopiesButton" Style="{DynamicResource Kyf.Button.Tool}" Content="−" Command="{Binding NudgeCopiesCommand}" CommandParameter="-"
+                      ToolTip="{x:Static pages:PrintText.FewerCopies}" AutomationProperties.Name="{x:Static pages:PrintText.FewerCopies}" />
+              <TextBox x:Name="CopiesBox" Width="48" MinHeight="0" Padding="6,2" VerticalAlignment="Center" TextAlignment="Center" Text="{Binding Copies, UpdateSourceTrigger=LostFocus}"
+                       FontFamily="{DynamicResource Kyf.Font.Code}" AutomationProperties.Name="{x:Static pages:PrintText.Copies}" />
+              <Button x:Name="MoreCopiesButton" Style="{DynamicResource Kyf.Button.Tool}" Content="+" Command="{Binding NudgeCopiesCommand}" CommandParameter="+"
+                      ToolTip="{x:Static pages:PrintText.MoreCopies}" AutomationProperties.Name="{x:Static pages:PrintText.MoreCopies}" />
+            </StackPanel>
+          </StackPanel>
+          <StackPanel Grid.Column="2">
+            <TextBlock Text="{x:Static pages:PrintText.Sheets}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,0,0,4" />
+            <StackPanel Orientation="Horizontal">
+              <Button x:Name="AllSheetsChoice" Style="{DynamicResource Kyf.Button.Tool}" Padding="12,0" Margin="0,0,2,0" Tag="{Binding AllPages}" Content="{x:Static pages:PrintText.AllSheets}"
+                      Command="{Binding SetPagesCommand}" CommandParameter="all" />
+              <Button x:Name="SomeSheetsChoice" Style="{DynamicResource Kyf.Button.Tool}" Padding="12,0" Tag="{Binding SomePages}" Content="{x:Static pages:PrintText.SomeSheets}"
+                      Command="{Binding SetPagesCommand}" CommandParameter="some" />
+            </StackPanel>
+          </StackPanel>
+        </Grid>
+        <StackPanel Margin="0,8,0,0" Visibility="{Binding SomePages, Converter={StaticResource Visible}}">
+          <TextBox x:Name="SheetNumbersBox" Text="{Binding PagesText, UpdateSourceTrigger=PropertyChanged}" FontFamily="{DynamicResource Kyf.Font.Code}"
+                   AutomationProperties.Name="{x:Static pages:PrintText.SheetNumbers}" AutomationProperties.HelpText="{Binding PagesMessage}" />
+          <TextBlock x:Name="SheetNumbersMessage" Text="{Binding PagesMessage}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,4,0,0"
+                     Visibility="{Binding ShowsPagesHelp, Converter={StaticResource Visible}}" />
+          <TextBlock x:Name="SheetNumbersError" Text="{Binding PagesMessage}" Style="{DynamicResource Kyf.Text.Caption}" Foreground="{DynamicResource Kyf.Brush.Critical}" TextWrapping="Wrap" Margin="0,4,0,0"
+                     Visibility="{Binding HasPagesError, Converter={StaticResource Visible}}" />
+        </StackPanel>
+
+        <TextBlock Text="{x:Static pages:PrintText.Sides}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,14,0,4" />
+        <WrapPanel>
+          <Button x:Name="OneSidedChoice" Style="{DynamicResource Kyf.Button.Tool}" Padding="8,0" Margin="0,0,2,2" Tag="{Binding IsOneSided}" Command="{Binding SetSidesCommand}" CommandParameter="one"
+                  AutomationProperties.Name="{x:Static pages:PrintText.OneSided}">
+            <StackPanel Orientation="Horizontal">
+              <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.PrintOneSided}" />
+              <TextBlock Text="{x:Static pages:PrintText.OneSided}" VerticalAlignment="Center" Margin="6,0,0,0" />
+            </StackPanel>
+          </Button>
+          <Button x:Name="LongEdgeChoice" Style="{DynamicResource Kyf.Button.Tool}" Padding="8,0" Margin="0,0,2,2" Tag="{Binding IsLongEdge}" Command="{Binding SetSidesCommand}" CommandParameter="long"
+                  ToolTip="{x:Static pages:PrintText.LongEdgeHelp}" AutomationProperties.Name="{x:Static pages:PrintText.LongEdgeHelp}">
+            <StackPanel Orientation="Horizontal">
+              <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.PrintLongEdge}" />
+              <TextBlock Text="{x:Static pages:PrintText.LongEdge}" VerticalAlignment="Center" Margin="6,0,0,0" />
+            </StackPanel>
+          </Button>
+          <Button x:Name="ShortEdgeChoice" Style="{DynamicResource Kyf.Button.Tool}" Padding="8,0" Margin="0,0,2,2" Tag="{Binding IsShortEdge}" Command="{Binding SetSidesCommand}" CommandParameter="short"
+                  ToolTip="{x:Static pages:PrintText.ShortEdgeHelp}" AutomationProperties.Name="{x:Static pages:PrintText.ShortEdgeHelp}">
+            <StackPanel Orientation="Horizontal">
+              <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.PrintShortEdge}" />
+              <TextBlock Text="{x:Static pages:PrintText.ShortEdge}" VerticalAlignment="Center" Margin="6,0,0,0" />
+            </StackPanel>
+          </Button>
+        </WrapPanel>
+
+        <Grid Margin="0,12,0,0">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto" />
+            <ColumnDefinition Width="16" />
+            <ColumnDefinition Width="*" />
+          </Grid.ColumnDefinitions>
+          <StackPanel>
+            <TextBlock Text="{x:Static pages:PrintText.Orientation}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,0,0,4" />
+            <StackPanel Orientation="Horizontal">
+              <Button x:Name="PortraitChoice" Style="{DynamicResource Kyf.Button.Tool}" Margin="0,0,2,0" Tag="{Binding IsPortrait}" Command="{Binding SetOrientationCommand}" CommandParameter="portrait"
+                      ToolTip="{x:Static pages:PrintText.Portrait}" AutomationProperties.Name="{x:Static pages:PrintText.Portrait}">
+                <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.PagePortrait}" />
+              </Button>
+              <Button x:Name="LandscapeChoice" Style="{DynamicResource Kyf.Button.Tool}" Tag="{Binding IsLandscape}" Command="{Binding SetOrientationCommand}" CommandParameter="landscape"
+                      ToolTip="{x:Static pages:PrintText.Landscape}" AutomationProperties.Name="{x:Static pages:PrintText.Landscape}">
+                <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.PageLandscape}" />
+              </Button>
+            </StackPanel>
+          </StackPanel>
+          <StackPanel Grid.Column="2">
+            <TextBlock Text="{x:Static pages:PrintText.Margins}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,0,0,4" />
+            <ComboBox x:Name="MarginBox" ItemsSource="{Binding MarginOptions}" SelectedItem="{Binding Margin}" AutomationProperties.Name="{x:Static pages:PrintText.Margins}" />
+            <StackPanel Orientation="Horizontal" Margin="0,6,0,0" Visibility="{Binding IsCustomMargin, Converter={StaticResource Visible}}">
+              <TextBox x:Name="CustomMarginBox" Width="72" MinHeight="0" Padding="8,2" Text="{Binding CustomMargin, UpdateSourceTrigger=PropertyChanged, Delay=400}"
+                       FontFamily="{DynamicResource Kyf.Font.Code}" AutomationProperties.Name="{x:Static pages:PrintText.MarginsCustomField}" />
+              <TextBlock Text="cm" Style="{DynamicResource Kyf.Text.Secondary}" VerticalAlignment="Center" Margin="6,0,0,0" />
+            </StackPanel>
+          </StackPanel>
+        </Grid>
+
+        <CheckBox x:Name="NumbersBox" IsChecked="{Binding ShowsNumbers}" Margin="0,14,0,0" Content="{x:Static pages:PrintText.Numbers}" />
+
+        <TextBlock x:Name="SummaryText" Text="{Binding Summary}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="0,14,0,0" />
+      </StackPanel>
+    </ScrollViewer>
+
+    <!-- L'aperçu : la feuille telle qu'elle sortira, numéro compris. -->
+    <Border Grid.Column="1" Background="{DynamicResource Kyf.Brush.SurfaceAlt}" CornerRadius="{DynamicResource Kyf.Radius.Card}" Padding="16,16,16,8">
+      <DockPanel>
+        <StackPanel DockPanel.Dock="Bottom" HorizontalAlignment="Center" Margin="0,8,0,0">
+          <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+            <Button x:Name="PreviousSheetButton" Style="{DynamicResource Kyf.Button.Tool}" Content="‹" Command="{Binding TurnCommand}" CommandParameter="-"
+                    ToolTip="{x:Static pages:PrintText.PreviousSheet}" AutomationProperties.Name="{x:Static pages:PrintText.PreviousSheet}" />
+            <TextBlock x:Name="SheetLabel" Text="{Binding PageLabel}" MinWidth="72" TextAlignment="Center" VerticalAlignment="Center" FontFamily="{DynamicResource Kyf.Font.Code}"
+                       AutomationProperties.LiveSetting="Polite" />
+            <Button x:Name="NextSheetButton" Style="{DynamicResource Kyf.Button.Tool}" Content="›" Command="{Binding TurnCommand}" CommandParameter="+"
+                    ToolTip="{x:Static pages:PrintText.NextSheet}" AutomationProperties.Name="{x:Static pages:PrintText.NextSheet}" />
+          </StackPanel>
+          <TextBlock x:Name="PreparingText" Text="{x:Static pages:PrintText.Preparing}" Style="{DynamicResource Kyf.Text.Caption}" HorizontalAlignment="Center"
+                     Visibility="{Binding IsPreparing, Converter={StaticResource Visible}}" />
+          <TextBlock x:Name="NotPrintedText" Text="{x:Static pages:PrintText.NotPrinted}" Style="{DynamicResource Kyf.Text.Caption}" HorizontalAlignment="Center" />
+        </StackPanel>
+        <Viewbox x:Name="PreviewBox" Stretch="Uniform" MinHeight="320" MaxHeight="470" AutomationProperties.Name="{x:Static pages:PrintText.Preview}">
+          <Border x:Name="Paper" BorderBrush="{DynamicResource Kyf.Brush.Divider}" BorderThickness="1" SnapsToDevicePixels="True">
+            <Grid>
+              <Canvas x:Name="PageCanvas" ClipToBounds="True" Width="794" Height="1123" />
+              <TextBlock x:Name="PageNumber" HorizontalAlignment="Center" VerticalAlignment="Bottom" IsHitTestVisible="False" />
+            </Grid>
+          </Border>
+        </Viewbox>
+      </DockPanel>
+    </Border>
+  </Grid>
+</UserControl>

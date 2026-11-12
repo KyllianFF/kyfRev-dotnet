@@ -18,6 +18,7 @@ namespace KyfRev.Presentation.Wpf.Editing;
 [JsonDerivedType(typeof(TableRequest), "table")]
 [JsonDerivedType(typeof(TableActionRequest), "tableAction")]
 [JsonDerivedType(typeof(TableLookRequest), "tableLook")]
+[JsonDerivedType(typeof(ImageLookRequest), "imageLook")]
 [JsonDerivedType(typeof(CodeRequest), "code")]
 [JsonDerivedType(typeof(RuleRequest), "rule")]
 [JsonDerivedType(typeof(AskFormulaRequest), "askFormula")]
@@ -42,6 +43,10 @@ namespace KyfRev.Presentation.Wpf.Editing;
 [JsonDerivedType(typeof(DiagramRequest), "diagram")]
 [JsonDerivedType(typeof(DeleteBlockRequest), "deleteBlock")]
 [JsonDerivedType(typeof(ShowBlockCodeRequest), "showBlockCode")]
+[JsonDerivedType(typeof(SetImageTitleRequest), "setImageTitle")]
+[JsonDerivedType(typeof(PageRequest), "page")]
+[JsonDerivedType(typeof(PageBreakRequest), "pageBreak")]
+[JsonDerivedType(typeof(PaperRequest), "paper")]
 internal abstract record EditorRequest;
 
 /// <summary>Ouvre ce Markdown : rien à enregistrer, rien à annuler.</summary>
@@ -80,6 +85,13 @@ internal sealed record TableActionRequest(string Action) : EditorRequest;
 /// la valeur donnée ; <c>trier</c> range les lignes selon la colonne.
 /// </summary>
 internal sealed record TableLookRequest(string Change, string? Value) : EditorRequest;
+
+/// <summary>
+/// Change l'apparence de l'image choisie : « width » (pourcentage du texte ; sans valeur, sa taille d'origine), « align »
+/// (fil, gauche, centre, droite), « crop » (x,y,largeur,hauteur en pourcentages ; sans valeur, l'image entière), « reset »
+/// (tout sauf les masques) ou « alt » (sa description).
+/// </summary>
+internal sealed record ImageLookRequest(string Change, string? Value) : EditorRequest;
 
 /// <summary>Crée un bloc de code, ou change le langage de celui où est le curseur.</summary>
 internal sealed record CodeRequest(string Language) : EditorRequest;
@@ -150,6 +162,28 @@ internal sealed record DiagramRequest(string Language, string Code, string? Svg,
 /// <summary>Retire de la fiche le bloc à cet endroit.</summary>
 internal sealed record DeleteBlockRequest(int Position) : EditorRequest;
 
+/// <summary>Change le titre Markdown de l'image à cet endroit : c'est lui qui porte ses masques. Sans titre, l'image n'en a plus.</summary>
+internal sealed record SetImageTitleRequest(int Position, string? Title) : EditorRequest;
+
+/// <summary>
+/// La feuille de la fiche : sa largeur, sa hauteur et ses marges, en points d'écran à la taille normale. Une largeur nulle
+/// est la feuille sans fin, sans pages.
+/// </summary>
+internal sealed record PageRequest(double Width, double Height, double Margin) : EditorRequest;
+
+/// <summary>
+/// Insère un saut de page après le bloc où est le curseur : ce qui suit commence la page suivante. « Blank » : une page
+/// blanche entière s'intercale.
+/// </summary>
+internal sealed record PageBreakRequest(bool Blank) : EditorRequest;
+
+/// <summary>
+/// Le papier montré derrière le texte : « uni », « petits-carreaux », « grands-carreaux », « lignes », « points »,
+/// « millimetre » ; sans nom, aucun papier. Ce n'est qu'un décor de l'écran. <paramref name="Step"/> est son pas
+/// d'écriture, en pixels : l'écart entre deux lignes où le texte se pose ; zéro quand rien ne cale le texte.
+/// </summary>
+internal sealed record PaperRequest(string Style, double Step = 0) : EditorRequest;
+
 /// <summary>Entre dans le code du bloc à cet endroit.</summary>
 internal sealed record ShowBlockCodeRequest(int Position) : EditorRequest;
 
@@ -166,6 +200,8 @@ internal sealed record ShowBlockCodeRequest(int Position) : EditorRequest;
 [JsonDerivedType(typeof(ListKeyEvent), "listKey")]
 [JsonDerivedType(typeof(MenuEvent), "menu")]
 [JsonDerivedType(typeof(DroppedEvent), "dropped")]
+[JsonDerivedType(typeof(ZoomEvent), "zoom")]
+[JsonDerivedType(typeof(PagesEvent), "pages")]
 [JsonDerivedType(typeof(AskDiagramEvent), "askDiagram")]
 [JsonDerivedType(typeof(EditDiagramEvent), "editDiagram")]
 internal abstract record EditorEvent;
@@ -183,7 +219,7 @@ internal sealed record TextEvent(int? Id, string Markdown) : EditorEvent;
 internal sealed record SaveEvent : EditorEvent;
 
 /// <summary>Ce que le ruban affiche.</summary>
-internal sealed record ToolsEvent(bool Bold, bool Italic, bool Underline, bool Strike, bool Superscript, bool Subscript, bool Link, int Heading, bool InCode, ListKind? List, bool Table, string? Color, string? Size, TextAlign Align, bool CanUndo, bool CanRedo, TableState? TableLook = null, bool Code = false, bool Quote = false) : EditorEvent;
+internal sealed record ToolsEvent(bool Bold, bool Italic, bool Underline, bool Strike, bool Superscript, bool Subscript, bool Link, int Heading, bool InCode, ListKind? List, bool Table, string? Color, string? Size, TextAlign Align, bool CanUndo, bool CanRedo, TableState? TableLook = null, bool Code = false, bool Quote = false, ImageState? ImageLook = null) : EditorEvent;
 
 /// <summary>Ctrl+K, ou la réponse à une demande : le lien à préremplir.</summary>
 internal sealed record AskLinkEvent(string Label, string Address) : EditorEvent;
@@ -198,10 +234,16 @@ internal sealed record LinkInputEvent(string? Query, int Start, double X, double
 internal sealed record ListKeyEvent(string Key) : EditorEvent;
 
 /// <summary>Un clic droit : ce qu'il faut pour le menu natif.</summary>
-internal sealed record MenuEvent(string? Word, int WordStart, bool HasSelection, bool InCode, bool InTable, bool OnLink, int? DrawingPosition = null, string? DrawingLanguage = null, string? DrawingCode = null) : EditorEvent;
+internal sealed record MenuEvent(string? Word, int WordStart, bool HasSelection, bool InCode, bool InTable, bool OnLink, int? DrawingPosition = null, string? DrawingLanguage = null, string? DrawingCode = null, int? ImagePosition = null, string? ImageAddress = null, string? ImageTitle = null, bool Bold = false, bool Italic = false, bool Underline = false, bool Strike = false, int? CodePosition = null) : EditorEvent;
 
 /// <summary>Une image collée ou déposée ; sans contenu, elle est trop lourde pour être lue.</summary>
 internal sealed record DroppedEvent(string Name, string? Base64, int? Position) : EditorEvent;
+
+/// <summary>Ctrl+molette dans le texte : un cran de zoom de la fiche en plus (1) ou en moins (-1).</summary>
+internal sealed record ZoomEvent(int Step) : EditorEvent;
+
+/// <summary>Le nombre de pages de la fiche a changé ; zéro pour une feuille sans fin.</summary>
+internal sealed record PagesEvent(int Count) : EditorEvent;
 
 /// <summary>La page a besoin du dessin d'un bloc.</summary>
 internal sealed record AskDiagramEvent(string Language, string Code) : EditorEvent;
@@ -260,7 +302,7 @@ internal static class VisualContract
             _ when type == typeof(bool) => "boolean",
             _ when type == typeof(IReadOnlyList<string>) => "string[]",
             { IsEnum: true } => string.Join(" | ", Enum.GetNames(type).Select(name => $"\"{JsonNamingPolicy.CamelCase.ConvertName(name)}\"")),
-            _ when type == typeof(TableState) => "{ " + string.Join("; ", type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
+            _ when type == typeof(TableState) || type == typeof(ImageState) => "{ " + string.Join("; ", type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly)
                 .Where(inner => inner.CanWrite)
                 .Select(inner => $"{JsonNamingPolicy.CamelCase.ConvertName(inner.Name)}: {Shape(inner, context)}")) + " }",
             _ => "Record<string, string>",

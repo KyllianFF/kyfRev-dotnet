@@ -195,6 +195,12 @@ public interface IReviewStore
     /// <summary>Reprend un élément suspendu, là où il en était.</summary>
     void ResumeReview(ItemKind kind, string id);
 
+    /// <summary>Fait d'une fiche active une simple note, tenue hors des révisions.</summary>
+    void MakeNote(string id, Moment now);
+
+    /// <summary>Met une note en révision : à J0 si elle n'a jamais été révisée, sinon là où elle en était.</summary>
+    void PutInReview(string id, Moment now);
+
     /// <summary>Archive une fiche à la main.</summary>
     void ArchiveSheet(string id, Moment now);
 
@@ -357,6 +363,12 @@ public interface ISchemaStore
 {
     /// <summary>Les schémas lisibles, par titre, avec les fiches qui les insèrent.</summary>
     IReadOnlyList<SchemaSummary> Schemas();
+
+    /// <summary>Les schémas archivés et ceux de la corbeille, par titre.</summary>
+    IReadOnlyList<SchemaSummary> SchemasAside();
+
+    /// <summary>Range un schéma : l'archive, le met à la corbeille, ou le remet dans la liste. Rien n'est effacé.</summary>
+    void MoveSchema(string id, SchemaPlace place);
 
     /// <summary>Lit un schéma.</summary>
     SchemaDocument ReadSchema(string id);

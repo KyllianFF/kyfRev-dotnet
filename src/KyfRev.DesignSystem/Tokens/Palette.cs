@@ -16,6 +16,12 @@ public sealed record NamedColor(string Name, TokenColor Color);
 /// </summary>
 public static class Palette
 {
+    /// <summary>
+    /// Le papier à l'impression : blanc, quel que soit le thème. On n'imprime pas un fond teinté ; l'aperçu de la fenêtre
+    /// « Imprimer » montre ce même blanc.
+    /// </summary>
+    public static TokenColor PrintPaper { get; } = TokenColor.FromHex("#ffffff");
+
     /// <summary>Vert forêt : la couleur principale (700 en thème clair, 300 en thème sombre).</summary>
     public static ColorRamp Forest { get; } = new(
         "forêt", "#f1f6f1", "#dde8df", "#c1daca", "#86c7a1", "#5eaa80", "#418c64", "#357a57", "#2e6a4e", "#234f3b", "#2a3a30");

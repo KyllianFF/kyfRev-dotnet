@@ -21,7 +21,9 @@
       </Border>
       <Border x:Name="PreviewPane" Margin="8,0,0,0" Padding="12,4,0,0" BorderBrush="{DynamicResource Kyf.Brush.Divider}" BorderThickness="1" CornerRadius="{DynamicResource Kyf.Radius.Control}"
               Visibility="{Binding ShowsPreview, Converter={StaticResource Visible}}">
-        <reading:SheetDocumentViewer x:Name="PreviewText" Reading="{Binding Preview}" KeepsScroll="True" AutomationProperties.Name="{x:Static editing:EditingText.PreviewName}" />
+        <reading:PageFitHost>
+          <reading:SheetDocumentViewer x:Name="PreviewText" Reading="{Binding Preview}" KeepsScroll="True" FollowsSheetLayout="True" AutomationProperties.Name="{x:Static editing:EditingText.PreviewName}" />
+        </reading:PageFitHost>
       </Border>
     </UniformGrid>
 

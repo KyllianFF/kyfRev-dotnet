@@ -729,6 +729,127 @@ public sealed class ReadingTests
     }
 
     [STATestMethod]
+    public void A_sheet_with_a_page_format_is_read_in_pages_without_cutting_a_block()
+    {
+        var body = string.Join("\n\n", Enumerable.Range(1, 40).Select(index => $"Paragraphe {index} : " + string.Join(' ', Enumerable.Repeat("des mots qui font des lignes", 6))))
+            + "\n\n| a | b |\n|---|---|\n" + string.Join("\n", Enumerable.Range(1, 30).Select(index => $"| ligne {index} | une case assez longue pour tenir sur plusieurs lignes dans une feuille étroite |")) + "\n";
+        var layout = new PageLayout(PageFormat.A6);
+        var viewer = new SheetDocumentViewer { Width = layout.WidthPixels + SystemParameters.VerticalScrollBarWidth, Height = 500 };
+        var window = new Window { Content = viewer, Left = -10000, Top = -10000, Width = 520, Height = 560, ShowActivated = false, ShowInTaskbar = false };
+        window.Show();
+        try
+        {
+            viewer.Reading = ReadingOf(Sheet(body), _ => Outcome.Refused<byte[]>("non"));
+            viewer.CompleteDocument();
+            viewer.UpdateLayout();
+            Assert.AreEqual(0, viewer.PageCount, "sans feuille, pas de pages");
+            var endless = viewer.Document!.Blocks.Select(block => block.Margin.Top).ToList();
+
+            var counted = 0;
+            viewer.PageCountChanged += (_, _) => counted++;
+            viewer.PageLayout = layout;
+            for (var pass = 0; pass < 6; pass++)
+            {
+                TestShell.Flush();
+                viewer.UpdateLayout();
+            }
+
+            Assert.IsGreaterThan(3, viewer.PageCount);
+            Assert.IsGreaterThan(0, counted);
+            Assert.AreEqual(viewer.PageCount - 1, viewer.PageBands.Count, "une bande entre deux feuilles");
+            // Les feuilles sont dessinées sous le texte : une par page, à la taille de la feuille, marges comprises.
+            Assert.AreEqual(viewer.PageCount, viewer.PagePaper.Count);
+            Assert.AreEqual(layout.WidthPixels, viewer.PagePaper.SheetWidth);
+            Assert.AreEqual(layout.HeightPixels, viewer.PagePaper.FirstSheetHeight, 0.5);
+            Assert.AreEqual(layout.MarginPixels, viewer.Document.PagePadding.Left);
+            var pushed = viewer.Document.Blocks.Where((block, index) => block.Margin.Top > endless[index] + 1).ToList();
+            Assert.IsGreaterThan(1, pushed.Count, "des paragraphes commencent une page");
+            var table = viewer.Document.Blocks.OfType<Table>().Single();
+            Assert.IsTrue(table.RowGroups.SelectMany(group => group.Rows).Any(row => row.Cells[0].Padding.Top > 40), "une ligne du tableau commence une page");
+
+            // Une case de plusieurs lignes compte pour toute sa hauteur : sa ligne ne déborde pas du bas de la page.
+            var tall = table.RowGroups.SelectMany(group => group.Rows).Last();
+            Assert.IsGreaterThan(viewer.Document.LineHeight * 2.5, SheetDocumentViewer.RowTextHeight(tall) ?? 0);
+
+            // Une seconde passe ne change plus rien : les sauts se calculent depuis les places naturelles.
+            var pages = viewer.PageCount;
+            var margins = viewer.Document.Blocks.Select(block => block.Margin.Top).ToList();
+            viewer.Paginate();
+            viewer.UpdateLayout();
+            viewer.Paginate();
+            Assert.AreEqual(pages, viewer.PageCount);
+            CollectionAssert.AreEqual(margins, viewer.Document.Blocks.Select(block => block.Margin.Top).ToList());
+
+            // La feuille sans fin revient : tout ce qui avait été ouvert se referme.
+            viewer.PageLayout = PageLayout.Default;
+            TestShell.Flush();
+            Assert.AreEqual(0, viewer.PageCount);
+            Assert.AreEqual(0, viewer.PageBands.Count);
+            Assert.AreEqual(0, viewer.PagePaper.Count);
+            CollectionAssert.AreEqual(endless, viewer.Document.Blocks.Select(block => block.Margin.Top).ToList());
+            Assert.IsTrue(table.RowGroups.SelectMany(group => group.Rows).All(row => row.Cells[0].Padding.Top < 40));
+            Assert.AreEqual(0, viewer.Document.PagePadding.Left);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
+    public void A_cut_table_repeats_its_header_in_reading_and_a_page_break_is_obeyed()
+    {
+        var body = "Avant." + "\n\n<!-- kyfrev saut-de-page -->\n\n"
+            + "| Notion | Sens |\n|---|---|\n" + string.Join("\n", Enumerable.Range(1, 30).Select(index => $"| ligne {index} | valeur |")) + "\n\n"
+            + string.Join("\n", Enumerable.Range(1, 30).Select(index => $"> Citation {index}, assez longue pour tenir sa ligne.\n>")) + "\n\n<!-- kyfrev page-blanche -->\n\nFin.\n";
+        var layout = new PageLayout(PageFormat.A6);
+        var viewer = new SheetDocumentViewer { Width = layout.WidthPixels + SystemParameters.VerticalScrollBarWidth, Height = 500 };
+        var window = new Window { Content = viewer, Left = -10000, Top = -10000, Width = 520, Height = 560, ShowActivated = false, ShowInTaskbar = false };
+        window.Show();
+        try
+        {
+            viewer.PageLayout = layout;
+            viewer.Reading = ReadingOf(Sheet(body), _ => Outcome.Refused<byte[]>("non"));
+            viewer.CompleteDocument();
+            for (var pass = 0; pass < 8; pass++)
+            {
+                TestShell.Flush();
+                viewer.UpdateLayout();
+            }
+
+            var document = viewer.Document!;
+            Assert.DoesNotContain("kyfrev", new TextRange(document.ContentStart, document.ContentEnd).Text, "la ligne de saut ne se lit pas");
+            var table = document.Blocks.OfType<Table>().Single();
+            var rows = table.RowGroups.SelectMany(group => group.Rows).ToList();
+            var headers = rows.Where(row => new TextRange(row.ContentStart, row.ContentEnd).Text.Contains("Notion", StringComparison.Ordinal)).ToList();
+            Assert.IsGreaterThan(1, headers.Count, "l'en-tête est répété en haut de chaque page du tableau");
+            Assert.HasCount(31 + headers.Count - 1, rows);
+            // Le tableau commence la deuxième page : le saut de page est obéi alors qu'il restait de la place.
+            Assert.IsGreaterThan(100, rows[0].Cells[0].Padding.Top);
+            Assert.IsGreaterThan(0, viewer.PageBands.Continued, "la citation coupée dit « suite »");
+            var pages = viewer.PageCount;
+            Assert.IsGreaterThan(4, pages);
+
+            // Rien ne bouge plus à la mesure suivante.
+            viewer.Paginate();
+            viewer.UpdateLayout();
+            viewer.Paginate();
+            Assert.AreEqual(pages, viewer.PageCount);
+            Assert.HasCount(rows.Count, table.RowGroups.SelectMany(group => group.Rows).ToList());
+
+            // Sans feuille, les en-têtes répétés s'en vont.
+            viewer.PageLayout = PageLayout.Default;
+            TestShell.Flush();
+            Assert.HasCount(31, table.RowGroups.SelectMany(group => group.Rows).ToList());
+            Assert.IsLessThan(40, rows[0].Cells[0].Padding.Top);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
     public void A_viewer_with_nothing_to_show_stays_quiet()
     {
         var viewer = new SheetDocumentViewer();

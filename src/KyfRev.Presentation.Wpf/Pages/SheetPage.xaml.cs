@@ -28,10 +28,16 @@ internal sealed partial class SheetPage : UserControl
     public SheetPage()
     {
         InitializeComponent();
+        // Les raccourcis marqués prennent les touches choisies dans les paramètres.
+        KyfRev.Presentation.Wpf.Shell.ShortcutMap.Follow(this);
         Ribbon.ChooseImages = EditorView.ChooseImages;
         AddPanelsToRibbon();
         Unloaded += (_, _) => (DataContext as SheetPageViewModel)?.ReadAloud?.CloseCommand.Execute(null);
         EditorView.CoveredTextClicked = () => (DataContext as SheetPageViewModel)?.CloseOverlayCommand.Execute(null);
+        EditorView.ZoomAsked = step => ZoomSheet(step);
+        SheetText.PageCountChanged += (_, _) => ShowPageCount();
+        EditorView.VisualPagesChanged += (_, _) => ShowPageCount();
+        EditorView.MaskImage = (picture, question, apply) => (DataContext as SheetPageViewModel)?.EditMasksWhileWriting(picture, question.Title, apply, question.Crop);
         SizeChanged += (_, e) =>
         {
             // Quand la place manque, « Écouter » se réduit à son icône : les autres boutons restent lisibles.
@@ -54,6 +60,7 @@ internal sealed partial class SheetPage : UserControl
             {
                 previous.PropertyChanged -= OnPageChanged;
                 previous.Sharing?.PropertyChanged -= OnSharingChanged;
+                previous.Masks?.PropertyChanged -= OnMasksChanged;
                 if (previous.ReadAloud is { } reader)
                 {
                     reader.PropertyChanged -= OnReadAloudChanged;
@@ -65,6 +72,9 @@ internal sealed partial class SheetPage : UserControl
                 page.PageWidth = ActualWidth;
                 page.PropertyChanged += OnPageChanged;
                 page.Sharing?.PropertyChanged += OnSharingChanged;
+                page.Masks?.PropertyChanged += OnMasksChanged;
+                page.Print?.PropertyChanged += OnPrintChanged;
+                ApplySheetZoom(page);
                 page.ReadAloud?.PropertyChanged += OnReadAloudChanged;
                 UpdateListenToggle(page);
                 ShowWantedPassage(page);
@@ -89,6 +99,14 @@ internal sealed partial class SheetPage : UserControl
             // Entrée et Espace affichent le trou suivant : ils doivent aller au texte, et non au bouton « Réviser ».
             Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, () => SheetText.Focus());
         }
+        if (e.PropertyName is nameof(SheetPageViewModel.IsWriting) or nameof(SheetPageViewModel.IsReading))
+        {
+            ShowPageCount();
+        }
+        if (e.PropertyName == nameof(SheetPageViewModel.SheetZoom) && sender is SheetPageViewModel zoomed)
+        {
+            ApplySheetZoom(zoomed);
+        }
         if (e.PropertyName is nameof(SheetPageViewModel.IsEditing) or nameof(SheetPageViewModel.IsDeleting)
             or nameof(SheetPageViewModel.ShowsOutlineOverlay) or nameof(SheetPageViewModel.ShowsPassagesOverlay))
         {
@@ -105,8 +123,78 @@ internal sealed partial class SheetPage : UserControl
         }
     }
 
+    /// <summary>Un cran de zoom de la fiche, en plus ou en moins.</summary>
+    private void ZoomSheet(int step)
+    {
+        if (DataContext is SheetPageViewModel page)
+        {
+            (step > 0 ? page.ZoomSheetInCommand : page.ZoomSheetOutCommand).Execute(null);
+        }
+    }
+
+    /// <summary>Ctrl+molette sur la fiche, en lecture, en révision ou dans le code Markdown : son zoom, et non le défilement.</summary>
+    protected override void OnPreviewMouseWheel(MouseWheelEventArgs e)
+    {
+        base.OnPreviewMouseWheel(e);
+        if (Keyboard.Modifiers == ModifierKeys.Control && e.Delta != 0)
+        {
+            ZoomSheet(e.Delta);
+            e.Handled = true;
+        }
+    }
+
+    /// <summary>La lecture suit le zoom de la fiche : le texte, ses images et ses schémas grandissent ensemble.</summary>
+    private void ApplySheetZoom(SheetPageViewModel page)
+    {
+        SheetText.LayoutTransform = page.SheetZoom == 1 ? System.Windows.Media.Transform.Identity : new System.Windows.Media.ScaleTransform(page.SheetZoom, page.SheetZoom);
+    }
+
+    /// <summary>Le nombre de pages est celui du texte montré : lu, ou mis en forme pour l'écriture.</summary>
+    private void ShowPageCount()
+    {
+        if (DataContext is SheetPageViewModel { PageSetup: { } setup } page)
+        {
+            setup.Pages = page.IsWriting ? EditorView.VisualPages : SheetText.PageCount;
+        }
+    }
+
+    /// <summary>« Ajuster à la largeur » : le zoom auquel la feuille occupe toute la largeur libre, au dixième en dessous.</summary>
+    private void OnFitPageWidth(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is SheetPageViewModel { PageSetup.IsPaged: true } page && SheetText.Parent is Grid { Parent: FrameworkElement around })
+        {
+            // Le plan et les passages, quand ils sont ouverts à côté du texte, prennent leur part de la largeur.
+            var beside = around is DockPanel dock
+                ? dock.Children.OfType<FrameworkElement>().Where(child => child != SheetText.Parent && child.IsVisible && DockPanel.GetDock(child) is Dock.Left or Dock.Right).Sum(child => child.ActualWidth + child.Margin.Left + child.Margin.Right)
+                : 0;
+            var room = around.ActualWidth - beside;
+            if (room > 0)
+            {
+                page.SheetZoom = Math.Floor(room / page.TextWidth * 10) / 10;
+            }
+        }
+    }
+
+    /// <summary>La fenêtre d'impression, ouverte en écriture, se pose elle aussi sur le texte mis en forme.</summary>
+    private void OnPrintChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(PrintViewModel.IsOpen) && DataContext is SheetPageViewModel page && ReferenceEquals(sender, page.Print))
+        {
+            UpdateCovered(page);
+        }
+    }
+
+    /// <summary>La fenêtre des masques, ouverte en écriture, se pose elle aussi sur le texte mis en forme.</summary>
+    private void OnMasksChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ImageMaskEditorViewModel.IsOpen) && DataContext is SheetPageViewModel page && ReferenceEquals(sender, page.Masks))
+        {
+            UpdateCovered(page);
+        }
+    }
+
     private void UpdateCovered(SheetPageViewModel page) =>
-        EditorView.PageCovered = page.IsEditing || page.IsDeleting || page.ShowsOutlineOverlay || page.ShowsPassagesOverlay || page.Sharing is { IsShowing: true };
+        EditorView.PageCovered = page.IsEditing || page.IsDeleting || page.ShowsOutlineOverlay || page.ShowsPassagesOverlay || page.Sharing is { IsShowing: true } || page.Masks is { IsOpen: true } || page.Print is { IsOpen: true };
 
     /// <summary>La réponse à la confirmation (révision en avance, J0, archivage) part vers la barre de révision.</summary>
     private void OnConfirmationClosed(object sender, DialogClosedEventArgs e)
@@ -466,7 +554,14 @@ internal sealed partial class SheetPage : UserControl
     }
 
     /// <summary>« Partager… » et « Enregistrer comme modèle… », à la fin du menu du texte, comme dans la 0.x.</summary>
-    private static List<Control> SharingItems(SheetPageViewModel page) => page.CanShare
+    private static List<Control> SharingItems(SheetPageViewModel page) =>
+        [.. PrintItems(page), .. ShareItems(page)];
+
+    /// <summary>« Imprimer… », quand la fiche peut s'imprimer d'ici.</summary>
+    private static List<Control> PrintItems(SheetPageViewModel page) =>
+        page.CanPrint ? [Item(PrintText.PrintAction, () => page.RequestPrintCommand.Execute(null), "Ctrl+P")] : [];
+
+    private static List<Control> ShareItems(SheetPageViewModel page) => page.CanShare
         ?
         [
             Item(SharingText.Share, () => page.RequestShareCommand.Execute(null)),
@@ -614,6 +709,21 @@ internal sealed partial class SheetPage : UserControl
 
     private void OnDiagramEditorClosed(object sender, DialogClosedEventArgs e) =>
         (DataContext as SheetPageViewModel)?.Editor?.AnswerDiagramEditorCommand.Execute(e.Choice == DialogChoice.Primary);
+
+    /// <summary>« Imprimer » : le travail part ; s'il est refusé, la fenêtre reste ouverte et dit pourquoi.</summary>
+    private void OnPrintClosed(object sender, DialogClosedEventArgs e)
+    {
+        if ((DataContext as SheetPageViewModel)?.Print is not { } print)
+        {
+            return;
+        }
+        if (e.Choice == DialogChoice.Primary && !print.Print())
+        {
+            PrintDialog.SetCurrentValue(Dialog.IsOpenProperty, true);
+            return;
+        }
+        print.Close();
+    }
 
     private void OnGalleryClosed(object sender, DialogClosedEventArgs e) =>
         (DataContext as SheetPageViewModel)?.Editor?.AnswerGalleryCommand.Execute(e.Choice == DialogChoice.Primary);

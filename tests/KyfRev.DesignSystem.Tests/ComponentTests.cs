@@ -845,6 +845,17 @@ public sealed class ComponentTests
         {
             Assert.AreEqual(Cursors.Hand, control.Cursor, control.GetType().Name);
         }
+
+        // Un outil du menu dont la mise en forme est déjà là ressort : son fond et sa couleur changent.
+        tool.ApplyTemplate();
+        var cell = (Border)tool.Template.FindName("Cell", tool);
+        var (restBackground, restText) = (cell.Background, tool.Foreground);
+        tool.IsChecked = true;
+        Assert.AreSame(design.Dictionary["Kyf.Brush.NavigationActiveBackground"], cell.Background);
+        Assert.AreSame(design.Dictionary["Kyf.Brush.NavigationActiveText"], tool.Foreground);
+        tool.IsChecked = false;
+        Assert.AreSame(restBackground, cell.Background);
+        Assert.AreSame(restText, tool.Foreground);
     }
 
     [STATestMethod]

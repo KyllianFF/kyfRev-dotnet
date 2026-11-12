@@ -5,6 +5,8 @@ import type { ActionTableau, Dessin, EtatOutils, NomMarque } from "./editeur";
 import { EditeurVisuel } from "./editeur";
 import type { Casse } from "./casse";
 import type { DepuisEditeur, VersEditeur } from "./messages";
+import { pasDEcriture } from "./lignes";
+import { poserPapier } from "./papier";
 
 declare const chrome: {
   webview: {
@@ -118,7 +120,7 @@ const editeur: EditeurVisuel = new EditeurVisuel(parent, {
     envoyer({ kind: "listKey", key: touche });
     return true;
   },
-  onmenu: (vise) => {
+  onmenu: (vise, image) => {
     const etat = editeur.etatOutils();
     const dessin = vise ?? editeur.dessinSousLeCurseur();
     envoyer({
@@ -130,10 +132,19 @@ const editeur: EditeurVisuel = new EditeurVisuel(parent, {
       drawingPosition: dessin?.position ?? null,
       drawingLanguage: dessin?.language ?? null,
       drawingCode: dessin?.code ?? null,
+      bold: etat.bold,
+      italic: etat.italic,
+      underline: etat.underline,
+      strike: etat.strike,
+      codePosition: editeur.positionDuCode(),
+      imagePosition: image?.position ?? null,
+      imageAddress: image?.address ?? null,
+      imageTitle: image?.title ?? null,
     });
   },
   dessin: demanderDessin,
   ondessin: (language, code, position) => envoyer({ kind: "editDiagram", language, code, position }),
+  onpages: (count) => envoyer({ kind: "pages", count }),
 });
 
 function demanderLien(): void {
@@ -157,6 +168,9 @@ function traiter(message: VersEditeur): void {
       break;
     case "deleteBlock":
       editeur.supprimerBloc(message.position);
+      break;
+    case "setImageTitle":
+      editeur.titreImage(message.position, message.title ?? null);
       break;
     case "showBlockCode":
       editeur.voirCodeBloc(message.position);
@@ -193,6 +207,9 @@ function traiter(message: VersEditeur): void {
       break;
     case "tableLook":
       editeur.apparenceTableau(message.change, message.value);
+      break;
+    case "imageLook":
+      editeur.apparenceImage(message.change, message.value);
       break;
     case "code":
       editeur.insererCode(message.language);
@@ -253,6 +270,17 @@ function traiter(message: VersEditeur): void {
       if (message.action === "cut" || message.action === "copy") document.execCommand(message.action);
       else void editeur.coller(message.action === "pastePlain");
       break;
+    case "paper":
+      // Le papier reste d'une fiche à l'autre. Son dessin est un habillage de la page ; s'il a des lignes, le texte
+      // s'y pose, au pas que donne l'application : le Markdown, lui, ne change pas.
+      editeur.lignes(pasDEcriture(poserPapier(document.documentElement, message.style), message.step));
+      break;
+    case "pageBreak":
+      editeur.sautDePage(message.blank);
+      break;
+    case "page":
+      editeur.page(message.width, message.height, message.margin);
+      break;
     case "listOpen":
       listeOuverte = message.open;
       break;
@@ -260,4 +288,15 @@ function traiter(message: VersEditeur): void {
 }
 
 chrome.webview.addEventListener("message", (evenement) => traiter(evenement.data as VersEditeur));
+
+// Ctrl+molette règle le zoom de la fiche, que l'application tient : le zoom propre au moteur n'a pas à s'y ajouter.
+window.addEventListener(
+  "wheel",
+  (evenement) => {
+    if (!evenement.ctrlKey || evenement.deltaY === 0) return;
+    evenement.preventDefault();
+    envoyer({ kind: "zoom", step: evenement.deltaY < 0 ? 1 : -1 });
+  },
+  { passive: false },
+);
 envoyer({ kind: "ready" });

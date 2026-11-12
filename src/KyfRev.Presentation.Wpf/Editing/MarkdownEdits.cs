@@ -295,11 +295,17 @@ internal static partial class MarkdownEdits
     /// Une ligne horizontale, isolée par des lignes vides : collée sous un paragraphe, elle en ferait un titre.
     /// Le curseur reprend au début du texte qui suit.
     /// </summary>
-    public static TextChange Rule(string text, int position)
+    public static TextChange Rule(string text, int position) => Line(text, position, "---");
+
+    /// <summary>Insère un saut de page, ou une page blanche, seul sur sa ligne ; le curseur passe après lui.</summary>
+    public static TextChange PageBreak(string text, int position, bool blank) =>
+        Line(text, position, blank ? KyfRev.Rendering.PageMarks.BlankPageLine : KyfRev.Rendering.PageMarks.BreakLine);
+
+    private static TextChange Line(string text, int position, string line)
     {
         var endsBefore = position == 0 ? 2 : position >= 2 && text[position - 1] == '\n' && text[position - 2] == '\n' ? 2 : text[position - 1] == '\n' ? 1 : 0;
         var endsAfter = position == text.Length ? 1 : text.AsSpan(position).StartsWith("\n\n", StringComparison.Ordinal) ? 2 : text[position] == '\n' ? 1 : 0;
-        var written = new string('\n', 2 - endsBefore) + "---" + new string('\n', 2 - endsAfter);
+        var written = new string('\n', 2 - endsBefore) + line + new string('\n', 2 - endsAfter);
         var caret = written.Length + (position == text.Length ? 0 : endsAfter);
         return new TextChange(position, 0, written, position + caret, 0);
     }

@@ -8,7 +8,7 @@ namespace KyfRev.Presentation.Wpf.Tests;
 [TestClass]
 public sealed class ShellLayoutTests
 {
-    private static readonly string[] TabLabels = ["Aujourd'hui", "Fiches", "Définitions"];
+    private static readonly string[] TabLabels = ["Aujourd'hui", "Carnet", "Définitions"];
     private static readonly string[] OverflowLabels = ["Archives", "Statistiques", "Santé du coffre", "Paramètres"];
 
     [TestMethod]

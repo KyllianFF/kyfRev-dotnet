@@ -17,6 +17,9 @@ public static class CorePages
     /// <summary>Identifiant de la vue « Fiches ».</summary>
     public const string Sheets = "fiches";
 
+    /// <summary>Une fiche ouverte, en lecture, en révision ou en écriture.</summary>
+    public const string Sheet = "fiche";
+
     /// <summary>Identifiant de la vue « Définitions ».</summary>
     public const string Definitions = "definitions";
 

@@ -46,7 +46,6 @@ internal sealed class DocumentBuilder
 
     private const int MaxInlineDepth = 24;
 
-    private const double ImageMaxHeight = 560;
 
     private const int ImageMaxPixels = 2400;
 
@@ -81,6 +80,7 @@ internal sealed class DocumentBuilder
     private const string CodeFont = "Kyf.Font.Code";
     private const string DisplayFont = "Kyf.Font.Display";
     private const string UiFont = "Kyf.Font.Ui";
+    private const string Surface = "Kyf.Brush.Surface";
 
     /// <summary>« [ ] », avec son espace.</summary>
     private const int TaskMarkLength = 4;
@@ -186,8 +186,10 @@ internal sealed class DocumentBuilder
             IsHyphenationEnabled = false,
             IsOptimalParagraphEnabled = false,
             FontSize = _comfort.Size,
-            LineHeight = _comfort.Size * _comfort.LineSpacing,
-            LineStackingStrategy = LineStackingStrategy.MaxHeight,
+            // Sur un papier réglé, chaque ligne occupe un pas, et sa ligne de base y tombe toujours au même endroit : la
+            // hauteur ne suit plus ce que la ligne contient.
+            LineHeight = _comfort.LineHeight,
+            LineStackingStrategy = _comfort.IsRuled ? LineStackingStrategy.BlockLineHeight : LineStackingStrategy.MaxHeight,
         };
         document.SetResourceReference(TextElement.ForegroundProperty, Text);
         if (_comfort.Family is { } family)
@@ -196,7 +198,7 @@ internal sealed class DocumentBuilder
         }
         else
         {
-            document.SetResourceReference(TextElement.FontFamilyProperty, UiFont);
+            document.SetResourceReference(TextElement.FontFamilyProperty, _comfort.FamilyKey ?? UiFont);
         }
         if (_showsHeader)
         {
@@ -261,7 +263,10 @@ internal sealed class DocumentBuilder
         return Convert.TryFromBase64String(data[(start + marker.Length)..], buffer, out var written) ? buffer[..written] : null;
     }
 
-    private static Paragraph NewParagraph() => new() { Margin = new Thickness(0, 0, 0, 12) };
+    /// <summary>L'écart sous un bloc de texte : une ligne laissée vide sur un papier réglé, douze points sinon.</summary>
+    private double Gap => _comfort.IsRuled ? _comfort.Step : 12;
+
+    private Paragraph NewParagraph() => new() { Margin = new Thickness(0, 0, 0, Gap) };
 
     /// <summary>Ce qui se lit à voix haute, dans l'ordre : ni le code, ni les dessins, ni ce qui entoure la fiche.</summary>
     public IReadOnlyList<SpokenBlock> SpokenBlocks()
@@ -353,7 +358,11 @@ internal sealed class DocumentBuilder
             FontWeight = FontWeights.SemiBold,
             LineHeight = Typography.Title.LineHeight,
         };
-        title.SetResourceReference(TextElement.FontFamilyProperty, DisplayFont);
+        var follows = _comfort.HeadingsFollow;
+        if (!follows)
+        {
+            title.SetResourceReference(TextElement.FontFamilyProperty, DisplayFont);
+        }
         AutomationProperties.SetHeadingLevel(title, AutomationHeadingLevel.Level1);
         blocks.Add(title);
     }
@@ -419,7 +428,7 @@ internal sealed class DocumentBuilder
             if (open is null)
             {
                 open = NewParagraph();
-                open.Margin = new Thickness(0, 0, 0, 4);
+                open.Margin = new Thickness(0, 0, 0, _comfort.IsRuled ? 0 : 4);
                 blocks.Add(open);
             }
             AddInline(child, open.Inlines, 0, false);
@@ -446,6 +455,10 @@ internal sealed class DocumentBuilder
                 break;
             case "table":
                 blocks.Add(BuildTable(element));
+                break;
+            case "hr" when element.PageMark != PageMark.None:
+                // Un saut de page ne se voit pas : la mise en pages le lit, et fait commencer la suite sur une autre page.
+                blocks.Add(new Paragraph { Tag = element.PageMark, Margin = new Thickness(0), FontSize = 1, LineHeight = 1, LineStackingStrategy = LineStackingStrategy.BlockLineHeight });
                 break;
             case "hr":
                 blocks.Add(BuildRule());
@@ -498,13 +511,17 @@ internal sealed class DocumentBuilder
         var size = HeadingSize(level);
         var heading = new Paragraph
         {
-            Margin = new Thickness(0, level <= 2 ? 24 : 16, 0, 8),
+            // Sur un papier réglé : une ligne vide avant le titre, aucune après, et le titre sur une ligne (ou deux, s'il est grand).
+            Margin = _comfort.IsRuled ? new Thickness(0, _comfort.Step, 0, 0) : new Thickness(0, level <= 2 ? 24 : 16, 0, 8),
             FontSize = size,
             FontWeight = FontWeights.SemiBold,
-            LineHeight = size * 1.3,
+            LineHeight = _comfort.HeadingLineHeight(size),
             KeepWithNext = true,
         };
-        heading.SetResourceReference(TextElement.FontFamilyProperty, DisplayFont);
+        if (!_comfort.HeadingsFollow)
+        {
+            heading.SetResourceReference(TextElement.FontFamilyProperty, DisplayFont);
+        }
         AutomationProperties.SetHeadingLevel(heading, level switch
         {
             1 => AutomationHeadingLevel.Level2,
@@ -542,7 +559,7 @@ internal sealed class DocumentBuilder
         var list = new List
         {
             MarkerStyle = numbered ? TextMarkerStyle.Decimal : TextMarkerStyle.Disc,
-            Margin = new Thickness(0, 0, 0, 12),
+            Margin = new Thickness(0, 0, 0, Gap),
             StartIndex = first,
             // La puce grandit avec le texte, et un numéro avec ses chiffres : à retrait fixe, ils seraient coupés à gauche.
             Padding = new Thickness(numbered ? Math.Max(indent, MarkerRoom(first + items.Count - 1)) : indent, 0, 0, 0),
@@ -648,7 +665,7 @@ internal sealed class DocumentBuilder
         }
         var quote = new Section
         {
-            Margin = new Thickness(0, 0, 0, 12),
+            Margin = new Thickness(0, 0, 0, Gap),
             Padding = new Thickness(16, 0, 0, 0),
             BorderThickness = new Thickness(3, 0, 0, 0),
         };
@@ -737,6 +754,14 @@ internal sealed class DocumentBuilder
         var look = element.Look ?? TableLook.Default;
         var colors = TableBrushes.Of(look.Theme);
         var table = new Table { CellSpacing = 0, Margin = new Thickness(0, 0, 0, 12) };
+        if (_comfort.IsRuled)
+        {
+            // Un tableau n'écrit pas sur les lignes du papier : il garde l'interligne du texte, et un fond plein, celui de
+            // la feuille, pour que la réglure ne passe pas à travers ses cases.
+            table.LineHeight = _comfort.Size * _comfort.LineSpacing;
+            table.LineStackingStrategy = LineStackingStrategy.MaxHeight;
+            table.SetResourceReference(TextElement.BackgroundProperty, Surface);
+        }
         var groups = element.Children.OfType<RenderElement>().ToList();
         var columns = groups.SelectMany(group => group.Children.OfType<RenderElement>()).Max(row => row.Children.OfType<RenderElement>().Count());
         var count = groups.Sum(group => group.Children.OfType<RenderElement>().Count());
@@ -765,7 +790,8 @@ internal sealed class DocumentBuilder
             var rows = new TableRowGroup();
             foreach (var row in group.Children.OfType<RenderElement>())
             {
-                var line = new TableRow();
+                // La ligne d'en-tête se reconnaît : la mise en pages la répète en haut de chaque page du tableau.
+                var line = new TableRow { Tag = group.Tag == "thead" && look.HeaderRow ? SheetDocumentViewer.HeaderRowMark : null };
                 var column = 0;
                 foreach (var cell in row.Children.OfType<RenderElement>())
                 {
@@ -1111,7 +1137,7 @@ internal sealed class DocumentBuilder
             return BuildNotice($"{ReadingText.SvgLater} : {svg[(svg.LastIndexOf('/') + 1)..]}");
         }
         // Son rang la désigne quand on pose ou retire ses masques.
-        var image = new Image { Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly, MaxHeight = ImageMaxHeight, Tag = index };
+        var image = new Image { Stretch = Stretch.Uniform, StretchDirection = StretchDirection.DownOnly, Tag = index };
         AutomationProperties.SetName(image, element.AlternativeText ?? string.Empty);
         UIElement shown = image;
         if (!element.Masks.IsDefaultOrEmpty)
@@ -1127,8 +1153,14 @@ internal sealed class DocumentBuilder
             shown = stack;
             MaskedImages.Add((overlay, _lastTextEnd));
         }
+        var look = element.ImageLook;
+        if (look.Width is not null || look.Align != ImageAlign.Inline)
+        {
+            // Réglée dans l'onglet Image : sa largeur se compte sur celle du texte, et sa place sur la ligne entière.
+            shown = new ImageHost { Child = shown, Percent = look.Width, Align = look.Align };
+        }
         var container = new InlineUIContainer(shown) { BaselineAlignment = BaselineAlignment.Center };
-        _images.Add(svg is not null ? LoadSvgAsync(container, image, svg) : LoadImageAsync(container, image, target));
+        _images.Add(svg is not null ? LoadSvgAsync(container, image, svg) : LoadImageAsync(container, image, target, look));
         return container;
     }
 
@@ -1174,17 +1206,38 @@ internal sealed class DocumentBuilder
         container.Child = notice;
     }
 
-    private async Task LoadImageAsync(InlineUIContainer container, Image image, ImageTarget target)
+    private async Task LoadImageAsync(InlineUIContainer container, Image image, ImageTarget target, ImageLook look)
     {
-        var bitmap = await Task.Run(() => ReadBitmap(target)).ConfigureAwait(true);
+        var bitmap = await Task.Run(() => Framed(ReadBitmap(target), look.Crop)).ConfigureAwait(true);
         if (bitmap is not null)
         {
+            // Comme en écriture : un pixel de l'image vaut un pixel de la fiche, quelle que soit la résolution inscrite dans
+            // le fichier, et l'image ne dépasse pas la largeur du texte. Sa hauteur n'est pas plafonnée.
+            image.StretchDirection = StretchDirection.Both;
+            // Une largeur choisie peut aussi l'agrandir : elle n'est alors plus bornée à ses pixels.
+            image.MaxWidth = look.Width is null ? bitmap.PixelWidth : double.PositiveInfinity;
             image.Source = bitmap;
         }
         else
         {
             ShowUnreadable(container);
         }
+    }
+
+    /// <summary>L'image réduite à son cadre ; entière s'il n'y en a pas. Le fichier n'est pas touché.</summary>
+    private static BitmapSource? Framed(BitmapImage? bitmap, ImageMask? crop)
+    {
+        if (bitmap is null || crop is not { } frame)
+        {
+            return bitmap;
+        }
+        var left = Math.Clamp((int)Math.Round(frame.X * bitmap.PixelWidth), 0, bitmap.PixelWidth - 1);
+        var top = Math.Clamp((int)Math.Round(frame.Y * bitmap.PixelHeight), 0, bitmap.PixelHeight - 1);
+        var width = Math.Clamp((int)Math.Round(frame.Width * bitmap.PixelWidth), 1, bitmap.PixelWidth - left);
+        var height = Math.Clamp((int)Math.Round(frame.Height * bitmap.PixelHeight), 1, bitmap.PixelHeight - top);
+        var framed = new CroppedBitmap(bitmap, new Int32Rect(left, top, width, height));
+        framed.Freeze();
+        return framed;
     }
 
     private BitmapImage? ReadBitmap(ImageTarget target)

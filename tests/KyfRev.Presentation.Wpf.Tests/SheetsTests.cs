@@ -57,7 +57,7 @@ public sealed class SheetsTests
         Assert.IsFalse(Row(page, "Archivée").IsLate);
         Assert.IsTrue(Row(page, "Absente").FileMissing);
         StringAssert.Contains(Row(page, "Absente").ToString(), "fichier introuvable", StringComparison.Ordinal);
-        Assert.AreEqual("Fiches", SheetsPageViewModel.Title);
+        Assert.AreEqual("Carnet", SheetsPageViewModel.Title);
     }
 
     [TestMethod]
@@ -283,12 +283,81 @@ public sealed class SheetsTests
         await page.AnswerCreateCommand.ExecuteAsync(true);
         Assert.AreEqual("Sciences/Chimie", vaults.App.Sheets.List().Value.Single(sheet => sheet.Title == "Atomes").Folder);
 
+        // Une simple note : son bouton ouvre la même fenêtre, à son nom ; elle a son filtre et son mot dans la liste.
+        await page.RequestCreateCommand.ExecuteAsync(null);
+        Assert.IsFalse(page.NewIsNote, "« Nouvelle fiche » fait une fiche de révision");
+        Assert.AreEqual(("Nouvelle fiche", "Créer la fiche"), (page.NewDialogTitle, page.NewDialogConfirm));
+        await page.AnswerCreateCommand.ExecuteAsync(false);
+        await page.RequestCreateNoteCommand.ExecuteAsync(null);
+        Assert.IsTrue(page.NewIsNote);
+        Assert.AreEqual(("Nouvelle note", "Créer la note"), (page.NewDialogTitle, page.NewDialogConfirm));
+        page.NewTitle = "Idées de stage";
+        page.NewFolder.Selected = page.NewFolder.Choices[0];
+        await page.AnswerCreateCommand.ExecuteAsync(true);
+        var note = vaults.App.Sheets.List().Value.Single(sheet => sheet.Title == "Idées de stage");
+        Assert.IsTrue(note.IsNote);
+        Assert.IsFalse(vaults.App.Sheets.List().Value.Single(sheet => sheet.Title == "Atomes").IsNote);
+        await page.RefreshCommand.ExecuteAsync(null);
+        var all = page.Bar.Filters[0];
+        all.Selected = all.Choices[0];
+        var state = page.Bar.Filters[1];
+        Assert.AreEqual("Notes · 1", page.KindNotesLabel);
+        Assert.AreEqual("Fiches · 2", page.KindReviewLabel);
+        Assert.AreEqual("Tout · 3", page.KindAllLabel);
+        page.ShowsNotesOnly = true;
+        Assert.AreEqual(SheetKind.Notes, page.Kind);
+        var shown = page.Rows.OfType<SheetRow>().Single();
+        Assert.AreEqual(note.Id, shown.Sheet.Id);
+        Assert.AreEqual("Note", shown.Meta);
+        Assert.AreEqual(("Note", SheetRowKind.Note), (shown.State, shown.Kind), "la liste dit ce qu'est le document");
+        Assert.IsFalse(shown.IsLate);
+        await page.RequestCreateCommand.ExecuteAsync(null);
+        Assert.IsFalse(page.NewIsNote, "même sur le filtre « Notes », « Nouvelle fiche » fait une fiche");
+        await page.AnswerCreateCommand.ExecuteAsync(false);
+        page.ShowsReviewOnly = true;
+        Assert.IsFalse(page.Rows.OfType<SheetRow>().Any(row => row.Sheet.Id == note.Id), "une note n'est pas une fiche de révision");
+        Assert.HasCount(2, page.Rows.OfType<SheetRow>().ToList());
+        page.ShowsAll = true;
+        state.Selected = state.Choices.Single(choice => choice.Label == "En révision");
+        Assert.IsFalse(page.Rows.OfType<SheetRow>().Any(row => row.Sheet.Id == note.Id), "une note n'est pas en révision");
+        state.Selected = state.Choices[0];
+
+        // « Nouvelle note » ouvre la même fenêtre, la case déjà cochée ; « Nouvelle fiche », non.
+        await page.RequestCreateNoteCommand.ExecuteAsync(null);
+        Assert.IsTrue(page.NewIsNote);
+        await page.AnswerCreateCommand.ExecuteAsync(false);
+        await page.RequestCreateCommand.ExecuteAsync(null);
+        Assert.IsFalse(page.NewIsNote);
+        await page.AnswerCreateCommand.ExecuteAsync(false);
+
+        // Le clic droit fait d'une note une fiche de révision, et l'inverse.
+        var managed = new SheetsPageViewModel(vaults.App.Sheets, vaults.App.Folders, vaults.App.Templates, opener, time, vaults.App.Reviews);
+        await managed.RefreshCommand.ExecuteAsync(null);
+        var reviewRow = managed.Rows.OfType<SheetRow>().First(row => row.Sheet.Id != note.Id);
+        Assert.AreEqual(SheetRowKind.Review, reviewRow.Kind);
+        StringAssert.StartsWith(reviewRow.State, "J1", StringComparison.Ordinal);
+
+        // « Lire » et « Écrire » ouvrent le document choisi, sans passer par le clic droit.
+        managed.SelectedRow = reviewRow;
+        var opened = opener.Opened.Count;
+        managed.ReadSelectedCommand.Execute(null);
+        Assert.AreEqual(opened + 1, opener.Opened.Count);
+        Assert.AreEqual(reviewRow.Sheet.Id, opener.Opened[^1]);
+
+        var noteRow = managed.Rows.OfType<SheetRow>().Single(row => row.Sheet.Id == note.Id);
+        await managed.ToggleNoteAsync(noteRow);
+        Assert.AreEqual("C'est maintenant une fiche de révision.", managed.Done);
+        Assert.IsFalse(vaults.App.Sheets.List().Value.Single(sheet => sheet.Id == note.Id).IsNote);
+        await managed.ToggleNoteAsync(managed.Rows.OfType<SheetRow>().Single(row => row.Sheet.Id == note.Id));
+        Assert.IsTrue(vaults.App.Sheets.List().Value.Single(sheet => sheet.Id == note.Id).IsNote);
+
         // Renoncer ne crée rien ; un refus du coffre laisse la fenêtre ouverte.
+        var before = vaults.App.Sheets.List().Value.Count;
         await page.RequestCreateCommand.ExecuteAsync(null);
         page.NewTitle = "Rien";
         await page.AnswerCreateCommand.ExecuteAsync(false);
         Assert.IsFalse(page.IsCreating);
-        Assert.HasCount(2, vaults.App.Sheets.List().Value);
+        Assert.HasCount(before, vaults.App.Sheets.List().Value);
         await page.RequestCreateCommand.ExecuteAsync(null);
         page.NewFolder.Selected = page.NewFolder.Choices[^1];
         page.NewFolderName = "../hors du coffre";
@@ -344,10 +413,10 @@ public sealed class SheetsTests
         {
             page.PageWidth = SheetsPageViewModel.PreviewMinimum;
             TestShell.Flush();
-            Assert.AreEqual("Fiches", Named<TextBlock>(window, "Heading").Text);
+            Assert.AreEqual("Carnet", Named<TextBlock>(window, "Heading").Text);
             var list = Named<OpenableList>(window, "Items");
             Assert.IsTrue(Named<Card>(window, "PreviewCard").IsVisible);
-            Assert.AreEqual(360, Named<Card>(window, "ListCard").ActualWidth, 1);
+            Assert.AreEqual(480, Named<Card>(window, "ListCard").ActualWidth, 1);
 
             // Un en-tête ne se choisit pas : le choix précédent reste.
             var chosen = page.SelectedRow;
@@ -390,7 +459,7 @@ public sealed class SheetsTests
             TestShell.Flush();
             window.UpdateLayout();
             Assert.IsFalse(Named<Card>(window, "PreviewCard").IsVisible);
-            Assert.IsGreaterThan(360, Named<Card>(window, "ListCard").ActualWidth);
+            Assert.IsGreaterThan(480, Named<Card>(window, "ListCard").ActualWidth);
             list.ScrollIntoView(second);
             window.UpdateLayout();
             container = (ListBoxItem)list.ItemContainerGenerator.ContainerFromItem(second);
@@ -481,7 +550,7 @@ public sealed class SheetsTests
             TestShell.Flush();
             Assert.IsTrue(Named<TextBlock>(window, "NoMatch").IsVisible);
             Assert.IsTrue(Named<FilterBar>(window, "FilterBar").IsVisible);
-            Assert.IsFalse(Named<Card>(window, "ListCard").IsVisible);
+            Assert.IsTrue(Named<Card>(window, "ListCard").IsVisible, "la colonne de la liste reste : c'est elle qui porte la recherche et les filtres");
             Assert.IsFalse(Named<Card>(window, "PreviewCard").IsVisible);
         }
         finally
@@ -542,20 +611,18 @@ public sealed class SheetsTests
     }
 
     [TestMethod]
-    public void On_a_narrow_window_the_tag_filter_folds_away_unless_it_acts()
+    public void The_tags_unfold_on_demand_and_stay_while_one_acts()
     {
         using var vaults = new TestVaults(AppMode.Development);
         var page = Page(vaults, new FakeOpener());
         page.Show(Tagged());
-        Assert.IsTrue(page.ShowsTags);
+        Assert.IsTrue(page.HasTags);
+        Assert.IsFalse(page.ShowsTags, "repliées d'abord : elles peuvent être nombreuses");
 
-        page.Bar.HasRoom = false;
-        Assert.IsFalse(page.ShowsTags);
-
-        page.Bar.AreOpen = true;
+        page.AreTagsOpen = true;
         Assert.IsTrue(page.ShowsTags);
         page.Tags[0].IsChosen = true;
-        page.Bar.AreOpen = false;
+        page.AreTagsOpen = false;
 
         Assert.IsTrue(page.ShowsTags, "un filtre qui agit reste visible");
 

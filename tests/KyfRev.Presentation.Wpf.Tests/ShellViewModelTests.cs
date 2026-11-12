@@ -11,7 +11,7 @@ namespace KyfRev.Presentation.Wpf.Tests;
 [TestClass]
 public sealed class ShellViewModelTests
 {
-    private static readonly string[] MainLabels = ["Aujourd'hui", "Fiches", "Définitions", "Archives", "Statistiques", "Citations", "Quiz"];
+    private static readonly string[] MainLabels = ["Aujourd'hui", "Carnet", "Définitions", "Archives", "Statistiques", "Citations", "Quiz"];
     private static readonly string[] SecondaryLabels = ["Santé du coffre", "Paramètres"];
 
     [STATestMethod]
@@ -72,15 +72,43 @@ public sealed class ShellViewModelTests
         Assert.AreEqual("Revoir la mitose", shell.CaptureText, "et le texte tapé reste");
 
         refusal = null;
+        var shown = new RefreshProbe();
+        shell.Navigate(new NavigationItem("carnet-essai", "Carnet", KyfRev.DesignSystem.Controls.Icons.Document, int.MaxValue, shown));
+        var before = shown.Refreshed;
+        shell.OpenCapture();
+        shell.CaptureText = "Revoir la mitose";
         await shell.AnswerCaptureCommand.ExecuteAsync(true);
         Assert.IsFalse(shell.IsCaptureOpen);
         Assert.IsFalse(shell.HasCaptureError);
         Assert.AreEqual("Revoir la mitose", notes[^1]);
+        Assert.AreEqual(before + 1, shown.Refreshed, "la vue affichée montre la note sans qu'on la quitte");
 
         shell.OpenPaletteCommand.Execute(null);
         shell.PaletteQuery = "capture";
         Assert.AreEqual("Capture rapide", shell.PaletteResults.Single().Label);
         Assert.IsTrue(shell.Shortcuts.Any(shortcut => shortcut.Keys == "Ctrl+Maj+N"));
+    }
+
+    [TestMethod]
+    public void The_menu_keeps_its_width_in_every_view_and_only_the_window_narrows_it()
+    {
+        var test = new TestShell();
+        var shell = new ShellViewModel(CorePages.All(), test.Appearance, test.Gallery) { WindowWidth = 1600 };
+        Assert.AreEqual(NavigationLayout.Sidebar, shell.Layout);
+
+        shell.Navigate(shell.MainNavigation.Single(item => item.Id == CorePages.Sheets));
+        Assert.AreEqual(NavigationLayout.Sidebar, shell.Layout, "le Carnet garde le menu entier");
+        shell.Navigate(new NavigationItem(CorePages.Sheet, "Une fiche", KyfRev.DesignSystem.Controls.Icons.Document, int.MaxValue, new object()));
+        Assert.AreEqual(NavigationLayout.Sidebar, shell.Layout);
+
+        shell.WindowWidth = 1000;
+        Assert.AreEqual(NavigationLayout.Rail, shell.Layout);
+        Assert.IsTrue(shell.CanToggleMenu);
+
+        // En fenêtre étroite, les onglets du bas : pas de menu latéral à masquer.
+        shell.WindowWidth = 500;
+        Assert.AreEqual(NavigationLayout.Tabs, shell.Layout);
+        Assert.IsFalse(shell.CanToggleMenu);
     }
 
     [STATestMethod]
@@ -252,9 +280,9 @@ public sealed class ShellViewModelTests
     public void Help_and_search_never_overlap()
     {
         var shell = new TestShell().Shell;
-        Assert.HasCount(16, shell.Shortcuts);
+        Assert.HasCount(17, shell.Shortcuts);
         Assert.AreEqual("Ctrl+Maj+L", shell.Shortcuts[^1].Keys);
-        Assert.AreEqual("F11 | Ctrl+Entrée | Entrée, Espace | H | Ctrl+E | Ctrl+P | Ctrl+Maj+N | Ctrl+→", string.Join(" | ", shell.Shortcuts.Skip(3).Take(8).Select(shortcut => shortcut.Keys)));
+        Assert.AreEqual("F11 | Ctrl+Entrée | Entrée, Espace | H | Ctrl+E | Ctrl+P | Ctrl+Maj+P | Ctrl+Maj+N | Ctrl+→", string.Join(" | ", shell.Shortcuts.Skip(3).Take(9).Select(shortcut => shortcut.Keys)));
         shell.OpenPalette();
         shell.ShowHelp();
         Assert.IsTrue(shell.IsHelpOpen);
@@ -278,5 +306,13 @@ public sealed class ShellViewModelTests
         Assert.AreEqual("Santé du coffre", onlySecondary.Current.Label);
         Assert.ThrowsExactly<ArgumentNullException>(() => new ShellViewModel(null!, test.Appearance, test.Gallery));
         Assert.ThrowsExactly<ArgumentNullException>(() => new ShellViewModel([], null!, test.Gallery));
+    }
+
+    /// <summary>Une vue qui compte ses relectures.</summary>
+    private sealed class RefreshProbe : INavigationAware
+    {
+        public int Refreshed { get; private set; }
+
+        public void OnNavigatedTo() => Refreshed++;
     }
 }

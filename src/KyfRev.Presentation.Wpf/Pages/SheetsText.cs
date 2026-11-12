@@ -20,6 +20,53 @@ public static class SheetsText
     /// <summary>« Archivée ».</summary>
     public static string ArchivedRow => Text(nameof(ArchivedRow));
 
+    /// <summary>« Note ».</summary>
+    public static string NoteRow => Text(nameof(NoteRow));
+
+    /// <summary>« Tout ».</summary>
+    public static string KindAll => Text(nameof(KindAll));
+
+    /// <summary>« Fiches » : les fiches de révision, par opposition aux notes.</summary>
+    public static string KindReview => Text(nameof(KindReview));
+
+    /// <summary>« Notes ».</summary>
+    public static string KindNotes => Text(nameof(KindNotes));
+
+    /// <summary>« Notes · 11 ».</summary>
+    public static string KindOf(string kind, int count) => string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{kind} · {count}");
+
+    /// <summary>Le nom de ce choix, pour un lecteur d'écran.</summary>
+    public static string KindName => Text(nameof(KindName));
+
+    /// <summary>« Étiquettes » : le bouton qui les déplie.</summary>
+    public static string TagsToggle => Text(nameof(TagsToggle));
+
+    /// <summary>« Créer la note ».</summary>
+    public static string CreateNote => Text(nameof(CreateNote));
+
+    /// <summary>« Lire ».</summary>
+    public static string Read => Text(nameof(Read));
+
+    /// <summary>« Écrire ».</summary>
+    public static string Write => Text(nameof(Write));
+
+    /// <summary>« Nouvelle note ».</summary>
+    public static string NewNote => Text(nameof(NewNote));
+
+    /// <summary>« En faire une simple note ».</summary>
+    public static string MakeNote => Text(nameof(MakeNote));
+
+    /// <summary>« En faire une fiche de révision ».</summary>
+    public static string MakeReview => Text(nameof(MakeReview));
+
+    /// <summary>« C'est maintenant une simple note : elle n'entre plus dans les révisions. ».</summary>
+    public static string NowNote => Text(nameof(NowNote));
+
+    /// <summary>« C'est maintenant une fiche de révision. ».</summary>
+    public static string NowReview => Text(nameof(NowReview));
+
+
+
     /// <summary>« À la racine ».</summary>
     public static string AtRoot => Text(nameof(AtRoot));
 

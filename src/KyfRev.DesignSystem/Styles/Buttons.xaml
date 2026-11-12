@@ -104,10 +104,10 @@
         <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.NavigationActiveText}" />
       </Trigger>
       <!-- Une mise en forme active sous le curseur : le bouton le montre, comme dans un traitement de texte. -->
-      <Trigger Property="Tag" Value="{x:Static sys:Boolean.TrueString}">
+      <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="True">
         <Setter Property="Background" Value="{DynamicResource Kyf.Brush.NavigationActiveBackground}" />
         <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.NavigationActiveText}" />
-      </Trigger>
+      </DataTrigger>
     </Style.Triggers>
   </Style>
 

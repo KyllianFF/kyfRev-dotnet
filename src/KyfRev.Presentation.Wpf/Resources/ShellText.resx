@@ -36,6 +36,12 @@
   <data name="Definitions" xml:space="preserve">
     <value>Définitions</value>
   </data>
+  <data name="SheetsGroup" xml:space="preserve">
+    <value>Fiches</value>
+  </data>
+  <data name="EnterFocusMode" xml:space="preserve">
+    <value>Masquer le menu (Ctrl+Maj+F)</value>
+  </data>
   <data name="ExitFocusMode" xml:space="preserve">
     <value>Afficher le menu (Ctrl+Maj+F)</value>
   </data>
@@ -109,7 +115,7 @@
     <value>Paramètres</value>
   </data>
   <data name="Sheets" xml:space="preserve">
-    <value>Fiches</value>
+    <value>Carnet</value>
   </data>
   <data name="ShortcutFocusMode" xml:space="preserve">
     <value>Afficher ou masquer le menu (mode concentration)</value>
@@ -140,6 +146,9 @@
   </data>
   <data name="ShortcutWrite" xml:space="preserve">
     <value>Écrire dans la fiche, ou revenir à la lecture</value>
+  </data>
+  <data name="ShortcutPrint" xml:space="preserve">
+    <value>Imprimer la fiche : aperçu feuille par feuille, recto verso, copies</value>
   </data>
   <data name="ShortcutShare" xml:space="preserve">
     <value>Partager la fiche : PDF, page web à imprimer, Markdown</value>

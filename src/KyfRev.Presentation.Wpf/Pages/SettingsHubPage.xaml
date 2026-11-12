@@ -2,10 +2,18 @@
              x:ClassModifier="internal"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:kyf="clr-namespace:KyfRev.DesignSystem.Controls;assembly=KyfRev.DesignSystem"
              xmlns:pages="clr-namespace:KyfRev.Presentation.Wpf.Pages">
   <UserControl.Resources>
+    <BooleanToVisibilityConverter x:Key="Visible" />
     <DataTemplate DataType="{x:Type pages:GeneralSettingsViewModel}">
       <pages:GeneralSettingsPage />
+    </DataTemplate>
+    <DataTemplate DataType="{x:Type pages:SheetsSettingsViewModel}">
+      <pages:SheetsSettingsPage />
+    </DataTemplate>
+    <DataTemplate DataType="{x:Type pages:ShortcutsSettingsViewModel}">
+      <pages:ShortcutsSettingsPage />
     </DataTemplate>
     <DataTemplate DataType="{x:Type pages:SettingsPageViewModel}">
       <pages:SettingsPage />
@@ -19,25 +27,169 @@
     <DataTemplate DataType="{x:Type pages:AboutSettingsViewModel}">
       <pages:AboutSettingsPage />
     </DataTemplate>
+
+    <!-- Ce que la recherche a trouvé : un réglage et sa section, ou une section et son groupe. Un clic ouvre la section. -->
+    <DataTemplate x:Key="FoundSettings">
+      <StackPanel>
+        <TextBlock x:Name="NoResult" Text="{x:Static pages:MoreSettingsText.NoResult}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="8,8,8,0"
+                   Visibility="{Binding HasNoResult, Converter={StaticResource Visible}}" AutomationProperties.LiveSetting="Polite" />
+        <ItemsControl x:Name="ResultList" ItemsSource="{Binding Results}" Focusable="False" AutomationProperties.Name="{x:Static pages:MoreSettingsText.ResultsName}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate DataType="{x:Type pages:SettingsHit}">
+              <Button Style="{DynamicResource Kyf.Button.Tool}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="8,6" MinHeight="38" Margin="0,0,0,2"
+                      Command="{Binding DataContext.OpenCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"
+                      AutomationProperties.Name="{Binding Spoken}">
+                <StackPanel>
+                  <TextBlock Text="{Binding Label}" TextWrapping="Wrap" />
+                  <TextBlock Text="{Binding Where}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" />
+                </StackPanel>
+              </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </StackPanel>
+    </DataTemplate>
   </UserControl.Resources>
 
-  <DockPanel Margin="16">
-    <TextBlock x:Name="Heading" DockPanel.Dock="Top" Text="{x:Static pages:SettingsText.Title}" Style="{DynamicResource Kyf.Text.Title}"
-               AutomationProperties.HeadingLevel="Level1" Margin="0,0,0,8" />
-    <!-- Un seul groupe de boutons radio : les flèches passent d'un onglet à l'autre, et un seul reste choisi. -->
-    <ItemsControl x:Name="TabBar" DockPanel.Dock="Top" ItemsSource="{Binding Tabs}" Focusable="False" Margin="0,0,0,12" AutomationProperties.Name="{x:Static pages:SettingsHubText.TabsName}">
-      <ItemsControl.ItemsPanel>
-        <ItemsPanelTemplate>
-          <WrapPanel />
-        </ItemsPanelTemplate>
-      </ItemsControl.ItemsPanel>
-      <ItemsControl.ItemTemplate>
-        <DataTemplate DataType="{x:Type pages:SettingsTab}">
-          <RadioButton GroupName="SettingsTabs" Content="{Binding Label}" IsChecked="{Binding IsSelected}" Style="{DynamicResource Kyf.Button.Tab}"
-                       MinHeight="36" AutomationProperties.Name="{Binding Label}" />
-        </DataTemplate>
-      </ItemsControl.ItemTemplate>
-    </ItemsControl>
-    <ContentControl x:Name="TabContent" Content="{Binding Selected.Page}" Focusable="False" IsTabStop="False" />
-  </DockPanel>
+  <!-- Les sections à gauche, rangées par portée ; la section ouverte à droite. En fenêtre étroite, la liste devient une liste déroulante. -->
+  <Grid Margin="16">
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition x:Name="SideColumn" Width="Auto" />
+      <ColumnDefinition Width="*" />
+    </Grid.ColumnDefinitions>
+
+    <Border x:Name="Side" Width="248" Margin="0,0,16,0" Padding="8,12,8,8" Background="{DynamicResource Kyf.Brush.Surface}" BorderBrush="{DynamicResource Kyf.Brush.Divider}" BorderThickness="1"
+            CornerRadius="{DynamicResource Kyf.Radius.Card}">
+      <DockPanel>
+        <TextBlock x:Name="Heading" DockPanel.Dock="Top" Text="{x:Static pages:SettingsText.Title}" Style="{DynamicResource Kyf.Text.Title}"
+                   AutomationProperties.HeadingLevel="Level1" Margin="8,0,0,8" />
+        <!-- Entrée ouvre le premier résultat, Échap rend la liste des sections. -->
+        <TextBox x:Name="SettingSearch" DockPanel.Dock="Top" Text="{Binding Query, UpdateSourceTrigger=PropertyChanged}" kyf:Field.Placeholder="{x:Static pages:MoreSettingsText.SearchLabel}"
+                 AutomationProperties.Name="{x:Static pages:MoreSettingsText.SearchLabel}" Margin="0,0,0,4">
+          <TextBox.InputBindings>
+            <KeyBinding Key="Return" Command="{Binding OpenFirstCommand}" />
+            <KeyBinding Key="Escape" Command="{Binding ClearSearchCommand}" />
+          </TextBox.InputBindings>
+        </TextBox>
+        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
+          <StackPanel>
+            <ContentControl x:Name="SideResults" Content="{Binding}" ContentTemplate="{StaticResource FoundSettings}" Focusable="False" IsTabStop="False" Margin="0,8,0,0"
+                            Visibility="{Binding IsSearching, Converter={StaticResource Visible}}" />
+            <!-- Un seul groupe de boutons radio : les flèches passent d'une section à l'autre, et une seule reste choisie. -->
+            <ItemsControl x:Name="SectionList" ItemsSource="{Binding Tabs}" Focusable="False" AutomationProperties.Name="{x:Static pages:SettingsHubText.TabsName}">
+              <ItemsControl.Style>
+                <Style TargetType="ItemsControl">
+                  <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsSearching}" Value="True">
+                      <Setter Property="Visibility" Value="Collapsed" />
+                    </DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </ItemsControl.Style>
+              <ItemsControl.ItemTemplate>
+                <DataTemplate DataType="{x:Type pages:SettingsTab}">
+                  <StackPanel>
+                    <TextBlock Text="{Binding Group}" Style="{DynamicResource Kyf.Text.Caption}" FontWeight="SemiBold" Margin="8,14,0,4"
+                               Visibility="{Binding StartsGroup, Converter={StaticResource Visible}}" />
+                    <RadioButton GroupName="SettingsSections" IsChecked="{Binding IsSelected}" Tag="{Binding IsSelected}" Style="{DynamicResource Kyf.Button.Tool}"
+                                 HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="8,0" MinHeight="38" Margin="0,0,0,2"
+                                 AutomationProperties.Name="{Binding Label}" AutomationProperties.HelpText="{Binding Description}">
+                      <StackPanel Orientation="Horizontal">
+                        <kyf:Icon Text="{Binding Glyph}" VerticalAlignment="Center" Margin="0,0,10,0" />
+                        <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
+                      </StackPanel>
+                    </RadioButton>
+                  </StackPanel>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </ScrollViewer>
+      </DockPanel>
+    </Border>
+
+    <Grid Grid.Column="1">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="*" />
+      </Grid.RowDefinitions>
+
+      <!-- En fenêtre étroite, le titre de la vue et la recherche remontent ici : le titre porte le même identifiant que celui de la liste, cachée. -->
+      <StackPanel x:Name="NarrowTop" Visibility="Collapsed">
+        <TextBlock x:Name="NarrowHeading" Text="{x:Static pages:SettingsText.Title}" Style="{DynamicResource Kyf.Text.Title}"
+                   AutomationProperties.HeadingLevel="Level1" AutomationProperties.AutomationId="Heading" Margin="0,0,0,8" />
+        <TextBox x:Name="NarrowSettingSearch" Text="{Binding Query, UpdateSourceTrigger=PropertyChanged}" kyf:Field.Placeholder="{x:Static pages:MoreSettingsText.SearchLabel}"
+                 AutomationProperties.Name="{x:Static pages:MoreSettingsText.SearchLabel}" Margin="0,0,0,8">
+          <TextBox.InputBindings>
+            <KeyBinding Key="Return" Command="{Binding OpenFirstCommand}" />
+            <KeyBinding Key="Escape" Command="{Binding ClearSearchCommand}" />
+          </TextBox.InputBindings>
+        </TextBox>
+      </StackPanel>
+
+      <!-- En fenêtre étroite, les résultats prennent la place de la section tant que l'on cherche. -->
+      <ScrollViewer x:Name="NarrowResults" Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
+        <ScrollViewer.Style>
+          <Style TargetType="ScrollViewer">
+            <Setter Property="Visibility" Value="Collapsed" />
+            <Style.Triggers>
+              <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                  <Condition Binding="{Binding IsSearching}" Value="True" />
+                  <Condition Binding="{Binding Visibility, ElementName=NarrowTop}" Value="Visible" />
+                </MultiDataTrigger.Conditions>
+                <Setter Property="Visibility" Value="Visible" />
+              </MultiDataTrigger>
+            </Style.Triggers>
+          </Style>
+        </ScrollViewer.Style>
+        <ContentControl Content="{Binding}" ContentTemplate="{StaticResource FoundSettings}" Focusable="False" IsTabStop="False" />
+      </ScrollViewer>
+
+      <DockPanel x:Name="SectionArea" Grid.Row="1">
+        <DockPanel.Style>
+          <Style TargetType="DockPanel">
+            <Style.Triggers>
+              <MultiDataTrigger>
+                <MultiDataTrigger.Conditions>
+                  <Condition Binding="{Binding IsSearching}" Value="True" />
+                  <Condition Binding="{Binding Visibility, ElementName=NarrowTop}" Value="Visible" />
+                </MultiDataTrigger.Conditions>
+                <Setter Property="Visibility" Value="Collapsed" />
+              </MultiDataTrigger>
+            </Style.Triggers>
+          </Style>
+        </DockPanel.Style>
+
+        <ComboBox x:Name="SectionChoice" DockPanel.Dock="Top" Margin="0,0,0,12" Visibility="Collapsed" ItemsSource="{Binding Tabs}" SelectedItem="{Binding Selected, Mode=OneWay}" DisplayMemberPath="Label"
+                  SelectionChanged="OnSectionChosen" AutomationProperties.Name="{x:Static pages:SettingsText.Title}" />
+
+        <!-- Le titre de la section et, pour ce qui est retenu sur l'ordinateur, le retour à ses réglages d'origine : à droite, ou dessous en fenêtre étroite. -->
+        <Grid x:Name="SectionHead" DockPanel.Dock="Top" Margin="0,0,0,12">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+          </Grid.ColumnDefinitions>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+          </Grid.RowDefinitions>
+          <StackPanel>
+            <TextBlock x:Name="SectionTitle" Text="{Binding Selected.Label}" Style="{DynamicResource Kyf.Text.Title}" AutomationProperties.HeadingLevel="Level2" />
+            <TextBlock x:Name="SectionAbout" Text="{Binding Selected.Description}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="0,2,0,0" />
+          </StackPanel>
+          <Button x:Name="RestoreButton" Grid.Column="1" Style="{DynamicResource Kyf.Button.Subtle}" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="12,0,0,0"
+                  Content="{x:Static pages:MoreSettingsText.RestoreSection}" Command="{Binding RestoreCommand}" Visibility="{Binding OffersRestore, Converter={StaticResource Visible}}"
+                  ToolTip="{x:Static pages:MoreSettingsText.RestoreSectionHelp}" AutomationProperties.HelpText="{x:Static pages:MoreSettingsText.RestoreSectionHelp}" />
+        </Grid>
+
+        <DockPanel x:Name="RestoreBar" DockPanel.Dock="Top" Margin="0,0,0,12" Visibility="{Binding HasRestoreNote, Converter={StaticResource Visible}}">
+          <Button x:Name="UndoRestoreButton" DockPanel.Dock="Right" VerticalAlignment="Center" Margin="8,0,0,0" Content="{x:Static pages:MoreSettingsText.UndoRestore}" Command="{Binding UndoRestoreCommand}" />
+          <kyf:Notification x:Name="RestoreNote" Severity="Info" Message="{Binding RestoreNote}" IsOpen="{Binding HasRestoreNote, Mode=OneWay}" IsClosable="False" />
+        </DockPanel>
+
+        <ContentControl x:Name="TabContent" Content="{Binding Selected.Page}" pages:SettingsPart.Current="{Binding Selected.Part}" Focusable="False" IsTabStop="False" />
+      </DockPanel>
+    </Grid>
+  </Grid>
 </UserControl>

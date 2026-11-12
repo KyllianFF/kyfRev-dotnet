@@ -7,6 +7,7 @@ import { definition } from "./catalogue";
 import type {
   Agregat,
   Annotation,
+  Ensemble,
   Equipement,
   Extremite,
   Interface,
@@ -472,6 +473,62 @@ export function relier(
 }
 
 /** Copie profonde d'un objet du modèle (un proxy de Svelte compris). */
+// --- Grouper, dégrouper -----------------------------------------------------------
+
+/** Ce qui se groupe : équipements, annotations et cadres. Les câbles suivent leurs équipements. */
+export function groupables(schema: Schema): Set<string> {
+  return new Set([
+    ...schema.equipements.map((e) => e.id),
+    ...schema.annotations.map((n) => n.id),
+    ...schema.groupes.map((g) => g.id),
+  ]);
+}
+
+/** Les ensembles dont un membre au moins est parmi `ids`. */
+export function ensemblesDe(schema: Schema, ids: Iterable<string>): Ensemble[] {
+  const choisis = new Set(ids);
+  return (schema.ensembles ?? []).filter((e) => e.membres.some((m) => choisis.has(m)));
+}
+
+/** `ids`, élargis aux ensembles qu'ils touchent : un élément groupé se choisit avec les autres. */
+export function avecEnsembles(schema: Schema, ids: string[]): string[] {
+  const touches = ensemblesDe(schema, ids);
+  if (touches.length === 0) return ids;
+  const presents = groupables(schema);
+  const resultat = new Set(ids);
+  for (const e of touches) for (const m of e.membres) if (presents.has(m)) resultat.add(m);
+  return [...resultat];
+}
+
+/**
+ * Groupe les éléments `ids` (deux au moins). Un élément n'est que dans un ensemble : ceux qui étaient déjà groupés
+ * rejoignent le nouveau, et un ancien ensemble réduit à un membre disparaît.
+ */
+export function grouper(schema: Schema, ids: Set<string>): Ensemble {
+  const presents = groupables(schema);
+  const membres = [...ids].filter((id) => presents.has(id));
+  if (membres.length < 2) {
+    throw new Refus("Choisissez au moins deux éléments à grouper : équipements, notes, zones ou cadres.");
+  }
+  const pris = new Set(membres);
+  const restes = (schema.ensembles ?? [])
+    .map((e) => ({ ...e, membres: e.membres.filter((m) => !pris.has(m) && presents.has(m)) }))
+    .filter((e) => e.membres.length >= 2);
+  const ensemble: Ensemble = { id: nouvelId("e"), membres };
+  schema.ensembles = [...restes, ensemble];
+  return ensemble;
+}
+
+/** Défait les ensembles que touchent `ids` : les éléments restent où ils sont. Rend le nombre d'ensembles défaits. */
+export function degrouper(schema: Schema, ids: Set<string>): number {
+  const defaits = new Set(ensemblesDe(schema, ids).map((e) => e.id));
+  if (defaits.size === 0) throw new Refus("Rien à dégrouper : la sélection n'est pas groupée.");
+  const restes = (schema.ensembles ?? []).filter((e) => !defaits.has(e.id));
+  if (restes.length > 0) schema.ensembles = restes;
+  else delete schema.ensembles;
+  return defaits.size;
+}
+
 function cloner<T>(valeur: T): T {
   return JSON.parse(JSON.stringify(valeur)) as T;
 }

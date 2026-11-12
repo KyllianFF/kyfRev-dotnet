@@ -79,6 +79,9 @@ WizardStyle=modern dynamic
 SetupIconFile=..\assets\icon\kyfrev.ico
 WizardImageFile=images\assistant-*.png
 WizardSmallImageFile=images\petit-*.png
+; En thème sombre, Setup ne prend pas les images ci-dessus : sans ces deux lignes, il montre son image par défaut.
+WizardImageFileDynamicDark=images\assistant-*.png
+WizardSmallImageFileDynamicDark=images\petit-*.png
 ShowLanguageDialog=no
 AppMutex=kyfRev,Global\kyfRev
 CloseApplications=yes

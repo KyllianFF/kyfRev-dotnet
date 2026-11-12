@@ -81,6 +81,9 @@ public static class Icons
     /// <summary>Paysage : une image.</summary>
     public static string Picture { get; } = Glyph(0xE8B9);
 
+    /// <summary>Rogner une image.</summary>
+    public static string Crop { get; } = Glyph(0xE7A8);
+
     /// <summary>Trait : une ligne horizontale.</summary>
     public static string Rule { get; } = Glyph(0xE94E);
 
@@ -212,6 +215,9 @@ public static class Icons
 
     /// <summary>Engrenage : les paramètres.</summary>
     public static string Settings { get; } = Glyph(0xE713);
+
+    /// <summary>Un clavier : les raccourcis.</summary>
+    public static string Keyboard { get; } = Glyph(0xE765);
 
     /// <summary>Palette : la galerie des composants.</summary>
     public static string Palette { get; } = Glyph(0xE790);

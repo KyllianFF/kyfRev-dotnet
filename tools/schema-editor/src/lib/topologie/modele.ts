@@ -384,6 +384,15 @@ export type Groupe = {
 };
 
 /**
+ * Éléments groupés : ils se choisissent, se déplacent, se copient et se retirent ensemble, et se dégroupent sans rien
+ * changer d'autre. Rien n'est dessiné. Un élément (équipement, annotation ou cadre) n'est que dans un ensemble.
+ */
+export type Ensemble = {
+  id: string;
+  membres: string[];
+};
+
+/**
  * Annotations libres (D46) : note (cadre et texte), texte seul, zone
  * rectangulaire ou elliptique (largeur × hauteur, texte en légende), flèche
  * (de `position` à `vers`, texte au milieu).
@@ -448,6 +457,8 @@ export type Schema = {
   agregats: Agregat[];
   groupes: Groupe[];
   annotations: Annotation[];
+  /** Éléments groupés ; la clé n'est écrite que s'il y en a. */
+  ensembles?: Ensemble[];
   /** Vue affichée à l'ouverture et dans l'aperçu des fiches. */
   vue: IdVue;
   /** Câbles coudés à angle droit par défaut (D44). */
@@ -494,7 +505,7 @@ export const schemaVide = (titre = "Schéma réseau"): Schema => ({
 const ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyz";
 
 /** Identifiant interne neuf (« d_k3x9… ») ; jamais réutilisé ni recalculé. */
-export function nouvelId(prefixe: "d" | "i" | "l" | "r" | "v" | "a" | "g" | "n" | "m"): string {
+export function nouvelId(prefixe: "d" | "i" | "l" | "r" | "v" | "a" | "g" | "n" | "m" | "e"): string {
   const octets = new Uint8Array(10);
   crypto.getRandomValues(octets);
   let suite = "";

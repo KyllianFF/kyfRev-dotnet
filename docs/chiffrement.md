@@ -218,7 +218,7 @@ kyfrev-coffre cle-de-recuperation <coffre chiffré>
 ## L'ouverture dans l'application
 
 - **Un coffre chiffré se reconnaît à son en-tête** (`kyfrev-chiffre.json`) : à son ouverture, au démarrage, depuis
-  l'accueil ou depuis Paramètres › Données, l'application lui demande sa clé avant de rien lire de lui. Le port
+  l'accueil ou depuis Paramètres › Coffre et chiffrement, l'application lui demande sa clé avant de rien lire de lui. Le port
   `IVaultKeys` (`KyfRev.Application`) reconnaît le coffre, tire sa clé et la retient ; `EncryptedVaults`
   (`KyfRev.Infrastructure.Crypto`) l'implémente, et ouvre aussi les coffres en clair, sur le disque, comme avant. Le
   coffre prévu du mode portable ou installé qui n'a que son en-tête (tout juste chiffré, son dossier de suivi n'est encore
@@ -282,7 +282,7 @@ kyfrev-coffre cle-de-recuperation <coffre chiffré>
 
 ## La carte Chiffrement
 
-Dans Paramètres › Données, pour un coffre chiffré ouvert seulement. Chaque fenêtre qui demande le mot de passe propose
+Dans Paramètres › Coffre et chiffrement, pour un coffre chiffré ouvert seulement. Chaque fenêtre qui demande le mot de passe propose
 « J'utilise la clé de récupération » : la clé se saisit alors dans un champ qui la montre, comme sur l'écran de
 déverrouillage. Ce qui a été tapé est vidé dès que la fenêtre se ferme ou se cache.
 
@@ -326,7 +326,7 @@ intacte, chaque fichier relu et comparé à l'original, un dossier temporaire vo
 vérifié. Elle vit dans `KyfRev.Conversion`, le seul endroit, avec l'outil et la racine de composition, qui relie le coffre
 en clair et le chiffrement ; la présentation n'y accède que par le port `IVaultConversion`.
 
-- **« Chiffrer ce coffre… »**, dans la carte Coffre de Paramètres › Données, pour un coffre en clair. Une page remplace les
+- **« Chiffrer ce coffre… »**, dans la carte Coffre de Paramètres › Coffre et chiffrement, pour un coffre en clair. Une page remplace les
   vues, le coffre restant ouvert derrière elle tant que la conversion n'a pas commencé (« Annuler » y revient) :
   1. **le mot de passe**, deux fois, de 12 caractères au moins. Le chiffrement est alors préparé, sans rien écrire : la
      clé de données est tirée au hasard et enveloppée par le mot de passe (Argon2id, réglé sur le poste) et par une clé

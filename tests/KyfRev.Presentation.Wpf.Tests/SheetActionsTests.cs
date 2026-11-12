@@ -17,9 +17,9 @@ public sealed class SheetActionsTests
 {
     private static readonly string[] SheetMenu =
     [
-        SheetActionsText.Open, SheetActionsText.Review, SheetActionsText.Write,
+        SheetActionsText.Open, SheetActionsText.Review, SheetActionsText.Write, PrintText.PrintAction,
         SheetActionsText.Rename, SheetActionsText.Tags, SheetActionsText.Move,
-        SheetActionsText.Archive, SheetActionsText.Delete,
+        SheetsText.MakeNote, SheetActionsText.Archive, SheetActionsText.Delete,
     ];
 
     private static readonly string[] FolderMenu =
@@ -29,7 +29,7 @@ public sealed class SheetActionsTests
 
     private static readonly string[] FreeSpaceMenu = [SheetActionsText.NewSheet, SheetActionsText.NewFolder];
 
-    private static readonly string[] OpeningMenu = [SheetActionsText.Open, SheetActionsText.Review, SheetActionsText.Write];
+    private static readonly string[] OpeningMenu = [SheetActionsText.Open, SheetActionsText.Review, SheetActionsText.Write, PrintText.PrintAction];
 
     private static readonly string[] Tree =
     [

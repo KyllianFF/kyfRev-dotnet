@@ -55,6 +55,12 @@ public enum TrackingErrorCode
 
     /// <summary>L'élément n'est pas suspendu.</summary>
     NotSuspended,
+
+    /// <summary>L'élément est déjà une note, hors des révisions.</summary>
+    AlreadyNote,
+
+    /// <summary>L'élément n'est pas une note.</summary>
+    NotNote,
 }
 
 /// <summary>Opération refusée, avec un message destiné à l'utilisateur.</summary>
@@ -107,6 +113,12 @@ public sealed record TrackingError(TrackingErrorCode Code, string Message)
 
     internal static TrackingError NotSuspended() =>
         new(TrackingErrorCode.NotSuspended, "Cet élément n'est pas suspendu.");
+
+    internal static TrackingError AlreadyNote() =>
+        new(TrackingErrorCode.AlreadyNote, "C'est déjà une note, hors des révisions.");
+
+    internal static TrackingError NotNote() =>
+        new(TrackingErrorCode.NotNote, "Ce n'est pas une note : cet élément est déjà en révision.");
 
     internal static TrackingError DateOutOfRange() =>
         new(TrackingErrorCode.DateOutOfRange, "Date hors des limites du calendrier.");

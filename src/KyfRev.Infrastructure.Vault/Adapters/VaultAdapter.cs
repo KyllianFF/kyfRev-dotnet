@@ -233,6 +233,13 @@ public sealed class VaultAdapter(VaultSession inner, IDisposable? owned = null) 
     public void ResumeReview(ItemKind kind, string id) => inner.ApplyTo(kind, id, (tracking, _) => tracking.Resume());
 
     /// <inheritdoc/>
+    public void MakeNote(string id, Moment now) => inner.ApplyTo(ItemKind.Sheet, id, (tracking, _) => tracking.MakeNote(now));
+
+    /// <inheritdoc/>
+    public void PutInReview(string id, Moment now) =>
+        inner.ApplyTo(ItemKind.Sheet, id, (tracking, _) => tracking.PutInReview(now, inner.Settings.Sequence));
+
+    /// <inheritdoc/>
     public void ArchiveSheet(string id, Moment now) =>
         inner.ApplyTo(ItemKind.Sheet, id, (tracking, rules) => tracking.ArchiveManually(now, rules));
 
@@ -343,6 +350,12 @@ public sealed class VaultAdapter(VaultSession inner, IDisposable? owned = null) 
 
     /// <inheritdoc/>
     public SchemaDocument ReadSchema(string id) => Document(inner.ReadSchema(id));
+
+    /// <inheritdoc/>
+    public IReadOnlyList<SchemaSummary> SchemasAside() => inner.SchemasAside();
+
+    /// <inheritdoc/>
+    public void MoveSchema(string id, SchemaPlace place) => inner.MoveSchema(id, place);
 
     /// <inheritdoc/>
     public SchemaDocument CreateSchema(string text) => Document(inner.CreateSchema(text));

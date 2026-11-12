@@ -212,6 +212,51 @@ public sealed partial class SheetsPageViewModel
     /// <summary>Ouvre une fiche pour l'écrire.</summary>
     internal void Write(SheetRow row) => _opener.WriteSheet(row.Sheet.Id);
 
+    /// <summary>Ouvre une fiche sur sa fenêtre « Imprimer ».</summary>
+    internal void Print(SheetRow row) => _opener.PrintSheet(row.Sheet.Id);
+
+    /// <summary>« Lire » : ouvre le document choisi dans la liste.</summary>
+    [RelayCommand]
+    private void ReadSelected()
+    {
+        if (SelectedRow is SheetRow row)
+        {
+            OpenCommand.Execute(row);
+        }
+    }
+
+    /// <summary>« Écrire » : ouvre le document choisi, en écriture.</summary>
+    [RelayCommand]
+    private void WriteSelected()
+    {
+        if (SelectedRow is SheetRow row)
+        {
+            Write(row);
+        }
+    }
+
+    /// <summary>
+    /// Fait d'une fiche de révision une simple note, ou d'une note une fiche de révision ; la liste est relue, et dit ce qui
+    /// a été fait. Rien pour une fiche archivée : elle se remet d'abord en révision.
+    /// </summary>
+    internal async Task ToggleNoteAsync(SheetRow row)
+    {
+        ArgumentNullException.ThrowIfNull(row);
+        if (_reviews is not { } reviews || row.Sheet.Archived)
+        {
+            return;
+        }
+        var (id, wasNote, generation) = (row.Sheet.Id, row.Sheet.IsNote, _generation);
+        var outcome = await Task.Run(() => wasNote ? reviews.PutInReview(id) : reviews.MakeNote(id)).ConfigureAwait(true);
+        if (generation != _generation)
+        {
+            return;
+        }
+        Error = outcome.Succeeded ? null : outcome.Error;
+        Done = outcome.Succeeded ? wasNote ? SheetsText.NowReview : SheetsText.NowNote : null;
+        await RefreshCommand.ExecuteAsync(null).ConfigureAwait(true);
+    }
+
     /// <summary>Renommer une fiche.</summary>
     internal void RequestRename(SheetRow row)
     {

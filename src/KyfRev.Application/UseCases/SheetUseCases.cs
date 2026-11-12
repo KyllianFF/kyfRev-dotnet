@@ -25,6 +25,26 @@ public sealed partial class SheetUseCases(VaultHost host, TimeProvider time, ILo
         });
     }
 
+    /// <summary>
+    /// Crée une simple note : une fiche comme les autres, avec le même éditeur, mais tenue hors des révisions dès sa
+    /// création. « Mettre en révision » en fait une fiche à apprendre.
+    /// </summary>
+    /// <param name="folder">Dossier relatif à <c>fiches/</c> ; vide ou rien : la racine.</param>
+    /// <param name="title">Titre.</param>
+    /// <param name="template">Nom du modèle ; vide ou rien : une note vide.</param>
+    public Outcome<string> CreateNote(string? folder, string title, string? template)
+    {
+        var present = Present.Of(time);
+        var target = string.IsNullOrWhiteSpace(folder) ? null : folder;
+        return host.Use(vault =>
+        {
+            var body = string.IsNullOrWhiteSpace(template) ? string.Empty : vault.TemplateBody(template, title, target ?? string.Empty, present.Now.Day);
+            var id = vault.CreateSheet(target, title, body, present.Now);
+            vault.MakeNote(id, present.Now);
+            return id;
+        });
+    }
+
     /// <summary>Contenu d'une image d'une fiche, pour l'afficher ; seul le dossier des fiches est lisible.</summary>
     public Outcome<byte[]> ReadResource(string path) => host.Use(vault => vault.ReadResource(path));
 

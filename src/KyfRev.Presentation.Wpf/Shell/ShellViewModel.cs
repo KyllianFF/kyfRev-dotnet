@@ -63,25 +63,6 @@ public sealed partial class ShellViewModel : ObservableObject, IForgetsVault, IS
             }
         };
         Gallery = new NavigationItem("galerie", ShellText.Gallery, Icons.Palette, int.MaxValue, gallery);
-        Shortcuts =
-        [
-            new("Ctrl+K", ShellText.ShortcutSearch),
-            new("F1", ShellText.ShortcutHelp),
-            new("Ctrl+Maj+F", ShellText.ShortcutFocusMode),
-            new("F11", ShellText.ShortcutFullScreen),
-            new("Ctrl+Entrée", ShellText.ShortcutValidate),
-            new("Entrée, Espace", ShellText.ShortcutReveal),
-            new("H", ShellText.ShortcutHighlight),
-            new("Ctrl+E", ShellText.ShortcutWrite),
-            new("Ctrl+P", ShellText.ShortcutShare),
-            new("Ctrl+Maj+N", ShellText.ShortcutCapture),
-            new("Ctrl+→", ShellText.ShortcutNext),
-            new("Ctrl+1 … Ctrl+9", ShellText.ShortcutGoTo),
-            new("Ctrl+plus", ShellText.ShortcutZoomIn),
-            new("Ctrl+moins", ShellText.ShortcutZoomOut),
-            new("Ctrl+0", ShellText.ShortcutZoomReset),
-            new("Ctrl+Maj+L", ShellText.ShortcutLock),
-        ];
         ChosenZoom = 1.0;
         Zoom = 1.0;
         WindowWidth = ShellLayout.SidebarMinimum;
@@ -124,7 +105,7 @@ public sealed partial class ShellViewModel : ObservableObject, IForgetsVault, IS
 
     /// <summary>Largeur de la fenêtre, en pixels indépendants, avant zoom.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Layout))]
+    [NotifyPropertyChangedFor(nameof(Layout), nameof(CanToggleMenu))]
     public partial double WindowWidth { get; set; }
 
     /// <summary>Disposition de la navigation : onglets, colonne d'icônes ou barre latérale.</summary>
@@ -146,8 +127,33 @@ public sealed partial class ShellViewModel : ObservableObject, IForgetsVault, IS
     /// <summary>Apparence (thème).</summary>
     public AppearanceController Appearance { get; }
 
-    /// <summary>Raccourcis présentés par l'aide.</summary>
-    public IReadOnlyList<Shortcut> Shortcuts { get; }
+    /// <summary>Raccourcis présentés par l'aide : ceux qui se changent y montrent leur touche en vigueur.</summary>
+    [ObservableProperty]
+    public partial IReadOnlyList<Shortcut> Shortcuts { get; private set; } = CurrentShortcuts();
+
+    /// <summary>Les raccourcis viennent de changer : l'aide les relit.</summary>
+    public void RefreshShortcuts() => Shortcuts = CurrentShortcuts();
+
+    private static List<Shortcut> CurrentShortcuts() =>
+    [
+        new(ShortcutMap.Current.DisplayOf("recherche"), ShellText.ShortcutSearch),
+        new(ShortcutMap.Current.DisplayOf("aide"), ShellText.ShortcutHelp),
+        new(ShortcutMap.Current.DisplayOf("concentration"), ShellText.ShortcutFocusMode),
+        new(ShortcutMap.Current.DisplayOf("plein-ecran"), ShellText.ShortcutFullScreen),
+        new(ShortcutMap.Current.DisplayOf("valider"), ShellText.ShortcutValidate),
+        new("Entrée, Espace", ShellText.ShortcutReveal),
+        new("H", ShellText.ShortcutHighlight),
+        new(ShortcutMap.Current.DisplayOf("ecrire"), ShellText.ShortcutWrite),
+        new(ShortcutMap.Current.DisplayOf("imprimer"), ShellText.ShortcutPrint),
+        new(ShortcutMap.Current.DisplayOf("partager"), ShellText.ShortcutShare),
+        new(ShortcutMap.Current.DisplayOf("capture"), ShellText.ShortcutCapture),
+        new("Ctrl+→", ShellText.ShortcutNext),
+        new("Ctrl+1 … Ctrl+9", ShellText.ShortcutGoTo),
+        new("Ctrl+plus", ShellText.ShortcutZoomIn),
+        new("Ctrl+moins", ShellText.ShortcutZoomOut),
+        new("Ctrl+0", ShellText.ShortcutZoomReset),
+        new(ShortcutMap.Current.DisplayOf("verrouiller"), ShellText.ShortcutLock),
+    ];
 
     /// <summary>Page affichée.</summary>
     [ObservableProperty]
@@ -194,20 +200,26 @@ public sealed partial class ShellViewModel : ObservableObject, IForgetsVault, IS
     /// <summary>Le menu latéral est affiché : un coffre est ouvert, hors du mode concentration et du plein écran.</summary>
     public bool IsMenuVisible => !IsWelcome && !IsFocusMode && !IsFullScreen;
 
+    /// <summary>Le bouton de la barre de titre peut masquer ou rendre le menu : en plein écran, il n'y a pas de menu à rendre.</summary>
+    public bool CanToggleMenu => !IsFullScreen && Layout != NavigationLayout.Tabs;
+
+    /// <summary>« Masquer le menu (Ctrl+Maj+F) » ou, quand il est masqué, « Afficher le menu (Ctrl+Maj+F) ».</summary>
+    public string MenuToggleLabel => IsFocusMode ? ShellText.ExitFocusMode : ShellText.EnterFocusMode;
+
     /// <summary>Plein écran (F11) : la fenêtre occupe tout l'écran, sans menu, pour réviser sans distraction.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsMenuVisible))]
+    [NotifyPropertyChangedFor(nameof(IsMenuVisible), nameof(CanToggleMenu))]
     public partial bool IsFullScreen { get; private set; }
 
     /// <summary>Mode concentration : le menu est masqué.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsMenuVisible))]
+    [NotifyPropertyChangedFor(nameof(IsMenuVisible), nameof(MenuToggleLabel))]
     public partial bool IsFocusMode { get; set; }
 
     /// <summary>Zoom de l'interface (1 : taille normale) : celui choisi, tant que l'écran de la fenêtre peut le tenir.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ZoomLabel))]
-    [NotifyPropertyChangedFor(nameof(Layout))]
+    [NotifyPropertyChangedFor(nameof(Layout), nameof(CanToggleMenu))]
     [NotifyPropertyChangedFor(nameof(MinimumWindowWidth))]
     [NotifyPropertyChangedFor(nameof(MinimumWindowHeight))]
     public partial double Zoom { get; private set; }
@@ -563,11 +575,28 @@ public sealed partial class ShellViewModel : ObservableObject, IForgetsVault, IS
 
     private static void Activate(NavigationItem item) => (item.Page as INavigationAware)?.OnNavigatedTo();
 
+    private List<string> _menuOrder = [];
+
+    /// <summary>L'ordre choisi des vues du haut du menu : leurs identifiants séparés par des virgules ; vide pour l'ordre d'origine.</summary>
+    public void SetMenuOrder(string? written)
+    {
+        var order = (written ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
+        if (order.SequenceEqual(_menuOrder))
+        {
+            return;
+        }
+        _menuOrder = order;
+        var current = Current;
+        ArrangeMenu();
+        SelectedMain = MainNavigation.Contains(current) ? current : null;
+    }
+
     [MemberNotNull(nameof(MainNavigation), nameof(SecondaryNavigation), nameof(TabNavigation), nameof(OverflowNavigation), nameof(_commands))]
     private void ArrangeMenu()
     {
         var items = _core.Concat(_moduleEntries).OrderBy(item => item.Order).ThenBy(item => item.Label, StringComparer.CurrentCulture).ToList();
-        MainNavigation = [.. items.Where(item => !item.IsSecondary)];
+        // L'ordre choisi dans les paramètres passe avant celui d'origine ; une vue qu'il ne nomme pas garde sa place, après.
+        MainNavigation = [.. items.Where(item => !item.IsSecondary).OrderBy(item => _menuOrder.IndexOf(item.Id) is var rank and >= 0 ? rank : int.MaxValue)];
         SecondaryNavigation = [.. items.Where(item => item.IsSecondary)];
         TabNavigation = [.. MainNavigation.Take(ShellLayout.TabCount)];
         OverflowNavigation = [.. MainNavigation.Skip(ShellLayout.TabCount), .. SecondaryNavigation];

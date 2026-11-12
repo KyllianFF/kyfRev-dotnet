@@ -19,6 +19,10 @@ namespace KyfRev.Domain.Reviews;
 /// Jour où l'élément a été suspendu ; rien s'il ne l'est pas. Suspendu, il garde son étape et son échéance, mais ne se
 /// présente plus à réviser tant qu'il n'est pas repris.
 /// </param>
+/// <param name="IsNote">
+/// L'élément est une simple note, tenue hors des révisions : il est suspendu, sans attendre d'être repris. Il n'apparaît
+/// pas parmi les éléments suspendus ; « Mettre en révision » l'en sort.
+/// </param>
 public sealed record Cycle(
     int Number,
     ReviewSequence Sequence,
@@ -26,7 +30,8 @@ public sealed record Cycle(
     int Step,
     DateOnly DueDate,
     DateOnly LastReview,
-    DateOnly? SuspendedOn = null)
+    DateOnly? SuspendedOn = null,
+    bool IsNote = false)
 {
     /// <summary>« J7 » si l'étape attendue est J7.</summary>
     public string StepLabel => Sequence.Label(Step);

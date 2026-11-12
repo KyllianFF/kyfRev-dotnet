@@ -59,7 +59,7 @@ public sealed class TrashRow
 }
 
 /// <summary>
-/// L'onglet « Données » : le coffre, ses sauvegardes, ce qui a été supprimé et les exports, comme dans la 0.x. Rien n'est
+/// Les sections « Coffre et chiffrement » et « Sauvegardes et exports » : le coffre, ses sauvegardes, ce qui a été supprimé et les exports, comme dans la 0.x. Rien n'est
 /// jamais purgé, et un export ne remplace aucun fichier.
 /// </summary>
 public sealed partial class DataSettingsViewModel : ObservableObject, INavigationAware, IForgetsVault

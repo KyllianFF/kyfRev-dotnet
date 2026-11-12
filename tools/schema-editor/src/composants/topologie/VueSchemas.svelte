@@ -1,4 +1,6 @@
 <script lang="ts">
+  import Archive from "@lucide/svelte/icons/archive";
+  import ArchiveRestore from "@lucide/svelte/icons/archive-restore";
   import ArrowLeft from "@lucide/svelte/icons/arrow-left";
   import Copy from "@lucide/svelte/icons/copy";
   import Eye from "@lucide/svelte/icons/eye";
@@ -6,9 +8,11 @@
   import PenLine from "@lucide/svelte/icons/pen-line";
   import Plus from "@lucide/svelte/icons/plus";
   import Search from "@lucide/svelte/icons/search";
+  import Trash2 from "@lucide/svelte/icons/trash-2";
+  import Undo2 from "@lucide/svelte/icons/undo-2";
   import Upload from "@lucide/svelte/icons/upload";
   import { onMount } from "svelte";
-  import { api, messageErreur } from "../../lib/api";
+  import { api, messageErreur, type SchemaRange } from "../../lib/api";
   import { momentCourt, pluriel } from "../../lib/format";
   import type { SchemaResume } from "../../lib/generes/SchemaResume";
   import { apercuSchema } from "../../lib/topologie/apercu";
@@ -24,7 +28,9 @@
   // Vue « Schémas réseau » (D40) : tous les schémas du coffre (schemas/*.json),
   // chacun avec son aperçu ; un clic montre le détail (grand aperçu dans la
   // vue choisie, inventaire, constats, fiches qui le citent) sans ouvrir
-  // l'éditeur ; « Modifier » l'ouvre.
+  // l'éditeur ; « Modifier » l'ouvre. Un schéma s'archive ou se supprime par
+  // ses boutons comme au clic droit ; rien ne s'efface : les archives et la
+  // corbeille se lisent sous la liste, et tout s'y restaure.
   let { onouvrirfiche }: { onouvrirfiche: (id: string) => void } = $props();
 
   type Detail = { schema: Schema; erreur?: undefined } | { erreur: string; schema?: undefined };
@@ -38,10 +44,16 @@
   let edite = $state<string | null>(null);
   let creation = $state(false);
   let occupe = $state(false);
+  let ranges = $state<SchemaRange[]>([]);
+  let aSupprimer = $state<SchemaResume | null>(null);
+  let menu = $state<{ schema: SchemaResume; x: number; y: number } | null>(null);
+  const archives = $derived(ranges.filter((s) => s.etat === "archive"));
+  const corbeille = $derived(ranges.filter((s) => s.etat === "corbeille"));
 
   async function charger() {
     try {
       liste = await api.schemas();
+      ranges = await api.schemasRanges();
       erreur = null;
       for (const s of liste) {
         try {
@@ -121,6 +133,54 @@
       return `Copie créée : « ${lireSchema(copie.texte).schema.titre} ».`;
     });
 
+  /** Range un schéma (archives, corbeille, ou retour dans la liste) et le dit. */
+  const ranger = (s: SchemaResume, etat: "actif" | "archive" | "corbeille", fait: string) =>
+    agir(async () => {
+      await api.rangerSchema(s.id, etat);
+      if (lu === s.id) lu = null;
+      return `Schéma « ${s.titre} » ${fait}`;
+    });
+  const archiver = (s: SchemaResume) => ranger(s, "archive", "archivé. Les fiches qui l'insèrent le montrent toujours.");
+  const supprimer = (s: SchemaResume) => ranger(s, "corbeille", "mis à la corbeille : il s'y restaure.");
+  const restaurer = (s: SchemaResume) => ranger(s, "actif", "remis dans la liste.");
+
+  function ouvrirMenu(evenement: MouseEvent, schema: SchemaResume) {
+    evenement.preventDefault();
+    // Au clavier (touche Menu), l'évènement n'a pas de position : le menu s'ouvre sur la carte.
+    const cadre = (evenement.currentTarget as HTMLElement).getBoundingClientRect();
+    const auClavier = evenement.clientX === 0 && evenement.clientY === 0;
+    menu = {
+      schema,
+      x: Math.min(auClavier ? cadre.left + 24 : evenement.clientX, window.innerWidth - 220),
+      y: Math.min(auClavier ? cadre.top + 24 : evenement.clientY, window.innerHeight - 230),
+    };
+  }
+
+  function choisir(action: (s: SchemaResume) => unknown) {
+    const schema = menu?.schema;
+    menu = null;
+    if (schema) action(schema);
+  }
+
+  /** Le menu prend le clavier à l'ouverture ; les flèches passent d'une entrée à l'autre, Échap le ferme. */
+  function clavierMenu(liste: HTMLElement) {
+    const entrees = () => [...liste.querySelectorAll<HTMLButtonElement>("button")];
+    entrees()[0]?.focus();
+    const touche = (evenement: KeyboardEvent) => {
+      const tous = entrees();
+      const ici = tous.indexOf(document.activeElement as HTMLButtonElement);
+      if (evenement.key === "Escape") menu = null;
+      else if (evenement.key === "ArrowDown") tous[(ici + 1) % tous.length]?.focus();
+      else if (evenement.key === "ArrowUp") tous[(ici - 1 + tous.length) % tous.length]?.focus();
+      else return;
+      evenement.preventDefault();
+    };
+    liste.addEventListener("keydown", touche);
+    return { destroy: () => liste.removeEventListener("keydown", touche) };
+  }
+
+  const ouvrirDialogue = (dialogue: HTMLDialogElement) => dialogue.showModal();
+
   async function importer() {
     const chemin = await api.choisirFichierSchema();
     if (!chemin) return;
@@ -179,6 +239,12 @@
         </label>
         <button type="button" class="bouton" disabled={occupe} onclick={() => dupliquer(resumeLu.id)}>
           <Copy size={16} aria-hidden="true" /> Dupliquer
+        </button>
+        <button type="button" class="bouton" disabled={occupe} onclick={() => archiver(resumeLu)}>
+          <Archive size={16} aria-hidden="true" /> Archiver
+        </button>
+        <button type="button" class="bouton" disabled={occupe} onclick={() => (aSupprimer = resumeLu)}>
+          <Trash2 size={16} aria-hidden="true" /> Supprimer
         </button>
         <button type="button" class="bouton principal" onclick={() => (edite = resumeLu.id)}>
           <PenLine size={16} aria-hidden="true" /> Modifier
@@ -261,7 +327,9 @@
       <p class="vide" aria-busy="true">Chargement des schémas…</p>
     {:else if liste.length === 0}
       <p class="vide">
-        Aucun schéma réseau pour l'instant. Créez-en un ici, ou depuis une fiche (Écrire › Insertion › Réseau).
+        {ranges.length === 0
+          ? "Aucun schéma réseau pour l'instant. Créez-en un ici, ou depuis une fiche (Écrire › Insertion › Réseau)."
+          : "Aucun schéma dans la liste : ceux que vous avez archivés ou supprimés sont plus bas."}
       </p>
     {:else}
       <label class="recherche">
@@ -272,7 +340,8 @@
       <ul class="grille">
         {#each filtres as s (s.id)}
           {@const schema = details[s.id]?.schema}
-          <li class="carte">
+          <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+          <li class="carte" oncontextmenu={(e) => ouvrirMenu(e, s)}>
             <button
               type="button"
               class="apercu"
@@ -303,6 +372,8 @@
                 <button type="button" class="bouton petit" onclick={() => lire(s.id)}><Eye size={14} aria-hidden="true" /> Détail</button>
                 <button type="button" class="bouton petit" onclick={() => (edite = s.id)}><PenLine size={14} aria-hidden="true" /> Modifier</button>
                 <button type="button" class="bouton petit" disabled={occupe} onclick={() => dupliquer(s.id)}><Copy size={14} aria-hidden="true" /> Dupliquer</button>
+                <button type="button" class="bouton petit" disabled={occupe} onclick={() => archiver(s)}><Archive size={14} aria-hidden="true" /> Archiver</button>
+                <button type="button" class="bouton petit" disabled={occupe} onclick={() => (aSupprimer = s)}><Trash2 size={14} aria-hidden="true" /> Supprimer</button>
               </div>
             </div>
           </li>
@@ -310,8 +381,80 @@
       </ul>
       {#if filtres.length === 0}<p class="vide">Aucun schéma ne correspond.</p>{/if}
     {/if}
+    {#if archives.length > 0}
+      <details class="ranges">
+        <summary>Archives <span class="compte">{archives.length}</span></summary>
+        <p class="aide">Hors de la liste, mais les fiches qui les insèrent les montrent toujours.</p>
+        <ul>
+          {#each archives as s (s.id)}
+            <li>
+              <span class="nom">{s.titre}</span>
+              <span class="meta">{pluriel(s.equipements, "équipement")}{s.fiches.length > 0 ? ` · cité dans ${s.fiches.map((f) => f.titre).join(", ")}` : ""}</span>
+              <button type="button" class="bouton petit" disabled={occupe} onclick={() => restaurer(s)}><ArchiveRestore size={14} aria-hidden="true" /> Désarchiver</button>
+              <button type="button" class="bouton petit" disabled={occupe} onclick={() => (aSupprimer = s)}><Trash2 size={14} aria-hidden="true" /> Supprimer</button>
+            </li>
+          {/each}
+        </ul>
+      </details>
+    {/if}
+    {#if corbeille.length > 0}
+      <details class="ranges">
+        <summary>Corbeille <span class="compte">{corbeille.length}</span></summary>
+        <p class="aide">Rien n'est effacé : un schéma supprimé reste ici, et se restaure tel qu'il était.</p>
+        <ul>
+          {#each corbeille as s (s.id)}
+            <li>
+              <span class="nom">{s.titre}</span>
+              <span class="meta">{pluriel(s.equipements, "équipement")}{s.fiches.length > 0 ? ` · manque à ${s.fiches.map((f) => f.titre).join(", ")}` : ""}</span>
+              <button type="button" class="bouton petit" disabled={occupe} onclick={() => restaurer(s)}><Undo2 size={14} aria-hidden="true" /> Restaurer</button>
+            </li>
+          {/each}
+        </ul>
+      </details>
+    {/if}
   {/if}
 </div>
+
+<svelte:window onclick={() => (menu = null)} onblur={() => (menu = null)} onresize={() => (menu = null)} />
+
+{#if menu}
+  <div class="menu" role="menu" aria-label={`Actions sur « ${menu.schema.titre} »`} style:left={`${menu.x}px`} style:top={`${menu.y}px`} use:clavierMenu>
+    <button type="button" role="menuitem" onclick={() => choisir((s) => lire(s.id))}><Eye size={16} aria-hidden="true" /> Détail</button>
+    <button type="button" role="menuitem" onclick={() => choisir((s) => (edite = s.id))}><PenLine size={16} aria-hidden="true" /> Modifier</button>
+    <button type="button" role="menuitem" disabled={occupe} onclick={() => choisir((s) => dupliquer(s.id))}><Copy size={16} aria-hidden="true" /> Dupliquer</button>
+    <hr />
+    <button type="button" role="menuitem" disabled={occupe} onclick={() => choisir(archiver)}><Archive size={16} aria-hidden="true" /> Archiver</button>
+    <button type="button" role="menuitem" disabled={occupe} onclick={() => choisir((s) => (aSupprimer = s))}><Trash2 size={16} aria-hidden="true" /> Supprimer</button>
+  </div>
+{/if}
+
+{#if aSupprimer}
+  {@const s = aSupprimer}
+  <dialog class="confirmation" aria-labelledby="titre-suppression" use:ouvrirDialogue onclose={() => (aSupprimer = null)}>
+    <h2 id="titre-suppression">Supprimer « {s.titre} » ?</h2>
+    <p>Le schéma va à la corbeille des schémas, en bas de cette page : il s'y restaure tel qu'il est.</p>
+    {#if s.fiches.length > 0}
+      <p class="alerte">
+        {pluriel(s.fiches.length, "fiche l'insère", "fiches l'insèrent")} ({s.fiches.map((f) => f.titre).join(", ")}) : le
+        schéma y manquera tant qu'il ne sera pas restauré. Pour le retirer de la liste sans le retirer des fiches, archivez-le.
+      </p>
+    {/if}
+    <div class="actions fin">
+      <!-- svelte-ignore a11y_autofocus -->
+      <button type="button" class="bouton" autofocus onclick={(e) => e.currentTarget.closest("dialog")?.close()}>Annuler</button>
+      <button
+        type="button"
+        class="bouton principal"
+        onclick={(e) => {
+          e.currentTarget.closest("dialog")?.close();
+          void supprimer(s);
+        }}
+      >
+        Supprimer
+      </button>
+    </div>
+  </dialog>
+{/if}
 
 {#if creation}
   <DialogueSaisie
@@ -488,6 +631,120 @@
 
   .entete-lecture {
     align-items: center;
+  }
+
+  .ranges {
+    margin-top: 24px;
+    padding: 10px 14px;
+    border: 1px solid var(--bordure);
+    border-radius: var(--rayon-carte);
+    background: var(--surface);
+  }
+
+  .ranges summary {
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .ranges .aide {
+    margin: 6px 0 8px;
+    font-size: 13px;
+  }
+
+  .ranges ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .ranges li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0;
+    border-top: 1px solid var(--bordure);
+  }
+
+  .ranges .nom {
+    font-weight: 600;
+  }
+
+  .ranges .meta {
+    flex: 1 1 160px;
+  }
+
+  .menu {
+    position: fixed;
+    z-index: 30;
+    display: flex;
+    flex-direction: column;
+    min-width: 200px;
+    padding: 4px;
+    border: 1px solid var(--bordure);
+    border-radius: var(--rayon);
+    background: var(--surface);
+    box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+  }
+
+  .menu button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 32px;
+    padding: 0 10px;
+    border: none;
+    border-radius: var(--rayon);
+    background: none;
+    color: var(--texte);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .menu button:hover:not(:disabled),
+  .menu button:focus-visible {
+    background: var(--surface-2);
+  }
+
+  .menu button:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  .menu hr {
+    width: 100%;
+    margin: 4px 0;
+    border: none;
+    border-top: 1px solid var(--bordure);
+  }
+
+  .confirmation {
+    width: min(480px, calc(100vw - 32px));
+    padding: 24px;
+    border: 1px solid var(--bordure);
+    border-radius: var(--rayon-carte);
+    background: var(--surface);
+    color: var(--texte);
+    box-shadow: 0 16px 48px rgb(0 0 0 / 0.2);
+  }
+
+  .confirmation::backdrop {
+    background: var(--voile);
+  }
+
+  .confirmation h2 {
+    margin-bottom: 12px;
+    font-size: 18px;
+  }
+
+  .confirmation p {
+    margin: 0 0 10px;
+  }
+
+  .actions.fin {
+    justify-content: flex-end;
+    margin-top: 16px;
   }
 
   .entete-lecture h1 {

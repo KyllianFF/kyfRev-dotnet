@@ -141,4 +141,46 @@
   <data name="SearchName" xml:space="preserve">
     <value>Rechercher dans les fiches (titre, étiquettes et texte)</value>
   </data>
+  <data name="NoteRow" xml:space="preserve">
+    <value>Note</value>
+  </data>
+  <data name="KindAll" xml:space="preserve">
+    <value>Tout</value>
+  </data>
+  <data name="KindReview" xml:space="preserve">
+    <value>Fiches</value>
+  </data>
+  <data name="KindNotes" xml:space="preserve">
+    <value>Notes</value>
+  </data>
+  <data name="KindName" xml:space="preserve">
+    <value>Ce que la liste montre</value>
+  </data>
+  <data name="NewNote" xml:space="preserve">
+    <value>Nouvelle note</value>
+  </data>
+  <data name="MakeNote" xml:space="preserve">
+    <value>En faire une simple note</value>
+  </data>
+  <data name="MakeReview" xml:space="preserve">
+    <value>En faire une fiche de révision</value>
+  </data>
+  <data name="NowNote" xml:space="preserve">
+    <value>C'est maintenant une simple note : elle n'entre plus dans les révisions.</value>
+  </data>
+  <data name="NowReview" xml:space="preserve">
+    <value>C'est maintenant une fiche de révision.</value>
+  </data>
+  <data name="CreateNote" xml:space="preserve">
+    <value>Créer la note</value>
+  </data>
+  <data name="Read" xml:space="preserve">
+    <value>Lire</value>
+  </data>
+  <data name="Write" xml:space="preserve">
+    <value>Écrire</value>
+  </data>
+  <data name="TagsToggle" xml:space="preserve">
+    <value>Étiquettes</value>
+  </data>
 </root>

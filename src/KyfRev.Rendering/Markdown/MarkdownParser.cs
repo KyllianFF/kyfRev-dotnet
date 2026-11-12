@@ -17,6 +17,7 @@ internal static partial class MarkdownParser
         BlockParser.Parse(text, environment, tokens);
         tokens.RemoveAll(token => token.Kind == TokenKind.ReferenceDefinition);
         AttachTableLooks(tokens);
+        ReadPageMarks(tokens);
         foreach (var token in tokens.Where(token => token.Kind == TokenKind.Inline))
         {
             InlineParser.Parse(token.Content, environment, token.Children);
@@ -54,6 +55,25 @@ internal static partial class MarkdownParser
             {
                 table.Look = look;
                 tokens.RemoveRange(i, 3);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Une ligne de saut de page ou de page blanche, seule dans son paragraphe et au premier niveau de la fiche, quitte le
+    /// texte : il en reste un filet qui porte la demande, que la mise en pages lit et que rien d'autre n'affiche comme tel.
+    /// </summary>
+    private static void ReadPageMarks(List<Token> tokens)
+    {
+        for (var i = tokens.Count - 3; i >= 0; i--)
+        {
+            if (tokens[i] is { Kind: TokenKind.ParagraphOpen, Level: 0 } open
+                && tokens[i + 1].Kind == TokenKind.Inline
+                && tokens[i + 2].Kind == TokenKind.ParagraphClose
+                && PageMarks.FromLine(tokens[i + 1].Content) is var mark and not PageMark.None)
+            {
+                tokens[i] = new Token(TokenKind.Element, "hr", 0) { Block = true, Level = 0, Line = open.Line, PageMark = mark };
+                tokens.RemoveRange(i + 1, 2);
             }
         }
     }

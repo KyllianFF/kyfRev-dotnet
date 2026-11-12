@@ -285,7 +285,9 @@
       <button type="button" class="bouton petit" onclick={() => aligner("x")}>Aligner verticalement</button>
       <button type="button" class="bouton petit" onclick={() => repartir("x")}>Répartir en largeur</button>
       <button type="button" class="bouton petit" onclick={() => repartir("y")}>Répartir en hauteur</button>
-      <button type="button" class="bouton petit" onclick={grouper}>Grouper</button>
+      <button type="button" class="bouton petit" disabled={!editeur.groupement.peutGrouper} title="Ctrl+G : les éléments choisis se manipulent ensemble" onclick={() => editeur.grouper()}>Grouper</button>
+      <button type="button" class="bouton petit" disabled={!editeur.groupement.peutDegrouper} title="Ctrl+Maj+G" onclick={() => editeur.degrouper()}>Dégrouper</button>
+      <button type="button" class="bouton petit" title="Dessine un cadre nommé autour des équipements choisis" onclick={grouper}>Encadrer</button>
       <button type="button" class="bouton petit" onclick={() => editeur.agir((s) => { editeur.selection = dupliquerEquipements(s, new Set(editeur.selection)); }, "Équipements dupliqués.")}>Dupliquer</button>
     </div>
     <label class="large">

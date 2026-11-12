@@ -99,7 +99,10 @@
 
       <!-- L'étape attendue et son échéance ; archivé, l'état des rappels. -->
       <StackPanel Style="{StaticResource StatusSlot}" kyf:AdaptiveRow.Part="Main">
-        <StackPanel Visibility="{Binding IsActive, Converter={StaticResource Visible}}">
+        <!-- Une note : ni étape ni échéance. -->
+        <TextBlock x:Name="NoteStatus" Text="{x:Static pages:ReviewText.NoteStatus}" TextWrapping="Wrap"
+                   Visibility="{Binding IsNote, Converter={StaticResource Visible}}" />
+        <StackPanel Visibility="{Binding ShowsCycle, Converter={StaticResource Visible}}">
           <TextBlock x:Name="Status" TextWrapping="Wrap">
             <Run Text="{Binding StepLabel, Mode=OneWay}" /><Run Text=" : " /><Run Text="{Binding State.Step, Mode=OneWay}" FontWeight="SemiBold" />
           </TextBlock>
@@ -119,9 +122,15 @@
 
       <Grid Style="{StaticResource ActionsSlot}" kyf:AdaptiveRow.Part="Trailing">
         <!-- Suspendu : il n'a qu'à être repris. -->
-        <WrapPanel Visibility="{Binding IsSuspended, Converter={StaticResource Visible}}">
+        <WrapPanel Visibility="{Binding ShowsResume, Converter={StaticResource Visible}}">
           <Button x:Name="ResumeButton" Content="{x:Static pages:ReviewText.ResumeAction}" Command="{Binding ResumeCommand}" Style="{DynamicResource Kyf.Button.Primary}"
                   AutomationProperties.Name="{x:Static pages:ReviewText.ResumeAction}" />
+        </WrapPanel>
+
+        <!-- Une note : elle n'a qu'à être mise en révision, si on veut l'apprendre. -->
+        <WrapPanel Visibility="{Binding IsNote, Converter={StaticResource Visible}}">
+          <Button x:Name="PutInReviewButton" Content="{x:Static pages:ReviewText.PutInReviewAction}" Command="{Binding PutInReviewCommand}"
+                  AutomationProperties.Name="{x:Static pages:ReviewText.PutInReviewAction}" />
         </WrapPanel>
 
         <!-- En révision : reporter, les autres actions, valider. -->
@@ -148,6 +157,8 @@
                 <MenuItem x:Name="ValidateOnDay" Header="{x:Static pages:ReviewText.ChooseValidationDay}" Command="{Binding ChooseValidationDayCommand}"
                           Visibility="{Binding CanAntedate, Converter={StaticResource Visible}}" />
                 <MenuItem x:Name="Suspend" Header="{x:Static pages:ReviewText.SuspendAction}" Command="{Binding SuspendCommand}" ToolTip="{x:Static pages:ReviewText.SuspendHelp}" />
+                <MenuItem x:Name="MakeNote" Header="{x:Static pages:ReviewText.MakeNoteAction}" Command="{Binding MakeNoteCommand}" ToolTip="{x:Static pages:ReviewText.MakeNoteHelp}"
+                          Visibility="{Binding IsSheet, Converter={StaticResource Visible}}" />
                 <MenuItem x:Name="Restart" Header="{x:Static pages:ReviewText.RestartAction}" Command="{Binding RequestRestartCommand}" />
                 <MenuItem x:Name="Archive" Header="{x:Static pages:ReviewText.ArchiveAction}" Command="{Binding RequestArchiveCommand}"
                           Visibility="{Binding IsSheet, Converter={StaticResource Visible}}" />

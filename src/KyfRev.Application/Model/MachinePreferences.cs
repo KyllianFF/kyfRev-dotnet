@@ -54,6 +54,15 @@ public enum ReadingFont
 
     /// <summary>Avec empattements : Georgia.</summary>
     Serif,
+
+    /// <summary>Manuscrite, comme au stylo : Segoe Print.</summary>
+    Handwriting,
+
+    /// <summary>Au feutre, plus libre : Ink Free.</summary>
+    Marker,
+
+    /// <summary>À chasse fixe, comme à la machine : Consolas.</summary>
+    Typewriter,
 }
 
 /// <summary>Ce qui est retenu sur cet ordinateur, jamais dans le coffre : l'apparence, le confort de lecture et la voix.</summary>
@@ -68,7 +77,28 @@ public sealed record MachinePreferences
     /// <summary>Taille de l'interface (1 : taille normale).</summary>
     public double Zoom { get; init; } = 1;
 
-    /// <summary>Largeur du texte des fiches.</summary>
+    /// <summary>
+    /// Zoom de la fiche (1 : taille normale), en lecture, en révision et en écriture. Il ne touche pas au reste de
+    /// l'interface, qui a sa propre taille.
+    /// </summary>
+    public double SheetZoom { get; init; } = 1;
+
+    /// <summary>La mise en page de toutes les fiches : la feuille sans fin, ou un format de page.</summary>
+    public PageLayout Page { get; init; } = PageLayout.Default;
+
+    /// <summary>Le papier montré derrière le texte, par type de feuille. Il ne s'imprime jamais.</summary>
+    public PaperChoices Paper { get; init; } = PaperChoices.Default;
+
+    /// <summary>Les fiches qui ont leur propre mise en page.</summary>
+    public SheetPageLayouts SheetPages { get; init; } = SheetPageLayouts.None;
+
+    /// <summary>L'ordre choisi des vues du menu : leurs identifiants séparés par des virgules ; vide pour l'ordre d'origine.</summary>
+    public string MenuOrder { get; init; } = string.Empty;
+
+    /// <summary>Les raccourcis changés : « imprimer=Ctrl+Shift+I;partager=Ctrl+J » ; vide si aucun.</summary>
+    public string Shortcuts { get; init; } = string.Empty;
+
+    /// <summary>Largeur du texte des fiches : gardée pour relire les anciennes préférences, elle n'a plus d'effet.</summary>
     public ReadingWidth Width { get; init; } = ReadingWidth.Comfortable;
 
     /// <summary>Taille du texte des fiches.</summary>

@@ -246,7 +246,7 @@ internal sealed class SchemaIsland : UserControl, IDisposable
             Configure(_view.CoreWebView2);
             _view.CoreWebView2.Navigate(StartAddress);
         }
-        catch (Exception exception) when (exception is WebView2RuntimeNotFoundException or InvalidOperationException or System.Runtime.InteropServices.COMException)
+        catch (Exception exception) when (exception is WebView2RuntimeNotFoundException or InvalidOperationException or System.Runtime.InteropServices.COMException or ArgumentException or IOException or UnauthorizedAccessException or ObjectDisposedException)
         {
             if (!_disposed)
             {
@@ -285,10 +285,22 @@ internal sealed class SchemaIsland : UserControl, IDisposable
             SendPendingOpen();
             return;
         }
-        var answer = await _bridge.ReceiveAsync(message).ConfigureAwait(true);
-        if (answer is not null)
+        // Une demande de la page qui échoue (un fichier refusé, un moteur fermé entre-temps) reste sans réponse : elle
+        // n'arrête pas l'application.
+        try
         {
-            Post(answer);
+            var answer = await _bridge.ReceiveAsync(message).ConfigureAwait(true);
+            if (answer is not null)
+            {
+                Post(answer);
+            }
+        }
+        catch (Exception exception) when (exception is System.Runtime.InteropServices.COMException or IOException or UnauthorizedAccessException or ObjectDisposedException or NotSupportedException or System.Text.Json.JsonException or KeyNotFoundException)
+        {
+            if (!_disposed)
+            {
+                Failed?.Invoke(this, exception.Message);
+            }
         }
     }
 

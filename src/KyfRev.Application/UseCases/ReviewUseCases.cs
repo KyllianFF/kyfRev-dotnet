@@ -74,6 +74,31 @@ public sealed class ReviewUseCases(VaultHost host, TimeProvider time)
         });
     }
 
+    /// <summary>
+    /// Fait d'une fiche une simple note : elle reste dans le coffre, avec son texte et son historique, mais sort des
+    /// révisions sans attendre d'être reprise.
+    /// </summary>
+    public Outcome<ReviewState> MakeNote(string id)
+    {
+        var now = Present.Of(time).Now;
+        return host.Use(vault =>
+        {
+            vault.MakeNote(id, now);
+            return vault.ReviewStateOf(ItemKind.Sheet, id, now.Day);
+        });
+    }
+
+    /// <summary>Met une note en révision : à J0 si elle n'a jamais été révisée, sinon là où elle en était.</summary>
+    public Outcome<ReviewState> PutInReview(string id)
+    {
+        var now = Present.Of(time).Now;
+        return host.Use(vault =>
+        {
+            vault.PutInReview(id, now);
+            return vault.ReviewStateOf(ItemKind.Sheet, id, now.Day);
+        });
+    }
+
     /// <summary>Archive une fiche à la main.</summary>
     [ZeroXCommand("archiver_fiche")]
     public Outcome<ReviewState> Archive(string id)

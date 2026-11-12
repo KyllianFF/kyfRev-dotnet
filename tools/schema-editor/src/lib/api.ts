@@ -6,6 +6,10 @@ import type { ResultatEnregistrement } from "./generes/ResultatEnregistrement";
 import type { SchemaLu } from "./generes/SchemaLu";
 import type { SchemaResume } from "./generes/SchemaResume";
 
+/** Où un schéma est rangé : dans la liste, aux archives, ou à la corbeille (d'où il se restaure). */
+export type EtatSchema = "actif" | "archive" | "corbeille";
+export type SchemaRange = SchemaResume & { etat: EtatSchema };
+
 type Attente = { resoudre: (valeur: never) => void; rejeter: (raison: unknown) => void };
 
 type Reponse = { kind: "answer"; id: number; ok: true; value: unknown } | { kind: "answer"; id: number; ok: false; error: string };
@@ -77,6 +81,8 @@ function base64(octets: Uint8Array): string {
 
 export const api = {
   schemas: () => appeler<SchemaResume[]>("schemas"),
+  schemasRanges: () => appeler<SchemaRange[]>("schemasRanges"),
+  rangerSchema: (id: string, etat: EtatSchema) => appeler<null>("rangerSchema", id, etat),
   lireSchema: (id: string) => appeler<SchemaLu>("lireSchema", id),
   creerSchema: (texte: string) => appeler<SchemaLu>("creerSchema", texte),
   enregistrerSchema: (id: string, texte: string, empreinte: string) =>

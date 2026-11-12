@@ -65,6 +65,9 @@ public sealed class RenderElement : RenderNode
     /// <summary>Les zones d'une image cachées en révision (voir <see cref="ImageMasks"/>) ; aucune pour une image ordinaire.</summary>
     public System.Collections.Immutable.ImmutableArray<ImageMask> Masks { get; internal set; } = [];
 
+    /// <summary>L'apparence d'une image (largeur, place, cadre, masques) ; celle d'une image ordinaire si son titre n'en dit rien.</summary>
+    public ImageLook ImageLook { get; internal set; } = ImageLook.Plain;
+
     /// <summary>Numéro de départ d'une liste numérotée qui ne commence pas à 1.</summary>
     public int? ListStart { get; internal set; }
 
@@ -76,6 +79,9 @@ public sealed class RenderElement : RenderNode
 
     /// <summary>L'apparence d'un tableau, si une ligne la donne au-dessus de lui ; rien pour l'apparence par défaut.</summary>
     public TableLook? Look { get; internal set; }
+
+    /// <summary>Un saut de page ou une page blanche : l'élément est alors un filet (<c>hr</c>) que seule la mise en pages lit.</summary>
+    public PageMark PageMark { get; internal set; }
 
     /// <summary>Couleur d'un passage, écrite <c>#rrggbb</c>.</summary>
     public string? TextColor { get; internal set; }
