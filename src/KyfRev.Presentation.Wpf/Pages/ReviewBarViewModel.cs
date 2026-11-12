@@ -66,6 +66,12 @@ public enum ReviewAction
     /// <summary>Élément suspendu repris.</summary>
     Resumed,
 
+    /// <summary>Fiche devenue une simple note, hors des révisions.</summary>
+    MadeNote,
+
+    /// <summary>Note mise en révision.</summary>
+    PutInReview,
+
     /// <summary>Fiche exclue des rappels, ou réincluse.</summary>
     RemindersChanged,
 
@@ -174,7 +180,7 @@ public sealed partial class ReviewBarViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsActive), nameof(IsArchived), nameof(IsEarly), nameof(StepLabel), nameof(DueText), nameof(IsLate), nameof(CanValidate),
         nameof(ValidateLabel), nameof(ArchivedStatus), nameof(Steps), nameof(ReminderToggleLabel), nameof(ShowsReviewedToday),
         nameof(IsReminder), nameof(ShowsArchivedActions), nameof(ShowsSteps), nameof(ShowsReminderChoices), nameof(ReminderIntro), nameof(CanAntedate), nameof(EarliestDay), nameof(LatestDay),
-        nameof(CanForget), nameof(IsSuspended), nameof(ShowsActiveActions), nameof(SuspendedText))]
+        nameof(CanForget), nameof(IsSuspended), nameof(ShowsActiveActions), nameof(SuspendedText), nameof(IsNote), nameof(ShowsResume), nameof(ShowsCycle))]
     [NotifyCanExecuteChangedFor(nameof(ValidateCommand), nameof(ForgotCommand))]
     public partial ReviewState State { get; private set; }
 
@@ -186,6 +192,15 @@ public sealed partial class ReviewBarViewModel : ObservableObject
 
     /// <summary>Suspendu : en révision, mais il ne se présente plus tant qu'il n'est pas repris.</summary>
     public bool IsSuspended => IsActive && State.SuspendedOn is not null;
+
+    /// <summary>Une simple note : elle n'entre pas dans les révisions, et n'a que « Mettre en révision ».</summary>
+    public bool IsNote => IsActive && State.IsNote;
+
+    /// <summary>Suspendu et à reprendre : une note, elle, n'attend rien.</summary>
+    public bool ShowsResume => IsSuspended && !IsNote;
+
+    /// <summary>L'étape attendue et son échéance se montrent : un cycle est en cours, et ce n'est pas une note.</summary>
+    public bool ShowsCycle => IsActive && !IsNote;
 
     /// <summary>Reporter, valider et les autres actions d'un élément en révision ; suspendu, il n'a que « Reprendre ».</summary>
     public bool ShowsActiveActions => IsActive && !IsSuspended;
@@ -297,7 +312,7 @@ public sealed partial class ReviewBarViewModel : ObservableObject
     public bool ShowsArchivedActions => IsArchived && !IsReminder;
 
     /// <summary>La frise montre où en est la révision ; un rappel porte sur toute la fiche.</summary>
-    public bool ShowsSteps => !IsReminder;
+    public bool ShowsSteps => !IsReminder && !IsNote;
 
     /// <summary>« Fiche archivée le …. Relisez-la, puis dites ce qu'il en reste. ».</summary>
     public string ReminderIntro => ReviewText.ReminderIntroOf(State.ArchivedOn is { } archived ? Dates.Long(archived) : string.Empty);
@@ -512,6 +527,15 @@ public sealed partial class ReviewBarViewModel : ObservableObject
     [RelayCommand]
     private Task ResumeAsync() =>
         ActAsync(ReviewAction.Resumed, () => _reviews.Resume(Kind, Id), next => ReviewText.ResumedOf(next.Step ?? string.Empty, DueText));
+
+    /// <summary>Fait de la fiche une simple note : elle sort des révisions, avec son texte et son historique.</summary>
+    [RelayCommand]
+    private Task MakeNoteAsync() => ActAsync(ReviewAction.MadeNote, () => _reviews.MakeNote(Id), _ => ReviewText.MadeNote);
+
+    /// <summary>Met la note en révision : à J0 si elle n'a jamais été révisée, sinon là où elle en était.</summary>
+    [RelayCommand]
+    private Task PutInReviewAsync() =>
+        ActAsync(ReviewAction.PutInReview, () => _reviews.PutInReview(Id), next => ReviewText.PutInReviewOf(next.Step ?? string.Empty, DueText));
 
     /// <summary>Demande confirmation avant d'archiver la fiche.</summary>
     [RelayCommand]

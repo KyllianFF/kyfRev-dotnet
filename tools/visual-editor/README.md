@@ -22,6 +22,19 @@ npm run build
 
 `src/messages.ts` est généré depuis `VisualMessages.cs`. Un test de la présentation vérifie qu'il est à jour et donne le texte attendu s'il ne l'est pas.
 
+## La page d'essai
+
+`essai.html` et `essai/essai.ts` montrent l'éditeur hors de l'application : la page joue l'hôte, charge une fiche d'exemple et
+envoie les messages `theme`, `page`, `paper` et `load` d'après son adresse. Elle n'entre pas dans le paquet.
+
+```bash
+npm run dev
+```
+
+Puis, par exemple, `http://localhost:5173/essai.html?papier=grands-carreaux&page=a5&police=manuscrite&fiche=longue`. Les
+réglages (papier, pas, page, marge, police, taille, thème, fiche, traits) sont décrits en tête de `essai/essai.ts` ; dans la
+console, `essai.verifier()` dit de combien chaque bloc de texte s'écarte des lignes du papier.
+
 ## La page des dessins
 
 `src/diagrammes.ts` et `public/diagrammes.html` sont la page cachée qui dessine les schémas et les graphiques : Mermaid en mode

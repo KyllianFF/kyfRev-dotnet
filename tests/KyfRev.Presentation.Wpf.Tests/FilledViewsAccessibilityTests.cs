@@ -48,28 +48,30 @@ public sealed class FilledViewsAccessibilityTests
 
         var names = Names(hub, () => hub.Selected.Page == general, null);
 
-        CollectionAssert.Contains(names, GeneralSettingsText.General);
+        CollectionAssert.Contains(names, MoreSettingsText.Appearance);
         CollectionAssert.Contains(names, GeneralSettingsText.ReducedMotion);
         CollectionAssert.Contains(names, GeneralSettingsText.LargerTargets);
 
-        hub.Tabs[1].IsSelected = true;
+        hub.Tabs[2].IsSelected = true;
         names = Names(hub, () => page.IsReady, null);
 
-        CollectionAssert.Contains(names, SettingsHubText.Data);
+        CollectionAssert.Contains(names, MoreSettingsText.VaultAndEncryption);
         CollectionAssert.Contains(names, SettingsText.Steps);
         CollectionAssert.Contains(names, SettingsText.ActiveRecall);
         CollectionAssert.Contains(names, SettingsText.Save);
 
-        hub.Tabs[2].IsSelected = true;
+        hub.Tabs[3].IsSelected = true;
         names = Names(hub, () => hub.Selected.Page == modules, null);
 
         CollectionAssert.Contains(names, ModulesSettingsText.QuotesModule);
         CollectionAssert.Contains(names, ModulesSettingsText.SchemasModule);
 
-        hub.Tabs[3].IsSelected = true;
+        hub.Tabs[4].IsSelected = true;
         names = Names(hub, () => data.IsLoaded, null);
 
         CollectionAssert.Contains(names, SettingsHubText.OpenVault);
+        hub.Tabs[5].IsSelected = true;
+        names = Names(hub, () => data.IsLoaded, null);
         CollectionAssert.Contains(names, SettingsHubText.BackupNow);
         CollectionAssert.Contains(names, SettingsHubText.Rotation);
         CollectionAssert.Contains(names, SettingsHubText.ExportVault);
@@ -108,7 +110,9 @@ public sealed class FilledViewsAccessibilityTests
         page.LoadCommand.Execute(null);
         UiThread.Until(() => page.Backlinks.Count == 1);
 
-        var names = Names(page, () => page.ShowsBacklinks, null);
+        // La colonne d'icônes du menu est plus étroite qu'avant : la fenêtre l'est d'autant, pour que les volets restent
+        // repliés sous leur bouton, ce que cet essai nomme.
+        var names = Names(page, () => page.ShowsBacklinks, window => ((Window)window).Width = 965);
 
         CollectionAssert.Contains(names, page.PanelsMenuName);
         CollectionAssert.Contains(names, "La source, Histoire, Voir la mitose.");

@@ -40,10 +40,13 @@ public sealed class Tracking
     public Cycle? Cycle => (State as ActiveState)?.Cycle;
 
     /// <summary>Le cycle en cours s'il se présente à réviser : l'élément est actif, et pas suspendu.</summary>
-    public Cycle? DueCycle => Cycle is { SuspendedOn: null } cycle ? cycle : null;
+    public Cycle? DueCycle => Cycle is { SuspendedOn: null, IsNote: false } cycle ? cycle : null;
 
     /// <summary>L'élément est actif, mais suspendu : il ne se présente plus à réviser.</summary>
     public bool IsSuspended => Cycle is { SuspendedOn: not null };
+
+    /// <summary>L'élément est une simple note, tenue hors des révisions.</summary>
+    public bool IsNote => Cycle is { IsNote: true };
 
     /// <summary>Informations d'archivage, si l'élément est archivé.</summary>
     public ArchiveInfo? Archive => (State as ArchivedState)?.Archive;
@@ -224,7 +227,44 @@ public sealed class Tracking
         }
         return cycle.SuspendedOn is null
             ? TrackingResult.Failure(TrackingError.NotSuspended())
-            : TrackingResult.Success(new Tracking(new ActiveState(cycle with { SuspendedOn = null }), Counters, History));
+            : TrackingResult.Success(new Tracking(new ActiveState(cycle with { SuspendedOn = null, IsNote = false }), Counters, History));
+    }
+
+    /// <summary>
+    /// Fait d'un élément actif une simple note : il sort des révisions, comme un élément suspendu, mais sans attendre
+    /// d'être repris. Il garde son étape, son échéance et son historique, auquel rien ne s'ajoute.
+    /// </summary>
+    public TrackingResult MakeNote(Moment now)
+    {
+        if (State is not ActiveState { Cycle: var cycle })
+        {
+            return TrackingResult.Failure(TrackingError.NotActive());
+        }
+        return cycle.IsNote
+            ? TrackingResult.Failure(TrackingError.AlreadyNote())
+            : TrackingResult.Success(new Tracking(new ActiveState(cycle with { SuspendedOn = cycle.SuspendedOn ?? now.Day, IsNote = true }), Counters, History));
+    }
+
+    /// <summary>
+    /// Met une note en révision. Si elle n'a jamais été révisée, elle repart à J0 aujourd'hui, comme une fiche qu'on
+    /// vient d'écrire ; sinon elle reprend là où elle en était, même étape et même échéance.
+    /// </summary>
+    public TrackingResult PutInReview(Moment now, ReviewSequence sequence)
+    {
+        ArgumentNullException.ThrowIfNull(sequence);
+        if (State is not ActiveState { Cycle: var cycle })
+        {
+            return TrackingResult.Failure(TrackingError.NotActive());
+        }
+        if (!cycle.IsNote)
+        {
+            return TrackingResult.Failure(TrackingError.NotNote());
+        }
+        // Jamais révisée, et pas commencée aujourd'hui : son J0 date du jour où la note a été écrite, pas de celui où l'on
+        // décide de l'apprendre.
+        return cycle.LastReview == cycle.StartedOn && cycle.StartedOn != now.Day
+            ? Restart(now, sequence)
+            : TrackingResult.Success(new Tracking(new ActiveState(cycle with { SuspendedOn = null, IsNote = false }), Counters, History));
     }
 
     /// <summary>

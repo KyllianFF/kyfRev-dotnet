@@ -5,6 +5,8 @@
   import Cable from "@lucide/svelte/icons/cable";
   import Copy from "@lucide/svelte/icons/copy";
   import CopyPlus from "@lucide/svelte/icons/copy-plus";
+  import Group from "@lucide/svelte/icons/group";
+  import Ungroup from "@lucide/svelte/icons/ungroup";
   import Spline from "@lucide/svelte/icons/spline";
   import Trash2 from "@lucide/svelte/icons/trash-2";
   import { onMount } from "svelte";
@@ -113,6 +115,8 @@
         origines: Map<string, Point>;
         avant: string;
         bouge: boolean;
+        /** Élément d'un ensemble déjà choisi, cliqué de nouveau : relâché sans avoir bougé, il se choisit seul. */
+        affiner?: string;
         /** Objet saisi : c'est lui qui s'aligne sur les autres. */
         meneur: string;
       }
@@ -489,13 +493,15 @@
       editeur.choisir(id, true);
       return;
     }
-    if (!editeur.estChoisi(id)) editeur.choisir(id);
+    const dejaChoisi = editeur.estChoisi(id);
+    if (!dejaChoisi) editeur.choisir(id);
     geste = {
       genre: "deplacement",
       depart: dansLePlan(evenement),
       origines: origines(),
       avant: editeur.commencerGeste(),
       bouge: false,
+      affiner: dejaChoisi && editeur.selection.length > 1 && editeur.estGroupe(id) ? id : undefined,
       meneur: id,
     };
   }
@@ -834,12 +840,23 @@
       const y1 = Math.max(fini.depart.y, fini.courant.y);
       if (x1 - x0 < 4 && y1 - y0 < 4) {
         const zone = zoneSous(fini.depart);
-        if (zone) editeur.selection = fini.ajouter ? [...new Set([...editeur.selection, zone])] : [zone];
+        const lot = zone ? editeur.avecEnsembles([zone]) : [];
+        if (zone) editeur.selection = fini.ajouter ? [...new Set([...editeur.selection, ...lot])] : lot;
         return;
       }
-      const dedans = visibles
-        .filter((e) => e.position.x >= x0 && e.position.x <= x1 && e.position.y >= y0 && e.position.y <= y1)
-        .map((e) => e.id);
+      // Le cadre de sélection prend les équipements dont le centre est dedans, les annotations qu'il contient en
+      // entier, et, avec chacun, l'ensemble dont il fait partie.
+      const dedans = editeur.avecEnsembles([
+        ...visibles
+          .filter((e) => e.position.x >= x0 && e.position.x <= x1 && e.position.y >= y0 && e.position.y <= y1)
+          .map((e) => e.id),
+        ...schema.annotations
+          .filter((n) => {
+            const c = cadreAnnotation(n);
+            return c.x >= x0 && c.x + c.largeur <= x1 && c.y >= y0 && c.y + c.hauteur <= y1;
+          })
+          .map((n) => n.id),
+      ]);
       editeur.selection = fini.ajouter ? [...new Set([...editeur.selection, ...dedans])] : dedans;
     } else if (
       fini.genre === "deplacement" ||
@@ -849,6 +866,8 @@
       fini.genre === "coulisse"
     ) {
       editeur.finirGeste(fini.avant);
+      // Comme dans un logiciel de dessin : un second clic sur un élément d'un groupe le choisit seul.
+      if (fini.genre === "deplacement" && !fini.bouge && fini.affiner) editeur.selection = [fini.affiner];
     } else if (fini.genre === "connexion") {
       const point = dansLePlan(evenement);
       const cible = visibles.find(
@@ -1079,9 +1098,22 @@
       const m = versEcran(milieu(t.trace));
       return { genre: "lien" as const, lien: t.lien, x: m.x, y: m.y + 16 };
     }
-    if (equipements.length === 0) return null;
-    const x = equipements.reduce((n, e) => n + e.position.x, 0) / equipements.length;
-    const y = Math.min(...equipements.map((e) => e.position.y)) - COTE / 2;
+    // Le haut de chaque élément choisi : équipements, annotations, cadres.
+    const hauts: Point[] = [
+      ...equipements.map((e) => ({ x: e.position.x, y: e.position.y - COTE / 2 })),
+      ...schema.annotations
+        .filter((n) => editeur.selection.includes(n.id))
+        .map((n) => {
+          const c = cadreAnnotation(n);
+          return { x: c.x + c.largeur / 2, y: c.y };
+        }),
+      ...schema.groupes
+        .filter((g) => editeur.selection.includes(g.id))
+        .map((g) => ({ x: g.position.x + g.taille.largeur / 2, y: g.position.y })),
+    ];
+    if (hauts.length === 0) return null;
+    const x = hauts.reduce((n, p) => n + p.x, 0) / hauts.length;
+    const y = Math.min(...hauts.map((p) => p.y));
     const haut = versEcran({ x, y });
     return {
       genre: "plusieurs" as const,
@@ -1608,7 +1640,17 @@
         {/each}
       </span>
     {:else}
-      <span class="nombre-rapide">{barre.nombre} éléments</span>
+      <span class="nombre-rapide">{editeur.groupement.unSeul ? `Groupe de ${barre.nombre} éléments` : `${barre.nombre} éléments`}</span>
+      {#if editeur.groupement.peutGrouper}
+        <button type="button" class="bouton discret" title="Grouper (Ctrl+G) : les éléments choisis se manipulent ensemble" aria-label="Grouper" onclick={() => editeur.grouper()}>
+          <Group size={16} aria-hidden="true" />
+        </button>
+      {/if}
+      {#if editeur.groupement.peutDegrouper}
+        <button type="button" class="bouton discret" title="Dégrouper (Ctrl+Maj+G)" aria-label="Dégrouper" onclick={() => editeur.degrouper()}>
+          <Ungroup size={16} aria-hidden="true" />
+        </button>
+      {/if}
       {#if barre.equipements >= 2}
         <span class="ancre-aligner">
           <button
@@ -1638,7 +1680,7 @@
         </span>
       {/if}
     {/if}
-    {#if barre.genre === "equipement" || barre.genre === "plusieurs"}
+    {#if barre.genre === "equipement" || (barre.genre === "plusieurs" && barre.equipements > 0)}
       <button type="button" class="bouton discret" title="Copier (Ctrl+C), puis Ctrl+V pour coller, ici ou dans un autre schéma" aria-label="Copier" onclick={oncopier}>
         <Copy size={16} aria-hidden="true" />
       </button>

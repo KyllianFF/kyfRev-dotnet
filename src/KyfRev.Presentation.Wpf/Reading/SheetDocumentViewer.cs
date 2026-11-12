@@ -16,7 +16,7 @@ namespace KyfRev.Presentation.Wpf.Reading;
 /// Le texte d'une fiche, en document natif : sélection sur plusieurs blocs, défilement vertical seul.
 /// Un lien vers un autre endroit de la fiche s'y suit ; les autres passent par <see cref="OpenLinkCommand"/>.
 /// </summary>
-internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
+internal sealed partial class SheetDocumentViewer : FlowDocumentScrollViewer
 {
     /// <summary>Hauteur au-dessus d'un titre amené en haut de la vue.</summary>
     private const double TopMargin = 8;
@@ -48,6 +48,13 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
     public static readonly DependencyProperty WordsProperty = DependencyProperty.Register(
         nameof(Words), typeof(IReadOnlyList<DefinedWordMark>), typeof(SheetDocumentViewer), new PropertyMetadata(null, OnWordsChanged));
 
+    /// <summary>
+    /// Ce que fait Ctrl+P quand le clavier est dans le texte : ouvrir la fenêtre « Imprimer » de l'application. Sans
+    /// commande, le raccourci ne fait rien ; jamais il n'ouvre la fenêtre d'impression de Windows.
+    /// </summary>
+    public static readonly DependencyProperty PrintCommandProperty = DependencyProperty.Register(
+        nameof(PrintCommand), typeof(ICommand), typeof(SheetDocumentViewer));
+
     /// <summary>L'aperçu des liens vers une fiche ; rien : ils n'en ont pas.</summary>
     public static readonly DependencyProperty LinkPreviewProperty = DependencyProperty.Register(
         nameof(LinkPreview), typeof(LinkPreviewViewModel), typeof(SheetDocumentViewer), new PropertyMetadata(null, OnLinkPreviewChanged));
@@ -75,6 +82,9 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
         VerticalScrollBarVisibility = ScrollBarVisibility.Auto;
         HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled;
         SetResourceReference(SelectionBrushProperty, "Kyf.Brush.Selection");
+        SetResourceReference(PaperProperty, SheetPaper.ResourceKey);
+        SetResourceReference(ComfortProperty, ReadingComfort.ResourceKey);
+        Template = LayeredTemplate.Value;
         _hover = new LinkHover(ReadLinkPreview, HideLinkPreview, () => LinkPopup?.IsOpen == true, link => !IsMasked(link));
         // Le texte prend pour lui les mouvements de souris et le focus : ces événements-là sont suivis même traités.
         AddHandler(Mouse.MouseMoveEvent, new MouseEventHandler((_, e) => PointAt(e.LeftButton == MouseButtonState.Pressed ? null : e.OriginalSource)), handledEventsToo: true);
@@ -91,18 +101,45 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
             _hover.Hide();
             WatchWindow(null);
         };
-        SizeChanged += (_, _) => FitTables();
+        SizeChanged += (_, _) =>
+        {
+            FitTables();
+            RestartPages();
+        };
         IsVisibleChanged += (_, e) =>
         {
             if (e.NewValue is true && _rebuildsWhenShown)
             {
                 Rebuild();
             }
+            if (e.NewValue is true)
+            {
+                SchedulePages();
+            }
             if (e.NewValue is false)
             {
                 _hover.Hide();
             }
         };
+    }
+
+    /// <inheritdoc cref="PrintCommandProperty"/>
+    public ICommand? PrintCommand
+    {
+        get => (ICommand?)GetValue(PrintCommandProperty);
+        set => SetValue(PrintCommandProperty, value);
+    }
+
+    /// <summary>
+    /// Ctrl+P, que le texte prend pour lui avant la page : la vue d'origine ouvrirait ici la fenêtre d'impression de
+    /// Windows, sans aperçu ni mise en page. C'est celle de l'application qui s'ouvre.
+    /// </summary>
+    protected override void OnPrintCommand()
+    {
+        if (PrintCommand is { } command && command.CanExecute(null))
+        {
+            command.Execute(null);
+        }
     }
 
     /// <inheritdoc cref="LinkPreviewProperty"/>
@@ -186,12 +223,42 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
     /// <summary>Il reste du contenu à ajouter ou des formules à dessiner.</summary>
     public bool HasPendingWork => _built?.HasPendingWork == true;
 
+    /// <summary>
+    /// Le gabarit de la vue : la zone qui défile, entre la couche des feuilles et celle des écarts, et la place de la barre de
+    /// recherche du texte.
+    /// </summary>
+    private static readonly Lazy<ControlTemplate> LayeredTemplate = new(() => (ControlTemplate)System.Windows.Markup.XamlReader.Parse(
+        """
+        <ControlTemplate xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" TargetType="FlowDocumentScrollViewer">
+          <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}">
+            <Grid>
+              <Grid.RowDefinitions>
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+              </Grid.RowDefinitions>
+              <Grid x:Name="PART_Layers">
+                <ScrollViewer x:Name="PART_ContentHost" CanContentScroll="True" />
+              </Grid>
+              <Border x:Name="PART_FindToolBarHost" Grid.Row="1" Visibility="Collapsed" HorizontalAlignment="Left" />
+            </Grid>
+          </Border>
+        </ControlTemplate>
+        """));
+
     public override void OnApplyTemplate()
     {
         _scroller?.ScrollChanged -= OnScrollChanged;
         base.OnApplyTemplate();
         _scroller = GetTemplateChild("PART_ContentHost") as ScrollViewer;
         _scroller?.ScrollChanged += OnScrollChanged;
+        // Les feuilles se dessinent sous le texte, et l'écart entre elles par-dessus : les deux couches entourent la zone qui défile.
+        if (GetTemplateChild("PART_Layers") is Grid layers)
+        {
+            (PagePaper.Parent as Panel)?.Children.Remove(PagePaper);
+            (PageBands.Parent as Panel)?.Children.Remove(PageBands);
+            layers.Children.Insert(0, PagePaper);
+            layers.Children.Add(PageBands);
+        }
     }
 
     /// <summary>La souris sort du texte.</summary>
@@ -604,6 +671,24 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
         return true;
     }
 
+    /// <summary>
+    /// Le confort de lecture (taille, interligne, police), trouvé dans les ressources : quand il change, le texte montré se
+    /// refait avec lui.
+    /// </summary>
+    private static readonly DependencyProperty ComfortProperty = DependencyProperty.Register(
+        "Comfort", typeof(ReadingComfort), typeof(SheetDocumentViewer), new PropertyMetadata(null, (viewer, e) => ((SheetDocumentViewer)viewer).FollowComfort(e.NewValue as ReadingComfort)));
+
+    /// <summary>Le confort avec lequel le document montré a été construit.</summary>
+    private ReadingComfort? _builtComfort;
+
+    private void FollowComfort(ReadingComfort? comfort)
+    {
+        if (Document is not null && (comfort ?? ReadingComfort.Default) != _builtComfort)
+        {
+            Rebuild();
+        }
+    }
+
     private void Rebuild()
     {
         // Un document caché ne se construit pas : l'interface a mieux à faire, et il se construira s'il se montre.
@@ -620,10 +705,15 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
         if (Reading is { } reading)
         {
             var drawsMermaid = TryFindResource(MermaidEngine.ResourceKey) is not null;
-            _built = new DocumentBuilder(reading, Follow, OpenLinkCommand is not null, ShowsHeader, key => TryFindResource(key) as System.Windows.Media.Brush, TryFindResource(ReadingComfort.ResourceKey) as ReadingComfort) { DrawsMermaid = drawsMermaid, Pictures = TryFindResource(MermaidEngine.ResourceKey) as IMermaidEngine, ExtensionBlocks = TryFindResource(ExtensionBlocks.ResourceKey) as ExtensionBlocks };
+            // Sur un papier réglé, les lignes du texte prennent le pas du papier.
+            _step = StepOf(PaperShown);
+            _builtComfort = TryFindResource(ReadingComfort.ResourceKey) as ReadingComfort ?? ReadingComfort.Default;
+            var comfort = _builtComfort with { Step = _step };
+            _built = new DocumentBuilder(reading, Follow, OpenLinkCommand is not null, ShowsHeader, key => TryFindResource(key) as System.Windows.Media.Brush, comfort) { DrawsMermaid = drawsMermaid, Pictures = TryFindResource(MermaidEngine.ResourceKey) as IMermaidEngine, ExtensionBlocks = TryFindResource(ExtensionBlocks.ResourceKey) as ExtensionBlocks };
             _built.Layer.Set(Highlights ?? [], ActiveHighlight);
             _built.Layer.SetWords(Words ?? []);
             Document = _built.Build();
+            ForgetPages();
             FitTables();
             ComputeHoles();
         }
@@ -631,6 +721,7 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
         {
             _built = null;
             Document = null;
+            ForgetPages();
         }
     }
 
@@ -712,6 +803,19 @@ internal sealed class SheetDocumentViewer : FlowDocumentScrollViewer
     /// </summary>
     private void OnScrollChanged(object sender, ScrollChangedEventArgs e)
     {
+        // Le texte a grandi (un morceau de plus, une image arrivée) ou la vue a changé de taille : les pages se refont.
+        if (e.ExtentHeightChange != 0)
+        {
+            FollowWholeHeight();
+        }
+        if (e.ExtentHeightChange != 0 || e.ViewportHeightChange != 0 || e.ViewportWidthChange != 0)
+        {
+            SchedulePages();
+        }
+        if (e.VerticalChange != 0 || e.ExtentHeightChange != 0 || e.ViewportHeightChange != 0 || e.ViewportWidthChange != 0)
+        {
+            UpdateBands();
+        }
         // L'aperçu est posé sous un lien qui vient de bouger ; seul celui du focus le suit.
         if (e.VerticalChange != 0 && !FollowsFocusedLink(e.ViewportHeight))
         {

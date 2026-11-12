@@ -569,6 +569,9 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
     /// <summary>Ouvre la fiche d'une ligne, pour la relire.</summary>
     internal void OpenSheetOf(DueItemRow row) => _opener.OpenSheet(row.Item.SheetId);
 
+    /// <summary>Ouvre la fiche d'une ligne sur sa fenêtre « Imprimer ».</summary>
+    internal void PrintSheetOf(DueItemRow row) => _opener.PrintSheet(row.Item.SheetId);
+
     /// <summary>Reporte une ligne à demain, puis relit le tableau de bord.</summary>
     internal async Task PostponeTomorrowAsync(DueItemRow row)
     {

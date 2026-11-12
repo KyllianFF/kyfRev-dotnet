@@ -12,7 +12,7 @@ import { diagnostiquer } from "./diagnostic";
 import { ecrireSchema, erreursStructurelles, lireSchema } from "./format";
 import type { Extremite, IdVue, Schema, Support } from "./modele";
 import { schemaVide } from "./modele";
-import { Refus } from "./operations";
+import { avecEnsembles, degrouper, ensemblesDe, groupables, grouper, Refus } from "./operations";
 
 /** Support choisi (« auto » : d'après les ports) et bout déjà branché. */
 export type CableEnMain = {
@@ -283,10 +283,49 @@ export class EditeurSchema {
     return this.selection.includes(id);
   }
 
+  /** Choisit `id` ; s'il est groupé, tout son ensemble vient avec lui (et repart avec lui). */
   choisir(id: string, ajouter = false): void {
-    if (!ajouter) this.selection = [id];
-    else
-      this.selection = this.estChoisi(id) ? this.selection.filter((x) => x !== id) : [...this.selection, id];
+    const lot = avecEnsembles(this.schema, [id]);
+    if (!ajouter) this.selection = lot;
+    else if (this.estChoisi(id)) this.selection = this.selection.filter((x) => !lot.includes(x));
+    else this.selection = [...new Set([...this.selection, ...lot])];
+  }
+
+  /** `ids`, élargis aux ensembles qu'ils touchent. */
+  avecEnsembles(ids: string[]): string[] {
+    return avecEnsembles(this.schema, ids);
+  }
+
+  /** `id` fait partie d'un ensemble. */
+  estGroupe(id: string): boolean {
+    return ensemblesDe(this.schema, [id]).length > 0;
+  }
+
+  /** Ce que la sélection permet : grouper (deux éléments au moins, pas déjà un seul ensemble), dégrouper. */
+  readonly groupement = $derived.by(() => {
+    const presents = groupables(this.schema);
+    const elements = this.selection.filter((id) => presents.has(id));
+    const touches = ensemblesDe(this.schema, elements);
+    const unSeul = touches.length === 1 && elements.every((id) => touches[0]?.membres.includes(id)) && elements.length > 1;
+    return { elements: elements.length, unSeul, peutGrouper: elements.length >= 2 && !unSeul, peutDegrouper: touches.length > 0 };
+  });
+
+  /** Groupe la sélection (Ctrl+G). */
+  grouper(): void {
+    const ids = new Set(this.selection);
+    let membres: string[] = [];
+    const fait = this.agir((schema) => {
+      membres = grouper(schema, ids).membres;
+    }, "Groupés : ils se choisissent et se déplacent ensemble. Ctrl+Maj+G les dégroupe.");
+    if (fait) this.selection = membres;
+  }
+
+  /** Dégroupe ce que touche la sélection (Ctrl+Maj+G) : les éléments restent choisis, chacun pour soi. */
+  degrouper(): void {
+    const ids = new Set(this.selection);
+    this.agir((schema) => {
+      degrouper(schema, ids);
+    }, "Dégroupés : chaque élément se choisit de nouveau seul.");
   }
 
   toutChoisir(): void {

@@ -230,6 +230,13 @@ public sealed class MarkdownEditingTests
         Assert.AreEqual(expected, Apply(model, (text, start, _) => MarkdownEdits.Rule(text, start)));
 
     [TestMethod]
+    [DataRow("Premier.|", false, "Premier.\n\n<!-- kyfrev saut-de-page -->\n|")]
+    [DataRow("Premier.\n\n|Second.", false, "Premier.\n\n<!-- kyfrev saut-de-page -->\n\n|Second.")]
+    [DataRow("Premier.\n\n|Second.", true, "Premier.\n\n<!-- kyfrev page-blanche -->\n\n|Second.")]
+    public void A_page_break_is_written_alone_on_its_line(string model, bool blank, string expected) =>
+        Assert.AreEqual(expected, Apply(model, (text, start, _) => MarkdownEdits.PageBreak(text, start, blank)));
+
+    [TestMethod]
     [DataRow("|", "python", "```python\n|\n```\n")]
     [DataRow("avant|", "sql", "avant\n\n```sql\n|\n```\n")]
     [DataRow("avant\n«du code»\naprès", "bash", "avant\n```bash\ndu code\n```\n|\naprès")]

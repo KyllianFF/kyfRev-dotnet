@@ -30,11 +30,14 @@
                      Visibility="{Binding HasPrompt, Converter={StaticResource Visible}}" />
         </StackPanel>
         <!-- Le titre est déjà au-dessus. Les liens s'y lisent : on les suit une fois la fiche ouverte. -->
-        <reading:SheetDocumentViewer x:Name="PreviewBody" Grid.Row="1" Reading="{Binding Reading}" Highlights="{Binding Reading.Highlights}" ShowsHeader="False"
-                                     AutomationProperties.Name="{x:Static pages:ReadingText.Document}"
-                                     Visibility="{Binding HasBody, Converter={StaticResource Visible}}" />
+        <reading:PageFitHost x:Name="PreviewSheet" Grid.Row="1" Visibility="{Binding HasBody, Converter={StaticResource Visible}}">
+          <reading:SheetDocumentViewer x:Name="PreviewBody" Reading="{Binding Reading}" Highlights="{Binding Reading.Highlights}" ShowsHeader="False" FollowsSheetLayout="True"
+                                       AutomationProperties.Name="{x:Static pages:ReadingText.Document}" />
+        </reading:PageFitHost>
       </Grid>
-      <ItemsControl x:Name="PreviewSteps" Grid.Row="3" ItemsSource="{Binding Steps}" Focusable="False" Margin="0,12,0,0"
+      <!-- Les étapes du cycle, puis « Historique » à leur suite : une ligne, au lieu de deux. -->
+      <DockPanel Grid.Row="3" Margin="0,12,0,0" LastChildFill="False">
+      <ItemsControl x:Name="PreviewSteps" DockPanel.Dock="Left" ItemsSource="{Binding Steps}" Focusable="False" VerticalAlignment="Center"
                     AutomationProperties.Name="{x:Static pages:ReviewText.Steps}" Visibility="{Binding HasSteps, Converter={StaticResource Visible}}">
         <ItemsControl.ItemsPanel>
           <ItemsPanelTemplate>
@@ -68,6 +71,14 @@
           </DataTemplate>
         </ItemsControl.ItemTemplate>
       </ItemsControl>
+        <ToggleButton x:Name="HistoryToggle" Style="{DynamicResource Kyf.Button.Subtle}" DockPanel.Dock="Left" VerticalAlignment="Top" Margin="0,-6,0,0" AutomationProperties.Name="{Binding HistoryLabel}"
+                      Visibility="{Binding HasHistory, Converter={StaticResource Visible}}">
+          <StackPanel Orientation="Horizontal">
+            <TextBlock Text="{Binding HistoryLabel}" VerticalAlignment="Center" />
+            <kyf:Icon x:Name="HistoryChevron" Text="{x:Static kyf:Icons.ChevronRight}" FontSize="10" Margin="8,0,0,0" VerticalAlignment="Center" />
+          </StackPanel>
+        </ToggleButton>
+      </DockPanel>
       <!-- L'historique se replie : le texte passe avant, et chaque étape dit déjà sa date au survol. -->
       <ScrollViewer x:Name="PreviewHistory" Grid.Row="4" MaxHeight="96" Margin="0,2,0,0" Focusable="False" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
                     Visibility="{Binding IsChecked, ElementName=HistoryToggle, Converter={StaticResource Visible}}">
@@ -79,16 +90,10 @@
           </ItemsControl.ItemTemplate>
         </ItemsControl>
       </ScrollViewer>
-      <DockPanel Grid.Row="5" Margin="0,8,0,0" LastChildFill="False">
+      <!-- « Réviser », sur Aujourd'hui ; dans le Carnet, « Lire » et « Écrire » au-dessus de l'aperçu ouvrent déjà le document. -->
+      <DockPanel Grid.Row="5" Margin="0,8,0,0" LastChildFill="False" Visibility="{Binding ShowsOpen, Converter={StaticResource Visible}}">
         <Button x:Name="ReviewNow" Content="{Binding OpenLabel}" Style="{DynamicResource Kyf.Button.Primary}"
                 Command="{Binding DataContext.OpenCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding Row}" />
-        <ToggleButton x:Name="HistoryToggle" Style="{DynamicResource Kyf.Button.Subtle}" Margin="8,0,0,0" AutomationProperties.Name="{Binding HistoryLabel}"
-                      Visibility="{Binding HasHistory, Converter={StaticResource Visible}}">
-          <StackPanel Orientation="Horizontal">
-            <TextBlock Text="{Binding HistoryLabel}" VerticalAlignment="Center" />
-            <kyf:Icon x:Name="HistoryChevron" Text="{x:Static kyf:Icons.ChevronRight}" FontSize="10" Margin="8,0,0,0" VerticalAlignment="Center" />
-          </StackPanel>
-        </ToggleButton>
       </DockPanel>
     </Grid>
     <DataTemplate.Triggers>

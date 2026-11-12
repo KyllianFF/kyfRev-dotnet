@@ -49,6 +49,10 @@ internal sealed class FakeChrome : IWindowChrome
 
     public WindowOverhang MaximizedOverhang(nint windowHandle) => Overhang;
 
+    public ScreenBounds Visible { get; set; }
+
+    public ScreenBounds VisibleBounds(nint windowHandle) => Visible;
+
     public ScreenArea Work { get; set; }
 
     public ScreenArea WorkArea(nint windowHandle) => Work;

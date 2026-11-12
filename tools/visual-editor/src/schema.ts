@@ -33,6 +33,7 @@ type NomNoeud =
   | "heading"
   | "blockquote"
   | "horizontal_rule"
+  | "saut_de_page"
   | "code_block"
   | "math_block"
   | "brut"
@@ -104,6 +105,24 @@ const noeuds: Record<NomNoeud, NodeSpec> = {
     group: "block",
     parseDOM: [{ tag: "hr" }],
     toDOM: () => ["hr"],
+  },
+
+  /**
+   * « <!-- kyfrev saut-de-page --> » ou « <!-- kyfrev page-blanche --> », seul sur sa ligne : ce qui suit commence une
+   * nouvelle page (`blanche` : après une page laissée vide). Un trait et son nom, toujours visibles, pour le retrouver
+   * et le retirer même sur la feuille sans fin.
+   */
+  saut_de_page: {
+    attrs: { blanche: { default: false } },
+    group: "block",
+    atom: true,
+    selectable: true,
+    parseDOM: [{ tag: "div.marque-de-page", getAttrs: (dom) => ({ blanche: dom.getAttribute("data-page") === "blanche" }) }],
+    toDOM: (noeud) => [
+      "div",
+      { class: "marque-de-page", "data-page": noeud.attrs.blanche ? "blanche" : "saut", contenteditable: "false" },
+      ["span", noeud.attrs.blanche ? "Page blanche" : "Saut de page"],
+    ],
   },
 
   code_block: {

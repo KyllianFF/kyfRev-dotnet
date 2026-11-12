@@ -27,6 +27,19 @@ public enum SheetState
     Archived,
 }
 
+/// <summary>Ce que la liste montre : tout, les fiches de révision seules, ou les simples notes seules.</summary>
+public enum SheetKind
+{
+    /// <summary>Fiches de révision et notes.</summary>
+    All,
+
+    /// <summary>Les fiches de révision, en cours ou archivées.</summary>
+    Review,
+
+    /// <summary>Les simples notes.</summary>
+    Notes,
+}
+
 /// <summary>L'ordre de la liste.</summary>
 public enum SheetSort
 {
@@ -72,6 +85,22 @@ public sealed record SheetFolderRow(string Folder, int Count)
     public override string ToString() => SheetsText.FolderCountOf(Folder, Count);
 }
 
+/// <summary>Ce qu'est un document de la liste : son étiquette en prend la couleur.</summary>
+public enum SheetRowKind
+{
+    /// <summary>Une fiche de révision, à jour.</summary>
+    Review,
+
+    /// <summary>Une fiche de révision en retard.</summary>
+    Late,
+
+    /// <summary>Une fiche archivée.</summary>
+    Archived,
+
+    /// <summary>Une simple note.</summary>
+    Note,
+}
+
 /// <summary>Une fiche, telle que la liste la montre.</summary>
 public sealed class SheetRow
 {
@@ -79,12 +108,15 @@ public sealed class SheetRow
     {
         Sheet = sheet;
         var folder = DisplayFolder(sheet.Folder);
-        IsLate = sheet.DueDate < day;
-        var state = sheet.Archived || sheet.DueDate is not { } due
-            ? SheetsText.ArchivedRow
+        IsLate = !sheet.IsNote && sheet.DueDate < day;
+        var state = sheet.IsNote ? SheetsText.NoteRow
+            : sheet.Archived || sheet.DueDate is not { } due ? SheetsText.ArchivedRow
             : due < day ? SheetsText.StepOf(sheet.Step!, DashboardText.DaysLateOf(day.DayNumber - due.DayNumber))
             : due == day ? SheetsText.StepOf(sheet.Step!, SheetsText.DueToday)
             : SheetsText.StepOf(sheet.Step!, Dates.Short(due));
+        State = state;
+        Place = showFolder ? folder : string.Empty;
+        Kind = sheet.IsNote ? SheetRowKind.Note : sheet.Archived || sheet.DueDate is null ? SheetRowKind.Archived : IsLate ? SheetRowKind.Late : SheetRowKind.Review;
         Meta = showFolder && folder.Length > 0 ? $"{folder} · {state}" : state;
         Details = string.Join(" · ", new[] { folder, string.Join(' ', sheet.Tags.Select(tag => $"#{tag}")), state }.Where(part => part.Length > 0));
     }
@@ -103,6 +135,18 @@ public sealed class SheetRow
 
     /// <summary>« J3 · dim. 1 nov. » ou « Archivée », précédé du dossier hors du tri par dossier.</summary>
     public string Meta { get; }
+
+    /// <summary>« J3 · dim. 1 nov. », « Archivée » ou « Note » : l'étiquette à droite de la ligne.</summary>
+    public string State { get; }
+
+    /// <summary>Son dossier, sous le titre ; vide dans le tri par dossier, où l'en-tête le dit déjà.</summary>
+    public string Place { get; }
+
+    /// <summary>Elle a un dossier à montrer sous son titre.</summary>
+    public bool HasPlace => Place.Length > 0;
+
+    /// <summary>Ce qu'est le document, pour la couleur de son étiquette.</summary>
+    public SheetRowKind Kind { get; }
 
     /// <summary>« Histoire · #partiel · J3 · dim. 1 nov. » : au-dessus de l'aperçu.</summary>
     public string Details { get; }
@@ -246,7 +290,7 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
             var count = Dates.Plural(entries.Count, SheetsText.CountOneOf, SheetsText.CountManyOf);
             var archived = entries.Count(sheet => sheet.Archived);
             var active = entries.Count - archived;
-            return !Bar.HasRoom ? count
+            return PageWidth < RoomMinimum ? count
                 : archived > 1 ? SheetsText.SummaryManyOf(count, active, archived)
                 : SheetsText.SummaryOneOf(count, active, archived);
         }
@@ -254,14 +298,22 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
 
     /// <summary>Les étiquettes des fiches du dossier et de l'état choisis : une fiche doit porter toutes celles qui sont choisies.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(ShowsTags))]
+    [NotifyPropertyChangedFor(nameof(ShowsTags), nameof(HasTags))]
     public partial IReadOnlyList<TagChip> Tags { get; private set; } = [];
 
     /// <summary>Au moins une étiquette est choisie.</summary>
     public bool HasChosenTags => _chosenTags.Count > 0;
 
     /// <summary>Le filtre se voit : sur une fenêtre étroite, il se replie avec les autres, sauf s'il agit.</summary>
-    public bool ShowsTags => Tags.Count > 0 && (Bar.ShowsFilters || HasChosenTags);
+    public bool ShowsTags => Tags.Count > 0 && (AreTagsOpen || HasChosenTags);
+
+    /// <summary>Il y a des étiquettes à proposer.</summary>
+    public bool HasTags => Tags.Count > 0;
+
+    /// <summary>Les étiquettes sont dépliées.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsTags))]
+    public partial bool AreTagsOpen { get; set; }
 
     /// <summary>Les lignes : des fiches (<see cref="SheetRow"/>), et leurs en-têtes (<see cref="SheetFolderRow"/>) dans le tri par dossier.</summary>
     [ObservableProperty]
@@ -331,6 +383,73 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
     /// <summary>Le nom du nouveau dossier.</summary>
     [ObservableProperty]
     public partial string NewFolderName { get; set; }
+
+    /// <summary>Ce que la liste montre : tout, les fiches de révision, ou les notes.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsAll), nameof(ShowsReviewOnly), nameof(ShowsNotesOnly))]
+    public partial SheetKind Kind { get; set; }
+
+    partial void OnKindChanged(SheetKind value) => BuildRows();
+
+    /// <summary>La liste montre tout.</summary>
+    public bool ShowsAll
+    {
+        get => Kind == SheetKind.All;
+        set => Choose(value, SheetKind.All);
+    }
+
+    /// <summary>La liste ne montre que les fiches de révision.</summary>
+    public bool ShowsReviewOnly
+    {
+        get => Kind == SheetKind.Review;
+        set => Choose(value, SheetKind.Review);
+    }
+
+    /// <summary>La liste ne montre que les notes.</summary>
+    public bool ShowsNotesOnly
+    {
+        get => Kind == SheetKind.Notes;
+        set => Choose(value, SheetKind.Notes);
+    }
+
+    private void Choose(bool chosen, SheetKind kind)
+    {
+        if (chosen)
+        {
+            Kind = kind;
+        }
+    }
+
+    /// <summary>« Tout · 42 ».</summary>
+    public string KindAllLabel => SheetsText.KindOf(SheetsText.KindAll, _entries?.Count ?? 0);
+
+    /// <summary>« Fiches de révision · 31 ».</summary>
+    public string KindReviewLabel => SheetsText.KindOf(SheetsText.KindReview, _entries?.Count(sheet => !sheet.IsNote) ?? 0);
+
+    /// <summary>« Notes · 11 ».</summary>
+    public string KindNotesLabel => SheetsText.KindOf(SheetsText.KindNotes, _entries?.Count(sheet => sheet.IsNote) ?? 0);
+
+    /// <summary>« Nouvelle note » a été demandée : la fenêtre s'ouvre avec la case cochée.</summary>
+    private bool _createsNote;
+
+    /// <summary>« Nouvelle note » : la même fenêtre que « Nouvelle fiche », pour une simple note.</summary>
+    [RelayCommand]
+    private Task RequestCreateNoteAsync()
+    {
+        _createsNote = true;
+        return RequestCreateAsync();
+    }
+
+    /// <summary>La nouvelle fiche est une simple note : elle n'entre pas dans les révisions.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(NewDialogTitle), nameof(NewDialogConfirm))]
+    public partial bool NewIsNote { get; set; }
+
+    /// <summary>« Nouvelle fiche » ou « Nouvelle note ».</summary>
+    public string NewDialogTitle => NewIsNote ? SheetsText.NewNote : SheetsText.NewSheet;
+
+    /// <summary>« Créer la fiche » ou « Créer la note ».</summary>
+    public string NewDialogConfirm => NewIsNote ? SheetsText.CreateNote : SheetsText.CreateSheet;
 
     /// <summary>Le modèle de la nouvelle fiche.</summary>
     public ListFilter NewTemplate { get; }
@@ -416,7 +535,8 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
 
     partial void OnPageWidthChanged(double value)
     {
-        Bar.HasRoom = value >= RoomMinimum;
+        // La recherche et les filtres tiennent dans la colonne de la liste : les filtres s'y déplient à la demande.
+        Bar.HasRoom = false;
         OnPropertyChanged(nameof(Summary));
         KeepSelection();
     }
@@ -544,6 +664,10 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
         }
         NewTitle = string.Empty;
         NewFolderName = string.Empty;
+        // Sur le filtre « Notes », c'est une note qu'on vient écrire.
+        // « Nouvelle note » fait une note, « Nouvelle fiche » une fiche de révision : le bouton décide, sans case à cocher.
+        NewIsNote = _createsNote;
+        _createsNote = false;
         CreateError = null;
         NewFolder.Replace([new(string.Empty, SheetsText.AtRoot), .. FolderChoices(folders.Value), new(NewFolderChoice, SheetsText.NewFolderChoice)]);
         var wanted = _createIn ?? _folder.Value;
@@ -574,7 +698,8 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
         var folder = IsNewFolder ? NewFolderName.Trim() : (string)NewFolder.Value!;
         var template = (string?)NewTemplate.Value;
         var generation = _generation;
-        var outcome = await Task.Run(() => _sheets.Create(folder, title, template)).ConfigureAwait(true);
+        var asNote = NewIsNote;
+        var outcome = await Task.Run(() => asNote ? _sheets.CreateNote(folder, title, template) : _sheets.Create(folder, title, template)).ConfigureAwait(true);
         if (generation != _generation)
         {
             // Le coffre a été oublié pendant la création : la fenêtre ne se rouvre pas, et la fiche ne s'ouvre pas.
@@ -602,7 +727,10 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
         RefreshTags(entries, day);
         var sheets = entries.Where(sheet => Matches(sheet, wanted, day)).ToList();
         var sort = (SheetSort)_sort.Value!;
-        var isFiltered = wanted.Length > 0 || HasChosenTags || !Equals(_folder.Value, string.Empty) || (SheetState)_state.Value! != SheetState.All;
+        OnPropertyChanged(nameof(KindAllLabel));
+        OnPropertyChanged(nameof(KindReviewLabel));
+        OnPropertyChanged(nameof(KindNotesLabel));
+        var isFiltered = Kind != SheetKind.All || wanted.Length > 0 || HasChosenTags || !Equals(_folder.Value, string.Empty) || (SheetState)_state.Value! != SheetState.All;
         Rows = sort == SheetSort.Folder ? Tree(sheets, day, isFiltered, expandAll: wanted.Length > 0 || HasChosenTags) : [.. Sorted(sheets, sort).Select(sheet => RowOf(sheet, day, showFolder: true))];
         IsEmpty = entries.Count == 0;
         HasNoMatch = entries.Count > 0 && sheets.Count == 0;
@@ -726,6 +854,10 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
 
     private bool IsInFolderAndState(VaultSheet sheet, DateOnly day)
     {
+        if ((Kind == SheetKind.Review && sheet.IsNote) || (Kind == SheetKind.Notes && !sheet.IsNote))
+        {
+            return false;
+        }
         var folder = (string)_folder.Value!;
         if (folder.Length > 0 && sheet.Folder != folder && !sheet.Folder.StartsWith(folder + "/", StringComparison.Ordinal))
         {
@@ -733,8 +865,8 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
         }
         return (SheetState)_state.Value! switch
         {
-            SheetState.Active => !sheet.Archived,
-            SheetState.Due => sheet.DueDate <= day,
+            SheetState.Active => !sheet.Archived && !sheet.IsNote,
+            SheetState.Due => !sheet.IsNote && sheet.DueDate <= day,
             SheetState.Archived => sheet.Archived,
             _ => true,
         };

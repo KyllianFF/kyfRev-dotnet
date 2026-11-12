@@ -128,6 +128,7 @@ public sealed class SheetReading
         _readImage = readImage;
         _firstBodyLine = sheet.FirstBodyLine;
         Fingerprint = sheet.Fingerprint;
+        SheetId = sheet.Id;
         Title = sheet.Title;
         Folder = ContentTargets.FolderOf(sheet.Path);
         Root = SheetRenderer.Render(sheet.Body, sheet.Title);
@@ -142,6 +143,9 @@ public sealed class SheetReading
 
     /// <summary>L'empreinte de la fiche lue.</summary>
     public string Fingerprint { get; }
+
+    /// <summary>L'identifiant de la fiche lue.</summary>
+    public string SheetId { get; }
 
     /// <summary>Le titre de la fiche.</summary>
     public string Title { get; }

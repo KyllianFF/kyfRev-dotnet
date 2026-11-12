@@ -1,14 +1,19 @@
 using System.IO;
 using System.Security.Cryptography;
 using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Media;
 using KyfRev.Application.Model;
 using KyfRev.Application.Ports;
 using KyfRev.Application.UseCases;
+using KyfRev.DesignSystem;
 using KyfRev.DesignSystem.Controls;
+using KyfRev.DesignSystem.Tokens;
 using KyfRev.Extensions.Host;
 using KyfRev.Presentation.Wpf.Pages;
+using KyfRev.Presentation.Wpf.Reading;
 using KyfRev.Presentation.Wpf.Shell;
 
 namespace KyfRev.Presentation.Wpf.Tests;
@@ -19,7 +24,9 @@ public sealed class SettingsHubTests
 {
     private static readonly Anchor Passage = new("La prophase", "", " précède", 0, 11, ["Mitose", "Étapes"], 5, "sha256:aa");
 
-    private static readonly string[] Tabs = ["Général", "Révisions", "Modules et extensions", "Données", "À propos"];
+    private static readonly string[] AllTabs = ["Apparence", "Lecture", "Feuilles", "Menu", "Raccourcis", "Révisions", "Modules et extensions", "Coffre et chiffrement", "Sauvegardes et exports", "À propos"];
+
+    private static readonly string[] Tabs = ["Apparence", "Lecture", "Révisions", "Modules et extensions", "Coffre et chiffrement", "Sauvegardes et exports", "À propos"];
 
     [TestMethod]
     public async Task Looking_for_an_update_says_what_exists_and_opens_only_its_page()
@@ -167,15 +174,18 @@ public sealed class SettingsHubTests
         Assert.IsTrue(hub.Tabs[0].IsSelected);
         hub.OnNavigatedTo();
 
-        hub.Tabs[4].IsSelected = true;
-        Assert.AreSame(hub.Tabs[4], hub.Selected);
+        Assert.AreSame(hub.Tabs[0].Page, hub.Tabs[1].Page, "Apparence et Lecture sont deux parts de la même page");
+        Assert.AreEqual((SettingsHubViewModel.AppearancePart, SettingsHubViewModel.ReadingPart), (hub.Tabs[0].Part, hub.Tabs[1].Part));
+        Assert.IsTrue(hub.Tabs[0].StartsGroup && !hub.Tabs[1].StartsGroup && hub.Tabs[2].StartsGroup && hub.Tabs[6].StartsGroup, "trois groupes : l'ordinateur, le coffre, l'application");
+        hub.Tabs[6].IsSelected = true;
+        Assert.AreSame(hub.Tabs[6], hub.Selected);
         Assert.IsFalse(hub.Tabs[0].IsSelected);
         Assert.AreEqual("kyfRev 1.0.0-essai", ((AboutSettingsViewModel)hub.Selected.Page).Version, "l'onglet se lit quand on l'ouvre");
 
-        hub.Tabs[4].IsSelected = false;
-        Assert.AreSame(hub.Tabs[4], hub.Selected, "décocher ne choisit rien d'autre");
-        hub.Tabs[4].IsSelected = true;
-        Assert.AreSame(hub.Tabs[4], hub.Selected);
+        hub.Tabs[6].IsSelected = false;
+        Assert.AreSame(hub.Tabs[6], hub.Selected, "décocher ne choisit rien d'autre");
+        hub.Tabs[6].IsSelected = true;
+        Assert.AreSame(hub.Tabs[6], hub.Selected);
     }
 
     [TestMethod]
@@ -549,6 +559,516 @@ public sealed class SettingsHubTests
         Assert.AreEqual("1, 3, 7, 14, 30", settings.Steps);
     }
 
+    [TestMethod]
+    public void Searching_finds_a_setting_whatever_the_accents_and_opens_its_section()
+    {
+        using var vault = new DataVault();
+        var hub = vault.Hub(new MachineSettings(new MemoryMachinePreferences()));
+        CollectionAssert.AreEqual(AllTabs, hub.Tabs.Select(tab => tab.Label).ToArray());
+        Assert.IsFalse(hub.IsSearching);
+        Assert.IsEmpty(hub.Results);
+
+        hub.Query = "theme";
+        Assert.IsTrue(hub.IsSearching);
+        var theme = hub.Results.Single();
+        Assert.AreEqual((GeneralSettingsText.Theme, "Apparence"), (theme.Label, theme.Where));
+        Assert.AreSame(hub.Tabs[0], theme.Tab);
+        Assert.AreEqual($"{GeneralSettingsText.Theme}, dans Apparence", theme.Spoken);
+
+        hub.Query = "SOMBRE";
+        Assert.AreEqual(GeneralSettingsText.Theme, hub.Results.Single().Label, "une valeur du réglage y mène aussi");
+
+        hub.Query = "taille fiches";
+        Assert.AreEqual(GeneralSettingsText.TextSize, hub.Results.Single().Label, "tous les mots doivent s'y trouver");
+
+        hub.Query = "chiffrement";
+        CollectionAssert.AreEqual(new[] { "Coffre et chiffrement", EncryptionText.CardTitle }, hub.Results.Select(hit => hit.Label).ToArray(), "la section, puis le réglage de ce nom : pas tout ce que la section contient");
+        Assert.AreEqual("Dans ce coffre", hub.Results[0].Where, "une section dit son groupe");
+        Assert.IsTrue(hub.Results.All(hit => hit.Tab.Label == "Coffre et chiffrement"));
+
+        hub.Query = "raccourcis recto";
+        Assert.AreEqual((ShellText.ShortcutPrint, "Raccourcis"), (hub.Results.Single().Label, hub.Results.Single().Where), "un mot du réglage, un mot de sa section");
+
+        hub.Query = "imprimer";
+        CollectionAssert.AreEqual(new[] { ShellText.ShortcutPrint, ShellText.ShortcutShare }, hub.Results.Select(hit => hit.Label).ToArray(), "les actions qui ont un raccourci se trouvent par leur nom");
+
+        hub.Query = "papier";
+        Assert.AreEqual((MoreSettingsText.PaperTitle, "Feuilles"), (hub.Results.Single().Label, hub.Results.Single().Where));
+
+        hub.Query = "zzz";
+        Assert.IsTrue(hub.HasNoResult);
+        hub.Query = "   ";
+        Assert.IsFalse(hub.IsSearching || hub.HasNoResult, "des espaces ne cherchent rien");
+
+        hub.Query = "anki";
+        hub.OpenCommand.Execute(hub.Results.Single());
+        Assert.AreEqual("Sauvegardes et exports", hub.Selected.Label);
+        Assert.AreEqual(string.Empty, hub.Query, "la liste des sections revient");
+        Assert.IsFalse(hub.IsSearching);
+
+        hub.Query = "voix";
+        hub.OpenFirstCommand.Execute(null);
+        Assert.AreEqual("Lecture", hub.Selected.Label);
+        hub.Query = "zzz";
+        hub.OpenFirstCommand.Execute(null);
+        Assert.AreEqual(("Lecture", "zzz"), (hub.Selected.Label, hub.Query), "rien à ouvrir : rien ne bouge");
+        hub.ClearSearchCommand.Execute(null);
+        Assert.AreEqual(string.Empty, hub.Query);
+
+        // Sans les sections Feuilles, Menu et Raccourcis, leurs réglages ne se trouvent pas.
+        var small = vault.Hub();
+        small.Query = "papier";
+        Assert.IsTrue(small.HasNoResult);
+    }
+
+    [TestMethod]
+    public void A_section_kept_on_the_computer_restores_its_own_settings_and_can_take_them_back()
+    {
+        using var vault = new DataVault();
+        var store = new MemoryMachinePreferences
+        {
+            Stored = new MachinePreferences { Theme = ThemePreference.Dark, ReducedMotion = true, TextSize = ReadingTextSize.Large, Shortcuts = "aide=F2", GlobalCapture = true, MenuOrder = "carnet,aujourdhui" },
+        };
+        var machine = new MachineSettings(store);
+        var hub = vault.Hub(machine);
+        var general = (GeneralSettingsViewModel)hub.Tabs[0].Page;
+        hub.OnNavigatedTo();
+        Assert.IsTrue(hub.OffersRestore);
+        Assert.IsTrue(hub.RestoreCommand.CanExecute(null));
+        Assert.IsFalse(hub.HasRestoreNote || hub.UndoRestoreCommand.CanExecute(null));
+
+        hub.RestoreCommand.Execute(null);
+        Assert.AreEqual((ThemePreference.System, false), (machine.Current.Theme, machine.Current.ReducedMotion));
+        Assert.AreEqual((ReadingTextSize.Large, "aide=F2", true, "carnet,aujourdhui"), (machine.Current.TextSize, machine.Current.Shortcuts, machine.Current.GlobalCapture, machine.Current.MenuOrder), "les autres sections gardent leurs réglages");
+        Assert.AreEqual(machine.Current, store.Stored, "retenu sur l'ordinateur");
+        Assert.AreEqual(ThemePreference.System, general.Theme.Value, "la section montre ce qui est en vigueur");
+        Assert.IsFalse(general.ReducedMotion);
+        Assert.AreEqual(MoreSettingsText.Restored, hub.RestoreNote);
+        Assert.IsFalse(hub.RestoreCommand.CanExecute(null), "plus rien à rétablir ici");
+        Assert.IsTrue(hub.UndoRestoreCommand.CanExecute(null));
+
+        hub.UndoRestoreCommand.Execute(null);
+        Assert.AreEqual((ThemePreference.Dark, true), (machine.Current.Theme, machine.Current.ReducedMotion));
+        Assert.AreEqual(ThemePreference.Dark, general.Theme.Value);
+        Assert.IsTrue(general.ReducedMotion);
+        Assert.IsFalse(hub.HasRestoreNote || hub.UndoRestoreCommand.CanExecute(null));
+        Assert.IsTrue(hub.RestoreCommand.CanExecute(null));
+
+        // Un réglage changé depuis : ce qui était proposé d'annuler ne correspond plus.
+        hub.RestoreCommand.Execute(null);
+        general.HighContrast = true;
+        Assert.IsFalse(hub.HasRestoreNote);
+        Assert.IsTrue(hub.RestoreCommand.CanExecute(null));
+
+        // Changer de section retire aussi la proposition.
+        hub.RestoreCommand.Execute(null);
+        hub.Tabs[1].IsSelected = true;
+        Assert.IsFalse(hub.HasRestoreNote);
+        Assert.IsTrue(hub.RestoreCommand.CanExecute(null), "Lecture a un texte agrandi");
+        hub.RestoreCommand.Execute(null);
+        Assert.AreEqual(ReadingTextSize.Normal, machine.Current.TextSize);
+        Assert.AreEqual(ReadingTextSize.Normal, general.TextSize.Value);
+
+        var menu = hub.Tabs.Single(tab => tab.Label == "Menu");
+        menu.IsSelected = true;
+        hub.RestoreCommand.Execute(null);
+        Assert.AreEqual((string.Empty, "aide=F2"), (machine.Current.MenuOrder, machine.Current.Shortcuts), "Menu et Raccourcis partagent une page, pas leurs réglages");
+
+        hub.Tabs.Single(tab => tab.Label == "Raccourcis").IsSelected = true;
+        store.Refuses = true;
+        hub.RestoreCommand.Execute(null);
+        Assert.AreEqual((string.Empty, false), (machine.Current.Shortcuts, machine.Current.GlobalCapture));
+        Assert.AreEqual(MoreSettingsText.RestoredNotKept, hub.RestoreNote, "le fichier des préférences n'a pas pu être écrit, et la vue le dit");
+        store.Refuses = false;
+
+        // Ce qui appartient au coffre ne se rétablit pas d'ici.
+        foreach (var tab in hub.Tabs.Where(tab => tab.Group != MoreSettingsText.GroupMachine))
+        {
+            tab.IsSelected = true;
+            Assert.IsFalse(hub.OffersRestore || hub.RestoreCommand.CanExecute(null), tab.Label);
+        }
+        Assert.IsFalse(vault.Hub().OffersRestore, "sans les préférences de l'ordinateur, rien n'est proposé");
+    }
+
+    [STATestMethod]
+    public void The_view_shows_what_the_search_found_and_offers_to_restore_a_section()
+    {
+        using var ui = new UiThread();
+        using var vault = new DataVault();
+        var test = new TestShell();
+        var machine = new MachineSettings(new MemoryMachinePreferences { Stored = new MachinePreferences { HighContrast = true } });
+        var hub = vault.Hub(machine);
+        hub.OnNavigatedTo();
+        var host = new Border { Width = 980, Height = 700, Child = new SettingsHubPage { DataContext = hub } };
+        host.Resources.MergedDictionaries.Add(test.Design.Dictionary);
+        var canvas = new Canvas();
+        canvas.Children.Add(host);
+        var window = new Window { Content = canvas, Left = -10000, Top = -10000, Width = 1100, Height = 800, ShowActivated = false };
+        window.Show();
+        TestShell.Flush();
+        try
+        {
+            var search = Named<TextBox>(window, "SettingSearch");
+            Assert.IsTrue(search.IsVisible);
+            Assert.AreEqual(MoreSettingsText.SearchLabel, AutomationProperties.GetName(search));
+            Assert.IsTrue(Named<FrameworkElement>(window, "SectionList").IsVisible);
+            Assert.IsEmpty(Hits(window));
+
+            search.Text = "étapes";
+            TestShell.Flush();
+            Assert.AreEqual("étapes", hub.Query);
+            Assert.IsFalse(Find<FrameworkElement>(window, "SectionList") is { IsVisible: true }, "les résultats prennent la place des sections");
+            var hit = Hits(window).Single();
+            Assert.AreEqual($"{SettingsText.Steps}, dans Révisions", AutomationProperties.GetName(hit));
+            Assert.IsTrue(Named<FrameworkElement>(window, "SectionArea").IsVisible, "la section ouverte reste en vue, à droite");
+
+            hit.Command.Execute(hit.CommandParameter);
+            TestShell.Flush();
+            Assert.AreEqual("Révisions", Named<TextBlock>(window, "SectionTitle").Text);
+            Assert.AreEqual(string.Empty, search.Text);
+            Assert.IsTrue(Named<FrameworkElement>(window, "SectionList").IsVisible);
+            Assert.IsNotNull(Find<FrameworkElement>(window, "StepsBox"));
+            Assert.IsFalse(Named<Button>(window, "RestoreButton").IsVisible, "une section du coffre ne se rétablit pas d'ici");
+
+            search.Text = "zzz";
+            TestShell.Flush();
+            Assert.IsEmpty(Hits(window));
+            Assert.IsTrue(Descendants<TextBlock>(window).Any(text => text.IsVisible && text.Text == MoreSettingsText.NoResult));
+            search.Text = string.Empty;
+            TestShell.Flush();
+
+            hub.Tabs[0].IsSelected = true;
+            TestShell.Flush();
+            var restore = Named<Button>(window, "RestoreButton");
+            Assert.IsTrue(restore.IsVisible && restore.IsEnabled);
+            Assert.AreEqual(MoreSettingsText.RestoreSection, restore.Content);
+            Assert.IsFalse(Find<FrameworkElement>(window, "RestoreBar") is { IsVisible: true });
+            Assert.IsTrue(Named<CheckBox>(window, "HighContrastBox").IsChecked);
+
+            restore.Command.Execute(null);
+            TestShell.Flush();
+            Assert.IsFalse(machine.Current.HighContrast);
+            Assert.IsFalse(Named<CheckBox>(window, "HighContrastBox").IsChecked, "la case suit");
+            Assert.IsFalse(restore.IsEnabled, "tout est d'origine");
+            Assert.IsTrue(Named<FrameworkElement>(window, "RestoreBar").IsVisible);
+            var undo = Named<Button>(window, "UndoRestoreButton");
+            Assert.AreEqual(MoreSettingsText.UndoRestore, undo.Content);
+
+            undo.Command.Execute(null);
+            TestShell.Flush();
+            Assert.IsTrue(machine.Current.HighContrast);
+            Assert.IsTrue(Named<CheckBox>(window, "HighContrastBox").IsChecked);
+            Assert.IsFalse(Find<FrameworkElement>(window, "RestoreBar") is { IsVisible: true });
+            Assert.IsTrue(restore.IsEnabled);
+
+            // En fenêtre étroite, la recherche est sous le titre, et ses résultats prennent la place de la section.
+            host.Width = 560;
+            TestShell.Flush();
+            var narrow = Named<TextBox>(window, "NarrowSettingSearch");
+            Assert.IsTrue(narrow.IsVisible);
+            Assert.IsTrue(Named<FrameworkElement>(window, "SectionArea").IsVisible);
+            Assert.IsTrue(restore.IsVisible, "« Rétablir » passe sous la ligne qui décrit la section");
+            Assert.AreEqual((0, 1), (Grid.GetColumn(restore), Grid.GetRow(restore)));
+            narrow.Text = "voix";
+            TestShell.Flush();
+            Assert.IsFalse(Find<FrameworkElement>(window, "SectionArea") is { IsVisible: true });
+            var found = Hits(window).Single();
+            found.Command.Execute(found.CommandParameter);
+            TestShell.Flush();
+            Assert.AreEqual("Lecture", hub.Selected.Label);
+            Assert.IsTrue(Named<FrameworkElement>(window, "SectionArea").IsVisible);
+            Assert.IsTrue(Named<FrameworkElement>(window, "RateChoice").IsVisible);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
+    [DataRow(false)]
+    [DataRow(true)]
+    public void The_sheets_section_shows_its_choices_as_the_mockup_does(bool dark)
+    {
+        using var ui = new UiThread();
+        using var vault = new DataVault();
+        var design = new DesignResources(dark ? ThemeKind.Dark : ThemeKind.Light, reducedMotion: false);
+        var own = SheetPageLayouts.None.With("f_1", new PageLayout(PageFormat.A5)).With("f_2", new PageLayout(PageFormat.A6)).With("f_3", new PageLayout(PageFormat.A4, true));
+        var store = new MemoryMachinePreferences
+        {
+            Stored = new MachinePreferences
+            {
+                Page = new PageLayout(PageFormat.A4),
+                Paper = new PaperChoices(IsOn: true, Endless: PaperStyle.Plain, A4: PaperStyle.LargeSquares, A5: PaperStyle.SmallSquares, A6: PaperStyle.Dots),
+                SheetPages = own,
+            },
+        };
+        var machine = new MachineSettings(store);
+        var hub = vault.Hub(machine);
+        hub.Tabs.Single(tab => tab.Label == "Feuilles").IsSelected = true;
+        var host = new Border { Width = 1460, Height = 900, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Child = new SettingsHubPage { DataContext = hub } };
+        host.Resources.MergedDictionaries.Add(design.Dictionary);
+        host.SetResourceReference(Border.BackgroundProperty, "Kyf.Brush.Background");
+        var window = new Window { Content = host, Left = -10000, Top = -10000, Width = 1500, Height = 960, ShowActivated = false, ShowInTaskbar = false };
+        window.Show();
+        TestShell.Flush();
+        try
+        {
+            host.Capture(dark ? "parametres-feuilles-sombre" : "parametres-feuilles");
+
+            // La feuille : quatre boutons, avec leurs dimensions ; l'orientation et les marges de même.
+            var formats = Named<ListBox>(window, "FormatChoice");
+            Assert.HasCount(4, formats.Items);
+            Assert.AreEqual(PageFormat.A4, ((SettingChoice<PageFormat>)formats.SelectedItem).Value);
+            Assert.IsTrue(Descendants<TextBlock>(formats).Any(text => text.Text == "21 × 29,7 cm"));
+            var margins = Named<ListBox>(window, "MarginChoice");
+            Assert.HasCount(3, margins.Items);
+            Assert.AreEqual(MoreSettingsText.MarginsNormalShort, ((SettingChoice<double>)margins.SelectedItem).Label);
+            Assert.AreEqual("2", Named<TextBox>(window, "CustomMarginBox").Text);
+
+            formats.SelectedIndex = 2;
+            TestShell.Flush();
+            Assert.AreEqual(PageFormat.A5, machine.Current.Page.Format);
+            Named<ListBox>(window, "OrientationChoice").SelectedIndex = 1;
+            TestShell.Flush();
+            Assert.IsTrue(machine.Current.Page.Landscape);
+
+            // Des marges sur mesure : tapées dans leur champ, elles n'allument aucun des trois boutons.
+            var page = (SheetsSettingsViewModel)hub.Selected.Page;
+            page.CustomMargin = "1,5";
+            TestShell.Flush();
+            Assert.AreEqual(1.5, machine.Current.Page.MarginCm);
+            Assert.HasCount(4, margins.Items, "la marge en vigueur est dans la liste…");
+            Assert.AreEqual(3, Descendants<ListBoxItem>(margins).Count(item => item.IsVisible), "… mais sans bouton à elle");
+            Assert.IsFalse(Descendants<ListBoxItem>(margins).Any(item => item.IsVisible && item.IsSelected));
+            page.CustomMargin = "abc";
+            Assert.AreEqual(1.5, machine.Current.Page.MarginCm, "un texte qui n'est pas un nombre ne change rien");
+            page.CustomMargin = "99";
+            Assert.AreEqual(machine.Current.Page.MaximumMarginCm, machine.Current.Page.MarginCm, "pas plus que la feuille ne permet");
+            margins.SelectedIndex = 1;
+            TestShell.Flush();
+            Assert.AreEqual(PageLayout.NormalMargin, machine.Current.Page.MarginCm);
+
+            // Le papier : une rangée par type de feuille, six échantillons, et un interrupteur.
+            var a5 = Named<ListBox>(window, "PaperA5Choice");
+            Assert.HasCount(6, a5.Items);
+            Assert.AreEqual(PaperStyle.SmallSquares, ((SettingChoice<PaperStyle>)a5.SelectedItem).Value);
+            Assert.HasCount(6, Descendants<PaperSwatch>(a5).ToList());
+            a5.SelectedIndex = 3;
+            TestShell.Flush();
+            Assert.AreEqual(PaperStyle.Lines, machine.Current.Paper.A5);
+
+            // L'aperçu : la feuille en vigueur (A5 en paysage), son papier, et une ligne qui le dit.
+            var preview = Named<SheetPaperPreview>(window, "Preview");
+            Assert.AreEqual(21 / 14.8, preview.Sheet.Width / preview.Sheet.Height, 0.02);
+            Assert.IsGreaterThan(0, preview.Step);
+            Assert.AreEqual("A5 paysage · marges de 2 cm · lignes", Named<TextBlock>(window, "PreviewCaption").Text);
+            var paperOn = Named<CheckBox>(window, "PaperOnBox");
+            Assert.IsTrue(paperOn.IsChecked);
+            paperOn.IsChecked = false;
+            TestShell.Flush();
+            Assert.IsFalse(machine.Current.Paper.IsOn);
+            Assert.AreEqual(0, preview.Step);
+            Assert.AreEqual("A5 paysage · marges de 2 cm · papier éteint", Named<TextBlock>(window, "PreviewCaption").Text);
+            paperOn.IsChecked = true;
+            TestShell.Flush();
+
+            // Les fiches qui ont leur propre mise en page : les aligner, puis s'en dédire.
+            Assert.AreEqual(MoreSettingsText.OwnLayouts(3), Named<TextBlock>(window, "OwnLayoutsNote").Text);
+            var align = Named<Button>(window, "AlignButton");
+            align.Command.Execute(null);
+            TestShell.Flush();
+            Assert.IsEmpty(machine.Current.SheetPages.Items);
+            Assert.IsFalse(Find<FrameworkElement>(window, "OwnLayouts") is { IsVisible: true });
+            Assert.AreEqual(MoreSettingsText.Aligned(3), Named<TextBlock>(window, "AlignedNote").Text);
+            Named<Button>(window, "UndoAlignButton").Command.Execute(null);
+            TestShell.Flush();
+            Assert.AreEqual(own, machine.Current.SheetPages);
+            Assert.IsTrue(Named<FrameworkElement>(window, "OwnLayouts").IsVisible);
+
+            // Le zoom des fiches, de 50 à 200 %.
+            Named<Button>(window, "ZoomInButton").Command.Execute(null);
+            Assert.AreEqual(1.1, machine.Current.SheetZoom, 0.001);
+            Assert.AreEqual("110 %", Named<Button>(window, "ZoomResetButton").Content);
+            page.ZoomPercent = 500;
+            Assert.AreEqual(2, machine.Current.SheetZoom, 0.001);
+            Named<Button>(window, "ZoomResetButton").Command.Execute(null);
+            Assert.AreEqual(1, machine.Current.SheetZoom, 0.001);
+            Named<Button>(window, "ZoomOutButton").Command.Execute(null);
+            Assert.AreEqual(0.9, machine.Current.SheetZoom, 0.001);
+            page.ZoomPercent = 10;
+            Assert.AreEqual(0.5, machine.Current.SheetZoom, 0.001);
+            Assert.IsFalse(Named<Button>(window, "ZoomOutButton").Command.CanExecute(null), "pas plus petit que 50 %");
+            Named<Button>(window, "ZoomResetButton").Command.Execute(null);
+
+            // La police : la liste, et celle que le papier de la feuille conseille.
+            Assert.HasCount(5, Named<ComboBox>(window, "FontChoice").Items);
+            Assert.AreEqual(MoreSettingsText.RecommendedFont(MoreSettingsText.Lines, GeneralSettingsText.FontSerif), Named<TextBlock>(window, "RecommendedFont").Text);
+            var use = Named<Button>(window, "UseFontButton");
+            Assert.IsTrue(use.IsEnabled);
+            use.Command.Execute(null);
+            TestShell.Flush();
+            Assert.AreEqual(ReadingFont.Serif, machine.Current.Font);
+            Assert.IsFalse(use.IsEnabled, "elle est déjà prise");
+            hub.Tabs[1].IsSelected = true;
+            Assert.AreEqual(ReadingFont.Serif, ((GeneralSettingsViewModel)hub.Tabs[1].Page).Font.Value, "la section Lecture montre la même police");
+            hub.Tabs.Single(tab => tab.Label == "Feuilles").IsSelected = true;
+            TestShell.Flush();
+
+            // « Rétablir » remet la feuille, le papier et le zoom, pas la police, qui est à la section Lecture.
+            page.ZoomPercent = 150;
+            hub.RestoreCommand.Execute(null);
+            Assert.AreEqual((PageLayout.Default, PaperChoices.Default, 1d, ReadingFont.Serif), (machine.Current.Page, machine.Current.Paper, machine.Current.SheetZoom, machine.Current.Font));
+
+            // En fenêtre étroite, l'aperçu passe sous les réglages.
+            host.Width = 1000;
+            TestShell.Flush();
+            Assert.AreEqual((0, 1), (Grid.GetColumn(Named<StackPanel>(window, "Side")), Grid.GetRow(Named<StackPanel>(window, "Side"))));
+            var scroller = Descendants<ScrollViewer>(window).First(view => view.Name == "Scroller" && view.IsVisible);
+            Assert.IsLessThanOrEqualTo(scroller.ViewportWidth, scroller.ExtentWidth);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
+    public void The_menu_and_shortcut_sections_show_their_rows_and_take_the_keys_typed()
+    {
+        using var ui = new UiThread();
+        using var vault = new DataVault();
+        var test = new TestShell();
+        var store = new MemoryMachinePreferences();
+        var machine = new MachineSettings(store);
+        var shortcuts = new ShortcutsSettingsViewModel(machine, () => test.Shell.MainNavigation);
+        var hub = new SettingsHubViewModel(
+            new GeneralSettingsViewModel(machine, new FakeVoices("Microsoft Hortense Desktop")),
+            new SettingsPageViewModel(vault.App.Settings, TimeProvider.System),
+            new ModulesSettingsViewModel(vault.App.Settings, _ => { }, FakeExtensions.Settings()),
+            vault.Page,
+            new AboutSettingsViewModel(vault.App.Vaults),
+            new SheetsSettingsViewModel(machine),
+            shortcuts,
+            machine);
+        var host = new Border { Width = 1200, Height = 800, Child = new SettingsHubPage { DataContext = hub } };
+        host.Resources.MergedDictionaries.Add(test.Design.Dictionary);
+        var window = new Window { Content = new Canvas { Children = { host } }, Left = -10000, Top = -10000, Width = 1300, Height = 900, ShowActivated = false, ShowInTaskbar = false };
+        window.Show();
+        TestShell.Flush();
+        try
+        {
+            // Menu : une rangée par vue, avec ses deux flèches nommées.
+            hub.Tabs.Single(tab => tab.Label == "Menu").IsSelected = true;
+            TestShell.Flush();
+            Assert.IsTrue(Named<FrameworkElement>(window, "MenuCard").IsVisible);
+            Assert.IsFalse(Find<FrameworkElement>(window, "ShortcutsCard") is { IsVisible: true }, "les raccourcis sont une autre section de la même page");
+            var first = shortcuts.Menu[0];
+            Assert.AreEqual(MoreSettingsText.MoveUp(first.Label), first.UpLabel);
+            Assert.IsTrue(Descendants<Button>(window).Any(button => button.IsVisible && AutomationProperties.GetName(button) == first.DownLabel));
+
+            // Raccourcis : « Modifier », puis la touche tapée devient le raccourci.
+            hub.Tabs.Single(tab => tab.Label == "Raccourcis").IsSelected = true;
+            TestShell.Flush();
+            Assert.IsTrue(Named<FrameworkElement>(window, "ShortcutsCard").IsVisible);
+            Assert.IsTrue(Named<FrameworkElement>(window, "CaptureCard").IsVisible);
+            var row = shortcuts.Rows.First(candidate => candidate.Id == "aide");
+            Assert.AreEqual(MoreSettingsText.Change, row.ChangeLabel);
+            shortcuts.ChangeCommand.Execute(row);
+            Assert.AreEqual(MoreSettingsText.Waiting, row.ChangeLabel);
+            var view = Descendants<ShortcutsSettingsPage>(window).Single();
+            var typed = new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(view)!, 0, Key.F9) { RoutedEvent = Keyboard.PreviewKeyDownEvent };
+            view.RaiseEvent(typed);
+            Assert.IsTrue(typed.Handled, "la touche est prise : elle ne déclenche rien d'autre");
+            Assert.AreEqual("F9", row.Keys);
+            Assert.AreEqual("aide=F9", machine.Current.Shortcuts);
+            // Hors de l'attente d'une touche, la vue laisse passer la frappe.
+            var free = new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(view)!, 0, Key.F8) { RoutedEvent = Keyboard.PreviewKeyDownEvent };
+            view.RaiseEvent(free);
+            Assert.IsFalse(free.Handled);
+
+            // Feuilles : des marges tapées, puis Entrée, sans quitter le champ.
+            hub.Tabs.Single(tab => tab.Label == "Feuilles").IsSelected = true;
+            TestShell.Flush();
+            var margin = Named<TextBox>(window, "CustomMarginBox");
+            margin.Text = "1,5";
+            Assert.AreEqual(PageLayout.NormalMargin, machine.Current.Page.MarginCm, "rien ne s'applique avant Entrée");
+            margin.RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(margin)!, 0, Key.Enter) { RoutedEvent = Keyboard.KeyDownEvent });
+            Assert.AreEqual(1.5, machine.Current.Page.MarginCm);
+
+            // Un résultat de la recherche choisi au clavier : le focus reprend sur la section qu'il ouvre.
+            hub.Query = "contraste";
+            TestShell.Flush();
+            var hit = Hits(window).Single();
+            var scope = FocusManager.GetFocusScope(hit);
+            FocusManager.SetFocusedElement(scope, hit);
+            hit.Command.Execute(hit.CommandParameter);
+            TestShell.Flush();
+            Assert.AreEqual("Apparence", hub.Selected.Label);
+            Assert.IsTrue(FocusManager.GetFocusedElement(scope) is RadioButton { IsChecked: true }, $"le clavier reprend sur la section ouverte, pas sur {FocusManager.GetFocusedElement(scope)?.GetType().Name ?? "rien"}");
+
+            // En fenêtre étroite, sur la liste déroulante des sections.
+            host.Width = 560;
+            TestShell.Flush();
+            hub.Query = "voix";
+            TestShell.Flush();
+            var narrow = Hits(window).Single();
+            FocusManager.SetFocusedElement(scope, narrow);
+            narrow.Command.Execute(narrow.CommandParameter);
+            TestShell.Flush();
+            Assert.AreEqual("Lecture", hub.Selected.Label);
+            Assert.AreSame(Named<ComboBox>(window, "SectionChoice"), FocusManager.GetFocusedElement(scope));
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
+    public void In_a_narrow_window_the_sections_are_chosen_in_a_drop_down_list()
+    {
+        using var ui = new UiThread();
+        using var vault = new DataVault();
+        var test = new TestShell();
+        var hub = vault.Hub();
+        hub.OnNavigatedTo();
+        var host = new Border { Width = 560, Height = 700, Child = new SettingsHubPage { DataContext = hub } };
+        host.Resources.MergedDictionaries.Add(test.Design.Dictionary);
+        var canvas = new Canvas();
+        canvas.Children.Add(host);
+        var window = new Window { Content = canvas, Left = -10000, Top = -10000, Width = 700, Height = 800, ShowActivated = false };
+        window.Show();
+        TestShell.Flush();
+        try
+        {
+            Assert.IsFalse(Find<FrameworkElement>(window, "Side") is { IsVisible: true }, "la liste de gauche ne tient plus");
+            var heading = Named<TextBlock>(window, "NarrowHeading");
+            Assert.IsTrue(heading.IsVisible);
+            Assert.AreEqual("Paramètres", heading.Text);
+            Assert.AreEqual("Heading", AutomationProperties.GetAutomationId(heading), "le titre de la vue se retrouve sous le même identifiant que dans la liste");
+            Assert.IsFalse(Find<FrameworkElement>(window, "SectionTitle") is { IsVisible: true }, "la liste déroulante nomme déjà la section");
+            var choice = Named<ComboBox>(window, "SectionChoice");
+            Assert.IsTrue(choice.IsVisible);
+            Assert.AreSame(hub.Tabs[0], choice.SelectedItem);
+
+            // Par son rang, comme le fait un choix dans la liste ouverte : écrire la valeur liée elle-même romprait son lien.
+            choice.SelectedIndex = 1;
+            TestShell.Flush();
+            Assert.AreSame(hub.Tabs[1], hub.Selected);
+            Assert.IsTrue(Named<FrameworkElement>(window, "TextSizeChoice").IsVisible);
+            Assert.IsFalse(Find<FrameworkElement>(window, "ThemeChoice") is { IsVisible: true });
+
+            hub.Tabs[2].IsSelected = true;
+            TestShell.Flush();
+            Assert.AreSame(hub.Tabs[2], choice.SelectedItem, "la liste suit un choix fait ailleurs");
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
     [STATestMethod]
     public void The_tabs_change_the_page_shown_without_horizontal_scrolling()
     {
@@ -557,33 +1077,50 @@ public sealed class SettingsHubTests
         var test = new TestShell();
         var hub = vault.Hub();
         hub.OnNavigatedTo();
-        var host = new Border { Width = 640, Height = 700, Child = new SettingsHubPage { DataContext = hub } };
+        var host = new Border { Width = 980, Height = 700, Child = new SettingsHubPage { DataContext = hub } };
         host.Resources.MergedDictionaries.Add(test.Design.Dictionary);
         var canvas = new Canvas();
         canvas.Children.Add(host);
-        var window = new Window { Content = canvas, Left = -10000, Top = -10000, Width = 800, Height = 800, ShowActivated = false };
+        var window = new Window { Content = canvas, Left = -10000, Top = -10000, Width = 1100, Height = 800, ShowActivated = false };
         window.Show();
         TestShell.Flush();
         try
         {
             Assert.AreEqual("Paramètres", Named<TextBlock>(window, "Heading").Text);
             var radios = Descendants<RadioButton>(window).ToList();
-            Assert.HasCount(5, radios);
+            Assert.HasCount(7, radios, "les sections, dans la liste de gauche");
             Assert.IsTrue(radios[0].IsChecked);
-            Assert.IsNotNull(Find<FrameworkElement>(window, "ThemeChoice"), "Général s'ouvre d'abord");
+            Assert.AreEqual("Apparence", Named<TextBlock>(window, "SectionTitle").Text);
+            Assert.IsTrue(Named<FrameworkElement>(window, "ThemeChoice").IsVisible, "Apparence s'ouvre d'abord");
+            Assert.IsFalse(Find<FrameworkElement>(window, "TextSizeChoice") is { IsVisible: true }, "le texte des fiches est dans Lecture");
 
+            // Lecture est une autre part de la même page : ses cartes se montrent, celles d'Apparence se cachent.
             radios[1].IsChecked = true;
             TestShell.Flush();
-            Assert.IsNotNull(Find<FrameworkElement>(window, "StepsBox"));
+            Assert.AreEqual("Lecture", Named<TextBlock>(window, "SectionTitle").Text);
+            Assert.IsTrue(Named<FrameworkElement>(window, "TextSizeChoice").IsVisible);
+            Assert.IsTrue(Named<FrameworkElement>(window, "RateChoice").IsVisible);
+            Assert.IsFalse(Find<FrameworkElement>(window, "ThemeChoice") is { IsVisible: true });
 
             radios[2].IsChecked = true;
             TestShell.Flush();
-            Assert.IsNotNull(Find<FrameworkElement>(window, "QuotesBox"));
+            Assert.IsNotNull(Find<FrameworkElement>(window, "StepsBox"));
 
             radios[3].IsChecked = true;
             TestShell.Flush();
+            Assert.IsNotNull(Find<FrameworkElement>(window, "QuotesBox"));
+
+            // Coffre et chiffrement, puis Sauvegardes et exports : deux parts de la page des données.
+            radios[4].IsChecked = true;
+            TestShell.Flush();
             UiThread.Until(() => vault.Page.IsLoaded);
             TestShell.Flush();
+            Assert.IsTrue(Named<FrameworkElement>(window, "VaultCard").IsVisible);
+            Assert.IsFalse(Find<FrameworkElement>(window, "BackupsCard") is { IsVisible: true });
+            radios[5].IsChecked = true;
+            TestShell.Flush();
+            Assert.IsFalse(Find<FrameworkElement>(window, "VaultCard") is { IsVisible: true });
+            Assert.IsTrue(Named<FrameworkElement>(window, "BackupsCard").IsVisible);
             Assert.IsFalse(hub.Tabs[0].IsSelected);
             Assert.IsNull(Find<FrameworkElement>(window, "StepsBox"));
             Assert.AreEqual(Visibility.Visible, Named<FrameworkElement>(window, "BackupsList").Visibility);
@@ -592,7 +1129,7 @@ public sealed class SettingsHubTests
             var scroller = Named<ScrollViewer>(window, "Scroller");
             Assert.IsLessThanOrEqualTo(scroller.ViewportWidth, scroller.ExtentWidth);
 
-            radios[4].IsChecked = true;
+            radios[6].IsChecked = true;
             TestShell.Flush();
             Assert.AreEqual("kyfRev 1.0.0-essai", Named<TextBlock>(window, "VersionLine").Text);
             Assert.AreEqual(vault.Root, Named<TextBlock>(window, "VaultLine").Text);
@@ -684,6 +1221,9 @@ public sealed class SettingsHubTests
         }
     }
 
+    /// <summary>Les boutons des résultats de la recherche, ceux que l'on voit.</summary>
+    private static List<Button> Hits(DependencyObject root) => [.. Descendants<Button>(root).Where(button => button is { IsVisible: true, DataContext: SettingsHit })];
+
     /// <summary>L'onglet « Données » sur un vrai coffre.</summary>
     private sealed class DataVault : IDisposable
     {
@@ -716,6 +1256,18 @@ public sealed class SettingsHubTests
         }
 
         public static GeneralSettingsViewModel General() => new(new MachineSettings(new MemoryMachinePreferences()), new FakeVoices("Microsoft Hortense Desktop"));
+
+        /// <summary>La vue entière, comme l'application la compose : avec Feuilles, Menu et Raccourcis, sur ces préférences.</summary>
+        public SettingsHubViewModel Hub(MachineSettings machine) =>
+            new(
+                new GeneralSettingsViewModel(machine, new FakeVoices("Microsoft Hortense Desktop")),
+                new SettingsPageViewModel(App.Settings, TimeProvider.System),
+                new ModulesSettingsViewModel(App.Settings, _ => { }, FakeExtensions.Settings()),
+                Page,
+                new AboutSettingsViewModel(App.Vaults),
+                new SheetsSettingsViewModel(machine),
+                new ShortcutsSettingsViewModel(machine),
+                machine);
 
         public SettingsHubViewModel Hub() => new(General(), new SettingsPageViewModel(App.Settings, TimeProvider.System), new ModulesSettingsViewModel(App.Settings, _ => { }, FakeExtensions.Settings()), Page, new AboutSettingsViewModel(App.Vaults));
 

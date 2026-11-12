@@ -486,3 +486,59 @@ describe("format étendu : tâches", () => {
     expect(taches(ecrit)).toEqual([null]);
   });
 });
+
+describe("saut de page et page blanche", () => {
+  const n = schema.nodes;
+
+  it("lit les deux lignes, seules dans leur bloc, et les rend telles quelles", () => {
+    const texte = "Avant\n\n<!-- kyfrev saut-de-page -->\n\nMilieu\n\n<!-- kyfrev page-blanche -->\n\nAprès\n";
+    const origine = depuisMarkdown(texte);
+    expect(origine.doc.child(1).type).toBe(n.saut_de_page);
+    expect(origine.doc.child(1).attrs.blanche).toBe(false);
+    expect(origine.doc.child(3).type).toBe(n.saut_de_page);
+    expect(origine.doc.child(3).attrs.blanche).toBe(true);
+    expect(versMarkdown(origine.doc, origine)).toBe(texte);
+    expect(reecrire(texte)).toBe(texte);
+    stable(texte);
+  });
+
+  it("lit une écriture relâchée, la garde tant qu'on n'y touche pas, et l'écrit dans sa forme exacte", () => {
+    const texte = "Avant\n\n   <!--kyfrev   page-blanche-->  \n\n<!--\tkyfrev saut-de-page -->\n";
+    const origine = depuisMarkdown(texte);
+    expect(origine.doc.child(1).attrs.blanche).toBe(true);
+    expect(origine.doc.child(2).type).toBe(n.saut_de_page);
+    expect(versMarkdown(origine.doc, origine)).toBe(texte);
+    expect(reecrire(texte)).toBe("Avant\n\n<!-- kyfrev page-blanche -->\n\n<!-- kyfrev saut-de-page -->\n");
+  });
+
+  it("laisse telle qu'elle est la même ligne dans une liste, une citation, un tableau ou un paragraphe", () => {
+    const genres = (doc: Node) => {
+      const liste: string[] = [];
+      doc.descendants((noeud) => void liste.push(noeud.type.name));
+      return liste;
+    };
+    const sans = (texte: string) => {
+      const origine = depuisMarkdown(texte);
+      expect(genres(origine.doc)).not.toContain("saut_de_page");
+      expect(versMarkdown(origine.doc, origine)).toBe(texte);
+      // Avec un autre commentaire à sa place, la fiche se lit pareil : la ligne n'y change rien.
+      const temoin = depuisMarkdown(texte.replace("<!-- kyfrev saut-de-page -->", "<!-- autre chose -->")).doc;
+      expect(genres(origine.doc)).toEqual(genres(temoin));
+    };
+    sans("- un\n- <!-- kyfrev saut-de-page -->\n");
+    sans("- un\n\n  <!-- kyfrev saut-de-page -->\n");
+    sans("> <!-- kyfrev saut-de-page -->\n");
+    sans("| a |\n|---|\n| <!-- kyfrev saut-de-page --> |\n");
+    sans("Un texte\n<!-- kyfrev saut-de-page -->\n");
+    sans("    <!-- kyfrev saut-de-page -->\n");
+  });
+
+  it("ne prend pas un autre commentaire pour un saut", () => {
+    for (const ligne of ["<!-- kyfrev saut -->", "<!-- kyfrev saut-de-page blanche -->", "<!-- saut-de-page -->", "<!-- kyfrev tableau bandes=lignes -->"]) {
+      const texte = `Avant\n\n${ligne}\n\nAprès\n`;
+      const origine = depuisMarkdown(texte);
+      origine.doc.forEach((noeud) => expect(noeud.type).not.toBe(n.saut_de_page));
+      expect(versMarkdown(origine.doc, origine)).toBe(texte);
+    }
+  });
+});

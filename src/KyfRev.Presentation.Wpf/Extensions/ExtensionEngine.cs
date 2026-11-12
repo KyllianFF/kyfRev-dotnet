@@ -435,23 +435,39 @@ public sealed class ExtensionEngine : IDisposable, IExtensionFaults
         return allowed;
     }
 
+    /// <summary>
+    /// Les réponses abandonnées parce que le moteur web s'est fermé pendant qu'elles se préparaient : sans gravité, mais
+    /// comptées, pour qu'un moteur qui se ferme trop souvent se remarque.
+    /// </summary>
+    internal int AbandonedAnswers { get; private set; }
+
     private async void OnResourceRequested(object? sender, CoreWebView2WebResourceRequestedEventArgs e)
     {
-        var web = (CoreWebView2)sender!;
-        var address = new Uri(e.Request.Uri);
-        using var deferral = e.GetDeferral();
-        var served = address.Host == Host && e.Request.Method == "GET" ? await Task.Run(() => ContentOf(Uri.UnescapeDataString(address.AbsolutePath))).ConfigureAwait(true) : null;
-        if (_disposed || _controller is null)
+        // Le moteur peut être arrêté pendant la lecture : répondre à un moteur parti peut alors échouer, sans que
+        // l'application ait à s'arrêter pour autant.
+        try
         {
-            return;
+            var web = (CoreWebView2)sender!;
+            var address = new Uri(e.Request.Uri);
+            using var deferral = e.GetDeferral();
+            var served = address.Host == Host && e.Request.Method == "GET" ? await Task.Run(() => ContentOf(Uri.UnescapeDataString(address.AbsolutePath))).ConfigureAwait(true) : null;
+            if (_disposed || _controller is null)
+            {
+                return;
+            }
+            if (served is null)
+            {
+                Refused.Add(e.Request.Uri);
+            }
+            e.Response = served is { } content
+                ? web.Environment.CreateWebResourceResponse(new MemoryStream(content.Bytes), 200, "OK", Headers(content.Type, content.Policy))
+                : web.Environment.CreateWebResourceResponse(null, 403, "Forbidden", "Cache-Control: no-store");
         }
-        if (served is null)
+        catch (Exception exception) when (exception is COMException or InvalidOperationException or ObjectDisposedException or IOException or UnauthorizedAccessException or UriFormatException)
         {
-            Refused.Add(e.Request.Uri);
+            // Le moteur est parti pendant la réponse : il n'y a plus personne à qui répondre. L'abandon se compte.
+            AbandonedAnswers++;
         }
-        e.Response = served is { } content
-            ? web.Environment.CreateWebResourceResponse(new MemoryStream(content.Bytes), 200, "OK", Headers(content.Type, content.Policy))
-            : web.Environment.CreateWebResourceResponse(null, 403, "Forbidden", "Cache-Control: no-store");
     }
 
     /// <summary>Ce que l'application sert : ses pages, et les fichiers d'une extension active. Rien d'autre n'existe.</summary>
@@ -519,15 +535,19 @@ public sealed class ExtensionEngine : IDisposable, IExtensionFaults
             case "resultat":
                 TakeResult(id, root);
                 break;
+            // Une demande sans numéro lisible (absent, ou trop grand pour un entier) n'a pas de réponse possible : elle est
+            // ignorée, plutôt que d'arrêter l'application sur un message mal fait d'une extension.
+            case "requete" when NumberOf(root) is null || !root.TryGetProperty("args", out _):
+                break;
             case "requete" when TextOf(root, "methode") == "vue.ouvrir":
                 ViewAsked?.Invoke(this, new ExtensionEventArgs(id));
-                Post(new { kind = "vers-cadre", id, message = new { type = "reponse", n = root.GetProperty("n").GetInt32(), resultat = (object?)null } });
+                Post(new { kind = "vers-cadre", id, message = new { type = "reponse", n = NumberOf(root)!.Value, resultat = (object?)null } });
                 break;
             case "requete" when TextOf(root, "methode") is "selection.demander" or "fiches.ouvrir":
-                _ = AnswerScreenAsync(id, root.GetProperty("n").GetInt32(), TextOf(root, "methode")!, root.GetProperty("args").Clone());
+                _ = AnswerScreenAsync(id, NumberOf(root)!.Value, TextOf(root, "methode")!, root.GetProperty("args").Clone());
                 break;
-            case "requete":
-                _ = AnswerRequestAsync(id, root.GetProperty("n").GetInt32(), root.GetProperty("methode").GetString()!, root.GetProperty("args").Clone());
+            case "requete" when TextOf(root, "methode") is { } method:
+                _ = AnswerRequestAsync(id, NumberOf(root)!.Value, method, root.GetProperty("args").Clone());
                 break;
             case "rafraichir":
                 RefreshAsked?.Invoke(this, new ExtensionEventArgs(id));
@@ -537,11 +557,14 @@ public sealed class ExtensionEngine : IDisposable, IExtensionFaults
         }
     }
 
+    /// <summary>Le numéro d'une demande ou d'un résultat ; rien s'il manque ou ne tient pas dans un entier.</summary>
+    private static int? NumberOf(JsonElement root) =>
+        root.TryGetProperty("n", out var number) && number.ValueKind == JsonValueKind.Number && number.TryGetInt32(out var value) ? value : null;
+
     /// <summary>Un résultat n'est pris que pour une demande faite à cette extension : elle ne peut pas répondre à la place d'une autre.</summary>
     private void TakeResult(string id, JsonElement root)
     {
-        var n = root.GetProperty("n").GetInt32();
-        if (!_pending.TryGetValue(n, out var pending) || pending.Extension != id)
+        if (NumberOf(root) is not { } n || !_pending.TryGetValue(n, out var pending) || pending.Extension != id)
         {
             return;
         }

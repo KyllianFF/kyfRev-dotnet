@@ -5,9 +5,43 @@
              xmlns:kyf="clr-namespace:KyfRev.DesignSystem.Controls;assembly=KyfRev.DesignSystem"
              xmlns:reading="clr-namespace:KyfRev.Presentation.Wpf.Reading"
              xmlns:editing="clr-namespace:KyfRev.Presentation.Wpf.Editing"
+             xmlns:shell="clr-namespace:KyfRev.Presentation.Wpf.Shell"
              xmlns:pages="clr-namespace:KyfRev.Presentation.Wpf.Pages">
   <UserControl.Resources>
     <BooleanToVisibilityConverter x:Key="Visible" />
+
+    <!-- Le curseur du zoom : une piste fine et une poignée ronde, aux couleurs du thème. -->
+    <Style x:Key="ZoomSlider" TargetType="Slider">
+      <Setter Property="Focusable" Value="True" />
+      <Setter Property="MinHeight" Value="24" />
+      <Setter Property="FocusVisualStyle" Value="{DynamicResource Kyf.FocusVisual}" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Slider">
+            <Grid Background="Transparent">
+              <Border Height="4" CornerRadius="2" VerticalAlignment="Center" Background="{DynamicResource Kyf.Brush.ControlBorder}" />
+              <Track x:Name="PART_Track">
+                <Track.DecreaseRepeatButton>
+                  <RepeatButton Command="Slider.DecreaseLarge" Focusable="False" IsTabStop="False" Opacity="0" AutomationProperties.Name="{x:Static pages:ReviewText.SheetZoomOut}" />
+                </Track.DecreaseRepeatButton>
+                <Track.IncreaseRepeatButton>
+                  <RepeatButton Command="Slider.IncreaseLarge" Focusable="False" IsTabStop="False" Opacity="0" AutomationProperties.Name="{x:Static pages:ReviewText.SheetZoomIn}" />
+                </Track.IncreaseRepeatButton>
+                <Track.Thumb>
+                  <Thumb Width="16" Height="16" Focusable="False">
+                    <Thumb.Template>
+                      <ControlTemplate TargetType="Thumb">
+                        <Ellipse Fill="{DynamicResource Kyf.Brush.Primary}" />
+                      </ControlTemplate>
+                    </Thumb.Template>
+                  </Thumb>
+                </Track.Thumb>
+              </Track>
+            </Grid>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
 
     <!-- Le titre d'une partie : celle qui est à l'écran ressort. -->
     <Style x:Key="OutlineTitle" TargetType="TextBlock">
@@ -147,10 +181,11 @@
     </DataTemplate>
   </UserControl.Resources>
   <UserControl.InputBindings>
-    <KeyBinding Key="Enter" Modifiers="Control" Command="{Binding ValidateShortcut}" />
-    <KeyBinding Key="E" Modifiers="Control" Command="{Binding ToggleWritingCommand}" />
-    <!-- Ctrl+P mène à « Partager », où la fiche sort en PDF A4 ou en page web à imprimer. -->
-    <KeyBinding Key="P" Modifiers="Control" Command="{Binding RequestShareCommand}" />
+    <KeyBinding shell:ShortcutMap.Id="valider" Key="Enter" Modifiers="Control" Command="{Binding ValidateShortcut}" />
+    <KeyBinding shell:ShortcutMap.Id="ecrire" Key="E" Modifiers="Control" Command="{Binding ToggleWritingCommand}" />
+    <!-- Ctrl+P ouvre « Imprimer » ; Ctrl+Maj+P, « Partager », où la fiche sort en PDF ou en page web. Ces touches se changent dans les paramètres. -->
+    <KeyBinding shell:ShortcutMap.Id="imprimer" Key="P" Modifiers="Control" Command="{Binding RequestPrintCommand}" />
+    <KeyBinding shell:ShortcutMap.Id="partager" Key="P" Modifiers="Control+Shift" Command="{Binding RequestShareCommand}" />
     <KeyBinding Key="Escape" Command="{Binding EscapeCommand}" />
   </UserControl.InputBindings>
 
@@ -160,6 +195,7 @@
         <RowDefinition Height="Auto" />
         <RowDefinition Height="Auto" />
         <RowDefinition Height="*" />
+        <RowDefinition Height="Auto" />
         <RowDefinition Height="Auto" />
       </Grid.RowDefinitions>
 
@@ -374,6 +410,8 @@
                     <Separator Visibility="{Binding HasPanels, Converter={StaticResource Visible}, FallbackValue=Collapsed}" />
                     <MenuItem x:Name="FocusItem" Header="{x:Static pages:ReadingText.FocusToggleName}" IsCheckable="True" IsChecked="{Binding IsFocusMode}"
                               Visibility="{Binding CanFocus, Converter={StaticResource Visible}}" />
+                    <MenuItem x:Name="PrintItem" Header="{x:Static pages:PrintText.PrintSheet}" Command="{Binding RequestPrintCommand}"
+                              Visibility="{Binding CanPrint, Converter={StaticResource Visible}, FallbackValue=Collapsed}" />
                     <MenuItem x:Name="ShareItem" Header="{x:Static pages:SharingText.Share}" Command="{Binding RequestShareCommand}"
                               Visibility="{Binding CanShare, Converter={StaticResource Visible}, FallbackValue=Collapsed}" />
                     <MenuItem x:Name="TemplateItem" Header="{x:Static pages:SharingText.SaveAsTemplate}" Command="{Binding RequestSaveAsTemplateCommand}"
@@ -465,7 +503,7 @@
       <!-- Le ruban court sur toute la largeur, au-dessus du plan et des passages. -->
       <StackPanel Grid.Row="1" Margin="16,0,16,8" DataContext="{Binding Editor}"
                   Visibility="{Binding DataContext.IsWriting, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource Visible}}">
-        <editing:EditorRibbon x:Name="Ribbon" />
+        <editing:EditorRibbon x:Name="Ribbon" PageSetup="{Binding DataContext.PageSetup, RelativeSource={RelativeSource AncestorType=UserControl}}" />
         <!-- Un conflit n'écrit rien tant qu'il n'est pas tranché : aucune des deux versions n'est perdue. -->
         <StackPanel x:Name="ConflictPanel" Margin="0,8,0,0" Visibility="{Binding HasConflict, Converter={StaticResource Visible}}">
           <kyf:Notification x:Name="ConflictMessage" Severity="Warning" Message="{x:Static editing:EditingText.ConflictMessage}" IsClosable="False" Margin="0,0,0,8" />
@@ -509,7 +547,7 @@
           </UniformGrid>
 
           <!-- La fiche, à largeur de lecture ; elle défile seule, avec son titre. -->
-          <Grid MaxWidth="{Binding TextWidth}">
+          <Grid MaxWidth="{Binding ZoomedTextWidth}">
             <Grid.RowDefinitions>
               <RowDefinition Height="Auto" />
               <RowDefinition Height="*" />
@@ -524,8 +562,10 @@
               <kyf:Notification x:Name="DoneMessage" Severity="Success" Message="{Binding Done}" IsOpen="{Binding HasDone, Mode=OneWay}" Margin="0,0,0,12" />
             </StackPanel>
             <editing:SheetEditorView x:Name="EditorView" Grid.Row="1" DataContext="{Binding Editor}"
+                                     SheetZoom="{Binding DataContext.SheetZoom, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                     PageSetup="{Binding DataContext.PageSetup, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                      Visibility="{Binding DataContext.IsWriting, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource Visible}}" />
-            <reading:SheetDocumentViewer x:Name="SheetText" Grid.Row="1" Visibility="{Binding IsReading, Converter={StaticResource Visible}}" Reading="{Binding Reading}" OpenLinkCommand="{Binding OpenLinkCommand}" LinkPreview="{Binding LinkPreview}"
+            <reading:SheetDocumentViewer x:Name="SheetText" Grid.Row="1" Visibility="{Binding IsReading, Converter={StaticResource Visible}}" Reading="{Binding Reading}" PrintCommand="{Binding RequestPrintCommand}" PageLayout="{Binding PageSetup.Layout}" OpenLinkCommand="{Binding OpenLinkCommand}" LinkPreview="{Binding LinkPreview}"
                                          Highlights="{Binding Highlights}" ActiveHighlight="{Binding ActivePassage}" Holes="{Binding Holes}" Words="{Binding Words}"
                                          PreviewMouseLeftButtonDown="OnTextPressed" PreviewMouseLeftButtonUp="OnTextReleased" PreviewKeyDown="OnTextKey"
                                          ContextMenuOpening="OnTextMenu"
@@ -546,7 +586,30 @@
                         Content="{Binding}" ContentTemplate="{StaticResource BacklinksPanel}" Visibility="{Binding ShowsBacklinksOverlay, Converter={StaticResource Visible}}" />
       </Grid>
 
-      <Border Grid.Row="3" Height="16" Visibility="{Binding IsWriting, Converter={StaticResource Visible}}" />
+      <Border Grid.Row="3" Height="4" Visibility="{Binding IsWriting, Converter={StaticResource Visible}}" />
+
+      <!-- Le zoom de la fiche, en bas à droite : il ne touche pas au reste de l'interface, dont la taille se règle dans les Paramètres. -->
+      <StackPanel x:Name="SheetZoomBar" Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Margin="16,0,16,8">
+        <!-- La feuille et son nombre de pages, puis le zoom qui la fait tenir dans la largeur. -->
+        <TextBlock x:Name="PageStatus" Text="{Binding PageSetup.Status}" Style="{DynamicResource Kyf.Text.Secondary}" VerticalAlignment="Center" Margin="0,0,12,0"
+                   Visibility="{Binding PageSetup.HasStatus, Converter={StaticResource Visible}, FallbackValue=Collapsed}" />
+        <Button x:Name="PageFitButton" Style="{DynamicResource Kyf.Button.Tool}" Padding="12,0" Margin="0,0,8,0" Content="{x:Static pages:ReviewText.PageFitWidth}" Click="OnFitPageWidth"
+                Visibility="{Binding PageSetup.HasStatus, Converter={StaticResource Visible}, FallbackValue=Collapsed}" />
+        <Button x:Name="PaperButton" Style="{DynamicResource Kyf.Button.Tool}" Margin="0,0,8,0" Tag="{Binding PageSetup.IsPaperOn}" Command="{Binding PageSetup.TogglePaperCommand}"
+                ToolTip="{x:Static editing:EditingText.PaperToggle}" AutomationProperties.Name="{x:Static editing:EditingText.PaperToggle}">
+          <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.PaperToggle}" />
+        </Button>
+        <Button x:Name="SheetZoomOutButton" Style="{DynamicResource Kyf.Button.Tool}" Content="−" Command="{Binding ZoomSheetOutCommand}"
+                ToolTip="{x:Static pages:ReviewText.SheetZoomOut}" AutomationProperties.Name="{x:Static pages:ReviewText.SheetZoomOut}" />
+        <Slider x:Name="SheetZoomSlider" Width="140" VerticalAlignment="Center" Margin="4,0" Minimum="50" Maximum="200" SmallChange="10" LargeChange="10"
+                TickFrequency="10" IsSnapToTickEnabled="True" Value="{Binding SheetZoomPercent}" Style="{StaticResource ZoomSlider}"
+                AutomationProperties.Name="{x:Static pages:ReviewText.SheetZoom}" />
+        <Button x:Name="SheetZoomInButton" Style="{DynamicResource Kyf.Button.Tool}" Content="+" Command="{Binding ZoomSheetInCommand}"
+                ToolTip="{x:Static pages:ReviewText.SheetZoomIn}" AutomationProperties.Name="{x:Static pages:ReviewText.SheetZoomIn}" />
+        <Button x:Name="SheetZoomResetButton" Style="{DynamicResource Kyf.Button.Tool}" MinWidth="64" Margin="4,0,0,0" Content="{Binding SheetZoomLabel}" Command="{Binding ResetSheetZoomCommand}"
+                FontFamily="{DynamicResource Kyf.Font.Code}" ToolTip="{x:Static pages:ReviewText.SheetZoomReset}" AutomationProperties.Name="{Binding SheetZoomLabel}"
+                AutomationProperties.HelpText="{x:Static pages:ReviewText.SheetZoomReset}" />
+      </StackPanel>
 
       <!-- Toujours visible, même la fiche défilée. -->
       <ContentControl Grid.Row="3" Content="{Binding Review}" Focusable="False" IsTabStop="False" Margin="16,8,16,16"
@@ -644,6 +707,12 @@
         </UniformGrid>
         <editing:DiffView x:Name="ConflictDiff" Rows="{Binding ConflictRows}" />
       </DockPanel>
+    </kyf:Dialog>
+
+    <!-- Imprimer (Ctrl+P) : les réglages et l'aperçu, dans une fenêtre au-dessus de la fiche. -->
+    <kyf:Dialog x:Name="PrintDialog" DataContext="{Binding Print}" Title="{Binding Title}" IsOpen="{Binding IsOpen, Mode=OneWay}" CardMaxWidth="900" IsWide="True"
+                PrimaryButtonText="{x:Static pages:PrintText.Print}" IsPrimaryEnabled="{Binding CanPrint}" Closed="OnPrintClosed">
+      <pages:PrintView x:Name="PrintContent" />
     </kyf:Dialog>
 
     <kyf:Dialog x:Name="GalleryDialog" DataContext="{Binding Editor}" Title="{Binding Gallery.Title}" IsOpen="{Binding IsGalleryOpen, Mode=OneWay}" CardMaxWidth="980" IsWide="True"

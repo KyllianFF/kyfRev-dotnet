@@ -10,6 +10,7 @@ using KyfRev.Extensions.Host;
 using KyfRev.Presentation.Wpf.Editing;
 using KyfRev.Presentation.Wpf.Extensions;
 using KyfRev.Presentation.Wpf.Pages;
+using KyfRev.Presentation.Wpf.Reading;
 using Microsoft.Web.WebView2.Core;
 
 namespace KyfRev.Presentation.Wpf.Tests;
@@ -931,6 +932,136 @@ public sealed class VisualEditorTests
     }
 
     [EngineTest]
+    public void What_is_written_sits_on_the_lines_of_each_paper()
+    {
+        // Des capitales seulement : rien ne descend sous la ligne de base, que l'essai cherche dans l'image.
+        const string body = "# MITOSE\n\nHIHI PREMIER PARAGRAPHE AVEC ASSEZ DE MOTS POUR PASSER À LA LIGNE SUIVANTE ET MONTRER DEUX LIGNES POSÉES SUR LE PAPIER, PUIS UNE TROISIÈME.\n\nHIHI SECOND PARAGRAPHE.\\\nLIGNE VENUE APRÈS MAJ+ENTRÉE.\n\n## PHASES\n\n- PROPHASE\n- ANAPHASE\n\n| Phase | Durée |\n| --- | --- |\n| Prophase | longue |\n| Métaphase | courte |\n\nTEXTE VENU SOUS LE TABLEAU.\n\n```\nligne de code\n```\n\nTEXTE VENU SOUS LE CODE.\n";
+        using var scene = new Scene(body, width: 760);
+        var visual = scene.Visual!;
+        var ink = ((SolidColorBrush)scene.Test.Design.Dictionary["Kyf.Brush.Text"]).Color;
+        var paper = ((SolidColorBrush)scene.Test.Design.Dictionary["Kyf.Brush.Surface"]).Color;
+        (PaperStyle Style, PageFormat Format)[] cases =
+        [
+            (PaperStyle.LargeSquares, PageFormat.Endless), (PaperStyle.Lines, PageFormat.Endless), (PaperStyle.SmallSquares, PageFormat.Endless),
+            (PaperStyle.Dots, PageFormat.Endless), (PaperStyle.Graph, PageFormat.Endless),
+            (PaperStyle.LargeSquares, PageFormat.A5), (PaperStyle.Lines, PageFormat.A5), (PaperStyle.SmallSquares, PageFormat.A5),
+            (PaperStyle.Dots, PageFormat.A5), (PaperStyle.Graph, PageFormat.A5),
+        ];
+        var astray = new List<string>();
+        foreach (var (style, format) in cases)
+        {
+            var name = $"{PaperStyles.Name(style)} {PaperStyles.FormatName(format)}";
+            var step = PaperStyles.LineStepPixels(style);
+            visual.SetPage(new PageLayout(format));
+            visual.SetPaper(PaperStyles.Name(style));
+            UiThread.Until(() => scene.Script($"document.documentElement.classList.contains('sur-lignes') && document.documentElement.getAttribute('data-papier') === '{PaperStyles.Name(style)}'") == "true");
+            // La mise en pages et le calage se mesurent après coup : on leur laisse le temps de se poser.
+            Pump(TimeSpan.FromMilliseconds(900));
+            var shot = visual.ShowSnapshotAsync();
+            UiThread.Until(() => shot.IsCompleted);
+            TestShell.Flush();
+            var image = visual.Capture($"ecriture-{PaperStyles.Name(style)}-{PaperStyles.FormatName(format)}");
+            var ratio = image.PixelWidth / double.Parse(scene.Script("innerWidth"), System.Globalization.CultureInfo.InvariantCulture);
+
+            // Chaque ligne de chaque bloc de texte, là où elle est dans la page : haut, bas, gauche ; et le bloc d'où elle vient.
+            var read = JsonSerializer.Deserialize<string>(scene.Script("""
+                JSON.stringify([...document.querySelectorAll('.ProseMirror :is(h1, h2, p)')].filter((bloc) => !bloc.closest('table, pre')).map((bloc) => {
+                  const part = document.createRange();
+                  part.selectNodeContents(bloc);
+                  const tops = [];
+                  for (const box of part.getClientRects()) {
+                    if (box.width > 2 && !tops.some((seen) => Math.abs(seen[0] - box.top) < 3)) tops.push([box.top, box.bottom, box.left]);
+                  }
+                  return { text: bloc.textContent.slice(0, 18), lines: tops };
+                }))
+                """))!;
+            using var parsed = JsonDocument.Parse(read);
+            var blocks = parsed.RootElement.EnumerateArray()
+                .Select(block => (Text: block.GetProperty("text").GetString()!, Lines: block.GetProperty("lines").EnumerateArray().Select(line => line.EnumerateArray().Select(value => value.GetDouble()).ToArray()).ToList()))
+                .ToList();
+            Assert.IsGreaterThanOrEqualTo(8, blocks.Count, name);
+            var left = blocks[0].Lines[0][2] * ratio;
+            var ruled = image.RuledRows(left - 30, left - 12, paper);
+            Assert.IsGreaterThan(5, ruled.Count, $"{name} : le papier montre ses lignes");
+            var measured = 0;
+            foreach (var block in blocks)
+            {
+                foreach (var line in block.Lines)
+                {
+                    var (top, bottom, start) = (line[0] * ratio, line[1] * ratio, line[2] * ratio);
+                    if (bottom > image.PixelHeight - 4 || image.LowestInk(top - 2, bottom, start, start + 170, ink) is not { } row)
+                    {
+                        continue;
+                    }
+                    measured++;
+                    // Le trait est juste sous la ligne de base : la rangée qui suit le bas des lettres, à une près.
+                    var nearest = ruled.MinBy(candidate => Math.Abs(candidate - (row + 1)));
+                    if (Math.Abs(nearest - (row + 1)) > 2)
+                    {
+                        astray.Add(string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{name} « {block.Text} » : bas des lettres {row + 1}, trait le plus proche {nearest}"));
+                    }
+                }
+            }
+            Assert.IsGreaterThanOrEqualTo(6, measured, $"{name} : des lignes de texte ont été regardées");
+
+            // Entrée laisse une ligne vide, Maj+Entrée n'en laisse pas : les écarts se comptent en pas.
+            var first = blocks.First(block => block.Text.StartsWith("HIHI PREMIER", StringComparison.Ordinal)).Lines;
+            var second = blocks.First(block => block.Text.StartsWith("HIHI SECOND", StringComparison.Ordinal)).Lines;
+            Assert.IsGreaterThanOrEqualTo(2, first.Count, name);
+            Assert.AreEqual(step, first[1][0] - first[0][0], 0.6, $"{name} : deux lignes d'un paragraphe");
+            if (Math.Abs(second[0][0] - first[^1][0]) < 400)
+            {
+                // Sauf si une page les sépare.
+                Assert.AreEqual(2 * step, second[0][0] - first[^1][0], 0.6, $"{name} : un nouveau paragraphe laisse une ligne vide");
+            }
+            Assert.AreEqual(step, second[1][0] - second[0][0], 0.6, $"{name} : Maj+Entrée passe à la ligne du dessous");
+
+            // Un tableau a un fond plein : la réglure ne passe pas à travers ses cases.
+            Assert.AreEqual("true", scene.Script("(() => { const fond = getComputedStyle(document.querySelector('.ProseMirror td')).backgroundColor; const parts = fond.match(/[\\d.]+/g) || []; return fond !== 'transparent' && (parts.length < 4 || Number(parts[3]) === 1); })()"), $"{name} : le fond des cases");
+        }
+        Assert.IsEmpty(astray, $"Des lignes écrites ne sont pas posées sur le papier : {string.Join(" ; ", astray)}");
+
+        // La police des fiches arrive à la page avec le thème, et le texte reste posé sur les lignes avec elle. Une police
+        // manuscrite ne pose pas toutes ses lettres sur la ligne de base : on lui laisse un peu de jeu.
+        visual.SetPage(PageLayout.Default);
+        visual.SetPaper(PaperStyles.Name(PaperStyle.Lines));
+        foreach (var (font, family, play) in new[] { (ReadingFont.Serif, "Georgia", 2d), (ReadingFont.Typewriter, "Mono", 2d), (ReadingFont.Handwriting, "Segoe Print", 4d) })
+        {
+            scene.Window.Resources[ReadingComfort.ResourceKey] = ReadingComfort.Of(new MachinePreferences { Font = font });
+            UiThread.Until(() => scene.Script("getComputedStyle(document.querySelector('.ProseMirror p')).fontFamily").Contains(family, StringComparison.Ordinal));
+            StringAssert.Contains(scene.Script("getComputedStyle(document.querySelector('.ProseMirror h1')).fontFamily"), family, StringComparison.Ordinal, "les titres prennent la police choisie");
+            Pump(TimeSpan.FromMilliseconds(900));
+            var shot = visual.ShowSnapshotAsync();
+            UiThread.Until(() => shot.IsCompleted);
+            TestShell.Flush();
+            var image = visual.Capture($"ecriture-lignes-{font}");
+            var ratio = image.PixelWidth / double.Parse(scene.Script("innerWidth"), System.Globalization.CultureInfo.InvariantCulture);
+            var box = JsonSerializer.Deserialize<double[]>(JsonSerializer.Deserialize<string>(scene.Script("""
+                (() => {
+                  const bloc = [...document.querySelectorAll('.ProseMirror p')].find((p) => p.textContent.startsWith('HIHI PREMIER'));
+                  const part = document.createRange();
+                  part.selectNodeContents(bloc);
+                  const box = part.getClientRects()[0];
+                  return JSON.stringify([box.top, box.bottom, box.left]);
+                })()
+                """))!)!;
+            var ruled = image.RuledRows((box[2] * ratio) - 30, (box[2] * ratio) - 12, paper);
+            Assert.IsGreaterThan(5, ruled.Count, font.ToString());
+            // Les premières lettres seulement, des « H » et des « I » : rien n'y descend sous la ligne.
+            var row = image.LowestInk((box[0] * ratio) - 2, box[1] * ratio, box[2] * ratio, (box[2] * ratio) + 34, ink);
+            Assert.IsNotNull(row, font.ToString());
+            Assert.AreEqual(ruled.MinBy(candidate => Math.Abs(candidate - (row.Value + 1))), row.Value + 1, play, $"{font} : le bas des premières lettres est sur une ligne");
+        }
+        scene.Window.Resources.Remove(ReadingComfort.ResourceKey);
+
+        // Sans papier réglé, plus rien ne cale le texte.
+        visual.SetPaper("uni");
+        UiThread.Until(() => scene.Script("document.documentElement.classList.contains('sur-lignes')") == "false");
+        visual.SetPaper(null);
+        visual.SetPage(PageLayout.Default);
+    }
+
+    [EngineTest]
     public void A_trapped_schema_is_only_a_picture()
     {
         using var scene = new Scene();
@@ -1192,6 +1323,138 @@ public sealed class VisualEditorTests
 
         UiThread.Until(() => scene.OnDisk.Contains("![point](", StringComparison.Ordinal));
         UiThread.Until(() => scene.Script("(() => { const i = document.querySelector('.ProseMirror .image img'); return i !== null && i.complete && i.naturalWidth === 1; })()") == "true");
+    }
+
+    private static readonly string[] ImageMenu = [EditingText.Cut, EditingText.Copy, EditingText.Paste, ImageMaskText.Action, EditingText.ImageCrop, EditingText.DeleteImage];
+
+    [EngineTest]
+    public void A_right_click_on_an_image_offers_to_mask_zones_and_the_title_is_written()
+    {
+        using var scene = new Scene("Une image.\n");
+        UiThread.Until(() => scene.Shown.Contains("Une image.", StringComparison.Ordinal));
+        scene.Script("document.querySelector('.ProseMirror').focus()");
+        var png = Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAEBgIApD5fRAAAAABJRU5ErkJggg==");
+        var inserted = scene.Editor.InsertImageAsync("point.png", png);
+        UiThread.Until(() => inserted.IsCompleted);
+        UiThread.Until(() => scene.Script("document.querySelector('.ProseMirror .image img') !== null") == "true");
+        var visual = scene.Visual!;
+        ImageMasksQuestion? asked = null;
+        visual.ImageMasksAsked += (_, question) => asked = question;
+
+        // Le vrai clic droit, dans la page, sur l'image.
+        scene.Script("document.querySelector('.ProseMirror .image img').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 5, clientY: 5 }))");
+        UiThread.Until(() => visual.LastMenuItems is { Count: > 0 });
+        var menu = visual.LastMenuItems!;
+        ((ContextMenu)menu[0].Parent).IsOpen = false;
+        // Un menu court, comme celui d'une fiche : couper, copier, coller, puis ce qui règle l'image.
+        CollectionAssert.AreEqual(
+            ImageMenu,
+            menu.OfType<MenuItem>().Select(item => (string)item.Header).ToList());
+        Assert.IsInstanceOfType<Separator>(menu[3]);
+
+        ((MenuItem)menu[4]).RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+        Assert.IsNotNull(asked);
+        Assert.IsNull(asked.Title);
+        StringAssert.EndsWith(asked.Path, "point.png", StringComparison.Ordinal);
+        Assert.IsTrue(scene.Editor.ReadResource(asked.Path).Succeeded, "le chemin rendu est celui du fichier dans le coffre");
+
+        // Le titre rendu par la fenêtre des masques s'écrit dans la fiche, puis s'en retire.
+        visual.SetImageTitle(asked.Position, "kyfrev-masques:10,20,30,15");
+        UiThread.Until(() => scene.OnDisk.Contains("point.png \"kyfrev-masques:10,20,30,15\")", StringComparison.Ordinal));
+        visual.SetImageTitle(asked.Position, null);
+        UiThread.Until(() => !scene.OnDisk.Contains("kyfrev-masques", StringComparison.Ordinal) && scene.OnDisk.Contains("![point](", StringComparison.Ordinal));
+
+        // « Supprimer l'image », au bas du menu : elle s'en va, le reste du texte ne bouge pas.
+        ((MenuItem)menu[^1]).RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+        UiThread.Until(() => !scene.OnDisk.Contains("![point](", StringComparison.Ordinal) && scene.OnDisk.Contains("Une image.", StringComparison.Ordinal));
+
+        // Le menu du texte montre la mise en forme déjà là, et propose de supprimer le bloc de code où est le curseur.
+        var formatted = visual.MenuItems(new MenuEvent("mot", 0, true, false, false, false, Bold: true, Strike: true), null).OfType<MenuItem>().ToList();
+        Assert.IsTrue(formatted.Single(item => (string)item.Header == EditingText.Bold).IsChecked);
+        Assert.IsTrue(formatted.Single(item => (string)item.Header == EditingText.Strike).IsChecked);
+        Assert.IsFalse(formatted.Single(item => (string)item.Header == EditingText.Italic).IsChecked);
+        var inCode = visual.MenuItems(new MenuEvent(null, 0, false, true, false, false, CodePosition: 12), null).OfType<MenuItem>().Select(item => (string)item.Header).ToList();
+        CollectionAssert.Contains(inCode, EditingText.DeleteCode);
+        CollectionAssert.DoesNotContain(formatted.Select(item => (string)item.Header).ToList(), EditingText.DeleteCode);
+
+        // Une image qui ne vient pas du coffre n'a pas de fichier à masquer.
+        var elsewhere = visual.MenuItems(new MenuEvent(null, 0, false, false, false, false, ImagePosition: 3, ImageAddress: "data:image/png;base64,AAAA"), null).OfType<MenuItem>().Select(item => (string)item.Header).ToList();
+        CollectionAssert.DoesNotContain(elsewhere, ImageMaskText.Action);
+    }
+
+    [EngineTest]
+    public void An_image_chosen_in_the_text_is_sized_placed_and_framed_from_its_tab()
+    {
+        using var scene = new Scene("Une image.\n");
+        UiThread.Until(() => scene.Shown.Contains("Une image.", StringComparison.Ordinal));
+        scene.Script("document.querySelector('.ProseMirror').focus()");
+        var png = Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAEBgIApD5fRAAAAABJRU5ErkJggg==");
+        var inserted = scene.Editor.InsertImageAsync("point.png", png);
+        UiThread.Until(() => inserted.IsCompleted);
+        UiThread.Until(() => scene.Script("document.querySelector('.ProseMirror .image img') !== null") == "true");
+        Assert.IsFalse(scene.Editor.IsOnImage, "le curseur dans le texte : pas d'onglet Image");
+
+        // Le clic droit choisit l'image : l'onglet Image la décrit.
+        scene.Script("document.querySelector('.ProseMirror .image img').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 5, clientY: 5 }))");
+        UiThread.Until(() => scene.Visual!.LastMenuItems is { Count: > 0 });
+        ((ContextMenu)scene.Visual!.LastMenuItems![0].Parent).IsOpen = false;
+        UiThread.Until(() => scene.Editor.IsOnImage);
+        var image = scene.Editor.Tools!.Image!;
+        Assert.IsTrue(image.Editable);
+        Assert.IsTrue(image.IsNatural);
+        Assert.AreEqual("fil", image.Align);
+        Assert.AreEqual("point", image.Alt);
+        Assert.IsTrue(scene.Editor.CanChangeImage);
+        StringAssert.EndsWith(VisualEditor.VaultPathOf(image.Address), "point.png", StringComparison.Ordinal);
+
+        // Choisie, elle a ses poignées : quatre coins et deux côtés.
+        Assert.AreEqual("6", scene.Script("document.querySelectorAll('.ProseMirror .image.ProseMirror-selectednode .poignee').length"));
+        Assert.AreEqual("\"block\"", scene.Script("getComputedStyle(document.querySelector('.ProseMirror .image .poignee')).display"));
+
+        scene.Editor.ChangeImageCommand.Execute("width=50");
+        UiThread.Until(() => scene.Editor.Tools?.Image?.Width == 50);
+        // Sa taille à l'écran arrive avec elle : le ruban la dit en centimètres, et une largeur tapée la change.
+        UiThread.Until(() => scene.Editor.Tools?.Image is { ShownWidth: > 0, Room: > 0 });
+        StringAssert.EndsWith(scene.Editor.ImageWidthCm, " cm", StringComparison.Ordinal);
+        var room = scene.Editor.Tools!.Image!.Room;
+        scene.Editor.ImageWidthCm = string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{room * 0.3 / KyfRev.Presentation.Wpf.Editing.ImageState.PixelsPerCentimetre:0.00}");
+        UiThread.Until(() => scene.Editor.Tools?.Image?.Width == 30);
+        scene.Editor.ChangeImageCommand.Execute("width=50");
+        UiThread.Until(() => scene.Editor.Tools?.Image?.Width == 50);
+        UiThread.Until(() => scene.OnDisk.Contains("point.png \"kyfrev-largeur:50\")", StringComparison.Ordinal));
+        Assert.AreEqual("\"50%\"", scene.Script("document.querySelector('.ProseMirror .image').style.width"));
+        Assert.IsTrue(scene.Editor.IsOnImage, "l'image reste choisie après un réglage");
+
+        scene.Editor.NudgeImageWidthCommand.Execute("5");
+        UiThread.Until(() => scene.Editor.Tools?.Image?.Width == 55);
+        scene.Editor.ChangeImageCommand.Execute("align=centre");
+        UiThread.Until(() => scene.Editor.Tools?.Image?.Align == "centre");
+        Assert.AreEqual("\"block\"", scene.Script("document.querySelector('.ProseMirror .image').style.display"));
+        scene.Editor.ChangeImageCommand.Execute("crop=10,10,50,50");
+        UiThread.Until(() => scene.Editor.Tools?.Image?.Crop == "10,10,50,50");
+        UiThread.Until(() => scene.OnDisk.Contains("\"kyfrev-largeur:55 kyfrev-position:centre kyfrev-cadre:10,10,50,50\"", StringComparison.Ordinal));
+        Assert.AreEqual("\"hidden\"", scene.Script("document.querySelector('.ProseMirror .image').style.overflow"));
+
+        // Les masques posés ensuite gardent ces réglages ; « Rétablir » ne retire pas les masques.
+        scene.Visual!.SetImageTitle(image.Position, KyfRev.Rendering.ImageLooks.Change(scene.Editor.Tools!.Image!.Title, look => look with { Masks = [new KyfRev.Rendering.ImageMask(0.1, 0.1, 0.2, 0.2)] }).Title);
+        UiThread.Until(() => scene.Editor.Tools?.Image?.Masks == 1);
+        Assert.AreEqual("1 zone masquée", scene.Editor.Tools!.Image!.MasksLabel);
+        scene.Editor.ChangeImageCommand.Execute("reset");
+        UiThread.Until(() => scene.OnDisk.Contains("point.png \"kyfrev-masques:10,10,20,20\")", StringComparison.Ordinal));
+
+        // Sa description.
+        scene.Editor.ImageAlt = "Un point rouge";
+        UiThread.Until(() => scene.OnDisk.Contains("![Un point rouge](", StringComparison.Ordinal));
+
+        // « Masquer des zones… » et « Rogner… » demandent leur fenêtre, avec le fichier de l'image.
+        var asked = new List<ImageMasksQuestion>();
+        scene.Editor.ImageDialogAsked += (_, question) => asked.Add(question);
+        scene.Editor.MaskImageCommand.Execute(null);
+        scene.Editor.CropImageCommand.Execute(null);
+        Assert.HasCount(2, asked);
+        Assert.IsFalse(asked[0].Crop);
+        Assert.IsTrue(asked[1].Crop);
+        StringAssert.EndsWith(asked[1].Path, "point.png", StringComparison.Ordinal);
     }
 
     [EngineTest]

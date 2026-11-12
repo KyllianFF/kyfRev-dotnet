@@ -306,14 +306,14 @@ internal sealed class RunningApplication : IDisposable
     }
 
     /// <summary>
-    /// « Chiffrer ce coffre… », depuis Paramètres › Données : le mot de passe deux fois (par le motif de valeur des
+    /// « Chiffrer ce coffre… », depuis Paramètres › Coffre et chiffrement : le mot de passe deux fois (par le motif de valeur des
     /// champs), « Continuer », la clé de récupération lue puis dite rangée, « Chiffrer le coffre », et l'attente de la
     /// conversion. Rend la clé de récupération montrée.
     /// </summary>
     public string EncryptVault(string password)
     {
         OpenView("Paramètres");
-        OpenSettingsTab("Données");
+        OpenSettingsTab("Coffre et chiffrement");
         Press("EncryptVaultButton");
         Wait("NewPasswordBox").Patterns.Value.Pattern.SetValue(password);
         Wait("ConfirmPasswordBox").Patterns.Value.Pattern.SetValue(password);
@@ -325,11 +325,11 @@ internal sealed class RunningApplication : IDisposable
         return key;
     }
 
-    /// <summary>« Verrouiller maintenant », depuis Paramètres › Données, et attend l'écran de déverrouillage.</summary>
+    /// <summary>« Verrouiller maintenant », depuis Paramètres › Coffre et chiffrement, et attend l'écran de déverrouillage.</summary>
     public void LockNow()
     {
         OpenView("Paramètres");
-        OpenSettingsTab("Données");
+        OpenSettingsTab("Coffre et chiffrement");
         Press("LockNowButton");
         Wait("UnlockButton");
     }
@@ -378,16 +378,22 @@ internal sealed class RunningApplication : IDisposable
     /// <summary>Change la séquence des étapes dans la vue « Paramètres ».</summary>
     public void ChangeSteps(string steps) => Wait("StepsBox").AsTextBox().Text = steps;
 
-    /// <summary>Ouvre un onglet de la vue « Paramètres ».</summary>
-    public void OpenSettingsTab(string name)
+    /// <summary>
+    /// Ouvre une section de la vue « Paramètres » : dans la liste de gauche, ou, en fenêtre étroite, dans la liste
+    /// déroulante qui la remplace.
+    /// </summary>
+    public void OpenSettingsTab(string name) =>
+        Retry.WhileFalse(() => ChooseSettingsSection(name), Patience, Interval, throwOnTimeout: true, timeoutMessage: $"La section « {name} » est introuvable.");
+
+    private bool ChooseSettingsSection(string name)
     {
-        var tab = Retry.WhileNull(
-            () => Wait("TabBar").FindAllDescendants().FirstOrDefault(child => child.Name == name && child.Patterns.SelectionItem.IsSupported),
-            Patience,
-            Interval,
-            throwOnTimeout: true,
-            timeoutMessage: $"L'onglet « {name} » est introuvable.").Result!;
-        tab.Patterns.SelectionItem.Pattern.Select();
+        var entry = Find("SectionList")?.FindAllDescendants().FirstOrDefault(child => child.Name == name && child.Patterns.SelectionItem.IsSupported);
+        if (entry is not null)
+        {
+            entry.Patterns.SelectionItem.Pattern.Select();
+            return true;
+        }
+        return Find("SectionChoice")?.AsComboBox().Select(name) is not null;
     }
 
     /// <summary>Enregistre les réglages, et attend que la vue le confirme.</summary>

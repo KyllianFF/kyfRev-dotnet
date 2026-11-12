@@ -27,10 +27,16 @@ internal sealed partial class DashboardPage : UserControl
             list.ContextMenuOpening += OnRowMenu;
         }
         // La disposition suit la largeur de la page, zoom et menu déjà comptés.
-        SizeChanged += (_, e) => Page.PageWidth = e.NewSize.Width;
+        SizeChanged += (_, e) => Live?.PageWidth = e.NewSize.Width;
     }
 
     private DashboardPageViewModel Page => (DashboardPageViewModel)DataContext;
+
+    /// <summary>
+    /// La page quittée n'a plus de modèle, mais un clic, une touche ou une fermeture de fenêtre déjà en route peut encore
+    /// lui arriver : il ne fait alors rien. Un clic rapide après l'ouverture d'une fiche arrêtait l'application ici.
+    /// </summary>
+    private DashboardPageViewModel? Live => DataContext as DashboardPageViewModel;
 
     /// <summary>
     /// Entrée ou Espace sur l'en-tête d'un groupe le replie ou le déplie (la liste est alors
@@ -38,6 +44,10 @@ internal sealed partial class DashboardPage : UserControl
     /// </summary>
     private void OnItemsKeyDown(object sender, KeyEventArgs e)
     {
+        if (Live is null)
+        {
+            return;
+        }
         var list = (ListBox)sender;
         if (e.Key is not (Key.Enter or Key.Space) || Keyboard.FocusedElement is not ListBoxItem { DataContext: var row })
         {
@@ -70,6 +80,10 @@ internal sealed partial class DashboardPage : UserControl
     /// </summary>
     private void OnItemsSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+        if (Live is null)
+        {
+            return;
+        }
         // La page qu'on quitte perd son contexte, puis sa liste se vide : il n'y a plus rien à choisir.
         if (DataContext is not DashboardPageViewModel)
         {
@@ -91,6 +105,10 @@ internal sealed partial class DashboardPage : UserControl
     /// <summary>Avec l'aperçu, un clic choisit la ligne ; un double clic l'ouvre.</summary>
     private void OnItemsDoubleClick(object sender, MouseButtonEventArgs e)
     {
+        if (Live is null)
+        {
+            return;
+        }
         if (Page.HasPreview && ((ListBox)sender).SelectedItem is (DueItemRow or ReminderRow) and var row)
         {
             Page.OpenCommand.Execute(row);
@@ -107,6 +125,10 @@ internal sealed partial class DashboardPage : UserControl
 
     private void OnSortChosen(object sender, RoutedEventArgs e)
     {
+        if (Live is null)
+        {
+            return;
+        }
         if (e.OriginalSource is MenuItem { DataContext: Choice<DashboardSort> choice })
         {
             Page.SelectedSort = choice;
@@ -116,6 +138,10 @@ internal sealed partial class DashboardPage : UserControl
     /// <summary>Un clic gauche sur une ligne (pas sur un en-tête) l'ouvre.</summary>
     private void OnItemsMouseUp(object sender, MouseButtonEventArgs e)
     {
+        if (Live is null)
+        {
+            return;
+        }
         if (!Page.HasPreview && e.ChangedButton == MouseButton.Left && ContainerOf(e.OriginalSource as DependencyObject) is { DataContext: DueItemRow or ReminderRow } container)
         {
             Page.OpenCommand.Execute(container.DataContext);
@@ -125,6 +151,10 @@ internal sealed partial class DashboardPage : UserControl
     /// <summary>Le menu d'une ligne : ce qu'on peut en faire d'ici.</summary>
     private void OnRowMenu(object sender, ContextMenuEventArgs e)
     {
+        if (Live is null)
+        {
+            return;
+        }
         var list = (ListBox)sender;
         ActionMenus.Fill(list.ContextMenu!, RowMenuItems(ContainerOf(e.OriginalSource as DependencyObject)?.DataContext), e);
     }
@@ -132,24 +162,29 @@ internal sealed partial class DashboardPage : UserControl
     /// <summary>Les entrées du menu de cette ligne ; aucune pour un en-tête.</summary>
     internal IReadOnlyList<Control> RowMenuItems(object? row)
     {
+        if (Live is not { } page)
+        {
+            return [];
+        }
         switch (row)
         {
             case DueItemRow item:
                 List<Control> items =
                 [
-                    ActionMenus.Quick(DashboardText.ReviewAction, Icons.Review, () => Page.OpenCommand.Execute(item)),
-                    ActionMenus.Quick(DashboardText.OpenSheet, Icons.Document, () => Page.OpenSheetOf(item)),
+                    ActionMenus.Quick(DashboardText.ReviewAction, Icons.Review, () => page.OpenCommand.Execute(item)),
+                    ActionMenus.Quick(DashboardText.OpenSheet, Icons.Document, () => page.OpenSheetOf(item)),
                 ];
-                if (Page.CanAct)
+                items.Add(ActionMenus.Item(PrintText.PrintAction, () => page.PrintSheetOf(item)));
+                if (page.CanAct)
                 {
                     items.Add(new Separator());
-                    items.Add(ActionMenus.Item(ReviewText.PostponeTomorrow, () => _ = Page.PostponeTomorrowAsync(item)));
-                    items.Add(ActionMenus.Item(ReviewText.ArchiveAction, () => Page.RequestArchive(item)));
+                    items.Add(ActionMenus.Item(ReviewText.PostponeTomorrow, () => _ = page.PostponeTomorrowAsync(item)));
+                    items.Add(ActionMenus.Item(ReviewText.ArchiveAction, () => page.RequestArchive(item)));
                 }
                 return items;
             case ReminderRow:
-                return [ActionMenus.Quick(DashboardText.OpenSheet, Icons.Document, () => Page.OpenCommand.Execute(row))];
-            case ExamRow exam when Page.Exams is { IsBusy: false } exams:
+                return [ActionMenus.Quick(DashboardText.OpenSheet, Icons.Document, () => page.OpenCommand.Execute(row))];
+            case ExamRow exam when page.Exams is { IsBusy: false } exams:
                 List<Control> entries = [];
                 if (exam.CanTighten)
                 {
@@ -164,7 +199,7 @@ internal sealed partial class DashboardPage : UserControl
     }
 
     /// <summary>« Resserrer… », sur la ligne d'un examen.</summary>
-    private void OnTightenClick(object sender, RoutedEventArgs e) => Page.Exams!.RequestTighten((ExamRow)((FrameworkElement)sender).DataContext);
+    private void OnTightenClick(object sender, RoutedEventArgs e) => Live?.Exams?.RequestTighten((ExamRow)((FrameworkElement)sender).DataContext);
 
     /// <summary>« ⋯ », sur la ligne d'un examen : ses actions, sous le bouton.</summary>
     private void OnExamMenuClick(object sender, RoutedEventArgs e) => OpenExamMenu((ExamRow)((FrameworkElement)sender).DataContext, (UIElement)sender);
@@ -182,11 +217,15 @@ internal sealed partial class DashboardPage : UserControl
     }
 
     /// <summary>La réponse à la fenêtre « Nouvelle fiche ».</summary>
-    private void OnNewSheetClosed(object sender, DialogClosedEventArgs e) => _ = Page.AnswerNewSheetCommand.ExecuteAsync(e.Choice == DialogChoice.Primary);
+    private void OnNewSheetClosed(object sender, DialogClosedEventArgs e) => _ = Live?.AnswerNewSheetCommand.ExecuteAsync(e.Choice == DialogChoice.Primary);
 
     /// <summary>La réponse à la fenêtre d'étalement ; le focus revient au bouton qui l'a ouverte.</summary>
     private void OnSpreadClosed(object sender, DialogClosedEventArgs e)
     {
+        if (Live is null)
+        {
+            return;
+        }
         _ = Page.Spread!.AnswerCommand.ExecuteAsync(e.Choice == DialogChoice.Primary);
         Dispatcher.BeginInvoke(DispatcherPriority.Input, () =>
         {
@@ -198,10 +237,22 @@ internal sealed partial class DashboardPage : UserControl
     }
 
     /// <summary>La réponse au formulaire d'un examen part vers les examens.</summary>
-    private void OnExamEditorClosed(object sender, DialogClosedEventArgs e) => _ = FocusExamAfterAsync(Page.Exams!.AnswerEditorCommand.ExecuteAsync(e.Choice == DialogChoice.Primary));
+    private void OnExamEditorClosed(object sender, DialogClosedEventArgs e)
+    {
+        if (Live?.Exams is { } exams)
+        {
+            _ = FocusExamAfterAsync(exams.AnswerEditorCommand.ExecuteAsync(e.Choice == DialogChoice.Primary));
+        }
+    }
 
     /// <summary>La réponse à la confirmation d'un examen part vers les examens.</summary>
-    private void OnExamConfirmationClosed(object sender, DialogClosedEventArgs e) => _ = FocusExamAfterAsync(Page.Exams!.AnswerCommand.ExecuteAsync(e.Choice == DialogChoice.Primary));
+    private void OnExamConfirmationClosed(object sender, DialogClosedEventArgs e)
+    {
+        if (Live?.Exams is { } exams)
+        {
+            _ = FocusExamAfterAsync(exams.AnswerCommand.ExecuteAsync(e.Choice == DialogChoice.Primary));
+        }
+    }
 
     /// <summary>La réponse relit le tableau de bord, ce qui refait les lignes : le focus attend qu'elle ait fini.</summary>
     private async Task FocusExamAfterAsync(Task answer)
@@ -232,7 +283,7 @@ internal sealed partial class DashboardPage : UserControl
     }
 
     /// <summary>La réponse à la mise aux archives part vers la vue.</summary>
-    private void OnArchiveClosed(object sender, DialogClosedEventArgs e) => Page.AnswerArchiveCommand.Execute(e.Choice == DialogChoice.Primary);
+    private void OnArchiveClosed(object sender, DialogClosedEventArgs e) => Live?.AnswerArchiveCommand.Execute(e.Choice == DialogChoice.Primary);
 
     private static ListBoxItem? ContainerOf(DependencyObject? element)
     {

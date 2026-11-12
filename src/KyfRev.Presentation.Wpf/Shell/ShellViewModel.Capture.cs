@@ -81,6 +81,12 @@ public sealed partial class ShellViewModel
         {
             CaptureError = null;
             CaptureText = string.Empty;
+            // La vue affichée montre tout de suite la note : le Carnet, Aujourd'hui… Une fiche ouverte n'est pas relue sous
+            // la main de qui l'écrit.
+            if (Current.Id != CorePages.Sheet)
+            {
+                Activate(Current);
+            }
             return;
         }
         CaptureError = outcome.Error;

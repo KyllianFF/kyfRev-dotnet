@@ -25,9 +25,9 @@ namespace KyfRev.Presentation.Wpf.Tests;
 [TestClass]
 public sealed class QuotesTests
 {
-    private static readonly string[] CoreMenu = ["Aujourd'hui", "Fiches", "Définitions", "Archives", "Statistiques"];
+    private static readonly string[] CoreMenu = ["Aujourd'hui", "Carnet", "Définitions", "Archives", "Statistiques"];
 
-    private static readonly string[] MenuWithQuotes = ["Aujourd'hui", "Fiches", "Définitions", "Archives", "Statistiques", "Citations"];
+    private static readonly string[] MenuWithQuotes = ["Aujourd'hui", "Carnet", "Définitions", "Archives", "Statistiques", "Citations"];
 
     private static readonly string[] ByAuthor = ["Albert", "Émile", "Zola", "— Auteur inconnu"];
 

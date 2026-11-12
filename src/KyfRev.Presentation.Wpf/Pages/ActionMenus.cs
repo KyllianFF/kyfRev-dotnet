@@ -30,9 +30,10 @@ internal static class ActionMenus
     }
 
     /// <summary>Un outil de la seconde rangée : une icône seule, son nom dans l'infobulle.</summary>
-    public static MenuItem Tool(string label, string glyph, Action action)
+    public static MenuItem Tool(string label, string glyph, Action action, bool active = false)
     {
-        var item = new MenuItem { Header = label, Icon = new Icon { Text = glyph }, ToolTip = label };
+        // « Actif » : la mise en forme est déjà là sous le curseur ; l'outil ressort, et le dit au lecteur d'écran.
+        var item = new MenuItem { Header = label, Icon = new Icon { Text = glyph }, ToolTip = label, IsChecked = active };
         item.SetResourceReference(FrameworkElement.StyleProperty, ToolStyle);
         item.Click += (_, _) => action();
         return item;

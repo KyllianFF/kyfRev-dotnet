@@ -4,12 +4,25 @@ using KyfRev.Application.UseCases;
 
 namespace KyfRev.Modules.Schemas;
 
-/// <summary>Cas d'usage du module Schémas réseau. Un schéma ne s'efface pas : retirer son bloc d'une fiche ne le touche pas.</summary>
+/// <summary>
+/// Cas d'usage du module Schémas réseau. Un schéma ne s'efface pas : retirer son bloc d'une fiche ne le touche pas, et
+/// « supprimer » un schéma le range dans une corbeille d'où il se restaure.
+/// </summary>
 public sealed class SchemaUseCases(VaultHost host)
 {
     /// <summary>Les schémas du coffre, par titre, avec les fiches qui les insèrent.</summary>
     [ZeroXCommand("schemas")]
     public Outcome<IReadOnlyList<SchemaSummary>> Schemas() => host.Use(vault => vault.Schemas());
+
+    /// <summary>Les schémas archivés et ceux de la corbeille.</summary>
+    public Outcome<IReadOnlyList<SchemaSummary>> Aside() => host.Use(vault => vault.SchemasAside());
+
+    /// <summary>Archive un schéma, le met à la corbeille, ou le remet dans la liste.</summary>
+    public Outcome<bool> Move(string id, SchemaPlace place) => host.Use(vault =>
+    {
+        vault.MoveSchema(id, place);
+        return true;
+    });
 
     /// <summary>Lit un schéma.</summary>
     [ZeroXCommand("lire_schema")]

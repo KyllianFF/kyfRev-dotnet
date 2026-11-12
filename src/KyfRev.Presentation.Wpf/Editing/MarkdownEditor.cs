@@ -292,10 +292,20 @@ internal sealed class MarkdownEditor : TextEditor, IEditorSurface
     }
 
     /// <inheritdoc/>
+    /// <remarks>Le code Markdown n'a pas d'onglet Image : le titre de l'image s'écrit à la main.</remarks>
+    public void SetImageLook(string change, string? value)
+    {
+        ArgumentNullException.ThrowIfNull(change);
+    }
+
+    /// <inheritdoc/>
     public void InsertCode(string language) => Edit((text, start, end) => MarkdownEdits.Code(text, start, end, language));
 
     /// <inheritdoc/>
     public void InsertRule() => Edit((text, start, _) => MarkdownEdits.Rule(text, start));
+
+    /// <inheritdoc/>
+    public void InsertPageBreak(bool blank) => Edit((text, start, _) => MarkdownEdits.PageBreak(text, start, blank));
 
     /// <inheritdoc/>
     public void AskFormula() => ToggleMark(InlineMark.Formula);

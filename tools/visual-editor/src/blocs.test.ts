@@ -1,4 +1,4 @@
-import { EditorState, TextSelection } from "prosemirror-state";
+import { EditorState, NodeSelection, TextSelection } from "prosemirror-state";
 import { describe, expect, it } from "vitest";
 import {
   type Alignement,
@@ -7,6 +7,7 @@ import {
   basculerTaches,
   insertionDeBloc,
   insertionDeLigne,
+  insertionDeSaut,
   sansTaches,
 } from "./blocs";
 import { depuisMarkdown, versMarkdown } from "./markdown";
@@ -180,5 +181,39 @@ describe("tâches", () => {
   it("sans tâche, rien à retirer", () => {
     const etat = EditorState.create({ doc: depuisMarkdown("- a\n").doc });
     expect(sansTaches(etat.apply(etat.tr.setSelection(TextSelection.create(etat.doc, 3))))).toBeNull();
+  });
+});
+
+describe("saut de page (éditeur visuel)", () => {
+  it("après le bloc du curseur, sans le couper ; le curseur au début de ce qui suit", () => {
+    const { origine, etat } = fiche("Un deux\n\n> Trois\n", () => 3);
+    const apres = etat.apply(insertionDeSaut(etat, false));
+    expect(apres.doc.child(1).type).toBe(n.saut_de_page);
+    expect(apres.doc.child(1).attrs.blanche).toBe(false);
+    expect(apres.selection.$from.node(1)).toBe(apres.doc.child(2));
+    expect(apres.selection.$from.parentOffset).toBe(0);
+    expect(versMarkdown(apres.doc, origine)).toBe("Un deux\n\n<!-- kyfrev saut-de-page -->\n\n> Trois\n");
+  });
+
+  it("en fin de fiche : un paragraphe vide le suit, qui ne s'écrit pas", () => {
+    const { origine, etat } = fiche("Un\n", () => 1);
+    const apres = etat.apply(insertionDeSaut(etat, true));
+    expect(apres.doc.childCount).toBe(3);
+    expect(apres.doc.child(1).attrs.blanche).toBe(true);
+    expect(apres.selection.$from.parent).toBe(apres.doc.lastChild);
+    expect(versMarkdown(apres.doc, origine)).toBe("Un\n\n<!-- kyfrev page-blanche -->\n");
+  });
+
+  it("dans une liste : sous la liste entière ; sur un bloc choisi : après lui", () => {
+    let { etat } = fiche("- un\n- deux\n\nTrois\n", (e) => dans(e, n.paragraph));
+    let apres = etat.apply(insertionDeSaut(etat, false));
+    expect(apres.doc.child(0).type).toBe(n.bullet_list);
+    expect(apres.doc.child(1).type).toBe(n.saut_de_page);
+
+    etat = EditorState.create({ doc: depuisMarkdown("Un\n\n---\n\nTrois\n").doc });
+    etat = etat.apply(etat.tr.setSelection(NodeSelection.create(etat.doc, etat.doc.child(0).nodeSize)));
+    apres = etat.apply(insertionDeSaut(etat, false));
+    expect(apres.doc.child(1).type).toBe(n.horizontal_rule);
+    expect(apres.doc.child(2).type).toBe(n.saut_de_page);
   });
 });

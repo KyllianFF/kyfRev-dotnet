@@ -302,6 +302,32 @@ public sealed class RebindTests
     private static void Lose(ReadingVault vault) =>
         Assert.IsTrue(vault.App.Editing.Save(vault.SheetId, "# Mitose\n\nUne tout autre rédaction, avec une nouvelle phrase.\n", vault.App.Sheets.Open(vault.SheetId).Value.Fingerprint, 2).Succeeded);
 
+    [TestMethod]
+    public void The_sheet_zoom_goes_from_half_to_double_by_tenths()
+    {
+        using var vault = new ReadingVault("Un texte.\n", passage: false);
+        var page = vault.Page();
+        Assert.AreEqual(1, page.SheetZoom);
+        Assert.AreEqual("100 %", page.SheetZoomLabel);
+
+        page.ZoomSheetInCommand.Execute(null);
+        Assert.AreEqual(1.1, page.SheetZoom);
+        Assert.AreEqual(SheetPageViewModel.TextMaxWidth * 1.1, page.ZoomedTextWidth, 0.001, "la fiche zoomée s'élargit");
+        page.SheetZoomPercent = 173;
+        Assert.AreEqual(1.7, page.SheetZoom, "au dixième");
+        page.SheetZoomPercent = 500;
+        Assert.AreEqual(SheetPageViewModel.MaximumSheetZoom, page.SheetZoom);
+        Assert.IsFalse(page.ZoomSheetInCommand.CanExecute(null));
+        page.SheetZoomPercent = 10;
+        Assert.AreEqual(SheetPageViewModel.MinimumSheetZoom, page.SheetZoom);
+        Assert.AreEqual("50 %", page.SheetZoomLabel);
+        Assert.IsFalse(page.ZoomSheetOutCommand.CanExecute(null));
+        page.ZoomSheetOutCommand.Execute(null);
+        Assert.AreEqual(SheetPageViewModel.MinimumSheetZoom, page.SheetZoom);
+        page.ResetSheetZoomCommand.Execute(null);
+        Assert.AreEqual(1, page.SheetZoom);
+    }
+
     private static async Task<SheetPageViewModel> LoadedAsync(ReadingVault vault)
     {
         var page = vault.Page();

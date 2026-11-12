@@ -55,6 +55,9 @@ public sealed record ReviewState(
     /// <summary>Jour où l'élément a été suspendu ; rien s'il ne l'est pas.</summary>
     public DateOnly? SuspendedOn { get; init; }
 
+    /// <summary>L'élément est une simple note, tenue hors des révisions.</summary>
+    public bool IsNote { get; init; }
+
     /// <summary>État de révision de <paramref name="tracking"/> au <paramref name="day"/> donné.</summary>
     public static ReviewState Of(Tracking tracking, DateOnly day)
     {
@@ -75,6 +78,7 @@ public sealed record ReviewState(
                 ReviewedToday = cycle.LastReview == day,
                 StartedToday = cycle.StartedOn == day,
                 SuspendedOn = cycle.SuspendedOn,
+                IsNote = cycle.IsNote,
             };
         }
         if (tracking.Archive is { } archive)
@@ -221,7 +225,11 @@ public sealed record VaultSheet(
     bool Archived,
     bool FilePresent,
     string? Step,
-    DateOnly? DueDate);
+    DateOnly? DueDate)
+{
+    /// <summary>Une simple note, tenue hors des révisions.</summary>
+    public bool IsNote { get; init; }
+}
 
 /// <summary>Un morceau de l'extrait d'un rétrolien.</summary>
 /// <param name="Text">Son texte.</param>

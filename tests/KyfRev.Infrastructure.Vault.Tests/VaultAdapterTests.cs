@@ -66,6 +66,41 @@ public abstract class VaultAdapterTests(StorageKind storage)
     }
 
     [TestMethod]
+    public void A_schema_is_archived_or_trashed_without_being_erased_and_comes_back()
+    {
+        using var folder = TemporaryVault.Empty(storage);
+        using var vault = new VaultStore(storage: folder.Storage).Initialize(folder.Root, Now);
+        var kept = vault.CreateSchema("{\"format\": 2, \"titre\": \"Gardé\"}");
+        var schema = vault.CreateSchema("{\"format\": 2, \"titre\": \"Lycée\"}");
+        vault.CreateSheet(null, "Citante", $"```reseau\nschema: {schema.Id}\n```\n", Now);
+        Assert.IsEmpty(vault.SchemasAside());
+
+        // Archivé : hors de la liste, mais la fiche qui l'insère le lit toujours, et il s'enregistre là où il est.
+        vault.MoveSchema(schema.Id, SchemaPlace.Archived);
+        Assert.AreEqual(kept.Id, vault.Schemas().Single().Id);
+        var archived = vault.SchemasAside().Single();
+        Assert.AreEqual((schema.Id, "Lycée", SchemaPlace.Archived, "Citante"), (archived.Id, archived.Title, archived.Place, archived.Sheets.Single().Title));
+        Assert.AreEqual(schema.Text, vault.ReadSchema(schema.Id).Text);
+        Assert.IsInstanceOfType<SheetSaved>(vault.SaveSchema(schema.Id, schema.Text.Replace("Lycée", "Collège", StringComparison.Ordinal), schema.Fingerprint));
+
+        // « Supprimé » : à la corbeille, introuvable pour les fiches, et toujours sur le disque.
+        vault.MoveSchema(schema.Id, SchemaPlace.Trash);
+        Assert.AreEqual(SchemaPlace.Trash, vault.SchemasAside().Single().Place);
+        Assert.AreEqual(VaultErrorKind.UnknownSchema, Assert.ThrowsExactly<VaultException>(() => vault.ReadSchema(schema.Id)).Kind);
+        Assert.AreEqual("Collège", vault.SchemasAside().Single().Title);
+        vault.MoveSchema(schema.Id, SchemaPlace.Trash);
+
+        // Restauré : il revient dans la liste, tel qu'il était.
+        vault.MoveSchema(schema.Id, SchemaPlace.Active);
+        Assert.IsEmpty(vault.SchemasAside());
+        Assert.HasCount(2, vault.Schemas());
+        Assert.Contains("Collège", vault.ReadSchema(schema.Id).Text);
+
+        Assert.AreEqual(VaultErrorKind.UnknownSchema, Assert.ThrowsExactly<VaultException>(() => vault.MoveSchema("s_" + new string('1', 26), SchemaPlace.Trash)).Kind);
+        Assert.AreEqual(VaultErrorKind.UnknownSchema, Assert.ThrowsExactly<VaultException>(() => vault.MoveSchema("../fiches", SchemaPlace.Trash)).Kind);
+    }
+
+    [TestMethod]
     public void Schemas_reach_the_session_and_a_conflict_says_what_the_disk_holds()
     {
         using var folder = TemporaryVault.Empty(storage);
@@ -258,6 +293,45 @@ public abstract class VaultAdapterTests(StorageKind storage)
     }
 
     [TestMethod]
+    public void A_note_stays_out_of_the_reviews_until_it_is_put_in_review()
+    {
+        using var folder = TemporaryVault.Empty(storage);
+        var store = new VaultStore(storage: folder.Storage);
+        string kept;
+        string note;
+        using (var vault = store.Initialize(folder.Root, Now))
+        {
+            kept = vault.CreateSheet(null, "Leçon", "Texte.\n", Now);
+            note = vault.CreateSheet("Projet", "Idées", "Texte.\n", Now);
+            vault.MakeNote(note, Now);
+            Assert.AreEqual(VaultErrorKind.Tracking, Assert.ThrowsExactly<VaultException>(() => vault.ValidateReview(ItemKind.Sheet, note, Tomorrow)).Kind);
+            Assert.AreEqual(VaultErrorKind.Tracking, Assert.ThrowsExactly<VaultException>(() => vault.MakeNote(note, Tomorrow)).Kind);
+        }
+        StringAssert.Contains(folder.ReadText($".suivi/fiches/{note}.json"), "\"horsRevision\": true", StringComparison.Ordinal);
+        Assert.IsFalse(folder.ReadText($".suivi/fiches/{kept}.json").Contains("horsRevision", StringComparison.Ordinal), "rien n'est écrit pour une fiche ordinaire");
+
+        using var reopened = store.Open(folder.Root, Tomorrow);
+        Assert.IsTrue(reopened.ReviewStateOf(ItemKind.Sheet, note, Tomorrow.Day).IsNote, "la note est relue");
+        var dashboard = reopened.Dashboard(Tomorrow.Day);
+        Assert.AreEqual(kept, dashboard.Today.Single().Id);
+        Assert.IsEmpty(dashboard.Suspended, "une note n'attend pas d'être reprise");
+        Assert.IsFalse(dashboard.Workload.SelectMany(day => day.Due).Any(item => item.Id == note));
+        var listed = reopened.SheetList();
+        Assert.IsTrue(listed.Single(sheet => sheet.Id == note).IsNote);
+        Assert.IsFalse(listed.Single(sheet => sheet.Id == kept).IsNote);
+
+        // Jamais révisée : elle part de J0 le jour où on la met en révision.
+        reopened.PutInReview(note, Tomorrow);
+        var state = reopened.ReviewStateOf(ItemKind.Sheet, note, Tomorrow.Day);
+        Assert.IsFalse(state.IsNote);
+        Assert.IsNull(state.SuspendedOn);
+        Assert.IsTrue(state.StartedToday);
+        Assert.AreEqual(("J1", Tomorrow.Day.AddDays(1)), (state.Step, state.DueDate));
+        Assert.IsFalse(folder.ReadText($".suivi/fiches/{note}.json").Contains("horsRevision", StringComparison.Ordinal));
+        Assert.AreEqual(VaultErrorKind.Tracking, Assert.ThrowsExactly<VaultException>(() => reopened.PutInReview(note, Tomorrow)).Kind);
+    }
+
+    [TestMethod]
     public void Conflict_copies_left_by_a_sync_tool_are_reported_by_their_name()
     {
         using var folder = TemporaryVault.Empty(storage);
@@ -304,6 +378,8 @@ public abstract class VaultAdapterTests(StorageKind storage)
         Assert.AreEqual((VaultSession.InboxTitle, string.Empty), (opened.Title, opened.Folder));
         Assert.AreEqual("- 2026-10-01 : Revoir la prophase et la métaphase\n", opened.Body, "sur une ligne, datée");
         Assert.AreEqual(Now.Day, opened.Review.SuspendedOn, "un bloc-notes à trier, pas une leçon à réviser");
+        Assert.IsTrue(opened.Review.IsNote, "c'est une note : elle n'attend pas parmi les fiches suspendues");
+        Assert.IsEmpty(vault.Dashboard(Tomorrow.Day).Suspended);
         Assert.IsEmpty(vault.Dashboard(Tomorrow.Day).Today);
 
         Assert.AreEqual(inbox, vault.CaptureToInbox("Seconde idée", Tomorrow), "la même fiche, pas une autre");

@@ -25,6 +25,9 @@ public sealed class TodayPreview
     /// <summary>« Réviser maintenant » ou « Ouvrir la fiche ».</summary>
     public string OpenLabel => Row is SheetRow ? SheetsText.OpenSheet : DashboardText.ReviewNow;
 
+    /// <summary>Le bouton qui ouvre l'élément se montre : pas dans le Carnet, où « Lire » et « Écrire » le font déjà.</summary>
+    public bool ShowsOpen => Row is not SheetRow;
+
     /// <summary>« Fiche · Biologie · #partiel · cycle 1 · … ».</summary>
     public string Meta { get; }
 

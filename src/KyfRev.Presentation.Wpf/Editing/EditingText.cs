@@ -75,6 +75,12 @@ public static class EditingText
     /// <summary>Supprimer un tableau.</summary>
     public const string DeleteTable = "Supprimer le tableau";
 
+    /// <summary>Retire le bloc de code où est le curseur.</summary>
+    public const string DeleteCode = "Supprimer ce bloc de code";
+
+    /// <summary>Retire l'image visée.</summary>
+    public const string DeleteImage = "Supprimer l'image";
+
     /// <summary>Le titre de la saisie d'une formule.</summary>
     public const string FormulaTitle = "Insérer une formule";
 
@@ -131,6 +137,201 @@ public static class EditingText
 
     /// <summary>L'onglet du ruban qui n'apparaît que dans un tableau.</summary>
     public const string TableTab = "Tableau";
+
+    /// <summary>L'onglet du ruban qui n'apparaît qu'une image choisie.</summary>
+    public const string ImageTab = "Image";
+
+    /// <summary>Le bouton qui fait commencer la suite sur la page suivante.</summary>
+    public const string PageBreak = "Saut de page";
+
+    /// <summary>Le bouton qui laisse une page entière vide.</summary>
+    public const string BlankPage = "Page blanche";
+
+    /// <summary>Ce que fait « Saut de page ».</summary>
+    public const string PageBreakHelp = "Saut de page : ce qui suit le curseur commence la page suivante";
+
+    /// <summary>Ce que fait « Page blanche ».</summary>
+    public const string BlankPageHelp = "Page blanche : une page entière reste vide après le curseur";
+
+    /// <summary>Le groupe des sauts de page, dans l'onglet Insertion.</summary>
+    public const string PagesGroup = "Pages";
+
+    /// <summary>Le groupe du papier, dans l'onglet Mise en page.</summary>
+    public const string PaperGroup = "Papier";
+
+    /// <summary>Le bouton qui montre ou cache le papier derrière le texte.</summary>
+    public const string PaperToggle = "Montrer le papier de la feuille (à l'écran seulement : il ne s'imprime pas)";
+
+    /// <summary>Une feuille unie.</summary>
+    public const string PaperPlain = "Papier uni";
+
+    /// <summary>Un quadrillage de 5 mm.</summary>
+    public const string PaperSmallSquares = "Petits carreaux (5 mm)";
+
+    /// <summary>La réglure des cahiers d'écolier.</summary>
+    public const string PaperLargeSquares = "Grands carreaux (réglure Seyès)";
+
+    /// <summary>Un cahier ligné.</summary>
+    public const string PaperLines = "Lignes (cahier)";
+
+    /// <summary>Un point tous les 5 mm.</summary>
+    public const string PaperDots = "Points (5 mm)";
+
+    /// <summary>Du papier millimétré.</summary>
+    public const string PaperGraph = "Millimétré";
+
+    /// <summary>L'onglet de la mise en page.</summary>
+    public const string PageTab = "Mise en page";
+
+    /// <summary>Le groupe du format de la feuille.</summary>
+    public const string PageSheetGroup = "Feuille";
+
+    /// <summary>La feuille sans pages.</summary>
+    public const string PageEndless = "Feuille sans fin";
+
+    /// <summary>Le format A4.</summary>
+    public const string PageA4 = "A4 (21 × 29,7 cm)";
+
+    /// <summary>Le format A5.</summary>
+    public const string PageA5 = "A5 (14,8 × 21 cm)";
+
+    /// <summary>Le format A6.</summary>
+    public const string PageA6 = "A6 (10,5 × 14,8 cm)";
+
+    /// <summary>Le groupe de l'orientation.</summary>
+    public const string PageOrientationGroup = "Orientation";
+
+    /// <summary>La feuille en hauteur.</summary>
+    public const string PagePortrait = "Portrait";
+
+    /// <summary>La feuille en largeur.</summary>
+    public const string PageLandscape = "Paysage";
+
+    /// <summary>Le groupe des marges.</summary>
+    public const string PageMarginsGroup = "Marges";
+
+    /// <summary>Des marges de 1,27 cm.</summary>
+    public const string PageMarginsNarrow = "Marges étroites (1,27 cm)";
+
+    /// <summary>Des marges de 2 cm.</summary>
+    public const string PageMarginsNormal = "Marges normales (2 cm)";
+
+    /// <summary>Des marges de 3 cm.</summary>
+    public const string PageMarginsWide = "Marges larges (3 cm)";
+
+    /// <summary>Le champ des marges sur mesure.</summary>
+    public const string PageMarginsCustom = "Marges sur mesure, en centimètres";
+
+    /// <summary>Un demi-centimètre de marge en moins.</summary>
+    public const string PageMarginLess = "Réduire les marges";
+
+    /// <summary>Un demi-centimètre de marge en plus.</summary>
+    public const string PageMarginMore = "Agrandir les marges";
+
+    /// <summary>L'unité des marges.</summary>
+    public const string PageCentimetres = "cm";
+
+    /// <summary>Le groupe de la portée du choix.</summary>
+    public const string PageScopeGroup = "S'applique";
+
+    /// <summary>Le choix vaut pour la fiche ouverte.</summary>
+    public const string PageScopeSheet = "À cette fiche";
+
+    /// <summary>Le choix vaut pour toutes les fiches.</summary>
+    public const string PageScopeAll = "À toutes les fiches";
+
+    /// <summary>Ce que change « À cette fiche ».</summary>
+    public const string PageScopeSheetHelp = "Cette fiche garde sa propre mise en page, sur cet ordinateur";
+
+    /// <summary>Ce que change « À toutes les fiches ».</summary>
+    public const string PageScopeAllHelp = "La mise en page vaut pour toutes les fiches qui n'ont pas la leur, sur cet ordinateur";
+
+    /// <summary>Le groupe de la taille d'une image.</summary>
+    public const string ImageSizeGroup = "Taille";
+
+    /// <summary>Un quart de la largeur du texte.</summary>
+    public const string ImageSmall = "Petite";
+
+    /// <summary>La moitié de la largeur du texte.</summary>
+    public const string ImageMedium = "Moyenne";
+
+    /// <summary>Les trois quarts de la largeur du texte.</summary>
+    public const string ImageLarge = "Grande";
+
+    /// <summary>Toute la largeur du texte.</summary>
+    public const string ImageFull = "Pleine largeur";
+
+    /// <summary>La taille du fichier, sans dépasser le texte.</summary>
+    public const string ImageNatural = "Taille d'origine";
+
+    /// <summary>Rétrécit l'image de cinq points.</summary>
+    public const string ImageNarrower = "Rétrécir l'image";
+
+    /// <summary>Élargit l'image de cinq points.</summary>
+    public const string ImageWider = "Élargir l'image";
+
+    /// <summary>Le groupe de la place d'une image.</summary>
+    public const string ImagePlaceGroup = "Position";
+
+    /// <summary>Dans le fil du texte.</summary>
+    public const string ImageInline = "Dans le texte";
+
+    /// <summary>Seule sur sa ligne, à gauche.</summary>
+    public const string ImageLeft = "À gauche";
+
+    /// <summary>Seule sur sa ligne, au centre.</summary>
+    public const string ImageCenter = "Au centre";
+
+    /// <summary>Seule sur sa ligne, à droite.</summary>
+    public const string ImageRight = "À droite";
+
+    /// <summary>Le groupe du cadre d'une image.</summary>
+    public const string ImageFrameGroup = "Cadrage";
+
+    /// <summary>Ouvre la fenêtre de rognage.</summary>
+    public const string ImageCrop = "Rogner…";
+
+    /// <summary>Rend l'image entière.</summary>
+    public const string ImageUncrop = "Image entière";
+
+    /// <summary>Le groupe de la révision d'une image.</summary>
+    public const string ImageReviewGroup = "Révision";
+
+    /// <summary>Le bouton de rognage, dans le groupe Taille.</summary>
+    public const string ImageCropShort = "Rogner";
+
+    /// <summary>La hauteur de l'image, en centimètres.</summary>
+    public const string ImageHeight = "Hauteur";
+
+    /// <summary>Sa largeur, en centimètres.</summary>
+    public const string ImageWidth = "Largeur";
+
+    /// <summary>Ce que les champs de taille expliquent.</summary>
+    public const string ImageSizeHelp = "En centimètres. L'image garde ses proportions : changer l'une change l'autre.";
+
+    /// <summary>Le groupe des réglages à retirer.</summary>
+    public const string ImageResetGroup = "Rétablir";
+
+    /// <summary>Ouvre la fenêtre des zones masquées.</summary>
+    public const string ImageMask = "Masquer des zones…";
+
+    /// <summary>Une zone masquée.</summary>
+    public const string ImageOneMask = "1 zone masquée";
+
+    /// <summary>Plusieurs zones masquées, après leur nombre.</summary>
+    public const string ImageManyMasks = "zones masquées";
+
+    /// <summary>Le groupe de la description d'une image.</summary>
+    public const string ImageAltGroup = "Description";
+
+    /// <summary>Ce que le champ de description attend.</summary>
+    public const string ImageAltHelp = "Ce que montre l'image : lu par un lecteur d'écran, et affiché si l'image manque.";
+
+    /// <summary>Retire largeur, place et cadre ; les zones masquées restent.</summary>
+    public const string ImageReset = "Rétablir";
+
+    /// <summary>Le titre de l'image est une légende écrite à la main.</summary>
+    public const string ImageCaption = "Cette image a un titre écrit à la main : il sert de légende, et ses réglages ne peuvent pas s'y écrire. Retirez-le dans le code Markdown pour la régler ici.";
 
     /// <summary>Le bouton de la barre courte qui ouvre toute la mise en forme.</summary>
     public const string Formatting = "Mise en forme";

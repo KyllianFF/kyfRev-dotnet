@@ -196,9 +196,16 @@ public sealed class ShellWindowTests
 
             shell.WindowWidth = 1024;
             window.UpdateLayout();
-            Assert.AreEqual(112, sidebar.ActualWidth);
+            Assert.AreEqual(77, sidebar.ActualWidth);
             Assert.AreEqual(HorizontalAlignment.Stretch, search.HorizontalContentAlignment);
-            Assert.IsTrue(Named<StackPanel>(main, "Stacked").All(stacked => stacked.Visibility == Visibility.Visible));
+            var squares = Named<Grid>(main, "Stacked").ToList();
+            Assert.IsTrue(squares.All(stacked => stacked.Visibility == Visibility.Visible));
+            // Des boutons carrés, tous pareils : l'icône seule, et le nom au survol.
+            var items = squares.Select(square => (FrameworkElement)ItemsControl.ContainerFromElement(main, square)).ToList();
+            Assert.IsTrue(items.All(item => Math.Abs(item.ActualWidth - item.ActualHeight) < 1), "carrés : " + string.Join(" ", items.Select(item => $"{item.ActualWidth}x{item.ActualHeight}")));
+            Assert.AreEqual(1, items.Select(item => Math.Round(item.ActualWidth)).Distinct().Count(), "tous de la même taille");
+            Assert.IsTrue(squares.All(square => square.ToolTip is string { Length: > 0 }));
+            Assert.IsTrue(Named<StackPanel>(main, "Row").All(row => row.Visibility == Visibility.Collapsed), "plus de texte sous l'icône");
 
             // La vraie fenêtre, rétrécie : la coquille suit.
             window.Width = 420;
@@ -519,7 +526,7 @@ public sealed class ShellWindowTests
             var tabs = (ListBox)window.FindName("TabNavigation");
             Assert.AreEqual(-1, tabs.SelectedIndex);
             tabs.SelectedIndex = 1;
-            Assert.AreEqual("Fiches", shell.Current.Label);
+            Assert.AreEqual("Carnet", shell.Current.Label);
             Assert.AreEqual(FontWeights.Normal, TextElement.GetFontWeight(background));
             menu.IsOpen = false;
         }
@@ -704,23 +711,170 @@ public sealed class ShellWindowTests
         window.RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(window), 0, key) { RoutedEvent = Keyboard.KeyDownEvent });
 
     [STATestMethod]
-    public void In_focus_mode_the_title_bar_brings_the_menu_back()
+    public void The_tabs_of_the_ribbon_all_have_the_height_of_the_first()
+    {
+        var test = new TestShell();
+        var ribbon = new KyfRev.Presentation.Wpf.Editing.EditorRibbon();
+        var window = new Window { Content = ribbon, Left = -10000, Top = -10000, Width = 1200, Height = 300, ShowActivated = false, ShowInTaskbar = false };
+        window.Resources.MergedDictionaries.Add(test.Design.Dictionary);
+        window.Show();
+        try
+        {
+            // Les onglets du tableau et de l'image n'existent que le curseur dans un tableau ou une image choisie : montrés ici.
+            ribbon.TableTab.Visibility = Visibility.Visible;
+            ribbon.ImageTab.Visibility = Visibility.Visible;
+            TestShell.Flush();
+
+            var home = ribbon.HomeTab;
+            Assert.IsGreaterThan(0, home.ActualHeight);
+            foreach (var tab in new FrameworkElement[] { ribbon.InsertTab, ribbon.TableTab, ribbon.ImageTab })
+            {
+                Assert.AreEqual(home.ActualHeight, tab.ActualHeight, 0.01, tab.Name);
+                Assert.AreEqual(home.TranslatePoint(default, ribbon).Y, tab.TranslatePoint(default, ribbon).Y, 0.01, tab.Name);
+            }
+
+            // Leurs titres sont du texte seul, comme Accueil et Insertion.
+            Assert.IsInstanceOfType<string>(ribbon.TableTab.Content);
+            Assert.IsInstanceOfType<string>(ribbon.ImageTab.Content);
+
+            // Un clic sur un onglet montre son ruban ; Entrée, dans un champ de taille, applique la valeur sans quitter le champ.
+            ribbon.PageTab.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+            TestShell.Flush();
+            Assert.AreEqual(Visibility.Visible, ribbon.PagePanel.Visibility);
+            var typed = new System.Windows.Input.KeyEventArgs(System.Windows.Input.Keyboard.PrimaryDevice, PresentationSource.FromVisual(ribbon.MarginBox)!, 0, System.Windows.Input.Key.Enter) { RoutedEvent = System.Windows.Input.Keyboard.KeyDownEvent };
+            ribbon.MarginBox.RaiseEvent(typed);
+            Assert.IsTrue(typed.Handled);
+            ribbon.ImageTab.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+            TestShell.Flush();
+            Assert.AreEqual(Visibility.Visible, ribbon.ImagePanel.Visibility);
+            Assert.AreEqual(Visibility.Collapsed, ribbon.PagePanel.Visibility);
+
+            // Et le ruban garde la hauteur de l'Accueil, quel que soit l'onglet : le texte de la fiche ne bouge pas.
+            window.Width = 1900;
+            ribbon.ShowTab(ribbon.HomePanel);
+            TestShell.Flush();
+            var height = ribbon.ActualHeight;
+            Assert.IsGreaterThan(0, height);
+            foreach (var panel in new Panel[] { ribbon.InsertPanel, ribbon.TablePanel, ribbon.ImagePanel, ribbon.PagePanel })
+            {
+                ribbon.ShowTab(panel);
+                TestShell.Flush();
+                Assert.AreEqual(Visibility.Visible, panel.Visibility, panel.Name);
+                Assert.AreEqual(height, ribbon.ActualHeight, 0.5, panel.Name);
+            }
+
+            // Les onglets Tableau et Image sont en icônes : chaque bouton garde son nom, pour le lecteur d'écran, et le dit au survol.
+            foreach (var panel in new Panel[] { ribbon.TablePanel, ribbon.ImagePanel, ribbon.PagePanel })
+            {
+                ribbon.ShowTab(panel);
+                TestShell.Flush();
+                var tools = Descendants(panel).OfType<System.Windows.Controls.Primitives.ButtonBase>().Where(tool => tool.IsVisible).ToList();
+                Assert.IsGreaterThan(8, tools.Count, panel.Name);
+                foreach (var tool in tools)
+                {
+                    var name = System.Windows.Automation.Peers.UIElementAutomationPeer.CreatePeerForElement(tool).GetName();
+                    Assert.IsFalse(string.IsNullOrWhiteSpace(name), tool.Name);
+                    Assert.IsTrue(tool.ToolTip is string { Length: > 0 }, $"{tool.Name} dit son nom au survol");
+                }
+                var glyphs = Descendants(panel).OfType<KyfRev.Presentation.Wpf.Editing.RibbonGlyph>().ToList();
+                Assert.IsGreaterThan(6, glyphs.Count, panel.Name);
+                Assert.IsTrue(glyphs.All(glyph => glyph.Icon is not null && glyph.Foreground is not null), "chaque icône a son dessin et la couleur du texte");
+            }
+            // Dans une fenêtre de taille courante, l'onglet Tableau tient sur une seule ligne de groupes.
+            window.Width = 1100;
+            ribbon.ShowTab(ribbon.TablePanel);
+            TestShell.Flush();
+            var groups = ribbon.TablePanel.Children.OfType<FrameworkElement>().Where(group => group.IsVisible).ToList();
+            Assert.IsGreaterThan(5, groups.Count);
+            Assert.AreEqual(1, groups.Select(group => Math.Round(group.TranslatePoint(default, ribbon.TablePanel).Y)).Distinct().Count(), "une seule ligne de groupes");
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
+    public void A_tool_of_the_ribbon_shows_that_its_formatting_is_active()
+    {
+        var test = new TestShell();
+        var tool = new Button { Content = "G" };
+        var window = new Window { Content = tool, Left = -10000, Top = -10000, Width = 200, Height = 100, ShowActivated = false, ShowInTaskbar = false };
+        window.Resources.MergedDictionaries.Add(test.Design.Dictionary);
+        tool.SetResourceReference(FrameworkElement.StyleProperty, "Kyf.Button.Tool");
+        window.Show();
+        try
+        {
+            TestShell.Flush();
+            var active = window.FindResource("Kyf.Brush.NavigationActiveBackground");
+            Assert.AreNotEqual(active, tool.Background);
+
+            // La valeur liée par le ruban est un booléen : « le texte sous le curseur est en gras ».
+            tool.Tag = true;
+            TestShell.Flush();
+            Assert.AreEqual(active, tool.Background, "le bouton d'une mise en forme active ressort");
+
+            tool.Tag = false;
+            TestShell.Flush();
+            Assert.AreNotEqual(active, tool.Background);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
+    public void The_title_bar_hides_the_menu_and_brings_it_back()
     {
         var test = new TestShell();
         var window = Open(test);
         try
         {
-            var exit = (Button)window.FindName("ExitFocusButton");
-            Assert.AreEqual(Visibility.Collapsed, exit.Visibility);
+            var toggle = (Button)window.FindName("ExitFocusButton");
+            var host = (FrameworkElement)window.FindName("MenuButtonHost");
+            Assert.IsTrue(toggle.IsVisible, "toujours là : le menu se masque d'un clic");
+            Assert.IsTrue(toggle.TranslatePoint(default, window).X < 60, "à gauche, au-dessus du menu");
+            Assert.AreEqual("Masquer le menu (Ctrl+Maj+F)", (string)toggle.ToolTip);
+            Assert.IsTrue(test.Shell.IsMenuVisible);
 
-            test.Shell.ToggleFocusMode();
+            toggle.Command.Execute(null);
             TestShell.Flush();
 
-            Assert.AreEqual(Visibility.Visible, exit.Visibility);
+            Assert.IsTrue(test.Shell.IsFocusMode);
+            Assert.IsFalse(test.Shell.IsMenuVisible);
+            Assert.AreEqual("Afficher le menu (Ctrl+Maj+F)", (string)toggle.ToolTip);
+            Assert.AreEqual("Afficher le menu (Ctrl+Maj+F)", System.Windows.Automation.AutomationProperties.GetName(toggle));
 
-            exit.Command.Execute(null);
+            toggle.Command.Execute(null);
+            TestShell.Flush();
 
             Assert.IsFalse(test.Shell.IsFocusMode);
+            Assert.IsTrue(test.Shell.IsMenuVisible);
+
+            // En plein écran, il n'y a pas de menu à rendre : le bouton s'efface.
+            test.Shell.ToggleFullScreen();
+            TestShell.Flush();
+            Assert.AreEqual(Visibility.Collapsed, host.Visibility);
+            test.Shell.ToggleFullScreen();
+            TestShell.Flush();
+            Assert.AreEqual(Visibility.Visible, host.Visibility);
+
+            // Menu masqué, survoler le bouton le montre par-dessus la page ; un clic le rend pour de bon et referme l'aperçu.
+            toggle.RaiseEvent(new MouseEventArgs(Mouse.PrimaryDevice, 0) { RoutedEvent = Mouse.MouseEnterEvent });
+            Assert.IsFalse(window.IsMenuPeekOpen, "menu visible : rien à montrer au survol");
+            test.Shell.ToggleFocusMode();
+            TestShell.Flush();
+            toggle.RaiseEvent(new MouseEventArgs(Mouse.PrimaryDevice, 0) { RoutedEvent = Mouse.MouseEnterEvent });
+            TestShell.Flush();
+            Assert.IsTrue(window.IsMenuPeekOpen);
+            var card = (FrameworkElement)window.FindName("MenuPeekCard");
+            var workspace = (FrameworkElement)window.FindName("Workspace");
+            Assert.AreEqual(workspace.ActualHeight, card.ActualHeight, 2, "sur toute la hauteur de la page, jusqu'en bas de la fenêtre");
+            Assert.AreEqual(test.Shell.MainNavigation.Count, ((ListBox)window.FindName("PeekMainNavigation")).Items.Count);
+            test.Shell.ToggleFocusMode();
+            TestShell.Flush();
+            Assert.IsFalse(window.IsMenuPeekOpen);
         }
         finally
         {
@@ -744,6 +898,19 @@ public sealed class ShellWindowTests
             foreach (var descendant in Descendants<T>(child))
             {
                 yield return descendant;
+            }
+        }
+    }
+
+    private static IEnumerable<DependencyObject> Descendants(DependencyObject root)
+    {
+        for (var index = 0; index < System.Windows.Media.VisualTreeHelper.GetChildrenCount(root); index++)
+        {
+            var child = System.Windows.Media.VisualTreeHelper.GetChild(root, index);
+            yield return child;
+            foreach (var deeper in Descendants(child))
+            {
+                yield return deeper;
             }
         }
     }

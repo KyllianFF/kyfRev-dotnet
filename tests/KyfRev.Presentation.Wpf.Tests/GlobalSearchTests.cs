@@ -88,16 +88,16 @@ public sealed class GlobalSearchTests
     {
         using var ui = new UiThread();
         using var scene = new Scene();
-        scene.Vaults.App.Sheets.Create(string.Empty, "Fiches de lecture", string.Empty);
+        scene.Vaults.App.Sheets.Create(string.Empty, "Carnet de lecture", string.Empty);
 
-        scene.Search("fiches");
+        scene.Search("carnet");
 
         var command = scene.Shell.PaletteResults[0];
-        Assert.AreEqual("Aller à : Fiches", command.Label);
+        Assert.AreEqual("Aller à : Carnet", command.Label);
         Assert.AreSame(PaletteGroup.Commands, command.Group);
         Assert.IsFalse(command.Group.HasHeading);
         Assert.AreEqual(command.Label, command.ToString(), "un raccourci ne se lit pas dans le nom");
-        Assert.AreEqual("Fiches de lecture", scene.Shell.PaletteResults[^1].Label);
+        Assert.AreEqual("Carnet de lecture", scene.Shell.PaletteResults[^1].Label);
         Assert.AreSame(command, scene.Shell.SelectedResult);
     }
 

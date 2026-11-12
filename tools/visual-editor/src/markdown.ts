@@ -155,6 +155,9 @@ export function depuisMarkdown(texte: string, { collage = false } = {}): Origine
   });
   const sources = bornes.map(([a, b]) => texte.slice(a, b));
   const noeuds = blocs.map((bloc, i) => {
+    // Un saut de page n'en est un que seul dans son paragraphe, au premier niveau : ailleurs, c'est du texte.
+    const saut = bloc.jetons?.[0]?.type === "paragraph_open" ? SAUT_DE_PAGE.exec(sources[i] ?? "") : null;
+    if (saut) return n.saut_de_page.create({ blanche: saut[1] === "page-blanche" });
     if (bloc.jetons) {
       try {
         return convertir(bloc.jetons);
@@ -178,6 +181,9 @@ export function depuisMarkdown(texte: string, { collage = false } = {}): Origine
     fin: dernier ? texte.slice(dernier[1]) : "",
   };
 }
+
+/** La ligne d'un saut de page ou d'une page blanche, lue avec la même tolérance que celle d'un tableau (apparence.ts). */
+const SAUT_DE_PAGE = /^ {0,3}<!--[ 	]*kyfrev[ 	]+(saut-de-page|page-blanche)[ 	]*-->[ 	]*$/;
 
 type Cadre = { type: NodeType; attrs: Attrs | null; contenu: Node[] };
 
@@ -482,6 +488,8 @@ function bloc(noeud: Node): string {
         .join("\n");
     case n.horizontal_rule:
       return (noeud.attrs.markup as string) || "---";
+    case n.saut_de_page:
+      return `<!-- kyfrev ${noeud.attrs.blanche ? "page-blanche" : "saut-de-page"} -->`;
     case n.code_block: {
       const contenu = noeud.textContent;
       const signe = ((noeud.attrs.fence as string) || "```")[0] === "~" ? "~" : "`";

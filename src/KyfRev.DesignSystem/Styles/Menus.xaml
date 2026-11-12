@@ -32,7 +32,8 @@
             <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
                     BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{DynamicResource Kyf.Radius.Card}"
                     Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
-              <ScrollViewer CanContentScroll="True">
+              <!-- La barre de défilement ne prend sa place que si le menu dépasse l'écran : sinon la marge de droite serait plus large que celle de gauche. -->
+              <ScrollViewer CanContentScroll="True" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                 <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle" />
               </ScrollViewer>
             </Border>
@@ -160,6 +161,11 @@
             <ContentPresenter ContentSource="Icon" HorizontalAlignment="Center" VerticalAlignment="Center" />
           </Border>
           <ControlTemplate.Triggers>
+            <!-- La mise en forme déjà active sous le curseur : l'outil ressort, comme son bouton du ruban. -->
+            <Trigger Property="IsChecked" Value="True">
+              <Setter TargetName="Cell" Property="Background" Value="{DynamicResource Kyf.Brush.NavigationActiveBackground}" />
+              <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.NavigationActiveText}" />
+            </Trigger>
             <Trigger Property="IsHighlighted" Value="True">
               <Setter TargetName="Cell" Property="Background" Value="{DynamicResource Kyf.Brush.SurfaceAlt}" />
             </Trigger>

@@ -529,7 +529,7 @@ public sealed class EncryptionSettingsTests
         window.Show();
         try
         {
-            hub.Tabs[3].IsSelected = true;
+            hub.Tabs[4].IsSelected = true;
             UiThread.Until(() => data.IsLoaded && vault.Card.IsEncrypted);
             TestShell.Flush();
             var page = Descendants(window).OfType<DataSettingsPage>().Single();

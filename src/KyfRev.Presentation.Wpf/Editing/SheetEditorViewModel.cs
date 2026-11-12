@@ -68,7 +68,80 @@ public sealed record EditorEnvironment(ISpelling Spelling, string WebDataFolder,
 /// <param name="Table">Le tableau où est le curseur, dans le texte mis en forme ; rien ailleurs.</param>
 /// <param name="Code">Du code dans le texte.</param>
 /// <param name="Quote">Une citation.</param>
-public sealed record EditorTools(bool Bold, bool Italic, bool Underline, bool Strike, bool Superscript, bool Subscript, int Heading, ListKind? List, bool CanUndo, bool CanRedo, string? Color = null, string? Size = null, TextAlign Align = TextAlign.Left, TableState? Table = null, bool Code = false, bool Quote = false);
+/// <param name="Image">L'image choisie, dans le texte mis en forme ; rien si la sélection n'en est pas une.</param>
+public sealed record EditorTools(bool Bold, bool Italic, bool Underline, bool Strike, bool Superscript, bool Subscript, int Heading, ListKind? List, bool CanUndo, bool CanRedo, string? Color = null, string? Size = null, TextAlign Align = TextAlign.Left, TableState? Table = null, bool Code = false, bool Quote = false, ImageState? Image = null);
+
+/// <summary>L'image choisie dans le texte mis en forme : ses réglages, écrits dans son titre Markdown.</summary>
+/// <param name="Position">Où elle se trouve.</param>
+/// <param name="Address">L'adresse d'où la page la lit : c'est par elle qu'on retrouve son fichier.</param>
+/// <param name="Title">Son titre Markdown ; rien si elle n'en a pas.</param>
+/// <param name="Alt">Sa description.</param>
+/// <param name="Editable">Faux si son titre est une légende écrite à la main : il ne peut pas porter de réglages.</param>
+/// <param name="Width">Sa largeur, en pourcentage de celle du texte ; rien : sa taille d'origine.</param>
+/// <param name="Align">Sa place : <c>fil</c>, <c>gauche</c>, <c>centre</c> ou <c>droite</c>.</param>
+/// <param name="Crop">Son cadre, « x,y,largeur,hauteur » en pourcentages ; rien : l'image entière.</param>
+/// <param name="Masks">Le nombre de ses zones masquées en révision.</param>
+/// <param name="ShownWidth">Sa largeur à l'écran, en pixels de la fiche.</param>
+/// <param name="ShownHeight">Sa hauteur à l'écran, en pixels de la fiche.</param>
+/// <param name="Room">La largeur du texte autour d'elle, en pixels de la fiche : celle qu'elle peut prendre au plus.</param>
+public sealed record ImageState(int Position, string Address, string? Title, string Alt, bool Editable, int? Width, string Align, string? Crop, int Masks, double ShownWidth = 0, double ShownHeight = 0, double Room = 0)
+{
+    /// <summary>Un centimètre, en pixels de la fiche : 96 par pouce.</summary>
+    public const double PixelsPerCentimetre = 96 / 2.54;
+
+    /// <summary>« 13,9 cm » : sa largeur.</summary>
+    public string WidthCm => Centimetres(ShownWidth);
+
+    /// <summary>« 24,7 cm » : sa hauteur.</summary>
+    public string HeightCm => Centimetres(ShownHeight);
+
+    /// <summary>Dans le fil du texte.</summary>
+    public bool IsInline => Align == "fil";
+
+    /// <summary>Seule sur sa ligne, à gauche.</summary>
+    public bool IsLeft => Align == "gauche";
+
+    /// <summary>Seule sur sa ligne, au centre.</summary>
+    public bool IsCenter => Align == "centre";
+
+    /// <summary>Seule sur sa ligne, à droite.</summary>
+    public bool IsRight => Align == "droite";
+
+    private static string Centimetres(double pixels) =>
+        string.Create(CultureInfo.GetCultureInfo("fr-FR"), $"{pixels / PixelsPerCentimetre:0.0} cm");
+
+    /// <summary>
+    /// La largeur, en pourcentage de celle du texte, qui donne à l'image cette largeur ou cette hauteur écrite en
+    /// centimètres (« 13,9 », « 13.9 cm ») ; rien si le texte ne se lit pas ou si la taille de l'image n'est pas connue.
+    /// </summary>
+    public int? PercentFor(string? centimetres, bool height)
+    {
+        var text = (centimetres ?? string.Empty).Replace("cm", string.Empty, StringComparison.OrdinalIgnoreCase).Trim().Replace(',', '.');
+        if (!double.TryParse(text, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out var wanted) || wanted <= 0 || Room <= 0 || ShownWidth <= 0 || ShownHeight <= 0)
+        {
+            return null;
+        }
+        var pixels = wanted * PixelsPerCentimetre * (height ? ShownWidth / ShownHeight : 1);
+        return Math.Clamp((int)Math.Round(pixels / Room * 100), KyfRev.Rendering.ImageLooks.MinimumWidth, KyfRev.Rendering.ImageLooks.MaximumWidth);
+    }
+
+    /// <summary>« 60 % », ou « Origine » à sa taille d'origine.</summary>
+    public string WidthLabel => Width is { } width ? string.Create(CultureInfo.GetCultureInfo("fr-FR"), $"{width} %") : EditingText.ImageNatural;
+
+    /// <summary>Elle est rognée.</summary>
+    public bool IsCropped => Crop is not null;
+
+    /// <summary>Elle est à sa taille d'origine.</summary>
+    public bool IsNatural => Width is null;
+
+    /// <summary>« 2 zones masquées », ou rien.</summary>
+    public string MasksLabel => Masks switch
+    {
+        0 => string.Empty,
+        1 => EditingText.ImageOneMask,
+        _ => string.Create(CultureInfo.InvariantCulture, $"{Masks} {EditingText.ImageManyMasks}"),
+    };
+}
 
 /// <summary>Le tableau où est le curseur : son apparence, écrite comme dans la fiche, et sa colonne.</summary>
 /// <param name="Header">L'en-tête : <c>ligne</c>, <c>colonne</c>, <c>ligne,colonne</c> ou <c>aucune</c>.</param>
@@ -114,6 +187,16 @@ public sealed record FormulaQuestion(string Tex, bool Block, int? Position);
 /// <param name="Code">Le contenu de son bloc.</param>
 /// <param name="Position">Où il se trouve.</param>
 public sealed record DiagramQuestion(string Info, string Code, int Position);
+
+/// <summary>« Masquer des zones… » demandé sur une image, en écriture.</summary>
+/// <param name="Position">Où elle se trouve dans le texte mis en forme.</param>
+/// <param name="Path">Son fichier, depuis la racine du coffre.</param>
+/// <param name="Title">Son titre Markdown, qui porte ses masques ; rien si elle n'en a pas.</param>
+public sealed record ImageMasksQuestion(int Position, string Path, string? Title)
+{
+    /// <summary>C'est le cadre de l'image qu'on veut tracer, et non ses zones masquées.</summary>
+    public bool Crop { get; init; }
+}
 
 /// <summary>
 /// Ce que l'éditeur attend d'une façon d'écrire : le texte mis en forme ou le code Markdown. L'enregistrement et
@@ -196,11 +279,17 @@ internal interface IEditorSurface
     /// <summary>Change l'apparence du tableau où est le curseur, ou sa colonne (voir la demande « tableLook »).</summary>
     void SetTableLook(string change, string? value);
 
+    /// <summary>Change l'apparence de l'image choisie, ou sa description (voir la demande « imageLook »).</summary>
+    void SetImageLook(string change, string? value);
+
     /// <summary>Crée un bloc de code, ou change le langage de celui où est le curseur.</summary>
     void InsertCode(string language);
 
     /// <summary>Insère une ligne horizontale.</summary>
     void InsertRule();
+
+    /// <summary>Insère un saut de page ; « blank » : une page blanche entière.</summary>
+    void InsertPageBreak(bool blank);
 
     /// <summary>Demande la saisie d'une formule, si cette façon d'écrire en a une.</summary>
     void AskFormula();
@@ -384,7 +473,60 @@ public sealed partial class SheetEditorViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsNumbers))]
     [NotifyPropertyChangedFor(nameof(IsTasks))]
     [NotifyPropertyChangedFor(nameof(IsInTable))]
+    [NotifyPropertyChangedFor(nameof(IsOnImage), nameof(CanChangeImage), nameof(ShowsImageCaption), nameof(ImageAlt), nameof(ImageWidthCm), nameof(ImageHeightCm))]
     public partial EditorTools? Tools { get; private set; }
+
+    /// <summary>Une image est choisie dans le texte mis en forme : l'onglet Image se montre.</summary>
+    public bool IsOnImage => Tools?.Image is not null;
+
+    /// <summary>Ses réglages peuvent changer : son titre n'est pas une légende écrite à la main.</summary>
+    public bool CanChangeImage => Tools?.Image is { Editable: true };
+
+    /// <summary>L'image choisie a une légende écrite à la main : l'onglet dit pourquoi ses réglages sont éteints.</summary>
+    public bool ShowsImageCaption => Tools?.Image is { Editable: false };
+
+    /// <summary>La description de l'image choisie, lue par un lecteur d'écran et montrée si l'image manque.</summary>
+    public string ImageAlt
+    {
+        get => Tools?.Image?.Alt ?? string.Empty;
+        set
+        {
+            if (Tools?.Image is { } image && value is not null && value != image.Alt)
+            {
+                _surface?.SetImageLook("alt", value);
+            }
+        }
+    }
+
+    /// <summary>La largeur de l'image choisie, en centimètres ; la changer change sa largeur dans le texte, la hauteur suit.</summary>
+    public string ImageWidthCm
+    {
+        get => Tools?.Image?.WidthCm ?? string.Empty;
+        set => SizeImage(value, height: false);
+    }
+
+    /// <summary>Sa hauteur, en centimètres ; la changer change sa largeur d'autant, pour garder ses proportions.</summary>
+    public string ImageHeightCm
+    {
+        get => Tools?.Image?.HeightCm ?? string.Empty;
+        set => SizeImage(value, height: true);
+    }
+
+    private void SizeImage(string? centimetres, bool height)
+    {
+        if (Tools?.Image is { Editable: true } image && image.PercentFor(centimetres, height) is { } percent && percent != image.Width)
+        {
+            _surface?.SetImageLook("width", percent.ToString(CultureInfo.InvariantCulture));
+        }
+        else
+        {
+            // Rien de lisible, ou la même taille : le champ reprend ce que l'image mesure vraiment.
+            OnPropertyChanged(height ? nameof(ImageHeightCm) : nameof(ImageWidthCm));
+        }
+    }
+
+    /// <summary>« Masquer des zones… » ou « Rogner… » est demandé sur l'image choisie : la vue ouvre la fenêtre.</summary>
+    internal event EventHandler<ImageMasksQuestion>? ImageDialogAsked;
 
     /// <summary>Le curseur est dans un tableau du texte mis en forme : l'onglet Tableau se montre.</summary>
     public bool IsInTable => Tools?.Table is not null;
@@ -922,19 +1064,36 @@ public sealed partial class SheetEditorViewModel : ObservableObject
 
     /// <summary>Met en forme la sélection, ou retire sa mise en forme.</summary>
     [RelayCommand]
-    private void ToggleMark(InlineMark mark) => _surface?.ToggleMark(mark);
+    private void ToggleMark(InlineMark mark)
+    {
+        _surface?.ToggleMark(mark);
+        // Le clavier revient au texte, à l'endroit où il était : on continue de taper sans recliquer.
+        _surface?.Focus();
+    }
 
     /// <summary>Donne un niveau de titre aux lignes de la sélection ; 0 en refait du texte.</summary>
     [RelayCommand]
-    private void SetHeading(int level) => _surface?.SetHeading(level);
+    private void SetHeading(int level)
+    {
+        _surface?.SetHeading(level);
+        _surface?.Focus();
+    }
 
     /// <summary>Met les lignes de la sélection en liste, ou les en sort.</summary>
     [RelayCommand]
-    private void ToggleList(ListKind kind) => _surface?.ToggleList(kind);
+    private void ToggleList(ListKind kind)
+    {
+        _surface?.ToggleList(kind);
+        _surface?.Focus();
+    }
 
     /// <summary>Met les lignes de la sélection en citation, ou les en sort.</summary>
     [RelayCommand]
-    private void ToggleQuote() => _surface?.ToggleQuote();
+    private void ToggleQuote()
+    {
+        _surface?.ToggleQuote();
+        _surface?.Focus();
+    }
 
     /// <summary>Pose une couleur sur la sélection, écrite <c>#rrggbb</c> ; rien : celle du thème.</summary>
     [RelayCommand]
@@ -958,7 +1117,11 @@ public sealed partial class SheetEditorViewModel : ObservableObject
 
     /// <summary>Aligne les blocs de la sélection.</summary>
     [RelayCommand]
-    private void SetAlign(TextAlign align) => _surface?.SetAlign(align);
+    private void SetAlign(TextAlign align)
+    {
+        _surface?.SetAlign(align);
+        _surface?.Focus();
+    }
 
     /// <summary>Change la casse de la sélection, ou du mot sous le curseur.</summary>
     [RelayCommand]
@@ -975,6 +1138,45 @@ public sealed partial class SheetEditorViewModel : ObservableObject
         ArgumentNullException.ThrowIfNull(change);
         var equal = change.IndexOf('=', StringComparison.Ordinal);
         _surface?.SetTableLook(equal < 0 ? change : change[..equal], equal < 0 ? null : change[(equal + 1)..]);
+    }
+
+    /// <summary>
+    /// Change l'apparence de l'image choisie : <c>nom</c>, ou <c>nom=valeur</c> (<c>width=50</c>, <c>align=centre</c>,
+    /// <c>crop=</c>, <c>reset</c>…).
+    /// </summary>
+    [RelayCommand]
+    private void ChangeImage(string change)
+    {
+        ArgumentNullException.ThrowIfNull(change);
+        var equal = change.IndexOf('=', StringComparison.Ordinal);
+        _surface?.SetImageLook(equal < 0 ? change : change[..equal], equal < 0 ? null : change[(equal + 1)..]);
+    }
+
+    /// <summary>Élargit ou rétrécit l'image choisie de quelques points ; partie de sa taille d'origine, elle est prise à toute la largeur.</summary>
+    [RelayCommand]
+    private void NudgeImageWidth(string step)
+    {
+        if (Tools?.Image is { Editable: true } image && int.TryParse(step, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out var points))
+        {
+            var width = Math.Clamp((image.Width ?? KyfRev.Rendering.ImageLooks.MaximumWidth) + points, KyfRev.Rendering.ImageLooks.MinimumWidth, KyfRev.Rendering.ImageLooks.MaximumWidth);
+            _surface?.SetImageLook("width", width.ToString(CultureInfo.InvariantCulture));
+        }
+    }
+
+    /// <summary>« Masquer des zones… » sur l'image choisie.</summary>
+    [RelayCommand]
+    private void MaskImage() => AskImageDialog(crop: false);
+
+    /// <summary>« Rogner… » sur l'image choisie.</summary>
+    [RelayCommand]
+    private void CropImage() => AskImageDialog(crop: true);
+
+    private void AskImageDialog(bool crop)
+    {
+        if (Tools?.Image is { Editable: true } image && VisualEditor.VaultPathOf(image.Address) is { } path)
+        {
+            ImageDialogAsked?.Invoke(this, new ImageMasksQuestion(image.Position, path, image.Title) { Crop = crop });
+        }
     }
 
     /// <summary>Crée un bloc de code, ou change le langage de celui où est le curseur.</summary>
@@ -1128,6 +1330,14 @@ public sealed partial class SheetEditorViewModel : ObservableObject
     /// <summary>Insère une ligne horizontale.</summary>
     [RelayCommand]
     private void InsertRule() => _surface?.InsertRule();
+
+    /// <summary>Insère un saut de page (« blank » : une page blanche) là où est le curseur.</summary>
+    [RelayCommand]
+    private void InsertPageBreak(string? kind)
+    {
+        _surface?.InsertPageBreak(kind == "blank");
+        _surface?.Focus();
+    }
 
     /// <summary>Demande une formule : une saisie dans le texte mis en forme, des signes dans le code.</summary>
     [RelayCommand]

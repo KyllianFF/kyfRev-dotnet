@@ -68,6 +68,34 @@ public sealed class SchemaModuleTests
     }
 
     [TestMethod]
+    public void A_schema_is_archived_or_put_in_the_bin_and_comes_back()
+    {
+        using var test = new SchemasTest();
+        var schemas = test.UseCases();
+        var kept = schemas.Create(Text).Value;
+        var moved = schemas.Create(Text).Value;
+        Assert.IsEmpty(schemas.Aside().Value);
+
+        // Archivé, il quitte la liste et se retrouve à part ; rien n'est effacé, et il se lit encore.
+        Assert.IsTrue(schemas.Move(moved.Id, SchemaPlace.Archived).Value);
+        Assert.AreEqual(kept.Id, schemas.Schemas().Value.Single().Id);
+        var aside = schemas.Aside().Value.Single();
+        Assert.AreEqual((moved.Id, SchemaPlace.Archived), (aside.Id, aside.Place));
+        Assert.AreEqual(moved.Text, schemas.Read(moved.Id).Value.Text);
+
+        // À la corbeille, puis remis dans la liste.
+        Assert.IsTrue(schemas.Move(moved.Id, SchemaPlace.Trash).Value);
+        Assert.AreEqual(SchemaPlace.Trash, schemas.Aside().Value.Single().Place);
+        Assert.IsTrue(schemas.Move(moved.Id, SchemaPlace.Active).Value);
+        Assert.IsEmpty(schemas.Aside().Value);
+        Assert.HasCount(2, schemas.Schemas().Value);
+        Assert.IsTrue(schemas.Schemas().Value.All(schema => schema.Place == SchemaPlace.Active));
+
+        // Un schéma qui n'existe pas : un refus, pas une erreur.
+        Assert.IsFalse(schemas.Move("s_inconnu", SchemaPlace.Archived).Succeeded);
+    }
+
+    [TestMethod]
     public void The_list_gives_titles_counts_and_the_sheets_that_cite_each_schema()
     {
         using var test = new SchemasTest();

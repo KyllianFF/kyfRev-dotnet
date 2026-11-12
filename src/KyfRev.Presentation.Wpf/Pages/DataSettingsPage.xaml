@@ -51,6 +51,7 @@
         <Button x:Name="OpenRestored" Content="{x:Static pages:SettingsHubText.OpenRestored}" Command="{Binding OpenRestoredVaultCommand}" HorizontalAlignment="Left" Margin="0,0,0,8"
                 Visibility="{Binding HasRestoredVault, Converter={StaticResource Visible}}" />
 
+        <StackPanel x:Name="VaultPart" pages:SettingsPart.Of="coffre">
         <kyf:Card x:Name="VaultCard" Padding="16,12" Margin="0,0,0,8">
           <StackPanel>
             <TextBlock Text="{x:Static pages:SettingsHubText.VaultTitle}" Style="{DynamicResource Kyf.Text.Subtitle}" AutomationProperties.HeadingLevel="Level2" />
@@ -117,6 +118,8 @@
           </StackPanel>
         </kyf:Card>
 
+        </StackPanel>
+        <StackPanel x:Name="BackupsPart" pages:SettingsPart.Of="sauvegardes">
         <kyf:Card x:Name="BackupsCard" Padding="16,12" Margin="0,0,0,8">
           <StackPanel>
             <TextBlock Text="{x:Static pages:SettingsHubText.BackupsTitle}" Style="{DynamicResource Kyf.Text.Subtitle}" AutomationProperties.HeadingLevel="Level2" />
@@ -158,6 +161,7 @@
             </WrapPanel>
           </StackPanel>
         </kyf:Card>
+        </StackPanel>
       </StackPanel>
     </ScrollViewer>
 

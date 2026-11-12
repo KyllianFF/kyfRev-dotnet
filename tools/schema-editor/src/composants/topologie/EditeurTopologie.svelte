@@ -329,6 +329,11 @@
     } else if (ctrl && evenement.key.toLowerCase() === "a") {
       evenement.preventDefault();
       editeur.toutChoisir();
+    } else if (ctrl && evenement.key.toLowerCase() === "g") {
+      // Ctrl+G groupe la sélection, Ctrl+Maj+G la dégroupe.
+      evenement.preventDefault();
+      if (evenement.shiftKey) editeur.degrouper();
+      else editeur.grouper();
     } else if (ctrl && evenement.key.toLowerCase() === "d") {
       evenement.preventDefault();
       dupliquerSelection();

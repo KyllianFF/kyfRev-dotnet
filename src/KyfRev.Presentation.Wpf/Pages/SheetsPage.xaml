@@ -21,21 +21,75 @@
         </DockPanel>
       </DataTemplate>
 
+      <!-- Un choix d'affichage : une pastille, pleine quand elle est choisie. -->
+      <Style x:Key="KindChip" TargetType="RadioButton">
+        <Setter Property="Margin" Value="0,0,8,4" />
+        <Setter Property="Padding" Value="14,0" />
+        <Setter Property="MinHeight" Value="{DynamicResource Kyf.Target.Compact}" />
+        <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Text}" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Kyf.Brush.ControlBorder}" />
+        <Setter Property="FocusVisualStyle" Value="{DynamicResource Kyf.FocusVisual}" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Template">
+          <Setter.Value>
+            <ControlTemplate TargetType="RadioButton">
+              <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="16"
+                      Padding="{TemplateBinding Padding}" MinHeight="{TemplateBinding MinHeight}" SnapsToDevicePixels="True">
+                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" TextElement.Foreground="{TemplateBinding Foreground}" />
+              </Border>
+            </ControlTemplate>
+          </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+          <Trigger Property="IsMouseOver" Value="True">
+            <Setter Property="Background" Value="{DynamicResource Kyf.Brush.SurfaceAlt}" />
+          </Trigger>
+          <Trigger Property="IsChecked" Value="True">
+            <Setter Property="Background" Value="{DynamicResource Kyf.Brush.Primary}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Kyf.Brush.Primary}" />
+            <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.OnPrimary}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+          </Trigger>
+        </Style.Triggers>
+      </Style>
+
       <!-- Une fiche. -->
       <DataTemplate DataType="{x:Type pages:SheetRow}">
-        <StackPanel Margin="{Binding Indent}">
+        <DockPanel Margin="{Binding Indent}">
+          <!-- À droite, ce qu'est le document : son étape et son échéance, « Archivée », ou « Note ». -->
+          <Border x:Name="Tag" DockPanel.Dock="Right" VerticalAlignment="Center" Margin="12,0,0,0" Padding="8,2" CornerRadius="6"
+                  Background="{DynamicResource Kyf.Brush.NavigationActiveBackground}">
+            <TextBlock x:Name="Meta" Text="{Binding State}" FontFamily="{DynamicResource Kyf.Font.Code}" FontSize="{DynamicResource Kyf.FontSize.Caption}"
+                       Foreground="{DynamicResource Kyf.Brush.NavigationActiveText}" />
+          </Border>
+          <StackPanel>
           <TextBlock Text="{Binding Title}" FontSize="{DynamicResource Kyf.FontSize.BodyLarge}" FontWeight="SemiBold" TextWrapping="Wrap" />
-          <TextBlock x:Name="Meta" Text="{Binding Meta}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,2,0,0" />
+          <TextBlock x:Name="Place" Text="{Binding Place}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,2,0,0"
+                     Visibility="{Binding HasPlace, Converter={StaticResource Visible}}" />
           <!-- La fiche a été trouvée par son texte : le passage où se trouvent les mots. -->
           <pages:ExcerptText Pieces="{Binding Excerpt}" Margin="0,2,0,0" Visibility="{Binding HasExcerpt, Converter={StaticResource Visible}}" />
           <StackPanel Orientation="Horizontal" Margin="0,2,0,0" Visibility="{Binding FileMissing, Converter={StaticResource Visible}}">
             <kyf:Icon Text="{x:Static kyf:Icons.Warning}" Foreground="{DynamicResource Kyf.Brush.Warning}" FontSize="12" Margin="0,0,4,0" />
             <TextBlock Text="{x:Static pages:DashboardText.FileMissing}" Style="{DynamicResource Kyf.Text.Caption}" Foreground="{DynamicResource Kyf.Brush.Warning}" />
           </StackPanel>
-        </StackPanel>
+          </StackPanel>
+        </DockPanel>
         <DataTemplate.Triggers>
-          <DataTrigger Binding="{Binding IsLate}" Value="True">
+          <DataTrigger Binding="{Binding Kind}" Value="Late">
+            <Setter TargetName="Tag" Property="Background" Value="{DynamicResource Kyf.Brush.SurfaceAlt}" />
             <Setter TargetName="Meta" Property="Foreground" Value="{DynamicResource Kyf.Brush.Warning}" />
+            <Setter TargetName="Meta" Property="FontWeight" Value="SemiBold" />
+          </DataTrigger>
+          <DataTrigger Binding="{Binding Kind}" Value="Archived">
+            <Setter TargetName="Tag" Property="Background" Value="{DynamicResource Kyf.Brush.SurfaceAlt}" />
+            <Setter TargetName="Meta" Property="Foreground" Value="{DynamicResource Kyf.Brush.TextSecondary}" />
+          </DataTrigger>
+          <!-- Une note : le mot, sans chiffres, dans la police du texte. -->
+          <DataTrigger Binding="{Binding Kind}" Value="Note">
+            <Setter TargetName="Tag" Property="Background" Value="{DynamicResource Kyf.Brush.SurfaceAlt}" />
+            <Setter TargetName="Meta" Property="Foreground" Value="{DynamicResource Kyf.Brush.TextSecondary}" />
+            <Setter TargetName="Meta" Property="FontFamily" Value="{DynamicResource Kyf.Font.Ui}" />
           </DataTrigger>
         </DataTemplate.Triggers>
       </DataTemplate>
@@ -52,8 +106,9 @@
       </Grid.RowDefinitions>
 
       <DockPanel>
-        <Button x:Name="NewSheetButton" DockPanel.Dock="Right" Content="{x:Static pages:SheetsText.NewSheet}" Style="{DynamicResource Kyf.Button.Primary}"
-                VerticalAlignment="Top" Margin="8,0,0,0" Command="{Binding RequestCreateCommand}" />
+        <!-- Créer un document : une fiche de révision, ou une simple note. À droite du titre, pour ne pas prendre de hauteur. -->
+        <Button x:Name="NewNoteButton" DockPanel.Dock="Right" Content="{x:Static pages:SheetsText.NewNote}" VerticalAlignment="Top" Margin="8,0,0,0" Command="{Binding RequestCreateNoteCommand}" />
+        <Button x:Name="NewSheetButton" DockPanel.Dock="Right" Content="{x:Static pages:SheetsText.NewSheet}" Style="{DynamicResource Kyf.Button.Primary}" VerticalAlignment="Top" Margin="8,0,0,0" Command="{Binding RequestCreateCommand}" />
         <Button x:Name="ImportButton" DockPanel.Dock="Right" Content="{x:Static kyf:Icons.Import}" Style="{DynamicResource Kyf.Button.Icon}" VerticalAlignment="Top" Margin="12,0,0,0"
                 Command="{Binding RequestImportCommand}" ToolTip="{x:Static pages:SharingText.ImportAction}" AutomationProperties.Name="{x:Static pages:SharingText.ImportTitle}"
                 Visibility="{Binding CanImport, Converter={StaticResource Visible}}" />
@@ -68,27 +123,6 @@
         <kyf:Notification x:Name="DoneMessage" Severity="Success" Message="{Binding Done}" IsOpen="{Binding HasDone, Mode=OneWay}" IsClosable="False" Margin="0,12,0,0" />
       </StackPanel>
 
-      <StackPanel Grid.Row="2" Margin="0,12,0,8" Visibility="{Binding HasSheets, Converter={StaticResource Visible}}">
-        <pages:FilterBar x:Name="FilterBar" DataContext="{Binding Bar}" />
-        <ItemsControl x:Name="TagFilter" ItemsSource="{Binding Tags}" Focusable="False" Margin="0,4,0,0" Visibility="{Binding ShowsTags, Converter={StaticResource Visible}}"
-                      AutomationProperties.Name="{x:Static pages:SheetsText.TagsFilterName}">
-          <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate>
-              <WrapPanel />
-            </ItemsPanelTemplate>
-          </ItemsControl.ItemsPanel>
-          <ItemsControl.ItemTemplate>
-            <DataTemplate DataType="{x:Type pages:TagChip}">
-              <ToggleButton IsChecked="{Binding IsChosen}" Style="{DynamicResource Kyf.Button.Tool}" Padding="8,0" Margin="0,0,4,4" MaxWidth="260"
-                            ToolTip="{Binding Hint}" AutomationProperties.Name="{Binding Name}">
-                <TextBlock Text="{Binding Text}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-              </ToggleButton>
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
-        <Button x:Name="ClearTagsButton" Content="{x:Static pages:SheetsText.TagsClear}" Command="{Binding ClearTagsCommand}" Style="{DynamicResource Kyf.Button.Subtle}"
-                HorizontalAlignment="Left" Visibility="{Binding HasChosenTags, Converter={StaticResource Visible}}" />
-      </StackPanel>
 
       <Grid Grid.Row="3">
         <!-- Squelettes pendant la première lecture. -->
@@ -107,10 +141,8 @@
           </kyf:EmptyState.Action>
         </kyf:EmptyState>
 
-        <TextBlock x:Name="NoMatch" Text="{x:Static pages:SheetsText.NoMatch}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="0,12,0,0"
-                   Visibility="{Binding HasNoMatch, Converter={StaticResource Visible}}" />
 
-        <Grid x:Name="Lists" Visibility="{Binding HasRows, Converter={StaticResource Visible}}">
+        <Grid x:Name="Lists" Margin="0,12,0,0" Visibility="{Binding HasSheets, Converter={StaticResource Visible}}">
           <Grid.ColumnDefinitions>
             <ColumnDefinition>
               <ColumnDefinition.Style>
@@ -118,7 +150,7 @@
                   <Setter Property="Width" Value="*" />
                   <Style.Triggers>
                     <DataTrigger Binding="{Binding HasPreview}" Value="True">
-                      <Setter Property="Width" Value="360" />
+                      <Setter Property="Width" Value="480" />
                     </DataTrigger>
                   </Style.Triggers>
                 </Style>
@@ -140,6 +172,39 @@
 
           <!-- La liste : virtualisée, pour qu'un grand coffre reste fluide. -->
           <kyf:Card x:Name="ListCard" Padding="8">
+            <DockPanel>
+              <StackPanel x:Name="ListFilters" DockPanel.Dock="Top" Margin="4,4,4,8">
+        <pages:FilterBar x:Name="FilterBar" DataContext="{Binding Bar}" />
+        <!-- Tout, les fiches de révision seules, ou les notes seules : toujours en vue, avec leur nombre. -->
+        <WrapPanel x:Name="KindFilter" Margin="0,8,0,0" AutomationProperties.Name="{x:Static pages:SheetsText.KindName}">
+          <RadioButton x:Name="KindAllChoice" GroupName="SheetKind" Style="{StaticResource KindChip}" Content="{Binding KindAllLabel}" IsChecked="{Binding ShowsAll}" />
+          <RadioButton x:Name="KindReviewChoice" GroupName="SheetKind" Style="{StaticResource KindChip}" Content="{Binding KindReviewLabel}" IsChecked="{Binding ShowsReviewOnly}" />
+          <RadioButton x:Name="KindNotesChoice" GroupName="SheetKind" Style="{StaticResource KindChip}" Content="{Binding KindNotesLabel}" IsChecked="{Binding ShowsNotesOnly}" />
+          <!-- Les étiquettes se déplient à la demande : elles peuvent être nombreuses. -->
+          <ToggleButton x:Name="TagsToggle" Style="{DynamicResource Kyf.Button.Tool}" Padding="10,0" Margin="0,0,0,4" Content="{x:Static pages:SheetsText.TagsToggle}" IsChecked="{Binding AreTagsOpen}"
+                        Visibility="{Binding HasTags, Converter={StaticResource Visible}}" />
+        </WrapPanel>
+        <ItemsControl x:Name="TagFilter" ItemsSource="{Binding Tags}" Focusable="False" Margin="0,4,0,0" Visibility="{Binding ShowsTags, Converter={StaticResource Visible}}"
+                      AutomationProperties.Name="{x:Static pages:SheetsText.TagsFilterName}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <WrapPanel />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate DataType="{x:Type pages:TagChip}">
+              <ToggleButton IsChecked="{Binding IsChosen}" Style="{DynamicResource Kyf.Button.Tool}" Padding="8,0" Margin="0,0,4,4" MaxWidth="260"
+                            ToolTip="{Binding Hint}" AutomationProperties.Name="{Binding Name}">
+                <TextBlock Text="{Binding Text}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+              </ToggleButton>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <Button x:Name="ClearTagsButton" Content="{x:Static pages:SheetsText.TagsClear}" Command="{Binding ClearTagsCommand}" Style="{DynamicResource Kyf.Button.Subtle}"
+                HorizontalAlignment="Left" Visibility="{Binding HasChosenTags, Converter={StaticResource Visible}}" />
+              </StackPanel>
+              <TextBlock x:Name="NoMatch" DockPanel.Dock="Top" Text="{x:Static pages:SheetsText.NoMatch}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="8,4,8,8"
+                         Visibility="{Binding HasNoMatch, Converter={StaticResource Visible}}" />
             <Grid>
               <pages:OpenableList x:Name="Items" ItemsSource="{Binding Rows}" SelectedItem="{Binding SelectedRow}" OpenCommand="{Binding OpenCommand}"
                                   AutomationProperties.Name="{x:Static pages:SheetsText.ListName}"
@@ -155,11 +220,19 @@
                 <TextBlock Text="{Binding DropHint}" Foreground="{DynamicResource Kyf.Brush.OnPrimary}" TextWrapping="Wrap" />
               </Border>
             </Grid>
+            </DockPanel>
           </kyf:Card>
 
           <!-- L'aperçu de la fiche choisie, quand il y a la place. -->
           <kyf:Card x:Name="PreviewCard" Grid.Column="1" Margin="12,0,0,0" Visibility="{Binding ShowsPreview, Converter={StaticResource Visible}}">
-            <ContentControl Content="{Binding Preview}" Focusable="False" IsTabStop="False" />
+            <DockPanel>
+              <!-- Le document choisi s'ouvre d'ici, en lecture ou en écriture, sans passer par le clic droit. -->
+              <StackPanel x:Name="PreviewActions" DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,12">
+                <Button x:Name="ReadButton" Content="{x:Static pages:SheetsText.Read}" Style="{DynamicResource Kyf.Button.Primary}" MinWidth="88" Margin="0,0,8,0" Command="{Binding ReadSelectedCommand}" />
+                <Button x:Name="WriteButton" Content="{x:Static pages:SheetsText.Write}" MinWidth="88" Command="{Binding WriteSelectedCommand}" />
+              </StackPanel>
+              <ContentControl Content="{Binding Preview}" Focusable="False" IsTabStop="False" />
+            </DockPanel>
           </kyf:Card>
         </Grid>
       </Grid>
@@ -201,8 +274,8 @@
       </StackPanel>
     </kyf:Dialog>
 
-    <kyf:Dialog x:Name="NewSheet" Title="{x:Static pages:SheetsText.NewSheet}" IsOpen="{Binding IsCreating, Mode=OneWay}"
-                PrimaryButtonText="{x:Static pages:SheetsText.CreateSheet}" Closed="OnCreateClosed">
+    <kyf:Dialog x:Name="NewSheet" Title="{Binding NewDialogTitle}" IsOpen="{Binding IsCreating, Mode=OneWay}"
+                PrimaryButtonText="{Binding NewDialogConfirm}" Closed="OnCreateClosed">
       <StackPanel>
         <kyf:Notification x:Name="CreateError" Severity="Critical" Message="{Binding CreateError}" IsOpen="{Binding HasCreateError, Mode=OneWay}" IsClosable="False" Margin="0,0,0,12" />
         <TextBlock Text="{x:Static pages:SheetsText.TitleLabel}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,0,0,4" />

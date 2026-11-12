@@ -82,6 +82,34 @@ public sealed class SchemasPageTests
     }
 
     [TestMethod]
+    public async Task The_bridge_archives_trashes_and_restores_a_schema()
+    {
+        using var scene = new BridgeScene();
+        var id = (await scene.CallAsync("creerSchema", Text))["id"]!.GetValue<string>();
+        Assert.AreEqual("actif", (await scene.CallAsync("schemas")).AsArray().Single()!["etat"]!.GetValue<string>());
+        Assert.IsEmpty((await scene.CallAsync("schemasRanges")).AsArray());
+
+        foreach (var place in new[] { "archive", "corbeille" })
+        {
+            Assert.IsNull(await scene.RawValueAsync("rangerSchema", id, place));
+            Assert.IsEmpty((await scene.CallAsync("schemas")).AsArray());
+            var aside = (await scene.CallAsync("schemasRanges")).AsArray().Single()!;
+            Assert.AreEqual((id, place), (aside["id"]!.GetValue<string>(), aside["etat"]!.GetValue<string>()));
+        }
+
+        Assert.IsNull(await scene.RawValueAsync("rangerSchema", id, "actif"));
+        Assert.AreEqual(id, (await scene.CallAsync("schemas")).AsArray().Single()!["id"]!.GetValue<string>());
+
+        // Un rangement inconnu ou un schéma absent est refusé, sans rien déplacer.
+        foreach (var args in new[] { $"[\"{id}\",\"ailleurs\"]", "[\"s_00000000000000000000000000\",\"corbeille\"]", "[]" })
+        {
+            var answer = await scene.AnswerAsync($"{{\"kind\":\"call\",\"id\":3,\"method\":\"rangerSchema\",\"args\":{args}}}");
+            Assert.IsFalse(answer["ok"]!.GetValue<bool>(), args);
+        }
+        Assert.HasCount(1, (await scene.CallAsync("schemas")).AsArray());
+    }
+
+    [TestMethod]
     public async Task The_bridge_refuses_what_it_does_not_know()
     {
         using var scene = new BridgeScene();

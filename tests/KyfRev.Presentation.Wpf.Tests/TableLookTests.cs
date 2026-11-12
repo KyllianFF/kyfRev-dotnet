@@ -205,8 +205,11 @@ public sealed class TableLookTests
             Assert.AreEqual(Visibility.Collapsed, ribbon.TabRow.Visibility, "les onglets attendent le volet");
             Assert.AreEqual(Visibility.Collapsed, ribbon.Panels.Visibility);
             Assert.AreEqual(Visibility.Collapsed, ribbon.CompactTableButton.Visibility);
-            Assert.AreEqual(Visibility.Visible, ribbon.FormatLabel.Visibility, "« Mise en forme » garde son libellé");
+            Assert.AreEqual(Visibility.Collapsed, ribbon.FormatLabel.Visibility, "la barre courte n'a que des icônes : le nom se lit au survol");
             Assert.AreEqual(Visibility.Collapsed, ribbon.CompactTableLabel.Visibility, "le bouton « Tableau » se réduit à son icône");
+            Assert.AreEqual(EditingText.FormattingHelp, (string)ribbon.FormatToggle.ToolTip);
+            Assert.AreEqual(EditorRibbon.CompactIconSize, ((KyfRev.DesignSystem.Controls.Icon)ribbon.CompactBoldButton.Content).FontSize, "en grand");
+            Assert.AreEqual(EditorRibbon.CompactButtonSide, ribbon.CompactBoldButton.MinHeight);
             Assert.HasCount(5, ribbon.CompactStyleMenu.Items);
             Assert.HasCount(3, ribbon.ViewMenu.Items, "historique, Markdown, aperçu ; la page y ajoute le plan et les passages");
             Assert.IsLessThanOrEqualTo(window.ActualWidth, ribbon.ViewButton.TranslatePoint(new Point(ribbon.ViewButton.ActualWidth, 0), window).X, "rien ne passe sous un autre bouton");
@@ -255,12 +258,11 @@ public sealed class TableLookTests
             Assert.AreEqual(Visibility.Visible, ribbon.CompactBulletsButton.Visibility);
             ribbon.Fit(EditorRibbon.BulletsWidth - 1);
             Assert.AreEqual(Visibility.Collapsed, ribbon.CompactBulletsButton.Visibility);
-            Assert.AreEqual(Visibility.Visible, ribbon.FormatLabel.Visibility);
             ribbon.Fit(EditorRibbon.LabelWidth - 1);
             Assert.AreEqual(Visibility.Collapsed, ribbon.FormatLabel.Visibility);
             ribbon.Fit(EditorRibbon.TightWidth);
-            Assert.AreEqual(Visibility.Visible, ribbon.FormatLabel.Visibility);
-            Assert.AreEqual(Visibility.Visible, ribbon.CompactTableLabel.Visibility);
+            Assert.AreEqual(Visibility.Collapsed, ribbon.FormatLabel.Visibility, "à toute largeur de la barre courte");
+            Assert.AreEqual(Visibility.Collapsed, ribbon.CompactTableLabel.Visibility);
             Assert.AreEqual(Visibility.Visible, ribbon.CompactLinkButton.Visibility);
 
             // Assez de place : le ruban entier revient, ses onglets et l'affichage à droite.

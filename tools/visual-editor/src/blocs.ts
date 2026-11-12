@@ -4,7 +4,7 @@
 
 import { type Node, NodeRange } from "prosemirror-model";
 import { wrapInList } from "prosemirror-schema-list";
-import { type EditorState, TextSelection, type Transaction } from "prosemirror-state";
+import { type EditorState, Selection, TextSelection, type Transaction } from "prosemirror-state";
 import { isInTable, selectedRect } from "prosemirror-tables";
 import { liftTarget } from "prosemirror-transform";
 import { schema } from "./schema";
@@ -41,6 +41,20 @@ export function insertionDeBloc(etat: EditorState, bloc: Node, decalage: number)
   const apres = position + bloc.nodeSize;
   if (apres === tr.doc.content.size) tr = tr.insert(apres, schema.nodes.paragraph.create());
   return tr.setSelection(TextSelection.near(tr.doc.resolve(position + decalage))).scrollIntoView();
+}
+
+/**
+ * Saut de page ou page blanche : après le bloc de premier niveau où est le curseur (ou le bloc choisi), sans le couper.
+ * Le curseur va au début de ce qui suit ; rien ne suit : un paragraphe vide, qui ne s'écrit pas tant qu'il le reste.
+ */
+export function insertionDeSaut(etat: EditorState, blanche: boolean): Transaction {
+  const { $from, to } = etat.selection;
+  const position = $from.depth > 0 ? $from.after(1) : to;
+  const saut = schema.nodes.saut_de_page.create({ blanche });
+  let tr = etat.tr.insert(position, saut);
+  const apres = position + saut.nodeSize;
+  if (apres === tr.doc.content.size) tr = tr.insert(apres, schema.nodes.paragraph.create());
+  return tr.setSelection(Selection.near(tr.doc.resolve(apres), 1)).scrollIntoView();
 }
 
 /**

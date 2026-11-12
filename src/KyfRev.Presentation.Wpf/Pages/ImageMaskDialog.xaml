@@ -9,20 +9,26 @@
   </UserControl.Resources>
   <Grid>
     <!-- « Masquer des zones » : on trace sur l'image les rectangles à retrouver en révision. -->
-    <kyf:Dialog x:Name="MaskDialog" Title="{x:Static pages:ImageMaskText.Title}" IsOpen="{Binding IsOpen, Mode=OneWay}"
+    <kyf:Dialog x:Name="MaskDialog" Title="{Binding DialogTitle}" IsOpen="{Binding IsOpen, Mode=OneWay}"
                 PrimaryButtonText="{x:Static pages:ImageMaskText.Save}" IsPrimaryEnabled="{Binding CanDraw}" Closed="OnClosed">
       <StackPanel>
         <kyf:Notification x:Name="MaskError" Severity="Critical" Message="{Binding Error}" IsOpen="{Binding HasError, Mode=OneWay}" IsClosable="False" Margin="0,0,0,12" />
-        <TextBlock Text="{x:Static pages:ImageMaskText.Help}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="0,0,0,12" />
+        <TextBlock x:Name="Help" Text="{Binding HelpText}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="0,0,0,4" />
+        <TextBlock Text="{x:Static pages:ImageMaskText.KeyboardHelp}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="0,0,0,12" />
         <!-- L'image et sa surface de tracé ont la même taille : un rectangle tracé se lit en parts de l'image. -->
         <Grid x:Name="Stage" HorizontalAlignment="Center">
           <Image x:Name="Picture" Source="{Binding Picture}" Stretch="Uniform" StretchDirection="DownOnly" MaxHeight="420" MaxWidth="640" />
-          <Canvas x:Name="Surface" Background="Transparent" ClipToBounds="True" Cursor="Cross" IsEnabled="{Binding CanDraw}"
+          <pages:ImageMaskSurface x:Name="Surface" Background="Transparent" ClipToBounds="True" Cursor="Cross" IsEnabled="{Binding CanDraw}"
+                  Focusable="True" FocusVisualStyle="{DynamicResource Kyf.FocusVisual.Inset}" PreviewKeyDown="OnSurfaceKey"
                   MouseLeftButtonDown="OnSurfaceDown" MouseMove="OnSurfaceMove" MouseLeftButtonUp="OnSurfaceUp" LostMouseCapture="OnSurfaceLostCapture"
-                  SizeChanged="OnSurfaceSizeChanged" AutomationProperties.Name="{x:Static pages:ImageMaskText.Surface}" />
+                  SizeChanged="OnSurfaceSizeChanged" AutomationProperties.Name="{x:Static pages:ImageMaskText.Surface}"
+                  AutomationProperties.HelpText="{x:Static pages:ImageMaskText.KeyboardHelp}" />
         </Grid>
+        <!-- La zone choisie, dite en mots : c'est ce qu'entend qui la place au clavier sans la voir. -->
+        <kyf:LiveText x:Name="Selection" Text="{Binding Selection}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="0,8,0,0" />
         <DockPanel Margin="0,12,0,0">
           <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+            <Button x:Name="AddButton" Content="{x:Static pages:ImageMaskText.Add}" Command="{Binding AddZoneCommand}" Click="OnAddClick" Style="{DynamicResource Kyf.Button.Subtle}" Margin="0,0,4,0" />
             <Button x:Name="UndoButton" Content="{x:Static pages:ImageMaskText.Undo}" Command="{Binding UndoLastCommand}" Style="{DynamicResource Kyf.Button.Subtle}" />
             <Button x:Name="ClearButton" Content="{x:Static pages:ImageMaskText.Clear}" Command="{Binding ClearCommand}" Style="{DynamicResource Kyf.Button.Subtle}" Margin="4,0,0,0" />
           </StackPanel>

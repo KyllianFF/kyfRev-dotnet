@@ -10,12 +10,14 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using KyfRev.Application;
+using KyfRev.Application.Model;
 using KyfRev.Application.Ports;
 using KyfRev.DesignSystem;
 using KyfRev.DesignSystem.Controls;
 using KyfRev.DesignSystem.Tokens;
 using KyfRev.Presentation.Wpf.Extensions;
 using KyfRev.Presentation.Wpf.Pages;
+using KyfRev.Presentation.Wpf.Reading;
 using KyfRev.Presentation.Wpf.Schemas;
 using KyfRev.Rendering.Diagrams;
 using Microsoft.Web.WebView2.Core;
@@ -141,6 +143,7 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
         ground.SetResourceReference(Panel.BackgroundProperty, "Kyf.Brush.Background");
         Content = ground;
         SetResourceReference(ThemeProbeProperty, "Kyf.Brush.Text");
+        SetResourceReference(ComfortProbeProperty, ReadingComfort.ResourceKey);
         Loaded += OnLoaded;
     }
 
@@ -167,6 +170,12 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
 
     /// <inheritdoc/>
     public event EventHandler<Key>? ListKeyPressed;
+
+    /// <summary>« Masquer des zones… » est demandé sur une image du coffre, au clic droit.</summary>
+    public event EventHandler<ImageMasksQuestion>? ImageMasksAsked;
+
+    /// <summary>Ctrl+molette dans le texte : un cran de zoom de la fiche en plus (1) ou en moins (-1).</summary>
+    public event EventHandler<int>? ZoomAsked;
 
     /// <summary>Une image est collée ou déposée ; sans contenu, elle est trop lourde.</summary>
     public event Action<string, byte[]?, int?>? ImageDropped;
@@ -235,6 +244,52 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
         if (!_disposed)
         {
             _view.ZoomFactor = zoom;
+        }
+    }
+
+    private PageLayout _page = PageLayout.Default;
+
+    /// <summary>Le nombre de pages de la fiche a changé ; zéro pour une feuille sans fin.</summary>
+    public event EventHandler<int>? PagesChanged;
+
+    /// <summary>La feuille de la fiche : son format, son orientation et ses marges. Le texte s'y coule en pages.</summary>
+    internal void SetPage(PageLayout layout)
+    {
+        ArgumentNullException.ThrowIfNull(layout);
+        if (_disposed || layout == _page)
+        {
+            return;
+        }
+        _page = layout;
+        SendPage();
+    }
+
+    private string _paper = string.Empty;
+
+    /// <summary>Le papier montré derrière le texte, par son nom écrit ; sans nom, aucun.</summary>
+    internal void SetPaper(string? style)
+    {
+        var wanted = style ?? string.Empty;
+        if (_disposed || wanted == _paper)
+        {
+            return;
+        }
+        _paper = wanted;
+        if (_ready)
+        {
+            Send(PaperMessage());
+        }
+    }
+
+    /// <summary>Le papier et son pas d'écriture : les mêmes nombres que la lecture.</summary>
+    private PaperRequest PaperMessage() =>
+        new(_paper, _paper.Length == 0 ? 0 : KyfRev.Application.Model.PaperStyles.LineStepPixels(KyfRev.Application.Model.PaperStyles.Parse(_paper)));
+
+    private void SendPage()
+    {
+        if (_ready)
+        {
+            Send(_page.IsPaged ? new PageRequest(_page.WidthPixels, _page.HeightPixels, _page.MarginPixels) : new PageRequest(0, 0, 0));
         }
     }
 
@@ -322,10 +377,20 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
     public void SetTableLook(string change, string? value) => Post(new TableLookRequest(change, value));
 
     /// <inheritdoc/>
+    public void SetImageLook(string change, string? value) => Post(new ImageLookRequest(change, value));
+
+    /// <summary>Le fichier d'une image d'après l'adresse d'où la page la lit, depuis la racine du coffre ; rien si elle ne vient pas du coffre.</summary>
+    internal static string? VaultPathOf(string? address) =>
+        address is not null && address.StartsWith(VaultResources, StringComparison.Ordinal) ? Uri.UnescapeDataString(address[VaultResources.Length..]) : null;
+
+    /// <inheritdoc/>
     public void InsertCode(string language) => Post(new CodeRequest(language));
 
     /// <inheritdoc/>
     public void InsertRule() => Post(new RuleRequest());
+
+    /// <inheritdoc/>
+    public void InsertPageBreak(bool blank) => Post(new PageBreakRequest(blank));
 
     /// <inheritdoc/>
     public void AskFormula() => Post(new AskFormulaRequest());
@@ -389,6 +454,11 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
             case ReadyEvent:
                 _ready = true;
                 SendTheme();
+                SendPage();
+                if (_paper.Length > 0)
+                {
+                    Send(PaperMessage());
+                }
                 while (_pending.TryDequeue(out var request))
                 {
                     Send(request);
@@ -410,7 +480,7 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
                 SaveAsked?.Invoke(this, EventArgs.Empty);
                 break;
             case ToolsEvent tools:
-                ToolsChanged?.Invoke(this, new EditorTools(tools.Bold, tools.Italic, tools.Underline, tools.Strike, tools.Superscript, tools.Subscript, tools.Heading, tools.List, tools.CanUndo, tools.CanRedo, tools.Color, tools.Size, tools.Align, tools.TableLook, tools.Code, tools.Quote));
+                ToolsChanged?.Invoke(this, new EditorTools(tools.Bold, tools.Italic, tools.Underline, tools.Strike, tools.Superscript, tools.Subscript, tools.Heading, tools.List, tools.CanUndo, tools.CanRedo, tools.Color, tools.Size, tools.Align, tools.TableLook, tools.Code, tools.Quote, tools.ImageLook));
                 break;
             case AskDiagramEvent diagram:
                 _ = AnswerDiagramAsync(diagram);
@@ -434,11 +504,20 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
             case MenuEvent menu:
                 OpenMenu(menu);
                 break;
+            case PagesEvent pages:
+                PagesChanged?.Invoke(this, Math.Max(0, pages.Count));
+                break;
+            case ZoomEvent zoom:
+                ZoomAsked?.Invoke(this, Math.Sign(zoom.Step));
+                break;
             case DroppedEvent dropped:
                 ImageDropped?.Invoke(dropped.Name, dropped.Base64 is null ? null : Convert.FromBase64String(dropped.Base64), dropped.Position);
                 break;
         }
     }
+
+    /// <summary>Écrit le titre Markdown de l'image à cet endroit ; sans titre, elle n'a plus de masques.</summary>
+    public void SetImageTitle(int position, string? title) => Post(new SetImageTitleRequest(position, title));
 
     /// <summary>Les éléments du menu natif, selon ce que la page a dit de l'endroit visé.</summary>
     internal List<Control> MenuItems(MenuEvent menu, SpellingCorrection? correction)
@@ -447,12 +526,46 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
         {
             return DrawingMenuItems(menu, drawing);
         }
+        if (menu.ImagePosition is { } image)
+        {
+            return ImageMenuItems(menu, image);
+        }
         var items = TextMenuItems(menu, correction);
         if (menu.DrawingPosition is { } current)
         {
             items.Add(new Separator());
             items.Add(DeleteDrawing(menu.DrawingLanguage ?? string.Empty, menu.DrawingCode ?? string.Empty, current));
         }
+        else if (menu.CodePosition is { } code)
+        {
+            // Un bloc de code ordinaire s'efface d'ici, sans avoir à en sélectionner tout le texte.
+            items.Add(new Separator());
+            items.Add(ActionMenus.Item(EditingText.DeleteCode, () => Post(new DeleteBlockRequest(code))));
+        }
+        return items;
+    }
+
+    /// <summary>
+    /// Le menu d'une image : couper, copier, coller en tête, comme le menu d'une fiche, puis ce qui la règle. La mise en
+    /// forme du texte n'y a pas sa place. Seule une image du coffre se masque et se rogne : celle d'une adresse ou d'un
+    /// texte collé n'a pas de fichier à lire.
+    /// </summary>
+    private List<Control> ImageMenuItems(MenuEvent menu, int image)
+    {
+        List<Control> items =
+        [
+            ActionMenus.Quick(EditingText.Cut, Icons.Cut, () => Post(new ClipboardRequest("cut"))),
+            ActionMenus.Quick(EditingText.Copy, Icons.Copy, () => Post(new ClipboardRequest("copy"))),
+            ActionMenus.Quick(EditingText.Paste, Icons.Paste, () => Post(new ClipboardRequest("paste"))),
+        ];
+        if (VaultPathOf(menu.ImageAddress) is { } path && KyfRev.Rendering.ImageLooks.IsOurs(menu.ImageTitle))
+        {
+            items.Add(new Separator());
+            items.Add(ActionMenus.Item(ImageMaskText.Action, () => ImageMasksAsked?.Invoke(this, new ImageMasksQuestion(image, path, menu.ImageTitle))));
+            items.Add(ActionMenus.Item(EditingText.ImageCrop, () => ImageMasksAsked?.Invoke(this, new ImageMasksQuestion(image, path, menu.ImageTitle) { Crop = true })));
+        }
+        items.Add(new Separator());
+        items.Add(ActionMenus.Item(EditingText.DeleteImage, () => Post(new DeleteBlockRequest(image))));
         return items;
     }
 
@@ -466,10 +579,11 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
         ];
         if (!menu.InCode)
         {
-            items.Add(ActionMenus.Tool(EditingText.Bold, Icons.Bold, () => Post(new MarkRequest(InlineMark.Bold))));
-            items.Add(ActionMenus.Tool(EditingText.Italic, Icons.Italic, () => Post(new MarkRequest(InlineMark.Italic))));
-            items.Add(ActionMenus.Tool(EditingText.Underline, Icons.Underline, () => Post(new MarkRequest(InlineMark.Underline))));
-            items.Add(ActionMenus.Tool(EditingText.Strike, Icons.Strike, () => Post(new MarkRequest(InlineMark.Strike))));
+            // Chaque outil montre si la mise en forme est déjà là, comme dans le ruban.
+            items.Add(ActionMenus.Tool(EditingText.Bold, Icons.Bold, () => Post(new MarkRequest(InlineMark.Bold)), menu.Bold));
+            items.Add(ActionMenus.Tool(EditingText.Italic, Icons.Italic, () => Post(new MarkRequest(InlineMark.Italic)), menu.Italic));
+            items.Add(ActionMenus.Tool(EditingText.Underline, Icons.Underline, () => Post(new MarkRequest(InlineMark.Underline)), menu.Underline));
+            items.Add(ActionMenus.Tool(EditingText.Strike, Icons.Strike, () => Post(new MarkRequest(InlineMark.Strike)), menu.Strike));
         }
         items.Add(new Separator());
         if (correction is not null && menu.Word is { } word)
@@ -686,6 +800,12 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
     }
 
     /// <summary>Une image du coffre peut être lourde, ou loin : elle se lit sur un fil de travail, l'interface reste libre.</summary>
+    /// <summary>
+    /// Les réponses abandonnées parce que le moteur web s'est fermé pendant qu'elles se préparaient : sans gravité, mais
+    /// comptées, pour qu'un moteur qui se ferme trop souvent se remarque.
+    /// </summary>
+    internal int AbandonedAnswers { get; private set; }
+
     private async void OnResourceRequested(CoreWebView2 web, CoreWebView2WebResourceRequestedEventArgs e)
     {
         var address = new Uri(e.Request.Uri);
@@ -695,11 +815,21 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
             Serve(web, e, Host, ContentOf);
             return;
         }
-        using var deferral = e.GetDeferral();
-        var content = await Task.Run(() => ContentOf(path)).ConfigureAwait(true);
-        if (!_disposed)
+        // L'éditeur peut être fermé pendant la lecture : répondre à un moteur parti, ou même rendre la main, peut alors
+        // échouer. Rien n'est à faire de plus, et surtout pas arrêter l'application.
+        try
         {
-            Respond(web, e, address, content);
+            using var deferral = e.GetDeferral();
+            var content = await Task.Run(() => ContentOf(path)).ConfigureAwait(true);
+            if (!_disposed)
+            {
+                Respond(web, e, address, content);
+            }
+        }
+        catch (Exception exception) when (exception is System.Runtime.InteropServices.COMException or InvalidOperationException or ObjectDisposedException or IOException or UnauthorizedAccessException)
+        {
+            // Le moteur est parti pendant la réponse : il n'y a plus personne à qui répondre. L'abandon se compte.
+            AbandonedAnswers++;
         }
     }
 
@@ -877,12 +1007,20 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
         }
     }
 
+    /// <summary>Le confort de lecture a changé : la page reprend la police des fiches.</summary>
+    private static readonly DependencyProperty ComfortProbeProperty = DependencyProperty.Register(
+        "ComfortProbe", typeof(ReadingComfort), typeof(VisualEditor), new PropertyMetadata(null, (sender, _) => ((VisualEditor)sender).QueueTheme()));
+
     private void SendTheme()
     {
+        var comfort = TryFindResource(ReadingComfort.ResourceKey) as ReadingComfort ?? ReadingComfort.Default;
         var variables = new Dictionary<string, string>
         {
             ["--taille-lecture"] = string.Create(CultureInfo.InvariantCulture, $"{Typography.BodyLarge.Size}px"),
             ["--interligne-lecture"] = string.Create(CultureInfo.InvariantCulture, $"{Typography.ReadingLineSpacing}"),
+            // La police des fiches, la même qu'en lecture ; les titres la prennent quand elle est manuscrite ou à chasse fixe.
+            ["--police-lecture"] = comfort.CssFamily,
+            ["--police-titre"] = comfort.HeadingsFollow ? comfort.CssFamily : "var(--police)",
         };
         foreach (var (variable, resource) in ThemeColors)
         {

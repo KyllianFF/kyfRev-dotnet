@@ -50,10 +50,12 @@ public sealed class AccessibilityTests
             foreach (var entry in entries)
             {
                 Select(Named(window, ControlType.ListItem, entry));
-                // La page affichée porte son titre : deux textes à ce nom avec l'entrée du menu.
-                WaitUntil(window, () => window.FindAll(TreeScope.Descendants, new AndCondition(
-                    new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Text),
-                    new PropertyCondition(AutomationElement.NameProperty, entry))).Count >= 2);
+                // La page affichée porte son titre, et son entrée est choisie. Dans la colonne d'icônes, l'entrée n'a plus de
+                // texte : le titre de la page est alors le seul à ce nom.
+                WaitUntil(window, () => Named(window, ControlType.ListItem, entry).GetCurrentPattern(SelectionItemPattern.Pattern) is SelectionItemPattern { Current.IsSelected: true }
+                    && window.FindAll(TreeScope.Descendants, new AndCondition(
+                        new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Text),
+                        new PropertyCondition(AutomationElement.NameProperty, entry))).Count >= 1);
                 Check(entry);
             }
 

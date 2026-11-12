@@ -26,7 +26,7 @@ public sealed class PasswordChange(string current, string newPassword, string co
 }
 
 /// <summary>
-/// La carte « Chiffrement » de l'onglet « Données », pour un coffre chiffré : retenir sa clé sur ce poste, le délai du
+/// La carte « Chiffrement » de la section « Coffre et chiffrement », pour un coffre chiffré : retenir sa clé sur ce poste, le délai du
 /// verrouillage automatique, le verrouillage tout de suite, un nouveau mot de passe et une nouvelle clé de récupération.
 /// Chaque fenêtre accepte le mot de passe ou, s'il est perdu, la clé de récupération. Les secrets passent des champs aux
 /// commandes sans être gardés, et chaque dérivation ou écriture se fait hors du fil de l'interface.

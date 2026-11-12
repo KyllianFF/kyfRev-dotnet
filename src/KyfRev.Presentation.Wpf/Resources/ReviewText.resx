@@ -348,4 +348,22 @@
   <data name="ValidationDay" xml:space="preserve">
     <value>Date de la révision</value>
   </data>
+  <data name="MakeNoteAction" xml:space="preserve">
+    <value>En faire une note</value>
+  </data>
+  <data name="MakeNoteHelp" xml:space="preserve">
+    <value>La fiche reste dans le coffre, mais sort des révisions. « Mettre en révision » l'y remet.</value>
+  </data>
+  <data name="PutInReviewAction" xml:space="preserve">
+    <value>Mettre en révision</value>
+  </data>
+  <data name="NoteStatus" xml:space="preserve">
+    <value>Note : elle n'entre pas dans les révisions.</value>
+  </data>
+  <data name="MadeNote" xml:space="preserve">
+    <value>C'est maintenant une note : elle n'entre plus dans les révisions.</value>
+  </data>
+  <data name="PutInReview" xml:space="preserve">
+    <value>En révision à l'étape {0} : {1}.</value>
+  </data>
 </root>

@@ -1,0 +1,380 @@
+<UserControl x:Class="KyfRev.Presentation.Wpf.Pages.SheetsSettingsPage"
+             x:ClassModifier="internal"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:kyf="clr-namespace:KyfRev.DesignSystem.Controls;assembly=KyfRev.DesignSystem"
+             xmlns:reading="clr-namespace:KyfRev.Presentation.Wpf.Reading"
+             xmlns:pages="clr-namespace:KyfRev.Presentation.Wpf.Pages">
+  <UserControl.Resources>
+    <BooleanToVisibilityConverter x:Key="Visible" />
+
+    <!-- Une liste de choix qui ne montre que ses éléments : ni cadre, ni défilement. -->
+    <Style x:Key="Choices" TargetType="ListBox">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="0" />
+      <Setter Property="Focusable" Value="False" />
+      <Setter Property="FontFamily" Value="{DynamicResource Kyf.Font.Ui}" />
+      <Setter Property="FontSize" Value="{DynamicResource Kyf.FontSize.Body}" />
+      <Setter Property="KeyboardNavigation.DirectionalNavigation" Value="Cycle" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="ListBox">
+            <ItemsPresenter />
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <!-- Un choix en forme de bouton : celui qui est pris se voit, comme un outil du ruban. -->
+    <Style x:Key="Tile" TargetType="ListBoxItem">
+      <Setter Property="Margin" Value="0,0,8,8" />
+      <Setter Property="Padding" Value="12,8" />
+      <Setter Property="MinHeight" Value="40" />
+      <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Text}" />
+      <Setter Property="FocusVisualStyle" Value="{DynamicResource Kyf.FocusVisual}" />
+      <Setter Property="ToolTip" Value="{Binding Detail}" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="ListBoxItem">
+            <Border x:Name="Tile" Background="{DynamicResource Kyf.Brush.Surface}" BorderBrush="{DynamicResource Kyf.Brush.ControlBorder}" BorderThickness="1"
+                    CornerRadius="{DynamicResource Kyf.Radius.Control}" Padding="{TemplateBinding Padding}">
+              <ContentPresenter VerticalAlignment="Center" />
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="Tile" Property="Background" Value="{DynamicResource Kyf.Brush.SurfaceAlt}" />
+              </Trigger>
+              <Trigger Property="IsSelected" Value="True">
+                <Setter TargetName="Tile" Property="Background" Value="{DynamicResource Kyf.Brush.NavigationActiveBackground}" />
+                <Setter TargetName="Tile" Property="BorderBrush" Value="{DynamicResource Kyf.Brush.Primary}" />
+                <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.NavigationActiveText}" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+              </Trigger>
+              <Trigger Property="IsEnabled" Value="False">
+                <Setter Property="Opacity" Value="0.5" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+      <Style.Triggers>
+        <!-- Des marges sur mesure sont en vigueur : leur champ les montre, elles n'ont pas de bouton à elles. -->
+        <DataTrigger Binding="{Binding IsExtra}" Value="True">
+          <Setter Property="Visibility" Value="Collapsed" />
+        </DataTrigger>
+      </Style.Triggers>
+    </Style>
+
+    <!-- Un échantillon de papier : celui qui est pris a un cadre et une coche. -->
+    <Style x:Key="Swatch" TargetType="ListBoxItem">
+      <Setter Property="Margin" Value="3" />
+      <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="FocusVisualStyle" Value="{DynamicResource Kyf.FocusVisual}" />
+      <Setter Property="ToolTip" Value="{Binding Label}" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="ListBoxItem">
+            <Grid>
+              <Border x:Name="Frame" Height="46" Background="{DynamicResource Kyf.Brush.Surface}" BorderBrush="{DynamicResource Kyf.Brush.ControlBorder}" BorderThickness="1" CornerRadius="5" Padding="2">
+                <reading:PaperSwatch Paper="{Binding Value}" />
+              </Border>
+              <Grid x:Name="Check" Width="18" Height="18" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,4,4,0" Visibility="Collapsed">
+                <Ellipse Fill="{DynamicResource Kyf.Brush.Primary}" />
+                <Path Data="M5,9.4 L7.8,12 L13,6.4" Stroke="{DynamicResource Kyf.Brush.OnPrimary}" StrokeThickness="1.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" />
+              </Grid>
+            </Grid>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="Frame" Property="BorderBrush" Value="{DynamicResource Kyf.Brush.TextSecondary}" />
+              </Trigger>
+              <Trigger Property="IsSelected" Value="True">
+                <Setter TargetName="Frame" Property="BorderBrush" Value="{DynamicResource Kyf.Brush.Primary}" />
+                <Setter TargetName="Frame" Property="BorderThickness" Value="2" />
+                <Setter TargetName="Frame" Property="Padding" Value="1" />
+                <Setter TargetName="Check" Property="Visibility" Value="Visible" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <!-- Un interrupteur : la même case à cocher, dessinée comme un bouton qui glisse. -->
+    <Style x:Key="Switch" TargetType="CheckBox">
+      <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="MinHeight" Value="28" />
+      <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Text}" />
+      <Setter Property="FocusVisualStyle" Value="{DynamicResource Kyf.FocusVisual}" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="CheckBox">
+            <StackPanel Orientation="Horizontal" Background="Transparent">
+              <ContentPresenter VerticalAlignment="Center" Margin="0,0,10,0" />
+              <Border x:Name="Track" Width="40" Height="22" CornerRadius="11" VerticalAlignment="Center" Background="{DynamicResource Kyf.Brush.Surface}" BorderBrush="{DynamicResource Kyf.Brush.TextSecondary}" BorderThickness="1">
+                <Ellipse x:Name="Knob" Width="14" Height="14" HorizontalAlignment="Left" Margin="3,0" Fill="{DynamicResource Kyf.Brush.TextSecondary}" />
+              </Border>
+            </StackPanel>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsChecked" Value="True">
+                <Setter TargetName="Track" Property="Background" Value="{DynamicResource Kyf.Brush.Primary}" />
+                <Setter TargetName="Track" Property="BorderBrush" Value="{DynamicResource Kyf.Brush.Primary}" />
+                <Setter TargetName="Knob" Property="HorizontalAlignment" Value="Right" />
+                <Setter TargetName="Knob" Property="Fill" Value="{DynamicResource Kyf.Brush.OnPrimary}" />
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <!-- Le curseur du zoom : celui du bas d'une fiche. -->
+    <Style x:Key="ZoomSlider" TargetType="Slider">
+      <Setter Property="Focusable" Value="True" />
+      <Setter Property="MinHeight" Value="24" />
+      <Setter Property="FocusVisualStyle" Value="{DynamicResource Kyf.FocusVisual}" />
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Slider">
+            <Grid Background="Transparent">
+              <Border Height="4" CornerRadius="2" VerticalAlignment="Center" Background="{DynamicResource Kyf.Brush.ControlBorder}" />
+              <Track x:Name="PART_Track">
+                <Track.DecreaseRepeatButton>
+                  <RepeatButton Command="Slider.DecreaseLarge" Focusable="False" IsTabStop="False" Opacity="0" AutomationProperties.Name="{x:Static pages:ReviewText.SheetZoomOut}" />
+                </Track.DecreaseRepeatButton>
+                <Track.IncreaseRepeatButton>
+                  <RepeatButton Command="Slider.IncreaseLarge" Focusable="False" IsTabStop="False" Opacity="0" AutomationProperties.Name="{x:Static pages:ReviewText.SheetZoomIn}" />
+                </Track.IncreaseRepeatButton>
+                <Track.Thumb>
+                  <Thumb Width="16" Height="16" Focusable="False">
+                    <Thumb.Template>
+                      <ControlTemplate TargetType="Thumb">
+                        <Ellipse Fill="{DynamicResource Kyf.Brush.Primary}" />
+                      </ControlTemplate>
+                    </Thumb.Template>
+                  </Thumb>
+                </Track.Thumb>
+              </Track>
+            </Grid>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <Style x:Key="RowLabel" TargetType="TextBlock">
+      <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.TextSecondary}" />
+      <Setter Property="FontSize" Value="{DynamicResource Kyf.FontSize.Body}" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="Margin" Value="0,0,12,8" />
+      <Setter Property="MinWidth" Value="92" />
+    </Style>
+
+    <!-- Les six colonnes de la grille des papiers : l'en-tête et chaque rangée partagent les mêmes. -->
+    <ItemsPanelTemplate x:Key="SixColumns">
+      <UniformGrid Columns="6" Rows="1" />
+    </ItemsPanelTemplate>
+    <ItemsPanelTemplate x:Key="Wrapping">
+      <WrapPanel />
+    </ItemsPanelTemplate>
+  </UserControl.Resources>
+
+  <ScrollViewer x:Name="Scroller" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
+    <!-- Deux colonnes : les réglages, puis ce qu'ils donnent. En fenêtre étroite, la seconde passe sous la première. -->
+    <Grid x:Name="Columns" MaxWidth="1180" HorizontalAlignment="Left">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="2*" />
+        <ColumnDefinition x:Name="SideColumn" Width="*" />
+      </Grid.ColumnDefinitions>
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto" />
+        <RowDefinition Height="Auto" />
+      </Grid.RowDefinitions>
+
+      <StackPanel x:Name="Main" Margin="0,0,12,0">
+        <kyf:Card x:Name="LayoutCard" Padding="20,16" Margin="0,0,0,12">
+          <StackPanel>
+            <TextBlock Text="{x:Static pages:MoreSettingsText.LayoutTitle}" Style="{DynamicResource Kyf.Text.Subtitle}" AutomationProperties.HeadingLevel="Level2" />
+            <TextBlock Text="{x:Static pages:MoreSettingsText.Format}" Style="{DynamicResource Kyf.Text.Secondary}" Margin="0,12,0,6" />
+            <ListBox x:Name="FormatChoice" Style="{StaticResource Choices}" ItemContainerStyle="{StaticResource Tile}" ItemsPanel="{StaticResource Wrapping}"
+                     ItemsSource="{x:Static pages:SheetsSettingsViewModel.Formats}" SelectedItem="{Binding Format}" AutomationProperties.Name="{x:Static pages:MoreSettingsText.Format}">
+              <ListBox.ItemTemplate>
+                <DataTemplate>
+                  <StackPanel Orientation="Horizontal" MinWidth="118">
+                    <!-- La feuille, à sa taille relative ; celle sans fin n'a pas de bas. -->
+                    <Border x:Name="Page" Width="15" Height="21" Margin="0,0,10,0" VerticalAlignment="Center" BorderThickness="1.5" CornerRadius="1.5"
+                            BorderBrush="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" />
+                    <StackPanel VerticalAlignment="Center">
+                      <TextBlock Text="{Binding Label}" FontWeight="SemiBold" />
+                      <TextBlock Text="{Binding Detail}" Style="{DynamicResource Kyf.Text.Caption}" />
+                    </StackPanel>
+                  </StackPanel>
+                  <DataTemplate.Triggers>
+                    <DataTrigger Binding="{Binding Value}" Value="Endless">
+                      <Setter TargetName="Page" Property="Height" Value="23" />
+                      <Setter TargetName="Page" Property="BorderThickness" Value="1.5,1.5,1.5,0" />
+                      <Setter TargetName="Page" Property="CornerRadius" Value="1.5,1.5,0,0" />
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding Value}" Value="A5">
+                      <Setter TargetName="Page" Property="Width" Value="12" />
+                      <Setter TargetName="Page" Property="Height" Value="17" />
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding Value}" Value="A6">
+                      <Setter TargetName="Page" Property="Width" Value="9" />
+                      <Setter TargetName="Page" Property="Height" Value="13" />
+                    </DataTrigger>
+                  </DataTemplate.Triggers>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+
+            <Grid Margin="0,6,0,0" IsEnabled="{Binding IsPaged}">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+              </Grid.ColumnDefinitions>
+              <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+              </Grid.RowDefinitions>
+              <TextBlock Text="{x:Static pages:MoreSettingsText.Orientation}" Style="{StaticResource RowLabel}" />
+              <ListBox x:Name="OrientationChoice" Grid.Column="1" Style="{StaticResource Choices}" ItemContainerStyle="{StaticResource Tile}" ItemsPanel="{StaticResource Wrapping}"
+                       ItemsSource="{x:Static pages:SheetsSettingsViewModel.Orientations}" SelectedItem="{Binding Orientation}" AutomationProperties.Name="{x:Static pages:MoreSettingsText.Orientation}">
+                <ListBox.ItemTemplate>
+                  <DataTemplate>
+                    <StackPanel Orientation="Horizontal">
+                      <Border x:Name="Page" Width="11" Height="15" Margin="0,0,8,0" VerticalAlignment="Center" BorderThickness="1.5" CornerRadius="1.5"
+                              BorderBrush="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}" />
+                      <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
+                    </StackPanel>
+                    <DataTemplate.Triggers>
+                      <DataTrigger Binding="{Binding Value}" Value="True">
+                        <Setter TargetName="Page" Property="Width" Value="15" />
+                        <Setter TargetName="Page" Property="Height" Value="11" />
+                      </DataTrigger>
+                    </DataTemplate.Triggers>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+
+              <TextBlock Grid.Row="1" Text="{x:Static pages:MoreSettingsText.Margins}" Style="{StaticResource RowLabel}" />
+              <WrapPanel Grid.Row="1" Grid.Column="1">
+                <ListBox x:Name="MarginChoice" Style="{StaticResource Choices}" ItemContainerStyle="{StaticResource Tile}" ItemsPanel="{StaticResource Wrapping}"
+                         ItemsSource="{Binding Margins}" SelectedItem="{Binding Margin}" DisplayMemberPath="Label" AutomationProperties.Name="{x:Static pages:MoreSettingsText.Margins}" />
+                <StackPanel Orientation="Horizontal" Margin="4,0,0,8">
+                  <TextBlock Text="{x:Static pages:MoreSettingsText.MarginsOwn}" Style="{DynamicResource Kyf.Text.Secondary}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                  <TextBox x:Name="CustomMarginBox" Width="64" Text="{Binding CustomMargin, UpdateSourceTrigger=LostFocus}" TextAlignment="Right" KeyDown="OnMarginKey"
+                           FontFamily="{DynamicResource Kyf.Font.Code}" AutomationProperties.Name="{x:Static pages:MoreSettingsText.MarginsOwn}"
+                           AutomationProperties.HelpText="{x:Static pages:MoreSettingsText.MarginsOwnHelp}" ToolTip="{x:Static pages:MoreSettingsText.MarginsOwnHelp}" />
+                  <TextBlock Text="{x:Static pages:MoreSettingsText.Centimetres}" Style="{DynamicResource Kyf.Text.Secondary}" VerticalAlignment="Center" Margin="6,0,0,0" />
+                </StackPanel>
+              </WrapPanel>
+            </Grid>
+
+            <!-- Les fiches qui ont leur propre mise en page : on peut les ramener à celle-ci, et s'en dédire. -->
+            <Border x:Name="OwnLayouts" BorderBrush="{DynamicResource Kyf.Brush.Divider}" BorderThickness="0,1,0,0" Margin="0,8,0,0" Padding="0,12,0,0"
+                    Visibility="{Binding HasOwnLayouts, Converter={StaticResource Visible}}">
+              <DockPanel>
+                <Button x:Name="AlignButton" DockPanel.Dock="Right" VerticalAlignment="Center" Margin="12,0,0,0" Content="{x:Static pages:MoreSettingsText.AlignOwnLayouts}" Command="{Binding AlignOwnLayoutsCommand}" />
+                <TextBlock x:Name="OwnLayoutsNote" Text="{Binding OwnLayoutsNote}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" VerticalAlignment="Center" />
+              </DockPanel>
+            </Border>
+            <Border x:Name="Aligned" BorderBrush="{DynamicResource Kyf.Brush.Divider}" BorderThickness="0,1,0,0" Margin="0,8,0,0" Padding="0,12,0,0"
+                    Visibility="{Binding HasAlignedNote, Converter={StaticResource Visible}}">
+              <DockPanel>
+                <Button x:Name="UndoAlignButton" DockPanel.Dock="Right" VerticalAlignment="Center" Margin="12,0,0,0" Content="{x:Static pages:MoreSettingsText.UndoAlign}" Command="{Binding UndoAlignCommand}" />
+                <TextBlock x:Name="AlignedNote" Text="{Binding AlignedNote}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" VerticalAlignment="Center" AutomationProperties.LiveSetting="Polite" />
+              </DockPanel>
+            </Border>
+          </StackPanel>
+        </kyf:Card>
+
+        <kyf:Card x:Name="PaperCard" Padding="20,16" Margin="0,0,0,12">
+          <StackPanel>
+            <DockPanel>
+              <CheckBox x:Name="PaperOnBox" DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding IsPaperOn}" Content="{x:Static pages:MoreSettingsText.PaperShown}"
+                        AutomationProperties.Name="{x:Static pages:MoreSettingsText.PaperShown}" />
+              <TextBlock Text="{x:Static pages:MoreSettingsText.PaperTitle}" Style="{DynamicResource Kyf.Text.Subtitle}" AutomationProperties.HeadingLevel="Level2" VerticalAlignment="Center" />
+            </DockPanel>
+            <TextBlock Text="{x:Static pages:MoreSettingsText.PaperMatrixHelp}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,4,0,10" />
+            <Grid x:Name="PaperGrid">
+              <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" MinWidth="76" />
+                <ColumnDefinition Width="*" />
+              </Grid.ColumnDefinitions>
+              <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+              </Grid.RowDefinitions>
+              <ItemsControl x:Name="PaperNames" Grid.Column="1" ItemsSource="{x:Static pages:SheetsSettingsViewModel.Papers}" ItemsPanel="{StaticResource SixColumns}" Focusable="False">
+                <ItemsControl.ItemTemplate>
+                  <DataTemplate>
+                    <TextBlock Text="{Binding Label}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" TextAlignment="Center" VerticalAlignment="Bottom" Margin="2,0,2,2" />
+                  </DataTemplate>
+                </ItemsControl.ItemTemplate>
+              </ItemsControl>
+
+              <TextBlock Grid.Row="1" Text="{x:Static pages:MoreSettingsText.PaperOfEndless}" Style="{DynamicResource Kyf.Text.Body}" VerticalAlignment="Center" Margin="0,0,8,0" />
+              <ListBox x:Name="PaperEndlessChoice" Grid.Row="1" Grid.Column="1" Style="{StaticResource Choices}" ItemContainerStyle="{StaticResource Swatch}" ItemsPanel="{StaticResource SixColumns}"
+                       ItemsSource="{x:Static pages:SheetsSettingsViewModel.Papers}" SelectedItem="{Binding PaperEndless}" AutomationProperties.Name="{x:Static pages:MoreSettingsText.PaperEndless}" />
+              <TextBlock Grid.Row="2" Text="A4" Style="{DynamicResource Kyf.Text.Body}" VerticalAlignment="Center" Margin="0,0,8,0" />
+              <ListBox x:Name="PaperA4Choice" Grid.Row="2" Grid.Column="1" Style="{StaticResource Choices}" ItemContainerStyle="{StaticResource Swatch}" ItemsPanel="{StaticResource SixColumns}"
+                       ItemsSource="{x:Static pages:SheetsSettingsViewModel.Papers}" SelectedItem="{Binding PaperA4}" AutomationProperties.Name="{x:Static pages:MoreSettingsText.PaperA4}" />
+              <TextBlock Grid.Row="3" Text="A5" Style="{DynamicResource Kyf.Text.Body}" VerticalAlignment="Center" Margin="0,0,8,0" />
+              <ListBox x:Name="PaperA5Choice" Grid.Row="3" Grid.Column="1" Style="{StaticResource Choices}" ItemContainerStyle="{StaticResource Swatch}" ItemsPanel="{StaticResource SixColumns}"
+                       ItemsSource="{x:Static pages:SheetsSettingsViewModel.Papers}" SelectedItem="{Binding PaperA5}" AutomationProperties.Name="{x:Static pages:MoreSettingsText.PaperA5}" />
+              <TextBlock Grid.Row="4" Text="A6" Style="{DynamicResource Kyf.Text.Body}" VerticalAlignment="Center" Margin="0,0,8,0" />
+              <ListBox x:Name="PaperA6Choice" Grid.Row="4" Grid.Column="1" Style="{StaticResource Choices}" ItemContainerStyle="{StaticResource Swatch}" ItemsPanel="{StaticResource SixColumns}"
+                       ItemsSource="{x:Static pages:SheetsSettingsViewModel.Papers}" SelectedItem="{Binding PaperA6}" AutomationProperties.Name="{x:Static pages:MoreSettingsText.PaperA6}" />
+            </Grid>
+          </StackPanel>
+        </kyf:Card>
+      </StackPanel>
+
+      <StackPanel x:Name="Side" Grid.Column="1">
+        <kyf:Card x:Name="PreviewCard" Padding="20,16" Margin="0,0,0,12">
+          <StackPanel>
+            <TextBlock Text="{x:Static pages:MoreSettingsText.PreviewTitle}" Style="{DynamicResource Kyf.Text.Subtitle}" AutomationProperties.HeadingLevel="Level2" />
+            <Border Height="380" Margin="0,10,0,8" Background="{DynamicResource Kyf.Brush.SurfaceAlt}" CornerRadius="{DynamicResource Kyf.Radius.Control}">
+              <reading:SheetPaperPreview x:Name="Preview" Layout="{Binding PreviewLayout}" Paper="{Binding PreviewPaper}" Comfort="{Binding PreviewComfort}"
+                                    Title="{x:Static pages:MoreSettingsText.PreviewSheetTitle}" Text="{x:Static pages:MoreSettingsText.PreviewSheetText}" />
+            </Border>
+            <TextBlock x:Name="PreviewCaption" Text="{Binding PreviewCaption}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" TextAlignment="Center" />
+          </StackPanel>
+        </kyf:Card>
+
+        <kyf:Card x:Name="ZoomCard" Padding="20,16" Margin="0,0,0,12">
+          <StackPanel>
+            <TextBlock Text="{x:Static pages:MoreSettingsText.ZoomTitle}" Style="{DynamicResource Kyf.Text.Subtitle}" AutomationProperties.HeadingLevel="Level2" Margin="0,0,0,10" />
+            <DockPanel>
+              <Button x:Name="ZoomOutButton" DockPanel.Dock="Left" Content="−" MinWidth="40" Padding="0" Command="{Binding ZoomOutCommand}"
+                      ToolTip="{x:Static pages:ReviewText.SheetZoomOut}" AutomationProperties.Name="{x:Static pages:ReviewText.SheetZoomOut}" />
+              <Button x:Name="ZoomResetButton" DockPanel.Dock="Right" MinWidth="72" Padding="8,0" Margin="8,0,0,0" Content="{Binding ZoomLabel}" Command="{Binding ResetZoomCommand}"
+                      FontFamily="{DynamicResource Kyf.Font.Code}" ToolTip="{x:Static pages:ReviewText.SheetZoomReset}" AutomationProperties.Name="{Binding ZoomLabel}"
+                      AutomationProperties.HelpText="{x:Static pages:ReviewText.SheetZoomReset}" />
+              <Button x:Name="ZoomInButton" DockPanel.Dock="Right" Content="+" MinWidth="40" Padding="0" Command="{Binding ZoomInCommand}"
+                      ToolTip="{x:Static pages:ReviewText.SheetZoomIn}" AutomationProperties.Name="{x:Static pages:ReviewText.SheetZoomIn}" />
+              <Slider x:Name="ZoomSlider" VerticalAlignment="Center" Margin="10,0" Minimum="50" Maximum="200" SmallChange="10" LargeChange="10" TickFrequency="10" IsSnapToTickEnabled="True"
+                      Value="{Binding ZoomPercent}" Style="{StaticResource ZoomSlider}" AutomationProperties.Name="{x:Static pages:MoreSettingsText.ZoomTitle}" />
+            </DockPanel>
+            <TextBlock Text="{x:Static pages:MoreSettingsText.ZoomHelp}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,10,0,0" />
+          </StackPanel>
+        </kyf:Card>
+
+        <kyf:Card x:Name="FontCard" Padding="20,16" Margin="0,0,0,12">
+          <StackPanel>
+            <TextBlock Text="{x:Static pages:MoreSettingsText.FontTitle}" Style="{DynamicResource Kyf.Text.Subtitle}" AutomationProperties.HeadingLevel="Level2" Margin="0,0,0,10" />
+            <ComboBox x:Name="FontChoice" ItemsSource="{x:Static pages:SheetsSettingsViewModel.Fonts}" SelectedItem="{Binding Font}" DisplayMemberPath="Label"
+                      AutomationProperties.Name="{x:Static pages:MoreSettingsText.FontTitle}" />
+            <TextBlock x:Name="RecommendedFont" Text="{Binding RecommendedFontNote}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="0,10,0,6" />
+            <Button x:Name="UseFontButton" HorizontalAlignment="Left" Content="{x:Static pages:MoreSettingsText.UseRecommendedFont}" Command="{Binding UseRecommendedFontCommand}" />
+            <TextBlock Text="{x:Static pages:MoreSettingsText.FontHelp}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,10,0,0" />
+          </StackPanel>
+        </kyf:Card>
+      </StackPanel>
+    </Grid>
+  </ScrollViewer>
+</UserControl>

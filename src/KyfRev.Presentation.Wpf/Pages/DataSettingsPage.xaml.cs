@@ -7,7 +7,8 @@ using KyfRev.Presentation.Wpf.Shell;
 namespace KyfRev.Presentation.Wpf.Pages;
 
 /// <summary>
-/// L'onglet « Données » de la vue « Paramètres ». Les mots de passe et les clés de récupération de la carte « Chiffrement »
+/// La page des données de la vue « Paramètres », qui sert deux sections : « Coffre et chiffrement » et « Sauvegardes et
+/// exports ». Les mots de passe et les clés de récupération de la carte « Chiffrement »
 /// ne se lient pas : quand leur fenêtre se ferme, la vue les passe à la commande, puis vide leurs champs, et ne les garde
 /// nulle part.
 /// </summary>

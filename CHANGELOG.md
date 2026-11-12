@@ -8,6 +8,114 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 ## [Non publié]
 
 ### Ajouté
+- Papier réglé : le texte se pose sur les lignes, en lecture, en révision et en écriture. Chaque ligne de texte occupe
+  un pas d'écriture : 8 mm sur les grands carreaux et le papier ligné, 10 mm (une ligne sur deux) sur les petits
+  carreaux, les points et le millimétré. Entrée laisse une ligne vide, Maj+Entrée passe à la ligne du dessous ; un titre
+  a une ligne vide avant lui, et un grand titre prend deux lignes des grands carreaux. Un tableau, une image, un schéma,
+  une formule ou un bloc de code gardent leur hauteur ; le texte qui les suit reprend sur la première ligne entière. Les
+  lignes du papier partent du texte : sur chaque feuille, la première ligne de texte est sur une ligne. Rien de cela ne
+  touche l'impression, qui garde l'interligne du texte. Le pas est arrondi au trois-centième de pouce (30,08 et 37,76
+  points), l'unité de la mise en page : le décor y perd un demi pour cent sur de vrais millimètres.
+- Tableaux sur un papier réglé : chaque case a un fond plein, celui de la feuille ; l'en-tête, les bandes et les couleurs
+  choisies restent par-dessus. La réglure ne passe plus à travers le texte d'un tableau.
+- Police d'écriture : cinq polices pour le texte des fiches, en lecture, en révision et en écriture (l'écriture mise en
+  forme gardait jusqu'ici la police de l'application) : sans empattements, avec empattements (Georgia), manuscrite (Segoe
+  Print), au feutre (Ink Free), à chasse fixe. Les titres prennent la police choisie. Chaque papier a sa police
+  conseillée, proposée d'un bouton : manuscrite sur les grands carreaux, à empattements sur le papier ligné, au feutre
+  sur les points, à chasse fixe sur le millimétré, celle de l'application sinon. Une lettre manuscrite ne se pose pas
+  toujours exactement sur la ligne : c'est le dessin de ces polices.
+- Paramètres › Feuilles, refait d'après sa maquette : la feuille en quatre boutons avec leurs dimensions, l'orientation
+  et les marges en boutons, des marges sur mesure tapées en centimètres ; « Les aligner sur ce réglage » ramène à la mise
+  en page de toutes les fiches celles qui avaient la leur, et « Annuler » la leur rend ; une grille des papiers, un
+  échantillon par papier et par type de feuille, avec un interrupteur « Montrer le papier » ; un aperçu de la feuille,
+  de ses marges, de son papier et de la police ; le zoom des fiches ; la police d'écriture et celle que le papier
+  conseille. « Rétablir les réglages d'origine » y remet aussi le zoom.
+- Paramètres, « Chercher un réglage » : au-dessus de la liste des sections, quelques lettres suffisent, sans égard aux
+  accents (« theme », « sombre », « anki », « marges »). Les résultats prennent la place de la liste ; chacun dit sa
+  section et l'ouvre d'un clic. Entrée ouvre le premier, Échap rend la liste. La recherche mène à la section, elle ne
+  désigne pas le réglage dans la page.
+- Paramètres, « Rétablir les réglages d'origine » : en tête des sections retenues sur l'ordinateur (Apparence, Lecture,
+  Feuilles, Menu, Raccourcis), le bouton remet les réglages de cette section seulement, et reste éteint tant que tout y
+  est d'origine. « Annuler » rend les réglages d'avant, tant que l'on reste dans la section sans rien y changer. Les
+  mises en page propres à une fiche ne sont pas touchées. Les sections du coffre n'ont pas ce bouton.
+- Papier des feuilles : derrière le texte d'une fiche, une feuille de papier, à l'écran seulement (rien ne s'en imprime).
+  Six papiers : uni, petits carreaux (5 mm), grands carreaux (la réglure des cahiers d'écolier, avec sa marge rouge),
+  lignes, points, millimétré. Le papier se choisit une fois par type de feuille (sans fin, A4, A5, A6), pour toutes les
+  fiches, dans le groupe « Papier » de l'onglet Mise en page ou dans Paramètres › Feuilles. Un bouton, à côté du zoom de la
+  fiche et en tête du groupe « Papier », l'allume et l'éteint. Sur un papier réglé, les fonds des blocs de code et des
+  citations laissent voir la réglure.
+- Feuilles partout où une fiche se lit : avec une feuille A4, A5 ou A6, la page de la fiche, l'aperçu d'Aujourd'hui et du
+  Carnet et l'aperçu de l'écriture en Markdown montrent les feuilles, l'écart entre elles et leur papier. Dans un aperçu
+  plus étroit que la feuille, celle-ci est vue de plus loin pour tenir dans la largeur.
+- « Imprimer… » au clic droit : dans le texte d'une fiche lue, sur une fiche du Carnet et sur une ligne d'Aujourd'hui (la
+  fiche s'ouvre sur sa fenêtre d'impression).
+- Paramètres › Feuilles : la mise en page de toutes les fiches (feuille, orientation, marges) et le papier de chaque type de
+  feuille.
+- Paramètres › Raccourcis : dix raccourcis se changent en tapant les nouvelles touches (recherche, aide, concentration,
+  plein écran, valider, écrire, imprimer, partager, capture, verrouiller), avec refus d'une touche déjà prise et retour à
+  l'origine. L'aide (F1) montre les touches en vigueur ; les infobulles et la recherche nomment encore celles d'origine.
+- Paramètres › Menu : les vues du haut du menu se réordonnent, et Ctrl+1 à Ctrl+9 suivent.
+- Imprimer (Ctrl+P) : une fenêtre au-dessus de la fiche, avec ses réglages à gauche et l'aperçu d'une feuille à droite,
+  que l'on feuillette. On y choisit l'imprimante, le nombre de copies, les feuilles (toutes, ou certaines par leurs
+  numéros et plages : « 1-2, 4 »), le recto seul ou le recto verso (bord long, bord court), l'orientation, les marges (par
+  défaut celles de la fiche) et les numéros de page en bas, au format 1/4. Les pages sont celles de la mise en page de la
+  fiche, sauts de page et en-têtes de tableau répétés compris ; une fiche restée en feuille sans fin s'imprime en A4. Ce
+  qui sort est ce que montre l'aperçu, toujours en thème clair et sur fond blanc. « Imprimer la fiche » est aussi dans le
+  menu des autres actions.
+- Saut de page et page blanche : quand la fiche a une feuille (A4, A5, A6), l'onglet Insertion gagne un groupe « Pages ».
+  « Saut de page » fait commencer la suite sur la page suivante ; « Page blanche » laisse une page entière vide. Chacun
+  s'écrit dans la fiche, seul sur sa ligne, en un commentaire que les autres outils Markdown n'affichent pas
+  (`<!-- kyfrev saut-de-page -->`, `<!-- kyfrev page-blanche -->`). En écriture, un trait pointillé le montre et il se
+  retire comme un bloc ; en lecture il ne se voit pas ; sur la feuille sans fin il ne fait rien.
+- Pages : un bloc coupé entre deux pages se ferme au bas de la première et se rouvre en haut de la suivante, au lieu de
+  traverser les marges. L'en-tête d'un tableau coupé est répété en haut de chaque page ; une citation coupée, ou un
+  tableau sans en-tête, dit « suite page suivante » puis « suite ». Ces rappels ne sont que de l'affichage : ils ne sont
+  pas dans le texte de la fiche.
+- Écrire : un onglet « Mise en page ». Il choisit la feuille de la fiche (sans fin, comme toujours, ou A4, A5, A6), son
+  orientation (portrait, paysage) et ses marges (étroites, normales, larges, ou sur mesure au demi-centimètre), en icônes
+  dont le nom se lit au survol. Le choix vaut « à toutes les fiches » ou « à cette fiche », qui garde alors la sienne. Il
+  règle l'affichage en lecture, en révision et en écriture, et il est retenu sur cet ordinateur : le texte de la fiche
+  n'est pas touché, et rien ne s'écrit dans le coffre.
+- Pages : une fiche qui a une feuille se lit et s'écrit en pages, comme dans un traitement de texte, mais sans jamais
+  couper un bloc. Le paragraphe, le titre ou l'élément de liste qui dépasserait le bas de la page commence la suivante ;
+  un tableau court sur plusieurs pages sans qu'une ligne soit coupée ; une image ou un schéma ne chevauche jamais deux
+  pages, et rétrécit s'il est plus haut qu'une page. Sous la fiche, à côté du zoom : la feuille, le nombre de pages, et
+  « Ajuster à la largeur », qui règle le zoom pour que la feuille tienne dans la fenêtre.
+- Schéma réseau : grouper et dégrouper. Plusieurs éléments choisis (Maj ou Ctrl + clic, ou un cadre tracé à la souris, qui
+  prend maintenant aussi les notes et les zones qu'il contient) se groupent d'un bouton de la barre de la sélection, du
+  panneau de propriétés ou par Ctrl+G : équipements, notes, zones et cadres. Un clic sur l'un d'eux les choisit alors tous,
+  et ils se déplacent, s'alignent et se retirent ensemble ; un second clic sur un élément du groupe le choisit seul, pour
+  le régler. Ctrl+Maj+G dégroupe sans rien déplacer. Un groupe ne dessine rien, et s'annule comme le reste. Le fichier du
+  schéma ne gagne une clé (`ensembles`) que s'il y a un groupe : une version plus ancienne l'ignore.
+- Schémas réseau : archiver et supprimer un schéma, par ses boutons (sur sa carte et dans son détail) comme au clic droit sur
+  sa carte. Un schéma archivé quitte la liste, mais les fiches qui l'insèrent le montrent toujours ; un schéma supprimé va
+  à la corbeille des schémas, après une confirmation qui nomme les fiches où il manquera. Rien n'est effacé : les archives
+  et la corbeille se lisent sous la liste, et tout s'y restaure tel quel (`schemas/archives/`, `schemas/.supprimes/`).
+- Écrire : le clic droit dans le texte montre la mise en forme déjà là (gras, italique, souligné, barré ressortent quand
+  ils sont actifs), et retire d'un choix le bloc de code où est le curseur, ou l'image visée.
+- Zoom de la fiche : en bas à droite d'une fiche, un curseur et deux boutons l'agrandissent ou la rétrécissent, de 50 à
+  200 %, par pas de 10 ; le pourcentage ramène à 100 % d'un clic. Il vaut en lecture, en révision et en écriture, et il est
+  retenu sur cet ordinateur. Il ne touche pas au reste de l'interface, dont la taille se règle toujours dans
+  Paramètres › Apparence (et avec Ctrl + et Ctrl −).
+- Fiches : deux boutons, « Nouvelle fiche » et « Nouvelle note » ; un choix toujours en vue, avec les nombres, entre tout,
+  les fiches seules ou les notes seules ; et, au clic droit sur une fiche, « En faire une simple note » ou
+  « En faire une fiche de révision ».
+- Écrire : un onglet « Image », quand une image est choisie dans le texte mis en forme (un clic, ou un clic droit). Il
+  règle sa taille (Petite, Moyenne, Grande, Pleine largeur, Origine, ou cinq points de plus ou de moins, en pourcentage de
+  la largeur du texte), sa place (dans le texte, à gauche, au centre, à droite), son cadre (« Rogner… » trace le rectangle
+  à garder, « Image entière » le retire), ses zones masquées et sa description. La lecture et la révision montrent l'image
+  de la même façon. Tout s'écrit dans le titre Markdown de l'image, que les autres outils gardent
+  (`![Cellule](cellule.png "kyfrev-largeur:60 kyfrev-position:centre kyfrev-cadre:10,5,80,90")`) : le fichier de l'image
+  n'est jamais modifié, et un rognage se retire. Changer le cadre retire les zones masquées, qui n'y seraient plus à leur
+  place. Une image dont le titre est une légende écrite à la main garde sa légende : l'onglet le dit et ne la règle pas.
+- Notes : une fiche peut être une simple note, tenue hors des révisions. Elle s'écrit, se range, s'étiquette et se cherche
+  comme les autres, mais n'a ni étape ni échéance et n'apparaît ni sur Aujourd'hui, ni dans la charge, ni dans une séance.
+  Dans « Nouvelle fiche », la case « Simple note » la crée ainsi ; dans la vue Fiches, le filtre d'état gagne « Notes », et
+  la liste dit « Note » à la place de l'étape. Sur une fiche, « En faire une note » (menu des autres actions) la sort des
+  révisions, et « Mettre en révision » l'y fait entrer : à J0 ce jour-là si elle n'a jamais été révisée, sinon là où elle
+  en était. Rien ne s'ajoute à l'historique. La boîte de réception de la capture rapide est désormais une note. Dans le
+  coffre, une note porte `cycle.horsRevision` en plus de `cycle.suspendueLe`, écrits seulement pour elle : la 0.x et la
+  bêta 1, qui ne connaissent ni l'un ni l'autre, la présentent comme une fiche à réviser.
 
 - « J'avais oublié », à côté de « Valider », pour une fiche, un passage ou une définition. La révision compte, et l'étape
   recule d'un cran au lieu d'avancer : après un oubli à J7, c'est J3 qui revient trois jours plus tard, jamais en dessous de
@@ -42,17 +150,17 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   hydrates et flèches de réaction (`\ce{2H2 + O2 -> 2H2O}`, `\ce{SO4^2-}`, `\ce{N2 + 3H2 <=> 2NH3}`). C'est le cœur de
   mhchem, traduit pour le moteur de formules de kyfRev, pas tout mhchem.
 - Sous le titre d'une fiche : sa date de création, son cycle à partir du deuxième, et son temps de lecture dès une minute.
-- Paramètres › Données : « Passages et définitions pour Anki », un fichier à importer dans Anki ou AnkiDroid pour réviser
+- Paramètres › Sauvegardes et exports : « Passages et définitions pour Anki », un fichier à importer dans Anki ou AnkiDroid pour réviser
   en déplacement. Une définition donne son terme au recto, un passage son contexte troué ; chaque carte porte l'identifiant
   du passage, si bien qu'un nouvel import la met à jour sans la doubler. Ce qui est fait dans Anki ne revient pas.
-- Paramètres › Données : « Échéances pour un agenda (.ics) ». Un événement d'une journée par jour de révision, qui dit
+- Paramètres › Sauvegardes et exports : « Échéances pour un agenda (.ics) ». Un événement d'une journée par jour de révision, qui dit
   combien de révisions tombent et lesquelles, et un par examen à venir. Les retards sont comptés aujourd'hui, les éléments
   suspendus n'y figurent pas, et un nouvel import met l'agenda à jour. Le texte des passages n'y est jamais écrit, mais
   les titres des fiches le sont : dans un agenda en ligne, ils quittent l'ordinateur, et le bouton le dit.
 - Capture rapide : Ctrl+Maj+N, depuis n'importe quelle vue, ou « Capture rapide » dans Ctrl+K. La note s'ajoute, datée,
   à la fiche « Boîte de réception », à la racine des fiches ; créée au besoin, cette fiche est suspendue : elle n'entre pas
   dans les révisions. Sans coffre ouvert, ou coffre verrouillé, la capture ne s'ouvre pas.
-- Paramètres › Général : « Capture rapide depuis n'importe quelle application (Ctrl+Alt+N) », coupé par défaut. Actif, le
+- Paramètres › Raccourcis : « Capture rapide depuis n'importe quelle application (Ctrl+Alt+N) », coupé par défaut. Actif, le
   raccourci ramène la fenêtre de kyfRev devant et ouvre la capture. Il n'est demandé à Windows que si le réglage est actif,
   et rendu dès qu'on le coupe.
 - Aujourd'hui : « Nouvelle fiche », qui la crée dans le dossier choisi dans la liste (la racine sinon) et l'ouvre en
@@ -71,6 +179,11 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   comme les trous du texte ; hors révision, l'image se voit entière. Les masques s'écrivent dans le titre Markdown de
   l'image (`![Cellule](cellule.png "kyfrev-masques:10,20,30,15")`, en pourcentages de l'image), que l'éditeur visuel et les
   autres outils gardent. Une image écrite par référence, ou qui a déjà un titre, ne peut pas en porter, et la fenêtre le dit.
+  Sans souris : « Ajouter une zone », ou Inser sur l'image, pose une zone que les flèches déplacent (Ctrl pour aller plus
+  vite) et dont Maj et les flèches changent la taille ; Page précédente et Page suivante passent d'une zone à l'autre,
+  Suppr retire la zone choisie. Sa place et sa taille sont dites au lecteur d'écran. En écriture aussi, dans le texte mis en
+  forme : le clic droit sur une image du coffre propose « Masquer des zones… », et les zones s'écrivent dans le texte en
+  cours, qui s'enregistre comme d'habitude.
 - Fiches : un filtre par étiquettes, comme la 0.x. Chaque pastille dit son nombre de fiches, on peut en choisir plusieurs, et
   « Tout afficher » les retire ; sur une fenêtre étroite, il se replie avec les autres filtres.
 - Écrire : les boutons « Code dans le texte » et « Citation », dans le ruban et dans le clic droit.
@@ -78,6 +191,59 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   garde la largeur de lecture même si la pleine largeur est choisie, et le mode est retenu sur l'ordinateur.
 
 ### Modifié
+- Lecture : changer la taille du texte, l'interligne ou la police dans les paramètres refait aussitôt le texte des fiches
+  déjà montrées (une fiche ouverte, un aperçu), sans attendre qu'on les rouvre.
+- Paramètres : les onglets du haut laissent place à une liste de sections à gauche, rangées par portée. « Sur cet
+  ordinateur » : Apparence, Lecture, Feuilles, Menu, Raccourcis ; « Dans ce coffre » : Révisions, Modules et extensions,
+  Coffre et chiffrement, Sauvegardes et exports ; « kyfRev » : À propos. La section ouverte montre son titre et, en une
+  ligne, ce qu'on y règle. L'ancien onglet Général se partage entre Apparence (thème, taille de l'interface,
+  accessibilité) et Lecture (texte des fiches, aperçu, voix) ; l'ancien onglet Données entre Coffre et chiffrement et
+  Sauvegardes et exports (sauvegardes, corbeille, exports) ; la capture rapide depuis une autre application est dans
+  Raccourcis. Aucun réglage n'a changé de sens ni de valeur. En fenêtre étroite, la liste devient une liste déroulante
+  au-dessus de la section.
+- Paramètres n'a plus de « Largeur des fiches » : une fiche garde sa largeur de lecture, ou prend celle de sa feuille. Une
+  préférence « toute la largeur » déjà enregistrée est ignorée.
+- Ctrl+P ouvre « Imprimer » ; « Partager » (PDF, page web, Markdown), qui avait ce raccourci, passe à Ctrl+Maj+P.
+- Schéma réseau : le bouton qui dessine un cadre nommé autour des équipements choisis s'appelle « Encadrer » ; « Grouper »
+  désigne maintenant le vrai groupement.
+- Écrire : mettre en forme depuis le ruban (gras, titre, liste, citation, alignement) laisse le curseur où il était, dans le
+  texte : on continue de taper sans recliquer.
+- Écrire : les onglets Tableau et Image du ruban sont en icônes. Chaque choix se montre par un dessin (un tableau dont la
+  première ligne est pleine pour « Première ligne », dont seul le contour est tracé pour « Contour »…), le choix en cours
+  ressort, et le nom de l'action se lit au survol et pour le lecteur d'écran. L'onglet Tableau tient ainsi sur une seule
+  ligne de groupes, à la hauteur de l'Accueil.
+- Menu latéral : il garde sa largeur dans toutes les vues, le Carnet compris ; seule une fenêtre plus étroite le réduit à
+  sa colonne d'icônes. Dans cette colonne, chaque entrée est un bouton carré, tous de la même taille, avec l'icône en
+  grand et sans texte : le nom se lit au survol.
+- Écrire : le ruban garde la même hauteur d'un onglet à l'autre, celle de l'Accueil, et les titres des onglets Tableau et
+  Image sont du texte seul, comme les autres.
+- Écrire, fenêtre étroite : la barre courte du ruban n'a plus que des icônes, plus grandes, sur des boutons plus faciles à
+  viser ; leur nom se lit au survol.
+- Écrire, image : une image choisie a des poignées, aux quatre coins et sur les deux côtés ; les tirer change sa largeur,
+  la hauteur suit, les proportions sont toujours gardées. « Rogner… » montre l'image entière, ce qui est écarté sous un
+  voile, et un cadre à huit poignées qu'on tire ou qu'on déplace, comme dans un traitement de texte. Dans l'onglet Image, le
+  groupe Taille a son grand bouton « Rogner » et la hauteur et la largeur en centimètres (en taper une change l'autre) ; la
+  position se choisit par quatre icônes, dont celle en cours ressort.
+- Carnet plus compact : « Nouvelle fiche » et « Nouvelle note » sont à droite du titre ; la recherche, les filtres (repliés
+  sous « Filtres »), les trois affichages et les étiquettes (repliées sous « Étiquettes ») sont dans la colonne de la liste,
+  qui s'élargit à 480 pixels pour ne plus couper les titres. L'aperçu prend le reste.
+- Aperçu du Carnet : « Ouvrir la fiche » disparaît, « Lire » le faisait déjà ; « Historique » suit les étapes du cycle, sur
+  la même ligne. Après une capture rapide, la vue affichée se relit : la note paraît dans le Carnet sans le quitter.
+- La vue « Fiches » s'appelle « Carnet » : elle réunit les fiches de révision et les simples notes. Chaque ligne dit ce
+  qu'est le document, dans une étiquette à droite : son étape et son échéance, « Archivée » ou « Note ». « Nouvelle fiche »
+  et « Nouvelle note » sont sous le titre, chacun ouvrant sa fenêtre : la case « Simple note » n'existe plus. Les trois
+  affichages sont des pastilles, et l'aperçu a ses boutons « Lire » et « Écrire ».
+- Le menu masqué, montré au survol, occupe toute la hauteur de la fenêtre, et son bouton a son propre signe (une fenêtre et
+  son volet de gauche).
+- Ctrl+molette règle le zoom de la fiche, en lecture, en révision et en écriture.
+- Menu latéral : son bouton est maintenant à gauche de la barre de titre, juste au-dessus de lui. Menu masqué, survoler le
+  bouton le montre par-dessus la page, le temps que la souris y reste ; un clic le rend pour de bon. Dans la vue Fiches et
+  sur une fiche ouverte, le menu se réduit de nouveau à ses icônes, même en fenêtre large : il ne change de taille qu'une
+  fois la souris relâchée, pour ne plus faire choisir l'entrée passée sous le pointeur.
+- Écrire : le clic droit sur une image a un menu court, comme celui d'une fiche (couper, copier, coller, puis « Masquer
+  des zones… » et « Rogner… »), et il choisit l'image. Les onglets Tableau et Image ont la hauteur des autres.
+- Barre de titre : le bouton du mode concentration est toujours là. Un clic masque le menu latéral pour laisser toute la
+  largeur à la fiche, un autre le rend (Ctrl+Maj+F fait de même). Il n'apparaissait qu'une fois le menu masqué.
 
 - L'application installée est précompilée (ReadyToRun) : au démarrage, son code n'attend plus le compilateur à la volée.
   L'installation pèse 7 Mo de plus (185 Mo au lieu de 178).
@@ -92,6 +258,32 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   Citations s'aligne sur celui de la carte.
 
 ### Corrigé
+- Ctrl+P en lecture ouvrait la fenêtre d'impression de Windows, sans aperçu : le texte lu prenait le raccourci pour lui
+  avant la page. Il ouvre maintenant la fenêtre « Imprimer » de l'application, où que soit le clavier.
+- Pages : avec certaines marges, la mise en pages de la lecture pouvait hésiter sans fin entre deux découpages (un bloc
+  tantôt en bas d'une page, tantôt en haut de la suivante). Les marges de deux blocs qui se suivent se confondent ; le
+  calcul en tient compte, et s'en tient de toute façon à un découpage après quelques mesures.
+- Schémas réseau : un schéma ne pouvait être ni supprimé ni archivé, faute de commande.
+- Écrire : l'onglet Tableau du ruban dépassait les autres de deux points, et les titres des groupes de l'onglet Insertion
+  étaient plus hauts que ceux des autres onglets.
+- Menu réduit à ses icônes : elles n'étaient pas entières, coupées à droite.
+- Menus du clic droit : la marge de droite était plus large que celle de gauche, la place d'une barre de défilement étant
+  gardée même quand il n'y en avait pas.
+- Écrire : les onglets Tableau et Image ont enfin la hauteur d'Accueil et d'Insertion.
+- Écrire : les boutons de mise en forme (gras, italique, listes, alignement…) montrent de nouveau que la mise en forme
+  est active sous le curseur. Leur règle de style ne se déclenchait jamais.
+- Écrire : une image choisie n'est plus assombrie par la couleur de sélection du moteur ; son contour suffit à la désigner.
+- Plusieurs arrêts possibles en allant vite, relevés à la relecture du code : quitter l'écriture pendant le chargement
+  d'une image, un message mal formé d'une extension, une demande de la vue Schémas qui échoue. Cliquer « Écrire » deux
+  fois de suite (ou avec Ctrl+E) n'ouvre plus deux éditeurs, et « Lire » puis « Réviser » pendant un enregistrement ne
+  relit plus la fiche deux fois.
+- Un clic rapide sur la liste d'Aujourd'hui juste après avoir ouvert une fiche n'arrête plus l'application : le clic
+  arrivait à une page déjà quittée. Le journal de diagnostic en gardait trois arrêts, tous au même endroit.
+- L'assistant d'installation montre l'image de kyfRev en thème sombre aussi : il affichait celle d'Inno Setup.
+- Une image a la même taille en lecture, en révision et en écriture : un pixel de l'image pour un pixel de la fiche, sans
+  dépasser la largeur du texte. La lecture plafonnait sa hauteur à 560 pixels et suivait la résolution inscrite dans le
+  fichier : une photo en hauteur y paraissait plus petite qu'en écriture.
+- Dans une fenêtre de dialogue, l'anneau de focus d'un bouton posé contre le bord du contenu n'est plus coupé.
 
 - `tools/design-captures` compile de nouveau, et une attente qui n'aboutit pas ne bloque plus l'outil : elle le dit au bout de
   20 secondes et passe à la suite.

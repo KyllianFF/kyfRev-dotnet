@@ -19,9 +19,9 @@ public sealed class ContextMenusTests
 {
     private static readonly Anchor Passage = new("La prophase", "", " précède", 0, 11, ["Mitose", "Étapes"], 5, "sha256:aa");
 
-    private static readonly string[] SheetRowMenu = [DashboardText.ReviewAction, DashboardText.OpenSheet, ReviewText.PostponeTomorrow, ReviewText.ArchiveAction];
+    private static readonly string[] SheetRowMenu = [DashboardText.ReviewAction, DashboardText.OpenSheet, PrintText.PrintAction, ReviewText.PostponeTomorrow, ReviewText.ArchiveAction];
 
-    private static readonly string[] SheetRowQuick = [DashboardText.ReviewAction, DashboardText.OpenSheet];
+    private static readonly string[] SheetRowQuick = [DashboardText.ReviewAction, DashboardText.OpenSheet, PrintText.PrintAction];
 
     private static readonly string[] Runs = ["ouvrir", "supprimer", "copier"];
 
@@ -191,7 +191,7 @@ public sealed class ContextMenusTests
             var opened = Opening(line);
             line.RaiseEvent(opened);
             Assert.IsFalse(opened.Handled);
-            Assert.HasCount(5, page.Items.ContextMenu!.Items);
+            Assert.HasCount(6, page.Items.ContextMenu!.Items);
 
             var title = (ListBoxItem)page.Items.ItemContainerGenerator.ContainerFromItem(model.Rows[0]);
             var refused = Opening(title);

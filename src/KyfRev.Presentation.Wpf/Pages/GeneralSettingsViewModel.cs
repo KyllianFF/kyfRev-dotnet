@@ -12,11 +12,17 @@ namespace KyfRev.Presentation.Wpf.Pages;
 /// <param name="Label">Ce qu'en voit l'utilisateur.</param>
 public sealed record SettingChoice<T>(T Value, string Label)
 {
+    /// <summary>Une seconde ligne, plus discrète : les dimensions d'une feuille, la valeur d'une marge.</summary>
+    public string? Detail { get; init; }
+
+    /// <summary>Le choix n'est pas proposé comme les autres : il n'est là que parce qu'il est en vigueur.</summary>
+    public bool IsExtra { get; init; }
+
     /// <summary>Ce que dit le lecteur d'écran.</summary>
     public override string ToString() => Label;
 }
 
-/// <summary>L'onglet « Général » : l'apparence et l'accessibilité, retenues sur ce poste et appliquées aussitôt.</summary>
+/// <summary>Les sections « Apparence » et « Lecture » : l'apparence, l'accessibilité et le confort de lecture, retenus sur ce poste et appliquées aussitôt.</summary>
 public sealed partial class GeneralSettingsViewModel : ObservableObject, INavigationAware
 {
     private static readonly double[] CommonSizes = [0.9, 1, 1.1, 1.25, 1.5];
@@ -33,7 +39,6 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, INaviga
         _machine = machine;
         _speech = speech;
         Theme = Themes[0];
-        Width = Widths[0];
         TextSize = TextSizes[0];
         LineSpacing = LineSpacings[0];
         Font = Fonts[0];
@@ -59,13 +64,6 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, INaviga
         new(ThemePreference.Dark, GeneralSettingsText.ThemeDark),
     ];
 
-    /// <summary>Les largeurs du texte.</summary>
-    public static IReadOnlyList<SettingChoice<ReadingWidth>> Widths { get; } =
-    [
-        new(ReadingWidth.Comfortable, GeneralSettingsText.WidthComfortable),
-        new(ReadingWidth.Full, GeneralSettingsText.WidthFull),
-    ];
-
     /// <summary>Les tailles du texte.</summary>
     public static IReadOnlyList<SettingChoice<ReadingTextSize>> TextSizes { get; } =
     [
@@ -86,6 +84,9 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, INaviga
     [
         new(ReadingFont.Sans, GeneralSettingsText.FontSans),
         new(ReadingFont.Serif, GeneralSettingsText.FontSerif),
+        new(ReadingFont.Handwriting, MoreSettingsText.FontHandwriting),
+        new(ReadingFont.Marker, MoreSettingsText.FontMarker),
+        new(ReadingFont.Typewriter, MoreSettingsText.FontTypewriter),
     ];
 
     /// <summary>Les vitesses de lecture.</summary>
@@ -114,10 +115,6 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, INaviga
     [ObservableProperty]
     public partial SettingChoice<double>? Size { get; set; }
 
-    /// <summary>Largeur du texte des fiches.</summary>
-    [ObservableProperty]
-    public partial SettingChoice<ReadingWidth> Width { get; set; }
-
     /// <summary>Taille du texte des fiches.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(PreviewSize), nameof(PreviewLineHeight))]
@@ -130,7 +127,7 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, INaviga
 
     /// <summary>Police du texte des fiches.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(PreviewIsSerif))]
+    [NotifyPropertyChangedFor(nameof(PreviewIsSerif), nameof(PreviewFont))]
     public partial SettingChoice<ReadingFont> Font { get; set; }
 
     /// <summary>Les mots définis se marquent dans toutes les fiches.</summary>
@@ -174,6 +171,9 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, INaviga
     /// <summary>L'aperçu a des empattements.</summary>
     public bool PreviewIsSerif => Font.Value == ReadingFont.Serif;
 
+    /// <summary>La police de l'aperçu.</summary>
+    public ReadingFont PreviewFont => Font.Value;
+
     /// <inheritdoc/>
     public void OnNavigatedTo()
     {
@@ -192,7 +192,6 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, INaviga
         var sizes = CommonSizes.Contains(current.Zoom) ? CommonSizes : [.. CommonSizes.Append(current.Zoom).Order()];
         Sizes = [.. sizes.Select(size => new SettingChoice<double>(size, GeneralSettingsText.PercentOf(((int)Math.Round(size * 100)).ToString(CultureInfo.InvariantCulture))))];
         Size = Sizes.First(choice => choice.Value == current.Zoom);
-        Width = Widths.First(choice => choice.Value == current.Width);
         TextSize = TextSizes.First(choice => choice.Value == current.TextSize);
         LineSpacing = LineSpacings.First(choice => choice.Value == current.LineSpacing);
         Font = Fonts.First(choice => choice.Value == current.Font);
@@ -225,7 +224,6 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, INaviga
         }
     }
 
-    partial void OnWidthChanged(SettingChoice<ReadingWidth> value) => Remember(preferences => preferences with { Width = value.Value });
 
     partial void OnTextSizeChanged(SettingChoice<ReadingTextSize> value) => Remember(preferences => preferences with { TextSize = value.Value });
 

@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using KyfRev.Application.Text;
 using KyfRev.Infrastructure.Vault.Files;
+using KyfRev.Infrastructure.Vault.Format;
 using KyfRev.Infrastructure.Vault.Json;
 using KyfRev.Infrastructure.Vault.Paths;
 
@@ -18,7 +19,9 @@ public sealed record SchemaContent(string Id, string Text, string Fingerprint);
 /// Schémas réseau : un fichier <c>schemas/&lt;id&gt;.json</c> par schéma. Le coffre ne connaît pas
 /// leur modèle (il appartient à l'interface) : il vérifie seulement qu'un schéma est un objet JSON
 /// raisonnable, au format connu, portant le bon identifiant, puis l'écrit de façon atomique avec
-/// détection des modifications concurrentes. Aucun schéma n'est jamais effacé.
+/// détection des modifications concurrentes. Aucun schéma n'est jamais effacé : un schéma archivé va dans
+/// <c>schemas/archives/</c>, un schéma « supprimé » dans <c>schemas/.supprimes/</c>, d'où il se restaure. Les versions
+/// qui ne connaissent pas ces dossiers ne les lisent pas, et n'y touchent pas.
 /// </remarks>
 public sealed partial class VaultSession
 {
@@ -32,10 +35,48 @@ public sealed partial class VaultSession
     private const string DefaultSchemaFileName = "Schéma réseau";
 
     /// <summary>Les schémas lisibles du coffre, par titre, avec les fiches qui les insèrent.</summary>
-    public IReadOnlyList<SchemaSummary> Schemas()
+    public IReadOnlyList<SchemaSummary> Schemas() => SchemasIn(SchemaPlace.Active);
+
+    /// <summary>Les schémas archivés et ceux de la corbeille, par titre.</summary>
+    public IReadOnlyList<SchemaSummary> SchemasAside() => SchemasIn(SchemaPlace.Archived, SchemaPlace.Trash);
+
+    /// <summary>
+    /// Range un schéma : l'archive, le met à la corbeille, ou le remet dans la liste. Le fichier est déplacé tel quel,
+    /// sous la protection du journal d'opération ; rien n'est effacé.
+    /// </summary>
+    public void MoveSchema(string id, SchemaPlace place)
     {
-        var folder = VaultLayout.Absolute(Root, VaultLayout.Schemas);
-        if (!_storage.DirectoryExists(folder))
+        var from = AllPlaces.Select(known => SchemaFile(id, known)).FirstOrDefault(path => _storage.FileExists(Confine(path)))
+            ?? throw VaultException.UnknownSchema(id);
+        var to = SchemaFile(id, place);
+        if (from != to)
+        {
+            MoveUnderJournal($"rangement du schéma {id}", [new PlannedMove(from, to)]);
+        }
+    }
+
+    private static readonly SchemaPlace[] AllPlaces = [SchemaPlace.Active, SchemaPlace.Archived, SchemaPlace.Trash];
+
+    private static string SchemaFolder(SchemaPlace place) => place switch
+    {
+        SchemaPlace.Archived => VaultLayout.Schemas + "/archives",
+        SchemaPlace.Trash => VaultLayout.Schemas + "/.supprimes",
+        _ => VaultLayout.Schemas,
+    };
+
+    private static VaultPath SchemaFile(string id, SchemaPlace place)
+    {
+        ArgumentNullException.ThrowIfNull(id);
+        return VaultIds.IsSchemaId(id) ? VaultPath.Create($"{SchemaFolder(place)}/{id}.json") : throw VaultException.UnknownSchema(id);
+    }
+
+    private IReadOnlyList<SchemaSummary> SchemasIn(params SchemaPlace[] places)
+    {
+        var folders = places
+            .Select(place => (Place: place, Folder: VaultLayout.Absolute(Root, SchemaFolder(place))))
+            .Where(pair => _storage.DirectoryExists(pair.Folder))
+            .ToList();
+        if (folders.Count == 0)
         {
             return [];
         }
@@ -62,11 +103,14 @@ public sealed partial class VaultSession
             }
         }
         var schemas = new List<SchemaSummary>();
-        foreach (var file in _storage.Files(folder, "*.json"))
+        foreach (var (place, folder) in folders)
         {
-            if (SummaryOf(file, citations) is { } summary)
+            foreach (var file in _storage.Files(folder, "*.json"))
             {
-                schemas.Add(summary);
+                if (SummaryOf(file, citations) is { } summary)
+                {
+                    schemas.Add(summary with { Place = place });
+                }
             }
         }
         return [.. schemas.OrderBy(schema => RustText.ToLowercase(schema.Title), Utf8Order.Instance).ThenBy(schema => schema.Id, StringComparer.Ordinal)];
@@ -259,11 +303,14 @@ public sealed partial class VaultSession
 
     private static string SchemaText(JsonObject schema) => SerdeJson.Pretty(SerdeJson.Canonical(schema)) + "\n";
 
+    /// <summary>
+    /// Le fichier d'un schéma : dans la liste, ou aux archives s'il y est (une fiche qui l'insère le montre toujours, et il
+    /// s'y modifie). Un schéma à la corbeille est introuvable tant qu'il n'est pas restauré.
+    /// </summary>
     private string SchemaPath(string id)
     {
-        ArgumentNullException.ThrowIfNull(id);
-        return VaultIds.IsSchemaId(id)
-            ? Confine(VaultPath.Create($"{VaultLayout.Schemas}/{id}.json"))
-            : throw VaultException.UnknownSchema(id);
+        var active = Confine(SchemaFile(id, SchemaPlace.Active));
+        var archived = Confine(SchemaFile(id, SchemaPlace.Archived));
+        return !_storage.FileExists(active) && _storage.FileExists(archived) ? archived : active;
     }
 }

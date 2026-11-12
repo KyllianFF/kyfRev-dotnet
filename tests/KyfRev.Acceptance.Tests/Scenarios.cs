@@ -435,7 +435,7 @@ public sealed class Scenarios
 
         using (var running = trial.Launch(Day(10, 9)))
         {
-            running.OpenView("Fiches");
+            running.OpenView("Carnet");
             running.CreateSheet(Title);
             running.Back();
             Assert.Contains("J1", running.WaitSheetRow(Title));
@@ -457,7 +457,7 @@ public sealed class Scenarios
         // Le texte s'écrit dans l'application, et le passage s'y surligne.
         using (var running = trial.Launch(Day(10, 14)))
         {
-            running.OpenView("Fiches");
+            running.OpenView("Carnet");
             running.OpenSheetRow(Title);
             running.StartWriting();
             running.TypeInSheet("Les trois ordres de la societe.");
@@ -552,7 +552,7 @@ public sealed class Scenarios
         using (var running = trial.Launch(created.AddDays(1), new Dictionary<string, string> { ["TMP"] = temporary, ["TEMP"] = temporary }))
         {
             running.Unlock(password);
-            running.OpenView("Fiches");
+            running.OpenView("Carnet");
             running.OpenSheetRow(title);
             Assert.Contains(marks["texte"], running.SheetText(), "le texte est passé par la lecture");
             running.WaitDrawing(marks["dessin"]);
@@ -608,7 +608,7 @@ public sealed class Scenarios
         {
             running.OpenView("Archives");
             running.ArchivedRow(archived);
-            running.OpenView("Fiches");
+            running.OpenView("Carnet");
             running.OpenSheetRow(target);
             Assert.Contains("La mitose commence", running.SheetText());
         }
@@ -721,7 +721,7 @@ public sealed class Scenarios
 
         using (var running = trial.Launch(Day(10, 11)))
         {
-            running.OpenView("Fiches");
+            running.OpenView("Carnet");
             Assert.Contains("1 j de retard", running.WaitSheetRow(Title));
             running.WaitSheetRow("Mitose");
 

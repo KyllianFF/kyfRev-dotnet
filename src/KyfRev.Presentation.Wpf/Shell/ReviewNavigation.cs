@@ -28,6 +28,9 @@ public interface IReviewOpener
     /// <summary>Ouvre une fiche, pour l'écrire.</summary>
     void WriteSheet(string sheetId);
 
+    /// <summary>Ouvre une fiche et, dès qu'elle est lue, sa fenêtre « Imprimer ».</summary>
+    void PrintSheet(string sheetId) => OpenSheet(sheetId);
+
     /// <summary>Ouvre la charge des 30 prochains jours, réduite à ce que montre <paramref name="filter"/>.</summary>
     void OpenWorkload(DashboardFilter filter);
 
@@ -63,10 +66,11 @@ public sealed class ReviewNavigation : IReviewOpener
     private readonly ISpeech? _speech;
     private readonly MachineSettings? _machine;
     private readonly SheetSharingViewModel? _sharing;
+    private readonly KyfRev.Presentation.Wpf.Printing.IPrintService? _printing;
     private ShellViewModel? _shell;
 
     /// <summary>La navigation, sur les cas d'usage des fiches, des révisions et des rappels, et la séance gardée sur ce poste.</summary>
-    public ReviewNavigation(SheetUseCases sheets, AnnotationUseCases annotations, ReviewUseCases reviews, ReminderUseCases reminders, VaultUseCases vaults, IStudySessionStore sessions, TimeProvider time, IExternalLinks links, EditingUseCases editing, EditorEnvironment environment, SettingsUseCases? settings = null, ISpeech? speech = null, MachineSettings? machine = null, SheetSharingViewModel? sharing = null)
+    public ReviewNavigation(SheetUseCases sheets, AnnotationUseCases annotations, ReviewUseCases reviews, ReminderUseCases reminders, VaultUseCases vaults, IStudySessionStore sessions, TimeProvider time, IExternalLinks links, EditingUseCases editing, EditorEnvironment environment, SettingsUseCases? settings = null, ISpeech? speech = null, MachineSettings? machine = null, SheetSharingViewModel? sharing = null, KyfRev.Presentation.Wpf.Printing.IPrintService? printing = null)
     {
         ArgumentNullException.ThrowIfNull(sheets);
         ArgumentNullException.ThrowIfNull(reviews);
@@ -82,6 +86,7 @@ public sealed class ReviewNavigation : IReviewOpener
         _speech = speech;
         _machine = machine;
         _sharing = sharing;
+        _printing = printing;
         _editing = editing;
         _environment = environment;
         _links = links;
@@ -150,6 +155,9 @@ public sealed class ReviewNavigation : IReviewOpener
     public void WriteSheet(string sheetId) => OpenSheet(sheetId, revising: false, writes: true);
 
     /// <inheritdoc/>
+    public void PrintSheet(string sheetId) => OpenSheet(sheetId, revising: false, prints: true);
+
+    /// <inheritdoc/>
     public void OpenWorkload(DashboardFilter filter)
     {
         if (Workload is not { } page)
@@ -162,20 +170,44 @@ public sealed class ReviewNavigation : IReviewOpener
         shell.Navigate(new NavigationItem("charge", WorkloadText.Title, Icons.Chart, int.MaxValue, page));
     }
 
-    private void OpenSheet(string sheetId, bool revising, string? passageId = null, bool writes = false, (int Start, int End)? range = null)
+    /// <summary>
+    /// La mise en page d'une fiche : la sienne si elle en a une, sinon celle de toutes les fiches. Chaque choix est retenu
+    /// sur cet ordinateur, pour cette fiche seule ou pour toutes.
+    /// </summary>
+    private PageSetupViewModel PageSetupOf(string sheetId)
+    {
+        var own = _machine?.Current.SheetPages.Of(sheetId);
+        return new PageSetupViewModel(own ?? _machine?.Current.Page, forAll: own is null, (layout, forAll) => _machine?.Update(preferences => forAll
+            ? preferences with { Page = layout, SheetPages = preferences.SheetPages.With(sheetId, null) }
+            : preferences with { SheetPages = preferences.SheetPages.With(sheetId, layout) }),
+            () => _machine?.Current.Paper ?? PaperChoices.Default,
+            paper => _machine?.Update(preferences => preferences with { Paper = paper }));
+    }
+
+    private void OpenSheet(string sheetId, bool revising, string? passageId = null, bool writes = false, (int Start, int End)? range = null, bool prints = false)
     {
         var shell = Shell;
         var from = shell.Current;
-        var page = new SheetPageViewModel(_sheets, _annotations, Bar, sheetId, () => shell.Navigate(from), OpenSheet, _links, Editor, revising, ActiveRecall) { PassageToShow = passageId, RangeToShow = range, Masks = new ImageMaskEditorViewModel(_sheets, _editing), ReadAloud = _speech is null ? null : new ReadAloudViewModel(_speech, _machine), ReadingMaxWidth = _machine?.Current.Width == ReadingWidth.Full ? double.PositiveInfinity : SheetPageViewModel.TextMaxWidth, MarksDefinedWords = _machine?.Current.MarkDefinedWords ?? true, OpenPassage = OpenPassageInSheet, Sharing = _sharing, FocusMode = shell };
-        shell.Navigate(new NavigationItem("fiche", ReviewText.SheetPage, Icons.Document, int.MaxValue, page));
+        var page = new SheetPageViewModel(_sheets, _annotations, Bar, sheetId, () => shell.Navigate(from), OpenSheet, _links, Editor, revising, ActiveRecall) { PageSetup = PageSetupOf(sheetId), Print = new PrintViewModel(_printing), SheetZoom = _machine?.Current.SheetZoom ?? 1, SheetZoomChanged = zoom => _machine?.Update(preferences => preferences with { SheetZoom = zoom }), PassageToShow = passageId, RangeToShow = range, Masks = new ImageMaskEditorViewModel(_sheets, _editing), ReadAloud = _speech is null ? null : new ReadAloudViewModel(_speech, _machine), MarksDefinedWords = _machine?.Current.MarkDefinedWords ?? true, OpenPassage = OpenPassageInSheet, Sharing = _sharing, FocusMode = shell };
+        shell.Navigate(new NavigationItem(CorePages.Sheet, ReviewText.SheetPage, Icons.Document, int.MaxValue, page));
         if (writes)
         {
             _ = LoadThenWriteAsync(page);
+        }
+        else if (prints)
+        {
+            _ = LoadThenPrintAsync(page);
         }
         else
         {
             page.LoadCommand.Execute(null);
         }
+    }
+
+    private static async Task LoadThenPrintAsync(SheetPageViewModel page)
+    {
+        await page.LoadCommand.ExecuteAsync(null).ConfigureAwait(true);
+        await page.RequestPrintCommand.ExecuteAsync(null).ConfigureAwait(true);
     }
 
     private static async Task LoadThenWriteAsync(SheetPageViewModel page)

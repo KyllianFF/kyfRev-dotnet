@@ -76,6 +76,14 @@ public sealed class MachineSettings
         appearance.ForcesReducedMotion = preferences.ReducedMotion;
         appearance.LargerTargets = preferences.LargerTargets;
         appearance.Resources[ReadingComfort.ResourceKey] = ReadingComfort.Of(preferences);
+        // Les feuilles et leur papier : toute vue qui lit une fiche les trouve là, et suit leurs changements.
+        if (!Equals(appearance.Resources[SheetPaper.ResourceKey], SheetPaper.Of(preferences)))
+        {
+            appearance.Resources[SheetPaper.ResourceKey] = SheetPaper.Of(preferences);
+        }
+        shell.SetMenuOrder(preferences.MenuOrder);
+        ShortcutMap.Use(preferences.Shortcuts);
+        shell.RefreshShortcuts();
         shell.SetZoom(preferences.Zoom);
         shell.IsFocusMode = preferences.FocusMode;
     }

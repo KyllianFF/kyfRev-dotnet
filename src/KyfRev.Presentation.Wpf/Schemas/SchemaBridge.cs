@@ -99,10 +99,30 @@ internal sealed class SchemaBridge(SchemaUseCases schemas, IFolderPicker folders
                 ["equipements"] = schema.Devices,
                 ["modifieLe"] = schema.ModifiedAt?.ToString("O", System.Globalization.CultureInfo.InvariantCulture),
                 ["fiches"] = sheets,
+                ["etat"] = PlaceName(schema.Place),
             });
         }
         return rows;
     }
+
+    private const string Active = "actif";
+    private const string Archived = "archive";
+    private const string Trash = "corbeille";
+
+    private static string PlaceName(SchemaPlace place) => place switch
+    {
+        SchemaPlace.Archived => Archived,
+        SchemaPlace.Trash => Trash,
+        _ => Active,
+    };
+
+    private static SchemaPlace Place(string name) => name switch
+    {
+        Active => SchemaPlace.Active,
+        Archived => SchemaPlace.Archived,
+        Trash => SchemaPlace.Trash,
+        _ => throw new ArgumentException(SchemaText.BadCall),
+    };
 
     private static JsonObject SaveAnswer(SaveResult result) => result switch
     {
@@ -117,6 +137,11 @@ internal sealed class SchemaBridge(SchemaUseCases schemas, IFolderPicker folders
         {
             case "schemas":
                 return Answer(await Task.Run(schemas.Schemas).ConfigureAwait(true), Summaries);
+            case "schemasRanges":
+                return Answer(await Task.Run(schemas.Aside).ConfigureAwait(true), Summaries);
+            case "rangerSchema":
+                var (moved, place) = (Argument(args, 0), Place(Argument(args, 1)));
+                return Answer(await Task.Run(() => schemas.Move(moved, place)).ConfigureAwait(true), _ => null);
             case "lireSchema":
                 var read = Argument(args, 0);
                 return Answer(await Task.Run(() => schemas.Read(read)).ConfigureAwait(true), Document);

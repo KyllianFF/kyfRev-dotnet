@@ -171,7 +171,6 @@ public sealed class GeneralSettingsTests
 
         Assert.AreEqual("Clair", page.Theme.Label);
         Assert.AreEqual("125 %", page.Size!.Label);
-        Assert.AreEqual("Toute la largeur", page.Width.Label);
         Assert.AreEqual("Grande (19 px)", page.TextSize.Label);
         Assert.AreEqual("Aéré", page.LineSpacing.Label);
         Assert.AreEqual("Avec empattements (Georgia)", page.Font.Label);
@@ -195,7 +194,6 @@ public sealed class GeneralSettingsTests
 
         page.Theme = GeneralSettingsViewModel.Themes[2];
         page.Size = page.Sizes[2];
-        page.Width = GeneralSettingsViewModel.Widths[1];
         page.TextSize = GeneralSettingsViewModel.TextSizes[2];
         page.LineSpacing = GeneralSettingsViewModel.LineSpacings[1];
         page.Font = GeneralSettingsViewModel.Fonts[1];
@@ -211,7 +209,6 @@ public sealed class GeneralSettingsTests
             {
                 Theme = ThemePreference.Dark,
                 Zoom = 1.1,
-                Width = ReadingWidth.Full,
                 TextSize = ReadingTextSize.ExtraLarge,
                 LineSpacing = ReadingLineSpacing.Airy,
                 Font = ReadingFont.Serif,
@@ -355,8 +352,9 @@ public sealed class GeneralSettingsTests
         TestShell.Flush();
         try
         {
-            Assert.AreEqual(GridUnitType.Star, page.SecondColumn.Width.GridUnitType);
-            Assert.AreEqual(1, Grid.GetColumn(page.AccessibilityCard));
+            Assert.AreEqual(2, page.Sections.Columns);
+            Assert.IsTrue(page.AppearanceCard.IsVisible && page.ReadingCard.IsVisible && page.VoiceCard.IsVisible, "hors de la vue Paramètres, toutes les cartes se montrent");
+            Assert.AreEqual(page.AppearanceCard.TranslatePoint(default, page).Y, page.AccessibilityCard.TranslatePoint(default, page).Y, 1, "côte à côte");
             Assert.AreEqual("100 %", page.SizeChoice.SelectionBoxItem.ToString(), "le libellé, pas l'objet");
             Assert.AreEqual(Visibility.Collapsed, page.NoVoice.Visibility);
             Assert.AreEqual("100 %", ((SettingChoice<double>)page.SizeChoice.SelectedItem).Label);
@@ -365,9 +363,19 @@ public sealed class GeneralSettingsTests
             host.Width = 560;
             TestShell.Flush();
 
-            Assert.AreEqual(0, page.SecondColumn.Width.Value);
-            Assert.AreEqual(0, Grid.GetColumn(page.AccessibilityCard));
-            Assert.AreEqual(2, Grid.GetRow(page.AccessibilityCard), "l'aperçu reste près des réglages qu'il montre");
+            Assert.AreEqual(1, page.Sections.Columns);
+            Assert.IsGreaterThan(page.ReadingCard.TranslatePoint(default, page).Y, page.PreviewCard.TranslatePoint(default, page).Y, "l'aperçu vient juste sous les réglages qu'il montre");
+            Assert.IsLessThan(page.VoiceCard.TranslatePoint(default, page).Y, page.PreviewCard.TranslatePoint(default, page).Y);
+
+            // Dans la vue Paramètres, une section ne montre que ses cartes.
+            SettingsPart.SetCurrent(page, SettingsHubViewModel.ReadingPart);
+            TestShell.Flush();
+            Assert.IsFalse(page.AppearanceCard.IsVisible || page.AccessibilityCard.IsVisible);
+            Assert.IsTrue(page.ReadingCard.IsVisible && page.PreviewCard.IsVisible && page.VoiceCard.IsVisible);
+            SettingsPart.SetCurrent(page, SettingsHubViewModel.AppearancePart);
+            TestShell.Flush();
+            Assert.IsTrue(page.AppearanceCard.IsVisible && page.AccessibilityCard.IsVisible);
+            Assert.IsFalse(page.ReadingCard.IsVisible || page.PreviewCard.IsVisible || page.VoiceCard.IsVisible);
             Assert.IsLessThanOrEqualTo(page.Scroller.ViewportWidth, page.Scroller.ExtentWidth);
         }
         finally

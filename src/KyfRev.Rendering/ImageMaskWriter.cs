@@ -28,8 +28,10 @@ public static class ImageMaskWriter
         {
             return null;
         }
-        var wanted = ImageMasks.FromTitle(ImageMasks.ToTitle(masks));
-        if (Rewrite(body, imageIndex, ImageMasks.ToTitle(masks)) is not { } written)
+        // Les autres réglages de l'image (largeur, place, cadre) restent : seuls ses masques changent.
+        var newTitle = ImageLooks.ToTitle(before[imageIndex].ImageLook with { Masks = [.. masks] });
+        var wanted = ImageMasks.FromTitle(newTitle);
+        if (Rewrite(body, imageIndex, newTitle) is not { } written)
         {
             return null;
         }
@@ -241,7 +243,7 @@ public static class ImageMaskWriter
                 return (0, string.Empty);
             }
             // Un titre que l'utilisateur a écrit lui-même n'est pas à nous : l'image est laissée telle quelle.
-            if (!text.Slice(titleStart, close).StartsWith(ImageMasks.Prefix, StringComparison.Ordinal))
+            if (!ImageLooks.IsOurs(text.Slice(titleStart, close).ToString()))
             {
                 return (0, string.Empty);
             }

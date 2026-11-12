@@ -123,6 +123,7 @@ internal static class Composition
             () => provider.GetRequiredService<ShellViewModel>()));
         services.AddSingleton(provider => new MermaidEngine(Path.Combine(provider.GetRequiredService<VaultLocations>().LocalData, "WebView2")));
         services.AddSingleton(clock);
+        services.AddSingleton<KyfRev.Presentation.Wpf.Printing.IPrintService, KyfRev.Presentation.Wpf.Printing.WindowsPrintService>();
         services.AddSingleton<ReviewNavigation>();
         services.AddSingleton<IReviewOpener>(provider => provider.GetRequiredService<ReviewNavigation>());
         services.AddSingleton(provider =>
@@ -247,6 +248,9 @@ internal static class Composition
             provider.GetRequiredService<IExternalLinks>(),
             provider.GetRequiredService<ILegacyInstallation>(),
             ReleasedOn));
+        services.AddSingleton<SheetsSettingsViewModel>();
+        // Le menu se lit dans la coquille, qui n'existe qu'après les vues : on la demande au moment de montrer l'onglet.
+        services.AddSingleton(provider => new ShortcutsSettingsViewModel(provider.GetRequiredService<MachineSettings>(), () => provider.GetRequiredService<ShellViewModel>().MainNavigation));
         services.AddSingleton<SettingsHubViewModel>();
         services.AddSingleton(provider => new HealthPageViewModel(
             provider.GetRequiredService<MaintenanceUseCases>(),

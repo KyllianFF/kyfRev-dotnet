@@ -16,8 +16,8 @@ public sealed partial class VaultSession
 
     /// <summary>
     /// Ajoute une note prise à la volée à la fiche « Boîte de réception », à la racine des fiches : une ligne de liste,
-    /// datée. La fiche est créée au besoin, et suspendue aussitôt : c'est un bloc-notes à trier, pas une leçon à réviser.
-    /// Reprise par l'utilisateur, elle reste reprise.
+    /// datée. La fiche est créée au besoin, comme une note : c'est un bloc-notes à trier, pas une leçon à réviser.
+    /// Mise en révision par l'utilisateur, elle y reste.
     /// </summary>
     /// <returns>L'identifiant de la boîte de réception.</returns>
     /// <exception cref="VaultException">La note est vide ou trop longue, ou la fiche a changé pendant l'écriture.</exception>
@@ -41,7 +41,7 @@ public sealed partial class VaultSession
         if (inbox is null)
         {
             inbox = CreateSheet(null, InboxTitle, string.Empty, now);
-            ApplyTo(ItemKind.Sheet, inbox, (tracking, _) => tracking.Suspend(now));
+            ApplyTo(ItemKind.Sheet, inbox, (tracking, _) => tracking.MakeNote(now));
         }
         var read = ReadSheet(inbox);
         var body = read.Text[HeaderPart(read.Text).Length..].TrimEnd('\r', '\n');

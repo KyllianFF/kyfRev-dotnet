@@ -32,7 +32,8 @@ internal sealed partial class WorkloadPage : UserControl
     /// <summary>Un clic sur le jour déjà choisi le désélectionne, comme dans la 0.x.</summary>
     private void OnColumnPressed(object sender, MouseButtonEventArgs e)
     {
-        if (ContainerOf(e.OriginalSource as DependencyObject) is { IsSelected: true })
+        // La page quittée n'a plus de modèle : un clic déjà en route n'y fait rien.
+        if (DataContext is WorkloadPageViewModel && ContainerOf(e.OriginalSource as DependencyObject) is { IsSelected: true })
         {
             Page.SelectedDay = null;
             e.Handled = true;

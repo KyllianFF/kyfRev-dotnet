@@ -42,6 +42,11 @@ public sealed partial class VaultSession
             var item = new DueItem(
                 ItemKind.Sheet, sheet.Id, sheet.Id, sheet.Title, null, null, [], null, DisplayFolder(sheet.Path), sheet.Tags,
                 cycle.StepLabel, cycle.DueDate, cycle.DaysLate(day), cycle.LastReview, cycle.Number, entry.Presence == FilePresence.Present);
+            if (cycle.IsNote)
+            {
+                // Une note : hors des révisions, et rien à reprendre.
+                continue;
+            }
             if (cycle.SuspendedOn is not null)
             {
                 // Suspendue : ni due, ni dans la charge ; elle attend d'être reprise.
@@ -199,7 +204,8 @@ public sealed partial class VaultSession
                 entry.Sheet.Tracking.Archive is not null,
                 entry.Presence == FilePresence.Present,
                 entry.Sheet.Tracking.Cycle?.StepLabel,
-                entry.Sheet.Tracking.Cycle?.DueDate))
+                entry.Sheet.Tracking.Cycle?.DueDate)
+            { IsNote = entry.Sheet.Tracking.IsNote })
             .OrderBy(sheet => RustText.ToLowercase(sheet.Folder), Utf8Order.Instance)
             .ThenBy(sheet => RustText.ToLowercase(sheet.Title), Utf8Order.Instance),
     ];

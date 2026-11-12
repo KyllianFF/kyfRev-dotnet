@@ -9,6 +9,7 @@ using KyfRev.Application.Model;
 using KyfRev.DesignSystem.Controls;
 using KyfRev.Presentation.Wpf.Editing;
 using KyfRev.Presentation.Wpf.Pages;
+using KyfRev.Presentation.Wpf.Printing;
 using KyfRev.Presentation.Wpf.Shell;
 
 namespace KyfRev.Presentation.Wpf.Tests;
@@ -94,6 +95,39 @@ public sealed class ReviewTests
         Assert.IsFalse(reopened.IsSuspended);
         Assert.IsTrue(reopened.CanValidate);
         StringAssert.StartsWith(reopened.Message, "Reprise à l'étape J1 : en retard de 1 j", StringComparison.Ordinal);
+    }
+
+    [TestMethod]
+    public async Task A_sheet_made_a_note_only_offers_to_be_put_in_review()
+    {
+        using var vault = new ReviewVault();
+        var bar = await vault.SheetBarAsync();
+        Assert.IsFalse(bar.IsNote);
+        Assert.IsTrue(bar.ShowsCycle);
+
+        await bar.MakeNoteCommand.ExecuteAsync(null);
+
+        Assert.AreEqual(ReviewAction.MadeNote, bar.LastAction);
+        Assert.AreEqual("C'est maintenant une note : elle n'entre plus dans les révisions.", bar.Message);
+        Assert.IsTrue(bar.IsNote);
+        Assert.IsFalse(bar.ShowsResume, "une note n'attend pas d'être reprise");
+        Assert.IsFalse(bar.ShowsCycle);
+        Assert.IsFalse(bar.ShowsSteps);
+        Assert.IsFalse(bar.ShowsActiveActions);
+        Assert.IsFalse(bar.CanValidate);
+        Assert.IsFalse(bar.IsLate);
+        Assert.IsTrue(bar.IsActive, "ni archivée, ni recommencée");
+
+        var reopened = await vault.SheetBarAsync();
+        Assert.IsTrue(reopened.IsNote, "la note tient d'une ouverture à l'autre");
+
+        await reopened.PutInReviewCommand.ExecuteAsync(null);
+
+        Assert.AreEqual(ReviewAction.PutInReview, reopened.LastAction);
+        Assert.IsFalse(reopened.IsNote);
+        Assert.IsTrue(reopened.ShowsCycle);
+        Assert.IsTrue(reopened.ShowsActiveActions);
+        StringAssert.StartsWith(reopened.Message, "En révision à l'étape J1 : ", StringComparison.Ordinal);
     }
 
     [TestMethod]
@@ -733,7 +767,7 @@ public sealed class ReviewTests
         navigation.OpenSheet(vault.SheetId);
         var page = (SheetPageViewModel)test.Shell.Current.Page;
         Assert.IsTrue(page.CanFocus);
-        Assert.AreEqual(double.PositiveInfinity, page.TextWidth);
+        Assert.AreEqual(SheetPageViewModel.TextMaxWidth, page.TextWidth, "la pleine largeur n'est plus un réglage");
 
         page.IsFocusMode = true;
 
@@ -743,12 +777,12 @@ public sealed class ReviewTests
         test.Shell.ToggleFocusMode();
 
         Assert.IsFalse(page.IsFocusMode, "Ctrl+Maj+F se voit sur le bouton de la fiche");
-        Assert.AreEqual(double.PositiveInfinity, page.TextWidth);
+        Assert.AreEqual(SheetPageViewModel.TextMaxWidth, page.TextWidth, "la pleine largeur n'est plus un réglage");
     }
 
     [TestMethod]
     [DataRow(ReadingWidth.Comfortable, SheetPageViewModel.TextMaxWidth)]
-    [DataRow(ReadingWidth.Full, double.PositiveInfinity)]
+    [DataRow(ReadingWidth.Full, SheetPageViewModel.TextMaxWidth)]
     public void A_sheet_opens_with_the_width_kept_on_this_computer(ReadingWidth width, double expected)
     {
         using var vault = new ReviewVault();
@@ -1275,6 +1309,85 @@ public sealed class ReviewTests
     /// Un coffre d'essai : la fiche « Mitose » (Biologie, #bio, #partiel) créée le jeudi 1er octobre
     /// 2026 avec un passage commenté et une définition ; l'horloge est au samedi 3, J1 en retard d'un jour.
     /// </summary>
+    [STATestMethod]
+    public void Printing_from_a_list_opens_the_sheet_on_its_print_window_and_the_page_answers()
+    {
+        using var ui = new UiThread();
+        using var vault = new ReviewVault();
+        var test = new TestShell();
+        var printing = new RecordingPrinting();
+        var machine = new MachineSettings(new MemoryMachinePreferences { Stored = new MachinePreferences { Page = new PageLayout(PageFormat.A5) } });
+        var navigation = new ReviewNavigation(vault.App.Sheets, vault.App.Annotations, vault.App.Reviews, vault.App.Reminders, vault.App.Vaults, new MemorySessions(), vault.Time, new RecordingLinks(), vault.App.Editing, FakeEnvironment.Markdown(), machine: machine, printing: printing);
+        navigation.Attach(test.Shell);
+        test.Shell.ShowWorkspace();
+
+        // « Imprimer… » d'une liste : la fiche s'ouvre, puis sa fenêtre d'impression, sur la feuille de toutes les fiches.
+        navigation.PrintSheet(vault.SheetId);
+        var page = (SheetPageViewModel)test.Shell.Current.Page;
+        UiThread.Until(() => page.Print is { IsOpen: true });
+        Assert.AreEqual(PageFormat.A5, page.Print!.Layout.Format);
+        Assert.IsTrue(page.CanPrint);
+
+        var sheet = new SheetPage { DataContext = page, Width = 1700, Height = 900 };
+        var window = new Window { Content = new Canvas { Children = { sheet } }, Left = -10000, Top = -10000, Width = 800, Height = 600, ShowActivated = false, ShowInTaskbar = false };
+        window.Resources.MergedDictionaries.Add(test.Design.Dictionary);
+        window.Show();
+        TestShell.Flush();
+        try
+        {
+            // « Annuler » : la fenêtre se ferme, rien n'est parti.
+            sheet.PrintDialog.Close(DialogChoice.None);
+            TestShell.Flush();
+            Assert.IsFalse(page.Print.IsOpen);
+            Assert.IsEmpty(printing.Jobs);
+
+            // « Imprimer » : le travail part, ou la fenêtre reste ouverte pour dire ce qui manque ; jamais l'un sans l'autre.
+            page.RequestPrintCommand.Execute(null);
+            UiThread.Until(() => page.Print.IsOpen && !page.Print.IsLookingForPrinters);
+            TestShell.Flush();
+            sheet.PrintDialog.Close(DialogChoice.Primary);
+            TestShell.Flush();
+            Assert.AreEqual(printing.Jobs.Count == 0, page.Print.IsOpen);
+            page.Print.Close();
+            TestShell.Flush();
+
+            // « Ajuster à la largeur » : le zoom de la fiche fait tenir la feuille dans la place offerte.
+            Assert.IsTrue(sheet.PageFitButton.IsVisible);
+            sheet.PageFitButton.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+            Assert.IsGreaterThan(1, page.SheetZoom, "une feuille A5 dans une vue large : elle est agrandie");
+            Assert.IsLessThanOrEqualTo(SheetPageViewModel.MaximumSheetZoom, page.SheetZoom);
+        }
+        finally
+        {
+            window.Close();
+        }
+
+        // « Écrire » et « Réviser » d'une liste ouvrent la fiche dans le mode demandé.
+        navigation.WriteSheet(vault.SheetId);
+        var written = (SheetPageViewModel)test.Shell.Current.Page;
+        UiThread.Until(() => written.IsWriting);
+        navigation.ReviseSheet(vault.SheetId);
+        Assert.AreNotSame(written, test.Shell.Current.Page);
+
+        // Une liste qui ne sait pas imprimer ouvre simplement la fiche.
+        var opener = new FakeOpener();
+        ((IReviewOpener)opener).PrintSheet("f_1");
+        CollectionAssert.AreEqual(new object[] { "f_1" }, opener.Opened);
+    }
+
+    private sealed class RecordingPrinting : IPrintService
+    {
+        public List<PrintJob> Jobs { get; } = [];
+
+        public IReadOnlyList<PrinterInfo> Printers() => [new("Bureau", true)];
+
+        public string? Print(PrintJob job, System.Windows.Documents.DocumentPaginator pages)
+        {
+            Jobs.Add(job);
+            return null;
+        }
+    }
+
     private sealed class ReviewVault : IDisposable
     {
         private readonly TestVaults _vaults;

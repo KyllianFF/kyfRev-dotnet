@@ -161,6 +161,7 @@ internal sealed partial class SheetsPage : UserControl
             ActionMenus.Quick(SheetActionsText.Review, Icons.Review, () => page.Revise(row), isEnabled: !row.Sheet.Archived),
             ActionMenus.Quick(SheetActionsText.Write, Icons.Edit, () => page.Write(row)),
         ];
+        items.Add(ActionMenus.Item(PrintText.PrintAction, () => page.Print(row)));
         if (page.CanManage)
         {
             items.Add(new Separator());
@@ -173,6 +174,11 @@ internal sealed partial class SheetsPage : UserControl
                 items.Add(ActionMenus.Item(SharingText.SaveAsTemplate, () => page.RequestSaveAsTemplate(row)));
             }
             items.Add(new Separator());
+            if (!row.Sheet.Archived)
+            {
+                // Fiche de révision ou simple note : le même document, qui passe de l'une à l'autre.
+                items.Add(ActionMenus.Item(row.Sheet.IsNote ? SheetsText.MakeReview : SheetsText.MakeNote, () => _ = page.ToggleNoteAsync(row)));
+            }
             items.Add(ActionMenus.Item(row.Sheet.Archived ? SheetActionsText.Restart : SheetActionsText.Archive, () => page.RequestArchiveOrRestart(row)));
             items.Add(ActionMenus.Item(SheetActionsText.Delete, () => page.RequestTrash(row)));
         }

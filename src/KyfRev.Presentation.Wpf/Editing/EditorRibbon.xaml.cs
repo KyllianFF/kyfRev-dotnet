@@ -31,7 +31,24 @@ internal sealed partial class EditorRibbon : UserControl
     public EditorRibbon()
     {
         InitializeComponent();
+        EnlargeCompactIcons(CompactBar);
+        // Tous les onglets ont la hauteur de l'Accueil : le texte de la fiche ne bouge pas quand on passe de l'un à l'autre.
+        HomePanel.SizeChanged += (_, e) =>
+        {
+            if (HomePanel.IsVisible && e.NewSize.Height > 0)
+            {
+                // La hauteur d'un groupe de l'Accueil : ceux des autres onglets la prennent, et leurs titres se posent sur la
+                // même ligne, tout en bas.
+                var line = HomePanel.Children.OfType<FrameworkElement>().Where(group => group.IsVisible).Select(group => group.ActualHeight).DefaultIfEmpty(0).Max();
+                foreach (var panel in new WrapPanel[] { InsertPanel, TablePanel, ImagePanel, PagePanel })
+                {
+                    panel.MinHeight = e.NewSize.Height;
+                    panel.ItemHeight = line > 0 ? line : double.NaN;
+                }
+            }
+        };
         TableTab.IsVisibleChanged += OnTableTabShown;
+        ImageTab.IsVisibleChanged += OnImageTabShown;
         SizeChanged += (_, e) => Fit(e.NewSize.Width);
         foreach (var menu in new[] { StyleMenu, CompactStyleMenu })
         {
@@ -159,6 +176,78 @@ internal sealed partial class EditorRibbon : UserControl
 
     private void OnTableTab(object sender, RoutedEventArgs e) => ShowTab(TablePanel);
 
+    /// <summary>La taille d'une icône de la barre courte, et le côté de son bouton.</summary>
+    internal const double CompactIconSize = 18;
+
+    internal const double CompactButtonSide = 40;
+
+    /// <summary>Dans la barre courte, les icônes sont grandes et leurs boutons faciles à viser.</summary>
+    private static void EnlargeCompactIcons(DependencyObject parent)
+    {
+        foreach (var child in LogicalTreeHelper.GetChildren(parent).OfType<DependencyObject>())
+        {
+            switch (child)
+            {
+                case KyfRev.DesignSystem.Controls.Icon icon when icon.FontSize != 10:
+                    icon.FontSize = CompactIconSize;
+                    break;
+                case System.Windows.Controls.Primitives.ButtonBase button:
+                    button.MinHeight = CompactButtonSide;
+                    button.MinWidth = Math.Max(button.MinWidth, CompactButtonSide);
+                    EnlargeCompactIcons(button);
+                    break;
+                case System.Windows.Controls.ContextMenu:
+                    break;
+                default:
+                    EnlargeCompactIcons(child);
+                    break;
+            }
+        }
+    }
+
+    private void OnImageTab(object sender, RoutedEventArgs e) => ShowTab(ImagePanel);
+
+    private void OnPageTab(object sender, RoutedEventArgs e) => ShowTab(PagePanel);
+
+    /// <summary>La mise en page de la fiche ouverte ; sans elle, l'onglet n'existe pas.</summary>
+    public static readonly DependencyProperty PageSetupProperty = DependencyProperty.Register(
+        nameof(PageSetup), typeof(Pages.PageSetupViewModel), typeof(EditorRibbon), new PropertyMetadata(null, (ribbon, e) => ((EditorRibbon)ribbon).OnPageSetupChanged(e.NewValue is not null)));
+
+    /// <inheritdoc cref="PageSetupProperty"/>
+    public Pages.PageSetupViewModel? PageSetup
+    {
+        get => (Pages.PageSetupViewModel?)GetValue(PageSetupProperty);
+        set => SetValue(PageSetupProperty, value);
+    }
+
+    private void OnPageSetupChanged(bool exists)
+    {
+        PageTab.Visibility = exists ? Visibility.Visible : Visibility.Collapsed;
+        if (!exists && PagePanel.Visibility == Visibility.Visible)
+        {
+            ShowTab(HomePanel);
+        }
+    }
+
+    /// <summary>Entrée, dans un champ de taille, applique ce qui est tapé, comme en le quittant.</summary>
+    private void OnSizeBoxKey(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (e.Key == System.Windows.Input.Key.Enter && sender is TextBox box)
+        {
+            box.GetBindingExpression(TextBox.TextProperty)?.UpdateSource();
+            e.Handled = true;
+        }
+    }
+
+    /// <summary>L'image n'est plus choisie : son onglet disparaît, et l'Accueil revient s'il était ouvert.</summary>
+    private void OnImageTabShown(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (e.NewValue is false && ImageTab.Visibility != Visibility.Visible && ImagePanel.Visibility == Visibility.Visible)
+        {
+            ShowTab(HomePanel);
+        }
+    }
+
     /// <summary>
     /// Le curseur sort du tableau : son onglet disparaît, et l'Accueil revient s'il était ouvert. Un volet replié cache aussi l'onglet,
     /// sans que le curseur ait quitté le tableau : rien ne change alors.
@@ -182,8 +271,9 @@ internal sealed partial class EditorRibbon : UserControl
     internal void Fit(double width)
     {
         IsCompact = width < CompactWidth;
-        FormatLabel.Visibility = width < LabelWidth ? Visibility.Collapsed : Visibility.Visible;
-        CompactTableLabel.Visibility = width < TightWidth ? Visibility.Collapsed : Visibility.Visible;
+        // La barre courte n'a que des icônes, en grand : leur nom se lit au survol, et pour un lecteur d'écran.
+        FormatLabel.Visibility = Visibility.Collapsed;
+        CompactTableLabel.Visibility = Visibility.Collapsed;
         CompactBulletsButton.Visibility = width < BulletsWidth ? Visibility.Collapsed : Visibility.Visible;
         var room = width < NarrowWidth ? Visibility.Collapsed : Visibility.Visible;
         CompactRedoButton.Visibility = room;
@@ -220,7 +310,9 @@ internal sealed partial class EditorRibbon : UserControl
         HomeTab.IsChecked = shown == HomePanel;
         InsertTab.IsChecked = shown == InsertPanel;
         TableTab.IsChecked = shown == TablePanel;
-        foreach (var panel in new Panel[] { HomePanel, InsertPanel, TablePanel })
+        ImageTab.IsChecked = shown == ImagePanel;
+        PageTab.IsChecked = shown == PagePanel;
+        foreach (var panel in new Panel[] { HomePanel, InsertPanel, TablePanel, ImagePanel, PagePanel })
         {
             panel.Visibility = panel == shown ? Visibility.Visible : Visibility.Collapsed;
         }
@@ -231,6 +323,11 @@ internal sealed partial class EditorRibbon : UserControl
     {
         // Le curseur a quitté le tableau pendant que le volet était replié : l'Accueil reprend sa place.
         if (TablePanel.Visibility == Visibility.Visible && TableTab.Visibility != Visibility.Visible)
+        {
+            Select(HomePanel);
+        }
+        // De même pour l'image qui n'est plus choisie.
+        if (ImagePanel.Visibility == Visibility.Visible && ImageTab.Visibility != Visibility.Visible)
         {
             Select(HomePanel);
         }

@@ -12,6 +12,9 @@ public sealed partial class WindowChrome : IWindowChrome
     /// <summary><c>MONITOR_DEFAULTTONEAREST</c>.</summary>
     private const uint NearestMonitor = 2;
 
+    /// <summary><c>DWMWA_EXTENDED_FRAME_BOUNDS</c> : le rectangle visible d'une fenêtre.</summary>
+    private const uint ExtendedFrameBounds = 9;
+
     /// <inheritdoc/>
     public bool UseDarkTitleBar(nint windowHandle, bool dark)
     {
@@ -38,6 +41,12 @@ public sealed partial class WindowChrome : IWindowChrome
             Math.Max(0, window.Right - work.Right),
             Math.Max(0, window.Bottom - work.Bottom));
     }
+
+    /// <inheritdoc/>
+    public ScreenBounds VisibleBounds(nint windowHandle) =>
+        windowHandle != 0 && DwmGetWindowAttribute(windowHandle, ExtendedFrameBounds, out var area, (uint)Marshal.SizeOf<Area>()) == 0
+            ? new ScreenBounds(area.Left, area.Top, area.Right, area.Bottom)
+            : default;
 
     /// <inheritdoc/>
     public ScreenArea WorkArea(nint windowHandle)
@@ -67,6 +76,10 @@ public sealed partial class WindowChrome : IWindowChrome
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [LibraryImport("dwmapi.dll")]
     private static partial int DwmSetWindowAttribute(nint window, uint attribute, ref int value, uint size);
+
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    [LibraryImport("dwmapi.dll")]
+    private static partial int DwmGetWindowAttribute(nint window, uint attribute, out Area area, uint size);
 
     [StructLayout(LayoutKind.Sequential)]
     private struct Area

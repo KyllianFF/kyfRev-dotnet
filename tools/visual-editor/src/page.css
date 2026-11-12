@@ -143,3 +143,459 @@ body {
   background: var(--selection);
   color: var(--sur-selection);
 }
+
+/*
+ * La fiche en pages (pages.ts) : l'application donne la feuille, ses mesures arrivent en variables sur #fiche. Le fond de
+ * la fenêtre est le bureau ; chaque page est une feuille posée dessus, derrière le texte.
+ */
+html.en-pages body {
+  /* Une feuille plus large que la fenêtre se fait défiler, plutôt que de perdre son bord droit. */
+  overflow-x: auto;
+}
+
+#fiche.en-pages {
+  position: relative;
+  box-sizing: content-box;
+  width: var(--page-largeur);
+  min-height: 0;
+  margin: 16px auto;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* Le texte : la largeur de la feuille, ses marges autour, et au moins la hauteur de toutes les pages (16 px entre deux). */
+#fiche.en-pages > .editeur-visuel {
+  position: relative;
+  box-sizing: border-box;
+  width: var(--page-largeur);
+  max-width: none;
+  min-height: calc(var(--pages, 1) * var(--page-hauteur) + (var(--pages, 1) - 1) * 16px);
+  padding: var(--page-marge);
+}
+
+#fiche.en-pages > :is(.papiers, .coupures) {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+#fiche.en-pages .papier {
+  position: absolute;
+  right: 0;
+  left: 0;
+  box-sizing: border-box;
+  height: var(--page-hauteur);
+  background: var(--surface);
+  border: 1px solid var(--bordure);
+}
+
+/* L'écart entre deux pages, redessiné devant ce qui le traverse quand un bloc a été poussé (les traits d'un tableau, le
+   fond d'une citation) : le bureau, entre le bord des deux feuilles. */
+#fiche.en-pages .coupure {
+  position: absolute;
+  right: 0;
+  left: 0;
+  box-sizing: border-box;
+  height: 18px;
+  background: var(--fond);
+  border-top: 1px solid var(--bordure);
+  border-bottom: 1px solid var(--bordure);
+}
+
+/* L'espace qui pousse un bloc en haut de la page suivante : sa hauteur vient de la mesure. */
+.editeur-visuel .saut-de-page {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Une ligne de tableau poussée : l'espace s'ouvre en haut de ses cases, la ligne n'est pas coupée. */
+.editeur-visuel tr.saut-de-ligne > :is(th, td)::before {
+  display: block;
+  height: var(--saut, 0);
+  content: "";
+}
+
+/* Une figure plus haute que le texte d'une page y est ramenée, à ses proportions. */
+.editeur-visuel .figure-de-page .image {
+  max-width: min(100%, var(--figure-large));
+}
+
+.editeur-visuel .figure-de-page .apercu-dessin :is(svg, img) {
+  max-width: min(100%, 640px, var(--figure-large));
+  max-height: var(--figure-haute);
+}
+
+/* La marque d'un saut de page ou d'une page blanche : un trait pointillé et son nom, avec ou sans pages, pour la retrouver. */
+.editeur-visuel .marque-de-page {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 1em;
+  color: var(--texte-secondaire);
+  font-family: var(--police);
+  font-size: 0.75em;
+  line-height: 1.4;
+  cursor: default;
+  user-select: none;
+}
+
+.editeur-visuel .marque-de-page::before,
+.editeur-visuel .marque-de-page::after {
+  flex: 1;
+  border-top: 1px dashed var(--texte-secondaire);
+  content: "";
+}
+
+/* L'espace ouvert au début d'une ligne, dans un bloc de code plus haut qu'une page. */
+.editeur-visuel .saut-de-code {
+  display: block;
+  pointer-events: none;
+  user-select: none;
+}
+
+/*
+ * Un bloc qui continue à la page suivante (citation, tableau, code) se ferme à sa dernière ligne et se rouvre à la
+ * première : entre les deux, le papier est redessiné devant lui, avec le bord de la feuille. Rien ne traverse la marge.
+ */
+#fiche.en-pages .masque {
+  position: absolute;
+  right: 0;
+  left: 0;
+  box-sizing: border-box;
+  background: var(--surface);
+  border-right: 1px solid var(--bordure);
+  border-left: 1px solid var(--bordure);
+}
+
+#fiche.en-pages .masque.bas {
+  border-bottom: 1px solid var(--bordure);
+}
+
+#fiche.en-pages .masque.haut {
+  border-top: 1px solid var(--bordure);
+}
+
+/* « suite page suivante » sous la dernière ligne, « suite » au-dessus de la première : dans la marge, au ras du texte. */
+#fiche.en-pages .suite {
+  position: absolute;
+  right: var(--page-marge);
+  left: var(--page-marge);
+  color: var(--texte-secondaire);
+  font-family: var(--police);
+  font-size: 12px;
+  font-style: italic;
+  line-height: 16px;
+}
+
+#fiche.en-pages .suite.fin {
+  text-align: right;
+}
+
+/* La ligne d'en-tête d'un tableau, remontrée en haut de la page où il continue : une image d'elle, hors du texte. */
+#fiche.en-pages .rappel-entete {
+  position: absolute;
+  min-height: 0;
+  max-width: none;
+  padding: 0;
+  overflow: hidden;
+  user-select: none;
+}
+
+#fiche.en-pages .trait-de-tableau {
+  position: absolute;
+  height: 0;
+}
+
+/*
+ * Le papier (papier.ts) : l'application en donne le nom, posé en `data-papier` sur <html>, et le pas de ses lignes
+ * d'écriture, posé en `--pas` (lignes.ts, pages.ts). Le dessin est fait de fonds répétés aux couleurs du thème, sur chaque
+ * feuille en pages, sur la fiche sans fin sinon. Il se compte en pas, et non en millimètres : une ligne d'écriture par
+ * pas, le reste en fractions de pas, pour que le texte et les lignes ne s'écartent pas d'une ligne à l'autre (le dessin
+ * peut être un demi pour cent plus petit que de vrais millimètres). Sans pas, les mesures du cahier : 8 mm, 10 mm.
+ *
+ * Le texte s'écrit sur ces lignes (plus bas, « Le texte sur les lignes »). « --phase » est mesurée dans la vraie police
+ * (pages.ts) : c'est d'elle que part le dessin, pour que la ligne d'écriture passe au pied des lettres.
+ */
+html[data-papier] {
+  --trait-leger: color-mix(in srgb, var(--bordure) 40%, transparent);
+  --trait: var(--bordure);
+  --trait-fort: color-mix(in srgb, var(--bordure) 50%, var(--texte-secondaire));
+  --trait-marge: color-mix(in srgb, var(--retard) 55%, transparent);
+}
+
+/* Une ligne d'écriture tous les deux carreaux. */
+html[data-papier="petits-carreaux"] {
+  --maille: calc(var(--pas, 10mm) / 2);
+  --reglure:
+    linear-gradient(to bottom, var(--trait) 1px, transparent 1px),
+    linear-gradient(to right, var(--trait) 1px, transparent 1px);
+  --reglure-tailles: 100% var(--maille), var(--maille) 100%;
+}
+
+/* Seyès : la ligne d'écriture à chaque pas, trois plus légères entre deux, une verticale à chaque pas. */
+html[data-papier="grands-carreaux"] {
+  --maille: var(--pas, 8mm);
+  --reglure:
+    linear-gradient(to bottom, var(--trait-fort) 1px, transparent 1px),
+    linear-gradient(to right, var(--trait) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--trait-leger) 1px, transparent 1px);
+  --reglure-tailles: 100% var(--maille), var(--maille) 100%, 100% calc(var(--maille) / 4);
+}
+
+html[data-papier="lignes"] {
+  --maille: var(--pas, 8mm);
+  --reglure: linear-gradient(to bottom, var(--trait) 1px, transparent 1px);
+  --reglure-tailles: 100% var(--maille);
+}
+
+/* Un point tous les demi-pas, dans les deux sens. */
+html[data-papier="points"] {
+  --maille: calc(var(--pas, 10mm) / 2);
+  --reglure: radial-gradient(circle, var(--trait) 1px, transparent 1.5px);
+  --reglure-tailles: var(--maille) var(--maille);
+}
+
+/* Le point est au milieu de sa maille : quand le texte suit les lignes, le dessin remonte d'autant, et une rangée de
+   points passe au pied des lettres. */
+html.sur-lignes[data-papier="points"] {
+  --reglure-dy: calc(0.5px - var(--maille) / 2);
+}
+
+/* Millimétré : très léger au dixième de pas, plus net au demi-pas, plus net encore à chaque pas (la ligne d'écriture). */
+html[data-papier="millimetre"] {
+  --maille: var(--pas, 10mm);
+  --reglure:
+    linear-gradient(to bottom, var(--trait-fort) 1px, transparent 1px),
+    linear-gradient(to right, var(--trait-fort) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--trait) 1px, transparent 1px),
+    linear-gradient(to right, var(--trait) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--trait-leger) 1px, transparent 1px),
+    linear-gradient(to right, var(--trait-leger) 1px, transparent 1px);
+  --reglure-tailles:
+    100% var(--maille), var(--maille) 100%, 100% calc(var(--maille) / 2), calc(var(--maille) / 2) 100%,
+    100% calc(var(--maille) / 10), calc(var(--maille) / 10) 100%;
+}
+
+/*
+ * Le dessin part du bord gauche de la feuille, marges comprises, et de « --phase » en hauteur : la même sur chaque page,
+ * dont le texte commence une marge sous le haut. Un masque (bloc coupé entre deux pages) le continue : « --dy ».
+ */
+html.en-pages[data-papier] #fiche :is(.papier, .masque),
+html[data-papier]:not(.en-pages) #fiche {
+  background-image: var(--reglure, none);
+  background-position: 0 calc(var(--phase, 0px) + var(--reglure-dy, 0px) + var(--dy, 0px));
+  background-size: var(--reglure-tailles, auto);
+  background-origin: border-box;
+}
+
+/* Sans pages, la fiche est la feuille : le texte garde ses distances du bord, même dans une fenêtre étroite. */
+html[data-papier]:not(.en-pages) #fiche {
+  --bord-texte: 40px;
+  position: relative;
+}
+
+@media (width < 640px) {
+  html[data-papier]:not(.en-pages) #fiche {
+    --bord-texte: 24px;
+    padding-right: 24px;
+    padding-left: 24px;
+  }
+}
+
+/* La ligne de marge des cahiers, quelques pixels à gauche du texte, sur toute la hauteur de la feuille. */
+html.en-pages:is([data-papier="grands-carreaux"], [data-papier="lignes"]) #fiche :is(.papier, .masque)::before,
+html:is([data-papier="grands-carreaux"], [data-papier="lignes"]):not(.en-pages) #fiche::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--bord-texte) - 6px);
+  width: 1.5px;
+  background: var(--trait-marge);
+  content: "";
+  pointer-events: none;
+}
+
+/* En pages, la feuille et le masque ont un bord d'un pixel : la ligne se compte depuis l'intérieur de ce bord. */
+html.en-pages[data-papier] #fiche :is(.papier, .masque) {
+  --bord-texte: calc(var(--page-marge) - 1px);
+}
+
+/*
+ * Sur un papier dessiné, le code et les citations le laissent voir à travers leur fond. Les tableaux, non : chaque case
+ * a un fond plein, pour que les lignes ne passent jamais sous son texte. La couleur de la feuille par défaut ; l'en-tête,
+ * les bandes et les couleurs d'un thème de tableau (fiche.css) passent devant, pleines elles aussi.
+ */
+html[data-papier]:not([data-papier="uni"]) .editeur-visuel :is(pre:not(.bloc-brut), blockquote),
+html[data-papier]:not([data-papier="uni"]) .editeur-visuel :not(pre) > code {
+  background-color: color-mix(in srgb, var(--surface-2) 55%, transparent);
+}
+
+html[data-papier]:not([data-papier="uni"]) .editeur-visuel .bloc-code:not(.bloc-dessin) > .entete-code {
+  background-color: color-mix(in srgb, var(--surface) 55%, transparent);
+}
+
+/* « :where » : cette règle ne pèse pas plus qu'une case, et celles de fiche.css (en-tête, bandes) gardent le dernier mot. */
+:where(html[data-papier]:not([data-papier="uni"])) .editeur-visuel :is(th, td) {
+  background-color: var(--surface);
+}
+
+/* La dernière ligne qui ressort n'a pas de bande (fiche.css la rend sans fond) : sur un papier, celui de la feuille. */
+html[data-papier]:not([data-papier="uni"]) .editeur-visuel table[data-total][data-bandes="lignes"] tr:last-child > * {
+  background: var(--surface);
+}
+
+/*
+ * Le texte sur les lignes (lignes.ts, pages.ts) : sur un papier réglé, <html> porte « sur-lignes » et « --pas », le pas des
+ * lignes d'écriture. Comme sur un cahier :
+ * - chaque ligne de texte prend une ligne d'écriture, dans un paragraphe, une liste, une citation ou un titre ;
+ * - un retour à la ligne (Maj+Entrée) continue sur la ligne suivante ; un nouveau paragraphe (Entrée) en saute une ;
+ * - les points d'une liste se suivent sans ligne vide, et la liste est suivie d'une ligne vide ;
+ * - un titre a une ligne vide avant lui et aucune après ; trop grand pour une ligne, il en prend deux ou plus
+ *   (« --lignes-N », compté par pages.ts) et se pose sur la dernière (« --levee-N », mesuré dans la police) ;
+ * - un tableau, une image, un code, une formule, un trait gardent leur hauteur, et sont calés (« --cale », mesuré) pour
+ *   que le texte reprenne sur la première ligne entière sous eux.
+ * Les marges se confondent : entre deux blocs, jamais plus d'une ligne vide.
+ */
+html.sur-lignes .contenu-fiche {
+  line-height: var(--pas);
+}
+
+html.sur-lignes .contenu-fiche :is(p, ul, ol, blockquote) {
+  margin: 0 0 var(--pas);
+}
+
+html.sur-lignes .contenu-fiche :is(h1, h2, h3, h4, h5, h6) {
+  position: relative;
+  margin: var(--pas) 0 0;
+  padding: 0;
+  border: 0;
+}
+
+html.sur-lignes .contenu-fiche h1 {
+  top: var(--levee-1, 0px);
+  line-height: calc(var(--pas) * var(--lignes-1, 1));
+}
+
+html.sur-lignes .contenu-fiche h2 {
+  top: var(--levee-2, 0px);
+  line-height: calc(var(--pas) * var(--lignes-2, 1));
+}
+
+html.sur-lignes .contenu-fiche h3 {
+  top: var(--levee-3, 0px);
+  line-height: calc(var(--pas) * var(--lignes-3, 1));
+}
+
+html.sur-lignes .contenu-fiche h4 {
+  top: var(--levee-4, 0px);
+  line-height: calc(var(--pas) * var(--lignes-4, 1));
+}
+
+html.sur-lignes .contenu-fiche h5 {
+  top: var(--levee-5, 0px);
+  line-height: calc(var(--pas) * var(--lignes-5, 1));
+}
+
+html.sur-lignes .contenu-fiche h6 {
+  top: var(--levee-6, 0px);
+  line-height: calc(var(--pas) * var(--lignes-6, 1));
+}
+
+html.sur-lignes .contenu-fiche > :first-child {
+  margin-top: 0;
+}
+
+/* Les points d'une liste serrée se suivent, comme dans fiche.css : ces règles repassent devant celle des paragraphes. */
+html.sur-lignes .editeur-visuel .serree > li > :is(p, ul, ol),
+html.sur-lignes .editeur-visuel .serree > li > .tache-texte > :is(p, ul, ol) {
+  margin: 0;
+}
+
+/* Une citation n'a plus de marge intérieure en hauteur : son fond va d'une ligne à l'autre, son texte est sur les lignes. */
+html.sur-lignes .contenu-fiche blockquote {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+/*
+ * Dans une ligne, ce qui a une autre taille ou une autre police (taille choisie, code, exposant, gras) ne la grandit
+ * pas : sans hauteur de ligne à lui, il se pose au pied des lettres voisines, sur la ligne d'écriture.
+ */
+html.sur-lignes .contenu-fiche :is(p, li, h1, h2, h3, h4, h5, h6) :is([data-taille], .couleur, code, sup, sub, strong, em, u, s, a, mark):not(:is(table, pre, .formule) *) {
+  line-height: 0;
+}
+
+/* Ce qui garde sa hauteur garde aussi son interligne de lecture, et n'a pas de marge sous lui : sa cale en tient lieu. */
+html.sur-lignes .contenu-fiche :is(table, pre, .bloc-code, .formule.bloc) {
+  line-height: var(--interligne-lecture, 1.65);
+}
+
+html.sur-lignes .contenu-fiche :is(table, pre, .bloc-code, .formule.bloc, .marque-de-page, p.bloc-libre) {
+  margin-bottom: 0;
+}
+
+html.sur-lignes .contenu-fiche .formule.bloc > .katex-display {
+  margin: 0;
+}
+
+/*
+ * Le trait garde son air : au-dessus, une marge qui se confond avec la ligne vide ; en dessous, de la place à lui. Il
+ * est plus sombre que les lignes du papier, pour ne pas être pris pour l'une d'elles.
+ */
+html.sur-lignes .contenu-fiche hr {
+  margin-bottom: 0;
+  padding-bottom: 1.5em;
+  border-top-color: var(--texte-secondaire);
+}
+
+/*
+ * La cale : de la place sous le bloc, à lui, pour que les marges autour de lui restent ce qu'elles sont. Ces règles
+ * passent devant toutes celles d'au-dessus : une cale qui ne s'applique pas ne serait jamais retrouvée par la mesure.
+ */
+html.sur-lignes .editeur-visuel .cale-de-ligne {
+  padding-bottom: var(--cale, 0px);
+}
+
+html.sur-lignes .editeur-visuel hr.cale-de-ligne {
+  padding-bottom: calc(1.5em + var(--cale, 0px));
+}
+
+html.sur-lignes .editeur-visuel pre.bloc-brut.cale-de-ligne {
+  padding-bottom: calc(14px + var(--cale, 0px));
+}
+
+/* Un tableau ne se cale pas par sa marge intérieure (ses traits sont fusionnés) : une légende vide, sous lui. */
+html.sur-lignes .editeur-visuel table.cale-de-ligne {
+  padding-bottom: 0;
+}
+
+html.sur-lignes .editeur-visuel table.cale-de-ligne::after {
+  display: table-caption;
+  height: var(--cale, 0px);
+  caption-side: bottom;
+  content: "";
+}
+
+/* La sonde des lignes (pages.ts) : une ligne de texte et un titre de chaque niveau, mesurés mais jamais montrés. */
+#fiche > .sonde-de-ligne {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: max-content;
+  max-width: none;
+  visibility: hidden;
+  pointer-events: none;
+  user-select: none;
+}
+
+#fiche > .sonde-de-ligne span {
+  display: inline-block;
+  width: 0;
+  height: 0;
+}
