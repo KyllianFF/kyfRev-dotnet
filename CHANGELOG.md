@@ -7,6 +7,8 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ## [Non publié]
 
+## [1.1.0-beta.1] - 2026-11-12
+
 ### Ajouté
 - Papier réglé : le texte se pose sur les lignes, en lecture, en révision et en écriture. Chaque ligne de texte occupe
   un pas d'écriture : 8 mm sur les grands carreaux et le papier ligné, 10 mm (une ligne sur deux) sur les petits
@@ -904,5 +906,6 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 - Le texte d'un champ de plusieurs lignes ne colle plus au bord haut.
 - Le libellé long d'une case à cocher était coupé : il passe maintenant à la ligne, en face de sa case.
 
-[Non publié]: https://github.com/KyllianFF/kyfRev-dotnet/compare/v1.0.0-beta.1...HEAD
+[Non publié]: https://github.com/KyllianFF/kyfRev-dotnet/compare/v1.1.0-beta.1...HEAD
+[1.1.0-beta.1]: https://github.com/KyllianFF/kyfRev-dotnet/compare/v1.0.0-beta.1...v1.1.0-beta.1
 [1.0.0-beta.1]: https://github.com/KyllianFF/kyfRev-dotnet/releases/tag/v1.0.0-beta.1

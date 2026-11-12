@@ -178,7 +178,7 @@
       "kyfrev.application": {
         "type": "Project",
         "dependencies": {
-          "KyfRev.Domain": "[1.0.0-beta.1, )",
+          "KyfRev.Domain": "[1.1.0-beta.1, )",
           "Microsoft.Extensions.DependencyInjection.Abstractions": "[10.0.13, )",
           "Microsoft.Extensions.Logging.Abstractions": "[10.0.13, )"
         }
@@ -189,7 +189,7 @@
       "kyfrev.infrastructure.crypto": {
         "type": "Project",
         "dependencies": {
-          "KyfRev.Application": "[1.0.0-beta.1, )",
+          "KyfRev.Application": "[1.1.0-beta.1, )",
           "NSec.Cryptography": "[26.4.0, )",
           "System.Security.Cryptography.ProtectedData": "[10.0.13, )"
         }
@@ -197,8 +197,8 @@
       "kyfrev.infrastructure.vault": {
         "type": "Project",
         "dependencies": {
-          "KyfRev.Application": "[1.0.0-beta.1, )",
-          "KyfRev.Domain": "[1.0.0-beta.1, )",
+          "KyfRev.Application": "[1.1.0-beta.1, )",
+          "KyfRev.Domain": "[1.1.0-beta.1, )",
           "YamlDotNet": "[18.1.0, )"
         }
       },

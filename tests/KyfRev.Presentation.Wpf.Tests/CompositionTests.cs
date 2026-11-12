@@ -54,7 +54,7 @@ public sealed class CompositionTests
         Assert.IsNull(state.Vault);
         Assert.AreEqual(KyfRev.App.Composition.Version, state.Version);
         Assert.DoesNotContain("+", state.Version);
-        Assert.StartsWith("1.0.0", state.Version);
+        Assert.StartsWith("1.1.0", state.Version);
     }
 
     [TestMethod]
