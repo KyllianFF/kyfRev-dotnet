@@ -116,9 +116,12 @@ describe("agrégats de liens, trunks (D51)", () => {
     expect(() => basculerMembre(schema, lien.id, "a", lien.a.interface)).toThrow(Refus);
     // Un port câblé vers un autre équipement : refusé.
     expect(() => basculerMembre(schema, lien.id, "a", port(sw, "1/5").interface)).toThrow(/câblé vers/);
-    // Dessin : un seul trait, son repère, les ports de l'agrégat aux bouts.
+    // Dessin : un trait par port de l'agrégat (deux ici) sous son cercle, les ports de l'agrégat aux bouts.
+    // (Avant, l'agrégat était un seul trait épais : on ne voyait pas combien de câbles il réunit.)
     const page = mettreEnPage(schema, vue("physique"), new Set());
-    expect(page.liens.find((l) => l.lien.id === lien.id)?.agregat).toBeDefined();
+    const dessine = page.liens.find((l) => l.lien.id === lien.id);
+    expect(dessine?.cercle).toBeDefined();
+    expect(dessine?.brins?.length).toBe(2);
     const ports = [...page.etiquettes.values()].flat().map((e) => e.texte);
     expect(ports).toContain("Trk1 · 1/1,1/2");
     expect(ports).toContain("Trk1 · port1,port4");

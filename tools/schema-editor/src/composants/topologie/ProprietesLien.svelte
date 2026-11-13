@@ -280,11 +280,11 @@
   </details>
 
   <details open={agrege}>
-    <summary>Agrégat de liens (trunk){agrege ? "" : " : non"}</summary>
+    <summary>Agrégat de liens{agrege ? "" : " : non"}</summary>
     {#if !agrege}
       <p class="aide">
-        Plusieurs ports agrégés entre ces deux équipements (trunk HPE/Aruba, port-channel, LACP) : ce câble les représente
-        tous, en un seul trait.
+        Plusieurs ports agrégés entre ces deux équipements (port-channel, LACP ; « trunk » chez HPE/Aruba) : ils se
+        dessinent un par un, sous un cercle. Le trunk au sens des VLAN se règle plus haut, dans les VLAN du câble.
       </p>
       <button type="button" class="bouton petit" onclick={() => editeur.agir((s) => creerAgregat(s, lien.id), "Agrégat créé : choisissez ses ports de chaque côté.")}>
         Faire de ce câble un agrégat

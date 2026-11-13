@@ -4,8 +4,9 @@
 // non tagué (untagged, natif d'un trunk) et des VLAN tagués (« 10,20,30-40 »).
 //
 // Un agrégat (trunk au sens HPE/Aruba, port-channel, LACP) regroupe des
-// ports d'un équipement ; son câble, un seul trait sur le schéma, les
-// représente tous. Ses autres membres ne prennent donc pas d'autre câble.
+// ports d'un équipement ; son câble les représente tous au modèle (ses autres
+// membres ne prennent donc pas d'autre câble) et se dessine en autant de
+// traits que de ports, sous un cercle.
 
 import type { Agregat, ConfigVlan, Extremite, Lien, Schema } from "./modele";
 import { equipementDe, interfaceDe, liensDeLInterface, nouvelId } from "./modele";
@@ -19,6 +20,35 @@ export const agregatDe = (schema: Pick<Schema, "agregats">, bout: Extremite): Ag
 export function configDuBout(schema: Schema, bout: Extremite): ConfigVlan | undefined {
   const agregat = agregatDe(schema, bout);
   return agregat ? agregat.vlan : interfaceDe(schema, bout)?.vlan;
+}
+
+/**
+ * Un câble d'agrégat de liens : un de ses bouts au moins est membre d'un agrégat. Le dessin montre
+ * autant de traits que de ports, sous un cercle. Ce n'est pas un trunk : l'un va sans l'autre.
+ */
+export const enAgregat = (schema: Pick<Schema, "agregats">, lien: Lien): boolean =>
+  Boolean(agregatDe(schema, lien.a) || agregatDe(schema, lien.b));
+
+/**
+ * Un câble en trunk : ses deux bouts sont en mode VLAN trunk (le réglage de leur agrégat, s'ils en
+ * ont un). Le dessin l'annote « Trunk », avec ses VLAN.
+ */
+export const estTrunk = (schema: Schema, lien: Lien): boolean =>
+  configDuBout(schema, lien.a)?.mode === "trunk" && configDuBout(schema, lien.b)?.mode === "trunk";
+
+/**
+ * L'annotation d'un câble en trunk : « Trunk », « Trunk · T 10,20 », « Trunk · U 1 · T 10,20,30 »
+ * (U : VLAN non tagué, T : VLAN tagués), d'après le premier bout qui a des VLAN.
+ */
+export function texteTrunk(schema: Schema, lien: Lien): string {
+  for (const bout of [lien.a, lien.b]) {
+    const { nonTague, tagues } = champsDe(configDuBout(schema, bout));
+    if (nonTague === undefined && !tagues) continue;
+    return ["Trunk", nonTague !== undefined ? `U ${nonTague}` : "", tagues ? `T ${tagues}` : ""]
+      .filter(Boolean)
+      .join(" · ");
+  }
+  return "Trunk";
 }
 
 /** Les deux champs d'une configuration : VLAN non tagué (ou natif) et VLAN tagués. */

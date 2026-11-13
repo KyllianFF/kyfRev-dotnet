@@ -89,6 +89,8 @@ export const api = {
     appeler<ResultatEnregistrement>("enregistrerSchema", id, texte, empreinte),
   dupliquerSchema: (id: string) => appeler<SchemaLu>("dupliquerSchema", id),
   exporterSchema: (dossier: string, nom: string, octets: Uint8Array) => appeler<string>("exporterSchema", dossier, nom, base64(octets)),
+  /** L'image PNG d'un schéma va dans le presse-papiers ; une erreur dit pourquoi ce n'est pas fait. */
+  copierImageSchema: (octets: Uint8Array) => appeler<null>("copierImageSchema", base64(octets)),
   choisirDossier: (titre: string) => appeler<string | null>("choisirDossier", titre),
   choisirFichierSchema: () => appeler<string | null>("choisirFichierSchema"),
   lireImportSchema: (chemin: string) => appeler<string>("lireImportSchema", chemin),

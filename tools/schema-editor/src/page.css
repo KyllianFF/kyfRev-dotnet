@@ -247,3 +247,59 @@ select.champ:disabled {
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+/*
+ * Impression d'un schéma seul (« Imprimer… ») : son titre et son dessin, posés dans ce conteneur juste avant
+ * l'impression et retirés après. Tant qu'il existe, rien d'autre de l'interface ne s'imprime. Le papier est
+ * blanc et l'encre sombre quel que soit le thème de l'écran : ces couleurs sont voulues, pas celles du thème.
+ * Le sens de la page (`@page { size }`) est posé avec le conteneur, d'après la forme du dessin.
+ */
+.impression-schema {
+  display: none;
+}
+
+@page {
+  margin: 12mm;
+}
+
+@media print {
+  html:has(.impression-schema) {
+    color-scheme: light;
+  }
+
+  html:has(.impression-schema),
+  body:has(> .impression-schema) {
+    height: auto;
+    background: #ffffff;
+    color: #000000;
+    overflow: visible;
+  }
+
+  body:has(> .impression-schema) > :not(.impression-schema) {
+    display: none !important;
+  }
+
+  /* Une seule page : le titre, puis le dessin dans la hauteur qui reste, entier. */
+  .impression-schema {
+    display: flex;
+    flex-direction: column;
+    gap: 5mm;
+    width: 100%;
+    height: 100vh;
+    break-inside: avoid;
+  }
+
+  .impression-schema h1 {
+    flex: none;
+    font-size: 16pt;
+    overflow-wrap: anywhere;
+  }
+
+  .impression-schema img {
+    flex: 1 1 0;
+    width: 100%;
+    min-height: 0;
+    object-fit: contain;
+    object-position: top center;
+  }
+}
