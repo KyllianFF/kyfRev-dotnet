@@ -7,6 +7,83 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ## [Non publié]
 
+### Ajouté
+- Écrire, repli des sections : une flèche dans la marge, à côté de chaque titre qui a du contenu, replie ou déplie tout ce
+  qui le suit jusqu'au prochain titre de même niveau, titres de niveau inférieur compris. Alt+Maj+« - » replie la section
+  où est le curseur, Alt+Maj+« + » la déplie. Le repli ne s'écrit pas dans la fiche et repart de zéro à chaque ouverture ;
+  le curseur n'entre jamais dans un texte caché (la section se déplie), et la mise en pages ne compte pas ce qui est
+  replié. Seuls les titres au premier niveau du texte ont une flèche, pas ceux d'une citation ou d'une liste.
+- Écrire, clic droit sur la marque d'un saut de page ou d'une page blanche : « Supprimer le saut de page » ou « Supprimer
+  la page blanche ». Ctrl+Z la remet.
+- Imprimer : le choix du format de papier (A4, A5, A6), par défaut celui de la mise en page de la fiche. En choisir un
+  autre refait les pages de l'aperçu pour ce papier, sans toucher à la fiche.
+- Schémas réseau, au clic droit sur la carte d'un schéma et dans son Détail : « Exporter… » (image PNG, image SVG ou
+  modèle JSON), « Partager » (l'image du schéma va dans le presse-papiers, prête à coller) et « Imprimer… ». Jusqu'ici,
+  l'export n'existait que dans l'éditeur.
+- Schémas réseau, deux modes de création dans l'éditeur, « Simplifié » et « Avancé », d'après leurs maquettes. Ce sont deux
+  façons de travailler sur le même schéma : passer de l'un à l'autre ne change rien, et ce qui est fait en simplifié a de
+  vrais ports en avancé. Le mode choisi est retenu sur l'ordinateur ; la première fois, Simplifié.
+  - Simplifié : les outils Choisir, Câble, Texte, Zone et Effacer. Un câble se tire d'un équipement à un autre sans
+    choisir de port (le premier port libre qui convient, créé s'il n'y en a pas) ; recommencer tire un câble de plus entre
+    les deux mêmes équipements. La bulle d'un équipement règle son nom et son adresse IP, facultative : sans adresse, rien
+    ne s'écrit sous lui. La bulle d'un câble règle son type (cuivre, fibre, série, sans fil…), le nombre de câbles, et
+    deux options distinctes : « Agrégat de liens », qui regroupe au moins deux câbles en un agrégat (LACP), et « Trunk »,
+    qui libère deux champs, « VLAN non tagué (untagged) » et « VLAN tagués (tagged) », écrits à l'identique aux deux
+    bouts. Les deux se cumulent : le trunk d'un agrégat est celui de l'agrégat. La bulle conseille sans bloquer : deux
+    câbles entre deux commutateurs sans agrégat (boucle), trunk sans VLAN, VLAN 1 non tagué, trunk vers un poste, liens
+    d'agrégat dissemblables ; elle refuse un numéro hors de 1 à 4094 ou un VLAN non tagué répété dans les tagués, et
+    propose d'aligner deux bouts qui diffèrent. Un texte libre se pose d'un clic, se déplace à la souris ou aux
+    flèches, se modifie au double-clic.
+  - Avancé : l'éditeur d'avant, avec ses interfaces, ses VLAN, ses vues et son diagnostic ; un outil « Relation » s'y
+    ajoute.
+  - Dans les deux modes, un plateau d'équipements au bas de l'éditeur remplace la bibliothèque : les familles en
+    onglets, une recherche, et chaque équipement sous sa vraie icône, à glisser sur le schéma, ou à poser d'un clic ou
+    d'Entrée. « Exporter… » et « Imprimer… » sont dans l'en-tête de l'éditeur.
+
+### Modifié
+- Tailles du texte des fiches, alignées sur celles d'un traitement de texte et comptées en points : le corps vaut 12
+  (17 pixels auparavant, soit 12,75 points), les titres 1 à 3 valent 20, 16 et 14, le titre 4 a la taille du corps en
+  italique, les titres 5 et 6 la taille du corps. Les titres grandissent maintenant avec le réglage « Taille du texte
+  des fiches » (Normale 12, Grande 14, Très grande 16), et l'écriture suit ce réglage comme la lecture. La liste des
+  tailles du ruban est en points (8 à 36) et dit la taille du titre où est le curseur. Une taille déjà posée dans une
+  fiche garde sa proportion : ce qui s'affichait « 20 » s'affiche « 14 ». Sur les grands carreaux, un titre 1 tient
+  désormais sur une ligne.
+- Barre de défilement d'une fiche : au bord droit de la fenêtre, en lecture, en révision et en écriture, et non plus
+  contre la feuille. Le texte reste une colonne à largeur de lecture, centrée ; sur un papier, la feuille sans fin est
+  une feuille de cette largeur, plus une nappe sur toute la fenêtre.
+- Outil actif du ruban (gras, alignement, papier…) et choix actif d'un bouton à bascule : un contour de la couleur
+  principale s'ajoute au fond, qui ne se distinguait pas du ruban en thème clair.
+- Messages de réussite (« Supprimé définitivement. », « Déplacé. », « Réglages enregistrés. »…) : ils s'effacent
+  d'eux-mêmes après le temps de les lire, de 5 à 12 secondes selon leur longueur, et restent tant que la souris ou le
+  clavier est dessus. Les erreurs, les avertissements et le résultat d'un long travail (conversion du coffre, mise à
+  jour, partage) restent affichés.
+- Schémas réseau, agrégat et trunk sur le dessin : un agrégat de liens se voit par ses câbles, dessinés un par un (ils
+  étaient fondus en un seul trait épais), sous un cercle qui les regroupe ; un trunk est annoté sur son câble, avec ses
+  VLAN (« Trunk · U 1 · T 10,20,30 », U pour non tagué, T pour tagués), dans toutes les vues, la simplifiée comprise.
+  Un trunk sans agrégat n'a pas de cercle ; un agrégat qui porte un trunk a son cercle et une seule annotation. Cela vaut
+  pour l'éditeur, la liste, l'export et les schémas insérés dans les fiches. En mode avancé, la section « Agrégat de
+  liens » ne s'intitule plus « (trunk) ».
+- Fenêtre « Imprimer » en fenêtre étroite : les réglages puis l'aperçu, l'un sous l'autre, au lieu d'un aperçu qui
+  sortait du cadre.
+- Carnet, aperçu de la fiche choisie, refait d'après sa maquette : la fiche est une feuille posée sur le fond de la page,
+  sans carte autour d'elle. Son titre est au-dessus d'elle, à son bord gauche ; « Lire » et « Écrire », accolés, à son
+  bord droit ; les étapes du cycle et « Historique » au-dessous, sur sa largeur. Une fiche en pages se voit en feuilles
+  séparées, le fond de la page entre elles et le rang de la suivante (« Page 2 sur 3 »). Sans papier choisi, la feuille
+  est unie ; avec un papier, le texte de l'aperçu est posé sur ses lignes, comme en lecture.
+- Paramètres : chaque section se lit dans une colonne centrée de 720 points au plus, le texte à gauche et chaque réglage
+  à droite de son nom, à largeur fixe ; les blocs sont l'un sous l'autre à toutes les largeurs. Feuilles garde ses deux
+  volets (1180 points), centrés eux aussi. En fenêtre étroite, la colonne prend toute la largeur.
+
+### Corrigé
+- Menu masqué, puis fenêtre rétrécie jusqu'à passer le menu en onglets : les onglets ne paraissaient pas et le bouton
+  du menu avait quitté la barre de titre, si bien qu'on restait bloqué sur la page. Les onglets du bas ne se masquent
+  plus ; le choix « masqué » reste retenu et reprend dès que la fenêtre retrouve son menu latéral.
+- Coin supérieur droit de la fenêtre : la flèche de redimensionnement en diagonale n'y paraissait pas, le bouton
+  « Fermer » l'emportant sur le cadre. Les quatre bords et les quatre coins redimensionnent maintenant, y compris
+  au-dessus des boutons de la barre de titre.
+- Carnet : plier ou déplier un dossier vidait puis relisait l'aperçu de la fiche choisie, d'où un clignotement.
+- Papier réglé : le texte venu après un tableau, lui-même venu après une liste, pouvait ne pas tomber sur une ligne.
+
 ## [1.1.0-beta.1] - 2026-11-12
 
 ### Ajouté

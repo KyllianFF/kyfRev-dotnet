@@ -101,8 +101,13 @@ internal sealed partial class SheetDocumentViewer : FlowDocumentScrollViewer
             _hover.Hide();
             WatchWindow(null);
         };
-        SizeChanged += (_, _) =>
+        SizeChanged += (_, e) =>
         {
+            if (e.WidthChanged && Layout is not { IsPaged: true })
+            {
+                // La colonne de texte d'une feuille sans fin reste centrée dans la vue.
+                ApplyPagePadding();
+            }
             FitTables();
             RestartPages();
         };
@@ -751,7 +756,7 @@ internal sealed partial class SheetDocumentViewer : FlowDocumentScrollViewer
         {
             return;
         }
-        var available = ActualWidth - Padding.Left - Padding.Right - SystemParameters.VerticalScrollBarWidth;
+        var available = ActualWidth - Padding.Left - Padding.Right - SystemParameters.VerticalScrollBarWidth - (Layout is { IsPaged: true } ? 0 : 2 * EndlessSide);
         foreach (var table in Tables(document))
         {
             if (table.Tag is not TableSizing sizing)

@@ -64,6 +64,7 @@ import {
   insertionDeLigne,
   insertionDeSaut,
   sansTaches,
+  suppressionDeBloc,
 } from "./blocs";
 import type { Casse } from "./casse";
 import { changementDeCasse } from "./casse-visuelle";
@@ -73,6 +74,7 @@ import { depuisMarkdown, type Origine, trancheBrute, trancheCollee, versMarkdown
 import { type ApparenceImage, changerTitre, lireTitre } from "./image";
 import { motsEntiers } from "./mots-entiers";
 import { MiseEnPage, pages, refairePages } from "./pages";
+import { repli } from "./repli";
 import { schema } from "./schema";
 import { caseVoisine, changerApparence, triable, trierTableau } from "./tableaux";
 
@@ -153,8 +155,8 @@ export type Reactions = {
   onsaisielien: (saisie: { requete: string; debut: number; x: number; y: number } | null) => void;
   /** Touche pendant une saisie : vrai si la liste la prend. */
   clavierlien: (touche: string) => boolean;
-  /** Clic droit : le menu est natif. */
-  onmenu: (dessin: DessinVise | null, image: ImageVisee | null) => void;
+  /** Clic droit : le menu est natif. Il vise un dessin, une image, la marque d'un saut de page, ou le texte. */
+  onmenu: (dessin: DessinVise | null, image: ImageVisee | null, marque: MarqueVisee | null) => void;
   /** Le dessin d'un bloc : un SVG, ou une image ; ni l'un ni l'autre : il ne se dessine pas. */
   dessin: (langage: string, code: string) => Promise<Dessin>;
   /** Modifier ce dessin : c'est la galerie de l'application. */
@@ -671,6 +673,22 @@ function dessinSous(vue: EditorView, cible: EventTarget | null): DessinVise | nu
     : null;
 }
 
+/** La marque visée par un clic droit : un saut de page, ou une page blanche. */
+export type MarqueVisee = { position: number; blank: boolean };
+
+/** La marque de saut de page sous la souris. */
+function marqueSous(vue: EditorView, cible: EventTarget | null): MarqueVisee | null {
+  const marque = cible instanceof Element ? cible.closest(".marque-de-page") : null;
+  if (!marque || !vue.dom.contains(marque)) return null;
+  let visee: MarqueVisee | null = null;
+  vue.state.doc.descendants((noeud, position) => {
+    if (visee) return false;
+    if (noeud.type === n.saut_de_page && vue.nodeDOM(position) === marque) visee = { position, blank: noeud.attrs.blanche === true };
+    return !noeud.isTextblock;
+  });
+  return visee;
+}
+
 /** Les langages de bloc que dessinent les extensions actives : l'application les donne avec chaque fiche. */
 let blocsDesExtensions: ReadonlySet<string> = new Set();
 
@@ -920,14 +938,21 @@ export class EditeurVisuel {
           evenement.preventDefault();
           const dessin = dessinSous(vue, evenement.target);
           if (dessin) {
-            reactions.onmenu(dessin, null);
+            reactions.onmenu(dessin, null, null);
             return true;
           }
           const image = imageSous(vue, evenement.target);
           if (image) {
             // Le clic droit choisit l'image : l'onglet Image s'ouvre sur elle, comme après un clic gauche.
             vue.dispatch(vue.state.tr.setSelection(NodeSelection.create(vue.state.doc, image.position)));
-            reactions.onmenu(null, image);
+            reactions.onmenu(null, image, null);
+            return true;
+          }
+          const marque = marqueSous(vue, evenement.target);
+          if (marque) {
+            // Le clic droit choisit la marque : le menu propose de retirer ce saut de page, et l'on voit lequel.
+            vue.dispatch(vue.state.tr.setSelection(NodeSelection.create(vue.state.doc, marque.position)));
+            reactions.onmenu(null, null, marque);
             return true;
           }
           const lieu = vue.posAtCoords({ left: evenement.clientX, top: evenement.clientY });
@@ -935,7 +960,7 @@ export class EditeurVisuel {
           if (lieu && (empty || lieu.pos < from || lieu.pos > to)) {
             vue.dispatch(vue.state.tr.setSelection(TextSelection.near(vue.state.doc.resolve(lieu.pos))));
           }
-          reactions.onmenu(null, image);
+          reactions.onmenu(null, image, null);
           return true;
         },
         blur: () => {
@@ -1035,6 +1060,8 @@ export class EditeurVisuel {
         motsEntiers(),
         colorationDuCode(),
         paragrapheFinal(),
+        // Avant les pages : elles ne mesurent pas ce qu'une section repliée cache.
+        repli(),
         pages(this.miseEnPage),
       ],
     });
@@ -1124,20 +1151,11 @@ export class EditeurVisuel {
     this.insererBloc(bloc, bloc.nodeSize);
   }
 
-  /** Retire un bloc de la fiche ; Ctrl+Z le rend. Une fiche garde toujours un paragraphe où écrire. */
+  /** Retire un bloc de la fiche (image, bloc de code, saut de page, page blanche) ; Ctrl+Z le rend. */
   supprimerBloc(position: number): void {
-    const etat = this.vue.state;
-    const noeud = etat.doc.nodeAt(position);
-    if (noeud?.type === n.image) {
-      // Une image s'en va seule : le paragraphe qui la porte reste, même vide.
-      this.vue.dispatch(etat.tr.delete(position, position + noeud.nodeSize).scrollIntoView());
-      this.vue.focus();
-      return;
-    }
-    if (noeud?.type !== n.code_block) return;
-    const fin = position + noeud.nodeSize;
-    const tr = etat.doc.childCount === 1 ? etat.tr.replaceWith(position, fin, n.paragraph.create()) : etat.tr.delete(position, fin);
-    this.vue.dispatch(tr.scrollIntoView());
+    const tr = suppressionDeBloc(this.vue.state, position);
+    if (!tr) return;
+    this.vue.dispatch(tr);
     this.vue.focus();
   }
 
@@ -1611,7 +1629,10 @@ export class EditeurVisuel {
     }
   }
 
-  /** Amène en haut le titre `titre`, à son occurrence `rang`, et y place le curseur. */
+  /**
+   * Amène en haut le titre `titre`, à son occurrence `rang`, et y place le curseur. Les sections repliées qui le
+   * cachaient se déplient : le curseur y entre (repli.ts).
+   */
   allerAuTitre(titre: string, rang: number): void {
     let position = -1;
     let vus = 0;

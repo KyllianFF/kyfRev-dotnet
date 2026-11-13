@@ -156,7 +156,7 @@
         <ProgressBar x:Name="VerifyingBar" Value="{Binding Verified, Mode=OneWay}" Maximum="{Binding Maximum, Mode=OneWay}"
                      AutomationProperties.Name="{x:Static pages:EncryptionText.FilesVerified}" />
 
-        <kyf:Notification x:Name="DoneMessage" Severity="Success" Message="{Binding Result}" IsOpen="{Binding IsDone, Mode=OneWay}" IsClosable="False" Margin="0,16,0,0" />
+        <kyf:Notification x:Name="DoneMessage" Severity="Success" StaysOpen="True" Message="{Binding Result}" IsOpen="{Binding IsDone, Mode=OneWay}" IsClosable="False" Margin="0,16,0,0" />
         <kyf:Notification x:Name="FailedMessage" Severity="Critical" Message="{Binding Result}" IsOpen="{Binding IsFailed, Mode=OneWay}" IsClosable="False" Margin="0,16,0,0" />
         <WrapPanel x:Name="FinishedActions" Margin="0,16,0,0" Visibility="{Binding IsFinished, Converter={StaticResource Visible}}" IsVisibleChanged="OnFinishedShown">
           <Button x:Name="OpenNewButton" Style="{DynamicResource Kyf.Button.Primary}" Command="{Binding OpenNewCommand}" IsEnabled="{Binding IsIdle}"

@@ -27,7 +27,7 @@ public sealed class SharedSheetPictures
     private const double Density = 2;
 
     /// <summary>La taille du texte de la page.</summary>
-    private const double TextSize = 17;
+    private const double TextSize = 16;
 
     private const double BlockScale = 1.2;
 

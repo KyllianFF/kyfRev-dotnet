@@ -34,7 +34,11 @@ public class Notification : Control
 
     /// <summary>Propriété <see cref="Severity"/>.</summary>
     public static readonly DependencyProperty SeverityProperty =
-        DependencyProperty.Register(nameof(Severity), typeof(NotificationSeverity), typeof(Notification), new PropertyMetadata(NotificationSeverity.Info, (notification, _) => ((Notification)notification).UpdateGlyph()));
+        DependencyProperty.Register(nameof(Severity), typeof(NotificationSeverity), typeof(Notification), new PropertyMetadata(NotificationSeverity.Info, (notification, _) =>
+        {
+            ((Notification)notification).UpdateGlyph();
+            ((Notification)notification).Renew();
+        }));
 
     /// <summary>Propriété <see cref="Title"/>.</summary>
     public static readonly DependencyProperty TitleProperty =
@@ -42,7 +46,7 @@ public class Notification : Control
 
     /// <summary>Propriété <see cref="Message"/>.</summary>
     public static readonly DependencyProperty MessageProperty =
-        DependencyProperty.Register(nameof(Message), typeof(string), typeof(Notification), new PropertyMetadata(string.Empty));
+        DependencyProperty.Register(nameof(Message), typeof(string), typeof(Notification), new PropertyMetadata(string.Empty, (notification, _) => ((Notification)notification).Renew()));
 
     /// <summary>Propriété <see cref="IsClosable"/>.</summary>
     public static readonly DependencyProperty IsClosableProperty =
@@ -50,7 +54,17 @@ public class Notification : Control
 
     /// <summary>Propriété <see cref="IsOpen"/>.</summary>
     public static readonly DependencyProperty IsOpenProperty =
-        DependencyProperty.Register(nameof(IsOpen), typeof(bool), typeof(Notification), new FrameworkPropertyMetadata(true, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault));
+        DependencyProperty.Register(nameof(IsOpen), typeof(bool), typeof(Notification), new FrameworkPropertyMetadata(true, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, (notification, _) => ((Notification)notification).Renew()));
+
+    /// <summary>Propriété <see cref="StaysOpen"/>.</summary>
+    public static readonly DependencyProperty StaysOpenProperty =
+        DependencyProperty.Register(nameof(StaysOpen), typeof(bool), typeof(Notification), new PropertyMetadata(false, (notification, _) => ((Notification)notification).Renew()));
+
+    private static readonly DependencyPropertyKey IsExpiredPropertyKey =
+        DependencyProperty.RegisterReadOnly(nameof(IsExpired), typeof(bool), typeof(Notification), new PropertyMetadata(false));
+
+    /// <summary>Propriété <see cref="IsExpired"/>.</summary>
+    public static readonly DependencyProperty IsExpiredProperty = IsExpiredPropertyKey.DependencyProperty;
 
     /// <summary>Quand elle paraît, la zone qui défile autour d'elle l'amène à la vue : un résultat se voit, même au bas d'une fenêtre étroite.</summary>
     public static readonly DependencyProperty ScrollsIntoViewProperty =
@@ -66,7 +80,17 @@ public class Notification : Control
     public static readonly RoutedEvent ClosedEvent =
         EventManager.RegisterRoutedEvent(nameof(Closed), RoutingStrategy.Bubble, typeof(RoutedEventHandler), typeof(Notification));
 
+    /// <summary>Le temps de lire le plus court des messages.</summary>
+    internal static readonly TimeSpan ShortestLifetime = TimeSpan.FromSeconds(5);
+
+    /// <summary>Au-delà, un message de réussite n'a plus à rester.</summary>
+    internal static readonly TimeSpan LongestLifetime = TimeSpan.FromSeconds(12);
+
+    /// <summary>Tant que la souris ou le clavier est sur la notification, elle reste ; on y revient voir à ce rythme.</summary>
+    private static readonly TimeSpan HeldCheck = TimeSpan.FromSeconds(1);
+
     private ButtonBase? _closeButton;
+    private DispatcherTimer? _timer;
 
     /// <summary>Une notification ; le lecteur d'écran l'annonce dès qu'elle paraît.</summary>
     public Notification()
@@ -128,8 +152,34 @@ public class Notification : Control
         set => SetValue(ScrollsIntoViewProperty, value);
     }
 
+    /// <summary>
+    /// Une réussite s'efface d'elle-même après le temps de la lire ; « vrai » la garde, pour le résultat d'un long travail
+    /// qu'on retrouve en revenant. Une erreur, un avertissement et une information restent toujours.
+    /// </summary>
+    public bool StaysOpen
+    {
+        get => (bool)GetValue(StaysOpenProperty);
+        set => SetValue(StaysOpenProperty, value);
+    }
+
+    /// <summary>Lue, elle s'est effacée d'elle-même ; un nouveau message la fait reparaître.</summary>
+    public bool IsExpired => (bool)GetValue(IsExpiredProperty);
+
     /// <summary>Icône de la gravité.</summary>
     public string Glyph => (string)GetValue(GlyphProperty);
+
+    /// <summary>Le temps laissé à un message avant de s'effacer ; rien : celui que demande sa longueur.</summary>
+    internal TimeSpan? Lifetime { get; set; }
+
+    /// <summary>
+    /// Le temps de lire <paramref name="message"/> : quatre secondes, plus une par quinzaine de caractères, entre
+    /// <see cref="ShortestLifetime"/> et <see cref="LongestLifetime"/>.
+    /// </summary>
+    internal static TimeSpan LifetimeOf(string? message)
+    {
+        var wanted = TimeSpan.FromSeconds(4 + ((message?.Length ?? 0) / 15.0));
+        return wanted < ShortestLifetime ? ShortestLifetime : wanted > LongestLifetime ? LongestLifetime : wanted;
+    }
 
     /// <inheritdoc/>
     public override void OnApplyTemplate()
@@ -156,6 +206,47 @@ public class Notification : Control
             // Après la mise en page et le focus : un lecteur d'écran coupe ce qu'il dit quand le focus change.
             Dispatcher.BeginInvoke(DispatcherPriority.ContextIdle, Appear);
         }
+        Count();
+    }
+
+    /// <summary>Un nouveau message, une autre gravité, une réouverture : la notification reparaît, et son temps repart.</summary>
+    private void Renew()
+    {
+        SetValue(IsExpiredPropertyKey, false);
+        Count();
+    }
+
+    /// <summary>Lance le compte d'une réussite visible, et arrête celui de toute autre.</summary>
+    private void Count()
+    {
+        _timer?.Stop();
+        if (!IsVisible || IsExpired || StaysOpen || Severity != NotificationSeverity.Success)
+        {
+            return;
+        }
+        _timer ??= new DispatcherTimer(DispatcherPriority.Background, Dispatcher);
+        _timer.Tick -= OnLifetimeOver;
+        _timer.Tick += OnLifetimeOver;
+        _timer.Interval = Lifetime ?? LifetimeOf(Title + Message);
+        _timer.Start();
+    }
+
+    private void OnLifetimeOver(object? sender, EventArgs e)
+    {
+        if (IsMouseOver || IsKeyboardFocusWithin)
+        {
+            // On la lit encore, ou on va la fermer : elle attend.
+            _timer!.Interval = HeldCheck < (Lifetime ?? HeldCheck) ? HeldCheck : Lifetime ?? HeldCheck;
+            return;
+        }
+        Expire();
+    }
+
+    /// <summary>Le message a eu son temps : il s'efface, sans toucher à ce qui l'a ouvert.</summary>
+    internal void Expire()
+    {
+        _timer?.Stop();
+        SetValue(IsExpiredPropertyKey, true);
     }
 
     /// <summary>La notification paraît : elle se montre si elle le doit, et s'annonce comme une région active, si un client d'UI Automation écoute.</summary>

@@ -223,17 +223,11 @@
             </DockPanel>
           </kyf:Card>
 
-          <!-- L'aperçu de la fiche choisie, quand il y a la place. -->
-          <kyf:Card x:Name="PreviewCard" Grid.Column="1" Margin="12,0,0,0" Visibility="{Binding ShowsPreview, Converter={StaticResource Visible}}">
-            <DockPanel>
-              <!-- Le document choisi s'ouvre d'ici, en lecture ou en écriture, sans passer par le clic droit. -->
-              <StackPanel x:Name="PreviewActions" DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,12">
-                <Button x:Name="ReadButton" Content="{x:Static pages:SheetsText.Read}" Style="{DynamicResource Kyf.Button.Primary}" MinWidth="88" Margin="0,0,8,0" Command="{Binding ReadSelectedCommand}" />
-                <Button x:Name="WriteButton" Content="{x:Static pages:SheetsText.Write}" MinWidth="88" Command="{Binding WriteSelectedCommand}" />
-              </StackPanel>
-              <ContentControl Content="{Binding Preview}" Focusable="False" IsTabStop="False" />
-            </DockPanel>
-          </kyf:Card>
+          <!-- L'aperçu de la fiche choisie, quand il y a la place : la fiche comme une feuille posée sur le fond de la page, sans
+               carte autour d'elle. « Lire » et « Écrire » sont au-dessus d'elle, avec son titre (gabarit CarnetPreview). -->
+          <Border x:Name="PreviewCard" Grid.Column="1" Margin="16,0,0,0" Visibility="{Binding ShowsPreview, Converter={StaticResource Visible}}">
+            <ContentControl x:Name="PreviewHost" Content="{Binding Preview}" ContentTemplate="{StaticResource CarnetPreview}" Focusable="False" IsTabStop="False" />
+          </Border>
         </Grid>
       </Grid>
     </Grid>

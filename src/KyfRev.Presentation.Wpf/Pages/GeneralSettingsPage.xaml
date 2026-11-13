@@ -9,7 +9,11 @@
     <Style x:Key="Row" TargetType="Grid">
       <Setter Property="Margin" Value="0,0,0,8" />
     </Style>
-    <Style x:Key="RowLabel" TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+    <!-- Le nom d'un réglage : écrit dans la police et la couleur du thème, où que la page soit posée. -->
+    <Style x:Key="RowLabel" TargetType="TextBlock">
+      <Setter Property="FontFamily" Value="{DynamicResource Kyf.Font.Ui}" />
+      <Setter Property="FontSize" Value="{DynamicResource Kyf.FontSize.Body}" />
+      <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Text}" />
       <Setter Property="TextWrapping" Value="Wrap" />
       <Setter Property="VerticalAlignment" Value="Center" />
       <Setter Property="Margin" Value="0,0,12,0" />
@@ -18,20 +22,20 @@
 
   <!-- Deux sections des paramètres vivent ici : « Apparence » (thème, taille, accessibilité) et « Lecture » (texte des fiches, voix). -->
   <ScrollViewer x:Name="Scroller" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
-    <StackPanel MaxWidth="1100">
+    <StackPanel MaxWidth="{x:Static pages:SettingsTab.Column}">
       <kyf:Notification x:Name="NotRemembered" Severity="Warning" Message="{x:Static pages:GeneralSettingsText.NotRemembered}" IsOpen="{Binding IsNotRemembered, Mode=OneWay}" IsClosable="False" Margin="0,0,0,8" />
-      <UniformGrid x:Name="Sections" Columns="2" VerticalAlignment="Top">
+      <StackPanel x:Name="Sections">
 
-        <kyf:Card x:Name="AppearanceCard" pages:SettingsPart.Of="apparence" Padding="16,12" Margin="0,0,8,8" VerticalAlignment="Top">
+        <kyf:Card x:Name="AppearanceCard" pages:SettingsPart.Of="apparence" Padding="16,12" Margin="0,0,0,8" VerticalAlignment="Top">
           <StackPanel>
             <TextBlock Text="{x:Static pages:GeneralSettingsText.AppearanceTitle}" Style="{DynamicResource Kyf.Text.Subtitle}" AutomationProperties.HeadingLevel="Level2" Margin="0,0,0,8" />
             <Grid Style="{StaticResource Row}">
-              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="260" /></Grid.ColumnDefinitions>
               <TextBlock Text="{x:Static pages:GeneralSettingsText.Theme}" Style="{StaticResource RowLabel}" />
               <ComboBox x:Name="ThemeChoice" Grid.Column="1" ItemsSource="{x:Static pages:GeneralSettingsViewModel.Themes}" SelectedItem="{Binding Theme}" DisplayMemberPath="Label" AutomationProperties.Name="{x:Static pages:GeneralSettingsText.Theme}" />
             </Grid>
             <Grid Style="{StaticResource Row}">
-              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="260" /></Grid.ColumnDefinitions>
               <StackPanel VerticalAlignment="Center">
                 <TextBlock Text="{x:Static pages:GeneralSettingsText.InterfaceSize}" Style="{StaticResource RowLabel}" />
                 <TextBlock Text="{x:Static pages:GeneralSettingsText.InterfaceSizeHelp}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,0,12,0" />
@@ -59,21 +63,21 @@
           </StackPanel>
         </kyf:Card>
 
-        <kyf:Card x:Name="ReadingCard" pages:SettingsPart.Of="lecture" Padding="16,12" Margin="0,0,8,8" VerticalAlignment="Top">
+        <kyf:Card x:Name="ReadingCard" pages:SettingsPart.Of="lecture" Padding="16,12" Margin="0,0,0,8" VerticalAlignment="Top">
           <StackPanel>
             <TextBlock Text="{x:Static pages:MoreSettingsText.ReadingTextTitle}" Style="{DynamicResource Kyf.Text.Subtitle}" AutomationProperties.HeadingLevel="Level2" Margin="0,0,0,8" />
             <Grid Style="{StaticResource Row}">
-              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="260" /></Grid.ColumnDefinitions>
               <TextBlock Text="{x:Static pages:GeneralSettingsText.TextSize}" Style="{StaticResource RowLabel}" />
               <ComboBox x:Name="TextSizeChoice" Grid.Column="1" ItemsSource="{x:Static pages:GeneralSettingsViewModel.TextSizes}" SelectedItem="{Binding TextSize}" DisplayMemberPath="Label" AutomationProperties.Name="{x:Static pages:GeneralSettingsText.TextSize}" />
             </Grid>
             <Grid Style="{StaticResource Row}">
-              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="260" /></Grid.ColumnDefinitions>
               <TextBlock Text="{x:Static pages:GeneralSettingsText.Spacing}" Style="{StaticResource RowLabel}" />
               <ComboBox x:Name="SpacingChoice" Grid.Column="1" ItemsSource="{x:Static pages:GeneralSettingsViewModel.LineSpacings}" SelectedItem="{Binding LineSpacing}" DisplayMemberPath="Label" AutomationProperties.Name="{x:Static pages:GeneralSettingsText.Spacing}" />
             </Grid>
             <Grid Style="{StaticResource Row}">
-              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="260" /></Grid.ColumnDefinitions>
               <TextBlock Text="{x:Static pages:GeneralSettingsText.Font}" Style="{StaticResource RowLabel}" />
               <ComboBox x:Name="FontChoice" Grid.Column="1" ItemsSource="{x:Static pages:GeneralSettingsViewModel.Fonts}" SelectedItem="{Binding Font}" DisplayMemberPath="Label" AutomationProperties.Name="{x:Static pages:GeneralSettingsText.Font}" />
             </Grid>
@@ -112,23 +116,23 @@
           </StackPanel>
         </kyf:Card>
 
-        <kyf:Card x:Name="VoiceCard" pages:SettingsPart.Of="lecture" Padding="16,12" Margin="0,0,8,8" VerticalAlignment="Top">
+        <kyf:Card x:Name="VoiceCard" pages:SettingsPart.Of="lecture" Padding="16,12" Margin="0,0,0,8" VerticalAlignment="Top">
           <StackPanel>
             <TextBlock Text="{x:Static pages:MoreSettingsText.VoiceTitle}" Style="{DynamicResource Kyf.Text.Subtitle}" AutomationProperties.HeadingLevel="Level2" Margin="0,0,0,8" />
             <TextBlock x:Name="NoVoice" Text="{x:Static pages:GeneralSettingsText.NoVoice}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="0,0,0,8" Visibility="{Binding HasNoVoice, Converter={StaticResource Visible}}" />
             <Grid Style="{StaticResource Row}" Visibility="{Binding HasVoices, Converter={StaticResource Visible}}">
-              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="260" /></Grid.ColumnDefinitions>
               <TextBlock Text="{x:Static pages:GeneralSettingsText.Voice}" Style="{StaticResource RowLabel}" />
               <ComboBox x:Name="VoiceChoice" Grid.Column="1" ItemsSource="{Binding Voices}" SelectedItem="{Binding Voice}" DisplayMemberPath="Label" AutomationProperties.Name="{x:Static pages:GeneralSettingsText.Voice}" />
             </Grid>
             <Grid Style="{StaticResource Row}">
-              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="*" /></Grid.ColumnDefinitions>
+              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="260" /></Grid.ColumnDefinitions>
               <TextBlock Text="{x:Static pages:GeneralSettingsText.Rate}" Style="{StaticResource RowLabel}" />
               <ComboBox x:Name="RateChoice" Grid.Column="1" ItemsSource="{x:Static pages:GeneralSettingsViewModel.Rates}" SelectedItem="{Binding Rate}" DisplayMemberPath="Label" AutomationProperties.Name="{x:Static pages:GeneralSettingsText.Rate}" />
             </Grid>
           </StackPanel>
         </kyf:Card>
-      </UniformGrid>
+      </StackPanel>
     </StackPanel>
   </ScrollViewer>
 </UserControl>

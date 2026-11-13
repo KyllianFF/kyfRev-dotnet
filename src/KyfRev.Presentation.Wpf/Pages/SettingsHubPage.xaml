@@ -161,11 +161,11 @@
           </Style>
         </DockPanel.Style>
 
-        <ComboBox x:Name="SectionChoice" DockPanel.Dock="Top" Margin="0,0,0,12" Visibility="Collapsed" ItemsSource="{Binding Tabs}" SelectedItem="{Binding Selected, Mode=OneWay}" DisplayMemberPath="Label"
+        <ComboBox x:Name="SectionChoice" DockPanel.Dock="Top" Margin="0,0,0,12" MaxWidth="{Binding Selected.ColumnWidth}" Visibility="Collapsed" ItemsSource="{Binding Tabs}" SelectedItem="{Binding Selected, Mode=OneWay}" DisplayMemberPath="Label"
                   SelectionChanged="OnSectionChosen" AutomationProperties.Name="{x:Static pages:SettingsText.Title}" />
 
         <!-- Le titre de la section et, pour ce qui est retenu sur l'ordinateur, le retour à ses réglages d'origine : à droite, ou dessous en fenêtre étroite. -->
-        <Grid x:Name="SectionHead" DockPanel.Dock="Top" Margin="0,0,0,12">
+        <Grid x:Name="SectionHead" DockPanel.Dock="Top" Margin="0,0,0,12" MaxWidth="{Binding Selected.ColumnWidth}">
           <Grid.ColumnDefinitions>
             <ColumnDefinition Width="*" />
             <ColumnDefinition Width="Auto" />
@@ -183,7 +183,7 @@
                   ToolTip="{x:Static pages:MoreSettingsText.RestoreSectionHelp}" AutomationProperties.HelpText="{x:Static pages:MoreSettingsText.RestoreSectionHelp}" />
         </Grid>
 
-        <DockPanel x:Name="RestoreBar" DockPanel.Dock="Top" Margin="0,0,0,12" Visibility="{Binding HasRestoreNote, Converter={StaticResource Visible}}">
+        <DockPanel x:Name="RestoreBar" DockPanel.Dock="Top" Margin="0,0,0,12" MaxWidth="{Binding Selected.ColumnWidth}" Visibility="{Binding HasRestoreNote, Converter={StaticResource Visible}}">
           <Button x:Name="UndoRestoreButton" DockPanel.Dock="Right" VerticalAlignment="Center" Margin="8,0,0,0" Content="{x:Static pages:MoreSettingsText.UndoRestore}" Command="{Binding UndoRestoreCommand}" />
           <kyf:Notification x:Name="RestoreNote" Severity="Info" Message="{Binding RestoreNote}" IsOpen="{Binding HasRestoreNote, Mode=OneWay}" IsClosable="False" />
         </DockPanel>

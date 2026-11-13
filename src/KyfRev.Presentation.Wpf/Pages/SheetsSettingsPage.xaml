@@ -181,7 +181,7 @@
 
   <ScrollViewer x:Name="Scroller" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
     <!-- Deux colonnes : les réglages, puis ce qu'ils donnent. En fenêtre étroite, la seconde passe sous la première. -->
-    <Grid x:Name="Columns" MaxWidth="1180" HorizontalAlignment="Left">
+    <Grid x:Name="Columns" MaxWidth="{x:Static pages:SettingsTab.WideColumn}">
       <Grid.ColumnDefinitions>
         <ColumnDefinition Width="2*" />
         <ColumnDefinition x:Name="SideColumn" Width="*" />

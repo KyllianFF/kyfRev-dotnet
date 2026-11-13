@@ -20,16 +20,47 @@ public sealed record ReadingComfort(double Size, double LineSpacing, FontFamily?
     /// <summary>La place qu'une ligne de texte laisse au-dessus et au-dessous de ses lettres, en part de sa taille.</summary>
     private const double SlotRoom = 1.1;
 
-    private const double LargeSize = 19;
-    private const double ExtraLargeSize = 21;
+    /// <summary>Le corps du texte, en points : la référence d'un traitement de texte.</summary>
+    public const int BodyPoints = 12;
+
+    /// <summary>« Grande », en points.</summary>
+    public const int LargePoints = 14;
+
+    /// <summary>« Très grande », en points.</summary>
+    public const int ExtraLargePoints = 16;
+
     private const double AiryLineSpacing = 1.9;
+
+    /// <summary>La taille à l'écran d'un texte de tant de points : un point vaut 1/72 de pouce, l'écran en compte 96.</summary>
+    public static double Pixels(double points) => points * 96 / 72;
+
+    /// <summary>
+    /// La taille d'un titre de ce niveau, en points, pour un corps de <see cref="BodyPoints"/> : 20, 16, 14, puis celle du
+    /// corps (le titre 4 s'en distingue par l'italique, les suivants par leur seule graisse).
+    /// </summary>
+    public static int HeadingPoints(int level) => level switch
+    {
+        1 => 20,
+        2 => 16,
+        3 => 14,
+        _ => BodyPoints,
+    };
+
+    /// <summary>La taille d'un titre de ce niveau, en multiple de celle du corps.</summary>
+    public static double HeadingScale(int level) => (double)HeadingPoints(level) / BodyPoints;
+
+    /// <summary>Un titre de ce niveau s'écrit en italique : le titre 4, de la taille du corps.</summary>
+    public static bool IsItalicHeading(int level) => level == 4;
 
     private static readonly FontFamily Serif = new("Georgia");
     private static readonly FontFamily Handwriting = new("Segoe Print");
     private static readonly FontFamily Marker = new("Ink Free, Segoe Print");
 
     /// <summary>Le confort par défaut.</summary>
-    public static ReadingComfort Default { get; } = new(Typography.BodyLarge.Size, Typography.ReadingLineSpacing, null);
+    public static ReadingComfort Default { get; } = new(Pixels(BodyPoints), Typography.ReadingLineSpacing, null);
+
+    /// <summary>La taille d'un titre de ce niveau, pour ce texte.</summary>
+    public double HeadingSize(int level) => Size * HeadingScale(level);
 
     /// <summary>La police est une de celles de l'application, à trouver dans les ressources sous cette clé ; rien pour celle de l'interface.</summary>
     public string? FamilyKey { get; init; }
@@ -61,9 +92,9 @@ public sealed record ReadingComfort(double Size, double LineSpacing, FontFamily?
         ArgumentNullException.ThrowIfNull(preferences);
         var size = preferences.TextSize switch
         {
-            ReadingTextSize.Large => LargeSize,
-            ReadingTextSize.ExtraLarge => ExtraLargeSize,
-            _ => Typography.BodyLarge.Size,
+            ReadingTextSize.Large => Pixels(LargePoints),
+            ReadingTextSize.ExtraLarge => Pixels(ExtraLargePoints),
+            _ => Pixels(BodyPoints),
         };
         var spacing = preferences.LineSpacing == ReadingLineSpacing.Airy ? AiryLineSpacing : Typography.ReadingLineSpacing;
         return preferences.Font switch

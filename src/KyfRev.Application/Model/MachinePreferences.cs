@@ -26,13 +26,13 @@ public enum ReadingWidth
 /// <summary>Taille du texte d'une fiche.</summary>
 public enum ReadingTextSize
 {
-    /// <summary>17 pixels.</summary>
+    /// <summary>12 points, comme le corps d'un traitement de texte.</summary>
     Normal,
 
-    /// <summary>19 pixels.</summary>
+    /// <summary>14 points.</summary>
     Large,
 
-    /// <summary>21 pixels.</summary>
+    /// <summary>16 points.</summary>
     ExtraLarge,
 }
 

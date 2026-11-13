@@ -95,8 +95,41 @@ internal sealed partial class SheetDocumentViewer
     public static readonly DependencyProperty FollowsSheetLayoutProperty = DependencyProperty.Register(
         nameof(FollowsSheetLayout), typeof(bool), typeof(SheetDocumentViewer), new PropertyMetadata(false, (viewer, _) => ((SheetDocumentViewer)viewer).FollowSheet()));
 
+    /// <summary>
+    /// La largeur que le texte d'une feuille sans fin ne dépasse pas, barre de défilement non comprise : la vue peut alors
+    /// être plus large que lui, sa barre au bord de la fenêtre, le texte restant une colonne centrée. Infinie par défaut :
+    /// le texte prend toute la vue.
+    /// </summary>
+    public static readonly DependencyProperty TextMaxWidthProperty = DependencyProperty.Register(
+        nameof(TextMaxWidth), typeof(double), typeof(SheetDocumentViewer), new PropertyMetadata(double.PositiveInfinity, (viewer, _) => ((SheetDocumentViewer)viewer).TextWidthChanged()));
+
     /// <summary>Les marges du texte sur une feuille sans fin dont le papier est montré : il ne touche pas le bord.</summary>
     private static readonly Thickness EndlessPaperPadding = new(28, 20, 28, 28);
+
+    /// <inheritdoc cref="TextMaxWidthProperty"/>
+    public double TextMaxWidth
+    {
+        get => (double)GetValue(TextMaxWidthProperty);
+        set => SetValue(TextMaxWidthProperty, value);
+    }
+
+    /// <summary>Ce qu'une feuille sans fin laisse libre de chaque côté de sa colonne de texte, dans une vue plus large qu'elle.</summary>
+    internal double EndlessSide =>
+        double.IsFinite(TextMaxWidth) && TextMaxWidth > 0 ? Math.Max(0, Math.Floor((ActualWidth - SystemParameters.VerticalScrollBarWidth - TextMaxWidth) / 2)) : 0;
+
+    /// <summary>
+    /// La largeur du papier d'une feuille sans fin : toute la vue, ou, dans une vue plus large que le texte, sa colonne et
+    /// ses marges, autant de chaque côté.
+    /// </summary>
+    private double EndlessSheetWidth(System.Windows.Controls.ScrollViewer scroller) =>
+        EndlessSide > 0 ? Math.Max(0, ActualWidth - SystemParameters.VerticalScrollBarWidth - (2 * EndlessSide)) : scroller.ViewportWidth;
+
+    private void TextWidthChanged()
+    {
+        ApplyPagePadding();
+        FitTables();
+        RestartPages();
+    }
 
     private PageLayout? _shownLayout;
     private PaperStyle? _shownStyle;
@@ -144,8 +177,33 @@ internal sealed partial class SheetDocumentViewer
     /// <summary>La mise en page en vigueur : celle qu'on lui donne, sinon celle de la fiche montrée si la vue la suit.</summary>
     internal PageLayout? Layout => PageLayout ?? (FollowsSheetLayout && Reading is { } reading ? Paper?.LayoutOf(reading.SheetId) : null);
 
-    /// <summary>Le papier à dessiner ; rien s'il est éteint.</summary>
-    internal PaperStyle? PaperShown => DrawsPaper ? Paper?.StyleOf(Layout?.Format ?? PageFormat.Endless) : null;
+    /// <summary>
+    /// La vue montre toujours sa feuille : sans papier choisi, une feuille unie, posée sur le fond de la page. C'est l'aperçu
+    /// du Carnet, où la fiche se voit comme une feuille même quand les papiers sont éteints.
+    /// </summary>
+    public static readonly DependencyProperty ShowsSheetProperty = DependencyProperty.Register(
+        nameof(ShowsSheet), typeof(bool), typeof(SheetDocumentViewer), new PropertyMetadata(false, (viewer, _) => ((SheetDocumentViewer)viewer).FollowSheet()));
+
+    /// <summary>L'écart entre deux feuilles dit quelle page commence : « Page 2 sur 3 ».</summary>
+    public static readonly DependencyProperty NumbersPagesProperty = DependencyProperty.Register(
+        nameof(NumbersPages), typeof(bool), typeof(SheetDocumentViewer), new PropertyMetadata(false, (viewer, _) => ((SheetDocumentViewer)viewer).UpdateBands()));
+
+    /// <inheritdoc cref="ShowsSheetProperty"/>
+    public bool ShowsSheet
+    {
+        get => (bool)GetValue(ShowsSheetProperty);
+        set => SetValue(ShowsSheetProperty, value);
+    }
+
+    /// <inheritdoc cref="NumbersPagesProperty"/>
+    public bool NumbersPages
+    {
+        get => (bool)GetValue(NumbersPagesProperty);
+        set => SetValue(NumbersPagesProperty, value);
+    }
+
+    /// <summary>Le papier à dessiner ; rien s'il est éteint, sauf pour une vue qui montre toujours sa feuille : une feuille unie.</summary>
+    internal PaperStyle? PaperShown => DrawsPaper ? Paper?.StyleOf(Layout?.Format ?? PageFormat.Endless) ?? (ShowsSheet ? PaperStyle.Plain : null) : null;
 
     /// <summary>La largeur qu'il faut à la vue pour montrer sa feuille entière ; zéro sans feuille.</summary>
     internal double FitWidth => Layout is { IsPaged: true } page ? page.WidthPixels + SystemParameters.VerticalScrollBarWidth + 8 : 0;
@@ -333,11 +391,18 @@ internal sealed partial class SheetDocumentViewer
     {
         if (Document is { } document)
         {
-            document.PagePadding = Layout is { IsPaged: true } page
+            var padding = Layout is { IsPaged: true } page
                 ? new Thickness(Side(page), page.MarginPixels, Side(page), page.MarginPixels)
-                : PaperShown is null ? EndlessPadding : EndlessPaperPadding;
+                : Beside(PaperShown is null ? EndlessPadding : EndlessPaperPadding, EndlessSide);
+            if (document.PagePadding != padding)
+            {
+                document.PagePadding = padding;
+            }
         }
     }
+
+    private static Thickness Beside(Thickness padding, double side) =>
+        new(padding.Left + side, padding.Top, padding.Right + side, padding.Bottom);
 
     /// <summary>La marge de côté : celle de la feuille, plus la moitié de ce que la vue a de plus large qu'elle.</summary>
     private double Side(PageLayout page) =>
@@ -609,11 +674,17 @@ internal sealed partial class SheetDocumentViewer
         return copy;
     }
 
-    /// <summary>La marge du bas de ce qui précède un bloc : son voisin, ou le dernier bloc de l'élément de liste d'avant.</summary>
-    private static double BottomMarginBefore(Block block) =>
-        block.PreviousBlock is { } before
-            ? before.Margin.Bottom
-            : block.Parent is ListItem { PreviousListItem.Blocks.LastBlock: { } last } ? last.Margin.Bottom : 0;
+    /// <summary>
+    /// La marge du bas de ce qui précède un bloc : son voisin, ou le dernier bloc de l'élément de liste d'avant. Un tableau
+    /// laisse passer la marge qui le précède : après lui, c'est la plus grande des deux qui compte (mesuré, sur un tableau
+    /// venu après une liste : le texte qui le suit ne descendait pas tant que sa marge n'avait pas rattrapé celle de la liste).
+    /// </summary>
+    private static double BottomMarginBefore(Block block) => block.PreviousBlock switch
+    {
+        Table table => Math.Max(table.Margin.Bottom, Math.Max(table.Margin.Top, BottomMarginBefore(table))),
+        { } before => before.Margin.Bottom,
+        null => block.Parent is ListItem { PreviousListItem.Blocks.LastBlock: { } last } ? last.Margin.Bottom : 0,
+    };
 
     private static void Remember<T>(Dictionary<T, double> spacers, T element, double spacer)
         where T : notnull
@@ -817,7 +888,7 @@ internal sealed partial class SheetDocumentViewer
             // du texte, tel qu'il a été mesuré : la première ligne de base y tombe sur une ligne.
             PageBands.Show([], [], null, 0, 0, 0, 0, 0);
             PagePaper.Show(
-                style is null || Document is null ? [] : [new Rect(shift.X, shift.Y - scroller.VerticalOffset, scroller.ViewportWidth, Math.Max(scroller.ExtentHeight, scroller.ViewportHeight))],
+                style is null || Document is null ? [] : [new Rect(shift.X + EndlessSide, shift.Y - scroller.VerticalOffset, EndlessSheetWidth(scroller), Math.Max(scroller.ExtentHeight, scroller.ViewportHeight))],
                 style,
                 EndlessPaperPadding.Left,
                 (_originKnown ? _origin : Document?.PagePadding.Top ?? 0) + _baseline,
@@ -832,6 +903,7 @@ internal sealed partial class SheetDocumentViewer
         {
             sheets.Add(new Rect(left, top + sheetTop - page.MarginPixels, page.WidthPixels, sheetEnd - sheetTop + (2 * page.MarginPixels)));
         }
+        PageBands.NumbersPages = NumbersPages;
         PageBands.Show(_breaks, sheets, style, top, left, page.WidthPixels, page.MarginPixels, shift.X + scroller.ViewportWidth, page.MarginPixels + _baseline, _step);
         PagePaper.Show(DrawsPaper ? sheets : [], style, page.MarginPixels, page.MarginPixels + _baseline, _step);
         PagesShown?.Invoke(this, EventArgs.Empty);

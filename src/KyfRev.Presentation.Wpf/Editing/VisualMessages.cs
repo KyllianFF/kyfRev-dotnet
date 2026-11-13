@@ -233,8 +233,11 @@ internal sealed record LinkInputEvent(string? Query, int Start, double X, double
 /// <summary>Une touche prise par la liste des fiches.</summary>
 internal sealed record ListKeyEvent(string Key) : EditorEvent;
 
-/// <summary>Un clic droit : ce qu'il faut pour le menu natif.</summary>
-internal sealed record MenuEvent(string? Word, int WordStart, bool HasSelection, bool InCode, bool InTable, bool OnLink, int? DrawingPosition = null, string? DrawingLanguage = null, string? DrawingCode = null, int? ImagePosition = null, string? ImageAddress = null, string? ImageTitle = null, bool Bold = false, bool Italic = false, bool Underline = false, bool Strike = false, int? CodePosition = null) : EditorEvent;
+/// <summary>
+/// Un clic droit : ce qu'il faut pour le menu natif. Sur la marque d'un saut de page ou d'une page blanche, sa position
+/// (<c>PageMarkPosition</c>) : le menu ne propose alors que de la supprimer.
+/// </summary>
+internal sealed record MenuEvent(string? Word, int WordStart, bool HasSelection, bool InCode, bool InTable, bool OnLink, int? DrawingPosition = null, string? DrawingLanguage = null, string? DrawingCode = null, int? ImagePosition = null, string? ImageAddress = null, string? ImageTitle = null, bool Bold = false, bool Italic = false, bool Underline = false, bool Strike = false, int? CodePosition = null, int? PageMarkPosition = null, bool PageMarkBlank = false) : EditorEvent;
 
 /// <summary>Une image collée ou déposée ; sans contenu, elle est trop lourde pour être lue.</summary>
 internal sealed record DroppedEvent(string Name, string? Base64, int? Position) : EditorEvent;

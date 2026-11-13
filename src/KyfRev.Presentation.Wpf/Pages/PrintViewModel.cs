@@ -83,6 +83,21 @@ public static class PrintText
     /// <summary>La feuille en largeur.</summary>
     public const string Landscape = "Paysage";
 
+    /// <summary>Le choix du papier dans l'imprimante.</summary>
+    public const string PaperFormat = "Format du papier";
+
+    /// <summary>Un format, avec ses dimensions.</summary>
+    public const string PaperA4 = "A4 (21 × 29,7 cm)";
+
+    /// <inheritdoc cref="PaperA4"/>
+    public const string PaperA5 = "A5 (14,8 × 21 cm)";
+
+    /// <inheritdoc cref="PaperA4"/>
+    public const string PaperA6 = "A6 (10,5 × 14,8 cm)";
+
+    /// <summary>Le format de la mise en page de la fiche, dans la liste : {0} est son nom.</summary>
+    public const string PaperOfSheet = "{0}, celui de la fiche";
+
     /// <summary>Le groupe des marges.</summary>
     public const string Margins = "Marges";
 
@@ -160,6 +175,15 @@ public enum PrintMargin
     Custom,
 }
 
+/// <summary>Un format de papier, avec son nom.</summary>
+/// <param name="Format">Le format.</param>
+/// <param name="Label">Ce qui se lit dans la liste.</param>
+public sealed record PrintFormatOption(PageFormat Format, string Label)
+{
+    /// <inheritdoc/>
+    public override string ToString() => Label;
+}
+
 /// <summary>Un choix de marges, avec son nom.</summary>
 /// <param name="Kind">Le choix.</param>
 /// <param name="Label">Ce qui se lit dans la liste.</param>
@@ -187,9 +211,9 @@ public sealed partial class PrintViewModel : ObservableObject
     private static readonly CompositeFormat WrongFormat = CompositeFormat.Parse(PrintText.SheetNumbersWrong);
     private static readonly CompositeFormat OfSheetFormat = CompositeFormat.Parse(PrintText.MarginsOfSheet);
     private static readonly CompositeFormat SentFormat = CompositeFormat.Parse(PrintText.Sent);
+    private static readonly CompositeFormat PaperOfSheetFormat = CompositeFormat.Parse(PrintText.PaperOfSheet);
 
     private readonly IPrintService? _service;
-    private PageFormat _format = PageFormat.A4;
     private double _sheetMargin = PageLayout.NormalMargin;
     private string _sheetTitle = string.Empty;
     private int _request;
@@ -198,6 +222,8 @@ public sealed partial class PrintViewModel : ObservableObject
     public PrintViewModel(IPrintService? service = null)
     {
         _service = service;
+        FormatOptions = Formats(PageFormat.A4, isPaged: false);
+        Format = FormatOptions[0];
         MarginOptions = Options(PageLayout.NormalMargin);
         Margin = MarginOptions[0];
     }
@@ -253,6 +279,18 @@ public sealed partial class PrintViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsPortrait), nameof(Layout))]
     public partial bool IsLandscape { get; private set; }
+
+    /// <summary>Les formats de papier : A4, A5 et A6, celui de la fiche étant dit tel.</summary>
+    [ObservableProperty]
+    public partial IReadOnlyList<PrintFormatOption> FormatOptions { get; private set; }
+
+    /// <summary>
+    /// Le papier sur lequel on imprime. Par défaut celui de la mise en page de la fiche ; en choisir un autre refait les
+    /// pages pour ce papier, sans toucher à la fiche.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Layout))]
+    public partial PrintFormatOption Format { get; set; }
 
     /// <summary>Les choix de marges.</summary>
     [ObservableProperty]
@@ -325,12 +363,12 @@ public sealed partial class PrintViewModel : ObservableObject
     /// <summary>L'aperçu a des feuilles à montrer.</summary>
     public bool HasPages => TotalPages > 0;
 
-    /// <summary>La feuille telle qu'elle s'imprime : le format de la fiche, l'orientation et les marges choisies ici.</summary>
+    /// <summary>La feuille telle qu'elle s'imprime : le papier, l'orientation et les marges choisis ici.</summary>
     public PageLayout Layout
     {
         get
         {
-            var layout = new PageLayout(_format, IsLandscape, MarginCm);
+            var layout = new PageLayout(Format.Format, IsLandscape, MarginCm);
             return layout with { MarginCm = layout.EffectiveMarginCm };
         }
     }
@@ -377,7 +415,8 @@ public sealed partial class PrintViewModel : ObservableObject
     {
         ArgumentNullException.ThrowIfNull(reading);
         var layout = sheet is { IsPaged: true } ? sheet : new PageLayout(PageFormat.A4);
-        _format = layout.Format;
+        FormatOptions = Formats(layout.Format, sheet is { IsPaged: true });
+        Format = FormatOptions.Single(option => option.Format == layout.Format);
         _sheetMargin = layout.EffectiveMarginCm;
         _sheetTitle = reading.Title;
         Error = null;
@@ -472,6 +511,13 @@ public sealed partial class PrintViewModel : ObservableObject
     /// <summary>La feuille suivante (« + ») ou précédente de l'aperçu.</summary>
     [RelayCommand]
     private void Turn(string? direction) => CurrentPage = Math.Clamp(CurrentPage + (direction == "+" ? 1 : -1), 1, Math.Max(1, TotalPages));
+
+    /// <summary>Les trois formats ; celui de la mise en page de la fiche, quand elle en a une, le dit dans son nom.</summary>
+    private static List<PrintFormatOption> Formats(PageFormat ofSheet, bool isPaged) =>
+    [
+        .. new (PageFormat Format, string Label)[] { (PageFormat.A4, PrintText.PaperA4), (PageFormat.A5, PrintText.PaperA5), (PageFormat.A6, PrintText.PaperA6) }
+            .Select(format => new PrintFormatOption(format.Format, isPaged && format.Format == ofSheet ? string.Format(French, PaperOfSheetFormat, format.Label) : format.Label)),
+    ];
 
     private static List<PrintMarginOption> Options(double sheetMargin) =>
     [

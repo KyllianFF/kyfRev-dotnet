@@ -786,6 +786,66 @@ public sealed class SettingsHubTests
     }
 
     [STATestMethod]
+    [DataRow(false, 1280)]
+    [DataRow(true, 1280)]
+    [DataRow(false, 520)]
+    [DataRow(true, 2600)]
+    [DataRow(false, 3440)]
+    public void Every_section_reads_in_a_centred_column_with_its_text_on_the_left(bool dark, int width)
+    {
+        using var ui = new UiThread();
+        using var vault = new DataVault();
+        var design = new DesignResources(dark ? ThemeKind.Dark : ThemeKind.Light, reducedMotion: false);
+        var hub = vault.Hub(new MachineSettings(new MemoryMachinePreferences()));
+        var view = new SettingsHubPage { DataContext = hub };
+        var host = new Border { Width = width, Height = 860, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top, Child = view };
+        host.Resources.MergedDictionaries.Add(design.Dictionary);
+        host.SetResourceReference(Border.BackgroundProperty, "Kyf.Brush.Background");
+        var window = new Window { Content = new Canvas { Children = { host } }, Left = -10000, Top = -10000, Width = 800, Height = 600, ShowActivated = false, ShowInTaskbar = false };
+        window.Show();
+        TestShell.Flush();
+        try
+        {
+            var area = Named<FrameworkElement>(window, "SectionArea");
+            foreach (var tab in hub.Tabs)
+            {
+                tab.IsSelected = true;
+                TestShell.Flush();
+                host.UpdateLayout();
+                TestShell.Flush();
+                var head = Named<FrameworkElement>(window, "SectionHead");
+                var title = Named<TextBlock>(window, "SectionTitle");
+                var (left, right) = (head.TranslatePoint(default, area).X, head.TranslatePoint(new Point(head.ActualWidth, 0), area).X);
+                Assert.IsLessThanOrEqualTo(tab.ColumnWidth + 0.5, head.ActualWidth, $"{tab.Label} : la colonne ne dépasse pas sa largeur");
+                Assert.AreEqual(left, area.ActualWidth - right, 1.5, $"{tab.Label} : la colonne est centrée");
+                Assert.AreEqual(left, title.TranslatePoint(default, area).X, 0.5, $"{tab.Label} : le titre est à gauche de la colonne, pas centré");
+                Assert.AreEqual(TextAlignment.Left, title.TextAlignment);
+
+                // Les blocs de la section sont dans la même colonne que son titre, à la barre de défilement près.
+                var cards = Descendants<Card>(Named<FrameworkElement>(window, "TabContent")).Where(card => card.IsVisible && card.ActualWidth > 200).ToList();
+                Assert.IsNotEmpty(cards, tab.Label);
+                foreach (var card in cards.Where(card => Descendants<Card>(card).All(inner => ReferenceEquals(inner, card) || !inner.IsVisible)))
+                {
+                    var cardLeft = card.TranslatePoint(default, area).X;
+                    var cardRight = card.TranslatePoint(new Point(card.ActualWidth, 0), area).X;
+                    Assert.IsGreaterThanOrEqualTo(left - 12, cardLeft, $"{tab.Label} : un bloc sort de la colonne à gauche");
+                    Assert.IsLessThanOrEqualTo(right + 12, cardRight, $"{tab.Label} : un bloc sort de la colonne à droite");
+                }
+                if (tab.Label is "Apparence" or "Coffre et chiffrement" or "À propos")
+                {
+                    host.Capture($"parametres-{width}-{(dark ? "sombre" : "clair")}-{tab.Label.Replace(' ', '-')}");
+                }
+            }
+            Assert.AreEqual(SettingsTab.WideColumn, hub.Tabs.Single(tab => tab.Label == "Feuilles").ColumnWidth, "Feuilles garde ses deux volets");
+            Assert.IsTrue(hub.Tabs.Where(tab => tab.Label != "Feuilles").All(tab => tab.ColumnWidth == SettingsTab.Column));
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
     [DataRow(false)]
     [DataRow(true)]
     public void The_sheets_section_shows_its_choices_as_the_mockup_does(bool dark)

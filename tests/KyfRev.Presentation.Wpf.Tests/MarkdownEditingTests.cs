@@ -84,17 +84,35 @@ public sealed class MarkdownEditingTests
     [TestMethod]
     public void Font_sizes_are_written_relative_to_the_normal_text()
     {
+        // En points, comme dans un traitement de texte : 12 pour le corps.
+        Assert.AreEqual(12, FontSizes.Normal);
         Assert.IsNull(FontSizes.Style(FontSizes.Normal));
-        foreach (var pixels in FontSizes.Steps)
+        foreach (var heading in new[] { 0, 1, 2, 3, 4, 5 })
         {
-            Assert.AreEqual(pixels, FontSizes.Pixels(FontSizes.Style(pixels)), "La taille se relit à l'identique.");
+            foreach (var points in FontSizes.Steps)
+            {
+                Assert.AreEqual(points, FontSizes.Points(FontSizes.Style(points, heading), heading), $"La taille se relit à l'identique (titre {heading}).");
+            }
         }
-        Assert.AreEqual("1.18em", FontSizes.Style(20));
-        Assert.AreEqual(20, FontSizes.Step(null, 1));
-        Assert.AreEqual(14, FontSizes.Step(null, -1));
-        Assert.AreEqual(40, FontSizes.Step("2.35em", 1), "Au bout de la liste, on y reste.");
-        Assert.AreEqual(10, FontSizes.Step("0.59em", -1));
-        Assert.AreEqual(24, FontSizes.Step("1.25em", 1), "Une taille hors de la liste va à la suivante.");
+        Assert.AreEqual("1.67em", FontSizes.Style(20));
+        Assert.AreEqual("1.17em", FontSizes.Style(14));
+        Assert.AreEqual(14, FontSizes.Step(null, 1));
+        Assert.AreEqual(11, FontSizes.Step(null, -1));
+        Assert.AreEqual(36, FontSizes.Step("3em", 1), "Au bout de la liste, on y reste.");
+        Assert.AreEqual(8, FontSizes.Step("0.67em", -1));
+        Assert.AreEqual(16, FontSizes.Step("1.25em", 1), "Une taille hors de la liste va à la suivante.");
+        Assert.AreEqual(14, FontSizes.Points("1.18em"), "Une taille écrite quand le corps valait 17 pixels : 20 pixels, soit 14 points.");
+
+        // Dans un titre, la taille sans écriture est celle du titre : 20, 16, 14, puis celle du corps.
+        Assert.AreEqual(20, FontSizes.Points(null, 1));
+        Assert.AreEqual(16, FontSizes.Points(null, 2));
+        Assert.AreEqual(14, FontSizes.Points(null, 3));
+        Assert.AreEqual(12, FontSizes.Points(null, 4));
+        Assert.AreEqual(12, FontSizes.Points(null, 5));
+        Assert.IsNull(FontSizes.Style(20, 1), "20 dans un titre 1 : rien à écrire");
+        Assert.AreEqual("1.2em", FontSizes.Style(24, 1), "par rapport au titre, comme la page l'applique");
+        Assert.AreEqual(24, FontSizes.Step(null, 1, 1));
+        Assert.AreEqual(18, FontSizes.Step(null, -1, 1));
     }
 
     /// <summary>Applique un remplacement au texte où « | » marque le curseur et « [ ] » la sélection ; rend le résultat marqué de même.</summary>

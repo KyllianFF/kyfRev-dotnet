@@ -100,13 +100,13 @@
     <value>Taille du texte des fiches</value>
   </data>
   <data name="TextSizeExtraLarge" xml:space="preserve">
-    <value>Très grande (21 px)</value>
+    <value>Très grande (16)</value>
   </data>
   <data name="TextSizeLarge" xml:space="preserve">
-    <value>Grande (19 px)</value>
+    <value>Grande (14)</value>
   </data>
   <data name="TextSizeNormal" xml:space="preserve">
-    <value>Normale (17 px)</value>
+    <value>Normale (12)</value>
   </data>
   <data name="Theme" xml:space="preserve">
     <value>Thème d'affichage</value>

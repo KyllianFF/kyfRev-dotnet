@@ -523,22 +523,24 @@
         </StackPanel>
       </StackPanel>
 
-      <Grid Grid.Row="2" Margin="16,0,16,0">
+      <!-- À droite, presque rien : la barre de défilement de la fiche est au bord de la fenêtre. Les volets de droite, quand
+           ils sont là, gardent leur écart avec ce bord. -->
+      <Grid Grid.Row="2" Margin="16,0,6,0">
         <DockPanel>
           <ContentControl x:Name="OutlinePane" DockPanel.Dock="Left" Width="{x:Static pages:SheetPageViewModel.OutlineWidth}" Margin="0,0,16,0" Focusable="False" IsTabStop="False"
                           Content="{Binding}" ContentTemplate="{StaticResource OutlinePanel}" Visibility="{Binding ShowsOutline, Converter={StaticResource Visible}}" />
           <!-- Les passages et les rétroliens se partagent la colonne de droite ; seul, l'un des deux la prend toute. -->
           <UniformGrid DockPanel.Dock="Right" Columns="1">
-            <ContentControl x:Name="PassagesPane" Width="{x:Static pages:SheetPageViewModel.PassagesWidth}" Margin="16,0,0,0" Focusable="False" IsTabStop="False"
+            <ContentControl x:Name="PassagesPane" Width="{x:Static pages:SheetPageViewModel.PassagesWidth}" Margin="16,0,10,0" Focusable="False" IsTabStop="False"
                             Content="{Binding}" ContentTemplate="{StaticResource PassagesPanel}" Visibility="{Binding ShowsPassages, Converter={StaticResource Visible}}" />
             <ContentControl x:Name="BacklinksPane" Width="{x:Static pages:SheetPageViewModel.PassagesWidth}" Focusable="False" IsTabStop="False"
                             Content="{Binding}" ContentTemplate="{StaticResource BacklinksPanel}" Visibility="{Binding ShowsBacklinks, Converter={StaticResource Visible}}">
               <ContentControl.Style>
                 <Style TargetType="ContentControl">
-                  <Setter Property="Margin" Value="16,0,0,0" />
+                  <Setter Property="Margin" Value="16,0,10,0" />
                   <Style.Triggers>
                     <DataTrigger Binding="{Binding ShowsPassages}" Value="True">
-                      <Setter Property="Margin" Value="16,12,0,0" />
+                      <Setter Property="Margin" Value="16,12,10,0" />
                     </DataTrigger>
                   </Style.Triggers>
                 </Style>
@@ -546,13 +548,14 @@
             </ContentControl>
           </UniformGrid>
 
-          <!-- La fiche, à largeur de lecture ; elle défile seule, avec son titre. -->
-          <Grid MaxWidth="{Binding ZoomedTextWidth}">
+          <!-- La fiche défile seule, avec son titre. Sa vue prend toute la largeur libre : la barre de défilement est au bord
+               droit de la fenêtre, et le texte reste une colonne à largeur de lecture, centrée (TextMaxWidth). -->
+          <Grid x:Name="SheetArea">
             <Grid.RowDefinitions>
               <RowDefinition Height="Auto" />
               <RowDefinition Height="*" />
             </Grid.RowDefinitions>
-            <StackPanel>
+            <StackPanel MaxWidth="{Binding ZoomedTextWidth}">
               <TextBlock x:Name="Loading" Text="{x:Static pages:ReviewText.OpeningSheet}" Style="{DynamicResource Kyf.Text.Secondary}"
                          Visibility="{Binding IsLoading, Converter={StaticResource Visible}}" />
               <kyf:Notification x:Name="ErrorMessage" Severity="Critical" Message="{Binding Error}" IsOpen="{Binding HasError, Mode=OneWay}"
@@ -561,11 +564,11 @@
                                 IsClosable="False" Margin="0,0,0,12" />
               <kyf:Notification x:Name="DoneMessage" Severity="Success" Message="{Binding Done}" IsOpen="{Binding HasDone, Mode=OneWay}" Margin="0,0,0,12" />
             </StackPanel>
-            <editing:SheetEditorView x:Name="EditorView" Grid.Row="1" DataContext="{Binding Editor}"
+            <editing:SheetEditorView x:Name="EditorView" Grid.Row="1" DataContext="{Binding Editor}" TextMaxWidth="{Binding DataContext.TextWidth, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                      SheetZoom="{Binding DataContext.SheetZoom, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                      PageSetup="{Binding DataContext.PageSetup, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                      Visibility="{Binding DataContext.IsWriting, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource Visible}}" />
-            <reading:SheetDocumentViewer x:Name="SheetText" Grid.Row="1" Visibility="{Binding IsReading, Converter={StaticResource Visible}}" Reading="{Binding Reading}" PrintCommand="{Binding RequestPrintCommand}" PageLayout="{Binding PageSetup.Layout}" OpenLinkCommand="{Binding OpenLinkCommand}" LinkPreview="{Binding LinkPreview}"
+            <reading:SheetDocumentViewer x:Name="SheetText" Grid.Row="1" TextMaxWidth="{Binding TextWidth}" Visibility="{Binding IsReading, Converter={StaticResource Visible}}" Reading="{Binding Reading}" PrintCommand="{Binding RequestPrintCommand}" PageLayout="{Binding PageSetup.Layout}" OpenLinkCommand="{Binding OpenLinkCommand}" LinkPreview="{Binding LinkPreview}"
                                          Highlights="{Binding Highlights}" ActiveHighlight="{Binding ActivePassage}" Holes="{Binding Holes}" Words="{Binding Words}"
                                          PreviewMouseLeftButtonDown="OnTextPressed" PreviewMouseLeftButtonUp="OnTextReleased" PreviewKeyDown="OnTextKey"
                                          ContextMenuOpening="OnTextMenu"

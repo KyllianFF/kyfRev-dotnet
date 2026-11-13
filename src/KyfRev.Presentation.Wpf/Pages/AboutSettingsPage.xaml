@@ -8,7 +8,7 @@
     <BooleanToVisibilityConverter x:Key="Visible" />
   </UserControl.Resources>
   <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
-    <StackPanel MaxWidth="1100">
+    <StackPanel MaxWidth="{x:Static pages:SettingsTab.Column}">
       <kyf:Card x:Name="LegacyCard" Padding="16,12" Margin="0,0,0,12" Visibility="{Binding HasLegacy, Converter={StaticResource Visible}}">
         <StackPanel>
           <TextBlock x:Name="LegacyLine" Text="{Binding LegacyMessage}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" />
@@ -31,7 +31,7 @@
               <Button x:Name="OpenReleaseButton" Content="{x:Static pages:SettingsHubText.OpenRelease}" Command="{Binding OpenReleaseCommand}" Margin="0,0,8,8"
                       Visibility="{Binding HasRelease, Converter={StaticResource Visible}}" />
             </WrapPanel>
-            <kyf:Notification x:Name="UpdateNotice" Severity="Success" Message="{Binding UpdateMessage}" IsOpen="{Binding HasUpdateMessage, Mode=OneWay}" IsClosable="False" />
+            <kyf:Notification x:Name="UpdateNotice" Severity="Success" StaysOpen="True" Message="{Binding UpdateMessage}" IsOpen="{Binding HasUpdateMessage, Mode=OneWay}" IsClosable="False" />
             <kyf:Notification x:Name="UpdateErrorNotice" Severity="Critical" Message="{Binding UpdateError}" IsOpen="{Binding HasUpdateError, Mode=OneWay}" IsClosable="False" />
           </StackPanel>
         </StackPanel>

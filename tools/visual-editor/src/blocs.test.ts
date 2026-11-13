@@ -1,3 +1,4 @@
+import { history, undo } from "prosemirror-history";
 import { EditorState, NodeSelection, TextSelection } from "prosemirror-state";
 import { describe, expect, it } from "vitest";
 import {
@@ -9,6 +10,7 @@ import {
   insertionDeLigne,
   insertionDeSaut,
   sansTaches,
+  suppressionDeBloc,
 } from "./blocs";
 import { depuisMarkdown, versMarkdown } from "./markdown";
 import { schema } from "./schema";
@@ -215,5 +217,84 @@ describe("saut de page (éditeur visuel)", () => {
     apres = etat.apply(insertionDeSaut(etat, false));
     expect(apres.doc.child(1).type).toBe(n.horizontal_rule);
     expect(apres.doc.child(2).type).toBe(n.saut_de_page);
+  });
+});
+
+describe("retirer un bloc (clic droit)", () => {
+  /** La fiche `texte` avec l'historique, la marque de saut de page choisie comme après un clic droit sur elle. */
+  function surLaMarque(texte: string) {
+    const origine = depuisMarkdown(texte);
+    let etat = EditorState.create({ doc: origine.doc, plugins: [history()] });
+    let position = -1;
+    etat.doc.descendants((noeud, ici) => {
+      if (position < 0 && noeud.type === n.saut_de_page) position = ici;
+    });
+    expect(position).toBeGreaterThanOrEqual(0);
+    etat = etat.apply(etat.tr.setSelection(NodeSelection.create(etat.doc, position)));
+    return { origine, etat, position };
+  }
+
+  it("retire un saut de page : le curseur va au début de ce qui le suivait, et Ctrl+Z le rend d'un coup", () => {
+    const texte = "Un\n\n<!-- kyfrev saut-de-page -->\n\nDeux\n";
+    const { origine, etat, position } = surLaMarque(texte);
+    const tr = suppressionDeBloc(etat, position);
+    expect(tr).not.toBeNull();
+    const apres = etat.apply(tr ?? etat.tr);
+    expect(versMarkdown(apres.doc, origine)).toBe("Un\n\nDeux\n");
+    expect(apres.selection).toBeInstanceOf(TextSelection);
+    expect(apres.selection.$from.parent.textContent).toBe("Deux");
+    expect(apres.selection.$from.parentOffset).toBe(0);
+    let rendu = apres;
+    expect(undo(apres, (annulation) => (rendu = apres.apply(annulation)))).toBe(true);
+    expect(versMarkdown(rendu.doc, origine)).toBe(texte);
+    expect(undo(rendu)).toBe(false);
+  });
+
+  it("retire une page blanche ; en fin de fiche, le curseur va à la fin de ce qui la précédait", () => {
+    const { origine, etat, position } = surLaMarque("Un\n\n<!-- kyfrev page-blanche -->\n");
+    expect(etat.doc.nodeAt(position)?.attrs.blanche).toBe(true);
+    const apres = etat.apply(suppressionDeBloc(etat, position) ?? etat.tr);
+    expect(versMarkdown(apres.doc, origine)).toBe("Un\n");
+    expect(apres.selection.$from.parent.textContent).toBe("Un");
+    expect(apres.selection.$from.parentOffset).toBe(2);
+  });
+
+  it("laisse un paragraphe où écrire quand la marque était seule", () => {
+    const { etat, position } = surLaMarque("<!-- kyfrev saut-de-page -->\n");
+    const apres = etat.apply(suppressionDeBloc(etat, position) ?? etat.tr);
+    expect(apres.doc.childCount).toBe(1);
+    expect(apres.doc.firstChild?.type).toBe(n.paragraph);
+    expect(apres.selection.$from.parent).toBe(apres.doc.firstChild);
+  });
+
+  it("ne change rien quand la position ne désigne pas une marque, une image ou un bloc de code", () => {
+    const { etat, position } = surLaMarque("Un\n\n<!-- kyfrev saut-de-page -->\n\n---\n\nDeux\n");
+    const fin = position + 1;
+    expect(etat.doc.nodeAt(fin)?.type).toBe(n.horizontal_rule);
+    // Un paragraphe, le milieu d'un texte, un trait, la fin de la fiche, hors de la fiche, pas un nombre entier.
+    for (const ailleurs of [0, 1, 2, fin, etat.doc.content.size, etat.doc.content.size + 5, -1, 1.5, Number.NaN]) {
+      expect(suppressionDeBloc(etat, ailleurs)).toBeNull();
+    }
+  });
+
+  it("retire toujours un bloc de code, et une image sans son paragraphe", () => {
+    let etat = EditorState.create({ doc: depuisMarkdown("Un\n\n```\ncode\n```\n\nDeux\n").doc });
+    let apres = etat.apply(suppressionDeBloc(etat, etat.doc.child(0).nodeSize) ?? etat.tr);
+    expect(apres.doc.childCount).toBe(2);
+    expect(apres.doc.textContent).toBe("UnDeux");
+    // Seul dans la fiche : un paragraphe vide le remplace.
+    etat = EditorState.create({ doc: depuisMarkdown("```\ncode\n```\n").doc });
+    apres = etat.apply(suppressionDeBloc(etat, 0) ?? etat.tr);
+    expect(apres.doc.childCount).toBe(1);
+    expect(apres.doc.firstChild?.type).toBe(n.paragraph);
+
+    etat = EditorState.create({ doc: depuisMarkdown("Avant ![alt](image.png) après\n").doc });
+    let image = -1;
+    etat.doc.descendants((noeud, ici) => {
+      if (noeud.type === n.image) image = ici;
+    });
+    apres = etat.apply(suppressionDeBloc(etat, image) ?? etat.tr);
+    expect(apres.doc.childCount).toBe(1);
+    expect(apres.doc.textContent).toBe("Avant  après");
   });
 });

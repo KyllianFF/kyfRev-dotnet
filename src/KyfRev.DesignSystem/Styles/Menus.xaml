@@ -157,12 +157,13 @@
     <Setter Property="Template">
       <Setter.Value>
         <ControlTemplate TargetType="MenuItem">
-          <Border x:Name="Cell" Background="Transparent" CornerRadius="{DynamicResource Kyf.Radius.Control}" SnapsToDevicePixels="True">
+          <Border x:Name="Cell" Background="Transparent" BorderBrush="Transparent" BorderThickness="1" CornerRadius="{DynamicResource Kyf.Radius.Control}" SnapsToDevicePixels="True">
             <ContentPresenter ContentSource="Icon" HorizontalAlignment="Center" VerticalAlignment="Center" />
           </Border>
           <ControlTemplate.Triggers>
-            <!-- La mise en forme déjà active sous le curseur : l'outil ressort, comme son bouton du ruban. -->
+            <!-- La mise en forme déjà active sous le curseur : l'outil ressort, comme son bouton du ruban, contour compris. -->
             <Trigger Property="IsChecked" Value="True">
+              <Setter TargetName="Cell" Property="BorderBrush" Value="{DynamicResource Kyf.Brush.Primary}" />
               <Setter TargetName="Cell" Property="Background" Value="{DynamicResource Kyf.Brush.NavigationActiveBackground}" />
               <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.NavigationActiveText}" />
             </Trigger>

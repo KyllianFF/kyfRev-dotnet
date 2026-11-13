@@ -59,10 +59,10 @@ internal sealed partial class EditorRibbon : UserControl
                 Item(menu, EditingText.Heading(level), page => page.SetHeadingCommand.Execute(chosen));
             }
         }
-        foreach (var pixels in FontSizes.Steps)
+        foreach (var points in FontSizes.Steps)
         {
-            var label = pixels == FontSizes.Normal ? EditingText.FontSizeNormal(pixels) : pixels.ToString(System.Globalization.CultureInfo.InvariantCulture);
-            Item(SizeMenu, label, page => page.SetFontSizeCommand.Execute(pixels));
+            var label = points == FontSizes.Normal ? EditingText.FontSizeNormal(points) : points.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            Item(SizeMenu, label, page => page.SetFontSizeCommand.Execute(points));
         }
         foreach (var (style, label) in new (CaseStyle Style, string Label)[]
         {

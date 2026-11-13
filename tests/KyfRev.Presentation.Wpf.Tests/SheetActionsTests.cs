@@ -1,12 +1,15 @@
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Input;
+using System.Windows.Media;
 using KyfRev.Application.Model;
 using KyfRev.Application.UseCases;
 using KyfRev.DesignSystem.Controls;
 using KyfRev.Extensions.Host;
 using KyfRev.Presentation.Wpf.Pages;
+using KyfRev.Presentation.Wpf.Reading;
 using KyfRev.Presentation.Wpf.Shell;
 
 namespace KyfRev.Presentation.Wpf.Tests;
@@ -461,6 +464,193 @@ public sealed class SheetActionsTests
         await page.RequestCreateCommand.ExecuteAsync(null);
         Assert.AreEqual(string.Empty, page.NewFolder.Value, "la fois d'après, le dossier habituel");
         await page.AnswerCreateCommand.ExecuteAsync(false);
+    }
+
+    [STATestMethod]
+    [DataRow(false, 1500, true)]
+    [DataRow(true, 1500, true)]
+    [DataRow(false, 1500, false)]
+    [DataRow(true, 900, true)]
+    [DataRow(false, 900, false)]
+    public void The_preview_is_a_sheet_on_the_page_with_its_title_and_buttons_aligned_on_it(bool dark, int width, bool ruled)
+    {
+        using var ui = new UiThread();
+        using var vault = new SheetsVault();
+        var test = new TestShell(dark);
+        var body = "# MITOSE\n\n" + string.Join("\n\n", Enumerable.Range(1, 24).Select(index => $"HIHI PARAGRAPHE {index} AVEC ASSEZ DE MOTS POUR PASSER À LA LIGNE DANS LA FEUILLE ET MONTRER DEUX LIGNES POSÉES SUR LE PAPIER.")) + "\n";
+        var id = vault.App.Sheets.Create(string.Empty, "Aperçu", null).Value;
+        var opened = vault.App.Sheets.Open(id).Value;
+        Assert.IsTrue(vault.App.Editing.Save(id, body, opened.Fingerprint, 1).Succeeded);
+        var model = vault.Loaded();
+        var page = new SheetsPage { DataContext = model };
+        var host = new Border { Width = width, Height = 900, Child = page };
+        host.Resources.MergedDictionaries.Add(test.Design.Dictionary);
+        host.SetResourceReference(Border.BackgroundProperty, "Kyf.Brush.Background");
+        // Un papier ligné sur des feuilles A5, ou aucun papier sur une feuille sans fin : les deux cas de la maquette.
+        var lined = new PaperChoices(IsOn: true, Endless: PaperStyle.Lines, A4: PaperStyle.Lines, A5: PaperStyle.Lines, A6: PaperStyle.Lines);
+        host.Resources[SheetPaper.ResourceKey] = ruled
+            ? new SheetPaper(lined, new PageLayout(PageFormat.A5), SheetPageLayouts.None)
+            : new SheetPaper(PaperChoices.Default, PageLayout.Default, SheetPageLayouts.None);
+        var canvas = new Canvas();
+        canvas.Children.Add(host);
+        var window = new Window { Content = canvas, Left = -10000, Top = -10000, Width = 800, Height = 600, ShowActivated = false, ShowInTaskbar = false };
+        window.Show();
+        TestShell.Flush();
+        try
+        {
+            Assert.IsTrue(model.HasPreview);
+            model.SelectedRow = model.Rows.OfType<SheetRow>().Single(row => row.Sheet.Id == id);
+            UiThread.Until(() => model.Preview is { HasBody: true }, TimeSpan.FromSeconds(20));
+            TestShell.Flush();
+            var viewer = Descendants(page).OfType<SheetDocumentViewer>().Single(candidate => candidate.Name == "PreviewBody");
+            UiThread.Until(() => viewer.Document is not null);
+            viewer.CompleteDocument();
+            for (var pass = 0; pass < 16; pass++)
+            {
+                TestShell.Flush();
+                page.UpdateLayout();
+            }
+            host.Capture($"carnet-{width}-{(dark ? "sombre" : "clair")}-{(ruled ? "ligne-a5" : "sans-papier")}");
+
+            // Plus de carte : la fiche est une feuille posée sur le fond de la page.
+            var pane = (Border)page.FindName("PreviewCard");
+            Assert.IsNull(pane.Background, "l'aperçu n'a plus de fond à lui");
+            var sheets = viewer.PagePaper.Sheets;
+            Assert.IsGreaterThanOrEqualTo(ruled ? 2 : 1, sheets.Count, "la fiche se voit comme une ou plusieurs feuilles, avec ou sans papier");
+            double OnPage(double x) => viewer.TranslatePoint(new Point(x, 0), page).X;
+            var (sheetLeft, sheetRight) = (OnPage(sheets[0].X), OnPage(sheets[0].Right));
+
+            // Le titre commence au bord gauche de la feuille, « Écrire » finit à son bord droit, « Lire » juste avant.
+            FrameworkElement Part(string name) => Descendants(page).OfType<FrameworkElement>().First(element => element.Name == name && element.IsVisible);
+            var (title, read, write, steps) = (Part("PreviewTitle"), Part("ReadButton"), Part("WriteButton"), Part("PreviewFoot"));
+            Assert.AreEqual(sheetLeft, title.TranslatePoint(default, page).X, 2.5, "le titre est aligné sur la feuille");
+            Assert.AreEqual(sheetLeft, Part("PreviewMeta").TranslatePoint(default, page).X, 2.5);
+            Assert.AreEqual(sheetRight, write.TranslatePoint(new Point(write.ActualWidth, 0), page).X, 2.5, "les boutons finissent au bord droit de la feuille");
+            Assert.AreEqual(write.TranslatePoint(default, page).X, read.TranslatePoint(new Point(read.ActualWidth, 0), page).X, 1, "« Lire » et « Écrire » se touchent");
+            Assert.AreEqual(sheetLeft, steps.TranslatePoint(default, page).X, 2.5, "les étapes sont sous la feuille, sur sa largeur");
+            var top = viewer.TranslatePoint(new Point(0, sheets[0].Y), page).Y;
+            Assert.IsLessThan(top + 1, write.TranslatePoint(new Point(0, write.ActualHeight), page).Y, "au-dessus de la feuille");
+            Assert.IsLessThanOrEqualTo(width, sheetRight + 24, "la feuille tient dans la page");
+            // Hors d'une carte, le texte garde la couleur du thème : une étape à venir se lit en sombre comme en clair.
+            var ink = ((SolidColorBrush)test.Design.Dictionary["Kyf.Brush.Text"]).Color;
+            var later = Descendants(steps).OfType<TextBlock>().Last(label => label.Name == "Label");
+            Assert.AreEqual(ink, ((SolidColorBrush)later.Foreground).Color, "l'étape à venir est écrite dans la couleur du texte");
+            Assert.AreSame(model.ReadSelectedCommand, ((Button)read).Command);
+            Assert.AreSame(model.WriteSelectedCommand, ((Button)write).Command);
+
+            if (ruled)
+            {
+                // Entre deux feuilles, le fond de la page et le rang de la suivante.
+                Assert.IsTrue(viewer.NumbersPages && viewer.PageBands.NumbersPages);
+                Assert.IsGreaterThanOrEqualTo(1, viewer.PageBands.Count);
+                Assert.AreEqual("Page 2 sur 3", PageBandsLayer.PageCaption(2, 3));
+
+                // Avec un papier, le texte de l'aperçu est posé sur ses lignes, comme en lecture.
+                var step = viewer.WritingStep;
+                Assert.IsGreaterThan(0, step);
+                var measured = 0;
+                foreach (var paragraph in viewer.Document!.Blocks.OfType<Paragraph>().Where(candidate => candidate.Tag is null && candidate.LineStackingStrategy == LineStackingStrategy.BlockLineHeight))
+                {
+                    var glyphs = paragraph.ContentStart.GetInsertionPosition(LogicalDirection.Forward).GetCharacterRect(LogicalDirection.Forward);
+                    var baseline = glyphs.Top + (paragraph.FontFamily.Baseline * paragraph.FontSize);
+                    if (sheets.FirstOrDefault(sheet => baseline > sheet.Y && baseline < sheet.Bottom) is not { Width: > 0 } sheet)
+                    {
+                        continue;
+                    }
+                    var offset = (baseline - (sheet.Y + viewer.PagePaper.WritingLine)) / step;
+                    Assert.AreEqual(Math.Round(offset), offset, 0.06, $"« {new TextRange(paragraph.ContentStart, paragraph.ContentEnd).Text[..Math.Min(20, new TextRange(paragraph.ContentStart, paragraph.ContentEnd).Text.Length)]} » est sur une ligne du papier");
+                    measured++;
+                }
+                Assert.IsGreaterThanOrEqualTo(3, measured, "le titre et plusieurs paragraphes ont été regardés");
+            }
+            else
+            {
+                Assert.AreEqual(PaperStyle.Plain, viewer.PaperShown, "sans papier choisi, une feuille unie");
+            }
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    private static IEnumerable<DependencyObject> Descendants(DependencyObject root)
+    {
+        for (var index = 0; index < VisualTreeHelper.GetChildrenCount(root); index++)
+        {
+            var child = VisualTreeHelper.GetChild(root, index);
+            yield return child;
+            foreach (var deeper in Descendants(child))
+            {
+                yield return deeper;
+            }
+        }
+    }
+
+    [STATestMethod]
+    public void Folding_a_folder_leaves_the_preview_of_the_chosen_sheet_alone()
+    {
+        using var ui = new UiThread();
+        using var vault = new SheetsVault();
+        var test = new TestShell();
+        var model = vault.Loaded();
+        var page = new SheetsPage { DataContext = model };
+        var host = new Border { Width = 1200, Height = 900, Child = page };
+        host.Resources.MergedDictionaries.Add(test.Design.Dictionary);
+        var canvas = new Canvas();
+        canvas.Children.Add(host);
+        var window = new Window { Content = canvas, Left = -10000, Top = -10000, Width = 800, Height = 600, ShowActivated = false, ShowInTaskbar = false };
+        window.Show();
+        TestShell.Flush();
+        try
+        {
+            Assert.IsTrue(model.HasPreview, "assez large pour l'aperçu");
+            var chosen = model.Rows.OfType<SheetRow>().First();
+            model.SelectedRow = chosen;
+            UiThread.Until(() => model.Preview is { HasBody: true }, TimeSpan.FromSeconds(20));
+            var shown = model.Preview;
+            var seen = new List<TodayPreview?>();
+            model.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName == nameof(SheetsPageViewModel.Preview))
+                {
+                    seen.Add(model.Preview);
+                }
+            };
+
+            // Un dossier qui ne contient pas la fiche choisie se plie puis se déplie : la liste se refait deux fois.
+            var other = model.Rows.OfType<SheetFolderRow>().Last(row => row.IsFolder && !chosen.Sheet.Folder.StartsWith(row.Path, StringComparison.Ordinal));
+            model.ToggleFolderCommand.Execute(other);
+            TestShell.Flush();
+            model.ToggleFolderCommand.Execute(model.Rows.OfType<SheetFolderRow>().Single(row => row.Path == other.Path));
+            TestShell.Flush();
+            var pause = System.Diagnostics.Stopwatch.StartNew();
+            UiThread.Until(() => pause.ElapsedMilliseconds > 300);
+
+            Assert.IsEmpty(seen, "l'aperçu ne se vide ni ne se relit : c'était le flash");
+            Assert.AreSame(shown, model.Preview);
+            Assert.AreEqual(chosen.Sheet.Id, ((SheetRow)model.SelectedRow!).Sheet.Id, "la fiche reste choisie dans la liste refaite");
+            Assert.AreSame(model.SelectedRow, page.Items.SelectedItem);
+
+            // Une autre fiche choisie : l'aperçu la suit toujours.
+            var next = model.Rows.OfType<SheetRow>().First(row => row.Sheet.Id != chosen.Sheet.Id);
+            model.SelectedRow = next;
+            UiThread.Until(() => model.Preview is { HasBody: true, Row: SheetRow row } && row.Sheet.Id == next.Sheet.Id, TimeSpan.FromSeconds(20));
+            Assert.IsFalse(seen.Contains(null), "sans passer par le vide");
+
+            // Le dossier de la fiche choisie se plie : elle n'est plus dans la liste, la première visible prend sa place.
+            if (model.Rows.OfType<SheetFolderRow>().FirstOrDefault(row => row.IsFolder && next.Sheet.Folder.Length > 0 && next.Sheet.Folder.StartsWith(row.Path, StringComparison.Ordinal)) is { } own)
+            {
+                model.ToggleFolderCommand.Execute(own);
+                TestShell.Flush();
+                Assert.IsFalse(model.Rows.OfType<SheetRow>().Any(row => row.Sheet.Id == next.Sheet.Id));
+                UiThread.Until(() => model.Preview is { Row: SheetRow row } && model.SelectedRow is SheetRow selected && row.Sheet.Id == selected.Sheet.Id, TimeSpan.FromSeconds(20));
+            }
+        }
+        finally
+        {
+            window.Close();
+        }
     }
 
     [STATestMethod]

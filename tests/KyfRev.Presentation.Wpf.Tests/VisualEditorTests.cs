@@ -645,8 +645,8 @@ public sealed class VisualEditorTests
         UiThread.Until(() => scene.Editor.Tools?.Color == "#1565c0");
 
         scene.Editor.StepFontSizeCommand.Execute(1);
-        UiThread.Until(() => scene.OnDisk.Contains("font-size:1.18em", StringComparison.Ordinal));
-        UiThread.Until(() => scene.Editor.SizeLabel == "20");
+        UiThread.Until(() => scene.OnDisk.Contains("font-size:1.17em", StringComparison.Ordinal));
+        UiThread.Until(() => scene.Editor.SizeLabel == "14");
         scene.Editor.SetFontSizeCommand.Execute(FontSizes.Normal);
         UiThread.Until(() => !scene.OnDisk.Contains("font-size", StringComparison.Ordinal));
 
@@ -957,6 +957,9 @@ public sealed class VisualEditorTests
             UiThread.Until(() => scene.Script($"document.documentElement.classList.contains('sur-lignes') && document.documentElement.getAttribute('data-papier') === '{PaperStyles.Name(style)}'") == "true");
             // La mise en pages et le calage se mesurent après coup : on leur laisse le temps de se poser.
             Pump(TimeSpan.FromMilliseconds(900));
+            // La flèche de repli d'un titre est posée dans la marge, là où l'essai cherche les traits du papier, et compte dans
+            // les boîtes de son titre : elle sort de la mesure, sans rien déplacer (elle ne prend pas de place dans le texte).
+            scene.Script("document.querySelectorAll('.ProseMirror button.repli').forEach((fleche) => { fleche.style.display = 'none'; })");
             var shot = visual.ShowSnapshotAsync();
             UiThread.Until(() => shot.IsCompleted);
             TestShell.Flush();
@@ -1031,6 +1034,9 @@ public sealed class VisualEditorTests
             UiThread.Until(() => scene.Script("getComputedStyle(document.querySelector('.ProseMirror p')).fontFamily").Contains(family, StringComparison.Ordinal));
             StringAssert.Contains(scene.Script("getComputedStyle(document.querySelector('.ProseMirror h1')).fontFamily"), family, StringComparison.Ordinal, "les titres prennent la police choisie");
             Pump(TimeSpan.FromMilliseconds(900));
+            // La flèche de repli d'un titre est posée dans la marge, là où l'essai cherche les traits du papier, et compte dans
+            // les boîtes de son titre : elle sort de la mesure, sans rien déplacer (elle ne prend pas de place dans le texte).
+            scene.Script("document.querySelectorAll('.ProseMirror button.repli').forEach((fleche) => { fleche.style.display = 'none'; })");
             var shot = visual.ShowSnapshotAsync();
             UiThread.Until(() => shot.IsCompleted);
             TestShell.Flush();
@@ -1380,6 +1386,123 @@ public sealed class VisualEditorTests
         // Une image qui ne vient pas du coffre n'a pas de fichier à masquer.
         var elsewhere = visual.MenuItems(new MenuEvent(null, 0, false, false, false, false, ImagePosition: 3, ImageAddress: "data:image/png;base64,AAAA"), null).OfType<MenuItem>().Select(item => (string)item.Header).ToList();
         CollectionAssert.DoesNotContain(elsewhere, ImageMaskText.Action);
+    }
+
+    [EngineTest]
+    public void The_titles_have_the_sizes_of_a_word_processor_and_the_text_stays_a_centred_column()
+    {
+        using var scene = new Scene("# Un\n\nTexte.\n\n## Deux\n\n### Trois\n\n#### Quatre\n\n##### Cinq\n\nFin.\n");
+        UiThread.Until(() => scene.Shown.Contains("Fin.", StringComparison.Ordinal));
+        var visual = scene.Visual!;
+        double Size(string selector) => double.Parse(scene.Script($"parseFloat(getComputedStyle(document.querySelector('.ProseMirror {selector}')).fontSize)"), System.Globalization.CultureInfo.InvariantCulture);
+        string Style(string selector) => scene.Script($"getComputedStyle(document.querySelector('.ProseMirror {selector}')).fontStyle").Trim('"');
+
+        // Le corps vaut 12 points (16 px), les titres 20, 16 et 14, puis la taille du corps : le titre 4 en italique.
+        UiThread.Until(() => Math.Abs(Size("p") - 16) < 0.05);
+        Assert.AreEqual(ReadingComfort.Pixels(20), Size("h1"), 0.1);
+        Assert.AreEqual(ReadingComfort.Pixels(16), Size("h2"), 0.1);
+        Assert.AreEqual(ReadingComfort.Pixels(14), Size("h3"), 0.1);
+        Assert.AreEqual(16, Size("h4"), 0.1);
+        Assert.AreEqual(16, Size("h5"), 0.1);
+        Assert.AreEqual("italic", Style("h4"));
+        Assert.AreEqual("normal", Style("h5"));
+        Assert.AreEqual("normal", Style("h1"));
+
+        // Le ruban dit la taille du titre où est le curseur, en points.
+        scene.Script("(() => { const titre = document.querySelector('.ProseMirror h1'); const selection = getSelection(); selection.selectAllChildren(titre); selection.collapseToEnd(); document.querySelector('.ProseMirror').focus(); })()");
+        UiThread.Until(() => scene.Editor.Tools?.Heading == 1);
+        Assert.AreEqual("20", scene.Editor.SizeLabel);
+
+        // La vue est plus large que le texte : la feuille sans fin reste une colonne, au milieu.
+        visual.TextWidth = 320;
+        UiThread.Until(() => scene.Script("getComputedStyle(document.documentElement).getPropertyValue('--largeur-fiche').trim()").Trim('"') == "320px");
+        UiThread.Until(() => double.Parse(scene.Script("document.getElementById('fiche').getBoundingClientRect().width"), System.Globalization.CultureInfo.InvariantCulture) <= 320.5);
+        var view = double.Parse(scene.Script("document.documentElement.clientWidth"), System.Globalization.CultureInfo.InvariantCulture);
+        var left = double.Parse(scene.Script("document.getElementById('fiche').getBoundingClientRect().left"), System.Globalization.CultureInfo.InvariantCulture);
+        var width = double.Parse(scene.Script("document.getElementById('fiche').getBoundingClientRect().width"), System.Globalization.CultureInfo.InvariantCulture);
+        if (view > 360)
+        {
+            Assert.AreEqual((view - width) / 2, left, 12, "centrée dans la vue");
+        }
+        Assert.AreEqual("false", scene.Script("document.documentElement.scrollWidth > document.documentElement.clientWidth + 1"), "sans défilement horizontal");
+
+        // Sans largeur donnée, la feuille reprend toute la vue.
+        visual.TextWidth = double.PositiveInfinity;
+        UiThread.Until(() => scene.Script("getComputedStyle(document.documentElement).getPropertyValue('--largeur-fiche').trim()").Trim('"') == "none");
+    }
+
+    [EngineTest]
+    public void A_section_folds_under_its_title_and_the_file_does_not_change()
+    {
+        using var scene = new Scene("# Un\n\nSous un.\n\n## Deux\n\nSous deux.\n\n# Trois\n\nSous trois.\n");
+        UiThread.Until(() => scene.Shown.Contains("Sous trois.", StringComparison.Ordinal));
+        scene.Script("document.querySelector('.ProseMirror').focus()");
+        UiThread.Until(() => scene.Script("document.querySelectorAll('.ProseMirror button.repli').length") == "3");
+        var before = scene.OnDisk;
+        string Hidden() => scene.Script("[...document.querySelectorAll('.ProseMirror > *')].filter((bloc) => getComputedStyle(bloc).display === 'none').map((bloc) => bloc.textContent).join('|')").Trim('"');
+        Assert.AreEqual(string.Empty, Hidden());
+        Assert.AreEqual("false", scene.Script("document.querySelector('.ProseMirror h1 button.repli').getAttribute('aria-expanded') === 'false'"));
+
+        // Un clic sur la flèche du premier titre : tout ce qui est sous lui se replie, le titre 2 et son texte compris,
+        // jusqu'au titre de même niveau qui suit.
+        scene.Script("document.querySelector('.ProseMirror h1 button.repli').click()");
+        UiThread.Until(() => Hidden().Contains("Sous deux.", StringComparison.Ordinal));
+        StringAssert.Contains(Hidden(), "Sous un.", StringComparison.Ordinal);
+        StringAssert.Contains(Hidden(), "Deux", StringComparison.Ordinal);
+        Assert.IsFalse(Hidden().Contains("Trois", StringComparison.Ordinal), "le titre suivant de même niveau reste");
+        Assert.AreEqual("true", scene.Script("document.querySelector('.ProseMirror h1 button.repli').getAttribute('aria-expanded') === 'false'"));
+        StringAssert.Contains(scene.Script("document.querySelector('.ProseMirror h1 button.repli').getAttribute('aria-label')"), "Déplier", StringComparison.Ordinal);
+
+        // Rien n'est écrit dans la fiche : replier ne change pas le texte.
+        TestShell.Flush();
+        Assert.AreEqual(before, scene.OnDisk);
+
+        // Un second clic déplie.
+        scene.Script("document.querySelector('.ProseMirror h1 button.repli').click()");
+        UiThread.Until(() => Hidden().Length == 0);
+        Assert.AreEqual(before, scene.OnDisk);
+    }
+
+    [EngineTest]
+    public void A_right_click_on_a_page_break_or_a_blank_page_offers_to_delete_it()
+    {
+        using var scene = new Scene("Avant.\n\n<!-- kyfrev saut-de-page -->\n\nMilieu.\n\n<!-- kyfrev page-blanche -->\n\nAprès.\n");
+        UiThread.Until(() => scene.Shown.Contains("Milieu.", StringComparison.Ordinal));
+        UiThread.Until(() => scene.Script("document.querySelectorAll('.ProseMirror .marque-de-page').length") == "2");
+        scene.Script("document.querySelector('.ProseMirror').focus()");
+        var visual = scene.Visual!;
+
+        // Le vrai clic droit, dans la page, sur la marque du saut : le menu ne propose que de la supprimer.
+        void RightClick(string kind) =>
+            scene.Script($"document.querySelector('.ProseMirror .marque-de-page[data-page=\"{kind}\"]').dispatchEvent(new MouseEvent('contextmenu', {{ bubbles: true, cancelable: true, clientX: 5, clientY: 5 }}))");
+        RightClick("saut");
+        UiThread.Until(() => visual.LastMenuItems is { Count: > 0 });
+        var menu = visual.LastMenuItems!;
+        ((ContextMenu)menu[0].Parent).IsOpen = false;
+        CollectionAssert.AreEqual(new[] { EditingText.DeletePageBreak }, menu.OfType<MenuItem>().Select(item => (string)item.Header).ToList());
+        ((MenuItem)menu[0]).RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+        UiThread.Until(() => !scene.OnDisk.Contains("saut-de-page", StringComparison.Ordinal));
+        StringAssert.Contains(scene.OnDisk, "page-blanche", StringComparison.Ordinal, "l'autre marque reste");
+        StringAssert.Contains(scene.OnDisk, "Avant.", StringComparison.Ordinal);
+        StringAssert.Contains(scene.OnDisk, "Milieu.", StringComparison.Ordinal);
+
+        // La page blanche, de même, sous son nom.
+        RightClick("blanche");
+        UiThread.Until(() => visual.LastMenuItems is { Count: 1 } items && (string)((MenuItem)items[0]).Header == EditingText.DeleteBlankPage);
+        menu = visual.LastMenuItems!;
+        ((ContextMenu)menu[0].Parent).IsOpen = false;
+        ((MenuItem)menu[0]).RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+        UiThread.Until(() => !scene.OnDisk.Contains("kyfrev", StringComparison.Ordinal));
+        StringAssert.Contains(scene.OnDisk, "Après.", StringComparison.Ordinal, "le texte autour ne bouge pas");
+
+        // Annuler remet la marque d'un coup.
+        scene.Editor.UndoCommand.Execute(null);
+        UiThread.Until(() => scene.OnDisk.Contains("page-blanche", StringComparison.Ordinal));
+
+        // Ailleurs dans le texte, le menu reste celui du texte.
+        var text = visual.MenuItems(new MenuEvent("mot", 0, true, false, false, false), null).OfType<MenuItem>().Select(item => (string)item.Header).ToList();
+        CollectionAssert.DoesNotContain(text, EditingText.DeletePageBreak);
+        CollectionAssert.Contains(text, EditingText.Cut);
     }
 
     [EngineTest]

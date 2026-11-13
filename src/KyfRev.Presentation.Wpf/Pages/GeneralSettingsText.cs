@@ -95,13 +95,13 @@ public static class GeneralSettingsText
     /// <summary>« Taille du texte des fiches ».</summary>
     public static string TextSize => Text(nameof(TextSize));
 
-    /// <summary>« Très grande (21 px) ».</summary>
+    /// <summary>« Très grande (16) ».</summary>
     public static string TextSizeExtraLarge => Text(nameof(TextSizeExtraLarge));
 
-    /// <summary>« Grande (19 px) ».</summary>
+    /// <summary>« Grande (14) ».</summary>
     public static string TextSizeLarge => Text(nameof(TextSizeLarge));
 
-    /// <summary>« Normale (17 px) ».</summary>
+    /// <summary>« Normale (12) ».</summary>
     public static string TextSizeNormal => Text(nameof(TextSizeNormal));
 
     /// <summary>« Thème d'affichage ».</summary>

@@ -289,6 +289,23 @@ internal sealed class PageBandsLayer : FrameworkElement
     /// <summary>Le nombre de bandes dessinées.</summary>
     internal int Count => _breaks.Count;
 
+    /// <summary>Chaque écart dit la page qui commence sous lui : « Page 2 sur 3 ».</summary>
+    internal bool NumbersPages
+    {
+        get;
+        set
+        {
+            if (field != value)
+            {
+                field = value;
+                InvalidateVisual();
+            }
+        }
+    }
+
+    /// <summary>Ce que dit l'écart au-dessus de la page <paramref name="page"/> d'une fiche de <paramref name="pages"/> pages.</summary>
+    internal static string PageCaption(int page, int pages) => string.Create(CultureInfo.CurrentCulture, $"Page {page} sur {pages}");
+
     /// <summary>Le nombre de coupures qui disent « suite ».</summary>
     internal int Continued => _breaks.Count(pageBreak => pageBreak.Continues);
 
@@ -325,8 +342,10 @@ internal sealed class PageBandsLayer : FrameworkElement
         // Le papier se redessine dans la largeur de la feuille ; l'écart, lui, efface tout ce qui le traverserait.
         var width = Math.Max(0, Math.Min(_left + _width, Math.Min(_clip, ActualWidth)) - _left);
         var side = _left + _margin;
+        var number = 1;
         foreach (var pageBreak in _breaks)
         {
+            number++;
             var contentEnd = _origin + pageBreak.ContentEnd;
             var sheetEnd = _origin + pageBreak.PageEnd + _margin;
             var nextSheet = _origin + pageBreak.NextTop - _margin;
@@ -344,6 +363,12 @@ internal sealed class PageBandsLayer : FrameworkElement
             {
                 drawingContext.DrawLine(line, new Point(_left, sheetEnd - 0.5), new Point(_left + width, sheetEnd - 0.5));
                 drawingContext.DrawLine(line, new Point(_left, nextSheet + 0.5), new Point(_left + width, nextSheet + 0.5));
+            }
+            if (NumbersPages && nextSheet - sheetEnd >= 12 && TryFindResource("Kyf.Brush.TextSecondary") is Brush quiet)
+            {
+                // Au milieu de l'écart, sur le fond de la page : la feuille qui suit dit son rang.
+                var caption = Caption(PageCaption(number, _breaks.Count + 1), quiet, FontStyles.Normal, Math.Min(12, nextSheet - sheetEnd - 2));
+                drawingContext.DrawText(caption, new Point(_left + ((width - caption.Width) / 2), sheetEnd + ((nextSheet - sheetEnd - caption.Height) / 2)));
             }
             if (pageBreak.Continues && TryFindResource("Kyf.Brush.TextSecondary") is Brush ink)
             {
@@ -369,12 +394,14 @@ internal sealed class PageBandsLayer : FrameworkElement
         return new Rect(_left, part.Y, _width, part.Height);
     }
 
-    private FormattedText Caption(string text, Brush ink) => new(
+    private FormattedText Caption(string text, Brush ink) => Caption(text, ink, FontStyles.Italic, 12);
+
+    private FormattedText Caption(string text, Brush ink, FontStyle style, double size) => new(
         text,
         CultureInfo.CurrentUICulture,
         FlowDirection.LeftToRight,
-        new Typeface(TextElement.GetFontFamily(this), FontStyles.Italic, FontWeights.Normal, FontStretches.Normal),
-        12,
+        new Typeface(TextElement.GetFontFamily(this), style, FontWeights.Normal, FontStretches.Normal),
+        size,
         ink,
         VisualTreeHelper.GetDpi(this).PixelsPerDip);
 }
@@ -385,7 +412,39 @@ internal sealed class PageBandsLayer : FrameworkElement
 /// </summary>
 internal sealed class PageFitHost : Decorator
 {
+    /// <summary>
+    /// La largeur que la vue demande pour sa feuille : celle de la page et de la barre de défilement, ou, pour une feuille
+    /// sans fin, <see cref="EndlessWidth"/>. Ce qui entoure la feuille (son titre, ses boutons) s'y aligne.
+    /// </summary>
+    public static readonly DependencyProperty SheetWidthProperty = DependencyProperty.Register(
+        nameof(SheetWidth), typeof(double), typeof(PageFitHost), new PropertyMetadata(double.PositiveInfinity));
+
+    /// <summary>
+    /// Ce qui sépare les bords de la vue de ceux de sa feuille, à gauche et à droite (la barre de défilement est à droite de
+    /// la feuille) : le titre et les boutons posés au-dessus d'elle prennent ces marges pour s'aligner sur elle.
+    /// </summary>
+    public static readonly DependencyProperty SheetInsetProperty = DependencyProperty.Register(
+        nameof(SheetInset), typeof(Thickness), typeof(PageFitHost), new PropertyMetadata(default(Thickness)));
+
     private double _scale = 1;
+    private SheetDocumentViewer? _watched;
+
+    /// <inheritdoc cref="SheetInsetProperty"/>
+    public Thickness SheetInset
+    {
+        get => (Thickness)GetValue(SheetInsetProperty);
+        private set => SetValue(SheetInsetProperty, value);
+    }
+
+    /// <inheritdoc cref="SheetWidthProperty"/>
+    public double SheetWidth
+    {
+        get => (double)GetValue(SheetWidthProperty);
+        private set => SetValue(SheetWidthProperty, value);
+    }
+
+    /// <summary>La largeur donnée à une feuille sans fin ; infinie : toute la place.</summary>
+    public double EndlessWidth { get; set; } = double.PositiveInfinity;
 
     /// <summary>L'échelle en cours ; 1 quand la feuille tient.</summary>
     internal double Scale => _scale;
@@ -395,7 +454,18 @@ internal sealed class PageFitHost : Decorator
     {
         if (Child is SheetDocumentViewer viewer)
         {
+            if (!ReferenceEquals(viewer, _watched))
+            {
+                _watched?.PagesShown -= OnPagesShown;
+                _watched = viewer;
+                viewer.PagesShown += OnPagesShown;
+            }
             var wanted = viewer.FitWidth;
+            var sheet = wanted > 0 ? wanted : EndlessWidth;
+            if (!sheet.Equals(SheetWidth))
+            {
+                SheetWidth = sheet;
+            }
             var scale = wanted > 0 && !double.IsInfinity(constraint.Width) && constraint.Width > 0 && constraint.Width < wanted
                 ? Math.Max(0.2, constraint.Width / wanted)
                 : 1;
@@ -406,5 +476,19 @@ internal sealed class PageFitHost : Decorator
             }
         }
         return base.MeasureOverride(constraint);
+    }
+
+    /// <summary>La vue vient de poser ses feuilles : leurs bords sont connus.</summary>
+    private void OnPagesShown(object? sender, EventArgs e)
+    {
+        if (sender is not SheetDocumentViewer viewer || viewer.PagePaper.Sheets is not [var sheet, ..] || viewer.ActualWidth <= 0)
+        {
+            return;
+        }
+        var inset = new Thickness(Math.Max(0, Math.Round(sheet.X * _scale)), 0, Math.Max(0, Math.Round((viewer.ActualWidth - sheet.Right) * _scale)), 0);
+        if (Math.Abs(inset.Left - SheetInset.Left) > 0.5 || Math.Abs(inset.Right - SheetInset.Right) > 0.5)
+        {
+            SheetInset = inset;
+        }
     }
 }

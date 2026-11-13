@@ -78,6 +78,12 @@ public static class EditingText
     /// <summary>Retire le bloc de code où est le curseur.</summary>
     public const string DeleteCode = "Supprimer ce bloc de code";
 
+    /// <summary>Au clic droit sur la marque d'un saut de page.</summary>
+    public const string DeletePageBreak = "Supprimer le saut de page";
+
+    /// <summary>Au clic droit sur la marque d'une page blanche.</summary>
+    public const string DeleteBlankPage = "Supprimer la page blanche";
+
     /// <summary>Retire l'image visée.</summary>
     public const string DeleteImage = "Supprimer l'image";
 
@@ -835,7 +841,7 @@ public static class EditingText
     public const string AlignJustify = "Justifier (Ctrl+J)";
 
     /// <summary>La taille du texte normal, dans la liste.</summary>
-    public static string FontSizeNormal(int pixels) => string.Create(CultureInfo.InvariantCulture, $"{pixels} (normale)");
+    public static string FontSizeNormal(int points) => string.Create(CultureInfo.InvariantCulture, $"{points} (normale)");
 
     /// <summary>Liste numérotée.</summary>
     public const string Numbers = "Liste numérotée";

@@ -29,6 +29,12 @@ public sealed partial class ShellWindow : Window
     private const int OnCaption = 2;
     private const int OnMaximizeButton = 9;
 
+    /// <summary>L'épaisseur du bord qui redimensionne la fenêtre : celle du cadre (<c>ResizeBorderThickness</c>).</summary>
+    internal const double ResizeBorder = 6;
+
+    /// <summary>Ce qu'un coin prend sur chacun de ses deux bords : la diagonale se trouve sans viser au pixel.</summary>
+    internal const double ResizeCorner = 16;
+
     private readonly ShellViewModel _shell;
     private const double PaletteEdge = 16;
     private const double PaletteMinWidth = 360;
@@ -150,6 +156,14 @@ public sealed partial class ShellWindow : Window
         switch (message)
         {
             case NonClientHitTest:
+                // Les bords d'abord : un bouton de la barre de titre se déclare « contenu » et l'emporte sur le cadre, si bien que le
+                // coin supérieur droit, sous « Fermer », ne redimensionnait plus la fenêtre.
+                if (ResizeEdgeAt(lParam) is var edge and not 0)
+                {
+                    MaximizeButton.Tag = null;
+                    handled = true;
+                    return edge;
+                }
                 var over = IsOnMaximizeButton(lParam);
                 MaximizeButton.Tag = over ? bool.TrueString : null;
                 if (over)
@@ -177,6 +191,51 @@ public sealed partial class ShellWindow : Window
                 break;
         }
         return 0;
+    }
+
+    /// <summary>Le bord ou le coin de la fenêtre sous ce point de l'écran, tant qu'elle se redimensionne ; 0 ailleurs.</summary>
+    private int ResizeEdgeAt(nint position)
+    {
+        if (WindowState != WindowState.Normal || _shell.IsFullScreen || ResizeMode is ResizeMode.NoResize or ResizeMode.CanMinimize || PresentationSource.FromVisual(this) is null)
+        {
+            return 0;
+        }
+        var point = PointFromScreen(new Point(unchecked((short)(position & 0xFFFF)), unchecked((short)((position >> 16) & 0xFFFF))));
+        return ResizeEdge(point, new Size(ActualWidth, ActualHeight));
+    }
+
+    /// <summary>
+    /// Ce que Windows doit comprendre d'un point de la fenêtre de taille <paramref name="window"/> : un de ses quatre bords
+    /// (HTLEFT 10, HTRIGHT 11, HTTOP 12, HTBOTTOM 15), un de ses coins (HTTOPLEFT 13, HTTOPRIGHT 14, HTBOTTOMLEFT 16,
+    /// HTBOTTOMRIGHT 17), ou 0 quand le point n'est pas sur le cadre.
+    /// </summary>
+    internal static int ResizeEdge(Point point, Size window)
+    {
+        if (point.X < 0 || point.Y < 0 || point.X > window.Width || point.Y > window.Height)
+        {
+            return 0;
+        }
+        var left = point.X < ResizeBorder;
+        var right = point.X >= window.Width - ResizeBorder;
+        var top = point.Y < ResizeBorder;
+        var bottom = point.Y >= window.Height - ResizeBorder;
+        if (!left && !right && !top && !bottom)
+        {
+            return 0;
+        }
+        // Sur un bord, près d'un coin : la diagonale.
+        var nearLeft = point.X < ResizeCorner;
+        var nearRight = point.X >= window.Width - ResizeCorner;
+        var nearTop = point.Y < ResizeCorner;
+        var nearBottom = point.Y >= window.Height - ResizeCorner;
+        return (nearTop, nearBottom, nearLeft, nearRight) switch
+        {
+            (true, _, true, _) => 13,
+            (true, _, _, true) => 14,
+            (_, true, true, _) => 16,
+            (_, true, _, true) => 17,
+            _ => left ? 10 : right ? 11 : top ? 12 : 15,
+        };
     }
 
     private bool IsOnMaximizeButton(nint position)

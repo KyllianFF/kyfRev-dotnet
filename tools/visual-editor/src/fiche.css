@@ -1,6 +1,6 @@
 /*
  * Mise en page de lecture des fiches (section 12.5) : lignes de 72 caractères
- * au plus, 17 px, interligne 1,65 ; tableaux défilants ; code coloré.
+ * au plus, 16 px, interligne 1,65 ; tableaux défilants ; code coloré.
  */
 
 /* Largeur : toute la place disponible, ou des lignes de 72 caractères au plus
@@ -8,7 +8,7 @@
 .contenu-fiche {
   max-width: var(--largeur-fiche, none);
   font-family: var(--police-lecture, inherit);
-  font-size: var(--taille-lecture, 17px);
+  font-size: var(--taille-lecture, 16px);
   line-height: var(--interligne-lecture, 1.65);
   overflow-wrap: break-word;
 }
@@ -31,26 +31,45 @@
   display: none;
 }
 
+/*
+ * Les titres, aux tailles d'un traitement de texte pour un corps de 12 points : 20, 16 et 14 points pour les trois
+ * premiers niveaux ; les suivants à la taille du texte, le quatrième en italique. Tous ont la même graisse et les mêmes
+ * marges, comptées sur leur propre taille.
+ */
 .contenu-fiche h1,
 .contenu-fiche h2,
 .contenu-fiche h3,
-.contenu-fiche h4 {
+.contenu-fiche h4,
+.contenu-fiche h5,
+.contenu-fiche h6 {
   margin: 1.6em 0 0.5em;
+  font-style: normal;
+  font-weight: 700;
   line-height: 1.3;
 }
 
 .contenu-fiche h1 {
-  font-size: 1.6em;
+  font-size: 1.667em;
 }
 
 .contenu-fiche h2 {
-  font-size: 1.3em;
+  font-size: 1.333em;
   padding-bottom: 4px;
   border-bottom: 1px solid var(--bordure);
 }
 
 .contenu-fiche h3 {
-  font-size: 1.1em;
+  font-size: 1.167em;
+}
+
+.contenu-fiche h4 {
+  font-size: 1em;
+  font-style: italic;
+}
+
+.contenu-fiche h5,
+.contenu-fiche h6 {
+  font-size: 1em;
 }
 
 .contenu-fiche p,

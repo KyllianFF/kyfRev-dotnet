@@ -105,7 +105,7 @@ public sealed partial class ShellViewModel : ObservableObject, IForgetsVault, IS
 
     /// <summary>Largeur de la fenêtre, en pixels indépendants, avant zoom.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Layout), nameof(CanToggleMenu))]
+    [NotifyPropertyChangedFor(nameof(Layout), nameof(CanToggleMenu), nameof(IsMenuVisible))]
     public partial double WindowWidth { get; set; }
 
     /// <summary>Disposition de la navigation : onglets, colonne d'icônes ou barre latérale.</summary>
@@ -197,8 +197,12 @@ public sealed partial class ShellViewModel : ObservableObject, IForgetsVault, IS
         UpdateResults();
     }
 
-    /// <summary>Le menu latéral est affiché : un coffre est ouvert, hors du mode concentration et du plein écran.</summary>
-    public bool IsMenuVisible => !IsWelcome && !IsFocusMode && !IsFullScreen;
+    /// <summary>
+    /// Le menu est affiché : un coffre est ouvert, hors du plein écran, et le menu latéral n'est pas masqué. En fenêtre étroite, le menu
+    /// passe en onglets au bas de la fenêtre et son bouton quitte la barre de titre : le masquage ne compte plus, sans quoi rien ne
+    /// permettrait de changer de vue. Le choix reste retenu, et reprend dès que la fenêtre retrouve un menu latéral.
+    /// </summary>
+    public bool IsMenuVisible => !IsWelcome && !IsFullScreen && (!IsFocusMode || Layout == NavigationLayout.Tabs);
 
     /// <summary>Le bouton de la barre de titre peut masquer ou rendre le menu : en plein écran, il n'y a pas de menu à rendre.</summary>
     public bool CanToggleMenu => !IsFullScreen && Layout != NavigationLayout.Tabs;
@@ -219,7 +223,7 @@ public sealed partial class ShellViewModel : ObservableObject, IForgetsVault, IS
     /// <summary>Zoom de l'interface (1 : taille normale) : celui choisi, tant que l'écran de la fenêtre peut le tenir.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ZoomLabel))]
-    [NotifyPropertyChangedFor(nameof(Layout), nameof(CanToggleMenu))]
+    [NotifyPropertyChangedFor(nameof(Layout), nameof(CanToggleMenu), nameof(IsMenuVisible))]
     [NotifyPropertyChangedFor(nameof(MinimumWindowWidth))]
     [NotifyPropertyChangedFor(nameof(MinimumWindowHeight))]
     public partial double Zoom { get; private set; }
@@ -474,9 +478,15 @@ public sealed partial class ShellViewModel : ObservableObject, IForgetsVault, IS
         }
     }
 
-    /// <summary>Masque ou affiche le menu.</summary>
+    /// <summary>Masque ou affiche le menu latéral. En fenêtre étroite, il n'y en a pas : le choix fait en grand ne change pas.</summary>
     [RelayCommand]
-    public void ToggleFocusMode() => IsFocusMode = !IsFocusMode;
+    public void ToggleFocusMode()
+    {
+        if (Layout != NavigationLayout.Tabs)
+        {
+            IsFocusMode = !IsFocusMode;
+        }
+    }
 
     /// <summary>Passe du thème clair au thème sombre, ou l'inverse. Ce choix remplace « comme Windows » ; il se retrouve dans les Paramètres.</summary>
     [RelayCommand]

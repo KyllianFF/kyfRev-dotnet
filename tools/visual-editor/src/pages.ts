@@ -11,6 +11,7 @@ import { type EditorState, Plugin, PluginKey } from "prosemirror-state";
 import { Decoration, DecorationSet, type EditorView } from "prosemirror-view";
 import { caler, GRAIN, leveeDeTitre, lignesDeTitre, phaseDuPapier } from "./lignes";
 import { type Boite, ECART, type Geometrie, type Genre, hauteurUtile, type Pagination, paginer } from "./pagination";
+import { CLASSE_CACHE, memeRepli } from "./repli";
 
 /** La feuille demandée par l'application, en pixels CSS au zoom 1. */
 export type Feuille = { largeur: number; hauteur: number; marge: number };
@@ -189,10 +190,16 @@ type Mesuree = Boite & {
 
 const estElement = (noeud: unknown): noeud is HTMLElement => noeud instanceof HTMLElement;
 
-/** Le voisin qui compte pour la mise en page : pas un autre ajout de l'éditeur (curseur de bloc, espace). */
+/** Un bloc que cache une section repliée (repli.ts) : il n'a ni place ni hauteur, et ne se mesure pas. */
+const estCache = (element: Element) => element.classList.contains(CLASSE_CACHE);
+
+/**
+ * Le voisin qui compte pour la mise en page : pas un autre ajout de l'éditeur (curseur de bloc, espace), ni un bloc
+ * caché par une section repliée.
+ */
 function voisin(element: Element, sens: "previousElementSibling" | "nextElementSibling"): Element | null {
   let autre = element[sens];
-  while (autre?.classList.contains("ProseMirror-widget") || autre?.classList.contains("ProseMirror-gapcursor")) {
+  while (autre && (autre.classList.contains("ProseMirror-widget") || autre.classList.contains("ProseMirror-gapcursor") || estCache(autre))) {
     autre = autre[sens];
   }
   return autre;
@@ -240,11 +247,14 @@ function dessinDe(figure: HTMLElement): Element | null {
  * Les boîtes de la fiche, de haut en bas, à leur place naturelle : les espaces déjà ouverts et les cales déjà posées
  * sont retirés, pour que le calcul ne dépende pas de ce qu'il a produit la fois d'avant. `levees` : de combien chaque
  * niveau de titre est décalé à l'œil sur un papier réglé ; sa place dans la page est celle d'avant ce décalage.
+ * Ce qu'une section repliée cache n'en fait pas partie : ni ses blocs, ni les espaces ouverts en eux.
  */
 function relever(vue: EditorView, marge: number, utile: number, levees: readonly number[] = []): Mesuree[] {
   const racine = vue.dom;
   const origine = racine.getBoundingClientRect().top + marge;
-  const espaces = [...racine.querySelectorAll<HTMLElement>(".saut-de-page, .saut-de-code, tr.saut-de-ligne")];
+  const espaces = [...racine.querySelectorAll<HTMLElement>(".saut-de-page, .saut-de-code, tr.saut-de-ligne")].filter(
+    (espace) => !espace.closest(`.${CLASSE_CACHE}`),
+  );
   let prochain = 0;
   let retire = 0;
   /** Compte les espaces ouverts avant cet élément. */
@@ -378,6 +388,8 @@ function relever(vue: EditorView, marge: number, utile: number, levees: readonly
     const element = vue.nodeDOM(position);
     const depuis = vue.nodeDOM(cible);
     if (!estElement(element) || !estElement(depuis)) return;
+    // Un élément caché rend un rectangle nul : mesuré, il fausserait toute la suite.
+    if (estCache(element)) return;
     const premiere = boites.length;
     if (CONTENANTS.has(noeud.type.name)) {
       noeud.forEach((enfant, decalage, rang) => {
@@ -848,7 +860,8 @@ export function pages(mise: MiseEnPage): Plugin<DecorationSet> {
         update(_vue, avant) {
           const change = mise.feuille !== posee || mise.ligne !== lignePosee;
           if (change) poser();
-          if (!change && avant.doc === vue.state.doc) return;
+          // Une section repliée ou dépliée : le texte est le même, mais plus aux mêmes places.
+          if (!change && avant.doc === vue.state.doc && memeRepli(avant, vue.state)) return;
           desaccords = 0;
           relances = RELANCES;
           planifier();

@@ -43,6 +43,38 @@ internal sealed partial class PrintView : UserControl
         _viewer.PagesShown += (_, _) => ShowPage();
         DataContextChanged += (_, e) => Follow(e.NewValue as PrintViewModel);
         IsVisibleChanged += (_, _) => ShowPage();
+        SizeChanged += (_, e) => Arrange(e.NewSize.Width);
+    }
+
+    /// <summary>En dessous, les réglages et l'aperçu ne tiennent plus côte à côte.</summary>
+    internal const double StackedBelow = 640;
+
+    /// <summary>Les réglages et l'aperçu sont l'un sous l'autre.</summary>
+    internal bool IsStacked { get; private set; }
+
+    /// <summary>
+    /// Dispose la fenêtre selon sa largeur : côte à côte, chacun à sa hauteur ; ou, trop étroite, les réglages puis l'aperçu,
+    /// l'ensemble défilant d'un bloc, pour que ni l'un ni l'autre ne sorte du cadre.
+    /// </summary>
+    private void Arrange(double width)
+    {
+        var stacked = width is > 0 and < StackedBelow;
+        if (stacked == IsStacked)
+        {
+            return;
+        }
+        IsStacked = stacked;
+        SettingsColumn.Width = stacked ? new GridLength(1, GridUnitType.Star) : new GridLength(340);
+        PreviewColumn.Width = stacked ? new GridLength(0) : new GridLength(1, GridUnitType.Star);
+        PreviewColumn.MinWidth = stacked ? 0 : 300;
+        SettingsRow.Height = stacked ? GridLength.Auto : new GridLength(1, GridUnitType.Star);
+        PreviewRow.Height = stacked ? GridLength.Auto : new GridLength(0);
+        Grid.SetColumn(PreviewPane, stacked ? 0 : 1);
+        Grid.SetRow(PreviewPane, stacked ? 1 : 0);
+        PreviewPane.Margin = stacked ? new Thickness(0, 16, 0, 0) : default;
+        SettingsPane.Margin = stacked ? default : new Thickness(0, 0, 16, 0);
+        SettingsPane.VerticalScrollBarVisibility = stacked ? ScrollBarVisibility.Disabled : ScrollBarVisibility.Auto;
+        Whole.VerticalScrollBarVisibility = stacked ? ScrollBarVisibility.Auto : ScrollBarVisibility.Disabled;
     }
 
     /// <summary>La vue qui met la fiche en page, pour les essais.</summary>
