@@ -243,6 +243,9 @@ public static class Icons
     /// <summary>Soleil : le thème.</summary>
     public static string Theme { get; } = Glyph(0xE706);
 
+    /// <summary>Poignée : la ligne se prend et se fait glisser.</summary>
+    public static string Grip { get; } = Glyph(0xE700);
+
     /// <summary>Trois points : les autres vues, les autres actions.</summary>
     public static string More { get; } = Glyph(0xE712);
 
