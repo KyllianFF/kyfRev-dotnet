@@ -260,6 +260,128 @@
     </Setter>
   </Style>
 
+  <!-- Bascule : un réglage qui s'applique dès qu'on le change. Son nom, s'il en a un, précède la piste. -->
+  <Style x:Key="Kyf.Switch" TargetType="CheckBox">
+    <Setter Property="KeyboardNavigation.AcceptsReturn" Value="False" />
+    <Setter Property="FontFamily" Value="{DynamicResource Kyf.Font.Ui}" />
+    <Setter Property="FontSize" Value="{DynamicResource Kyf.FontSize.Body}" />
+    <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Text}" />
+    <Setter Property="FocusVisualStyle" Value="{DynamicResource Kyf.FocusVisual}" />
+    <Setter Property="MinHeight" Value="{DynamicResource Kyf.Target.Compact}" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="CheckBox">
+          <Grid Background="Transparent">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <ContentPresenter x:Name="Label" VerticalAlignment="Center" Margin="0,0,10,0" />
+            <Border x:Name="Track" Grid.Column="1" Width="44" Height="24" CornerRadius="12" VerticalAlignment="Center" BorderThickness="1"
+                    Background="{DynamicResource Kyf.Brush.Surface}" BorderBrush="{DynamicResource Kyf.Brush.ControlBorder}">
+              <Ellipse x:Name="Knob" Width="16" Height="16" HorizontalAlignment="Left" Margin="3,0" Fill="{DynamicResource Kyf.Brush.ControlBorder}" />
+            </Border>
+          </Grid>
+          <ControlTemplate.Triggers>
+            <Trigger Property="HasContent" Value="False">
+              <Setter TargetName="Label" Property="Visibility" Value="Collapsed" />
+            </Trigger>
+            <Trigger Property="IsChecked" Value="True">
+              <Setter TargetName="Track" Property="Background" Value="{DynamicResource Kyf.Brush.Primary}" />
+              <Setter TargetName="Track" Property="BorderBrush" Value="{DynamicResource Kyf.Brush.Primary}" />
+              <Setter TargetName="Knob" Property="HorizontalAlignment" Value="Right" />
+              <Setter TargetName="Knob" Property="Fill" Value="{DynamicResource Kyf.Brush.OnPrimary}" />
+            </Trigger>
+            <Trigger Property="IsEnabled" Value="False">
+              <Setter Property="Opacity" Value="0.6" />
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <!-- Un choix parmi deux ou trois, tous visibles : des boutons côte à côte, celui qui est retenu marqué de la couleur
+       principale. Les flèches passent de l'un à l'autre. -->
+  <Style x:Key="Kyf.ListBoxItem.Choice" TargetType="ListBoxItem">
+    <Setter Property="FontFamily" Value="{DynamicResource Kyf.Font.Ui}" />
+    <Setter Property="FontSize" Value="{DynamicResource Kyf.FontSize.Body}" />
+    <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Text}" />
+    <Setter Property="Background" Value="{DynamicResource Kyf.Brush.Surface}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource Kyf.Brush.ControlBorder}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="Padding" Value="14,0" />
+    <Setter Property="Margin" Value="0,0,6,6" />
+    <Setter Property="MinHeight" Value="40" />
+    <Setter Property="FocusVisualStyle" Value="{DynamicResource Kyf.FocusVisual}" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="ListBoxItem">
+          <Border x:Name="Chrome" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
+                  CornerRadius="{DynamicResource Kyf.Radius.Control}" SnapsToDevicePixels="True">
+            <!-- Le nom en gras, caché, garde sa place : le bouton ne change pas de largeur quand on le choisit. -->
+            <Grid Margin="{TemplateBinding Padding}" VerticalAlignment="Center" HorizontalAlignment="Center">
+              <ContentPresenter TextElement.FontWeight="SemiBold" Visibility="Hidden" />
+              <ContentPresenter HorizontalAlignment="Center" />
+            </Grid>
+          </Border>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+    <Style.Triggers>
+      <Trigger Property="IsMouseOver" Value="True">
+        <Setter Property="Background" Value="{DynamicResource Kyf.Brush.SurfaceAlt}" />
+      </Trigger>
+      <Trigger Property="IsSelected" Value="True">
+        <Setter Property="Background" Value="{DynamicResource Kyf.Brush.NavigationActiveBackground}" />
+        <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.NavigationActiveText}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Kyf.Brush.Primary}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+      </Trigger>
+    </Style.Triggers>
+  </Style>
+
+  <Style x:Key="Kyf.ListBox.Choices" TargetType="ListBox">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Margin" Value="0,0,-6,-6" />
+    <Setter Property="Focusable" Value="False" />
+    <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+    <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Disabled" />
+    <Setter Property="KeyboardNavigation.DirectionalNavigation" Value="Cycle" />
+    <Setter Property="KeyboardNavigation.TabNavigation" Value="Once" />
+    <Setter Property="ItemContainerStyle" Value="{StaticResource Kyf.ListBoxItem.Choice}" />
+    <Setter Property="ItemsPanel">
+      <Setter.Value>
+        <ItemsPanelTemplate>
+          <WrapPanel IsItemsHost="True" />
+        </ItemsPanelTemplate>
+      </Setter.Value>
+    </Setter>
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="ListBox">
+          <ItemsPresenter />
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
+  <!-- La rangée d'un réglage dans un bloc des paramètres : un filet la sépare de celle du dessus. -->
+  <Style x:Key="Kyf.Setting.Row" TargetType="Border">
+    <Setter Property="BorderBrush" Value="{DynamicResource Kyf.Brush.Divider}" />
+    <Setter Property="BorderThickness" Value="0,1,0,0" />
+    <Setter Property="Padding" Value="0,14" />
+  </Style>
+
+  <!-- La première rangée d'un bloc : sans filet. -->
+  <Style x:Key="Kyf.Setting.FirstRow" TargetType="Border" BasedOn="{StaticResource Kyf.Setting.Row}">
+    <Setter Property="BorderThickness" Value="0" />
+  </Style>
+
   <!-- Barre de progression : une piste discrète, la part faite à la couleur principale. -->
   <Style TargetType="ProgressBar">
     <Setter Property="Height" Value="6" />

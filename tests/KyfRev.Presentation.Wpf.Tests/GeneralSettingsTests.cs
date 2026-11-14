@@ -357,18 +357,55 @@ public sealed class GeneralSettingsTests
             Assert.IsTrue(page.AppearanceCard.IsVisible && page.ReadingCard.IsVisible && page.VoiceCard.IsVisible, "hors de la vue Paramètres, toutes les cartes se montrent");
             Assert.IsGreaterThan(page.AppearanceCard.TranslatePoint(default, page).Y + page.AppearanceCard.ActualHeight - 1, page.AccessibilityCard.TranslatePoint(default, page).Y, "l'une sous l'autre");
             Assert.IsLessThanOrEqualTo(SettingsTab.Column + 0.5, page.AppearanceCard.ActualWidth, "la colonne ne dépasse pas sa largeur");
-            // Chaque réglage est à droite de son nom, au même bord que les autres.
-            var edge = page.AppearanceCard.TranslatePoint(new Point(page.AppearanceCard.ActualWidth, 0), page).X - 16;
-            Assert.AreEqual(edge, page.ThemeChoice.TranslatePoint(new Point(page.ThemeChoice.ActualWidth, 0), page).X, 1);
-            Assert.AreEqual(edge, page.SizeChoice.TranslatePoint(new Point(page.SizeChoice.ActualWidth, 0), page).X, 1);
-            Assert.AreEqual(page.ThemeChoice.ActualWidth, page.SizeChoice.ActualWidth, 0.5);
+            // Chaque réglage est à droite de son nom, au même bord que les autres : le dernier choix du thème, les listes
+            // et les bascules.
+            double Right(FrameworkElement element) => element.TranslatePoint(new Point(element.ActualWidth, 0), page).X;
+            var edge = Right(page.AppearanceCard) - 20;
+            var lastTheme = (ListBoxItem)page.ThemeChoice.ItemContainerGenerator.ContainerFromIndex(2);
+            Assert.AreEqual(edge, Right(lastTheme), 1);
+            Assert.AreEqual(edge, Right(page.SizeChoice), 1);
+            Assert.AreEqual(edge, Right(page.FontChoice), 1);
+            Assert.AreEqual(edge, Right(page.HighContrastBox), 1);
+            Assert.AreEqual(page.TextSizeChoice.ActualWidth, page.SizeChoice.ActualWidth, 0.5);
+            Assert.IsGreaterThan(page.AppearanceCard.TranslatePoint(default, page).X + 240, page.SizeChoice.TranslatePoint(default, page).X, "le nom à gauche, le réglage à droite");
+
+            // Le thème : trois boutons, tous visibles, dont celui en vigueur ; en choisir un autre vaut aussitôt.
+            var model = (GeneralSettingsViewModel)page.DataContext;
+            Assert.HasCount(3, page.ThemeChoice.Items);
+            Assert.AreEqual(0, page.ThemeChoice.SelectedIndex);
+            var width = lastTheme.ActualWidth;
+            page.ThemeChoice.SelectedIndex = 2;
+            TestShell.Flush();
+            Assert.AreEqual(ThemePreference.Dark, model.Theme.Value);
+            Assert.AreEqual(FontWeights.SemiBold, lastTheme.FontWeight, "le choix retenu est en gras");
+            Assert.AreEqual(width, lastTheme.ActualWidth, 0.01, "sans que le bouton change de largeur");
+            page.ThemeChoice.SelectedIndex = 0;
+
+            // Un réglage qui vaut aussitôt est une bascule, pas une case : la piste, et son bouton qui passe à droite.
+            var track = Descendants<Border>(page.HighContrastBox).Single(border => border.Name == "Track");
+            var knob = Descendants<System.Windows.Shapes.Ellipse>(page.HighContrastBox).Single();
+            Assert.AreEqual((44d, 24d), (track.ActualWidth, track.ActualHeight));
+            Assert.AreEqual(HorizontalAlignment.Left, knob.HorizontalAlignment);
+            page.HighContrastBox.IsChecked = true;
+            TestShell.Flush();
+            Assert.IsTrue(model.HighContrast);
+            Assert.AreEqual(HorizontalAlignment.Right, knob.HorizontalAlignment);
+            page.HighContrastBox.IsChecked = false;
+            Assert.IsTrue(new[] { page.ReducedMotionBox, page.HighContrastBox, page.LargerTargetsBox, page.DefinedWordsBox }.All(box => Descendants<Border>(box).Any(border => border.Name == "Track")));
             Assert.AreEqual("100 %", page.SizeChoice.SelectionBoxItem.ToString(), "le libellé, pas l'objet");
-            Assert.AreEqual(Visibility.Collapsed, page.NoVoice.Visibility);
+            Assert.IsFalse(page.NoVoice.IsVisible, "une voix est installée");
             Assert.AreEqual("100 %", ((SettingChoice<double>)page.SizeChoice.SelectedItem).Label);
             Assert.IsLessThanOrEqualTo(page.Scroller.ViewportWidth, page.Scroller.ExtentWidth);
 
-            host.Width = 560;
+            host.Width = 430;
             TestShell.Flush();
+
+            // En fenêtre étroite, une liste ou un choix passe sous son nom, calé à gauche ; une bascule, étroite, reste au
+            // bout de sa rangée.
+            var left = page.AppearanceCard.TranslatePoint(default, page).X + 20;
+            Assert.AreEqual(left, page.SizeChoice.TranslatePoint(default, page).X, 1);
+            Assert.AreEqual(left, page.ThemeChoice.TranslatePoint(default, page).X, 1);
+            Assert.AreEqual(Right(page.AccessibilityCard) - 20, Right(page.HighContrastBox), 1);
 
             Assert.IsGreaterThan(page.ReadingCard.TranslatePoint(default, page).Y, page.PreviewCard.TranslatePoint(default, page).Y, "l'aperçu vient juste sous les réglages qu'il montre");
             Assert.IsLessThan(page.VoiceCard.TranslatePoint(default, page).Y, page.PreviewCard.TranslatePoint(default, page).Y);
@@ -376,17 +413,34 @@ public sealed class GeneralSettingsTests
             // Dans la vue Paramètres, une section ne montre que ses cartes.
             SettingsPart.SetCurrent(page, SettingsHubViewModel.ReadingPart);
             TestShell.Flush();
-            Assert.IsFalse(page.AppearanceCard.IsVisible || page.AccessibilityCard.IsVisible);
-            Assert.IsTrue(page.ReadingCard.IsVisible && page.PreviewCard.IsVisible && page.VoiceCard.IsVisible);
+            Assert.IsFalse(page.AppearanceCard.IsVisible || page.ReadingCard.IsVisible || page.PreviewCard.IsVisible || page.AccessibilityCard.IsVisible);
+            Assert.IsTrue(page.WordsCard.IsVisible && page.VoiceCard.IsVisible);
             SettingsPart.SetCurrent(page, SettingsHubViewModel.AppearancePart);
             TestShell.Flush();
-            Assert.IsTrue(page.AppearanceCard.IsVisible && page.AccessibilityCard.IsVisible);
-            Assert.IsFalse(page.ReadingCard.IsVisible || page.PreviewCard.IsVisible || page.VoiceCard.IsVisible);
+            Assert.IsTrue(page.AppearanceCard.IsVisible && page.ReadingCard.IsVisible && page.PreviewCard.IsVisible && page.AccessibilityCard.IsVisible, "le texte des fiches et son aperçu sont dans Apparence");
+            Assert.IsFalse(page.WordsCard.IsVisible || page.VoiceCard.IsVisible);
             Assert.IsLessThanOrEqualTo(page.Scroller.ViewportWidth, page.Scroller.ExtentWidth);
         }
         finally
         {
             window.Close();
+        }
+    }
+
+    private static IEnumerable<T> Descendants<T>(DependencyObject root)
+        where T : DependencyObject
+    {
+        for (var i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)
+        {
+            var child = VisualTreeHelper.GetChild(root, i);
+            if (child is T element)
+            {
+                yield return element;
+            }
+            foreach (var nested in Descendants<T>(child))
+            {
+                yield return nested;
+            }
         }
     }
 }

@@ -627,7 +627,7 @@ public sealed class SettingsHubTests
         using var vault = new DataVault();
         var store = new MemoryMachinePreferences
         {
-            Stored = new MachinePreferences { Theme = ThemePreference.Dark, ReducedMotion = true, TextSize = ReadingTextSize.Large, Shortcuts = "aide=F2", GlobalCapture = true, MenuOrder = "carnet,aujourdhui" },
+            Stored = new MachinePreferences { Theme = ThemePreference.Dark, ReducedMotion = true, TextSize = ReadingTextSize.Large, MarkDefinedWords = false, Shortcuts = "aide=F2", GlobalCapture = true, MenuOrder = "carnet,aujourdhui" },
         };
         var machine = new MachineSettings(store);
         var hub = vault.Hub(machine);
@@ -638,8 +638,8 @@ public sealed class SettingsHubTests
         Assert.IsFalse(hub.HasRestoreNote || hub.UndoRestoreCommand.CanExecute(null));
 
         hub.RestoreCommand.Execute(null);
-        Assert.AreEqual((ThemePreference.System, false), (machine.Current.Theme, machine.Current.ReducedMotion));
-        Assert.AreEqual((ReadingTextSize.Large, "aide=F2", true, "carnet,aujourdhui"), (machine.Current.TextSize, machine.Current.Shortcuts, machine.Current.GlobalCapture, machine.Current.MenuOrder), "les autres sections gardent leurs réglages");
+        Assert.AreEqual((ThemePreference.System, false, ReadingTextSize.Normal), (machine.Current.Theme, machine.Current.ReducedMotion, machine.Current.TextSize), "le texte des fiches est un réglage d'Apparence");
+        Assert.AreEqual((false, "aide=F2", true, "carnet,aujourdhui"), (machine.Current.MarkDefinedWords, machine.Current.Shortcuts, machine.Current.GlobalCapture, machine.Current.MenuOrder), "les autres sections gardent leurs réglages");
         Assert.AreEqual(machine.Current, store.Stored, "retenu sur l'ordinateur");
         Assert.AreEqual(ThemePreference.System, general.Theme.Value, "la section montre ce qui est en vigueur");
         Assert.IsFalse(general.ReducedMotion);
@@ -648,8 +648,9 @@ public sealed class SettingsHubTests
         Assert.IsTrue(hub.UndoRestoreCommand.CanExecute(null));
 
         hub.UndoRestoreCommand.Execute(null);
-        Assert.AreEqual((ThemePreference.Dark, true), (machine.Current.Theme, machine.Current.ReducedMotion));
+        Assert.AreEqual((ThemePreference.Dark, true, ReadingTextSize.Large), (machine.Current.Theme, machine.Current.ReducedMotion, machine.Current.TextSize));
         Assert.AreEqual(ThemePreference.Dark, general.Theme.Value);
+        Assert.AreEqual(ReadingTextSize.Large, general.TextSize.Value);
         Assert.IsTrue(general.ReducedMotion);
         Assert.IsFalse(hub.HasRestoreNote || hub.UndoRestoreCommand.CanExecute(null));
         Assert.IsTrue(hub.RestoreCommand.CanExecute(null));
@@ -664,10 +665,10 @@ public sealed class SettingsHubTests
         hub.RestoreCommand.Execute(null);
         hub.Tabs[1].IsSelected = true;
         Assert.IsFalse(hub.HasRestoreNote);
-        Assert.IsTrue(hub.RestoreCommand.CanExecute(null), "Lecture a un texte agrandi");
+        Assert.IsTrue(hub.RestoreCommand.CanExecute(null), "Lecture ne marque plus les mots définis");
         hub.RestoreCommand.Execute(null);
-        Assert.AreEqual(ReadingTextSize.Normal, machine.Current.TextSize);
-        Assert.AreEqual(ReadingTextSize.Normal, general.TextSize.Value);
+        Assert.IsTrue(machine.Current.MarkDefinedWords);
+        Assert.IsTrue(general.MarkDefinedWords);
 
         var menu = hub.Tabs.Single(tab => tab.Label == "Menu");
         menu.IsSelected = true;
@@ -837,7 +838,7 @@ public sealed class SettingsHubTests
                     Assert.IsGreaterThanOrEqualTo(left - 12, cardLeft, $"{tab.Label} : un bloc sort de la colonne à gauche");
                     Assert.IsLessThanOrEqualTo(right + 12, cardRight, $"{tab.Label} : un bloc sort de la colonne à droite");
                 }
-                if (tab.Label is "Apparence" or "Coffre et chiffrement" or "À propos")
+                if (tab.Label is "Apparence" or "Lecture" or "Raccourcis" or "Modules et extensions" or "Coffre et chiffrement" or "À propos")
                 {
                     host.Capture($"parametres-{width}-{(dark ? "sombre" : "clair")}-{tab.Label.Replace(' ', '-')}");
                 }
@@ -1122,7 +1123,7 @@ public sealed class SettingsHubTests
             choice.SelectedIndex = 1;
             TestShell.Flush();
             Assert.AreSame(hub.Tabs[1], hub.Selected);
-            Assert.IsTrue(Named<FrameworkElement>(window, "TextSizeChoice").IsVisible);
+            Assert.IsTrue(Named<FrameworkElement>(window, "RateChoice").IsVisible);
             Assert.IsFalse(Find<FrameworkElement>(window, "ThemeChoice") is { IsVisible: true });
 
             hub.Tabs[2].IsSelected = true;
@@ -1158,15 +1159,17 @@ public sealed class SettingsHubTests
             Assert.IsTrue(radios[0].IsChecked);
             Assert.AreEqual("Apparence", Named<TextBlock>(window, "SectionTitle").Text);
             Assert.IsTrue(Named<FrameworkElement>(window, "ThemeChoice").IsVisible, "Apparence s'ouvre d'abord");
-            Assert.IsFalse(Find<FrameworkElement>(window, "TextSizeChoice") is { IsVisible: true }, "le texte des fiches est dans Lecture");
+            Assert.IsTrue(Named<FrameworkElement>(window, "TextSizeChoice").IsVisible, "le texte des fiches se règle dans Apparence");
+            Assert.IsFalse(Find<FrameworkElement>(window, "RateChoice") is { IsVisible: true }, "la voix est dans Lecture");
 
             // Lecture est une autre part de la même page : ses cartes se montrent, celles d'Apparence se cachent.
             radios[1].IsChecked = true;
             TestShell.Flush();
             Assert.AreEqual("Lecture", Named<TextBlock>(window, "SectionTitle").Text);
-            Assert.IsTrue(Named<FrameworkElement>(window, "TextSizeChoice").IsVisible);
+            Assert.IsTrue(Named<FrameworkElement>(window, "DefinedWordsBox").IsVisible);
             Assert.IsTrue(Named<FrameworkElement>(window, "RateChoice").IsVisible);
             Assert.IsFalse(Find<FrameworkElement>(window, "ThemeChoice") is { IsVisible: true });
+            Assert.IsFalse(Find<FrameworkElement>(window, "TextSizeChoice") is { IsVisible: true });
 
             radios[2].IsChecked = true;
             TestShell.Flush();

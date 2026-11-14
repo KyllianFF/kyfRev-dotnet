@@ -155,24 +155,34 @@ public sealed partial class SettingsHubViewModel : ObservableObject, INavigation
                 [
                     new(GeneralSettingsText.Theme, $"{GeneralSettingsText.ThemeSystem} {GeneralSettingsText.ThemeLight} {GeneralSettingsText.ThemeDark}"),
                     new(GeneralSettingsText.InterfaceSize, MoreSettingsText.WordsZoom),
+                    GeneralSettingsText.TextSize,
+                    GeneralSettingsText.Spacing,
+                    new(GeneralSettingsText.Font, $"{GeneralSettingsText.FontSans} {GeneralSettingsText.FontSerif}"),
                     GeneralSettingsText.ReducedMotion,
                     GeneralSettingsText.HighContrast,
                     GeneralSettingsText.LargerTargets,
                 ],
-                Take = (from, to) => to with { Theme = from.Theme, Zoom = from.Zoom, ReducedMotion = from.ReducedMotion, HighContrast = from.HighContrast, LargerTargets = from.LargerTargets },
+                Take = (from, to) => to with
+                {
+                    Theme = from.Theme,
+                    Zoom = from.Zoom,
+                    TextSize = from.TextSize,
+                    LineSpacing = from.LineSpacing,
+                    Font = from.Font,
+                    ReducedMotion = from.ReducedMotion,
+                    HighContrast = from.HighContrast,
+                    LargerTargets = from.LargerTargets,
+                },
             },
             new SettingsTab(MoreSettingsText.Reading, general, onMachine, Icons.Read, ReadingPart, MoreSettingsText.ReadingAbout)
             {
                 Settings =
                 [
-                    GeneralSettingsText.TextSize,
-                    GeneralSettingsText.Spacing,
-                    new(GeneralSettingsText.Font, $"{GeneralSettingsText.FontSans} {GeneralSettingsText.FontSerif}"),
                     GeneralSettingsText.DefinedWords,
                     GeneralSettingsText.Voice,
                     GeneralSettingsText.Rate,
                 ],
-                Take = (from, to) => to with { TextSize = from.TextSize, LineSpacing = from.LineSpacing, Font = from.Font, MarkDefinedWords = from.MarkDefinedWords, Voice = from.Voice, Rate = from.Rate },
+                Take = (from, to) => to with { MarkDefinedWords = from.MarkDefinedWords, Voice = from.Voice, Rate = from.Rate },
             },
             .. sheets is null
                 ? []

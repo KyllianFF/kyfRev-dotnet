@@ -73,6 +73,16 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 - Paramètres : chaque section se lit dans une colonne centrée de 720 points au plus, le texte à gauche et chaque réglage
   à droite de son nom, à largeur fixe ; les blocs sont l'un sous l'autre à toutes les largeurs. Feuilles garde ses deux
   volets (1180 points), centrés eux aussi. En fenêtre étroite, la colonne prend toute la largeur.
+- Paramètres › Apparence, d'après sa maquette : chaque réglage sur sa rangée, son nom en gras et ce qu'il fait à gauche, le
+  réglage à droite, un filet entre deux rangées ; en fenêtre étroite, le réglage passe sous son nom. Le thème se choisit
+  parmi trois boutons côte à côte (« Comme Windows », « Clair », « Sombre ») au lieu d'une liste. Les réglages qui valent
+  aussitôt (animations, contraste, grands boutons) sont des bascules et non plus des cases. « Rétablir les réglages
+  d'origine » est écrit dans la couleur principale.
+- Paramètres : la taille du texte des fiches, l'interligne, la police et leur aperçu se règlent dans « Apparence » ;
+  « Lecture » garde les mots définis et la lecture à voix haute. « Rétablir les réglages d'origine » suit ce rangement.
+- Paramètres › Lecture, Raccourcis, Modules et extensions, Feuilles : la même bascule pour les mots définis, la capture
+  rapide, les modules, le mode développeur, une extension et le papier. Les cases restent là où l'on enregistre d'un bloc
+  (Révisions, chiffrement) et pour les droits d'une extension.
 
 ### Corrigé
 - Menu masqué, puis fenêtre rétrécie jusqu'à passer le menu en onglets : les onglets ne paraissaient pas et le bouton

@@ -160,17 +160,17 @@ public static class MoreSettingsText
     /// <summary>Le groupe de l'application.</summary>
     public const string GroupApp = "kyfRev";
 
-    /// <summary>La section du thème, de la taille et de l'accessibilité.</summary>
+    /// <summary>La section du thème, de la taille, du texte des fiches et de l'accessibilité.</summary>
     public const string Appearance = "Apparence";
 
     /// <summary>Ce qu'on y règle.</summary>
-    public const string AppearanceAbout = "Le thème, la taille de l'interface et l'accessibilité. Retenus sur cet ordinateur, appliqués aussitôt.";
+    public const string AppearanceAbout = "Le thème, la taille de l'interface, le texte des fiches et l'accessibilité. Retenus sur cet ordinateur, appliqués aussitôt.";
 
-    /// <summary>La section du texte des fiches et de la voix.</summary>
+    /// <summary>La section des mots définis et de la voix.</summary>
     public const string Reading = "Lecture";
 
     /// <summary>Ce qu'on y règle.</summary>
-    public const string ReadingAbout = "Le texte des fiches et la lecture à voix haute. Retenus sur cet ordinateur, appliqués aussitôt.";
+    public const string ReadingAbout = "Les mots définis et la lecture à voix haute. Retenus sur cet ordinateur, appliqués aussitôt.";
 
     /// <summary>La section des feuilles.</summary>
     public const string Sheets = "Feuilles";
@@ -210,6 +210,30 @@ public static class MoreSettingsText
 
     /// <summary>Ce qu'on lit dans « À propos ».</summary>
     public const string AboutAbout = "La version, la licence et les mises à jour.";
+
+    /// <summary>Le bloc du thème et de la taille de l'interface.</summary>
+    public const string ThemeAndSizeTitle = "Thème et taille";
+
+    /// <summary>Ce que l'on sait du thème.</summary>
+    public const string ThemeHelp = "Le bouton de la barre de titre en change aussi.";
+
+    /// <summary>Où s'applique la taille du texte.</summary>
+    public const string TextSizeHelp = "En lecture, en révision et en écriture.";
+
+    /// <summary>À quoi sert l'interligne.</summary>
+    public const string SpacingHelp = "Aéré pour relire longtemps.";
+
+    /// <summary>Ce que la police entraîne.</summary>
+    public const string ReadingFontHelp = "Les titres la suivent quand elle est manuscrite.";
+
+    /// <summary>Le bloc des mots définis.</summary>
+    public const string DefinedWordsTitle = "Mots définis";
+
+    /// <summary>D'où viennent les voix.</summary>
+    public const string VoiceHelp = "Les voix françaises installées dans Windows.";
+
+    /// <summary>Où s'applique la vitesse.</summary>
+    public const string RateHelp = "Pour la lecture à voix haute d'une fiche.";
 
     /// <summary>La carte du texte des fiches.</summary>
     public const string ReadingTextTitle = "Texte des fiches";
@@ -405,7 +429,7 @@ public sealed partial class SheetsSettingsViewModel : ObservableObject, INavigat
         new(PaperStyle.Graph, MoreSettingsText.Graph),
     ];
 
-    /// <summary>Les polices des fiches : les mêmes que dans la section « Lecture ».</summary>
+    /// <summary>Les polices des fiches : les mêmes que dans la section « Apparence ».</summary>
     public static IReadOnlyList<SettingChoice<ReadingFont>> Fonts => GeneralSettingsViewModel.Fonts;
 
     /// <summary>Les marges proposées ; celles réglées sur mesure s'y ajoutent, sans bouton à elles : leur champ les montre.</summary>
