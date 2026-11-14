@@ -508,9 +508,22 @@ public sealed class ShellWindowTests
             TestShell.Flush();
             Assert.AreEqual(ThemePreference.Light, machine.Current.Theme);
 
+            // Forcé dans kyfRev, le contraste élevé garde le bouton : il passe du contraste clair au sombre.
             shell.Appearance.ForcesHighContrast = true;
             TestShell.Flush();
-            Assert.AreEqual(Visibility.Collapsed, button.Visibility, "Le contraste élevé passe avant.");
+            Assert.AreEqual(Visibility.Visible, button.Visibility);
+            Assert.AreEqual(ThemeKind.HighContrast, shell.Appearance.Theme);
+            Assert.AreEqual(Icons.Moon, button.Content);
+            shell.ToggleThemeCommand.Execute(null);
+            TestShell.Flush();
+            Assert.IsTrue(shell.Appearance.IsDark);
+            Assert.AreEqual(Icons.Sun, button.Content);
+
+            // Windows en contraste élevé : ses couleurs passent avant, plus de bouton.
+            test.System.HighContrast = true;
+            test.System.RaiseChanged();
+            TestShell.Flush();
+            Assert.AreEqual(Visibility.Collapsed, button.Visibility, "Le contraste élevé de Windows passe avant.");
         }
         finally
         {

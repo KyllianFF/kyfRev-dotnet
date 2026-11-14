@@ -76,13 +76,16 @@ public sealed partial class ShellViewModel : ObservableObject, IForgetsVault, IS
     }
 
     /// <summary>L'icône du bouton de thème : le thème où il mène.</summary>
-    public string ThemeGlyph => Appearance.Theme == ThemeKind.Dark ? Icons.Sun : Icons.Moon;
+    public string ThemeGlyph => Appearance.IsDark ? Icons.Sun : Icons.Moon;
 
     /// <summary>Le nom du bouton de thème.</summary>
-    public string ThemeLabel => Appearance.Theme == ThemeKind.Dark ? ShellText.ThemeToLight : ShellText.ThemeToDark;
+    public string ThemeLabel => Appearance.IsDark ? ShellText.ThemeToLight : ShellText.ThemeToDark;
 
-    /// <summary>Le thème se change d'un clic, sauf en contraste élevé, qui passe avant.</summary>
-    public bool CanToggleTheme => Appearance.Theme != ThemeKind.HighContrast;
+    /// <summary>
+    /// Le thème se change d'un clic, en contraste élevé forcé dans kyfRev aussi (il passe du clair au sombre) ; pas quand Windows
+    /// est en contraste élevé : ses couleurs passent avant.
+    /// </summary>
+    public bool CanToggleTheme => !(Appearance.Theme == ThemeKind.HighContrast && Appearance.FollowsWindowsContrast);
 
     /// <summary>Un coffre va s'afficher : c'est le moment de charger ce qui dépend de lui.</summary>
     public event EventHandler? WorkspaceOpening;
@@ -490,7 +493,7 @@ public sealed partial class ShellViewModel : ObservableObject, IForgetsVault, IS
 
     /// <summary>Passe du thème clair au thème sombre, ou l'inverse. Ce choix remplace « comme Windows » ; il se retrouve dans les Paramètres.</summary>
     [RelayCommand]
-    private void ToggleTheme() => Appearance.Preference = Appearance.Theme == ThemeKind.Dark ? ThemePreference.Light : ThemePreference.Dark;
+    private void ToggleTheme() => Appearance.Preference = Appearance.IsDark ? ThemePreference.Light : ThemePreference.Dark;
 
     /// <summary>Passe en plein écran, ou en sort (F11).</summary>
     [RelayCommand]

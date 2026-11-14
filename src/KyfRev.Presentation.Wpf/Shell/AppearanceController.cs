@@ -56,6 +56,12 @@ public sealed partial class AppearanceController : ObservableObject, IDisposable
     /// <summary>Thème en vigueur.</summary>
     public ThemeKind Theme => _design.Theme;
 
+    /// <summary>Le fond en vigueur est sombre : le thème sombre, ou un contraste élevé sombre.</summary>
+    public bool IsDark => _design.IsDark;
+
+    /// <summary>Windows est en contraste élevé : ses couleurs passent avant tout choix de thème.</summary>
+    public bool FollowsWindowsContrast => _system.HighContrast;
+
     /// <summary>Ressources du design system, à fusionner dans celles de l'application.</summary>
     public ResourceDictionary Resources => _design.Dictionary;
 
@@ -84,14 +90,17 @@ public sealed partial class AppearanceController : ObservableObject, IDisposable
 
     private void Apply()
     {
-        _design.Theme = _system.HighContrast || ForcesHighContrast
-            ? ThemeKind.HighContrast
-            : Preference switch
-            {
-                ThemePreference.Light => ThemeKind.Light,
-                ThemePreference.Dark => ThemeKind.Dark,
-                _ => _system.PrefersDarkTheme ? ThemeKind.Dark : ThemeKind.Light,
-            };
+        var chosen = Preference switch
+        {
+            ThemePreference.Light => ThemeKind.Light,
+            ThemePreference.Dark => ThemeKind.Dark,
+            _ => _system.PrefersDarkTheme ? ThemeKind.Dark : ThemeKind.Light,
+        };
+        // Le contraste de Windows prend ses couleurs ; forcé dans kyfRev, il garde le thème choisi, clair ou sombre.
+        _design.HighContrastPalette = _system.HighContrast
+            ? HighContrastPalette.Windows
+            : chosen == ThemeKind.Dark ? HighContrastPalette.Dark : HighContrastPalette.Light;
+        _design.Theme = _system.HighContrast || ForcesHighContrast ? ThemeKind.HighContrast : chosen;
         _design.ReducedMotion = _system.ReducedMotion || ForcesReducedMotion;
         foreach (var window in _windows)
         {
@@ -114,7 +123,7 @@ public sealed partial class AppearanceController : ObservableObject, IDisposable
         var handle = new WindowInteropHelper(window).Handle;
         if (handle != 0)
         {
-            _chrome.UseDarkTitleBar(handle, _design.Theme == ThemeKind.Dark);
+            _chrome.UseDarkTitleBar(handle, _design.IsDark);
         }
     }
 }

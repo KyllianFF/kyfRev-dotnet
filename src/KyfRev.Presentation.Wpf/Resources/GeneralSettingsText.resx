@@ -46,7 +46,7 @@
     <value>Contraste élevé</value>
   </data>
   <data name="HighContrastHelp" xml:space="preserve">
-    <value>Les couleurs de contraste de Windows, même si ce mode y est désactivé.</value>
+    <value>Des couleurs plus franches, claires ou sombres comme le thème choisi. Quand Windows est en contraste élevé, kyfRev prend ses couleurs.</value>
   </data>
   <data name="InterfaceSize" xml:space="preserve">
     <value>Taille de l'interface</value>
