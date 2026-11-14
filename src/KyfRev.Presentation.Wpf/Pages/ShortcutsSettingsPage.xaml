@@ -69,11 +69,13 @@
         <kyf:Card x:Name="CaptureCard" pages:SettingsPart.Of="raccourcis" Padding="16,12" Margin="0,0,0,8" VerticalAlignment="Top">
           <StackPanel>
             <TextBlock Text="{x:Static pages:MoreSettingsText.CaptureTitle}" Style="{DynamicResource Kyf.Text.Subtitle}" AutomationProperties.HeadingLevel="Level2" Margin="0,0,0,8" />
-            <CheckBox x:Name="GlobalCaptureBox" IsChecked="{Binding GlobalCapture}" AutomationProperties.Name="{x:Static pages:GeneralSettingsText.GlobalCapture}"
+            <CheckBox x:Name="GlobalCaptureBox" Style="{DynamicResource Kyf.Switch}" IsChecked="{Binding GlobalCapture}" AutomationProperties.Name="{x:Static pages:GeneralSettingsText.GlobalCapture}"
                       AutomationProperties.HelpText="{x:Static pages:GeneralSettingsText.GlobalCaptureHelp}">
-              <TextBlock Text="{x:Static pages:GeneralSettingsText.GlobalCapture}" TextWrapping="Wrap" />
+              <StackPanel>
+                <TextBlock Text="{x:Static pages:GeneralSettingsText.GlobalCapture}" Style="{DynamicResource Kyf.Text.BodyStrong}" />
+                <TextBlock Text="{x:Static pages:GeneralSettingsText.GlobalCaptureHelp}" Style="{DynamicResource Kyf.Text.Secondary}" Margin="0,2,0,0" />
+              </StackPanel>
             </CheckBox>
-            <TextBlock Text="{x:Static pages:GeneralSettingsText.GlobalCaptureHelp}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="26,2,0,0" />
           </StackPanel>
         </kyf:Card>
 

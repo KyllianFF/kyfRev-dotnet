@@ -6,89 +6,82 @@
              xmlns:pages="clr-namespace:KyfRev.Presentation.Wpf.Pages">
   <UserControl.Resources>
     <BooleanToVisibilityConverter x:Key="Visible" />
-    <Style x:Key="Row" TargetType="Grid">
-      <Setter Property="Margin" Value="0,0,0,8" />
-    </Style>
-    <!-- Le nom d'un réglage : écrit dans la police et la couleur du thème, où que la page soit posée. -->
-    <Style x:Key="RowLabel" TargetType="TextBlock">
-      <Setter Property="FontFamily" Value="{DynamicResource Kyf.Font.Ui}" />
-      <Setter Property="FontSize" Value="{DynamicResource Kyf.FontSize.Body}" />
-      <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Text}" />
-      <Setter Property="TextWrapping" Value="Wrap" />
-      <Setter Property="VerticalAlignment" Value="Center" />
-      <Setter Property="Margin" Value="0,0,12,0" />
+    <!-- Une rangée : le nom du réglage et ce qu'il fait à gauche, le réglage à droite ; l'un sous l'autre quand la place manque. -->
+    <Style x:Key="Line" TargetType="kyf:AdaptiveRow">
+      <Setter Property="MainMinWidth" Value="220" />
+      <Setter Property="Spacing" Value="20" />
+      <Setter Property="StackedSpacing" Value="8" />
     </Style>
   </UserControl.Resources>
 
-  <!-- Deux sections des paramètres vivent ici : « Apparence » (thème, taille, accessibilité) et « Lecture » (texte des fiches, voix). -->
+  <!-- Deux sections des paramètres vivent ici : « Apparence » (thème, taille, texte des fiches, accessibilité) et « Lecture » (mots définis, voix). -->
   <ScrollViewer x:Name="Scroller" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
     <StackPanel MaxWidth="{x:Static pages:SettingsTab.Column}">
       <kyf:Notification x:Name="NotRemembered" Severity="Warning" Message="{x:Static pages:GeneralSettingsText.NotRemembered}" IsOpen="{Binding IsNotRemembered, Mode=OneWay}" IsClosable="False" Margin="0,0,0,8" />
       <StackPanel x:Name="Sections">
 
-        <kyf:Card x:Name="AppearanceCard" pages:SettingsPart.Of="apparence" Padding="16,12" Margin="0,0,0,8" VerticalAlignment="Top">
+        <kyf:Card x:Name="AppearanceCard" pages:SettingsPart.Of="apparence" Padding="20,6" Margin="0,0,0,14" VerticalAlignment="Top" AutomationProperties.Name="{x:Static pages:MoreSettingsText.ThemeAndSizeTitle}">
           <StackPanel>
-            <TextBlock Text="{x:Static pages:GeneralSettingsText.AppearanceTitle}" Style="{DynamicResource Kyf.Text.Subtitle}" AutomationProperties.HeadingLevel="Level2" Margin="0,0,0,8" />
-            <Grid Style="{StaticResource Row}">
-              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="260" /></Grid.ColumnDefinitions>
-              <TextBlock Text="{x:Static pages:GeneralSettingsText.Theme}" Style="{StaticResource RowLabel}" />
-              <ComboBox x:Name="ThemeChoice" Grid.Column="1" ItemsSource="{x:Static pages:GeneralSettingsViewModel.Themes}" SelectedItem="{Binding Theme}" DisplayMemberPath="Label" AutomationProperties.Name="{x:Static pages:GeneralSettingsText.Theme}" />
-            </Grid>
-            <Grid Style="{StaticResource Row}">
-              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="260" /></Grid.ColumnDefinitions>
-              <StackPanel VerticalAlignment="Center">
-                <TextBlock Text="{x:Static pages:GeneralSettingsText.InterfaceSize}" Style="{StaticResource RowLabel}" />
-                <TextBlock Text="{x:Static pages:GeneralSettingsText.InterfaceSizeHelp}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,0,12,0" />
-              </StackPanel>
-              <ComboBox x:Name="SizeChoice" Grid.Column="1" VerticalAlignment="Center" ItemsSource="{Binding Sizes}" SelectedItem="{Binding Size}" DisplayMemberPath="Label" AutomationProperties.Name="{x:Static pages:GeneralSettingsText.InterfaceSize}" />
-            </Grid>
+            <Border Style="{DynamicResource Kyf.Setting.FirstRow}">
+              <kyf:AdaptiveRow Style="{StaticResource Line}">
+                <StackPanel VerticalAlignment="Center">
+                  <TextBlock Text="{x:Static pages:GeneralSettingsText.Theme}" Style="{DynamicResource Kyf.Text.BodyStrong}" />
+                  <TextBlock Text="{x:Static pages:MoreSettingsText.ThemeHelp}" Style="{DynamicResource Kyf.Text.Secondary}" Margin="0,2,0,0" />
+                </StackPanel>
+                <ListBox x:Name="ThemeChoice" kyf:AdaptiveRow.Part="Trailing" Style="{DynamicResource Kyf.ListBox.Choices}" HorizontalAlignment="Left" VerticalAlignment="Center"
+                         ItemsSource="{x:Static pages:GeneralSettingsViewModel.Themes}" SelectedItem="{Binding Theme}" DisplayMemberPath="Label"
+                         AutomationProperties.Name="{x:Static pages:GeneralSettingsText.Theme}" AutomationProperties.HelpText="{x:Static pages:MoreSettingsText.ThemeHelp}" />
+              </kyf:AdaptiveRow>
+            </Border>
+            <Border Style="{DynamicResource Kyf.Setting.Row}">
+              <kyf:AdaptiveRow Style="{StaticResource Line}">
+                <StackPanel VerticalAlignment="Center">
+                  <TextBlock Text="{x:Static pages:GeneralSettingsText.InterfaceSize}" Style="{DynamicResource Kyf.Text.BodyStrong}" />
+                  <TextBlock Text="{x:Static pages:GeneralSettingsText.InterfaceSizeHelp}" Style="{DynamicResource Kyf.Text.Secondary}" Margin="0,2,0,0" />
+                </StackPanel>
+                <ComboBox x:Name="SizeChoice" kyf:AdaptiveRow.Part="Trailing" Width="260" HorizontalAlignment="Left" VerticalAlignment="Center" ItemsSource="{Binding Sizes}" SelectedItem="{Binding Size}" DisplayMemberPath="Label"
+                          AutomationProperties.Name="{x:Static pages:GeneralSettingsText.InterfaceSize}" AutomationProperties.HelpText="{x:Static pages:GeneralSettingsText.InterfaceSizeHelp}" />
+              </kyf:AdaptiveRow>
+            </Border>
           </StackPanel>
         </kyf:Card>
 
-        <kyf:Card x:Name="AccessibilityCard" pages:SettingsPart.Of="apparence" Padding="16,12" Margin="0,0,0,8" VerticalAlignment="Top">
+        <kyf:Card x:Name="ReadingCard" pages:SettingsPart.Of="apparence" Padding="20,6" Margin="0,0,0,14" VerticalAlignment="Top" AutomationProperties.Name="{x:Static pages:MoreSettingsText.ReadingTextTitle}">
           <StackPanel>
-            <TextBlock Text="{x:Static pages:GeneralSettingsText.AccessibilityTitle}" Style="{DynamicResource Kyf.Text.Subtitle}" AutomationProperties.HeadingLevel="Level2" Margin="0,0,0,8" />
-            <CheckBox x:Name="ReducedMotionBox" IsChecked="{Binding ReducedMotion}" AutomationProperties.Name="{x:Static pages:GeneralSettingsText.ReducedMotion}">
-              <TextBlock Text="{x:Static pages:GeneralSettingsText.ReducedMotion}" TextWrapping="Wrap" />
-            </CheckBox>
-            <TextBlock Text="{x:Static pages:GeneralSettingsText.ReducedMotionHelp}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="26,2,0,12" />
-            <CheckBox x:Name="HighContrastBox" IsChecked="{Binding HighContrast}" AutomationProperties.Name="{x:Static pages:GeneralSettingsText.HighContrast}">
-              <TextBlock Text="{x:Static pages:GeneralSettingsText.HighContrast}" TextWrapping="Wrap" />
-            </CheckBox>
-            <TextBlock Text="{x:Static pages:GeneralSettingsText.HighContrastHelp}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="26,2,0,12" />
-            <CheckBox x:Name="LargerTargetsBox" IsChecked="{Binding LargerTargets}" AutomationProperties.Name="{x:Static pages:GeneralSettingsText.LargerTargets}">
-              <TextBlock Text="{x:Static pages:GeneralSettingsText.LargerTargets}" TextWrapping="Wrap" />
-            </CheckBox>
-            <TextBlock Text="{x:Static pages:GeneralSettingsText.LargerTargetsHelp}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="26,2,0,4" />
+            <Border Style="{DynamicResource Kyf.Setting.FirstRow}">
+              <kyf:AdaptiveRow Style="{StaticResource Line}">
+                <StackPanel VerticalAlignment="Center">
+                  <TextBlock Text="{x:Static pages:GeneralSettingsText.TextSize}" Style="{DynamicResource Kyf.Text.BodyStrong}" />
+                  <TextBlock Text="{x:Static pages:MoreSettingsText.TextSizeHelp}" Style="{DynamicResource Kyf.Text.Secondary}" Margin="0,2,0,0" />
+                </StackPanel>
+                <ComboBox x:Name="TextSizeChoice" kyf:AdaptiveRow.Part="Trailing" Width="260" HorizontalAlignment="Left" VerticalAlignment="Center" ItemsSource="{x:Static pages:GeneralSettingsViewModel.TextSizes}" SelectedItem="{Binding TextSize}" DisplayMemberPath="Label"
+                          AutomationProperties.Name="{x:Static pages:GeneralSettingsText.TextSize}" AutomationProperties.HelpText="{x:Static pages:MoreSettingsText.TextSizeHelp}" />
+              </kyf:AdaptiveRow>
+            </Border>
+            <Border Style="{DynamicResource Kyf.Setting.Row}">
+              <kyf:AdaptiveRow Style="{StaticResource Line}">
+                <StackPanel VerticalAlignment="Center">
+                  <TextBlock Text="{x:Static pages:GeneralSettingsText.Spacing}" Style="{DynamicResource Kyf.Text.BodyStrong}" />
+                  <TextBlock Text="{x:Static pages:MoreSettingsText.SpacingHelp}" Style="{DynamicResource Kyf.Text.Secondary}" Margin="0,2,0,0" />
+                </StackPanel>
+                <ComboBox x:Name="SpacingChoice" kyf:AdaptiveRow.Part="Trailing" Width="260" HorizontalAlignment="Left" VerticalAlignment="Center" ItemsSource="{x:Static pages:GeneralSettingsViewModel.LineSpacings}" SelectedItem="{Binding LineSpacing}" DisplayMemberPath="Label"
+                          AutomationProperties.Name="{x:Static pages:GeneralSettingsText.Spacing}" AutomationProperties.HelpText="{x:Static pages:MoreSettingsText.SpacingHelp}" />
+              </kyf:AdaptiveRow>
+            </Border>
+            <Border Style="{DynamicResource Kyf.Setting.Row}">
+              <kyf:AdaptiveRow Style="{StaticResource Line}">
+                <StackPanel VerticalAlignment="Center">
+                  <TextBlock Text="{x:Static pages:GeneralSettingsText.Font}" Style="{DynamicResource Kyf.Text.BodyStrong}" />
+                  <TextBlock Text="{x:Static pages:MoreSettingsText.ReadingFontHelp}" Style="{DynamicResource Kyf.Text.Secondary}" Margin="0,2,0,0" />
+                </StackPanel>
+                <ComboBox x:Name="FontChoice" kyf:AdaptiveRow.Part="Trailing" Width="260" HorizontalAlignment="Left" VerticalAlignment="Center" ItemsSource="{x:Static pages:GeneralSettingsViewModel.Fonts}" SelectedItem="{Binding Font}" DisplayMemberPath="Label"
+                          AutomationProperties.Name="{x:Static pages:GeneralSettingsText.Font}" AutomationProperties.HelpText="{x:Static pages:MoreSettingsText.ReadingFontHelp}" />
+              </kyf:AdaptiveRow>
+            </Border>
           </StackPanel>
         </kyf:Card>
 
-        <kyf:Card x:Name="ReadingCard" pages:SettingsPart.Of="lecture" Padding="16,12" Margin="0,0,0,8" VerticalAlignment="Top">
-          <StackPanel>
-            <TextBlock Text="{x:Static pages:MoreSettingsText.ReadingTextTitle}" Style="{DynamicResource Kyf.Text.Subtitle}" AutomationProperties.HeadingLevel="Level2" Margin="0,0,0,8" />
-            <Grid Style="{StaticResource Row}">
-              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="260" /></Grid.ColumnDefinitions>
-              <TextBlock Text="{x:Static pages:GeneralSettingsText.TextSize}" Style="{StaticResource RowLabel}" />
-              <ComboBox x:Name="TextSizeChoice" Grid.Column="1" ItemsSource="{x:Static pages:GeneralSettingsViewModel.TextSizes}" SelectedItem="{Binding TextSize}" DisplayMemberPath="Label" AutomationProperties.Name="{x:Static pages:GeneralSettingsText.TextSize}" />
-            </Grid>
-            <Grid Style="{StaticResource Row}">
-              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="260" /></Grid.ColumnDefinitions>
-              <TextBlock Text="{x:Static pages:GeneralSettingsText.Spacing}" Style="{StaticResource RowLabel}" />
-              <ComboBox x:Name="SpacingChoice" Grid.Column="1" ItemsSource="{x:Static pages:GeneralSettingsViewModel.LineSpacings}" SelectedItem="{Binding LineSpacing}" DisplayMemberPath="Label" AutomationProperties.Name="{x:Static pages:GeneralSettingsText.Spacing}" />
-            </Grid>
-            <Grid Style="{StaticResource Row}">
-              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="260" /></Grid.ColumnDefinitions>
-              <TextBlock Text="{x:Static pages:GeneralSettingsText.Font}" Style="{StaticResource RowLabel}" />
-              <ComboBox x:Name="FontChoice" Grid.Column="1" ItemsSource="{x:Static pages:GeneralSettingsViewModel.Fonts}" SelectedItem="{Binding Font}" DisplayMemberPath="Label" AutomationProperties.Name="{x:Static pages:GeneralSettingsText.Font}" />
-            </Grid>
-            <CheckBox x:Name="DefinedWordsBox" IsChecked="{Binding MarkDefinedWords}" AutomationProperties.Name="{x:Static pages:GeneralSettingsText.DefinedWords}" Margin="0,8,0,0">
-              <TextBlock Text="{x:Static pages:GeneralSettingsText.DefinedWords}" TextWrapping="Wrap" />
-            </CheckBox>
-            <TextBlock Text="{x:Static pages:GeneralSettingsText.DefinedWordsHelp}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="26,2,0,4" />
-          </StackPanel>
-        </kyf:Card>
-
-        <kyf:Card x:Name="PreviewCard" pages:SettingsPart.Of="lecture" Padding="16,12" Margin="0,0,0,8" VerticalAlignment="Top">
+        <kyf:Card x:Name="PreviewCard" pages:SettingsPart.Of="apparence" Padding="20,14" Margin="0,0,0,14" VerticalAlignment="Top" AutomationProperties.Name="{x:Static pages:GeneralSettingsText.Preview}">
           <StackPanel>
             <TextBlock Text="{x:Static pages:GeneralSettingsText.Preview}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,0,0,4" />
             <TextBlock x:Name="PreviewText" Text="{x:Static pages:GeneralSettingsText.PreviewText}" TextWrapping="Wrap" Foreground="{DynamicResource Kyf.Brush.Text}"
@@ -116,20 +109,82 @@
           </StackPanel>
         </kyf:Card>
 
-        <kyf:Card x:Name="VoiceCard" pages:SettingsPart.Of="lecture" Padding="16,12" Margin="0,0,0,8" VerticalAlignment="Top">
+        <kyf:Card x:Name="AccessibilityCard" pages:SettingsPart.Of="apparence" Padding="20,6" Margin="0,0,0,14" VerticalAlignment="Top" AutomationProperties.Name="{x:Static pages:GeneralSettingsText.AccessibilityTitle}">
           <StackPanel>
-            <TextBlock Text="{x:Static pages:MoreSettingsText.VoiceTitle}" Style="{DynamicResource Kyf.Text.Subtitle}" AutomationProperties.HeadingLevel="Level2" Margin="0,0,0,8" />
-            <TextBlock x:Name="NoVoice" Text="{x:Static pages:GeneralSettingsText.NoVoice}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="0,0,0,8" Visibility="{Binding HasNoVoice, Converter={StaticResource Visible}}" />
-            <Grid Style="{StaticResource Row}" Visibility="{Binding HasVoices, Converter={StaticResource Visible}}">
-              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="260" /></Grid.ColumnDefinitions>
-              <TextBlock Text="{x:Static pages:GeneralSettingsText.Voice}" Style="{StaticResource RowLabel}" />
-              <ComboBox x:Name="VoiceChoice" Grid.Column="1" ItemsSource="{Binding Voices}" SelectedItem="{Binding Voice}" DisplayMemberPath="Label" AutomationProperties.Name="{x:Static pages:GeneralSettingsText.Voice}" />
-            </Grid>
-            <Grid Style="{StaticResource Row}">
-              <Grid.ColumnDefinitions><ColumnDefinition Width="*" /><ColumnDefinition Width="260" /></Grid.ColumnDefinitions>
-              <TextBlock Text="{x:Static pages:GeneralSettingsText.Rate}" Style="{StaticResource RowLabel}" />
-              <ComboBox x:Name="RateChoice" Grid.Column="1" ItemsSource="{x:Static pages:GeneralSettingsViewModel.Rates}" SelectedItem="{Binding Rate}" DisplayMemberPath="Label" AutomationProperties.Name="{x:Static pages:GeneralSettingsText.Rate}" />
-            </Grid>
+            <Border Style="{DynamicResource Kyf.Setting.FirstRow}">
+              <kyf:AdaptiveRow Style="{StaticResource Line}">
+                <StackPanel VerticalAlignment="Center">
+                  <TextBlock Text="{x:Static pages:GeneralSettingsText.ReducedMotion}" Style="{DynamicResource Kyf.Text.BodyStrong}" />
+                  <TextBlock Text="{x:Static pages:GeneralSettingsText.ReducedMotionHelp}" Style="{DynamicResource Kyf.Text.Secondary}" Margin="0,2,0,0" />
+                </StackPanel>
+                <CheckBox x:Name="ReducedMotionBox" kyf:AdaptiveRow.Part="Trailing" Style="{DynamicResource Kyf.Switch}" HorizontalAlignment="Left" VerticalAlignment="Center" IsChecked="{Binding ReducedMotion}"
+                          AutomationProperties.Name="{x:Static pages:GeneralSettingsText.ReducedMotion}" AutomationProperties.HelpText="{x:Static pages:GeneralSettingsText.ReducedMotionHelp}" />
+              </kyf:AdaptiveRow>
+            </Border>
+            <Border Style="{DynamicResource Kyf.Setting.Row}">
+              <kyf:AdaptiveRow Style="{StaticResource Line}">
+                <StackPanel VerticalAlignment="Center">
+                  <TextBlock Text="{x:Static pages:GeneralSettingsText.HighContrast}" Style="{DynamicResource Kyf.Text.BodyStrong}" />
+                  <TextBlock Text="{x:Static pages:GeneralSettingsText.HighContrastHelp}" Style="{DynamicResource Kyf.Text.Secondary}" Margin="0,2,0,0" />
+                </StackPanel>
+                <CheckBox x:Name="HighContrastBox" kyf:AdaptiveRow.Part="Trailing" Style="{DynamicResource Kyf.Switch}" HorizontalAlignment="Left" VerticalAlignment="Center" IsChecked="{Binding HighContrast}"
+                          AutomationProperties.Name="{x:Static pages:GeneralSettingsText.HighContrast}" AutomationProperties.HelpText="{x:Static pages:GeneralSettingsText.HighContrastHelp}" />
+              </kyf:AdaptiveRow>
+            </Border>
+            <Border Style="{DynamicResource Kyf.Setting.Row}">
+              <kyf:AdaptiveRow Style="{StaticResource Line}">
+                <StackPanel VerticalAlignment="Center">
+                  <TextBlock Text="{x:Static pages:GeneralSettingsText.LargerTargets}" Style="{DynamicResource Kyf.Text.BodyStrong}" />
+                  <TextBlock Text="{x:Static pages:GeneralSettingsText.LargerTargetsHelp}" Style="{DynamicResource Kyf.Text.Secondary}" Margin="0,2,0,0" />
+                </StackPanel>
+                <CheckBox x:Name="LargerTargetsBox" kyf:AdaptiveRow.Part="Trailing" Style="{DynamicResource Kyf.Switch}" HorizontalAlignment="Left" VerticalAlignment="Center" IsChecked="{Binding LargerTargets}"
+                          AutomationProperties.Name="{x:Static pages:GeneralSettingsText.LargerTargets}" AutomationProperties.HelpText="{x:Static pages:GeneralSettingsText.LargerTargetsHelp}" />
+              </kyf:AdaptiveRow>
+            </Border>
+          </StackPanel>
+        </kyf:Card>
+
+        <kyf:Card x:Name="WordsCard" pages:SettingsPart.Of="lecture" Padding="20,6" Margin="0,0,0,14" VerticalAlignment="Top" AutomationProperties.Name="{x:Static pages:MoreSettingsText.DefinedWordsTitle}">
+          <Border Style="{DynamicResource Kyf.Setting.FirstRow}">
+            <kyf:AdaptiveRow Style="{StaticResource Line}">
+              <StackPanel VerticalAlignment="Center">
+                <TextBlock Text="{x:Static pages:GeneralSettingsText.DefinedWords}" Style="{DynamicResource Kyf.Text.BodyStrong}" />
+                <TextBlock Text="{x:Static pages:GeneralSettingsText.DefinedWordsHelp}" Style="{DynamicResource Kyf.Text.Secondary}" Margin="0,2,0,0" />
+              </StackPanel>
+              <CheckBox x:Name="DefinedWordsBox" kyf:AdaptiveRow.Part="Trailing" Style="{DynamicResource Kyf.Switch}" HorizontalAlignment="Left" VerticalAlignment="Center" IsChecked="{Binding MarkDefinedWords}"
+                        AutomationProperties.Name="{x:Static pages:GeneralSettingsText.DefinedWords}" AutomationProperties.HelpText="{x:Static pages:GeneralSettingsText.DefinedWordsHelp}" />
+            </kyf:AdaptiveRow>
+          </Border>
+        </kyf:Card>
+
+        <kyf:Card x:Name="VoiceCard" pages:SettingsPart.Of="lecture" Padding="20,6" Margin="0,0,0,14" VerticalAlignment="Top" AutomationProperties.Name="{x:Static pages:MoreSettingsText.VoiceTitle}">
+          <StackPanel>
+            <Border Style="{DynamicResource Kyf.Setting.FirstRow}">
+              <Grid>
+                <kyf:AdaptiveRow Style="{StaticResource Line}" Visibility="{Binding HasVoices, Converter={StaticResource Visible}}">
+                  <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="{x:Static pages:GeneralSettingsText.Voice}" Style="{DynamicResource Kyf.Text.BodyStrong}" />
+                    <TextBlock Text="{x:Static pages:MoreSettingsText.VoiceHelp}" Style="{DynamicResource Kyf.Text.Secondary}" Margin="0,2,0,0" />
+                  </StackPanel>
+                  <ComboBox x:Name="VoiceChoice" kyf:AdaptiveRow.Part="Trailing" Width="260" HorizontalAlignment="Left" VerticalAlignment="Center" ItemsSource="{Binding Voices}" SelectedItem="{Binding Voice}" DisplayMemberPath="Label"
+                            AutomationProperties.Name="{x:Static pages:GeneralSettingsText.Voice}" AutomationProperties.HelpText="{x:Static pages:MoreSettingsText.VoiceHelp}" />
+                </kyf:AdaptiveRow>
+                <StackPanel Visibility="{Binding HasNoVoice, Converter={StaticResource Visible}}">
+                  <TextBlock Text="{x:Static pages:GeneralSettingsText.Voice}" Style="{DynamicResource Kyf.Text.BodyStrong}" />
+                  <TextBlock x:Name="NoVoice" Text="{x:Static pages:GeneralSettingsText.NoVoice}" Style="{DynamicResource Kyf.Text.Secondary}" Margin="0,2,0,0" />
+                </StackPanel>
+              </Grid>
+            </Border>
+            <Border Style="{DynamicResource Kyf.Setting.Row}">
+              <kyf:AdaptiveRow Style="{StaticResource Line}">
+                <StackPanel VerticalAlignment="Center">
+                  <TextBlock Text="{x:Static pages:GeneralSettingsText.Rate}" Style="{DynamicResource Kyf.Text.BodyStrong}" />
+                  <TextBlock Text="{x:Static pages:MoreSettingsText.RateHelp}" Style="{DynamicResource Kyf.Text.Secondary}" Margin="0,2,0,0" />
+                </StackPanel>
+                <ComboBox x:Name="RateChoice" kyf:AdaptiveRow.Part="Trailing" Width="260" HorizontalAlignment="Left" VerticalAlignment="Center" ItemsSource="{x:Static pages:GeneralSettingsViewModel.Rates}" SelectedItem="{Binding Rate}" DisplayMemberPath="Label"
+                          AutomationProperties.Name="{x:Static pages:GeneralSettingsText.Rate}" AutomationProperties.HelpText="{x:Static pages:MoreSettingsText.RateHelp}" />
+              </kyf:AdaptiveRow>
+            </Border>
           </StackPanel>
         </kyf:Card>
       </StackPanel>

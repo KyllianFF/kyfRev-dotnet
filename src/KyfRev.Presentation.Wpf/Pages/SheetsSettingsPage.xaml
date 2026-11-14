@@ -101,34 +101,6 @@
       </Setter>
     </Style>
 
-    <!-- Un interrupteur : la même case à cocher, dessinée comme un bouton qui glisse. -->
-    <Style x:Key="Switch" TargetType="CheckBox">
-      <Setter Property="Cursor" Value="Hand" />
-      <Setter Property="MinHeight" Value="28" />
-      <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Text}" />
-      <Setter Property="FocusVisualStyle" Value="{DynamicResource Kyf.FocusVisual}" />
-      <Setter Property="Template">
-        <Setter.Value>
-          <ControlTemplate TargetType="CheckBox">
-            <StackPanel Orientation="Horizontal" Background="Transparent">
-              <ContentPresenter VerticalAlignment="Center" Margin="0,0,10,0" />
-              <Border x:Name="Track" Width="40" Height="22" CornerRadius="11" VerticalAlignment="Center" Background="{DynamicResource Kyf.Brush.Surface}" BorderBrush="{DynamicResource Kyf.Brush.TextSecondary}" BorderThickness="1">
-                <Ellipse x:Name="Knob" Width="14" Height="14" HorizontalAlignment="Left" Margin="3,0" Fill="{DynamicResource Kyf.Brush.TextSecondary}" />
-              </Border>
-            </StackPanel>
-            <ControlTemplate.Triggers>
-              <Trigger Property="IsChecked" Value="True">
-                <Setter TargetName="Track" Property="Background" Value="{DynamicResource Kyf.Brush.Primary}" />
-                <Setter TargetName="Track" Property="BorderBrush" Value="{DynamicResource Kyf.Brush.Primary}" />
-                <Setter TargetName="Knob" Property="HorizontalAlignment" Value="Right" />
-                <Setter TargetName="Knob" Property="Fill" Value="{DynamicResource Kyf.Brush.OnPrimary}" />
-              </Trigger>
-            </ControlTemplate.Triggers>
-          </ControlTemplate>
-        </Setter.Value>
-      </Setter>
-    </Style>
-
     <!-- Le curseur du zoom : celui du bas d'une fiche. -->
     <Style x:Key="ZoomSlider" TargetType="Slider">
       <Setter Property="Focusable" Value="True" />
@@ -292,7 +264,7 @@
         <kyf:Card x:Name="PaperCard" Padding="20,16" Margin="0,0,0,12">
           <StackPanel>
             <DockPanel>
-              <CheckBox x:Name="PaperOnBox" DockPanel.Dock="Right" Style="{StaticResource Switch}" IsChecked="{Binding IsPaperOn}" Content="{x:Static pages:MoreSettingsText.PaperShown}"
+              <CheckBox x:Name="PaperOnBox" DockPanel.Dock="Right" Style="{DynamicResource Kyf.Switch}" IsChecked="{Binding IsPaperOn}" Content="{x:Static pages:MoreSettingsText.PaperShown}"
                         AutomationProperties.Name="{x:Static pages:MoreSettingsText.PaperShown}" />
               <TextBlock Text="{x:Static pages:MoreSettingsText.PaperTitle}" Style="{DynamicResource Kyf.Text.Subtitle}" AutomationProperties.HeadingLevel="Level2" VerticalAlignment="Center" />
             </DockPanel>

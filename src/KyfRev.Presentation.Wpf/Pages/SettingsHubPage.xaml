@@ -178,7 +178,7 @@
             <TextBlock x:Name="SectionTitle" Text="{Binding Selected.Label}" Style="{DynamicResource Kyf.Text.Title}" AutomationProperties.HeadingLevel="Level2" />
             <TextBlock x:Name="SectionAbout" Text="{Binding Selected.Description}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="0,2,0,0" />
           </StackPanel>
-          <Button x:Name="RestoreButton" Grid.Column="1" Style="{DynamicResource Kyf.Button.Subtle}" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="12,0,0,0"
+          <Button x:Name="RestoreButton" Grid.Column="1" Style="{DynamicResource Kyf.Button.Subtle}" Foreground="{DynamicResource Kyf.Brush.Primary}" FontWeight="SemiBold" VerticalAlignment="Top" HorizontalAlignment="Left" Margin="12,0,0,0"
                   Content="{x:Static pages:MoreSettingsText.RestoreSection}" Command="{Binding RestoreCommand}" Visibility="{Binding OffersRestore, Converter={StaticResource Visible}}"
                   ToolTip="{x:Static pages:MoreSettingsText.RestoreSectionHelp}" AutomationProperties.HelpText="{x:Static pages:MoreSettingsText.RestoreSectionHelp}" />
         </Grid>

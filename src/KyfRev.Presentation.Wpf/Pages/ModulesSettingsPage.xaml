@@ -19,17 +19,24 @@
           <TextBlock Text="{x:Static pages:ModulesSettingsText.ModulesTitle}" Style="{DynamicResource Kyf.Text.Subtitle}" AutomationProperties.HeadingLevel="Level2" />
           <TextBlock Text="{x:Static pages:ModulesSettingsText.ModulesHelp}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="0,4,0,12" />
 
-          <CheckBox x:Name="QuotesBox" IsChecked="{Binding QuotesActive}" AutomationProperties.Name="{x:Static pages:ModulesSettingsText.QuotesModule}">
-            <TextBlock Text="{x:Static pages:ModulesSettingsText.QuotesModule}" Style="{DynamicResource Kyf.Text.BodyStrong}" TextWrapping="Wrap" />
+          <!-- Un module s'allume et s'éteint d'une bascule : le changement vaut aussitôt. -->
+          <CheckBox x:Name="QuotesBox" Style="{DynamicResource Kyf.Switch}" IsChecked="{Binding QuotesActive}" Margin="0,0,0,12"
+                    AutomationProperties.Name="{x:Static pages:ModulesSettingsText.QuotesModule}" AutomationProperties.HelpText="{x:Static pages:ModulesSettingsText.QuotesHelp}">
+            <StackPanel>
+              <TextBlock Text="{x:Static pages:ModulesSettingsText.QuotesModule}" Style="{DynamicResource Kyf.Text.BodyStrong}" />
+              <TextBlock Text="{x:Static pages:ModulesSettingsText.QuotesHelp}" Style="{DynamicResource Kyf.Text.Secondary}" Margin="0,2,0,0" />
+            </StackPanel>
           </CheckBox>
-          <TextBlock Text="{x:Static pages:ModulesSettingsText.QuotesHelp}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="26,2,0,8" />
 
-          <StackPanel x:Name="QuotesOptions" Margin="26,0,0,12" Visibility="{Binding QuotesActive, Converter={StaticResource Visible}}">
-            <CheckBox x:Name="OnlineBox" IsChecked="{Binding QuotesOnline}" AutomationProperties.Name="{x:Static pages:ModulesSettingsText.Online}">
-              <TextBlock Text="{x:Static pages:ModulesSettingsText.Online}" TextWrapping="Wrap" />
+          <StackPanel x:Name="QuotesOptions" Margin="20,0,0,12" Visibility="{Binding QuotesActive, Converter={StaticResource Visible}}">
+            <CheckBox x:Name="OnlineBox" Style="{DynamicResource Kyf.Switch}" IsChecked="{Binding QuotesOnline}" Margin="0,0,0,8"
+                      AutomationProperties.Name="{x:Static pages:ModulesSettingsText.Online}" AutomationProperties.HelpText="{x:Static pages:ModulesSettingsText.OnlineHelp}">
+              <StackPanel>
+                <TextBlock Text="{x:Static pages:ModulesSettingsText.Online}" Style="{DynamicResource Kyf.Text.Body}" />
+                <TextBlock Text="{x:Static pages:ModulesSettingsText.OnlineHelp}" Style="{DynamicResource Kyf.Text.Secondary}" Margin="0,2,0,0" />
+              </StackPanel>
             </CheckBox>
-            <TextBlock Text="{x:Static pages:ModulesSettingsText.OnlineHelp}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="26,2,0,8" />
-            <StackPanel x:Name="DomainsPanel" Margin="26,0,0,0" Visibility="{Binding ShowsDomains, Converter={StaticResource Visible}}">
+            <StackPanel x:Name="DomainsPanel" Visibility="{Binding ShowsDomains, Converter={StaticResource Visible}}">
               <TextBlock Text="{x:Static pages:ModulesSettingsText.DomainsTitle}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,0,0,4" />
               <ItemsControl x:Name="DomainsList" ItemsSource="{Binding Domains}" Focusable="False" AutomationProperties.Name="{x:Static pages:ModulesSettingsText.DomainsTitle}">
                 <ItemsControl.ItemsPanel>
@@ -46,10 +53,15 @@
             </StackPanel>
           </StackPanel>
 
-          <CheckBox x:Name="SchemasBox" IsChecked="{Binding SchemasActive}" AutomationProperties.Name="{x:Static pages:ModulesSettingsText.SchemasModule}">
-            <TextBlock Text="{x:Static pages:ModulesSettingsText.SchemasModule}" Style="{DynamicResource Kyf.Text.BodyStrong}" TextWrapping="Wrap" />
-          </CheckBox>
-          <TextBlock Text="{x:Static pages:ModulesSettingsText.SchemasHelp}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="26,2,0,0" />
+          <Border Style="{DynamicResource Kyf.Setting.Row}" Padding="0,12,0,4">
+            <CheckBox x:Name="SchemasBox" Style="{DynamicResource Kyf.Switch}" IsChecked="{Binding SchemasActive}"
+                      AutomationProperties.Name="{x:Static pages:ModulesSettingsText.SchemasModule}" AutomationProperties.HelpText="{x:Static pages:ModulesSettingsText.SchemasHelp}">
+              <StackPanel>
+                <TextBlock Text="{x:Static pages:ModulesSettingsText.SchemasModule}" Style="{DynamicResource Kyf.Text.BodyStrong}" />
+                <TextBlock Text="{x:Static pages:ModulesSettingsText.SchemasHelp}" Style="{DynamicResource Kyf.Text.Secondary}" Margin="0,2,0,0" />
+              </StackPanel>
+            </CheckBox>
+          </Border>
         </StackPanel>
       </kyf:Card>
 
@@ -91,7 +103,7 @@
               </ItemsControl.ItemTemplate>
             </ItemsControl>
           </StackPanel>
-          <CheckBox x:Name="DeveloperMode" IsChecked="{Binding IsDeveloperMode}" Margin="0,0,0,8" AutomationProperties.Name="{x:Static pages:ModulesSettingsText.ExtensionDeveloper}" AutomationProperties.HelpText="{x:Static pages:ModulesSettingsText.ExtensionDeveloperHelp}">
+          <CheckBox x:Name="DeveloperMode" Style="{DynamicResource Kyf.Switch}" IsChecked="{Binding IsDeveloperMode}" Margin="0,0,0,8" AutomationProperties.Name="{x:Static pages:ModulesSettingsText.ExtensionDeveloper}" AutomationProperties.HelpText="{x:Static pages:ModulesSettingsText.ExtensionDeveloperHelp}">
             <StackPanel>
               <TextBlock Text="{x:Static pages:ModulesSettingsText.ExtensionDeveloper}" TextWrapping="Wrap" />
               <TextBlock Text="{x:Static pages:ModulesSettingsText.ExtensionDeveloperHelp}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" />
@@ -106,13 +118,13 @@
                     <Button x:Name="RemoveExtension" DockPanel.Dock="Right" Content="{x:Static pages:ModulesSettingsText.ExtensionRemoveLabel}" Style="{DynamicResource Kyf.Button.Subtle}" VerticalAlignment="Top" Margin="8,0,0,0"
                             Command="{Binding DataContext.RequestRemoveCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}" AutomationProperties.Name="{Binding RemoveName}" />
                     <StackPanel>
-                      <CheckBox x:Name="ExtensionActive" IsChecked="{Binding IsActive}" AutomationProperties.Name="{Binding Name}">
+                      <CheckBox x:Name="ExtensionActive" Style="{DynamicResource Kyf.Switch}" IsChecked="{Binding IsActive}" AutomationProperties.Name="{Binding Name}">
                         <TextBlock Text="{Binding Name}" Style="{DynamicResource Kyf.Text.BodyStrong}" TextWrapping="Wrap" />
                       </CheckBox>
-                      <TextBlock Text="{Binding Version}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="26,2,0,0" />
-                      <TextBlock Text="{Binding Description}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="26,2,0,0" Visibility="{Binding HasDescription, Converter={StaticResource Visible}}" />
-                      <TextBlock Text="{Binding Adds}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="26,2,0,0" />
-                      <StackPanel x:Name="ExtensionRights" Margin="26,8,0,0" Visibility="{Binding HasRights, Converter={StaticResource Visible}}">
+                      <TextBlock Text="{Binding Version}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,2,0,0" />
+                      <TextBlock Text="{Binding Description}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,2,0,0" Visibility="{Binding HasDescription, Converter={StaticResource Visible}}" />
+                      <TextBlock Text="{Binding Adds}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,2,0,0" />
+                      <StackPanel x:Name="ExtensionRights" Margin="0,8,0,0" Visibility="{Binding HasRights, Converter={StaticResource Visible}}">
                         <TextBlock Text="{x:Static pages:ModulesSettingsText.ExtensionRightsTitle}" Style="{DynamicResource Kyf.Text.Caption}" FontWeight="SemiBold" />
                         <TextBlock x:Name="ExtensionRightsInactive" Text="{x:Static pages:ModulesSettingsText.ExtensionRightsInactive}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap"
                                    Visibility="{Binding IsInactive, Converter={StaticResource Visible}}" />

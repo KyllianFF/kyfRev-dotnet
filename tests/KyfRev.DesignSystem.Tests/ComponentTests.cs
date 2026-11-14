@@ -980,6 +980,57 @@ public sealed class ComponentTests
     }
 
     [STATestMethod]
+    [DataRow(ThemeKind.Light)]
+    [DataRow(ThemeKind.Dark)]
+    public void A_switch_and_a_row_of_choices_show_their_state_in_both_themes(ThemeKind theme)
+    {
+        var design = new DesignResources(theme, reducedMotion: false);
+        var off = new CheckBox();
+        var on = new CheckBox { IsChecked = true, Content = "Papier" };
+        var choices = new ListBox { ItemsSource = new[] { "Comme Windows", "Clair", "Sombre" }, SelectedIndex = 1 };
+        var panel = new StackPanel { Width = 600, Children = { off, on, choices } };
+        Host.Of(design, panel);
+        off.Style = (Style)design.Dictionary["Kyf.Switch"];
+        on.Style = (Style)design.Dictionary["Kyf.Switch"];
+        choices.Style = (Style)design.Dictionary["Kyf.ListBox.Choices"];
+        Host.Flush();
+
+        var colors = ThemeColors.For(theme);
+        static (Border Track, System.Windows.Shapes.Ellipse Knob, UIElement Label) Parts(CheckBox box) =>
+            ((Border)box.Template.FindName("Track", box), (System.Windows.Shapes.Ellipse)box.Template.FindName("Knob", box), (UIElement)box.Template.FindName("Label", box));
+
+        // Éteinte : le bouton à gauche, dans la couleur du contour, qui se voit sur le fond de la piste.
+        var resting = Parts(off);
+        Assert.AreEqual((44d, 24d), (resting.Track.ActualWidth, resting.Track.ActualHeight));
+        Assert.AreEqual(HorizontalAlignment.Left, resting.Knob.HorizontalAlignment);
+        Assert.AreEqual(colors[ColorRole.ControlBorder].ToColor(), ((SolidColorBrush)resting.Knob.Fill).Color);
+        Assert.IsGreaterThanOrEqualTo(ContrastRequirements.Graphic, colors[ColorRole.ControlBorder].ContrastWith(colors[ColorRole.Surface]));
+        Assert.AreEqual(Visibility.Collapsed, resting.Label.Visibility, "sans nom, la piste seule");
+
+        // Allumée : la piste à la couleur principale, le bouton à droite ; son nom la précède.
+        var lit = Parts(on);
+        Assert.AreEqual(HorizontalAlignment.Right, lit.Knob.HorizontalAlignment);
+        Assert.AreEqual(colors[ColorRole.Primary].ToColor(), ((SolidColorBrush)lit.Track.Background).Color);
+        Assert.AreEqual(colors[ColorRole.OnPrimary].ToColor(), ((SolidColorBrush)lit.Knob.Fill).Color);
+        Assert.IsGreaterThanOrEqualTo(ContrastRequirements.Graphic, colors[ColorRole.OnPrimary].ContrastWith(colors[ColorRole.Primary]));
+        Assert.AreEqual(Visibility.Visible, lit.Label.Visibility);
+        Assert.IsLessThan(lit.Track.TranslatePoint(default, on).X, lit.Label.TranslatePoint(default, on).X);
+
+        // Les choix : côte à côte, celui qui est retenu au contour de la couleur principale, en gras.
+        var items = Enumerable.Range(0, 3).Select(index => (ListBoxItem)choices.ItemContainerGenerator.ContainerFromIndex(index)).ToList();
+        Assert.AreEqual(1, items.Select(item => item.TranslatePoint(default, choices).Y).Distinct().Count(), "sur une ligne");
+        Assert.AreEqual(colors[ColorRole.Primary].ToColor(), ((SolidColorBrush)items[1].BorderBrush).Color);
+        Assert.AreEqual(FontWeights.SemiBold, items[1].FontWeight);
+        Assert.AreEqual(colors[ColorRole.ControlBorder].ToColor(), ((SolidColorBrush)items[0].BorderBrush).Color);
+        Assert.AreEqual(FontWeights.Normal, items[0].FontWeight);
+        var width = items[0].ActualWidth;
+        choices.SelectedIndex = 0;
+        Host.Flush();
+        Assert.AreEqual(width, items[0].ActualWidth, 0.01, "le bouton choisi garde sa largeur");
+        Assert.AreEqual(colors[ColorRole.ControlBorder].ToColor(), ((SolidColorBrush)items[1].BorderBrush).Color);
+    }
+
+    [STATestMethod]
     public void A_success_goes_away_by_itself_and_comes_back_with_the_next_message()
     {
         var done = new Notification { Severity = NotificationSeverity.Success, Message = "Supprimé définitivement.", Lifetime = TimeSpan.FromMilliseconds(600) };
