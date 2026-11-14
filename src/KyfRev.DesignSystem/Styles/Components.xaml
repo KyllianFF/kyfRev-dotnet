@@ -160,6 +160,10 @@
       <Trigger Property="IsOpen" Value="False">
         <Setter Property="Visibility" Value="Collapsed" />
       </Trigger>
+      <!-- Une réussite lue s'efface d'elle-même (Notification.StaysOpen la garde). -->
+      <Trigger Property="IsExpired" Value="True">
+        <Setter Property="Visibility" Value="Collapsed" />
+      </Trigger>
       <Trigger Property="Severity" Value="Success">
         <Setter Property="Background" Value="{DynamicResource Kyf.Brush.SuccessBackground}" />
       </Trigger>

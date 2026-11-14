@@ -73,6 +73,27 @@ export function insertionDeLigne(etat: EditorState): Transaction {
   return tr.setSelection(TextSelection.create(tr.doc, apres + 1)).scrollIntoView();
 }
 
+/**
+ * Retire le bloc qui commence à `position` : une image, un bloc de code, la marque d'un saut de page ou d'une page
+ * blanche. Rien pour un autre nœud. Une seule transaction : Ctrl+Z le rend d'un coup. Une fiche garde toujours un
+ * paragraphe où écrire.
+ */
+export function suppressionDeBloc(etat: EditorState, position: number): Transaction | null {
+  if (!Number.isInteger(position) || position < 0 || position >= etat.doc.content.size) return null;
+  const noeud = etat.doc.nodeAt(position);
+  if (!noeud) return null;
+  const fin = position + noeud.nodeSize;
+  // Une image s'en va seule : le paragraphe qui la porte reste, même vide.
+  if (noeud.type === n.image) return etat.tr.delete(position, fin).scrollIntoView();
+  if (noeud.type !== n.code_block && noeud.type !== n.saut_de_page) return null;
+  const seul = etat.doc.resolve(position).parent.childCount === 1;
+  const tr = seul ? etat.tr.replaceWith(position, fin, n.paragraph.create()) : etat.tr.delete(position, fin);
+  // Une marque était choisie, pas traversée par un curseur : il va au début de ce qui la suivait, sinon à la fin de
+  // ce qui la précédait.
+  if (noeud.type === n.saut_de_page) tr.setSelection(Selection.near(tr.doc.resolve(Math.min(position, tr.doc.content.size)), 1));
+  return tr.scrollIntoView();
+}
+
 export type Alignement = "left" | "center" | "right" | "justify";
 
 /** L'alignement sous le curseur. */

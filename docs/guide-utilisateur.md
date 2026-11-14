@@ -72,6 +72,10 @@ main. Paramètres › Coffre et chiffrement permet d'en ouvrir ou d'en créer un
 Dans une fiche, « Écrire » ouvre le texte mis en forme ; le code Markdown s'affiche à côté si vous le demandez. L'enregistrement est
 automatique, et l'historique garde les versions précédentes. Le ruban insère images, tableaux, formules, dessins et schémas.
 - Dans une formule, `\ce{…}` écrit de la chimie : `$\ce{2H2 + O2 -> 2H2O}$`, `$\ce{SO4^2-}$`.
+- Les tailles sont en points, comme dans un traitement de texte : 12 pour le texte, 20, 16 et 14 pour les titres 1 à 3 ;
+  le titre 4 a la taille du texte, en italique. « Taille du texte des fiches », dans les Paramètres, grandit le tout.
+- Une flèche dans la marge, à côté d'un titre, replie ou déplie tout ce qui est sous lui, sous-titres compris
+  (Alt+Maj+« - » et Alt+Maj+« + »). Le repli n'est pas enregistré dans la fiche.
 
 L'onglet « Mise en page » du ruban donne une feuille à la fiche : sans fin (par défaut), A4, A5 ou A6, en portrait ou en
 paysage, avec des marges étroites, normales, larges ou sur mesure. Le choix vaut pour toutes les fiches ou pour la fiche
@@ -79,14 +83,14 @@ ouverte seule, et il est retenu sur cet ordinateur. Avec une feuille, la fiche s
 dépasserait le bas d'une page commence la suivante, un tableau court sur plusieurs pages sans qu'une ligne soit coupée, et
 une image ou un schéma trop haut rétrécit pour tenir sur une page. Sous la fiche, « Ajuster à la largeur » règle le zoom
 pour que la feuille tienne dans la fenêtre. Avec une feuille, l'onglet Insertion propose « Saut de page » (la suite commence la
-page suivante) et « Page blanche » (une page entière reste vide) ; un tableau coupé répète son en-tête en haut de chaque
+page suivante) et « Page blanche » (une page entière reste vide) ; un clic droit sur leur marque propose de la supprimer ; un tableau coupé répète son en-tête en haut de chaque
 page, et une citation coupée dit « suite ».
 
 Ctrl+P ouvre « Imprimer » : l'imprimante, le nombre de copies, les feuilles (toutes, ou certaines par leurs numéros :
-« 1-2, 4 »), le recto verso (bord long ou bord court), l'orientation, les marges (par défaut celles de la fiche) et les
-numéros de page en bas, au format 1/4. L'aperçu montre chaque feuille telle qu'elle sortira. Les pages sont celles de la
-mise en page de la fiche ; une fiche restée en feuille sans fin s'imprime en A4. L'impression est toujours en thème clair,
-sur fond blanc.
+« 1-2, 4 »), le recto verso (bord long ou bord court), le format du papier (A4, A5 ou A6, par défaut celui de la fiche),
+l'orientation, les marges (par défaut celles de la fiche) et les numéros de page en bas, au format 1/4. L'aperçu montre
+chaque feuille telle qu'elle sortira, et se refait quand vous changez de papier. Une fiche restée en feuille sans fin
+s'imprime en A4. L'impression est toujours en thème clair, sur fond blanc.
 
 Le groupe « Papier » de l'onglet Mise en page pose une feuille de papier derrière le texte : unie, à petits carreaux, à
 grands carreaux, lignée, à points ou millimétrée. Le choix vaut pour toutes les fiches du même type de feuille (sans
@@ -146,6 +150,14 @@ il quitte la liste mais reste montré par les fiches qui l'insèrent ; supprimé
 se retrouvent sous la liste et se restaurent : rien n'est effacé. Dans l'éditeur d'un schéma, plusieurs éléments choisis
 (Maj ou Ctrl + clic, ou un cadre tracé à la souris) se groupent avec Ctrl+G et se manipulent alors ensemble ; un second clic
 sur l'un d'eux le choisit seul, et Ctrl+Maj+G les dégroupe.
+
+L'éditeur d'un schéma a deux modes, à choisir dans son en-tête. « Simplifié » va vite : on glisse un équipement depuis le
+plateau du bas, on tire un câble d'un équipement à un autre sans choisir de port, on donne un nom et, si l'on veut, une
+adresse IP à un équipement, un type et un nombre de câbles à une liaison, et l'on pose du texte où l'on veut. « Avancé »
+règle le reste : interfaces, VLAN, vues, diagnostic. C'est le même schéma dans les deux. Sur une liaison, « Agrégat de
+liens » regroupe plusieurs câbles (ils se voient tous, sous un cercle) et « Trunk » demande ses VLAN, non tagué et tagués,
+écrits sur le câble (« Trunk · U 1 · T 10,20,30 ») ; les deux se cumulent. Au clic droit sur la carte d'un schéma, ou dans son Détail : « Exporter… », « Partager » (son image
+va dans le presse-papiers) et « Imprimer… ».
 
 ## Noter une idée
 

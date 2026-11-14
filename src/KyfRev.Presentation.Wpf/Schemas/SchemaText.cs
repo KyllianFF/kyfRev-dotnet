@@ -11,6 +11,9 @@ public static class SchemaText
     /// <summary>« Appel refusé. ».</summary>
     public static string BadCall => Text(nameof(BadCall));
 
+    /// <summary>« L'image n'a pas pu être copiée… ».</summary>
+    public static string ClipboardBusy => Text(nameof(ClipboardBusy));
+
     /// <summary>« Le schéma réseau est illisible ou absent. ».</summary>
     public static string Unavailable => Text(nameof(Unavailable));
 

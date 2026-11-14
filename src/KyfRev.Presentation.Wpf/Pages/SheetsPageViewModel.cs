@@ -218,6 +218,12 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
     /// <summary>Numéro du dernier aperçu demandé : une lecture dépassée est ignorée.</summary>
     private int _previewTicket;
 
+    /// <summary>La liste se refait : la fiche choisie se retrouve à la fin, et l'aperçu n'a pas à se vider entre-temps.</summary>
+    private bool _rebuilding;
+
+    /// <summary>Un dossier plié ou déplié : le contenu des fiches n'a pas changé, l'aperçu de la fiche gardée reste tel quel.</summary>
+    private bool _sameSheets;
+
     /// <summary>Change à chaque oubli du coffre : une lecture ou une action partie avant n'y remet rien.</summary>
     private int _generation;
 
@@ -541,7 +547,19 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
         KeepSelection();
     }
 
-    partial void OnSelectedRowChanged(object? value) => LoadPreviewCommand.Execute(value);
+    partial void OnSelectedRowChanged(object? value)
+    {
+        // Une liste refaite perd un instant sa ligne choisie, avant de la retrouver : vider l'aperçu puis le relire le faisait
+        // clignoter à chaque dossier plié ou déplié.
+        if (_rebuilding && (value is null || (_sameSheets && IsPreviewed(value))))
+        {
+            return;
+        }
+        LoadPreviewCommand.Execute(value);
+    }
+
+    private bool IsPreviewed(object row) =>
+        row is SheetRow wanted && Preview is { HasBody: true, Row: SheetRow shown } && shown.Sheet.Id == wanted.Sheet.Id;
 
     partial void OnRowsChanged(IReadOnlyList<object> value) => OnPropertyChanged(nameof(ShowsPreview));
 
@@ -731,10 +749,23 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
         OnPropertyChanged(nameof(KindReviewLabel));
         OnPropertyChanged(nameof(KindNotesLabel));
         var isFiltered = Kind != SheetKind.All || wanted.Length > 0 || HasChosenTags || !Equals(_folder.Value, string.Empty) || (SheetState)_state.Value! != SheetState.All;
-        Rows = sort == SheetSort.Folder ? Tree(sheets, day, isFiltered, expandAll: wanted.Length > 0 || HasChosenTags) : [.. Sorted(sheets, sort).Select(sheet => RowOf(sheet, day, showFolder: true))];
-        IsEmpty = entries.Count == 0;
-        HasNoMatch = entries.Count > 0 && sheets.Count == 0;
-        KeepSelection();
+        _rebuilding = true;
+        try
+        {
+            Rows = sort == SheetSort.Folder ? Tree(sheets, day, isFiltered, expandAll: wanted.Length > 0 || HasChosenTags) : [.. Sorted(sheets, sort).Select(sheet => RowOf(sheet, day, showFolder: true))];
+            IsEmpty = entries.Count == 0;
+            HasNoMatch = entries.Count > 0 && sheets.Count == 0;
+            KeepSelection();
+        }
+        finally
+        {
+            _rebuilding = false;
+        }
+        if (SelectedRow is null && Preview is not null)
+        {
+            // Plus rien n'est choisi : l'aperçu resté le temps de refaire la liste s'en va.
+            LoadPreviewCommand.Execute(null);
+        }
     }
 
     /// <summary>
@@ -834,7 +865,15 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
             {
                 _collapsed.Remove(row.Path);
             }
-            BuildRows();
+            _sameSheets = true;
+            try
+            {
+                BuildRows();
+            }
+            finally
+            {
+                _sameSheets = false;
+            }
         }
     }
 

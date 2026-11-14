@@ -946,6 +946,110 @@ public sealed class ComponentTests
         Assert.AreEqual(default, drawn.Margin);
         Assert.AreEqual(design.Dictionary["Kyf.Radius.Control"], ((Border)drawn).CornerRadius);
     }
+
+    [STATestMethod]
+    [DataRow(ThemeKind.Light)]
+    [DataRow(ThemeKind.Dark)]
+    public void An_active_tool_is_outlined_so_it_shows_on_the_ribbon_in_both_themes(ThemeKind theme)
+    {
+        var design = new DesignResources(theme, reducedMotion: false);
+        var tool = new Button { Content = "G", Tag = true };
+        var toggle = new ToggleButton { Content = "Plan", IsChecked = true };
+        var resting = new Button { Content = "I", Tag = false };
+        var panel = new StackPanel { Children = { tool, toggle, resting } };
+        Host.Of(design, panel);
+        foreach (var button in new ButtonBase[] { tool, toggle, resting })
+        {
+            button.Style = (Style)design.Dictionary["Kyf.Button.Tool"];
+        }
+        Host.Flush();
+
+        var colors = ThemeColors.For(theme);
+        var ribbon = colors[ColorRole.SurfaceAlt];
+        foreach (var active in new ButtonBase[] { tool, toggle })
+        {
+            var outline = ((SolidColorBrush)active.BorderBrush).Color;
+            Assert.AreEqual(colors[ColorRole.Primary].ToColor(), outline, "le contour de la couleur principale");
+            Assert.AreEqual(new Thickness(1), active.BorderThickness);
+            Assert.IsGreaterThanOrEqualTo(ContrastRequirements.Graphic, colors[ColorRole.Primary].ContrastWith(ribbon), "il se voit sur le fond du ruban");
+            Assert.AreEqual(colors[ColorRole.NavigationActiveBackground].ToColor(), ((SolidColorBrush)active.Background).Color);
+        }
+        // Le fond seul ne suffisait pas : en clair, il est presque celui du ruban.
+        Assert.IsLessThan(ContrastRequirements.Graphic, colors[ColorRole.NavigationActiveBackground].ContrastWith(ribbon));
+        Assert.AreEqual(Colors.Transparent, ((SolidColorBrush)resting.BorderBrush).Color, "au repos, rien");
+    }
+
+    [STATestMethod]
+    public void A_success_goes_away_by_itself_and_comes_back_with_the_next_message()
+    {
+        var done = new Notification { Severity = NotificationSeverity.Success, Message = "Supprimé définitivement.", Lifetime = TimeSpan.FromMilliseconds(600) };
+        var error = new Notification { Severity = NotificationSeverity.Critical, Message = "Le dossier est introuvable.", Lifetime = TimeSpan.FromMilliseconds(600) };
+        var busy = new Notification { Severity = NotificationSeverity.Info, Message = "Chiffrement en cours…", Lifetime = TimeSpan.FromMilliseconds(600) };
+        var kept = new Notification { Severity = NotificationSeverity.Success, Message = "Coffre chiffré.", StaysOpen = true, Lifetime = TimeSpan.FromMilliseconds(600) };
+        var panel = new StackPanel();
+        foreach (var notification in new[] { done, error, busy, kept })
+        {
+            panel.Children.Add(notification);
+        }
+        var host = Host.Of(new DesignResources(ThemeKind.Light, reducedMotion: false), panel);
+        using var source = new HwndSource(new HwndSourceParameters("kyfRev essai") { Width = 480, Height = 320 }) { RootVisual = host };
+        Host.Layout(host);
+        Host.Flush();
+        Assert.IsTrue(done.IsVisible && error.IsVisible && busy.IsVisible && kept.IsVisible);
+
+        Wait(() => done.IsExpired);
+        Assert.IsFalse(done.IsVisible, "lue, la réussite s'efface et ne garde pas sa place");
+        Assert.IsTrue(done.IsOpen, "sans toucher à ce qui l'a ouverte : la liaison de la page tient toujours");
+        Assert.IsTrue(error.IsVisible && busy.IsVisible && kept.IsVisible, "une erreur, un travail en cours et un résultat à garder restent");
+        Assert.IsFalse(error.IsExpired || busy.IsExpired || kept.IsExpired);
+
+        // Le message suivant reparaît, et son temps repart.
+        done.Message = "Déplacé.";
+        Host.Flush();
+        Assert.IsTrue(done.IsVisible);
+        Assert.IsFalse(done.IsExpired);
+        Wait(() => done.IsExpired);
+        Assert.IsFalse(done.IsVisible);
+
+        // Fermée puis rouverte avec le même message : elle reparaît aussi.
+        done.IsOpen = false;
+        done.IsOpen = true;
+        Host.Flush();
+        Assert.IsTrue(done.IsVisible);
+
+        // Une réussite devenue erreur ne s'efface plus.
+        done.Severity = NotificationSeverity.Critical;
+        Pause(900);
+        Assert.IsTrue(done.IsVisible);
+
+        // Le temps de lire suit la longueur du message, entre cinq et douze secondes.
+        Assert.AreEqual(Notification.ShortestLifetime, Notification.LifetimeOf("Déplacé."));
+        Assert.AreEqual(Notification.ShortestLifetime, Notification.LifetimeOf(null));
+        Assert.AreEqual(TimeSpan.FromSeconds(8), Notification.LifetimeOf(new string('a', 60)));
+        Assert.AreEqual(Notification.LongestLifetime, Notification.LifetimeOf(new string('a', 400)));
+
+        static void Pause(int milliseconds)
+        {
+            var until = DateTime.UtcNow.AddMilliseconds(milliseconds);
+            while (DateTime.UtcNow < until)
+            {
+                var frame = new System.Windows.Threading.DispatcherFrame();
+                var timer = new System.Windows.Threading.DispatcherTimer(TimeSpan.FromMilliseconds(15), System.Windows.Threading.DispatcherPriority.Background, (_, _) => frame.Continue = false, System.Windows.Threading.Dispatcher.CurrentDispatcher);
+                System.Windows.Threading.Dispatcher.PushFrame(frame);
+                timer.Stop();
+            }
+        }
+
+        static void Wait(Func<bool> done)
+        {
+            var until = DateTime.UtcNow.AddSeconds(5);
+            while (!done() && DateTime.UtcNow < until)
+            {
+                Pause(20);
+            }
+            Assert.IsTrue(done(), "attendu en cinq secondes");
+        }
+    }
 }
 
 /// <summary>Une source de liaison qui signale ses changements.</summary>

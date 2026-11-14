@@ -32,7 +32,7 @@ npm run dev
 ```
 
 Puis, par exemple, `http://localhost:5173/essai.html?papier=grands-carreaux&page=a5&police=manuscrite&fiche=longue`. Les
-réglages (papier, pas, page, marge, police, taille, thème, fiche, traits) sont décrits en tête de `essai/essai.ts` ; dans la
+réglages (papier, pas, page, marge, police, taille, thème, fiche, largeur, traits) sont décrits en tête de `essai/essai.ts` ; dans la
 console, `essai.verifier()` dit de combien chaque bloc de texte s'écarte des lignes du papier.
 
 ## La page des dessins

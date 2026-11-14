@@ -44,7 +44,8 @@ function grappesHauteDispo(schema: Schema): Map<string, string> {
 
 const FIBRE = new Set(["fibre-monomode", "fibre-multimode", "aoc"]);
 
-function supportIncompatible(support: string, i: Interface): boolean {
+/** Un support ne va pas sur ce port : de la fibre sur du cuivre, du cuivre sur de la fibre ou du stockage. */
+export function supportIncompatible(support: string, i: Interface): boolean {
   if (FIBRE.has(support)) return i.genre === "cuivre";
   if (support === "cuivre") return i.genre === "fibre" || i.genre === "stockage";
   if (support === "fibre-channel") return i.genre === "cuivre";

@@ -530,6 +530,11 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
         {
             return ImageMenuItems(menu, image);
         }
+        if (menu.PageMarkPosition is { } mark)
+        {
+            // Une marque de page n'a pas de texte à couper ni à mettre en gras : elle se supprime, c'est tout.
+            return [ActionMenus.Item(menu.PageMarkBlank ? EditingText.DeleteBlankPage : EditingText.DeletePageBreak, () => Post(new DeleteBlockRequest(mark)))];
+        }
         var items = TextMenuItems(menu, correction);
         if (menu.DrawingPosition is { } current)
         {
@@ -1011,16 +1016,35 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
     private static readonly DependencyProperty ComfortProbeProperty = DependencyProperty.Register(
         "ComfortProbe", typeof(ReadingComfort), typeof(VisualEditor), new PropertyMetadata(null, (sender, _) => ((VisualEditor)sender).QueueTheme()));
 
+    /// <summary>
+    /// La largeur que le texte d'une feuille sans fin ne dépasse pas dans la page, en pixels de la page (avant zoom) ;
+    /// infinie : il prend toute la vue. La page en fait une colonne centrée (<c>--largeur-fiche</c>).
+    /// </summary>
+    public double TextWidth
+    {
+        get;
+        set
+        {
+            if (field != value)
+            {
+                field = value;
+                QueueTheme();
+            }
+        }
+    } = double.PositiveInfinity;
+
     private void SendTheme()
     {
         var comfort = TryFindResource(ReadingComfort.ResourceKey) as ReadingComfort ?? ReadingComfort.Default;
         var variables = new Dictionary<string, string>
         {
-            ["--taille-lecture"] = string.Create(CultureInfo.InvariantCulture, $"{Typography.BodyLarge.Size}px"),
+            ["--taille-lecture"] = string.Create(CultureInfo.InvariantCulture, $"{Math.Round(comfort.Size, 2)}px"),
             ["--interligne-lecture"] = string.Create(CultureInfo.InvariantCulture, $"{Typography.ReadingLineSpacing}"),
             // La police des fiches, la même qu'en lecture ; les titres la prennent quand elle est manuscrite ou à chasse fixe.
             ["--police-lecture"] = comfort.CssFamily,
             ["--police-titre"] = comfort.HeadingsFollow ? comfort.CssFamily : "var(--police)",
+            // La colonne du texte d'une feuille sans fin : la vue est plus large qu'elle, sa barre au bord de la fenêtre.
+            ["--largeur-fiche"] = double.IsFinite(TextWidth) && TextWidth > 0 ? string.Create(CultureInfo.InvariantCulture, $"{Math.Round(TextWidth)}px") : "none",
         };
         foreach (var (variable, resource) in ThemeColors)
         {

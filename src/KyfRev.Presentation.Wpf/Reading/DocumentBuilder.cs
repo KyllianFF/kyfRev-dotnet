@@ -225,13 +225,7 @@ internal sealed class DocumentBuilder
         ? text.Value.Length
         : ElementWeight + ((RenderElement)node).Children.Sum(Weight);
 
-    private double HeadingSize(int level) => level switch
-    {
-        1 => 28,
-        2 => Typography.Subtitle.Size + 2,
-        3 => Typography.Subtitle.Size - 2,
-        _ => _comfort.Size,
-    };
+    private double HeadingSize(int level) => _comfort.HeadingSize(level);
 
     /// <summary>Lit une image sans le fil de l'interface, en plafonnant sa taille en mémoire.</summary>
     private static BitmapImage Decode(byte[] content)
@@ -515,6 +509,8 @@ internal sealed class DocumentBuilder
             Margin = _comfort.IsRuled ? new Thickness(0, _comfort.Step, 0, 0) : new Thickness(0, level <= 2 ? 24 : 16, 0, 8),
             FontSize = size,
             FontWeight = FontWeights.SemiBold,
+            // Le titre 4 a la taille du texte : l'italique le distingue du titre 5.
+            FontStyle = ReadingComfort.IsItalicHeading(level) ? FontStyles.Italic : FontStyles.Normal,
             LineHeight = _comfort.HeadingLineHeight(size),
             KeepWithNext = true,
         };

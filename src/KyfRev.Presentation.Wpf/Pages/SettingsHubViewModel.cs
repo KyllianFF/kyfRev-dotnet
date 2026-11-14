@@ -19,8 +19,20 @@ public sealed partial class SettingsTab : ObservableObject
         Description = description;
     }
 
+    /// <summary>
+    /// La largeur de la colonne des réglages : ils se lisent dans une colonne centrée, le texte à gauche et chaque réglage
+    /// à droite de son nom, quelle que soit la largeur de la fenêtre.
+    /// </summary>
+    public const double Column = 720;
+
+    /// <summary>La colonne d'une section qui montre deux volets côte à côte (Feuilles : les réglages et leur aperçu).</summary>
+    public const double WideColumn = 1180;
+
     /// <summary>« Apparence », « Révisions »….</summary>
     public string Label { get; }
+
+    /// <summary>La largeur de la colonne de cette section.</summary>
+    public double ColumnWidth { get; init; } = Column;
 
     /// <summary>Le contenu de la section : une page, qui peut en servir plusieurs.</summary>
     public object Page { get; }
@@ -168,6 +180,7 @@ public sealed partial class SettingsHubViewModel : ObservableObject, INavigation
                 {
                     new SettingsTab(MoreSettingsText.Sheets, sheets, onMachine, Icons.Document, string.Empty, MoreSettingsText.SheetsAbout)
                     {
+                        ColumnWidth = SettingsTab.WideColumn,
                         Settings =
                         [
                             new(MoreSettingsText.LayoutTitle, MoreSettingsText.WordsLayout),

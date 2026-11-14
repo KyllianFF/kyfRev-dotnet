@@ -52,7 +52,7 @@ export type DepuisEditeur =
   | { kind: "askFormula"; position: number | null; tex: string; block: boolean }
   | { kind: "linkInput"; query: string | null; start: number; x: number; y: number }
   | { kind: "listKey"; key: string }
-  | { kind: "menu"; word: string | null; wordStart: number; hasSelection: boolean; inCode: boolean; inTable: boolean; onLink: boolean; drawingPosition: number | null; drawingLanguage: string | null; drawingCode: string | null; imagePosition: number | null; imageAddress: string | null; imageTitle: string | null; bold: boolean; italic: boolean; underline: boolean; strike: boolean; codePosition: number | null }
+  | { kind: "menu"; word: string | null; wordStart: number; hasSelection: boolean; inCode: boolean; inTable: boolean; onLink: boolean; drawingPosition: number | null; drawingLanguage: string | null; drawingCode: string | null; imagePosition: number | null; imageAddress: string | null; imageTitle: string | null; bold: boolean; italic: boolean; underline: boolean; strike: boolean; codePosition: number | null; pageMarkPosition: number | null; pageMarkBlank: boolean }
   | { kind: "dropped"; name: string; base64: string | null; position: number | null }
   | { kind: "zoom"; step: number }
   | { kind: "pages"; count: number }

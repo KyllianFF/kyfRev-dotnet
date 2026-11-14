@@ -55,7 +55,26 @@ public sealed partial class SchemasPageViewModel : ObservableObject, ILeaving
     public async Task<bool> LeaveAsync() => FinishIsland is not { } finish || await finish().ConfigureAwait(true);
 
     /// <summary>Le pont vers le coffre, pour un îlot.</summary>
-    internal SchemaBridge Bridge() => new(_schemas, _folders, () => PickSchemaFile(), _opener.OpenSheet, EditorClosed);
+    internal SchemaBridge Bridge() => new(_schemas, _folders, () => PickSchemaFile(), _opener.OpenSheet, EditorClosed, CopyImage);
+
+    /// <summary>Ce qui copie l'image d'un schéma : le presse-papiers de Windows, sauf dans les essais.</summary>
+    internal Action<byte[]> CopyImage { get; init; } = ToClipboard;
+
+    /// <summary>Met une image PNG dans le presse-papiers ; une image illisible est refusée comme un appel mal formé.</summary>
+    private static void ToClipboard(byte[] png)
+    {
+        try
+        {
+            using var stream = new System.IO.MemoryStream(png);
+            var picture = System.Windows.Media.Imaging.BitmapFrame.Create(stream, System.Windows.Media.Imaging.BitmapCreateOptions.None, System.Windows.Media.Imaging.BitmapCacheOption.OnLoad);
+            picture.Freeze();
+            System.Windows.Clipboard.SetImage(picture);
+        }
+        catch (Exception exception) when (exception is NotSupportedException or System.IO.FileFormatException or System.Runtime.InteropServices.ExternalException)
+        {
+            throw new InvalidOperationException(Schemas.SchemaText.ClipboardBusy, exception);
+        }
+    }
 
     /// <summary>Ouvre l'éditeur sur un schéma ; le fermer revient d'où l'on vient.</summary>
     /// <param name="id">Le schéma.</param>

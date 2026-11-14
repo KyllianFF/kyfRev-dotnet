@@ -9,7 +9,8 @@
   import Ungroup from "@lucide/svelte/icons/ungroup";
   import Spline from "@lucide/svelte/icons/spline";
   import Trash2 from "@lucide/svelte/icons/trash-2";
-  import { onMount } from "svelte";
+  import { onMount, tick } from "svelte";
+  import type { Zone } from "../../lib/placement";
   import { definition } from "../../lib/topologie/catalogue";
   import {
     adresseAffichee,
@@ -17,6 +18,7 @@
     COTE,
     COULEUR_MAINTENANCE,
     cadreAnnotation,
+    cadreDuSchema,
     cheminDe,
     couleurDe,
     dessinerAnnotation,
@@ -36,7 +38,10 @@
     type Annotation,
     COULEURS_ANNOTATION,
     type Equipement,
+    GENRES_RELATION,
+    type GenreRelation,
     type Lien,
+    nouvelId,
     type Point,
     SUPPORTS,
     type Support,
@@ -48,9 +53,22 @@
     aligner,
     connecter,
     rebrancher,
+    relier,
     repartir,
   } from "../../lib/topologie/operations";
-  import { vue as vueDe } from "../../lib/topologie/vues";
+  import {
+    cablesEntre,
+    effacer,
+    epurer,
+    groupeDeCables,
+    type Outil,
+    tirerCable,
+  } from "../../lib/topologie/simplifie";
+  import { agregatDe, champsDe, configDuBout, estTrunk, texteTrunk } from "../../lib/topologie/vlans";
+  import { VUES, vue as vueDe } from "../../lib/topologie/vues";
+  import Bulle from "./Bulle.svelte";
+  import BulleCable from "./BulleCable.svelte";
+  import BulleEquipement from "./BulleEquipement.svelte";
   import MenuPorts from "./MenuPorts.svelte";
 
   // Canevas de l'éditeur de schémas réseau (D39). Le modèle est la seule
@@ -62,13 +80,28 @@
     miniCarte = $bindable(true),
     zoom = $bindable(1),
     trouves = null,
+    simplifie = false,
+    outil = $bindable("choisir"),
+    pose = $bindable(null),
+    genreRelation = "dependance",
     onconnecter,
     ondeposer,
     onretirer,
     oncopier,
     ondupliquer,
+    onavance,
   }: {
     editeur: EditeurSchema;
+    /** Mode simplifié (11A) : vue simplifiée, câbles sans choix de port, bulles près de l'objet choisi. */
+    simplifie?: boolean;
+    /** L'outil de la barre d'outils. */
+    outil?: Outil;
+    /** Tuile du plateau cliquée : le prochain clic sur le plan la pose. */
+    pose?: string | null;
+    /** Genre de la relation que trace l'outil Relation. */
+    genreRelation?: GenreRelation;
+    /** Passer en mode avancé (lien d'une bulle), la sélection gardée. */
+    onavance?: () => void;
     /** Aimantation à la grille. */
     grille?: boolean;
     /** Outil « main » : tout glissement déplace le plan. */
@@ -91,7 +124,9 @@
 
   const PAS = 20;
   const schema = $derived(editeur.schema);
-  const v = $derived(vueDe(schema.vue));
+  // Le mode simplifié dessine la vue simplifiée, sans changer la vue du schéma.
+  const v = $derived(vueDe(simplifie ? "simplifiee" : schema.vue));
+  const dessine = $derived(simplifie ? epurer(schema) : schema);
   const caches = $derived(masques(schema));
   const parId = $derived(new Map(schema.equipements.map((e) => [e.id, e])));
 
@@ -131,6 +166,12 @@
         mode: Coulisse | null;
       }
     | { genre: "connexion"; source: string; courant: Point }
+    /** Outil Câble ou Relation : d'un équipement vers un autre, cliqué ou tiré. */
+    | { genre: "tirage"; source: string; depart: Point; bouge: boolean }
+    /** Outil Zone : le rectangle tiré sur le plan. */
+    | { genre: "zone"; depart: Point; courant: Point }
+    /** Outil Texte : le texte naît où le bouton est relâché. */
+    | { genre: "texte"; point: Point }
     | { genre: "passage"; lien: string; indice: number; avant: string; relation: boolean }
     | {
         genre: "taille";
@@ -184,7 +225,7 @@
   });
 
   // Tracés et étiquettes : la même mise en page que les aperçus et les exports (D50).
-  const page = $derived(mettreEnPage(schema, v, caches, editeur.cable?.lien));
+  const page = $derived(mettreEnPage(dessine, v, caches, editeur.cable?.lien));
   const affichage = $derived(page.affichage);
   const traces = $derived(page.liens);
   const tracesRelations = $derived(page.relations);
@@ -200,13 +241,18 @@
 
   onMount(() => {
     if (!svg) return;
+    // Le schéma est cadré dès que le plan connaît sa vraie taille (avant, il se cadrerait sur une taille supposée).
+    let mesure = false;
     const observateur = new ResizeObserver(([entree]) => {
       if (!entree) return;
       largeur = entree.contentRect.width;
       hauteur = entree.contentRect.height;
+      if (!mesure && largeur > 0 && hauteur > 0) {
+        mesure = true;
+        toutVoir();
+      }
     });
     observateur.observe(svg);
-    requestAnimationFrame(() => toutVoir());
     return () => observateur.disconnect();
   });
 
@@ -232,22 +278,18 @@
 
   /** Cadre le schéma entier. */
   export function toutVoir(): void {
-    const xs = schema.equipements.flatMap((e) => [e.position.x - COTE, e.position.x + COTE]);
-    const ys = schema.equipements.flatMap((e) => [e.position.y - COTE, e.position.y + COTE + 30]);
-    for (const g of schema.groupes) {
-      xs.push(g.position.x, g.position.x + g.taille.largeur);
-      ys.push(g.position.y, g.position.y + g.taille.hauteur);
-    }
-    if (xs.length === 0) {
+    if (schema.equipements.length + schema.groupes.length + schema.annotations.length === 0) {
       camera = { x: -largeur / 2, y: -hauteur / 2, zoom: 1 };
       return;
     }
-    const x0 = Math.min(...xs) - 60;
-    const y0 = Math.min(...ys) - 60;
-    const l = Math.max(...xs) + 60 - x0;
-    const h = Math.max(...ys) + 60 - y0;
-    const zoom = Math.max(0.15, Math.min(1.5, largeur / l, hauteur / h));
-    camera = { x: x0 - (largeur / zoom - l) / 2, y: y0 - (hauteur / zoom - h) / 2, zoom };
+    // Le cadre du dessin (équipements, noms, cadres, textes, points de passage), avec un peu d'air autour.
+    const c = cadreDuSchema(schema);
+    const zoom = Math.max(0.15, Math.min(1.5, (largeur / c.largeur) * 0.94, (hauteur / c.hauteur) * 0.94));
+    camera = {
+      x: c.x - (largeur / zoom - c.largeur) / 2,
+      y: c.y - (hauteur / zoom - c.hauteur) / 2,
+      zoom,
+    };
   }
 
   /** Amène un équipement au centre du champ. */
@@ -398,8 +440,30 @@
     svg?.focus();
     capturer(evenement);
     menuPorts = null;
-    // Câble en main : le plan se fait glisser, on ne sélectionne pas.
-    if (evenement.button === 1 || plan || editeur.cable) {
+    bulleAuClavier = false;
+    if (evenement.button === 0 && !plan) {
+      const ici = dansLePlan(evenement);
+      // Tuile du plateau en attente : elle se pose ici.
+      if (pose) {
+        sansAimant = evenement.altKey;
+        ondeposer(pose, { x: aimanter(ici.x), y: aimanter(ici.y) });
+        sansAimant = false;
+        pose = null;
+        return;
+      }
+      if (outil === "texte") {
+        geste = { genre: "texte", point: ici };
+        return;
+      }
+      if (outil === "zone") {
+        geste = { genre: "zone", depart: ici, courant: ici };
+        return;
+      }
+    }
+    // Câble en main, ou outil qui vise un objet : le plan se fait glisser, on ne sélectionne pas.
+    if (evenement.button === 1 || plan || editeur.cable || outil !== "choisir") {
+      // Un clic dans le vide lâche le câble commencé.
+      tirage = null;
       geste = {
         genre: "plan",
         depart: { x: evenement.clientX, y: evenement.clientY },
@@ -477,8 +541,27 @@
     return resultat;
   }
 
+  /** Une tuile attend d'être posée, ou l'outil dessine sur le plan : l'appui va au plan, même sur un objet. */
+  const versLePlan = () => pose !== null || outil === "texte" || outil === "zone";
+  /** L'outil vise un équipement : Câble (mode simplifié) ou Relation. */
+  const vise = () => outil === "cable" || outil === "relation";
+
   function appuiSurObjet(evenement: PointerEvent, id: string) {
-    if (evenement.button !== 0 || plan) return;
+    if (evenement.button !== 0 || plan || versLePlan()) return;
+    bulleAuClavier = false;
+    if (outil === "effacer") {
+      evenement.stopPropagation();
+      gommer(id);
+      return;
+    }
+    if (vise()) {
+      if (!parId.has(id)) return;
+      evenement.stopPropagation();
+      svg?.focus();
+      capturer(evenement);
+      viser(id, dansLePlan(evenement));
+      return;
+    }
     if (editeur.cable) {
       // Câble en main : un équipement cliqué ouvre le menu de ses ports.
       if (!parId.has(id)) return;
@@ -507,17 +590,27 @@
   }
 
   function appuiSurPoignee(evenement: PointerEvent, equipement: Equipement) {
-    if (evenement.button !== 0 || plan || editeur.cable) return;
+    if (evenement.button !== 0 || plan || editeur.cable || outil !== "choisir" || pose) return;
     evenement.stopPropagation();
     capturer(evenement);
     geste = { genre: "connexion", source: equipement.id, courant: dansLePlan(evenement) };
   }
 
   function appuiSurLien(evenement: PointerEvent, id: string) {
-    if (evenement.button !== 0 || plan || editeur.cable) return;
+    if (evenement.button !== 0 || plan || editeur.cable || versLePlan() || vise()) return;
     evenement.stopPropagation();
+    bulleAuClavier = false;
+    if (outil === "effacer") {
+      gommer(id);
+      return;
+    }
     svg?.focus();
     const ajouter = evenement.shiftKey || evenement.ctrlKey;
+    // Mode simplifié : un câble se choisit avec ceux qui relient les deux mêmes équipements.
+    if (simplifie && schema.liens.some((l) => l.id === id)) {
+      choisirCables(id, ajouter);
+      return;
+    }
     editeur.choisir(id, ajouter);
     // Un câble saisi puis tiré coulisse (D53).
     if (ajouter || !schema.liens.some((l) => l.id === id)) return;
@@ -584,7 +677,7 @@
   }
 
   function appuiSurPassage(evenement: PointerEvent, lien: string, indice: number, relation: boolean) {
-    if (evenement.button !== 0 || plan) return;
+    if (evenement.button !== 0 || plan || versLePlan()) return;
     evenement.stopPropagation();
     capturer(evenement);
     geste = { genre: "passage", lien, indice, avant: editeur.commencerGeste(), relation };
@@ -592,6 +685,8 @@
 
   /** Double-clic sur un tracé : un point de passage de plus ; sur un point : il est retiré. */
   function ajouterPassage(evenement: MouseEvent, id: string, relation: boolean) {
+    // Le tracé d'un câble se retouche en mode avancé.
+    if (simplifie || outil !== "choisir") return;
     evenement.stopPropagation();
     const point = dansLePlan(evenement);
     sansAimant = evenement.altKey;
@@ -631,7 +726,7 @@
   }
 
   function appuiSurTaille(evenement: PointerEvent, groupe: string, poignee: Poignee, annotation = false) {
-    if (evenement.button !== 0 || plan) return;
+    if (evenement.button !== 0 || plan || versLePlan()) return;
     evenement.stopPropagation();
     capturer(evenement);
     const n = annotation ? schema.annotations.find((x) => x.id === groupe) : undefined;
@@ -679,7 +774,7 @@
   }
 
   function appuiSurPointe(evenement: PointerEvent, annotation: string, bout: "position" | "vers") {
-    if (evenement.button !== 0 || plan) return;
+    if (evenement.button !== 0 || plan || versLePlan()) return;
     evenement.stopPropagation();
     capturer(evenement);
     geste = { genre: "pointe", annotation, bout, avant: editeur.commencerGeste() };
@@ -687,6 +782,7 @@
 
   function mouvement(evenement: PointerEvent) {
     if (editeur.cable) pointeur = dansLePlan(evenement);
+    if (tirage) tirage.courant = dansLePlan(evenement);
     if (!geste) return;
     if (geste.genre === "plan") {
       camera = {
@@ -708,8 +804,12 @@
   function suivre(pointeur: { clientX: number; clientY: number }) {
     if (!geste || geste.genre === "plan") return;
     const point = dansLePlan(pointeur);
-    if (geste.genre === "rectangle") geste.courant = point;
+    if (geste.genre === "rectangle" || geste.genre === "zone") geste.courant = point;
     else if (geste.genre === "connexion") geste.courant = point;
+    else if (geste.genre === "tirage") {
+      if (Math.hypot(point.x - geste.depart.x, point.y - geste.depart.y) > 8 / camera.zoom) geste.bouge = true;
+      if (tirage) tirage.courant = point;
+    } else if (geste.genre === "texte") geste.point = point;
     else if (geste.genre === "deplacement") {
       const dx = point.x - geste.depart.x;
       const dy = point.y - geste.depart.y;
@@ -745,9 +845,13 @@
         if (gx !== null || gy !== null) guides = { x: gx, y: gy };
       }
       for (const [id, origine] of geste.origines) {
+        // Un texte libre saisi seul va où on le pose, hors de la grille.
+        const libre = !decalage && textesLibres.has(id);
         const cible = decalage
           ? { x: origine.x + decalage.x, y: origine.y + decalage.y }
-          : { x: aimanter(origine.x + dx), y: aimanter(origine.y + dy) };
+          : libre
+            ? { x: Math.round(origine.x + dx), y: Math.round(origine.y + dy) }
+            : { x: aimanter(origine.x + dx), y: aimanter(origine.y + dy) };
         if (id.endsWith(">vers")) {
           const n = schema.annotations.find((x) => x.id === id.slice(0, -5));
           if (n) n.vers = cible;
@@ -869,16 +973,382 @@
       // Comme dans un logiciel de dessin : un second clic sur un élément d'un groupe le choisit seul.
       if (fini.genre === "deplacement" && !fini.bouge && fini.affiner) editeur.selection = [fini.affiner];
     } else if (fini.genre === "connexion") {
-      const point = dansLePlan(evenement);
-      const cible = visibles.find(
-        (e) =>
-          e.id !== fini.source &&
-          Math.abs(e.position.x - point.x) <= COTE / 2 + 6 &&
-          Math.abs(e.position.y - point.y) <= COTE / 2 + 6,
-      );
-      onconnecter(fini.source, cible?.id);
+      onconnecter(fini.source, equipementSous(dansLePlan(evenement), fini.source)?.id);
+    } else if (fini.genre === "tirage") {
+      // Lâché sur un autre équipement : le câble est tiré. Dans le vide après un glissement : on renonce.
+      // Sans avoir bougé : c'était un clic, le prochain équipement cliqué recevra le câble.
+      const cible = equipementSous(dansLePlan(evenement), fini.source);
+      if (cible) {
+        tirage = null;
+        relierDepuis(fini.source, cible.id);
+      } else if (fini.bouge) tirage = null;
+    } else if (fini.genre === "texte") {
+      commencerTexte(fini.point);
+    } else if (fini.genre === "zone") {
+      poserZone(fini.depart, fini.courant);
     }
   }
+
+  /** L'équipement sous un point du plan, hors `sauf`. */
+  const equipementSous = (point: Point, sauf: string) =>
+    visibles.find(
+      (e) =>
+        e.id !== sauf &&
+        Math.abs(e.position.x - point.x) <= COTE / 2 + 6 &&
+        Math.abs(e.position.y - point.y) <= COTE / 2 + 6,
+    );
+
+  // --- Outils Câble et Relation : d'un équipement à un autre, sans choisir de port ---
+
+  /** Le câble (ou la relation) commencé : son équipement de départ, et où en est le pointeur. */
+  let tirage = $state<{ depart: string; courant: Point } | null>(null);
+
+  $effect(() => {
+    if (outil !== "cable" && outil !== "relation") tirage = null;
+  });
+
+  /** Un équipement est désigné (clic, ou Entrée au clavier) : le premier est le départ, le second l'arrivée. */
+  function viser(id: string, point?: Point) {
+    if (tirage && tirage.depart !== id) {
+      const depart = tirage.depart;
+      tirage = null;
+      relierDepuis(depart, id);
+      return;
+    }
+    if (tirage) {
+      // Le même, désigné de nouveau : on renonce.
+      tirage = null;
+      return;
+    }
+    tirage = { depart: id, courant: point ?? parId.get(id)?.position ?? { x: 0, y: 0 } };
+    if (point) geste = { genre: "tirage", source: id, depart: point, bouge: false };
+    else editeur.annonce = `${parId.get(id)?.nom ?? "Équipement"} : départ choisi. Désignez l'autre équipement.`;
+  }
+
+  function relierDepuis(de: string, vers: string) {
+    const [a, b] = [parId.get(de)?.nom ?? "?", parId.get(vers)?.nom ?? "?"];
+    if (outil === "relation") {
+      const genre = genreRelation;
+      let creee = "";
+      const fait = editeur.agir((s) => {
+        creee = relier(s, { genre, de, vers }).id;
+      });
+      if (!fait) return;
+      editeur.selection = [creee];
+      outil = "choisir";
+      const nom = GENRES_RELATION.find((g) => g.valeur === genre)?.nom ?? "Relation";
+      const ailleurs = v.relations.includes(genre) ? "" : ` Elle se voit en vue « ${vueQuiMontre(genre)} ».`;
+      editeur.annonce = `${nom} : relation tracée de ${a} vers ${b}.${ailleurs}`;
+      return;
+    }
+    let nombre = 0;
+    const fait = editeur.agir((s) => {
+      tirerCable(s, de, vers);
+      nombre = cablesEntre(s, de, vers).length;
+    });
+    if (fait) {
+      editeur.annonce =
+        nombre > 1
+          ? `Câble tiré entre ${a} et ${b} : ${nombre} câbles les relient.`
+          : `Câble tiré entre ${a} et ${b}.`;
+    }
+  }
+
+  /** Nom de la première vue qui montre ce genre de relation. */
+  const vueQuiMontre = (genre: GenreRelation) =>
+    VUES.find((x) => x.relations.includes(genre))?.nom ?? "Logique et VLAN";
+
+  /** Le fil du câble commencé, de son équipement au pointeur. */
+  const filDuTirage = $derived.by(() => {
+    const source = tirage ? parId.get(tirage.depart) : undefined;
+    if (!tirage || !source) return null;
+    const depart = traceEntre(source.position, tirage.courant, [], 0, [boiteDe(source), undefined])[0];
+    return { de: depart ?? source.position, vers: tirage.courant };
+  });
+
+  // --- Outil Effacer ---
+
+  function gommer(id: string) {
+    const equipement = parId.get(id);
+    if (equipement?.verrou) {
+      editeur.annonce = `« ${equipement.nom} » est verrouillé : il ne s'efface pas.`;
+      return;
+    }
+    if (editeur.agir((s) => effacer(s, new Set([id])), "Effacé : Ctrl+Z pour annuler.")) {
+      editeur.selection = editeur.selection.filter((x) => x !== id);
+    }
+  }
+
+  // --- Mode simplifié : câbles choisis ensemble, bulles ---
+
+  /** Choisit tous les câbles qui relient les deux mêmes équipements que `id`. */
+  function choisirCables(id: string, ajouter: boolean) {
+    const ids = groupeDeCables(schema, id)?.cables.map((l) => l.id) ?? [id];
+    if (!ajouter) editeur.selection = ids;
+    else if (editeur.estChoisi(id)) editeur.selection = editeur.selection.filter((x) => !ids.includes(x));
+    else editeur.selection = [...new Set([...editeur.selection, ...ids])];
+  }
+
+  /** Le premier câble de chaque paire d'équipements : au clavier, il représente les autres. */
+  const premiersCables = $derived.by(() => {
+    const paires = new Set<string>();
+    const premiers = new Set<string>();
+    for (const l of schema.liens) {
+      const cle = [l.a.equipement, l.b.equipement].sort().join("|");
+      if (!paires.has(cle)) premiers.add(l.id);
+      paires.add(cle);
+    }
+    return premiers;
+  });
+
+  /** Ce qu'un lecteur d'écran dit d'un câble. */
+  function libelleDuCable(lien: Lien): string {
+    const [a, b] = [parId.get(lien.a.equipement)?.nom ?? "?", parId.get(lien.b.equipement)?.nom ?? "?"];
+    const type = (SUPPORTS.find((x) => x.valeur === lien.support)?.nom ?? lien.support).toLowerCase();
+    const nombre = simplifie ? cablesEntre(schema, lien.a.equipement, lien.b.equipement).length : 1;
+    const debut = nombre > 1 ? `${nombre} câbles` : "Câble";
+    // L'agrégat et le trunk sont deux choses : chacun se dit, avec ses mots.
+    const ports = Math.max(agregatDe(schema, lien.a)?.membres.length ?? 0, agregatDe(schema, lien.b)?.membres.length ?? 0);
+    const agregat = ports > 0 ? `, agrégat de ${ports} lien(s)` : "";
+    let trunk = "";
+    if (estTrunk(schema, lien)) {
+      const { nonTague, tagues } = champsDe(configDuBout(schema, lien.a));
+      trunk = `, en trunk${nonTague !== undefined ? `, VLAN non tagué ${nonTague}` : ""}${tagues ? `, VLAN tagués ${tagues}` : ""}`;
+    }
+    return `${debut} entre ${a} et ${b}, ${type}${agregat}${trunk}`;
+  }
+
+  /** La bulle vient d'être ouverte au clavier : son premier champ prend la main. */
+  let bulleAuClavier = $state(false);
+
+  /** Entrée ou Espace sur un objet du plan : ce que ferait un clic avec l'outil en cours. */
+  function toucheSurObjet(evenement: KeyboardEvent, id: string) {
+    if ((evenement.key !== "Enter" && evenement.key !== " ") || evenement.target !== evenement.currentTarget) return;
+    evenement.preventDefault();
+    evenement.stopPropagation();
+    if (pose || outil === "texte" || outil === "zone") return;
+    if (outil === "effacer") {
+      gommer(id);
+      svg?.focus();
+      return;
+    }
+    if (vise()) {
+      if (parId.has(id)) viser(id);
+      return;
+    }
+    if (editeur.cable) {
+      if (parId.has(id)) ouvrirPorts(id);
+      return;
+    }
+    const note = schema.annotations.find((n) => n.id === id);
+    if (note && editeur.estChoisi(id) && seModifieEnPlace(note)) {
+      modifierTexte(note);
+      return;
+    }
+    bulleAuClavier = true;
+    if (simplifie && schema.liens.some((l) => l.id === id)) choisirCables(id, false);
+    else editeur.choisir(id);
+  }
+
+  /** Rend la main à un objet du plan (ou au plan, s'il n'est plus là). */
+  function rendreLaMain(id: string | undefined) {
+    void tick().then(() => {
+      const objet = id ? svg?.querySelector<SVGElement>(`[data-id="${CSS.escape(id)}"]`) : null;
+      (objet ?? svg)?.focus();
+    });
+  }
+
+  function fermerBulle(id: string) {
+    editeur.selection = [];
+    bulleAuClavier = false;
+    rendreLaMain(id);
+  }
+
+  /** Ce qu'occupe un équipement choisi, son nom et son adresse compris (cadre de sélection, bulle). */
+  function cadreDe(e: Equipement): Zone {
+    const b = boiteDe(e, 0);
+    const adresse = affichage.adresses ? adresseAffichee(e) : "";
+    const demi = Math.max(42, Math.max(e.nom.length * 7.6, adresse.length * 6.8) / 2 + 6);
+    return { x0: e.position.x - demi, y0: b.y0 - 8, x1: e.position.x + demi, y1: ligneDuNom(b, adresse ? 1 : 0) + 7 };
+  }
+
+  const zoneEcran = (z: Zone): Zone => {
+    const [a, b] = [versEcran({ x: z.x0, y: z.y0 }), versEcran({ x: z.x1, y: z.y1 })];
+    return { x0: a.x, y0: a.y, x1: b.x, y1: b.y };
+  };
+
+  /** Les câbles choisis ensemble (mode simplifié) : leur groupe, et où poser leur repère et leur bulle. */
+  const cablesChoisis = $derived.by(() => {
+    const premier = editeur.selection[0];
+    if (!simplifie || !premier) return null;
+    const groupe = groupeDeCables(schema, premier);
+    if (!groupe || !editeur.selection.every((id) => groupe.cables.some((l) => l.id === id))) return null;
+    const choisies = traces.filter((t) => groupe.cables.some((l) => l.id === t.lien.id));
+    if (choisies.length === 0) return null;
+    // Sur le cercle du trunk s'il y en a un, sinon au milieu des câbles.
+    const cercle = choisies.find((t) => t.cercle)?.cercle;
+    const milieux = choisies.map((t) => milieu(t.trace));
+    const centre = cercle ?? {
+      x: milieux.reduce((n, m) => n + m.x, 0) / milieux.length,
+      y: milieux.reduce((n, m) => n + m.y, 0) / milieux.length,
+    };
+    return { groupe, cadre: { x0: centre.x - 23, y0: centre.y - 20, x1: centre.x + 23, y1: centre.y + 20 } };
+  });
+
+  const bulle = $derived.by(() => {
+    if (!simplifie || outil !== "choisir" || pose || edition) return null;
+    // Pendant un geste, la bulle s'efface : elle revient où l'objet s'arrête.
+    if (geste && !(geste.genre === "deplacement" && !geste.bouge)) return null;
+    const seul = editeur.selection.length === 1 ? parId.get(editeur.selection[0] ?? "") : undefined;
+    if (seul && !caches.has(seul.id)) {
+      return { genre: "equipement" as const, cle: seul.id, equipement: seul, objet: zoneEcran(cadreDe(seul)) };
+    }
+    if (cablesChoisis) {
+      const { a, b } = cablesChoisis.groupe;
+      return {
+        genre: "cables" as const,
+        cle: [a.id, b.id].sort().join("|"),
+        retour: cablesChoisis.groupe.cables[0]?.id ?? "",
+        groupe: cablesChoisis.groupe,
+        objet: zoneEcran(cablesChoisis.cadre),
+      };
+    }
+    return null;
+  });
+
+  // --- Texte en place : un texte libre naît sous l'outil Texte, et se modifie au double-clic ---
+
+  /** Le texte en cours de saisie : `id` nul pour un texte qui n'existe pas encore. */
+  let edition = $state<{ id: string | null; position: Point; valeur: string; taille: number } | null>(null);
+  let champTexte = $state<HTMLInputElement>();
+  const TAILLE_TEXTE = 15;
+
+  /** Les annotations dont le texte se change sur place : texte libre et nom d'une zone. */
+  const seModifieEnPlace = (n: Annotation) => n.forme === "texte" || estZone(n);
+
+  function commencerTexte(point: Point) {
+    edition = {
+      id: null,
+      position: { x: Math.round(point.x), y: Math.round(point.y - TAILLE_TEXTE * 0.65) },
+      valeur: "",
+      taille: TAILLE_TEXTE,
+    };
+    void tick().then(() => champTexte?.focus());
+  }
+
+  function modifierTexte(n: Annotation) {
+    if (!seModifieEnPlace(n) || outil !== "choisir") return;
+    const zone = estZone(n);
+    edition = {
+      id: n.id,
+      position: zone ? { x: n.position.x + 8, y: n.position.y + 4 } : { ...n.position },
+      valeur: n.texte.split("\n")[0] ?? "",
+      taille: zone ? 13 : (n.taille ?? 16),
+    };
+    void tick().then(() => {
+      champTexte?.focus();
+      champTexte?.select();
+    });
+  }
+
+  /** Entrée, ou le champ quitté : le texte est posé (un texte vide n'est pas gardé). */
+  function validerTexte() {
+    const saisie = edition;
+    if (!saisie) return;
+    edition = null;
+    const texte = saisie.valeur.trim();
+    if (saisie.id === null) {
+      outil = "choisir";
+      if (!texte) {
+        svg?.focus();
+        return;
+      }
+      const id = nouvelId("n");
+      editeur.agir((s) => {
+        s.annotations.push({ id, texte, forme: "texte", position: saisie.position, taille: saisie.taille });
+      }, "Texte posé. Il se déplace à la souris ou aux flèches (Maj : grands pas) ; double-clic pour le modifier.");
+      editeur.selection = [id];
+      rendreLaMain(id);
+      return;
+    }
+    const id = saisie.id;
+    const avant = schema.annotations.find((n) => n.id === id);
+    if (!avant) return;
+    if (!texte && avant.forme === "texte") {
+      editeur.agir((s) => {
+        s.annotations = s.annotations.filter((n) => n.id !== id);
+      }, "Texte vide : retiré. Ctrl+Z pour le retrouver.");
+      editeur.selection = editeur.selection.filter((x) => x !== id);
+      svg?.focus();
+      return;
+    }
+    if (texte !== (avant.texte.split("\n")[0] ?? "")) {
+      editeur.agir((s) => {
+        const n = s.annotations.find((x) => x.id === id);
+        if (n) n.texte = [texte, ...n.texte.split("\n").slice(1)].join("\n");
+      });
+    }
+    // Le texte modifié reste choisi : les flèches le déplacent, Suppr le retire.
+    editeur.selection = [id];
+    rendreLaMain(id);
+  }
+
+  /** Échap : rien n'est gardé de la saisie. */
+  function annulerTexte() {
+    const saisie = edition;
+    edition = null;
+    if (saisie?.id === null) outil = "choisir";
+    rendreLaMain(saisie?.id ?? undefined);
+  }
+
+  // --- Outil Zone ---
+
+  /** Une zone rectangulaire : le rectangle tiré, ou une zone de taille courante autour d'un simple clic. */
+  function poserZone(depart: Point, fin: Point) {
+    const [l, h] = [Math.abs(fin.x - depart.x), Math.abs(fin.y - depart.y)];
+    const clic = l < 12 / camera.zoom && h < 12 / camera.zoom;
+    const position = clic
+      ? { x: aimanter(depart.x - 120), y: aimanter(depart.y - 80) }
+      : { x: aimanter(Math.min(depart.x, fin.x)), y: aimanter(Math.min(depart.y, fin.y)) };
+    const id = nouvelId("n");
+    editeur.agir((s) => {
+      s.annotations.push({
+        id,
+        texte: "Zone",
+        forme: "rectangle",
+        position,
+        largeur: clic ? 240 : Math.max(40, aimanter(l)),
+        hauteur: clic ? 160 : Math.max(30, aimanter(h)),
+        couleur: "#1f62b0",
+      });
+    }, "Zone posée : ses poignées la redimensionnent, un double-clic sur son bord change son nom.");
+    editeur.selection = [id];
+    outil = "choisir";
+    rendreLaMain(id);
+  }
+
+  /** Ce que l'outil en cours attend (dit aussi aux lecteurs d'écran). */
+  const consigneOutil = $derived.by(() => {
+    if (pose) {
+      const nom = pose.startsWith("type:") ? definition(pose.slice(5)).nom : "Élément";
+      return `${nom} : cliquez sur le plan à l'endroit voulu. Échap pour renoncer.`;
+    }
+    const depart = tirage ? (parId.get(tirage.depart)?.nom ?? "") : "";
+    if (outil === "cable") {
+      return depart
+        ? `Câble depuis ${depart} : cliquez l'autre équipement.`
+        : "Câble : cliquez un équipement, puis un autre (ou glissez de l'un à l'autre). Échap pour arrêter.";
+    }
+    if (outil === "relation") {
+      return depart
+        ? `Relation depuis ${depart} : cliquez l'autre équipement.`
+        : "Relation : cliquez un équipement, puis celui dont il dépend. Échap pour arrêter.";
+    }
+    if (outil === "texte") return edition ? null : "Texte : cliquez à l'endroit voulu. Échap pour arrêter.";
+    if (outil === "zone") return "Zone : cliquez, ou tirez un rectangle. Échap pour arrêter.";
+    if (outil === "effacer") return "Effacer : cliquez ce qu'il faut retirer. Ctrl+Z annule, Échap arrête.";
+    return null;
+  });
 
   function deposer(evenement: DragEvent) {
     const genre = evenement.dataTransfer?.getData("application/x-kyfrev-topologie");
@@ -891,7 +1361,7 @@
   }
 
   const rectangle = $derived(
-    geste?.genre === "rectangle"
+    geste?.genre === "rectangle" || geste?.genre === "zone"
       ? {
           x: Math.min(geste.depart.x, geste.courant.x),
           y: Math.min(geste.depart.y, geste.courant.y),
@@ -901,6 +1371,7 @@
       : null,
   );
   const fil = $derived.by(() => {
+    if (filDuTirage) return filDuTirage;
     if (geste?.genre !== "connexion") return null;
     const source = parId.get(geste.source);
     return source ? { de: source.position, vers: geste.courant } : null;
@@ -1076,6 +1547,8 @@
 
   // Barre d'actions rapides, au-dessus de l'objet choisi.
   const barre = $derived.by(() => {
+    // Mode simplifié : les bulles la remplacent.
+    if (simplifie || outil !== "choisir" || edition) return null;
     if (geste || editeur.cable || editeur.selection.length === 0) return null;
     const equipements = editeur.selection.map((id) => parId.get(id)).filter((e) => e !== undefined);
     if (editeur.selection.length === 1 && equipements.length === 1) {
@@ -1149,6 +1622,9 @@
     });
   }
 
+  const textesLibres = $derived(
+    new Set(schema.annotations.filter((n) => n.forme === "texte").map((n) => n.id)),
+  );
   const zones = $derived(affichage.zones ? schema.annotations.filter(estZone) : []);
   const autresAnnotations = $derived(
     affichage.annotations ? schema.annotations.filter((n) => !estZone(n)) : [],
@@ -1185,6 +1661,11 @@
       editeur.cable = null;
       return;
     }
+    if (e.key === "Escape" && tirage && !e.defaultPrevented) {
+      e.preventDefault();
+      tirage = null;
+      return;
+    }
     if (document.activeElement !== svg) return;
     if (e.key === " ") {
       espace = true;
@@ -1207,9 +1688,13 @@
   class="canevas"
   class:deplacement={geste?.genre === "plan"}
   class:main={plan}
-  class:cable={editeur.cable !== null}
+  class:cable={editeur.cable !== null || outil === "cable" || outil === "relation"}
+  class:pose={pose !== null || outil === "zone"}
+  class:texte={outil === "texte"}
+  class:effacer={outil === "effacer"}
+  class:simplifie
   role="application"
-  aria-label="Plan du schéma réseau : faites glisser un équipement de la bibliothèque, Suppr retire la sélection, Ctrl+Z annule. Se déplacer : molette ou deux doigts, flèches, Espace ou H et glisser ; zoom : Ctrl+molette ou pincer, + et −, 0 pour tout voir ; Alt maintenu pendant un déplacement : sans grille ni aimantation"
+  aria-label="Plan du schéma réseau : faites glisser un équipement du plateau, ou choisissez-le puis cliquez ici. Tab passe d'un objet à l'autre, Entrée le choisit, Suppr retire la sélection, Ctrl+Z annule. Se déplacer : molette ou deux doigts, flèches, Espace ou H et glisser ; zoom : Ctrl+molette ou pincer, + et −, 0 pour tout voir ; Alt maintenu pendant un déplacement : sans grille ni aimantation"
   tabindex="0"
   viewBox="{camera.x} {camera.y} {largeur / camera.zoom} {hauteur / camera.zoom}"
   onpointerdown={appuiSurLePlan}
@@ -1284,8 +1769,17 @@
   {/each}
 
   {#each zones as n (n.id)}
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <g class="annotation zone" class:choisi={choisis.has(n.id)} onpointerdown={(ev) => appuiSurObjet(ev, n.id)}>
+    <g
+      class="annotation zone"
+      class:choisi={choisis.has(n.id)}
+      data-id={n.id}
+      role="button"
+      tabindex="0"
+      aria-label="Zone : {n.texte.split('\n')[0] || 'sans nom'}"
+      onpointerdown={(ev) => appuiSurObjet(ev, n.id)}
+      ondblclick={() => modifierTexte(n)}
+      onkeydown={(ev) => toucheSurObjet(ev, n.id)}
+    >
       {@html dessinerAnnotation(n)}
       {#if n.forme === "ellipse"}
         <ellipse
@@ -1302,32 +1796,47 @@
   {/each}
 
   {#each traces as t (t.lien.id)}
+    <!-- Mode simplifié : les câbles de deux mêmes équipements se choisissent ensemble, le premier les représente au clavier. -->
     <g
       class="lien"
       class:choisi={choisis.has(t.lien.id)}
       class:prevu={t.lien.statut === "prevu"}
       class:relie={survole !== null && (t.lien.a.equipement === survole || t.lien.b.equipement === survole)}
+      data-id={t.lien.id}
+      role="button"
+      tabindex={simplifie && !premiersCables.has(t.lien.id) ? -1 : 0}
+      aria-label={libelleDuCable(t.lien)}
+      onkeydown={(e) => toucheSurObjet(e, t.lien.id)}
     >
-      <path
-        d={cheminDe(t.trace)}
-        fill="none"
-        stroke={t.trait.couleur}
-        stroke-width={t.trait.epaisseur}
-        stroke-dasharray={t.trait.tirets}
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      />
-      {#if t.agregat}
-        <g pointer-events="none">{@html dessinerMarque(t.agregat, t.trait.couleur)}</g>
+      {#if estTrunk(schema, t.lien)}
+        <!-- L'étiquette abrège une longue liste de VLAN : la liste entière se lit au survol du câble. -->
+        <title>{texteTrunk(schema, t.lien)}</title>
+      {/if}
+      <!-- Un trait par câble : ceux d'un agrégat se voient tous, sous leur cercle. -->
+      {#each t.brins ?? [t.trace] as brin, k (k)}
+        <path
+          class="trait"
+          d={cheminDe(brin)}
+          fill="none"
+          stroke={t.trait.couleur}
+          stroke-width={t.trait.epaisseur}
+          stroke-dasharray={t.trait.tirets}
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      {/each}
+      {#if t.cercle}
+        <g pointer-events="none">{@html dessinerMarque(t.cercle, t.trait.couleur)}</g>
       {/if}
       <!-- svelte-ignore a11y_no_static_element_interactions -->
       <path
         d={cheminDe(t.trace)}
         class="prise"
+        style="stroke-width: {14 + ((t.brins?.length ?? 1) - 1) * 8}px"
         onpointerdown={(e) => appuiSurLien(e, t.lien.id)}
         ondblclick={(e) => ajouterPassage(e, t.lien.id, false)}
       />
-      {#each boutsDe(t.trace) as p, i (i)}
+      {#each simplifie ? [] : boutsDe(t.trace) as p, i (i)}
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <g class="bout" onpointerdown={(e) => detacher(e, t.lien.id, i === 0 ? "a" : "b")}>
           <title>Détacher ce bout du câble (puis cliquer l'équipement où le brancher)</title>
@@ -1335,7 +1844,7 @@
           <circle cx={p.x} cy={p.y} r="5" class="pastille-bout" stroke={t.trait.couleur} />
         </g>
       {/each}
-      {#if choisis.has(t.lien.id)}
+      {#if choisis.has(t.lien.id) && !simplifie}
         {#each t.lien.points as p, i (i)}
           <!-- svelte-ignore a11y_no_static_element_interactions -->
           <circle
@@ -1384,6 +1893,11 @@
     </g>
   {/each}
 
+  {#if cablesChoisis}
+    {@const c = cablesChoisis.cadre}
+    <rect x={c.x0} y={c.y0} width={c.x1 - c.x0} height={c.y1 - c.y0} rx="9" class="cadre-objet" />
+  {/if}
+
   <g class="etiquettes">
     {#each etiquettes as etiquette, i (i)}
       {@html dessinerEtiquette(etiquette)}
@@ -1395,16 +1909,20 @@
     {@const couleur = couleurDe(e)}
     {@const adresse = affichage.adresses ? adresseAffichee(e) : ""}
     {@const b = boiteDe(e, 0)}
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
     <g
       class="equipement"
       class:choisi={choisis.has(e.id)}
       class:verrouille={e.verrou}
       class:estompe={trouves !== null && !trouves.has(e.id)}
+      class:depart={tirage?.depart === e.id}
       data-id={e.id}
+      role="button"
+      tabindex="0"
+      aria-label="{e.nom}, {def.nom}{adresse ? `, ${adresse}` : ''}{e.verrou ? ', verrouillé' : ''}"
       onpointerdown={(ev) => appuiSurObjet(ev, e.id)}
       onpointerenter={() => (survole = e.id)}
       onpointerleave={() => (survole = null)}
+      onkeydown={(ev) => toucheSurObjet(ev, e.id)}
     >
       <title>{e.nom} — {def.nom}{e.verrou ? " (verrouillé)" : ""}</title>
       <rect
@@ -1439,7 +1957,11 @@
       {#if e.replie}
         <text x={b.x1 + 2} y={b.y0 + 8} class="replie">+</text>
       {/if}
-      {#if !e.verrou && def.ports.length + e.interfaces.length > 0}
+      {#if choisis.has(e.id)}
+        {@const c = cadreDe(e)}
+        <rect x={c.x0} y={c.y0} width={c.x1 - c.x0} height={c.y1 - c.y0} rx="9" class="cadre-objet" />
+      {/if}
+      {#if !simplifie && !e.verrou && def.ports.length + e.interfaces.length > 0}
         <!-- svelte-ignore a11y_no_static_element_interactions -->
         <circle
           cx={b.x1 + 4}
@@ -1455,8 +1977,18 @@
   {/each}
 
   {#each autresAnnotations as n (n.id)}
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <g class="annotation" class:choisi={choisis.has(n.id)} onpointerdown={(ev) => appuiSurObjet(ev, n.id)}>
+    <g
+      class="annotation"
+      class:choisi={choisis.has(n.id)}
+      class:en-saisie={edition?.id === n.id}
+      data-id={n.id}
+      role="button"
+      tabindex="0"
+      aria-label="{n.forme === 'texte' ? 'Texte' : n.forme === 'fleche' ? 'Flèche' : 'Note'} : {n.texte.split('\n')[0] || 'vide'}"
+      onpointerdown={(ev) => appuiSurObjet(ev, n.id)}
+      ondblclick={() => modifierTexte(n)}
+      onkeydown={(ev) => toucheSurObjet(ev, n.id)}
+    >
       {@html dessinerAnnotation(n.texte || n.forme ? n : { ...n, texte: "Annotation" })}
       {#if n.forme === "fleche"}
         {@const vers = n.vers ?? { x: n.position.x + 120, y: n.position.y }}
@@ -1480,6 +2012,20 @@
     {:else}
       {@const c = cadreAnnotation(n)}
       <rect x={c.x - 4} y={c.y - 4} width={c.largeur + 8} height={c.hauteur + 8} rx="6" class="cadre-choisi" />
+      {#if n.forme === "texte" && edition?.id !== n.id}
+        <!-- Texte libre choisi (11A) : cadre en tirets, repères de coin, et une poignée pour le saisir. -->
+        {#each [[c.x - 4, c.y - 4], [c.x + c.largeur + 4, c.y - 4], [c.x - 4, c.y + c.hauteur + 4], [c.x + c.largeur + 4, c.y + c.hauteur + 4]] as [x = 0, y = 0], k (k)}
+          <rect x={x - 3.5} y={y - 3.5} width="7" height="7" class="coin-texte" />
+        {/each}
+        {@const px = c.x + c.largeur / 2}
+        {@const py = c.y - 21}
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <g class="poignee-texte" onpointerdown={(e) => appuiSurObjet(e, n.id)}>
+          <title>Faire glisser pour déplacer le texte (ou les flèches du clavier)</title>
+          <circle cx={px} cy={py} r="11" />
+          <path d="M{px} {py - 7}v14M{px - 7} {py}h14M{px} {py - 7}l-3 3M{px} {py - 7}l3 3M{px} {py + 7}l-3 -3M{px} {py + 7}l3 -3M{px - 7} {py}l3 -3M{px - 7} {py}l3 3M{px + 7} {py}l-3 -3M{px + 7} {py}l-3 3" />
+        </g>
+      {/if}
       {#if estZone(n)}
         {@const cote = 11 / camera.zoom}
         {#each POIGNEES as p (p.poignee)}
@@ -1540,6 +2086,67 @@
     <span>{consigneCable}</span>
     <button type="button" class="bouton petit" onclick={() => (editeur.cable = null)}>Reposer (Échap)</button>
   </div>
+{:else if consigneOutil}
+  <p class="consigne-cable consigne-outil" role="status">{consigneOutil}</p>
+{/if}
+
+{#if edition}
+  {@const ou = versEcran(edition.position)}
+  <input
+    bind:this={champTexte}
+    class="texte-en-place"
+    style="left: {ou.x}px; top: {ou.y}px; font-size: {Math.max(11, edition.taille * camera.zoom)}px"
+    aria-label={edition.id === null ? "Texte à poser sur le plan" : "Texte"}
+    placeholder={edition.id === null ? "Texte" : ""}
+    maxlength="200"
+    autocomplete="off"
+    bind:value={edition.valeur}
+    onkeydown={(e) => {
+      // Entrée valide, Échap renonce ; aucune touche de la saisie ne touche le schéma.
+      e.stopPropagation();
+      if (e.key === "Enter") {
+        e.preventDefault();
+        validerTexte();
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        annulerTexte();
+      }
+    }}
+    onblur={validerTexte}
+  />
+{/if}
+
+{#if bulle}
+  {#key bulle.cle}
+    {#if bulle.genre === "equipement"}
+      {@const choisi = bulle.equipement}
+      <Bulle
+        objet={bulle.objet}
+        libelle="Réglages de {choisi.nom}"
+        auClavier={bulleAuClavier}
+        onfermer={() => fermerBulle(choisi.id)}
+      >
+        <BulleEquipement
+          {editeur}
+          equipement={choisi}
+          {ondupliquer}
+          {onretirer}
+          onavance={() => onavance?.()}
+        />
+      </Bulle>
+    {:else}
+      {@const retour = bulle.retour}
+      <Bulle
+        objet={bulle.objet}
+        cotes={["dessous", "dessus", "droite", "gauche"]}
+        libelle="Réglages des câbles entre {bulle.groupe.a.nom} et {bulle.groupe.b.nom}"
+        auClavier={bulleAuClavier}
+        onfermer={() => fermerBulle(retour)}
+      >
+        <BulleCable {editeur} groupe={bulle.groupe} {onretirer} onavance={() => onavance?.()} />
+      </Bulle>
+    {/if}
+  {/key}
 {/if}
 
 {#if menuPorts && editeur.cable}
@@ -1694,7 +2301,7 @@
   </div>
 {/if}
 
-{#if miniCarte && etendue}
+{#if miniCarte && etendue && !simplifie}
   <!-- Aide au pointeur : le clavier a les flèches, + − et 0. -->
   <svg
     bind:this={carte}
@@ -1735,11 +2342,16 @@
     display: block;
     width: 100%;
     height: 100%;
-    background: var(--fond);
+    background: var(--surface);
     font-family: var(--police);
     touch-action: none;
     user-select: none;
     cursor: default;
+  }
+
+  /* Le plan qui a la main après un clic : pas de contour (le moteur en met un aux SVG) ; au clavier, si. */
+  .canevas:focus {
+    outline: none;
   }
 
   .canevas:focus-visible {
@@ -1757,8 +2369,133 @@
     cursor: grabbing;
   }
 
-  .canevas.cable {
+  .canevas.cable,
+  .canevas.pose,
+  .canevas.pose * {
     cursor: crosshair;
+  }
+
+  .canevas.texte,
+  .canevas.texte * {
+    cursor: text;
+  }
+
+  .canevas.effacer .equipement,
+  .canevas.effacer .annotation,
+  .canevas.effacer .prise,
+  .canevas.effacer .nom-groupe {
+    cursor: not-allowed;
+  }
+
+  .canevas.effacer .equipement:hover .pave {
+    fill: var(--retard);
+    fill-opacity: 0.12;
+    stroke: var(--retard);
+    stroke-width: 2;
+  }
+
+  .canevas.effacer .lien:hover .trait {
+    filter: drop-shadow(0 0 3px var(--retard));
+  }
+
+  /* Le clavier : l'objet qui a la main se voit, sans dépendre du contour par défaut du moteur. */
+  .equipement,
+  .lien,
+  .annotation {
+    outline: none;
+  }
+
+  .equipement:focus-visible .pave {
+    stroke: var(--focus);
+    stroke-width: 2.5;
+    stroke-dasharray: none;
+  }
+
+  .lien:focus-visible .prise {
+    stroke: var(--focus);
+    stroke-opacity: 0.3;
+  }
+
+  /* Une annotation choisie a déjà son cadre : le repère du clavier ne s'y ajoute pas. */
+  .annotation:not(.choisi):focus-visible .prise-note,
+  .annotation:not(.choisi):focus-visible .prise-fleche,
+  .annotation:not(.choisi):focus-visible .prise-zone {
+    stroke: var(--focus);
+    stroke-opacity: 0.45;
+    stroke-width: 3;
+  }
+
+  /* L'équipement d'où part le câble commencé. */
+  .equipement.depart .pave {
+    fill: var(--focus);
+    fill-opacity: 0.15;
+    stroke: var(--focus);
+    stroke-width: 2.5;
+  }
+
+  .consigne-outil {
+    margin: 0;
+    padding: 6px 12px;
+    border-color: var(--bordure);
+    color: var(--texte);
+    pointer-events: none;
+  }
+
+  .texte-en-place {
+    position: absolute;
+    z-index: 4;
+    min-width: 90px;
+    max-width: calc(100% - 16px);
+    padding: 0 4px;
+    margin: -1px 0 0 -5px;
+    border: 1.5px dashed var(--focus);
+    border-radius: 5px;
+    background: var(--surface);
+    color: var(--texte);
+    font-family: var(--police);
+    font-weight: 600;
+    line-height: 1.3;
+    field-sizing: content;
+  }
+
+  .texte-en-place:focus-visible {
+    outline: none;
+    border-style: solid;
+  }
+
+  /* Le texte en cours de saisie : le champ le remplace. */
+  .annotation.en-saisie {
+    visibility: hidden;
+  }
+
+  /* Cadre de l'objet choisi (11A, 12) : un contour, qui prend aussi le nom et l'adresse. */
+  .cadre-objet {
+    fill: none;
+    stroke: var(--focus);
+    stroke-width: 2.2;
+    pointer-events: none;
+  }
+
+  .coin-texte {
+    fill: var(--surface);
+    stroke: var(--focus);
+    stroke-width: 1.5;
+    pointer-events: none;
+  }
+
+  .poignee-texte {
+    cursor: move;
+  }
+
+  .poignee-texte circle {
+    fill: transparent;
+  }
+
+  .poignee-texte path {
+    fill: none;
+    stroke: var(--focus);
+    stroke-width: 1.6;
+    stroke-linecap: round;
   }
 
   .equipement.estompe {
@@ -1938,19 +2675,12 @@
     cursor: default;
   }
 
-  .equipement.choisi .pave {
-    fill: var(--focus);
-    fill-opacity: 0.12;
-    stroke: var(--focus);
-    stroke-width: 2;
-    stroke-dasharray: none;
-  }
 
   /* Liseré de la couleur du fond : un nom reste lisible sur un câble (D50). */
   .nom,
   .adresse {
     paint-order: stroke;
-    stroke: var(--fond);
+    stroke: var(--surface);
     stroke-width: 4px;
     stroke-linejoin: round;
   }
@@ -1966,7 +2696,7 @@
     pointer-events: none;
   }
 
-  .lien.relie > path:first-child {
+  .lien.relie > .trait {
     filter: drop-shadow(0 0 2.5px var(--focus));
   }
 
@@ -2010,12 +2740,12 @@
     cursor: move;
   }
 
-  .lien.choisi path:first-child,
+  .lien.choisi .trait,
   .relation.choisi path:first-child {
     filter: drop-shadow(0 0 3px var(--focus));
   }
 
-  .lien.prevu path:first-child {
+  .lien.prevu .trait {
     opacity: 0.6;
   }
 

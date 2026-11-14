@@ -36,6 +36,9 @@
   <data name="BadCall" xml:space="preserve">
     <value>Appel refusé.</value>
   </data>
+  <data name="ClipboardBusy" xml:space="preserve">
+    <value>L'image n'a pas pu être copiée : le presse-papiers est occupé, ou l'image est illisible. Réessayez.</value>
+  </data>
   <data name="ChooseFile" xml:space="preserve">
     <value>Choisir un schéma à importer</value>
   </data>

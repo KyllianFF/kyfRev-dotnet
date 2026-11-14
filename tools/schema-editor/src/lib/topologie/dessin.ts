@@ -22,7 +22,7 @@ import type {
   Vue,
 } from "./modele";
 import { interfaceDe, RELATIONS_SYMETRIQUES } from "./modele";
-import { agregatDe, configDuBout, texteAgregat, texteVlan } from "./vlans";
+import { agregatDe, configDuBout, enAgregat, estTrunk, texteAgregat, texteTrunk, texteVlan } from "./vlans";
 import { liensVisibles, relationVisible, vue as vueDe } from "./vues";
 
 export { icone } from "./pictogrammes";
@@ -237,6 +237,15 @@ export function traceEntre(
     const de2 = { x: de.x + nx, y: de.y + ny };
     const vers2 = { x: vers.x + nx, y: vers.y + ny };
     return [borne(bornes[0], de2, vers2), borne(bornes[1], vers2, de2)];
+  }
+  if (ecart !== 0) {
+    // Avec des points de passage : chaque segment se décale, comme des rails (les traits d'un faisceau).
+    const rail = decaler([de, ...passages, vers], ecart);
+    return [
+      borne(bornes[0], rail[0] as Point, rail[1] as Point),
+      ...rail.slice(1, -1),
+      borne(bornes[1], rail.at(-1) as Point, rail.at(-2) as Point),
+    ];
   }
   const premier = passages[0] ?? vers;
   const dernier = passages.at(-1) ?? de;
@@ -484,6 +493,7 @@ export function choisirRoutes(
   liens: Lien[],
   presents: Equipement[],
   ecarts: Map<string, number>,
+  faisceaux?: Map<string, Faisceau>,
 ): Map<string, Route> {
   const parId = new Map(presents.map((e) => [e.id, e]));
   const routes = new Map<string, Route>();
@@ -522,7 +532,14 @@ export function choisirRoutes(
     const eqQ = parId.get(idQ);
     if (!eqP || !eqQ) continue;
     const [p, q] = [eqP.position, eqQ.position];
-    const voies = ((groupe.length - 1) * 16) / 2;
+    // Demi-largeur de la paire : du câble le plus écarté, avec les traits de son faisceau.
+    const voies = Math.max(
+      0,
+      ...groupe.map(
+        (l) =>
+          Math.abs(ecarts.get(l.id) ?? 0) + (((faisceaux?.get(l.id)?.brins ?? 1) - 1) * PAS_FAISCEAU) / 2,
+      ),
+    );
     const tolerance = voies + 9;
     const habituelle = routeParDefaut(p, q).forme;
     // Toutes les routes possibles, avec leur coût propre : un coude coûte ; un L,
@@ -629,8 +646,61 @@ class Repartition<T> {
   }
 }
 
-/** Écart de chaque câble droit parmi ceux qui relient deux mêmes équipements (16 px entre deux). */
-export function ecartsParalleles(liens: Lien[]): Map<string, number> {
+/** Écart entre deux câbles ordinaires, et entre deux traits d'un même faisceau (les ports d'un agrégat). */
+const PAS_CABLES = 16;
+export const PAS_FAISCEAU = 8;
+/** Traits dessinés au plus pour un seul câble (un agrégat de nombreux ports reste lisible). */
+const BRINS_MAX = 8;
+
+/**
+ * Faisceau d'un câble d'agrégat de liens : les câbles de même `cle` entre deux mêmes équipements
+ * partagent un cercle ; `brins` est le nombre de traits du câble (un par port de son agrégat).
+ */
+export type Faisceau = { cle: string; brins: number };
+
+/**
+ * Les faisceaux des agrégats de liens. Un agrégat n'a qu'un câble au modèle, qui vaut pour tous ses
+ * ports : il se dessine en autant de traits, sous un cercle. Un trunk n'est pas un agrégat : sans
+ * agrégat, des câbles en trunk restent des câbles ordinaires, annotés. Des câbles au tracé différent
+ * (droit ou coudé, palier, points de passage) ne partagent pas de cercle.
+ */
+export function faisceauxDe(schema: Schema, liens: Lien[]): Map<string, Faisceau> {
+  const agregatDuLien = (lien: Lien) => {
+    const [a, b] = [agregatDe(schema, lien.a), agregatDe(schema, lien.b)];
+    if (!a && !b) return null;
+    return {
+      cle: `a:${a?.id ?? ""}:${b?.id ?? ""}`,
+      ports: Math.max(a?.membres.length ?? 0, b?.membres.length ?? 0),
+    };
+  };
+  const cables = new Map<string, number>();
+  for (const lien of liens) {
+    const agregat = agregatDuLien(lien);
+    if (agregat) cables.set(agregat.cle, (cables.get(agregat.cle) ?? 0) + 1);
+  }
+  const faisceaux = new Map<string, Faisceau>();
+  for (const lien of liens) {
+    const agregat = agregatDuLien(lien);
+    if (!agregat) continue;
+    const trace = [
+      estCoude(schema, lien) ? "c" : "d",
+      lien.palier ? `${lien.palier.axe}${lien.palier.position}` : "",
+      lien.points.length > 0 ? lien.id : "",
+    ].join("|");
+    faisceaux.set(lien.id, {
+      cle: `${agregat.cle}|${trace}`,
+      brins: cables.get(agregat.cle) === 1 ? Math.max(1, Math.min(BRINS_MAX, agregat.ports)) : 1,
+    });
+  }
+  return faisceaux;
+}
+
+/**
+ * Écart de chaque câble droit parmi ceux qui relient deux mêmes équipements : 16 px entre deux câbles,
+ * 8 px entre deux traits d'un même faisceau (`faisceaux` : les agrégats, dont les traits se serrent
+ * sous leur cercle ; chaque faisceau est regroupé à la place de son premier câble).
+ */
+export function ecartsParalleles(liens: Lien[], faisceaux?: Map<string, Faisceau>): Map<string, number> {
   const paires = new Map<string, Lien[]>();
   for (const lien of liens) {
     if (lien.points.length > 0) continue;
@@ -641,10 +711,27 @@ export function ecartsParalleles(liens: Lien[]): Map<string, number> {
   const ecarts = new Map<string, number>();
   for (const groupe of paires.values()) {
     if (groupe.length < 2) continue;
-    groupe.forEach((lien, i) => {
+    const cleDe = (lien: Lien) => faisceaux?.get(lien.id)?.cle;
+    const ordonnes = groupe.flatMap((lien, i) => {
+      const cle = cleDe(lien);
+      if (cle === undefined) return [lien];
+      return groupe.findIndex((l) => cleDe(l) === cle) === i ? groupe.filter((l) => cleDe(l) === cle) : [];
+    });
+    // Le centre de chaque câble, de proche en proche ; le tout est ensuite centré sur l'axe de la paire.
+    const centres: number[] = [];
+    let curseur = 0;
+    ordonnes.forEach((lien, i) => {
+      const avant = ordonnes[i - 1];
+      if (avant)
+        curseur += cleDe(lien) !== undefined && cleDe(lien) === cleDe(avant) ? PAS_FAISCEAU : PAS_CABLES;
+      const largeur = ((faisceaux?.get(lien.id)?.brins ?? 1) - 1) * PAS_FAISCEAU;
+      centres.push(curseur + largeur / 2);
+      curseur += largeur;
+    });
+    ordonnes.forEach((lien, i) => {
       // Même sens pour tous (sinon la normale s'inverse avec le sens du lien).
       const sens = lien.a.equipement <= lien.b.equipement ? 1 : -1;
-      ecarts.set(lien.id, (i - (groupe.length - 1) / 2) * 16 * sens);
+      ecarts.set(lien.id, ((centres[i] as number) - curseur / 2) * sens);
     });
   }
   return ecarts;
@@ -951,6 +1038,8 @@ export type Etiquette = {
   taille: number;
   genre: "port" | "nom" | "vlan";
   couleur?: string;
+  /** Le texte entier, quand l'étiquette l'abrège (une longue liste de VLAN) : il se lit au survol. */
+  titre?: string;
 };
 
 const largeurDe = (texte: string, taille: number) => texte.length * taille * 0.58 + 10;
@@ -965,6 +1054,7 @@ export function dessinerEtiquette(e: Etiquette): string {
   const b = boiteEtiquette(e, 0);
   const contour = e.couleur ?? BORDURE;
   return [
+    e.titre ? `<g><title>${echapper(e.titre)}</title>` : "",
     `<rect x="${b.x0.toFixed(1)}" y="${b.y0.toFixed(1)}" width="${(b.x1 - b.x0).toFixed(1)}" height="${(b.y1 - b.y0).toFixed(1)}" rx="${((b.y1 - b.y0) / 2).toFixed(1)}" fill="${SURFACE}" stroke="${contour}"${e.couleur ? ' stroke-width="1.5"' : ""}/>`,
     texteSvg(
       e.x,
@@ -972,6 +1062,7 @@ export function dessinerEtiquette(e: Etiquette): string {
       e.texte,
       `text-anchor="middle" fill="${e.genre === "vlan" && e.couleur ? e.couleur : SECONDAIRE}" font-size="${e.taille}"${e.genre === "port" ? "" : ' font-weight="600"'}`,
     ),
+    e.titre ? "</g>" : "",
   ].join("");
 }
 
@@ -982,6 +1073,20 @@ const recouvrement = (a: Boite, b: Boite) =>
   Math.max(0, Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0));
 const abreger = (texte: string, maximum = 28) =>
   texte.length > maximum ? `${texte.slice(0, maximum - 1)}…` : texte;
+
+/** Largeur d'une étiquette de VLAN, en caractères : au-delà, la liste est coupée. */
+const VLAN_MAX = 32;
+
+/**
+ * Une liste de VLAN trop longue pour son étiquette, coupée après un numéro entier :
+ * « Trunk · U 1 · T 10,20,30-40,… ». Le texte entier reste dans le titre de l'étiquette.
+ */
+export function abregerVlans(texte: string, maximum = VLAN_MAX): string {
+  if (texte.length <= maximum) return texte;
+  const debut = texte.slice(0, maximum - 1);
+  const virgule = debut.lastIndexOf(",");
+  return virgule > 0 ? `${debut.slice(0, virgule + 1)}…` : `${debut}…`;
+}
 
 /** Ce qu'il faut étiqueter sur un tracé. */
 export type ATaguer = {
@@ -1095,7 +1200,14 @@ export function placerEtiquettes(elements: ATaguer[], obstacles: Boite[]): Map<s
     ] as const) {
       if (!texte) continue;
       const taille = genre === "nom" ? 11 : 10;
-      const base = { texte: abreger(texte), taille, genre, ...(couleur ? { couleur } : {}) };
+      const court = genre === "vlan" ? abregerVlans(texte) : abreger(texte);
+      const base = {
+        texte: court,
+        taille,
+        genre,
+        ...(couleur ? { couleur } : {}),
+        ...(genre === "vlan" && court !== texte ? { titre: texte } : {}),
+      };
       const distances = autourDuMilieu(parcours.total).map((d) => ({
         d,
         cout: Math.abs(d - parcours.total / 2),
@@ -1138,6 +1250,31 @@ function parcourir(trace: Point[]) {
   return { total, a };
 }
 
+/**
+ * Les annotations des câbles en trunk, par câble : « Trunk · U 1 · T 10,20 ». Des câbles parallèles en
+ * trunk aux mêmes VLAN n'en portent qu'une, sur le premier ; s'ils diffèrent, chacun a la sienne. Un
+ * agrégat a la sienne (un seul câble au modèle, un seul réglage VLAN).
+ */
+export function annotationsDeTrunk(schema: Schema, liens: Lien[]): Map<string, string> {
+  const paires = new Map<string, { lien: Lien; texte: string }[]>();
+  const annotations = new Map<string, string>();
+  for (const lien of liens) {
+    if (!estTrunk(schema, lien)) continue;
+    const texte = texteTrunk(schema, lien);
+    if (enAgregat(schema, lien)) {
+      annotations.set(lien.id, texte);
+      continue;
+    }
+    const cle = [lien.a.equipement, lien.b.equipement].sort().join("|");
+    paires.set(cle, [...(paires.get(cle) ?? []), { lien, texte }]);
+  }
+  for (const groupe of paires.values()) {
+    const memes = groupe.every((g) => g.texte === groupe[0]?.texte);
+    for (const [rang, g] of groupe.entries()) if (!memes || rang === 0) annotations.set(g.lien.id, g.texte);
+  }
+  return annotations;
+}
+
 /** VLAN d'un câble, d'après la configuration de l'un de ses bouts (son agrégat, sinon son port). */
 export function vlanDuLien(schema: Schema, lien: Lien): { texte: string; couleur?: string } | undefined {
   for (const bout of [lien.a, lien.b]) {
@@ -1147,19 +1284,57 @@ export function vlanDuLien(schema: Schema, lien: Lien): { texte: string; couleur
   return undefined;
 }
 
-/** Repère d'un agrégat (D51) : l'ellipse qui enserre le câble en son milieu. */
-export type Marque = { x: number; y: number; angle: number };
+/**
+ * Repère d'un agrégat de liens (D51) : l'ellipse qui enserre ses câbles, en travers du tracé. `rx` est son
+ * demi-axe en travers des câbles, `ry` le long. Le cercle n'a pas de libellé ; un trunk, lui, s'annote.
+ */
+export type Marque = { x: number; y: number; angle: number; rx: number; ry: number };
 
-export function marqueDAgregat(trace: Point[]): Marque {
-  const parcours = parcourir(trace);
-  const { p, n } = parcours.a(parcours.total / 2);
-  return { x: p.x, y: p.y, angle: (Math.atan2(n.y, n.x) * 180) / Math.PI };
+/**
+ * Le cercle d'un faisceau, posé sur le tracé de son axe : `etendue` est la distance entre ses deux traits
+ * extrêmes. Il se met au milieu du tracé si c'est sur un segment droit, loin d'un coude ; sinon au milieu
+ * du plus long segment.
+ */
+export function marqueDeFaisceau(trace: Point[], etendue = 0): Marque {
+  const rx = Math.max(12, etendue / 2 + 8);
+  const ry = 5;
+  const segments = segmentsDe(trace).map(([a, b]) => ({ a, b, l: Math.hypot(b.x - a.x, b.y - a.y) }));
+  const poser = (s: (typeof segments)[number], d: number): Marque => {
+    const t = s.l ? d / s.l : 0;
+    // L'angle de la normale du segment : le grand axe de l'ellipse est en travers du câble.
+    const angle = s.l ? (Math.atan2(s.b.x - s.a.x, -(s.b.y - s.a.y)) * 180) / Math.PI : -90;
+    return { x: s.a.x + (s.b.x - s.a.x) * t, y: s.a.y + (s.b.y - s.a.y) * t, angle, rx, ry };
+  };
+  const premier = segments[0];
+  if (!premier) return { x: trace[0]?.x ?? 0, y: trace[0]?.y ?? 0, angle: -90, rx, ry };
+  // Place qu'il faut de part et d'autre : le cercle, et un peu d'air avant le coude.
+  const garde = ry + 9;
+  let reste = segments.reduce((n, s) => n + s.l, 0) / 2;
+  for (const s of segments) {
+    if (reste <= s.l) {
+      if (segments.length === 1 || (reste >= garde && s.l - reste >= garde)) return poser(s, reste);
+      break;
+    }
+    reste -= s.l;
+  }
+  const long = segments.reduce((m, s) => (s.l > m.l ? s : m), premier);
+  return poser(long, long.l / 2);
 }
 
 export const dessinerMarque = (m: Marque, couleur: string): string =>
-  `<ellipse cx="${m.x.toFixed(1)}" cy="${m.y.toFixed(1)}" rx="12" ry="5" transform="rotate(${m.angle.toFixed(1)} ${m.x.toFixed(1)} ${m.y.toFixed(1)})" fill="none" stroke="${couleur}" stroke-width="1.6"/>`;
+  `<ellipse cx="${m.x.toFixed(1)}" cy="${m.y.toFixed(1)}" rx="${m.rx}" ry="${m.ry}" transform="rotate(${m.angle.toFixed(1)} ${m.x.toFixed(1)} ${m.y.toFixed(1)})" fill="none" stroke="${couleur}" stroke-width="1.6"/>`;
 
-const boiteMarque = (m: Marque): Boite => ({ x0: m.x - 13, y0: m.y - 13, x1: m.x + 13, y1: m.y + 13 });
+const boiteMarque = (m: Marque): Boite => ({
+  x0: m.x - m.rx - 1,
+  y0: m.y - m.rx - 1,
+  x1: m.x + m.rx + 1,
+  y1: m.y + m.rx + 1,
+});
+
+/** Épaisseur au plus des traits d'un faisceau qui en compte plusieurs : serrés, ils restent distincts. */
+const EPAISSEUR_FAISCEAU = 2.4;
+/** Ce que la légende dit du cercle. */
+export const LEGENDE_CERCLE = "Cercle : agrégat de liens";
 
 /** Ce qui est affiché : les choix du schéma, sinon ceux de la vue. */
 export function affichageDe(schema: Pick<Schema, "affichage">, v: Vue): Affichage {
@@ -1190,10 +1365,19 @@ export function occupationDe(e: Equipement, adresses: boolean): Boite[] {
 
 export type MiseEnPage = {
   /**
-   * `agregat` : repère d'un câble agrégé (trunk) ; `coude` : tracé à angle
-   * droit ; `route` : sa route, s'il n'a pas de point de passage.
+   * `trace` : l'axe du câble (étiquettes, prise du pointeur) ; `brins` : ses traits, s'il en a plusieurs
+   * (un par port de son agrégat) ; `cercle` : le repère de l'agrégat, porté par le premier câble du
+   * faisceau ; `coude` : tracé à angle droit ; `route` : sa route, s'il n'a pas de point de passage.
    */
-  liens: { lien: Lien; trace: Point[]; trait: Trait; coude: boolean; route?: Route; agregat?: Marque }[];
+  liens: {
+    lien: Lien;
+    trace: Point[];
+    trait: Trait;
+    coude: boolean;
+    route?: Route;
+    brins?: Point[][];
+    cercle?: Marque;
+  }[];
   /** `fleche` : relation orientée (une paire haute disponibilité n'en a pas). */
   relations: { relation: Relation; trace: Point[]; trait: Trait; nom: string; fleche: boolean }[];
   etiquettes: Map<string, Etiquette[]>;
@@ -1207,12 +1391,14 @@ export function mettreEnPage(schema: Schema, v: Vue, caches: Set<string>, sauf?:
   const visibles = liensVisibles(schema, v).filter(
     (l) => !caches.has(l.a.equipement) && !caches.has(l.b.equipement) && l.id !== sauf,
   );
-  const ecarts = ecartsParalleles(visibles);
+  const faisceaux = faisceauxDe(schema, visibles);
+  const ecarts = ecartsParalleles(visibles, faisceaux);
   const routes = choisirRoutes(
     schema,
     visibles,
     schema.equipements.filter((e) => !caches.has(e.id)),
     ecarts,
+    faisceaux,
   );
   const liens: MiseEnPage["liens"] = [];
   // Une interface partagée par plusieurs câbles (un nuage) n'a qu'une pastille.
@@ -1226,14 +1412,38 @@ export function mettreEnPage(schema: Schema, v: Vue, caches: Set<string>, sauf?:
   };
   const aTaguer: ATaguer[] = [];
   const marques: Boite[] = [];
+  // Le trunk s'annote sur le câble dans toutes les vues, sauf si le schéma masque les VLAN des câbles.
+  const trunks = schema.affichage?.vlans !== false ? annotationsDeTrunk(schema, visibles) : new Map<string, string>();
+  // Les câbles d'un même agrégat : ils partagent un cercle.
+  const grappes = new Map<string, { rang: number; lien: Lien; ecart: number; brins: number }[]>();
   for (const lien of visibles) {
     const a = parId.get(lien.a.equipement);
     const b = parId.get(lien.b.equipement);
     if (!a || !b) continue;
-    const trace = traceDuLien(schema, lien, a, b, ecarts.get(lien.id) ?? 0, routes.get(lien.id));
-    const agregat =
-      agregatDe(schema, lien.a) || agregatDe(schema, lien.b) ? marqueDAgregat(trace) : undefined;
-    if (agregat) marques.push(boiteMarque(agregat));
+    const ecart = ecarts.get(lien.id) ?? 0;
+    const faisceau = faisceaux.get(lien.id);
+    const trace = traceDuLien(schema, lien, a, b, ecart, routes.get(lien.id));
+    // Un agrégat : un trait par port, de part et d'autre de l'axe du câble.
+    const brins =
+      faisceau && faisceau.brins > 1
+        ? Array.from({ length: faisceau.brins }, (_, k) =>
+            traceDuLien(
+              schema,
+              lien,
+              a,
+              b,
+              ecart + (k - (faisceau.brins - 1) / 2) * PAS_FAISCEAU,
+              routes.get(lien.id),
+            ),
+          )
+        : undefined;
+    if (faisceau) {
+      const cle = `${[lien.a.equipement, lien.b.equipement].sort().join("|")}|${faisceau.cle}`;
+      grappes.set(cle, [
+        ...(grappes.get(cle) ?? []),
+        { rang: liens.length, lien, ecart, brins: faisceau.brins },
+      ]);
+    }
     // Route d'un câble coudé sans point de passage : le canevas en coulisse le palier (D53).
     const coude = estCoude(schema, lien);
     const route =
@@ -1246,7 +1456,7 @@ export function mettreEnPage(schema: Schema, v: Vue, caches: Set<string>, sauf?:
       trait: traitDuLien(lien),
       coude,
       ...(route ? { route } : {}),
-      ...(agregat ? { agregat } : {}),
+      ...(brins ? { brins } : {}),
     });
     const libelles = lien.libelles;
     const ports = libelles ? libelles === "ports" || libelles === "tout" : affichage.ports;
@@ -1260,8 +1470,43 @@ export function mettreEnPage(schema: Schema, v: Vue, caches: Set<string>, sauf?:
           }
         : {}),
       ...(nom && lien.nom ? { nom: lien.nom } : {}),
-      ...(affichage.vlans ? { vlan: vlanDuLien(schema, lien) } : {}),
+      // Une seule étiquette par câble : celle du trunk tient lieu d'étiquette de VLAN.
+      ...(estTrunk(schema, lien)
+        ? trunks.has(lien.id)
+          ? { vlan: { texte: trunks.get(lien.id) as string } }
+          : {}
+        : affichage.vlans
+          ? { vlan: vlanDuLien(schema, lien) }
+          : {}),
     });
+  }
+  // Le cercle de chaque faisceau, sur son axe, assez large pour entourer tous ses traits.
+  for (const grappe of grappes.values()) {
+    const premier = grappe[0];
+    const entree = premier ? liens[premier.rang] : undefined;
+    const a = premier ? parId.get(premier.lien.a.equipement) : undefined;
+    const b = premier ? parId.get(premier.lien.b.equipement) : undefined;
+    if (!premier || !entree || !a || !b) continue;
+    // Dans le sens du premier câble (l'écart d'un câble tracé dans l'autre sens est de signe opposé).
+    const direct = premier.lien.a.equipement <= premier.lien.b.equipement;
+    const sens = (l: Lien) => (l.a.equipement <= l.b.equipement === direct ? 1 : -1);
+    const bords = grappe.flatMap((g) => {
+      const demi = ((g.brins - 1) * PAS_FAISCEAU) / 2;
+      return [g.ecart * sens(g.lien) - demi, g.ecart * sens(g.lien) + demi];
+    });
+    const [bas, haut] = [Math.min(...bords), Math.max(...bords)];
+    const axe =
+      grappe.length === 1
+        ? entree.trace
+        : traceDuLien(schema, premier.lien, a, b, (bas + haut) / 2, routes.get(premier.lien.id));
+    entree.cercle = marqueDeFaisceau(axe, haut - bas);
+    marques.push(boiteMarque(entree.cercle));
+    // Plusieurs traits sous un même cercle : affinés, pour rester distincts.
+    if (haut - bas > 0)
+      for (const g of grappe) {
+        const e = liens[g.rang];
+        if (e) e.trait = { ...e.trait, epaisseur: Math.min(e.trait.epaisseur, EPAISSEUR_FAISCEAU) };
+      }
   }
   // Une relation entre deux équipements déjà reliés par des câbles droits passe à côté d'eux.
   const paires = new Map<string, number>();
@@ -1327,10 +1572,12 @@ export function dessinerSchema(schema: Schema, options: { vue?: Vue; legende?: b
     for (const n of schema.annotations) if (estZone(n)) parties.push(dessinerAnnotation(n));
   const legende = new Map<string, Trait>();
   const page = mettreEnPage(schema, v, caches);
-  for (const { trace, trait, agregat } of page.liens) {
-    legende.set(trait.nom, trait);
-    parties.push(dessinerTrace(trace, trait));
-    if (agregat) parties.push(dessinerMarque(agregat, trait.couleur));
+  let cercles = false;
+  for (const { lien, trace, trait, brins, cercle } of page.liens) {
+    legende.set(trait.nom, traitDuLien(lien));
+    for (const brin of brins ?? [trace]) parties.push(dessinerTrace(brin, trait));
+    if (cercle) parties.push(dessinerMarque(cercle, trait.couleur));
+    cercles ||= cercle !== undefined;
   }
   for (const { trace, trait, fleche } of page.relations) {
     legende.set(trait.nom, trait);
@@ -1372,6 +1619,23 @@ export function dessinerSchema(schema: Schema, options: { vue?: Vue; legende?: b
       );
     });
     hauteur += 20 + legende.size * 18;
+  }
+  if (options.legende && cercles) {
+    // Le cercle n'a pas de libellé sur le dessin : la légende dit ce qu'il veut dire.
+    const y = cadre.y + hauteur + (legende.size > 0 ? -6 : 14);
+    const trait: Trait = { couleur: SECONDAIRE, epaisseur: 2, nom: LEGENDE_CERCLE };
+    parties.push(
+      dessinerTrace(
+        [
+          { x: cadre.x + 12, y },
+          { x: cadre.x + 52, y },
+        ],
+        trait,
+      ),
+      dessinerMarque({ x: cadre.x + 32, y, angle: 90, rx: 9, ry: 4 }, SECONDAIRE),
+      texteSvg(cadre.x + 60, y + 4, LEGENDE_CERCLE, `fill="${SECONDAIRE}" font-size="11"`),
+    );
+    hauteur += legende.size > 0 ? 18 : 34;
   }
 
   return [

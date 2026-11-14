@@ -112,6 +112,52 @@ public sealed class ShellViewModelTests
     }
 
     [STATestMethod]
+    public void A_hidden_menu_comes_back_as_tabs_in_a_narrow_window_and_hides_again_when_it_widens()
+    {
+        var test = new TestShell();
+        var shell = new ShellViewModel(CorePages.All(), test.Appearance, test.Gallery) { WindowWidth = 1600 };
+        var changed = new List<string?>();
+        shell.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+
+        shell.ToggleFocusMode();
+        Assert.IsTrue(shell.IsFocusMode);
+        Assert.IsFalse(shell.IsMenuVisible, "masqué, en grand");
+
+        // La fenêtre rétrécit : le menu passe en onglets, et rien d'autre ne permettrait de changer de vue.
+        changed.Clear();
+        shell.WindowWidth = 500;
+        Assert.AreEqual(NavigationLayout.Tabs, shell.Layout);
+        Assert.IsTrue(shell.IsMenuVisible, "les onglets du bas ne se masquent pas");
+        Assert.IsTrue(shell.IsFocusMode, "le choix fait en grand reste retenu");
+        CollectionAssert.Contains(changed, nameof(ShellViewModel.IsMenuVisible), "la fenêtre l'apprend");
+
+        // Ctrl+Maj+F n'a rien à masquer ici : le choix ne change pas dans le dos de la personne.
+        shell.ToggleFocusMode();
+        Assert.IsTrue(shell.IsFocusMode);
+        Assert.IsTrue(shell.IsMenuVisible);
+
+        // Elle s'élargit : le menu latéral revient masqué, comme on l'avait laissé.
+        shell.WindowWidth = 1000;
+        Assert.AreEqual(NavigationLayout.Rail, shell.Layout);
+        Assert.IsFalse(shell.IsMenuVisible);
+        shell.ToggleFocusMode();
+        Assert.IsTrue(shell.IsMenuVisible);
+
+        // Le zoom de l'interface rapproche du palier étroit, lui aussi.
+        shell.ToggleFocusMode();
+        shell.WindowWidth = 900;
+        Assert.IsFalse(shell.IsMenuVisible);
+        shell.ZoomIn();
+        shell.ZoomIn();
+        shell.ZoomIn();
+        shell.ZoomIn();
+        if (shell.Layout == NavigationLayout.Tabs)
+        {
+            Assert.IsTrue(shell.IsMenuVisible);
+        }
+    }
+
+    [STATestMethod]
     public void Navigating_selects_the_entry_in_its_part_of_the_menu()
     {
         var shell = new TestShell().Shell;

@@ -36,6 +36,14 @@ describe("les lignes d'un titre", () => {
     expect(lignesDeTitre(35, DIX)).toBe(2);
   });
 
+  it("tient les titres de la fiche sur une ligne de 8 mm, pour un texte de 16 px", () => {
+    // Les tailles de fiche.css : 20, 16 et 14 points pour un corps de 12, puis la taille du texte.
+    for (const part of [1.667, 1.333, 1.167, 1, 1, 1]) expect(lignesDeTitre(16 * part, HUIT)).toBe(1);
+    // À 17 px, le premier niveau (28,3 px) n'y tenait plus.
+    expect(lignesDeTitre(17 * 1.667, HUIT)).toBe(2);
+    expect(lignesDeTitre(17 * 1.333, HUIT)).toBe(1);
+  });
+
   it("en prend deux, trois… quand il est plus grand", () => {
     expect(lignesDeTitre(40, HUIT)).toBe(2);
     expect(lignesDeTitre(54, HUIT)).toBe(2);

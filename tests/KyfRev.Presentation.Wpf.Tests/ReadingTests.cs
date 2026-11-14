@@ -954,7 +954,7 @@ public sealed class ReadingTests
     public void A_size_is_relative_to_the_text_around_it()
     {
         var elements = LogicalDescendants(Build("<span style=\"font-size:2em\">grand <span style=\"font-size:0.5em\">moyen</span></span>\n\n## <span style=\"font-size:2em\">Titre</span>\n\nfin", showsHeader: false).Document).OfType<Span>().ToList();
-        var reading = KyfRev.DesignSystem.Tokens.Typography.BodyLarge.Size;
+        var reading = ReadingComfort.Default.Size;
 
         Assert.AreEqual(reading * 2, elements[0].FontSize);
         Assert.AreEqual(reading, elements[1].FontSize);

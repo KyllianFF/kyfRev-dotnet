@@ -9,14 +9,20 @@
     <BooleanToVisibilityConverter x:Key="Visible" />
   </UserControl.Resources>
 
-  <!-- La fenêtre compacte : les réglages à gauche, une feuille à droite, que l'on feuillette. -->
-  <Grid>
+  <!-- La fenêtre compacte : les réglages à gauche, une feuille à droite, que l'on feuillette. Trop étroite pour les deux
+       côte à côte, elle les empile et défile d'un bloc (PrintView.Arrange). -->
+  <ScrollViewer x:Name="Whole" VerticalScrollBarVisibility="Disabled" HorizontalScrollBarVisibility="Disabled" Focusable="False">
+  <Grid x:Name="Parts">
     <Grid.ColumnDefinitions>
-      <ColumnDefinition Width="340" />
-      <ColumnDefinition Width="*" MinWidth="300" />
+      <ColumnDefinition x:Name="SettingsColumn" Width="340" />
+      <ColumnDefinition x:Name="PreviewColumn" Width="*" MinWidth="300" />
     </Grid.ColumnDefinitions>
+    <Grid.RowDefinitions>
+      <RowDefinition x:Name="SettingsRow" Height="*" />
+      <RowDefinition x:Name="PreviewRow" Height="0" />
+    </Grid.RowDefinitions>
 
-    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False" Margin="0,0,16,0">
+    <ScrollViewer x:Name="SettingsPane" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False" Margin="0,0,16,0">
       <StackPanel Margin="2,0,8,0">
         <kyf:Notification x:Name="PrintError" Severity="Critical" Message="{Binding Error}" IsOpen="{Binding HasError, Mode=OneWay}" IsClosable="False" Margin="0,0,0,12" />
 
@@ -88,6 +94,10 @@
           </Button>
         </WrapPanel>
 
+        <!-- Le papier chargé dans l'imprimante : celui de la fiche par défaut. En changer refait les pages de l'aperçu. -->
+        <TextBlock Text="{x:Static pages:PrintText.PaperFormat}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,12,0,4" />
+        <ComboBox x:Name="PaperFormatBox" ItemsSource="{Binding FormatOptions}" SelectedItem="{Binding Format}" AutomationProperties.Name="{x:Static pages:PrintText.PaperFormat}" />
+
         <Grid Margin="0,12,0,0">
           <Grid.ColumnDefinitions>
             <ColumnDefinition Width="Auto" />
@@ -125,7 +135,7 @@
     </ScrollViewer>
 
     <!-- L'aperçu : la feuille telle qu'elle sortira, numéro compris. -->
-    <Border Grid.Column="1" Background="{DynamicResource Kyf.Brush.SurfaceAlt}" CornerRadius="{DynamicResource Kyf.Radius.Card}" Padding="16,16,16,8">
+    <Border x:Name="PreviewPane" Grid.Column="1" Background="{DynamicResource Kyf.Brush.SurfaceAlt}" CornerRadius="{DynamicResource Kyf.Radius.Card}" Padding="16,16,16,8">
       <DockPanel>
         <StackPanel DockPanel.Dock="Bottom" HorizontalAlignment="Center" Margin="0,8,0,0">
           <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
@@ -151,4 +161,5 @@
       </DockPanel>
     </Border>
   </Grid>
+  </ScrollViewer>
 </UserControl>

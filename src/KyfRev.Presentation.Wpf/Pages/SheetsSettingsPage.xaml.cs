@@ -47,7 +47,6 @@ internal sealed partial class ShortcutsSettingsPage : UserControl
     public ShortcutsSettingsPage()
     {
         InitializeComponent();
-        SizeChanged += (_, e) => Sections.Columns = e.NewSize.Width < 820 ? 1 : 2;
     }
 
     private void OnKey(object sender, KeyEventArgs e)

@@ -99,6 +99,11 @@ public sealed class RuledPaperTests
             }
             foreach (var (top, bottom, left, _) in shown.LineBoxes(paragraph).Take(written ? 1 : int.MaxValue))
             {
+                if (bottom > image.PixelHeight - 4)
+                {
+                    // Une ligne passée sur la feuille suivante, au bord de l'image ou au-delà : ses lettres n'y sont pas entières.
+                    continue;
+                }
                 var ink = image.LowestInk(top, bottom, left, left + reach, shown.Ink);
                 if (ink is not { } row)
                 {
@@ -128,6 +133,80 @@ public sealed class RuledPaperTests
         var table = blocks.OfType<Table>().Single();
         Assert.IsNotNull(table.Background, "un tableau a un fond plein sur un papier réglé");
         Assert.AreNotEqual(step, table.LineHeight, "un tableau garde l'interligne du texte");
+    }
+
+    [STATestMethod]
+    [DataRow(PaperStyle.Plain)]
+    [DataRow(PaperStyle.Lines)]
+    [DataRow(PaperStyle.SmallSquares)]
+    public void A_wide_view_keeps_the_text_in_a_centred_column_and_its_scroll_bar_at_the_edge(PaperStyle style)
+    {
+        const double column = 600;
+        using var shown = new Shown(style, null, ReadingFont.Sans, Body);
+        var viewer = shown.Viewer;
+        viewer.TextMaxWidth = column;
+        shown.Settle();
+        var bar = SystemParameters.VerticalScrollBarWidth;
+        var first = viewer.Document!.Blocks.OfType<Paragraph>().First(paragraph => Start(paragraph).StartsWith("HIHI", StringComparison.Ordinal));
+
+        // À peine plus large que la colonne : presque rien de chaque côté.
+        var tight = Math.Floor((640 - bar - column) / 2);
+        Assert.AreEqual(tight, viewer.EndlessSide);
+        var narrowLeft = shown.LineBoxes(first).First().Left;
+
+        // Très large : la colonne garde sa largeur, centrée ; la barre de défilement reste au bord droit de la vue.
+        shown.Resize(1600);
+        var side = Math.Floor((1600 - bar - column) / 2);
+        Assert.AreEqual(side, viewer.EndlessSide);
+        var lines = shown.LineBoxes(first).ToList();
+        Assert.AreEqual(narrowLeft + side - tight, lines[0].Left, 1, "le texte commence au bord de sa colonne");
+        Assert.IsLessThanOrEqualTo(1600 - bar - side + 1, lines.Max(line => line.Right), "et ne la dépasse pas");
+        Assert.IsGreaterThanOrEqualTo(2, lines.Count, "il passe à la ligne comme dans une vue étroite");
+        // Sur une feuille unie, ce texte tient dans la vue : pas de barre à chercher.
+        var scroll = Visuals(viewer).OfType<System.Windows.Controls.Primitives.ScrollBar>().SingleOrDefault(candidate => candidate.Orientation == Orientation.Vertical && candidate.IsVisible);
+        Assert.IsTrue(style == PaperStyle.Plain || scroll is not null, "le texte posé sur des lignes dépasse la vue");
+        if (scroll is not null)
+        {
+            Assert.AreEqual(1600, scroll.TranslatePoint(new Point(scroll.ActualWidth, 0), viewer).X, 1.5, "la barre touche le bord droit de la vue");
+        }
+        var image = shown.Capture($"lecture-large-{PaperStyles.Name(style)}");
+        // Le papier est une feuille de la largeur de la colonne, pas une nappe sur toute la fenêtre.
+        var sheet = viewer.PagePaper.Sheets.Single();
+        Assert.AreEqual(side, sheet.X, 1);
+        Assert.AreEqual(1600 - bar - (2 * side), sheet.Width, 1.5);
+        if (style != PaperStyle.Plain)
+        {
+            var rows = shown.WritingLines(image.PixelHeight);
+            foreach (var (top, bottom, left, _) in lines)
+            {
+                var ink = image.LowestInk(top, bottom, left, left + 200, shown.Ink);
+                Assert.IsNotNull(ink);
+                Assert.IsLessThanOrEqualTo(1.6, Math.Abs(rows.MinBy(row => Math.Abs(row - (ink.Value + 1))) - (ink.Value + 1)), "centré, le texte reste posé sur les lignes");
+            }
+        }
+
+        // Un tableau pleine largeur se partage la colonne, pas la fenêtre.
+        var table = viewer.Document.Blocks.OfType<Table>().Single();
+        var cell = table.RowGroups[0].Rows[0].Cells[^1];
+        Assert.IsLessThanOrEqualTo(1600 - bar - side + 1, cell.ContentEnd.GetCharacterRect(LogicalDirection.Backward).Right);
+
+        // Rétrécie : la colonne reprend toute la vue.
+        shown.Resize(560);
+        Assert.AreEqual(0, viewer.EndlessSide);
+        Assert.IsLessThan(60, shown.LineBoxes(first).First().Left);
+
+        static IEnumerable<DependencyObject> Visuals(DependencyObject root)
+        {
+            for (var index = 0; index < VisualTreeHelper.GetChildrenCount(root); index++)
+            {
+                var child = VisualTreeHelper.GetChild(root, index);
+                yield return child;
+                foreach (var deeper in Visuals(child))
+                {
+                    yield return deeper;
+                }
+            }
+        }
     }
 
     [STATestMethod]
@@ -261,16 +340,32 @@ public sealed class RuledPaperTests
         Assert.AreEqual(0, PaperStyles.LineStepPixels(PaperStyle.Plain));
         Assert.AreEqual(0, (large * 300 / 96) % 1, 1e-9, "un nombre entier de l'unité de la mise en page");
 
-        Assert.AreEqual(1, ReadingComfort.Slots(17, large));
+        Assert.AreEqual(1, ReadingComfort.Slots(16, large));
         Assert.AreEqual(1, ReadingComfort.Slots(21, large));
-        Assert.AreEqual(2, ReadingComfort.Slots(28, large), "un grand titre prend deux lignes des grands carreaux");
+        Assert.AreEqual(2, ReadingComfort.Slots(28, large), "un très grand texte prend deux lignes des grands carreaux");
         Assert.AreEqual(1, ReadingComfort.Slots(28, small));
-        Assert.AreEqual(1, ReadingComfort.Slots(17, 0));
+        Assert.AreEqual(1, ReadingComfort.Slots(16, 0));
         var ruled = ReadingComfort.Default with { Step = large };
         Assert.IsTrue(ruled.IsRuled);
         Assert.AreEqual(large, ruled.LineHeight);
         Assert.AreEqual(2 * large, ruled.HeadingLineHeight(28));
         Assert.AreEqual(28 * 1.3, ReadingComfort.Default.HeadingLineHeight(28), 0.001);
+
+        // Le corps vaut 12 points, les titres 20, 16 et 14, puis la taille du corps : celles d'un traitement de texte.
+        Assert.AreEqual(16, ReadingComfort.Default.Size, 1e-9);
+        Assert.AreEqual(16, ReadingComfort.Pixels(12), 1e-9);
+        Assert.AreEqual("20 16 14 12 12 12", string.Join(" ", Enumerable.Range(1, 6).Select(ReadingComfort.HeadingPoints)));
+        Assert.AreEqual(ReadingComfort.Pixels(20), ReadingComfort.Default.HeadingSize(1), 1e-9);
+        Assert.AreEqual(ReadingComfort.Pixels(16), ReadingComfort.Default.HeadingSize(2), 1e-9);
+        Assert.AreEqual(ReadingComfort.Pixels(14), ReadingComfort.Default.HeadingSize(3), 1e-9);
+        Assert.AreEqual(16, ReadingComfort.Default.HeadingSize(4), 1e-9);
+        Assert.IsTrue(ReadingComfort.IsItalicHeading(4));
+        Assert.IsFalse(ReadingComfort.IsItalicHeading(3) || ReadingComfort.IsItalicHeading(5));
+        Assert.AreEqual(1, ReadingComfort.Slots(ReadingComfort.Default.HeadingSize(1), large), "le titre 1 tient maintenant sur une ligne des grands carreaux");
+        // Une taille de texte plus grande grandit les titres avec elle.
+        var bigger = ReadingComfort.Of(new MachinePreferences { TextSize = ReadingTextSize.ExtraLarge });
+        Assert.AreEqual(ReadingComfort.Pixels(16), bigger.Size, 1e-9);
+        Assert.AreEqual(bigger.Size * 20 / 12, bigger.HeadingSize(1), 1e-9);
     }
 
     [TestMethod]
@@ -397,6 +492,14 @@ public sealed class RuledPaperTests
         public void Use(ReadingFont font)
         {
             _host.Resources[ReadingComfort.ResourceKey] = ReadingComfort.Of(new MachinePreferences { Font = font });
+            Settle();
+        }
+
+        /// <summary>Donne une autre largeur à la vue, comme une fenêtre qu'on élargit.</summary>
+        public void Resize(double width)
+        {
+            _host.Width = width;
+            Viewer.Width = width;
             Settle();
         }
 

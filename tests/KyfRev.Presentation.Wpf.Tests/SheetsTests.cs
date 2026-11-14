@@ -415,7 +415,7 @@ public sealed class SheetsTests
             TestShell.Flush();
             Assert.AreEqual("Carnet", Named<TextBlock>(window, "Heading").Text);
             var list = Named<OpenableList>(window, "Items");
-            Assert.IsTrue(Named<Card>(window, "PreviewCard").IsVisible);
+            Assert.IsTrue(Named<Border>(window, "PreviewCard").IsVisible);
             Assert.AreEqual(480, Named<Card>(window, "ListCard").ActualWidth, 1);
 
             // Un en-tête ne se choisit pas : le choix précédent reste.
@@ -458,7 +458,7 @@ public sealed class SheetsTests
             page.PageWidth = SheetsPageViewModel.PreviewMinimum - 1;
             TestShell.Flush();
             window.UpdateLayout();
-            Assert.IsFalse(Named<Card>(window, "PreviewCard").IsVisible);
+            Assert.IsFalse(Named<Border>(window, "PreviewCard").IsVisible);
             Assert.IsGreaterThan(480, Named<Card>(window, "ListCard").ActualWidth);
             list.ScrollIntoView(second);
             window.UpdateLayout();
@@ -551,7 +551,7 @@ public sealed class SheetsTests
             Assert.IsTrue(Named<TextBlock>(window, "NoMatch").IsVisible);
             Assert.IsTrue(Named<FilterBar>(window, "FilterBar").IsVisible);
             Assert.IsTrue(Named<Card>(window, "ListCard").IsVisible, "la colonne de la liste reste : c'est elle qui porte la recherche et les filtres");
-            Assert.IsFalse(Named<Card>(window, "PreviewCard").IsVisible);
+            Assert.IsFalse(Named<Border>(window, "PreviewCard").IsVisible);
         }
         finally
         {

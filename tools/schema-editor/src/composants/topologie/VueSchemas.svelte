@@ -3,26 +3,41 @@
   import ArchiveRestore from "@lucide/svelte/icons/archive-restore";
   import ArrowLeft from "@lucide/svelte/icons/arrow-left";
   import Copy from "@lucide/svelte/icons/copy";
+  import Download from "@lucide/svelte/icons/download";
+  import Ellipsis from "@lucide/svelte/icons/ellipsis";
   import Eye from "@lucide/svelte/icons/eye";
   import FileText from "@lucide/svelte/icons/file-text";
   import PenLine from "@lucide/svelte/icons/pen-line";
   import Plus from "@lucide/svelte/icons/plus";
+  import Printer from "@lucide/svelte/icons/printer";
   import Search from "@lucide/svelte/icons/search";
+  import Share2 from "@lucide/svelte/icons/share-2";
   import Trash2 from "@lucide/svelte/icons/trash-2";
   import Undo2 from "@lucide/svelte/icons/undo-2";
   import Upload from "@lucide/svelte/icons/upload";
+  import X from "@lucide/svelte/icons/x";
   import { onMount } from "svelte";
   import { api, messageErreur, type SchemaRange } from "../../lib/api";
   import { momentCourt, pluriel } from "../../lib/format";
   import type { SchemaResume } from "../../lib/generes/SchemaResume";
+  import { type Ancre, placerMenu } from "../../lib/placement";
   import { apercuSchema } from "../../lib/topologie/apercu";
   import { definition } from "../../lib/topologie/catalogue";
   import { adresseAffichee, couleurDe, FAMILLES, familleDe } from "../../lib/topologie/dessin";
   import { diagnostiquer } from "../../lib/topologie/diagnostic";
   import { ecrireSchema, lireSchema } from "../../lib/topologie/format";
   import { type IdVue, type Schema, STATUTS, schemaVide } from "../../lib/topologie/modele";
+  import {
+    dureeAnnonce,
+    estVide,
+    exporterSchema,
+    type FormatExport,
+    imprimerSchema,
+    partagerSchema,
+  } from "../../lib/topologie/sorties";
   import { VUES, vue as vueDe } from "../../lib/topologie/vues";
   import DialogueSaisie from "../DialogueSaisie.svelte";
+  import DialogueExport from "./DialogueExport.svelte";
   import EditeurTopologie from "./EditeurTopologie.svelte";
 
   // Vue « Schémas réseau » (D40) : tous les schémas du coffre (schemas/*.json),
@@ -30,10 +45,16 @@
   // vue choisie, inventaire, constats, fiches qui le citent) sans ouvrir
   // l'éditeur ; « Modifier » l'ouvre. Un schéma s'archive ou se supprime par
   // ses boutons comme au clic droit ; rien ne s'efface : les archives et la
-  // corbeille se lisent sous la liste, et tout s'y restaure.
+  // corbeille se lisent sous la liste, et tout s'y restaure. Un schéma
+  // s'exporte, se partage (son image est copiée) et s'imprime au clic droit
+  // sur sa carte et depuis son détail, sans ouvrir l'éditeur.
   let { onouvrirfiche }: { onouvrirfiche: (id: string) => void } = $props();
 
   type Detail = { schema: Schema; erreur?: undefined } | { erreur: string; schema?: undefined };
+  /** Menu flottant : celui du clic droit sur une carte, ou « Plus » dans le détail. */
+  type Menu = { schema: SchemaResume; genre: "carte" | "plus"; ancre: Ancre; origine: HTMLElement | null };
+  /** Largeur sous laquelle l'en-tête du détail range aussi exporter, partager et imprimer sous « Plus ». */
+  const LARGEUR_ETROITE = 780;
   let liste = $state<SchemaResume[] | null>(null);
   let details = $state<Record<string, Detail>>({});
   let erreur = $state<string | null>(null);
@@ -42,13 +63,28 @@
   let lu = $state<string | null>(null);
   let vueLue = $state<IdVue>("physique");
   let edite = $state<string | null>(null);
+  /** L'éditeur a été ouvert par l'application, depuis une fiche : le fermer y ramène, pas à cette liste. */
+  let depuisFiche = $state(false);
   let creation = $state(false);
   let occupe = $state(false);
   let ranges = $state<SchemaRange[]>([]);
   let aSupprimer = $state<SchemaResume | null>(null);
-  let menu = $state<{ schema: SchemaResume; x: number; y: number } | null>(null);
+  let aExporter = $state<SchemaResume | null>(null);
+  let menu = $state<Menu | null>(null);
+  let largeur = $state(window.innerWidth);
+  const etroit = $derived(largeur < LARGEUR_ETROITE);
   const archives = $derived(ranges.filter((s) => s.etat === "archive"));
   const corbeille = $derived(ranges.filter((s) => s.etat === "corbeille"));
+
+  // Un message de réussite disparaît de lui-même ; une erreur reste, jusqu'à l'action suivante ou sa fermeture.
+  $effect(() => {
+    const texte = message;
+    if (!texte) return;
+    const minuterie = setTimeout(() => {
+      if (message === texte) message = null;
+    }, dureeAnnonce(texte));
+    return () => clearTimeout(minuterie);
+  });
 
   async function charger() {
     try {
@@ -71,6 +107,7 @@
     void charger();
     // L'application ouvre un schéma depuis une fiche.
     const ouvrir = (evenement: Event) => {
+      depuisFiche = true;
       edite = (evenement as CustomEvent<string>).detail;
     };
     document.addEventListener("ouvrir-schema", ouvrir);
@@ -110,6 +147,7 @@
   async function agir(action: () => Promise<string>) {
     occupe = true;
     message = null;
+    erreur = null;
     try {
       message = await action();
       await charger();
@@ -144,34 +182,128 @@
   const supprimer = (s: SchemaResume) => ranger(s, "corbeille", "mis à la corbeille : il s'y restaure.");
   const restaurer = (s: SchemaResume) => ranger(s, "actif", "remis dans la liste.");
 
+  /**
+   * Une sortie d'un schéma (export, partage, impression) : rien ne change dans le coffre, la liste n'est pas relue.
+   * L'action rend le message de réussite, ou `null` s'il n'y a rien à dire (choix du dossier annulé).
+   */
+  async function sortir(action: () => Promise<string | null>, echec = "") {
+    if (occupe) return;
+    occupe = true;
+    message = null;
+    erreur = null;
+    try {
+      message = await action();
+    } catch (e) {
+      erreur = `${echec}${messageErreur(e)}`;
+    } finally {
+      occupe = false;
+    }
+  }
+
+  /** Le schéma tel qu'il est dans le coffre à cet instant : la liste peut dater. */
+  const schemaDuCoffre = async (id: string) => lireSchema((await api.lireSchema(id)).texte).schema;
+  /** Depuis le détail, ce qui sort est la vue montrée ; depuis la liste, celle du schéma. */
+  const vueDeSortie = (s: SchemaResume) => (lu === s.id ? vueDe(vueLue) : undefined);
+
+  const exporter = (s: SchemaResume, format: FormatExport) =>
+    sortir(async () => {
+      const schema = await schemaDuCoffre(s.id);
+      if (format !== "json" && estVide(schema)) return "Ce schéma est vide : rien à exporter en image.";
+      const chemin = await exporterSchema(schema, format, vueDeSortie(s));
+      return chemin ? `Schéma exporté vers ${chemin}` : null;
+    }, "Export impossible : ");
+
+  const partager = (s: SchemaResume) =>
+    sortir(async () => {
+      const schema = await schemaDuCoffre(s.id);
+      if (estVide(schema)) return "Ce schéma est vide : rien à partager.";
+      await partagerSchema(schema, vueDeSortie(s));
+      return "Image du schéma copiée : collez-la dans un message, un document ou une fiche.";
+    });
+
+  const imprimer = (s: SchemaResume) =>
+    sortir(async () => {
+      const schema = await schemaDuCoffre(s.id);
+      if (estVide(schema)) return "Ce schéma est vide : rien à imprimer.";
+      await imprimerSchema(schema, vueDeSortie(s));
+      return null;
+    }, "Impression impossible : ");
+
   function ouvrirMenu(evenement: MouseEvent, schema: SchemaResume) {
     evenement.preventDefault();
     // Au clavier (touche Menu), l'évènement n'a pas de position : le menu s'ouvre sur la carte.
-    const cadre = (evenement.currentTarget as HTMLElement).getBoundingClientRect();
+    const carte = evenement.currentTarget as HTMLElement;
+    const cadre = carte.getBoundingClientRect();
     const auClavier = evenement.clientX === 0 && evenement.clientY === 0;
+    // À la fermeture, le clavier revient d'où il vient : le bouton de la carte qui l'avait, sinon son aperçu.
+    const actif = document.activeElement;
     menu = {
       schema,
-      x: Math.min(auClavier ? cadre.left + 24 : evenement.clientX, window.innerWidth - 220),
-      y: Math.min(auClavier ? cadre.top + 24 : evenement.clientY, window.innerHeight - 230),
+      genre: "carte",
+      ancre: { x: auClavier ? cadre.left + 24 : evenement.clientX, y: auClavier ? cadre.top + 24 : evenement.clientY },
+      origine: actif instanceof HTMLElement && carte.contains(actif) ? actif : carte.querySelector<HTMLElement>("button"),
     };
+  }
+
+  /** « Plus », dans l'en-tête du détail : le menu s'ouvre sous le bouton, aligné sur sa droite. */
+  function ouvrirPlus(evenement: MouseEvent, schema: SchemaResume) {
+    // Le clic ne remonte pas à la fenêtre, qui fermerait le menu aussitôt.
+    evenement.stopPropagation();
+    if (menu?.genre === "plus") {
+      menu = null;
+      return;
+    }
+    const bouton = evenement.currentTarget as HTMLElement;
+    const cadre = bouton.getBoundingClientRect();
+    menu = { schema, genre: "plus", ancre: { x: cadre.right, y: cadre.bottom + 4, fin: true }, origine: bouton };
+  }
+
+  /** Ferme le menu ; le clavier revient à l'élément d'où il a été ouvert. */
+  function fermerMenu() {
+    const origine = menu?.origine;
+    menu = null;
+    if (origine?.isConnected) origine.focus();
   }
 
   function choisir(action: (s: SchemaResume) => unknown) {
     const schema = menu?.schema;
-    menu = null;
+    // Le focus revient d'abord à l'origine : un dialogue ouvert par l'action le lui rendra en se fermant.
+    fermerMenu();
     if (schema) action(schema);
   }
 
-  /** Le menu prend le clavier à l'ouverture ; les flèches passent d'une entrée à l'autre, Échap le ferme. */
+  /** Le menu mesuré une fois rendu : il ne sort jamais de la fenêtre, même étroite ou basse. */
+  function dansLaFenetre(liste: HTMLElement, ancre: Ancre) {
+    const cadre = liste.getBoundingClientRect();
+    // La page défile dans `body` : sa largeur utile s'arrête avant la barre de défilement.
+    const { documentElement: racine, body } = document;
+    const place = placerMenu(
+      ancre,
+      { largeur: cadre.width, hauteur: cadre.height },
+      {
+        largeur: Math.min(racine.clientWidth, body.clientWidth),
+        hauteur: Math.min(racine.clientHeight, body.clientHeight),
+      },
+    );
+    liste.style.left = `${place.x}px`;
+    liste.style.top = `${place.y}px`;
+  }
+
+  /**
+   * Le menu prend le clavier à l'ouverture ; les flèches passent d'une entrée à l'autre (Début et Fin : la
+   * première, la dernière), Échap le ferme, Tab aussi.
+   */
   function clavierMenu(liste: HTMLElement) {
-    const entrees = () => [...liste.querySelectorAll<HTMLButtonElement>("button")];
+    const entrees = () => [...liste.querySelectorAll<HTMLButtonElement>("button:not(:disabled)")];
     entrees()[0]?.focus();
     const touche = (evenement: KeyboardEvent) => {
       const tous = entrees();
       const ici = tous.indexOf(document.activeElement as HTMLButtonElement);
-      if (evenement.key === "Escape") menu = null;
+      if (evenement.key === "Escape" || evenement.key === "Tab") fermerMenu();
       else if (evenement.key === "ArrowDown") tous[(ici + 1) % tous.length]?.focus();
       else if (evenement.key === "ArrowUp") tous[(ici - 1 + tous.length) % tous.length]?.focus();
+      else if (evenement.key === "Home") tous[0]?.focus();
+      else if (evenement.key === "End") tous[tous.length - 1]?.focus();
       else return;
       evenement.preventDefault();
     };
@@ -237,14 +369,33 @@
             {#each VUES as v (v.id)}<option value={v.id}>Vue {v.nom.toLowerCase()}</option>{/each}
           </select>
         </label>
-        <button type="button" class="bouton" disabled={occupe} onclick={() => dupliquer(resumeLu.id)}>
-          <Copy size={16} aria-hidden="true" /> Dupliquer
-        </button>
-        <button type="button" class="bouton" disabled={occupe} onclick={() => archiver(resumeLu)}>
-          <Archive size={16} aria-hidden="true" /> Archiver
-        </button>
-        <button type="button" class="bouton" disabled={occupe} onclick={() => (aSupprimer = resumeLu)}>
-          <Trash2 size={16} aria-hidden="true" /> Supprimer
+        <!-- Fenêtre étroite : exporter, partager et imprimer rejoignent « Plus », l'en-tête tient en deux lignes. -->
+        {#if !etroit}
+          <button type="button" class="bouton" onclick={() => (aExporter = resumeLu)}>
+            <Download size={16} aria-hidden="true" /> Exporter…
+          </button>
+          <button
+            type="button"
+            class="bouton"
+            aria-label="Partager (copier l'image)"
+            title="Copie l'image du schéma, à coller dans un message, un document ou une fiche"
+            onclick={() => partager(resumeLu)}
+          >
+            <Share2 size={16} aria-hidden="true" /> Partager
+          </button>
+          <button type="button" class="bouton" onclick={() => imprimer(resumeLu)}>
+            <Printer size={16} aria-hidden="true" /> Imprimer…
+          </button>
+        {/if}
+        <button
+          type="button"
+          class="bouton"
+          aria-haspopup="menu"
+          aria-expanded={menu?.genre === "plus"}
+          aria-label={etroit ? "Plus d'actions : exporter, partager, imprimer, dupliquer, archiver, supprimer" : "Plus d'actions : dupliquer, archiver, supprimer"}
+          onclick={(e) => ouvrirPlus(e, resumeLu)}
+        >
+          <Ellipsis size={16} aria-hidden="true" /> Plus
         </button>
         <button type="button" class="bouton principal" onclick={() => (edite = resumeLu.id)}>
           <PenLine size={16} aria-hidden="true" /> Modifier
@@ -257,7 +408,7 @@
         {@html apercuSchema(schemaLu, vueDe(vueLue), true)}
       </figure>
       <div class="colonnes">
-        <section aria-labelledby="titre-inventaire">
+        <section class="inventaire" aria-labelledby="titre-inventaire">
           <h2 id="titre-inventaire">Inventaire <span class="compte">{schemaLu.equipements.length}</span></h2>
           <table>
             <thead>
@@ -321,8 +472,6 @@
         </button>
       </div>
     </header>
-    {#if erreur}<p class="bandeau erreur" role="alert">{erreur}</p>{/if}
-    {#if message}<p class="bandeau succes" role="status">{message}</p>{/if}
     {#if liste === null}
       <p class="vide" aria-busy="true">Chargement des schémas…</p>
     {:else if liste.length === 0}
@@ -415,17 +564,67 @@
   {/if}
 </div>
 
-<svelte:window onclick={() => (menu = null)} onblur={() => (menu = null)} onresize={() => (menu = null)} />
+<svelte:window bind:innerWidth={largeur} onclick={() => (menu = null)} onblur={() => (menu = null)} onresize={() => (menu = null)} />
+
+<!-- Les messages, au bas de la fenêtre dans la liste comme dans le détail : la réussite s'efface seule, l'erreur se ferme. -->
+<div class="annonces">
+  <div role="status">
+    {#if message}<p class="annonce succes">{message}</p>{/if}
+  </div>
+  {#if erreur}
+    <div class="annonce erreur" role="alert">
+      <p>{erreur}</p>
+      <button type="button" class="fermer" aria-label="Fermer le message d'erreur" title="Fermer" onclick={() => (erreur = null)}>
+        <X size={16} aria-hidden="true" />
+      </button>
+    </div>
+  {/if}
+</div>
+
+{#snippet entreesSorties()}
+  <button type="button" role="menuitem" onclick={() => choisir((s) => (aExporter = s))}><Download size={16} aria-hidden="true" /> Exporter…</button>
+  <button type="button" role="menuitem" onclick={() => choisir(partager)}><Share2 size={16} aria-hidden="true" /> Partager (copier l'image)</button>
+  <button type="button" role="menuitem" onclick={() => choisir(imprimer)}><Printer size={16} aria-hidden="true" /> Imprimer…</button>
+{/snippet}
 
 {#if menu}
-  <div class="menu" role="menu" aria-label={`Actions sur « ${menu.schema.titre} »`} style:left={`${menu.x}px`} style:top={`${menu.y}px`} use:clavierMenu>
-    <button type="button" role="menuitem" onclick={() => choisir((s) => lire(s.id))}><Eye size={16} aria-hidden="true" /> Détail</button>
-    <button type="button" role="menuitem" onclick={() => choisir((s) => (edite = s.id))}><PenLine size={16} aria-hidden="true" /> Modifier</button>
-    <button type="button" role="menuitem" disabled={occupe} onclick={() => choisir((s) => dupliquer(s.id))}><Copy size={16} aria-hidden="true" /> Dupliquer</button>
-    <hr />
-    <button type="button" role="menuitem" disabled={occupe} onclick={() => choisir(archiver)}><Archive size={16} aria-hidden="true" /> Archiver</button>
-    <button type="button" role="menuitem" disabled={occupe} onclick={() => choisir((s) => (aSupprimer = s))}><Trash2 size={16} aria-hidden="true" /> Supprimer</button>
-  </div>
+  {#key menu}
+    <div
+      class="menu"
+      role="menu"
+      aria-label={menu.genre === "carte" ? `Actions sur « ${menu.schema.titre} »` : `Plus d'actions sur « ${menu.schema.titre} »`}
+      use:dansLaFenetre={menu.ancre}
+      use:clavierMenu
+    >
+      {#if menu.genre === "carte"}
+        <button type="button" role="menuitem" onclick={() => choisir((s) => lire(s.id))}><Eye size={16} aria-hidden="true" /> Détail</button>
+        <button type="button" role="menuitem" onclick={() => choisir((s) => (edite = s.id))}><PenLine size={16} aria-hidden="true" /> Modifier</button>
+        <button type="button" role="menuitem" disabled={occupe} onclick={() => choisir((s) => dupliquer(s.id))}><Copy size={16} aria-hidden="true" /> Dupliquer</button>
+        <hr />
+        {@render entreesSorties()}
+        <hr />
+      {:else}
+        {#if etroit}
+          {@render entreesSorties()}
+          <hr />
+        {/if}
+        <button type="button" role="menuitem" disabled={occupe} onclick={() => choisir((s) => dupliquer(s.id))}><Copy size={16} aria-hidden="true" /> Dupliquer</button>
+      {/if}
+      <button type="button" role="menuitem" disabled={occupe} onclick={() => choisir(archiver)}><Archive size={16} aria-hidden="true" /> Archiver</button>
+      <button type="button" role="menuitem" disabled={occupe} onclick={() => choisir((s) => (aSupprimer = s))}><Trash2 size={16} aria-hidden="true" /> Supprimer</button>
+    </div>
+  {/key}
+{/if}
+
+{#if aExporter}
+  {@const s = aExporter}
+  {@const connu = details[s.id]?.schema}
+  <DialogueExport
+    titre={s.titre}
+    vide={connu !== undefined && estVide(connu)}
+    onvalider={(format) => exporter(s, format)}
+    onfermer={() => (aExporter = null)}
+  />
 {/if}
 
 {#if aSupprimer}
@@ -472,8 +671,10 @@
   {#key edite}
     <EditeurTopologie
       id={edite}
+      retour={depuisFiche ? "Fermer" : "Schémas"}
       onfermer={() => {
         edite = null;
+        depuisFiche = false;
         void charger();
         void api.editeurFerme();
       }}
@@ -674,12 +875,74 @@
     flex: 1 1 160px;
   }
 
+  .annonces {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    left: 16px;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    pointer-events: none;
+  }
+
+  .annonces [role="status"] {
+    display: flex;
+    justify-content: center;
+    max-width: 100%;
+  }
+
+  .annonce {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    max-width: min(640px, 100%);
+    margin: 0;
+    padding: 8px 14px;
+    border: 1px solid var(--bordure);
+    border-radius: var(--rayon);
+    box-shadow: 0 8px 24px rgb(0 0 0 / 0.18);
+    font-size: 13px;
+    overflow-wrap: anywhere;
+    pointer-events: auto;
+  }
+
+  .annonce.erreur {
+    padding: 4px 4px 4px 14px;
+  }
+
+  .annonce p {
+    margin: 0;
+  }
+
+  .fermer {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: var(--rayon);
+    background: none;
+    color: inherit;
+  }
+
+  .fermer:hover {
+    background: var(--surface);
+  }
+
   .menu {
     position: fixed;
     z-index: 30;
     display: flex;
     flex-direction: column;
     min-width: 200px;
+    max-width: calc(100vw - 16px);
+    max-height: calc(100vh - 16px);
+    overflow-y: auto;
     padding: 4px;
     border: 1px solid var(--bordure);
     border-radius: var(--rayon);
@@ -689,6 +952,7 @@
 
   .menu button {
     display: flex;
+    flex: none;
     align-items: center;
     gap: 8px;
     height: 32px;
@@ -771,6 +1035,12 @@
     display: grid;
     grid-template-columns: minmax(0, 2fr) minmax(240px, 1fr);
     gap: 24px;
+  }
+
+  /* Fenêtre étroite : le tableau défile dans sa section au lieu de sortir de la page. */
+  .inventaire {
+    min-width: 0;
+    overflow-x: auto;
   }
 
   h2 {

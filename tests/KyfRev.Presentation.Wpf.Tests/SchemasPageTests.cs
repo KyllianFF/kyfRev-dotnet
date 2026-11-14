@@ -110,6 +110,41 @@ public sealed class SchemasPageTests
     }
 
     [TestMethod]
+    public async Task The_bridge_copies_the_picture_of_a_schema_and_only_a_picture()
+    {
+        using var scene = new BridgeScene();
+        var png = Convert.FromBase64String("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAEBgIApD5fRAAAAABJRU5ErkJggg==");
+
+        // « Partager » : l'image du schéma, telle que l'îlot l'a dessinée, va à ce qui la copie.
+        Assert.IsNull(await scene.RawValueAsync("copierImageSchema", Convert.ToBase64String(png)));
+        CollectionAssert.AreEqual(png, scene.Copied.Single());
+
+        // Autre chose qu'une image PNG, rien du tout, ou du texte qui n'est pas du base64 : refusé, rien n'est copié.
+        foreach (var bad in new[] { Convert.ToBase64String("<svg/>"u8.ToArray()), string.Empty, "pas du base64 !" })
+        {
+            var answer = await scene.AnswerAsync(JsonSerializer.Serialize(new { kind = "call", id = 2, method = "copierImageSchema", args = new[] { bad } }));
+            Assert.IsFalse(answer["ok"]!.GetValue<bool>(), bad);
+        }
+        Assert.HasCount(1, scene.Copied);
+
+        // Sans rien pour copier, l'appel est refusé comme un appel inconnu.
+        var bare = new SchemaBridge(new SchemaUseCases(scene.Vaults.App.Host), scene.Picker, () => null, _ => { });
+        var refused = JsonNode.Parse((await bare.ReceiveAsync(JsonSerializer.Serialize(new { kind = "call", id = 3, method = "copierImageSchema", args = new[] { Convert.ToBase64String(png) } })))!)!;
+        Assert.IsFalse(refused["ok"]!.GetValue<bool>());
+        Assert.AreEqual(SchemaText.BadCall, refused["error"]!.GetValue<string>());
+    }
+
+    [STATestMethod]
+    public void The_page_copies_a_picture_to_the_clipboard_and_says_when_it_cannot()
+    {
+        using var scene = new BridgeScene();
+        var page = scene.Page();
+        // Une image illisible : un refus dit en clair, pas une exception qui remonte.
+        var refusal = Assert.ThrowsExactly<InvalidOperationException>(() => page.CopyImage([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 1, 2, 3]));
+        Assert.AreEqual(SchemaText.ClipboardBusy, refusal.Message);
+    }
+
+    [TestMethod]
     public async Task The_bridge_refuses_what_it_does_not_know()
     {
         using var scene = new BridgeScene();
@@ -180,6 +215,157 @@ public sealed class SchemasPageTests
     }
 
     [EngineTest]
+    [DataRow(ThemeKind.Light)]
+    [DataRow(ThemeKind.Dark)]
+    public void The_simple_mode_places_devices_and_cables_without_ports_circles_aggregates_and_labels_trunks(ThemeKind theme)
+    {
+        using var scene = new IslandScene(theme: theme);
+        scene.WaitFor("document.querySelector('.bouton.principal') !== null");
+        scene.Script("document.querySelector('.bouton.principal').click()");
+        scene.WaitFor("document.querySelector('dialog[open] input') !== null");
+        scene.Script("const champ = document.querySelector('dialog[open] input'); champ.value = 'Site de Meylan'; champ.dispatchEvent(new Event('input', { bubbles: true })); document.querySelector('dialog[open] form').requestSubmit()");
+        scene.WaitFor("document.querySelector('dialog[open] svg.canevas') !== null");
+        int Count(string selector) => int.Parse(scene.Script($"document.querySelectorAll('{selector}').length"), System.Globalization.CultureInfo.InvariantCulture);
+        string Text(string expression) => JsonSerializer.Deserialize<string>(scene.Script(expression)) ?? string.Empty;
+
+        // Les deux modes, et le même plateau d'équipements en bas dans l'un comme dans l'autre.
+        scene.Script("document.querySelector('.segments.mode button[data-mode=\"simplifie\"]').click()");
+        scene.WaitFor("document.querySelector('.segments.mode button[data-mode=\"simplifie\"]').getAttribute('aria-pressed') === 'true'");
+        Assert.AreEqual(1, Count("footer.plateau"));
+        Assert.IsGreaterThanOrEqualTo(5, Count("footer.plateau .tuile"));
+        Assert.IsGreaterThanOrEqualTo(Count("footer.plateau .tuile"), Count("footer.plateau .tuile svg"), "chaque tuile montre l'icône de l'équipement");
+        StringAssert.StartsWith(Text("document.querySelector('.tuile[data-genre=\"type:switch\"]').getAttribute('aria-label')"), "Ajouter", StringComparison.Ordinal);
+
+        // Deux équipements posés depuis le plateau, au clavier : la tuile, puis Entrée.
+        foreach (var genre in new[] { "type:switch-coeur", "type:switch" })
+        {
+            var before = Count("svg.canevas g.equipement");
+            scene.Script($"(() => {{ const tuile = document.querySelector('.tuile[data-genre=\"{genre}\"]'); tuile.focus(); tuile.click(); }})()");
+            UiThread.Until(() => Count("svg.canevas g.equipement") == before + 1, TimeSpan.FromSeconds(15));
+        }
+
+        // Un équipement sans adresse n'écrit rien sous son nom : ni « sans adresse », ni rien d'autre.
+        var drawn = Text("document.querySelector('svg.canevas').textContent");
+        Assert.IsFalse(drawn.Contains("adresse", StringComparison.OrdinalIgnoreCase), drawn);
+
+        // Deux câbles tirés entre eux, sans choisir de port : l'outil Câble, un équipement, puis l'autre ; et on recommence.
+        void Cable()
+        {
+            var before = Count("svg.canevas g.lien .trait");
+            scene.Script("document.querySelector('nav.outils .outil[data-outil=\"cable\"]').click()");
+            scene.Script("(() => { for (const equipement of document.querySelectorAll('svg.canevas g.equipement')) { equipement.focus(); equipement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true, cancelable: true })); } })()");
+            UiThread.Until(() => Count("svg.canevas g.lien .trait") == before + 1, TimeSpan.FromSeconds(15));
+        }
+        Cable();
+        Cable();
+        Assert.AreEqual(0, Count("dialog[open] dialog[open]"), "aucune fenêtre de connexion ne s'ouvre");
+        scene.Picture($"schemas-simplifie-{(theme == ThemeKind.Dark ? "sombre" : "clair")}-cables");
+
+        // Le fichier a de vrais ports et deux vrais liens : le mode avancé les retrouvera.
+        var id = scene.Schemas.Schemas().Value.Single().Id;
+        UiThread.Until(() => (JsonNode.Parse(scene.Schemas.Read(id).Value.Text)!["liens"] as JsonArray)?.Count == 2, TimeSpan.FromSeconds(20));
+        var links = (JsonArray)JsonNode.Parse(scene.Schemas.Read(id).Value.Text)!["liens"]!;
+        foreach (var link in links)
+        {
+            Assert.IsFalse(string.IsNullOrEmpty(link!["a"]!["interface"]!.GetValue<string>()));
+            Assert.IsFalse(string.IsNullOrEmpty(link["b"]!["interface"]!.GetValue<string>()));
+        }
+        Assert.AreNotEqual(links[0]!["a"]!["interface"]!.GetValue<string>(), links[1]!["a"]!["interface"]!.GetValue<string>(), "chaque câble a son port");
+
+        // Le câble choisi : sa bulle offre deux options distinctes, « Agrégat de liens » et « Trunk ».
+        Assert.AreEqual(0, Count("svg.canevas g.lien ellipse"));
+        scene.Script("document.querySelector('nav.outils .outil[data-outil=\"choisir\"]').click()");
+        scene.Script("(() => { const lien = document.querySelector('svg.canevas g.lien'); lien.focus(); lien.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true, cancelable: true })); })()");
+        scene.WaitFor("document.querySelector('.bulle button[role=switch][data-option=\"agregat\"]') !== null && document.querySelector('.bulle button[role=switch][data-option=\"trunk\"]') !== null");
+        string Labels() => Text("[...document.querySelectorAll('svg.canevas .etiquettes text')].map((texte) => texte.textContent.trim()).join(' | ')");
+        void Type(string field, string value) =>
+            scene.Script($"(() => {{ const champ = document.getElementById('{field}'); champ.value = '{value}'; champ.dispatchEvent(new Event('input', {{ bubbles: true }})); champ.dispatchEvent(new Event('change', {{ bubbles: true }})); }})()");
+        // Deux câbles entre deux commutateurs, sans agrégat : la bulle conseille, sans rien bloquer.
+        StringAssert.Contains(Text("[...document.querySelectorAll('.bulle [role=note]')].map((note) => note.textContent).join(' ')"), "boucle", StringComparison.Ordinal);
+        Assert.AreEqual(0, Count("#bulle-vlan-non-tague"), "sans trunk, pas de champs de VLAN");
+
+        // « Trunk » : il libère deux champs, et le câble est annoté de ses VLAN. Pas de cercle : le cercle est pour l'agrégat.
+        scene.Script("document.querySelector('.bulle button[role=switch][data-option=\"trunk\"]').click()");
+        scene.WaitFor("document.getElementById('bulle-vlan-non-tague') !== null && document.getElementById('bulle-vlans-tagues') !== null");
+        UiThread.Until(() => Labels().Contains("Trunk", StringComparison.Ordinal), TimeSpan.FromSeconds(15));
+        Type("bulle-vlan-non-tague", "99");
+        Type("bulle-vlans-tagues", "10,20,30");
+        UiThread.Until(() => Labels().Contains("Trunk · U 99 · T 10,20,30", StringComparison.Ordinal), TimeSpan.FromSeconds(15));
+        Assert.AreEqual(0, Count("svg.canevas g.lien ellipse"), "un trunk seul n'a pas de cercle");
+        Assert.AreEqual(2, Count("svg.canevas g.lien .trait"));
+        scene.Picture($"schemas-simplifie-{(theme == ThemeKind.Dark ? "sombre" : "clair")}-trunk");
+
+        // Le VLAN non tagué ne se répète pas dans les tagués : dit en clair, et rien n'est écrit.
+        Type("bulle-vlans-tagues", "10,99");
+        scene.WaitFor("document.querySelector('.bulle [role=alert]') !== null");
+        StringAssert.Contains(Text("document.querySelector('.bulle [role=alert]').textContent"), "99", StringComparison.Ordinal);
+        Assert.IsTrue(Labels().Contains("T 10,20,30", StringComparison.Ordinal), "le dessin garde les VLAN valides");
+        Type("bulle-vlans-tagues", "10,20,30");
+
+        // « Agrégat de liens » : les deux câbles sous un cercle, autant de traits que de câbles, et une seule annotation de trunk.
+        scene.Script("document.querySelector('.bulle button[role=switch][data-option=\"agregat\"]').click()");
+        UiThread.Until(() => Count("svg.canevas g.lien ellipse") == 1, TimeSpan.FromSeconds(15));
+        Assert.AreEqual(2, Count("svg.canevas g.lien .trait"), "le nombre de câbles se voit toujours");
+        Assert.AreEqual(1, Labels().Split(" | ").Count(label => label.StartsWith("Trunk", StringComparison.Ordinal)), "une seule annotation pour le groupe");
+        StringAssert.Contains(Labels(), "Trunk · U 99 · T 10,20,30", StringComparison.Ordinal, "le trunk suit l'agrégat");
+        scene.Picture($"schemas-simplifie-{(theme == ThemeKind.Dark ? "sombre" : "clair")}-agregat");
+
+        // Le fichier : un vrai agrégat, qui porte le trunk et ses VLAN.
+        UiThread.Until(() => (JsonNode.Parse(scene.Schemas.Read(id).Value.Text)!["agregats"] as JsonArray)?.Count >= 1, TimeSpan.FromSeconds(20));
+        var written = scene.Schemas.Read(id).Value.Text;
+        StringAssert.Contains(written, "\"trunk\"", StringComparison.Ordinal);
+        StringAssert.Contains(written, "10,20,30", StringComparison.Ordinal);
+
+        // En avancé, le même schéma, ses ports, et le même plateau.
+        scene.Script("document.querySelector('.segments.mode button[data-mode=\"avance\"]').click()");
+        scene.WaitFor("document.querySelector('.segments.mode button[data-mode=\"avance\"]').getAttribute('aria-pressed') === 'true'");
+        Assert.AreEqual(1, Count("footer.plateau"));
+        Assert.AreEqual(2, Count("svg.canevas g.equipement"));
+        Assert.AreEqual(2, Count("svg.canevas g.lien .trait"));
+        Assert.AreEqual(1, Count("svg.canevas g.lien ellipse"));
+        scene.Picture($"schemas-avance-{(theme == ThemeKind.Dark ? "sombre" : "clair")}");
+        Assert.AreEqual("0", scene.Script("document.documentElement.scrollWidth - document.documentElement.clientWidth"), "Pas de défilement horizontal.");
+    }
+
+    [EngineTest]
+    public void A_right_click_on_a_schema_exports_shares_and_prints_it()
+    {
+        using var scene = new IslandScene(Text);
+        scene.WaitFor("document.querySelector('li.carte') !== null");
+
+        // Le vrai clic droit, dans l'îlot, sur la carte : le menu propose les trois sorties, entre « Dupliquer » et « Archiver ».
+        scene.Script("document.querySelector('li.carte').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 60, clientY: 60 }))");
+        scene.WaitFor("document.querySelector('.menu[role=menu]') !== null");
+        var order = JsonSerializer.Deserialize<string>(scene.Script("[...document.querySelectorAll('.menu [role=menuitem]')].map((entree) => entree.textContent.trim()).join(' | ')"))!;
+        StringAssert.Contains(order, "Dupliquer | Exporter… | Partager (copier l'image) | Imprimer… | Archiver", StringComparison.Ordinal);
+        Assert.AreEqual("true", scene.Script("(() => { const m = document.querySelector('.menu[role=menu]').getBoundingClientRect(); return m.left >= 0 && m.top >= 0 && m.right <= innerWidth && m.bottom <= innerHeight; })()"), "le menu tient dans la fenêtre");
+
+        // « Partager » : l'îlot dessine le schéma, le pont reçoit une vraie image PNG, et l'îlot le dit.
+        scene.Script("[...document.querySelectorAll('.menu [role=menuitem]')].find((entree) => entree.textContent.includes('Partager')).click()");
+        UiThread.Until(() => scene.Copied.Count == 1, TimeSpan.FromSeconds(30));
+        CollectionAssert.AreEqual(new byte[] { 0x89, 0x50, 0x4E, 0x47 }, scene.Copied[0].Take(4).ToArray(), "une image PNG");
+        using (var stream = new MemoryStream(scene.Copied[0]))
+        {
+            var picture = System.Windows.Media.Imaging.BitmapFrame.Create(stream, System.Windows.Media.Imaging.BitmapCreateOptions.None, System.Windows.Media.Imaging.BitmapCacheOption.OnLoad);
+            Assert.IsGreaterThan(100, picture.PixelWidth, "qui se lit, avec le dessin dedans");
+        }
+        scene.WaitFor("document.querySelector('.annonces [role=status]').textContent.includes('copiée')");
+
+        // « Exporter… » : la fenêtre des formats, puis le dossier choisi, et le fichier est écrit hors du coffre.
+        var folder = scene.Outside("Exports");
+        Directory.CreateDirectory(folder);
+        scene.Picker.Answers.Enqueue(folder);
+        scene.Script("document.querySelector('li.carte').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 60, clientY: 60 }))");
+        scene.WaitFor("document.querySelector('.menu[role=menu]') !== null");
+        scene.Script("[...document.querySelectorAll('.menu [role=menuitem]')].find((entree) => entree.textContent.includes('Exporter')).click()");
+        scene.WaitFor("document.querySelector('dialog[open] input[type=radio]') !== null");
+        Assert.AreEqual("3", scene.Script("document.querySelectorAll('dialog[open] input[type=radio]').length"));
+        scene.Script("(() => { const svg = [...document.querySelectorAll('dialog[open] input[type=radio]')].find((choix) => choix.value === 'svg'); svg.click(); document.querySelector('dialog[open] form').requestSubmit(); })()");
+        UiThread.Until(() => Directory.Exists(folder) && Directory.GetFiles(folder, "*.svg").Length == 1, TimeSpan.FromSeconds(30));
+        StringAssert.Contains(File.ReadAllText(Directory.GetFiles(folder, "*.svg").Single()), "<svg", StringComparison.Ordinal);
+    }
+
+    [EngineTest]
     public void The_island_shows_the_schemas_of_the_vault_and_follows_the_theme()
     {
         using var scene = new IslandScene(Text);
@@ -230,7 +416,7 @@ public sealed class SchemasPageTests
         {
             Vaults = new TestVaults(AppMode.Development);
             Vaults.App.Vaults.Create(Vaults.PathOf("Coffre"));
-            Bridge = new SchemaBridge(new SchemaUseCases(Vaults.App.Host), Picker, () => PickedFile, Opened.Add);
+            Bridge = new SchemaBridge(new SchemaUseCases(Vaults.App.Host), Picker, () => PickedFile, Opened.Add, copyImage: Copied.Add);
         }
 
         public TestVaults Vaults { get; }
@@ -242,6 +428,8 @@ public sealed class SchemasPageTests
         public string? PickedFile { get; set; }
 
         public List<string> Opened { get; } = [];
+
+        public List<byte[]> Copied { get; } = [];
 
         public SchemasPageViewModel Page() => new(new SchemaUseCases(Vaults.App.Host), Picker, new FakeOpener(), FakeEnvironment.WebData);
 
@@ -277,7 +465,7 @@ public sealed class SchemasPageTests
             }
             Test = new TestShell();
             Test.Design.Theme = theme;
-            Page = new SchemasPage { DataContext = new SchemasPageViewModel(Schemas, _vaults.Picker, new FakeOpener(), FakeEnvironment.WebData), Width = 1300, Height = 860 };
+            Page = new SchemasPage { DataContext = new SchemasPageViewModel(Schemas, _vaults.Picker, new FakeOpener(), FakeEnvironment.WebData) { CopyImage = Copied.Add }, Width = 1300, Height = 860 };
             _window = new Window { Content = new Canvas { Children = { Page } }, Left = -10000, Top = -10000, Width = 800, Height = 600, ShowActivated = false, ShowInTaskbar = false };
             _window.Resources.MergedDictionaries.Add(Test.Design.Dictionary);
             _window.Show();
@@ -289,6 +477,30 @@ public sealed class SchemasPageTests
         }
 
         public TestShell Test { get; }
+
+        /// <summary>Les images que l'îlot a demandé de copier : le presse-papiers du poste n'est pas touché.</summary>
+        public List<byte[]> Copied { get; } = [];
+
+        /// <summary>Le sélecteur de dossier de l'essai.</summary>
+        public FakePicker Picker => _vaults.Picker;
+
+        /// <summary>
+        /// L'image de l'îlot, telle que le moteur web la rend : écrite dans le dossier des captures s'il est donné. Le moteur a
+        /// sa propre fenêtre, que l'image d'un élément WPF ne voit pas : on passe par celle qu'il donne quand un volet le recouvre.
+        /// </summary>
+        public void Picture(string name)
+        {
+            var covered = Page.Island!.SetCoveredAsync(true);
+            UiThread.Until(() => covered.IsCompleted);
+            TestShell.Flush();
+            Page.Capture(name);
+            var shown = Page.Island.SetCoveredAsync(false);
+            UiThread.Until(() => shown.IsCompleted);
+            TestShell.Flush();
+        }
+
+        /// <summary>Un dossier hors du coffre, où exporter.</summary>
+        public string Outside(string name) => _vaults.PathOf(name);
 
         /// <summary>Le fond du thème, tel que le moteur le reçoit.</summary>
         public System.Drawing.Color Background =>

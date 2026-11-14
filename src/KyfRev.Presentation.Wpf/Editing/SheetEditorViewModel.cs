@@ -531,8 +531,8 @@ public sealed partial class SheetEditorViewModel : ObservableObject
     /// <summary>Le curseur est dans un tableau du texte mis en forme : l'onglet Tableau se montre.</summary>
     public bool IsInTable => Tools?.Table is not null;
 
-    /// <summary>La taille du texte, en pixels.</summary>
-    public string SizeLabel => FontSizes.Pixels(Tools?.Size).ToString(CultureInfo.InvariantCulture);
+    /// <summary>La taille du texte au curseur, en points : celle de son titre, s'il est dans un titre.</summary>
+    public string SizeLabel => FontSizes.Points(Tools?.Size, Tools?.Heading ?? 0).ToString(CultureInfo.InvariantCulture);
 
     /// <summary>Le curseur est dans du texte à gauche.</summary>
     public bool IsAlignLeft => Tools?.Align is null or TextAlign.Left;
@@ -1103,17 +1103,17 @@ public sealed partial class SheetEditorViewModel : ObservableObject
         _surface?.Focus();
     }
 
-    /// <summary>Pose une taille sur la sélection, en pixels.</summary>
+    /// <summary>Pose une taille sur la sélection, en points.</summary>
     [RelayCommand]
-    private void SetFontSize(int pixels)
+    private void SetFontSize(int points)
     {
-        _surface?.SetFontSize(FontSizes.Style(pixels));
+        _surface?.SetFontSize(FontSizes.Style(points, Tools?.Heading ?? 0));
         _surface?.Focus();
     }
 
     /// <summary>Passe à la taille suivante de la liste, vers le haut ou vers le bas.</summary>
     [RelayCommand]
-    private void StepFontSize(int direction) => SetFontSize(FontSizes.Step(Tools?.Size, direction));
+    private void StepFontSize(int direction) => SetFontSize(FontSizes.Step(Tools?.Size, direction, Tools?.Heading ?? 0));
 
     /// <summary>Aligne les blocs de la sélection.</summary>
     [RelayCommand]

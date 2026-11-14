@@ -45,7 +45,7 @@
 
   <Grid>
     <ScrollViewer x:Name="Scroller" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
-      <StackPanel MaxWidth="1100" HorizontalAlignment="Stretch">
+      <StackPanel MaxWidth="{x:Static pages:SettingsTab.Column}" HorizontalAlignment="Stretch">
         <kyf:Notification x:Name="ErrorMessage" Severity="Critical" Message="{Binding Error}" IsOpen="{Binding HasError, Mode=OneWay}" IsClosable="False" Margin="0,0,0,8" />
         <kyf:Notification x:Name="DoneMessage" Severity="Success" Message="{Binding Message}" IsOpen="{Binding HasMessage, Mode=OneWay}" IsClosable="False" Margin="0,0,0,8" />
         <Button x:Name="OpenRestored" Content="{x:Static pages:SettingsHubText.OpenRestored}" Command="{Binding OpenRestoredVaultCommand}" HorizontalAlignment="Left" Margin="0,0,0,8"

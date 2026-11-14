@@ -389,6 +389,8 @@ public sealed partial class SheetsPageViewModel
             return;
         }
         var generation = _generation;
+        // Le message d'avant s'en va d'abord : deux déplacements de suite disent chacun « Déplacé. ».
+        Done = null;
         var refusal = await Task.Run(() => Run(action, sheet, path, string.Empty, folder, erases: false)).ConfigureAwait(true);
         if (generation != _generation)
         {

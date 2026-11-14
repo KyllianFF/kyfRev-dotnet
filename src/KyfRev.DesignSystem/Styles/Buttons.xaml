@@ -52,9 +52,12 @@
 
   <Style TargetType="ToggleButton" BasedOn="{StaticResource Kyf.Button}">
     <Style.Triggers>
+      <!-- Le fond d'un choix actif est presque celui de la page, en clair surtout : c'est son contour, de la couleur
+           principale, qui le fait voir (3:1 au moins sur tous les fonds). -->
       <Trigger Property="IsChecked" Value="True">
         <Setter Property="Background" Value="{DynamicResource Kyf.Brush.NavigationActiveBackground}" />
         <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.NavigationActiveText}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Kyf.Brush.Primary}" />
       </Trigger>
     </Style.Triggers>
   </Style>
@@ -102,11 +105,14 @@
       <Trigger Property="ToggleButton.IsChecked" Value="True">
         <Setter Property="Background" Value="{DynamicResource Kyf.Brush.NavigationActiveBackground}" />
         <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.NavigationActiveText}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Kyf.Brush.Primary}" />
       </Trigger>
-      <!-- Une mise en forme active sous le curseur : le bouton le montre, comme dans un traitement de texte. -->
+      <!-- Une mise en forme active sous le curseur : le bouton le montre, comme dans un traitement de texte. Sur le fond
+           du ruban, le fond actif ne se distingue pas en thème clair : le contour le dit. -->
       <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="True">
         <Setter Property="Background" Value="{DynamicResource Kyf.Brush.NavigationActiveBackground}" />
         <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.NavigationActiveText}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Kyf.Brush.Primary}" />
       </DataTrigger>
     </Style.Triggers>
   </Style>

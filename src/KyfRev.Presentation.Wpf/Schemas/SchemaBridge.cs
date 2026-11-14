@@ -11,8 +11,13 @@ namespace KyfRev.Presentation.Wpf.Schemas;
 /// Ce que l'îlot des schémas peut demander à l'application : une liste fermée d'appels. L'îlot ne voit ni le coffre ni le disque, et
 /// un appel inconnu ou mal formé est refusé. Les noms sont ceux de la 0.x, que l'éditeur repris attend tels quels.
 /// </summary>
-internal sealed class SchemaBridge(SchemaUseCases schemas, IFolderPicker folders, Func<string?> pickFile, Action<string> openSheet, Action? editorClosed = null)
+internal sealed class SchemaBridge(SchemaUseCases schemas, IFolderPicker folders, Func<string?> pickFile, Action<string> openSheet, Action? editorClosed = null, Action<byte[]>? copyImage = null)
 {
+    /// <summary>Une image de schéma copiée ne dépasse pas ce poids : au-delà, l'appel est refusé sans rien copier.</summary>
+    internal const int ImageLimit = 32 * 1024 * 1024;
+
+    private static ReadOnlySpan<byte> PngSignature => [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+
     private const string Saved = "enregistre";
     private const string Conflict = "conflit";
     private const string NoneOpen = "aucun";
@@ -157,6 +162,16 @@ internal sealed class SchemaBridge(SchemaUseCases schemas, IFolderPicker folders
             case "exporterSchema":
                 var (folder, name, content) = (Argument(args, 0), Argument(args, 1), Convert.FromBase64String(Argument(args, 2)));
                 return Answer(await Task.Run(() => schemas.Export(folder, name, content)).ConfigureAwait(true), path => path);
+            case "copierImageSchema":
+                // « Partager » : l'image du schéma va dans le presse-papiers, prête à être collée dans un message ou un
+                // document. Seule une image PNG de taille raisonnable est acceptée, et seulement si quelque chose sait la copier.
+                var picture = Convert.FromBase64String(Argument(args, 0));
+                if (copyImage is null || picture.Length is 0 or > ImageLimit || !picture.AsSpan().StartsWith(PngSignature))
+                {
+                    throw new ArgumentException(SchemaText.BadCall);
+                }
+                copyImage(picture);
+                return (null, null);
             case "choisirDossier":
                 return (folders.Pick(Argument(args, 0)), null);
             case "choisirFichierSchema":

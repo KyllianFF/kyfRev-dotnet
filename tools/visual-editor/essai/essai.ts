@@ -8,9 +8,11 @@
 //   page    sans-fin | a4 | a5 | a6                                                    (sans-fin)
 //   marge   les marges de la feuille, en millimètres                                   (15)
 //   police  application | georgia | manuscrite | feutre | code                         (application)
-//   taille  la taille du texte, en pixels                                              (17)
+//   taille  la taille du texte, en pixels                                              (16)
 //   theme   clair | sombre                                                             (clair)
-//   fiche   courte | longue (assez de texte pour plusieurs pages) | vide               (courte)
+//   fiche   courte | longue (assez de texte pour plusieurs pages) | titres | vide      (courte)
+//           titres : les six niveaux, des sections à replier, un saut de page, une page blanche
+//   largeur la largeur de la feuille sans fin, en pixels (« --largeur-fiche ») ; rien : toute la vue
 //   traits  une couleur pour les lignes du papier, pour mieux les voir : traits=red    (celle du thème)
 //
 // Dans la console : `essai.envoyer({ kind: "paper", style: "points", step: 37.76 })` envoie un message de l'hôte,
@@ -191,6 +193,73 @@ const LONGUE = () => {
   return `${court}\n## Un long tableau\n\n| Nom | Valeur | Remarque |\n| --- | --- | --- |\n${lignes.join("\n")}\n\n${paragraphes.join("\n\n")}\n\n> ${paragraphes.slice(0, 6).join("\n>\n> ")}\n\n${court.replace("# Le cycle de l'eau", "# Encore une fois")}`;
 };
 
+/** Les six niveaux de titre, des sections dans des sections, un titre centré, un titre cité, un saut et une page blanche. */
+const TITRES = () => `# Titre de niveau 1
+
+Un paragraphe sous le premier titre, assez long pour passer à la ligne et montrer la taille du texte à côté de celle des titres.
+
+## Titre de niveau 2
+
+Du texte sous le titre de niveau 2.
+
+### Titre de niveau 3
+
+Du texte sous le titre de niveau 3.
+
+| Niveau | Taille |
+| --- | --- |
+| 1 | 20 points |
+| 2 | 16 points |
+
+#### Titre de niveau 4
+
+Du texte sous le titre de niveau 4, qui est en italique.
+
+##### Titre de niveau 5
+
+Du texte sous le titre de niveau 5.
+
+###### Titre de niveau 6
+
+Du texte sous le titre de niveau 6.
+
+## Un titre de niveau 2 assez long pour passer à la ligne dans une feuille étroite, et voir où se pose sa flèche
+
+- un point ;
+- un autre.
+
+<!-- kyfrev saut-de-page -->
+
+Ce paragraphe commence une page, après un saut.
+
+## Sans rien dessous
+
+## Une image et du code
+
+![Un schéma](${image(320, 137)})
+
+\`\`\`python
+def cycle(eau):
+    return condenser(evaporer(eau))
+\`\`\`
+
+<!-- kyfrev page-blanche -->
+
+<div align="center">
+
+# Un titre centré
+
+</div>
+
+Du texte sous le titre centré.
+
+> ## Un titre dans une citation
+>
+> Il n'ouvre pas de section : pas de flèche.
+
+Dernier paragraphe.
+`;
+
 const recus: DepuisEditeur[] = [];
 type Ecoute = (evenement: { data: unknown }) => void;
 const ecoutes: Ecoute[] = [];
@@ -202,13 +271,14 @@ function demarrer(): void {
   const papier = choix("papier", ["uni", "petits-carreaux", "grands-carreaux", "lignes", "points", "millimetre", "aucun"], "grands-carreaux");
   const page = choix("page", ["sans-fin", "a4", "a5", "a6"], "sans-fin");
   const police = choix("police", ["application", "georgia", "manuscrite", "feutre", "code"], "application");
-  const fiche = choix("fiche", ["courte", "longue", "vide"], "courte");
+  const fiche = choix("fiche", ["courte", "longue", "titres", "vide"], "courte");
   const theme = choix("theme", ["clair", "sombre"], "clair");
   envoyer({
     kind: "theme",
     variables: {
       ...(theme === "sombre" ? SOMBRE : CLAIR),
-      "--taille-lecture": `${nombre("taille", 17)}px`,
+      "--taille-lecture": `${nombre("taille", 16)}px`,
+      ...(parametres.has("largeur") ? { "--largeur-fiche": `${nombre("largeur", 820)}px` } : {}),
       "--interligne-lecture": "1.65",
       "--police-lecture": POLICES[police],
       "--couleur-forcee": "",
@@ -221,7 +291,8 @@ function demarrer(): void {
     envoyer({ kind: "page", width: largeur * MM, height: hauteur * MM, margin: nombre("marge", 15) * MM });
   }
   envoyer({ kind: "paper", style: papier === "aucun" ? "" : papier, step: nombre("pas", PAS[papier] ?? 0) });
-  envoyer({ kind: "load", text: fiche === "vide" ? "" : fiche === "longue" ? LONGUE() : COURTE(), folder: "", drawn: [] });
+  const textes = { vide: () => "", courte: COURTE, longue: LONGUE, titres: TITRES };
+  envoyer({ kind: "load", text: textes[fiche](), folder: "", drawn: [] });
 }
 
 /**
@@ -238,7 +309,8 @@ function verifier(): { bloc: string; page: number; ecart: number }[] {
   const feuille = Number.parseFloat(style.getPropertyValue("--page-hauteur")) || 0;
   const marge = Number.parseFloat(style.getPropertyValue("--page-marge")) || 0;
   const origine = editeur.getBoundingClientRect().top + marge;
-  const blocs = editeur.querySelectorAll<HTMLElement>(":is(p, h1, h2, h3, h4, h5, h6):not(:is(table, .bloc-code) *)");
+  // Ce qu'une section repliée cache n'a pas de place : il ne se vérifie pas.
+  const blocs = editeur.querySelectorAll<HTMLElement>(":is(p, h1, h2, h3, h4, h5, h6):not(:is(table, .bloc-code, .bloc-replie) *, .bloc-replie)");
   return [...blocs].map((bloc) => {
     const levee = /^H\d$/.test(bloc.tagName) ? Number.parseFloat(getComputedStyle(bloc).top) || 0 : 0;
     const haut = bloc.getBoundingClientRect().top - levee - origine;

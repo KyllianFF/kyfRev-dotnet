@@ -220,8 +220,37 @@ public sealed class ShellWindowTests
             window.FocusNavigation();
             Assert.AreSame(window.FindName("TabNavigation"), ItemsControl.ItemsControlFromItemContainer((DependencyObject)FocusManager.GetFocusedElement(window)));
 
+            // Les onglets du bas ne se masquent pas : Ctrl+Maj+F n'a pas de menu latéral à retirer ici.
             shell.ToggleFocusMode();
+            Assert.AreEqual(Visibility.Visible, tabBar.Visibility);
+            Assert.IsFalse(shell.IsFocusMode);
+
+            // Masqué en grand, puis la fenêtre rétrécit : les onglets paraissent quand même, sans quoi on resterait bloqué sur la page ;
+            // élargie, elle retrouve son menu masqué et le bouton qui le rend.
+            window.Width = 1100;
+            window.UpdateLayout();
+            TestShell.Flush();
+            shell.ToggleFocusMode();
+            TestShell.Flush();
+            Assert.IsTrue(shell.IsFocusMode);
+            Assert.AreEqual(Visibility.Collapsed, sidebar.Visibility);
+            window.Width = 420;
+            window.UpdateLayout();
+            TestShell.Flush();
+            Assert.AreEqual(NavigationLayout.Tabs, shell.Layout);
+            Assert.AreEqual(Visibility.Visible, tabBar.Visibility, "le menu masqué revient en onglets");
+            Assert.IsTrue(tabBar.ActualHeight > 0);
+            Assert.AreEqual(Visibility.Collapsed, ((FrameworkElement)window.FindName("MenuButtonHost")).Visibility);
+            window.Width = 1100;
+            window.UpdateLayout();
+            TestShell.Flush();
             Assert.AreEqual(Visibility.Collapsed, tabBar.Visibility);
+            Assert.AreEqual(Visibility.Collapsed, sidebar.Visibility, "élargie, elle retrouve le menu masqué");
+            Assert.IsTrue(((Button)window.FindName("ExitFocusButton")).IsVisible, "et le bouton qui le rend");
+            shell.ToggleFocusMode();
+            window.Width = 420;
+            window.UpdateLayout();
+            TestShell.Flush();
 
             // Le zoom grandit la fenêtre minimale avec lui.
             shell.SetZoom(1.2);
@@ -317,7 +346,7 @@ public sealed class ShellWindowTests
             var handle = new WindowInteropHelper(window).Handle;
             var maximize = (Button)window.FindName("MaximizeButton");
             var center = maximize.PointToScreen(new Point(maximize.ActualWidth / 2, maximize.ActualHeight / 2));
-            var elsewhere = ((Button)window.FindName("CloseButton")).PointToScreen(new Point(4, 4));
+            var elsewhere = ((Button)window.FindName("CloseButton")).PointToScreen(new Point(4, 12));
             nint Send(int message, nint wParam, nint lParam, out bool handled)
             {
                 var taken = false;
@@ -817,6 +846,69 @@ public sealed class ShellWindowTests
             tool.Tag = false;
             TestShell.Flush();
             Assert.AreNotEqual(active, tool.Background);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [TestMethod]
+    public void Every_edge_and_corner_of_the_window_resizes_it()
+    {
+        var size = new Size(900, 600);
+        // Les quatre coins, sur l'un ou l'autre de leurs bords.
+        Assert.AreEqual(13, ShellWindow.ResizeEdge(new Point(2, 2), size), "HTTOPLEFT");
+        Assert.AreEqual(14, ShellWindow.ResizeEdge(new Point(898, 2), size), "HTTOPRIGHT");
+        Assert.AreEqual(14, ShellWindow.ResizeEdge(new Point(890, 3), size), "le coin se prend aussi par le bord du haut");
+        Assert.AreEqual(14, ShellWindow.ResizeEdge(new Point(897, 12), size), "et par le bord de droite");
+        Assert.AreEqual(16, ShellWindow.ResizeEdge(new Point(1, 598), size), "HTBOTTOMLEFT");
+        Assert.AreEqual(17, ShellWindow.ResizeEdge(new Point(899, 599), size), "HTBOTTOMRIGHT");
+        // Les quatre bords.
+        Assert.AreEqual(10, ShellWindow.ResizeEdge(new Point(3, 300), size), "HTLEFT");
+        Assert.AreEqual(11, ShellWindow.ResizeEdge(new Point(896, 300), size), "HTRIGHT");
+        Assert.AreEqual(12, ShellWindow.ResizeEdge(new Point(450, 5), size), "HTTOP");
+        Assert.AreEqual(15, ShellWindow.ResizeEdge(new Point(450, 595), size), "HTBOTTOM");
+        // Ailleurs, rien : le bouton « Fermer » se clique à quelques pixels du coin.
+        Assert.AreEqual(0, ShellWindow.ResizeEdge(new Point(880, 20), size));
+        Assert.AreEqual(0, ShellWindow.ResizeEdge(new Point(890, 12), size), "près du coin, mais sur aucun bord");
+        Assert.AreEqual(0, ShellWindow.ResizeEdge(new Point(450, 300), size));
+        Assert.AreEqual(0, ShellWindow.ResizeEdge(new Point(-4, 300), size));
+        Assert.AreEqual(0, ShellWindow.ResizeEdge(new Point(450, 700), size));
+    }
+
+    [STATestMethod]
+    public void The_corner_under_the_close_button_resizes_the_window()
+    {
+        var test = new TestShell();
+        var window = Open(test);
+        try
+        {
+            var handle = new WindowInteropHelper(window).Handle;
+            var close = (Button)window.FindName("CloseButton");
+            var maximize = (Button)window.FindName("MaximizeButton");
+            int At(Point point)
+            {
+                var taken = false;
+                var answer = (int)window.OnWindowMessage(handle, 0x0084, 0, ScreenPosition(window.PointToScreen(point)), ref taken);
+                Assert.AreEqual(answer != 0, taken);
+                return answer;
+            }
+
+            var corner = new Point(window.ActualWidth - 2, 2);
+            Assert.IsTrue(close.TranslatePoint(new Point(close.ActualWidth, 0), window).X >= window.ActualWidth - 8, "« Fermer » touche le coin : sans rien faire, il l'emporterait sur le cadre");
+            Assert.AreEqual(14, At(corner), "HTTOPRIGHT : la flèche en diagonale, comme dans les autres applications");
+            Assert.AreEqual(13, At(new Point(2, 2)), "le coin du bouton du menu aussi");
+            Assert.AreEqual(12, At(maximize.TranslatePoint(new Point(maximize.ActualWidth / 2, 2), window)), "le haut des boutons redimensionne");
+            Assert.IsNull(maximize.Tag, "sans montrer « Agrandir » survolé");
+            Assert.AreEqual(0, At(close.TranslatePoint(new Point(close.ActualWidth / 2, close.ActualHeight / 2), window)), "le bouton se clique toujours");
+
+            // Agrandie ou en plein écran, la fenêtre ne se redimensionne pas : ses bords ne répondent plus.
+            test.Shell.ToggleFullScreen();
+            TestShell.Flush();
+            Assert.AreEqual(0, At(new Point(window.ActualWidth - 2, 2)));
+            test.Shell.ToggleFullScreen();
+            TestShell.Flush();
         }
         finally
         {

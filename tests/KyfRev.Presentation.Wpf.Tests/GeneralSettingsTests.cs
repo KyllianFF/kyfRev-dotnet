@@ -80,7 +80,7 @@ public sealed class GeneralSettingsTests
 
         Assert.AreEqual(ThemeKind.Dark, test.Design.Theme);
         Assert.AreEqual(1.25, test.Shell.Zoom);
-        Assert.AreEqual(21.0, ((ReadingComfort)test.Design.Dictionary[ReadingComfort.ResourceKey]).Size);
+        Assert.AreEqual(ReadingComfort.Pixels(16), ((ReadingComfort)test.Design.Dictionary[ReadingComfort.ResourceKey]).Size, 1e-9);
 
         machine.Update(preferences => preferences with { HighContrast = true, ReducedMotion = true, LargerTargets = true, Zoom = 9, LineSpacing = ReadingLineSpacing.Airy });
 
@@ -171,7 +171,7 @@ public sealed class GeneralSettingsTests
 
         Assert.AreEqual("Clair", page.Theme.Label);
         Assert.AreEqual("125 %", page.Size!.Label);
-        Assert.AreEqual("Grande (19 px)", page.TextSize.Label);
+        Assert.AreEqual("Grande (14)", page.TextSize.Label);
         Assert.AreEqual("Aéré", page.LineSpacing.Label);
         Assert.AreEqual("Avec empattements (Georgia)", page.Font.Label);
         Assert.IsTrue(page.ReducedMotion);
@@ -179,8 +179,8 @@ public sealed class GeneralSettingsTests
         Assert.IsTrue(page.LargerTargets);
         Assert.AreEqual("Paul", page.Voice!.Label);
         Assert.AreEqual(ReadingText.RateFast, page.Rate.Label);
-        Assert.AreEqual(19.0, page.PreviewSize);
-        Assert.AreEqual(19 * 1.9, page.PreviewLineHeight, 0.001);
+        Assert.AreEqual(ReadingComfort.Pixels(14), page.PreviewSize, 1e-9);
+        Assert.AreEqual(ReadingComfort.Pixels(14) * 1.9, page.PreviewLineHeight, 0.001);
         Assert.IsTrue(page.PreviewIsSerif);
         Assert.IsFalse(page.MarkDefinedWords);
         Assert.AreEqual(0, store.Saves, "montrer n'écrit rien");
@@ -313,8 +313,10 @@ public sealed class GeneralSettingsTests
         Assert.AreEqual("Georgia", document.FontFamily.Source);
         var small = document.Blocks.OfType<Paragraph>().ElementAt(1);
         Assert.AreEqual(21.0, small.FontSize, "le plus petit titre a la taille du texte");
+        Assert.AreEqual(FontStyles.Italic, small.FontStyle, "et l'italique le distingue");
+        Assert.AreEqual(21.0 * 20 / 12, document.Blocks.OfType<Paragraph>().First().FontSize, 1e-9, "le titre 1 vaut 20 points pour un corps de 12, et grandit avec le texte");
         var link = document.Blocks.OfType<Paragraph>().ElementAt(2).Inlines.OfType<Hyperlink>().Single();
-        Assert.AreEqual(24 * 21 / KyfRev.DesignSystem.Tokens.Typography.BodyLarge.Size, document.Blocks.OfType<List>().Single().Padding.Left, 0.001, "la puce grandit avec le texte");
+        Assert.AreEqual(24 * 21 / ReadingComfort.Default.Size, document.Blocks.OfType<List>().Single().Padding.Left, 0.001, "la puce grandit avec le texte");
         var window = new Window { Content = new FlowDocumentScrollViewer { Document = document }, Left = -10000, Top = -10000, Width = 600, Height = 400, ShowActivated = false };
         window.Show();
         TestShell.Flush();
@@ -323,16 +325,16 @@ public sealed class GeneralSettingsTests
 
         var usual = new DocumentBuilder(reading, _ => { }, opensLinks: true, showsHeader: false).Build();
 
-        Assert.AreEqual(KyfRev.DesignSystem.Tokens.Typography.BodyLarge.Size, usual.FontSize);
-        Assert.AreEqual(KyfRev.DesignSystem.Tokens.Typography.BodyLarge.Size * KyfRev.DesignSystem.Tokens.Typography.ReadingLineSpacing, usual.LineHeight, 0.001);
+        Assert.AreEqual(16.0, usual.FontSize, "12 points");
+        Assert.AreEqual(16 * KyfRev.DesignSystem.Tokens.Typography.ReadingLineSpacing, usual.LineHeight, 0.001);
     }
 
     [TestMethod]
     public void The_comfort_says_what_the_preferences_say()
     {
         Assert.AreEqual(ReadingComfort.Default, ReadingComfort.Of(new MachinePreferences()));
-        Assert.AreEqual(19.0, ReadingComfort.Of(new MachinePreferences { TextSize = ReadingTextSize.Large }).Size);
-        Assert.AreEqual(21.0, ReadingComfort.Of(new MachinePreferences { TextSize = ReadingTextSize.ExtraLarge }).Size);
+        Assert.AreEqual(ReadingComfort.Pixels(14), ReadingComfort.Of(new MachinePreferences { TextSize = ReadingTextSize.Large }).Size, 1e-9);
+        Assert.AreEqual(ReadingComfort.Pixels(16), ReadingComfort.Of(new MachinePreferences { TextSize = ReadingTextSize.ExtraLarge }).Size, 1e-9);
         Assert.AreEqual(1.9, ReadingComfort.Of(new MachinePreferences { LineSpacing = ReadingLineSpacing.Airy }).LineSpacing);
         Assert.AreEqual("Georgia", ReadingComfort.Of(new MachinePreferences { Font = ReadingFont.Serif }).Family!.Source);
     }
@@ -352,9 +354,14 @@ public sealed class GeneralSettingsTests
         TestShell.Flush();
         try
         {
-            Assert.AreEqual(2, page.Sections.Columns);
             Assert.IsTrue(page.AppearanceCard.IsVisible && page.ReadingCard.IsVisible && page.VoiceCard.IsVisible, "hors de la vue Paramètres, toutes les cartes se montrent");
-            Assert.AreEqual(page.AppearanceCard.TranslatePoint(default, page).Y, page.AccessibilityCard.TranslatePoint(default, page).Y, 1, "côte à côte");
+            Assert.IsGreaterThan(page.AppearanceCard.TranslatePoint(default, page).Y + page.AppearanceCard.ActualHeight - 1, page.AccessibilityCard.TranslatePoint(default, page).Y, "l'une sous l'autre");
+            Assert.IsLessThanOrEqualTo(SettingsTab.Column + 0.5, page.AppearanceCard.ActualWidth, "la colonne ne dépasse pas sa largeur");
+            // Chaque réglage est à droite de son nom, au même bord que les autres.
+            var edge = page.AppearanceCard.TranslatePoint(new Point(page.AppearanceCard.ActualWidth, 0), page).X - 16;
+            Assert.AreEqual(edge, page.ThemeChoice.TranslatePoint(new Point(page.ThemeChoice.ActualWidth, 0), page).X, 1);
+            Assert.AreEqual(edge, page.SizeChoice.TranslatePoint(new Point(page.SizeChoice.ActualWidth, 0), page).X, 1);
+            Assert.AreEqual(page.ThemeChoice.ActualWidth, page.SizeChoice.ActualWidth, 0.5);
             Assert.AreEqual("100 %", page.SizeChoice.SelectionBoxItem.ToString(), "le libellé, pas l'objet");
             Assert.AreEqual(Visibility.Collapsed, page.NoVoice.Visibility);
             Assert.AreEqual("100 %", ((SettingChoice<double>)page.SizeChoice.SelectedItem).Label);
@@ -363,7 +370,6 @@ public sealed class GeneralSettingsTests
             host.Width = 560;
             TestShell.Flush();
 
-            Assert.AreEqual(1, page.Sections.Columns);
             Assert.IsGreaterThan(page.ReadingCard.TranslatePoint(default, page).Y, page.PreviewCard.TranslatePoint(default, page).Y, "l'aperçu vient juste sous les réglages qu'il montre");
             Assert.IsLessThan(page.VoiceCard.TranslatePoint(default, page).Y, page.PreviewCard.TranslatePoint(default, page).Y);
 

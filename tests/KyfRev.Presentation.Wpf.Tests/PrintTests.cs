@@ -2,6 +2,7 @@ using System.IO;
 using System.IO.Packaging;
 using System.Printing;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -152,6 +153,123 @@ public sealed class PrintTests
         Assert.AreEqual(2, print.Layout.MarginCm, "une saisie illisible laisse les marges de la fiche");
         print.SetOrientationCommand.Execute("landscape");
         Assert.IsTrue(print.Layout.Landscape);
+    }
+
+    [STATestMethod]
+    [DataRow(false, 860)]
+    [DataRow(true, 860)]
+    [DataRow(false, 430)]
+    public void Another_paper_chosen_in_the_window_redoes_the_pages_of_the_preview(bool dark, int width)
+    {
+        using var ui = new UiThread();
+        var test = new TestShell(dark);
+        var body = "# Chapitre\n\n" + string.Join("\n\n", Enumerable.Range(1, 30).Select(index => $"Paragraphe {index} : " + string.Join(' ', Enumerable.Repeat("des mots qui font des lignes", 5))));
+        var print = new PrintViewModel(new FakePrinting());
+        var view = new PrintView { DataContext = print, Width = width, Height = 700 };
+        var host = new Border { Child = view, Width = width, Height = 700 };
+        host.Resources.MergedDictionaries.Add(test.Design.Dictionary);
+        host.SetResourceReference(Border.BackgroundProperty, "Kyf.Brush.Surface");
+        var window = new Window { Content = new Canvas { Children = { host } }, Left = -10000, Top = -10000, Width = 400, Height = 300, ShowActivated = false, ShowInTaskbar = false };
+        window.Show();
+        try
+        {
+            print.Open(Reading(body), new PageLayout(PageFormat.A5));
+            UiThread.Until(() => !print.IsPreparing && print.TotalPages > 0);
+            TestShell.Flush();
+            var onA5 = print.TotalPages;
+            var a5 = new PageLayout(PageFormat.A5);
+            Assert.AreEqual(a5.WidthPixels, view.PageCanvas.Width);
+
+            // Le choix du papier : dans la fenêtre, entier, sur celui de la fiche.
+            var box = (ComboBox)view.FindName("PaperFormatBox");
+            Assert.IsTrue(box.IsVisible);
+            Assert.AreEqual(3, box.Items.Count);
+            Assert.AreSame(print.Format, box.SelectedItem);
+            Assert.AreEqual(PrintText.PaperFormat, System.Windows.Automation.AutomationProperties.GetName(box));
+            Assert.IsGreaterThanOrEqualTo(0, box.TranslatePoint(default, host).X);
+            Assert.IsLessThanOrEqualTo(width, box.TranslatePoint(new Point(box.ActualWidth, 0), host).X, "il tient dans la fenêtre");
+
+            // Large, les réglages et l'aperçu sont côte à côte ; étroite, l'un sous l'autre, et rien ne sort du cadre.
+            var preview = (FrameworkElement)view.FindName("PreviewPane");
+            Assert.AreEqual(width < PrintView.StackedBelow, view.IsStacked);
+            Assert.IsGreaterThanOrEqualTo(-0.5, preview.TranslatePoint(default, host).X);
+            Assert.IsLessThanOrEqualTo(width + 0.5, preview.TranslatePoint(new Point(preview.ActualWidth, 0), host).X, "l'aperçu tient dans la largeur de la fenêtre");
+            if (view.IsStacked)
+            {
+                Assert.IsGreaterThan(box.TranslatePoint(default, host).Y, preview.TranslatePoint(default, host).Y, "sous les réglages");
+                Assert.AreEqual(ScrollBarVisibility.Auto, ((ScrollViewer)view.FindName("Whole")).VerticalScrollBarVisibility, "et l'ensemble défile");
+            }
+            else
+            {
+                Assert.IsGreaterThan(box.TranslatePoint(new Point(box.ActualWidth, 0), host).X, preview.TranslatePoint(default, host).X, "à droite des réglages");
+            }
+
+            // A4 : la feuille de l'aperçu grandit, et le même texte tient sur moins de feuilles.
+            box.SelectedIndex = 0;
+            var a4 = new PageLayout(PageFormat.A4);
+            UiThread.Until(() => !print.IsPreparing && view.PageCanvas.Width == a4.WidthPixels && print.TotalPages > 0 && print.TotalPages < onA5);
+            Assert.AreEqual(a4.HeightPixels, view.PageCanvas.Height);
+            Assert.AreEqual(PageFormat.A4, print.Layout.Format);
+            TestShell.Flush();
+            host.Capture($"impression-a4-{width}-{(dark ? "sombre" : "clair")}");
+            if (view.IsStacked)
+            {
+                ((ScrollViewer)view.FindName("Whole")).ScrollToEnd();
+                TestShell.Flush();
+                host.Capture($"impression-a4-{width}-bas");
+            }
+
+            // A6 : plus petite, donc plus de feuilles ; ce qui part à l'imprimante a sa taille.
+            box.SelectedIndex = 2;
+            var a6 = new PageLayout(PageFormat.A6);
+            UiThread.Until(() => !print.IsPreparing && view.PageCanvas.Width == a6.WidthPixels && print.TotalPages > onA5);
+            TestShell.Flush();
+            Assert.AreEqual(new Size(a6.WidthPixels, a6.HeightPixels), view.Paginate([1], numbers: true)!.PageSize);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
+    public void The_paper_is_the_one_of_the_sheet_until_another_is_chosen()
+    {
+        using var ui = new UiThread();
+        var service = new FakePrinting();
+        var print = new PrintViewModel(service);
+
+        print.Open(Reading("Texte."), new PageLayout(PageFormat.A5, MarginCm: 1));
+        UiThread.Until(() => !print.IsLookingForPrinters);
+        CollectionAssert.AreEqual(new[] { PageFormat.A4, PageFormat.A5, PageFormat.A6 }, print.FormatOptions.Select(option => option.Format).ToArray());
+        Assert.AreEqual("A5 (14,8 × 21 cm), celui de la fiche", print.Format.Label);
+        Assert.AreEqual("A4 (21 × 29,7 cm)", print.FormatOptions[0].ToString());
+
+        // Un autre papier : la feuille imprimée change, l'aperçu l'apprend, la fiche n'en sait rien.
+        var changed = new List<string?>();
+        print.PropertyChanged += (_, e) => changed.Add(e.PropertyName);
+        print.Format = print.FormatOptions.Single(option => option.Format == PageFormat.A4);
+        Assert.AreEqual(new PageLayout(PageFormat.A4, MarginCm: 1), print.Layout);
+        CollectionAssert.Contains(changed, nameof(PrintViewModel.Layout));
+
+        // Le plus petit : des marges trop grandes pour lui sont ramenées à ce qu'il peut tenir.
+        print.Margin = print.MarginOptions.Single(option => option.Kind == PrintMargin.Custom);
+        print.CustomMargin = "9";
+        print.Format = print.FormatOptions.Single(option => option.Format == PageFormat.A6);
+        Assert.AreEqual(PageFormat.A6, print.Layout.Format);
+        Assert.IsLessThan(print.Layout.WidthPixels, 2 * print.Layout.MarginPixels, "il reste de la place pour le texte");
+
+        // Le papier choisi part à l'imprimante, avec son nom de format.
+        print.Margin = print.MarginOptions.Single(option => option.Kind == PrintMargin.Normal);
+        var ticket = WindowsPrintService.TicketFor(new PrintJob("Bureau", "Mitose", print.Layout, PrintSides.OneSided, 1), new System.Printing.PrintTicket());
+        Assert.AreEqual(System.Printing.PageMediaSizeName.ISOA6, ticket.PageMediaSize!.PageMediaSizeName);
+
+        // Une fiche sans fin part en A4, sans « celui de la fiche » : elle n'a pas de papier à elle. Rouverte, la fenêtre
+        // oublie le papier choisi la fois d'avant.
+        print.Close();
+        print.Open(Reading("Texte."), PageLayout.Default);
+        Assert.AreEqual("A4 (21 × 29,7 cm)", print.Format.Label);
+        Assert.IsFalse(print.FormatOptions.Any(option => option.Label.Contains("fiche", StringComparison.Ordinal)));
     }
 
     [STATestMethod]

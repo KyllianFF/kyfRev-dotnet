@@ -81,8 +81,10 @@ body {
   overflow-x: hidden;
 }
 
-/* La feuille : elle se détache du fond, comme dans un traitement de texte. */
+/* La feuille : elle se détache du fond, comme dans un traitement de texte. « --marge-repli » : ce qu'il y a de place à
+   gauche du texte, du bord de la feuille au texte, pour la flèche qui replie une section. */
 #fiche {
+  --marge-repli: 40px;
   box-sizing: border-box;
   min-height: calc(100% - 28px);
   margin: 8px 12px 20px 8px;
@@ -95,8 +97,20 @@ body {
 
 @media (width < 640px) {
   #fiche {
+    --marge-repli: 16px;
     padding: 16px;
   }
+}
+
+/*
+ * La feuille sans fin dans une vue plus large qu'elle : l'application donne sa largeur (« --largeur-fiche », bords
+ * compris), et elle se tient au milieu de la vue ; la page entière défile, sa barre au bord droit de la vue. Dans une vue
+ * plus étroite, ou sans cette largeur, elle prend toute la place, à ses marges d'avant.
+ */
+html:not(.en-pages) #fiche {
+  max-width: var(--largeur-fiche, none);
+  margin-right: max(12px, (100% - var(--largeur-fiche, 100%)) / 2);
+  margin-left: max(8px, (100% - var(--largeur-fiche, 100%)) / 2);
 }
 
 .contenu-fiche pre,
@@ -154,6 +168,8 @@ html.en-pages body {
 }
 
 #fiche.en-pages {
+  /* La feuille a un bord d'un pixel : la marge du texte se compte depuis l'intérieur de ce bord. */
+  --marge-repli: max(0px, var(--page-marge) - 1px);
   position: relative;
   box-sizing: content-box;
   width: var(--page-largeur);
@@ -250,6 +266,101 @@ html.en-pages body {
   flex: 1;
   border-top: 1px dashed var(--texte-secondaire);
   content: "";
+}
+
+/*
+ * Le repli des sections (repli.ts) : une flèche dans la marge, à gauche de chaque titre qui a quelque chose sous lui.
+ * Elle est dans le titre mais hors de son texte : posée en absolu, elle ne déplace rien et ne change pas la hauteur de
+ * la ligne. Elle se montre au survol du titre, quand le curseur y est, quand elle a le focus du clavier, et toujours
+ * quand la section est repliée.
+ */
+.editeur-visuel :is(h1, h2, h3, h4, h5, h6) {
+  position: relative;
+}
+
+/*
+ * 24 px de côté, au milieu de la première ligne du titre (« 1lh » : elle hérite de sa police et de son interligne, y
+ * compris sur un papier réglé, où le titre est déjà décalé vers sa ligne). Dans une marge plus étroite qu'elle, elle se
+ * réduit à la marge et reste collée au bord de la feuille : jamais hors de la feuille, et sur le texte seulement si la
+ * marge n'a même plus la place de son chevron.
+ */
+.editeur-visuel .repli {
+  position: absolute;
+  top: calc((1lh - 24px) / 2);
+  left: calc(-1 * min(var(--marge-repli, 24px), 24px));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: clamp(12px, var(--marge-repli, 24px), 24px);
+  height: 24px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  color: var(--texte-secondaire);
+  font: inherit;
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--duree);
+  user-select: none;
+}
+
+.editeur-visuel .repli > svg {
+  flex: none;
+}
+
+/* Dépliée, le chevron pointe vers le bas ; repliée, vers le texte caché. */
+.editeur-visuel .repli[aria-expanded="true"] > svg {
+  transform: rotate(90deg);
+}
+
+.editeur-visuel :is(h1, h2, h3, h4, h5, h6):hover > .repli,
+.editeur-visuel.ProseMirror-focused .titre-courant > .repli,
+.editeur-visuel .titre-replie > .repli,
+.editeur-visuel .repli:focus-visible {
+  opacity: 1;
+}
+
+.editeur-visuel .repli:hover {
+  color: var(--texte);
+  background: var(--surface-2);
+}
+
+.editeur-visuel .repli:focus-visible {
+  color: var(--texte);
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+/* Sans souris, rien ne se survole : les flèches sont toujours là. */
+@media (hover: none) {
+  .editeur-visuel .repli {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .editeur-visuel .repli {
+    transition: none;
+  }
+}
+
+/* Un titre replié le dit, discrètement : trois points après lui, qui ne sont pas dans le texte et ne se lisent pas. */
+.editeur-visuel .titre-replie::after {
+  margin-left: 0.4em;
+  color: var(--texte-secondaire);
+  font-style: normal;
+  font-weight: 400;
+  content: "…" / "";
+}
+
+/* Ce qu'une section repliée cache. */
+.editeur-visuel .bloc-replie {
+  /* biome-ignore lint/complexity/noImportantStyles: un bloc replié ne se montre pas, quel que soit son style (tableau, tâche, marque de page). */
+  display: none !important;
 }
 
 /* L'espace ouvert au début d'une ligne, dans un bloc de code plus haut qu'une page. */
@@ -403,6 +514,7 @@ html[data-papier]:not(.en-pages) #fiche {
 @media (width < 640px) {
   html[data-papier]:not(.en-pages) #fiche {
     --bord-texte: 24px;
+    --marge-repli: 24px;
     padding-right: 24px;
     padding-left: 24px;
   }

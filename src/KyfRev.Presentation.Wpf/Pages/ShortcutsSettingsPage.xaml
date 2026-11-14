@@ -11,10 +11,10 @@
   </UserControl.Resources>
 
   <ScrollViewer x:Name="Scroller" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
-    <StackPanel MaxWidth="1100">
+    <StackPanel MaxWidth="{x:Static pages:SettingsTab.Column}">
       <TextBlock Text="{x:Static pages:MoreSettingsText.MachineNote}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="0,0,0,8" />
-      <UniformGrid x:Name="Sections" Columns="2" VerticalAlignment="Top">
-        <kyf:Card x:Name="ShortcutsCard" pages:SettingsPart.Of="raccourcis" Padding="16,12" Margin="0,0,8,8">
+      <StackPanel x:Name="Sections">
+        <kyf:Card x:Name="ShortcutsCard" pages:SettingsPart.Of="raccourcis" Padding="16,12" Margin="0,0,0,8">
           <StackPanel>
             <TextBlock Text="{x:Static pages:MoreSettingsText.ShortcutsTitle}" Style="{DynamicResource Kyf.Text.Subtitle}" AutomationProperties.HeadingLevel="Level2" Margin="0,0,0,4" />
             <TextBlock Text="{x:Static pages:MoreSettingsText.ShortcutsHelp}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,0,0,8" />
@@ -103,7 +103,7 @@
                     Command="{Binding RestoreOrderCommand}" />
           </StackPanel>
         </kyf:Card>
-      </UniformGrid>
+      </StackPanel>
     </StackPanel>
   </ScrollViewer>
 </UserControl>

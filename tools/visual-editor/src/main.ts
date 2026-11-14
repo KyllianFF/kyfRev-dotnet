@@ -120,7 +120,7 @@ const editeur: EditeurVisuel = new EditeurVisuel(parent, {
     envoyer({ kind: "listKey", key: touche });
     return true;
   },
-  onmenu: (vise, image) => {
+  onmenu: (vise, image, marque) => {
     const etat = editeur.etatOutils();
     const dessin = vise ?? editeur.dessinSousLeCurseur();
     envoyer({
@@ -140,6 +140,8 @@ const editeur: EditeurVisuel = new EditeurVisuel(parent, {
       imagePosition: image?.position ?? null,
       imageAddress: image?.address ?? null,
       imageTitle: image?.title ?? null,
+      pageMarkPosition: marque?.position ?? null,
+      pageMarkBlank: marque?.blank ?? false,
     });
   },
   dessin: demanderDessin,
