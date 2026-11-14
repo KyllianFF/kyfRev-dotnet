@@ -640,6 +640,26 @@ export function ecrireVlansDuTrunk(schema: Schema, lienIds: string[], champs: Ch
   }
 }
 
+/**
+ * Le VLAN d'un câble en accès (un port d'accès : un seul VLAN, non tagué), écrit à l'identique sur les
+ * deux bouts de chaque câble, sur l'agrégat de chaque côté s'il y en a un ; `undefined` le retire. Seul
+ * ce numéro change : VLAN natif et tagués d'un ancien trunk, voix et PVID restent. Un bout en trunk ou
+ * en hybride n'est pas touché : l'interrupteur « Trunk » le règle.
+ */
+export function ecrireVlanDAcces(schema: Schema, lienIds: string[], vlan: number | undefined): void {
+  for (const id of lienIds) {
+    const lien = schema.liens.find((l) => l.id === id);
+    if (!lien) continue;
+    for (const bout of [lien.a, lien.b]) {
+      const avant = configDuBout(schema, bout);
+      if (avant && avant.mode !== "acces") continue;
+      const { acces: _acces, ...reste } = avant ?? { mode: "acces" as const };
+      const apres: ConfigVlan = vlan !== undefined ? { ...reste, mode: "acces", acces: vlan } : { ...reste, mode: "acces" };
+      ecrireConfigDuBout(schema, bout, Object.keys(apres).length > 1 ? apres : undefined);
+    }
+  }
+}
+
 /** Ce que dit le réglage VLAN d'un bout, en clair (« trunk, U 1 · T 10,20 », « accès, VLAN 10 »). */
 function decrireVlans(schema: Schema, config: ConfigVlan | undefined): string {
   if (!config) return "aucun réglage";
@@ -779,6 +799,10 @@ export function conseilsDeLiaison(schema: Schema, groupe: GroupeDeCables): strin
     if (estTerminal(a) || estTerminal(b)) {
       conseils.push("Un poste se branche d'ordinaire sur un port d'accès, pas sur un trunk.");
     }
+  } else if (groupe.vlans.nonTague === 1) {
+    conseils.push(
+      "Le VLAN 1 est celui de tous les ports tant qu'on n'en a rien dit : mieux vaut un VLAN propre à cet usage.",
+    );
   }
   if (agregat) {
     // Comme le diagnostic le dit des deux bouts d'un lien : des ports qui ne vont pas ensemble.

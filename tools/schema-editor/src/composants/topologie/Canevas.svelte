@@ -460,6 +460,15 @@
         return;
       }
     }
+    // Câble commencé au premier clic : le second, tout près d'un équipement (sur son nom, à côté de son
+    // icône), le lui tire ; pas besoin de viser l'illustration au pixel près.
+    if (evenement.button === 0 && !plan && tirage && vise()) {
+      const cible = equipementSous(dansLePlan(evenement), tirage.depart);
+      if (cible) {
+        viser(cible.id);
+        return;
+      }
+    }
     // Câble en main, ou outil qui vise un objet : le plan se fait glisser, on ne sélectionne pas.
     if (evenement.button === 1 || plan || editeur.cable || outil !== "choisir") {
       // Un clic dans le vide lâche le câble commencé.
@@ -2890,9 +2899,11 @@
     stroke-dasharray: 4 3;
   }
 
+  /* Le fil suit le pointeur jusque sous lui : il ne doit pas prendre le second clic, qui va à l'équipement. */
   .fil {
     stroke: var(--principale);
     stroke-width: 2;
     stroke-dasharray: 6 4;
+    pointer-events: none;
   }
 </style>

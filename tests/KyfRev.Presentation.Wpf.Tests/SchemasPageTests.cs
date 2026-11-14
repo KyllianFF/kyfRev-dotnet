@@ -8,6 +8,7 @@ using KyfRev.DesignSystem.Tokens;
 using KyfRev.Modules.Schemas;
 using KyfRev.Presentation.Wpf.Pages;
 using KyfRev.Presentation.Wpf.Schemas;
+using KyfRev.Presentation.Wpf.Shell;
 
 namespace KyfRev.Presentation.Wpf.Tests;
 
@@ -138,7 +139,7 @@ public sealed class SchemasPageTests
     public void The_page_copies_a_picture_to_the_clipboard_and_says_when_it_cannot()
     {
         using var scene = new BridgeScene();
-        var page = scene.Page();
+        using var page = scene.Page();
         // Une image illisible : un refus dit en clair, pas une exception qui remonte.
         var refusal = Assert.ThrowsExactly<InvalidOperationException>(() => page.CopyImage([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 1, 2, 3]));
         Assert.AreEqual(SchemaText.ClipboardBusy, refusal.Message);
@@ -181,7 +182,7 @@ public sealed class SchemasPageTests
     public void The_page_says_when_the_engine_could_not_start()
     {
         using var scene = new BridgeScene();
-        var page = scene.Page();
+        using var page = scene.Page();
         Assert.IsFalse(page.HasProblem);
 
         page.Problem = SchemaText.EngineFailedOf("absent");
@@ -257,7 +258,19 @@ public sealed class SchemasPageTests
             UiThread.Until(() => Count("svg.canevas g.lien .trait") == before + 1, TimeSpan.FromSeconds(15));
         }
         Cable();
-        Cable();
+
+        // Le second à la souris, en deux clics sans glisser : le pointillé qui suit le pointeur ne prend pas le second clic.
+        var centres = JsonSerializer.Deserialize<double[][]>(Text("JSON.stringify([...document.querySelectorAll('svg.canevas g.equipement')].map((g) => { const r = g.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; }))"))!;
+        var cables = Count("svg.canevas g.lien .trait");
+        scene.Script("document.querySelector('nav.outils .outil[data-outil=\"cable\"]').click()");
+        scene.Click(centres[0][0], centres[0][1]);
+        scene.WaitFor("document.body.innerText.includes('cliquez l\\'autre équipement')");
+        scene.Mouse("mouseMoved", centres[1][0], centres[1][1]);
+        var there = string.Join(',', centres[1].Select(c => c.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+        Assert.AreEqual("true", scene.Script("document.querySelector('line.fil') !== null"), "le pointillé suit le pointeur jusqu'à l'autre équipement");
+        Assert.AreEqual("true", scene.Script($"document.elementFromPoint({there}).closest('g.equipement') !== null"), "sous le pointeur, c'est l'équipement qui reçoit le clic, pas le pointillé");
+        scene.Click(centres[1][0], centres[1][1]);
+        UiThread.Until(() => Count("svg.canevas g.lien .trait") == cables + 1, TimeSpan.FromSeconds(15));
         Assert.AreEqual(0, Count("dialog[open] dialog[open]"), "aucune fenêtre de connexion ne s'ouvre");
         scene.Picture($"schemas-simplifie-{(theme == ThemeKind.Dark ? "sombre" : "clair")}-cables");
 
@@ -282,7 +295,16 @@ public sealed class SchemasPageTests
             scene.Script($"(() => {{ const champ = document.getElementById('{field}'); champ.value = '{value}'; champ.dispatchEvent(new Event('input', {{ bubbles: true }})); champ.dispatchEvent(new Event('change', {{ bubbles: true }})); }})()");
         // Deux câbles entre deux commutateurs, sans agrégat : la bulle conseille, sans rien bloquer.
         StringAssert.Contains(Text("[...document.querySelectorAll('.bulle [role=note]')].map((note) => note.textContent).join(' ')"), "boucle", StringComparison.Ordinal);
-        Assert.AreEqual(0, Count("#bulle-vlan-non-tague"), "sans trunk, pas de champs de VLAN");
+        // Sans trunk, les ports sont en accès : un seul champ, le VLAN non tagué ; le câble s'annote « Access · U 30 ».
+        Assert.AreEqual(0, Count("#bulle-vlan-non-tague"), "sans trunk, pas les champs du trunk");
+        Assert.AreEqual(1, Count("#bulle-vlan-acces"));
+        Type("bulle-vlan-acces", "4095");
+        scene.WaitFor("document.querySelector('.bulle [role=alert]') !== null");
+        Type("bulle-vlan-acces", "30");
+        UiThread.Until(() => Labels().Contains("Access · U 30", StringComparison.Ordinal), TimeSpan.FromSeconds(15));
+        Assert.AreEqual(0, Count(".bulle [role=alert]"), "corrigé, plus d'erreur");
+        Assert.AreEqual(1, Labels().Split(" | ").Count(label => label.StartsWith("Access", StringComparison.Ordinal)), "une seule annotation pour les deux câbles");
+        scene.Picture($"schemas-simplifie-{(theme == ThemeKind.Dark ? "sombre" : "clair")}-acces");
 
         // « Trunk » : il libère deux champs, et le câble est annoté de ses VLAN. Pas de cercle : le cercle est pour l'agrégat.
         scene.Script("document.querySelector('.bulle button[role=switch][data-option=\"trunk\"]').click()");
@@ -409,6 +431,127 @@ public sealed class SchemasPageTests
         Assert.IsNull(scene.Page.Island, "Sans vue, plus d'îlot.");
     }
 
+    [EngineTest]
+    public void Leaving_the_view_keeps_its_island_and_coming_back_rereads_the_list_at_once()
+    {
+        using var scene = new IslandScene(Text);
+        scene.WaitFor("document.querySelectorAll('li.carte').length === 1");
+        var model = (SchemasPageViewModel)scene.Page.DataContext;
+        var island = scene.Page.Island!;
+
+        // La vue part : l'îlot quitte l'affichage, mais reste ouvert avec sa vue-modèle.
+        scene.Page.DataContext = null;
+        TestShell.Flush();
+        Assert.IsNull(scene.Page.Island);
+        Assert.AreSame(island, model.Island);
+        Assert.IsFalse(island.IsDisposed);
+
+        // Pendant ce temps, un schéma arrive dans le coffre ; de retour, le même îlot, déjà prêt, relit la liste.
+        scene.Schemas.Create(Text.Replace("Réseau", "Autre réseau", StringComparison.Ordinal)).Value.ToString();
+        scene.Page.DataContext = model;
+        TestShell.Flush();
+        Assert.AreSame(island, scene.Page.Island);
+        Assert.IsTrue(island.IsReady, "rien à recharger : la page est déjà là");
+        scene.WaitFor("document.querySelectorAll('li.carte').length === 2");
+
+        // La vue-modèle remplacée (un coffre verrouillé, un autre coffre) ferme son îlot ; une nouvelle en ouvre un autre.
+        scene.Page.DataContext = null;
+        model.Dispose();
+        Assert.IsTrue(island.IsDisposed);
+        Assert.IsNull(model.Island);
+        Assert.ThrowsExactly<ObjectDisposedException>(() => model.TakeIsland());
+    }
+
+    [EngineTest]
+    public void The_island_warms_up_hidden_and_the_view_then_shows_it_at_once()
+    {
+        using var ui = new UiThread();
+        using var vaults = new TestVaults(AppMode.Development);
+        vaults.App.Vaults.Create(vaults.PathOf("Coffre"));
+        var schemas = new SchemaUseCases(vaults.App.Host);
+        schemas.Create(Text).Value.ToString();
+        var test = new TestShell();
+        using var model = new SchemasPageViewModel(schemas, vaults.Picker, new FakeOpener(), FakeEnvironment.WebData);
+        var hidden = new ContentControl { Width = 320, Height = 240, Visibility = Visibility.Hidden };
+        var place = new Canvas();
+        var window = new Window { Content = new Grid { Children = { place, hidden } }, Left = -10000, Top = -10000, Width = 800, Height = 600, ShowActivated = false, ShowInTaskbar = false };
+        window.Resources.MergedDictionaries.Add(test.Design.Dictionary);
+        window.Show();
+        try
+        {
+            SchemasPageViewModel? offered = null;
+            var warmUp = new SchemaWarmUp(hidden, () => offered) { Delay = TimeSpan.FromMilliseconds(50) };
+            warmUp.Warm();
+            Assert.IsNull(hidden.Content, "sans module des schémas, rien à préparer");
+
+            // Le coffre ouvert : après le délai, l'îlot démarre caché, puis quitte sa place, prêt.
+            offered = model;
+            warmUp.Schedule();
+            warmUp.Schedule();
+            UiThread.Until(() => model.Island is { IsReady: true } && hidden.Content is null, TimeSpan.FromMinutes(2));
+            var island = model.Island!;
+            warmUp.Warm();
+            Assert.IsNull(hidden.Content, "déjà prêt : rien de plus");
+
+            // La vue s'affiche : le même îlot, tout de suite.
+            var page = new SchemasPage { DataContext = model, Width = 1300, Height = 860 };
+            place.Children.Add(page);
+            TestShell.Flush();
+            Assert.AreSame(island, page.Island);
+            Assert.IsTrue(island.IsReady);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [TestMethod]
+    public void The_engine_keeps_off_the_frame_of_the_window_where_it_touches_it()
+    {
+        var window = new Size(1200, 800);
+        Assert.AreEqual(default, ShellWindow.FrameInset(new Rect(220, 40, 900, 700), window), "loin du cadre : rien");
+        Assert.AreEqual(new Thickness(0, 0, 6, 6), ShellWindow.FrameInset(new Rect(220, 40, 980, 760), window), "posé sur les bords droit et bas");
+        Assert.AreEqual(new Thickness(6, 0, 4, 0), ShellWindow.FrameInset(new Rect(0, 40, 1198, 700), window), "menu replié : le bord gauche aussi");
+    }
+
+    [EngineTest]
+    public void The_island_leaves_the_frame_to_the_window_only_while_it_resizes()
+    {
+        using var ui = new UiThread();
+        using var vaults = new TestVaults(AppMode.Development);
+        vaults.App.Vaults.Create(vaults.PathOf("Coffre"));
+        var test = new TestShell();
+        using var model = new SchemasPageViewModel(new SchemaUseCases(vaults.App.Host), vaults.Picker, new FakeOpener(), FakeEnvironment.WebData);
+        var page = new SchemasPage { DataContext = model };
+        // Une fenêtre qui dessine son cadre, comme celle de kyfRev : son bord de redimensionnement est dans ce qu'elle affiche.
+        var window = new Window { Content = page, Left = -10000, Top = -10000, Width = 800, Height = 600, ShowActivated = false, ShowInTaskbar = false };
+        System.Windows.Shell.WindowChrome.SetWindowChrome(window, new System.Windows.Shell.WindowChrome { CaptionHeight = 0, ResizeBorderThickness = new Thickness(6), GlassFrameThickness = default });
+        window.Resources.MergedDictionaries.Add(test.Design.Dictionary);
+        window.Show();
+        try
+        {
+            TestShell.Flush();
+            var island = page.Island!;
+            UiThread.Until(() => island.EngineMargin == new Thickness(6));
+            window.ResizeMode = ResizeMode.NoResize;
+            window.InvalidateMeasure();
+            UiThread.Until(() => island.EngineMargin == default);
+
+            // Sans cadre dessiné, c'est Windows qui tient le bord : rien à laisser.
+            window.ResizeMode = ResizeMode.CanResize;
+            System.Windows.Shell.WindowChrome.SetWindowChrome(window, null);
+            window.InvalidateMeasure();
+            UiThread.Until(() => island.EngineMargin == default);
+            island.KeepOffTheFrame();
+            Assert.AreEqual(default, island.EngineMargin);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
     /// <summary>Le pont seul, sur un vrai coffre.</summary>
     private sealed class BridgeScene : IDisposable
     {
@@ -530,9 +673,27 @@ public sealed class SchemasPageTests
 
         public void WaitFor(string condition) => UiThread.Until(() => Script(condition) == "true", TimeSpan.FromSeconds(20));
 
+        /// <summary>Un vrai geste de la souris, donné au moteur comme s'il venait de Windows, à ce point de la page.</summary>
+        public void Mouse(string type, double x, double y)
+        {
+            var parameters = JsonSerializer.Serialize(new { type, x, y, button = type == "mouseMoved" ? "none" : "left", clickCount = type == "mouseMoved" ? 0 : 1 });
+            var run = Page.Island!.CallDevToolsAsync("Input.dispatchMouseEvent", parameters);
+            UiThread.Until(() => run.IsCompleted);
+            TestShell.Flush();
+        }
+
+        /// <summary>Un clic de la souris : appuyer, relâcher, au même point.</summary>
+        public void Click(double x, double y)
+        {
+            Mouse("mouseMoved", x, y);
+            Mouse("mousePressed", x, y);
+            Mouse("mouseReleased", x, y);
+        }
+
         public void Dispose()
         {
             _window.Close();
+            (Page.DataContext as IDisposable)?.Dispose();
             _vaults.Dispose();
             _ui.Dispose();
         }

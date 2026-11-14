@@ -6,7 +6,10 @@ using KyfRev.Presentation.Wpf.Shell;
 
 namespace KyfRev.Presentation.Wpf.Pages;
 
-/// <summary>Vue « Schémas réseau » : l'îlot, qui s'ouvre avec la vue et se ferme avec elle.</summary>
+/// <summary>
+/// Vue « Schémas réseau » : elle montre l'îlot de sa vue-modèle, l'ouvre la première fois, et le rend en partant. L'îlot reste
+/// ouvert avec la vue-modèle (<see cref="SchemasPageViewModel"/>) : y revenir est immédiat, et la liste relit alors le coffre.
+/// </summary>
 internal sealed partial class SchemasPage : UserControl
 {
     private ShellViewModel? _shell;
@@ -38,25 +41,40 @@ internal sealed partial class SchemasPage : UserControl
         };
     }
 
-    /// <summary>L'îlot, s'il est ouvert.</summary>
+    /// <summary>L'îlot, s'il est affiché ici.</summary>
     internal SchemaIsland? Island => IslandHost.Content as SchemaIsland;
 
     private void Open()
     {
-        if (Island is null && DataContext is SchemasPageViewModel page)
+        if (Island is not null || DataContext is not SchemasPageViewModel page)
         {
-            var island = new SchemaIsland(page.Bridge(), page.WebDataFolder);
-            island.Failed += (_, reason) =>
-            {
-                page.Problem = SchemaText.EngineFailedOf(reason);
-                Close();
-            };
-            IslandHost.Content = island;
-            page.PropertyChanged += OnPageChanged;
-            // Avant le verrouillage, ce qui s'écrit dans l'îlot s'enregistre (ILeaving).
-            page.FinishIsland = island.FinishAsync;
-            _page = page;
-            OpenRequested();
+            return;
+        }
+        var kept = page.Island is { IsDisposed: false };
+        var island = page.TakeIsland();
+        // Gardé ouvert, il était peut-être encore posé ailleurs (préparé en arrière-plan) : il quitte cette place.
+        if (island.Parent is ContentControl previous && !ReferenceEquals(previous, IslandHost))
+        {
+            previous.Content = null;
+        }
+        IslandHost.Content = island;
+        island.Failed += OnFailed;
+        page.PropertyChanged += OnPageChanged;
+        _page = page;
+        if (kept)
+        {
+            island.Returned();
+        }
+        OpenRequested();
+    }
+
+    private void OnFailed(object? sender, string reason)
+    {
+        if (_page is { } page)
+        {
+            page.Problem = SchemaText.EngineFailedOf(reason);
+            Close();
+            page.CloseIsland();
         }
     }
 
@@ -77,13 +95,16 @@ internal sealed partial class SchemasPage : UserControl
         }
     }
 
+    /// <summary>La vue part : l'îlot quitte l'affichage, sans se fermer ; la vue-modèle le garde.</summary>
     private void Close()
     {
         _page?.PropertyChanged -= OnPageChanged;
-        _page?.FinishIsland = null;
         _page = null;
-        Island?.Dispose();
-        IslandHost.Content = null;
+        if (Island is { } island)
+        {
+            island.Failed -= OnFailed;
+            IslandHost.Content = null;
+        }
     }
 
     private void OnShellChanged(object? sender, PropertyChangedEventArgs e)

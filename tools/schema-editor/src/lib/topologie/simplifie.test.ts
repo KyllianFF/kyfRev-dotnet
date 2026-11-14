@@ -17,6 +17,7 @@ import {
   conseilsDeLiaison,
   desagreger,
   ecrireAdresse,
+  ecrireVlanDAcces,
   ecrireVlansDuTrunk,
   effacer,
   epurer,
@@ -429,7 +430,7 @@ describe("adresse IP d'un équipement", () => {
 });
 
 describe("ce que le mode simplifié dessine", () => {
-  it("ni nom de port, ni VLAN d'un port d'accès, même si le schéma en demande en avancé ; le trunk, lui, est annoté", () => {
+  it("pas de nom de port, même si le schéma en demande en avancé ; le trunk et le port d'accès s'annotent de leurs VLAN", () => {
     const { schema, sw1, sw2, pc } = site();
     const lien = tirerCable(schema, sw1.id, sw2.id);
     const acces = connecter(schema, port(sw1, "1/5"), port(pc, "Ethernet"), { libelles: "tout", nom: "Poste" });
@@ -439,7 +440,7 @@ describe("ce que le mode simplifié dessine", () => {
     const epure = epurer(schema);
     const page = mettreEnPage(epure, vue("simplifiee"), new Set());
     const etiquettes = [...page.etiquettes.values()].flat();
-    expect(etiquettes.map((e) => e.texte).sort()).toEqual(["Poste", "Trunk"]);
+    expect(etiquettes.map((e) => e.texte).sort()).toEqual(["Access · U 20", "Poste", "Trunk"]);
     const svg = dessinerSchema(epure, { vue: vue("simplifiee"), legende: true });
     expect(svg).not.toMatch(/>1\/1<|VLAN 20/);
     expect(svg).toContain(">Trunk<");
@@ -686,6 +687,50 @@ describe("VLAN d'un trunk", () => {
   });
 });
 
+describe("VLAN d'un câble en accès", () => {
+  it("s'écrit sur les deux bouts, en accès, et se retire ; voix, PVID et l'ancien trunk restent", () => {
+    const { schema, sw1, sw2, pc } = site();
+    const lien = tirerCable(schema, sw1.id, pc.id);
+    ecrireConfigDuBout(schema, lien.a, { mode: "acces", voix: 40 });
+    ecrireVlanDAcces(schema, [lien.id], 30);
+    expect(configDuBout(schema, lien.a)).toEqual({ mode: "acces", voix: 40, acces: 30 });
+    expect(configDuBout(schema, lien.b)).toEqual({ mode: "acces", acces: 30 });
+    expect(groupeDeCables(schema, lien.id)).toMatchObject({ trunk: false, vlans: { nonTague: 30 }, boutsDifferents: null });
+    // Vidé : le VLAN part, la voix reste ; un bout sans autre réglage n'en a plus.
+    ecrireVlanDAcces(schema, [lien.id], undefined);
+    expect(configDuBout(schema, lien.a)).toEqual({ mode: "acces", voix: 40 });
+    expect(configDuBout(schema, lien.b)).toBeUndefined();
+    // Un trunk décoché garde ses VLAN pour un retour en trunk : le VLAN d'accès s'y ajoute sans les perdre.
+    const montant = tirerCable(schema, sw1.id, sw2.id);
+    ecrireVlansDuTrunk(schema, [montant.id], { nonTague: 1, tagues: "10,20" });
+    mettreEnTrunk(schema, [montant.id], false);
+    ecrireVlanDAcces(schema, [montant.id], 10);
+    expect(configDuBout(schema, montant.a)).toEqual({ mode: "acces", natif: 1, tagues: "10,20", acces: 10 });
+    expect(groupeDeCables(schema, montant.id)?.vlans).toEqual({ nonTague: 10 });
+    mettreEnTrunk(schema, [montant.id], true);
+    expect(groupeDeCables(schema, montant.id)?.vlans).toEqual({ nonTague: 1, tagues: "10,20" });
+  });
+
+  it("ne touche pas un bout en trunk", () => {
+    const { schema, sw1, sw2 } = site();
+    const lien = tirerCable(schema, sw1.id, sw2.id);
+    ecrireConfigDuBout(schema, lien.a, { mode: "trunk", tagues: "10" });
+    ecrireVlanDAcces(schema, [lien.id], 20);
+    expect(configDuBout(schema, lien.a)).toEqual({ mode: "trunk", tagues: "10" });
+    expect(configDuBout(schema, lien.b)).toEqual({ mode: "acces", acces: 20 });
+  });
+
+  it("sur un agrégat, il s'écrit sur l'agrégat de chaque côté", () => {
+    const { schema, sw1, sw2 } = site();
+    tirerCable(schema, sw1.id, sw2.id);
+    tirerCable(schema, sw1.id, sw2.id);
+    const lien = agreger(schema, sw1.id, sw2.id);
+    ecrireVlanDAcces(schema, [lien.id], 30);
+    expect(agregatDe(schema, lien.a)?.vlan).toEqual({ mode: "acces", acces: 30 });
+    expect(agregatDe(schema, lien.b)?.vlan).toEqual({ mode: "acces", acces: 30 });
+  });
+});
+
 describe("bonnes pratiques : des conseils, jamais des blocages", () => {
   const conseils = (schema: Schema, lienId: string) => {
     const groupe = groupeDeCables(schema, lienId);
@@ -734,6 +779,17 @@ describe("bonnes pratiques : des conseils, jamais des blocages", () => {
     const versTelephone = tirerCable(schema, sw1.id, telephone.id);
     ecrireVlansDuTrunk(schema, [versTelephone.id], { nonTague: 20, tagues: "40" });
     expect(conseils(schema, versTelephone.id)).toEqual([]);
+  });
+
+  it("un poste dans le VLAN 1 : un conseil ; dans un autre VLAN, aucun", () => {
+    const { schema, sw1, pc } = site();
+    const lien = tirerCable(schema, sw1.id, pc.id);
+    ecrireVlanDAcces(schema, [lien.id], 1);
+    expect(conseils(schema, lien.id)).toEqual([
+      "Le VLAN 1 est celui de tous les ports tant qu'on n'en a rien dit : mieux vaut un VLAN propre à cet usage.",
+    ]);
+    ecrireVlanDAcces(schema, [lien.id], 30);
+    expect(conseils(schema, lien.id)).toEqual([]);
   });
 
   it("un agrégat aux ports de genres ou de débits différents : dit comme le diagnostic", () => {

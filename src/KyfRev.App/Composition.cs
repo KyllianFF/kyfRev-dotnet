@@ -418,11 +418,19 @@ internal static class Composition
         provider.GetRequiredService<LockDelay>().Clear();
     }
 
-    /// <summary>Les vues qui peuvent garder un brouillon à enregistrer avant le verrouillage, même quand elles ne sont pas affichées.</summary>
-    private static ILeaving[] DraftViews(IServiceProvider provider) =>
-    [
-        provider.GetRequiredService<DefinitionsPageViewModel>(),
-    ];
+    /// <summary>
+    /// Les vues qui peuvent garder un brouillon à enregistrer avant le verrouillage, même quand elles ne sont pas affichées : les
+    /// définitions, et les schémas, dont l'îlot reste ouvert quand on quitte la vue.
+    /// </summary>
+    private static ILeaving[] DraftViews(IServiceProvider provider)
+    {
+        var shell = provider.GetRequiredService<ShellViewModel>();
+        return
+        [
+            provider.GetRequiredService<DefinitionsPageViewModel>(),
+            .. shell.MainNavigation.Concat(shell.SecondaryNavigation).Select(entry => entry.Page).OfType<SchemasPageViewModel>(),
+        ];
+    }
 
     /// <summary>Les vues dont une recherche peut tenir le coffre : elles s'arrêtent dès qu'une fermeture est demandée.</summary>
     internal static IStopsSearch[] SearchingViews(IServiceProvider provider) =>

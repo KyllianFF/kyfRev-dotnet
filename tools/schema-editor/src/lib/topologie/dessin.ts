@@ -22,7 +22,17 @@ import type {
   Vue,
 } from "./modele";
 import { interfaceDe, RELATIONS_SYMETRIQUES } from "./modele";
-import { agregatDe, configDuBout, enAgregat, estTrunk, texteAgregat, texteTrunk, texteVlan } from "./vlans";
+import {
+  agregatDe,
+  configDuBout,
+  enAgregat,
+  estTrunk,
+  texteAcces,
+  texteAgregat,
+  texteTrunk,
+  texteVlan,
+  vlanDAcces,
+} from "./vlans";
 import { liensVisibles, relationVisible, vue as vueDe } from "./vues";
 
 export { icone } from "./pictogrammes";
@@ -1250,27 +1260,40 @@ function parcourir(trace: Point[]) {
   return { total, a };
 }
 
+/** L'annotation VLAN d'un câble : son texte, et la couleur du VLAN déclaré pour un câble en accès. */
+export type AnnotationVlan = { texte: string; couleur?: string };
+
+/** Un câble qui s'annote de son mode VLAN : en trunk, ou en accès avec son VLAN. */
+export const sAnnoteDeSonVlan = (schema: Schema, lien: Lien): boolean =>
+  estTrunk(schema, lien) || vlanDAcces(schema, lien) !== undefined;
+
 /**
- * Les annotations des câbles en trunk, par câble : « Trunk · U 1 · T 10,20 ». Des câbles parallèles en
- * trunk aux mêmes VLAN n'en portent qu'une, sur le premier ; s'ils diffèrent, chacun a la sienne. Un
- * agrégat a la sienne (un seul câble au modèle, un seul réglage VLAN).
+ * Les annotations VLAN des câbles, par câble : « Trunk · U 1 · T 10,20 » pour un trunk, « Access · U 30 »
+ * pour un câble en accès qui a son VLAN. Des câbles parallèles aux mêmes VLAN n'en portent qu'une, sur le
+ * premier ; s'ils diffèrent, chacun a la sienne. Un agrégat a la sienne (un seul câble au modèle, un seul
+ * réglage VLAN).
  */
-export function annotationsDeTrunk(schema: Schema, liens: Lien[]): Map<string, string> {
-  const paires = new Map<string, { lien: Lien; texte: string }[]>();
-  const annotations = new Map<string, string>();
+export function annotationsDeVlan(schema: Schema, liens: Lien[]): Map<string, AnnotationVlan> {
+  const paires = new Map<string, { lien: Lien; annotation: AnnotationVlan }[]>();
+  const annotations = new Map<string, AnnotationVlan>();
   for (const lien of liens) {
-    if (!estTrunk(schema, lien)) continue;
-    const texte = texteTrunk(schema, lien);
+    const acces = estTrunk(schema, lien) ? undefined : vlanDAcces(schema, lien);
+    if (!estTrunk(schema, lien) && acces === undefined) continue;
+    const couleur = acces !== undefined ? schema.vlans.find((v) => v.numero === acces)?.couleur : undefined;
+    const annotation: AnnotationVlan =
+      acces !== undefined
+        ? { texte: texteAcces(acces), ...(couleur ? { couleur } : {}) }
+        : { texte: texteTrunk(schema, lien) };
     if (enAgregat(schema, lien)) {
-      annotations.set(lien.id, texte);
+      annotations.set(lien.id, annotation);
       continue;
     }
     const cle = [lien.a.equipement, lien.b.equipement].sort().join("|");
-    paires.set(cle, [...(paires.get(cle) ?? []), { lien, texte }]);
+    paires.set(cle, [...(paires.get(cle) ?? []), { lien, annotation }]);
   }
   for (const groupe of paires.values()) {
-    const memes = groupe.every((g) => g.texte === groupe[0]?.texte);
-    for (const [rang, g] of groupe.entries()) if (!memes || rang === 0) annotations.set(g.lien.id, g.texte);
+    const memes = groupe.every((g) => g.annotation.texte === groupe[0]?.annotation.texte);
+    for (const [rang, g] of groupe.entries()) if (!memes || rang === 0) annotations.set(g.lien.id, g.annotation);
   }
   return annotations;
 }
@@ -1412,8 +1435,10 @@ export function mettreEnPage(schema: Schema, v: Vue, caches: Set<string>, sauf?:
   };
   const aTaguer: ATaguer[] = [];
   const marques: Boite[] = [];
-  // Le trunk s'annote sur le câble dans toutes les vues, sauf si le schéma masque les VLAN des câbles.
-  const trunks = schema.affichage?.vlans !== false ? annotationsDeTrunk(schema, visibles) : new Map<string, string>();
+  // Le trunk, et le câble en accès qui a son VLAN, s'annotent sur le câble dans toutes les vues, sauf si le
+  // schéma masque les VLAN des câbles.
+  const annotationsVlan =
+    schema.affichage?.vlans !== false ? annotationsDeVlan(schema, visibles) : new Map<string, AnnotationVlan>();
   // Les câbles d'un même agrégat : ils partagent un cercle.
   const grappes = new Map<string, { rang: number; lien: Lien; ecart: number; brins: number }[]>();
   for (const lien of visibles) {
@@ -1470,10 +1495,10 @@ export function mettreEnPage(schema: Schema, v: Vue, caches: Set<string>, sauf?:
           }
         : {}),
       ...(nom && lien.nom ? { nom: lien.nom } : {}),
-      // Une seule étiquette par câble : celle du trunk tient lieu d'étiquette de VLAN.
-      ...(estTrunk(schema, lien)
-        ? trunks.has(lien.id)
-          ? { vlan: { texte: trunks.get(lien.id) as string } }
+      // Une seule étiquette par câble : celle du mode (trunk, accès) tient lieu d'étiquette de VLAN.
+      ...(sAnnoteDeSonVlan(schema, lien)
+        ? annotationsVlan.has(lien.id)
+          ? { vlan: annotationsVlan.get(lien.id) as AnnotationVlan }
           : {}
         : affichage.vlans
           ? { vlan: vlanDuLien(schema, lien) }

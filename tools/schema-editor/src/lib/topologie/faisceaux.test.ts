@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   abregerVlans,
-  annotationsDeTrunk,
+  annotationsDeVlan,
   dessinerSchema,
   ecartsParalleles,
   type Etiquette,
@@ -18,12 +18,21 @@ import { connecter, creerEquipement } from "./operations";
 import {
   agreger,
   changerTypeDeCable,
+  ecrireVlanDAcces,
   ecrireVlansDuTrunk,
   epurer,
   mettreEnTrunk,
   tirerCable,
 } from "./simplifie";
-import { basculerMembre, creerAgregat, ecrireConfigDuBout, enAgregat, estTrunk, texteTrunk } from "./vlans";
+import {
+  basculerMembre,
+  creerAgregat,
+  ecrireConfigDuBout,
+  enAgregat,
+  estTrunk,
+  texteTrunk,
+  vlanDAcces,
+} from "./vlans";
 import { vue } from "./vues";
 
 // Deux choses qui ne se confondent pas. L'agrégat de liens : autant de traits que de câbles, sous un
@@ -199,6 +208,29 @@ describe("trunk : une annotation sur le câble, pas de cercle", () => {
     ]);
   });
 
+  it("un câble en accès avec son VLAN s'annote « Access · U 30 », de la couleur du VLAN déclaré", () => {
+    const { schema, ids, cables } = paire(2);
+    const lien = cables[0] as (typeof cables)[number];
+    expect(textesDe(schema)).toEqual([]);
+    ecrireVlanDAcces(schema, ids, 30);
+    expect(vlanDAcces(schema, lien)).toBe(30);
+    // Deux câbles parallèles au même VLAN : une seule annotation, sur le premier.
+    expect(textesDe(schema)).toEqual(["Access · U 30"]);
+    expect([...annotationsDeVlan(schema, schema.liens).keys()]).toEqual([lien.id]);
+    schema.vlans.push({ id: "v30", numero: 30, nom: "Postes", couleur: "#2e6a4e", sousReseaux: [] });
+    expect(annotationsDeVlan(schema, schema.liens).get(lien.id)).toEqual({ texte: "Access · U 30", couleur: "#2e6a4e" });
+    // Dans la vue logique aussi, à la place de « VLAN 30 » ; un schéma qui masque les VLAN ne montre rien.
+    expect(textesDe(schema, "logique")).toContain("Access · U 30");
+    expect(textesDe(schema, "logique")).not.toContain("VLAN 30");
+    schema.affichage = { vlans: false };
+    expect(textesDe(schema, "physique")).not.toContain("Access · U 30");
+    // En trunk, c'est l'annotation du trunk.
+    schema.affichage = {};
+    mettreEnTrunk(schema, ids, true);
+    expect(vlanDAcces(schema, lien)).toBeUndefined();
+    expect(textesDe(schema)).toEqual(["Trunk · U 30"]);
+  });
+
   it("l'étiquette dit les VLAN : non tagué (U) et tagués (T)", () => {
     const { schema, ids, cables } = paire(1);
     const lien = cables[0] as (typeof cables)[number];
@@ -234,7 +266,7 @@ describe("trunk : une annotation sur le câble, pas de cercle", () => {
     expect(hauteurs(traitsDe(schema))).toEqual([-8, 8]);
     expect(cerclesDe(schema)).toEqual([]);
     expect(textesDe(schema)).toEqual(["Trunk · U 1 · T 10,20"]);
-    expect([...annotationsDeTrunk(schema, schema.liens).keys()]).toEqual([cables[0]?.id]);
+    expect([...annotationsDeVlan(schema, schema.liens).keys()]).toEqual([cables[0]?.id]);
     // Des VLAN différents d'un câble à l'autre : chacun dit les siens.
     ecrireVlansDuTrunk(schema, [ids[1] as string], { tagues: "30" });
     expect(textesDe(schema).sort()).toEqual(["Trunk · T 30", "Trunk · U 1 · T 10,20"]);
@@ -254,13 +286,13 @@ describe("trunk : une annotation sur le câble, pas de cercle", () => {
     expect(Math.hypot((etiquette?.x ?? 0) - (cercle?.x ?? 0), (etiquette?.y ?? 0) - (cercle?.y ?? 0))).toBeGreaterThan(12);
   });
 
-  it("un port d'accès n'est pas un trunk : rien en vue simplifiée ; un seul bout en trunk non plus", () => {
+  it("un port d'accès n'est pas un trunk : il s'annote de son seul VLAN ; un seul bout en trunk, rien", () => {
     const { schema, cables } = paire(1);
     const lien = cables[0] as (typeof cables)[number];
     ecrireConfigDuBout(schema, lien.a, { mode: "acces", acces: 20 });
     ecrireConfigDuBout(schema, lien.b, { mode: "acces", acces: 20 });
-    expect(textesDe(schema)).toEqual([]);
-    expect(textesDe(schema, "logique")).toEqual(["VLAN 20"]);
+    expect(textesDe(schema)).toEqual(["Access · U 20"]);
+    expect(textesDe(schema, "logique")).toEqual(["Access · U 20"]);
     ecrireConfigDuBout(schema, lien.a, { mode: "trunk", tagues: "10" });
     expect(estTrunk(schema, lien)).toBe(false);
     expect(textesDe(schema)).toEqual([]);

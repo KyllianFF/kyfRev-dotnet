@@ -18,7 +18,8 @@ export type DepuisHote =
   | Reponse
   | { kind: "theme"; variables: Record<string, string> }
   | { kind: "open"; id: string }
-  | { kind: "finir"; numero: number };
+  | { kind: "finir"; numero: number }
+  | { kind: "revenu" };
 
 const attentes = new Map<number, Attente>();
 let suivant = 1;
@@ -53,6 +54,11 @@ export function recevoir(message: DepuisHote): void {
   }
   if (message.kind === "open") {
     document.dispatchEvent(new CustomEvent("ouvrir-schema", { detail: message.id }));
+    return;
+  }
+  if (message.kind === "revenu") {
+    // La vue est de nouveau affichée, l'îlot gardé ouvert depuis : la liste relit le coffre.
+    document.dispatchEvent(new Event("schemas-revenus"));
     return;
   }
   if (message.kind === "finir") {

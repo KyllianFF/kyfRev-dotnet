@@ -171,7 +171,7 @@ describe("lisibilité des schémas (D50)", () => {
     schema.affichage = { ports: true, vlans: true };
     const page = mettreEnPage(schema, vue("physique"), new Set());
     const toutes = [...page.etiquettes.values()].flat();
-    expect(toutes.some((e) => e.genre === "vlan" && e.texte === "VLAN 10" && e.couleur === "#167a5a")).toBe(
+    expect(toutes.some((e) => e.genre === "vlan" && e.texte === "Access · U 10" && e.couleur === "#167a5a")).toBe(
       true,
     );
     expect(toutes.filter((e) => e.genre === "port").length).toBe(6);

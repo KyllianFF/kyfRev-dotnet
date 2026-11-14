@@ -111,7 +111,15 @@
       edite = (evenement as CustomEvent<string>).detail;
     };
     document.addEventListener("ouvrir-schema", ouvrir);
-    return () => document.removeEventListener("ouvrir-schema", ouvrir);
+    // De retour sur la vue : un schéma a pu être importé, cité ou retiré entre-temps. L'éditeur ouvert, lui, reste tel quel.
+    const revenus = () => {
+      if (!edite) void charger();
+    };
+    document.addEventListener("schemas-revenus", revenus);
+    return () => {
+      document.removeEventListener("ouvrir-schema", ouvrir);
+      document.removeEventListener("schemas-revenus", revenus);
+    };
   });
 
   const sansAccents = (t: string) => t.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();

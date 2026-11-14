@@ -194,6 +194,10 @@
       <RowDefinition Height="*" />
     </Grid.RowDefinitions>
 
+    <!-- Une place cachée où l'îlot des schémas démarre en arrière-plan, avant qu'on ouvre la vue (SchemaWarmUp). -->
+    <ContentControl x:Name="WarmHost" Grid.Row="1" Width="320" Height="240" HorizontalAlignment="Left" VerticalAlignment="Top" Visibility="Hidden"
+                    Focusable="False" IsTabStop="False" IsHitTestVisible="False" />
+
     <!-- La barre de titre : le nom, la recherche, le thème, l'aide et les boutons de la fenêtre. Le reste de la barre déplace la fenêtre.
          Elle ne suit pas le zoom : sa hauteur est celle que Windows connaît. -->
     <Border x:Name="TitleBar" Height="40" Background="{DynamicResource Kyf.Brush.Surface}" BorderBrush="{DynamicResource Kyf.Brush.Divider}" BorderThickness="0,0,0,1">

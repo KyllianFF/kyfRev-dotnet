@@ -354,6 +354,7 @@ public sealed partial class ShellViewModel : ObservableObject, IForgetsVault, IS
     {
         ArgumentNullException.ThrowIfNull(entries);
         var left = _moduleEntries.Contains(Current);
+        var replaced = _moduleEntries;
         _moduleEntries = [.. entries];
         var current = Current;
         ArrangeMenu();
@@ -361,10 +362,17 @@ public sealed partial class ShellViewModel : ObservableObject, IForgetsVault, IS
         if (left)
         {
             Navigate(Home);
-            return;
         }
-        SelectedMain = MainNavigation.Contains(current) ? current : null;
-        SelectedSecondary = SecondaryNavigation.Contains(current) ? current : null;
+        else
+        {
+            SelectedMain = MainNavigation.Contains(current) ? current : null;
+            SelectedSecondary = SecondaryNavigation.Contains(current) ? current : null;
+        }
+        // Les vues remplacées se ferment, et ce qu'elles gardaient ouvert avec elles (l'îlot des schémas et son moteur web).
+        foreach (var page in replaced.Select(entry => entry.Page).Except(_moduleEntries.Select(entry => entry.Page)).OfType<IDisposable>())
+        {
+            page.Dispose();
+        }
     }
 
     /// <summary>Un coffre est ouvert : le menu revient, sur sa première vue, qui est prévenue.</summary>

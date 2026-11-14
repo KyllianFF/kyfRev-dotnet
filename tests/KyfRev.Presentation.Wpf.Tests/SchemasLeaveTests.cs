@@ -26,7 +26,7 @@ public sealed class SchemasLeaveTests
     public async Task Leaving_waits_for_the_island_and_keeps_the_vault_open_when_it_could_not_save()
     {
         using var vaults = new TestVaults(AppMode.Development);
-        var page = new SchemasPageViewModel(new SchemaUseCases(vaults.App.Host), vaults.Picker, new FakeOpener(), FakeEnvironment.WebData);
+        using var page = new SchemasPageViewModel(new SchemaUseCases(vaults.App.Host), vaults.Picker, new FakeOpener(), FakeEnvironment.WebData);
         Assert.IsTrue(await page.LeaveAsync(), "sans îlot ouvert, rien à finir");
 
         var finishing = new TaskCompletionSource<bool>();
@@ -93,7 +93,10 @@ public sealed class SchemasLeaveTests
         Assert.IsFalse(scene.Leave());
         StringAssert.Contains(scene.Schemas.Read(scene.Id).Value.Text, "Ailleurs", StringComparison.Ordinal);
 
+        // Quitter la vue garde l'îlot ouvert, et ce qui n'a pas pu s'enregistrer avec lui : le verrouillage le sait encore.
         scene.Page.DataContext = null;
+        Assert.IsFalse(scene.Leave(), "l'îlot reste ouvert avec sa vue-modèle");
+        scene.Model.Dispose();
         Assert.IsTrue(scene.Leave(), "sans îlot, rien à finir");
     }
 
@@ -151,6 +154,7 @@ public sealed class SchemasLeaveTests
         public void Dispose()
         {
             _window.Close();
+            Model.Dispose();
             _vaults.Dispose();
             _ui.Dispose();
         }

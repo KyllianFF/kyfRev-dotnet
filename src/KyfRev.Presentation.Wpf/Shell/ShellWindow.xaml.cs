@@ -74,7 +74,14 @@ public sealed partial class ShellWindow : Window
             FitScreen();
         };
         Loaded += (_, _) => FocusNavigation();
+        // Le coffre ouvert, l'îlot de ses schémas démarre en arrière-plan : la vue s'affichera dès le premier clic.
+        WarmUp = new Schemas.SchemaWarmUp(WarmHost, () => shell.MainNavigation.Concat(shell.SecondaryNavigation)
+            .Select(entry => entry.Page).OfType<Pages.SchemasPageViewModel>().FirstOrDefault());
+        shell.WorkspaceOpening += (_, _) => WarmUp.Schedule();
     }
+
+    /// <summary>La préparation de l'îlot des schémas, en arrière-plan.</summary>
+    internal Schemas.SchemaWarmUp WarmUp { get; }
 
     /// <inheritdoc/>
     protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
@@ -193,10 +200,25 @@ public sealed partial class ShellWindow : Window
         return 0;
     }
 
+    /// <summary>La fenêtre se redimensionne par son cadre : ni agrandie, ni en plein écran, ni de taille fixe.</summary>
+    internal bool ResizesByItsFrame =>
+        WindowState == WindowState.Normal && !_shell.IsFullScreen && ResizeMode is not (ResizeMode.NoResize or ResizeMode.CanMinimize);
+
+    /// <summary>
+    /// Ce qu'un contenu qui a sa propre fenêtre (le moteur web) doit laisser au cadre d'une fenêtre de taille <paramref name="window"/>,
+    /// d'après sa place <paramref name="bounds"/> : posé sur un bord, il prendrait la souris au cadre, et la fenêtre ne se
+    /// redimensionnerait plus par ce bord.
+    /// </summary>
+    internal static Thickness FrameInset(Rect bounds, Size window) => new(
+        Math.Max(0, ResizeBorder - bounds.Left),
+        Math.Max(0, ResizeBorder - bounds.Top),
+        Math.Max(0, bounds.Right - (window.Width - ResizeBorder)),
+        Math.Max(0, bounds.Bottom - (window.Height - ResizeBorder)));
+
     /// <summary>Le bord ou le coin de la fenêtre sous ce point de l'écran, tant qu'elle se redimensionne ; 0 ailleurs.</summary>
     private int ResizeEdgeAt(nint position)
     {
-        if (WindowState != WindowState.Normal || _shell.IsFullScreen || ResizeMode is ResizeMode.NoResize or ResizeMode.CanMinimize || PresentationSource.FromVisual(this) is null)
+        if (!ResizesByItsFrame || PresentationSource.FromVisual(this) is null)
         {
             return 0;
         }
