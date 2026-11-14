@@ -113,7 +113,9 @@ public sealed partial class VaultSession : IDisposable
         var settingsPath = VaultLayout.Absolute(absolute, VaultLayout.SettingsFile);
         if (!storage.FileExists(settingsPath))
         {
-            throw VaultException.NotAVault(absolute);
+            throw storage.Raw.DirectoryExists(VaultLayout.Absolute(absolute, VaultLayout.Tracking))
+                ? VaultException.IncompleteVault(absolute)
+                : VaultException.NotAVault(absolute);
         }
         if (storage.Raw != storage)
         {

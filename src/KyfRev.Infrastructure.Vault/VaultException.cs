@@ -180,6 +180,14 @@ public sealed class VaultException : OperationException
     internal static VaultException NotAVault(string root) =>
         new(VaultErrorKind.NotAVault, $"« {root} » n'est pas un coffre de révision (dossier .suivi/coffre.json absent).");
 
+    /// <summary>
+    /// Le dossier a son <c>.suivi</c>, mais pas son <c>coffre.json</c> : un coffre dont la copie n'est pas finie, le plus souvent
+    /// un dossier synchronisé (Proton Drive, OneDrive, iCloud…) que le poste n'a pas encore reçu en entier.
+    /// </summary>
+    internal static VaultException IncompleteVault(string root) =>
+        new(VaultErrorKind.NotAVault, $"« {root} » a le dossier .suivi d'un coffre, mais pas son fichier .suivi/coffre.json : la copie de ce coffre n'est pas finie. "
+            + "S'il est dans un dossier synchronisé (Proton Drive, OneDrive, iCloud…), attendez que ce poste l'ait reçu en entier, puis rouvrez-le. Rien n'y a été écrit.");
+
     internal static VaultException FolderNotEmpty(string root) =>
         new(VaultErrorKind.FolderNotEmpty, $"Le dossier « {root} » n'est pas vide : un nouveau coffre doit être créé dans un dossier vide.");
 

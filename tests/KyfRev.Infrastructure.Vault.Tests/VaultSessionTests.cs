@@ -57,6 +57,23 @@ public abstract class VaultSessionTests(StorageKind storage)
     }
 
     [TestMethod]
+    public void A_vault_whose_copy_has_not_finished_says_so_and_nothing_is_written()
+    {
+        // Un dossier synchronisé reçu à moitié : .suivi et son verrou sont là, pas coffre.json.
+        using var folder = TemporaryVault.Empty(storage);
+        var tracking = Path.Combine(folder.Root, ".suivi");
+        Directory.CreateDirectory(tracking);
+        File.WriteAllBytes(Path.Combine(tracking, "verrou"), []);
+
+        var error = Assert.ThrowsExactly<VaultException>(() => folder.Open(Now));
+
+        Assert.AreEqual(VaultErrorKind.NotAVault, error.Kind);
+        StringAssert.Contains(error.Message, "la copie de ce coffre n'est pas finie", StringComparison.Ordinal);
+        StringAssert.Contains(error.Message, "dossier synchronisé", StringComparison.Ordinal);
+        Assert.AreEqual("verrou", Path.GetFileName(Directory.GetFiles(tracking).Single()), "rien d'écrit, pas même le verrou-info");
+    }
+
+    [TestMethod]
     public void A_vault_opened_twice_names_who_holds_it()
     {
         using var folder = TemporaryVault.Empty(storage);
