@@ -822,7 +822,13 @@ public sealed class SettingsHubTests
                 Assert.AreEqual(TextAlignment.Left, title.TextAlignment);
 
                 // Les blocs de la section sont dans la même colonne que son titre, à la barre de défilement près.
-                var cards = Descendants<Card>(Named<FrameworkElement>(window, "TabContent")).Where(card => card.IsVisible && card.ActualWidth > 200).ToList();
+                // Une section lue dans le coffre (Révisions) montre ses blocs une fois ses réglages lus : on les attend, au lieu
+                // de compter sur un poste assez rapide pour qu'ils soient déjà là.
+                List<Card> Cards() => [.. Descendants<Card>(Named<FrameworkElement>(window, "TabContent")).Where(card => card.IsVisible && card.ActualWidth > 200)];
+                UiThread.Until(() => Cards().Count > 0, TimeSpan.FromSeconds(30));
+                host.UpdateLayout();
+                TestShell.Flush();
+                var cards = Cards();
                 Assert.IsNotEmpty(cards, tab.Label);
                 foreach (var card in cards.Where(card => Descendants<Card>(card).All(inner => ReferenceEquals(inner, card) || !inner.IsVisible)))
                 {
