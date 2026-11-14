@@ -146,7 +146,7 @@ internal static class Composition
         services.AddSingleton<FolderImportViewModel>();
         services.AddSingleton<WorkloadPageViewModel>();
         services.AddSingleton<SheetsPageViewModel>();
-        services.AddSingleton<DefinitionsPageViewModel>();
+        services.AddSingleton(provider => new DefinitionsPageViewModel(provider.GetRequiredService<AnnotationUseCases>(), provider.GetRequiredService<IReviewOpener>(), provider.GetRequiredService<SheetUseCases>()));
         services.AddSingleton<SettingsPageViewModel>();
         services.AddSingleton<ArchivesPageViewModel>();
         services.AddSingleton<StatisticsPageViewModel>();

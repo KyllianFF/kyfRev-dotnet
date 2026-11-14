@@ -26,7 +26,9 @@ public sealed class FilledViewsAccessibilityTests
         var page = new DefinitionsPageViewModel(vault.App.Annotations, new FakeOpener());
 
         var names = Names(page, () => page.Rows.Count > 0, null);
-        CollectionAssert.Contains(names, DefinitionsText.WholeVault);
+        CollectionAssert.Contains(names, DefinitionsText.FoldersLabel);
+        CollectionAssert.Contains(names, DefinitionsText.NewDefinition);
+        CollectionAssert.Contains(names, DefinitionsText.MoreActions);
         CollectionAssert.Contains(names, DefinitionsText.SeeInSheet);
 
         var editing = Names(page, () => page.Rows.Count > 0, root => page.Rows[0].EditCommand.Execute(null));

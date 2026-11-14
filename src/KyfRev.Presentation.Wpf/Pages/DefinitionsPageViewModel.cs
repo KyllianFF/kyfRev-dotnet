@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using KyfRev.Application;
 using KyfRev.Application.Model;
 using KyfRev.Application.UseCases;
 using KyfRev.Presentation.Wpf.Shell;
@@ -127,11 +128,37 @@ public sealed partial class DefinitionRow : ObservableObject
     private void Open() => _page.Open(this);
 }
 
-/// <summary>La vue « Définitions » : le glossaire du coffre, par dossier, avec une recherche.</summary>
+/// <summary>L'ordre des définitions dans la vue.</summary>
+public enum DefinitionOrder
+{
+    /// <summary>Par ordre alphabétique du terme.</summary>
+    Alphabet,
+
+    /// <summary>Par dossier, puis par fiche.</summary>
+    BySheet,
+
+    /// <summary>Les dernières écrites d'abord.</summary>
+    Recent,
+}
+
+/// <summary>Un ordre proposé, avec son nom.</summary>
+/// <param name="Value">L'ordre.</param>
+/// <param name="Label">Son nom.</param>
+public sealed record DefinitionOrderChoice(DefinitionOrder Value, string Label)
+{
+    /// <summary>Ce qu'en dit un lecteur d'écran : son nom.</summary>
+    public override string ToString() => Label;
+}
+
+/// <summary>
+/// La vue « Définitions » : le glossaire du coffre, avec une recherche, un dossier, un ordre et un filtre, et l'ajout d'une
+/// définition sans ouvrir de fiche.
+/// </summary>
 public sealed partial class DefinitionsPageViewModel : ObservableObject, IForgetsVault, ILeaving
 {
     private readonly AnnotationUseCases _annotations;
     private readonly IReviewOpener _opener;
+    private readonly SheetUseCases? _sheets;
     private readonly Dictionary<string, DefinitionRow> _rows = new(StringComparer.Ordinal);
     private DefinitionRow? _toDelete;
     private IReadOnlyList<VaultDefinition> _all = [];
@@ -140,15 +167,112 @@ public sealed partial class DefinitionsPageViewModel : ObservableObject, IForget
     /// <summary>Compte les oublis du coffre : une lecture partie avant le dernier oubli n'y remet rien.</summary>
     private int _generation;
 
-    /// <summary>Le glossaire, sur ces cas d'usage.</summary>
-    public DefinitionsPageViewModel(AnnotationUseCases annotations, IReviewOpener opener)
+    /// <summary>Le glossaire, sur ces cas d'usage ; sans <paramref name="sheets"/>, une nouvelle définition ne trouve où s'accrocher.</summary>
+    public DefinitionsPageViewModel(AnnotationUseCases annotations, IReviewOpener opener, SheetUseCases? sheets = null)
     {
         ArgumentNullException.ThrowIfNull(annotations);
         ArgumentNullException.ThrowIfNull(opener);
         _annotations = annotations;
         _opener = opener;
+        _sheets = sheets;
         SelectedFolder = Folders[0];
+        SelectedOrder = Orders[0];
     }
+
+    /// <summary>Les ordres proposés.</summary>
+    public IReadOnlyList<DefinitionOrderChoice> Orders { get; } =
+    [
+        new(DefinitionOrder.Alphabet, DefinitionsText.OrderAlphabet),
+        new(DefinitionOrder.BySheet, DefinitionsText.OrderBySheet),
+        new(DefinitionOrder.Recent, DefinitionsText.OrderRecent),
+    ];
+
+    /// <summary>L'ordre choisi ; rien pendant que la vue se défait, sans que le choix soit perdu.</summary>
+    [ObservableProperty]
+    public partial DefinitionOrderChoice? SelectedOrder { get; set; }
+
+    /// <summary>Seules les définitions marquées dans toutes les fiches sont montrées.</summary>
+    [ObservableProperty]
+    public partial bool OnlyMarkedEverywhere { get; set; }
+
+    /// <summary>La nouvelle définition en cours d'écriture, s'il y en a une.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsAdding))]
+    public partial DefinitionDraft? Draft { get; private set; }
+
+    /// <summary>Une nouvelle définition s'écrit.</summary>
+    public bool IsAdding => Draft is not null;
+
+    /// <summary>Ce qui vient de se faire, dit aux lecteurs d'écran (« Définition de « VLAN » ajoutée. »).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasAnnouncement))]
+    public partial string? Announcement { get; private set; }
+
+    /// <summary>Il y a quelque chose à dire.</summary>
+    public bool HasAnnouncement => Announcement is not null;
+
+    /// <summary>La pause avant de chercher où le terme tapé est écrit.</summary>
+    internal TimeSpan PlacesPause { get; set; } = TimeSpan.FromMilliseconds(300);
+
+    /// <summary>Ouvre une nouvelle définition, son terme repris de la recherche ; une déjà ouverte reste telle quelle.</summary>
+    [RelayCommand]
+    private void StartNew()
+    {
+        Announcement = null;
+        Draft ??= new DefinitionDraft(this, FindPlaces, PlacesPause, Search.Trim());
+    }
+
+    /// <summary>Referme la nouvelle définition, sans rien enregistrer.</summary>
+    internal void CloseDraft()
+    {
+        Draft?.Dispose();
+        Draft = null;
+    }
+
+    /// <summary>Enregistre la nouvelle définition, à l'endroit choisi, puis relit le glossaire ; un refus reste dans le brouillon.</summary>
+    internal async Task CreateAsync(DefinitionDraft draft)
+    {
+        if (draft.ChosenPlace is not { } place || !draft.CanSave())
+        {
+            return;
+        }
+        var term = draft.Term.Trim();
+        var definition = new Definition(term, draft.Explanation.Trim()) { Everywhere = draft.IsMarkedEverywhere };
+        var generation = _generation;
+        draft.IsSaving = true;
+        draft.Problem = null;
+        var outcome = await Task.Run(() => Create(place, definition)).ConfigureAwait(true);
+        if (generation != _generation)
+        {
+            return;
+        }
+        draft.IsSaving = false;
+        if (!outcome.Succeeded)
+        {
+            draft.Problem = outcome.Error;
+            return;
+        }
+        if (ReferenceEquals(Draft, draft))
+        {
+            CloseDraft();
+        }
+        Announcement = DefinitionsText.Created(term);
+        await LoadAsync().ConfigureAwait(true);
+    }
+
+    /// <summary>Écrit la définition ; elle naît marquée partout, et celle qui ne doit l'être qu'à sa place le devient juste après.</summary>
+    private Outcome<string> Create(DefinitionPlace place, Definition definition)
+    {
+        var created = _annotations.CreateDefinition(place.SheetId, place.Anchor, definition);
+        if (created.Succeeded && !definition.Everywhere && _annotations.MarkEverywhere(created.Value, false) is { Succeeded: false } refused)
+        {
+            return Outcome.Refused<string>(refused.Error!);
+        }
+        return created;
+    }
+
+    private IReadOnlyList<DefinitionPlace> FindPlaces(string term, CancellationToken cancellation) =>
+        _sheets is null ? [] : DefinitionPlaces.Find(_sheets, term, cancellation);
 
     /// <summary>Les dossiers qui ont des définitions, et tout le coffre.</summary>
     public ObservableCollection<DefinitionFolder> Folders { get; } = [new(string.Empty, DefinitionsText.WholeVault)];
@@ -183,8 +307,13 @@ public sealed partial class DefinitionsPageViewModel : ObservableObject, IForget
     /// <summary>Aucune définition ne répond à la recherche ou au dossier.</summary>
     public bool HasNoMatch => !IsLoading && _all.Count > 0 && Rows.Count == 0;
 
-    /// <summary>Combien de définitions sont montrées ; rien tant que le coffre n'en a pas.</summary>
-    public string Summary => _all.Count == 0 ? string.Empty : DefinitionsText.Count(Rows.Count);
+    /// <summary>
+    /// Le compte du glossaire (définitions, fiches, marquées partout), ou, filtré, combien sont montrées sur combien ; rien tant
+    /// que le coffre n'en a pas.
+    /// </summary>
+    public string Summary => _all.Count == 0 ? string.Empty
+        : Rows.Count < _all.Count ? DefinitionsText.Shown(Rows.Count, _all.Count)
+        : DefinitionsText.Summary(_all.Count, _all.Select(definition => definition.SheetId).Distinct(StringComparer.Ordinal).Count(), _all.Count(definition => definition.Everywhere));
 
     /// <summary>Relit le glossaire.</summary>
     [RelayCommand]
@@ -307,6 +436,11 @@ public sealed partial class DefinitionsPageViewModel : ObservableObject, IForget
     /// </summary>
     public async Task<bool> LeaveAsync()
     {
+        // Une nouvelle définition complète s'enregistre aussi ; incomplète, elle est abandonnée avec le reste.
+        if (Draft is { } draft && draft.CanSave())
+        {
+            await CreateAsync(draft).ConfigureAwait(true);
+        }
         var editing = _rows.Values.Where(row => row.IsEditing).ToList();
         foreach (var row in editing)
         {
@@ -325,7 +459,7 @@ public sealed partial class DefinitionsPageViewModel : ObservableObject, IForget
     }
 
     /// <summary>Une définition reste en cours de modification, avec des changements que <see cref="LeaveAsync"/> n'a pas pu enregistrer.</summary>
-    public bool HasUnsavedDraft => _rows.Values.Any(row => row.IsEditing && !row.IsUnchanged);
+    public bool HasUnsavedDraft => _rows.Values.Any(row => row.IsEditing && !row.IsUnchanged) || Draft is { HasText: true };
 
     /// <summary>La définition a changé dans le coffre depuis qu'on a commencé à la modifier ici : le brouillon l'écraserait.</summary>
     private bool ChangedElsewhere(DefinitionRow row) =>
@@ -344,6 +478,10 @@ public sealed partial class DefinitionsPageViewModel : ObservableObject, IForget
         _rows.Clear();
         _toDelete = null;
         _folder = string.Empty;
+        CloseDraft();
+        Announcement = null;
+        OnlyMarkedEverywhere = false;
+        SelectedOrder = Orders[0];
         Folders.Clear();
         Folders.Add(new DefinitionFolder(string.Empty, DefinitionsText.WholeVault));
         SelectedFolder = Folders[0];
@@ -393,16 +531,46 @@ public sealed partial class DefinitionsPageViewModel : ObservableObject, IForget
     {
         var folder = _folder;
         var wanted = DefinitionsText.WithoutAccents(Search.Trim());
+        var everywhereOnly = OnlyMarkedEverywhere;
+        var shown = _all.Where(definition =>
+            (folder.Length == 0 || definition.Folder == folder || definition.Folder.StartsWith(folder + "/", StringComparison.Ordinal))
+            && (!everywhereOnly || definition.Everywhere)
+            && DefinitionsText.WithoutAccents($"{definition.Term} {definition.Explanation}").Contains(wanted, StringComparison.Ordinal));
         Rows.Clear();
-        foreach (var definition in _all)
+        foreach (var definition in Ordered(shown, SelectedOrder?.Value ?? DefinitionOrder.Alphabet))
         {
-            var inFolder = folder.Length == 0 || definition.Folder == folder || definition.Folder.StartsWith(folder + "/", StringComparison.Ordinal);
-            if (inFolder && DefinitionsText.WithoutAccents($"{definition.Term} {definition.Explanation}").Contains(wanted, StringComparison.Ordinal))
-            {
-                Rows.Add(_rows[definition.Id]);
-            }
+            Rows.Add(_rows[definition.Id]);
         }
         OnPropertyChanged(nameof(HasNoMatch));
+        OnPropertyChanged(nameof(HasRows));
         OnPropertyChanged(nameof(Summary));
     }
+
+    /// <summary>Des définitions sont montrées : la liste a quelque chose à dire.</summary>
+    public bool HasRows => Rows.Count > 0;
+
+    /// <summary>
+    /// Les définitions dans l'ordre voulu : le terme comme un dictionnaire (sans majuscules ni accents), le dossier puis la fiche,
+    /// ou les dernières écrites d'abord (leur identifiant suit l'heure où elles l'ont été).
+    /// </summary>
+    private static IEnumerable<VaultDefinition> Ordered(IEnumerable<VaultDefinition> definitions, DefinitionOrder order)
+    {
+        var dictionary = StringComparer.Create(DefinitionsText.Culture, CompareOptions.IgnoreCase | CompareOptions.IgnoreNonSpace);
+        return order switch
+        {
+            DefinitionOrder.BySheet => definitions.OrderBy(definition => definition.Folder, dictionary).ThenBy(definition => definition.SheetTitle, dictionary).ThenBy(definition => definition.Term, dictionary),
+            DefinitionOrder.Recent => definitions.OrderByDescending(definition => definition.Id, StringComparer.Ordinal),
+            _ => definitions.OrderBy(definition => definition.Term, dictionary),
+        };
+    }
+
+    partial void OnSelectedOrderChanged(DefinitionOrderChoice? value)
+    {
+        if (value is not null)
+        {
+            Refresh();
+        }
+    }
+
+    partial void OnOnlyMarkedEverywhereChanged(bool value) => Refresh();
 }

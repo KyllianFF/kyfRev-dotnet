@@ -53,7 +53,7 @@ public sealed class DefinitionsForgetTests
         CollectionAssert.AreEqual(Terms, page.Rows.Select(row => row.Term).ToArray(), "relire ramène tout le glossaire");
         CollectionAssert.AreEqual(FolderPaths, page.Folders.Select(folder => folder.Path).ToArray());
         Assert.AreEqual(string.Empty, page.SelectedFolder!.Path);
-        Assert.AreEqual("2 définitions", page.Summary);
+        StringAssert.StartsWith(page.Summary, "2 définitions dans ", StringComparison.Ordinal);
         var again = page.Rows.Single(row => row.Term == "Mitose");
         Assert.AreNotSame(mitose, again);
         Assert.IsTrue(again.IsShown, "le brouillon est oublié");
