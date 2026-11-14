@@ -51,6 +51,20 @@ export function texteTrunk(schema: Schema, lien: Lien): string {
   return "Trunk";
 }
 
+/**
+ * Le VLAN d'un câble en accès : aucun de ses bouts n'est en trunk ni en hybride, et l'un d'eux au
+ * moins porte un VLAN d'accès (le premier qui en a un). Un port d'accès ne transporte qu'un VLAN, non
+ * tagué.
+ */
+export function vlanDAcces(schema: Schema, lien: Lien): number | undefined {
+  const configs = [configDuBout(schema, lien.a), configDuBout(schema, lien.b)];
+  if (configs.some((c) => c !== undefined && c.mode !== "acces")) return undefined;
+  return configs.find((c) => c?.acces !== undefined)?.acces;
+}
+
+/** L'annotation d'un câble en accès, sur le modèle de celle du trunk : « Access · U 30 ». */
+export const texteAcces = (vlan: number): string => `Access · U ${vlan}`;
+
 /** Les deux champs d'une configuration : VLAN non tagué (ou natif) et VLAN tagués. */
 export type ChampsVlan = { nonTague?: number; tagues?: string };
 

@@ -79,7 +79,34 @@ internal sealed class SchemaIsland : UserControl, IDisposable
         Content = ground;
         SetResourceReference(ThemeProbeProperty, "Kyf.Brush.Text");
         Loaded += OnLoaded;
+        LayoutUpdated += (_, _) => KeepOffTheFrame();
         _bridge.Finished += OnFinished;
+    }
+
+    /// <summary>
+    /// Le moteur a sa propre fenêtre, qui prend la souris : posée sur le bord de la fenêtre de l'application, elle empêcherait de la
+    /// redimensionner par ce bord. Il s'en écarte de l'épaisseur du cadre, tant que la fenêtre se redimensionne ; le fond de l'îlot,
+    /// aux couleurs du thème, remplit l'écart.
+    /// </summary>
+    internal void KeepOffTheFrame()
+    {
+        if (_disposed || Window.GetWindow(this) is not { } window || !IsDescendantOf(window))
+        {
+            return;
+        }
+        // Seule une fenêtre qui dessine son cadre (WindowChrome) a son bord de redimensionnement dans ce qu'elle affiche.
+        var resizable = window is Shell.ShellWindow shell
+            ? shell.ResizesByItsFrame
+            : System.Windows.Shell.WindowChrome.GetWindowChrome(window) is not null
+              && window.WindowState == WindowState.Normal && window.ResizeMode is ResizeMode.CanResize or ResizeMode.CanResizeWithGrip;
+        var inset = resizable
+            ? Shell.ShellWindow.FrameInset(TransformToAncestor(window).TransformBounds(new Rect(RenderSize)), new Size(window.ActualWidth, window.ActualHeight))
+            : default;
+        if (inset != _view.Margin)
+        {
+            _view.Margin = inset;
+            _snapshot.Margin = inset;
+        }
     }
 
     /// <summary>Le moteur n'a pas pu démarrer, ou s'est arrêté.</summary>
@@ -87,6 +114,12 @@ internal sealed class SchemaIsland : UserControl, IDisposable
 
     /// <summary>Un processus du moteur s'est arrêté puis a été relancé par WebView2 (le GPU, un utilitaire) : la page continue.</summary>
     public event EventHandler<string>? Restarted;
+
+    /// <summary>La page a chargé son code (<see cref="IsReady"/>).</summary>
+    public event EventHandler? Ready;
+
+    /// <summary>L'îlot est fermé : son moteur ne sert plus.</summary>
+    internal bool IsDisposed => _disposed;
 
     /// <summary>La page a chargé son code.</summary>
     internal bool IsReady => _ready;
@@ -119,6 +152,18 @@ internal sealed class SchemaIsland : UserControl, IDisposable
     {
         _toOpen = id;
         SendPendingOpen();
+    }
+
+    /// <summary>
+    /// L'îlot est de nouveau affiché, gardé ouvert depuis la dernière fois : la liste relit le coffre (un schéma a pu y être
+    /// importé, cité ou retiré entre-temps). Un schéma ouvert dans l'éditeur reste comme on l'a laissé.
+    /// </summary>
+    internal void Returned()
+    {
+        if (_ready)
+        {
+            Post(new JsonObject { ["kind"] = "revenu" }.ToJsonString());
+        }
     }
 
     /// <summary>Le moteur a sa propre fenêtre, au premier plan : pendant qu'un volet de l'application le recouvre, son image prend sa place.</summary>
@@ -193,6 +238,12 @@ internal sealed class SchemaIsland : UserControl, IDisposable
 
     /// <summary>Exécute un script dans la page, pour les essais.</summary>
     internal Task<string> RunScriptAsync(string script) => _view.ExecuteScriptAsync(script);
+
+    /// <summary>Donne au moteur un geste de la souris ou du clavier, comme s'il venait de Windows, pour les essais.</summary>
+    internal Task<string> CallDevToolsAsync(string method, string parameters) => _view.CoreWebView2.CallDevToolsProtocolMethodAsync(method, parameters);
+
+    /// <summary>L'écart que le moteur garde avec le cadre de la fenêtre (<see cref="KeepOffTheFrame"/>).</summary>
+    internal Thickness EngineMargin => _view.Margin;
 
     /// <inheritdoc/>
     public void Dispose()
@@ -283,6 +334,7 @@ internal sealed class SchemaIsland : UserControl, IDisposable
             _ready = true;
             SendTheme();
             SendPendingOpen();
+            Ready?.Invoke(this, EventArgs.Empty);
             return;
         }
         // Une demande de la page qui échoue (un fichier refusé, un moteur fermé entre-temps) reste sans réponse : elle

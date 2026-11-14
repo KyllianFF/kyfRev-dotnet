@@ -6,13 +6,18 @@ using Microsoft.Win32;
 
 namespace KyfRev.Presentation.Wpf.Pages;
 
-/// <summary>Vue « Schémas réseau » : un îlot web, et ce qu'il faut pour qu'il parle au coffre.</summary>
-public sealed partial class SchemasPageViewModel : ObservableObject, ILeaving
+/// <summary>
+/// Vue « Schémas réseau » : un îlot web, et ce qu'il faut pour qu'il parle au coffre. L'îlot vit avec cette vue, pas avec son
+/// affichage : quitter l'onglet le garde ouvert, et y revenir ne relance pas le moteur web. Il se ferme avec elle, quand les
+/// entrées du menu changent (un coffre verrouillé, un autre coffre, le module coupé).
+/// </summary>
+public sealed partial class SchemasPageViewModel : ObservableObject, ILeaving, IDisposable
 {
     private readonly SchemaUseCases _schemas;
     private readonly IFolderPicker _folders;
     private readonly IReviewOpener _opener;
     private Action? _back;
+    private bool _disposed;
 
     /// <summary>La vue d'un module, sur ses cas d'usage.</summary>
     /// <param name="schemas">Les cas d'usage du module.</param>
@@ -25,6 +30,7 @@ public sealed partial class SchemasPageViewModel : ObservableObject, ILeaving
         _folders = folders;
         _opener = opener;
         WebDataFolder = webDataFolder;
+        FinishIsland = () => Island is { IsDisposed: false } island ? island.FinishAsync() : Task.FromResult(true);
     }
 
     /// <summary>Le dossier de données du moteur web.</summary>
@@ -46,13 +52,41 @@ public sealed partial class SchemasPageViewModel : ObservableObject, ILeaving
     public partial string? ToOpen { get; set; }
 
     /// <summary>Finit ce qui est en cours dans l'îlot ouvert (<see cref="SchemaIsland.FinishAsync"/>) ; rien quand l'îlot n'est pas ouvert.</summary>
-    internal Func<Task<bool>>? FinishIsland { get; set; }
+    internal Func<Task<bool>> FinishIsland { get; set; }
+
+    /// <summary>L'îlot ouvert pour cette vue, affiché ou non ; la vue l'ouvre la première fois qu'elle s'affiche.</summary>
+    internal SchemaIsland? Island { get; private set; }
+
+    /// <summary>L'îlot de cette vue : celui qui est déjà ouvert, sinon un nouveau, qui démarre dès qu'il est posé dans une fenêtre.</summary>
+    internal SchemaIsland TakeIsland()
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        if (Island is not { IsDisposed: false })
+        {
+            Island = new SchemaIsland(Bridge(), WebDataFolder);
+        }
+        return Island;
+    }
+
+    /// <summary>Ferme l'îlot : le moteur web s'est arrêté, ou la vue n'en a plus besoin. La vue en ouvrira un autre.</summary>
+    internal void CloseIsland()
+    {
+        Island?.Dispose();
+        Island = null;
+    }
+
+    /// <summary>La vue ne sert plus (ses entrées du menu ont été remplacées) : son îlot se ferme.</summary>
+    public void Dispose()
+    {
+        _disposed = true;
+        CloseIsland();
+    }
 
     /// <summary>
     /// Avant le verrouillage : le champ où l'on écrivait dans l'éditeur s'applique, et le schéma s'enregistre. Faux s'il n'a pas pu
     /// l'être (refusé, modifié ailleurs, ou l'îlot n'a pas répondu) : le coffre reste alors ouvert. Vrai quand l'îlot n'est pas ouvert.
     /// </summary>
-    public async Task<bool> LeaveAsync() => FinishIsland is not { } finish || await finish().ConfigureAwait(true);
+    public async Task<bool> LeaveAsync() => await FinishIsland().ConfigureAwait(true);
 
     /// <summary>Le pont vers le coffre, pour un îlot.</summary>
     internal SchemaBridge Bridge() => new(_schemas, _folders, () => PickSchemaFile(), _opener.OpenSheet, EditorClosed, CopyImage);

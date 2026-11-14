@@ -17,6 +17,7 @@
     changerTypeDeCable,
     conseilsDeLiaison,
     desagreger,
+    ecrireVlanDAcces,
     ecrireVlansDuTrunk,
     type GroupeDeCables,
     lireVlansDuTrunk,
@@ -25,11 +26,13 @@
     reglerMembres,
     reglerNombreDeCables,
   } from "../../lib/topologie/simplifie";
+  import { lireNumeroVlan } from "../../lib/topologie/vlans";
 
   // Bulle d'un câble choisi en mode simplifié (11A), ou des câbles qui relient deux mêmes équipements :
   // leur type, leur nombre, et deux options qui ne se confondent pas. « Agrégat de liens » réunit les
   // câbles en un seul lien (le dessin les cercle) ; « Trunk » leur fait transporter plusieurs VLAN (le
-  // dessin l'annote). Chaque réglage est le vrai réglage du modèle.
+  // dessin l'annote). Sans trunk, les ports sont en accès : un seul VLAN, non tagué, annoté lui aussi.
+  // Chaque réglage est le vrai réglage du modèle.
   let {
     editeur,
     groupe,
@@ -139,9 +142,27 @@
 
   // --- Trunk et ses VLAN ---
 
-  let erreur = $state<{ texte: string; champ: "non-tague" | "tagues" } | null>(null);
+  let erreur = $state<{ texte: string; champ: "non-tague" | "tagues" | "acces" } | null>(null);
   let champNonTague = $state<HTMLInputElement>();
   let champTagues = $state<HTMLInputElement>();
+  let champAcces = $state<HTMLInputElement>();
+
+  /** Le VLAN d'un câble en accès : un seul numéro, non tagué. Vide, il se retire. */
+  function ecrireVlanAcces() {
+    const lu = lireNumeroVlan(champAcces?.value ?? "");
+    if (lu === null) {
+      erreur = { texte: "Le VLAN d'un port d'accès est un seul numéro, de 1 à 4094.", champ: "acces" };
+      void tick().then(() => document.getElementById("bulle-vlans-erreur")?.scrollIntoView({ block: "nearest" }));
+      return;
+    }
+    erreur = null;
+    if (lu === groupe.vlans.nonTague && !groupe.cablesDifferents) return;
+    const cables = ids;
+    editeur.agir(
+      (s) => ecrireVlanDAcces(s, cables, lu),
+      lu !== undefined ? `Entre ${noms} : VLAN ${lu} en accès, non tagué.` : `Entre ${noms} : plus de VLAN.`,
+    );
+  }
 
   function basculerTrunk() {
     const actif = !groupe.trunk;
@@ -181,7 +202,12 @@
 
   /** Pendant la saisie, une erreur corrigée s'efface tout de suite. */
   function relire() {
-    if (erreur && !("erreur" in lireVlansDuTrunk(champNonTague?.value ?? "", champTagues?.value ?? ""))) erreur = null;
+    if (!erreur) return;
+    const corrige =
+      erreur.champ === "acces"
+        ? lireNumeroVlan(champAcces?.value ?? "") !== null
+        : !("erreur" in lireVlansDuTrunk(champNonTague?.value ?? "", champTagues?.value ?? ""));
+    if (corrige) erreur = null;
   }
 
   function aligner(equipement: string, nom: string) {
@@ -340,6 +366,31 @@
         onkeydown={entree}
       />
     </div>
+  </div>
+  {#if erreur}
+    <p id="bulle-vlans-erreur" class="erreur" role="alert">{erreur.texte}</p>
+  {/if}
+{:else}
+  <!-- Sans trunk, les ports sont en accès : un seul VLAN, qui passe sans étiquette. -->
+  <div class="vlans" id="bulle-vlans">
+    <div>
+      <label for="bulle-vlan-acces">VLAN non tagué (untagged)</label>
+      <input
+        bind:this={champAcces}
+        id="bulle-vlan-acces"
+        class="champ code"
+        value={groupe.vlans.nonTague ?? ""}
+        inputmode="numeric"
+        autocomplete="off"
+        placeholder="aucun"
+        aria-invalid={erreur?.champ === "acces"}
+        aria-describedby={erreur ? "bulle-vlans-erreur bulle-acces-aide" : "bulle-acces-aide"}
+        onchange={ecrireVlanAcces}
+        oninput={relire}
+        onkeydown={entree}
+      />
+    </div>
+    <p class="aide" id="bulle-acces-aide">Port d'accès : un seul VLAN. Pour en faire passer plusieurs, cochez « Trunk ».</p>
   </div>
   {#if erreur}
     <p id="bulle-vlans-erreur" class="erreur" role="alert">{erreur.texte}</p>
