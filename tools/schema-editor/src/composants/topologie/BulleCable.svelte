@@ -252,7 +252,7 @@
   {#if plusieurs}
     {groupe.memePaire ? `${groupe.cables.length} câbles choisis : ` : ""}ce que vous réglez ici vaut pour tous.
   {:else}
-    Ctrl+clic sur d'autres câbles pour les régler ensemble.
+    Glissez le câble pour changer son tracé ; Ctrl+clic sur d'autres câbles pour les régler ensemble.
   {/if}
 </p>
 <div>

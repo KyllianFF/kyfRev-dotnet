@@ -312,6 +312,52 @@ public sealed class SchemasPageTests
         Assert.AreEqual(1, Labels().Split(" | ").Count(label => label.StartsWith("Access", StringComparison.Ordinal)), "seul le câble choisi est en accès sur ce VLAN");
         scene.Picture($"schemas-simplifie-{(theme == ThemeKind.Dark ? "sombre" : "clair")}-acces");
 
+        // Le câble choisi se tire à la souris, comme en mode avancé : son tracé change et s'enregistre, il reste choisi,
+        // et sa bulle revient où il s'arrête. On le saisit là où lui seul est sous le pointeur, l'autre câble passant à côté.
+        bool Routed() => ((JsonArray)JsonNode.Parse(scene.Schemas.Read(id).Value.Text)!["liens"]!)
+            .Any(link => (link!["points"] as JsonArray)?.Count > 0 || link["palier"] is not null);
+        Assert.IsFalse(Routed(), "aucun câble n'a encore de tracé à lui");
+        var grip = JsonSerializer.Deserialize<double[]?>(Text("""
+            (() => {
+              const lien = document.querySelector('svg.canevas g.lien.choisi');
+              const prise = lien.querySelector('path.prise');
+              const m = prise.getScreenCTM();
+              const total = prise.getTotalLength();
+              for (let f = 0.15; f < 0.9; f += 0.05) {
+                const p = prise.getPointAtLength(total * f);
+                for (const d of [0, -5, 5, -3, 3]) {
+                  for (const [ox, oy] of [[d, 0], [0, d]]) {
+                    const x = p.x * m.a + p.y * m.c + m.e + ox;
+                    const y = p.x * m.b + p.y * m.d + m.f + oy;
+                    const sous = document.elementFromPoint(x, y);
+                    if (sous && sous.classList.contains('prise') && sous.closest('g.lien') === lien) {
+                      // Le pointeur part en travers du câble : le nouveau tracé se voit.
+                      const q = prise.getPointAtLength(Math.min(total, total * f + 10));
+                      const tx = (q.x - p.x) * m.a + (q.y - p.y) * m.c;
+                      const ty = (q.x - p.x) * m.b + (q.y - p.y) * m.d;
+                      const n = Math.hypot(tx, ty) || 1;
+                      return JSON.stringify([x, y, -ty / n, tx / n]);
+                    }
+                  }
+                }
+              }
+              return JSON.stringify(null);
+            })()
+            """));
+        Assert.IsNotNull(grip, "un point du câble choisi, sous le pointeur");
+        scene.Drag(grip[0], grip[1], grip[0] + (60 * grip[2]), grip[1] + (60 * grip[3]));
+        UiThread.Until(Routed, TimeSpan.FromSeconds(15));
+        scene.WaitFor("document.querySelectorAll('svg.canevas g.lien.choisi').length === 1 && document.querySelector('.bulle') !== null");
+        var bends = ((JsonArray)JsonNode.Parse(scene.Schemas.Read(id).Value.Text)!["liens"]!).Max(link => (link!["points"] as JsonArray)?.Count ?? 0);
+        Assert.AreEqual(bends, Count("svg.canevas circle.passage"), "les points de passage du câble choisi se montrent, pour les tirer ou les retirer");
+
+        // Échap : sans la bulle, le nouveau tracé se voit. Puis le câble est repris au clavier pour la suite.
+        scene.Script("document.querySelector('svg.canevas').dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true, cancelable: true }))");
+        scene.WaitFor("document.querySelectorAll('svg.canevas g.lien.choisi').length === 0 && document.querySelector('.bulle') === null");
+        scene.Picture($"schemas-simplifie-{(theme == ThemeKind.Dark ? "sombre" : "clair")}-trace");
+        scene.Script("(() => { const lien = document.querySelector('svg.canevas g.lien'); lien.focus(); lien.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true, cancelable: true })); })()");
+        scene.WaitFor("document.getElementById('bulle-vlan-acces') !== null");
+
         // « Trunk » : il libère deux champs, et le câble est annoté de ses VLAN. Pas de cercle : le cercle est pour l'agrégat.
         scene.Script("document.querySelector('.bulle button[role=switch][data-option=\"trunk\"]').click()");
         scene.WaitFor("document.getElementById('bulle-vlan-non-tague') !== null && document.getElementById('bulle-vlans-tagues') !== null");
@@ -862,10 +908,24 @@ public sealed class SchemasPageTests
         public void WaitFor(string condition) => UiThread.Until(() => Script(condition) == "true", TimeSpan.FromSeconds(20));
 
         /// <summary>Un vrai geste de la souris, donné au moteur comme s'il venait de Windows, à ce point de la page.</summary>
-        public void Mouse(string type, double x, double y)
+        public void Mouse(string type, double x, double y) =>
+            Dispatch(new { type, x, y, button = type == "mouseMoved" ? "none" : "left", clickCount = type == "mouseMoved" ? 0 : 1 });
+
+        /// <summary>Un glissement, bouton gauche tenu : appuyer, cinq pas, relâcher.</summary>
+        public void Drag(double fromX, double fromY, double toX, double toY)
         {
-            var parameters = JsonSerializer.Serialize(new { type, x, y, button = type == "mouseMoved" ? "none" : "left", clickCount = type == "mouseMoved" ? 0 : 1 });
-            var run = Page.Island!.CallDevToolsAsync("Input.dispatchMouseEvent", parameters);
+            Mouse("mouseMoved", fromX, fromY);
+            Mouse("mousePressed", fromX, fromY);
+            for (var step = 1; step <= 5; step++)
+            {
+                Dispatch(new { type = "mouseMoved", x = fromX + ((toX - fromX) * step / 5), y = fromY + ((toY - fromY) * step / 5), button = "left", buttons = 1 });
+            }
+            Mouse("mouseReleased", toX, toY);
+        }
+
+        private void Dispatch(object parameters)
+        {
+            var run = Page.Island!.CallDevToolsAsync("Input.dispatchMouseEvent", JsonSerializer.Serialize(parameters));
             UiThread.Until(() => run.IsCompleted);
             TestShell.Flush();
         }
