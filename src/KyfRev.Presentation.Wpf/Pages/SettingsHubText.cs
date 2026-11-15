@@ -101,8 +101,86 @@ public static class SettingsHubText
     /// <summary>« Recherche… ».</summary>
     public static string CheckingUpdate => Text(nameof(CheckingUpdate));
 
-    /// <summary>« La recherche n'a lieu que si vous la demandez… ».</summary>
+    /// <summary>« Une version plus récente se télécharge dans kyfRev… ».</summary>
     public static string UpdateHelp => Text(nameof(UpdateHelp));
+
+    /// <summary>« Cette copie de kyfRev ne vient pas de l'installateur… ».</summary>
+    public static string UpdateHelpPortable => Text(nameof(UpdateHelpPortable));
+
+    /// <summary>« Rechercher une mise à jour au démarrage ».</summary>
+    public static string CheckAtStartup => Text(nameof(CheckAtStartup));
+
+    /// <summary>« À chaque ouverture, kyfRev regarde si une version plus récente est publiée… ».</summary>
+    public static string CheckAtStartupHelp => Text(nameof(CheckAtStartupHelp));
+
+    /// <summary>« Mise à jour disponible ».</summary>
+    public static string UpdateOfferTitle => Text(nameof(UpdateOfferTitle));
+
+    /// <summary>« kyfRev {0} est disponible (vous avez la {1}). Elle se télécharge maintenant… ».</summary>
+    public static string UpdateOfferOf(object latest, object current) => Format("UpdateOffer", latest, current);
+
+    /// <summary>« Mettre à jour ».</summary>
+    public static string UpdateNow => Text(nameof(UpdateNow));
+
+    /// <summary>« Retarder à la prochaine ouverture ».</summary>
+    public static string UpdatePostpone => Text(nameof(UpdatePostpone));
+
+    /// <summary>« kyfRev {0} est disponible : elle vous sera proposée de nouveau… ».</summary>
+    public static string UpdatePostponedOf(object latest) => Format("UpdatePostponed", latest);
+
+    /// <summary>« Téléchargement de kyfRev {0} ».</summary>
+    public static string UpdateDownloadingTitleOf(object latest) => Format("UpdateDownloadingTitle", latest);
+
+    /// <summary>« kyfRev télécharge la nouvelle version, puis vérifie… ».</summary>
+    public static string UpdateDownloading => Text(nameof(UpdateDownloading));
+
+    /// <summary>« Téléchargement de kyfRev {0}… ».</summary>
+    public static string UpdateDownloadingShortOf(object latest) => Format("UpdateDownloadingShort", latest);
+
+    /// <summary>« {0} Mo sur {1} Mo ».</summary>
+    public static string UpdateProgressOf(object received, object total) => Format("UpdateProgress", received, total);
+
+    /// <summary>« Progression du téléchargement ».</summary>
+    public static string UpdateProgressLabel => Text(nameof(UpdateProgressLabel));
+
+    /// <summary>« Masquer ».</summary>
+    public static string UpdateHide => Text(nameof(UpdateHide));
+
+    /// <summary>« Mise à jour prête ».</summary>
+    public static string UpdateReadyTitle => Text(nameof(UpdateReadyTitle));
+
+    /// <summary>« kyfRev {0} est téléchargée et vérifiée. Pour l'installer, kyfRev doit redémarrer… ».</summary>
+    public static string UpdateReadyOf(object latest) => Format("UpdateReady", latest);
+
+    /// <summary>« kyfRev est installé pour toutes les personnes de cet ordinateur… ».</summary>
+    public static string UpdateAllUsers => Text(nameof(UpdateAllUsers));
+
+    /// <summary>« Redémarrer maintenant ».</summary>
+    public static string RestartNow => Text(nameof(RestartNow));
+
+    /// <summary>« Plus tard ».</summary>
+    public static string RestartLater => Text(nameof(RestartLater));
+
+    /// <summary>« kyfRev {0} est prête : elle s'installera quand vous fermerez kyfRev. ».</summary>
+    public static string UpdateAtExitOf(object latest) => Format("UpdateAtExit", latest);
+
+    /// <summary>« kyfRev est passé à la version {0}. ».</summary>
+    public static string UpdateInstalledOf(object version) => Format("UpdateInstalled", version);
+
+    /// <summary>« Mise à jour non installée ».</summary>
+    public static string UpdateNotInstalledTitle => Text(nameof(UpdateNotInstalledTitle));
+
+    /// <summary>« La mise à jour vers kyfRev {0} ne s'est pas installée… ».</summary>
+    public static string UpdateNotInstalledOf(object latest, object current, object log) => Format("UpdateNotInstalled", latest, current, log);
+
+    /// <summary>« Réessayer ».</summary>
+    public static string UpdateRetry => Text(nameof(UpdateRetry));
+
+    /// <summary>« Mise à jour impossible ».</summary>
+    public static string UpdateFailedTitle => Text(nameof(UpdateFailedTitle));
+
+    /// <summary>« kyfRev ne peut pas se fermer pendant une conversion… ».</summary>
+    public static string UpdateCannotClose => Text(nameof(UpdateCannotClose));
 
     /// <summary>« Ouvrir la page de cette version ».</summary>
     public static string OpenRelease => Text(nameof(OpenRelease));

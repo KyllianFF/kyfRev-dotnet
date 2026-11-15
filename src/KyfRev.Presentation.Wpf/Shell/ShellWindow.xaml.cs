@@ -596,6 +596,8 @@ public sealed partial class ShellWindow : Window
     /// <summary>La réponse à la capture rapide part vers la coquille.</summary>
     private void OnCaptureClosed(object sender, DialogClosedEventArgs e) => _ = _shell.AnswerCaptureCommand.ExecuteAsync(e.Choice == DialogChoice.Primary);
 
+    private void OnUpdateClosed(object sender, DialogClosedEventArgs e) => _ = _shell.Updates?.AnswerAsync(e.Choice == DialogChoice.Primary);
+
     /// <summary>La note se tape dès que la fenêtre de capture paraît.</summary>
     private void OnCaptureBoxShown(object sender, DependencyPropertyChangedEventArgs e)
     {

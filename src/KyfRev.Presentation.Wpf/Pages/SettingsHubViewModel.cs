@@ -274,7 +274,7 @@ public sealed partial class SettingsHubViewModel : ObservableObject, INavigation
             },
             new SettingsTab(SettingsHubText.About, about, app, Icons.Info, string.Empty, MoreSettingsText.AboutAbout)
             {
-                Settings = [new(SettingsHubText.CheckUpdate, MoreSettingsText.WordsVersion), SettingsHubText.LicenseLabel],
+                Settings = [new(SettingsHubText.CheckUpdate, MoreSettingsText.WordsVersion), SettingsHubText.CheckAtStartup, SettingsHubText.LicenseLabel],
             },
         ];
         _machine = machine;

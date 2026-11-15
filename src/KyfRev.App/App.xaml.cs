@@ -14,11 +14,14 @@ namespace KyfRev.App;
 /// L'application : se signale ouverte à l'installateur, assemble les services, applique
 /// l'apparence de Windows, ouvre le coffre prévu
 /// (l'accueil à défaut), puis la fenêtre principale. Avec <c>--galerie</c>, la fenêtre s'ouvre sur
-/// la galerie des composants, sans ouvrir de coffre.
+/// la galerie des composants, sans ouvrir de coffre. Une mise à jour prête s'installe une fois l'application
+/// fermée ; pendant qu'elle s'installe, l'application lancée se referme aussitôt.
 /// </summary>
 internal sealed partial class App : System.Windows.Application
 {
     private ServiceProvider? _services;
+    private UpdateFlow? _updates;
+    private bool _sessionEnding;
 
     /// <summary>L'horloge de l'application ; les scénarios d'acceptation y mettent une date simulée.</summary>
     internal TimeProvider Time { get; init; } = TimeProvider.System;
@@ -30,6 +33,13 @@ internal sealed partial class App : System.Windows.Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        // Une mise à jour s'installe : ouvert maintenant, kyfRev retiendrait des fichiers qu'elle remplace. Il se referme
+        // aussitôt, sans rien ouvrir ; la mise à jour finie, il s'ouvre normalement.
+        if (SilentInstaller.IsInstalling())
+        {
+            Shutdown();
+            return;
+        }
         _services = Composition.Build(Time, Locations);
         _services.GetRequiredService<OpenMarker>();
         WatchUnexpectedErrors(_services.GetRequiredService<ILoggerFactory>().CreateLogger("kyfRev"));
@@ -39,7 +49,8 @@ internal sealed partial class App : System.Windows.Application
         Resources[ExtensionBlocks.ResourceKey] = _services.GetRequiredService<ExtensionBlocks>();
         Resources[ExtensionPages.ResourceKey] = _services.GetRequiredService<ExtensionPages>();
         var shell = _services.GetRequiredService<ShellViewModel>();
-        if (e.Args.Contains("--galerie", StringComparer.Ordinal))
+        var gallery = e.Args.Contains("--galerie", StringComparer.Ordinal);
+        if (gallery)
         {
             // Revue visuelle : la galerie des composants d'emblée.
             shell.Navigate(shell.Gallery);
@@ -54,6 +65,28 @@ internal sealed partial class App : System.Windows.Application
         FollowCaptureKey(window, shell, _services.GetRequiredService<MachineSettings>());
         // Le coffre chiffré se verrouille de lui-même après un temps d'inactivité, ou quand Windows se verrouille.
         _services.GetRequiredService<AutoLock>().Start();
+        // La mise à jour dit ce qu'est devenue la dernière, puis en cherche une si on l'a choisi ; « Redémarrer
+        // maintenant » ferme la fenêtre, et l'installation part de OnExit. La galerie, elle, ne cherche rien.
+        if (gallery)
+        {
+            return;
+        }
+        _updates = _services.GetRequiredService<UpdateFlow>();
+        var closed = false;
+        window.Closed += (_, _) => closed = true;
+        _updates.CloseApplication = () =>
+        {
+            window.Close();
+            return closed;
+        };
+        _ = _updates.StartAsync(_services.GetRequiredService<MachineSettings>().Current.CheckUpdatesAtStartup);
+    }
+
+    /// <summary>Windows ferme la session : une mise à jour prévue attendra la prochaine fermeture de kyfRev.</summary>
+    protected override void OnSessionEnding(SessionEndingCancelEventArgs e)
+    {
+        _sessionEnding = true;
+        base.OnSessionEnding(e);
     }
 
     /// <summary>
@@ -93,7 +126,10 @@ internal sealed partial class App : System.Windows.Application
     /// <inheritdoc/>
     protected override void OnExit(ExitEventArgs e)
     {
+        var update = _sessionEnding ? null : _updates?.ExitLaunch;
+        // Les services rendus, kyfRev ne tient plus le verrou qui arrête l'installateur.
         _services?.Dispose();
+        update?.Invoke();
         base.OnExit(e);
     }
 }

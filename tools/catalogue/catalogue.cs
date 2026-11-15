@@ -6,7 +6,10 @@
 // à la racine du dépôt :
 //   dotnet run tools/catalogue/catalogue.cs -- cle <fichier.pem> [nom]   crée une clé de publication, hors du dépôt
 //   dotnet run tools/catalogue/catalogue.cs -- publier <fichier.pem>     signe catalogue/ d'après extensions/
-//   dotnet run tools/catalogue/catalogue.cs -- version <fichier.pem> <v> signe l'annonce de la version publiée
+//   dotnet run tools/catalogue/catalogue.cs -- version <fichier.pem> <v> [installateur.exe]
+//                                                                         signe l'annonce de la version publiée, avec la
+//                                                                         taille et l'empreinte de son installateur (par
+//                                                                         défaut celui que tools/publier-version.ps1 a repris)
 //   dotnet run tools/catalogue/catalogue.cs -- verifier                  vérifie catalogue/ comme l'application
 // La clé privée ne quitte jamais son fichier, chiffré par une phrase de passe demandée au clavier. Le dépôt, lui, ne
 // reçoit que la clé publique (src/KyfRev.Extensions.Host/cles-catalogue.json) et le catalogue signé.
@@ -25,9 +28,10 @@ return args switch
     ["cle", var fichier] => Cle(fichier, "kyfrev-1"),
     ["cle", var fichier, var nom] => Cle(fichier, nom),
     ["publier", var fichier] => Publier(fichier),
-    ["version", var fichier, var numero] => Version(fichier, numero),
+    ["version", var fichier, var numero] => Version(fichier, numero, Path.Combine(racine, "artifacts", "publication", numero, $"kyfRev-{numero}-installation.exe")),
+    ["version", var fichier, var numero, var installateur] => Version(fichier, numero, installateur),
     ["verifier"] => Verifier(),
-    _ => Echec("usage : cle <fichier.pem> [nom] | publier <fichier.pem> | version <fichier.pem> <numero> | verifier"),
+    _ => Echec("usage : cle <fichier.pem> [nom] | publier <fichier.pem> | version <fichier.pem> <numero> [installateur.exe] | verifier"),
 };
 
 int Cle(string fichier, string nom)
@@ -110,11 +114,21 @@ int Publier(string fichier)
     return 0;
 }
 
-int Version(string fichier, string numero)
+int Version(string fichier, string numero, string installateur)
 {
     if (!File.Exists(fichier))
     {
         return Echec($"{fichier} est introuvable.");
+    }
+    // L'installateur exact de la version publiée : kyfRev ne lance que celui dont la taille et l'empreinte sont signées ici.
+    if (!File.Exists(installateur))
+    {
+        return Echec($"{installateur} est introuvable : lancez d'abord tools/publier-version.ps1, ou donnez le chemin de l'installateur publié.");
+    }
+    var construite = (System.Diagnostics.FileVersionInfo.GetVersionInfo(installateur).ProductVersion ?? string.Empty).Split('+')[0].Trim();
+    if (construite != numero)
+    {
+        return Echec($"{installateur} est en version « {construite} », pas {numero}.");
     }
     using var cle = ECDsa.Create();
     try
@@ -133,7 +147,7 @@ int Version(string fichier, string numero)
     byte[] annonce;
     try
     {
-        annonce = UpdateChecker.Write(numero, DateOnly.FromDateTime(DateTime.Now));
+        annonce = UpdateChecker.Write(numero, DateOnly.FromDateTime(DateTime.Now), File.ReadAllBytes(installateur));
     }
     catch (ArgumentException erreur)
     {
@@ -149,7 +163,7 @@ int Version(string fichier, string numero)
     Directory.CreateDirectory(Path.GetDirectoryName(chemin)!);
     File.WriteAllBytes(chemin, annonce);
     File.WriteAllBytes(Path.Combine(racine, UpdateChecker.SignatureFile), signature);
-    Console.WriteLine($"Version {numero} annoncée et signée par « {connue.Id} ». Il ne reste qu'à proposer mise-a-jour/ dans une PR.");
+    Console.WriteLine($"Version {numero} annoncée et signée par « {connue.Id} », avec son installateur ({verifie.Value.Installer!.Size} octets, SHA-256 {verifie.Value.Installer.Sha256}). Il ne reste qu'à proposer mise-a-jour/ dans une PR.");
     return 0;
 }
 

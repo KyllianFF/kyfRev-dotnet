@@ -29,23 +29,28 @@ public sealed class SettingsHubTests
     private static readonly string[] Tabs = ["Apparence", "Lecture", "Révisions", "Modules et extensions", "Coffre et chiffrement", "Sauvegardes et exports", "À propos"];
 
     [TestMethod]
-    public async Task Looking_for_an_update_says_what_exists_and_opens_only_its_page()
+    public async Task A_copy_that_does_not_come_from_the_installer_says_what_exists_and_opens_only_its_page()
     {
         using var vault = new DataVault();
         using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
-        var manifest = UpdateChecker.Write("9.0.0", new DateOnly(2026, 11, 8));
+        var manifest = UpdateChecker.Write("9.0.0", new DateOnly(2026, 11, 8), [1, 2, 3]);
         var online = new AnnouncedVersion(manifest, ExtensionCatalogue.Sign(manifest, key, "essai"));
         var links = new RecordingLinks();
-        var about = new AboutSettingsViewModel(vault.App.Vaults, new UpdateChecker(online, [new("essai", key.ExportSubjectPublicKeyInfoPem())], "1.0.0"), links);
+        var updates = new UpdateFlow(new UpdateChecker(online, [new("essai", key.ExportSubjectPublicKeyInfoPem())], "1.0.0"), packages: null, links);
+        var about = new AboutSettingsViewModel(vault.App.Vaults, updates);
         Assert.IsTrue(about.CanCheckUpdates);
+        Assert.IsFalse(about.CanCheckAtStartup, "sans les préférences de ce poste, le choix ne se retient pas");
+        Assert.AreEqual(SettingsHubText.UpdateHelpPortable, updates.Help);
         Assert.AreEqual(0, online.Reads, "rien n'est lu sans le demander");
 
-        await about.CheckUpdateCommand.ExecuteAsync(null);
+        await updates.CheckCommand.ExecuteAsync(null);
 
-        Assert.AreEqual(SettingsHubText.UpdateAvailableOf("9.0.0", "1.0.0"), about.UpdateMessage);
-        Assert.IsTrue(about.HasRelease && about.HasUpdateMessage);
-        Assert.AreEqual(SettingsHubText.CheckUpdate, about.CheckLabel);
-        about.OpenReleaseCommand.Execute(null);
+        Assert.AreEqual(SettingsHubText.UpdateAvailableOf("9.0.0", "1.0.0"), updates.Message);
+        Assert.IsTrue(updates.HasRelease && updates.HasMessage);
+        Assert.AreEqual(UpdateStage.Available, updates.Stage);
+        Assert.AreEqual(SettingsHubText.CheckUpdate, updates.CheckLabel);
+        Assert.IsNull(updates.ExitLaunch, "rien ne s'installe d'ici");
+        updates.OpenReleaseCommand.Execute(null);
         Assert.AreEqual("https://github.com/KyllianFF/kyfRev-dotnet/releases/tag/v9.0.0", links.Opened.Single());
     }
 
@@ -54,24 +59,47 @@ public sealed class SettingsHubTests
     {
         using var vault = new DataVault();
         using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
-        var about = new AboutSettingsViewModel(vault.App.Vaults, new UpdateChecker(new AnnouncedVersion([], []), [new("essai", key.ExportSubjectPublicKeyInfoPem())], "1.0.0"), new RecordingLinks());
+        var updates = new UpdateFlow(new UpdateChecker(new AnnouncedVersion([], []), [new("essai", key.ExportSubjectPublicKeyInfoPem())], "1.0.0"), packages: null, new RecordingLinks());
 
-        await about.CheckUpdateCommand.ExecuteAsync(null);
+        await updates.CheckCommand.ExecuteAsync(null);
 
-        Assert.IsTrue(about.HasUpdateError);
-        Assert.IsFalse(about.HasRelease || about.HasUpdateMessage);
+        Assert.IsTrue(updates.HasError);
+        Assert.AreEqual(UpdateStage.Failed, updates.Stage);
+        Assert.IsFalse(updates.HasRelease || updates.HasMessage || updates.IsDialogOpen);
     }
 
     [TestMethod]
-    public async Task Without_a_checker_nothing_is_searched()
+    public void Without_a_search_nothing_is_offered()
     {
         using var vault = new DataVault();
         var about = new AboutSettingsViewModel(vault.App.Vaults);
 
-        await about.CheckUpdateCommand.ExecuteAsync(null);
-        about.OpenReleaseCommand.Execute(null);
+        Assert.IsFalse(about.CanCheckUpdates || about.CanCheckAtStartup);
+        Assert.IsNull(about.Updates);
+        Assert.ThrowsExactly<ArgumentNullException>(() => new UpdateFlow(null!));
+    }
 
-        Assert.IsFalse(about.CanCheckUpdates || about.HasUpdateMessage || about.HasUpdateError);
+    [TestMethod]
+    public void Looking_for_an_update_at_startup_is_chosen_here_and_kept_on_this_computer()
+    {
+        using var vault = new DataVault();
+        using var key = ECDsa.Create(ECCurve.NamedCurves.nistP256);
+        var store = new MemoryMachinePreferences();
+        var machine = new MachineSettings(store);
+        var updates = new UpdateFlow(new UpdateChecker(new AnnouncedVersion([], []), [new("essai", key.ExportSubjectPublicKeyInfoPem())], "1.0.0"));
+        var about = new AboutSettingsViewModel(vault.App.Vaults, updates, machine);
+        Assert.IsTrue(about.CanCheckAtStartup);
+        Assert.IsFalse(about.CheckAtStartup, "coupé par défaut");
+
+        about.CheckAtStartup = true;
+        Assert.IsTrue(store.Stored.CheckUpdatesAtStartup);
+        Assert.AreEqual(1, store.Saves);
+
+        // Changé ailleurs (Rétablir), il se relit en revenant sur l'onglet ; rien n'est écrit pour une valeur déjà retenue.
+        machine.Update(preferences => preferences with { CheckUpdatesAtStartup = false });
+        about.OnNavigatedTo();
+        Assert.IsFalse(about.CheckAtStartup);
+        Assert.AreEqual(2, store.Saves);
     }
 
     [TestMethod]

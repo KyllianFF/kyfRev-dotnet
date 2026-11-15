@@ -21,6 +21,7 @@ public sealed class MachinePreferencesFileTests
         ReducedMotion = true,
         HighContrast = true,
         LargerTargets = true,
+        CheckUpdatesAtStartup = true,
         Voice = "Microsoft Hortense Desktop",
         Rate = 1.5,
     };
@@ -118,6 +119,8 @@ public sealed class MachinePreferencesFileTests
         StringAssert.Contains(File.ReadAllText(Path.Combine(folder.Path, "v1", "preferences.json")), "\"theme\": \"sombre\"", StringComparison.Ordinal);
         StringAssert.Contains(File.ReadAllText(Path.Combine(folder.Path, "v1", "preferences.json")), "\"motsDefinis\": false", StringComparison.Ordinal);
         Assert.IsTrue(new MachinePreferences().MarkDefinedWords, "les mots définis se marquent tant qu'on ne l'a pas coupé");
+        StringAssert.Contains(File.ReadAllText(Path.Combine(folder.Path, "v1", "preferences.json")), "\"majAuDemarrage\": true", StringComparison.Ordinal);
+        Assert.IsFalse(new MachinePreferences().CheckUpdatesAtStartup, "rien ne part sur le réseau au démarrage tant qu'on ne l'a pas choisi");
     }
 
     [TestMethod]

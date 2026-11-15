@@ -71,4 +71,4 @@ git push origin $etiquette
 if ($LASTEXITCODE -ne 0) { throw 'L''étiquette n''a pas pu être poussée.' }
 gh @options
 if ($LASTEXITCODE -ne 0) { throw 'La version GitHub n''a pas pu être créée ; l''étiquette est posée.' }
-Write-Host "kyfRev $version est publiée. Pensez à l'annonce signée : dotnet run tools/catalogue/catalogue.cs -- version <clé> $version"
+Write-Host "kyfRev $version est publiée. Pensez à l'annonce signée, qui reprend $installateur : dotnet run tools/catalogue/catalogue.cs -- version <clé> $version"

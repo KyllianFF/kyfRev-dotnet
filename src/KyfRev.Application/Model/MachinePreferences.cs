@@ -119,6 +119,12 @@ public sealed record MachinePreferences
     /// </summary>
     public bool GlobalCapture { get; init; }
 
+    /// <summary>
+    /// kyfRev cherche une mise à jour à chaque démarrage, et propose de l'installer. Coupé par défaut : sans lui, rien ne
+    /// part sur le réseau tant qu'on ne le demande pas.
+    /// </summary>
+    public bool CheckUpdatesAtStartup { get; init; }
+
     /// <summary>Animations réduites, même si Windows ne le demande pas.</summary>
     public bool ReducedMotion { get; init; }
 

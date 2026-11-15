@@ -21,6 +21,18 @@ complémentaires », puis « Exécuter quand même ».
 WebView2, le moteur du texte mis en forme, est déjà présent sur Windows 11. S'il manque, l'installateur l'ajoute ; sans lui,
 l'écriture s'ouvre en Markdown.
 
+### Mettre à jour
+
+Paramètres › À propos › « Rechercher une mise à jour » regarde si une version plus récente est publiée. Installé, kyfRev la
+télécharge aussitôt et vérifie qu'elle est bien celle annoncée et signée, puis demande quand l'installer : « Redémarrer
+maintenant » (kyfRev se ferme, s'installe sans rien vous demander et se rouvre) ou « Plus tard » (elle s'installe quand vous
+fermez kyfRev). Vos fiches, vos réglages, le dossier et les raccourcis ne changent pas. Installé pour tous, Windows demande
+l'autorisation d'un administrateur.
+
+Avec « Rechercher une mise à jour au démarrage », coupé au départ, kyfRev regarde à chaque ouverture et vous propose
+« Mettre à jour » ou « Retarder à la prochaine ouverture » ; rien ne se télécharge sans votre accord. La version portable,
+elle, ne se met pas à jour seule : kyfRev ouvre la page de la nouvelle version.
+
 ### Depuis une version 0.x
 
 kyfRev reprend votre coffre sans conversion. Au premier lancement, il ouvre le dernier coffre de la 0.x et y écrit aussitôt.
