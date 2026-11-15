@@ -714,8 +714,7 @@ public sealed class Scenarios
         using var trial = new Trial();
         var sheet = trial.On(Day(10, 9), app =>
         {
-            // La recherche lit aussi le texte des fiches : celui de la Mitose ne parle pas de la Révolution, sans quoi elle
-            // serait trouvée elle aussi, et ne quitterait la liste qu'un instant, avant la réponse.
+            // La recherche lit aussi le texte des fiches : celui de la Mitose a ses propres mots.
             NewSheet(app, "Mitose", "# Mitose\n\nLa prophase précède la métaphase.\n");
             return NewSheet(app, Title);
         });
@@ -727,7 +726,11 @@ public sealed class Scenarios
             Assert.Contains("1 j de retard", running.WaitSheetRow(Title));
             running.WaitSheetRow("Mitose");
 
-            running.Search("revolution");
+            // « 1789 » n'est que dans le texte de la Révolution. Pendant la pause de la frappe, seuls les titres filtrent la
+            // liste ; sa ligne ne revient qu'avec la réponse de la recherche, et son extrait. La liste ne bouge plus ensuite :
+            // la ligne s'ouvre sans être refaite sous le clic.
+            running.Search("1789");
+            Assert.Contains("1789", running.WaitSheetRow(Title), "La fiche est trouvée par son texte, avec l'extrait.");
             running.WaitWithoutSheetRow("Mitose");
             running.OpenSheetRow(Title);
             running.Back();
