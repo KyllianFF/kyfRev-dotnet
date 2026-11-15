@@ -10,7 +10,9 @@
        licences, installation.json, inscription dans Paramètres › Applications ;
     2. kyfRev ouvert : une installation s'arrête sans rien modifier ;
     3. sur un poste vierge, kyfRev installé démarre en mode « installée » et se signale ouvert ;
-    4. mise à jour par la version plus récente : même dossier, mêmes choix, licences en place ;
+       lancé pendant qu'une installation tourne (mutex kyfRevInstallation), il se referme sans rien ouvrir ;
+    4. mise à jour par la version plus récente, avec les options que kyfRev lui passe : même dossier,
+       mêmes choix, licences en place ; sur un poste vierge, /RELANCER rouvre la nouvelle version ;
     5. retour à la version d'origine refusé : code 7, rien n'est modifié ;
     6. désinstallation : le dossier, ses licences et l'inscription disparaissent, les données du
        profil restent ;
@@ -192,11 +194,40 @@ try {
             $kyfrev.Kill()
             $kyfrev.WaitForExit()
         }
+
+        # Une installation tourne : kyfRev lancé à ce moment retiendrait des fichiers qu'elle remplace.
+        $demarrages = @(Select-String -Path $journalKyfRev -SimpleMatch 'Démarrage de kyfRev').Count
+        $installation = [Threading.Mutex]::new($false, 'kyfRevInstallation')
+        try {
+            $kyfrev = Start-Process -FilePath (Join-Path $dossier 'kyfRev.exe') -PassThru
+            if (-not $kyfrev.WaitForExit([TimeSpan]::FromSeconds(30))) {
+                $kyfrev.Kill()
+                throw 'Échec : kyfRev lancé pendant une installation ne s''est pas refermé.'
+            }
+        }
+        finally {
+            $installation.Dispose()
+        }
+        Assert-Vrai (@(Select-String -Path $journalKyfRev -SimpleMatch 'Démarrage de kyfRev').Count -eq $demarrages) 'lancé pendant une installation, kyfRev se referme sans rien ouvrir'
     }
 
-    Write-Host '4. Mise à jour en version 99.0.0'
-    $code = Invoke-Silencieux $recent
+    Write-Host '4. Mise à jour en version 99.0.0, comme kyfRev la lance'
+    # Les options de SilentInstaller : le mode de l'installation en place et, sur un poste vierge, /RELANCER.
+    $options = @('/CURRENTUSER') + ($PosteVierge ? @('/RELANCER') : @())
+    $code = Invoke-Silencieux $recent $options
     Assert-Vrai ($code -eq 0) "mise à jour terminée (code $code)"
+    if ($PosteVierge) {
+        $attendu = 'Démarrage de kyfRev 99.0.0 (installée)'
+        $limite = [DateTime]::UtcNow.AddMinutes(1)
+        while (-not (Select-String -Path $journalKyfRev -SimpleMatch $attendu -Quiet)) {
+            if ([DateTime]::UtcNow -gt $limite) { throw 'Échec : kyfRev ne s''est pas rouvert après sa mise à jour.' }
+            Start-Sleep -Milliseconds 250
+        }
+        Assert-Vrai $true 'avec /RELANCER, la nouvelle version se rouvre seule'
+        $rouvert = Get-Process -Name 'kyfRev' -ErrorAction SilentlyContinue |
+            Where-Object { $_.Path -and $_.Path.StartsWith($dossier, [StringComparison]::OrdinalIgnoreCase) }
+        $rouvert | ForEach-Object { $_.Kill(); $_.WaitForExit() }
+    }
     $inscription = Get-Inscription
     Assert-Vrai ($inscription.DisplayVersion -eq '99.0.0') 'version 99.0.0 inscrite'
     Assert-Vrai ($inscription.InstallLocation.TrimEnd('\') -eq $dossier) 'même dossier'

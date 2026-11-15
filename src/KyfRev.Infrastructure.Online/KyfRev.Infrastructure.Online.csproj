@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
-    <Description>Accès au réseau de kyfRev : un client HTTPS durci (ni redirection ni cookie, réponse bornée), pour Wikiquote.</Description>
+    <Description>Accès au réseau de kyfRev : un client HTTPS durci (ni redirection ni cookie, réponse bornée), pour Wikiquote et les annonces signées ; le téléchargement borné de l'installateur d'une mise à jour.</Description>
   </PropertyGroup>
 
   <ItemGroup>

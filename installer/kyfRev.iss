@@ -22,6 +22,9 @@
 ; - une version plus récente déjà installée n'est jamais remplacée : rien n'est modifié, et le
 ;   code de sortie est 7 ;
 ; - kyfRev ouvert est détecté avant l'installation comme avant la désinstallation (AppMutex) ;
+; - kyfRev se met à jour lui-même : une fois fermé, il lance l'installateur vérifié avec /VERYSILENT /SUPPRESSMSGBOXES
+;   /NORESTART, /CURRENTUSER ou /ALLUSERS selon l'installation en place, et /RELANCER pour se rouvrir à la fin. Pendant
+;   l'installation, l'installateur tient le mutex kyfRevInstallation : kyfRev lancé à ce moment se referme aussitôt ;
 ; - la licence de kyfRev, les avis de tiers, les avis des paquets NuGet et les licences des polices
 ;   sont installés dans {app}\licences, et retirés avec l'application ;
 ; - la désinstallation ne touche jamais aux coffres, aux sauvegardes ni aux réglages des profils ;
@@ -84,6 +87,7 @@ WizardImageFileDynamicDark=images\assistant-*.png
 WizardSmallImageFileDynamicDark=images\petit-*.png
 ShowLanguageDialog=no
 AppMutex=kyfRev,Global\kyfRev
+SetupMutex=kyfRevInstallation
 CloseApplications=yes
 RestartApplications=no
 UninstallDisplayName=kyfRev
@@ -126,6 +130,8 @@ Name: "{autodesktop}\kyfRev"; Filename: "{app}\kyfRev.exe"; Check: ShortcutWante
 
 [Run]
 Filename: "{app}\kyfRev.exe"; Description: "{cm:LaunchProgram,kyfRev}"; Flags: nowait postinstall skipifsilent
+; Mise à jour lancée par kyfRev avec « Redémarrer maintenant » : il se rouvre à la fin, avec les droits de la personne.
+Filename: "{app}\kyfRev.exe"; Flags: nowait runasoriginaluser; Check: ReopenWanted
 
 [Code]
 const
@@ -142,15 +148,27 @@ var
   InstalledVersion: String;
   NewerInstalled: Boolean;
 
-{ Vrai si la ligne de commande contient /NOICONS : aucun raccourci. }
-function NoIcons: Boolean;
+{ Vrai si la ligne de commande contient l'option Name (« /NOICONS »), en majuscules ou non. }
+function HasSwitch(const Name: String): Boolean;
 var
   I: Integer;
 begin
   Result := False;
   for I := 1 to ParamCount do
-    if CompareText(ParamStr(I), '/NOICONS') = 0 then
+    if CompareText(ParamStr(I), Name) = 0 then
       Result := True;
+end;
+
+{ Vrai si la ligne de commande contient /NOICONS : aucun raccourci. }
+function NoIcons: Boolean;
+begin
+  Result := HasSwitch('/NOICONS');
+end;
+
+{ Vrai si kyfRev a lancé sa mise à jour avec /RELANCER : il se rouvre à la fin. }
+function ReopenWanted: Boolean;
+begin
+  Result := HasSwitch('/RELANCER');
 end;
 
 { Vrai pour une mise à jour : kyfRev est déjà installé dans le mode choisi (utilisateur ou tous). }

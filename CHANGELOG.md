@@ -8,6 +8,14 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 ## [Non publié]
 
 ### Ajouté
+- Mise à jour depuis kyfRev. « Rechercher une mise à jour » (Paramètres › À propos) télécharge la version trouvée dans
+  kyfRev, avec sa progression, et vérifie sa taille et son empreinte SHA-256 contre l'annonce signée ; puis « Redémarrer
+  maintenant » ferme kyfRev, l'installe sans aucune fenêtre et le rouvre, et « Plus tard » l'installe à la fermeture. Le
+  nouveau réglage « Rechercher une mise à jour au démarrage », coupé par défaut, la propose à chaque ouverture : « Mettre à
+  jour » ou « Retarder à la prochaine ouverture ». Au démarrage suivant, kyfRev dit si elle s'est installée, et propose de
+  réessayer sinon. Installé pour tous, Windows demande l'autorisation d'un administrateur ; la version portable ouvre
+  toujours la page de la version. L'annonce garde son format : la 1.1.0-beta.1 la lit encore.
+  `tools/catalogue/catalogue.cs version` y signe la taille et l'empreinte de l'installateur publié.
 - Écrire, repli des sections : une flèche dans la marge, à côté de chaque titre qui a du contenu, replie ou déplie tout ce
   qui le suit jusqu'au prochain titre de même niveau, titres de niveau inférieur compris. Alt+Maj+« - » replie la section
   où est le curseur, Alt+Maj+« + » la déplie. Le repli ne s'écrit pas dans la fiche et repart de zéro à chaque ouverture ;

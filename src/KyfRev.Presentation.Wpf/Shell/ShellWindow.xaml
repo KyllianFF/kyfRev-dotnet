@@ -524,6 +524,20 @@
       </StackPanel>
     </kyf:Dialog>
 
+    <!-- Mise à jour : proposée au démarrage, téléchargée, puis prête à s'installer au redémarrage de kyfRev. -->
+    <kyf:Dialog x:Name="UpdateDialog" Title="{Binding Updates.DialogTitle}" IsOpen="{Binding Updates.IsDialogOpen, Mode=OneWay, FallbackValue=False}"
+                PrimaryButtonText="{Binding Updates.DialogPrimary}" SecondaryButtonText="{Binding Updates.DialogSecondary}"
+                IsPrimaryEnabled="{Binding Updates.IsDialogPrimaryEnabled, FallbackValue=True}"
+                IsWorking="{Binding Updates.IsDialogDownloading, FallbackValue=False}" Closed="OnUpdateClosed">
+      <StackPanel>
+        <TextBlock x:Name="UpdateDialogMessage" Text="{Binding Updates.DialogMessage}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" />
+        <StackPanel x:Name="UpdateDialogProgress" Margin="0,16,0,0" Visibility="{Binding Updates.IsDialogDownloading, Converter={StaticResource Visible}, FallbackValue=Collapsed}">
+          <ProgressBar x:Name="UpdateDialogBar" Value="{Binding Updates.Progress, Mode=OneWay}" Maximum="100" AutomationProperties.Name="{x:Static pages:SettingsHubText.UpdateProgressLabel}" />
+          <TextBlock Text="{Binding Updates.ProgressText}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,4,0,0" />
+        </StackPanel>
+      </StackPanel>
+    </kyf:Dialog>
+
     <!-- Aide des raccourcis (F1). -->
     <kyf:Dialog x:Name="HelpDialog" Title="{x:Static p:ShellText.Help}" IsOpen="{Binding IsHelpOpen}"
                 PrimaryButtonText="{x:Static ds:DesignText.Close}" SecondaryButtonText="">

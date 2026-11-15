@@ -131,6 +131,7 @@ public sealed class MachinePreferencesFile : IMachinePreferencesStore
             writer.WriteBoolean("concentration", preferences.FocusMode);
             writer.WriteBoolean("motsDefinis", preferences.MarkDefinedWords);
             writer.WriteBoolean("captureGlobale", preferences.GlobalCapture);
+            writer.WriteBoolean("majAuDemarrage", preferences.CheckUpdatesAtStartup);
             writer.WriteBoolean("animationsReduites", preferences.ReducedMotion);
             writer.WriteBoolean("contrasteEleve", preferences.HighContrast);
             writer.WriteBoolean("ciblesAgrandies", preferences.LargerTargets);
@@ -173,6 +174,7 @@ public sealed class MachinePreferencesFile : IMachinePreferencesStore
             FocusMode = Flag(root, "concentration", defaults.FocusMode),
             MarkDefinedWords = Flag(root, "motsDefinis", defaults.MarkDefinedWords),
             GlobalCapture = Flag(root, "captureGlobale", defaults.GlobalCapture),
+            CheckUpdatesAtStartup = Flag(root, "majAuDemarrage", defaults.CheckUpdatesAtStartup),
             ReducedMotion = Flag(root, "animationsReduites", defaults.ReducedMotion),
             HighContrast = Flag(root, "contrasteEleve", defaults.HighContrast),
             LargerTargets = Flag(root, "ciblesAgrandies", defaults.LargerTargets),

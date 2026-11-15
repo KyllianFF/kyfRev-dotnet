@@ -242,10 +242,18 @@ internal static class Composition
             provider.GetRequiredService<ExtensionSettingsViewModel>()));
         services.AddSingleton<GeneralSettingsViewModel>();
         services.AddSingleton(provider => new UpdateChecker(provider.GetRequiredService<IOnlineReader>(), ExtensionCatalogue.KnownKeys, Version));
+        services.AddSingleton(_ => new FileDownloader(Version));
+        // Seule une copie installée se met à jour d'ici : la portable et celle du développement ouvrent la page de la version.
+        services.AddSingleton(provider => new UpdateFlow(
+            provider.GetRequiredService<UpdateChecker>(),
+            provider.GetRequiredService<VaultLocations>() is { Mode: AppMode.Installed } installed
+                ? new UpdatePackages(provider.GetRequiredService<FileDownloader>(), new SilentInstaller(), Path.Combine(installed.LocalData, "mises-a-jour"))
+                : null,
+            provider.GetRequiredService<IExternalLinks>()));
         services.AddSingleton(provider => new AboutSettingsViewModel(
             provider.GetRequiredService<VaultUseCases>(),
-            provider.GetRequiredService<UpdateChecker>(),
-            provider.GetRequiredService<IExternalLinks>(),
+            provider.GetRequiredService<UpdateFlow>(),
+            provider.GetRequiredService<MachineSettings>(),
             provider.GetRequiredService<ILegacyInstallation>(),
             ReleasedOn));
         services.AddSingleton<SheetsSettingsViewModel>();
@@ -280,6 +288,8 @@ internal static class Composition
                 provider.GetRequiredService<GalleryPageViewModel>());
             // La capture rapide range une note dans la boîte de réception du coffre ouvert.
             shell.Capture = text => provider.GetRequiredService<EditingUseCases>().Capture(text);
+            // Le dialogue de la mise à jour se pose sur toutes les vues.
+            shell.Updates = provider.GetRequiredService<UpdateFlow>();
             // Les fiches et les passages s'ouvrent dans la coquille.
             provider.GetRequiredService<ReviewNavigation>().Attach(shell);
             provider.GetRequiredService<ReviewNavigation>().Workload = provider.GetRequiredService<WorkloadPageViewModel>();

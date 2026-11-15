@@ -34,10 +34,14 @@ Il pose l'étiquette annotée `vx.y.z`, la pousse et crée la version GitHub, ma
 
 ## 3. Annoncer
 
-La recherche de mise à jour lit une annonce signée. Avec votre clé de publication, jamais rangée dans le dépôt :
+La recherche de mise à jour lit une annonce signée. Elle donne la version publiée, et la taille et l'empreinte SHA-256 de son
+installateur : kyfRev télécharge l'installateur depuis la version GitHub, et ne lance que celui qui leur correspond. Avec votre
+clé de publication, jamais rangée dans le dépôt, sur le poste où `tools/publier-version.ps1` a repris les fichiers :
 
 ```powershell
 dotnet run tools/catalogue/catalogue.cs -- version C:\chemin\hors\du\depot\kyfrev-1.pem x.y.z
 ```
 
-Puis proposer `mise-a-jour/` dans une demande de fusion.
+L'outil prend `artifacts/publication/x.y.z/kyfRev-x.y.z-installation.exe`, le fichier même qui a été publié, et vérifie sa
+version ; un autre chemin se donne en dernier argument. Puis proposer `mise-a-jour/` dans une demande de fusion. Tant que
+l'annonce n'est pas fusionnée dans main, aucune copie installée ne voit la nouvelle version.

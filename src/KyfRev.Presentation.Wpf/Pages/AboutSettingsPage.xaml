@@ -24,15 +24,30 @@
           <TextBlock x:Name="VaultLine" Text="{Binding Vault}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" />
           <TextBlock Text="{x:Static pages:SettingsHubText.LicenseLabel}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,12,0,0" />
           <TextBlock Text="{x:Static pages:SettingsHubText.LicenseText}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" />
+          <!-- La mise à jour : la recherche, son téléchargement dans kyfRev, puis l'installation au redémarrage. -->
           <StackPanel x:Name="UpdatePanel" Margin="0,16,0,0" Visibility="{Binding CanCheckUpdates, Converter={StaticResource Visible}}">
-            <TextBlock Text="{x:Static pages:SettingsHubText.UpdateHelp}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" />
-            <WrapPanel Margin="0,8,0,0">
-              <Button x:Name="CheckUpdateButton" Content="{Binding CheckLabel}" Command="{Binding CheckUpdateCommand}" Margin="0,0,8,8" />
-              <Button x:Name="OpenReleaseButton" Content="{x:Static pages:SettingsHubText.OpenRelease}" Command="{Binding OpenReleaseCommand}" Margin="0,0,8,8"
-                      Visibility="{Binding HasRelease, Converter={StaticResource Visible}}" />
+            <TextBlock Text="{Binding Updates.Help}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" />
+            <CheckBox x:Name="CheckAtStartupBox" Style="{DynamicResource Kyf.Switch}" IsChecked="{Binding CheckAtStartup}" Margin="0,12,0,0"
+                      Visibility="{Binding CanCheckAtStartup, Converter={StaticResource Visible}}"
+                      AutomationProperties.Name="{x:Static pages:SettingsHubText.CheckAtStartup}" AutomationProperties.HelpText="{x:Static pages:SettingsHubText.CheckAtStartupHelp}">
+              <StackPanel>
+                <TextBlock Text="{x:Static pages:SettingsHubText.CheckAtStartup}" Style="{DynamicResource Kyf.Text.BodyStrong}" TextWrapping="Wrap" />
+                <TextBlock Text="{x:Static pages:SettingsHubText.CheckAtStartupHelp}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="0,2,0,0" />
+              </StackPanel>
+            </CheckBox>
+            <WrapPanel Margin="0,12,0,0">
+              <Button x:Name="CheckUpdateButton" Content="{Binding Updates.CheckLabel}" Command="{Binding Updates.CheckCommand}" Margin="0,0,8,8" />
+              <Button x:Name="RestartButton" Content="{x:Static pages:SettingsHubText.RestartNow}" Command="{Binding Updates.RestartNowCommand}" Style="{DynamicResource Kyf.Button.Primary}" Margin="0,0,8,8"
+                      Visibility="{Binding Updates.IsReady, Converter={StaticResource Visible}}" />
+              <Button x:Name="OpenReleaseButton" Content="{x:Static pages:SettingsHubText.OpenRelease}" Command="{Binding Updates.OpenReleaseCommand}" Margin="0,0,8,8"
+                      Visibility="{Binding Updates.HasRelease, Converter={StaticResource Visible}}" />
             </WrapPanel>
-            <kyf:Notification x:Name="UpdateNotice" Severity="Success" StaysOpen="True" Message="{Binding UpdateMessage}" IsOpen="{Binding HasUpdateMessage, Mode=OneWay}" IsClosable="False" />
-            <kyf:Notification x:Name="UpdateErrorNotice" Severity="Critical" Message="{Binding UpdateError}" IsOpen="{Binding HasUpdateError, Mode=OneWay}" IsClosable="False" />
+            <StackPanel x:Name="DownloadProgress" Margin="0,0,0,8" Visibility="{Binding Updates.IsDownloading, Converter={StaticResource Visible}}">
+              <ProgressBar x:Name="DownloadBar" Value="{Binding Updates.Progress, Mode=OneWay}" Maximum="100" AutomationProperties.Name="{x:Static pages:SettingsHubText.UpdateProgressLabel}" />
+              <TextBlock x:Name="DownloadText" Text="{Binding Updates.ProgressText}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,4,0,0" />
+            </StackPanel>
+            <kyf:Notification x:Name="UpdateNotice" Severity="{Binding Updates.MessageSeverity}" StaysOpen="True" Message="{Binding Updates.Message}" IsOpen="{Binding Updates.HasMessage, Mode=OneWay}" IsClosable="False" />
+            <kyf:Notification x:Name="UpdateErrorNotice" Severity="Critical" Message="{Binding Updates.Error}" IsOpen="{Binding Updates.HasError, Mode=OneWay}" IsClosable="False" />
           </StackPanel>
         </StackPanel>
       </kyf:Card>

@@ -3,30 +3,32 @@ using CommunityToolkit.Mvvm.Input;
 using KyfRev.Application.Model;
 using KyfRev.Application.Ports;
 using KyfRev.Application.UseCases;
-using KyfRev.Extensions.Host;
 using KyfRev.Presentation.Wpf.Shell;
 
 namespace KyfRev.Presentation.Wpf.Pages;
 
-/// <summary>L'onglet « À propos » : ce qui tourne, où, et sous quelle licence.</summary>
+/// <summary>L'onglet « À propos » : ce qui tourne, où, sous quelle licence, et sa mise à jour.</summary>
 public sealed partial class AboutSettingsViewModel : ObservableObject, INavigationAware, IForgetsVault
 {
     private readonly VaultUseCases _vaults;
-    private readonly UpdateChecker? _updates;
-    private readonly IExternalLinks? _links;
+    private readonly MachineSettings? _machine;
     private readonly ILegacyInstallation? _legacy;
     private readonly DateOnly? _released;
-    private Uri? _release;
 
-    /// <summary>L'onglet, sur le cas d'usage qui rend l'état de l'application ; la recherche de mise à jour s'y ajoute si elle est là, et la 0.x y est signalée si elle est encore installée, et le jour de publication s'affiche s'il est connu.</summary>
-    public AboutSettingsViewModel(VaultUseCases vaults, UpdateChecker? updates = null, IExternalLinks? links = null, ILegacyInstallation? legacy = null, DateOnly? released = null)
+    /// <summary>
+    /// L'onglet, sur le cas d'usage qui rend l'état de l'application ; la mise à jour s'y ajoute si elle est là, avec le
+    /// choix de la chercher au démarrage si les préférences de ce poste le sont aussi. La 0.x y est signalée si elle est
+    /// encore installée, et le jour de publication s'affiche s'il est connu.
+    /// </summary>
+    public AboutSettingsViewModel(VaultUseCases vaults, UpdateFlow? updates = null, MachineSettings? machine = null, ILegacyInstallation? legacy = null, DateOnly? released = null)
     {
         ArgumentNullException.ThrowIfNull(vaults);
         _vaults = vaults;
-        _updates = updates;
-        _links = links;
+        Updates = updates;
+        _machine = machine;
         _legacy = legacy;
         _released = released;
+        CheckAtStartup = machine?.Current.CheckUpdatesAtStartup ?? false;
     }
 
     /// <summary>La 0.x est encore installée : le message qui propose de la retirer, sinon vide.</summary>
@@ -49,37 +51,24 @@ public sealed partial class AboutSettingsViewModel : ObservableObject, INavigati
     [ObservableProperty]
     public partial string Vault { get; private set; } = string.Empty;
 
+    /// <summary>La mise à jour : sa recherche, son téléchargement, son installation.</summary>
+    public UpdateFlow? Updates { get; }
+
     /// <summary>La recherche de mise à jour est proposée.</summary>
-    public bool CanCheckUpdates => _updates is not null;
+    public bool CanCheckUpdates => Updates is not null;
 
-    /// <summary>Le libellé du bouton de recherche.</summary>
+    /// <summary>Le choix de chercher au démarrage est proposé.</summary>
+    public bool CanCheckAtStartup => Updates is not null && _machine is not null;
+
+    /// <summary>kyfRev cherche une mise à jour à chaque démarrage ; retenu sur ce poste.</summary>
     [ObservableProperty]
-    public partial string CheckLabel { get; private set; } = SettingsHubText.CheckUpdate;
-
-    /// <summary>Ce que la recherche a trouvé.</summary>
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasUpdateMessage))]
-    public partial string UpdateMessage { get; private set; } = string.Empty;
-
-    /// <summary>Pourquoi la recherche n'a pas abouti.</summary>
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasUpdateError))]
-    public partial string UpdateError { get; private set; } = string.Empty;
-
-    /// <summary>Une version plus récente attend : sa page peut s'ouvrir.</summary>
-    [ObservableProperty]
-    public partial bool HasRelease { get; private set; }
-
-    /// <inheritdoc cref="UpdateMessage"/>
-    public bool HasUpdateMessage => UpdateMessage.Length > 0;
-
-    /// <inheritdoc cref="UpdateError"/>
-    public bool HasUpdateError => UpdateError.Length > 0;
+    public partial bool CheckAtStartup { get; set; }
 
     /// <inheritdoc/>
     public void OnNavigatedTo()
     {
         Show(_vaults.State());
+        CheckAtStartup = _machine?.Current.CheckUpdatesAtStartup ?? false;
         LegacyMessage = _legacy?.Find() switch
         {
             null => string.Empty,
@@ -109,37 +98,11 @@ public sealed partial class AboutSettingsViewModel : ObservableObject, INavigati
         Vault = state.Vault ?? string.Empty;
     }
 
-    /// <summary>Cherche une mise à jour, seulement à la demande : rien n'est téléchargé ni installé.</summary>
-    [RelayCommand]
-    private async Task CheckUpdateAsync()
+    partial void OnCheckAtStartupChanged(bool value)
     {
-        if (_updates is null)
+        if (_machine is { } machine && value != machine.Current.CheckUpdatesAtStartup)
         {
-            return;
-        }
-        CheckLabel = SettingsHubText.CheckingUpdate;
-        UpdateMessage = string.Empty;
-        UpdateError = string.Empty;
-        HasRelease = false;
-        var result = await _updates.CheckAsync(CancellationToken.None).ConfigureAwait(true);
-        CheckLabel = SettingsHubText.CheckUpdate;
-        if (!result.Succeeded)
-        {
-            UpdateError = result.Error!;
-            return;
-        }
-        _release = result.Value.Page;
-        HasRelease = result.Value.IsNewer;
-        UpdateMessage = result.Value.IsNewer ? SettingsHubText.UpdateAvailableOf(result.Value.Latest, result.Value.Current) : SettingsHubText.UpToDateOf(result.Value.Current);
-    }
-
-    /// <summary>Ouvre la page de la version trouvée, dans le navigateur.</summary>
-    [RelayCommand]
-    private void OpenRelease()
-    {
-        if (_release is { } page)
-        {
-            _links?.Open(page.ToString());
+            machine.Update(preferences => preferences with { CheckUpdatesAtStartup = value });
         }
     }
 }

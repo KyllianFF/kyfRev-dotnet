@@ -124,11 +124,12 @@ public sealed partial class ArchitectureTests
     }
 
     /// <summary>
-    /// T1 : rien n'est effacé, sauf sept exceptions : la rotation des copies de sauvegarde (le nom
+    /// T1 : rien n'est effacé, sauf huit exceptions : la rotation des copies de sauvegarde (le nom
     /// et le dossier de la copie vérifiés), les deux fichiers temporaires de l'écriture atomique et
     /// de la sauvegarde, le dossier d'une extension téléchargée du catalogue (dans le dossier des
-    /// téléchargements), le dossier temporaire d'une conversion et son marqueur, et l'effacement
-    /// demandé depuis la corbeille. Trois comptes exacts, fichier par fichier, sur le code seul (les
+    /// téléchargements), le dossier temporaire d'une conversion et son marqueur, l'effacement
+    /// demandé depuis la corbeille, et les fichiers des mises à jour (un installateur téléchargé, son
+    /// début, la mise à jour retenue : leur nom et leur dossier vérifiés). Trois comptes exacts, fichier par fichier, sur le code seul (les
     /// lignes de commentaire n'effacent rien) : les effacements directs du disque (le disque applique
     /// <c>Purge</c> à un dossier ou à un fichier) ; chaque purge, quoi qui la reçoive (le coffre
     /// chiffré retire l'entrée de son index puis efface ses objets, et lui seul efface un objet que
@@ -145,6 +146,7 @@ public sealed partial class ArchitectureTests
         {
             ["KyfRev.Infrastructure.Vault/Backups/VaultBackups.cs"] = 1,
             ["KyfRev.Extensions.Host/CatalogueReader.cs"] = 1,
+            ["KyfRev.Extensions.Host/UpdatePackages.cs"] = 1,
             ["KyfRev.Infrastructure.Vault/Files/AtomicFile.cs"] = 1,
             ["KyfRev.Infrastructure.Vault/Files/DiskStorage.cs"] = 2,
             ["KyfRev.Infrastructure.Vault/VaultSession.Backups.cs"] = 1,
@@ -185,6 +187,11 @@ public sealed partial class ArchitectureTests
         // Les contrôles lisent le code seul : un appel mis en commentaire ne les satisfait pas.
         var discard = Code("KyfRev.Extensions.Host/CatalogueReader.cs");
         Assert.Contains("Path.GetFullPath(folder).StartsWith(root", discard, "un dossier téléchargé ne s'efface que dans le dossier des téléchargements");
+        var updates = Code("KyfRev.Extensions.Host/UpdatePackages.cs");
+        var erase = updates[updates.IndexOf("private void Delete(string path)", StringComparison.Ordinal)..updates.IndexOf("File.Delete(path)", StringComparison.Ordinal)];
+        Assert.Contains("if (!IsOurs(path))", erase, "une mise à jour n'efface que ses fichiers, dans son dossier");
+        Assert.Contains("Path.GetDirectoryName(full), Path.TrimEndingDirectorySeparator(Path.GetFullPath(folder))", updates, "le dossier du fichier doit être vérifié");
+        Assert.Contains("InstallerName().IsMatch(Path.GetFileName(full))", updates, "le nom du fichier doit être vérifié");
         var rotation = Code("KyfRev.Infrastructure.Vault/Backups/VaultBackups.cs");
         var copy = rotation[rotation.IndexOf("private static void RemoveOutdatedCopy", StringComparison.Ordinal)..rotation.IndexOf("File.Delete(path)", StringComparison.Ordinal)];
         Assert.Contains("TimestampOf(name) is null", copy, "le nom de la copie doit être vérifié");

@@ -254,6 +254,9 @@ public sealed partial class ShellViewModel : ObservableObject, IForgetsVault, IS
     /// <summary>Ce qui cherche dans le coffre (la racine de composition le donne) ; rien : seules les commandes se cherchent.</summary>
     public GlobalSearch? Search { get; set; }
 
+    /// <summary>La mise à jour (la racine de composition la donne) : son dialogue se pose sur toutes les vues ; rien, il n'y en a pas.</summary>
+    public UpdateFlow? Updates { get; set; }
+
     /// <summary>Ce que dit le champ de recherche : « Rechercher partout », ou seulement les commandes quand aucun coffre n'est cherché.</summary>
     public string PaletteLabel => CanSearch ? ShellText.SearchPlaceholder : ShellText.SearchCommandsPlaceholder;
 

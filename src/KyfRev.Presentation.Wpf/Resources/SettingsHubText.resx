@@ -226,7 +226,85 @@
     <value>Recherche…</value>
   </data>
   <data name="UpdateHelp" xml:space="preserve">
-    <value>La recherche n'a lieu que si vous la demandez. Rien n'est téléchargé ni installé : kyfRev dit seulement si une version plus récente existe, et peut ouvrir sa page.</value>
+    <value>Une version plus récente se télécharge dans kyfRev, qui vérifie qu'elle est bien celle annoncée, puis s'installe quand kyfRev redémarre. Vos fiches et vos réglages ne changent pas.</value>
+  </data>
+  <data name="UpdateHelpPortable" xml:space="preserve">
+    <value>Cette copie de kyfRev ne vient pas de l'installateur : elle ne se met pas à jour seule. kyfRev dit si une version plus récente existe, et peut ouvrir sa page.</value>
+  </data>
+  <data name="CheckAtStartup" xml:space="preserve">
+    <value>Rechercher une mise à jour au démarrage</value>
+  </data>
+  <data name="CheckAtStartupHelp" xml:space="preserve">
+    <value>À chaque ouverture, kyfRev regarde si une version plus récente est publiée, et vous propose de l'installer. Rien ne se télécharge sans votre accord.</value>
+  </data>
+  <data name="UpdateOfferTitle" xml:space="preserve">
+    <value>Mise à jour disponible</value>
+  </data>
+  <data name="UpdateOffer" xml:space="preserve">
+    <value>kyfRev {0} est disponible (vous avez la {1}). Elle se télécharge maintenant, puis s'installe quand kyfRev redémarre.</value>
+  </data>
+  <data name="UpdateNow" xml:space="preserve">
+    <value>Mettre à jour</value>
+  </data>
+  <data name="UpdatePostpone" xml:space="preserve">
+    <value>Retarder à la prochaine ouverture</value>
+  </data>
+  <data name="UpdatePostponed" xml:space="preserve">
+    <value>kyfRev {0} est disponible : elle vous sera proposée de nouveau à la prochaine ouverture.</value>
+  </data>
+  <data name="UpdateDownloadingTitle" xml:space="preserve">
+    <value>Téléchargement de kyfRev {0}</value>
+  </data>
+  <data name="UpdateDownloading" xml:space="preserve">
+    <value>kyfRev télécharge la nouvelle version, puis vérifie qu'elle est bien celle annoncée. Vous pouvez masquer cette fenêtre et continuer : elle reviendra quand la mise à jour sera prête.</value>
+  </data>
+  <data name="UpdateDownloadingShort" xml:space="preserve">
+    <value>Téléchargement de kyfRev {0}…</value>
+  </data>
+  <data name="UpdateProgress" xml:space="preserve">
+    <value>{0} Mo sur {1} Mo</value>
+  </data>
+  <data name="UpdateProgressLabel" xml:space="preserve">
+    <value>Progression du téléchargement</value>
+  </data>
+  <data name="UpdateHide" xml:space="preserve">
+    <value>Masquer</value>
+  </data>
+  <data name="UpdateReadyTitle" xml:space="preserve">
+    <value>Mise à jour prête</value>
+  </data>
+  <data name="UpdateReady" xml:space="preserve">
+    <value>kyfRev {0} est téléchargée et vérifiée. Pour l'installer, kyfRev doit redémarrer : il se ferme, s'installe sans rien vous demander, puis se rouvre. Plus tard, elle s'installera quand vous fermerez kyfRev.</value>
+  </data>
+  <data name="UpdateAllUsers" xml:space="preserve">
+    <value>kyfRev est installé pour toutes les personnes de cet ordinateur : Windows demandera l'autorisation d'un administrateur.</value>
+  </data>
+  <data name="RestartNow" xml:space="preserve">
+    <value>Redémarrer maintenant</value>
+  </data>
+  <data name="RestartLater" xml:space="preserve">
+    <value>Plus tard</value>
+  </data>
+  <data name="UpdateAtExit" xml:space="preserve">
+    <value>kyfRev {0} est prête : elle s'installera quand vous fermerez kyfRev.</value>
+  </data>
+  <data name="UpdateInstalled" xml:space="preserve">
+    <value>kyfRev est passé à la version {0}.</value>
+  </data>
+  <data name="UpdateNotInstalledTitle" xml:space="preserve">
+    <value>Mise à jour non installée</value>
+  </data>
+  <data name="UpdateNotInstalled" xml:space="preserve">
+    <value>La mise à jour vers kyfRev {0} ne s'est pas installée : vous avez toujours la version {1}. Son journal est dans « {2} ».</value>
+  </data>
+  <data name="UpdateRetry" xml:space="preserve">
+    <value>Réessayer</value>
+  </data>
+  <data name="UpdateFailedTitle" xml:space="preserve">
+    <value>Mise à jour impossible</value>
+  </data>
+  <data name="UpdateCannotClose" xml:space="preserve">
+    <value>kyfRev ne peut pas se fermer pendant une conversion : la mise à jour s'installera quand vous le fermerez.</value>
   </data>
   <data name="OpenRelease" xml:space="preserve">
     <value>Ouvrir la page de cette version</value>
