@@ -24,29 +24,43 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 - Écrire, clic droit sur la marque d'un saut de page ou d'une page blanche : « Supprimer le saut de page » ou « Supprimer
   la page blanche ». Ctrl+Z la remet.
 - Imprimer : le choix du format de papier (A4, A5, A6), par défaut celui de la mise en page de la fiche. En choisir un
-  autre refait les pages de l'aperçu pour ce papier, sans toucher à la fiche.
+  autre refait les pages de l'aperçu pour ce papier, sans toucher à la fiche. Le choix Couleur / Noir et blanc, pour les
+  fiches comme pour les schémas : en noir et blanc, l'aperçu et les feuilles envoyées sont en nuances de gris (300
+  points par pouce), et l'imprimante le sait. Le choix reste d'une impression à l'autre.
 - Schémas réseau, au clic droit sur la carte d'un schéma et dans son Détail : « Exporter… » (image PNG, image SVG ou
   modèle JSON), « Partager » (l'image du schéma va dans le presse-papiers, prête à coller) et « Imprimer… ». Jusqu'ici,
-  l'export n'existait que dans l'éditeur.
+  l'export n'existait que dans l'éditeur. « Imprimer… » d'un schéma, ici comme dans l'éditeur, ouvre la fenêtre
+  « Imprimer » de kyfRev, comme pour une fiche, et non plus la boîte d'impression du moteur web : le schéma seul, sous
+  son titre, sur une feuille A4, en paysage s'il est plus large que haut.
+- Définitions : « Nouvelle définition », en haut de l'onglet, s'ouvre en tête des cartes. Une définition s'attache à un
+  mot écrit dans une fiche : à mesure que le terme s'écrit, l'onglet cherche où il est écrit et propose ces endroits,
+  chacun dans sa phrase, le premier choisi d'avance. Un terme écrit nulle part le dit, et rien ne s'enregistre.
 - Schémas réseau, deux modes de création dans l'éditeur, « Simplifié » et « Avancé », d'après leurs maquettes. Ce sont deux
   façons de travailler sur le même schéma : passer de l'un à l'autre ne change rien, et ce qui est fait en simplifié a de
   vrais ports en avancé. Le mode choisi est retenu sur l'ordinateur ; la première fois, Simplifié.
-  - Simplifié : les outils Choisir, Câble, Texte, Zone et Effacer. Un câble se tire d'un équipement à un autre sans
-    choisir de port (le premier port libre qui convient, créé s'il n'y en a pas) ; recommencer tire un câble de plus entre
-    les deux mêmes équipements. La bulle d'un équipement règle son nom et son adresse IP, facultative : sans adresse, rien
-    ne s'écrit sous lui. La bulle d'un câble règle son type (cuivre, fibre, série, sans fil…), le nombre de câbles, et
-    deux options distinctes : « Agrégat de liens », qui regroupe au moins deux câbles en un agrégat (LACP), et « Trunk »,
-    qui libère deux champs, « VLAN non tagué (untagged) » et « VLAN tagués (tagged) », écrits à l'identique aux deux
-    bouts. Les deux se cumulent : le trunk d'un agrégat est celui de l'agrégat. La bulle conseille sans bloquer : deux
-    câbles entre deux commutateurs sans agrégat (boucle), trunk sans VLAN, VLAN 1 non tagué, trunk vers un poste, liens
-    d'agrégat dissemblables ; elle refuse un numéro hors de 1 à 4094 ou un VLAN non tagué répété dans les tagués, et
-    propose d'aligner deux bouts qui diffèrent. Un texte libre se pose d'un clic, se déplace à la souris ou aux
-    flèches, se modifie au double-clic.
+  - Simplifié : les outils Choisir, Câble, Texte, Zone et Effacer. Un câble se tire en deux clics d'un équipement à un
+    autre, sans choisir de port (le premier port libre qui convient, créé s'il n'y en a pas) ; un clic tout près d'un
+    équipement le vise aussi. Recommencer, ou « Ajouter un câble à côté » depuis sa bulle, tire un câble de plus entre
+    les deux mêmes équipements : il prend le type des autres, mais ni leur agrégat ni leurs VLAN. La bulle d'un
+    équipement règle son nom et son adresse IP, facultative : sans adresse, rien ne s'écrit sous lui.
+  - Un câble se choisit seul, en surbrillance, et sa bulle ne règle que lui ; Ctrl+clic (ou Maj+clic, ou Ctrl+Entrée au
+    clavier) en ajoute d'autres, qui se règlent alors ensemble. La bulle règle son type (cuivre, fibre, série, sans
+    fil…), le nombre de câbles, et deux options distinctes : « Agrégat de liens », qui réunit en un agrégat (LACP) au
+    moins deux câbles choisis entre deux mêmes équipements, et « Trunk », qui libère deux champs, « VLAN non tagué
+    (untagged) » et « VLAN tagués (tagged) », écrits à l'identique aux deux bouts. Les deux se cumulent : le trunk d'un
+    agrégat est celui de l'agrégat. Sans trunk, elle règle le VLAN d'accès de ses ports, un seul, non tagué. La bulle
+    conseille sans bloquer : deux câbles aux mêmes VLAN entre deux commutateurs sans agrégat (boucle), trunk sans VLAN,
+    VLAN 1 non tagué ou en accès, trunk vers un poste, liens d'agrégat dissemblables ; elle refuse un numéro hors de 1 à
+    4094 ou un VLAN non tagué répété dans les tagués, et propose d'aligner deux bouts qui diffèrent.
+  - Le câble choisi se tire : un câble droit prend un point de passage, un câble coudé déplace son coude ou son palier,
+    et sa bulle revient où il s'arrête. Ses points de passage se voient, pour les tirer ou en retirer un d'un
+    double-clic. Un texte libre se pose d'un clic, se déplace à la souris ou aux flèches, se modifie au double-clic.
   - Avancé : l'éditeur d'avant, avec ses interfaces, ses VLAN, ses vues et son diagnostic ; un outil « Relation » s'y
     ajoute.
   - Dans les deux modes, un plateau d'équipements au bas de l'éditeur remplace la bibliothèque : les familles en
     onglets, une recherche, et chaque équipement sous sa vraie icône, à glisser sur le schéma, ou à poser d'un clic ou
-    d'Entrée. « Exporter… » et « Imprimer… » sont dans l'en-tête de l'éditeur.
+    d'Entrée. « Exporter… » et « Imprimer… » sont dans l'en-tête de l'éditeur. Un nouveau type de câble, « Haute
+    disponibilité », relie les deux membres d'une paire : violet, en tirets long-court, lisible aussi en noir et blanc.
 
 ### Modifié
 - Tailles du texte des fiches, alignées sur celles d'un traitement de texte et comptées en points : le corps vaut 12
@@ -67,10 +81,26 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   jour, partage) restent affichés.
 - Schémas réseau, agrégat et trunk sur le dessin : un agrégat de liens se voit par ses câbles, dessinés un par un (ils
   étaient fondus en un seul trait épais), sous un cercle qui les regroupe ; un trunk est annoté sur son câble, avec ses
-  VLAN (« Trunk · U 1 · T 10,20,30 », U pour non tagué, T pour tagués), dans toutes les vues, la simplifiée comprise.
+  VLAN (« Trunk · U 1 · T 10,20,30 », U pour non tagué, T pour tagués), dans toutes les vues, la simplifiée comprise ;
+  un câble en accès s'annote de même (« Access · U 30 »).
   Un trunk sans agrégat n'a pas de cercle ; un agrégat qui porte un trunk a son cercle et une seule annotation. Cela vaut
   pour l'éditeur, la liste, l'export et les schémas insérés dans les fiches. En mode avancé, la section « Agrégat de
   liens » ne s'intitule plus « (trunk) ».
+- Schémas réseau, l'onglet : il ne se ferme plus quand on le quitte, et y revenir est immédiat (quelques millisecondes
+  au lieu de deux à neuf secondes) ; la liste relit le coffre. Il se prépare aussi, caché, trois secondes après
+  l'ouverture du coffre : le premier clic l'affiche tout de suite. Il se ferme avec le coffre (verrouillage, autre
+  coffre, module coupé), après avoir enregistré ce qu'il avait à enregistrer. Dans une grande fenêtre, la liste et la
+  lecture d'un schéma se tiennent au milieu, comme les autres pages, au lieu de rester collées à gauche.
+- Définitions, d'après sa maquette : l'onglet comme les autres vues. Le titre, le compte (définitions, fiches, marquées
+  partout) et « Nouvelle définition » en haut ; la recherche, le dossier, l'ordre (A → Z, par fiche, récentes) et le
+  filtre « Marquées partout » sur une ligne ; les définitions en cartes, avec une pastille quand le mot est marqué
+  partout, et « … » pour le reste. La colonne des dossiers disparaît ; en fenêtre étroite, une seule colonne.
+- Paramètres › Menu : une vue se prend par sa ligne et se fait glisser à sa place, l'ordre s'écrivant quand on la lâche.
+  Au clavier, ↑ et ↓ déplacent la vue choisie, Début et Fin l'envoient en tête ou en queue, Ctrl et les flèches passent
+  d'une vue à l'autre sans rien déplacer. Les boutons ↑ ↓ restent ; une poignée signale qu'une ligne se prend, et un
+  lecteur d'écran entend le nouveau rang de la vue déplacée.
+- Carnet : l'icône « Importer » est une flèche qui descend dans un plateau ; la flèche vers une barre se lisait « aller
+  au bout ».
 - Fenêtre « Imprimer » en fenêtre étroite : les réglages puis l'aperçu, l'un sous l'autre, au lieu d'un aperçu qui
   sortait du cadre.
 - Carnet, aperçu de la fiche choisie, refait d'après sa maquette : la fiche est une feuille posée sur le fond de la page,
@@ -93,6 +123,23 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   (Révisions, chiffrement) et pour les droits d'une extension.
 
 ### Corrigé
+- Coffre dans un dossier synchronisé (Proton Drive, OneDrive, iCloud) : chaque fichier écrit par kyfRev gardait
+  l'attribut « temporaire » de Windows, et le service n'envoyait pas un fichier qui le porte ; un autre poste ne recevait
+  qu'une partie du coffre. Le fichier d'écriture ne le porte plus, et à l'ouverture le coffre le retire des fichiers
+  déjà écrits, sans changer leur contenu ni leur date : le service les envoie alors. Un dossier qui a le `.suivi` d'un
+  coffre sans son `.suivi/coffre.json` n'est plus présenté comme « pas un coffre » : kyfRev dit que sa copie n'est pas
+  finie, qu'il faut attendre la fin de la synchronisation, ou ouvrir d'abord le coffre, avec cette version, sur le poste
+  qui l'a écrit ; rien n'y est écrit, pas même le verrou. Les dossiers d'un service de synchronisation ne sont plus pris
+  pour des liens : le relevé du coffre y entre, et les copies de conflit de ses sous-dossiers ne passent plus inaperçues.
+- Contraste élevé coché dans Paramètres : il prenait les couleurs de Windows, claires tant que Windows n'est pas lui-même
+  en contraste élevé, si bien qu'avec le thème sombre on obtenait un contraste clair. Il a maintenant deux palettes, claire
+  et sombre, qui suivent le thème choisi, chaque paire au-delà de 7:1 ; le bouton de thème de la barre de titre passe de
+  l'une à l'autre. Quand Windows est en contraste élevé, ce sont toujours ses couleurs.
+- Fenêtre agrandie : Windows la prenait pour une fenêtre en plein écran, et une barre des tâches qui se masque d'elle-même
+  ne réapparaissait plus quand la souris touchait le bord de l'écran. La fenêtre laisse deux pixels libres sur ce bord ;
+  en plein écran (F11), rien ne change.
+- Schémas réseau : le moteur web prenait la souris au bord de la fenêtre de kyfRev, qui ne se redimensionnait plus par la
+  droite ni par le bas tant que l'onglet était ouvert.
 - Menu masqué, puis fenêtre rétrécie jusqu'à passer le menu en onglets : les onglets ne paraissaient pas et le bouton
   du menu avait quitté la barre de titre, si bien qu'on restait bloqué sur la page. Les onglets du bas ne se masquent
   plus ; le choix « masqué » reste retenu et reprend dès que la fenêtre retrouve son menu latéral.
