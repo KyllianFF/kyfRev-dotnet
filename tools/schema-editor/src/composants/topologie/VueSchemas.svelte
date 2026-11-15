@@ -690,8 +690,10 @@
 {/if}
 
 <style>
+  /* Centrée, comme les autres pages : la liste et la lecture d'un schéma ne restent pas collées à gauche d'une grande fenêtre. */
   .vue {
     max-width: 1200px;
+    margin: 0 auto;
     padding: 24px 32px 48px;
   }
 

@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -415,6 +416,35 @@ public sealed class SchemasPageTests
         UiThread.Until(() => scene.Page.Island!.IsCovered, TimeSpan.FromSeconds(10));
         model.Print.Close();
         UiThread.Until(() => !scene.Page.Island!.IsCovered, TimeSpan.FromSeconds(10));
+    }
+
+    [EngineTest]
+    public void A_schema_is_read_in_a_centred_column_at_every_width()
+    {
+        using var scene = new IslandScene(Text);
+        scene.WaitFor("document.querySelector('li.carte .apercu') !== null");
+        scene.Script("document.querySelector('li.carte .apercu').click()");
+        scene.WaitFor("document.querySelector('.grand-apercu svg') !== null");
+
+        // Du plus large au plus étroit : la colonne de lecture se tient au milieu, sans défilement de côté.
+        foreach (var (width, theme) in new[] { (2400d, ThemeKind.Light), (1300d, ThemeKind.Dark), (480d, ThemeKind.Light) })
+        {
+            var before = scene.Script("document.documentElement.clientWidth");
+            scene.Page.Width = width;
+            scene.Test.Design.Theme = theme;
+            TestShell.Flush();
+            UiThread.Until(() => scene.Script("document.documentElement.clientWidth") != before, TimeSpan.FromSeconds(20));
+            var sides = scene.Script("(() => { const v = document.querySelector('.vue').getBoundingClientRect(); return [Math.round(v.left), Math.round(document.documentElement.clientWidth - v.right)].join(' '); })()");
+            var (left, right) = (int.Parse(sides.Trim('"').Split(' ')[0], CultureInfo.InvariantCulture), int.Parse(sides.Trim('"').Split(' ')[1], CultureInfo.InvariantCulture));
+            Assert.IsLessThanOrEqualTo(1, Math.Abs(left - right), $"au milieu à {width} : {sides}");
+            if (width > 1300)
+            {
+                Assert.IsGreaterThan(100, left, "une grande fenêtre laisse de la place des deux côtés");
+            }
+            Assert.AreEqual("0", scene.Script("document.documentElement.scrollWidth - document.documentElement.clientWidth"), $"pas de défilement de côté à {width}");
+            scene.WaitFor("document.getAnimations().length === 0");
+            scene.Picture($"schemas-lecture-{width}-{theme}");
+        }
     }
 
     [EngineTest]
