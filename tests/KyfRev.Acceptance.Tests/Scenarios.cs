@@ -714,7 +714,9 @@ public sealed class Scenarios
         using var trial = new Trial();
         var sheet = trial.On(Day(10, 9), app =>
         {
-            NewSheet(app, "Mitose");
+            // La recherche lit aussi le texte des fiches : celui de la Mitose ne parle pas de la Révolution, sans quoi elle
+            // serait trouvée elle aussi, et ne quitterait la liste qu'un instant, avant la réponse.
+            NewSheet(app, "Mitose", "# Mitose\n\nLa prophase précède la métaphase.\n");
             return NewSheet(app, Title);
         });
         var before = trial.SheetFile(sheet);
