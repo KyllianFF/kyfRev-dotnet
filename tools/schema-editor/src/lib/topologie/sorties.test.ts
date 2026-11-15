@@ -11,7 +11,7 @@ import {
   estVide,
   FORMATS_EXPORT,
   nomDeFichier,
-  orientationPage,
+  echelleImpression,
   svgAutonome,
 } from "./sorties";
 import { vue } from "./vues";
@@ -105,10 +105,11 @@ describe("sorties d'un schéma : image", () => {
 });
 
 describe("sorties d'un schéma : impression, gardes et messages", () => {
-  it("page en paysage si le dessin est plus large que haut, en portrait sinon", () => {
-    expect(orientationPage(1200, 600)).toBe("landscape");
-    expect(orientationPage(600, 1200)).toBe("portrait");
-    expect(orientationPage(500, 500)).toBe("portrait");
+  it("l'image à imprimer : 3600 pixels de long au moins, deux fois le dessin au moins, 8000 au plus", () => {
+    expect(echelleImpression(1200, 600)).toBe(3);
+    expect(echelleImpression(600, 1800)).toBe(2);
+    expect(echelleImpression(3000, 500)).toBe(2);
+    expect(echelleImpression(6000, 1000)).toBeCloseTo(8000 / 6000);
   });
 
   it("un schéma sans équipement est vide, même annoté", () => {

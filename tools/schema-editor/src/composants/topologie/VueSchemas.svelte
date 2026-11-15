@@ -233,8 +233,7 @@
     sortir(async () => {
       const schema = await schemaDuCoffre(s.id);
       if (estVide(schema)) return "Ce schéma est vide : rien à imprimer.";
-      await imprimerSchema(schema, vueDeSortie(s));
-      return null;
+      return imprimerSchema(schema, vueDeSortie(s));
     }, "Impression impossible : ");
 
   function ouvrirMenu(evenement: MouseEvent, schema: SchemaResume) {

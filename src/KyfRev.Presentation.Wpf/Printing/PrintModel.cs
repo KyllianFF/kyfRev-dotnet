@@ -28,7 +28,8 @@ public sealed record PrinterInfo(string Name, bool IsDefault);
 /// <param name="Layout">La feuille : son format et son orientation.</param>
 /// <param name="Sides">Recto seul ou recto verso.</param>
 /// <param name="Copies">Le nombre d'exemplaires.</param>
-public sealed record PrintJob(string Printer, string Title, PageLayout Layout, PrintSides Sides, int Copies);
+/// <param name="InColor">En couleur ; sinon en noir et blanc (des nuances de gris).</param>
+public sealed record PrintJob(string Printer, string Title, PageLayout Layout, PrintSides Sides, int Copies, bool InColor = true);
 
 /// <summary>Les imprimantes de l'ordinateur, et l'envoi d'un travail à l'une d'elles.</summary>
 public interface IPrintService

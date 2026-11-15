@@ -22,6 +22,9 @@ public static class Palette
     /// </summary>
     public static TokenColor PrintPaper { get; } = TokenColor.FromHex("#ffffff");
 
+    /// <summary>L'encre d'une impression en noir et blanc : du noir, sans teinte, quel que soit le thème.</summary>
+    public static TokenColor PrintInk { get; } = TokenColor.FromHex("#000000");
+
     /// <summary>Vert forêt : la couleur principale (700 en thème clair, 300 en thème sombre).</summary>
     public static ColorRamp Forest { get; } = new(
         "forêt", "#f1f6f1", "#dde8df", "#c1daca", "#86c7a1", "#5eaa80", "#418c64", "#357a57", "#2e6a4e", "#234f3b", "#2a3a30");

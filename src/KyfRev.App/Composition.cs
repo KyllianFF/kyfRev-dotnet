@@ -295,7 +295,8 @@ internal static class Composition
                 schemas,
                 provider.GetRequiredService<IFolderPicker>(),
                 provider.GetRequiredService<IReviewOpener>(),
-                provider.GetRequiredService<EditorEnvironment>().WebDataFolder)), .. extensionPages.Entries()]);
+                provider.GetRequiredService<EditorEnvironment>().WebDataFolder,
+                provider.GetRequiredService<KyfRev.Presentation.Wpf.Printing.IPrintService>())), .. extensionPages.Entries()]);
             modules.Changed += (_, _) => ShowEntries();
             void ShowExtensions()
             {

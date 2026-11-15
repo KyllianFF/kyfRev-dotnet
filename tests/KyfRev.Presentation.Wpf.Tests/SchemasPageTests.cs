@@ -7,6 +7,7 @@ using KyfRev.Application.Model;
 using KyfRev.DesignSystem.Tokens;
 using KyfRev.Modules.Schemas;
 using KyfRev.Presentation.Wpf.Pages;
+using KyfRev.Presentation.Wpf.Printing;
 using KyfRev.Presentation.Wpf.Schemas;
 using KyfRev.Presentation.Wpf.Shell;
 
@@ -290,6 +291,10 @@ public sealed class SchemasPageTests
         scene.Script("document.querySelector('nav.outils .outil[data-outil=\"choisir\"]').click()");
         scene.Script("(() => { const lien = document.querySelector('svg.canevas g.lien'); lien.focus(); lien.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true, cancelable: true })); })()");
         scene.WaitFor("document.querySelector('.bulle button[role=switch][data-option=\"agregat\"]') !== null && document.querySelector('.bulle button[role=switch][data-option=\"trunk\"]') !== null");
+        // Un câble se choisit seul, même si un autre relie les deux mêmes équipements : lui seul est en surbrillance, sans cadre.
+        Assert.AreEqual(1, Count("svg.canevas g.lien.choisi"));
+        Assert.AreEqual(1, Count("svg.canevas path.halo"));
+        Assert.AreEqual(0, Count("svg.canevas rect.cadre-objet"));
         string Labels() => Text("[...document.querySelectorAll('svg.canevas .etiquettes text')].map((texte) => texte.textContent.trim()).join(' | ')");
         void Type(string field, string value) =>
             scene.Script($"(() => {{ const champ = document.getElementById('{field}'); champ.value = '{value}'; champ.dispatchEvent(new Event('input', {{ bubbles: true }})); champ.dispatchEvent(new Event('change', {{ bubbles: true }})); }})()");
@@ -303,7 +308,7 @@ public sealed class SchemasPageTests
         Type("bulle-vlan-acces", "30");
         UiThread.Until(() => Labels().Contains("Access · U 30", StringComparison.Ordinal), TimeSpan.FromSeconds(15));
         Assert.AreEqual(0, Count(".bulle [role=alert]"), "corrigé, plus d'erreur");
-        Assert.AreEqual(1, Labels().Split(" | ").Count(label => label.StartsWith("Access", StringComparison.Ordinal)), "une seule annotation pour les deux câbles");
+        Assert.AreEqual(1, Labels().Split(" | ").Count(label => label.StartsWith("Access", StringComparison.Ordinal)), "seul le câble choisi est en accès sur ce VLAN");
         scene.Picture($"schemas-simplifie-{(theme == ThemeKind.Dark ? "sombre" : "clair")}-acces");
 
         // « Trunk » : il libère deux champs, et le câble est annoté de ses VLAN. Pas de cercle : le cercle est pour l'agrégat.
@@ -324,6 +329,13 @@ public sealed class SchemasPageTests
         Assert.IsTrue(Labels().Contains("T 10,20,30", StringComparison.Ordinal), "le dessin garde les VLAN valides");
         Type("bulle-vlans-tagues", "10,20,30");
 
+        // Ctrl+Entrée, comme Ctrl+clic, choisit l'autre câble avec le premier : la bulle les règle ensemble.
+        scene.Script("(() => { const lien = document.querySelectorAll('svg.canevas g.lien')[1]; lien.focus(); lien.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', ctrlKey: true, bubbles: true, cancelable: true })); })()");
+        scene.WaitFor("document.querySelectorAll('svg.canevas g.lien.choisi').length === 2 && document.getElementById('bulle-choix') !== null");
+        StringAssert.Contains(Text("document.getElementById('bulle-choix').textContent"), "2 câbles choisis", StringComparison.Ordinal);
+        Assert.AreEqual(2, Count("svg.canevas path.halo"));
+        scene.Picture($"schemas-simplifie-{(theme == ThemeKind.Dark ? "sombre" : "clair")}-deux-choisis");
+
         // « Agrégat de liens » : les deux câbles sous un cercle, autant de traits que de câbles, et une seule annotation de trunk.
         scene.Script("document.querySelector('.bulle button[role=switch][data-option=\"agregat\"]').click()");
         UiThread.Until(() => Count("svg.canevas g.lien ellipse") == 1, TimeSpan.FromSeconds(15));
@@ -331,6 +343,12 @@ public sealed class SchemasPageTests
         Assert.AreEqual(1, Labels().Split(" | ").Count(label => label.StartsWith("Trunk", StringComparison.Ordinal)), "une seule annotation pour le groupe");
         StringAssert.Contains(Labels(), "Trunk · U 99 · T 10,20,30", StringComparison.Ordinal, "le trunk suit l'agrégat");
         scene.Picture($"schemas-simplifie-{(theme == ThemeKind.Dark ? "sombre" : "clair")}-agregat");
+
+        // Les autres types de câble, dont « Haute disponibilité » : son nom tient dans son bouton.
+        scene.Script("document.querySelector('.bulle .type.plus').click()");
+        scene.WaitFor("document.querySelector('.bulle .type[data-support=\"haute-disponibilite\"]') !== null");
+        Assert.AreEqual("true", scene.Script("(() => { const bouton = document.querySelector('.bulle .type[data-support=\"haute-disponibilite\"]'); return bouton.scrollWidth <= bouton.clientWidth + 1; })()"));
+        scene.Picture($"schemas-simplifie-{(theme == ThemeKind.Dark ? "sombre" : "clair")}-types");
 
         // Le fichier : un vrai agrégat, qui porte le trunk et ses VLAN.
         UiThread.Until(() => (JsonNode.Parse(scene.Schemas.Read(id).Value.Text)!["agregats"] as JsonArray)?.Count >= 1, TimeSpan.FromSeconds(20));
@@ -385,6 +403,18 @@ public sealed class SchemasPageTests
         scene.Script("(() => { const svg = [...document.querySelectorAll('dialog[open] input[type=radio]')].find((choix) => choix.value === 'svg'); svg.click(); document.querySelector('dialog[open] form').requestSubmit(); })()");
         UiThread.Until(() => Directory.Exists(folder) && Directory.GetFiles(folder, "*.svg").Length == 1, TimeSpan.FromSeconds(30));
         StringAssert.Contains(File.ReadAllText(Directory.GetFiles(folder, "*.svg").Single()), "<svg", StringComparison.Ordinal);
+
+        // « Imprimer… » : la fenêtre « Imprimer » de l'application, sur une image fine du schéma ; l'îlot est recouvert le temps qu'elle est ouverte.
+        var model = (SchemasPageViewModel)scene.Page.DataContext;
+        scene.Script("document.querySelector('li.carte').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 60, clientY: 60 }))");
+        scene.WaitFor("document.querySelector('.menu[role=menu]') !== null");
+        scene.Script("[...document.querySelectorAll('.menu [role=menuitem]')].find((entree) => entree.textContent.includes('Imprimer')).click()");
+        UiThread.Until(() => model.Print.IsOpen, TimeSpan.FromSeconds(30));
+        Assert.AreEqual("Imprimer « Réseau »", model.Print.Title);
+        Assert.IsGreaterThanOrEqualTo(3000, Math.Max(model.Print.Picture!.PixelWidth, model.Print.Picture.PixelHeight), "assez fine pour le papier");
+        UiThread.Until(() => scene.Page.Island!.IsCovered, TimeSpan.FromSeconds(10));
+        model.Print.Close();
+        UiThread.Until(() => !scene.Page.Island!.IsCovered, TimeSpan.FromSeconds(10));
     }
 
     [EngineTest]
@@ -553,6 +583,134 @@ public sealed class SchemasPageTests
     }
 
     /// <summary>Le pont seul, sur un vrai coffre.</summary>
+    [TestMethod]
+    public async Task The_bridge_prints_a_picture_through_the_window_of_the_app_and_only_a_picture()
+    {
+        using var scene = new BridgeScene();
+        var png = Convert.FromBase64String(OnePixel);
+        var asked = new List<(string Title, byte[] Picture)>();
+        var outcomes = new Queue<string?>(["Envoyé à l'imprimante « Bureau ».", null]);
+        var bridge = new SchemaBridge(new SchemaUseCases(scene.Vaults.App.Host), scene.Picker, () => null, _ => { }, print: (title, picture) =>
+        {
+            asked.Add((title, picture));
+            return Task.FromResult(outcomes.Dequeue());
+        });
+        async Task<JsonObject> Print(params string[] args) =>
+            JsonNode.Parse((await bridge.ReceiveAsync(JsonSerializer.Serialize(new { kind = "call", id = 4, method = "imprimerSchema", args })))!)!.AsObject();
+
+        // La fenêtre s'ouvre sur l'image, sous son titre ; la réponse vient quand elle se ferme : le travail parti, ou rien.
+        var sent = await Print("Réseau du lycée", Convert.ToBase64String(png));
+        Assert.IsTrue(sent["ok"]!.GetValue<bool>());
+        Assert.AreEqual("Envoyé à l'imprimante « Bureau ».", sent["value"]!.GetValue<string>());
+        Assert.AreEqual("Réseau du lycée", asked.Single().Title);
+        CollectionAssert.AreEqual(png, asked.Single().Picture);
+        var closed = await Print("Réseau du lycée", Convert.ToBase64String(png));
+        Assert.IsTrue(closed["ok"]!.GetValue<bool>());
+        Assert.IsNull(closed["value"]);
+
+        // Autre chose qu'une image PNG, pas de titre, ou du texte qui n'est pas du base64 : refusé, rien ne s'ouvre.
+        foreach (var bad in new[] { new[] { "Réseau", Convert.ToBase64String("<svg/>"u8.ToArray()) }, ["Réseau", string.Empty], ["Réseau", "pas du base64 !"], [Convert.ToBase64String(png)] })
+        {
+            Assert.IsFalse((await Print(bad))["ok"]!.GetValue<bool>(), string.Join(" ", bad));
+        }
+        Assert.HasCount(2, asked);
+
+        // Sans fenêtre pour imprimer, l'appel est refusé comme un appel inconnu.
+        var refused = await scene.AnswerAsync(JsonSerializer.Serialize(new { kind = "call", id = 5, method = "imprimerSchema", args = new[] { "Réseau", Convert.ToBase64String(png) } }));
+        Assert.IsFalse(refused["ok"]!.GetValue<bool>());
+        Assert.AreEqual(SchemaText.BadCall, refused["error"]!.GetValue<string>());
+    }
+
+    [STATestMethod]
+    public void The_page_opens_the_print_window_on_the_picture_and_says_what_became_of_it()
+    {
+        using var ui = new UiThread();
+        using var scene = new BridgeScene();
+        using var page = new SchemasPageViewModel(new SchemaUseCases(scene.Vaults.App.Host), scene.Picker, new FakeOpener(), FakeEnvironment.WebData, new OnePrinter());
+        var png = Convert.FromBase64String(OnePixel);
+
+        // Fermée sans imprimer : l'îlot n'a rien à dire.
+        var closed = page.PrintPictureAsync("Réseau du lycée", png);
+        Assert.IsTrue(page.Print.IsOpen);
+        Assert.AreEqual("Réseau du lycée", page.Print.PictureTitle);
+        Assert.AreEqual(1, page.Print.Picture!.PixelWidth);
+        page.Print.Close();
+        Assert.IsTrue(closed.IsCompletedSuccessfully);
+        Assert.IsNull(closed.Result);
+
+        // Une autre demande remplace celle d'une fenêtre restée ouverte, qui n'imprimera pas.
+        var forgotten = page.PrintPictureAsync("Premier", png);
+        var printed = page.PrintPictureAsync("Second", png);
+        Assert.IsTrue(forgotten.IsCompletedSuccessfully);
+        Assert.IsNull(forgotten.Result);
+        UiThread.Until(() => !page.Print.IsLookingForPrinters);
+        page.Print.Paginator = (_, _) => new System.Windows.Documents.FixedDocument().DocumentPaginator;
+        Assert.IsTrue(page.Print.Print());
+        Assert.AreEqual("Envoyé à l'imprimante « Bureau ».", printed.Result);
+        Assert.IsFalse(page.Print.IsOpen);
+
+        // Une image illisible : refusée comme un appel mal formé, et la fenêtre ne s'ouvre pas.
+        var refusal = Assert.ThrowsExactly<ArgumentException>(() => page.PrintPictureAsync("Réseau", [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 1, 2, 3]));
+        Assert.AreEqual(SchemaText.BadCall, refusal.Message);
+        Assert.IsFalse(page.Print.IsOpen);
+    }
+
+    [STATestMethod]
+    public void The_page_shows_the_print_window_of_the_app_over_the_schemas()
+    {
+        using var ui = new UiThread();
+        using var scene = new BridgeScene();
+        var printer = new OnePrinter();
+        using var model = new SchemasPageViewModel(new SchemaUseCases(scene.Vaults.App.Host), scene.Picker, new FakeOpener(), FakeEnvironment.WebData, printer);
+        var page = new SchemasPage { DataContext = model };
+        var dialog = (KyfRev.DesignSystem.Controls.Dialog)page.FindName("PrintDialog");
+        TestShell.Flush();
+        Assert.AreSame(model.Print, dialog.DataContext);
+        Assert.IsFalse(dialog.IsOpen);
+        _ = model.PrintPictureAsync("Réseau du lycée", Convert.FromBase64String(OnePixel));
+        TestShell.Flush();
+        Assert.IsTrue(dialog.IsOpen);
+        Assert.AreEqual("Imprimer « Réseau du lycée »", dialog.Title);
+        Assert.IsInstanceOfType<PrintView>(dialog.Content);
+        model.Print.Close();
+        TestShell.Flush();
+        Assert.IsFalse(dialog.IsOpen);
+
+        // « Annuler » ferme sans imprimer ; « Imprimer » refusé par l'imprimante laisse la fenêtre ouverte, qui dit pourquoi ; accepté, il la ferme.
+        var cancelled = model.PrintPictureAsync("Réseau du lycée", Convert.FromBase64String(OnePixel));
+        TestShell.Flush();
+        dialog.Close(KyfRev.DesignSystem.Controls.DialogChoice.None);
+        TestShell.Flush();
+        Assert.IsFalse(model.Print.IsOpen);
+        Assert.IsNull(cancelled.Result);
+        var printed = model.PrintPictureAsync("Réseau du lycée", Convert.FromBase64String(OnePixel));
+        UiThread.Until(() => model.Print.CanPrint);
+        printer.Refusal = "Plus de papier.";
+        dialog.Close(KyfRev.DesignSystem.Controls.DialogChoice.Primary);
+        TestShell.Flush();
+        Assert.IsTrue(dialog.IsOpen);
+        StringAssert.Contains(model.Print.Error, "Plus de papier.", StringComparison.Ordinal);
+        Assert.IsFalse(printed.IsCompleted);
+        printer.Refusal = null;
+        dialog.Close(KyfRev.DesignSystem.Controls.DialogChoice.Primary);
+        TestShell.Flush();
+        Assert.IsFalse(dialog.IsOpen);
+        Assert.AreEqual("Envoyé à l'imprimante « Bureau ».", printed.Result);
+    }
+
+    /// <summary>Une image PNG d'un point.</summary>
+    private const string OnePixel = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAEBgIApD5fRAAAAABJRU5ErkJggg==";
+
+    /// <summary>Une imprimante, qui accepte tout, sauf quand on lui donne de quoi refuser.</summary>
+    private sealed class OnePrinter : IPrintService
+    {
+        public string? Refusal { get; set; }
+
+        public IReadOnlyList<PrinterInfo> Printers() => [new("Bureau", true)];
+
+        public string? Print(PrintJob job, System.Windows.Documents.DocumentPaginator pages) => Refusal;
+    }
+
     private sealed class BridgeScene : IDisposable
     {
         public BridgeScene()

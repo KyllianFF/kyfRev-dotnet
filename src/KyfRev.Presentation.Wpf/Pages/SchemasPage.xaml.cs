@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using KyfRev.DesignSystem.Controls;
 using KyfRev.Presentation.Wpf.Schemas;
 using KyfRev.Presentation.Wpf.Shell;
 
@@ -8,7 +9,8 @@ namespace KyfRev.Presentation.Wpf.Pages;
 
 /// <summary>
 /// Vue « Schémas réseau » : elle montre l'îlot de sa vue-modèle, l'ouvre la première fois, et le rend en partant. L'îlot reste
-/// ouvert avec la vue-modèle (<see cref="SchemasPageViewModel"/>) : y revenir est immédiat, et la liste relit alors le coffre.
+/// ouvert avec la vue-modèle (<see cref="SchemasPageViewModel"/>) : y revenir est immédiat, et la liste relit alors le coffre. La
+/// fenêtre « Imprimer » se pose sur l'îlot, recouvert de son image le temps qu'elle est ouverte.
 /// </summary>
 internal sealed partial class SchemasPage : UserControl
 {
@@ -60,6 +62,7 @@ internal sealed partial class SchemasPage : UserControl
         IslandHost.Content = island;
         island.Failed += OnFailed;
         page.PropertyChanged += OnPageChanged;
+        page.Print.PropertyChanged += OnPrintChanged;
         _page = page;
         if (kept)
         {
@@ -99,6 +102,7 @@ internal sealed partial class SchemasPage : UserControl
     private void Close()
     {
         _page?.PropertyChanged -= OnPageChanged;
+        _page?.Print.PropertyChanged -= OnPrintChanged;
         _page = null;
         if (Island is { } island)
         {
@@ -115,11 +119,39 @@ internal sealed partial class SchemasPage : UserControl
         }
     }
 
+    private void OnPrintChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(PrintViewModel.IsOpen))
+        {
+            UpdateShell();
+        }
+    }
+
+    /// <summary>« Imprimer » : le travail part ; s'il est refusé, la fenêtre reste ouverte et dit pourquoi.</summary>
+    private void OnPrintClosed(object sender, DialogClosedEventArgs e)
+    {
+        if ((DataContext as SchemasPageViewModel)?.Print is not { } print)
+        {
+            return;
+        }
+        if (e.Choice == DialogChoice.Primary && !print.Print())
+        {
+            PrintDialog.SetCurrentValue(Dialog.IsOpenProperty, true);
+            return;
+        }
+        print.Close();
+    }
+
+    /// <summary>L'îlot est recouvert de son image quand la palette, l'aide ou la fenêtre « Imprimer » sont ouvertes.</summary>
     private void UpdateShell()
     {
-        if (_shell is { } shell && Island is { } island)
+        if (Island is not { } island)
         {
-            _ = island.SetCoveredAsync(shell.IsPaletteOpen || shell.IsHelpOpen);
+            return;
+        }
+        _ = island.SetCoveredAsync(_shell is { IsPaletteOpen: true } or { IsHelpOpen: true } || _page?.Print.IsOpen == true);
+        if (_shell is { } shell)
+        {
             island.SetZoom(shell.Zoom);
         }
     }
