@@ -228,6 +228,9 @@ public sealed class FileDownloaderTests
     /// <summary>Une réponse dont rien n'arrive, jusqu'à ce qu'on arrête de l'attendre.</summary>
     private sealed class StalledStream : Stream
     {
+        /// <summary>Rien ne la termine : la lecture n'en sort que lorsqu'on cesse de l'attendre.</summary>
+        private readonly TaskCompletionSource _nothing = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
         public override bool CanRead => true;
 
         public override bool CanSeek => false;
@@ -244,7 +247,7 @@ public sealed class FileDownloaderTests
 
         public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
         {
-            await Task.Delay(Timeout.Infinite, cancellationToken);
+            await _nothing.Task.WaitAsync(cancellationToken);
             return 0;
         }
 
