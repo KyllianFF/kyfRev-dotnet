@@ -127,6 +127,15 @@ export function traitDuSupport(support: Support): Trait {
         tirets: "12 6",
         nom: "Opérateur / WAN",
       };
+    case "haute-disponibilite":
+      // Le câble qui relie les deux membres d'une paire (pare-feu actif/passif) : son tiret long-court se lit
+      // aussi en noir et blanc.
+      return {
+        couleur: "var(--graphique-6, #8b5d8f)",
+        epaisseur: 3,
+        tirets: "16 4 3 4",
+        nom: "Haute disponibilité",
+      };
     case "console":
     case "usb":
       return {

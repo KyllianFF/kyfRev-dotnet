@@ -233,6 +233,7 @@ export type Support =
   | "console"
   | "virtuel"
   | "operateur"
+  | "haute-disponibilite"
   | "personnalise";
 export const SUPPORTS: { valeur: Support; nom: string }[] = [
   { valeur: "cuivre", nom: "Cuivre (Ethernet)" },
@@ -247,6 +248,7 @@ export const SUPPORTS: { valeur: Support; nom: string }[] = [
   { valeur: "console", nom: "Console" },
   { valeur: "virtuel", nom: "Connexion virtuelle" },
   { valeur: "operateur", nom: "Interconnexion opérateur / WAN" },
+  { valeur: "haute-disponibilite", nom: "Lien de haute disponibilité (HA)" },
   { valeur: "personnalise", nom: "Personnalisé" },
 ];
 

@@ -17,6 +17,7 @@ import { type Equipement, type IdVue, type Point, type Schema, schemaVide } from
 import { connecter, creerEquipement } from "./operations";
 import {
   agreger,
+  cablesEntre,
   changerTypeDeCable,
   ecrireVlanDAcces,
   ecrireVlansDuTrunk,
@@ -56,7 +57,7 @@ function paire(nombre: number, position: Point = { x: 400, y: 0 }) {
 /** Les mêmes, réunis en un agrégat de `nombre` câbles. */
 function agregat(nombre: number, position?: Point) {
   const liaison = paire(nombre, position);
-  const lien = agreger(liaison.schema, liaison.a.id, liaison.b.id);
+  const lien = agreger(liaison.schema, cablesEntre(liaison.schema, liaison.a.id, liaison.b.id).map((l) => l.id));
   return { ...liaison, lien };
 }
 

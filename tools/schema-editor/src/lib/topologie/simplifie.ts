@@ -168,13 +168,10 @@ export function choisirBouts(
   return { a: { creer: voulu ?? "cuivre" }, b: { creer: voulu ?? "cuivre" } };
 }
 
-/** Les deux bouts d'un câble sont-ils en mode VLAN trunk (réglage des ports, ou de leur agrégat) ? */
-const boutsEnTrunk = (schema: Schema, lien: Lien): boolean =>
-  configDuBout(schema, lien.a)?.mode === "trunk" && configDuBout(schema, lien.b)?.mode === "trunk";
-
 /**
  * Tire un câble entre deux équipements, sans dialogue ni choix de port (11A). Entre deux équipements
- * déjà reliés, c'est un câble de plus : du même type que les autres, et en trunk s'ils le sont tous.
+ * déjà reliés, c'est un câble de plus, à part : du même type que les autres, mais ni dans leur agrégat
+ * ni avec leurs VLAN. Des câbles se règlent ensemble quand on les choisit ensemble (Ctrl+clic).
  */
 export function tirerCable(
   schema: Schema,
@@ -186,13 +183,6 @@ export function tirerCable(
   if (!a || !b) throw new Refus("Équipement introuvable.");
   if (a.id === b.id) throw new Refus("Un câble relie deux équipements différents.");
   const autres = cablesEntre(schema, a.id, b.id);
-  // La liaison est un agrégat : un câble de plus y est un port de plus.
-  const agregat =
-    options.support === undefined && options.trunk === undefined ? agregatReglable(schema, autres) : null;
-  if (agregat) {
-    reglerMembres(schema, agregat.id, portsDeLAgregat(schema, agregat) + 1);
-    return agregat;
-  }
   if (autres.length >= CABLES_MAX) {
     throw new Refus(`Pas plus de ${CABLES_MAX} câbles entre deux mêmes équipements.`);
   }
@@ -200,7 +190,6 @@ export function tirerCable(
   const memeType =
     premier && autres.every((l) => l.support === premier.support) ? premier.support : undefined;
   const support = options.support ?? memeType;
-  const trunk = options.trunk ?? (autres.length > 0 && autres.every((l) => boutsEnTrunk(schema, l)));
   const bouts = choisirBouts(schema, a, b, support);
   const port = (equipement: Equipement, bout: BoutChoisi) =>
     "interface" in bout ? bout.interface : ajouterInterface(schema, equipement.id, { genre: bout.creer }).id;
@@ -210,17 +199,7 @@ export function tirerCable(
     { equipement: b.id, interface: port(b, bouts.b) },
     support ? { support } : {},
   );
-  if (trunk) {
-    mettreEnTrunk(schema, [lien.id], true);
-    // Dans un groupe en trunk, il transporte les mêmes VLAN que les autres.
-    if (premier && options.trunk === undefined) {
-      for (const bout of [lien.a, lien.b]) {
-        const modele = premier.a.equipement === bout.equipement ? premier.a : premier.b;
-        const config = configDuBout(schema, modele);
-        if (config) ecrireConfigDuBout(schema, bout, { ...config });
-      }
-    }
-  }
+  if (options.trunk) mettreEnTrunk(schema, [lien.id], true);
   return lien;
 }
 
@@ -330,27 +309,6 @@ export function effacer(schema: Schema, ids: Set<string>): void {
   schema.annotations = schema.annotations.filter((n) => !ids.has(n.id));
 }
 
-/**
- * Règle le nombre de câbles entre deux équipements (1 à 8). Un de plus : `tirerCable`. Un de moins : le
- * dernier posé parmi ceux qui n'ont aucun réglage du mode avancé ; s'ils en ont tous, c'est refusé (on
- * ne choisit pas à la place de l'utilisateur lequel perdre : l'outil Effacer retire celui qu'il désigne).
- */
-export function reglerNombreDeCables(schema: Schema, idA: string, idB: string, nombre: number): void {
-  const voulu = Math.max(1, Math.min(CABLES_MAX, Math.round(nombre)));
-  const cables = cablesEntre(schema, idA, idB);
-  const enTrop = cables.length - voulu;
-  if (enTrop > 0) {
-    const simples = cables.filter((l) => !aDesReglages(schema, l));
-    if (simples.length < enTrop) {
-      throw new Refus(
-        "Les câbles qui restent ont des réglages du mode avancé (nom, étiquette, tracé…) : retirez celui que vous voulez avec l'outil Effacer.",
-      );
-    }
-    for (const cable of simples.slice(-enTrop)) retirerCable(schema, cable.id);
-  }
-  for (let n = cables.length; n < voulu; n++) tirerCable(schema, idA, idB);
-}
-
 // --- Type de câble ------------------------------------------------------------------
 
 /**
@@ -408,7 +366,10 @@ export function changerTypeDeCable(schema: Schema, lienId: string, support: Supp
 export const MEMBRES_MIN = 2;
 
 /** Pourquoi un agrégat ne se fait pas avec un seul câble (aide de l'interrupteur, et refus). */
-export const AIDE_AGREGAT_SEUL = "Un agrégat regroupe au moins deux câbles : ajoutez-en un.";
+export const AIDE_AGREGAT_SEUL = "Un agrégat regroupe au moins deux câbles choisis entre les mêmes équipements.";
+/** Pourquoi un agrégat ne se fait pas avec des câbles qui ne relient pas les deux mêmes équipements. */
+export const AIDE_AGREGAT_PAIRE =
+  "Un agrégat relie deux mêmes équipements : ces câbles n'en relient pas deux mêmes.";
 /** Pourquoi « − » s'arrête à deux ports. */
 export const AIDE_AGREGAT_MINIMUM =
   "Un agrégat garde au moins deux câbles : décochez « Agrégat de liens » pour n'en garder qu'un.";
@@ -417,49 +378,67 @@ export const AIDE_AGREGAT_MINIMUM =
 export const portsDeLAgregat = (schema: Schema, lien: Lien): number =>
   Math.max(agregatDe(schema, lien.a)?.membres.length ?? 0, agregatDe(schema, lien.b)?.membres.length ?? 0);
 
+/** Ce qui désigne l'agrégat d'un câble : ses agrégats des deux côtés (`undefined` hors agrégat). */
+const cleDAgregat = (schema: Schema, lien: Lien): string | undefined =>
+  enAgregat(schema, lien) ? `${agregatDe(schema, lien.a)?.id ?? ""}|${agregatDe(schema, lien.b)?.id ?? ""}` : undefined;
+
+/** Le nom d'un agrégat (« Trk1 »), d'un côté ou de l'autre. */
+const nomDAgregat = (schema: Schema, lien: Lien): string =>
+  agregatDe(schema, lien.a)?.nom ?? agregatDe(schema, lien.b)?.nom ?? "";
+
 /**
- * Ce que le mode simplifié ne sait pas exprimer d'un agrégat fait ailleurs (ou `null`) : plusieurs
- * agrégats sur une même liaison, un agrégat d'un seul côté, un agrégat qui a un câble par port.
+ * Ce que le mode simplifié ne sait pas exprimer d'un agrégat fait ailleurs (ou `null`) : un agrégat d'un
+ * seul côté, un agrégat qui a un câble par port.
  */
 function agregatHorsDePortee(schema: Schema, cables: Lien[]): string | null {
-  const agreges = cables.filter((l) => enAgregat(schema, l));
-  const cles = new Set(agreges.map((l) => `${agregatDe(schema, l.a)?.id}|${agregatDe(schema, l.b)?.id}`));
-  if (cles.size > 1) {
-    const noms = [...new Set(agreges.map((l) => agregatDe(schema, l.a)?.nom ?? agregatDe(schema, l.b)?.nom))];
-    return (
-      `Cette liaison a plusieurs agrégats (${noms.join(", ")}) : ` +
-      "le mode simplifié n'en règle qu'un par liaison. Ils se règlent en mode avancé."
-    );
-  }
-  if (agreges.length > 1) {
-    return "Cet agrégat a un câble par port au modèle : son nombre de ports se règle en mode avancé.";
-  }
-  const lien = agreges[0];
-  if (lien && (!agregatDe(schema, lien.a) || !agregatDe(schema, lien.b))) {
-    const cote = equipementDe(schema, (agregatDe(schema, lien.a) ? lien.a : lien.b).equipement);
-    return `L'agrégat n'existe que du côté de ${cote?.nom ?? "un équipement"} : il se complète en mode avancé.`;
+  for (const lien of cables) {
+    const cle = cleDAgregat(schema, lien);
+    if (cle === undefined) continue;
+    if (schema.liens.filter((l) => cleDAgregat(schema, l) === cle).length > 1) {
+      return "Cet agrégat a un câble par port au modèle : son nombre de ports se règle en mode avancé.";
+    }
+    if (!agregatDe(schema, lien.a) || !agregatDe(schema, lien.b)) {
+      const cote = equipementDe(schema, (agregatDe(schema, lien.a) ? lien.a : lien.b).equipement);
+      return `L'agrégat n'existe que du côté de ${cote?.nom ?? "un équipement"} : il se complète en mode avancé.`;
+    }
   }
   return null;
 }
 
-/** Le câble de l'agrégat d'une liaison, quand le mode simplifié sait le régler. */
-function agregatReglable(schema: Schema, cables: Lien[]): Lien | null {
-  if (agregatHorsDePortee(schema, cables) !== null) return null;
-  return cables.find((l) => enAgregat(schema, l)) ?? null;
+/**
+ * Pourquoi des câbles choisis ne deviennent pas un agrégat (ou `null`) : il faut qu'ils relient les deux
+ * mêmes équipements, qu'ils soient au moins deux ou qu'un agrégat soit parmi eux, et qu'il n'y en ait
+ * qu'un.
+ */
+function sansAgregat(schema: Schema, cables: Lien[]): string | null {
+  const premier = cables[0];
+  if (!premier) return AIDE_AGREGAT_SEUL;
+  if (cables.some((l) => cablesEntre({ liens: [l] }, premier.a.equipement, premier.b.equipement).length === 0)) {
+    return AIDE_AGREGAT_PAIRE;
+  }
+  const hors = agregatHorsDePortee(schema, cables);
+  if (hors) return hors;
+  const agreges = cables.filter((l) => enAgregat(schema, l));
+  if (agreges.length > 1) {
+    const noms = [...new Set(agreges.map((l) => nomDAgregat(schema, l)))];
+    return `Ces câbles sont dans plusieurs agrégats (${noms.join(", ")}) : choisissez-en un seul pour le régler.`;
+  }
+  if (agreges.length === 0 && cables.length < MEMBRES_MIN) return AIDE_AGREGAT_SEUL;
+  return null;
 }
 
 /**
- * Coche « Agrégat de liens » : les câbles ordinaires d'une liaison deviennent un agrégat (LACP), un
- * port par câble de chaque côté. Il en faut au moins deux. Ils prennent tous le type du câble gardé
- * (celui qui a des réglages du mode avancé, sinon le premier), et l'agrégat reprend son réglage VLAN.
+ * Coche « Agrégat de liens » pour des câbles choisis entre deux mêmes équipements : ils deviennent un
+ * agrégat (LACP), un port par câble de chaque côté, ou rejoignent l'agrégat choisi avec eux. Les autres
+ * câbles de la liaison restent à part. Ils prennent tous le type du câble gardé (l'agrégat, sinon celui qui
+ * a des réglages du mode avancé, sinon le premier), et l'agrégat reprend son réglage VLAN.
  */
-export function agreger(schema: Schema, idA: string, idB: string): Lien {
-  const cables = cablesEntre(schema, idA, idB);
+export function agreger(schema: Schema, ids: readonly string[]): Lien {
+  const cables = ids.flatMap((id) => schema.liens.filter((l) => l.id === id));
+  const refus = sansAgregat(schema, cables);
+  if (refus) throw new Refus(refus);
   const existant = cables.find((l) => enAgregat(schema, l));
   const ordinaires = cables.filter((l) => !enAgregat(schema, l));
-  const hors = agregatHorsDePortee(schema, cables);
-  if (hors) throw new Refus(hors);
-  if (!existant && ordinaires.length < MEMBRES_MIN) throw new Refus(AIDE_AGREGAT_SEUL);
   const garde = existant ?? ordinaires.find((l) => aDesReglages(schema, l)) ?? (ordinaires[0] as Lien);
   if (!existant) creerAgregat(schema, garde.id);
   for (const autre of ordinaires) {
@@ -684,70 +663,84 @@ export function alignerVlans(schema: Schema, lienIds: string[], equipementId: st
   }
 }
 
-// --- Le groupe des câbles d'une liaison ---------------------------------------------
+// --- Les câbles choisis ensemble -----------------------------------------------------
 
-/** Ce que la bulle d'un groupe de câbles montre et permet. */
+/** Ce que la bulle des câbles choisis montre et permet. */
 export type GroupeDeCables = {
-  /** Les deux équipements, dans le sens du premier câble. */
+  /** Les deux équipements du premier câble choisi, dans son sens. */
   a: Equipement;
   b: Equipement;
+  /** Tous les câbles choisis relient ces deux mêmes équipements. */
+  memePaire: boolean;
+  /** Les câbles choisis, dans l'ordre où ils l'ont été. */
   cables: Lien[];
   /** Le nombre de câbles que le dessin montre : un agrégat compte pour autant de câbles que de ports. */
   nombre: number;
   /** Le type commun, ou `null` s'ils diffèrent. */
   support: Support | null;
-  /** L'agrégat de la liaison : son câble, son nombre de ports, son nom (« Trk1 »). */
+  /** L'agrégat parmi les câbles choisis, s'il n'y en a qu'un : son câble, son nombre de ports, son nom (« Trk1 »). */
   agregat: { lien: Lien; ports: number; nom: string } | null;
-  /** Les câbles ordinaires, hors de l'agrégat. */
+  /** Les câbles choisis qui ne sont pas dans un agrégat. */
   ordinaires: Lien[];
-  /** Ce que le mode simplifié ne sait pas régler de cet agrégat, dit précisément (ou `null`). */
+  /** Ce que le mode simplifié ne sait pas régler d'un agrégat choisi, dit précisément (ou `null`). */
   horsDePortee: string | null;
+  /** Pourquoi « Agrégat de liens » ne se coche pas (ou ne se décoche pas) pour ces câbles, ou `null`. */
+  agregatImpossible: string | null;
   /** Tous les câbles sont en trunk (le dessin les annote). */
   trunk: boolean;
-  /** Les VLAN du trunk, d'après le premier bout qui en a. */
+  /** Les VLAN, d'après le premier bout qui en a. */
   vlans: ChampsVlan;
-  /** Un câble dont les deux bouts n'ont pas le même réglage VLAN : ce que dit chacun. */
+  /** Un câble dont les deux bouts n'ont pas le même réglage VLAN : ce que dit chacun (câbles d'une même paire). */
   boutsDifferents: { a: string; b: string } | null;
-  /** Des câbles parallèles n'ont pas les mêmes VLAN entre eux. */
+  /** Les câbles choisis n'ont pas les mêmes VLAN entre eux. */
   cablesDifferents: boolean;
 };
 
-/** Le groupe des câbles qui relient les deux mêmes équipements que `lienId`. */
-export function groupeDeCables(schema: Schema, lienId: string): GroupeDeCables | null {
-  const lien = schema.liens.find((l) => l.id === lienId);
+/** Les VLAN d'un câble, lus à ses bouts dans l'ordre donné : ceux du premier bout qui en a. */
+function champsDuCable(schema: Schema, bouts: Extremite[]): ChampsVlan {
+  for (const x of bouts) {
+    const champs = champsDe(configDuBout(schema, x));
+    if (champs.nonTague !== undefined || champs.tagues) return champs;
+  }
+  return {};
+}
+
+/**
+ * Les câbles choisis (un seul, ou plusieurs avec Ctrl+clic) : ce qu'ils ont en commun, ce qui les
+ * distingue. Un câble choisi seul se règle seul, même si d'autres relient les deux mêmes équipements.
+ */
+export function groupeDeCables(schema: Schema, ids: string | readonly string[]): GroupeDeCables | null {
+  const cables = (typeof ids === "string" ? [ids] : ids).flatMap((id) => schema.liens.filter((l) => l.id === id));
+  const lien = cables[0];
   if (!lien) return null;
   const [a, b] = [equipementDe(schema, lien.a.equipement), equipementDe(schema, lien.b.equipement)];
   if (!a || !b) return null;
-  const cables = cablesEntre(schema, a.id, b.id);
+  const memePaire = cables.every((l) => cablesEntre({ liens: [l] }, a.id, b.id).length > 0);
   const faisceaux = faisceauxDe(schema, cables);
-  const agrege = cables.find((l) => enAgregat(schema, l));
-  // Le bout de chaque câble du côté de `a`, puis du côté de `b`.
+  const agreges = cables.filter((l) => enAgregat(schema, l));
+  const agrege = agreges.length === 1 ? agreges[0] : undefined;
+  // Le bout de chaque câble du côté de `a`, puis du côté de `b` ; hors de la paire, dans son propre sens.
   const bout = (l: Lien, equipement: Equipement) => (l.a.equipement === equipement.id ? l.a : l.b);
-  const desaccorde = cables.find((l) => !boutsAccordes(schema, l));
-  const champsDuCable = (l: Lien): ChampsVlan => {
-    for (const x of [bout(l, a), bout(l, b)]) {
-      const champs = champsDe(configDuBout(schema, x));
-      if (champs.nonTague !== undefined || champs.tagues) return champs;
-    }
-    return {};
-  };
-  const vlans = cables.map(champsDuCable);
+  const bouts = (l: Lien) => (memePaire ? [bout(l, a), bout(l, b)] : [l.a, l.b]);
+  const desaccorde = memePaire ? cables.find((l) => !boutsAccordes(schema, l)) : undefined;
+  const vlans = cables.map((l) => champsDuCable(schema, bouts(l)));
   const premiers = vlans.find((c) => c.nonTague !== undefined || c.tagues) ?? {};
+  const horsDePortee = agregatHorsDePortee(schema, cables);
+  // Un agrégat choisi seul se décoche ; sinon, il faut de quoi en faire un.
+  const seulAgregat = agrege !== undefined && cables.length === 1;
   return {
     a,
     b,
+    memePaire,
     cables,
     nombre: cables.reduce((n, l) => n + (faisceaux.get(l.id)?.brins ?? 1), 0),
     support: cables.every((l) => l.support === lien.support) ? lien.support : null,
     agregat: agrege
-      ? {
-          lien: agrege,
-          ports: portsDeLAgregat(schema, agrege),
-          nom: agregatDe(schema, agrege.a)?.nom ?? agregatDe(schema, agrege.b)?.nom ?? "",
-        }
+      ? { lien: agrege, ports: portsDeLAgregat(schema, agrege), nom: nomDAgregat(schema, agrege) }
       : null,
     ordinaires: cables.filter((l) => !enAgregat(schema, l)),
-    horsDePortee: agregatHorsDePortee(schema, cables),
+    horsDePortee,
+    agregatImpossible: seulAgregat ? horsDePortee : sansAgregat(schema, cables),
     trunk: cables.every((l) => estTrunk(schema, l)),
     vlans: premiers,
     boutsDifferents: desaccorde
@@ -770,20 +763,39 @@ const estTerminal = (e: Equipement): boolean =>
   definition(e.type).categorie === "terminaux" && e.type !== "telephone-ip";
 
 /**
- * Les conseils que la bulle d'une liaison donne, quand c'est le cas. Aucun n'empêche rien : on
+ * Les câbles en boucle entre deux commutateurs : des câbles ordinaires qui font passer les mêmes VLAN
+ * (le plus grand nombre d'entre eux), et s'il y a un agrégat. Des câbles aux VLAN différents, un trunk et
+ * un accès pour un autre VLAN, ne bouclent pas.
+ */
+function boucle(schema: Schema, a: Equipement, b: Equipement): { cables: number; agregat: boolean } {
+  const tous = cablesEntre(schema, a.id, b.id);
+  const parVlans = new Map<string, number>();
+  for (const l of tous) {
+    if (enAgregat(schema, l)) continue;
+    const [cote, autre] = l.a.equipement === a.id ? [l.a, l.b] : [l.b, l.a];
+    const champs = champsDuCable(schema, [cote, autre]);
+    const cle = `${estTrunk(schema, l) ? "trunk" : "acces"}|${champs.nonTague ?? ""}|${champs.tagues ?? ""}`;
+    parVlans.set(cle, (parVlans.get(cle) ?? 0) + 1);
+  }
+  return { cables: Math.max(0, ...parVlans.values()), agregat: tous.some((l) => enAgregat(schema, l)) };
+}
+
+/**
+ * Les conseils que la bulle des câbles choisis donne, quand c'est le cas. Aucun n'empêche rien : on
  * documente aussi ce qui n'est pas idéal.
  */
 export function conseilsDeLiaison(schema: Schema, groupe: GroupeDeCables): string[] {
   const conseils: string[] = [];
-  const { a, b, agregat, ordinaires } = groupe;
-  if (estCommutateur(a) && estCommutateur(b)) {
-    if (!agregat && ordinaires.length >= 2) {
+  const { a, b, agregat, memePaire } = groupe;
+  if (memePaire && estCommutateur(a) && estCommutateur(b)) {
+    const enBoucle = boucle(schema, a, b);
+    if (!enBoucle.agregat && enBoucle.cables >= 2) {
       conseils.push(
-        "Deux câbles entre deux commutateurs sans agrégat forment une boucle : le spanning tree n'en laissera passer qu'un. Cochez « Agrégat de liens ».",
+        "Deux câbles aux mêmes VLAN entre deux commutateurs, sans agrégat, forment une boucle : le spanning tree n'en laissera passer qu'un. Choisissez-les ensemble (Ctrl+clic) et cochez « Agrégat de liens ».",
       );
-    } else if (agregat && ordinaires.length >= 1) {
+    } else if (enBoucle.agregat && enBoucle.cables >= 1) {
       conseils.push(
-        "Un câble de cette liaison n'est pas dans l'agrégat : entre deux commutateurs, il forme une boucle avec lui. Décochez puis recochez « Agrégat de liens » pour l'y mettre.",
+        "Un câble de cette liaison n'est pas dans l'agrégat : entre deux commutateurs, il forme une boucle avec lui. Choisissez-le avec l'agrégat (Ctrl+clic) et cochez « Agrégat de liens » pour l'y mettre.",
       );
     }
   }
@@ -796,7 +808,7 @@ export function conseilsDeLiaison(schema: Schema, groupe: GroupeDeCables): strin
         "Le VLAN 1 comme VLAN non tagué d'un trunk est déconseillé : préférez un VLAN réservé à cet usage.",
       );
     }
-    if (estTerminal(a) || estTerminal(b)) {
+    if (memePaire && (estTerminal(a) || estTerminal(b))) {
       conseils.push("Un poste se branche d'ordinaire sur un port d'accès, pas sur un trunk.");
     }
   } else if (groupe.vlans.nonTague === 1) {
