@@ -132,6 +132,8 @@ public sealed partial class VaultSession : IDisposable
                 storage.Reload();
                 return true;
             });
+            // Les fichiers écrits par une version d'avant portent un attribut qui empêche leur synchronisation.
+            _ = Io(absolute, () => SyncedFiles.Release(absolute));
             VaultSettingsFile settings;
             try
             {

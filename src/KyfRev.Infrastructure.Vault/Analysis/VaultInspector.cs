@@ -109,7 +109,7 @@ public static partial class VaultInspector
     {
         foreach (var entry in storage.Entries(directory))
         {
-            if (entry.Name.StartsWith('.') || entry.IsReparsePoint)
+            if (entry.Name.StartsWith('.') || entry.IsLink)
             {
                 continue;
             }

@@ -86,6 +86,89 @@ public sealed class FileSafetyTests
         Assert.HasCount(1, Directory.GetFiles(vault.Root), "le temporaire est retiré");
     }
 
+    [TestMethod]
+    public void A_written_file_does_not_carry_the_temporary_mark_that_sync_services_skip()
+    {
+        using var vault = TemporaryVault.Empty();
+        var replaced = vault.PathOf("fiche.md");
+        var created = vault.PathOf("autre.md");
+
+        AtomicFile.Replace(replaced, "contenu"u8);
+        Assert.IsTrue(AtomicFile.TryCreateNew(created, "contenu"u8));
+
+        foreach (var path in new[] { replaced, created })
+        {
+            Assert.IsFalse(File.GetAttributes(path).HasFlag(FileAttributes.Temporary), path);
+        }
+    }
+
+    [TestMethod]
+    public void Files_marked_temporary_by_an_earlier_version_are_released_without_changing_them()
+    {
+        using var vault = TemporaryVault.Empty();
+        using var outside = TemporaryVault.Empty();
+        var when = new DateTime(2026, 11, 8, 14, 0, 0, DateTimeKind.Utc);
+        string Marked(string relative, FileAttributes more = 0)
+        {
+            var path = vault.PathOf(relative);
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            File.WriteAllText(path, relative);
+            File.SetLastWriteTimeUtc(path, when);
+            File.SetAttributes(path, FileAttributes.Archive | FileAttributes.Temporary | more);
+            return path;
+        }
+        var settings = Marked(".suivi/coffre.json");
+        var sheet = Marked("fiches/Réseau/Câblage.md", FileAttributes.ReadOnly);
+        var hidden = Marked("fiches/Réseau/note.md", FileAttributes.Hidden);
+        var writing = Marked($".suivi/fiches/{AtomicFile.TemporaryPrefix}ABC123.tmp");
+        var plain = vault.PathOf("fiches/sans marque.md");
+        File.WriteAllText(plain, "x");
+        var elsewhere = outside.PathOf("hors du coffre.md");
+        File.WriteAllText(elsewhere, "x");
+        File.SetAttributes(elsewhere, FileAttributes.Temporary);
+        var link = vault.PathOf("fiches/Lien");
+        FileLinks.CreateDirectoryLink(link, outside.Root);
+
+        var (released, refused) = SyncedFiles.Release(vault.Root);
+        Directory.Delete(link);
+
+        Assert.AreEqual((3, 0), (released, refused));
+        foreach (var path in new[] { settings, sheet, hidden, plain })
+        {
+            Assert.IsFalse(File.GetAttributes(path).HasFlag(FileAttributes.Temporary), path);
+        }
+        Assert.IsTrue(File.GetAttributes(sheet).HasFlag(FileAttributes.ReadOnly), "les autres attributs restent");
+        Assert.IsTrue(File.GetAttributes(hidden).HasFlag(FileAttributes.Hidden));
+        Assert.AreEqual(when, File.GetLastWriteTimeUtc(sheet), "la date ne change pas");
+        Assert.AreEqual("fiches/Réseau/Câblage.md", File.ReadAllText(sheet));
+        Assert.IsTrue(File.GetAttributes(writing).HasFlag(FileAttributes.Temporary), "une écriture en cours garde le sien");
+        Assert.IsTrue(File.GetAttributes(elsewhere).HasFlag(FileAttributes.Temporary), "rien hors du coffre, même par un lien");
+        Assert.AreEqual((0, 0), SyncedFiles.Release(vault.Root));
+        File.SetAttributes(sheet, FileAttributes.Normal);
+    }
+
+    [TestMethod]
+    public void A_walk_of_the_disk_enters_folders_but_not_links()
+    {
+        using var vault = TemporaryVault.Empty();
+        using var outside = TemporaryVault.Empty();
+        vault.Write("fiches/Réseau/Câblage.md", "x");
+        outside.Write("hors du coffre.md", "x");
+        var link = vault.PathOf("fiches/Lien");
+        FileLinks.CreateDirectoryLink(link, outside.Root);
+
+        var entries = DiskStorage.Instance.AllEntries(vault.Root);
+        var listed = DiskStorage.Instance.Entries(vault.PathOf("fiches")).ToDictionary(entry => entry.Name, entry => entry.IsLink);
+        Directory.Delete(link);
+
+        Assert.IsFalse(entries.Single(entry => entry.Name == "Câblage.md").IsLink);
+        Assert.IsFalse(entries.Single(entry => entry.Name == "Réseau").IsLink);
+        Assert.IsTrue(entries.Single(entry => entry.Name == "Lien").IsLink);
+        Assert.DoesNotContain(entry => entry.Name == "hors du coffre.md", entries);
+        Assert.IsTrue(listed["Lien"]);
+        Assert.IsFalse(listed["Réseau"]);
+    }
+
     /// <summary>T15 : une coupure pendant l'écriture laisse l'ancienne version, jamais un fichier tronqué.</summary>
     [TestMethod]
     public void A_crash_during_a_write_leaves_the_previous_version_intact()

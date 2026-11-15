@@ -10,6 +10,8 @@ namespace KyfRev.Infrastructure.Vault.Files;
 /// <remarks>
 /// Les temporaires portent le préfixe <c>.ecriture-</c> et le suffixe <c>.tmp</c>, comme dans la
 /// version 0.x : les deux implémentations les ignorent dans leurs analyses et leurs sauvegardes.
+/// Ils ne portent pas l'attribut « temporaire » de Windows : il resterait au fichier mis en place, et
+/// les services de synchronisation (Proton Drive, OneDrive…) n'envoient pas un fichier qui le porte.
 /// </remarks>
 public static class AtomicFile
 {
@@ -77,7 +79,6 @@ public static class AtomicFile
             }
             using (stream)
             {
-                File.SetAttributes(temporary, FileAttributes.Temporary);
                 stream.Write(content);
                 stream.Flush(flushToDisk: true);
             }

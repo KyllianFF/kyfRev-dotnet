@@ -182,11 +182,14 @@ public sealed class VaultException : OperationException
 
     /// <summary>
     /// Le dossier a son <c>.suivi</c>, mais pas son <c>coffre.json</c> : un coffre dont la copie n'est pas finie, le plus souvent
-    /// un dossier synchronisé (Proton Drive, OneDrive, iCloud…) que le poste n'a pas encore reçu en entier.
+    /// un dossier synchronisé (Proton Drive, OneDrive, iCloud…) que le poste n'a pas encore reçu en entier, ou que le poste qui
+    /// l'a écrit n'a pas envoyé (voir <see cref="Files.SyncedFiles.Release(string)"/>).
     /// </summary>
     internal static VaultException IncompleteVault(string root) =>
         new(VaultErrorKind.NotAVault, $"« {root} » a le dossier .suivi d'un coffre, mais pas son fichier .suivi/coffre.json : la copie de ce coffre n'est pas finie. "
-            + "S'il est dans un dossier synchronisé (Proton Drive, OneDrive, iCloud…), attendez que ce poste l'ait reçu en entier, puis rouvrez-le. Rien n'y a été écrit.");
+            + "S'il est dans un dossier synchronisé (Proton Drive, OneDrive, iCloud…), attendez que ce poste l'ait reçu en entier, puis rouvrez-le. "
+            + "Si la synchronisation est finie, ouvrez-le d'abord sur le poste qui l'a écrit, avec cette version de kyfRev : celles d'avant le 15 novembre 2026 "
+            + "marquaient ses fichiers d'un attribut qui empêche leur envoi. Rien n'y a été écrit.");
 
     internal static VaultException FolderNotEmpty(string root) =>
         new(VaultErrorKind.FolderNotEmpty, $"Le dossier « {root} » n'est pas vide : un nouveau coffre doit être créé dans un dossier vide.");

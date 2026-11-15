@@ -59,14 +59,13 @@ public sealed class VaultStorageTests
         Assert.AreEqual(date, file.LastWriteTimeUtc);
         Assert.AreEqual(1, reads);
         Assert.IsFalse(file.IsLink);
-        Assert.IsFalse(file.IsReparsePoint);
 
         var folder = new StorageEntry(Path.Combine("coffre", "fiches"), isDirectory: true, () => throw new InvalidOperationException());
         Assert.AreEqual(0, folder.Length);
         Assert.IsTrue(folder.IsDirectory);
 
-        var found = new StorageEntry(Path.Combine("coffre", "b.md"), "b.md", isDirectory: false, 5, date, isReparsePoint: true);
-        Assert.AreEqual((5L, date, true), (found.Length, found.LastWriteTimeUtc, found.IsReparsePoint));
+        var found = new StorageEntry(Path.Combine("coffre", "b.md"), "b.md", isDirectory: false, 5, date, isLink: true);
+        Assert.AreEqual((5L, date, true), (found.Length, found.LastWriteTimeUtc, found.IsLink));
     }
 
     [TestMethod]
