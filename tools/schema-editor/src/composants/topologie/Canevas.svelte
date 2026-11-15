@@ -617,8 +617,8 @@
     const ajouter = evenement.shiftKey || evenement.ctrlKey;
     // Un câble se choisit seul ; Ctrl+clic (ou Maj+clic) en ajoute un autre, pour les régler ensemble.
     editeur.choisir(id, ajouter);
-    // Un câble saisi puis tiré coulisse (D53), en mode avancé.
-    if (simplifie || ajouter || !schema.liens.some((l) => l.id === id)) return;
+    // Un câble saisi puis tiré coulisse (D53), dans les deux modes.
+    if (ajouter || !schema.liens.some((l) => l.id === id)) return;
     capturer(evenement);
     geste = {
       genre: "coulisse",
@@ -1178,8 +1178,8 @@
 
   const bulle = $derived.by(() => {
     if (!simplifie || outil !== "choisir" || pose || edition) return null;
-    // Pendant un geste, la bulle s'efface : elle revient où l'objet s'arrête.
-    if (geste && !(geste.genre === "deplacement" && !geste.bouge)) return null;
+    // Pendant un geste, la bulle s'efface : elle revient où l'objet s'arrête. Un simple clic ne la fait pas clignoter.
+    if (geste && !((geste.genre === "deplacement" || geste.genre === "coulisse") && !geste.bouge)) return null;
     const seul = editeur.selection.length === 1 ? parId.get(editeur.selection[0] ?? "") : undefined;
     if (seul && !caches.has(seul.id)) {
       return { genre: "equipement" as const, cle: seul.id, equipement: seul, objet: zoneEcran(cadreDe(seul)) };
@@ -1831,7 +1831,8 @@
           <circle cx={p.x} cy={p.y} r="5" class="pastille-bout" stroke={t.trait.couleur} />
         </g>
       {/each}
-      {#if choisis.has(t.lien.id) && !simplifie}
+      <!-- Les points de passage du câble choisi : ils se tirent, et un double-clic en retire un. -->
+      {#if choisis.has(t.lien.id)}
         {#each t.lien.points as p, i (i)}
           <!-- svelte-ignore a11y_no_static_element_interactions -->
           <circle
