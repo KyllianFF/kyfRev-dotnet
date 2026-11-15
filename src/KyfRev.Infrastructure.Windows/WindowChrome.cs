@@ -15,6 +15,21 @@ public sealed partial class WindowChrome : IWindowChrome
     /// <summary><c>DWMWA_EXTENDED_FRAME_BOUNDS</c> : le rectangle visible d'une fenêtre.</summary>
     private const uint ExtendedFrameBounds = 9;
 
+    /// <summary><c>ABM_GETSTATE</c> : la barre des tâches se masque-t-elle d'elle-même ?</summary>
+    private const uint AppBarGetState = 0x4;
+
+    /// <summary><c>ABM_GETAUTOHIDEBAREX</c> : la barre qui se masque sur tel bord de tel écran.</summary>
+    private const uint AppBarGetAutoHideBarEx = 0xB;
+
+    /// <summary><c>ABS_AUTOHIDE</c>.</summary>
+    private const nuint AutoHide = 0x1;
+
+    /// <summary>
+    /// Ce que la fenêtre laisse libre au bord d'une barre qui se masque : deux pixels, comme Windows Terminal et Chromium. Un seul
+    /// suffit à la souris, le second couvre l'arrondi d'un écran agrandi à 150 %.
+    /// </summary>
+    internal const int HiddenTaskbarRoom = 2;
+
     /// <inheritdoc/>
     public bool UseDarkTitleBar(nint windowHandle, bool dark)
     {
@@ -30,7 +45,7 @@ public sealed partial class WindowChrome : IWindowChrome
     public WindowOverhang MaximizedOverhang(nint windowHandle)
     {
         var monitor = new MonitorInfo { Size = Marshal.SizeOf<MonitorInfo>() };
-        if (windowHandle == 0 || !GetWindowRect(windowHandle, out var window) || !GetMonitorInfoW(MonitorFromWindow(windowHandle, NearestMonitor), ref monitor))
+        if (windowHandle == 0 || !ClientBounds(windowHandle, out var window) || !GetMonitorInfoW(MonitorFromWindow(windowHandle, NearestMonitor), ref monitor))
         {
             return default;
         }
@@ -41,6 +56,41 @@ public sealed partial class WindowChrome : IWindowChrome
             Math.Max(0, window.Right - work.Right),
             Math.Max(0, window.Bottom - work.Bottom));
     }
+
+    /// <inheritdoc/>
+    public bool LeaveRoomForHiddenTaskbar(nint windowHandle, nint calcSizeParameters)
+    {
+        var monitor = new MonitorInfo { Size = Marshal.SizeOf<MonitorInfo>() };
+        if (windowHandle == 0 || calcSizeParameters == 0 || !IsZoomed(windowHandle)
+            || !GetMonitorInfoW(MonitorFromWindow(windowHandle, NearestMonitor), ref monitor))
+        {
+            return false;
+        }
+        var edges = HiddenTaskbarEdges(monitor.Whole);
+        if (edges == ScreenEdges.None)
+        {
+            return false;
+        }
+        var whole = new ScreenBounds(monitor.Whole.Left, monitor.Whole.Top, monitor.Whole.Right, monitor.Whole.Bottom);
+        var proposed = Marshal.PtrToStructure<Area>(calcSizeParameters);
+        var room = Trimmed(new ScreenBounds(proposed.Left, proposed.Top, proposed.Right, proposed.Bottom), whole, edges);
+        Marshal.StructureToPtr(new Area { Left = room.Left, Top = room.Top, Right = room.Right, Bottom = room.Bottom }, calcSizeParameters, fDeleteOld: false);
+        return true;
+    }
+
+    /// <summary>
+    /// La zone cliente <paramref name="proposed"/> arrêtée à <see cref="HiddenTaskbarRoom"/> pixels de chaque bord
+    /// <paramref name="edges"/> de l'écran <paramref name="monitor"/> ; les autres bords ne bougent pas.
+    /// </summary>
+    internal static ScreenBounds Trimmed(ScreenBounds proposed, ScreenBounds monitor, ScreenEdges edges) => new(
+        edges.HasFlag(ScreenEdges.Left) ? Math.Max(proposed.Left, monitor.Left + HiddenTaskbarRoom) : proposed.Left,
+        edges.HasFlag(ScreenEdges.Top) ? Math.Max(proposed.Top, monitor.Top + HiddenTaskbarRoom) : proposed.Top,
+        edges.HasFlag(ScreenEdges.Right) ? Math.Min(proposed.Right, monitor.Right - HiddenTaskbarRoom) : proposed.Right,
+        edges.HasFlag(ScreenEdges.Bottom) ? Math.Min(proposed.Bottom, monitor.Bottom - HiddenTaskbarRoom) : proposed.Bottom);
+
+    /// <summary>Les bords de l'écran <paramref name="monitor"/> où une barre des tâches se masque d'elle-même ; aucun si elle reste affichée.</summary>
+    internal static ScreenEdges HiddenTaskbarEdges(ScreenBounds monitor) =>
+        HiddenTaskbarEdges(new Area { Left = monitor.Left, Top = monitor.Top, Right = monitor.Right, Bottom = monitor.Bottom });
 
     /// <inheritdoc/>
     public ScreenBounds VisibleBounds(nint windowHandle) =>
@@ -59,10 +109,57 @@ public sealed partial class WindowChrome : IWindowChrome
         return new ScreenArea(monitor.Work.Right - monitor.Work.Left, monitor.Work.Bottom - monitor.Work.Top);
     }
 
+    private static ScreenEdges HiddenTaskbarEdges(Area monitor)
+    {
+        var state = new AppBarData { Size = (uint)Marshal.SizeOf<AppBarData>() };
+        if ((SHAppBarMessage(AppBarGetState, ref state) & AutoHide) == 0)
+        {
+            return ScreenEdges.None;
+        }
+        var edges = ScreenEdges.None;
+        // ABE_LEFT, ABE_TOP, ABE_RIGHT, ABE_BOTTOM : une barre par bord et par écran.
+        foreach (var (edge, flag) in new[] { (0u, ScreenEdges.Left), (1u, ScreenEdges.Top), (2u, ScreenEdges.Right), (3u, ScreenEdges.Bottom) })
+        {
+            var bar = new AppBarData { Size = (uint)Marshal.SizeOf<AppBarData>(), Edge = edge, Bounds = monitor };
+            if (SHAppBarMessage(AppBarGetAutoHideBarEx, ref bar) != 0)
+            {
+                edges |= flag;
+            }
+        }
+        return edges;
+    }
+
+    /// <summary>La zone cliente de la fenêtre, en pixels de l'écran.</summary>
+    private static bool ClientBounds(nint window, out Area area)
+    {
+        area = default;
+        var origin = default(Spot);
+        if (!GetClientRect(window, out var client) || !ClientToScreen(window, ref origin))
+        {
+            return false;
+        }
+        area = new Area { Left = origin.X, Top = origin.Y, Right = origin.X + client.Right, Bottom = origin.Y + client.Bottom };
+        return true;
+    }
+
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [LibraryImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
-    private static partial bool GetWindowRect(nint window, out Area area);
+    private static partial bool GetClientRect(nint window, out Area area);
+
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool ClientToScreen(nint window, ref Spot point);
+
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool IsZoomed(nint window);
+
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    [LibraryImport("shell32.dll")]
+    private static partial nuint SHAppBarMessage(uint message, ref AppBarData data);
 
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [LibraryImport("user32.dll")]
@@ -91,6 +188,25 @@ public sealed partial class WindowChrome : IWindowChrome
     }
 
     [StructLayout(LayoutKind.Sequential)]
+    private struct Spot
+    {
+        public int X;
+        public int Y;
+    }
+
+    /// <summary><c>APPBARDATA</c>.</summary>
+    [StructLayout(LayoutKind.Sequential)]
+    private struct AppBarData
+    {
+        public uint Size;
+        public nint Window;
+        public uint CallbackMessage;
+        public uint Edge;
+        public Area Bounds;
+        public nint Parameter;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
     private struct MonitorInfo
     {
         public int Size;
@@ -98,4 +214,24 @@ public sealed partial class WindowChrome : IWindowChrome
         public Area Work;
         public int Flags;
     }
+}
+
+/// <summary>Les bords d'un écran.</summary>
+[Flags]
+internal enum ScreenEdges
+{
+    /// <summary>Aucun.</summary>
+    None = 0,
+
+    /// <summary>À gauche.</summary>
+    Left = 1,
+
+    /// <summary>En haut.</summary>
+    Top = 2,
+
+    /// <summary>À droite.</summary>
+    Right = 4,
+
+    /// <summary>En bas.</summary>
+    Bottom = 8,
 }
