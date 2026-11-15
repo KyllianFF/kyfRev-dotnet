@@ -105,8 +105,8 @@ public static class Icons
     /// <summary>Nouveau dossier : créer un coffre.</summary>
     public static string NewFolder { get; } = Glyph(0xE8F4);
 
-    /// <summary>Flèche qui entre dans un plateau : importer.</summary>
-    public static string Import { get; } = Glyph(0xE8B5);
+    /// <summary>Flèche qui descend dans un plateau : importer (une flèche vers une barre se lisait « aller au bout »).</summary>
+    public static string Import { get; } = Glyph(0xE896);
 
     /// <summary>Flèche qui s'échappe : partager.</summary>
     public static string Share { get; } = Glyph(0xE72D);
