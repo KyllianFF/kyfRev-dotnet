@@ -49,6 +49,17 @@ internal sealed class FakeChrome : IWindowChrome
 
     public WindowOverhang MaximizedOverhang(nint windowHandle) => Overhang;
 
+    /// <summary>Ce que répond <see cref="LeaveRoomForHiddenTaskbar"/> : une barre des tâches qui se masque, ou non.</summary>
+    public bool HiddenTaskbar { get; set; }
+
+    public List<nint> RoomLeft { get; } = [];
+
+    public bool LeaveRoomForHiddenTaskbar(nint windowHandle, nint calcSizeParameters)
+    {
+        RoomLeft.Add(calcSizeParameters);
+        return HiddenTaskbar;
+    }
+
     public ScreenBounds Visible { get; set; }
 
     public ScreenBounds VisibleBounds(nint windowHandle) => Visible;

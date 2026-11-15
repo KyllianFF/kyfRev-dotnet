@@ -90,12 +90,34 @@ public sealed class DiskStorage : VaultStorage
                 entry.IsDirectory,
                 entry.Length,
                 entry.LastWriteTimeUtc.UtcDateTime,
-                (entry.Attributes & FileAttributes.ReparsePoint) != 0),
+                IsLink(ref entry)),
             options)
         {
-            ShouldRecursePredicate = (ref FileSystemEntry entry) => (entry.Attributes & FileAttributes.ReparsePoint) == 0,
+            ShouldRecursePredicate = (ref FileSystemEntry entry) => !IsLink(ref entry),
         };
         return [.. entries];
+    }
+
+    /// <summary>
+    /// Un lien symbolique ou une jonction : un point d'analyse qui mène ailleurs, où un parcours n'entre pas. Les dossiers et
+    /// les fichiers d'un service de synchronisation (Proton Drive, OneDrive…) sont aussi des points d'analyse, mais sans
+    /// cible : un parcours y entre comme dans un dossier ordinaire.
+    /// </summary>
+    internal static bool IsLink(ref FileSystemEntry entry)
+    {
+        if ((entry.Attributes & FileAttributes.ReparsePoint) == 0)
+        {
+            return false;
+        }
+        try
+        {
+            return entry.ToFileSystemInfo().LinkTarget is not null;
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        {
+            // Un point d'analyse qui ne se lit pas : traité comme un lien, on n'y entre pas.
+            return true;
+        }
     }
 
     /// <inheritdoc/>

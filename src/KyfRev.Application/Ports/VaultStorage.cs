@@ -156,6 +156,7 @@ public sealed class StorageEntry
     private Func<(long Length, DateTime LastWriteTimeUtc)>? _facts;
     private long _length;
     private DateTime _lastWriteTimeUtc;
+    private bool? _isLink;
 
     /// <summary>Un élément d'un stockage sans liens, dont la taille et la date ne se lisent qu'à la demande.</summary>
     /// <param name="fullName">Le chemin complet.</param>
@@ -170,8 +171,11 @@ public sealed class StorageEntry
         _facts = isDirectory ? null : facts;
     }
 
-    /// <summary>Un élément relevé sur le disque en un parcours, sans relire ses attributs.</summary>
-    public StorageEntry(string fullName, string name, bool isDirectory, long length, DateTime lastWriteTimeUtc, bool isReparsePoint)
+    /// <summary>
+    /// Un élément relevé sur le disque en un parcours, sans relire ses attributs ; <c>isLink</c> dit s'il est un lien
+    /// symbolique ou une jonction (voir <see cref="IsLink"/>).
+    /// </summary>
+    public StorageEntry(string fullName, string name, bool isDirectory, long length, DateTime lastWriteTimeUtc, bool isLink)
     {
         ArgumentNullException.ThrowIfNull(fullName);
         ArgumentNullException.ThrowIfNull(name);
@@ -180,7 +184,7 @@ public sealed class StorageEntry
         IsDirectory = isDirectory;
         _length = length;
         _lastWriteTimeUtc = lastWriteTimeUtc;
-        IsReparsePoint = isReparsePoint;
+        _isLink = isLink;
     }
 
     /// <summary>Un élément du disque ; la cible d'un lien ne se lit qu'à la demande.</summary>
@@ -193,7 +197,10 @@ public sealed class StorageEntry
         IsDirectory = info is DirectoryInfo;
         _length = info is FileInfo file ? file.Length : 0;
         _lastWriteTimeUtc = info.LastWriteTimeUtc;
-        IsReparsePoint = info.Attributes.HasFlag(FileAttributes.ReparsePoint);
+        if (!info.Attributes.HasFlag(FileAttributes.ReparsePoint))
+        {
+            _isLink = false;
+        }
     }
 
     /// <summary>Le chemin complet.</summary>
@@ -225,11 +232,11 @@ public sealed class StorageEntry
         }
     }
 
-    /// <summary>Un point d'analyse du disque : lien, jonction, ou fichier en ligne d'un service de synchronisation.</summary>
-    public bool IsReparsePoint { get; }
-
-    /// <summary>Un lien symbolique ou une jonction, qui pourrait mener hors du coffre.</summary>
-    public bool IsLink => _info?.LinkTarget is not null;
+    /// <summary>
+    /// Un lien symbolique ou une jonction, qui pourrait mener hors du coffre. Un dossier ou un fichier d'un service de
+    /// synchronisation (Proton Drive, OneDrive…) est aussi un point d'analyse du disque, mais sans cible : il n'en est pas un.
+    /// </summary>
+    public bool IsLink => _isLink ??= _info?.LinkTarget is not null;
 
     private void ReadFacts()
     {

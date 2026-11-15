@@ -113,7 +113,9 @@ public sealed partial class VaultSession : IDisposable
         var settingsPath = VaultLayout.Absolute(absolute, VaultLayout.SettingsFile);
         if (!storage.FileExists(settingsPath))
         {
-            throw VaultException.NotAVault(absolute);
+            throw storage.Raw.DirectoryExists(VaultLayout.Absolute(absolute, VaultLayout.Tracking))
+                ? VaultException.IncompleteVault(absolute)
+                : VaultException.NotAVault(absolute);
         }
         if (storage.Raw != storage)
         {
@@ -130,6 +132,8 @@ public sealed partial class VaultSession : IDisposable
                 storage.Reload();
                 return true;
             });
+            // Les fichiers écrits par une version d'avant portent un attribut qui empêche leur synchronisation.
+            _ = Io(absolute, () => SyncedFiles.Release(absolute));
             VaultSettingsFile settings;
             try
             {

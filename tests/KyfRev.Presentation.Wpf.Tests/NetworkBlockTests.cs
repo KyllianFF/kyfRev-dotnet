@@ -173,6 +173,52 @@ public sealed class NetworkBlockTests
     }
 
     [STATestMethod]
+    public void A_view_replaced_in_the_menu_closes_its_island_and_a_view_kept_keeps_it()
+    {
+        using var ui = new UiThread();
+        using var vaults = new TestVaults(AppMode.Development);
+        vaults.App.Vaults.Create(vaults.PathOf("Coffre"));
+        var page = new SchemasPageViewModel(new SchemaUseCases(vaults.App.Host), vaults.Picker, new FakeOpener(), FakeEnvironment.WebData);
+        var island = page.TakeIsland();
+        Assert.AreSame(island, page.TakeIsland(), "une seule à la fois");
+        var test = new TestShell();
+        var entry = CorePages.FromModule(new NavigationEntry(SchemasModule.ModuleId, "Schémas réseau", 45)) with { Page = page };
+
+        test.Shell.SetModuleEntries([entry]);
+        test.Shell.SetModuleEntries([entry]);
+        Assert.IsFalse(island.IsDisposed, "la même vue, gardée : son îlot reste ouvert");
+
+        test.Shell.SetModuleEntries([]);
+        Assert.IsTrue(island.IsDisposed, "la vue remplacée ferme son îlot et son moteur");
+        Assert.IsNull(page.Island);
+    }
+
+    [EngineTest]
+    public void The_window_warms_up_the_island_of_the_open_vault_in_the_background()
+    {
+        using var ui = new UiThread();
+        using var vaults = new TestVaults(AppMode.Development);
+        vaults.App.Vaults.Create(vaults.PathOf("Coffre"));
+        var test = new TestShell();
+        using var page = new SchemasPageViewModel(new SchemaUseCases(vaults.App.Host), vaults.Picker, new FakeOpener(), FakeEnvironment.WebData);
+        test.Shell.SetModuleEntries([CorePages.FromModule(new NavigationEntry(SchemasModule.ModuleId, "Schémas réseau", 45)) with { Page = page }]);
+        var window = new ShellWindow(test.Shell) { ShowActivated = false, Left = -10000, Top = -10000, Width = 1100, Height = 800, WindowStartupLocation = WindowStartupLocation.Manual };
+        window.Resources.MergedDictionaries.Add(test.Design.Dictionary);
+        window.Show();
+        try
+        {
+            window.WarmUp.Delay = TimeSpan.FromMilliseconds(50);
+            test.Shell.ShowWorkspace();
+            UiThread.Until(() => page.Island is { IsReady: true }, TimeSpan.FromMinutes(2));
+            UiThread.Until(() => page.Island!.Parent is null, TimeSpan.FromSeconds(10));
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
     public void Opening_goes_to_the_view_and_closing_the_editor_comes_back()
     {
         using var ui = new UiThread();
@@ -385,7 +431,7 @@ public sealed class NetworkBlockTests
         var useCases = new SchemaUseCases(vaults.App.Host);
         var id = new NetworkSchemas(() => useCases, () => null).CreateAsync("Depuis une fiche");
         UiThread.Until(() => id.IsCompleted);
-        var model = new SchemasPageViewModel(useCases, vaults.Picker, new FakeOpener(), FakeEnvironment.WebData);
+        using var model = new SchemasPageViewModel(useCases, vaults.Picker, new FakeOpener(), FakeEnvironment.WebData);
         var test = new TestShell();
         var back = 0;
         model.OpenFrom(id.Result!, () => back++);

@@ -102,9 +102,9 @@ public sealed partial class VaultSession
     {
         private static readonly StringComparer PathComparer = OperatingSystem.IsWindows() ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
 
-        private readonly Dictionary<string, (bool IsReparsePoint, DateTime Modified, long Length)> _entries;
+        private readonly Dictionary<string, (bool IsLink, DateTime Modified, long Length)> _entries;
 
-        private VaultSnapshot(Dictionary<string, (bool IsReparsePoint, DateTime Modified, long Length)> entries)
+        private VaultSnapshot(Dictionary<string, (bool IsLink, DateTime Modified, long Length)> entries)
         {
             _entries = entries;
         }
@@ -116,7 +116,7 @@ public sealed partial class VaultSession
             // Un disque débranché ou un partage perdu : un refus comme un autre, pas une exception qui sort du cas d'usage.
             foreach (var entry in Io(realRoot, () => storage.AllEntries(realRoot)))
             {
-                found[entry.FullName[start..].Replace(Path.DirectorySeparatorChar, '/')] = (entry.IsReparsePoint, entry.LastWriteTimeUtc, entry.Length);
+                found[entry.FullName[start..].Replace(Path.DirectorySeparatorChar, '/')] = (entry.IsLink, entry.LastWriteTimeUtc, entry.Length);
             }
             return new VaultSnapshot(found);
         }
@@ -140,7 +140,7 @@ public sealed partial class VaultSession
                 {
                     return false;
                 }
-                if (entry.IsReparsePoint)
+                if (entry.IsLink)
                 {
                     return null;
                 }

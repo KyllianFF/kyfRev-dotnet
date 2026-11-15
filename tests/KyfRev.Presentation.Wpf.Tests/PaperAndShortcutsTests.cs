@@ -1,5 +1,7 @@
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 using CommunityToolkit.Mvvm.Input;
 using KyfRev.Application;
 using KyfRev.Application.Model;
@@ -273,6 +275,112 @@ public sealed class PaperAndShortcutsTests
         finally
         {
             ShortcutMap.Use(null);
+        }
+    }
+
+    [STATestMethod]
+    public void A_view_of_the_menu_moves_by_dragging_or_by_the_arrows_once_chosen()
+    {
+        using var ui = new UiThread();
+        var test = new TestShell();
+        var ids = test.Shell.MainNavigation.Select(item => item.Id).ToList();
+        var store = new MemoryMachinePreferences();
+        var page = new ShortcutsSettingsViewModel(new MachineSettings(store), () => test.Shell.MainNavigation);
+        page.OnNavigatedTo();
+        var view = new ShortcutsSettingsPage { DataContext = page, Width = 700 };
+        var window = new Window { Content = new ScrollViewer { Content = view }, Left = -10000, Top = -10000, Width = 760, Height = 900, ShowActivated = false, ShowInTaskbar = false };
+        window.Resources.MergedDictionaries.Add(test.Design.Dictionary);
+        window.Show();
+        try
+        {
+            TestShell.Flush();
+            var list = (ListBox)view.FindName("MenuList");
+            Assert.AreEqual(page.Menu[0].Label, page.Menu[0].ToString(), "un lecteur d'écran dit le nom de la vue");
+            List<string> Order() => [.. page.Menu.Select(row => row.Id)];
+            ListBoxItem Row(int index) => (ListBoxItem)list.ItemContainerGenerator.ContainerFromIndex(index);
+
+            // Sans vue choisie, les flèches restent celles de la liste.
+            Assert.IsFalse(view.MoveChosen(Key.Down, ModifierKeys.None));
+
+            // Un clic choisit la vue ; ↓ la descend, et elle garde le focus.
+            var carnet = page.Menu[0];
+            list.SelectedItem = carnet;
+            Assert.AreSame(carnet, page.ChosenMenuRow);
+            Row(0).Focus();
+            Row(0).RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(list), 0, Key.Down) { RoutedEvent = Keyboard.PreviewKeyDownEvent });
+            Assert.AreEqual(1, page.Menu.IndexOf(carnet));
+            Assert.IsTrue(Row(1).IsKeyboardFocusWithin, "la vue déplacée garde le focus");
+            Assert.AreEqual(ids[1] + "," + ids[0], string.Join(',', Order().Take(2)));
+            Assert.AreEqual(string.Join(',', Order()), store.Stored.MenuOrder, "écrit aussitôt");
+            Assert.AreEqual($"{carnet.Label} : 2 sur {ids.Count}", page.MenuMoved);
+            view.Capture("menu-liste-clair");
+            test.Design.Theme = DesignSystem.Tokens.ThemeKind.Dark;
+            TestShell.Flush();
+            view.Capture("menu-liste-sombre");
+            test.Design.Theme = DesignSystem.Tokens.ThemeKind.Light;
+
+            // Fin, Début ; ↑ tout en haut ne va nulle part, mais la touche est prise ; Ctrl+↓ reste à la liste ; une autre touche aussi.
+            Assert.IsTrue(view.MoveChosen(Key.End, ModifierKeys.None));
+            Assert.AreEqual(ids.Count - 1, page.Menu.IndexOf(carnet));
+            Assert.IsTrue(view.MoveChosen(Key.Home, ModifierKeys.None));
+            Assert.AreEqual(0, page.Menu.IndexOf(carnet));
+            Assert.IsTrue(view.MoveChosen(Key.Up, ModifierKeys.None));
+            Assert.AreEqual(0, page.Menu.IndexOf(carnet));
+            Assert.IsFalse(view.MoveChosen(Key.Down, ModifierKeys.Control));
+            Assert.IsFalse(view.MoveChosen(Key.Space, ModifierKeys.None));
+            Assert.IsFalse(page.MoveTo(carnet, 0), "déjà à sa place");
+
+            // Glissée : la vue prise par sa ligne suit le pointeur, à mesure ; l'ordre s'écrit au dépôt.
+            var written = store.Stored.MenuOrder;
+            var label = Descendants<TextBlock>(Row(0)).First(text => text.Text == carnet.Label);
+            var start = label.TranslatePoint(new Point(4, 4), list);
+            label.RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, 0, MouseButton.Left) { RoutedEvent = UIElement.PreviewMouseLeftButtonDownEvent });
+            view.Pressed(label, start);
+            view.Dragged(start with { Y = start.Y + 1 }, pressed: true);
+            Assert.IsFalse(view.IsDragging, "en deçà du seuil, c'est un clic");
+            var third = Row(2).TranslatePoint(new Point(4, Row(2).ActualHeight / 2), list);
+            view.Dragged(third, pressed: true);
+            Assert.IsTrue(view.IsDragging);
+            Assert.AreEqual(2, page.Menu.IndexOf(carnet), "elle est passée sous la troisième ligne");
+            Assert.AreSame(carnet, page.ChosenMenuRow, "et elle est choisie");
+            Assert.AreEqual(written, store.Stored.MenuOrder, "rien d'écrit pendant le glissement");
+            view.Dragged(new Point(4, list.ActualHeight + 200), pressed: true);
+            Assert.AreEqual(ids.Count - 1, page.Menu.IndexOf(carnet), "sous la liste : en queue");
+            list.RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, 0, MouseButton.Left) { RoutedEvent = UIElement.PreviewMouseLeftButtonUpEvent });
+            Assert.IsFalse(view.IsDragging);
+            Assert.AreEqual(string.Join(',', Order()), store.Stored.MenuOrder, "écrit au dépôt");
+
+            // Un appui sur ↑ ou ↓ reste à son bouton : rien ne glisse ; bouton relâché, rien non plus.
+            var button = Descendants<Button>(Row(1)).First();
+            view.Pressed(button, button.TranslatePoint(default, list));
+            view.Dragged(new Point(4, list.ActualHeight), pressed: true);
+            Assert.IsFalse(view.IsDragging);
+            view.Pressed(label, start);
+            view.Dragged(new Point(4, list.ActualHeight), pressed: false);
+            Assert.IsFalse(view.IsDragging);
+            list.RaiseEvent(new MouseEventArgs(Mouse.PrimaryDevice, 0) { RoutedEvent = Mouse.LostMouseCaptureEvent });
+            list.RaiseEvent(new MouseEventArgs(Mouse.PrimaryDevice, 0) { RoutedEvent = UIElement.PreviewMouseMoveEvent });
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    private static IEnumerable<T> Descendants<T>(DependencyObject root)
+        where T : DependencyObject
+    {
+        for (var index = 0; index < VisualTreeHelper.GetChildrenCount(root); index++)
+        {
+            var child = VisualTreeHelper.GetChild(root, index);
+            if (child is T found)
+            {
+                yield return found;
+            }
+            foreach (var deeper in Descendants<T>(child))
+            {
+                yield return deeper;
+            }
         }
     }
 

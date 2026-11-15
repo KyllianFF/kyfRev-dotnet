@@ -39,6 +39,38 @@ public enum SystemColor
     HotTrack,
 }
 
+/// <summary>D'où le contraste élevé prend ses couleurs.</summary>
+public enum HighContrastPalette
+{
+    /// <summary>Celles que l'utilisateur a choisies dans Windows, qui est en contraste élevé.</summary>
+    Windows,
+
+    /// <summary>Celles de kyfRev, claires : le contraste est forcé dans kyfRev, avec le thème clair.</summary>
+    Light,
+
+    /// <summary>Celles de kyfRev, sombres : le contraste est forcé dans kyfRev, avec le thème sombre.</summary>
+    Dark,
+}
+
+/// <summary>Les cinq couleurs d'un contraste élevé, celles que Windows y donne.</summary>
+/// <param name="Window">Fond de fenêtre.</param>
+/// <param name="WindowText">Texte de fenêtre.</param>
+/// <param name="Highlight">Fond mis en évidence.</param>
+/// <param name="HighlightText">Texte mis en évidence.</param>
+/// <param name="HotTrack">Lien.</param>
+public sealed record HighContrastSet(TokenColor Window, TokenColor WindowText, TokenColor Highlight, TokenColor HighlightText, TokenColor HotTrack)
+{
+    /// <summary>La couleur de ce rôle de Windows.</summary>
+    public TokenColor this[SystemColor color] => color switch
+    {
+        SystemColor.Window => Window,
+        SystemColor.WindowText => WindowText,
+        SystemColor.Highlight => Highlight,
+        SystemColor.HighlightText => HighlightText,
+        _ => HotTrack,
+    };
+}
+
 /// <summary>La couleur de chaque rôle, selon le thème.</summary>
 public static class ThemeColors
 {
@@ -194,7 +226,15 @@ public static class ThemeColors
         return colors.ToFrozenDictionary();
     }
 
-    /// <summary>Valeur actuelle d'une couleur de Windows.</summary>
+    /// <summary>Couleur de <paramref name="color"/> en contraste élevé : celle de Windows, ou celle de kyfRev, claire ou sombre.</summary>
+    public static Color Current(SystemColor color, HighContrastPalette palette) => palette switch
+    {
+        HighContrastPalette.Light => Palette.HighContrastLight[color].ToColor(),
+        HighContrastPalette.Dark => Palette.HighContrastDark[color].ToColor(),
+        _ => Current(color),
+    };
+
+    /// <summary>Couleur actuelle de Windows pour <paramref name="color"/>.</summary>
     public static Color Current(SystemColor color) => color switch
     {
         SystemColor.Window => SystemColors.WindowColor,

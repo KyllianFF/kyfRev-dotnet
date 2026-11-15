@@ -47,10 +47,21 @@ public interface IWindowChrome
 {
     /// <summary>
     /// Ce qui dépasse de l'espace de travail d'une fenêtre agrandie, en pixels : Windows étend une fenêtre redimensionnable au-delà
-    /// de l'écran, de l'épaisseur de son cadre, et une fenêtre qui dessine le sien doit le compenser.
+    /// de l'écran, de l'épaisseur de son cadre, et une fenêtre qui dessine le sien doit le compenser. Mesuré sur sa zone cliente,
+    /// celle où elle dessine.
     /// </summary>
     /// <param name="windowHandle">La fenêtre.</param>
     WindowOverhang MaximizedOverhang(nint windowHandle);
+
+    /// <summary>
+    /// Agrandie, la fenêtre laisse deux pixels libres sur chaque bord de son écran où la barre des tâches se masque d'elle-même :
+    /// une fenêtre qui dessine jusqu'au bord de l'écran passe pour une fenêtre en plein écran, et la barre ne se montre plus quand la
+    /// souris touche ce bord. Appelée sur <c>WM_NCCALCSIZE</c>, elle rogne la zone cliente proposée.
+    /// </summary>
+    /// <param name="windowHandle">La fenêtre.</param>
+    /// <param name="calcSizeParameters">Le <c>lParam</c> du message : ses paramètres, dont le premier rectangle est la zone cliente proposée.</param>
+    /// <returns>Vrai si la zone a été rognée : la fenêtre répond alors elle-même au message.</returns>
+    bool LeaveRoomForHiddenTaskbar(nint windowHandle, nint calcSizeParameters);
 
     /// <summary>L'espace de travail de l'écran où se trouve la fenêtre <paramref name="windowHandle"/>, en pixels ; vide sans fenêtre.</summary>
     /// <param name="windowHandle">La fenêtre.</param>

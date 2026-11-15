@@ -364,6 +364,18 @@ public static class MoreSettingsText
     /// <summary>Ce que change l'ordre.</summary>
     public const string MenuHelp = "L'ordre des vues du menu de gauche, et donc de Ctrl+1 à Ctrl+9. Santé du coffre et Paramètres restent en bas.";
 
+    /// <summary>Comment changer l'ordre.</summary>
+    public const string MenuHowTo = "Faites glisser une vue à sa place. Au clavier : cliquez-la, puis ↑ et ↓ la déplacent, Début et Fin l'envoient en tête ou en queue.";
+
+    /// <summary>Le nom de la liste, et ce que font ses touches, pour un lecteur d'écran.</summary>
+    public const string MenuListName = "Vues du menu, dans l'ordre";
+
+    /// <summary>Ce que font les touches dans la liste.</summary>
+    public const string MenuListHelp = "Les flèches haut et bas déplacent la vue choisie ; Ctrl et les flèches passent d'une vue à l'autre sans rien déplacer, Espace en choisit une.";
+
+    /// <summary>Une vue déplacée : son nom, son rang, sur combien.</summary>
+    public static string Moved(string view, int rank, int count) => $"{view} : {rank} sur {count}";
+
     /// <summary>Monter une vue.</summary>
     public static string MoveUp(string view) => $"Monter {view}";
 
@@ -730,6 +742,9 @@ public sealed record MenuRow(string Id, string Label)
 
     /// <summary>« Descendre Carnet ».</summary>
     public string DownLabel => MoreSettingsText.MoveDown(Label);
+
+    /// <summary>Son nom : c'est ce que la liste dit d'elle à un lecteur d'écran.</summary>
+    public override string ToString() => Label;
 }
 
 /// <summary>
@@ -872,6 +887,42 @@ public sealed partial class ShortcutsSettingsViewModel : ObservableObject, INavi
         Save(ShortcutMap.Parse(_machine.Current.Shortcuts).Without(row?.Id));
     }
 
+    /// <summary>La vue choisie dans la liste du menu, d'un clic : les flèches haut et bas du clavier la déplacent.</summary>
+    [ObservableProperty]
+    public partial MenuRow? ChosenMenuRow { get; set; }
+
+    /// <summary>Ce que la dernière vue déplacée est devenue, dit aux lecteurs d'écran : « Carnet : 3 sur 7 ».</summary>
+    [ObservableProperty]
+    public partial string? MenuMoved { get; private set; }
+
+    /// <summary>
+    /// Place une vue du menu à ce rang, borné à la liste. Faux si elle y était déjà. Pendant un glissement, <paramref name="save"/>
+    /// est faux : l'ordre s'écrit une fois, au dépôt (<see cref="SaveMenuOrder"/>).
+    /// </summary>
+    internal bool MoveTo(MenuRow row, int index, bool save = true)
+    {
+        var from = Menu.IndexOf(row);
+        var to = Math.Clamp(index, 0, Menu.Count - 1);
+        if (from < 0 || from == to)
+        {
+            return false;
+        }
+        Menu.Move(from, to);
+        MenuMoved = MoreSettingsText.Moved(row.Label, to + 1, Menu.Count);
+        if (save)
+        {
+            SaveMenuOrder();
+        }
+        return true;
+    }
+
+    /// <summary>Écrit l'ordre du menu tel que la liste le montre.</summary>
+    internal void SaveMenuOrder()
+    {
+        var order = string.Join(',', Menu.Select(entry => entry.Id));
+        _machine.Update(preferences => preferences with { MenuOrder = order });
+    }
+
     /// <summary>Monte une vue du menu d'un rang.</summary>
     [RelayCommand]
     private void MoveUp(MenuRow? row) => Move(row, -1);
@@ -896,9 +947,7 @@ public sealed partial class ShortcutsSettingsViewModel : ObservableObject, INavi
         {
             return;
         }
-        Menu.Move(from, to);
-        var order = string.Join(',', Menu.Select(entry => entry.Id));
-        _machine.Update(preferences => preferences with { MenuOrder = order });
+        MoveTo(row!, to);
     }
 
     private void Save(ShortcutMap map)

@@ -20,6 +20,7 @@ public sealed class DesignResources
     private ResourceDictionary _motion;
     private ResourceDictionary _targets;
     private ThemeKind _themeKind;
+    private HighContrastPalette _highContrastPalette;
     private bool _reducedMotion;
     private bool _largerTargets;
 
@@ -54,9 +55,34 @@ public sealed class DesignResources
         set
         {
             _themeKind = value;
-            _theme = Replace(_theme, ThemeDictionary(value));
+            _theme = Replace(_theme, ThemeDictionary(value, _highContrastPalette));
         }
     }
+
+    /// <summary>
+    /// D'où le contraste élevé prend ses couleurs : de Windows quand il y est activé, sinon de kyfRev, claires ou sombres
+    /// selon le thème choisi. Changée en contraste élevé, elle s'applique tout de suite.
+    /// </summary>
+    public HighContrastPalette HighContrastPalette
+    {
+        get => _highContrastPalette;
+        set
+        {
+            if (value == _highContrastPalette)
+            {
+                return;
+            }
+            _highContrastPalette = value;
+            if (_themeKind == ThemeKind.HighContrast)
+            {
+                _theme = Replace(_theme, ThemeDictionary(_themeKind, value));
+            }
+        }
+    }
+
+    /// <summary>Le fond en vigueur est sombre : le thème sombre, ou un contraste élevé sur fond sombre.</summary>
+    public bool IsDark => _theme[DesignKeys.Color(ColorRole.Background)] is Color ground
+        && new TokenColor(ground.A, ground.R, ground.G, ground.B).RelativeLuminance < 0.5;
 
     /// <summary>Animations réduites : durées nulles, squelettes immobiles.</summary>
     public bool ReducedMotion
@@ -81,13 +107,13 @@ public sealed class DesignResources
     }
 
     /// <summary>Couleurs d'un thème : une couleur et un pinceau figé par rôle, et les ombres.</summary>
-    internal static ResourceDictionary ThemeDictionary(ThemeKind theme)
+    internal static ResourceDictionary ThemeDictionary(ThemeKind theme, HighContrastPalette palette = HighContrastPalette.Windows)
     {
         var dictionary = new ResourceDictionary { [DesignKeys.IsHighContrast] = theme == ThemeKind.HighContrast };
         foreach (var role in Enum.GetValues<ColorRole>())
         {
             var color = theme == ThemeKind.HighContrast
-                ? ThemeColors.Current(ThemeColors.HighContrast(role))
+                ? ThemeColors.Current(ThemeColors.HighContrast(role), palette)
                 : ThemeColors.For(theme)[role].ToColor();
             var brush = new SolidColorBrush(color);
             brush.Freeze();

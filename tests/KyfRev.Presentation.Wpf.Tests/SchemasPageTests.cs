@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -7,7 +8,9 @@ using KyfRev.Application.Model;
 using KyfRev.DesignSystem.Tokens;
 using KyfRev.Modules.Schemas;
 using KyfRev.Presentation.Wpf.Pages;
+using KyfRev.Presentation.Wpf.Printing;
 using KyfRev.Presentation.Wpf.Schemas;
+using KyfRev.Presentation.Wpf.Shell;
 
 namespace KyfRev.Presentation.Wpf.Tests;
 
@@ -138,7 +141,7 @@ public sealed class SchemasPageTests
     public void The_page_copies_a_picture_to_the_clipboard_and_says_when_it_cannot()
     {
         using var scene = new BridgeScene();
-        var page = scene.Page();
+        using var page = scene.Page();
         // Une image illisible : un refus dit en clair, pas une exception qui remonte.
         var refusal = Assert.ThrowsExactly<InvalidOperationException>(() => page.CopyImage([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 1, 2, 3]));
         Assert.AreEqual(SchemaText.ClipboardBusy, refusal.Message);
@@ -181,7 +184,7 @@ public sealed class SchemasPageTests
     public void The_page_says_when_the_engine_could_not_start()
     {
         using var scene = new BridgeScene();
-        var page = scene.Page();
+        using var page = scene.Page();
         Assert.IsFalse(page.HasProblem);
 
         page.Problem = SchemaText.EngineFailedOf("absent");
@@ -257,7 +260,19 @@ public sealed class SchemasPageTests
             UiThread.Until(() => Count("svg.canevas g.lien .trait") == before + 1, TimeSpan.FromSeconds(15));
         }
         Cable();
-        Cable();
+
+        // Le second à la souris, en deux clics sans glisser : le pointillé qui suit le pointeur ne prend pas le second clic.
+        var centres = JsonSerializer.Deserialize<double[][]>(Text("JSON.stringify([...document.querySelectorAll('svg.canevas g.equipement')].map((g) => { const r = g.getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; }))"))!;
+        var cables = Count("svg.canevas g.lien .trait");
+        scene.Script("document.querySelector('nav.outils .outil[data-outil=\"cable\"]').click()");
+        scene.Click(centres[0][0], centres[0][1]);
+        scene.WaitFor("document.body.innerText.includes('cliquez l\\'autre équipement')");
+        scene.Mouse("mouseMoved", centres[1][0], centres[1][1]);
+        var there = string.Join(',', centres[1].Select(c => c.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+        Assert.AreEqual("true", scene.Script("document.querySelector('line.fil') !== null"), "le pointillé suit le pointeur jusqu'à l'autre équipement");
+        Assert.AreEqual("true", scene.Script($"document.elementFromPoint({there}).closest('g.equipement') !== null"), "sous le pointeur, c'est l'équipement qui reçoit le clic, pas le pointillé");
+        scene.Click(centres[1][0], centres[1][1]);
+        UiThread.Until(() => Count("svg.canevas g.lien .trait") == cables + 1, TimeSpan.FromSeconds(15));
         Assert.AreEqual(0, Count("dialog[open] dialog[open]"), "aucune fenêtre de connexion ne s'ouvre");
         scene.Picture($"schemas-simplifie-{(theme == ThemeKind.Dark ? "sombre" : "clair")}-cables");
 
@@ -277,12 +292,25 @@ public sealed class SchemasPageTests
         scene.Script("document.querySelector('nav.outils .outil[data-outil=\"choisir\"]').click()");
         scene.Script("(() => { const lien = document.querySelector('svg.canevas g.lien'); lien.focus(); lien.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true, cancelable: true })); })()");
         scene.WaitFor("document.querySelector('.bulle button[role=switch][data-option=\"agregat\"]') !== null && document.querySelector('.bulle button[role=switch][data-option=\"trunk\"]') !== null");
+        // Un câble se choisit seul, même si un autre relie les deux mêmes équipements : lui seul est en surbrillance, sans cadre.
+        Assert.AreEqual(1, Count("svg.canevas g.lien.choisi"));
+        Assert.AreEqual(1, Count("svg.canevas path.halo"));
+        Assert.AreEqual(0, Count("svg.canevas rect.cadre-objet"));
         string Labels() => Text("[...document.querySelectorAll('svg.canevas .etiquettes text')].map((texte) => texte.textContent.trim()).join(' | ')");
         void Type(string field, string value) =>
             scene.Script($"(() => {{ const champ = document.getElementById('{field}'); champ.value = '{value}'; champ.dispatchEvent(new Event('input', {{ bubbles: true }})); champ.dispatchEvent(new Event('change', {{ bubbles: true }})); }})()");
         // Deux câbles entre deux commutateurs, sans agrégat : la bulle conseille, sans rien bloquer.
         StringAssert.Contains(Text("[...document.querySelectorAll('.bulle [role=note]')].map((note) => note.textContent).join(' ')"), "boucle", StringComparison.Ordinal);
-        Assert.AreEqual(0, Count("#bulle-vlan-non-tague"), "sans trunk, pas de champs de VLAN");
+        // Sans trunk, les ports sont en accès : un seul champ, le VLAN non tagué ; le câble s'annote « Access · U 30 ».
+        Assert.AreEqual(0, Count("#bulle-vlan-non-tague"), "sans trunk, pas les champs du trunk");
+        Assert.AreEqual(1, Count("#bulle-vlan-acces"));
+        Type("bulle-vlan-acces", "4095");
+        scene.WaitFor("document.querySelector('.bulle [role=alert]') !== null");
+        Type("bulle-vlan-acces", "30");
+        UiThread.Until(() => Labels().Contains("Access · U 30", StringComparison.Ordinal), TimeSpan.FromSeconds(15));
+        Assert.AreEqual(0, Count(".bulle [role=alert]"), "corrigé, plus d'erreur");
+        Assert.AreEqual(1, Labels().Split(" | ").Count(label => label.StartsWith("Access", StringComparison.Ordinal)), "seul le câble choisi est en accès sur ce VLAN");
+        scene.Picture($"schemas-simplifie-{(theme == ThemeKind.Dark ? "sombre" : "clair")}-acces");
 
         // « Trunk » : il libère deux champs, et le câble est annoté de ses VLAN. Pas de cercle : le cercle est pour l'agrégat.
         scene.Script("document.querySelector('.bulle button[role=switch][data-option=\"trunk\"]').click()");
@@ -302,6 +330,13 @@ public sealed class SchemasPageTests
         Assert.IsTrue(Labels().Contains("T 10,20,30", StringComparison.Ordinal), "le dessin garde les VLAN valides");
         Type("bulle-vlans-tagues", "10,20,30");
 
+        // Ctrl+Entrée, comme Ctrl+clic, choisit l'autre câble avec le premier : la bulle les règle ensemble.
+        scene.Script("(() => { const lien = document.querySelectorAll('svg.canevas g.lien')[1]; lien.focus(); lien.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', ctrlKey: true, bubbles: true, cancelable: true })); })()");
+        scene.WaitFor("document.querySelectorAll('svg.canevas g.lien.choisi').length === 2 && document.getElementById('bulle-choix') !== null");
+        StringAssert.Contains(Text("document.getElementById('bulle-choix').textContent"), "2 câbles choisis", StringComparison.Ordinal);
+        Assert.AreEqual(2, Count("svg.canevas path.halo"));
+        scene.Picture($"schemas-simplifie-{(theme == ThemeKind.Dark ? "sombre" : "clair")}-deux-choisis");
+
         // « Agrégat de liens » : les deux câbles sous un cercle, autant de traits que de câbles, et une seule annotation de trunk.
         scene.Script("document.querySelector('.bulle button[role=switch][data-option=\"agregat\"]').click()");
         UiThread.Until(() => Count("svg.canevas g.lien ellipse") == 1, TimeSpan.FromSeconds(15));
@@ -309,6 +344,12 @@ public sealed class SchemasPageTests
         Assert.AreEqual(1, Labels().Split(" | ").Count(label => label.StartsWith("Trunk", StringComparison.Ordinal)), "une seule annotation pour le groupe");
         StringAssert.Contains(Labels(), "Trunk · U 99 · T 10,20,30", StringComparison.Ordinal, "le trunk suit l'agrégat");
         scene.Picture($"schemas-simplifie-{(theme == ThemeKind.Dark ? "sombre" : "clair")}-agregat");
+
+        // Les autres types de câble, dont « Haute disponibilité » : son nom tient dans son bouton.
+        scene.Script("document.querySelector('.bulle .type.plus').click()");
+        scene.WaitFor("document.querySelector('.bulle .type[data-support=\"haute-disponibilite\"]') !== null");
+        Assert.AreEqual("true", scene.Script("(() => { const bouton = document.querySelector('.bulle .type[data-support=\"haute-disponibilite\"]'); return bouton.scrollWidth <= bouton.clientWidth + 1; })()"));
+        scene.Picture($"schemas-simplifie-{(theme == ThemeKind.Dark ? "sombre" : "clair")}-types");
 
         // Le fichier : un vrai agrégat, qui porte le trunk et ses VLAN.
         UiThread.Until(() => (JsonNode.Parse(scene.Schemas.Read(id).Value.Text)!["agregats"] as JsonArray)?.Count >= 1, TimeSpan.FromSeconds(20));
@@ -363,6 +404,47 @@ public sealed class SchemasPageTests
         scene.Script("(() => { const svg = [...document.querySelectorAll('dialog[open] input[type=radio]')].find((choix) => choix.value === 'svg'); svg.click(); document.querySelector('dialog[open] form').requestSubmit(); })()");
         UiThread.Until(() => Directory.Exists(folder) && Directory.GetFiles(folder, "*.svg").Length == 1, TimeSpan.FromSeconds(30));
         StringAssert.Contains(File.ReadAllText(Directory.GetFiles(folder, "*.svg").Single()), "<svg", StringComparison.Ordinal);
+
+        // « Imprimer… » : la fenêtre « Imprimer » de l'application, sur une image fine du schéma ; l'îlot est recouvert le temps qu'elle est ouverte.
+        var model = (SchemasPageViewModel)scene.Page.DataContext;
+        scene.Script("document.querySelector('li.carte').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 60, clientY: 60 }))");
+        scene.WaitFor("document.querySelector('.menu[role=menu]') !== null");
+        scene.Script("[...document.querySelectorAll('.menu [role=menuitem]')].find((entree) => entree.textContent.includes('Imprimer')).click()");
+        UiThread.Until(() => model.Print.IsOpen, TimeSpan.FromSeconds(30));
+        Assert.AreEqual("Imprimer « Réseau »", model.Print.Title);
+        Assert.IsGreaterThanOrEqualTo(3000, Math.Max(model.Print.Picture!.PixelWidth, model.Print.Picture.PixelHeight), "assez fine pour le papier");
+        UiThread.Until(() => scene.Page.Island!.IsCovered, TimeSpan.FromSeconds(10));
+        model.Print.Close();
+        UiThread.Until(() => !scene.Page.Island!.IsCovered, TimeSpan.FromSeconds(10));
+    }
+
+    [EngineTest]
+    public void A_schema_is_read_in_a_centred_column_at_every_width()
+    {
+        using var scene = new IslandScene(Text);
+        scene.WaitFor("document.querySelector('li.carte .apercu') !== null");
+        scene.Script("document.querySelector('li.carte .apercu').click()");
+        scene.WaitFor("document.querySelector('.grand-apercu svg') !== null");
+
+        // Du plus large au plus étroit : la colonne de lecture se tient au milieu, sans défilement de côté.
+        foreach (var (width, theme) in new[] { (2400d, ThemeKind.Light), (1300d, ThemeKind.Dark), (480d, ThemeKind.Light) })
+        {
+            var before = scene.Script("document.documentElement.clientWidth");
+            scene.Page.Width = width;
+            scene.Test.Design.Theme = theme;
+            TestShell.Flush();
+            UiThread.Until(() => scene.Script("document.documentElement.clientWidth") != before, TimeSpan.FromSeconds(20));
+            var sides = scene.Script("(() => { const v = document.querySelector('.vue').getBoundingClientRect(); return [Math.round(v.left), Math.round(document.documentElement.clientWidth - v.right)].join(' '); })()");
+            var (left, right) = (int.Parse(sides.Trim('"').Split(' ')[0], CultureInfo.InvariantCulture), int.Parse(sides.Trim('"').Split(' ')[1], CultureInfo.InvariantCulture));
+            Assert.IsLessThanOrEqualTo(1, Math.Abs(left - right), $"au milieu à {width} : {sides}");
+            if (width > 1300)
+            {
+                Assert.IsGreaterThan(100, left, "une grande fenêtre laisse de la place des deux côtés");
+            }
+            Assert.AreEqual("0", scene.Script("document.documentElement.scrollWidth - document.documentElement.clientWidth"), $"pas de défilement de côté à {width}");
+            scene.WaitFor("document.getAnimations().length === 0");
+            scene.Picture($"schemas-lecture-{width}-{theme}");
+        }
     }
 
     [EngineTest]
@@ -409,7 +491,256 @@ public sealed class SchemasPageTests
         Assert.IsNull(scene.Page.Island, "Sans vue, plus d'îlot.");
     }
 
+    [EngineTest]
+    public void Leaving_the_view_keeps_its_island_and_coming_back_rereads_the_list_at_once()
+    {
+        using var scene = new IslandScene(Text);
+        scene.WaitFor("document.querySelectorAll('li.carte').length === 1");
+        var model = (SchemasPageViewModel)scene.Page.DataContext;
+        var island = scene.Page.Island!;
+
+        // La vue part : l'îlot quitte l'affichage, mais reste ouvert avec sa vue-modèle.
+        scene.Page.DataContext = null;
+        TestShell.Flush();
+        Assert.IsNull(scene.Page.Island);
+        Assert.AreSame(island, model.Island);
+        Assert.IsFalse(island.IsDisposed);
+
+        // Pendant ce temps, un schéma arrive dans le coffre ; de retour, le même îlot, déjà prêt, relit la liste.
+        scene.Schemas.Create(Text.Replace("Réseau", "Autre réseau", StringComparison.Ordinal)).Value.ToString();
+        scene.Page.DataContext = model;
+        TestShell.Flush();
+        Assert.AreSame(island, scene.Page.Island);
+        Assert.IsTrue(island.IsReady, "rien à recharger : la page est déjà là");
+        scene.WaitFor("document.querySelectorAll('li.carte').length === 2");
+
+        // La vue-modèle remplacée (un coffre verrouillé, un autre coffre) ferme son îlot ; une nouvelle en ouvre un autre.
+        scene.Page.DataContext = null;
+        model.Dispose();
+        Assert.IsTrue(island.IsDisposed);
+        Assert.IsNull(model.Island);
+        Assert.ThrowsExactly<ObjectDisposedException>(() => model.TakeIsland());
+    }
+
+    [EngineTest]
+    public void The_island_warms_up_hidden_and_the_view_then_shows_it_at_once()
+    {
+        using var ui = new UiThread();
+        using var vaults = new TestVaults(AppMode.Development);
+        vaults.App.Vaults.Create(vaults.PathOf("Coffre"));
+        var schemas = new SchemaUseCases(vaults.App.Host);
+        schemas.Create(Text).Value.ToString();
+        var test = new TestShell();
+        using var model = new SchemasPageViewModel(schemas, vaults.Picker, new FakeOpener(), FakeEnvironment.WebData);
+        var hidden = new ContentControl { Width = 320, Height = 240, Visibility = Visibility.Hidden };
+        var place = new Canvas();
+        var window = new Window { Content = new Grid { Children = { place, hidden } }, Left = -10000, Top = -10000, Width = 800, Height = 600, ShowActivated = false, ShowInTaskbar = false };
+        window.Resources.MergedDictionaries.Add(test.Design.Dictionary);
+        window.Show();
+        try
+        {
+            SchemasPageViewModel? offered = null;
+            var warmUp = new SchemaWarmUp(hidden, () => offered) { Delay = TimeSpan.FromMilliseconds(50) };
+            warmUp.Warm();
+            Assert.IsNull(hidden.Content, "sans module des schémas, rien à préparer");
+
+            // Le coffre ouvert : après le délai, l'îlot démarre caché, puis quitte sa place, prêt.
+            offered = model;
+            warmUp.Schedule();
+            warmUp.Schedule();
+            UiThread.Until(() => model.Island is { IsReady: true } && hidden.Content is null, TimeSpan.FromMinutes(2));
+            var island = model.Island!;
+            warmUp.Warm();
+            Assert.IsNull(hidden.Content, "déjà prêt : rien de plus");
+
+            // La vue s'affiche : le même îlot, tout de suite.
+            var page = new SchemasPage { DataContext = model, Width = 1300, Height = 860 };
+            place.Children.Add(page);
+            TestShell.Flush();
+            Assert.AreSame(island, page.Island);
+            Assert.IsTrue(island.IsReady);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [TestMethod]
+    public void The_engine_keeps_off_the_frame_of_the_window_where_it_touches_it()
+    {
+        var window = new Size(1200, 800);
+        Assert.AreEqual(default, ShellWindow.FrameInset(new Rect(220, 40, 900, 700), window), "loin du cadre : rien");
+        Assert.AreEqual(new Thickness(0, 0, 6, 6), ShellWindow.FrameInset(new Rect(220, 40, 980, 760), window), "posé sur les bords droit et bas");
+        Assert.AreEqual(new Thickness(6, 0, 4, 0), ShellWindow.FrameInset(new Rect(0, 40, 1198, 700), window), "menu replié : le bord gauche aussi");
+    }
+
+    [EngineTest]
+    public void The_island_leaves_the_frame_to_the_window_only_while_it_resizes()
+    {
+        using var ui = new UiThread();
+        using var vaults = new TestVaults(AppMode.Development);
+        vaults.App.Vaults.Create(vaults.PathOf("Coffre"));
+        var test = new TestShell();
+        using var model = new SchemasPageViewModel(new SchemaUseCases(vaults.App.Host), vaults.Picker, new FakeOpener(), FakeEnvironment.WebData);
+        var page = new SchemasPage { DataContext = model };
+        // Une fenêtre qui dessine son cadre, comme celle de kyfRev : son bord de redimensionnement est dans ce qu'elle affiche.
+        var window = new Window { Content = page, Left = -10000, Top = -10000, Width = 800, Height = 600, ShowActivated = false, ShowInTaskbar = false };
+        System.Windows.Shell.WindowChrome.SetWindowChrome(window, new System.Windows.Shell.WindowChrome { CaptionHeight = 0, ResizeBorderThickness = new Thickness(6), GlassFrameThickness = default });
+        window.Resources.MergedDictionaries.Add(test.Design.Dictionary);
+        window.Show();
+        try
+        {
+            TestShell.Flush();
+            var island = page.Island!;
+            UiThread.Until(() => island.EngineMargin == new Thickness(6));
+            window.ResizeMode = ResizeMode.NoResize;
+            window.InvalidateMeasure();
+            UiThread.Until(() => island.EngineMargin == default);
+
+            // Sans cadre dessiné, c'est Windows qui tient le bord : rien à laisser.
+            window.ResizeMode = ResizeMode.CanResize;
+            System.Windows.Shell.WindowChrome.SetWindowChrome(window, null);
+            window.InvalidateMeasure();
+            UiThread.Until(() => island.EngineMargin == default);
+            island.KeepOffTheFrame();
+            Assert.AreEqual(default, island.EngineMargin);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
     /// <summary>Le pont seul, sur un vrai coffre.</summary>
+    [TestMethod]
+    public async Task The_bridge_prints_a_picture_through_the_window_of_the_app_and_only_a_picture()
+    {
+        using var scene = new BridgeScene();
+        var png = Convert.FromBase64String(OnePixel);
+        var asked = new List<(string Title, byte[] Picture)>();
+        var outcomes = new Queue<string?>(["Envoyé à l'imprimante « Bureau ».", null]);
+        var bridge = new SchemaBridge(new SchemaUseCases(scene.Vaults.App.Host), scene.Picker, () => null, _ => { }, print: (title, picture) =>
+        {
+            asked.Add((title, picture));
+            return Task.FromResult(outcomes.Dequeue());
+        });
+        async Task<JsonObject> Print(params string[] args) =>
+            JsonNode.Parse((await bridge.ReceiveAsync(JsonSerializer.Serialize(new { kind = "call", id = 4, method = "imprimerSchema", args })))!)!.AsObject();
+
+        // La fenêtre s'ouvre sur l'image, sous son titre ; la réponse vient quand elle se ferme : le travail parti, ou rien.
+        var sent = await Print("Réseau du lycée", Convert.ToBase64String(png));
+        Assert.IsTrue(sent["ok"]!.GetValue<bool>());
+        Assert.AreEqual("Envoyé à l'imprimante « Bureau ».", sent["value"]!.GetValue<string>());
+        Assert.AreEqual("Réseau du lycée", asked.Single().Title);
+        CollectionAssert.AreEqual(png, asked.Single().Picture);
+        var closed = await Print("Réseau du lycée", Convert.ToBase64String(png));
+        Assert.IsTrue(closed["ok"]!.GetValue<bool>());
+        Assert.IsNull(closed["value"]);
+
+        // Autre chose qu'une image PNG, pas de titre, ou du texte qui n'est pas du base64 : refusé, rien ne s'ouvre.
+        foreach (var bad in new[] { new[] { "Réseau", Convert.ToBase64String("<svg/>"u8.ToArray()) }, ["Réseau", string.Empty], ["Réseau", "pas du base64 !"], [Convert.ToBase64String(png)] })
+        {
+            Assert.IsFalse((await Print(bad))["ok"]!.GetValue<bool>(), string.Join(" ", bad));
+        }
+        Assert.HasCount(2, asked);
+
+        // Sans fenêtre pour imprimer, l'appel est refusé comme un appel inconnu.
+        var refused = await scene.AnswerAsync(JsonSerializer.Serialize(new { kind = "call", id = 5, method = "imprimerSchema", args = new[] { "Réseau", Convert.ToBase64String(png) } }));
+        Assert.IsFalse(refused["ok"]!.GetValue<bool>());
+        Assert.AreEqual(SchemaText.BadCall, refused["error"]!.GetValue<string>());
+    }
+
+    [STATestMethod]
+    public void The_page_opens_the_print_window_on_the_picture_and_says_what_became_of_it()
+    {
+        using var ui = new UiThread();
+        using var scene = new BridgeScene();
+        using var page = new SchemasPageViewModel(new SchemaUseCases(scene.Vaults.App.Host), scene.Picker, new FakeOpener(), FakeEnvironment.WebData, new OnePrinter());
+        var png = Convert.FromBase64String(OnePixel);
+
+        // Fermée sans imprimer : l'îlot n'a rien à dire.
+        var closed = page.PrintPictureAsync("Réseau du lycée", png);
+        Assert.IsTrue(page.Print.IsOpen);
+        Assert.AreEqual("Réseau du lycée", page.Print.PictureTitle);
+        Assert.AreEqual(1, page.Print.Picture!.PixelWidth);
+        page.Print.Close();
+        Assert.IsTrue(closed.IsCompletedSuccessfully);
+        Assert.IsNull(closed.Result);
+
+        // Une autre demande remplace celle d'une fenêtre restée ouverte, qui n'imprimera pas.
+        var forgotten = page.PrintPictureAsync("Premier", png);
+        var printed = page.PrintPictureAsync("Second", png);
+        Assert.IsTrue(forgotten.IsCompletedSuccessfully);
+        Assert.IsNull(forgotten.Result);
+        UiThread.Until(() => !page.Print.IsLookingForPrinters);
+        page.Print.Paginator = (_, _) => new System.Windows.Documents.FixedDocument().DocumentPaginator;
+        Assert.IsTrue(page.Print.Print());
+        Assert.AreEqual("Envoyé à l'imprimante « Bureau ».", printed.Result);
+        Assert.IsFalse(page.Print.IsOpen);
+
+        // Une image illisible : refusée comme un appel mal formé, et la fenêtre ne s'ouvre pas.
+        var refusal = Assert.ThrowsExactly<ArgumentException>(() => page.PrintPictureAsync("Réseau", [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 1, 2, 3]));
+        Assert.AreEqual(SchemaText.BadCall, refusal.Message);
+        Assert.IsFalse(page.Print.IsOpen);
+    }
+
+    [STATestMethod]
+    public void The_page_shows_the_print_window_of_the_app_over_the_schemas()
+    {
+        using var ui = new UiThread();
+        using var scene = new BridgeScene();
+        var printer = new OnePrinter();
+        using var model = new SchemasPageViewModel(new SchemaUseCases(scene.Vaults.App.Host), scene.Picker, new FakeOpener(), FakeEnvironment.WebData, printer);
+        var page = new SchemasPage { DataContext = model };
+        var dialog = (KyfRev.DesignSystem.Controls.Dialog)page.FindName("PrintDialog");
+        TestShell.Flush();
+        Assert.AreSame(model.Print, dialog.DataContext);
+        Assert.IsFalse(dialog.IsOpen);
+        _ = model.PrintPictureAsync("Réseau du lycée", Convert.FromBase64String(OnePixel));
+        TestShell.Flush();
+        Assert.IsTrue(dialog.IsOpen);
+        Assert.AreEqual("Imprimer « Réseau du lycée »", dialog.Title);
+        Assert.IsInstanceOfType<PrintView>(dialog.Content);
+        model.Print.Close();
+        TestShell.Flush();
+        Assert.IsFalse(dialog.IsOpen);
+
+        // « Annuler » ferme sans imprimer ; « Imprimer » refusé par l'imprimante laisse la fenêtre ouverte, qui dit pourquoi ; accepté, il la ferme.
+        var cancelled = model.PrintPictureAsync("Réseau du lycée", Convert.FromBase64String(OnePixel));
+        TestShell.Flush();
+        dialog.Close(KyfRev.DesignSystem.Controls.DialogChoice.None);
+        TestShell.Flush();
+        Assert.IsFalse(model.Print.IsOpen);
+        Assert.IsNull(cancelled.Result);
+        var printed = model.PrintPictureAsync("Réseau du lycée", Convert.FromBase64String(OnePixel));
+        UiThread.Until(() => model.Print.CanPrint);
+        printer.Refusal = "Plus de papier.";
+        dialog.Close(KyfRev.DesignSystem.Controls.DialogChoice.Primary);
+        TestShell.Flush();
+        Assert.IsTrue(dialog.IsOpen);
+        StringAssert.Contains(model.Print.Error, "Plus de papier.", StringComparison.Ordinal);
+        Assert.IsFalse(printed.IsCompleted);
+        printer.Refusal = null;
+        dialog.Close(KyfRev.DesignSystem.Controls.DialogChoice.Primary);
+        TestShell.Flush();
+        Assert.IsFalse(dialog.IsOpen);
+        Assert.AreEqual("Envoyé à l'imprimante « Bureau ».", printed.Result);
+    }
+
+    /// <summary>Une image PNG d'un point.</summary>
+    private const string OnePixel = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAEBgIApD5fRAAAAABJRU5ErkJggg==";
+
+    /// <summary>Une imprimante, qui accepte tout, sauf quand on lui donne de quoi refuser.</summary>
+    private sealed class OnePrinter : IPrintService
+    {
+        public string? Refusal { get; set; }
+
+        public IReadOnlyList<PrinterInfo> Printers() => [new("Bureau", true)];
+
+        public string? Print(PrintJob job, System.Windows.Documents.DocumentPaginator pages) => Refusal;
+    }
+
     private sealed class BridgeScene : IDisposable
     {
         public BridgeScene()
@@ -530,9 +861,27 @@ public sealed class SchemasPageTests
 
         public void WaitFor(string condition) => UiThread.Until(() => Script(condition) == "true", TimeSpan.FromSeconds(20));
 
+        /// <summary>Un vrai geste de la souris, donné au moteur comme s'il venait de Windows, à ce point de la page.</summary>
+        public void Mouse(string type, double x, double y)
+        {
+            var parameters = JsonSerializer.Serialize(new { type, x, y, button = type == "mouseMoved" ? "none" : "left", clickCount = type == "mouseMoved" ? 0 : 1 });
+            var run = Page.Island!.CallDevToolsAsync("Input.dispatchMouseEvent", parameters);
+            UiThread.Until(() => run.IsCompleted);
+            TestShell.Flush();
+        }
+
+        /// <summary>Un clic de la souris : appuyer, relâcher, au même point.</summary>
+        public void Click(double x, double y)
+        {
+            Mouse("mouseMoved", x, y);
+            Mouse("mousePressed", x, y);
+            Mouse("mouseReleased", x, y);
+        }
+
         public void Dispose()
         {
             _window.Close();
+            (Page.DataContext as IDisposable)?.Dispose();
             _vaults.Dispose();
             _ui.Dispose();
         }

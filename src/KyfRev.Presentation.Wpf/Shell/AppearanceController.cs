@@ -56,6 +56,12 @@ public sealed partial class AppearanceController : ObservableObject, IDisposable
     /// <summary>Thème en vigueur.</summary>
     public ThemeKind Theme => _design.Theme;
 
+    /// <summary>Le fond en vigueur est sombre : le thème sombre, ou un contraste élevé sombre.</summary>
+    public bool IsDark => _design.IsDark;
+
+    /// <summary>Windows est en contraste élevé : ses couleurs passent avant tout choix de thème.</summary>
+    public bool FollowsWindowsContrast => _system.HighContrast;
+
     /// <summary>Ressources du design system, à fusionner dans celles de l'application.</summary>
     public ResourceDictionary Resources => _design.Dictionary;
 
@@ -84,14 +90,17 @@ public sealed partial class AppearanceController : ObservableObject, IDisposable
 
     private void Apply()
     {
-        _design.Theme = _system.HighContrast || ForcesHighContrast
-            ? ThemeKind.HighContrast
-            : Preference switch
-            {
-                ThemePreference.Light => ThemeKind.Light,
-                ThemePreference.Dark => ThemeKind.Dark,
-                _ => _system.PrefersDarkTheme ? ThemeKind.Dark : ThemeKind.Light,
-            };
+        var chosen = Preference switch
+        {
+            ThemePreference.Light => ThemeKind.Light,
+            ThemePreference.Dark => ThemeKind.Dark,
+            _ => _system.PrefersDarkTheme ? ThemeKind.Dark : ThemeKind.Light,
+        };
+        // Le contraste de Windows prend ses couleurs ; forcé dans kyfRev, il garde le thème choisi, clair ou sombre.
+        _design.HighContrastPalette = _system.HighContrast
+            ? HighContrastPalette.Windows
+            : chosen == ThemeKind.Dark ? HighContrastPalette.Dark : HighContrastPalette.Light;
+        _design.Theme = _system.HighContrast || ForcesHighContrast ? ThemeKind.HighContrast : chosen;
         _design.ReducedMotion = _system.ReducedMotion || ForcesReducedMotion;
         foreach (var window in _windows)
         {
@@ -102,6 +111,9 @@ public sealed partial class AppearanceController : ObservableObject, IDisposable
 
     /// <summary>Ce qui dépasse de l'écran d'une fenêtre agrandie, en pixels.</summary>
     internal WindowOverhang MaximizedOverhang(nint window) => _chrome.MaximizedOverhang(window);
+
+    /// <summary>Agrandie, la fenêtre laisse de quoi faire apparaître une barre des tâches masquée ; vrai si elle a rogné sa zone cliente.</summary>
+    internal bool LeaveRoomForHiddenTaskbar(nint window, nint calcSizeParameters) => _chrome.LeaveRoomForHiddenTaskbar(window, calcSizeParameters);
 
     /// <summary>Ce qui se voit vraiment de la fenêtre, en pixels ; vide si Windows ne le dit pas.</summary>
     internal ScreenBounds VisibleBounds(nint window) => _chrome.VisibleBounds(window);
@@ -114,7 +126,7 @@ public sealed partial class AppearanceController : ObservableObject, IDisposable
         var handle = new WindowInteropHelper(window).Handle;
         if (handle != 0)
         {
-            _chrome.UseDarkTitleBar(handle, _design.Theme == ThemeKind.Dark);
+            _chrome.UseDarkTitleBar(handle, _design.IsDark);
         }
     }
 }

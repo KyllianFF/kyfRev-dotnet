@@ -18,7 +18,8 @@ export type DepuisHote =
   | Reponse
   | { kind: "theme"; variables: Record<string, string> }
   | { kind: "open"; id: string }
-  | { kind: "finir"; numero: number };
+  | { kind: "finir"; numero: number }
+  | { kind: "revenu" };
 
 const attentes = new Map<number, Attente>();
 let suivant = 1;
@@ -53,6 +54,11 @@ export function recevoir(message: DepuisHote): void {
   }
   if (message.kind === "open") {
     document.dispatchEvent(new CustomEvent("ouvrir-schema", { detail: message.id }));
+    return;
+  }
+  if (message.kind === "revenu") {
+    // La vue est de nouveau affichée, l'îlot gardé ouvert depuis : la liste relit le coffre.
+    document.dispatchEvent(new Event("schemas-revenus"));
     return;
   }
   if (message.kind === "finir") {
@@ -91,6 +97,11 @@ export const api = {
   exporterSchema: (dossier: string, nom: string, octets: Uint8Array) => appeler<string>("exporterSchema", dossier, nom, base64(octets)),
   /** L'image PNG d'un schéma va dans le presse-papiers ; une erreur dit pourquoi ce n'est pas fait. */
   copierImageSchema: (octets: Uint8Array) => appeler<null>("copierImageSchema", base64(octets)),
+  /**
+   * Ouvre la fenêtre « Imprimer » de l'application sur l'image PNG d'un schéma, sous son titre. Répond quand elle se ferme :
+   * ce qu'il faut dire du travail parti, ou rien s'il n'est pas parti.
+   */
+  imprimerSchema: (titre: string, octets: Uint8Array) => appeler<string | null>("imprimerSchema", titre, base64(octets)),
   choisirDossier: (titre: string) => appeler<string | null>("choisirDossier", titre),
   choisirFichierSchema: () => appeler<string | null>("choisirFichierSchema"),
   lireImportSchema: (chemin: string) => appeler<string>("lireImportSchema", chemin),

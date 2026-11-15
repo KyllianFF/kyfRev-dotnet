@@ -504,7 +504,8 @@
     }
     try {
       const { schema: aImprimer, vue } = sortie(true);
-      await imprimerSchema(aImprimer, vue);
+      const parti = await imprimerSchema(aImprimer, vue);
+      if (parti) editeur.annonce = parti;
     } catch (e) {
       editeur.annonce = `Impression impossible : ${messageErreur(e)}`;
     }

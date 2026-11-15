@@ -57,6 +57,45 @@ public abstract class VaultSessionTests(StorageKind storage)
     }
 
     [TestMethod]
+    public void A_vault_whose_copy_has_not_finished_says_so_and_nothing_is_written()
+    {
+        // Un dossier synchronisé reçu à moitié : .suivi et son verrou sont là, pas coffre.json.
+        using var folder = TemporaryVault.Empty(storage);
+        var tracking = Path.Combine(folder.Root, ".suivi");
+        Directory.CreateDirectory(tracking);
+        File.WriteAllBytes(Path.Combine(tracking, "verrou"), []);
+
+        var error = Assert.ThrowsExactly<VaultException>(() => folder.Open(Now));
+
+        Assert.AreEqual(VaultErrorKind.NotAVault, error.Kind);
+        StringAssert.Contains(error.Message, "la copie de ce coffre n'est pas finie", StringComparison.Ordinal);
+        StringAssert.Contains(error.Message, "dossier synchronisé", StringComparison.Ordinal);
+        StringAssert.Contains(error.Message, "ouvrez-le d'abord sur le poste qui l'a écrit", StringComparison.Ordinal);
+        Assert.AreEqual("verrou", Path.GetFileName(Directory.GetFiles(tracking).Single()), "rien d'écrit, pas même le verrou-info");
+    }
+
+    [TestMethod]
+    public void Opening_a_vault_releases_the_files_an_earlier_version_kept_from_sync_services()
+    {
+        using var folder = TemporaryVault.Empty(storage);
+        using (var first = folder.Initialize(Now))
+        {
+            first.CreateSheet(null, "Fiche", "Corps", Now);
+        }
+        // Tout ce qui est sur le disque, comme l'écrivaient les versions d'avant : coffre.json, fiches, suivis, ou objets chiffrés.
+        var files = Directory.GetFiles(folder.Root, "*", SearchOption.AllDirectories);
+        Assert.IsGreaterThan(2, files.Length);
+        foreach (var file in files)
+        {
+            File.SetAttributes(file, File.GetAttributes(file) | FileAttributes.Temporary);
+        }
+
+        using var vault = folder.Open(Now);
+
+        Assert.IsEmpty(files.Where(file => File.GetAttributes(file).HasFlag(FileAttributes.Temporary)));
+    }
+
+    [TestMethod]
     public void A_vault_opened_twice_names_who_holds_it()
     {
         using var folder = TemporaryVault.Empty(storage);

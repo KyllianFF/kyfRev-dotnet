@@ -120,6 +120,36 @@ public sealed class TokenTests
     }
 
     [TestMethod]
+    public void The_high_contrast_of_kyfrev_reads_at_seven_to_one_in_light_and_dark()
+    {
+        foreach (var set in new[] { Palette.HighContrastLight, Palette.HighContrastDark })
+        {
+            Assert.IsGreaterThanOrEqualTo(7.0, set.WindowText.ContrastWith(set.Window));
+            Assert.IsGreaterThanOrEqualTo(7.0, set.HighlightText.ContrastWith(set.Highlight));
+            Assert.IsGreaterThanOrEqualTo(7.0, set.HotTrack.ContrastWith(set.Window));
+            Assert.IsGreaterThanOrEqualTo(7.0, set.Highlight.ContrastWith(set.Window));
+            foreach (var color in Enum.GetValues<SystemColor>())
+            {
+                Assert.AreEqual(set[color].ToColor(), ThemeColors.Current(color, set == Palette.HighContrastLight ? HighContrastPalette.Light : HighContrastPalette.Dark));
+            }
+        }
+        Assert.IsLessThan(0.1, Palette.HighContrastDark.Window.RelativeLuminance);
+        Assert.IsGreaterThan(0.9, Palette.HighContrastLight.Window.RelativeLuminance);
+        Assert.AreEqual(ThemeColors.Current(SystemColor.HotTrack), ThemeColors.Current(SystemColor.HotTrack, HighContrastPalette.Windows));
+
+        // Changée en contraste élevé, la palette s'applique tout de suite ; hors contraste, elle attend.
+        var design = new DesignResources(ThemeKind.Dark, reducedMotion: false);
+        design.HighContrastPalette = HighContrastPalette.Light;
+        Assert.IsTrue(design.IsDark, "le thème sombre reste sombre");
+        design.Theme = ThemeKind.HighContrast;
+        Assert.IsFalse(design.IsDark);
+        design.HighContrastPalette = HighContrastPalette.Dark;
+        Assert.IsTrue(design.IsDark);
+        design.HighContrastPalette = HighContrastPalette.Dark;
+        Assert.AreEqual(HighContrastPalette.Dark, design.HighContrastPalette);
+    }
+
+    [TestMethod]
     public void High_contrast_uses_only_the_pairs_windows_guarantees()
     {
         (SystemColor, SystemColor)[] guaranteed =

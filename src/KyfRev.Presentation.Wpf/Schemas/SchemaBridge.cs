@@ -11,9 +11,13 @@ namespace KyfRev.Presentation.Wpf.Schemas;
 /// Ce que l'îlot des schémas peut demander à l'application : une liste fermée d'appels. L'îlot ne voit ni le coffre ni le disque, et
 /// un appel inconnu ou mal formé est refusé. Les noms sont ceux de la 0.x, que l'éditeur repris attend tels quels.
 /// </summary>
-internal sealed class SchemaBridge(SchemaUseCases schemas, IFolderPicker folders, Func<string?> pickFile, Action<string> openSheet, Action? editorClosed = null, Action<byte[]>? copyImage = null)
+/// <remarks>
+/// « imprimerSchema » ouvre la fenêtre « Imprimer » de l'application sur l'image du schéma, et ne répond qu'une fois la fenêtre
+/// fermée : ce qu'il faut en dire (le travail est parti), ou rien (elle a été fermée sans imprimer).
+/// </remarks>
+internal sealed class SchemaBridge(SchemaUseCases schemas, IFolderPicker folders, Func<string?> pickFile, Action<string> openSheet, Action? editorClosed = null, Action<byte[]>? copyImage = null, Func<string, byte[], Task<string?>>? print = null)
 {
-    /// <summary>Une image de schéma copiée ne dépasse pas ce poids : au-delà, l'appel est refusé sans rien copier.</summary>
+    /// <summary>Une image de schéma copiée ou imprimée ne dépasse pas ce poids : au-delà, l'appel est refusé.</summary>
     internal const int ImageLimit = 32 * 1024 * 1024;
 
     private static ReadOnlySpan<byte> PngSignature => [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
@@ -61,6 +65,9 @@ internal sealed class SchemaBridge(SchemaUseCases schemas, IFolderPicker folders
         }
         return answer.ToJsonString();
     }
+
+    /// <summary>Une image PNG, d'un poids raisonnable.</summary>
+    private static bool IsPicture(byte[] bytes) => bytes.Length is > 0 and <= ImageLimit && bytes.AsSpan().StartsWith(PngSignature);
 
     private static string? Text(JsonNode? node) =>
         node is JsonValue value && value.TryGetValue<string>(out var text) ? text : null;
@@ -166,12 +173,20 @@ internal sealed class SchemaBridge(SchemaUseCases schemas, IFolderPicker folders
                 // « Partager » : l'image du schéma va dans le presse-papiers, prête à être collée dans un message ou un
                 // document. Seule une image PNG de taille raisonnable est acceptée, et seulement si quelque chose sait la copier.
                 var picture = Convert.FromBase64String(Argument(args, 0));
-                if (copyImage is null || picture.Length is 0 or > ImageLimit || !picture.AsSpan().StartsWith(PngSignature))
+                if (copyImage is null || !IsPicture(picture))
                 {
                     throw new ArgumentException(SchemaText.BadCall);
                 }
                 copyImage(picture);
                 return (null, null);
+            case "imprimerSchema":
+                // « Imprimer » : la fenêtre de l'application, sur l'image du schéma, sous son titre. Une image PNG seulement.
+                var (printed, image) = (Argument(args, 0), Convert.FromBase64String(Argument(args, 1)));
+                if (print is null || !IsPicture(image))
+                {
+                    throw new ArgumentException(SchemaText.BadCall);
+                }
+                return (await print(printed, image).ConfigureAwait(true) is { } said ? JsonValue.Create(said) : null, null);
             case "choisirDossier":
                 return (folders.Pick(Argument(args, 0)), null);
             case "choisirFichierSchema":

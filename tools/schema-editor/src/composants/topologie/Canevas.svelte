@@ -460,6 +460,15 @@
         return;
       }
     }
+    // Câble commencé au premier clic : le second, tout près d'un équipement (sur son nom, à côté de son
+    // icône), le lui tire ; pas besoin de viser l'illustration au pixel près.
+    if (evenement.button === 0 && !plan && tirage && vise()) {
+      const cible = equipementSous(dansLePlan(evenement), tirage.depart);
+      if (cible) {
+        viser(cible.id);
+        return;
+      }
+    }
     // Câble en main, ou outil qui vise un objet : le plan se fait glisser, on ne sélectionne pas.
     if (evenement.button === 1 || plan || editeur.cable || outil !== "choisir") {
       // Un clic dans le vide lâche le câble commencé.
@@ -606,14 +615,10 @@
     }
     svg?.focus();
     const ajouter = evenement.shiftKey || evenement.ctrlKey;
-    // Mode simplifié : un câble se choisit avec ceux qui relient les deux mêmes équipements.
-    if (simplifie && schema.liens.some((l) => l.id === id)) {
-      choisirCables(id, ajouter);
-      return;
-    }
+    // Un câble se choisit seul ; Ctrl+clic (ou Maj+clic) en ajoute un autre, pour les régler ensemble.
     editeur.choisir(id, ajouter);
-    // Un câble saisi puis tiré coulisse (D53).
-    if (ajouter || !schema.liens.some((l) => l.id === id)) return;
+    // Un câble saisi puis tiré coulisse (D53), en mode avancé.
+    if (simplifie || ajouter || !schema.liens.some((l) => l.id === id)) return;
     capturer(evenement);
     geste = {
       genre: "coulisse",
@@ -1049,7 +1054,7 @@
     if (fait) {
       editeur.annonce =
         nombre > 1
-          ? `Câble tiré entre ${a} et ${b} : ${nombre} câbles les relient.`
+          ? `Câble tiré entre ${a} et ${b} : ${nombre} câbles les relient, chacun réglé à part.`
           : `Câble tiré entre ${a} et ${b}.`;
     }
   }
@@ -1079,34 +1084,13 @@
     }
   }
 
-  // --- Mode simplifié : câbles choisis ensemble, bulles ---
-
-  /** Choisit tous les câbles qui relient les deux mêmes équipements que `id`. */
-  function choisirCables(id: string, ajouter: boolean) {
-    const ids = groupeDeCables(schema, id)?.cables.map((l) => l.id) ?? [id];
-    if (!ajouter) editeur.selection = ids;
-    else if (editeur.estChoisi(id)) editeur.selection = editeur.selection.filter((x) => !ids.includes(x));
-    else editeur.selection = [...new Set([...editeur.selection, ...ids])];
-  }
-
-  /** Le premier câble de chaque paire d'équipements : au clavier, il représente les autres. */
-  const premiersCables = $derived.by(() => {
-    const paires = new Set<string>();
-    const premiers = new Set<string>();
-    for (const l of schema.liens) {
-      const cle = [l.a.equipement, l.b.equipement].sort().join("|");
-      if (!paires.has(cle)) premiers.add(l.id);
-      paires.add(cle);
-    }
-    return premiers;
-  });
+  // --- Mode simplifié : bulles ---
 
   /** Ce qu'un lecteur d'écran dit d'un câble. */
   function libelleDuCable(lien: Lien): string {
     const [a, b] = [parId.get(lien.a.equipement)?.nom ?? "?", parId.get(lien.b.equipement)?.nom ?? "?"];
     const type = (SUPPORTS.find((x) => x.valeur === lien.support)?.nom ?? lien.support).toLowerCase();
-    const nombre = simplifie ? cablesEntre(schema, lien.a.equipement, lien.b.equipement).length : 1;
-    const debut = nombre > 1 ? `${nombre} câbles` : "Câble";
+    const debut = "Câble";
     // L'agrégat et le trunk sont deux choses : chacun se dit, avec ses mots.
     const ports = Math.max(agregatDe(schema, lien.a)?.membres.length ?? 0, agregatDe(schema, lien.b)?.membres.length ?? 0);
     const agregat = ports > 0 ? `, agrégat de ${ports} lien(s)` : "";
@@ -1146,8 +1130,8 @@
       return;
     }
     bulleAuClavier = true;
-    if (simplifie && schema.liens.some((l) => l.id === id)) choisirCables(id, false);
-    else editeur.choisir(id);
+    // Ctrl+Entrée (ou Maj+Entrée) ajoute l'objet aux autres choisis, comme Ctrl+clic.
+    editeur.choisir(id, evenement.ctrlKey || evenement.shiftKey);
   }
 
   /** Rend la main à un objet du plan (ou au plan, s'il n'est plus là). */
@@ -1177,22 +1161,19 @@
     return { x0: a.x, y0: a.y, x1: b.x, y1: b.y };
   };
 
-  /** Les câbles choisis ensemble (mode simplifié) : leur groupe, et où poser leur repère et leur bulle. */
+  /**
+   * Les câbles choisis (mode simplifié), un seul ou plusieurs avec Ctrl+clic : ce qu'ils ont en commun, et
+   * où poser leur bulle : près du dernier choisi, sur son cercle s'il en a un, sinon au milieu de son tracé.
+   * Rien n'est dessiné autour : le câble choisi a son halo.
+   */
   const cablesChoisis = $derived.by(() => {
-    const premier = editeur.selection[0];
-    if (!simplifie || !premier) return null;
-    const groupe = groupeDeCables(schema, premier);
-    if (!groupe || !editeur.selection.every((id) => groupe.cables.some((l) => l.id === id))) return null;
-    const choisies = traces.filter((t) => groupe.cables.some((l) => l.id === t.lien.id));
-    if (choisies.length === 0) return null;
-    // Sur le cercle du trunk s'il y en a un, sinon au milieu des câbles.
-    const cercle = choisies.find((t) => t.cercle)?.cercle;
-    const milieux = choisies.map((t) => milieu(t.trace));
-    const centre = cercle ?? {
-      x: milieux.reduce((n, m) => n + m.x, 0) / milieux.length,
-      y: milieux.reduce((n, m) => n + m.y, 0) / milieux.length,
-    };
-    return { groupe, cadre: { x0: centre.x - 23, y0: centre.y - 20, x1: centre.x + 23, y1: centre.y + 20 } };
+    const ids = editeur.selection;
+    if (!simplifie || ids.length === 0 || !ids.every((id) => schema.liens.some((l) => l.id === id))) return null;
+    const groupe = groupeDeCables(schema, ids);
+    const dernier = traces.find((t) => t.lien.id === ids.at(-1));
+    if (!groupe || !dernier) return null;
+    const centre = dernier.cercle ?? milieu(dernier.trace);
+    return { groupe, ancre: { x0: centre.x - 23, y0: centre.y - 20, x1: centre.x + 23, y1: centre.y + 20 } };
   });
 
   const bulle = $derived.by(() => {
@@ -1204,13 +1185,13 @@
       return { genre: "equipement" as const, cle: seul.id, equipement: seul, objet: zoneEcran(cadreDe(seul)) };
     }
     if (cablesChoisis) {
-      const { a, b } = cablesChoisis.groupe;
+      const { cables } = cablesChoisis.groupe;
       return {
         genre: "cables" as const,
-        cle: [a.id, b.id].sort().join("|"),
-        retour: cablesChoisis.groupe.cables[0]?.id ?? "",
+        cle: cables.map((l) => l.id).join("|"),
+        retour: cables.at(-1)?.id ?? "",
         groupe: cablesChoisis.groupe,
-        objet: zoneEcran(cablesChoisis.cadre),
+        objet: zoneEcran(cablesChoisis.ancre),
       };
     }
     return null;
@@ -1796,7 +1777,7 @@
   {/each}
 
   {#each traces as t (t.lien.id)}
-    <!-- Mode simplifié : les câbles de deux mêmes équipements se choisissent ensemble, le premier les représente au clavier. -->
+    <!-- Chaque câble se choisit seul, à la souris comme au clavier ; Ctrl+clic ou Ctrl+Entrée en ajoute un autre. -->
     <g
       class="lien"
       class:choisi={choisis.has(t.lien.id)}
@@ -1804,13 +1785,19 @@
       class:relie={survole !== null && (t.lien.a.equipement === survole || t.lien.b.equipement === survole)}
       data-id={t.lien.id}
       role="button"
-      tabindex={simplifie && !premiersCables.has(t.lien.id) ? -1 : 0}
+      tabindex="0"
       aria-label={libelleDuCable(t.lien)}
       onkeydown={(e) => toucheSurObjet(e, t.lien.id)}
     >
       {#if estTrunk(schema, t.lien)}
         <!-- L'étiquette abrège une longue liste de VLAN : la liste entière se lit au survol du câble. -->
         <title>{texteTrunk(schema, t.lien)}</title>
+      {/if}
+      <!-- Le câble choisi, seul en surbrillance : un halo sous son trait (ses traits, pour un agrégat). -->
+      {#if choisis.has(t.lien.id)}
+        {#each t.brins ?? [t.trace] as brin, k (k)}
+          <path class="halo" d={cheminDe(brin)} style="stroke-width: {t.trait.epaisseur + 8}px" />
+        {/each}
       {/if}
       <!-- Un trait par câble : ceux d'un agrégat se voient tous, sous leur cercle. -->
       {#each t.brins ?? [t.trace] as brin, k (k)}
@@ -1892,11 +1879,6 @@
       {/if}
     </g>
   {/each}
-
-  {#if cablesChoisis}
-    {@const c = cablesChoisis.cadre}
-    <rect x={c.x0} y={c.y0} width={c.x1 - c.x0} height={c.y1 - c.y0} rx="9" class="cadre-objet" />
-  {/if}
 
   <g class="etiquettes">
     {#each etiquettes as etiquette, i (i)}
@@ -2139,7 +2121,11 @@
       <Bulle
         objet={bulle.objet}
         cotes={["dessous", "dessus", "droite", "gauche"]}
-        libelle="Réglages des câbles entre {bulle.groupe.a.nom} et {bulle.groupe.b.nom}"
+        libelle={bulle.groupe.cables.length > 1
+          ? bulle.groupe.memePaire
+            ? `Réglages des ${bulle.groupe.cables.length} câbles choisis entre ${bulle.groupe.a.nom} et ${bulle.groupe.b.nom}`
+            : `Réglages des ${bulle.groupe.cables.length} câbles choisis`
+          : `Réglages du câble entre ${bulle.groupe.a.nom} et ${bulle.groupe.b.nom}`}
         auClavier={bulleAuClavier}
         onfermer={() => fermerBulle(retour)}
       >
@@ -2745,6 +2731,16 @@
     filter: drop-shadow(0 0 3px var(--focus));
   }
 
+  /* Le halo du câble choisi : sa couleur de repère, sous son trait, sans cadre autour. */
+  .halo {
+    fill: none;
+    stroke: var(--focus);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-opacity: 0.35;
+    pointer-events: none;
+  }
+
   .lien.prevu .trait {
     opacity: 0.6;
   }
@@ -2890,9 +2886,11 @@
     stroke-dasharray: 4 3;
   }
 
+  /* Le fil suit le pointeur jusque sous lui : il ne doit pas prendre le second clic, qui va à l'équipement. */
   .fil {
     stroke: var(--principale);
     stroke-width: 2;
     stroke-dasharray: 6 4;
+    pointer-events: none;
   }
 </style>

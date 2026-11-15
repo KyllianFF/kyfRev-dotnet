@@ -4,6 +4,7 @@ using System.Windows.Media;
 using KyfRev.Application.Model;
 using KyfRev.Application.UseCases;
 using KyfRev.DesignSystem.Controls;
+using KyfRev.DesignSystem.Tokens;
 using KyfRev.Presentation.Wpf.Pages;
 using KyfRev.Presentation.Wpf.Shell;
 
@@ -16,6 +17,10 @@ public sealed class DefinitionsTests
     private static readonly Anchor Passage = new("La prophase", "", " précède", 0, 11, ["Mitose", "Étapes"], 5, "sha256:aa");
 
     private static readonly string[] AllTerms = ["Bastille", "Écologie", "Mitose", "Noyau"];
+
+    private static readonly string[] NewestFirst = ["Mitose", "Noyau", "Écologie", "Bastille"];
+
+    private static readonly string[] OrderLabels = ["A → Z", "Par fiche", "Récentes"];
 
     private static readonly string[] BiologyTerms = ["Écologie", "Mitose", "Noyau"];
 
@@ -34,7 +39,9 @@ public sealed class DefinitionsTests
         var page = await glossary.LoadedAsync();
 
         CollectionAssert.AreEqual(AllTerms, Terms(page), "un commentaire ou une définition à la corbeille n'y sont pas, et É se range avec E");
-        Assert.AreEqual("4 définitions", page.Summary);
+        var all = glossary.App.Annotations.Definitions().Value;
+        Assert.AreEqual(DefinitionsText.Summary(4, all.Select(definition => definition.SheetId).Distinct().Count(), all.Count(definition => definition.Everywhere)), page.Summary);
+        StringAssert.StartsWith(page.Summary, "4 définitions dans ", StringComparison.Ordinal);
         Assert.IsFalse(page.IsEmpty);
         Assert.IsFalse(page.HasNoMatch);
         Assert.IsFalse(page.HasError);
@@ -113,12 +120,12 @@ public sealed class DefinitionsTests
 
         page.Search = "  DIVISION  ";
         Assert.AreEqual("Mitose", page.Rows.Single().Term, "dans l'explication aussi");
-        Assert.AreEqual("1 définition", page.Summary);
+        Assert.AreEqual("1 définition sur 4", page.Summary, "filtré : combien sur combien");
 
         page.Search = "absent";
         Assert.IsEmpty(page.Rows);
         Assert.IsTrue(page.HasNoMatch);
-        Assert.AreEqual("0 définition", page.Summary);
+        Assert.AreEqual("0 définition sur 4", page.Summary);
 
         page.Search = string.Empty;
         CollectionAssert.AreEqual(AllTerms, Terms(page));
@@ -351,16 +358,21 @@ public sealed class DefinitionsTests
             Assert.IsLessThan(Left(wide[1], scroller), Left(wide[0], scroller), "plusieurs colonnes quand la place le permet");
             Assert.AreEqual(Top(wide[0], scroller), Top(wide[1], scroller));
             AssertInside(wide, scroller);
-            Assert.AreEqual(0, Grid.GetRow(Named<FrameworkElement>(window, "ListPanel")));
+            // Comme les autres vues : le titre en haut à gauche, au-dessus des cartes, et non plus au-dessus d'une colonne de dossiers.
+            var heading = Named<TextBlock>(window, "Heading");
+            Assert.AreEqual(Left(heading, host), Left(wide[0], host), 0.5, "le titre s'aligne sur la première carte");
+            Assert.AreEqual(DefinitionsText.NewDefinition, Named<TextBlock>(window, "NewLabel").Text);
+            Assert.AreEqual(340, Named<TextBox>(window, "SearchBox").Width);
 
-            host.Width = 560;
+            host.Width = 470;
             host.Height = 420;
             TestShell.Flush();
             Assert.IsGreaterThan(0, scroller.ScrollableHeight, "en largeur étroite aussi, les cartes défilent");
 
             var narrow = Cards(scroller);
-            Assert.AreEqual(1, Grid.GetRow(Named<FrameworkElement>(window, "ListPanel")), "les dossiers passent au-dessus");
             Assert.AreEqual(Left(narrow[0], scroller), Left(narrow[1], scroller), 0.5, "une seule colonne");
+            Assert.AreEqual(DefinitionsText.NewShort, Named<TextBlock>(window, "NewLabel").Text, "le bouton se raccourcit");
+            Assert.AreEqual(Named<FrameworkElement>(window, "Tools").ActualWidth, Named<TextBox>(window, "SearchBox").ActualWidth + 18, 1, "la recherche prend toute la largeur");
             AssertInside(narrow, scroller);
             Assert.AreEqual(Visibility.Collapsed, Named<Notification>(window, "ErrorMessage").Visibility);
 
@@ -428,7 +440,7 @@ public sealed class DefinitionsTests
 
     private static string[] Terms(DefinitionsPageViewModel page) => [.. page.Rows.Select(row => row.Term)];
 
-    private static List<Card> Cards(DependencyObject root) => [.. Descendants(root).OfType<Card>()];
+    private static List<Card> Cards(DependencyObject root) => [.. Descendants(root).OfType<Card>().Where(card => card.DataContext is DefinitionRow)];
 
     private static double Left(FrameworkElement element, Visual root) => element.TransformToAncestor(root).Transform(default).X;
 
@@ -460,6 +472,195 @@ public sealed class DefinitionsTests
     }
 
     /// <summary>Un coffre jetable, et ce qu'il faut pour y poser des définitions.</summary>
+    private const string CellBody = "# La mitose\n\nLa prophase précède la métaphase.\n\n## Fin\n\nLa cytokinèse partage la cellule en deux cellules filles.\n";
+
+    [STATestMethod]
+    public void A_new_definition_hooks_where_its_term_is_written_and_is_saved_from_the_view()
+    {
+        using var ui = new UiThread();
+        using var vault = new ReadingVault(CellBody, passage: false);
+        var page = new DefinitionsPageViewModel(vault.App.Annotations, new FakeOpener(), vault.App.Sheets) { PlacesPause = TimeSpan.Zero };
+        page.LoadCommand.Execute(null);
+        UiThread.Until(() => !page.IsLoading);
+
+        // Le terme vient de la recherche ; tant qu'il manque, la vue dit quoi faire.
+        page.StartNewCommand.Execute(null);
+        var draft = page.Draft!;
+        Assert.IsTrue(page.IsAdding);
+        UiThread.Until(() => !draft.IsSearching);
+        Assert.AreEqual(DefinitionsText.TypeTheTerm, draft.PlacesHeading);
+        Assert.IsFalse(draft.HasText);
+        page.StartNewCommand.Execute(null);
+        Assert.AreSame(draft, page.Draft, "une seule nouvelle définition à la fois");
+
+        // Un terme écrit dans une fiche : l'endroit est trouvé et choisi d'avance, dans sa phrase.
+        draft.Term = "Cytokinèses";
+        draft.Term = "cytokinèse";
+        UiThread.Until(() => draft.Searched == "cytokinèse" && !draft.IsSearching);
+        var place = draft.ChosenPlace!;
+        Assert.HasCount(1, draft.Places);
+        Assert.AreEqual(DefinitionsText.PlacesFound(1, more: false), draft.PlacesHeading);
+        StringAssert.Contains(place.Where, "Fin", StringComparison.Ordinal);
+        Assert.AreEqual("« La cytokinèse partage la cellule en deux … »", place.Excerpt, "le contexte reste dans le bloc du terme, sans le titre voisin");
+        Assert.AreEqual(place.ToString(), $"{place.Where} : {place.Excerpt}");
+        Assert.IsFalse(draft.SaveCommand.CanExecute(null), "sans explication, rien à enregistrer");
+        Assert.IsTrue(page.HasUnsavedDraft);
+
+        // Enregistrée : la définition est accrochée là, marquée partout, et la vue le dit.
+        draft.Explanation = "Le partage du cytoplasme entre les deux cellules filles.";
+        Assert.IsTrue(draft.SaveCommand.CanExecute(null));
+        draft.SaveCommand.Execute(null);
+        UiThread.Until(() => page.Draft is null && page.Rows.Count == 1);
+        var saved = vault.App.Annotations.Definitions().Value.Single();
+        Assert.AreEqual(("cytokinèse", place.SheetId, true), (saved.Term, saved.SheetId, saved.Everywhere));
+        Assert.AreEqual(DefinitionsText.Created("cytokinèse"), page.Announcement);
+        Assert.IsTrue(page.HasAnnouncement);
+        Assert.IsTrue(draft.IsMarkedEverywhere);
+
+        // Un terme écrit nulle part : il n'a pas où s'accrocher, et rien ne s'enregistre.
+        page.Search = "zygote";
+        page.StartNewCommand.Execute(null);
+        var nowhere = page.Draft!;
+        Assert.AreEqual("zygote", nowhere.Term);
+        UiThread.Until(() => nowhere.Searched == "zygote" && !nowhere.IsSearching);
+        Assert.IsTrue(nowhere.HasNoPlace);
+        Assert.AreEqual(DefinitionsText.NoPlace("zygote"), nowhere.PlacesHeading);
+        nowhere.Explanation = "La cellule née de la fécondation.";
+        Assert.IsFalse(nowhere.SaveCommand.CanExecute(null));
+        nowhere.CancelCommand.Execute(null);
+        Assert.IsNull(page.Draft);
+        Assert.IsFalse(page.HasUnsavedDraft);
+    }
+
+    [STATestMethod]
+    public void Before_the_lock_a_complete_new_definition_is_saved_and_an_incomplete_one_is_left()
+    {
+        using var ui = new UiThread();
+        using var vault = new ReadingVault(CellBody, passage: false);
+        var page = new DefinitionsPageViewModel(vault.App.Annotations, new FakeOpener(), vault.App.Sheets) { PlacesPause = TimeSpan.Zero };
+        page.StartNewCommand.Execute(null);
+        var draft = page.Draft!;
+        draft.Term = "prophase";
+        draft.Explanation = "La première étape de la mitose.";
+        draft.IsMarkedEverywhere = false;
+        UiThread.Until(() => draft.ChosenPlace is not null);
+
+        var leaving = page.LeaveAsync();
+        UiThread.Until(() => leaving.IsCompleted);
+        Assert.IsTrue(leaving.Result);
+        Assert.IsFalse(vault.App.Annotations.Definitions().Value.Single().Everywhere, "enregistrée telle qu'écrite");
+        Assert.IsNull(page.Draft);
+
+        // Incomplète, elle est laissée : la conversion attendra, le verrouillage l'oublie.
+        page.StartNewCommand.Execute(null);
+        page.Draft!.Explanation = "Sans terme.";
+        leaving = page.LeaveAsync();
+        UiThread.Until(() => leaving.IsCompleted);
+        Assert.IsTrue(page.HasUnsavedDraft);
+        page.Forget();
+        Assert.IsNull(page.Draft);
+        Assert.IsFalse(page.HasUnsavedDraft);
+    }
+
+    [STATestMethod]
+    public void Without_the_sheets_a_new_definition_finds_nowhere_and_a_refusal_stays_in_it()
+    {
+        using var ui = new UiThread();
+        using var vault = new ReadingVault(CellBody, passage: false);
+        var page = new DefinitionsPageViewModel(vault.App.Annotations, new FakeOpener()) { PlacesPause = TimeSpan.Zero };
+        page.StartNewCommand.Execute(null);
+        var draft = page.Draft!;
+        draft.Term = "prophase";
+        UiThread.Until(() => draft.Searched == "prophase" && !draft.IsSearching);
+        Assert.IsTrue(draft.HasNoPlace);
+
+        // Une ancre qui ne mène à aucune fiche : le coffre refuse, le brouillon le dit et reste ouvert.
+        var stray = new DefinitionPlace("f_inconnue", "Nulle part", "« … »", Passage);
+        draft.Places.Add(stray);
+        draft.ChosenPlace = stray;
+        draft.Explanation = "La première étape.";
+        draft.SaveCommand.Execute(null);
+        UiThread.Until(() => draft.HasProblem);
+        Assert.AreSame(draft, page.Draft);
+        Assert.IsFalse(draft.IsSaving);
+    }
+
+    [TestMethod]
+    public async Task The_glossary_sorts_by_term_by_sheet_or_newest_first_and_filters_what_is_marked_everywhere()
+    {
+        using var glossary = new Glossary();
+        glossary.Filled();
+        var page = await glossary.LoadedAsync();
+        CollectionAssert.AreEqual(OrderLabels, page.Orders.Select(order => order.ToString()).ToArray());
+
+        page.SelectedOrder = page.Orders.Single(order => order.Value == DefinitionOrder.BySheet);
+        CollectionAssert.AreEqual(AllTerms, Terms(page), "Histoire, puis Sciences, puis Sciences/Cellule");
+        page.SelectedOrder = page.Orders.Single(order => order.Value == DefinitionOrder.Recent);
+        CollectionAssert.AreEqual(NewestFirst, Terms(page), "la dernière écrite d'abord");
+        page.SelectedOrder = null;
+        Assert.HasCount(4, page.Rows, "rien ne bouge pendant que la vue se défait");
+
+        page.Rows.Single(row => row.Term == "Noyau").IsMarkedEverywhere = false;
+        await Waiting.UntilAsync(() => !page.Rows.Single(row => row.Term == "Noyau").Definition.Everywhere);
+        page.OnlyMarkedEverywhere = true;
+        CollectionAssert.DoesNotContain(Terms(page), "Noyau");
+        Assert.AreEqual("3 définitions sur 4", page.Summary);
+        page.Forget();
+        Assert.IsFalse(page.OnlyMarkedEverywhere);
+        Assert.AreEqual(DefinitionOrder.Alphabet, page.SelectedOrder!.Value);
+    }
+
+    [STATestMethod]
+    [DataRow(ThemeKind.Light, 1200)]
+    [DataRow(ThemeKind.Dark, 900)]
+    [DataRow(ThemeKind.Dark, 470)]
+    public void The_view_shows_the_new_definition_above_the_cards_as_the_mockup_does(ThemeKind theme, double width)
+    {
+        using var ui = new UiThread();
+        using var vault = new ReadingVault(CellBody, passage: false);
+        Assert.IsTrue(vault.App.Annotations.CreateDefinition(vault.SheetId, Passage, new Definition("Prophase", "La première étape de la mitose.")).Succeeded);
+        var page = new DefinitionsPageViewModel(vault.App.Annotations, new FakeOpener(), vault.App.Sheets) { PlacesPause = TimeSpan.Zero };
+        var test = new TestShell();
+        test.Design.Theme = theme;
+        var view = new DefinitionsPage { DataContext = page };
+        var host = new Border { Width = width, Height = 720, Child = view, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top };
+        host.SetResourceReference(Border.BackgroundProperty, "Kyf.Brush.Background");
+        var window = new Window { ShowActivated = false, Left = -10000, Top = -10000, Width = 800, Height = 600, WindowStartupLocation = WindowStartupLocation.Manual, Content = new Canvas { Children = { host } } };
+        window.Resources.MergedDictionaries.Add(test.Design.Dictionary);
+        window.Show();
+        try
+        {
+            UiThread.Until(() => page.Rows.Count == 1);
+            ((Button)view.FindName("NewButton")).Command.Execute(null);
+            page.Draft!.Term = "cytokinèse";
+            page.Draft.Explanation = "Le partage du cytoplasme.";
+            UiThread.Until(() => page.Draft.ChosenPlace is not null);
+            TestShell.Flush();
+
+            var draft = Named<Card>(window, "DraftCard");
+            var card = Cards(window).Single();
+            Assert.AreEqual(Visibility.Visible, draft.Visibility);
+            Assert.AreEqual(Left(card, host), Left(draft, host), 0.5, "la nouvelle définition s'aligne sur les cartes");
+            Assert.IsGreaterThan(Top(draft, host), Top(card, host), "en tête, au-dessus des cartes");
+            Assert.IsLessThanOrEqualTo(host.Width - 32, draft.ActualWidth + Left(draft, host), "elle tient dans la vue");
+            var stacked = width < 2 * 300;
+            Assert.AreEqual(stacked ? 1 : 0, Grid.GetRow(Named<FrameworkElement>(window, "ExplanationField")), "les champs l'un sous l'autre quand la place manque");
+            Assert.AreEqual(width < DefinitionsPage.NarrowPage ? DefinitionsText.NewShort : DefinitionsText.NewDefinition, Named<TextBlock>(window, "NewLabel").Text);
+            Assert.AreEqual(1, Named<ListBox>(window, "PlaceChoice").Items.Count);
+            Assert.IsGreaterThanOrEqualTo(card.ActualHeight, card.DesiredSize.Height - 0.5);
+            host.Capture(FormattableString.Invariant($"definitions-nouvelle-{(theme == ThemeKind.Dark ? "sombre" : "clair")}-{width}"));
+
+            // « … » ouvre le menu de la carte ; les marques de la carte disent qu'elle est marquée partout.
+            var more = Descendants(card).OfType<Button>().Single(button => button.Name == "MoreButton");
+            more.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+            Assert.AreEqual(Visibility.Visible, Descendants(card).OfType<Border>().Single(border => border.Name == "EverywherePill").Visibility);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
     private sealed class Glossary : IDisposable
     {
         private readonly TestVaults _vaults;

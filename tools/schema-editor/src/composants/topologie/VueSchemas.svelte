@@ -111,7 +111,15 @@
       edite = (evenement as CustomEvent<string>).detail;
     };
     document.addEventListener("ouvrir-schema", ouvrir);
-    return () => document.removeEventListener("ouvrir-schema", ouvrir);
+    // De retour sur la vue : un schéma a pu être importé, cité ou retiré entre-temps. L'éditeur ouvert, lui, reste tel quel.
+    const revenus = () => {
+      if (!edite) void charger();
+    };
+    document.addEventListener("schemas-revenus", revenus);
+    return () => {
+      document.removeEventListener("ouvrir-schema", ouvrir);
+      document.removeEventListener("schemas-revenus", revenus);
+    };
   });
 
   const sansAccents = (t: string) => t.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
@@ -225,8 +233,7 @@
     sortir(async () => {
       const schema = await schemaDuCoffre(s.id);
       if (estVide(schema)) return "Ce schéma est vide : rien à imprimer.";
-      await imprimerSchema(schema, vueDeSortie(s));
-      return null;
+      return imprimerSchema(schema, vueDeSortie(s));
     }, "Impression impossible : ");
 
   function ouvrirMenu(evenement: MouseEvent, schema: SchemaResume) {
@@ -683,8 +690,10 @@
 {/if}
 
 <style>
+  /* Centrée, comme les autres pages : la liste et la lecture d'un schéma ne restent pas collées à gauche d'une grande fenêtre. */
   .vue {
     max-width: 1200px;
+    margin: 0 auto;
     padding: 24px 32px 48px;
   }
 

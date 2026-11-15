@@ -50,7 +50,7 @@
                       ToolTip="{x:Static pages:PrintText.MoreCopies}" AutomationProperties.Name="{x:Static pages:PrintText.MoreCopies}" />
             </StackPanel>
           </StackPanel>
-          <StackPanel Grid.Column="2">
+          <StackPanel Grid.Column="2" Visibility="{Binding IsSheet, Converter={StaticResource Visible}}">
             <TextBlock Text="{x:Static pages:PrintText.Sheets}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,0,0,4" />
             <StackPanel Orientation="Horizontal">
               <Button x:Name="AllSheetsChoice" Style="{DynamicResource Kyf.Button.Tool}" Padding="12,0" Margin="0,0,2,0" Tag="{Binding AllPages}" Content="{x:Static pages:PrintText.AllSheets}"
@@ -94,6 +94,16 @@
           </Button>
         </WrapPanel>
 
+        <!-- En noir et blanc, l'aperçu et les pages sont en nuances de gris : ce qui sort est ce qui est montré. -->
+        <TextBlock Text="{x:Static pages:PrintText.Colors}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,12,0,4" />
+        <WrapPanel>
+          <Button x:Name="ColorChoice" Style="{DynamicResource Kyf.Button.Tool}" Padding="12,0" Margin="0,0,2,2" Tag="{Binding IsColor}" Content="{x:Static pages:PrintText.InColor}"
+                  Command="{Binding SetColorCommand}" CommandParameter="color" />
+          <Button x:Name="GrayscaleChoice" Style="{DynamicResource Kyf.Button.Tool}" Padding="12,0" Margin="0,0,2,2" Tag="{Binding IsGrayscale}" Content="{x:Static pages:PrintText.Grayscale}"
+                  Command="{Binding SetColorCommand}" CommandParameter="gray" ToolTip="{x:Static pages:PrintText.GrayscaleHelp}"
+                  AutomationProperties.HelpText="{x:Static pages:PrintText.GrayscaleHelp}" />
+        </WrapPanel>
+
         <!-- Le papier chargé dans l'imprimante : celui de la fiche par défaut. En changer refait les pages de l'aperçu. -->
         <TextBlock Text="{x:Static pages:PrintText.PaperFormat}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,12,0,4" />
         <ComboBox x:Name="PaperFormatBox" ItemsSource="{Binding FormatOptions}" SelectedItem="{Binding Format}" AutomationProperties.Name="{x:Static pages:PrintText.PaperFormat}" />
@@ -128,7 +138,8 @@
           </StackPanel>
         </Grid>
 
-        <CheckBox x:Name="NumbersBox" IsChecked="{Binding ShowsNumbers}" Margin="0,14,0,0" Content="{x:Static pages:PrintText.Numbers}" />
+        <CheckBox x:Name="NumbersBox" IsChecked="{Binding ShowsNumbers}" Margin="0,14,0,0" Content="{x:Static pages:PrintText.Numbers}"
+                  Visibility="{Binding IsSheet, Converter={StaticResource Visible}}" />
 
         <TextBlock x:Name="SummaryText" Text="{Binding Summary}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="0,14,0,0" />
       </StackPanel>
@@ -154,6 +165,8 @@
           <Border x:Name="Paper" BorderBrush="{DynamicResource Kyf.Brush.Divider}" BorderThickness="1" SnapsToDevicePixels="True">
             <Grid>
               <Canvas x:Name="PageCanvas" ClipToBounds="True" Width="794" Height="1123" />
+              <!-- La feuille d'une image seule, ou la feuille en noir et blanc : ce qui sortira, posé sur la feuille. -->
+              <Image x:Name="PageImage" Stretch="Fill" Visibility="Collapsed" IsHitTestVisible="False" />
               <TextBlock x:Name="PageNumber" HorizontalAlignment="Center" VerticalAlignment="Bottom" IsHitTestVisible="False" />
             </Grid>
           </Border>

@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using System.Windows.Documents;
+using System.Windows.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using KyfRev.Application.Model;
@@ -119,6 +120,18 @@ public static class PrintText
     /// <summary>Le champ des marges sur mesure.</summary>
     public const string MarginsCustomField = "Marges, en centimètres";
 
+    /// <summary>Le groupe des couleurs.</summary>
+    public const string Colors = "Couleurs";
+
+    /// <summary>En couleur.</summary>
+    public const string InColor = "Couleur";
+
+    /// <summary>En noir et blanc.</summary>
+    public const string Grayscale = "Noir et blanc";
+
+    /// <summary>Ce que veut dire « Noir et blanc ».</summary>
+    public const string GrayscaleHelp = "Noir et blanc : en nuances de gris, même sur une imprimante couleur";
+
     /// <summary>La case des numéros de page.</summary>
     public const string Numbers = "Numéros de page en bas (1/4)";
 
@@ -195,8 +208,9 @@ public sealed record PrintMarginOption(PrintMargin Kind, string Label)
 
 /// <summary>
 /// La fenêtre « Imprimer » d'une fiche (Ctrl+P) : l'imprimante, les copies, les feuilles (toutes ou certaines), le recto
-/// verso, l'orientation, les marges (par défaut celles de la fiche), les numéros de page, et l'aperçu feuille par feuille.
-/// Les pages sont celles de la mise en page de la fiche ; une fiche restée en feuille sans fin s'imprime en A4.
+/// verso, la couleur ou le noir et blanc, l'orientation, les marges (par défaut celles de la fiche), les numéros de page, et
+/// l'aperçu feuille par feuille. Les pages sont celles de la mise en page de la fiche ; une fiche restée en feuille sans fin
+/// s'imprime en A4. La même fenêtre imprime une image seule, sous son titre, sur une feuille (un schéma réseau).
 /// </summary>
 public sealed partial class PrintViewModel : ObservableObject
 {
@@ -235,6 +249,26 @@ public sealed partial class PrintViewModel : ObservableObject
     /// <summary>La fiche à imprimer, telle qu'elle est enregistrée.</summary>
     [ObservableProperty]
     public partial SheetReading? Reading { get; private set; }
+
+    /// <summary>L'image à imprimer seule, sous son titre (un schéma réseau) ; rien quand on imprime une fiche.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsSheet))]
+    public partial BitmapSource? Picture { get; private set; }
+
+    /// <summary>Le titre imprimé au-dessus de l'image seule.</summary>
+    [ObservableProperty]
+    public partial string PictureTitle { get; private set; } = string.Empty;
+
+    /// <summary>On imprime une fiche, avec ses feuilles et leurs numéros ; pas une image seule.</summary>
+    public bool IsSheet => Picture is null;
+
+    /// <summary>En couleur ; sinon en noir et blanc, l'aperçu compris. Le choix reste d'une impression à l'autre.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsGrayscale))]
+    public partial bool IsColor { get; private set; } = true;
+
+    /// <summary>En noir et blanc.</summary>
+    public bool IsGrayscale => !IsColor;
 
     /// <summary>Le titre de la fenêtre.</summary>
     [ObservableProperty]
@@ -433,7 +467,43 @@ public sealed partial class PrintViewModel : ObservableObject
         CurrentPage = 1;
         IsPreparing = true;
         OnPropertyChanged(nameof(Layout));
+        Picture = null;
         Reading = reading;
+        IsOpen = true;
+        _ = ReadPrintersAsync();
+    }
+
+    /// <summary>
+    /// Ouvre la fenêtre sur une image seule (un schéma réseau) : une feuille A4, en paysage si l'image est plus large que haute,
+    /// avec des marges étroites ; son titre en haut, l'image entière dans la place qui reste.
+    /// </summary>
+    /// <param name="title">Le titre, imprimé au-dessus de l'image et donné au travail d'impression.</param>
+    /// <param name="picture">L'image.</param>
+    public void OpenPicture(string title, BitmapSource picture)
+    {
+        ArgumentNullException.ThrowIfNull(title);
+        ArgumentNullException.ThrowIfNull(picture);
+        FormatOptions = Formats(PageFormat.A4, isPaged: false);
+        Format = FormatOptions[0];
+        _sheetMargin = PageLayout.NarrowMargin;
+        _sheetTitle = title;
+        Error = null;
+        Title = string.Format(French, TitleFormat, title);
+        MarginOptions = [.. Options(_sheetMargin).Where(option => option.Kind != PrintMargin.Sheet)];
+        Margin = MarginOptions[0];
+        CustomMargin = _sheetMargin.ToString("0.##", French);
+        IsLandscape = picture.PixelWidth > picture.PixelHeight;
+        Copies = 1;
+        AllPages = true;
+        PagesText = string.Empty;
+        Sides = PrintSides.OneSided;
+        Reading = null;
+        PictureTitle = title;
+        Picture = picture;
+        TotalPages = 1;
+        CurrentPage = 1;
+        IsPreparing = false;
+        OnPropertyChanged(nameof(Layout));
         IsOpen = true;
         _ = ReadPrintersAsync();
     }
@@ -444,6 +514,7 @@ public sealed partial class PrintViewModel : ObservableObject
         _request++;
         IsOpen = false;
         Reading = null;
+        Picture = null;
     }
 
     /// <summary>Envoie le travail à l'imprimante. La fenêtre se ferme s'il est parti ; sinon elle dit pourquoi.</summary>
@@ -460,13 +531,14 @@ public sealed partial class PrintViewModel : ObservableObject
             Error = PrintText.PrintFailed(PrintText.Preparing);
             return false;
         }
-        Error = _service.Print(new PrintJob(printer, _sheetTitle, Layout, Sides, Copies), pages);
+        Error = _service.Print(new PrintJob(printer, _sheetTitle, Layout, Sides, Copies, IsColor), pages);
         if (Error is not null)
         {
             return false;
         }
-        Close();
+        // Ce qui est dit l'est avant que la fenêtre se ferme : qui attend sa fermeture sait déjà que le travail est parti.
         Printed?.Invoke(string.Format(French, SentFormat, printer));
+        Close();
         return true;
     }
 
@@ -503,6 +575,10 @@ public sealed partial class PrintViewModel : ObservableObject
         "short" => PrintSides.ShortEdge,
         _ => PrintSides.OneSided,
     };
+
+    /// <summary>Noir et blanc (« gray ») ou couleur.</summary>
+    [RelayCommand]
+    private void SetColor(string? choice) => IsColor = choice != "gray";
 
     /// <summary>Paysage (« landscape ») ou portrait.</summary>
     [RelayCommand]

@@ -21,6 +21,7 @@ namespace KyfRev.Presentation.Wpf.Shell;
 /// </summary>
 public sealed partial class ShellWindow : Window
 {
+    private const int NonClientCalcSize = 0x0083;
     private const int NonClientHitTest = 0x0084;
     private const int NonClientLeftButtonDown = 0x00A1;
     private const int NonClientLeftButtonUp = 0x00A2;
@@ -28,6 +29,9 @@ public sealed partial class ShellWindow : Window
     private const int NonClientRightButtonDown = 0x00A4;
     private const int OnCaption = 2;
     private const int OnMaximizeButton = 9;
+
+    /// <summary><c>WVR_REDRAW</c> : la réponse à <c>WM_NCCALCSIZE</c> que donne le cadre, la fenêtre redessinée en entier.</summary>
+    private const int RedrawWhole = 0x0300;
 
     /// <summary>L'épaisseur du bord qui redimensionne la fenêtre : celle du cadre (<c>ResizeBorderThickness</c>).</summary>
     internal const double ResizeBorder = 6;
@@ -74,7 +78,14 @@ public sealed partial class ShellWindow : Window
             FitScreen();
         };
         Loaded += (_, _) => FocusNavigation();
+        // Le coffre ouvert, l'îlot de ses schémas démarre en arrière-plan : la vue s'affichera dès le premier clic.
+        WarmUp = new Schemas.SchemaWarmUp(WarmHost, () => shell.MainNavigation.Concat(shell.SecondaryNavigation)
+            .Select(entry => entry.Page).OfType<Pages.SchemasPageViewModel>().FirstOrDefault());
+        shell.WorkspaceOpening += (_, _) => WarmUp.Schedule();
     }
+
+    /// <summary>La préparation de l'îlot des schémas, en arrière-plan.</summary>
+    internal Schemas.SchemaWarmUp WarmUp { get; }
 
     /// <inheritdoc/>
     protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
@@ -155,6 +166,11 @@ public sealed partial class ShellWindow : Window
     {
         switch (message)
         {
+            case NonClientCalcSize when wParam != 0 && !_shell.IsFullScreen && _shell.Appearance.LeaveRoomForHiddenTaskbar(window, lParam):
+                // Agrandie, avec une barre des tâches qui se masque : la zone cliente s'arrête juste avant son bord, sans quoi la barre ne
+                // se montre plus. Comme le cadre l'aurait fait, la fenêtre est redessinée en entier.
+                handled = true;
+                return RedrawWhole;
             case NonClientHitTest:
                 // Les bords d'abord : un bouton de la barre de titre se déclare « contenu » et l'emporte sur le cadre, si bien que le
                 // coin supérieur droit, sous « Fermer », ne redimensionnait plus la fenêtre.
@@ -193,10 +209,25 @@ public sealed partial class ShellWindow : Window
         return 0;
     }
 
+    /// <summary>La fenêtre se redimensionne par son cadre : ni agrandie, ni en plein écran, ni de taille fixe.</summary>
+    internal bool ResizesByItsFrame =>
+        WindowState == WindowState.Normal && !_shell.IsFullScreen && ResizeMode is not (ResizeMode.NoResize or ResizeMode.CanMinimize);
+
+    /// <summary>
+    /// Ce qu'un contenu qui a sa propre fenêtre (le moteur web) doit laisser au cadre d'une fenêtre de taille <paramref name="window"/>,
+    /// d'après sa place <paramref name="bounds"/> : posé sur un bord, il prendrait la souris au cadre, et la fenêtre ne se
+    /// redimensionnerait plus par ce bord.
+    /// </summary>
+    internal static Thickness FrameInset(Rect bounds, Size window) => new(
+        Math.Max(0, ResizeBorder - bounds.Left),
+        Math.Max(0, ResizeBorder - bounds.Top),
+        Math.Max(0, bounds.Right - (window.Width - ResizeBorder)),
+        Math.Max(0, bounds.Bottom - (window.Height - ResizeBorder)));
+
     /// <summary>Le bord ou le coin de la fenêtre sous ce point de l'écran, tant qu'elle se redimensionne ; 0 ailleurs.</summary>
     private int ResizeEdgeAt(nint position)
     {
-        if (WindowState != WindowState.Normal || _shell.IsFullScreen || ResizeMode is ResizeMode.NoResize or ResizeMode.CanMinimize || PresentationSource.FromVisual(this) is null)
+        if (!ResizesByItsFrame || PresentationSource.FromVisual(this) is null)
         {
             return 0;
         }

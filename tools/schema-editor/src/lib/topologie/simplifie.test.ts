@@ -7,6 +7,7 @@ import { connecter, creerEquipement, Refus } from "./operations";
 import {
   aDesReglages,
   AIDE_AGREGAT_MINIMUM,
+  AIDE_AGREGAT_PAIRE,
   AIDE_AGREGAT_SEUL,
   agreger,
   alignerVlans,
@@ -17,9 +18,11 @@ import {
   conseilsDeLiaison,
   desagreger,
   ecrireAdresse,
+  ecrireVlanDAcces,
   ecrireVlansDuTrunk,
   effacer,
   epurer,
+  type GroupeDeCables,
   groupeDeCables,
   lireAdresse,
   lireMode,
@@ -27,7 +30,6 @@ import {
   mettreEnTrunk,
   portsLibres,
   reglerMembres,
-  reglerNombreDeCables,
   retenirMode,
   retirerCable,
   tirerCable,
@@ -177,7 +179,7 @@ describe("câble sans choisir de port", () => {
 });
 
 describe("plusieurs câbles entre deux mêmes équipements", () => {
-  it("recommencer tire un câble de plus, du même type, sur les ports suivants", () => {
+  it("recommencer tire un câble de plus, à part, du même type, sur les ports suivants", () => {
     const { schema, sw1, sw2 } = site();
     const un = tirerCable(schema, sw1.id, sw2.id);
     // Dans l'autre sens : c'est toujours la même paire.
@@ -186,55 +188,82 @@ describe("plusieurs câbles entre deux mêmes équipements", () => {
     expect(nomDuPort(schema, un.a)).toBe("1/1");
     expect(nomDuPort(schema, deux.b)).toBe("1/2");
     expect(deux.support).toBe(un.support);
-    expect(groupeDeCables(schema, deux.id)?.cables.length).toBe(2);
+    // Choisi seul, un câble se règle seul ; choisis ensemble (Ctrl+clic), ils se règlent ensemble.
+    expect(groupeDeCables(schema, deux.id)).toMatchObject({ cables: [deux], memePaire: true, nombre: 1 });
+    expect(groupeDeCables(schema, [un.id, deux.id])).toMatchObject({ cables: [un, deux], memePaire: true, nombre: 2 });
   });
 
-  it("un câble de plus suit le type et le trunk du groupe", () => {
+  it("un câble de plus garde le type des autres, mais ni leur trunk ni leurs VLAN", () => {
     const { schema, sw1, sw2 } = site();
     const un = tirerCable(schema, sw1.id, sw2.id);
     changerTypeDeCable(schema, un.id, "fibre-multimode");
+    ecrireVlansDuTrunk(schema, [un.id], { nonTague: 1, tagues: "10,20" });
     mettreEnTrunk(schema, [un.id], true);
     const deux = tirerCable(schema, sw1.id, sw2.id);
     expect(deux.support).toBe("fibre-multimode");
     expect(interfaceDe(schema, deux.a)?.genre).toBe("fibre");
-    expect(enTrunk(schema, deux)).toBe(true);
-    expect(groupeDeCables(schema, un.id)).toMatchObject({ support: "fibre-multimode", trunk: true, agregat: null });
-    // Et les mêmes VLAN que les autres câbles du trunk.
-    ecrireVlansDuTrunk(schema, [un.id, deux.id], { nonTague: 1, tagues: "10,20" });
-    const trois = tirerCable(schema, sw1.id, sw2.id);
-    expect(configDuBout(schema, trois.a)).toEqual({ mode: "trunk", natif: 1, tagues: "10,20" });
-    expect(configDuBout(schema, trois.b)).toEqual({ mode: "trunk", natif: 1, tagues: "10,20" });
+    expect(enTrunk(schema, deux)).toBe(false);
+    expect(configDuBout(schema, deux.a)).toBeUndefined();
+    expect(groupeDeCables(schema, un.id)).toMatchObject({ trunk: true, vlans: { nonTague: 1, tagues: "10,20" } });
+    expect(groupeDeCables(schema, [un.id, deux.id])).toMatchObject({ trunk: false, cablesDifferents: true });
   });
 
-  it("le nombre de câbles se règle de 1 à 8, par + et par −", () => {
+  it("deux câbles entre un cœur et un pare-feu : l'un en trunk, l'autre en accès pour le VLAN du WAN", () => {
+    const schema = schemaVide("Cœur et pare-feu");
+    const coeur = creerEquipement(schema, "switch-coeur", { x: 0, y: 0 });
+    const parefeu = creerEquipement(schema, "pare-feu", { x: 300, y: 0 });
+    const trunk = tirerCable(schema, coeur.id, parefeu.id);
+    const wan = tirerCable(schema, coeur.id, parefeu.id);
+    mettreEnTrunk(schema, [trunk.id], true);
+    ecrireVlansDuTrunk(schema, [trunk.id], { nonTague: 30, tagues: "11,21,31" });
+    ecrireVlanDAcces(schema, [wan.id], 2131);
+    expect(groupeDeCables(schema, trunk.id)).toMatchObject({ trunk: true, vlans: { nonTague: 30, tagues: "11,21,31" } });
+    expect(groupeDeCables(schema, wan.id)).toMatchObject({ trunk: false, vlans: { nonTague: 2131 } });
+    // Chacun a son annotation sur le dessin.
+    const svg = dessinerSchema(schema);
+    expect(svg).toContain("Trunk · U 30 · T 11,21,31");
+    expect(svg).toContain("Access · U 2131");
+  });
+
+  it("pas plus de huit câbles entre deux mêmes équipements", () => {
     const { schema, sw1, sw2 } = site();
-    tirerCable(schema, sw1.id, sw2.id);
-    reglerNombreDeCables(schema, sw1.id, sw2.id, 3);
-    expect(cablesEntre(schema, sw1.id, sw2.id).length).toBe(3);
-    reglerNombreDeCables(schema, sw1.id, sw2.id, 99);
+    for (let n = 0; n < CABLES_MAX; n++) tirerCable(schema, sw1.id, sw2.id);
     expect(cablesEntre(schema, sw1.id, sw2.id).length).toBe(CABLES_MAX);
     expect(() => tirerCable(schema, sw1.id, sw2.id)).toThrow(/Pas plus de 8/);
-    reglerNombreDeCables(schema, sw1.id, sw2.id, 2);
-    expect(cablesEntre(schema, sw1.id, sw2.id).map((l) => nomDuPort(schema, l.a))).toEqual(["1/1", "1/2"]);
-    reglerNombreDeCables(schema, sw1.id, sw2.id, 0);
-    expect(cablesEntre(schema, sw1.id, sw2.id).length).toBe(1);
-    // Les ports rendus sont libres : le prochain câble les reprend.
-    expect(interfaceOccupee(schema, sw1.id, port(sw1, "1/2").interface)).toBe(false);
   });
 
-  it("« − » garde les câbles réglés en avancé ; s'ils le sont tous, il refuse sans rien retirer", () => {
+  it("un câble réglé en mode avancé se reconnaît", () => {
     const { schema, sw1, sw2 } = site();
     const nomme = tirerCable(schema, sw1.id, sw2.id);
     nomme.nom = "Lien principal";
     const simple = tirerCable(schema, sw1.id, sw2.id);
-    const etiquete = tirerCable(schema, sw1.id, sw2.id);
-    etiquete.etiquette = "C-042";
     expect(aDesReglages(schema, nomme)).toBe(true);
     expect(aDesReglages(schema, simple)).toBe(false);
-    reglerNombreDeCables(schema, sw1.id, sw2.id, 2);
-    expect(cablesEntre(schema, sw1.id, sw2.id).map((l) => l.id)).toEqual([nomme.id, etiquete.id]);
-    expect(() => reglerNombreDeCables(schema, sw1.id, sw2.id, 1)).toThrow(/outil Effacer/);
-    expect(cablesEntre(schema, sw1.id, sw2.id).length).toBe(2);
+  });
+
+  it("des câbles choisis entre des équipements différents se règlent ensemble, sans agrégat possible", () => {
+    const { schema, sw1, sw2, pc } = site();
+    const montant = tirerCable(schema, sw1.id, sw2.id);
+    const poste = tirerCable(schema, sw1.id, pc.id);
+    const groupe = groupeDeCables(schema, [montant.id, poste.id]);
+    expect(groupe).toMatchObject({ memePaire: false, nombre: 2, agregatImpossible: AIDE_AGREGAT_PAIRE });
+    changerTypeDeCable(schema, montant.id, "haute-disponibilite");
+    ecrireVlanDAcces(schema, [montant.id, poste.id], 40);
+    expect(groupeDeCables(schema, [montant.id, poste.id])).toMatchObject({ vlans: { nonTague: 40 }, cablesDifferents: false });
+    expect(() => agreger(schema, [montant.id, poste.id])).toThrow(AIDE_AGREGAT_PAIRE);
+  });
+
+  it("deux câbles aux mêmes VLAN entre deux commutateurs bouclent ; un trunk et un accès d'un autre VLAN, non", () => {
+    const { schema, sw1, sw2 } = site();
+    const un = tirerCable(schema, sw1.id, sw2.id);
+    const deux = tirerCable(schema, sw1.id, sw2.id);
+    const boucle = (id: string) => conseilsDeLiaison(schema, groupeDeCables(schema, id) as GroupeDeCables).some((c) => c.includes("boucle"));
+    expect(boucle(un.id)).toBe(true);
+    mettreEnTrunk(schema, [un.id], true);
+    ecrireVlansDuTrunk(schema, [un.id], { nonTague: 30, tagues: "10,20" });
+    ecrireVlanDAcces(schema, [deux.id], 99);
+    expect(boucle(un.id)).toBe(false);
+    expect(boucle(deux.id)).toBe(false);
   });
 });
 
@@ -298,7 +327,7 @@ describe("type de câble", () => {
     const { schema, sw1, sw2 } = site();
     tirerCable(schema, sw1.id, sw2.id);
     tirerCable(schema, sw1.id, sw2.id);
-    const lien = agreger(schema, sw1.id, sw2.id);
+    const lien = agreger(schema, cablesEntre(schema, sw1.id, sw2.id).map((l) => l.id));
     const nomsDesPorts = (e: Equipement) =>
       agregatDe(schema, { equipement: e.id, interface: (e.id === lien.a.equipement ? lien.a : lien.b).interface })
         ?.membres.map((m) => e.interfaces.find((i) => i.id === m)?.nom);
@@ -429,7 +458,7 @@ describe("adresse IP d'un équipement", () => {
 });
 
 describe("ce que le mode simplifié dessine", () => {
-  it("ni nom de port, ni VLAN d'un port d'accès, même si le schéma en demande en avancé ; le trunk, lui, est annoté", () => {
+  it("pas de nom de port, même si le schéma en demande en avancé ; le trunk et le port d'accès s'annotent de leurs VLAN", () => {
     const { schema, sw1, sw2, pc } = site();
     const lien = tirerCable(schema, sw1.id, sw2.id);
     const acces = connecter(schema, port(sw1, "1/5"), port(pc, "Ethernet"), { libelles: "tout", nom: "Poste" });
@@ -439,7 +468,7 @@ describe("ce que le mode simplifié dessine", () => {
     const epure = epurer(schema);
     const page = mettreEnPage(epure, vue("simplifiee"), new Set());
     const etiquettes = [...page.etiquettes.values()].flat();
-    expect(etiquettes.map((e) => e.texte).sort()).toEqual(["Poste", "Trunk"]);
+    expect(etiquettes.map((e) => e.texte).sort()).toEqual(["Access · U 20", "Poste", "Trunk"]);
     const svg = dessinerSchema(epure, { vue: vue("simplifiee"), legende: true });
     expect(svg).not.toMatch(/>1\/1<|VLAN 20/);
     expect(svg).toContain(">Trunk<");
@@ -466,7 +495,7 @@ describe("agrégat de liens", () => {
 
   it("coché : les câbles de la liaison deviennent un agrégat LACP, un port par câble de chaque côté", () => {
     const { schema, sw1, sw2 } = liaison(3);
-    const lien = agreger(schema, sw1.id, sw2.id);
+    const lien = agreger(schema, cablesEntre(schema, sw1.id, sw2.id).map((l) => l.id));
     // Le vrai agrégat du modèle : un câble, et les ports de chaque côté.
     expect(schema.liens.length).toBe(1);
     expect(schema.agregats.length).toBe(2);
@@ -490,8 +519,9 @@ describe("agrégat de liens", () => {
 
   it("un seul câble : refusé, avec l'aide qui dit quoi faire", () => {
     const { schema, sw1, sw2 } = liaison(1);
-    expect(() => agreger(schema, sw1.id, sw2.id)).toThrow(AIDE_AGREGAT_SEUL);
-    expect(AIDE_AGREGAT_SEUL).toBe("Un agrégat regroupe au moins deux câbles : ajoutez-en un.");
+    expect(() => agreger(schema, cablesEntre(schema, sw1.id, sw2.id).map((l) => l.id))).toThrow(AIDE_AGREGAT_SEUL);
+    expect(AIDE_AGREGAT_SEUL).toBe("Un agrégat regroupe au moins deux câbles choisis entre les mêmes équipements.");
+    expect(groupeDeCables(schema, cablesEntre(schema, sw1.id, sw2.id)[0]?.id ?? "")?.agregatImpossible).toBe(AIDE_AGREGAT_SEUL);
     expect(schema.agregats).toEqual([]);
     expect(schema.liens.length).toBe(1);
   });
@@ -499,7 +529,7 @@ describe("agrégat de liens", () => {
   it("des câbles de types différents prennent le type du câble gardé", () => {
     const { schema, sw1, sw2, cables } = liaison(2);
     changerTypeDeCable(schema, (cables[1] as (typeof cables)[number]).id, "fibre-multimode");
-    const lien = agreger(schema, sw1.id, sw2.id);
+    const lien = agreger(schema, cablesEntre(schema, sw1.id, sw2.id).map((l) => l.id));
     expect(lien.support).toBe("cuivre");
     expect(membres(schema, lien.a)).toEqual(["1/1", "1/2"]);
     expect(avertissementsDeSupport(schema)).toEqual([]);
@@ -507,7 +537,7 @@ describe("agrégat de liens", () => {
 
   it("décoché : chaque port retrouve son câble, et le réglage VLAN de l'agrégat est reporté sur chacun", () => {
     const { schema, sw1, sw2 } = liaison(3);
-    const lien = agreger(schema, sw1.id, sw2.id);
+    const lien = agreger(schema, cablesEntre(schema, sw1.id, sw2.id).map((l) => l.id));
     ecrireVlansDuTrunk(schema, [lien.id], { nonTague: 1, tagues: "10,20" });
     // Le réglage est celui de l'agrégat, pas des ports.
     expect(agregatDe(schema, lien.a)?.vlan).toEqual({ mode: "trunk", natif: 1, tagues: "10,20" });
@@ -525,16 +555,16 @@ describe("agrégat de liens", () => {
       expect(interfaceDe(schema, cable.b)?.vlan).toEqual({ mode: "trunk", natif: 1, tagues: "10,20" });
       expect(enTrunk(schema, cable)).toBe(true);
     }
-    expect(groupeDeCables(schema, lien.id)).toMatchObject({ nombre: 3, agregat: null, trunk: true });
+    expect(groupeDeCables(schema, cables.map((l) => l.id))).toMatchObject({ nombre: 3, agregat: null, trunk: true });
     // Un agrégat sans VLAN : des câbles sans réglage.
-    const second = agreger(schema, sw1.id, sw2.id);
+    const second = agreger(schema, cablesEntre(schema, sw1.id, sw2.id).map((l) => l.id));
     mettreEnTrunk(schema, [second.id], false);
     for (const cable of desagreger(schema, second.id)) expect(enTrunk(schema, cable)).toBe(false);
   });
 
   it("« + » et « − » ajoutent et rendent des ports de l'agrégat, de 2 à 8", () => {
     const { schema, sw1, sw2 } = liaison(2);
-    const lien = agreger(schema, sw1.id, sw2.id);
+    const lien = agreger(schema, cablesEntre(schema, sw1.id, sw2.id).map((l) => l.id));
     reglerMembres(schema, lien.id, 4);
     expect(membres(schema, lien.a)).toEqual(["1/1", "1/2", "1/3", "1/4"]);
     expect(membres(schema, lien.b)).toEqual(["1/1", "1/2", "1/3", "1/4"]);
@@ -546,8 +576,15 @@ describe("agrégat de liens", () => {
     expect(() => reglerMembres(schema, lien.id, 1)).toThrow(AIDE_AGREGAT_MINIMUM);
     expect(() => reglerMembres(schema, lien.id, CABLES_MAX + 1)).toThrow(/Pas plus de 8/);
     expect(membres(schema, lien.a)).toEqual(["1/1", "1/2"]);
-    // L'outil Câble, sur une liaison agrégée, ajoute un port à l'agrégat.
-    expect(tirerCable(schema, sw1.id, sw2.id).id).toBe(lien.id);
+    // L'outil Câble, sur une liaison agrégée, tire un câble à part : l'agrégat ne change pas.
+    const aPart = tirerCable(schema, sw1.id, sw2.id);
+    expect(aPart.id).not.toBe(lien.id);
+    expect(enAgregat(schema, aPart)).toBe(false);
+    expect(membres(schema, lien.b)).toEqual(["1/1", "1/2"]);
+    expect(schema.liens.length).toBe(2);
+    // Choisi avec l'agrégat (Ctrl+clic), il le rejoint.
+    expect(groupeDeCables(schema, [lien.id, aPart.id])?.agregatImpossible).toBeNull();
+    expect(agreger(schema, [lien.id, aPart.id]).id).toBe(lien.id);
     expect(membres(schema, lien.b)).toEqual(["1/1", "1/2", "1/3"]);
     expect(schema.liens.length).toBe(1);
   });
@@ -556,7 +593,7 @@ describe("agrégat de liens", () => {
     const { schema, sw1, pc } = site();
     tirerCable(schema, sw1.id, pc.id);
     tirerCable(schema, sw1.id, pc.id);
-    const lien = agreger(schema, sw1.id, pc.id);
+    const lien = agreger(schema, cablesEntre(schema, sw1.id, pc.id).map((l) => l.id));
     const avant = pc.interfaces.length;
     reglerMembres(schema, lien.id, 3);
     expect(pc.interfaces.length).toBe(avant + 1);
@@ -566,7 +603,7 @@ describe("agrégat de liens", () => {
 
   it("supprimer le câble d'un agrégat retire l'agrégat et rend ses ports", () => {
     const { schema, sw1, sw2 } = liaison(2);
-    const lien = agreger(schema, sw1.id, sw2.id);
+    const lien = agreger(schema, cablesEntre(schema, sw1.id, sw2.id).map((l) => l.id));
     mettreEnTrunk(schema, [lien.id], true);
     retirerCable(schema, lien.id);
     expect(schema.liens).toEqual([]);
@@ -585,12 +622,13 @@ describe("agrégat de liens", () => {
     reglerMembres(schema, lien.id, 3);
     expect(agregatDe(schema, lien.a)?.mode).toBe("statique");
     expect(desagreger(schema, lien.id).length).toBe(3);
-    // Deux agrégats sur la même liaison : le simplifié n'en règle qu'un.
-    const un = agreger(schema, sw1.id, sw2.id);
+    // Deux agrégats sur la même liaison : chacun se règle seul ; choisis ensemble, ils ne s'agrègent pas.
+    const un = agreger(schema, cablesEntre(schema, sw1.id, sw2.id).map((l) => l.id));
     const autre = connecter(schema, port(sw1, "1/10"), port(sw2, "1/10"));
     creerAgregat(schema, autre.id);
-    expect(groupeDeCables(schema, un.id)?.horsDePortee).toMatch(/plusieurs agrégats \(Trk1, Trk2\)/);
-    expect(() => agreger(schema, sw1.id, sw2.id)).toThrow(/plusieurs agrégats/);
+    expect(groupeDeCables(schema, un.id)).toMatchObject({ horsDePortee: null, agregatImpossible: null });
+    expect(groupeDeCables(schema, [un.id, autre.id])?.agregatImpossible).toMatch(/plusieurs agrégats \(Trk1, Trk2\)/);
+    expect(() => agreger(schema, [un.id, autre.id])).toThrow(/plusieurs agrégats/);
     // Un agrégat d'un seul côté.
     schema.agregats = schema.agregats.filter((a) => a.equipement !== sw2.id || !a.membres.includes(autre.b.interface));
     retirerCable(schema, un.id);
@@ -648,7 +686,7 @@ describe("VLAN d'un trunk", () => {
     const { schema, sw1, sw2 } = site();
     tirerCable(schema, sw1.id, sw2.id);
     tirerCable(schema, sw1.id, sw2.id);
-    const lien = agreger(schema, sw1.id, sw2.id);
+    const lien = agreger(schema, cablesEntre(schema, sw1.id, sw2.id).map((l) => l.id));
     ecrireVlansDuTrunk(schema, [lien.id], { nonTague: 1, tagues: "10,20" });
     expect(agregatDe(schema, lien.a)?.vlan).toEqual({ mode: "trunk", natif: 1, tagues: "10,20" });
     expect(agregatDe(schema, lien.b)?.vlan).toEqual({ mode: "trunk", natif: 1, tagues: "10,20" });
@@ -680,9 +718,55 @@ describe("VLAN d'un trunk", () => {
     const [un, deux] = [tirerCable(schema, sw1.id, sw2.id), tirerCable(schema, sw1.id, sw2.id)];
     ecrireVlansDuTrunk(schema, [un.id], { tagues: "10" });
     ecrireVlansDuTrunk(schema, [deux.id], { tagues: "20" });
-    expect(groupeDeCables(schema, un.id)).toMatchObject({ trunk: true, cablesDifferents: true, vlans: { tagues: "10" } });
+    // Choisis ensemble (Ctrl+clic) : la bulle le dit ; choisi seul, chacun a les siens.
+    expect(groupeDeCables(schema, [un.id, deux.id])).toMatchObject({ trunk: true, cablesDifferents: true, vlans: { tagues: "10" } });
+    expect(groupeDeCables(schema, deux.id)).toMatchObject({ cablesDifferents: false, vlans: { tagues: "20" } });
     ecrireVlansDuTrunk(schema, [un.id, deux.id], { nonTague: 5, tagues: "10,20" });
-    expect(groupeDeCables(schema, un.id)).toMatchObject({ cablesDifferents: false, vlans: { nonTague: 5, tagues: "10,20" } });
+    expect(groupeDeCables(schema, [un.id, deux.id])).toMatchObject({ cablesDifferents: false, vlans: { nonTague: 5, tagues: "10,20" } });
+  });
+});
+
+describe("VLAN d'un câble en accès", () => {
+  it("s'écrit sur les deux bouts, en accès, et se retire ; voix, PVID et l'ancien trunk restent", () => {
+    const { schema, sw1, sw2, pc } = site();
+    const lien = tirerCable(schema, sw1.id, pc.id);
+    ecrireConfigDuBout(schema, lien.a, { mode: "acces", voix: 40 });
+    ecrireVlanDAcces(schema, [lien.id], 30);
+    expect(configDuBout(schema, lien.a)).toEqual({ mode: "acces", voix: 40, acces: 30 });
+    expect(configDuBout(schema, lien.b)).toEqual({ mode: "acces", acces: 30 });
+    expect(groupeDeCables(schema, lien.id)).toMatchObject({ trunk: false, vlans: { nonTague: 30 }, boutsDifferents: null });
+    // Vidé : le VLAN part, la voix reste ; un bout sans autre réglage n'en a plus.
+    ecrireVlanDAcces(schema, [lien.id], undefined);
+    expect(configDuBout(schema, lien.a)).toEqual({ mode: "acces", voix: 40 });
+    expect(configDuBout(schema, lien.b)).toBeUndefined();
+    // Un trunk décoché garde ses VLAN pour un retour en trunk : le VLAN d'accès s'y ajoute sans les perdre.
+    const montant = tirerCable(schema, sw1.id, sw2.id);
+    ecrireVlansDuTrunk(schema, [montant.id], { nonTague: 1, tagues: "10,20" });
+    mettreEnTrunk(schema, [montant.id], false);
+    ecrireVlanDAcces(schema, [montant.id], 10);
+    expect(configDuBout(schema, montant.a)).toEqual({ mode: "acces", natif: 1, tagues: "10,20", acces: 10 });
+    expect(groupeDeCables(schema, montant.id)?.vlans).toEqual({ nonTague: 10 });
+    mettreEnTrunk(schema, [montant.id], true);
+    expect(groupeDeCables(schema, montant.id)?.vlans).toEqual({ nonTague: 1, tagues: "10,20" });
+  });
+
+  it("ne touche pas un bout en trunk", () => {
+    const { schema, sw1, sw2 } = site();
+    const lien = tirerCable(schema, sw1.id, sw2.id);
+    ecrireConfigDuBout(schema, lien.a, { mode: "trunk", tagues: "10" });
+    ecrireVlanDAcces(schema, [lien.id], 20);
+    expect(configDuBout(schema, lien.a)).toEqual({ mode: "trunk", tagues: "10" });
+    expect(configDuBout(schema, lien.b)).toEqual({ mode: "acces", acces: 20 });
+  });
+
+  it("sur un agrégat, il s'écrit sur l'agrégat de chaque côté", () => {
+    const { schema, sw1, sw2 } = site();
+    tirerCable(schema, sw1.id, sw2.id);
+    tirerCable(schema, sw1.id, sw2.id);
+    const lien = agreger(schema, cablesEntre(schema, sw1.id, sw2.id).map((l) => l.id));
+    ecrireVlanDAcces(schema, [lien.id], 30);
+    expect(agregatDe(schema, lien.a)?.vlan).toEqual({ mode: "acces", acces: 30 });
+    expect(agregatDe(schema, lien.b)?.vlan).toEqual({ mode: "acces", acces: 30 });
   });
 });
 
@@ -699,10 +783,14 @@ describe("bonnes pratiques : des conseils, jamais des blocages", () => {
     expect(conseils(schema, un.id)).toEqual([]);
     tirerCable(schema, sw1.id, sw2.id);
     expect(conseils(schema, un.id)).toEqual([
-      "Deux câbles entre deux commutateurs sans agrégat forment une boucle : le spanning tree n'en laissera passer qu'un. Cochez « Agrégat de liens ».",
+      "Deux câbles aux mêmes VLAN entre deux commutateurs, sans agrégat, forment une boucle : le spanning tree n'en laissera passer qu'un. Choisissez-les ensemble (Ctrl+clic) et cochez « Agrégat de liens ».",
     ]);
-    const lien = agreger(schema, sw1.id, sw2.id);
+    const lien = agreger(schema, cablesEntre(schema, sw1.id, sw2.id).map((l) => l.id));
     expect(conseils(schema, lien.id)).toEqual([]);
+    // Un câble à part, à côté de l'agrégat et aux mêmes VLAN : il boucle avec lui.
+    const aPart = tirerCable(schema, sw1.id, sw2.id);
+    expect(conseils(schema, aPart.id)[0]).toContain("n'est pas dans l'agrégat");
+    retirerCable(schema, aPart.id);
     // Un cœur est un commutateur ; un serveur n'en est pas un (deux câbles vers lui ne font pas de boucle).
     const versCoeur = tirerCable(schema, sw1.id, coeur.id);
     tirerCable(schema, sw1.id, coeur.id);
@@ -734,6 +822,17 @@ describe("bonnes pratiques : des conseils, jamais des blocages", () => {
     const versTelephone = tirerCable(schema, sw1.id, telephone.id);
     ecrireVlansDuTrunk(schema, [versTelephone.id], { nonTague: 20, tagues: "40" });
     expect(conseils(schema, versTelephone.id)).toEqual([]);
+  });
+
+  it("un poste dans le VLAN 1 : un conseil ; dans un autre VLAN, aucun", () => {
+    const { schema, sw1, pc } = site();
+    const lien = tirerCable(schema, sw1.id, pc.id);
+    ecrireVlanDAcces(schema, [lien.id], 1);
+    expect(conseils(schema, lien.id)).toEqual([
+      "Le VLAN 1 est celui de tous les ports tant qu'on n'en a rien dit : mieux vaut un VLAN propre à cet usage.",
+    ]);
+    ecrireVlanDAcces(schema, [lien.id], 30);
+    expect(conseils(schema, lien.id)).toEqual([]);
   });
 
   it("un agrégat aux ports de genres ou de débits différents : dit comme le diagnostic", () => {

@@ -8,28 +8,29 @@
   import { SUPPORTS, type Support } from "../../lib/topologie/modele";
   import {
     AIDE_AGREGAT_MINIMUM,
-    AIDE_AGREGAT_SEUL,
     agreger,
     alignerVlans,
     aDesReglages,
     CABLES_MAX,
-    cablesEntre,
     changerTypeDeCable,
     conseilsDeLiaison,
     desagreger,
+    ecrireVlanDAcces,
     ecrireVlansDuTrunk,
     type GroupeDeCables,
     lireVlansDuTrunk,
     MEMBRES_MIN,
     mettreEnTrunk,
     reglerMembres,
-    reglerNombreDeCables,
+    tirerCable,
   } from "../../lib/topologie/simplifie";
+  import { lireNumeroVlan } from "../../lib/topologie/vlans";
 
-  // Bulle d'un câble choisi en mode simplifié (11A), ou des câbles qui relient deux mêmes équipements :
-  // leur type, leur nombre, et deux options qui ne se confondent pas. « Agrégat de liens » réunit les
-  // câbles en un seul lien (le dessin les cercle) ; « Trunk » leur fait transporter plusieurs VLAN (le
-  // dessin l'annote). Chaque réglage est le vrai réglage du modèle.
+  // Bulle des câbles choisis en mode simplifié (11A) : un câble, ou plusieurs choisis avec Ctrl+clic, qui
+  // se règlent alors ensemble. Leur type, et deux options qui ne se confondent pas. « Agrégat de liens »
+  // réunit des câbles choisis entre deux mêmes équipements en un seul lien (le dessin les cercle) ;
+  // « Trunk » leur fait transporter plusieurs VLAN (le dessin l'annote). Sans trunk, les ports sont en
+  // accès : un seul VLAN, non tagué, annoté lui aussi. Chaque réglage est le vrai réglage du modèle.
   let {
     editeur,
     groupe,
@@ -58,18 +59,17 @@
   const types = $derived(
     autresOuverts || AUTRES.some((t) => t.valeur === groupe.support) ? [...COURANTS, ...AUTRES] : COURANTS,
   );
-  const nombre = $derived(groupe.nombre);
   const ids = $derived(groupe.cables.map((l) => l.id));
-  const noms = $derived(`${groupe.a.nom} et ${groupe.b.nom}`);
+  const plusieurs = $derived(groupe.cables.length > 1);
+  /** Ce que disent les annonces : le câble, les câbles d'une même liaison, ou les câbles choisis. */
+  const sujet = $derived(
+    !groupe.memePaire
+      ? `Les ${groupe.cables.length} câbles choisis`
+      : plusieurs
+        ? `Les ${groupe.cables.length} câbles choisis entre ${groupe.a.nom} et ${groupe.b.nom}`
+        : `Câble entre ${groupe.a.nom} et ${groupe.b.nom}`,
+  );
   const conseils = $derived(conseilsDeLiaison(editeur.schema, groupe));
-
-  /**
-   * Après un changement du nombre de câbles : la sélection reste celle de toute la liaison. Les deux
-   * équipements sont lus avant l'opération : un câble retiré laisse un instant la sélection sans groupe.
-   */
-  function choisirLaLiaison(a: string, b: string) {
-    editeur.selection = cablesEntre(editeur.schema, a, b).map((l) => l.id);
-  }
 
   function changerType(support: Support) {
     if (support === groupe.support) return;
@@ -78,70 +78,96 @@
       (s) => {
         for (const id of cables) changerTypeDeCable(s, id, support);
       },
-      `Type de câble entre ${noms} : ${nomEntier(support).toLowerCase()}.`,
+      `${sujet} : ${nomEntier(support).toLowerCase()}.`,
     );
   }
 
-  // --- Nombre de câbles : des câbles ordinaires, ou les ports de l'agrégat ---
+  // --- Un câble de plus, à part ---
+
+  /** Un câble seul choisi : un autre câble entre les deux mêmes équipements, du même type, à régler à part. */
+  function ajouterACote() {
+    const [a, b, support] = [groupe.a, groupe.b, groupe.cables[0]?.support];
+    let nouveau = "";
+    const fait = editeur.agir((s) => {
+      nouveau = tirerCable(s, a.id, b.id, support ? { support } : {}).id;
+    });
+    if (!fait) return;
+    editeur.selection = [nouveau];
+    editeur.annonce = `Un câble de plus entre ${a.nom} et ${b.nom}, choisi : il se règle à part.`;
+  }
+
+  // --- L'agrégat choisi seul : ses câbles, qui sont ses ports ---
 
   /** Le « − » s'arrête : pourquoi (dit sous le compteur, une fois qu'on l'a demandé). */
   let aideMoins = $state<string | null>(null);
-  const minimum = $derived(groupe.agregat ? groupe.nombre - groupe.agregat.ports + MEMBRES_MIN : 1);
 
   function regler(voulu: number) {
     aideMoins = null;
-    if (voulu < minimum) {
-      if (groupe.agregat) aideMoins = AIDE_AGREGAT_MINIMUM;
+    const agregat = groupe.agregat;
+    if (!agregat) return;
+    if (voulu < MEMBRES_MIN) {
+      aideMoins = AIDE_AGREGAT_MINIMUM;
       return;
     }
-    const [a, b, entre] = [groupe.a.id, groupe.b.id, noms];
-    const agregat = groupe.agregat;
-    const ports = agregat ? agregat.ports + voulu - nombre : 0;
-    const fait = editeur.agir((s) => {
-      if (agregat) reglerMembres(s, agregat.lien.id, ports);
-      else reglerNombreDeCables(s, a, b, voulu);
-    });
-    if (!fait) return;
-    choisirLaLiaison(a, b);
-    editeur.annonce = agregat ? `Agrégat entre ${entre} : ${ports} câbles.` : `${voulu} câble(s) entre ${entre}.`;
+    if (editeur.agir((s) => reglerMembres(s, agregat.lien.id, voulu))) {
+      editeur.annonce = `Agrégat entre ${groupe.a.nom} et ${groupe.b.nom} : ${voulu} câbles.`;
+    }
   }
 
   // --- Agrégat de liens ---
 
-  const agregatImpossible = $derived(
-    groupe.horsDePortee ?? (!groupe.agregat && groupe.ordinaires.length < MEMBRES_MIN ? AIDE_AGREGAT_SEUL : null),
-  );
+  /** Coché : le câble choisi est un agrégat, choisi seul (le décocher en refait des câbles à part). */
+  const agrege = $derived(groupe.agregat !== null && !plusieurs);
 
   function basculerAgregat() {
     aideMoins = null;
-    if (agregatImpossible) {
-      editeur.annonce = agregatImpossible;
+    if (groupe.agregatImpossible) {
+      editeur.annonce = groupe.agregatImpossible;
       return;
     }
-    const [a, b, entre] = [groupe.a.id, groupe.b.id, noms];
-    if (groupe.agregat) {
+    const entre = `${groupe.a.nom} et ${groupe.b.nom}`;
+    if (agrege && groupe.agregat) {
       const lien = groupe.agregat.lien.id;
-      let cables = 0;
-      if (!editeur.agir((s) => (cables = desagreger(s, lien).length))) return;
-      choisirLaLiaison(a, b);
-      editeur.annonce = `Plus d'agrégat entre ${entre} : ${cables} câble(s) ordinaire(s), chacun sur son port.`;
+      let cables: string[] = [];
+      if (!editeur.agir((s) => (cables = desagreger(s, lien).map((l) => l.id)))) return;
+      editeur.selection = cables;
+      editeur.annonce = `Plus d'agrégat entre ${entre} : ${cables.length} câble(s) à part, chacun sur son port, tous choisis.`;
       return;
     }
     // Un seul câble reste au modèle : les réglages propres aux autres (nom, étiquette…) ne suivent pas.
     const regles = groupe.ordinaires.filter((l) => aDesReglages(editeur.schema, l)).length;
-    const cables = groupe.ordinaires.length;
-    if (!editeur.agir((s) => void agreger(s, a, b))) return;
-    choisirLaLiaison(a, b);
+    const choisis = ids;
+    let garde = "";
+    if (!editeur.agir((s) => (garde = agreger(s, choisis).id))) return;
+    editeur.selection = [garde];
     editeur.annonce =
-      `Agrégat de liens entre ${entre} : ${cables} câbles sous un cercle.` +
+      `Agrégat de liens entre ${entre} : ${groupe.nombre} câbles sous un cercle.` +
       (regles > 1 ? " Les réglages propres aux autres câbles (nom, étiquette…) ne sont pas gardés : Ctrl+Z annule." : "");
   }
 
   // --- Trunk et ses VLAN ---
 
-  let erreur = $state<{ texte: string; champ: "non-tague" | "tagues" } | null>(null);
+  let erreur = $state<{ texte: string; champ: "non-tague" | "tagues" | "acces" } | null>(null);
   let champNonTague = $state<HTMLInputElement>();
   let champTagues = $state<HTMLInputElement>();
+  let champAcces = $state<HTMLInputElement>();
+
+  /** Le VLAN d'un câble en accès : un seul numéro, non tagué. Vide, il se retire. */
+  function ecrireVlanAcces() {
+    const lu = lireNumeroVlan(champAcces?.value ?? "");
+    if (lu === null) {
+      erreur = { texte: "Le VLAN d'un port d'accès est un seul numéro, de 1 à 4094.", champ: "acces" };
+      void tick().then(() => document.getElementById("bulle-vlans-erreur")?.scrollIntoView({ block: "nearest" }));
+      return;
+    }
+    erreur = null;
+    if (lu === groupe.vlans.nonTague && !groupe.cablesDifferents) return;
+    const cables = ids;
+    editeur.agir(
+      (s) => ecrireVlanDAcces(s, cables, lu),
+      lu !== undefined ? `${sujet} : VLAN ${lu} en accès, non tagué.` : `${sujet} : plus de VLAN.`,
+    );
+  }
 
   function basculerTrunk() {
     const actif = !groupe.trunk;
@@ -150,8 +176,8 @@
     editeur.agir(
       (s) => mettreEnTrunk(s, cables, actif),
       actif
-        ? `Trunk entre ${noms} : ses VLAN non tagué et tagués se règlent juste dessous.`
-        : `Plus de trunk entre ${noms} : les ports reviennent en accès.`,
+        ? `${sujet} : trunk. Ses VLAN non tagué et tagués se règlent juste dessous.`
+        : `${sujet} : plus de trunk, les ports reviennent en accès.`,
     );
   }
 
@@ -175,13 +201,18 @@
       .join(", ");
     editeur.agir(
       (s) => ecrireVlansDuTrunk(s, cables, lus.champs),
-      texte ? `Trunk entre ${noms} : VLAN ${texte}.` : `Trunk entre ${noms} : plus aucun VLAN.`,
+      texte ? `${sujet} : trunk, VLAN ${texte}.` : `${sujet} : trunk sans VLAN.`,
     );
   }
 
   /** Pendant la saisie, une erreur corrigée s'efface tout de suite. */
   function relire() {
-    if (erreur && !("erreur" in lireVlansDuTrunk(champNonTague?.value ?? "", champTagues?.value ?? ""))) erreur = null;
+    if (!erreur) return;
+    const corrige =
+      erreur.champ === "acces"
+        ? lireNumeroVlan(champAcces?.value ?? "") !== null
+        : !("erreur" in lireVlansDuTrunk(champNonTague?.value ?? "", champTagues?.value ?? ""));
+    if (corrige) erreur = null;
   }
 
   function aligner(equipement: string, nom: string) {
@@ -216,7 +247,14 @@
   }
 </script>
 
-<h2 id="titre-bulle">{groupe.a.nom} ↔ {groupe.b.nom}</h2>
+<h2 id="titre-bulle">{groupe.memePaire ? `${groupe.a.nom} ↔ ${groupe.b.nom}` : `${groupe.cables.length} câbles choisis`}</h2>
+<p class="aide" id="bulle-choix">
+  {#if plusieurs}
+    {groupe.memePaire ? `${groupe.cables.length} câbles choisis : ` : ""}ce que vous réglez ici vaut pour tous.
+  {:else}
+    Ctrl+clic sur d'autres câbles pour les régler ensemble.
+  {/if}
+</p>
 <div>
   <span class="libelle" id="bulle-type">Type de câble</span>
   <!-- svelte-ignore a11y_interactive_supports_focus -->
@@ -250,27 +288,34 @@
   </div>
 </div>
 
-<div class="option">
-  <span class="nom-option" id="bulle-nombre">Nombre de câbles</span>
-  <div class="pas" role="group" aria-labelledby="bulle-nombre">
-    <button
-      type="button"
-      aria-label="Un câble de moins"
-      aria-disabled={nombre <= minimum}
-      aria-describedby={aideMoins ? "bulle-nombre-aide" : undefined}
-      disabled={groupe.horsDePortee !== null || (!groupe.agregat && nombre <= 1)}
-      onclick={() => regler(nombre - 1)}
-    >
-      <Minus size={16} aria-hidden="true" />
-    </button>
-    <output aria-live="polite">{nombre}</output>
-    <button type="button" aria-label="Un câble de plus" disabled={groupe.horsDePortee !== null || nombre >= CABLES_MAX} onclick={() => regler(nombre + 1)}>
-      <Plus size={16} aria-hidden="true" />
-    </button>
+{#if agrege && groupe.agregat}
+  <div class="option">
+    <span class="nom-option" id="bulle-nombre">Nombre de câbles</span>
+    <div class="pas" role="group" aria-labelledby="bulle-nombre">
+      <button
+        type="button"
+        aria-label="Un câble de moins"
+        aria-disabled={groupe.agregat.ports <= MEMBRES_MIN}
+        aria-describedby={aideMoins ? "bulle-nombre-aide" : undefined}
+        disabled={groupe.horsDePortee !== null}
+        onclick={() => regler((groupe.agregat?.ports ?? MEMBRES_MIN) - 1)}
+      >
+        <Minus size={16} aria-hidden="true" />
+      </button>
+      <output aria-live="polite">{groupe.agregat.ports}</output>
+      <button
+        type="button"
+        aria-label="Un câble de plus"
+        disabled={groupe.horsDePortee !== null || groupe.agregat.ports >= CABLES_MAX}
+        onclick={() => regler((groupe.agregat?.ports ?? MEMBRES_MIN) + 1)}
+      >
+        <Plus size={16} aria-hidden="true" />
+      </button>
+    </div>
   </div>
-</div>
-{#if aideMoins}
-  <p class="aide" id="bulle-nombre-aide" role="status">{aideMoins}</p>
+  {#if aideMoins}
+    <p class="aide" id="bulle-nombre-aide" role="status">{aideMoins}</p>
+  {/if}
 {/if}
 
 <div class="option">
@@ -280,15 +325,15 @@
     class="interrupteur"
     role="switch"
     data-option="agregat"
-    aria-checked={groupe.agregat !== null}
+    aria-checked={agrege}
     aria-labelledby="bulle-agregat"
-    aria-describedby={agregatImpossible ? "bulle-agregat-aide" : undefined}
-    aria-disabled={agregatImpossible !== null}
+    aria-describedby={groupe.agregatImpossible ? "bulle-agregat-aide" : undefined}
+    aria-disabled={groupe.agregatImpossible !== null}
     onclick={basculerAgregat}
   ></button>
 </div>
-{#if agregatImpossible}
-  <p class="aide" id="bulle-agregat-aide">{agregatImpossible}</p>
+{#if groupe.agregatImpossible}
+  <p class="aide" id="bulle-agregat-aide">{groupe.agregatImpossible}</p>
 {/if}
 
 <div class="option">
@@ -312,10 +357,10 @@
         bind:this={champNonTague}
         id="bulle-vlan-non-tague"
         class="champ code"
-        value={groupe.vlans.nonTague ?? ""}
+        value={groupe.cablesDifferents ? "" : (groupe.vlans.nonTague ?? "")}
         inputmode="numeric"
         autocomplete="off"
-        placeholder="aucun"
+        placeholder={groupe.cablesDifferents ? "différents" : "aucun"}
         aria-invalid={erreur?.champ === "non-tague"}
         aria-describedby={erreur ? "bulle-vlans-erreur" : undefined}
         onchange={ecrireVlans}
@@ -329,10 +374,10 @@
         bind:this={champTagues}
         id="bulle-vlans-tagues"
         class="champ code"
-        value={groupe.vlans.tagues ?? ""}
+        value={groupe.cablesDifferents ? "" : (groupe.vlans.tagues ?? "")}
         autocomplete="off"
         spellcheck="false"
-        placeholder="10,20,30-40"
+        placeholder={groupe.cablesDifferents ? "différents" : "10,20,30-40"}
         aria-invalid={erreur?.champ === "tagues"}
         aria-describedby={erreur ? "bulle-vlans-erreur" : undefined}
         onchange={ecrireVlans}
@@ -340,6 +385,31 @@
         onkeydown={entree}
       />
     </div>
+  </div>
+  {#if erreur}
+    <p id="bulle-vlans-erreur" class="erreur" role="alert">{erreur.texte}</p>
+  {/if}
+{:else}
+  <!-- Sans trunk, les ports sont en accès : un seul VLAN, qui passe sans étiquette. -->
+  <div class="vlans" id="bulle-vlans">
+    <div>
+      <label for="bulle-vlan-acces">VLAN non tagué (untagged)</label>
+      <input
+        bind:this={champAcces}
+        id="bulle-vlan-acces"
+        class="champ code"
+        value={groupe.cablesDifferents ? "" : (groupe.vlans.nonTague ?? "")}
+        inputmode="numeric"
+        autocomplete="off"
+        placeholder={groupe.cablesDifferents ? "différents" : "aucun"}
+        aria-invalid={erreur?.champ === "acces"}
+        aria-describedby={erreur ? "bulle-vlans-erreur bulle-acces-aide" : "bulle-acces-aide"}
+        onchange={ecrireVlanAcces}
+        oninput={relire}
+        onkeydown={entree}
+      />
+    </div>
+    <p class="aide" id="bulle-acces-aide">Port d'accès : un seul VLAN. Pour en faire passer plusieurs, cochez « Trunk ».</p>
   </div>
   {#if erreur}
     <p id="bulle-vlans-erreur" class="erreur" role="alert">{erreur.texte}</p>
@@ -365,8 +435,13 @@
 {/each}
 
 <div class="actions">
+  {#if !plusieurs}
+    <button type="button" class="bouton discret" data-action="a-cote" onclick={ajouterACote}>
+      <Plus size={16} aria-hidden="true" /> Ajouter un câble à côté
+    </button>
+  {/if}
   <button type="button" class="bouton discret danger" title="Supprimer (Suppr) ; Ctrl+Z annule" onclick={onretirer}>
-    <Trash2 size={16} aria-hidden="true" /> Supprimer {nombre > 1 ? "les câbles" : "le câble"}
+    <Trash2 size={16} aria-hidden="true" /> Supprimer {groupe.nombre > 1 ? "les câbles" : "le câble"}
   </button>
 </div>
 {#if groupe.horsDePortee}

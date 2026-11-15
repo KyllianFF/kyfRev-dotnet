@@ -91,7 +91,7 @@ public sealed class WindowsPrintService : IPrintService
         }
     }
 
-    /// <summary>Pose les réglages d'un travail sur le ticket d'une imprimante : exemplaires, recto verso, orientation, papier.</summary>
+    /// <summary>Pose les réglages d'un travail sur le ticket d'une imprimante : exemplaires, recto verso, orientation, papier, couleur.</summary>
     internal static PrintTicket TicketFor(PrintJob job, PrintTicket ticket)
     {
         ticket.CopyCount = Math.Clamp(job.Copies, 1, PrintViewModel.MaximumCopies);
@@ -102,6 +102,8 @@ public sealed class WindowsPrintService : IPrintService
             _ => Duplexing.OneSided,
         };
         ticket.PageOrientation = job.Layout.Landscape ? PageOrientation.Landscape : PageOrientation.Portrait;
+        // Les pages en noir et blanc sont déjà grises ; l'imprimante le sait aussi, et n'use pas ses couleurs.
+        ticket.OutputColor = job.InColor ? OutputColor.Color : OutputColor.Grayscale;
         // Le papier se décrit en portrait : c'est l'orientation qui le tourne.
         var portrait = job.Layout with { Landscape = false };
         ticket.PageMediaSize = new PageMediaSize(MediaName(job.Layout.Format), portrait.WidthPixels, portrait.HeightPixels);

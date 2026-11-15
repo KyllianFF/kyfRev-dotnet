@@ -82,25 +82,39 @@
         <kyf:Card x:Name="MenuCard" pages:SettingsPart.Of="menu" Padding="16,12" Margin="0,0,0,8" VerticalAlignment="Top">
           <StackPanel>
             <TextBlock Text="{x:Static pages:MoreSettingsText.MenuTitle}" Style="{DynamicResource Kyf.Text.Subtitle}" AutomationProperties.HeadingLevel="Level2" Margin="0,0,0,4" />
-            <TextBlock Text="{x:Static pages:MoreSettingsText.MenuHelp}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,0,0,8" />
-            <ItemsControl x:Name="MenuList" ItemsSource="{Binding Menu}" Focusable="False">
-              <ItemsControl.ItemTemplate>
+            <TextBlock Text="{x:Static pages:MoreSettingsText.MenuHelp}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,0,0,2" />
+            <TextBlock Text="{x:Static pages:MoreSettingsText.MenuHowTo}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,0,0,8" />
+            <!-- Une vue se prend par sa ligne et se fait glisser ; choisie d'un clic, les flèches la déplacent. Les boutons ↑ ↓ restent,
+                 pour la souris seule et les lecteurs d'écran. -->
+            <ListBox x:Name="MenuList" ItemsSource="{Binding Menu}" SelectedItem="{Binding ChosenMenuRow}" SelectionMode="Single" PreviewKeyDown="OnMenuKey"
+                     PreviewMouseLeftButtonDown="OnMenuPressed" PreviewMouseMove="OnMenuDragged" PreviewMouseLeftButtonUp="OnMenuReleased" LostMouseCapture="OnMenuCaptureLost"
+                     AutomationProperties.Name="{x:Static pages:MoreSettingsText.MenuListName}" AutomationProperties.HelpText="{x:Static pages:MoreSettingsText.MenuListHelp}">
+              <!-- Pas de défilement propre : la page défile, molette comprise, même au-dessus de la liste. -->
+              <ListBox.Template>
+                <ControlTemplate TargetType="ListBox">
+                  <ItemsPresenter />
+                </ControlTemplate>
+              </ListBox.Template>
+              <ListBox.ItemTemplate>
                 <DataTemplate DataType="{x:Type pages:MenuRow}">
-                  <Grid Margin="0,0,0,4">
+                  <Grid>
                     <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="Auto" />
                       <ColumnDefinition Width="*" />
                       <ColumnDefinition Width="Auto" />
                       <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
-                    <Button Grid.Column="1" Style="{DynamicResource Kyf.Button.Tool}" Content="↑" ToolTip="{Binding UpLabel}" AutomationProperties.Name="{Binding UpLabel}"
+                    <kyf:Icon Text="{x:Static kyf:Icons.Grip}" FontSize="14" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="{DynamicResource Kyf.Brush.TextSecondary}" />
+                    <TextBlock Grid.Column="1" Text="{Binding Label}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                    <Button Grid.Column="2" Style="{DynamicResource Kyf.Button.Tool}" Content="↑" Cursor="Hand" ToolTip="{Binding UpLabel}" AutomationProperties.Name="{Binding UpLabel}"
                             Command="{Binding DataContext.MoveUpCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
-                    <Button Grid.Column="2" Style="{DynamicResource Kyf.Button.Tool}" Content="↓" Margin="2,0,0,0" ToolTip="{Binding DownLabel}" AutomationProperties.Name="{Binding DownLabel}"
+                    <Button Grid.Column="3" Style="{DynamicResource Kyf.Button.Tool}" Content="↓" Cursor="Hand" Margin="2,0,0,0" ToolTip="{Binding DownLabel}" AutomationProperties.Name="{Binding DownLabel}"
                             Command="{Binding DataContext.MoveDownCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
                   </Grid>
                 </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
+              </ListBox.ItemTemplate>
+            </ListBox>
+            <TextBlock x:Name="MenuMovedText" Text="{Binding MenuMoved}" Style="{DynamicResource Kyf.Text.Caption}" Margin="8,4,0,0" AutomationProperties.LiveSetting="Polite" />
             <Button x:Name="RestoreOrderButton" Style="{DynamicResource Kyf.Button.Subtle}" HorizontalAlignment="Left" Margin="0,8,0,0" Content="{x:Static pages:MoreSettingsText.RestoreOrder}"
                     Command="{Binding RestoreOrderCommand}" />
           </StackPanel>

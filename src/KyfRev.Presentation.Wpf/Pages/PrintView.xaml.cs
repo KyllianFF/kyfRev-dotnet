@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using KyfRev.Application.Model;
 using KyfRev.DesignSystem;
 using KyfRev.DesignSystem.Tokens;
@@ -15,23 +16,37 @@ namespace KyfRev.Presentation.Wpf.Pages;
 /// Le contenu de la fenêtre « Imprimer » : ses réglages, et l'aperçu. La fiche est mise en page une fois, en une longue
 /// bande, par la même vue que la lecture, avec la feuille choisie ici ; l'aperçu en montre une feuille, et l'impression
 /// les découpe toutes dans cette même bande : ce qui sort est ce qui est montré. Le thème clair s'y applique toujours, et
-/// le papier est blanc : on n'imprime pas un fond.
+/// le papier est blanc : on n'imprime pas un fond. Une image seule (un schéma) se pose sur une feuille, sous son titre. En noir
+/// et blanc, l'aperçu et les pages sont en nuances de gris : ce qui sort est encore ce qui est montré.
 /// </summary>
 internal sealed partial class PrintView : UserControl
 {
     /// <summary>La taille des numéros de page.</summary>
     private const double NumberSize = 11;
 
+    /// <summary>La taille du titre d'une image imprimée seule.</summary>
+    private const double PictureTitleSize = 21;
+
+    /// <summary>La finesse d'une page imprimée en noir et blanc, en points par pouce.</summary>
+    private const double GrayPrintDpi = 300;
+
+    /// <summary>La finesse de l'aperçu en noir et blanc.</summary>
+    private const double GrayPreviewDpi = 144;
+
     private readonly SheetDocumentViewer _viewer = new() { ShowsWhole = true, DrawsPaper = false, IsHitTestVisible = false, Focusable = false, IsTabStop = false };
     private readonly Grid _stage = new() { IsHitTestVisible = false };
     private PrintViewModel? _model;
+    private (BitmapSource Source, BitmapSource Gray)? _grayPicture;
+
+    /// <summary>Le papier, blanc, et l'encre du noir et blanc : des jetons du design system, pas des couleurs écrites ici.</summary>
+    private readonly SolidColorBrush _paper = Frozen(Palette.PrintPaper);
+    private readonly SolidColorBrush _ink = Frozen(Palette.PrintInk);
 
     public PrintView()
     {
         InitializeComponent();
         // Le texte s'imprime comme en thème clair, quel que soit celui de l'application, et sur du papier blanc.
-        var paper = new SolidColorBrush(Palette.PrintPaper.ToColor());
-        paper.Freeze();
+        var paper = _paper;
         _stage.Resources.MergedDictionaries.Add(new DesignResources(ThemeKind.Light, reducedMotion: true).Dictionary);
         _stage.Resources["Kyf.Brush.Surface"] = paper;
         _stage.Resources["Kyf.Brush.Background"] = paper;
@@ -95,6 +110,7 @@ internal sealed partial class PrintView : UserControl
             ApplyLayout(model);
             _viewer.Reading = model.Reading;
             _ = WaitForPicturesAsync(model);
+            ShowPage();
         }
     }
 
@@ -112,8 +128,13 @@ internal sealed partial class PrintView : UserControl
                 break;
             case nameof(PrintViewModel.Layout):
                 ApplyLayout(model);
+                if (model.Picture is not null)
+                {
+                    ShowPage();
+                }
                 break;
-            case nameof(PrintViewModel.CurrentPage) or nameof(PrintViewModel.ShowsNumbers) or nameof(PrintViewModel.IsCurrentPrinted):
+            case nameof(PrintViewModel.CurrentPage) or nameof(PrintViewModel.ShowsNumbers) or nameof(PrintViewModel.IsCurrentPrinted)
+                or nameof(PrintViewModel.Picture) or nameof(PrintViewModel.IsColor):
                 ShowPage();
                 break;
         }
@@ -171,6 +192,12 @@ internal sealed partial class PrintView : UserControl
         {
             return;
         }
+        if (model.Picture is { } picture)
+        {
+            ShowPicture(model, picture);
+            return;
+        }
+        PageCanvas.Visibility = Visibility.Visible;
         var rects = _viewer.PageRects();
         if (model.TotalPages != rects.Count)
         {
@@ -180,15 +207,123 @@ internal sealed partial class PrintView : UserControl
         if (rects.Count == 0)
         {
             PageNumber.Text = string.Empty;
+            HidePageImage();
             return;
         }
         var index = Math.Clamp(model.CurrentPage, 1, rects.Count) - 1;
-        var (sheet, _) = rects[index];
+        var (sheet, textOnly) = rects[index];
         Canvas.SetLeft(_stage, -sheet.X);
         Canvas.SetTop(_stage, -sheet.Y);
         Paper.Opacity = model.IsCurrentPrinted ? 1 : 0.45;
         PageNumber.Text = model.ShowsNumbers ? Number(index + 1, rects.Count) : string.Empty;
         PageNumber.Margin = new Thickness(0, 0, 0, NumberBottom(model.Layout));
+        // En noir et blanc, la feuille montrée est celle qui sortira : grise, posée sur la feuille en couleur.
+        if (model.IsGrayscale && !model.IsPreparing)
+        {
+            var layout = model.Layout;
+            PageImage.Source = Grayed(SheetVisual(sheet, textOnly, layout, null, rects.Count), new Size(layout.WidthPixels, layout.HeightPixels), GrayPreviewDpi);
+            PageImage.Visibility = Visibility.Visible;
+        }
+        else
+        {
+            HidePageImage();
+        }
+    }
+
+    private void HidePageImage()
+    {
+        PageImage.Source = null;
+        PageImage.Visibility = Visibility.Collapsed;
+    }
+
+    /// <summary>L'image seule : une feuille, celle qui sortira, sans numéro.</summary>
+    private void ShowPicture(PrintViewModel model, BitmapSource picture)
+    {
+        if (model.TotalPages != 1)
+        {
+            model.TotalPages = 1;
+        }
+        PageCanvas.Visibility = Visibility.Hidden;
+        NotPrintedText.Visibility = Visibility.Hidden;
+        Paper.Opacity = 1;
+        PageNumber.Text = string.Empty;
+        var page = new DrawingImage(PicturePage(model, picture));
+        page.Freeze();
+        PageImage.Source = page;
+        PageImage.Visibility = Visibility.Visible;
+    }
+
+    /// <summary>
+    /// La feuille d'une image seule : son titre en haut, dans les marges, puis l'image entière, centrée dans la place qui reste.
+    /// Le titre reste du texte ; en noir et blanc, il est noir et l'image en nuances de gris.
+    /// </summary>
+    private DrawingGroup PicturePage(PrintViewModel model, BitmapSource picture)
+    {
+        var layout = model.Layout;
+        var size = new Size(layout.WidthPixels, layout.HeightPixels);
+        var margin = layout.MarginPixels;
+        var width = Math.Max(1, size.Width - (2 * margin));
+        var ink = model.IsColor && _stage.TryFindResource("Kyf.Brush.Text") is Brush text ? text : _ink;
+        var typeface = new Typeface(TextElement.GetFontFamily(_viewer), FontStyles.Normal, FontWeights.SemiBold, FontStretches.Normal);
+        var title = new FormattedText(model.PictureTitle, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, typeface, PictureTitleSize, ink, 1)
+        {
+            MaxTextWidth = width,
+            MaxLineCount = 2,
+            Trimming = TextTrimming.CharacterEllipsis,
+        };
+        var top = margin + title.Height + 12;
+        var area = new Rect(margin, top, width, Math.Max(1, size.Height - top - margin));
+        var scale = Math.Min(area.Width / Math.Max(1, picture.PixelWidth), area.Height / Math.Max(1, picture.PixelHeight));
+        var drawn = new Size(picture.PixelWidth * scale, picture.PixelHeight * scale);
+        var page = new DrawingGroup();
+        using (var context = page.Open())
+        {
+            context.DrawRectangle(_paper, null, new Rect(size));
+            context.DrawText(title, new Point(margin, margin));
+            context.DrawImage(model.IsColor ? picture : GrayOf(picture), new Rect(area.X + ((area.Width - drawn.Width) / 2), area.Y, drawn.Width, drawn.Height));
+        }
+        page.Freeze();
+        return page;
+    }
+
+    private static SolidColorBrush Frozen(TokenColor color)
+    {
+        var brush = new SolidColorBrush(color.ToColor());
+        brush.Freeze();
+        return brush;
+    }
+
+    /// <summary>L'image en nuances de gris, faite une fois par image.</summary>
+    private BitmapSource GrayOf(BitmapSource picture)
+    {
+        if (_grayPicture is not { } known || !ReferenceEquals(known.Source, picture))
+        {
+            var gray = new FormatConvertedBitmap(picture, PixelFormats.Gray8, null, 0);
+            gray.Freeze();
+            _grayPicture = (picture, gray);
+        }
+        return _grayPicture.Value.Gray;
+    }
+
+    /// <summary>Une page rendue en points, puis en nuances de gris, sur fond blanc.</summary>
+    private static FormatConvertedBitmap Grayed(Visual page, Size size, double dpi)
+    {
+        var bitmap = new RenderTargetBitmap(Math.Max(1, (int)Math.Ceiling(size.Width * dpi / 96)), Math.Max(1, (int)Math.Ceiling(size.Height * dpi / 96)), dpi, dpi, PixelFormats.Pbgra32);
+        bitmap.Render(page);
+        var gray = new FormatConvertedBitmap(bitmap, PixelFormats.Gray8, null, 0);
+        gray.Freeze();
+        return gray;
+    }
+
+    /// <summary>Une page faite d'une image, à la taille de la feuille.</summary>
+    private static DrawingVisual ImagePage(ImageSource image, Size size)
+    {
+        var visual = new DrawingVisual();
+        using (var drawing = visual.RenderOpen())
+        {
+            drawing.DrawImage(image, new Rect(size));
+        }
+        return visual;
     }
 
     private static string Number(int page, int total) => string.Create(CultureInfo.InvariantCulture, $"{page}/{total}");
@@ -196,72 +331,99 @@ internal sealed partial class PrintView : UserControl
     /// <summary>Le numéro se pose au milieu de la marge du bas.</summary>
     private static double NumberBottom(PageLayout layout) => Math.Max(4, (layout.MarginPixels - (NumberSize * 1.3)) / 2);
 
-    /// <summary>Les pages à envoyer à l'imprimante : les feuilles demandées, découpées dans la bande mise en page.</summary>
+    /// <summary>
+    /// Les pages à envoyer à l'imprimante : les feuilles demandées, découpées dans la bande mise en page ; ou la feuille de l'image
+    /// seule. Elles se dessinent l'une après l'autre, quand l'imprimante les demande : en noir et blanc, chacune devient une image
+    /// grise fine, et une seule à la fois est en mémoire.
+    /// </summary>
     internal DocumentPaginator? Paginate(IReadOnlyList<int> pages, bool numbers)
     {
         if (_model is not { } model)
         {
             return null;
         }
+        var layout = model.Layout;
+        var size = new Size(layout.WidthPixels, layout.HeightPixels);
+        if (model.Picture is { } picture)
+        {
+            var drawing = PicturePage(model, picture);
+            return new SheetPaginator(1, size, _ =>
+            {
+                var visual = new DrawingVisual();
+                using (var context = visual.RenderOpen())
+                {
+                    context.DrawDrawing(drawing);
+                }
+                return visual;
+            });
+        }
         Settle();
         var rects = _viewer.PageRects();
-        if (rects.Count == 0)
+        var chosen = pages.Where(page => page >= 1 && page <= rects.Count).ToList();
+        if (chosen.Count == 0)
         {
             return null;
         }
-        var layout = model.Layout;
+        var gray = model.IsGrayscale;
+        return new SheetPaginator(chosen.Count, size, index =>
+        {
+            var page = chosen[index];
+            var (sheet, textOnly) = rects[page - 1];
+            var visual = SheetVisual(sheet, textOnly, layout, numbers ? page : null, rects.Count);
+            return gray ? ImagePage(Grayed(visual, size, GrayPrintDpi), size) : visual;
+        });
+    }
+
+    /// <summary>Une feuille de la fiche, découpée dans la bande mise en page, sur du blanc, avec son numéro si on le veut.</summary>
+    private DrawingVisual SheetVisual(Rect sheet, bool textOnly, PageLayout layout, int? number, int total)
+    {
         var size = new Size(layout.WidthPixels, layout.HeightPixels);
         var ink = _stage.TryFindResource("Kyf.Brush.Text") as Brush;
         var typeface = new Typeface(TextElement.GetFontFamily(_viewer), FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);
-        var visuals = new List<Visual>();
-        foreach (var page in pages.Where(page => page >= 1 && page <= rects.Count))
+        var visual = new DrawingVisual();
+        using (var drawing = visual.RenderOpen())
         {
-            var (sheet, textOnly) = rects[page - 1];
-            var visual = new DrawingVisual();
-            using (var drawing = visual.RenderOpen())
+            drawing.DrawRectangle(_paper, null, new Rect(size));
+            var picture = new VisualBrush(_stage)
             {
-                var picture = new VisualBrush(_stage)
-                {
-                    ViewboxUnits = BrushMappingMode.Absolute,
-                    Viewbox = sheet,
-                    ViewportUnits = BrushMappingMode.Absolute,
-                    Viewport = new Rect(size),
-                    Stretch = Stretch.Fill,
-                    TileMode = TileMode.None,
-                };
-                if (textOnly)
-                {
-                    // Une page découpée dans un texte plus haut qu'elle : ses marges restent blanches.
-                    drawing.PushClip(new RectangleGeometry(new Rect(0, layout.MarginPixels, size.Width, size.Height - (2 * layout.MarginPixels))));
-                }
-                drawing.DrawRectangle(picture, null, new Rect(size));
-                if (textOnly)
-                {
-                    drawing.Pop();
-                }
-                if (numbers && ink is not null)
-                {
-                    var text = new FormattedText(Number(page, rects.Count), CultureInfo.InvariantCulture, FlowDirection.LeftToRight, typeface, NumberSize, ink, 1);
-                    drawing.DrawText(text, new Point((size.Width - text.Width) / 2, size.Height - NumberBottom(layout) - text.Height));
-                }
+                ViewboxUnits = BrushMappingMode.Absolute,
+                Viewbox = sheet,
+                ViewportUnits = BrushMappingMode.Absolute,
+                Viewport = new Rect(size),
+                Stretch = Stretch.Fill,
+                TileMode = TileMode.None,
+            };
+            if (textOnly)
+            {
+                // Une page découpée dans un texte plus haut qu'elle : ses marges restent blanches.
+                drawing.PushClip(new RectangleGeometry(new Rect(0, layout.MarginPixels, size.Width, size.Height - (2 * layout.MarginPixels))));
             }
-            visuals.Add(visual);
+            drawing.DrawRectangle(picture, null, new Rect(size));
+            if (textOnly)
+            {
+                drawing.Pop();
+            }
+            if (number is { } page && ink is not null)
+            {
+                var text = new FormattedText(Number(page, total), CultureInfo.InvariantCulture, FlowDirection.LeftToRight, typeface, NumberSize, ink, 1);
+                drawing.DrawText(text, new Point((size.Width - text.Width) / 2, size.Height - NumberBottom(layout) - text.Height));
+            }
         }
-        return visuals.Count == 0 ? null : new SheetPaginator(visuals, size);
+        return visual;
     }
 
-    /// <summary>Des pages déjà dessinées, à la taille de la feuille.</summary>
-    private sealed class SheetPaginator(IReadOnlyList<Visual> pages, Size size) : DocumentPaginator
+    /// <summary>Des pages à la taille de la feuille, dessinées quand on les demande.</summary>
+    private sealed class SheetPaginator(int count, Size size, Func<int, Visual> page) : DocumentPaginator
     {
         public override bool IsPageCountValid => true;
 
-        public override int PageCount => pages.Count;
+        public override int PageCount => count;
 
         public override Size PageSize { get; set; } = size;
 
         public override IDocumentPaginatorSource? Source => null;
 
         public override DocumentPage GetPage(int pageNumber) =>
-            new(pages[pageNumber], PageSize, new Rect(PageSize), new Rect(PageSize));
+            new(page(pageNumber), PageSize, new Rect(PageSize), new Rect(PageSize));
     }
 }

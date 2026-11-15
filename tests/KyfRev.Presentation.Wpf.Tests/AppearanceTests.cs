@@ -1,7 +1,9 @@
 using System.Windows;
 using System.Windows.Interop;
+using System.Windows.Media;
 using KyfRev.Application.Model;
 using KyfRev.DesignSystem;
+using KyfRev.DesignSystem.Controls;
 using KyfRev.DesignSystem.Tokens;
 using KyfRev.Presentation.Wpf.Pages;
 using KyfRev.Presentation.Wpf.Shell;
@@ -89,6 +91,46 @@ public sealed class AppearanceTests
         Assert.AreEqual("Clair", gallery.SelectedTheme.Label);
         Assert.ThrowsExactly<ArgumentNullException>(() => gallery.SelectedTheme = null!);
         Assert.ThrowsExactly<ArgumentNullException>(() => new GalleryPageViewModel(null!));
+    }
+
+    [STATestMethod]
+    public void High_contrast_forced_in_kyfrev_keeps_the_chosen_theme_light_or_dark()
+    {
+        var test = new TestShell();
+        var window = new Window();
+        test.Appearance.Attach(window);
+        var handle = new WindowInteropHelper(window).EnsureHandle();
+        Color Ground() => (Color)test.Design.Dictionary[DesignKeys.Color(ColorRole.Background)];
+
+        // Sombre, puis le contraste forcé : un contraste élevé sombre, pas les couleurs claires de Windows.
+        test.Appearance.Preference = ThemePreference.Dark;
+        test.Appearance.ForcesHighContrast = true;
+        Assert.AreEqual(ThemeKind.HighContrast, test.Design.Theme);
+        Assert.AreEqual(HighContrastPalette.Dark, test.Design.HighContrastPalette);
+        Assert.AreEqual(Palette.HighContrastDark.Window.ToColor(), Ground());
+        Assert.IsTrue(test.Appearance.IsDark);
+        Assert.AreEqual((handle, true), test.Chrome.Calls.Last(), "la barre de titre sombre aussi");
+        Assert.IsTrue(test.Shell.CanToggleTheme, "forcé dans kyfRev, il passe du sombre au clair d'un clic");
+        Assert.AreEqual(Icons.Sun, test.Shell.ThemeGlyph);
+
+        // Le bouton de thème : le même contraste, en clair.
+        test.Shell.ToggleThemeCommand.Execute(null);
+        Assert.AreEqual(ThemePreference.Light, test.Appearance.Preference);
+        Assert.AreEqual(ThemeKind.HighContrast, test.Design.Theme);
+        Assert.AreEqual(Palette.HighContrastLight.Window.ToColor(), Ground());
+        Assert.IsFalse(test.Appearance.IsDark);
+        Assert.AreEqual((handle, false), test.Chrome.Calls.Last());
+        test.Shell.ToggleThemeCommand.Execute(null);
+        Assert.AreEqual(Palette.HighContrastDark.Window.ToColor(), Ground());
+
+        // Windows en contraste élevé : ses couleurs, et plus de bouton de thème.
+        test.System.HighContrast = true;
+        test.System.RaiseChanged();
+        TestShell.Flush();
+        Assert.AreEqual(HighContrastPalette.Windows, test.Design.HighContrastPalette);
+        Assert.AreEqual(SystemColors.WindowColor, Ground());
+        Assert.IsFalse(test.Shell.CanToggleTheme);
+        window.Close();
     }
 
     [STATestMethod]

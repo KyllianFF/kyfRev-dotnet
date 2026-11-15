@@ -427,6 +427,52 @@ public sealed class ShellWindowTests
     }
 
     [STATestMethod]
+    public void A_maximized_window_leaves_room_for_a_taskbar_that_hides()
+    {
+        var test = new TestShell();
+        var window = Open(test);
+        try
+        {
+            var handle = new WindowInteropHelper(window).Handle;
+            nint Send(nint wParam, out bool handled)
+            {
+                var taken = false;
+                var answer = window.OnWindowMessage(handle, 0x0083, wParam, 1234, ref taken);
+                handled = taken;
+                return answer;
+            }
+            test.Chrome.RoomLeft.Clear();
+
+            Assert.AreEqual(0, Send(1, out var handled));
+            Assert.IsFalse(handled, "Sans barre qui se masque, le cadre calcule seul la zone cliente.");
+            CollectionAssert.AreEqual(new nint[] { 1234 }, test.Chrome.RoomLeft, "Les paramètres du message vont au cadre de Windows.");
+
+            test.Chrome.HiddenTaskbar = true;
+            Assert.AreEqual(0x0300, Send(1, out handled), "WVR_REDRAW, comme le cadre.");
+            Assert.IsTrue(handled);
+
+            Assert.AreEqual(0, Send(0, out handled), "Sans rectangles proposés, rien à rogner.");
+            Assert.IsFalse(handled);
+
+            test.Chrome.HiddenTaskbar = false;
+            test.Shell.ToggleFullScreen();
+            TestShell.Flush();
+            test.Chrome.RoomLeft.Clear();
+            test.Chrome.HiddenTaskbar = true;
+            Assert.AreEqual(0, Send(1, out handled), "En plein écran, la fenêtre couvre tout l'écran, barre comprise.");
+            Assert.IsFalse(handled);
+            Assert.IsEmpty(test.Chrome.RoomLeft);
+            test.Chrome.HiddenTaskbar = false;
+            test.Shell.ToggleFullScreen();
+            TestShell.Flush();
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
     public void Full_screen_hides_the_title_bar_and_the_welcome_keeps_only_the_window()
     {
         var test = new TestShell();
@@ -508,9 +554,22 @@ public sealed class ShellWindowTests
             TestShell.Flush();
             Assert.AreEqual(ThemePreference.Light, machine.Current.Theme);
 
+            // Forcé dans kyfRev, le contraste élevé garde le bouton : il passe du contraste clair au sombre.
             shell.Appearance.ForcesHighContrast = true;
             TestShell.Flush();
-            Assert.AreEqual(Visibility.Collapsed, button.Visibility, "Le contraste élevé passe avant.");
+            Assert.AreEqual(Visibility.Visible, button.Visibility);
+            Assert.AreEqual(ThemeKind.HighContrast, shell.Appearance.Theme);
+            Assert.AreEqual(Icons.Moon, button.Content);
+            shell.ToggleThemeCommand.Execute(null);
+            TestShell.Flush();
+            Assert.IsTrue(shell.Appearance.IsDark);
+            Assert.AreEqual(Icons.Sun, button.Content);
+
+            // Windows en contraste élevé : ses couleurs passent avant, plus de bouton.
+            test.System.HighContrast = true;
+            test.System.RaiseChanged();
+            TestShell.Flush();
+            Assert.AreEqual(Visibility.Collapsed, button.Visibility, "Le contraste élevé de Windows passe avant.");
         }
         finally
         {
