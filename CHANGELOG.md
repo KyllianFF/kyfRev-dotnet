@@ -7,6 +7,8 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ## [Non publié]
 
+## [1.1.0-beta.2] - 2026-11-16
+
 ### Ajouté
 - Mise à jour depuis kyfRev. « Rechercher une mise à jour » (Paramètres › À propos) télécharge la version trouvée dans
   kyfRev, avec sa progression, et vérifie sa taille et son empreinte SHA-256 contre l'annonce signée ; puis « Redémarrer
@@ -1048,6 +1050,7 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 - Le texte d'un champ de plusieurs lignes ne colle plus au bord haut.
 - Le libellé long d'une case à cocher était coupé : il passe maintenant à la ligne, en face de sa case.
 
-[Non publié]: https://github.com/KyllianFF/kyfRev-dotnet/compare/v1.1.0-beta.1...HEAD
+[Non publié]: https://github.com/KyllianFF/kyfRev-dotnet/compare/v1.1.0-beta.2...HEAD
+[1.1.0-beta.2]: https://github.com/KyllianFF/kyfRev-dotnet/compare/v1.1.0-beta.1...v1.1.0-beta.2
 [1.1.0-beta.1]: https://github.com/KyllianFF/kyfRev-dotnet/compare/v1.0.0-beta.1...v1.1.0-beta.1
 [1.0.0-beta.1]: https://github.com/KyllianFF/kyfRev-dotnet/releases/tag/v1.0.0-beta.1
