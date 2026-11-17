@@ -3,6 +3,7 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:kyf="clr-namespace:KyfRev.DesignSystem.Controls;assembly=KyfRev.DesignSystem"
+             xmlns:shell="clr-namespace:KyfRev.Presentation.Wpf.Shell"
              xmlns:pages="clr-namespace:KyfRev.Presentation.Wpf.Pages">
   <UserControl.Resources>
     <BooleanToVisibilityConverter x:Key="Visible" />
@@ -11,7 +12,14 @@
   <!-- Un coffre chiffré attend sa clé : rien de lui n'est lu, ni menu ni recherche. Ses fiches ne s'ouvrent qu'ensuite. -->
   <ScrollViewer x:Name="Scroller" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
     <StackPanel MaxWidth="480" Margin="16" HorizontalAlignment="Stretch" VerticalAlignment="Center">
-      <kyf:Icon Text="{x:Static kyf:Icons.Lock}" FontSize="32" HorizontalAlignment="Center" />
+      <Grid HorizontalAlignment="Center">
+        <shell:BrandMark x:Name="Brand" Width="64" Height="64" />
+        <!-- Le cadenas, en pastille sur l'icône : ce coffre attend sa clé. -->
+        <Border Width="28" Height="28" CornerRadius="14" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,-8,-6"
+                Background="{DynamicResource Kyf.Brush.Surface}" BorderBrush="{DynamicResource Kyf.Brush.Hairline}" BorderThickness="1">
+          <kyf:Icon Text="{x:Static kyf:Icons.Lock}" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center" />
+        </Border>
+      </Grid>
       <TextBlock x:Name="Heading" Text="{x:Static pages:EncryptionText.LockedHeading}" Style="{DynamicResource Kyf.Text.Title}"
                  Margin="0,12,0,0" HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap"
                  AutomationProperties.HeadingLevel="Level1" />

@@ -210,6 +210,13 @@ public class Dialog : ContentControl
             {
                 _focusBefore = Keyboard.FocusedElement;
             }
+            // Sa carte arrive en fondu, en montant un peu : elle s'ouvre, elle ne surgit pas.
+            // À sa première ouverture, son modèle n'est pas encore en place : il l'est ici.
+            ApplyTemplate();
+            if (GetTemplateChild("Card") is FrameworkElement card)
+            {
+                Transitions.Enter(card, DesignKeys.NormalDuration, Transitions.DialogRise);
+            }
             // Une fois le dialogue affiché, le focus va au premier élément qui le prend.
             Dispatcher.BeginInvoke(DispatcherPriority.Input, FocusFirst);
         }

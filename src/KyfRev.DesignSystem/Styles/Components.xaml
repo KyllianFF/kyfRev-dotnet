@@ -456,6 +456,11 @@
             <Trigger Property="SecondaryButtonText" Value="">
               <Setter TargetName="PART_SecondaryButton" Property="Visibility" Value="Collapsed" />
             </Trigger>
+            <!-- Sans action principale : la fenêtre se ferme par son seul bouton ordinaire, et ce qu'elle contient garde le bouton plein. -->
+            <Trigger Property="PrimaryButtonText" Value="">
+              <Setter TargetName="PART_PrimaryButton" Property="Visibility" Value="Collapsed" />
+              <Setter TargetName="PART_SecondaryButton" Property="Margin" Value="0" />
+            </Trigger>
             <!-- Pendant le travail, le focus attend ici : un second appui sur Entrée ne ferme rien. -->
             <Trigger Property="IsWorking" Value="True">
               <Setter TargetName="PART_SecondaryButton" Property="KeyboardNavigation.AcceptsReturn" Value="False" />

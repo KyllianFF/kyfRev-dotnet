@@ -6,7 +6,6 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using KyfRev.DesignSystem.Controls;
 
@@ -64,6 +63,14 @@ public sealed partial class ShellWindow : Window
         DataContext = shell;
         shell.Appearance.Attach(this);
         shell.PropertyChanged += OnShellChanged;
+        // Une vue qui en remplace une autre arrive en fondu, brièvement.
+        shell.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(ShellViewModel.Current))
+            {
+                KyfRev.DesignSystem.Controls.Transitions.Enter(Page, KyfRev.DesignSystem.DesignKeys.FastDuration);
+            }
+        };
         // MouseUp remonte jusqu'à la liste, même quand l'élément cliqué l'a déjà traité.
         PaletteResults.AddHandler(MouseUpEvent, new MouseButtonEventHandler(OnPaletteClick), handledEventsToo: true);
         MoreMenu.AddHandler(MenuItem.ClickEvent, new RoutedEventHandler(OnOverflowClick));
@@ -580,15 +587,10 @@ public sealed partial class ShellWindow : Window
     /// <summary>L'icône de l'application, dans l'image de son fichier .ico la plus proche de la taille à l'écran : nette à toutes les échelles.</summary>
     internal void ShowIcon()
     {
-        using var stream = typeof(ShellWindow).Assembly.GetManifestResourceStream("kyfrev-icone.ico");
-        if (stream is null)
+        if (BrandMark.FrameFor(AppIcon.Width * VisualTreeHelper.GetDpi(this).DpiScaleX) is { } frame)
         {
-            return;
+            AppIcon.Source = frame;
         }
-        var pixels = AppIcon.Width * VisualTreeHelper.GetDpi(this).DpiScaleX;
-        var frames = new IconBitmapDecoder(stream, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad).Frames;
-        AppIcon.Source = frames.Where(frame => frame.PixelWidth >= pixels).OrderBy(frame => frame.PixelWidth).FirstOrDefault()
-            ?? frames.OrderByDescending(frame => frame.PixelWidth).First();
     }
 
     private void OnPaletteClick(object sender, MouseButtonEventArgs e)

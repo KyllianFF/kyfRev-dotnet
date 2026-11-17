@@ -657,7 +657,7 @@
     </kyf:Dialog>
 
     <kyf:Dialog x:Name="HistoryDialog" DataContext="{Binding Editor}" Title="{x:Static editing:EditingText.HistoryTitle}" IsOpen="{Binding IsHistoryOpen, Mode=OneWay}" CardMaxWidth="1150" IsWide="True"
-                PrimaryButtonText="{x:Static editing:EditingText.HistoryClose}" SecondaryButtonText="" Closed="OnHistoryClosed">
+                PrimaryButtonText="" SecondaryButtonText="{x:Static editing:EditingText.HistoryClose}" Closed="OnHistoryClosed">
       <Grid x:Name="HistoryContent" DataContext="{Binding History}" Height="560">
         <Grid.RowDefinitions>
           <RowDefinition Height="Auto" />

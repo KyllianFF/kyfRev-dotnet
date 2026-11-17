@@ -49,7 +49,7 @@
                               Margin="{TemplateBinding Padding}" VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
                               HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" IsHitTestVisible="False" />
             <Popup x:Name="PART_Popup" IsOpen="{TemplateBinding IsDropDownOpen}" Placement="Bottom" AllowsTransparency="True" Focusable="False"
-                   PopupAnimation="None">
+                   PopupAnimation="{DynamicResource Kyf.Motion.Popup}">
               <!-- La marge laisse la place de l'ombre, comme pour un menu. -->
               <Grid Margin="8,4,8,12" MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}">
                 <Border Background="{DynamicResource Kyf.Brush.Surface}" CornerRadius="{DynamicResource Kyf.Radius.Card}" Effect="{DynamicResource Kyf.Elevation.Flyout}" />
@@ -459,7 +459,7 @@
             <!-- Le refus s'écrit : ni la couleur ni le contour ne suffisent, en contraste élevé surtout ; il est annoncé aussitôt. -->
             <kyf:LiveText x:Name="Refusal" Grid.Row="1" Style="{DynamicResource Kyf.Text.Caption}" Foreground="{DynamicResource Kyf.Brush.Critical}" TextWrapping="Wrap" Margin="0,4,0,0"
                           Visibility="Collapsed" AutomationProperties.LiveSetting="Assertive" />
-            <Popup x:Name="PART_Popup" Placement="Bottom" PlacementTarget="{Binding ElementName=Frame}" StaysOpen="False" AllowsTransparency="True" PopupAnimation="None" />
+            <Popup x:Name="PART_Popup" Placement="Bottom" PlacementTarget="{Binding ElementName=Frame}" StaysOpen="False" AllowsTransparency="True" PopupAnimation="{DynamicResource Kyf.Motion.Popup}" />
           </Grid>
           <ControlTemplate.Triggers>
             <Trigger Property="IsMouseOver" Value="True">

@@ -78,7 +78,7 @@
           <Button x:Name="CompactStyleButton" Style="{DynamicResource Kyf.Button.Tool}" Click="OnMenuButton" ToolTip="{x:Static editing:EditingText.StyleName}" AutomationProperties.Name="{x:Static editing:EditingText.StyleName}"
                   MinWidth="96" MaxWidth="152" Margin="2,0" HorizontalContentAlignment="Stretch">
             <DockPanel>
-              <kyf:Icon DockPanel.Dock="Right" Text="{x:Static kyf:Icons.ChevronDown}" FontSize="10" Margin="8,0,0,0" />
+              <kyf:Icon DockPanel.Dock="Right" Text="{x:Static kyf:Icons.ChevronDown}" FontSize="12" Margin="8,0,0,0" />
               <TextBlock Text="{Binding StyleLabel}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
             </DockPanel>
             <Button.ContextMenu>
@@ -140,7 +140,7 @@
           <HeaderedContentControl Style="{StaticResource Group}" Header="{x:Static editing:EditingText.StyleGroup}">
             <Button x:Name="StyleButton" Style="{DynamicResource Kyf.Button.Tool}" Click="OnMenuButton" ToolTip="{x:Static editing:EditingText.StyleName}" AutomationProperties.Name="{x:Static editing:EditingText.StyleName}" MinWidth="112" HorizontalContentAlignment="Stretch">
               <DockPanel>
-                <kyf:Icon DockPanel.Dock="Right" Text="{x:Static kyf:Icons.ChevronDown}" FontSize="10" Margin="8,0,0,0" />
+                <kyf:Icon DockPanel.Dock="Right" Text="{x:Static kyf:Icons.ChevronDown}" FontSize="12" Margin="8,0,0,0" />
                 <TextBlock Text="{Binding StyleLabel}" VerticalAlignment="Center" />
               </DockPanel>
               <Button.ContextMenu>
@@ -154,7 +154,7 @@
               <StackPanel Orientation="Horizontal">
                 <Button x:Name="SizeButton" Style="{DynamicResource Kyf.Button.Tool}" Click="OnMenuButton" ToolTip="{x:Static editing:EditingText.FontSize}" AutomationProperties.Name="{x:Static editing:EditingText.FontSize}" MinWidth="52" HorizontalContentAlignment="Stretch">
                   <DockPanel>
-                    <kyf:Icon DockPanel.Dock="Right" Text="{x:Static kyf:Icons.ChevronDown}" FontSize="10" Margin="4,0,0,0" />
+                    <kyf:Icon DockPanel.Dock="Right" Text="{x:Static kyf:Icons.ChevronDown}" FontSize="12" Margin="4,0,0,0" />
                     <TextBlock Text="{Binding SizeLabel}" VerticalAlignment="Center" />
                   </DockPanel>
                   <Button.ContextMenu>
@@ -182,13 +182,13 @@
                         <Border x:Name="ColorBar" Background="{Binding Tools.Color, Converter={StaticResource ColorBrush}}" />
                       </Grid>
                     </StackPanel>
-                    <kyf:Icon Text="{x:Static kyf:Icons.ChevronDown}" FontSize="10" Margin="4,0,0,0" />
+                    <kyf:Icon Text="{x:Static kyf:Icons.ChevronDown}" FontSize="12" Margin="4,0,0,0" />
                   </StackPanel>
                 </Button>
                 <Button x:Name="CaseButton" Style="{DynamicResource Kyf.Button.Tool}" Click="OnMenuButton" ToolTip="{x:Static editing:EditingText.ChangeCase}" AutomationProperties.Name="{x:Static editing:EditingText.ChangeCase}">
                   <StackPanel Orientation="Horizontal">
                     <TextBlock Text="Aa" Style="{StaticResource Letter}" />
-                    <kyf:Icon Text="{x:Static kyf:Icons.ChevronDown}" FontSize="10" Margin="4,0,0,0" />
+                    <kyf:Icon Text="{x:Static kyf:Icons.ChevronDown}" FontSize="12" Margin="4,0,0,0" />
                   </StackPanel>
                   <Button.ContextMenu>
                     <ContextMenu x:Name="CaseMenu" />
@@ -229,7 +229,7 @@
                 </Button>
                 <Button x:Name="NumbersButton" Style="{DynamicResource Kyf.Button.Tool}" Tag="{Binding IsNumbers}" Command="{Binding ToggleListCommand}" CommandParameter="{x:Static editing:ListKind.Numbers}" ToolTip="{x:Static editing:EditingText.Numbers}" AutomationProperties.Name="{x:Static editing:EditingText.Numbers}">
                   <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="1." FontSize="11" VerticalAlignment="Center" Foreground="{DynamicResource Kyf.Brush.Text}" />
+                    <TextBlock Text="1." FontSize="12" VerticalAlignment="Center" Foreground="{DynamicResource Kyf.Brush.Text}" />
                     <kyf:Icon Text="{x:Static kyf:Icons.ListLines}" Margin="2,0,0,0" />
                   </StackPanel>
                 </Button>
