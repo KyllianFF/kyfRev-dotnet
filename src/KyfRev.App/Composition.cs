@@ -151,7 +151,16 @@ internal static class Composition
         services.AddSingleton<FolderImportViewModel>();
         services.AddSingleton<WorkloadPageViewModel>();
         services.AddSingleton<SheetsPageViewModel>();
-        services.AddSingleton(provider => new DefinitionsPageViewModel(provider.GetRequiredService<AnnotationUseCases>(), provider.GetRequiredService<IReviewOpener>(), provider.GetRequiredService<SheetUseCases>()));
+        services.AddSingleton(provider => new DefinitionsPageViewModel(provider.GetRequiredService<AnnotationUseCases>(), provider.GetRequiredService<IReviewOpener>(), provider.GetRequiredService<SheetUseCases>())
+        {
+            // « Voir comment faire », dans la vue vide : le guide, sur la partie qui en parle.
+            OpenGuide = title =>
+            {
+                var shell = provider.GetRequiredService<ShellViewModel>();
+                shell.Guide.Show(title);
+                shell.ShowGuide();
+            },
+        });
         services.AddSingleton<SettingsPageViewModel>();
         services.AddSingleton<ArchivesPageViewModel>();
         services.AddSingleton<StatisticsPageViewModel>();
@@ -300,6 +309,7 @@ internal static class Composition
             provider.GetRequiredService<ReviewNavigation>().Workload = provider.GetRequiredService<WorkloadPageViewModel>();
             provider.GetRequiredService<MachineSettings>().Follow(provider.GetRequiredService<AppearanceController>(), shell);
             shell.FirstUse = provider.GetRequiredService<FirstUse>();
+            provider.GetRequiredService<AboutSettingsViewModel>().OpenGuide = shell.ShowGuide;
             shell.WelcomeOffers = Welcome(provider.GetRequiredService<VaultUseCases>(), provider.GetRequiredService<TimeProvider>(), provider.GetRequiredService<VaultLocations>().VaultToCreate(), shell.ShowGuide);
             var modules = provider.GetRequiredService<ActiveModules>();
             // La recherche (Ctrl+K) couvre le cœur et les modules actifs ; un résultat s'ouvre dans la coquille.

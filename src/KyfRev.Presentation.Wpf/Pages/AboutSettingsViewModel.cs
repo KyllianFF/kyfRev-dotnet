@@ -81,6 +81,16 @@ public sealed partial class AboutSettingsViewModel : ObservableObject, INavigati
     [RelayCommand]
     private void OpenInstalledApps() => _legacy?.OpenInstalledApps();
 
+    /// <summary>Ouvre le guide, lu dans kyfRev ; rien : la section ne le propose pas.</summary>
+    public Action? OpenGuide { get; set; }
+
+    /// <summary>« Lire le guide » est proposé.</summary>
+    public bool CanOpenGuide => OpenGuide is not null;
+
+    /// <summary>« Lire le guide ».</summary>
+    [RelayCommand]
+    private void OpenGuideNow() => OpenGuide?.Invoke();
+
     /// <summary>Oublie le dossier du coffre ; ce qui tourne et sous quel mode reste affiché.</summary>
     public void Forget() => Vault = string.Empty;
 

@@ -24,6 +24,8 @@
           <TextBlock x:Name="VaultLine" Text="{Binding Vault}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" />
           <TextBlock Text="{x:Static pages:SettingsHubText.LicenseLabel}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,12,0,0" />
           <TextBlock Text="{x:Static pages:SettingsHubText.LicenseText}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" />
+          <Button x:Name="GuideButton" Content="{x:Static pages:WelcomeText.ReadGuide}" Command="{Binding OpenGuideNowCommand}" HorizontalAlignment="Left" Margin="0,12,0,0"
+                  Visibility="{Binding CanOpenGuide, Converter={StaticResource Visible}}" />
           <!-- La mise à jour : la recherche, son téléchargement dans kyfRev, puis l'installation au redémarrage. -->
           <StackPanel x:Name="UpdatePanel" Margin="0,16,0,0" Visibility="{Binding CanCheckUpdates, Converter={StaticResource Visible}}">
             <TextBlock Text="{Binding Updates.Help}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" />

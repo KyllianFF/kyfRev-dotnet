@@ -110,7 +110,12 @@
         </kyf:Card>
 
         <kyf:EmptyState x:Name="Empty" Glyph="{x:Static kyf:Icons.Dictionary}" Title="{x:Static pages:DefinitionsText.EmptyTitle}" Description="{x:Static pages:DefinitionsText.EmptyDescription}"
-                        Visibility="{Binding IsEmpty, Converter={StaticResource Visible}}" />
+                        Visibility="{Binding IsEmpty, Converter={StaticResource Visible}}">
+          <kyf:EmptyState.Action>
+            <Button x:Name="EmptyHowButton" Content="{x:Static pages:DefinitionsPageViewModel.HowLabel}" Command="{Binding ShowHowCommand}"
+                    Visibility="{Binding CanShowHow, Converter={StaticResource Visible}}" />
+          </kyf:EmptyState.Action>
+        </kyf:EmptyState>
         <TextBlock x:Name="NoMatch" Text="{x:Static pages:DefinitionsText.NoMatch}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Visibility="{Binding HasNoMatch, Converter={StaticResource Visible}}" />
 
         <!-- Des cartes, autant de colonnes que la largeur en permet : un écran large ne reste pas vide. -->

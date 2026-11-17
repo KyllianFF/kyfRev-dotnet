@@ -406,6 +406,44 @@ public sealed class FirstUseTests
         }
     }
 
+    [STATestMethod]
+    public void The_empty_views_offer_what_to_do_next()
+    {
+        using var test = new TestVaults(AppMode.Development);
+        Assert.IsNotNull(test.App.Vaults.Create(test.PathOf("Coffre")).Vault);
+
+        // Définitions : « Voir comment faire » ouvre le guide là où il parle des passages et des définitions.
+        var bare = new DefinitionsPageViewModel(test.App.Annotations, new FakeOpener());
+        Assert.IsFalse(bare.CanShowHow);
+        bare.ShowHowCommand.Execute(null);
+        var asked = new List<string>();
+        var definitions = new DefinitionsPageViewModel(test.App.Annotations, new FakeOpener()) { OpenGuide = asked.Add };
+        Assert.IsTrue(definitions.CanShowHow);
+        definitions.ShowHowCommand.Execute(null);
+        CollectionAssert.AreEqual(new[] { DefinitionsPageViewModel.HowSection }, asked);
+        Assert.IsTrue(new GuideViewModel().Sections.Any(section => section.Title == DefinitionsPageViewModel.HowSection), "cette partie existe dans le guide livré");
+        var how = (Button)new DefinitionsPage().FindName("EmptyHowButton");
+        Assert.AreEqual("Voir comment faire", how.Content);
+
+        // Carnet : « Nouvelle fiche », avant « Importer ».
+        var carnet = new SheetsPage();
+        var newSheet = (Button)carnet.FindName("EmptyNewSheetButton");
+        Assert.AreEqual(SheetsText.NewSheet, newSheet.Content);
+        Assert.AreEqual("RequestCreateCommand", System.Windows.Data.BindingOperations.GetBinding(newSheet, System.Windows.Controls.Primitives.ButtonBase.CommandProperty)!.Path.Path);
+        Assert.IsNotNull(carnet.FindName("EmptyImportButton"));
+
+        // À propos : le guide s'ouvre de là aussi, quand la coquille le propose.
+        var about = new AboutSettingsViewModel(test.App.Vaults);
+        Assert.IsFalse(about.CanOpenGuide);
+        about.OpenGuideNowCommand.Execute(null);
+        var guides = 0;
+        about.OpenGuide = () => guides++;
+        Assert.IsTrue(about.CanOpenGuide);
+        about.OpenGuideNowCommand.Execute(null);
+        Assert.AreEqual(1, guides);
+        Assert.AreEqual(WelcomeText.ReadGuide, ((Button)new AboutSettingsPage().FindName("GuideButton")).Content);
+    }
+
     private static string RepositoryRoot()
     {
         var folder = new System.IO.DirectoryInfo(AppContext.BaseDirectory);
