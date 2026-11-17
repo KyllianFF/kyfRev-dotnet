@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.IO;
 using System.Reflection;
+using KyfRev.Application;
 using KyfRev.Application.Model;
 using KyfRev.Application.Modules;
 using KyfRev.Application.Ports;
@@ -13,6 +14,7 @@ using KyfRev.Infrastructure.Crypto;
 using KyfRev.Infrastructure.Online;
 using KyfRev.Infrastructure.Vault.Adapters;
 using KyfRev.Infrastructure.Vault.Files;
+using KyfRev.Infrastructure.Vault.Samples;
 using KyfRev.Infrastructure.Windows;
 using KyfRev.Modules.Citations;
 using KyfRev.Modules.Schemas;
@@ -294,6 +296,7 @@ internal static class Composition
             provider.GetRequiredService<ReviewNavigation>().Attach(shell);
             provider.GetRequiredService<ReviewNavigation>().Workload = provider.GetRequiredService<WorkloadPageViewModel>();
             provider.GetRequiredService<MachineSettings>().Follow(provider.GetRequiredService<AppearanceController>(), shell);
+            shell.WelcomeOffers = Welcome(provider);
             var modules = provider.GetRequiredService<ActiveModules>();
             // La recherche (Ctrl+K) couvre le cœur et les modules actifs ; un résultat s'ouvre dans la coquille.
             shell.Search = new GlobalSearch(
@@ -518,6 +521,37 @@ internal static class Composition
     /// Un mot accepté ne va pas dans le dictionnaire de Windows, un fichier du profil, ni depuis un coffre chiffré, ni en mode
     /// portable, qui n'écrit rien hors de son dossier.
     /// </summary>
+    /// <summary>
+    /// Ce que l'accueil propose en plus de créer et d'ouvrir un coffre : le coffre d'exemple, dans son propre dossier
+    /// « Exemple » à côté du coffre prévu (ses sauvegardes se rangent à côté de lui, pas avec celles du vrai coffre), et le
+    /// guide. Un coffre d'exemple déjà créé là est rouvert tel qu'il est.
+    /// </summary>
+    internal static WelcomeOffers Welcome(IServiceProvider provider)
+    {
+        var vaults = provider.GetRequiredService<VaultUseCases>();
+        var time = provider.GetRequiredService<TimeProvider>();
+        var shell = provider.GetRequiredService<ShellViewModel>();
+        return new WelcomeOffers(
+            SampleFolderOf(provider.GetRequiredService<VaultLocations>().VaultToCreate()),
+            root =>
+            {
+                if (SampleVault.CanCreateIn(root))
+                {
+                    var created = SampleVault.Create(root, DateOnly.FromDateTime(time.GetLocalNow().DateTime));
+                    if (!created.Succeeded)
+                    {
+                        return Outcome.Refused<AppState>(created.Error ?? string.Empty);
+                    }
+                }
+                return Outcome.Of(vaults.Open(root));
+            },
+            shell.ShowGuide);
+    }
+
+    /// <summary>Le dossier du coffre d'exemple : « ExempleCoffre », à côté du coffre prévu ; rien sans coffre prévu.</summary>
+    internal static string? SampleFolderOf(string? planned) =>
+        planned is not null && Path.GetDirectoryName(planned) is { Length: > 0 } parent ? Path.Combine(parent, "Exemple", "Coffre") : null;
+
     internal static bool WordsStayInMemory(AppMode mode, bool encrypted) => encrypted || mode == AppMode.Portable;
 
     internal static string ModeName(AppMode mode) => mode switch

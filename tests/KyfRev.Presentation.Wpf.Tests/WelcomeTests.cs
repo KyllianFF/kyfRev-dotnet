@@ -30,7 +30,7 @@ public sealed class WelcomeTests
 
         Assert.IsTrue(welcome.HasVaultToCreate);
         Assert.AreEqual(test.Planned, welcome.VaultToCreate);
-        Assert.AreEqual("Créer le coffre ici", welcome.CreateLabel);
+        Assert.AreEqual(WelcomeText.CreateHere, welcome.CreateHelp);
         Assert.IsTrue(welcome.CanOpenExisting, "installé : un coffre existant peut aussi être repris");
         Assert.IsFalse(welcome.ExplainsNewVault);
 
@@ -62,7 +62,7 @@ public sealed class WelcomeTests
         var opened = new List<AppState>();
         var welcome = test.Welcome(opened.Add);
         Assert.IsFalse(welcome.HasVaultToCreate);
-        Assert.AreEqual("Créer un coffre", welcome.CreateLabel);
+        Assert.AreEqual(WelcomeText.CreateAnywhere, welcome.CreateHelp);
         Assert.IsTrue(welcome.CanOpenExisting);
         Assert.IsTrue(welcome.ExplainsNewVault);
 
@@ -230,14 +230,158 @@ public sealed class WelcomeTests
             Assert.AreNotEqual(0, new WindowInteropHelper(window).Handle);
             Assert.AreEqual(Visibility.Collapsed, Named<FrameworkElement>(window, "Sidebar").Visibility);
             var create = Named<Button>(window, "CreateButton");
-            Assert.AreEqual("Créer le coffre ici", AutomationProperties.GetName(create));
+            Assert.AreEqual("Créer mon coffre", AutomationProperties.GetName(create));
+            Assert.AreEqual(WelcomeText.CreateHere, AutomationProperties.GetHelpText(create));
             Assert.AreEqual(Visibility.Visible, Named<Button>(window, "OpenButton").Visibility);
             Assert.AreEqual(test.Planned, Named<TextBlock>(window, "PlannedVault").Text);
-            Assert.AreEqual(Visibility.Collapsed, Named<TextBlock>(window, "NewVaultHelp").Visibility);
+            Assert.AreEqual(WelcomeText.CreateHere, Named<TextBlock>(window, "NewVaultHelp").Text);
+            Assert.AreEqual(Visibility.Collapsed, Named<Button>(window, "SampleButton").Visibility, "sans rien pour le créer, le coffre d'exemple n'est pas proposé");
+            Assert.AreEqual(Visibility.Collapsed, Named<Button>(window, "GuideButton").Visibility);
             var error = Named<Notification>(window, "ErrorMessage");
             Assert.IsTrue(error.IsOpen);
             Assert.AreEqual("Le coffre est déjà ouvert ailleurs.", error.Message);
             Assert.AreEqual(AutomationHeadingLevel.Level1, AutomationProperties.GetHeadingLevel(Named<TextBlock>(window, "Heading")));
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [TestMethod]
+    public async Task The_sample_vault_is_created_in_its_own_folder_and_opened()
+    {
+        using var test = new TestVaults(AppMode.Installed);
+        var opened = new List<AppState>();
+        var asked = new List<string>();
+        var guides = 0;
+        var answer = KyfRev.Application.Outcome.Refused<AppState>("Ce dossier n'est pas vide.");
+        var welcome = test.Welcome(opened.Add);
+        Assert.IsFalse(welcome.CanTrySample || welcome.CanOpenGuide);
+        Assert.IsFalse(welcome.TrySampleCommand.CanExecute(null), "rien à proposer tant que la coquille n'a rien donné");
+        welcome.OpenGuideCommand.Execute(null);
+
+        var sample = test.Folder("Exemple");
+        welcome.Offers = new WelcomeOffers(sample, root =>
+        {
+            asked.Add(root);
+            return answer;
+        }, () => guides++);
+        Assert.IsTrue(welcome.CanTrySample && welcome.CanOpenGuide);
+
+        // Refusé : la raison se lit, rien n'est ouvert.
+        await welcome.TrySampleCommand.ExecuteAsync(null);
+        CollectionAssert.AreEqual(new[] { sample }, asked, "dans son dossier, sans rien demander");
+        Assert.AreEqual("Ce dossier n'est pas vide.", welcome.Error);
+        Assert.IsEmpty(opened);
+        Assert.IsFalse(welcome.IsBusy);
+
+        // Créé : il s'ouvre comme un coffre choisi.
+        answer = KyfRev.Application.Outcome.Of(test.App.Vaults.Create(sample));
+        await welcome.TrySampleCommand.ExecuteAsync(null);
+        Assert.IsFalse(welcome.HasError);
+        Assert.AreEqual(sample, opened.Single().Vault);
+
+        // Sans dossier prévu, un dossier vide est demandé ; annulé, rien ne se passe.
+        welcome.Offers = new WelcomeOffers(null, root =>
+        {
+            asked.Add(root);
+            return answer;
+        }, null);
+        Assert.IsFalse(welcome.CanOpenGuide);
+        test.Picker.Answers.Enqueue(null);
+        await welcome.TrySampleCommand.ExecuteAsync(null);
+        Assert.HasCount(2, asked);
+        test.Picker.Answers.Enqueue(test.Folder("Ailleurs"));
+        await welcome.TrySampleCommand.ExecuteAsync(null);
+        Assert.AreEqual(test.Folder("Ailleurs"), asked[^1]);
+
+        welcome.Offers = new WelcomeOffers(sample, _ => answer, () => guides++);
+        welcome.OpenGuideCommand.Execute(null);
+        Assert.AreEqual(1, guides);
+    }
+
+    [STATestMethod]
+    public void The_shell_gives_the_welcome_what_it_offers()
+    {
+        using var test = new TestVaults(AppMode.Installed);
+        var shell = new TestShell().Shell;
+        var welcome = test.Welcome(_ => { });
+        var offers = new WelcomeOffers(test.Folder("Exemple"), _ => KyfRev.Application.Outcome.Refused<AppState>("non"), shell.ShowGuide);
+
+        shell.ShowWelcome(welcome);
+        Assert.IsNull(welcome.Offers);
+        shell.WelcomeOffers = offers;
+        shell.ShowWelcome(welcome);
+        Assert.AreSame(offers, welcome.Offers);
+
+        // « Lire le guide » ouvre l'aide sur le guide ; F1 la rouvre sur les raccourcis.
+        welcome.OpenGuideCommand.Execute(null);
+        Assert.IsTrue(shell.IsHelpOpen && shell.IsGuideShown);
+        shell.IsHelpOpen = false;
+        shell.ShowHelpCommand.Execute(null);
+        Assert.IsTrue(shell.IsHelpOpen);
+        Assert.IsFalse(shell.IsGuideShown);
+        shell.ShowGuideCommand.Execute(null);
+        Assert.IsTrue(shell.IsGuideShown);
+    }
+
+    [STATestMethod]
+    [DataRow(470, false)]
+    [DataRow(760, true)]
+    [DataRow(1280, false)]
+    [DataRow(2600, true)]
+    public void The_welcome_shows_three_entries_and_the_method_at_every_width_in_both_themes(int width, bool dark)
+    {
+        using var ui = new UiThread();
+        using var vaults = new TestVaults(AppMode.Installed);
+        var test = new TestShell();
+        test.Design.Theme = dark ? DesignSystem.Tokens.ThemeKind.Dark : DesignSystem.Tokens.ThemeKind.Light;
+        var welcome = vaults.Welcome(_ => { });
+        welcome.Offers = new WelcomeOffers(vaults.Folder("Exemple"), _ => KyfRev.Application.Outcome.Refused<AppState>("non"), () => { });
+        var page = new WelcomePage { DataContext = welcome };
+        var host = new Border { Width = width, Height = 860, Child = page, Background = (Brush)test.Design.Dictionary["Kyf.Brush.Background"] };
+        host.Resources.MergedDictionaries.Add(test.Design.Dictionary);
+        var window = new Window { Content = new Canvas { Children = { host } }, Left = -10000, Top = -10000, Width = 800, Height = 600, ShowActivated = false, ShowInTaskbar = false };
+        window.Show();
+        try
+        {
+            TestShell.Flush();
+            List<Button> entries = [Named<Button>(page, "CreateButton"), Named<Button>(page, "OpenButton"), Named<Button>(page, "SampleButton")];
+            var places = entries.Select(entry => new Rect(entry.TranslatePoint(default, page), entry.RenderSize)).ToList();
+            var method = Named<Border>(page, "Method");
+            var steps = Named<System.Windows.Controls.Primitives.UniformGrid>(page, "Steps").Children.OfType<FrameworkElement>().Select(step => new Rect(step.TranslatePoint(default, page), step.RenderSize)).ToList();
+
+            // Rien ne dépasse, à aucune largeur : ni les entrées, ni la méthode, ni le lien du guide.
+            foreach (var place in places.Concat(steps).Append(new Rect(method.TranslatePoint(default, page), method.RenderSize)))
+            {
+                Assert.IsTrue(place.Left >= 0 && place.Right <= width + 0.5, $"de {place.Left:0} à {place.Right:0} sur {width}");
+            }
+            var scroller = Named<ScrollViewer>(page, "Scroller");
+            Assert.IsLessThanOrEqualTo(scroller.ViewportWidth + 0.5, scroller.ExtentWidth);
+            if (width >= WelcomePage.SideBySideMinimum)
+            {
+                Assert.IsTrue(places.All(place => Math.Abs(place.Top - places[0].Top) < 1), "trois entrées côte à côte");
+                Assert.IsTrue(places.All(place => Math.Abs(place.Height - places[0].Height) < 1) && places.All(place => Math.Abs(place.Width - places[0].Width) < 1), "de même taille");
+                Assert.IsTrue(places[0].Left < places[1].Left && places[1].Left < places[2].Left);
+                Assert.IsTrue(steps.All(step => Math.Abs(step.Top - steps[0].Top) < 1), "les trois temps côte à côte");
+                Assert.IsLessThanOrEqualTo(1054 + 0.5, places[2].Right - places[0].Left + 14, "la colonne ne s'étire pas sur un écran très large");
+            }
+            else
+            {
+                Assert.IsTrue(places[0].Bottom <= places[1].Top + 1 && places[1].Bottom <= places[2].Top + 1, "l'une sous l'autre en fenêtre étroite");
+                Assert.IsTrue(steps[0].Bottom <= steps[1].Top + 1 && steps[1].Bottom <= steps[2].Top + 1);
+            }
+
+            // L'entrée principale est en couleur, et son texte reste celui qui se lit sur cette couleur.
+            Assert.AreSame(page.FindResource("Kyf.Brush.Primary"), entries[0].Background);
+            Assert.AreSame(page.FindResource("Kyf.Brush.OnPrimary"), Named<TextBlock>(page, "PlannedVault").Foreground);
+            Assert.AreSame(page.FindResource("Kyf.Brush.OnPrimary"), Named<TextBlock>(page, "NewVaultHelp").Foreground);
+            Assert.AreEqual(vaults.Planned, Named<TextBlock>(page, "PlannedVault").Text);
+            Assert.IsTrue(entries.All(entry => entry.ActualHeight >= 44 && !string.IsNullOrEmpty(AutomationProperties.GetName(entry)) && !string.IsNullOrEmpty(AutomationProperties.GetHelpText(entry))));
+            Assert.AreEqual(6, Named<ItemsControl>(page, "StepPills").Items.Count);
+            Assert.AreEqual(Visibility.Visible, Named<Button>(page, "GuideButton").Visibility);
+            host.Capture($"accueil-{width}-{(dark ? "sombre" : "clair")}");
         }
         finally
         {
