@@ -370,6 +370,9 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
     /// <summary>Ce que les modules vont chercher au-dehors, une fois la vue affichée ; vrai si un encart a changé.</summary>
     public Func<Task<bool>>? LookForNews { get; init; }
 
+    /// <summary>La carte « Premiers pas », montrée à la place de l'état vide dans un coffre qui débute ; rien : jamais montrée.</summary>
+    public FirstSteps? FirstSteps { get; init; }
+
     /// <summary>Les encarts des extensions, demandés à leur code après ceux des modules.</summary>
     public Func<Task<IReadOnlyList<DashboardCard>>>? ExtensionCards { get; set; }
 
@@ -800,6 +803,14 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
         }
     }
 
+    /// <summary>La carte suit ce tableau de bord, et dit si elle se montre ; son bouton et son lien « Masquer » agissent sur cette vue.</summary>
+    private bool FollowedBy(FirstSteps steps, Dashboard dashboard)
+    {
+        steps.NewSheet ??= () => NewSheetCommand.Execute(null);
+        steps.Hidden ??= BuildRows;
+        return steps.Follow(dashboard);
+    }
+
     private void BuildRows(Dashboard dashboard)
     {
         BuildScopes(dashboard);
@@ -814,7 +825,13 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
 
         var rows = new List<object>();
         Add(rows, _examGroup, dashboard.Exams.Select(exam => new ExamRow(exam)));
-        if (total == 0)
+        // Les premiers pas se cochent d'après ce tableau de bord, que la carte se montre ou non.
+        var showsFirstSteps = FirstSteps is { } steps && FollowedBy(steps, dashboard);
+        if (total == 0 && showsFirstSteps)
+        {
+            rows.Add(FirstSteps!);
+        }
+        else if (total == 0)
         {
             rows.Add(new EmptyDashboardRow(
                 dashboard.NextDueDate is { } next ? DashboardText.NextReviewOf(Dates.Long(next))

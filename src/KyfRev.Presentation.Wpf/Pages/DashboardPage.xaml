@@ -28,6 +28,70 @@
                       Description="{Binding Description}" Margin="0,8,0,16" />
     </DataTemplate>
 
+    <!-- Les premiers pas, dans un coffre qui débute : trois pas qui se cochent seuls, à la place de l'état vide. -->
+    <DataTemplate DataType="{x:Type pages:FirstSteps}">
+      <Border x:Name="FirstStepsCard" BorderBrush="{DynamicResource Kyf.Brush.Primary}" BorderThickness="2" CornerRadius="{DynamicResource Kyf.Radius.Card}"
+              Padding="16,14,16,6" Margin="0,8,0,16" AutomationProperties.Name="{Binding}">
+        <StackPanel>
+          <WrapPanel>
+            <TextBlock Text="{x:Static pages:FirstStepsText.Title}" Style="{DynamicResource Kyf.Text.Subtitle}" AutomationProperties.HeadingLevel="Level2" />
+            <TextBlock x:Name="FirstStepsProgress" Text="{Binding Progress}" Style="{DynamicResource Kyf.Text.Secondary}" Margin="10,0,0,2" VerticalAlignment="Bottom" />
+          </WrapPanel>
+          <ItemsControl x:Name="FirstStepsList" ItemsSource="{Binding Steps}" Focusable="False" Margin="0,6,0,0">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Border BorderBrush="{DynamicResource Kyf.Brush.Hairline}" BorderThickness="0,1,0,0" Padding="0,10" AutomationProperties.Name="{Binding Spoken}">
+                  <Grid>
+                    <Grid.ColumnDefinitions>
+                      <ColumnDefinition Width="Auto" />
+                      <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Border x:Name="Dot" Width="26" Height="26" CornerRadius="13" BorderThickness="2" BorderBrush="{DynamicResource Kyf.Brush.ControlBorder}"
+                            VerticalAlignment="Top" Margin="0,0,12,0">
+                      <Grid>
+                        <TextBlock x:Name="Number" Text="{Binding Number}" Style="{DynamicResource Kyf.Text.BodyStrong}" Foreground="{DynamicResource Kyf.Brush.TextSecondary}"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        <kyf:Icon x:Name="Check" Text="{x:Static kyf:Icons.Success}" Foreground="{DynamicResource Kyf.Brush.OnPrimary}" Visibility="Collapsed"
+                                  HorizontalAlignment="Center" VerticalAlignment="Center" />
+                      </Grid>
+                    </Border>
+                    <kyf:AdaptiveRow Grid.Column="1" MainMinWidth="220" Spacing="16" StackedSpacing="8">
+                      <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Title}" Style="{DynamicResource Kyf.Text.BodyStrong}" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding Help}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="0,2,0,0" />
+                      </StackPanel>
+                      <Button kyf:AdaptiveRow.Part="Trailing" Content="{x:Static pages:FirstStepsText.NewSheet}" Style="{DynamicResource Kyf.Button.Primary}"
+                              HorizontalAlignment="Left" VerticalAlignment="Center"
+                              Command="{Binding DataContext.StartSheetCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                              Visibility="{Binding OffersNewSheet, Converter={StaticResource Visible}}" />
+                    </kyf:AdaptiveRow>
+                  </Grid>
+                </Border>
+                <DataTemplate.Triggers>
+                  <DataTrigger Binding="{Binding IsCurrent}" Value="True">
+                    <Setter TargetName="Dot" Property="BorderBrush" Value="{DynamicResource Kyf.Brush.Primary}" />
+                    <Setter TargetName="Dot" Property="Background" Value="{DynamicResource Kyf.Brush.NavigationActiveBackground}" />
+                    <Setter TargetName="Number" Property="Foreground" Value="{DynamicResource Kyf.Brush.NavigationActiveText}" />
+                  </DataTrigger>
+                  <DataTrigger Binding="{Binding IsDone}" Value="True">
+                    <Setter TargetName="Dot" Property="BorderBrush" Value="{DynamicResource Kyf.Brush.Primary}" />
+                    <Setter TargetName="Dot" Property="Background" Value="{DynamicResource Kyf.Brush.Primary}" />
+                    <Setter TargetName="Number" Property="Visibility" Value="Collapsed" />
+                    <Setter TargetName="Check" Property="Visibility" Value="Visible" />
+                  </DataTrigger>
+                </DataTemplate.Triggers>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <WrapPanel Margin="-10,0,0,0">
+            <Button x:Name="FirstStepsGuide" Content="{x:Static pages:FirstStepsText.ReadGuide}" Command="{Binding OpenGuideCommand}" Style="{DynamicResource Kyf.Button.Subtle}"
+                    MinHeight="44" Visibility="{Binding CanOpenGuide, Converter={StaticResource Visible}}" />
+            <Button x:Name="FirstStepsHide" Content="{x:Static pages:FirstStepsText.Hide}" Command="{Binding HideCommand}" Style="{DynamicResource Kyf.Button.Subtle}" MinHeight="44" />
+          </WrapPanel>
+        </StackPanel>
+      </Border>
+    </DataTemplate>
+
     <!-- En-tête de groupe : le cliquer (ou Entrée, Espace) replie ou déplie le groupe. -->
     <DataTemplate DataType="{x:Type pages:DashboardGroup}">
       <ToggleButton x:Name="Header" Command="{Binding ToggleCommand}" IsChecked="{Binding IsExpanded, Mode=OneWay}" Focusable="False"

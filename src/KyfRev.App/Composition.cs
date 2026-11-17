@@ -126,6 +126,8 @@ internal static class Composition
         services.AddSingleton(provider => new MermaidEngine(Path.Combine(provider.GetRequiredService<VaultLocations>().LocalData, "WebView2")));
         services.AddSingleton(clock);
         services.AddSingleton<KyfRev.Presentation.Wpf.Printing.IPrintService, KyfRev.Presentation.Wpf.Printing.WindowsPrintService>();
+        // Ce que la première utilisation a déjà montré sur cet ordinateur : les premiers pas, les aides lues.
+        services.AddSingleton(provider => new FirstUse(provider.GetRequiredService<MachineSettings>()));
         services.AddSingleton<ReviewNavigation>();
         services.AddSingleton<IReviewOpener>(provider => provider.GetRequiredService<ReviewNavigation>());
         services.AddSingleton(provider =>
@@ -134,6 +136,7 @@ internal static class Composition
             return new DashboardPageViewModel(provider.GetRequiredService<ReminderUseCases>(), provider.GetRequiredService<SheetUseCases>(), provider.GetRequiredService<IReviewOpener>(), modules.Widgets, provider.GetRequiredService<ReviewUseCases>(), provider.GetRequiredService<KyfRevApplication>().Exams, provider.GetRequiredService<FolderUseCases>(), provider.GetRequiredService<TimeProvider>())
             {
                 LookForNews = () => LookForQuoteAsync(modules),
+                FirstSteps = new FirstSteps(provider.GetRequiredService<FirstUse>(), () => provider.GetRequiredService<ShellViewModel>().ShowGuide()),
             };
         });
         // Partager une fiche et enregistrer un modèle, depuis la vue « Fiches » comme depuis la lecture : une seule demande à la fois.
