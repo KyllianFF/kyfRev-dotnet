@@ -622,10 +622,10 @@ public static class EditingText
     public const string GalleryShowCode = "Voir le code Mermaid";
 
     /// <summary>Insérer un SmartArt.</summary>
-    public const string SmartArt = "SmartArt";
+    public const string SmartArt = "Diagramme";
 
     /// <summary>Le titre de la galerie des SmartArt.</summary>
-    public const string GallerySmartArtTitle = "Insérer un SmartArt";
+    public const string GallerySmartArtTitle = "Insérer un diagramme";
 
     /// <summary>Le titre de la galerie des schémas.</summary>
     public const string GallerySchemaTitle = "Insérer un schéma";
@@ -769,7 +769,7 @@ public static class EditingText
     public const string ShowDrawingCode = "Voir le code";
 
     /// <summary>Supprimer un SmartArt de la fiche.</summary>
-    public const string DeleteSmartArt = "Supprimer ce SmartArt";
+    public const string DeleteSmartArt = "Supprimer ce diagramme";
 
     /// <summary>Supprimer un graphique de la fiche.</summary>
     public const string DeleteChart = "Supprimer ce graphique";

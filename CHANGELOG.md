@@ -33,6 +33,18 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   coffre d'avant sans qu'on le lui demande. Vos fiches et vos sauvegardes ne sont jamais supprimées, et un dossier qui a
   un coffre n'est jamais touché. Une désinstallation silencieuse conserve les réglages, sauf `/REGLAGES=supprimer` ;
   `/REGLAGES=garder` les conserve sans poser la question. L'installation et la mise à jour ne changent pas.
+- Transitions : une fenêtre de dialogue arrive en fondu en montant un peu, une vue qui en remplace une autre arrive en
+  fondu, les menus et les listes déroulantes s'ouvrent en fondu. Elles durent 120 ou 220 millièmes de seconde, et rien ne
+  bouge quand les animations sont réduites (Windows, ou Paramètres › Apparence).
+- L'icône de kyfRev se montre dans l'application : à l'accueil, à l'écran de déverrouillage d'un coffre chiffré (avec un
+  cadenas en pastille) et dans Paramètres › À propos. Elle n'y paraissait qu'en petit, dans la barre de titre.
+- Lisibilité : plus aucun texte sous 12 px (les jours et les mois de la charge à venir, le compteur du menu réduit à ses
+  icônes, la pastille « partout » d'une définition, le numéro d'une liste dans le ruban), et les chevrons passent de 10
+  à 12 px. Les boutons de la fenêtre (réduire, agrandir, fermer) gardent la taille que leur donne Windows.
+- Écrire, historique des versions : la fenêtre se ferme par un bouton ordinaire. « Restaurer » y est le seul bouton plein,
+  comme le veut la règle « une seule action principale par vue ».
+- Écrire, ruban Insertion : « SmartArt » s'appelle « Diagramme » (« Insérer un diagramme », « Supprimer ce diagramme »).
+  Ce qui est écrit dans les fiches ne change pas : les fiches existantes se lisent comme avant.
 - Raccourcis changés (Paramètres › Raccourcis) : les infobulles, la recherche (Ctrl+K), le menu « ⋯ » et le clic droit
   d'une fiche, le bouton du menu dans la barre de titre et ce qu'entend un lecteur d'écran nomment maintenant la touche
   choisie, et la suivent dès qu'elle change. Jusqu'ici seule l'aide (F1) le faisait.
