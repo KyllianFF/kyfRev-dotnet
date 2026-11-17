@@ -31,11 +31,48 @@ public sealed class CompositionTests
         Assert.HasCount(2, shell.SecondaryNavigation);
         Assert.IsNotNull(shell.Locking, "Ctrl+Maj+L verrouille le coffre chiffré");
         Assert.IsNotNull(shell.Search, "Ctrl+K cherche dans le coffre");
+        Assert.IsNotNull(shell.WelcomeOffers, "l'accueil propose le coffre d'exemple et le guide");
         Assert.IsEmpty(shell.Search.Providers(), "aucun module actif");
         Assert.IsInstanceOfType<UserPresence>(services.GetRequiredService<IUserPresence>());
         Assert.IsNotNull(services.GetRequiredService<VaultLocking>());
         Assert.IsNotNull(services.GetRequiredService<AutoLock>());
         window.Close();
+    }
+
+    [TestMethod]
+    public void The_welcome_creates_the_sample_vault_beside_the_planned_one_and_reopens_it_as_it_is()
+    {
+        using var test = new TestVaults(AppMode.Installed);
+        var guides = 0;
+        var offers = KyfRev.App.Composition.Welcome(test.App.Vaults, TimeProvider.System, test.Planned, () => guides++);
+
+        // À côté du coffre prévu, dans son propre dossier : ses sauvegardes ne se mêlent pas à celles du vrai coffre.
+        var sample = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(test.Planned)!, "Exemple", "Coffre");
+        Assert.AreEqual(sample, offers.SampleFolder);
+        Assert.IsNull(KyfRev.App.Composition.SampleFolderOf(null), "sans coffre prévu, le dossier se choisit");
+        Assert.IsNull(KyfRev.App.Composition.SampleFolderOf(@"C:\"));
+        offers.OpenGuide!();
+        Assert.AreEqual(1, guides);
+
+        var created = offers.CreateSample(sample);
+        Assert.IsTrue(created.Succeeded, created.Error);
+        Assert.AreEqual(sample, created.Value.Vault);
+        Assert.IsFalse(System.IO.Directory.Exists(test.Planned), "le coffre prévu n'est pas créé pour autant");
+        var sheets = System.IO.Directory.GetFiles(System.IO.Path.Combine(sample, "fiches"), "*.md", System.IO.SearchOption.AllDirectories);
+        Assert.HasCount(10, sheets);
+
+        // Déjà là : il est rouvert tel qu'il est, pas recréé ni écrasé.
+        System.IO.File.AppendAllText(sheets[0], Environment.NewLine + "Une ligne à moi." + Environment.NewLine);
+        var again = offers.CreateSample(sample);
+        Assert.AreEqual(sample, again.Value.Vault);
+        StringAssert.Contains(System.IO.File.ReadAllText(sheets[0]), "Une ligne à moi.", StringComparison.Ordinal);
+
+        // Un dossier qui a autre chose qu'un coffre : rien n'y est écrit, et la raison se lit.
+        var other = test.Folder("Autre");
+        System.IO.File.WriteAllText(System.IO.Path.Combine(other, "notes.txt"), "à moi");
+        var refused = offers.CreateSample(other);
+        Assert.IsTrue(refused.Succeeded && refused.Value.OpenError is not null, "ce dossier ne s'ouvre pas comme un coffre, et l'état dit pourquoi");
+        Assert.HasCount(1, System.IO.Directory.GetFileSystemEntries(other));
     }
 
     [TestMethod]

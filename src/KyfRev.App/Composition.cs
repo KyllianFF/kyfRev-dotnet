@@ -296,7 +296,7 @@ internal static class Composition
             provider.GetRequiredService<ReviewNavigation>().Attach(shell);
             provider.GetRequiredService<ReviewNavigation>().Workload = provider.GetRequiredService<WorkloadPageViewModel>();
             provider.GetRequiredService<MachineSettings>().Follow(provider.GetRequiredService<AppearanceController>(), shell);
-            shell.WelcomeOffers = Welcome(provider);
+            shell.WelcomeOffers = Welcome(provider.GetRequiredService<VaultUseCases>(), provider.GetRequiredService<TimeProvider>(), provider.GetRequiredService<VaultLocations>().VaultToCreate(), shell.ShowGuide);
             var modules = provider.GetRequiredService<ActiveModules>();
             // La recherche (Ctrl+K) couvre le cœur et les modules actifs ; un résultat s'ouvre dans la coquille.
             shell.Search = new GlobalSearch(
@@ -526,13 +526,9 @@ internal static class Composition
     /// « Exemple » à côté du coffre prévu (ses sauvegardes se rangent à côté de lui, pas avec celles du vrai coffre), et le
     /// guide. Un coffre d'exemple déjà créé là est rouvert tel qu'il est.
     /// </summary>
-    internal static WelcomeOffers Welcome(IServiceProvider provider)
-    {
-        var vaults = provider.GetRequiredService<VaultUseCases>();
-        var time = provider.GetRequiredService<TimeProvider>();
-        var shell = provider.GetRequiredService<ShellViewModel>();
-        return new WelcomeOffers(
-            SampleFolderOf(provider.GetRequiredService<VaultLocations>().VaultToCreate()),
+    internal static WelcomeOffers Welcome(VaultUseCases vaults, TimeProvider time, string? planned, Action openGuide) =>
+        new(
+            SampleFolderOf(planned),
             root =>
             {
                 if (SampleVault.CanCreateIn(root))
@@ -545,8 +541,7 @@ internal static class Composition
                 }
                 return Outcome.Of(vaults.Open(root));
             },
-            shell.ShowGuide);
-    }
+            openGuide);
 
     /// <summary>Le dossier du coffre d'exemple : « ExempleCoffre », à côté du coffre prévu ; rien sans coffre prévu.</summary>
     internal static string? SampleFolderOf(string? planned) =>
