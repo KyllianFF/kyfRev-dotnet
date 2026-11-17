@@ -7,6 +7,25 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ## [Non publié]
 
+### Ajouté
+- Accueil : trois entrées côte à côte, « Créer mon coffre », « Ouvrir un coffre existant » et « Essayer avec un coffre
+  d'exemple », puis la méthode des J dite en trois temps. En fenêtre étroite, elles se rangent l'une sous l'autre.
+- Coffre d'exemple : dix fiches inventées sur six matières (histoire, biologie, réseaux, mathématiques, anglais,
+  philosophie), avec leurs passages, leurs définitions, un schéma réseau, des citations et un examen, déjà en cours de
+  révision : du retard, des révisions du jour et d'autres à venir, quel que soit le jour où il est créé. Il se crée dans
+  son propre dossier « Exemple », à côté du coffre prévu, jamais dans le vôtre ; déjà créé, il est rouvert tel qu'il est.
+  Pour revenir à votre coffre : Paramètres › Coffre et chiffrement.
+- Aujourd'hui, « Premiers pas » : dans un coffre qui débute, une carte tient la place de « Rien à réviser aujourd'hui »
+  avec trois pas qui se cochent seuls (écrire une première fiche, la réviser, surligner un passage ou définir un mot).
+  Elle ne revient plus une fois les trois pas faits ou sur « Masquer les premiers pas » ; l'ordinateur le retient.
+- Aide (F1) : un onglet « Guide » à côté des raccourcis. Le guide de kyfRev est livré dans le programme et se lit sans
+  connexion, avec son plan (à gauche, ou dans une liste déroulante en fenêtre étroite). « Lire le guide » y mène depuis
+  l'accueil, les premiers pas et Paramètres › À propos.
+- Aides de la première fois : à la première révision et à la première fiche écrite, quelques lignes disent ce qui se
+  passe. « Compris » ferme l'aide pour de bon ; « Ne plus montrer d'aide » les coupe toutes. Elles ne bloquent rien.
+- Vues vides : le Carnet vide propose « Nouvelle fiche » ; les Définitions vides, « Voir comment faire », qui ouvre le
+  guide sur la partie qui en parle.
+
 ### Modifié
 - Raccourcis changés (Paramètres › Raccourcis) : les infobulles, la recherche (Ctrl+K), le menu « ⋯ » et le clic droit
   d'une fiche, le bouton du menu dans la barre de titre et ce qu'entend un lecteur d'écran nomment maintenant la touche
