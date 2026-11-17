@@ -37,8 +37,8 @@ public static class ReadingText
     /// <summary>Le bouton du mode concentration.</summary>
     public const string FocusToggleName = "Mode concentration";
 
-    /// <summary>Ce qu'il fait.</summary>
-    public const string FocusToggle = "Mode concentration : menu masqué, texte à la largeur de lecture (Ctrl+Maj+F)";
+    /// <summary>Ce qu'il fait ; « {0} » : sa touche en vigueur.</summary>
+    public const string FocusToggle = "Mode concentration : menu masqué, texte à la largeur de lecture ({0})";
 
     /// <summary>Le menu « ⋯ » de l'en-tête étroit : le plan, les passages et les rétroliens.</summary>
     public const string PanelsMenu = "Volets";

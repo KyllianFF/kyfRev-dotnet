@@ -232,6 +232,81 @@ public sealed class PaperAndShortcutsTests
     }
 
     [STATestMethod]
+    public void The_search_the_tooltips_and_the_screen_reader_name_the_shortcuts_in_force()
+    {
+        var test = new TestShell();
+        var window = new ShellWindow(test.Shell) { ShowActivated = false, Left = -10000, Top = -10000, WindowStartupLocation = WindowStartupLocation.Manual };
+        window.Resources.MergedDictionaries.Add(test.Design.Dictionary);
+        window.Show();
+        try
+        {
+            TestShell.Flush();
+            var toggle = (Button)window.FindName("ExitFocusButton");
+            var help = (Button)window.FindName("HelpButton");
+            var search = (Button)window.FindName("SearchButton");
+            var searchKeys = (TextBlock)window.FindName("SearchButtonKeys");
+            string? Named(string label) => test.Shell.PaletteResults.Single(entry => entry.Label == label).Detail;
+            static string Accelerator(DependencyObject element) => System.Windows.Automation.AutomationProperties.GetAcceleratorKey(element);
+
+            // D'origine.
+            Assert.AreEqual("Masquer le menu (Ctrl+Maj+F)", (string)toggle.ToolTip);
+            Assert.AreEqual("Ctrl+Maj+F", Accelerator(toggle));
+            Assert.AreEqual("F1", Accelerator(help));
+            Assert.AreEqual("Ctrl+K", searchKeys.Text);
+            Assert.AreEqual("Ctrl+K", Accelerator(search));
+            Assert.AreEqual("F1", Named(ShellText.Help));
+            Assert.AreEqual("F11", Named(ShellText.ShortcutFullScreen));
+
+            // Changées : comme le fait Paramètres › Raccourcis, puis la coquille qui relit les préférences.
+            ShortcutMap.Use("recherche=Ctrl+J;aide=F2;concentration=Ctrl+Alt+M;plein-ecran=F9;capture=Ctrl+Alt+C");
+            test.Shell.RefreshShortcuts();
+            TestShell.Flush();
+
+            Assert.AreEqual("Masquer le menu (Ctrl+Alt+M)", (string)toggle.ToolTip);
+            Assert.AreEqual("Masquer le menu (Ctrl+Alt+M)", System.Windows.Automation.AutomationProperties.GetName(toggle));
+            Assert.AreEqual("Ctrl+Alt+M", Accelerator(toggle));
+            Assert.AreEqual("F2", Accelerator(help));
+            Assert.AreEqual("Ctrl+J", searchKeys.Text);
+            Assert.AreEqual("Ctrl+J", Accelerator(search));
+            Assert.AreEqual("F2", Named(ShellText.Help), "la recherche, rouverte sans rien taper");
+            Assert.AreEqual("F9", Named(ShellText.ShortcutFullScreen));
+            Assert.AreEqual("Ctrl+Alt+M", Named(ShellText.FocusMode));
+
+            // Une infobulle écrite dans une vue, et un texte qui nomme la touche.
+            var view = (StackPanel)System.Windows.Markup.XamlReader.Parse("""
+                <StackPanel xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                            xmlns:shell="clr-namespace:KyfRev.Presentation.Wpf.Shell;assembly=KyfRev.Presentation.Wpf">
+                  <Button ToolTip="{shell:Shortcut imprimer}" AutomationProperties.AcceleratorKey="{shell:Shortcut Id=imprimer}" />
+                  <TextBlock Text="{shell:Shortcut capture, Format='Dans kyfRev, {0} fait de même.'}" />
+                </StackPanel>
+                """);
+            var button = (Button)view.Children[0];
+            var text = (TextBlock)view.Children[1];
+            Assert.AreEqual("Ctrl+P", (string)button.ToolTip);
+            Assert.AreEqual("Ctrl+P", Accelerator(button));
+            Assert.AreEqual("Dans kyfRev, Ctrl+Alt+C fait de même.", text.Text);
+            ShortcutMap.Use("imprimer=Ctrl+Shift+I");
+            Assert.AreEqual("Ctrl+Maj+I", (string)button.ToolTip, "sans attendre : l'infobulle suit le changement");
+            Assert.AreEqual("Ctrl+Maj+I", Accelerator(button));
+            Assert.AreEqual("Dans kyfRev, Ctrl+Maj+N fait de même.", text.Text, "la capture a repris sa touche d'origine");
+            Assert.AreEqual("Imprimer la fiche (Ctrl+Maj+I)", ShortcutKeys.In("Imprimer la fiche ({0})", "imprimer"));
+
+            // Retour à l'origine.
+            ShortcutMap.Use(null);
+            test.Shell.RefreshShortcuts();
+            TestShell.Flush();
+            Assert.AreEqual("Masquer le menu (Ctrl+Maj+F)", (string)toggle.ToolTip);
+            Assert.AreEqual("Ctrl+K", searchKeys.Text);
+            Assert.AreEqual("Ctrl+P", (string)button.ToolTip);
+        }
+        finally
+        {
+            ShortcutMap.Use(null);
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
     public void The_menu_takes_the_chosen_order_and_the_help_shows_the_shortcuts_in_force()
     {
         try

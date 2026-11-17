@@ -311,7 +311,7 @@
                   </StackPanel>
                 </ToggleButton>
                 <ToggleButton x:Name="WriteToggle" IsChecked="{Binding IsWriteOn}" Style="{DynamicResource Kyf.Button.Tool}" MinHeight="36" Padding="12,0"
-                              ToolTip="{x:Static editing:EditingText.WriteKey}" AutomationProperties.Name="{x:Static editing:EditingText.Write}">
+                              ToolTip="{shell:Shortcut ecrire}" AutomationProperties.Name="{x:Static editing:EditingText.Write}">
                   <StackPanel Orientation="Horizontal">
                     <kyf:Icon Text="{x:Static kyf:Icons.Edit}" VerticalAlignment="Center" />
                     <TextBlock Text="{x:Static editing:EditingText.Write}" VerticalAlignment="Center" Margin="8,0,0,0" />
@@ -343,7 +343,8 @@
                 </Style>
               </Border.Style>
               <ToggleButton x:Name="FocusToggle" IsChecked="{Binding IsFocusMode}" Style="{DynamicResource Kyf.Button.Tool}" MinHeight="40" Padding="12,0"
-                            ToolTip="{x:Static pages:ReadingText.FocusToggle}" AutomationProperties.Name="{x:Static pages:ReadingText.FocusToggleName}" AutomationProperties.AcceleratorKey="Ctrl+Maj+F">
+                            ToolTip="{shell:Shortcut concentration, Format={x:Static pages:ReadingText.FocusToggle}}" AutomationProperties.Name="{x:Static pages:ReadingText.FocusToggleName}"
+                            AutomationProperties.AcceleratorKey="{shell:Shortcut concentration}">
                 <kyf:Icon Text="{x:Static kyf:Icons.FocusMode}" VerticalAlignment="Center" />
               </ToggleButton>
             </Border>
@@ -410,7 +411,7 @@
                     <Separator Visibility="{Binding HasPanels, Converter={StaticResource Visible}, FallbackValue=Collapsed}" />
                     <MenuItem x:Name="FocusItem" Header="{x:Static pages:ReadingText.FocusToggleName}" IsCheckable="True" IsChecked="{Binding IsFocusMode}"
                               Visibility="{Binding CanFocus, Converter={StaticResource Visible}}" />
-                    <MenuItem x:Name="PrintItem" Header="{x:Static pages:PrintText.PrintSheet}" Command="{Binding RequestPrintCommand}"
+                    <MenuItem x:Name="PrintItem" Header="{x:Static pages:PrintText.PrintSheet}" InputGestureText="{shell:Shortcut imprimer}" Command="{Binding RequestPrintCommand}"
                               Visibility="{Binding CanPrint, Converter={StaticResource Visible}, FallbackValue=Collapsed}" />
                     <MenuItem x:Name="ShareItem" Header="{x:Static pages:SharingText.Share}" Command="{Binding RequestShareCommand}"
                               Visibility="{Binding CanShare, Converter={StaticResource Visible}, FallbackValue=Collapsed}" />

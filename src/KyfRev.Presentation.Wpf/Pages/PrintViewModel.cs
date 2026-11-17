@@ -162,8 +162,8 @@ public static class PrintText
     /// <summary>L'entrée des menus du clic droit.</summary>
     public const string PrintAction = "Imprimer…";
 
-    /// <summary>L'impression est demandée par un raccourci.</summary>
-    public const string PrintSheet = "Imprimer la fiche (Ctrl+P)";
+    /// <summary>L'entrée du menu « ⋯ » de la fiche ; sa touche s'écrit à côté.</summary>
+    public const string PrintSheet = "Imprimer la fiche";
 
     /// <summary>L'imprimante a refusé : la raison donnée par Windows suit.</summary>
     public static string PrintFailed(string reason) => $"L'impression n'a pas pu partir : {reason}";

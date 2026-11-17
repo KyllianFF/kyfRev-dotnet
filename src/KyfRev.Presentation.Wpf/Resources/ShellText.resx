@@ -40,10 +40,10 @@
     <value>Fiches</value>
   </data>
   <data name="EnterFocusMode" xml:space="preserve">
-    <value>Masquer le menu (Ctrl+Maj+F)</value>
+    <value>Masquer le menu ({0})</value>
   </data>
   <data name="ExitFocusMode" xml:space="preserve">
-    <value>Afficher le menu (Ctrl+Maj+F)</value>
+    <value>Afficher le menu ({0})</value>
   </data>
   <data name="FocusMode" xml:space="preserve">
     <value>Mode concentration</value>

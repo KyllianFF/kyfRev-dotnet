@@ -35,7 +35,7 @@ public sealed partial class ShellViewModel : ObservableObject, IForgetsVault, IS
     private static readonly TimeSpan SearchPause = TimeSpan.FromMilliseconds(150);
 
     private readonly IReadOnlyList<NavigationItem> _core;
-    private readonly IReadOnlyList<PaletteEntry> _commandsWithoutVault;
+    private IReadOnlyList<PaletteEntry> _commandsWithoutVault;
     private readonly LatestSearch _vaultSearch = new();
     private IReadOnlyList<PaletteEntry> _commands;
     private IReadOnlyList<PaletteEntry> _extensionCommands = [];
@@ -134,8 +134,19 @@ public sealed partial class ShellViewModel : ObservableObject, IForgetsVault, IS
     [ObservableProperty]
     public partial IReadOnlyList<Shortcut> Shortcuts { get; private set; } = CurrentShortcuts();
 
-    /// <summary>Les raccourcis viennent de changer : l'aide les relit.</summary>
-    public void RefreshShortcuts() => Shortcuts = CurrentShortcuts();
+    /// <summary>Les raccourcis viennent de changer : l'aide, la recherche et le bouton du menu les relisent.</summary>
+    public void RefreshShortcuts()
+    {
+        Shortcuts = CurrentShortcuts();
+        _commandsWithoutVault = OtherCommands();
+        RebuildCommands();
+        // La liste déjà montrée par la recherche fermée est refaite : rouverte sans rien taper, elle nomme les nouvelles touches.
+        if (!IsPaletteOpen)
+        {
+            UpdateResults();
+        }
+        OnPropertyChanged(nameof(MenuToggleLabel));
+    }
 
     private static List<Shortcut> CurrentShortcuts() =>
     [
@@ -210,8 +221,8 @@ public sealed partial class ShellViewModel : ObservableObject, IForgetsVault, IS
     /// <summary>Le bouton de la barre de titre peut masquer ou rendre le menu : en plein écran, il n'y a pas de menu à rendre.</summary>
     public bool CanToggleMenu => !IsFullScreen && Layout != NavigationLayout.Tabs;
 
-    /// <summary>« Masquer le menu (Ctrl+Maj+F) » ou, quand il est masqué, « Afficher le menu (Ctrl+Maj+F) ».</summary>
-    public string MenuToggleLabel => IsFocusMode ? ShellText.ExitFocusMode : ShellText.EnterFocusMode;
+    /// <summary>« Masquer le menu (Ctrl+Maj+F) » ou, quand il est masqué, « Afficher le menu (Ctrl+Maj+F) », avec la touche en vigueur.</summary>
+    public string MenuToggleLabel => ShortcutKeys.In(IsFocusMode ? ShellText.ExitFocusMode : ShellText.EnterFocusMode, "concentration");
 
     /// <summary>Plein écran (F11) : la fenêtre occupe tout l'écran, sans menu, pour réviser sans distraction.</summary>
     [ObservableProperty]
@@ -633,7 +644,7 @@ public sealed partial class ShellViewModel : ObservableObject, IForgetsVault, IS
         _commands = [.. NavigationCommands(), .. CaptureCommands(), .. _extensionCommands, .. LockCommands(), .. _commandsWithoutVault];
 
     private List<PaletteEntry> LockCommands() =>
-        CanLock ? [new(ShellText.ShortcutLock, "Ctrl+Maj+L", Icons.Lock, () => LockCommand.Execute(null))] : [];
+        CanLock ? [new(ShellText.ShortcutLock, ShortcutMap.Current.DisplayOf("verrouiller"), Icons.Lock, () => LockCommand.Execute(null))] : [];
 
     /// <summary>Les commandes des extensions actives, dans la recherche (Ctrl+K).</summary>
     public void SetExtensionCommands(IEnumerable<PaletteEntry> commands)
@@ -753,12 +764,12 @@ public sealed partial class ShellViewModel : ObservableObject, IForgetsVault, IS
     {
         List<PaletteEntry> commands =
         [
-            new(ShellText.FocusMode, "Ctrl+Maj+F", Icons.FocusMode, ToggleFocusMode),
-            new(ShellText.ShortcutFullScreen, "F11", Icons.FocusMode, ToggleFullScreen),
+            new(ShellText.FocusMode, ShortcutMap.Current.DisplayOf("concentration"), Icons.FocusMode, ToggleFocusMode),
+            new(ShellText.ShortcutFullScreen, ShortcutMap.Current.DisplayOf("plein-ecran"), Icons.FocusMode, ToggleFullScreen),
             new(ShellText.ShortcutZoomIn, "Ctrl+plus", Icons.ZoomIn, ZoomIn),
             new(ShellText.ShortcutZoomOut, "Ctrl+moins", Icons.ZoomOut, ZoomOut),
             new(ShellText.ShortcutZoomReset, "Ctrl+0", Icons.ZoomOut, ResetZoom),
-            new(ShellText.Help, "F1", Icons.Help, ShowHelp),
+            new(ShellText.Help, ShortcutMap.Current.DisplayOf("aide"), Icons.Help, ShowHelp),
         ];
         foreach (var (preference, label) in new[] { (ThemePreference.System, ShellText.ThemeSystem), (ThemePreference.Light, ShellText.ThemeLight), (ThemePreference.Dark, ShellText.ThemeDark) })
         {

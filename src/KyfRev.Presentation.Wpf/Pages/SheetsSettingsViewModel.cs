@@ -355,9 +355,6 @@ public static class MoreSettingsText
     /// <summary>Ces raccourcis-là ne se changent pas.</summary>
     public const string FixedTitle = "Raccourcis fixes";
 
-    /// <summary>Ce qui ne suit pas un changement.</summary>
-    public const string ShortcutsNote = "Les infobulles et la recherche (Ctrl+K) nomment encore la touche d'origine ; l'aide (F1) montre celle en vigueur.";
-
     /// <summary>La carte du menu.</summary>
     public const string MenuTitle = "Ordre du menu";
 
