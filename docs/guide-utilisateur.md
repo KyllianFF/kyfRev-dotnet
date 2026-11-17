@@ -33,6 +33,20 @@ Avec « Rechercher une mise à jour au démarrage », coupé au départ, kyfRev 
 « Mettre à jour » ou « Retarder à la prochaine ouverture » ; rien ne se télécharge sans votre accord. La version portable,
 elle, ne se met pas à jour seule : kyfRev ouvre la page de la nouvelle version.
 
+### Désinstaller
+
+Windows › Paramètres › Applications retire kyfRev. Vos fiches et vos sauvegardes ne sont jamais supprimées : le coffre reste
+où il est. Le désinstallateur demande ensuite ce qu'il faut faire de vos réglages, c'est-à-dire ce que kyfRev retient sur
+cet ordinateur hors du coffre (le dernier coffre ouvert, l'apparence, les raccourcis, les extensions installées, la clé
+retenue d'un coffre chiffré) :
+
+- **Supprimer mes réglages**, proposé d'abord : une prochaine installation repart de zéro. Elle ne rouvre pas votre coffre
+  d'elle-même (rouvrez-le par « Ouvrir un coffre existant »), et un coffre chiffré redemande son mot de passe.
+- **Conserver mes réglages** : une prochaine installation retrouve votre coffre et vos choix.
+
+Seuls vos réglages sont concernés : ceux des autres personnes de l'ordinateur restent dans leur profil. Une désinstallation
+sans question (silencieuse) les conserve, sauf avec l'option `/REGLAGES=supprimer`.
+
 ### Depuis une version 0.x
 
 kyfRev reprend votre coffre sans conversion. Au premier lancement, il ouvre le dernier coffre de la 0.x et y écrit aussitôt.
