@@ -81,11 +81,12 @@ internal sealed record SettingsEntry(string Label, string Words = "")
 /// <summary>Ce que la recherche a trouvé : un réglage, ou une section entière.</summary>
 public sealed class SettingsHit
 {
-    internal SettingsHit(string label, string where, SettingsTab tab)
+    internal SettingsHit(string label, string where, SettingsTab tab, bool isSetting = false)
     {
         Label = label;
         Where = where;
         Tab = tab;
+        IsSetting = isSetting;
     }
 
     /// <summary>Le réglage, ou la section.</summary>
@@ -96,6 +97,9 @@ public sealed class SettingsHit
 
     /// <summary>La section qu'il ouvre.</summary>
     public SettingsTab Tab { get; }
+
+    /// <summary>Un réglage de la section, que la vue désigne une fois la section ouverte ; sinon, la section entière.</summary>
+    public bool IsSetting { get; }
 
     /// <summary>Ce que dit le lecteur d'écran.</summary>
     public string Spoken => MoreSettingsText.HitSpoken(Label, Where);
@@ -345,7 +349,10 @@ public sealed partial class SettingsHubViewModel : ObservableObject, INavigation
     /// <inheritdoc/>
     public void OnNavigatedTo() => (Selected.Page as INavigationAware)?.OnNavigatedTo();
 
-    /// <summary>Ouvre la section d'un résultat, et rend la liste des sections.</summary>
+    /// <summary>Un réglage vient d'être ouvert par la recherche : la vue le désigne dans sa section, par le nom qu'il y porte.</summary>
+    internal event Action<string>? Pointing;
+
+    /// <summary>Ouvre la section d'un résultat, rend la liste des sections, et fait désigner le réglage trouvé.</summary>
     [RelayCommand]
     private void Open(SettingsHit? hit)
     {
@@ -353,6 +360,10 @@ public sealed partial class SettingsHubViewModel : ObservableObject, INavigation
         {
             hit.Tab.IsSelected = true;
             Query = string.Empty;
+            if (hit.IsSetting)
+            {
+                Pointing?.Invoke(hit.Label);
+            }
         }
     }
 
@@ -440,7 +451,7 @@ public sealed partial class SettingsHubViewModel : ObservableObject, INavigation
                 if (words.Any(word => own.Contains(word, StringComparison.Ordinal))
                     && words.All(word => own.Contains(word, StringComparison.Ordinal) || section.Contains(word, StringComparison.Ordinal)))
                 {
-                    found.Add(new SettingsHit(entry.Label, tab.Label, tab));
+                    found.Add(new SettingsHit(entry.Label, tab.Label, tab, isSetting: true));
                 }
             }
         }

@@ -1046,7 +1046,8 @@ public sealed class SettingsHubTests
             new SheetsSettingsViewModel(machine),
             shortcuts,
             machine);
-        var host = new Border { Width = 1200, Height = 800, Child = new SettingsHubPage { DataContext = hub } };
+        var hubPage = new SettingsHubPage { DataContext = hub };
+        var host = new Border { Width = 1200, Height = 800, Child = hubPage };
         host.Resources.MergedDictionaries.Add(test.Design.Dictionary);
         var window = new Window { Content = new Canvas { Children = { host } }, Left = -10000, Top = -10000, Width = 1300, Height = 900, ShowActivated = false, ShowInTaskbar = false };
         window.Show();
@@ -1091,15 +1092,27 @@ public sealed class SettingsHubTests
             margin.RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(margin)!, 0, Key.Enter) { RoutedEvent = Keyboard.KeyDownEvent });
             Assert.AreEqual(1.5, machine.Current.Page.MarginCm);
 
-            // Un résultat de la recherche choisi au clavier : le focus reprend sur la section qu'il ouvre.
+            // Un réglage trouvé par la recherche et choisi au clavier : le focus arrive sur ce réglage, dans la section qu'il ouvre.
             hub.Query = "contraste";
             TestShell.Flush();
             var hit = Hits(window).Single();
             var scope = FocusManager.GetFocusScope(hit);
             FocusManager.SetFocusedElement(scope, hit);
             hit.Command.Execute(hit.CommandParameter);
-            TestShell.Flush();
+            UiThread.Until(() => hubPage.Pointed is not null);
             Assert.AreEqual("Apparence", hub.Selected.Label);
+            Assert.AreEqual(GeneralSettingsText.HighContrast, AutomationProperties.GetName((DependencyObject)FocusManager.GetFocusedElement(scope)), "le clavier arrive sur le réglage trouvé");
+
+            // Une section entière, choisie de même : le focus reprend sur elle, dans la liste des sections.
+            hub.Query = "lecture";
+            TestShell.Flush();
+            var section = Hits(window).First();
+            Assert.IsFalse(((SettingsHit)section.DataContext).IsSetting);
+            FocusManager.SetFocusedElement(scope, section);
+            section.Command.Execute(section.CommandParameter);
+            TestShell.Flush();
+            Assert.AreEqual("Lecture", hub.Selected.Label);
+            Assert.IsNull(hubPage.Pointed, "une section ne désigne aucun réglage");
             Assert.IsTrue(FocusManager.GetFocusedElement(scope) is RadioButton { IsChecked: true }, $"le clavier reprend sur la section ouverte, pas sur {FocusManager.GetFocusedElement(scope)?.GetType().Name ?? "rien"}");
 
             // En fenêtre étroite, sur la liste déroulante des sections.
@@ -1110,9 +1123,97 @@ public sealed class SettingsHubTests
             var narrow = Hits(window).Single();
             FocusManager.SetFocusedElement(scope, narrow);
             narrow.Command.Execute(narrow.CommandParameter);
-            TestShell.Flush();
+            UiThread.Until(() => hubPage.Pointed is not null);
             Assert.AreEqual("Lecture", hub.Selected.Label);
-            Assert.AreSame(Named<ComboBox>(window, "SectionChoice"), FocusManager.GetFocusedElement(scope));
+            Assert.AreEqual(GeneralSettingsText.Voice, AutomationProperties.GetName((DependencyObject)FocusManager.GetFocusedElement(scope)), "en fenêtre étroite aussi, le clavier arrive sur le réglage");
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
+    public void A_setting_found_by_the_search_is_pointed_at_in_its_section()
+    {
+        using var ui = new UiThread();
+        var test = new TestShell();
+        using var vault = new DataVault();
+        var hub = vault.Hub(new MachineSettings(new MemoryMachinePreferences()));
+        var view = new SettingsHubPage { DataContext = hub };
+        var host = new Border { Width = 1200, Height = 700, Child = view };
+        host.Resources.MergedDictionaries.Add(test.Design.Dictionary);
+        var window = new Window { Content = new Canvas { Children = { host } }, Left = -10000, Top = -10000, Width = 1300, Height = 800, ShowActivated = false, ShowInTaskbar = false };
+        window.Show();
+        try
+        {
+            TestShell.Flush();
+            bool Reaches(SettingsTab tab, string label)
+            {
+                hub.OpenCommand.Execute(new SettingsHit(label, tab.Label, tab, isSetting: true));
+                var deadline = DateTime.UtcNow.AddSeconds(4);
+                while (view.Pointed is null && DateTime.UtcNow < deadline)
+                {
+                    TestShell.Flush();
+                }
+                return view.Pointed is not null;
+            }
+
+            // Chaque réglage que la recherche connaît se retrouve dans sa section, sous le nom que la recherche lui donne.
+            // Ceux que ce coffre ne montre pas ouvrent leur section, sans plus : le chiffrement d'un coffre en clair, les
+            // citations quand leur module est coupé, le catalogue qui n'a pas été lu, la mise à jour en développement.
+            var hidden = new[]
+            {
+                EncryptionText.CardTitle, EncryptionText.LockAfter, EncryptionText.LockNow, EncryptionText.ChangePassword, EncryptionText.Remember,
+                ModulesSettingsText.Online, ModulesSettingsText.DomainsTitle, ModulesSettingsText.CatalogueTitle, SettingsHubText.ExportQuotes,
+                SettingsHubText.CheckUpdate, SettingsHubText.CheckAtStartup,
+            };
+            var lost = new List<string>();
+            foreach (var tab in hub.Tabs)
+            {
+                foreach (var entry in tab.Settings.Where(entry => !hidden.Contains(entry.Label)))
+                {
+                    if (!Reaches(tab, entry.Label))
+                    {
+                        lost.Add($"{tab.Label} › {entry.Label}");
+                        continue;
+                    }
+                    Assert.AreSame(tab, hub.Selected);
+                    var pointed = view.Pointed!;
+                    Assert.IsTrue(pointed.IsVisible, entry.Label);
+                    // Amené à la vue, en entier quand il y tient : ni sous le bas de la fenêtre, ni coupé par lui.
+                    var top = pointed.TranslatePoint(default, view).Y;
+                    var bottom = Math.Min(top + pointed.ActualHeight, top + 300);
+                    Assert.IsTrue(top >= 0 && bottom <= view.ActualHeight, $"{tab.Label} › {entry.Label} : de {top:0} à {bottom:0} sur {view.ActualHeight:0}");
+                }
+            }
+            Assert.IsEmpty(lost, "introuvables dans leur section : " + string.Join(" ; ", lost));
+
+            // Le cadre suit le thème, ne prend pas la souris, et s'en va de lui-même.
+            Assert.IsTrue(Reaches(hub.Tabs[0], GeneralSettingsText.HighContrast));
+            var layer = System.Windows.Documents.AdornerLayer.GetAdornerLayer(view.Pointed!);
+            var frame = layer.GetAdorners(view.Pointed!).OfType<SettingPointer>().Single();
+            Assert.IsFalse(frame.IsHitTestVisible);
+            Assert.AreSame(view.FindResource("Kyf.Brush.Primary"), frame.Stroke);
+            view.Capture("reglage-designe-clair");
+            test.Design.Theme = DesignSystem.Tokens.ThemeKind.Dark;
+            TestShell.Flush();
+            Assert.AreSame(view.FindResource("Kyf.Brush.Primary"), frame.Stroke, "le trait prend la couleur du thème sombre");
+            view.Capture("reglage-designe-sombre");
+            test.Design.Theme = DesignSystem.Tokens.ThemeKind.Light;
+            var kept = view.Pointed;
+            UiThread.Until(() => view.Pointed is null, SettingsHubPage.PointedFor + TimeSpan.FromSeconds(5));
+            Assert.IsNull(layer.GetAdorners(kept!), "plus rien n'entoure le réglage");
+
+            // Un réglage que la section ne montre pas : elle s'ouvre, rien n'est entouré, et la recherche d'après repart de zéro.
+            Assert.IsFalse(Reaches(hub.Tabs.Single(tab => tab.Label == "Coffre et chiffrement"), EncryptionText.ChangePassword));
+            Assert.AreEqual("Coffre et chiffrement", hub.Selected.Label);
+            Assert.IsTrue(Reaches(hub.Tabs[0], GeneralSettingsText.Theme));
+
+            // Quitter la vue retire le cadre.
+            host.Child = null;
+            TestShell.Flush();
+            Assert.IsNull(view.Pointed);
         }
         finally
         {
