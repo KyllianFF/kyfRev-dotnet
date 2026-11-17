@@ -1,3 +1,4 @@
+using System.IO;
 using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -15,7 +16,8 @@ internal sealed class BrandMark : Image
     /// <summary>Le nom du fichier .ico dans les ressources du programme.</summary>
     internal const string Resource = "kyfrev-icone.ico";
 
-    private static readonly Lazy<List<BitmapFrame>> Frames = new(Read);
+    // Seuls les octets du fichier sont gardés d'une fenêtre à l'autre : une image de WPF appartient au fil qui l'a lue.
+    private static readonly Lazy<byte[]> File = new(Read);
 
     public BrandMark()
     {
@@ -33,26 +35,27 @@ internal sealed class BrandMark : Image
     /// </summary>
     internal static ImageSource? FrameFor(double pixels)
     {
-        var frames = Frames.Value;
+        if (File.Value.Length == 0)
+        {
+            return null;
+        }
+        using var stream = new MemoryStream(File.Value, writable: false);
+        var frames = new IconBitmapDecoder(stream, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad).Frames;
         return frames.Where(frame => frame.PixelWidth >= pixels).OrderBy(frame => frame.PixelWidth).FirstOrDefault()
             ?? frames.OrderByDescending(frame => frame.PixelWidth).FirstOrDefault();
     }
 
     private void Show() => Source = FrameFor(Math.Max(Width, ActualWidth) * VisualTreeHelper.GetDpi(this).DpiScaleX);
 
-    private static List<BitmapFrame> Read()
+    private static byte[] Read()
     {
         using var stream = typeof(BrandMark).Assembly.GetManifestResourceStream(Resource);
         if (stream is null)
         {
             return [];
         }
-        var frames = new IconBitmapDecoder(stream, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad).Frames.ToList();
-        // Lues une fois pour toutes les fenêtres : figées, elles se partagent d'un fil à l'autre.
-        foreach (var frame in frames)
-        {
-            frame.Freeze();
-        }
-        return frames;
+        using var copy = new MemoryStream();
+        stream.CopyTo(copy);
+        return copy.ToArray();
     }
 }
