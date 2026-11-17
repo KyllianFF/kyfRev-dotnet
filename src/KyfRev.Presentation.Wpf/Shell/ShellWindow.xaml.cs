@@ -68,6 +68,8 @@ public sealed partial class ShellWindow : Window
         PaletteResults.AddHandler(MouseUpEvent, new MouseButtonEventHandler(OnPaletteClick), handledEventsToo: true);
         MoreMenu.AddHandler(MenuItem.ClickEvent, new RoutedEventHandler(OnOverflowClick));
         Root.SizeChanged += (_, e) => shell.WindowWidth = e.NewSize.Width;
+        // Le guide prend la place que la fenêtre lui laisse : ni plus large, ni plus haut qu'elle.
+        Root.SizeChanged += (_, e) => (GuidePane.Width, GuidePane.Height) = GuideSize(e.NewSize);
         PreviewMouseDown += OnClickAnywhere;
         Deactivated += (_, _) => _shell.ClosePalette();
         Loaded += (_, _) => ShowIcon();
@@ -105,6 +107,10 @@ public sealed partial class ShellWindow : Window
         HwndSource.FromHwnd(new WindowInteropHelper(this).Handle)?.AddHook(OnWindowMessage);
         FitScreen();
     }
+
+    /// <summary>La taille du guide dans l'aide, pour une fenêtre de cette taille : 800 × 440 au plus, et ce qui reste autour de l'aide au moins.</summary>
+    internal static (double Width, double Height) GuideSize(Size window) =>
+        (Math.Clamp(window.Width - 96, 240, 800), Math.Clamp(window.Height - 300, 160, 440));
 
     /// <inheritdoc/>
     protected override void OnStateChanged(EventArgs e)

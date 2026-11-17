@@ -4,11 +4,15 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:kyf="clr-namespace:KyfRev.DesignSystem.Controls;assembly=KyfRev.DesignSystem"
              xmlns:editing="clr-namespace:KyfRev.Presentation.Wpf.Editing"
+             xmlns:pages="clr-namespace:KyfRev.Presentation.Wpf.Pages"
              xmlns:reading="clr-namespace:KyfRev.Presentation.Wpf.Reading">
   <UserControl.Resources>
     <BooleanToVisibilityConverter x:Key="Visible" />
   </UserControl.Resources>
 
+  <DockPanel>
+  <pages:FirstTip x:Name="WritingTip" DockPanel.Dock="Top" Mark="{x:Static pages:FirstUse.WritingTipRead}" Title="{x:Static pages:FirstTipText.WritingTitle}"
+                  Text="{x:Static pages:FirstTipText.WritingText}" MaxWidth="560" HorizontalAlignment="Center" Margin="0,0,0,8" />
   <Grid>
     <!-- Par défaut, le texte se modifie à sa place. -->
     <ContentControl x:Name="VisualHost" Focusable="False" IsTabStop="False" Visibility="{Binding IsVisualShown, Converter={StaticResource Visible}}" />
@@ -50,4 +54,5 @@
       </Border>
     </Popup>
   </Grid>
+  </DockPanel>
 </UserControl>

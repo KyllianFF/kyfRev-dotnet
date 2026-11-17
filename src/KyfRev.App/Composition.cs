@@ -299,6 +299,7 @@ internal static class Composition
             provider.GetRequiredService<ReviewNavigation>().Attach(shell);
             provider.GetRequiredService<ReviewNavigation>().Workload = provider.GetRequiredService<WorkloadPageViewModel>();
             provider.GetRequiredService<MachineSettings>().Follow(provider.GetRequiredService<AppearanceController>(), shell);
+            shell.FirstUse = provider.GetRequiredService<FirstUse>();
             shell.WelcomeOffers = Welcome(provider.GetRequiredService<VaultUseCases>(), provider.GetRequiredService<TimeProvider>(), provider.GetRequiredService<VaultLocations>().VaultToCreate(), shell.ShowGuide);
             var modules = provider.GetRequiredService<ActiveModules>();
             // La recherche (Ctrl+K) couvre le cœur et les modules actifs ; un résultat s'ouvre dans la coquille.

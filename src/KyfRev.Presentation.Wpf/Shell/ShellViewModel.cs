@@ -597,7 +597,21 @@ public sealed partial class ShellViewModel : ObservableObject, IForgetsVault, IS
 
     /// <summary>L'aide montre le guide ; sinon, les raccourcis.</summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsShortcutsShown))]
     public partial bool IsGuideShown { get; set; }
+
+    /// <summary>L'aide montre les raccourcis ; sinon, le guide.</summary>
+    public bool IsShortcutsShown
+    {
+        get => !IsGuideShown;
+        set => IsGuideShown = !value;
+    }
+
+    /// <summary>Ce que la première utilisation a déjà montré sur cet ordinateur : les aides en contexte s'y fient. Rien : aucune aide ne se montre.</summary>
+    public Pages.FirstUse? FirstUse { get; set; }
+
+    /// <summary>Le guide de kyfRev, lu dans l'aide.</summary>
+    public GuideViewModel Guide { get; } = new();
 
     /// <summary>Texte normalisé pour la recherche : minuscules, sans accents.</summary>
     internal static string Fold(string text)

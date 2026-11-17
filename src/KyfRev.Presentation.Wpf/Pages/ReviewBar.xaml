@@ -36,6 +36,9 @@
     </Style>
   </UserControl.Resources>
 
+  <StackPanel>
+  <pages:FirstTip x:Name="ReviewTip" Mark="{x:Static pages:FirstUse.ReviewTipRead}" Title="{x:Static pages:FirstTipText.ReviewTitle}" Text="{x:Static pages:FirstTipText.ReviewText}"
+                  IsOffered="{Binding CanValidate}" MaxWidth="420" HorizontalAlignment="Right" Margin="0,0,0,8" />
   <kyf:Card x:Name="Bar" MaxWidth="980" Padding="16,12" AutomationProperties.Name="{x:Static pages:ReviewText.Review}">
     <Grid>
       <Grid.RowDefinitions>
@@ -248,4 +251,5 @@
       </StackPanel>
     </Grid>
   </kyf:Card>
+  </StackPanel>
 </UserControl>
