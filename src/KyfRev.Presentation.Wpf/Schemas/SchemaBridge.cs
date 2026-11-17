@@ -14,8 +14,10 @@ namespace KyfRev.Presentation.Wpf.Schemas;
 /// <remarks>
 /// « imprimerSchema » ouvre la fenêtre « Imprimer » de l'application sur l'image du schéma, et ne répond qu'une fois la fenêtre
 /// fermée : ce qu'il faut en dire (le travail est parti), ou rien (elle a été fermée sans imprimer).
+/// « coffreChiffre » dit si le coffre ouvert est chiffré : ce qui sort d'un schéma (export, image copiée) est en clair, et
+/// l'îlot en prévient alors. Sans rien pour le dire, le coffre est tenu pour en clair.
 /// </remarks>
-internal sealed class SchemaBridge(SchemaUseCases schemas, IFolderPicker folders, Func<string?> pickFile, Action<string> openSheet, Action? editorClosed = null, Action<byte[]>? copyImage = null, Func<string, byte[], Task<string?>>? print = null)
+internal sealed class SchemaBridge(SchemaUseCases schemas, IFolderPicker folders, Func<string?> pickFile, Action<string> openSheet, Action? editorClosed = null, Action<byte[]>? copyImage = null, Func<string, byte[], Task<string?>>? print = null, Func<bool>? isEncrypted = null)
 {
     /// <summary>Une image de schéma copiée ou imprimée ne dépasse pas ce poids : au-delà, l'appel est refusé.</summary>
     internal const int ImageLimit = 32 * 1024 * 1024;
@@ -169,6 +171,8 @@ internal sealed class SchemaBridge(SchemaUseCases schemas, IFolderPicker folders
             case "exporterSchema":
                 var (folder, name, content) = (Argument(args, 0), Argument(args, 1), Convert.FromBase64String(Argument(args, 2)));
                 return Answer(await Task.Run(() => schemas.Export(folder, name, content)).ConfigureAwait(true), path => path);
+            case "coffreChiffre":
+                return (JsonValue.Create(isEncrypted?.Invoke() ?? false), null);
             case "copierImageSchema":
                 // « Partager » : l'image du schéma va dans le presse-papiers, prête à être collée dans un message ou un
                 // document. Seule une image PNG de taille raisonnable est acceptée, et seulement si quelque chose sait la copier.

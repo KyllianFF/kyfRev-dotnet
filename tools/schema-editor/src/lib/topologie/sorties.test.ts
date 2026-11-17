@@ -4,6 +4,8 @@ import { GABARITS } from "./gabarits";
 import { schemaVide } from "./modele";
 import { collerEquipements, creerEquipement } from "./operations";
 import {
+  AVIS_EXPORT_EN_CLAIR,
+  avisEnClair,
   couleursClaires,
   dimensionsSvg,
   dureeAnnonce,
@@ -15,6 +17,23 @@ import {
   svgAutonome,
 } from "./sorties";
 import { vue } from "./vues";
+
+describe("sorties d'un schéma : ce qui sort d'un coffre chiffré est en clair", () => {
+  it("ne dit rien pour un coffre en clair", () => {
+    expect(avisEnClair(false, "fichier")).toBe("");
+    expect(avisEnClair(false, "image")).toBe("");
+  });
+
+  it("dit du fichier qu'il est en clair, et de l'image qu'elle l'est dans le presse-papiers", () => {
+    expect(avisEnClair(true, "fichier")).toBe(" Ce coffre est chiffré, pas ce fichier : il est en clair.");
+    expect(avisEnClair(true, "image")).toBe(" Ce coffre est chiffré, pas cette image : dans le presse-papiers, elle est en clair.");
+  });
+
+  it("la fenêtre d'export le dit avant le choix du dossier", () => {
+    expect(AVIS_EXPORT_EN_CLAIR).toContain("en clair");
+    expect(AVIS_EXPORT_EN_CLAIR).toContain("chiffré");
+  });
+});
 
 describe("sorties d'un schéma : nom du fichier", () => {
   it("garde le titre, accents compris, et ajoute l'extension", () => {

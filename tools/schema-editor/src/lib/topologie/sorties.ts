@@ -23,6 +23,33 @@ const COTE_MAX_PNG = 8000;
 /** Côté le plus long de l'image à imprimer, au moins : de quoi rester net sur une feuille A4 à 300 points par pouce. */
 const COTE_IMPRESSION = 3600;
 
+/** Dans la fenêtre d'export, quand le coffre est chiffré : dit avant que le fichier ne soit écrit. */
+export const AVIS_EXPORT_EN_CLAIR =
+  "Ce coffre est chiffré, mais pas ce que vous exportez : le fichier créé est en clair, lisible par quiconque y accède.";
+
+/** Ce qui vient de sortir du coffre sans passer par la fenêtre d'export. */
+export type Sortie = "fichier" | "image";
+
+/** La phrase qui suit l'annonce d'une sortie quand le coffre est chiffré ; rien sinon. */
+export const avisEnClair = (chiffre: boolean, sortie: Sortie): string =>
+  !chiffre
+    ? ""
+    : sortie === "image"
+      ? " Ce coffre est chiffré, pas cette image : dans le presse-papiers, elle est en clair."
+      : " Ce coffre est chiffré, pas ce fichier : il est en clair.";
+
+/**
+ * Le coffre ouvert est-il chiffré ? Demandé à l'application à chaque sortie : le coffre peut avoir changé depuis l'ouverture
+ * de la vue. Sans réponse, rien n'est annoncé : l'export, lui, ne doit pas échouer pour un avis.
+ */
+export async function coffreChiffre(): Promise<boolean> {
+  try {
+    return (await api.coffreChiffre()) === true;
+  } catch {
+    return false;
+  }
+}
+
 /** Un schéma sans équipement n'a rien à montrer : ni image, ni page à imprimer. */
 export const estVide = (schema: Schema): boolean => schema.equipements.length === 0;
 
