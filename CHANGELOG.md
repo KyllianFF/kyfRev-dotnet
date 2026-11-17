@@ -7,6 +7,18 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ## [Non publié]
 
+### Modifié
+- Raccourcis changés (Paramètres › Raccourcis) : les infobulles, la recherche (Ctrl+K), le menu « ⋯ » et le clic droit
+  d'une fiche, le bouton du menu dans la barre de titre et ce qu'entend un lecteur d'écran nomment maintenant la touche
+  choisie, et la suivent dès qu'elle change. Jusqu'ici seule l'aide (F1) le faisait.
+- Paramètres, « Chercher un réglage » : un résultat ouvre toujours sa section, et désigne maintenant le réglage dans la
+  page. Sa ligne est amenée à la vue et entourée quelques secondes, et le clavier arrive sur sa commande quand elle peut
+  le recevoir. Un réglage que la section ne montre pas (le chiffrement d'un coffre en clair, par exemple) ouvre sa
+  section, sans plus.
+- Schémas réseau d'un coffre chiffré : ce qui en sort est en clair, et kyfRev le dit. La fenêtre « Exporter le schéma »
+  prévient avant le choix du dossier ; l'export du plan d'adressage et « Partager (copier l'image) » le disent dans leur
+  annonce. Rien n'est empêché.
+
 ## [1.1.0-beta.2] - 2026-11-16
 
 ### Ajouté

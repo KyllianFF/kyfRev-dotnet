@@ -6,13 +6,19 @@ réellement faite. Les fiches terminées sont archivées, puis rappelées au has
 consolidation. Les passages annotés et les définitions ont leur propre calendrier.
 
 Ce dépôt est la **nouvelle génération de kyfRev, en C# .NET**. Elle reprend sans conversion
-les coffres de la version 0.x et vise la parité fonctionnelle en version 1.0.0.
+les coffres de la version 0.x et vise la parité fonctionnelle avec elle dans sa première version stable.
 
 ## État
 
-Refonte presque terminée : le dernier jalon, **J11, la livraison de la 1.0.0**, est en cours. Pour utiliser kyfRev, voir le
-[guide](docs/guide-utilisateur.md). Le plan complet, les décisions et les critères de validation de chaque jalon sont dans
-[docs/plan-de-refonte.md](docs/plan-de-refonte.md).
+kyfRev est publié en **préversion** : la dernière est la **1.1.0-beta.2**, du 16 novembre 2026, avec son installateur
+et sa version portable sur la [page des versions](https://github.com/KyllianFF/kyfRev-dotnet/releases). Depuis cette
+version, kyfRev installé se met à jour depuis Paramètres › À propos. Les fichiers ne sont pas signés : Windows affiche
+un avertissement à l'installation.
+
+Il n'y a pas encore de version stable. Le dernier jalon du plan, **J11, la livraison stable**, reste ouvert : ce qui est
+vérifié et ce qui ne l'est pas est tenu à jour dans [docs/plan-de-refonte.md](docs/plan-de-refonte.md), sous J11. Pour
+utiliser kyfRev, voir le [guide](docs/guide-utilisateur.md) ; ce qui change d'une version à l'autre est dans le
+[journal des modifications](CHANGELOG.md).
 
 Vérifier un coffre existant, sans rien y écrire :
 

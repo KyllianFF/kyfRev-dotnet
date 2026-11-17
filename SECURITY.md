@@ -10,7 +10,7 @@ l'impact estimé.
 
 | Version | Correctifs de sécurité |
 |---|---|
-| 1.x (en développement) | Oui |
+| 1.x (préversions, la dernière seulement) | Oui |
 | 0.x (application Tauri, dépôt `kyfRev`) | Jusqu'à la sortie de la 1.0.0 |
 
 ## Principes appliqués
