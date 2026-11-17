@@ -31,3 +31,7 @@ Les captures de la vue « Aujourd'hui » montrent un exemple d'encart de module 
 sont pas encore branchés dans l'application.
 
 Le rendu se fait hors écran (`RenderTargetBitmap`, 96 ppp), animations arrêtées.
+
+La vue « Paramètres » et les vues ajoutées depuis J7 (mise à jour, impression, papier des feuilles, schémas réseau, éditeur
+visuel) ne sont pas rendues par cet outil : leurs captures sont écrites par les essais de
+`tests/KyfRev.Presentation.Wpf.Tests` quand la variable d'environnement `KYFREV_CAPTURES` désigne un dossier existant.
