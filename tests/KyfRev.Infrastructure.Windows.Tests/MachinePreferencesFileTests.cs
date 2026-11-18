@@ -13,6 +13,7 @@ public sealed class MachinePreferencesFileTests
         Theme = ThemePreference.Dark,
         Zoom = 1.25,
         Width = ReadingWidth.Full,
+        Column = ReadingColumn.Narrow,
         TextSize = ReadingTextSize.ExtraLarge,
         LineSpacing = ReadingLineSpacing.Airy,
         Font = ReadingFont.Serif,

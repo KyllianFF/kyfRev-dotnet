@@ -42,6 +42,7 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, INaviga
         TextSize = TextSizes[0];
         LineSpacing = LineSpacings[0];
         Font = Fonts[0];
+        Column = Columns[1];
         Rate = Rates[1];
         Show();
         // Le thème se change aussi depuis la barre de titre, cet onglet ouvert.
@@ -89,6 +90,14 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, INaviga
         new(ReadingFont.Typewriter, MoreSettingsText.FontTypewriter),
     ];
 
+    /// <summary>Les largeurs du texte d'une fiche sans mise en page.</summary>
+    public static IReadOnlyList<SettingChoice<ReadingColumn>> Columns { get; } =
+    [
+        new(ReadingColumn.Narrow, MoreSettingsText.TextWidthNarrow),
+        new(ReadingColumn.Comfortable, MoreSettingsText.TextWidthComfortable),
+        new(ReadingColumn.Wide, MoreSettingsText.TextWidthWide),
+    ];
+
     /// <summary>Les vitesses de lecture.</summary>
     public static IReadOnlyList<ReadingRate> Rates => ReadAloudViewModel.Rates;
 
@@ -129,6 +138,10 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, INaviga
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(PreviewIsSerif), nameof(PreviewFont))]
     public partial SettingChoice<ReadingFont> Font { get; set; }
+
+    /// <summary>Largeur du texte des fiches sans mise en page.</summary>
+    [ObservableProperty]
+    public partial SettingChoice<ReadingColumn> Column { get; set; }
 
     /// <summary>Les mots définis se marquent dans toutes les fiches.</summary>
     [ObservableProperty]
@@ -195,6 +208,7 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, INaviga
         TextSize = TextSizes.First(choice => choice.Value == current.TextSize);
         LineSpacing = LineSpacings.First(choice => choice.Value == current.LineSpacing);
         Font = Fonts.First(choice => choice.Value == current.Font);
+        Column = Columns.First(choice => choice.Value == current.Column);
         MarkDefinedWords = current.MarkDefinedWords;
         GlobalCapture = current.GlobalCapture;
         ReducedMotion = current.ReducedMotion;
@@ -230,6 +244,8 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, INaviga
     partial void OnLineSpacingChanged(SettingChoice<ReadingLineSpacing> value) => Remember(preferences => preferences with { LineSpacing = value.Value });
 
     partial void OnFontChanged(SettingChoice<ReadingFont> value) => Remember(preferences => preferences with { Font = value.Value });
+
+    partial void OnColumnChanged(SettingChoice<ReadingColumn> value) => Remember(preferences => preferences with { Column = value.Value });
 
     partial void OnMarkDefinedWordsChanged(bool value) => Remember(preferences => preferences with { MarkDefinedWords = value });
 

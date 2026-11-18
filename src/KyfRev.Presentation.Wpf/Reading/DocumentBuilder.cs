@@ -771,11 +771,9 @@ internal sealed class DocumentBuilder
         // Ajusté à son contenu : une colonne élastique prend le reste de la ligne. Elle a des cases vides, sans trait ni
         // fond : une colonne sans case n'aurait aucune largeur.
         var rest = look.FullWidth ? 0 : TableBudget - natural.Sum();
-        if (look.FullWidth)
-        {
-            // Toute la largeur du texte : la vue la partage selon sa largeur réelle, voir TableSizing.
-            table.Tag = new TableSizing(minimum, natural);
-        }
+        // La vue partage la largeur réelle du texte, voir TableSizing : toute la ligne, ou, ajusté, ce que les colonnes
+        // demandent et pas plus, dans une colonne de texte plus étroite que celle prévue ici comme dans une plus large.
+        table.Tag = new TableSizing(minimum, natural, Fitted: !look.FullWidth);
         if (rest > 0)
         {
             table.Columns.Add(new TableColumn { Width = new GridLength(rest / StarUnit, GridUnitType.Star) });

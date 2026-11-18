@@ -1,13 +1,20 @@
 namespace KyfRev.Presentation.Wpf.Reading;
 
 /// <summary>
-/// Ce que demandent les colonnes d'un tableau pleine largeur : leur plus long mot (<paramref name="Minimum"/>) et leur plus
-/// longue case sur une ligne (<paramref name="Natural"/>). La vue en tire leurs largeurs pour la largeur réelle du texte.
+/// Ce que demandent les colonnes d'un tableau : leur plus long mot (<paramref name="Minimum"/>) et leur plus longue case sur
+/// une ligne (<paramref name="Natural"/>). La vue en tire leurs largeurs pour la largeur réelle du texte.
 /// </summary>
 /// <param name="Minimum">Pour chaque colonne, la largeur de son plus long mot, marges comprises.</param>
 /// <param name="Natural">Pour chaque colonne, la largeur de sa plus longue case sur une seule ligne, marges comprises.</param>
-internal sealed record TableSizing(IReadOnlyList<double> Minimum, IReadOnlyList<double> Natural)
+/// <param name="Fitted">
+/// Le tableau est ajusté à son contenu : ses colonnes gardent ce qu'elles demandent tant que la ligne le permet, et une
+/// colonne vide, la dernière, prend ce qui reste. Sinon il prend toute la largeur du texte.
+/// </param>
+internal sealed record TableSizing(IReadOnlyList<double> Minimum, IReadOnlyList<double> Natural, bool Fitted = false)
 {
+    /// <summary>Ce que la colonne vide d'un tableau ajusté prend de <paramref name="available"/> pixels : ce que les autres laissent.</summary>
+    public double RestFor(double available) => Math.Max(0, available - For(available).Sum());
+
     /// <summary>
     /// Les largeurs des colonnes pour <paramref name="available"/> pixels, comme les tableaux d'une page web. Avec assez de place,
     /// chacune grandit en proportion de ce qu'elle demande ; sinon chacune garde son plus long mot, et le reste se partage selon

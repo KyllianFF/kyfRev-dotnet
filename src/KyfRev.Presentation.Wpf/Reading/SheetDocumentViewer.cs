@@ -747,8 +747,9 @@ internal sealed partial class SheetDocumentViewer : FlowDocumentScrollViewer
     }
 
     /// <summary>
-    /// Les tableaux pleine largeur se partagent la largeur réelle du texte : chaque colonne garde son plus long mot tant que le
-    /// tableau le permet. Des proportions d'étoiles ne le peuvent pas seules : une fenêtre étroite les resserrait toutes d'autant.
+    /// Les tableaux se partagent la largeur réelle du texte : chaque colonne garde son plus long mot tant que le tableau le
+    /// permet, et un tableau ajusté à son contenu ne grandit ni ne se resserre avec la colonne de texte tant qu'il y tient.
+    /// Des proportions d'étoiles ne le peuvent pas seules : une fenêtre étroite les resserrait toutes d'autant.
     /// </summary>
     internal void FitTables()
     {
@@ -763,13 +764,23 @@ internal sealed partial class SheetDocumentViewer : FlowDocumentScrollViewer
             {
                 continue;
             }
-            var widths = sizing.For(available - table.Margin.Left - table.Margin.Right);
+            var room = available - table.Margin.Left - table.Margin.Right;
+            var widths = sizing.For(room);
             for (var column = 0; column < widths.Count && column < table.Columns.Count; column++)
             {
                 var width = new GridLength(widths[column] / DocumentBuilder.StarUnit, GridUnitType.Star);
                 if (table.Columns[column].Width != width)
                 {
                     table.Columns[column].Width = width;
+                }
+            }
+            if (sizing.Fitted && table.Columns.Count > widths.Count && double.IsFinite(room))
+            {
+                // La colonne vide d'un tableau ajusté : ce que les autres laissent de la ligne, rien quand elles la remplissent.
+                var rest = new GridLength(sizing.RestFor(room) / DocumentBuilder.StarUnit, GridUnitType.Star);
+                if (table.Columns[widths.Count].Width != rest)
+                {
+                    table.Columns[widths.Count].Width = rest;
                 }
             }
         }

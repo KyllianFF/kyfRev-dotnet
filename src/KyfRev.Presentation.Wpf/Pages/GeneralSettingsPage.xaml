@@ -78,6 +78,16 @@
                           AutomationProperties.Name="{x:Static pages:GeneralSettingsText.Font}" AutomationProperties.HelpText="{x:Static pages:MoreSettingsText.ReadingFontHelp}" />
               </kyf:AdaptiveRow>
             </Border>
+            <Border Style="{DynamicResource Kyf.Setting.Row}">
+              <kyf:AdaptiveRow Style="{StaticResource Line}">
+                <StackPanel VerticalAlignment="Center">
+                  <TextBlock Text="{x:Static pages:MoreSettingsText.TextWidth}" Style="{DynamicResource Kyf.Text.BodyStrong}" />
+                  <TextBlock Text="{x:Static pages:MoreSettingsText.TextWidthHelp}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="0,2,0,0" />
+                </StackPanel>
+                <ComboBox x:Name="ColumnChoice" kyf:AdaptiveRow.Part="Trailing" Width="260" HorizontalAlignment="Left" VerticalAlignment="Center" ItemsSource="{x:Static pages:GeneralSettingsViewModel.Columns}" SelectedItem="{Binding Column}" DisplayMemberPath="Label"
+                          AutomationProperties.Name="{x:Static pages:MoreSettingsText.TextWidth}" AutomationProperties.HelpText="{x:Static pages:MoreSettingsText.TextWidthHelp}" />
+              </kyf:AdaptiveRow>
+            </Border>
           </StackPanel>
         </kyf:Card>
 

@@ -188,7 +188,7 @@ public sealed class ReviewNavigation : IReviewOpener
     {
         var shell = Shell;
         var from = shell.Current;
-        var page = new SheetPageViewModel(_sheets, _annotations, Bar, sheetId, () => shell.Navigate(from), OpenSheet, _links, Editor, revising, ActiveRecall) { PageSetup = PageSetupOf(sheetId), Print = new PrintViewModel(_printing), SheetZoom = _machine?.Current.SheetZoom ?? 1, SheetZoomChanged = zoom => _machine?.Update(preferences => preferences with { SheetZoom = zoom }), PassageToShow = passageId, RangeToShow = range, Masks = new ImageMaskEditorViewModel(_sheets, _editing), ReadAloud = _speech is null ? null : new ReadAloudViewModel(_speech, _machine), MarksDefinedWords = _machine?.Current.MarkDefinedWords ?? true, OpenPassage = OpenPassageInSheet, Sharing = _sharing, FocusMode = shell };
+        var page = new SheetPageViewModel(_sheets, _annotations, Bar, sheetId, () => shell.Navigate(from), OpenSheet, _links, Editor, revising, ActiveRecall) { PageSetup = PageSetupOf(sheetId), Print = new PrintViewModel(_printing), SheetZoom = _machine?.Current.SheetZoom ?? 1, Column = () => _machine?.Current.Column ?? ReadingColumn.Comfortable, SheetZoomChanged = zoom => _machine?.Update(preferences => preferences with { SheetZoom = zoom }), PassageToShow = passageId, RangeToShow = range, Masks = new ImageMaskEditorViewModel(_sheets, _editing), ReadAloud = _speech is null ? null : new ReadAloudViewModel(_speech, _machine), MarksDefinedWords = _machine?.Current.MarkDefinedWords ?? true, OpenPassage = OpenPassageInSheet, Sharing = _sharing, FocusMode = shell };
         shell.Navigate(new NavigationItem(CorePages.Sheet, ReviewText.SheetPage, Icons.Document, int.MaxValue, page));
         if (writes)
         {

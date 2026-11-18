@@ -187,6 +187,27 @@ public sealed class GeneralSettingsTests
     }
 
     [TestMethod]
+    public void The_text_width_is_shown_and_kept_at_once()
+    {
+        Assert.AreEqual(ReadingColumn.Comfortable, new MachinePreferences().Column, "sans choix : la colonne confortable");
+        var store = new MemoryMachinePreferences { Stored = new MachinePreferences { Column = ReadingColumn.Wide } };
+        var page = new GeneralSettingsViewModel(new MachineSettings(store), new FakeVoices("Microsoft Hortense Desktop"));
+
+        Assert.AreEqual(MoreSettingsText.TextWidthWide, page.Column.Label);
+        Assert.AreEqual(0, store.Saves, "montrer n'écrit rien");
+        CollectionAssert.AreEqual(
+            new[] { ReadingColumn.Narrow, ReadingColumn.Comfortable, ReadingColumn.Wide },
+            GeneralSettingsViewModel.Columns.Select(choice => choice.Value).ToArray());
+
+        page.Column = GeneralSettingsViewModel.Columns[0];
+
+        Assert.AreEqual(ReadingColumn.Narrow, store.Stored.Column);
+        Assert.AreEqual(ReadingColumn.Narrow, new MachineSettings(store).Current.Column, "au prochain démarrage");
+        Assert.IsTrue(SheetPageViewModel.ColumnWidth(ReadingColumn.Narrow) < SheetPageViewModel.ColumnWidth(ReadingColumn.Comfortable));
+        Assert.IsTrue(SheetPageViewModel.ColumnWidth(ReadingColumn.Comfortable) < SheetPageViewModel.ColumnWidth(ReadingColumn.Wide));
+    }
+
+    [TestMethod]
     public void Each_choice_is_kept_at_once()
     {
         var store = new MemoryMachinePreferences();
