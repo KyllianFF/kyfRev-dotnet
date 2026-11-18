@@ -471,8 +471,19 @@ begin
     Exit;
   if HoldsVault(Folder) then
     Log('Réglages : ' + Folder + ' a un coffre, rien n''y est retiré.')
-  else if not DelTree(Folder, True, True, True) then
+  else if DelTree(Folder, True, True, True) then
+    Log('Réglages : ' + Folder + ' retiré.')
+  else
     Log('Réglages : ' + Folder + ' n''a pas pu être retiré en entier.');
+end;
+
+{ Retire les fichiers de ce nom dans le dossier des réglages, et dit dans le journal ce qu'il en est. }
+procedure RemoveOwnedFiles(const Pattern: String);
+begin
+  if DelTree(Pattern, False, True, False) then
+    Log('Réglages : ' + Pattern + ' retirés.')
+  else
+    Log('Réglages : ' + Pattern + ' n''ont pas pu être retirés en entier.');
 end;
 
 { Demande ce qu'il faut faire des réglages ; vrai s'ils sont à supprimer. La suppression est proposée d'abord. Sans personne
@@ -514,7 +525,10 @@ var
 begin
   Own := SettingsFolder;
   Profile := ExpandConstant('{localappdata}\kyfRev');
-  if DirExists(Own) then
+  Log('Réglages : suppression dans ' + Own + '.');
+  if not DirExists(Own) then
+    Log('Réglages : ' + Own + ' n''existe pas.')
+  else
   begin
     if HoldsVault(Own) then
     begin
@@ -522,8 +536,8 @@ begin
       Exit;
     end;
     { config-locale.json (dernier coffre), preferences.json, seance.json, cles-retenues.json ; le journal. }
-    DelTree(Own + '\*.json', False, True, False);
-    DelTree(Own + '\*.log', False, True, False);
+    RemoveOwnedFiles(Own + '\*.json');
+    RemoveOwnedFiles(Own + '\*.log');
     RemoveOwnedFolder(Own + '\WebView2');
     RemoveOwnedFolder(Own + '\WebView2-extensions');
     RemoveOwnedFolder(Own + '\extensions');
@@ -544,6 +558,7 @@ var
 
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 begin
+  Log(Format('Réglages : étape %d de la désinstallation, suppression demandée : %d.', [Ord(CurUninstallStep), Ord(RemovesSettings)]));
   if CurUninstallStep = usUninstall then
     RemovesSettings := SettingsToRemove
   else if (CurUninstallStep = usPostUninstall) and RemovesSettings then
