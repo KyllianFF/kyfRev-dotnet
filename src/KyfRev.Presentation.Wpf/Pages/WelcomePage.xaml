@@ -89,7 +89,7 @@
 
   <ScrollViewer x:Name="Scroller" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
     <StackPanel x:Name="Column" MaxWidth="1054" Margin="16,28,16,20" VerticalAlignment="Center">
-      <shell:BrandMark x:Name="Brand" Width="64" Height="64" HorizontalAlignment="Center" Margin="0,0,0,12" />
+      <shell:Logotype x:Name="Brand" MarkSize="56" HorizontalAlignment="Center" Margin="0,0,0,16" />
       <TextBlock x:Name="Heading" Text="{x:Static p:ShellText.Welcome}" Style="{DynamicResource Kyf.Text.Display}"
                  HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" AutomationProperties.HeadingLevel="Level1" />
       <TextBlock Text="{x:Static p:ShellText.WelcomeIntro}" Style="{DynamicResource Kyf.Text.Secondary}" MaxWidth="640"

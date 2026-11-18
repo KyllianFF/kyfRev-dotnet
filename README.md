@@ -1,5 +1,10 @@
 # kyfRev
 
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/logo/kyfrev-logotype-sombre.png">
+  <img src="assets/logo/kyfrev-logotype-clair.png" alt="Le logotype de kyfRev : son icône, puis son nom" width="207">
+</picture>
+
 Application de bureau Windows de **fiches de révision en Markdown**, révisées selon la
 **méthode des J** (J0, J1, J3, J7, J14, J30) : chaque étape tombe n jours après la révision
 réellement faite. Les fiches terminées sont archivées, puis rappelées au hasard pour
