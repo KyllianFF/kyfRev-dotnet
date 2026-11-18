@@ -4,7 +4,8 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:kyf="clr-namespace:KyfRev.DesignSystem.Controls;assembly=KyfRev.DesignSystem"
              xmlns:model="clr-namespace:KyfRev.Application.Model;assembly=KyfRev.Application"
-             xmlns:pages="clr-namespace:KyfRev.Presentation.Wpf.Pages">
+             xmlns:pages="clr-namespace:KyfRev.Presentation.Wpf.Pages"
+             xmlns:shell="clr-namespace:KyfRev.Presentation.Wpf.Shell">
   <UserControl.Resources>
     <BooleanToVisibilityConverter x:Key="Visible" />
 
@@ -99,7 +100,7 @@
 
               <WrapPanel>
                 <Button x:Name="LockNowButton" Command="{Binding LockNowCommand}" Margin="0,0,8,8" Visibility="{Binding CanLockNow, Converter={StaticResource Visible}}"
-                        AutomationProperties.Name="{x:Static pages:EncryptionText.LockNow}">
+                        ToolTip="{shell:Shortcut verrouiller}" AutomationProperties.Name="{x:Static pages:EncryptionText.LockNow}" AutomationProperties.AcceleratorKey="{shell:Shortcut verrouiller}">
                   <StackPanel Orientation="Horizontal">
                     <kyf:Icon Text="{x:Static kyf:Icons.Lock}" Margin="0,0,8,0" />
                     <TextBlock Text="{x:Static pages:EncryptionText.LockNow}" VerticalAlignment="Center" />

@@ -92,6 +92,8 @@ et non réussi.
 
 - [Versionnement sémantique](https://semver.org/lang/fr/) strict. La version a une source
   unique : `<Version>` dans `Directory.Build.props`.
-- Préversions `1.0.0-alpha.N` puis `1.0.0-beta.N`, puis `1.0.0` à la parité avec la 0.x.
+- Préversions `x.y.z-alpha.N` puis `x.y.z-beta.N`, puis `x.y.z`. La série `1.0.0` s'est arrêtée à `1.0.0-beta.1` :
+  des fonctions s'y sont ajoutées avant sa sortie, et les préversions sont passées à `1.1.0-beta.N`. La première version
+  stable prend le numéro de la série de préversions en cours, à la parité avec la 0.x (plan, J11).
 - Une version se prépare dans `release/x.y.z` : version, section datée du CHANGELOG, puis
   fusion dans `main` et étiquette annotée `vX.Y.Z` créée en local.

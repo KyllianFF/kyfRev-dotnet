@@ -391,7 +391,7 @@ noms des dossiers et des fiches.
   sauvegardes.
 - **Ce que l'utilisateur sort lui-même du coffre** : un export, un copier-coller (le presse-papiers et son historique), le
   coffre déchiffré. Le suivi, les annotations et les citations exportés sont en clair, et l'application le dit ; un schéma
-  exporté aussi, sans avertissement. « Coffre complet (.zip) » est une sauvegarde, il garde le chiffrement du coffre.
+  exporté aussi, comme son plan d'adressage et son image copiée : la fenêtre d'export et les annonces le disent. « Coffre complet (.zip) » est une sauvegarde, il garde le chiffrement du coffre.
 - **Ce que le coffre en clair a laissé derrière lui.** Après « Chiffrer ce coffre… », le coffre d'origine et ses sauvegardes
   restent en clair jusqu'à ce que l'utilisateur les retire ; sur un SSD, un fichier effacé peut encore se retrouver.
 - **Les anciens secrets dans les sauvegardes.** Une sauvegarde garde l'en-tête de son jour : l'ancien mot de passe et

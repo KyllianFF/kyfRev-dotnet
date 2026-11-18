@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, untrack } from "svelte";
-  import { FORMATS_EXPORT, type FormatExport } from "../../lib/topologie/sorties";
+  import { AVIS_EXPORT_EN_CLAIR, coffreChiffre, FORMATS_EXPORT, type FormatExport } from "../../lib/topologie/sorties";
 
   // « Exporter le schéma » : le format d'abord ; le dossier se choisit ensuite, dans la fenêtre de l'application.
   let {
@@ -20,8 +20,13 @@
   let dialogue: HTMLDialogElement;
   let format = $state<FormatExport>(untrack(() => (vide ? "json" : "png")));
   let valide = false;
+  /** Le coffre ouvert est chiffré : l'export, lui, sort en clair, et la fenêtre le dit avant le choix du dossier. */
+  let chiffre = $state(false);
 
-  onMount(() => dialogue.showModal());
+  onMount(() => {
+    dialogue.showModal();
+    void coffreChiffre().then((reponse) => (chiffre = reponse));
+  });
 
   function valider(evenement: SubmitEvent) {
     evenement.preventDefault();
@@ -61,6 +66,7 @@
       {/each}
     </fieldset>
     {#if vide}<p class="note">Ce schéma est vide : il n'a pas d'image, seul son modèle s'exporte.</p>{/if}
+    {#if chiffre}<p class="en-clair" role="note">{AVIS_EXPORT_EN_CLAIR}</p>{/if}
     <div class="actions">
       <button type="button" class="bouton" onclick={() => dialogue.close()}>Annuler</button>
       <button type="submit" class="bouton principal">Choisir le dossier…</button>
@@ -155,6 +161,16 @@
   .note {
     margin: 10px 0 0;
     color: var(--texte-secondaire);
+    font-size: 13px;
+  }
+
+  /* Un avertissement : il informe, il n'empêche rien. */
+  .en-clair {
+    margin: 12px 0 0;
+    padding: 8px 10px;
+    border-left: 2px solid var(--avertissement);
+    border-radius: var(--rayon);
+    background: var(--avertissement-fond);
     font-size: 13px;
   }
 

@@ -306,7 +306,10 @@ internal static class Composition
                 provider.GetRequiredService<IFolderPicker>(),
                 provider.GetRequiredService<IReviewOpener>(),
                 provider.GetRequiredService<EditorEnvironment>().WebDataFolder,
-                provider.GetRequiredService<KyfRev.Presentation.Wpf.Printing.IPrintService>())), .. extensionPages.Entries()]);
+                provider.GetRequiredService<KyfRev.Presentation.Wpf.Printing.IPrintService>())
+            {
+                IsEncrypted = () => provider.GetRequiredService<VaultUseCases>().State().Encrypted,
+            }), .. extensionPages.Entries()]);
             modules.Changed += (_, _) => ShowEntries();
             void ShowExtensions()
             {

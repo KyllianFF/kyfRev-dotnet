@@ -136,10 +136,13 @@ public sealed partial class SchemasPageViewModel : ObservableObject, ILeaving, I
     public async Task<bool> LeaveAsync() => await FinishIsland().ConfigureAwait(true);
 
     /// <summary>Le pont vers le coffre, pour un îlot.</summary>
-    internal SchemaBridge Bridge() => new(_schemas, _folders, () => PickSchemaFile(), _opener.OpenSheet, EditorClosed, CopyImage, PrintPictureAsync);
+    internal SchemaBridge Bridge() => new(_schemas, _folders, () => PickSchemaFile(), _opener.OpenSheet, EditorClosed, CopyImage, PrintPictureAsync, IsEncrypted);
 
     /// <summary>Ce qui copie l'image d'un schéma : le presse-papiers de Windows, sauf dans les essais.</summary>
     internal Action<byte[]> CopyImage { get; init; } = ToClipboard;
+
+    /// <summary>Dit si le coffre ouvert est chiffré : l'îlot prévient alors que ce qui sort d'un schéma est en clair. Rien : il ne prévient pas.</summary>
+    public Func<bool>? IsEncrypted { get; init; }
 
     /// <summary>Met une image PNG dans le presse-papiers ; une image illisible est refusée comme un appel mal formé.</summary>
     private static void ToClipboard(byte[] png)

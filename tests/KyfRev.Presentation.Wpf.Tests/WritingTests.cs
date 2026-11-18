@@ -265,7 +265,7 @@ public sealed class WritingTests
 
         var item = scene.SheetPage.TextMenuItems(null).OfType<MenuItem>().Single();
         Assert.AreEqual(EditingText.EditSheet, item.Header);
-        Assert.AreEqual(EditingText.WriteKey, item.InputGestureText);
+        Assert.AreEqual("Ctrl+E", item.InputGestureText);
         item.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
         UiThread.Until(() => scene.Page.Editor is not null);
     }

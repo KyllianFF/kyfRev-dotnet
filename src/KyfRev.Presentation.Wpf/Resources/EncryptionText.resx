@@ -199,7 +199,7 @@
     <value>Jamais</value>
   </data>
   <data name="LockNow" xml:space="preserve">
-    <value>Verrouiller maintenant (Ctrl+Maj+L)</value>
+    <value>Verrouiller maintenant</value>
   </data>
   <data name="LostPassword" xml:space="preserve">
     <value>J'ai perdu mon mot de passe…</value>

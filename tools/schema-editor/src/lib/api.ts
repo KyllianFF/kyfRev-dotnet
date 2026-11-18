@@ -102,6 +102,8 @@ export const api = {
    * ce qu'il faut dire du travail parti, ou rien s'il n'est pas parti.
    */
   imprimerSchema: (titre: string, octets: Uint8Array) => appeler<string | null>("imprimerSchema", titre, base64(octets)),
+  /** Le coffre ouvert est chiffré : ce qui sort d'un schéma, lui, est en clair. */
+  coffreChiffre: () => appeler<boolean>("coffreChiffre"),
   choisirDossier: (titre: string) => appeler<string | null>("choisirDossier", titre),
   choisirFichierSchema: () => appeler<string | null>("choisirFichierSchema"),
   lireImportSchema: (chemin: string) => appeler<string>("lireImportSchema", chemin),

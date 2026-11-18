@@ -258,7 +258,7 @@
               </Border.Style>
               <Button x:Name="ExitFocusButton" Command="{Binding ToggleFocusModeCommand}" Style="{DynamicResource Kyf.Button.Icon}" Width="36" Height="32"
                       WindowChrome.IsHitTestVisibleInChrome="True" MouseEnter="OnMenuButtonEnter" MouseLeave="OnMenuPeekLeave" Click="OnMenuButtonClick"
-                      ToolTip="{Binding MenuToggleLabel}" AutomationProperties.Name="{Binding MenuToggleLabel}" AutomationProperties.AcceleratorKey="Ctrl+Maj+F">
+                      ToolTip="{Binding MenuToggleLabel}" AutomationProperties.Name="{Binding MenuToggleLabel}" AutomationProperties.AcceleratorKey="{shell:Shortcut concentration}">
                 <!-- Une fenêtre et son volet de gauche : dessinée ici, la police d'icônes n'a pas ce signe. -->
                 <Grid x:Name="MenuGlyph" Width="18" Height="14" SnapsToDevicePixels="True">
                   <Border BorderThickness="1.5" CornerRadius="3" BorderBrush="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
@@ -332,9 +332,9 @@
         <Button x:Name="SearchButton" Command="{Binding OpenPaletteCommand}" MinHeight="0" HorizontalContentAlignment="Stretch"
                 WindowChrome.IsHitTestVisibleInChrome="True"
                 AutomationProperties.Name="{x:Static p:ShellText.SearchPlaceholder}"
-                AutomationProperties.AcceleratorKey="Ctrl+K" ToolTip="{x:Static p:ShellText.SearchPlaceholder}">
+                AutomationProperties.AcceleratorKey="{shell:Shortcut recherche}" ToolTip="{x:Static p:ShellText.SearchPlaceholder}">
           <DockPanel>
-            <TextBlock DockPanel.Dock="Right" Text="Ctrl+K" Style="{DynamicResource Kyf.Text.Caption}" VerticalAlignment="Center"
+            <TextBlock x:Name="SearchButtonKeys" DockPanel.Dock="Right" Text="{shell:Shortcut recherche}" Style="{DynamicResource Kyf.Text.Caption}" VerticalAlignment="Center"
                        Visibility="{Binding Layout, Converter={StaticResource ShownIn}, ConverterParameter=Sidebar}" />
             <kyf:Icon x:Name="SearchIcon" Text="&#xE721;" />
             <TextBlock x:Name="SearchLabel" Text="{x:Static p:ShellText.Search}" VerticalAlignment="Center" Margin="8,0,0,0">
@@ -369,7 +369,7 @@
                   ToolTip="{Binding ThemeLabel}" AutomationProperties.Name="{Binding ThemeLabel}" />
           <Button x:Name="HelpButton" Command="{Binding ShowHelpCommand}" Content="&#xE897;" Style="{DynamicResource Kyf.Button.Icon}" Width="36" Height="32" FontSize="14"
                   WindowChrome.IsHitTestVisibleInChrome="True"
-                  ToolTip="{x:Static p:ShellText.Help}" AutomationProperties.Name="{x:Static p:ShellText.Help}" AutomationProperties.AcceleratorKey="F1" />
+                  ToolTip="{x:Static p:ShellText.Help}" AutomationProperties.Name="{x:Static p:ShellText.Help}" AutomationProperties.AcceleratorKey="{shell:Shortcut aide}" />
         </StackPanel>
 
         <StackPanel x:Name="WindowButtons" Grid.Column="3" Orientation="Horizontal">

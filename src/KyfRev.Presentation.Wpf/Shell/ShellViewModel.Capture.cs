@@ -96,5 +96,5 @@ public sealed partial class ShellViewModel
 
     /// <summary>La capture, dans la recherche Ctrl+K.</summary>
     private IEnumerable<PaletteEntry> CaptureCommands() =>
-        Capture is null ? [] : [new(ShellText.Capture, "Ctrl+Maj+N", Icons.Document, () => OpenCapture())];
+        Capture is null ? [] : [new(ShellText.Capture, ShortcutMap.Current.DisplayOf("capture"), Icons.Document, () => OpenCapture())];
 }

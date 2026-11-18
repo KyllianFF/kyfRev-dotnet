@@ -28,6 +28,8 @@
   import { ecrireSchema, lireSchema } from "../../lib/topologie/format";
   import { type IdVue, type Schema, STATUTS, schemaVide } from "../../lib/topologie/modele";
   import {
+    avisEnClair,
+    coffreChiffre,
     dureeAnnonce,
     estVide,
     exporterSchema,
@@ -226,7 +228,7 @@
       const schema = await schemaDuCoffre(s.id);
       if (estVide(schema)) return "Ce schéma est vide : rien à partager.";
       await partagerSchema(schema, vueDeSortie(s));
-      return "Image du schéma copiée : collez-la dans un message, un document ou une fiche.";
+      return `Image du schéma copiée : collez-la dans un message, un document ou une fiche.${avisEnClair(await coffreChiffre(), "image")}`;
     });
 
   const imprimer = (s: SchemaResume) =>

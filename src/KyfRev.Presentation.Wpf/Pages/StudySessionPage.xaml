@@ -4,6 +4,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:kyf="clr-namespace:KyfRev.DesignSystem.Controls;assembly=KyfRev.DesignSystem"
              xmlns:pages="clr-namespace:KyfRev.Presentation.Wpf.Pages"
+             xmlns:shell="clr-namespace:KyfRev.Presentation.Wpf.Shell"
              x:Name="Self">
   <UserControl.Resources>
     <BooleanToVisibilityConverter x:Key="Visible" />
@@ -46,8 +47,8 @@
         <DockPanel Margin="16,8">
           <WrapPanel Style="{StaticResource SessionActions}">
             <Button x:Name="FullScreenButton" Command="{Binding ToggleFullScreenCommand}" Style="{DynamicResource Kyf.Button.Icon}" Margin="0,0,8,0"
-                    Content="{x:Static kyf:Icons.FocusMode}" ToolTip="F11" AutomationProperties.Name="{x:Static pages:SessionText.FullScreen}"
-                    AutomationProperties.AcceleratorKey="F11" />
+                    Content="{x:Static kyf:Icons.FocusMode}" ToolTip="{shell:Shortcut plein-ecran}" AutomationProperties.Name="{x:Static pages:SessionText.FullScreen}"
+                    AutomationProperties.AcceleratorKey="{shell:Shortcut plein-ecran}" />
             <Button x:Name="EndButton" Content="{x:Static pages:SessionText.Finish}" Command="{Binding EndCommand}" Margin="0,0,8,0" />
             <!-- Rien n'a été fait : « Passer » ; une fois l'élément traité : « Suivant », en bouton principal. -->
             <Button x:Name="SkipButton" Command="{Binding NextCommand}" ToolTip="Ctrl+→" AutomationProperties.Name="{x:Static pages:SessionText.Skip}"

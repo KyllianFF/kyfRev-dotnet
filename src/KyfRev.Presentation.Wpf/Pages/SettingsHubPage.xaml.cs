@@ -1,6 +1,9 @@
 using System.ComponentModel;
 using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
+using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
@@ -16,8 +19,15 @@ internal sealed partial class SettingsHubPage : UserControl
     /// <summary>En deçà, la liste des sections ne tient plus à côté de leur contenu.</summary>
     internal const double SideListMinimum = 760;
 
+    /// <summary>Le temps pendant lequel un réglage trouvé par la recherche reste entouré.</summary>
+    internal static readonly TimeSpan PointedFor = TimeSpan.FromSeconds(2.5);
+
+    private readonly DispatcherTimer _pointing = new() { Interval = TimeSpan.FromMilliseconds(100) };
     private SettingsHubViewModel? _followed;
     private bool _resultHadFocus;
+    private string? _wanted;
+    private int _attempts;
+    private SettingPointer? _pointer;
 
     public SettingsHubPage()
     {
@@ -26,7 +36,11 @@ internal sealed partial class SettingsHubPage : UserControl
         Loaded += (_, _) => Follow(DataContext as SettingsHubViewModel);
         Unloaded += (_, _) => Follow(null);
         DataContextChanged += (_, e) => Follow(IsLoaded ? e.NewValue as SettingsHubViewModel : null);
+        _pointing.Tick += (_, _) => Point();
     }
+
+    /// <summary>Le réglage que la recherche a fait désigner, tant qu'il est entouré.</summary>
+    internal FrameworkElement? Pointed => _pointer?.AdornedElement as FrameworkElement;
 
     private void Arrange(double width)
     {
@@ -50,9 +64,129 @@ internal sealed partial class SettingsHubPage : UserControl
         }
         _followed?.PropertyChanging -= OnHubChanging;
         _followed?.PropertyChanged -= OnHubChanged;
+        _followed?.Pointing -= OnPointing;
         _followed = hub;
         _followed?.PropertyChanging += OnHubChanging;
         _followed?.PropertyChanged += OnHubChanged;
+        _followed?.Pointing += OnPointing;
+        if (hub is null)
+        {
+            StopPointing();
+        }
+    }
+
+    /// <summary>
+    /// La recherche vient d'ouvrir un réglage : sa section se montre d'abord, et ce qu'elle lit dans le coffre peut arriver
+    /// un peu après. Le réglage est cherché dès qu'elle est en place, puis quelques fois encore.
+    /// </summary>
+    private void OnPointing(string label)
+    {
+        StopPointing();
+        _wanted = label;
+        _attempts = 0;
+        Dispatcher.BeginInvoke(Point, DispatcherPriority.Loaded);
+    }
+
+    private void Point()
+    {
+        _pointing.Stop();
+        if (_pointer is not null)
+        {
+            // Le temps est écoulé : le réglage n'est plus entouré.
+            StopPointing();
+            return;
+        }
+        if (_wanted is not { } label)
+        {
+            return;
+        }
+        if (Find(TabContent, label) is not var (frame, control))
+        {
+            // Vingt essais en deux secondes : au-delà, la section est ouverte, et c'est déjà cela.
+            if (++_attempts < 20)
+            {
+                _pointing.Interval = TimeSpan.FromMilliseconds(100);
+                _pointing.Start();
+            }
+            else
+            {
+                _wanted = null;
+            }
+            return;
+        }
+        _wanted = null;
+        // Le clavier arrive sur le réglage quand il peut le recevoir ; un titre ou une ligne de texte est seulement entouré.
+        if (control is { Focusable: true, IsEnabled: true } && !control.Focus())
+        {
+            FocusManager.SetFocusedElement(FocusManager.GetFocusScope(control), control);
+        }
+        // Après le focus, qui n'amène à la vue que la commande : la ligne entière, avec un peu d'air au-dessus et au-dessous,
+        // car le cadre dépasse le réglage et une ligne collée au bord se lit mal.
+        frame.BringIntoView(new Rect(0, -Air, frame.ActualWidth, frame.ActualHeight + (2 * Air)));
+        if (AdornerLayer.GetAdornerLayer(frame) is { } layer)
+        {
+            _pointer = new SettingPointer(frame);
+            layer.Add(_pointer);
+            _pointing.Interval = PointedFor;
+            _pointing.Start();
+        }
+    }
+
+    private void StopPointing()
+    {
+        _pointing.Stop();
+        _wanted = null;
+        if (_pointer is { } pointer)
+        {
+            _pointer = null;
+            AdornerLayer.GetAdornerLayer(pointer.AdornedElement)?.Remove(pointer);
+        }
+    }
+
+    /// <summary>
+    /// Dans la section montrée, ce qui porte ce nom : la commande nommée ainsi pour le lecteur d'écran, et le texte qui
+    /// l'écrit. À entourer : la ligne qui tient les deux quand ils sont côte à côte, sinon la commande, sinon le texte
+    /// (ou le bouton, la case, la liste où il est écrit). À donner au clavier : la commande.
+    /// </summary>
+    private static (FrameworkElement Frame, Control? Control)? Find(DependencyObject section, string label)
+    {
+        var control = First<Control>(section, candidate => candidate.IsVisible && AutomationProperties.GetName(candidate) == label);
+        var text = First<TextBlock>(section, candidate => candidate.IsVisible && candidate.Text == label);
+        if (control is null)
+        {
+            return text is null ? null : Holder(text) is var holder ? (holder, holder as Control) : null;
+        }
+        if (text is null || text.IsDescendantOf(control))
+        {
+            return (control, control);
+        }
+        // Le libellé à gauche, la commande à droite : la ligne entière, tant que c'est bien une ligne et pas toute une carte.
+        for (var parent = VisualTreeHelper.GetParent(control); parent is not null and not ScrollViewer and not UserControl; parent = VisualTreeHelper.GetParent(parent))
+        {
+            if (parent is FrameworkElement line && text.IsDescendantOf(line))
+            {
+                return (line.ActualHeight <= LineMaximum ? line : control, control);
+            }
+        }
+        return (control, control);
+    }
+
+    /// <summary>L'espace gardé au-dessus et au-dessous d'un réglage amené à la vue.</summary>
+    private const double Air = 24;
+
+    /// <summary>Au-delà de cette hauteur, ce qui tient un libellé et sa commande n'est plus une ligne.</summary>
+    private const double LineMaximum = 160;
+
+    private static FrameworkElement Holder(TextBlock text)
+    {
+        for (var parent = VisualTreeHelper.GetParent(text); parent is not null and not ScrollViewer and not UserControl; parent = VisualTreeHelper.GetParent(parent))
+        {
+            if (parent is ButtonBase or ComboBox or TextBoxBase)
+            {
+                return (FrameworkElement)parent;
+            }
+        }
+        return text;
     }
 
     /// <summary>
@@ -61,6 +195,11 @@ internal sealed partial class SettingsHubPage : UserControl
     /// </summary>
     private void OnHubChanged(object? sender, PropertyChangedEventArgs e)
     {
+        // Une autre section, ou une nouvelle recherche : ce qui était entouré ne l'est plus.
+        if (e.PropertyName == nameof(SettingsHubViewModel.Selected) || (e.PropertyName == nameof(SettingsHubViewModel.Query) && sender is SettingsHubViewModel { IsSearching: true }))
+        {
+            StopPointing();
+        }
         if (e.PropertyName == nameof(SettingsHubViewModel.Query) && sender is SettingsHubViewModel { IsSearching: false } && _resultHadFocus)
         {
             _resultHadFocus = false;
@@ -96,13 +235,13 @@ internal sealed partial class SettingsHubPage : UserControl
         }
     }
 
-    private static T? First<T>(DependencyObject parent)
+    private static T? First<T>(DependencyObject parent, Func<T, bool>? wanted = null)
         where T : DependencyObject
     {
         for (var index = 0; index < VisualTreeHelper.GetChildrenCount(parent); index++)
         {
             var child = VisualTreeHelper.GetChild(parent, index);
-            if (child is T found || (found = First<T>(child)!) is not null)
+            if ((child is T found && (wanted is null || wanted(found))) || (found = First(child, wanted)!) is not null)
             {
                 return found;
             }

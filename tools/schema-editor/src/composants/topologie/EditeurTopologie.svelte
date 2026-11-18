@@ -53,7 +53,7 @@
     type Outil,
     retenirMode,
   } from "../../lib/topologie/simplifie";
-  import { estVide, exporterSchema, type FormatExport, imprimerSchema } from "../../lib/topologie/sorties";
+  import { avisEnClair, coffreChiffre, estVide, exporterSchema, type FormatExport, imprimerSchema } from "../../lib/topologie/sorties";
   import { VUES, vue as vueDe } from "../../lib/topologie/vues";
   import Canevas from "./Canevas.svelte";
   import { GABARITS } from "../../lib/topologie/gabarits";
@@ -190,7 +190,7 @@
       // Marque UTF-8 : un tableur lit alors les accents.
       const octets = new TextEncoder().encode(`﻿${csv}`);
       const chemin = await api.exporterSchema(dossier, `${schema.titre || "Schéma réseau"} - plan IP.csv`, octets);
-      editeur.annonce = `Plan IP exporté : ${chemin}`;
+      editeur.annonce = `Plan IP exporté : ${chemin}.${avisEnClair(await coffreChiffre(), "fichier")}`;
     } catch (err) {
       editeur.annonce = `Export impossible : ${messageErreur(err)}`;
     }

@@ -148,6 +148,26 @@ public sealed class SchemasPageTests
     }
 
     [TestMethod]
+    public async Task The_bridge_says_whether_the_open_vault_is_encrypted()
+    {
+        using var scene = new BridgeScene();
+        Assert.IsFalse((await scene.CallAsync("coffreChiffre")).GetValue<bool>(), "sans rien pour le dire, le coffre est tenu pour en clair");
+
+        var encrypted = false;
+        var bridge = new SchemaBridge(new SchemaUseCases(scene.Vaults.App.Host), scene.Picker, () => null, _ => { }, isEncrypted: () => encrypted);
+        async Task<bool> SaysAsync() =>
+            JsonNode.Parse((await bridge.ReceiveAsync(JsonSerializer.Serialize(new { kind = "call", id = 1, method = "coffreChiffre", args = Array.Empty<string>() })))!)!["value"]!.GetValue<bool>();
+        Assert.IsFalse(await SaysAsync());
+        encrypted = true;
+        Assert.IsTrue(await SaysAsync(), "demandé à chaque fois : le coffre ouvert peut avoir changé");
+
+        // La page donne à son pont ce qu'on lui a donné.
+        using var page = new SchemasPageViewModel(new SchemaUseCases(scene.Vaults.App.Host), scene.Picker, new FakeOpener(), FakeEnvironment.WebData) { IsEncrypted = () => true };
+        var answer = JsonNode.Parse((await page.Bridge().ReceiveAsync(JsonSerializer.Serialize(new { kind = "call", id = 2, method = "coffreChiffre", args = Array.Empty<string>() })))!)!;
+        Assert.IsTrue(answer["value"]!.GetValue<bool>());
+    }
+
+    [TestMethod]
     public async Task The_bridge_refuses_what_it_does_not_know()
     {
         using var scene = new BridgeScene();
@@ -437,6 +457,7 @@ public sealed class SchemasPageTests
             Assert.IsGreaterThan(100, picture.PixelWidth, "qui se lit, avec le dessin dedans");
         }
         scene.WaitFor("document.querySelector('.annonces [role=status]').textContent.includes('copiée')");
+        Assert.AreEqual("false", scene.Script("document.querySelector('.annonces [role=status]').textContent.includes('en clair')"));
 
         // « Exporter… » : la fenêtre des formats, puis le dossier choisi, et le fichier est écrit hors du coffre.
         var folder = scene.Outside("Exports");
@@ -447,6 +468,7 @@ public sealed class SchemasPageTests
         scene.Script("[...document.querySelectorAll('.menu [role=menuitem]')].find((entree) => entree.textContent.includes('Exporter')).click()");
         scene.WaitFor("document.querySelector('dialog[open] input[type=radio]') !== null");
         Assert.AreEqual("3", scene.Script("document.querySelectorAll('dialog[open] input[type=radio]').length"));
+        Assert.AreEqual("true", scene.Script("document.querySelector('dialog[open] .en-clair') === null"), "un coffre en clair : rien à dire de l'export");
         scene.Script("(() => { const svg = [...document.querySelectorAll('dialog[open] input[type=radio]')].find((choix) => choix.value === 'svg'); svg.click(); document.querySelector('dialog[open] form').requestSubmit(); })()");
         UiThread.Until(() => Directory.Exists(folder) && Directory.GetFiles(folder, "*.svg").Length == 1, TimeSpan.FromSeconds(30));
         StringAssert.Contains(File.ReadAllText(Directory.GetFiles(folder, "*.svg").Single()), "<svg", StringComparison.Ordinal);
@@ -462,6 +484,41 @@ public sealed class SchemasPageTests
         UiThread.Until(() => scene.Page.Island!.IsCovered, TimeSpan.FromSeconds(10));
         model.Print.Close();
         UiThread.Until(() => !scene.Page.Island!.IsCovered, TimeSpan.FromSeconds(10));
+    }
+
+    [EngineTest]
+    [DataRow(ThemeKind.Light)]
+    [DataRow(ThemeKind.Dark)]
+    public void What_leaves_a_schema_of_an_encrypted_vault_is_said_to_be_in_clear(ThemeKind theme)
+    {
+        using var scene = new IslandScene(Text, theme: theme, encrypted: true);
+        scene.WaitFor("document.querySelector('li.carte') !== null");
+        void Choose(string entry)
+        {
+            scene.Script("document.querySelector('li.carte').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 60, clientY: 60 }))");
+            scene.WaitFor("document.querySelector('.menu[role=menu]') !== null");
+            scene.Script($"[...document.querySelectorAll('.menu [role=menuitem]')].find((entree) => entree.textContent.includes('{entry}')).click()");
+        }
+
+        // « Exporter… » : la fenêtre le dit avant le choix du dossier, sans rien empêcher, et tient dans la fenêtre.
+        Choose("Exporter");
+        scene.WaitFor("document.querySelector('dialog[open] .en-clair') !== null");
+        var warning = JsonSerializer.Deserialize<string>(scene.Script("document.querySelector('dialog[open] .en-clair').textContent"))!;
+        Assert.AreEqual("Ce coffre est chiffré, mais pas ce que vous exportez : le fichier créé est en clair, lisible par quiconque y accède.", warning);
+        Assert.AreEqual("note", JsonSerializer.Deserialize<string>(scene.Script("document.querySelector('dialog[open] .en-clair').getAttribute('role')")));
+        Assert.AreEqual("true", scene.Script("(() => { const d = document.querySelector('dialog[open]').getBoundingClientRect(); const a = document.querySelector('dialog[open] .en-clair').getBoundingClientRect(); return a.left >= d.left && a.right <= d.right && a.bottom <= d.bottom && d.bottom <= innerHeight; })()"), "l'avis tient dans la fenêtre d'export");
+        scene.WaitFor("document.getAnimations().length === 0");
+        scene.Picture($"schemas-export-chiffre-{(theme == ThemeKind.Dark ? "sombre" : "clair")}");
+        var folder = scene.Outside("Exports");
+        Directory.CreateDirectory(folder);
+        scene.Picker.Answers.Enqueue(folder);
+        scene.Script("document.querySelector('dialog[open] form').requestSubmit()");
+        UiThread.Until(() => Directory.GetFiles(folder, "*.png").Length == 1, TimeSpan.FromSeconds(30));
+
+        // « Partager » : l'image est dans le presse-papiers, et l'annonce dit qu'elle y est en clair.
+        Choose("Partager");
+        UiThread.Until(() => scene.Copied.Count == 1, TimeSpan.FromSeconds(30));
+        scene.WaitFor("document.querySelector('.annonces [role=status]').textContent.includes('Ce coffre est chiffré, pas cette image')");
     }
 
     [EngineTest]
@@ -832,7 +889,7 @@ public sealed class SchemasPageTests
         private readonly TestVaults _vaults = new(AppMode.Development);
         private readonly Window _window;
 
-        public IslandScene(string? schema = null, bool waitsForTheIsland = true, ThemeKind theme = ThemeKind.Light)
+        public IslandScene(string? schema = null, bool waitsForTheIsland = true, ThemeKind theme = ThemeKind.Light, bool encrypted = false)
         {
             _vaults.App.Vaults.Create(_vaults.PathOf("Coffre"));
             Schemas = new SchemaUseCases(_vaults.App.Host);
@@ -842,7 +899,7 @@ public sealed class SchemasPageTests
             }
             Test = new TestShell();
             Test.Design.Theme = theme;
-            Page = new SchemasPage { DataContext = new SchemasPageViewModel(Schemas, _vaults.Picker, new FakeOpener(), FakeEnvironment.WebData) { CopyImage = Copied.Add }, Width = 1300, Height = 860 };
+            Page = new SchemasPage { DataContext = new SchemasPageViewModel(Schemas, _vaults.Picker, new FakeOpener(), FakeEnvironment.WebData) { CopyImage = Copied.Add, IsEncrypted = () => encrypted }, Width = 1300, Height = 860 };
             _window = new Window { Content = new Canvas { Children = { Page } }, Left = -10000, Top = -10000, Width = 800, Height = 600, ShowActivated = false, ShowInTaskbar = false };
             _window.Resources.MergedDictionaries.Add(Test.Design.Dictionary);
             _window.Show();

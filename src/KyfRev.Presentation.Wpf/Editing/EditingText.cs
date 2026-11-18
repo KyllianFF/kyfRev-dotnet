@@ -12,9 +12,6 @@ public static class EditingText
     /// <summary>Écrire la fiche.</summary>
     public const string Write = "Écrire";
 
-    /// <summary>Le raccourci qui passe de l'un à l'autre.</summary>
-    public const string WriteKey = "Ctrl+E";
-
     /// <summary>Passer à l'écriture depuis le texte de la fiche.</summary>
     public const string EditSheet = "Modifier la fiche";
 

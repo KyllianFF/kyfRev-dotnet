@@ -121,7 +121,7 @@ Dans Paramètres, les sections sont à gauche, rangées par portée : ce qui est
 Lecture, Feuilles, Menu, Raccourcis), ce qui appartient au coffre ouvert (Révisions, Modules et extensions, Coffre et
 chiffrement, Sauvegardes et exports), et À propos. Apparence règle le thème, la taille de l'interface, le texte des fiches
 (taille, interligne, police) et l'accessibilité ; Lecture, les mots définis et la voix. Raccourcis change dix raccourcis
-clavier ; Menu change l'ordre des vues du menu. « Chercher un réglage », en haut de la liste, trouve un réglage par quelques lettres et ouvre sa section. Dans une
+clavier ; Menu change l'ordre des vues du menu. « Chercher un réglage », en haut de la liste, trouve un réglage par quelques lettres, ouvre sa section et l'y entoure. Dans une
 section retenue sur l'ordinateur, « Rétablir les réglages d'origine » remet ceux de cette section ; « Annuler » les rend tant
 que vous y restez.
 

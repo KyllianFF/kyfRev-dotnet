@@ -559,7 +559,7 @@ internal sealed partial class SheetPage : UserControl
 
     /// <summary>« Imprimer… », quand la fiche peut s'imprimer d'ici.</summary>
     private static List<Control> PrintItems(SheetPageViewModel page) =>
-        page.CanPrint ? [Item(PrintText.PrintAction, () => page.RequestPrintCommand.Execute(null), "Ctrl+P")] : [];
+        page.CanPrint ? [Item(PrintText.PrintAction, () => page.RequestPrintCommand.Execute(null), KyfRev.Presentation.Wpf.Shell.ShortcutMap.Current.DisplayOf("imprimer"))] : [];
 
     private static List<Control> ShareItems(SheetPageViewModel page) => page.CanShare
         ?
@@ -629,7 +629,7 @@ internal sealed partial class SheetPage : UserControl
     }
 
     private static MenuItem EditSheetItem(SheetPageViewModel page) =>
-        Item(EditingText.EditSheet, () => page.StartWritingCommand.Execute(null), EditingText.WriteKey);
+        Item(EditingText.EditSheet, () => page.StartWritingCommand.Execute(null), KyfRev.Presentation.Wpf.Shell.ShortcutMap.Current.DisplayOf("ecrire"));
 
     internal IReadOnlyList<Control> PassageMenuItems(SheetPageViewModel page, PassageEntry entry)
     {
