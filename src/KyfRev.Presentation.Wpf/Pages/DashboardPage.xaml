@@ -123,7 +123,8 @@
 
     <!-- Une fiche ou un passage à réviser : le titre, ce qu'il faut savoir dessous, le retard ou l'échéance, l'étape. -->
     <DataTemplate DataType="{x:Type pages:DueItemRow}">
-      <Grid Margin="0,8">
+      <Border BorderBrush="{DynamicResource Kyf.Brush.Divider}" BorderThickness="0,1,0,0" Padding="0,8">
+      <Grid>
         <Grid.ColumnDefinitions>
           <ColumnDefinition Width="*" />
           <ColumnDefinition Width="Auto" />
@@ -156,6 +157,7 @@
                      Foreground="{DynamicResource Kyf.Brush.PillSheetText}" />
         </Border>
       </Grid>
+      </Border>
       <DataTemplate.Triggers>
         <DataTrigger Binding="{Binding DataContext.HasRoom, RelativeSource={RelativeSource AncestorType=ListBox}}" Value="False">
           <Setter TargetName="Timing" Property="Grid.Column" Value="0" />
@@ -182,10 +184,12 @@
 
     <!-- Un rappel de consolidation, dans la liste quand il n'y a pas de colonne latérale. -->
     <DataTemplate DataType="{x:Type pages:ReminderRow}">
-      <StackPanel Margin="0,8">
-        <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" FontSize="{DynamicResource Kyf.FontSize.BodyLarge}" FontWeight="SemiBold" />
-        <TextBlock Text="{Binding Meta}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,2,0,0" />
-      </StackPanel>
+      <Border BorderBrush="{DynamicResource Kyf.Brush.Divider}" BorderThickness="0,1,0,0" Padding="0,8">
+        <StackPanel>
+          <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" FontSize="{DynamicResource Kyf.FontSize.BodyLarge}" FontWeight="SemiBold" />
+          <TextBlock Text="{Binding Meta}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,2,0,0" />
+        </StackPanel>
+      </Border>
     </DataTemplate>
 
     <!-- Les sept prochains jours : le nombre d'échéances est écrit, le remplissage le redit. -->
@@ -383,9 +387,31 @@
       <Setter Property="Margin" Value="0,0,0,16" />
     </Style>
 
-    <!-- Un avertissement du jour : une ligne, son signe devant, et le lien qui mène où le régler. -->
-    <Style x:Key="WarningLine" TargetType="DockPanel">
-      <Setter Property="Margin" Value="0,12,0,0" />
+    <!-- Un avertissement du jour : une ligne dans sa couleur, un point devant, et le lien qui mène où le régler. -->
+    <Style x:Key="WarningLine" TargetType="Grid">
+      <Setter Property="Margin" Value="0,10,0,0" />
+    </Style>
+
+    <Style x:Key="WarningDot" TargetType="Ellipse">
+      <Setter Property="Width" Value="8" />
+      <Setter Property="Height" Value="8" />
+      <Setter Property="Fill" Value="{DynamicResource Kyf.Brush.Warning}" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="Margin" Value="0,0,10,0" />
+    </Style>
+
+    <!-- Le lien de l'avertissement : à la suite du texte, ou sous lui quand la place manque. -->
+    <Style x:Key="WarningLink" TargetType="Border">
+      <Setter Property="Grid.Column" Value="2" />
+      <Setter Property="Margin" Value="4,0,0,0" />
+      <Setter Property="HorizontalAlignment" Value="Left" />
+      <Style.Triggers>
+        <DataTrigger Binding="{Binding HasRoom}" Value="False">
+          <Setter Property="Grid.Column" Value="1" />
+          <Setter Property="Grid.Row" Value="1" />
+          <Setter Property="Margin" Value="-8,0,0,0" />
+        </DataTrigger>
+      </Style.Triggers>
     </Style>
 
     <Style x:Key="SideColumn" TargetType="DockPanel">
@@ -400,7 +426,7 @@
     <Style x:Key="PreviewPane" TargetType="ContentControl">
       <Setter Property="DockPanel.Dock" Value="Right" />
       <Setter Property="Width" Value="620" />
-      <Setter Property="Margin" Value="16,0,0,0" />
+      <Setter Property="Margin" Value="32,0,0,0" />
       <Setter Property="Focusable" Value="False" />
       <Setter Property="IsTabStop" Value="False" />
       <Style.Triggers>
@@ -413,7 +439,7 @@
     <!-- La seconde carte de la liste. -->
     <Style x:Key="SecondList" TargetType="ContentControl">
       <Setter Property="Visibility" Value="Collapsed" />
-      <Setter Property="Margin" Value="16,0,0,0" />
+      <Setter Property="Margin" Value="8,0,0,0" />
       <Setter Property="Focusable" Value="False" />
       <Setter Property="IsTabStop" Value="False" />
       <Style.Triggers>
@@ -486,15 +512,33 @@
     <StackPanel Grid.Row="2" Grid.ColumnSpan="2">
       <kyf:Notification x:Name="ErrorMessage" Severity="Critical" Message="{Binding Error}" IsOpen="{Binding HasError, Mode=OneWay}"
                         IsClosable="False" Margin="0,12,0,0" />
-      <DockPanel x:Name="HealthWarning" Style="{StaticResource WarningLine}" Visibility="{Binding HasHealthWarning, Converter={StaticResource Visible}}">
-        <kyf:Icon DockPanel.Dock="Left" Text="{x:Static kyf:Icons.Warning}" Foreground="{DynamicResource Kyf.Brush.Warning}" VerticalAlignment="Top" Margin="0,2,8,0" />
-        <TextBlock x:Name="HealthText" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite"
-                   AutomationProperties.Name="{Binding HealthWarning}"><Run Text="{Binding HealthWarning, Mode=OneWay}" /><Run Text=" " /><Hyperlink x:Name="HealthLink" Command="{Binding OpenHealthCommand}" AutomationProperties.Name="{x:Static pages:DashboardText.SeeHealth}"><Run Text="{x:Static pages:DashboardText.SeeHealth}" /></Hyperlink></TextBlock>
-      </DockPanel>
-      <DockPanel x:Name="PriorityWarning" Style="{StaticResource WarningLine}" Visibility="{Binding HasPriorityWarning, Converter={StaticResource Visible}}">
-        <kyf:Icon DockPanel.Dock="Left" Text="{x:Static kyf:Icons.Warning}" Foreground="{DynamicResource Kyf.Brush.Warning}" VerticalAlignment="Top" Margin="0,2,8,0" />
-        <TextBlock x:Name="PriorityText" Text="{Binding PriorityWarning}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
-      </DockPanel>
+      <Grid x:Name="HealthWarning" Style="{StaticResource WarningLine}" Visibility="{Binding HasHealthWarning, Converter={StaticResource Visible}}">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto" />
+          <ColumnDefinition Width="Auto" />
+          <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto" />
+          <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <Ellipse Style="{StaticResource WarningDot}" />
+        <TextBlock x:Name="HealthText" Grid.Column="1" Text="{Binding HealthWarning}" Style="{DynamicResource Kyf.Text.Body}" Foreground="{DynamicResource Kyf.Brush.Warning}"
+                   TextWrapping="Wrap" VerticalAlignment="Center" AutomationProperties.LiveSetting="Polite" />
+        <Border Style="{StaticResource WarningLink}">
+          <Button x:Name="HealthLink" Style="{DynamicResource Kyf.Button.Subtle}" Foreground="{DynamicResource Kyf.Brush.Primary}" FontWeight="SemiBold" MinHeight="44" Padding="8,0"
+                  Command="{Binding OpenHealthCommand}" Content="{x:Static pages:DashboardText.SeeHealth}" AutomationProperties.Name="{x:Static pages:DashboardText.SeeHealth}" />
+        </Border>
+      </Grid>
+      <Grid x:Name="PriorityWarning" Style="{StaticResource WarningLine}" Visibility="{Binding HasPriorityWarning, Converter={StaticResource Visible}}">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="Auto" />
+          <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <Ellipse Style="{StaticResource WarningDot}" />
+        <TextBlock x:Name="PriorityText" Grid.Column="1" Text="{Binding PriorityWarning}" Style="{DynamicResource Kyf.Text.Body}" Foreground="{DynamicResource Kyf.Brush.Warning}"
+                   TextWrapping="Wrap" VerticalAlignment="Center" AutomationProperties.LiveSetting="Polite" />
+      </Grid>
       <kyf:Notification x:Name="ExamMessage" Severity="Success" Message="{Binding Exams.Message}" IsOpen="{Binding Exams.HasMessage, Mode=OneWay, FallbackValue=False}"
                         IsClosable="False" Margin="0,12,0,0" />
       <kyf:Notification x:Name="ExamError" Severity="Critical" Message="{Binding Exams.Error}" IsOpen="{Binding Exams.HasError, Mode=OneWay, FallbackValue=False}"
@@ -507,7 +551,7 @@
 
     <DockPanel Grid.Row="3" Grid.ColumnSpan="2" Margin="0,16,0,0">
       <!-- La colonne latérale : les encarts en bas, le reste défile au besoin. -->
-      <DockPanel x:Name="Side" DockPanel.Dock="Right" Width="340" Margin="16,0,0,0" Style="{StaticResource SideColumn}">
+      <DockPanel x:Name="Side" DockPanel.Dock="Right" Width="300" Margin="32,0,0,0" Style="{StaticResource SideColumn}">
         <ItemsControl x:Name="Cards" DockPanel.Dock="Bottom" ItemsSource="{Binding Cards}" Focusable="False" Margin="8,0"
                       Visibility="{Binding HasCards, Converter={StaticResource Visible}}" />
         <ScrollViewer VerticalScrollBarVisibility="Auto" Focusable="False">
@@ -544,13 +588,15 @@
 
       <!-- L'aperçu de la ligne choisie, sur les grands écrans. -->
       <ContentControl Style="{StaticResource PreviewPane}" Visibility="{Binding ShowsPreview, Converter={StaticResource Visible}}">
-        <kyf:Card x:Name="PreviewCard" Padding="24,20" AutomationProperties.Name="{x:Static pages:DashboardText.Preview}">
+        <!-- Sans cadre : la seule carte de la vue est la liste à réviser ; un filet sépare l'aperçu de ce qui l'entoure. -->
+        <Border x:Name="PreviewCard" BorderBrush="{DynamicResource Kyf.Brush.Divider}" BorderThickness="1,0,0,0" Padding="32,4,0,0"
+                AutomationProperties.Name="{x:Static pages:DashboardText.Preview}">
           <ContentControl Content="{Binding Preview}" Focusable="False" IsTabStop="False" />
-        </kyf:Card>
+        </Border>
       </ContentControl>
 
-      <UniformGrid Rows="1">
       <kyf:Card x:Name="ListCard" Padding="8">
+      <UniformGrid Rows="1">
         <Grid>
           <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -632,18 +678,19 @@
           <TextBlock x:Name="Footer" Grid.Row="2" Text="{Binding Footer}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="16,8,16,4"
                      Visibility="{Binding HasRoom, Converter={StaticResource Visible}}" />
         </Grid>
-      </kyf:Card>
 
-      <ContentControl Style="{StaticResource SecondList}">
-        <kyf:Card Padding="8">
+        <!-- La suite de la liste, sur un très grand écran : dans la même carte, après un filet. -->
+        <ContentControl Style="{StaticResource SecondList}">
+        <Border BorderBrush="{DynamicResource Kyf.Brush.Divider}" BorderThickness="1,0,0,0" Padding="8,0,0,0">
           <pages:OpenableList x:Name="SecondItems" ItemsSource="{Binding SecondRows}" OpenCommand="{Binding OpenCommand}" SelectedItem="{Binding SelectedRow, Mode=OneWay}"
                    AutomationProperties.Name="{x:Static pages:DashboardText.Items}"
                    ScrollViewer.CanContentScroll="True" VirtualizingPanel.IsVirtualizing="True"
                    VirtualizingPanel.VirtualizationMode="Recycling" VirtualizingPanel.ScrollUnit="Pixel"
                    PreviewKeyDown="OnItemsKeyDown" SelectionChanged="OnItemsSelectionChanged" MouseDoubleClick="OnItemsDoubleClick" />
-        </kyf:Card>
-      </ContentControl>
+        </Border>
+        </ContentControl>
       </UniformGrid>
+      </kyf:Card>
     </DockPanel>
 
     <kyf:Dialog x:Name="ArchiveConfirmation" Grid.RowSpan="9" Grid.ColumnSpan="9" Title="{x:Static pages:ReviewText.ArchiveTitle}" IsOpen="{Binding IsConfirmingArchive, Mode=OneWay}"

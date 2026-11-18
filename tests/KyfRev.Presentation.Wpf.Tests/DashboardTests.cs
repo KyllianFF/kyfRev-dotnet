@@ -280,8 +280,8 @@ public sealed class DashboardTests
             Assert.AreEqual("Vendredi 9 octobre", Named<TextBlock>(window, "Subtitle").Text);
             Assert.AreEqual("Vendredi 9 octobre · 5 éléments à réviser", AutomationProperties.GetName(Named<Border>(window, "Hero")));
             Assert.AreEqual(AutomationHeadingLevel.Level1, AutomationProperties.GetHeadingLevel(Named<TextBlock>(window, "Heading")));
-            Assert.IsTrue(Named<DockPanel>(window, "HealthWarning").IsVisible);
-            Assert.AreEqual(Visibility.Collapsed, Named<DockPanel>(window, "PriorityWarning").Visibility);
+            Assert.IsTrue(Named<Grid>(window, "HealthWarning").IsVisible);
+            Assert.AreEqual(Visibility.Collapsed, Named<Grid>(window, "PriorityWarning").Visibility);
             Assert.IsFalse(Named<Notification>(window, "ErrorMessage").IsOpen);
             Assert.AreEqual(Visibility.Collapsed, Named<StackPanel>(window, "Loading").Visibility);
             var headers = Descendants(list).OfType<ToggleButton>().Where(button => button.Name == "Header").ToList();
@@ -596,7 +596,7 @@ public sealed class DashboardTests
             UiThread.Until(() => page.ShowsPreview);
             TestShell.Flush();
             var list = Named<ListBox>(window, "Items");
-            Assert.AreEqual(620, Named<Card>(window, "PreviewCard").ActualWidth);
+            Assert.AreEqual(620, Named<Border>(window, "PreviewCard").ActualWidth);
             Assert.AreSame(page.SelectedRow, list.SelectedItem);
             Assert.IsTrue(Named<Notification>(window, "PreviewError").IsOpen, "aucun coffre n'est ouvert ici");
 
@@ -626,7 +626,7 @@ public sealed class DashboardTests
             window.UpdateLayout();
             TestShell.Flush();
             var second = Named<ListBox>(window, "SecondItems");
-            Assert.AreEqual(840, Named<Card>(window, "PreviewCard").ActualWidth);
+            Assert.AreEqual(840, Named<Border>(window, "PreviewCard").ActualWidth);
             Assert.IsNotNull(list.SelectedItem ?? second.SelectedItem);
             second.SetCurrentValue(Selector.SelectedItemProperty, page.SecondRows.OfType<DueItemRow>().First());
             Assert.AreSame(second.SelectedItem, page.SelectedRow);
@@ -653,6 +653,9 @@ public sealed class DashboardTests
     [DataRow(false, 1440)]
     [DataRow(true, 1440)]
     [DataRow(true, 2600)]
+    [DataRow(false, 1700)]
+    [DataRow(false, 2600)]
+    [DataRow(true, 3440)]
     public void Today_frames_only_the_list_and_the_vault_warning_is_a_line_with_its_link(bool dark, int width)
     {
         var test = new TestShell(dark);
@@ -685,28 +688,66 @@ public sealed class DashboardTests
             Assert.AreEqual(default, hero.BorderThickness);
             Assert.AreEqual(page.Subtitle, AutomationProperties.GetName(hero));
 
-            // Les cartes de la vue : la liste, et, sur un très grand écran, sa seconde moitié et l'aperçu.
+            // Une seule carte, à toutes les largeurs : la liste à réviser. Sur un très grand écran, sa suite est dans la même
+            // carte, après un filet, et l'aperçu n'a pas de cadre.
             var cards = Descendants(view).OfType<Card>().Where(card => card.IsVisible).ToList();
-            Assert.IsTrue(cards.Any(card => card.Name == "ListCard"));
-            if (width <= 1440)
-            {
-                Assert.HasCount(1, cards, "une seule carte : la liste à réviser");
-            }
+            Assert.HasCount(1, cards, $"une seule carte, la liste ({page.Layout})");
+            Assert.AreEqual("ListCard", cards[0].Name);
             Assert.IsFalse(Descendants(Named<DockPanel>(window, "Side")).OfType<Card>().Any(), "plus aucune carte dans la colonne de droite");
+            var divider = view.FindResource("Kyf.Brush.Divider");
+            if (page.Layout == TodayLayout.WithSplit)
+            {
+                var second = Named<ListBox>(window, "SecondItems");
+                Assert.IsTrue(second.IsVisible);
+                Assert.IsTrue(Descendants(cards[0]).Contains(second), "la suite de la liste est dans la même carte");
+                var line = (Border)VisualTreeHelper.GetParent(second);
+                Assert.AreEqual((new Thickness(1, 0, 0, 0), divider), (line.BorderThickness, line.BorderBrush), "un filet entre les deux moitiés");
+            }
+            if (page.ShowsPreview)
+            {
+                var preview = Named<Border>(window, "PreviewCard");
+                Assert.IsTrue(preview.IsVisible);
+                Assert.AreEqual((new Thickness(1, 0, 0, 0), divider), (preview.BorderThickness, preview.BorderBrush), "l'aperçu, sans cadre, après un filet");
+                Assert.IsNull(preview.Background);
+            }
 
-            // L'avertissement du coffre : une ligne, son lien mène à « Santé du coffre ».
-            var health = Named<DockPanel>(window, "HealthWarning");
+            // Chaque fiche de la liste a son filet au-dessus, comme sur la maquette.
+            var rows = Descendants(Named<ListBox>(window, "Items")).OfType<ContentPresenter>().Where(presenter => presenter.Content is DueItemRow).ToList();
+            Assert.IsNotEmpty(rows);
+            foreach (var row in rows)
+            {
+                var line = (Border)VisualTreeHelper.GetChild(row, 0);
+                Assert.AreEqual((new Thickness(0, 1, 0, 0), divider), (line.BorderThickness, line.BorderBrush));
+            }
+
+            // L'avertissement du coffre : une ligne dans sa couleur, un point devant, le lien en bouton qui mène à « Santé du coffre ».
+            var health = Named<Grid>(window, "HealthWarning");
             Assert.IsTrue(health.IsVisible);
+            var warning = view.FindResource("Kyf.Brush.Warning");
             var text = Named<TextBlock>(window, "HealthText");
-            Assert.AreEqual(page.HealthWarning, text.Inlines.OfType<Run>().First().Text);
+            Assert.AreEqual(page.HealthWarning, text.Text);
+            Assert.AreSame(warning, text.Foreground, "dans la couleur des avertissements");
+            Assert.AreSame(warning, health.Children.OfType<System.Windows.Shapes.Ellipse>().Single().Fill, "un point devant");
             Assert.IsLessThanOrEqualTo(view.ActualWidth, text.TranslatePoint(new Point(text.ActualWidth, 0), view).X, "la ligne passe à la ligne plutôt que de dépasser");
-            var link = text.Inlines.OfType<Hyperlink>().Single();
+            var link = Named<Button>(window, "HealthLink");
             Assert.AreEqual(DashboardText.SeeHealth, AutomationProperties.GetName(link));
-            Assert.AreEqual("Voir dans Santé du coffre", string.Concat(link.Inlines.OfType<Run>().Select(run => run.Text)));
+            Assert.AreEqual("Voir dans Santé du coffre", link.Content);
+            Assert.AreSame(view.FindResource("Kyf.Brush.Primary"), link.Foreground);
+            Assert.IsGreaterThanOrEqualTo(44d, link.ActualHeight, "une cible de 44 pixels");
+            Assert.IsLessThanOrEqualTo(view.ActualWidth + 0.5, link.TranslatePoint(new Point(link.ActualWidth, 0), view).X, "le lien tient dans la vue");
+            if (page.HasRoom)
+            {
+                Assert.AreEqual(text.TranslatePoint(default, view).Y + (text.ActualHeight / 2), link.TranslatePoint(default, view).Y + (link.ActualHeight / 2), 12, "à la suite du texte");
+            }
+            else
+            {
+                Assert.IsGreaterThan(text.TranslatePoint(default, view).Y, link.TranslatePoint(default, view).Y, "dessous, à l'étroit");
+            }
             link.Command.Execute(null);
             Assert.AreEqual("santé", opener.Opened.Single());
             Assert.IsFalse(Descendants(view).OfType<Notification>().Any(notification => notification.Name is "HealthWarning" or "PriorityWarning"), "plus de bandeau pour un avertissement");
             Assert.AreEqual(page.PriorityWarning, Named<TextBlock>(window, "PriorityText").Text);
+            Assert.AreSame(warning, Named<TextBlock>(window, "PriorityText").Foreground);
 
             var side = Named<DockPanel>(window, "Side");
             if (page.Layout == TodayLayout.OneColumn)
@@ -715,8 +756,8 @@ public sealed class DashboardTests
             }
             else
             {
-                // La colonne de droite : un filet sous chaque partie, sauf la dernière ; l'encart d'un module a le sien au-dessus.
-                var divider = view.FindResource("Kyf.Brush.Divider");
+                // La colonne de droite : 300 pixels, un filet sous chaque partie, sauf la dernière ; l'encart d'un module a le sien au-dessus.
+                Assert.AreEqual(300d, side.ActualWidth);
                 foreach (var name in new[] { "RemindersSection", "ForecastSection" })
                 {
                     var section = Named<Border>(side, name);

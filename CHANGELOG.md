@@ -69,10 +69,13 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   tableau se compte maintenant entre les marges, et plus sur toute la vue. Les tableaux d'une longue fiche qui
   arrivent après le premier écran prennent leurs largeurs comme ceux du début, sans attendre que la fenêtre change
   de taille.
-- Aujourd'hui : une seule carte, celle de la liste à réviser. Le compte du jour n'est plus encadré ; les avertissements
-  (un point à vérifier dans le coffre, un rappel qui attend depuis plus de 30 jours) sont des lignes, et celui du coffre
-  porte un lien « Voir dans Santé du coffre » ; la colonne de droite sépare ses parties (rappels, à venir, cette
-  semaine, encart d'un module) par de l'espace et un filet. Rien n'est retiré.
+- Aujourd'hui : une seule carte, celle de la liste à réviser, à toutes les largeurs. Le compte du jour n'est plus
+  encadré ; les avertissements (un point à vérifier dans le coffre, un rappel qui attend depuis plus de 30 jours) sont
+  des lignes dans leur couleur, un point devant, et celui du coffre porte un bouton « Voir dans Santé du coffre » ; un
+  filet sépare les fiches de la liste ; la colonne de droite, à 300 pixels, sépare ses parties (rappels, à venir, cette
+  semaine, encart d'un module) par de l'espace et un filet. Sur un grand écran, l'aperçu de la ligne choisie n'a plus
+  de cadre, et sur un très grand écran les deux moitiés de la liste sont dans la même carte, un filet entre elles.
+  Rien n'est retiré.
 - Archives : les actions d'une fiche (ouvrir, remettre en révision, suspendre ou reprendre ses rappels) passent
   derrière un bouton « ⋯ », le même menu qu'au clic droit. Chaque fiche tient sur une ligne, sans répéter les mêmes
   boutons de ligne en ligne.
