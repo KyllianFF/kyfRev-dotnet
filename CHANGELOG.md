@@ -37,6 +37,13 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   ne le réduisez pas, l'ordinateur retient le choix, et les raccourcis clavier ne changent pas.
 - Logotype : l'icône de kyfRev suivie de son nom en deux tons, à l'accueil, dans Paramètres › À propos et en tête du
   README (`assets/logo`, en clair et en sombre).
+- Animation d'ouverture : quand la fenêtre paraît, les fiches de l'icône se feuillettent et se rangent en éventail, la
+  dernière s'écrit (son titre, ses lignes, un passage surligné, puis la frise des J), et le nom arrive en fondu. À la
+  toute première ouverture, sur l'accueil, elle prend un peu moins de cinq secondes et le logotype monte à sa place en
+  tête de l'accueil ; toutes les fois suivantes elle dure moins d'une seconde et laisse la place en fondu. Tant que la
+  liste du jour se lit encore, le logotype reste affiché au lieu d'une vue vide. Un clic ou une touche la passe (dans
+  un champ, comme le mot de passe d'un coffre chiffré, la touche tapée arrive au champ), et rien ne joue quand les
+  animations sont réduites (Windows, ou Paramètres › Apparence).
 
 ### Modifié
 - Désinstallation : le désinstallateur demande ce qu'il faut faire de vos réglages (le dernier coffre ouvert, l'apparence,

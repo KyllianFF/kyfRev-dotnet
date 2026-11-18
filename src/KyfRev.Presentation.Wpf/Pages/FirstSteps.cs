@@ -33,6 +33,9 @@ public sealed class FirstUse
     /// <summary>« Ne plus montrer d'aide » : aucune aide en contexte ne se montre plus.</summary>
     public const string NoTips = "sans-aide";
 
+    /// <summary>L'animation de la première ouverture a été jouée : les suivantes sont courtes.</summary>
+    public const string OpeningSeen = "ouverture-vue";
+
     private readonly MachineSettings? _machine;
     private readonly HashSet<string> _session = new(StringComparer.Ordinal);
 

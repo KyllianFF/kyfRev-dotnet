@@ -32,6 +32,7 @@
     <!-- Le guide du dépôt, lu dans l'aide sans connexion. -->
     <EmbeddedResource Include="..\..\docs\guide-utilisateur.md" LogicalName="kyfrev-guide.md" />
     <EmbeddedResource Include="..\..\assets\icon\kyfrev.ico" LogicalName="kyfrev-icone.ico" />
+    <EmbeddedResource Include="..\..\assets\icon\kyfrev.svg" LogicalName="kyfrev-icone.svg" />
   </ItemGroup>
 
   <ItemGroup>
