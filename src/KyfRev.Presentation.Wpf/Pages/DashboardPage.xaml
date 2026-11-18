@@ -311,12 +311,10 @@
 
     <!-- Un encart apporté par un module (la citation du jour). -->
     <DataTemplate DataType="{x:Type modules:DashboardCard}">
-      <Border CornerRadius="{DynamicResource Kyf.Radius.Card}" Padding="16" Margin="0,16,0,0" Background="{DynamicResource Kyf.Brush.NavigationActiveBackground}">
+      <Border x:Name="Aside" BorderBrush="{DynamicResource Kyf.Brush.Divider}" BorderThickness="0,1,0,0" Padding="0,16,0,0" Margin="0,16,0,0">
         <StackPanel>
-          <TextBlock Text="{Binding Text}" Style="{DynamicResource Kyf.Text.BodyLarge}" TextWrapping="Wrap"
-                     Foreground="{DynamicResource Kyf.Brush.NavigationActiveText}" />
-          <TextBlock x:Name="Credit" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,8,0,0"
-                     Foreground="{DynamicResource Kyf.Brush.NavigationActiveText}"><Run x:Name="Detail" Text="{Binding Detail, Mode=OneWay}" /><Run x:Name="Separator" Text=" · " /><Run Text="{Binding Title, Mode=OneWay}" /></TextBlock>
+          <TextBlock Text="{Binding Text}" Style="{DynamicResource Kyf.Text.BodyLarge}" TextWrapping="Wrap" />
+          <TextBlock x:Name="Credit" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,8,0,0"><Run x:Name="Detail" Text="{Binding Detail, Mode=OneWay}" /><Run x:Name="Separator" Text=" · " /><Run Text="{Binding Title, Mode=OneWay}" /></TextBlock>
         </StackPanel>
       </Border>
       <DataTemplate.Triggers>
@@ -377,6 +375,19 @@
       </Style.Triggers>
     </Style>
 
+    <!-- Une partie de la colonne latérale : son titre, ce qu'elle montre, puis de l'espace et un filet. Seule la liste du jour est une carte. -->
+    <Style x:Key="SideSection" TargetType="Border">
+      <Setter Property="BorderBrush" Value="{DynamicResource Kyf.Brush.Divider}" />
+      <Setter Property="BorderThickness" Value="0,0,0,1" />
+      <Setter Property="Padding" Value="0,0,0,16" />
+      <Setter Property="Margin" Value="0,0,0,16" />
+    </Style>
+
+    <!-- Un avertissement du jour : une ligne, son signe devant, et le lien qui mène où le régler. -->
+    <Style x:Key="WarningLine" TargetType="DockPanel">
+      <Setter Property="Margin" Value="0,12,0,0" />
+    </Style>
+
     <Style x:Key="SideColumn" TargetType="DockPanel">
       <Style.Triggers>
         <DataTrigger Binding="{Binding Layout}" Value="OneColumn">
@@ -435,7 +446,8 @@
 
     <!-- Ce qu'il y a à réviser aujourd'hui, et de quoi s'y mettre. -->
     <ContentControl Style="{StaticResource HeroSlot}">
-      <kyf:Card x:Name="Hero" Padding="24,12" AutomationProperties.Name="{Binding Subtitle}">
+      <!-- Sans cadre : la seule carte de la vue est la liste à réviser. -->
+      <Border x:Name="Hero" Padding="0,4" AutomationProperties.Name="{Binding Subtitle}">
         <DockPanel>
           <StackPanel Style="{StaticResource HeroActions}">
             <Button x:Name="ResumeButton" Content="{Binding ResumeLabel}" Command="{Binding ResumeCommand}"
@@ -468,16 +480,21 @@
             </ItemsControl>
           </StackPanel>
         </DockPanel>
-      </kyf:Card>
+      </Border>
     </ContentControl>
 
     <StackPanel Grid.Row="2" Grid.ColumnSpan="2">
       <kyf:Notification x:Name="ErrorMessage" Severity="Critical" Message="{Binding Error}" IsOpen="{Binding HasError, Mode=OneWay}"
                         IsClosable="False" Margin="0,12,0,0" />
-      <kyf:Notification x:Name="HealthWarning" Severity="Warning" Message="{Binding HealthWarning}" IsOpen="{Binding HasHealthWarning, Mode=OneWay}"
-                        IsClosable="False" Margin="0,12,0,0" />
-      <kyf:Notification x:Name="PriorityWarning" Severity="Warning" Message="{Binding PriorityWarning}" IsOpen="{Binding HasPriorityWarning, Mode=OneWay}"
-                        IsClosable="False" Margin="0,12,0,0" />
+      <DockPanel x:Name="HealthWarning" Style="{StaticResource WarningLine}" Visibility="{Binding HasHealthWarning, Converter={StaticResource Visible}}">
+        <kyf:Icon DockPanel.Dock="Left" Text="{x:Static kyf:Icons.Warning}" Foreground="{DynamicResource Kyf.Brush.Warning}" VerticalAlignment="Top" Margin="0,2,8,0" />
+        <TextBlock x:Name="HealthText" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite"
+                   AutomationProperties.Name="{Binding HealthWarning}"><Run Text="{Binding HealthWarning, Mode=OneWay}" /><Run Text=" " /><Hyperlink x:Name="HealthLink" Command="{Binding OpenHealthCommand}" AutomationProperties.Name="{x:Static pages:DashboardText.SeeHealth}"><Run Text="{x:Static pages:DashboardText.SeeHealth}" /></Hyperlink></TextBlock>
+      </DockPanel>
+      <DockPanel x:Name="PriorityWarning" Style="{StaticResource WarningLine}" Visibility="{Binding HasPriorityWarning, Converter={StaticResource Visible}}">
+        <kyf:Icon DockPanel.Dock="Left" Text="{x:Static kyf:Icons.Warning}" Foreground="{DynamicResource Kyf.Brush.Warning}" VerticalAlignment="Top" Margin="0,2,8,0" />
+        <TextBlock x:Name="PriorityText" Text="{Binding PriorityWarning}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
+      </DockPanel>
       <kyf:Notification x:Name="ExamMessage" Severity="Success" Message="{Binding Exams.Message}" IsOpen="{Binding Exams.HasMessage, Mode=OneWay, FallbackValue=False}"
                         IsClosable="False" Margin="0,12,0,0" />
       <kyf:Notification x:Name="ExamError" Severity="Critical" Message="{Binding Exams.Error}" IsOpen="{Binding Exams.HasError, Mode=OneWay, FallbackValue=False}"
@@ -491,11 +508,11 @@
     <DockPanel Grid.Row="3" Grid.ColumnSpan="2" Margin="0,16,0,0">
       <!-- La colonne latérale : les encarts en bas, le reste défile au besoin. -->
       <DockPanel x:Name="Side" DockPanel.Dock="Right" Width="340" Margin="16,0,0,0" Style="{StaticResource SideColumn}">
-        <ItemsControl x:Name="Cards" DockPanel.Dock="Bottom" ItemsSource="{Binding Cards}" Focusable="False"
+        <ItemsControl x:Name="Cards" DockPanel.Dock="Bottom" ItemsSource="{Binding Cards}" Focusable="False" Margin="8,0"
                       Visibility="{Binding HasCards, Converter={StaticResource Visible}}" />
         <ScrollViewer VerticalScrollBarVisibility="Auto" Focusable="False">
-          <StackPanel Margin="0,0,0,4">
-            <kyf:Card Padding="16,12" Margin="0,0,0,12" Visibility="{Binding HasSideReminders, Converter={StaticResource Visible}}">
+          <StackPanel Margin="8,8,8,4">
+            <Border x:Name="RemindersSection" Style="{StaticResource SideSection}" Visibility="{Binding HasSideReminders, Converter={StaticResource Visible}}">
               <StackPanel>
                 <TextBlock Text="{x:Static pages:DashboardText.Reminders}" Style="{DynamicResource Kyf.Text.BodyStrong}" AutomationProperties.HeadingLevel="Level2" />
                 <ItemsControl x:Name="SideReminders" ItemsSource="{Binding SideReminders}" Focusable="False" Margin="-8,4,-8,0">
@@ -513,13 +530,14 @@
                   </ItemsControl.ItemTemplate>
                 </ItemsControl>
               </StackPanel>
-            </kyf:Card>
-            <kyf:Card Padding="16,12" Margin="0,0,0,12" Visibility="{Binding HasForecast, Converter={StaticResource Visible}}">
+            </Border>
+            <Border x:Name="ForecastSection" Style="{StaticResource SideSection}" Visibility="{Binding HasForecast, Converter={StaticResource Visible}}">
               <ContentControl Content="{Binding}" ContentTemplate="{StaticResource ForecastSection}" Focusable="False" IsTabStop="False" />
-            </kyf:Card>
-            <kyf:Card Padding="16,12" Visibility="{Binding HasWeek, Converter={StaticResource Visible}}">
+            </Border>
+            <!-- La dernière : rien ne la suit dans la colonne, elle n'a pas de filet. -->
+            <Border x:Name="WeekSection" Visibility="{Binding HasWeek, Converter={StaticResource Visible}}">
               <ContentControl Content="{Binding}" ContentTemplate="{StaticResource WeekSection}" Focusable="False" IsTabStop="False" />
-            </kyf:Card>
+            </Border>
           </StackPanel>
         </ScrollViewer>
       </DockPanel>

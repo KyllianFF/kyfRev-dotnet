@@ -278,10 +278,10 @@ public sealed class DashboardTests
             var list = Named<ListBox>(window, "Items");
             Assert.AreEqual("Éléments à réviser", AutomationProperties.GetName(list));
             Assert.AreEqual("Vendredi 9 octobre", Named<TextBlock>(window, "Subtitle").Text);
-            Assert.AreEqual("Vendredi 9 octobre · 5 éléments à réviser", AutomationProperties.GetName(Named<Card>(window, "Hero")));
+            Assert.AreEqual("Vendredi 9 octobre · 5 éléments à réviser", AutomationProperties.GetName(Named<Border>(window, "Hero")));
             Assert.AreEqual(AutomationHeadingLevel.Level1, AutomationProperties.GetHeadingLevel(Named<TextBlock>(window, "Heading")));
-            Assert.IsTrue(Named<Notification>(window, "HealthWarning").IsOpen);
-            Assert.IsFalse(Named<Notification>(window, "PriorityWarning").IsOpen);
+            Assert.IsTrue(Named<DockPanel>(window, "HealthWarning").IsVisible);
+            Assert.AreEqual(Visibility.Collapsed, Named<DockPanel>(window, "PriorityWarning").Visibility);
             Assert.IsFalse(Named<Notification>(window, "ErrorMessage").IsOpen);
             Assert.AreEqual(Visibility.Collapsed, Named<StackPanel>(window, "Loading").Visibility);
             var headers = Descendants(list).OfType<ToggleButton>().Where(button => button.Name == "Header").ToList();
@@ -642,6 +642,102 @@ public sealed class DashboardTests
         }
     }
 
+    /// <summary>
+    /// Une seule carte, celle de la liste du jour : le compte du jour n'est plus encadré, les avertissements sont des lignes
+    /// (celui du coffre avec son lien), et la colonne de droite sépare ses parties par de l'espace et un filet.
+    /// </summary>
+    [STATestMethod]
+    [DataRow(false, 470)]
+    [DataRow(true, 470)]
+    [DataRow(false, 900)]
+    [DataRow(false, 1440)]
+    [DataRow(true, 1440)]
+    [DataRow(true, 2600)]
+    public void Today_frames_only_the_list_and_the_vault_warning_is_a_line_with_its_link(bool dark, int width)
+    {
+        var test = new TestShell(dark);
+        var opener = new FakeOpener();
+        using var vaults = new TestVaults(AppMode.Development);
+        var page = new DashboardPageViewModel(vaults.App.Reminders, vaults.App.Sheets, opener, [new Widget(1, "Citation du jour")]);
+        var forecast = Enumerable.Range(0, 8).Select(offset => new WorkloadDay(Day.AddDays(offset), [Item($"Fiche {offset}", ItemKind.Sheet, "J3")], []));
+        page.Show(
+            Sample(reminders: [Reminder("Cellule", previous: 0)]) with { HealthProblems = 1, UnservedPriorities = 2, Workload = [.. forecast], RecentReviews = [.. Enumerable.Range(0, 7).Select(age => new ReviewDay(Day.AddDays(-age), age))] },
+            [new DashboardCard("Citation du jour", "Le cœur a ses raisons que la raison ne connaît point.", "Blaise Pascal")]);
+        var shell = new ShellViewModel(CorePages.All(new Dictionary<string, object> { [CorePages.Today] = page }), test.Appearance, test.Gallery);
+        var window = Show(test, shell);
+        try
+        {
+            window.Width = width;
+            window.UpdateLayout();
+            TestShell.Flush();
+            var view = Descendants(window).OfType<DashboardPage>().Single();
+            // La fenêtre peint le fond de l'application ; la capture ne prend que son contenu, qui le reçoit ici pour se lire comme à l'écran.
+            if (window.Content is Panel { Background: null } root)
+            {
+                root.SetResourceReference(Panel.BackgroundProperty, "Kyf.Brush.Background");
+                TestShell.Flush();
+            }
+            ((FrameworkElement)window.Content).Capture($"aujourdhui-{width}-{(dark ? "sombre" : "clair")}");
+
+            // Le compte du jour : sans cadre, et toujours dit au lecteur d'écran.
+            var hero = Named<Border>(window, "Hero");
+            Assert.IsNull(hero.Background);
+            Assert.AreEqual(default, hero.BorderThickness);
+            Assert.AreEqual(page.Subtitle, AutomationProperties.GetName(hero));
+
+            // Les cartes de la vue : la liste, et, sur un très grand écran, sa seconde moitié et l'aperçu.
+            var cards = Descendants(view).OfType<Card>().Where(card => card.IsVisible).ToList();
+            Assert.IsTrue(cards.Any(card => card.Name == "ListCard"));
+            if (width <= 1440)
+            {
+                Assert.HasCount(1, cards, "une seule carte : la liste à réviser");
+            }
+            Assert.IsFalse(Descendants(Named<DockPanel>(window, "Side")).OfType<Card>().Any(), "plus aucune carte dans la colonne de droite");
+
+            // L'avertissement du coffre : une ligne, son lien mène à « Santé du coffre ».
+            var health = Named<DockPanel>(window, "HealthWarning");
+            Assert.IsTrue(health.IsVisible);
+            var text = Named<TextBlock>(window, "HealthText");
+            Assert.AreEqual(page.HealthWarning, text.Inlines.OfType<Run>().First().Text);
+            Assert.IsLessThanOrEqualTo(view.ActualWidth, text.TranslatePoint(new Point(text.ActualWidth, 0), view).X, "la ligne passe à la ligne plutôt que de dépasser");
+            var link = text.Inlines.OfType<Hyperlink>().Single();
+            Assert.AreEqual(DashboardText.SeeHealth, AutomationProperties.GetName(link));
+            Assert.AreEqual("Voir dans Santé du coffre", string.Concat(link.Inlines.OfType<Run>().Select(run => run.Text)));
+            link.Command.Execute(null);
+            Assert.AreEqual("santé", opener.Opened.Single());
+            Assert.IsFalse(Descendants(view).OfType<Notification>().Any(notification => notification.Name is "HealthWarning" or "PriorityWarning"), "plus de bandeau pour un avertissement");
+            Assert.AreEqual(page.PriorityWarning, Named<TextBlock>(window, "PriorityText").Text);
+
+            var side = Named<DockPanel>(window, "Side");
+            if (page.Layout == TodayLayout.OneColumn)
+            {
+                Assert.AreEqual(Visibility.Collapsed, side.Visibility, "étroite : la colonne passe sous la liste");
+            }
+            else
+            {
+                // La colonne de droite : un filet sous chaque partie, sauf la dernière ; l'encart d'un module a le sien au-dessus.
+                var divider = view.FindResource("Kyf.Brush.Divider");
+                foreach (var name in new[] { "RemindersSection", "ForecastSection" })
+                {
+                    var section = Named<Border>(side, name);
+                    Assert.AreEqual(new Thickness(0, 0, 0, 1), section.BorderThickness, name);
+                    Assert.AreSame(divider, section.BorderBrush, name);
+                    Assert.IsNull(section.Background, name);
+                }
+                Assert.AreEqual(default, Named<Border>(side, "WeekSection").BorderThickness);
+                var aside = Named<Border>(Named<ItemsControl>(window, "Cards"), "Aside");
+                Assert.AreEqual(new Thickness(0, 1, 0, 0), aside.BorderThickness);
+                Assert.IsNull(aside.Background);
+                var titles = Descendants(side).OfType<TextBlock>().Where(block => AutomationProperties.GetHeadingLevel(block) == AutomationHeadingLevel.Level2).Select(block => block.Text);
+                Same($"{DashboardText.Reminders} | {DashboardText.Forecast} | {DashboardText.ThisWeek}", titles);
+            }
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
     [STATestMethod]
     public void The_view_keeps_within_the_width_of_the_window()
     {
@@ -692,7 +788,7 @@ public sealed class DashboardTests
             Assert.AreEqual(Visibility.Collapsed, side.Visibility);
             var list = Named<ListBox>(window, "Items");
             Assert.AreEqual(0, Descendants(list).OfType<ScrollViewer>().First().ScrollableWidth);
-            var hero = Named<Card>(window, "Hero");
+            var hero = Named<Border>(window, "Hero");
             Assert.IsGreaterThan(Named<TextBlock>(window, "Heading").TranslatePoint(new Point(), window).Y, hero.TranslatePoint(new Point(), window).Y, "le résumé passe sous le titre");
             Assert.IsLessThanOrEqualTo(window.ActualWidth, hero.TranslatePoint(new Point(hero.ActualWidth, 0), window).X);
             Assert.IsGreaterThan(window.ActualWidth / 2, Named<Button>(window, "StartButton").ActualWidth, "le bouton prend toute la largeur");

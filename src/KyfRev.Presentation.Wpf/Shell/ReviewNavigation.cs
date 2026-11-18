@@ -34,6 +34,9 @@ public interface IReviewOpener
     /// <summary>Ouvre la charge des 30 prochains jours, réduite à ce que montre <paramref name="filter"/>.</summary>
     void OpenWorkload(DashboardFilter filter);
 
+    /// <summary>Ouvre « Santé du coffre », où se lit ce qu'un avertissement annonce.</summary>
+    void OpenHealth();
+
     /// <summary>Lance une séance d'étude sur ces éléments, dans cet ordre.</summary>
     void StartSession(IReadOnlyList<DueItem> items, bool activeRecall);
 
@@ -156,6 +159,16 @@ public sealed class ReviewNavigation : IReviewOpener
 
     /// <inheritdoc/>
     public void PrintSheet(string sheetId) => OpenSheet(sheetId, revising: false, prints: true);
+
+    /// <inheritdoc/>
+    public void OpenHealth()
+    {
+        var shell = Shell;
+        if (shell.MainNavigation.Concat(shell.SecondaryNavigation).FirstOrDefault(item => item.Id == CorePages.Health) is { } health)
+        {
+            shell.Navigate(health);
+        }
+    }
 
     /// <inheritdoc/>
     public void OpenWorkload(DashboardFilter filter)

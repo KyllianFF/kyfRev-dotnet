@@ -789,6 +789,32 @@ public sealed class ReviewTests
     }
 
     [TestMethod]
+    public void The_vault_warning_leads_to_the_health_view()
+    {
+        using var vault = new ReviewVault();
+        var test = new TestShell();
+        var health = new object();
+        var shell = new ShellViewModel(CorePages.All(new Dictionary<string, object> { [CorePages.Today] = new object(), [CorePages.Health] = health }), test.Appearance, test.Gallery);
+        var navigation = new ReviewNavigation(vault.App.Sheets, vault.App.Annotations, vault.App.Reviews, vault.App.Reminders, vault.App.Vaults, new MemorySessions(), vault.Time, new RecordingLinks(), vault.App.Editing, FakeEnvironment.Markdown());
+        navigation.Attach(shell);
+        shell.ShowWorkspace();
+        Assert.AreNotSame(health, shell.Current.Page);
+
+        navigation.OpenHealth();
+
+        Assert.AreEqual(CorePages.Health, shell.Current.Id);
+        Assert.AreSame(health, shell.Current.Page);
+
+        // Sans cette vue (un module retiré) : rien ne se passe.
+        var bare = new ShellViewModel([.. CorePages.All(new Dictionary<string, object> { [CorePages.Today] = new object() }).Where(item => item.Id != CorePages.Health)], test.Appearance, test.Gallery);
+        navigation.Attach(bare);
+        bare.ShowWorkspace();
+        var before = bare.Current;
+        navigation.OpenHealth();
+        Assert.AreSame(before, bare.Current);
+    }
+
+    [TestMethod]
     public void The_ribbon_display_is_kept_on_this_computer()
     {
         using var vault = new ReviewVault();

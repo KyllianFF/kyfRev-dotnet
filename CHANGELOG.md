@@ -25,6 +25,18 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   passe. « Compris » ferme l'aide pour de bon ; « Ne plus montrer d'aide » les coupe toutes. Elles ne bloquent rien.
 - Vues vides : le Carnet vide propose « Nouvelle fiche » ; les Définitions vides, « Voir comment faire », qui ouvre le
   guide sur la partie qui en parle.
+- Paramètres › Apparence, « Largeur du texte » : la longueur des lignes d'une fiche sans mise en page, au choix entre
+  « Étroite » (environ 80 caractères par ligne à la taille de texte normale), « Confortable » (environ 95, proposée
+  d'abord) et « Large » (environ 115, la largeur qu'avaient toutes les fiches jusqu'ici). Elle vaut en lecture, en
+  révision et en écriture. Une feuille A4, A5 ou A6 garde sa largeur.
+- Écrire, ruban réduit : un petit bouton en bas à droite du ruban propose « Afficher en réduit » et « Afficher en
+  étendu ». Réduit, le ruban tient sur une rangée, sans le nom des groupes, dans tous ses onglets : l'annulation, le
+  style, la taille, la couleur, gras, italique, souligné, les listes, la citation, aligner à gauche et centrer restent
+  sous la main ; « Plus » range barré, exposant, indice, code, la casse, agrandir et réduire le texte, aligner à droite
+  et justifier. Le texte de la fiche y gagne une cinquantaine de pixels de hauteur. Le ruban reste étendu tant que vous
+  ne le réduisez pas, l'ordinateur retient le choix, et les raccourcis clavier ne changent pas.
+- Logotype : l'icône de kyfRev suivie de son nom en deux tons, à l'accueil, dans Paramètres › À propos et en tête du
+  README (`assets/logo`, en clair et en sombre).
 
 ### Modifié
 - Désinstallation : le désinstallateur demande ce qu'il faut faire de vos réglages (le dernier coffre ouvert, l'apparence,
@@ -38,6 +50,19 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   bouge quand les animations sont réduites (Windows, ou Paramètres › Apparence).
 - L'icône de kyfRev se montre dans l'application : à l'accueil, à l'écran de déverrouillage d'un coffre chiffré (avec un
   cadenas en pastille) et dans Paramètres › À propos. Elle n'y paraissait qu'en petit, dans la barre de titre.
+- Lecture : la colonne de texte d'une fiche sans mise en page passe de 820 à 680 pixels, soit d'environ 115 à environ
+  95 caractères par ligne. « Large », dans Paramètres › Apparence, rend l'ancienne largeur. Les images, les schémas et
+  les tableaux pleine largeur suivent la colonne, comme ils le faisaient déjà.
+- Tableaux ajustés à leur contenu, en lecture : leurs colonnes gardent la largeur qu'elles demandent dans une colonne
+  de texte plus étroite ou plus large que 820 pixels (une fenêtre étroite, une feuille A5, le nouveau réglage de
+  largeur). Jusqu'ici elles se resserraient ou s'étiraient avec elle.
+- Aujourd'hui : une seule carte, celle de la liste à réviser. Le compte du jour n'est plus encadré ; les avertissements
+  (un point à vérifier dans le coffre, un rappel qui attend depuis plus de 30 jours) sont des lignes, et celui du coffre
+  porte un lien « Voir dans Santé du coffre » ; la colonne de droite sépare ses parties (rappels, à venir, cette
+  semaine, encart d'un module) par de l'espace et un filet. Rien n'est retiré.
+- Archives : les actions d'une fiche (ouvrir, remettre en révision, suspendre ou reprendre ses rappels) passent
+  derrière un bouton « ⋯ », le même menu qu'au clic droit. Chaque fiche tient sur une ligne, sans répéter les mêmes
+  boutons de ligne en ligne.
 - Lisibilité : plus aucun texte sous 12 px (les jours et les mois de la charge à venir, le compteur du menu réduit à ses
   icônes, la pastille « partout » d'une définition, le numéro d'une liste dans le ruban), et les chevrons passent de 10
   à 12 px. Les boutons de la fenêtre (réduire, agrandir, fermer) gardent la taille que leur donne Windows.

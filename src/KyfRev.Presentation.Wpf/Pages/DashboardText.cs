@@ -44,6 +44,9 @@ public static class DashboardText
     /// <summary>« … points à vérifier dans le coffre (fichier manquant, lien à revoir…). ».</summary>
     public static string HealthWarningManyOf(object count) => Format("HealthWarningMany", count);
 
+    /// <summary>« Voir dans Santé du coffre ».</summary>
+    public static string SeeHealth => Text(nameof(SeeHealth));
+
     /// <summary>« … point à vérifier dans le coffre (fichier manquant, lien à revoir…). ».</summary>
     public static string HealthWarningOneOf(object count) => Format("HealthWarningOne", count);
 

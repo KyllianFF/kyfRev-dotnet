@@ -323,6 +323,8 @@ internal sealed class FakeOpener : IReviewOpener
 
     public void OpenWorkload(DashboardFilter filter) => Opened.Add(("charge", filter));
 
+    public void OpenHealth() => Opened.Add("santé");
+
     /// <summary>Éléments restants de la séance à reprendre, simulés.</summary>
     public int? Resumable { get; set; }
 
