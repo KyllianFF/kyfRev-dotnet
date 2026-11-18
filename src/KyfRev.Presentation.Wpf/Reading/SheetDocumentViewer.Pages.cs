@@ -103,6 +103,18 @@ internal sealed partial class SheetDocumentViewer
     public static readonly DependencyProperty TextMaxWidthProperty = DependencyProperty.Register(
         nameof(TextMaxWidth), typeof(double), typeof(SheetDocumentViewer), new PropertyMetadata(double.PositiveInfinity, (viewer, _) => ((SheetDocumentViewer)viewer).TextWidthChanged()));
 
+    /// <summary>
+    /// La largeur que peut prendre, sur une feuille sans fin et sans papier, ce qui est plus large que la colonne de texte :
+    /// un tableau, une image seule sur sa ligne, un schéma. Le texte garde <see cref="TextMaxWidth"/> ; eux débordent de
+    /// chaque côté, centrés sur lui, jusqu'à cette largeur. Zéro par défaut : rien ne déborde.
+    /// </summary>
+    public static readonly DependencyProperty WideMaxWidthProperty = DependencyProperty.Register(
+        nameof(WideMaxWidth), typeof(double), typeof(SheetDocumentViewer), new PropertyMetadata(0d, (viewer, _) => ((SheetDocumentViewer)viewer).TextWidthChanged()));
+
+    /// <summary>Les marges de côté qu'un bloc avait avant que la vue ne le resserre sur la colonne de texte.</summary>
+    private static readonly DependencyProperty OwnMarginProperty = DependencyProperty.RegisterAttached(
+        "OwnMargin", typeof(Thickness), typeof(SheetDocumentViewer), new PropertyMetadata(default(Thickness)));
+
     /// <summary>Les marges du texte sur une feuille sans fin dont le papier est montré : il ne touche pas le bord.</summary>
     private static readonly Thickness EndlessPaperPadding = new(28, 20, 28, 28);
 
@@ -113,9 +125,111 @@ internal sealed partial class SheetDocumentViewer
         set => SetValue(TextMaxWidthProperty, value);
     }
 
-    /// <summary>Ce qu'une feuille sans fin laisse libre de chaque côté de sa colonne de texte, dans une vue plus large qu'elle.</summary>
+    /// <inheritdoc cref="WideMaxWidthProperty"/>
+    public double WideMaxWidth
+    {
+        get => (double)GetValue(WideMaxWidthProperty);
+        set => SetValue(WideMaxWidthProperty, value);
+    }
+
+    /// <summary>
+    /// La largeur du document d'une feuille sans fin : celle du texte, ou celle des blocs larges quand ils peuvent déborder.
+    /// Un papier montré garde la sienne, celle du texte : rien ne sort de la feuille dessinée.
+    /// </summary>
+    private double EndlessWidth =>
+        PaperShown is null && Layout is not { IsPaged: true } && double.IsFinite(WideMaxWidth) && WideMaxWidth > TextMaxWidth ? WideMaxWidth : TextMaxWidth;
+
+    /// <summary>Ce qu'une feuille sans fin laisse libre de chaque côté de son document, dans une vue plus large que lui.</summary>
     internal double EndlessSide =>
-        double.IsFinite(TextMaxWidth) && TextMaxWidth > 0 ? Math.Max(0, Math.Floor((ActualWidth - SystemParameters.VerticalScrollBarWidth - TextMaxWidth) / 2)) : 0;
+        double.IsFinite(TextMaxWidth) && TextMaxWidth > 0 ? Math.Max(0, Math.Floor((ActualWidth - SystemParameters.VerticalScrollBarWidth - EndlessWidth) / 2)) : 0;
+
+    /// <summary>
+    /// Ce que le texte laisse de chaque côté dans le document, quand celui-ci est plus large que la colonne de texte : la
+    /// place où un bloc large déborde. Zéro quand rien ne peut déborder, ou dans une vue qui n'a que la place du texte.
+    /// </summary>
+    internal double TextInset =>
+        double.IsFinite(TextMaxWidth) && TextMaxWidth > 0 && EndlessWidth > TextMaxWidth && ActualWidth > 0
+            ? Math.Max(0, Math.Floor((ActualWidth - SystemParameters.VerticalScrollBarWidth - (2 * EndlessSide) - TextMaxWidth) / 2))
+            : 0;
+
+    /// <summary>
+    /// Resserre chaque bloc du document sur la colonne de texte, et laisse à un bloc plus large qu'elle la place qu'il
+    /// demande, autant de chaque côté. Seules les marges de côté changent : celles du haut sont à la mise en pages.
+    /// </summary>
+    /// <returns>Au moins un bloc a changé de largeur.</returns>
+    internal bool FitBlocks()
+    {
+        if (Document is not { } document)
+        {
+            return false;
+        }
+        var inset = TextInset;
+        var changed = false;
+        foreach (var block in document.Blocks)
+        {
+            if (block.ReadLocalValue(OwnMarginProperty) == DependencyProperty.UnsetValue)
+            {
+                if (inset <= 0)
+                {
+                    // Rien ne déborde et ce bloc n'a jamais été resserré : il garde ses marges.
+                    continue;
+                }
+                block.SetValue(OwnMarginProperty, block.Margin);
+            }
+            var own = (Thickness)block.GetValue(OwnMarginProperty);
+            var side = inset <= 0 ? 0 : Math.Max(0, inset - Math.Ceiling(Math.Max(0, WidthWanted(block) - TextMaxWidth) / 2));
+            var margin = block.Margin;
+            var fitted = new Thickness(own.Left + side, margin.Top, own.Right + side, margin.Bottom);
+            if (margin != fitted)
+            {
+                block.Margin = fitted;
+                changed = true;
+            }
+        }
+        return changed;
+    }
+
+    /// <summary>
+    /// La largeur qu'un bloc demande quand elle dépasse celle du texte : un tableau, ce que ses colonnes demandent sur une
+    /// ligne ; un schéma, sa plus grande largeur ; un paragraphe qui n'a que des images sans largeur choisie, la leur.
+    /// Tout le reste est du texte, qui passe à la ligne dans sa colonne.
+    /// </summary>
+    private static double WidthWanted(Block block) => block switch
+    {
+        Table { Tag: TableSizing sizing } => sizing.Natural.Sum(),
+        BlockUIContainer { Child: FrameworkElement drawing and (DiagramView or MermaidView or NetworkView) } when double.IsFinite(drawing.MaxWidth) => drawing.MaxWidth,
+        Paragraph paragraph => PicturesWidth(paragraph),
+        _ => 0,
+    };
+
+    private static double PicturesWidth(Paragraph paragraph)
+    {
+        var width = 0d;
+        foreach (var inline in paragraph.Inlines)
+        {
+            switch (inline)
+            {
+                case InlineUIContainer { Child: var child } when PictureOf(child) is { Source: not null } picture && double.IsFinite(picture.MaxWidth):
+                    width += picture.MaxWidth;
+                    break;
+                case Run run when string.IsNullOrWhiteSpace(run.Text):
+                case LineBreak:
+                    break;
+                default:
+                    // Du texte autour, une image à la largeur choisie (comptée sur celle du texte) ou pas encore lue.
+                    return 0;
+            }
+        }
+        return width;
+    }
+
+    /// <summary>L'image d'une ligne, seule ou sous ses masques.</summary>
+    private static System.Windows.Controls.Image? PictureOf(UIElement? child) => child switch
+    {
+        System.Windows.Controls.Image image => image,
+        System.Windows.Controls.Grid { Children: { Count: > 0 } children } when children[0] is System.Windows.Controls.Image image => image,
+        _ => null,
+    };
 
     /// <summary>
     /// La largeur du papier d'une feuille sans fin : toute la vue, ou, dans une vue plus large que le texte, sa colonne et
@@ -398,6 +512,8 @@ internal sealed partial class SheetDocumentViewer
             {
                 document.PagePadding = padding;
             }
+            // La colonne de texte se taille dans ces marges : elle suit tout ce qui les change.
+            FitBlocks();
         }
     }
 

@@ -51,11 +51,17 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 - L'icône de kyfRev se montre dans l'application : à l'accueil, à l'écran de déverrouillage d'un coffre chiffré (avec un
   cadenas en pastille) et dans Paramètres › À propos. Elle n'y paraissait qu'en petit, dans la barre de titre.
 - Lecture : la colonne de texte d'une fiche sans mise en page passe de 820 à 680 pixels, soit d'environ 115 à environ
-  95 caractères par ligne. « Large », dans Paramètres › Apparence, rend l'ancienne largeur. Les images, les schémas et
-  les tableaux pleine largeur suivent la colonne, comme ils le faisaient déjà.
-- Tableaux ajustés à leur contenu, en lecture : leurs colonnes gardent la largeur qu'elles demandent dans une colonne
-  de texte plus étroite ou plus large que 820 pixels (une fenêtre étroite, une feuille A5, le nouveau réglage de
-  largeur). Jusqu'ici elles se resserraient ou s'étiraient avec elle.
+  95 caractères par ligne. « Large », dans Paramètres › Apparence, rend l'ancienne largeur.
+- Lecture, ce qui est plus large que la colonne de texte : un tableau, une image seule sur sa ligne ou un schéma garde
+  la place qu'il avait, jusqu'à 820 pixels, et déborde autant de chaque côté du texte. Seul le texte se resserre. Dans
+  une fenêtre qui n'a que la place du texte, sur un papier (uni, lignes, carreaux) et sur une feuille A4, A5 ou A6,
+  rien ne déborde. En écriture, ces blocs suivent encore la colonne : un tableau large y paraît plus serré qu'en lecture.
+- Tableaux, en lecture : un tableau ajusté à son contenu garde la largeur que ses colonnes demandent, dans une colonne
+  de texte plus étroite ou plus large que 820 pixels (une fenêtre étroite, le réglage de largeur), sur un papier et
+  sur une feuille A4, A5 ou A6 ; jusqu'ici il se resserrait ou s'étirait. Sur un papier ou une feuille, la place d'un
+  tableau se compte maintenant entre les marges, et plus sur toute la vue. Les tableaux d'une longue fiche qui
+  arrivent après le premier écran prennent leurs largeurs comme ceux du début, sans attendre que la fenêtre change
+  de taille.
 - Aujourd'hui : une seule carte, celle de la liste à réviser. Le compte du jour n'est plus encadré ; les avertissements
   (un point à vérifier dans le coffre, un rappel qui attend depuis plus de 30 jours) sont des lignes, et celui du coffre
   porte un lien « Voir dans Santé du coffre » ; la colonne de droite sépare ses parties (rappels, à venir, cette

@@ -166,8 +166,19 @@ internal sealed class DocumentBuilder
     /// <summary>Les blocs que dessinent les extensions actives ; sans eux, ces blocs restent du code.</summary>
     public ExtensionBlocks? ExtensionBlocks { get; init; }
 
+    /// <summary>Les tableaux du document, dans l'ordre où ils y arrivent : la vue leur donne leurs largeurs sans les y chercher.</summary>
+    public IReadOnlyList<Table> Tables => _tables;
+
+    private readonly List<Table> _tables = [];
+
     /// <summary>Le lien entre le document et le texte affiché, et les surlignages.</summary>
     public TextLayer Layer { get; }
+
+    /// <summary>
+    /// Le document a grandi (la suite d'une longue fiche est arrivée) ou une image a pris sa taille : la vue y refait ce
+    /// qui dépend de sa largeur. Rien pendant <see cref="Build"/>, la vue n'a pas encore le document.
+    /// </summary>
+    public Action? Grew { get; set; }
 
     /// <summary>Il reste du contenu à ajouter ou des formules à dessiner.</summary>
     public bool HasPendingWork => HasPendingContent || _pendingFormulas.Count > 0;
@@ -370,6 +381,10 @@ internal sealed class DocumentBuilder
             var child = children[_nextRootChild++];
             AddChild(child, _document!.Blocks, 0, ref _openRootParagraph);
             added += Weight(child);
+        }
+        if (added > 0)
+        {
+            Grew?.Invoke();
         }
     }
 
@@ -750,6 +765,7 @@ internal sealed class DocumentBuilder
         var look = element.Look ?? TableLook.Default;
         var colors = TableBrushes.Of(look.Theme);
         var table = new Table { CellSpacing = 0, Margin = new Thickness(0, 0, 0, 12) };
+        _tables.Add(table);
         if (_comfort.IsRuled)
         {
             // Un tableau n'écrit pas sur les lignes du papier : il garde l'interligne du texte, et un fond plein, celui de
@@ -1186,6 +1202,7 @@ internal sealed class DocumentBuilder
             using var stream = new MemoryStream(picture.Png.ToArray());
             image.Source = BitmapFrame.Create(stream, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
             image.MaxWidth = picture.Width;
+            Grew?.Invoke();
         }
         catch (Exception problem) when (problem is NotSupportedException or FileFormatException or ArgumentException or InvalidOperationException)
         {
@@ -1211,6 +1228,7 @@ internal sealed class DocumentBuilder
             // Une largeur choisie peut aussi l'agrandir : elle n'est alors plus bornée à ses pixels.
             image.MaxWidth = look.Width is null ? bitmap.PixelWidth : double.PositiveInfinity;
             image.Source = bitmap;
+            Grew?.Invoke();
         }
         else
         {

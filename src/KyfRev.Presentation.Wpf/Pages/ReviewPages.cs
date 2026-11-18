@@ -255,7 +255,10 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage, 
     /// <summary>Largeur des passages à côté du texte.</summary>
     public const double PassagesWidth = 300;
 
-    /// <summary>La plus grande largeur du texte : celle de la colonne « Large », environ 115 caractères par ligne à la taille normale.</summary>
+    /// <summary>
+    /// La plus grande largeur du texte : celle de la colonne « Large », environ 115 caractères par ligne à la taille normale.
+    /// C'est aussi la largeur que peut prendre, en lecture, un tableau, une image ou un schéma plus large que la colonne choisie.
+    /// </summary>
     public const double TextMaxWidth = 820;
 
     /// <summary>La colonne « Confortable », environ 95 caractères par ligne : celle d'une fiche, sauf autre choix.</summary>

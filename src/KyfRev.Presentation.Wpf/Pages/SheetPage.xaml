@@ -570,7 +570,7 @@
                                      SheetZoom="{Binding DataContext.SheetZoom, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                      PageSetup="{Binding DataContext.PageSetup, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                      Visibility="{Binding DataContext.IsWriting, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource Visible}}" />
-            <reading:SheetDocumentViewer x:Name="SheetText" Grid.Row="1" TextMaxWidth="{Binding TextWidth}" Visibility="{Binding IsReading, Converter={StaticResource Visible}}" Reading="{Binding Reading}" PrintCommand="{Binding RequestPrintCommand}" PageLayout="{Binding PageSetup.Layout}" OpenLinkCommand="{Binding OpenLinkCommand}" LinkPreview="{Binding LinkPreview}"
+            <reading:SheetDocumentViewer x:Name="SheetText" Grid.Row="1" TextMaxWidth="{Binding TextWidth}" WideMaxWidth="{x:Static pages:SheetPageViewModel.TextMaxWidth}" Visibility="{Binding IsReading, Converter={StaticResource Visible}}" Reading="{Binding Reading}" PrintCommand="{Binding RequestPrintCommand}" PageLayout="{Binding PageSetup.Layout}" OpenLinkCommand="{Binding OpenLinkCommand}" LinkPreview="{Binding LinkPreview}"
                                          Highlights="{Binding Highlights}" ActiveHighlight="{Binding ActivePassage}" Holes="{Binding Holes}" Words="{Binding Words}"
                                          PreviewMouseLeftButtonDown="OnTextPressed" PreviewMouseLeftButtonUp="OnTextReleased" PreviewKeyDown="OnTextKey"
                                          ContextMenuOpening="OnTextMenu"
