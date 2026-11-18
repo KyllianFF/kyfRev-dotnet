@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
@@ -351,8 +352,26 @@ public sealed class ArchivesTests
             TestShell.Flush();
             Assert.IsFalse(page.IsConfirming);
 
-            // Le titre garde sa place : quand l'état et les actions la lui prendraient (vu à 760 pixels, une lettre par ligne),
-            // ils passent dessous, alignés sur lui.
+            // Les actions d'une fiche sont dans un menu, derrière « ⋯ » : la ligne ne répète plus les mêmes mots d'une fiche à l'autre.
+            var more = Descendants(window).OfType<Button>().First(button => button.Name == "MoreRow");
+            var shown = (ArchiveRow)more.DataContext;
+            Assert.AreEqual($"Actions : {shown.Title}", AutomationProperties.GetName(more));
+            Assert.AreEqual(ArchivesText.MoreActionsHelp, AutomationProperties.GetHelpText(more));
+            Assert.IsTrue(more.ActualWidth >= 44 && more.ActualHeight >= 44, "une cible de 44 pixels");
+            Assert.IsFalse(Descendants(window).OfType<Button>().Any(button => button.Name is "ToggleRow" or "RestartRow"), "plus de boutons en texte sur chaque ligne");
+            var entries = ((ArchivesPage)Descendants(window).First(element => element is ArchivesPage)).RowMenuItems(shown);
+            CollectionAssert.AreEqual(
+                new[] { ArchivesText.Open, ArchivesText.Restart, shown.ToggleLabel },
+                entries.OfType<MenuItem>().Select(item => (string)item.Header).ToArray(),
+                "le menu du bouton est celui du clic droit");
+            ((FrameworkElement)window.Content).Capture("archives-actions-clair");
+            test.Design.Theme = DesignSystem.Tokens.ThemeKind.Dark;
+            TestShell.Flush();
+            ((FrameworkElement)window.Content).Capture("archives-actions-sombre");
+            test.Design.Theme = DesignSystem.Tokens.ThemeKind.Light;
+            TestShell.Flush();
+
+            // Le titre garde sa place : quand l'état et le bouton des actions la lui prendraient, ils passent dessous, alignés sur lui.
             var layout = Descendants(window).OfType<AdaptiveRow>().First(row => row.Name == "RowLayout");
             var side = Descendants(window).OfType<StackPanel>().First(panel => panel.Name == "Side");
             var open = Descendants(window).OfType<Button>().First(button => button.Name == "OpenRow");
@@ -364,11 +383,7 @@ public sealed class ArchivesTests
                 TestShell.Flush();
                 Assert.IsTrue(layout.IsStacked || open.ActualWidth >= layout.MainMinWidth, $"à {width} pixels, le titre garde sa place");
             }
-            Assert.IsTrue(layout.IsStacked);
-            Assert.IsGreaterThan(title.TranslatePoint(default, window).Y, side.TranslatePoint(default, window).Y, "l'état et les actions sous le titre");
-            Assert.AreEqual(HorizontalAlignment.Left, side.HorizontalAlignment);
-
-            // Très étroite : l'état au-dessus des actions.
+            // Très étroite : l'état et « ⋯ » restent sur une ligne, alignés à gauche.
             window.Width = 1100;
             window.UpdateLayout();
             TestShell.Flush();
@@ -376,7 +391,8 @@ public sealed class ArchivesTests
             page.PageWidth = ArchivesPageViewModel.RoomMinimum - 1;
             TestShell.Flush();
             Assert.IsFalse(page.HasRoom);
-            Assert.AreEqual(Orientation.Vertical, side.Orientation);
+            Assert.AreEqual(Orientation.Horizontal, side.Orientation);
+            Assert.AreEqual(HorizontalAlignment.Left, side.HorizontalAlignment);
 
             // La page quittée perd son contexte sans rien lever.
             test.Shell.Navigate(test.Shell.Gallery);

@@ -35,6 +35,13 @@ public sealed class MachinePreferencesFile : IMachinePreferencesStore
         ["pleine"] = ReadingWidth.Full,
     };
 
+    private static readonly Dictionary<string, ReadingColumn> Columns = new(StringComparer.Ordinal)
+    {
+        ["etroite"] = ReadingColumn.Narrow,
+        ["confortable"] = ReadingColumn.Comfortable,
+        ["large"] = ReadingColumn.Wide,
+    };
+
     private static readonly Dictionary<string, ReadingTextSize> TextSizes = new(StringComparer.Ordinal)
     {
         ["normale"] = ReadingTextSize.Normal,
@@ -129,10 +136,12 @@ public sealed class MachinePreferencesFile : IMachinePreferencesStore
                 writer.WriteString("premiereUtilisation", preferences.FirstUse);
             }
             writer.WriteString("largeur", Name(Widths, preferences.Width));
+            writer.WriteString("colonne", Name(Columns, preferences.Column));
             writer.WriteString("taille", Name(TextSizes, preferences.TextSize));
             writer.WriteString("interligne", Name(LineSpacings, preferences.LineSpacing));
             writer.WriteString("police", Name(Fonts, preferences.Font));
             writer.WriteBoolean("concentration", preferences.FocusMode);
+            writer.WriteBoolean("rubanReduit", preferences.RibbonReduced);
             writer.WriteBoolean("motsDefinis", preferences.MarkDefinedWords);
             writer.WriteBoolean("captureGlobale", preferences.GlobalCapture);
             writer.WriteBoolean("majAuDemarrage", preferences.CheckUpdatesAtStartup);
@@ -173,10 +182,12 @@ public sealed class MachinePreferencesFile : IMachinePreferencesStore
             Shortcuts = Text(root, "raccourcis"),
             FirstUse = Text(root, "premiereUtilisation"),
             Width = Choice(root, "largeur", Widths, defaults.Width),
+            Column = Choice(root, "colonne", Columns, defaults.Column),
             TextSize = Choice(root, "taille", TextSizes, defaults.TextSize),
             LineSpacing = Choice(root, "interligne", LineSpacings, defaults.LineSpacing),
             Font = Choice(root, "police", Fonts, defaults.Font),
             FocusMode = Flag(root, "concentration", defaults.FocusMode),
+            RibbonReduced = Flag(root, "rubanReduit", defaults.RibbonReduced),
             MarkDefinedWords = Flag(root, "motsDefinis", defaults.MarkDefinedWords),
             GlobalCapture = Flag(root, "captureGlobale", defaults.GlobalCapture),
             CheckUpdatesAtStartup = Flag(root, "majAuDemarrage", defaults.CheckUpdatesAtStartup),

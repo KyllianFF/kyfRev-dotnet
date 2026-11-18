@@ -45,6 +45,9 @@
   <data name="FirstSheet" xml:space="preserve">
     <value>Créez votre première fiche : sa révision J1 sera due demain.</value>
   </data>
+  <data name="SeeHealth" xml:space="preserve">
+    <value>Voir dans Santé du coffre</value>
+  </data>
   <data name="HealthWarningMany" xml:space="preserve">
     <value>{0} points à vérifier dans le coffre (fichier manquant, lien à revoir…).</value>
   </data>

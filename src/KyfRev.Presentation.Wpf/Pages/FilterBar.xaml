@@ -78,7 +78,7 @@
             <Border Background="{DynamicResource Kyf.Brush.NavigationActiveBackground}" CornerRadius="{DynamicResource Kyf.Radius.Control}" Padding="12,0">
               <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                 <TextBlock Text="{Binding Name}" FontSize="{DynamicResource Kyf.FontSize.Caption}" Foreground="{DynamicResource Kyf.Brush.NavigationActiveText}" VerticalAlignment="Center" />
-                <kyf:Icon Text="&#xE711;" FontSize="10" Foreground="{DynamicResource Kyf.Brush.NavigationActiveText}" Margin="8,0,0,0" />
+                <kyf:Icon Text="&#xE711;" FontSize="12" Foreground="{DynamicResource Kyf.Brush.NavigationActiveText}" Margin="8,0,0,0" />
               </StackPanel>
             </Border>
           </Button>

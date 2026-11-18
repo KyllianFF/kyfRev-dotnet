@@ -760,34 +760,96 @@ public sealed class ReviewTests
     {
         using var vault = new ReviewVault();
         var test = new TestShell();
-        var machine = new MachineSettings(new MemoryMachinePreferences { Stored = new MachinePreferences { Width = ReadingWidth.Full } });
+        var machine = new MachineSettings(new MemoryMachinePreferences { Stored = new MachinePreferences { Width = ReadingWidth.Full, Column = ReadingColumn.Narrow } });
         var navigation = new ReviewNavigation(vault.App.Sheets, vault.App.Annotations, vault.App.Reviews, vault.App.Reminders, vault.App.Vaults, new MemorySessions(), vault.Time, new RecordingLinks(), vault.App.Editing, FakeEnvironment.Markdown(), machine: machine);
         navigation.Attach(test.Shell);
         test.Shell.ShowWorkspace();
         navigation.OpenSheet(vault.SheetId);
         var page = (SheetPageViewModel)test.Shell.Current.Page;
         Assert.IsTrue(page.CanFocus);
-        Assert.AreEqual(SheetPageViewModel.TextMaxWidth, page.TextWidth, "la pleine largeur n'est plus un réglage");
+        Assert.AreEqual(SheetPageViewModel.NarrowTextWidth, page.TextWidth, "la colonne choisie ; l'ancienne pleine largeur n'est plus un réglage");
 
         page.IsFocusMode = true;
 
         Assert.IsTrue(test.Shell.IsFocusMode, "le bouton de la fiche commande la coquille");
-        Assert.AreEqual(SheetPageViewModel.TextMaxWidth, page.TextWidth, "même si la pleine largeur est choisie");
+        Assert.AreEqual(SheetPageViewModel.NarrowTextWidth, page.TextWidth, "la concentration garde la colonne choisie");
 
         test.Shell.ToggleFocusMode();
 
         Assert.IsFalse(page.IsFocusMode, "Ctrl+Maj+F se voit sur le bouton de la fiche");
-        Assert.AreEqual(SheetPageViewModel.TextMaxWidth, page.TextWidth, "la pleine largeur n'est plus un réglage");
+        Assert.AreEqual(SheetPageViewModel.NarrowTextWidth, page.TextWidth);
+
+        // Changée dans les Paramètres pendant que la fiche attendait : elle la reprend au retour.
+        var told = new List<string?>();
+        page.PropertyChanged += (_, e) => told.Add(e.PropertyName);
+        machine.Update(preferences => preferences with { Column = ReadingColumn.Wide });
+        page.OnNavigatedTo();
+        Assert.AreEqual(SheetPageViewModel.TextMaxWidth, page.TextWidth);
+        CollectionAssert.IsSubsetOf(new[] { nameof(SheetPageViewModel.TextWidth), nameof(SheetPageViewModel.ZoomedTextWidth) }, told);
     }
 
     [TestMethod]
-    [DataRow(ReadingWidth.Comfortable, SheetPageViewModel.TextMaxWidth)]
-    [DataRow(ReadingWidth.Full, SheetPageViewModel.TextMaxWidth)]
-    public void A_sheet_opens_with_the_width_kept_on_this_computer(ReadingWidth width, double expected)
+    public void The_vault_warning_leads_to_the_health_view()
     {
         using var vault = new ReviewVault();
         var test = new TestShell();
-        var machine = new MachineSettings(new MemoryMachinePreferences { Stored = new MachinePreferences { Width = width } });
+        var health = new object();
+        var shell = new ShellViewModel(CorePages.All(new Dictionary<string, object> { [CorePages.Today] = new object(), [CorePages.Health] = health }), test.Appearance, test.Gallery);
+        var navigation = new ReviewNavigation(vault.App.Sheets, vault.App.Annotations, vault.App.Reviews, vault.App.Reminders, vault.App.Vaults, new MemorySessions(), vault.Time, new RecordingLinks(), vault.App.Editing, FakeEnvironment.Markdown());
+        navigation.Attach(shell);
+        shell.ShowWorkspace();
+        Assert.AreNotSame(health, shell.Current.Page);
+
+        navigation.OpenHealth();
+
+        Assert.AreEqual(CorePages.Health, shell.Current.Id);
+        Assert.AreSame(health, shell.Current.Page);
+
+        // Sans cette vue (un module retiré) : rien ne se passe.
+        var bare = new ShellViewModel([.. CorePages.All(new Dictionary<string, object> { [CorePages.Today] = new object() }).Where(item => item.Id != CorePages.Health)], test.Appearance, test.Gallery);
+        navigation.Attach(bare);
+        bare.ShowWorkspace();
+        var before = bare.Current;
+        navigation.OpenHealth();
+        Assert.AreSame(before, bare.Current);
+    }
+
+    [TestMethod]
+    public void The_ribbon_display_is_kept_on_this_computer()
+    {
+        using var vault = new ReviewVault();
+        var test = new TestShell();
+        var store = new MemoryMachinePreferences();
+        var machine = new MachineSettings(store);
+        var navigation = new ReviewNavigation(vault.App.Sheets, vault.App.Annotations, vault.App.Reviews, vault.App.Reminders, vault.App.Vaults, new MemorySessions(), vault.Time, new RecordingLinks(), vault.App.Editing, FakeEnvironment.Markdown(), machine: machine);
+        navigation.Attach(test.Shell);
+        test.Shell.ShowWorkspace();
+        navigation.OpenSheet(vault.SheetId);
+        var page = (SheetPageViewModel)test.Shell.Current.Page;
+        Assert.IsFalse(page.IsRibbonReduced, "étendu au départ");
+        Assert.IsFalse(new MachinePreferences().RibbonReduced);
+        Assert.AreEqual(0, store.Saves, "ouvrir une fiche n'écrit rien");
+
+        page.IsRibbonReduced = true;
+
+        Assert.IsTrue(store.Stored.RibbonReduced);
+        navigation.OpenSheet(vault.SheetId);
+        Assert.IsTrue(((SheetPageViewModel)test.Shell.Current.Page).IsRibbonReduced, "la fiche suivante s'ouvre avec le ruban réduit");
+
+        ((SheetPageViewModel)test.Shell.Current.Page).IsRibbonReduced = false;
+        Assert.IsFalse(store.Stored.RibbonReduced);
+    }
+
+    [TestMethod]
+    [DataRow(ReadingColumn.Narrow, ReadingWidth.Comfortable, SheetPageViewModel.NarrowTextWidth)]
+    [DataRow(ReadingColumn.Comfortable, ReadingWidth.Comfortable, SheetPageViewModel.ComfortableTextWidth)]
+    [DataRow(ReadingColumn.Comfortable, ReadingWidth.Full, SheetPageViewModel.ComfortableTextWidth)]
+    [DataRow(ReadingColumn.Wide, ReadingWidth.Comfortable, SheetPageViewModel.TextMaxWidth)]
+    public void A_sheet_opens_with_the_width_kept_on_this_computer(ReadingColumn column, ReadingWidth width, double expected)
+    {
+        using var vault = new ReviewVault();
+        var test = new TestShell();
+        var machine = new MachineSettings(new MemoryMachinePreferences { Stored = new MachinePreferences { Column = column, Width = width } });
         var navigation = new ReviewNavigation(vault.App.Sheets, vault.App.Annotations, vault.App.Reviews, vault.App.Reminders, vault.App.Vaults, new MemorySessions(), vault.Time, new RecordingLinks(), vault.App.Editing, FakeEnvironment.Markdown(), machine: machine);
         navigation.Attach(test.Shell);
         test.Shell.ShowWorkspace();

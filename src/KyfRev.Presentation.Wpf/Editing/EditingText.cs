@@ -477,6 +477,27 @@ public static class EditingText
     /// <summary>Le groupe de l'historique.</summary>
     public const string HistoryGroup = "Historique";
 
+    /// <summary>Le bouton du ruban réduit qui range les outils rares.</summary>
+    public const string MoreTools = "Plus";
+
+    /// <summary>Ce que range « Plus ».</summary>
+    public const string MoreToolsHelp = "Barré, exposant, indice, code, casse, taille du texte, alignement à droite et justifié";
+
+    /// <summary>La casse, dans le menu « Plus ».</summary>
+    public const string CaseMenuTitle = "Casse";
+
+    /// <summary>Le bouton en bas à droite du ruban.</summary>
+    public const string RibbonDisplay = "Affichage du ruban";
+
+    /// <summary>Ce que change l'affichage du ruban.</summary>
+    public const string RibbonDisplayHelp = "Réduit : une rangée d'outils, sans le nom des groupes. Étendu : tous les outils.";
+
+    /// <summary>Une rangée d'outils, sans le nom des groupes.</summary>
+    public const string RibbonReduced = "Afficher en réduit";
+
+    /// <summary>Tous les outils, avec le nom des groupes.</summary>
+    public const string RibbonExtended = "Afficher en étendu";
+
     /// <summary>Le groupe du style.</summary>
     public const string StyleGroup = "Style";
 
@@ -622,10 +643,10 @@ public static class EditingText
     public const string GalleryShowCode = "Voir le code Mermaid";
 
     /// <summary>Insérer un SmartArt.</summary>
-    public const string SmartArt = "SmartArt";
+    public const string SmartArt = "Diagramme";
 
     /// <summary>Le titre de la galerie des SmartArt.</summary>
-    public const string GallerySmartArtTitle = "Insérer un SmartArt";
+    public const string GallerySmartArtTitle = "Insérer un diagramme";
 
     /// <summary>Le titre de la galerie des schémas.</summary>
     public const string GallerySchemaTitle = "Insérer un schéma";
@@ -769,7 +790,7 @@ public static class EditingText
     public const string ShowDrawingCode = "Voir le code";
 
     /// <summary>Supprimer un SmartArt de la fiche.</summary>
-    public const string DeleteSmartArt = "Supprimer ce SmartArt";
+    public const string DeleteSmartArt = "Supprimer ce diagramme";
 
     /// <summary>Supprimer un graphique de la fiche.</summary>
     public const string DeleteChart = "Supprimer ce graphique";

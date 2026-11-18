@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Documents;
 using System.Windows.Media;
+using KyfRev.Application.Model;
 using KyfRev.Presentation.Wpf.Pages;
 using KyfRev.Presentation.Wpf.Reading;
 
@@ -67,21 +68,88 @@ public sealed class SheetScrollTests
                 ends.Add(viewer.TranslatePoint(new Point(end.GetCharacterRect(LogicalDirection.Backward).Right, 0), sheet).X);
             }
             var textRight = ends.Max();
-            Assert.IsLessThanOrEqualTo(SheetPageViewModel.TextMaxWidth + 1, textRight - left, "le texte reste à largeur de lecture");
+            Assert.IsLessThanOrEqualTo(SheetPageViewModel.ComfortableTextWidth + 1, textRight - left, "le texte reste à largeur de lecture");
             Assert.IsLessThan(bar.TranslatePoint(default, sheet).X, textRight, "sans passer sous la barre");
             if (width >= 1700)
             {
                 // De la place de chaque côté : autant à gauche qu'à droite, à la barre près.
                 var area = (FrameworkElement)sheet.FindName("SheetArea");
                 var areaLeft = area.TranslatePoint(default, sheet).X;
-                var free = area.ActualWidth - bar.ActualWidth - SheetPageViewModel.TextMaxWidth;
+                var free = area.ActualWidth - bar.ActualWidth - SheetPageViewModel.ComfortableTextWidth;
                 Assert.AreEqual(areaLeft + (free / 2), left, 24, "la colonne est centrée dans la zone de la fiche");
                 Assert.IsGreaterThan(ends.Count > 1 ? 400 : 0, textRight - left, "et garde sa largeur");
             }
-            else if (width <= 900)
+            else if (width <= 600)
             {
                 Assert.IsLessThan(60, left - ((FrameworkElement)sheet.FindName("SheetArea")).TranslatePoint(default, sheet).X, "étroite, la fiche prend toute la place");
             }
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    /// <summary>
+    /// La colonne de texte suit la largeur choisie dans Paramètres › Apparence : environ 80, 95 ou 115 caractères par
+    /// ligne à la taille de texte normale. Un tableau ajusté à son contenu garde sa largeur dans les trois.
+    /// </summary>
+    [STATestMethod]
+    [DataRow(ReadingColumn.Narrow, 80, false)]
+    [DataRow(ReadingColumn.Comfortable, 95, false)]
+    [DataRow(ReadingColumn.Comfortable, 95, true)]
+    [DataRow(ReadingColumn.Wide, 115, false)]
+    public void The_text_column_follows_the_width_chosen_on_this_computer(ReadingColumn column, int about, bool dark)
+    {
+        const string fittedTable = "<!-- kyfrev tableau largeur=ajustee -->\n| Étape | Jour |\n|---|---|\n| J1 | demain |\n| J3 | dans trois jours |\n\n";
+        using var ui = new UiThread();
+        using var vault = new ReadingVault(fittedTable + Body + "\n", passage: false);
+        var page = vault.Page(column: () => column);
+        var test = new TestShell(dark);
+        page.LoadCommand.Execute(null);
+        UiThread.Until(() => !page.IsLoading);
+        var sheet = new SheetPage { DataContext = page, Width = 1700, Height = 800 };
+        var host = new Border { Child = sheet, Width = 1700, Height = 800 };
+        host.Resources.MergedDictionaries.Add(test.Design.Dictionary);
+        host.SetResourceReference(Border.BackgroundProperty, "Kyf.Brush.Background");
+        var window = new Window { Content = new Canvas { Children = { host } }, Left = -10000, Top = -10000, Width = 400, Height = 300, ShowActivated = false, ShowInTaskbar = false };
+        window.Show();
+        try
+        {
+            var viewer = (SheetDocumentViewer)sheet.FindName("SheetText");
+            UiThread.Until(() => viewer.Document is not null);
+            viewer.CompleteDocument();
+            for (var pass = 0; pass < 8; pass++)
+            {
+                TestShell.Flush();
+                sheet.UpdateLayout();
+            }
+            var name = column switch { ReadingColumn.Narrow => "etroite", ReadingColumn.Wide => "large", _ => "confortable" };
+            host.Capture($"fiche-colonne-{name}-{(dark ? "sombre" : "clair")}");
+
+            var expected = SheetPageViewModel.ColumnWidth(column);
+            Assert.AreEqual(expected, page.TextWidth);
+            var first = viewer.Document!.Blocks.OfType<Paragraph>().First(paragraph => new TextRange(paragraph.ContentStart, paragraph.ContentEnd).Text.StartsWith("Paragraphe 1 ", StringComparison.Ordinal));
+            var start = first.ContentStart.GetLineStartPosition(0)!;
+            var next = start.GetLineStartPosition(1, out var moved);
+            Assert.AreEqual(1, moved, "le paragraphe passe à la ligne");
+            var line = new TextRange(start, next!).Text;
+            var left = start.GetCharacterRect(LogicalDirection.Forward).Left;
+            var right = next!.GetPositionAtOffset(-1, LogicalDirection.Backward)!.GetCharacterRect(LogicalDirection.Backward).Right;
+            Assert.IsLessThanOrEqualTo(expected + 1, right - left, "une ligne ne dépasse pas la colonne");
+            Assert.IsGreaterThan(expected - 120, right - left, "et la remplit, à un mot près");
+            Assert.AreEqual(about, line.Length, about * 0.08, $"environ {about} caractères par ligne : « {line} »");
+
+            // Le tableau ajusté : ses deux colonnes gardent ce qu'elles demandent, la colonne vide prend le reste de la ligne.
+            var table = viewer.Document.Blocks.OfType<Table>().Single();
+            var sizing = (TableSizing)table.Tag;
+            Assert.IsTrue(sizing.Fitted);
+            Assert.AreEqual(3, table.Columns.Count, "deux colonnes, et la colonne élastique");
+            for (var index = 0; index < 2; index++)
+            {
+                Assert.AreEqual(sizing.Natural[index] / DocumentBuilder.StarUnit, table.Columns[index].Width.Value, 1e-6, "la colonne garde sa largeur, quelle que soit la colonne de texte");
+            }
+            Assert.AreEqual((expected - sizing.Natural.Sum()) / DocumentBuilder.StarUnit, table.Columns[2].Width.Value, 0.2, "le reste à la colonne vide");
         }
         finally
         {

@@ -41,6 +41,9 @@ public static class DesignKeys
     /// <summary>Durée normale, nulle si les animations sont réduites.</summary>
     public const string NormalDuration = "Kyf.Duration.Normal";
 
+    /// <summary>L'ouverture d'un menu ou d'une liste déroulante : en fondu, ou d'un coup quand les animations sont réduites.</summary>
+    public const string PopupMotion = "Kyf.Motion.Popup";
+
     /// <summary>Le contraste élevé de Windows est actif : les couleurs sont les siennes, y compris celles du texte des fiches.</summary>
     public const string IsHighContrast = "Kyf.Theme.IsHighContrast";
 

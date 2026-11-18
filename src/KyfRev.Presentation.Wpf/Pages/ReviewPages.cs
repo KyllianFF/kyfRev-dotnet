@@ -255,8 +255,25 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage, 
     /// <summary>Largeur des passages à côté du texte.</summary>
     public const double PassagesWidth = 300;
 
-    /// <summary>Largeur maximale du texte, pour rester lisible.</summary>
+    /// <summary>
+    /// La plus grande largeur du texte : celle de la colonne « Large », environ 115 caractères par ligne à la taille normale.
+    /// C'est aussi la largeur que peut prendre, en lecture, un tableau, une image ou un schéma plus large que la colonne choisie.
+    /// </summary>
     public const double TextMaxWidth = 820;
+
+    /// <summary>La colonne « Confortable », environ 95 caractères par ligne : celle d'une fiche, sauf autre choix.</summary>
+    public const double ComfortableTextWidth = 680;
+
+    /// <summary>La colonne « Étroite », environ 80 caractères par ligne.</summary>
+    public const double NarrowTextWidth = 570;
+
+    /// <summary>La largeur de la colonne de texte choisie.</summary>
+    public static double ColumnWidth(ReadingColumn column) => column switch
+    {
+        ReadingColumn.Narrow => NarrowTextWidth,
+        ReadingColumn.Wide => TextMaxWidth,
+        _ => ComfortableTextWidth,
+    };
 
     /// <summary>Largeur du plan ouvert par-dessus le texte.</summary>
     public const double OutlineOverlayWidth = 280;
@@ -773,8 +790,11 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage, 
     /// <summary>Les boutons du plan et des passages ont un sens.</summary>
     public bool ShowsPanelToggles => !ShowsCode;
 
-    /// <summary>La largeur du texte : celle de la lecture, ou toute la place pour le code et son rendu.</summary>
-    public double TextWidth => ShowsCode ? double.PositiveInfinity : PageSetup is { IsPaged: true } paged ? paged.Layout.WidthPixels + PageScrollRoom : IsFocusMode ? TextMaxWidth : ReadingMaxWidth;
+    /// <summary>
+    /// La largeur du texte : celle de la feuille quand la fiche a une mise en page, la colonne choisie sur ce poste sinon,
+    /// ou toute la place pour le code et son rendu.
+    /// </summary>
+    public double TextWidth => ShowsCode ? double.PositiveInfinity : PageSetup is { IsPaged: true } paged ? paged.Layout.WidthPixels + PageScrollRoom : ReadingMaxWidth;
 
     /// <summary>À côté d'une feuille, un peu de bureau de chaque côté et la place de la barre de défilement : la feuille garde sa largeur exacte.</summary>
     public const double PageScrollRoom = 52;
@@ -898,8 +918,23 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage, 
         OnPropertyChanged(nameof(ZoomedTextWidth));
     }
 
-    /// <summary>La largeur du texte en lecture : celle qui reste lisible, ou toute la place si elle est préférée.</summary>
-    public double ReadingMaxWidth { get; init; } = TextMaxWidth;
+    /// <summary>
+    /// Le ruban d'écriture est réduit : une rangée d'outils, sans le nom des groupes. Le bouton en bas à droite du ruban
+    /// le change, et l'ordinateur le retient.
+    /// </summary>
+    [ObservableProperty]
+    public partial bool IsRibbonReduced { get; set; }
+
+    /// <summary>Retient l'affichage du ruban sur ce poste.</summary>
+    public Action<bool>? RibbonReducedChanged { get; init; }
+
+    partial void OnIsRibbonReducedChanged(bool value) => RibbonReducedChanged?.Invoke(value);
+
+    /// <summary>La colonne de texte choisie sur ce poste, relue à chaque retour sur la fiche ; sans elle, la colonne « Confortable ».</summary>
+    public Func<ReadingColumn>? Column { get; init; }
+
+    /// <summary>La largeur du texte d'une fiche sans mise en page : la colonne choisie, en lecture, en révision et en écriture.</summary>
+    public double ReadingMaxWidth => ColumnWidth(Column?.Invoke() ?? ReadingColumn.Comfortable);
 
     /// <summary>Le raccourci de validation : en écriture, il n'y a rien à valider.</summary>
     public System.Windows.Input.ICommand? ValidateShortcut => IsWriting ? null : Review?.ValidateCommand;
@@ -956,6 +991,9 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage, 
     /// <summary>De retour sur la fiche : ce qui a changé pendant qu'on était ailleurs se relit.</summary>
     public void OnNavigatedTo()
     {
+        // La colonne a pu changer dans les Paramètres pendant que la fiche attendait.
+        OnPropertyChanged(nameof(TextWidth));
+        OnPropertyChanged(nameof(ZoomedTextWidth));
         if (Reading is not null && IsReading)
         {
             _ = CatchUpAsync();

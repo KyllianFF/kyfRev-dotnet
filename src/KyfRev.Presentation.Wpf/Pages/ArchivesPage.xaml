@@ -42,32 +42,23 @@
             </Button>
             <StackPanel x:Name="Side" kyf:AdaptiveRow.Part="Trailing" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
               <kyf:Pill x:Name="Status" Kind="{Binding StatusKind}" Text="{Binding Status}" VerticalAlignment="Center" Margin="0,0,8,0" />
-              <WrapPanel x:Name="Actions" VerticalAlignment="Center">
-                <Button x:Name="ToggleRow" Content="{Binding ToggleLabel}" Style="{DynamicResource Kyf.Button.Subtle}"
-                        Command="{Binding DataContext.ToggleRemindersCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}"
-                        AutomationProperties.Name="{Binding ToggleName}" />
-                <Button x:Name="RestartRow" Content="{x:Static pages:ArchivesText.Restart}" Style="{DynamicResource Kyf.Button.Subtle}" Margin="4,0,0,0"
-                        Command="{Binding DataContext.RequestRestartCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}"
-                        AutomationProperties.Name="{Binding RestartName}" />
-              </WrapPanel>
+              <!-- Les actions de la fiche : dans un menu, le même qu'au clic droit. La ligne ne répète plus les mêmes mots d'une fiche à l'autre. -->
+              <Button x:Name="MoreRow" Style="{DynamicResource Kyf.Button.Tool}" MinWidth="44" MinHeight="44" VerticalAlignment="Center" Click="OnMoreClick"
+                      ToolTip="{x:Static pages:ArchivesText.MoreActions}" AutomationProperties.Name="{Binding MoreName}" AutomationProperties.HelpText="{x:Static pages:ArchivesText.MoreActionsHelp}">
+                <kyf:Icon Text="{x:Static kyf:Icons.More}" FontSize="16" />
+              </Button>
             </StackPanel>
           </kyf:AdaptiveRow>
         </Border>
       </Border>
       <DataTemplate.Triggers>
-        <!-- Empilés, l'état et les actions s'alignent sous le titre. -->
+        <!-- Empilés, l'état et le bouton des actions s'alignent sous le titre. -->
         <DataTrigger Binding="{Binding IsStacked, ElementName=RowLayout}" Value="True">
           <Setter TargetName="Side" Property="HorizontalAlignment" Value="Left" />
         </DataTrigger>
         <DataTrigger Binding="{Binding DataContext.HasRoom, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="False">
-          <Setter TargetName="Side" Property="Orientation" Value="Vertical" />
           <Setter TargetName="Side" Property="HorizontalAlignment" Value="Left" />
           <Setter TargetName="Side" Property="Margin" Value="12,4,0,4" />
-          <Setter TargetName="Status" Property="HorizontalAlignment" Value="Left" />
-          <Setter TargetName="Status" Property="Margin" Value="4,0,0,4" />
-          <Setter TargetName="ToggleRow" Property="Padding" Value="4,0" />
-          <Setter TargetName="RestartRow" Property="Padding" Value="4,0" />
-          <Setter TargetName="RestartRow" Property="Margin" Value="2,0,0,0" />
         </DataTrigger>
       </DataTemplate.Triggers>
     </DataTemplate>

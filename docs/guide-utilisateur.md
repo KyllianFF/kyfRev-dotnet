@@ -55,6 +55,10 @@ votre coffre n'est pas touché. N'installez pas « pour tous les utilisateurs »
 
 ## Le coffre
 
+À l'ouverture, kyfRev montre brièvement son logotype : les fiches se feuillettent, la dernière s'écrit, le nom arrive.
+La toute première fois l'animation prend quelques secondes, ensuite moins d'une ; un clic ou une touche la passe, et
+elle ne joue pas quand les animations sont réduites (Paramètres › Apparence).
+
 Pour voir kyfRev en marche avant d'écrire, l'accueil propose « Essayer avec un coffre d'exemple » : dix fiches inventées
 sur six matières, déjà en cours de révision. Il se crée dans son propre dossier « Exemple », à côté du coffre prévu, et
 ne touche jamais à vos fiches. Pour créer ou rouvrir votre coffre ensuite : Paramètres › Coffre et chiffrement.
@@ -138,7 +142,7 @@ feutre, à chasse fixe). Chaque papier a sa police conseillée, qu'un bouton app
 Dans Paramètres, les sections sont à gauche, rangées par portée : ce qui est retenu sur cet ordinateur (Apparence,
 Lecture, Feuilles, Menu, Raccourcis), ce qui appartient au coffre ouvert (Révisions, Modules et extensions, Coffre et
 chiffrement, Sauvegardes et exports), et À propos. Apparence règle le thème, la taille de l'interface, le texte des fiches
-(taille, interligne, police) et l'accessibilité ; Lecture, les mots définis et la voix. Raccourcis change dix raccourcis
+(taille, interligne, police, largeur de la colonne) et l'accessibilité ; Lecture, les mots définis et la voix. Raccourcis change dix raccourcis
 clavier ; Menu change l'ordre des vues du menu. « Chercher un réglage », en haut de la liste, trouve un réglage par quelques lettres, ouvre sa section et l'y entoure. Dans une
 section retenue sur l'ordinateur, « Rétablir les réglages d'origine » remet ceux de cette section ; « Annuler » les rend tant
 que vous y restez.

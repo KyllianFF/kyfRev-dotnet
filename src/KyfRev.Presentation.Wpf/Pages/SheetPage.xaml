@@ -504,7 +504,8 @@
       <!-- Le ruban court sur toute la largeur, au-dessus du plan et des passages. -->
       <StackPanel Grid.Row="1" Margin="16,0,16,8" DataContext="{Binding Editor}"
                   Visibility="{Binding DataContext.IsWriting, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource Visible}}">
-        <editing:EditorRibbon x:Name="Ribbon" PageSetup="{Binding DataContext.PageSetup, RelativeSource={RelativeSource AncestorType=UserControl}}" />
+        <editing:EditorRibbon x:Name="Ribbon" PageSetup="{Binding DataContext.PageSetup, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                              IsReduced="{Binding DataContext.IsRibbonReduced, RelativeSource={RelativeSource AncestorType=UserControl}, Mode=TwoWay}" />
         <!-- Un conflit n'écrit rien tant qu'il n'est pas tranché : aucune des deux versions n'est perdue. -->
         <StackPanel x:Name="ConflictPanel" Margin="0,8,0,0" Visibility="{Binding HasConflict, Converter={StaticResource Visible}}">
           <kyf:Notification x:Name="ConflictMessage" Severity="Warning" Message="{x:Static editing:EditingText.ConflictMessage}" IsClosable="False" Margin="0,0,0,8" />
@@ -569,7 +570,7 @@
                                      SheetZoom="{Binding DataContext.SheetZoom, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                      PageSetup="{Binding DataContext.PageSetup, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                      Visibility="{Binding DataContext.IsWriting, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource Visible}}" />
-            <reading:SheetDocumentViewer x:Name="SheetText" Grid.Row="1" TextMaxWidth="{Binding TextWidth}" Visibility="{Binding IsReading, Converter={StaticResource Visible}}" Reading="{Binding Reading}" PrintCommand="{Binding RequestPrintCommand}" PageLayout="{Binding PageSetup.Layout}" OpenLinkCommand="{Binding OpenLinkCommand}" LinkPreview="{Binding LinkPreview}"
+            <reading:SheetDocumentViewer x:Name="SheetText" Grid.Row="1" TextMaxWidth="{Binding TextWidth}" WideMaxWidth="{x:Static pages:SheetPageViewModel.TextMaxWidth}" Visibility="{Binding IsReading, Converter={StaticResource Visible}}" Reading="{Binding Reading}" PrintCommand="{Binding RequestPrintCommand}" PageLayout="{Binding PageSetup.Layout}" OpenLinkCommand="{Binding OpenLinkCommand}" LinkPreview="{Binding LinkPreview}"
                                          Highlights="{Binding Highlights}" ActiveHighlight="{Binding ActivePassage}" Holes="{Binding Holes}" Words="{Binding Words}"
                                          PreviewMouseLeftButtonDown="OnTextPressed" PreviewMouseLeftButtonUp="OnTextReleased" PreviewKeyDown="OnTextKey"
                                          ContextMenuOpening="OnTextMenu"
@@ -657,7 +658,7 @@
     </kyf:Dialog>
 
     <kyf:Dialog x:Name="HistoryDialog" DataContext="{Binding Editor}" Title="{x:Static editing:EditingText.HistoryTitle}" IsOpen="{Binding IsHistoryOpen, Mode=OneWay}" CardMaxWidth="1150" IsWide="True"
-                PrimaryButtonText="{x:Static editing:EditingText.HistoryClose}" SecondaryButtonText="" Closed="OnHistoryClosed">
+                PrimaryButtonText="" SecondaryButtonText="{x:Static editing:EditingText.HistoryClose}" Closed="OnHistoryClosed">
       <Grid x:Name="HistoryContent" DataContext="{Binding History}" Height="560">
         <Grid.RowDefinitions>
           <RowDefinition Height="Auto" />

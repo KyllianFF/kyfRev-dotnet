@@ -4,6 +4,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:kyf="clr-namespace:KyfRev.DesignSystem.Controls;assembly=KyfRev.DesignSystem"
              xmlns:pages="clr-namespace:KyfRev.Presentation.Wpf.Pages"
+             xmlns:shell="clr-namespace:KyfRev.Presentation.Wpf.Shell"
              xmlns:p="clr-namespace:KyfRev.Presentation.Wpf">
   <UserControl.Resources>
     <BooleanToVisibilityConverter x:Key="Visible" />
@@ -88,6 +89,7 @@
 
   <ScrollViewer x:Name="Scroller" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Focusable="False">
     <StackPanel x:Name="Column" MaxWidth="1054" Margin="16,28,16,20" VerticalAlignment="Center">
+      <shell:Logotype x:Name="Brand" MarkSize="56" HorizontalAlignment="Center" Margin="0,0,0,16" />
       <TextBlock x:Name="Heading" Text="{x:Static p:ShellText.Welcome}" Style="{DynamicResource Kyf.Text.Display}"
                  HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" AutomationProperties.HeadingLevel="Level1" />
       <TextBlock Text="{x:Static p:ShellText.WelcomeIntro}" Style="{DynamicResource Kyf.Text.Secondary}" MaxWidth="640"

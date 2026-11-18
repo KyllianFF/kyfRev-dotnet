@@ -226,6 +226,24 @@ public static class MoreSettingsText
     /// <summary>Ce que la police entraîne.</summary>
     public const string ReadingFontHelp = "Les titres la suivent quand elle est manuscrite.";
 
+    /// <summary>La longueur des lignes d'une fiche.</summary>
+    public const string TextWidth = "Largeur du texte";
+
+    /// <summary>Où s'applique la largeur du texte, et où elle ne s'applique pas.</summary>
+    public const string TextWidthHelp = "La longueur des lignes d'une fiche sans mise en page : environ tant de caractères, à la taille de texte normale. Une feuille A4, A5 ou A6 garde sa largeur.";
+
+    /// <summary>La colonne la plus étroite.</summary>
+    public const string TextWidthNarrow = "Étroite (80 caractères)";
+
+    /// <summary>La colonne d'origine.</summary>
+    public const string TextWidthComfortable = "Confortable (95 caractères)";
+
+    /// <summary>La colonne la plus large.</summary>
+    public const string TextWidthWide = "Large (115 caractères)";
+
+    /// <summary>Les mots qui mènent à la largeur du texte dans la recherche.</summary>
+    public const string WordsTextWidth = "colonne ligne lignes caractères étroite confortable large longueur";
+
     /// <summary>Le bloc des mots définis.</summary>
     public const string DefinedWordsTitle = "Mots définis";
 

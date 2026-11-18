@@ -20,6 +20,8 @@ internal static class Program
         {
             Time = new SimulatedClock(DateTimeOffset.Parse(args[1], CultureInfo.InvariantCulture)),
             Locations = VaultLocations.From(folder, new ProfileFolders(folder, folder, folder)),
+            // Sans l'animation d'ouverture : les scénarios invoquent les boutons dès que la fenêtre existe.
+            PlaysOpening = false,
         };
         // Assez étroite pour une seule colonne, quel que soit l'écran : les rappels sont alors dans la liste.
         EventManager.RegisterClassHandler(typeof(Window), FrameworkElement.LoadedEvent, new RoutedEventHandler((sender, _) =>

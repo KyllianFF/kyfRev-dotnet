@@ -565,6 +565,10 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
     /// <summary>Les actions de révision sont disponibles depuis le menu d'une ligne.</summary>
     internal bool CanAct => _reviews is not null;
 
+    /// <summary>Ouvre « Santé du coffre » : ce que l'avertissement du jour annonce s'y lit en détail.</summary>
+    [RelayCommand]
+    private void OpenHealth() => _opener.OpenHealth();
+
     /// <summary>Ouvre la charge des 30 prochains jours, avec le filtre de la liste.</summary>
     [RelayCommand]
     private void OpenWorkload() => _opener.OpenWorkload(SelectedFilter.Value);

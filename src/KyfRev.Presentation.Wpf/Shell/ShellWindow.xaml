@@ -121,7 +121,7 @@
           <Viewbox Width="24" Height="24" HorizontalAlignment="Center" VerticalAlignment="Center">
             <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource NavigationGlyphTemplate}" />
           </Viewbox>
-          <TextBlock x:Name="StackedBadge" Text="{Binding Badge.Text}" FontFamily="{DynamicResource Kyf.Font.Code}" FontSize="10" HorizontalAlignment="Right" VerticalAlignment="Top"
+          <TextBlock x:Name="StackedBadge" Text="{Binding Badge.Text}" FontFamily="{DynamicResource Kyf.Font.Code}" FontSize="12" HorizontalAlignment="Right" VerticalAlignment="Top"
                      Margin="0,2,4,0" Visibility="{Binding Badge.IsShown, Converter={StaticResource Visible}, FallbackValue=Collapsed}" />
         </Grid>
       </Grid>

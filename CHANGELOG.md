@@ -25,6 +25,25 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   passe. « Compris » ferme l'aide pour de bon ; « Ne plus montrer d'aide » les coupe toutes. Elles ne bloquent rien.
 - Vues vides : le Carnet vide propose « Nouvelle fiche » ; les Définitions vides, « Voir comment faire », qui ouvre le
   guide sur la partie qui en parle.
+- Paramètres › Apparence, « Largeur du texte » : la longueur des lignes d'une fiche sans mise en page, au choix entre
+  « Étroite » (environ 80 caractères par ligne à la taille de texte normale), « Confortable » (environ 95, proposée
+  d'abord) et « Large » (environ 115, la largeur qu'avaient toutes les fiches jusqu'ici). Elle vaut en lecture, en
+  révision et en écriture. Une feuille A4, A5 ou A6 garde sa largeur.
+- Écrire, ruban réduit : un petit bouton en bas à droite du ruban propose « Afficher en réduit » et « Afficher en
+  étendu ». Réduit, le ruban tient sur une rangée, sans le nom des groupes, dans tous ses onglets : l'annulation, le
+  style, la taille, la couleur, gras, italique, souligné, les listes, la citation, aligner à gauche et centrer restent
+  sous la main ; « Plus » range barré, exposant, indice, code, la casse, agrandir et réduire le texte, aligner à droite
+  et justifier. Le texte de la fiche y gagne une cinquantaine de pixels de hauteur. Le ruban reste étendu tant que vous
+  ne le réduisez pas, l'ordinateur retient le choix, et les raccourcis clavier ne changent pas.
+- Logotype : l'icône de kyfRev suivie de son nom en deux tons, à l'accueil, dans Paramètres › À propos et en tête du
+  README (`assets/logo`, en clair et en sombre).
+- Animation d'ouverture : quand la fenêtre paraît, les fiches de l'icône se feuillettent et se rangent en éventail, la
+  dernière s'écrit (son titre, ses lignes, un passage surligné, puis la frise des J), et le nom arrive en fondu. À la
+  toute première ouverture, sur l'accueil, elle prend un peu moins de cinq secondes et le logotype monte à sa place en
+  tête de l'accueil ; toutes les fois suivantes elle dure moins d'une seconde et laisse la place en fondu. Tant que la
+  liste du jour se lit encore, le logotype reste affiché au lieu d'une vue vide. Un clic ou une touche la passe (dans
+  un champ, comme le mot de passe d'un coffre chiffré, la touche tapée arrive au champ), et rien ne joue quand les
+  animations sont réduites (Windows, ou Paramètres › Apparence).
 
 ### Modifié
 - Désinstallation : le désinstallateur demande ce qu'il faut faire de vos réglages (le dernier coffre ouvert, l'apparence,
@@ -33,6 +52,40 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   coffre d'avant sans qu'on le lui demande. Vos fiches et vos sauvegardes ne sont jamais supprimées, et un dossier qui a
   un coffre n'est jamais touché. Une désinstallation silencieuse conserve les réglages, sauf `/REGLAGES=supprimer` ;
   `/REGLAGES=garder` les conserve sans poser la question. L'installation et la mise à jour ne changent pas.
+- Transitions : une fenêtre de dialogue arrive en fondu en montant un peu, une vue qui en remplace une autre arrive en
+  fondu, les menus et les listes déroulantes s'ouvrent en fondu. Elles durent 120 ou 220 millièmes de seconde, et rien ne
+  bouge quand les animations sont réduites (Windows, ou Paramètres › Apparence).
+- L'icône de kyfRev se montre dans l'application : à l'accueil, à l'écran de déverrouillage d'un coffre chiffré (avec un
+  cadenas en pastille) et dans Paramètres › À propos. Elle n'y paraissait qu'en petit, dans la barre de titre.
+- Lecture : la colonne de texte d'une fiche sans mise en page passe de 820 à 680 pixels, soit d'environ 115 à environ
+  95 caractères par ligne. « Large », dans Paramètres › Apparence, rend l'ancienne largeur.
+- Lecture, ce qui est plus large que la colonne de texte : un tableau, une image seule sur sa ligne ou un schéma garde
+  la place qu'il avait, jusqu'à 820 pixels, et déborde autant de chaque côté du texte. Seul le texte se resserre. Dans
+  une fenêtre qui n'a que la place du texte, sur un papier (uni, lignes, carreaux) et sur une feuille A4, A5 ou A6,
+  rien ne déborde. En écriture, ces blocs suivent encore la colonne : un tableau large y paraît plus serré qu'en lecture.
+- Tableaux, en lecture : un tableau ajusté à son contenu garde la largeur que ses colonnes demandent, dans une colonne
+  de texte plus étroite ou plus large que 820 pixels (une fenêtre étroite, le réglage de largeur), sur un papier et
+  sur une feuille A4, A5 ou A6 ; jusqu'ici il se resserrait ou s'étirait. Sur un papier ou une feuille, la place d'un
+  tableau se compte maintenant entre les marges, et plus sur toute la vue. Les tableaux d'une longue fiche qui
+  arrivent après le premier écran prennent leurs largeurs comme ceux du début, sans attendre que la fenêtre change
+  de taille.
+- Aujourd'hui : une seule carte, celle de la liste à réviser, à toutes les largeurs. Le compte du jour n'est plus
+  encadré ; les avertissements (un point à vérifier dans le coffre, un rappel qui attend depuis plus de 30 jours) sont
+  des lignes dans leur couleur, un point devant, et celui du coffre porte un bouton « Voir dans Santé du coffre » ; un
+  filet sépare les fiches de la liste ; la colonne de droite, à 300 pixels, sépare ses parties (rappels, à venir, cette
+  semaine, encart d'un module) par de l'espace et un filet. Sur un grand écran, l'aperçu de la ligne choisie n'a plus
+  de cadre, et sur un très grand écran les deux moitiés de la liste sont dans la même carte, un filet entre elles.
+  Rien n'est retiré.
+- Archives : les actions d'une fiche (ouvrir, remettre en révision, suspendre ou reprendre ses rappels) passent
+  derrière un bouton « ⋯ », le même menu qu'au clic droit. Chaque fiche tient sur une ligne, sans répéter les mêmes
+  boutons de ligne en ligne.
+- Lisibilité : plus aucun texte sous 12 px (les jours et les mois de la charge à venir, le compteur du menu réduit à ses
+  icônes, la pastille « partout » d'une définition, le numéro d'une liste dans le ruban), et les chevrons passent de 10
+  à 12 px. Les boutons de la fenêtre (réduire, agrandir, fermer) gardent la taille que leur donne Windows.
+- Écrire, historique des versions : la fenêtre se ferme par un bouton ordinaire. « Restaurer » y est le seul bouton plein,
+  comme le veut la règle « une seule action principale par vue ».
+- Écrire, ruban Insertion : « SmartArt » s'appelle « Diagramme » (« Insérer un diagramme », « Supprimer ce diagramme »).
+  Ce qui est écrit dans les fiches ne change pas : les fiches existantes se lisent comme avant.
 - Raccourcis changés (Paramètres › Raccourcis) : les infobulles, la recherche (Ctrl+K), le menu « ⋯ » et le clic droit
   d'une fiche, le bouton du menu dans la barre de titre et ce qu'entend un lecteur d'écran nomment maintenant la touche
   choisie, et la suivent dès qu'elle change. Jusqu'ici seule l'aide (F1) le faisait.

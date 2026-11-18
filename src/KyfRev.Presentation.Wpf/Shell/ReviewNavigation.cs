@@ -34,6 +34,9 @@ public interface IReviewOpener
     /// <summary>Ouvre la charge des 30 prochains jours, réduite à ce que montre <paramref name="filter"/>.</summary>
     void OpenWorkload(DashboardFilter filter);
 
+    /// <summary>Ouvre « Santé du coffre », où se lit ce qu'un avertissement annonce.</summary>
+    void OpenHealth();
+
     /// <summary>Lance une séance d'étude sur ces éléments, dans cet ordre.</summary>
     void StartSession(IReadOnlyList<DueItem> items, bool activeRecall);
 
@@ -158,6 +161,16 @@ public sealed class ReviewNavigation : IReviewOpener
     public void PrintSheet(string sheetId) => OpenSheet(sheetId, revising: false, prints: true);
 
     /// <inheritdoc/>
+    public void OpenHealth()
+    {
+        var shell = Shell;
+        if (shell.MainNavigation.Concat(shell.SecondaryNavigation).FirstOrDefault(item => item.Id == CorePages.Health) is { } health)
+        {
+            shell.Navigate(health);
+        }
+    }
+
+    /// <inheritdoc/>
     public void OpenWorkload(DashboardFilter filter)
     {
         if (Workload is not { } page)
@@ -188,7 +201,7 @@ public sealed class ReviewNavigation : IReviewOpener
     {
         var shell = Shell;
         var from = shell.Current;
-        var page = new SheetPageViewModel(_sheets, _annotations, Bar, sheetId, () => shell.Navigate(from), OpenSheet, _links, Editor, revising, ActiveRecall) { PageSetup = PageSetupOf(sheetId), Print = new PrintViewModel(_printing), SheetZoom = _machine?.Current.SheetZoom ?? 1, SheetZoomChanged = zoom => _machine?.Update(preferences => preferences with { SheetZoom = zoom }), PassageToShow = passageId, RangeToShow = range, Masks = new ImageMaskEditorViewModel(_sheets, _editing), ReadAloud = _speech is null ? null : new ReadAloudViewModel(_speech, _machine), MarksDefinedWords = _machine?.Current.MarkDefinedWords ?? true, OpenPassage = OpenPassageInSheet, Sharing = _sharing, FocusMode = shell };
+        var page = new SheetPageViewModel(_sheets, _annotations, Bar, sheetId, () => shell.Navigate(from), OpenSheet, _links, Editor, revising, ActiveRecall) { PageSetup = PageSetupOf(sheetId), Print = new PrintViewModel(_printing), SheetZoom = _machine?.Current.SheetZoom ?? 1, Column = () => _machine?.Current.Column ?? ReadingColumn.Comfortable, IsRibbonReduced = _machine?.Current.RibbonReduced ?? false, RibbonReducedChanged = reduced => _machine?.Update(preferences => preferences with { RibbonReduced = reduced }), SheetZoomChanged = zoom => _machine?.Update(preferences => preferences with { SheetZoom = zoom }), PassageToShow = passageId, RangeToShow = range, Masks = new ImageMaskEditorViewModel(_sheets, _editing), ReadAloud = _speech is null ? null : new ReadAloudViewModel(_speech, _machine), MarksDefinedWords = _machine?.Current.MarkDefinedWords ?? true, OpenPassage = OpenPassageInSheet, Sharing = _sharing, FocusMode = shell };
         shell.Navigate(new NavigationItem(CorePages.Sheet, ReviewText.SheetPage, Icons.Document, int.MaxValue, page));
         if (writes)
         {

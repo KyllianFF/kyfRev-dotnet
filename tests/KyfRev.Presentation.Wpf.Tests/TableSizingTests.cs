@@ -6,6 +6,20 @@ namespace KyfRev.Presentation.Wpf.Tests;
 [TestClass]
 public sealed class TableSizingTests
 {
+    [TestMethod]
+    public void A_fitted_table_keeps_what_it_asks_for_and_leaves_the_rest_empty()
+    {
+        var sizing = new TableSizing([40, 60], [120, 180], Fitted: true);
+
+        Assert.AreEqual("120|180", string.Join('|', sizing.For(680)), "dans une colonne de texte plus large que lui");
+        Assert.AreEqual(380, sizing.RestFor(680), "le reste de la ligne à la colonne vide");
+        Assert.AreEqual(520, sizing.RestFor(820));
+        Assert.AreEqual(0, sizing.RestFor(300), "pile sa largeur : rien ne reste");
+        Assert.AreEqual(0, sizing.RestFor(200), 1e-9, "plus étroit que lui : il se resserre, et rien ne reste");
+        Assert.AreEqual(200, sizing.For(200).Sum(), 1e-9);
+        Assert.IsFalse(new TableSizing([40], [120]).Fitted, "pleine largeur, sauf mention");
+    }
+
     private static readonly TableSizing Verbs = new([60, 80], [150, 100]);
     private static readonly double[] Asked = [150, 100];
     private static readonly double[] Words = [60, 80];

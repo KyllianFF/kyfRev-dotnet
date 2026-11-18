@@ -1600,6 +1600,153 @@ public sealed class WritingTests
         scene.Ribbon.TablePopup.IsOpen = false;
     }
 
+    [STATestMethod]
+    public void The_ribbon_is_extended_until_its_corner_button_reduces_it_to_one_row()
+    {
+        using var scene = new Scene("un mot ici");
+        var ribbon = scene.Ribbon;
+        Assert.IsFalse(ribbon.IsReduced, "étendu au départ, comme il l'a toujours été");
+        Assert.AreEqual(Visibility.Collapsed, ribbon.MoreGroup.Visibility);
+        Assert.AreEqual(Orientation.Vertical, ribbon.FontRows.Orientation);
+        Assert.IsTrue(ribbon.StrikeButton.IsVisible && ribbon.AlignJustifyButton.IsVisible && ribbon.CaseButton.IsVisible && ribbon.GrowButton.IsVisible);
+        Assert.IsNotEmpty(Captions(ribbon), "chaque groupe a son nom");
+        var extended = ribbon.ActualHeight;
+
+        // Le bouton d'affichage : petit, en bas à droite du ruban, avec les deux affichages.
+        var display = ribbon.DisplayButton;
+        Assert.AreEqual(EditingText.RibbonDisplay, System.Windows.Automation.AutomationProperties.GetName(display));
+        var corner = display.TranslatePoint(new Point(display.ActualWidth, display.ActualHeight), ribbon);
+        Assert.IsGreaterThan(ribbon.ActualWidth - 12, corner.X, "à droite");
+        Assert.IsGreaterThan(ribbon.ActualHeight - 12, corner.Y, "en bas");
+        Click(display);
+        Assert.IsTrue(ribbon.DisplayMenu.IsOpen);
+        Assert.AreSame(display, ribbon.DisplayMenu.PlacementTarget);
+        Assert.AreEqual(
+            $"{EditingText.RibbonReduced}|{EditingText.RibbonExtended}",
+            string.Join('|', ribbon.DisplayMenu.Items.OfType<MenuItem>().Select(item => (string)item.Header)));
+        Assert.IsTrue(ribbon.ExtendedItem.IsChecked && !ribbon.ReducedItem.IsChecked, "l'affichage en cours est coché");
+        ribbon.DisplayMenu.IsOpen = false;
+
+        Choose(ribbon.DisplayMenu, EditingText.RibbonReduced);
+        scene.SheetPage.UpdateLayout();
+        TestShell.Flush();
+
+        Assert.IsTrue(ribbon.IsReduced);
+        Assert.IsTrue(scene.Page.IsRibbonReduced, "la page le retient");
+        Assert.IsTrue(ribbon.ReducedItem.IsChecked && !ribbon.ExtendedItem.IsChecked);
+        Assert.IsEmpty(Captions(ribbon), "plus de nom sous les groupes");
+        Assert.IsLessThan(extended - 30, ribbon.ActualHeight, "une rangée et les légendes en moins : le texte de la fiche gagne cette hauteur");
+        foreach (var kept in new ButtonBase[] { ribbon.UndoButton, ribbon.RedoButton, ribbon.StyleButton, ribbon.SizeButton, ribbon.ColorButton, ribbon.BoldButton, ribbon.ItalicButton, ribbon.UnderlineButton, ribbon.BulletsButton, ribbon.NumbersButton, ribbon.TasksButton, ribbon.QuoteButton, ribbon.AlignLeftButton, ribbon.AlignCenterButton, ribbon.MoreButton })
+        {
+            Assert.IsTrue(kept.IsVisible, kept.Name);
+        }
+        foreach (var ranged in new ButtonBase[] { ribbon.GrowButton, ribbon.ShrinkButton, ribbon.CaseButton, ribbon.StrikeButton, ribbon.SuperscriptButton, ribbon.SubscriptButton, ribbon.InlineCodeButton, ribbon.AlignRightButton, ribbon.AlignJustifyButton })
+        {
+            Assert.IsFalse(ranged.IsVisible, ranged.Name);
+        }
+        var rows = Descendants(ribbon.HomePanel).OfType<ButtonBase>().Where(button => button.IsVisible)
+            .Select(button => Math.Round(button.TranslatePoint(new Point(0, button.ActualHeight / 2), ribbon).Y)).Distinct().ToList();
+        Assert.HasCount(1, rows, "tous les outils de l'Accueil sur une seule rangée");
+        Assert.IsEmpty(OverflowFaults(ribbon));
+
+        // « Plus » : ce qui a quitté la rangée, coché selon le texte sous le curseur, et qui agit comme les boutons.
+        scene.Select(3, 3);
+        Click(ribbon.MoreButton);
+        Assert.IsTrue(ribbon.MoreMenu.IsOpen);
+        Assert.AreSame(ribbon.MoreButton, ribbon.MoreMenu.PlacementTarget);
+        Assert.AreEqual(
+            string.Join('|', EditingText.Strike, EditingText.Superscript, EditingText.Subscript, EditingText.InlineCode, EditingText.FontGrow, EditingText.FontShrink, EditingText.CaseMenuTitle, EditingText.AlignRight, EditingText.AlignJustify),
+            string.Join('|', ribbon.MoreMenu.Items.OfType<MenuItem>().Select(item => (string)item.Header)));
+        var strike = ribbon.MoreMenu.Items.OfType<MenuItem>().First();
+        Assert.IsTrue(strike.IsCheckable && !strike.IsChecked && strike.IsEnabled);
+        ribbon.MoreMenu.IsOpen = false;
+        Choose(ribbon.MoreMenu, EditingText.Strike);
+        Assert.AreEqual("un ~~mot~~ ici", Written(scene));
+        var cases = ribbon.MoreMenu.Items.OfType<MenuItem>().Single(item => (string)item.Header == EditingText.CaseMenuTitle);
+        Assert.AreEqual(ribbon.CaseMenu.Items.Count, cases.Items.Count, "toutes les casses");
+        cases.Items.OfType<MenuItem>().First(item => (string)item.Header == EditingText.CaseUpper).RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+        TestShell.Flush();
+        Assert.AreEqual("un ~~MOT~~ ici", Written(scene));
+
+        // Les autres onglets suivent : une rangée, de la hauteur de l'Accueil, les grands boutons couchés.
+        var home = ribbon.ActualHeight;
+        Click(ribbon.InsertTab);
+        scene.SheetPage.UpdateLayout();
+        TestShell.Flush();
+        Assert.AreEqual(home, ribbon.ActualHeight, 1, "le texte ne bouge pas d'un onglet à l'autre");
+        Assert.AreEqual(Orientation.Horizontal, ((StackPanel)ribbon.TableButton.Content).Orientation);
+        Assert.IsEmpty(OverflowFaults(ribbon));
+        Click(ribbon.HomeTab);
+
+        // Et retour : tout revient, sans rien perdre.
+        Choose(ribbon.DisplayMenu, EditingText.RibbonExtended);
+        scene.SheetPage.UpdateLayout();
+        TestShell.Flush();
+        Assert.IsFalse(scene.Page.IsRibbonReduced);
+        Assert.AreEqual(extended, ribbon.ActualHeight, 1);
+        Assert.IsTrue(ribbon.StrikeButton.IsVisible && ribbon.CaseButton.IsVisible);
+        Assert.AreEqual(Visibility.Collapsed, ribbon.MoreGroup.Visibility);
+        Assert.AreEqual(Orientation.Vertical, ((StackPanel)ribbon.TableButton.Content).Orientation);
+        Assert.IsNotEmpty(Captions(ribbon));
+
+        // Recliquer l'affichage en cours ne le décoche pas.
+        Choose(ribbon.DisplayMenu, EditingText.RibbonExtended);
+        Assert.IsTrue(ribbon.ExtendedItem.IsChecked && !ribbon.ReducedItem.IsChecked);
+    }
+
+    [STATestMethod]
+    [DataRow(ThemeKind.Light, 1400)]
+    [DataRow(ThemeKind.Dark, 1400)]
+    [DataRow(ThemeKind.Dark, 1000)]
+    [DataRow(ThemeKind.Light, 800)]
+    [DataRow(ThemeKind.HighContrast, 1400)]
+    [DataRow(ThemeKind.Light, 470)]
+    [DataRow(ThemeKind.Dark, 470)]
+    [DataRow(ThemeKind.Light, 2600)]
+    public void The_reduced_ribbon_is_readable_and_stays_in_its_frame(ThemeKind theme, int width)
+    {
+        using var scene = new Scene(width: width, theme: theme);
+        var ribbon = scene.Ribbon;
+        var name = $"{width}-{(theme == ThemeKind.Dark ? "sombre" : theme == ThemeKind.HighContrast ? "contraste" : "clair")}";
+        if (ribbon.IsCompact)
+        {
+            // Fenêtre étroite : la barre courte, et le volet de la mise en forme ouvert.
+            ribbon.FormatToggle.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+            Assert.IsTrue(ribbon.IsPanelOpen);
+        }
+        scene.SheetPage.UpdateLayout();
+        TestShell.Flush();
+        ribbon.Capture($"ruban-etendu-{name}");
+
+        scene.Page.IsRibbonReduced = true;
+        scene.SheetPage.UpdateLayout();
+        TestShell.Flush();
+        Assert.IsTrue(ribbon.IsReduced, "la page commande le ruban");
+
+        foreach (var (tab, tabName) in new[] { (ribbon.HomeTab, "accueil"), (ribbon.InsertTab, "insertion"), (ribbon.PageTab, "mise-en-page") })
+        {
+            if (!tab.IsVisible)
+            {
+                continue;
+            }
+            tab.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+            scene.SheetPage.UpdateLayout();
+            TestShell.Flush();
+            ribbon.Capture($"ruban-reduit-{name}-{tabName}");
+            var contrast = Faults(theme, ribbon);
+            Assert.IsEmpty(contrast, string.Join(", ", contrast));
+            var overflow = OverflowFaults(ribbon);
+            Assert.IsEmpty(overflow, string.Join(", ", overflow));
+            Assert.IsEmpty(Captions(ribbon), tabName);
+        }
+        Assert.IsTrue(ribbon.DisplayButton.IsVisible, "le bouton d'affichage reste à portée");
+        Assert.IsGreaterThanOrEqualTo(28, ribbon.DisplayButton.ActualWidth);
+    }
+
+    /// <summary>Les noms de groupe que le ruban montre.</summary>
+    private static List<string> Captions(EditorRibbon ribbon) =>
+        [.. Descendants(ribbon).OfType<TextBlock>().Where(text => text.Name == "Caption" && text.IsVisible).Select(text => text.Text)];
+
     [TestMethod]
     public void The_table_size_reads_in_french()
     {

@@ -23,6 +23,19 @@ public enum ReadingWidth
     Full,
 }
 
+/// <summary>La colonne de texte d'une fiche lue sans mise en page : la longueur de ses lignes.</summary>
+public enum ReadingColumn
+{
+    /// <summary>Des lignes courtes, environ 80 caractères à la taille normale.</summary>
+    Narrow,
+
+    /// <summary>Des lignes de longueur reposante, environ 95 caractères.</summary>
+    Comfortable,
+
+    /// <summary>Des lignes longues, environ 115 caractères : la largeur d'avant ce réglage.</summary>
+    Wide,
+}
+
 /// <summary>Taille du texte d'une fiche.</summary>
 public enum ReadingTextSize
 {
@@ -104,8 +117,20 @@ public sealed record MachinePreferences
     /// </summary>
     public string FirstUse { get; init; } = string.Empty;
 
-    /// <summary>Largeur du texte des fiches : gardée pour relire les anciennes préférences, elle n'a plus d'effet.</summary>
+    /// <summary>
+    /// L'ancienne largeur du texte des fiches : gardée pour relire les anciennes préférences, elle n'a plus d'effet. La largeur
+    /// en vigueur est <see cref="Column"/>.
+    /// </summary>
     public ReadingWidth Width { get; init; } = ReadingWidth.Comfortable;
+
+    /// <summary>La colonne de texte des fiches lues sans mise en page.</summary>
+    public ReadingColumn Column { get; init; } = ReadingColumn.Comfortable;
+
+    /// <summary>
+    /// Le ruban d'écriture est réduit : une seule rangée d'outils, sans le nom des groupes, les outils rares sous « Plus ».
+    /// Étendu au départ.
+    /// </summary>
+    public bool RibbonReduced { get; init; }
 
     /// <summary>Taille du texte des fiches.</summary>
     public ReadingTextSize TextSize { get; init; } = ReadingTextSize.Normal;

@@ -29,6 +29,12 @@ internal sealed partial class App : System.Windows.Application
     /// <summary>Les emplacements de l'application ; les scénarios d'acceptation y mettent un dossier à eux.</summary>
     internal VaultLocations? Locations { get; init; }
 
+    /// <summary>
+    /// L'animation d'ouverture se joue quand la fenêtre paraît. Les scénarios d'acceptation la coupent : ils agissent dès
+    /// que la fenêtre existe, sans attendre qu'elle ait laissé la place.
+    /// </summary>
+    internal bool PlaysOpening { get; init; } = true;
+
     /// <inheritdoc/>
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -62,6 +68,12 @@ internal sealed partial class App : System.Windows.Application
         var window = _services.GetRequiredService<ShellWindow>();
         MainWindow = window;
         window.Show();
+        // Par-dessus la vue qui s'ouvre : longue la toute première fois, sur l'accueil ; ensuite moins d'une seconde. La
+        // galerie des composants, elle, s'ouvre telle quelle.
+        if (PlaysOpening && !gallery)
+        {
+            window.PlayOpening();
+        }
         FollowCaptureKey(window, shell, _services.GetRequiredService<MachineSettings>());
         // Le coffre chiffré se verrouille de lui-même après un temps d'inactivité, ou quand Windows se verrouille.
         _services.GetRequiredService<AutoLock>().Start();

@@ -718,6 +718,7 @@ internal sealed partial class SheetDocumentViewer : FlowDocumentScrollViewer
             _built.Layer.Set(Highlights ?? [], ActiveHighlight);
             _built.Layer.SetWords(Words ?? []);
             Document = _built.Build();
+            _built.Grew = OnDocumentGrew;
             ForgetPages();
             FitTables();
             ComputeHoles();
@@ -747,46 +748,64 @@ internal sealed partial class SheetDocumentViewer : FlowDocumentScrollViewer
     }
 
     /// <summary>
-    /// Les tableaux pleine largeur se partagent la largeur réelle du texte : chaque colonne garde son plus long mot tant que le
-    /// tableau le permet. Des proportions d'étoiles ne le peuvent pas seules : une fenêtre étroite les resserrait toutes d'autant.
+    /// Les tableaux se partagent la largeur réelle du texte : chaque colonne garde son plus long mot tant que le tableau le
+    /// permet, et un tableau ajusté à son contenu ne grandit ni ne se resserre avec la colonne de texte tant qu'il y tient.
+    /// Des proportions d'étoiles ne le peuvent pas seules : une fenêtre étroite les resserrait toutes d'autant.
     /// </summary>
-    internal void FitTables()
+    /// <returns>Au moins une colonne a changé de largeur.</returns>
+    internal bool FitTables()
     {
-        if (Document is not { } document || ActualWidth <= 0)
+        if (Document is null || _built is not { } built || ActualWidth <= 0)
         {
-            return;
+            return false;
         }
-        var available = ActualWidth - Padding.Left - Padding.Right - SystemParameters.VerticalScrollBarWidth - (Layout is { IsPaged: true } ? 0 : 2 * EndlessSide);
-        foreach (var table in Tables(document))
+        var changed = false;
+        // La largeur que le texte a vraiment : celle de la feuille entre ses marges ; sans feuille, celle du document, moins
+        // les marges du papier quand il est montré.
+        var available = Layout is { IsPaged: true } page
+            ? page.WidthPixels - (2 * page.MarginPixels)
+            : ActualWidth - Padding.Left - Padding.Right - SystemParameters.VerticalScrollBarWidth - (2 * EndlessSide) - (PaperShown is null ? 0 : EndlessPaperPadding.Left + EndlessPaperPadding.Right);
+        foreach (var table in built.Tables)
         {
             if (table.Tag is not TableSizing sizing)
             {
                 continue;
             }
-            var widths = sizing.For(available - table.Margin.Left - table.Margin.Right);
+            var room = available - table.Margin.Left - table.Margin.Right;
+            var widths = sizing.For(room);
             for (var column = 0; column < widths.Count && column < table.Columns.Count; column++)
             {
                 var width = new GridLength(widths[column] / DocumentBuilder.StarUnit, GridUnitType.Star);
                 if (table.Columns[column].Width != width)
                 {
                     table.Columns[column].Width = width;
+                    changed = true;
+                }
+            }
+            if (sizing.Fitted && table.Columns.Count > widths.Count && double.IsFinite(room))
+            {
+                // La colonne vide d'un tableau ajusté : ce que les autres laissent de la ligne, rien quand elles la remplissent.
+                var rest = new GridLength(sizing.RestFor(room) / DocumentBuilder.StarUnit, GridUnitType.Star);
+                if (table.Columns[widths.Count].Width != rest)
+                {
+                    table.Columns[widths.Count].Width = rest;
+                    changed = true;
                 }
             }
         }
+        return changed;
     }
 
-    private static IEnumerable<Table> Tables(DependencyObject parent)
+    /// <summary>
+    /// La suite d'une longue fiche est arrivée, ou une image a pris sa taille : les nouveaux blocs prennent leur place dans
+    /// la colonne, les nouveaux tableaux leurs largeurs, et la mise en pages reprend si l'un d'eux a changé.
+    /// </summary>
+    private void OnDocumentGrew()
     {
-        foreach (var child in LogicalTreeHelper.GetChildren(parent).OfType<DependencyObject>())
+        var blocks = FitBlocks();
+        if (FitTables() || blocks)
         {
-            if (child is Table table)
-            {
-                yield return table;
-            }
-            foreach (var inner in Tables(child))
-            {
-                yield return inner;
-            }
+            RestartPages();
         }
     }
 

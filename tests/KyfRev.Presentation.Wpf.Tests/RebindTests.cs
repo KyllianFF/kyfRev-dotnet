@@ -312,7 +312,7 @@ public sealed class RebindTests
 
         page.ZoomSheetInCommand.Execute(null);
         Assert.AreEqual(1.1, page.SheetZoom);
-        Assert.AreEqual(SheetPageViewModel.TextMaxWidth * 1.1, page.ZoomedTextWidth, 0.001, "la fiche zoomée s'élargit");
+        Assert.AreEqual(SheetPageViewModel.ComfortableTextWidth * 1.1, page.ZoomedTextWidth, 0.001, "la fiche zoomée s'élargit");
         page.SheetZoomPercent = 173;
         Assert.AreEqual(1.7, page.SheetZoom, "au dixième");
         page.SheetZoomPercent = 500;

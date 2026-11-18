@@ -123,6 +123,12 @@
   <data name="Restart" xml:space="preserve">
     <value>Remettre en révision…</value>
   </data>
+  <data name="MoreActions" xml:space="preserve">
+    <value>Actions</value>
+  </data>
+  <data name="MoreActionsHelp" xml:space="preserve">
+    <value>Ouvrir la fiche, la remettre en révision, l'inclure ou non dans les rappels.</value>
+  </data>
   <data name="RestartConfirm" xml:space="preserve">
     <value>Remettre en révision</value>
   </data>
