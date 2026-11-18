@@ -23,6 +23,10 @@ internal sealed partial class Trial : IDisposable
     {
         Directory.CreateDirectory(_folder);
         File.WriteAllText(Path.Combine(_folder, "portable.json"), """{ "coffre": "Coffre" }""");
+        // Quelqu'un qui a déjà ses habitudes : la carte des premiers pas, qu'un coffre qui débute montre en tête de la liste,
+        // ne repousse pas les lignes hors de la fenêtre, où une liste virtualisée ne les montre pas. Les essais de
+        // présentation s'occupent d'elle.
+        File.WriteAllText(Path.Combine(_folder, "preferences.json"), """{ "premiereUtilisation": "pas-masques" }""");
     }
 
     private string Vault => Path.Combine(_folder, "Coffre");

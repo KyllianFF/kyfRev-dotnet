@@ -429,18 +429,21 @@ internal sealed class RunningApplication : IDisposable
         Wait("BackButton");
     }
 
-    /// <summary>« Exclure des rappels » ou « Réinclure » : attend que la ligne ait changé.</summary>
+    /// <summary>
+    /// « Exclure des rappels » ou « Réinclure », dans le menu « ⋯ » de la fiche : attend que la ligne ait changé, son nom
+    /// disant l'état de la fiche.
+    /// </summary>
     public void ToggleArchived(string title)
     {
-        var before = WaitArchive("ToggleRow", title).Name;
-        WaitArchive("ToggleRow", title).Patterns.Invoke.Pattern.Invoke();
-        Retry.WhileTrue(() => WaitArchive("ToggleRow", title).Name == before, Patience, Interval, throwOnTimeout: true, timeoutMessage: "Le choix des rappels n'a pas changé.");
+        var before = WaitArchive("OpenRow", title).Name;
+        ChooseArchiveAction(title, "Exclure des rappels", "Réinclure");
+        Retry.WhileTrue(() => WaitArchive("OpenRow", title).Name == before, Patience, Interval, throwOnTimeout: true, timeoutMessage: "Le choix des rappels n'a pas changé.");
     }
 
-    /// <summary>« Remettre en révision… », confirmé : attend que la fiche ait quitté la liste.</summary>
+    /// <summary>« Remettre en révision… », dans le menu « ⋯ » de la fiche, confirmé : attend que la fiche ait quitté la liste.</summary>
     public void RestartArchived(string title)
     {
-        WaitArchive("RestartRow", title).Patterns.Invoke.Pattern.Invoke();
+        ChooseArchiveAction(title, "Remettre en révision…");
         Confirm();
         Retry.WhileTrue(() => FindArchive("OpenRow", title) is not null, Patience, Interval, throwOnTimeout: true, timeoutMessage: "La fiche est restée dans les archives.");
     }
@@ -495,6 +498,21 @@ internal sealed class RunningApplication : IDisposable
 
     private AutomationElement? FindArchive(string id, string title) =>
         _window.FindAllDescendants(condition => condition.ByAutomationId(id)).FirstOrDefault(button => button.Name.Contains(title, StringComparison.Ordinal));
+
+    /// <summary>Ouvre le menu « ⋯ » d'une fiche des archives et y choisit l'entrée qui porte l'un de ces noms.</summary>
+    private void ChooseArchiveAction(string title, params string[] names)
+    {
+        WaitArchive("MoreRow", title).Patterns.Invoke.Pattern.Invoke();
+        var item = Retry.WhileNull(() => OpenMenuItem(names), Patience, Interval, throwOnTimeout: true, timeoutMessage: $"Le menu de « {title} » ne propose pas « {string.Join(" » ni « ", names)} ».").Result!;
+        item.Patterns.Invoke.Pattern.Invoke();
+    }
+
+    /// <summary>Une entrée d'un menu ouvert par l'application : un menu est une fenêtre à part, posée sur le bureau.</summary>
+    private AutomationElement? OpenMenuItem(string[] names) =>
+        _automation.GetDesktop()
+            .FindAllChildren(condition => condition.ByProcessId(_process.Id).And(condition.ByControlType(ControlType.Menu)))
+            .SelectMany(menu => menu.FindAllDescendants(condition => condition.ByControlType(ControlType.MenuItem)))
+            .FirstOrDefault(item => names.Contains(item.Name, StringComparer.Ordinal));
 
     private AutomationElement WaitArchive(string id, string title) =>
         Retry.WhileNull(() => FindArchive(id, title), Patience, Interval, throwOnTimeout: true, timeoutMessage: $"« {title} » n'est pas dans les archives.").Result!;

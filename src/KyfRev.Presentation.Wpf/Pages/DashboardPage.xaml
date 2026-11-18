@@ -524,7 +524,7 @@
         </Grid.RowDefinitions>
         <Ellipse Style="{StaticResource WarningDot}" />
         <TextBlock x:Name="HealthText" Grid.Column="1" Text="{Binding HealthWarning}" Style="{DynamicResource Kyf.Text.Body}" Foreground="{DynamicResource Kyf.Brush.Warning}"
-                   TextWrapping="Wrap" VerticalAlignment="Center" AutomationProperties.LiveSetting="Polite" />
+                   TextWrapping="Wrap" VerticalAlignment="Center" AutomationProperties.LiveSetting="Polite" AutomationProperties.AutomationId="HealthWarning" />
         <Border Style="{StaticResource WarningLink}">
           <Button x:Name="HealthLink" Style="{DynamicResource Kyf.Button.Subtle}" Foreground="{DynamicResource Kyf.Brush.Primary}" FontWeight="SemiBold" MinHeight="44" Padding="8,0"
                   Command="{Binding OpenHealthCommand}" Content="{x:Static pages:DashboardText.SeeHealth}" AutomationProperties.Name="{x:Static pages:DashboardText.SeeHealth}" />
@@ -537,7 +537,7 @@
         </Grid.ColumnDefinitions>
         <Ellipse Style="{StaticResource WarningDot}" />
         <TextBlock x:Name="PriorityText" Grid.Column="1" Text="{Binding PriorityWarning}" Style="{DynamicResource Kyf.Text.Body}" Foreground="{DynamicResource Kyf.Brush.Warning}"
-                   TextWrapping="Wrap" VerticalAlignment="Center" AutomationProperties.LiveSetting="Polite" />
+                   TextWrapping="Wrap" VerticalAlignment="Center" AutomationProperties.LiveSetting="Polite" AutomationProperties.AutomationId="PriorityWarning" />
       </Grid>
       <kyf:Notification x:Name="ExamMessage" Severity="Success" Message="{Binding Exams.Message}" IsOpen="{Binding Exams.HasMessage, Mode=OneWay, FallbackValue=False}"
                         IsClosable="False" Margin="0,12,0,0" />
