@@ -56,7 +56,7 @@ votre coffre n'est pas touché. N'installez pas « pour tous les utilisateurs »
 ## Le coffre
 
 À l'ouverture, kyfRev montre brièvement son logotype : les fiches se feuillettent, la dernière s'écrit, le nom arrive.
-La toute première fois l'animation prend quelques secondes, ensuite moins d'une ; un clic ou une touche la passe, et
+La toute première fois l'animation prend quelques secondes, ensuite un peu moins de trois ; un clic ou une touche la passe, et
 elle ne joue pas quand les animations sont réduites (Paramètres › Apparence).
 
 Pour voir kyfRev en marche avant d'écrire, l'accueil propose « Essayer avec un coffre d'exemple » : dix fiches inventées
