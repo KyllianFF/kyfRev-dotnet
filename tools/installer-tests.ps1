@@ -117,12 +117,27 @@ function Test-Icone([string] $Programme) {
     }
 }
 
-# Désinstalle l'installation d'essai ; rend le code de sortie du désinstallateur.
-function Invoke-Desinstallation([string[]] $Options = @()) {
-    $code = Invoke-Silencieux ((Get-Inscription).UninstallString.Trim('"')) $Options
-    # Le désinstallateur ne peut retirer le dossier, où il était, qu'une fois fermé.
+# Vrai quand le second processus du désinstallateur a fermé ce journal : il y écrit en dernier, après avoir tout retiré.
+function Test-DesinstallationFinie([string] $Journal) {
+    (Test-Path -LiteralPath $Journal) -and
+        (Select-String -LiteralPath $Journal -SimpleMatch '/SECONDPHASE' -Quiet) -and
+        (Select-String -LiteralPath $Journal -SimpleMatch 'Log closed.' -Quiet)
+}
+
+# Désinstalle l'installation d'essai ; rend le code de sortie du désinstallateur. En nettoyage, après un échec, il
+# n'affirme rien : l'erreur à montrer est celle qui a interrompu l'essai.
+function Invoke-Desinstallation([string[]] $Options = @(), [switch] $Nettoyage) {
+    $programme = (Get-Inscription).UninstallString.Trim('"')
+    $code = Invoke-Silencieux $programme $Options
+    # Le premier processus rend la main avant la fin : c'est un second, lancé depuis le dossier temporaire, qui retire le
+    # dossier d'installation puis, après lui, les réglages demandés. La désinstallation n'est finie que quand ce second
+    # processus ferme son journal ; regarder avant, c'est voir des réglages qu'il allait retirer.
+    $journal = Join-Path $journaux "$script:numero-$([IO.Path]::GetFileNameWithoutExtension($programme)).log"
     $limite = [DateTime]::UtcNow.AddSeconds(30)
-    while ((Test-Path $dossier) -and [DateTime]::UtcNow -lt $limite) { Start-Sleep -Milliseconds 250 }
+    while (((Test-Path $dossier) -or -not (Test-DesinstallationFinie $journal)) -and [DateTime]::UtcNow -lt $limite) { Start-Sleep -Milliseconds 250 }
+    if (-not $Nettoyage) {
+        Assert-Vrai (Test-DesinstallationFinie $journal) 'le désinstallateur a fini et fermé son journal'
+    }
     return $code
 }
 
@@ -305,6 +320,6 @@ finally {
     # Un essai interrompu ne laisse pas kyfRev installé.
     $reste = Get-Inscription
     if ($reste -and $reste.InstallLocation.TrimEnd('\') -eq $dossier) {
-        Invoke-Desinstallation | Out-Null
+        Invoke-Desinstallation -Nettoyage | Out-Null
     }
 }
