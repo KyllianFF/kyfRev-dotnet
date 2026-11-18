@@ -67,13 +67,13 @@ internal sealed partial class App : System.Windows.Application
         }
         var window = _services.GetRequiredService<ShellWindow>();
         MainWindow = window;
-        window.Show();
-        // Par-dessus la vue qui s'ouvre : longue la toute première fois, sur l'accueil ; ensuite moins d'une seconde. La
-        // galerie des composants, elle, s'ouvre telle quelle.
+        // Posée avant que la fenêtre ne paraisse, elle en est la première image : longue la toute première fois, sur
+        // l'accueil, plus courte ensuite. La galerie des composants, elle, s'ouvre telle quelle.
         if (PlaysOpening && !gallery)
         {
             window.PlayOpening();
         }
+        window.Show();
         FollowCaptureKey(window, shell, _services.GetRequiredService<MachineSettings>());
         // Le coffre chiffré se verrouille de lui-même après un temps d'inactivité, ou quand Windows se verrouille.
         _services.GetRequiredService<AutoLock>().Start();

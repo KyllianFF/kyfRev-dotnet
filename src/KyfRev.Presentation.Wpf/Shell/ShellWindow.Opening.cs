@@ -10,18 +10,22 @@ using KyfRev.Presentation.Wpf.Pages;
 namespace KyfRev.Presentation.Wpf.Shell;
 
 /// <remarks>
-/// L'animation d'ouverture : jouée une fois par lancement, par-dessus la vue qui s'ouvre et sous la barre de titre. La
-/// première fois, sur l'accueil, elle prend son temps et porte le logotype en tête de l'accueil ; ensuite elle dure moins
-/// d'une seconde. Un clic ou une touche la passe, et rien ne joue quand les animations sont réduites.
+/// L'animation d'ouverture : jouée une fois par lancement, par-dessus toute la fenêtre, barre de titre comprise. La première
+/// fois, sur l'accueil, elle prend son temps et porte le logotype en tête de l'accueil ; ensuite elle est plus courte. Un
+/// clic ou une touche la passe, et rien ne joue quand les animations sont réduites.
 /// </remarks>
 public sealed partial class ShellWindow
 {
     /// <summary>L'animation d'ouverture en cours ; rien quand elle n'a pas joué ou qu'elle a laissé la place.</summary>
     internal OpeningView? Opening { get; private set; }
 
+    /// <summary>La fenêtre a été dessinée à l'écran une première fois.</summary>
+    internal bool IsRendered { get; private set; }
+
     /// <summary>
-    /// Joue l'animation d'ouverture, la fenêtre une fois montrée. La première ouverture est celle où l'accueil se montre
-    /// sans que l'animation longue ait jamais été vue sur cet ordinateur.
+    /// Pose l'animation d'ouverture, à appeler avant de montrer la fenêtre : elle en est alors la première image, rien de
+    /// l'interface ne paraît avant elle. Elle ne commence qu'une fois la fenêtre à l'écran, pour être vue dès son début. La
+    /// première ouverture est celle où l'accueil se montre sans que l'animation longue ait jamais été vue sur cet ordinateur.
     /// </summary>
     /// <param name="animated">Pour les essais : joue même quand les transitions sont coupées pour eux, ou ne joue pas.</param>
     /// <returns>Vrai si l'animation a commencé ; faux quand les animations sont réduites.</returns>
@@ -34,8 +38,8 @@ public sealed partial class ShellWindow
         }
         var memory = _shell.FirstUse;
         var first = _shell.Current.Page is WelcomePageViewModel && memory is not null && !memory.Has(FirstUse.OpeningSeen);
-        UpdateLayout();
-        var width = Root.ActualWidth > 0 ? Root.ActualWidth : Width;
+        // Avant que la fenêtre ne soit montrée, sa largeur est celle qu'elle demande.
+        var width = Root.ActualWidth > 0 ? Root.ActualWidth : double.IsNaN(Width) ? MinWidth : Width;
         var opening = new OpeningView(first ? OpeningPace.First : OpeningPace.Usual, OpeningView.MarkFor(width, first))
         {
             // La liste du jour se lit encore : le logotype reste, plutôt qu'une vue vide.
@@ -43,21 +47,38 @@ public sealed partial class ShellWindow
             Landing = first ? () => Descendants(Root).OfType<WelcomePage>().FirstOrDefault()?.FindName("Brand") as Logotype : null,
         };
         Panel.SetZIndex(opening, int.MaxValue);
+        // Sur toute la fenêtre, barre de titre comprise : rien de l'interface ne se voit avant que l'animation ne laisse la place.
+        Grid.SetRowSpan(opening, Frame.RowDefinitions.Count);
         opening.Finished += (_, _) =>
         {
-            Root.Children.Remove(opening);
+            Frame.Children.Remove(opening);
             PreviewKeyDown -= OnKeyDuringOpening;
+            ContentRendered -= OnFirstRender;
             Opening = null;
         };
         Opening = opening;
-        Root.Children.Add(opening);
+        Frame.Children.Add(opening);
         PreviewKeyDown += OnKeyDuringOpening;
         if (first)
         {
             memory!.Remember(FirstUse.OpeningSeen);
         }
-        opening.Play();
+        if (IsRendered)
+        {
+            opening.Play();
+        }
+        else
+        {
+            ContentRendered += OnFirstRender;
+        }
         return true;
+    }
+
+    /// <summary>La fenêtre est à l'écran : l'animation commence, dès sa première image.</summary>
+    private void OnFirstRender(object? sender, EventArgs e)
+    {
+        ContentRendered -= OnFirstRender;
+        Opening?.Play();
     }
 
     /// <summary>

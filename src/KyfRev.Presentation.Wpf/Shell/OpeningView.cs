@@ -32,8 +32,8 @@ internal sealed record OpeningPace(
     /// <summary>La première ouverture : on voit chaque fiche passer, puis le logotype monte en tête de l'accueil.</summary>
     public static OpeningPace First { get; } = new(0.3, 0.4, 0.26, 0.34, 1.55, 0.14, 0.24, 2.45, 0.09, 3.1, 0.5, 0.3, 0.85);
 
-    /// <summary>Toutes les autres : le même déroulé en moins d'une seconde.</summary>
-    public static OpeningPace Usual { get; } = new(0.05, 0.04, 0.055, 0.12, 0.26, 0.03, 0.12, 0.38, 0.03, 0.46, 0.22, 0.08, 0.18);
+    /// <summary>Toutes les autres : le même déroulé, plus court, assez posé pour qu'on voie chaque fiche passer.</summary>
+    public static OpeningPace Usual { get; } = new(0.15, 0.2, 0.16, 0.24, 0.9, 0.08, 0.18, 1.4, 0.06, 1.75, 0.35, 0.3, 0.3);
 
     /// <summary>Le moment où le logotype est entier et a été vu.</summary>
     public double Drawn => Name + NameLength + Rest;
@@ -144,6 +144,9 @@ internal sealed class OpeningView : Grid
 
     /// <summary>Elle a laissé la place, ou on l'a passée.</summary>
     public bool IsFinished { get; private set; }
+
+    /// <summary>Elle a commencé à jouer.</summary>
+    internal bool HasBegun => _begun;
 
     /// <summary>Le logotype est entier, et elle attend que la vue soit prête pour laisser la place.</summary>
     internal bool IsWaiting => _wait is { IsEnabled: true };

@@ -40,7 +40,9 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 - Animation d'ouverture : quand la fenêtre paraît, les fiches de l'icône se feuillettent et se rangent en éventail, la
   dernière s'écrit (son titre, ses lignes, un passage surligné, puis la frise des J), et le nom arrive en fondu. À la
   toute première ouverture, sur l'accueil, elle prend un peu moins de cinq secondes et le logotype monte à sa place en
-  tête de l'accueil ; toutes les fois suivantes elle dure moins d'une seconde et laisse la place en fondu. Tant que la
+  tête de l'accueil ; toutes les fois suivantes elle dure un peu moins de trois secondes et laisse la place en fondu.
+  Elle couvre toute la fenêtre, barre de titre comprise, et ne commence qu'une fois la fenêtre à l'écran : rien de
+  l'interface ne paraît avant elle, et on la voit dès son début. Tant que la
   liste du jour se lit encore, le logotype reste affiché au lieu d'une vue vide. Un clic ou une touche la passe (dans
   un champ, comme le mot de passe d'un coffre chiffré, la touche tapée arrive au champ), et rien ne joue quand les
   animations sont réduites (Windows, ou Paramètres › Apparence).

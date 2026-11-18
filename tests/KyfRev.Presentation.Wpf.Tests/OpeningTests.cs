@@ -52,10 +52,12 @@ public sealed class OpeningTests
     }
 
     [TestMethod]
-    public void The_usual_opening_lasts_less_than_a_second_and_the_first_one_takes_its_time()
+    public void The_usual_opening_is_slow_enough_to_be_seen_and_the_first_one_takes_its_time()
     {
-        Assert.IsLessThan(1, OpeningPace.Usual.Total);
-        Assert.IsGreaterThan(0.6, OpeningPace.Usual.Total, "assez pour être vue");
+        Assert.AreEqual(2.7, OpeningPace.Usual.Total, 0.001, "assez posée pour qu'on voie chaque fiche passer");
+        Assert.IsLessThan(3, OpeningPace.Usual.Total, "sans faire attendre chaque jour");
+        Assert.IsLessThan(OpeningPace.First.Total, OpeningPace.Usual.Total);
+        Assert.IsGreaterThanOrEqualTo(0.15, OpeningPace.Usual.FlipGap, "les fiches partent l'une après l'autre, pas d'un seul geste");
         Assert.AreEqual(4.75, OpeningPace.First.Total, 0.001);
         Assert.AreEqual(OpeningPace.First.Name + OpeningPace.First.NameLength + OpeningPace.First.Rest, OpeningPace.First.Drawn);
 
@@ -282,8 +284,10 @@ public sealed class OpeningTests
             Assert.IsFalse(window.PlayOpening(animated: true), "une seule à la fois");
             var brand = (Logotype)Descendants(window).OfType<WelcomePage>().Single().FindName("Brand");
             Assert.AreEqual(0d, brand.Opacity, "le logotype de l'accueil attend celui de l'animation");
-            var root = (Grid)window.FindName("Root");
-            Assert.AreSame(opening, root.Children[^1], "par-dessus la vue, sous la barre de titre");
+            var frame = (Grid)window.FindName("Frame");
+            Assert.AreSame(opening, frame.Children[^1], "par-dessus toute la fenêtre");
+            Assert.AreEqual(frame.RowDefinitions.Count, Grid.GetRowSpan(opening), "barre de titre comprise");
+            Assert.IsTrue(opening.HasBegun, "la fenêtre déjà à l'écran : elle joue aussitôt");
 
             // Une touche la passe, sans activer le bouton que l'on ne voit pas encore.
             var key = Key(window, System.Windows.Input.Key.Enter);
@@ -291,7 +295,7 @@ public sealed class OpeningTests
             Assert.IsNull(window.Opening);
             Assert.IsTrue(opening.IsFinished);
             Assert.AreEqual(1d, brand.Opacity);
-            Assert.IsFalse(root.Children.Contains(opening));
+            Assert.IsFalse(frame.Children.Contains(opening));
             Assert.IsFalse(Key(window, System.Windows.Input.Key.Enter).Handled, "l'animation passée, les touches reprennent leur cours");
         }
         finally
@@ -341,6 +345,45 @@ public sealed class OpeningTests
             window.Close();
         }
         Assert.IsNotNull(shell);
+    }
+
+    [STATestMethod]
+    public void Laid_before_the_window_shows_it_is_the_first_thing_drawn_and_starts_once_on_screen()
+    {
+        using var ui = new UiThread();
+        var test = new TestShell();
+        test.Shell.FirstUse = new FirstUse(new MachineSettings(new MemoryMachinePreferences()));
+        var window = new ShellWindow(test.Shell) { ShowActivated = false, Left = -10000, Top = -10000, Width = 1000, Height = 700, WindowStartupLocation = WindowStartupLocation.Manual };
+        window.Resources.MergedDictionaries.Add(test.Design.Dictionary);
+        try
+        {
+            // Comme au démarrage : posée avant que la fenêtre ne soit montrée.
+            Assert.IsFalse(window.IsRendered);
+            Assert.IsTrue(window.PlayOpening(animated: true));
+            var opening = window.Opening!;
+            Assert.AreEqual(OpeningView.MarkFor(1000, first: false), opening.Mark, "à la taille de la fenêtre qui va paraître");
+            Assert.IsFalse(opening.HasBegun, "elle attend que la fenêtre soit à l'écran");
+
+            window.Show();
+            UiThread.Until(() => window.IsRendered);
+            TestShell.Flush();
+
+            Assert.IsTrue(opening.HasBegun, "la fenêtre à l'écran, elle commence");
+            var frame = (Grid)window.FindName("Frame");
+            var titleBar = (FrameworkElement)window.FindName("TitleBar");
+            var covered = opening.TransformToVisual(frame).TransformBounds(new Rect(opening.RenderSize));
+            var bar = titleBar.TransformToVisual(frame).TransformBounds(new Rect(titleBar.RenderSize));
+            Assert.IsTrue(covered.Contains(bar), "la barre de titre est sous l'animation");
+            Assert.AreEqual(1d, opening.Veil.Opacity, "le fond de l'animation cache l'interface");
+            Assert.AreEqual(0d, opening.Logo.Opacity, 0.2, "et le logotype commence à paraître, du début");
+            opening.Skip();
+            Assert.IsNull(window.Opening);
+            Assert.IsFalse(frame.Children.Contains(opening));
+        }
+        finally
+        {
+            window.Close();
+        }
     }
 
     private static (ShellWindow Window, ShellViewModel Shell) Window(FirstUse memory, TestVaults? vaults)
