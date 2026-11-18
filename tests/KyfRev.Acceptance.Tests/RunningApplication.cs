@@ -502,6 +502,9 @@ internal sealed class RunningApplication : IDisposable
     /// <summary>Ouvre le menu « ⋯ » d'une fiche des archives et y choisit l'entrée qui porte l'un de ces noms.</summary>
     private void ChooseArchiveAction(string title, params string[] names)
     {
+        // Un menu ouvert dans une fenêtre qui n'est pas au premier plan se referme aussitôt : l'hôte des scénarios s'ouvre
+        // sans le prendre, la fenêtre le prend le temps du menu.
+        _window.SetForeground();
         WaitArchive("MoreRow", title).Patterns.Invoke.Pattern.Invoke();
         var item = Retry.WhileNull(() => OpenMenuItem(names), Patience, Interval, throwOnTimeout: true, timeoutMessage: $"Le menu de « {title} » ne propose pas « {string.Join(" » ni « ", names)} ».").Result!;
         item.Patterns.Invoke.Pattern.Invoke();
