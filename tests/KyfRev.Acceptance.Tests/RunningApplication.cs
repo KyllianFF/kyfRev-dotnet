@@ -510,11 +510,14 @@ internal sealed class RunningApplication : IDisposable
         item.Patterns.Invoke.Pattern.Invoke();
     }
 
-    /// <summary>Une entrée d'un menu ouvert par l'application : un menu est une fenêtre à part, posée sur le bureau.</summary>
+    /// <summary>
+    /// Une entrée d'un menu ouvert par l'application. Un menu est dans une fenêtre à part, posée sur le bureau : la fenêtre
+    /// « Popup » de WPF, dont il est un enfant, et non le menu lui-même.
+    /// </summary>
     private AutomationElement? OpenMenuItem(string[] names) =>
         _automation.GetDesktop()
-            .FindAllChildren(condition => condition.ByProcessId(_process.Id).And(condition.ByControlType(ControlType.Menu)))
-            .SelectMany(menu => menu.FindAllDescendants(condition => condition.ByControlType(ControlType.MenuItem)))
+            .FindAllChildren(condition => condition.ByProcessId(_process.Id))
+            .SelectMany(window => window.FindAllDescendants(condition => condition.ByControlType(ControlType.MenuItem)))
             .FirstOrDefault(item => names.Contains(item.Name, StringComparer.Ordinal));
 
     private AutomationElement WaitArchive(string id, string title) =>
