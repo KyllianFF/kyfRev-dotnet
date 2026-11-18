@@ -27,12 +27,6 @@
   <data name="ComingSoon" xml:space="preserve">
     <value>Cette vue arrive dans une prochaine version de kyfRev. Vos fiches restent dans le coffre, lisibles par la version 0.x en attendant.</value>
   </data>
-  <data name="CreateVault" xml:space="preserve">
-    <value>Créer un coffre</value>
-  </data>
-  <data name="CreateVaultHere" xml:space="preserve">
-    <value>Créer le coffre ici</value>
-  </data>
   <data name="Definitions" xml:space="preserve">
     <value>Définitions</value>
   </data>
@@ -89,9 +83,6 @@
   </data>
   <data name="MainNavigation" xml:space="preserve">
     <value>Navigation principale</value>
-  </data>
-  <data name="NewVaultHelp" xml:space="preserve">
-    <value>Un nouveau coffre se crée dans un dossier vide.</value>
   </data>
   <data name="NoCommand" xml:space="preserve">
     <value>Aucune commande ne correspond.</value>

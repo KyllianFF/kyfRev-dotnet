@@ -23,12 +23,6 @@ public static class ShellText
     /// <summary>Explication des vues à venir.</summary>
     public static string ComingSoon => Text(nameof(ComingSoon));
 
-    /// <summary>« Créer un coffre ».</summary>
-    public static string CreateVault => Text(nameof(CreateVault));
-
-    /// <summary>« Créer le coffre ici ».</summary>
-    public static string CreateVaultHere => Text(nameof(CreateVaultHere));
-
     /// <summary>« Définitions ».</summary>
     public static string Definitions => Text(nameof(Definitions));
 
@@ -82,9 +76,6 @@ public static class ShellText
 
     /// <summary>« Autres vues » : le menu de l'onglet « Plus ».</summary>
     public static string MoreViews => Text(nameof(MoreViews));
-
-    /// <summary>« Un nouveau coffre se crée dans un dossier vide. »</summary>
-    public static string NewVaultHelp => Text(nameof(NewVaultHelp));
 
     /// <summary>« Aucune commande ne correspond. ».</summary>
     public static string NoCommand => Text(nameof(NoCommand));

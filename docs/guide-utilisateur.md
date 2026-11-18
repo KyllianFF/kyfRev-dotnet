@@ -41,6 +41,10 @@ votre coffre n'est pas touché. N'installez pas « pour tous les utilisateurs »
 
 ## Le coffre
 
+Pour voir kyfRev en marche avant d'écrire, l'accueil propose « Essayer avec un coffre d'exemple » : dix fiches inventées
+sur six matières, déjà en cours de révision. Il se crée dans son propre dossier « Exemple », à côté du coffre prévu, et
+ne touche jamais à vos fiches. Pour créer ou rouvrir votre coffre ensuite : Paramètres › Coffre et chiffrement.
+
 Un coffre est un dossier : des fichiers Markdown et, dans `.suivi`, le calendrier de vos révisions. Ne modifiez pas `.suivi` à la
 main. Paramètres › Coffre et chiffrement permet d'en ouvrir ou d'en créer un autre.
 

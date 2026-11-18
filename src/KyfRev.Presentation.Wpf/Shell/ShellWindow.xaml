@@ -398,7 +398,7 @@
       </Grid>
     </Border>
 
-  <Grid x:Name="Root" Grid.Row="1">
+  <Grid x:Name="Root" Grid.Row="1" pages:FirstTip.Memory="{Binding FirstUse}">
     <!-- Espace de travail, agrandi ou réduit par le zoom. Le menu suit la largeur de la fenêtre
          (ShellLayout) : barre latérale, colonne d'icônes, ou onglets en bas ; le contenu ne défile
          jamais horizontalement. -->
@@ -539,10 +539,19 @@
     </kyf:Dialog>
 
     <!-- Aide des raccourcis (F1). -->
-    <kyf:Dialog x:Name="HelpDialog" Title="{x:Static p:ShellText.Help}" IsOpen="{Binding IsHelpOpen}"
+    <kyf:Dialog x:Name="HelpDialog" Title="{x:Static shell:GuideText.Tabs}" IsOpen="{Binding IsHelpOpen}" CardMaxWidth="860"
                 PrimaryButtonText="{x:Static ds:DesignText.Close}" SecondaryButtonText="">
+      <StackPanel>
+      <!-- Deux onglets : les raccourcis, et le guide livré avec kyfRev. -->
+      <StackPanel x:Name="HelpTabs" Orientation="Horizontal" Margin="0,0,0,12" AutomationProperties.Name="{x:Static shell:GuideText.Tabs}">
+        <ToggleButton x:Name="ShortcutsTab" Style="{DynamicResource Kyf.Button.Tab}" Content="{x:Static shell:GuideText.ShortcutsTab}" IsChecked="{Binding IsShortcutsShown}" MinHeight="44" Margin="0,0,4,0" />
+        <ToggleButton x:Name="GuideTab" Style="{DynamicResource Kyf.Button.Tab}" Content="{x:Static shell:GuideText.GuideTab}" IsChecked="{Binding IsGuideShown}" MinHeight="44" />
+      </StackPanel>
+      <pages:GuideView x:Name="GuidePane" DataContext="{Binding Guide}" Height="440" Width="800"
+                       Visibility="{Binding DataContext.IsGuideShown, ElementName=HelpDialog, Converter={StaticResource Visible}}" />
       <!-- La colonne des touches prend la largeur de la plus longue : la description garde le reste. -->
-      <ItemsControl ItemsSource="{Binding Shortcuts}" Focusable="False" Grid.IsSharedSizeScope="True">
+      <ItemsControl x:Name="ShortcutList" ItemsSource="{Binding Shortcuts}" Focusable="False" Grid.IsSharedSizeScope="True"
+                    Visibility="{Binding IsShortcutsShown, Converter={StaticResource Visible}}">
         <ItemsControl.ItemTemplate>
           <DataTemplate>
             <Grid Margin="0,4">
@@ -559,6 +568,7 @@
           </DataTemplate>
         </ItemsControl.ItemTemplate>
       </ItemsControl>
+      </StackPanel>
     </kyf:Dialog>
 
     <!-- Recherche (Ctrl+K) : on tape dans la barre de titre, la liste s'ouvre juste dessous, à son aplomb. -->

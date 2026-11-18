@@ -124,6 +124,10 @@ public sealed class MachinePreferencesFile : IMachinePreferencesStore
             {
                 writer.WriteString("raccourcis", preferences.Shortcuts);
             }
+            if (preferences.FirstUse.Length > 0)
+            {
+                writer.WriteString("premiereUtilisation", preferences.FirstUse);
+            }
             writer.WriteString("largeur", Name(Widths, preferences.Width));
             writer.WriteString("taille", Name(TextSizes, preferences.TextSize));
             writer.WriteString("interligne", Name(LineSpacings, preferences.LineSpacing));
@@ -167,6 +171,7 @@ public sealed class MachinePreferencesFile : IMachinePreferencesStore
             Paper = Paper(root),
             MenuOrder = Text(root, "menu"),
             Shortcuts = Text(root, "raccourcis"),
+            FirstUse = Text(root, "premiereUtilisation"),
             Width = Choice(root, "largeur", Widths, defaults.Width),
             TextSize = Choice(root, "taille", TextSizes, defaults.TextSize),
             LineSpacing = Choice(root, "interligne", LineSpacings, defaults.LineSpacing),

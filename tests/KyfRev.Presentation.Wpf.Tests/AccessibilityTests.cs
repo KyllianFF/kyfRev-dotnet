@@ -62,7 +62,7 @@ public sealed class AccessibilityTests
             Invoke(Named(window, ControlType.Button, "Raccourcis clavier"));
             WaitUntil(window, () => window.FindFirst(TreeScope.Descendants, new PropertyCondition(AutomationElement.NameProperty, "Afficher les raccourcis clavier")) is not null);
             Check("aide");
-            Invoke(Named(Named(window, ControlType.Pane, "Raccourcis clavier"), ControlType.Button, "Fermer"));
+            Invoke(Named(Named(window, ControlType.Pane, "Aide"), ControlType.Button, "Fermer"));
 
             Invoke(Named(window, ControlType.Button, "Rechercher partout"));
             WaitUntil(window, () => window.FindFirst(TreeScope.Descendants, new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit)) is not null);

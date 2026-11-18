@@ -98,6 +98,12 @@ public sealed record MachinePreferences
     /// <summary>Les raccourcis changés : « imprimer=Ctrl+Shift+I;partager=Ctrl+J » ; vide si aucun.</summary>
     public string Shortcuts { get; init; } = string.Empty;
 
+    /// <summary>
+    /// Ce que la première utilisation a déjà montré, ou qu'on lui a demandé de ne plus montrer : « pas-masques;aide-revision » ;
+    /// vide au départ.
+    /// </summary>
+    public string FirstUse { get; init; } = string.Empty;
+
     /// <summary>Largeur du texte des fiches : gardée pour relire les anciennes préférences, elle n'a plus d'effet.</summary>
     public ReadingWidth Width { get; init; } = ReadingWidth.Comfortable;
 

@@ -167,6 +167,22 @@ public sealed partial class DefinitionsPageViewModel : ObservableObject, IForget
     /// <summary>Compte les oublis du coffre : une lecture partie avant le dernier oubli n'y remet rien.</summary>
     private int _generation;
 
+    /// <summary>Le bouton de la vue vide.</summary>
+    public const string HowLabel = "Voir comment faire";
+
+    /// <summary>La partie du guide qui dit comment surligner un passage et définir un mot.</summary>
+    public const string HowSection = "Réviser";
+
+    /// <summary>Ouvre le guide sur la partie de ce titre ; rien : la vue vide ne le propose pas.</summary>
+    public Action<string>? OpenGuide { get; init; }
+
+    /// <summary>La vue vide propose « Voir comment faire ».</summary>
+    public bool CanShowHow => OpenGuide is not null;
+
+    /// <summary>« Voir comment faire » : le guide, là où il parle des passages et des définitions.</summary>
+    [RelayCommand]
+    private void ShowHow() => OpenGuide?.Invoke(HowSection);
+
     /// <summary>Le glossaire, sur ces cas d'usage ; sans <paramref name="sheets"/>, une nouvelle définition ne trouve où s'accrocher.</summary>
     public DefinitionsPageViewModel(AnnotationUseCases annotations, IReviewOpener opener, SheetUseCases? sheets = null)
     {

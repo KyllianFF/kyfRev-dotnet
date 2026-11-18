@@ -33,3 +33,6 @@ recalées lorsque la lecture native (J7) ouvrira ces fiches.
 
 Tant que J7 n'est pas livré, les fiches s'affichent en texte brut. Aucune page n'affiche encore les
 schémas (J10) ni les citations : ces données sont déjà dans le coffre, prêtes pour ces vues.
+
+Le moteur et le contenu sont ceux du coffre d'exemple de l'application (`src/KyfRev.Infrastructure.Vault/Samples`), qui en
+propose dix fiches à l'accueil ; cet outil en crée la version complète.

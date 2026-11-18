@@ -1,10 +1,19 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using KyfRev.Application;
 using KyfRev.Application.Model;
 using KyfRev.Application.UseCases;
 using KyfRev.Presentation.Wpf.Shell;
 
 namespace KyfRev.Presentation.Wpf.Pages;
+
+/// <summary>
+/// Ce que l'accueil propose en plus de créer et d'ouvrir un coffre. La coquille le lui donne quand elle le montre.
+/// </summary>
+/// <param name="SampleFolder">Où créer le coffre d'exemple ; rien : un dossier vide est demandé.</param>
+/// <param name="CreateSample">Crée le coffre d'exemple dans ce dossier s'il est vide, l'ouvre, et rend l'état ; ou dit pourquoi il ne l'a pas fait.</param>
+/// <param name="OpenGuide">Ouvre le guide dans kyfRev ; rien : l'accueil ne le propose pas.</param>
+public sealed record WelcomeOffers(string? SampleFolder, Func<string, Outcome<AppState>> CreateSample, Action? OpenGuide);
 
 /// <summary>
 /// L'accueil, quand aucun coffre n'est ouvert, comme dans la 0.x : créer le coffre que prévoit le
@@ -44,8 +53,20 @@ public sealed partial class WelcomePageViewModel : ObservableObject
     /// <summary>Un coffre est prévu : l'accueil propose de le créer là.</summary>
     public bool HasVaultToCreate => VaultToCreate is not null;
 
-    /// <summary>« Créer le coffre ici » ou « Créer un coffre ».</summary>
-    public string CreateLabel => HasVaultToCreate ? ShellText.CreateVaultHere : ShellText.CreateVault;
+    /// <summary>Ce que fait cette entrée : le coffre prévu, dont le chemin suit, ou un dossier vide à choisir.</summary>
+    public string CreateHelp => HasVaultToCreate ? WelcomeText.CreateHere : WelcomeText.CreateAnywhere;
+
+    /// <summary>Le coffre d'exemple et le guide, quand la coquille les propose.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanTrySample), nameof(CanOpenGuide))]
+    [NotifyCanExecuteChangedFor(nameof(TrySampleCommand))]
+    public partial WelcomeOffers? Offers { get; set; }
+
+    /// <summary>« Essayer avec un coffre d'exemple » est proposé.</summary>
+    public bool CanTrySample => Offers is not null;
+
+    /// <summary>« Lire le guide » est proposé.</summary>
+    public bool CanOpenGuide => Offers?.OpenGuide is not null;
 
     /// <summary>Sans coffre prévu, l'accueil rappelle qu'un coffre se crée dans un dossier vide.</summary>
     public bool ExplainsNewVault => !HasVaultToCreate;
@@ -55,7 +76,7 @@ public sealed partial class WelcomePageViewModel : ObservableObject
 
     /// <summary>Une ouverture ou une création est en cours.</summary>
     [ObservableProperty]
-    [NotifyCanExecuteChangedFor(nameof(CreateCommand), nameof(OpenCommand))]
+    [NotifyCanExecuteChangedFor(nameof(CreateCommand), nameof(OpenCommand), nameof(TrySampleCommand))]
     public partial bool IsBusy { get; private set; }
 
     /// <summary>Pourquoi le dernier coffre demandé n'a pas pu être ouvert.</summary>
@@ -67,6 +88,49 @@ public sealed partial class WelcomePageViewModel : ObservableObject
     public bool HasError => Error is not null;
 
     private bool IsIdle => !IsBusy;
+
+    private bool CanStartSample => IsIdle && Offers is not null;
+
+    /// <summary>
+    /// Crée le coffre d'exemple dans son dossier, à part du coffre prévu, puis l'ouvre ; s'il y est déjà, il est rouvert tel
+    /// qu'il est.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanStartSample))]
+    private async Task TrySampleAsync()
+    {
+        if (Offers is not { } offers)
+        {
+            return;
+        }
+        Error = null;
+        var folder = offers.SampleFolder ?? _picker.Pick(WelcomeText.ChooseSampleFolder);
+        if (folder is null)
+        {
+            return;
+        }
+        IsBusy = true;
+        try
+        {
+            // Le coffre vit ses premières semaines en accéléré : hors du fil de l'interface.
+            var created = await Task.Run(() => offers.CreateSample(folder)).ConfigureAwait(true);
+            if (created.Succeeded)
+            {
+                Show(created.Value);
+            }
+            else
+            {
+                Error = created.Error;
+            }
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    /// <summary>Ouvre le guide, lu dans kyfRev.</summary>
+    [RelayCommand]
+    private void OpenGuide() => Offers?.OpenGuide?.Invoke();
 
     /// <summary>Crée le coffre prévu, ou un coffre dans le dossier vide choisi.</summary>
     [RelayCommand(CanExecute = nameof(IsIdle))]
@@ -88,23 +152,28 @@ public sealed partial class WelcomePageViewModel : ObservableObject
         try
         {
             // L'ouverture lit tout le coffre : hors du fil de l'interface.
-            var state = await Task.Run(() => create ? _vaults.Create(folder) : _vaults.Open(folder)).ConfigureAwait(true);
-            if (state.Locked is not null && _locked is not null)
-            {
-                _locked(state);
-            }
-            else if (state.Vault is not null)
-            {
-                _opened(state);
-            }
-            else
-            {
-                Error = state.OpenError ?? ShellText.VaultNotOpened;
-            }
+            Show(await Task.Run(() => create ? _vaults.Create(folder) : _vaults.Open(folder)).ConfigureAwait(true));
         }
         finally
         {
             IsBusy = false;
+        }
+    }
+
+    /// <summary>Ce qu'il advient du coffre demandé : ouvert, en attente de sa clé, ou refusé avec sa raison.</summary>
+    private void Show(AppState state)
+    {
+        if (state.Locked is not null && _locked is not null)
+        {
+            _locked(state);
+        }
+        else if (state.Vault is not null)
+        {
+            _opened(state);
+        }
+        else
+        {
+            Error = state.OpenError ?? ShellText.VaultNotOpened;
         }
     }
 }

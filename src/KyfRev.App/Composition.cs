@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.IO;
 using System.Reflection;
+using KyfRev.Application;
 using KyfRev.Application.Model;
 using KyfRev.Application.Modules;
 using KyfRev.Application.Ports;
@@ -13,6 +14,7 @@ using KyfRev.Infrastructure.Crypto;
 using KyfRev.Infrastructure.Online;
 using KyfRev.Infrastructure.Vault.Adapters;
 using KyfRev.Infrastructure.Vault.Files;
+using KyfRev.Infrastructure.Vault.Samples;
 using KyfRev.Infrastructure.Windows;
 using KyfRev.Modules.Citations;
 using KyfRev.Modules.Schemas;
@@ -124,6 +126,8 @@ internal static class Composition
         services.AddSingleton(provider => new MermaidEngine(Path.Combine(provider.GetRequiredService<VaultLocations>().LocalData, "WebView2")));
         services.AddSingleton(clock);
         services.AddSingleton<KyfRev.Presentation.Wpf.Printing.IPrintService, KyfRev.Presentation.Wpf.Printing.WindowsPrintService>();
+        // Ce que la première utilisation a déjà montré sur cet ordinateur : les premiers pas, les aides lues.
+        services.AddSingleton(provider => new FirstUse(provider.GetRequiredService<MachineSettings>()));
         services.AddSingleton<ReviewNavigation>();
         services.AddSingleton<IReviewOpener>(provider => provider.GetRequiredService<ReviewNavigation>());
         services.AddSingleton(provider =>
@@ -132,6 +136,7 @@ internal static class Composition
             return new DashboardPageViewModel(provider.GetRequiredService<ReminderUseCases>(), provider.GetRequiredService<SheetUseCases>(), provider.GetRequiredService<IReviewOpener>(), modules.Widgets, provider.GetRequiredService<ReviewUseCases>(), provider.GetRequiredService<KyfRevApplication>().Exams, provider.GetRequiredService<FolderUseCases>(), provider.GetRequiredService<TimeProvider>())
             {
                 LookForNews = () => LookForQuoteAsync(modules),
+                FirstSteps = new FirstSteps(provider.GetRequiredService<FirstUse>(), () => provider.GetRequiredService<ShellViewModel>().ShowGuide()),
             };
         });
         // Partager une fiche et enregistrer un modèle, depuis la vue « Fiches » comme depuis la lecture : une seule demande à la fois.
@@ -146,7 +151,16 @@ internal static class Composition
         services.AddSingleton<FolderImportViewModel>();
         services.AddSingleton<WorkloadPageViewModel>();
         services.AddSingleton<SheetsPageViewModel>();
-        services.AddSingleton(provider => new DefinitionsPageViewModel(provider.GetRequiredService<AnnotationUseCases>(), provider.GetRequiredService<IReviewOpener>(), provider.GetRequiredService<SheetUseCases>()));
+        services.AddSingleton(provider => new DefinitionsPageViewModel(provider.GetRequiredService<AnnotationUseCases>(), provider.GetRequiredService<IReviewOpener>(), provider.GetRequiredService<SheetUseCases>())
+        {
+            // « Voir comment faire », dans la vue vide : le guide, sur la partie qui en parle.
+            OpenGuide = title =>
+            {
+                var shell = provider.GetRequiredService<ShellViewModel>();
+                shell.Guide.Show(title);
+                shell.ShowGuide();
+            },
+        });
         services.AddSingleton<SettingsPageViewModel>();
         services.AddSingleton<ArchivesPageViewModel>();
         services.AddSingleton<StatisticsPageViewModel>();
@@ -294,6 +308,9 @@ internal static class Composition
             provider.GetRequiredService<ReviewNavigation>().Attach(shell);
             provider.GetRequiredService<ReviewNavigation>().Workload = provider.GetRequiredService<WorkloadPageViewModel>();
             provider.GetRequiredService<MachineSettings>().Follow(provider.GetRequiredService<AppearanceController>(), shell);
+            shell.FirstUse = provider.GetRequiredService<FirstUse>();
+            provider.GetRequiredService<AboutSettingsViewModel>().OpenGuide = shell.ShowGuide;
+            shell.WelcomeOffers = Welcome(provider.GetRequiredService<VaultUseCases>(), provider.GetRequiredService<TimeProvider>(), provider.GetRequiredService<VaultLocations>().VaultToCreate(), shell.ShowGuide);
             var modules = provider.GetRequiredService<ActiveModules>();
             // La recherche (Ctrl+K) couvre le cœur et les modules actifs ; un résultat s'ouvre dans la coquille.
             shell.Search = new GlobalSearch(
@@ -518,6 +535,32 @@ internal static class Composition
     /// Un mot accepté ne va pas dans le dictionnaire de Windows, un fichier du profil, ni depuis un coffre chiffré, ni en mode
     /// portable, qui n'écrit rien hors de son dossier.
     /// </summary>
+    /// <summary>
+    /// Ce que l'accueil propose en plus de créer et d'ouvrir un coffre : le coffre d'exemple, dans son propre dossier
+    /// « Exemple » à côté du coffre prévu (ses sauvegardes se rangent à côté de lui, pas avec celles du vrai coffre), et le
+    /// guide. Un coffre d'exemple déjà créé là est rouvert tel qu'il est.
+    /// </summary>
+    internal static WelcomeOffers Welcome(VaultUseCases vaults, TimeProvider time, string? planned, Action openGuide) =>
+        new(
+            SampleFolderOf(planned),
+            root =>
+            {
+                if (SampleVault.CanCreateIn(root))
+                {
+                    var created = SampleVault.Create(root, DateOnly.FromDateTime(time.GetLocalNow().DateTime));
+                    if (!created.Succeeded)
+                    {
+                        return Outcome.Refused<AppState>(created.Error ?? string.Empty);
+                    }
+                }
+                return Outcome.Of(vaults.Open(root));
+            },
+            openGuide);
+
+    /// <summary>Le dossier du coffre d'exemple : « ExempleCoffre », à côté du coffre prévu ; rien sans coffre prévu.</summary>
+    internal static string? SampleFolderOf(string? planned) =>
+        planned is not null && Path.GetDirectoryName(planned) is { Length: > 0 } parent ? Path.Combine(parent, "Exemple", "Coffre") : null;
+
     internal static bool WordsStayInMemory(AppMode mode, bool encrypted) => encrypted || mode == AppMode.Portable;
 
     internal static string ModeName(AppMode mode) => mode switch

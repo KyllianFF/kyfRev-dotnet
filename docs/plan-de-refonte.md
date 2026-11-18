@@ -893,7 +893,7 @@ le job « Installateur » de `.github/workflows/verification.yml`, qui tourne à
 |---|---|---|
 | Installateur et version portable | Publiés en préversion (`1.1.0-beta.2`) | Page des versions ; `tools/installer.ps1`, `tools/portable.ps1` |
 | Signature | Non faite | Aucun certificat ; l'avertissement de Windows est décrit dans le guide |
-| Documentation utilisateur | Écrite | `docs/guide-utilisateur.md` ; elle ne s'ouvre pas encore depuis l'application |
+| Documentation utilisateur | Écrite, et lue dans l'application | `docs/guide-utilisateur.md`, livré dans le programme : onglet « Guide » de l'aide (F1), sans connexion |
 | CHANGELOG daté, étiquette | Faits pour chaque préversion ; pas d'étiquette stable | `CHANGELOG.md`, workflow « Étiquette » |
 | Installation, mise à jour et désinstallation par utilisateur | Vérifiées | CI : `tools/installer-tests.ps1` (installation, mise à jour, retour en arrière refusé, désinstallation) |
 | Les mêmes, pour tous | En partie | Installation et mise à jour faites à la main sur le poste de développement (la 1.1.0-beta.2 par-dessus la 1.1.0-beta.1, le 16 novembre) ; aucun essai automatique, la désinstallation pour tous n'a pas été essayée |

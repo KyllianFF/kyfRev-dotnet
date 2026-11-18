@@ -265,6 +265,9 @@ public sealed partial class ShellViewModel : ObservableObject, IForgetsVault, IS
     /// <summary>Ce qui cherche dans le coffre (la racine de composition le donne) ; rien : seules les commandes se cherchent.</summary>
     public GlobalSearch? Search { get; set; }
 
+    /// <summary>Ce que l'accueil propose en plus de créer et d'ouvrir un coffre : le coffre d'exemple, le guide. Rien : il ne les propose pas.</summary>
+    public Pages.WelcomeOffers? WelcomeOffers { get; set; }
+
     /// <summary>La mise à jour (la racine de composition la donne) : son dialogue se pose sur toutes les vues ; rien, il n'y en a pas.</summary>
     public UpdateFlow? Updates { get; set; }
 
@@ -353,6 +356,10 @@ public sealed partial class ShellViewModel : ObservableObject, IForgetsVault, IS
     public void ShowWelcome(object page)
     {
         ArgumentNullException.ThrowIfNull(page);
+        if (page is Pages.WelcomePageViewModel welcome)
+        {
+            welcome.Offers = WelcomeOffers;
+        }
         IsWelcome = true;
         SelectedMain = null;
         SelectedSecondary = null;
@@ -570,13 +577,41 @@ public sealed partial class ShellViewModel : ObservableObject, IForgetsVault, IS
         Zoom = Math.Min(zoom, ZoomLimit);
     }
 
-    /// <summary>Affiche l'aide des raccourcis.</summary>
+    /// <summary>Affiche l'aide, sur ses raccourcis.</summary>
     [RelayCommand]
     public void ShowHelp()
     {
         IsPaletteOpen = false;
+        IsGuideShown = false;
         IsHelpOpen = true;
     }
+
+    /// <summary>Affiche l'aide sur le guide, lu dans kyfRev.</summary>
+    [RelayCommand]
+    public void ShowGuide()
+    {
+        IsPaletteOpen = false;
+        IsGuideShown = true;
+        IsHelpOpen = true;
+    }
+
+    /// <summary>L'aide montre le guide ; sinon, les raccourcis.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsShortcutsShown))]
+    public partial bool IsGuideShown { get; set; }
+
+    /// <summary>L'aide montre les raccourcis ; sinon, le guide.</summary>
+    public bool IsShortcutsShown
+    {
+        get => !IsGuideShown;
+        set => IsGuideShown = !value;
+    }
+
+    /// <summary>Ce que la première utilisation a déjà montré sur cet ordinateur : les aides en contexte s'y fient. Rien : aucune aide ne se montre.</summary>
+    public Pages.FirstUse? FirstUse { get; set; }
+
+    /// <summary>Le guide de kyfRev, lu dans l'aide.</summary>
+    public GuideViewModel Guide { get; } = new();
 
     /// <summary>Texte normalisé pour la recherche : minuscules, sans accents.</summary>
     internal static string Fold(string text)
