@@ -915,6 +915,18 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage, 
         OnPropertyChanged(nameof(ZoomedTextWidth));
     }
 
+    /// <summary>
+    /// Le ruban d'écriture est réduit : une rangée d'outils, sans le nom des groupes. Le bouton en bas à droite du ruban
+    /// le change, et l'ordinateur le retient.
+    /// </summary>
+    [ObservableProperty]
+    public partial bool IsRibbonReduced { get; set; }
+
+    /// <summary>Retient l'affichage du ruban sur ce poste.</summary>
+    public Action<bool>? RibbonReducedChanged { get; init; }
+
+    partial void OnIsRibbonReducedChanged(bool value) => RibbonReducedChanged?.Invoke(value);
+
     /// <summary>La colonne de texte choisie sur ce poste, relue à chaque retour sur la fiche ; sans elle, la colonne « Confortable ».</summary>
     public Func<ReadingColumn>? Column { get; init; }
 

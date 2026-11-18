@@ -40,11 +40,8 @@ internal sealed partial class EditorRibbon : UserControl
                 // La hauteur d'un groupe de l'Accueil : ceux des autres onglets la prennent, et leurs titres se posent sur la
                 // même ligne, tout en bas.
                 var line = HomePanel.Children.OfType<FrameworkElement>().Where(group => group.IsVisible).Select(group => group.ActualHeight).DefaultIfEmpty(0).Max();
-                foreach (var panel in new WrapPanel[] { InsertPanel, TablePanel, ImagePanel, PagePanel })
-                {
-                    panel.MinHeight = e.NewSize.Height;
-                    panel.ItemHeight = line > 0 ? line : double.NaN;
-                }
+                _homeHeights[IsReduced] = (e.NewSize.Height, line);
+                FollowHome();
             }
         };
         TableTab.IsVisibleChanged += OnTableTabShown;
@@ -85,6 +82,176 @@ internal sealed partial class EditorRibbon : UserControl
         _colorPopup = new Popup { Child = _colors, StaysOpen = false, Placement = PlacementMode.Bottom, PlacementTarget = ColorButton, AllowsTransparency = false };
         _colors.Chosen += OnColorChosen;
         _colors.Cancelled += OnColorCancelled;
+        // Après les menus qu'il reprend : « Plus » range aussi la casse.
+        BuildMoreMenu();
+        ShowDisplay();
+    }
+
+    /// <summary>
+    /// Le ruban est réduit : une seule rangée d'outils, sans le nom des groupes, les outils qui servent moins sous « Plus ».
+    /// Étendu, il montre tout, sur deux rangées, comme un traitement de texte.
+    /// </summary>
+    public static readonly DependencyProperty IsReducedProperty = DependencyProperty.Register(
+        nameof(IsReduced), typeof(bool), typeof(EditorRibbon), new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, (ribbon, _) => ((EditorRibbon)ribbon).ShowDisplay()));
+
+    /// <inheritdoc cref="IsReducedProperty"/>
+    public bool IsReduced
+    {
+        get => (bool)GetValue(IsReducedProperty);
+        set => SetValue(IsReducedProperty, value);
+    }
+
+    /// <summary>La hauteur de l'Accueil et celle d'un de ses groupes, vues dans chaque affichage.</summary>
+    private readonly Dictionary<bool, (double Panel, double Line)> _homeHeights = [];
+
+    /// <summary>Ce que « Plus » range : à cocher selon le texte sous le curseur, et grisé quand l'outil ne peut pas servir.</summary>
+    private readonly List<(MenuItem Item, Func<SheetEditorViewModel, bool> Checked, Func<SheetEditorViewModel, bool> Enabled)> _more = [];
+
+    /// <summary>Les autres onglets prennent la hauteur de l'Accueil dans l'affichage en cours, dès qu'elle est connue.</summary>
+    private void FollowHome()
+    {
+        var known = _homeHeights.TryGetValue(IsReduced, out var heights);
+        foreach (var panel in new WrapPanel[] { InsertPanel, TablePanel, ImagePanel, PagePanel })
+        {
+            panel.MinHeight = known ? heights.Panel : 0;
+            panel.ItemHeight = known && heights.Line > 0 ? heights.Line : double.NaN;
+        }
+    }
+
+    /// <summary>Applique l'affichage choisi : ce qui se montre, ce qui se range sous « Plus », et la forme des grands boutons.</summary>
+    private void ShowDisplay()
+    {
+        var reduced = IsReduced;
+        ReducedItem.IsChecked = reduced;
+        ExtendedItem.IsChecked = !reduced;
+        var rare = reduced ? Visibility.Collapsed : Visibility.Visible;
+        foreach (var button in new[] { GrowButton, ShrinkButton, CaseButton, StrikeButton, SuperscriptButton, SubscriptButton, InlineCodeButton, AlignRightButton, AlignJustifyButton })
+        {
+            button.Visibility = rare;
+        }
+        MoreGroup.Visibility = reduced ? Visibility.Visible : Visibility.Collapsed;
+        foreach (var (rows, second) in new[] { (FontRows, FontSecondRow), (ParagraphRows, ParagraphSecondRow) })
+        {
+            rows.Orientation = reduced ? Orientation.Horizontal : Orientation.Vertical;
+            second.Margin = reduced ? default : new Thickness(0, 2, 0, 0);
+        }
+        foreach (var button in new[] { TableButton, CodeButton, SchemaButton, ChartButton, NetworkButton, SmartArtButton, LinkButton, ImagesButton, FormulaButton, RuleButton, PageBreakButton, BlankPageButton, ImageCropButton, ImageMaskButton })
+        {
+            Lay(button, reduced);
+        }
+        // L'image : la hauteur et la largeur côte à côte, et les trois retours à l'origine sur une ligne.
+        Grid.SetRow(ImageWidthGlyph, reduced ? 0 : 1);
+        Grid.SetColumn(ImageWidthGlyph, reduced ? 2 : 0);
+        Grid.SetRow(ImageWidthBox, reduced ? 0 : 1);
+        Grid.SetColumn(ImageWidthBox, reduced ? 3 : 1);
+        ImageHeightBox.Margin = reduced ? new Thickness(0, 0, 12, 0) : new Thickness(0, 0, 0, 2);
+        foreach (var (button, column) in new[] { (ImageNarrowerButton, 2), (ImageWiderButton, 3) })
+        {
+            Grid.SetColumn(button, reduced ? column + 2 : column);
+            Grid.SetRowSpan(button, reduced ? 1 : 2);
+        }
+        ImageResetGrid.Rows = reduced ? 1 : 2;
+        ImageResetGrid.Columns = reduced ? 3 : 2;
+        FollowHome();
+    }
+
+    /// <summary>
+    /// Un grand outil : son icône au-dessus de son nom, ou, en réduit, à sa gauche dans un bouton de la hauteur des autres.
+    /// </summary>
+    private static void Lay(Button button, bool reduced)
+    {
+        button.SetResourceReference(StyleProperty, reduced ? "Kyf.Button.Tool" : "Kyf.Button.ToolLarge");
+        if (reduced)
+        {
+            button.Padding = new Thickness(8, 0, 8, 0);
+        }
+        else
+        {
+            button.ClearValue(PaddingProperty);
+        }
+        switch (button.Content)
+        {
+            case StackPanel { Children.Count: > 0 } content:
+                content.Orientation = reduced ? Orientation.Horizontal : Orientation.Vertical;
+                var picture = (FrameworkElement)content.Children[0];
+                picture.Margin = reduced ? new Thickness(0, 0, 6, 0) : default;
+                picture.VerticalAlignment = VerticalAlignment.Center;
+                if (picture is KyfRev.DesignSystem.Controls.Icon icon)
+                {
+                    icon.FontSize = reduced ? 16 : 20;
+                }
+                foreach (var label in content.Children.OfType<TextBlock>().Skip(picture is TextBlock ? 1 : 0))
+                {
+                    label.VerticalAlignment = VerticalAlignment.Center;
+                }
+                break;
+            case RibbonGlyph glyph:
+                glyph.Width = glyph.Height = reduced ? 20 : 28;
+                break;
+            default:
+                break;
+        }
+    }
+
+    private void OnReducedItem(object sender, RoutedEventArgs e) => Display(reduced: true);
+
+    private void OnExtendedItem(object sender, RoutedEventArgs e) => Display(reduced: false);
+
+    /// <summary>Le choix du menu d'affichage : la page le retient. Recliquer le choix en cours ne le décoche pas.</summary>
+    private void Display(bool reduced)
+    {
+        SetCurrentValue(IsReducedProperty, reduced);
+        ShowDisplay();
+    }
+
+    private void BuildMoreMenu()
+    {
+        void Mark(string header, InlineMark mark, Func<EditorTools, bool> on) =>
+            More(header, page => page.ToggleMarkCommand, mark, page => page.Tools is { } tools && on(tools));
+        Mark(EditingText.Strike, InlineMark.Strike, tools => tools.Strike);
+        Mark(EditingText.Superscript, InlineMark.Superscript, tools => tools.Superscript);
+        Mark(EditingText.Subscript, InlineMark.Subscript, tools => tools.Subscript);
+        Mark(EditingText.InlineCode, InlineMark.Code, tools => tools.Code);
+        MoreMenu.Items.Add(new Separator());
+        More(EditingText.FontGrow, page => page.StepFontSizeCommand, 1);
+        More(EditingText.FontShrink, page => page.StepFontSizeCommand, -1);
+        var cases = new MenuItem { Header = EditingText.CaseMenuTitle };
+        foreach (var item in CaseMenu.Items.OfType<MenuItem>())
+        {
+            var copy = new MenuItem { Header = item.Header };
+            copy.Click += (_, _) => item.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+            cases.Items.Add(copy);
+        }
+        MoreMenu.Items.Add(cases);
+        MoreMenu.Items.Add(new Separator());
+        More(EditingText.AlignRight, page => page.SetAlignCommand, TextAlign.Right, page => page.IsAlignRight);
+        More(EditingText.AlignJustify, page => page.SetAlignCommand, TextAlign.Justify, page => page.IsAlignJustify);
+    }
+
+    private void More(string header, Func<SheetEditorViewModel, System.Windows.Input.ICommand> command, object parameter, Func<SheetEditorViewModel, bool>? isChecked = null)
+    {
+        var item = new MenuItem { Header = header, IsCheckable = isChecked is not null };
+        item.Click += (_, _) =>
+        {
+            if (DataContext is SheetEditorViewModel page && command(page).CanExecute(parameter))
+            {
+                command(page).Execute(parameter);
+            }
+        };
+        MoreMenu.Items.Add(item);
+        _more.Add((item, isChecked ?? (_ => false), page => command(page).CanExecute(parameter)));
+    }
+
+    /// <summary>« Plus » : le menu dit d'abord ce qui est en vigueur sous le curseur, puis s'ouvre sous son bouton.</summary>
+    private void OnMoreButton(object sender, RoutedEventArgs e)
+    {
+        var page = DataContext as SheetEditorViewModel;
+        foreach (var (item, isChecked, isEnabled) in _more)
+        {
+            item.IsChecked = page is not null && isChecked(page);
+            item.IsEnabled = page is not null && isEnabled(page);
+        }
+        OnMenuButton(sender, e);
     }
 
     /// <summary>Le choix de la taille d'un tableau.</summary>

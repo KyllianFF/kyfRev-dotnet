@@ -18,6 +18,7 @@ public sealed class MachinePreferencesFileTests
         LineSpacing = ReadingLineSpacing.Airy,
         Font = ReadingFont.Serif,
         FocusMode = true,
+        RibbonReduced = true,
         MarkDefinedWords = false,
         ReducedMotion = true,
         HighContrast = true,

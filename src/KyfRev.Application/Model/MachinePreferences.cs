@@ -126,6 +126,12 @@ public sealed record MachinePreferences
     /// <summary>La colonne de texte des fiches lues sans mise en page.</summary>
     public ReadingColumn Column { get; init; } = ReadingColumn.Comfortable;
 
+    /// <summary>
+    /// Le ruban d'écriture est réduit : une seule rangée d'outils, sans le nom des groupes, les outils rares sous « Plus ».
+    /// Étendu au départ.
+    /// </summary>
+    public bool RibbonReduced { get; init; }
+
     /// <summary>Taille du texte des fiches.</summary>
     public ReadingTextSize TextSize { get; init; } = ReadingTextSize.Normal;
 

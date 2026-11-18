@@ -18,12 +18,19 @@
       <Setter Property="Template">
         <Setter.Value>
           <ControlTemplate TargetType="HeaderedContentControl">
-            <Border BorderBrush="{DynamicResource Kyf.Brush.Divider}" BorderThickness="0,0,1,0" Padding="8,4" Margin="0,2">
+            <Border x:Name="Frame" BorderBrush="{DynamicResource Kyf.Brush.Divider}" BorderThickness="0,0,1,0" Padding="8,4" Margin="0,2">
               <DockPanel>
-                <TextBlock DockPanel.Dock="Bottom" Text="{TemplateBinding Header}" Style="{DynamicResource Kyf.Text.Caption}" HorizontalAlignment="Center" Margin="0,2,0,0" />
+                <TextBlock x:Name="Caption" DockPanel.Dock="Bottom" Text="{TemplateBinding Header}" Style="{DynamicResource Kyf.Text.Caption}" HorizontalAlignment="Center" Margin="0,2,0,0" />
                 <ContentPresenter VerticalAlignment="Center" />
               </DockPanel>
             </Border>
+            <ControlTemplate.Triggers>
+              <!-- Ruban réduit : les outils seuls, le nom du groupe reste dit au lecteur d'écran par ses outils. -->
+              <DataTrigger Binding="{Binding IsReduced, RelativeSource={RelativeSource AncestorType=UserControl}}" Value="True">
+                <Setter TargetName="Caption" Property="Visibility" Value="Collapsed" />
+                <Setter TargetName="Frame" Property="Padding" Value="6,2" />
+              </DataTrigger>
+            </ControlTemplate.Triggers>
           </ControlTemplate>
         </Setter.Value>
       </Setter>
@@ -124,6 +131,21 @@
       <!-- En barre courte, le volet garde une hauteur mesurée et défile verticalement : le texte reste en vue dessous. -->
       <ScrollViewer x:Name="Panels" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto" Focusable="False">
       <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*" />
+          <ColumnDefinition Width="Auto" />
+        </Grid.ColumnDefinitions>
+        <!-- En bas à droite : le ruban réduit à une rangée, ou étendu comme un traitement de texte. -->
+        <Button x:Name="DisplayButton" Grid.Column="1" Style="{DynamicResource Kyf.Button.Tool}" VerticalAlignment="Bottom" Margin="2,0,2,2" Click="OnMenuButton"
+                ToolTip="{x:Static editing:EditingText.RibbonDisplay}" AutomationProperties.Name="{x:Static editing:EditingText.RibbonDisplay}" AutomationProperties.HelpText="{x:Static editing:EditingText.RibbonDisplayHelp}">
+          <kyf:Icon Text="{x:Static kyf:Icons.ChevronDown}" FontSize="12" />
+          <Button.ContextMenu>
+            <ContextMenu x:Name="DisplayMenu">
+              <MenuItem x:Name="ReducedItem" Header="{x:Static editing:EditingText.RibbonReduced}" IsCheckable="True" Click="OnReducedItem" />
+              <MenuItem x:Name="ExtendedItem" Header="{x:Static editing:EditingText.RibbonExtended}" IsCheckable="True" Click="OnExtendedItem" />
+            </ContextMenu>
+          </Button.ContextMenu>
+        </Button>
         <!-- Les groupes passent à la ligne : jamais de défilement horizontal. -->
         <WrapPanel x:Name="HomePanel">
           <HeaderedContentControl Style="{StaticResource Group}" Header="{x:Static editing:EditingText.HistoryGroup}">
@@ -150,7 +172,7 @@
           </HeaderedContentControl>
 
           <HeaderedContentControl Style="{StaticResource Group}" Header="{x:Static editing:EditingText.FontGroup}">
-            <StackPanel>
+            <StackPanel x:Name="FontRows">
               <StackPanel Orientation="Horizontal">
                 <Button x:Name="SizeButton" Style="{DynamicResource Kyf.Button.Tool}" Click="OnMenuButton" ToolTip="{x:Static editing:EditingText.FontSize}" AutomationProperties.Name="{x:Static editing:EditingText.FontSize}" MinWidth="52" HorizontalContentAlignment="Stretch">
                   <DockPanel>
@@ -195,7 +217,7 @@
                   </Button.ContextMenu>
                 </Button>
               </StackPanel>
-              <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+              <StackPanel x:Name="FontSecondRow" Orientation="Horizontal" Margin="0,2,0,0">
                 <Button x:Name="BoldButton" Style="{DynamicResource Kyf.Button.Tool}" Tag="{Binding Tools.Bold}" Command="{Binding ToggleMarkCommand}" CommandParameter="{x:Static editing:InlineMark.Bold}" ToolTip="{x:Static editing:EditingText.Bold}" AutomationProperties.Name="{x:Static editing:EditingText.Bold}">
                   <kyf:Icon Text="{x:Static kyf:Icons.Bold}" />
                 </Button>
@@ -222,7 +244,7 @@
           </HeaderedContentControl>
 
           <HeaderedContentControl Style="{StaticResource Group}" Header="{x:Static editing:EditingText.ParagraphGroup}">
-            <StackPanel>
+            <StackPanel x:Name="ParagraphRows">
               <StackPanel Orientation="Horizontal">
                 <Button x:Name="BulletsButton" Style="{DynamicResource Kyf.Button.Tool}" Tag="{Binding IsBullets}" Command="{Binding ToggleListCommand}" CommandParameter="{x:Static editing:ListKind.Bullets}" ToolTip="{x:Static editing:EditingText.Bullets}" AutomationProperties.Name="{x:Static editing:EditingText.Bullets}">
                   <kyf:Icon Text="{x:Static kyf:Icons.Bullets}" />
@@ -240,7 +262,7 @@
                   <kyf:Icon Text="{x:Static kyf:Icons.Quote}" />
                 </Button>
               </StackPanel>
-              <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+              <StackPanel x:Name="ParagraphSecondRow" Orientation="Horizontal" Margin="0,2,0,0">
                 <Button x:Name="AlignLeftButton" Style="{DynamicResource Kyf.Button.Tool}" Tag="{Binding IsAlignLeft}" Command="{Binding SetAlignCommand}" CommandParameter="{x:Static editing:TextAlign.Left}" ToolTip="{x:Static editing:EditingText.AlignLeft}" AutomationProperties.Name="{x:Static editing:EditingText.AlignLeft}">
                   <kyf:Icon Text="{x:Static kyf:Icons.AlignLeft}" />
                 </Button>
@@ -255,6 +277,20 @@
                 </Button>
               </StackPanel>
             </StackPanel>
+          </HeaderedContentControl>
+
+          <!-- Ruban réduit : les outils qui servent moins, dans un menu. -->
+          <HeaderedContentControl x:Name="MoreGroup" Style="{StaticResource Group}" Header="{x:Static editing:EditingText.MoreTools}" Visibility="Collapsed">
+            <Button x:Name="MoreButton" Style="{DynamicResource Kyf.Button.Tool}" Padding="8,0" Click="OnMoreButton"
+                    ToolTip="{x:Static editing:EditingText.MoreToolsHelp}" AutomationProperties.Name="{x:Static editing:EditingText.MoreTools}" AutomationProperties.HelpText="{x:Static editing:EditingText.MoreToolsHelp}">
+              <StackPanel Orientation="Horizontal">
+                <TextBlock Text="{x:Static editing:EditingText.MoreTools}" VerticalAlignment="Center" />
+                <kyf:Icon Text="{x:Static kyf:Icons.ChevronDown}" FontSize="12" Margin="4,0,0,0" />
+              </StackPanel>
+              <Button.ContextMenu>
+                <ContextMenu x:Name="MoreMenu" />
+              </Button.ContextMenu>
+            </Button>
           </HeaderedContentControl>
         </WrapPanel>
 
@@ -589,8 +625,10 @@
                       ToolTip="{x:Static editing:EditingText.ImageCrop}" AutomationProperties.Name="{x:Static editing:EditingText.ImageCrop}">
                 <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.Crop}" Width="28" Height="28" />
               </Button>
-              <Grid VerticalAlignment="Center">
+              <Grid x:Name="ImageSizeGrid" VerticalAlignment="Center">
                 <Grid.ColumnDefinitions>
+                  <ColumnDefinition Width="Auto" />
+                  <ColumnDefinition Width="Auto" />
                   <ColumnDefinition Width="Auto" />
                   <ColumnDefinition Width="Auto" />
                   <ColumnDefinition Width="Auto" />
@@ -603,7 +641,7 @@
                 <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.Height}" VerticalAlignment="Center" Margin="0,0,8,0" ToolTip="{x:Static editing:EditingText.ImageHeight}" IsHitTestVisible="True" />
                 <TextBox x:Name="ImageHeightBox" Grid.Column="1" Width="84" MinHeight="0" Padding="8,2" Margin="0,0,0,2" Text="{Binding ImageHeightCm, UpdateSourceTrigger=LostFocus}" KeyDown="OnSizeBoxKey"
                          FontFamily="{DynamicResource Kyf.Font.Code}" ToolTip="{x:Static editing:EditingText.ImageSizeHelp}" AutomationProperties.Name="{x:Static editing:EditingText.ImageHeight}" />
-                <editing:RibbonGlyph Grid.Row="1" Icon="{x:Static editing:RibbonIcons.Width}" VerticalAlignment="Center" Margin="0,0,8,0" ToolTip="{x:Static editing:EditingText.ImageWidth}" IsHitTestVisible="True" />
+                <editing:RibbonGlyph x:Name="ImageWidthGlyph" Grid.Row="1" Icon="{x:Static editing:RibbonIcons.Width}" VerticalAlignment="Center" Margin="0,0,8,0" ToolTip="{x:Static editing:EditingText.ImageWidth}" IsHitTestVisible="True" />
                 <TextBox x:Name="ImageWidthBox" Grid.Row="1" Grid.Column="1" Width="84" MinHeight="0" Padding="8,2" Text="{Binding ImageWidthCm, UpdateSourceTrigger=LostFocus}" KeyDown="OnSizeBoxKey"
                          FontFamily="{DynamicResource Kyf.Font.Code}" ToolTip="{x:Static editing:EditingText.ImageSizeHelp}" AutomationProperties.Name="{x:Static editing:EditingText.ImageWidth}" />
                 <Button x:Name="ImageNarrowerButton" Grid.RowSpan="2" Grid.Column="2" Style="{DynamicResource Kyf.Button.Tool}" Content="−" Margin="4,0,0,0" Command="{Binding NudgeImageWidthCommand}" CommandParameter="-5"
@@ -647,7 +685,7 @@
           </HeaderedContentControl>
 
           <HeaderedContentControl Style="{StaticResource Group}" Header="{x:Static editing:EditingText.ImageResetGroup}" IsEnabled="{Binding CanChangeImage}">
-            <UniformGrid Rows="2" Columns="2" VerticalAlignment="Center">
+            <UniformGrid x:Name="ImageResetGrid" Rows="2" Columns="2" VerticalAlignment="Center">
               <Button x:Name="ImageNaturalButton" Style="{DynamicResource Kyf.Button.Tool}" Margin="0,0,2,0" Command="{Binding ChangeImageCommand}" CommandParameter="width="
                       ToolTip="{x:Static editing:EditingText.ImageNatural}" AutomationProperties.Name="{x:Static editing:EditingText.ImageNatural}">
                 <editing:RibbonGlyph Icon="{x:Static editing:RibbonIcons.Natural}" />

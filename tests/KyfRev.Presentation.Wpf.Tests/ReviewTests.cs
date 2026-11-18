@@ -789,6 +789,32 @@ public sealed class ReviewTests
     }
 
     [TestMethod]
+    public void The_ribbon_display_is_kept_on_this_computer()
+    {
+        using var vault = new ReviewVault();
+        var test = new TestShell();
+        var store = new MemoryMachinePreferences();
+        var machine = new MachineSettings(store);
+        var navigation = new ReviewNavigation(vault.App.Sheets, vault.App.Annotations, vault.App.Reviews, vault.App.Reminders, vault.App.Vaults, new MemorySessions(), vault.Time, new RecordingLinks(), vault.App.Editing, FakeEnvironment.Markdown(), machine: machine);
+        navigation.Attach(test.Shell);
+        test.Shell.ShowWorkspace();
+        navigation.OpenSheet(vault.SheetId);
+        var page = (SheetPageViewModel)test.Shell.Current.Page;
+        Assert.IsFalse(page.IsRibbonReduced, "étendu au départ");
+        Assert.IsFalse(new MachinePreferences().RibbonReduced);
+        Assert.AreEqual(0, store.Saves, "ouvrir une fiche n'écrit rien");
+
+        page.IsRibbonReduced = true;
+
+        Assert.IsTrue(store.Stored.RibbonReduced);
+        navigation.OpenSheet(vault.SheetId);
+        Assert.IsTrue(((SheetPageViewModel)test.Shell.Current.Page).IsRibbonReduced, "la fiche suivante s'ouvre avec le ruban réduit");
+
+        ((SheetPageViewModel)test.Shell.Current.Page).IsRibbonReduced = false;
+        Assert.IsFalse(store.Stored.RibbonReduced);
+    }
+
+    [TestMethod]
     [DataRow(ReadingColumn.Narrow, ReadingWidth.Comfortable, SheetPageViewModel.NarrowTextWidth)]
     [DataRow(ReadingColumn.Comfortable, ReadingWidth.Comfortable, SheetPageViewModel.ComfortableTextWidth)]
     [DataRow(ReadingColumn.Comfortable, ReadingWidth.Full, SheetPageViewModel.ComfortableTextWidth)]

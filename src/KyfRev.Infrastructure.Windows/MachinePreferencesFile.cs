@@ -141,6 +141,7 @@ public sealed class MachinePreferencesFile : IMachinePreferencesStore
             writer.WriteString("interligne", Name(LineSpacings, preferences.LineSpacing));
             writer.WriteString("police", Name(Fonts, preferences.Font));
             writer.WriteBoolean("concentration", preferences.FocusMode);
+            writer.WriteBoolean("rubanReduit", preferences.RibbonReduced);
             writer.WriteBoolean("motsDefinis", preferences.MarkDefinedWords);
             writer.WriteBoolean("captureGlobale", preferences.GlobalCapture);
             writer.WriteBoolean("majAuDemarrage", preferences.CheckUpdatesAtStartup);
@@ -186,6 +187,7 @@ public sealed class MachinePreferencesFile : IMachinePreferencesStore
             LineSpacing = Choice(root, "interligne", LineSpacings, defaults.LineSpacing),
             Font = Choice(root, "police", Fonts, defaults.Font),
             FocusMode = Flag(root, "concentration", defaults.FocusMode),
+            RibbonReduced = Flag(root, "rubanReduit", defaults.RibbonReduced),
             MarkDefinedWords = Flag(root, "motsDefinis", defaults.MarkDefinedWords),
             GlobalCapture = Flag(root, "captureGlobale", defaults.GlobalCapture),
             CheckUpdatesAtStartup = Flag(root, "majAuDemarrage", defaults.CheckUpdatesAtStartup),
