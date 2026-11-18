@@ -7,6 +7,8 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ## [Non publié]
 
+## [1.1.0-beta.3] - 2026-11-18
+
 ### Ajouté
 - Accueil : trois entrées côte à côte, « Créer mon coffre », « Ouvrir un coffre existant » et « Essayer avec un coffre
   d'exemple », puis la méthode des J dite en trois temps. En fenêtre étroite, elles se rangent l'une sous l'autre.
@@ -1142,7 +1144,8 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 - Le texte d'un champ de plusieurs lignes ne colle plus au bord haut.
 - Le libellé long d'une case à cocher était coupé : il passe maintenant à la ligne, en face de sa case.
 
-[Non publié]: https://github.com/KyllianFF/kyfRev-dotnet/compare/v1.1.0-beta.2...HEAD
+[Non publié]: https://github.com/KyllianFF/kyfRev-dotnet/compare/v1.1.0-beta.3...HEAD
+[1.1.0-beta.3]: https://github.com/KyllianFF/kyfRev-dotnet/compare/v1.1.0-beta.2...v1.1.0-beta.3
 [1.1.0-beta.2]: https://github.com/KyllianFF/kyfRev-dotnet/compare/v1.1.0-beta.1...v1.1.0-beta.2
 [1.1.0-beta.1]: https://github.com/KyllianFF/kyfRev-dotnet/compare/v1.0.0-beta.1...v1.1.0-beta.1
 [1.0.0-beta.1]: https://github.com/KyllianFF/kyfRev-dotnet/releases/tag/v1.0.0-beta.1
