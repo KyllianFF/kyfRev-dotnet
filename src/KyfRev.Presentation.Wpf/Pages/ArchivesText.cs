@@ -119,6 +119,12 @@ public static class ArchivesText
     /// <summary>« Remettre en révision ».</summary>
     public static string RestartConfirm => Text(nameof(RestartConfirm));
 
+    /// <summary>« Actions » : le bouton « ⋯ » d'une fiche archivée.</summary>
+    public static string MoreActions => Text(nameof(MoreActions));
+
+    /// <summary>Ce que le menu d'une fiche archivée contient.</summary>
+    public static string MoreActionsHelp => Text(nameof(MoreActionsHelp));
+
     /// <summary>« Ouvrir ».</summary>
     public static string Open => Text(nameof(Open));
 

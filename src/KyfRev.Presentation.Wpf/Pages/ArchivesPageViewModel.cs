@@ -117,6 +117,9 @@ public sealed class ArchiveRow
     /// <summary>Le nom du bouton de remise en révision.</summary>
     public string RestartName => ArchivesText.ActionOnOf(ArchivesText.RestartConfirm, Title);
 
+    /// <summary>Le nom du bouton « ⋯ » pour le lecteur d'écran : « Actions : Mitose ».</summary>
+    public string MoreName => ArchivesText.ActionOnOf(ArchivesText.MoreActions, Title);
+
     /// <inheritdoc/>
     public override string ToString() => Spoken;
 
