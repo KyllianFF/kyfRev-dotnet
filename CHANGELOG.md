@@ -27,6 +27,12 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   guide sur la partie qui en parle.
 
 ### Modifié
+- Désinstallation : le désinstallateur demande ce qu'il faut faire de vos réglages (le dernier coffre ouvert, l'apparence,
+  les raccourcis, les extensions installées, la clé retenue d'un coffre chiffré), qu'il laissait toujours en place : les
+  supprimer, proposé d'abord, ou les conserver pour une prochaine installation. Jusqu'ici, kyfRev réinstallé rouvrait le
+  coffre d'avant sans qu'on le lui demande. Vos fiches et vos sauvegardes ne sont jamais supprimées, et un dossier qui a
+  un coffre n'est jamais touché. Une désinstallation silencieuse conserve les réglages, sauf `/REGLAGES=supprimer` ;
+  `/REGLAGES=garder` les conserve sans poser la question. L'installation et la mise à jour ne changent pas.
 - Raccourcis changés (Paramètres › Raccourcis) : les infobulles, la recherche (Ctrl+K), le menu « ⋯ » et le clic droit
   d'une fiche, le bouton du menu dans la barre de titre et ce qu'entend un lecteur d'écran nomment maintenant la touche
   choisie, et la suivent dès qu'elle change. Jusqu'ici seule l'aide (F1) le faisait.

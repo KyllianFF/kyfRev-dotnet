@@ -27,7 +27,12 @@
 ;   l'installation, l'installateur tient le mutex kyfRevInstallation : kyfRev lancé à ce moment se referme aussitôt ;
 ; - la licence de kyfRev, les avis de tiers, les avis des paquets NuGet et les licences des polices
 ;   sont installés dans {app}\licences, et retirés avec l'application ;
-; - la désinstallation ne touche jamais aux coffres, aux sauvegardes ni aux réglages des profils ;
+; - la désinstallation ne touche jamais aux coffres ni aux sauvegardes. Elle demande ce qu'il faut faire des réglages de
+;   la personne qui désinstalle (%LOCALAPPDATA%\kyfRev\v1 : dernier coffre ouvert, préférences, extensions installées,
+;   clé retenue d'un coffre chiffré, journal) : les supprimer, proposé d'abord, ou les conserver pour une prochaine
+;   installation. Sans personne pour répondre (désinstallation silencieuse), ils sont conservés, sauf /REGLAGES=supprimer ;
+;   /REGLAGES=garder les conserve sans poser la question. Seul ce que kyfRev y a écrit est retiré : un dossier qui a un
+;   coffre n'est jamais touché, et les réglages des autres personnes de l'ordinateur restent dans leur profil ;
 ; - WebView2 s'installe s'il manque, après vérification de la signature de son programme d'amorçage ;
 ; - une nouvelle installation refuse le dossier de la 0.x : sa désinstallation y retirerait kyfRev.exe.
 ;   Une version déjà installée là, elle, se met à jour.
@@ -106,7 +111,7 @@ Name: "fr"; MessagesFile: "compiler:Languages\French.isl"
 
 [Messages]
 WelcomeLabel2=kyfRev organise vos fiches de révision selon la méthode des J.%n%n{#Published}%n%nChaque personne garde ses fiches, ses sauvegardes et ses réglages dans son propre profil.
-ConfirmUninstall=Voulez-vous retirer %1 de cet ordinateur ?%n%nLes fiches, les sauvegardes et les réglages de chaque personne restent dans son profil : rien n'est effacé.
+ConfirmUninstall=Voulez-vous retirer %1 de cet ordinateur ?%n%nVos fiches et vos sauvegardes restent où elles sont : elles ne sont jamais effacées. La question suivante porte sur vos réglages.
 
 [Files]
 ; Les polices sont dans les assemblys : Fonts ne contient que leurs licences, installées plus bas.
@@ -432,6 +437,117 @@ begin
     WebView2Missing('son programme d''installation n''a pas démarré')
   else if Code <> 0 then
     WebView2Missing('code ' + IntToStr(Code) + ', le réseau est peut-être coupé');
+end;
+
+{ La valeur d'une option « /NOM=valeur » de la ligne de commande, en majuscules ou non ; vide si elle n'y est pas. }
+function SwitchValue(const Name: String): String;
+var
+  I: Integer;
+  Prefix: String;
+begin
+  Result := '';
+  Prefix := Name + '=';
+  for I := 1 to ParamCount do
+    if CompareText(Copy(ParamStr(I), 1, Length(Prefix)), Prefix) = 0 then
+      Result := Copy(ParamStr(I), Length(Prefix) + 1, MaxInt);
+end;
+
+{ Les réglages de la personne qui désinstalle : ce que kyfRev retient sur cet ordinateur, hors de tout coffre. }
+function SettingsFolder: String;
+begin
+  Result := ExpandConstant('{localappdata}\kyfRev\v1');
+end;
+
+{ Vrai si ce dossier est un coffre, en clair ou chiffré : rien n'y est jamais retiré. }
+function HoldsVault(const Folder: String): Boolean;
+begin
+  Result := DirExists(Folder + '\.suivi') or FileExists(Folder + '\kyfrev-chiffre.json');
+end;
+
+{ Retire un dossier que kyfRev tient dans ses réglages, sauf s'il a un coffre. }
+procedure RemoveOwnedFolder(const Folder: String);
+begin
+  if not DirExists(Folder) then
+    Exit;
+  if HoldsVault(Folder) then
+    Log('Réglages : ' + Folder + ' a un coffre, rien n''y est retiré.')
+  else if not DelTree(Folder, True, True, True) then
+    Log('Réglages : ' + Folder + ' n''a pas pu être retiré en entier.');
+end;
+
+{ Demande ce qu'il faut faire des réglages ; vrai s'ils sont à supprimer. La suppression est proposée d'abord. Sans personne
+  pour répondre, ils sont conservés, sauf /REGLAGES=supprimer. }
+function SettingsToRemove: Boolean;
+var
+  Asked: String;
+  Labels: TArrayOfString;
+begin
+  Asked := SwitchValue('/REGLAGES');
+  if CompareText(Asked, 'supprimer') = 0 then
+    Result := True
+  else if (CompareText(Asked, 'garder') = 0) or UninstallSilent then
+    Result := False
+  else if not DirExists(SettingsFolder) then
+    Result := False
+  else
+  begin
+    SetArrayLength(Labels, 2);
+    Labels[0] := 'Supprimer mes réglages';
+    Labels[1] := 'Conserver mes réglages';
+    Result := TaskDialogMsgBox('Que faire de vos réglages ?',
+      'Vos fiches et vos sauvegardes ne sont jamais supprimées : votre coffre reste où il est.' + #13#10#13#10 +
+      'Vos réglages sont ce que kyfRev retient sur cet ordinateur : le dernier coffre ouvert, l''apparence, les raccourcis, les extensions installées et la clé retenue d''un coffre chiffré.' + #13#10#13#10 +
+      'Supprimés, une prochaine installation repartira de zéro : elle ne rouvrira pas votre coffre d''elle-même, et un coffre chiffré redemandera son mot de passe. Conservés, elle retrouvera votre coffre et vos choix.',
+      mbConfirmation, MB_YESNO, Labels, 0) = IDYES;
+  end;
+  if Result then
+    Log('Réglages : à supprimer.')
+  else
+    Log('Réglages : conservés.');
+end;
+
+{ Retire les réglages : seulement ce que kyfRev écrit dans son dossier, jamais un dossier inconnu ni un coffre. Les dossiers
+  ne sont retirés que vides. }
+procedure RemoveSettings;
+var
+  Own, Profile: String;
+begin
+  Own := SettingsFolder;
+  Profile := ExpandConstant('{localappdata}\kyfRev');
+  if DirExists(Own) then
+  begin
+    if HoldsVault(Own) then
+    begin
+      Log('Réglages : ' + Own + ' est un coffre, rien n''y est retiré.');
+      Exit;
+    end;
+    { config-locale.json (dernier coffre), preferences.json, seance.json, cles-retenues.json ; le journal. }
+    DelTree(Own + '\*.json', False, True, False);
+    DelTree(Own + '\*.log', False, True, False);
+    RemoveOwnedFolder(Own + '\WebView2');
+    RemoveOwnedFolder(Own + '\WebView2-extensions');
+    RemoveOwnedFolder(Own + '\extensions');
+    RemoveOwnedFolder(Own + '\catalogue');
+    RemoveOwnedFolder(Own + '\mises-a-jour');
+    RemoveDir(Own);
+  end;
+  { Le dernier coffre de la 0.x, que cette version relit à son premier lancement : retiré seulement si la 0.x n'est plus
+    installée, puisqu'elle s'en sert encore sinon. Le reste de son dossier n'est pas touché. }
+  if LegacyFolder = '' then
+    DeleteFile(Profile + '\config-locale.json');
+  RemoveDir(Profile);
+end;
+
+var
+  { La réponse à la question des réglages, posée avant de retirer kyfRev et appliquée après. }
+  RemovesSettings: Boolean;
+
+procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
+begin
+  if CurUninstallStep = usUninstall then
+    RemovesSettings := SettingsToRemove
+  else if (CurUninstallStep = usPostUninstall) and RemovesSettings then
+    RemoveSettings;
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);

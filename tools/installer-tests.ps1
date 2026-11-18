@@ -17,7 +17,10 @@
     6. désinstallation : le dossier, ses licences et l'inscription disparaissent, les données du
        profil restent ;
     7. sur un poste vierge, installation par défaut : raccourcis dans le menu Démarrer et sur le
-       Bureau, fiches dans Documents ; la désinstallation retire les raccourcis.
+       Bureau, fiches dans Documents ; la désinstallation retire les raccourcis ;
+    8. sur un poste vierge, désinstallation avec /REGLAGES=supprimer : les réglages que kyfRev tient
+       dans le profil sont retirés, pas un coffre, pas un fichier qui n'est pas à lui ; avec
+       /REGLAGES=garder, comme sans rien demander, ils restent.
     Les journaux d'Inno Setup sont rangés dans artifacts/installer/essais.
 
 .PARAMETER Installateur
@@ -115,8 +118,8 @@ function Test-Icone([string] $Programme) {
 }
 
 # Désinstalle l'installation d'essai ; rend le code de sortie du désinstallateur.
-function Invoke-Desinstallation {
-    $code = Invoke-Silencieux ((Get-Inscription).UninstallString.Trim('"'))
+function Invoke-Desinstallation([string[]] $Options = @()) {
+    $code = Invoke-Silencieux ((Get-Inscription).UninstallString.Trim('"')) $Options
     # Le désinstallateur ne peut retirer le dossier, où il était, qu'une fois fermé.
     $limite = [DateTime]::UtcNow.AddSeconds(30)
     while ((Test-Path $dossier) -and [DateTime]::UtcNow -lt $limite) { Start-Sleep -Milliseconds 250 }
@@ -260,6 +263,41 @@ try {
         $code = Invoke-Desinstallation
         Assert-Vrai ($code -eq 0 -and -not (Test-Path $dossier)) "désinstallation terminée (code $code)"
         Assert-Vrai (-not (Get-Raccourcis)) 'raccourcis retirés'
+
+        Write-Host '8. Désinstallation et réglages'
+        # Ce que kyfRev tient dans le profil, un coffre rangé là par mégarde, un fichier qui n'est pas à lui, et un coffre dans Documents.
+        $reglages = Join-Path $profil 'v1'
+        $coffre = Join-Path ([Environment]::GetFolderPath('MyDocuments')) 'kyfRev\Coffre'
+        function New-Reglages {
+            foreach ($fichier in 'config-locale.json', 'preferences.json', 'seance.json', 'cles-retenues.json', 'kyfRev.log', 'WebView2\profil.txt', 'extensions\une\extension.json',
+                'catalogue\cles-catalogue.json', 'mises-a-jour\etat.json', 'notes-a-moi.txt', 'Mon coffre\.suivi\coffre.json', 'Mon coffre\fiches\Fiche.md') {
+                $chemin = Join-Path $reglages $fichier
+                New-Item -ItemType Directory -Force (Split-Path $chemin) | Out-Null
+                Set-Content -LiteralPath $chemin -Value 'essai' -Encoding utf8
+            }
+            New-Item -ItemType Directory -Force (Join-Path $coffre '.suivi'), (Join-Path $coffre 'fiches') | Out-Null
+            Set-Content -LiteralPath (Join-Path $coffre '.suivi\coffre.json') -Value '{}' -Encoding utf8
+            Set-Content -LiteralPath (Join-Path $coffre 'fiches\Fiche.md') -Value '# Fiche' -Encoding utf8
+            Set-Content -LiteralPath (Join-Path $profil 'config-locale.json') -Value '{}' -Encoding utf8
+        }
+        function Get-Reste { @(Get-ChildItem $profil -Recurse -File -Force -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName.Substring($profil.Length + 1) } | Sort-Object) }
+
+        $code = Invoke-Silencieux $Installateur @('/CURRENTUSER', "/DIR=`"$dossier`"", '/NOICONS')
+        Assert-Vrai ($code -eq 0) "installation terminée (code $code)"
+        New-Reglages
+        $avant = Get-Reste
+        $code = Invoke-Desinstallation @('/REGLAGES=garder')
+        Assert-Vrai ($code -eq 0 -and -not (Test-Path $dossier)) "désinstallation terminée (code $code)"
+        Assert-Vrai (((Get-Reste) -join '|') -eq ($avant -join '|')) '/REGLAGES=garder : les réglages restent, tous'
+
+        $code = Invoke-Silencieux $Installateur @('/CURRENTUSER', "/DIR=`"$dossier`"", '/NOICONS')
+        Assert-Vrai ($code -eq 0) "installation terminée (code $code)"
+        $code = Invoke-Desinstallation @('/REGLAGES=supprimer')
+        Assert-Vrai ($code -eq 0 -and -not (Test-Path $dossier)) "désinstallation terminée (code $code)"
+        $reste = Get-Reste
+        Assert-Vrai (($reste -join '|') -eq 'v1\Mon coffre\.suivi\coffre.json|v1\Mon coffre\fiches\Fiche.md|v1\notes-a-moi.txt') "/REGLAGES=supprimer : il ne reste que le coffre et le fichier qui ne sont pas des réglages ($($reste -join ', '))"
+        Assert-Vrai ((Test-Path (Join-Path $coffre '.suivi\coffre.json')) -and (Test-Path (Join-Path $coffre 'fiches\Fiche.md'))) 'le coffre des Documents est intact'
+        Remove-Item -LiteralPath $profil, (Split-Path $coffre) -Recurse -Force
     }
     Write-Host 'Installateur conforme.'
 }
