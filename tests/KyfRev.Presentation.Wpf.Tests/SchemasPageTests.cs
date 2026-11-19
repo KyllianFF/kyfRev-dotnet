@@ -463,6 +463,11 @@ public sealed class SchemasPageTests
         int Count(string selector) => int.Parse(scene.Script($"document.querySelectorAll('{selector}').length"), CultureInfo.InvariantCulture);
         double[] Centre(string selector) => JsonSerializer.Deserialize<double[]>(JsonSerializer.Deserialize<string>(scene.Script(
             "(() => { const r = document.querySelector('" + selector + "').getBoundingClientRect(); return JSON.stringify([r.x + r.width / 2, r.y + r.height / 2]); })()"))!)!;
+        // Un point de l'élément où lui seul est sous le pointeur : une pastille collée à un équipement est en partie sous
+        // son icône, et selon les polices son centre peut l'être.
+        double[] Grip(string selector) => JsonSerializer.Deserialize<double[]?>(JsonSerializer.Deserialize<string>(scene.Script(
+            "(() => { const e = document.querySelector('" + selector + "'); const r = e.getBoundingClientRect(); for (const fy of [0.5, 0.35, 0.65]) for (const fx of [0.5, 0.35, 0.65, 0.2, 0.8]) { const x = r.x + r.width * fx, y = r.y + r.height * fy; const s = document.elementFromPoint(x, y); if (s && (s === e || e.contains(s))) return JSON.stringify([x, y]); } return JSON.stringify(null); })()"))!)
+            ?? throw new AssertFailedException($"aucun point de « {selector} » sous le pointeur");
         const string vlanLabel = "g.etiquette[data-etiquette=\"l_trunk|vlan\"]";
 
         // Mode simplifié : l'étiquette du trunk se prend seule (pas son câble), et se tire sous le câble.
@@ -470,7 +475,7 @@ public sealed class SchemasPageTests
         // Le plan se cadre sur le schéma à sa première image, que cette fenêtre hors de l'écran ne dessine qu'au premier mouvement.
         scene.Mouse("mouseMoved", 4, 4);
         scene.WaitFor("document.querySelector('svg.canevas').getAttribute('viewBox') !== '-400 -300 800 600'");
-        var label = Centre(vlanLabel);
+        var label = Grip(vlanLabel);
         scene.Drag(label[0], label[1], label[0], label[1] + 50);
         UiThread.Until(() => Pose("vlan")?["place"] is not null, TimeSpan.FromSeconds(20));
         Assert.IsGreaterThan(10d, Math.Abs(Pose("vlan")!["place"]!["y"]!.GetValue<double>()), "écartée du câble, en travers");
@@ -510,7 +515,7 @@ public sealed class SchemasPageTests
         scene.WaitFor("document.querySelectorAll('g.etiquette.choisie').length === 0 && document.querySelector('.poignee-rotation') === null");
 
         // « Remettre à sa place » : position et angle oubliés, l'étiquette revient sur son câble.
-        label = Centre(vlanLabel);
+        label = Grip(vlanLabel);
         scene.Click(label[0], label[1]);
         scene.WaitFor("document.querySelector('.barre-etiquette button[data-action=\"remettre\"]') !== null");
         scene.Script("document.querySelector('.barre-etiquette button[data-action=\"remettre\"]').click()");
@@ -518,7 +523,7 @@ public sealed class SchemasPageTests
         scene.WaitFor("document.querySelector('line.attache') === null");
 
         // Reposée à la main, pour la suite : elle doit tenir après la fermeture.
-        label = Centre(vlanLabel);
+        label = Grip(vlanLabel);
         scene.Drag(label[0], label[1], label[0] + 30, label[1] - 40);
         UiThread.Until(() => Pose("vlan")?["place"] is not null, TimeSpan.FromSeconds(20));
 
@@ -527,14 +532,14 @@ public sealed class SchemasPageTests
         scene.WaitFor("document.querySelector('.segments.mode button[data-mode=\"avance\"]').getAttribute('aria-pressed') === 'true'");
         const string portLabel = "g.etiquette[data-etiquette=\"l_trunk|port-b\"]";
         scene.WaitFor($"document.querySelector('{portLabel}') !== null");
-        var port = Centre(portLabel);
+        var port = Grip(portLabel);
         scene.Drag(port[0], port[1], port[0] - 10, port[1] + 40);
         UiThread.Until(() => Pose("port-b")?["place"] is not null, TimeSpan.FromSeconds(20));
 
         // Le nom et l'adresse d'un équipement : l'équipement choisi d'abord, puis son nom se tire, d'un seul bloc.
         scene.Script("(() => { const e = document.querySelector('svg.canevas g.equipement[data-id=\"d_coeur\"]'); e.focus(); e.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true, cancelable: true })); })()");
         scene.WaitFor("document.querySelectorAll('svg.canevas g.equipement.choisi').length === 1");
-        var name = Centre("[data-bloc=\"d_coeur\"]");
+        var name = Grip("[data-bloc=\"d_coeur\"]");
         scene.Drag(name[0], name[1], name[0] - 150, name[1] - 20);
         UiThread.Until(() => Saved()["equipements"]![0]!["pose"]?["place"] is not null, TimeSpan.FromSeconds(20));
         Assert.AreEqual(0, Saved()["equipements"]![0]!["position"]!["x"]!.GetValue<double>(), "l'équipement n'a pas bougé : seulement son nom");
