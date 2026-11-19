@@ -9,30 +9,47 @@
   import Ungroup from "@lucide/svelte/icons/ungroup";
   import Spline from "@lucide/svelte/icons/spline";
   import Trash2 from "@lucide/svelte/icons/trash-2";
+  import Undo2 from "@lucide/svelte/icons/undo-2";
   import { onMount, tick } from "svelte";
   import type { Zone } from "../../lib/placement";
   import { definition } from "../../lib/topologie/catalogue";
   import {
     adresseAffichee,
+    blocDuNom,
     boiteDe,
     COTE,
     COULEUR_MAINTENANCE,
     cadreAnnotation,
     cadreDuSchema,
+    cadreEtiquette,
     cheminDe,
     couleurDe,
     dessinerAnnotation,
     dessinerEtiquette,
     dessinerMarque,
+    type Etiquette,
     estZone,
     ligneDuNom,
     masques,
     mettreEnPage,
     milieu,
+    placeSurLeTrace,
     traceEntre,
     traitDuSupport,
+    transformeDuBloc,
   } from "../../lib/topologie/dessin";
   import type { EditeurSchema } from "../../lib/topologie/etat.svelte";
+  import {
+    angleDeLaPoignee,
+    type CibleEtiquette,
+    CRAN,
+    cranSuivant,
+    memeCible,
+    placer,
+    poseDe,
+    remettre,
+    tourner,
+  } from "../../lib/topologie/etiquettes";
   import { illustration } from "../../lib/topologie/illustrations";
   import {
     type Annotation,
@@ -173,6 +190,10 @@
     /** Outil Texte : le texte naît où le bouton est relâché. */
     | { genre: "texte"; point: Point }
     | { genre: "passage"; lien: string; indice: number; avant: string; relation: boolean }
+    /** Une étiquette saisie : elle suit le pointeur, accrochée à son tracé (ou décalée de son équipement). */
+    | { genre: "etiquette"; cible: CibleEtiquette; depart: Point; centre: Point; avant: string; bouge: boolean }
+    /** La poignée de rotation d'une étiquette : par crans de 15°, Alt maintenu au degré près. */
+    | { genre: "rotation"; cible: CibleEtiquette; centre: Point; avant: string }
     | {
         genre: "taille";
         groupe: string;
@@ -230,6 +251,184 @@
   const traces = $derived(page.liens);
   const tracesRelations = $derived(page.relations);
   const etiquettes = $derived([...page.etiquettes.values()].flat());
+
+  // --- Étiquettes placées et tournées à la main (rangée 17) ---
+
+  /** L'étiquette choisie : elle seule, ni son câble ni son équipement. */
+  let etiquette = $state<CibleEtiquette | null>(null);
+  $effect(() => {
+    if (editeur.selection.length > 0) etiquette = null;
+  });
+
+  /** L'étiquette d'un câble ou d'une relation, telle que le dessin la nomme. */
+  function cibleDe(e: Etiquette): CibleEtiquette | null {
+    if (!e.id || !e.cle) return null;
+    if (schema.liens.some((l) => l.id === e.id)) return { genre: "lien", id: e.id, cle: e.cle };
+    return e.cle === "nom" ? { genre: "relation", id: e.id, cle: "nom" } : null;
+  }
+
+  /**
+   * Où est une étiquette : son centre, son cadre droit (avant rotation), son angle ; son point d'accroche si
+   * elle a été déplacée à la main ; le tracé qui la porte.
+   */
+  type Geometrie = {
+    cx: number;
+    cy: number;
+    l: number;
+    h: number;
+    angle: number;
+    ancre: Point | null;
+    trace: Point[] | null;
+    texte: string;
+  };
+  function geometrieDe(cible: CibleEtiquette): Geometrie | null {
+    if (cible.genre === "equipement") {
+      const e = parId.get(cible.id);
+      if (!e || caches.has(e.id)) return null;
+      const bloc = blocDuNom(e, affichage.adresses);
+      const place = e.pose?.place;
+      return {
+        cx: bloc.cx + (place?.x ?? 0),
+        cy: bloc.cy + (place?.y ?? 0),
+        l: bloc.x1 - bloc.x0,
+        h: bloc.y1 - bloc.y0,
+        angle: e.pose?.angle ?? 0,
+        ancre: place ? { x: e.position.x, y: boiteDe(e, 0).y1 } : null,
+        trace: null,
+        texte: e.nom,
+      };
+    }
+    const e = etiquettes.find((x) => x.id === cible.id && x.cle === cible.cle);
+    if (!e) return null;
+    const c = cadreEtiquette(e, 0);
+    const trace =
+      cible.genre === "lien"
+        ? traces.find((t) => t.lien.id === cible.id)?.trace
+        : tracesRelations.find((t) => t.relation.id === cible.id)?.trace;
+    return {
+      cx: e.x,
+      cy: e.y,
+      l: c.x1 - c.x0,
+      h: c.y1 - c.y0,
+      angle: e.angle ?? 0,
+      ancre: e.ancre ?? null,
+      trace: trace ?? null,
+      texte: e.titre ?? e.texte,
+    };
+  }
+  const etiquetteChoisie = $derived(etiquette ? geometrieDe(etiquette) : null);
+  /** Les étiquettes se prennent avec l'outil Choisir, quand rien d'autre n'est en main. */
+  const etiquettesPrenables = $derived(outil === "choisir" && !editeur.cable && pose === null && !plan);
+
+  function choisirEtiquette(cible: CibleEtiquette) {
+    editeur.selection = [];
+    bulleAuClavier = false;
+    etiquette = cible;
+  }
+
+  /** La place d'une étiquette dont le centre irait en `centre` : sur son tracé, ou par rapport à son équipement. */
+  function placeVers(cible: CibleEtiquette, centre: Point): { t?: number; x: number; y: number } | null {
+    if (cible.genre === "equipement") {
+      const e = parId.get(cible.id);
+      if (!e) return null;
+      const bloc = blocDuNom(e, affichage.adresses);
+      return { x: Math.round(centre.x - bloc.cx), y: Math.round(centre.y - bloc.cy) };
+    }
+    const trace = geometrieDe(cible)?.trace;
+    return trace ? placeSurLeTrace(trace, centre) : null;
+  }
+
+  function appuiSurEtiquette(evenement: PointerEvent, cible: CibleEtiquette) {
+    if (evenement.button !== 0 || !etiquettesPrenables) return;
+    const vue = geometrieDe(cible);
+    if (!vue) return;
+    evenement.stopPropagation();
+    svg?.focus();
+    capturer(evenement);
+    choisirEtiquette(cible);
+    geste = {
+      genre: "etiquette",
+      cible,
+      depart: dansLePlan(evenement),
+      centre: { x: vue.cx, y: vue.cy },
+      avant: editeur.commencerGeste(),
+      bouge: false,
+    };
+  }
+
+  /**
+   * Le nom d'un équipement : un premier clic choisit l'équipement (et le tirer le déplace, comme avant) ; une
+   * fois l'équipement choisi seul, le nom se prend à son tour, comme une étiquette.
+   */
+  function appuiSurBloc(evenement: PointerEvent, e: Equipement) {
+    const cible: CibleEtiquette = { genre: "equipement", id: e.id };
+    const seul = editeur.selection.length === 1 && editeur.selection[0] === e.id;
+    if (seul || memeCible(etiquette, cible)) appuiSurEtiquette(evenement, cible);
+  }
+
+  function appuiSurRotation(evenement: PointerEvent) {
+    if (evenement.button !== 0 || !etiquette || !etiquetteChoisie) return;
+    evenement.stopPropagation();
+    capturer(evenement);
+    geste = {
+      genre: "rotation",
+      cible: etiquette,
+      centre: { x: etiquetteChoisie.cx, y: etiquetteChoisie.cy },
+      avant: editeur.commencerGeste(),
+    };
+  }
+
+  /** Double-clic sur la poignée : l'étiquette à plat, à sa place. */
+  function aPlat(evenement: MouseEvent) {
+    evenement.stopPropagation();
+    const cible = etiquette;
+    if (cible) editeur.agir((s) => tourner(s, cible, 0));
+  }
+
+  function remettreEtiquette() {
+    const cible = etiquette;
+    if (!cible) return;
+    editeur.agir((s) => remettre(s, cible), "Étiquette remise à sa place.");
+    svg?.focus();
+  }
+
+  /** Entrée ou Espace sur une étiquette : elle est choisie. */
+  function toucheSurEtiquette(evenement: KeyboardEvent, cible: CibleEtiquette) {
+    if ((evenement.key !== "Enter" && evenement.key !== " ") || evenement.target !== evenement.currentTarget) return;
+    evenement.preventDefault();
+    evenement.stopPropagation();
+    if (etiquettesPrenables) choisirEtiquette(cible);
+  }
+
+  /**
+   * Le clavier, une étiquette choisie : les flèches la déplacent (1 px, Maj : 10 px), R la fait pivoter d'un
+   * cran (Maj+R : dans l'autre sens), Échap la lâche. Rend vrai si la touche a servi.
+   */
+  function clavierDeLEtiquette(evenement: KeyboardEvent): boolean {
+    const cible = etiquette;
+    const vue = etiquetteChoisie;
+    if (!cible || !vue || evenement.ctrlKey || evenement.metaKey || evenement.altKey) return false;
+    if (evenement.key === "Escape") {
+      evenement.preventDefault();
+      etiquette = null;
+      return true;
+    }
+    if (evenement.key.startsWith("Arrow")) {
+      evenement.preventDefault();
+      const pas = evenement.shiftKey ? 10 : 1;
+      const dx = evenement.key === "ArrowLeft" ? -pas : evenement.key === "ArrowRight" ? pas : 0;
+      const dy = evenement.key === "ArrowUp" ? -pas : evenement.key === "ArrowDown" ? pas : 0;
+      const place = placeVers(cible, { x: vue.cx + dx, y: vue.cy + dy });
+      if (place) editeur.agir((s) => placer(s, cible, place));
+      return true;
+    }
+    if (evenement.key.toLowerCase() === "r") {
+      evenement.preventDefault();
+      editeur.agir((s) => tourner(s, cible, cranSuivant(vue.angle, evenement.shiftKey ? -1 : 1)));
+      return true;
+    }
+    return false;
+  }
   /** Équipement survolé : ses câbles ressortent. */
   let survole = $state<string | null>(null);
 
@@ -493,7 +692,10 @@
       };
       return;
     }
-    if (!evenement.shiftKey && !evenement.ctrlKey) editeur.selection = [];
+    if (!evenement.shiftKey && !evenement.ctrlKey) {
+      editeur.selection = [];
+      etiquette = null;
+    }
     geste = {
       genre: "rectangle",
       depart: point,
@@ -905,6 +1107,17 @@
       } else if (mode?.genre === "passage") {
         lien.points[mode.indice] = { x: aimanter(point.x), y: aimanter(point.y) };
       }
+    } else if (geste.genre === "etiquette") {
+      const g = geste;
+      const dx = point.x - g.depart.x;
+      const dy = point.y - g.depart.y;
+      if (!g.bouge && Math.hypot(dx, dy) < 3 / camera.zoom) return;
+      g.bouge = true;
+      // Au pixel près, sans la grille : une étiquette se pose là où on la lâche.
+      const place = placeVers(g.cible, { x: g.centre.x + dx, y: g.centre.y + dy });
+      if (place) placer(schema, g.cible, place);
+    } else if (geste.genre === "rotation") {
+      tourner(schema, geste.cible, angleDeLaPoignee(geste.centre, point, sansAimant));
     } else if (geste.genre === "passage") {
       const g = geste;
       const objet = g.relation
@@ -972,7 +1185,9 @@
       fini.genre === "passage" ||
       fini.genre === "taille" ||
       fini.genre === "pointe" ||
-      fini.genre === "coulisse"
+      fini.genre === "coulisse" ||
+      fini.genre === "etiquette" ||
+      fini.genre === "rotation"
     ) {
       editeur.finirGeste(fini.avant);
       // Comme dans un logiciel de dessin : un second clic sur un élément d'un groupe le choisit seul.
@@ -1152,6 +1367,8 @@
   function cadreDe(e: Equipement): Zone {
     const b = boiteDe(e, 0);
     const adresse = affichage.adresses ? adresseAffichee(e) : "";
+    // Un nom placé ou tourné à la main n'est plus sous l'illustration : le cadre ne prend que l'équipement.
+    if (e.pose) return { x0: e.position.x - 42, y0: b.y0 - 8, x1: e.position.x + 42, y1: b.y1 + 7 };
     const demi = Math.max(42, Math.max(e.nom.length * 7.6, adresse.length * 6.8) / 2 + 6);
     return { x0: e.position.x - demi, y0: b.y0 - 8, x1: e.position.x + demi, y1: ligneDuNom(b, adresse ? 1 : 0) + 7 };
   }
@@ -1647,6 +1864,8 @@
       tirage = null;
       return;
     }
+    // Une étiquette choisie, le plan ou l'une de ses étiquettes ayant la main : les touches sont pour elle.
+    if (etiquette && !e.defaultPrevented && svg?.contains(document.activeElement) && clavierDeLEtiquette(e)) return;
     if (document.activeElement !== svg) return;
     if (e.key === " ") {
       espace = true;
@@ -1675,7 +1894,7 @@
   class:effacer={outil === "effacer"}
   class:simplifie
   role="application"
-  aria-label="Plan du schéma réseau : faites glisser un équipement du plateau, ou choisissez-le puis cliquez ici. Tab passe d'un objet à l'autre, Entrée le choisit, Suppr retire la sélection, Ctrl+Z annule. Se déplacer : molette ou deux doigts, flèches, Espace ou H et glisser ; zoom : Ctrl+molette ou pincer, + et −, 0 pour tout voir ; Alt maintenu pendant un déplacement : sans grille ni aimantation"
+  aria-label="Plan du schéma réseau : faites glisser un équipement du plateau, ou choisissez-le puis cliquez ici. Tab passe d'un objet à l'autre, Entrée le choisit, Suppr retire la sélection, Ctrl+Z annule. Se déplacer : molette ou deux doigts, flèches, Espace ou H et glisser ; zoom : Ctrl+molette ou pincer, + et −, 0 pour tout voir ; Alt maintenu pendant un déplacement : sans grille ni aimantation. Une étiquette se prend et se tire ; sa poignée la fait pivoter par crans de 15° (R au clavier, Alt : au degré près)"
   tabindex="0"
   viewBox="{camera.x} {camera.y} {largeur / camera.zoom} {hauteur / camera.zoom}"
   onpointerdown={appuiSurLePlan}
@@ -1881,9 +2100,41 @@
     </g>
   {/each}
 
-  <g class="etiquettes">
-    {#each etiquettes as etiquette, i (i)}
-      {@html dessinerEtiquette(etiquette)}
+  {#if etiquetteChoisie?.trace}
+    <!-- Le câble (ou la relation) qui porte l'étiquette choisie garde un halo léger : on voit à qui elle est. -->
+    <path d={cheminDe(etiquetteChoisie.trace)} class="halo-porteur" />
+  {/if}
+  {#if etiquetteChoisie?.ancre}
+    <!-- L'étiquette déplacée, choisie : un fil la relie au point où elle s'accroche. -->
+    <line
+      x1={etiquetteChoisie.ancre.x}
+      y1={etiquetteChoisie.ancre.y}
+      x2={etiquetteChoisie.cx}
+      y2={etiquetteChoisie.cy}
+      class="attache"
+    />
+    <circle cx={etiquetteChoisie.ancre.x} cy={etiquetteChoisie.ancre.y} r={3 / camera.zoom} class="point-attache" />
+  {/if}
+
+  <g class="etiquettes" class:prenables={etiquettesPrenables}>
+    {#each etiquettes as e, i (e.id && e.cle ? `${e.id}|${e.cle}` : i)}
+      {@const cible = cibleDe(e)}
+      {#if cible}
+        <g
+          class="etiquette"
+          class:choisie={memeCible(etiquette, cible)}
+          data-etiquette="{e.id}|{e.cle}"
+          role="button"
+          tabindex={choisis.has(cible.id) || memeCible(etiquette, cible) ? 0 : -1}
+          aria-label="Étiquette « {e.titre ?? e.texte} » : glisser pour la déplacer"
+          onpointerdown={(ev) => appuiSurEtiquette(ev, cible)}
+          onkeydown={(ev) => toucheSurEtiquette(ev, cible)}
+        >
+          {@html dessinerEtiquette(e)}
+        </g>
+      {:else}
+        {@html dessinerEtiquette(e)}
+      {/if}
     {/each}
   </g>
 
@@ -1933,10 +2184,19 @@
       {#if e.statut === "maintenance"}
         <circle cx={b.x0} cy={b.y0} r="6" fill={COULEUR_MAINTENANCE} class="pastille-statut" />
       {/if}
-      <text x={e.position.x} y={ligneDuNom(b, 0)} class="nom">{e.nom}{e.statut === "hors-service" ? " (hors service)" : e.statut === "prevu" ? " (prévu)" : ""}</text>
-      {#if adresse}
-        <text x={e.position.x} y={ligneDuNom(b, 1)} class="adresse">{adresse}</text>
-      {/if}
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <g
+        class="bloc-nom"
+        class:prenable={etiquettesPrenables && ((choisis.has(e.id) && choisis.size === 1) || memeCible(etiquette, { genre: "equipement", id: e.id }))}
+        data-bloc={e.id}
+        transform={transformeDuBloc(e, affichage.adresses) || undefined}
+        onpointerdown={(ev) => appuiSurBloc(ev, e)}
+      >
+        <text x={e.position.x} y={ligneDuNom(b, 0)} class="nom">{e.nom}{e.statut === "hors-service" ? " (hors service)" : e.statut === "prevu" ? " (prévu)" : ""}</text>
+        {#if adresse}
+          <text x={e.position.x} y={ligneDuNom(b, 1)} class="adresse">{adresse}</text>
+        {/if}
+      </g>
       {#if e.replie}
         <text x={b.x1 + 2} y={b.y0 + 8} class="replie">+</text>
       {/if}
@@ -2028,6 +2288,53 @@
       {/if}
     {/if}
   {/each}
+
+  {#if etiquetteChoisie}
+    {@const v = etiquetteChoisie}
+    {@const z = 1 / camera.zoom}
+    {@const haut = v.cy - v.h / 2 - 4}
+    {@const p = haut - 20 * z}
+    {#if geste?.genre === "rotation"}
+      <!-- Pendant le geste : les crans de 15°, et l'angle en clair. -->
+      {@const rayon = Math.hypot(v.l / 2, v.h / 2) + 30 * z}
+      <g class="crans" aria-hidden="true">
+        {#each Array.from({ length: 180 / CRAN + 1 }, (_, k) => -90 + k * CRAN) as a (a)}
+          {@const r = ((a - 90) * Math.PI) / 180}
+          <line
+            x1={v.cx + Math.cos(r) * rayon}
+            y1={v.cy + Math.sin(r) * rayon}
+            x2={v.cx + Math.cos(r) * (rayon + (a === v.angle ? 12 : 7) * z)}
+            y2={v.cy + Math.sin(r) * (rayon + (a === v.angle ? 12 : 7) * z)}
+            class:atteint={a === v.angle}
+          />
+        {/each}
+        <g transform="translate({v.cx} {v.cy - rayon - 26 * z}) scale({z})" class="bulle-angle">
+          <rect x="-24" y="-11" width="48" height="22" rx="11" />
+          <text y="4">{v.angle.toLocaleString("fr-FR").replace("-", "−")}°</text>
+        </g>
+      </g>
+    {/if}
+    <g transform="rotate({v.angle} {v.cx} {v.cy})" class="etiquette-choisie">
+      <rect
+        x={v.cx - v.l / 2 - 4}
+        y={v.cy - v.h / 2 - 4}
+        width={v.l + 8}
+        height={v.h + 8}
+        rx={etiquette?.genre === "equipement" ? 6 : (v.h + 8) / 2}
+        class="cadre-choisi"
+      />
+      <line x1={v.cx} y1={haut} x2={v.cx} y2={p + 9 * z} class="tige" />
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <g class="poignee-rotation" onpointerdown={appuiSurRotation} ondblclick={aPlat}>
+        <title>Faire pivoter par crans de 15° (Alt : au degré près ; R au clavier) ; double-clic : à plat</title>
+        <circle cx={v.cx} cy={p} r={9 * z} />
+        <path
+          transform="translate({v.cx} {p}) scale({z})"
+          d="M3.6 -2.6A4.4 4.4 0 1 0 4.4 1.2M4.2 -5.6v3.2h-3.2"
+        />
+      </g>
+    </g>
+  {/if}
 
   {#if guides}
     {#if guides.x !== null}
@@ -2151,6 +2458,32 @@
       onfermer={() => (menuPorts = null)}
     />
   {/if}
+{/if}
+
+{#if etiquette && etiquetteChoisie && !geste}
+  {@const v = etiquetteChoisie}
+  <!-- Juste sous l'étiquette, telle qu'elle est tournée : la poignée, au-dessus, reste libre. -->
+  {@const r = (v.angle * Math.PI) / 180}
+  {@const demiHauteur = Math.abs((v.l / 2) * Math.sin(r)) + Math.abs((v.h / 2) * Math.cos(r))}
+  {@const bas = versEcran({ x: v.cx, y: v.cy + demiHauteur + 8 / camera.zoom })}
+  {@const choisie = etiquette}
+  <div
+    class="barre-rapide a-cote barre-etiquette"
+    style="left: {Math.max(100, Math.min(largeur - 100, bas.x))}px; top: {bas.y}px"
+    role="toolbar"
+    aria-label="Actions de l'étiquette « {v.texte} »"
+  >
+    <button
+      type="button"
+      class="bouton discret"
+      data-action="remettre"
+      disabled={!poseDe(schema, choisie)}
+      title="Oublie sa position et son angle : elle retrouve sa place calculée"
+      onclick={remettreEtiquette}
+    >
+      <Undo2 size={16} aria-hidden="true" /><span>Remettre à sa place</span>
+    </button>
+  </div>
 {/if}
 
 {#if barre}
@@ -2681,6 +3014,112 @@
 
   .etiquettes {
     pointer-events: none;
+  }
+
+  /* Avec l'outil Choisir, une étiquette se prend à la main (rangée 17) ; sinon, le clic passe au câble dessous. */
+  .etiquettes.prenables .etiquette {
+    pointer-events: auto;
+    cursor: move;
+  }
+
+  .etiquette:focus,
+  .bloc-nom:focus {
+    outline: none;
+  }
+
+  /* Au clavier, l'étiquette qui a la main ; choisie, son cadre en tirets suffit. */
+  .etiquette:not(.choisie):focus-visible :global(rect) {
+    stroke: var(--focus);
+    stroke-width: 2;
+  }
+
+  .bloc-nom.prenable {
+    cursor: move;
+  }
+
+  .halo-porteur {
+    fill: none;
+    stroke: var(--focus);
+    stroke-opacity: 0.22;
+    stroke-width: 10;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    pointer-events: none;
+  }
+
+  .attache {
+    stroke: var(--focus);
+    stroke-width: 1.2;
+    stroke-dasharray: 3 3;
+    vector-effect: non-scaling-stroke;
+    pointer-events: none;
+  }
+
+  .point-attache {
+    fill: var(--focus);
+    pointer-events: none;
+  }
+
+  .etiquette-choisie .tige {
+    stroke: var(--focus);
+    stroke-width: 1.5;
+    vector-effect: non-scaling-stroke;
+    pointer-events: none;
+  }
+
+  .poignee-rotation {
+    cursor: grab;
+  }
+
+  .poignee-rotation circle {
+    fill: var(--surface);
+    stroke: var(--focus);
+    stroke-width: 1.8;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .poignee-rotation path {
+    fill: none;
+    stroke: var(--focus);
+    stroke-width: 1.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+    pointer-events: none;
+  }
+
+  .crans {
+    pointer-events: none;
+  }
+
+  .crans line {
+    stroke: var(--bordure);
+    stroke-width: 1;
+    opacity: 0.6;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .crans line.atteint {
+    stroke: var(--focus);
+    stroke-width: 2;
+    opacity: 1;
+  }
+
+  .bulle-angle rect {
+    fill: var(--focus);
+  }
+
+  .bulle-angle text {
+    fill: var(--surface);
+    font-size: 11px;
+    font-weight: 700;
+    text-anchor: middle;
+  }
+
+  .barre-etiquette .bouton {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
   }
 
   .lien.relie > .trait {

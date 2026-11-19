@@ -224,6 +224,7 @@ export function aDesReglages(schema: Schema, lien: Lien): boolean {
       lien.libelles ||
       lien.forme ||
       lien.palier ||
+      lien.poses ||
       lien.points.length > 0 ||
       lien.statut !== "actif" ||
       agregatDe(schema, lien.a) ||

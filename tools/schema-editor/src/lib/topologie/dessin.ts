@@ -12,10 +12,13 @@ import { DEFINITIONS_ILLUSTRATIONS, emprise, illustration } from "./illustration
 import type {
   Affichage,
   Annotation,
+  CleEtiquette,
   Equipement,
   Groupe,
   Lien,
   Point,
+  PoseEtiquette,
+  PosesDuLien,
   Relation,
   Schema,
   Support,
@@ -827,6 +830,12 @@ export function cadreDuSchema(schema: Schema, marge = 40): Cadre {
   for (const e of schema.equipements) {
     xs.push(e.position.x - COTE, e.position.x + COTE);
     ys.push(e.position.y - COTE / 2, e.position.y + COTE / 2 + 34);
+    // Un nom placé à la main loin de son équipement reste dans le cadre.
+    if (e.pose) {
+      const b = occupationDuBloc(e, true);
+      xs.push(b.x0, b.x1);
+      ys.push(b.y0, b.y1);
+    }
   }
   for (const g of schema.groupes) {
     xs.push(g.position.x, g.position.x + g.taille.largeur);
@@ -995,6 +1004,50 @@ const LISERE = `stroke="${FOND}" stroke-width="4" stroke-linejoin="round" paint-
 /** Position du nom (puis de l'adresse) sous l'illustration. */
 export const ligneDuNom = (b: Boite, rang: 0 | 1): number => b.y1 + 13 + rang * 14;
 
+/**
+ * Le bloc du nom et de l'adresse d'un équipement, à sa place calculée (sous l'illustration) : ce qu'il
+ * occupe, et son centre, autour duquel il tourne.
+ */
+export function blocDuNom(e: Equipement, adresses: boolean): Boite & { cx: number; cy: number } {
+  const b = boiteDe(e, 1);
+  const adresse = adresses ? adresseAffichee(e) : "";
+  const demi = Math.max(e.nom.length * 7.6, adresse.length * 6.8) / 2 + 3;
+  const bloc = { x0: e.position.x - demi, y0: b.y1, x1: e.position.x + demi, y1: ligneDuNom(b, adresse ? 1 : 0) + 6 };
+  return { ...bloc, cx: e.position.x, cy: (bloc.y0 + bloc.y1) / 2 };
+}
+
+/** La transformation SVG du bloc du nom d'un équipement placé ou tourné à la main ; sinon, rien. */
+export function transformeDuBloc(e: Equipement, adresses: boolean): string {
+  const pose = e.pose;
+  if (!pose?.place && !pose?.angle) return "";
+  const { cx, cy } = blocDuNom(e, adresses);
+  const [dx, dy] = [pose.place?.x ?? 0, pose.place?.y ?? 0];
+  return [
+    dx || dy ? `translate(${dx} ${dy})` : "",
+    pose.angle ? `rotate(${pose.angle} ${cx.toFixed(1)} ${cy.toFixed(1)})` : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
+
+/** Ce qu'occupe une boîte tournée de `angle` degrés autour de son centre (la boîte droite qui l'enserre). */
+function boiteTournee(b: Boite, angle: number | undefined): Boite {
+  if (!angle) return b;
+  const r = (angle * Math.PI) / 180;
+  const [l, h] = [(b.x1 - b.x0) / 2, (b.y1 - b.y0) / 2];
+  const [cx, cy] = [(b.x0 + b.x1) / 2, (b.y0 + b.y1) / 2];
+  const dl = Math.abs(l * Math.cos(r)) + Math.abs(h * Math.sin(r));
+  const dh = Math.abs(l * Math.sin(r)) + Math.abs(h * Math.cos(r));
+  return { x0: cx - dl, y0: cy - dh, x1: cx + dl, y1: cy + dh };
+}
+
+/** Ce qu'occupe le bloc du nom d'un équipement, là où il est (placé ou tourné à la main, ou à sa place). */
+export function occupationDuBloc(e: Equipement, adresses: boolean): Boite {
+  const bloc = blocDuNom(e, adresses);
+  const [dx, dy] = [e.pose?.place?.x ?? 0, e.pose?.place?.y ?? 0];
+  return boiteTournee({ x0: bloc.x0 + dx, y0: bloc.y0 + dy, x1: bloc.x1 + dx, y1: bloc.y1 + dy }, e.pose?.angle);
+}
+
 function dessinerEquipement(e: Equipement, adresses = true): string {
   const def = definition(e.type);
   const couleur = couleurDe(e);
@@ -1002,6 +1055,7 @@ function dessinerEquipement(e: Equipement, adresses = true): string {
   const y = e.position.y - COTE / 2;
   const b = boiteDe(e, 0);
   const adresse = adresses ? adresseAffichee(e) : "";
+  const bloc = transformeDuBloc(e, adresses);
   const membres = nombreDeMembres(e);
   const statut =
     e.statut !== "actif"
@@ -1020,6 +1074,7 @@ function dessinerEquipement(e: Equipement, adresses = true): string {
     e.statut === "maintenance"
       ? `<circle cx="${b.x0.toFixed(1)}" cy="${b.y0.toFixed(1)}" r="6" fill="${COULEUR_MAINTENANCE}" stroke="${SURFACE}" stroke-width="2"/>`
       : "",
+    bloc ? `<g transform="${bloc}">` : "",
     texteSvg(
       e.position.x,
       ligneDuNom(b, 0),
@@ -1034,6 +1089,7 @@ function dessinerEquipement(e: Equipement, adresses = true): string {
           `text-anchor="middle" fill="${SECONDAIRE}" font-size="11" font-family="Cascadia Mono, Consolas, monospace" ${LISERE}`,
         )
       : "",
+    bloc ? `</g>` : "",
     `</g>`,
   ].join("");
 }
@@ -1059,21 +1115,33 @@ export type Etiquette = {
   couleur?: string;
   /** Le texte entier, quand l'étiquette l'abrège (une longue liste de VLAN) : il se lit au survol. */
   titre?: string;
+  /** Tournée à la main, en degrés. */
+  angle?: number;
+  /** Le câble ou la relation qui la porte, et laquelle de ses étiquettes elle est. */
+  id?: string;
+  cle?: CleEtiquette;
+  /** Placée à la main : le point du tracé où elle s'accroche. */
+  ancre?: Point;
 };
 
 const largeurDe = (texte: string, taille: number) => texte.length * taille * 0.58 + 10;
 
-export function boiteEtiquette(e: Etiquette, marge = 1): Boite {
+/** Le cadre d'une étiquette, droit (avant sa rotation). */
+export function cadreEtiquette(e: Etiquette, marge = 1): Boite {
   const l = largeurDe(e.texte, e.taille) / 2 + marge;
   const h = (e.taille + 6) / 2 + marge;
   return { x0: e.x - l, y0: e.y - h, x1: e.x + l, y1: e.y + h };
 }
 
+/** Ce qu'occupe une étiquette, tournée comprise. */
+export const boiteEtiquette = (e: Etiquette, marge = 1): Boite => boiteTournee(cadreEtiquette(e, marge), e.angle);
+
 export function dessinerEtiquette(e: Etiquette): string {
-  const b = boiteEtiquette(e, 0);
+  const b = cadreEtiquette(e, 0);
   const contour = e.couleur ?? BORDURE;
+  const tournee = e.angle ? ` transform="rotate(${e.angle} ${e.x.toFixed(1)} ${e.y.toFixed(1)})"` : "";
   return [
-    e.titre ? `<g><title>${echapper(e.titre)}</title>` : "",
+    e.titre || tournee ? `<g${tournee}>${e.titre ? `<title>${echapper(e.titre)}</title>` : ""}` : "",
     `<rect x="${b.x0.toFixed(1)}" y="${b.y0.toFixed(1)}" width="${(b.x1 - b.x0).toFixed(1)}" height="${(b.y1 - b.y0).toFixed(1)}" rx="${((b.y1 - b.y0) / 2).toFixed(1)}" fill="${SURFACE}" stroke="${contour}"${e.couleur ? ' stroke-width="1.5"' : ""}/>`,
     texteSvg(
       e.x,
@@ -1081,8 +1149,42 @@ export function dessinerEtiquette(e: Etiquette): string {
       e.texte,
       `text-anchor="middle" fill="${e.genre === "vlan" && e.couleur ? e.couleur : SECONDAIRE}" font-size="${e.taille}"${e.genre === "port" ? "" : ' font-weight="600"'}`,
     ),
-    e.titre ? "</g>" : "",
+    e.titre || tournee ? "</g>" : "",
   ].join("");
+}
+
+/** Le point d'un tracé où s'accroche une étiquette placée à la main, et où elle se trouve. */
+export function pointDeLaPlace(trace: Point[], place: { t?: number; x: number; y: number }): { ancre: Point; centre: Point } {
+  const parcours = parcourir(trace);
+  const { p, n } = parcours.a((place.t ?? 0) * parcours.total);
+  // Le long du tracé (u) et en travers (n) : u se déduit de la normale.
+  const u = { x: n.y, y: -n.x };
+  return { ancre: p, centre: { x: p.x + u.x * place.x + n.x * place.y, y: p.y + u.y * place.x + n.y * place.y } };
+}
+
+/**
+ * La place d'une étiquette posée au point `centre`, accrochée au point le plus proche du tracé : la fraction
+ * du tracé où il se trouve, et l'écart du centre à ce point, le long du tracé et en travers.
+ */
+export function placeSurLeTrace(trace: Point[], centre: Point): { t: number; x: number; y: number } {
+  const parcours = parcourir(trace);
+  let meilleure = { d: 0, distance: Number.POSITIVE_INFINITY };
+  let cumul = 0;
+  for (const [i, a] of trace.slice(0, -1).entries()) {
+    const b = trace[i + 1] as Point;
+    const l = Math.hypot(b.x - a.x, b.y - a.y);
+    const s = l ? Math.max(0, Math.min(1, ((centre.x - a.x) * (b.x - a.x) + (centre.y - a.y) * (b.y - a.y)) / (l * l))) : 0;
+    const distance = Math.hypot(a.x + (b.x - a.x) * s - centre.x, a.y + (b.y - a.y) * s - centre.y);
+    if (distance < meilleure.distance) meilleure = { d: cumul + s * l, distance };
+    cumul += l;
+  }
+  // La fraction arrondie d'abord : le point d'accroche relu est celui qui sert à mesurer l'écart.
+  const t = parcours.total ? Math.round((meilleure.d / parcours.total) * 10_000) / 10_000 : 0;
+  const { p, n } = parcours.a(t * parcours.total);
+  const u = { x: n.y, y: -n.x };
+  const [dx, dy] = [centre.x - p.x, centre.y - p.y];
+  const dixieme = (v: number) => Math.round(v * 10) / 10;
+  return { t, x: dixieme(dx * u.x + dy * u.y), y: dixieme(dx * n.x + dy * n.y) };
 }
 
 const chevauche = (a: Boite, b: Boite) => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
@@ -1114,6 +1216,8 @@ export type ATaguer = {
   ports?: [string | undefined, string | undefined];
   nom?: string;
   vlan?: { texte: string; couleur?: string };
+  /** Ses étiquettes placées ou tournées à la main. */
+  poses?: PosesDuLien;
 };
 
 type Candidat = { e: Etiquette; cout: number };
@@ -1193,46 +1297,72 @@ export function placerEtiquettes(elements: ATaguer[], obstacles: Boite[]): Map<s
     poses.push(boiteEtiquette(e, 2));
     resultat.set(id, [...(resultat.get(id) ?? []), e]);
   };
-  // Les ports d'abord (au plus près des équipements, en suivant le tracé même
-  // coudé), puis noms et VLAN autour du milieu.
+  // Ce qu'il y a à étiqueter, dans l'ordre : les ports d'abord (au plus près des équipements, en suivant le
+  // tracé même coudé), puis noms et VLAN autour du milieu.
+  type Aplacer = {
+    el: ATaguer;
+    cle: CleEtiquette;
+    base: Omit<Etiquette, "x" | "y">;
+    distances: (total: number) => { d: number; cout: number }[];
+  };
+  const aPlacer: Aplacer[] = [];
   for (const el of elements) {
-    if (!el.ports) continue;
-    const parcours = parcourir(el.trace);
-    const fin = Math.max(10, Math.min(parcours.total * 0.45, 160));
-    for (const [rang, texte] of el.ports.entries()) {
+    for (const [rang, texte] of (el.ports ?? []).entries()) {
       if (!texte) continue;
-      const distances: { d: number; cout: number }[] = [];
-      // Passé la moitié du câble, la pastille se rapprocherait de l'autre bout : plus coûteux.
-      // Au-delà, une pastille n'appartiendrait plus visiblement à son bout.
-      const loin = Math.max(8, Math.min(parcours.total - 8, fin + 140));
-      for (let d = 8; d <= loin; d += 4)
-        distances.push({ d: rang === 0 ? d : parcours.total - d, cout: d + Math.max(0, d - fin) * 2 });
-      const base = { texte: abreger(texte, 22), taille: 10, genre: "port" as const };
-      poser(el.id, choisir(autourDuTrace(parcours, distances, base)));
+      aPlacer.push({
+        el,
+        cle: rang === 0 ? "port-a" : "port-b",
+        base: { texte: abreger(texte, 22), taille: 10, genre: "port" },
+        distances: (total) => {
+          const fin = Math.max(10, Math.min(total * 0.45, 160));
+          const distances: { d: number; cout: number }[] = [];
+          // Passé la moitié du câble, la pastille se rapprocherait de l'autre bout : plus coûteux.
+          // Au-delà, une pastille n'appartiendrait plus visiblement à son bout.
+          const loin = Math.max(8, Math.min(total - 8, fin + 140));
+          for (let d = 8; d <= loin; d += 4)
+            distances.push({ d: rang === 0 ? d : total - d, cout: d + Math.max(0, d - fin) * 2 });
+          return distances;
+        },
+      });
     }
   }
   for (const el of elements) {
-    const parcours = parcourir(el.trace);
     for (const [genre, texte, couleur] of [
       ["nom", el.nom, undefined],
       ["vlan", el.vlan?.texte, el.vlan?.couleur],
     ] as const) {
       if (!texte) continue;
-      const taille = genre === "nom" ? 11 : 10;
       const court = genre === "vlan" ? abregerVlans(texte) : abreger(texte);
-      const base = {
-        texte: court,
-        taille,
-        genre,
-        ...(couleur ? { couleur } : {}),
-        ...(genre === "vlan" && court !== texte ? { titre: texte } : {}),
-      };
-      const distances = autourDuMilieu(parcours.total).map((d) => ({
-        d,
-        cout: Math.abs(d - parcours.total / 2),
-      }));
-      poser(el.id, choisir(autourDuTrace(parcours, distances, base)));
+      aPlacer.push({
+        el,
+        cle: genre,
+        base: {
+          texte: court,
+          taille: genre === "nom" ? 11 : 10,
+          genre,
+          ...(couleur ? { couleur } : {}),
+          ...(genre === "vlan" && court !== texte ? { titre: texte } : {}),
+        },
+        distances: (total) => autourDuMilieu(total).map((d) => ({ d, cout: Math.abs(d - total / 2) })),
+      });
     }
+  }
+  const pose = (a: Aplacer): PoseEtiquette | undefined => a.el.poses?.[a.cle];
+  // Les étiquettes placées à la main d'abord, là où elles ont été posées : les autres s'écartent d'elles.
+  for (const a of aPlacer) {
+    const place = pose(a)?.place;
+    if (!place) continue;
+    const { ancre, centre } = pointDeLaPlace(a.el.trace, place);
+    const angle = pose(a)?.angle;
+    poser(a.el.id, { ...a.base, ...centre, ...(angle ? { angle } : {}), id: a.el.id, cle: a.cle, ancre });
+  }
+  for (const a of aPlacer) {
+    if (pose(a)?.place) continue;
+    const parcours = parcourir(a.el.trace);
+    const angle = pose(a)?.angle;
+    // Tournée seulement : elle garde sa place calculée, la place qu'il lui faut tournée.
+    const base = { ...a.base, ...(angle ? { angle } : {}), id: a.el.id, cle: a.cle };
+    poser(a.el.id, choisir(autourDuTrace(parcours, a.distances(parcours.total), base)));
   }
   return resultat;
 }
@@ -1384,15 +1514,9 @@ export function affichageDe(schema: Pick<Schema, "affichage">, v: Vue): Affichag
 /** Ce qu'occupent un équipement et son nom (obstacles des étiquettes). */
 export function occupationDe(e: Equipement, adresses: boolean): Boite[] {
   const b = boiteDe(e, 1);
-  const adresse = adresses ? adresseAffichee(e) : "";
-  const demi = Math.max(e.nom.length * 7.6, adresse.length * 6.8) / 2 + 3;
   const badge: Boite[] =
     e.membres.length > 1 ? [{ x0: b.x1 - 17, y0: b.y0 - 11, x1: b.x1 + 9, y1: b.y0 + 6 }] : [];
-  return [
-    ...badge,
-    b,
-    { x0: e.position.x - demi, y0: b.y1, x1: e.position.x + demi, y1: ligneDuNom(b, adresse ? 1 : 0) + 6 },
-  ];
+  return [...badge, b, occupationDuBloc(e, adresses)];
 }
 
 export type MiseEnPage = {
@@ -1498,6 +1622,7 @@ export function mettreEnPage(schema: Schema, v: Vue, caches: Set<string>, sauf?:
     aTaguer.push({
       id: lien.id,
       trace,
+      ...(lien.poses ? { poses: lien.poses } : {}),
       ...(ports
         ? {
             ports: [portUnique(lien.a), portUnique(lien.b)] as [string | undefined, string | undefined],
@@ -1568,7 +1693,8 @@ export function mettreEnPage(schema: Schema, v: Vue, caches: Set<string>, sauf?:
       relation.nom || (typeof relation.proprietes.ssid === "string" ? relation.proprietes.ssid : "");
     const fleche = !RELATIONS_SYMETRIQUES.has(relation.genre);
     relations.push({ relation, trace, trait: traitDeRelation(relation), nom, fleche });
-    if (nom && affichage.nomsCables) aTaguer.push({ id: relation.id, trace, nom });
+    if (nom && affichage.nomsCables)
+      aTaguer.push({ id: relation.id, trace, nom, ...(relation.poses ? { poses: relation.poses } : {}) });
   }
   // Légendes des zones et noms des groupes : aucune étiquette ne les couvre.
   const legendes: Boite[] = [
@@ -1595,17 +1721,30 @@ export function mettreEnPage(schema: Schema, v: Vue, caches: Set<string>, sauf?:
   return { liens, relations, etiquettes: placerEtiquettes(aTaguer, obstacles), affichage };
 }
 
+/** Un cadre agrandi pour contenir aussi ces boîtes (des étiquettes placées à la main loin du reste). */
+function elargir(cadre: Cadre, boites: Boite[]): Cadre {
+  if (boites.length === 0) return cadre;
+  const x0 = Math.floor(Math.min(cadre.x, ...boites.map((b) => b.x0)));
+  const y0 = Math.floor(Math.min(cadre.y, ...boites.map((b) => b.y0)));
+  const x1 = Math.ceil(Math.max(cadre.x + cadre.largeur, ...boites.map((b) => b.x1)));
+  const y1 = Math.ceil(Math.max(cadre.y + cadre.hauteur, ...boites.map((b) => b.y1)));
+  return { x: x0, y: y0, largeur: x1 - x0, hauteur: y1 - y0 };
+}
+
 /** Le SVG complet d'un schéma, cadré sur son contenu. */
 export function dessinerSchema(schema: Schema, options: { vue?: Vue; legende?: boolean } = {}): string {
   const v = options.vue ?? vueDe(schema.vue);
   const caches = masques(schema);
-  const cadre = cadreDuSchema(schema);
+  const page = mettreEnPage(schema, v, caches);
+  const cadre = elargir(
+    cadreDuSchema(schema),
+    [...page.etiquettes.values()].flat().filter((e) => e.ancre).map((e) => boiteEtiquette(e, 8)),
+  );
   const parties: string[] = [];
   for (const g of schema.groupes) parties.push(dessinerGroupe(g));
   if (affichageDe(schema, v).zones)
     for (const n of schema.annotations) if (estZone(n)) parties.push(dessinerAnnotation(n));
   const legende = new Map<string, Trait>();
-  const page = mettreEnPage(schema, v, caches);
   let cercles = false;
   for (const { lien, trace, trait, brins, cercle } of page.liens) {
     legende.set(trait.nom, traitDuLien(lien));

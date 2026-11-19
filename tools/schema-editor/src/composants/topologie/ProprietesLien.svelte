@@ -418,7 +418,8 @@
     </div>
     <p class="aide">
       Tirer le câble le fait coulisser (le palier d'un câble coudé, ou un point de passage). Double-clic sur le tracé :
-      point de passage ; double-clic sur un point : il disparaît.
+      point de passage ; double-clic sur un point : il disparaît. Ses étiquettes se prennent et se tirent à la main ;
+      leur poignée les fait pivoter.
     </p>
   </details>
 
@@ -437,6 +438,15 @@
     {/if}
     {#if lien.couleur}
       <button type="button" class="bouton petit" onclick={() => modifier((l) => delete l.couleur)}>Couleur du support</button>
+    {/if}
+    {#if lien.poses}
+      <button
+        type="button"
+        class="bouton petit"
+        data-action="remettre-etiquettes"
+        title="Oublie la position et l'angle de ses étiquettes : elles retrouvent leur place calculée"
+        onclick={() => modifier((l) => delete l.poses, "Étiquettes remises à leur place.")}
+      >Remettre ses étiquettes à leur place</button>
     {/if}
     <button
       type="button"

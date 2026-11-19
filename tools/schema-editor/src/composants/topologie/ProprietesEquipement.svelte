@@ -735,6 +735,9 @@
     {#if def.hebergeur}
       <button type="button" class="bouton petit" onclick={() => modifier((x) => { if (x.replie) delete x.replie; else x.replie = true; })}>{equipement.replie ? "Déplier" : "Replier"}</button>
     {/if}
+    {#if equipement.pose}
+      <button type="button" class="bouton petit" data-action="remettre-nom" title="Oublie la position et l'angle de son nom : il retrouve sa place sous l'équipement" onclick={() => modifier((x) => delete x.pose, "Nom remis à sa place.")}>Remettre le nom à sa place</button>
+    {/if}
     <button type="button" class="bouton petit attention" onclick={() => { editeur.agir((s) => retirerEquipements(s, new Set([equipement.id])), "Équipement retiré, avec ses liens : Ctrl+Z pour annuler."); editeur.selection = []; }}>Retirer</button>
   </div>
 </div>
