@@ -9,6 +9,7 @@ import { migrerFormat1 } from "./migration";
 import {
   type Adresse,
   AFFICHAGES,
+  type AffichageLibelles,
   type Agregat,
   type Annotation,
   type ConfigVlan,
@@ -246,6 +247,9 @@ function lirePalier(valeur: unknown): Lien["palier"] {
   return (p.axe === "x" || p.axe === "y") && position !== undefined ? { axe: p.axe, position } : undefined;
 }
 
+/** Ce qu'un câble écrit sur lui-même : rien, ses ports, son nom, ou tout (le choix « Ports » se perdait). */
+const LIBELLES: readonly AffichageLibelles[] = ["aucun", "ports", "nom", "tout"];
+
 function lireLien(l: Brut): Lien {
   const optique = typeof l.optique === "object" && l.optique !== null ? (l.optique as Brut) : undefined;
   const mesure = typeof l.mesure === "object" && l.mesure !== null ? (l.mesure as Brut) : undefined;
@@ -280,8 +284,7 @@ function lireLien(l: Brut): Lien {
       : undefined,
     couleur: /^#[0-9a-f]{6}$/i.test(texte(l.couleur, 7)) ? texte(l.couleur, 7) : undefined,
     trait: l.trait === "tirets" || l.trait === "points" ? l.trait : undefined,
-    libelles:
-      l.libelles === "aucun" || l.libelles === "nom" || l.libelles === "tout" ? l.libelles : undefined,
+    libelles: LIBELLES.find((choix) => choix === l.libelles),
     forme: l.forme === "droite" || l.forme === "coudee" ? l.forme : undefined,
     points: points(l.points),
     palier: lirePalier(l.palier),
