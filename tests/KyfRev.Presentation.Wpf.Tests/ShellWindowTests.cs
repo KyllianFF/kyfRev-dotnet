@@ -321,8 +321,11 @@ public sealed class ShellWindowTests
 
             Click((Button)window.FindName("MinimizeButton"));
             Assert.AreEqual(WindowState.Minimized, window.WindowState);
+            Assert.IsEmpty(test.Chrome.Refreshed);
             window.WindowState = WindowState.Normal;
             TestShell.Flush();
+            // Rendue depuis la barre des tâches, la fenêtre fait recalculer son cadre : pas de bande vide en bas.
+            CollectionAssert.Contains(test.Chrome.Refreshed, new WindowInteropHelper(window).Handle);
 
             Click((Button)window.FindName("CloseButton"));
             Assert.IsTrue(closed);

@@ -694,6 +694,36 @@ public sealed class WritingTests
     }
 
     [STATestMethod]
+    public void Changing_mode_brings_the_new_view_in_from_the_side_of_the_chosen_mode()
+    {
+        using var scene = new Scene();
+        var page = scene.SheetPage;
+        Assert.IsFalse(page.ShowMode(scene.Page), "le même mode : rien ne bouge");
+        // Les essais coupent les transitions ; celui-ci les rend, le temps de les voir.
+        KyfRev.DesignSystem.Controls.Transitions.Skip = false;
+        try
+        {
+            // D'Écrire à Lire : le texte arrive de la gauche.
+            scene.Page.ToggleWritingCommand.Execute(null);
+            TestShell.Flush();
+            Assert.IsFalse(scene.Page.IsWriting);
+            var text = (System.Windows.Media.TranslateTransform)page.SheetText.RenderTransform;
+            Assert.IsTrue(page.SheetText.HasAnimatedProperties, "le texte paraît en fondu");
+            Assert.IsTrue(text.HasAnimatedProperties, "en glissant");
+
+            // De Lire à Écrire : le ruban arrive de la droite.
+            scene.Page.ToggleWritingCommand.Execute(null);
+            UiThread.Until(() => scene.Page.IsWriting);
+            TestShell.Flush();
+            Assert.IsTrue(page.Ribbon.HasAnimatedProperties, "le ruban paraît en fondu");
+        }
+        finally
+        {
+            KyfRev.DesignSystem.Controls.Transitions.Skip = true;
+        }
+    }
+
+    [STATestMethod]
     [DataRow(ThemeKind.Light)]
     [DataRow(ThemeKind.Dark)]
     public void One_line_marks_the_chosen_ribbon_tab_and_follows_it(ThemeKind theme)

@@ -250,6 +250,9 @@ public sealed class InterfaceMotionTests
         var menu = new ContextMenu { Items = { new MenuItem { Header = "Renommer" } }, Resources = design.Dictionary };
         menu.ApplyTemplate();
         Assert.IsTrue(Transitions.GetGrowsOnOpen(menu), "le style du menu le demande");
+        // Un menu fait à la volée n'a pas encore son cadre : il grandit au tour suivant, une fois posé.
+        Assert.IsFalse(Transitions.GrowFrame(new ContextMenu()));
+        Host.Flush();
         menu.RaiseEvent(new RoutedEventArgs(ContextMenu.OpenedEvent, menu));
         var frame = (FrameworkElement)VisualTreeHelper.GetChild(menu, 0);
         Assert.IsTrue(frame.HasAnimatedProperties, "il paraît en fondu");
@@ -353,6 +356,62 @@ public sealed class InterfaceMotionTests
         Host.Layout(host);
         Assert.AreEqual(0, Transitions.Welcome(list));
         Host.Flush();
+    }
+
+    [STATestMethod]
+    public void A_sheet_created_elsewhere_arrives_when_its_list_is_shown_again()
+    {
+        var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
+        var model = new object();
+        static Row Sheet(string id) => new(new Sheet(id));
+        ItemsControl View(object[] rows)
+        {
+            var list = new ItemsControl { DataContext = model, ItemsSource = rows };
+            Transitions.SetNewcomerKey(list, "Card.Id");
+            return list;
+        }
+
+        // La page vue une première fois, puis quittée : sa vue est jetée, son modèle reste.
+        var first = View([Sheet("f_a"), Sheet("f_b")]);
+        var host = Host.Of(design, first);
+        using var source = new HwndSource(new HwndSourceParameters("kyfRev essai") { Width = 480, Height = 320 }) { RootVisual = host };
+        Host.Layout(host);
+        Assert.AreEqual(0, Transitions.Welcome(first));
+
+        // De retour, une vue neuve du même modèle : la fiche créée entre-temps arrive.
+        var created = Sheet("f_c");
+        var again = View([Sheet("f_a"), created, Sheet("f_b")]);
+        host.Child = again;
+        Host.Layout(host);
+        Assert.AreEqual(1, Transitions.Welcome(again), "la fiche créée arrive, les autres non");
+
+        // La liste encore cachée quand elle change : la nouvelle fiche attend qu'elle se montre.
+        var waiting = Sheet("f_d");
+        again.Visibility = Visibility.Collapsed;
+        again.ItemsSource = new[] { Sheet("f_a"), Sheet("f_b"), waiting };
+        Host.Layout(host);
+        Assert.AreEqual(0, Transitions.Welcome(again));
+        again.Visibility = Visibility.Visible;
+        Host.Layout(host);
+        Assert.AreEqual(1, Transitions.Welcome(again), "elle arrive quand la liste se montre");
+        Host.Flush();
+    }
+
+    [STATestMethod]
+    public void A_drop_down_list_or_a_sub_menu_grows_as_it_opens()
+    {
+        var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
+        var content = new Border { Width = 120, Height = 80 };
+        var popup = new System.Windows.Controls.Primitives.Popup { Child = content, Resources = design.Dictionary };
+        Transitions.SetGrowsOnOpen(popup, true);
+        Assert.IsTrue(Transitions.GetGrowsOnOpen(popup));
+
+        typeof(System.Windows.Controls.Primitives.Popup).GetMethod("OnOpened", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(popup, [EventArgs.Empty]);
+
+        Assert.IsTrue(content.HasAnimatedProperties, "son contenu paraît en fondu");
+        Assert.IsInstanceOfType<ScaleTransform>(content.RenderTransform, "en grandissant");
+        Transitions.SetGrowsOnOpen(popup, false);
+        Transitions.SetGrowsOnOpen(new Border(), true);
     }
 
     private sealed record Sheet(string Id);

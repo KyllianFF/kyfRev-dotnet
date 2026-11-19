@@ -142,6 +142,26 @@ public sealed partial class WindowChrome : IWindowChrome
         return true;
     }
 
+    /// <inheritdoc/>
+    public void RefreshFrame(nint windowHandle)
+    {
+        if (windowHandle != 0)
+        {
+            SetWindowPos(windowHandle, 0, 0, 0, 0, 0, NoSize | NoMove | NoZOrder | NoActivate | FrameChanged);
+        }
+    }
+
+    private const uint NoSize = 0x0001;
+    private const uint NoMove = 0x0002;
+    private const uint NoZOrder = 0x0004;
+    private const uint NoActivate = 0x0010;
+    private const uint FrameChanged = 0x0020;
+
+    [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    private static partial bool SetWindowPos(nint window, nint after, int x, int y, int width, int height, uint flags);
+
     [DefaultDllImportSearchPaths(DllImportSearchPath.System32)]
     [LibraryImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]

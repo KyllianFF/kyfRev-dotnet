@@ -71,6 +71,9 @@ internal sealed partial class SheetPage : UserControl
             {
                 page.PageWidth = ActualWidth;
                 page.PropertyChanged += OnPageChanged;
+                // Une autre fiche : son mode est le point de départ, il ne s'anime pas.
+                _mode = -1;
+                ShowMode(page);
                 page.Sharing?.PropertyChanged += OnSharingChanged;
                 page.Masks?.PropertyChanged += OnMasksChanged;
                 page.Print?.PropertyChanged += OnPrintChanged;
@@ -82,9 +85,38 @@ internal sealed partial class SheetPage : UserControl
         };
     }
 
+    /// <summary>De combien glisse ce qui paraît quand on change de mode, depuis le côté du mode choisi.</summary>
+    internal const double ModeShift = 12;
+
+    /// <summary>Le mode montré : 0 Lire, 1 Réviser, 2 Écrire ; −1 avant le premier.</summary>
+    private int _mode = -1;
+
+    /// <summary>
+    /// Lire, Réviser, Écrire : ce qui paraît arrive en fondu, en glissant du côté du mode choisi (vers la droite en allant
+    /// vers Écrire). En lecture, c'est le texte ; en écriture, le ruban (l'éditeur a sa propre fenêtre, qu'on ne fait pas
+    /// glisser).
+    /// </summary>
+    /// <returns>Vrai si une transition a commencé.</returns>
+    internal bool ShowMode(SheetPageViewModel page)
+    {
+        var mode = page.IsWriting ? 2 : page.IsRevising ? 1 : 0;
+        var before = _mode;
+        _mode = mode;
+        if (before < 0 || before == mode)
+        {
+            return false;
+        }
+        var shift = mode > before ? ModeShift : -ModeShift;
+        return Transitions.Enter(page.IsWriting ? Ribbon : SheetText, KyfRev.DesignSystem.DesignKeys.NormalDuration, shift: shift);
+    }
+
     /// <summary>Le texte mis en forme a sa propre fenêtre : tout ce qui le recouvre le lui dit.</summary>
     private void OnPageChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
+        if (e.PropertyName is nameof(SheetPageViewModel.IsWriting) or nameof(SheetPageViewModel.IsRevising) && sender is SheetPageViewModel switched)
+        {
+            ShowMode(switched);
+        }
         if (e.PropertyName is nameof(SheetPageViewModel.Reading) or nameof(SheetPageViewModel.IsReading) or nameof(SheetPageViewModel.IsRevising) && sender is SheetPageViewModel listened)
         {
             listened.ReadAloud?.CloseCommand.Execute(null);
