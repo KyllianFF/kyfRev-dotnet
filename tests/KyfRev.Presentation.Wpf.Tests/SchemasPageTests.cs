@@ -527,13 +527,24 @@ public sealed class SchemasPageTests
         scene.Drag(label[0], label[1], label[0] + 30, label[1] - 40);
         UiThread.Until(() => Pose("vlan")?["place"] is not null, TimeSpan.FromSeconds(20));
 
-        // Mode avancé : les pastilles des ports se prennent de même.
+        // Mode avancé : les pastilles des ports se prennent de même, ici au clavier. Collée à son switch, celle-ci peut être
+        // sous son icône (selon les polices, toute entière sur la machine de la CI) : le clavier l'atteint quand même.
         scene.Script("document.querySelector('.segments.mode button[data-mode=\"avance\"]').click()");
         scene.WaitFor("document.querySelector('.segments.mode button[data-mode=\"avance\"]').getAttribute('aria-pressed') === 'true'");
         const string portLabel = "g.etiquette[data-etiquette=\"l_trunk|port-b\"]";
         scene.WaitFor($"document.querySelector('{portLabel}') !== null");
-        var port = Grip(portLabel);
-        scene.Drag(port[0], port[1], port[0] - 10, port[1] + 40);
+        void Key(string key, bool shift = false) =>
+            scene.Script("document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: '" + key + "', shiftKey: " + (shift ? "true" : "false") + ", bubbles: true, cancelable: true }))");
+        // Le câble choisi, ses étiquettes se prennent au clavier : Entrée sur l'une la choisit, les flèches la déplacent.
+        scene.Script("(() => { const lien = document.querySelector('svg.canevas g.lien'); lien.focus(); lien.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', bubbles: true, cancelable: true })); })()");
+        scene.WaitFor($"document.querySelector('{portLabel}').getAttribute('tabindex') === '0'");
+        scene.Script($"document.querySelector('{portLabel}').focus()");
+        Key("Enter");
+        scene.WaitFor("document.querySelectorAll('g.etiquette.choisie').length === 1");
+        for (var step = 0; step < 4; step++)
+        {
+            Key("ArrowDown", shift: true);
+        }
         UiThread.Until(() => Pose("port-b")?["place"] is not null, TimeSpan.FromSeconds(20));
 
         // Le nom et l'adresse d'un équipement : l'équipement choisi d'abord, puis son nom se tire, d'un seul bloc.
