@@ -31,6 +31,14 @@
               <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.NavigationActiveText}" />
               <Setter Property="FontWeight" Value="SemiBold" />
             </Trigger>
+            <!-- Dans une colonne dont la sélection glisse, c'est elle qui dessine le cadre du choix, derrière lui. -->
+            <MultiTrigger>
+              <MultiTrigger.Conditions>
+                <Condition Property="IsSelected" Value="True" />
+                <Condition Property="kyf:Transitions.HasSlidingSelection" Value="True" />
+              </MultiTrigger.Conditions>
+              <Setter TargetName="Row" Property="Background" Value="Transparent" />
+            </MultiTrigger>
             <Trigger Property="IsEnabled" Value="False">
               <Setter TargetName="Row" Property="Opacity" Value="0.5" />
             </Trigger>

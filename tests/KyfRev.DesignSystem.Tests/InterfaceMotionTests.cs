@@ -5,6 +5,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Documents;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using KyfRev.DesignSystem.Controls;
 using KyfRev.DesignSystem.Tokens;
 
@@ -412,6 +413,68 @@ public sealed class InterfaceMotionTests
         Assert.IsInstanceOfType<ScaleTransform>(content.RenderTransform, "en grandissant");
         Transitions.SetGrowsOnOpen(popup, false);
         Transitions.SetGrowsOnOpen(new Border(), true);
+    }
+
+    [STATestMethod]
+    public void In_a_menu_column_the_chosen_box_slides_from_one_choice_to_the_next()
+    {
+        var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
+        var panel = new FrameworkElementFactory(typeof(SlidingSelectionPanel));
+        var menu = new ListBox { ItemsSource = new[] { "Aujourd'hui", "Carnet", "Définitions" }, ItemsPanel = new ItemsPanelTemplate(panel) };
+        var host = Host.Of(design, menu);
+        using var source = new HwndSource(new HwndSourceParameters("kyfRev essai") { Width = 480, Height = 320 }) { RootVisual = host };
+        Host.Layout(host);
+        var column = (SlidingSelectionPanel)VisualTreeHelper.GetParent(menu.ItemContainerGenerator.ContainerFromIndex(0));
+        Assert.IsNull(column.Selection, "rien de choisi : pas de cadre");
+
+        // Le premier choix : le cadre paraît à sa place, en fondu ; la ligne ne dessine plus le sien.
+        menu.SelectedIndex = 0;
+        Host.Layout(host);
+        var first = (ListBoxItem)menu.ItemContainerGenerator.ContainerFromIndex(0);
+        Assert.AreEqual(0, column.Selection!.Value.Top, 0.5);
+        Assert.IsTrue(Transitions.GetHasSlidingSelection(first), "la ligne le sait");
+        Assert.AreEqual(Colors.Transparent, ((SolidColorBrush)Host.Part<Border>(first, "Row").Background).Color, "et ne dessine plus son cadre");
+
+        // Le suivant : le cadre glisse jusqu'à lui.
+        menu.SelectedIndex = 2;
+        var third = (ListBoxItem)menu.ItemContainerGenerator.ContainerFromIndex(2);
+        Assert.IsTrue(column.HasAnimatedProperties, "il glisse");
+        Assert.AreEqual(third.TransformToAncestor(column).Transform(default).Y, (double)column.GetAnimationBaseValue(SlidingSelectionPanel.SelectionTopProperty), 0.5, "jusqu'au choix");
+        Assert.AreEqual(third.ActualHeight, (double)column.GetAnimationBaseValue(SlidingSelectionPanel.SelectionHeightProperty), 0.5);
+        var picture = new RenderTargetBitmap(480, 320, 96, 96, PixelFormats.Pbgra32);
+        picture.Render(host);
+
+        // Plus rien de choisi : plus de cadre. Animations réduites : il saute.
+        menu.SelectedIndex = -1;
+        Host.Layout(host);
+        Assert.IsNull(column.Selection);
+        design.ReducedMotion = true;
+        menu.SelectedIndex = 1;
+        Host.Layout(host);
+        Assert.IsFalse(column.HasAnimatedProperties);
+        Assert.AreEqual(1d, column.SelectionOpacity);
+    }
+
+    [STATestMethod]
+    public void In_a_column_of_sections_a_checked_button_lets_the_column_draw_its_box()
+    {
+        var design = new DesignResources(ThemeKind.Dark, reducedMotion: false);
+        var tool = (Style)design.Dictionary["Kyf.Button.Tool"];
+        var general = new RadioButton { Style = tool, Content = "Général", IsChecked = true, GroupName = "Colonne" };
+        var reviews = new RadioButton { Style = tool, Content = "Révisions", GroupName = "Colonne" };
+        var column = new SlidingSelectionPanel { Children = { new ContentControl { Content = general }, new ContentControl { Content = reviews } } };
+        var host = Host.Of(design, column);
+        using var source = new HwndSource(new HwndSourceParameters("kyfRev essai") { Width = 480, Height = 320 }) { RootVisual = host };
+        Host.Layout(host);
+
+        Assert.AreEqual(Colors.Transparent, ((SolidColorBrush)general.GetAnimationBaseValue(Control.BackgroundProperty)).Color, "la section cochée ne dessine plus son cadre");
+        Assert.AreEqual(0, column.Selection!.Value.Top, 0.5);
+        reviews.IsChecked = true;
+        Assert.AreSame(reviews, SlidingSelectionPanel.Chosen(column));
+        Assert.AreEqual(general.ActualHeight, (double)column.GetAnimationBaseValue(SlidingSelectionPanel.SelectionTopProperty), 0.5, "le cadre descend à la suivante");
+        column.Visibility = Visibility.Collapsed;
+        Host.Layout(host);
+        Assert.IsNull(column.Selection, "une colonne cachée n'a pas de cadre");
     }
 
     private sealed record Sheet(string Id);

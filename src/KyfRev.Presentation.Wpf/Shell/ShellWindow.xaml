@@ -86,6 +86,10 @@
       <pages:WorkloadPage />
     </DataTemplate>
     <shell:LayoutVisibilityConverter x:Key="ShownIn" />
+    <!-- Le menu de gauche : la sélection glisse d'une vue à l'autre (rangée 18B). -->
+    <ItemsPanelTemplate x:Key="SlidingChoices">
+      <kyf:SlidingSelectionPanel />
+    </ItemsPanelTemplate>
     <!-- L'icône d'une entrée : un glyphe de kyfRev, ou l'icône dessinée d'une extension, de la couleur du texte comme lui. -->
     <DataTemplate x:Key="NavigationGlyphTemplate" DataType="{x:Type shell:NavigationItem}">
       <Grid>
@@ -437,10 +441,10 @@
         <DockPanel Margin="12,12,12,12">
           <StackPanel DockPanel.Dock="Bottom">
             <Separator Margin="0,8" />
-            <ListBox x:Name="SecondaryNavigation" ItemsSource="{Binding SecondaryNavigation}" SelectedItem="{Binding SelectedSecondary}"
+            <ListBox x:Name="SecondaryNavigation" ItemsPanel="{StaticResource SlidingChoices}" ItemsSource="{Binding SecondaryNavigation}" SelectedItem="{Binding SelectedSecondary}"
                      ItemTemplate="{StaticResource NavigationItemTemplate}" AutomationProperties.Name="{x:Static p:ShellText.SecondaryNavigation}" />
           </StackPanel>
-          <ListBox x:Name="MainNavigation" ItemsSource="{Binding MainNavigation}" SelectedItem="{Binding SelectedMain}"
+          <ListBox x:Name="MainNavigation" ItemsPanel="{StaticResource SlidingChoices}" ItemsSource="{Binding MainNavigation}" SelectedItem="{Binding SelectedMain}"
                    ItemTemplate="{StaticResource NavigationItemTemplate}" AutomationProperties.Name="{x:Static p:ShellText.MainNavigation}" />
         </DockPanel>
       </Border>
@@ -460,10 +464,10 @@
           <DockPanel Margin="12,12,12,12">
             <StackPanel DockPanel.Dock="Bottom">
               <Separator Margin="0,8" />
-              <ListBox x:Name="PeekSecondaryNavigation" ItemsSource="{Binding SecondaryNavigation}" SelectedItem="{Binding SelectedSecondary}"
+              <ListBox x:Name="PeekSecondaryNavigation" ItemsPanel="{StaticResource SlidingChoices}" ItemsSource="{Binding SecondaryNavigation}" SelectedItem="{Binding SelectedSecondary}"
                        ItemTemplate="{StaticResource PeekNavigationItemTemplate}" AutomationProperties.Name="{x:Static p:ShellText.SecondaryNavigation}" />
             </StackPanel>
-            <ListBox x:Name="PeekMainNavigation" ItemsSource="{Binding MainNavigation}" SelectedItem="{Binding SelectedMain}"
+            <ListBox x:Name="PeekMainNavigation" ItemsPanel="{StaticResource SlidingChoices}" ItemsSource="{Binding MainNavigation}" SelectedItem="{Binding SelectedMain}"
                      ItemTemplate="{StaticResource PeekNavigationItemTemplate}" AutomationProperties.Name="{x:Static p:ShellText.MainNavigation}" />
           </DockPanel>
         </Border>

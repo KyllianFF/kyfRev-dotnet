@@ -29,6 +29,19 @@ public static partial class Transitions
     public static readonly DependencyProperty HasSharedIndicatorProperty =
         DependencyProperty.RegisterAttached("HasSharedIndicator", typeof(bool), typeof(Transitions), new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.Inherits));
 
+    /// <summary>
+    /// Vrai dans une colonne dont la sélection glisse (<see cref="SlidingSelectionPanel"/>) : c'est la colonne qui dessine le
+    /// cadre du choix, le choix ne dessine plus le sien (son style le lit). Hérité par tout ce que la colonne contient.
+    /// </summary>
+    public static readonly DependencyProperty HasSlidingSelectionProperty =
+        DependencyProperty.RegisterAttached("HasSlidingSelection", typeof(bool), typeof(Transitions), new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.Inherits));
+
+    /// <summary>Lit <see cref="HasSlidingSelectionProperty"/>.</summary>
+    public static bool GetHasSlidingSelection(DependencyObject element) => (bool)(element ?? throw new ArgumentNullException(nameof(element))).GetValue(HasSlidingSelectionProperty);
+
+    /// <summary>Écrit <see cref="HasSlidingSelectionProperty"/>.</summary>
+    public static void SetHasSlidingSelection(DependencyObject element, bool value) => (element ?? throw new ArgumentNullException(nameof(element))).SetValue(HasSlidingSelectionProperty, value);
+
     private static readonly DependencyProperty IndicatorProperty =
         DependencyProperty.RegisterAttached("Indicator", typeof(TabIndicatorAdorner), typeof(Transitions));
 
