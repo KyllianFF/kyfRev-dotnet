@@ -10,6 +10,9 @@ import {
   type Adresse,
   AFFICHAGES,
   type Agregat,
+  angleLisible,
+  CLES_ETIQUETTE,
+  type CleEtiquette,
   type Annotation,
   type ConfigVlan,
   type Equipement,
@@ -29,6 +32,7 @@ import {
   type ModeleMateriel,
   NATURES_INTERFACE,
   type Point,
+  type PoseEtiquette,
   type Relation,
   ROLES_INTERFACE,
   type Schema,
@@ -229,6 +233,7 @@ function lireEquipement(e: Brut): Equipement {
       .slice(0, PORTS_MAX * MEMBRES_MAX)
       .map(lireInterface),
     position: point(e.position),
+    pose: lirePose(e.pose, false),
     verrou: booleen(e.verrou),
     replie: booleen(e.replie),
   });
@@ -244,6 +249,40 @@ function lirePalier(valeur: unknown): Lien["palier"] {
   const p = valeur as Brut;
   const position = nombre(p.position, -1_000_000, 1_000_000);
   return (p.axe === "x" || p.axe === "y") && position !== undefined ? { axe: p.axe, position } : undefined;
+}
+
+/** Une étiquette placée ou tournée à la main ; rien d'utile (ni place ni angle) : rien. */
+function lirePose(valeur: unknown, surTrace: boolean): PoseEtiquette | undefined {
+  if (typeof valeur !== "object" || valeur === null) return undefined;
+  const brut = valeur as Brut;
+  const lue = typeof brut.place === "object" && brut.place !== null ? (brut.place as Brut) : undefined;
+  const x = nombre(lue?.x, -COORDONNEE_MAX, COORDONNEE_MAX);
+  const y = nombre(lue?.y, -COORDONNEE_MAX, COORDONNEE_MAX);
+  const t = nombre(lue?.t, 0, 1);
+  const dixieme = (n: number) => Math.round(n * 10) / 10;
+  // Une place sur un tracé a sa fraction ; sur un équipement, elle n'en a pas.
+  const complete = x !== undefined && y !== undefined && (!surTrace || t !== undefined);
+  const place = complete
+    ? { ...(surTrace ? { t: Math.round((t ?? 0) * 10_000) / 10_000 } : {}), x: dixieme(x), y: dixieme(y) }
+    : undefined;
+  const brutAngle = nombre(brut.angle, -COORDONNEE_MAX, COORDONNEE_MAX);
+  const angle = brutAngle === undefined ? 0 : angleLisible(brutAngle);
+  if (!place && angle === 0) return undefined;
+  return propre({ place, angle: angle === 0 ? undefined : angle });
+}
+
+function lirePoses<T extends CleEtiquette>(
+  valeur: unknown,
+  cles: readonly T[],
+): Partial<Record<T, PoseEtiquette>> | undefined {
+  if (typeof valeur !== "object" || valeur === null) return undefined;
+  const brut = valeur as Brut;
+  const poses: Partial<Record<T, PoseEtiquette>> = {};
+  for (const cle of cles) {
+    const pose = lirePose(brut[cle], true);
+    if (pose) poses[cle] = pose;
+  }
+  return Object.keys(poses).length > 0 ? poses : undefined;
 }
 
 function lireLien(l: Brut): Lien {
@@ -285,6 +324,7 @@ function lireLien(l: Brut): Lien {
     forme: l.forme === "droite" || l.forme === "coudee" ? l.forme : undefined,
     points: points(l.points),
     palier: lirePalier(l.palier),
+    poses: lirePoses(l.poses, CLES_ETIQUETTE),
     notes: facultatif(l.notes, LONG_MAX),
   });
 }
@@ -302,6 +342,7 @@ const lireRelation = (r: Brut): Relation =>
     statut: parmi(r.statut, STATUTS_LIEN) ?? "actif",
     proprietes: proprietes(r.proprietes),
     points: points(r.points),
+    poses: lirePoses(r.poses, ["nom"] as const),
   });
 
 const lireVlan = (v: Brut): Vlan =>

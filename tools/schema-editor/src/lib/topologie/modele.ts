@@ -210,6 +210,8 @@ export type Equipement = {
   membres: Membre[];
   interfaces: Interface[];
   position: Point;
+  /** Le bloc de son nom et de son adresse, placé ou tourné à la main. */
+  pose?: PoseEtiquette;
   verrou?: boolean;
   /** Hôte replié : ce qu'il héberge est masqué. */
   replie?: boolean;
@@ -292,8 +294,31 @@ export type Lien = {
    * un Z horizontal). Il reste en place quand les équipements bougent.
    */
   palier?: { axe: "x" | "y"; position: number };
+  /** Étiquettes du câble placées ou tournées à la main ; les autres gardent leur place calculée. */
+  poses?: PosesDuLien;
   notes?: string;
 };
+
+/**
+ * Une étiquette placée ou tournée à la main. Sur un câble ou une relation, `place` l'accroche au tracé : `t`
+ * est la fraction de sa longueur où elle s'attache, `x` et `y` son écart à ce point, le long du tracé et en
+ * travers (elle suit donc son câble quand les équipements bougent). Sur un équipement, `t` manque et `x`,
+ * `y` décalent le bloc du nom et de l'adresse de sa place calculée. `angle` est en degrés, entre −90 et 90 :
+ * le texte ne se lit jamais à l'envers. Sans `place`, l'étiquette garde sa place calculée.
+ */
+export type PoseEtiquette = { place?: { t?: number; x: number; y: number }; angle?: number };
+
+/** Les étiquettes d'un câble : ses deux ports, son nom, son VLAN. */
+export type CleEtiquette = "port-a" | "port-b" | "nom" | "vlan";
+export const CLES_ETIQUETTE: CleEtiquette[] = ["port-a", "port-b", "nom", "vlan"];
+export type PosesDuLien = Partial<Record<CleEtiquette, PoseEtiquette>>;
+
+/** Un angle ramené entre −90 (compris) et 90 (exclu) : au-delà, le texte se retourne pour se lire à l'endroit. */
+export function angleLisible(angle: number): number {
+  const a = (((angle + 90) % 180) + 180) % 180 - 90;
+  // −0 et les poussières d'arrondi ne s'écrivent pas.
+  return Math.abs(a) < 1e-9 ? 0 : Math.round(a * 10) / 10;
+}
 
 /** Relations logiques : jamais confondues avec un câble. */
 export type GenreRelation =
@@ -334,6 +359,8 @@ export type Relation = {
   statut: StatutLien;
   proprietes: Record<string, Valeur>;
   points: Point[];
+  /** Son nom, placé ou tourné à la main. */
+  poses?: Pick<PosesDuLien, "nom">;
 };
 
 // --- VLAN, agrégats, groupes, annotations, vues ----------------------------------
