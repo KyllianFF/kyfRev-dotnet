@@ -302,7 +302,7 @@ internal sealed class BrushTransition : AnimationTimeline
         {
             return progress >= 0.5 ? to : from;
         }
-        // Vers ou depuis le transparent : seule l'opacité change, la teinte reste celle de la couleur visible (pas de voile blanc en thème sombre).
+        // Vers ou depuis le transparent : seule l'opacitÃ© change, la teinte reste celle de la couleur visible (pas de voile blanc en thÃ¨me sombre).
         var (ca, cb) = (a.Color.A == 0 ? b.Color with { A = 0 } : a.Color, b.Color.A == 0 ? a.Color with { A = 0 } : b.Color);
         byte Mix(byte x, byte y) => (byte)Math.Round(x + ((y - x) * progress));
         // Entre deux couleurs des jetons : la couleur de passage se fait comme elles, par TokenColor.
