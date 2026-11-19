@@ -115,7 +115,7 @@
                         Visibility="{Binding IsMarkdownShown, Converter={StaticResource Visible}}" />
           <ToggleButton x:Name="MarkdownToggle" Style="{DynamicResource Kyf.Button.Tool}" Padding="12,0" Content="{x:Static editing:EditingText.ShowMarkdown}" IsChecked="{Binding IsMarkdownOn}" IsEnabled="{Binding IsVisualAvailable}" />
         </StackPanel>
-        <StackPanel Orientation="Horizontal">
+        <StackPanel x:Name="RibbonTabs" Orientation="Horizontal" kyf:Transitions.TabIndicator="True">
           <ToggleButton x:Name="HomeTab" Style="{DynamicResource Kyf.Button.Tab}" Height="{DynamicResource Kyf.Target.Tab}" VerticalAlignment="Bottom" Content="{x:Static editing:EditingText.Home}" IsChecked="True" Click="OnHomeTab" />
           <ToggleButton x:Name="InsertTab" Style="{DynamicResource Kyf.Button.Tab}" Height="{DynamicResource Kyf.Target.Tab}" VerticalAlignment="Bottom" Content="{x:Static editing:EditingText.Insert}" Click="OnInsertTab" />
           <ToggleButton x:Name="PageTab" Style="{DynamicResource Kyf.Button.Tab}" Height="{DynamicResource Kyf.Target.Tab}" VerticalAlignment="Bottom" Content="{x:Static editing:EditingText.PageTab}" Click="OnPageTab" Visibility="Collapsed" />

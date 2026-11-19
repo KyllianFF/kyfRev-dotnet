@@ -694,6 +694,26 @@ public sealed class WritingTests
     }
 
     [STATestMethod]
+    [DataRow(ThemeKind.Light)]
+    [DataRow(ThemeKind.Dark)]
+    public void One_line_marks_the_chosen_ribbon_tab_and_follows_it(ThemeKind theme)
+    {
+        using var scene = new Scene(theme: theme);
+        var ribbon = scene.Ribbon;
+        var tabs = ribbon.RibbonTabs;
+        Assert.IsTrue(KyfRev.DesignSystem.Controls.Transitions.GetHasSharedIndicator(ribbon.HomeTab), "les onglets laissent le trait au panneau");
+        Rect Under(FrameworkElement tab) => tab.TransformToAncestor(tabs).TransformBounds(new Rect(tab.RenderSize));
+        Assert.AreEqual(Under(ribbon.HomeTab), KyfRev.DesignSystem.Controls.Transitions.IndicatedTab(tabs), "un trait commun, sous l'Accueil");
+
+        ribbon.InsertTab.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+        TestShell.Flush();
+
+        Assert.AreEqual(Under(ribbon.InsertTab), KyfRev.DesignSystem.Controls.Transitions.IndicatedTab(tabs), "il suit l'onglet choisi");
+        // Le trait est dessiné au-dessus de la page : l'image est celle de toute la fenêtre.
+        RuledPaperPixels.Capture((FrameworkElement)VisualTreeHelper.GetChild(scene.Window, 0), $"ruban-trait-commun-{(theme == ThemeKind.Dark ? "sombre" : "clair")}");
+    }
+
+    [STATestMethod]
     public void The_table_grid_follows_the_keyboard_and_inserts()
     {
         using var scene = new Scene("|");

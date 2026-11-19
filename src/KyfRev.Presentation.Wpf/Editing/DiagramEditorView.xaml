@@ -116,7 +116,7 @@
         </Grid.ColumnDefinitions>
         <ComboBox x:Name="ModelChoice" ItemsSource="{Binding Models}" SelectedItem="{Binding SelectedModel}" DisplayMemberPath="Name" MaxWidth="280" HorizontalAlignment="Left"
                   AutomationProperties.Name="{x:Static editing:EditingText.DiagramModel}" />
-        <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="8,0,0,0" Visibility="{Binding ShowsDirection, Converter={StaticResource Visible}}">
+        <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="8,0,0,0" Visibility="{Binding ShowsDirection, Converter={StaticResource Visible}}" kyf:Transitions.TabIndicator="True">
           <ToggleButton x:Name="DownButton" Style="{DynamicResource Kyf.Button.Tab}" Content="{x:Static editing:EditingText.DiagramDown}" IsChecked="{Binding IsDown}" Margin="0,0,4,0" />
           <ToggleButton x:Name="AcrossButton" Style="{DynamicResource Kyf.Button.Tab}" Content="{x:Static editing:EditingText.DiagramAcross}" IsChecked="{Binding IsAcross}" />
         </StackPanel>

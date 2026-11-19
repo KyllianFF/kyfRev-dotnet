@@ -41,6 +41,9 @@ public static class DesignKeys
     /// <summary>Durée normale, nulle si les animations sont réduites.</summary>
     public const string NormalDuration = "Kyf.Duration.Normal";
 
+    /// <summary>Durée de l'enfoncement d'un bouton sous le clic, nulle si les animations sont réduites.</summary>
+    public const string PressDuration = "Kyf.Duration.Press";
+
     /// <summary>L'ouverture d'un menu ou d'une liste déroulante : en fondu, ou d'un coup quand les animations sont réduites.</summary>
     public const string PopupMotion = "Kyf.Motion.Popup";
 

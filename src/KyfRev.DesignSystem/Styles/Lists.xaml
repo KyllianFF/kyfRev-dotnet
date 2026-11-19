@@ -1,7 +1,8 @@
 <ResourceDictionary x:Class="KyfRev.DesignSystem.Styles.Lists"
                     x:ClassModifier="internal"
                     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:kyf="clr-namespace:KyfRev.DesignSystem.Controls">
 
   <!-- Élément de liste : survol sur la surface secondaire ; sélectionné, fond vert pâle et texte
        en gras, pour que l'état ne tienne pas qu'à la couleur. -->
@@ -17,7 +18,7 @@
     <Setter Property="Template">
       <Setter.Value>
         <ControlTemplate TargetType="ListBoxItem">
-          <Border x:Name="Row" Background="{TemplateBinding Background}" CornerRadius="{DynamicResource Kyf.Radius.Control}"
+          <Border x:Name="Row" Background="{TemplateBinding Background}" CornerRadius="{DynamicResource Kyf.Radius.Control}" kyf:Transitions.SmoothBrushes="True"
                   Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
             <ContentPresenter VerticalAlignment="Center" HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" />
           </Border>

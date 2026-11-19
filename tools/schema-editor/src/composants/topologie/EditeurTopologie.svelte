@@ -973,7 +973,7 @@
     background: transparent;
     color: var(--texte);
     white-space: nowrap;
-    transition: background var(--duree);
+    transition: background var(--duree), transform var(--duree) cubic-bezier(0.2, 0.7, 0.3, 1);
   }
 
   .outil:hover:not(:disabled) {
@@ -1046,6 +1046,9 @@
     background: var(--surface);
     color: var(--texte);
     white-space: nowrap;
+    transition:
+      background var(--duree),
+      color var(--duree);
   }
 
   .segments button:hover {

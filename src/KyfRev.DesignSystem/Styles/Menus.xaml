@@ -6,6 +6,8 @@
 
   <!-- Menu contextuel : une carte flottante, ombre de l'élévation « Flyout ». Les actions rapides, s'il y en a, en tête. -->
   <Style TargetType="ContextMenu">
+    <!-- À l'ouverture, il grandit depuis son coin (rangée 18C). -->
+    <Setter Property="kyf:Transitions.GrowsOnOpen" Value="True" />
     <Setter Property="Background" Value="{DynamicResource Kyf.Brush.Surface}" />
     <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Text}" />
     <Setter Property="BorderBrush" Value="{DynamicResource Kyf.Brush.Divider}" />
@@ -52,7 +54,7 @@
 
   <!-- Entrée de menu : icône (ou coche), libellé, raccourci, flèche de sous-menu. -->
   <ControlTemplate x:Key="Kyf.Template.MenuItem" TargetType="MenuItem">
-    <Border x:Name="Row" Background="Transparent" CornerRadius="{DynamicResource Kyf.Radius.Control}"
+    <Border x:Name="Row" Background="Transparent" CornerRadius="{DynamicResource Kyf.Radius.Control}" kyf:Transitions.SmoothBrushes="True"
             Padding="12,0" MinHeight="40" SnapsToDevicePixels="True">
       <Grid>
         <Grid.ColumnDefinitions>

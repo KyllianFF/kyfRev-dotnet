@@ -7,6 +7,8 @@ using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
+using KyfRev.DesignSystem;
+using KyfRev.DesignSystem.Controls;
 
 namespace KyfRev.Presentation.Wpf.Pages;
 
@@ -21,6 +23,9 @@ internal sealed partial class SettingsHubPage : UserControl
 
     /// <summary>Le temps pendant lequel un réglage trouvé par la recherche reste entouré.</summary>
     internal static readonly TimeSpan PointedFor = TimeSpan.FromSeconds(2.5);
+
+    /// <summary>De combien monte la page d'une section qui paraît.</summary>
+    internal const double SectionRise = 6;
 
     private readonly DispatcherTimer _pointing = new() { Interval = TimeSpan.FromMilliseconds(100) };
     private SettingsHubViewModel? _followed;
@@ -199,6 +204,11 @@ internal sealed partial class SettingsHubPage : UserControl
         if (e.PropertyName == nameof(SettingsHubViewModel.Selected) || (e.PropertyName == nameof(SettingsHubViewModel.Query) && sender is SettingsHubViewModel { IsSearching: true }))
         {
             StopPointing();
+        }
+        // Une autre section : sa page arrive en fondu, en montant un peu (rangée 18B).
+        if (e.PropertyName == nameof(SettingsHubViewModel.Selected))
+        {
+            Transitions.Enter(TabContent, DesignKeys.FastDuration, rise: SectionRise);
         }
         if (e.PropertyName == nameof(SettingsHubViewModel.Query) && sender is SettingsHubViewModel { IsSearching: false } && _resultHadFocus)
         {

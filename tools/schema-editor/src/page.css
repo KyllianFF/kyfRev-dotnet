@@ -152,7 +152,8 @@ time {
   cursor: pointer;
   transition:
     background var(--duree),
-    border-color var(--duree);
+    border-color var(--duree),
+    transform var(--duree) cubic-bezier(0.2, 0.7, 0.3, 1);
 }
 
 .bouton:hover {
@@ -248,3 +249,84 @@ select.champ:disabled {
   white-space: nowrap;
 }
 
+
+/* --- Animations d'interface (rangée 18 des maquettes) --------------------------------------------------------------
+   Les mêmes que dans l'application : 120 ms pour un retour au toucher, 220 ms pour ce qui s'ouvre, une décélération
+   douce, sans rebond. Rien ne bouge quand Windows demande moins d'animations. */
+:root {
+  --duree-appui: 0.08s;
+  --duree-ouverture: 0.22s;
+  --decelere: cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+/* Un bouton s'enfonce un instant sous le clic, et revient. */
+.outil:active:not(:disabled) {
+  transform: scale(0.94);
+  transition-duration: var(--duree-appui);
+}
+
+.bouton:active:not(:disabled) {
+  transform: scale(0.97);
+  transition-duration: var(--duree-appui);
+}
+
+/* Un menu grandit depuis son coin, en fondu. */
+@keyframes kyfrev-grandir {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
+[role="menu"] {
+  transform-origin: top left;
+  animation: kyfrev-grandir var(--duree) var(--decelere);
+}
+
+/* Une section repliable : le chevron tourne d'un quart, ce qu'elle contient arrive en fondu en descendant un peu. */
+details > summary {
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+details > summary::-webkit-details-marker {
+  display: none;
+}
+
+details > summary::before {
+  content: "";
+  flex: none;
+  width: 6px;
+  height: 6px;
+  margin: 0 3px 0 1px;
+  border-right: 1.6px solid currentColor;
+  border-bottom: 1.6px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform var(--duree) var(--decelere);
+}
+
+details[open] > summary::before {
+  transform: rotate(45deg);
+}
+
+@keyframes kyfrev-deplier {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+details[open] > :not(summary) {
+  animation: kyfrev-deplier var(--duree-ouverture) var(--decelere);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0s !important;
+    transition-duration: 0s !important;
+  }
+}
