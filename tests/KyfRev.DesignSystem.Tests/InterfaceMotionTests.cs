@@ -288,6 +288,77 @@ public sealed class InterfaceMotionTests
     /// <summary>Où va le repère : sa valeur à la fin du glissement en cours.</summary>
     private static double Settled(TabIndicatorAdorner indicator, DependencyProperty property) => (double)indicator.GetAnimationBaseValue(property);
 
+    [STATestMethod]
+    public void A_sheet_added_to_a_rebuilt_list_arrives_and_nothing_else_moves()
+    {
+        var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
+        static Row Sheet(string id) => new(new Sheet(id));
+        var list = new ItemsControl { ItemsSource = new[] { Sheet("f_a"), Sheet("f_b") } };
+        Transitions.SetNewcomerKey(list, "Card.Id");
+        Assert.AreEqual("Card.Id", Transitions.GetNewcomerKey(list));
+        var host = Host.Of(design, list);
+        using var source = new HwndSource(new HwndSourceParameters("kyfRev essai") { Width = 480, Height = 320 }) { RootVisual = host };
+        Host.Layout(host);
+        Host.Flush();
+
+        // La liste qu'on trouve en arrivant ne s'anime pas ; une fiche nouvelle, dans la liste reconstruite, arrive.
+        Assert.AreEqual(0, Transitions.Welcome(list));
+        var added = Sheet("f_c");
+        list.ItemsSource = new[] { Sheet("f_a"), added, Sheet("f_b") };
+        Host.Layout(host);
+        Assert.AreEqual(1, Transitions.Welcome(list), "seule la fiche nouvelle arrive");
+        Assert.IsTrue(((FrameworkElement)list.ItemContainerGenerator.ContainerFromItem(added)).HasAnimatedProperties);
+        Host.Flush();
+
+        // Des fiches déjà vues qui reparaissent (un filtre levé) ne s'animent pas ; une liste toute neuve non plus.
+        list.ItemsSource = new[] { Sheet("f_b") };
+        Host.Layout(host);
+        Assert.AreEqual(0, Transitions.Welcome(list));
+        list.ItemsSource = new[] { Sheet("f_a"), Sheet("f_b"), Sheet("f_c") };
+        Host.Layout(host);
+        Assert.AreEqual(0, Transitions.Welcome(list));
+        list.ItemsSource = new[] { Sheet("n_1"), Sheet("n_2"), Sheet("n_3"), Sheet("n_4") };
+        Host.Layout(host);
+        Assert.AreEqual(0, Transitions.Welcome(list), "plus de trois : une autre liste, pas un ajout");
+
+        // Une ligne sans clé (un dossier) est ignorée ; animations réduites ou liste cachée : rien ne bouge.
+        list.ItemsSource = new object[] { "Dossier", Sheet("n_5") };
+        Host.Layout(host);
+        design.ReducedMotion = true;
+        Assert.AreEqual(0, Transitions.Welcome(list));
+        design.ReducedMotion = false;
+        list.ItemsSource = new[] { Sheet("n_6") };
+        list.Visibility = Visibility.Collapsed;
+        Host.Layout(host);
+        Assert.AreEqual(0, Transitions.Welcome(list));
+
+        Assert.IsNull(Transitions.KeyOf(new Row(null!), "Card.Id"), "un chemin interrompu n'a pas de clé");
+        Assert.IsNull(Transitions.KeyOf("texte", "Card.Id"));
+        Transitions.SetNewcomerKey(list, string.Empty);
+        Assert.AreEqual(0, Transitions.Welcome(list), "la liste n'en veut plus");
+        Transitions.SetNewcomerKey(new Border(), "Card.Id");
+    }
+
+    [STATestMethod]
+    public void A_list_still_loading_is_not_taken_for_new_sheets()
+    {
+        var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
+        var list = new ItemsControl();
+        Transitions.SetNewcomerKey(list, "Card.Id");
+        var host = Host.Of(design, list);
+        using var source = new HwndSource(new HwndSourceParameters("kyfRev essai") { Width = 480, Height = 320 }) { RootVisual = host };
+
+        // Vide, puis chargée : c'est la liste qu'on trouve en arrivant.
+        list.ItemsSource = new[] { new Row(new Sheet("f_a")) };
+        Host.Layout(host);
+        Assert.AreEqual(0, Transitions.Welcome(list));
+        Host.Flush();
+    }
+
+    private sealed record Sheet(string Id);
+
+    private sealed record Row(Sheet Card);
+
     private static Brush Brushes(DesignResources design, ColorRole role) => (Brush)design.Dictionary[DesignKeys.Brush(role)];
 
     private static SolidColorBrush Solid(byte a, byte r, byte g, byte b) => new(new TokenColor(a, r, g, b).ToColor());
