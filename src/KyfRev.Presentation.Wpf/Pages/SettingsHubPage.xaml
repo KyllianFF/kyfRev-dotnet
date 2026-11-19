@@ -76,7 +76,7 @@
             <ContentControl x:Name="SideResults" Content="{Binding}" ContentTemplate="{StaticResource FoundSettings}" Focusable="False" IsTabStop="False" Margin="0,8,0,0"
                             Visibility="{Binding IsSearching, Converter={StaticResource Visible}}" />
             <!-- Un seul groupe de boutons radio : les flèches passent d'une section à l'autre, et une seule reste choisie. -->
-            <ItemsControl x:Name="SectionList" ItemsSource="{Binding Tabs}" Focusable="False" AutomationProperties.Name="{x:Static pages:SettingsHubText.TabsName}">
+            <ItemsControl x:Name="SectionList" ItemsSource="{Binding Tabs}" Focusable="False" kyf:Transitions.TabIndicator="True" kyf:Transitions.TabIndicatorSide="Left" AutomationProperties.Name="{x:Static pages:SettingsHubText.TabsName}">
               <ItemsControl.Style>
                 <Style TargetType="ItemsControl">
                   <Style.Triggers>

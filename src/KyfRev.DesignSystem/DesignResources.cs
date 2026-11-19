@@ -133,6 +133,7 @@ public sealed class DesignResources
         [DesignKeys.AnimationsEnabled] = !reducedMotion,
         [DesignKeys.FastDuration] = new Duration(Motion.Effective(Motion.Fast, reducedMotion)),
         [DesignKeys.NormalDuration] = new Duration(Motion.Effective(Motion.Normal, reducedMotion)),
+        [DesignKeys.PressDuration] = new Duration(Motion.Effective(Motion.Press, reducedMotion)),
         [DesignKeys.PopupMotion] = reducedMotion || Controls.Transitions.Skip ? System.Windows.Controls.Primitives.PopupAnimation.None : System.Windows.Controls.Primitives.PopupAnimation.Fade,
     };
 

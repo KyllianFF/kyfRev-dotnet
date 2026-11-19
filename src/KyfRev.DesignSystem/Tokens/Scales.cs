@@ -144,6 +144,9 @@ public static class Motion
     /// <summary>Ouverture et fermeture d'un élément.</summary>
     public static TimeSpan Normal { get; } = TimeSpan.FromMilliseconds(220);
 
+    /// <summary>Un bouton qui s'enfonce sous le clic : plus vite qu'il ne revient (<see cref="Fast"/>).</summary>
+    public static TimeSpan Press { get; } = TimeSpan.FromMilliseconds(80);
+
     /// <summary>Durée réellement employée : nulle quand les animations sont réduites.</summary>
     public static TimeSpan Effective(TimeSpan duration, bool reducedMotion) => reducedMotion ? TimeSpan.Zero : duration;
 

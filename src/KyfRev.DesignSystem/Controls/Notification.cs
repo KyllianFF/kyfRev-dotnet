@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Automation.Peers;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using System.Windows.Media;
 using System.Windows.Threading;
 
 namespace KyfRev.DesignSystem.Controls;
@@ -203,6 +204,10 @@ public class Notification : Control
     {
         if (isVisible)
         {
+            // Elle monte un peu, en fondu (rangée 18C) ; d'un coup quand les animations sont réduites. C'est son cadre qui
+            // bouge, pas elle : sa place reste celle que la mise en page lui donne, et la ramener à la vue la montre entière.
+            ApplyTemplate();
+            Transitions.Enter(VisualTreeHelper.GetChildrenCount(this) > 0 && VisualTreeHelper.GetChild(this, 0) is FrameworkElement frame ? frame : this, DesignKeys.NormalDuration, rise: Transitions.DialogRise);
             // Après la mise en page et le focus : un lecteur d'écran coupe ce qu'il dit quand le focus change.
             Dispatcher.BeginInvoke(DispatcherPriority.ContextIdle, Appear);
         }

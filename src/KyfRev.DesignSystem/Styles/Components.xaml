@@ -195,9 +195,9 @@
               <ColumnDefinition Width="Auto" />
               <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
-            <Border x:Name="Box" Width="18" Height="18" CornerRadius="4" BorderThickness="1" Background="{DynamicResource Kyf.Brush.Surface}"
+            <Border x:Name="Box" Width="18" Height="18" CornerRadius="4" BorderThickness="1" kyf:Transitions.SmoothBrushes="True" Background="{DynamicResource Kyf.Brush.Surface}"
                     BorderBrush="{DynamicResource Kyf.Brush.ControlBorder}" VerticalAlignment="Top" Margin="0,3,0,0">
-              <kyf:Icon x:Name="Mark" Text="&#xE73E;" FontSize="12" HorizontalAlignment="Center" Foreground="{DynamicResource Kyf.Brush.OnPrimary}" Visibility="Collapsed" />
+              <kyf:Icon x:Name="Mark" Text="&#xE73E;" kyf:Transitions.PopsIn="True" FontSize="12" HorizontalAlignment="Center" Foreground="{DynamicResource Kyf.Brush.OnPrimary}" Visibility="Collapsed" />
             </Border>
             <ContentPresenter Grid.Column="1" VerticalAlignment="Center" Margin="8,0,0,0" />
           </Grid>
@@ -236,8 +236,8 @@
               <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
             <Grid VerticalAlignment="Top" Margin="0,3,0,0">
-              <Ellipse x:Name="Ring" Width="18" Height="18" StrokeThickness="1" Fill="{DynamicResource Kyf.Brush.Surface}" Stroke="{DynamicResource Kyf.Brush.ControlBorder}" />
-              <Ellipse x:Name="Dot" Width="8" Height="8" Fill="{DynamicResource Kyf.Brush.OnPrimary}" Visibility="Collapsed" />
+              <Ellipse x:Name="Ring" Width="18" Height="18" StrokeThickness="1" kyf:Transitions.SmoothBrushes="True" Fill="{DynamicResource Kyf.Brush.Surface}" Stroke="{DynamicResource Kyf.Brush.ControlBorder}" />
+              <Ellipse x:Name="Dot" Width="8" Height="8" kyf:Transitions.PopsIn="True" Fill="{DynamicResource Kyf.Brush.OnPrimary}" Visibility="Collapsed" />
             </Grid>
             <ContentPresenter Grid.Column="1" VerticalAlignment="Center" Margin="8,0,0,0" />
           </Grid>
@@ -278,9 +278,9 @@
               <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
             <ContentPresenter x:Name="Label" VerticalAlignment="Center" Margin="0,0,10,0" />
-            <Border x:Name="Track" Grid.Column="1" Width="44" Height="24" CornerRadius="12" VerticalAlignment="Center" BorderThickness="1"
+            <Border x:Name="Track" Grid.Column="1" Width="44" Height="24" CornerRadius="12" VerticalAlignment="Center" BorderThickness="1" kyf:Transitions.SmoothBrushes="True"
                     Background="{DynamicResource Kyf.Brush.Surface}" BorderBrush="{DynamicResource Kyf.Brush.ControlBorder}">
-              <Ellipse x:Name="Knob" Width="16" Height="16" HorizontalAlignment="Left" Margin="3,0" Fill="{DynamicResource Kyf.Brush.ControlBorder}" />
+              <Ellipse x:Name="Knob" Width="16" Height="16" HorizontalAlignment="Left" Margin="3,0" kyf:Transitions.SmoothBrushes="True" kyf:Transitions.Glides="True" Fill="{DynamicResource Kyf.Brush.ControlBorder}" />
             </Border>
           </Grid>
           <ControlTemplate.Triggers>
@@ -320,7 +320,7 @@
       <Setter.Value>
         <ControlTemplate TargetType="ListBoxItem">
           <Border x:Name="Chrome" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
-                  CornerRadius="{DynamicResource Kyf.Radius.Control}" SnapsToDevicePixels="True">
+                  CornerRadius="{DynamicResource Kyf.Radius.Control}" kyf:Transitions.SmoothBrushes="True" SnapsToDevicePixels="True">
             <!-- Le nom en gras, caché, garde sa place : le bouton ne change pas de largeur quand on le choisit. -->
             <Grid Margin="{TemplateBinding Padding}" VerticalAlignment="Center" HorizontalAlignment="Center">
               <ContentPresenter TextElement.FontWeight="SemiBold" Visibility="Hidden" />

@@ -2,11 +2,12 @@
                     x:ClassModifier="internal"
                     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-                    xmlns:sys="clr-namespace:System;assembly=System.Runtime">
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime"
+                    xmlns:kyf="clr-namespace:KyfRev.DesignSystem.Controls">
 
   <ControlTemplate x:Key="Kyf.Template.Button" TargetType="ButtonBase">
     <Border x:Name="Chrome" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
-            BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{DynamicResource Kyf.Radius.Control}"
+            BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{DynamicResource Kyf.Radius.Control}" kyf:Transitions.SmoothBrushes="True"
             SnapsToDevicePixels="True">
       <ContentPresenter Margin="{TemplateBinding Padding}" Focusable="False" RecognizesAccessKey="True"
                         HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
@@ -36,6 +37,8 @@
     <Setter Property="FocusVisualStyle" Value="{DynamicResource Kyf.FocusVisual}" />
     <Setter Property="Cursor" Value="Hand" />
     <Setter Property="Template" Value="{StaticResource Kyf.Template.Button}" />
+    <!-- Sous le clic, le bouton s'enfonce un instant (rangée 18A). -->
+    <Setter Property="kyf:Transitions.PressScale" Value="0.97" />
     <Style.Triggers>
       <Trigger Property="IsMouseOver" Value="True">
         <Setter Property="Background" Value="{DynamicResource Kyf.Brush.SurfaceAlt}" />
@@ -98,6 +101,7 @@
 
   <!-- Outil d'un ruban : compact, sans fond au repos ; s'il est à bascule, le choix se voit. -->
   <Style x:Key="Kyf.Button.Tool" TargetType="ButtonBase" BasedOn="{StaticResource Kyf.Button.Subtle}">
+    <Setter Property="kyf:Transitions.PressScale" Value="0.94" />
     <Setter Property="Padding" Value="6,0" />
     <Setter Property="MinHeight" Value="{DynamicResource Kyf.Target.Compact}" />
     <Setter Property="MinWidth" Value="28" />
@@ -127,7 +131,7 @@
   <!-- Onglet : le survol arrondi comme partout, et un trait droit sous celui qui est choisi. -->
   <ControlTemplate x:Key="Kyf.Template.Tab" TargetType="ToggleButton">
     <Grid x:Name="Root" SnapsToDevicePixels="True">
-      <Border x:Name="Chrome" Background="{TemplateBinding Background}" CornerRadius="{DynamicResource Kyf.Radius.Control}" Margin="0,0,0,2" />
+      <Border x:Name="Chrome" Background="{TemplateBinding Background}" CornerRadius="{DynamicResource Kyf.Radius.Control}" Margin="0,0,0,2" kyf:Transitions.SmoothBrushes="True" />
       <Border x:Name="Line" Height="2" VerticalAlignment="Bottom" Background="{TemplateBinding BorderBrush}" />
       <ContentPresenter Margin="{TemplateBinding Padding}" Focusable="False" RecognizesAccessKey="True"
                         HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
@@ -137,10 +141,15 @@
       <Trigger Property="IsEnabled" Value="False">
         <Setter TargetName="Root" Property="Opacity" Value="0.5" />
       </Trigger>
+      <!-- Sous un panneau qui a son repère commun, c'est lui qui glisse d'onglet en onglet : chacun cache le sien. -->
+      <Trigger Property="kyf:Transitions.HasSharedIndicator" Value="True">
+        <Setter TargetName="Line" Property="Visibility" Value="Hidden" />
+      </Trigger>
     </ControlTemplate.Triggers>
   </ControlTemplate>
 
   <Style x:Key="Kyf.Button.Tab" TargetType="ToggleButton" BasedOn="{StaticResource Kyf.Button.Subtle}">
+    <Setter Property="kyf:Transitions.PressScale" Value="0" />
     <Setter Property="Template" Value="{StaticResource Kyf.Template.Tab}" />
     <Setter Property="Padding" Value="12,0" />
     <Setter Property="MinHeight" Value="{DynamicResource Kyf.Target.Tab}" />
@@ -156,6 +165,7 @@
 
   <!-- Icône seule : son nom vient de AutomationProperties.Name et de l'infobulle. -->
   <Style x:Key="Kyf.Button.Icon" TargetType="ButtonBase" BasedOn="{StaticResource Kyf.Button.Subtle}">
+    <Setter Property="kyf:Transitions.PressScale" Value="0.94" />
     <Setter Property="FontFamily" Value="{DynamicResource Kyf.Font.Icons}" />
     <Setter Property="FontSize" Value="16" />
     <Setter Property="Padding" Value="0" />
@@ -166,6 +176,7 @@
   <!-- Bouton de la fenêtre (réduire, agrandir), dans la barre de titre : carré, collé au bord, hors du parcours au clavier comme ceux de Windows.
        « Tag » montre le survol quand c'est Windows qui le suit, sur « Agrandir » et ses dispositions. -->
   <Style x:Key="Kyf.Button.Window" TargetType="Button" BasedOn="{StaticResource Kyf.Button.Subtle}">
+    <Setter Property="kyf:Transitions.PressScale" Value="0" />
     <Setter Property="Width" Value="46" />
     <Setter Property="MinWidth" Value="46" />
     <Setter Property="MinHeight" Value="0" />
@@ -176,7 +187,7 @@
     <Setter Property="Template">
       <Setter.Value>
         <ControlTemplate TargetType="Button">
-          <Border Background="{TemplateBinding Background}">
+          <Border Background="{TemplateBinding Background}" kyf:Transitions.SmoothBrushes="True">
             <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
           </Border>
         </ControlTemplate>

@@ -543,7 +543,7 @@
                 PrimaryButtonText="{x:Static ds:DesignText.Close}" SecondaryButtonText="">
       <StackPanel>
       <!-- Deux onglets : les raccourcis, et le guide livré avec kyfRev. -->
-      <StackPanel x:Name="HelpTabs" Orientation="Horizontal" Margin="0,0,0,12" AutomationProperties.Name="{x:Static shell:GuideText.Tabs}">
+      <StackPanel x:Name="HelpTabs" Orientation="Horizontal" kyf:Transitions.TabIndicator="True" Margin="0,0,0,12" AutomationProperties.Name="{x:Static shell:GuideText.Tabs}">
         <ToggleButton x:Name="ShortcutsTab" Style="{DynamicResource Kyf.Button.Tab}" Content="{x:Static shell:GuideText.ShortcutsTab}" IsChecked="{Binding IsShortcutsShown}" MinHeight="44" Margin="0,0,4,0" />
         <ToggleButton x:Name="GuideTab" Style="{DynamicResource Kyf.Button.Tab}" Content="{x:Static shell:GuideText.GuideTab}" IsChecked="{Binding IsGuideShown}" MinHeight="44" />
       </StackPanel>

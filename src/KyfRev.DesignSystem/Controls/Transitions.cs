@@ -8,7 +8,7 @@ namespace KyfRev.DesignSystem.Controls;
 /// Les transitions de l'interface : ce qui apparaît (une page, une fenêtre de dialogue) arrive en fondu, sur les durées du
 /// design system. Quand les animations sont réduites, ces durées sont nulles et rien ne bouge.
 /// </summary>
-public static class Transitions
+public static partial class Transitions
 {
     /// <summary>La montée, en pixels, d'une fenêtre de dialogue qui apparaît.</summary>
     public const double DialogRise = 8;
@@ -25,30 +25,50 @@ public static class Transitions
     /// <param name="element">Ce qui apparaît.</param>
     /// <param name="durationKey">La durée, par sa clé du design system (<see cref="DesignKeys.FastDuration"/>, <see cref="DesignKeys.NormalDuration"/>).</param>
     /// <param name="rise">De combien de pixels l'élément monte en apparaissant ; 0 : il ne bouge pas.</param>
+    /// <param name="shift">De combien de pixels il glisse de côté en apparaissant (négatif : il vient de la gauche) ; 0 : il ne glisse pas.</param>
     /// <returns>Vrai si une transition a commencé ; faux si l'élément est montré tel quel (animations réduites, essais).</returns>
-    public static bool Enter(FrameworkElement element, string durationKey = DesignKeys.NormalDuration, double rise = 0)
+    public static bool Enter(FrameworkElement element, string durationKey = DesignKeys.NormalDuration, double rise = 0, double shift = 0)
     {
         ArgumentNullException.ThrowIfNull(element);
-        var duration = element.TryFindResource(durationKey) is Duration { HasTimeSpan: true } found ? found.TimeSpan : TimeSpan.Zero;
-        if (Skip || duration <= TimeSpan.Zero)
+        if (!Moves(element, durationKey, out var duration))
         {
             // Une transition en cours s'arrête là : l'élément est entier, à sa place.
             element.BeginAnimation(UIElement.OpacityProperty, null);
             if (element.RenderTransform is TranslateTransform { IsFrozen: false } still)
             {
                 still.BeginAnimation(TranslateTransform.YProperty, null);
+                still.BeginAnimation(TranslateTransform.XProperty, null);
             }
             return false;
         }
-        var ease = new CubicEase { EasingMode = EasingMode.EaseOut };
         // À la fin, l'animation rend la main : l'opacité et la place de l'élément redeviennent celles qu'il avait.
-        element.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 1, duration) { EasingFunction = ease, FillBehavior = FillBehavior.Stop });
-        if (rise > 0)
+        element.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 1, duration) { EasingFunction = Ease, FillBehavior = FillBehavior.Stop });
+        if (rise != 0 || shift != 0)
         {
             var move = new TranslateTransform();
             element.RenderTransform = move;
-            move.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(rise, 0, duration) { EasingFunction = ease, FillBehavior = FillBehavior.Stop });
+            move.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(rise, 0, duration) { EasingFunction = Ease, FillBehavior = FillBehavior.Stop });
+            move.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(shift, 0, duration) { EasingFunction = Ease, FillBehavior = FillBehavior.Stop });
         }
         return true;
+    }
+
+    /// <summary>La décélération douce de toutes les transitions : sans rebond.</summary>
+    internal static IEasingFunction Ease { get; } = Frozen(new CubicEase { EasingMode = EasingMode.EaseOut });
+
+    /// <summary>
+    /// La durée de <paramref name="durationKey"/> pour cet élément, et s'il y a lieu de bouger : non quand les animations sont
+    /// réduites (durée nulle), hors de tout thème, ou pendant les essais.
+    /// </summary>
+    internal static bool Moves(FrameworkElement element, string durationKey, out TimeSpan duration)
+    {
+        duration = element.TryFindResource(durationKey) is Duration { HasTimeSpan: true } found ? found.TimeSpan : TimeSpan.Zero;
+        return !Skip && duration > TimeSpan.Zero;
+    }
+
+    private static CubicEase Frozen(CubicEase ease)
+    {
+        ease.Freeze();
+        return ease;
     }
 }

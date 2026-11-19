@@ -1,6 +1,8 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
+using KyfRev.DesignSystem;
+using KyfRev.DesignSystem.Controls;
 
 namespace KyfRev.Presentation.Wpf.Editing;
 
@@ -24,6 +26,9 @@ internal sealed partial class EditorRibbon : UserControl
 
     /// <summary>En deçà, « Mise en forme » ne garde que son icône (la fenêtre la plus étroite lui laisse son libellé).</summary>
     internal const double LabelWidth = 400;
+
+    /// <summary>De combien glisse le contenu d'un onglet qui paraît, depuis le côté de l'onglet choisi.</summary>
+    internal const double TabShift = 8;
 
     /// <summary>La hauteur du volet de la barre courte : au-delà, il défile, et le texte reste en vue dessous.</summary>
     internal const double CompactPanelHeight = 200;
@@ -474,6 +479,14 @@ internal sealed partial class EditorRibbon : UserControl
 
     private void Select(Panel shown)
     {
+        // Le contenu d'un autre onglet arrive en fondu, en glissant un peu depuis le côté de l'onglet choisi (rangée 18B).
+        Panel[] order = [HomePanel, InsertPanel, PagePanel, TablePanel, ImagePanel];
+        var before = Array.FindIndex(order, panel => panel.Visibility == Visibility.Visible);
+        var after = Array.IndexOf(order, shown);
+        if (before >= 0 && after >= 0 && before != after)
+        {
+            Transitions.Enter(shown, DesignKeys.FastDuration, shift: after > before ? TabShift : -TabShift);
+        }
         HomeTab.IsChecked = shown == HomePanel;
         InsertTab.IsChecked = shown == InsertPanel;
         TableTab.IsChecked = shown == TablePanel;
