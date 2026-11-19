@@ -119,7 +119,7 @@
         <TextBlock x:Name="NoMatch" Text="{x:Static pages:DefinitionsText.NoMatch}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Visibility="{Binding HasNoMatch, Converter={StaticResource Visible}}" />
 
         <!-- Des cartes, autant de colonnes que la largeur en permet : un écran large ne reste pas vide. -->
-        <ItemsControl x:Name="List" ItemsSource="{Binding Rows}" AutomationProperties.Name="{x:Static pages:DefinitionsText.ListName}" Focusable="False"
+        <ItemsControl x:Name="List" ItemsSource="{Binding Rows}" kyf:Transitions.NewcomerKey="Definition.Id" AutomationProperties.Name="{x:Static pages:DefinitionsText.ListName}" Focusable="False"
                       Visibility="{Binding HasRows, Converter={StaticResource Visible}}">
           <ItemsControl.ItemsPanel>
             <ItemsPanelTemplate>

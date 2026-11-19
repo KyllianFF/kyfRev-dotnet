@@ -209,7 +209,7 @@
               <TextBlock x:Name="NoMatch" DockPanel.Dock="Top" Text="{x:Static pages:SheetsText.NoMatch}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="8,4,8,8"
                          Visibility="{Binding HasNoMatch, Converter={StaticResource Visible}}" />
             <Grid>
-              <pages:OpenableList x:Name="Items" ItemsSource="{Binding Rows}" SelectedItem="{Binding SelectedRow}" OpenCommand="{Binding OpenCommand}"
+              <pages:OpenableList x:Name="Items" ItemsSource="{Binding Rows}" kyf:Transitions.NewcomerKey="Sheet.Id" SelectedItem="{Binding SelectedRow}" OpenCommand="{Binding OpenCommand}"
                                   AutomationProperties.Name="{x:Static pages:SheetsText.ListName}"
                                   ScrollViewer.CanContentScroll="True" VirtualizingPanel.IsVirtualizing="True"
                                   VirtualizingPanel.VirtualizationMode="Recycling" VirtualizingPanel.ScrollUnit="Pixel"

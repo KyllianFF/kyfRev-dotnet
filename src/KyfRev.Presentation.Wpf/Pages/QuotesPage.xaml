@@ -43,7 +43,7 @@
           <StackPanel>
             <TextBlock x:Name="NoMatch" Text="{x:Static pages:QuotesText.NoMatch}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="0,0,0,8" Visibility="{Binding HasNoMatch, Converter={StaticResource Visible}}" />
             <!-- Des cartes, autant de colonnes que la largeur en permet : un écran large ne reste pas vide. -->
-            <ItemsControl x:Name="List" ItemsSource="{Binding Rows}" Focusable="False" AutomationProperties.Name="{x:Static pages:QuotesText.ListName}" Visibility="{Binding HasRows, Converter={StaticResource Visible}}">
+            <ItemsControl x:Name="List" ItemsSource="{Binding Rows}" kyf:Transitions.NewcomerKey="Quote.Path" Focusable="False" AutomationProperties.Name="{x:Static pages:QuotesText.ListName}" Visibility="{Binding HasRows, Converter={StaticResource Visible}}">
               <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>
                   <WrapPanel />
