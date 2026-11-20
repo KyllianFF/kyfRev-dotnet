@@ -95,10 +95,11 @@
               <ItemsControl.ItemTemplate>
                 <DataTemplate DataType="{x:Type pages:SettingsTab}">
                   <StackPanel>
-                    <TextBlock Text="{Binding Group}" Style="{DynamicResource Kyf.Text.Caption}" FontWeight="SemiBold" Margin="8,14,0,4"
+                    <!-- Le nom du groupe s'aligne sur les icônes des sections, en retrait du trait de la section choisie. -->
+                    <TextBlock Text="{Binding Group}" Style="{DynamicResource Kyf.Text.Caption}" FontWeight="SemiBold" Margin="14,14,0,4"
                                Visibility="{Binding StartsGroup, Converter={StaticResource Visible}}" />
                     <RadioButton GroupName="SettingsSections" IsChecked="{Binding IsSelected}" Tag="{Binding IsSelected}" Style="{DynamicResource Kyf.Button.Tool}"
-                                 HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="8,0" MinHeight="38" Margin="0,0,0,2"
+                                 HorizontalAlignment="Stretch" HorizontalContentAlignment="Left" Padding="14,0" MinHeight="38" Margin="0,0,0,2"
                                  AutomationProperties.Name="{Binding Label}" AutomationProperties.HelpText="{Binding Description}">
                       <StackPanel Orientation="Horizontal">
                         <kyf:Icon Text="{Binding Glyph}" VerticalAlignment="Center" Margin="0,0,10,0" />
