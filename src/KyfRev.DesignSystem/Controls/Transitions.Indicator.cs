@@ -29,6 +29,19 @@ public static partial class Transitions
     public static readonly DependencyProperty HasSharedIndicatorProperty =
         DependencyProperty.RegisterAttached("HasSharedIndicator", typeof(bool), typeof(Transitions), new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.Inherits));
 
+    /// <summary>
+    /// Vrai dans une colonne dont la sélection glisse (<see cref="SlidingSelectionPanel"/>) : c'est la colonne qui dessine le
+    /// cadre du choix, le choix ne dessine plus le sien (son style le lit). Hérité par tout ce que la colonne contient.
+    /// </summary>
+    public static readonly DependencyProperty HasSlidingSelectionProperty =
+        DependencyProperty.RegisterAttached("HasSlidingSelection", typeof(bool), typeof(Transitions), new FrameworkPropertyMetadata(false, FrameworkPropertyMetadataOptions.Inherits));
+
+    /// <summary>Lit <see cref="HasSlidingSelectionProperty"/>.</summary>
+    public static bool GetHasSlidingSelection(DependencyObject element) => (bool)(element ?? throw new ArgumentNullException(nameof(element))).GetValue(HasSlidingSelectionProperty);
+
+    /// <summary>Écrit <see cref="HasSlidingSelectionProperty"/>.</summary>
+    public static void SetHasSlidingSelection(DependencyObject element, bool value) => (element ?? throw new ArgumentNullException(nameof(element))).SetValue(HasSlidingSelectionProperty, value);
+
     private static readonly DependencyProperty IndicatorProperty =
         DependencyProperty.RegisterAttached("Indicator", typeof(TabIndicatorAdorner), typeof(Transitions));
 
@@ -111,6 +124,12 @@ internal sealed class TabIndicatorAdorner : Adorner
 
     /// <summary>Épaisseur du trait à gauche d'une section.</summary>
     internal const double SideThickness = 3;
+
+    /// <summary>Le retrait de la pastille d'une section depuis le bord de son cadre.</summary>
+    internal const double SideInset = 3;
+
+    /// <summary>La part de la hauteur de la section que tient sa pastille.</summary>
+    internal const double SideShare = 0.45;
 
     /// <summary>Où commence le repère, le long de la rangée (ou de la colonne).</summary>
     public static readonly DependencyProperty StartProperty =
@@ -235,9 +254,12 @@ internal sealed class TabIndicatorAdorner : Adorner
         {
             return;
         }
+        // À gauche d'une section, une petite pastille arrondie posée dans son cadre, comme le menu de navigation de Windows : un
+        // trait droit sur le bord coupait l'arrondi du cadre.
         var line = Side == Dock.Left
-            ? new Rect(target.Left, Start, SideThickness, Length)
+            ? new Rect(target.Left + SideInset, Start + (Length * (1 - SideShare) / 2), SideThickness, Length * SideShare)
             : new Rect(Start, target.Bottom - LineThickness, Length, LineThickness);
-        drawingContext.DrawRoundedRectangle(brush, null, line, 1, 1);
+        var radius = Side == Dock.Left ? SideThickness / 2 : 1;
+        drawingContext.DrawRoundedRectangle(brush, null, line, radius, radius);
     }
 }

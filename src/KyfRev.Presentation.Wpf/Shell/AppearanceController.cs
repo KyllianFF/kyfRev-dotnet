@@ -115,6 +115,9 @@ public sealed partial class AppearanceController : ObservableObject, IDisposable
     /// <summary>Agrandie, la fenêtre laisse de quoi faire apparaître une barre des tâches masquée ; vrai si elle a rogné sa zone cliente.</summary>
     internal bool LeaveRoomForHiddenTaskbar(nint window, nint calcSizeParameters) => _chrome.LeaveRoomForHiddenTaskbar(window, calcSizeParameters);
 
+    /// <summary>Le cadre et la zone cliente de la fenêtre recalculés par Windows, comme après un redimensionnement.</summary>
+    internal void RefreshFrame(nint window) => _chrome.RefreshFrame(window);
+
     /// <summary>Ce qui se voit vraiment de la fenêtre, en pixels ; vide si Windows ne le dit pas.</summary>
     internal ScreenBounds VisibleBounds(nint window) => _chrome.VisibleBounds(window);
 

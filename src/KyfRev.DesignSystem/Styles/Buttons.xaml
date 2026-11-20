@@ -118,6 +118,15 @@
         <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.NavigationActiveText}" />
         <Setter Property="BorderBrush" Value="{DynamicResource Kyf.Brush.Primary}" />
       </DataTrigger>
+      <!-- Dans une colonne dont la sélection glisse (les sections des Paramètres), c'est elle qui dessine le cadre du choix. -->
+      <MultiTrigger>
+        <MultiTrigger.Conditions>
+          <Condition Property="ToggleButton.IsChecked" Value="True" />
+          <Condition Property="kyf:Transitions.HasSlidingSelection" Value="True" />
+        </MultiTrigger.Conditions>
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="Transparent" />
+      </MultiTrigger>
     </Style.Triggers>
   </Style>
 

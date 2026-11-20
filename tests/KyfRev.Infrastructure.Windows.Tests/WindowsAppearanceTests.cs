@@ -156,6 +156,29 @@ public sealed class WindowsAppearanceTests
     }
 
     [STATestMethod]
+    public void A_window_frame_is_recalculated_without_moving_or_resizing_the_window()
+    {
+        var chrome = new WindowChrome();
+        chrome.RefreshFrame(0);
+
+        // Le cadre recalculé, Windows renvoie le calcul de la zone cliente ; la fenêtre ne bouge ni ne change de taille.
+        var asked = 0;
+        using var window = new HwndSource(new HwndSourceParameters("kyfRev essai") { WindowStyle = unchecked((int)0x00CF0000), PositionX = -10000, PositionY = -10000, Width = 300, Height = 200 });
+        window.AddHook((nint _, int message, nint _, nint _, ref bool _) =>
+        {
+            if (message == 0x0083)
+            {
+                asked++;
+            }
+            return 0;
+        });
+        var before = chrome.VisibleBounds(window.Handle);
+        chrome.RefreshFrame(window.Handle);
+        Assert.IsGreaterThan(0, asked, "WM_NCCALCSIZE renvoyé");
+        Assert.AreEqual(before, chrome.VisibleBounds(window.Handle));
+    }
+
+    [STATestMethod]
     public void The_title_bar_follows_the_theme()
     {
         var chrome = new WindowChrome();

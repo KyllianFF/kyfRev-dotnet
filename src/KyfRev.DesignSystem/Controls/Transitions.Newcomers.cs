@@ -28,8 +28,11 @@ public static partial class Transitions
     public static readonly DependencyProperty NewcomerKeyProperty =
         DependencyProperty.RegisterAttached("NewcomerKey", typeof(string), typeof(Transitions), new PropertyMetadata(string.Empty, OnNewcomerKey));
 
-    private static readonly DependencyProperty SeenKeysProperty =
-        DependencyProperty.RegisterAttached("SeenKeys", typeof(HashSet<object>), typeof(Transitions));
+    /// <summary>
+    /// Les clés vues, par modèle de la page (son contexte de données) : la vue d'une page est refaite à chaque visite, son
+    /// modèle reste. Une fiche créée dans l'éditeur arrive ainsi quand on revient au Carnet.
+    /// </summary>
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<object, Dictionary<string, HashSet<object>>> SeenByOwner = [];
 
     private static readonly ConcurrentDictionary<(Type, string), PropertyInfo?> KeyProperties = new();
 
@@ -46,11 +49,11 @@ public static partial class Transitions
             return;
         }
         list.ItemContainerGenerator.ItemsChanged -= NewcomerHandlers.Of(list);
-        list.ClearValue(SeenKeysProperty);
         if (e.NewValue is string { Length: > 0 })
         {
             list.ItemContainerGenerator.ItemsChanged += NewcomerHandlers.Of(list);
-            Remember(list);
+            // Une vue neuve d'un modèle déjà vu : ses lignes nouvelles arrivent ; sinon, ce sont celles qu'on trouve en arrivant.
+            OnListChanged(list);
         }
     }
 
@@ -70,14 +73,22 @@ public static partial class Transitions
             return 0;
         }
         // La première liste qui a des lignes est celle qu'on trouve en arrivant : on la retient, sans rien animer.
-        if (list.GetValue(SeenKeysProperty) is not HashSet<object> seen)
+        if (SeenOf(list) is not { } seen)
         {
             Remember(list);
             return 0;
         }
         var newcomers = Keyed(list.Items, path).Where(entry => !seen.Contains(entry.Key)).ToList();
+        if (newcomers.Count is > 0 and <= MostNewcomers && !list.IsVisible)
+        {
+            // La liste est cachée (la page s'ouvre encore) : les nouvelles lignes attendent qu'elle se montre pour arriver.
+            seen.UnionWith(Keyed(list.Items, path).Select(entry => entry.Key).Except(newcomers.Select(entry => entry.Key)));
+            list.IsVisibleChanged -= VisibleHandlers.Of(list);
+            list.IsVisibleChanged += VisibleHandlers.Of(list);
+            return 0;
+        }
         Remember(list);
-        if (newcomers.Count is 0 or > MostNewcomers || !list.IsVisible)
+        if (newcomers.Count is 0 or > MostNewcomers)
         {
             return 0;
         }
@@ -96,15 +107,40 @@ public static partial class Transitions
     private static void Remember(ItemsControl list)
     {
         var keys = Keyed(list.Items, GetNewcomerKey(list)).Select(entry => entry.Key).ToList();
-        if (list.GetValue(SeenKeysProperty) is HashSet<object> seen)
+        if (SeenOf(list) is { } seen)
         {
             seen.UnionWith(keys);
         }
         else if (keys.Count > 0)
         {
             // Une liste vide n'est pas encore celle qu'on trouve en arrivant : elle se charge peut-être.
-            list.SetValue(SeenKeysProperty, keys.ToHashSet());
+            SeenByOwner.GetValue(OwnerOf(list), _ => [])[GetNewcomerKey(list)] = [.. keys];
         }
+    }
+
+    /// <summary>Les clés déjà vues par le modèle de cette liste, pour son chemin de clé ; aucune s'il n'a encore rien montré.</summary>
+    private static HashSet<object>? SeenOf(ItemsControl list) =>
+        SeenByOwner.TryGetValue(OwnerOf(list), out var byPath) && byPath.TryGetValue(GetNewcomerKey(list), out var seen) ? seen : null;
+
+    /// <summary>À qui appartiennent les clés vues : le modèle de la page, sinon la liste elle-même.</summary>
+    private static object OwnerOf(ItemsControl list) => list.DataContext ?? list;
+
+    /// <summary>La liste se montre : les lignes qui attendaient arrivent ; on ne l'attend plus.</summary>
+    private static void OnListShown(ItemsControl list)
+    {
+        if (list.IsVisible)
+        {
+            list.IsVisibleChanged -= VisibleHandlers.Of(list);
+            list.Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () => Welcome(list));
+        }
+    }
+
+    /// <summary>Le gestionnaire « la liste se montre » de chaque liste, pour pouvoir le retirer.</summary>
+    private static class VisibleHandlers
+    {
+        private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<ItemsControl, DependencyPropertyChangedEventHandler> Handlers = [];
+
+        public static DependencyPropertyChangedEventHandler Of(ItemsControl list) => Handlers.GetValue(list, owner => (_, _) => OnListShown(owner));
     }
 
     /// <summary>Les lignes qui ont une clé (une rangée de dossier n'en a pas), avec leur clé.</summary>

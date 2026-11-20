@@ -50,6 +50,7 @@ public sealed partial class ShellWindow : Window
     private IInputElement? _focusBeforePalette;
     private bool _paletteLeft;
     private WindowState _windowedState;
+    private WindowState _lastState;
     private ResizeMode _windowedResize = ResizeMode.CanResize;
 
     /// <summary>La fenêtre de la coquille <paramref name="shell"/>.</summary>
@@ -130,6 +131,23 @@ public sealed partial class ShellWindow : Window
         MaximizeButton.ToolTip = label;
         AutomationProperties.SetName(MaximizeButton, label);
         FitFrame();
+        // Rendue depuis la barre des tâches, la fenêtre pouvait garder la mise en page d'une taille d'avant : une grande bande vide
+        // en bas, jusqu'à la navigation suivante. Le cadre est recalculé, puis le contenu remis à la taille de la fenêtre.
+        if (_lastState == WindowState.Minimized && WindowState != WindowState.Minimized)
+        {
+            Dispatcher.BeginInvoke(DispatcherPriority.Loaded, Refill);
+        }
+        _lastState = WindowState;
+    }
+
+    /// <summary>Le cadre recalculé par Windows, et le contenu remis à la taille de la fenêtre.</summary>
+    internal void Refill()
+    {
+        _shell.Appearance.RefreshFrame(new WindowInteropHelper(this).Handle);
+        FitFrame();
+        InvalidateMeasure();
+        Root.InvalidateMeasure();
+        UpdateLayout();
     }
 
     /// <inheritdoc/>

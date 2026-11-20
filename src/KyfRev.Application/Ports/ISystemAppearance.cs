@@ -76,4 +76,11 @@ public interface IWindowChrome
 
     /// <summary>Barre de titre sombre ou claire pour la fenêtre <paramref name="windowHandle"/> ; faux si Windows ne le permet pas.</summary>
     bool UseDarkTitleBar(nint windowHandle, bool dark);
+
+    /// <summary>
+    /// Fait recalculer à Windows le cadre et la zone cliente de la fenêtre, comme après un redimensionnement : rendue depuis la barre
+    /// des tâches, une fenêtre qui calcule elle-même sa zone cliente pouvait garder la taille qu'elle avait avant.
+    /// </summary>
+    /// <param name="windowHandle">La fenêtre.</param>
+    void RefreshFrame(nint windowHandle);
 }

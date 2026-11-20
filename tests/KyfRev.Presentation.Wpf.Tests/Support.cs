@@ -67,6 +67,11 @@ internal sealed class FakeChrome : IWindowChrome
     public ScreenArea Work { get; set; }
 
     public ScreenArea WorkArea(nint windowHandle) => Work;
+
+    /// <summary>Les fenêtres dont le cadre a été recalculé.</summary>
+    public List<nint> Refreshed { get; } = [];
+
+    public void RefreshFrame(nint windowHandle) => Refreshed.Add(windowHandle);
 }
 
 /// <summary>Une coquille assemblée comme dans l'application, avec des préférences de Windows simulées.</summary>

@@ -5,6 +5,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Documents;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using KyfRev.DesignSystem.Controls;
 using KyfRev.DesignSystem.Tokens;
 
@@ -250,6 +251,9 @@ public sealed class InterfaceMotionTests
         var menu = new ContextMenu { Items = { new MenuItem { Header = "Renommer" } }, Resources = design.Dictionary };
         menu.ApplyTemplate();
         Assert.IsTrue(Transitions.GetGrowsOnOpen(menu), "le style du menu le demande");
+        // Un menu fait à la volée n'a pas encore son cadre : il grandit au tour suivant, une fois posé.
+        Assert.IsFalse(Transitions.GrowFrame(new ContextMenu()));
+        Host.Flush();
         menu.RaiseEvent(new RoutedEventArgs(ContextMenu.OpenedEvent, menu));
         var frame = (FrameworkElement)VisualTreeHelper.GetChild(menu, 0);
         Assert.IsTrue(frame.HasAnimatedProperties, "il paraît en fondu");
@@ -353,6 +357,124 @@ public sealed class InterfaceMotionTests
         Host.Layout(host);
         Assert.AreEqual(0, Transitions.Welcome(list));
         Host.Flush();
+    }
+
+    [STATestMethod]
+    public void A_sheet_created_elsewhere_arrives_when_its_list_is_shown_again()
+    {
+        var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
+        var model = new object();
+        static Row Sheet(string id) => new(new Sheet(id));
+        ItemsControl View(object[] rows)
+        {
+            var list = new ItemsControl { DataContext = model, ItemsSource = rows };
+            Transitions.SetNewcomerKey(list, "Card.Id");
+            return list;
+        }
+
+        // La page vue une première fois, puis quittée : sa vue est jetée, son modèle reste.
+        var first = View([Sheet("f_a"), Sheet("f_b")]);
+        var host = Host.Of(design, first);
+        using var source = new HwndSource(new HwndSourceParameters("kyfRev essai") { Width = 480, Height = 320 }) { RootVisual = host };
+        Host.Layout(host);
+        Assert.AreEqual(0, Transitions.Welcome(first));
+
+        // De retour, une vue neuve du même modèle : la fiche créée entre-temps arrive.
+        var created = Sheet("f_c");
+        var again = View([Sheet("f_a"), created, Sheet("f_b")]);
+        host.Child = again;
+        Host.Layout(host);
+        Assert.AreEqual(1, Transitions.Welcome(again), "la fiche créée arrive, les autres non");
+
+        // La liste encore cachée quand elle change : la nouvelle fiche attend qu'elle se montre.
+        var waiting = Sheet("f_d");
+        again.Visibility = Visibility.Collapsed;
+        again.ItemsSource = new[] { Sheet("f_a"), Sheet("f_b"), waiting };
+        Host.Layout(host);
+        Assert.AreEqual(0, Transitions.Welcome(again));
+        again.Visibility = Visibility.Visible;
+        Host.Layout(host);
+        Assert.AreEqual(1, Transitions.Welcome(again), "elle arrive quand la liste se montre");
+        Host.Flush();
+    }
+
+    [STATestMethod]
+    public void A_drop_down_list_or_a_sub_menu_grows_as_it_opens()
+    {
+        var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
+        var content = new Border { Width = 120, Height = 80 };
+        var popup = new System.Windows.Controls.Primitives.Popup { Child = content, Resources = design.Dictionary };
+        Transitions.SetGrowsOnOpen(popup, true);
+        Assert.IsTrue(Transitions.GetGrowsOnOpen(popup));
+
+        typeof(System.Windows.Controls.Primitives.Popup).GetMethod("OnOpened", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(popup, [EventArgs.Empty]);
+
+        Assert.IsTrue(content.HasAnimatedProperties, "son contenu paraît en fondu");
+        Assert.IsInstanceOfType<ScaleTransform>(content.RenderTransform, "en grandissant");
+        Transitions.SetGrowsOnOpen(popup, false);
+        Transitions.SetGrowsOnOpen(new Border(), true);
+    }
+
+    [STATestMethod]
+    public void In_a_menu_column_the_chosen_box_slides_from_one_choice_to_the_next()
+    {
+        var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
+        var panel = new FrameworkElementFactory(typeof(SlidingSelectionPanel));
+        var menu = new ListBox { ItemsSource = new[] { "Aujourd'hui", "Carnet", "Définitions" }, ItemsPanel = new ItemsPanelTemplate(panel) };
+        var host = Host.Of(design, menu);
+        using var source = new HwndSource(new HwndSourceParameters("kyfRev essai") { Width = 480, Height = 320 }) { RootVisual = host };
+        Host.Layout(host);
+        var column = (SlidingSelectionPanel)VisualTreeHelper.GetParent(menu.ItemContainerGenerator.ContainerFromIndex(0));
+        Assert.IsNull(column.Selection, "rien de choisi : pas de cadre");
+
+        // Le premier choix : le cadre paraît à sa place, en fondu ; la ligne ne dessine plus le sien.
+        menu.SelectedIndex = 0;
+        Host.Layout(host);
+        var first = (ListBoxItem)menu.ItemContainerGenerator.ContainerFromIndex(0);
+        Assert.AreEqual(0, column.Selection!.Value.Top, 0.5);
+        Assert.IsTrue(Transitions.GetHasSlidingSelection(first), "la ligne le sait");
+        Assert.AreEqual(Colors.Transparent, ((SolidColorBrush)Host.Part<Border>(first, "Row").Background).Color, "et ne dessine plus son cadre");
+
+        // Le suivant : le cadre glisse jusqu'à lui.
+        menu.SelectedIndex = 2;
+        var third = (ListBoxItem)menu.ItemContainerGenerator.ContainerFromIndex(2);
+        Assert.IsTrue(column.HasAnimatedProperties, "il glisse");
+        Assert.AreEqual(third.TransformToAncestor(column).Transform(default).Y, (double)column.GetAnimationBaseValue(SlidingSelectionPanel.SelectionTopProperty), 0.5, "jusqu'au choix");
+        Assert.AreEqual(third.ActualHeight, (double)column.GetAnimationBaseValue(SlidingSelectionPanel.SelectionHeightProperty), 0.5);
+        var picture = new RenderTargetBitmap(480, 320, 96, 96, PixelFormats.Pbgra32);
+        picture.Render(host);
+
+        // Plus rien de choisi : plus de cadre. Animations réduites : il saute.
+        menu.SelectedIndex = -1;
+        Host.Layout(host);
+        Assert.IsNull(column.Selection);
+        design.ReducedMotion = true;
+        menu.SelectedIndex = 1;
+        Host.Layout(host);
+        Assert.IsFalse(column.HasAnimatedProperties);
+        Assert.AreEqual(1d, column.SelectionOpacity);
+    }
+
+    [STATestMethod]
+    public void In_a_column_of_sections_a_checked_button_lets_the_column_draw_its_box()
+    {
+        var design = new DesignResources(ThemeKind.Dark, reducedMotion: false);
+        var tool = (Style)design.Dictionary["Kyf.Button.Tool"];
+        var general = new RadioButton { Style = tool, Content = "Général", IsChecked = true, GroupName = "Colonne" };
+        var reviews = new RadioButton { Style = tool, Content = "Révisions", GroupName = "Colonne" };
+        var column = new SlidingSelectionPanel { Children = { new ContentControl { Content = general }, new ContentControl { Content = reviews } } };
+        var host = Host.Of(design, column);
+        using var source = new HwndSource(new HwndSourceParameters("kyfRev essai") { Width = 480, Height = 320 }) { RootVisual = host };
+        Host.Layout(host);
+
+        Assert.AreEqual(Colors.Transparent, ((SolidColorBrush)general.GetAnimationBaseValue(Control.BackgroundProperty)).Color, "la section cochée ne dessine plus son cadre");
+        Assert.AreEqual(0, column.Selection!.Value.Top, 0.5);
+        reviews.IsChecked = true;
+        Assert.AreSame(reviews, SlidingSelectionPanel.Chosen(column));
+        Assert.AreEqual(general.ActualHeight, (double)column.GetAnimationBaseValue(SlidingSelectionPanel.SelectionTopProperty), 0.5, "le cadre descend à la suivante");
+        column.Visibility = Visibility.Collapsed;
+        Host.Layout(host);
+        Assert.IsNull(column.Selection, "une colonne cachée n'a pas de cadre");
     }
 
     private sealed record Sheet(string Id);
