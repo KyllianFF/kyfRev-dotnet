@@ -796,13 +796,16 @@ public sealed class ShellWindowTests
             var sidebar = (FrameworkElement)window.FindName("Sidebar");
             var curtain = (FrameworkElement)window.FindName("MenuCurtain");
             var page = (FrameworkElement)window.FindName("Page");
-            window.Width = 1500;
+            // La largeur passe par le modèle : sur un écran plus étroit que le seuil de la barre, Windows borne la fenêtre.
+            window.Width = 1000;
+            TestShell.Flush();
+            test.Shell.WindowWidth = 1500;
             TestShell.Flush();
             Assert.AreEqual(248, sidebar.ActualWidth, "la barre entière");
             Assert.IsFalse(window.FollowSidebar(), "rien n'a changé depuis la dernière mise en page");
 
             // La fenêtre plus étroite : le menu passe à la colonne d'icônes. Le rideau tient la place quittée et se retire.
-            window.Width = 1000;
+            test.Shell.WindowWidth = 1000;
             TestShell.Flush();
             Assert.AreEqual(77, sidebar.ActualWidth);
             Assert.AreEqual(Visibility.Visible, curtain.Visibility, "le rideau se retire vers le nouveau bord");
@@ -811,7 +814,7 @@ public sealed class ShellWindowTests
             Assert.IsTrue(((TranslateTransform)page.RenderTransform).HasAnimatedProperties, "la page glisse avec le bord");
 
             // De nouveau large : le menu se découvre depuis la colonne d'icônes.
-            window.Width = 1500;
+            test.Shell.WindowWidth = 1500;
             TestShell.Flush();
             Assert.AreEqual(Visibility.Collapsed, curtain.Visibility);
             Assert.IsNotNull(sidebar.Clip, "le menu se découvre peu à peu");
@@ -835,7 +838,7 @@ public sealed class ShellWindowTests
             var column = (SlidingSelectionPanel)VisualTreeHelper.GetParent(menu.ItemContainerGenerator.ContainerFromIndex(0));
             foreach (var (width, name) in new[] { (1500d, "barre"), (1000d, "icones"), (1500d, "barre-de-retour") })
             {
-                window.Width = width;
+                test.Shell.WindowWidth = width;
                 TestShell.Flush();
                 var chosen = (FrameworkElement)menu.ItemContainerGenerator.ContainerFromItem(menu.SelectedItem);
                 Assert.AreEqual(chosen.ActualWidth, column.Selection!.Value.Width, 0.5, $"le cadre a la largeur du choix ({name})");
