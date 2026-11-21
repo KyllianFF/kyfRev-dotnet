@@ -257,6 +257,9 @@ public sealed class VisualEditorTests
         Assert.IsTrue(held, "à l'entrée en écriture, la fiche lue reste, inerte");
         Assert.IsFalse(leftEarly, "elle ne part qu'une fois le texte de l'éditeur à l'écran");
         Assert.IsFalse(second.GaveUpWaiting);
+        // Le focus demandé pendant que l'éditeur était caché lui revient quand il se montre : on écrit sans cliquer dans le texte.
+        UiThread.Until(() => ReferenceEquals(System.Windows.Input.FocusManager.GetFocusedElement(scene.Window), second.View));
+        Assert.AreSame(second.View, System.Windows.Input.FocusManager.GetFocusedElement(scene.Window));
         Assert.AreEqual(Visibility.Visible, second.View.Visibility);
         Assert.AreEqual(Visibility.Collapsed, page.SheetText.Visibility);
         Assert.IsTrue(page.SheetText.IsHitTestVisible);
