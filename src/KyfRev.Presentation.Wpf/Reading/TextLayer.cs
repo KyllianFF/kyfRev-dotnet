@@ -63,15 +63,46 @@ internal sealed class TextLayer(Func<string, Brush?> findBrush)
     }
 
     /// <summary>Change les surlignages et celui qui ressort.</summary>
-    public void Set(IReadOnlyList<Highlight> highlights, string? active)
+    /// <param name="highlights">Les passages.</param>
+    /// <param name="active">Le passage visé depuis le volet.</param>
+    /// <param name="fadeOn">La vue qui montre le texte, si le changement vient d'un geste : les couleurs passent en fondu.</param>
+    public void Set(IReadOnlyList<Highlight> highlights, string? active, FrameworkElement? fadeOn = null)
     {
         _highlights = highlights;
         _active = active;
-        for (var i = 0; i < _segments.Count; i++)
+        Fading(fadeOn, () =>
         {
-            i += Apply(i);
-        }
+            for (var i = 0; i < _segments.Count; i++)
+            {
+                i += Apply(i);
+            }
+        });
         _formulas.ForEach(Style);
+    }
+
+    /// <summary>Au-delà, trop de texte change à la fois (« Tout afficher » sur une longue fiche) : les couleurs changent d'un coup.</summary>
+    internal const int MostFades = 60;
+
+    // La vue sur laquelle les couleurs passent en fondu, le temps d'un changement venu d'un geste ; et combien l'ont fait.
+    private FrameworkElement? _fadeOn;
+    private int _fades;
+
+    /// <summary>Combien de morceaux de texte ont changé de couleur en fondu au dernier changement.</summary>
+    internal int LastFades { get; private set; }
+
+    private void Fading(FrameworkElement? fadeOn, Action change)
+    {
+        _fadeOn = fadeOn;
+        _fades = 0;
+        try
+        {
+            change();
+        }
+        finally
+        {
+            LastFades = _fades;
+            _fadeOn = null;
+        }
     }
 
     /// <summary>Change les mots définis ailleurs dans le coffre, marqués d'un pointillé discret.</summary>
@@ -89,13 +120,18 @@ internal sealed class TextLayer(Func<string, Brush?> findBrush)
         source is Run run && _byRun.TryGetValue(run, out var segment) ? WordOver(segment.Start, segment.End) : null;
 
     /// <summary>Change les trous encore masqués.</summary>
-    public void SetHoles(IReadOnlyList<TextHole> holes)
+    /// <param name="holes">Les trous encore masqués.</param>
+    /// <param name="fadeOn">La vue qui montre le texte, si le changement vient d'un geste : un trou découvert paraît en fondu.</param>
+    public void SetHoles(IReadOnlyList<TextHole> holes, FrameworkElement? fadeOn = null)
     {
         _holes = holes;
-        foreach (var segment in _segments)
+        Fading(fadeOn, () =>
         {
-            Style(segment, Covering(segment.Start, segment.End));
-        }
+            foreach (var segment in _segments)
+            {
+                Style(segment, Covering(segment.Start, segment.End));
+            }
+        });
         _formulas.ForEach(Style);
     }
 
@@ -211,7 +247,36 @@ internal sealed class TextLayer(Func<string, Brush?> findBrush)
         return cuts.Count;
     }
 
+    /// <summary>
+    /// Met un morceau de texte aux couleurs de ce qui le couvre. Si le changement vient d'un geste, la couleur du texte et
+    /// celle de son fond passent de l'ancienne à la nouvelle en fondu.
+    /// </summary>
     private void Style(Segment segment, List<Highlight> covering)
+    {
+        if (_fadeOn is not { } view || _fades >= MostFades)
+        {
+            Restyle(segment, covering);
+            return;
+        }
+        var run = segment.Run;
+        var (back, fore) = (run.Background, run.Foreground);
+        Restyle(segment, covering);
+        var changed = false;
+        if (!Equals(back, run.Background))
+        {
+            changed |= KyfRev.DesignSystem.Controls.Transitions.FadeBrush(view, run, TextElement.BackgroundProperty, back);
+        }
+        if (!Equals(fore, run.Foreground))
+        {
+            changed |= KyfRev.DesignSystem.Controls.Transitions.FadeBrush(view, run, TextElement.ForegroundProperty, fore);
+        }
+        if (changed)
+        {
+            _fades++;
+        }
+    }
+
+    private void Restyle(Segment segment, List<Highlight> covering)
     {
         var hidden = HoleOver(segment.Start, segment.End) is not null;
         // Un mot défini ailleurs ne se marque que hors des passages et des trous : il n'y ajouterait que du bruit.

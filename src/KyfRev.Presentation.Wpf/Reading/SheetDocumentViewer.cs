@@ -603,7 +603,7 @@ internal sealed partial class SheetDocumentViewer : FlowDocumentScrollViewer
 
     private void ApplyHighlights()
     {
-        _built?.Layer.Set(Highlights ?? [], ActiveHighlight);
+        _built?.Layer.Set(Highlights ?? [], ActiveHighlight, fadeOn: this);
         ComputeHoles();
     }
 
@@ -634,7 +634,7 @@ internal sealed partial class SheetDocumentViewer : FlowDocumentScrollViewer
 
     private void OnHolesChanged(object? sender, EventArgs e)
     {
-        _built?.Layer.SetHoles(Holes?.Hidden ?? []);
+        _built?.Layer.SetHoles(Holes?.Hidden ?? [], fadeOn: this);
         ShowMasks();
         // Un trou vient de se poser sur le lien dont l'aperçu est montré.
         if (_hover.Current is { } link && IsMasked(link))

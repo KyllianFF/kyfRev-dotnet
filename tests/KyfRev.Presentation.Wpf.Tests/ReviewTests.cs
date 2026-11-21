@@ -1522,4 +1522,54 @@ public sealed class ReviewTests
 
         public void Dispose() => _vaults.Dispose();
     }
+
+    [STATestMethod]
+    public void A_step_just_validated_fills_its_check_grows_and_the_line_moves_on()
+    {
+        using var ui = new UiThread();
+        using var vault = new ReviewVault();
+        var loading = vault.SheetBarAsync();
+        UiThread.Until(() => loading.IsCompleted);
+        var model = loading.Result;
+        var test = new TestShell();
+        var bar = new ReviewBar { DataContext = model };
+        var window = new Window { Content = bar, Left = -10000, Top = -10000, Width = 1100, Height = 300, ShowActivated = false, ShowInTaskbar = false };
+        window.Resources.MergedDictionaries.Add(test.Design.Dictionary);
+        window.Show();
+        // Les essais coupent les transitions ; celui-ci les rend, le temps de les voir.
+        Transitions.Skip = false;
+        try
+        {
+            TestShell.Flush();
+            var before = model.Steps;
+            var step = before.ToList().FindIndex(mark => mark.IsCurrent);
+            Assert.IsGreaterThanOrEqualTo(0, step, "une étape est attendue");
+            Assert.IsNotNull(bar.PartOf<Border>(step, "Point"));
+            Assert.IsNull(bar.PartOf<Border>(-1, "Point"));
+            Assert.IsNull(bar.PartOf<Border>(before.Count, "Point"));
+            Assert.AreEqual(0, bar.MarkValidated(before, before), "rien n'a changé");
+            Assert.AreEqual(0, bar.MarkValidated(null, before), "la frise qu'on trouve en arrivant ne s'anime pas");
+            Assert.AreEqual(0, bar.MarkValidated([.. before.Take(2)], before), "une autre frise");
+
+            // Validée : la frise est refaite ; l'étape se remplit, sa coche grandit, le trait avance vers la suivante.
+            var validating = model.ValidateCommand.ExecuteAsync(null);
+            UiThread.Until(() => validating.IsCompleted);
+            TestShell.Flush();
+            var now = model.Steps;
+            Assert.IsTrue(now[step].IsDone);
+            Assert.AreEqual(1, bar.MarkValidated(before, now));
+            Assert.IsTrue(bar.PartOf<Border>(step, "Point")!.HasAnimatedProperties, "l'étape prend sa couleur en fondu");
+            Assert.IsTrue(bar.PartOf<FrameworkElement>(step, "Check")!.HasAnimatedProperties, "sa coche grandit");
+            Assert.IsInstanceOfType<ScaleTransform>(bar.PartOf<FrameworkElement>(step + 1, "Link")!.RenderTransform, "le trait avance");
+
+            // Un autre élément dans la barre : sa frise est un point de départ.
+            bar.DataContext = null;
+            TestShell.Flush();
+        }
+        finally
+        {
+            Transitions.Skip = true;
+            window.Close();
+        }
+    }
 }

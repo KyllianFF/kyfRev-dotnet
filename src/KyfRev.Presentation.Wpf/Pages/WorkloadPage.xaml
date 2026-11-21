@@ -68,9 +68,9 @@
         <StackPanel VerticalAlignment="Bottom" HorizontalAlignment="Center">
           <TextBlock x:Name="Value" Text="{Binding Total}" Style="{DynamicResource Kyf.Text.Caption}" FontWeight="SemiBold" Foreground="{DynamicResource Kyf.Brush.Text}" HorizontalAlignment="Center"
                      Visibility="{Binding ShowsValue, Converter={StaticResource Visible}}" />
-          <Border x:Name="Projected" Style="{StaticResource ProjectedBar}" Height="{Binding ProjectedHeight}" />
+          <Border x:Name="Projected" Style="{StaticResource ProjectedBar}" Height="{Binding ProjectedHeight}" kyf:Transitions.GrowsFrom="Bottom" />
           <Border x:Name="Gap" Height="2" Visibility="{Binding HasBoth, Converter={StaticResource Visible}}" />
-          <Border x:Name="Due" Style="{StaticResource DueBar}" Height="{Binding DueHeight}" />
+          <Border x:Name="Due" Style="{StaticResource DueBar}" Height="{Binding DueHeight}" kyf:Transitions.GrowsFrom="Bottom" />
         </StackPanel>
         <Border VerticalAlignment="Bottom" BorderThickness="0,0,0,1" BorderBrush="{DynamicResource Kyf.Brush.Divider}" />
         <StackPanel Grid.Row="1" Margin="0,4,0,0">

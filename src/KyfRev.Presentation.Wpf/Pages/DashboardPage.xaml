@@ -242,7 +242,7 @@
               <DockPanel Height="72" Background="Transparent" ToolTip="{Binding Name}" AutomationProperties.Name="{Binding Name}">
                 <TextBlock x:Name="Day" DockPanel.Dock="Bottom" Text="{Binding Label}" Style="{DynamicResource Kyf.Text.Caption}"
                            HorizontalAlignment="Center" Margin="0,4,0,0" />
-                <Border x:Name="Bar" VerticalAlignment="Bottom" Height="{Binding Height}" MaxWidth="24" CornerRadius="4,4,0,0"
+                <Border x:Name="Bar" kyf:Transitions.GrowsFrom="Bottom" VerticalAlignment="Bottom" Height="{Binding Height}" MaxWidth="24" CornerRadius="4,4,0,0"
                         Background="{DynamicResource Kyf.Brush.Primary}" />
               </DockPanel>
               <DataTemplate.Triggers>

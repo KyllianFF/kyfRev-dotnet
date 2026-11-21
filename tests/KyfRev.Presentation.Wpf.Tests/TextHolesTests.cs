@@ -463,4 +463,31 @@ public sealed class TextHolesTests
         TestShell.Flush();
         return (window, viewer, holes);
     }
+
+    [STATestMethod]
+    public void A_hole_uncovered_by_hand_fades_in()
+    {
+        var (window, viewer, holes) = Host();
+        // Les essais coupent les transitions ; celui-ci les rend, le temps de les voir.
+        KyfRev.DesignSystem.Controls.Transitions.Skip = false;
+        try
+        {
+            var bold = LogicalRuns(viewer).Single(run => run.Text == "mot");
+            var ordinary = LogicalRuns(viewer).Single(run => run.Text.StartsWith("Un ", StringComparison.Ordinal));
+            Assert.IsFalse(bold.HasAnimatedProperties, "les trous posés à l'ouverture le sont d'un coup");
+
+            // Découvert d'un clic : son texte reprend sa couleur en fondu ; le reste ne bouge pas.
+            Assert.IsTrue(viewer.RevealHoleAt(bold));
+            Assert.IsTrue(bold.HasAnimatedProperties);
+            Assert.IsFalse(ordinary.HasAnimatedProperties);
+            Assert.AreEqual(1, holes.RevealedCount);
+            TestShell.Flush();
+            Assert.AreNotEqual(bold.Background, bold.Foreground, "découvert, il se lit");
+        }
+        finally
+        {
+            KyfRev.DesignSystem.Controls.Transitions.Skip = true;
+            window.Close();
+        }
+    }
 }

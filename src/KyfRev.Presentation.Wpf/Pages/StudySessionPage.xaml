@@ -38,11 +38,8 @@
         <!-- Piste de la progression : la part parcourue se remplit. -->
         <Grid x:Name="ProgressTrack" Height="4">
           <Border Background="{DynamicResource Kyf.Brush.SurfaceAlt}" />
-          <Border x:Name="ProgressFill" Background="{DynamicResource Kyf.Brush.Primary}" RenderTransformOrigin="0,0.5">
-            <Border.RenderTransform>
-              <ScaleTransform ScaleX="{Binding Progress}" />
-            </Border.RenderTransform>
-          </Border>
+          <!-- La part faite : étirée de 0 à 1, elle avance en glissant d'un élément au suivant. -->
+          <Border x:Name="ProgressFill" Background="{DynamicResource Kyf.Brush.Primary}" kyf:Transitions.Fill="{Binding Progress}" />
         </Grid>
         <DockPanel Margin="16,8">
           <WrapPanel Style="{StaticResource SessionActions}">
@@ -51,16 +48,15 @@
                     AutomationProperties.AcceleratorKey="{shell:Shortcut plein-ecran}" />
             <Button x:Name="EndButton" Content="{x:Static pages:SessionText.Finish}" Command="{Binding EndCommand}" Margin="0,0,8,0" />
             <!-- Rien n'a été fait : « Passer » ; une fois l'élément traité : « Suivant », en bouton principal. -->
-            <Button x:Name="SkipButton" Command="{Binding NextCommand}" ToolTip="Ctrl+→" AutomationProperties.Name="{x:Static pages:SessionText.Skip}"
-                    AutomationProperties.AcceleratorKey="Ctrl+→" Visibility="{Binding IsWaiting, Converter={StaticResource Visible}}">
+            <Button x:Name="SkipButton" kyf:Transitions.SwappedIn="{Binding IsWaiting}" Command="{Binding NextCommand}" ToolTip="Ctrl+→" AutomationProperties.Name="{x:Static pages:SessionText.Skip}"
+                    AutomationProperties.AcceleratorKey="Ctrl+→">
               <StackPanel Orientation="Horizontal">
                 <TextBlock Text="{x:Static pages:SessionText.Skip}" VerticalAlignment="Center" />
                 <kyf:Icon Text="&#xE72A;" Margin="8,0,0,0" />
               </StackPanel>
             </Button>
-            <Button x:Name="NextButton" Command="{Binding NextCommand}" Style="{DynamicResource Kyf.Button.Primary}" ToolTip="Ctrl+→"
-                    AutomationProperties.Name="{x:Static pages:SessionText.Next}" AutomationProperties.AcceleratorKey="Ctrl+→"
-                    Visibility="{Binding HasActed, Converter={StaticResource Visible}}">
+            <Button x:Name="NextButton" kyf:Transitions.SwappedIn="{Binding HasActed}" Command="{Binding NextCommand}" Style="{DynamicResource Kyf.Button.Primary}" ToolTip="Ctrl+→"
+                    AutomationProperties.Name="{x:Static pages:SessionText.Next}" AutomationProperties.AcceleratorKey="Ctrl+→">
               <StackPanel Orientation="Horizontal">
                 <TextBlock Text="{x:Static pages:SessionText.Next}" VerticalAlignment="Center" />
                 <kyf:Icon Text="&#xE72A;" Margin="8,0,0,0" />
@@ -68,7 +64,7 @@
             </Button>
           </WrapPanel>
           <StackPanel VerticalAlignment="Center" AutomationProperties.Name="{Binding ProgressName}">
-            <TextBlock x:Name="ProgressLabel" Text="{Binding ProgressLabel}" Style="{DynamicResource Kyf.Text.BodyStrong}" />
+            <TextBlock x:Name="ProgressLabel" kyf:Transitions.RollingText="{Binding ProgressLabel}" Style="{DynamicResource Kyf.Text.BodyStrong}" />
           </StackPanel>
         </DockPanel>
       </StackPanel>
