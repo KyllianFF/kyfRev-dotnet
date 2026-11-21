@@ -127,6 +127,7 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
     private bool _configured;
     private bool _disposed;
     private bool _textShown;
+    private bool _focusAsked;
     private readonly DispatcherTimer _patience = new() { Interval = TextPatience };
 
     public VisualEditor(string folder, Func<string, Outcome<byte[]>> readResource, ISpelling spelling, string dataFolder)
@@ -244,6 +245,13 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
         if (!_covered)
         {
             _view.Visibility = Visibility.Visible;
+        }
+        if (_focusAsked)
+        {
+            // Le focus demandé pendant qu'il était caché : l'écriture commence sans avoir à cliquer dans le texte.
+            _focusAsked = false;
+            _view.Focus();
+            Post(new FocusRequest());
         }
         TextShown?.Invoke(this, EventArgs.Empty);
     }
@@ -465,6 +473,8 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
     {
         if (!_disposed)
         {
+            // Caché en attendant son texte, le moteur ne peut pas prendre le focus : il le prendra en se montrant.
+            _focusAsked = !_textShown;
             _view.Focus();
             Post(new FocusRequest());
         }

@@ -294,6 +294,119 @@ public sealed class RuledPaperTests
         Assert.IsLessThan(page.MarginPixels, Top(endless, "MITOSE") - TitleBottom(endless));
     }
 
+    private const string TwoTables = """
+        mail du prof : [nick@example.org](mailto:nick@example.org)
+
+        ## Vocabulary
+
+        | English | French | Prononciation |
+        | --- | --- | --- |
+        | Administration fee | Frais Administratif | |
+        | Intellectual Property | Certificats de propriété intellectuelle | |
+        | Identification Documents | Documents d'identité | |
+        | Equipment List | Liste des équipements | |
+        | Feasibility Study | Étude de faisabilité | Fee-zuh-**BI**-li-tea |
+        | health certificate | Certificat sanitaire | |
+        | Ensure | Veiller à ce que | |
+
+        ## Language Feedback
+
+        | WHAT YOU SAID | WHAT YOU SHOULD HAVE SAID |
+        | --- | --- |
+        | We need a power supply. Can you help us for that? | Could you ensure that we will not have power cut by providing a backup power supply? We need a power supply. Could you help us **with** that ? |
+        | We have obtained the money we asked | We **reach the amount of money** we asked |
+        | You can put a curfew | You can **implement** a curfew / You can **put in place** a curfew |
+        | We are agree | We **have reached an agreement** / We **have come to an agreement** |
+        | He pay for the reparation of the stadium | He pays for the repair of the stadium every time there is a problem / They are going to pay for the repair of the stadium |
+        | We have obtain the money we asked for | We have obtained the money we asked for |
+        | We do not find an arrangement | We did not find an arrangement / We have not reached an agreement |
+        | There is a lot of neighbours | There are a lot of neighbours |
+        | The first apple was | The first application was |
+        | I studied three years in Grenoble | I studied for three years in Grenoble |
+        """;
+
+    [STATestMethod]
+    [DataRow(ReadingFont.Marker)]
+    [DataRow(ReadingFont.Sans)]
+    public void Wherever_the_page_turns_two_sheets_are_one_gap_apart(ReadingFont font)
+    {
+        // Les tableaux descendent d'une ligne à chaque tour : la page tourne tour à tour sur un titre, sur l'en-tête d'un
+        // tableau, sur l'une de ses lignes. La distance naturelle entre le bloc qui passe et celui d'avant (la marge d'un
+        // titre, l'espace entre deux lignes de tableau) s'ajoutait à l'écart entre les feuilles.
+        var page = new PageLayout(PageFormat.A4);
+        for (var lines = 0; lines <= 16; lines++)
+        {
+            var body = string.Concat(Enumerable.Repeat("Une ligne de plus avant les tableaux.\n\n", lines)) + TwoTables.ReplaceLineEndings("\n");
+            using var shown = new Shown(PaperStyle.LargeSquares, page, font, body, headerAbove: true);
+            var sheets = shown.Viewer.PagePaper.Sheets;
+            Assert.IsGreaterThan(1, sheets.Count, $"{lines} lignes : plus d'une feuille");
+            for (var index = 1; index < sheets.Count; index++)
+            {
+                Assert.AreEqual(SheetDocumentViewer.PageGap, sheets[index].Top - sheets[index - 1].Bottom, 1.5, $"{lines} lignes, entre les feuilles {index} et {index + 1}");
+            }
+        }
+    }
+
+    [STATestMethod]
+    public void A_repeated_header_the_pages_no_longer_know_is_removed_and_the_sheets_come_back()
+    {
+        var page = new PageLayout(PageFormat.A4);
+        using var shown = new Shown(PaperStyle.LargeSquares, page, ReadingFont.Sans, TwoTables, headerAbove: true);
+        static List<TableRow> Rows(Shown shown) => [.. shown.Viewer.Document!.Blocks.OfType<Table>().SelectMany(table => table.RowGroups).SelectMany(group => group.Rows)];
+        static int Repeats(Shown shown) => Rows(shown).Count(row => row.Tag is not null && !ReferenceEquals(row.Tag, SheetDocumentViewer.HeaderRowMark));
+        var sheets = shown.Viewer.PagePaper.Sheets.ToList();
+        Assert.AreEqual(1, Repeats(shown), "le second tableau se poursuit sur la deuxième feuille, sous son en-tête répété");
+
+        // La mise en pages perd la mémoire de ce qu'elle a posé, sans que le texte change : son en-tête répété reste là, avec
+        // l'espace ouvert au-dessus de lui.
+        typeof(SheetDocumentViewer).GetMethod("ForgetPages", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)!.Invoke(shown.Viewer, null);
+        shown.Settle();
+
+        // Elle le retire, se remesure, et retrouve les mêmes feuilles : une seule copie, un seul écart.
+        Assert.AreEqual(1, Repeats(shown));
+        var again = shown.Viewer.PagePaper.Sheets;
+        Assert.HasCount(sheets.Count, again);
+        for (var index = 0; index < sheets.Count; index++)
+        {
+            Assert.AreEqual(sheets[index].Top, again[index].Top, 1.5, $"feuille {index + 1}");
+            Assert.AreEqual(sheets[index].Bottom, again[index].Bottom, 1.5, $"feuille {index + 1}");
+        }
+    }
+
+    [STATestMethod]
+    public void A_table_whose_first_line_is_pushed_keeps_the_height_of_its_header()
+    {
+        // L'en-tête du second tableau reste au bas de la première feuille, sa première ligne passe à la suivante sous un
+        // en-tête répété : l'espace ouvert au-dessus de cet en-tête ne compte pas dans sa hauteur, et la suite de la mise en
+        // pages ne se décale pas. Le bas du texte de chaque feuille reste dans sa zone de texte.
+        var page = new PageLayout(PageFormat.A4);
+        for (var lines = 6; lines <= 10; lines++)
+        {
+            var body = string.Concat(Enumerable.Repeat("Une ligne de plus avant les tableaux.\n\n", lines)) + TwoTables.ReplaceLineEndings("\n");
+            using var shown = new Shown(PaperStyle.LargeSquares, page, ReadingFont.Sans, body, headerAbove: true);
+            var sheets = shown.Viewer.PagePaper.Sheets;
+            var texts = shown.Viewer.Document!.Blocks.OfType<Table>().SelectMany(table => table.RowGroups).SelectMany(group => group.Rows).SelectMany(row => row.Cells)
+                .SelectMany(cell => cell.Blocks.OfType<Paragraph>()).SelectMany(paragraph => shown.LineBoxes(paragraph)).ToList();
+            foreach (var (top, bottom, _, _) in texts)
+            {
+                Assert.IsTrue(sheets.Any(sheet => top >= sheet.Top + page.MarginPixels - 2 && bottom <= sheet.Bottom - page.MarginPixels + 2), $"{lines} lignes : une ligne de tableau de {top:0} à {bottom:0} est hors de la zone de texte des feuilles");
+            }
+        }
+    }
+
+    private static IEnumerable<DependencyObject> Descendants(DependencyObject root)
+    {
+        for (var i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)
+        {
+            var child = VisualTreeHelper.GetChild(root, i);
+            yield return child;
+            foreach (var nested in Descendants(child))
+            {
+                yield return nested;
+            }
+        }
+    }
+
     [STATestMethod]
     public void A_quote_cut_between_two_sheets_says_so_and_a_figure_keeps_its_place()
     {

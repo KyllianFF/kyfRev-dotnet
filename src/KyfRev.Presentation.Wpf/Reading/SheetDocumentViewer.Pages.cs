@@ -654,6 +654,12 @@ internal sealed partial class SheetDocumentViewer
         }
         _baseline = _step > 0 ? document.LineHeight * BaselineRatio(document.FontFamily) : 0;
         var usable = page is null ? double.PositiveInfinity : page.HeightPixels - (2 * page.MarginPixels);
+        if (RemoveStrayRepeats(document))
+        {
+            // Le texte vient de changer : il se mesure de nouveau avant d'être mis en pages.
+            SchedulePages();
+            return;
+        }
         var units = new List<Unit>();
         Collect(document.Blocks, scroller.VerticalOffset, units, continues: false);
         if (units.Count == 0)
@@ -732,6 +738,26 @@ internal sealed partial class SheetDocumentViewer
         {
             _passes = 0;
         }
+    }
+
+    /// <summary>
+    /// Retire les en-têtes répétés que la mise en pages ne connaît plus. Elle seule en pose, et sait pour quelle ligne ; un
+    /// en-tête resté sans elle garderait l'espace ouvert au-dessus de lui, caché sous l'écart entre deux feuilles : la feuille
+    /// d'avant resterait à moitié vide, et l'écart s'allongerait d'autant.
+    /// </summary>
+    /// <returns>Vrai si le texte a changé.</returns>
+    private bool RemoveStrayRepeats(FlowDocument document)
+    {
+        var strays = document.Blocks.OfType<Table>()
+            .SelectMany(table => table.RowGroups)
+            .SelectMany(group => group.Rows)
+            .Where(row => ReferenceEquals(row.Tag, RepeatedRowMark) && !_repeats.ContainsValue(row))
+            .ToList();
+        foreach (var stray in strays)
+        {
+            (stray.Parent as TableRowGroup)?.Rows.Remove(stray);
+        }
+        return strays.Count > 0;
     }
 
     private bool Place(Unit unit, PagePlacement placement)
@@ -944,8 +970,7 @@ internal sealed partial class SheetDocumentViewer
         var rows = table.RowGroups.SelectMany(group => group.Rows).ToList();
         var tops = rows.Select(row => MeasureRow(row, offset)).ToList();
         var hasHeader = rows.Count > 1 && ReferenceEquals(rows[0].Tag, HeaderRowMark);
-        // La hauteur de l'en-tête : du haut de son texte au haut du texte de la ligne suivante.
-        var lead = hasHeader && tops[0] is (var headerTop, _) && tops[1] is (var secondTop, _) ? Math.Max(0, secondTop - headerTop - _rowSpacers.GetValueOrDefault(rows[1])) : 0;
+        var lead = hasHeader ? HeaderLead(rows, tops) : 0;
         var real = 0;
         for (var index = 0; index < rows.Count; index++)
         {
@@ -963,6 +988,25 @@ internal sealed partial class SheetDocumentViewer
             units.Add(new Unit(rows[index], top, height, PageBoxKind.Row, added, spacer, Continues: real > 0, Lead: real > 0 ? lead : 0));
             real++;
         }
+    }
+
+    /// <summary>
+    /// La hauteur de l'en-tête d'un tableau : du haut de son texte au haut du texte de la première ligne. Si cette ligne a été
+    /// poussée sous un en-tête répété, c'est lui qui se mesure : l'espace ouvert au-dessus de lui n'est pas de la hauteur de
+    /// l'en-tête, et compté comme tel, il décalait toute la suite de la mise en pages.
+    /// </summary>
+    private double HeaderLead(List<TableRow> rows, List<(double Top, double Height)?> tops)
+    {
+        var first = rows.FindIndex(1, row => !ReferenceEquals(row.Tag, RepeatedRowMark));
+        if (first < 0 || tops[first] is not (var firstTop, _))
+        {
+            return 0;
+        }
+        if (ReferenceEquals(rows[first - 1].Tag, RepeatedRowMark) && tops[first - 1] is (var repeatTop, _))
+        {
+            return Math.Max(0, firstTop - repeatTop);
+        }
+        return tops[0] is (var headerTop, _) ? Math.Max(0, firstTop - headerTop - _rowSpacers.GetValueOrDefault(rows[first])) : 0;
     }
 
     /// <summary>Le haut et la hauteur d'un passage du texte, dans le document entier ; rien s'il n'est pas encore mesuré.</summary>

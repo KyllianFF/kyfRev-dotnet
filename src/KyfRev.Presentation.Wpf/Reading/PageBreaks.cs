@@ -94,7 +94,10 @@ internal static class PageBreaks
         double Turn(double from, bool continues)
         {
             var pageEnd = pageTop + usable;
-            var next = Math.Max(from, pageEnd) + between;
+            // Le texte de la page suivante commence à ses marges et à l'écart de la fin de celle-ci, où que soit le bloc qui
+            // passe : sa distance naturelle au bloc d'avant (une marge de titre, l'espace entre deux lignes de tableau) ne
+            // s'ajoute pas à l'écart entre les feuilles. Seul un bloc déjà plus bas que cela reste où il est.
+            var next = Math.Max(from, pageEnd + between);
             breaks.Add(new PageBreak(Math.Min(contentEnd, pageEnd), pageEnd, next, continues));
             pages++;
             for (; blanks > 0; blanks--)
