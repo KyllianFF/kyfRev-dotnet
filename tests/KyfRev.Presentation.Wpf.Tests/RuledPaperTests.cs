@@ -259,6 +259,42 @@ public sealed class RuledPaperTests
     }
 
     [STATestMethod]
+    public void On_pages_the_header_of_a_sheet_read_sits_above_the_first_sheet_and_takes_none_of_its_room()
+    {
+        var page = new PageLayout(PageFormat.A5);
+        // Dans la feuille, comme à l'impression : l'en-tête prend la place du texte. Au-dessus d'elle, comme à la lecture d'une
+        // fiche : la première feuille garde toute sa place pour le texte, comme à l'écriture, qui n'a pas cet en-tête.
+        using var inside = new Shown(PaperStyle.Lines, page, ReadingFont.Sans, Body);
+        using var above = new Shown(PaperStyle.Lines, page, ReadingFont.Sans, Body, headerAbove: true);
+        Assert.IsFalse(inside.Viewer.HeaderIsAbove);
+        Assert.IsTrue(above.Viewer.HeaderIsAbove);
+        above.Capture("lecture-entete-au-dessus-a5");
+
+        static Paragraph Found(Shown shown, string start) => Texts(shown.Viewer.Document!.Blocks).First(paragraph => Start(paragraph).StartsWith(start, StringComparison.Ordinal));
+        static double Top(Shown shown, string start) => shown.LineBoxes(Found(shown, start)).First().Top;
+        // Le titre de la fiche : le dernier bloc de son en-tête.
+        static double TitleBottom(Shown shown) =>
+            shown.LineBoxes(shown.Viewer.Document!.Blocks.OfType<Paragraph>().Last(paragraph => ReferenceEquals(paragraph.Tag, SheetDocumentViewer.SheetHeaderMark))).Last().Bottom;
+
+        // Le titre de la fiche est au-dessus du bord de la première feuille : le texte commence une marge plus bas que ce bord.
+        Assert.IsGreaterThan(page.MarginPixels + 4, Top(above, "MITOSE") - TitleBottom(above), "le titre, un espace, le bord de la feuille, sa marge, puis le texte");
+        Assert.IsLessThan(page.MarginPixels, Top(inside, "MITOSE") - TitleBottom(inside), "dans la feuille, le titre touche presque le texte");
+
+        // Dans la feuille, l'en-tête pousse la fin de la page sur la feuille suivante : un saut sépare le tableau de ce qui le
+        // suit. Au-dessus, ce texte tient sous son tableau, sur la première feuille.
+        var jump = (2 * page.MarginPixels) + SheetDocumentViewer.PageGap;
+        var pushed = Top(inside, "TEXTE VENU SOUS LE TABLEAU") - Top(inside, "PHASES");
+        var kept = Top(above, "TEXTE VENU SOUS LE TABLEAU") - Top(above, "PHASES");
+        Assert.IsGreaterThan(kept + jump - 40, pushed, "avec l'en-tête dans la feuille, ce paragraphe change de feuille");
+        Assert.IsLessThan(page.HeightPixels - (2 * page.MarginPixels), Top(above, "TEXTE VENU SOUS LE TABLEAU") - Top(above, "MITOSE"), "sans lui, il tient sur la première");
+
+        // Une feuille sans fin n'a pas de pages : l'en-tête reste dans le texte.
+        using var endless = new Shown(PaperStyle.Lines, null, ReadingFont.Sans, Body, headerAbove: true);
+        Assert.IsFalse(endless.Viewer.HeaderIsAbove);
+        Assert.IsLessThan(page.MarginPixels, Top(endless, "MITOSE") - TitleBottom(endless));
+    }
+
+    [STATestMethod]
     public void A_quote_cut_between_two_sheets_says_so_and_a_figure_keeps_its_place()
     {
         var quote = string.Join("\n>\n", Enumerable.Range(1, 30).Select(index => $"> CITATION {index}."));
@@ -459,12 +495,12 @@ public sealed class RuledPaperTests
         private readonly Window _window;
         private readonly Border _host;
 
-        public Shown(PaperStyle style, PageLayout? layout, ReadingFont font, string body, bool drawsPaper = true)
+        public Shown(PaperStyle style, PageLayout? layout, ReadingFont font, string body, bool drawsPaper = true, bool headerAbove = false)
         {
             var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
             var choices = new PaperChoices(IsOn: true, Endless: style, A4: style, A5: style, A6: style);
             var width = layout is null ? 640 : layout.WidthPixels + SystemParameters.VerticalScrollBarWidth + 8;
-            Viewer = new SheetDocumentViewer { Width = width, Height = 900, DrawsPaper = drawsPaper, Paper = new SheetPaper(choices, PageLayout.Default, SheetPageLayouts.None), PageLayout = layout };
+            Viewer = new SheetDocumentViewer { Width = width, Height = 900, DrawsPaper = drawsPaper, HeaderAbovePages = headerAbove, Paper = new SheetPaper(choices, PageLayout.Default, SheetPageLayouts.None), PageLayout = layout };
             // En haut à gauche de la fenêtre : l'image d'un élément garde le décalage qu'il a dans son parent.
             _host = new Border { Child = Viewer, Width = width, Height = 900, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top };
             _host.Resources.MergedDictionaries.Add(design.Dictionary);

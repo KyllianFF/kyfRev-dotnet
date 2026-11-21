@@ -351,14 +351,15 @@ internal sealed class DocumentBuilder
     {
         if (_reading.Details.Length > 0)
         {
-            var details = new Paragraph(new Run(_reading.Details)) { Margin = new Thickness(0, 0, 0, 4), FontSize = Typography.Caption.Size };
+            var details = new Paragraph(new Run(_reading.Details)) { Margin = new Thickness(0, 0, 0, 4), FontSize = Typography.Caption.Size, Tag = SheetDocumentViewer.SheetHeaderMark };
             _unspoken.Add(details);
             details.SetResourceReference(TextElement.ForegroundProperty, TextSecondary);
             blocks.Add(details);
         }
         var title = new Paragraph(new Run(_reading.Title))
         {
-            Margin = new Thickness(0, 0, 0, 16),
+            Tag = SheetDocumentViewer.SheetHeaderMark,
+            Margin = new Thickness(0, 0, 0, SheetDocumentViewer.HeaderSpacing),
             FontSize = Typography.Title.Size,
             FontWeight = FontWeights.SemiBold,
             LineHeight = Typography.Title.LineHeight,

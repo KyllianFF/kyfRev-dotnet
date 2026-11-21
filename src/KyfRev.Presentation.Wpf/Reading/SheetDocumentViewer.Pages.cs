@@ -22,6 +22,15 @@ internal sealed partial class SheetDocumentViewer
     /// <summary>Ce qui marque la ligne d'en-tête d'un tableau.</summary>
     internal static readonly object HeaderRowMark = new();
 
+    /// <summary>Ce qui marque l'en-tête de la fiche : ses détails et son titre, avant le texte.</summary>
+    internal static readonly object SheetHeaderMark = new();
+
+    /// <summary>L'espace sous le titre de la fiche, quand il est dans le texte.</summary>
+    internal const double HeaderSpacing = 16;
+
+    /// <summary>L'espace entre l'en-tête posé au-dessus des feuilles et le bord de la première, et au-dessus de lui.</summary>
+    internal const double HeaderGap = 12;
+
     /// <summary>Ce qui marque un en-tête répété : il n'est pas dans la fiche, la mise en pages l'ajoute et le retire.</summary>
     private static readonly object RepeatedRowMark = new();
 
@@ -438,6 +447,39 @@ internal sealed partial class SheetDocumentViewer
     private bool IsPaged => Layout is { IsPaged: true };
 
     /// <summary>
+    /// En pages, l'en-tête de la fiche se pose au-dessus de la première feuille, sur le fond, au lieu d'y prendre la place du
+    /// texte : la première feuille porte alors le même texte qu'à l'écriture, qui n'a pas cet en-tête, et se coupe au même
+    /// endroit. Ailleurs (l'impression, l'aperçu de l'écriture), il reste en haut de la première page.
+    /// </summary>
+    public bool HeaderAbovePages { get; set; }
+
+    /// <summary>Le dernier bloc de l'en-tête de la fiche : son titre ; rien si le texte n'en a pas.</summary>
+    private Paragraph? HeaderEnd => Document?.Blocks.TakeWhile(block => ReferenceEquals(block.Tag, SheetHeaderMark)).LastOrDefault() as Paragraph;
+
+    /// <summary>L'en-tête est posé au-dessus des feuilles : il ne compte pas dans leur mise en pages.</summary>
+    internal bool HeaderIsAbove => HeaderAbovePages && IsPaged && HeaderEnd is not null;
+
+    /// <summary>La marge du haut du document : celle de la feuille, ou un simple espace quand l'en-tête est au-dessus d'elle.</summary>
+    private double TopPadding(PageLayout page) => HeaderIsAbove ? HeaderGap : page.MarginPixels;
+
+    /// <summary>
+    /// Met le titre à sa distance du texte : l'espace de toujours quand il est dans la feuille ; au-dessus d'elle, l'espace
+    /// qui le sépare de son bord, puis la marge de la feuille, puisque le texte commence sous cette marge.
+    /// </summary>
+    private void PlaceHeader()
+    {
+        if (HeaderEnd is not { } title)
+        {
+            return;
+        }
+        var below = HeaderIsAbove && Layout is { } page ? HeaderGap + page.MarginPixels : HeaderSpacing;
+        if (Math.Abs(title.Margin.Bottom - below) > 0.5)
+        {
+            title.Margin = new Thickness(title.Margin.Left, title.Margin.Top, title.Margin.Right, below);
+        }
+    }
+
+    /// <summary>
     /// La vue montre le texte entier, sans défiler : elle prend la hauteur de tout le document. C'est ce qu'il faut à
     /// l'impression, qui découpe ensuite les feuilles dans cette longue bande.
     /// </summary>
@@ -505,8 +547,9 @@ internal sealed partial class SheetDocumentViewer
     {
         if (Document is { } document)
         {
+            PlaceHeader();
             var padding = Layout is { IsPaged: true } page
-                ? new Thickness(Side(page), page.MarginPixels, Side(page), page.MarginPixels)
+                ? new Thickness(Side(page), TopPadding(page), Side(page), page.MarginPixels)
                 : Beside(PaperShown is null ? EndlessPadding : EndlessPaperPadding, EndlessSide);
             if (document.PagePadding != padding)
             {
@@ -616,7 +659,10 @@ internal sealed partial class SheetDocumentViewer
         if (units.Count == 0)
         {
             _breaks = [];
-            _origin = (page?.MarginPixels ?? document.PagePadding.Top) - scroller.VerticalOffset;
+            // Sans texte, la feuille commence sous sa marge ; sous l'en-tête, s'il est au-dessus d'elle.
+            _origin = HeaderIsAbove && HeaderEnd is { } alone && Measure(alone.ContentStart, alone.ContentEnd, scroller.VerticalOffset) is (var aloneTop, var aloneHeight)
+                ? aloneTop + aloneHeight + alone.Margin.Bottom
+                : (page?.MarginPixels ?? document.PagePadding.Top) - scroller.VerticalOffset;
             _sheets = page is null ? [] : [(0, usable)];
             SetPageCount(page is null ? 0 : 1);
             UpdateBands();
@@ -670,7 +716,7 @@ internal sealed partial class SheetDocumentViewer
             var side = Side(page);
             if (Math.Abs(document.PagePadding.Bottom - bottom) > 0.5 || Math.Abs(document.PagePadding.Left - side) > 0.5)
             {
-                document.PagePadding = new Thickness(side, page.MarginPixels, side, bottom);
+                document.PagePadding = new Thickness(side, TopPadding(page), side, bottom);
             }
         }
         SetPageCount(page is null ? 0 : result.Pages);
@@ -833,6 +879,9 @@ internal sealed partial class SheetDocumentViewer
         {
             switch (block)
             {
+                case Paragraph header when ReferenceEquals(header.Tag, SheetHeaderMark) && HeaderIsAbove:
+                    // Posé au-dessus de la première feuille : il n'est sur aucune page.
+                    break;
                 case Section section:
                     // Une citation (son trait à gauche la désigne) se poursuit d'un bloc au suivant.
                     var quote = section.BorderThickness.Left > 0;
