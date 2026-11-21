@@ -51,7 +51,7 @@ public sealed class FilledViewsAccessibilityTests
         var names = Names(hub, () => hub.Selected.Page == general, null);
 
         CollectionAssert.Contains(names, MoreSettingsText.Appearance);
-        CollectionAssert.Contains(names, GeneralSettingsText.ReducedMotion);
+        CollectionAssert.Contains(names, GeneralSettingsText.MotionFeedback);
         CollectionAssert.Contains(names, GeneralSettingsText.LargerTargets);
 
         hub.Tabs[2].IsSelected = true;

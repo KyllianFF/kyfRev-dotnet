@@ -49,6 +49,10 @@ public sealed partial class AppearanceController : ObservableObject, IDisposable
     [ObservableProperty]
     public partial bool ForcesReducedMotion { get; set; }
 
+    /// <summary>Les familles d'animations coupées dans les Paramètres.</summary>
+    [ObservableProperty]
+    public partial MotionFamilies MotionOff { get; set; }
+
     /// <summary>Les petits boutons sont agrandis.</summary>
     [ObservableProperty]
     public partial bool LargerTargets { get; set; }
@@ -83,6 +87,9 @@ public sealed partial class AppearanceController : ObservableObject, IDisposable
     partial void OnForcesHighContrastChanged(bool value) => Apply();
 
     partial void OnForcesReducedMotionChanged(bool value) => Apply();
+
+    // Les mêmes familles, sous leur nom du design system : mêmes valeurs (un essai le vérifie).
+    partial void OnMotionOffChanged(MotionFamilies value) => _design.MotionOff = (MotionKinds)(int)value;
 
     partial void OnLargerTargetsChanged(bool value) => _design.LargerTargets = value;
 

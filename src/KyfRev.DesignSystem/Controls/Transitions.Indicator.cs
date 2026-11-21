@@ -217,7 +217,7 @@ internal sealed class TabIndicatorAdorner : Adorner
         _target = bounds;
         // Un glissement que la mise en page rattrape en route (l'onglet choisi passe en gras et s'élargit) continue vers la
         // nouvelle place, au lieu de s'arrêter net.
-        Slid = Transitions.Moves(_panel, DesignKeys.NormalDuration, out var duration) && (animate || _sliding) && Length > 0 && length > 0;
+        Slid = Transitions.Moves(_panel, DesignKeys.NormalDuration, out var duration, MotionKinds.Selection) && (animate || _sliding) && Length > 0 && length > 0;
         if (Slid)
         {
             var run = ++_run;

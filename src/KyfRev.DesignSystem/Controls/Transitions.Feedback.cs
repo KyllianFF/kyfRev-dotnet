@@ -77,10 +77,10 @@ public static partial class Transitions
     /// <paramref name="origin"/> (0,5 ; 0,5 : son centre ; 0 ; 0 : son coin haut gauche).
     /// </summary>
     /// <returns>Vrai si une transition a commencé ; faux si l'élément est montré tel quel.</returns>
-    public static bool Grow(FrameworkElement element, double from, Point origin, string durationKey = DesignKeys.FastDuration)
+    public static bool Grow(FrameworkElement element, double from, Point origin, string durationKey = DesignKeys.FastDuration, MotionKinds kind = MotionKinds.Feedback)
     {
         ArgumentNullException.ThrowIfNull(element);
-        if (!Moves(element, durationKey, out var duration) || !OwnsScale(element, out var scale))
+        if (!Moves(element, durationKey, out var duration, kind) || !OwnsScale(element, out var scale))
         {
             return false;
         }
@@ -139,7 +139,7 @@ public static partial class Transitions
         }
         last[property] = target;
         var shown = element.GetValue(property) as Brush;
-        if (Moves(element, DesignKeys.FastDuration, out var duration) && shown is SolidColorBrush && target is SolidColorBrush)
+        if (Moves(element, DesignKeys.FastDuration, out var duration, MotionKinds.Feedback) && shown is SolidColorBrush && target is SolidColorBrush)
         {
             element.BeginAnimation(property, new BrushTransition { From = shown, Duration = duration, FillBehavior = FillBehavior.Stop });
         }
@@ -167,7 +167,7 @@ public static partial class Transitions
         {
             return;
         }
-        if (!Moves(button, pressed ? DesignKeys.PressDuration : DesignKeys.FastDuration, out var duration))
+        if (!Moves(button, pressed ? DesignKeys.PressDuration : DesignKeys.FastDuration, out var duration, MotionKinds.Feedback))
         {
             scale.BeginAnimation(ScaleTransform.ScaleXProperty, null);
             scale.BeginAnimation(ScaleTransform.ScaleYProperty, null);
@@ -257,7 +257,7 @@ public static partial class Transitions
         {
             return;
         }
-        if (!Moves(element, DesignKeys.FastDuration, out var duration))
+        if (!Moves(element, DesignKeys.FastDuration, out var duration, MotionKinds.Feedback))
         {
             return;
         }

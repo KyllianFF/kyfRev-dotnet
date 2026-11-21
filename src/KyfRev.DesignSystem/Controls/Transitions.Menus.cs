@@ -62,7 +62,7 @@ public static partial class Transitions
     {
         if (sender is Popup { Child: FrameworkElement child })
         {
-            Grow(child, MenuFrom, new Point(0, 0), DesignKeys.NormalDuration);
+            Grow(child, MenuFrom, new Point(0, 0), DesignKeys.NormalDuration, MotionKinds.Surfaces);
         }
     }
 
@@ -71,13 +71,13 @@ public static partial class Transitions
     {
         if (VisualTreeHelper.GetChildrenCount(menu) > 0 && VisualTreeHelper.GetChild(menu, 0) is FrameworkElement frame)
         {
-            return Grow(frame, MenuFrom, new Point(0, 0), DesignKeys.NormalDuration);
+            return Grow(frame, MenuFrom, new Point(0, 0), DesignKeys.NormalDuration, MotionKinds.Surfaces);
         }
         menu.Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () =>
         {
             if (VisualTreeHelper.GetChildrenCount(menu) > 0 && VisualTreeHelper.GetChild(menu, 0) is FrameworkElement later)
             {
-                Grow(later, MenuFrom, new Point(0, 0), DesignKeys.NormalDuration);
+                Grow(later, MenuFrom, new Point(0, 0), DesignKeys.NormalDuration, MotionKinds.Surfaces);
             }
         });
         return false;

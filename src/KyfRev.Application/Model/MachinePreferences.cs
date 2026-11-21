@@ -159,6 +159,9 @@ public sealed record MachinePreferences
     /// <summary>Animations réduites, même si Windows ne le demande pas.</summary>
     public bool ReducedMotion { get; init; }
 
+    /// <summary>Les familles d'animations coupées une à une, quand les animations ne sont pas toutes réduites.</summary>
+    public MotionFamilies MotionOff { get; init; }
+
     /// <summary>Contraste élevé, même si Windows ne l'active pas.</summary>
     public bool HighContrast { get; init; }
 

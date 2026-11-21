@@ -81,11 +81,62 @@
   <data name="Rate" xml:space="preserve">
     <value>Vitesse de lecture</value>
   </data>
-  <data name="ReducedMotion" xml:space="preserve">
-    <value>Réduire les animations</value>
+  <data name="MotionAll" xml:space="preserve">
+    <value>Toutes</value>
   </data>
-  <data name="ReducedMotionHelp" xml:space="preserve">
-    <value>Même si Windows ne le demande pas.</value>
+  <data name="MotionEssential" xml:space="preserve">
+    <value>Essentielles</value>
+  </data>
+  <data name="MotionFeedback" xml:space="preserve">
+    <value>Retour au toucher</value>
+  </data>
+  <data name="MotionFeedbackHelp" xml:space="preserve">
+    <value>Survol et appui des boutons, coches, interrupteurs.</value>
+  </data>
+  <data name="MotionHelp" xml:space="preserve">
+    <value>Toutes, les essentielles (retour au toucher et sélection), ou aucune. Si Windows demande moins d'animations, kyfRev n'en joue aucune.</value>
+  </data>
+  <data name="MotionLists" xml:space="preserve">
+    <value>Listes</value>
+  </data>
+  <data name="MotionListsHelp" xml:space="preserve">
+    <value>Fiche, définition ou citation ajoutée.</value>
+  </data>
+  <data name="MotionNone" xml:space="preserve">
+    <value>Aucune</value>
+  </data>
+  <data name="MotionOpening" xml:space="preserve">
+    <value>Animation d'ouverture</value>
+  </data>
+  <data name="MotionOpeningHelp" xml:space="preserve">
+    <value>Les fiches du logo, au lancement de kyfRev.</value>
+  </data>
+  <data name="MotionPanels" xml:space="preserve">
+    <value>Menu et volets</value>
+  </data>
+  <data name="MotionPanelsHelp" xml:space="preserve">
+    <value>Menu réduit ou élargi, volets Plan, Passages et Rétroliens, barre de révision.</value>
+  </data>
+  <data name="MotionSelection" xml:space="preserve">
+    <value>Sélection qui glisse</value>
+  </data>
+  <data name="MotionSelectionHelp" xml:space="preserve">
+    <value>Menu de gauche, onglets, sections des Paramètres, modes d'une fiche.</value>
+  </data>
+  <data name="MotionSurfaces" xml:space="preserve">
+    <value>Menus, fenêtres et avis</value>
+  </data>
+  <data name="MotionSurfacesHelp" xml:space="preserve">
+    <value>Menus, listes déroulantes, fenêtres de dialogue, avis.</value>
+  </data>
+  <data name="MotionTitle" xml:space="preserve">
+    <value>Animations</value>
+  </data>
+  <data name="MotionViews" xml:space="preserve">
+    <value>Changement de vue et de mode</value>
+  </data>
+  <data name="MotionViewsHelp" xml:space="preserve">
+    <value>Page qui arrive, Lire, Réviser, Écrire, ruban et feuille de l'écriture.</value>
   </data>
   <data name="Spacing" xml:space="preserve">
     <value>Interligne des fiches</value>

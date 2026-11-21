@@ -46,6 +46,7 @@ internal sealed partial class SheetEditorView : UserControl
             if (_page is { IsVisualShown: true } page && Visual is null)
             {
                 page.Attach(Source, () => CreateVisual(page));
+                TellTextShownWithoutEngine(page);
             }
             UpdateCover();
             UpdateZoom();
@@ -114,6 +115,7 @@ internal sealed partial class SheetEditorView : UserControl
             page.ImageDialogAsked += OnImageDialogAsked;
             Source.Spelling = page.Spelling;
             page.Attach(Source, () => CreateVisual(page));
+            TellTextShownWithoutEngine(page);
             _ = page.RefreshPreviewAsync();
             Dispatcher.BeginInvoke(DispatcherPriority.Input, () => page.Surface?.Focus());
         }
@@ -183,6 +185,21 @@ internal sealed partial class SheetEditorView : UserControl
 
     /// <summary>Le nombre de pages du texte mis en forme a changé.</summary>
     internal event EventHandler? VisualPagesChanged;
+
+    /// <summary>
+    /// Le texte à écrire est à l'écran : le moteur s'est montré avec lui, ou l'écriture se fait en Markdown, sans moteur.
+    /// La fiche lue, gardée à l'écran jusque-là, peut lui laisser la place.
+    /// </summary>
+    internal event EventHandler? TextShown;
+
+    /// <summary>En Markdown, rien n'est à attendre : le champ est là tout de suite.</summary>
+    private void TellTextShownWithoutEngine(SheetEditorViewModel page)
+    {
+        if (!page.IsVisualShown)
+        {
+            TextShown?.Invoke(this, EventArgs.Empty);
+        }
+    }
 
     private void OnPageSetupChanged(Pages.PageSetupViewModel? old, Pages.PageSetupViewModel? setup)
     {
@@ -315,6 +332,7 @@ internal sealed partial class SheetEditorView : UserControl
         };
         visual.Restarted += (_, reason) => page.Environment.Report?.Invoke($"moteur web du texte mis en forme : {reason}, relancé");
         visual.SnapshotClicked += (_, _) => CoveredTextClicked?.Invoke();
+        visual.TextShown += (_, _) => TextShown?.Invoke(this, EventArgs.Empty);
         VisualHost.Content = visual;
         UpdateZoom();
         return visual;

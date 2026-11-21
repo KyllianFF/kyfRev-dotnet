@@ -454,8 +454,10 @@ public sealed class InterfaceMotionTests
         menu.SelectedIndex = 2;
         var third = (ListBoxItem)menu.ItemContainerGenerator.ContainerFromIndex(2);
         Assert.AreEqual(SelectionMove.Slid, column.LastMove, "il glisse");
-        Assert.AreEqual(third.TransformToAncestor(column).Transform(default).Y, (double)column.GetAnimationBaseValue(SlidingSelectionPanel.SelectionTopProperty), 0.5, "jusqu'au choix");
-        Assert.AreEqual(third.ActualHeight, (double)column.GetAnimationBaseValue(SlidingSelectionPanel.SelectionHeightProperty), 0.5);
+        // Le cadre part une fois montré ce que le choix change : d'ici là, il reste sous l'ancien.
+        Host.Flush();
+        Assert.AreEqual(third.TransformToAncestor(column).Transform(default).Y, (double)column.GetAnimationBaseValue(SlidingSelectionPanel.SelectionStartProperty), 0.5, "jusqu'au choix");
+        Assert.AreEqual(third.ActualHeight, (double)column.GetAnimationBaseValue(SlidingSelectionPanel.SelectionLengthProperty), 0.5);
         var picture = new RenderTargetBitmap(480, 320, 96, 96, PixelFormats.Pbgra32);
         picture.Render(host);
 
@@ -486,7 +488,9 @@ public sealed class InterfaceMotionTests
         Assert.AreEqual(0, column.Selection!.Value.Top, 0.5);
         reviews.IsChecked = true;
         Assert.AreSame(reviews, SlidingSelectionPanel.Chosen(column));
-        Assert.AreEqual(general.ActualHeight, (double)column.GetAnimationBaseValue(SlidingSelectionPanel.SelectionTopProperty), 0.5, "le cadre descend à la suivante");
+        // Le cadre part une fois montré ce que le choix change : d'ici là, il reste sous l'ancien.
+        Host.Flush();
+        Assert.AreEqual(general.ActualHeight, (double)column.GetAnimationBaseValue(SlidingSelectionPanel.SelectionStartProperty), 0.5, "le cadre descend à la suivante");
         column.Visibility = Visibility.Collapsed;
         Host.Layout(host);
         Assert.IsNull(column.Selection, "une colonne cachée n'a pas de cadre");
@@ -506,7 +510,7 @@ public sealed class InterfaceMotionTests
         var first = (ListBoxItem)menu.ItemContainerGenerator.ContainerFromIndex(0);
         var column = (SlidingSelectionPanel)VisualTreeHelper.GetParent(first);
         Assert.IsNotNull(column.Selection, "le cadre est là dès la première image");
-        Assert.AreEqual(first.ActualHeight, column.SelectionHeight, 0.5, "de la hauteur du choix");
+        Assert.AreEqual(first.ActualHeight, column.SelectionLength, 0.5, "de la hauteur du choix");
         Assert.AreEqual(first.ActualWidth, column.Selection!.Value.Width, 0.5);
     }
 
@@ -573,6 +577,52 @@ public sealed class InterfaceMotionTests
     }
 
     [STATestMethod]
+    public void A_family_switched_off_does_not_move_and_leaves_the_others_alone()
+    {
+        var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
+        var block = new Border { Width = 100, Height = 40 };
+        var read = new ToggleButton { Content = "Lire", IsChecked = true };
+        var write = new ToggleButton { Content = "Écrire" };
+        var row = new SlidingSelectionPanel { Orientation = Orientation.Horizontal, Children = { read, write } };
+        var host = Host.Of(design, new StackPanel { Children = { block, row } });
+        using var source = new HwndSource(new HwndSourceParameters("kyfRev essai") { Width = 480, Height = 320 }) { RootVisual = host };
+        Host.Layout(host);
+        Assert.AreEqual(MotionKinds.None, design.MotionOff);
+        Assert.IsTrue(Transitions.Enter(block), "rien n'est coupé : tout joue");
+
+        // Les changements de vue et les menus coupés : leurs transitions n'ont pas lieu, celle en cours s'arrête.
+        design.MotionOff = MotionKinds.Views | MotionKinds.Surfaces;
+        Assert.AreEqual(MotionKinds.Views | MotionKinds.Surfaces, design.Dictionary[DesignKeys.MotionOff]);
+        Assert.IsFalse(Transitions.Enter(block));
+        Assert.IsFalse(block.HasAnimatedProperties);
+        Assert.IsFalse(Transitions.EnterOnceShown(block));
+        Assert.IsFalse(Transitions.Grow(block, 0.9, new Point(0, 0), kind: MotionKinds.Surfaces));
+        Assert.AreEqual(TimeSpan.Zero, Transitions.DurationOf(block), "la page de l'éditeur reçoit une durée nulle");
+        Assert.AreEqual(PopupAnimation.None, design.Dictionary[DesignKeys.PopupMotion], "les menus s'ouvrent d'un coup");
+
+        // Les autres familles gardent leurs durées.
+        Assert.IsTrue(Transitions.Enter(block, kind: MotionKinds.Lists));
+        Assert.IsGreaterThan(TimeSpan.Zero, Transitions.DurationOf(block, kind: MotionKinds.Panels));
+        write.IsChecked = true;
+        read.IsChecked = false;
+        Assert.AreEqual(SelectionMove.Slid, row.LastMove, "la sélection glisse encore");
+
+        // La sélection coupée à son tour : le cadre saute.
+        design.MotionOff = MotionKinds.Selection;
+        Host.Flush();
+        read.IsChecked = true;
+        write.IsChecked = false;
+        Assert.AreEqual(SelectionMove.Jumped, row.LastMove);
+        Assert.AreEqual(PopupAnimation.Fade, design.Dictionary[DesignKeys.PopupMotion]);
+
+        // Les animations réduites coupent tout, sans oublier les familles réglées.
+        design.ReducedMotion = true;
+        Assert.AreEqual(MotionKinds.Selection, design.MotionOff);
+        Assert.AreEqual(MotionKinds.Selection, design.Dictionary[DesignKeys.MotionOff]);
+        Assert.IsFalse(Transitions.Enter(block, kind: MotionKinds.Lists));
+    }
+
+    [STATestMethod]
     public void A_side_panel_that_changes_width_slides_its_edge_and_what_follows_it()
     {
         var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
@@ -615,6 +665,177 @@ public sealed class InterfaceMotionTests
     private sealed record Sheet(string Id);
 
     private sealed record Row(Sheet Card);
+
+    [STATestMethod]
+    public void In_a_row_of_modes_the_chosen_box_slides_sideways_and_keeps_the_outline_of_a_checked_tool()
+    {
+        var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
+        var read = new ToggleButton { Content = "Lire", IsChecked = true, Style = (Style)design.Dictionary["Kyf.Button.Tool"] };
+        var revise = new ToggleButton { Content = "Réviser", Style = (Style)design.Dictionary["Kyf.Button.Tool"] };
+        var write = new ToggleButton { Content = "Écrire", Style = (Style)design.Dictionary["Kyf.Button.Tool"] };
+        var row = new SlidingSelectionPanel { Orientation = Orientation.Horizontal, Children = { read, revise, write } };
+        var host = Host.Of(design, row);
+        using var source = new HwndSource(new HwndSourceParameters("kyfRev essai") { Width = 480, Height = 320 }) { RootVisual = host };
+        Host.Layout(host);
+
+        // Le cadre est sous le mode choisi, de sa largeur ; le bouton ne dessine plus le sien.
+        Assert.AreEqual(0, row.SelectionStart, 0.5);
+        Assert.AreEqual(read.ActualWidth, row.SelectionLength, 0.5, "dans une rangée, la longueur du cadre est une largeur");
+        Assert.AreEqual(Colors.Transparent, ((SolidColorBrush)read.Background).Color);
+
+        // Un autre mode : l'ancien se décoche après, le cadre glisse de côté jusqu'au nouveau.
+        write.IsChecked = true;
+        read.IsChecked = false;
+        Assert.AreEqual(SelectionMove.Slid, row.LastMove);
+        // Le cadre part une fois montré ce que le choix change : d'ici là, il reste sous l'ancien.
+        Host.Flush();
+        Assert.AreEqual(write.TransformToAncestor(row).Transform(default).X, (double)row.GetAnimationBaseValue(SlidingSelectionPanel.SelectionStartProperty), 0.5);
+        Assert.AreEqual(write.ActualWidth, (double)row.GetAnimationBaseValue(SlidingSelectionPanel.SelectionLengthProperty), 0.5);
+        Host.Flush();
+        Assert.IsNotNull(row.Selection, "le mode quitté n'efface pas le cadre");
+        var picture = new RenderTargetBitmap(480, 320, 96, 96, PixelFormats.Pbgra32);
+        picture.Render(host);
+    }
+
+    [STATestMethod]
+    public void A_block_shown_slides_in_from_its_edge_and_slides_back_before_giving_up_its_place()
+    {
+        var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
+        var pane = new Border { Width = 200, Height = 300, Visibility = Visibility.Collapsed };
+        var bar = new Border { Width = 300, Height = 60 };
+        Transitions.SetShownFrom(pane, Dock.Left);
+        Assert.AreEqual(Dock.Bottom, Transitions.GetShownFrom(bar), "sans indication, un bloc vient du bas");
+
+        // Avant d'être à l'écran : montré ou caché d'un coup.
+        Transitions.SetShown(bar, false);
+        Assert.AreEqual(Visibility.Collapsed, bar.Visibility);
+        Transitions.SetShown(bar, true);
+        Assert.AreEqual(Visibility.Visible, bar.Visibility);
+        Assert.IsTrue(Transitions.GetShown(bar));
+        Transitions.SetShown(bar, null);
+        Assert.AreEqual(Visibility.Visible, bar.Visibility, "sans valeur, rien n'est décidé");
+
+        var host = Host.Of(design, new DockPanel { LastChildFill = false, Children = { pane, bar } });
+        DockPanel.SetDock(bar, Dock.Bottom);
+        using var source = new HwndSource(new HwndSourceParameters("kyfRev essai") { Width = 480, Height = 320 }) { RootVisual = host };
+        Host.Layout(host);
+        Host.Flush();
+
+        // Montré : il prend sa place aussitôt, invisible, puis glisse depuis son bord, découpé à sa place.
+        Transitions.SetShown(pane, true);
+        Assert.AreEqual(Visibility.Visible, pane.Visibility);
+        Assert.AreEqual(0, Transitions.SlidesOf(pane), "il attend sa mise en page, et que l'application soit libre");
+        Assert.IsTrue(pane.HasAnimatedProperties, "invisible d'ici là");
+        Host.Layout(host);
+        Wait(() => Transitions.SlidesOf(pane) == 1 && pane.Clip is null);
+        Assert.AreEqual(1, Transitions.SlidesOf(pane), "puis glisse");
+        Assert.IsNull(pane.Clip, "arrivé, il est entier");
+
+        // Caché : il repart vers son bord, et ne cède sa place qu'une fois parti.
+        Transitions.SetShown(pane, false);
+        Assert.AreEqual(Visibility.Visible, pane.Visibility, "il garde sa place le temps de partir");
+        Wait(() => pane.Visibility == Visibility.Collapsed);
+        Assert.AreEqual(2, Transitions.SlidesOf(pane));
+        Assert.AreEqual(Visibility.Collapsed, pane.Visibility, "parti, il la cède");
+        Assert.IsNull(pane.Clip, "et rien ne reste de la transition");
+
+        // Une barre du bas descend pour se cacher ; remontrée avant d'être partie, elle revient, et le départ oublié ne la cache pas.
+        Transitions.SetShown(bar, false);
+        Transitions.SetShown(bar, true);
+        Wait(() => false, 400);
+        Assert.AreEqual(Visibility.Visible, bar.Visibility);
+        Assert.IsNull(bar.Clip);
+        Assert.AreEqual(0, Transitions.SlidesOf(bar), "le départ annulé n'a pas eu lieu");
+        Transitions.SetShown(bar, false);
+        Wait(() => Transitions.SlidesOf(bar) == 1);
+        Transitions.SetShown(bar, true);
+        Wait(() => Transitions.SlidesOf(bar) == 2 && bar.Clip is null);
+        Assert.AreEqual(Visibility.Visible, bar.Visibility, "rappelée en route, elle revient");
+        Assert.IsNull(bar.Clip);
+
+        // Déjà montré : rien à faire. Déjà caché : rien à faire glisser.
+        Transitions.SetShown(bar, null);
+        Transitions.SetShown(bar, true);
+        Assert.IsFalse(Transitions.IsSliding(bar));
+        Transitions.SetShown(pane, null);
+        Transitions.SetShown(pane, false);
+        Assert.IsFalse(Transitions.IsSliding(pane));
+
+        // Une autre fiche dans la même vue : ce que le bloc montre alors est son point de départ, rien ne glisse. Ensuite, si.
+        var before = Transitions.SlidesOf(bar);
+        host.DataContext = "une autre fiche";
+        Transitions.SetShown(bar, false);
+        Assert.AreEqual(Visibility.Collapsed, bar.Visibility, "d'un coup");
+        Assert.AreEqual(before, Transitions.SlidesOf(bar));
+        Host.Layout(host);
+        Host.Flush();
+        Transitions.SetShown(bar, true);
+        Wait(() => Transitions.SlidesOf(bar) == before + 1 && bar.Clip is null);
+        Assert.AreEqual(before + 1, Transitions.SlidesOf(bar), "le même contexte : le bloc glisse de nouveau");
+
+        // Un bouton dont le cadre glisse ne s'enfonce pas : c'est le cadre qui répond au clic.
+        var plain = new ToggleButton { Style = (Style)design.Dictionary["Kyf.Button.Tool"] };
+        var sliding = new ToggleButton { Style = (Style)design.Dictionary["Kyf.Button.Tool"] };
+        Transitions.SetHasSlidingSelection(sliding, true);
+        Assert.IsGreaterThan(0d, Transitions.GetPressScale(plain));
+        Assert.AreEqual(0d, Transitions.GetPressScale(sliding));
+
+        // Animations réduites : d'un coup, dans les deux sens.
+        design.ReducedMotion = true;
+        Assert.AreEqual(TimeSpan.Zero, Transitions.DurationOf(pane));
+        Transitions.SetShown(pane, true);
+        Assert.AreEqual(Visibility.Visible, pane.Visibility);
+        Assert.IsFalse(Transitions.IsSliding(pane));
+        Transitions.SetShown(pane, false);
+        Assert.AreEqual(Visibility.Collapsed, pane.Visibility);
+        design.ReducedMotion = false;
+        Assert.IsGreaterThan(TimeSpan.Zero, Transitions.DurationOf(pane), "la durée à donner à ce qui s'anime hors de WPF");
+        Transitions.SetShown(new TextElementProbe(), true);
+        Assert.ThrowsExactly<ArgumentNullException>(() => Transitions.GetShown(null!));
+        Assert.ThrowsExactly<ArgumentNullException>(() => Transitions.SetShown(null!, true));
+        Assert.ThrowsExactly<ArgumentNullException>(() => Transitions.GetShownFrom(null!));
+        Assert.ThrowsExactly<ArgumentNullException>(() => Transitions.SetShownFrom(null!, Dock.Top));
+        Assert.ThrowsExactly<ArgumentNullException>(() => Transitions.DurationOf(null!));
+    }
+
+    [STATestMethod]
+    public void A_block_can_come_from_any_edge()
+    {
+        var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
+        foreach (var edge in new[] { Dock.Left, Dock.Right, Dock.Top, Dock.Bottom })
+        {
+            var block = new Border { Width = 120, Height = 80, Visibility = Visibility.Collapsed };
+            Transitions.SetShownFrom(block, edge);
+            var host = Host.Of(design, block);
+            using var source = new HwndSource(new HwndSourceParameters("kyfRev essai") { Width = 480, Height = 320 }) { RootVisual = host };
+            Host.Layout(host);
+            Host.Flush();
+            Transitions.SetShown(block, true);
+            Host.Layout(host);
+            Wait(() => Transitions.SlidesOf(block) == 1 && block.Clip is null);
+            Assert.AreEqual(1, Transitions.SlidesOf(block), $"depuis {edge}");
+            Assert.IsNull(block.Clip, "arrivé, il est entier");
+            Assert.AreEqual(Visibility.Visible, block.Visibility);
+        }
+    }
+
+    /// <summary>Laisse tourner les animations jusqu'à ce que la condition soit vraie, deux secondes au plus par défaut.</summary>
+    private static void Wait(Func<bool> done, int milliseconds = 2000)
+    {
+        var limit = DateTime.UtcNow.AddMilliseconds(milliseconds);
+        var frame = new System.Windows.Threading.DispatcherFrame();
+        var timer = new System.Windows.Threading.DispatcherTimer(
+            TimeSpan.FromMilliseconds(15),
+            System.Windows.Threading.DispatcherPriority.Background,
+            (_, _) => frame.Continue = !done() && DateTime.UtcNow < limit,
+            System.Windows.Threading.Dispatcher.CurrentDispatcher);
+        timer.Start();
+        System.Windows.Threading.Dispatcher.PushFrame(frame);
+        timer.Stop();
+    }
+
+    /// <summary>Un objet qui n'est pas un élément d'interface : la propriété n'y fait rien.</summary>
+    private sealed class TextElementProbe : DependencyObject;
 
     private static Brush Brushes(DesignResources design, ColorRole role) => (Brush)design.Dictionary[DesignKeys.Brush(role)];
 

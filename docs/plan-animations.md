@@ -12,25 +12,32 @@
    change une fois, avant ou après ; elle n'est jamais recalculée à chaque image.
 3. **Ce qu'on lit ne bouge pas sans raison.** Entre Lire et Réviser, le texte est le
    même : rien ne s'estompe. Un bloc qui fait de la place à un autre bouge une fois.
-4. **Ce qui part va plus vite que ce qui arrive** (120 ms contre 220 ms).
+4. **Un fondu de départ est plus court que celui d'arrivée** (120 ms contre 220 ms). Un bloc qui
+   glisse pour se cacher met le même temps qu'à venir (220 ms) : on doit le voir partir.
 5. **Les fenêtres natives ne s'animent pas** : l'éditeur d'Écrire et l'îlot des Schémas
    sont des pages web posées dans la fenêtre, que l'application ne peut ni estomper ni
-   faire glisser. Ce qui les entoure s'anime ; eux paraissent d'un coup.
-6. **Une seule porte** : toute animation passe par `Transitions.Moves`. C'est là que
-   se lisent « Réduire les animations », le réglage de Windows et, demain, les familles.
-7. **Redimensionner la fenêtre n'anime rien** : un bloc qui passe sous un autre parce
+   faire glisser. Ce qui les entoure s'anime. L'éditeur habille lui-même son texte de sa feuille, en fondu,
+   sur la durée que l'application lui donne avec le thème (« --duree-entree »).
+6. **Une seule porte** : toute animation passe par `Transitions.Moves`, avec sa famille. C'est là
+   que se lisent le choix « Aucune », le réglage de Windows et les familles coupées.
+7. **Une transition lancée pendant que l'application travaille part quand la nouvelle vue est
+   affichée** (`Transitions.WhenShown`) : partie au clic, elle serait finie avant la première image ;
+   attendre que l'application soit au repos la retarderait de plusieurs secondes sur une longue fiche.
+8. **Redimensionner la fenêtre n'anime rien** : un bloc qui passe sous un autre parce
    que la place manque change d'un coup, comme aujourd'hui.
 
-## Réglages (maquette 19D)
+## Réglages (maquette 19D) : faits
 
-Dans Paramètres › Apparence, à la place de la seule case « Réduire les animations » :
+Dans Paramètres › Apparence, la carte « Animations » remplace la case « Réduire les animations » :
 
 - un choix en tête : **Toutes**, **Essentielles** (retour au toucher et sélection),
-  **Aucune** ; « Aucune » reprend le réglage d'aujourd'hui, et le fichier de préférences
-  existant (`animationsReduites`) est relu comme « Aucune » ;
-- **Suivre le réglage de Windows** : si Windows demande moins d'animations, aucune ne joue ;
-- **un interrupteur par famille**, neuf en tout. Chaque animation appartient à une
-  famille et se coupe avec elle, sans redémarrer.
+  **Aucune** ; « Aucune » est l'ancien réglage, et le fichier de préférences existant
+  (`animationsReduites`) se relit tel quel ;
+- si Windows demande moins d'animations, aucune ne joue : c'est dit dans la carte, sans interrupteur
+  de plus ;
+- **un interrupteur par famille** qui a déjà des animations, sept aujourd'hui (`animationsCoupees`
+  dans les préférences). Chaque animation appartient à une famille et se coupe avec elle, sans
+  redémarrer. « Nombres et jauges » et « Révision » auront le leur quand leurs animations existeront.
 
 | Famille | Ce qu'elle couvre |
 | --- | --- |
@@ -44,9 +51,9 @@ Dans Paramètres › Apparence, à la place de la seule case « Réduire les ani
 | Révision | trous révélés, étape validée, surlignage |
 | Animation d'ouverture | les fiches du logo au lancement |
 
-Construction : `Moves` reçoit la famille ; `DesignResources` garde l'ensemble des
-familles allumées à côté de `ReducedMotion`. Une famille éteinte donne une durée nulle,
-donc le chemin « sans animation » déjà essayé partout. Pas d'interrupteur par animation :
+Construction : `Moves` reçoit la famille (`MotionKinds`) ; `DesignResources.MotionOff` garde les
+familles coupées à côté de `ReducedMotion`, et les pose dans les ressources (`Kyf.Motion.Off`).
+Une famille coupée donne une durée nulle, donc le chemin « sans animation » déjà essayé partout. Pas d'interrupteur par animation :
 il y en aurait une quarantaine, et la page deviendrait illisible.
 
 ## Liste des éléments à animer
@@ -71,6 +78,7 @@ Priorité 1 : vu à chaque séance. Priorité 2 : vu chaque jour. Priorité 3 : 
 | --- | --- | --- | --- |
 | Cadre du choix du menu et des sections des Paramètres | absent à la première ouverture, ne suit pas la largeur | présent, suit le menu, glisse | fait |
 | Trait des onglets du ruban | ne glissait que dans un sens | glisse dans les deux | fait |
+| Choix Lire / Réviser / Écrire | sautait | le cadre glisse d'un mode à l'autre | fait |
 | Choix dans la liste du Carnet et d'Aujourd'hui | saute | le cadre glisse (19B) | 2 |
 
 ### Changement de vue et de mode
@@ -78,7 +86,8 @@ Priorité 1 : vu à chaque séance. Priorité 2 : vu chaque jour. Priorité 3 : 
 | Élément | Aujourd'hui | Proposé | Priorité |
 | --- | --- | --- | --- |
 | Lire ↔ Réviser | le texte clignote | rien ne bouge | fait |
-| Ruban à l'entrée en Écrire | d'un coup | descend de 8 px en fondu | fait |
+| Ruban à l'entrée en Écrire | d'un coup | descend de 8 px en fondu, son trait d'onglet avec lui | fait |
+| Feuille de l'éditeur à l'entrée en Écrire | surgissait après un blanc | la fiche lue reste à l'écran jusqu'à ce que l'éditeur ait son texte ; sa feuille vient alors l'habiller en fondu | fait |
 | Élément suivant en séance | toute la fiche change d'un coup | l'ancienne s'efface, la nouvelle arrive en fondu | 1 |
 | Bilan de fin de séance | surgit | monte de 8 px en fondu | 2 |
 | « Ouverture… », squelettes → contenu (fiche, Aujourd'hui, Statistiques, Santé) | échange sec | fondu | 2 |
@@ -92,9 +101,10 @@ Priorité 1 : vu à chaque séance. Priorité 2 : vu chaque jour. Priorité 3 : 
 | Élément | Aujourd'hui | Proposé | Priorité |
 | --- | --- | --- | --- |
 | Menu réduit, élargi, masqué | d'un coup | le bord glisse, la page suit | fait |
-| Volets Plan, Passages, Liens (en colonne et par-dessus le texte) | d'un coup, le texte se recentre | glissent depuis leur bord, le texte se pousse une fois | 1 |
+| Volets Plan, Passages, Liens (en colonne et par-dessus le texte) | d'un coup | glissent depuis leur bord et y retournent ; le texte se recentre une fois | fait |
+| Barre de révision en passant à Écrire, et au retour | d'un coup | descend pour se cacher, remonte pour revenir | fait |
 | Groupes d'Aujourd'hui, dossiers du Carnet | lignes d'un coup, chevron échangé | le chevron tourne, les lignes se replient | 1 |
-| Barre de révision, barres des trous, de l'écoute, de la révision guidée | surgissent | montent de 8 px en fondu | 2 |
+| Barres des trous, de l'écoute, de la révision guidée | surgissent | glissent depuis leur bord, comme la barre de révision | 2 |
 | Historique dans l'aperçu, filtres, étiquettes, diagnostic, options d'un module | se déplient d'un coup | se déplient (220 ms) | 2 |
 | Carte « Nouvelle définition », carte en cours d'édition | pousse la grille d'un coup | se déplie | 2 |
 | Bandeaux et alertes dans une page | d'un coup | se déplient en poussant la suite | 2 |
@@ -148,16 +158,38 @@ Priorité 1 : vu à chaque séance. Priorité 2 : vu chaque jour. Priorité 3 : 
 - La barre de titre en plein écran : la fenêtre change d'état au même instant.
 - Le zoom, le changement de thème, le papier d'une fiche, l'aperçu d'impression.
 
+## Fluidité : ce qui reste à gagner (maquettes, rangée 20)
+
+Relevé après l'essai 11. Les animations d'arrivée sont en place ; ce qui donne encore une impression de coupure, c'est ce
+qui part d'un coup, ce qui saute pour faire de la place, et l'application occupée pendant qu'elle anime.
+
+| Rang | Point relevé | Modification proposée | Maquette |
+| --- | --- | --- | --- |
+| 1 | L'éditeur se crée à chaque entrée en écriture : 170 à 430 ms d'attente, pendant lesquels l'application est occupée et les animations sautent des images | Le créer d'avance, caché, dès que la fiche s'ouvre en lecture ; le garder d'une entrée à l'autre | 20A |
+| 2 | Le ruban pousse le texte d'un coup en paraissant ; au relais entre la fiche lue et l'éditeur, le texte change de place | Le texte descend avec le ruban (220 ms) ; la lecture et l'éditeur posent le premier bloc au même endroit, le titre de la fiche s'efface vers le haut | 20A |
+| 3 | Rien de ce qui part n'est animé : vue quittée, dialogue, menu, avis, ruban en quittant l'écriture | Un départ en 120 ms, sur une courbe qui accélère ; une vue arrive du côté où l'on va | 20B |
+| 4 | Un volet glisse, mais le texte saute à sa nouvelle place | Le texte glisse en même temps (position affichée animée, une seule mise en page) | 20C |
+| 5 | Une ligne retirée disparaît et la liste remonte d'un coup | Elle s'efface (120 ms), la liste se referme (220 ms) | 20C |
+| 6 | Aller à un titre, à un passage, au trou suivant : un saut | Défilement accompagné de 220 ms au plus | 20D |
+| 7 | Squelette remplacé d'un coup par le contenu | Fondu croisé de 220 ms | 20D |
+| 8 | Une liste entière paraît en bloc | Courte cascade : 35 ms d'écart, six lignes au plus | 20C |
+| 9 | Une seule courbe pour tout, deux durées | Une courbe d'arrivée et une de départ ; une troisième durée (320 ms) pour les grandes surfaces, si l'essai le demande | 20B |
+| 10 | Le thème bascule d'un coup | Fondu des couleurs en 120 ms | 20D |
+| 11 | Compteurs, jauges, étape validée, trous révélés : secs | Voir « Nombres et jauges » et « Révision » plus haut | 19C |
+| 12 | Les blocs qui glissent sont redessinés à chaque image | Les mettre en image le temps du trajet (`BitmapCache`), si une mesure montre que c'est utile | — |
+
+Les rangs 1 et 2 comptent le plus : ce sont eux qui séparent encore l'entrée en écriture d'un seul mouvement continu.
+
 ## Plan d'action
 
 Une demande de fusion par lot, chacune avec ses essais (`InterfaceMotionTests`),
 ses captures de 470 px à l'ultra-large en clair et en sombre, et un installateur d'essai.
 
 1. **Correctifs** : cadre du choix, glissement réel, Lire ↔ Réviser, ruban, bord du menu.
-2. **Réglages par famille** : la porte `Moves` par famille, les préférences, la page
-   Apparence. En premier, pour que tout ce qui suit naisse avec son interrupteur.
-3. **Quatre outils communs**, petits et sans mise en page par image : déplier ou replier
-   un bloc (découpe), remplacer un contenu (fondu), retirer une ligne, faire changer un
+2. **Réglages par famille** (fait) : la porte `Moves` par famille, les préférences, la page
+   Apparence. Tout ce qui suit naît avec son interrupteur.
+3. **Quatre outils communs**, petits et sans mise en page par image : montrer ou cacher
+   un bloc en le faisant glisser (`Transitions.Shown`, fait), le déplier ou le replier (découpe), remplacer un contenu (fondu), retirer une ligne, faire changer un
    nombre ou une jauge. Chacun arrête proprement l'animation précédente s'il est relancé.
 4. **Menu et volets** : volets de la fiche, groupes, dossiers, barres, bandeaux.
 5. **Listes, aperçus, palette, cartes flottantes.**

@@ -22,6 +22,15 @@ internal sealed partial class SheetDocumentViewer
     /// <summary>Ce qui marque la ligne d'en-tête d'un tableau.</summary>
     internal static readonly object HeaderRowMark = new();
 
+    /// <summary>Ce qui marque l'en-tête de la fiche : ses détails et son titre, avant le texte.</summary>
+    internal static readonly object SheetHeaderMark = new();
+
+    /// <summary>L'espace sous le titre de la fiche, quand il est dans le texte.</summary>
+    internal const double HeaderSpacing = 16;
+
+    /// <summary>L'espace entre l'en-tête posé au-dessus des feuilles et le bord de la première, et au-dessus de lui.</summary>
+    internal const double HeaderGap = 12;
+
     /// <summary>Ce qui marque un en-tête répété : il n'est pas dans la fiche, la mise en pages l'ajoute et le retire.</summary>
     private static readonly object RepeatedRowMark = new();
 
@@ -438,6 +447,39 @@ internal sealed partial class SheetDocumentViewer
     private bool IsPaged => Layout is { IsPaged: true };
 
     /// <summary>
+    /// En pages, l'en-tête de la fiche se pose au-dessus de la première feuille, sur le fond, au lieu d'y prendre la place du
+    /// texte : la première feuille porte alors le même texte qu'à l'écriture, qui n'a pas cet en-tête, et se coupe au même
+    /// endroit. Ailleurs (l'impression, l'aperçu de l'écriture), il reste en haut de la première page.
+    /// </summary>
+    public bool HeaderAbovePages { get; set; }
+
+    /// <summary>Le dernier bloc de l'en-tête de la fiche : son titre ; rien si le texte n'en a pas.</summary>
+    private Paragraph? HeaderEnd => Document?.Blocks.TakeWhile(block => ReferenceEquals(block.Tag, SheetHeaderMark)).LastOrDefault() as Paragraph;
+
+    /// <summary>L'en-tête est posé au-dessus des feuilles : il ne compte pas dans leur mise en pages.</summary>
+    internal bool HeaderIsAbove => HeaderAbovePages && IsPaged && HeaderEnd is not null;
+
+    /// <summary>La marge du haut du document : celle de la feuille, ou un simple espace quand l'en-tête est au-dessus d'elle.</summary>
+    private double TopPadding(PageLayout page) => HeaderIsAbove ? HeaderGap : page.MarginPixels;
+
+    /// <summary>
+    /// Met le titre à sa distance du texte : l'espace de toujours quand il est dans la feuille ; au-dessus d'elle, l'espace
+    /// qui le sépare de son bord, puis la marge de la feuille, puisque le texte commence sous cette marge.
+    /// </summary>
+    private void PlaceHeader()
+    {
+        if (HeaderEnd is not { } title)
+        {
+            return;
+        }
+        var below = HeaderIsAbove && Layout is { } page ? HeaderGap + page.MarginPixels : HeaderSpacing;
+        if (Math.Abs(title.Margin.Bottom - below) > 0.5)
+        {
+            title.Margin = new Thickness(title.Margin.Left, title.Margin.Top, title.Margin.Right, below);
+        }
+    }
+
+    /// <summary>
     /// La vue montre le texte entier, sans défiler : elle prend la hauteur de tout le document. C'est ce qu'il faut à
     /// l'impression, qui découpe ensuite les feuilles dans cette longue bande.
     /// </summary>
@@ -505,8 +547,9 @@ internal sealed partial class SheetDocumentViewer
     {
         if (Document is { } document)
         {
+            PlaceHeader();
             var padding = Layout is { IsPaged: true } page
-                ? new Thickness(Side(page), page.MarginPixels, Side(page), page.MarginPixels)
+                ? new Thickness(Side(page), TopPadding(page), Side(page), page.MarginPixels)
                 : Beside(PaperShown is null ? EndlessPadding : EndlessPaperPadding, EndlessSide);
             if (document.PagePadding != padding)
             {
@@ -611,12 +654,21 @@ internal sealed partial class SheetDocumentViewer
         }
         _baseline = _step > 0 ? document.LineHeight * BaselineRatio(document.FontFamily) : 0;
         var usable = page is null ? double.PositiveInfinity : page.HeightPixels - (2 * page.MarginPixels);
+        if (RemoveStrayRepeats(document))
+        {
+            // Le texte vient de changer : il se mesure de nouveau avant d'être mis en pages.
+            SchedulePages();
+            return;
+        }
         var units = new List<Unit>();
         Collect(document.Blocks, scroller.VerticalOffset, units, continues: false);
         if (units.Count == 0)
         {
             _breaks = [];
-            _origin = (page?.MarginPixels ?? document.PagePadding.Top) - scroller.VerticalOffset;
+            // Sans texte, la feuille commence sous sa marge ; sous l'en-tête, s'il est au-dessus d'elle.
+            _origin = HeaderIsAbove && HeaderEnd is { } alone && Measure(alone.ContentStart, alone.ContentEnd, scroller.VerticalOffset) is (var aloneTop, var aloneHeight)
+                ? aloneTop + aloneHeight + alone.Margin.Bottom
+                : (page?.MarginPixels ?? document.PagePadding.Top) - scroller.VerticalOffset;
             _sheets = page is null ? [] : [(0, usable)];
             SetPageCount(page is null ? 0 : 1);
             UpdateBands();
@@ -670,7 +722,7 @@ internal sealed partial class SheetDocumentViewer
             var side = Side(page);
             if (Math.Abs(document.PagePadding.Bottom - bottom) > 0.5 || Math.Abs(document.PagePadding.Left - side) > 0.5)
             {
-                document.PagePadding = new Thickness(side, page.MarginPixels, side, bottom);
+                document.PagePadding = new Thickness(side, TopPadding(page), side, bottom);
             }
         }
         SetPageCount(page is null ? 0 : result.Pages);
@@ -686,6 +738,26 @@ internal sealed partial class SheetDocumentViewer
         {
             _passes = 0;
         }
+    }
+
+    /// <summary>
+    /// Retire les en-têtes répétés que la mise en pages ne connaît plus. Elle seule en pose, et sait pour quelle ligne ; un
+    /// en-tête resté sans elle garderait l'espace ouvert au-dessus de lui, caché sous l'écart entre deux feuilles : la feuille
+    /// d'avant resterait à moitié vide, et l'écart s'allongerait d'autant.
+    /// </summary>
+    /// <returns>Vrai si le texte a changé.</returns>
+    private bool RemoveStrayRepeats(FlowDocument document)
+    {
+        var strays = document.Blocks.OfType<Table>()
+            .SelectMany(table => table.RowGroups)
+            .SelectMany(group => group.Rows)
+            .Where(row => ReferenceEquals(row.Tag, RepeatedRowMark) && !_repeats.ContainsValue(row))
+            .ToList();
+        foreach (var stray in strays)
+        {
+            (stray.Parent as TableRowGroup)?.Rows.Remove(stray);
+        }
+        return strays.Count > 0;
     }
 
     private bool Place(Unit unit, PagePlacement placement)
@@ -833,6 +905,9 @@ internal sealed partial class SheetDocumentViewer
         {
             switch (block)
             {
+                case Paragraph header when ReferenceEquals(header.Tag, SheetHeaderMark) && HeaderIsAbove:
+                    // Posé au-dessus de la première feuille : il n'est sur aucune page.
+                    break;
                 case Section section:
                     // Une citation (son trait à gauche la désigne) se poursuit d'un bloc au suivant.
                     var quote = section.BorderThickness.Left > 0;
@@ -895,8 +970,7 @@ internal sealed partial class SheetDocumentViewer
         var rows = table.RowGroups.SelectMany(group => group.Rows).ToList();
         var tops = rows.Select(row => MeasureRow(row, offset)).ToList();
         var hasHeader = rows.Count > 1 && ReferenceEquals(rows[0].Tag, HeaderRowMark);
-        // La hauteur de l'en-tête : du haut de son texte au haut du texte de la ligne suivante.
-        var lead = hasHeader && tops[0] is (var headerTop, _) && tops[1] is (var secondTop, _) ? Math.Max(0, secondTop - headerTop - _rowSpacers.GetValueOrDefault(rows[1])) : 0;
+        var lead = hasHeader ? HeaderLead(rows, tops) : 0;
         var real = 0;
         for (var index = 0; index < rows.Count; index++)
         {
@@ -914,6 +988,25 @@ internal sealed partial class SheetDocumentViewer
             units.Add(new Unit(rows[index], top, height, PageBoxKind.Row, added, spacer, Continues: real > 0, Lead: real > 0 ? lead : 0));
             real++;
         }
+    }
+
+    /// <summary>
+    /// La hauteur de l'en-tête d'un tableau : du haut de son texte au haut du texte de la première ligne. Si cette ligne a été
+    /// poussée sous un en-tête répété, c'est lui qui se mesure : l'espace ouvert au-dessus de lui n'est pas de la hauteur de
+    /// l'en-tête, et compté comme tel, il décalait toute la suite de la mise en pages.
+    /// </summary>
+    private double HeaderLead(List<TableRow> rows, List<(double Top, double Height)?> tops)
+    {
+        var first = rows.FindIndex(1, row => !ReferenceEquals(row.Tag, RepeatedRowMark));
+        if (first < 0 || tops[first] is not (var firstTop, _))
+        {
+            return 0;
+        }
+        if (ReferenceEquals(rows[first - 1].Tag, RepeatedRowMark) && tops[first - 1] is (var repeatTop, _))
+        {
+            return Math.Max(0, firstTop - repeatTop);
+        }
+        return tops[0] is (var headerTop, _) ? Math.Max(0, firstTop - headerTop - _rowSpacers.GetValueOrDefault(rows[first])) : 0;
     }
 
     /// <summary>Le haut et la hauteur d'un passage du texte, dans le document entier ; rien s'il n'est pas encore mesuré.</summary>

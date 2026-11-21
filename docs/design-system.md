@@ -93,7 +93,7 @@ vérifient toutes, dans chaque thème :
 | Rayons | 12 (contrôles), 20 (cartes, menus), 24 (dialogues) ; pastilles en arrondi complet |
 | Élévations | « Card » (ombre douce des cartes, en thème clair seulement : en sombre, la surface et son filet suffisent), « Flyout » (menus) et « Dialog » ; aucune en contraste élevé |
 | Tailles | contrôles de 40 px de haut au moins, 44 pour le bouton principal et les éléments de liste |
-| Durées | 120 et 220 ms, décélération douce ; nulles, et squelettes immobiles, si Windows demande de réduire les animations |
+| Durées | 120 et 220 ms, décélération douce ; nulles, et squelettes immobiles, si Windows demande de réduire les animations ou si elles sont toutes coupées dans les Paramètres ; une famille d'animations (`MotionKinds`) se coupe à part |
 
 ### Polices
 

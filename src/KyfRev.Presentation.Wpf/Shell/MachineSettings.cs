@@ -74,6 +74,7 @@ public sealed class MachineSettings
         appearance.Preference = preferences.Theme;
         appearance.ForcesHighContrast = preferences.HighContrast;
         appearance.ForcesReducedMotion = preferences.ReducedMotion;
+        appearance.MotionOff = preferences.MotionOff;
         appearance.LargerTargets = preferences.LargerTargets;
         appearance.Resources[ReadingComfort.ResourceKey] = ReadingComfort.Of(preferences);
         // Les feuilles et leur papier : toute vue qui lit une fiche les trouve là, et suit leurs changements.
