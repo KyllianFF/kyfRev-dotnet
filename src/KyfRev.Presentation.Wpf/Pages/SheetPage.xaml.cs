@@ -35,8 +35,21 @@ internal sealed partial class SheetPage : UserControl
         Unloaded += (_, _) => (DataContext as SheetPageViewModel)?.ReadAloud?.CloseCommand.Execute(null);
         EditorView.CoveredTextClicked = () => (DataContext as SheetPageViewModel)?.CloseOverlayCommand.Execute(null);
         EditorView.ZoomAsked = step => ZoomSheet(step);
+        WriteToggle.MouseEnter += (_, _) => WarmUpEditor();
+        WriteToggle.GotKeyboardFocus += (_, _) => WarmUpEditor();
+        RibbonRow.SizeChanged += (_, _) =>
+        {
+            if (RibbonRow.IsVisible && RibbonRow.ActualHeight > 0)
+            {
+                _ribbonPush = RibbonRow.ActualHeight + RibbonRow.Margin.Bottom;
+            }
+        };
+        EditorView.TextReady += (_, _) => AlignReadingText();
         EditorView.TextShown += (_, _) =>
         {
+            // L'éditeur prend la place : la fiche lue, alignée sur lui un instant plus tôt, n'a plus à l'être.
+            _moves = 0;
+            Transitions.Rest(SheetArea);
             _shownEditor = EditorView.DataContext;
             ShowReadingText(DataContext as SheetPageViewModel);
         };
@@ -97,6 +110,15 @@ internal sealed partial class SheetPage : UserControl
     /// <summary>Le mode montré : 0 Lire, 1 Réviser, 2 Écrire ; −1 avant le premier.</summary>
     private int _mode = -1;
 
+    /// <summary>En lecture ou en révision, prépare l'éditeur avant qu'on ne le demande.</summary>
+    internal void WarmUpEditor()
+    {
+        if (DataContext is SheetPageViewModel { IsReading: true })
+        {
+            EditorView.WarmUp();
+        }
+    }
+
     /// <summary>L'éditeur dont le texte est à l'écran.</summary>
     private object? _shownEditor;
 
@@ -127,9 +149,102 @@ internal sealed partial class SheetPage : UserControl
         {
             return false;
         }
-        return mode == 2
-            ? Transitions.EnterOnceShown(Ribbon, KyfRev.DesignSystem.DesignKeys.NormalDuration, rise: -RibbonDrop)
-            : Transitions.EnterOnceShown(SheetText, KyfRev.DesignSystem.DesignKeys.NormalDuration);
+        if (mode != 2)
+        {
+            // Le ruban parti, ce qui était sous lui remonte en glissant.
+            Transitions.Rest(SheetArea);
+            Transitions.FollowOnceShown(Body, _ribbonPush);
+            return Transitions.EnterOnceShown(SheetText, KyfRev.DesignSystem.DesignKeys.NormalDuration);
+        }
+        if (!Transitions.EnterOnceShown(Ribbon, KyfRev.DesignSystem.DesignKeys.NormalDuration, rise: -RibbonDrop))
+        {
+            return false;
+        }
+        FollowRibbon();
+        return true;
+    }
+
+    /// <summary>De combien le ruban pousse ce qui est sous lui : sa hauteur et sa marge.</summary>
+    private double _ribbonPush;
+
+    /// <summary>Les mouvements en cours que l'éditeur attend pour se montrer.</summary>
+    private int _moves;
+
+    /// <summary>
+    /// Le ruban paraît et pousse ce qui est sous lui : la fiche descend avec lui, au lieu de sauter de sa hauteur. L'éditeur,
+    /// qui a sa propre fenêtre et ne glisse pas, reste caché le temps de ce trajet.
+    /// </summary>
+    private void FollowRibbon()
+    {
+        Hold();
+        void Follow(object? sender, EventArgs e)
+        {
+            if (DataContext is not SheetPageViewModel { IsWriting: true })
+            {
+                LayoutUpdated -= Follow;
+                Settle();
+                return;
+            }
+            if (!RibbonRow.IsVisible || RibbonRow.ActualHeight <= 0)
+            {
+                return;
+            }
+            LayoutUpdated -= Follow;
+            Transitions.FollowOnceShown(Body, -(RibbonRow.ActualHeight + RibbonRow.Margin.Bottom), done: Settle);
+        }
+        LayoutUpdated += Follow;
+        Follow(this, EventArgs.Empty);
+    }
+
+    /// <summary>Un mouvement commence : l'éditeur attend.</summary>
+    private void Hold()
+    {
+        _moves++;
+        EditorView.HoldText();
+    }
+
+    /// <summary>Un mouvement est fini : au dernier, l'éditeur peut se montrer.</summary>
+    private void Settle()
+    {
+        _moves = Math.Max(0, _moves - 1);
+        if (_moves == 0)
+        {
+            EditorView.ReleaseText();
+        }
+    }
+
+    /// <summary>Le plus grand décalage qu'un alignement se permet : au-delà, les deux vues ne se ressemblent pas assez.</summary>
+    internal const double MaximumAlignment = 240;
+
+    /// <summary>De combien la fiche lue s'est décalée la dernière fois pour s'aligner sur l'éditeur (pour les essais).</summary>
+    internal double LastAlignment { get; private set; }
+
+    /// <summary>
+    /// Le texte de l'éditeur est chargé, encore caché : la fiche lue glisse jusqu'à poser sa première ligne là où sera celle
+    /// de l'éditeur, son titre passant sous le ruban. Le relais se fait alors sans que le texte change de place. Seulement
+    /// si la lecture est en haut de la fiche : plus bas, l'éditeur s'ouvre de toute façon sur le début.
+    /// </summary>
+    /// <returns>Vrai si la fiche lue s'aligne.</returns>
+    internal bool AlignReadingText()
+    {
+        if (DataContext is not SheetPageViewModel { IsWriting: true } || SheetText.Visibility != Visibility.Visible
+            || EditorView.Visual is not { TextOffset: { } offset } visual || SheetText.FirstTextTop() is not { } reading
+            || PresentationSource.FromVisual(this)?.RootVisual is not System.Windows.Media.Visual root || !IsDescendantOf(root))
+        {
+            return false;
+        }
+        // La page web compte en pixels de l'écran ; la fiche, dans la taille de l'interface.
+        var scale = TransformToAncestor(root).TransformBounds(new Rect(0, 0, 1, 1)).Height;
+        var editorTop = visual.TransformToAncestor(this).Transform(default).Y + (offset / Math.Max(scale, 0.01));
+        var readingTop = SheetText.TransformToAncestor(this).Transform(new Point(0, reading)).Y;
+        var shift = editorTop - readingTop;
+        if (Math.Abs(shift) > MaximumAlignment)
+        {
+            return false;
+        }
+        Hold();
+        LastAlignment = shift;
+        return Transitions.ShiftTo(SheetArea, shift, done: Settle);
     }
 
     /// <summary>Le texte mis en forme a sa propre fenêtre : tout ce qui le recouvre le lui dit.</summary>

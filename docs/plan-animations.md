@@ -165,8 +165,8 @@ qui part d'un coup, ce qui saute pour faire de la place, et l'application occup�
 
 | Rang | Point relevé | Modification proposée | Maquette |
 | --- | --- | --- | --- |
-| 1 | L'éditeur se crée à chaque entrée en écriture : 170 à 430 ms d'attente, pendant lesquels l'application est occupée et les animations sautent des images | Le créer d'avance, caché, dès que la fiche s'ouvre en lecture ; le garder d'une entrée à l'autre | 20A |
-| 2 | Le ruban pousse le texte d'un coup en paraissant ; au relais entre la fiche lue et l'éditeur, le texte change de place | Le texte descend avec le ruban (220 ms) ; la lecture et l'éditeur posent le premier bloc au même endroit, le titre de la fiche s'efface vers le haut | 20A |
+| 1 (fait, à la demande : quand le pointeur ou le clavier arrive sur « Écrire ») | L'éditeur se crée à chaque entrée en écriture : 170 à 430 ms d'attente, pendant lesquels l'application est occupée et les animations sautent des images | Le créer d'avance, caché, dès que la fiche s'ouvre en lecture ; le garder d'une entrée à l'autre | 20A |
+| 2 (fait, l'alignement seulement en haut de la fiche) | Le ruban pousse le texte d'un coup en paraissant ; au relais entre la fiche lue et l'éditeur, le texte change de place | Le texte descend avec le ruban (220 ms) ; la lecture et l'éditeur posent le premier bloc au même endroit, le titre de la fiche s'efface vers le haut | 20A |
 | 3 | Rien de ce qui part n'est animé : vue quittée, dialogue, menu, avis, ruban en quittant l'écriture | Un départ en 120 ms, sur une courbe qui accélère ; une vue arrive du côté où l'on va | 20B |
 | 4 | Un volet glisse, mais le texte saute à sa nouvelle place | Le texte glisse en même temps (position affichée animée, une seule mise en page) | 20C |
 | 5 | Une ligne retirée disparaît et la liste remonte d'un coup | Elle s'efface (120 ms), la liste se referme (220 ms) | 20C |

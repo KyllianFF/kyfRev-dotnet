@@ -47,3 +47,17 @@ export function paraitre(fiche: HTMLElement, page: Document = document): void {
     }),
   );
 }
+
+/**
+ * Le haut de la première ligne du texte, depuis le haut de la vue, en pixels CSS ; 0 sans texte. L'application y amène
+ * la fiche lue avant de montrer celle-ci : le texte ne change pas de place au relais.
+ */
+export function hautDuTexte(fiche: HTMLElement): number {
+  const premier = fiche.querySelector(".ProseMirror")?.firstElementChild;
+  if (!premier) {
+    return 0;
+  }
+  const plage = fiche.ownerDocument.createRange();
+  plage.selectNodeContents(premier);
+  return (plage.getClientRects()[0] ?? premier.getBoundingClientRect()).top;
+}

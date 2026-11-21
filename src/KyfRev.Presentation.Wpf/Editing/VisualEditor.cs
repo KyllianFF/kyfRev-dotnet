@@ -113,10 +113,11 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
 
     private readonly WebView2 _view = new();
     private readonly Image _snapshot = new() { Visibility = Visibility.Collapsed, Stretch = Stretch.None, HorizontalAlignment = HorizontalAlignment.Left, VerticalAlignment = VerticalAlignment.Top };
-    private readonly Func<string, Outcome<byte[]>> _readResource;
     private readonly string _dataFolder;
-    private readonly string _folder;
-    private readonly ISpelling _spelling;
+    // La fiche que l'éditeur sert : inconnue tant qu'il n'est qu'une réserve, préparée d'avance.
+    private Func<string, Outcome<byte[]>>? _readResource;
+    private string _folder = string.Empty;
+    private ISpelling? _spelling;
     private readonly Queue<EditorRequest> _pending = new();
     private readonly Dictionary<int, TaskCompletionSource> _syncs = [];
     private bool _ready;
@@ -128,13 +129,22 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
     private bool _disposed;
     private bool _textShown;
     private bool _focusAsked;
+    private bool _heldBack;
+    private bool _textWaits;
     private readonly DispatcherTimer _patience = new() { Interval = TextPatience };
 
     public VisualEditor(string folder, Func<string, Outcome<byte[]>> readResource, ISpelling spelling, string dataFolder)
+        : this(dataFolder)
     {
-        _folder = folder;
-        _readResource = readResource;
-        _spelling = spelling;
+        Adopt(folder, readResource, spelling);
+    }
+
+    /// <summary>
+    /// Un éditeur de réserve : son moteur s'ouvre et sa page se charge sans fiche, pour être prêts quand l'écriture
+    /// commence. <see cref="Adopt"/> lui donne sa fiche.
+    /// </summary>
+    internal VisualEditor(string dataFolder)
+    {
         _dataFolder = dataFolder;
         Text = string.Empty;
         Focusable = false;
@@ -148,6 +158,7 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
         _patience.Tick += (_, _) =>
         {
             GaveUpWaiting = !_textShown;
+            _heldBack = false;
             ShowText();
         };
         var ground = new Grid { Children = { _view, _snapshot } };
@@ -218,6 +229,20 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
     /// <summary>Le moteur, pour les essais.</summary>
     internal WebView2 View => _view;
 
+    /// <summary>Le dossier de données de son moteur.</summary>
+    internal string DataFolder => _dataFolder;
+
+    /// <summary>Le moteur ne s'est pas ouvert, ou s'est arrêté : une réserve dans cet état ne sert pas.</summary>
+    internal bool HasFailed { get; private set; }
+
+    /// <summary>Donne à l'éditeur la fiche qu'il sert : son dossier, ses ressources, son correcteur.</summary>
+    internal void Adopt(string folder, Func<string, Outcome<byte[]>> readResource, ISpelling spelling)
+    {
+        _folder = folder;
+        _readResource = readResource;
+        _spelling = spelling;
+    }
+
     /// <summary>Le temps laissé au moteur pour montrer son texte, avant de se montrer quand même.</summary>
     internal static readonly TimeSpan TextPatience = TimeSpan.FromSeconds(2);
 
@@ -227,8 +252,30 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
     /// <summary>Le moteur s'est montré sans son texte, qui tardait (pour les essais).</summary>
     internal bool GaveUpWaiting { get; private set; }
 
-    /// <summary>Le moteur vient de se montrer, avec son texte.</summary>
+    /// <summary>Le moteur se montre, avec son texte : ce qui tenait sa place peut la lui laisser.</summary>
     internal event EventHandler? TextShown;
+
+    /// <summary>Le texte est dans la page, pas encore à l'écran : c'est le moment de le retenir (<see cref="HoldBack"/>).</summary>
+    internal event EventHandler? TextReady;
+
+    /// <summary>Le haut de la première ligne du texte, sous le haut de la vue, en pixels de l'écran ; rien avant son chargement.</summary>
+    internal double? TextOffset { get; private set; }
+
+    /// <summary>
+    /// Retient le moteur caché, même son texte arrivé : ce qui tient sa place finit d'abord son mouvement. Il se montre à
+    /// <see cref="Release"/>, ou au bout de sa patience.
+    /// </summary>
+    internal void HoldBack() => _heldBack = !_textShown;
+
+    /// <summary>Laisse le moteur se montrer, dès que son texte est là.</summary>
+    internal void Release()
+    {
+        _heldBack = false;
+        if (_textWaits)
+        {
+            ShowText();
+        }
+    }
 
     /// <summary>Le texte est recouvert, et remplacé par son image.</summary>
     internal bool IsCovered => _covered;
@@ -236,12 +283,25 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
     /// <summary>Montre le moteur : son texte est là, il a renoncé à l'attendre, ou il ne s'ouvrira pas.</summary>
     private void ShowText()
     {
-        _patience.Stop();
         if (_textShown || _disposed)
         {
+            _patience.Stop();
             return;
         }
+        if (_heldBack)
+        {
+            // Retenu : la patience court toujours, il se montrera quand même.
+            _textWaits = true;
+            return;
+        }
+        _patience.Stop();
+        _textWaits = false;
         _textShown = true;
+        // Ce qui tenait sa place la lui laisse, puis sa fenêtre se pose là où la mise en page la met maintenant : elle ne
+        // suit pas d'elle-même un décalage qui vient de finir.
+        TextShown?.Invoke(this, EventArgs.Empty);
+        InvalidateArrange();
+        UpdateLayout();
         if (!_covered)
         {
             _view.Visibility = Visibility.Visible;
@@ -253,7 +313,6 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
             _view.Focus();
             Post(new FocusRequest());
         }
-        TextShown?.Invoke(this, EventArgs.Empty);
     }
 
     /// <summary>
@@ -383,6 +442,11 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
     {
         Text = text;
         _stale = false;
+        if (!_textShown)
+        {
+            // La patience court depuis le texte demandé : une réserve attend sa fiche sans se montrer.
+            _patience.Start();
+        }
         Post(new LoadRequest(text, _folder, TryFindResource(ExtensionBlocks.ResourceKey) is ExtensionBlocks blocks ? blocks.Languages : []));
     }
 
@@ -513,7 +577,9 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
                     Send(request);
                 }
                 break;
-            case TextLoadedEvent:
+            case TextLoadedEvent loaded:
+                TextOffset = loaded.Top * _view.ZoomFactor;
+                TextReady?.Invoke(this, EventArgs.Empty);
                 ShowText();
                 break;
             case EditedEvent:
@@ -654,10 +720,10 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
             }
             // Ici, le soulignement vient du moteur web, qu'un mot accepté pour la session n'atteint pas : sur un coffre chiffré,
             // accepter un mot se propose dans le code Markdown, dont le correcteur est le nôtre.
-            if (!_spelling.AddsUntilClosing)
+            if (_spelling is { AddsUntilClosing: false } spelling)
             {
                 var add = new MenuItem { Header = EditingText.AddToDictionary };
-                add.Click += (_, _) => _ = Task.Run(() => _spelling.Add(word));
+                add.Click += (_, _) => _ = Task.Run(() => spelling.Add(word));
                 items.Add(add);
             }
             if (items[^1] is not Separator)
@@ -790,7 +856,7 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
     private void OpenMenu(MenuEvent menu)
     {
         // Le menu attend sa réponse, le temps d'une frappe : le correcteur vit sur les fils de travail.
-        var correction = menu.Word is { } word ? Task.Run(() => _spelling.Correct(word)).GetAwaiter().GetResult() : null;
+        var correction = menu.Word is { } word && _spelling is { } checker ? Task.Run(() => checker.Correct(word)).GetAwaiter().GetResult() : null;
         LastMenuItems = MenuItems(menu, correction);
         var context = new ContextMenu { Placement = PlacementMode.MousePoint, PlacementTarget = this };
         foreach (var item in LastMenuItems)
@@ -808,7 +874,6 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
         {
             return;
         }
-        _patience.Start();
         try
         {
             // Le fond du moteur prend celui de l'application dès avant sa première page : aucun éclair blanc à l'ouverture.
@@ -831,6 +896,7 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
             if (!_disposed)
             {
                 MissesEngine = exception is WebView2RuntimeNotFoundException;
+                HasFailed = true;
                 ShowText();
                 Failed?.Invoke(this, exception.Message);
             }
@@ -849,6 +915,7 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
         {
             if (WebProcesses.StopsThePage(e.ProcessFailedKind))
             {
+                HasFailed = true;
                 ShowText();
                 Failed?.Invoke(this, e.ProcessFailedKind.ToString());
             }
@@ -994,7 +1061,11 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
     {
         if (path.StartsWith(VaultResources, StringComparison.Ordinal))
         {
-            var outcome = _readResource(path[VaultResources.Length..]);
+            if (_readResource is not { } read)
+            {
+                return null;
+            }
+            var outcome = read(path[VaultResources.Length..]);
             return outcome.Succeeded ? outcome.Value : null;
         }
         return PageContent(path);

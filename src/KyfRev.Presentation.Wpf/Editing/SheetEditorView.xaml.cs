@@ -106,8 +106,12 @@ internal sealed partial class SheetEditorView : UserControl
             _ = previous.SaveAsync();
         }
         _page = e.NewValue as SheetEditorViewModel;
-        Visual?.Dispose();
-        VisualHost.Content = null;
+        // L'éditeur de la fiche d'avant s'en va ; une réserve préparée d'avance attend la sienne.
+        if (!_spareWaits)
+        {
+            Visual?.Dispose();
+            VisualHost.Content = null;
+        }
         if (_page is { } page)
         {
             page.EditorWidth = ActualWidth > 0 ? ActualWidth : double.PositiveInfinity;
@@ -130,6 +134,8 @@ internal sealed partial class SheetEditorView : UserControl
         }
         if (!IsLoaded)
         {
+            _spareWaits = false;
+            _spareLife.Stop();
             Visual?.Dispose();
             VisualHost.Content = null;
         }
@@ -191,6 +197,26 @@ internal sealed partial class SheetEditorView : UserControl
     /// La fiche lue, gardée à l'écran jusque-là, peut lui laisser la place.
     /// </summary>
     internal event EventHandler? TextShown;
+
+    /// <summary>Le texte de l'éditeur est chargé, pas encore à l'écran.</summary>
+    internal event EventHandler? TextReady;
+
+    // La page retient l'éditeur : celui qui arrive le sera aussi.
+    private bool _holdsText;
+
+    /// <summary>Retient l'éditeur caché, le temps que ce qui tient sa place finisse son mouvement.</summary>
+    internal void HoldText()
+    {
+        _holdsText = true;
+        Visual?.HoldBack();
+    }
+
+    /// <summary>Laisse l'éditeur se montrer dès que son texte est là.</summary>
+    internal void ReleaseText()
+    {
+        _holdsText = false;
+        Visual?.Release();
+    }
 
     /// <summary>En Markdown, rien n'est à attendre : le champ est là tout de suite.</summary>
     private void TellTextShownWithoutEngine(SheetEditorViewModel page)
@@ -312,9 +338,68 @@ internal sealed partial class SheetEditorView : UserControl
         }
     }
 
+    /// <summary>Le temps qu'une réserve attend d'être prise avant de rendre sa mémoire.</summary>
+    internal static readonly TimeSpan SpareLife = TimeSpan.FromSeconds(20);
+
+    private readonly DispatcherTimer _spareLife = new() { Interval = SpareLife };
+
+    // L'éditeur que la vue porte est une réserve : préparé d'avance, il n'a pas encore de fiche.
+    private bool _spareWaits;
+
+    /// <summary>L'éditeur préparé d'avance, s'il y en a un.</summary>
+    internal VisualEditor? Spare => _spareWaits ? Visual : null;
+
+    private static VisualEditor NewVisual(SheetEditorViewModel page) => new(page.Folder, page.ReadResource, page.Spelling, page.Environment.WebDataFolder);
+
+    /// <summary>
+    /// Prépare l'éditeur d'avance, quand tout indique que l'écriture va commencer (le pointeur ou le clavier arrive sur
+    /// « Écrire ») : son moteur s'ouvre et sa page se charge, cachés, pendant ce temps. À l'entrée en écriture, il n'y a
+    /// plus à l'attendre. Non pris, il rend sa mémoire au bout de <see cref="SpareLife"/>.
+    /// </summary>
+    internal void WarmUp()
+    {
+        if (_spareWaits || _page is not null || !IsLoaded || TryFindResource(EditorEnvironment.WebDataFolderKey) is not string folder)
+        {
+            return;
+        }
+        VisualHost.Content = new VisualEditor(folder);
+        _spareWaits = true;
+        _spareLife.Tick -= OnSpareExpired;
+        _spareLife.Tick += OnSpareExpired;
+        _spareLife.Start();
+    }
+
+    private void OnSpareExpired(object? sender, EventArgs e) => DropSpare();
+
+    /// <summary>Renonce à la réserve : son moteur se ferme.</summary>
+    internal void DropSpare()
+    {
+        _spareLife.Stop();
+        if (Spare is { } spare)
+        {
+            _spareWaits = false;
+            VisualHost.Content = null;
+            spare.Dispose();
+        }
+    }
+
+    /// <summary>Prend la réserve pour cette fiche, si elle est en état de servir ; sinon rien, et elle est rendue.</summary>
+    private VisualEditor? TakeSpare(SheetEditorViewModel page)
+    {
+        if (Spare is not { HasFailed: false } spare || spare.DataFolder != page.Environment.WebDataFolder)
+        {
+            DropSpare();
+            return null;
+        }
+        _spareWaits = false;
+        _spareLife.Stop();
+        spare.Adopt(page.Folder, page.ReadResource, page.Spelling);
+        return spare;
+    }
+
     private VisualEditor CreateVisual(SheetEditorViewModel page)
     {
-        var visual = new VisualEditor(page.Folder, page.ReadResource, page.Spelling, page.Environment.WebDataFolder);
+        var visual = TakeSpare(page) is { } spare ? spare : NewVisual(page);
         visual.ImageDropped += (name, content, position) => _ = page.InsertImageAsync(name, content, position);
         visual.ImageMasksAsked += (_, question) => _ = AskImageMasksAsync(visual, page, question);
         visual.ZoomAsked += (_, step) => ZoomAsked?.Invoke(step);
@@ -333,6 +418,11 @@ internal sealed partial class SheetEditorView : UserControl
         visual.Restarted += (_, reason) => page.Environment.Report?.Invoke($"moteur web du texte mis en forme : {reason}, relancé");
         visual.SnapshotClicked += (_, _) => CoveredTextClicked?.Invoke();
         visual.TextShown += (_, _) => TextShown?.Invoke(this, EventArgs.Empty);
+        visual.TextReady += (_, _) => TextReady?.Invoke(this, EventArgs.Empty);
+        if (_holdsText)
+        {
+            visual.HoldBack();
+        }
         VisualHost.Content = visual;
         UpdateZoom();
         return visual;

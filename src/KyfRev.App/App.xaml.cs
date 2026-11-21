@@ -51,6 +51,7 @@ internal sealed partial class App : System.Windows.Application
         WatchUnexpectedErrors(_services.GetRequiredService<ILoggerFactory>().CreateLogger("kyfRev"));
         Resources.MergedDictionaries.Add(_services.GetRequiredService<AppearanceController>().Resources);
         Resources[MermaidEngine.ResourceKey] = _services.GetRequiredService<MermaidEngine>();
+        Resources[EditorEnvironment.WebDataFolderKey] = _services.GetRequiredService<EditorEnvironment>().WebDataFolder;
         Resources[NetworkBlock.ResourceKey] = _services.GetRequiredService<INetworkSchemas>();
         Resources[ExtensionBlocks.ResourceKey] = _services.GetRequiredService<ExtensionBlocks>();
         Resources[ExtensionPages.ResourceKey] = _services.GetRequiredService<ExtensionPages>();

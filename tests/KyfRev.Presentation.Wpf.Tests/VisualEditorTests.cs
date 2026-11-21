@@ -266,6 +266,115 @@ public sealed class VisualEditorTests
     }
 
     [EngineTest]
+    public void The_editor_gets_ready_before_writing_is_asked_and_is_the_one_that_opens()
+    {
+        using var scene = new Scene();
+        var page = scene.SheetPage;
+        scene.Window.Resources[EditorEnvironment.WebDataFolderKey] = scene.Editor.Environment.WebDataFolder;
+
+        // En écriture, il n'y a rien à préparer.
+        page.WarmUpEditor();
+        Assert.IsNull(page.EditorView.Spare);
+        scene.Page.ToggleWritingCommand.Execute(null);
+        UiThread.Until(() => !scene.Page.IsWriting);
+        Assert.IsNull(page.EditorView.Visual, "en lecture, aucun moteur");
+
+        // Le pointeur arrive sur « Écrire » : une réserve s'ouvre, cachée, et sa page se charge. Une seule.
+        page.WriteToggle.RaiseEvent(new System.Windows.Input.MouseEventArgs(System.Windows.Input.Mouse.PrimaryDevice, 0) { RoutedEvent = System.Windows.Input.Mouse.MouseEnterEvent });
+        var spare = page.EditorView.Spare;
+        Assert.IsNotNull(spare);
+        page.WarmUpEditor();
+        Assert.AreSame(spare, page.EditorView.Spare);
+        UiThread.Until(() => spare.IsReady, TimeSpan.FromMinutes(2));
+        Assert.IsFalse(spare.HasFailed);
+        Assert.IsFalse(spare.HasShownText, "sans fiche, elle ne se montre pas");
+        Assert.AreEqual(Visibility.Visible, page.SheetText.Visibility, "la lecture continue");
+
+        // L'écriture commence : c'est la réserve qui sert, et son texte arrive sans qu'on attende le moteur.
+        scene.Page.ToggleWritingCommand.Execute(null);
+        UiThread.Until(() => scene.Page.IsWriting && scene.Visual is not null);
+        Assert.AreSame(spare, scene.Visual);
+        Assert.IsNull(page.EditorView.Spare, "elle n'est plus une réserve");
+        UiThread.Until(() => spare.HasShownText, TimeSpan.FromMinutes(2));
+        Assert.IsFalse(spare.GaveUpWaiting);
+        UiThread.Until(() => scene.Shown.Contains("Un premier paragraphe.", StringComparison.Ordinal));
+        Assert.AreEqual(Visibility.Collapsed, page.SheetText.Visibility);
+
+        // De retour en lecture : une réserve que personne ne prend rend sa mémoire.
+        scene.Page.ToggleWritingCommand.Execute(null);
+        UiThread.Until(() => !scene.Page.IsWriting);
+        page.WarmUpEditor();
+        Assert.IsNotNull(page.EditorView.Spare);
+        page.EditorView.DropSpare();
+        Assert.IsNull(page.EditorView.Spare);
+        Assert.IsNull(page.EditorView.Visual);
+        page.EditorView.DropSpare();
+    }
+
+    [EngineTest]
+    public void Entering_writing_the_sheet_follows_the_ribbon_and_lines_up_with_the_editor_before_it_shows()
+    {
+        using var scene = new Scene();
+        var page = scene.SheetPage;
+        scene.Page.ToggleWritingCommand.Execute(null);
+        UiThread.Until(() => !scene.Page.IsWriting);
+        TestShell.Flush();
+
+        // Les essais coupent les transitions ; celui-ci les rend, le temps de les suivre.
+        KyfRev.DesignSystem.Controls.Transitions.Skip = false;
+        try
+        {
+            // Ce que le corps de la fiche et sa zone de texte reçoivent comme décalage, au moment où ils le reçoivent.
+            var bodyMoves = new List<double>();
+            TranslateTransform? alignment = null;
+            var transform = System.ComponentModel.DependencyPropertyDescriptor.FromProperty(UIElement.RenderTransformProperty, typeof(UIElement));
+            transform.AddValueChanged(page.Body, (_, _) =>
+            {
+                if (page.Body.RenderTransform is TranslateTransform move)
+                {
+                    bodyMoves.Add(move.Y);
+                }
+            });
+            transform.AddValueChanged(page.SheetArea, (_, _) => alignment = page.SheetArea.RenderTransform as TranslateTransform ?? alignment);
+            var hiddenWhenReady = false;
+            var restedWhenShown = false;
+            page.EditorView.TextReady += (_, _) => hiddenWhenReady = scene.Visual is { HasShownText: false } waiting && waiting.View.Visibility == Visibility.Hidden;
+            page.EditorView.TextShown += (_, _) => restedWhenShown = page.Body.RenderTransform == Transform.Identity && page.SheetArea.RenderTransform == Transform.Identity;
+
+            scene.Page.ToggleWritingCommand.Execute(null);
+            UiThread.Until(() => scene.Page.IsWriting && scene.Visual is not null);
+            var visual = scene.Visual!;
+            UiThread.Until(() => visual.HasShownText, TimeSpan.FromMinutes(2));
+
+            // Le ruban a poussé la fiche : elle est partie de là où elle était, plus haut de la hauteur du ruban.
+            Assert.IsNotEmpty(bodyMoves, "le corps de la fiche suit le ruban");
+            Assert.IsLessThan(-20, bodyMoves[0], "il part de sa place d'avant, au-dessus");
+            // Le texte de l'éditeur chargé, la fiche lue s'est alignée sur lui pendant qu'il était encore caché.
+            Assert.IsTrue(hiddenWhenReady, "son texte chargé, l'éditeur attend");
+            Assert.IsNotNull(alignment, "la fiche lue s'aligne sur l'éditeur");
+            Assert.IsLessThan(0, page.LastAlignment, "son titre passe sous le ruban : le texte monte");
+            Assert.IsGreaterThan(-SheetPage.MaximumAlignment, page.LastAlignment);
+            // Il ne s'est montré qu'une fois tout à sa place, et c'est son texte qui l'a montré.
+            Assert.IsTrue(restedWhenShown, "l'éditeur se montre une fois les mouvements finis");
+            Assert.IsFalse(visual.GaveUpWaiting);
+            Assert.AreEqual(Visibility.Visible, visual.View.Visibility);
+            Assert.AreEqual(Visibility.Collapsed, page.SheetText.Visibility);
+
+            // De retour en lecture : le ruban parti, la fiche remonte en glissant.
+            bodyMoves.Clear();
+            scene.Page.ToggleWritingCommand.Execute(null);
+            UiThread.Until(() => !scene.Page.IsWriting);
+            UiThread.Until(() => bodyMoves.Count > 0 && page.Body.RenderTransform == Transform.Identity);
+            Assert.IsGreaterThan(20, bodyMoves[0], "elle part de plus bas, là où le ruban la tenait");
+            Assert.IsFalse(page.AlignReadingText(), "en lecture, rien à aligner");
+        }
+        finally
+        {
+            KyfRev.DesignSystem.Controls.Transitions.Skip = true;
+        }
+    }
+
+    [EngineTest]
     public void Writing_opens_on_the_formatted_text_alone_and_the_button_shows_the_code()
     {
         using var scene = new Scene();
