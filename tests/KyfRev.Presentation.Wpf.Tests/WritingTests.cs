@@ -694,7 +694,7 @@ public sealed class WritingTests
     }
 
     [STATestMethod]
-    public void Changing_mode_brings_the_new_view_in_from_the_side_of_the_chosen_mode()
+    public void Changing_mode_moves_nothing_between_reading_and_revising_and_brings_the_ribbon_in_when_writing()
     {
         using var scene = new Scene();
         var page = scene.SheetPage;
@@ -703,19 +703,29 @@ public sealed class WritingTests
         KyfRev.DesignSystem.Controls.Transitions.Skip = false;
         try
         {
-            // D'Écrire à Lire : le texte arrive de la gauche.
+            // D'Écrire à Lire : le texte mis en forme revient en fondu, sans bouger.
             scene.Page.ToggleWritingCommand.Execute(null);
+            UiThread.Until(() => !scene.Page.IsWriting);
+            Assert.IsTrue(page.SheetText.HasAnimatedProperties, "le texte paraît en fondu, une fois l'écran prêt");
             TestShell.Flush();
-            Assert.IsFalse(scene.Page.IsWriting);
-            var text = (System.Windows.Media.TranslateTransform)page.SheetText.RenderTransform;
-            Assert.IsTrue(page.SheetText.HasAnimatedProperties, "le texte paraît en fondu");
-            Assert.IsTrue(text.HasAnimatedProperties, "en glissant");
+            Assert.IsNotInstanceOfType<System.Windows.Media.TranslateTransform>(page.SheetText.RenderTransform, "le texte qu'on lit ne bouge pas");
 
-            // De Lire à Écrire : le ruban arrive de la droite.
+            // De Lire à Réviser, et retour : le même texte, au même endroit. Rien ne s'estompe, rien ne bouge.
+            page.SheetText.BeginAnimation(UIElement.OpacityProperty, null);
+            scene.Page.IsReviseOn = true;
+            TestShell.Flush();
+            Assert.IsTrue(scene.Page.IsRevising);
+            Assert.IsFalse(page.SheetText.HasAnimatedProperties, "de Lire à Réviser, pas de saut");
+            scene.Page.IsReadOn = true;
+            TestShell.Flush();
+            Assert.IsFalse(page.SheetText.HasAnimatedProperties, "ni de Réviser à Lire");
+
+            // De Lire à Écrire : le ruban descend en fondu, une fois l'éditeur ouvert.
             scene.Page.ToggleWritingCommand.Execute(null);
             UiThread.Until(() => scene.Page.IsWriting);
+            Assert.IsTrue(page.Ribbon.HasAnimatedProperties, "le ruban est tenu invisible, puis paraît");
             TestShell.Flush();
-            Assert.IsTrue(page.Ribbon.HasAnimatedProperties, "le ruban paraît en fondu");
+            Assert.IsInstanceOfType<System.Windows.Media.TranslateTransform>(page.Ribbon.RenderTransform, "en descendant");
         }
         finally
         {

@@ -194,19 +194,34 @@ public sealed class InterfaceMotionTests
 
         second.IsChecked = true;
         first.IsChecked = false;
-        Assert.IsTrue(indicator.HasAnimatedProperties, "il glisse");
+        Assert.IsTrue(indicator.Slid, "il glisse");
         Assert.AreEqual(first.ActualWidth, Settled(indicator, TabIndicatorAdorner.StartProperty), 0.5, "jusque sous l'onglet choisi");
         Assert.AreEqual(second.ActualWidth, Settled(indicator, TabIndicatorAdorner.LengthProperty), 0.5, "et en prend la largeur");
         indicator.Measure(new Size(480, 320));
         indicator.Arrange(new Rect(0, 0, 480, 320));
         indicator.UpdateLayout();
 
-        // Plus rien de choisi : pas de repère ; animations réduites : il saute.
+        // Dans l'ordre du ruban, l'onglet quitté est décoché avant que le nouveau soit coché : le repère glisse quand même.
         second.IsChecked = false;
+        first.IsChecked = true;
+        Assert.IsTrue(indicator.Slid, "il glisse aussi vers la gauche");
+        Host.Flush();
+        Assert.IsNotNull(indicator.Target);
+
+        // Pendant le glissement, la mise en page change (un onglet plus large) : le repère suit la nouvelle place.
+        Assert.IsTrue(indicator.HasAnimatedProperties);
+        first.MinWidth = 200;
+        Host.Layout(host);
+        Assert.AreEqual(200, indicator.Target!.Value.Width, 0.5, "il suit, même en cours de glissement");
+
+        // Plus rien de choisi : le repère s'efface au tour suivant ; animations réduites : il saute.
+        first.IsChecked = false;
+        Assert.IsNotNull(indicator.Target, "pas tout de suite : un autre onglet peut être coché juste après");
+        Host.Flush();
         Assert.IsNull(indicator.Target);
         design.ReducedMotion = true;
         first.IsChecked = true;
-        Assert.IsFalse(indicator.HasAnimatedProperties);
+        Assert.IsFalse(indicator.Slid);
 
         // Le panneau n'en veut plus : le repère s'en va.
         Transitions.SetTabIndicator(tabs, false);
@@ -438,7 +453,7 @@ public sealed class InterfaceMotionTests
         // Le suivant : le cadre glisse jusqu'à lui.
         menu.SelectedIndex = 2;
         var third = (ListBoxItem)menu.ItemContainerGenerator.ContainerFromIndex(2);
-        Assert.IsTrue(column.HasAnimatedProperties, "il glisse");
+        Assert.AreEqual(SelectionMove.Slid, column.LastMove, "il glisse");
         Assert.AreEqual(third.TransformToAncestor(column).Transform(default).Y, (double)column.GetAnimationBaseValue(SlidingSelectionPanel.SelectionTopProperty), 0.5, "jusqu'au choix");
         Assert.AreEqual(third.ActualHeight, (double)column.GetAnimationBaseValue(SlidingSelectionPanel.SelectionHeightProperty), 0.5);
         var picture = new RenderTargetBitmap(480, 320, 96, 96, PixelFormats.Pbgra32);
@@ -475,6 +490,126 @@ public sealed class InterfaceMotionTests
         column.Visibility = Visibility.Collapsed;
         Host.Layout(host);
         Assert.IsNull(column.Selection, "une colonne cachée n'a pas de cadre");
+    }
+
+    [STATestMethod]
+    public void At_first_opening_the_box_is_under_the_choice_made_before_any_layout()
+    {
+        var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
+        // Comme à l'ouverture de kyfRev : la vue est choisie avant que le menu ait été mis en page.
+        var menu = new ListBox { ItemsSource = new[] { "Aujourd'hui", "Carnet", "Définitions" }, ItemsPanel = new ItemsPanelTemplate(new FrameworkElementFactory(typeof(SlidingSelectionPanel))), SelectedIndex = 0 };
+        var host = Host.Of(design, menu);
+        using var source = new HwndSource(new HwndSourceParameters("kyfRev essai") { Width = 480, Height = 320 }) { RootVisual = host };
+        Host.Layout(host);
+        Host.Flush();
+
+        var first = (ListBoxItem)menu.ItemContainerGenerator.ContainerFromIndex(0);
+        var column = (SlidingSelectionPanel)VisualTreeHelper.GetParent(first);
+        Assert.IsNotNull(column.Selection, "le cadre est là dès la première image");
+        Assert.AreEqual(first.ActualHeight, column.SelectionHeight, 0.5, "de la hauteur du choix");
+        Assert.AreEqual(first.ActualWidth, column.Selection!.Value.Width, 0.5);
+    }
+
+    [STATestMethod]
+    public void The_box_follows_its_choice_when_the_menu_narrows_or_widens_even_while_it_fades_in()
+    {
+        var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
+        var menu = new ListBox { ItemsSource = new[] { "Aujourd'hui", "Paramètres" }, ItemsPanel = new ItemsPanelTemplate(new FrameworkElementFactory(typeof(SlidingSelectionPanel))), Width = 240 };
+        var host = Host.Of(design, menu);
+        using var source = new HwndSource(new HwndSourceParameters("kyfRev essai") { Width = 480, Height = 320 }) { RootVisual = host };
+        Host.Layout(host);
+        menu.SelectedIndex = 1;
+        Host.Layout(host);
+        var chosen = (ListBoxItem)menu.ItemContainerGenerator.ContainerFromIndex(1);
+        var column = (SlidingSelectionPanel)VisualTreeHelper.GetParent(chosen);
+        Assert.AreEqual(SelectionMove.Faded, column.LastMove, "premier choix : il paraît en fondu");
+        Assert.IsTrue(column.HasAnimatedProperties);
+        var wide = column.Selection!.Value.Width;
+
+        // Le menu se réduit à la colonne d'icônes pendant que le cadre paraît encore : il se réduit avec lui.
+        menu.Width = 80;
+        Host.Layout(host);
+        Assert.IsLessThan(wide, column.Selection!.Value.Width, "le cadre s'est réduit");
+        Assert.AreEqual(chosen.ActualWidth, column.Selection!.Value.Width, 0.5);
+        Assert.AreEqual(SelectionMove.Jumped, column.LastMove, "avec la mise en page, sans glisser");
+
+        // Puis s'élargit : le cadre aussi.
+        menu.Width = 240;
+        Host.Layout(host);
+        Assert.AreEqual(wide, column.Selection!.Value.Width, 0.5);
+
+        // Un autre choix : l'ancien est quitté avant que le nouveau soit pris, et le cadre glisse quand même de l'un à l'autre.
+        menu.SelectedIndex = 0;
+        Assert.AreEqual(SelectionMove.Slid, column.LastMove);
+        Host.Flush();
+        Assert.IsNotNull(column.Selection);
+
+        // Plus rien de choisi dans cette colonne : le cadre s'efface au tour suivant.
+        menu.SelectedIndex = -1;
+        Assert.IsNotNull(column.Selection, "pas tout de suite : un autre choix peut arriver juste après");
+        Host.Flush();
+        Assert.IsNull(column.Selection);
+    }
+
+    [STATestMethod]
+    public void What_appears_after_a_busy_moment_waits_to_be_on_screen_before_fading_in()
+    {
+        var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
+        var ribbon = new Border { Width = 200, Height = 40 };
+        Host.Of(design, ribbon);
+
+        Assert.IsTrue(Transitions.EnterOnceShown(ribbon, rise: -8));
+        Assert.IsTrue(ribbon.HasAnimatedProperties, "tenu invisible en attendant");
+        Assert.IsNotInstanceOfType<TranslateTransform>(ribbon.RenderTransform, "pas encore parti");
+        Host.Flush();
+        Assert.IsInstanceOfType<TranslateTransform>(ribbon.RenderTransform, "l'écran prêt, il descend en fondu");
+        Assert.AreEqual(1d, (double)ribbon.GetAnimationBaseValue(UIElement.OpacityProperty), "et retrouve son opacité à la fin");
+
+        // Animations réduites : montré tel quel, tout de suite.
+        design.ReducedMotion = true;
+        Assert.IsFalse(Transitions.EnterOnceShown(ribbon, rise: -8));
+        Assert.AreEqual(1d, ribbon.Opacity);
+        Assert.ThrowsExactly<ArgumentNullException>(() => Transitions.EnterOnceShown(null!));
+    }
+
+    [STATestMethod]
+    public void A_side_panel_that_changes_width_slides_its_edge_and_what_follows_it()
+    {
+        var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
+        var panel = new Border { Width = 248, Height = 300 };
+        var page = new Border { Width = 200, Height = 300 };
+        var curtain = new Border { Visibility = Visibility.Collapsed };
+        var canvas = new Canvas { Children = { curtain } };
+        var host = Host.Of(design, new Grid { Children = { panel, page, canvas } });
+        using var source = new HwndSource(new HwndSourceParameters("kyfRev essai") { Width = 480, Height = 320 }) { RootVisual = host };
+        Host.Layout(host);
+
+        // Élargi : le panneau se découvre depuis son ancienne largeur, la page glisse avec son bord.
+        Assert.IsTrue(Transitions.Resize(panel, curtain, page, from: 77, to: 248));
+        Assert.AreEqual(77, ((RectangleGeometry)panel.Clip).Rect.Width, 1, "découpé à l'ancienne largeur au départ");
+        Assert.AreEqual(Visibility.Collapsed, curtain.Visibility);
+        Assert.IsTrue(((TranslateTransform)page.RenderTransform).HasAnimatedProperties);
+
+        // Réduit : le rideau tient la place quittée, du nouveau bord à l'ancien, et se retire.
+        Assert.IsTrue(Transitions.Resize(panel, curtain, page, from: 248, to: 77));
+        Assert.IsNull(panel.Clip, "la transition d'avant s'est arrêtée");
+        Assert.AreEqual(Visibility.Visible, curtain.Visibility);
+        Assert.AreEqual(77, Canvas.GetLeft(curtain));
+        Assert.AreEqual(171, curtain.Width);
+        Assert.IsTrue(curtain.RenderTransform.HasAnimatedProperties);
+
+        // Masqué, sans rien qui suive (une page à fenêtre native) : seul le rideau bouge.
+        Assert.IsTrue(Transitions.Resize(panel, curtain, null, from: 77, to: 0));
+        Assert.AreEqual(0, Canvas.GetLeft(curtain));
+
+        // La même largeur, ou les animations réduites : rien ne bouge, et rien ne reste en route.
+        Assert.IsFalse(Transitions.Resize(panel, curtain, page, from: 77, to: 77));
+        Assert.AreEqual(Visibility.Collapsed, curtain.Visibility);
+        design.ReducedMotion = true;
+        Assert.IsFalse(Transitions.Resize(panel, curtain, page, from: 0, to: 248));
+        Assert.IsNull(panel.Clip);
+        Assert.ThrowsExactly<ArgumentNullException>(() => Transitions.Resize(null!, curtain, page, 0, 1));
+        Assert.ThrowsExactly<ArgumentNullException>(() => Transitions.Resize(panel, null!, page, 0, 1));
     }
 
     private sealed record Sheet(string Id);

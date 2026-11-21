@@ -784,6 +784,71 @@ public sealed class ShellWindowTests
 
     private static nint ScreenPosition(Point point) => (((int)point.Y & 0xFFFF) << 16) | ((int)point.X & 0xFFFF);
 
+    [STATestMethod]
+    public void The_menu_edge_slides_when_the_menu_narrows_widens_or_hides()
+    {
+        var test = new TestShell();
+        var window = Open(test);
+        // Les essais coupent les transitions ; celui-ci les rend, le temps de les voir.
+        Transitions.Skip = false;
+        try
+        {
+            var sidebar = (FrameworkElement)window.FindName("Sidebar");
+            var curtain = (FrameworkElement)window.FindName("MenuCurtain");
+            var page = (FrameworkElement)window.FindName("Page");
+            window.Width = 1500;
+            TestShell.Flush();
+            Assert.AreEqual(248, sidebar.ActualWidth, "la barre entière");
+            Assert.IsFalse(window.FollowSidebar(), "rien n'a changé depuis la dernière mise en page");
+
+            // La fenêtre plus étroite : le menu passe à la colonne d'icônes. Le rideau tient la place quittée et se retire.
+            window.Width = 1000;
+            TestShell.Flush();
+            Assert.AreEqual(77, sidebar.ActualWidth);
+            Assert.AreEqual(Visibility.Visible, curtain.Visibility, "le rideau se retire vers le nouveau bord");
+            Assert.AreEqual(77, Canvas.GetLeft(curtain));
+            Assert.AreEqual(171, curtain.Width);
+            Assert.IsTrue(((TranslateTransform)page.RenderTransform).HasAnimatedProperties, "la page glisse avec le bord");
+
+            // De nouveau large : le menu se découvre depuis la colonne d'icônes.
+            window.Width = 1500;
+            TestShell.Flush();
+            Assert.AreEqual(Visibility.Collapsed, curtain.Visibility);
+            Assert.IsNotNull(sidebar.Clip, "le menu se découvre peu à peu");
+
+            // Masqué (Ctrl+Maj+F) : le rideau se retire jusqu'au bord de la fenêtre.
+            test.Shell.ToggleFocusMode();
+            TestShell.Flush();
+            Assert.AreEqual(Visibility.Visible, curtain.Visibility);
+            Assert.AreEqual(0, Canvas.GetLeft(curtain));
+            Assert.AreEqual(248, curtain.Width);
+            test.Shell.ToggleFocusMode();
+            TestShell.Flush();
+            Assert.IsNotNull(sidebar.Clip, "et revient en se découvrant");
+
+            // Une page qui montre une fenêtre native ne glisse pas ; un élément ordinaire, si.
+            Assert.IsFalse(ShellWindow.HostsNativeWindow(page));
+
+            // Le cadre du choix suit le menu : large dans la barre, carré dans la colonne d'icônes. À regarder dans les captures.
+            Transitions.Skip = true;
+            var menu = (ListBox)window.FindName("MainNavigation");
+            var column = (SlidingSelectionPanel)VisualTreeHelper.GetParent(menu.ItemContainerGenerator.ContainerFromIndex(0));
+            foreach (var (width, name) in new[] { (1500d, "barre"), (1000d, "icones"), (1500d, "barre-de-retour") })
+            {
+                window.Width = width;
+                TestShell.Flush();
+                var chosen = (FrameworkElement)menu.ItemContainerGenerator.ContainerFromItem(menu.SelectedItem);
+                Assert.AreEqual(chosen.ActualWidth, column.Selection!.Value.Width, 0.5, $"le cadre a la largeur du choix ({name})");
+                RuledPaperPixels.Capture(sidebar, $"menu-cadre-{name}");
+            }
+        }
+        finally
+        {
+            Transitions.Skip = true;
+            window.Close();
+        }
+    }
+
     private static ShellWindow Open(TestShell test)
     {
         var window = new ShellWindow(test.Shell) { ShowActivated = true, Left = -10000, Top = -10000, WindowStartupLocation = WindowStartupLocation.Manual };

@@ -76,6 +76,8 @@ public sealed partial class ShellWindow : Window
         PaletteResults.AddHandler(MouseUpEvent, new MouseButtonEventHandler(OnPaletteClick), handledEventsToo: true);
         MoreMenu.AddHandler(MenuItem.ClickEvent, new RoutedEventHandler(OnOverflowClick));
         Root.SizeChanged += (_, e) => shell.WindowWidth = e.NewSize.Width;
+        // Le menu réduit, élargi ou masqué : son bord glisse de l'ancienne largeur à la nouvelle.
+        Sidebar.LayoutUpdated += (_, _) => FollowSidebar();
         // Le guide prend la place que la fenêtre lui laisse : ni plus large, ni plus haut qu'elle.
         Root.SizeChanged += (_, e) => (GuidePane.Width, GuidePane.Height) = GuideSize(e.NewSize);
         PreviewMouseDown += OnClickAnywhere;
@@ -138,6 +140,46 @@ public sealed partial class ShellWindow : Window
             Dispatcher.BeginInvoke(DispatcherPriority.Loaded, Refill);
         }
         _lastState = WindowState;
+    }
+
+    /// <summary>La largeur du menu à la dernière mise en page (0 : masqué) ; négative avant la première.</summary>
+    private double _sidebarWidth = -1;
+
+    /// <summary>
+    /// Après une mise en page : si le menu a changé de largeur (barre, colonne d'icônes, masqué), son bord glisse de
+    /// l'ancienne à la nouvelle, et la page avec lui. La mise en page, elle, a déjà changé, une seule fois. Une page qui
+    /// montre une fenêtre native (l'éditeur d'Écrire, les Schémas) ne glisse pas : le rendu ne déplace pas ces fenêtres.
+    /// </summary>
+    /// <returns>Vrai si une transition a commencé.</returns>
+    internal bool FollowSidebar()
+    {
+        var width = Sidebar.Visibility == Visibility.Visible ? Sidebar.ActualWidth : 0;
+        var before = _sidebarWidth;
+        if (Math.Abs(width - before) < 0.5)
+        {
+            return false;
+        }
+        _sidebarWidth = width;
+        // La première largeur est celle qu'on trouve en ouvrant : elle ne s'anime pas.
+        return before >= 0 && IsLoaded && Transitions.Resize(Sidebar, MenuCurtain, HostsNativeWindow(Page) ? null : Page, before, width);
+    }
+
+    /// <summary>Vrai si une fenêtre native (un moteur web) se montre sous cet élément.</summary>
+    internal static bool HostsNativeWindow(DependencyObject root)
+    {
+        if (root is HwndHost { IsVisible: true })
+        {
+            return true;
+        }
+        for (var i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)
+        {
+            var child = VisualTreeHelper.GetChild(root, i);
+            if (child is not UIElement { IsVisible: false } && HostsNativeWindow(child))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     /// <summary>Le cadre recalculé par Windows, et le contenu remis à la taille de la fenêtre.</summary>

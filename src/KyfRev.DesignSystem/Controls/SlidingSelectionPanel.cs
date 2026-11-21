@@ -30,24 +30,29 @@ public sealed class SlidingSelectionPanel : StackPanel
         DependencyProperty.Register(nameof(SelectionOpacity), typeof(double), typeof(SlidingSelectionPanel), new FrameworkPropertyMetadata(1d, FrameworkPropertyMetadataOptions.AffectsRender));
 
     private Rect? _target;
+    private bool _sliding;
+    private int _run;
+
+    /// <summary>Ce que le cadre a fait en dernier : rien, sauté, paru en fondu, ou glissé (pour les essais).</summary>
+    internal SelectionMove LastMove { get; private set; }
 
     /// <summary>Une colonne dont la sélection glisse.</summary>
     public SlidingSelectionPanel()
     {
         Transitions.SetHasSlidingSelection(this, true);
         AddHandler(ListBoxItem.SelectedEvent, new RoutedEventHandler((_, e) => Place(animate: true, e.OriginalSource as FrameworkElement)), handledEventsToo: true);
-        AddHandler(ListBoxItem.UnselectedEvent, new RoutedEventHandler((_, _) => Place(animate: true)), handledEventsToo: true);
         AddHandler(ToggleButton.CheckedEvent, new RoutedEventHandler((_, e) => Place(animate: true, e.OriginalSource as FrameworkElement)), handledEventsToo: true);
-        AddHandler(ToggleButton.UncheckedEvent, new RoutedEventHandler((_, _) => Place(animate: true)), handledEventsToo: true);
+        // Un choix quitté n'efface pas le cadre tout de suite : le nouveau choix arrive juste après, et le cadre doit glisser de
+        // l'un à l'autre. Si rien n'est choisi au tour suivant (la sélection est partie dans l'autre colonne), il s'efface.
+        var left = new RoutedEventHandler((_, _) => Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, () => Place(animate: false)));
+        AddHandler(ListBoxItem.UnselectedEvent, left, handledEventsToo: true);
+        AddHandler(ToggleButton.UncheckedEvent, left, handledEventsToo: true);
         // Cachée ou montrée, même pendant un glissement : le cadre suit tout de suite.
         IsVisibleChanged += (_, _) => Place(animate: false);
-        LayoutUpdated += (_, _) =>
-        {
-            if (!HasAnimatedProperties)
-            {
-                Place(animate: false);
-            }
-        };
+        // Après chaque mise en page, le cadre est là où est le choix : à la première ouverture (le choix est fait avant d'avoir
+        // une taille), quand le menu se réduit ou s'élargit, quand un groupe se replie. Sans effet si rien n'a bougé ; pendant un
+        // glissement, la place visée est déjà la bonne.
+        LayoutUpdated += (_, _) => Place(animate: false);
     }
 
     /// <inheritdoc cref="SelectionTopProperty"/>
@@ -78,7 +83,11 @@ public sealed class SlidingSelectionPanel : StackPanel
     internal void Place(bool animate, FrameworkElement? chosen = null)
     {
         chosen = chosen is ListBoxItem { IsSelected: true, IsVisible: true } or ToggleButton { IsChecked: true, IsVisible: true } ? chosen : Chosen(this);
-        var bounds = chosen is null || !IsVisible || !chosen.IsDescendantOf(this) ? (Rect?)null : chosen.TransformToAncestor(this).TransformBounds(new Rect(chosen.RenderSize));
+        // Un choix qui n'a pas encore de taille (choisi avant sa première mise en page) n'a pas encore de place : elle viendra
+        // à la mise en page suivante.
+        var bounds = chosen is null || !IsVisible || !chosen.IsDescendantOf(this) || chosen.RenderSize.Height <= 0 || chosen.RenderSize.Width <= 0
+            ? (Rect?)null
+            : chosen.TransformToAncestor(this).TransformBounds(new Rect(chosen.RenderSize));
         // Rien n'a bougé : rien à redessiner (redessiner demande une mise en page, qui rappellerait cette méthode, sans fin).
         if (TabIndicatorAdorner.Same(_target, bounds))
         {
@@ -93,18 +102,29 @@ public sealed class SlidingSelectionPanel : StackPanel
             InvalidateVisual();
             return;
         }
-        var moves = Transitions.Moves(this, DesignKeys.NormalDuration, out var duration) && animate;
-        if (moves && before is not null)
+        var canMove = Transitions.Moves(this, DesignKeys.NormalDuration, out var duration);
+        // Un glissement que la mise en page rattrape en route (le choix a changé de taille) continue vers la nouvelle place.
+        if (canMove && before is not null && (animate || _sliding))
         {
-            BeginAnimation(SelectionTopProperty, new DoubleAnimation(SelectionTop, b.Top, duration) { EasingFunction = Transitions.Ease, FillBehavior = FillBehavior.Stop });
+            var run = ++_run;
+            _sliding = true;
+            var slide = new DoubleAnimation(SelectionTop, b.Top, duration) { EasingFunction = Transitions.Ease, FillBehavior = FillBehavior.Stop };
+            slide.Completed += (_, _) => _sliding = _sliding && run != _run;
+            BeginAnimation(SelectionTopProperty, slide);
             BeginAnimation(SelectionHeightProperty, new DoubleAnimation(SelectionHeight, b.Height, duration) { EasingFunction = Transitions.Ease, FillBehavior = FillBehavior.Stop });
+            LastMove = SelectionMove.Slid;
         }
         else
         {
+            // La mise en page a déplacé le choix, ou il vient d'être fait : le cadre y est d'un coup, de haut en bas. S'il vient
+            // d'être fait dans une colonne qui n'en avait pas (la sélection arrive de l'autre colonne du menu), il paraît en fondu.
+            _run++;
+            _sliding = false;
+            var fades = canMove && animate;
             BeginAnimation(SelectionTopProperty, null);
             BeginAnimation(SelectionHeightProperty, null);
-            // La sélection arrive d'ailleurs (l'autre colonne du menu) : le cadre paraît en fondu, à sa place.
-            BeginAnimation(SelectionOpacityProperty, moves ? new DoubleAnimation(0, 1, duration) { EasingFunction = Transitions.Ease, FillBehavior = FillBehavior.Stop } : null);
+            BeginAnimation(SelectionOpacityProperty, fades ? new DoubleAnimation(0, 1, duration) { EasingFunction = Transitions.Ease, FillBehavior = FillBehavior.Stop } : null);
+            LastMove = fades ? SelectionMove.Faded : SelectionMove.Jumped;
         }
         SelectionTop = b.Top;
         SelectionHeight = b.Height;
@@ -151,4 +171,20 @@ public sealed class SlidingSelectionPanel : StackPanel
         dc.Pop();
         dc.Pop();
     }
+}
+
+/// <summary>Comment le cadre d'un choix a rejoint sa place.</summary>
+internal enum SelectionMove
+{
+    /// <summary>Il n'a pas encore bougé.</summary>
+    None,
+
+    /// <summary>D'un coup : la mise en page l'a déplacé, ou les animations sont réduites.</summary>
+    Jumped,
+
+    /// <summary>En fondu, à sa place : il n'y avait pas de choix avant dans cette colonne.</summary>
+    Faded,
+
+    /// <summary>En glissant depuis l'ancien choix.</summary>
+    Slid,
 }
