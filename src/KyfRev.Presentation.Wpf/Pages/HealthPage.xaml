@@ -74,7 +74,7 @@
       <kyf:Notification x:Name="ErrorMessage" Severity="Critical" Message="{Binding Error}" IsOpen="{Binding HasError, Mode=OneWay}" Margin="0,0,0,8" />
       <kyf:Notification x:Name="DoneMessage" Severity="Success" Message="{Binding Message}" IsOpen="{Binding HasMessage, Mode=OneWay}" Margin="0,0,0,8" />
 
-      <StackPanel x:Name="Loading" Visibility="{Binding IsLoading, Converter={StaticResource Visible}}" AutomationProperties.Name="{x:Static pages:HealthText.Loading}">
+      <StackPanel x:Name="Loading" kyf:Transitions.StandsIn="{Binding IsLoading}" AutomationProperties.Name="{x:Static pages:HealthText.Loading}">
         <kyf:Skeleton Height="96" Margin="0,0,0,8" />
         <kyf:Skeleton Height="96" />
       </StackPanel>

@@ -111,7 +111,7 @@
       <TextBlock x:Name="Summary" Text="{Binding Summary}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="0,4,0,12" />
       <kyf:Notification x:Name="ErrorMessage" Severity="Critical" Message="{Binding Error}" IsOpen="{Binding HasError, Mode=OneWay}" Margin="0,0,0,8" />
 
-      <StackPanel x:Name="Loading" Visibility="{Binding IsLoading, Converter={StaticResource Visible}}" AutomationProperties.Name="{x:Static pages:StatisticsText.Loading}">
+      <StackPanel x:Name="Loading" kyf:Transitions.StandsIn="{Binding IsLoading}" AutomationProperties.Name="{x:Static pages:StatisticsText.Loading}">
         <kyf:Skeleton Height="96" Margin="0,0,0,8" />
         <kyf:Skeleton Height="180" Margin="0,0,0,8" />
         <kyf:Skeleton Height="180" />

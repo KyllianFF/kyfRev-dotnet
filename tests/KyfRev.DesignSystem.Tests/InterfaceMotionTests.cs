@@ -996,6 +996,16 @@ public sealed class InterfaceMotionTests
         notice.Close();
         Assert.IsFalse(notice.IsLeaving);
         Assert.AreEqual(Visibility.Collapsed, notice.Visibility);
+        // Un départ arrêté ne prévient plus personne : l'élément est là, entier.
+        design.ReducedMotion = false;
+        var stopped = 0;
+        Assert.IsTrue(Transitions.Exit(block, () => stopped++, drop: 4));
+        Transitions.StopExit(block);
+        Assert.AreEqual(Transform.Identity, block.RenderTransform);
+        Wait(() => false, 300);
+        Assert.AreEqual(0, stopped);
+        Assert.AreEqual(1.0, block.Opacity);
+        Assert.ThrowsExactly<ArgumentNullException>(() => Transitions.StopExit(null!));
         Assert.ThrowsExactly<ArgumentNullException>(() => Transitions.Exit(null!, () => { }));
         Assert.ThrowsExactly<ArgumentNullException>(() => Transitions.Exit(block, null!));
         Assert.ThrowsExactly<ArgumentNullException>(() => Transitions.GetShownTravel(null!));

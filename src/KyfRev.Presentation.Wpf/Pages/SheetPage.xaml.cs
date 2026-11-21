@@ -58,6 +58,7 @@ internal sealed partial class SheetPage : UserControl
                 Transitions.FollowOnceShown(Body, _ribbonPush);
             }
         };
+        SheetArea.LayoutUpdated += (_, _) => FollowCenter();
         EditorView.TextReady += (_, _) => AlignReadingText();
         EditorView.TextShown += (_, _) =>
         {
@@ -105,6 +106,11 @@ internal sealed partial class SheetPage : UserControl
                 page.PropertyChanged += OnPageChanged;
                 // Une autre fiche : son mode est le point de départ, il ne s'anime pas.
                 _mode = -1;
+                // Ses volets aussi : la fiche ne glisse pas pour les rejoindre.
+                _panes = (page.ShowsOutline, page.ShowsPassages || page.ShowsBacklinks);
+                _center = double.NaN;
+                _paneCame = false;
+                _paneLeaves = false;
                 RibbonRow.IsHitTestVisible = true;
                 RibbonContent.DataContext = page.Editor;
                 ShowMode(page);
@@ -178,6 +184,110 @@ internal sealed partial class SheetPage : UserControl
         }
         FollowRibbon();
         return true;
+    }
+
+    /// <summary>Le milieu de la fiche dans le corps de la page, à la dernière mise en page ; rien tant qu'elle n'en a pas eu.</summary>
+    private double _center = double.NaN;
+
+    /// <summary>Les volets en colonne que la page montrait à la dernière annonce : celui de gauche, et la colonne de droite (passages ou liens).</summary>
+    private (bool Left, bool Right) _panes;
+
+    /// <summary>Un volet vient de paraître à côté de la fiche : le déplacement que la mise en page lui donne est à accompagner.</summary>
+    private bool _paneCame;
+
+    /// <summary>Un volet s'en va : la fiche glisse déjà vers la place qu'il lui rendra.</summary>
+    private bool _paneLeaves;
+
+    /// <summary>Ce qui est centré dans la colonne de la fiche lue, et glisse avec elle : pas la barre de défilement.</summary>
+    internal IEnumerable<FrameworkElement> Centered() => SheetText.Centered.Append(SheetHead);
+
+    /// <summary>
+    /// Un volet en colonne paraît ou s'en va à côté de la fiche lue : le texte glisse en même temps que lui, au lieu de sauter
+    /// à sa nouvelle place. Quand le volet paraît, la mise en page a déjà déplacé le texte : il repart de là où il était
+    /// (voir <see cref="FollowCenter"/>). Quand il s'en va, il ne rend sa place qu'une fois parti : le texte glisse d'avance
+    /// vers celle qu'il aura. Pas en écriture : la fenêtre de l'éditeur ne se déplace pas ainsi.
+    /// </summary>
+    /// <returns>Vrai si le texte va glisser.</returns>
+    internal bool FollowPane(SheetPageViewModel page)
+    {
+        // Le modèle annonce ses volets à chaque changement de largeur : seul un volet qui a vraiment changé compte.
+        var before = _panes;
+        _panes = (page.ShowsOutline, page.ShowsPassages || page.ShowsBacklinks);
+        if (before == _panes || page.IsWriting || !IsLoaded || !SheetArea.IsVisible)
+        {
+            return false;
+        }
+        if (_paneLeaves)
+        {
+            // Un autre changement pendant qu'un volet s'en allait : la fiche reprend la place que la mise en page lui donne.
+            _paneLeaves = false;
+            foreach (var element in Centered())
+            {
+                Transitions.Rest(element);
+            }
+        }
+        if ((_panes.Left && !before.Left) || (_panes.Right && !before.Right))
+        {
+            _paneCame = true;
+            // Sans effet sur la mise en page : il n'y aura rien à accompagner.
+            Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, () => _paneCame = false);
+            return true;
+        }
+        // Un volet parti rend sa colonne : la fiche se recentre d'une demi-colonne de son côté.
+        var toX = 0.0;
+        if (before.Left && OutlinePane.IsVisible)
+        {
+            toX -= (OutlinePane.ActualWidth + OutlinePane.Margin.Left + OutlinePane.Margin.Right) / 2;
+        }
+        if (before.Right && SidePanes.IsVisible)
+        {
+            toX += (SidePanes.ActualWidth + SidePanes.Margin.Left + SidePanes.Margin.Right) / 2;
+        }
+        foreach (var element in Centered())
+        {
+            _paneLeaves |= Transitions.ShiftAsideOnceShown(element, toX);
+        }
+        return _paneLeaves;
+    }
+
+    /// <summary>
+    /// La mise en page vient de passer : si le milieu de la fiche a bougé parce qu'un volet a paru, le texte repart de là où
+    /// il était ; si c'est parce qu'un volet est parti, il y est déjà (voir <see cref="FollowPane"/>), et retrouve sa place
+    /// sans décalage. Une fenêtre qu'on redimensionne ne fait rien glisser.
+    /// </summary>
+    internal bool FollowCenter()
+    {
+        if (!SheetArea.IsVisible || SheetArea.ActualWidth <= 0)
+        {
+            return false;
+        }
+        var center = SheetArea.TranslatePoint(new Point(SheetArea.ActualWidth / 2, 0), Body).X;
+        var before = _center;
+        _center = center;
+        if (double.IsNaN(before) || Math.Abs(center - before) < 0.5)
+        {
+            return false;
+        }
+        if (_paneLeaves)
+        {
+            _paneLeaves = false;
+            foreach (var element in Centered())
+            {
+                Transitions.Rest(element);
+            }
+            return false;
+        }
+        if (!_paneCame)
+        {
+            return false;
+        }
+        _paneCame = false;
+        var glides = false;
+        foreach (var element in Centered())
+        {
+            glides |= Transitions.FollowAsideOnceShown(element, before - center);
+        }
+        return glides;
     }
 
     /// <summary>
@@ -281,6 +391,11 @@ internal sealed partial class SheetPage : UserControl
     /// <summary>Le texte mis en forme a sa propre fenêtre : tout ce qui le recouvre le lui dit.</summary>
     private void OnPageChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
+        if (e.PropertyName is nameof(SheetPageViewModel.ShowsOutline) or nameof(SheetPageViewModel.ShowsPassages) or nameof(SheetPageViewModel.ShowsBacklinks)
+            && sender is SheetPageViewModel beside)
+        {
+            FollowPane(beside);
+        }
         if (e.PropertyName is nameof(SheetPageViewModel.IsWriting) or nameof(SheetPageViewModel.Editor) && sender is SheetPageViewModel edited)
         {
             ShowRibbonContext(edited);

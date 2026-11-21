@@ -250,6 +250,19 @@ internal sealed partial class SheetDocumentViewer : FlowDocumentScrollViewer
         </ControlTemplate>
         """));
 
+    /// <summary>
+    /// Ce qui, dans la vue, est centré avec le texte : les feuilles, le texte et les écarts entre les feuilles. Pas la barre
+    /// de défilement, qui reste au bord. Quand un volet paraît ou s'en va à côté de la fiche, c'est cela qui glisse.
+    /// </summary>
+    internal IReadOnlyList<FrameworkElement> Centered
+    {
+        get
+        {
+            _scroller?.ApplyTemplate();
+            return _scroller?.Template?.FindName("PART_ScrollContentPresenter", _scroller) is FrameworkElement text ? [PagePaper, text, PageBands] : [PagePaper, PageBands];
+        }
+    }
+
     public override void OnApplyTemplate()
     {
         _scroller?.ScrollChanged -= OnScrollChanged;
@@ -273,12 +286,36 @@ internal sealed partial class SheetDocumentViewer : FlowDocumentScrollViewer
         PointAt(null);
     }
 
-    /// <summary>Un clic dans le texte referme l'aperçu.</summary>
+    /// <summary>Un clic dans le texte referme l'aperçu ; sur la barre de défilement aussi, il reprend la main sur un défilement accompagné.</summary>
     protected override void OnPreviewMouseDown(MouseButtonEventArgs e)
     {
         _hover.Hide();
+        StopGliding();
         base.OnPreviewMouseDown(e);
     }
+
+    /// <summary>La molette reprend la main sur un défilement accompagné.</summary>
+    protected override void OnPreviewMouseWheel(MouseWheelEventArgs e)
+    {
+        StopGliding();
+        base.OnPreviewMouseWheel(e);
+    }
+
+    private void StopGliding()
+    {
+        if (_scroller is { } scroller)
+        {
+            KyfRev.DesignSystem.Controls.Transitions.StopScroll(scroller);
+        }
+    }
+
+    /// <summary>
+    /// Amène le point situé à <paramref name="top"/> pixels du haut de la vue à <paramref name="wanted"/> pixels de ce haut,
+    /// en glissant (rangée 20D) ; d'un coup si les animations sont coupées.
+    /// </summary>
+    /// <returns>Vrai si la vue glisse.</returns>
+    internal bool GlideTo(double top, double wanted, Action? done = null) =>
+        _scroller is { } scroller && KyfRev.DesignSystem.Controls.Transitions.ScrollTo(scroller, scroller.VerticalOffset + top - wanted, done);
 
     /// <summary>Échap referme l'aperçu d'abord.</summary>
     protected override void OnPreviewKeyDown(KeyEventArgs e)
@@ -515,7 +552,7 @@ internal sealed partial class SheetDocumentViewer : FlowDocumentScrollViewer
         {
             UpdateLayout();
             var top = block.ContentStart.GetCharacterRect(LogicalDirection.Forward).Top;
-            scroller.ScrollToVerticalOffset(scroller.VerticalOffset + top - (scroller.ViewportHeight / 2));
+            GlideTo(top, scroller.ViewportHeight / 2);
         }
     }
 
@@ -672,9 +709,35 @@ internal sealed partial class SheetDocumentViewer : FlowDocumentScrollViewer
         {
             return false;
         }
-        _built?.Layer.ElementAt(hole.Start)?.BringIntoView();
+        ShowHole(_built?.Layer.ElementAt(hole.Start));
         return true;
     }
+
+    /// <summary>
+    /// Le trou qui vient d'être révélé : s'il est hors de la vue, ou tout au bord, la vue glisse jusqu'à lui, au tiers de sa
+    /// hauteur ; déjà bien visible, rien ne bouge.
+    /// </summary>
+    private void ShowHole(TextElement? element)
+    {
+        if (element is null)
+        {
+            return;
+        }
+        if (_scroller is not { ViewportHeight: > 0 } scroller)
+        {
+            element.BringIntoView();
+            return;
+        }
+        UpdateLayout();
+        var top = element.ContentStart.GetCharacterRect(LogicalDirection.Forward).Top;
+        if (top < HoleEdge || top > scroller.ViewportHeight - HoleEdge)
+        {
+            GlideTo(top, scroller.ViewportHeight / 3);
+        }
+    }
+
+    /// <summary>À moins de cette distance du haut ou du bas de la vue, un trou révélé est amené plus au milieu.</summary>
+    internal const double HoleEdge = 48;
 
     /// <summary>
     /// Le confort de lecture (taille, interligne, police), trouvé dans les ressources : quand il change, le texte montré se
@@ -818,7 +881,14 @@ internal sealed partial class SheetDocumentViewer : FlowDocumentScrollViewer
         }
         UpdateLayout();
         var top = element.ContentStart.GetCharacterRect(LogicalDirection.Forward).Top;
-        _scroller.ScrollToVerticalOffset(_scroller.VerticalOffset + top - TopMargin);
+        // Arrivée, la vue se pose exactement : pendant le trajet, la suite d'une longue fiche a pu se mettre en page.
+        GlideTo(top, TopMargin, () =>
+        {
+            if (_scroller is { } scroller && element.ContentStart.GetCharacterRect(LogicalDirection.Forward) is { IsEmpty: false } place)
+            {
+                scroller.ScrollToVerticalOffset(scroller.VerticalOffset + place.Top - TopMargin);
+            }
+        });
     }
 
     /// <summary>

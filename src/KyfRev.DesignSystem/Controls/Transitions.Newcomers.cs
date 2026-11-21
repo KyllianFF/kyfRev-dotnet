@@ -49,17 +49,56 @@ public static partial class Transitions
             return;
         }
         list.ItemContainerGenerator.ItemsChanged -= NewcomerHandlers.Of(list);
+        list.RemoveHandler(ScrollViewer.ScrollChangedEvent, PlaceHandlers.ScrolledOf(list));
+        list.SizeChanged -= PlaceHandlers.ResizedOf(list);
         if (e.NewValue is string { Length: > 0 })
         {
             list.ItemContainerGenerator.ItemsChanged += NewcomerHandlers.Of(list);
+            // Défilée ou redimensionnée, la liste n'a plus ses lignes où on les a vues (voir Transitions.Lists).
+            list.AddHandler(ScrollViewer.ScrollChangedEvent, PlaceHandlers.ScrolledOf(list));
+            list.SizeChanged += PlaceHandlers.ResizedOf(list);
             // Une vue neuve d'un modèle déjà vu : ses lignes nouvelles arrivent ; sinon, ce sont celles qu'on trouve en arrivant.
             OnListChanged(list);
         }
     }
 
-    /// <summary>La liste a changé : une fois ses lignes à leur place, celles qu'on n'avait jamais vues arrivent.</summary>
-    private static void OnListChanged(ItemsControl list) =>
+    /// <summary>
+    /// La liste a changé : les lignes qui viennent d'en partir sont prises en image tout de suite, avant que rien ne soit
+    /// redessiné ; puis, une fois ses lignes à leur place, celles qu'on n'avait jamais vues arrivent.
+    /// </summary>
+    private static void OnListChanged(ItemsControl list)
+    {
+        Portray(list);
         list.Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () => Welcome(list));
+    }
+
+    // La vue de cette liste a déjà montré des lignes : sa cascade d'arrivée est passée.
+    private static readonly DependencyProperty HasShownRowsProperty =
+        DependencyProperty.RegisterAttached("HasShownRows", typeof(bool), typeof(Transitions), new PropertyMetadata(false));
+
+    /// <summary>
+    /// Ce qui arrive aux lignes déjà connues quand la liste change : à la première fois que cette vue montre des lignes,
+    /// elles arrivent en cascade ; ensuite, si une à trois lignes sont parties, les suivantes remontent en glissant. Puis on
+    /// retient où est chaque ligne.
+    /// </summary>
+    /// <param name="list">La liste.</param>
+    /// <param name="hasNewcomers">Des lignes nouvelles arrivent déjà en fondu : rien d'autre ne bouge.</param>
+    private static void Settle(ItemsControl list, bool hasNewcomers)
+    {
+        if (list.Items.Count > 0 && !(bool)list.GetValue(HasShownRowsProperty))
+        {
+            list.SetValue(HasShownRowsProperty, true);
+            if (!hasNewcomers)
+            {
+                Cascade(list);
+            }
+        }
+        else if (!hasNewcomers)
+        {
+            Close(list);
+        }
+        Place(list);
+    }
 
     /// <summary>
     /// Les lignes nouvelles de la liste (une à trois, une liste déjà montrée) arrivent en fondu en montant ; toutes sont
@@ -76,6 +115,7 @@ public static partial class Transitions
         if (SeenOf(list) is not { } seen)
         {
             Remember(list);
+            Settle(list, hasNewcomers: false);
             return 0;
         }
         var newcomers = Keyed(list.Items, path).Where(entry => !seen.Contains(entry.Key)).ToList();
@@ -90,6 +130,7 @@ public static partial class Transitions
         Remember(list);
         if (newcomers.Count is 0 or > MostNewcomers)
         {
+            Settle(list, hasNewcomers: false);
             return 0;
         }
         var welcomed = 0;
@@ -100,6 +141,7 @@ public static partial class Transitions
                 welcomed++;
             }
         }
+        Settle(list, hasNewcomers: true);
         return welcomed;
     }
 

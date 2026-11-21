@@ -27,8 +27,9 @@ public static partial class Transitions
     /// <param name="rise">De combien de pixels l'élément monte en apparaissant ; 0 : il ne bouge pas.</param>
     /// <param name="shift">De combien de pixels il glisse de côté en apparaissant (négatif : il vient de la gauche) ; 0 : il ne glisse pas.</param>
     /// <param name="kind">La famille de l'animation : coupée dans les Paramètres, l'élément est montré tel quel.</param>
+    /// <param name="delay">Le temps qu'il attend, invisible, avant d'apparaître : son tour dans une cascade.</param>
     /// <returns>Vrai si une transition a commencé ; faux si l'élément est montré tel quel (animations réduites, essais).</returns>
-    public static bool Enter(FrameworkElement element, string durationKey = DesignKeys.NormalDuration, double rise = 0, double shift = 0, MotionKinds kind = MotionKinds.Views)
+    public static bool Enter(FrameworkElement element, string durationKey = DesignKeys.NormalDuration, double rise = 0, double shift = 0, MotionKinds kind = MotionKinds.Views, TimeSpan delay = default)
     {
         ArgumentNullException.ThrowIfNull(element);
         if (!Moves(element, durationKey, out var duration, kind))
@@ -43,15 +44,32 @@ public static partial class Transitions
             return false;
         }
         // À la fin, l'animation rend la main : l'opacité et la place de l'élément redeviennent celles qu'il avait.
-        element.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 1, duration) { EasingFunction = Ease, FillBehavior = FillBehavior.Stop });
+        element.BeginAnimation(UIElement.OpacityProperty, Arrival(0, 1, duration, delay));
         if (rise != 0 || shift != 0)
         {
             var move = new TranslateTransform();
             element.RenderTransform = move;
-            move.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(rise, 0, duration) { EasingFunction = Ease, FillBehavior = FillBehavior.Stop });
-            move.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(shift, 0, duration) { EasingFunction = Ease, FillBehavior = FillBehavior.Stop });
+            move.BeginAnimation(TranslateTransform.YProperty, Arrival(rise, 0, duration, delay));
+            move.BeginAnimation(TranslateTransform.XProperty, Arrival(shift, 0, duration, delay));
         }
         return true;
+    }
+
+    /// <summary>
+    /// Le trajet d'une arrivée, de <paramref name="from"/> à <paramref name="to"/>. Avec un délai, l'élément est tenu à son
+    /// point de départ le temps d'attendre son tour, puis fait le même trajet : sans cela, il serait entier avant d'arriver.
+    /// </summary>
+    private static AnimationTimeline Arrival(double from, double to, TimeSpan duration, TimeSpan delay)
+    {
+        if (delay <= TimeSpan.Zero)
+        {
+            return new DoubleAnimation(from, to, duration) { EasingFunction = Ease, FillBehavior = FillBehavior.Stop };
+        }
+        var frames = new DoubleAnimationUsingKeyFrames { Duration = delay + duration, FillBehavior = FillBehavior.Stop };
+        frames.KeyFrames.Add(new DiscreteDoubleKeyFrame(from, KeyTime.FromTimeSpan(TimeSpan.Zero)));
+        frames.KeyFrames.Add(new DiscreteDoubleKeyFrame(from, KeyTime.FromTimeSpan(delay)));
+        frames.KeyFrames.Add(new EasingDoubleKeyFrame(to, KeyTime.FromTimeSpan(delay + duration), Ease));
+        return frames;
     }
 
     /// <summary>
@@ -66,6 +84,22 @@ public static partial class Transitions
 
     /// <summary>L'accélération de ce qui part : il s'en va de plus en plus vite, sans traîner.</summary>
     internal static IEasingFunction Leave { get; } = Frozen(new CubicEase { EasingMode = EasingMode.EaseIn });
+
+    // Le numéro du départ en cours de chaque élément.
+    private static readonly DependencyProperty ExitRunProperty =
+        DependencyProperty.RegisterAttached("ExitRun", typeof(int), typeof(Transitions), new PropertyMetadata(0));
+
+    /// <summary>
+    /// Arrête le départ en cours de <paramref name="element"/> (voir <see cref="Exit"/>) : il est là, entier, à sa place, et
+    /// la suite prévue à son départ n'est pas appelée.
+    /// </summary>
+    public static void StopExit(FrameworkElement element)
+    {
+        ArgumentNullException.ThrowIfNull(element);
+        element.SetValue(ExitRunProperty, (int)element.GetValue(ExitRunProperty) + 1);
+        element.BeginAnimation(UIElement.OpacityProperty, null);
+        Rest(element);
+    }
 
     /// <summary>
     /// Fait partir <paramref name="element"/> : il s'efface, en accélérant, et descend ou glisse de quelques pixels si on le
@@ -82,6 +116,8 @@ public static partial class Transitions
     {
         ArgumentNullException.ThrowIfNull(element);
         ArgumentNullException.ThrowIfNull(done);
+        var run = (int)element.GetValue(ExitRunProperty) + 1;
+        element.SetValue(ExitRunProperty, run);
         if (!Moves(element, durationKey, out var duration, kind))
         {
             done();
@@ -90,6 +126,11 @@ public static partial class Transitions
         var fade = new DoubleAnimation(element.Opacity, 0, duration) { EasingFunction = Leave, FillBehavior = FillBehavior.HoldEnd };
         fade.Completed += (_, _) =>
         {
+            // Une animation retirée va quand même à son terme : un départ arrêté, ou remplacé, ne prévient plus personne.
+            if ((int)element.GetValue(ExitRunProperty) != run)
+            {
+                return;
+            }
             done();
             // Retiré de l'écran, il redevient entier, à sa place, pour la prochaine fois.
             element.BeginAnimation(UIElement.OpacityProperty, null);

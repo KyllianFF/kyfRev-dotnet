@@ -98,6 +98,72 @@ public static partial class Transitions
         return true;
     }
 
+    /// <summary>
+    /// Le jumeau de <see cref="FollowOnceShown"/> pour un élément que la mise en page vient de déplacer de côté (un volet
+    /// paru à côté de lui) : il part de là où il était, <paramref name="fromX"/> pixels plus loin, et rejoint sa place en
+    /// même temps que le volet glisse.
+    /// </summary>
+    /// <param name="element">Ce qui a été déplacé.</param>
+    /// <param name="fromX">D'où il part, depuis sa nouvelle place : négatif s'il a été poussé vers la droite.</param>
+    /// <param name="durationKey">La durée, par sa clé du design system.</param>
+    /// <param name="kind">La famille de l'animation.</param>
+    /// <returns>Vrai si un trajet est prévu.</returns>
+    public static bool FollowAsideOnceShown(FrameworkElement element, double fromX, string durationKey = DesignKeys.NormalDuration, MotionKinds kind = MotionKinds.Panels)
+    {
+        ArgumentNullException.ThrowIfNull(element);
+        if (Math.Abs(fromX) < 0.5 || !Moves(element, durationKey, out var duration, kind))
+        {
+            Rest(element);
+            return false;
+        }
+        var move = new TranslateTransform(fromX, 0);
+        element.RenderTransform = move;
+        element.Dispatcher.BeginInvoke(WhenShown, () =>
+        {
+            if (!ReferenceEquals(element.RenderTransform, move))
+            {
+                // Un autre trajet a pris le relais.
+                return;
+            }
+            var glide = new DoubleAnimation(fromX, 0, duration) { EasingFunction = Ease, FillBehavior = FillBehavior.Stop };
+            glide.Completed += (_, _) =>
+            {
+                if (ReferenceEquals(element.RenderTransform, move))
+                {
+                    element.ClearValue(UIElement.RenderTransformProperty);
+                }
+            };
+            move.X = 0;
+            move.BeginAnimation(TranslateTransform.XProperty, glide);
+        });
+        return true;
+    }
+
+    /// <summary>
+    /// Décale un élément de <paramref name="toX"/> pixels de côté, en glissant, une fois l'écran prêt, et l'y laisse jusqu'à
+    /// <see cref="Rest"/> : un volet s'en va à côté de lui, et il rejoint d'avance la place que la mise en page lui donnera
+    /// quand le volet l'aura rendue. Il suit la courbe de ce qui part, pour bouger avec le volet.
+    /// </summary>
+    /// <returns>Vrai si l'élément va glisser ; faux s'il ne bouge pas (animations coupées).</returns>
+    public static bool ShiftAsideOnceShown(FrameworkElement element, double toX, string durationKey = DesignKeys.NormalDuration, MotionKinds kind = MotionKinds.Panels)
+    {
+        ArgumentNullException.ThrowIfNull(element);
+        if (Math.Abs(toX) < 0.5 || !Moves(element, durationKey, out var duration, kind))
+        {
+            return false;
+        }
+        var move = new TranslateTransform();
+        element.RenderTransform = move;
+        element.Dispatcher.BeginInvoke(WhenShown, () =>
+        {
+            if (ReferenceEquals(element.RenderTransform, move))
+            {
+                move.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(0, toX, duration) { EasingFunction = Leave, FillBehavior = FillBehavior.HoldEnd });
+            }
+        });
+        return true;
+    }
+
     /// <summary>Remet un élément à sa place : plus de trajet, plus de décalage.</summary>
     public static void Rest(FrameworkElement element)
     {

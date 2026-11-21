@@ -694,6 +694,82 @@ public sealed class WritingTests
     }
 
     [STATestMethod]
+    public void Beside_a_pane_that_comes_or_goes_the_sheet_read_glides_with_it()
+    {
+        using var scene = new Scene("# Mitose\n\nUn premier paragraphe.\n\n## Prophase\n\nLa suite.\n\n## Métaphase\n\nLa fin.\n");
+        var page = scene.SheetPage;
+        // En écriture, rien ne glisse : la fenêtre de l'éditeur ne se déplace pas ainsi.
+        Assert.IsTrue(scene.Page.IsWriting);
+        Assert.IsFalse(page.FollowPane(scene.Page));
+        scene.Page.ToggleWritingCommand.Execute(null);
+        UiThread.Until(() => !scene.Page.IsWriting);
+        TestShell.Flush();
+        Assert.IsTrue(scene.Page.ShowsOutline, "la fenêtre est assez large pour le plan en colonne");
+        var head = page.SheetHead;
+        var centered = page.Centered().ToList();
+        Assert.IsGreaterThanOrEqualTo(3, centered.Count, "les feuilles, le texte, les écarts, l'en-tête ; pas la barre de défilement");
+        CollectionAssert.DoesNotContain(centered, page.SheetText);
+        Assert.IsFalse(page.FollowPane(scene.Page), "rien n'a changé");
+        // Les essais coupent les transitions ; celui-ci les rend, le temps de les voir.
+        KyfRev.DesignSystem.Controls.Transitions.Skip = false;
+        try
+        {
+            // Le plan s'en va : il ne rend sa place qu'une fois parti, et la fiche glisse d'avance vers celle qu'elle aura.
+            var freed = page.OutlinePane.ActualWidth + page.OutlinePane.Margin.Right;
+            var middle = page.SheetArea.TranslatePoint(new Point(page.SheetArea.ActualWidth / 2, 0), page.Body).X;
+            scene.Page.IsOutlineOn = false;
+            Assert.IsFalse(scene.Page.ShowsOutline);
+            Assert.IsInstanceOfType<System.Windows.Media.TranslateTransform>(head.RenderTransform, "la fiche part vers sa future place");
+            var move = (System.Windows.Media.TranslateTransform)head.RenderTransform;
+            var furthest = 0.0;
+            UiThread.Until(() =>
+            {
+                furthest = Math.Min(furthest, move.X);
+                return page.OutlinePane.Visibility == Visibility.Collapsed;
+            });
+            page.UpdateLayout();
+            Assert.AreEqual(System.Windows.Media.Transform.Identity, head.RenderTransform, "le plan parti, la mise en page lui donne cette place : plus de décalage");
+            Assert.IsLessThan(-1, furthest, "elle a glissé vers la gauche pendant que le plan s'en allait");
+            Assert.IsGreaterThanOrEqualTo((-freed / 2) - 0.5, furthest, "pas plus loin que sa future place");
+            var recentred = page.SheetArea.TranslatePoint(new Point(page.SheetArea.ActualWidth / 2, 0), page.Body).X;
+            Assert.AreEqual(middle - (freed / 2), recentred, 0.5);
+            foreach (var element in centered)
+            {
+                Assert.AreEqual(System.Windows.Media.Transform.Identity, element.RenderTransform);
+            }
+
+            // Il revient : la mise en page déplace la fiche tout de suite, et elle repart de là où elle était.
+            scene.Page.IsOutlineOn = true;
+            page.UpdateLayout();
+            Assert.IsInstanceOfType<System.Windows.Media.TranslateTransform>(head.RenderTransform);
+            Assert.AreEqual(-freed / 2, ((System.Windows.Media.TranslateTransform)head.RenderTransform).X, 0.5, "elle n'a pas encore bougé à l'écran");
+            UiThread.Until(() => head.RenderTransform == System.Windows.Media.Transform.Identity);
+            foreach (var element in centered)
+            {
+                Assert.AreEqual(System.Windows.Media.Transform.Identity, element.RenderTransform, "arrivée, plus rien n'est décalé");
+            }
+
+            // Une page qu'on redimensionne ne fait rien glisser, même si le modèle annonce de nouveau ses volets.
+            page.Width -= 60;
+            page.UpdateLayout();
+            TestShell.Flush();
+            Assert.AreEqual(System.Windows.Media.Transform.Identity, head.RenderTransform);
+            Assert.IsFalse(page.FollowCenter(), "la mise en page n'a rien déplacé depuis");
+
+            // Le plan rappelé pendant qu'il s'en va : la fiche reprend sa place.
+            scene.Page.IsOutlineOn = false;
+            Assert.IsInstanceOfType<System.Windows.Media.TranslateTransform>(head.RenderTransform);
+            scene.Page.IsOutlineOn = true;
+            Assert.AreEqual(System.Windows.Media.Transform.Identity, head.RenderTransform);
+            TestShell.Flush();
+        }
+        finally
+        {
+            KyfRev.DesignSystem.Controls.Transitions.Skip = true;
+        }
+    }
+
+    [STATestMethod]
     public void Changing_mode_moves_nothing_between_reading_and_revising_and_brings_the_ribbon_in_when_writing()
     {
         using var scene = new Scene();
