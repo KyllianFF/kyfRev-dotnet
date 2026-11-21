@@ -12,10 +12,12 @@
    change une fois, avant ou après ; elle n'est jamais recalculée à chaque image.
 3. **Ce qu'on lit ne bouge pas sans raison.** Entre Lire et Réviser, le texte est le
    même : rien ne s'estompe. Un bloc qui fait de la place à un autre bouge une fois.
-4. **Ce qui part va plus vite que ce qui arrive** (120 ms contre 220 ms).
+4. **Un fondu de départ est plus court que celui d'arrivée** (120 ms contre 220 ms). Un bloc qui
+   glisse pour se cacher met le même temps qu'à venir (220 ms) : on doit le voir partir.
 5. **Les fenêtres natives ne s'animent pas** : l'éditeur d'Écrire et l'îlot des Schémas
    sont des pages web posées dans la fenêtre, que l'application ne peut ni estomper ni
-   faire glisser. Ce qui les entoure s'anime ; eux paraissent d'un coup.
+   faire glisser. Ce qui les entoure s'anime. L'éditeur fait paraître sa feuille lui-même, en fondu,
+   sur la durée que l'application lui donne avec le thème (« --duree-entree »).
 6. **Une seule porte** : toute animation passe par `Transitions.Moves`. C'est là que
    se lisent « Réduire les animations », le réglage de Windows et, demain, les familles.
 7. **Redimensionner la fenêtre n'anime rien** : un bloc qui passe sous un autre parce
@@ -71,6 +73,7 @@ Priorité 1 : vu à chaque séance. Priorité 2 : vu chaque jour. Priorité 3 : 
 | --- | --- | --- | --- |
 | Cadre du choix du menu et des sections des Paramètres | absent à la première ouverture, ne suit pas la largeur | présent, suit le menu, glisse | fait |
 | Trait des onglets du ruban | ne glissait que dans un sens | glisse dans les deux | fait |
+| Choix Lire / Réviser / Écrire | sautait | le cadre glisse d'un mode à l'autre | fait |
 | Choix dans la liste du Carnet et d'Aujourd'hui | saute | le cadre glisse (19B) | 2 |
 
 ### Changement de vue et de mode
@@ -78,7 +81,8 @@ Priorité 1 : vu à chaque séance. Priorité 2 : vu chaque jour. Priorité 3 : 
 | Élément | Aujourd'hui | Proposé | Priorité |
 | --- | --- | --- | --- |
 | Lire ↔ Réviser | le texte clignote | rien ne bouge | fait |
-| Ruban à l'entrée en Écrire | d'un coup | descend de 8 px en fondu | fait |
+| Ruban à l'entrée en Écrire | d'un coup | descend de 8 px en fondu, son trait d'onglet avec lui | fait |
+| Feuille de l'éditeur à l'entrée en Écrire | surgissait | paraît en fondu, animée par sa propre page | fait |
 | Élément suivant en séance | toute la fiche change d'un coup | l'ancienne s'efface, la nouvelle arrive en fondu | 1 |
 | Bilan de fin de séance | surgit | monte de 8 px en fondu | 2 |
 | « Ouverture… », squelettes → contenu (fiche, Aujourd'hui, Statistiques, Santé) | échange sec | fondu | 2 |
@@ -92,9 +96,10 @@ Priorité 1 : vu à chaque séance. Priorité 2 : vu chaque jour. Priorité 3 : 
 | Élément | Aujourd'hui | Proposé | Priorité |
 | --- | --- | --- | --- |
 | Menu réduit, élargi, masqué | d'un coup | le bord glisse, la page suit | fait |
-| Volets Plan, Passages, Liens (en colonne et par-dessus le texte) | d'un coup, le texte se recentre | glissent depuis leur bord, le texte se pousse une fois | 1 |
+| Volets Plan, Passages, Liens (en colonne et par-dessus le texte) | d'un coup | glissent depuis leur bord et y retournent ; le texte se recentre une fois | fait |
+| Barre de révision en passant à Écrire, et au retour | d'un coup | descend pour se cacher, remonte pour revenir | fait |
 | Groupes d'Aujourd'hui, dossiers du Carnet | lignes d'un coup, chevron échangé | le chevron tourne, les lignes se replient | 1 |
-| Barre de révision, barres des trous, de l'écoute, de la révision guidée | surgissent | montent de 8 px en fondu | 2 |
+| Barres des trous, de l'écoute, de la révision guidée | surgissent | glissent depuis leur bord, comme la barre de révision | 2 |
 | Historique dans l'aperçu, filtres, étiquettes, diagnostic, options d'un module | se déplient d'un coup | se déplient (220 ms) | 2 |
 | Carte « Nouvelle définition », carte en cours d'édition | pousse la grille d'un coup | se déplie | 2 |
 | Bandeaux et alertes dans une page | d'un coup | se déplient en poussant la suite | 2 |
@@ -156,8 +161,8 @@ ses captures de 470 px à l'ultra-large en clair et en sombre, et un installateu
 1. **Correctifs** : cadre du choix, glissement réel, Lire ↔ Réviser, ruban, bord du menu.
 2. **Réglages par famille** : la porte `Moves` par famille, les préférences, la page
    Apparence. En premier, pour que tout ce qui suit naisse avec son interrupteur.
-3. **Quatre outils communs**, petits et sans mise en page par image : déplier ou replier
-   un bloc (découpe), remplacer un contenu (fondu), retirer une ligne, faire changer un
+3. **Quatre outils communs**, petits et sans mise en page par image : montrer ou cacher
+   un bloc en le faisant glisser (`Transitions.Shown`, fait), le déplier ou le replier (découpe), remplacer un contenu (fondu), retirer une ligne, faire changer un
    nombre ou une jauge. Chacun arrête proprement l'animation précédente s'il est relancé.
 4. **Menu et volets** : volets de la fiche, groupes, dossiers, barres, bandeaux.
 5. **Listes, aperçus, palette, cartes flottantes.**

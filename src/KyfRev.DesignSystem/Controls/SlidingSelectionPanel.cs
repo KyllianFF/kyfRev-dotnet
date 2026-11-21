@@ -17,13 +17,16 @@ public sealed class SlidingSelectionPanel : StackPanel
     /// <summary>L'épaisseur du trait à gauche du choix.</summary>
     internal const double BarThickness = 3;
 
-    /// <summary>Où commence le cadre, de haut en bas.</summary>
-    public static readonly DependencyProperty SelectionTopProperty =
-        DependencyProperty.Register(nameof(SelectionTop), typeof(double), typeof(SlidingSelectionPanel), new FrameworkPropertyMetadata(0d, FrameworkPropertyMetadataOptions.AffectsRender));
+    /// <summary>L'épaisseur du filet qui cerne le choix d'une rangée.</summary>
+    internal const double OutlineThickness = 1;
 
-    /// <summary>Sa hauteur : celle du choix.</summary>
-    public static readonly DependencyProperty SelectionHeightProperty =
-        DependencyProperty.Register(nameof(SelectionHeight), typeof(double), typeof(SlidingSelectionPanel), new FrameworkPropertyMetadata(0d, FrameworkPropertyMetadataOptions.AffectsRender));
+    /// <summary>Où commence le cadre, le long de la colonne (de haut en bas) ou de la rangée (de gauche à droite).</summary>
+    public static readonly DependencyProperty SelectionStartProperty =
+        DependencyProperty.Register(nameof(SelectionStart), typeof(double), typeof(SlidingSelectionPanel), new FrameworkPropertyMetadata(0d, FrameworkPropertyMetadataOptions.AffectsRender));
+
+    /// <summary>Sa longueur dans ce sens : la hauteur du choix dans une colonne, sa largeur dans une rangée.</summary>
+    public static readonly DependencyProperty SelectionLengthProperty =
+        DependencyProperty.Register(nameof(SelectionLength), typeof(double), typeof(SlidingSelectionPanel), new FrameworkPropertyMetadata(0d, FrameworkPropertyMetadataOptions.AffectsRender));
 
     /// <summary>Son opacité : il paraît en fondu quand la sélection arrive d'une autre colonne.</summary>
     public static readonly DependencyProperty SelectionOpacityProperty =
@@ -55,18 +58,18 @@ public sealed class SlidingSelectionPanel : StackPanel
         LayoutUpdated += (_, _) => Place(animate: false);
     }
 
-    /// <inheritdoc cref="SelectionTopProperty"/>
-    public double SelectionTop
+    /// <inheritdoc cref="SelectionStartProperty"/>
+    public double SelectionStart
     {
-        get => (double)GetValue(SelectionTopProperty);
-        set => SetValue(SelectionTopProperty, value);
+        get => (double)GetValue(SelectionStartProperty);
+        set => SetValue(SelectionStartProperty, value);
     }
 
-    /// <inheritdoc cref="SelectionHeightProperty"/>
-    public double SelectionHeight
+    /// <inheritdoc cref="SelectionLengthProperty"/>
+    public double SelectionLength
     {
-        get => (double)GetValue(SelectionHeightProperty);
-        set => SetValue(SelectionHeightProperty, value);
+        get => (double)GetValue(SelectionLengthProperty);
+        set => SetValue(SelectionLengthProperty, value);
     }
 
     /// <inheritdoc cref="SelectionOpacityProperty"/>
@@ -97,21 +100,22 @@ public sealed class SlidingSelectionPanel : StackPanel
         _target = bounds;
         if (bounds is not { } b)
         {
-            BeginAnimation(SelectionTopProperty, null);
-            BeginAnimation(SelectionHeightProperty, null);
+            BeginAnimation(SelectionStartProperty, null);
+            BeginAnimation(SelectionLengthProperty, null);
             InvalidateVisual();
             return;
         }
+        var (start, length) = Orientation == Orientation.Horizontal ? (b.Left, b.Width) : (b.Top, b.Height);
         var canMove = Transitions.Moves(this, DesignKeys.NormalDuration, out var duration);
         // Un glissement que la mise en page rattrape en route (le choix a changé de taille) continue vers la nouvelle place.
         if (canMove && before is not null && (animate || _sliding))
         {
             var run = ++_run;
             _sliding = true;
-            var slide = new DoubleAnimation(SelectionTop, b.Top, duration) { EasingFunction = Transitions.Ease, FillBehavior = FillBehavior.Stop };
+            var slide = new DoubleAnimation(SelectionStart, start, duration) { EasingFunction = Transitions.Ease, FillBehavior = FillBehavior.Stop };
             slide.Completed += (_, _) => _sliding = _sliding && run != _run;
-            BeginAnimation(SelectionTopProperty, slide);
-            BeginAnimation(SelectionHeightProperty, new DoubleAnimation(SelectionHeight, b.Height, duration) { EasingFunction = Transitions.Ease, FillBehavior = FillBehavior.Stop });
+            BeginAnimation(SelectionStartProperty, slide);
+            BeginAnimation(SelectionLengthProperty, new DoubleAnimation(SelectionLength, length, duration) { EasingFunction = Transitions.Ease, FillBehavior = FillBehavior.Stop });
             LastMove = SelectionMove.Slid;
         }
         else
@@ -121,13 +125,13 @@ public sealed class SlidingSelectionPanel : StackPanel
             _run++;
             _sliding = false;
             var fades = canMove && animate;
-            BeginAnimation(SelectionTopProperty, null);
-            BeginAnimation(SelectionHeightProperty, null);
+            BeginAnimation(SelectionStartProperty, null);
+            BeginAnimation(SelectionLengthProperty, null);
             BeginAnimation(SelectionOpacityProperty, fades ? new DoubleAnimation(0, 1, duration) { EasingFunction = Transitions.Ease, FillBehavior = FillBehavior.Stop } : null);
             LastMove = fades ? SelectionMove.Faded : SelectionMove.Jumped;
         }
-        SelectionTop = b.Top;
-        SelectionHeight = b.Height;
+        SelectionStart = start;
+        SelectionLength = length;
         InvalidateVisual();
     }
 
@@ -149,26 +153,40 @@ public sealed class SlidingSelectionPanel : StackPanel
         return null;
     }
 
-    /// <summary>Le cadre du choix, sous les choix : la couleur d'un choix actif, et son trait à gauche, pris dans l'arrondi.</summary>
+    /// <summary>
+    /// Le cadre du choix, sous les choix. Dans une colonne : la couleur d'un choix actif, et son trait à gauche, pris dans
+    /// l'arrondi. Dans une rangée (Lire, Réviser, Écrire) : la même couleur, cernée d'un filet, comme un outil coché.
+    /// </summary>
     protected override void OnRender(DrawingContext dc)
     {
         base.OnRender(dc);
         ArgumentNullException.ThrowIfNull(dc);
-        if (_target is not { } target || SelectionHeight <= 0
+        if (_target is not { } target || SelectionLength <= 0
             || TryFindResource(DesignKeys.Brush(ColorRole.NavigationActiveBackground)) is not Brush fill
             || TryFindResource(DesignKeys.Brush(ColorRole.Primary)) is not Brush bar)
         {
             return;
         }
         var radius = TryFindResource(DesignKeys.ControlRadius) is CornerRadius corner ? corner.TopLeft : 0;
-        var frame = new Rect(target.Left, SelectionTop, target.Width, SelectionHeight);
-        var shape = new RectangleGeometry(frame, radius, radius);
-        shape.Freeze();
         dc.PushOpacity(SelectionOpacity);
-        dc.DrawGeometry(fill, null, shape);
-        dc.PushClip(shape);
-        dc.DrawRectangle(bar, null, new Rect(frame.Left, frame.Top, BarThickness, frame.Height));
-        dc.Pop();
+        if (Orientation == Orientation.Horizontal)
+        {
+            // Le filet d'un pixel tombe sur les pixels : son axe est à un demi-pixel du bord.
+            var edge = new Pen(bar, OutlineThickness);
+            edge.Freeze();
+            var inner = new Rect(SelectionStart + (OutlineThickness / 2), target.Top + (OutlineThickness / 2), Math.Max(0, SelectionLength - OutlineThickness), Math.Max(0, target.Height - OutlineThickness));
+            dc.DrawRoundedRectangle(fill, edge, inner, radius, radius);
+        }
+        else
+        {
+            var frame = new Rect(target.Left, SelectionStart, target.Width, SelectionLength);
+            var shape = new RectangleGeometry(frame, radius, radius);
+            shape.Freeze();
+            dc.DrawGeometry(fill, null, shape);
+            dc.PushClip(shape);
+            dc.DrawRectangle(bar, null, new Rect(frame.Left, frame.Top, BarThickness, frame.Height));
+            dc.Pop();
+        }
         dc.Pop();
     }
 }

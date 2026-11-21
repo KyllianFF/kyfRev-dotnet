@@ -66,6 +66,16 @@ public static partial class Transitions
         return !Skip && duration > TimeSpan.Zero;
     }
 
+    /// <summary>
+    /// La durée d'une transition pour cet élément, à donner à ce qui s'anime hors de WPF (la page de l'éditeur) : nulle
+    /// quand il n'y a pas lieu de bouger.
+    /// </summary>
+    public static TimeSpan DurationOf(FrameworkElement element, string durationKey = DesignKeys.NormalDuration)
+    {
+        ArgumentNullException.ThrowIfNull(element);
+        return Moves(element, durationKey, out var duration) ? duration : TimeSpan.Zero;
+    }
+
     private static CubicEase Frozen(CubicEase ease)
     {
         ease.Freeze();

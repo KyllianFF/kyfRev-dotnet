@@ -726,6 +726,24 @@ public sealed class WritingTests
             Assert.IsTrue(page.Ribbon.HasAnimatedProperties, "le ruban est tenu invisible, puis paraît");
             TestShell.Flush();
             Assert.IsInstanceOfType<System.Windows.Media.TranslateTransform>(page.Ribbon.RenderTransform, "en descendant");
+
+            // Le cadre du mode choisi a glissé sous Écrire, et la barre de révision descend avant de céder sa place.
+            var modes = (KyfRev.DesignSystem.Controls.SlidingSelectionPanel)System.Windows.Media.VisualTreeHelper.GetParent(page.WriteToggle);
+            Assert.AreEqual(page.WriteToggle.TransformToAncestor(modes).Transform(default).X, modes.Selection!.Value.Left, 0.5, "le cadre est sous le mode choisi");
+            Assert.AreEqual(Dock.Bottom, KyfRev.DesignSystem.Controls.Transitions.GetShownFrom(page.ReviewHost));
+            Assert.IsFalse(KyfRev.DesignSystem.Controls.Transitions.GetShown(page.ReviewHost), "en écriture, la barre de révision s'en va");
+            UiThread.Until(() => page.ReviewHost.Visibility == Visibility.Collapsed);
+            Assert.IsNull(page.ReviewHost.Clip, "partie, il ne reste rien de son trajet");
+
+            // Les volets viennent de leur bord, et suivent ce que la page décide de montrer.
+            Assert.AreEqual(Dock.Left, KyfRev.DesignSystem.Controls.Transitions.GetShownFrom(page.OutlinePane));
+            Assert.AreEqual(Dock.Right, KyfRev.DesignSystem.Controls.Transitions.GetShownFrom(page.PassagesPane));
+            Assert.AreEqual(Dock.Right, KyfRev.DesignSystem.Controls.Transitions.GetShownFrom(page.BacklinksPane));
+            Assert.AreEqual(Dock.Left, KyfRev.DesignSystem.Controls.Transitions.GetShownFrom(page.OutlineOverlay));
+            Assert.AreEqual(Dock.Right, KyfRev.DesignSystem.Controls.Transitions.GetShownFrom(page.PassagesOverlay));
+            Assert.AreEqual(Dock.Right, KyfRev.DesignSystem.Controls.Transitions.GetShownFrom(page.BacklinksOverlay));
+            Assert.AreEqual(scene.Page.ShowsOutline, KyfRev.DesignSystem.Controls.Transitions.GetShown(page.OutlinePane));
+            Assert.AreEqual(scene.Page.ShowsPassages, KyfRev.DesignSystem.Controls.Transitions.GetShown(page.PassagesPane));
         }
         finally
         {
@@ -742,6 +760,8 @@ public sealed class WritingTests
         var ribbon = scene.Ribbon;
         var tabs = ribbon.RibbonTabs;
         Assert.IsTrue(KyfRev.DesignSystem.Controls.Transitions.GetHasSharedIndicator(ribbon.HomeTab), "les onglets laissent le trait au panneau");
+        // Le trait est un ornement : sa couche est dans le ruban, pour paraître et descendre avec lui.
+        Assert.IsTrue(System.Windows.Documents.AdornerLayer.GetAdornerLayer(tabs).IsDescendantOf(ribbon));
         Rect Under(FrameworkElement tab) => tab.TransformToAncestor(tabs).TransformBounds(new Rect(tab.RenderSize));
         Assert.AreEqual(Under(ribbon.HomeTab), KyfRev.DesignSystem.Controls.Transitions.IndicatedTab(tabs), "un trait commun, sous l'Accueil");
 
@@ -751,6 +771,8 @@ public sealed class WritingTests
         Assert.AreEqual(Under(ribbon.InsertTab), KyfRev.DesignSystem.Controls.Transitions.IndicatedTab(tabs), "il suit l'onglet choisi");
         // Le trait est dessiné au-dessus de la page : l'image est celle de toute la fenêtre.
         RuledPaperPixels.Capture((FrameworkElement)VisualTreeHelper.GetChild(scene.Window, 0), $"ruban-trait-commun-{(theme == ThemeKind.Dark ? "sombre" : "clair")}");
+        // Le cadre du mode choisi, dessiné par la rangée : à regarder dans les captures.
+        RuledPaperPixels.Capture(scene.SheetPage.ModeSwitch, $"modes-{(theme == ThemeKind.Dark ? "sombre" : "clair")}");
     }
 
     [STATestMethod]

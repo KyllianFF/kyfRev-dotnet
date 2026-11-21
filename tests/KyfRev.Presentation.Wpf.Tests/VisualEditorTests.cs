@@ -1416,6 +1416,23 @@ public sealed class VisualEditorTests
         // La vue est plus large que le texte : la feuille sans fin reste une colonne, au milieu.
         visual.TextWidth = 320;
         UiThread.Until(() => scene.Script("getComputedStyle(document.documentElement).getPropertyValue('--largeur-fiche').trim()").Trim('"') == "320px");
+
+        // La feuille paraît en fondu sur la durée des transitions de l'application : nulle pendant les essais, normale sinon.
+        string Entry() => scene.Script("getComputedStyle(document.documentElement).getPropertyValue('--duree-entree').trim()").Trim('"');
+        Assert.AreEqual("0ms", Entry());
+        KyfRev.DesignSystem.Controls.Transitions.Skip = false;
+        try
+        {
+            visual.TextWidth = 321;
+            UiThread.Until(() => Entry() == "220ms");
+            Assert.AreEqual("220ms", Entry());
+        }
+        finally
+        {
+            KyfRev.DesignSystem.Controls.Transitions.Skip = true;
+        }
+        visual.TextWidth = 320;
+        UiThread.Until(() => Entry() == "0ms");
         UiThread.Until(() => double.Parse(scene.Script("document.getElementById('fiche').getBoundingClientRect().width"), System.Globalization.CultureInfo.InvariantCulture) <= 320.5);
         var view = double.Parse(scene.Script("document.documentElement.clientWidth"), System.Globalization.CultureInfo.InvariantCulture);
         var left = double.Parse(scene.Script("document.getElementById('fiche').getBoundingClientRect().left"), System.Globalization.CultureInfo.InvariantCulture);

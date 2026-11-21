@@ -293,9 +293,9 @@
             </kyf:Icon>
           </Label>
           <StackPanel Orientation="Horizontal">
-            <!-- Les trois modes, groupés : un seul est choisi. -->
+            <!-- Les trois modes, groupés : un seul est choisi, et son cadre glisse de l'un à l'autre. -->
             <Border x:Name="ModeSwitch" BorderBrush="{DynamicResource Kyf.Brush.ControlBorder}" BorderThickness="1" CornerRadius="{DynamicResource Kyf.Radius.Control}" Padding="2">
-              <StackPanel Orientation="Horizontal">
+              <kyf:SlidingSelectionPanel Orientation="Horizontal">
                 <ToggleButton x:Name="ReadToggle" IsChecked="{Binding IsReadOn}" Style="{DynamicResource Kyf.Button.Tool}" MinHeight="36" Padding="12,0"
                               AutomationProperties.Name="{x:Static editing:EditingText.Read}">
                   <StackPanel Orientation="Horizontal">
@@ -317,7 +317,7 @@
                     <TextBlock Text="{x:Static editing:EditingText.Write}" VerticalAlignment="Center" Margin="8,0,0,0" />
                   </StackPanel>
                 </ToggleButton>
-              </StackPanel>
+              </kyf:SlidingSelectionPanel>
             </Border>
             <ToggleButton x:Name="ListenToggle" IsChecked="{Binding ReadAloud.IsOpen, Mode=OneWay}" Click="OnListenToggle" Style="{DynamicResource Kyf.Button.Tool}" MinHeight="40" Padding="12,0" Margin="8,0,0,0" Visibility="Collapsed"
                           ToolTip="{x:Static pages:ReadingText.ListenRegion}" AutomationProperties.Name="{x:Static pages:ReadingText.Listen}">
@@ -530,13 +530,13 @@
       <Grid Grid.Row="2" Margin="16,0,6,0">
         <DockPanel>
           <ContentControl x:Name="OutlinePane" DockPanel.Dock="Left" Width="{x:Static pages:SheetPageViewModel.OutlineWidth}" Margin="0,0,16,0" Focusable="False" IsTabStop="False"
-                          Content="{Binding}" ContentTemplate="{StaticResource OutlinePanel}" Visibility="{Binding ShowsOutline, Converter={StaticResource Visible}}" />
+                          Content="{Binding}" ContentTemplate="{StaticResource OutlinePanel}" kyf:Transitions.Shown="{Binding ShowsOutline}" kyf:Transitions.ShownFrom="Left" />
           <!-- Les passages et les rétroliens se partagent la colonne de droite ; seul, l'un des deux la prend toute. -->
           <UniformGrid DockPanel.Dock="Right" Columns="1">
             <ContentControl x:Name="PassagesPane" Width="{x:Static pages:SheetPageViewModel.PassagesWidth}" Margin="16,0,10,0" Focusable="False" IsTabStop="False"
-                            Content="{Binding}" ContentTemplate="{StaticResource PassagesPanel}" Visibility="{Binding ShowsPassages, Converter={StaticResource Visible}}" />
+                            Content="{Binding}" ContentTemplate="{StaticResource PassagesPanel}" kyf:Transitions.Shown="{Binding ShowsPassages}" kyf:Transitions.ShownFrom="Right" />
             <ContentControl x:Name="BacklinksPane" Width="{x:Static pages:SheetPageViewModel.PassagesWidth}" Focusable="False" IsTabStop="False"
-                            Content="{Binding}" ContentTemplate="{StaticResource BacklinksPanel}" Visibility="{Binding ShowsBacklinks, Converter={StaticResource Visible}}">
+                            Content="{Binding}" ContentTemplate="{StaticResource BacklinksPanel}" kyf:Transitions.Shown="{Binding ShowsBacklinks}" kyf:Transitions.ShownFrom="Right">
               <ContentControl.Style>
                 <Style TargetType="ContentControl">
                   <Setter Property="Margin" Value="16,0,10,0" />
@@ -584,11 +584,11 @@
 
         <!-- Sans la place, un volet s'ouvre par-dessus le texte, avec les mêmes boutons. -->
         <ContentControl x:Name="OutlineOverlay" HorizontalAlignment="Left" VerticalAlignment="Top" Width="{x:Static pages:SheetPageViewModel.OutlineOverlayWidth}" Focusable="False" IsTabStop="False"
-                        Content="{Binding}" ContentTemplate="{StaticResource OutlinePanel}" Visibility="{Binding ShowsOutlineOverlay, Converter={StaticResource Visible}}" />
+                        Content="{Binding}" ContentTemplate="{StaticResource OutlinePanel}" kyf:Transitions.Shown="{Binding ShowsOutlineOverlay}" kyf:Transitions.ShownFrom="Left" />
         <ContentControl x:Name="PassagesOverlay" HorizontalAlignment="Right" VerticalAlignment="Top" Width="{x:Static pages:SheetPageViewModel.PassagesOverlayWidth}" Focusable="False" IsTabStop="False"
-                        Content="{Binding}" ContentTemplate="{StaticResource PassagesPanel}" Visibility="{Binding ShowsPassagesOverlay, Converter={StaticResource Visible}}" />
+                        Content="{Binding}" ContentTemplate="{StaticResource PassagesPanel}" kyf:Transitions.Shown="{Binding ShowsPassagesOverlay}" kyf:Transitions.ShownFrom="Right" />
         <ContentControl x:Name="BacklinksOverlay" HorizontalAlignment="Right" VerticalAlignment="Top" Width="{x:Static pages:SheetPageViewModel.PassagesOverlayWidth}" Focusable="False" IsTabStop="False"
-                        Content="{Binding}" ContentTemplate="{StaticResource BacklinksPanel}" Visibility="{Binding ShowsBacklinksOverlay, Converter={StaticResource Visible}}" />
+                        Content="{Binding}" ContentTemplate="{StaticResource BacklinksPanel}" kyf:Transitions.Shown="{Binding ShowsBacklinksOverlay}" kyf:Transitions.ShownFrom="Right" />
       </Grid>
 
       <Border Grid.Row="3" Height="4" Visibility="{Binding IsWriting, Converter={StaticResource Visible}}" />
@@ -617,8 +617,8 @@
       </StackPanel>
 
       <!-- Toujours visible, même la fiche défilée. -->
-      <ContentControl Grid.Row="3" Content="{Binding Review}" Focusable="False" IsTabStop="False" Margin="16,8,16,16"
-                      Visibility="{Binding IsReading, Converter={StaticResource Visible}}" />
+      <ContentControl x:Name="ReviewHost" Grid.Row="3" Content="{Binding Review}" Focusable="False" IsTabStop="False" Margin="16,8,16,16"
+                      kyf:Transitions.Shown="{Binding IsReading}" kyf:Transitions.ShownFrom="Bottom" />
     </Grid>
 
     <kyf:Dialog x:Name="Confirmation" Title="{Binding Review.ConfirmTitle}" IsOpen="{Binding Review.IsConfirming, Mode=OneWay}"

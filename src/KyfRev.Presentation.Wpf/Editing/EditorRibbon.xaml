@@ -43,6 +43,8 @@
     </Style>
   </UserControl.Resources>
 
+  <!-- Le trait commun des onglets est un ornement : sa couche vit dans le ruban, pour paraître, s'estomper et bouger avec lui. -->
+  <AdornerDecorator>
   <Border Background="{DynamicResource Kyf.Brush.SurfaceAlt}" BorderBrush="{DynamicResource Kyf.Brush.Divider}" BorderThickness="1" CornerRadius="{DynamicResource Kyf.Radius.Control}">
     <DockPanel>
       <!-- Quand la place manque : une barre courte. Toute la mise en forme s'ouvre en volet, l'affichage passe sous « ⋯ ». -->
@@ -815,4 +817,5 @@
       </ScrollViewer>
     </DockPanel>
   </Border>
+  </AdornerDecorator>
 </UserControl>

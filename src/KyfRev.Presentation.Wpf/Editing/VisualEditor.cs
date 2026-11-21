@@ -1045,6 +1045,9 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
             ["--police-titre"] = comfort.HeadingsFollow ? comfort.CssFamily : "var(--police)",
             // La colonne du texte d'une feuille sans fin : la vue est plus large qu'elle, sa barre au bord de la fenêtre.
             ["--largeur-fiche"] = double.IsFinite(TextWidth) && TextWidth > 0 ? string.Create(CultureInfo.InvariantCulture, $"{Math.Round(TextWidth)}px") : "none",
+            // La feuille paraît en fondu à chaque texte chargé : la page a sa propre fenêtre, c'est elle qui l'anime. Durée
+            // nulle quand les animations sont coupées.
+            ["--duree-entree"] = string.Create(CultureInfo.InvariantCulture, $"{Math.Round(Transitions.DurationOf(this, DesignKeys.NormalDuration).TotalMilliseconds)}ms"),
         };
         foreach (var (variable, resource) in ThemeColors)
         {
