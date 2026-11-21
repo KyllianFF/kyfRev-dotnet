@@ -212,6 +212,7 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, INaviga
         MarkDefinedWords = current.MarkDefinedWords;
         GlobalCapture = current.GlobalCapture;
         ReducedMotion = current.ReducedMotion;
+        MotionOff = current.MotionOff;
         HighContrast = current.HighContrast;
         LargerTargets = current.LargerTargets;
         Voices = [.. _speech.FrenchVoices().Select(voice => new SettingChoice<string>(voice, ReadingText.ShortVoice(voice)))];
@@ -251,7 +252,11 @@ public sealed partial class GeneralSettingsViewModel : ObservableObject, INaviga
 
     partial void OnGlobalCaptureChanged(bool value) => Remember(preferences => preferences with { GlobalCapture = value });
 
-    partial void OnReducedMotionChanged(bool value) => Remember(preferences => preferences with { ReducedMotion = value });
+    partial void OnReducedMotionChanged(bool value)
+    {
+        Remember(preferences => preferences with { ReducedMotion = value });
+        ShowMotion();
+    }
 
     partial void OnHighContrastChanged(bool value) => Remember(preferences => preferences with { HighContrast = value });
 

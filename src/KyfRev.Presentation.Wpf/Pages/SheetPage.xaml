@@ -211,6 +211,14 @@
         <!-- Quand la place manque, l'en-tête tient sur une ligne, comme sur la maquette : l'enregistrement en icône, les modes
              groupés, les volets sous « ⋯ ». Aucun bouton ne passe sous le retour. -->
         <WrapPanel DockPanel.Dock="Right" HorizontalAlignment="Right">
+          <!-- « Écouter » n'existe qu'en lecture : en tête de rangée, il paraît et disparaît sans décaler les modes ni ce qui les suit. -->
+          <ToggleButton x:Name="ListenToggle" IsChecked="{Binding ReadAloud.IsOpen, Mode=OneWay}" Click="OnListenToggle" Style="{DynamicResource Kyf.Button.Tool}" MinHeight="40" Padding="12,0" Margin="0,0,8,0" Visibility="Collapsed"
+                        ToolTip="{x:Static pages:ReadingText.ListenRegion}" AutomationProperties.Name="{x:Static pages:ReadingText.Listen}">
+            <StackPanel Orientation="Horizontal">
+              <kyf:Icon Text="{x:Static kyf:Icons.Speaker}" VerticalAlignment="Center" />
+              <TextBlock x:Name="ListenLabel" Text="{x:Static pages:ReadingText.Listen}" VerticalAlignment="Center" Margin="8,0,0,0" />
+            </StackPanel>
+          </ToggleButton>
           <StackPanel Orientation="Horizontal">
             <StackPanel.Style>
               <Style TargetType="StackPanel">
@@ -319,13 +327,6 @@
                 </ToggleButton>
               </kyf:SlidingSelectionPanel>
             </Border>
-            <ToggleButton x:Name="ListenToggle" IsChecked="{Binding ReadAloud.IsOpen, Mode=OneWay}" Click="OnListenToggle" Style="{DynamicResource Kyf.Button.Tool}" MinHeight="40" Padding="12,0" Margin="8,0,0,0" Visibility="Collapsed"
-                          ToolTip="{x:Static pages:ReadingText.ListenRegion}" AutomationProperties.Name="{x:Static pages:ReadingText.Listen}">
-              <StackPanel Orientation="Horizontal">
-                <kyf:Icon Text="{x:Static kyf:Icons.Speaker}" VerticalAlignment="Center" />
-                <TextBlock x:Name="ListenLabel" Text="{x:Static pages:ReadingText.Listen}" VerticalAlignment="Center" Margin="8,0,0,0" />
-              </StackPanel>
-            </ToggleButton>
             <!-- En-tête étroit : il passe sous « ⋯ ». -->
             <Border Margin="8,0,0,0">
               <Border.Style>

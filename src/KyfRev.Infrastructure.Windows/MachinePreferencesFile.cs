@@ -146,6 +146,7 @@ public sealed class MachinePreferencesFile : IMachinePreferencesStore
             writer.WriteBoolean("captureGlobale", preferences.GlobalCapture);
             writer.WriteBoolean("majAuDemarrage", preferences.CheckUpdatesAtStartup);
             writer.WriteBoolean("animationsReduites", preferences.ReducedMotion);
+            writer.WriteNumber("animationsCoupees", (int)preferences.MotionOff);
             writer.WriteBoolean("contrasteEleve", preferences.HighContrast);
             writer.WriteBoolean("ciblesAgrandies", preferences.LargerTargets);
             if (preferences.Voice is { } voice)
@@ -192,6 +193,8 @@ public sealed class MachinePreferencesFile : IMachinePreferencesStore
             GlobalCapture = Flag(root, "captureGlobale", defaults.GlobalCapture),
             CheckUpdatesAtStartup = Flag(root, "majAuDemarrage", defaults.CheckUpdatesAtStartup),
             ReducedMotion = Flag(root, "animationsReduites", defaults.ReducedMotion),
+            // Un nombre qui ne dit rien de connu ne coupe rien d'inconnu : seules les familles qui existent sont gardées.
+            MotionOff = (MotionFamilies)((int)Number(root, "animationsCoupees", (int)defaults.MotionOff) & (int)MotionFamilies.All),
             HighContrast = Flag(root, "contrasteEleve", defaults.HighContrast),
             LargerTargets = Flag(root, "ciblesAgrandies", defaults.LargerTargets),
             Voice = root.TryGetProperty("voix", out var voice) && voice.ValueKind == JsonValueKind.String ? voice.GetString() : defaults.Voice,

@@ -454,6 +454,8 @@ public sealed class InterfaceMotionTests
         menu.SelectedIndex = 2;
         var third = (ListBoxItem)menu.ItemContainerGenerator.ContainerFromIndex(2);
         Assert.AreEqual(SelectionMove.Slid, column.LastMove, "il glisse");
+        // Le cadre part une fois montré ce que le choix change : d'ici là, il reste sous l'ancien.
+        Host.Flush();
         Assert.AreEqual(third.TransformToAncestor(column).Transform(default).Y, (double)column.GetAnimationBaseValue(SlidingSelectionPanel.SelectionStartProperty), 0.5, "jusqu'au choix");
         Assert.AreEqual(third.ActualHeight, (double)column.GetAnimationBaseValue(SlidingSelectionPanel.SelectionLengthProperty), 0.5);
         var picture = new RenderTargetBitmap(480, 320, 96, 96, PixelFormats.Pbgra32);
@@ -486,6 +488,8 @@ public sealed class InterfaceMotionTests
         Assert.AreEqual(0, column.Selection!.Value.Top, 0.5);
         reviews.IsChecked = true;
         Assert.AreSame(reviews, SlidingSelectionPanel.Chosen(column));
+        // Le cadre part une fois montré ce que le choix change : d'ici là, il reste sous l'ancien.
+        Host.Flush();
         Assert.AreEqual(general.ActualHeight, (double)column.GetAnimationBaseValue(SlidingSelectionPanel.SelectionStartProperty), 0.5, "le cadre descend à la suivante");
         column.Visibility = Visibility.Collapsed;
         Host.Layout(host);
@@ -573,6 +577,52 @@ public sealed class InterfaceMotionTests
     }
 
     [STATestMethod]
+    public void A_family_switched_off_does_not_move_and_leaves_the_others_alone()
+    {
+        var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
+        var block = new Border { Width = 100, Height = 40 };
+        var read = new ToggleButton { Content = "Lire", IsChecked = true };
+        var write = new ToggleButton { Content = "Écrire" };
+        var row = new SlidingSelectionPanel { Orientation = Orientation.Horizontal, Children = { read, write } };
+        var host = Host.Of(design, new StackPanel { Children = { block, row } });
+        using var source = new HwndSource(new HwndSourceParameters("kyfRev essai") { Width = 480, Height = 320 }) { RootVisual = host };
+        Host.Layout(host);
+        Assert.AreEqual(MotionKinds.None, design.MotionOff);
+        Assert.IsTrue(Transitions.Enter(block), "rien n'est coupé : tout joue");
+
+        // Les changements de vue et les menus coupés : leurs transitions n'ont pas lieu, celle en cours s'arrête.
+        design.MotionOff = MotionKinds.Views | MotionKinds.Surfaces;
+        Assert.AreEqual(MotionKinds.Views | MotionKinds.Surfaces, design.Dictionary[DesignKeys.MotionOff]);
+        Assert.IsFalse(Transitions.Enter(block));
+        Assert.IsFalse(block.HasAnimatedProperties);
+        Assert.IsFalse(Transitions.EnterOnceShown(block));
+        Assert.IsFalse(Transitions.Grow(block, 0.9, new Point(0, 0), kind: MotionKinds.Surfaces));
+        Assert.AreEqual(TimeSpan.Zero, Transitions.DurationOf(block), "la page de l'éditeur reçoit une durée nulle");
+        Assert.AreEqual(PopupAnimation.None, design.Dictionary[DesignKeys.PopupMotion], "les menus s'ouvrent d'un coup");
+
+        // Les autres familles gardent leurs durées.
+        Assert.IsTrue(Transitions.Enter(block, kind: MotionKinds.Lists));
+        Assert.IsGreaterThan(TimeSpan.Zero, Transitions.DurationOf(block, kind: MotionKinds.Panels));
+        write.IsChecked = true;
+        read.IsChecked = false;
+        Assert.AreEqual(SelectionMove.Slid, row.LastMove, "la sélection glisse encore");
+
+        // La sélection coupée à son tour : le cadre saute.
+        design.MotionOff = MotionKinds.Selection;
+        Host.Flush();
+        read.IsChecked = true;
+        write.IsChecked = false;
+        Assert.AreEqual(SelectionMove.Jumped, row.LastMove);
+        Assert.AreEqual(PopupAnimation.Fade, design.Dictionary[DesignKeys.PopupMotion]);
+
+        // Les animations réduites coupent tout, sans oublier les familles réglées.
+        design.ReducedMotion = true;
+        Assert.AreEqual(MotionKinds.Selection, design.MotionOff);
+        Assert.AreEqual(MotionKinds.Selection, design.Dictionary[DesignKeys.MotionOff]);
+        Assert.IsFalse(Transitions.Enter(block, kind: MotionKinds.Lists));
+    }
+
+    [STATestMethod]
     public void A_side_panel_that_changes_width_slides_its_edge_and_what_follows_it()
     {
         var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
@@ -637,6 +687,8 @@ public sealed class InterfaceMotionTests
         write.IsChecked = true;
         read.IsChecked = false;
         Assert.AreEqual(SelectionMove.Slid, row.LastMove);
+        // Le cadre part une fois montré ce que le choix change : d'ici là, il reste sous l'ancien.
+        Host.Flush();
         Assert.AreEqual(write.TransformToAncestor(row).Transform(default).X, (double)row.GetAnimationBaseValue(SlidingSelectionPanel.SelectionStartProperty), 0.5);
         Assert.AreEqual(write.ActualWidth, (double)row.GetAnimationBaseValue(SlidingSelectionPanel.SelectionLengthProperty), 0.5);
         Host.Flush();
@@ -709,6 +761,25 @@ public sealed class InterfaceMotionTests
         Transitions.SetShown(pane, false);
         Assert.IsFalse(Transitions.IsSliding(pane));
 
+        // Une autre fiche dans la même vue : ce que le bloc montre alors est son point de départ, rien ne glisse. Ensuite, si.
+        var before = Transitions.SlidesOf(bar);
+        host.DataContext = "une autre fiche";
+        Transitions.SetShown(bar, false);
+        Assert.AreEqual(Visibility.Collapsed, bar.Visibility, "d'un coup");
+        Assert.AreEqual(before, Transitions.SlidesOf(bar));
+        Host.Layout(host);
+        Host.Flush();
+        Transitions.SetShown(bar, true);
+        Wait(() => Transitions.SlidesOf(bar) == before + 1 && bar.Clip is null);
+        Assert.AreEqual(before + 1, Transitions.SlidesOf(bar), "le même contexte : le bloc glisse de nouveau");
+
+        // Un bouton dont le cadre glisse ne s'enfonce pas : c'est le cadre qui répond au clic.
+        var plain = new ToggleButton { Style = (Style)design.Dictionary["Kyf.Button.Tool"] };
+        var sliding = new ToggleButton { Style = (Style)design.Dictionary["Kyf.Button.Tool"] };
+        Transitions.SetHasSlidingSelection(sliding, true);
+        Assert.IsGreaterThan(0d, Transitions.GetPressScale(plain));
+        Assert.AreEqual(0d, Transitions.GetPressScale(sliding));
+
         // Animations réduites : d'un coup, dans les deux sens.
         design.ReducedMotion = true;
         Assert.AreEqual(TimeSpan.Zero, Transitions.DurationOf(pane));
@@ -752,11 +823,15 @@ public sealed class InterfaceMotionTests
     private static void Wait(Func<bool> done, int milliseconds = 2000)
     {
         var limit = DateTime.UtcNow.AddMilliseconds(milliseconds);
-        while (!done() && DateTime.UtcNow < limit)
-        {
-            Host.Flush();
-            System.Threading.Thread.Sleep(15);
-        }
+        var frame = new System.Windows.Threading.DispatcherFrame();
+        var timer = new System.Windows.Threading.DispatcherTimer(
+            TimeSpan.FromMilliseconds(15),
+            System.Windows.Threading.DispatcherPriority.Background,
+            (_, _) => frame.Continue = !done() && DateTime.UtcNow < limit,
+            System.Windows.Threading.Dispatcher.CurrentDispatcher);
+        timer.Start();
+        System.Windows.Threading.Dispatcher.PushFrame(frame);
+        timer.Stop();
     }
 
     /// <summary>Un objet qui n'est pas un élément d'interface : la propriété n'y fait rien.</summary>

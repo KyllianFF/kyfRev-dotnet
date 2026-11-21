@@ -28,10 +28,11 @@ public sealed partial class ShellWindow
     /// première ouverture est celle où l'accueil se montre sans que l'animation longue ait jamais été vue sur cet ordinateur.
     /// </summary>
     /// <param name="animated">Pour les essais : joue même quand les transitions sont coupées pour eux, ou ne joue pas.</param>
-    /// <returns>Vrai si l'animation a commencé ; faux quand les animations sont réduites.</returns>
+    /// <returns>Vrai si l'animation a commencé ; faux quand les animations sont réduites, ou celle-ci coupée dans les Paramètres.</returns>
     public bool PlayOpening(bool? animated = null)
     {
-        var moves = animated ?? (!Transitions.Skip && TryFindResource(DesignKeys.NormalDuration) is Duration { HasTimeSpan: true } duration && duration.TimeSpan > TimeSpan.Zero);
+        var moves = animated ?? (!Transitions.Skip && TryFindResource(DesignKeys.NormalDuration) is Duration { HasTimeSpan: true } duration && duration.TimeSpan > TimeSpan.Zero
+            && !(TryFindResource(DesignKeys.MotionOff) is MotionKinds off && off.HasFlag(MotionKinds.Opening)));
         if (!moves || Opening is not null)
         {
             return false;

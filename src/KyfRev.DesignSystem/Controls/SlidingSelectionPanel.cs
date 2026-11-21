@@ -100,23 +100,38 @@ public sealed class SlidingSelectionPanel : StackPanel
         _target = bounds;
         if (bounds is not { } b)
         {
+            _run++;
+            _sliding = false;
             BeginAnimation(SelectionStartProperty, null);
             BeginAnimation(SelectionLengthProperty, null);
             InvalidateVisual();
             return;
         }
         var (start, length) = Orientation == Orientation.Horizontal ? (b.Left, b.Width) : (b.Top, b.Height);
-        var canMove = Transitions.Moves(this, DesignKeys.NormalDuration, out var duration);
+        var canMove = Transitions.Moves(this, DesignKeys.NormalDuration, out var duration, MotionKinds.Selection);
         // Un glissement que la mise en page rattrape en route (le choix a changé de taille) continue vers la nouvelle place.
         if (canMove && before is not null && (animate || _sliding))
         {
             var run = ++_run;
             _sliding = true;
-            var slide = new DoubleAnimation(SelectionStart, start, duration) { EasingFunction = Transitions.Ease, FillBehavior = FillBehavior.Stop };
-            slide.Completed += (_, _) => _sliding = _sliding && run != _run;
-            BeginAnimation(SelectionStartProperty, slide);
-            BeginAnimation(SelectionLengthProperty, new DoubleAnimation(SelectionLength, length, duration) { EasingFunction = Transitions.Ease, FillBehavior = FillBehavior.Stop });
             LastMove = SelectionMove.Slid;
+            // Le cadre part une fois montré ce que le choix change (une autre vue, l'éditeur qui s'ouvre) : parti au clic, il
+            // serait arrivé avant la première image. D'ici là, il reste sous l'ancien choix.
+            Dispatcher.BeginInvoke(Transitions.WhenShown, () =>
+            {
+                if (run != _run)
+                {
+                    return;
+                }
+                var slide = new DoubleAnimation(SelectionStart, start, duration) { EasingFunction = Transitions.Ease, FillBehavior = FillBehavior.Stop };
+                slide.Completed += (_, _) => _sliding = _sliding && run != _run;
+                BeginAnimation(SelectionStartProperty, slide);
+                BeginAnimation(SelectionLengthProperty, new DoubleAnimation(SelectionLength, length, duration) { EasingFunction = Transitions.Ease, FillBehavior = FillBehavior.Stop });
+                SelectionStart = start;
+                SelectionLength = length;
+            });
+            InvalidateVisual();
+            return;
         }
         else
         {

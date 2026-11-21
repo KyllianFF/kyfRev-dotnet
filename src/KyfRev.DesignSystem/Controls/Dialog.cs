@@ -215,7 +215,7 @@ public class Dialog : ContentControl
             ApplyTemplate();
             if (GetTemplateChild("Card") is FrameworkElement card)
             {
-                Transitions.Enter(card, DesignKeys.NormalDuration, Transitions.DialogRise);
+                Transitions.Enter(card, DesignKeys.NormalDuration, Transitions.DialogRise, kind: MotionKinds.Surfaces);
             }
             // Une fois le dialogue affiché, le focus va au premier élément qui le prend.
             Dispatcher.BeginInvoke(DispatcherPriority.Input, FocusFirst);

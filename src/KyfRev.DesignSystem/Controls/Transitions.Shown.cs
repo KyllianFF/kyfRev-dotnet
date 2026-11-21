@@ -61,8 +61,9 @@ public static partial class Transitions
         element.SetValue(ShownRunProperty, run);
         var wasSliding = IsSliding(element);
         StopSlide(element);
-        // Pas encore à l'écran, ou sans animation : d'un coup.
-        if (!element.IsLoaded || !Moves(element, DesignKeys.NormalDuration, out var duration))
+        var fresh = IsFreshContext(element);
+        // Pas encore à l'écran, une autre fiche dans la même vue (son état est le point de départ), ou sans animation : d'un coup.
+        if (!element.IsLoaded || fresh || !Moves(element, DesignKeys.NormalDuration, out var duration, MotionKinds.Panels))
         {
             element.Visibility = shown ? Visibility.Visible : Visibility.Collapsed;
             return;
@@ -75,9 +76,9 @@ public static partial class Transitions
                 element.Visibility = Visibility.Collapsed;
                 return;
             }
-            // Il reste là tant que l'application est occupée (ouvrir l'éditeur, par exemple) : lancé plus tôt, le trajet
-            // serait fini avant la première image.
-            element.Dispatcher.BeginInvoke(DispatcherPriority.ContextIdle, () =>
+            // Il reste là le temps que l'application montre ce qui change (ouvrir l'éditeur, par exemple) : lancé plus tôt,
+            // le trajet serait fini avant la première image.
+            element.Dispatcher.BeginInvoke(WhenShown, () =>
             {
                 if ((int)element.GetValue(ShownRunProperty) != run)
                 {
@@ -101,7 +102,7 @@ public static partial class Transitions
         // Il prend sa place, invisible, le temps d'une mise en page : sa taille dit de combien il glisse.
         element.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 0, TimeSpan.Zero) { FillBehavior = FillBehavior.HoldEnd });
         element.Visibility = Visibility.Visible;
-        element.Dispatcher.BeginInvoke(DispatcherPriority.ContextIdle, () =>
+        element.Dispatcher.BeginInvoke(WhenShown, () =>
         {
             if ((int)element.GetValue(ShownRunProperty) != run)
             {
@@ -114,6 +115,40 @@ public static partial class Transitions
             }
             Slide(element, duration, entering: true, null);
         });
+    }
+
+    // Le contexte de données pour lequel l'élément a été montré ou caché en dernier, et s'il vient de changer.
+    private static readonly DependencyProperty ShownContextProperty =
+        DependencyProperty.RegisterAttached("ShownContext", typeof(object), typeof(Transitions), new PropertyMetadata(null));
+
+    private static readonly DependencyProperty ShownSwappedProperty =
+        DependencyProperty.RegisterAttached("ShownSwapped", typeof(bool?), typeof(Transitions), new PropertyMetadata(null));
+
+    /// <summary>
+    /// Vrai si l'élément vient de recevoir un autre contexte de données (une autre fiche dans la même vue) : ce qu'il montre
+    /// alors est un point de départ, pas un changement à animer.
+    /// </summary>
+    private static bool IsFreshContext(FrameworkElement element)
+    {
+        if (element.GetValue(ShownSwappedProperty) is null)
+        {
+            // Première fois : on suit désormais le contexte de l'élément.
+            element.SetValue(ShownSwappedProperty, false);
+            element.SetValue(ShownContextProperty, element.DataContext);
+            element.DataContextChanged += OnShownContextChanged;
+            return false;
+        }
+        return element.GetValue(ShownSwappedProperty) is true || !ReferenceEquals(element.GetValue(ShownContextProperty), element.DataContext);
+    }
+
+    private static void OnShownContextChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        var element = (FrameworkElement)sender;
+        element.SetValue(ShownContextProperty, e.NewValue);
+        // Les liaisons relisent leur valeur dans la foulée, avant ou après ce gestionnaire : jusqu'à la mise en page suivante,
+        // ce que l'élément montre est son point de départ.
+        element.SetValue(ShownSwappedProperty, true);
+        element.Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () => element.SetValue(ShownSwappedProperty, false));
     }
 
     /// <summary>Fait glisser l'élément sur toute sa longueur, depuis son bord ou vers lui, en fondu, découpé à sa place.</summary>

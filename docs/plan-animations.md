@@ -16,23 +16,28 @@
    glisse pour se cacher met le même temps qu'à venir (220 ms) : on doit le voir partir.
 5. **Les fenêtres natives ne s'animent pas** : l'éditeur d'Écrire et l'îlot des Schémas
    sont des pages web posées dans la fenêtre, que l'application ne peut ni estomper ni
-   faire glisser. Ce qui les entoure s'anime. L'éditeur fait paraître sa feuille lui-même, en fondu,
+   faire glisser. Ce qui les entoure s'anime. L'éditeur habille lui-même son texte de sa feuille, en fondu,
    sur la durée que l'application lui donne avec le thème (« --duree-entree »).
-6. **Une seule porte** : toute animation passe par `Transitions.Moves`. C'est là que
-   se lisent « Réduire les animations », le réglage de Windows et, demain, les familles.
-7. **Redimensionner la fenêtre n'anime rien** : un bloc qui passe sous un autre parce
+6. **Une seule porte** : toute animation passe par `Transitions.Moves`, avec sa famille. C'est là
+   que se lisent le choix « Aucune », le réglage de Windows et les familles coupées.
+7. **Une transition lancée pendant que l'application travaille part quand la nouvelle vue est
+   affichée** (`Transitions.WhenShown`) : partie au clic, elle serait finie avant la première image ;
+   attendre que l'application soit au repos la retarderait de plusieurs secondes sur une longue fiche.
+8. **Redimensionner la fenêtre n'anime rien** : un bloc qui passe sous un autre parce
    que la place manque change d'un coup, comme aujourd'hui.
 
-## Réglages (maquette 19D)
+## Réglages (maquette 19D) : faits
 
-Dans Paramètres › Apparence, à la place de la seule case « Réduire les animations » :
+Dans Paramètres › Apparence, la carte « Animations » remplace la case « Réduire les animations » :
 
 - un choix en tête : **Toutes**, **Essentielles** (retour au toucher et sélection),
-  **Aucune** ; « Aucune » reprend le réglage d'aujourd'hui, et le fichier de préférences
-  existant (`animationsReduites`) est relu comme « Aucune » ;
-- **Suivre le réglage de Windows** : si Windows demande moins d'animations, aucune ne joue ;
-- **un interrupteur par famille**, neuf en tout. Chaque animation appartient à une
-  famille et se coupe avec elle, sans redémarrer.
+  **Aucune** ; « Aucune » est l'ancien réglage, et le fichier de préférences existant
+  (`animationsReduites`) se relit tel quel ;
+- si Windows demande moins d'animations, aucune ne joue : c'est dit dans la carte, sans interrupteur
+  de plus ;
+- **un interrupteur par famille** qui a déjà des animations, sept aujourd'hui (`animationsCoupees`
+  dans les préférences). Chaque animation appartient à une famille et se coupe avec elle, sans
+  redémarrer. « Nombres et jauges » et « Révision » auront le leur quand leurs animations existeront.
 
 | Famille | Ce qu'elle couvre |
 | --- | --- |
@@ -46,9 +51,9 @@ Dans Paramètres › Apparence, à la place de la seule case « Réduire les ani
 | Révision | trous révélés, étape validée, surlignage |
 | Animation d'ouverture | les fiches du logo au lancement |
 
-Construction : `Moves` reçoit la famille ; `DesignResources` garde l'ensemble des
-familles allumées à côté de `ReducedMotion`. Une famille éteinte donne une durée nulle,
-donc le chemin « sans animation » déjà essayé partout. Pas d'interrupteur par animation :
+Construction : `Moves` reçoit la famille (`MotionKinds`) ; `DesignResources.MotionOff` garde les
+familles coupées à côté de `ReducedMotion`, et les pose dans les ressources (`Kyf.Motion.Off`).
+Une famille coupée donne une durée nulle, donc le chemin « sans animation » déjà essayé partout. Pas d'interrupteur par animation :
 il y en aurait une quarantaine, et la page deviendrait illisible.
 
 ## Liste des éléments à animer
@@ -82,7 +87,7 @@ Priorité 1 : vu à chaque séance. Priorité 2 : vu chaque jour. Priorité 3 : 
 | --- | --- | --- | --- |
 | Lire ↔ Réviser | le texte clignote | rien ne bouge | fait |
 | Ruban à l'entrée en Écrire | d'un coup | descend de 8 px en fondu, son trait d'onglet avec lui | fait |
-| Feuille de l'éditeur à l'entrée en Écrire | surgissait | paraît en fondu, animée par sa propre page | fait |
+| Feuille de l'éditeur à l'entrée en Écrire | surgissait | le texte est là tout de suite, sa feuille vient l'habiller en fondu | fait |
 | Élément suivant en séance | toute la fiche change d'un coup | l'ancienne s'efface, la nouvelle arrive en fondu | 1 |
 | Bilan de fin de séance | surgit | monte de 8 px en fondu | 2 |
 | « Ouverture… », squelettes → contenu (fiche, Aujourd'hui, Statistiques, Santé) | échange sec | fondu | 2 |
@@ -159,8 +164,8 @@ Une demande de fusion par lot, chacune avec ses essais (`InterfaceMotionTests`),
 ses captures de 470 px à l'ultra-large en clair et en sombre, et un installateur d'essai.
 
 1. **Correctifs** : cadre du choix, glissement réel, Lire ↔ Réviser, ruban, bord du menu.
-2. **Réglages par famille** : la porte `Moves` par famille, les préférences, la page
-   Apparence. En premier, pour que tout ce qui suit naisse avec son interrupteur.
+2. **Réglages par famille** (fait) : la porte `Moves` par famille, les préférences, la page
+   Apparence. Tout ce qui suit naît avec son interrupteur.
 3. **Quatre outils communs**, petits et sans mise en page par image : montrer ou cacher
    un bloc en le faisant glisser (`Transitions.Shown`, fait), le déplier ou le replier (découpe), remplacer un contenu (fondu), retirer une ligne, faire changer un
    nombre ou une jauge. Chacun arrête proprement l'animation précédente s'il est relancé.

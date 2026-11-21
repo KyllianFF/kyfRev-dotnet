@@ -1283,7 +1283,7 @@ public sealed class SettingsHubTests
         try
         {
             Assert.AreEqual("Paramètres", Named<TextBlock>(window, "Heading").Text);
-            var radios = Descendants<RadioButton>(window).ToList();
+            var radios = Descendants<RadioButton>(window).Where(radio => radio.GroupName == "SettingsSections").ToList();
             Assert.HasCount(7, radios, "les sections, dans la liste de gauche");
             Assert.IsTrue(radios[0].IsChecked);
             Assert.AreEqual("Apparence", Named<TextBlock>(window, "SectionTitle").Text);
