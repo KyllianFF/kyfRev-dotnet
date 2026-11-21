@@ -597,4 +597,60 @@ public sealed class FluidityTests
         Assert.ThrowsExactly<ArgumentNullException>(() => Transitions.GetSwappedIn(null!));
         Assert.ThrowsExactly<ArgumentNullException>(() => Transitions.SetSwappedIn(null!, true));
     }
+
+    [STATestMethod]
+    public void A_check_that_shows_by_itself_grows_in()
+    {
+        var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
+        var already = new Border { Width = 18, Height = 18 };
+        var check = new Border { Width = 18, Height = 18, Visibility = Visibility.Collapsed };
+        Transitions.SetGrowsIn(already, true);
+        Transitions.SetGrowsIn(check, true);
+        Assert.IsTrue(Transitions.GetGrowsIn(check));
+        var view = new StackPanel { Children = { already, check } };
+        var window = new Window { Content = view, Resources = design.Dictionary, Left = -10000, Top = -10000, Width = 300, Height = 200, ShowActivated = false, ShowInTaskbar = false };
+        window.Show();
+        try
+        {
+            Host.Flush();
+            Assert.IsFalse(already.HasAnimatedProperties, "la vue qui s'ouvre montre ses coches d'un coup");
+
+            // L'étape vient d'être faite : sa coche paraît en grandissant.
+            check.Visibility = Visibility.Visible;
+            Assert.IsTrue(check.HasAnimatedProperties);
+            Assert.IsInstanceOfType<ScaleTransform>(check.RenderTransform);
+            Assert.AreEqual(new Point(0.5, 0.5), check.RenderTransformOrigin);
+            Wait(() => check.Opacity >= 1 && ((ScaleTransform)check.RenderTransform).ScaleX >= 1);
+
+            // La vue cachée puis revenue : la coche déjà là ne rejoue pas son arrivée.
+            var shown = (ScaleTransform)check.RenderTransform;
+            view.Visibility = Visibility.Collapsed;
+            view.Visibility = Visibility.Visible;
+            Assert.AreEqual(1.0, shown.ScaleX, "elle revient telle quelle");
+            Assert.AreEqual(1.0, check.Opacity);
+
+            // Décochée puis recochée : elle grandit de nouveau. Animations réduites, ou coche qui n'en veut plus : d'un coup.
+            check.Visibility = Visibility.Collapsed;
+            check.Visibility = Visibility.Visible;
+            Wait(() => shown.ScaleX < 1);
+            Assert.IsLessThan(1.0, shown.ScaleX);
+            Wait(() => shown.ScaleX >= 1);
+            design.ReducedMotion = true;
+            check.Visibility = Visibility.Collapsed;
+            check.Visibility = Visibility.Visible;
+            Assert.AreEqual(1.0, shown.ScaleX);
+            design.ReducedMotion = false;
+            Transitions.SetGrowsIn(check, false);
+            check.Visibility = Visibility.Collapsed;
+            check.Visibility = Visibility.Visible;
+            Assert.AreEqual(1.0, shown.ScaleX);
+            Transitions.SetGrowsIn(new System.Windows.Documents.Run(), true);
+            Assert.ThrowsExactly<ArgumentNullException>(() => Transitions.GetGrowsIn(null!));
+            Assert.ThrowsExactly<ArgumentNullException>(() => Transitions.SetGrowsIn(null!, true));
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
 }

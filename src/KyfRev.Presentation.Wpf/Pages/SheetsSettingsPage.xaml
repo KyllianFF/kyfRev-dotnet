@@ -80,7 +80,7 @@
               <Border x:Name="Frame" Height="46" Background="{DynamicResource Kyf.Brush.Surface}" BorderBrush="{DynamicResource Kyf.Brush.ControlBorder}" BorderThickness="1" CornerRadius="5" Padding="2">
                 <reading:PaperSwatch Paper="{Binding Value}" />
               </Border>
-              <Grid x:Name="Check" Width="18" Height="18" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,4,4,0" Visibility="Collapsed">
+              <Grid x:Name="Check" kyf:Transitions.GrowsIn="True" Width="18" Height="18" HorizontalAlignment="Right" VerticalAlignment="Top" Margin="0,4,4,0" Visibility="Collapsed">
                 <Ellipse Fill="{DynamicResource Kyf.Brush.Primary}" />
                 <Path Data="M5,9.4 L7.8,12 L13,6.4" Stroke="{DynamicResource Kyf.Brush.OnPrimary}" StrokeThickness="1.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" />
               </Grid>

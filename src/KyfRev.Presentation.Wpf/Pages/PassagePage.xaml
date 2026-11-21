@@ -57,7 +57,8 @@
             <!-- Définition : le terme ; l'explication une fois demandée. -->
             <StackPanel x:Name="Definition" Visibility="{Binding IsDefinition, Converter={StaticResource Visible}}">
               <TextBlock x:Name="Term" Text="{Binding Term}" Style="{DynamicResource Kyf.Text.Subtitle}" TextWrapping="Wrap" />
-              <StackPanel Visibility="{Binding IsRevealed, Converter={StaticResource Visible}}" Margin="0,12,0,0">
+              <!-- L'explication demandée paraît en fondu. -->
+              <StackPanel kyf:Transitions.SwappedIn="{Binding IsRevealed}" Margin="0,12,0,0">
                 <TextBlock x:Name="Explanation" Text="{Binding Explanation}" Style="{DynamicResource Kyf.Text.BodyLarge}" TextWrapping="Wrap" />
                 <TextBlock Text="{Binding Quote}" TextWrapping="Wrap" Margin="0,12,0,0" Padding="4,2"
                            Background="{DynamicResource Kyf.Brush.PillPassageBackground}" HorizontalAlignment="Left" />
