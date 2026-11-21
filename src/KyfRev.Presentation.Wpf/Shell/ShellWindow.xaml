@@ -451,6 +451,11 @@
 
       <ContentControl x:Name="Page" Grid.Column="1" Content="{Binding Current.Page}" Focusable="False" IsTabStop="False" />
 
+      <!-- L'image de la vue qu'on quitte : elle s'efface un instant par-dessus celle qui arrive (voir LeavePage). Sans effet
+           sur la mise en page, et rien ne s'y clique. -->
+      <Image x:Name="PageGhost" Grid.Column="1" Stretch="Fill" HorizontalAlignment="Left" VerticalAlignment="Top" IsHitTestVisible="False"
+             Visibility="Collapsed" />
+
       <!-- Le rideau du menu : quand le menu se réduit ou se masque, il tient un instant la place quittée et se retire vers le
            nouveau bord (voir FollowSidebar). Dans un canevas : il ne compte pas dans la mise en page. -->
       <Canvas Grid.ColumnSpan="2" IsHitTestVisible="False">

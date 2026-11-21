@@ -852,6 +852,84 @@ public sealed class ShellWindowTests
         }
     }
 
+    [STATestMethod]
+    public void The_view_left_fades_out_over_the_one_that_comes_from_the_side_one_goes_to()
+    {
+        var test = new TestShell();
+        var window = Open(test);
+        // Les essais coupent les transitions ; celui-ci les rend, le temps de les voir.
+        Transitions.Skip = false;
+        try
+        {
+            var page = (FrameworkElement)window.FindName("Page");
+            var ghost = (Image)window.FindName("PageGhost");
+            var menu = test.Shell.MainNavigation;
+            Assert.IsGreaterThanOrEqualTo(3, menu.Count);
+            Assert.AreSame(menu[0], test.Shell.Current);
+            Assert.AreEqual(Visibility.Collapsed, ghost.Visibility, "rien n'est quitté tant qu'on ne change pas de vue");
+
+            // Vers le bas du menu : l'image de la vue quittée s'efface par-dessus, la nouvelle arrive par la droite.
+            var width = page.ActualWidth;
+            test.Shell.Navigate(menu[2]);
+            Assert.AreSame(menu[2], test.Shell.Current);
+            Assert.AreEqual(Visibility.Visible, ghost.Visibility);
+            Assert.IsNotNull(ghost.Source);
+            Assert.AreEqual(width, ghost.Width, "à la taille de la vue quittée");
+            Assert.IsFalse(ghost.IsHitTestVisible, "rien ne s'y clique");
+            Assert.IsTrue(ghost.HasAnimatedProperties, "elle s'efface");
+            Assert.IsTrue(page.HasAnimatedProperties, "la nouvelle paraît");
+            Assert.AreEqual(1, window.EnterPage(), "plus bas dans le menu : par la droite");
+            Wait(() => ghost.Visibility == Visibility.Collapsed);
+            Assert.IsNull(ghost.Source, "effacée, l'image est rendue");
+            Assert.IsFalse(ghost.HasAnimatedProperties);
+
+            // Vers le haut : par la gauche. Hors du menu (la galerie) : sur place.
+            test.Shell.Navigate(menu[1]);
+            Assert.AreEqual(-1, window.EnterPage());
+            test.Shell.Navigate(test.Shell.Gallery);
+            Assert.AreEqual(0, window.EnterPage());
+            test.Shell.Navigate(menu[0]);
+            Assert.AreEqual(0, window.EnterPage(), "on revient d'une vue hors du menu");
+            Wait(() => ghost.Visibility == Visibility.Collapsed);
+
+            // Deux changements coup sur coup : une seule image, celle de la dernière vue quittée.
+            test.Shell.Navigate(menu[1]);
+            test.Shell.Navigate(menu[2]);
+            Assert.AreEqual(Visibility.Visible, ghost.Visibility);
+            Wait(() => ghost.Visibility == Visibility.Collapsed);
+            Assert.IsNull(ghost.Source);
+
+            // Sur un très grand écran, l'image est dessinée moins fine plutôt que de retarder le changement de vue.
+            Assert.AreEqual(1, ShellWindow.GhostScale(1920 * 1080 * 0.7));
+            Assert.AreEqual(0.5, ShellWindow.GhostScale(4 * ShellWindow.PageGhostPixels), 1e-9);
+
+            // Animations coupées : pas d'image, la vue change d'un coup.
+            Transitions.Skip = true;
+            Assert.IsFalse(window.LeavePage());
+            test.Shell.Navigate(menu[0]);
+            Assert.AreEqual(Visibility.Collapsed, ghost.Visibility);
+            Assert.IsFalse(page.HasAnimatedProperties);
+        }
+        finally
+        {
+            Transitions.Skip = true;
+            window.Close();
+        }
+
+        static void Wait(Func<bool> done)
+        {
+            var until = DateTime.UtcNow.AddSeconds(5);
+            while (!done() && DateTime.UtcNow < until)
+            {
+                var frame = new System.Windows.Threading.DispatcherFrame();
+                var timer = new System.Windows.Threading.DispatcherTimer(TimeSpan.FromMilliseconds(15), System.Windows.Threading.DispatcherPriority.Background, (_, _) => frame.Continue = false, System.Windows.Threading.Dispatcher.CurrentDispatcher);
+                System.Windows.Threading.Dispatcher.PushFrame(frame);
+                timer.Stop();
+            }
+            Assert.IsTrue(done(), "attendu en cinq secondes");
+        }
+    }
+
     private static ShellWindow Open(TestShell test)
     {
         var window = new ShellWindow(test.Shell) { ShowActivated = true, Left = -10000, Top = -10000, WindowStartupLocation = WindowStartupLocation.Manual };

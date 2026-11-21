@@ -201,10 +201,22 @@ public class Dialog : ContentControl
         base.OnKeyDown(e);
     }
 
+    private static readonly DependencyPropertyKey IsLeavingPropertyKey =
+        DependencyProperty.RegisterReadOnly(nameof(IsLeaving), typeof(bool), typeof(Dialog), new PropertyMetadata(false));
+
+    /// <summary>Propriété <see cref="IsLeaving"/>.</summary>
+    public static readonly DependencyProperty IsLeavingProperty = IsLeavingPropertyKey.DependencyProperty;
+
+    /// <summary>Fermé, le dialogue s'efface encore : il reste à l'écran un instant, sans plus rien recevoir.</summary>
+    public bool IsLeaving => (bool)GetValue(IsLeavingProperty);
+
     private void OnIsOpenChanged(bool isOpen)
     {
         if (isOpen)
         {
+            // Rouvert pendant qu'il s'effaçait : il est là, entier.
+            BeginAnimation(OpacityProperty, null);
+            SetValue(IsLeavingPropertyKey, false);
             // Rouvert aussitôt après un refus, il a encore le focus : ce qu'on retient reste ce d'où l'on venait.
             if (!IsKeyboardFocusWithin)
             {
@@ -222,6 +234,9 @@ public class Dialog : ContentControl
         }
         else
         {
+            // Il s'efface, avec son voile, au lieu de disparaître d'un coup ; le focus, lui, repart tout de suite.
+            SetValue(IsLeavingPropertyKey, true);
+            Transitions.Exit(this, () => SetValue(IsLeavingPropertyKey, false));
             Dispatcher.BeginInvoke(DispatcherPriority.Input, GiveFocusBack);
         }
     }
@@ -235,9 +250,12 @@ public class Dialog : ContentControl
         }
         var before = _focusBefore;
         _focusBefore = null;
-        if (KeyboardFocus.IsLost())
+        // Fermé, le dialogue s'efface encore un instant : le focus resté dedans est perdu autant que s'il avait disparu.
+        var within = IsKeyboardFocusWithin;
+        if ((KeyboardFocus.IsLost() || within) && before?.Focus() != true && within)
         {
-            before?.Focus();
+            // Rien à qui le rendre : il ne reste pas sur un bouton qui s'efface, que la touche Entrée actionnerait encore.
+            Keyboard.ClearFocus();
         }
     }
 

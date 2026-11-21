@@ -503,8 +503,11 @@
       </StackPanel>
 
       <!-- Le ruban court sur toute la largeur, au-dessus du plan et des passages. -->
-      <StackPanel x:Name="RibbonRow" Grid.Row="1" Margin="16,0,16,8" DataContext="{Binding Editor}"
-                  Visibility="{Binding DataContext.IsWriting, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource Visible}}">
+      <!-- Il descend de quelques pixels en paraissant, et remonte en s'effaçant quand on quitte l'écriture. La rangée garde le
+           contexte de la page ; ce qu'elle porte reçoit celui de l'éditeur, et le garde le temps de s'effacer (ShowRibbonContext). -->
+      <Border x:Name="RibbonRow" Grid.Row="1" Margin="16,0,16,8" kyf:Transitions.Shown="{Binding IsWriting}" kyf:Transitions.ShownFrom="Top"
+              kyf:Transitions.ShownTravel="{x:Static pages:SheetPage.RibbonDrop}">
+      <StackPanel x:Name="RibbonContent">
         <editing:EditorRibbon x:Name="Ribbon" PageSetup="{Binding DataContext.PageSetup, RelativeSource={RelativeSource AncestorType=UserControl}}"
                               IsReduced="{Binding DataContext.IsRibbonReduced, RelativeSource={RelativeSource AncestorType=UserControl}, Mode=TwoWay}" />
         <!-- Un conflit n'écrit rien tant qu'il n'est pas tranché : aucune des deux versions n'est perdue. -->
@@ -525,6 +528,7 @@
           </WrapPanel>
         </StackPanel>
       </StackPanel>
+      </Border>
 
       <!-- À droite, presque rien : la barre de défilement de la fiche est au bord de la fenêtre. Les volets de droite, quand
            ils sont là, gardent leur écart avec ce bord. -->

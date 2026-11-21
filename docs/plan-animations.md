@@ -167,13 +167,13 @@ qui part d'un coup, ce qui saute pour faire de la place, et l'application occup�
 | --- | --- | --- | --- |
 | 1 (fait, à la demande : quand le pointeur ou le clavier arrive sur « Écrire ») | L'éditeur se crée à chaque entrée en écriture : 170 à 430 ms d'attente, pendant lesquels l'application est occupée et les animations sautent des images | Le créer d'avance, caché, dès que la fiche s'ouvre en lecture ; le garder d'une entrée à l'autre | 20A |
 | 2 (fait, l'alignement seulement en haut de la fiche) | Le ruban pousse le texte d'un coup en paraissant ; au relais entre la fiche lue et l'éditeur, le texte change de place | Le texte descend avec le ruban (220 ms) ; la lecture et l'éditeur posent le premier bloc au même endroit, le titre de la fiche s'efface vers le haut | 20A |
-| 3 | Rien de ce qui part n'est animé : vue quittée, dialogue, menu, avis, ruban en quittant l'écriture | Un départ en 120 ms, sur une courbe qui accélère ; une vue arrive du côté où l'on va | 20B |
+| 3 (fait, sauf les menus : Windows retire leur fenêtre dès qu'ils se ferment, il n'y a plus rien à estomper) | Rien de ce qui part n'est animé : vue quittée, dialogue, menu, avis, ruban en quittant l'écriture | Un départ en 120 ms, sur une courbe qui accélère ; une vue arrive du côté où l'on va. Un avis garde son texte en s'effaçant, le ruban ce qu'il montrait ; rien de ce qui part ne reçoit plus de clic. L'image de la vue quittée est bornée à 1,5 million de points, pour ne pas retarder le changement sur un très grand écran | 20B |
 | 4 | Un volet glisse, mais le texte saute à sa nouvelle place | Le texte glisse en même temps (position affichée animée, une seule mise en page) | 20C |
 | 5 | Une ligne retirée disparaît et la liste remonte d'un coup | Elle s'efface (120 ms), la liste se referme (220 ms) | 20C |
 | 6 | Aller à un titre, à un passage, au trou suivant : un saut | Défilement accompagné de 220 ms au plus | 20D |
 | 7 | Squelette remplacé d'un coup par le contenu | Fondu croisé de 220 ms | 20D |
 | 8 | Une liste entière paraît en bloc | Courte cascade : 35 ms d'écart, six lignes au plus | 20C |
-| 9 | Une seule courbe pour tout, deux durées | Une courbe d'arrivée et une de départ ; une troisième durée (320 ms) pour les grandes surfaces, si l'essai le demande | 20B |
+| 9 (fait : deux courbes ; la troisième durée attend l'essai) | Une seule courbe pour tout, deux durées | Une courbe d'arrivée et une de départ ; une troisième durée (320 ms) pour les grandes surfaces, si l'essai le demande | 20B |
 | 10 | Le thème bascule d'un coup | Fondu des couleurs en 120 ms | 20D |
 | 11 | Compteurs, jauges, étape validée, trous révélés : secs | Voir « Nombres et jauges » et « Révision » plus haut | 19C |
 | 12 | Les blocs qui glissent sont redessinés à chaque image | Les mettre en image le temps du trajet (`BitmapCache`), si une mesure montre que c'est utile | — |

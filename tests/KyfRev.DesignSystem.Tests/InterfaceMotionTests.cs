@@ -855,6 +855,154 @@ public sealed class InterfaceMotionTests
     }
 
     [STATestMethod]
+    public void What_leaves_fades_out_before_giving_up_its_place()
+    {
+        var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
+        var block = new Border { Width = 200, Height = 100 };
+        var dialog = new Dialog { Title = "Supprimer ?", Content = "Elle part à la corbeille." };
+        var notice = new Notification { Message = "Enregistré.", Severity = NotificationSeverity.Success };
+        var ribbon = new Border { Width = 300, Height = 60 };
+        Transitions.SetShownFrom(ribbon, Dock.Top);
+        Transitions.SetShownTravel(ribbon, 8);
+        Assert.AreEqual(8, Transitions.GetShownTravel(ribbon));
+        var host = Host.Of(design, new Grid { Children = { new StackPanel { Children = { ribbon, block, notice } }, dialog } });
+        using var source = new HwndSource(new HwndSourceParameters("kyfRev essai") { Width = 480, Height = 320 }) { RootVisual = host };
+        Host.Layout(host);
+        Host.Flush();
+
+        // Un élément qui part s'efface en accélérant, et ne prévient qu'une fois parti ; il redevient alors entier.
+        var gone = 0;
+        Assert.IsTrue(Transitions.Exit(block, () => gone++, drop: 4, shift: -10));
+        Assert.AreEqual(0, gone, "il est encore là");
+        Assert.IsTrue(block.HasAnimatedProperties);
+        Assert.IsInstanceOfType<TranslateTransform>(block.RenderTransform);
+        Wait(() => gone == 1);
+        Assert.AreEqual(1, gone);
+        Assert.IsFalse(block.HasAnimatedProperties);
+        Assert.AreEqual(Transform.Identity, block.RenderTransform);
+
+        // Un dialogue fermé s'efface, avec son voile, sans plus rien recevoir ; puis il n'est plus là.
+        dialog.IsOpen = true;
+        Host.Layout(host);
+        Assert.AreEqual(Visibility.Visible, dialog.Visibility);
+        dialog.IsOpen = false;
+        Assert.IsTrue(dialog.IsLeaving);
+        Assert.AreEqual(Visibility.Visible, dialog.Visibility, "il s'efface encore");
+        Assert.IsFalse(dialog.IsHitTestVisible);
+        Wait(() => !dialog.IsLeaving);
+        Assert.IsFalse(dialog.IsLeaving);
+        Assert.AreEqual(Visibility.Collapsed, dialog.Visibility);
+        // Rouvert pendant qu'il s'efface : il est là, entier.
+        dialog.IsOpen = true;
+        dialog.IsOpen = false;
+        dialog.IsOpen = true;
+        Assert.IsFalse(dialog.IsLeaving);
+        Assert.AreEqual(Visibility.Visible, dialog.Visibility);
+        Assert.IsTrue(dialog.IsHitTestVisible);
+        dialog.IsOpen = false;
+        Wait(() => !dialog.IsLeaving);
+
+        // Un avis fermé, ou lu jusqu'au bout, s'efface de même avant de rendre sa place.
+        Host.Layout(host);
+        Assert.AreEqual(Visibility.Visible, notice.Visibility);
+        notice.Close();
+        Assert.IsTrue(notice.IsLeaving);
+        Assert.AreEqual(Visibility.Visible, notice.Visibility);
+        Wait(() => !notice.IsLeaving);
+        Assert.AreEqual(Visibility.Collapsed, notice.Visibility);
+        notice.IsOpen = true;
+        Host.Layout(host);
+        Assert.AreEqual(Visibility.Visible, notice.Visibility);
+        notice.Expire();
+        Assert.IsTrue(notice.IsLeaving);
+        Wait(() => !notice.IsLeaving);
+        Assert.AreEqual(Visibility.Collapsed, notice.Visibility);
+        notice.Expire();
+        Assert.IsFalse(notice.IsLeaving, "déjà partie, elle ne repart pas");
+
+        // Une page vide souvent son message au moment de fermer : l'avis part avec ce qu'il disait, pas vide.
+        string? leftWith = null;
+        System.ComponentModel.DependencyPropertyDescriptor.FromProperty(Notification.IsLeavingProperty, typeof(Notification)).AddValueChanged(notice, (_, _) =>
+        {
+            if (!notice.IsLeaving)
+            {
+                leftWith = notice.ShownMessage;
+            }
+        });
+        notice.Message = "Déplacé.";
+        Host.Layout(host);
+        Host.Flush();
+        Assert.AreEqual(Visibility.Visible, notice.Visibility, "un nouveau message la fait reparaître");
+        Assert.AreEqual("Déplacé.", notice.ShownMessage);
+        notice.Message = string.Empty;
+        notice.IsOpen = false;
+        Wait(() => !notice.IsLeaving);
+        Host.Flush();
+        Assert.AreEqual("Déplacé.", leftWith, "elle a gardé son texte en s'effaçant");
+        Assert.AreEqual(string.Empty, notice.ShownMessage, "partie, elle suit de nouveau son message");
+        // Vidé sans être fermé : le texte suit.
+        notice.Message = "Copié.";
+        notice.IsOpen = true;
+        Host.Layout(host);
+        Host.Flush();
+        notice.Message = string.Empty;
+        Host.Flush();
+        Assert.AreEqual(string.Empty, notice.ShownMessage);
+
+        // Un nouveau message pendant qu'elle s'efface : elle revient entière, et son temps repart.
+        notice.Message = "Collé.";
+        Host.Layout(host);
+        Host.Flush();
+        notice.Expire();
+        Assert.IsTrue(notice.IsLeaving);
+        notice.Message = "Archivé.";
+        Assert.IsFalse(notice.IsLeaving);
+        Assert.IsFalse(notice.IsExpired);
+        Assert.AreEqual("Archivé.", notice.ShownMessage);
+        Assert.AreEqual(Visibility.Visible, notice.Visibility);
+        Assert.IsFalse(notice.HasAnimatedProperties, "son fondu de départ est arrêté");
+        // Fermée pendant qu'elle s'efface d'elle-même : elle finit de partir, et se rouvre comme neuve.
+        notice.Expire();
+        notice.IsOpen = false;
+        notice.Message = string.Empty;
+        Assert.IsTrue(notice.IsLeaving);
+        Wait(() => !notice.IsLeaving);
+        Assert.AreEqual(Visibility.Collapsed, notice.Visibility);
+        Assert.AreEqual("Archivé.", leftWith);
+        notice.Message = "Rétabli.";
+        notice.IsOpen = true;
+        Host.Layout(host);
+        Assert.IsFalse(notice.IsExpired);
+        Assert.AreEqual(Visibility.Visible, notice.Visibility);
+
+        // Un bloc qui paraît presque sur place (le ruban) s'en va de même, vite, sans glisser de toute sa hauteur.
+        Transitions.SetShown(ribbon, false);
+        Wait(() => ribbon.Visibility == Visibility.Collapsed);
+        Assert.AreEqual(Visibility.Collapsed, ribbon.Visibility);
+        Assert.AreEqual(1, Transitions.SlidesOf(ribbon));
+        Transitions.SetShown(ribbon, true);
+        Host.Layout(host);
+        Wait(() => Transitions.SlidesOf(ribbon) == 2 && ribbon.Clip is null);
+        Assert.AreEqual(Visibility.Visible, ribbon.Visibility);
+
+        // Animations coupées : tout part d'un coup, et la suite est prévenue tout de suite.
+        design.ReducedMotion = true;
+        Assert.IsFalse(Transitions.Exit(block, () => gone++));
+        Assert.AreEqual(2, gone);
+        dialog.IsOpen = true;
+        dialog.IsOpen = false;
+        Assert.IsFalse(dialog.IsLeaving);
+        Assert.AreEqual(Visibility.Collapsed, dialog.Visibility);
+        notice.Close();
+        Assert.IsFalse(notice.IsLeaving);
+        Assert.AreEqual(Visibility.Collapsed, notice.Visibility);
+        Assert.ThrowsExactly<ArgumentNullException>(() => Transitions.Exit(null!, () => { }));
+        Assert.ThrowsExactly<ArgumentNullException>(() => Transitions.Exit(block, null!));
+        Assert.ThrowsExactly<ArgumentNullException>(() => Transitions.GetShownTravel(null!));
+        Assert.ThrowsExactly<ArgumentNullException>(() => Transitions.SetShownTravel(null!, 1));
+    }
+
+    [STATestMethod]
     public void A_block_can_come_from_any_edge()
     {
         var design = new DesignResources(ThemeKind.Light, reducedMotion: false);

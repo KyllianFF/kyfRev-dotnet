@@ -44,6 +44,20 @@ internal sealed partial class SheetPage : UserControl
                 _ribbonPush = RibbonRow.ActualHeight + RibbonRow.Margin.Bottom;
             }
         };
+        RibbonRow.IsVisibleChanged += (_, e) =>
+        {
+            if (e.NewValue is not false)
+            {
+                return;
+            }
+            // Le ruban vient de rendre sa place : il lâche l'éditeur qu'il montrait encore, et ce qui était sous lui remonte
+            // en glissant.
+            ShowRibbonContext(DataContext as SheetPageViewModel);
+            if (DataContext is SheetPageViewModel { IsWriting: false })
+            {
+                Transitions.FollowOnceShown(Body, _ribbonPush);
+            }
+        };
         EditorView.TextReady += (_, _) => AlignReadingText();
         EditorView.TextShown += (_, _) =>
         {
@@ -91,6 +105,8 @@ internal sealed partial class SheetPage : UserControl
                 page.PropertyChanged += OnPageChanged;
                 // Une autre fiche : son mode est le point de départ, il ne s'anime pas.
                 _mode = -1;
+                RibbonRow.IsHitTestVisible = true;
+                RibbonContent.DataContext = page.Editor;
                 ShowMode(page);
                 ShowReadingText(page);
                 page.Sharing?.PropertyChanged += OnSharingChanged;
@@ -105,7 +121,7 @@ internal sealed partial class SheetPage : UserControl
     }
 
     /// <summary>De combien le ruban descend en paraissant, quand on passe à Écrire.</summary>
-    internal const double RibbonDrop = 8;
+    public const double RibbonDrop = 8;
 
     /// <summary>Le mode montré : 0 Lire, 1 Réviser, 2 Écrire ; −1 avant le premier.</summary>
     private int _mode = -1;
@@ -151,17 +167,32 @@ internal sealed partial class SheetPage : UserControl
         }
         if (mode != 2)
         {
-            // Le ruban parti, ce qui était sous lui remonte en glissant.
+            // Le ruban s'efface d'abord ; quand il rend sa place, ce qui était sous lui remonte en glissant (voir le constructeur).
             Transitions.Rest(SheetArea);
-            Transitions.FollowOnceShown(Body, _ribbonPush);
             return Transitions.EnterOnceShown(SheetText, KyfRev.DesignSystem.DesignKeys.NormalDuration);
         }
-        if (!Transitions.EnterOnceShown(Ribbon, KyfRev.DesignSystem.DesignKeys.NormalDuration, rise: -RibbonDrop))
+        // Le ruban paraît de lui-même (Transitions.Shown) ; la fiche le suit.
+        if (Transitions.DurationOf(this) == TimeSpan.Zero)
         {
             return false;
         }
         FollowRibbon();
         return true;
+    }
+
+    /// <summary>
+    /// Le ruban montre l'éditeur de la page. Quand elle quitte l'écriture, il garde le sien le temps de s'effacer, sans plus
+    /// rien recevoir : vidé d'un coup, ses listes et ses boutons changeraient sous les yeux avant de partir.
+    /// </summary>
+    internal void ShowRibbonContext(SheetPageViewModel? page)
+    {
+        if (page?.Editor is null && RibbonRow.IsVisible && RibbonContent.DataContext is not null)
+        {
+            RibbonRow.IsHitTestVisible = false;
+            return;
+        }
+        RibbonRow.IsHitTestVisible = true;
+        RibbonContent.DataContext = page?.Editor;
     }
 
     /// <summary>De combien le ruban pousse ce qui est sous lui : sa hauteur et sa marge.</summary>
@@ -250,6 +281,10 @@ internal sealed partial class SheetPage : UserControl
     /// <summary>Le texte mis en forme a sa propre fenêtre : tout ce qui le recouvre le lui dit.</summary>
     private void OnPageChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
+        if (e.PropertyName is nameof(SheetPageViewModel.IsWriting) or nameof(SheetPageViewModel.Editor) && sender is SheetPageViewModel edited)
+        {
+            ShowRibbonContext(edited);
+        }
         if (e.PropertyName is nameof(SheetPageViewModel.IsWriting) or nameof(SheetPageViewModel.IsRevising) && sender is SheetPageViewModel switched)
         {
             ShowMode(switched);
