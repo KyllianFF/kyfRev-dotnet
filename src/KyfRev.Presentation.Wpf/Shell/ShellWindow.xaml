@@ -116,7 +116,7 @@
         <StackPanel x:Name="Row" Orientation="Horizontal">
           <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource NavigationGlyphTemplate}" Margin="0,0,12,0" VerticalAlignment="Center" />
           <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
-          <TextBlock x:Name="RowBadge" Text="{Binding Badge.Text}" Margin="8,0,0,0" VerticalAlignment="Center" FontFamily="{DynamicResource Kyf.Font.Code}"
+          <TextBlock x:Name="RowBadge" kyf:Transitions.RollingText="{Binding Badge.Text}" Margin="8,0,0,0" VerticalAlignment="Center" FontFamily="{DynamicResource Kyf.Font.Code}"
                      FontSize="{DynamicResource Kyf.FontSize.Caption}" Visibility="{Binding Badge.IsShown, Converter={StaticResource Visible}, FallbackValue=Collapsed}" />
         </StackPanel>
         <!-- Dans la colonne d'icônes : l'icône seule, en grand, dans un carré ; le nom se lit au survol, le compteur d'une extension
@@ -125,7 +125,7 @@
           <Viewbox Width="24" Height="24" HorizontalAlignment="Center" VerticalAlignment="Center">
             <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource NavigationGlyphTemplate}" />
           </Viewbox>
-          <TextBlock x:Name="StackedBadge" Text="{Binding Badge.Text}" FontFamily="{DynamicResource Kyf.Font.Code}" FontSize="12" HorizontalAlignment="Right" VerticalAlignment="Top"
+          <TextBlock x:Name="StackedBadge" kyf:Transitions.RollingText="{Binding Badge.Text}" FontFamily="{DynamicResource Kyf.Font.Code}" FontSize="12" HorizontalAlignment="Right" VerticalAlignment="Top"
                      Margin="0,2,4,0" Visibility="{Binding Badge.IsShown, Converter={StaticResource Visible}, FallbackValue=Collapsed}" />
         </Grid>
       </Grid>
@@ -141,7 +141,7 @@
       <StackPanel Orientation="Horizontal">
         <ContentPresenter Content="{Binding}" ContentTemplate="{StaticResource NavigationGlyphTemplate}" Margin="0,0,12,0" VerticalAlignment="Center" />
         <TextBlock Text="{Binding Label}" VerticalAlignment="Center" />
-        <TextBlock Text="{Binding Badge.Text}" Margin="8,0,0,0" VerticalAlignment="Center" FontFamily="{DynamicResource Kyf.Font.Code}"
+        <TextBlock kyf:Transitions.RollingText="{Binding Badge.Text}" Margin="8,0,0,0" VerticalAlignment="Center" FontFamily="{DynamicResource Kyf.Font.Code}"
                    FontSize="{DynamicResource Kyf.FontSize.Caption}" Visibility="{Binding Badge.IsShown, Converter={StaticResource Visible}, FallbackValue=Collapsed}" />
       </StackPanel>
     </DataTemplate>
@@ -664,5 +664,10 @@
       </Grid>
     </Grid>
   </Grid>
+
+    <!-- L'image de la fenêtre dans l'ancien thème : elle s'efface un instant par-dessus le nouveau (voir FadeTheme). Sans
+         effet sur la mise en page, et rien ne s'y clique. -->
+    <Image x:Name="ThemeGhost" Grid.RowSpan="2" Stretch="Fill" HorizontalAlignment="Left" VerticalAlignment="Top" IsHitTestVisible="False"
+           Visibility="Collapsed" />
   </Grid>
 </Window>

@@ -358,4 +358,76 @@ public sealed class FluidityTests
         Assert.ThrowsExactly<ArgumentNullException>(() => Transitions.FollowAsideOnceShown(null!, 1));
         Assert.ThrowsExactly<ArgumentNullException>(() => Transitions.ShiftAsideOnceShown(null!, 1));
     }
+
+    [STATestMethod]
+    public void A_gauge_advances_and_a_count_rolls()
+    {
+        var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
+        var gauge = new ProgressBar { Maximum = 100, Value = 20, Width = 200 };
+        var count = new TextBlock();
+        var fresh = new TextBlock();
+        Transitions.SetRollingText(count, "17");
+        var host = Host.Of(design, new StackPanel { Children = { gauge, count, fresh } });
+        using var source = new HwndSource(new HwndSourceParameters("kyfRev essai") { Width = 480, Height = 320 }) { RootVisual = host };
+        Host.Layout(host);
+        Host.Flush();
+
+        // Une jauge qui avance : sa barre a déjà sa nouvelle longueur, et repart de l'ancienne.
+        Assert.IsTrue(Transitions.GetAdvances(gauge), "le style des jauges le demande");
+        var indicator = Host.Part<FrameworkElement>(gauge, "PART_Indicator");
+        gauge.Value = 60;
+        Assert.IsInstanceOfType<ScaleTransform>(indicator.RenderTransform);
+        var stretch = (ScaleTransform)indicator.RenderTransform;
+        Assert.AreEqual(new Point(0, 0.5), indicator.RenderTransformOrigin, "elle grandit depuis son début");
+        Wait(() => stretch.ScaleX < 0.99);
+        Assert.IsLessThan(0.99, stretch.ScaleX, "elle part de l'ancienne longueur");
+        Assert.IsGreaterThanOrEqualTo((20.0 / 60) - 0.001, stretch.ScaleX);
+        Wait(() => stretch.ScaleX >= 1);
+        Assert.AreEqual(1.0, stretch.ScaleX, "et arrive à la nouvelle");
+
+        // Remise à zéro, ou repartie de zéro : elle ne glisse pas.
+        gauge.Value = 0;
+        Assert.AreEqual(Transform.Identity, indicator.RenderTransform);
+        gauge.Value = 30;
+        Assert.AreEqual(Transform.Identity, indicator.RenderTransform);
+        // Animations réduites, jauge qui n'en veut plus, jauge sans modèle : rien.
+        design.ReducedMotion = true;
+        gauge.Value = 80;
+        Assert.AreEqual(Transform.Identity, indicator.RenderTransform);
+        design.ReducedMotion = false;
+        Transitions.SetAdvances(gauge, false);
+        gauge.Value = 90;
+        Assert.AreEqual(Transform.Identity, indicator.RenderTransform);
+        Assert.IsFalse(Transitions.Advance(new ProgressBar(), 10, 20));
+        Transitions.SetAdvances(new Border(), true);
+
+        // Un compte qui change : la nouvelle valeur arrive par le bas, en fondu.
+        Assert.AreEqual("17", count.Text);
+        Assert.AreEqual("17", Transitions.GetRollingText(count));
+        Assert.IsFalse(count.HasAnimatedProperties, "posé avant d'être à l'écran, il ne bouge pas");
+        Transitions.SetRollingText(count, "16");
+        Assert.AreEqual("16", count.Text);
+        Assert.IsTrue(count.HasAnimatedProperties);
+        Assert.IsInstanceOfType<TranslateTransform>(count.RenderTransform);
+        Wait(() => count.Opacity >= 1 && ((TranslateTransform)count.RenderTransform).Y == 0);
+        Assert.AreEqual(1.0, count.Opacity);
+
+        // Un compte qui paraît, ou qui s'en va, n'est pas un compte qui change ; animations réduites : rien.
+        Transitions.SetRollingText(fresh, "3");
+        Assert.AreEqual("3", fresh.Text);
+        Assert.IsFalse(fresh.HasAnimatedProperties);
+        Transitions.SetRollingText(fresh, null);
+        Assert.AreEqual(string.Empty, fresh.Text);
+        Assert.IsFalse(fresh.HasAnimatedProperties);
+        Transitions.SetRollingText(fresh, "4");
+        design.ReducedMotion = true;
+        Transitions.SetRollingText(fresh, "5");
+        Assert.AreEqual("5", fresh.Text);
+        Assert.IsFalse(fresh.HasAnimatedProperties);
+        Transitions.SetRollingText(new Border(), "sans effet");
+        Assert.ThrowsExactly<ArgumentNullException>(() => Transitions.GetAdvances(null!));
+        Assert.ThrowsExactly<ArgumentNullException>(() => Transitions.SetAdvances(null!, true));
+        Assert.ThrowsExactly<ArgumentNullException>(() => Transitions.GetRollingText(null!));
+        Assert.ThrowsExactly<ArgumentNullException>(() => Transitions.SetRollingText(null!, "x"));
+    }
 }

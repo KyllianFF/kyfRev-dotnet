@@ -65,6 +65,8 @@ public sealed partial class ShellWindow : Window
         shell.Appearance.Attach(this);
         shell.PropertyChanged += OnShellChanged;
         // Une vue qui en remplace une autre : celle qu'on quitte s'efface, celle qui arrive vient du côté où l'on va.
+        // Le thème bascule en fondu : l'image de l'ancien s'efface par-dessus le nouveau.
+        shell.Appearance.ThemeChanging += (_, _) => FadeTheme();
         shell.PropertyChanging += (_, e) =>
         {
             if (e.PropertyName == nameof(ShellViewModel.Current))
@@ -179,6 +181,54 @@ public sealed partial class ShellWindow : Window
         item is null ? -1 : _shell.MainNavigation.Concat(_shell.SecondaryNavigation).ToList().IndexOf(item);
 
     /// <summary>
+    /// Le thème va changer : l'image de la fenêtre telle qu'elle est, dans l'ancien thème, est posée par-dessus et s'efface
+    /// pendant que les nouvelles couleurs prennent place dessous. Une fenêtre native (l'éditeur, les schémas) passe devant
+    /// cette image : elle change de couleurs d'elle-même.
+    /// </summary>
+    /// <returns>Vrai si le fondu a commencé.</returns>
+    internal bool FadeTheme()
+    {
+        Transitions.StopExit(ThemeGhost);
+        ThemeGhost.Visibility = Visibility.Collapsed;
+        ThemeGhost.Source = null;
+        if (!IsLoaded || Frame.ActualWidth < 1 || Frame.ActualHeight < 1
+            || Transitions.DurationOf(Frame, KyfRev.DesignSystem.DesignKeys.FastDuration) == TimeSpan.Zero)
+        {
+            return false;
+        }
+        ThemeGhost.Source = Portrait(Frame);
+        ThemeGhost.Width = Frame.ActualWidth;
+        ThemeGhost.Height = Frame.ActualHeight;
+        ThemeGhost.Visibility = Visibility.Visible;
+        return Transitions.Exit(
+            ThemeGhost,
+            () =>
+            {
+                ThemeGhost.Visibility = Visibility.Collapsed;
+                ThemeGhost.Source = null;
+            },
+            KyfRev.DesignSystem.DesignKeys.FastDuration,
+            kind: KyfRev.DesignSystem.MotionKinds.Views);
+    }
+
+    /// <summary>L'image d'un élément tel qu'il est à l'écran, moins fine s'il est très grand (voir <see cref="PageGhostPixels"/>).</summary>
+    private System.Windows.Media.Imaging.RenderTargetBitmap Portrait(FrameworkElement element)
+    {
+        var dpi = VisualTreeHelper.GetDpi(this);
+        var fine = GhostScale(element.ActualWidth * dpi.DpiScaleX * element.ActualHeight * dpi.DpiScaleY);
+        var picture = new System.Windows.Media.Imaging.RenderTargetBitmap(
+            (int)Math.Ceiling(element.ActualWidth * dpi.DpiScaleX * fine), (int)Math.Ceiling(element.ActualHeight * dpi.DpiScaleY * fine), dpi.PixelsPerInchX * fine, dpi.PixelsPerInchY * fine, PixelFormats.Pbgra32);
+        var drawing = new DrawingVisual();
+        using (var context = drawing.RenderOpen())
+        {
+            context.DrawRectangle(new VisualBrush(element) { Stretch = Stretch.None, AlignmentX = AlignmentX.Left, AlignmentY = AlignmentY.Top }, null, new Rect(element.RenderSize));
+        }
+        picture.Render(drawing);
+        picture.Freeze();
+        return picture;
+    }
+
+    /// <summary>
     /// La vue courante va changer : son image est gardée par-dessus, le temps de s'effacer. Pas pour une vue qui montre une
     /// fenêtre native (l'éditeur, les schémas) : son image n'aurait pas leur contenu.
     /// </summary>
@@ -192,18 +242,7 @@ public sealed partial class ShellWindow : Window
         {
             return false;
         }
-        var dpi = VisualTreeHelper.GetDpi(this);
-        var fine = GhostScale(Page.ActualWidth * dpi.DpiScaleX * Page.ActualHeight * dpi.DpiScaleY);
-        var picture = new System.Windows.Media.Imaging.RenderTargetBitmap(
-            (int)Math.Ceiling(Page.ActualWidth * dpi.DpiScaleX * fine), (int)Math.Ceiling(Page.ActualHeight * dpi.DpiScaleY * fine), dpi.PixelsPerInchX * fine, dpi.PixelsPerInchY * fine, PixelFormats.Pbgra32);
-        var drawing = new DrawingVisual();
-        using (var context = drawing.RenderOpen())
-        {
-            context.DrawRectangle(new VisualBrush(Page) { Stretch = Stretch.None, AlignmentX = AlignmentX.Left, AlignmentY = AlignmentY.Top }, null, new Rect(Page.RenderSize));
-        }
-        picture.Render(drawing);
-        picture.Freeze();
-        PageGhost.Source = picture;
+        PageGhost.Source = Portrait(Page);
         PageGhost.Width = Page.ActualWidth;
         PageGhost.Height = Page.ActualHeight;
         PageGhost.Visibility = Visibility.Visible;

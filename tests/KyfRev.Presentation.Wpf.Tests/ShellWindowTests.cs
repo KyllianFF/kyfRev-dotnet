@@ -915,18 +915,67 @@ public sealed class ShellWindowTests
             Transitions.Skip = true;
             window.Close();
         }
+    }
 
-        static void Wait(Func<bool> done)
+    private static void Wait(Func<bool> done)
+    {
+        var until = DateTime.UtcNow.AddSeconds(5);
+        while (!done() && DateTime.UtcNow < until)
         {
-            var until = DateTime.UtcNow.AddSeconds(5);
-            while (!done() && DateTime.UtcNow < until)
-            {
-                var frame = new System.Windows.Threading.DispatcherFrame();
-                var timer = new System.Windows.Threading.DispatcherTimer(TimeSpan.FromMilliseconds(15), System.Windows.Threading.DispatcherPriority.Background, (_, _) => frame.Continue = false, System.Windows.Threading.Dispatcher.CurrentDispatcher);
-                System.Windows.Threading.Dispatcher.PushFrame(frame);
-                timer.Stop();
-            }
-            Assert.IsTrue(done(), "attendu en cinq secondes");
+            var frame = new System.Windows.Threading.DispatcherFrame();
+            var timer = new System.Windows.Threading.DispatcherTimer(TimeSpan.FromMilliseconds(15), System.Windows.Threading.DispatcherPriority.Background, (_, _) => frame.Continue = false, System.Windows.Threading.Dispatcher.CurrentDispatcher);
+            System.Windows.Threading.Dispatcher.PushFrame(frame);
+            timer.Stop();
+        }
+        Assert.IsTrue(done(), "attendu en cinq secondes");
+    }
+
+    [STATestMethod]
+    public void Changing_theme_the_old_colours_fade_over_the_new_ones()
+    {
+        var test = new TestShell();
+        var window = Open(test);
+        // Les essais coupent les transitions ; celui-ci les rend, le temps de les voir.
+        Transitions.Skip = false;
+        try
+        {
+            var ghost = (Image)window.FindName("ThemeGhost");
+            Assert.AreEqual(Visibility.Collapsed, ghost.Visibility, "rien tant que le thème ne change pas");
+            var dark = test.Shell.Appearance.IsDark;
+
+            // Le thème bascule : l'image de la fenêtre dans l'ancien thème s'efface par-dessus le nouveau.
+            test.Shell.ToggleThemeCommand.Execute(null);
+            Assert.AreNotEqual(dark, test.Shell.Appearance.IsDark);
+            Assert.AreEqual(Visibility.Visible, ghost.Visibility);
+            Assert.IsNotNull(ghost.Source);
+            Assert.AreEqual(((FrameworkElement)window.FindName("Frame")).ActualWidth, ghost.Width, "à la taille de la fenêtre");
+            Assert.IsFalse(ghost.IsHitTestVisible, "rien ne s'y clique");
+            Assert.IsTrue(ghost.HasAnimatedProperties, "elle s'efface");
+            Wait(() => ghost.Visibility == Visibility.Collapsed);
+            Assert.IsNull(ghost.Source, "effacée, l'image est rendue");
+
+            // Deux bascules coup sur coup : une seule image, celle du dernier thème quitté.
+            test.Shell.ToggleThemeCommand.Execute(null);
+            test.Shell.ToggleThemeCommand.Execute(null);
+            Assert.AreEqual(Visibility.Visible, ghost.Visibility);
+            Wait(() => ghost.Visibility == Visibility.Collapsed);
+            Assert.IsNull(ghost.Source);
+
+            // Le même thème redemandé ne change rien : pas d'image.
+            test.Shell.Appearance.Preference = test.Shell.Appearance.IsDark ? ThemePreference.Dark : ThemePreference.Light;
+            TestShell.Flush();
+            Assert.AreEqual(Visibility.Collapsed, ghost.Visibility);
+
+            // Animations coupées : les couleurs changent d'un coup.
+            Transitions.Skip = true;
+            Assert.IsFalse(window.FadeTheme());
+            test.Shell.ToggleThemeCommand.Execute(null);
+            Assert.AreEqual(Visibility.Collapsed, ghost.Visibility);
+        }
+        finally
+        {
+            Transitions.Skip = true;
+            window.Close();
         }
     }
 
