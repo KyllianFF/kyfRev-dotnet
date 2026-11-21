@@ -141,6 +141,8 @@ internal sealed class TabIndicatorAdorner : Adorner
 
     private readonly FrameworkElement _panel;
     private Rect? _target;
+    private bool _sliding;
+    private int _run;
 
     public TabIndicatorAdorner(FrameworkElement panel)
         : base(panel)
@@ -183,24 +185,29 @@ internal sealed class TabIndicatorAdorner : Adorner
     // L'onglet qui vient d'être coché est le bon, même si l'ancien n'est pas encore décoché.
     private void OnChecked(object sender, RoutedEventArgs e) => Place(animate: true, e.OriginalSource as ToggleButton);
 
-    private void OnUnchecked(object sender, RoutedEventArgs e) => Place(animate: true);
+    // Un onglet quitté n'efface pas le repère tout de suite : l'onglet choisi est coché juste après, et le repère doit glisser
+    // de l'un à l'autre. Si aucun n'est coché au tour suivant, il s'efface.
+    private void OnUnchecked(object sender, RoutedEventArgs e) => Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Loaded, () => Place(animate: false));
 
     private void OnVisible(object sender, DependencyPropertyChangedEventArgs e) => Place(animate: false);
 
-    /// <summary>Après une mise en page (une fenêtre plus étroite, un onglet qui paraît) : le repère suit, sans glisser.</summary>
-    private void OnLayout(object? sender, EventArgs e)
-    {
-        if (!HasAnimatedProperties)
-        {
-            Place(animate: false);
-        }
-    }
+    /// <summary>
+    /// Après une mise en page (une fenêtre plus étroite, un onglet qui paraît) : le repère suit, sans glisser. Sans effet si rien
+    /// n'a bougé ; pendant un glissement, la place visée est déjà la bonne.
+    /// </summary>
+    private void OnLayout(object? sender, EventArgs e) => Place(animate: false);
+
+    /// <summary>Vrai si le dernier changement d'onglet a fait glisser le repère (pour les essais).</summary>
+    internal bool Slid { get; private set; }
 
     /// <summary>Met le repère sous l'onglet choisi : en glissant depuis l'ancien, ou d'un coup.</summary>
     internal void Place(bool animate, ToggleButton? chosen = null)
     {
         chosen = chosen is { IsChecked: true, IsVisible: true } ? chosen : Chosen(_panel);
-        var bounds = chosen is null || !_panel.IsVisible ? (Rect?)null : chosen.TransformToAncestor(_panel).TransformBounds(new Rect(chosen.RenderSize));
+        // Un onglet qui n'a pas encore de taille n'a pas encore de place : elle viendra à la mise en page suivante.
+        var bounds = chosen is null || !_panel.IsVisible || !chosen.IsDescendantOf(_panel) || chosen.RenderSize.Width <= 0 || chosen.RenderSize.Height <= 0
+            ? (Rect?)null
+            : chosen.TransformToAncestor(_panel).TransformBounds(new Rect(chosen.RenderSize));
         // Rien n'a bougé : rien à redessiner. Redessiner demande une mise en page, qui rappellerait cette méthode, sans fin.
         if (Same(_target, bounds))
         {
@@ -208,13 +215,22 @@ internal sealed class TabIndicatorAdorner : Adorner
         }
         var (start, length) = bounds is not { } b ? (0d, 0d) : Side == Dock.Left ? (b.Top, b.Height) : (b.Left, b.Width);
         _target = bounds;
-        if (animate && Length > 0 && length > 0 && Transitions.Moves(_panel, DesignKeys.NormalDuration, out var duration))
+        // Un glissement que la mise en page rattrape en route (l'onglet choisi passe en gras et s'élargit) continue vers la
+        // nouvelle place, au lieu de s'arrêter net.
+        Slid = Transitions.Moves(_panel, DesignKeys.NormalDuration, out var duration) && (animate || _sliding) && Length > 0 && length > 0;
+        if (Slid)
         {
-            BeginAnimation(StartProperty, new DoubleAnimation(Start, start, duration) { EasingFunction = Transitions.Ease, FillBehavior = FillBehavior.Stop });
+            var run = ++_run;
+            _sliding = true;
+            var slide = new DoubleAnimation(Start, start, duration) { EasingFunction = Transitions.Ease, FillBehavior = FillBehavior.Stop };
+            slide.Completed += (_, _) => _sliding = _sliding && run != _run;
+            BeginAnimation(StartProperty, slide);
             BeginAnimation(LengthProperty, new DoubleAnimation(Length, length, duration) { EasingFunction = Transitions.Ease, FillBehavior = FillBehavior.Stop });
         }
         else
         {
+            _run++;
+            _sliding = false;
             BeginAnimation(StartProperty, null);
             BeginAnimation(LengthProperty, null);
         }

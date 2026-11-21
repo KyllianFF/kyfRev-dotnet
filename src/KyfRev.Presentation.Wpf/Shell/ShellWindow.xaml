@@ -451,6 +451,12 @@
 
       <ContentControl x:Name="Page" Grid.Column="1" Content="{Binding Current.Page}" Focusable="False" IsTabStop="False" />
 
+      <!-- Le rideau du menu : quand le menu se réduit ou se masque, il tient un instant la place quittée et se retire vers le
+           nouveau bord (voir FollowSidebar). Dans un canevas : il ne compte pas dans la mise en page. -->
+      <Canvas Grid.ColumnSpan="2" IsHitTestVisible="False">
+        <Border x:Name="MenuCurtain" Background="{DynamicResource Kyf.Brush.Surface}" Visibility="Collapsed" />
+      </Canvas>
+
       <!-- Le menu masqué, montré le temps d'un survol de son bouton. Il est décrit ici, mais se pose dans une fenêtre à lui (voir
            OpenPeek) : par-dessus la page, donc aussi devant le texte mis en forme, et sur toute la hauteur, ce qu'un Popup ne
            permet pas (Windows le limite aux trois quarts de l'écran). -->
