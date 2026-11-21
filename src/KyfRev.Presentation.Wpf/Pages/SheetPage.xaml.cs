@@ -35,6 +35,11 @@ internal sealed partial class SheetPage : UserControl
         Unloaded += (_, _) => (DataContext as SheetPageViewModel)?.ReadAloud?.CloseCommand.Execute(null);
         EditorView.CoveredTextClicked = () => (DataContext as SheetPageViewModel)?.CloseOverlayCommand.Execute(null);
         EditorView.ZoomAsked = step => ZoomSheet(step);
+        EditorView.TextShown += (_, _) =>
+        {
+            _shownEditor = EditorView.DataContext;
+            ShowReadingText(DataContext as SheetPageViewModel);
+        };
         SheetText.PageCountChanged += (_, _) => ShowPageCount();
         EditorView.VisualPagesChanged += (_, _) => ShowPageCount();
         EditorView.MaskImage = (picture, question, apply) => (DataContext as SheetPageViewModel)?.EditMasksWhileWriting(picture, question.Title, apply, question.Crop);
@@ -74,6 +79,7 @@ internal sealed partial class SheetPage : UserControl
                 // Une autre fiche : son mode est le point de départ, il ne s'anime pas.
                 _mode = -1;
                 ShowMode(page);
+                ShowReadingText(page);
                 page.Sharing?.PropertyChanged += OnSharingChanged;
                 page.Masks?.PropertyChanged += OnMasksChanged;
                 page.Print?.PropertyChanged += OnPrintChanged;
@@ -90,6 +96,21 @@ internal sealed partial class SheetPage : UserControl
 
     /// <summary>Le mode montré : 0 Lire, 1 Réviser, 2 Écrire ; −1 avant le premier.</summary>
     private int _mode = -1;
+
+    /// <summary>L'éditeur dont le texte est à l'écran.</summary>
+    private object? _shownEditor;
+
+    /// <summary>
+    /// Le texte mis en forme se voit en lecture et en révision. En passant à l'écriture, il reste à l'écran, inerte, tant que
+    /// l'éditeur n'a pas montré le sien : l'éditeur a sa propre fenêtre, qui met un instant à s'ouvrir, et il n'y a ainsi
+    /// pas de blanc entre les deux.
+    /// </summary>
+    internal void ShowReadingText(SheetPageViewModel? page)
+    {
+        var held = page is { IsWriting: true } && !ReferenceEquals(page.Editor, _shownEditor);
+        SheetText.Visibility = page is { IsReading: true } || held ? Visibility.Visible : Visibility.Collapsed;
+        SheetText.IsHitTestVisible = !held;
+    }
 
     /// <summary>
     /// Lire, Réviser, Écrire. Entre Lire et Réviser, le texte est le même, au même endroit : rien ne bouge, rien ne
@@ -117,6 +138,10 @@ internal sealed partial class SheetPage : UserControl
         if (e.PropertyName is nameof(SheetPageViewModel.IsWriting) or nameof(SheetPageViewModel.IsRevising) && sender is SheetPageViewModel switched)
         {
             ShowMode(switched);
+        }
+        if (e.PropertyName is nameof(SheetPageViewModel.IsWriting) or nameof(SheetPageViewModel.IsReading) && sender is SheetPageViewModel shown)
+        {
+            ShowReadingText(shown);
         }
         if (e.PropertyName is nameof(SheetPageViewModel.Reading) or nameof(SheetPageViewModel.IsReading) or nameof(SheetPageViewModel.IsRevising) && sender is SheetPageViewModel listened)
         {

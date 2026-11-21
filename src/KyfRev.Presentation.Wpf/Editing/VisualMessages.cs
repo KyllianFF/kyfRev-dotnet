@@ -190,6 +190,7 @@ internal sealed record ShowBlockCodeRequest(int Position) : EditorRequest;
 /// <summary>Ce que l'éditeur visuel dit à l'application.</summary>
 [JsonPolymorphic(TypeDiscriminatorPropertyName = "kind")]
 [JsonDerivedType(typeof(ReadyEvent), "ready")]
+[JsonDerivedType(typeof(TextLoadedEvent), "loaded")]
 [JsonDerivedType(typeof(EditedEvent), "edited")]
 [JsonDerivedType(typeof(TextEvent), "text")]
 [JsonDerivedType(typeof(SaveEvent), "save")]
@@ -208,6 +209,9 @@ internal abstract record EditorEvent;
 
 /// <summary>La page est prête.</summary>
 internal sealed record ReadyEvent : EditorEvent;
+
+/// <summary>Le texte demandé est dans la page : elle peut être montrée.</summary>
+internal sealed record TextLoadedEvent : EditorEvent;
 
 /// <summary>L'utilisateur a modifié le texte ; le Markdown suit.</summary>
 internal sealed record EditedEvent : EditorEvent;

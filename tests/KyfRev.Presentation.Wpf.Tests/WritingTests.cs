@@ -727,6 +727,10 @@ public sealed class WritingTests
             TestShell.Flush();
             Assert.IsInstanceOfType<System.Windows.Media.TranslateTransform>(page.Ribbon.RenderTransform, "en descendant");
 
+            // En Markdown, sans moteur à attendre, la fiche lue laisse la place aussitôt.
+            UiThread.Until(() => page.SheetText.Visibility == Visibility.Collapsed);
+            Assert.IsTrue(page.SheetText.IsHitTestVisible, "de retour en lecture, le texte répondra de nouveau");
+
             // Le cadre du mode choisi a glissé sous Écrire, et la barre de révision descend avant de céder sa place.
             var modes = (KyfRev.DesignSystem.Controls.SlidingSelectionPanel)System.Windows.Media.VisualTreeHelper.GetParent(page.WriteToggle);
             Assert.AreEqual(page.WriteToggle.TransformToAncestor(modes).Transform(default).X, modes.Selection!.Value.Left, 0.5, "le cadre est sous le mode choisi");

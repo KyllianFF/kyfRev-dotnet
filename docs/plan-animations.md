@@ -87,7 +87,7 @@ Priorité 1 : vu à chaque séance. Priorité 2 : vu chaque jour. Priorité 3 : 
 | --- | --- | --- | --- |
 | Lire ↔ Réviser | le texte clignote | rien ne bouge | fait |
 | Ruban à l'entrée en Écrire | d'un coup | descend de 8 px en fondu, son trait d'onglet avec lui | fait |
-| Feuille de l'éditeur à l'entrée en Écrire | surgissait | le texte est là tout de suite, sa feuille vient l'habiller en fondu | fait |
+| Feuille de l'éditeur à l'entrée en Écrire | surgissait après un blanc | la fiche lue reste à l'écran jusqu'à ce que l'éditeur ait son texte ; sa feuille vient alors l'habiller en fondu | fait |
 | Élément suivant en séance | toute la fiche change d'un coup | l'ancienne s'efface, la nouvelle arrive en fondu | 1 |
 | Bilan de fin de séance | surgit | monte de 8 px en fondu | 2 |
 | « Ouverture… », squelettes → contenu (fiche, Aujourd'hui, Statistiques, Santé) | échange sec | fondu | 2 |

@@ -126,6 +126,8 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
     private bool _covered;
     private bool _configured;
     private bool _disposed;
+    private bool _textShown;
+    private readonly DispatcherTimer _patience = new() { Interval = TextPatience };
 
     public VisualEditor(string folder, Func<string, Outcome<byte[]>> readResource, ISpelling spelling, string dataFolder)
     {
@@ -139,6 +141,14 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
         System.Windows.Automation.AutomationProperties.SetAutomationId(_view, "VisualText");
         System.Windows.Automation.AutomationProperties.SetName(_view, EditingText.VisualText);
         _snapshot.MouseLeftButtonDown += (_, _) => SnapshotClicked?.Invoke(this, EventArgs.Empty);
+        // Le moteur a sa propre fenêtre, toujours au premier plan : il reste caché tant qu'il n'a pas son texte, pour que la
+        // fiche lue reste à l'écran d'ici là, sans blanc entre les deux. S'il tarde, il se montre quand même.
+        _view.Visibility = Visibility.Hidden;
+        _patience.Tick += (_, _) =>
+        {
+            GaveUpWaiting = !_textShown;
+            ShowText();
+        };
         var ground = new Grid { Children = { _view, _snapshot } };
         ground.SetResourceReference(Panel.BackgroundProperty, "Kyf.Brush.Background");
         Content = ground;
@@ -207,8 +217,36 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
     /// <summary>Le moteur, pour les essais.</summary>
     internal WebView2 View => _view;
 
+    /// <summary>Le temps laissé au moteur pour montrer son texte, avant de se montrer quand même.</summary>
+    internal static readonly TimeSpan TextPatience = TimeSpan.FromSeconds(2);
+
+    /// <summary>Le texte chargé est à l'écran : le moteur est montré.</summary>
+    internal bool HasShownText => _textShown;
+
+    /// <summary>Le moteur s'est montré sans son texte, qui tardait (pour les essais).</summary>
+    internal bool GaveUpWaiting { get; private set; }
+
+    /// <summary>Le moteur vient de se montrer, avec son texte.</summary>
+    internal event EventHandler? TextShown;
+
     /// <summary>Le texte est recouvert, et remplacé par son image.</summary>
     internal bool IsCovered => _covered;
+
+    /// <summary>Montre le moteur : son texte est là, il a renoncé à l'attendre, ou il ne s'ouvrira pas.</summary>
+    private void ShowText()
+    {
+        _patience.Stop();
+        if (_textShown || _disposed)
+        {
+            return;
+        }
+        _textShown = true;
+        if (!_covered)
+        {
+            _view.Visibility = Visibility.Visible;
+        }
+        TextShown?.Invoke(this, EventArgs.Empty);
+    }
 
     /// <summary>
     /// Le moteur a sa propre fenêtre, toujours au premier plan : pendant qu'un dialogue ou un volet de l'application
@@ -233,7 +271,7 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
         {
             _snapshot.Visibility = Visibility.Collapsed;
             _snapshot.Source = null;
-            _view.Visibility = Visibility.Visible;
+            _view.Visibility = _textShown ? Visibility.Visible : Visibility.Hidden;
             Post(new FocusRequest());
         }
     }
@@ -436,6 +474,7 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
     public void Dispose()
     {
         _disposed = true;
+        _patience.Stop();
         _ready = false;
         _configured = false;
         _pending.Clear();
@@ -463,6 +502,9 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
                 {
                     Send(request);
                 }
+                break;
+            case TextLoadedEvent:
+                ShowText();
                 break;
             case EditedEvent:
                 _stale = true;
@@ -756,6 +798,7 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
         {
             return;
         }
+        _patience.Start();
         try
         {
             // Le fond du moteur prend celui de l'application dès avant sa première page : aucun éclair blanc à l'ouverture.
@@ -778,6 +821,7 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
             if (!_disposed)
             {
                 MissesEngine = exception is WebView2RuntimeNotFoundException;
+                ShowText();
                 Failed?.Invoke(this, exception.Message);
             }
         }
@@ -795,6 +839,7 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
         {
             if (WebProcesses.StopsThePage(e.ProcessFailedKind))
             {
+                ShowText();
                 Failed?.Invoke(this, e.ProcessFailedKind.ToString());
             }
             else
