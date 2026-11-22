@@ -61,8 +61,50 @@ public static partial class Transitions
     /// </summary>
     internal const System.Windows.Threading.DispatcherPriority WhenShown = System.Windows.Threading.DispatcherPriority.Input;
 
-    /// <summary>La décélération douce de toutes les transitions : sans rebond.</summary>
+    /// <summary>La décélération douce de tout ce qui arrive : sans rebond.</summary>
     internal static IEasingFunction Ease { get; } = Frozen(new CubicEase { EasingMode = EasingMode.EaseOut });
+
+    /// <summary>L'accélération de ce qui part : il s'en va de plus en plus vite, sans traîner.</summary>
+    internal static IEasingFunction Leave { get; } = Frozen(new CubicEase { EasingMode = EasingMode.EaseIn });
+
+    /// <summary>
+    /// Fait partir <paramref name="element"/> : il s'efface, en accélérant, et descend ou glisse de quelques pixels si on le
+    /// demande. Il reste effacé jusqu'à ce que <paramref name="done"/> le retire de l'écran, puis retrouve son opacité.
+    /// </summary>
+    /// <param name="element">Ce qui part.</param>
+    /// <param name="done">Appelé une fois l'élément effacé ; tout de suite s'il n'y a pas de transition.</param>
+    /// <param name="durationKey">La durée, par sa clé du design system : un départ est court.</param>
+    /// <param name="drop">De combien de pixels il descend en partant.</param>
+    /// <param name="shift">De combien de pixels il glisse de côté en partant (négatif : vers la gauche).</param>
+    /// <param name="kind">La famille de l'animation.</param>
+    /// <returns>Vrai si une transition a commencé.</returns>
+    public static bool Exit(FrameworkElement element, Action done, string durationKey = DesignKeys.FastDuration, double drop = 0, double shift = 0, MotionKinds kind = MotionKinds.Surfaces)
+    {
+        ArgumentNullException.ThrowIfNull(element);
+        ArgumentNullException.ThrowIfNull(done);
+        if (!Moves(element, durationKey, out var duration, kind))
+        {
+            done();
+            return false;
+        }
+        var fade = new DoubleAnimation(element.Opacity, 0, duration) { EasingFunction = Leave, FillBehavior = FillBehavior.HoldEnd };
+        fade.Completed += (_, _) =>
+        {
+            done();
+            // Retiré de l'écran, il redevient entier, à sa place, pour la prochaine fois.
+            element.BeginAnimation(UIElement.OpacityProperty, null);
+            Rest(element);
+        };
+        if (drop != 0 || shift != 0)
+        {
+            var move = new TranslateTransform();
+            element.RenderTransform = move;
+            move.BeginAnimation(TranslateTransform.YProperty, new DoubleAnimation(0, drop, duration) { EasingFunction = Leave, FillBehavior = FillBehavior.HoldEnd });
+            move.BeginAnimation(TranslateTransform.XProperty, new DoubleAnimation(0, shift, duration) { EasingFunction = Leave, FillBehavior = FillBehavior.HoldEnd });
+        }
+        element.BeginAnimation(UIElement.OpacityProperty, fade);
+        return true;
+    }
 
     /// <summary>
     /// La durée de <paramref name="durationKey"/> pour cet élément, et s'il y a lieu de bouger : non quand les animations sont

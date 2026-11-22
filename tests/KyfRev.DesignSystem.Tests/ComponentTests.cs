@@ -350,6 +350,7 @@ public sealed class ComponentTests
         result.IsOpen = true;
         result.IsOpen = false;
         Host.Flush();
+        Wait(() => !result.IsLeaving);
         Assert.IsFalse(result.IsVisible, "refermée entre-temps, elle ne fait plus rien");
     }
 
@@ -1049,6 +1050,8 @@ public sealed class ComponentTests
         Assert.IsTrue(done.IsVisible && error.IsVisible && busy.IsVisible && kept.IsVisible);
 
         Wait(() => done.IsExpired);
+        Assert.IsFalse(done.IsHitTestVisible, "lue, elle ne reçoit plus rien pendant qu'elle s'efface");
+        Wait(() => !done.IsLeaving);
         Assert.IsFalse(done.IsVisible, "lue, la réussite s'efface et ne garde pas sa place");
         Assert.IsTrue(done.IsOpen, "sans toucher à ce qui l'a ouverte : la liaison de la page tient toujours");
         Assert.IsTrue(error.IsVisible && busy.IsVisible && kept.IsVisible, "une erreur, un travail en cours et un résultat à garder restent");
@@ -1059,7 +1062,7 @@ public sealed class ComponentTests
         Host.Flush();
         Assert.IsTrue(done.IsVisible);
         Assert.IsFalse(done.IsExpired);
-        Wait(() => done.IsExpired);
+        Wait(() => done.IsExpired && !done.IsLeaving);
         Assert.IsFalse(done.IsVisible);
 
         // Fermée puis rouverte avec le même message : elle reparaît aussi.
@@ -1078,28 +1081,28 @@ public sealed class ComponentTests
         Assert.AreEqual(Notification.ShortestLifetime, Notification.LifetimeOf(null));
         Assert.AreEqual(TimeSpan.FromSeconds(8), Notification.LifetimeOf(new string('a', 60)));
         Assert.AreEqual(Notification.LongestLifetime, Notification.LifetimeOf(new string('a', 400)));
+    }
 
-        static void Pause(int milliseconds)
+    private static void Pause(int milliseconds)
+    {
+        var until = DateTime.UtcNow.AddMilliseconds(milliseconds);
+        while (DateTime.UtcNow < until)
         {
-            var until = DateTime.UtcNow.AddMilliseconds(milliseconds);
-            while (DateTime.UtcNow < until)
-            {
-                var frame = new System.Windows.Threading.DispatcherFrame();
-                var timer = new System.Windows.Threading.DispatcherTimer(TimeSpan.FromMilliseconds(15), System.Windows.Threading.DispatcherPriority.Background, (_, _) => frame.Continue = false, System.Windows.Threading.Dispatcher.CurrentDispatcher);
-                System.Windows.Threading.Dispatcher.PushFrame(frame);
-                timer.Stop();
-            }
+            var frame = new System.Windows.Threading.DispatcherFrame();
+            var timer = new System.Windows.Threading.DispatcherTimer(TimeSpan.FromMilliseconds(15), System.Windows.Threading.DispatcherPriority.Background, (_, _) => frame.Continue = false, System.Windows.Threading.Dispatcher.CurrentDispatcher);
+            System.Windows.Threading.Dispatcher.PushFrame(frame);
+            timer.Stop();
         }
+    }
 
-        static void Wait(Func<bool> done)
+    private static void Wait(Func<bool> done)
+    {
+        var until = DateTime.UtcNow.AddSeconds(5);
+        while (!done() && DateTime.UtcNow < until)
         {
-            var until = DateTime.UtcNow.AddSeconds(5);
-            while (!done() && DateTime.UtcNow < until)
-            {
-                Pause(20);
-            }
-            Assert.IsTrue(done(), "attendu en cinq secondes");
+            Pause(20);
         }
+        Assert.IsTrue(done(), "attendu en cinq secondes");
     }
 }
 

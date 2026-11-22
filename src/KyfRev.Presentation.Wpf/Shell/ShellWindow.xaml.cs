@@ -64,12 +64,19 @@ public sealed partial class ShellWindow : Window
         DataContext = shell;
         shell.Appearance.Attach(this);
         shell.PropertyChanged += OnShellChanged;
-        // Une vue qui en remplace une autre arrive en fondu, brièvement.
+        // Une vue qui en remplace une autre : celle qu'on quitte s'efface, celle qui arrive vient du côté où l'on va.
+        shell.PropertyChanging += (_, e) =>
+        {
+            if (e.PropertyName == nameof(ShellViewModel.Current))
+            {
+                LeavePage();
+            }
+        };
         shell.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(ShellViewModel.Current))
             {
-                KyfRev.DesignSystem.Controls.Transitions.Enter(Page, KyfRev.DesignSystem.DesignKeys.FastDuration);
+                EnterPage();
             }
         };
         // MouseUp remonte jusqu'à la liste, même quand l'élément cliqué l'a déjà traité.
@@ -151,6 +158,86 @@ public sealed partial class ShellWindow : Window
     /// montre une fenêtre native (l'éditeur d'Écrire, les Schémas) ne glisse pas : le rendu ne déplace pas ces fenêtres.
     /// </summary>
     /// <returns>Vrai si une transition a commencé.</returns>
+    /// <summary>De combien la vue quittée recule en s'effaçant, et de combien celle qui arrive vient de côté.</summary>
+    internal const double PageLeaveShift = 10;
+
+    /// <inheritdoc cref="PageLeaveShift"/>
+    internal const double PageEnterShift = 14;
+
+    /// <summary>
+    /// Le nombre de points de l'image de la vue quittée, au plus. La dessiner prend une quinzaine de millisecondes par million
+    /// de points, avant que la vue ne change : sur un très grand écran, elle est dessinée moins fine (elle s'efface en un
+    /// dixième de seconde) plutôt que de retarder le changement.
+    /// </summary>
+    internal const double PageGhostPixels = 1_500_000;
+
+    /// <summary>La place, dans le menu, de la vue qu'on quitte ; −1 si elle n'y est pas (une fiche ouverte, par exemple).</summary>
+    private int _leftPlace = -1;
+
+    /// <summary>La place d'une vue dans le menu, principal puis secondaire.</summary>
+    private int PlaceOf(NavigationItem? item) =>
+        item is null ? -1 : _shell.MainNavigation.Concat(_shell.SecondaryNavigation).ToList().IndexOf(item);
+
+    /// <summary>
+    /// La vue courante va changer : son image est gardée par-dessus, le temps de s'effacer. Pas pour une vue qui montre une
+    /// fenêtre native (l'éditeur, les schémas) : son image n'aurait pas leur contenu.
+    /// </summary>
+    internal bool LeavePage()
+    {
+        _leftPlace = PlaceOf(_shell.Current);
+        PageGhost.Visibility = Visibility.Collapsed;
+        PageGhost.Source = null;
+        if (!IsLoaded || Page.ActualWidth < 1 || Page.ActualHeight < 1 || HostsNativeWindow(Page)
+            || Transitions.DurationOf(Page, KyfRev.DesignSystem.DesignKeys.FastDuration) == TimeSpan.Zero)
+        {
+            return false;
+        }
+        var dpi = VisualTreeHelper.GetDpi(this);
+        var fine = GhostScale(Page.ActualWidth * dpi.DpiScaleX * Page.ActualHeight * dpi.DpiScaleY);
+        var picture = new System.Windows.Media.Imaging.RenderTargetBitmap(
+            (int)Math.Ceiling(Page.ActualWidth * dpi.DpiScaleX * fine), (int)Math.Ceiling(Page.ActualHeight * dpi.DpiScaleY * fine), dpi.PixelsPerInchX * fine, dpi.PixelsPerInchY * fine, PixelFormats.Pbgra32);
+        var drawing = new DrawingVisual();
+        using (var context = drawing.RenderOpen())
+        {
+            context.DrawRectangle(new VisualBrush(Page) { Stretch = Stretch.None, AlignmentX = AlignmentX.Left, AlignmentY = AlignmentY.Top }, null, new Rect(Page.RenderSize));
+        }
+        picture.Render(drawing);
+        picture.Freeze();
+        PageGhost.Source = picture;
+        PageGhost.Width = Page.ActualWidth;
+        PageGhost.Height = Page.ActualHeight;
+        PageGhost.Visibility = Visibility.Visible;
+        return true;
+    }
+
+    /// <summary>La finesse de l'image d'une vue de <paramref name="pixels"/> points : entière tant qu'elle tient dans <see cref="PageGhostPixels"/>.</summary>
+    internal static double GhostScale(double pixels) => pixels <= PageGhostPixels ? 1 : Math.Sqrt(PageGhostPixels / pixels);
+
+    /// <summary>
+    /// La vue courante vient de changer : l'image de l'ancienne s'efface en reculant, la nouvelle arrive du côté où l'on va
+    /// (vers le bas du menu : par la droite ; vers le haut : par la gauche ; hors du menu : sur place).
+    /// </summary>
+    internal int EnterPage()
+    {
+        var place = PlaceOf(_shell.Current);
+        var direction = _leftPlace < 0 || place < 0 ? 0 : Math.Sign(place - _leftPlace);
+        if (PageGhost.Visibility == Visibility.Visible)
+        {
+            Transitions.Exit(
+                PageGhost,
+                () =>
+                {
+                    PageGhost.Visibility = Visibility.Collapsed;
+                    PageGhost.Source = null;
+                },
+                KyfRev.DesignSystem.DesignKeys.FastDuration,
+                shift: -PageLeaveShift * direction,
+                kind: KyfRev.DesignSystem.MotionKinds.Views);
+        }
+        Transitions.Enter(Page, KyfRev.DesignSystem.DesignKeys.FastDuration, shift: PageEnterShift * direction);
+        return direction;
+    }
+
     internal bool FollowSidebar()
     {
         var width = Sidebar.Visibility == Visibility.Visible ? Sidebar.ActualWidth : 0;

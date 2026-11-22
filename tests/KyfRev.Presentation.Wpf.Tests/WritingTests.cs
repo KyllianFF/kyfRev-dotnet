@@ -703,10 +703,22 @@ public sealed class WritingTests
         KyfRev.DesignSystem.Controls.Transitions.Skip = false;
         try
         {
-            // D'Écrire à Lire : le texte mis en forme revient en fondu, sans bouger.
+            // D'Écrire à Lire : le texte mis en forme revient en fondu, sans bouger. Le ruban s'efface en remontant, avec ce
+            // qu'il montrait, sans plus rien recevoir ; puis il rend sa place et lâche l'éditeur.
+            Assert.AreSame(scene.Page.Editor, page.RibbonContent.DataContext);
+            var left = scene.Page.Editor;
             scene.Page.ToggleWritingCommand.Execute(null);
             UiThread.Until(() => !scene.Page.IsWriting);
             Assert.IsTrue(page.SheetText.HasAnimatedProperties, "le texte paraît en fondu, une fois l'écran prêt");
+            Assert.AreEqual(Visibility.Visible, page.RibbonRow.Visibility, "le ruban s'efface encore");
+            Assert.AreSame(left, page.RibbonContent.DataContext, "avec ses listes et ses boutons tels qu'ils étaient");
+            Assert.IsFalse(page.RibbonRow.IsHitTestVisible, "sans plus rien recevoir");
+            Assert.AreEqual(Dock.Top, KyfRev.DesignSystem.Controls.Transitions.GetShownFrom(page.RibbonRow));
+            Assert.AreEqual(SheetPage.RibbonDrop, KyfRev.DesignSystem.Controls.Transitions.GetShownTravel(page.RibbonRow));
+            UiThread.Until(() => page.RibbonRow.Visibility == Visibility.Collapsed);
+            Assert.IsNull(page.RibbonContent.DataContext, "parti, il lâche l'éditeur");
+            Assert.IsTrue(page.RibbonRow.IsHitTestVisible);
+            Assert.IsInstanceOfType<System.Windows.Media.TranslateTransform>(page.Body.RenderTransform, "ce qui était sous lui remonte en glissant");
             TestShell.Flush();
             Assert.IsNotInstanceOfType<System.Windows.Media.TranslateTransform>(page.SheetText.RenderTransform, "le texte qu'on lit ne bouge pas");
 
@@ -723,9 +735,12 @@ public sealed class WritingTests
             // De Lire à Écrire : le ruban descend en fondu, une fois l'éditeur ouvert.
             scene.Page.ToggleWritingCommand.Execute(null);
             UiThread.Until(() => scene.Page.IsWriting);
-            Assert.IsTrue(page.Ribbon.HasAnimatedProperties, "le ruban est tenu invisible, puis paraît");
+            Assert.IsTrue(KyfRev.DesignSystem.Controls.Transitions.GetShown(page.RibbonRow));
+            Assert.AreEqual(Visibility.Visible, page.RibbonRow.Visibility);
+            Assert.IsTrue(page.RibbonRow.HasAnimatedProperties, "le ruban est tenu invisible, puis paraît en descendant");
+            Assert.AreSame(scene.Page.Editor, page.RibbonContent.DataContext, "il montre le nouvel éditeur");
+            Assert.IsTrue(page.RibbonRow.IsHitTestVisible);
             TestShell.Flush();
-            Assert.IsInstanceOfType<System.Windows.Media.TranslateTransform>(page.Ribbon.RenderTransform, "en descendant");
 
             // En Markdown, sans moteur à attendre, la fiche lue laisse la place aussitôt.
             UiThread.Until(() => page.SheetText.Visibility == Visibility.Collapsed);

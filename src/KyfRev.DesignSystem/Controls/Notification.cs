@@ -47,7 +47,19 @@ public class Notification : Control
 
     /// <summary>Propriété <see cref="Message"/>.</summary>
     public static readonly DependencyProperty MessageProperty =
-        DependencyProperty.Register(nameof(Message), typeof(string), typeof(Notification), new PropertyMetadata(string.Empty, (notification, _) => ((Notification)notification).Renew()));
+        DependencyProperty.Register(nameof(Message), typeof(string), typeof(Notification), new PropertyMetadata(string.Empty, (notification, _) => ((Notification)notification).OnMessageChanged()));
+
+    private static readonly DependencyPropertyKey ShownMessagePropertyKey =
+        DependencyProperty.RegisterReadOnly(nameof(ShownMessage), typeof(string), typeof(Notification), new PropertyMetadata(string.Empty));
+
+    /// <summary>Propriété <see cref="ShownMessage"/>.</summary>
+    public static readonly DependencyProperty ShownMessageProperty = ShownMessagePropertyKey.DependencyProperty;
+
+    /// <summary>
+    /// Le message qu'on lit à l'écran : <see cref="Message"/>, sauf pendant que la notification s'efface. Une page vide
+    /// souvent son message au moment de la fermer : elle part avec ce qu'elle disait, pas vide.
+    /// </summary>
+    public string ShownMessage => (string)GetValue(ShownMessageProperty);
 
     /// <summary>Propriété <see cref="IsClosable"/>.</summary>
     public static readonly DependencyProperty IsClosableProperty =
@@ -55,11 +67,60 @@ public class Notification : Control
 
     /// <summary>Propriété <see cref="IsOpen"/>.</summary>
     public static readonly DependencyProperty IsOpenProperty =
-        DependencyProperty.Register(nameof(IsOpen), typeof(bool), typeof(Notification), new FrameworkPropertyMetadata(true, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, (notification, _) => ((Notification)notification).Renew()));
+        DependencyProperty.Register(nameof(IsOpen), typeof(bool), typeof(Notification), new FrameworkPropertyMetadata(true, FrameworkPropertyMetadataOptions.BindsTwoWayByDefault, (notification, e) => ((Notification)notification).OnOpenChanged((bool)e.NewValue)));
 
     /// <summary>Propriété <see cref="StaysOpen"/>.</summary>
     public static readonly DependencyProperty StaysOpenProperty =
         DependencyProperty.Register(nameof(StaysOpen), typeof(bool), typeof(Notification), new PropertyMetadata(false, (notification, _) => ((Notification)notification).Renew()));
+
+    private static readonly DependencyPropertyKey IsLeavingPropertyKey =
+        DependencyProperty.RegisterReadOnly(nameof(IsLeaving), typeof(bool), typeof(Notification), new PropertyMetadata(false));
+
+    /// <summary>Propriété <see cref="IsLeaving"/>.</summary>
+    public static readonly DependencyProperty IsLeavingProperty = IsLeavingPropertyKey.DependencyProperty;
+
+    /// <summary>Fermée ou lue, la notification s'efface encore : elle garde sa place un instant, sans plus rien recevoir.</summary>
+    public bool IsLeaving => (bool)GetValue(IsLeavingProperty);
+
+    /// <summary>
+    /// La notification n'a plus à être montrée (fermée, ou lue jusqu'au bout) : si elle est à l'écran, elle s'efface avant
+    /// de rendre sa place.
+    /// </summary>
+    private void Leave()
+    {
+        if (!IsVisible || IsLeaving)
+        {
+            return;
+        }
+        SetValue(IsLeavingPropertyKey, true);
+        Transitions.Exit(this, () =>
+        {
+            SetValue(IsLeavingPropertyKey, false);
+            SetValue(ShownMessagePropertyKey, Message);
+        });
+    }
+
+    private void OnMessageChanged()
+    {
+        if (string.IsNullOrEmpty(Message) && IsVisible)
+        {
+            // Vidé : si c'est pour la fermer, la fermeture suit dans l'instant, et elle garde son texte en s'effaçant.
+            Dispatcher.BeginInvoke(DispatcherPriority.Input, SettleMessage);
+        }
+        else
+        {
+            SetValue(ShownMessagePropertyKey, Message);
+        }
+        Renew();
+    }
+
+    private void SettleMessage()
+    {
+        if (!IsLeaving)
+        {
+            SetValue(ShownMessagePropertyKey, Message);
+        }
+    }
 
     private static readonly DependencyPropertyKey IsExpiredPropertyKey =
         DependencyProperty.RegisterReadOnly(nameof(IsExpired), typeof(bool), typeof(Notification), new PropertyMetadata(false));
@@ -217,15 +278,29 @@ public class Notification : Control
     /// <summary>Un nouveau message, une autre gravité, une réouverture : la notification reparaît, et son temps repart.</summary>
     private void Renew()
     {
+        if (IsLeaving)
+        {
+            if (!IsOpen || string.IsNullOrEmpty(Title + Message))
+            {
+                // Elle s'en va, et il n'y a rien de nouveau à dire : elle finit de s'effacer.
+                return;
+            }
+            // Elle s'effaçait : elle revient entière, et s'annonce de nouveau.
+            BeginAnimation(OpacityProperty, null);
+            SetValue(IsLeavingPropertyKey, false);
+            SetValue(ShownMessagePropertyKey, Message);
+            SetValue(IsExpiredPropertyKey, false);
+            OnAppearing(IsVisible);
+            return;
+        }
         SetValue(IsExpiredPropertyKey, false);
         Count();
     }
-
     /// <summary>Lance le compte d'une réussite visible, et arrête celui de toute autre.</summary>
     private void Count()
     {
         _timer?.Stop();
-        if (!IsVisible || IsExpired || StaysOpen || Severity != NotificationSeverity.Success)
+        if (!IsVisible || IsLeaving || IsExpired || StaysOpen || Severity != NotificationSeverity.Success)
         {
             return;
         }
@@ -247,17 +322,34 @@ public class Notification : Control
         Expire();
     }
 
+    /// <summary>Ouverte, elle reparaît entière et son temps repart ; fermée, elle s'efface avant de rendre sa place.</summary>
+    private void OnOpenChanged(bool isOpen)
+    {
+        if (isOpen)
+        {
+            Renew();
+            return;
+        }
+        Leave();
+        _timer?.Stop();
+        if (!IsLeaving)
+        {
+            SetValue(IsExpiredPropertyKey, false);
+        }
+    }
+
     /// <summary>Le message a eu son temps : il s'efface, sans toucher à ce qui l'a ouvert.</summary>
     internal void Expire()
     {
         _timer?.Stop();
+        Leave();
         SetValue(IsExpiredPropertyKey, true);
     }
 
     /// <summary>La notification paraît : elle se montre si elle le doit, et s'annonce comme une région active, si un client d'UI Automation écoute.</summary>
     private void Appear()
     {
-        if (!IsVisible)
+        if (!IsVisible || IsLeaving)
         {
             return;
         }

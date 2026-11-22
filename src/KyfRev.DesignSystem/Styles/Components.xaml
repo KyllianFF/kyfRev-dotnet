@@ -129,7 +129,7 @@
                          Foreground="{DynamicResource Kyf.Brush.Info}" VerticalAlignment="Top" Margin="0,2,12,0" />
               <StackPanel Grid.Column="1" VerticalAlignment="Center">
                 <TextBlock x:Name="Title" Text="{TemplateBinding Title}" Style="{DynamicResource Kyf.Text.BodyStrong}" />
-                <TextBlock Text="{TemplateBinding Message}" Style="{DynamicResource Kyf.Text.Body}" />
+                <TextBlock Text="{TemplateBinding ShownMessage}" Style="{DynamicResource Kyf.Text.Body}" />
               </StackPanel>
               <Button x:Name="PART_CloseButton" Grid.Column="2" Margin="12,-4,-4,-4" VerticalAlignment="Top"
                       Style="{DynamicResource Kyf.Button.Icon}" Content="&#xE711;"
@@ -163,6 +163,11 @@
       <!-- Une réussite lue s'efface d'elle-même (Notification.StaysOpen la garde). -->
       <Trigger Property="IsExpired" Value="True">
         <Setter Property="Visibility" Value="Collapsed" />
+      </Trigger>
+      <!-- Fermée ou lue, elle s'efface encore : elle garde sa place un instant, sans plus rien recevoir. -->
+      <Trigger Property="IsLeaving" Value="True">
+        <Setter Property="Visibility" Value="Visible" />
+        <Setter Property="IsHitTestVisible" Value="False" />
       </Trigger>
       <Trigger Property="Severity" Value="Success">
         <Setter Property="Background" Value="{DynamicResource Kyf.Brush.SuccessBackground}" />
@@ -477,6 +482,11 @@
     <Style.Triggers>
       <Trigger Property="IsOpen" Value="True">
         <Setter Property="Visibility" Value="Visible" />
+      </Trigger>
+      <!-- Fermé, il s'efface encore, avec son voile : il ne reçoit plus rien. -->
+      <Trigger Property="IsLeaving" Value="True">
+        <Setter Property="Visibility" Value="Visible" />
+        <Setter Property="IsHitTestVisible" Value="False" />
       </Trigger>
     </Style.Triggers>
   </Style>
