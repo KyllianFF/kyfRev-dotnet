@@ -224,14 +224,14 @@ public sealed class SessionTests
     }
 
     [TestMethod]
-    public void Full_screen_hides_the_menu_and_escape_leaves_it()
+    public void Full_screen_keeps_the_menu_and_escape_leaves_it()
     {
         var shell = new TestShell().Shell;
         shell.ShowWorkspace();
 
         shell.ToggleFullScreen();
         Assert.IsTrue(shell.IsFullScreen);
-        Assert.IsFalse(shell.IsMenuVisible);
+        Assert.IsTrue(shell.IsMenuVisible, "le menu reste : c'est par lui qu'on change de vue");
         shell.ExitFullScreen();
         Assert.IsFalse(shell.IsFullScreen);
         Assert.IsTrue(shell.IsMenuVisible);

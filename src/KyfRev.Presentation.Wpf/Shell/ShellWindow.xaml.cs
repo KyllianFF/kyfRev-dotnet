@@ -6,6 +6,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Shell;
 using System.Windows.Threading;
 using KyfRev.DesignSystem.Controls;
 
@@ -641,9 +642,23 @@ public sealed partial class ShellWindow : Window
             ResizeMode = _windowedResize;
             WindowState = _windowedState;
         }
+        // La barre de titre partie, sa bande ne sert plus à déplacer la fenêtre : sans cela, elle prenait les clics des boutons du
+        // haut de la page, venus à sa place.
+        Caption(fullScreen ? 0 : TitleBar.Height);
         // Du plein écran à une fenêtre déjà agrandie, l'état ne change pas : le cadre se recalcule quand même.
         FitFrame();
         Dispatcher.BeginInvoke(DispatcherPriority.Loaded, FitFrame);
+    }
+
+    /// <summary>La hauteur de la bande qui déplace la fenêtre.</summary>
+    private void Caption(double height)
+    {
+        if (WindowChrome.GetWindowChrome(this) is { } chrome && chrome.CaptionHeight != height)
+        {
+            var changed = (WindowChrome)chrome.Clone();
+            changed.CaptionHeight = height;
+            WindowChrome.SetWindowChrome(this, changed);
+        }
     }
 
     /// <summary>« Plus » : les autres vues, dans un menu ouvert au-dessus de l'onglet.</summary>

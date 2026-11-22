@@ -11,6 +11,13 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 - Installation : la case « Exécuter kyfRev » de la dernière page ouvre bien kyfRev. Ouvert alors que l'installateur
   n'avait pas tout à fait fini, il se croyait au milieu d'une mise à jour et se refermait aussitôt, sans rien montrer.
   La réouverture après une mise à jour (« Redémarrer maintenant ») pouvait échouer de la même façon.
+### Modifié
+- Écrire : l'enregistrement est une icône (coche, flèches pendant l'enregistrement, avertissement en cas de souci),
+  à gauche de « Plan » et « Passages ». Son infobulle dit l'état. Rien ne change plus de place quand on passe d'un mode à l'autre.
+
+### Corrigé
+- Plein écran (F11) : le menu reste, pour changer de vue. La bande du haut de l'écran ne prend plus les clics des boutons
+  de la page qui s'y trouvent.
 
 ## [1.1.0-beta.3] - 2026-11-18
 
