@@ -59,7 +59,7 @@ public static partial class Transitions
     /// Le trajet d'une arrivée, de <paramref name="from"/> à <paramref name="to"/>. Avec un délai, l'élément est tenu à son
     /// point de départ le temps d'attendre son tour, puis fait le même trajet : sans cela, il serait entier avant d'arriver.
     /// </summary>
-    private static AnimationTimeline Arrival(double from, double to, TimeSpan duration, TimeSpan delay)
+    internal static AnimationTimeline Arrival(double from, double to, TimeSpan duration, TimeSpan delay)
     {
         if (delay <= TimeSpan.Zero)
         {

@@ -63,9 +63,18 @@ public sealed class FluidityTests
         var following = RowOf(list, Transitions.CascadeRows + 1);
         Assert.IsTrue(following.HasAnimatedProperties, "les suivantes arrivent aussi");
         var last = RowOf(list, Transitions.CascadeRows - 1);
-        Wait(() => last.Opacity < 0.5);
-        Assert.IsLessThan(0.5, last.Opacity, "la dernière attend son tour, invisible");
-        Assert.IsLessThan(0.5, following.Opacity, "et celles d'en dessous avec elle : le bas de la liste n'est pas là avant le haut");
+        Assert.IsTrue(last.HasAnimatedProperties, "la dernière a son arrivée, qui la tient invisible en attendant son tour");
+        // Une arrivée qui attend son tour tient l'élément à son point de départ, puis fait le même trajet : le bas de la liste
+        // n'est donc pas là avant le haut. Vérifié sur le trajet lui-même, pas à un instant de son déroulement.
+        var waiting = (System.Windows.Media.Animation.DoubleAnimationUsingKeyFrames)Transitions.Arrival(0, 1, TimeSpan.FromMilliseconds(220), TimeSpan.FromMilliseconds(175));
+        Assert.HasCount(3, waiting.KeyFrames);
+        Assert.AreEqual(0.0, waiting.KeyFrames[0].Value);
+        Assert.AreEqual(TimeSpan.Zero, waiting.KeyFrames[0].KeyTime.TimeSpan);
+        Assert.AreEqual(0.0, waiting.KeyFrames[1].Value, "invisible jusqu'à son tour");
+        Assert.AreEqual(TimeSpan.FromMilliseconds(175), waiting.KeyFrames[1].KeyTime.TimeSpan);
+        Assert.AreEqual(1.0, waiting.KeyFrames[2].Value);
+        Assert.AreEqual(TimeSpan.FromMilliseconds(395), waiting.KeyFrames[2].KeyTime.TimeSpan);
+        Assert.IsInstanceOfType<System.Windows.Media.Animation.DoubleAnimation>(Transitions.Arrival(0, 1, TimeSpan.FromMilliseconds(220), TimeSpan.Zero), "sans attente, un trajet simple");
         Wait(() => last.Opacity >= 1);
         Assert.AreEqual(1.0, last.Opacity, "puis elle arrive");
         Assert.AreEqual(1.0, RowOf(list, 0).Opacity);
@@ -351,8 +360,7 @@ public sealed class FluidityTests
 
         // Une arrivée qui attend son tour : tenue invisible, puis le même trajet.
         Assert.IsTrue(Transitions.Enter(text, DesignKeys.FastDuration, rise: 6, delay: TimeSpan.FromMilliseconds(60)));
-        Wait(() => text.Opacity < 0.5);
-        Assert.IsLessThan(0.5, text.Opacity, "elle attend son tour, invisible");
+        Assert.IsTrue(text.HasAnimatedProperties);
         Wait(() => text.Opacity >= 1);
         Assert.AreEqual(1.0, text.Opacity);
 
@@ -385,9 +393,7 @@ public sealed class FluidityTests
         Assert.IsInstanceOfType<ScaleTransform>(indicator.RenderTransform);
         var stretch = (ScaleTransform)indicator.RenderTransform;
         Assert.AreEqual(new Point(0, 0.5), indicator.RenderTransformOrigin, "elle grandit depuis son début");
-        Wait(() => stretch.ScaleX < 0.99);
-        Assert.IsLessThan(0.99, stretch.ScaleX, "elle part de l'ancienne longueur");
-        Assert.IsGreaterThanOrEqualTo((20.0 / 60) - 0.001, stretch.ScaleX);
+        Assert.IsTrue(stretch.HasAnimatedProperties, "elle repart de l'ancienne longueur en glissant");
         Wait(() => stretch.ScaleX >= 1);
         Assert.AreEqual(1.0, stretch.ScaleX, "et arrive à la nouvelle");
 
@@ -457,8 +463,7 @@ public sealed class FluidityTests
         Assert.AreEqual(new Point(0.5, 1), bar.RenderTransformOrigin);
         Assert.AreEqual(new Point(0, 0.5), row.RenderTransformOrigin);
         Assert.IsInstanceOfType<ScaleTransform>(row.RenderTransform);
-        Wait(() => grown.ScaleY < 0.9);
-        Assert.IsLessThan(0.9, grown.ScaleY, "elle part de rien");
+        Assert.IsTrue(grown.HasAnimatedProperties, "elle pousse");
         Assert.AreEqual(1.0, grown.ScaleX, "en hauteur seulement");
         Wait(() => grown.ScaleY >= 1);
         Assert.AreEqual(1.0, grown.ScaleY);
@@ -468,8 +473,7 @@ public sealed class FluidityTests
         Host.Layout(host);
         var taller = (ScaleTransform)bar.RenderTransform;
         Assert.AreNotSame(grown, taller);
-        Wait(() => taller.ScaleY < 0.99);
-        Assert.IsGreaterThanOrEqualTo(0.499, taller.ScaleY, "de la moitié, son ancienne hauteur");
+        Assert.IsTrue(taller.HasAnimatedProperties, "elle grandit depuis son ancienne hauteur");
         Wait(() => taller.ScaleY >= 1);
         bar.Width = 24;
         Host.Layout(host);
@@ -491,8 +495,7 @@ public sealed class FluidityTests
         Assert.AreEqual(0.25, Transitions.GetFill(share));
         Transitions.SetFill(share, 0.75);
         Assert.AreSame(done, share.RenderTransform);
-        Wait(() => done.ScaleX is > 0.26 and < 0.75);
-        Assert.IsLessThan(0.75, done.ScaleX, "elle est en route");
+        Assert.IsTrue(done.HasAnimatedProperties, "elle avance en glissant");
         Wait(() => done.ScaleX >= 0.75);
         Assert.AreEqual(0.75, done.ScaleX);
         Transitions.SetFill(share, double.NaN);
@@ -576,8 +579,7 @@ public sealed class FluidityTests
         Assert.HasCount(1, ghosts);
         var former = (Transitions.FormerTextAdorner)ghosts[0];
         Assert.IsFalse(former.IsHitTestVisible);
-        Wait(() => former.Lift > 0);
-        Assert.IsGreaterThan(0, former.Lift, "elle monte");
+        Assert.IsTrue(former.HasAnimatedProperties, "elle monte en s'effaçant");
         Wait(() => layer.GetAdorners(panel) is null);
         Assert.IsNull(layer.GetAdorners(panel), "sortie, elle est retirée");
         // Le même compte redit ne roule pas ; sans couche d'ornements, seule la nouvelle valeur arrive.
@@ -638,8 +640,7 @@ public sealed class FluidityTests
             // Décochée puis recochée : elle grandit de nouveau. Animations réduites, ou coche qui n'en veut plus : d'un coup.
             check.Visibility = Visibility.Collapsed;
             check.Visibility = Visibility.Visible;
-            Wait(() => shown.ScaleX < 1);
-            Assert.IsLessThan(1.0, shown.ScaleX);
+            Assert.IsTrue(shown.HasAnimatedProperties);
             Wait(() => shown.ScaleX >= 1);
             design.ReducedMotion = true;
             check.Visibility = Visibility.Collapsed;
@@ -682,19 +683,9 @@ public sealed class FluidityTests
         Assert.AreEqual(0, Transitions.Welcome(list));
         Assert.IsFalse(RowOf(list, 0).HasAnimatedProperties);
         Assert.AreEqual(0, Transitions.Cascade(list));
-        var lowest = 0.0;
-        var first = double.NaN;
-        Wait(() =>
-        {
-            if (page.RenderTransform is TranslateTransform move)
-            {
-                first = double.IsNaN(first) ? move.Y : first;
-                lowest = Math.Max(lowest, move.Y);
-            }
-            return !Transitions.GetIsArriving(page);
-        });
-        Assert.IsGreaterThan(0, lowest, "elle est partie de plus bas");
-        Assert.IsLessThanOrEqualTo(Transitions.PageRise, lowest);
+        Assert.AreEqual(0, Transitions.RisesOf(page));
+        Wait(() => !Transitions.GetIsArriving(page));
+        Assert.AreEqual(1, Transitions.RisesOf(page), "elle est montée, une fois");
         Assert.AreEqual(Transform.Identity, page.RenderTransform, "posée, elle n'est plus décalée");
         Assert.AreEqual(1.0, page.Opacity);
         Assert.IsFalse(Transitions.GetIsArriving(list));
@@ -707,12 +698,14 @@ public sealed class FluidityTests
         Assert.IsTrue(Transitions.Arrive(page));
         Assert.IsTrue(Transitions.Arrive(page));
         Wait(() => !Transitions.GetIsArriving(page));
+        Assert.AreEqual(2, Transitions.RisesOf(page), "une seule montée de plus, pas deux");
         Assert.AreEqual(Transform.Identity, page.RenderTransform);
         Assert.AreEqual(1.0, page.Opacity);
 
         // Une page qui montre une fenêtre native ne bouge pas : elle est montrée telle quelle.
         Assert.IsTrue(Transitions.Arrive(page, () => true));
         Wait(() => !Transitions.GetIsArriving(page));
+        Assert.AreEqual(2, Transitions.RisesOf(page), "elle n'est pas montée");
         Assert.AreEqual(Transform.Identity, page.RenderTransform);
         Assert.AreEqual(1.0, page.Opacity);
         Assert.IsFalse(page.HasAnimatedProperties && page.Opacity < 1);

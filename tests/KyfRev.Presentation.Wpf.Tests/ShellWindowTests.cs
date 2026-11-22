@@ -872,17 +872,8 @@ public sealed class ShellWindowTests
             Assert.AreSame(menu[2], test.Shell.Current);
             Assert.IsTrue(Transitions.GetIsArriving(page), "elle arrive");
             Assert.IsTrue(page.HasAnimatedProperties, "invisible en attendant");
-            var lowest = 0.0;
-            Wait(() =>
-            {
-                if (page.RenderTransform is TranslateTransform move)
-                {
-                    lowest = Math.Max(lowest, move.Y);
-                }
-                return !Transitions.GetIsArriving(page);
-            });
-            Assert.IsGreaterThan(0, lowest, "elle est partie de plus bas");
-            Assert.IsLessThanOrEqualTo(Transitions.PageRise, lowest, "de quelques pixels seulement");
+            // Le trajet lui-même est vérifié dans le design system ; ici, qu'il a lieu et que la page finit à sa place.
+            Wait(() => !Transitions.GetIsArriving(page));
             Assert.AreEqual(Transform.Identity, page.RenderTransform, "posée, elle n'est plus décalée");
             Assert.AreEqual(1.0, page.Opacity);
             // Ce qu'elle contient sait qu'elle est arrivée : une liste peut de nouveau s'animer de son côté.

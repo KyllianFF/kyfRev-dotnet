@@ -39,6 +39,13 @@ public static partial class Transitions
     /// <summary>Lit <see cref="IsArrivingProperty"/>.</summary>
     public static bool GetIsArriving(DependencyObject element) => (bool)(element ?? throw new ArgumentNullException(nameof(element))).GetValue(IsArrivingProperty);
 
+    // Combien de fois la page a commencé à monter (pour les essais).
+    private static readonly DependencyProperty RisesProperty =
+        DependencyProperty.RegisterAttached("Rises", typeof(int), typeof(Transitions), new PropertyMetadata(0));
+
+    /// <summary>Combien de fois <paramref name="page"/> a commencé à monter, pour les essais : un instant du trajet ne se vérifie pas.</summary>
+    internal static int RisesOf(DependencyObject page) => (int)page.GetValue(RisesProperty);
+
     // Le numéro de la dernière arrivée de chaque page : une arrivée remplacée par une autre ne touche plus à rien.
     private static readonly DependencyProperty ArrivalProperty =
         DependencyProperty.RegisterAttached("Arrival", typeof(int), typeof(Transitions), new PropertyMetadata(0));
@@ -83,6 +90,7 @@ public static partial class Transitions
             }
             var move = new TranslateTransform();
             page.RenderTransform = move;
+            page.SetValue(RisesProperty, RisesOf(page) + 1);
             // Tenue en bas au départ, puis la montée : à la fin, l'animation rend la main et la page est à sa place.
             var rise = new DoubleAnimationUsingKeyFrames { Duration = duration, FillBehavior = FillBehavior.Stop };
             rise.KeyFrames.Add(new DiscreteDoubleKeyFrame(PageRise, KeyTime.FromTimeSpan(TimeSpan.Zero)));
