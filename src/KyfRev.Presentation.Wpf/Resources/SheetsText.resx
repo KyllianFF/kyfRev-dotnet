@@ -85,7 +85,7 @@
     <value>Nouvelle fiche</value>
   </data>
   <data name="NoFolder" xml:space="preserve">
-    <value>Sans dossier</value>
+    <value>Non rangées</value>
   </data>
   <data name="NoMatch" xml:space="preserve">
     <value>Aucune fiche ne correspond à ces filtres.</value>
@@ -182,5 +182,38 @@
   </data>
   <data name="TagsToggle" xml:space="preserve">
     <value>Étiquettes</value>
+  </data>
+  <data name="AllSheets" xml:space="preserve">
+    <value>Toutes les fiches</value>
+  </data>
+  <data name="DueSheets" xml:space="preserve">
+    <value>À réviser</value>
+  </data>
+  <data name="SearchEverywhere" xml:space="preserve">
+    <value>Dans tout le coffre</value>
+  </data>
+  <data name="FoldersHeading" xml:space="preserve">
+    <value>Dossiers</value>
+  </data>
+  <data name="PlacesName" xml:space="preserve">
+    <value>Dossiers du coffre</value>
+  </data>
+  <data name="ChoosePlace" xml:space="preserve">
+    <value>Choisir un dossier</value>
+  </data>
+  <data name="EmptyPlace" xml:space="preserve">
+    <value>Ce dossier est vide.</value>
+  </data>
+  <data name="NewFolderAction" xml:space="preserve">
+    <value>Nouveau dossier</value>
+  </data>
+  <data name="ToggleFolderName" xml:space="preserve">
+    <value>Plier ou déplier</value>
+  </data>
+  <data name="NothingDue" xml:space="preserve">
+    <value>Rien à réviser pour l'instant.</value>
+  </data>
+  <data name="AllFiled" xml:space="preserve">
+    <value>Toutes vos fiches sont rangées dans un dossier.</value>
   </data>
 </root>

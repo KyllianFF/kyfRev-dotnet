@@ -14,7 +14,7 @@ using KyfRev.Presentation.Wpf.Shell;
 
 namespace KyfRev.Presentation.Wpf.Tests;
 
-/// <summary>La vue « Fiches » : l'arborescence, le clic droit, et ce qu'il fait au coffre.</summary>
+/// <summary>La vue « Fiches » : le volet des dossiers, la liste rangée par dossier, le clic droit, et ce qu'il fait au coffre.</summary>
 [TestClass]
 public sealed class SheetActionsTests
 {
@@ -34,27 +34,69 @@ public sealed class SheetActionsTests
 
     private static readonly string[] OpeningMenu = [SheetActionsText.Open, SheetActionsText.Review, SheetActionsText.Write, PrintText.PrintAction];
 
-    private static readonly string[] Tree =
+    private static readonly string[] Pane =
     [
-        "Sans dossier · 1", "À la racine",
-        "Sciences · 3", "Biologie · 1", "Cellule · 1", "Noyau · 1", "Membrane", "Chimie · 1", "Atomes", "Lois",
-        "Vide · 0",
+        "Toutes les fiches · 4", "À réviser · 0",
+        "Sciences · 3", "Biologie · 1", "Cellule · 1", "Noyau · 1", "Chimie · 1", "Vide · 0",
+        "Non rangées · 1",
     ];
+
+    private static readonly string[] Everything =
+    [
+        "Sciences · 1", "Lois",
+        "Sciences › Biologie › Cellule › Noyau · 1", "Membrane",
+        "Sciences › Chimie · 1", "Atomes",
+        "Non rangées · 1", "À la racine",
+    ];
+
+    private static readonly string[] InSciences = ["Lois", "Biologie › Cellule › Noyau · 1", "Membrane", "Chimie · 1", "Atomes"];
+
+    private static readonly string[] Unfiled = ["À la racine"];
+
+    private static readonly string[] FoundAtoms = ["Sciences › Chimie · 1", "Atomes"];
 
     private static readonly string[] NewTags = ["bio", "partiel"];
 
     [TestMethod]
-    public async Task The_folders_nest_and_empty_ones_are_shown()
+    public async Task The_pane_nests_the_folders_and_the_list_groups_the_sheets_under_them()
     {
         using var vault = new SheetsVault();
         var page = await vault.LoadedAsync();
 
-        CollectionAssert.AreEqual(Tree, Labels(page));
-        var deep = page.Rows.OfType<SheetFolderRow>().Single(row => row.Path == "Sciences/Biologie/Cellule/Noyau");
+        CollectionAssert.AreEqual(Pane, PaneLabels(page), "les dossiers vides aussi : on peut y ranger");
+        CollectionAssert.AreEqual(Everything, Labels(page), "toutes les fiches, sous un intertitre par dossier, les non rangées à la fin");
+        Assert.AreEqual(page.Places[0], page.SelectedPlace, "au départ, toutes les fiches");
+        Assert.AreEqual(SheetsText.AllSheets, page.ListTitle);
+        Assert.AreEqual("4 fiches", page.ListCount);
+        var deep = page.Folder("Sciences/Biologie/Cellule/Noyau");
         Assert.AreEqual(3, deep.Depth);
         Assert.AreEqual(48, deep.Indent.Left, "chaque niveau décale");
         Assert.IsFalse(deep.IsTooDeep, "un dossier et trois sous-dossiers : c'est la limite tranquille");
-        Assert.AreEqual(64, page.Rows.OfType<SheetRow>().Single(row => row.Title == "Membrane").Indent.Left);
+        Assert.IsTrue(page.Folder("Sciences").HasChildren);
+        Assert.IsFalse(page.Folder("Vide").HasChildren);
+        Assert.IsTrue(page.Folder("Sciences").StartsFolders, "un écart avant le premier dossier");
+        CollectionAssert.AreEqual(
+            new[] { Icons.ListLines, Icons.Clock, Icons.FolderOpen, Icons.Document },
+            new[] { page.Places[0].Glyph, page.Places[1].Glyph, deep.Glyph, page.Unfiled().Glyph });
+
+        // Dans un dossier : ses propres fiches d'abord, puis celles de ses sous-dossiers sous leur nom.
+        page.SelectedPlace = page.Folder("Sciences");
+        CollectionAssert.AreEqual(InSciences, Labels(page));
+        Assert.AreEqual("Sciences", page.ListTitle);
+        Assert.AreEqual("Sciences", page.PlaceName);
+
+        page.SelectedPlace = page.Unfiled();
+        CollectionAssert.AreEqual(Unfiled, Labels(page), "les non rangées, sans intertitre");
+        page.SelectedPlace = page.Places[1];
+        Assert.IsEmpty(page.Rows, "rien n'est à réviser aujourd'hui");
+        Assert.IsTrue(page.IsPlaceEmpty);
+        Assert.AreEqual(SheetsText.NothingDue, page.PlaceEmptyText, "« À réviser » le dit à sa façon");
+        Assert.IsFalse(page.PlaceTakesSheets, "et n'y propose pas d'écrire");
+        page.SelectedPlace = page.Folder("Vide");
+        Assert.IsTrue(page.IsPlaceEmpty);
+        Assert.AreEqual(SheetsText.EmptyPlace, page.PlaceEmptyText);
+        Assert.IsTrue(page.PlaceTakesSheets);
+        Assert.IsFalse(page.HasNoMatch, "un dossier vide n'est pas une recherche sans réponse");
     }
 
     [TestMethod]
@@ -62,35 +104,54 @@ public sealed class SheetActionsTests
     {
         using var vault = new SheetsVault();
         var page = await vault.LoadedAsync();
-        var science = page.Rows.OfType<SheetFolderRow>().Single(row => row.Path == "Sciences");
+        var science = page.Folder("Sciences");
         Assert.AreEqual(Icons.ChevronDown, science.Chevron);
 
         page.ToggleFolderCommand.Execute(science);
 
-        Assert.IsFalse(Labels(page).Contains("Atomes"));
-        var folded = page.Rows.OfType<SheetFolderRow>().Single(row => row.Path == "Sciences");
+        Assert.IsFalse(PaneLabels(page).Contains("Biologie · 1"));
+        var folded = page.Folder("Sciences");
         Assert.AreEqual(Icons.ChevronRight, folded.Chevron);
         Assert.AreEqual("Sciences · 3", folded.ToString(), "il dit encore ce qu'il contient");
+        CollectionAssert.AreEqual(Everything, Labels(page), "plier le volet ne change pas la liste");
 
         page.ToggleFolderCommand.Execute(folded);
-        CollectionAssert.AreEqual(Tree, Labels(page));
+        CollectionAssert.AreEqual(Pane, PaneLabels(page));
 
-        page.ToggleFolderCommand.Execute(page.Rows[0]);
-        CollectionAssert.AreEqual(Tree, Labels(page), "« Sans dossier » ne se plie pas");
+        page.ToggleFolderCommand.Execute(page.Unfiled());
+        page.ToggleFolderCommand.Execute(page.Folder("Vide"));
+        CollectionAssert.AreEqual(Pane, PaneLabels(page), "« Non rangées » et un dossier sans sous-dossier ne se plient pas");
+
+        // Le dossier choisi se cache sous son parent plié : c'est le parent qui est choisi, comme dans l'Explorateur.
+        page.SelectedPlace = page.Folder("Sciences/Chimie");
+        page.ToggleFolderCommand.Execute(page.Folder("Sciences"));
+        Assert.AreEqual("Sciences", page.SelectedPlace!.Path);
+        Assert.AreEqual("Sciences", page.ListTitle);
+        Assert.IsFalse(page.Folder("Sciences").IsExpanded);
     }
 
     [TestMethod]
-    public async Task A_filter_hides_the_empty_folders()
+    public async Task A_search_looks_in_the_whole_vault_and_says_where()
     {
         using var vault = new SheetsVault();
         var page = await vault.LoadedAsync();
+        page.SelectedPlace = page.Folder("Vide");
+        Assert.IsTrue(page.IsPlaceEmpty);
 
         page.Bar.Search = "atomes";
 
-        Assert.IsFalse(Labels(page).Contains("Vide · 0"));
-        Assert.IsFalse(Labels(page).Contains("Biologie · 1"));
-        Assert.IsTrue(Labels(page).Contains("Chimie · 1"));
-        Assert.IsTrue(Labels(page).Contains("Sciences · 1"), "les parents restent, pour dire où elle est");
+        CollectionAssert.AreEqual(FoundAtoms, Labels(page), "hors du dossier choisi, et sous son dossier");
+        Assert.AreEqual(SheetsText.SearchEverywhere, page.ListTitle);
+        Assert.IsFalse(page.IsPlaceEmpty);
+        CollectionAssert.AreEqual(Pane, PaneLabels(page), "le volet garde tous les dossiers");
+
+        page.Bar.Search = "introuvable";
+        Assert.IsTrue(page.HasNoMatch);
+        Assert.IsFalse(page.IsPlaceEmpty);
+
+        page.Bar.Search = string.Empty;
+        Assert.IsTrue(page.IsPlaceEmpty, "la recherche finie, on retrouve le dossier choisi");
+        Assert.AreEqual("Vide", page.ListTitle);
     }
 
     [STATestMethod]
@@ -164,10 +225,22 @@ public sealed class SheetActionsTests
         var page = vault.Loaded();
         var view = new SheetsPage { DataContext = page };
 
-        var folder = page.Rows.OfType<SheetFolderRow>().Single(row => row.Path == "Sciences");
+        var folder = page.Folder("Sciences");
         CollectionAssert.AreEqual(FolderMenu, Headers(view.RowMenuItems(folder)));
+        CollectionAssert.AreEqual(FolderMenu, Headers(view.RowMenuItems(page.Rows.OfType<SheetFolderRow>().First(row => row.IsFolder))), "l'intertitre d'un dossier aussi");
         CollectionAssert.AreEqual(FreeSpaceMenu, Headers(view.RowMenuItems(null)));
-        CollectionAssert.AreEqual(FreeSpaceMenu, Headers(view.RowMenuItems(page.Rows[0])), "« Sans dossier » n'est pas un vrai dossier");
+        CollectionAssert.AreEqual(FreeSpaceMenu, Headers(view.RowMenuItems(page.Unfiled())), "« Non rangées » n'est pas un vrai dossier");
+        CollectionAssert.AreEqual(FreeSpaceMenu, Headers(view.RowMenuItems(page.Places[0])), "« Toutes les fiches » non plus");
+
+        // « Nouveau dossier », au bas du volet : dans le dossier choisi.
+        page.SelectedPlace = folder;
+        page.NewFolderHereCommand.Execute(null);
+        Assert.AreEqual("Nouveau dossier dans « Sciences »", page.ActionTitle);
+        page.AnswerActionCommand.Execute(false);
+        page.SelectedPlace = page.Places[0];
+        page.NewFolderHereCommand.Execute(null);
+        Assert.AreEqual(SheetActionsText.NewFolderTitle, page.ActionTitle, "ailleurs, à la racine");
+        page.AnswerActionCommand.Execute(false);
 
         Click(view.RowMenuItems(folder)[1]);
         Assert.IsTrue(page.IsActing);
@@ -386,7 +459,7 @@ public sealed class SheetActionsTests
     {
         using var vault = new SheetsVault();
         var page = await vault.LoadedAsync();
-        var deep = page.Rows.OfType<SheetFolderRow>().Single(row => row.Path == "Sciences/Biologie/Cellule/Noyau");
+        var deep = page.Folder("Sciences/Biologie/Cellule/Noyau");
 
         page.RequestNewFolder(deep.Path);
         Assert.IsFalse(page.HasDepthWarning, "rien n'est encore écrit");
@@ -395,17 +468,17 @@ public sealed class SheetActionsTests
         Assert.AreEqual(SheetActionsText.DepthWarningOf(5), page.DepthWarning);
         await page.AnswerActionCommand.ExecuteAsync(true);
         Assert.AreEqual(SheetActionsText.FolderCreated, page.Done, "un avertissement n'empêche rien");
-        var created = page.Rows.OfType<SheetFolderRow>().Single(row => row.Path == "Sciences/Biologie/Cellule/Noyau/Trop loin");
+        var created = page.Folder("Sciences/Biologie/Cellule/Noyau/Trop loin");
         Assert.IsTrue(created.IsTooDeep);
 
-        page.RequestRenameFolder(page.Rows.OfType<SheetFolderRow>().Single(row => row.Path == "Vide"));
+        page.RequestRenameFolder(page.Folder("Vide"));
         Assert.AreEqual("Vide", page.ActionInput);
         page.ActionInput = "Rangement";
         await page.AnswerActionCommand.ExecuteAsync(true);
         Assert.AreEqual(SheetActionsText.FolderRenamed, page.Done);
         CollectionAssert.Contains(vault.App.Folders.Folders().Value.ToList(), "Rangement");
 
-        var chemistry = page.Rows.OfType<SheetFolderRow>().Single(row => row.Path == "Sciences/Chimie");
+        var chemistry = page.Folder("Sciences/Chimie");
         page.RequestMoveFolder(chemistry);
         Assert.AreEqual("Sciences", page.ActionDestination!.Value);
         Assert.IsFalse(page.ActionDestinations.Any(choice => choice.Value == "Sciences/Chimie"), "pas en lui-même");
@@ -414,7 +487,7 @@ public sealed class SheetActionsTests
         Assert.AreEqual(SheetActionsText.Moved, page.Done);
         CollectionAssert.Contains(vault.App.Folders.Folders().Value.ToList(), "Rangement/Chimie");
 
-        var rangement = page.Rows.OfType<SheetFolderRow>().Single(row => row.Path == "Rangement/Chimie");
+        var rangement = page.Folder("Rangement/Chimie");
         page.RequestMoveFolder(rangement);
         page.ActionDestination = page.ActionDestinations.Single(choice => choice.Value == "Sciences/Biologie/Cellule/Noyau");
         Assert.IsTrue(page.HasDepthWarning, "déplacer peut aussi creuser trop");
@@ -427,19 +500,19 @@ public sealed class SheetActionsTests
         using var vault = new SheetsVault();
         var page = await vault.LoadedAsync();
 
-        page.RequestTrashFolder(page.Rows.OfType<SheetFolderRow>().Single(row => row.Path == "Vide"));
+        page.RequestTrashFolder(page.Folder("Vide"));
         Assert.AreEqual(SheetActionsText.TrashEmptyFolderMessageOf("Vide"), page.ActionMessage);
         await page.AnswerActionCommand.ExecuteAsync(true);
         Assert.AreEqual(SheetActionsText.Trashed, page.Done);
         Assert.IsFalse(vault.App.Folders.Folders().Value.Contains("Vide"));
 
-        var chemistry = page.Rows.OfType<SheetFolderRow>().Single(row => row.Path == "Sciences/Chimie");
+        var chemistry = page.Folder("Sciences/Chimie");
         page.RequestTrashFolder(chemistry);
         StringAssert.Contains(page.ActionMessage, "1 fiche", StringComparison.Ordinal);
         await page.AnswerActionCommand.ExecuteAsync(true);
         Assert.HasCount(1, vault.App.Trash.TrashedSheets().Value);
 
-        var biology = page.Rows.OfType<SheetFolderRow>().Single(row => row.Path == "Sciences/Biologie");
+        var biology = page.Folder("Sciences/Biologie");
         page.RequestTrashFolder(biology);
         page.ErasesForGood = true;
         await page.AnswerActionCommand.ExecuteAsync(true);
@@ -500,7 +573,8 @@ public sealed class SheetActionsTests
         {
             Assert.IsTrue(model.HasPreview);
             model.SelectedRow = model.Rows.OfType<SheetRow>().Single(row => row.Sheet.Id == id);
-            UiThread.Until(() => model.Preview is { HasBody: true }, TimeSpan.FromSeconds(20));
+            // L'aperçu de cette fiche, pas celui de la première ligne, choisie d'office en arrivant.
+            UiThread.Until(() => model.Preview is { HasBody: true, Row: SheetRow shown } && shown.Sheet.Id == id, TimeSpan.FromSeconds(20));
             TestShell.Flush();
             var viewer = Descendants(page).OfType<SheetDocumentViewer>().Single(candidate => candidate.Name == "PreviewBody");
             UiThread.Until(() => viewer.Document is not null);
@@ -618,18 +692,17 @@ public sealed class SheetActionsTests
                 }
             };
 
-            // Un dossier qui ne contient pas la fiche choisie se plie puis se déplie : la liste se refait deux fois.
-            var other = model.Rows.OfType<SheetFolderRow>().Last(row => row.IsFolder && !chosen.Sheet.Folder.StartsWith(row.Path, StringComparison.Ordinal));
-            model.ToggleFolderCommand.Execute(other);
+            // Un dossier du volet se plie puis se déplie : le volet se refait deux fois, la liste reste.
+            model.ToggleFolderCommand.Execute(model.Folder("Sciences"));
             TestShell.Flush();
-            model.ToggleFolderCommand.Execute(model.Rows.OfType<SheetFolderRow>().Single(row => row.Path == other.Path));
+            model.ToggleFolderCommand.Execute(model.Folder("Sciences"));
             TestShell.Flush();
             var pause = System.Diagnostics.Stopwatch.StartNew();
             UiThread.Until(() => pause.ElapsedMilliseconds > 300);
 
             Assert.IsEmpty(seen, "l'aperçu ne se vide ni ne se relit : c'était le flash");
             Assert.AreSame(shown, model.Preview);
-            Assert.AreEqual(chosen.Sheet.Id, ((SheetRow)model.SelectedRow!).Sheet.Id, "la fiche reste choisie dans la liste refaite");
+            Assert.AreEqual(chosen.Sheet.Id, ((SheetRow)model.SelectedRow!).Sheet.Id, "la fiche reste choisie");
             Assert.AreSame(model.SelectedRow, page.Items.SelectedItem);
 
             // Une autre fiche choisie : l'aperçu la suit toujours.
@@ -638,14 +711,11 @@ public sealed class SheetActionsTests
             UiThread.Until(() => model.Preview is { HasBody: true, Row: SheetRow row } && row.Sheet.Id == next.Sheet.Id, TimeSpan.FromSeconds(20));
             Assert.IsFalse(seen.Contains(null), "sans passer par le vide");
 
-            // Le dossier de la fiche choisie se plie : elle n'est plus dans la liste, la première visible prend sa place.
-            if (model.Rows.OfType<SheetFolderRow>().FirstOrDefault(row => row.IsFolder && next.Sheet.Folder.Length > 0 && next.Sheet.Folder.StartsWith(row.Path, StringComparison.Ordinal)) is { } own)
-            {
-                model.ToggleFolderCommand.Execute(own);
-                TestShell.Flush();
-                Assert.IsFalse(model.Rows.OfType<SheetRow>().Any(row => row.Sheet.Id == next.Sheet.Id));
-                UiThread.Until(() => model.Preview is { Row: SheetRow row } && model.SelectedRow is SheetRow selected && row.Sheet.Id == selected.Sheet.Id, TimeSpan.FromSeconds(20));
-            }
+            // Un autre dossier choisi, sans la fiche : sa première fiche prend sa place, et la liste arrive.
+            model.SelectedPlace = model.Folder("Sciences/Chimie");
+            TestShell.Flush();
+            Assert.AreEqual("Atomes", ((SheetRow)model.SelectedRow!).Title);
+            UiThread.Until(() => model.Preview is { Row: SheetRow row } && row.Title == "Atomes", TimeSpan.FromSeconds(20));
         }
         finally
         {
@@ -670,26 +740,38 @@ public sealed class SheetActionsTests
         TestShell.Flush();
         try
         {
-            var science = model.Rows.OfType<SheetFolderRow>().Single(row => row.Path == "Sciences");
-            var line = (ListBoxItem)page.Items.ItemContainerGenerator.ContainerFromItem(science);
-            line.RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, 0, MouseButton.Left) { RoutedEvent = UIElement.MouseUpEvent });
-            Assert.IsFalse(model.Rows.OfType<SheetFolderRow>().Single(row => row.Path == "Sciences").IsExpanded);
+            // Le chevron d'un dossier du volet le plie, sans le choisir.
+            var science = model.Folder("Sciences");
+            var line = (ListBoxItem)page.PlacesList.ItemContainerGenerator.ContainerFromItem(science);
+            var chevron = Descendants(line).OfType<Button>().Single();
+            chevron.Command.Execute(chevron.CommandParameter);
+            Assert.IsFalse(model.Folder("Sciences").IsExpanded);
+            Assert.AreEqual(model.Places[0], model.SelectedPlace, "le chevron ne choisit pas");
             TestShell.Flush();
 
-            var folded = (ListBoxItem)page.Items.ItemContainerGenerator.ContainerFromItem(model.Rows.OfType<SheetFolderRow>().Single(row => row.Path == "Sciences"));
+            var folded = (ListBoxItem)page.PlacesList.ItemContainerGenerator.ContainerFromItem(model.Folder("Sciences"));
             folded.RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(folded)!, 0, Key.Left) { RoutedEvent = UIElement.PreviewKeyDownEvent });
             TestShell.Flush();
-            Assert.IsFalse(model.Rows.OfType<SheetFolderRow>().Single(row => row.Path == "Sciences").IsExpanded, "la flèche gauche ne replie pas ce qui l'est déjà");
+            Assert.IsFalse(model.Folder("Sciences").IsExpanded, "la flèche gauche ne replie pas ce qui l'est déjà");
 
             folded.RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(folded)!, 0, Key.Right) { RoutedEvent = UIElement.PreviewKeyDownEvent });
             TestShell.Flush();
-            var opened = model.Rows.OfType<SheetFolderRow>().Single(row => row.Path == "Sciences");
-            Assert.IsTrue(opened.IsExpanded, "la flèche droite le déplie");
+            Assert.IsTrue(model.Folder("Sciences").IsExpanded, "la flèche droite le déplie");
 
-            var line2 = (ListBoxItem)page.Items.ItemContainerGenerator.ContainerFromItem(opened);
-            line2.RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(line2)!, 0, Key.Enter) { RoutedEvent = UIElement.PreviewKeyDownEvent });
+            var opened = (ListBoxItem)page.PlacesList.ItemContainerGenerator.ContainerFromItem(model.Folder("Sciences"));
+            opened.RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(opened)!, 0, Key.Left) { RoutedEvent = UIElement.PreviewKeyDownEvent });
             TestShell.Flush();
-            Assert.IsFalse(model.Rows.OfType<SheetFolderRow>().Single(row => row.Path == "Sciences").IsExpanded, "Entrée aussi");
+            Assert.IsFalse(model.Folder("Sciences").IsExpanded, "la flèche gauche le replie");
+
+            // Choisir une entrée du volet : la liste montre ses fiches.
+            page.PlacesList.SelectedItem = model.Folder("Vide");
+            TestShell.Flush();
+            Assert.AreEqual("Vide", model.ListTitle);
+            Assert.IsTrue(page.PlaceEmpty.IsVisible);
+            Assert.IsTrue(page.PaneHost.IsVisible, "à 1 200 px, le volet tient à gauche");
+            Assert.IsFalse(page.PlacesButtonHost.IsVisible);
+            page.PlacesList.SelectedItem = model.Places[0];
+            TestShell.Flush();
 
             var chemistry = model.Rows.OfType<SheetRow>().First(row => row.Title == "À la racine");
             model.RequestTrash(chemistry);
@@ -789,6 +871,8 @@ public sealed class SheetActionsTests
 
     private static List<string> Labels(SheetsPageViewModel page) =>
         [.. page.Rows.Select(row => row is SheetRow sheet ? sheet.Title : row.ToString()!)];
+
+    private static List<string> PaneLabels(SheetsPageViewModel page) => [.. page.Places.Select(row => row.ToString())];
 
     private static List<string> Headers(IReadOnlyList<Control> items) =>
         [.. items.OfType<MenuItem>().Select(item => (string)item.Header)];

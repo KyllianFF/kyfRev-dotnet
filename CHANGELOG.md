@@ -22,6 +22,12 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   largeur de la précédente : la fiche, « Lire / Écrire » et « Historique » sortaient du cadre.
 - Écrire : la feuille pouvait rester blanche jusqu'à ce que la souris bouge. Le moteur du texte décidait seul que sa fenêtre
   était cachée et cessait de dessiner ; kyfRev le lui interdit désormais.
+### Modifié
+- Carnet en deux volets : les dossiers à gauche, avec « Toutes les fiches », « À réviser » et « Non rangées » ; au milieu,
+  les fiches du dossier choisi, rangées sous le nom de chaque sous-dossier. Un clic sur ce nom mène au sous-dossier. Les
+  fiches s'écrivent en texte courant, avec une pastille pour leur état (à venir, aujourd'hui, en retard, note). Le filtre
+  « Dossier » disparaît : le volet le remplace. La recherche porte sur tout le coffre. Sous 1 000 px de large, un bouton
+  au-dessus de la liste ouvre les dossiers par la gauche, et par le bas en fenêtre étroite.
 
 ## [1.1.0-beta.3] - 2026-11-18
 

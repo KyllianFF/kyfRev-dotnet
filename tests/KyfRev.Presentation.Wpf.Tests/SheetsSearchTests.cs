@@ -100,20 +100,22 @@ public sealed class SheetsSearchTests
     }
 
     [STATestMethod]
-    public void A_search_opens_the_folders_and_leaves_them_as_they_were_afterwards()
+    public void A_search_spans_the_vault_from_any_folder_and_returns_to_it_afterwards()
     {
         using var ui = new UiThread();
         using var scene = new Scene();
         scene.Sheet("Biologie", "Mitose", "La prophase.");
         scene.Load();
-        scene.Page.ToggleFolderCommand.Execute(scene.Page.Rows.OfType<SheetFolderRow>().Single(row => row.Path == "Biologie"));
-        Assert.IsEmpty(scene.Rows, "le dossier est plié");
+        scene.Page.SelectedPlace = scene.Page.Unfiled();
+        Assert.IsEmpty(scene.Rows, "aucune fiche hors des dossiers");
 
         scene.Page.Bar.Search = "prophase";
         UiThread.Until(() => scene.Rows.Count == 1 && scene.Rows[0].HasExcerpt);
+        Assert.AreEqual(SheetsText.SearchEverywhere, scene.Page.ListTitle);
 
         scene.Page.Bar.Search = string.Empty;
-        Assert.IsEmpty(scene.Rows, "il se replie");
+        Assert.IsEmpty(scene.Rows, "on retrouve ce qui était choisi");
+        Assert.AreEqual(SheetsText.NoFolder, scene.Page.ListTitle);
     }
 
     [STATestMethod]

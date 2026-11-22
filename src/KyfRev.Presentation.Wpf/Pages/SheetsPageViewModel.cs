@@ -53,33 +53,73 @@ public enum SheetSort
     DueDate,
 }
 
-/// <summary>L'en-tête d'un dossier dans la liste : il se plie et se déplie, mais ne se choisit pas.</summary>
-/// <param name="Folder">« Biologie » ou « Sans dossier ».</param>
-/// <param name="Count">Fiches montrées dans ce dossier et ses sous-dossiers.</param>
+/// <summary>Ce qu'on choisit dans le volet des dossiers : ce que la liste du milieu montre.</summary>
+public enum SheetPlace
+{
+    /// <summary>Toutes les fiches, rangées par dossier.</summary>
+    All,
+
+    /// <summary>Les fiches à réviser aujourd'hui ou en retard.</summary>
+    Due,
+
+    /// <summary>Un dossier, avec ses sous-dossiers.</summary>
+    Folder,
+
+    /// <summary>Les fiches posées à la racine du coffre, dans aucun dossier.</summary>
+    Unfiled,
+}
+
+/// <summary>
+/// Un dossier : une entrée du volet des dossiers (rangée 21B des maquettes), qui se choisit et, s'il a des sous-dossiers,
+/// se plie ; ou l'intertitre d'un sous-dossier dans la liste du milieu, qui ne se choisit pas.
+/// </summary>
+/// <param name="Folder">« Biologie », « Toutes les fiches » ou « Non rangées » ; « Cellule › Noyau » pour un intertitre.</param>
+/// <param name="Count">Fiches de ce dossier et de ses sous-dossiers.</param>
 public sealed record SheetFolderRow(string Folder, int Count)
 {
     private const double IndentStep = 16;
 
-    /// <summary>Son chemin relatif à <c>fiches/</c> ; vide pour « Sans dossier ».</summary>
+    /// <summary>Son chemin relatif à <c>fiches/</c> ; vide pour ce qui n'est pas un vrai dossier.</summary>
     public string Path { get; init; } = string.Empty;
+
+    /// <summary>Ce que cette entrée montre quand on la choisit.</summary>
+    public SheetPlace Place { get; init; } = SheetPlace.Folder;
 
     /// <summary>Sa profondeur dans l'arborescence, à partir de 0.</summary>
     public int Depth { get; init; }
 
-    /// <summary>Ses fiches et sous-dossiers sont montrés.</summary>
+    /// <summary>Ses sous-dossiers sont montrés.</summary>
     public bool IsExpanded { get; init; } = true;
 
-    /// <summary>C'est un vrai dossier, et non « Sans dossier ».</summary>
+    /// <summary>Il a des sous-dossiers : son chevron le plie et le déplie.</summary>
+    public bool HasChildren { get; init; }
+
+    /// <summary>La première entrée des dossiers : l'intertitre « Dossiers » est au-dessus d'elle.</summary>
+    public bool StartsFolders { get; init; }
+
+    /// <summary>C'est un vrai dossier, qu'on renomme, déplace ou supprime.</summary>
     public bool IsFolder => Path.Length > 0;
+
+    /// <summary>On peut y déposer une fiche ou un dossier : un vrai dossier, ou la racine (« Non rangées »).</summary>
+    public bool TakesDrops => Place is SheetPlace.Folder or SheetPlace.Unfiled;
 
     /// <summary>Il est plus profond que ce qui se parcourt bien.</summary>
     public bool IsTooDeep => Path.Split('/').Length > SheetsPageViewModel.CalmDepth;
 
-    /// <summary>Son retrait dans la liste.</summary>
-    public Thickness Indent => new(Depth * IndentStep, 8, 0, 2);
+    /// <summary>Son retrait dans le volet.</summary>
+    public Thickness Indent => new(Depth * IndentStep, 0, 0, 0);
 
     /// <summary>Le chevron qui dit s'il est plié.</summary>
     public string Chevron => IsExpanded ? Icons.ChevronDown : Icons.ChevronRight;
+
+    /// <summary>Son icône : la liste, l'horloge, le dossier, ou la fiche seule.</summary>
+    public string Glyph => Place switch
+    {
+        SheetPlace.All => Icons.ListLines,
+        SheetPlace.Due => Icons.Clock,
+        SheetPlace.Unfiled => Icons.Document,
+        _ => Icons.FolderOpen,
+    };
 
     /// <summary>Le nom lu par le lecteur d'écran, et ce qui s'affiche.</summary>
     public override string ToString() => SheetsText.FolderCountOf(Folder, Count);
@@ -109,6 +149,7 @@ public sealed class SheetRow
         Sheet = sheet;
         var folder = DisplayFolder(sheet.Folder);
         IsLate = !sheet.IsNote && sheet.DueDate < day;
+        IsDueToday = !sheet.IsNote && !sheet.Archived && sheet.DueDate == day;
         var state = sheet.IsNote ? SheetsText.NoteRow
             : sheet.Archived || sheet.DueDate is not { } due ? SheetsText.ArchivedRow
             : due < day ? SheetsText.StepOf(sheet.Step!, DashboardText.DaysLateOf(day.DayNumber - due.DayNumber))
@@ -123,12 +164,6 @@ public sealed class SheetRow
 
     /// <summary>La fiche lue dans le coffre.</summary>
     public VaultSheet Sheet { get; }
-
-    /// <summary>Sa profondeur dans l'arborescence.</summary>
-    internal int Depth { get; init; }
-
-    /// <summary>Son retrait dans la liste.</summary>
-    public Thickness Indent => new(Depth * 16, 6, 0, 6);
 
     /// <summary>Titre.</summary>
     public string Title => Sheet.Title;
@@ -153,6 +188,9 @@ public sealed class SheetRow
 
     /// <summary>L'échéance est passée.</summary>
     public bool IsLate { get; }
+
+    /// <summary>Elle est à réviser aujourd'hui même : sa pastille est un anneau.</summary>
+    public bool IsDueToday { get; }
 
     /// <summary>Le fichier de la fiche est introuvable ou en double.</summary>
     public bool FileMissing => !Sheet.FilePresent;
@@ -186,6 +224,12 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
     /// <summary>Largeur à partir de laquelle l'aperçu s'affiche à côté de la liste.</summary>
     public const double PreviewMinimum = 820;
 
+    /// <summary>Largeur à partir de laquelle le volet des dossiers tient à gauche de la liste ; en deçà, un bouton l'ouvre.</summary>
+    public const double PaneMinimum = 1000;
+
+    /// <summary>Largeur à partir de laquelle le volet et la liste s'élargissent (écran très large).</summary>
+    public const double WideMinimum = 1800;
+
     private static readonly StringComparer FrenchTitles = StringComparer.Create(CultureInfo.GetCultureInfo("fr-FR"), ignoreCase: false);
 
     /// <summary>Le choix « Nouveau dossier… » du menu des dossiers.</summary>
@@ -202,8 +246,13 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
     private readonly ReviewUseCases? _reviews;
     private readonly TrashUseCases? _trash;
     private readonly HashSet<string> _collapsed = new(StringComparer.Ordinal);
-    private readonly ListFilter _folder;
     private readonly ListFilter _state;
+
+    /// <summary>Ce que le volet des dossiers a choisi : toutes les fiches au départ.</summary>
+    private (SheetPlace Kind, string Path) _place = (SheetPlace.All, string.Empty);
+
+    /// <summary>Le volet se refait : la sélection qui passe un instant à rien ne change pas ce qui est choisi.</summary>
+    private bool _rebuildingPlaces;
     private readonly HashSet<string> _chosenTags = new(StringComparer.OrdinalIgnoreCase);
     private readonly ListFilter _sort;
     private readonly LatestSearch _textSearch = new();
@@ -247,7 +296,7 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
         Import?.Imported = OnImported;
         Import?.RefusedUnseen = ShowUnreadRefusal;
         Bar = new FilterBarViewModel(BuildRows) { SearchPlaceholder = SheetsText.SearchPlaceholder, SearchName = SheetsText.SearchName, SearchChanged = OnSearchTextChanged };
-        _folder = Bar.Add(SheetsText.FilterFolder, [new(string.Empty, SheetsText.AllFolders)]);
+        // Le dossier se choisit dans le volet de gauche, plus dans les filtres.
         _state = Bar.Add(
             SheetsText.FilterState,
             [
@@ -329,6 +378,193 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
     /// <summary>Au moins une fiche à montrer.</summary>
     public bool HasRows => Rows.Count > 0;
 
+    /// <summary>
+    /// Le volet des dossiers : « Toutes les fiches », « À réviser aujourd'hui », l'arborescence des dossiers (ses
+    /// sous-dossiers pliés cachés), puis « Non rangées ».
+    /// </summary>
+    [ObservableProperty]
+    public partial IReadOnlyList<SheetFolderRow> Places { get; private set; } = [];
+
+    /// <summary>L'entrée choisie dans le volet : la liste du milieu montre ses fiches.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(PlaceName))]
+    public partial SheetFolderRow? SelectedPlace { get; set; }
+
+    /// <summary>« Biologie » : le nom de ce qui est choisi, sur le bouton du volet replié.</summary>
+    public string PlaceName => SelectedPlace?.Folder ?? SheetsText.AllSheets;
+
+    /// <summary>Le volet replié est demandé ouvert, par-dessus la page.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsPlacesSheet))]
+    public partial bool ArePlacesOpen { get; set; }
+
+    /// <summary>Le tiroir des dossiers est ouvert : demandé, et le volet ne tient pas à côté de la liste.</summary>
+    public bool ShowsPlacesSheet => ArePlacesOpen && !ShowsPane;
+
+    /// <summary>Le volet tient à gauche de la liste ; sinon, un bouton l'ouvre par-dessus. Tant que la largeur n'est pas connue, non.</summary>
+    public bool ShowsPane => PageWidth >= PaneMinimum && !double.IsInfinity(PageWidth);
+
+    /// <summary>Le volet replié s'ouvre par le bas, comme sur un téléphone ; sinon par la gauche.</summary>
+    public bool PlacesFromBottom => PageWidth < RoomMinimum;
+
+    /// <summary>Écran très large : le volet et la liste prennent plus de place.</summary>
+    public bool IsWide => PageWidth >= WideMinimum && !double.IsInfinity(PageWidth);
+
+    /// <summary>« Biologie », « Toutes les fiches », ou « Dans tout le coffre » pendant une recherche : au-dessus de la liste.</summary>
+    [ObservableProperty]
+    public partial string ListTitle { get; private set; } = SheetsText.AllSheets;
+
+    /// <summary>« 3 fiches » : ce que la liste montre.</summary>
+    [ObservableProperty]
+    public partial string ListCount { get; private set; } = string.Empty;
+
+    /// <summary>Ce qui est choisi dans le volet n'a aucune fiche, sans qu'aucun filtre n'y soit pour rien.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(PlaceEmptyText), nameof(PlaceTakesSheets))]
+    public partial bool IsPlaceEmpty { get; private set; }
+
+    /// <summary>« Ce dossier est vide. », « Rien à réviser pour l'instant. » ou « Toutes vos fiches sont rangées. ».</summary>
+    public string PlaceEmptyText => _place.Kind switch
+    {
+        SheetPlace.Due => SheetsText.NothingDue,
+        SheetPlace.Unfiled => SheetsText.AllFiled,
+        _ => SheetsText.EmptyPlace,
+    };
+
+    /// <summary>On peut écrire une fiche là où l'on est : un dossier, ou la racine ; pas dans « À réviser ».</summary>
+    public bool PlaceTakesSheets => _place.Kind != SheetPlace.Due;
+
+    /// <summary>La liste du milieu montre autre chose : la vue la fait arriver.</summary>
+    public event EventHandler? PlaceChanged;
+
+    partial void OnSelectedPlaceChanged(SheetFolderRow? value)
+    {
+        if (_rebuildingPlaces || value is null)
+        {
+            return;
+        }
+        ArePlacesOpen = false;
+        var place = (value.Place, value.Path);
+        if (place == _place)
+        {
+            return;
+        }
+        _place = place;
+        BuildRows();
+        PlaceChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
+    /// Va dans ce dossier, depuis son intertitre dans la liste : il est choisi dans le volet, ses parents dépliés pour le
+    /// montrer. La recherche en cours s'arrête : on veut voir ce dossier.
+    /// </summary>
+    internal void GoTo(string folder)
+    {
+        if (_place == (SheetPlace.Folder, folder) && Bar.Search.Length == 0)
+        {
+            return;
+        }
+        for (var ancestor = ParentOf(folder); ancestor.Length > 0; ancestor = ParentOf(ancestor))
+        {
+            _collapsed.Remove(ancestor);
+        }
+        _place = (SheetPlace.Folder, folder);
+        Bar.Search = string.Empty;
+        BuildRows();
+        PlaceChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>Ouvre ou ferme le volet replié.</summary>
+    [RelayCommand]
+    private void TogglePlaces() => ArePlacesOpen = !ArePlacesOpen;
+
+    /// <summary>« Nouveau dossier », au bas du volet : dans le dossier choisi, à la racine sinon.</summary>
+    [RelayCommand]
+    private void NewFolderHere()
+    {
+        ArePlacesOpen = false;
+        RequestNewFolder(_place.Kind == SheetPlace.Folder ? _place.Path : string.Empty);
+    }
+
+    /// <summary>
+    /// Refait le volet : les dossiers du coffre, même vides, et le nombre de fiches de chacun (parmi celles que montrent
+    /// « Tout », « Fiches » ou « Notes »). Rien ne change s'il est le même, pour que le choix ne saute pas.
+    /// </summary>
+    private void BuildPlaces(IReadOnlyList<VaultSheet> entries, DateOnly day)
+    {
+        var shown = entries.Where(sheet => (Kind != SheetKind.Review || !sheet.IsNote) && (Kind != SheetKind.Notes || sheet.IsNote)).ToList();
+        var paths = new SortedSet<string>(FrenchTitles);
+        foreach (var path in shown.Select(sheet => sheet.Folder).Concat(entries.Select(sheet => sheet.Folder)).Concat(_folderPaths).Where(path => path.Length > 0))
+        {
+            for (var ancestor = path; ancestor.Length > 0; ancestor = ParentOf(ancestor))
+            {
+                paths.Add(ancestor);
+            }
+        }
+        var places = new List<SheetFolderRow>
+        {
+            new(SheetsText.AllSheets, shown.Count) { Place = SheetPlace.All },
+            new(SheetsText.DueSheets, shown.Count(sheet => IsDue(sheet, day))) { Place = SheetPlace.Due },
+        };
+        var first = true;
+        AddChildren(string.Empty, 0);
+        places.Add(new SheetFolderRow(SheetsText.NoFolder, shown.Count(sheet => sheet.Folder.Length == 0)) { Place = SheetPlace.Unfiled, StartsFolders = first });
+        if (!places.SequenceEqual(Places))
+        {
+            _rebuildingPlaces = true;
+            try
+            {
+                Places = places;
+            }
+            finally
+            {
+                _rebuildingPlaces = false;
+            }
+        }
+        // Le dossier choisi s'est caché sous un parent plié : c'est le parent qui est choisi, comme dans l'Explorateur. Il a
+        // disparu (supprimé, renommé, déplacé) : on revient à toutes les fiches.
+        var chosen = Places.FirstOrDefault(row => row.Place == _place.Kind && row.Path == _place.Path);
+        for (var ancestor = _place.Kind == SheetPlace.Folder && paths.Contains(_place.Path) ? ParentOf(_place.Path) : string.Empty; chosen is null && ancestor.Length > 0; ancestor = ParentOf(ancestor))
+        {
+            chosen = Places.FirstOrDefault(row => row.IsFolder && row.Path == ancestor);
+        }
+        chosen ??= Places[0];
+        _place = (chosen.Place, chosen.Path);
+        _rebuildingPlaces = true;
+        try
+        {
+            SelectedPlace = chosen;
+        }
+        finally
+        {
+            _rebuildingPlaces = false;
+        }
+
+        void AddChildren(string parent, int depth)
+        {
+            foreach (var path in paths.Where(path => ParentOf(path) == parent))
+            {
+                var hasChildren = paths.Any(other => ParentOf(other) == path);
+                var isExpanded = !_collapsed.Contains(path);
+                places.Add(new SheetFolderRow(NameOf(path), shown.Count(sheet => IsWithin(sheet.Folder, path)))
+                {
+                    Path = path,
+                    Depth = depth,
+                    HasChildren = hasChildren,
+                    IsExpanded = isExpanded,
+                    StartsFolders = first,
+                });
+                first = false;
+                if (hasChildren && isExpanded)
+                {
+                    AddChildren(path, depth + 1);
+                }
+            }
+        }
+    }
+
+    private static bool IsDue(VaultSheet sheet, DateOnly day) => !sheet.IsNote && !sheet.Archived && sheet.DueDate <= day;
+
     /// <summary>La fiche choisie, montrée dans l'aperçu.</summary>
     [ObservableProperty]
     public partial object? SelectedRow { get; set; }
@@ -363,7 +599,7 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
 
     /// <summary>Largeur de la page.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasPreview), nameof(ShowsPreview))]
+    [NotifyPropertyChangedFor(nameof(HasPreview), nameof(ShowsPreview), nameof(ShowsPane), nameof(PlacesFromBottom), nameof(IsWide), nameof(ShowsPlacesSheet))]
     public partial double PageWidth { get; set; } = double.PositiveInfinity;
 
     /// <summary>Assez de largeur pour montrer l'aperçu à côté de la liste.</summary>
@@ -491,7 +727,19 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
         Tags = [];
         OnPropertyChanged(nameof(HasChosenTags));
         Bar.Search = string.Empty;
-        _folder.Replace([new(string.Empty, SheetsText.AllFolders)]);
+        _place = (SheetPlace.All, string.Empty);
+        _rebuildingPlaces = true;
+        try
+        {
+            Places = [];
+            SelectedPlace = null;
+        }
+        finally
+        {
+            _rebuildingPlaces = false;
+        }
+        ArePlacesOpen = false;
+        IsPlaceEmpty = false;
         Rows = [];
         SelectedRow = null;
         Preview = null;
@@ -535,7 +783,6 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
         ShowUnreadRefusal();
         HasSheets = entries.Count > 0;
         OnPropertyChanged(nameof(Summary));
-        _folder.Replace([new(string.Empty, SheetsText.AllFolders), .. FolderChoices(entries.Select(sheet => sheet.Folder))]);
         BuildRows();
     }
 
@@ -543,6 +790,11 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
     {
         // La recherche et les filtres tiennent dans la colonne de la liste : les filtres s'y déplient à la demande.
         Bar.HasRoom = false;
+        // Le volet tient de nouveau à côté de la liste : le tiroir n'a plus lieu d'être.
+        if (ShowsPane)
+        {
+            ArePlacesOpen = false;
+        }
         OnPropertyChanged(nameof(Summary));
         KeepSelection();
     }
@@ -688,7 +940,7 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
         _createsNote = false;
         CreateError = null;
         NewFolder.Replace([new(string.Empty, SheetsText.AtRoot), .. FolderChoices(folders.Value), new(NewFolderChoice, SheetsText.NewFolderChoice)]);
-        var wanted = _createIn ?? _folder.Value;
+        var wanted = _createIn ?? (_place.Kind == SheetPlace.Folder ? _place.Path : string.Empty);
         _createIn = null;
         NewFolder.Selected = NewFolder.Choices.FirstOrDefault(choice => Equals(choice.Value, wanted)) ?? NewFolder.Choices[0];
         NewTemplate.Replace([new(null, SheetsText.EmptyTemplate), .. templates.Value.Select(template => new Choice<object?>(template.Name, template.Name))]);
@@ -748,13 +1000,28 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
         OnPropertyChanged(nameof(KindAllLabel));
         OnPropertyChanged(nameof(KindReviewLabel));
         OnPropertyChanged(nameof(KindNotesLabel));
-        var isFiltered = Kind != SheetKind.All || wanted.Length > 0 || HasChosenTags || !Equals(_folder.Value, string.Empty) || (SheetState)_state.Value! != SheetState.All;
+        var isFiltered = Kind != SheetKind.All || HasChosenTags || (SheetState)_state.Value! != SheetState.All;
+        BuildPlaces(entries, day);
+        // Une recherche porte sur tout le coffre : chaque fiche trouvée dit son dossier.
+        var searching = wanted.Length > 0;
+        var (kind, root) = searching ? (SheetPlace.All, string.Empty) : _place;
+        var inPlace = entries.Where(sheet => IsIn(sheet, kind, root, day)).ToList();
+        sheets = [.. sheets.Where(sheet => IsIn(sheet, kind, root, day))];
+        ListTitle = searching ? SheetsText.SearchEverywhere : SelectedPlace?.Folder ?? SheetsText.AllSheets;
+        ListCount = Dates.Plural(sheets.Count, SheetsText.CountOneOf, SheetsText.CountManyOf);
         _rebuilding = true;
         try
         {
-            Rows = sort == SheetSort.Folder ? Tree(sheets, day, isFiltered, expandAll: wanted.Length > 0 || HasChosenTags) : [.. Sorted(sheets, sort).Select(sheet => RowOf(sheet, day, showFolder: true))];
+            Rows = sort != SheetSort.Folder || kind is SheetPlace.Due or SheetPlace.Unfiled
+                ? [.. (kind == SheetPlace.Due && sort == SheetSort.Folder ? Sorted(sheets, SheetSort.DueDate) : Sorted(sheets, sort == SheetSort.Folder ? SheetSort.Title : sort))
+                    .Select(sheet => RowOf(sheet, day, showFolder: kind != SheetPlace.Unfiled))]
+                : Grouped(sheets, day, kind == SheetPlace.Folder ? root : null);
             IsEmpty = entries.Count == 0;
-            HasNoMatch = entries.Count > 0 && sheets.Count == 0;
+            // Un dossier vide n'est pas une recherche sans réponse : on y propose d'écrire.
+            IsPlaceEmpty = entries.Count > 0 && inPlace.Count == 0 && !searching && kind != SheetPlace.All;
+            OnPropertyChanged(nameof(PlaceEmptyText));
+            OnPropertyChanged(nameof(PlaceTakesSheets));
+            HasNoMatch = entries.Count > 0 && sheets.Count == 0 && !IsPlaceEmpty && (searching || isFiltered);
             KeepSelection();
         }
         finally
@@ -769,44 +1036,41 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
     }
 
     /// <summary>
-    /// L'arborescence : chaque dossier, ses sous-dossiers, puis ses fiches. Sans filtre, les dossiers vides sont montrés :
-    /// on peut y ranger des fiches. Pendant une recherche, tous les dossiers sont dépliés : ce qui est trouvé se voit.
+    /// La liste rangée par dossier : dans un dossier (<paramref name="root"/>), ses propres fiches d'abord, puis celles de
+    /// chaque sous-dossier sous son intertitre (« Cellule », « Cellule › Noyau ») ; pour tout le coffre (<c>null</c>), un
+    /// intertitre par dossier, et les fiches non rangées à la fin. Les dossiers sans fiche montrée n'ont pas d'intertitre.
     /// </summary>
-    private List<object> Tree(List<VaultSheet> sheets, DateOnly day, bool isFiltered, bool expandAll)
+    private List<object> Grouped(List<VaultSheet> sheets, DateOnly day, string? root)
     {
-        var paths = new SortedSet<string>(FrenchTitles);
-        foreach (var path in sheets.Select(sheet => sheet.Folder).Concat(isFiltered ? [] : _folderPaths).Where(path => path.Length > 0))
-        {
-            for (var ancestor = path; ancestor.Length > 0; ancestor = ParentOf(ancestor))
-            {
-                paths.Add(ancestor);
-            }
-        }
         var rows = new List<object>();
-        var atRoot = sheets.Where(sheet => sheet.Folder.Length == 0).ToList();
-        // Même vide, « Sans dossier » reste une destination pour une fiche qu'on glisse hors d'un dossier.
-        if (atRoot.Count > 0 || (!isFiltered && paths.Count > 0))
+        if (root is not null)
         {
-            rows.Add(new SheetFolderRow(SheetsText.NoFolder, atRoot.Count));
-            rows.AddRange(atRoot.Select(sheet => RowOf(sheet, day, showFolder: false)));
+            rows.AddRange(sheets.Where(sheet => sheet.Folder == root).Select(sheet => RowOf(sheet, day, showFolder: false)));
         }
-        AddChildren(string.Empty, 0);
+        var folders = new SortedSet<string>(sheets.Select(sheet => sheet.Folder).Where(folder => folder.Length > 0 && folder != root), FrenchTitles);
+        foreach (var folder in folders)
+        {
+            var inside = sheets.Where(sheet => sheet.Folder == folder).ToList();
+            var label = root is { Length: > 0 } ? folder[(root.Length + 1)..] : folder;
+            rows.Add(new SheetFolderRow(SheetRow.DisplayFolder(label), inside.Count) { Path = folder });
+            rows.AddRange(inside.Select(sheet => RowOf(sheet, day, showFolder: false)));
+        }
+        if (root is null && sheets.Where(sheet => sheet.Folder.Length == 0).ToList() is { Count: > 0 } unfiled)
+        {
+            rows.Add(new SheetFolderRow(SheetsText.NoFolder, unfiled.Count) { Place = SheetPlace.Unfiled });
+            rows.AddRange(unfiled.Select(sheet => RowOf(sheet, day, showFolder: false)));
+        }
         return rows;
-
-        void AddChildren(string parent, int depth)
-        {
-            foreach (var path in paths.Where(path => ParentOf(path) == parent))
-            {
-                var isExpanded = expandAll || !_collapsed.Contains(path);
-                rows.Add(new SheetFolderRow(NameOf(path), sheets.Count(sheet => IsWithin(sheet.Folder, path))) { Path = path, Depth = depth, IsExpanded = isExpanded });
-                if (isExpanded)
-                {
-                    AddChildren(path, depth + 1);
-                    rows.AddRange(sheets.Where(sheet => sheet.Folder == path).Select(sheet => RowOf(sheet, day, showFolder: false, depth + 1)));
-                }
-            }
-        }
     }
+
+    /// <summary>La fiche est dans ce que montre le volet.</summary>
+    private static bool IsIn(VaultSheet sheet, SheetPlace kind, string root, DateOnly day) => kind switch
+    {
+        SheetPlace.Due => IsDue(sheet, day),
+        SheetPlace.Folder => IsWithin(sheet.Folder, root),
+        SheetPlace.Unfiled => sheet.Folder.Length == 0,
+        _ => true,
+    };
 
     /// <summary>Retire tous les filtres d'étiquette.</summary>
     [RelayCommand]
@@ -843,7 +1107,7 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
     /// </summary>
     private void RefreshTags(IEnumerable<VaultSheet> entries, DateOnly day)
     {
-        var tally = TagChip.Tally(entries.Where(sheet => IsInFolderAndState(sheet, day)), FrenchTitles);
+        var tally = TagChip.Tally(entries.Where(sheet => IsInKindAndState(sheet, day) && IsIn(sheet, _place.Kind, _place.Path, day)), FrenchTitles);
         var known = tally.Select(tag => tag.Label).ToHashSet(StringComparer.OrdinalIgnoreCase);
         List<(string Label, int Count)> wanted = [.. tally, .. _chosenTags.Where(tag => !known.Contains(tag)).Select(tag => (tag, 0))];
         if (!wanted.SequenceEqual(Tags.Select(chip => (chip.Label, chip.Count))))
@@ -852,14 +1116,14 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
         }
     }
 
-    private SheetRow RowOf(VaultSheet sheet, DateOnly day, bool showFolder, int depth = 0) =>
-        new(sheet, day, showFolder) { Depth = depth, Excerpt = _found?.GetValueOrDefault(sheet.Id) ?? [] };
+    private SheetRow RowOf(VaultSheet sheet, DateOnly day, bool showFolder) =>
+        new(sheet, day, showFolder) { Excerpt = _found?.GetValueOrDefault(sheet.Id) ?? [] };
 
-    /// <summary>Plie ou déplie un dossier.</summary>
+    /// <summary>Plie ou déplie un dossier du volet : ses sous-dossiers se cachent ou se montrent.</summary>
     [RelayCommand]
     private void ToggleFolder(SheetFolderRow row)
     {
-        if (row.IsFolder)
+        if (row.IsFolder && row.HasChildren)
         {
             if (!_collapsed.Add(row.Path))
             {
@@ -888,17 +1152,12 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
         {
             return false;
         }
-        return _chosenTags.All(tag => sheet.Tags.Contains(tag, StringComparer.OrdinalIgnoreCase)) && IsInFolderAndState(sheet, day);
+        return _chosenTags.All(tag => sheet.Tags.Contains(tag, StringComparer.OrdinalIgnoreCase)) && IsInKindAndState(sheet, day);
     }
 
-    private bool IsInFolderAndState(VaultSheet sheet, DateOnly day)
+    private bool IsInKindAndState(VaultSheet sheet, DateOnly day)
     {
         if ((Kind == SheetKind.Review && sheet.IsNote) || (Kind == SheetKind.Notes && !sheet.IsNote))
-        {
-            return false;
-        }
-        var folder = (string)_folder.Value!;
-        if (folder.Length > 0 && sheet.Folder != folder && !sheet.Folder.StartsWith(folder + "/", StringComparison.Ordinal))
         {
             return false;
         }

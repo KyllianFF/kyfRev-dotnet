@@ -343,7 +343,7 @@ public sealed partial class SheetsPageViewModel
     {
         var folder = target switch
         {
-            SheetFolderRow row => row.Path,
+            SheetFolderRow { TakesDrops: true } row => row.Path,
             SheetRow row when Rows.OfType<SheetFolderRow>().Any() => row.Sheet.Folder,
             _ => null,
         };
