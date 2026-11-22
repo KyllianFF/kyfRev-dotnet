@@ -10,7 +10,8 @@
        licences, installation.json, inscription dans Paramètres › Applications ;
     2. kyfRev ouvert : une installation s'arrête sans rien modifier ;
     3. sur un poste vierge, kyfRev installé démarre en mode « installée » et se signale ouvert ;
-       lancé pendant qu'une installation tourne (mutex kyfRevInstallation), il se referme sans rien ouvrir ;
+       lancé pendant qu'une installation tourne (mutex kyfRevInstallation), il se referme sans rien ouvrir,
+       sauf ouvert par l'installateur à la fin (--apres-installation) ;
     4. mise à jour par la version plus récente, avec les options que kyfRev lui passe : même dossier,
        mêmes choix, licences en place ; sur un poste vierge, /RELANCER rouvre la nouvelle version ;
     5. retour à la version d'origine refusé : code 7, rien n'est modifié ;
@@ -222,11 +223,26 @@ try {
                 $kyfrev.Kill()
                 throw 'Échec : kyfRev lancé pendant une installation ne s''est pas refermé.'
             }
+            Assert-Vrai (@(Select-String -Path $journalKyfRev -SimpleMatch 'Démarrage de kyfRev').Count -eq $demarrages) 'lancé pendant une installation, kyfRev se referme sans rien ouvrir'
+
+            # Celui que l'installateur ouvre lui-même à la fin (case « Exécuter kyfRev », /RELANCER), mutex encore tenu.
+            $kyfrev = Start-Process -FilePath (Join-Path $dossier 'kyfRev.exe') -ArgumentList '--apres-installation' -PassThru
+            try {
+                $limite = [DateTime]::UtcNow.AddMinutes(1)
+                while (@(Select-String -Path $journalKyfRev -SimpleMatch 'Démarrage de kyfRev').Count -eq $demarrages) {
+                    if ($kyfrev.HasExited -or [DateTime]::UtcNow -gt $limite) { throw 'Échec : kyfRev ouvert par l''installateur s''est refermé.' }
+                    Start-Sleep -Milliseconds 250
+                }
+                Assert-Vrai $true 'ouvert par l''installateur à la fin, kyfRev démarre alors que l''installation tient encore son mutex'
+            }
+            finally {
+                if (-not $kyfrev.HasExited) { $kyfrev.Kill() }
+                $kyfrev.WaitForExit()
+            }
         }
         finally {
             $installation.Dispose()
         }
-        Assert-Vrai (@(Select-String -Path $journalKyfRev -SimpleMatch 'Démarrage de kyfRev').Count -eq $demarrages) 'lancé pendant une installation, kyfRev se referme sans rien ouvrir'
     }
 
     Write-Host '4. Mise à jour en version 99.0.0, comme kyfRev la lance'

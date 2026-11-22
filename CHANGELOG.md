@@ -7,6 +7,11 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ## [Non publié]
 
+### Corrigé
+- Installation : la case « Exécuter kyfRev » de la dernière page ouvre bien kyfRev. Ouvert alors que l'installateur
+  n'avait pas tout à fait fini, il se croyait au milieu d'une mise à jour et se refermait aussitôt, sans rien montrer.
+  La réouverture après une mise à jour (« Redémarrer maintenant ») pouvait échouer de la même façon.
+
 ## [1.1.0-beta.3] - 2026-11-18
 
 ### Ajouté

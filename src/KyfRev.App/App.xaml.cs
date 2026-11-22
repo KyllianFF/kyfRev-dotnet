@@ -40,8 +40,9 @@ internal sealed partial class App : System.Windows.Application
     {
         base.OnStartup(e);
         // Une mise à jour s'installe : ouvert maintenant, kyfRev retiendrait des fichiers qu'elle remplace. Il se referme
-        // aussitôt, sans rien ouvrir ; la mise à jour finie, il s'ouvre normalement.
-        if (SilentInstaller.IsInstalling())
+        // aussitôt, sans rien ouvrir ; la mise à jour finie, il s'ouvre normalement. L'installateur qui l'ouvre lui-même à
+        // la fin tient encore son mutex : il le dit par une option, ses fichiers étant déjà en place.
+        if (SilentInstaller.StepsAside(e.Args))
         {
             Shutdown();
             return;
