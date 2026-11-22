@@ -195,12 +195,13 @@ internal sealed partial class DashboardPage : UserControl
                 }
                 return items;
             case ExamRow exam when page.Exams is { IsBusy: false } exams:
-                List<Control> entries = [];
+                // Rangée 23C : Modifier et Resserrer en tête, Retirer l'examen à part.
+                List<Control> entries = [ActionMenus.Quick(ExamText.EditAction, Icons.Edit, () => exams.EditCommand.Execute(exam))];
                 if (exam.CanTighten)
                 {
-                    entries.Add(ActionMenus.Item(ExamText.TightenAction, () => exams.RequestTighten(exam)));
+                    entries.Add(ActionMenus.Quick(ExamText.TightenAction, Icons.Calendar, () => exams.RequestTighten(exam)));
                 }
-                entries.Add(ActionMenus.Item(ExamText.EditAction, () => exams.EditCommand.Execute(exam)));
+                entries.Add(new Separator());
                 entries.Add(ActionMenus.Item(ExamText.WithdrawAction, () => exams.RequestWithdraw(exam)));
                 return entries;
             default:

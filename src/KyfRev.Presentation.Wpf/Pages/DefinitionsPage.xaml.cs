@@ -60,13 +60,18 @@ internal sealed partial class DefinitionsPage : UserControl
         {
             return [];
         }
+        // Rangée 23C : les actions sur la définition en tête, le marquage, la suppression, puis la fiche où elle est écrite.
+        var sheet = new SheetTarget(row.Definition.SheetId, row.Definition.SheetTitle) { Folder = row.Definition.Folder };
         return
         [
-            ActionMenus.Quick(DefinitionsText.SeeInSheet, Icons.Document, () => row.OpenCommand.Execute(null)),
+            ActionMenus.Quick(DefinitionsText.SeeInSheet, Icons.Show, () => row.OpenCommand.Execute(null)),
             ActionMenus.Quick(DefinitionsText.Edit, Icons.Edit, () => row.EditCommand.Execute(null)),
+            new Separator(),
             ActionMenus.Item(row.IsMarkedEverywhere ? DefinitionsText.MarkHereOnly : DefinitionsText.MarkEverywhere, () => row.IsMarkedEverywhere = !row.IsMarkedEverywhere),
             new Separator(),
             ActionMenus.Item(ReadingText.DeleteDefinition, () => page.RequestDelete(row)),
+            new Separator(),
+            ActionMenus.Submenu(ReadingText.SheetSubmenu, SheetMenu.Items(sheet, page.SheetMenuHost())),
         ];
     }
 

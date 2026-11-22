@@ -826,6 +826,27 @@ internal sealed partial class SheetPage : UserControl
         {
             return [.. PassageMenuItems(page, entry), new Separator(), SheetSubmenu(page)];
         }
+        // Un schéma, un diagramme ou un graphique (rangée 23D) : le modifier, ou le copier en image.
+        if (DrawingAt(source) is { } drawing)
+        {
+            return
+            [
+                ActionMenus.Quick(ReadingText.EditDrawing, Icons.Edit, () => page.IsWriteOn = true),
+                ActionMenus.Quick(ReadingText.CopyDrawing, Icons.Copy, () => CopyDrawing(drawing)),
+                new Separator(),
+                SheetSubmenu(page),
+            ];
+        }
+        // Un tableau (rangée 23B) : le copier, pour le coller dans un tableur.
+        if (TableAt(source) is { } table)
+        {
+            return
+            [
+                ActionMenus.Quick(ReadingText.CopyTable, Icons.Table, () => Clipboard.SetText(TableText(table))),
+                new Separator(),
+                SheetSubmenu(page),
+            ];
+        }
         // Une image : on peut y masquer des zones à retrouver en révision.
         var picture = source as Image ?? ((source as Reading.ImageMaskOverlay)?.Parent as Panel)?.Children.OfType<Image>().FirstOrDefault();
         if (picture is { Tag: int imageIndex } && page.CanMaskImages)
@@ -853,6 +874,50 @@ internal sealed partial class SheetPage : UserControl
 
     /// <summary>« Fiche › » : le menu de la fiche entière, sous ce qu'on vise.</summary>
     private static MenuItem SheetSubmenu(SheetPageViewModel page) => ActionMenus.Submenu(ReadingText.SheetSubmenu, SheetItems(page));
+
+    /// <summary>Le schéma, le diagramme ou le graphique sous le pointeur ; rien ailleurs.</summary>
+    internal static FrameworkElement? DrawingAt(object? source)
+    {
+        for (var element = source as DependencyObject; element is not null; element = element is System.Windows.Media.Visual ? System.Windows.Media.VisualTreeHelper.GetParent(element) : LogicalTreeHelper.GetParent(element))
+        {
+            if (element is DiagramView or MermaidView or NetworkView)
+            {
+                return (FrameworkElement)element;
+            }
+        }
+        return null;
+    }
+
+    /// <summary>Le tableau sous le pointeur ; rien ailleurs.</summary>
+    internal static Table? TableAt(object? source)
+    {
+        for (var element = source as DependencyObject; element is not null; element = LogicalTreeHelper.GetParent(element))
+        {
+            if (element is Table table)
+            {
+                return table;
+            }
+        }
+        return null;
+    }
+
+    /// <summary>Le texte d'un tableau : une ligne par rangée, les cases séparées par des tabulations, comme les tableurs l'attendent.</summary>
+    internal static string TableText(Table table) => string.Join(
+        Environment.NewLine,
+        table.RowGroups.SelectMany(group => group.Rows).Select(row => string.Join('\t', row.Cells.Select(cell => new TextRange(cell.ContentStart, cell.ContentEnd).Text.Trim().ReplaceLineEndings(" ")))));
+
+    /// <summary>Copie un schéma tel qu'il s'affiche, en deux fois plus fin que l'écran pour rester net une fois collé.</summary>
+    private static void CopyDrawing(FrameworkElement drawing)
+    {
+        var (width, height) = ((int)Math.Ceiling(drawing.ActualWidth * 2), (int)Math.Ceiling(drawing.ActualHeight * 2));
+        if (width <= 0 || height <= 0)
+        {
+            return;
+        }
+        var bitmap = new System.Windows.Media.Imaging.RenderTargetBitmap(width, height, 192, 192, System.Windows.Media.PixelFormats.Pbgra32);
+        bitmap.Render(drawing);
+        Clipboard.SetImage(bitmap);
+    }
 
     /// <summary>Copie l'image visée, telle qu'elle s'affiche.</summary>
     private static void CopyPicture(Image picture)

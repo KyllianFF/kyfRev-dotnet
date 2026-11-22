@@ -376,6 +376,7 @@ internal static class Composition
             provider.GetRequiredService<ArchivesPageViewModel>().SheetActions = sheetActions;
             provider.GetRequiredService<ReviewNavigation>().SheetActions = sheetActions;
             provider.GetRequiredService<WorkloadPageViewModel>().SheetActions = sheetActions;
+            provider.GetRequiredService<DefinitionsPageViewModel>().SheetActions = sheetActions;
             provider.GetRequiredService<ExtensionEngine>().Screen = new ExtensionScreen(shell, provider.GetRequiredService<ReviewNavigation>());
             provider.GetRequiredService<DashboardPageViewModel>().ExtensionCards = extensionPages.CardsAsync;
             shell.WorkspaceOpening += (_, _) =>

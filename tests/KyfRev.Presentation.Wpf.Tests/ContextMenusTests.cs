@@ -293,7 +293,7 @@ public sealed class ContextMenusTests
             TestShell.Flush();
             var row = model.Rows.Single();
             var items = page.RowMenuItems(row);
-            CollectionAssert.AreEqual(new[] { DefinitionsText.SeeInSheet, DefinitionsText.Edit, DefinitionsText.MarkHereOnly, ReadingText.DeleteDefinition }, Headers(items));
+            CollectionAssert.AreEqual(new[] { DefinitionsText.SeeInSheet, DefinitionsText.Edit, DefinitionsText.MarkHereOnly, ReadingText.DeleteDefinition, ReadingText.SheetSubmenu }, Headers(items), "rangée 23C : la définition, puis sa fiche sous « Fiche › »");
 
             Click(items[0]);
             Assert.AreEqual((sheet, id), opener.Opened.Single());
@@ -307,14 +307,14 @@ public sealed class ContextMenusTests
             card.RaiseEvent(opened);
             Assert.IsFalse(opened.Handled);
 
-            Click(page.RowMenuItems(row)[4]);
+            Click(page.RowMenuItems(row)[5]);
             Assert.IsTrue(model.IsConfirmingDelete);
             TestShell.Flush();
             page.DeleteConfirmation.Close(DialogChoice.Secondary);
             TestShell.Flush();
             Assert.HasCount(1, model.Rows, "le refus ne change rien");
 
-            Click(page.RowMenuItems(row)[4]);
+            Click(page.RowMenuItems(row)[5]);
             TestShell.Flush();
             page.DeleteConfirmation.Close(DialogChoice.Primary);
             UiThread.Until(() => model.Rows.Count == 0);

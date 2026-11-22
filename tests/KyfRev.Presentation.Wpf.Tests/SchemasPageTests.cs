@@ -578,15 +578,16 @@ public sealed class SchemasPageTests
         using var scene = new IslandScene(Text);
         scene.WaitFor("document.querySelector('li.carte') !== null");
 
-        // Le vrai clic droit, dans l'îlot, sur la carte : le menu propose les trois sorties, entre « Dupliquer » et « Archiver ».
+        // Le vrai clic droit, dans l'îlot, sur la carte : Détail et Modifier en tête, puis les trois sorties, entre « Dupliquer » et « Archiver ».
         scene.Script("document.querySelector('li.carte').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 60, clientY: 60 }))");
         scene.WaitFor("document.querySelector('.menu[role=menu]') !== null");
         var order = JsonSerializer.Deserialize<string>(scene.Script("[...document.querySelectorAll('.menu [role=menuitem]')].map((entree) => entree.textContent.trim()).join(' | ')"))!;
-        StringAssert.Contains(order, "Dupliquer | Exporter… | Partager (copier l'image) | Imprimer… | Archiver", StringComparison.Ordinal);
+        StringAssert.StartsWith(order, "Détail | Modifier | Dupliquer", StringComparison.Ordinal);
+        StringAssert.Contains(order, "Dupliquer | Copier l'image | Exporter… | Imprimer… | Archiver | Supprimer…", StringComparison.Ordinal);
         Assert.AreEqual("true", scene.Script("(() => { const m = document.querySelector('.menu[role=menu]').getBoundingClientRect(); return m.left >= 0 && m.top >= 0 && m.right <= innerWidth && m.bottom <= innerHeight; })()"), "le menu tient dans la fenêtre");
 
-        // « Partager » : l'îlot dessine le schéma, le pont reçoit une vraie image PNG, et l'îlot le dit.
-        scene.Script("[...document.querySelectorAll('.menu [role=menuitem]')].find((entree) => entree.textContent.includes('Partager')).click()");
+        // « Copier l'image » : l'îlot dessine le schéma, le pont reçoit une vraie image PNG, et l'îlot le dit.
+        scene.Script("[...document.querySelectorAll('.menu [role=menuitem]')].find((entree) => entree.textContent.includes('Copier l')).click()");
         UiThread.Until(() => scene.Copied.Count == 1, TimeSpan.FromSeconds(30));
         CollectionAssert.AreEqual(new byte[] { 0x89, 0x50, 0x4E, 0x47 }, scene.Copied[0].Take(4).ToArray(), "une image PNG");
         using (var stream = new MemoryStream(scene.Copied[0]))
@@ -653,8 +654,8 @@ public sealed class SchemasPageTests
         scene.Script("document.querySelector('dialog[open] form').requestSubmit()");
         UiThread.Until(() => Directory.GetFiles(folder, "*.png").Length == 1, TimeSpan.FromSeconds(30));
 
-        // « Partager » : l'image est dans le presse-papiers, et l'annonce dit qu'elle y est en clair.
-        Choose("Partager");
+        // « Copier l'image » : l'image est dans le presse-papiers, et l'annonce dit qu'elle y est en clair.
+        Choose("Copier l");
         UiThread.Until(() => scene.Copied.Count == 1, TimeSpan.FromSeconds(30));
         scene.WaitFor("document.querySelector('.annonces [role=status]').textContent.includes('Ce coffre est chiffré, pas cette image')");
     }

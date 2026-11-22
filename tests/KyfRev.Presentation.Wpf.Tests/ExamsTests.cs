@@ -744,14 +744,14 @@ public sealed class ExamsTests
 
             // Le menu de la ligne : ce qu'on peut faire de cet examen.
             var entries = view.RowMenuItems(row);
-            Same(ExamText.TightenAction + " | " + ExamText.EditAction + " | " + ExamText.WithdrawAction, entries.OfType<MenuItem>().Select(item => (string)item.Header));
-            Click(entries[2]);
+            Same(ExamText.EditAction + " | " + ExamText.TightenAction + " | " + ExamText.WithdrawAction, entries.OfType<MenuItem>().Select(item => (string)item.Header));
+            Click(entries[3]);
             Assert.AreEqual(ExamConfirmation.Withdraw, page.Exams.Confirmation);
             page.Exams.AnswerCommand.Execute(false);
-            Click(entries[0]);
+            Click(entries[1]);
             Assert.AreEqual(ExamConfirmation.Tighten, page.Exams.Confirmation);
             page.Exams.AnswerCommand.Execute(false);
-            Click(entries[1]);
+            Click(entries[0]);
             UiThread.Until(() => page.Exams.IsEditing);
             page.Exams.AnswerEditorCommand.Execute(false);
             UiThread.Until(() => !page.Exams.IsEditing);

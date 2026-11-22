@@ -14,6 +14,9 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   extensions. Ces actions se font maintenant depuis toutes les vues, et ce qui a abouti se dit en bas de la fenêtre.
 - Fiche ouverte : sur un texte choisi, un passage, une image ou un mot défini, ce qu'on vise d'abord, puis « Fiche › »
   pour le reste. Les aperçus ont ce menu en français, à la place de « Copy / Select All ».
+- Clic droit, la suite : un tableau se copie pour un tableur ; un schéma se modifie ou se copie en image ; une définition
+  a la même forme dans l'onglet Définitions, avec sa fiche sous « Fiche › » ; un examen a « Modifier » et « Resserrer » en
+  tête. Dans l'onglet Schémas, le menu prend le même dessin et les mêmes mots (« Copier l'image », « Supprimer… »).
 - Carnet en deux volets : les dossiers à gauche, avec « Toutes les fiches », « À réviser » et « Non rangées » ; au milieu,
   les fiches du dossier choisi, rangées sous le nom de chaque sous-dossier. Un clic sur ce nom mène au sous-dossier. Les
   fiches s'écrivent en texte courant, avec une pastille pour leur état (à venir, aujourd'hui, en retard, note). Le filtre
