@@ -212,11 +212,12 @@ public sealed partial class ShellViewModel : ObservableObject, IForgetsVault, IS
     }
 
     /// <summary>
-    /// Le menu est affiché : un coffre est ouvert, hors du plein écran, et le menu latéral n'est pas masqué. En fenêtre étroite, le menu
+    /// Le menu est affiché : un coffre est ouvert, et le menu latéral n'est pas masqué. En plein écran aussi : c'est par lui qu'on change
+    /// de vue, la barre de titre partie. En fenêtre étroite, le menu
     /// passe en onglets au bas de la fenêtre et son bouton quitte la barre de titre : le masquage ne compte plus, sans quoi rien ne
     /// permettrait de changer de vue. Le choix reste retenu, et reprend dès que la fenêtre retrouve un menu latéral.
     /// </summary>
-    public bool IsMenuVisible => !IsWelcome && !IsFullScreen && (!IsFocusMode || Layout == NavigationLayout.Tabs);
+    public bool IsMenuVisible => !IsWelcome && (!IsFocusMode || Layout == NavigationLayout.Tabs);
 
     /// <summary>Le bouton de la barre de titre peut masquer ou rendre le menu : en plein écran, il n'y a pas de menu à rendre.</summary>
     public bool CanToggleMenu => !IsFullScreen && Layout != NavigationLayout.Tabs;
@@ -224,7 +225,7 @@ public sealed partial class ShellViewModel : ObservableObject, IForgetsVault, IS
     /// <summary>« Masquer le menu (Ctrl+Maj+F) » ou, quand il est masqué, « Afficher le menu (Ctrl+Maj+F) », avec la touche en vigueur.</summary>
     public string MenuToggleLabel => ShortcutKeys.In(IsFocusMode ? ShellText.ExitFocusMode : ShellText.EnterFocusMode, "concentration");
 
-    /// <summary>Plein écran (F11) : la fenêtre occupe tout l'écran, sans menu, pour réviser sans distraction.</summary>
+    /// <summary>Plein écran (F11) : la fenêtre occupe tout l'écran, sans barre de titre ni barre des tâches ; le menu reste, pour changer de vue.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsMenuVisible), nameof(CanToggleMenu))]
     public partial bool IsFullScreen { get; private set; }

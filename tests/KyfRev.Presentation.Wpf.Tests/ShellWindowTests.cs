@@ -488,9 +488,11 @@ public sealed class ShellWindowTests
             var buttons = (StackPanel)window.FindName("WindowButtons");
             Assert.AreEqual(Visibility.Visible, bar.Visibility);
 
+            Assert.AreEqual(40, System.Windows.Shell.WindowChrome.GetWindowChrome(window).CaptionHeight);
             test.Shell.ToggleFullScreen();
             TestShell.Flush();
             Assert.AreEqual(Visibility.Collapsed, bar.Visibility);
+            Assert.AreEqual(0, System.Windows.Shell.WindowChrome.GetWindowChrome(window).CaptionHeight, "plus de bande qui prend les clics du haut de la page");
             var maximize = (Button)window.FindName("MaximizeButton");
             var taken = false;
             Assert.AreEqual(0, window.OnWindowMessage(new WindowInteropHelper(window).Handle, 0x0084, 0, 0, ref taken), "Un bouton caché ne répond pas à Windows.");
@@ -498,6 +500,7 @@ public sealed class ShellWindowTests
             test.Shell.ToggleFullScreen();
             TestShell.Flush();
             Assert.AreEqual(Visibility.Visible, bar.Visibility);
+            Assert.AreEqual(40, System.Windows.Shell.WindowChrome.GetWindowChrome(window).CaptionHeight, "la barre revenue, elle déplace de nouveau la fenêtre");
 
             test.Shell.ToggleFocusMode();
             TestShell.Flush();

@@ -147,16 +147,20 @@ public sealed class WritingTests
         var text = scene.View.PreviewPane.TranslatePoint(default, scene.View);
         Assert.IsLessThan(text.X, code.X, "Le code est à gauche.");
         Assert.Contains("Un premier paragraphe.", scene.Editor.Preview!.Map.Text);
-        Assert.Contains("Enregistré", scene.SheetPage.SaveStateText.Text);
-        Assert.IsTrue(scene.SheetPage.SaveStateText.IsVisible, "large, l'état s'écrit en toutes lettres");
-
-        // Étroite, une icône le remplace, sous le même identifiant : un lecteur d'écran la lit et l'annonce.
+        // L'état est une icône, à gauche des volets, à toutes les largeurs : un lecteur d'écran la lit et l'annonce.
+        var icon = scene.SheetPage.SaveStateIconHost;
+        Assert.IsTrue(icon.IsVisible);
+        Assert.Contains("Enregistré", scene.Editor.StateLabel);
+        Assert.AreEqual(scene.Editor.StateLabel, icon.ToolTip);
+        var outline = scene.SheetPage.OutlineToggle;
+        if (outline.IsVisible)
+        {
+            Assert.IsLessThan(outline.TranslatePoint(default, scene.SheetPage).X, icon.TranslatePoint(default, scene.SheetPage).X, "à gauche de « Plan »");
+        }
         scene.SheetPage.Width = 600;
         scene.SheetPage.UpdateLayout();
         TestShell.Flush();
-        Assert.IsFalse(scene.SheetPage.SaveStateText.IsVisible);
-        var icon = scene.SheetPage.SaveStateIconHost;
-        Assert.IsTrue(icon.IsVisible);
+        Assert.IsTrue(icon.IsVisible, "en fenêtre étroite aussi");
         var peer = System.Windows.Automation.Peers.UIElementAutomationPeer.CreatePeerForElement(icon);
         Assert.AreEqual("SaveStateText", peer.GetAutomationId());
         Assert.AreEqual(scene.Editor.StateLabel, peer.GetName());

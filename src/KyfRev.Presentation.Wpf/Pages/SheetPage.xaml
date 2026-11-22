@@ -219,57 +219,17 @@
               <TextBlock x:Name="ListenLabel" Text="{x:Static pages:ReadingText.Listen}" VerticalAlignment="Center" Margin="8,0,0,0" />
             </StackPanel>
           </ToggleButton>
-          <StackPanel Orientation="Horizontal">
-            <StackPanel.Style>
-              <Style TargetType="StackPanel">
-                <Style.Triggers>
-                  <DataTrigger Binding="{Binding ShowsPanelToggles}" Value="False">
-                    <Setter Property="Visibility" Value="Collapsed" />
-                  </DataTrigger>
-                  <DataTrigger Binding="{Binding IsCompactHeader}" Value="True">
-                    <Setter Property="Visibility" Value="Collapsed" />
-                  </DataTrigger>
-                </Style.Triggers>
-              </Style>
-            </StackPanel.Style>
-            <ToggleButton x:Name="OutlineToggle" Content="{x:Static pages:ReadingText.Outline}" IsChecked="{Binding IsOutlineOn}" Margin="0,0,8,0"
-                          Visibility="{Binding HasOutline, Converter={StaticResource Visible}}" />
-            <ToggleButton x:Name="PassagesToggle" Content="{Binding PassagesLabel}" IsChecked="{Binding IsPassagesOn}" Margin="0,0,8,0"
-                          Visibility="{Binding HasPassages, Converter={StaticResource Visible}}" />
-            <ToggleButton x:Name="BacklinksToggle" Content="{Binding BacklinksLabel}" IsChecked="{Binding IsBacklinksOn}" Margin="0,0,8,0"
-                          ToolTip="{x:Static pages:ReadingText.BacklinksTitle}" Visibility="{Binding HasBacklinks, Converter={StaticResource Visible}}" />
-          </StackPanel>
-          <Border VerticalAlignment="Center" Margin="0,0,12,0">
-            <Border.Style>
-              <Style TargetType="Border">
-                <Setter Property="Visibility" Value="Collapsed" />
-                <Style.Triggers>
-                  <MultiDataTrigger>
-                    <MultiDataTrigger.Conditions>
-                      <Condition Binding="{Binding IsWriting}" Value="True" />
-                      <Condition Binding="{Binding IsCompactHeader}" Value="False" />
-                    </MultiDataTrigger.Conditions>
-                    <Setter Property="Visibility" Value="Visible" />
-                  </MultiDataTrigger>
-                </Style.Triggers>
-              </Style>
-            </Border.Style>
-            <TextBlock x:Name="SaveStateText" Text="{Binding Editor.StateLabel}" Style="{DynamicResource Kyf.Text.Secondary}" AutomationProperties.LiveSetting="Polite" />
-          </Border>
-          <!-- L'icône a le même identifiant que le texte qu'elle remplace : un lecteur d'écran lit et annonce l'état. -->
+          <!-- L'enregistrement, en écriture : une icône à gauche des volets, pour que rien ne bouge quand on change de mode. Son
+               nom et son infobulle disent l'état ; un lecteur d'écran l'annonce sous l'identifiant « SaveStateText ». -->
           <Label x:Name="SaveStateIconHost" AutomationProperties.AutomationId="SaveStateText" Padding="0" VerticalAlignment="Center" Margin="0,0,12,0" Background="Transparent"
                   ToolTip="{Binding Editor.StateLabel}" AutomationProperties.Name="{Binding Editor.StateLabel}" AutomationProperties.LiveSetting="Polite">
             <Label.Style>
               <Style TargetType="Label">
                 <Setter Property="Visibility" Value="Collapsed" />
                 <Style.Triggers>
-                  <MultiDataTrigger>
-                    <MultiDataTrigger.Conditions>
-                      <Condition Binding="{Binding IsWriting}" Value="True" />
-                      <Condition Binding="{Binding IsCompactHeader}" Value="True" />
-                    </MultiDataTrigger.Conditions>
+                  <DataTrigger Binding="{Binding IsWriting}" Value="True">
                     <Setter Property="Visibility" Value="Visible" />
-                  </MultiDataTrigger>
+                  </DataTrigger>
                 </Style.Triggers>
               </Style>
             </Label.Style>
@@ -300,6 +260,26 @@
               </kyf:Icon.Style>
             </kyf:Icon>
           </Label>
+          <StackPanel Orientation="Horizontal">
+            <StackPanel.Style>
+              <Style TargetType="StackPanel">
+                <Style.Triggers>
+                  <DataTrigger Binding="{Binding ShowsPanelToggles}" Value="False">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                  </DataTrigger>
+                  <DataTrigger Binding="{Binding IsCompactHeader}" Value="True">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                  </DataTrigger>
+                </Style.Triggers>
+              </Style>
+            </StackPanel.Style>
+            <ToggleButton x:Name="OutlineToggle" Content="{x:Static pages:ReadingText.Outline}" IsChecked="{Binding IsOutlineOn}" Margin="0,0,8,0"
+                          Visibility="{Binding HasOutline, Converter={StaticResource Visible}}" />
+            <ToggleButton x:Name="PassagesToggle" Content="{Binding PassagesLabel}" IsChecked="{Binding IsPassagesOn}" Margin="0,0,8,0"
+                          Visibility="{Binding HasPassages, Converter={StaticResource Visible}}" />
+            <ToggleButton x:Name="BacklinksToggle" Content="{Binding BacklinksLabel}" IsChecked="{Binding IsBacklinksOn}" Margin="0,0,8,0"
+                          ToolTip="{x:Static pages:ReadingText.BacklinksTitle}" Visibility="{Binding HasBacklinks, Converter={StaticResource Visible}}" />
+          </StackPanel>
           <StackPanel Orientation="Horizontal">
             <!-- Les trois modes, groupés : un seul est choisi, et son cadre glisse de l'un à l'autre. -->
             <Border x:Name="ModeSwitch" BorderBrush="{DynamicResource Kyf.Brush.ControlBorder}" BorderThickness="1" CornerRadius="{DynamicResource Kyf.Radius.Control}" Padding="2">
