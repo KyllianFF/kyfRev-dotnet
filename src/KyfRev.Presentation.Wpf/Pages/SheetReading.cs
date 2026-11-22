@@ -131,6 +131,8 @@ public sealed class SheetReading
         SheetId = sheet.Id;
         Title = sheet.Title;
         Folder = ContentTargets.FolderOf(sheet.Path);
+        IsArchived = sheet.Review?.Status == ReviewStatus.Archived;
+        IsNote = sheet.Review?.IsNote ?? false;
         Root = SheetRenderer.Render(sheet.Body, sheet.Title);
         Map = TextMap.Of(Root);
         Details = string.Join("  ·  ", DetailsOf(sheet, Map.Text));
@@ -188,6 +190,12 @@ public sealed class SheetReading
 
     /// <summary>Son dossier dans le coffre, d'où partent ses liens et ses images.</summary>
     public string Folder { get; }
+
+    /// <summary>La fiche est archivée.</summary>
+    public bool IsArchived { get; }
+
+    /// <summary>La fiche est une simple note.</summary>
+    public bool IsNote { get; }
 
     /// <summary>Son contenu.</summary>
     public RenderElement Root { get; }

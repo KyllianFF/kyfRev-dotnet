@@ -454,7 +454,6 @@
       </StackPanel>
     </kyf:Dialog>
 
-    <pages:SheetSharingDialogs x:Name="SharingDialogs" DataContext="{Binding Sharing}" />
     <pages:FolderImportDialog x:Name="ImportDialog" DataContext="{Binding Import}" />
   </Grid>
 </UserControl>

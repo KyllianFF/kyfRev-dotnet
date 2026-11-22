@@ -404,6 +404,17 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage, 
     /// <summary>La fiche est lue, et peut partir.</summary>
     public bool CanShare => Sharing is not null && Reading is not null;
 
+    /// <summary>Les actions communes sur une fiche, pour son clic droit (rangée 23A) ; rien sans elles.</summary>
+    public SheetActionsViewModel? SheetActions { get; init; }
+
+    /// <summary>Ce que le menu de la fiche sait d'elle ; rien tant qu'elle n'est pas lue.</summary>
+    internal SheetTarget? MenuTarget => Reading is { } reading
+        ? new SheetTarget(reading.SheetId, reading.Title) { IsArchived = reading.IsArchived, IsNote = reading.IsNote, Folder = reading.Folder }
+        : null;
+
+    /// <summary>Le mode en cours, marqué dans le menu de la fiche.</summary>
+    internal SheetMode Mode => IsWriting ? SheetMode.Write : IsRevising ? SheetMode.Revise : SheetMode.Read;
+
     /// <summary>La pose de masques sur les images de la fiche ; rien sans cas d'usage.</summary>
     public ImageMaskEditorViewModel? Masks { get; init; }
 

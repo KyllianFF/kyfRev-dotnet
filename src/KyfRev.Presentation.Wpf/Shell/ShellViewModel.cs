@@ -613,6 +613,12 @@ public sealed partial class ShellViewModel : ObservableObject, IForgetsVault, IS
     /// <summary>Le guide de kyfRev, lu dans l'aide.</summary>
     public GuideViewModel Guide { get; } = new();
 
+    /// <summary>Les actions sur une fiche, depuis n'importe quelle vue (rangée 23A) ; rien tant que l'application ne les a pas données.</summary>
+    public SheetActionsViewModel? SheetActions { get; set; }
+
+    /// <summary>Partager une fiche et l'enregistrer comme modèle, depuis toutes les vues ; rien sans cas d'usage.</summary>
+    public SheetSharingViewModel? Sharing { get; set; }
+
     /// <summary>Texte normalisé pour la recherche : minuscules, sans accents.</summary>
     internal static string Fold(string text)
     {

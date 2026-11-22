@@ -19,11 +19,19 @@ public sealed class ContextMenusTests
 {
     private static readonly Anchor Passage = new("La prophase", "", " précède", 0, 11, ["Mitose", "Étapes"], 5, "sha256:aa");
 
-    private static readonly string[] SheetRowMenu = [DashboardText.ReviewAction, DashboardText.OpenSheet, PrintText.PrintAction, ReviewText.PostponeTomorrow, ReviewText.ArchiveAction];
+    // Le menu d'une fiche, le même partout (rangée 23A).
+    private static readonly string[] SheetRowMenu =
+    [
+        EditingText.Read, ReadingText.Revise, EditingText.Write, ReviewText.PostponeTomorrow, SheetActionsText.Archive,
+        SheetActionsText.Rename, SheetActionsText.Tags, SheetActionsText.Move, PrintText.PrintAction, SheetsText.MakeNote, SheetActionsText.Delete,
+    ];
 
-    private static readonly string[] SheetRowQuick = [DashboardText.ReviewAction, DashboardText.OpenSheet, PrintText.PrintAction];
+    private static readonly string[] SheetRowQuick = [EditingText.Read, ReadingText.Revise, EditingText.Write, PrintText.PrintAction];
 
     private static readonly string[] Runs = ["ouvrir", "supprimer", "copier"];
+
+    // La fiche ouverte, sans les actions communes ni le partage : les trois modes, puis Imprimer.
+    private static readonly string[] OpenedSheet = [EditingText.Read, ReadingText.Revise, EditingText.Write, PrintText.PrintAction];
 
     private static readonly string[] CopiedLine = ["Mitose : Fiche manquante"];
 
@@ -85,19 +93,23 @@ public sealed class ContextMenusTests
 
         var items = view.RowMenuItems(row);
 
-        CollectionAssert.AreEqual(SheetRowMenu, Headers(items));
+        CollectionAssert.AreEqual(SheetRowQuick, Headers(items), "sans les actions communes, seulement ce qui ouvre et imprime");
         Assert.IsTrue(ActionMenuPanel.GetIsQuick(Show(test, items[0])), "le style du design system la met en tête");
         Click(items[0]);
-        Assert.HasCount(1, today.Opener.Opened);
+        Assert.AreEqual(row.Item.SheetId, today.Opener.Opened[0], "« Lire » ouvre la fiche");
         Click(items[1]);
-        Assert.AreEqual(row.Item.SheetId, today.Opener.Opened[1]);
+        Assert.AreEqual(row.Item, (((DueItem Item, bool ActiveRecall))today.Opener.Opened[1]).Item, "« Réviser » la révise, comme un clic sur la ligne");
         Assert.IsEmpty(view.RowMenuItems(page.Rows[0]), "un en-tête de groupe n'a pas de menu");
         Assert.IsEmpty(view.RowMenuItems(null));
 
         var reminder = new ReminderRow(new PendingReminder("f_1", "Mitose", "Biologie", [], new DateOnly(2026, 1, 1), new DateOnly(2026, 2, 1), 0));
-        CollectionAssert.AreEqual(new[] { DashboardText.OpenSheet }, Headers(view.RowMenuItems(reminder)));
+        CollectionAssert.AreEqual(SheetRowQuick, Headers(view.RowMenuItems(reminder)), "un rappel est une fiche : le même menu");
+        Assert.IsFalse(((MenuItem)view.RowMenuItems(reminder)[1]).IsEnabled, "archivée, elle ne se révise pas");
         Click(view.RowMenuItems(reminder)[0]);
         Assert.AreEqual(reminder.Reminder, today.Opener.Opened[2]);
+
+        page.SheetActions = new SheetActionsViewModel(today.App.Sheets, today.App.Folders, today.App.Reviews, today.App.Reminders, today.App.Trash, today.Opener, TimeProvider.System);
+        CollectionAssert.AreEqual(SheetRowMenu, Headers(view.RowMenuItems(row)), "avec les actions communes, le même menu que dans le Carnet");
 
         var withoutActions = new DashboardPage { DataContext = new DashboardPageViewModel(today.App.Reminders, today.App.Sheets, today.Opener) };
         CollectionAssert.AreEqual(SheetRowQuick, Headers(withoutActions.RowMenuItems(row)), "sans les cas d'usage, seulement ce qui ouvre");
@@ -191,7 +203,7 @@ public sealed class ContextMenusTests
             var opened = Opening(line);
             line.RaiseEvent(opened);
             Assert.IsFalse(opened.Handled);
-            Assert.HasCount(6, page.Items.ContextMenu!.Items);
+            Assert.HasCount(5, page.Items.ContextMenu!.Items, "Lire, Réviser, Écrire, puis Imprimer après un filet");
 
             var title = (ListBoxItem)page.Items.ItemContainerGenerator.ContainerFromItem(model.Rows[0]);
             var refused = Opening(title);
@@ -230,23 +242,28 @@ public sealed class ContextMenusTests
         try
         {
             var row = model.Rows.Single();
+            model.SheetActions = new SheetActionsViewModel(vaults.App.Sheets, vaults.App.Folders, vaults.App.Reviews, vaults.App.Reminders, vaults.App.Trash, opener, time);
             var items = page.RowMenuItems(row);
-            CollectionAssert.AreEqual(new[] { ArchivesText.Open, ArchivesText.Restart, row.ToggleLabel }, Headers(items));
+            // Le menu d'une fiche archivée, le même que partout (rangée 23A) ; la remise en révision et les rappels sont ceux des Archives.
+            CollectionAssert.AreEqual(
+                new[] { EditingText.Read, ReadingText.Revise, EditingText.Write, SheetActionsText.Restart, row.ToggleLabel, SheetActionsText.Rename, SheetActionsText.Tags, SheetActionsText.Move, PrintText.PrintAction, SheetActionsText.Delete },
+                Headers(items));
+            Assert.IsFalse(((MenuItem)items[1]).IsEnabled, "archivée, elle ne se révise pas");
 
             Click(items[0]);
             CollectionAssert.AreEqual(new object[] { sheet }, opener.Opened);
-            Click(items[1]);
+            Click(Entry(items, SheetActionsText.Restart));
             Assert.IsTrue(model.IsConfirming);
             model.AnswerRestartCommand.Execute(false);
             var label = row.ToggleLabel;
-            Click(items[3]);
+            Click(Entry(items, label));
             UiThread.Until(() => model.Rows.Single().ToggleLabel != label);
 
             var border = Descendants<Border>(window).First(element => element.Name == "RowBorder");
             var opened = Opening(border);
             border.RaiseEvent(opened);
             Assert.IsFalse(opened.Handled);
-            Assert.HasCount(4, border.ContextMenu!.Items);
+            Assert.HasCount(items.Count, border.ContextMenu!.Items);
 
             page.DataContext = null;
             Assert.IsEmpty(page.RowMenuItems(row));
@@ -388,17 +405,19 @@ public sealed class ContextMenusTests
             var second = document.Blocks.OfType<Paragraph>().First(paragraph => new TextRange(paragraph.ContentStart, paragraph.ContentEnd).Text.Contains("second", StringComparison.Ordinal));
             var run = second.Inlines.First();
 
+            // Le fond de la fiche : le menu de la fiche (rangée 23A), le mode en cours marqué ; « Écouter d'ici » à la fin.
             var items = page.TextMenuItems(run);
-            CollectionAssert.AreEqual(new[] { ReadingText.ListenFromHere, EditingText.EditSheet }, Headers(items));
+            CollectionAssert.AreEqual(OpenedSheet.Append(ReadingText.ListenFromHere).ToList(), Headers(items));
+            Assert.IsTrue(((MenuItem)items[0]).IsChecked, "en lecture, « Lire » est marqué");
 
-            Click(items[0]);
+            Click(items[^1]);
 
             Assert.IsTrue(model.ReadAloud!.IsOpen);
             Assert.IsTrue(model.ReadAloud.IsPlaying);
             StringAssert.Contains(page.SheetText.SpokenBlocks()[model.ReadAloud.Current!.Value].Text, "second", StringComparison.Ordinal);
 
             model.ReadAloud.CloseCommand.Execute(null);
-            CollectionAssert.AreEqual(new[] { EditingText.EditSheet }, Headers(page.TextMenuItems(new Border())), "hors du texte, rien à écouter");
+            CollectionAssert.AreEqual(OpenedSheet, Headers(page.TextMenuItems(new Border())), "hors du texte, rien à écouter");
         }
         finally
         {
@@ -425,7 +444,7 @@ public sealed class ContextMenusTests
 
             var items = page.TextMenuItems(word);
             CollectionAssert.AreEqual(
-                new[] { ReadingText.ShowDefinition, ReadingText.SeeWordDefinition("Noyau"), ReadingText.StopMarkingWord("Noyau"), EditingText.EditSheet },
+                new[] { ReadingText.ShowDefinition, ReadingText.SeeWordDefinition("Noyau"), ReadingText.StopMarkingWord("Noyau"), ReadingText.SheetSubmenu },
                 Headers(items));
 
             Click(items[0]);
@@ -520,6 +539,8 @@ public sealed class ContextMenusTests
         [.. items.OfType<MenuItem>().Select(item => (string)item.Header)];
 
     private static void Click(Control item) => item.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+
+    private static MenuItem Entry(IReadOnlyList<Control> items, string header) => items.OfType<MenuItem>().Single(item => (string)item.Header == header);
 
     /// <summary>L'ouverture d'un menu sur cet élément, celle que WPF lui enverrait.</summary>
     private static ContextMenuEventArgs Opening(object source)

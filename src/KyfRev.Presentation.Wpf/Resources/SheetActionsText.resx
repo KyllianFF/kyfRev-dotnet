@@ -183,4 +183,10 @@
   <data name="Write" xml:space="preserve">
     <value>Modifier</value>
   </data>
+  <data name="PostponedTomorrow" xml:space="preserve">
+    <value>Reportée à demain.</value>
+  </data>
+  <data name="SheetMissing" xml:space="preserve">
+    <value>Cette fiche n'est plus dans le coffre.</value>
+  </data>
 </root>

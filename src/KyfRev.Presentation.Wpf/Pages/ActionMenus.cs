@@ -11,11 +11,15 @@ internal static class ActionMenus
     private const string QuickStyle = "Kyf.MenuItem.Quick";
     private const string ToolStyle = "Kyf.MenuItem.Tool";
 
-    /// <summary>Une action rapide : icône au-dessus du libellé.</summary>
-    public static MenuItem Quick(string label, string glyph, Action action, bool isEnabled = true)
+    /// <summary>
+    /// Une action rapide : icône au-dessus du libellé. <paramref name="current"/> la marque comme l'état en cours (le mode
+    /// dans lequel la fiche est ouverte) : elle ressort, et le lecteur d'écran la dit cochée.
+    /// </summary>
+    public static MenuItem Quick(string label, string glyph, Action action, bool isEnabled = true, bool current = false)
     {
         var item = NewQuick(label, glyph);
         item.IsEnabled = isEnabled;
+        item.IsChecked = current;
         item.Click += (_, _) => action();
         return item;
     }
@@ -45,6 +49,25 @@ internal static class ActionMenus
         var item = new MenuItem { Header = label, InputGestureText = shortcut ?? string.Empty };
         item.Click += (_, _) => action();
         return item;
+    }
+
+    /// <summary>Une entrée de la liste portée par une commande, comme « Tout sélectionner ».</summary>
+    public static MenuItem Item(string label, ICommand command, IInputElement target, string? shortcut = null) =>
+        new() { Header = label, Command = command, CommandTarget = target, InputGestureText = shortcut ?? string.Empty };
+
+    /// <summary>
+    /// Un sous-menu (« Fiche › ») dans le même dessin que le menu : ses actions rapides en tête, puis la liste par blocs.
+    /// Sans entrée, il n'est pas proposé.
+    /// </summary>
+    public static MenuItem Submenu(string label, IReadOnlyList<Control> items)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+        var submenu = new MenuItem { Header = label, ItemsPanel = new ItemsPanelTemplate(new FrameworkElementFactory(typeof(ActionMenuPanel))), IsEnabled = items.Count > 0 };
+        foreach (var item in items)
+        {
+            submenu.Items.Add(item);
+        }
+        return submenu;
     }
 
     /// <summary>Remplit le menu qui s'ouvre ; sans entrée, il ne s'ouvre pas.</summary>

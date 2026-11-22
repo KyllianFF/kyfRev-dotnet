@@ -365,6 +365,12 @@ public sealed partial class ArchivesPageViewModel : ObservableObject, INavigatio
         }
     }
 
+    /// <summary>Les actions communes sur une fiche, pour son clic droit (rangée 23A) ; rien sans elles.</summary>
+    public SheetActionsViewModel? SheetActions { get; set; }
+
+    /// <summary>Le menu d'une fiche ; la vue peut l'ouvrir ou la réviser à sa façon.</summary>
+    internal ISheetMenuHost SheetMenuHost(Action<SheetTarget>? read = null, Action<SheetTarget>? revise = null) => new SharedSheetMenu(SheetActions, _opener, read, revise);
+
     /// <summary>Ouvre une fiche archivée, pour la relire.</summary>
     [RelayCommand]
     private void Open(ArchiveRow row) => _opener.OpenSheet(row.Entry.Id);

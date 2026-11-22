@@ -8,6 +8,7 @@ using KyfRev.Application.Model;
 using KyfRev.Application.UseCases;
 using KyfRev.DesignSystem.Controls;
 using KyfRev.Domain.Reviews;
+using KyfRev.Presentation.Wpf.Editing;
 using KyfRev.Presentation.Wpf.Pages;
 using KyfRev.Presentation.Wpf.Shell;
 
@@ -361,7 +362,7 @@ public sealed class ArchivesTests
             Assert.IsFalse(Descendants(window).OfType<Button>().Any(button => button.Name is "ToggleRow" or "RestartRow"), "plus de boutons en texte sur chaque ligne");
             var entries = ((ArchivesPage)Descendants(window).First(element => element is ArchivesPage)).RowMenuItems(shown);
             CollectionAssert.AreEqual(
-                new[] { ArchivesText.Open, ArchivesText.Restart, shown.ToggleLabel },
+                new[] { EditingText.Read, ReadingText.Revise, EditingText.Write, PrintText.PrintAction },
                 entries.OfType<MenuItem>().Select(item => (string)item.Header).ToArray(),
                 "le menu du bouton est celui du clic droit");
             ((FrameworkElement)window.Content).Capture("archives-actions-clair");

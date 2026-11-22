@@ -8,6 +8,7 @@ using KyfRev.Application.Model;
 using KyfRev.Application.UseCases;
 using KyfRev.DesignSystem.Controls;
 using KyfRev.Extensions.Host;
+using KyfRev.Presentation.Wpf.Editing;
 using KyfRev.Presentation.Wpf.Pages;
 using KyfRev.Presentation.Wpf.Reading;
 using KyfRev.Presentation.Wpf.Shell;
@@ -18,11 +19,15 @@ namespace KyfRev.Presentation.Wpf.Tests;
 [TestClass]
 public sealed class SheetActionsTests
 {
+    // Le menu d'une fiche, le même partout (rangée 23A) : les trois modes, puis la révision, le rangement, la sortie, la note, la suppression.
     private static readonly string[] SheetMenu =
     [
-        SheetActionsText.Open, SheetActionsText.Review, SheetActionsText.Write, PrintText.PrintAction,
+        EditingText.Read, ReadingText.Revise, EditingText.Write,
+        ReviewText.PostponeTomorrow, SheetActionsText.Archive,
         SheetActionsText.Rename, SheetActionsText.Tags, SheetActionsText.Move,
-        SheetsText.MakeNote, SheetActionsText.Archive, SheetActionsText.Delete,
+        PrintText.PrintAction,
+        SheetsText.MakeNote,
+        SheetActionsText.Delete,
     ];
 
     private static readonly string[] FolderMenu =
@@ -32,7 +37,7 @@ public sealed class SheetActionsTests
 
     private static readonly string[] FreeSpaceMenu = [SheetActionsText.NewSheet, SheetActionsText.NewFolder];
 
-    private static readonly string[] OpeningMenu = [SheetActionsText.Open, SheetActionsText.Review, SheetActionsText.Write, PrintText.PrintAction];
+    private static readonly string[] OpeningMenu = [EditingText.Read, ReadingText.Revise, EditingText.Write, PrintText.PrintAction];
 
     private static readonly string[] Pane =
     [

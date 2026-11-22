@@ -8,6 +8,12 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 ## [Non publié]
 
 ### Modifié
+- Clic droit sur une fiche : le même menu partout (Carnet, Aujourd'hui, rappels, Archives, aperçus, fiche ouverte,
+  Ctrl+K, Charge). En tête Lire, Réviser, Écrire, le mode en cours marqué ; puis Reporter à demain et Archiver (ou Remettre
+  en révision et les rappels), Renommer, Étiquettes, Déplacer, Imprimer, Partager, modèle, note, Supprimer et les
+  extensions. Ces actions se font maintenant depuis toutes les vues, et ce qui a abouti se dit en bas de la fenêtre.
+- Fiche ouverte : sur un texte choisi, un passage, une image ou un mot défini, ce qu'on vise d'abord, puis « Fiche › »
+  pour le reste. Les aperçus ont ce menu en français, à la place de « Copy / Select All ».
 - Carnet en deux volets : les dossiers à gauche, avec « Toutes les fiches », « À réviser » et « Non rangées » ; au milieu,
   les fiches du dossier choisi, rangées sous le nom de chaque sous-dossier. Un clic sur ce nom mène au sous-dossier. Les
   fiches s'écrivent en texte courant, avec une pastille pour leur état (à venir, aujourd'hui, en retard, note). Le filtre

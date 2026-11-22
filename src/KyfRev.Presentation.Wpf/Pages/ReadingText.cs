@@ -89,6 +89,9 @@ public static class ReadingText
     /// <summary>Un passage dont la position n'est qu'approchée.</summary>
     public const string CandidatePassage = "Position à vérifier : son texte a changé.";
 
+    /// <summary>« Fiche » : le sous-menu de la fiche entière, sous ce qu'on vise.</summary>
+    public const string SheetSubmenu = "Fiche";
+
     /// <summary>Copier la sélection.</summary>
     public const string Copy = "Copier";
 

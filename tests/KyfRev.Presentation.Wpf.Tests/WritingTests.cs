@@ -263,9 +263,8 @@ public sealed class WritingTests
         scene.Page.ToggleWritingCommand.Execute(null);
         UiThread.Until(() => scene.Page.Editor is null);
 
-        var item = scene.SheetPage.TextMenuItems(null).OfType<MenuItem>().Single();
-        Assert.AreEqual(EditingText.EditSheet, item.Header);
-        Assert.AreEqual("Ctrl+E", item.InputGestureText);
+        // « Écrire », en tête du menu de la fiche, comme partout (rangée 23A).
+        var item = scene.SheetPage.TextMenuItems(null).OfType<MenuItem>().Single(entry => (string)entry.Header == EditingText.Write);
         item.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
         UiThread.Until(() => scene.Page.Editor is not null);
     }

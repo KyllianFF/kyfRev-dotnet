@@ -4,6 +4,7 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
+using KyfRev.Application.Model;
 using KyfRev.DesignSystem.Controls;
 
 namespace KyfRev.Presentation.Wpf.Pages;
@@ -26,6 +27,8 @@ internal sealed partial class DashboardPage : UserControl
             list.ContextMenu = new ContextMenu();
             list.ContextMenuOpening += OnRowMenu;
         }
+        // L'aperçu a le menu de sa ligne (rangée 23B).
+        PreviewCard.AddHandler(ContextMenuOpeningEvent, new ContextMenuEventHandler((_, e) => PreviewMenus.Open(e, () => RowMenuItems(Live?.Preview?.Row))));
         // La disposition suit la largeur de la page, zoom et menu déjà comptés.
         SizeChanged += (_, e) => Live?.PageWidth = e.NewSize.Width;
     }
@@ -168,6 +171,15 @@ internal sealed partial class DashboardPage : UserControl
         }
         switch (row)
         {
+            // Une fiche à réviser ou un rappel : le menu d'une fiche, le même que partout (rangée 23A).
+            case DueItemRow { Item.Kind: ItemKind.Sheet } sheet:
+                return SheetMenu.Items(
+                    new SheetTarget(sheet.Item.SheetId, sheet.Item.Title) { Folder = sheet.Item.Folder },
+                    page.SheetMenuHost(read: _ => page.OpenSheetOf(sheet), revise: _ => page.OpenCommand.Execute(sheet)));
+            case ReminderRow reminder:
+                return SheetMenu.Items(
+                    new SheetTarget(reminder.Reminder.SheetId, reminder.Reminder.Title) { IsArchived = true, IsExcludedFromReminders = false, Folder = reminder.Reminder.Folder },
+                    page.SheetMenuHost(read: _ => page.OpenCommand.Execute(reminder)));
             case DueItemRow item:
                 List<Control> items =
                 [
@@ -182,8 +194,6 @@ internal sealed partial class DashboardPage : UserControl
                     items.Add(ActionMenus.Item(ReviewText.ArchiveAction, () => page.RequestArchive(item)));
                 }
                 return items;
-            case ReminderRow:
-                return [ActionMenus.Quick(DashboardText.OpenSheet, Icons.Document, () => page.OpenCommand.Execute(row))];
             case ExamRow exam when page.Exams is { IsBusy: false } exams:
                 List<Control> entries = [];
                 if (exam.CanTighten)

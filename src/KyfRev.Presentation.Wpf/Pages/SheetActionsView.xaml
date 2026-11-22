@@ -1,0 +1,53 @@
+<UserControl x:Class="KyfRev.Presentation.Wpf.Pages.SheetActionsView"
+             x:ClassModifier="internal"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:kyf="clr-namespace:KyfRev.DesignSystem.Controls;assembly=KyfRev.DesignSystem"
+             xmlns:pages="clr-namespace:KyfRev.Presentation.Wpf.Pages">
+  <UserControl.Resources>
+    <BooleanToVisibilityConverter x:Key="Visible" />
+  </UserControl.Resources>
+
+  <!-- Les actions sur une fiche, depuis n'importe quelle vue (rangée 23A) : une seule fenêtre, et ce qui a abouti, en bas. -->
+  <Grid>
+    <kyf:Dialog x:Name="ActionDialog" Title="{Binding ActionTitle}" IsOpen="{Binding IsActing, Mode=OneWay}" PrimaryButtonText="{Binding ActionConfirm}" IsDestructive="{Binding ErasesForGood}" Closed="OnActionClosed">
+      <StackPanel>
+        <kyf:Notification x:Name="ActionErrorMessage" Severity="Critical" Message="{Binding ActionError}" IsOpen="{Binding HasActionError, Mode=OneWay}" IsClosable="False" Margin="0,0,0,12" />
+        <TextBlock x:Name="ActionMessageText" Text="{Binding ActionMessage}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" Visibility="{Binding HasActionMessage, Converter={StaticResource Visible}}" />
+        <StackPanel Visibility="{Binding HasActionInput, Converter={StaticResource Visible}}">
+          <TextBlock Text="{Binding ActionInputLabel}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,0,0,4" />
+          <TextBox x:Name="ActionInputBox" IsVisibleChanged="OnActionInputShown" Text="{Binding ActionInput, UpdateSourceTrigger=PropertyChanged}" AutomationProperties.Name="{Binding ActionInputLabel}" />
+          <!-- Les étiquettes déjà utilisées : en reprendre une évite d'en créer deux pour la même chose. -->
+          <ItemsControl x:Name="TagSuggestions" ItemsSource="{Binding TagSuggestions}" Focusable="False" Margin="0,8,0,0" Visibility="{Binding HasTagSuggestions, Converter={StaticResource Visible}}"
+                        AutomationProperties.Name="{x:Static pages:SheetActionsText.TagSuggestions}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <WrapPanel />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Button Content="{Binding}" Style="{DynamicResource Kyf.Button.Subtle}" Margin="0,0,4,4" Click="OnTagSuggestionClick" AutomationProperties.Name="{Binding}" />
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+        <StackPanel Visibility="{Binding HasActionDestination, Converter={StaticResource Visible}}">
+          <TextBlock Text="{x:Static pages:SheetActionsText.MoveLabel}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,0,0,4" />
+          <ComboBox x:Name="ActionDestinationChoice" ItemsSource="{Binding ActionDestinations}" SelectedItem="{Binding ActionDestination}" DisplayMemberPath="Label" AutomationProperties.Name="{x:Static pages:SheetActionsText.MoveLabel}" />
+        </StackPanel>
+        <StackPanel Margin="0,12,0,0" Visibility="{Binding CanErase, Converter={StaticResource Visible}}">
+          <CheckBox x:Name="EraseBox" IsChecked="{Binding ErasesForGood}" AutomationProperties.Name="{x:Static pages:SheetActionsText.EraseBox}">
+            <TextBlock Text="{x:Static pages:SheetActionsText.EraseBox}" TextWrapping="Wrap" />
+          </CheckBox>
+          <TextBlock Text="{x:Static pages:SheetActionsText.EraseHelp}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="26,2,0,0" />
+        </StackPanel>
+      </StackPanel>
+    </kyf:Dialog>
+
+    <!-- Ce qui vient d'aboutir : en bas, au milieu, le temps de le lire ; un succès s'en va seul, un refus attend qu'on le ferme. -->
+    <kyf:Notification x:Name="DoneMessage" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="16,0,16,24" MaxWidth="520"
+                      Severity="Success" Message="{Binding Done}" IsOpen="{Binding HasDone, Mode=OneWay}" IsClosable="True" Closed="OnDoneClosed" />
+
+  </Grid>
+</UserControl>

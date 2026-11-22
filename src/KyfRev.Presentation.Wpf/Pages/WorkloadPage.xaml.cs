@@ -15,6 +15,12 @@ internal sealed partial class WorkloadPage : UserControl
         InitializeComponent();
         // Un clic sur une colonne : la liste le traite d'abord pour la choisir.
         Chart.AddHandler(MouseUpEvent, new MouseButtonEventHandler(OnColumnReleased), handledEventsToo: true);
+        // Une échéance du jour choisi a le menu de sa fiche, le même que partout (rangée 23A) ; ailleurs, pas de menu.
+        ContextMenu = new ContextMenu();
+        ContextMenuOpening += (_, e) => ActionMenus.Fill(
+            ContextMenu,
+            (e.OriginalSource as FrameworkElement)?.DataContext is DueItemRow row && DataContext is WorkloadPageViewModel page ? page.SheetMenuOf(row) : [],
+            e);
     }
 
     private WorkloadPageViewModel Page => (WorkloadPageViewModel)DataContext;
