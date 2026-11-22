@@ -216,4 +216,22 @@
   <data name="AllFiled" xml:space="preserve">
     <value>Toutes vos fiches sont rangées dans un dossier.</value>
   </data>
+  <data name="EmptyTemplateDescription" xml:space="preserve">
+    <value>Une page blanche</value>
+  </data>
+  <data name="PlaceIn" xml:space="preserve">
+    <value>Dans</value>
+  </data>
+  <data name="TemplateHeading" xml:space="preserve">
+    <value>Modèle</value>
+  </data>
+  <data name="ReviewSheetChoice" xml:space="preserve">
+    <value>Fiche de révision</value>
+  </data>
+  <data name="NoteChoice" xml:space="preserve">
+    <value>Note</value>
+  </data>
+  <data name="CloseNew" xml:space="preserve">
+    <value>Fermer</value>
+  </data>
 </root>

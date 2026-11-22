@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Documents;
+using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -695,6 +696,69 @@ public sealed class InterfaceMotionTests
         Assert.IsNotNull(row.Selection, "le mode quitté n'efface pas le cadre");
         var picture = new RenderTargetBitmap(480, 320, 96, 96, PixelFormats.Pbgra32);
         picture.Render(host);
+    }
+
+    [STATestMethod]
+    public void A_dialog_as_a_side_panel_slides_from_the_right_and_from_the_bottom_when_narrow()
+    {
+        var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
+        var field = new TextBox();
+        var dialog = new Dialog { Title = "Nouvelle fiche", Content = field, IsSidePanel = true, CardMaxWidth = 420 };
+        var choices = new List<DialogChoice>();
+        dialog.Closed += (_, e) => choices.Add(e.Choice);
+        var host = Host.Of(design, dialog, 1000, 600);
+        using var source = new HwndSource(new HwndSourceParameters("kyfRev essai") { Width = 1000, Height = 600 }) { RootVisual = host };
+
+        // Large : contre le bord droit, sur toute la hauteur ; la page reste visible (le voile ne la couvre pas).
+        dialog.IsOpen = true;
+        Host.Layout(host);
+        var card = Host.Part<Grid>(dialog, "Card");
+        Wait(() => Transitions.SlidesOf(card) == 1 && card.Clip is null);
+        Assert.IsFalse(dialog.IsFromBottom);
+        Assert.AreEqual(1, Transitions.SlidesOf(card), "il glisse en s'ouvrant");
+        Assert.AreEqual(Dock.Right, Transitions.GetShownFrom(card), "depuis la droite");
+        Assert.AreEqual(420, card.ActualWidth, 0.5);
+        Assert.AreEqual(600, card.ActualHeight, 0.5);
+        Assert.AreEqual(580, card.TranslatePoint(default, host).X, 0.5, "collé au bord droit");
+        var scrim = Host.Part<System.Windows.Shapes.Shape>(dialog, Dialog.ScrimPart);
+        Assert.AreEqual(Colors.Transparent, ((SolidColorBrush)scrim.Fill).Color, "la page reste à voir");
+        Assert.AreEqual(Visibility.Visible, Host.Part<Button>(dialog, Dialog.CloseButtonPart).Visibility, "une croix le referme");
+        Assert.AreSame(field, FocusManager.GetFocusedElement(FocusManager.GetFocusScope(field)), "le focus va au premier champ, pas à la croix");
+
+        // La croix le referme, sans rien choisir.
+        Host.Part<Button>(dialog, Dialog.CloseButtonPart).RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+        Assert.IsFalse(dialog.IsOpen);
+        CollectionAssert.AreEqual(new[] { DialogChoice.None }, choices);
+
+        // Un clic à côté aussi.
+        dialog.IsOpen = true;
+        Host.Flush();
+        scrim.RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, 0, MouseButton.Left) { RoutedEvent = UIElement.MouseLeftButtonDownEvent });
+        Assert.IsFalse(dialog.IsOpen);
+        CollectionAssert.AreEqual(new[] { DialogChoice.None, DialogChoice.None }, choices);
+
+        // Étroit : il vient du bas, sur toute la largeur, avec son voile et sa poignée.
+        host.Width = 480;
+        Host.Layout(host);
+        Assert.IsTrue(dialog.IsFromBottom);
+        dialog.IsOpen = true;
+        Host.Layout(host);
+        Wait(() => Transitions.SlidesOf(card) == 2 && card.Clip is null);
+        Assert.AreEqual(Dock.Bottom, Transitions.GetShownFrom(card), "depuis le bas");
+        Assert.AreEqual(480, card.ActualWidth, 0.5);
+        Assert.AreEqual(600, card.TranslatePoint(default, host).Y + card.ActualHeight, 0.5, "posé sur le bas");
+        Assert.AreNotEqual(Colors.Transparent, ((SolidColorBrush)scrim.Fill).Color, "le voile couvre la page");
+        Assert.AreEqual(Visibility.Visible, Host.Part<Border>(dialog, "Grip").Visibility);
+
+        // Une fenêtre au milieu, elle, ne se ferme pas d'un clic à côté.
+        dialog.IsOpen = false;
+        dialog.IsSidePanel = false;
+        Assert.IsFalse(dialog.IsFromBottom);
+        dialog.IsOpen = true;
+        Host.Layout(host);
+        scrim.RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, 0, MouseButton.Left) { RoutedEvent = UIElement.MouseLeftButtonDownEvent });
+        Assert.IsTrue(dialog.IsOpen);
+        Assert.AreEqual(Visibility.Collapsed, Host.Part<Button>(dialog, Dialog.CloseButtonPart).Visibility);
     }
 
     [STATestMethod]

@@ -440,17 +440,108 @@
       </StackPanel>
     </kyf:Dialog>
 
-    <kyf:Dialog x:Name="NewSheet" Title="{Binding NewDialogTitle}" IsOpen="{Binding IsCreating, Mode=OneWay}"
+    <!-- Nouvelle fiche (rangée 22B) : un volet qui glisse de la droite, le Carnet restant visible à côté ; sous 600 px, il vient
+         du bas. Le titre en grand, comme une fiche qui commence ; où elle ira ; fiche ou note ; les modèles en vignettes. -->
+    <kyf:Dialog x:Name="NewSheet" Title="{Binding NewDialogTitle}" IsOpen="{Binding IsCreating, Mode=OneWay}" IsSidePanel="True" CardMaxWidth="420"
                 PrimaryButtonText="{Binding NewDialogConfirm}" Closed="OnCreateClosed">
       <StackPanel>
         <kyf:Notification x:Name="CreateError" Severity="Critical" Message="{Binding CreateError}" IsOpen="{Binding HasCreateError, Mode=OneWay}" IsClosable="False" Margin="0,0,0,12" />
-        <TextBlock Text="{x:Static pages:SheetsText.TitleLabel}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,0,0,4" />
         <TextBox x:Name="NewTitleBox" Text="{Binding NewTitle, UpdateSourceTrigger=PropertyChanged}" kyf:Field.Placeholder="{x:Static pages:SheetsText.TitlePlaceholder}"
+                 FontSize="{DynamicResource Kyf.FontSize.Subtitle}" FontWeight="SemiBold" MinHeight="44" VerticalContentAlignment="Center"
                  AutomationProperties.Name="{x:Static pages:SheetsText.TitleLabel}" />
-        <pages:ListFilterButton x:Name="NewFolderMenu" DataContext="{Binding NewFolder}" HorizontalAlignment="Left" Margin="-16,8,0,0" />
+
+        <!-- Où : « Dans Biologie › Cellule », qui ouvre la liste des dossiers. -->
+        <Button x:Name="NewFolderMenu" Style="{DynamicResource Kyf.Button.Subtle}" HorizontalAlignment="Left" Margin="-12,10,0,0" Padding="12,0"
+                Click="OnNewFolderClick" AutomationProperties.Name="{Binding NewFolder.Name}">
+          <Button.ContextMenu>
+            <ContextMenu DataContext="{Binding PlacementTarget.DataContext.NewFolder, RelativeSource={RelativeSource Self}}"
+                         ItemsSource="{Binding Choices}" DisplayMemberPath="Label" MenuItem.Click="OnNewFolderChosen"
+                         AutomationProperties.Name="{Binding Label}" />
+          </Button.ContextMenu>
+          <StackPanel Orientation="Horizontal">
+            <TextBlock Text="{x:Static pages:SheetsText.PlaceIn}" Foreground="{DynamicResource Kyf.Brush.TextSecondary}" VerticalAlignment="Center" Margin="0,0,6,0"
+                       Visibility="{Binding NewFolderIsNamed, Converter={StaticResource Visible}}" />
+            <TextBlock Text="{Binding NewFolderLabel}" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="280" />
+            <kyf:Icon Text="&#xE70D;" FontSize="10" Margin="8,0,0,0" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
         <TextBox x:Name="NewFolderBox" Text="{Binding NewFolderName, UpdateSourceTrigger=PropertyChanged}" kyf:Field.Placeholder="{x:Static pages:SheetsText.NewFolderPlaceholder}"
                  AutomationProperties.Name="{x:Static pages:SheetsText.NewFolderName}" Margin="0,4,0,0" Visibility="{Binding IsNewFolder, Converter={StaticResource Visible}}" />
-        <pages:ListFilterButton x:Name="NewTemplateMenu" DataContext="{Binding NewTemplate}" HorizontalAlignment="Left" Margin="-16,4,0,0" />
+
+        <!-- Fiche ou note, comme Lire / Réviser / Écrire : un seul choix, dont le cadre glisse. -->
+        <Border x:Name="NewKind" HorizontalAlignment="Left" Margin="0,12,0,0" BorderBrush="{DynamicResource Kyf.Brush.ControlBorder}" BorderThickness="1"
+                CornerRadius="{DynamicResource Kyf.Radius.Control}" Padding="2">
+          <kyf:SlidingSelectionPanel Orientation="Horizontal">
+            <RadioButton x:Name="NewReviewChoice" GroupName="NewKind" Content="{x:Static pages:SheetsText.ReviewSheetChoice}" IsChecked="{Binding NewIsReview}"
+                         Style="{DynamicResource Kyf.Button.Tool}" MinHeight="36" Padding="14,0" />
+            <RadioButton x:Name="NewNoteChoice" GroupName="NewKind" Content="{x:Static pages:SheetsText.NoteChoice}" IsChecked="{Binding NewIsNote}"
+                         Style="{DynamicResource Kyf.Button.Tool}" MinHeight="36" Padding="14,0" />
+          </kyf:SlidingSelectionPanel>
+        </Border>
+
+        <!-- Les modèles en vignettes : leur allure se voit avant de choisir ; ce qu'ils contiennent se lit au survol. -->
+        <TextBlock Text="{x:Static pages:SheetsText.TemplateHeading}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,20,0,8" />
+        <ListBox x:Name="NewTemplateTiles" ItemsSource="{Binding NewTemplates}" SelectedItem="{Binding NewTemplateTile}"
+                 Background="Transparent" BorderThickness="0" Padding="0" Margin="0,0,-8,-8" AutomationProperties.Name="{x:Static pages:SheetsText.TemplateHeading}"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled" ScrollViewer.VerticalScrollBarVisibility="Disabled">
+          <ListBox.ItemsPanel>
+            <ItemsPanelTemplate>
+              <UniformGrid Columns="3" />
+            </ItemsPanelTemplate>
+          </ListBox.ItemsPanel>
+          <ListBox.ItemContainerStyle>
+            <Style TargetType="ListBoxItem">
+              <Setter Property="Margin" Value="0,0,8,8" />
+              <Setter Property="FocusVisualStyle" Value="{DynamicResource Kyf.FocusVisual}" />
+              <Setter Property="ToolTip" Value="{Binding Description}" />
+              <Setter Property="AutomationProperties.Name" Value="{Binding Name}" />
+              <Setter Property="AutomationProperties.HelpText" Value="{Binding Description}" />
+              <Setter Property="Template">
+                <Setter.Value>
+                  <ControlTemplate TargetType="ListBoxItem">
+                    <Border x:Name="Tile" Background="Transparent" BorderBrush="{DynamicResource Kyf.Brush.Divider}" BorderThickness="1"
+                            CornerRadius="{DynamicResource Kyf.Radius.Control}" Padding="10,9" MinHeight="76" SnapsToDevicePixels="True">
+                      <ContentPresenter />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                      <Trigger Property="IsMouseOver" Value="True">
+                        <Setter TargetName="Tile" Property="Background" Value="{DynamicResource Kyf.Brush.SurfaceAlt}" />
+                      </Trigger>
+                      <!-- Choisie : un cadre plus épais, de la couleur principale ; le contenu ne bouge pas d'un pixel. -->
+                      <Trigger Property="IsSelected" Value="True">
+                        <Setter TargetName="Tile" Property="BorderBrush" Value="{DynamicResource Kyf.Brush.Primary}" />
+                        <Setter TargetName="Tile" Property="BorderThickness" Value="2" />
+                        <Setter TargetName="Tile" Property="Padding" Value="9,8" />
+                      </Trigger>
+                    </ControlTemplate.Triggers>
+                  </ControlTemplate>
+                </Setter.Value>
+              </Setter>
+            </Style>
+          </ListBox.ItemContainerStyle>
+          <ListBox.ItemTemplate>
+            <DataTemplate DataType="{x:Type pages:TemplateTile}">
+              <StackPanel>
+                <TextBlock Text="{Binding Name}" Style="{DynamicResource Kyf.Text.BodyStrong}" TextTrimming="CharacterEllipsis" />
+                <ItemsControl ItemsSource="{Binding Shape}" Margin="0,8,0,0" Focusable="False" IsTabStop="False">
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type pages:TemplateLine}">
+                      <Border x:Name="Line" Width="{Binding Width}" Height="3" CornerRadius="1.5" HorizontalAlignment="Left" Margin="0,0,0,4"
+                              Background="{DynamicResource Kyf.Brush.Divider}" />
+                      <DataTemplate.Triggers>
+                        <DataTrigger Binding="{Binding IsHeading}" Value="True">
+                          <Setter TargetName="Line" Property="Height" Value="5" />
+                          <Setter TargetName="Line" Property="CornerRadius" Value="2.5" />
+                          <Setter TargetName="Line" Property="Background" Value="{DynamicResource Kyf.Brush.ControlBorder}" />
+                        </DataTrigger>
+                      </DataTemplate.Triggers>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </StackPanel>
+            </DataTemplate>
+          </ListBox.ItemTemplate>
+        </ListBox>
       </StackPanel>
     </kyf:Dialog>
 

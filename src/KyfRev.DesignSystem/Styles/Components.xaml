@@ -414,7 +414,9 @@
     </Setter>
   </Style>
 
-  <!-- Dialogue : voile, carte au centre, ombre de l'élévation « Dialog », focus tenu à l'intérieur. -->
+  <!-- Dialogue : voile, carte au centre, ombre de l'élévation « Dialog », focus tenu à l'intérieur.
+       En volet : contre le bord droit, sur toute la hauteur, sans voile visible (la page reste lisible à côté) ;
+       sous 600 px, il vient du bas, sur toute la largeur, avec son voile et une poignée, comme le tiroir des dossiers. -->
   <Style TargetType="kyf:Dialog">
     <Setter Property="FontFamily" Value="{DynamicResource Kyf.Font.Ui}" />
     <Setter Property="FontSize" Value="{DynamicResource Kyf.FontSize.Body}" />
@@ -434,11 +436,11 @@
       <Setter.Value>
         <ControlTemplate TargetType="kyf:Dialog">
           <Grid>
-            <Rectangle Fill="{DynamicResource Kyf.Brush.Scrim}" />
+            <Rectangle x:Name="PART_Scrim" Fill="{DynamicResource Kyf.Brush.Scrim}" />
             <Grid x:Name="Card" HorizontalAlignment="Center" VerticalAlignment="Center" MinWidth="280" MaxWidth="{TemplateBinding CardMaxWidth}" Margin="16">
-              <Border Background="{TemplateBinding Background}" CornerRadius="{DynamicResource Kyf.Radius.Dialog}"
+              <Border x:Name="CardShadow" Background="{TemplateBinding Background}" CornerRadius="{DynamicResource Kyf.Radius.Dialog}"
                       Effect="{DynamicResource Kyf.Elevation.Dialog}" />
-              <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+              <Border x:Name="CardFrame" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
                       BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{DynamicResource Kyf.Radius.Dialog}"
                       Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
                 <!-- Le contenu vient avant les boutons, dans cet ordre aussi au clavier : le focus va d'abord à son premier champ. -->
@@ -448,7 +450,16 @@
                     <RowDefinition Height="*" />
                     <RowDefinition Height="Auto" />
                   </Grid.RowDefinitions>
-                  <TextBlock Grid.Row="0" Text="{TemplateBinding Title}" Style="{DynamicResource Kyf.Text.Subtitle}" Margin="0,0,0,12" />
+                  <DockPanel Grid.Row="0" Margin="0,0,0,12">
+                    <!-- La poignée d'un volet venu du bas : on voit qu'il est posé sur la page. -->
+                    <Border x:Name="Grip" DockPanel.Dock="Top" Width="36" Height="4" CornerRadius="2" Background="{DynamicResource Kyf.Brush.Divider}"
+                            HorizontalAlignment="Center" Margin="0,-12,0,12" Visibility="Collapsed" />
+                    <!-- Hors du parcours au clavier : Échap fait la même chose, et le focus va d'abord au contenu. -->
+                    <Button x:Name="PART_CloseButton" DockPanel.Dock="Right" Style="{DynamicResource Kyf.Button.Icon}" Content="{x:Static kyf:Icons.Close}"
+                            Width="32" Height="32" FontSize="12" Margin="8,-6,-8,-6" VerticalAlignment="Center" Visibility="Collapsed" IsTabStop="False"
+                            ToolTip="{x:Static ds:DesignText.Close}" AutomationProperties.Name="{x:Static ds:DesignText.Close}" />
+                    <TextBlock Text="{TemplateBinding Title}" Style="{DynamicResource Kyf.Text.Subtitle}" VerticalAlignment="Center" />
+                  </DockPanel>
                   <!-- Trop haut pour la fenêtre : le contenu défile, le titre et les boutons restent. -->
                   <!-- La zone qui défile coupe ce qui en dépasse : 4 px de marge rendus au contenu laissent voir l'anneau de focus
                        d'un bouton posé contre son bord, sans déplacer le contenu. -->
@@ -468,6 +479,31 @@
           <ControlTemplate.Triggers>
             <Trigger Property="IsWide" Value="True">
               <Setter TargetName="Card" Property="HorizontalAlignment" Value="Stretch" />
+            </Trigger>
+            <!-- Le volet, contre le bord droit : la page reste à voir, un clic dessus le referme. -->
+            <Trigger Property="IsSidePanel" Value="True">
+              <Setter TargetName="PART_Scrim" Property="Fill" Value="Transparent" />
+              <Setter TargetName="Card" Property="HorizontalAlignment" Value="Right" />
+              <Setter TargetName="Card" Property="VerticalAlignment" Value="Stretch" />
+              <Setter TargetName="Card" Property="Width" Value="{Binding CardMaxWidth, RelativeSource={RelativeSource TemplatedParent}}" />
+              <Setter TargetName="Card" Property="Margin" Value="0" />
+              <Setter TargetName="CardShadow" Property="CornerRadius" Value="12,0,0,12" />
+              <Setter TargetName="CardFrame" Property="CornerRadius" Value="12,0,0,12" />
+              <Setter TargetName="CardFrame" Property="BorderThickness" Value="1,0,0,0" />
+              <Setter TargetName="PART_CloseButton" Property="Visibility" Value="Visible" />
+            </Trigger>
+            <!-- Trop étroit : il vient du bas, sur toute la largeur, avec son voile. -->
+            <Trigger Property="IsFromBottom" Value="True">
+              <Setter TargetName="PART_Scrim" Property="Fill" Value="{DynamicResource Kyf.Brush.Scrim}" />
+              <Setter TargetName="Card" Property="HorizontalAlignment" Value="Stretch" />
+              <Setter TargetName="Card" Property="VerticalAlignment" Value="Bottom" />
+              <Setter TargetName="Card" Property="Width" Value="NaN" />
+              <Setter TargetName="Card" Property="MaxWidth" Value="Infinity" />
+              <Setter TargetName="Card" Property="Margin" Value="0,48,0,0" />
+              <Setter TargetName="CardShadow" Property="CornerRadius" Value="16,16,0,0" />
+              <Setter TargetName="CardFrame" Property="CornerRadius" Value="16,16,0,0" />
+              <Setter TargetName="CardFrame" Property="BorderThickness" Value="0,1,0,0" />
+              <Setter TargetName="Grip" Property="Visibility" Value="Visible" />
             </Trigger>
             <Trigger Property="SecondaryButtonText" Value="">
               <Setter TargetName="PART_SecondaryButton" Property="Visibility" Value="Collapsed" />

@@ -479,6 +479,25 @@ public sealed class SheetsTests
         }
     }
 
+    [TestMethod]
+    public void A_template_tile_draws_the_first_lines_of_its_text()
+    {
+        var tile = TemplateTile.Of("Cours", "Un plan de cours", "# {{titre}}\n\n## Définitions\n\n- un point assez long pour remplir toute la vignette\n- a\n- encore\n");
+
+        Assert.AreEqual("Cours", tile.Value);
+        Assert.HasCount(TemplateTile.ShapeLines, tile.Shape);
+        Assert.IsTrue(tile.Shape[0].IsHeading);
+        Assert.IsTrue(tile.Shape[1].IsHeading);
+        Assert.IsFalse(tile.Shape[2].IsHeading);
+        Assert.AreEqual(TemplateTile.ShapeWidth, tile.Shape[2].Width, "une longue ligne remplit la vignette");
+        Assert.AreEqual(TemplateTile.ShapeWidth * 0.3, tile.Shape[3].Width, 0.001, "une ligne courte garde un trait visible");
+        Assert.AreEqual("Cours, Un plan de cours", tile.ToString());
+
+        var empty = new TemplateTile(null, "Fiche vide", string.Empty);
+        Assert.HasCount(2, empty.Shape);
+        Assert.AreEqual("Fiche vide", empty.ToString());
+    }
+
     [STATestMethod]
     public void The_new_sheet_window_answers_through_its_buttons()
     {
@@ -504,7 +523,36 @@ public sealed class SheetsTests
             TestShell.Flush();
             var dialog = Named<Dialog>(window, "NewSheet");
             Assert.IsTrue(dialog.IsOpen);
+            Assert.IsTrue(dialog.IsSidePanel, "un volet à droite (rangée 22B)");
             Assert.IsFalse(Named<TextBox>(window, "NewFolderBox").IsVisible);
+
+            // Où : à la racine, qui se dit seul ; un dossier se dit « Dans Biologie ».
+            Assert.AreEqual(SheetsText.AtRoot, page.NewFolderLabel);
+            Assert.IsFalse(page.NewFolderIsNamed);
+            Assert.AreEqual(page.NewFolder.Name, Named<Button>(window, "NewFolderMenu").GetValue(System.Windows.Automation.AutomationProperties.NameProperty));
+
+            // Fiche ou note : un segment, la fiche de révision d'office.
+            var review = Named<RadioButton>(window, "NewReviewChoice");
+            var note = Named<RadioButton>(window, "NewNoteChoice");
+            Assert.IsTrue(review.IsChecked);
+            note.IsChecked = true;
+            Assert.IsTrue(page.NewIsNote);
+            Assert.IsFalse(page.NewIsReview);
+            Assert.AreEqual(SheetsText.NewNote, dialog.Title);
+            review.IsChecked = true;
+            Assert.IsFalse(page.NewIsNote);
+            Assert.IsFalse(note.IsChecked ?? true);
+
+            // Les modèles en vignettes : une fiche vide d'office ; une vignette choisie choisit le modèle.
+            var tiles = Named<ListBox>(window, "NewTemplateTiles");
+            Assert.AreEqual(page.NewTemplates.Count, tiles.Items.Count);
+            Assert.IsGreaterThan(1, tiles.Items.Count, "les modèles livrés avec kyfRev");
+            Assert.AreSame(page.NewTemplates[0], tiles.SelectedItem);
+            Assert.IsNull(page.NewTemplate.Value);
+            tiles.SelectedItem = page.NewTemplates[1];
+            Assert.AreEqual(page.NewTemplates[1].Value, page.NewTemplate.Value);
+            tiles.SelectedItem = page.NewTemplates[0];
+            Assert.IsNull(page.NewTemplate.Value);
 
             // Un refus rouvre la fenêtre, avec sa raison.
             dialog.Close(DialogChoice.Primary);

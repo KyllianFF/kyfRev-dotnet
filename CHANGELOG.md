@@ -22,6 +22,10 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   fiches s'écrivent en texte courant, avec une pastille pour leur état (à venir, aujourd'hui, en retard, note). Le filtre
   « Dossier » disparaît : le volet le remplace. La recherche porte sur tout le coffre. Sous 1 000 px de large, un bouton
   au-dessus de la liste ouvre les dossiers par la gauche, et par le bas en fenêtre étroite.
+- Nouvelle fiche : la fenêtre au milieu de l'écran devient un volet qui glisse de la droite, le Carnet restant visible à
+  côté. Le titre en grand ; « Dans Biologie › Cellule » pour le dossier ; « Fiche de révision / Note » côte à côte ; les
+  modèles en vignettes qui montrent leur allure. Sous 600 px de large, le volet vient du bas. Une croix, Échap ou un clic
+  à côté le referment.
 
 ## [1.1.0-beta.3] - 2026-11-18
 

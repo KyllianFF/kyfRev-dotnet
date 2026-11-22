@@ -53,6 +53,49 @@ public enum SheetSort
     DueDate,
 }
 
+/// <summary>Un modèle proposé dans le volet « Nouvelle fiche » (rangée 22B) : son nom, et ce qu'il contient.</summary>
+/// <param name="Value">Le nom du modèle ; rien pour une fiche vide.</param>
+/// <param name="Name">Ce qui s'affiche.</param>
+/// <param name="Description">Ce qu'il contient, en une ligne.</param>
+public sealed record TemplateTile(string? Value, string Name, string Description)
+{
+    /// <summary>Le plus de lignes qu'une vignette dessine.</summary>
+    internal const int ShapeLines = 4;
+
+    /// <summary>La plus longue ligne dessinée, en pixels : une ligne de texte de cette longueur, ou plus, la remplit.</summary>
+    internal const double ShapeWidth = 72;
+
+    /// <summary>
+    /// L'allure du modèle, en traits : ses premières lignes, longues ou courtes comme elles le sont, les titres plus
+    /// épais. Une fiche vide n'en a que deux, à peine marqués.
+    /// </summary>
+    public IReadOnlyList<TemplateLine> Shape { get; init; } = [new(ShapeWidth * 0.7, IsHeading: false), new(ShapeWidth * 0.45, IsHeading: false)];
+
+    /// <summary>Une vignette pour un modèle, dessinée d'après son texte.</summary>
+    public static TemplateTile Of(string name, string description, string body) => new(name, name, description) { Shape = ShapeOf(body) };
+
+    /// <summary>Les traits des premières lignes non vides d'un texte Markdown.</summary>
+    internal static IReadOnlyList<TemplateLine> ShapeOf(string body) =>
+        [.. body.Split('\n')
+            .Select(line => line.Trim())
+            .Where(line => line.Length > 0)
+            .Take(ShapeLines)
+            .Select(line =>
+            {
+                var heading = line.StartsWith('#');
+                var text = line.TrimStart('#', '-', '*', '>', ' ');
+                return new TemplateLine(Math.Clamp(text.Length / 28d, 0.3, 1) * ShapeWidth, heading);
+            })];
+
+    /// <summary>Le nom lu par le lecteur d'écran.</summary>
+    public override string ToString() => Description.Length > 0 ? $"{Name}, {Description}" : Name;
+}
+
+/// <summary>Un trait dans une vignette de modèle : une ligne du modèle, sa longueur, et si c'est un titre.</summary>
+/// <param name="Width">Longueur, en pixels.</param>
+/// <param name="IsHeading">Un titre : un trait plus épais.</param>
+public sealed record TemplateLine(double Width, bool IsHeading);
+
 /// <summary>Ce qu'on choisit dans le volet des dossiers : ce que la liste du milieu montre.</summary>
 public enum SheetPlace
 {
@@ -326,7 +369,12 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
                 OnPropertyChanged(nameof(ShowsTags));
             }
         };
-        NewFolder = new ListFilter(SheetsText.FilterFolder, [new(string.Empty, SheetsText.AtRoot)], counts: false, () => OnPropertyChanged(nameof(IsNewFolder)));
+        NewFolder = new ListFilter(SheetsText.FilterFolder, [new(string.Empty, SheetsText.AtRoot)], counts: false, () =>
+        {
+            OnPropertyChanged(nameof(IsNewFolder));
+            OnPropertyChanged(nameof(NewFolderLabel));
+            OnPropertyChanged(nameof(NewFolderIsNamed));
+        });
         NewTemplate = new ListFilter(SheetsText.Template, [new(null, SheetsText.EmptyTemplate)], counts: false, () => { });
         Rows = [];
         NewTitle = string.Empty;
@@ -693,6 +741,43 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
     [NotifyPropertyChangedFor(nameof(NewDialogTitle), nameof(NewDialogConfirm))]
     public partial bool NewIsNote { get; set; }
 
+    /// <summary>La nouvelle fiche est une fiche de révision : l'autre côté du choix « Fiche de révision / Note ».</summary>
+    public bool NewIsReview
+    {
+        get => !NewIsNote;
+        set
+        {
+            if (value)
+            {
+                NewIsNote = false;
+            }
+        }
+    }
+
+    partial void OnNewIsNoteChanged(bool value) => OnPropertyChanged(nameof(NewIsReview));
+
+    /// <summary>Les modèles, en vignettes : une fiche vide, puis ceux du coffre et ceux livrés avec kyfRev.</summary>
+    [ObservableProperty]
+    public partial IReadOnlyList<TemplateTile> NewTemplates { get; private set; } = [];
+
+    /// <summary>La vignette choisie ; elle choisit le modèle.</summary>
+    [ObservableProperty]
+    public partial TemplateTile? NewTemplateTile { get; set; }
+
+    partial void OnNewTemplateTileChanged(TemplateTile? value)
+    {
+        if (value is not null && NewTemplate.Choices.FirstOrDefault(choice => Equals(choice.Value, value.Value)) is { } choice)
+        {
+            NewTemplate.Selected = choice;
+        }
+    }
+
+    /// <summary>« Biologie › Cellule » : où ira la fiche, sur le bouton qui le change.</summary>
+    public string NewFolderLabel => NewFolder.Selected.Label;
+
+    /// <summary>« Dans », devant un dossier ; rien devant « À la racine » ni « Nouveau dossier… », qui se disent seuls.</summary>
+    public bool NewFolderIsNamed => NewFolder.Value is string { Length: > 0 };
+
     /// <summary>« Nouvelle fiche » ou « Nouvelle note ».</summary>
     public string NewDialogTitle => NewIsNote ? SheetsText.NewNote : SheetsText.NewSheet;
 
@@ -951,6 +1036,10 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
         NewFolder.Selected = NewFolder.Choices.FirstOrDefault(choice => Equals(choice.Value, wanted)) ?? NewFolder.Choices[0];
         NewTemplate.Replace([new(null, SheetsText.EmptyTemplate), .. templates.Value.Select(template => new Choice<object?>(template.Name, template.Name))]);
         NewTemplate.Selected = NewTemplate.Choices[0];
+        NewTemplates = [new(null, SheetsText.EmptyTemplate, SheetsText.EmptyTemplateDescription), .. templates.Value.Select(template => TemplateTile.Of(template.Name, template.Description, template.Body))];
+        NewTemplateTile = NewTemplates[0];
+        OnPropertyChanged(nameof(NewFolderLabel));
+        OnPropertyChanged(nameof(NewFolderIsNamed));
         IsCreating = true;
     }
 

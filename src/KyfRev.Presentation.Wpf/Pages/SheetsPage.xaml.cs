@@ -443,6 +443,23 @@ internal sealed partial class SheetsPage : UserControl
         return null;
     }
 
+    /// <summary>« Dans Biologie › Cellule » : la liste des dossiers s'ouvre sous le bouton.</summary>
+    private void OnNewFolderClick(object sender, RoutedEventArgs e)
+    {
+        var menu = NewFolderMenu.ContextMenu;
+        menu.PlacementTarget = NewFolderMenu;
+        menu.Placement = PlacementMode.Bottom;
+        menu.IsOpen = true;
+    }
+
+    private void OnNewFolderChosen(object sender, RoutedEventArgs e)
+    {
+        if (sender is ContextMenu { DataContext: ListFilter filter } && e.OriginalSource is MenuItem { DataContext: Choice<object?> choice })
+        {
+            filter.Selected = choice;
+        }
+    }
+
     private void OnCreateClosed(object sender, DialogClosedEventArgs e)
     {
         if (DataContext is SheetsPageViewModel page)
