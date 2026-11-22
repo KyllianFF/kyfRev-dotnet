@@ -449,7 +449,9 @@
         </DockPanel>
       </Border>
 
-      <ContentControl x:Name="Page" Grid.Column="1" Content="{Binding Current.Page}" Focusable="False" IsTabStop="False" />
+      <!-- Les confirmations s'y posent en pastille, au bas de la page (rangée 24A). -->
+      <ContentControl x:Name="Page" Grid.Column="1" Content="{Binding Current.Page}" Focusable="False" IsTabStop="False"
+                      kyf:Notification.ToastArea="{Binding RelativeSource={RelativeSource Self}}" />
 
       <!-- Le rideau du menu : quand le menu se réduit ou se masque, il tient un instant la place quittée et se retire vers le
            nouveau bord (voir FollowSidebar). Dans un canevas : il ne compte pas dans la mise en page. -->
@@ -661,7 +663,7 @@
   </Grid>
 
     <!-- Les actions sur une fiche, depuis n'importe quelle vue : leur fenêtre, et ce qui a abouti (rangée 23A). -->
-    <pages:SheetActionsView x:Name="SheetActionsHost" Grid.Row="1" DataContext="{Binding SheetActions}" />
+    <pages:SheetActionsView x:Name="SheetActionsHost" Grid.Row="1" DataContext="{Binding SheetActions}" kyf:Notification.ToastArea="{Binding ElementName=Page}" />
     <!-- Partager une fiche et l'enregistrer comme modèle : une seule fois, pour toutes les vues ; on les referme en changeant de vue. -->
     <pages:SheetSharingDialogs x:Name="SharingHost" Grid.Row="1" DataContext="{Binding Sharing}" />
 

@@ -100,6 +100,56 @@
     </Style.Triggers>
   </Style>
 
+  <!-- Notification en pastille (rangée 24A) : elle ne prend aucune place dans la page ; elle se pose dans une fenêtre flottante,
+       au bas de la page, sur la surface des menus. Un trait au bas de la pastille raccourcit avec le temps qui lui reste ; il
+       s'arrête sous la souris. Une confirmation se ferme seule, ou par Échap ; un avertissement garde son ✕. -->
+  <ControlTemplate x:Key="Kyf.Template.NotificationToast" TargetType="kyf:Notification">
+    <Popup x:Name="PART_Toast" AllowsTransparency="True" Placement="Custom" Focusable="False" StaysOpen="True" PopupAnimation="None">
+      <!-- La marge laisse la place de l'ombre, dessinée sous le contenu pour garder un texte net. -->
+      <Grid x:Name="PART_Pill" Margin="16,8,16,16" Opacity="{Binding Opacity, RelativeSource={RelativeSource TemplatedParent}}">
+        <Border Background="{DynamicResource Kyf.Brush.Surface}" CornerRadius="{DynamicResource Kyf.Radius.Card}" Effect="{DynamicResource Kyf.Elevation.Flyout}" />
+        <Border Background="{DynamicResource Kyf.Brush.Surface}" BorderBrush="{DynamicResource Kyf.Brush.Divider}" BorderThickness="1"
+                CornerRadius="{DynamicResource Kyf.Radius.Card}" Padding="12,0,8,0" MinHeight="40" SnapsToDevicePixels="True">
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="Auto" />
+              <ColumnDefinition Width="*" />
+              <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock x:Name="SeverityGlyph" Text="{TemplateBinding Glyph}" Style="{DynamicResource Kyf.Text.Icon}"
+                       Foreground="{DynamicResource Kyf.Brush.Info}" VerticalAlignment="Center" Margin="0,0,10,0" />
+            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="0,9,4,9">
+              <TextBlock x:Name="Title" Text="{TemplateBinding Title}" Style="{DynamicResource Kyf.Text.BodyStrong}" TextWrapping="Wrap" />
+              <TextBlock Text="{TemplateBinding ShownMessage}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" />
+            </StackPanel>
+            <Button x:Name="PART_CloseButton" Grid.Column="2" Style="{DynamicResource Kyf.Button.Icon}" Content="&#xE711;" Width="32" Height="32" FontSize="12"
+                    VerticalAlignment="Center" Margin="4,0,0,0" IsTabStop="False"
+                    AutomationProperties.Name="{x:Static ds:DesignText.Close}" ToolTip="{x:Static ds:DesignText.Close}" />
+            <!-- Le temps qui reste : le trait raccourcit vers la gauche. -->
+            <Border x:Name="PART_Countdown" Grid.ColumnSpan="3" VerticalAlignment="Bottom" Height="2" CornerRadius="1" Margin="0,0,4,3"
+                    Background="{DynamicResource Kyf.Brush.Primary}" RenderTransformOrigin="0,0.5" Visibility="Collapsed" IsHitTestVisible="False" />
+          </Grid>
+        </Border>
+      </Grid>
+    </Popup>
+    <ControlTemplate.Triggers>
+      <Trigger Property="Title" Value="">
+        <Setter TargetName="Title" Property="Visibility" Value="Collapsed" />
+      </Trigger>
+      <!-- Une confirmation se ferme d'elle-même : pas de ✕ ; Échap la ferme plus tôt. -->
+      <Trigger Property="Severity" Value="Success">
+        <Setter TargetName="SeverityGlyph" Property="Foreground" Value="{DynamicResource Kyf.Brush.Success}" />
+        <Setter TargetName="PART_CloseButton" Property="Visibility" Value="Collapsed" />
+      </Trigger>
+      <Trigger Property="Severity" Value="Warning">
+        <Setter TargetName="SeverityGlyph" Property="Foreground" Value="{DynamicResource Kyf.Brush.Warning}" />
+      </Trigger>
+      <Trigger Property="Severity" Value="Critical">
+        <Setter TargetName="SeverityGlyph" Property="Foreground" Value="{DynamicResource Kyf.Brush.Critical}" />
+      </Trigger>
+    </ControlTemplate.Triggers>
+  </ControlTemplate>
+
   <!-- Notification : fond et icône selon la gravité, texte toujours dans la couleur du texte ; un filet
        discret la borde, jamais un trait de couleur (le contraste élevé en fait un vrai contour). -->
   <Style TargetType="kyf:Notification">
@@ -187,6 +237,10 @@
       <Trigger Property="Severity" Value="Critical">
         <Setter Property="Background" Value="{DynamicResource Kyf.Brush.CriticalBackground}" />
         <Setter Property="AutomationProperties.LiveSetting" Value="Assertive" />
+      </Trigger>
+      <!-- En pastille : par-dessus la page, sans y prendre de place (rangée 24A). -->
+      <Trigger Property="IsToast" Value="True">
+        <Setter Property="Template" Value="{StaticResource Kyf.Template.NotificationToast}" />
       </Trigger>
     </Style.Triggers>
   </Style>
