@@ -119,7 +119,6 @@ public sealed class SpreadTests
         var page = new DashboardPageViewModel(vault.App.Reminders, vault.App.Sheets, opener, null, vault.App.Reviews, vault.App.Exams, vault.App.Folders, vault.Time);
         await page.RefreshCommand.ExecuteAsync(null);
 
-        Assert.IsTrue(page.HasScopes);
         Assert.AreEqual(
             "Tous les dossiers | Dossier : Biologie | Dossier : Histoire | Dossier : Histoire › Révolution | Étiquette : partiel",
             string.Join(" | ", page.Scopes.Select(scope => scope.Label)));
@@ -143,6 +142,152 @@ public sealed class SpreadTests
         await page.RefreshCommand.ExecuteAsync(null);
         Assert.AreEqual("Tous les dossiers", page.SelectedScope!.Label);
         Assert.AreEqual("Commencer (2)", page.StartLabel);
+    }
+
+    [TestMethod]
+    public async Task The_written_filter_reads_a_kind_a_folder_a_tag_or_words()
+    {
+        using var vault = new LateVault(sheets: 2, daysAway: 2);
+        var history = vault.App.Sheets.Create("Histoire/Révolution", "1789", null).Value;
+        Assert.IsTrue(vault.App.Sheets.SetTags(history, ["partiel"]).Succeeded);
+        vault.Time.AdvanceDays(2);
+        var page = vault.Page();
+        await page.RefreshCommand.ExecuteAsync(null);
+        Assert.AreEqual("Commencer (3)", page.StartLabel);
+
+        // Un dossier par son nom, sans accents ni majuscules : la liste s'y restreint, la séance et la nouvelle fiche aussi.
+        page.Query = "REVOLUTION";
+        Assert.AreEqual("Dossier : Histoire › Révolution", page.SelectedScope!.Label);
+        Assert.AreEqual("Commencer (1)", page.StartLabel);
+        Assert.AreEqual("Elle sera créée dans « Histoire › Révolution », et entre en révision aujourd'hui (J0).", page.NewSheetPlace);
+        page.Query = "histoire/revolution";
+        Assert.AreEqual("Dossier : Histoire › Révolution", page.SelectedScope!.Label, "le chemin aussi");
+
+        // Une étiquette, avec ou sans #.
+        page.Query = "#Partiel";
+        Assert.AreEqual("Étiquette : partiel", page.SelectedScope!.Label);
+        Assert.AreEqual("Commencer (1)", page.StartLabel);
+
+        // Le genre : aucun passage n'est dû, « Commencer » reste, grisé.
+        page.Query = "passages";
+        Assert.AreEqual(DashboardFilter.Passages, page.SelectedFilter.Value);
+        Assert.AreEqual("Tous les dossiers", page.SelectedScope!.Label);
+        Assert.IsFalse(page.StartCommand.CanExecute(null));
+        Assert.AreEqual(SessionText.StartNothing, page.StartLabel);
+        Assert.IsTrue(page.HasTiles, "les tuiles restent, à zéro : la journée a quelque chose");
+        Assert.AreEqual(0, page.Tiles[0].Count);
+        Assert.AreEqual(DashboardText.NothingMatches, page.Rows.OfType<EmptyDashboardRow>().Single().Description, "l'état vide dit le filtre, pas un coffre vide");
+
+        // Le reste cherche dans les titres, les dossiers et les étiquettes ; « fiche » choisit le genre.
+        page.Query = "fiche 178";
+        Assert.AreEqual(DashboardFilter.Sheets, page.SelectedFilter.Value);
+        Assert.AreEqual("1789", page.Rows.OfType<DueItemRow>().Single().Item.Title);
+        page.Query = "bio 2";
+        Assert.AreEqual("Fiche 2", page.Rows.OfType<DueItemRow>().Single().Item.Title);
+        Assert.AreEqual("Tous les dossiers", page.SelectedScope!.Label, "des mots ne choisissent pas de dossier");
+        Assert.AreEqual(DashboardText.NewSheetAtRoot, page.NewSheetPlace);
+
+        page.Query = string.Empty;
+        Assert.AreEqual(DashboardFilter.All, page.SelectedFilter.Value);
+        Assert.AreEqual("Commencer (3)", page.StartLabel);
+
+        // Oublier le coffre oublie le filtre : il peut nommer un dossier.
+        page.Query = "histoire";
+        page.Forget();
+        Assert.AreEqual(string.Empty, page.Query);
+    }
+
+    [TestMethod]
+    public async Task A_tile_keeps_only_its_own_and_a_second_click_gives_all_back()
+    {
+        using var vault = new LateVault(sheets: 2, daysAway: 2);
+        Assert.IsTrue(vault.App.Sheets.Create("Chimie", "Atome", null).Succeeded);
+        vault.Time.AdvanceDays(1);
+        var page = vault.Page();
+        await page.RefreshCommand.ExecuteAsync(null);
+
+        var (overdue, today, reminders) = (page.Tiles[0], page.Tiles[1], page.Tiles[2]);
+        Assert.AreEqual(DashboardText.Overdue, overdue.Title);
+        Assert.AreEqual(2, overdue.Count);
+        Assert.AreEqual(DashboardText.RemindersShort, reminders.Title);
+        Assert.AreEqual(0, reminders.Count);
+        Assert.AreEqual($"{DashboardText.Overdue} : 2", overdue.Spoken);
+        Assert.AreEqual(1, today.Count, "l'atome, créé hier, est dû aujourd'hui (J1)");
+
+        // La tuile ne garde que les retards : dans la liste, la séance et le résumé ; ni examens ni « à venir ».
+        page.ChooseTileCommand.Execute(overdue);
+        Assert.IsTrue(overdue.IsChosen);
+        Assert.AreEqual("Commencer (2)", page.StartLabel);
+        Assert.AreEqual(2, page.ReviewCount);
+        CollectionAssert.AreEqual(new[] { DashboardText.Overdue }, page.Rows.OfType<DashboardGroup>().Select(group => group.Title).ToArray());
+
+        // Une autre tuile prend la place ; la même, rechoisie, rend tout.
+        page.ChooseTileCommand.Execute(today);
+        Assert.IsFalse(overdue.IsChosen);
+        Assert.AreEqual("Commencer (1)", page.StartLabel);
+        page.ChooseTileCommand.Execute(today);
+        Assert.IsFalse(today.IsChosen);
+        Assert.AreEqual("Commencer (3)", page.StartLabel);
+
+        // Une tuile vide ne se choisit pas ; une tuile choisie qui se vide se relâche.
+        page.ChooseTileCommand.Execute(reminders);
+        Assert.IsFalse(reminders.IsChosen);
+        page.ChooseTileCommand.Execute(today);
+        page.Query = "biologie";
+        Assert.IsFalse(today.IsChosen);
+        Assert.AreEqual("Commencer (2)", page.StartLabel);
+    }
+
+    [TestMethod]
+    public async Task Each_action_sits_in_its_section_and_the_day_says_how_far_it_has_come()
+    {
+        using var vault = new LateVault(sheets: 2, daysAway: 2);
+        var page = vault.Page();
+        await page.RefreshCommand.ExecuteAsync(null);
+
+        // Les examens se montrent sans examen, avec de quoi en fixer un ; « Étaler… » va aux retards.
+        var groups = page.Rows.OfType<DashboardGroup>().ToList();
+        var exams = groups.Single(group => group.Title == ExamText.Exams);
+        Assert.AreEqual(0, exams.Count);
+        Assert.AreSame(page.Exams!.NewCommand, exams.Action!.Command);
+        Assert.AreEqual(ExamText.NewExamName, exams.Action.Name);
+        var overdue = groups.Single(group => group.Title == DashboardText.Overdue);
+        Assert.AreSame(page.Spread!.OpenCommand, overdue.Action!.Command);
+        Assert.AreEqual(SpreadText.Action, overdue.Action.Label);
+        Assert.IsTrue(overdue.HasAction);
+
+        // Rien de fait encore : 0 sur 2, et ce que la séance ouvrira d'abord.
+        StringAssert.StartsWith(page.Progress, "0 sur 2 fait · prochain : Fiche ", StringComparison.Ordinal);
+        Assert.AreEqual(0, page.DoneShare);
+
+        // Une révision faite : la journée avance, et sans retard, « Étaler… » passe à la section suivante.
+        var first = page.Rows.OfType<DueItemRow>().First().Item;
+        Assert.IsNull(vault.App.Reviews.Validate(first.Kind, first.Id).Error);
+        await page.RefreshCommand.ExecuteAsync(null);
+        StringAssert.StartsWith(page.Progress, "1 sur 2 fait · prochain : Fiche ", StringComparison.Ordinal);
+        Assert.AreEqual(0.5, page.DoneShare);
+        var second = page.Rows.OfType<DueItemRow>().First().Item;
+        Assert.IsNull(vault.App.Reviews.Validate(second.Kind, second.Id).Error);
+        await page.RefreshCommand.ExecuteAsync(null);
+        Assert.AreEqual($"2 sur 2 faits · {DashboardText.DayDone}", page.Progress);
+        Assert.IsFalse(page.HasTiles);
+        Assert.IsFalse(page.Rows.OfType<DashboardGroup>().Any(group => group.Title == DashboardText.Overdue));
+    }
+
+    [TestMethod]
+    public async Task A_day_of_the_forecast_opens_the_workload_on_it()
+    {
+        using var vault = new LateVault(sheets: 1, daysAway: 0);
+        var opener = new FakeOpener();
+        var page = new DashboardPageViewModel(vault.App.Reminders, vault.App.Sheets, opener, null, vault.App.Reviews, vault.App.Exams, vault.App.Folders, vault.Time);
+        await page.RefreshCommand.ExecuteAsync(null);
+
+        page.OpenWorkloadCommand.Execute(null);
+        var day = page.Forecast[1];
+        page.OpenWorkloadOnCommand.Execute(day);
+        page.OpenWorkloadOnCommand.Execute(null);
+        CollectionAssert.AreEqual(new object[] { ("charge", DashboardFilter.All), ("charge", DashboardFilter.All, day.Day) }, opener.Opened);
+        Assert.AreEqual(vault.Time.GetLocalNow().Date.AddDays(2), day.Day.ToDateTime(TimeOnly.MinValue));
     }
 
     [TestMethod]

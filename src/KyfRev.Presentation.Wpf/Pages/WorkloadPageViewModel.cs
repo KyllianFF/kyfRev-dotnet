@@ -166,6 +166,9 @@ public sealed partial class WorkloadPageViewModel : ObservableObject, INavigatio
     private readonly ReviewUseCases _reviews;
     private readonly IReviewOpener _opener;
     private Action? _back;
+
+    /// <summary>Le jour à choisir à la prochaine lecture ; rien sinon.</summary>
+    private DateOnly? _wantedDay;
     private Dashboard? _dashboard;
 
     /// <summary>Numéro de la dernière lecture demandée : une lecture dépassée n'affiche rien.</summary>
@@ -385,12 +388,17 @@ public sealed partial class WorkloadPageViewModel : ObservableObject, INavigatio
     /// <summary>« aucune révision », « 1 révision », « 3 révisions ».</summary>
     internal static string ReviewsOf(int count) => count == 0 ? WorkloadText.NoReview : Dates.Plural(count, WorkloadText.ReviewsOneOf, WorkloadText.ReviewsManyOf);
 
-    /// <summary>Prépare la vue à s'ouvrir : le filtre de la liste, et de quoi y revenir.</summary>
-    internal void Prepare(DashboardFilter filter, Action back)
+    /// <summary>
+    /// Prépare la vue à s'ouvrir : le filtre de la liste, de quoi y revenir, et le jour à choisir dès qu'elle sera lue
+    /// (un jour cliqué dans « À venir ») ; aucun sinon.
+    /// </summary>
+    internal void Prepare(DashboardFilter filter, Action back, DateOnly? day = null)
     {
         _back = back;
         SelectedFilter = Filters.First(choice => choice.Value == filter);
         SelectedDay = null;
+        // Après le filtre : la vue qu'il refait sur l'ancienne lecture ne le consomme pas.
+        _wantedDay = day;
         CloseMoveForm();
         Message = string.Empty;
         Error = string.Empty;
@@ -591,7 +599,8 @@ public sealed partial class WorkloadPageViewModel : ObservableObject, INavigatio
         var tallest = ChartColumns == WideColumns ? TallBar : ShortBar;
         double Height(double count) => count == 0 ? 0 : Math.Max(SmallestBar, count / most * tallest);
         var peak = sum == 0 ? -1 : totals.IndexOf(totals.Max());
-        var kept = SelectedDay?.Day;
+        var kept = SelectedDay?.Day ?? _wantedDay;
+        _wantedDay = null;
         _rebuilding = true;
         try
         {

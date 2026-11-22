@@ -162,9 +162,6 @@
   <data name="AllScopes" xml:space="preserve">
     <value>Tous les dossiers</value>
   </data>
-  <data name="ScopeName" xml:space="preserve">
-    <value>Restreindre à un dossier ou à une étiquette</value>
-  </data>
   <data name="FolderScope" xml:space="preserve">
     <value>Dossier : {0}</value>
   </data>
@@ -242,5 +239,38 @@
   </data>
   <data name="ReviewNow" xml:space="preserve">
     <value>Réviser maintenant</value>
+  </data>
+  <data name="RemindersShort" xml:space="preserve">
+    <value>Rappels</value>
+  </data>
+  <data name="FilterPlaceholder" xml:space="preserve">
+    <value>Filtrer : fiche, passage, dossier, étiquette…</value>
+  </data>
+  <data name="FilterName" xml:space="preserve">
+    <value>Filtrer la liste : fiche, passage, un dossier, une étiquette ou un mot du titre</value>
+  </data>
+  <data name="ProgressOne" xml:space="preserve">
+    <value>{0} sur {1} fait</value>
+  </data>
+  <data name="ProgressMany" xml:space="preserve">
+    <value>{0} sur {1} faits</value>
+  </data>
+  <data name="Next" xml:space="preserve">
+    <value>prochain : {0}</value>
+  </data>
+  <data name="DayDone" xml:space="preserve">
+    <value>tout est fait pour aujourd'hui</value>
+  </data>
+  <data name="Tiles" xml:space="preserve">
+    <value>Ne montrer que</value>
+  </data>
+  <data name="SeeWorkload" xml:space="preserve">
+    <value>Ouvrir la charge des 30 prochains jours</value>
+  </data>
+  <data name="NothingToStart" xml:space="preserve">
+    <value>Rien à réviser pour l'instant : la séance s'ouvrira dès qu'une fiche ou un passage sera dû.</value>
+  </data>
+  <data name="NothingMatches" xml:space="preserve">
+    <value>Rien de dû ne correspond au filtre. Échap dans le champ l'efface.</value>
   </data>
 </root>

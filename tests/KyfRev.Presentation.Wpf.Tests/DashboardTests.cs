@@ -803,6 +803,14 @@ public sealed class DashboardTests
             reminder.Command.Execute(reminder.CommandParameter);
             Assert.IsInstanceOfType<PendingReminder>(opener.Opened.Single());
             Assert.HasCount(7, Descendants(Named<ItemsControl>(window, "Forecast")).OfType<Border>().Where(border => border.Name == "Dot").ToList());
+            // « À venir » mène à la Charge ; un jour l'y ouvre sur lui.
+            var forecastTitle = Named<Button>(window, "ForecastTitle");
+            Assert.AreEqual(DashboardText.Forecast, AutomationProperties.GetName(forecastTitle));
+            forecastTitle.Command.Execute(null);
+            var days = Descendants(Named<ItemsControl>(window, "Forecast")).OfType<Button>().Where(button => button.Name == "ForecastDay").ToList();
+            Assert.HasCount(7, days);
+            days[2].Command.Execute(days[2].CommandParameter);
+            CollectionAssert.AreEqual(new object[] { ("charge", DashboardFilter.All), ("charge", DashboardFilter.All, Day.AddDays(3)) }, opener.Opened.Skip(1).ToList());
             Assert.HasCount(7, Descendants(Named<ItemsControl>(window, "Week")).OfType<Border>().Where(border => border.Name == "Bar").ToList());
             var credits = Descendants(Named<ItemsControl>(window, "Cards")).OfType<TextBlock>().Where(text => text.Name == "Credit");
             Same("Blaise Pascal · Citation du jour | Sans auteur", credits.Select(credit => string.Concat(credit.Inlines.OfType<Run>().Select(run => run.Text))));

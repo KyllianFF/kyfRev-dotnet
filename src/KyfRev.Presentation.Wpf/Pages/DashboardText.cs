@@ -215,8 +215,38 @@ public static class DashboardText
     /// <summary>« Tous les dossiers ».</summary>
     public static string AllScopes => Text(nameof(AllScopes));
 
-    /// <summary>« Restreindre à un dossier ou à une étiquette ».</summary>
-    public static string ScopeName => Text(nameof(ScopeName));
+    /// <summary>« Rappels » : la tuile des rappels de consolidation.</summary>
+    public static string RemindersShort => Text(nameof(RemindersShort));
+
+    /// <summary>« Filtrer : fiche, passage, dossier, étiquette… ».</summary>
+    public static string FilterPlaceholder => Text(nameof(FilterPlaceholder));
+
+    /// <summary>« Filtrer la liste : fiche, passage, un dossier, une étiquette ou un mot du titre ».</summary>
+    public static string FilterName => Text(nameof(FilterName));
+
+    /// <summary>« 1 sur 5 fait ».</summary>
+    public static string ProgressOneOf(object done, object day) => Format("ProgressOne", done, day);
+
+    /// <summary>« 3 sur 5 faits ».</summary>
+    public static string ProgressManyOf(object done, object day) => Format("ProgressMany", done, day);
+
+    /// <summary>« prochain : … ».</summary>
+    public static string NextOf(object title) => Format("Next", title);
+
+    /// <summary>« tout est fait pour aujourd'hui ».</summary>
+    public static string DayDone => Text(nameof(DayDone));
+
+    /// <summary>« Rien à réviser pour l'instant… » : l'infobulle de « Commencer », grisé.</summary>
+    public static string NothingToStart => Text(nameof(NothingToStart));
+
+    /// <summary>« Rien de dû ne correspond au filtre… » : l'état vide quand le filtre cache tout.</summary>
+    public static string NothingMatches => Text(nameof(NothingMatches));
+
+    /// <summary>« Ne montrer que » : le nom des tuiles.</summary>
+    public static string Tiles => Text(nameof(Tiles));
+
+    /// <summary>« Ouvrir la charge des 30 prochains jours » : le titre « À venir », qui y mène.</summary>
+    public static string SeeWorkload => Text(nameof(SeeWorkload));
 
     /// <summary>« Dossier : {0} ».</summary>
     public static string FolderScopeOf(object folder) => Format("FolderScope", folder);

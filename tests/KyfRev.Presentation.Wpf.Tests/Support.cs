@@ -326,7 +326,7 @@ internal sealed class FakeOpener : IReviewOpener
 
     public void OpenReminder(PendingReminder reminder) => Opened.Add(reminder);
 
-    public void OpenWorkload(DashboardFilter filter) => Opened.Add(("charge", filter));
+    public void OpenWorkload(DashboardFilter filter, DateOnly? day = null) => Opened.Add(day is { } chosen ? ("charge", filter, chosen) : ("charge", filter));
 
     public void OpenHealth() => Opened.Add("santé");
 
