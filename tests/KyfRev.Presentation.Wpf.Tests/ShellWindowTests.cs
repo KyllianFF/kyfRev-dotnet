@@ -853,7 +853,7 @@ public sealed class ShellWindowTests
     }
 
     [STATestMethod]
-    public void The_view_left_fades_out_over_the_one_that_comes_from_the_side_one_goes_to()
+    public void A_view_that_arrives_rises_a_little_and_settles()
     {
         var test = new TestShell();
         var window = Open(test);
@@ -862,89 +862,113 @@ public sealed class ShellWindowTests
         try
         {
             var page = (FrameworkElement)window.FindName("Page");
-            var ghost = (Image)window.FindName("PageGhost");
             var menu = test.Shell.MainNavigation;
             Assert.IsGreaterThanOrEqualTo(3, menu.Count);
-            Assert.AreSame(menu[0], test.Shell.Current);
-            Assert.AreEqual(Visibility.Collapsed, ghost.Visibility, "rien n'est quitté tant qu'on ne change pas de vue");
+            Assert.IsNull(window.FindName("PageGhost"), "plus d'image de la vue quittée : la vue qui arrive est seule à bouger");
+            Assert.IsFalse(Transitions.GetIsArriving(page));
 
-            // L'image de la vue quittée est la vue, point pour point : posée par-dessus, elle ne la décale pas (une image prise
-            // au contour de ce que la vue dessine perdait ses marges, et la vue semblait sursauter avant de s'effacer).
-            var reference = RuledPaperPixels.Capture(page, "vue-quittee-reference");
-            Assert.IsTrue(window.LeavePage());
-            var picture = (System.Windows.Media.Imaging.BitmapSource)ghost.Source;
-            window.UpdateLayout();
-            var root = (FrameworkElement)window.FindName("Root");
-            Assert.AreEqual(page.TranslatePoint(default, root), ghost.TranslatePoint(default, root), "l'image est posée là où est la vue");
-            Assert.AreEqual(page.ActualWidth, ghost.ActualWidth, 0.5);
-            Assert.AreEqual(page.ActualHeight, ghost.ActualHeight, 0.5);
-            if (picture.PixelWidth == reference.PixelWidth && picture.PixelHeight == reference.PixelHeight)
-            {
-                var stride = picture.PixelWidth * 4;
-                var shown = new byte[stride * picture.PixelHeight];
-                var wanted = new byte[stride * reference.PixelHeight];
-                picture.CopyPixels(shown, stride, 0);
-                reference.CopyPixels(wanted, stride, 0);
-                var different = 0;
-                for (var index = 0; index < shown.Length; index++)
-                {
-                    if (Math.Abs(shown[index] - wanted[index]) > 2)
-                    {
-                        different++;
-                    }
-                }
-                Assert.AreEqual(0, different, "les mêmes points, aux mêmes endroits");
-                Assert.IsTrue(wanted.Any(value => value != wanted[0]), "la vue n'est pas vide : la comparaison porte sur du contenu");
-            }
-            ghost.Visibility = Visibility.Collapsed;
-            ghost.Source = null;
-
-            // Vers le bas du menu : l'image de la vue quittée s'efface par-dessus, la nouvelle arrive par la droite.
-            var width = page.ActualWidth;
+            // On change de vue : la page est tenue invisible le temps de se mettre en page, puis monte et se pose.
             test.Shell.Navigate(menu[2]);
             Assert.AreSame(menu[2], test.Shell.Current);
-            Assert.AreEqual(Visibility.Visible, ghost.Visibility);
-            Assert.IsNotNull(ghost.Source);
-            Assert.AreEqual(width, ghost.Width, "à la taille de la vue quittée");
-            Assert.IsFalse(ghost.IsHitTestVisible, "rien ne s'y clique");
-            Assert.IsTrue(ghost.HasAnimatedProperties, "elle s'efface");
-            Assert.IsTrue(page.HasAnimatedProperties, "la nouvelle paraît");
-            Assert.AreEqual(1, window.EnterPage(), "plus bas dans le menu : par la droite");
-            Wait(() => ghost.Visibility == Visibility.Collapsed);
-            Assert.IsNull(ghost.Source, "effacée, l'image est rendue");
-            Assert.IsFalse(ghost.HasAnimatedProperties);
+            Assert.IsTrue(Transitions.GetIsArriving(page), "elle arrive");
+            Assert.IsTrue(page.HasAnimatedProperties, "invisible en attendant");
+            // Le trajet lui-même est vérifié dans le design system ; ici, qu'il a lieu et que la page finit à sa place.
+            Wait(() => !Transitions.GetIsArriving(page));
+            Assert.AreEqual(Transform.Identity, page.RenderTransform, "posée, elle n'est plus décalée");
+            Assert.AreEqual(1.0, page.Opacity);
+            // Ce qu'elle contient sait qu'elle est arrivée : une liste peut de nouveau s'animer de son côté.
+            Assert.IsFalse(Transitions.GetIsArriving((DependencyObject)page));
 
-            // Vers le haut : par la gauche. Hors du menu (la galerie) : sur place.
+            // Deux changements coup sur coup : la seconde arrivée remplace la première, et la page finit à sa place.
             test.Shell.Navigate(menu[1]);
-            Assert.AreEqual(-1, window.EnterPage());
-            test.Shell.Navigate(test.Shell.Gallery);
-            Assert.AreEqual(0, window.EnterPage());
             test.Shell.Navigate(menu[0]);
-            Assert.AreEqual(0, window.EnterPage(), "on revient d'une vue hors du menu");
-            Wait(() => ghost.Visibility == Visibility.Collapsed);
+            Assert.IsTrue(Transitions.GetIsArriving(page));
+            Wait(() => !Transitions.GetIsArriving(page));
+            Assert.AreEqual(Transform.Identity, page.RenderTransform);
+            Assert.AreEqual(1.0, page.Opacity);
 
-            // Deux changements coup sur coup : une seule image, celle de la dernière vue quittée.
-            test.Shell.Navigate(menu[1]);
-            test.Shell.Navigate(menu[2]);
-            Assert.AreEqual(Visibility.Visible, ghost.Visibility);
-            Wait(() => ghost.Visibility == Visibility.Collapsed);
-            Assert.IsNull(ghost.Source);
-
-            // Sur un très grand écran, l'image est dessinée moins fine plutôt que de retarder le changement de vue.
-            Assert.AreEqual(1, ShellWindow.GhostScale(1920 * 1080 * 0.7));
-            Assert.AreEqual(0.5, ShellWindow.GhostScale(4 * ShellWindow.PageGhostPixels), 1e-9);
-
-            // Animations coupées : pas d'image, la vue change d'un coup.
+            // Animations coupées : la vue change d'un coup.
             Transitions.Skip = true;
-            Assert.IsFalse(window.LeavePage());
-            test.Shell.Navigate(menu[0]);
-            Assert.AreEqual(Visibility.Collapsed, ghost.Visibility);
-            Assert.IsFalse(page.HasAnimatedProperties);
+            Assert.IsFalse(window.ArrivePage());
+            test.Shell.Navigate(menu[2]);
+            Assert.IsFalse(Transitions.GetIsArriving(page));
+            Assert.IsFalse(page.RenderTransform is TranslateTransform { Y: > 0 });
+            Assert.AreEqual(1.0, page.Opacity);
         }
         finally
         {
             Transitions.Skip = true;
             window.Close();
+        }
+    }
+
+    [STATestMethod]
+    [DataRow(ThemeKind.Light)]
+    [DataRow(ThemeKind.Dark)]
+    public void A_page_about_to_rise_never_covers_the_title_bar_the_menu_or_the_tabs(ThemeKind theme)
+    {
+        // De la fenêtre étroite, aux onglets en bas, à la barre latérale entière : au départ de sa montée, la page est plus
+        // bas que sa place. Ce qui l'entoure doit rester intact.
+        foreach (var width in new[] { 470d, 1000d, 1500d })
+        {
+            var test = new TestShell();
+            test.Design.Theme = theme;
+            var window = Open(test);
+            try
+            {
+                window.Width = width;
+                test.Shell.WindowWidth = width;
+                TestShell.Flush();
+                var page = (FrameworkElement)window.FindName("Page");
+                var frame = (FrameworkElement)window.FindName("Frame");
+                byte[] Pixels(System.Windows.Media.Imaging.BitmapSource image)
+                {
+                    var all = new byte[image.PixelWidth * 4 * image.PixelHeight];
+                    image.CopyPixels(all, image.PixelWidth * 4, 0);
+                    return all;
+                }
+                var settled = RuledPaperPixels.Capture(frame, $"arrivee-{theme}-{width:0}-posee");
+                var still = Pixels(settled);
+                page.RenderTransform = new TranslateTransform(0, Transitions.PageRise);
+                window.UpdateLayout();
+                var low = Pixels(RuledPaperPixels.Capture(frame, $"arrivee-{theme}-{width:0}-depart"));
+                page.ClearValue(UIElement.RenderTransformProperty);
+                var stride = settled.PixelWidth * 4;
+                int Different(Rect area)
+                {
+                    var count = 0;
+                    for (var y = Math.Max(0, (int)area.Top); y < Math.Min(settled.PixelHeight, (int)area.Bottom); y++)
+                    {
+                        for (var x = Math.Max(0, (int)area.Left); x < Math.Min(settled.PixelWidth, (int)area.Right); x++)
+                        {
+                            var at = (y * stride) + (x * 4);
+                            if (Math.Abs(still[at] - low[at]) > 2 || Math.Abs(still[at + 1] - low[at + 1]) > 2 || Math.Abs(still[at + 2] - low[at + 2]) > 2)
+                            {
+                                count++;
+                            }
+                        }
+                    }
+                    return count;
+                }
+                Rect Place(string name) => window.FindName(name) is FrameworkElement { IsVisible: true } part
+                    ? new Rect(part.TranslatePoint(default, frame), part.RenderSize)
+                    : Rect.Empty;
+
+                Assert.AreEqual(0, Different(Place("TitleBar")), $"{theme}, {width:0} px : la barre de titre");
+                foreach (var name in new[] { "Sidebar", "TabBar" })
+                {
+                    if (Place(name) is { IsEmpty: false } around)
+                    {
+                        Assert.AreEqual(0, Different(around), $"{theme}, {width:0} px : {name}");
+                    }
+                }
+                var own = new Rect(page.TranslatePoint(default, frame), page.RenderSize);
+                Assert.IsGreaterThan(0, Different(own), $"{theme}, {width:0} px : la page, elle, est bien plus bas");
+            }
+            finally
+            {
+                window.Close();
+            }
         }
     }
 
@@ -973,6 +997,39 @@ public sealed class ShellWindowTests
             var ghost = (Image)window.FindName("ThemeGhost");
             Assert.AreEqual(Visibility.Collapsed, ghost.Visibility, "rien tant que le thème ne change pas");
             var dark = test.Shell.Appearance.IsDark;
+
+            // L'image est la fenêtre, point pour point, à sa place : posée par-dessus, elle ne la décale pas (une image prise
+            // au contour de ce que la fenêtre dessine perdrait ses marges, et tout semblerait sursauter avant de s'effacer).
+            var frame = (FrameworkElement)window.FindName("Frame");
+            var reference = RuledPaperPixels.Capture(frame, "fenetre-reference");
+            Assert.IsTrue(window.FadeTheme());
+            var picture = (System.Windows.Media.Imaging.BitmapSource)ghost.Source;
+            window.UpdateLayout();
+            Assert.AreEqual(frame.TranslatePoint(default, window), ghost.TranslatePoint(default, window), "l'image est posée là où est la fenêtre");
+            Assert.AreEqual(frame.ActualWidth, ghost.ActualWidth, 0.5);
+            Assert.AreEqual(frame.ActualHeight, ghost.ActualHeight, 0.5);
+            if (picture.PixelWidth == reference.PixelWidth && picture.PixelHeight == reference.PixelHeight)
+            {
+                var stride = picture.PixelWidth * 4;
+                var shown = new byte[stride * picture.PixelHeight];
+                var wanted = new byte[stride * reference.PixelHeight];
+                picture.CopyPixels(shown, stride, 0);
+                reference.CopyPixels(wanted, stride, 0);
+                var different = 0;
+                for (var index = 0; index < shown.Length; index++)
+                {
+                    if (Math.Abs(shown[index] - wanted[index]) > 2)
+                    {
+                        different++;
+                    }
+                }
+                Assert.AreEqual(0, different, "les mêmes points, aux mêmes endroits");
+                Assert.IsTrue(wanted.Any(value => value != wanted[0]), "la fenêtre n'est pas vide : la comparaison porte sur du contenu");
+            }
+            Wait(() => ghost.Visibility == Visibility.Collapsed);
+            // Sur un très grand écran, l'image est dessinée moins fine plutôt que de retarder le changement.
+            Assert.AreEqual(1, ShellWindow.GhostScale(1920 * 1080 * 0.7));
+            Assert.AreEqual(0.5, ShellWindow.GhostScale(4 * ShellWindow.PageGhostPixels), 1e-9);
 
             // Le thème bascule : l'image de la fenêtre dans l'ancien thème s'efface par-dessus le nouveau.
             test.Shell.ToggleThemeCommand.Execute(null);

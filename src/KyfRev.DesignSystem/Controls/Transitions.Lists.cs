@@ -54,12 +54,13 @@ public static partial class Transitions
     /// Les lignes d'une liste qu'on voit pour la première fois arrivent en fondu, en montant un peu : les premières l'une après
     /// l'autre, les suivantes ensemble avec la dernière d'entre elles. Aucune ligne n'est là avant celles du haut : une
     /// liste dont le bas serait déjà affiché pendant que le haut arrive paraîtrait trouée. Les lignes sous le bas de la
-    /// fenêtre ne s'animent pas.
+    /// fenêtre ne s'animent pas. Rien si la page de la liste est elle-même en train d'arriver (voir <see cref="Arrive"/>).
     /// </summary>
     /// <returns>Combien de lignes arrivent.</returns>
     internal static int Cascade(ItemsControl list)
     {
-        if (!list.IsVisible)
+        // Pendant que sa page arrive, la liste monte déjà avec elle : pas de second mouvement par-dessus.
+        if (!list.IsVisible || GetIsArriving(list))
         {
             return 0;
         }

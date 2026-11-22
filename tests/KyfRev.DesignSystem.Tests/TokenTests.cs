@@ -207,6 +207,9 @@ public sealed class TokenTests
     {
         Assert.IsLessThanOrEqualTo(TimeSpan.FromMilliseconds(260), Motion.Normal);
         Assert.IsLessThan(Motion.Normal, Motion.Fast);
+        // Une exception, voulue : la page qui arrive a la durée des pages de Windows. Sa courbe fait presque tout le chemin dans
+        // le premier tiers ; le reste n'est que la page qui se pose.
+        Assert.AreEqual(TimeSpan.FromMilliseconds(300), Motion.Page);
         Assert.AreEqual(TimeSpan.Zero, Motion.Effective(Motion.Normal, reducedMotion: true));
         Assert.AreEqual(Motion.Fast, Motion.Effective(Motion.Fast, reducedMotion: false));
         Assert.AreEqual(!System.Windows.SystemParameters.ClientAreaAnimation, Motion.SystemPrefersReducedMotion);
