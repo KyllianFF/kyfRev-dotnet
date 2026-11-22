@@ -89,7 +89,7 @@
 
       <Grid Grid.Row="3">
         <!-- Squelettes pendant la première lecture. -->
-        <StackPanel x:Name="Loading" Margin="0,12,0,0" Visibility="{Binding IsLoading, Converter={StaticResource Visible}}"
+        <StackPanel x:Name="Loading" Margin="0,12,0,0" kyf:Transitions.StandsIn="{Binding IsLoading}"
                     AutomationProperties.Name="{x:Static pages:ArchivesText.Loading}">
           <kyf:Skeleton Height="44" Margin="0,0,0,8" />
           <kyf:Skeleton Height="44" Margin="0,0,0,8" />

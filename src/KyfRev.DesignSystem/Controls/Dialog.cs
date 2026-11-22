@@ -215,7 +215,7 @@ public class Dialog : ContentControl
         if (isOpen)
         {
             // Rouvert pendant qu'il s'effaçait : il est là, entier.
-            BeginAnimation(OpacityProperty, null);
+            Transitions.StopExit(this);
             SetValue(IsLeavingPropertyKey, false);
             // Rouvert aussitôt après un refus, il a encore le focus : ce qu'on retient reste ce d'où l'on venait.
             if (!IsKeyboardFocusWithin)

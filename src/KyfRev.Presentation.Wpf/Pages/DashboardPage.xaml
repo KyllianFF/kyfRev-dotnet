@@ -660,7 +660,7 @@
           </WrapPanel>
 
           <!-- Squelettes pendant la première lecture. -->
-          <StackPanel x:Name="Loading" Grid.Row="1" Margin="12,8,12,0" Visibility="{Binding IsLoading, Converter={StaticResource Visible}}"
+          <StackPanel x:Name="Loading" Grid.Row="1" Margin="12,8,12,0" kyf:Transitions.StandsIn="{Binding IsLoading}"
                       AutomationProperties.Name="{x:Static pages:DashboardText.Loading}">
             <kyf:Skeleton Width="220" Height="20" HorizontalAlignment="Left" Margin="0,0,0,16" />
             <kyf:Skeleton Height="44" Margin="0,0,0,8" />

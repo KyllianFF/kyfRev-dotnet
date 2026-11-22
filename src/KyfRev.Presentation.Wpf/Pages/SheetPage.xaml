@@ -538,7 +538,7 @@
           <ContentControl x:Name="OutlinePane" DockPanel.Dock="Left" Width="{x:Static pages:SheetPageViewModel.OutlineWidth}" Margin="0,0,16,0" Focusable="False" IsTabStop="False"
                           Content="{Binding}" ContentTemplate="{StaticResource OutlinePanel}" kyf:Transitions.Shown="{Binding ShowsOutline}" kyf:Transitions.ShownFrom="Left" />
           <!-- Les passages et les rétroliens se partagent la colonne de droite ; seul, l'un des deux la prend toute. -->
-          <UniformGrid DockPanel.Dock="Right" Columns="1">
+          <UniformGrid x:Name="SidePanes" DockPanel.Dock="Right" Columns="1">
             <ContentControl x:Name="PassagesPane" Width="{x:Static pages:SheetPageViewModel.PassagesWidth}" Margin="16,0,10,0" Focusable="False" IsTabStop="False"
                             Content="{Binding}" ContentTemplate="{StaticResource PassagesPanel}" kyf:Transitions.Shown="{Binding ShowsPassages}" kyf:Transitions.ShownFrom="Right" />
             <ContentControl x:Name="BacklinksPane" Width="{x:Static pages:SheetPageViewModel.PassagesWidth}" Focusable="False" IsTabStop="False"
@@ -563,7 +563,7 @@
               <RowDefinition Height="Auto" />
               <RowDefinition Height="*" />
             </Grid.RowDefinitions>
-            <StackPanel MaxWidth="{Binding ZoomedTextWidth}">
+            <StackPanel x:Name="SheetHead" MaxWidth="{Binding ZoomedTextWidth}">
               <TextBlock x:Name="Loading" Text="{x:Static pages:ReviewText.OpeningSheet}" Style="{DynamicResource Kyf.Text.Secondary}"
                          Visibility="{Binding IsLoading, Converter={StaticResource Visible}}" />
               <kyf:Notification x:Name="ErrorMessage" Severity="Critical" Message="{Binding Error}" IsOpen="{Binding HasError, Mode=OneWay}"

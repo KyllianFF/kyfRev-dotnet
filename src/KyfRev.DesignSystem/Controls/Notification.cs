@@ -286,7 +286,7 @@ public class Notification : Control
                 return;
             }
             // Elle s'effaçait : elle revient entière, et s'annonce de nouveau.
-            BeginAnimation(OpacityProperty, null);
+            Transitions.StopExit(this);
             SetValue(IsLeavingPropertyKey, false);
             SetValue(ShownMessagePropertyKey, Message);
             SetValue(IsExpiredPropertyKey, false);

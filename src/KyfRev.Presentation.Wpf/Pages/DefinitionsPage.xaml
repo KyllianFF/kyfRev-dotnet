@@ -45,7 +45,7 @@
       <ToggleButton x:Name="EverywhereFilter" Margin="0,0,0,8" VerticalAlignment="Top" IsChecked="{Binding OnlyMarkedEverywhere}" Content="{x:Static pages:DefinitionsText.OnlyEverywhere}" />
     </WrapPanel>
 
-    <StackPanel x:Name="Loading" Grid.Row="2" Visibility="{Binding IsLoading, Converter={StaticResource Visible}}" AutomationProperties.Name="{x:Static pages:DefinitionsText.Loading}">
+    <StackPanel x:Name="Loading" Grid.Row="2" kyf:Transitions.StandsIn="{Binding IsLoading}" AutomationProperties.Name="{x:Static pages:DefinitionsText.Loading}">
       <kyf:Skeleton Height="88" Margin="0,0,0,8" />
       <kyf:Skeleton Height="88" Margin="0,0,0,8" />
     </StackPanel>
