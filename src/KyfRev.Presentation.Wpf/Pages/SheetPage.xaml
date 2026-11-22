@@ -503,11 +503,10 @@
       </StackPanel>
 
       <!-- Le ruban court sur toute la largeur, au-dessus du plan et des passages. -->
-      <!-- Il descend de quelques pixels en paraissant, et remonte en s'effaçant quand on quitte l'écriture. La rangée garde le
-           contexte de la page ; ce qu'elle porte reçoit celui de l'éditeur, et le garde le temps de s'effacer (ShowRibbonContext). -->
-      <Border x:Name="RibbonRow" Grid.Row="1" Margin="16,0,16,8" kyf:Transitions.Shown="{Binding IsWriting}" kyf:Transitions.ShownFrom="Top"
-              kyf:Transitions.ShownTravel="{x:Static pages:SheetPage.RibbonDrop}">
-      <StackPanel x:Name="RibbonContent">
+      <!-- Il paraît en descendant de quelques pixels, en fondu (ShowMode). En quittant l'écriture, il part d'un coup : les barres
+           de la lecture prennent sa rangée au même instant, et l'éditeur qu'il montrait n'existe plus. -->
+      <StackPanel x:Name="RibbonRow" Grid.Row="1" Margin="16,0,16,8" DataContext="{Binding Editor}"
+                  Visibility="{Binding DataContext.IsWriting, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource Visible}}">
         <editing:EditorRibbon x:Name="Ribbon" PageSetup="{Binding DataContext.PageSetup, RelativeSource={RelativeSource AncestorType=UserControl}}"
                               IsReduced="{Binding DataContext.IsRibbonReduced, RelativeSource={RelativeSource AncestorType=UserControl}, Mode=TwoWay}" />
         <!-- Un conflit n'écrit rien tant qu'il n'est pas tranché : aucune des deux versions n'est perdue. -->
@@ -528,12 +527,15 @@
           </WrapPanel>
         </StackPanel>
       </StackPanel>
-      </Border>
 
       <!-- À droite, presque rien : la barre de défilement de la fiche est au bord de la fenêtre. Les volets de droite, quand
            ils sont là, gardent leur écart avec ce bord. -->
       <!-- Rogné à ses bords : la fiche lue qui s'aligne sur l'éditeur glisse sous le ruban, pas dessus. -->
-      <Grid x:Name="Body" Grid.Row="2" Margin="16,0,6,0" ClipToBounds="True">
+      <!-- Le corps a le fond de la fenêtre, sur toute la largeur de la page : quand il glisse pour suivre le ruban qui paraît,
+           il le découvre peu à peu, au lieu de le laisser voir d'avance dans ses vides, à gauche et à droite de la fiche. Ses
+           marges sont à l'intérieur, pour que rien du ruban ne dépasse sur ses bords. -->
+      <Grid x:Name="Body" Grid.Row="2" Background="{DynamicResource Kyf.Brush.Background}">
+      <Grid Margin="16,0,6,0" ClipToBounds="True">
         <DockPanel>
           <ContentControl x:Name="OutlinePane" DockPanel.Dock="Left" Width="{x:Static pages:SheetPageViewModel.OutlineWidth}" Margin="0,0,16,0" Focusable="False" IsTabStop="False"
                           Content="{Binding}" ContentTemplate="{StaticResource OutlinePanel}" kyf:Transitions.Shown="{Binding ShowsOutline}" kyf:Transitions.ShownFrom="Left" />
@@ -595,6 +597,7 @@
                         Content="{Binding}" ContentTemplate="{StaticResource PassagesPanel}" kyf:Transitions.Shown="{Binding ShowsPassagesOverlay}" kyf:Transitions.ShownFrom="Right" />
         <ContentControl x:Name="BacklinksOverlay" HorizontalAlignment="Right" VerticalAlignment="Top" Width="{x:Static pages:SheetPageViewModel.PassagesOverlayWidth}" Focusable="False" IsTabStop="False"
                         Content="{Binding}" ContentTemplate="{StaticResource BacklinksPanel}" kyf:Transitions.Shown="{Binding ShowsBacklinksOverlay}" kyf:Transitions.ShownFrom="Right" />
+      </Grid>
       </Grid>
 
       <Border Grid.Row="3" Height="4" Visibility="{Binding IsWriting, Converter={StaticResource Visible}}" />

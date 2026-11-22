@@ -211,7 +211,10 @@ public sealed partial class ShellWindow : Window
             kind: KyfRev.DesignSystem.MotionKinds.Views);
     }
 
-    /// <summary>L'image d'un élément tel qu'il est à l'écran, moins fine s'il est très grand (voir <see cref="PageGhostPixels"/>).</summary>
+    /// <summary>
+    /// L'image d'un élément tel qu'il est à l'écran, point pour point, à sa place : posée par-dessus lui, elle ne le décale pas.
+    /// Moins fine s'il est très grand (voir <see cref="PageGhostPixels"/>).
+    /// </summary>
     private System.Windows.Media.Imaging.RenderTargetBitmap Portrait(FrameworkElement element)
     {
         var dpi = VisualTreeHelper.GetDpi(this);
@@ -221,7 +224,11 @@ public sealed partial class ShellWindow : Window
         var drawing = new DrawingVisual();
         using (var context = drawing.RenderOpen())
         {
-            context.DrawRectangle(new VisualBrush(element) { Stretch = Stretch.None, AlignmentX = AlignmentX.Left, AlignmentY = AlignmentY.Top }, null, new Rect(element.RenderSize));
+            // La zone peinte est celle que la mise en page donne à l'élément, pas le contour de ce qu'il dessine : sans cela,
+            // ses marges intérieures disparaissent de l'image, qui paraît alors décalée vers le haut et la gauche.
+            var place = new Rect(element.RenderSize);
+            var brush = new VisualBrush(element) { Stretch = Stretch.None, AlignmentX = AlignmentX.Left, AlignmentY = AlignmentY.Top, ViewboxUnits = BrushMappingMode.Absolute, Viewbox = place };
+            context.DrawRectangle(brush, null, place);
         }
         picture.Render(drawing);
         picture.Freeze();

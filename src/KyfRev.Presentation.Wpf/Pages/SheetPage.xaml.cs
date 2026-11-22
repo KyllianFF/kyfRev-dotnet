@@ -44,21 +44,8 @@ internal sealed partial class SheetPage : UserControl
                 _ribbonPush = RibbonRow.ActualHeight + RibbonRow.Margin.Bottom;
             }
         };
-        RibbonRow.IsVisibleChanged += (_, e) =>
-        {
-            if (e.NewValue is not false)
-            {
-                return;
-            }
-            // Le ruban vient de rendre sa place : il lâche l'éditeur qu'il montrait encore, et ce qui était sous lui remonte
-            // en glissant.
-            ShowRibbonContext(DataContext as SheetPageViewModel);
-            if (DataContext is SheetPageViewModel { IsWriting: false })
-            {
-                Transitions.FollowOnceShown(Body, _ribbonPush);
-            }
-        };
-        SheetArea.LayoutUpdated += (_, _) => FollowCenter();
+        // Seulement quand la fiche change de place ou de largeur (un volet à côté d'elle) : pas à chaque mise en page.
+        SheetArea.SizeChanged += (_, _) => FollowCenter();
         EditorView.TextReady += (_, _) => AlignReadingText();
         EditorView.TextShown += (_, _) =>
         {
@@ -111,8 +98,6 @@ internal sealed partial class SheetPage : UserControl
                 _center = double.NaN;
                 _paneCame = false;
                 _paneLeaves = false;
-                RibbonRow.IsHitTestVisible = true;
-                RibbonContent.DataContext = page.Editor;
                 ShowMode(page);
                 ShowReadingText(page);
                 page.Sharing?.PropertyChanged += OnSharingChanged;
@@ -127,7 +112,7 @@ internal sealed partial class SheetPage : UserControl
     }
 
     /// <summary>De combien le ruban descend en paraissant, quand on passe à Écrire.</summary>
-    public const double RibbonDrop = 8;
+    internal const double RibbonDrop = 8;
 
     /// <summary>Le mode montré : 0 Lire, 1 Réviser, 2 Écrire ; −1 avant le premier.</summary>
     private int _mode = -1;
@@ -173,12 +158,12 @@ internal sealed partial class SheetPage : UserControl
         }
         if (mode != 2)
         {
-            // Le ruban s'efface d'abord ; quand il rend sa place, ce qui était sous lui remonte en glissant (voir le constructeur).
+            // Le ruban est parti d'un coup : ce qui était sous lui remonte en glissant.
             Transitions.Rest(SheetArea);
+            Transitions.FollowOnceShown(Body, _ribbonPush);
             return Transitions.EnterOnceShown(SheetText, KyfRev.DesignSystem.DesignKeys.NormalDuration);
         }
-        // Le ruban paraît de lui-même (Transitions.Shown) ; la fiche le suit.
-        if (Transitions.DurationOf(this) == TimeSpan.Zero)
+        if (!Transitions.EnterOnceShown(Ribbon, KyfRev.DesignSystem.DesignKeys.NormalDuration, rise: -RibbonDrop))
         {
             return false;
         }
@@ -290,21 +275,6 @@ internal sealed partial class SheetPage : UserControl
         return glides;
     }
 
-    /// <summary>
-    /// Le ruban montre l'éditeur de la page. Quand elle quitte l'écriture, il garde le sien le temps de s'effacer, sans plus
-    /// rien recevoir : vidé d'un coup, ses listes et ses boutons changeraient sous les yeux avant de partir.
-    /// </summary>
-    internal void ShowRibbonContext(SheetPageViewModel? page)
-    {
-        if (page?.Editor is null && RibbonRow.IsVisible && RibbonContent.DataContext is not null)
-        {
-            RibbonRow.IsHitTestVisible = false;
-            return;
-        }
-        RibbonRow.IsHitTestVisible = true;
-        RibbonContent.DataContext = page?.Editor;
-    }
-
     /// <summary>De combien le ruban pousse ce qui est sous lui : sa hauteur et sa marge.</summary>
     private double _ribbonPush;
 
@@ -395,10 +365,6 @@ internal sealed partial class SheetPage : UserControl
             && sender is SheetPageViewModel beside)
         {
             FollowPane(beside);
-        }
-        if (e.PropertyName is nameof(SheetPageViewModel.IsWriting) or nameof(SheetPageViewModel.Editor) && sender is SheetPageViewModel edited)
-        {
-            ShowRibbonContext(edited);
         }
         if (e.PropertyName is nameof(SheetPageViewModel.IsWriting) or nameof(SheetPageViewModel.IsRevising) && sender is SheetPageViewModel switched)
         {

@@ -16,8 +16,11 @@ namespace KyfRev.DesignSystem.Controls;
 /// </summary>
 public static partial class Transitions
 {
-    /// <summary>Combien de lignes arrivent l'une après l'autre quand une liste paraît ; les suivantes sont là d'emblée.</summary>
+    /// <summary>Combien de lignes arrivent l'une après l'autre quand une liste paraît ; les suivantes arrivent ensemble, juste après.</summary>
     public const int CascadeRows = 6;
+
+    /// <summary>Combien de lignes une cascade anime au plus : au-delà, elles sont hors de l'écran.</summary>
+    public const int MostCascadedRows = 80;
 
     /// <summary>L'écart entre deux lignes de la cascade.</summary>
     public static readonly TimeSpan CascadeStep = TimeSpan.FromMilliseconds(35);
@@ -48,8 +51,10 @@ public static partial class Transitions
         DependencyProperty.RegisterAttached("PlacesPending", typeof(bool), typeof(Transitions), new PropertyMetadata(false));
 
     /// <summary>
-    /// Les premières lignes d'une liste qu'on voit pour la première fois arrivent l'une après l'autre, en fondu, en montant
-    /// un peu.
+    /// Les lignes d'une liste qu'on voit pour la première fois arrivent en fondu, en montant un peu : les premières l'une après
+    /// l'autre, les suivantes ensemble avec la dernière d'entre elles. Aucune ligne n'est là avant celles du haut : une
+    /// liste dont le bas serait déjà affiché pendant que le haut arrive paraîtrait trouée. Les lignes sous le bas de la
+    /// fenêtre ne s'animent pas.
     /// </summary>
     /// <returns>Combien de lignes arrivent.</returns>
     internal static int Cascade(ItemsControl list)
@@ -58,14 +63,19 @@ public static partial class Transitions
         {
             return 0;
         }
+        var window = Window.GetWindow(list);
         var shown = 0;
-        for (var index = 0; index < list.Items.Count && shown < CascadeRows; index++)
+        for (var index = 0; index < list.Items.Count && shown < MostCascadedRows; index++)
         {
             if (list.ItemContainerGenerator.ContainerFromIndex(index) is not FrameworkElement { IsVisible: true } row)
             {
                 continue;
             }
-            if (!Enter(row, DesignKeys.NormalDuration, rise: NewcomerRise, kind: MotionKinds.Lists, delay: CascadeStep * shown))
+            if (window is not null && shown >= CascadeRows && row.TranslatePoint(default, window).Y > window.ActualHeight)
+            {
+                break;
+            }
+            if (!Enter(row, DesignKeys.NormalDuration, rise: NewcomerRise, kind: MotionKinds.Lists, delay: CascadeStep * Math.Min(shown, CascadeRows - 1)))
             {
                 break;
             }

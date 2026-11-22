@@ -694,6 +694,67 @@ public sealed class WritingTests
     }
 
     [STATestMethod]
+    [DataRow(ThemeKind.Light)]
+    [DataRow(ThemeKind.Dark)]
+    public void The_body_that_follows_the_ribbon_uncovers_it_instead_of_letting_it_show_through(ThemeKind theme)
+    {
+        // Du plus étroit au très large : le ruban ne doit se voir nulle part sous le corps de la page pendant qu'il le suit.
+        foreach (var width in new[] { 470d, 760d, 1000d, 1400d, 2200d })
+        {
+            using var scene = new Scene("# Mitose\n\nUn premier paragraphe.\n\n## Prophase\n\nLa suite.\n", width, theme);
+            var page = scene.SheetPage;
+            TestShell.Flush();
+            Assert.AreEqual(Visibility.Visible, page.RibbonRow.Visibility);
+            var push = page.RibbonRow.ActualHeight + page.RibbonRow.Margin.Bottom;
+            Assert.IsGreaterThan(20, push);
+
+            // À mi-chemin de son trajet : le corps couvre encore la moitié basse du ruban.
+            page.Body.RenderTransform = new System.Windows.Media.TranslateTransform(0, -push / 2);
+            page.UpdateLayout();
+            // Deux images de la page : avec le ruban, puis sans lui. Là où le corps le couvre, elles sont les mêmes : rien du
+            // ruban ne transparaît dans les vides du corps, à gauche et à droite de la fiche.
+            byte[] Pixels(System.Windows.Media.Imaging.BitmapSource image)
+            {
+                var all = new byte[image.PixelWidth * 4 * image.PixelHeight];
+                image.CopyPixels(all, image.PixelWidth * 4, 0);
+                return all;
+            }
+            var withRibbon = page.Capture($"entree-ecriture-{theme}-{width:0}");
+            var shown = Pixels(withRibbon);
+            page.RibbonRow.Opacity = 0;
+            page.UpdateLayout();
+            var hidden = Pixels(page.Capture($"entree-ecriture-{theme}-{width:0}-sans-ruban"));
+            page.RibbonRow.Opacity = 1;
+            var stride = withRibbon.PixelWidth * 4;
+            int Different(int top, int bottom)
+            {
+                var count = 0;
+                for (var y = Math.Max(0, top); y < Math.Min(withRibbon.PixelHeight, bottom); y++)
+                {
+                    for (var x = 0; x < withRibbon.PixelWidth; x++)
+                    {
+                        var at = (y * stride) + (x * 4);
+                        if (Math.Abs(shown[at] - hidden[at]) > 2 || Math.Abs(shown[at + 1] - hidden[at + 1]) > 2 || Math.Abs(shown[at + 2] - hidden[at + 2]) > 2 || Math.Abs(shown[at + 3] - hidden[at + 3]) > 2)
+                        {
+                            count++;
+                        }
+                    }
+                }
+                return count;
+            }
+
+            var ribbon = page.RibbonRow.TranslatePoint(default, page);
+            var body = page.Body.TranslatePoint(default, page);
+            Assert.AreEqual(ribbon.Y + (push / 2), body.Y, 1.5, "le corps est à mi-hauteur du ruban");
+            var edge = (int)Math.Ceiling(body.Y) + 1;
+            Assert.IsGreaterThan(8, (int)(ribbon.Y + push) - edge, $"{width:0} : la bande couverte est assez haute pour être regardée");
+            Assert.AreEqual(0, Different(edge, (int)Math.Ceiling(ribbon.Y + push) + 4), $"{theme}, {width:0} px : le ruban ne se voit pas sous le corps qui le couvre");
+            Assert.IsGreaterThan(50, Different((int)ribbon.Y, edge - 2), $"{theme}, {width:0} px : au-dessus du corps, le ruban se voit");
+            page.Body.ClearValue(UIElement.RenderTransformProperty);
+        }
+    }
+
+    [STATestMethod]
     public void Beside_a_pane_that_comes_or_goes_the_sheet_read_glides_with_it()
     {
         using var scene = new Scene("# Mitose\n\nUn premier paragraphe.\n\n## Prophase\n\nLa suite.\n\n## Métaphase\n\nLa fin.\n");
@@ -779,21 +840,13 @@ public sealed class WritingTests
         KyfRev.DesignSystem.Controls.Transitions.Skip = false;
         try
         {
-            // D'Écrire à Lire : le texte mis en forme revient en fondu, sans bouger. Le ruban s'efface en remontant, avec ce
-            // qu'il montrait, sans plus rien recevoir ; puis il rend sa place et lâche l'éditeur.
-            Assert.AreSame(scene.Page.Editor, page.RibbonContent.DataContext);
-            var left = scene.Page.Editor;
+            // D'Écrire à Lire : le texte mis en forme revient en fondu, sans bouger. Le ruban part d'un coup, avec l'éditeur
+            // qu'il montrait : les barres de la lecture prennent sa rangée au même instant.
             scene.Page.ToggleWritingCommand.Execute(null);
             UiThread.Until(() => !scene.Page.IsWriting);
             Assert.IsTrue(page.SheetText.HasAnimatedProperties, "le texte paraît en fondu, une fois l'écran prêt");
-            Assert.AreEqual(Visibility.Visible, page.RibbonRow.Visibility, "le ruban s'efface encore");
-            Assert.AreSame(left, page.RibbonContent.DataContext, "avec ses listes et ses boutons tels qu'ils étaient");
-            Assert.IsFalse(page.RibbonRow.IsHitTestVisible, "sans plus rien recevoir");
-            Assert.AreEqual(Dock.Top, KyfRev.DesignSystem.Controls.Transitions.GetShownFrom(page.RibbonRow));
-            Assert.AreEqual(SheetPage.RibbonDrop, KyfRev.DesignSystem.Controls.Transitions.GetShownTravel(page.RibbonRow));
-            UiThread.Until(() => page.RibbonRow.Visibility == Visibility.Collapsed);
-            Assert.IsNull(page.RibbonContent.DataContext, "parti, il lâche l'éditeur");
-            Assert.IsTrue(page.RibbonRow.IsHitTestVisible);
+            Assert.AreEqual(Visibility.Collapsed, page.RibbonRow.Visibility, "le ruban ne reste pas par-dessus les barres de la lecture");
+            Assert.IsNull(page.RibbonRow.DataContext, "ni lié à un éditeur qui n'existe plus");
             Assert.IsInstanceOfType<System.Windows.Media.TranslateTransform>(page.Body.RenderTransform, "ce qui était sous lui remonte en glissant");
             TestShell.Flush();
             Assert.IsNotInstanceOfType<System.Windows.Media.TranslateTransform>(page.SheetText.RenderTransform, "le texte qu'on lit ne bouge pas");
@@ -811,12 +864,14 @@ public sealed class WritingTests
             // De Lire à Écrire : le ruban descend en fondu, une fois l'éditeur ouvert.
             scene.Page.ToggleWritingCommand.Execute(null);
             UiThread.Until(() => scene.Page.IsWriting);
-            Assert.IsTrue(KyfRev.DesignSystem.Controls.Transitions.GetShown(page.RibbonRow));
             Assert.AreEqual(Visibility.Visible, page.RibbonRow.Visibility);
-            Assert.IsTrue(page.RibbonRow.HasAnimatedProperties, "le ruban est tenu invisible, puis paraît en descendant");
-            Assert.AreSame(scene.Page.Editor, page.RibbonContent.DataContext, "il montre le nouvel éditeur");
-            Assert.IsTrue(page.RibbonRow.IsHitTestVisible);
+            Assert.IsTrue(page.Ribbon.HasAnimatedProperties, "le ruban est tenu invisible, puis paraît");
+            Assert.AreSame(scene.Page.Editor, page.RibbonRow.DataContext, "il montre le nouvel éditeur");
+            // Le corps de la page a le fond de la fenêtre : en glissant, il découvre le ruban au lieu de le laisser voir
+            // d'avance dans ses vides, à gauche et à droite de la fiche.
+            Assert.AreSame(page.FindResource("Kyf.Brush.Background"), page.Body.Background);
             TestShell.Flush();
+            Assert.IsInstanceOfType<System.Windows.Media.TranslateTransform>(page.Ribbon.RenderTransform, "en descendant");
 
             // En Markdown, sans moteur à attendre, la fiche lue laisse la place aussitôt.
             UiThread.Until(() => page.SheetText.Visibility == Visibility.Collapsed);

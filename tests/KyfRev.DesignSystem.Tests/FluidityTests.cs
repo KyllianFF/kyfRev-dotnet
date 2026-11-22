@@ -52,20 +52,26 @@ public sealed class FluidityTests
         using var source = new HwndSource(new HwndSourceParameters("kyfRev essai") { Width = 480, Height = 320 }) { RootVisual = host };
         Host.Layout(host);
 
-        // La liste qu'on trouve en arrivant : aucune ligne n'est « nouvelle », mais ses six premières arrivent l'une après l'autre.
+        // La liste qu'on trouve en arrivant : aucune ligne n'est « nouvelle », mais toutes arrivent, les six premières l'une
+        // après l'autre et les suivantes avec la sixième : aucune n'est là avant celles du haut.
         Assert.AreEqual(0, Transitions.Welcome(list));
         for (var index = 0; index < Transitions.CascadeRows; index++)
         {
             Assert.IsTrue(RowOf(list, index).HasAnimatedProperties, $"la ligne {index + 1} arrive");
             Assert.IsInstanceOfType<TranslateTransform>(RowOf(list, index).RenderTransform, "en montant un peu");
         }
-        Assert.IsFalse(RowOf(list, Transitions.CascadeRows).HasAnimatedProperties, "les suivantes sont là d'emblée");
+        var following = RowOf(list, Transitions.CascadeRows + 1);
+        Assert.IsTrue(following.HasAnimatedProperties, "les suivantes arrivent aussi");
         var last = RowOf(list, Transitions.CascadeRows - 1);
         Wait(() => last.Opacity < 0.5);
         Assert.IsLessThan(0.5, last.Opacity, "la dernière attend son tour, invisible");
+        Assert.IsLessThan(0.5, following.Opacity, "et celles d'en dessous avec elle : le bas de la liste n'est pas là avant le haut");
         Wait(() => last.Opacity >= 1);
         Assert.AreEqual(1.0, last.Opacity, "puis elle arrive");
         Assert.AreEqual(1.0, RowOf(list, 0).Opacity);
+        Wait(() => following.Opacity >= 1);
+        Assert.AreEqual(1.0, following.Opacity);
+        Assert.AreEqual(8, Transitions.Cascade(list), "les huit lignes de la liste");
         Assert.AreEqual(0, ((TranslateTransform)last.RenderTransform).Y, "à sa place");
 
         // La même vue, une autre liste : la cascade est passée.

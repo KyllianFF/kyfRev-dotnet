@@ -465,24 +465,24 @@ public sealed class TextHolesTests
     }
 
     [STATestMethod]
-    public void A_hole_uncovered_by_hand_fades_in()
+    public void Uncovering_a_hole_changes_its_colours_at_once_without_animating_the_text()
     {
         var (window, viewer, holes) = Host();
-        // Les essais coupent les transitions ; celui-ci les rend, le temps de les voir.
+        // Les essais coupent les transitions ; celui-ci les rend : même permises, elles ne touchent pas au texte de la fiche.
         KyfRev.DesignSystem.Controls.Transitions.Skip = false;
         try
         {
             var bold = LogicalRuns(viewer).Single(run => run.Text == "mot");
-            var ordinary = LogicalRuns(viewer).Single(run => run.Text.StartsWith("Un ", StringComparison.Ordinal));
-            Assert.IsFalse(bold.HasAnimatedProperties, "les trous posés à l'ouverture le sont d'un coup");
+            Assert.AreEqual(bold.Background, bold.Foreground, "masqué, il ne se lit pas");
 
-            // Découvert d'un clic : son texte reprend sa couleur en fondu ; le reste ne bouge pas.
+            // Découvert : il se lit aussitôt. Aucune couleur du texte n'est animée : chaque image d'une telle animation
+            // referait la mise en page de toute la fiche.
             Assert.IsTrue(viewer.RevealHoleAt(bold));
-            Assert.IsTrue(bold.HasAnimatedProperties);
-            Assert.IsFalse(ordinary.HasAnimatedProperties);
-            Assert.AreEqual(1, holes.RevealedCount);
-            TestShell.Flush();
-            Assert.AreNotEqual(bold.Background, bold.Foreground, "découvert, il se lit");
+            Assert.AreNotEqual(bold.Background, bold.Foreground);
+            Assert.IsFalse(bold.HasAnimatedProperties);
+            holes.HideAllCommand.Execute(null);
+            Assert.AreEqual(bold.Background, bold.Foreground);
+            Assert.IsFalse(LogicalRuns(viewer).Any(run => run.HasAnimatedProperties));
         }
         finally
         {

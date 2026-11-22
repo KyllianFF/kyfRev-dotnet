@@ -111,6 +111,8 @@ internal sealed partial class App : System.Windows.Application
         DispatcherUnhandledException += (_, args) => DiagnosticLog.UnexpectedStop(log, args.Exception);
         AppDomain.CurrentDomain.UnhandledException += (_, args) => DiagnosticLog.UnexpectedStop(log, args.ExceptionObject as Exception);
         TaskScheduler.UnobservedTaskException += (_, args) => DiagnosticLog.UnobservedTask(log, args.Exception);
+        // Une animation relancée en boucle est coupée par le design system ; le journal dit laquelle.
+        KyfRev.DesignSystem.Controls.Transitions.LoopCut += (_, cut) => DiagnosticLog.AnimationLoopCut(log, cut.Element);
     }
 
     /// <summary>
