@@ -149,7 +149,10 @@ que vous y restez.
 
 ## Retrouver
 
-- **Fiches** liste vos dossiers et cherche dans le texte, sans tenir compte des accents ni de la casse.
+- **Carnet** montre vos dossiers à gauche et les fiches du dossier choisi au milieu, rangées sous le nom de chaque
+  sous-dossier ; « À réviser » réunit celles du jour et celles en retard. Glissez une fiche sur un dossier pour l'y ranger.
+  En fenêtre étroite, le bouton au-dessus de la liste ouvre les dossiers. La recherche porte sur tout le coffre, dans le
+  texte, sans tenir compte des accents ni de la casse.
 - **Ctrl+K** cherche partout : commandes, fiches, passages, définitions, citations.
 - Le panneau **« Fiches qui mènent ici »** montre les liens entrants ; survolez un lien pour voir un aperçu de sa fiche.
 

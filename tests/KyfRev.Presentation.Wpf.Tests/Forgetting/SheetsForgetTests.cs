@@ -21,10 +21,10 @@ public sealed class SheetsForgetTests
         await page.LoadPreviewCommand.ExecutionTask!;
         Assert.AreEqual("Mitose", page.Preview!.Title);
 
-        // La page garde ce qu'elle a lu : un dossier filtré, une recherche, une fiche à créer, une fiche à supprimer.
-        var folder = page.Bar.Filters[0];
-        var state = page.Bar.Filters[1];
-        folder.Selected = folder.Choices.Single(choice => choice.Label == "Biologie");
+        // La page garde ce qu'elle a lu : un dossier choisi, une recherche, une fiche à créer, une fiche à supprimer.
+        var state = page.Bar.Filters[0];
+        page.SelectedPlace = page.Folder("Biologie");
+        page.ArePlacesOpen = true;
         state.Selected = state.Choices[1];
         page.Bar.Search = "mito";
         await page.LoadPreviewCommand.ExecutionTask!;
@@ -52,8 +52,11 @@ public sealed class SheetsForgetTests
         Assert.IsFalse(page.IsLoading);
         Assert.IsNull(page.Error);
         Assert.AreEqual(string.Empty, page.Bar.Search);
-        Assert.HasCount(1, folder.Choices);
-        Assert.AreEqual("Tous", folder.Selected.Label);
+        Assert.IsEmpty(page.Places, "ni les dossiers du volet");
+        Assert.IsNull(page.SelectedPlace);
+        Assert.IsFalse(page.ArePlacesOpen);
+        Assert.IsFalse(page.IsPlaceEmpty);
+        Assert.AreEqual(SheetsText.AllSheets, page.PlaceName);
         Assert.IsFalse(page.IsCreating);
         Assert.AreEqual(string.Empty, page.NewTitle);
         Assert.AreEqual(string.Empty, page.NewFolderName);
@@ -87,7 +90,7 @@ public sealed class SheetsForgetTests
         Assert.AreEqual("Mitose", page.Preview!.Title);
         Assert.IsTrue(page.HasSheets);
         Assert.AreEqual("1 fiche · 1 en révision · 0 archivée", page.Summary);
-        CollectionAssert.Contains(folder.Choices.Select(choice => choice.Label).ToList(), "Biologie");
+        Assert.AreEqual("Biologie", page.Folder("Biologie").Folder, "le volet est relu");
     }
 
     [STATestMethod]

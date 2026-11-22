@@ -79,13 +79,12 @@ public sealed class SheetsTests
         var page = Page(vaults, new FakeOpener());
         page.Show([Sheet("À la racine", ""), Sheet("Atomes", "Sciences/Chimie"), Sheet("Mitose", "Sciences/Chimie")]);
 
-        Assert.HasCount(6, page.Rows);
-        Assert.AreEqual("Sans dossier · 1", page.Rows[0].ToString());
-        Assert.AreEqual("Sciences · 2", page.Rows[2].ToString());
-        Assert.AreEqual("Chimie · 2", page.Rows[3].ToString());
+        Assert.HasCount(5, page.Rows);
+        Assert.AreEqual("Sciences › Chimie · 2", page.Rows[0].ToString(), "un intertitre par dossier qui a des fiches");
+        Assert.AreEqual("Non rangées · 1", page.Rows[3].ToString(), "les fiches hors des dossiers à la fin");
 
         // Les autres tris sont à plat : chaque ligne dit son dossier.
-        var sort = page.Bar.Filters[2];
+        var sort = page.Bar.Filters[1];
         sort.Selected = sort.Choices[1];
         Assert.HasCount(3, page.Rows);
         Assert.AreEqual("Sciences › Chimie · J1 · ven. 2 oct.", Row(page, "Atomes").Meta);
@@ -103,7 +102,7 @@ public sealed class SheetsTests
             Sheet("Archivée", "", archived: true),
             Sheet("Mitose", "", step: "J1", due: Day.AddDays(3)),
         ]);
-        var sort = page.Bar.Filters[2];
+        var sort = page.Bar.Filters[1];
 
         sort.Selected = sort.Choices[1];
         ExpectTitles(page, "Archivée", "Écologie", "Mitose", "Révolution");
@@ -125,16 +124,15 @@ public sealed class SheetsTests
             Sheet("Sciences po", "Sciences po", step: "J1", due: Day.AddDays(-1)),
         ];
         page.Show(sheets);
-        var folder = page.Bar.Filters[0];
-        var state = page.Bar.Filters[1];
-        Assert.AreEqual("Tous", folder.Choices[0].Label);
-        Assert.HasCount(5, folder.Choices);
+        var state = page.Bar.Filters[0];
+        Assert.IsFalse(page.Bar.Filters.Any(filter => filter.Label == SheetsText.FilterFolder), "le dossier se choisit dans le volet");
 
-        folder.Selected = folder.Choices.Single(choice => choice.Label == "Sciences");
+        page.SelectedPlace = page.Folder("Sciences");
         ExpectSheetsInAnyOrder(page, "Écologie", "Atomes");
         page.Show(sheets);
-        Assert.AreEqual("Sciences", folder.Selected.Label, "une nouvelle lecture garde le dossier");
-        folder.ClearCommand.Execute(null);
+        Assert.AreEqual("Sciences", page.SelectedPlace!.Path, "une nouvelle lecture garde le dossier");
+        ExpectSheetsInAnyOrder(page, "Écologie", "Atomes");
+        page.SelectedPlace = page.Places[0];
 
         state.Selected = state.Choices[1];
         ExpectSheetsInAnyOrder(page, "Écologie", "Atomes", "Sciences po");
@@ -271,10 +269,9 @@ public sealed class SheetsTests
 
         // Un nouveau dossier, écrit à la main.
         await page.RefreshCommand.ExecuteAsync(null);
-        var folder = page.Bar.Filters[0];
-        folder.Selected = folder.Choices[1];
+        page.SelectedPlace = page.Folder("Histoire");
         await page.RequestCreateCommand.ExecuteAsync(null);
-        Assert.AreEqual("Histoire", page.NewFolder.Selected.Label, "le dossier filtré est proposé");
+        Assert.AreEqual("Histoire", page.NewFolder.Selected.Label, "le dossier choisi dans le volet est proposé");
         Assert.IsFalse(page.IsNewFolder);
         page.NewFolder.Selected = page.NewFolder.Choices[^1];
         Assert.IsTrue(page.IsNewFolder);
@@ -298,9 +295,8 @@ public sealed class SheetsTests
         Assert.IsTrue(note.IsNote);
         Assert.IsFalse(vaults.App.Sheets.List().Value.Single(sheet => sheet.Title == "Atomes").IsNote);
         await page.RefreshCommand.ExecuteAsync(null);
-        var all = page.Bar.Filters[0];
-        all.Selected = all.Choices[0];
-        var state = page.Bar.Filters[1];
+        page.SelectedPlace = page.Places[0];
+        var state = page.Bar.Filters[0];
         Assert.AreEqual("Notes · 1", page.KindNotesLabel);
         Assert.AreEqual("Fiches · 2", page.KindReviewLabel);
         Assert.AreEqual("Tout · 3", page.KindAllLabel);
@@ -416,7 +412,7 @@ public sealed class SheetsTests
             Assert.AreEqual("Carnet", Named<TextBlock>(window, "Heading").Text);
             var list = Named<OpenableList>(window, "Items");
             Assert.IsTrue(Named<Border>(window, "PreviewCard").IsVisible);
-            Assert.AreEqual(480, Named<Card>(window, "ListCard").ActualWidth, 1);
+            Assert.AreEqual(480, Named<Border>(window, "ListCard").ActualWidth, 1);
 
             // Un en-tête ne se choisit pas : le choix précédent reste.
             var chosen = page.SelectedRow;
@@ -459,7 +455,7 @@ public sealed class SheetsTests
             TestShell.Flush();
             window.UpdateLayout();
             Assert.IsFalse(Named<Border>(window, "PreviewCard").IsVisible);
-            Assert.IsGreaterThan(480, Named<Card>(window, "ListCard").ActualWidth);
+            Assert.IsGreaterThan(480, Named<Border>(window, "ListCard").ActualWidth);
             list.ScrollIntoView(second);
             window.UpdateLayout();
             container = (ListBoxItem)list.ItemContainerGenerator.ContainerFromItem(second);
@@ -501,7 +497,7 @@ public sealed class SheetsTests
             TestShell.Flush();
             Assert.IsTrue(Named<EmptyState>(window, "Empty").IsVisible);
             Assert.IsFalse(Named<FilterBar>(window, "FilterBar").IsVisible);
-            Assert.IsFalse(Named<Card>(window, "ListCard").IsVisible);
+            Assert.IsFalse(Named<Border>(window, "ListCard").IsVisible);
 
             Named<Button>(window, "NewSheetButton").Command.Execute(null);
             UiThread.Until(() => page.IsCreating);
@@ -550,7 +546,7 @@ public sealed class SheetsTests
             TestShell.Flush();
             Assert.IsTrue(Named<TextBlock>(window, "NoMatch").IsVisible);
             Assert.IsTrue(Named<FilterBar>(window, "FilterBar").IsVisible);
-            Assert.IsTrue(Named<Card>(window, "ListCard").IsVisible, "la colonne de la liste reste : c'est elle qui porte la recherche et les filtres");
+            Assert.IsTrue(Named<Border>(window, "ListCard").IsVisible, "la colonne de la liste reste : c'est elle qui porte la recherche et les filtres");
             Assert.IsFalse(Named<Border>(window, "PreviewCard").IsVisible);
         }
         finally
@@ -598,7 +594,7 @@ public sealed class SheetsTests
         var page = Page(vaults, new FakeOpener());
         page.Show([.. Tagged(), Sheet("Archivée", "", tags: ["vieux"], archived: true)]);
         page.Tags.Single(chip => chip.Label == "maths").IsChosen = true;
-        var state = page.Bar.Filters[1];
+        var state = page.Bar.Filters[0];
 
         state.Selected = state.Choices[3];
 

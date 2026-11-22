@@ -37,7 +37,10 @@ public sealed class SheetDragTests
         var atoms = page.Sheet("Atomes");
 
         Assert.AreEqual("Vide", page.DropFolderOf(atoms, page.Folder("Vide")));
-        Assert.AreEqual(string.Empty, page.DropFolderOf(atoms, page.Rows[0]), "« Sans dossier » est une destination.");
+        Assert.AreEqual(string.Empty, page.DropFolderOf(atoms, page.Unfiled()), "« Non rangées » est une destination.");
+        Assert.IsNull(page.DropFolderOf(atoms, page.Places[0]), "« Toutes les fiches » n'en est pas une.");
+        Assert.IsNull(page.DropFolderOf(atoms, page.Places[1]), "« À réviser » non plus.");
+        Assert.AreEqual("Sciences/Chimie", page.DropFolderOf(page.Sheet("Lois"), page.Rows.OfType<SheetFolderRow>().Single(row => row.Path == "Sciences/Chimie")), "Un intertitre de la liste aussi.");
         Assert.AreEqual("Sciences", page.DropFolderOf(atoms, page.Sheet("Lois")), "Sur une fiche : dans son dossier.");
         Assert.IsNull(page.DropFolderOf(atoms, page.Folder("Sciences/Chimie")), "Elle y est déjà.");
         Assert.IsNull(page.DropFolderOf(atoms, null), "Sur la place libre : rien.");
@@ -55,9 +58,9 @@ public sealed class SheetDragTests
         Assert.AreEqual("Vide", page.DropFolderOf(science, page.Folder("Vide")));
         Assert.IsNull(page.DropFolderOf(science, science));
         Assert.IsNull(page.DropFolderOf(science, page.Folder("Sciences/Chimie")), "Pas dans ses propres sous-dossiers.");
-        Assert.IsNull(page.DropFolderOf(science, page.Rows[0]), "Déjà à la racine.");
-        Assert.AreEqual(string.Empty, page.DropFolderOf(page.Folder("Sciences/Chimie"), page.Rows[0]));
-        Assert.IsNull(page.DropFolderOf(page.Rows[0], page.Folder("Vide")), "« Sans dossier » ne se déplace pas.");
+        Assert.IsNull(page.DropFolderOf(science, page.Unfiled()), "Déjà à la racine.");
+        Assert.AreEqual(string.Empty, page.DropFolderOf(page.Folder("Sciences/Chimie"), page.Unfiled()));
+        Assert.IsNull(page.DropFolderOf(page.Unfiled(), page.Folder("Vide")), "« Non rangées » ne se déplace pas.");
     }
 
     [TestMethod]
@@ -71,7 +74,7 @@ public sealed class SheetDragTests
         Assert.AreEqual(SheetActionsText.DropInOf("Sciences"), page.DropHint);
         Assert.IsTrue(page.HasDropHint);
 
-        Assert.AreEqual(string.Empty, page.ShowDrop(atoms, page.Rows[0]));
+        Assert.AreEqual(string.Empty, page.ShowDrop(atoms, page.Unfiled()));
         Assert.AreEqual(SheetActionsText.DropAtRoot, page.DropHint);
 
         Assert.IsNull(page.ShowDrop(null, null));
@@ -160,16 +163,17 @@ public sealed class SheetDragTests
     }
 
     [TestMethod]
-    public async Task Sans_dossier_stays_a_destination_even_empty_unless_filtered()
+    public async Task Non_rangees_stays_a_destination_even_empty_and_filtered()
     {
         using var vault = new DragVault(withRootSheet: false);
         var page = await vault.LoadedAsync();
 
-        Assert.AreEqual(SheetsText.FolderCountOf(SheetsText.NoFolder, 0), page.Rows[0].ToString());
+        Assert.AreEqual(SheetsText.FolderCountOf(SheetsText.NoFolder, 0), page.Unfiled().ToString());
+        Assert.IsFalse(page.Rows.OfType<SheetFolderRow>().Any(row => row.Place == SheetPlace.Unfiled), "Vide, elle n'a pas d'intertitre dans la liste.");
 
         page.Bar.Search = "atomes";
 
-        Assert.AreNotEqual(SheetsText.FolderCountOf(SheetsText.NoFolder, 0), page.Rows[0].ToString());
+        Assert.AreEqual(string.Empty, page.DropFolderOf(page.Sheet("Atomes"), page.Unfiled()));
     }
 
     [STATestMethod]
@@ -198,7 +202,7 @@ public sealed class SheetDragTests
                 Assert.IsTrue(page.DraggedOver(hovered, 200));
                 Assert.AreEqual(Visibility.Visible, page.DropHintBox.Visibility);
                 Assert.AreEqual(VerticalAlignment.Bottom, page.DropHintBox.VerticalAlignment, "Le pointeur est en haut : l'indication est en bas.");
-                var header = (ListBoxItem)page.Items.ItemContainerGenerator.ContainerFromItem(hovered);
+                var header = (ListBoxItem)page.PlacesList.ItemContainerGenerator.ContainerFromItem(hovered);
                 Assert.AreEqual(test.Design.Dictionary["Kyf.Brush.NavigationActiveBackground"], header.Background, "Le dossier visé ressort.");
                 Assert.IsTrue(page.DraggedOver(hovered, page.Items.ActualHeight - 1));
                 Assert.AreEqual(VerticalAlignment.Top, page.DropHintBox.VerticalAlignment);
@@ -352,5 +356,9 @@ internal static class SheetRowsExtensions
 {
     public static SheetRow Sheet(this SheetsPageViewModel page, string title) => page.Rows.OfType<SheetRow>().Single(row => row.Title == title);
 
-    public static SheetFolderRow Folder(this SheetsPageViewModel page, string path) => page.Rows.OfType<SheetFolderRow>().Single(row => row.Path == path);
+    /// <summary>Un dossier, dans le volet des dossiers.</summary>
+    public static SheetFolderRow Folder(this SheetsPageViewModel page, string path) => page.Places.Single(row => row.IsFolder && row.Path == path);
+
+    /// <summary>« Non rangées », dans le volet.</summary>
+    public static SheetFolderRow Unfiled(this SheetsPageViewModel page) => page.Places.Single(row => row.Place == SheetPlace.Unfiled);
 }

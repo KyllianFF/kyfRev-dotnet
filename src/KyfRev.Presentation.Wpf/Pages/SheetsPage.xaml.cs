@@ -1,9 +1,11 @@
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Threading;
+using KyfRev.DesignSystem;
 using KyfRev.DesignSystem.Controls;
 using KyfRev.Extensions.Host;
 
@@ -19,6 +21,8 @@ internal sealed partial class SheetsPage : UserControl
 
     private Point _pressedAt;
     private object? _pressedRow;
+    private ListBox? _pressedList;
+    private SheetsPageViewModel? _model;
     private object? _dragged;
     private ListBoxItem? _dropTarget;
     private ScrollViewer? _scroller;
@@ -30,6 +34,10 @@ internal sealed partial class SheetsPage : UserControl
         Items.AddHandler(MouseUpEvent, new MouseButtonEventHandler(OnItemsMouseUp), handledEventsToo: true);
         Items.ContextMenu = new ContextMenu();
         Items.ContextMenuOpening += OnRowMenu;
+        PlacesList.ContextMenu = new ContextMenu();
+        PlacesList.ContextMenuOpening += OnPlaceMenu;
+        // Le volet des dossiers suit la vue : à gauche de la liste s'il y tient, dans le tiroir sinon.
+        DataContextChanged += (_, _) => Follow(DataContext as SheetsPageViewModel);
         // La disposition suit la largeur de la page. La page quittée n'a plus de contexte.
         SizeChanged += (_, e) =>
         {
@@ -39,6 +47,102 @@ internal sealed partial class SheetsPage : UserControl
             }
         };
     }
+
+    /// <summary>Suit la vue : où est le volet, et la liste qui arrive quand on change de dossier.</summary>
+    private void Follow(SheetsPageViewModel? model)
+    {
+        if (_model is not null)
+        {
+            _model.PropertyChanged -= OnModelChanged;
+            _model.PlaceChanged -= OnPlaceChanged;
+        }
+        _model = model;
+        if (model is not null)
+        {
+            model.PropertyChanged += OnModelChanged;
+            model.PlaceChanged += OnPlaceChanged;
+        }
+        PlacePanel();
+    }
+
+    private void OnModelChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(SheetsPageViewModel.ShowsPane))
+        {
+            PlacePanel();
+        }
+        else if (e.PropertyName == nameof(SheetsPageViewModel.ShowsPlacesSheet) && _model is { ShowsPlacesSheet: true })
+        {
+            // Le tiroir s'ouvre : le clavier va au dossier choisi.
+            Dispatcher.BeginInvoke(DispatcherPriority.Loaded, FocusChosenPlace);
+        }
+    }
+
+    /// <summary>Le volet va là où il se montre : à gauche de la liste, ou dans le tiroir.</summary>
+    internal void PlacePanel()
+    {
+        var host = _model is { ShowsPane: false } ? PlacesDrawerHost : PaneHost;
+        if (ReferenceEquals(PlacesPanel.Parent, host))
+        {
+            return;
+        }
+        ((Border)PlacesPanel.Parent).Child = null;
+        host.Child = PlacesPanel;
+    }
+
+    /// <summary>On a choisi un autre dossier : la liste arrive, en fondu, de quelques pixels plus bas.</summary>
+    private void OnPlaceChanged(object? sender, EventArgs e) => Transitions.Enter(Items, DesignKeys.FastDuration, rise: 8, kind: MotionKinds.Views);
+
+    private void FocusChosenPlace()
+    {
+        if (PlacesList.SelectedItem is { } chosen && PlacesList.ItemContainerGenerator.ContainerFromItem(chosen) is ListBoxItem item)
+        {
+            item.Focus();
+        }
+    }
+
+    /// <summary>Un clic à côté du tiroir le referme.</summary>
+    private void OnScrimPressed(object sender, MouseButtonEventArgs e)
+    {
+        _model?.ArePlacesOpen = false;
+        e.Handled = true;
+    }
+
+    /// <summary>Échap referme le tiroir, et rend le clavier au bouton qui l'a ouvert.</summary>
+    private void OnDrawerKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Escape && _model is { ShowsPlacesSheet: true })
+        {
+            _model.ArePlacesOpen = false;
+            PlacesButton.Focus();
+            e.Handled = true;
+        }
+    }
+
+    /// <summary>Dans le volet, ← plie un dossier ouvert et → l'ouvre.</summary>
+    private void OnPlacesKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.OriginalSource is ListBoxItem { DataContext: SheetFolderRow { IsFolder: true, HasChildren: true } folder } && _model is { } page
+            && ((e.Key == Key.Left && folder.IsExpanded) || (e.Key == Key.Right && !folder.IsExpanded)))
+        {
+            page.ToggleFolderCommand.Execute(folder);
+            Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () => FocusPlace(folder.Path));
+            e.Handled = true;
+        }
+    }
+
+    private void FocusPlace(string path)
+    {
+        var shown = PlacesList.Items.OfType<SheetFolderRow>().FirstOrDefault(row => row.IsFolder && row.Path == path);
+        if (shown is not null && PlacesList.ItemContainerGenerator.ContainerFromItem(shown) is ListBoxItem item)
+        {
+            item.Focus();
+        }
+    }
+
+    /// <summary>Le menu d'une entrée du volet : celui d'un dossier, ou celui de la place libre.</summary>
+    private void OnPlaceMenu(object sender, ContextMenuEventArgs e) =>
+        ActionMenus.Fill(PlacesList.ContextMenu!, RowMenuItems(ContainerOf(e.OriginalSource as DependencyObject)?.DataContext), e);
 
     /// <summary>Lance le glisser-déposer ; remplacé dans les essais, où rien ne peut le conduire.</summary>
     internal Func<DependencyObject, object, DragDropEffects, DragDropEffects> StartDrag { get; set; } = DragDrop.DoDragDrop;
@@ -77,19 +181,20 @@ internal sealed partial class SheetsPage : UserControl
         }
         _pressedRow = null;
         _dragged = row;
+        var list = _pressedList ?? Items;
         // La liste garde la souris depuis l'appui : sans cela, elle change de ligne choisie sous le pointeur.
-        Items.ReleaseMouseCapture();
-        StartDrag(Items, new DataObject(DragFormat, DragFormat), DragDropEffects.Move);
+        list.ReleaseMouseCapture();
+        StartDrag(list, new DataObject(DragFormat, DragFormat), DragDropEffects.Move);
         _dragged = null;
         Highlight(null);
         page.ShowDrop(null, null);
     }
 
     /// <summary>Le pointeur passe au-dessus de cette ligne : fait défiler près des bords, et dit si l'on peut y déposer.</summary>
-    internal bool DraggedOver(object? target, double y)
+    internal bool DraggedOver(object? target, double y, ListBox? over = null)
     {
         _scroller ??= Inside<ScrollViewer>(Items);
-        if (_scroller is not null)
+        if (_scroller is not null && (over is null || ReferenceEquals(over, Items)))
         {
             var lines = ScrollLinesAt(y, Items.ActualHeight);
             for (var i = 0; i < Math.Abs(lines); i++)
@@ -264,28 +369,13 @@ internal sealed partial class SheetsPage : UserControl
         }
     }
 
-    /// <summary>Entrée, Espace ou les flèches plient un dossier ; le focus lui est rendu, la liste étant reconstruite.</summary>
-    private void ToggleFolderFromKeyboard(SheetsPageViewModel page, SheetFolderRow row)
-    {
-        page.ToggleFolderCommand.Execute(row);
-        Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () =>
-        {
-            var shown = Items.Items.OfType<SheetFolderRow>().FirstOrDefault(other => other.Path == row.Path);
-            if (shown is not null)
-            {
-                Items.ScrollIntoView(shown);
-                (Items.ItemContainerGenerator.ContainerFromItem(shown) as ListBoxItem)?.Focus();
-            }
-        });
-    }
-
-    /// <summary>Entrée sur une ligne l'ouvre ; sur un dossier, Entrée, Espace et les flèches le plient ou le déplient.</summary>
+    /// <summary>Entrée sur une fiche l'ouvre ; sur l'intertitre d'un sous-dossier, elle mène à ce dossier.</summary>
     private void OnItemsKeyDown(object sender, KeyEventArgs e)
     {
-        if (e.OriginalSource is ListBoxItem { DataContext: SheetFolderRow { IsFolder: true } folder } && DataContext is SheetsPageViewModel owner
-            && (e.Key is Key.Enter or Key.Space || (e.Key == Key.Left && folder.IsExpanded) || (e.Key == Key.Right && !folder.IsExpanded)))
+        // Entrée sur l'intertitre d'un sous-dossier mène à ce dossier.
+        if (e.Key == Key.Enter && e.OriginalSource is ListBoxItem { DataContext: SheetFolderRow { IsFolder: true } folder } && DataContext is SheetsPageViewModel owner)
         {
-            ToggleFolderFromKeyboard(owner, folder);
+            owner.GoTo(folder.Path);
             e.Handled = true;
             return;
         }
@@ -310,7 +400,8 @@ internal sealed partial class SheetsPage : UserControl
         if (DataContext is SheetsPageViewModel owner && e.ChangedButton == MouseButton.Left
             && ContainerOf(e.OriginalSource as DependencyObject) is { DataContext: SheetFolderRow { IsFolder: true } folder })
         {
-            owner.ToggleFolderCommand.Execute(folder);
+            // Un clic sur l'intertitre d'un sous-dossier mène à ce dossier.
+            owner.GoTo(folder.Path);
             return;
         }
         if (DataContext is SheetsPageViewModel { HasPreview: false } page && e.ChangedButton == MouseButton.Left
@@ -322,6 +413,7 @@ internal sealed partial class SheetsPage : UserControl
 
     private void OnItemsPressed(object sender, MouseButtonEventArgs e)
     {
+        _pressedList = sender as ListBox;
         _pressedAt = e.GetPosition(Items);
         _pressedRow = ContainerOf(e.OriginalSource as DependencyObject)?.DataContext;
     }
@@ -330,7 +422,7 @@ internal sealed partial class SheetsPage : UserControl
 
     private void OnItemsDragOver(object sender, DragEventArgs e)
     {
-        e.Effects = DraggedOver(ContainerOf(e.OriginalSource as DependencyObject)?.DataContext, e.GetPosition(Items).Y) ? DragDropEffects.Move : DragDropEffects.None;
+        e.Effects = DraggedOver(ContainerOf(e.OriginalSource as DependencyObject)?.DataContext, e.GetPosition(Items).Y, sender as ListBox) ? DragDropEffects.Move : DragDropEffects.None;
         e.Handled = true;
     }
 
@@ -346,16 +438,21 @@ internal sealed partial class SheetsPage : UserControl
         _ = DroppedOn(ContainerOf(e.OriginalSource as DependencyObject)?.DataContext);
     }
 
-    /// <summary>Met en évidence l'en-tête du dossier visé, s'il est à l'écran.</summary>
+    /// <summary>Met en évidence le dossier visé : son entrée dans le volet, ou son intertitre dans la liste, s'il est à l'écran.</summary>
     private void Highlight(string? folder)
     {
-        var container = folder is null ? null : Items.ItemContainerGenerator.ContainerFromItem(Items.Items.OfType<SheetFolderRow>().FirstOrDefault(row => row.Path == folder)) as ListBoxItem;
+        var container = folder is null ? null : Visible(PlacesList, folder) ?? Visible(Items, folder);
         if (!ReferenceEquals(container, _dropTarget))
         {
             _dropTarget?.ClearValue(BackgroundProperty);
             _dropTarget = container;
             _dropTarget?.SetResourceReference(BackgroundProperty, "Kyf.Brush.NavigationActiveBackground");
         }
+
+        static ListBoxItem? Visible(ListBox list, string folder) =>
+            list.IsVisible && list.Items.OfType<SheetFolderRow>().FirstOrDefault(row => row.TakesDrops && row.Path == folder) is { } row
+                ? list.ItemContainerGenerator.ContainerFromItem(row) as ListBoxItem
+                : null;
     }
 
     private static T? Inside<T>(DependencyObject parent)

@@ -133,7 +133,40 @@ public static class SheetsText
     /// <summary>« Nouvelle fiche ».</summary>
     public static string NewSheet => Text(nameof(NewSheet));
 
-    /// <summary>« Sans dossier ».</summary>
+    /// <summary>« Toutes les fiches ».</summary>
+    public static string AllSheets => Text(nameof(AllSheets));
+
+    /// <summary>« À réviser » : aujourd'hui ou en retard.</summary>
+    public static string DueSheets => Text(nameof(DueSheets));
+
+    /// <summary>« Dans tout le coffre ».</summary>
+    public static string SearchEverywhere => Text(nameof(SearchEverywhere));
+
+    /// <summary>« Rien à réviser pour l'instant. ».</summary>
+    public static string NothingDue => Text(nameof(NothingDue));
+
+    /// <summary>« Toutes vos fiches sont rangées dans un dossier. ».</summary>
+    public static string AllFiled => Text(nameof(AllFiled));
+
+    /// <summary>« Plier ou déplier ».</summary>
+    public static string ToggleFolderName => Text(nameof(ToggleFolderName));
+
+    /// <summary>« Dossiers ».</summary>
+    public static string FoldersHeading => Text(nameof(FoldersHeading));
+
+    /// <summary>« Dossiers du coffre ».</summary>
+    public static string PlacesName => Text(nameof(PlacesName));
+
+    /// <summary>« Choisir un dossier ».</summary>
+    public static string ChoosePlace => Text(nameof(ChoosePlace));
+
+    /// <summary>« Ce dossier est vide. ».</summary>
+    public static string EmptyPlace => Text(nameof(EmptyPlace));
+
+    /// <summary>« Nouveau dossier ».</summary>
+    public static string NewFolderAction => Text(nameof(NewFolderAction));
+
+    /// <summary>« Non rangées » : les fiches à la racine du coffre.</summary>
     public static string NoFolder => Text(nameof(NoFolder));
 
     /// <summary>« Aucune fiche ne correspond à ces filtres. ».</summary>

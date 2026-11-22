@@ -11,14 +11,56 @@
       </ResourceDictionary.MergedDictionaries>
       <BooleanToVisibilityConverter x:Key="Visible" />
 
-      <!-- L'en-tête d'un dossier : décalé selon sa profondeur, il se plie et se déplie. -->
+      <!-- L'intertitre d'un sous-dossier dans la liste du milieu (rangée 21B) : son nom et son nombre de fiches ; un clic ou Entrée mène à ce dossier. -->
       <DataTemplate DataType="{x:Type pages:SheetFolderRow}">
-        <DockPanel Margin="{Binding Indent}">
-          <kyf:Icon Text="{Binding Chevron}" FontSize="12" Margin="0,0,8,0" Visibility="{Binding IsFolder, Converter={StaticResource Visible}}" />
-          <kyf:Icon Text="{x:Static kyf:Icons.Warning}" Foreground="{DynamicResource Kyf.Brush.Warning}" FontSize="12" Margin="0,0,8,0"
-                    ToolTip="{x:Static pages:SheetActionsText.TooDeep}" Visibility="{Binding IsTooDeep, Converter={StaticResource Visible}}" />
-          <TextBlock Text="{Binding}" Style="{DynamicResource Kyf.Text.BodyStrong}" TextTrimming="CharacterEllipsis" />
+        <DockPanel Margin="0,10,0,0">
+          <TextBlock DockPanel.Dock="Right" Text="{Binding Count}" Style="{DynamicResource Kyf.Text.Caption}" VerticalAlignment="Center" Margin="12,0,0,0" />
+          <kyf:Icon Text="{Binding Glyph}" FontSize="13" Foreground="{DynamicResource Kyf.Brush.Primary}" Margin="0,0,8,0" VerticalAlignment="Center" />
+          <TextBlock Text="{Binding Folder}" Style="{DynamicResource Kyf.Text.BodyStrong}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
         </DockPanel>
+      </DataTemplate>
+
+      <!-- Le chevron d'un dossier du volet : il plie ou déplie ses sous-dossiers, sans le choisir. -->
+      <Style x:Key="FolderChevron" TargetType="Button">
+        <Setter Property="Focusable" Value="False" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.TextSecondary}" />
+        <Setter Property="Template">
+          <Setter.Value>
+            <ControlTemplate TargetType="Button">
+              <Border Background="Transparent" Width="22" Height="28">
+                <kyf:Icon Text="{Binding Chevron}" FontSize="10" Foreground="{TemplateBinding Foreground}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+              </Border>
+              <ControlTemplate.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                  <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Primary}" />
+                </Trigger>
+              </ControlTemplate.Triggers>
+            </ControlTemplate>
+          </Setter.Value>
+        </Setter>
+      </Style>
+
+      <!-- Une entrée du volet des dossiers : chevron, icône, nom, nombre de fiches. -->
+      <DataTemplate x:Key="PlaceRow" DataType="{x:Type pages:SheetFolderRow}">
+        <DockPanel Margin="{Binding Indent}">
+          <Button x:Name="Chevron" DockPanel.Dock="Left" Style="{StaticResource FolderChevron}" CommandParameter="{Binding}"
+                  Command="{Binding DataContext.ToggleFolderCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                  AutomationProperties.Name="{x:Static pages:SheetsText.ToggleFolderName}" />
+          <TextBlock DockPanel.Dock="Right" Text="{Binding Count}" Style="{DynamicResource Kyf.Text.Caption}" VerticalAlignment="Center" Margin="8,0,0,0" />
+          <kyf:Icon x:Name="Glyph" Text="{Binding Glyph}" FontSize="14" Foreground="{DynamicResource Kyf.Brush.Primary}" Margin="0,0,8,0" VerticalAlignment="Center" />
+          <kyf:Icon Text="{x:Static kyf:Icons.Warning}" Foreground="{DynamicResource Kyf.Brush.Warning}" FontSize="12" Margin="0,0,6,0" VerticalAlignment="Center"
+                    ToolTip="{x:Static pages:SheetActionsText.TooDeep}" Visibility="{Binding IsTooDeep, Converter={StaticResource Visible}}" />
+          <TextBlock Text="{Binding Folder}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+        </DockPanel>
+        <DataTemplate.Triggers>
+          <DataTrigger Binding="{Binding HasChildren}" Value="False">
+            <Setter TargetName="Chevron" Property="Visibility" Value="Hidden" />
+          </DataTrigger>
+          <DataTrigger Binding="{Binding Place}" Value="Unfiled">
+            <Setter TargetName="Glyph" Property="Foreground" Value="{DynamicResource Kyf.Brush.TextSecondary}" />
+          </DataTrigger>
+        </DataTemplate.Triggers>
       </DataTemplate>
 
       <!-- Un choix d'affichage : une pastille, pleine quand elle est choisie. -->
@@ -54,17 +96,16 @@
         </Style.Triggers>
       </Style>
 
-      <!-- Une fiche. -->
+      <!-- Une fiche : son titre en texte courant ; à droite, une pastille et son état en clair (rangée 21B). -->
       <DataTemplate DataType="{x:Type pages:SheetRow}">
-        <DockPanel Margin="{Binding Indent}">
-          <!-- À droite, ce qu'est le document : son étape et son échéance, « Archivée », ou « Note ». -->
-          <Border x:Name="Tag" DockPanel.Dock="Right" VerticalAlignment="Center" Margin="12,0,0,0" Padding="8,2" CornerRadius="6"
-                  Background="{DynamicResource Kyf.Brush.NavigationActiveBackground}">
-            <TextBlock x:Name="Meta" Text="{Binding State}" FontFamily="{DynamicResource Kyf.Font.Code}" FontSize="{DynamicResource Kyf.FontSize.Caption}"
-                       Foreground="{DynamicResource Kyf.Brush.NavigationActiveText}" />
-          </Border>
+        <DockPanel Margin="0,6">
+          <!-- Ce qu'est le document : son étape et son échéance, « Archivée », ou « Note ». -->
+          <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0">
+            <Ellipse x:Name="Dot" Width="7" Height="7" Fill="{DynamicResource Kyf.Brush.Primary}" StrokeThickness="1.6" Margin="0,0,6,0" VerticalAlignment="Center" />
+            <TextBlock x:Name="Meta" Text="{Binding State}" Style="{DynamicResource Kyf.Text.Caption}" VerticalAlignment="Center" />
+          </StackPanel>
           <StackPanel>
-          <TextBlock Text="{Binding Title}" FontSize="{DynamicResource Kyf.FontSize.BodyLarge}" FontWeight="SemiBold" TextWrapping="Wrap" />
+          <TextBlock Text="{Binding Title}" TextWrapping="Wrap" />
           <TextBlock x:Name="Place" Text="{Binding Place}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,2,0,0"
                      Visibility="{Binding HasPlace, Converter={StaticResource Visible}}" />
           <!-- La fiche a été trouvée par son texte : le passage où se trouvent les mots. -->
@@ -76,20 +117,28 @@
           </StackPanel>
         </DockPanel>
         <DataTemplate.Triggers>
+          <!-- À réviser aujourd'hui : un anneau. -->
+          <DataTrigger Binding="{Binding IsDueToday}" Value="True">
+            <Setter TargetName="Dot" Property="Fill" Value="Transparent" />
+            <Setter TargetName="Dot" Property="Stroke" Value="{DynamicResource Kyf.Brush.Primary}" />
+            <Setter TargetName="Dot" Property="Width" Value="8" />
+            <Setter TargetName="Dot" Property="Height" Value="8" />
+          </DataTrigger>
           <DataTrigger Binding="{Binding Kind}" Value="Late">
-            <Setter TargetName="Tag" Property="Background" Value="{DynamicResource Kyf.Brush.SurfaceAlt}" />
+            <Setter TargetName="Dot" Property="Fill" Value="{DynamicResource Kyf.Brush.Warning}" />
             <Setter TargetName="Meta" Property="Foreground" Value="{DynamicResource Kyf.Brush.Warning}" />
             <Setter TargetName="Meta" Property="FontWeight" Value="SemiBold" />
           </DataTrigger>
           <DataTrigger Binding="{Binding Kind}" Value="Archived">
-            <Setter TargetName="Tag" Property="Background" Value="{DynamicResource Kyf.Brush.SurfaceAlt}" />
-            <Setter TargetName="Meta" Property="Foreground" Value="{DynamicResource Kyf.Brush.TextSecondary}" />
+            <Setter TargetName="Dot" Property="Fill" Value="{DynamicResource Kyf.Brush.TextSecondary}" />
           </DataTrigger>
-          <!-- Une note : le mot, sans chiffres, dans la police du texte. -->
+          <!-- Une note : un anneau en pointillé, sans échéance. -->
           <DataTrigger Binding="{Binding Kind}" Value="Note">
-            <Setter TargetName="Tag" Property="Background" Value="{DynamicResource Kyf.Brush.SurfaceAlt}" />
-            <Setter TargetName="Meta" Property="Foreground" Value="{DynamicResource Kyf.Brush.TextSecondary}" />
-            <Setter TargetName="Meta" Property="FontFamily" Value="{DynamicResource Kyf.Font.Ui}" />
+            <Setter TargetName="Dot" Property="Fill" Value="Transparent" />
+            <Setter TargetName="Dot" Property="Stroke" Value="{DynamicResource Kyf.Brush.TextSecondary}" />
+            <Setter TargetName="Dot" Property="StrokeDashArray" Value="1.5 1.5" />
+            <Setter TargetName="Dot" Property="Width" Value="8" />
+            <Setter TargetName="Dot" Property="Height" Value="8" />
           </DataTrigger>
         </DataTemplate.Triggers>
       </DataTemplate>
@@ -147,6 +196,23 @@
 
         <Grid x:Name="Lists" Margin="0,12,0,0" Visibility="{Binding HasSheets, Converter={StaticResource Visible}}">
           <Grid.ColumnDefinitions>
+            <!-- Le volet des dossiers, quand il tient à gauche : 240, 300 sur un écran très large (rangée 21B). -->
+            <ColumnDefinition>
+              <ColumnDefinition.Style>
+                <Style TargetType="ColumnDefinition">
+                  <Setter Property="Width" Value="0" />
+                  <Style.Triggers>
+                    <DataTrigger Binding="{Binding ShowsPane}" Value="True">
+                      <Setter Property="Width" Value="240" />
+                    </DataTrigger>
+                    <DataTrigger Binding="{Binding IsWide}" Value="True">
+                      <Setter Property="Width" Value="300" />
+                    </DataTrigger>
+                  </Style.Triggers>
+                </Style>
+              </ColumnDefinition.Style>
+            </ColumnDefinition>
+            <!-- La liste : toute la place sans aperçu ; 480 avec lui, 420 à côté du volet, 620 sur un écran très large. -->
             <ColumnDefinition>
               <ColumnDefinition.Style>
                 <Style TargetType="ColumnDefinition">
@@ -154,6 +220,16 @@
                   <Style.Triggers>
                     <DataTrigger Binding="{Binding HasPreview}" Value="True">
                       <Setter Property="Width" Value="480" />
+                    </DataTrigger>
+                    <MultiDataTrigger>
+                      <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding HasPreview}" Value="True" />
+                        <Condition Binding="{Binding ShowsPane}" Value="True" />
+                      </MultiDataTrigger.Conditions>
+                      <Setter Property="Width" Value="420" />
+                    </MultiDataTrigger>
+                    <DataTrigger Binding="{Binding IsWide}" Value="True">
+                      <Setter Property="Width" Value="620" />
                     </DataTrigger>
                   </Style.Triggers>
                 </Style>
@@ -173,10 +249,55 @@
             </ColumnDefinition>
           </Grid.ColumnDefinitions>
 
+          <!-- Le volet tient à gauche, séparé de la liste par un filet. Replié, il passe dans le tiroir (PlacesDrawerHost). -->
+          <Border x:Name="PaneHost" Margin="0,0,16,0" Padding="0,0,12,0" BorderThickness="0,0,1,0" BorderBrush="{DynamicResource Kyf.Brush.Divider}"
+                  Visibility="{Binding ShowsPane, Converter={StaticResource Visible}}">
+            <DockPanel x:Name="PlacesPanel">
+              <Button x:Name="NewFolderButton" DockPanel.Dock="Bottom" Style="{DynamicResource Kyf.Button.Subtle}" HorizontalAlignment="Left" Margin="0,8,0,0"
+                      Command="{Binding NewFolderHereCommand}" AutomationProperties.Name="{x:Static pages:SheetsText.NewFolderAction}">
+                <StackPanel Orientation="Horizontal">
+                  <kyf:Icon Text="{x:Static kyf:Icons.NewFolder}" FontSize="14" Margin="0,0,8,0" VerticalAlignment="Center" />
+                  <TextBlock Text="{x:Static pages:SheetsText.NewFolderAction}" VerticalAlignment="Center" />
+                </StackPanel>
+              </Button>
+              <!-- Le choix glisse d'une entrée à l'autre (rangée 18B) ; les flèches parcourent, ← et → plient et déplient. -->
+              <pages:PlacesList x:Name="PlacesList" ItemsSource="{Binding Places}" SelectedItem="{Binding SelectedPlace}" ItemTemplate="{StaticResource PlaceRow}"
+                       AutomationProperties.Name="{x:Static pages:SheetsText.PlacesName}"
+                       PreviewKeyDown="OnPlacesKeyDown" AllowDrop="True" PreviewMouseLeftButtonDown="OnItemsPressed" PreviewMouseMove="OnItemsMoved"
+                       DragOver="OnItemsDragOver" Drop="OnItemsDrop" DragLeave="OnItemsDragLeave">
+                <pages:PlacesList.ItemsPanel>
+                  <ItemsPanelTemplate>
+                    <kyf:SlidingSelectionPanel />
+                  </ItemsPanelTemplate>
+                </pages:PlacesList.ItemsPanel>
+              </pages:PlacesList>
+            </DockPanel>
+          </Border>
+
           <!-- La liste : virtualisée, pour qu'un grand coffre reste fluide. -->
-          <kyf:Card x:Name="ListCard" Padding="8">
+          <Border x:Name="ListCard" Grid.Column="1">
             <DockPanel>
-              <StackPanel x:Name="ListFilters" DockPanel.Dock="Top" Margin="4,4,4,8">
+              <StackPanel x:Name="ListFilters" DockPanel.Dock="Top" Margin="0,0,0,8">
+        <!-- Le volet replié : le dossier choisi, qui ouvre le tiroir des dossiers. -->
+        <Border x:Name="PlacesButtonHost" HorizontalAlignment="Left" Margin="0,0,0,8">
+          <Border.Style>
+            <Style TargetType="Border">
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding ShowsPane}" Value="True">
+                  <Setter Property="Visibility" Value="Collapsed" />
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </Border.Style>
+        <Button x:Name="PlacesButton" Style="{DynamicResource Kyf.Button.Tool}" Padding="10,0" Command="{Binding TogglePlacesCommand}"
+                ToolTip="{x:Static pages:SheetsText.ChoosePlace}" AutomationProperties.Name="{x:Static pages:SheetsText.ChoosePlace}">
+          <StackPanel Orientation="Horizontal">
+            <kyf:Icon Text="{Binding SelectedPlace.Glyph, FallbackValue={x:Static kyf:Icons.ListLines}}" FontSize="14" Foreground="{DynamicResource Kyf.Brush.Primary}" Margin="0,0,8,0" VerticalAlignment="Center" />
+            <TextBlock Text="{Binding PlaceName}" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="320" />
+            <kyf:Icon Text="{x:Static kyf:Icons.ChevronDown}" FontSize="10" Margin="8,0,0,0" VerticalAlignment="Center" />
+          </StackPanel>
+        </Button>
+        </Border>
         <pages:FilterBar x:Name="FilterBar" DataContext="{Binding Bar}" />
         <!-- Tout, les fiches de révision seules, ou les notes seules : toujours en vue, avec leur nombre. -->
         <WrapPanel x:Name="KindFilter" Margin="0,8,0,0" AutomationProperties.Name="{x:Static pages:SheetsText.KindName}">
@@ -206,8 +327,19 @@
         <Button x:Name="ClearTagsButton" Content="{x:Static pages:SheetsText.TagsClear}" Command="{Binding ClearTagsCommand}" Style="{DynamicResource Kyf.Button.Subtle}"
                 HorizontalAlignment="Left" Visibility="{Binding HasChosenTags, Converter={StaticResource Visible}}" />
               </StackPanel>
-              <TextBlock x:Name="NoMatch" DockPanel.Dock="Top" Text="{x:Static pages:SheetsText.NoMatch}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="8,4,8,8"
+              <!-- Ce que la liste montre : le dossier choisi, ou tout le coffre pendant une recherche, et son nombre de fiches. -->
+              <DockPanel x:Name="ListHeader" DockPanel.Dock="Top" Margin="0,4,0,4">
+                <TextBlock x:Name="ListCountText" DockPanel.Dock="Right" Text="{Binding ListCount}" Style="{DynamicResource Kyf.Text.Caption}" VerticalAlignment="Bottom" Margin="12,0,0,3" />
+                <TextBlock x:Name="ListTitleText" Text="{Binding ListTitle}" Style="{DynamicResource Kyf.Text.Subtitle}" TextTrimming="CharacterEllipsis" AutomationProperties.HeadingLevel="Level2" />
+              </DockPanel>
+              <TextBlock x:Name="NoMatch" DockPanel.Dock="Top" Text="{x:Static pages:SheetsText.NoMatch}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="0,8"
                          Visibility="{Binding HasNoMatch, Converter={StaticResource Visible}}" />
+              <!-- Rien là où l'on est : on le dit, et dans un dossier on propose d'y écrire. -->
+              <StackPanel x:Name="PlaceEmpty" DockPanel.Dock="Top" Margin="0,8" Visibility="{Binding IsPlaceEmpty, Converter={StaticResource Visible}}">
+                <TextBlock x:Name="PlaceEmptyText" Text="{Binding PlaceEmptyText}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" />
+                <Button x:Name="PlaceNewSheetButton" Content="{x:Static pages:SheetsText.NewSheet}" Command="{Binding RequestCreateCommand}" HorizontalAlignment="Left" Margin="0,8,0,0"
+                        Visibility="{Binding PlaceTakesSheets, Converter={StaticResource Visible}}" />
+              </StackPanel>
             <Grid>
               <pages:OpenableList x:Name="Items" ItemsSource="{Binding Rows}" kyf:Transitions.NewcomerKey="Sheet.Id" SelectedItem="{Binding SelectedRow}" OpenCommand="{Binding OpenCommand}"
                                   AutomationProperties.Name="{x:Static pages:SheetsText.ListName}"
@@ -216,7 +348,7 @@
                                   PreviewKeyDown="OnItemsKeyDown" SelectionChanged="OnItemsSelectionChanged" MouseDoubleClick="OnItemsDoubleClick"
                                   AllowDrop="True" PreviewMouseLeftButtonDown="OnItemsPressed" PreviewMouseMove="OnItemsMoved"
                                   DragOver="OnItemsDragOver" Drop="OnItemsDrop" DragLeave="OnItemsDragLeave" />
-              <!-- Pendant un glisser-déposer : où la fiche irait, même si l'en-tête du dossier n'est pas à l'écran. -->
+              <!-- Pendant un glisser-déposer : où la fiche irait, même si le dossier visé n'est pas à l'écran. -->
               <Border x:Name="DropHintBox" VerticalAlignment="Bottom" HorizontalAlignment="Center" Margin="8" Padding="12,8" IsHitTestVisible="False"
                       Background="{DynamicResource Kyf.Brush.Primary}" CornerRadius="{DynamicResource Kyf.Radius.Control}"
                       Visibility="{Binding HasDropHint, Converter={StaticResource Visible}}">
@@ -224,15 +356,46 @@
               </Border>
             </Grid>
             </DockPanel>
-          </kyf:Card>
+          </Border>
 
           <!-- L'aperçu de la fiche choisie, quand il y a la place : la fiche comme une feuille posée sur le fond de la page, sans
                carte autour d'elle. « Lire » et « Écrire » sont au-dessus d'elle, avec son titre (gabarit CarnetPreview). -->
-          <Border x:Name="PreviewCard" Grid.Column="1" Margin="16,0,0,0" Visibility="{Binding ShowsPreview, Converter={StaticResource Visible}}">
+          <Border x:Name="PreviewCard" Grid.Column="2" Margin="16,0,0,0" Visibility="{Binding ShowsPreview, Converter={StaticResource Visible}}">
             <ContentControl x:Name="PreviewHost" Content="{Binding Preview}" ContentTemplate="{StaticResource CarnetPreview}" Focusable="False" IsTabStop="False" />
           </Border>
         </Grid>
       </Grid>
+    </Grid>
+
+    <!-- Le volet replié, ouvert par-dessus la page : il vient de la gauche, ou du bas sous 600 px, comme sur un téléphone.
+         Un clic à côté ou Échap le referme ; choisir un dossier aussi. -->
+    <Grid x:Name="PlacesOverlay" IsHitTestVisible="{Binding ShowsPlacesSheet}">
+      <Rectangle x:Name="PlacesScrim" Fill="{DynamicResource Kyf.Brush.Scrim}" kyf:Transitions.SwappedIn="{Binding ShowsPlacesSheet}" MouseLeftButtonDown="OnScrimPressed" />
+      <Border x:Name="PlacesDrawer" Background="{DynamicResource Kyf.Brush.Surface}" Effect="{DynamicResource Kyf.Elevation.Dialog}" Padding="12,12,12,16"
+              kyf:Transitions.Shown="{Binding ShowsPlacesSheet}" PreviewKeyDown="OnDrawerKeyDown">
+        <Border.Style>
+          <Style TargetType="Border">
+            <Setter Property="HorizontalAlignment" Value="Left" />
+            <Setter Property="Width" Value="300" />
+            <Setter Property="kyf:Transitions.ShownFrom" Value="Left" />
+            <Setter Property="CornerRadius" Value="0,12,12,0" />
+            <Style.Triggers>
+              <DataTrigger Binding="{Binding PlacesFromBottom}" Value="True">
+                <Setter Property="HorizontalAlignment" Value="Stretch" />
+                <Setter Property="VerticalAlignment" Value="Bottom" />
+                <Setter Property="Width" Value="NaN" />
+                <Setter Property="MaxHeight" Value="520" />
+                <Setter Property="kyf:Transitions.ShownFrom" Value="Bottom" />
+                <Setter Property="CornerRadius" Value="16,16,0,0" />
+              </DataTrigger>
+            </Style.Triggers>
+          </Style>
+        </Border.Style>
+        <DockPanel>
+          <TextBlock DockPanel.Dock="Top" Text="{x:Static pages:SheetsText.ChoosePlace}" Style="{DynamicResource Kyf.Text.Subtitle}" Margin="4,0,0,8" />
+          <Border x:Name="PlacesDrawerHost" />
+        </DockPanel>
+      </Border>
     </Grid>
 
     <kyf:Dialog x:Name="ActionDialog" Title="{Binding ActionTitle}" IsOpen="{Binding IsActing, Mode=OneWay}" PrimaryButtonText="{Binding ActionConfirm}" IsDestructive="{Binding ErasesForGood}" Closed="OnActionClosed">
