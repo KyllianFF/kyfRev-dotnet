@@ -1183,6 +1183,8 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
             // La feuille paraît en fondu à chaque texte chargé : la page a sa propre fenêtre, c'est elle qui l'anime. Durée
             // nulle quand les animations sont coupées.
             ["--duree-entree"] = string.Create(CultureInfo.InvariantCulture, $"{Math.Round(Transitions.DurationOf(this, DesignKeys.NormalDuration).TotalMilliseconds)}ms"),
+            // Le plan fait glisser la fiche jusqu'au titre, comme en lecture : la même durée, la même famille d'animations.
+            ["--duree-defilement"] = string.Create(CultureInfo.InvariantCulture, $"{Math.Round(Transitions.DurationOf(this, DesignKeys.NormalDuration, MotionKinds.Views).TotalMilliseconds)}ms"),
         };
         foreach (var (variable, resource) in ThemeColors)
         {

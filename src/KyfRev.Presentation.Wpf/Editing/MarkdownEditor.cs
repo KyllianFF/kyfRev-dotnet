@@ -354,7 +354,15 @@ internal sealed class MarkdownEditor : TextEditor, IEditorSurface
             if (!IsInFence(line.Offset) && text.TrimStart().StartsWith('#') && text.TrimStart().TrimStart('#').Trim() == title && seen++ == occurrence)
             {
                 TextArea.Caret.Offset = line.Offset;
-                TextArea.Caret.BringCaretToView();
+                // La vue glisse jusqu'au titre, posé en haut, comme en lecture (rangée 20D) ; d'un coup sans animations.
+                if (GetTemplateChild("PART_ScrollViewer") is ScrollViewer scroller)
+                {
+                    Transitions.ScrollTo(scroller, TextArea.TextView.GetVisualTopByDocumentLine(line.LineNumber));
+                }
+                else
+                {
+                    TextArea.Caret.BringCaretToView();
+                }
                 TextArea.Focus();
                 return;
             }

@@ -45,6 +45,7 @@ import {
   type TableRect,
   tableEditing,
 } from "prosemirror-tables";
+import { glisserJusqua } from "./defilement";
 import type { Apparence, Bandes, Largeur, Theme, Traits } from "./apparence";
 import {
   Decoration,
@@ -1630,7 +1631,7 @@ export class EditeurVisuel {
   }
 
   /**
-   * Amène en haut le titre `titre`, à son occurrence `rang`, et y place le curseur. Les sections repliées qui le
+   * Amène en haut le titre `titre`, à son occurrence `rang`, en glissant, et y place le curseur. Les sections repliées qui le
    * cachaient se déplient : le curseur y entre (repli.ts).
    */
   allerAuTitre(titre: string, rang: number): void {
@@ -1646,7 +1647,8 @@ export class EditeurVisuel {
     this.vue.dispatch(state.tr.setSelection(TextSelection.create(state.doc, position + 1)));
     this.vue.focus();
     const element = this.vue.nodeDOM(position);
-    if (element instanceof Element) element.scrollIntoView({ block: "start" });
+    // La fiche glisse jusqu'au titre, comme en lecture (rangée 20D), au lieu d'y sauter.
+    if (element instanceof Element) glisserJusqua(element);
   }
 
   /** Casse de la sélection, ou du mot du curseur ; sans `casse`, la suivante (Maj+F3). */

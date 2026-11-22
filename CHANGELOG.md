@@ -7,6 +7,10 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ## [Non publié]
 
+### Modifié
+- Écrire : un clic dans le plan fait glisser la fiche jusqu'au titre, comme en lecture, au lieu d'y sauter ; dans la vue
+  Markdown aussi. D'un coup avec les animations coupées.
+
 ## [1.1.0-beta.4] - 2026-11-22
 
 ### Ajouté
