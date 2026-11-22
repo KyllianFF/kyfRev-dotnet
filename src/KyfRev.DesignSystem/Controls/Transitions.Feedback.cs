@@ -283,6 +283,16 @@ public static partial class Transitions
 /// <summary>Une couleur qui passe d'un pinceau uni à un autre ; la destination est la valeur de base de la propriété.</summary>
 internal sealed class BrushTransition : AnimationTimeline
 {
+    /// <summary>Le pinceau sans couleur : d'où part un fond qu'on pose, où va un fond qu'on retire.</summary>
+    internal static Brush Clear { get; } = MakeClear();
+
+    private static SolidColorBrush MakeClear()
+    {
+        var clear = new SolidColorBrush(Colors.Transparent);
+        clear.Freeze();
+        return clear;
+    }
+
     /// <summary>Le pinceau de départ ; sinon, celui que la propriété avait.</summary>
     public Brush? From { get; init; }
 
@@ -298,6 +308,12 @@ internal sealed class BrushTransition : AnimationTimeline
     /// <summary>La couleur à <paramref name="progress"/> (de 0 à 1) entre deux pinceaux unis ; sinon, l'un ou l'autre.</summary>
     internal static Brush? Between(Brush? from, Brush? to, double progress)
     {
+        // Rien d'un côté (un fond qu'on pose, ou qu'on retire) : c'est le transparent de l'autre couleur.
+        from ??= to is SolidColorBrush ? Clear : null;
+        if (progress < 1 && to is null && from is SolidColorBrush)
+        {
+            to = Clear;
+        }
         if (progress >= 1 || from is not SolidColorBrush a || to is not SolidColorBrush b)
         {
             return progress >= 0.5 ? to : from;

@@ -430,4 +430,171 @@ public sealed class FluidityTests
         Assert.ThrowsExactly<ArgumentNullException>(() => Transitions.GetRollingText(null!));
         Assert.ThrowsExactly<ArgumentNullException>(() => Transitions.SetRollingText(null!, "x"));
     }
+
+    [STATestMethod]
+    public void A_bar_grows_from_its_edge_and_a_share_done_advances()
+    {
+        var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
+        var bar = new Border { Width = 20, Height = 40, VerticalAlignment = VerticalAlignment.Bottom };
+        Transitions.SetGrowsFrom(bar, Dock.Bottom);
+        Assert.AreEqual(Dock.Bottom, Transitions.GetGrowsFrom(bar));
+        var row = new Border { Height = 8, Width = 100, HorizontalAlignment = HorizontalAlignment.Left };
+        Transitions.SetGrowsFrom(row, Dock.Left);
+        var share = new Border { Height = 4 };
+        Transitions.SetFill(share, 0.25);
+        var host = Host.Of(design, new StackPanel { Children = { new Grid { Height = 80, Children = { bar } }, row, share } });
+        using var source = new HwndSource(new HwndSourceParameters("kyfRev essai") { Width = 480, Height = 320 }) { RootVisual = host };
+        Host.Layout(host);
+
+        // Une barre qui arrive pousse depuis son pied ; une barre horizontale, depuis la gauche.
+        var grown = (ScaleTransform)bar.RenderTransform;
+        Assert.AreEqual(new Point(0.5, 1), bar.RenderTransformOrigin);
+        Assert.AreEqual(new Point(0, 0.5), row.RenderTransformOrigin);
+        Assert.IsInstanceOfType<ScaleTransform>(row.RenderTransform);
+        Wait(() => grown.ScaleY < 0.9);
+        Assert.IsLessThan(0.9, grown.ScaleY, "elle part de rien");
+        Assert.AreEqual(1.0, grown.ScaleX, "en hauteur seulement");
+        Wait(() => grown.ScaleY >= 1);
+        Assert.AreEqual(1.0, grown.ScaleY);
+
+        // Sa valeur change : elle repart de son ancienne taille. Une taille qui ne change pas ne fait rien.
+        bar.Height = 80;
+        Host.Layout(host);
+        var taller = (ScaleTransform)bar.RenderTransform;
+        Assert.AreNotSame(grown, taller);
+        Wait(() => taller.ScaleY < 0.99);
+        Assert.IsGreaterThanOrEqualTo(0.499, taller.ScaleY, "de la moitié, son ancienne hauteur");
+        Wait(() => taller.ScaleY >= 1);
+        bar.Width = 24;
+        Host.Layout(host);
+        Assert.AreSame(taller, bar.RenderTransform, "plus large, pas plus haute : rien ne pousse");
+
+        // Les autres bords, et les valeurs qui ne disent rien.
+        Assert.IsTrue(Transitions.Stretch(bar, 0.5, Dock.Top));
+        Assert.AreEqual(new Point(0.5, 0), bar.RenderTransformOrigin);
+        Assert.IsTrue(Transitions.Stretch(bar, 0.5, Dock.Right));
+        Assert.AreEqual(new Point(1, 0.5), bar.RenderTransformOrigin);
+        Assert.IsFalse(Transitions.Stretch(bar, 1, Dock.Left), "déjà à sa taille");
+        Assert.IsFalse(Transitions.Stretch(bar, double.NaN, Dock.Left));
+        Assert.IsFalse(Transitions.Stretch(bar, double.PositiveInfinity, Dock.Left));
+
+        // La part faite d'une progression : étirée à sa valeur d'emblée, elle avance en glissant ensuite.
+        var done = (ScaleTransform)share.RenderTransform;
+        Assert.AreEqual(0.25, done.ScaleX, "posée avant d'être à l'écran : d'un coup");
+        Assert.AreEqual(new Point(0, 0.5), share.RenderTransformOrigin);
+        Assert.AreEqual(0.25, Transitions.GetFill(share));
+        Transitions.SetFill(share, 0.75);
+        Assert.AreSame(done, share.RenderTransform);
+        Wait(() => done.ScaleX is > 0.26 and < 0.75);
+        Assert.IsLessThan(0.75, done.ScaleX, "elle est en route");
+        Wait(() => done.ScaleX >= 0.75);
+        Assert.AreEqual(0.75, done.ScaleX);
+        Transitions.SetFill(share, double.NaN);
+        Assert.AreEqual(0.75, done.ScaleX, "une valeur qui ne dit rien est ignorée");
+
+        // Animations réduites, ou barre qui n'en veut plus : rien ne bouge.
+        design.ReducedMotion = true;
+        Transitions.SetFill(share, 0.5);
+        Assert.AreEqual(0.5, done.ScaleX);
+        Assert.IsFalse(Transitions.Stretch(bar, 0.5, Dock.Bottom));
+        design.ReducedMotion = false;
+        Transitions.SetGrowsFrom(bar, null);
+        var kept = bar.RenderTransform;
+        bar.Height = 20;
+        Host.Layout(host);
+        Assert.AreSame(kept, bar.RenderTransform);
+        Transitions.SetGrowsFrom(new System.Windows.Documents.Run(), Dock.Left);
+        Transitions.SetFill(new System.Windows.Documents.Run(), 0.5);
+        Assert.ThrowsExactly<ArgumentNullException>(() => Transitions.Stretch(null!, 0, Dock.Left));
+        Assert.ThrowsExactly<ArgumentNullException>(() => Transitions.GetGrowsFrom(null!));
+        Assert.ThrowsExactly<ArgumentNullException>(() => Transitions.SetGrowsFrom(null!, Dock.Left));
+        Assert.ThrowsExactly<ArgumentNullException>(() => Transitions.GetFill(null!));
+        Assert.ThrowsExactly<ArgumentNullException>(() => Transitions.SetFill(null!, 1));
+    }
+
+    [STATestMethod]
+    public void What_replaces_something_fades_in_and_a_colour_laid_on_text_fades()
+    {
+        var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
+        var skip = new Button { Content = "Passer" };
+        var next = new Button { Content = "Suivant" };
+        Transitions.SetSwappedIn(skip, true);
+        Transitions.SetSwappedIn(next, false);
+        Assert.IsFalse(Transitions.GetSwappedIn(next));
+        Assert.AreEqual(Visibility.Collapsed, next.Visibility, "il laisse la place");
+        var word = new System.Windows.Documents.Run("mitose");
+        var text = new TextBlock();
+        text.Inlines.Add(word);
+        var count = new TextBlock { Width = 80, TextAlignment = TextAlignment.Right };
+        Transitions.SetRollingText(count, "3 / 14");
+        var host = Host.Of(design, new AdornerDecorator { Child = new StackPanel { Children = { skip, next, text, count } } });
+        using var source = new HwndSource(new HwndSourceParameters("kyfRev essai") { Width = 480, Height = 320 }) { RootVisual = host };
+        Host.Layout(host);
+        Host.Flush();
+        Assert.IsFalse(skip.HasAnimatedProperties, "la vue qui s'ouvre montre tout d'un coup");
+
+        // « Passer » devient « Suivant » : celui qui se montre paraît en fondu.
+        Transitions.SetSwappedIn(skip, false);
+        Transitions.SetSwappedIn(next, true);
+        Assert.AreEqual(Visibility.Collapsed, skip.Visibility, "celui qui s'en va part d'un coup");
+        Assert.IsFalse(skip.HasAnimatedProperties);
+        Assert.AreEqual(Visibility.Visible, next.Visibility);
+        Assert.IsTrue(next.HasAnimatedProperties);
+        Wait(() => next.Opacity >= 1);
+        Transitions.SetSwappedIn(next, null);
+        Assert.AreEqual(Visibility.Visible, next.Visibility, "sans valeur, rien ne change");
+
+        // Un fond posé sur un mot, un texte qui reprend sa couleur : en fondu, depuis la couleur d'avant.
+        var marker = new SolidColorBrush(new TokenColor(255, 250, 220, 120).ToColor());
+        word.Background = marker;
+        Assert.IsTrue(Transitions.FadeBrush(text, word, System.Windows.Documents.TextElement.BackgroundProperty, null));
+        Assert.IsTrue(word.HasAnimatedProperties);
+        Wait(() => word.Background is SolidColorBrush { Color.A: 255 });
+        Assert.AreEqual(marker.Color, ((SolidColorBrush)word.Background).Color, "arrivé, c'est la couleur posée");
+        // D'une couleur vers rien, ou de rien vers une couleur : seule l'opacité change.
+        var leaving = (SolidColorBrush)BrushTransition.Between(marker, null, 0.5)!;
+        Assert.AreEqual(marker.Color.R, leaving.Color.R);
+        Assert.IsLessThan(marker.Color.A, leaving.Color.A);
+        var coming = (SolidColorBrush)BrushTransition.Between(null, marker, 0.5)!;
+        Assert.AreEqual(marker.Color.G, coming.Color.G);
+        Assert.IsNull(BrushTransition.Between(marker, null, 1));
+        Assert.IsNull(BrushTransition.Between(null, null, 0.3));
+
+        // Un compte qui change : l'ancienne valeur sort par le haut, dessinée là où elle était, la nouvelle arrive par le bas.
+        var layer = AdornerLayer.GetAdornerLayer(count)!;
+        var panel = (UIElement)VisualTreeHelper.GetParent(count);
+        Transitions.SetRollingText(count, "4 / 14");
+        Assert.AreEqual("4 / 14", count.Text);
+        var ghosts = layer.GetAdorners(panel);
+        Assert.IsNotNull(ghosts, "l'ancienne valeur a son image");
+        Assert.HasCount(1, ghosts);
+        var former = (Transitions.FormerTextAdorner)ghosts[0];
+        Assert.IsFalse(former.IsHitTestVisible);
+        Wait(() => former.Lift > 0);
+        Assert.IsGreaterThan(0, former.Lift, "elle monte");
+        Wait(() => layer.GetAdorners(panel) is null);
+        Assert.IsNull(layer.GetAdorners(panel), "sortie, elle est retirée");
+        // Le même compte redit ne roule pas ; sans couche d'ornements, seule la nouvelle valeur arrive.
+        Transitions.SetRollingText(count, "4 / 14");
+        Assert.IsNull(layer.GetAdorners(panel));
+        var alone = new TextBlock { Text = "1" };
+        var bare = Host.Of(design, alone);
+        using var other = new HwndSource(new HwndSourceParameters("kyfRev essai") { Width = 200, Height = 100 }) { RootVisual = bare };
+        Host.Layout(bare);
+        Assert.IsFalse(Transitions.Roll(alone, "0"));
+        Assert.IsTrue(alone.HasAnimatedProperties, "la nouvelle arrive quand même");
+
+        // Animations réduites : rien.
+        design.ReducedMotion = true;
+        Assert.IsFalse(Transitions.FadeBrush(text, word, System.Windows.Documents.TextElement.BackgroundProperty, marker));
+        Assert.IsFalse(Transitions.Roll(count, "3 / 14"));
+        Transitions.SetSwappedIn(new System.Windows.Documents.Run(), true);
+        Transitions.SetSwappedIn(skip, true);
+        Assert.IsFalse(skip.HasAnimatedProperties, "animations réduites : il est là d'un coup");
+        Assert.ThrowsExactly<ArgumentNullException>(() => Transitions.FadeBrush(null!, word, System.Windows.Documents.TextElement.BackgroundProperty, null));
+        Assert.ThrowsExactly<ArgumentNullException>(() => Transitions.FadeBrush(text, null!, System.Windows.Documents.TextElement.BackgroundProperty, null));
+        Assert.ThrowsExactly<ArgumentNullException>(() => Transitions.FadeBrush(text, word, null!, null));
+        Assert.ThrowsExactly<ArgumentNullException>(() => Transitions.GetSwappedIn(null!));
+        Assert.ThrowsExactly<ArgumentNullException>(() => Transitions.SetSwappedIn(null!, true));
+    }
 }
