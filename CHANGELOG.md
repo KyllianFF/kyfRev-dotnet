@@ -7,6 +7,8 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ## [Non publié]
 
+## [1.1.0-beta.4] - 2026-11-22
+
 ### Ajouté
 - Capture rapide : une palette au-dessus de tout, comme celle de PowerToys. Ctrl+Alt+N l'ouvre où que l'on soit, même kyfRev
   réduit dans la barre d'état, sans ouvrir sa fenêtre ; Ctrl+Maj+N dans kyfRev. On y tape une idée : Entrée la note dans la
@@ -1191,7 +1193,8 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 - Le texte d'un champ de plusieurs lignes ne colle plus au bord haut.
 - Le libellé long d'une case à cocher était coupé : il passe maintenant à la ligne, en face de sa case.
 
-[Non publié]: https://github.com/KyllianFF/kyfRev-dotnet/compare/v1.1.0-beta.3...HEAD
+[Non publié]: https://github.com/KyllianFF/kyfRev-dotnet/compare/v1.1.0-beta.4...HEAD
+[1.1.0-beta.4]: https://github.com/KyllianFF/kyfRev-dotnet/compare/v1.1.0-beta.3...v1.1.0-beta.4
 [1.1.0-beta.3]: https://github.com/KyllianFF/kyfRev-dotnet/compare/v1.1.0-beta.2...v1.1.0-beta.3
 [1.1.0-beta.2]: https://github.com/KyllianFF/kyfRev-dotnet/compare/v1.1.0-beta.1...v1.1.0-beta.2
 [1.1.0-beta.1]: https://github.com/KyllianFF/kyfRev-dotnet/compare/v1.0.0-beta.1...v1.1.0-beta.1
