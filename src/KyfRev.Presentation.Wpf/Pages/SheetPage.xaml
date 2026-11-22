@@ -436,7 +436,7 @@
             <Button x:Name="RevealAllButton" Style="{DynamicResource Kyf.Button.Subtle}" Content="{x:Static pages:ReadingText.RevealAllHoles}" Command="{Binding RevealAllCommand}" IsEnabled="{Binding CanRevealAll}" />
             <Button x:Name="HideAllButton" Style="{DynamicResource Kyf.Button.Subtle}" Content="{x:Static pages:ReadingText.HideAllHoles}" Command="{Binding HideAllCommand}" IsEnabled="{Binding CanHideAll}" Margin="4,0,0,0" />
           </StackPanel>
-          <TextBlock x:Name="HolesSummary" Text="{Binding Summary}" Style="{DynamicResource Kyf.Text.Secondary}" VerticalAlignment="Center" AutomationProperties.LiveSetting="Polite" />
+          <TextBlock x:Name="HolesSummary" kyf:Transitions.RollingText="{Binding Summary}" Style="{DynamicResource Kyf.Text.Secondary}" VerticalAlignment="Center" AutomationProperties.LiveSetting="Polite" />
         </DockPanel>
 
         <!-- Un passage attend sa nouvelle place : on la sélectionne dans le texte, le reste de la page reste lisible. -->

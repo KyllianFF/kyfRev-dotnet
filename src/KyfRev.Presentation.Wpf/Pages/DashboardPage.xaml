@@ -202,7 +202,7 @@
               <StackPanel ToolTip="{Binding Name}" AutomationProperties.Name="{Binding Name}" Background="Transparent">
                 <Border x:Name="Dot" Width="32" Height="32" CornerRadius="16" HorizontalAlignment="Center"
                         BorderThickness="1" BorderBrush="{DynamicResource Kyf.Brush.Divider}">
-                  <TextBlock x:Name="Count" Text="{Binding Count}" FontFamily="{DynamicResource Kyf.Font.Code}" FontWeight="SemiBold"
+                  <TextBlock x:Name="Count" kyf:Transitions.RollingText="{Binding Count}" FontFamily="{DynamicResource Kyf.Font.Code}" FontWeight="SemiBold"
                              FontSize="{DynamicResource Kyf.FontSize.Caption}" HorizontalAlignment="Center" VerticalAlignment="Center" />
                 </Border>
                 <TextBlock Text="{Binding Label}" Style="{DynamicResource Kyf.Text.Caption}" HorizontalAlignment="Center" Margin="0,4,0,0" />
@@ -487,7 +487,7 @@
               </StackPanel>
             </Button>
           </StackPanel>
-          <TextBlock x:Name="HeroCount" DockPanel.Dock="Left" Text="{Binding ReviewCount}" FontFamily="{DynamicResource Kyf.Font.Code}" FontWeight="SemiBold"
+          <TextBlock x:Name="HeroCount" DockPanel.Dock="Left" kyf:Transitions.RollingText="{Binding ReviewCount}" FontFamily="{DynamicResource Kyf.Font.Code}" FontWeight="SemiBold"
                      FontSize="{DynamicResource Kyf.FontSize.Display}" VerticalAlignment="Center" Margin="0,0,16,0"
                      Visibility="{Binding HasReviews, Converter={StaticResource Visible}}" />
           <StackPanel VerticalAlignment="Center">

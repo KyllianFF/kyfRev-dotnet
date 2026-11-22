@@ -93,6 +93,9 @@ public sealed partial class AppearanceController : ObservableObject, IDisposable
 
     partial void OnLargerTargetsChanged(bool value) => _design.LargerTargets = value;
 
+    /// <summary>Le thème va changer : rien n'a encore changé de couleur.</summary>
+    public event EventHandler? ThemeChanging;
+
     private void OnSystemChanged(object? sender, EventArgs e) => _dispatcher.BeginInvoke(Apply);
 
     private void Apply()
@@ -104,10 +107,17 @@ public sealed partial class AppearanceController : ObservableObject, IDisposable
             _ => _system.PrefersDarkTheme ? ThemeKind.Dark : ThemeKind.Light,
         };
         // Le contraste de Windows prend ses couleurs ; forcé dans kyfRev, il garde le thème choisi, clair ou sombre.
-        _design.HighContrastPalette = _system.HighContrast
+        var palette = _system.HighContrast
             ? HighContrastPalette.Windows
             : chosen == ThemeKind.Dark ? HighContrastPalette.Dark : HighContrastPalette.Light;
-        _design.Theme = _system.HighContrast || ForcesHighContrast ? ThemeKind.HighContrast : chosen;
+        var theme = _system.HighContrast || ForcesHighContrast ? ThemeKind.HighContrast : chosen;
+        if (theme != _design.Theme || (theme == ThemeKind.HighContrast && palette != _design.HighContrastPalette))
+        {
+            // Les couleurs vont changer : qui veut garder l'image d'avant (la fenêtre, pour un fondu) la prend maintenant.
+            ThemeChanging?.Invoke(this, EventArgs.Empty);
+        }
+        _design.HighContrastPalette = palette;
+        _design.Theme = theme;
         _design.ReducedMotion = _system.ReducedMotion || ForcesReducedMotion;
         foreach (var window in _windows)
         {

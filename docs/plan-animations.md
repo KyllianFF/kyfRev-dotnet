@@ -156,7 +156,7 @@ Priorité 1 : vu à chaque séance. Priorité 2 : vu chaque jour. Priorité 3 : 
   l'éditeur prend sa place d'un coup.
 - Tout ce qui change parce que la fenêtre change de taille.
 - La barre de titre en plein écran : la fenêtre change d'état au même instant.
-- Le zoom, le changement de thème, le papier d'une fiche, l'aperçu d'impression.
+- Le zoom, le papier d'une fiche, l'aperçu d'impression. (Le changement de thème, d'abord écarté, bascule en fondu : rang 10 de la liste « Fluidité ».)
 
 ## Fluidité : ce qui reste à gagner (maquettes, rangée 20)
 
@@ -174,9 +174,9 @@ qui part d'un coup, ce qui saute pour faire de la place, et l'application occup�
 | 7 (fait : le squelette rend sa place et s'efface sous le contenu, qui paraît en fondu ; huit pages) | Squelette remplacé d'un coup par le contenu | Fondu croisé de 220 ms | 20D |
 | 8 (fait : à chaque fois qu'une vue montre sa liste pour la première fois, sauf si une ligne nouvelle y arrive) | Une liste entière paraît en bloc | Courte cascade : 35 ms d'écart, six lignes au plus | 20C |
 | 9 (fait : deux courbes ; la troisième durée attend l'essai) | Une seule courbe pour tout, deux durées | Une courbe d'arrivée et une de départ ; une troisième durée (320 ms) pour les grandes surfaces, si l'essai le demande | 20B |
-| 10 | Le thème bascule d'un coup | Fondu des couleurs en 120 ms | 20D |
-| 11 | Compteurs, jauges, étape validée, trous révélés : secs | Voir « Nombres et jauges » et « Révision » plus haut | 19C |
-| 12 | Les blocs qui glissent sont redessinés à chaque image | Les mettre en image le temps du trajet (`BitmapCache`), si une mesure montre que c'est utile | — |
+| 10 (fait : l'image de la fenêtre dans l'ancien thème s'efface par-dessus le nouveau ; l'éditeur et les schémas, fenêtres natives, changent d'eux-mêmes) | Le thème bascule d'un coup | Fondu des couleurs en 120 ms | 20D |
+| 11 (en partie : les jauges avancent, les compteurs du menu, d'Aujourd'hui et des trous font arriver leur nouvelle valeur par le bas ; restent les barres des graphiques, l'ancienne valeur qui sort par le haut, les trous révélés en fondu, l'étape validée, « Passer » qui devient « Suivant », le surlignage qui s'étend) | Compteurs, jauges, étape validée, trous révélés : secs | Voir « Nombres et jauges » et « Révision » plus haut | 19C |
+| 12 (pas fait : il faut d'abord une mesure sur un vrai écran, que je n'ai pas) | Les blocs qui glissent sont redessinés à chaque image | Les mettre en image le temps du trajet (`BitmapCache`), si une mesure montre que c'est utile | — |
 
 Les rangs 1 et 2 comptent le plus : ce sont eux qui séparent encore l'entrée en écriture d'un seul mouvement continu.
 
