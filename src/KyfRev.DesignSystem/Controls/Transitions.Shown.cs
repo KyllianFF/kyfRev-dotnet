@@ -151,6 +151,30 @@ public static partial class Transitions
         element.Dispatcher.BeginInvoke(DispatcherPriority.Loaded, () => element.SetValue(ShownSwappedProperty, false));
     }
 
+    /// <summary>
+    /// Fait paraître l'élément, déjà montré, en glissant depuis le bord donné (un volet de dialogue qui s'ouvre) : une fois
+    /// mis en page, puisque sa taille dit de combien il glisse. Les fenêtres coupées dans les Paramètres, il est là d'un coup.
+    /// </summary>
+    internal static void SlideIn(FrameworkElement element, Dock from)
+    {
+        SetShownFrom(element, from);
+        StopSlide(element);
+        if (!Moves(element, DesignKeys.NormalDuration, out var duration, MotionKinds.Surfaces))
+        {
+            return;
+        }
+        element.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 0, TimeSpan.Zero) { FillBehavior = FillBehavior.HoldEnd });
+        element.Dispatcher.BeginInvoke(WhenShown, () =>
+        {
+            if (element.RenderSize.Width <= 0 || element.RenderSize.Height <= 0)
+            {
+                StopSlide(element);
+                return;
+            }
+            Slide(element, duration, entering: true, null);
+        });
+    }
+
     /// <summary>Fait glisser l'élément sur toute sa longueur, depuis son bord ou vers lui, en fondu, découpé à sa place.</summary>
     private static void Slide(FrameworkElement element, TimeSpan duration, bool entering, Action? done)
     {

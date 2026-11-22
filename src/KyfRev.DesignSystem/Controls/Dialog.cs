@@ -31,10 +31,13 @@ public sealed class DialogClosedEventArgs(RoutedEvent routedEvent, object source
 /// Dialogue posé sur un voile, au-dessus de la page. Le focus y entre à l'ouverture, n'en sort pas
 /// au clavier, et revient à la fermeture à ce qui le tenait ; Échap le ferme, Entrée choisit le
 /// bouton principal. Pendant un travail lancé de là (<see cref="IsWorking"/>), le focus attend sur le
-/// bouton secondaire ; le travail fini, il revient au bouton principal.
+/// bouton secondaire ; le travail fini, il revient au bouton principal. En volet (<see cref="IsSidePanel"/>), il glisse
+/// depuis le bord droit et laisse voir la page ; sous <see cref="NarrowWidth"/> de large, il vient du bas.
 /// </summary>
 [TemplatePart(Name = PrimaryButtonPart, Type = typeof(ButtonBase))]
 [TemplatePart(Name = SecondaryButtonPart, Type = typeof(ButtonBase))]
+[TemplatePart(Name = CloseButtonPart, Type = typeof(ButtonBase))]
+[TemplatePart(Name = ScrimPart, Type = typeof(UIElement))]
 public class Dialog : ContentControl
 {
     /// <summary>Bouton principal dans le modèle.</summary>
@@ -42,6 +45,25 @@ public class Dialog : ContentControl
 
     /// <summary>Bouton secondaire dans le modèle.</summary>
     public const string SecondaryButtonPart = "PART_SecondaryButton";
+
+    /// <summary>La croix d'un volet, dans le modèle.</summary>
+    public const string CloseButtonPart = "PART_CloseButton";
+
+    /// <summary>Le voile, dans le modèle : un clic dessus referme un volet.</summary>
+    public const string ScrimPart = "PART_Scrim";
+
+    /// <summary>Plus étroit, un volet vient du bas et prend toute la largeur, comme sur un téléphone.</summary>
+    public const double NarrowWidth = 600;
+
+    /// <summary>S'ouvre en volet contre le bord droit, la page restant visible à côté, au lieu d'une carte au milieu.</summary>
+    public static readonly DependencyProperty IsSidePanelProperty =
+        DependencyProperty.Register(nameof(IsSidePanel), typeof(bool), typeof(Dialog), new PropertyMetadata(false, (dialog, _) => ((Dialog)dialog).UpdateFromBottom()));
+
+    private static readonly DependencyPropertyKey IsFromBottomPropertyKey =
+        DependencyProperty.RegisterReadOnly(nameof(IsFromBottom), typeof(bool), typeof(Dialog), new PropertyMetadata(false));
+
+    /// <summary>Propriété <see cref="IsFromBottom"/>.</summary>
+    public static readonly DependencyProperty IsFromBottomProperty = IsFromBottomPropertyKey.DependencyProperty;
 
     /// <summary>Propriété <see cref="Title"/>.</summary>
     public static readonly DependencyProperty TitleProperty =
@@ -88,6 +110,8 @@ public class Dialog : ContentControl
 
     private ButtonBase? _primaryButton;
     private ButtonBase? _secondaryButton;
+    private ButtonBase? _closeButton;
+    private UIElement? _scrim;
 
     /// <summary>Ce qui tenait le focus à l'ouverture.</summary>
     private IInputElement? _focusBefore;
@@ -132,6 +156,16 @@ public class Dialog : ContentControl
         set => SetValue(IsDestructiveProperty, value);
     }
 
+    /// <inheritdoc cref="IsSidePanelProperty"/>
+    public bool IsSidePanel
+    {
+        get => (bool)GetValue(IsSidePanelProperty);
+        set => SetValue(IsSidePanelProperty, value);
+    }
+
+    /// <summary>Un volet dans une place trop étroite : il vient du bas, sur toute la largeur.</summary>
+    public bool IsFromBottom => (bool)GetValue(IsFromBottomProperty);
+
     /// <summary>Ouvert ; fermé par défaut.</summary>
     public bool IsOpen
     {
@@ -172,11 +206,17 @@ public class Dialog : ContentControl
     {
         _primaryButton?.Click -= OnPrimary;
         _secondaryButton?.Click -= OnSecondary;
+        _closeButton?.Click -= OnCloseButton;
+        _scrim?.MouseLeftButtonDown -= OnScrimPressed;
         base.OnApplyTemplate();
         _primaryButton = GetTemplateChild(PrimaryButtonPart) as ButtonBase;
         _secondaryButton = GetTemplateChild(SecondaryButtonPart) as ButtonBase;
+        _closeButton = GetTemplateChild(CloseButtonPart) as ButtonBase;
+        _scrim = GetTemplateChild(ScrimPart) as UIElement;
         _primaryButton?.Click += OnPrimary;
         _secondaryButton?.Click += OnSecondary;
+        _closeButton?.Click += OnCloseButton;
+        _scrim?.MouseLeftButtonDown += OnScrimPressed;
     }
 
     /// <summary>
@@ -227,7 +267,15 @@ public class Dialog : ContentControl
             ApplyTemplate();
             if (GetTemplateChild("Card") is FrameworkElement card)
             {
-                Transitions.Enter(card, DesignKeys.NormalDuration, Transitions.DialogRise, kind: MotionKinds.Surfaces);
+                // Un volet glisse depuis son bord : la droite, ou le bas quand la place est étroite.
+                if (IsSidePanel)
+                {
+                    Transitions.SlideIn(card, IsFromBottom ? Dock.Bottom : Dock.Right);
+                }
+                else
+                {
+                    Transitions.Enter(card, DesignKeys.NormalDuration, Transitions.DialogRise, kind: MotionKinds.Surfaces);
+                }
             }
             // Une fois le dialogue affiché, le focus va au premier élément qui le prend.
             Dispatcher.BeginInvoke(DispatcherPriority.Input, FocusFirst);
@@ -287,6 +335,27 @@ public class Dialog : ContentControl
     }
 
     private void FocusFirst() => MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
+
+    /// <inheritdoc/>
+    protected override void OnRenderSizeChanged(SizeChangedInfo sizeInfo)
+    {
+        base.OnRenderSizeChanged(sizeInfo);
+        UpdateFromBottom();
+    }
+
+    private void UpdateFromBottom() => SetValue(IsFromBottomPropertyKey, IsSidePanel && ActualWidth > 0 && ActualWidth < NarrowWidth);
+
+    /// <summary>Un clic à côté d'un volet le referme, comme Échap ; à côté d'une fenêtre au milieu, il ne fait rien.</summary>
+    private void OnScrimPressed(object sender, MouseButtonEventArgs e)
+    {
+        if (IsOpen && IsSidePanel)
+        {
+            Close(DialogChoice.None);
+            e.Handled = true;
+        }
+    }
+
+    private void OnCloseButton(object sender, RoutedEventArgs e) => Close(DialogChoice.None);
 
     private void OnPrimary(object sender, RoutedEventArgs e) => Close(DialogChoice.Primary);
 

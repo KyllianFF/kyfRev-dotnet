@@ -148,6 +148,24 @@ public static class SheetsText
     /// <summary>« Toutes vos fiches sont rangées dans un dossier. ».</summary>
     public static string AllFiled => Text(nameof(AllFiled));
 
+    /// <summary>« Une page blanche ».</summary>
+    public static string EmptyTemplateDescription => Text(nameof(EmptyTemplateDescription));
+
+    /// <summary>« Dans ».</summary>
+    public static string PlaceIn => Text(nameof(PlaceIn));
+
+    /// <summary>« Modèle ».</summary>
+    public static string TemplateHeading => Text(nameof(TemplateHeading));
+
+    /// <summary>« Fiche de révision ».</summary>
+    public static string ReviewSheetChoice => Text(nameof(ReviewSheetChoice));
+
+    /// <summary>« Note ».</summary>
+    public static string NoteChoice => Text(nameof(NoteChoice));
+
+    /// <summary>« Fermer ».</summary>
+    public static string CloseNew => Text(nameof(CloseNew));
+
     /// <summary>« Plier ou déplier ».</summary>
     public static string ToggleFolderName => Text(nameof(ToggleFolderName));
 
