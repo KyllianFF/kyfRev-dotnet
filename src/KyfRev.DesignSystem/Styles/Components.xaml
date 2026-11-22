@@ -160,6 +160,15 @@
       <Trigger Property="IsOpen" Value="False">
         <Setter Property="Visibility" Value="Collapsed" />
       </Trigger>
+      <!-- Rien à dire (ni titre ni message) : rien à montrer, même ouverte. Elle paraîtra, en s'animant, quand un message
+           arrivera. -->
+      <MultiTrigger>
+        <MultiTrigger.Conditions>
+          <Condition Property="Title" Value="" />
+          <Condition Property="ShownMessage" Value="" />
+        </MultiTrigger.Conditions>
+        <Setter Property="Visibility" Value="Collapsed" />
+      </MultiTrigger>
       <!-- Une réussite lue s'efface d'elle-même (Notification.StaysOpen la garde). -->
       <Trigger Property="IsExpired" Value="True">
         <Setter Property="Visibility" Value="Collapsed" />

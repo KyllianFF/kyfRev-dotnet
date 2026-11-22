@@ -210,6 +210,11 @@ ses captures de 470 px à l'ultra-large en clair et en sombre, et un installateu
   l'application par WPF à la cent cinquante-troisième passe. Par sûreté, un élément qui lance
   plus de trente animations d'affilée, sans que l'application ait repris la main, est coupé
   (`Transitions.LoopCut`) et le journal dit lequel.
+- Un avis ne se montre que s'il a quelque chose à dire (un titre ou un message), et ne s'efface
+  en fondu que s'il a été vu : une page qui s'ouvre pose ses avis ouverts avant que ses liaisons
+  ne les ferment, et ils paraissaient vides un instant.
+- Dans une phrase qui porte un compte (« Texte à trous : 1 sur 3 affichés. »), seul le compte
+  roule : la phrase est en morceaux, le reste ne bouge pas.
 - Aucune animation par image sur le texte d'une fiche (couleur d'un `Run`) : chaque image
   referait la mise en page du document.
 - L'image de la fenêtre (ancien thème) est prise sur la place que la mise en page lui

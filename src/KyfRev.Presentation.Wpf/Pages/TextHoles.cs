@@ -54,6 +54,17 @@ public sealed partial class TextHoles : ObservableObject
     /// <summary>Où l'on en est.</summary>
     public string Summary => IsBySection ? ReadingText.SectionsSummary(RevealedCount, _all.Length) : ReadingText.HolesSummary(RevealedCount, _all.Length);
 
+    private (string Before, string After) SummaryAround => IsBySection ? ReadingText.SectionsSummaryAround(_all.Length) : ReadingText.HolesSummaryAround(_all.Length);
+
+    /// <summary>Le début de <see cref="Summary"/>, jusqu'au compte.</summary>
+    public string SummaryBefore => SummaryAround.Before;
+
+    /// <summary>Le compte de ce qui est déjà affiché : la seule partie de <see cref="Summary"/> qui change quand on affiche un trou.</summary>
+    public string SummaryCount => RevealedCount.ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+    /// <summary>La fin de <see cref="Summary"/>, après le compte.</summary>
+    public string SummaryAfter => SummaryAround.After;
+
     /// <summary>Il reste quelque chose à afficher.</summary>
     public bool CanRevealAll => RevealedCount < _all.Length;
 
@@ -206,6 +217,9 @@ public sealed partial class TextHoles : ObservableObject
         OnPropertyChanged(nameof(HasHoles));
         OnPropertyChanged(nameof(IsBySection));
         OnPropertyChanged(nameof(Summary));
+        OnPropertyChanged(nameof(SummaryBefore));
+        OnPropertyChanged(nameof(SummaryCount));
+        OnPropertyChanged(nameof(SummaryAfter));
         OnPropertyChanged(nameof(CanRevealAll));
         OnPropertyChanged(nameof(CanHideAll));
         Changed?.Invoke(this, EventArgs.Empty);
