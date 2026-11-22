@@ -168,7 +168,8 @@ public sealed partial class ArchitectureTests
             ["KyfRev.Infrastructure.Windows/DiagnosticLog.cs"] = 1,
             ["KyfRev.Presentation.Wpf/Editing/DiagramEditorViewModel.cs"] = 1,
             ["KyfRev.Presentation.Wpf/Pages/ImageMaskDialog.xaml.cs"] = 1,
-            ["KyfRev.Presentation.Wpf/Pages/SheetsPage.xaml.cs"] = 2,
+            ["KyfRev.Presentation.Wpf/Pages/SheetMenu.cs"] = 1,
+            ["KyfRev.Presentation.Wpf/Pages/SheetsPage.xaml.cs"] = 1,
         };
         string Code(string file) => CodeOnly(File.ReadAllText(Path.Combine(src, file)));
         var files = Directory.EnumerateFiles(src, "*.cs", SearchOption.AllDirectories)
