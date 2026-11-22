@@ -503,7 +503,7 @@
       </StackPanel>
 
       <!-- Le ruban court sur toute la largeur, au-dessus du plan et des passages. -->
-      <StackPanel Grid.Row="1" Margin="16,0,16,8" DataContext="{Binding Editor}"
+      <StackPanel x:Name="RibbonRow" Grid.Row="1" Margin="16,0,16,8" DataContext="{Binding Editor}"
                   Visibility="{Binding DataContext.IsWriting, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource Visible}}">
         <editing:EditorRibbon x:Name="Ribbon" PageSetup="{Binding DataContext.PageSetup, RelativeSource={RelativeSource AncestorType=UserControl}}"
                               IsReduced="{Binding DataContext.IsRibbonReduced, RelativeSource={RelativeSource AncestorType=UserControl}, Mode=TwoWay}" />
@@ -528,7 +528,8 @@
 
       <!-- À droite, presque rien : la barre de défilement de la fiche est au bord de la fenêtre. Les volets de droite, quand
            ils sont là, gardent leur écart avec ce bord. -->
-      <Grid Grid.Row="2" Margin="16,0,6,0">
+      <!-- Rogné à ses bords : la fiche lue qui s'aligne sur l'éditeur glisse sous le ruban, pas dessus. -->
+      <Grid x:Name="Body" Grid.Row="2" Margin="16,0,6,0" ClipToBounds="True">
         <DockPanel>
           <ContentControl x:Name="OutlinePane" DockPanel.Dock="Left" Width="{x:Static pages:SheetPageViewModel.OutlineWidth}" Margin="0,0,16,0" Focusable="False" IsTabStop="False"
                           Content="{Binding}" ContentTemplate="{StaticResource OutlinePanel}" kyf:Transitions.Shown="{Binding ShowsOutline}" kyf:Transitions.ShownFrom="Left" />

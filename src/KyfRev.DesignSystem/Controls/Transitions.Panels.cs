@@ -32,6 +32,85 @@ public static partial class Transitions
     }
 
     /// <summary>
+    /// Fait suivre un élément que la mise en page vient de déplacer de haut en bas (un bloc paru au-dessus de lui l'a poussé,
+    /// ou parti, l'a laissé remonter) : il part de là où il était, <paramref name="fromY"/> pixels plus loin, et rejoint sa
+    /// place. Comme <see cref="EnterOnceShown"/>, le trajet ne commence qu'une fois la nouvelle vue affichée ; d'ici là,
+    /// l'élément reste où il était.
+    /// </summary>
+    /// <param name="element">Ce qui a été déplacé.</param>
+    /// <param name="fromY">D'où il part, depuis sa nouvelle place : négatif s'il a été poussé vers le bas.</param>
+    /// <param name="durationKey">La durée, par sa clé du design system.</param>
+    /// <param name="kind">La famille de l'animation.</param>
+    /// <param name="done">Appelé une fois l'élément à sa place ; tout de suite s'il n'y a pas de trajet.</param>
+    /// <returns>Vrai si un trajet est prévu.</returns>
+    public static bool FollowOnceShown(FrameworkElement element, double fromY, string durationKey = DesignKeys.NormalDuration, MotionKinds kind = MotionKinds.Views, Action? done = null)
+    {
+        ArgumentNullException.ThrowIfNull(element);
+        if (Math.Abs(fromY) < 0.5 || !Moves(element, durationKey, out var duration, kind))
+        {
+            Rest(element);
+            done?.Invoke();
+            return false;
+        }
+        var move = new TranslateTransform(0, fromY);
+        element.RenderTransform = move;
+        element.Dispatcher.BeginInvoke(WhenShown, () =>
+        {
+            if (!ReferenceEquals(element.RenderTransform, move))
+            {
+                // Un autre trajet a pris le relais.
+                done?.Invoke();
+                return;
+            }
+            var glide = new DoubleAnimation(fromY, 0, duration) { EasingFunction = Ease, FillBehavior = FillBehavior.Stop };
+            glide.Completed += (_, _) =>
+            {
+                if (ReferenceEquals(element.RenderTransform, move))
+                {
+                    element.ClearValue(UIElement.RenderTransformProperty);
+                }
+                done?.Invoke();
+            };
+            move.Y = 0;
+            move.BeginAnimation(TranslateTransform.YProperty, glide);
+        });
+        return true;
+    }
+
+    /// <summary>
+    /// Décale un élément de <paramref name="toY"/> pixels, en glissant, et l'y laisse jusqu'à <see cref="Rest"/> : le temps
+    /// qu'un autre prenne sa place, exactement là.
+    /// </summary>
+    /// <returns>Vrai si l'élément glisse ; faux s'il ne bouge pas (animations coupées) : il reste alors à sa place.</returns>
+    public static bool ShiftTo(FrameworkElement element, double toY, string durationKey = DesignKeys.FastDuration, MotionKinds kind = MotionKinds.Views, Action? done = null)
+    {
+        ArgumentNullException.ThrowIfNull(element);
+        if (Math.Abs(toY) < 0.5 || !Moves(element, durationKey, out var duration, kind))
+        {
+            done?.Invoke();
+            return false;
+        }
+        var move = new TranslateTransform();
+        element.RenderTransform = move;
+        var shift = new DoubleAnimation(0, toY, duration) { EasingFunction = Ease, FillBehavior = FillBehavior.HoldEnd };
+        shift.Completed += (_, _) => done?.Invoke();
+        move.BeginAnimation(TranslateTransform.YProperty, shift);
+        return true;
+    }
+
+    /// <summary>Remet un élément à sa place : plus de trajet, plus de décalage.</summary>
+    public static void Rest(FrameworkElement element)
+    {
+        ArgumentNullException.ThrowIfNull(element);
+        if (element.RenderTransform is TranslateTransform { IsFrozen: false } move)
+        {
+            move.BeginAnimation(TranslateTransform.XProperty, null);
+            move.BeginAnimation(TranslateTransform.YProperty, null);
+            element.ClearValue(UIElement.RenderTransformProperty);
+        }
+    }
+
+    /// <summary>
     /// Un panneau de côté vient de changer de largeur dans la mise en page (de <paramref name="from"/> à
     /// <paramref name="to"/>, 0 : masqué) : à l'écran, son bord glisse de l'ancienne largeur à la nouvelle. Élargi, il se
     /// découvre peu à peu ; réduit, un rideau de sa couleur (<paramref name="curtain"/>, posé à son bord, par-dessus la

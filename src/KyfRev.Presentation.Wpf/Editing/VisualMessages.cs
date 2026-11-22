@@ -211,7 +211,8 @@ internal abstract record EditorEvent;
 internal sealed record ReadyEvent : EditorEvent;
 
 /// <summary>Le texte demandé est dans la page : elle peut être montrée.</summary>
-internal sealed record TextLoadedEvent : EditorEvent;
+/// <param name="Top">Le haut de sa première ligne, depuis le haut de la vue, en pixels de la page.</param>
+internal sealed record TextLoadedEvent(double Top = 0) : EditorEvent;
 
 /// <summary>L'utilisateur a modifié le texte ; le Markdown suit.</summary>
 internal sealed record EditedEvent : EditorEvent;

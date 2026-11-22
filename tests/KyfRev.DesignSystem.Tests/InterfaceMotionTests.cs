@@ -799,6 +799,62 @@ public sealed class InterfaceMotionTests
     }
 
     [STATestMethod]
+    public void What_layout_pushes_follows_from_where_it_was_and_can_be_shifted_for_a_moment()
+    {
+        var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
+        var body = new Border { Width = 200, Height = 100 };
+        var host = Host.Of(design, body);
+        using var source = new HwndSource(new HwndSourceParameters("kyfRev essai") { Width = 480, Height = 320 }) { RootVisual = host };
+        Host.Layout(host);
+        Host.Flush();
+
+        // Poussé de 120 px vers le bas par un bloc paru au-dessus : il reste où il était, puis rejoint sa place.
+        var arrived = 0;
+        Assert.IsTrue(Transitions.FollowOnceShown(body, -120, done: () => arrived++));
+        var held = (TranslateTransform)body.RenderTransform;
+        Assert.AreEqual(-120, held.Y, "il est encore là où il était");
+        Assert.AreEqual(0, arrived);
+        Wait(() => arrived == 1);
+        Assert.AreEqual(1, arrived, "arrivé, il le dit, une fois");
+        Assert.AreEqual(Transform.Identity, body.RenderTransform, "et ne garde rien du trajet");
+
+        // Un second trajet demandé avant que le premier ne parte prend sa suite : le premier s'efface, et le dit.
+        var first = 0;
+        var second = 0;
+        Transitions.FollowOnceShown(body, 60, done: () => first++);
+        Transitions.FollowOnceShown(body, 40, done: () => second++);
+        Wait(() => first == 1 && second == 1);
+        Assert.AreEqual(1, first);
+        Assert.AreEqual(1, second);
+        Assert.AreEqual(Transform.Identity, body.RenderTransform);
+
+        // Décalé un instant : il glisse jusque-là et y reste, jusqu'à ce qu'on le remette à sa place.
+        var shifted = 0;
+        Assert.IsTrue(Transitions.ShiftTo(body, -40, done: () => shifted++));
+        Wait(() => shifted == 1);
+        Assert.AreEqual(1, shifted);
+        Assert.AreEqual(-40, ((TranslateTransform)body.RenderTransform).Y, 0.5, "il y reste");
+        Transitions.Rest(body);
+        Assert.AreEqual(Transform.Identity, body.RenderTransform);
+        Transitions.Rest(body);
+
+        // Sans distance, ou les animations coupées : rien ne bouge, et la suite est prévenue tout de suite.
+        var told = 0;
+        Assert.IsFalse(Transitions.FollowOnceShown(body, 0, done: () => told++));
+        Assert.IsFalse(Transitions.ShiftTo(body, 0, done: () => told++));
+        design.MotionOff = MotionKinds.Views;
+        Assert.IsFalse(Transitions.FollowOnceShown(body, -120, done: () => told++));
+        Assert.IsFalse(Transitions.ShiftTo(body, -40, done: () => told++));
+        Assert.AreEqual(4, told);
+        Assert.AreEqual(Transform.Identity, body.RenderTransform);
+        Transitions.FollowOnceShown(body, -10);
+        Transitions.ShiftTo(body, -10);
+        Assert.ThrowsExactly<ArgumentNullException>(() => Transitions.FollowOnceShown(null!, 1));
+        Assert.ThrowsExactly<ArgumentNullException>(() => Transitions.ShiftTo(null!, 1));
+        Assert.ThrowsExactly<ArgumentNullException>(() => Transitions.Rest(null!));
+    }
+
+    [STATestMethod]
     public void A_block_can_come_from_any_edge()
     {
         var design = new DesignResources(ThemeKind.Light, reducedMotion: false);

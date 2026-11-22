@@ -47,6 +47,12 @@ public sealed record TableSize(int Rows, int Columns);
 /// <param name="Schemas">Le module Schémas réseau ; rien s'il n'y en a pas.</param>
 public sealed record EditorEnvironment(ISpelling Spelling, string WebDataFolder, bool StartsInMarkdown = false, Func<INetworkSchemas?>? Schemas = null)
 {
+    /// <summary>
+    /// La clé de ressource du dossier de données du moteur web : une vue qui prépare l'éditeur d'avance l'y trouve, avant
+    /// qu'une fiche ne soit ouverte à l'écriture.
+    /// </summary>
+    public const string WebDataFolderKey = "KyfRev.Editor.WebDataFolder";
+
     /// <summary>Ce qui note un incident du moteur web dans le journal de diagnostic : sa raison, jamais le texte de la fiche.</summary>
     public Action<string>? Report { get; init; }
 }

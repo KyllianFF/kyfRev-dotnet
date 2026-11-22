@@ -453,6 +453,25 @@ internal sealed partial class SheetDocumentViewer
     /// </summary>
     public bool HeaderAbovePages { get; set; }
 
+    /// <summary>
+    /// Le haut de la première ligne du texte, sous l'en-tête de la fiche, depuis le haut de la vue ; rien si la vue a défilé,
+    /// ou si le texte n'est pas encore mesuré.
+    /// </summary>
+    internal double? FirstTextTop()
+    {
+        if (_scroller is not { VerticalOffset: < 1 } scroller || Document?.Blocks.SkipWhile(block => ReferenceEquals(block.Tag, SheetHeaderMark)).FirstOrDefault() is not { } first)
+        {
+            return null;
+        }
+        var line = first.ContentStart.GetCharacterRect(LogicalDirection.Forward);
+        if (line.IsEmpty || double.IsInfinity(line.Top))
+        {
+            return null;
+        }
+        var scope = scroller.Content as UIElement ?? scroller;
+        return line.Top + (scope.IsDescendantOf(this) ? scope.TranslatePoint(default, this).Y : 0);
+    }
+
     /// <summary>Le dernier bloc de l'en-tête de la fiche : son titre ; rien si le texte n'en a pas.</summary>
     private Paragraph? HeaderEnd => Document?.Blocks.TakeWhile(block => ReferenceEquals(block.Tag, SheetHeaderMark)).LastOrDefault() as Paragraph;
 

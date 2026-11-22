@@ -44,7 +44,7 @@ export type VersEditeur =
 
 export type DepuisEditeur =
   | { kind: "ready" }
-  | { kind: "loaded" }
+  | { kind: "loaded"; top: number }
   | { kind: "edited" }
   | { kind: "text"; id: number | null; markdown: string }
   | { kind: "save" }
