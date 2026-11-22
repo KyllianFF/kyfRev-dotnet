@@ -46,8 +46,24 @@ public sealed class SilentInstaller : IUpdateInstaller
     /// <inheritdoc/>
     public InstallScope? Scope => _scope.Value;
 
+    /// <summary>
+    /// L'option que l'installateur donne à kyfRev qu'il ouvre lui-même à la fin (case « Exécuter kyfRev », <c>/RELANCER</c>) :
+    /// ses fichiers sont déjà en place, mais il tient encore son mutex.
+    /// </summary>
+    public const string AfterInstallation = "--apres-installation";
+
     /// <summary>Vrai pendant qu'une installation de kyfRev tourne sur cette session.</summary>
     public static bool IsInstalling() => IsInstalling(InstallingMutex);
+
+    /// <summary>
+    /// Vrai si kyfRev, lancé avec ces arguments, doit se refermer sans rien ouvrir : une installation tourne et ce n'est
+    /// pas elle qui l'ouvre, une fois ses fichiers en place.
+    /// </summary>
+    public static bool StepsAside(IReadOnlyList<string> args) => StepsAside(args, InstallingMutex);
+
+    /// <summary>Comme <see cref="StepsAside(IReadOnlyList{string})"/>, avec le mutex <paramref name="name"/>.</summary>
+    internal static bool StepsAside(IReadOnlyList<string> args, string name) =>
+        !args.Contains(AfterInstallation, StringComparer.Ordinal) && IsInstalling(name);
 
     /// <summary>Vrai si le mutex <paramref name="name"/> existe sur cette session.</summary>
     internal static bool IsInstalling(string name)

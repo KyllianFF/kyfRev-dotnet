@@ -88,6 +88,23 @@ public sealed class SilentInstallerTests
     }
 
     [TestMethod]
+    public void Only_the_kyfrev_the_installer_opens_itself_stays_while_it_runs()
+    {
+        var name = $"kyfRevInstallation-essai-{Guid.NewGuid():N}";
+        string[] opened = [SilentInstaller.AfterInstallation];
+        Assert.IsFalse(SilentInstaller.StepsAside([], name));
+        Assert.IsFalse(SilentInstaller.StepsAside(opened, name));
+
+        using (new Mutex(false, name))
+        {
+            Assert.IsTrue(SilentInstaller.StepsAside([], name));
+            Assert.IsTrue(SilentInstaller.StepsAside(["--galerie"], name));
+            Assert.IsFalse(SilentInstaller.StepsAside(opened, name));
+        }
+        Assert.AreEqual(SilentInstaller.IsInstalling(), SilentInstaller.StepsAside([]));
+    }
+
+    [TestMethod]
     public void The_default_reads_the_real_registry_without_failing()
     {
         Assert.IsTrue(new SilentInstaller().Scope is null or InstallScope.CurrentUser or InstallScope.AllUsers);
@@ -110,6 +127,10 @@ public sealed class SilentInstallerTests
         StringAssert.Contains(script, $"SetupMutex={SilentInstaller.InstallingMutex}\r\n", StringComparison.Ordinal);
         StringAssert.Contains(script, "Check: ReopenWanted", StringComparison.Ordinal);
         StringAssert.Contains(script, "HasSwitch('/RELANCER')", StringComparison.Ordinal);
+        // Les deux ouvertures de la fin (case « Exécuter kyfRev », /RELANCER) passent alors que l'installateur tient son mutex.
+        var opens = script.Split("\r\n").Where(line => line.StartsWith(@"Filename: ""{app}\kyfRev.exe""", StringComparison.Ordinal)).ToList();
+        Assert.HasCount(2, opens);
+        Assert.IsTrue(opens.All(line => line.Contains($"Parameters: \"{SilentInstaller.AfterInstallation}\"", StringComparison.Ordinal)), string.Join("\n", opens));
     }
 
     /// <summary>Un installateur sur deux clés d'essai, l'une pour la personne, l'autre pour le poste.</summary>

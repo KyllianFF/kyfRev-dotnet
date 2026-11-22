@@ -24,7 +24,8 @@
 ; - kyfRev ouvert est détecté avant l'installation comme avant la désinstallation (AppMutex) ;
 ; - kyfRev se met à jour lui-même : une fois fermé, il lance l'installateur vérifié avec /VERYSILENT /SUPPRESSMSGBOXES
 ;   /NORESTART, /CURRENTUSER ou /ALLUSERS selon l'installation en place, et /RELANCER pour se rouvrir à la fin. Pendant
-;   l'installation, l'installateur tient le mutex kyfRevInstallation : kyfRev lancé à ce moment se referme aussitôt ;
+;   l'installation, l'installateur tient le mutex kyfRevInstallation : kyfRev lancé à ce moment se referme aussitôt,
+;   sauf celui que l'installateur ouvre lui-même à la fin, avec --apres-installation ;
 ; - la licence de kyfRev, les avis de tiers, les avis des paquets NuGet et les licences des polices
 ;   sont installés dans {app}\licences, et retirés avec l'application ;
 ; - la désinstallation ne touche jamais aux coffres ni aux sauvegardes. Elle demande ce qu'il faut faire des réglages de
@@ -134,9 +135,11 @@ Name: "{autoprograms}\kyfRev"; Filename: "{app}\kyfRev.exe"; Check: ShortcutWant
 Name: "{autodesktop}\kyfRev"; Filename: "{app}\kyfRev.exe"; Check: ShortcutWanted(1)
 
 [Run]
-Filename: "{app}\kyfRev.exe"; Description: "{cm:LaunchProgram,kyfRev}"; Flags: nowait postinstall skipifsilent
+; L'installateur tient encore le mutex kyfRevInstallation : sans --apres-installation, kyfRev le verrait et se refermerait
+; aussitôt, comme pendant une mise à jour.
+Filename: "{app}\kyfRev.exe"; Parameters: "--apres-installation"; Description: "{cm:LaunchProgram,kyfRev}"; Flags: nowait postinstall skipifsilent
 ; Mise à jour lancée par kyfRev avec « Redémarrer maintenant » : il se rouvre à la fin, avec les droits de la personne.
-Filename: "{app}\kyfRev.exe"; Flags: nowait runasoriginaluser; Check: ReopenWanted
+Filename: "{app}\kyfRev.exe"; Parameters: "--apres-installation"; Flags: nowait runasoriginaluser; Check: ReopenWanted
 
 [Code]
 const
