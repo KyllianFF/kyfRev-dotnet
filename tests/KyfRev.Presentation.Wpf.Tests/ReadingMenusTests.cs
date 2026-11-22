@@ -44,6 +44,43 @@ public sealed class ReadingMenusTests
         Assert.IsNull(SheetPage.DrawingAt("du texte"));
     }
 
+    [STATestMethod]
+    public void The_opened_sheet_changes_its_own_mode_and_hands_the_rest_to_the_shared_actions()
+    {
+        using var ui = new UiThread();
+        using var vault = new ReadingVault("Le texte.\n", passage: false);
+        var target = new SheetTarget(vault.SheetId, "Mitose");
+
+        // Sans les actions communes (un essai, une page seule) : ni rangement ni partage, et rien ne lève.
+        var bare = new OpenedSheetMenu(vault.Page());
+        Assert.IsFalse(bare.CanManage);
+        Assert.IsFalse(bare.CanShare);
+        Assert.IsEmpty(bare.Extensions(target));
+        foreach (var action in new Action<SheetTarget>[] { bare.PostponeTomorrow, bare.Archive, bare.Restart, bare.ToggleReminders, bare.Rename, bare.Tags, bare.Move, bare.ToggleNote, bare.Trash })
+        {
+            action(target);
+        }
+
+        // Avec elles : la fiche change de mode elle-même, et « Renommer » ouvre la fenêtre commune.
+        var actions = new SheetActionsViewModel(vault.App.Sheets, vault.App.Folders, vault.App.Reviews, vault.App.Reminders, vault.App.Trash, new FakeOpener(), TimeProvider.System);
+        var page = vault.Page(actions: actions);
+        page.LoadCommand.Execute(null);
+        UiThread.Until(() => page.Reading is not null);
+        var menu = new OpenedSheetMenu(page);
+        Assert.IsTrue(menu.CanManage);
+        menu.Revise(target);
+        Assert.IsTrue(page.IsReviseOn);
+        menu.Read(target);
+        Assert.IsTrue(page.IsReadOn);
+        menu.Print(target);
+        menu.Share(target);
+        menu.SaveAsTemplate(target);
+        Assert.IsFalse(actions.IsActing, "imprimer, partager : rien ne s'ouvre sans leur service");
+        menu.Rename(target);
+        UiThread.Until(() => actions.IsActing);
+        Assert.AreEqual(SheetActionsText.RenameTitle, actions.ActionTitle);
+    }
+
     private static TableRow Row(Run first, Run second)
     {
         var row = new TableRow();
