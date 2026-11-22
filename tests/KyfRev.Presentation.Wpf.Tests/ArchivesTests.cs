@@ -365,6 +365,30 @@ public sealed class ArchivesTests
                 new[] { EditingText.Read, ReadingText.Revise, EditingText.Write, PrintText.PrintAction },
                 entries.OfType<MenuItem>().Select(item => (string)item.Header).ToArray(),
                 "le menu du bouton est celui du clic droit");
+
+            // Chaque entrée fait ce qu'elle dit : ouvrir, réviser, écrire, imprimer (qui ouvre la fiche pour l'imprimer).
+            foreach (var entry in entries.OfType<MenuItem>())
+            {
+                entry.RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+            }
+            TestShell.Flush();
+            CollectionAssert.AreEqual(
+                new object[] { shown.Entry.Id, ("réviser", shown.Entry.Id), ("écrire", shown.Entry.Id), shown.Entry.Id },
+                opener.Opened.ToArray(),
+                "Lire, Réviser, Écrire, Imprimer");
+
+            // « ⋯ » ouvre ce menu sous lui.
+            more.RaiseEvent(new RoutedEventArgs(ButtonBase.ClickEvent));
+            TestShell.Flush();
+            var opened = PresentationSource.CurrentSources.OfType<System.Windows.Interop.HwndSource>()
+                .Select(source => source.RootVisual).OfType<DependencyObject>()
+                .SelectMany(root => Descendants(root).Prepend(root)).OfType<ContextMenu>()
+                .Single(candidate => ReferenceEquals(candidate.PlacementTarget, more));
+            Assert.IsTrue(opened.IsOpen);
+            Assert.AreEqual(PlacementMode.Bottom, opened.Placement);
+            Assert.HasCount(entries.Count, opened.Items);
+            opened.IsOpen = false;
+            TestShell.Flush();
             ((FrameworkElement)window.Content).Capture("archives-actions-clair");
             test.Design.Theme = DesignSystem.Tokens.ThemeKind.Dark;
             TestShell.Flush();
