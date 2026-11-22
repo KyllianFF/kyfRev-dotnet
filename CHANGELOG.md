@@ -7,22 +7,19 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ## [Non publié]
 
-### Corrigé
-- Installation : la case « Exécuter kyfRev » de la dernière page ouvre bien kyfRev. Ouvert alors que l'installateur
-  n'avait pas tout à fait fini, il se croyait au milieu d'une mise à jour et se refermait aussitôt, sans rien montrer.
-  La réouverture après une mise à jour (« Redémarrer maintenant ») pouvait échouer de la même façon.
+### Ajouté
+- Capture rapide : une palette au-dessus de tout, comme celle de PowerToys. Ctrl+Alt+N l'ouvre où que l'on soit, même kyfRev
+  réduit dans la barre d'état, sans ouvrir sa fenêtre ; Ctrl+Maj+N dans kyfRev. On y tape une idée : Entrée la note dans la
+  Boîte de réception, Ctrl+Entrée en fait une fiche, ou une note ; elle cherche aussi dans le coffre, ouvre « Aujourd'hui »
+  (avec le nombre de révisions du jour) ou kyfRev. Coffre verrouillé ou absent : elle le dit, et propose d'ouvrir kyfRev.
+- Barre d'état : Paramètres › Démarrage et barre d'état. La croix peut réduire kyfRev près de l'horloge au lieu de le fermer
+  (une bulle le dit la première fois) ; kyfRev peut se lancer à l'ouverture de session, ouvert ou dans la barre d'état. Son
+  icône ouvre kyfRev d'un clic ; son menu : Ouvrir, Capture rapide, Réviser maintenant, Paramètres, Quitter kyfRev.
+- Nouvelle fiche : un champ « Étiquettes » ; celles du coffre sont proposées pendant qu'on écrit, comme dans « Étiquettes… ».
+
 ### Modifié
 - Écrire : l'enregistrement est une icône (coche, flèches pendant l'enregistrement, avertissement en cas de souci),
   à gauche de « Plan » et « Passages ». Son infobulle dit l'état. Rien ne change plus de place quand on passe d'un mode à l'autre.
-
-### Corrigé
-- Plein écran (F11) : le menu reste, pour changer de vue. La bande du haut de l'écran ne prend plus les clics des boutons
-  de la page qui s'y trouvent.
-- Carnet : en passant d'une fiche à une autre d'un autre format de page (une A4, puis une fiche sans fin), l'aperçu gardait la
-  largeur de la précédente : la fiche, « Lire / Écrire » et « Historique » sortaient du cadre.
-- Écrire : la feuille pouvait rester blanche jusqu'à ce que la souris bouge. Le moteur du texte décidait seul que sa fenêtre
-  était cachée et cessait de dessiner ; kyfRev le lui interdit désormais.
-### Modifié
 - Clic droit sur une fiche : le même menu partout (Carnet, Aujourd'hui, rappels, Archives, aperçus, fiche ouverte,
   Ctrl+K, Charge). En tête Lire, Réviser, Écrire, le mode en cours marqué ; puis Reporter à demain et Archiver (ou Remettre
   en révision et les rappels), Renommer, Étiquettes, Déplacer, Imprimer, Partager, modèle, note, Supprimer et les
@@ -41,18 +38,21 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   côté. Le titre en grand ; « Dans Biologie › Cellule » pour le dossier ; « Fiche de révision / Note » côte à côte ; les
   modèles en vignettes qui montrent leur allure. Sous 600 px de large, le volet vient du bas. Une croix, Échap ou un clic
   à côté le referment.
-- Capture rapide : une palette au-dessus de tout, comme celle de PowerToys. Ctrl+Alt+N l'ouvre où que l'on soit, même kyfRev
-  réduit dans la barre d'état, sans ouvrir sa fenêtre ; Ctrl+Maj+N dans kyfRev. On y tape une idée : Entrée la note dans la
-  Boîte de réception, Ctrl+Entrée en fait une fiche, ou une note ; elle cherche aussi dans le coffre, ouvre « Aujourd'hui »
-  (avec le nombre de révisions du jour) ou kyfRev. Coffre verrouillé ou absent : elle le dit, et propose d'ouvrir kyfRev.
-- Barre d'état : Paramètres › Démarrage et barre d'état. La croix peut réduire kyfRev près de l'horloge au lieu de le fermer
-  (une bulle le dit la première fois) ; kyfRev peut se lancer à l'ouverture de session, ouvert ou dans la barre d'état. Son
-  icône ouvre kyfRev d'un clic ; son menu : Ouvrir, Capture rapide, Réviser maintenant, Paramètres, Quitter kyfRev.
-- Nouvelle fiche : un champ « Étiquettes » ; celles du coffre sont proposées pendant qu'on écrit, comme dans « Étiquettes… ».
 - Confirmations (Déplacé, Archivé, Enregistré…) : une petite pastille au bas de la page, par-dessus, au lieu d'une bande
   qui poussait toute la page vers le bas. Elle reste 3 secondes (4 si le texte est long) ; un trait au bas de la pastille
   raccourcit avec le temps qui reste et s'arrête sous la souris ; Échap la ferme. Un avertissement sur une fiche ouverte
   (adresse introuvable, fiche liée absente) prend la même forme, et reste jusqu'à son ✕. Les erreurs restent dans la page.
+
+### Corrigé
+- Installation : la case « Exécuter kyfRev » de la dernière page ouvre bien kyfRev. Ouvert alors que l'installateur
+  n'avait pas tout à fait fini, il se croyait au milieu d'une mise à jour et se refermait aussitôt, sans rien montrer.
+  La réouverture après une mise à jour (« Redémarrer maintenant ») pouvait échouer de la même façon.
+- Plein écran (F11) : le menu reste, pour changer de vue. La bande du haut de l'écran ne prend plus les clics des boutons
+  de la page qui s'y trouvent.
+- Carnet : en passant d'une fiche à une autre d'un autre format de page (une A4, puis une fiche sans fin), l'aperçu gardait la
+  largeur de la précédente : la fiche, « Lire / Écrire » et « Historique » sortaient du cadre.
+- Écrire : la feuille pouvait rester blanche jusqu'à ce que la souris bouge. Le moteur du texte décidait seul que sa fenêtre
+  était cachée et cessait de dessiner ; kyfRev le lui interdit désormais.
 
 ## [1.1.0-beta.3] - 2026-11-18
 
