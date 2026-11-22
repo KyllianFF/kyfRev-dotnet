@@ -250,12 +250,24 @@ public static class ReadingText
     }
 
     /// <summary>Où l'on en est dans le texte à trous.</summary>
-    public static string HolesSummary(int revealed, int total) =>
-        string.Create(System.Globalization.CultureInfo.InvariantCulture, $"Texte à trous : {revealed} sur {total} affichés.");
+    public static string HolesSummary(int revealed, int total) => Whole(HolesSummaryAround(total), revealed);
+
+    /// <summary>
+    /// Ce qui entoure le compte des trous affichés dans <see cref="HolesSummary"/> : seul ce compte change quand on en
+    /// affiche un, et lui seul s'anime.
+    /// </summary>
+    public static (string Before, string After) HolesSummaryAround(int total) =>
+        ("Texte à trous : ", string.Create(System.Globalization.CultureInfo.InvariantCulture, $" sur {total} affichés."));
 
     /// <summary>Où l'on en est dans le rappel des parties d'une fiche.</summary>
-    public static string SectionsSummary(int revealed, int total) =>
-        string.Create(System.Globalization.CultureInfo.InvariantCulture, $"Rappelez-vous chaque partie avant de l'afficher (Entrée) : {revealed} sur {total} affichées.");
+    public static string SectionsSummary(int revealed, int total) => Whole(SectionsSummaryAround(total), revealed);
+
+    /// <summary>Ce qui entoure le compte des parties affichées dans <see cref="SectionsSummary"/>.</summary>
+    public static (string Before, string After) SectionsSummaryAround(int total) =>
+        ("Rappelez-vous chaque partie avant de l'afficher (Entrée) : ", string.Create(System.Globalization.CultureInfo.InvariantCulture, $" sur {total} affichées."));
+
+    private static string Whole((string Before, string After) around, int count) =>
+        string.Create(System.Globalization.CultureInfo.InvariantCulture, $"{around.Before}{count}{around.After}");
 
     /// <summary>La date de création, dans la ligne sous le titre.</summary>
     public static string CreatedOn(string day) => $"créée le {day}";

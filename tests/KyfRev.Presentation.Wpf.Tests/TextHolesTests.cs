@@ -4,6 +4,7 @@ using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using KyfRev.Application;
+using KyfRev.DesignSystem.Tokens;
 using KyfRev.Presentation.Wpf.Pages;
 using KyfRev.Presentation.Wpf.Reading;
 
@@ -57,6 +58,11 @@ public sealed class TextHolesTests
         state.Set(TextHoles.Compute([new("p", 0, 5, false, false)], [(10, 12), (20, 22)]));
         Assert.IsTrue(state.HasHoles);
         Assert.AreEqual("Texte à trous : 0 sur 3 affichés.", state.Summary);
+        // En trois morceaux, pour l'écran : seul le compte change quand on affiche un trou.
+        Assert.AreEqual("Texte à trous : ", state.SummaryBefore);
+        Assert.AreEqual("0", state.SummaryCount);
+        Assert.AreEqual(" sur 3 affichés.", state.SummaryAfter);
+        Assert.AreEqual(state.Summary, state.SummaryBefore + state.SummaryCount + state.SummaryAfter);
         Assert.IsTrue(state.CanRevealAll);
         Assert.IsFalse(state.CanHideAll);
         Assert.IsTrue(state.Masks("p"));
@@ -418,6 +424,109 @@ public sealed class TextHolesTests
         }
         finally
         {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
+    [DataRow(ThemeKind.Light)]
+    [DataRow(ThemeKind.Dark)]
+    public void Uncovering_a_hole_changes_only_the_count_of_the_summary(ThemeKind theme)
+    {
+        // De la fenêtre étroite à la très large : la phrase tient, et seul son compte bouge.
+        foreach (var width in new[] { 470d, 760d, 1400d, 2200d })
+        {
+            using var ui = new UiThread();
+            using var vault = new ReadingVault("# Mitose\n\nUn **autre** paragraphe avec un **mot**, et **encore** un.\n", passage: false);
+            var page = vault.Page(activeRecall: () => true);
+            var test = new TestShell();
+            test.Design.Theme = theme;
+            var view = new SheetPage { DataContext = page, Width = width, Height = 700 };
+            var window = new Window { ShowActivated = false, Left = -10000, Top = -10000, Width = 800, Height = 600, WindowStartupLocation = WindowStartupLocation.Manual, Content = new Canvas { Children = { view } } };
+            window.Resources.MergedDictionaries.Add(test.Design.Dictionary);
+            window.Show();
+            try
+            {
+                page.LoadCommand.Execute(null);
+                UiThread.Until(() => page.Reading is not null && !page.IsLoading);
+                page.IsReviseOn = true;
+                TestShell.Flush();
+                Assert.IsTrue(page.Holes.HasHoles);
+                var summary = Named<WrapPanel>(window, "HolesSummary");
+                var parts = summary.Children.OfType<TextBlock>().ToList();
+                Assert.HasCount(3, parts);
+                var count = Named<TextBlock>(window, "HolesCount");
+                Assert.AreSame(parts[1], count);
+                Assert.AreEqual("Texte à trous : ", parts[0].Text);
+                Assert.AreEqual("0", count.Text);
+                Assert.AreEqual(" sur 3 affichés.", parts[2].Text);
+                Assert.IsTrue(parts.All(part => part.IsVisible && part.ActualWidth > 0), $"{width:0} px : les trois morceaux se voient");
+                // Sur une ligne, les trois morceaux se suivent sur la même ligne de base.
+                if (parts.Select(part => part.TranslatePoint(default, summary).Y).Distinct().Count() == 1)
+                {
+                    Assert.AreEqual(parts[0].TranslatePoint(default, summary).X + parts[0].ActualWidth, count.TranslatePoint(default, summary).X, 0.5, "le compte suit le début de la phrase");
+                }
+                view.Capture($"trous-resume-{theme}-{width:0}");
+
+                // On affiche un trou : seul le compte change, et lui seul s'anime. Le reste de la phrase ne bouge pas.
+                KyfRev.DesignSystem.Controls.Transitions.Skip = false;
+                var (before, after) = (parts[0], parts[2]);
+                var texts = (before.Text, after.Text);
+                Assert.IsTrue(view.SheetText.RevealNextHole());
+                Assert.AreEqual("1", count.Text);
+                Assert.AreEqual(texts, (before.Text, after.Text));
+                Assert.IsTrue(count.HasAnimatedProperties, "le compte roule");
+                Assert.IsFalse(before.HasAnimatedProperties, "le début de la phrase ne bouge pas");
+                Assert.IsFalse(after.HasAnimatedProperties, "ni sa fin");
+                Assert.AreEqual(Transform.Identity, before.RenderTransform);
+                Assert.AreEqual(Transform.Identity, after.RenderTransform);
+            }
+            finally
+            {
+                KyfRev.DesignSystem.Controls.Transitions.Skip = true;
+                window.Close();
+            }
+        }
+    }
+
+    [STATestMethod]
+    public void A_page_that_opens_never_shows_a_notice_that_has_nothing_to_say()
+    {
+        using var ui = new UiThread();
+        using var vault = new ReadingVault("# Mitose\n\nUn paragraphe.\n", passage: false);
+        var page = vault.Page();
+        var test = new TestShell();
+        var view = new SheetPage { DataContext = page };
+        var window = new Window { ShowActivated = false, Left = -10000, Top = -10000, Width = 1000, Height = 700, WindowStartupLocation = WindowStartupLocation.Manual, Content = view };
+        window.Resources.MergedDictionaries.Add(test.Design.Dictionary);
+        // Les essais coupent les transitions ; celui-ci les rend : c'est avec elles que les avis vides paraissaient un instant,
+        // le temps de s'estomper, à l'ouverture de chaque page.
+        KyfRev.DesignSystem.Controls.Transitions.Skip = false;
+        try
+        {
+            window.Show();
+            view.UpdateLayout();
+            void NothingShows(string when)
+            {
+                var notices = Descendants(window).OfType<KyfRev.DesignSystem.Controls.Notification>().ToList();
+                Assert.IsGreaterThanOrEqualTo(3, notices.Count, "l'erreur, le problème, la réussite");
+                foreach (var notice in notices.Where(notice => string.IsNullOrEmpty(notice.Title + notice.Message) || !notice.IsOpen))
+                {
+                    Assert.IsFalse(notice.IsVisible, $"{when} : « {notice.Name} » n'a rien à dire, il ne se montre pas");
+                    Assert.IsFalse(notice.IsLeaving, $"{when} : « {notice.Name} » ne s'estompe pas sous les yeux");
+                }
+            }
+            NothingShows("à l'ouverture");
+            page.LoadCommand.Execute(null);
+            NothingShows("pendant la lecture");
+            UiThread.Until(() => page.Reading is not null && !page.IsLoading);
+            NothingShows("la fiche lue");
+            TestShell.Flush();
+            NothingShows("au repos");
+        }
+        finally
+        {
+            KyfRev.DesignSystem.Controls.Transitions.Skip = true;
             window.Close();
         }
     }

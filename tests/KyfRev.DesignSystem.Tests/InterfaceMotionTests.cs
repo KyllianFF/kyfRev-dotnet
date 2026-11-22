@@ -906,11 +906,28 @@ public sealed class InterfaceMotionTests
         Assert.AreEqual(Visibility.Visible, notice.Visibility);
         Wait(() => !notice.IsLeaving);
         Assert.AreEqual(Visibility.Collapsed, notice.Visibility);
+        // Rouverte et refermée avant d'avoir été vue (une page qui s'ouvre pose ses avis ouverts, puis ses liaisons les
+        // ferment) : elle est retirée d'un coup, sans s'estomper sous les yeux.
         notice.IsOpen = true;
         Host.Layout(host);
         Assert.AreEqual(Visibility.Visible, notice.Visibility);
+        notice.IsOpen = false;
+        Assert.IsFalse(notice.IsLeaving, "jamais vue, elle n'a pas à s'effacer");
+        Assert.AreEqual(Visibility.Collapsed, notice.Visibility);
+        var early = new Notification { Message = "Enregistré.", Severity = NotificationSeverity.Success };
+        ((Panel)notice.Parent).Children.Add(early);
+        Host.Layout(host);
+        early.Expire();
+        Assert.IsFalse(early.IsLeaving);
+        Assert.AreEqual(Visibility.Collapsed, early.Visibility);
+        ((Panel)notice.Parent).Children.Remove(early);
+
+        notice.IsOpen = true;
+        Host.Layout(host);
+        Host.Flush();
+        Assert.AreEqual(Visibility.Visible, notice.Visibility);
         notice.Expire();
-        Assert.IsTrue(notice.IsLeaving);
+        Assert.IsTrue(notice.IsLeaving, "vue, elle s'efface");
         Wait(() => !notice.IsLeaving);
         Assert.AreEqual(Visibility.Collapsed, notice.Visibility);
         notice.Expire();
@@ -936,14 +953,28 @@ public sealed class InterfaceMotionTests
         Host.Flush();
         Assert.AreEqual("Déplacé.", leftWith, "elle a gardé son texte en s'effaçant");
         Assert.AreEqual(string.Empty, notice.ShownMessage, "partie, elle suit de nouveau son message");
-        // Vidé sans être fermé : le texte suit.
+        // Vidée sans être fermée : elle n'a plus rien à dire, et s'efface de même avec ce qu'elle disait. Ouverte ou non,
+        // une notification sans titre ni message ne se montre pas.
         notice.Message = "Copié.";
         notice.IsOpen = true;
         Host.Layout(host);
         Host.Flush();
+        Assert.AreEqual(Visibility.Visible, notice.Visibility);
         notice.Message = string.Empty;
         Host.Flush();
+        Wait(() => !notice.IsLeaving);
+        Assert.AreEqual("Copié.", leftWith, "elle a gardé son texte en s'effaçant");
         Assert.AreEqual(string.Empty, notice.ShownMessage);
+        Assert.IsTrue(notice.IsOpen);
+        Assert.AreEqual(Visibility.Collapsed, notice.Visibility, "ouverte, mais sans rien à dire : elle ne se montre pas");
+        var silent = new Notification { Severity = NotificationSeverity.Warning };
+        ((Panel)notice.Parent).Children.Add(silent);
+        Host.Layout(host);
+        Assert.AreEqual(Visibility.Collapsed, silent.Visibility, "un avis vide ne paraît pas, même un instant");
+        silent.Title = "Attention";
+        Host.Layout(host);
+        Assert.AreEqual(Visibility.Visible, silent.Visibility, "un titre suffit");
+        ((Panel)notice.Parent).Children.Remove(silent);
 
         // Un nouveau message pendant qu'elle s'efface : elle revient entière, et son temps repart.
         notice.Message = "Collé.";

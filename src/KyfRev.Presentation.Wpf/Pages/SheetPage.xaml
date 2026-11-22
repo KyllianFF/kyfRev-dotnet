@@ -436,7 +436,13 @@
             <Button x:Name="RevealAllButton" Style="{DynamicResource Kyf.Button.Subtle}" Content="{x:Static pages:ReadingText.RevealAllHoles}" Command="{Binding RevealAllCommand}" IsEnabled="{Binding CanRevealAll}" />
             <Button x:Name="HideAllButton" Style="{DynamicResource Kyf.Button.Subtle}" Content="{x:Static pages:ReadingText.HideAllHoles}" Command="{Binding HideAllCommand}" IsEnabled="{Binding CanHideAll}" Margin="4,0,0,0" />
           </StackPanel>
-          <TextBlock x:Name="HolesSummary" kyf:Transitions.RollingText="{Binding Summary}" Style="{DynamicResource Kyf.Text.Secondary}" VerticalAlignment="Center" AutomationProperties.LiveSetting="Polite" />
+          <!-- En trois morceaux : quand on affiche un trou, seul le compte change, et lui seul roule. Le reste de la phrase ne
+               bouge pas. Ils passent à la ligne entre eux si la place manque. -->
+          <WrapPanel x:Name="HolesSummary" VerticalAlignment="Center">
+            <TextBlock Text="{Binding SummaryBefore}" Style="{DynamicResource Kyf.Text.Secondary}" />
+            <TextBlock x:Name="HolesCount" kyf:Transitions.RollingText="{Binding SummaryCount}" Style="{DynamicResource Kyf.Text.Secondary}" />
+            <TextBlock Text="{Binding SummaryAfter}" Style="{DynamicResource Kyf.Text.Secondary}" />
+          </WrapPanel>
         </DockPanel>
 
         <!-- Un passage attend sa nouvelle place : on la sélectionne dans le texte, le reste de la page reste lisible. -->

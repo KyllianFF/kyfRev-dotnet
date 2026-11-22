@@ -88,7 +88,9 @@ public class Notification : Control
     /// </summary>
     private void Leave()
     {
-        if (!IsVisible || IsLeaving)
+        // Jamais vue : elle n'a pas à s'effacer sous les yeux. Une page qui s'ouvre pose ses avis ouverts, puis ses liaisons
+        // les ferment ; sans cette garde, ils paraissaient vides un instant avant de s'estomper.
+        if (!_wasSeen || !IsVisible || IsLeaving)
         {
             return;
         }
@@ -116,10 +118,20 @@ public class Notification : Control
 
     private void SettleMessage()
     {
-        if (!IsLeaving)
+        if (IsLeaving)
         {
-            SetValue(ShownMessagePropertyKey, Message);
+            return;
         }
+        if (string.IsNullOrEmpty(Title + Message))
+        {
+            // Plus rien à dire, sans avoir été fermée : elle s'efface de même, avec ce qu'elle disait.
+            Leave();
+            if (IsLeaving)
+            {
+                return;
+            }
+        }
+        SetValue(ShownMessagePropertyKey, Message);
     }
 
     private static readonly DependencyPropertyKey IsExpiredPropertyKey =
@@ -261,8 +273,18 @@ public class Notification : Control
 
     private void OnClose(object sender, RoutedEventArgs e) => Close();
 
+    /// <summary>
+    /// La notification a été à l'écran assez longtemps pour être vue (l'application a repris la main depuis qu'elle a paru) :
+    /// fermée, elle s'efface en fondu. Sinon elle est retirée d'un coup, sans avoir été montrée.
+    /// </summary>
+    private bool _wasSeen;
+
     private void OnAppearing(bool isVisible)
     {
+        if (!isVisible)
+        {
+            _wasSeen = false;
+        }
         if (isVisible)
         {
             // Elle monte un peu, en fondu (rangée 18C) ; d'un coup quand les animations sont réduites. C'est son cadre qui
@@ -286,10 +308,11 @@ public class Notification : Control
                 return;
             }
             // Elle s'effaçait : elle revient entière, et s'annonce de nouveau.
+            // Dans cet ordre : à aucun moment elle n'est ni en train de partir ni ouverte, sans quoi elle disparaîtrait un instant.
             Transitions.StopExit(this);
-            SetValue(IsLeavingPropertyKey, false);
             SetValue(ShownMessagePropertyKey, Message);
             SetValue(IsExpiredPropertyKey, false);
+            SetValue(IsLeavingPropertyKey, false);
             OnAppearing(IsVisible);
             return;
         }
@@ -353,6 +376,7 @@ public class Notification : Control
         {
             return;
         }
+        _wasSeen = true;
         if (ScrollsIntoView)
         {
             BringIntoView();
