@@ -95,6 +95,11 @@ main. Paramètres › Coffre et chiffrement permet d'en ouvrir ou d'en créer un
 - **Nouvelle fiche** : dans la vue Carnet, un volet s'ouvre à droite (par le bas en fenêtre étroite), le Carnet restant
   visible. Le titre en haut ; « Dans … » pour choisir le dossier ; fiche de révision ou note ; ses étiquettes ; puis un modèle, dont la
   vignette montre l'allure (son contenu se lit au survol). Entrée crée la fiche, Échap ou un clic à côté referme le volet.
+- **Capture rapide** : Ctrl+Alt+N (à activer dans Paramètres › Raccourcis), où que l'on soit, ou Ctrl+Maj+N dans kyfRev :
+  une palette s'ouvre au-dessus de tout. Entrée note l'idée dans la Boîte de réception, Ctrl+Entrée en fait une fiche ;
+  les flèches choisissent une autre action (note, recherche, réviser, ouvrir kyfRev). Échap la ferme.
+- **Barre d'état** : Paramètres › Démarrage et barre d'état. Fermer peut réduire kyfRev près de l'horloge, et kyfRev peut
+  se lancer avec Windows. Pour le quitter vraiment : clic droit sur son icône, « Quitter kyfRev ».
 - **Confirmations** : ce qui a abouti se dit dans une pastille au bas de la page, trois secondes ; la souris dessus la
   retient, Échap la ferme.
 - **Une simple note** : « Nouvelle note », dans la vue Carnet. Elle s'écrit et se range comme une fiche, mais

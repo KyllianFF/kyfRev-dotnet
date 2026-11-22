@@ -25,6 +25,10 @@ public sealed class MachinePreferencesFileTests
         HighContrast = true,
         LargerTargets = true,
         CheckUpdatesAtStartup = true,
+        CloseToTray = true,
+        StartWithSession = true,
+        StartInTray = false,
+        TrayTipShown = true,
         Voice = "Microsoft Hortense Desktop",
         Rate = 1.5,
     };
@@ -127,6 +131,10 @@ public sealed class MachinePreferencesFileTests
         Assert.IsTrue(new MachinePreferences().MarkDefinedWords, "les mots définis se marquent tant qu'on ne l'a pas coupé");
         StringAssert.Contains(File.ReadAllText(Path.Combine(folder.Path, "v1", "preferences.json")), "\"majAuDemarrage\": true", StringComparison.Ordinal);
         Assert.IsFalse(new MachinePreferences().CheckUpdatesAtStartup, "rien ne part sur le réseau au démarrage tant qu'on ne l'a pas choisi");
+        StringAssert.Contains(File.ReadAllText(Path.Combine(folder.Path, "v1", "preferences.json")), "\"fermerDansBarre\": true", StringComparison.Ordinal);
+        Assert.IsFalse(new MachinePreferences().CloseToTray, "fermer ferme, tant qu'on ne l'a pas choisi");
+        Assert.IsFalse(new MachinePreferences().StartWithSession, "rien ne se lance avec Windows tant qu'on ne l'a pas choisi");
+        Assert.IsTrue(new MachinePreferences().StartInTray, "lancé par Windows, il reste discret");
     }
 
     [TestMethod]

@@ -22,6 +22,7 @@ internal sealed partial class App : System.Windows.Application
     private ServiceProvider? _services;
     private UpdateFlow? _updates;
     private bool _sessionEnding;
+    private TrayIcon? _tray;
 
     /// <summary>L'horloge de l'application ; les scénarios d'acceptation y mettent une date simulée.</summary>
     internal TimeProvider Time { get; init; } = TimeProvider.System;
@@ -68,14 +69,29 @@ internal sealed partial class App : System.Windows.Application
         }
         var window = _services.GetRequiredService<ShellWindow>();
         MainWindow = window;
+        var machine = _services.GetRequiredService<MachineSettings>();
+        // Lancé par Windows avec la session, réglé pour rester discret : kyfRev reste dans la barre d'état.
+        var inTray = !gallery && e.Args.Contains(SessionStartup.InTrayArgument, StringComparer.Ordinal);
         // Posée avant que la fenêtre ne paraisse, elle en est la première image : longue la toute première fois, sur
         // l'accueil, plus courte ensuite. La galerie des composants, elle, s'ouvre telle quelle.
-        if (PlaysOpening && !gallery)
+        if (PlaysOpening && !gallery && !inTray)
         {
             window.PlayOpening();
         }
-        window.Show();
-        FollowCaptureKey(window, shell, _services.GetRequiredService<MachineSettings>());
+        var palette = PaletteFor(window, shell);
+        _tray = TrayFor(window, shell, palette, machine);
+        if (inTray)
+        {
+            // Sa fenêtre existe, cachée : le raccourci global a besoin d'elle.
+            new System.Windows.Interop.WindowInteropHelper(window).EnsureHandle();
+            _tray.Visible = true;
+        }
+        else
+        {
+            window.Show();
+        }
+        FollowCaptureKey(window, palette, machine);
+        FollowSessionStartup(machine);
         // Le coffre chiffré se verrouille de lui-même après un temps d'inactivité, ou quand Windows se verrouille.
         _services.GetRequiredService<AutoLock>().Start();
         // La mise à jour dit ce qu'est devenue la dernière, puis en cherche une si on l'a choisi ; « Redémarrer
@@ -89,7 +105,7 @@ internal sealed partial class App : System.Windows.Application
         window.Closed += (_, _) => closed = true;
         _updates.CloseApplication = () =>
         {
-            window.Close();
+            window.Quit();
             return closed;
         };
         _ = _updates.StartAsync(_services.GetRequiredService<MachineSettings>().Current.CheckUpdatesAtStartup);
@@ -99,6 +115,8 @@ internal sealed partial class App : System.Windows.Application
     protected override void OnSessionEnding(SessionEndingCancelEventArgs e)
     {
         _sessionEnding = true;
+        // La session se ferme : la croix ne cache plus kyfRev, elle le ferme.
+        (MainWindow as ShellWindow)?.LetClose();
         base.OnSessionEnding(e);
     }
 
@@ -120,17 +138,10 @@ internal sealed partial class App : System.Windows.Application
     /// chaque changement. Tapé, il ramène la fenêtre devant et ouvre la capture ; sans coffre ouvert, seule la fenêtre
     /// revient.
     /// </summary>
-    private static void FollowCaptureKey(Window window, ShellViewModel shell, MachineSettings machine)
+    private static void FollowCaptureKey(Window window, CapturePaletteWindow palette, MachineSettings machine)
     {
-        var captureKey = new GlobalHotKey(window, () =>
-        {
-            if (window.WindowState == WindowState.Minimized)
-            {
-                window.WindowState = WindowState.Normal;
-            }
-            window.Activate();
-            shell.OpenCapture();
-        });
+        // La palette paraît seule, au-dessus de tout : la fenêtre de kyfRev reste où elle est, même cachée (rangée 25B).
+        var captureKey = new GlobalHotKey(window, () => palette.ShowNear(window));
         void Apply() => captureKey.Set(machine.Current.GlobalCapture);
         Apply();
         machine.Changed += (_, _) => Apply();
@@ -138,9 +149,99 @@ internal sealed partial class App : System.Windows.Application
         window.Closed += (_, _) => captureKey.Release();
     }
 
+    /// <summary>
+    /// La palette de capture (rangée 25B) : Ctrl+Maj+N dans kyfRev et Ctrl+Alt+N partout l'ouvrent. Elle note dans la Boîte
+    /// de réception, crée une fiche ou une note à la racine, ou ramène kyfRev pour chercher, réviser, ouvrir.
+    /// </summary>
+    private CapturePaletteWindow PaletteFor(ShellWindow window, ShellViewModel shell)
+    {
+        var services = _services!;
+        var sheets = services.GetRequiredService<SheetUseCases>();
+        var reminders = services.GetRequiredService<ReminderUseCases>();
+        var model = new CapturePaletteViewModel(
+            shell,
+            (title, note) => note ? sheets.CreateNote(string.Empty, title, null) : sheets.Create(string.Empty, title, null),
+            () => reminders.Dashboard() is { Succeeded: true } dashboard ? dashboard.Value.Overdue.Length + dashboard.Value.Today.Length : null)
+        {
+            ShowApplication = () => Bring(window),
+        };
+        var palette = new CapturePaletteWindow(model);
+        shell.ShowCapturePalette = () => palette.ShowNear(window);
+        window.Closed += (_, _) => palette.Close();
+        return palette;
+    }
+
+    /// <summary>
+    /// L'icône de la barre d'état (rangée 25D) : montrée quand la croix cache kyfRev, quand il se lance avec la session, et
+    /// tant que sa fenêtre est cachée. La première fois que la croix le cache, une bulle le dit.
+    /// </summary>
+    private static TrayIcon TrayFor(ShellWindow window, ShellViewModel shell, CapturePaletteWindow palette, MachineSettings machine)
+    {
+        var actions = new TrayActions(
+            Open: () => Bring(window),
+            Capture: () => palette.ShowNear(window),
+            Revise: () =>
+            {
+                Bring(window);
+                if (shell.MainNavigation.FirstOrDefault(item => item.Id == CorePages.Today) is { } today)
+                {
+                    shell.Navigate(today);
+                }
+            },
+            Settings: () =>
+            {
+                Bring(window);
+                if (shell.MainNavigation.Concat(shell.SecondaryNavigation).FirstOrDefault(item => item.Id == CorePages.Settings) is { } settings)
+                {
+                    shell.Navigate(settings);
+                }
+            },
+            Quit: window.Quit);
+        var tray = new TrayIcon(() => TrayMenu.Items(actions, machine.Current.GlobalCapture ? GlobalHotKey.Keys : null), () => Bring(window));
+        void Show() => tray.Visible = machine.Current.CloseToTray || machine.Current.StartWithSession || !window.IsVisible;
+        Show();
+        machine.Changed += (_, _) => Show();
+        window.IsVisibleChanged += (_, _) => Show();
+        window.ClosesToTray = () => machine.Current.CloseToTray;
+        window.HiddenToTray += (_, _) =>
+        {
+            Show();
+            if (!machine.Current.TrayTipShown)
+            {
+                tray.Tell(TrayText.TipTitle, TrayText.Tip);
+                machine.Update(preferences => preferences with { TrayTipShown = true });
+            }
+        };
+        return tray;
+    }
+
+    /// <summary>Ramène la fenêtre de kyfRev, au premier plan.</summary>
+    private static void Bring(Window window)
+    {
+        if (!window.IsVisible)
+        {
+            window.Show();
+        }
+        if (window.WindowState == WindowState.Minimized)
+        {
+            window.WindowState = WindowState.Normal;
+        }
+        window.Activate();
+    }
+
+    /// <summary>Le lancement avec la session suit le réglage, maintenant et à chaque changement.</summary>
+    private static void FollowSessionStartup(MachineSettings machine)
+    {
+        var startup = new SessionStartup();
+        void Apply() => startup.Apply(machine.Current.StartWithSession, machine.Current.StartInTray);
+        Apply();
+        machine.Changed += (_, _) => Apply();
+    }
+
     /// <inheritdoc/>
     protected override void OnExit(ExitEventArgs e)
     {
+        _tray?.Dispose();
         var update = _sessionEnding ? null : _updates?.ExitLaunch;
         // Les services rendus, kyfRev ne tient plus le verrou qui arrête l'installateur.
         _services?.Dispose();

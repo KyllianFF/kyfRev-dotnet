@@ -24,6 +24,15 @@ public sealed partial class ShellViewModel
         }
     }
 
+    /// <summary>Ouvre la palette de capture, à la place de la fenêtre ; rien : la fenêtre (un essai, une page seule).</summary>
+    public Action? ShowCapturePalette { get; set; }
+
+    /// <summary>Le coffre ouvert est chiffré et attend son mot de passe : la page de déverrouillage est montrée.</summary>
+    public bool IsLockedOut => Current.Id == UnlockPage;
+
+    /// <summary>La page de déverrouillage.</summary>
+    internal const string UnlockPage = "deverrouillage";
+
     /// <summary>La fenêtre de capture est ouverte.</summary>
     [ObservableProperty]
     public partial bool IsCaptureOpen { get; private set; }
@@ -50,6 +59,14 @@ public sealed partial class ShellViewModel
     /// <returns>Vrai si la fenêtre s'est ouverte.</returns>
     public bool OpenCapture()
     {
+        // La palette de capture (rangée 25B), quand l'application l'a posée : elle sait dire, elle, qu'un coffre est verrouillé.
+        if (ShowCapturePalette is { } show)
+        {
+            ClosePalette();
+            IsHelpOpen = false;
+            show();
+            return true;
+        }
         if (!CanCapture)
         {
             return false;
@@ -92,6 +109,16 @@ public sealed partial class ShellViewModel
         CaptureError = outcome.Error;
         // Verrouillé entre-temps, le coffre ne reçoit plus rien : la fenêtre ne se rouvre pas sur lui.
         IsCaptureOpen = CanCapture;
+    }
+
+    /// <summary>Une note, une fiche viennent d'être écrites ailleurs que dans la vue : elle les montre, sans qu'on la quitte.</summary>
+    internal void ShowWritten()
+    {
+        // Une fiche ouverte n'est pas relue sous la main de qui l'écrit.
+        if (Current.Id != CorePages.Sheet)
+        {
+            Activate(Current);
+        }
     }
 
     /// <summary>La capture, dans la recherche Ctrl+K.</summary>

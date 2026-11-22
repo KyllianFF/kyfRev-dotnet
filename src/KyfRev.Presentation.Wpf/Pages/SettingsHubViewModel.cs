@@ -126,6 +126,9 @@ public sealed partial class SettingsHubViewModel : ObservableObject, INavigation
     /// <summary>La part « Raccourcis » de la page des raccourcis.</summary>
     public const string ShortcutsPart = "raccourcis";
 
+    /// <summary>La part « Démarrage et barre d'état » de la page des raccourcis.</summary>
+    public const string StartupPart = "demarrage";
+
     /// <summary>La part « Coffre et chiffrement » de la page des données.</summary>
     public const string VaultPart = "coffre";
 
@@ -223,6 +226,16 @@ public sealed partial class SettingsHubViewModel : ObservableObject, INavigation
                     {
                         Settings = [MoreSettingsText.ShortcutsTitle, .. ShortcutMap.Actions.Select(action => new SettingsEntry(action.Label)), GeneralSettingsText.GlobalCapture],
                         Take = (from, to) => to with { Shortcuts = from.Shortcuts, GlobalCapture = from.GlobalCapture },
+                    },
+                    new SettingsTab(MoreSettingsText.Startup, shortcuts, onMachine, Icons.Home, StartupPart, MoreSettingsText.StartupAbout)
+                    {
+                        Settings =
+                        [
+                            new(MoreSettingsText.CloseToTray, MoreSettingsText.WordsStartup),
+                            MoreSettingsText.StartWithSession,
+                            new(MoreSettingsText.StartAs, $"{MoreSettingsText.StartOpen} {MoreSettingsText.StartInTray}"),
+                        ],
+                        Take = (from, to) => to with { CloseToTray = from.CloseToTray, StartWithSession = from.StartWithSession, StartInTray = from.StartInTray },
                     },
                 },
             new SettingsTab(SettingsHubText.Revisions, revisions, vault, Icons.Review, string.Empty, MoreSettingsText.RevisionsAbout)

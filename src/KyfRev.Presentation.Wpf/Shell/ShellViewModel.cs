@@ -330,7 +330,7 @@ public sealed partial class ShellViewModel : ObservableObject, IForgetsVault, IS
         _workspace = false;
         SelectedMain = null;
         SelectedSecondary = null;
-        Current = new NavigationItem("deverrouillage", EncryptionText.LockedPage, Icons.Lock, int.MaxValue, page);
+        Current = new NavigationItem(UnlockPage, EncryptionText.LockedPage, Icons.Lock, int.MaxValue, page);
         UpdateResults();
     }
 

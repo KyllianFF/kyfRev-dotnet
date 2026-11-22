@@ -262,6 +262,39 @@ public static class MoreSettingsText
     /// <summary>La carte de la capture rapide.</summary>
     public const string CaptureTitle = "Capture rapide";
 
+    /// <summary>« Démarrage et barre d'état ».</summary>
+    public const string Startup = "Démarrage et barre d'état";
+
+    /// <summary>Ce qu'on règle dans « Démarrage et barre d'état ».</summary>
+    public const string StartupAbout = "Fermer dans la barre d'état, lancer kyfRev avec Windows. Retenus sur cet ordinateur.";
+
+    /// <summary>« Fermer réduit kyfRev dans la barre d'état ».</summary>
+    public const string CloseToTray = "Fermer réduit kyfRev dans la barre d'état";
+
+    /// <summary>Ce que fait la croix, réglage coché.</summary>
+    public const string CloseToTrayHelp = "La croix le cache près de l'horloge : la capture rapide et les rappels restent prêts. « Quitter kyfRev » est dans le menu de son icône.";
+
+    /// <summary>« Lancer kyfRev à l'ouverture de session ».</summary>
+    public const string StartWithSession = "Lancer kyfRev à l'ouverture de session";
+
+    /// <summary>Pour qui.</summary>
+    public const string StartWithSessionHelp = "Pour votre compte Windows seulement.";
+
+    /// <summary>« Au lancement ».</summary>
+    public const string StartAs = "Au lancement";
+
+    /// <summary>Quand.</summary>
+    public const string StartAsHelp = "Quand Windows le lance.";
+
+    /// <summary>« Ouvert ».</summary>
+    public const string StartOpen = "Ouvert";
+
+    /// <summary>« Dans la barre d'état ».</summary>
+    public const string StartInTray = "Dans la barre d'état";
+
+    /// <summary>Mots que la recherche des paramètres reconnaît pour cet onglet.</summary>
+    public const string WordsStartup = "barre d'état zone de notification horloge icône réduire fermer démarrage session windows lancer automatiquement";
+
     /// <summary>L'onglet des feuilles.</summary>
     public const string SheetsTab = "Fiches";
 
@@ -816,6 +849,56 @@ public sealed partial class ShortcutsSettingsViewModel : ObservableObject, INavi
         }
     }
 
+    /// <summary>La croix réduit kyfRev dans la barre d'état.</summary>
+    [ObservableProperty]
+    public partial bool CloseToTray { get; set; }
+
+    partial void OnCloseToTrayChanged(bool value)
+    {
+        if (value != _machine.Current.CloseToTray)
+        {
+            _machine.Update(preferences => preferences with { CloseToTray = value });
+        }
+    }
+
+    /// <summary>kyfRev se lance à l'ouverture de la session Windows.</summary>
+    [ObservableProperty]
+    public partial bool StartWithSession { get; set; }
+
+    partial void OnStartWithSessionChanged(bool value)
+    {
+        if (value != _machine.Current.StartWithSession)
+        {
+            _machine.Update(preferences => preferences with { StartWithSession = value });
+        }
+    }
+
+    /// <summary>Lancé par Windows, il reste dans la barre d'état.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(StartsOpen))]
+    public partial bool StartInTray { get; set; }
+
+    /// <summary>Lancé par Windows, il ouvre sa fenêtre : l'autre côté du choix.</summary>
+    public bool StartsOpen
+    {
+        get => !StartInTray;
+        set
+        {
+            if (value)
+            {
+                StartInTray = false;
+            }
+        }
+    }
+
+    partial void OnStartInTrayChanged(bool value)
+    {
+        if (value != _machine.Current.StartInTray)
+        {
+            _machine.Update(preferences => preferences with { StartInTray = value });
+        }
+    }
+
     /// <summary>Ce qui a empêché le dernier changement ; rien sinon.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasMessage))]
@@ -978,6 +1061,9 @@ public sealed partial class ShortcutsSettingsViewModel : ObservableObject, INavi
     private void ShowShortcuts()
     {
         GlobalCapture = _machine.Current.GlobalCapture;
+        CloseToTray = _machine.Current.CloseToTray;
+        StartWithSession = _machine.Current.StartWithSession;
+        StartInTray = _machine.Current.StartInTray;
         var map = ShortcutMap.Parse(_machine.Current.Shortcuts);
         foreach (var row in Rows)
         {

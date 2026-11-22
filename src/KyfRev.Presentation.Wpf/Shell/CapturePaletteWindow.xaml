@@ -1,0 +1,140 @@
+<Window x:Class="KyfRev.Presentation.Wpf.Shell.CapturePaletteWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:kyf="clr-namespace:KyfRev.DesignSystem.Controls;assembly=KyfRev.DesignSystem"
+        xmlns:shell="clr-namespace:KyfRev.Presentation.Wpf.Shell"
+        Title="{x:Static shell:CapturePaletteText.Title}" WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        ShowInTaskbar="False" Topmost="True" ResizeMode="NoResize" SizeToContent="Height" Width="672"
+        FontFamily="{DynamicResource Kyf.Font.Ui}" FontSize="{DynamicResource Kyf.FontSize.Body}" Foreground="{DynamicResource Kyf.Brush.Text}"
+        PreviewKeyDown="OnPreviewKeyDown" Deactivated="OnDeactivated">
+  <Window.Resources>
+    <CollectionViewSource x:Key="Grouped" Source="{Binding Choices}">
+      <CollectionViewSource.GroupDescriptions>
+        <PropertyGroupDescription PropertyName="Group" />
+      </CollectionViewSource.GroupDescriptions>
+    </CollectionViewSource>
+    <BooleanToVisibilityConverter x:Key="Visible" />
+    <!-- Une touche, comme sur un clavier : un cadre discret autour de son nom. -->
+    <Style x:Key="Key" TargetType="Border">
+      <Setter Property="BorderBrush" Value="{DynamicResource Kyf.Brush.Divider}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="5" />
+      <Setter Property="Padding" Value="6,1" />
+      <Setter Property="MinHeight" Value="20" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="Background" Value="{DynamicResource Kyf.Brush.SurfaceAlt}" />
+      <Setter Property="TextElement.FontSize" Value="{DynamicResource Kyf.FontSize.Caption}" />
+      <Setter Property="TextElement.Foreground" Value="{DynamicResource Kyf.Brush.TextSecondary}" />
+    </Style>
+  </Window.Resources>
+  <!-- La palette de capture (rangée 25B), au-dessus de tout : un champ, et dessous ce qu'on peut faire de ce qu'on tape. La
+       marge laisse la place de l'ombre. -->
+  <Grid x:Name="Frame" Margin="16,12,16,24">
+    <Border Background="{DynamicResource Kyf.Brush.Surface}" CornerRadius="16" Effect="{DynamicResource Kyf.Elevation.Dialog}" />
+    <Border Background="{DynamicResource Kyf.Brush.Surface}" BorderBrush="{DynamicResource Kyf.Brush.Divider}" BorderThickness="1" CornerRadius="16" SnapsToDevicePixels="True">
+      <DockPanel>
+        <!-- Le champ : la marque de kyfRev, puis ce qu'on tape. -->
+        <DockPanel DockPanel.Dock="Top" MinHeight="56" Margin="16,0">
+          <Border Width="26" Height="26" CornerRadius="7" Background="{DynamicResource Kyf.Brush.Primary}" VerticalAlignment="Center" Margin="0,0,12,0">
+            <kyf:Icon Text="{x:Static kyf:Icons.Document}" FontSize="14" Foreground="{DynamicResource Kyf.Brush.OnPrimary}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+          </Border>
+          <TextBox x:Name="Input" Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" Style="{DynamicResource Kyf.TextBox.Bare}"
+                   FontSize="{DynamicResource Kyf.FontSize.BodyLarge}" VerticalAlignment="Center" VerticalContentAlignment="Center" MinHeight="40"
+                   kyf:Field.Placeholder="{x:Static shell:CapturePaletteText.Placeholder}"
+                   AutomationProperties.Name="{x:Static shell:CapturePaletteText.Title}" />
+        </DockPanel>
+        <!-- Les touches : rappelées une fois pour toutes, en bas. -->
+        <Border DockPanel.Dock="Bottom" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource Kyf.Brush.Divider}" Padding="16,8">
+          <DockPanel TextElement.Foreground="{DynamicResource Kyf.Brush.TextSecondary}">
+            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+              <Border Style="{StaticResource Key}"><TextBlock Text="Échap" /></Border>
+              <TextBlock Text="{x:Static shell:CapturePaletteText.HintClose}" Style="{DynamicResource Kyf.Text.Caption}" VerticalAlignment="Center" Margin="6,0,0,0" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal">
+              <Border Style="{StaticResource Key}"><TextBlock Text="↑" /></Border>
+              <Border Style="{StaticResource Key}" Margin="4,0,0,0"><TextBlock Text="↓" /></Border>
+              <TextBlock Text="{x:Static shell:CapturePaletteText.HintMove}" Style="{DynamicResource Kyf.Text.Caption}" VerticalAlignment="Center" Margin="6,0,16,0" />
+              <Border Style="{StaticResource Key}"><TextBlock Text="{x:Static shell:CapturePaletteText.Enter}" /></Border>
+              <TextBlock Text="{x:Static shell:CapturePaletteText.HintRun}" Style="{DynamicResource Kyf.Text.Caption}" VerticalAlignment="Center" Margin="6,0,0,0" />
+            </StackPanel>
+          </DockPanel>
+        </Border>
+        <StackPanel>
+          <Border Height="1" Background="{DynamicResource Kyf.Brush.Divider}" />
+          <!-- Coffre verrouillé ou absent : on le dit, et seul « Ouvrir kyfRev » reste. -->
+          <DockPanel x:Name="LockedLine" Margin="16,12,16,4" Visibility="{Binding IsLocked, Converter={StaticResource Visible}}">
+            <kyf:Icon Text="{x:Static kyf:Icons.Lock}" FontSize="16" Foreground="{DynamicResource Kyf.Brush.Warning}" VerticalAlignment="Top" Margin="0,2,10,0" />
+            <TextBlock x:Name="LockedText" Text="{Binding LockedMessage}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" />
+          </DockPanel>
+          <!-- Ce qui est fait se dit une seconde, à la place des choix ; un refus reste, avec le texte. -->
+          <DockPanel x:Name="DoneLine" Margin="16,14" Visibility="{Binding HasDone, Converter={StaticResource Visible}}">
+            <kyf:Icon Text="{x:Static kyf:Icons.Success}" FontSize="16" Foreground="{DynamicResource Kyf.Brush.Success}" VerticalAlignment="Center" Margin="0,0,10,0" />
+            <TextBlock x:Name="DoneText" Text="{Binding Done}" Style="{DynamicResource Kyf.Text.BodyStrong}" TextWrapping="Wrap" VerticalAlignment="Center" />
+          </DockPanel>
+          <DockPanel x:Name="ErrorLine" Margin="16,12,16,4" Visibility="{Binding HasError, Converter={StaticResource Visible}}">
+            <kyf:Icon Text="{x:Static kyf:Icons.Error}" FontSize="16" Foreground="{DynamicResource Kyf.Brush.Critical}" VerticalAlignment="Top" Margin="0,2,10,0" />
+            <TextBlock x:Name="ErrorText" Text="{Binding Error}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" />
+          </DockPanel>
+          <ListBox x:Name="ChoiceList" ItemsSource="{Binding Source={StaticResource Grouped}}" SelectedItem="{Binding Selected}" Focusable="False"
+                   Background="Transparent" BorderThickness="0" Padding="6,0,6,6" ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                   AutomationProperties.Name="{x:Static shell:CapturePaletteText.Title}" PreviewMouseLeftButtonUp="OnChoiceClicked">
+            <ListBox.Style>
+              <Style TargetType="ListBox">
+                <Style.Triggers>
+                  <DataTrigger Binding="{Binding HasDone}" Value="True">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                  </DataTrigger>
+                </Style.Triggers>
+              </Style>
+            </ListBox.Style>
+            <ListBox.GroupStyle>
+              <GroupStyle>
+                <GroupStyle.HeaderTemplate>
+                  <DataTemplate>
+                    <TextBlock Text="{Binding Name}" Style="{DynamicResource Kyf.Text.Caption}" Foreground="{DynamicResource Kyf.Brush.TextSecondary}" FontWeight="SemiBold" Margin="12,10,0,4" />
+                  </DataTemplate>
+                </GroupStyle.HeaderTemplate>
+              </GroupStyle>
+            </ListBox.GroupStyle>
+            <ListBox.ItemContainerStyle>
+              <Style TargetType="ListBoxItem">
+                <Setter Property="Focusable" Value="False" />
+                <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Text}" />
+                <Setter Property="AutomationProperties.Name" Value="{Binding Title}" />
+                <Setter Property="Template">
+                  <Setter.Value>
+                    <ControlTemplate TargetType="ListBoxItem">
+                      <Border x:Name="Row" Background="Transparent" CornerRadius="9" MinHeight="38" Padding="10,0">
+                        <ContentPresenter VerticalAlignment="Center" />
+                      </Border>
+                      <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                          <Setter TargetName="Row" Property="Background" Value="{DynamicResource Kyf.Brush.SurfaceAlt}" />
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                          <Setter TargetName="Row" Property="Background" Value="{DynamicResource Kyf.Brush.NavigationActiveBackground}" />
+                          <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.NavigationActiveText}" />
+                        </Trigger>
+                      </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                  </Setter.Value>
+                </Setter>
+              </Style>
+            </ListBox.ItemContainerStyle>
+            <ListBox.ItemTemplate>
+              <DataTemplate DataType="{x:Type shell:CaptureChoice}">
+                <DockPanel>
+                  <kyf:Icon DockPanel.Dock="Left" Text="{Binding Glyph}" FontSize="15" VerticalAlignment="Center" Margin="0,0,12,0" />
+                  <Border DockPanel.Dock="Right" Style="{StaticResource Key}" Visibility="{Binding HasHint, Converter={StaticResource Visible}}" Margin="12,0,0,0">
+                    <TextBlock Text="{Binding Hint}" />
+                  </Border>
+                  <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                </DockPanel>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+        </StackPanel>
+      </DockPanel>
+    </Border>
+  </Grid>
+</Window>
