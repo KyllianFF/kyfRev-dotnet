@@ -459,6 +459,38 @@ public sealed class PaperAndShortcutsTests
         }
     }
 
+    [STATestMethod]
+    public void The_overview_column_follows_each_sheet_it_shows_a5_then_a4_then_endless()
+    {
+        // Comme l'aperçu du Carnet : une colonne centrée, aussi large que la feuille au plus, autour de l'hôte qui la rétrécit.
+        var paper = new SheetPaper(new PaperChoices(IsOn: true, Endless: PaperStyle.Dots, A5: PaperStyle.Lines), PageLayout.Default,
+            SheetPageLayouts.None.With("f_1", new PageLayout(PageFormat.A5)).With("f_2", new PageLayout(PageFormat.A4, false, 2)));
+        var viewer = new SheetDocumentViewer { Paper = paper, FollowsSheetLayout = true };
+        var host = new PageFitHost { Child = viewer, EndlessWidth = 760 };
+        var column = new Grid { HorizontalAlignment = HorizontalAlignment.Center };
+        column.SetBinding(FrameworkElement.MaxWidthProperty, new System.Windows.Data.Binding(nameof(PageFitHost.SheetWidth)) { Source = host });
+        column.Children.Add(host);
+        var window = new Window { Content = column, Left = -10000, Top = -10000, Width = 1000, Height = 700, ShowActivated = false, ShowInTaskbar = false };
+        window.Show();
+        try
+        {
+            foreach (var (id, text) in new[] { ("f_1", "Une fiche A5."), ("f_2", "Une fiche A4, plus large."), ("f_3", "Une fiche sans fin."), ("f_2", "De retour sur l'A4."), ("f_1", "De retour sur l'A5.") })
+            {
+                viewer.Reading = Reading(string.Join("\n\n", Enumerable.Range(1, 6).Select(index => $"{text} Paragraphe {index}, assez long pour remplir sa ligne et passer à la suivante.")), id);
+                viewer.CompleteDocument();
+                Settle(viewer);
+                var wanted = viewer.FitWidth > 0 ? viewer.FitWidth : 760;
+                Assert.AreEqual(wanted, host.SheetWidth, 0.5, $"{id} : la colonne prend la largeur de cette feuille");
+                Assert.AreEqual(Math.Min(wanted, window.ActualWidth), column.ActualWidth, 20, $"{id} : la colonne suit");
+                Assert.IsLessThanOrEqualTo(column.ActualWidth + 0.5, host.DesiredSize.Width, $"{id} : rien ne déborde de la colonne");
+            }
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
     private static void Settle(SheetDocumentViewer viewer)
     {
         for (var pass = 0; pass < 6; pass++)
@@ -468,7 +500,7 @@ public sealed class PaperAndShortcutsTests
         }
     }
 
-    private static SheetReading Reading(string body) => SheetReading.Of(
-        new OpenedSheet("f_1", "Mitose", "fiches/Biologie/Mitose.md", "Biologie", [], body, 1, "sha256:essai", null, DateTimeOffset.UnixEpoch, null!, []),
+    private static SheetReading Reading(string body, string id = "f_1") => SheetReading.Of(
+        new OpenedSheet(id, "Mitose", "fiches/Biologie/Mitose.md", "Biologie", [], body, 1, "sha256:essai", null, DateTimeOffset.UnixEpoch, null!, []),
         _ => Outcome.Refused<byte[]>("non"));
 }

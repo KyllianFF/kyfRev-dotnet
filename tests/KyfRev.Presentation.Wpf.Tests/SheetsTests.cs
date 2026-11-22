@@ -484,6 +484,63 @@ public sealed class SheetsTests
     }
 
     [STATestMethod]
+    [DataRow(1920)]
+    [DataRow(1100)]
+    public void The_preview_column_follows_each_sheet_format_and_nothing_is_cut(int width)
+    {
+        using var ui = new UiThread();
+        var time = new FakeTime(new DateTimeOffset(2026, 10, 1, 8, 0, 0, TimeSpan.Zero));
+        using var vaults = new TestVaults(AppMode.Development, time);
+        Assert.IsNotNull(vaults.App.Vaults.Create(vaults.PathOf("Coffre")).Vault);
+        var table = "mail du prof : nick@example.com\n\n## Vocabulary\n\n| English | French | Transcription |\n|---|---|---|\n" + string.Concat(Enumerable.Range(1, 8).Select(i => $"| Administration fee {i} | Frais administratif {i} | |\n")) + "\n## Language Feedback\n\n| WHAT YOU SAID | WHAT YOU SHOULD HAVE SAID |\n|---|---|\n" + string.Concat(Enumerable.Range(1, 6).Select(i => $"| We have obtained the money we asked {i} | We have obtained the money we asked for, and more besides {i} |\n"));
+        var text = "Évaluation de la capacité à convaincre le jury. Capacité à mettre en œuvre un projet dans son entreprise (le jury joue le rôle d'un CODIR).\n\n## Déroulement de l'épreuve\n\n" + string.Concat(Enumerable.Range(1, 10).Select(i => $"- Dispose d'un temps de préparation perso (1 h 30) avec accès à tous les supports (support de cours autorisé) {i}\n"));
+        var vocabulary = vaults.App.Sheets.Create("Anglais", "1 - Vocabulary", null).Value;
+        var oral = vaults.App.Sheets.Create("Culture", "1 - Préparation au Grand Oral", null).Value;
+        Assert.IsTrue(vaults.App.Editing.Save(vocabulary, table, vaults.App.Sheets.Open(vocabulary).Value.Fingerprint, 1).Succeeded);
+        Assert.IsTrue(vaults.App.Editing.Save(oral, text, vaults.App.Sheets.Open(oral).Value.Fingerprint, 2).Succeeded);
+        var page = Page(vaults, new FakeOpener(), time);
+        var test = new TestShell(true);
+        // Les réglages de l'essai : la plupart des fiches en A4, celle du Grand Oral sans fin.
+        test.Design.Dictionary[KyfRev.Presentation.Wpf.Reading.SheetPaper.ResourceKey] = new KyfRev.Presentation.Wpf.Reading.SheetPaper(
+            new PaperChoices(IsOn: true, Endless: PaperStyle.Dots, A5: PaperStyle.Lines),
+            new PageLayout(PageFormat.A4),
+            SheetPageLayouts.None.With(oral, PageLayout.Default));
+        var window = Show(test, page);
+        try
+        {
+            window.Width = width;
+            window.Height = 1000;
+            window.UpdateLayout();
+            page.RefreshCommand.Execute(null);
+            UiThread.Until(() => page.Rows.OfType<SheetRow>().Count() == 2);
+            foreach (var (id, name) in new[] { (vocabulary, "a4"), (oral, "sansfin"), (vocabulary, "a4-retour"), (oral, "sansfin-retour") })
+            {
+                page.SelectedRow = page.Rows.OfType<SheetRow>().Single(row => row.Sheet.Id == id);
+                UiThread.Until(() => page.Preview is { HasBody: true, Row: SheetRow shown } && shown.Sheet.Id == id);
+                for (var pass = 0; pass < 10; pass++)
+                {
+                    TestShell.Flush();
+                    window.UpdateLayout();
+                }
+                // La colonne prend la largeur de cette feuille (ou toute la place, si elle en a moins) : celle de la fiche d'avant
+                // la laissait trop large ou trop étroite, et « Écrire » sortait du cadre.
+                var host = Named<KyfRev.Presentation.Wpf.Reading.PageFitHost>(window, "PreviewSheet");
+                var column = Named<Grid>(window, "PreviewColumn");
+                var card = Named<Border>(window, "PreviewCard");
+                var write = Named<Button>(window, "WriteButton");
+                Assert.AreEqual(column.MaxWidth, host.SheetWidth, $"{name} : la colonne suit la feuille");
+                Assert.AreEqual(Math.Min(column.MaxWidth, card.ActualWidth), column.ActualWidth, 1, $"{name} : la colonne a la largeur voulue");
+                Assert.IsLessThanOrEqualTo(column.ActualWidth + 0.5, host.DesiredSize.Width, $"{name} : la feuille tient dans la colonne");
+                Assert.IsLessThanOrEqualTo(card.ActualWidth + 0.5, write.TranslatePoint(new Point(write.ActualWidth, 0), card).X, $"{name} : « Écrire » reste dans le cadre");
+            }
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
     public void The_new_sheet_window_answers_through_its_buttons()
     {
         using var ui = new UiThread();
