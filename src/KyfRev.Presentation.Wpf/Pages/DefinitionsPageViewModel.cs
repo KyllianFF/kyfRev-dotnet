@@ -183,6 +183,12 @@ public sealed partial class DefinitionsPageViewModel : ObservableObject, IForget
     [RelayCommand]
     private void ShowHow() => OpenGuide?.Invoke(HowSection);
 
+    /// <summary>Les actions communes sur une fiche, pour le menu de la fiche d'une définition (rangée 23C) ; rien sans elles.</summary>
+    public SheetActionsViewModel? SheetActions { get; set; }
+
+    /// <summary>Le menu de la fiche d'une définition.</summary>
+    internal ISheetMenuHost SheetMenuHost() => new SharedSheetMenu(SheetActions, _opener);
+
     /// <summary>Le glossaire, sur ces cas d'usage ; sans <paramref name="sheets"/>, une nouvelle définition ne trouve où s'accrocher.</summary>
     public DefinitionsPageViewModel(AnnotationUseCases annotations, IReviewOpener opener, SheetUseCases? sheets = null)
     {

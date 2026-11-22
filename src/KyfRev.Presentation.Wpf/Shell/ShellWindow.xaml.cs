@@ -9,6 +9,7 @@ using System.Windows.Media;
 using System.Windows.Shell;
 using System.Windows.Threading;
 using KyfRev.DesignSystem.Controls;
+using KyfRev.Presentation.Wpf.Pages;
 
 namespace KyfRev.Presentation.Wpf.Shell;
 
@@ -60,6 +61,12 @@ public sealed partial class ShellWindow : Window
         ArgumentNullException.ThrowIfNull(shell);
         _shell = shell;
         InitializeComponent();
+        // Un résultat de Ctrl+K qui est une fiche a le menu de la fiche, le même que partout (rangée 23A).
+        PaletteResults.ContextMenu = new ContextMenu();
+        PaletteResults.ContextMenuOpening += (_, e) => ActionMenus.Fill(
+            PaletteResults.ContextMenu,
+            (e.OriginalSource as FrameworkElement)?.DataContext is PaletteEntry { Sheet: { } sheet } && _shell.SheetActions is { } actions ? SheetMenu.Items(sheet, actions) : [],
+            e);
         // Les raccourcis marqués prennent les touches choisies dans les paramètres.
         KyfRev.Presentation.Wpf.Shell.ShortcutMap.Follow(this);
         DataContext = shell;
@@ -574,6 +581,9 @@ public sealed partial class ShellWindow : Window
         {
             // Une vue choisie dans le menu montré au survol le referme.
             ClosePeek();
+            // Ce que la vue quittée avait ouvert (partage, action sur une fiche) se referme avec elle.
+            _shell.Sharing?.Dismiss();
+            _shell.SheetActions?.Dismiss();
         }
         if (e.PropertyName is nameof(ShellViewModel.IsFocusMode) or nameof(ShellViewModel.IsFullScreen) or nameof(ShellViewModel.Layout))
         {

@@ -192,6 +192,9 @@ public sealed class SheetRow
     /// <summary>Elle est à réviser aujourd'hui même : sa pastille est un anneau.</summary>
     public bool IsDueToday { get; }
 
+    /// <summary>Ce que son menu sait d'elle.</summary>
+    internal SheetTarget Target => new(Sheet.Id, Sheet.Title) { IsArchived = Sheet.Archived, IsNote = Sheet.IsNote, Folder = Sheet.Folder };
+
     /// <summary>Le fichier de la fiche est introuvable ou en double.</summary>
     public bool FileMissing => !Sheet.FilePresent;
 
@@ -215,6 +218,9 @@ public sealed class SheetRow
 /// </summary>
 public sealed partial class SheetsPageViewModel : ObservableObject, INavigationAware, IForgetsVault, IStopsSearch
 {
+    /// <summary>Les actions communes sur une fiche : ce que le Carnet ne fait pas lui-même (reporter, rappels).</summary>
+    public SheetActionsViewModel? SheetActions { get; set; }
+
     /// <summary>Les entrées que les extensions ajoutent au clic droit d'une fiche ou d'un dossier.</summary>
     public Func<ExtensionMenuZone, IReadOnlyDictionary<string, string>, IReadOnlyList<MenuContribution>>? ExtensionMenus { get; set; }
 

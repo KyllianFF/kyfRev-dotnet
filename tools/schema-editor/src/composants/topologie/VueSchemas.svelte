@@ -386,7 +386,7 @@
           <button
             type="button"
             class="bouton"
-            aria-label="Partager (copier l'image)"
+            aria-label="Copier l'image"
             title="Copie l'image du schéma, à coller dans un message, un document ou une fiche"
             onclick={() => partager(resumeLu)}
           >
@@ -590,10 +590,11 @@
   {/if}
 </div>
 
+<!-- Les sorties, dans les mots du reste de kyfRev (rangée 23D) : copier l'image, l'exporter, l'imprimer. -->
 {#snippet entreesSorties()}
-  <button type="button" role="menuitem" onclick={() => choisir((s) => (aExporter = s))}><Download size={16} aria-hidden="true" /> Exporter…</button>
-  <button type="button" role="menuitem" onclick={() => choisir(partager)}><Share2 size={16} aria-hidden="true" /> Partager (copier l'image)</button>
-  <button type="button" role="menuitem" onclick={() => choisir(imprimer)}><Printer size={16} aria-hidden="true" /> Imprimer…</button>
+  <button type="button" role="menuitem" onclick={() => choisir(partager)}>Copier l'image</button>
+  <button type="button" role="menuitem" onclick={() => choisir((s) => (aExporter = s))}>Exporter…</button>
+  <button type="button" role="menuitem" onclick={() => choisir(imprimer)}>Imprimer…</button>
 {/snippet}
 
 {#if menu}
@@ -605,10 +606,15 @@
       use:dansLaFenetre={menu.ancre}
       use:clavierMenu
     >
+      <!-- Le même dessin que les menus de kyfRev (rangée 23D) : les actions principales en tête, l'icône au-dessus du mot ;
+           puis la liste, par blocs. -->
       {#if menu.genre === "carte"}
-        <button type="button" role="menuitem" onclick={() => choisir((s) => lire(s.id))}><Eye size={16} aria-hidden="true" /> Détail</button>
-        <button type="button" role="menuitem" onclick={() => choisir((s) => (edite = s.id))}><PenLine size={16} aria-hidden="true" /> Modifier</button>
-        <button type="button" role="menuitem" disabled={occupe} onclick={() => choisir((s) => dupliquer(s.id))}><Copy size={16} aria-hidden="true" /> Dupliquer</button>
+        <div class="vite">
+          <button type="button" role="menuitem" onclick={() => choisir((s) => lire(s.id))}><Eye size={18} aria-hidden="true" /> Détail</button>
+          <button type="button" role="menuitem" onclick={() => choisir((s) => (edite = s.id))}><PenLine size={18} aria-hidden="true" /> Modifier</button>
+        </div>
+        <hr />
+        <button type="button" role="menuitem" disabled={occupe} onclick={() => choisir((s) => dupliquer(s.id))}>Dupliquer</button>
         <hr />
         {@render entreesSorties()}
         <hr />
@@ -617,10 +623,11 @@
           {@render entreesSorties()}
           <hr />
         {/if}
-        <button type="button" role="menuitem" disabled={occupe} onclick={() => choisir((s) => dupliquer(s.id))}><Copy size={16} aria-hidden="true" /> Dupliquer</button>
+        <button type="button" role="menuitem" disabled={occupe} onclick={() => choisir((s) => dupliquer(s.id))}>Dupliquer</button>
+        <hr />
       {/if}
-      <button type="button" role="menuitem" disabled={occupe} onclick={() => choisir(archiver)}><Archive size={16} aria-hidden="true" /> Archiver</button>
-      <button type="button" role="menuitem" disabled={occupe} onclick={() => choisir((s) => (aSupprimer = s))}><Trash2 size={16} aria-hidden="true" /> Supprimer</button>
+      <button type="button" role="menuitem" disabled={occupe} onclick={() => choisir(archiver)}>Archiver</button>
+      <button type="button" role="menuitem" disabled={occupe} onclick={() => choisir((s) => (aSupprimer = s))}>Supprimer…</button>
     </div>
   {/key}
 {/if}
@@ -950,7 +957,7 @@
     z-index: 30;
     display: flex;
     flex-direction: column;
-    min-width: 200px;
+    min-width: 220px;
     max-width: calc(100vw - 16px);
     max-height: calc(100vh - 16px);
     overflow-y: auto;
@@ -980,6 +987,22 @@
   .menu button:hover:not(:disabled),
   .menu button:focus-visible {
     background: var(--surface-2);
+  }
+
+  /* Les actions principales : l'icône au-dessus du mot, côte à côte, comme les menus de kyfRev. */
+  .menu .vite {
+    display: flex;
+    gap: 4px;
+  }
+
+  .menu .vite button {
+    flex: 1;
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    height: auto;
+    padding: 8px 6px;
+    text-align: center;
   }
 
   .menu button:disabled {

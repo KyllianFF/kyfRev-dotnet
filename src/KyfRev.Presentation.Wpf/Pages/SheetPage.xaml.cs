@@ -6,11 +6,12 @@ using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Threading;
+using KyfRev.DesignSystem;
 using KyfRev.DesignSystem.Controls;
 using KyfRev.Extensions.Host;
-using KyfRev.Presentation.Wpf.Editing;
 using KyfRev.Presentation.Wpf.Extensions;
 using KyfRev.Presentation.Wpf.Reading;
+using KyfRev.Presentation.Wpf.Shell;
 using KyfRev.Rendering;
 
 namespace KyfRev.Presentation.Wpf.Pages;
@@ -815,14 +816,36 @@ internal sealed partial class SheetPage : UserControl
                 .. ExtensionItems(page, position),
                 new Separator(),
                 .. ListenItems(page, SheetText.Selection?.Start),
-                EditSheetItem(page),
-                .. SharingItems(page),
+                ActionMenus.Item(DesignText.SelectAll, ApplicationCommands.SelectAll, SheetText, "Ctrl+A"),
+                new Separator(),
+                SheetSubmenu(page),
             ];
         }
         var entry = page.Passages.FirstOrDefault(candidate => SheetText.AnnotationsAt(source).Contains(candidate.Annotation.Id));
         if (entry is not null)
         {
-            return [.. PassageMenuItems(page, entry), new Separator(), EditSheetItem(page), .. SharingItems(page)];
+            return [.. PassageMenuItems(page, entry), new Separator(), SheetSubmenu(page)];
+        }
+        // Un schéma, un diagramme ou un graphique (rangée 23D) : le modifier, ou le copier en image.
+        if (DrawingAt(source) is { } drawing)
+        {
+            return
+            [
+                ActionMenus.Quick(ReadingText.EditDrawing, Icons.Edit, () => page.IsWriteOn = true),
+                ActionMenus.Quick(ReadingText.CopyDrawing, Icons.Copy, () => CopyDrawing(drawing)),
+                new Separator(),
+                SheetSubmenu(page),
+            ];
+        }
+        // Un tableau (rangée 23B) : le copier, pour le coller dans un tableur.
+        if (TableAt(source) is { } table)
+        {
+            return
+            [
+                ActionMenus.Quick(ReadingText.CopyTable, Icons.Table, () => Clipboard.SetText(TableText(table))),
+                new Separator(),
+                SheetSubmenu(page),
+            ];
         }
         // Une image : on peut y masquer des zones à retrouver en révision.
         var picture = source as Image ?? ((source as Reading.ImageMaskOverlay)?.Parent as Panel)?.Children.OfType<Image>().FirstOrDefault();
@@ -830,33 +853,80 @@ internal sealed partial class SheetPage : UserControl
         {
             return
             [
+                ActionMenus.Quick(ReadingText.Copy, Icons.Copy, () => CopyPicture(picture)),
                 ActionMenus.Quick(ImageMaskText.Action, Icons.Edit, () => _ = page.EditMasksAsync(imageIndex, picture.Source)),
                 new Separator(),
-                EditSheetItem(page),
-                .. SharingItems(page),
+                SheetSubmenu(page),
             ];
         }
         var listen = ListenItems(page, (source as TextElement)?.ContentStart);
-        return SheetText.WordAt(source) is { } word
-            ? [.. WordMenuItems(page, word), new Separator(), .. listen, EditSheetItem(page), .. SharingItems(page)]
-            : [.. listen, EditSheetItem(page), .. SharingItems(page)];
+        if (SheetText.WordAt(source) is { } word)
+        {
+            return [.. WordMenuItems(page, word), new Separator(), .. listen, .. listen.Count > 0 ? [new Separator()] : new List<Control>(), SheetSubmenu(page)];
+        }
+        // Le fond de la fiche : le menu de la fiche, le même que partout, le mode en cours marqué ; « Écouter d'ici » à la fin.
+        return [.. SheetItems(page), .. listen.Count > 0 ? [new Separator(), .. listen] : new List<Control>()];
     }
 
-    /// <summary>« Partager… » et « Enregistrer comme modèle… », à la fin du menu du texte, comme dans la 0.x.</summary>
-    private static List<Control> SharingItems(SheetPageViewModel page) =>
-        [.. PrintItems(page), .. ShareItems(page)];
+    /// <summary>Le menu de la fiche entière (rangée 23A) ; rien tant qu'elle n'est pas lue.</summary>
+    private static List<Control> SheetItems(SheetPageViewModel page) =>
+        page.MenuTarget is { } target ? SheetMenu.Items(target, new OpenedSheetMenu(page), page.Mode) : [];
 
-    /// <summary>« Imprimer… », quand la fiche peut s'imprimer d'ici.</summary>
-    private static List<Control> PrintItems(SheetPageViewModel page) =>
-        page.CanPrint ? [Item(PrintText.PrintAction, () => page.RequestPrintCommand.Execute(null), KyfRev.Presentation.Wpf.Shell.ShortcutMap.Current.DisplayOf("imprimer"))] : [];
+    /// <summary>« Fiche › » : le menu de la fiche entière, sous ce qu'on vise.</summary>
+    private static MenuItem SheetSubmenu(SheetPageViewModel page) => ActionMenus.Submenu(ReadingText.SheetSubmenu, SheetItems(page));
 
-    private static List<Control> ShareItems(SheetPageViewModel page) => page.CanShare
-        ?
-        [
-            Item(SharingText.Share, () => page.RequestShareCommand.Execute(null)),
-            Item(SharingText.SaveAsTemplate, () => page.RequestSaveAsTemplateCommand.Execute(null)),
-        ]
-        : [];
+    /// <summary>Le schéma, le diagramme ou le graphique sous le pointeur ; rien ailleurs.</summary>
+    internal static FrameworkElement? DrawingAt(object? source)
+    {
+        for (var element = source as DependencyObject; element is not null; element = element is System.Windows.Media.Visual ? System.Windows.Media.VisualTreeHelper.GetParent(element) : LogicalTreeHelper.GetParent(element))
+        {
+            if (element is DiagramView or MermaidView or NetworkView)
+            {
+                return (FrameworkElement)element;
+            }
+        }
+        return null;
+    }
+
+    /// <summary>Le tableau sous le pointeur ; rien ailleurs.</summary>
+    internal static Table? TableAt(object? source)
+    {
+        for (var element = source as DependencyObject; element is not null; element = LogicalTreeHelper.GetParent(element))
+        {
+            if (element is Table table)
+            {
+                return table;
+            }
+        }
+        return null;
+    }
+
+    /// <summary>Le texte d'un tableau : une ligne par rangée, les cases séparées par des tabulations, comme les tableurs l'attendent.</summary>
+    internal static string TableText(Table table) => string.Join(
+        Environment.NewLine,
+        table.RowGroups.SelectMany(group => group.Rows).Select(row => string.Join('\t', row.Cells.Select(cell => new TextRange(cell.ContentStart, cell.ContentEnd).Text.Trim().ReplaceLineEndings(" ")))));
+
+    /// <summary>Copie un schéma tel qu'il s'affiche, en deux fois plus fin que l'écran pour rester net une fois collé.</summary>
+    private static void CopyDrawing(FrameworkElement drawing)
+    {
+        var (width, height) = ((int)Math.Ceiling(drawing.ActualWidth * 2), (int)Math.Ceiling(drawing.ActualHeight * 2));
+        if (width <= 0 || height <= 0)
+        {
+            return;
+        }
+        var bitmap = new System.Windows.Media.Imaging.RenderTargetBitmap(width, height, 192, 192, System.Windows.Media.PixelFormats.Pbgra32);
+        bitmap.Render(drawing);
+        Clipboard.SetImage(bitmap);
+    }
+
+    /// <summary>Copie l'image visée, telle qu'elle s'affiche.</summary>
+    private static void CopyPicture(Image picture)
+    {
+        if (picture.Source is System.Windows.Media.Imaging.BitmapSource bitmap)
+        {
+            Clipboard.SetImage(bitmap);
+        }
+    }
 
     /// <summary>Les entrées que les extensions ajoutent au clic droit d'un texte sélectionné, avec ce texte et sa place.</summary>
     private List<Control> ExtensionItems(SheetPageViewModel page, TextPosition position)
@@ -916,9 +986,6 @@ internal sealed partial class SheetPage : UserControl
         var index = _spoken.ToList().FindIndex(block => block.Block.ContentEnd.CompareTo(place) >= 0);
         reader.PlayFrom(Math.Max(index, 0));
     }
-
-    private static MenuItem EditSheetItem(SheetPageViewModel page) =>
-        Item(EditingText.EditSheet, () => page.StartWritingCommand.Execute(null), KyfRev.Presentation.Wpf.Shell.ShortcutMap.Current.DisplayOf("ecrire"));
 
     internal IReadOnlyList<Control> PassageMenuItems(SheetPageViewModel page, PassageEntry entry)
     {
@@ -1047,4 +1114,45 @@ public sealed class IndentConverter : IValueConverter
 
     /// <inheritdoc/>
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) => throw new NotSupportedException();
+
+}
+
+/// <summary>Le menu de la fiche ouverte : elle change de mode, s'imprime et se partage elle-même ; le reste par les actions communes.</summary>
+internal sealed class OpenedSheetMenu(SheetPageViewModel page) : ISheetMenuHost
+{
+    public bool CanManage => page.SheetActions is not null;
+
+    public bool CanShare => page.CanShare;
+
+    public void Read(SheetTarget sheet) => page.IsReadOn = true;
+
+    public void Revise(SheetTarget sheet) => page.IsReviseOn = true;
+
+    public void Write(SheetTarget sheet) => page.IsWriteOn = true;
+
+    public void Print(SheetTarget sheet) => page.RequestPrintCommand.Execute(null);
+
+    public void Share(SheetTarget sheet) => page.RequestShareCommand.Execute(null);
+
+    public void SaveAsTemplate(SheetTarget sheet) => page.RequestSaveAsTemplateCommand.Execute(null);
+
+    public void PostponeTomorrow(SheetTarget sheet) => page.SheetActions?.PostponeTomorrow(sheet);
+
+    public void Archive(SheetTarget sheet) => page.SheetActions?.Archive(sheet);
+
+    public void Restart(SheetTarget sheet) => page.SheetActions?.Restart(sheet);
+
+    public void ToggleReminders(SheetTarget sheet) => page.SheetActions?.ToggleReminders(sheet);
+
+    public void Rename(SheetTarget sheet) => page.SheetActions?.Rename(sheet);
+
+    public void Tags(SheetTarget sheet) => page.SheetActions?.Tags(sheet);
+
+    public void Move(SheetTarget sheet) => page.SheetActions?.Move(sheet);
+
+    public void ToggleNote(SheetTarget sheet) => page.SheetActions?.ToggleNote(sheet);
+
+    public void Trash(SheetTarget sheet) => page.SheetActions?.Trash(sheet);
+
+    public IReadOnlyList<MenuContribution> Extensions(SheetTarget sheet) => page.SheetActions?.Extensions(sheet) ?? [];
 }

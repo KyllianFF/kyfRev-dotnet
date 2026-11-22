@@ -573,6 +573,12 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
     [RelayCommand]
     private void OpenWorkload() => _opener.OpenWorkload(SelectedFilter.Value);
 
+    /// <summary>Les actions communes sur une fiche, pour son clic droit (rangée 23A) ; rien sans elles.</summary>
+    public SheetActionsViewModel? SheetActions { get; set; }
+
+    /// <summary>Le menu d'une fiche ; la vue peut l'ouvrir ou la réviser à sa façon.</summary>
+    internal ISheetMenuHost SheetMenuHost(Action<SheetTarget>? read = null, Action<SheetTarget>? revise = null) => new SharedSheetMenu(SheetActions, _opener, read, revise);
+
     /// <summary>Ouvre la fiche d'une ligne, pour la relire.</summary>
     internal void OpenSheetOf(DueItemRow row) => _opener.OpenSheet(row.Item.SheetId);
 

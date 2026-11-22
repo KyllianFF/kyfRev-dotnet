@@ -463,6 +463,14 @@ public sealed partial class WorkloadPageViewModel : ObservableObject, INavigatio
     [RelayCommand]
     private void Open(DueItemRow row) => _opener.Open(row.Item, row.ActiveRecall);
 
+    /// <summary>Les actions communes sur une fiche, pour son clic droit (rangée 23A) ; rien sans elles.</summary>
+    public SheetActionsViewModel? SheetActions { get; set; }
+
+    /// <summary>Le menu de la fiche d'une échéance : « Réviser » la révise comme un clic sur la ligne.</summary>
+    internal IReadOnlyList<System.Windows.Controls.Control> SheetMenuOf(DueItemRow row) => row.Item.Kind == ItemKind.Sheet
+        ? SheetMenu.Items(new SheetTarget(row.Item.SheetId, row.Item.Title) { Folder = row.Item.Folder }, new SharedSheetMenu(SheetActions, _opener, revise: _ => Open(row)))
+        : [];
+
     /// <summary>« Déplacer… » : le choix d'un jour paraît, sur le jour le moins chargé alentour.</summary>
     [RelayCommand]
     private void PrepareMove(DueItemRow row)

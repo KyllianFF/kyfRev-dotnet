@@ -1,6 +1,7 @@
 using System.Windows.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using KyfRev.Application.Model;
+using KyfRev.Presentation.Wpf.Pages;
 
 namespace KyfRev.Presentation.Wpf.Shell;
 
@@ -36,6 +37,9 @@ public sealed record PaletteEntry(string Label, string? Detail, string Glyph, Ac
 {
     /// <summary>Son groupe.</summary>
     public PaletteGroup Group { get; init; } = PaletteGroup.Commands;
+
+    /// <summary>La fiche que ce résultat désigne, pour son clic droit (rangée 23A) ; rien pour le reste.</summary>
+    public SheetTarget? Sheet { get; init; }
 
     /// <summary>Où se trouve un résultat : le dossier d'une fiche, la fiche d'un passage.</summary>
     public string? Place { get; init; }

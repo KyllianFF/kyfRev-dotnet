@@ -7,6 +7,7 @@ using System.Windows.Media;
 using CsCheck;
 using KyfRev.Application;
 using KyfRev.Application.Model;
+using KyfRev.DesignSystem;
 using KyfRev.DesignSystem.Controls;
 using KyfRev.Presentation.Wpf.Editing;
 using KyfRev.Presentation.Wpf.Pages;
@@ -555,14 +556,14 @@ public sealed class HighlightingTests
         try
         {
             var viewer = Named<SheetDocumentViewer>(window, "SheetText");
-            Assert.AreEqual(EditingText.EditSheet, Headers(sheetPage.TextMenuItems(null)));
+            Assert.AreEqual($"{EditingText.Read}|{ReadingText.Revise}|{EditingText.Write}|{PrintText.PrintAction}", Headers(sheetPage.TextMenuItems(null)), "le fond de la fiche : le menu de la fiche");
 
             var run = Runs(viewer).First(candidate => candidate.Background is not null);
             var onPassage = Headers(sheetPage.TextMenuItems(run));
-            Assert.AreEqual($"{ReadingText.ShowPassage}|{ReadingText.EditComment}|{ReadingText.RebindOther}|{ReadingText.DeletePassage}|{EditingText.EditSheet}", onPassage);
+            Assert.AreEqual($"{ReadingText.ShowPassage}|{ReadingText.EditComment}|{ReadingText.RebindOther}|{ReadingText.DeletePassage}|{ReadingText.SheetSubmenu}", onPassage);
 
             Select(viewer, Position(viewer, "second"));
-            Assert.AreEqual($"{ReadingText.Copy}|{ReadingText.Highlight}|{ReadingText.Annotate}|{ReadingText.Define}|{EditingText.EditSheet}", Headers(sheetPage.TextMenuItems(null)));
+            Assert.AreEqual($"{ReadingText.Copy}|{ReadingText.Highlight}|{ReadingText.Annotate}|{ReadingText.Define}|{DesignText.SelectAll}|{ReadingText.SheetSubmenu}", Headers(sheetPage.TextMenuItems(null)));
 
             ((MenuItem)sheetPage.TextMenuItems(null)[2]).RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
             Assert.IsTrue(page.IsEditing);

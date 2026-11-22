@@ -92,6 +92,12 @@ public static class SheetActionsText
     /// <summary>« Ouvrir ».</summary>
     public static string Open => Text(nameof(Open));
 
+    /// <summary>« Reportée à demain. ».</summary>
+    public static string PostponedTomorrow => Text(nameof(PostponedTomorrow));
+
+    /// <summary>« Cette fiche n'est plus dans le coffre. ».</summary>
+    public static string SheetMissing => Text(nameof(SheetMissing));
+
     /// <summary>« Renommer… ».</summary>
     public static string Rename => Text(nameof(Rename));
 

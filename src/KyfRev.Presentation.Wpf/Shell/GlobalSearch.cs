@@ -78,6 +78,7 @@ internal static class SearchEntries
         new(hit.Title, hit.IsArchived ? ShellText.SearchBadgeArchived : null, hit.IsArchived ? Icons.Archive : Icons.Document, () => open(hit))
         {
             Place = hit.Detail is { Length: > 0 } folder ? SheetRow.DisplayFolder(folder) : null,
+            Sheet = new SheetTarget(hit.Id, hit.Title) { IsArchived = hit.IsArchived, Folder = hit.Detail ?? string.Empty },
         };
 
     private static PaletteEntry AnnotationEntry(SearchHit hit, Action<SearchHit> open)

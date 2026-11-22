@@ -77,7 +77,12 @@
       <!-- Le titre est déjà au-dessus. Les liens s'y lisent : on les suit une fois la fiche ouverte. -->
       <reading:PageFitHost x:Name="PreviewSheet" Grid.Row="2" EndlessWidth="760" Margin="0,12,0,0" Visibility="{Binding HasBody, Converter={StaticResource Visible}}">
         <reading:SheetDocumentViewer x:Name="PreviewBody" Reading="{Binding Reading}" Highlights="{Binding Reading.Highlights}" ShowsHeader="False" FollowsSheetLayout="True"
-                                     ShowsSheet="True" NumbersPages="True" AutomationProperties.Name="{x:Static pages:ReadingText.Document}" />
+                                     ShowsSheet="True" NumbersPages="True" AutomationProperties.Name="{x:Static pages:ReadingText.Document}">
+          <!-- Le menu de la fiche (rangée 23A), rempli par la vue qui montre l'aperçu ; sans lui, Windows montrait le sien, en anglais. -->
+          <reading:SheetDocumentViewer.ContextMenu>
+            <ContextMenu />
+          </reading:SheetDocumentViewer.ContextMenu>
+        </reading:SheetDocumentViewer>
       </reading:PageFitHost>
       <Border x:Name="PreviewFoot" Grid.Row="3" Margin="{Binding SheetInset, ElementName=PreviewSheet}" Padding="0,8,0,0" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource Kyf.Brush.Divider}">
         <DockPanel LastChildFill="False" Margin="0,8,0,0">
@@ -145,7 +150,11 @@
         <!-- Le titre est déjà au-dessus. Les liens s'y lisent : on les suit une fois la fiche ouverte. -->
         <reading:PageFitHost x:Name="PreviewSheet" Grid.Row="1" Visibility="{Binding HasBody, Converter={StaticResource Visible}}">
           <reading:SheetDocumentViewer x:Name="PreviewBody" Reading="{Binding Reading}" Highlights="{Binding Reading.Highlights}" ShowsHeader="False" FollowsSheetLayout="True"
-                                       AutomationProperties.Name="{x:Static pages:ReadingText.Document}" />
+                                       AutomationProperties.Name="{x:Static pages:ReadingText.Document}">
+            <reading:SheetDocumentViewer.ContextMenu>
+              <ContextMenu />
+            </reading:SheetDocumentViewer.ContextMenu>
+          </reading:SheetDocumentViewer>
         </reading:PageFitHost>
       </Grid>
       <!-- Les étapes du cycle, puis « Historique » à leur suite : une ligne, au lieu de deux. -->

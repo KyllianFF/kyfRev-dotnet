@@ -660,6 +660,11 @@
     </Grid>
   </Grid>
 
+    <!-- Les actions sur une fiche, depuis n'importe quelle vue : leur fenêtre, et ce qui a abouti (rangée 23A). -->
+    <pages:SheetActionsView x:Name="SheetActionsHost" Grid.Row="1" DataContext="{Binding SheetActions}" />
+    <!-- Partager une fiche et l'enregistrer comme modèle : une seule fois, pour toutes les vues ; on les referme en changeant de vue. -->
+    <pages:SheetSharingDialogs x:Name="SharingHost" Grid.Row="1" DataContext="{Binding Sharing}" />
+
     <!-- L'image de la fenêtre dans l'ancien thème : elle s'efface un instant par-dessus le nouveau (voir FadeTheme). Sans
          effet sur la mise en page, et rien ne s'y clique. -->
     <Image x:Name="ThemeGhost" Grid.RowSpan="2" Stretch="Fill" HorizontalAlignment="Left" VerticalAlignment="Top" IsHitTestVisible="False"

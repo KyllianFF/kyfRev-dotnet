@@ -33,7 +33,7 @@ public sealed class SharingViewsTests
             var items = scene.View.RowMenuItems(row);
             var headers = items.OfType<MenuItem>().Select(item => (string)item.Header).ToList();
             CollectionAssert.IsSubsetOf(SharingEntries, headers);
-            Assert.AreEqual(headers.IndexOf(SheetActionsText.Move) + 1, headers.IndexOf(SharingText.Share), "après « Déplacer », comme dans la 0.x");
+            Assert.AreEqual(headers.IndexOf(PrintText.PrintAction) + 1, headers.IndexOf(SharingText.Share), "après « Imprimer… », dans le bloc de la sortie (rangée 23A)");
             Assert.IsInstanceOfType<MenuItem>(items[0], "les actions rapides restent en tête");
 
             Click(items, SharingText.Share);
@@ -465,7 +465,9 @@ public sealed class SharingViewsTests
             var items = view.TextMenuItems(null).OfType<MenuItem>().Select(item => (string)item.Header).ToList();
             CollectionAssert.AreEqual(SharingEntries, items.TakeLast(2).ToList(), "à la fin du menu du texte, comme dans la 0.x");
             view.SheetText.Selection.Select(view.SheetText.Document.ContentStart, view.SheetText.Document.ContentEnd);
-            CollectionAssert.AreEqual(SharingEntries, view.TextMenuItems(null).OfType<MenuItem>().Select(item => (string)item.Header).TakeLast(2).ToList(), "sélection comprise");
+            var sheet = (MenuItem)view.TextMenuItems(null)[^1];
+            Assert.AreEqual(ReadingText.SheetSubmenu, sheet.Header, "sur une sélection, la fiche est sous « Fiche › »");
+            CollectionAssert.AreEqual(SharingEntries, sheet.Items.OfType<MenuItem>().Select(item => (string)item.Header).TakeLast(2).ToList(), "sélection comprise");
             view.SheetText.Selection.Select(view.SheetText.Document.ContentStart, view.SheetText.Document.ContentStart);
 
             Click(view.TextMenuItems(null), SharingText.SaveAsTemplate);
@@ -642,6 +644,13 @@ public sealed class SharingViewsTests
     private static ShellWindow Show(TestShell test, object page, double width, double height)
     {
         var shell = test.Shell;
+        // Comme dans l'application : la fenêtre principale porte les fenêtres de partage.
+        shell.Sharing = page switch
+        {
+            SheetsPageViewModel sheets => sheets.Sharing,
+            SheetPageViewModel sheet => sheet.Sharing,
+            _ => null,
+        };
         shell.Navigate(new NavigationItem("fiche", "Fiche", Icons.Document, int.MaxValue, page));
         var window = new ShellWindow(shell) { ShowActivated = true, Left = -10000, Top = -10000, Width = width, Height = height, WindowStartupLocation = WindowStartupLocation.Manual };
         window.Resources.MergedDictionaries.Add(test.Design.Dictionary);

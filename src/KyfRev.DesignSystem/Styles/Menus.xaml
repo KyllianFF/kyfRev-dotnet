@@ -139,6 +139,12 @@
             <Trigger Property="IsHighlighted" Value="True">
               <Setter TargetName="Cell" Property="Background" Value="{DynamicResource Kyf.Brush.SurfaceAlt}" />
             </Trigger>
+            <!-- L'état en cours (le mode où la fiche est ouverte) : en vert pâle, comme le choix d'une liste. -->
+            <Trigger Property="IsChecked" Value="True">
+              <Setter TargetName="Cell" Property="Background" Value="{DynamicResource Kyf.Brush.NavigationActiveBackground}" />
+              <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.NavigationActiveText}" />
+              <Setter Property="FontWeight" Value="SemiBold" />
+            </Trigger>
             <Trigger Property="IsEnabled" Value="False">
               <Setter TargetName="Cell" Property="Opacity" Value="0.5" />
             </Trigger>

@@ -105,6 +105,9 @@ public sealed class ReviewNavigation : IReviewOpener
     /// <summary>La vue de la charge à venir, tenue par la composition.</summary>
     public WorkloadPageViewModel? Workload { get; set; }
 
+    /// <summary>Les actions communes sur une fiche, données aux fiches qu'on ouvre ; rien sans elles.</summary>
+    public SheetActionsViewModel? SheetActions { get; set; }
+
     private DateOnly Today => DateOnly.FromDateTime(_time.GetLocalNow().DateTime);
 
     private ShellViewModel Shell => _shell ?? throw new InvalidOperationException("La coquille n'est pas encore assemblée.");
@@ -201,7 +204,7 @@ public sealed class ReviewNavigation : IReviewOpener
     {
         var shell = Shell;
         var from = shell.Current;
-        var page = new SheetPageViewModel(_sheets, _annotations, Bar, sheetId, () => shell.Navigate(from), OpenSheet, _links, Editor, revising, ActiveRecall) { PageSetup = PageSetupOf(sheetId), Print = new PrintViewModel(_printing), SheetZoom = _machine?.Current.SheetZoom ?? 1, Column = () => _machine?.Current.Column ?? ReadingColumn.Comfortable, IsRibbonReduced = _machine?.Current.RibbonReduced ?? false, RibbonReducedChanged = reduced => _machine?.Update(preferences => preferences with { RibbonReduced = reduced }), SheetZoomChanged = zoom => _machine?.Update(preferences => preferences with { SheetZoom = zoom }), PassageToShow = passageId, RangeToShow = range, Masks = new ImageMaskEditorViewModel(_sheets, _editing), ReadAloud = _speech is null ? null : new ReadAloudViewModel(_speech, _machine), MarksDefinedWords = _machine?.Current.MarkDefinedWords ?? true, OpenPassage = OpenPassageInSheet, Sharing = _sharing, FocusMode = shell };
+        var page = new SheetPageViewModel(_sheets, _annotations, Bar, sheetId, () => shell.Navigate(from), OpenSheet, _links, Editor, revising, ActiveRecall) { PageSetup = PageSetupOf(sheetId), Print = new PrintViewModel(_printing), SheetZoom = _machine?.Current.SheetZoom ?? 1, Column = () => _machine?.Current.Column ?? ReadingColumn.Comfortable, IsRibbonReduced = _machine?.Current.RibbonReduced ?? false, RibbonReducedChanged = reduced => _machine?.Update(preferences => preferences with { RibbonReduced = reduced }), SheetZoomChanged = zoom => _machine?.Update(preferences => preferences with { SheetZoom = zoom }), PassageToShow = passageId, RangeToShow = range, Masks = new ImageMaskEditorViewModel(_sheets, _editing), ReadAloud = _speech is null ? null : new ReadAloudViewModel(_speech, _machine), MarksDefinedWords = _machine?.Current.MarkDefinedWords ?? true, OpenPassage = OpenPassageInSheet, Sharing = _sharing, FocusMode = shell, SheetActions = SheetActions };
         shell.Navigate(new NavigationItem(CorePages.Sheet, ReviewText.SheetPage, Icons.Document, int.MaxValue, page));
         if (writes)
         {

@@ -8,6 +8,7 @@ using System.Windows.Threading;
 using KyfRev.DesignSystem;
 using KyfRev.DesignSystem.Controls;
 using KyfRev.Extensions.Host;
+using KyfRev.Presentation.Wpf.Shell;
 
 namespace KyfRev.Presentation.Wpf.Pages;
 
@@ -36,6 +37,9 @@ internal sealed partial class SheetsPage : UserControl
         Items.ContextMenuOpening += OnRowMenu;
         PlacesList.ContextMenu = new ContextMenu();
         PlacesList.ContextMenuOpening += OnPlaceMenu;
+        // L'aperçu a le menu de la fiche, le même que sa ligne (rangée 23B).
+        PreviewHost.AddHandler(ContextMenuOpeningEvent, new ContextMenuEventHandler((_, e) =>
+            PreviewMenus.Open(e, () => DataContext is SheetsPageViewModel { Preview.Row: SheetRow row } ? RowMenuItems(row) : [])));
         // Le volet des dossiers suit la vue : à gauche de la liste s'il y tient, dans le tiroir sinon.
         DataContextChanged += (_, _) => Follow(DataContext as SheetsPageViewModel);
         // La disposition suit la largeur de la page. La page quittée n'a plus de contexte.
@@ -252,44 +256,14 @@ internal sealed partial class SheetsPage : UserControl
         }
         return row switch
         {
-            SheetRow sheet => SheetMenu(page, sheet),
+            SheetRow sheet => SheetRowMenu(page, sheet),
             SheetFolderRow { IsFolder: true } folder => FolderMenu(page, folder),
             _ => FreeSpaceMenu(page),
         };
     }
 
-    private static List<Control> SheetMenu(SheetsPageViewModel page, SheetRow row)
-    {
-        List<Control> items =
-        [
-            ActionMenus.Quick(SheetActionsText.Open, Icons.Document, () => page.OpenCommand.Execute(row)),
-            ActionMenus.Quick(SheetActionsText.Review, Icons.Review, () => page.Revise(row), isEnabled: !row.Sheet.Archived),
-            ActionMenus.Quick(SheetActionsText.Write, Icons.Edit, () => page.Write(row)),
-        ];
-        items.Add(ActionMenus.Item(PrintText.PrintAction, () => page.Print(row)));
-        if (page.CanManage)
-        {
-            items.Add(new Separator());
-            items.Add(ActionMenus.Item(SheetActionsText.Rename, () => page.RequestRename(row)));
-            items.Add(ActionMenus.Item(SheetActionsText.Tags, () => page.RequestTags(row)));
-            items.Add(ActionMenus.Item(SheetActionsText.Move, () => page.RequestMove(row)));
-            if (page.Sharing is not null)
-            {
-                items.Add(ActionMenus.Item(SharingText.Share, () => page.RequestShare(row)));
-                items.Add(ActionMenus.Item(SharingText.SaveAsTemplate, () => page.RequestSaveAsTemplate(row)));
-            }
-            items.Add(new Separator());
-            if (!row.Sheet.Archived)
-            {
-                // Fiche de révision ou simple note : le même document, qui passe de l'une à l'autre.
-                items.Add(ActionMenus.Item(row.Sheet.IsNote ? SheetsText.MakeReview : SheetsText.MakeNote, () => _ = page.ToggleNoteAsync(row)));
-            }
-            items.Add(ActionMenus.Item(row.Sheet.Archived ? SheetActionsText.Restart : SheetActionsText.Archive, () => page.RequestArchiveOrRestart(row)));
-            items.Add(ActionMenus.Item(SheetActionsText.Delete, () => page.RequestTrash(row)));
-        }
-        AddExtensions(items, page, ExtensionMenuZone.Sheet, new Dictionary<string, string> { ["id"] = row.Sheet.Id, ["titre"] = row.Sheet.Title, ["dossier"] = row.Sheet.Folder });
-        return items;
-    }
+    /// <summary>Le menu d'une fiche, le même que partout (rangée 23A), sur les actions du Carnet.</summary>
+    private static List<Control> SheetRowMenu(SheetsPageViewModel page, SheetRow row) => SheetMenu.Items(row.Target, new CarnetSheetMenu(page, row));
 
     /// <summary>Les entrées des extensions, après celles de kyfRev.</summary>
     private static void AddExtensions(List<Control> items, SheetsPageViewModel page, ExtensionMenuZone zone, IReadOnlyDictionary<string, string> context)
@@ -487,5 +461,49 @@ internal sealed partial class SheetsPage : UserControl
             }
         }
         return null;
+    }
+
+    /// <summary>
+    /// Le menu d'une fiche dans le Carnet : ses fenêtres pour renommer, déplacer, archiver ou supprimer ; les actions communes
+    /// pour ce qu'il ne fait pas lui-même (reporter, rappels).
+    /// </summary>
+    private sealed class CarnetSheetMenu(SheetsPageViewModel page, SheetRow row) : ISheetMenuHost
+    {
+        public bool CanManage => page.CanManage;
+
+        public bool CanShare => page.CanManage && page.Sharing is not null;
+
+        public void Read(SheetTarget sheet) => page.OpenCommand.Execute(row);
+
+        public void Revise(SheetTarget sheet) => page.Revise(row);
+
+        public void Write(SheetTarget sheet) => page.Write(row);
+
+        public void PostponeTomorrow(SheetTarget sheet) => page.SheetActions?.PostponeTomorrow(sheet);
+
+        public void Archive(SheetTarget sheet) => page.RequestArchiveOrRestart(row);
+
+        public void Restart(SheetTarget sheet) => page.RequestArchiveOrRestart(row);
+
+        public void ToggleReminders(SheetTarget sheet) => page.SheetActions?.ToggleReminders(sheet);
+
+        public void Rename(SheetTarget sheet) => page.RequestRename(row);
+
+        public void Tags(SheetTarget sheet) => page.RequestTags(row);
+
+        public void Move(SheetTarget sheet) => page.RequestMove(row);
+
+        public void Print(SheetTarget sheet) => page.Print(row);
+
+        public void Share(SheetTarget sheet) => page.RequestShare(row);
+
+        public void SaveAsTemplate(SheetTarget sheet) => page.RequestSaveAsTemplate(row);
+
+        public void ToggleNote(SheetTarget sheet) => _ = page.ToggleNoteAsync(row);
+
+        public void Trash(SheetTarget sheet) => page.RequestTrash(row);
+
+        public IReadOnlyList<MenuContribution> Extensions(SheetTarget sheet) =>
+            page.ExtensionMenus?.Invoke(ExtensionMenuZone.Sheet, new Dictionary<string, string> { ["id"] = sheet.Id, ["titre"] = sheet.Title, ["dossier"] = sheet.Folder }) ?? [];
     }
 }

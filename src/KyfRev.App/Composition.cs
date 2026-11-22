@@ -148,6 +148,15 @@ internal static class Composition
             new SharedSheetPictures(provider.GetRequiredService<MermaidEngine>(), () => provider.GetRequiredService<INetworkSchemas>()),
             new SheetPrinter(Path.Combine(provider.GetRequiredService<VaultLocations>().LocalData, "WebView2")),
             clock));
+        services.AddSingleton(provider => new SheetActionsViewModel(
+            provider.GetRequiredService<SheetUseCases>(),
+            provider.GetRequiredService<FolderUseCases>(),
+            provider.GetRequiredService<ReviewUseCases>(),
+            provider.GetRequiredService<ReminderUseCases>(),
+            provider.GetRequiredService<TrashUseCases>(),
+            provider.GetRequiredService<IReviewOpener>(),
+            clock,
+            provider.GetRequiredService<SheetSharingViewModel>()));
         services.AddSingleton<FolderImportViewModel>();
         services.AddSingleton<WorkloadPageViewModel>();
         services.AddSingleton<SheetsPageViewModel>();
@@ -304,6 +313,19 @@ internal static class Composition
             shell.Capture = text => provider.GetRequiredService<EditingUseCases>().Capture(text);
             // Le dialogue de la mise à jour se pose sur toutes les vues.
             shell.Updates = provider.GetRequiredService<UpdateFlow>();
+            // Les actions sur une fiche, depuis toutes les vues : la vue affichée se relit après une action, et une fiche ouverte
+            // qu'on met à la corbeille se quitte.
+            var sheetActions = provider.GetRequiredService<SheetActionsViewModel>();
+            sheetActions.Changed += (_, _) => (shell.Current.Page as INavigationAware)?.OnNavigatedTo();
+            sheetActions.SheetGone = id =>
+            {
+                if (shell.Current.Page is SheetPageViewModel opened && opened.SheetId == id)
+                {
+                    opened.BackCommand.Execute(null);
+                }
+            };
+            shell.SheetActions = sheetActions;
+            shell.Sharing = provider.GetRequiredService<SheetSharingViewModel>();
             // Les fiches et les passages s'ouvrent dans la coquille.
             provider.GetRequiredService<ReviewNavigation>().Attach(shell);
             provider.GetRequiredService<ReviewNavigation>().Workload = provider.GetRequiredService<WorkloadPageViewModel>();
@@ -348,6 +370,13 @@ internal static class Composition
                 }
             };
             provider.GetRequiredService<SheetsPageViewModel>().ExtensionMenus = extensionPages.MenuEntries;
+            sheetActions.ExtensionMenus = extensionPages.MenuEntries;
+            provider.GetRequiredService<SheetsPageViewModel>().SheetActions = sheetActions;
+            provider.GetRequiredService<DashboardPageViewModel>().SheetActions = sheetActions;
+            provider.GetRequiredService<ArchivesPageViewModel>().SheetActions = sheetActions;
+            provider.GetRequiredService<ReviewNavigation>().SheetActions = sheetActions;
+            provider.GetRequiredService<WorkloadPageViewModel>().SheetActions = sheetActions;
+            provider.GetRequiredService<DefinitionsPageViewModel>().SheetActions = sheetActions;
             provider.GetRequiredService<ExtensionEngine>().Screen = new ExtensionScreen(shell, provider.GetRequiredService<ReviewNavigation>());
             provider.GetRequiredService<DashboardPageViewModel>().ExtensionCards = extensionPages.CardsAsync;
             shell.WorkspaceOpening += (_, _) =>

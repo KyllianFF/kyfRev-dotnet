@@ -89,6 +89,18 @@ public static class ReadingText
     /// <summary>Un passage dont la position n'est qu'approchée.</summary>
     public const string CandidatePassage = "Position à vérifier : son texte a changé.";
 
+    /// <summary>« Fiche » : le sous-menu de la fiche entière, sous ce qu'on vise.</summary>
+    public const string SheetSubmenu = "Fiche";
+
+    /// <summary>« Copier le tableau » : son texte, une ligne par rangée, les cases séparées par des tabulations.</summary>
+    public const string CopyTable = "Copier le tableau";
+
+    /// <summary>« Copier l'image » : un schéma, un diagramme ou un graphique, tel qu'il s'affiche.</summary>
+    public const string CopyDrawing = "Copier l'image";
+
+    /// <summary>« Modifier » : un schéma, en écriture.</summary>
+    public const string EditDrawing = "Modifier";
+
     /// <summary>Copier la sélection.</summary>
     public const string Copy = "Copier";
 
