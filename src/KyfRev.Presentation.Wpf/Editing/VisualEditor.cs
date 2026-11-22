@@ -305,6 +305,8 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
         if (!_covered)
         {
             _view.Visibility = Visibility.Visible;
+            // Sa fenêtre se pose là où la mise en page la met, sans attendre un autre changement.
+            Dispatcher.BeginInvoke(DispatcherPriority.Render, _view.UpdateWindowPos);
         }
         if (_focusAsked)
         {
@@ -808,8 +810,15 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
         {
             Environment.SetEnvironmentVariable(variable, null);
         }
-        return new CoreWebView2EnvironmentOptions { Language = "fr-FR", IsCustomCrashReportingEnabled = true, AdditionalBrowserArguments = browserArguments };
+        return new CoreWebView2EnvironmentOptions { Language = "fr-FR", IsCustomCrashReportingEnabled = true, AdditionalBrowserArguments = string.IsNullOrEmpty(browserArguments) ? DrawsWhenShown : $"{DrawsWhenShown} {browserArguments}" };
     }
+
+    /// <summary>
+    /// Le moteur décide lui-même si sa fenêtre est cachée, et cesse alors de dessiner ; il ne le revoit qu'à certains
+    /// événements de fenêtre, un mouvement de souris par exemple. Caché le temps que son texte arrive, puis montré, il restait
+    /// blanc jusqu'à ce que la souris bouge. kyfRev montre et cache lui-même ses moteurs : ce calcul est coupé.
+    /// </summary>
+    internal const string DrawsWhenShown = "--disable-features=CalculateNativeWinOcclusion";
 
     /// <summary>Le menu d'un dessin : le modifier si kyfRev sait le faire, voir son code, le retirer de la fiche.</summary>
     private List<Control> DrawingMenuItems(MenuEvent menu, int position)

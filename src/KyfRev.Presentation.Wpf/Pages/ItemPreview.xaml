@@ -36,7 +36,9 @@
        avec un papier, le texte est sur ses lignes, comme en lecture. Entre deux feuilles, le fond de la page et le rang de la
        suivante. -->
   <DataTemplate x:Key="CarnetPreview" DataType="{x:Type pages:TodayPreview}">
-    <Grid x:Name="PreviewColumn" HorizontalAlignment="Center" MaxWidth="{Binding SheetWidth, ElementName=PreviewSheet}" TextElement.Foreground="{DynamicResource Kyf.Brush.Text}">
+    <!-- Étirée jusqu'à la largeur de la feuille, et centrée au-delà : sa largeur ne dépend que de la place et de la feuille, jamais
+         de ce que son contenu demandait pour la fiche d'avant (une feuille plus étroite la laissait trop étroite, et coupait la suivante). -->
+    <Grid x:Name="PreviewColumn" HorizontalAlignment="Stretch" MaxWidth="{Binding SheetWidth, ElementName=PreviewSheet}" TextElement.Foreground="{DynamicResource Kyf.Brush.Text}">
       <Grid.RowDefinitions>
         <RowDefinition Height="Auto" />
         <RowDefinition Height="Auto" />

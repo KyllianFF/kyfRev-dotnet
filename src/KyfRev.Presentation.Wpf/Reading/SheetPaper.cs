@@ -3,6 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Media;
+using System.Windows.Threading;
 using KyfRev.Application.Model;
 using KyfRev.Presentation.Wpf.Pages;
 
@@ -429,6 +430,12 @@ internal sealed class PageFitHost : Decorator
     private double _scale = 1;
     private SheetDocumentViewer? _watched;
 
+    /// <summary>La largeur de feuille sur laquelle l'échelle a été calculée.</summary>
+    private double _measuredWanted = -1;
+
+    /// <summary>La largeur de feuille qui sera donnée à la colonne, une fois la mise en page finie.</summary>
+    private double _comingWidth = double.NaN;
+
     /// <inheritdoc cref="SheetInsetProperty"/>
     public Thickness SheetInset
     {
@@ -461,10 +468,18 @@ internal sealed class PageFitHost : Decorator
                 viewer.PagesShown += OnPagesShown;
             }
             var wanted = viewer.FitWidth;
+            _measuredWanted = wanted;
             var sheet = wanted > 0 ? wanted : EndlessWidth;
-            if (!sheet.Equals(SheetWidth))
+            if (!sheet.Equals(SheetWidth) && !sheet.Equals(_comingWidth))
             {
-                SheetWidth = sheet;
+                // Pas pendant la mise en page : la colonne autour, liée à cette largeur, est en train de se mesurer, et WPF
+                // oublierait de la remesurer. Elle gardait la largeur de la fiche d'avant, et coupait celle-ci (rangée 9A).
+                _comingWidth = sheet;
+                Dispatcher.BeginInvoke(DispatcherPriority.Render, () =>
+                {
+                    SheetWidth = _comingWidth;
+                    _comingWidth = double.NaN;
+                });
             }
             var scale = wanted > 0 && !double.IsInfinity(constraint.Width) && constraint.Width > 0 && constraint.Width < wanted
                 ? Math.Max(0.2, constraint.Width / wanted)
@@ -481,7 +496,16 @@ internal sealed class PageFitHost : Decorator
     /// <summary>La vue vient de poser ses feuilles : leurs bords sont connus.</summary>
     private void OnPagesShown(object? sender, EventArgs e)
     {
-        if (sender is not SheetDocumentViewer viewer || viewer.PagePaper.Sheets is not [var sheet, ..] || viewer.ActualWidth <= 0)
+        if (sender is not SheetDocumentViewer viewer)
+        {
+            return;
+        }
+        // Une autre fiche, d'un autre format : la vue a gardé sa taille, et l'hôte n'a pas été remesuré. Il refait son échelle.
+        if (!viewer.FitWidth.Equals(_measuredWanted))
+        {
+            InvalidateMeasure();
+        }
+        if (viewer.PagePaper.Sheets is not [var sheet, ..] || viewer.ActualWidth <= 0)
         {
             return;
         }

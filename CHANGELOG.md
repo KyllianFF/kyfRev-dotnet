@@ -7,6 +7,12 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ## [Non publié]
 
+### Corrigé
+- Carnet : en passant d'une fiche à une autre d'un autre format de page (une A4, puis une fiche sans fin), l'aperçu gardait la
+  largeur de la précédente : la fiche, « Lire / Écrire » et « Historique » sortaient du cadre.
+- Écrire : la feuille pouvait rester blanche jusqu'à ce que la souris bouge. Le moteur du texte décidait seul que sa fenêtre
+  était cachée et cessait de dessiner ; kyfRev le lui interdit désormais.
+
 ## [1.1.0-beta.3] - 2026-11-18
 
 ### Ajouté
