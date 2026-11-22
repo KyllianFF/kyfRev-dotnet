@@ -147,6 +147,7 @@ public sealed class DesignResources
         [DesignKeys.FastDuration] = new Duration(Motion.Effective(Motion.Fast, reducedMotion)),
         [DesignKeys.NormalDuration] = new Duration(Motion.Effective(Motion.Normal, reducedMotion)),
         [DesignKeys.PressDuration] = new Duration(Motion.Effective(Motion.Press, reducedMotion)),
+        [DesignKeys.PageDuration] = new Duration(Motion.Effective(Motion.Page, reducedMotion)),
         [DesignKeys.PopupMotion] = reducedMotion || Controls.Transitions.Skip || off.HasFlag(MotionKinds.Surfaces) ? System.Windows.Controls.Primitives.PopupAnimation.None : System.Windows.Controls.Primitives.PopupAnimation.Fade,
     };
 

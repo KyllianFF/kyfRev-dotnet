@@ -41,6 +41,9 @@ public static class DesignKeys
     /// <summary>Durée normale, nulle si les animations sont réduites.</summary>
     public const string NormalDuration = "Kyf.Duration.Normal";
 
+    /// <summary>Durée de l'arrivée d'une page quand on change de vue, nulle si les animations sont réduites.</summary>
+    public const string PageDuration = "Kyf.Duration.Page";
+
     /// <summary>Durée de l'enfoncement d'un bouton sous le clic, nulle si les animations sont réduites.</summary>
     public const string PressDuration = "Kyf.Duration.Press";
 

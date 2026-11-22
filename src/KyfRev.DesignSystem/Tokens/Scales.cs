@@ -147,6 +147,12 @@ public static class Motion
     /// <summary>Un bouton qui s'enfonce sous le clic : plus vite qu'il ne revient (<see cref="Fast"/>).</summary>
     public static TimeSpan Press { get; } = TimeSpan.FromMilliseconds(80);
 
+    /// <summary>
+    /// Une page qui arrive quand on change de vue : la durée des pages de Windows. Plus longue que <see cref="Normal"/>, mais
+    /// sa courbe fait presque tout le chemin dans le premier tiers ; le reste n'est que la page qui se pose.
+    /// </summary>
+    public static TimeSpan Page { get; } = TimeSpan.FromMilliseconds(300);
+
     /// <summary>Durée réellement employée : nulle quand les animations sont réduites.</summary>
     public static TimeSpan Effective(TimeSpan duration, bool reducedMotion) => reducedMotion ? TimeSpan.Zero : duration;
 

@@ -659,4 +659,71 @@ public sealed class FluidityTests
             window.Close();
         }
     }
+
+    [STATestMethod]
+    public void A_page_that_arrives_rises_a_little_and_nothing_else_moves_meanwhile()
+    {
+        var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
+        Assert.AreEqual(new Duration(Motion.Page), design.Dictionary[DesignKeys.PageDuration]);
+        var list = new ItemsControl { ItemsSource = Lines("a", "b", "c") };
+        Transitions.SetNewcomerKey(list, "Card.Id");
+        var page = new ContentControl { Content = list };
+        var host = Host.Of(design, page);
+        using var source = new HwndSource(new HwndSourceParameters("kyfRev essai") { Width = 480, Height = 320 }) { RootVisual = host };
+        Host.Layout(host);
+
+        // La page arrive : invisible le temps de se mettre en page, puis elle monte de quelques pixels et se pose.
+        Assert.IsTrue(Transitions.Arrive(page));
+        Assert.IsTrue(Transitions.GetIsArriving(page));
+        Assert.IsTrue(Transitions.GetIsArriving(list), "ce qu'elle contient le sait");
+        Assert.IsTrue(page.HasAnimatedProperties, "tenue invisible en attendant");
+        Assert.AreEqual(Transform.Identity, page.RenderTransform, "pas encore partie");
+        // Sa liste, vue pour la première fois, ne fait pas sa cascade par-dessus : un seul mouvement à l'écran.
+        Assert.AreEqual(0, Transitions.Welcome(list));
+        Assert.IsFalse(RowOf(list, 0).HasAnimatedProperties);
+        Assert.AreEqual(0, Transitions.Cascade(list));
+        var lowest = 0.0;
+        var first = double.NaN;
+        Wait(() =>
+        {
+            if (page.RenderTransform is TranslateTransform move)
+            {
+                first = double.IsNaN(first) ? move.Y : first;
+                lowest = Math.Max(lowest, move.Y);
+            }
+            return !Transitions.GetIsArriving(page);
+        });
+        Assert.IsGreaterThan(0, lowest, "elle est partie de plus bas");
+        Assert.IsLessThanOrEqualTo(Transitions.PageRise, lowest);
+        Assert.AreEqual(Transform.Identity, page.RenderTransform, "posée, elle n'est plus décalée");
+        Assert.AreEqual(1.0, page.Opacity);
+        Assert.IsFalse(Transitions.GetIsArriving(list));
+        // La courbe des pages de Windows : les deux tiers du chemin dans le premier dixième du temps.
+        Assert.AreEqual(new Point(0.1, 0.9), Transitions.PageEase.ControlPoint1);
+        Assert.AreEqual(new Point(0.2, 1), Transitions.PageEase.ControlPoint2);
+        Assert.IsGreaterThan(0.6, Transitions.PageEase.GetSplineProgress(0.11));
+
+        // Une arrivée remplacée par une autre ne touche plus à rien ; la dernière finit à sa place.
+        Assert.IsTrue(Transitions.Arrive(page));
+        Assert.IsTrue(Transitions.Arrive(page));
+        Wait(() => !Transitions.GetIsArriving(page));
+        Assert.AreEqual(Transform.Identity, page.RenderTransform);
+        Assert.AreEqual(1.0, page.Opacity);
+
+        // Une page qui montre une fenêtre native ne bouge pas : elle est montrée telle quelle.
+        Assert.IsTrue(Transitions.Arrive(page, () => true));
+        Wait(() => !Transitions.GetIsArriving(page));
+        Assert.AreEqual(Transform.Identity, page.RenderTransform);
+        Assert.AreEqual(1.0, page.Opacity);
+        Assert.IsFalse(page.HasAnimatedProperties && page.Opacity < 1);
+
+        // Animations réduites : la page est là d'un coup.
+        design.ReducedMotion = true;
+        Assert.AreEqual(new Duration(TimeSpan.Zero), design.Dictionary[DesignKeys.PageDuration]);
+        Assert.IsFalse(Transitions.Arrive(page));
+        Assert.IsFalse(Transitions.GetIsArriving(page));
+        Assert.AreEqual(1.0, page.Opacity);
+        Assert.ThrowsExactly<ArgumentNullException>(() => Transitions.Arrive(null!));
+        Assert.ThrowsExactly<ArgumentNullException>(() => Transitions.GetIsArriving(null!));
+    }
 }
