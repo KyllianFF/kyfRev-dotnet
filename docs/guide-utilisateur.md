@@ -93,7 +93,7 @@ main. Paramètres › Coffre et chiffrement permet d'en ouvrir ou d'en créer un
 - **Zoom de la fiche** : le curseur en bas à droite, de 50 à 200 %. La taille de toute l'interface se règle à part, dans
   Paramètres › Apparence.
 - **Nouvelle fiche** : dans la vue Carnet, un volet s'ouvre à droite (par le bas en fenêtre étroite), le Carnet restant
-  visible. Le titre en haut ; « Dans … » pour choisir le dossier ; fiche de révision ou note ; puis un modèle, dont la
+  visible. Le titre en haut ; « Dans … » pour choisir le dossier ; fiche de révision ou note ; ses étiquettes ; puis un modèle, dont la
   vignette montre l'allure (son contenu se lit au survol). Entrée crée la fiche, Échap ou un clic à côté referme le volet.
 - **Confirmations** : ce qui a abouti se dit dans une pastille au bas de la page, trois secondes ; la souris dessus la
   retient, Échap la ferme.

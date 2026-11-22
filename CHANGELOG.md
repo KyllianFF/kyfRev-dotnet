@@ -26,6 +26,7 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   côté. Le titre en grand ; « Dans Biologie › Cellule » pour le dossier ; « Fiche de révision / Note » côte à côte ; les
   modèles en vignettes qui montrent leur allure. Sous 600 px de large, le volet vient du bas. Une croix, Échap ou un clic
   à côté le referment.
+- Nouvelle fiche : un champ « Étiquettes » ; celles du coffre sont proposées pendant qu'on écrit, comme dans « Étiquettes… ».
 - Confirmations (Déplacé, Archivé, Enregistré…) : une petite pastille au bas de la page, par-dessus, au lieu d'une bande
   qui poussait toute la page vers le bas. Elle reste 3 secondes (4 si le texte est long) ; un trait au bas de la pastille
   raccourcit avec le temps qui reste et s'arrête sous la souris ; Échap la ferme. Un avertissement sur une fiche ouverte

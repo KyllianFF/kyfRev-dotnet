@@ -234,4 +234,10 @@
   <data name="CloseNew" xml:space="preserve">
     <value>Fermer</value>
   </data>
+  <data name="TagsHeading" xml:space="preserve">
+    <value>Étiquettes</value>
+  </data>
+  <data name="TagsPlaceholder" xml:space="preserve">
+    <value>bio, partiel</value>
+  </data>
 </root>

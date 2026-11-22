@@ -443,6 +443,17 @@ internal sealed partial class SheetsPage : UserControl
         return null;
     }
 
+    /// <summary>Une étiquette proposée est prise ; la saisie reprend à sa suite.</summary>
+    private void OnNewTagSuggestionClick(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: string tag } && DataContext is SheetsPageViewModel page)
+        {
+            page.TakeNewTagCommand.Execute(tag);
+            NewTagsBox.Focus();
+            NewTagsBox.CaretIndex = NewTagsBox.Text.Length;
+        }
+    }
+
     /// <summary>« Dans Biologie › Cellule » : la liste des dossiers s'ouvre sous le bouton.</summary>
     private void OnNewFolderClick(object sender, RoutedEventArgs e)
     {

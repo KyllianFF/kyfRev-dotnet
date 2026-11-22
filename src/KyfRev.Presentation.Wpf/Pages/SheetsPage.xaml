@@ -479,6 +479,24 @@
           </kyf:SlidingSelectionPanel>
         </Border>
 
+        <!-- Les étiquettes, séparées par des virgules ; celles du coffre sont proposées pendant qu'on écrit. -->
+        <TextBlock Text="{x:Static pages:SheetsText.TagsHeading}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,20,0,6" />
+        <TextBox x:Name="NewTagsBox" Text="{Binding NewTags, UpdateSourceTrigger=PropertyChanged}" kyf:Field.Placeholder="{x:Static pages:SheetsText.TagsPlaceholder}"
+                 AutomationProperties.Name="{x:Static pages:SheetsText.TagsHeading}" />
+        <ItemsControl x:Name="NewTagSuggestions" ItemsSource="{Binding NewTagSuggestions}" Focusable="False" Margin="0,6,0,0"
+                      Visibility="{Binding HasNewTagSuggestions, Converter={StaticResource Visible}}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <WrapPanel />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Button Content="{Binding}" Style="{DynamicResource Kyf.Button.Subtle}" Margin="0,0,4,4" Click="OnNewTagSuggestionClick" AutomationProperties.Name="{Binding}" />
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
         <!-- Les modèles en vignettes : leur allure se voit avant de choisir ; ce qu'ils contiennent se lit au survol. -->
         <TextBlock Text="{x:Static pages:SheetsText.TemplateHeading}" Style="{DynamicResource Kyf.Text.Caption}" Margin="0,20,0,8" />
         <ListBox x:Name="NewTemplateTiles" ItemsSource="{Binding NewTemplates}" SelectedItem="{Binding NewTemplateTile}"
