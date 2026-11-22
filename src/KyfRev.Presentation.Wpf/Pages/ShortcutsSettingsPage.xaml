@@ -78,6 +78,41 @@
           </StackPanel>
         </kyf:Card>
 
+        <!-- Démarrage et barre d'état (rangée 25D) : fermer réduit, lancer avec la session, ouvert ou réduit au lancement. -->
+        <kyf:Card x:Name="StartupCard" pages:SettingsPart.Of="demarrage" Padding="16,12" Margin="0,0,0,8" VerticalAlignment="Top">
+          <StackPanel>
+            <TextBlock Text="{x:Static pages:MoreSettingsText.Startup}" Style="{DynamicResource Kyf.Text.Subtitle}" AutomationProperties.HeadingLevel="Level2" Margin="0,0,0,8" />
+            <CheckBox x:Name="CloseToTrayBox" Style="{DynamicResource Kyf.Switch}" IsChecked="{Binding CloseToTray}" AutomationProperties.Name="{x:Static pages:MoreSettingsText.CloseToTray}"
+                      AutomationProperties.HelpText="{x:Static pages:MoreSettingsText.CloseToTrayHelp}">
+              <StackPanel>
+                <TextBlock Text="{x:Static pages:MoreSettingsText.CloseToTray}" Style="{DynamicResource Kyf.Text.BodyStrong}" TextWrapping="Wrap" />
+                <TextBlock Text="{x:Static pages:MoreSettingsText.CloseToTrayHelp}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="0,2,0,0" />
+              </StackPanel>
+            </CheckBox>
+            <CheckBox x:Name="StartWithSessionBox" Style="{DynamicResource Kyf.Switch}" IsChecked="{Binding StartWithSession}" Margin="0,16,0,0"
+                      AutomationProperties.Name="{x:Static pages:MoreSettingsText.StartWithSession}" AutomationProperties.HelpText="{x:Static pages:MoreSettingsText.StartWithSessionHelp}">
+              <StackPanel>
+                <TextBlock Text="{x:Static pages:MoreSettingsText.StartWithSession}" Style="{DynamicResource Kyf.Text.BodyStrong}" TextWrapping="Wrap" />
+                <TextBlock Text="{x:Static pages:MoreSettingsText.StartWithSessionHelp}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="0,2,0,0" />
+              </StackPanel>
+            </CheckBox>
+            <!-- Ouvert, ou dans la barre d'état : un seul choix, dont le cadre glisse ; il ne compte que si kyfRev se lance avec la session. -->
+            <kyf:AdaptiveRow Margin="0,16,0,0" IsEnabled="{Binding StartWithSession}">
+              <StackPanel VerticalAlignment="Center">
+                <TextBlock Text="{x:Static pages:MoreSettingsText.StartAs}" Style="{DynamicResource Kyf.Text.BodyStrong}" />
+                <TextBlock Text="{x:Static pages:MoreSettingsText.StartAsHelp}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="0,2,0,0" />
+              </StackPanel>
+              <Border x:Name="StartAs" kyf:AdaptiveRow.Part="Trailing" HorizontalAlignment="Left" VerticalAlignment="Center" BorderBrush="{DynamicResource Kyf.Brush.ControlBorder}" BorderThickness="1"
+                      CornerRadius="{DynamicResource Kyf.Radius.Control}" Padding="2">
+                <kyf:SlidingSelectionPanel Orientation="Horizontal">
+                  <RadioButton x:Name="StartOpenChoice" GroupName="StartAs" Content="{x:Static pages:MoreSettingsText.StartOpen}" IsChecked="{Binding StartsOpen}" Style="{DynamicResource Kyf.Button.Tool}" MinHeight="36" Padding="12,0" />
+                  <RadioButton x:Name="StartInTrayChoice" GroupName="StartAs" Content="{x:Static pages:MoreSettingsText.StartInTray}" IsChecked="{Binding StartInTray}" Style="{DynamicResource Kyf.Button.Tool}" MinHeight="36" Padding="12,0" />
+                </kyf:SlidingSelectionPanel>
+              </Border>
+            </kyf:AdaptiveRow>
+          </StackPanel>
+        </kyf:Card>
+
         <kyf:Card x:Name="MenuCard" pages:SettingsPart.Of="menu" Padding="16,12" Margin="0,0,0,8" VerticalAlignment="Top">
           <StackPanel>
             <TextBlock Text="{x:Static pages:MoreSettingsText.MenuTitle}" Style="{DynamicResource Kyf.Text.Subtitle}" AutomationProperties.HeadingLevel="Level2" Margin="0,0,0,4" />

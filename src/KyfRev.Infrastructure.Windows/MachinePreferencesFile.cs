@@ -144,6 +144,10 @@ public sealed class MachinePreferencesFile : IMachinePreferencesStore
             writer.WriteBoolean("rubanReduit", preferences.RibbonReduced);
             writer.WriteBoolean("motsDefinis", preferences.MarkDefinedWords);
             writer.WriteBoolean("captureGlobale", preferences.GlobalCapture);
+            writer.WriteBoolean("fermerDansBarre", preferences.CloseToTray);
+            writer.WriteBoolean("lancementSession", preferences.StartWithSession);
+            writer.WriteBoolean("lancementReduit", preferences.StartInTray);
+            writer.WriteBoolean("bulleBarreVue", preferences.TrayTipShown);
             writer.WriteBoolean("majAuDemarrage", preferences.CheckUpdatesAtStartup);
             writer.WriteBoolean("animationsReduites", preferences.ReducedMotion);
             writer.WriteNumber("animationsCoupees", (int)preferences.MotionOff);
@@ -191,6 +195,10 @@ public sealed class MachinePreferencesFile : IMachinePreferencesStore
             RibbonReduced = Flag(root, "rubanReduit", defaults.RibbonReduced),
             MarkDefinedWords = Flag(root, "motsDefinis", defaults.MarkDefinedWords),
             GlobalCapture = Flag(root, "captureGlobale", defaults.GlobalCapture),
+            CloseToTray = Flag(root, "fermerDansBarre", defaults.CloseToTray),
+            StartWithSession = Flag(root, "lancementSession", defaults.StartWithSession),
+            StartInTray = Flag(root, "lancementReduit", defaults.StartInTray),
+            TrayTipShown = Flag(root, "bulleBarreVue", defaults.TrayTipShown),
             CheckUpdatesAtStartup = Flag(root, "majAuDemarrage", defaults.CheckUpdatesAtStartup),
             ReducedMotion = Flag(root, "animationsReduites", defaults.ReducedMotion),
             // Un nombre qui ne dit rien de connu ne coupe rien d'inconnu : seules les familles qui existent sont gardées.

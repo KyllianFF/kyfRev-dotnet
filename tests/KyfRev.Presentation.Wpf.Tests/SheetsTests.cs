@@ -17,6 +17,10 @@ namespace KyfRev.Presentation.Wpf.Tests;
 [TestClass]
 public sealed class SheetsTests
 {
+    private static readonly string[] Biologie = ["biologie"];
+    private static readonly string[] Partiel = ["partiel"];
+    private static readonly string[] BiologieMeiose = ["biologie", "méiose"];
+
     private static readonly DateOnly Day = new(2026, 10, 1);
 
     private static readonly string[] NewFolderLabels = ["À la racine", "Histoire", "Nouveau dossier…"];
@@ -361,6 +365,42 @@ public sealed class SheetsTests
         await page.AnswerCreateCommand.ExecuteAsync(true);
         Assert.IsTrue(page.IsCreating);
         Assert.IsTrue(page.HasCreateError);
+    }
+
+    [TestMethod]
+    public async Task A_new_sheet_takes_its_tags_and_the_vault_tags_are_offered()
+    {
+        var time = new FakeTime(new DateTimeOffset(2026, 10, 1, 8, 0, 0, TimeSpan.Zero));
+        using var vaults = new TestVaults(AppMode.Development, time);
+        Assert.IsNotNull(vaults.App.Vaults.Create(vaults.PathOf("Coffre")).Vault);
+        var other = vaults.App.Sheets.Create("Biologie", "Mitose", null).Value;
+        vaults.App.Sheets.SetTags(other, ["biologie", "partiel"]).Value.ToString();
+        var opener = new FakeOpener();
+        var page = Page(vaults, opener, time);
+        await page.RefreshCommand.ExecuteAsync(null);
+        await page.RequestCreateCommand.ExecuteAsync(null);
+        Assert.AreEqual(string.Empty, page.NewTags);
+        Assert.IsFalse(page.HasNewTagSuggestions);
+
+        // On écrit : les étiquettes du coffre qui commencent ainsi sont proposées ; en prendre une laisse écrire la suivante.
+        page.NewTags = "bi";
+        CollectionAssert.AreEqual(Biologie, page.NewTagSuggestions.ToArray());
+        page.TakeNewTagCommand.Execute("biologie");
+        Assert.AreEqual("biologie, ", page.NewTags);
+        CollectionAssert.AreEqual(Partiel, page.NewTagSuggestions.ToArray(), "les autres étiquettes du coffre restent proposées");
+        page.NewTags += "#méiose";
+
+        page.NewTitle = "Méiose";
+        await page.AnswerCreateCommand.ExecuteAsync(true);
+        Assert.IsFalse(page.IsCreating);
+        Assert.IsNull(page.Error);
+        var created = vaults.App.Sheets.List().Value.Single(sheet => sheet.Title == "Méiose");
+        CollectionAssert.AreEquivalent(BiologieMeiose, created.Tags.ToArray(), "créée avec ses étiquettes");
+        CollectionAssert.AreEqual(new object[] { created.Id }, opener.Opened);
+
+        // La fenêtre suivante repart d'une saisie vide.
+        await page.RequestCreateCommand.ExecuteAsync(null);
+        Assert.AreEqual(string.Empty, page.NewTags);
     }
 
     [TestMethod]

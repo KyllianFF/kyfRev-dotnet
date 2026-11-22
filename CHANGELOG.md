@@ -41,6 +41,14 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   côté. Le titre en grand ; « Dans Biologie › Cellule » pour le dossier ; « Fiche de révision / Note » côte à côte ; les
   modèles en vignettes qui montrent leur allure. Sous 600 px de large, le volet vient du bas. Une croix, Échap ou un clic
   à côté le referment.
+- Capture rapide : une palette au-dessus de tout, comme celle de PowerToys. Ctrl+Alt+N l'ouvre où que l'on soit, même kyfRev
+  réduit dans la barre d'état, sans ouvrir sa fenêtre ; Ctrl+Maj+N dans kyfRev. On y tape une idée : Entrée la note dans la
+  Boîte de réception, Ctrl+Entrée en fait une fiche, ou une note ; elle cherche aussi dans le coffre, ouvre « Aujourd'hui »
+  (avec le nombre de révisions du jour) ou kyfRev. Coffre verrouillé ou absent : elle le dit, et propose d'ouvrir kyfRev.
+- Barre d'état : Paramètres › Démarrage et barre d'état. La croix peut réduire kyfRev près de l'horloge au lieu de le fermer
+  (une bulle le dit la première fois) ; kyfRev peut se lancer à l'ouverture de session, ouvert ou dans la barre d'état. Son
+  icône ouvre kyfRev d'un clic ; son menu : Ouvrir, Capture rapide, Réviser maintenant, Paramètres, Quitter kyfRev.
+- Nouvelle fiche : un champ « Étiquettes » ; celles du coffre sont proposées pendant qu'on écrit, comme dans « Étiquettes… ».
 - Confirmations (Déplacé, Archivé, Enregistré…) : une petite pastille au bas de la page, par-dessus, au lieu d'une bande
   qui poussait toute la page vers le bas. Elle reste 3 secondes (4 si le texte est long) ; un trait au bas de la pastille
   raccourcit avec le temps qui reste et s'arrête sous la souris ; Échap la ferme. Un avertissement sur une fiche ouverte

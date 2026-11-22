@@ -15,9 +15,6 @@ namespace KyfRev.Presentation.Wpf.Pages;
 /// </summary>
 public sealed partial class SheetActionsViewModel : ObservableObject, ISheetMenuHost
 {
-    /// <summary>Au plus autant d'étiquettes proposées à la fois.</summary>
-    private const int MaxTagSuggestions = 8;
-
     private readonly SheetUseCases _sheets;
     private readonly FolderUseCases _folders;
     private readonly ReviewUseCases _reviews;
@@ -233,12 +230,7 @@ public sealed partial class SheetActionsViewModel : ObservableObject, ISheetMenu
 
     /// <summary>Prend une étiquette proposée : elle remplace celle en cours de saisie, et la suivante peut se taper.</summary>
     [RelayCommand]
-    private void TakeTag(string tag)
-    {
-        var cut = ActionInput.LastIndexOf(',');
-        var kept = cut < 0 ? string.Empty : ActionInput[..(cut + 1)].TrimEnd() + " ";
-        ActionInput = $"{kept}{tag}, ";
-    }
+    private void TakeTag(string tag) => ActionInput = TagInput.Take(ActionInput, tag);
 
     /// <summary>La réponse de la fenêtre : un refus la laisse ouverte, avec sa raison.</summary>
     [RelayCommand]
@@ -261,7 +253,7 @@ public sealed partial class SheetActionsViewModel : ObservableObject, ISheetMenu
         var refusal = await Task.Run(() => action switch
         {
             SheetAction.Rename => _sheets.ChangeTitle(sheet.Id, input).Error,
-            SheetAction.Tags => _sheets.SetTags(sheet.Id, [.. input.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)]).Error,
+            SheetAction.Tags => _sheets.SetTags(sheet.Id, TagInput.Parse(input)).Error,
             SheetAction.Move => _sheets.Move(sheet.Id, destination).Error,
             SheetAction.Archive => _reviews.Archive(sheet.Id).Error,
             SheetAction.Restart => _reviews.Restart(ItemKind.Sheet, sheet.Id).Error,
@@ -338,21 +330,7 @@ public sealed partial class SheetActionsViewModel : ObservableObject, ISheetMenu
             TagSuggestions = [];
             return;
         }
-        var typed = ActionInput.Split(',').Select(tag => tag.Trim().TrimStart('#')).ToList();
-        var current = ShellViewModel.Fold(typed.Count > 0 ? typed[^1] : string.Empty);
-        var written = typed.Take(Math.Max(typed.Count - 1, 0)).Select(ShellViewModel.Fold).ToHashSet(StringComparer.Ordinal);
-        TagSuggestions =
-        [
-            .. _knownTags
-                .GroupBy(tag => tag, StringComparer.Ordinal)
-                .Where(group => !written.Contains(ShellViewModel.Fold(group.Key))
-                    && ShellViewModel.Fold(group.Key).StartsWith(current, StringComparison.Ordinal)
-                    && ShellViewModel.Fold(group.Key) != current)
-                .OrderByDescending(group => group.Count())
-                .ThenBy(group => group.Key, StringComparer.CurrentCulture)
-                .Take(MaxTagSuggestions)
-                .Select(group => group.Key),
-        ];
+        TagSuggestions = TagInput.Suggest(ActionInput, _knownTags);
     }
 
     private static SheetTarget Of(SheetTarget sheet) => sheet ?? throw new ArgumentNullException(nameof(sheet));

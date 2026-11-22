@@ -151,6 +151,21 @@ public sealed record MachinePreferences
     public bool GlobalCapture { get; init; }
 
     /// <summary>
+    /// La croix de la fenêtre réduit kyfRev dans la barre d'état au lieu de le fermer : la capture rapide et les rappels
+    /// restent prêts. Coupé par défaut : fermer ferme.
+    /// </summary>
+    public bool CloseToTray { get; init; }
+
+    /// <summary>kyfRev se lance à l'ouverture de la session Windows. Coupé par défaut.</summary>
+    public bool StartWithSession { get; init; }
+
+    /// <summary>Lancé par Windows, kyfRev reste dans la barre d'état au lieu d'ouvrir sa fenêtre. Oui par défaut.</summary>
+    public bool StartInTray { get; init; } = true;
+
+    /// <summary>La bulle qui dit que kyfRev reste dans la barre d'état a déjà été montrée : elle ne l'est qu'une fois.</summary>
+    public bool TrayTipShown { get; init; }
+
+    /// <summary>
     /// kyfRev cherche une mise à jour à chaque démarrage, et propose de l'installer. Coupé par défaut : sans lui, rien ne
     /// part sur le réseau tant qu'on ne le demande pas.
     /// </summary>

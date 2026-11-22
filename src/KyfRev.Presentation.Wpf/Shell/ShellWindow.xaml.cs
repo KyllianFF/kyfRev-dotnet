@@ -122,6 +122,25 @@ public sealed partial class ShellWindow : Window
         base.OnKeyDown(e);
     }
 
+    /// <summary>La croix cache kyfRev dans la barre d'état au lieu de le fermer (Paramètres › Démarrage et barre d'état).</summary>
+    public Func<bool>? ClosesToTray { get; set; }
+
+    /// <summary>La croix vient de cacher kyfRev dans la barre d'état.</summary>
+    public event EventHandler? HiddenToTray;
+
+    /// <summary>Fermer ferme pour de bon : « Quitter kyfRev », la fin de la session, une mise à jour.</summary>
+    private bool _leaving;
+
+    /// <summary>La prochaine fermeture ferme pour de bon, même si la croix cache d'habitude kyfRev.</summary>
+    public void LetClose() => _leaving = true;
+
+    /// <summary>Ferme kyfRev pour de bon.</summary>
+    public void Quit()
+    {
+        LetClose();
+        Close();
+    }
+
     /// <inheritdoc/>
     protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
     {
@@ -129,6 +148,13 @@ public sealed partial class ShellWindow : Window
         // Coupée, une conversion laisse un dossier temporaire, le coffre en clair s'il s'agit d'un déchiffrement : la page
         // demande de laisser kyfRev ouvert jusqu'au bout.
         e.Cancel = e.Cancel || _shell.Current.Page is Pages.ConversionPageViewModel { IsConverting: true };
+        // La croix, réglage choisi : kyfRev se cache dans la barre d'état ; il reste prêt pour la capture et les rappels.
+        if (!e.Cancel && !_leaving && ClosesToTray?.Invoke() == true)
+        {
+            e.Cancel = true;
+            Hide();
+            HiddenToTray?.Invoke(this, EventArgs.Empty);
+        }
         base.OnClosing(e);
     }
 

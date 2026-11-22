@@ -680,6 +680,26 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
     [ObservableProperty]
     public partial string NewFolderName { get; set; }
 
+    /// <summary>Les étiquettes de la nouvelle fiche, séparées par des virgules.</summary>
+    [ObservableProperty]
+    public partial string NewTags { get; set; } = string.Empty;
+
+    /// <summary>Les étiquettes du coffre qui commencent comme celle en cours de saisie.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasNewTagSuggestions))]
+    public partial IReadOnlyList<string> NewTagSuggestions { get; private set; } = [];
+
+    /// <summary>Des étiquettes du coffre sont proposées.</summary>
+    public bool HasNewTagSuggestions => NewTagSuggestions.Count > 0;
+
+    /// <summary>Elles sont proposées pendant qu'on écrit : celles des fiches du coffre.</summary>
+    partial void OnNewTagsChanged(string value) =>
+        NewTagSuggestions = IsCreating && value.Length > 0 ? TagInput.Suggest(value, _entries?.SelectMany(sheet => sheet.Tags) ?? []) : [];
+
+    /// <summary>Prend une étiquette proposée ; la suivante peut se taper.</summary>
+    [RelayCommand]
+    private void TakeNewTag(string tag) => NewTags = TagInput.Take(NewTags, tag);
+
     /// <summary>Ce que la liste montre : tout, les fiches de révision, ou les notes.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ShowsAll), nameof(ShowsReviewOnly), nameof(ShowsNotesOnly))]
@@ -1025,6 +1045,7 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
         }
         NewTitle = string.Empty;
         NewFolderName = string.Empty;
+        NewTags = string.Empty;
         // Sur le filtre « Notes », c'est une note qu'on vient écrire.
         // « Nouvelle note » fait une note, « Nouvelle fiche » une fiche de révision : le bouton décide, sans case à cocher.
         NewIsNote = _createsNote;
@@ -1064,7 +1085,13 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
         var template = (string?)NewTemplate.Value;
         var generation = _generation;
         var asNote = NewIsNote;
-        var outcome = await Task.Run(() => asNote ? _sheets.CreateNote(folder, title, template) : _sheets.Create(folder, title, template)).ConfigureAwait(true);
+        var tags = TagInput.Parse(NewTags);
+        // Créée, la fiche reçoit ses étiquettes ; si elles sont refusées, la fiche existe : elle s'ouvre, et le refus se dit.
+        var (outcome, tagsRefused) = await Task.Run(() =>
+        {
+            var created = asNote ? _sheets.CreateNote(folder, title, template) : _sheets.Create(folder, title, template);
+            return (created, created.Succeeded && tags.Count > 0 ? _sheets.SetTags(created.Value, tags).Error : null);
+        }).ConfigureAwait(true);
         if (generation != _generation)
         {
             // Le coffre a été oublié pendant la création : la fenêtre ne se rouvre pas, et la fiche ne s'ouvre pas.
@@ -1077,6 +1104,8 @@ public sealed partial class SheetsPageViewModel : ObservableObject, INavigationA
             return;
         }
         CreateError = null;
+        NewTags = string.Empty;
+        Error = tagsRefused;
         _opener.OpenSheet(outcome.Value);
     }
 

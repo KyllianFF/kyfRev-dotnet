@@ -4,6 +4,8 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows</TargetFramework>
     <UseWPF>true</UseWPF>
+    <!-- L'icône de la barre d'état seulement (NotifyIcon) : rien d'autre de Windows Forms ne sert. -->
+    <UseWindowsForms>true</UseWindowsForms>
     <AssemblyName>kyfRev</AssemblyName>
     <RootNamespace>KyfRev.App</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
@@ -30,6 +32,12 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
+  </ItemGroup>
+
+  <!-- Windows Forms n'ajoute pas ses espaces de noms partout : ses noms croiseraient ceux de WPF. -->
+  <ItemGroup>
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
   </ItemGroup>
 
   <ItemGroup>

@@ -154,6 +154,12 @@ public static class SheetsText
     /// <summary>« Dans ».</summary>
     public static string PlaceIn => Text(nameof(PlaceIn));
 
+    /// <summary>« Étiquettes ».</summary>
+    public static string TagsHeading => Text(nameof(TagsHeading));
+
+    /// <summary>« bio, partiel ».</summary>
+    public static string TagsPlaceholder => Text(nameof(TagsPlaceholder));
+
     /// <summary>« Modèle ».</summary>
     public static string TemplateHeading => Text(nameof(TemplateHeading));
 

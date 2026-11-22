@@ -160,6 +160,32 @@
     </Style.Triggers>
   </Style>
 
+  <!-- Champ nu : le même champ, sans cadre ni fond, pour un champ qui est à lui seul la surface qui le porte (la palette de
+       capture). Son texte d'aide reste. -->
+  <Style x:Key="Kyf.TextBox.Bare" TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="Padding" Value="0" />
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="TextBox">
+          <Grid Background="{TemplateBinding Background}">
+            <TextBlock x:Name="Placeholder" Margin="{TemplateBinding Padding}" Padding="2,0" IsHitTestVisible="False"
+                       VerticalAlignment="{TemplateBinding VerticalContentAlignment}" Visibility="Collapsed"
+                       Foreground="{DynamicResource Kyf.Brush.TextSecondary}" Text="{TemplateBinding kyf:Field.Placeholder}" />
+            <ScrollViewer x:Name="PART_ContentHost" Focusable="False" VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                          HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Hidden" />
+          </Grid>
+          <ControlTemplate.Triggers>
+            <Trigger Property="Text" Value="">
+              <Setter TargetName="Placeholder" Property="Visibility" Value="Visible" />
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
   <!--
     Mot de passe : le même champ que le texte, ses caractères masqués. Ni texte d'aide dans le champ (son nom le dit, à
     côté), ni Couper ni Copier : rien ne sort d'un mot de passe. Son menu ne fait que coller (depuis un gestionnaire de
