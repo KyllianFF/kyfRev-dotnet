@@ -861,11 +861,7 @@ public sealed class InterfaceMotionTests
         var block = new Border { Width = 200, Height = 100 };
         var dialog = new Dialog { Title = "Supprimer ?", Content = "Elle part à la corbeille." };
         var notice = new Notification { Message = "Enregistré.", Severity = NotificationSeverity.Success };
-        var ribbon = new Border { Width = 300, Height = 60 };
-        Transitions.SetShownFrom(ribbon, Dock.Top);
-        Transitions.SetShownTravel(ribbon, 8);
-        Assert.AreEqual(8, Transitions.GetShownTravel(ribbon));
-        var host = Host.Of(design, new Grid { Children = { new StackPanel { Children = { ribbon, block, notice } }, dialog } });
+        var host = Host.Of(design, new Grid { Children = { new StackPanel { Children = { block, notice } }, dialog } });
         using var source = new HwndSource(new HwndSourceParameters("kyfRev essai") { Width = 480, Height = 320 }) { RootVisual = host };
         Host.Layout(host);
         Host.Flush();
@@ -975,15 +971,6 @@ public sealed class InterfaceMotionTests
         Assert.IsFalse(notice.IsExpired);
         Assert.AreEqual(Visibility.Visible, notice.Visibility);
 
-        // Un bloc qui paraît presque sur place (le ruban) s'en va de même, vite, sans glisser de toute sa hauteur.
-        Transitions.SetShown(ribbon, false);
-        Wait(() => ribbon.Visibility == Visibility.Collapsed);
-        Assert.AreEqual(Visibility.Collapsed, ribbon.Visibility);
-        Assert.AreEqual(1, Transitions.SlidesOf(ribbon));
-        Transitions.SetShown(ribbon, true);
-        Host.Layout(host);
-        Wait(() => Transitions.SlidesOf(ribbon) == 2 && ribbon.Clip is null);
-        Assert.AreEqual(Visibility.Visible, ribbon.Visibility);
 
         // Animations coupées : tout part d'un coup, et la suite est prévenue tout de suite.
         design.ReducedMotion = true;
@@ -1008,8 +995,49 @@ public sealed class InterfaceMotionTests
         Assert.ThrowsExactly<ArgumentNullException>(() => Transitions.StopExit(null!));
         Assert.ThrowsExactly<ArgumentNullException>(() => Transitions.Exit(null!, () => { }));
         Assert.ThrowsExactly<ArgumentNullException>(() => Transitions.Exit(block, null!));
-        Assert.ThrowsExactly<ArgumentNullException>(() => Transitions.GetShownTravel(null!));
-        Assert.ThrowsExactly<ArgumentNullException>(() => Transitions.SetShownTravel(null!, 1));
+    }
+
+    [STATestMethod]
+    public void An_animation_started_again_and_again_is_cut_before_it_closes_the_application()
+    {
+        var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
+        var block = new Border { Name = "Bloc", Width = 200, Height = 100 };
+        var other = new Border { Width = 200, Height = 100 };
+        var host = Host.Of(design, new StackPanel { Children = { block, other } });
+        using var source = new HwndSource(new HwndSourceParameters("kyfRev essai") { Width = 480, Height = 320 }) { RootVisual = host };
+        Host.Layout(host);
+        Host.Flush();
+        var cut = new List<string>();
+        void Note(object? sender, LoopCutEventArgs e) => cut.Add(e.Element);
+        Transitions.LoopCut += Note;
+        try
+        {
+            // Une mise en page qui relance une animation, laquelle redemande une mise en page : sans que l'application reprenne
+            // la main, le même élément lance des animations d'affilée. Un geste en lance une poignée.
+            for (var start = 0; start < Transitions.MostStartsInARow; start++)
+            {
+                Assert.IsTrue(Transitions.Enter(block, DesignKeys.FastDuration), $"lancement {start + 1}");
+            }
+            Assert.IsEmpty(cut);
+
+            // Au-delà, c'est une boucle : l'élément est montré tel quel, et le journal saura lequel c'était. Une fois.
+            Assert.IsFalse(Transitions.Enter(block, DesignKeys.FastDuration));
+            Assert.IsFalse(Transitions.Enter(block, DesignKeys.FastDuration));
+            Assert.HasCount(1, cut);
+            StringAssert.Contains(cut[0], "Border", StringComparison.Ordinal);
+            StringAssert.Contains(cut[0], "Bloc", StringComparison.Ordinal);
+            Assert.AreEqual(TimeSpan.Zero, Transitions.DurationOf(block), "pour lui, plus rien ne bouge");
+            Assert.IsTrue(Transitions.Enter(other, DesignKeys.FastDuration), "les autres éléments ne sont pas touchés");
+
+            // Dès que l'application reprend la main, il s'anime de nouveau.
+            Host.Flush();
+            Assert.IsTrue(Transitions.Enter(block, DesignKeys.FastDuration));
+            Assert.HasCount(1, cut);
+        }
+        finally
+        {
+            Transitions.LoopCut -= Note;
+        }
     }
 
     [STATestMethod]

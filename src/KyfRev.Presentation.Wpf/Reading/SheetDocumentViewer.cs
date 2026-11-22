@@ -603,7 +603,7 @@ internal sealed partial class SheetDocumentViewer : FlowDocumentScrollViewer
 
     private void ApplyHighlights()
     {
-        _built?.Layer.Set(Highlights ?? [], ActiveHighlight, fadeOn: this);
+        _built?.Layer.Set(Highlights ?? [], ActiveHighlight);
         ComputeHoles();
     }
 
@@ -634,7 +634,9 @@ internal sealed partial class SheetDocumentViewer : FlowDocumentScrollViewer
 
     private void OnHolesChanged(object? sender, EventArgs e)
     {
-        _built?.Layer.SetHoles(Holes?.Hidden ?? [], fadeOn: this);
+        // D'un coup, sans fondu : animer la couleur d'un morceau de texte refait la mise en page de toute la fiche à chaque
+        // image, et une longue fiche en pages n'y résiste pas.
+        _built?.Layer.SetHoles(Holes?.Hidden ?? []);
         ShowMasks();
         // Un trou vient de se poser sur le lien dont l'aperçu est montré.
         if (_hover.Current is { } link && IsMasked(link))

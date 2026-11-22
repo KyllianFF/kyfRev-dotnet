@@ -160,7 +160,67 @@ public static partial class Transitions
             return false;
         }
         duration = element.TryFindResource(durationKey) is Duration { HasTimeSpan: true } found ? found.TimeSpan : TimeSpan.Zero;
-        return !Skip && duration > TimeSpan.Zero;
+        if (Skip || duration <= TimeSpan.Zero)
+        {
+            return false;
+        }
+        if (!Starts(element, durationKey, kind))
+        {
+            duration = TimeSpan.Zero;
+            return false;
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// Combien d'animations un même élément peut lancer d'affilée, sans que l'application ait repris la main entre deux.
+    /// Un geste en lance une poignée ; au-delà, c'est une boucle : une mise en page qui relance une animation, laquelle
+    /// redemande une mise en page. WPF ferme l'application à la cent cinquante-troisième ; on coupe bien avant.
+    /// </summary>
+    internal const int MostStartsInARow = 30;
+
+    /// <summary>
+    /// Une animation relancée en boucle vient d'être coupée : qui (le type de l'élément, son nom, la durée et la famille
+    /// demandées), pour le journal. L'élément est montré tel quel, sans transition, jusqu'à ce que l'application reprenne la main.
+    /// </summary>
+    public static event EventHandler<LoopCutEventArgs>? LoopCut;
+
+    /// <summary>Les lancements d'affilée d'un élément, et s'il est coupé.</summary>
+    private sealed class Burst
+    {
+        public int Count { get; set; }
+
+        public bool IsCut { get; set; }
+    }
+
+    private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<FrameworkElement, Burst> Bursts = [];
+
+    /// <summary>
+    /// Compte ce lancement, et dit s'il a lieu. Le compte repart de zéro dès que l'application reprend la main (une tâche de
+    /// la priorité des saisies passe) : pendant une boucle de la mise en page, elle ne la reprend jamais.
+    /// </summary>
+    private static bool Starts(FrameworkElement element, string durationKey, MotionKinds kind)
+    {
+        var burst = Bursts.GetValue(element, _ => new Burst());
+        if (burst.IsCut)
+        {
+            return false;
+        }
+        if (burst.Count++ == 0)
+        {
+            element.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Input, () =>
+            {
+                burst.Count = 0;
+                burst.IsCut = false;
+            });
+        }
+        if (burst.Count <= MostStartsInARow)
+        {
+            return true;
+        }
+        burst.IsCut = true;
+        LoopCut?.Invoke(element, new LoopCutEventArgs($"{element.GetType().Name} « {element.Name} » ({durationKey}, {kind})"));
+        return false;
     }
 
     /// <summary>
@@ -178,4 +238,12 @@ public static partial class Transitions
         ease.Freeze();
         return ease;
     }
+}
+
+/// <summary>Ce qui a été coupé quand une animation se relançait en boucle (voir <see cref="Transitions.LoopCut"/>).</summary>
+/// <param name="element">Le type de l'élément, son nom, la durée et la famille demandées.</param>
+public sealed class LoopCutEventArgs(string element) : EventArgs
+{
+    /// <summary>Le type de l'élément, son nom, la durée et la famille demandées.</summary>
+    public string Element { get; } = element;
 }

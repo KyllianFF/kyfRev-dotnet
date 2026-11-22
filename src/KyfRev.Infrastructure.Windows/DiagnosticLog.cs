@@ -153,6 +153,13 @@ public sealed partial class DiagnosticLog : ILoggerFactory
     [LoggerMessage(Level = LogLevel.Critical, Message = "Arrêt inattendu de kyfRev.")]
     public static partial void UnexpectedStop(ILogger logger, Exception? exception);
 
+    /// <summary>
+    /// Consigne une animation relancée en boucle, que l'interface a coupée au lieu de laisser l'application se fermer : de
+    /// quel élément il s'agit, pour en trouver la cause.
+    /// </summary>
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Animation relancée en boucle, coupée : {Element}.")]
+    public static partial void AnimationLoopCut(ILogger logger, string element);
+
     /// <summary>Consigne l'erreur d'une tâche de fond dont personne n'a observé l'issue.</summary>
     [LoggerMessage(Level = LogLevel.Error, Message = "Erreur d'une tâche de fond non observée.")]
     public static partial void UnobservedTask(ILogger logger, Exception exception);

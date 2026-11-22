@@ -868,6 +868,37 @@ public sealed class ShellWindowTests
             Assert.AreSame(menu[0], test.Shell.Current);
             Assert.AreEqual(Visibility.Collapsed, ghost.Visibility, "rien n'est quitté tant qu'on ne change pas de vue");
 
+            // L'image de la vue quittée est la vue, point pour point : posée par-dessus, elle ne la décale pas (une image prise
+            // au contour de ce que la vue dessine perdait ses marges, et la vue semblait sursauter avant de s'effacer).
+            var reference = RuledPaperPixels.Capture(page, "vue-quittee-reference");
+            Assert.IsTrue(window.LeavePage());
+            var picture = (System.Windows.Media.Imaging.BitmapSource)ghost.Source;
+            window.UpdateLayout();
+            var root = (FrameworkElement)window.FindName("Root");
+            Assert.AreEqual(page.TranslatePoint(default, root), ghost.TranslatePoint(default, root), "l'image est posée là où est la vue");
+            Assert.AreEqual(page.ActualWidth, ghost.ActualWidth, 0.5);
+            Assert.AreEqual(page.ActualHeight, ghost.ActualHeight, 0.5);
+            if (picture.PixelWidth == reference.PixelWidth && picture.PixelHeight == reference.PixelHeight)
+            {
+                var stride = picture.PixelWidth * 4;
+                var shown = new byte[stride * picture.PixelHeight];
+                var wanted = new byte[stride * reference.PixelHeight];
+                picture.CopyPixels(shown, stride, 0);
+                reference.CopyPixels(wanted, stride, 0);
+                var different = 0;
+                for (var index = 0; index < shown.Length; index++)
+                {
+                    if (Math.Abs(shown[index] - wanted[index]) > 2)
+                    {
+                        different++;
+                    }
+                }
+                Assert.AreEqual(0, different, "les mêmes points, aux mêmes endroits");
+                Assert.IsTrue(wanted.Any(value => value != wanted[0]), "la vue n'est pas vide : la comparaison porte sur du contenu");
+            }
+            ghost.Visibility = Visibility.Collapsed;
+            ghost.Source = null;
+
             // Vers le bas du menu : l'image de la vue quittée s'efface par-dessus, la nouvelle arrive par la droite.
             var width = page.ActualWidth;
             test.Shell.Navigate(menu[2]);

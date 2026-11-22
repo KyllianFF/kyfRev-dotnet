@@ -25,19 +25,6 @@ public static partial class Transitions
     public static readonly DependencyProperty ShownFromProperty =
         DependencyProperty.RegisterAttached("ShownFrom", typeof(Dock), typeof(Transitions), new PropertyMetadata(Dock.Bottom));
 
-    /// <summary>
-    /// De combien l'élément glisse, en pixels ; sans valeur, de toute sa longueur, découpé à sa place (un volet). Avec une
-    /// petite valeur, il paraît et s'efface presque sur place, sans découpe (le ruban, qui descend de quelques pixels).
-    /// </summary>
-    public static readonly DependencyProperty ShownTravelProperty =
-        DependencyProperty.RegisterAttached("ShownTravel", typeof(double), typeof(Transitions), new PropertyMetadata(double.NaN));
-
-    /// <summary>Lit <see cref="ShownTravelProperty"/>.</summary>
-    public static double GetShownTravel(DependencyObject element) => (double)(element ?? throw new ArgumentNullException(nameof(element))).GetValue(ShownTravelProperty);
-
-    /// <summary>Écrit <see cref="ShownTravelProperty"/>.</summary>
-    public static void SetShownTravel(DependencyObject element, double value) => (element ?? throw new ArgumentNullException(nameof(element))).SetValue(ShownTravelProperty, value);
-
     // Le numéro du dernier changement : une fin de trajet d'un changement plus ancien ne décide plus de rien.
     private static readonly DependencyProperty ShownRunProperty =
         DependencyProperty.RegisterAttached("ShownRun", typeof(int), typeof(Transitions), new PropertyMetadata(0));
@@ -97,9 +84,7 @@ public static partial class Transitions
                 {
                     return;
                 }
-                // Un départ presque sur place est court ; un volet qui s'en va de toute sa longueur garde le temps d'être vu.
-                var leaving = !double.IsNaN(GetShownTravel(element)) && Moves(element, DesignKeys.FastDuration, out var fast, MotionKinds.Panels) ? fast : duration;
-                Slide(element, leaving, entering: false, () =>
+                Slide(element, duration, entering: false, () =>
                 {
                     if ((int)element.GetValue(ShownRunProperty) == run)
                     {
@@ -171,19 +156,16 @@ public static partial class Transitions
     {
         element.SetValue(ShownSlidesProperty, SlidesOf(element) + 1);
         var size = element.RenderSize;
-        var travel = GetShownTravel(element);
-        var entire = double.IsNaN(travel);
         var (dx, dy) = GetShownFrom(element) switch
         {
-            Dock.Left => (-(entire ? size.Width : travel), 0d),
-            Dock.Right => (entire ? size.Width : travel, 0d),
-            Dock.Top => (0d, -(entire ? size.Height : travel)),
-            _ => (0d, entire ? size.Height : travel),
+            Dock.Left => (-size.Width, 0d),
+            Dock.Right => (size.Width, 0d),
+            Dock.Top => (0d, -size.Height),
+            _ => (0d, size.Height),
         };
         var whole = new Rect(size);
-        // Parti de toute sa longueur : ce qui reste de lui à sa place, dans ses propres coordonnées, est un bord sans
-        // épaisseur. Parti presque sur place : il n'est pas découpé, il s'efface.
-        var gone = entire ? new Rect(dx < 0 ? size.Width : 0, dy < 0 ? size.Height : 0, dx != 0 ? 0 : size.Width, dy != 0 ? 0 : size.Height) : whole;
+        // Parti : ce qui reste de lui à sa place, dans ses propres coordonnées, est un bord sans épaisseur.
+        var gone = new Rect(dx < 0 ? size.Width : 0, dy < 0 ? size.Height : 0, dx != 0 ? 0 : size.Width, dy != 0 ? 0 : size.Height);
         var fill = entering ? FillBehavior.Stop : FillBehavior.HoldEnd;
         // Ce qui arrive décélère ; ce qui part accélère.
         var ease = entering ? Ease : Leave;

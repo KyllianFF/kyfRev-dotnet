@@ -51,6 +51,7 @@ public sealed class DiagnosticLogTests
         DiagnosticLog.UnexpectedStop(logger, failure);
         var timeout = new TimeoutException("Trop long");
         DiagnosticLog.UnobservedTask(logger, timeout);
+        DiagnosticLog.AnimationLoopCut(logger, "Border « Bloc » (Kyf.Duration.Fast, Views)");
         using var next = new DiagnosticLog(folder.Path, @"C:\Users\Élève", new Clock(Morning.AddHours(1)));
 
         var lines = File.ReadAllText(log.LogFile).Split('\n');
@@ -62,6 +63,7 @@ public sealed class DiagnosticLogTests
         Assert.AreEqual("    System.InvalidOperationException: Panne", lines[5]);
         Assert.AreEqual("2026-11-01 08:30:00.000 ERREUR        KyfRev.Application.UseCases.VaultUseCases : Erreur d'une tâche de fond non observée.", lines[6]);
         Assert.AreEqual("    System.TimeoutException: Trop long", lines[7]);
+        Assert.AreEqual("2026-11-01 08:30:00.000 AVERTISSEMENT KyfRev.Application.UseCases.VaultUseCases : Animation relancée en boucle, coupée : Border « Bloc » (Kyf.Duration.Fast, Views).", lines[8]);
         Assert.AreEqual("=== 2026-11-01 09:30:00 ===", lines[^2], "le démarrage suivant continue le même journal");
         Assert.IsFalse(File.ReadAllText(log.LogFile).Contains("Détail", StringComparison.Ordinal), "à partir de l'information, comme la 0.x");
         Assert.IsNull(logger.BeginScope("portée"));
