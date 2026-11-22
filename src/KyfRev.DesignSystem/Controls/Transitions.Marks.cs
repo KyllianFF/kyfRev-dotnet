@@ -168,4 +168,57 @@ public static partial class Transitions
             Enter(element, DesignKeys.FastDuration, kind: MotionKinds.Views);
         }
     }
+
+    /// <summary>
+    /// Sur une coche qu'un déclencheur montre (une étape des premiers pas faite, un papier choisi) : elle paraît en
+    /// grandissant, comme celle d'une case qu'on coche, chaque fois qu'elle se montre d'elle-même une fois la vue à l'écran.
+    /// La vue qui s'ouvre, ou qui revient, montre ses coches d'un coup.
+    /// </summary>
+    public static readonly DependencyProperty GrowsInProperty =
+        DependencyProperty.RegisterAttached("GrowsIn", typeof(bool), typeof(Transitions), new PropertyMetadata(false, OnGrowsIn));
+
+    /// <summary>Lit <see cref="GrowsInProperty"/>.</summary>
+    public static bool GetGrowsIn(DependencyObject element) => (bool)(element ?? throw new ArgumentNullException(nameof(element))).GetValue(GrowsInProperty);
+
+    /// <summary>Écrit <see cref="GrowsInProperty"/>.</summary>
+    public static void SetGrowsIn(DependencyObject element, bool value) => (element ?? throw new ArgumentNullException(nameof(element))).SetValue(GrowsInProperty, value);
+
+    // La coche était cachée par elle-même (et non parce que sa vue l'était) la dernière fois qu'on l'a regardée.
+    private static readonly DependencyProperty HidItselfProperty =
+        DependencyProperty.RegisterAttached("HidItself", typeof(bool), typeof(Transitions), new PropertyMetadata(false));
+
+    private static void OnGrowsIn(DependencyObject target, DependencyPropertyChangedEventArgs e)
+    {
+        if (target is not FrameworkElement mark)
+        {
+            return;
+        }
+        mark.Loaded -= OnMarkLoaded;
+        mark.IsVisibleChanged -= OnMarkShown;
+        if ((bool)e.NewValue)
+        {
+            mark.Loaded += OnMarkLoaded;
+            mark.IsVisibleChanged += OnMarkShown;
+        }
+    }
+
+    private static void OnMarkLoaded(object sender, RoutedEventArgs e)
+    {
+        var mark = (FrameworkElement)sender;
+        mark.SetValue(HidItselfProperty, mark.Visibility != Visibility.Visible);
+    }
+
+    private static void OnMarkShown(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        var mark = (FrameworkElement)sender;
+        if (e.NewValue is false)
+        {
+            mark.SetValue(HidItselfProperty, mark.Visibility != Visibility.Visible);
+        }
+        else if (mark.IsLoaded && (bool)mark.GetValue(HidItselfProperty))
+        {
+            mark.SetValue(HidItselfProperty, false);
+            Grow(mark, 0.4, new Point(0.5, 0.5));
+        }
+    }
 }

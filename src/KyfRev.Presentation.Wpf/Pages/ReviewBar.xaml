@@ -139,8 +139,9 @@
 
         <!-- En révision : reporter, les autres actions, valider. -->
         <WrapPanel Visibility="{Binding ShowsActiveActions, Converter={StaticResource Visible}}">
+          <!-- Après une révision, « Révisé aujourd'hui » prend la place de « Valider » : il paraît en fondu. -->
           <StackPanel x:Name="Done" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0"
-                      Visibility="{Binding ShowsReviewedToday, Converter={StaticResource Visible}}">
+                      kyf:Transitions.SwappedIn="{Binding ShowsReviewedToday}">
             <kyf:Icon Text="{x:Static kyf:Icons.Success}" Foreground="{DynamicResource Kyf.Brush.Success}" Margin="0,0,8,0" />
             <TextBlock Text="{x:Static pages:ReviewText.ReviewedToday}" VerticalAlignment="Center" />
           </StackPanel>

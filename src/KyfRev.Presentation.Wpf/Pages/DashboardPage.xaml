@@ -51,7 +51,7 @@
                       <Grid>
                         <TextBlock x:Name="Number" Text="{Binding Number}" Style="{DynamicResource Kyf.Text.BodyStrong}" Foreground="{DynamicResource Kyf.Brush.TextSecondary}"
                                    HorizontalAlignment="Center" VerticalAlignment="Center" />
-                        <kyf:Icon x:Name="Check" Text="{x:Static kyf:Icons.Success}" Foreground="{DynamicResource Kyf.Brush.OnPrimary}" Visibility="Collapsed"
+                        <kyf:Icon x:Name="Check" kyf:Transitions.GrowsIn="True" Text="{x:Static kyf:Icons.Success}" Foreground="{DynamicResource Kyf.Brush.OnPrimary}" Visibility="Collapsed"
                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
                       </Grid>
                     </Border>
