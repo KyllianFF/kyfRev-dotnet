@@ -259,10 +259,8 @@ public sealed class SheetActionsViewModelTests
         /// <summary>Attend que la condition soit vraie, en écoutant ce que les actions annoncent.</summary>
         public Task UntilAsync(Func<bool> condition)
         {
-            if (condition())
-            {
-                return Task.CompletedTask;
-            }
+            // Sans fil d'interface, les actions finissent sur un fil du pool : on écoute avant de regarder, pour qu'un
+            // changement tombé entre les deux ne soit pas manqué.
             var reached = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             void Check(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
             {
@@ -273,6 +271,7 @@ public sealed class SheetActionsViewModelTests
                 }
             }
             Actions.PropertyChanged += Check;
+            Check(null, new System.ComponentModel.PropertyChangedEventArgs(null));
             return reached.Task.WaitAsync(TimeSpan.FromSeconds(10));
         }
 
