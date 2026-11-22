@@ -711,3 +711,14 @@ html.sur-lignes .editeur-visuel table.cale-de-ligne::after {
   width: 0;
   height: 0;
 }
+
+/* L'entrée de la feuille (entree.ts) : le temps d'une image, le texte est seul ; sa feuille paraît ensuite derrière lui. */
+#fiche.nue:not(.en-pages) {
+  border-color: transparent;
+  background-color: transparent;
+  box-shadow: none;
+}
+
+#fiche.nue.en-pages > .papiers {
+  opacity: 0;
+}

@@ -44,6 +44,9 @@ public static class DesignKeys
     /// <summary>Durée de l'enfoncement d'un bouton sous le clic, nulle si les animations sont réduites.</summary>
     public const string PressDuration = "Kyf.Duration.Press";
 
+    /// <summary>Les familles d'animations coupées (<see cref="MotionKinds"/>) : leurs transitions n'ont pas lieu.</summary>
+    public const string MotionOff = "Kyf.Motion.Off";
+
     /// <summary>L'ouverture d'un menu ou d'une liste déroulante : en fondu, ou d'un coup quand les animations sont réduites.</summary>
     public const string PopupMotion = "Kyf.Motion.Popup";
 

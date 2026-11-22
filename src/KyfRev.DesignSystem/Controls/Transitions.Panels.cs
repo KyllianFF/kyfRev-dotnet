@@ -1,7 +1,6 @@
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
-using System.Windows.Threading;
 
 namespace KyfRev.DesignSystem.Controls;
 
@@ -19,16 +18,16 @@ public static partial class Transitions
     /// transition lancée tout de suite serait finie avant la première image.
     /// </summary>
     /// <returns>Vrai si une transition est prévue ; faux si l'élément est montré tel quel (animations réduites, essais).</returns>
-    public static bool EnterOnceShown(FrameworkElement element, string durationKey = DesignKeys.NormalDuration, double rise = 0, double shift = 0)
+    public static bool EnterOnceShown(FrameworkElement element, string durationKey = DesignKeys.NormalDuration, double rise = 0, double shift = 0, MotionKinds kind = MotionKinds.Views)
     {
         ArgumentNullException.ThrowIfNull(element);
-        if (!Moves(element, durationKey, out _))
+        if (!Moves(element, durationKey, out _, kind))
         {
-            return Enter(element, durationKey, rise, shift);
+            return Enter(element, durationKey, rise, shift, kind);
         }
         // Invisible en attendant ; la transition, en partant, prend la place de cette attente.
         element.BeginAnimation(UIElement.OpacityProperty, new DoubleAnimation(0, 0, TimeSpan.Zero) { FillBehavior = FillBehavior.HoldEnd });
-        element.Dispatcher.BeginInvoke(DispatcherPriority.ContextIdle, () => Enter(element, durationKey, rise, shift));
+        element.Dispatcher.BeginInvoke(WhenShown, () => Enter(element, durationKey, rise, shift, kind));
         return true;
     }
 
@@ -48,7 +47,7 @@ public static partial class Transitions
     {
         ArgumentNullException.ThrowIfNull(panel);
         ArgumentNullException.ThrowIfNull(curtain);
-        if (Math.Abs(from - to) < 0.5 || !Moves(panel, DesignKeys.NormalDuration, out var duration))
+        if (Math.Abs(from - to) < 0.5 || !Moves(panel, DesignKeys.NormalDuration, out var duration, MotionKinds.Panels))
         {
             StopResize(panel, curtain, follower);
             return false;

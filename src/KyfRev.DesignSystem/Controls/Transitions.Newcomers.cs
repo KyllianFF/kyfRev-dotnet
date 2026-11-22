@@ -95,7 +95,7 @@ public static partial class Transitions
         var welcomed = 0;
         foreach (var (item, _) in newcomers)
         {
-            if (list.ItemContainerGenerator.ContainerFromItem(item) is FrameworkElement row && Enter(row, DesignKeys.NormalDuration, rise: NewcomerRise))
+            if (list.ItemContainerGenerator.ContainerFromItem(item) is FrameworkElement row && Enter(row, DesignKeys.NormalDuration, rise: NewcomerRise, kind: MotionKinds.Lists))
             {
                 welcomed++;
             }

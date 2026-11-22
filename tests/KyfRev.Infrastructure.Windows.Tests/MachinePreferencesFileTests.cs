@@ -21,6 +21,7 @@ public sealed class MachinePreferencesFileTests
         RibbonReduced = true,
         MarkDefinedWords = false,
         ReducedMotion = true,
+        MotionOff = MotionFamilies.Views | MotionFamilies.Opening,
         HighContrast = true,
         LargerTargets = true,
         CheckUpdatesAtStartup = true,
@@ -160,7 +161,7 @@ public sealed class MachinePreferencesFileTests
         using var folder = new Folder();
         File.WriteAllText(
             Path.Combine(folder.Path, "preferences.json"),
-            """{ "theme": "fuchsia", "zoom": -3, "largeur": 12, "taille": "grande", "animationsReduites": "oui", "contrasteEleve": true, "voix": 4, "vitesse": "vite" }""",
+            """{ "theme": "fuchsia", "zoom": -3, "largeur": 12, "taille": "grande", "animationsReduites": "oui", "animationsCoupees": 4096, "contrasteEleve": true, "voix": 4, "vitesse": "vite" }""",
             new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
 
         var preferences = new MachinePreferencesFile(folder.Path).Load();

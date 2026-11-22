@@ -221,6 +221,51 @@ public sealed class VisualEditorTests
     }
 
     [EngineTest]
+    public void The_sheet_read_stays_on_screen_until_the_editor_shows_its_text()
+    {
+        using var scene = new Scene();
+        var page = scene.SheetPage;
+
+        // Le banc d'essai est entré en écriture : la fiche lue a laissé la place une fois le texte de l'éditeur à l'écran.
+        UiThread.Until(() => scene.Visual!.HasShownText);
+        Assert.IsFalse(scene.Visual!.GaveUpWaiting, "c'est son texte qui a montré l'éditeur, pas l'attente");
+        Assert.AreEqual(Visibility.Visible, scene.Visual.View.Visibility);
+        Assert.AreEqual(Visibility.Collapsed, page.SheetText.Visibility);
+
+        // Retour à la lecture : le texte se lit et répond.
+        scene.Page.ToggleWritingCommand.Execute(null);
+        UiThread.Until(() => !scene.Page.IsWriting);
+        Assert.AreEqual(Visibility.Visible, page.SheetText.Visibility);
+        Assert.IsTrue(page.SheetText.IsHitTestVisible);
+
+        // De nouveau en écriture : un autre éditeur, dont la fenêtre reste cachée tant qu'il n'a pas son texte. D'ici là, la
+        // fiche lue reste à l'écran, inerte ; elle ne part qu'ensuite.
+        var held = false;
+        var leftEarly = false;
+        scene.Page.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(SheetPageViewModel.IsWriting) && scene.Page.IsWriting)
+            {
+                held = page.SheetText.Visibility == Visibility.Visible && !page.SheetText.IsHitTestVisible;
+            }
+        };
+        page.SheetText.IsVisibleChanged += (_, _) => leftEarly |= !page.SheetText.IsVisible && scene.Page.IsWriting && scene.Visual is { HasShownText: false };
+        scene.Page.ToggleWritingCommand.Execute(null);
+        UiThread.Until(() => scene.Page.IsWriting && scene.Visual is not null);
+        var second = scene.Visual!;
+        UiThread.Until(() => second.HasShownText, TimeSpan.FromMinutes(2));
+        Assert.IsTrue(held, "à l'entrée en écriture, la fiche lue reste, inerte");
+        Assert.IsFalse(leftEarly, "elle ne part qu'une fois le texte de l'éditeur à l'écran");
+        Assert.IsFalse(second.GaveUpWaiting);
+        // Le focus demandé pendant que l'éditeur était caché lui revient quand il se montre : on écrit sans cliquer dans le texte.
+        UiThread.Until(() => ReferenceEquals(System.Windows.Input.FocusManager.GetFocusedElement(scene.Window), second.View));
+        Assert.AreSame(second.View, System.Windows.Input.FocusManager.GetFocusedElement(scene.Window));
+        Assert.AreEqual(Visibility.Visible, second.View.Visibility);
+        Assert.AreEqual(Visibility.Collapsed, page.SheetText.Visibility);
+        Assert.IsTrue(page.SheetText.IsHitTestVisible);
+    }
+
+    [EngineTest]
     public void Writing_opens_on_the_formatted_text_alone_and_the_button_shows_the_code()
     {
         using var scene = new Scene();
@@ -1416,6 +1461,23 @@ public sealed class VisualEditorTests
         // La vue est plus large que le texte : la feuille sans fin reste une colonne, au milieu.
         visual.TextWidth = 320;
         UiThread.Until(() => scene.Script("getComputedStyle(document.documentElement).getPropertyValue('--largeur-fiche').trim()").Trim('"') == "320px");
+
+        // La feuille paraît en fondu sur la durée des transitions de l'application : nulle pendant les essais, normale sinon.
+        string Entry() => scene.Script("getComputedStyle(document.documentElement).getPropertyValue('--duree-entree').trim()").Trim('"');
+        Assert.AreEqual("0ms", Entry());
+        KyfRev.DesignSystem.Controls.Transitions.Skip = false;
+        try
+        {
+            visual.TextWidth = 321;
+            UiThread.Until(() => Entry() == "220ms");
+            Assert.AreEqual("220ms", Entry());
+        }
+        finally
+        {
+            KyfRev.DesignSystem.Controls.Transitions.Skip = true;
+        }
+        visual.TextWidth = 320;
+        UiThread.Until(() => Entry() == "0ms");
         UiThread.Until(() => double.Parse(scene.Script("document.getElementById('fiche').getBoundingClientRect().width"), System.Globalization.CultureInfo.InvariantCulture) <= 320.5);
         var view = double.Parse(scene.Script("document.documentElement.clientWidth"), System.Globalization.CultureInfo.InvariantCulture);
         var left = double.Parse(scene.Script("document.getElementById('fiche').getBoundingClientRect().left"), System.Globalization.CultureInfo.InvariantCulture);

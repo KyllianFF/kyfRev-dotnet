@@ -3,6 +3,7 @@
 
 import type { ActionTableau, Dessin, EtatOutils, NomMarque } from "./editeur";
 import { EditeurVisuel } from "./editeur";
+import { paraitre } from "./entree";
 import type { Casse } from "./casse";
 import type { DepuisEditeur, VersEditeur } from "./messages";
 import { pasDEcriture } from "./lignes";
@@ -158,6 +159,10 @@ function traiter(message: VersEditeur): void {
   switch (message.kind) {
     case "load":
       editeur.remplacer(message.text, message.folder, message.drawn);
+      // Un texte arrive : la feuille paraît en fondu, au lieu de surgir.
+      paraitre(parent);
+      // L'application garde la fiche lue à l'écran jusque-là : elle peut maintenant montrer celle-ci.
+      envoyer({ kind: "loaded" });
       break;
     case "diagram": {
       const cle = cleDessin(message.language, message.code);

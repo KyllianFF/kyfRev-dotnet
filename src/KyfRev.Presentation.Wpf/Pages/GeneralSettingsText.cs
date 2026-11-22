@@ -77,11 +77,62 @@ public static class GeneralSettingsText
     /// <summary>« Vitesse de lecture ».</summary>
     public static string Rate => Text(nameof(Rate));
 
-    /// <summary>« Réduire les animations ».</summary>
-    public static string ReducedMotion => Text(nameof(ReducedMotion));
+    /// <summary>« Toutes ».</summary>
+    public static string MotionAll => Text(nameof(MotionAll));
 
-    /// <summary>« Même si Windows ne le demande pas. ».</summary>
-    public static string ReducedMotionHelp => Text(nameof(ReducedMotionHelp));
+    /// <summary>« Essentielles ».</summary>
+    public static string MotionEssential => Text(nameof(MotionEssential));
+
+    /// <summary>« Retour au toucher ».</summary>
+    public static string MotionFeedback => Text(nameof(MotionFeedback));
+
+    /// <summary>« Survol et appui des boutons, coches, interrupteurs. ».</summary>
+    public static string MotionFeedbackHelp => Text(nameof(MotionFeedbackHelp));
+
+    /// <summary>« Toutes, les essentielles (retour au toucher et sélection)… ».</summary>
+    public static string MotionHelp => Text(nameof(MotionHelp));
+
+    /// <summary>« Listes ».</summary>
+    public static string MotionLists => Text(nameof(MotionLists));
+
+    /// <summary>« Fiche, définition ou citation ajoutée. ».</summary>
+    public static string MotionListsHelp => Text(nameof(MotionListsHelp));
+
+    /// <summary>« Aucune ».</summary>
+    public static string MotionNone => Text(nameof(MotionNone));
+
+    /// <summary>« Animation d'ouverture ».</summary>
+    public static string MotionOpening => Text(nameof(MotionOpening));
+
+    /// <summary>« Les fiches du logo, au lancement de kyfRev. ».</summary>
+    public static string MotionOpeningHelp => Text(nameof(MotionOpeningHelp));
+
+    /// <summary>« Menu et volets ».</summary>
+    public static string MotionPanels => Text(nameof(MotionPanels));
+
+    /// <summary>« Menu réduit ou élargi, volets Plan, Passages et Rétrolien… ».</summary>
+    public static string MotionPanelsHelp => Text(nameof(MotionPanelsHelp));
+
+    /// <summary>« Sélection qui glisse ».</summary>
+    public static string MotionSelection => Text(nameof(MotionSelection));
+
+    /// <summary>« Menu de gauche, onglets, sections des Paramètres, modes d… ».</summary>
+    public static string MotionSelectionHelp => Text(nameof(MotionSelectionHelp));
+
+    /// <summary>« Menus, fenêtres et avis ».</summary>
+    public static string MotionSurfaces => Text(nameof(MotionSurfaces));
+
+    /// <summary>« Menus, listes déroulantes, fenêtres de dialogue, avis. ».</summary>
+    public static string MotionSurfacesHelp => Text(nameof(MotionSurfacesHelp));
+
+    /// <summary>« Animations ».</summary>
+    public static string MotionTitle => Text(nameof(MotionTitle));
+
+    /// <summary>« Changement de vue et de mode ».</summary>
+    public static string MotionViews => Text(nameof(MotionViews));
+
+    /// <summary>« Page qui arrive, Lire, Réviser, Écrire, ruban et feuille … ».</summary>
+    public static string MotionViewsHelp => Text(nameof(MotionViewsHelp));
 
     /// <summary>« Interligne des fiches ».</summary>
     public static string Spacing => Text(nameof(Spacing));

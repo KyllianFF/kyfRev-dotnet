@@ -119,19 +119,48 @@
           </StackPanel>
         </kyf:Card>
 
-        <kyf:Card x:Name="AccessibilityCard" pages:SettingsPart.Of="apparence" Padding="20,6" Margin="0,0,0,14" VerticalAlignment="Top" AutomationProperties.Name="{x:Static pages:GeneralSettingsText.AccessibilityTitle}">
+        <kyf:Card x:Name="MotionCard" pages:SettingsPart.Of="apparence" Padding="20,6" Margin="0,0,0,14" VerticalAlignment="Top" AutomationProperties.Name="{x:Static pages:GeneralSettingsText.MotionTitle}">
           <StackPanel>
             <Border Style="{DynamicResource Kyf.Setting.FirstRow}">
               <kyf:AdaptiveRow Style="{StaticResource Line}">
                 <StackPanel VerticalAlignment="Center">
-                  <TextBlock Text="{x:Static pages:GeneralSettingsText.ReducedMotion}" Style="{DynamicResource Kyf.Text.BodyStrong}" />
-                  <TextBlock Text="{x:Static pages:GeneralSettingsText.ReducedMotionHelp}" Style="{DynamicResource Kyf.Text.Secondary}" Margin="0,2,0,0" />
+                  <TextBlock Text="{x:Static pages:GeneralSettingsText.MotionTitle}" Style="{DynamicResource Kyf.Text.BodyStrong}" />
+                  <TextBlock Text="{x:Static pages:GeneralSettingsText.MotionHelp}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="0,2,0,0" />
                 </StackPanel>
-                <CheckBox x:Name="ReducedMotionBox" kyf:AdaptiveRow.Part="Trailing" Style="{DynamicResource Kyf.Switch}" HorizontalAlignment="Left" VerticalAlignment="Center" IsChecked="{Binding ReducedMotion}"
-                          AutomationProperties.Name="{x:Static pages:GeneralSettingsText.ReducedMotion}" AutomationProperties.HelpText="{x:Static pages:GeneralSettingsText.ReducedMotionHelp}" />
+                <!-- Toutes, les essentielles, aucune : un seul choix, dont le cadre glisse. Aucun des trois quand les familles sont réglées une à une. -->
+                <Border x:Name="MotionLevel" kyf:AdaptiveRow.Part="Trailing" HorizontalAlignment="Left" VerticalAlignment="Center" BorderBrush="{DynamicResource Kyf.Brush.ControlBorder}" BorderThickness="1"
+                        CornerRadius="{DynamicResource Kyf.Radius.Control}" Padding="2">
+                  <kyf:SlidingSelectionPanel Orientation="Horizontal">
+                    <RadioButton x:Name="MotionAllChoice" GroupName="MotionLevel" Content="{x:Static pages:GeneralSettingsText.MotionAll}" IsChecked="{Binding IsMotionAll}" Style="{DynamicResource Kyf.Button.Tool}" MinHeight="36" Padding="12,0" />
+                    <RadioButton x:Name="MotionEssentialChoice" GroupName="MotionLevel" Content="{x:Static pages:GeneralSettingsText.MotionEssential}" IsChecked="{Binding IsMotionEssential}" Style="{DynamicResource Kyf.Button.Tool}" MinHeight="36" Padding="12,0" />
+                    <RadioButton x:Name="MotionNoneChoice" GroupName="MotionLevel" Content="{x:Static pages:GeneralSettingsText.MotionNone}" IsChecked="{Binding IsMotionNone}" Style="{DynamicResource Kyf.Button.Tool}" MinHeight="36" Padding="12,0" />
+                  </kyf:SlidingSelectionPanel>
+                </Border>
               </kyf:AdaptiveRow>
             </Border>
-            <Border Style="{DynamicResource Kyf.Setting.Row}">
+            <!-- Une rangée par famille : toute animation de kyfRev appartient à l'une d'elles, et se coupe avec elle. -->
+            <ItemsControl x:Name="MotionChoices" ItemsSource="{Binding Motions}" IsEnabled="{Binding CanChooseMotions}" Focusable="False" IsTabStop="False">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Border Style="{DynamicResource Kyf.Setting.Row}">
+                    <kyf:AdaptiveRow Style="{StaticResource Line}">
+                      <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="{Binding Name}" Style="{DynamicResource Kyf.Text.BodyStrong}" />
+                        <TextBlock Text="{Binding Help}" Style="{DynamicResource Kyf.Text.Secondary}" TextWrapping="Wrap" Margin="0,2,0,0" />
+                      </StackPanel>
+                      <CheckBox kyf:AdaptiveRow.Part="Trailing" Style="{DynamicResource Kyf.Switch}" HorizontalAlignment="Left" VerticalAlignment="Center" IsChecked="{Binding IsOn}"
+                                AutomationProperties.Name="{Binding Name}" AutomationProperties.HelpText="{Binding Help}" />
+                    </kyf:AdaptiveRow>
+                  </Border>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </kyf:Card>
+
+        <kyf:Card x:Name="AccessibilityCard" pages:SettingsPart.Of="apparence" Padding="20,6" Margin="0,0,0,14" VerticalAlignment="Top" AutomationProperties.Name="{x:Static pages:GeneralSettingsText.AccessibilityTitle}">
+          <StackPanel>
+            <Border Style="{DynamicResource Kyf.Setting.FirstRow}">
               <kyf:AdaptiveRow Style="{StaticResource Line}">
                 <StackPanel VerticalAlignment="Center">
                   <TextBlock Text="{x:Static pages:GeneralSettingsText.HighContrast}" Style="{DynamicResource Kyf.Text.BodyStrong}" />

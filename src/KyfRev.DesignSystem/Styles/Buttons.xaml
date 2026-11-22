@@ -118,6 +118,18 @@
         <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.NavigationActiveText}" />
         <Setter Property="BorderBrush" Value="{DynamicResource Kyf.Brush.Primary}" />
       </DataTrigger>
+      <!-- Là où la sélection glisse (les sections des Paramètres, les modes d'une fiche), c'est le cadre qui répond au clic :
+           le bouton ne s'enfonce pas et ne fonce pas juste avant que le cadre arrive. Le survol reste. -->
+      <Trigger Property="kyf:Transitions.HasSlidingSelection" Value="True">
+        <Setter Property="kyf:Transitions.PressScale" Value="0" />
+      </Trigger>
+      <MultiTrigger>
+        <MultiTrigger.Conditions>
+          <Condition Property="IsPressed" Value="True" />
+          <Condition Property="kyf:Transitions.HasSlidingSelection" Value="True" />
+        </MultiTrigger.Conditions>
+        <Setter Property="Background" Value="{DynamicResource Kyf.Brush.SurfaceAlt}" />
+      </MultiTrigger>
       <!-- Dans une colonne dont la sélection glisse (les sections des Paramètres), c'est elle qui dessine le cadre du choix. -->
       <MultiTrigger>
         <MultiTrigger.Conditions>

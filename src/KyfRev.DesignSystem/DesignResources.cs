@@ -22,6 +22,7 @@ public sealed class DesignResources
     private ThemeKind _themeKind;
     private HighContrastPalette _highContrastPalette;
     private bool _reducedMotion;
+    private MotionKinds _motionOff;
     private bool _largerTargets;
 
     /// <summary>Thème et animations choisis.</summary>
@@ -91,7 +92,18 @@ public sealed class DesignResources
         set
         {
             _reducedMotion = value;
-            _motion = Replace(_motion, MotionDictionary(value));
+            _motion = Replace(_motion, MotionDictionary(value, _motionOff));
+        }
+    }
+
+    /// <summary>Les familles d'animations coupées : leurs transitions n'ont pas lieu, les autres gardent leurs durées.</summary>
+    public MotionKinds MotionOff
+    {
+        get => _motionOff;
+        set
+        {
+            _motionOff = value;
+            _motion = Replace(_motion, MotionDictionary(_reducedMotion, value));
         }
     }
 
@@ -128,13 +140,14 @@ public sealed class DesignResources
     }
 
     /// <summary>Durées et animations.</summary>
-    internal static ResourceDictionary MotionDictionary(bool reducedMotion) => new()
+    internal static ResourceDictionary MotionDictionary(bool reducedMotion, MotionKinds off = MotionKinds.None) => new()
     {
+        [DesignKeys.MotionOff] = off,
         [DesignKeys.AnimationsEnabled] = !reducedMotion,
         [DesignKeys.FastDuration] = new Duration(Motion.Effective(Motion.Fast, reducedMotion)),
         [DesignKeys.NormalDuration] = new Duration(Motion.Effective(Motion.Normal, reducedMotion)),
         [DesignKeys.PressDuration] = new Duration(Motion.Effective(Motion.Press, reducedMotion)),
-        [DesignKeys.PopupMotion] = reducedMotion || Controls.Transitions.Skip ? System.Windows.Controls.Primitives.PopupAnimation.None : System.Windows.Controls.Primitives.PopupAnimation.Fade,
+        [DesignKeys.PopupMotion] = reducedMotion || Controls.Transitions.Skip || off.HasFlag(MotionKinds.Surfaces) ? System.Windows.Controls.Primitives.PopupAnimation.None : System.Windows.Controls.Primitives.PopupAnimation.Fade,
     };
 
     /// <summary>Hauteurs minimales des petits boutons.</summary>

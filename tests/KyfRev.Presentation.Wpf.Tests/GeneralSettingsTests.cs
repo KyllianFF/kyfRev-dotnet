@@ -412,7 +412,7 @@ public sealed class GeneralSettingsTests
             Assert.IsTrue(model.HighContrast);
             Assert.AreEqual(HorizontalAlignment.Right, knob.HorizontalAlignment);
             page.HighContrastBox.IsChecked = false;
-            Assert.IsTrue(new[] { page.ReducedMotionBox, page.HighContrastBox, page.LargerTargetsBox, page.DefinedWordsBox }.All(box => Descendants<Border>(box).Any(border => border.Name == "Track")));
+            Assert.IsTrue(new[] { page.HighContrastBox, page.LargerTargetsBox, page.DefinedWordsBox }.All(box => Descendants<Border>(box).Any(border => border.Name == "Track")));
             Assert.AreEqual("100 %", page.SizeChoice.SelectionBoxItem.ToString(), "le libellé, pas l'objet");
             Assert.IsFalse(page.NoVoice.IsVisible, "une voix est installée");
             Assert.AreEqual("100 %", ((SettingChoice<double>)page.SizeChoice.SelectedItem).Label);
