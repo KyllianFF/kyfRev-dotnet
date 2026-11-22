@@ -24,7 +24,7 @@ public sealed class SettingsHubTests
 {
     private static readonly Anchor Passage = new("La prophase", "", " précède", 0, 11, ["Mitose", "Étapes"], 5, "sha256:aa");
 
-    private static readonly string[] AllTabs = ["Apparence", "Lecture", "Feuilles", "Menu", "Raccourcis", "Révisions", "Modules et extensions", "Coffre et chiffrement", "Sauvegardes et exports", "À propos"];
+    private static readonly string[] AllTabs = ["Apparence", "Lecture", "Feuilles", "Menu", "Raccourcis", "Démarrage et barre d'état", "Révisions", "Modules et extensions", "Coffre et chiffrement", "Sauvegardes et exports", "À propos"];
 
     private static readonly string[] Tabs = ["Apparence", "Lecture", "Révisions", "Modules et extensions", "Coffre et chiffrement", "Sauvegardes et exports", "À propos"];
 
