@@ -110,6 +110,18 @@ public sealed partial class ShellWindow : Window
     internal Schemas.SchemaWarmUp WarmUp { get; }
 
     /// <inheritdoc/>
+    /// <remarks>Échap, que rien d'autre n'a pris (un dialogue, un volet, un menu) : la pastille la plus récente se ferme.</remarks>
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        ArgumentNullException.ThrowIfNull(e);
+        if (!e.Handled && e.Key == Key.Escape && Keyboard.Modifiers == ModifierKeys.None && Notification.CloseNewestToast())
+        {
+            e.Handled = true;
+        }
+        base.OnKeyDown(e);
+    }
+
+    /// <inheritdoc/>
     protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
     {
         ArgumentNullException.ThrowIfNull(e);

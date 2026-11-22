@@ -576,7 +576,7 @@
                          Visibility="{Binding IsLoading, Converter={StaticResource Visible}}" />
               <kyf:Notification x:Name="ErrorMessage" Severity="Critical" Message="{Binding Error}" IsOpen="{Binding HasError, Mode=OneWay}"
                                 IsClosable="False" Margin="0,0,0,12" />
-              <kyf:Notification x:Name="ProblemMessage" Severity="Warning" Message="{Binding Problem}" IsOpen="{Binding HasProblem, Mode=OneWay}"
+              <kyf:Notification x:Name="ProblemMessage" Severity="Warning" Placement="Toast" Message="{Binding Problem}" IsOpen="{Binding HasProblem, Mode=OneWay}"
                                 IsClosable="False" Margin="0,0,0,12" />
               <kyf:Notification x:Name="DoneMessage" Severity="Success" Message="{Binding Done}" IsOpen="{Binding HasDone, Mode=OneWay}" Margin="0,0,0,12" />
             </StackPanel>

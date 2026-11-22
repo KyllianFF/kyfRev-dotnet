@@ -1032,6 +1032,86 @@ public sealed class ComponentTests
     }
 
     [STATestMethod]
+    public void A_confirmation_floats_at_the_bottom_of_the_page_takes_no_room_and_its_countdown_stops_under_the_mouse()
+    {
+        var design = new DesignResources(ThemeKind.Light, reducedMotion: false);
+        var above = new TextBlock { Text = "Carnet" };
+        var done = new Notification { Severity = NotificationSeverity.Success, Message = "Déplacé dans Réseau › Layer 3", Margin = new Thickness(0, 0, 0, 12), Lifetime = TimeSpan.FromMilliseconds(700) };
+        var warning = new Notification { Severity = NotificationSeverity.Warning, Message = "Pas de sauvegarde depuis 9 jours", Placement = NotificationPlacement.Toast, IsClosable = false };
+        var error = new Notification { Severity = NotificationSeverity.Critical, Message = "Le dossier est introuvable." };
+        var inline = new Notification { Severity = NotificationSeverity.Success, Message = "Gardée à sa place.", Placement = NotificationPlacement.Inline };
+        var below = new TextBlock { Text = "La liste" };
+        var page = new StackPanel { Children = { above, done, warning, error, inline, below } };
+        var area = new Border { Child = page, Width = 800, Height = 500 };
+        Notification.SetToastArea(area, area);
+        var window = new Window { Content = area, Resources = design.Dictionary, SizeToContent = SizeToContent.WidthAndHeight, Left = -10000, Top = -10000, ShowActivated = false, ShowInTaskbar = false, WindowStyle = WindowStyle.None };
+        var foreground = Notification.IsForeground;
+        Notification.IsForeground = _ => true;
+        window.Show();
+        try
+        {
+            Host.Flush();
+            Wait(() => Notification.Toasts.Count == 2);
+
+            // Une confirmation et un avertissement demandé en pastille : par-dessus la page. Une erreur, et une confirmation
+            // gardée à sa place, restent dans la page.
+            Assert.IsTrue(done.IsToast);
+            Assert.IsTrue(warning.IsToast);
+            Assert.IsFalse(error.IsToast);
+            Assert.IsFalse(inline.IsToast);
+            Assert.AreEqual(default, done.Margin, "pas même sa marge");
+            Assert.AreEqual(0, done.ActualHeight, "elle ne prend aucune place");
+            Assert.AreEqual(0, warning.ActualHeight);
+            Assert.IsGreaterThan(0, error.ActualHeight);
+            CollectionAssert.AreEqual(new[] { done, warning }, Notification.Toasts.ToArray(), "dans l'ordre où elles ont paru");
+
+            // Au bas de la page, au milieu ; la plus récente au-dessus de l'autre.
+            var donePill = Host.Part<FrameworkElement>(done, Notification.ToastPillPart);
+            var warningPill = Host.Part<FrameworkElement>(warning, Notification.ToastPillPart);
+            Assert.IsTrue(Host.Part<System.Windows.Controls.Primitives.Popup>(done, Notification.ToastPart).IsOpen);
+            // (Le placement se vérifie sur son calcul : hors de l'écran, Windows ramène toute fenêtre flottante à l'écran.)
+            var doneSize = new Size(300 * 1.5, donePill.DesiredSize.Height * 1.5);
+            var room = new Size(800 * 1.5, 500 * 1.5);
+            var first = done.PlaceToast(doneSize, room, default)[0].Point;
+            Assert.AreEqual((room.Width - doneSize.Width) / 2, first.X, 0.01, "au milieu de la page");
+            Assert.AreEqual(room.Height - doneSize.Height, first.Y, 0.01, "au bas de la page (sa marge garde l'écart)");
+            var second = warning.PlaceToast(new Size(380 * 1.5, warningPill.DesiredSize.Height * 1.5), room, default)[0].Point;
+            Assert.AreEqual(room.Height - (warningPill.DesiredSize.Height * 1.5) - ((donePill.DesiredSize.Height - Notification.ToastGap) * 1.5), second.Y, 0.01, "la plus récente au-dessus de l'autre, à l'échelle de l'écran");
+
+            // La confirmation : pas de ✕, un trait qui raccourcit ; l'avertissement : son ✕, et pas de trait.
+            Assert.AreEqual(Visibility.Collapsed, Host.Part<Button>(done, Notification.CloseButtonPart).Visibility);
+            Assert.AreEqual(Visibility.Visible, Host.Part<FrameworkElement>(done, Notification.CountdownPart).Visibility);
+            Assert.AreEqual(Visibility.Visible, Host.Part<Button>(warning, Notification.CloseButtonPart).Visibility, "un avertissement en pastille se ferme toujours");
+            Assert.AreEqual(Visibility.Collapsed, Host.Part<FrameworkElement>(warning, Notification.CountdownPart).Visibility);
+
+            // Sous la souris, le temps s'arrête ; il reprend à la sortie.
+            done.Hold(true);
+            Pause(1000);
+            Assert.IsFalse(done.IsExpired, "son temps est arrêté");
+            done.Hold(false);
+            Wait(() => done.IsExpired && !done.IsLeaving);
+            Assert.IsFalse(done.IsVisible);
+            Assert.IsFalse(Host.Part<System.Windows.Controls.Primitives.Popup>(done, Notification.ToastPart).IsOpen, "partie, sa fenêtre flottante se ferme");
+            CollectionAssert.AreEqual(new[] { warning }, Notification.Toasts.ToArray());
+
+            // Échap ferme la plus récente ; plus rien ensuite.
+            Assert.IsTrue(Notification.CloseNewestToast());
+            Assert.IsFalse(warning.IsOpen);
+            Host.Flush();
+            Assert.IsFalse(Notification.CloseNewestToast(), "aucune pastille : Échap sert à autre chose");
+
+            // Le temps d'une confirmation en pastille : trois secondes, quatre si elle est longue.
+            Assert.AreEqual(TimeSpan.FromSeconds(3), Notification.ToastLifetimeOf("Déplacé."));
+            Assert.AreEqual(TimeSpan.FromSeconds(4), Notification.ToastLifetimeOf(new string('a', 61)));
+        }
+        finally
+        {
+            Notification.IsForeground = foreground;
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
     public void A_success_goes_away_by_itself_and_comes_back_with_the_next_message()
     {
         var done = new Notification { Severity = NotificationSeverity.Success, Message = "Supprimé définitivement.", Lifetime = TimeSpan.FromMilliseconds(600) };

@@ -95,6 +95,8 @@ main. Paramètres › Coffre et chiffrement permet d'en ouvrir ou d'en créer un
 - **Nouvelle fiche** : dans la vue Carnet, un volet s'ouvre à droite (par le bas en fenêtre étroite), le Carnet restant
   visible. Le titre en haut ; « Dans … » pour choisir le dossier ; fiche de révision ou note ; puis un modèle, dont la
   vignette montre l'allure (son contenu se lit au survol). Entrée crée la fiche, Échap ou un clic à côté referme le volet.
+- **Confirmations** : ce qui a abouti se dit dans une pastille au bas de la page, trois secondes ; la souris dessus la
+  retient, Échap la ferme.
 - **Une simple note** : « Nouvelle note », dans la vue Carnet. Elle s'écrit et se range comme une fiche, mais
   n'entre pas dans les révisions. La pastille « Notes » de la vue Carnet les montre ; « Mettre en révision », sur la note, en
   fait une fiche à apprendre, et « En faire une note » (dans « ⋯ ») fait l'inverse.

@@ -26,6 +26,10 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   côté. Le titre en grand ; « Dans Biologie › Cellule » pour le dossier ; « Fiche de révision / Note » côte à côte ; les
   modèles en vignettes qui montrent leur allure. Sous 600 px de large, le volet vient du bas. Une croix, Échap ou un clic
   à côté le referment.
+- Confirmations (Déplacé, Archivé, Enregistré…) : une petite pastille au bas de la page, par-dessus, au lieu d'une bande
+  qui poussait toute la page vers le bas. Elle reste 3 secondes (4 si le texte est long) ; un trait au bas de la pastille
+  raccourcit avec le temps qui reste et s'arrête sous la souris ; Échap la ferme. Un avertissement sur une fiche ouverte
+  (adresse introuvable, fiche liée absente) prend la même forme, et reste jusqu'à son ✕. Les erreurs restent dans la page.
 
 ## [1.1.0-beta.3] - 2026-11-18
 
