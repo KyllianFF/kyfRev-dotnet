@@ -1,11 +1,13 @@
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Controls;
+using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using KyfRev.Application.Model;
 using KyfRev.Application.UseCases;
 using KyfRev.Presentation.Wpf.Pages;
+using KyfRev.Presentation.Wpf.Reading;
 using KyfRev.Presentation.Wpf.Shell;
 
 namespace KyfRev.Presentation.Wpf.Tests;
@@ -70,6 +72,128 @@ public sealed class SessionTests
         session.LeaveCommand.Execute(null);
         Assert.AreSame(vault.Shell.Home, vault.Shell.Current);
         Assert.IsTrue(vault.Sessions.Forgotten, "quitter le bilan ne garde rien");
+    }
+
+    [TestMethod]
+    public async Task A_sheet_of_a_session_keeps_its_page_its_zoom_and_its_column_as_anywhere_else()
+    {
+        // Ce que l'ordinateur retient : une feuille A4 pour la première fiche de la séance, un zoom, une colonne étroite.
+        var machine = new MachineSettings(new MemoryMachinePreferences { Stored = new MachinePreferences { SheetZoom = 1.9, Column = ReadingColumn.Narrow, RibbonReduced = true } });
+        using var vault = new SessionVault(machine: machine);
+        var first = vault.App.Sheets.List().Value.Single(sheet => sheet.Title == "Atome").Id;
+        var a4 = new PageLayout(PageFormat.A4);
+        machine.Update(preferences => preferences with { SheetPages = preferences.SheetPages.With(first, a4) });
+
+        var session = await vault.StartAsync();
+        var page = (SheetPageViewModel)await SessionVault.LoadedAsync(session);
+        Assert.AreEqual(first, page.SheetId);
+
+        // La même fiche ouverte depuis le Carnet, pour comparer.
+        vault.Navigation.OpenSheet(first);
+        var elsewhere = (SheetPageViewModel)vault.Shell.Current.Page;
+
+        Assert.AreEqual(a4, page.PageSetup!.Layout, "sa feuille, la même qu'ailleurs : le texte se mesure sur elle");
+        Assert.AreEqual(elsewhere.TextWidth, page.TextWidth);
+        Assert.AreEqual(1.9, page.SheetZoom);
+        Assert.IsTrue(page.IsRibbonReduced);
+        Assert.IsNotNull(page.Masks);
+        Assert.IsTrue(page.CanPrint || page.Print is not null);
+
+        // Le zoom changé en séance est retenu, comme ailleurs.
+        page.SheetZoom = 1.5;
+        Assert.AreEqual(1.5, machine.Current.SheetZoom);
+
+        // Rien de ce qui ferait sortir de la séance.
+        Assert.IsFalse(page.CanFocus, "la séance a son plein écran");
+        Assert.IsNull(page.SheetActions);
+        Assert.IsNull(page.OpenPassage);
+    }
+
+    /// <summary>
+    /// Sur un papier ligné, le texte d'une fiche de séance reste posé sur les lignes d'un mode à l'autre, comme ailleurs :
+    /// il glissait un peu plus à chaque passage de Lire à Réviser quand la séance ignorait la mise en page de la fiche.
+    /// </summary>
+    [STATestMethod]
+    public void On_a_ruled_paper_the_text_of_a_session_stays_on_the_lines_from_one_mode_to_the_other()
+    {
+        using var ui = new UiThread();
+        var lined = new PaperChoices(IsOn: true, Endless: PaperStyle.Lines, A4: PaperStyle.Lines, A5: PaperStyle.Lines, A6: PaperStyle.Lines);
+        var machine = new MachineSettings(new MemoryMachinePreferences { Stored = new MachinePreferences { Paper = lined, SheetZoom = 1.9, Column = ReadingColumn.Narrow } });
+        using var vault = new SessionVault(machine: machine);
+        var atom = vault.App.Sheets.List().Value.Single(sheet => sheet.Title == "Atome").Id;
+        var body = "# ATOME\n\n" + string.Join("\n\n", Enumerable.Range(1, 12).Select(index => $"HIHI PARAGRAPHE {index} AVEC ASSEZ DE MOTS POUR PASSER À LA LIGNE DANS LA FEUILLE ET MONTRER DEUX LIGNES.")) + "\n";
+        Assert.IsTrue(vault.App.Editing.Save(atom, body, vault.App.Sheets.Open(atom).Value.Fingerprint, 1).Succeeded);
+        machine.Update(preferences => preferences with { SheetPages = preferences.SheetPages.With(atom, new PageLayout(PageFormat.A4)) });
+        var test = new TestShell();
+        var window = new ShellWindow(vault.Shell) { ShowActivated = false, Left = -10000, Top = -10000, Width = 1440, Height = 900, WindowStartupLocation = WindowStartupLocation.Manual };
+        window.Resources.MergedDictionaries.Add(test.Design.Dictionary);
+        window.Resources[SheetPaper.ResourceKey] = SheetPaper.Of(machine.Current);
+        window.Show();
+        try
+        {
+            vault.Shell.ShowWorkspace();
+            UiThread.Until(() => vault.Dashboard.Dashboard is not null);
+            vault.Dashboard.StartCommand.Execute(null);
+            var session = (StudySessionViewModel)vault.Shell.Current.Page;
+            var page = (SheetPageViewModel)session.Current!;
+            UiThread.Until(() => page.Review is not null && page.Reading is not null);
+
+            var worst = new List<string>();
+            for (var turn = 0; turn < 10; turn++)
+            {
+                switch (turn % 3)
+                {
+                    case 0:
+                        page.IsReadOn = true;
+                        break;
+                    case 1:
+                        page.IsReviseOn = true;
+                        break;
+                    default:
+                        page.IsWriteOn = true;
+                        UiThread.Until(() => page.IsWriting);
+                        break;
+                }
+                for (var pass = 0; pass < 12; pass++)
+                {
+                    TestShell.Flush();
+                    window.UpdateLayout();
+                }
+                if (page.IsWriting)
+                {
+                    continue;
+                }
+                var viewer = Descendants(window).OfType<SheetDocumentViewer>().First(candidate => candidate.IsVisible && candidate.Document is not null);
+                var step = viewer.WritingStep;
+                Assert.IsGreaterThan(0, step, "le papier est réglé");
+                var sheets = viewer.PagePaper.Sheets;
+                foreach (var paragraph in viewer.Document!.Blocks.OfType<Paragraph>().Where(candidate => candidate.Tag is null && candidate.LineStackingStrategy == LineStackingStrategy.BlockLineHeight))
+                {
+                    var glyphs = paragraph.ContentStart.GetInsertionPosition(LogicalDirection.Forward).GetCharacterRect(LogicalDirection.Forward);
+                    var baseline = glyphs.Top + (paragraph.FontFamily.Baseline * paragraph.FontSize);
+                    if (sheets.FirstOrDefault(sheet => baseline > sheet.Y && baseline < sheet.Bottom) is not { Width: > 0 } sheet)
+                    {
+                        continue;
+                    }
+                    var offset = (baseline - (sheet.Y + viewer.PagePaper.WritingLine)) / step;
+                    if (Math.Abs(offset - Math.Round(offset)) > 0.06)
+                    {
+                        worst.Add(FormattableString.Invariant($"bascule {turn} : {offset:0.00} pas"));
+                    }
+                    // La fin de sa première ligne reste sur la feuille : le texte se mesure sur elle, pas sur la vue.
+                    var lineEnd = (paragraph.ContentStart.GetLineStartPosition(1) ?? paragraph.ContentEnd).GetInsertionPosition(LogicalDirection.Backward).GetCharacterRect(LogicalDirection.Backward);
+                    if (glyphs.Left < sheet.X || lineEnd.Right > sheet.Right)
+                    {
+                        worst.Add(FormattableString.Invariant($"bascule {turn} : texte de {glyphs.Left:0} à {lineEnd.Right:0}, feuille de {sheet.X:0} à {sheet.Right:0}"));
+                    }
+                }
+            }
+            Assert.IsEmpty(worst, string.Join(" ; ", worst));
+        }
+        finally
+        {
+            window.Close();
+        }
     }
 
     [TestMethod]
@@ -350,7 +474,7 @@ public sealed class SessionTests
     {
         private readonly TestVaults _vaults;
 
-        public SessionVault(bool withPassage = false)
+        public SessionVault(bool withPassage = false, MachineSettings? machine = null)
         {
             Time = new FakeTime(new DateTimeOffset(2026, 10, 1, 8, 0, 0, TimeSpan.Zero));
             _vaults = new TestVaults(AppMode.Development, Time);
@@ -366,7 +490,7 @@ public sealed class SessionTests
             }
             Time.Now += TimeSpan.FromDays(2);
             var test = new TestShell();
-            Navigation = new ReviewNavigation(App.Sheets, App.Annotations, App.Reviews, App.Reminders, App.Vaults, Sessions, Time, new RecordingLinks(), App.Editing, FakeEnvironment.Markdown());
+            Navigation = new ReviewNavigation(App.Sheets, App.Annotations, App.Reviews, App.Reminders, App.Vaults, Sessions, Time, new RecordingLinks(), App.Editing, FakeEnvironment.Markdown(), machine: machine);
             Dashboard = new DashboardPageViewModel(App.Reminders, App.Sheets, Navigation);
             Shell = new ShellViewModel(CorePages.All(new Dictionary<string, object> { [CorePages.Today] = Dashboard }), test.Appearance, test.Gallery);
             Navigation.Attach(Shell);

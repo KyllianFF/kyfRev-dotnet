@@ -7,6 +7,11 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ## [Non publié]
 
+### Corrigé
+- Séance : une fiche y garde sa mise en page, son papier, son zoom et sa colonne, comme ouverte depuis le Carnet. Sur un
+  papier réglé, son texte quittait les lignes (et la feuille) en passant de Lire à Réviser ou Écrire ; le zoom changé
+  en séance est retenu.
+
 ### Modifié
 - Écrire : un clic dans le plan fait glisser la fiche jusqu'au titre, comme en lecture, au lieu d'y sauter ; dans la vue
   Markdown aussi. D'un coup avec les animations coupées.

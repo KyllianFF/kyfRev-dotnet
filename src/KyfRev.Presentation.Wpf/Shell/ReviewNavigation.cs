@@ -203,11 +203,39 @@ public sealed class ReviewNavigation : IReviewOpener
             paper => _machine?.Update(preferences => preferences with { Paper = paper }));
     }
 
+    /// <summary>
+    /// La page d'une fiche, avec tout ce que l'ordinateur en retient : sa mise en page et son papier, le zoom, la colonne, le
+    /// ruban, les masques d'image, la lecture à voix haute, les mots définis. La même en séance qu'ailleurs : sans sa mise en
+    /// page, la fiche d'une séance se mesurait sur une autre largeur que sa feuille, et son texte quittait la réglure d'un
+    /// mode à l'autre. En séance seulement, rien de ce qui en ferait sortir : ni passage ouvert ailleurs, ni mode
+    /// concentration (la séance a son plein écran), ni clic droit qui archiverait ou supprimerait la fiche en cours.
+    /// </summary>
+    private SheetPageViewModel SheetPage(string sheetId, Action back, bool revising, Func<bool> activeRecall, bool inSession, string? passageId = null, (int Start, int End)? range = null) =>
+        new(_sheets, _annotations, Bar, sheetId, back, OpenSheet, _links, Editor, revising, activeRecall)
+        {
+            PageSetup = PageSetupOf(sheetId),
+            Print = new PrintViewModel(_printing),
+            SheetZoom = _machine?.Current.SheetZoom ?? 1,
+            Column = () => _machine?.Current.Column ?? ReadingColumn.Comfortable,
+            IsRibbonReduced = _machine?.Current.RibbonReduced ?? false,
+            RibbonReducedChanged = reduced => _machine?.Update(preferences => preferences with { RibbonReduced = reduced }),
+            SheetZoomChanged = zoom => _machine?.Update(preferences => preferences with { SheetZoom = zoom }),
+            PassageToShow = passageId,
+            RangeToShow = range,
+            Masks = new ImageMaskEditorViewModel(_sheets, _editing),
+            ReadAloud = _speech is null ? null : new ReadAloudViewModel(_speech, _machine),
+            MarksDefinedWords = _machine?.Current.MarkDefinedWords ?? true,
+            OpenPassage = inSession ? null : OpenPassageInSheet,
+            Sharing = _sharing,
+            FocusMode = inSession ? null : Shell,
+            SheetActions = inSession ? null : SheetActions,
+        };
+
     private void OpenSheet(string sheetId, bool revising, string? passageId = null, bool writes = false, (int Start, int End)? range = null, bool prints = false)
     {
         var shell = Shell;
         var from = shell.Current;
-        var page = new SheetPageViewModel(_sheets, _annotations, Bar, sheetId, () => shell.Navigate(from), OpenSheet, _links, Editor, revising, ActiveRecall) { PageSetup = PageSetupOf(sheetId), Print = new PrintViewModel(_printing), SheetZoom = _machine?.Current.SheetZoom ?? 1, Column = () => _machine?.Current.Column ?? ReadingColumn.Comfortable, IsRibbonReduced = _machine?.Current.RibbonReduced ?? false, RibbonReducedChanged = reduced => _machine?.Update(preferences => preferences with { RibbonReduced = reduced }), SheetZoomChanged = zoom => _machine?.Update(preferences => preferences with { SheetZoom = zoom }), PassageToShow = passageId, RangeToShow = range, Masks = new ImageMaskEditorViewModel(_sheets, _editing), ReadAloud = _speech is null ? null : new ReadAloudViewModel(_speech, _machine), MarksDefinedWords = _machine?.Current.MarkDefinedWords ?? true, OpenPassage = OpenPassageInSheet, Sharing = _sharing, FocusMode = shell, SheetActions = SheetActions };
+        var page = SheetPage(sheetId, () => shell.Navigate(from), revising, ActiveRecall, inSession: false, passageId, range);
         shell.Navigate(new NavigationItem(CorePages.Sheet, ReviewText.SheetPage, Icons.Document, int.MaxValue, page));
         if (writes)
         {
@@ -292,7 +320,7 @@ public sealed class ReviewNavigation : IReviewOpener
     {
         if (item.Kind == ItemKind.Sheet)
         {
-            var sheet = new SheetPageViewModel(_sheets, _annotations, Bar, item.Id, leave, OpenSheet, _links, Editor, revising: true, () => activeRecall) { Sharing = _sharing };
+            var sheet = SheetPage(item.Id, leave, revising: true, () => activeRecall, inSession: true);
             sheet.LoadCommand.Execute(null);
             return sheet;
         }
