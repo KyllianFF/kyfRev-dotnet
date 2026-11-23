@@ -394,24 +394,24 @@ public sealed class ReadingTests
     }
 
     [TestMethod]
-    public void Following_a_link_opens_the_browser_or_the_sheet_and_says_when_it_cannot()
+    public async Task Following_a_link_opens_the_browser_or_the_sheet_and_says_when_it_cannot()
     {
         using var vault = new ReadingVault(Rich, passage: false);
         var page = vault.Page();
 
-        page.OpenLinkCommand.Execute(new ExternalLink("https://exemple.org"));
+        await page.OpenLinkCommand.ExecuteAsync(new ExternalLink("https://exemple.org"));
         Assert.AreEqual("https://exemple.org", vault.Links.Opened.Single());
         Assert.IsFalse(page.HasProblem);
 
         vault.Links.Works = false;
-        page.OpenLinkCommand.Execute(new ExternalLink("https://exemple.org/b"));
+        await page.OpenLinkCommand.ExecuteAsync(new ExternalLink("https://exemple.org/b"));
         Assert.AreEqual(ReadingText.CannotOpenAddress, page.Problem);
 
-        page.OpenLinkCommand.Execute(new SheetLink(vault.App.Sheets.Open(vault.SheetId).Value.Path));
+        await page.OpenLinkCommand.ExecuteAsync(new SheetLink(vault.App.Sheets.Open(vault.SheetId).Value.Path));
         Assert.AreEqual(vault.SheetId, vault.OpenedSheets.Single());
         Assert.IsFalse(page.HasProblem);
 
-        page.OpenLinkCommand.Execute(new SheetLink("fiches/Absente.md"));
+        await page.OpenLinkCommand.ExecuteAsync(new SheetLink("fiches/Absente.md"));
         Assert.AreEqual(ReadingText.MissingLinkedSheet, page.Problem);
     }
 

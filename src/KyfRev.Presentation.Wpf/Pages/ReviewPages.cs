@@ -1380,7 +1380,7 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage, 
 
     /// <summary>Suit un lien de la fiche : vers le navigateur du système, ou vers une autre fiche.</summary>
     [RelayCommand]
-    private void OpenLink(LinkTarget? target)
+    private async Task OpenLinkAsync(LinkTarget? target)
     {
         Problem = null;
         switch (target)
@@ -1389,7 +1389,8 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage, 
                 Problem = ReadingText.CannotOpenAddress;
                 break;
             case SheetLink sheet:
-                var found = _sheets.IdAt(sheet.Path);
+                // Le coffre peut être occupé (les liens entrants se lisent à l'ouverture) : le clic ne gèle pas l'interface.
+                var found = await Task.Run(() => _sheets.IdAt(sheet.Path)).ConfigureAwait(true);
                 if (found is { Succeeded: true, Value: { } id })
                 {
                     _openSheet(id);

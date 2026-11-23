@@ -7,6 +7,11 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ## [Non publié]
 
+### Modifié
+- Plus fluide, sans rien changer à l'écran : les squelettes de chargement cessent d'animer une fois cachés (Aujourd'hui et le
+  Carnet ne redessinaient plus 60 fois par seconde pour rien) ; le clic sur un lien vers une fiche, « Déplacer… » et le
+  clic droit dans le texte mis en forme n'attendent plus le coffre ou le correcteur en figeant l'interface.
+
 ## [1.1.0-beta.5] - 2026-11-23
 
 ### Corrigé
