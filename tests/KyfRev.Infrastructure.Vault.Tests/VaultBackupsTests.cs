@@ -15,6 +15,7 @@ public abstract class VaultBackupsTests(StorageKind storage)
     protected static readonly byte[] Settings = Encoding.UTF8.GetBytes("{}");
     private static readonly string[] TrackingExports = ["kyfRev - suivi 2026-10-05.csv", "kyfRev - historique 2026-10-05.csv"];
     private static readonly string[] SharedEntries = ["Carte.md", "images/carte.png", "images/2-carte.png"];
+    private static readonly string[] ConfinedEntries = ["Carte.md", "carte.png"];
 
     [TestMethod]
     public void A_backup_is_verified_and_leaves_no_temporary_file()
@@ -148,6 +149,25 @@ public abstract class VaultBackupsTests(StorageKind storage)
         CollectionAssert.AreEqual(SharedEntries, zip.Entries.Select(e => e.FullName).ToArray());
         using var reader = new StreamReader(zip.Entries[0].Open());
         Assert.Contains("![a](images/carte.png) ![b](images/2-carte.png)", reader.ReadToEnd());
+    }
+
+    [TestMethod]
+    public void A_shared_archive_takes_nothing_from_outside_the_sheets_folder()
+    {
+        using var folder = TemporaryVault.Empty(storage);
+        using var outside = TemporaryVault.Empty();
+        using var vault = folder.Initialize(Now);
+        folder.Write("fiches/Cours/carte.png", "a");
+        folder.Write(".suivi/extensions/secret.json", "{}");
+        // Une définition de lien ne se voit pas à la lecture : elle viserait le suivi, ou les réglages du coffre.
+        var id = vault.CreateSheet("Cours", "Carte", "![a](carte.png) ![s](../../.suivi/extensions/secret.json)\n\n[r]: ../../coffre.json\n", Now);
+
+        var archive = vault.ShareSheet(id, ShareFormat.MarkdownWithImages, outside.Root, content: null);
+
+        using var zip = ZipFile.OpenRead(archive);
+        CollectionAssert.AreEqual(ConfinedEntries, zip.Entries.Select(e => e.FullName).ToArray());
+        using var reader = new StreamReader(zip.Entries[0].Open());
+        Assert.Contains("![s](../../.suivi/extensions/secret.json)", reader.ReadToEnd(), "le lien reste tel quel, sans rien emporter");
     }
 
     [TestMethod]

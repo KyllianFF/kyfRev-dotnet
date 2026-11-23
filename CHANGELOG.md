@@ -7,6 +7,10 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ## [Non publié]
 
+### Sécurité
+- Partager « Markdown avec images » n'emporte plus que des fichiers des fiches. Un lien, même invisible à la lecture, vers
+  le suivi, les réglages du coffre ou les données d'une extension mettait ce fichier dans l'archive, déchiffré.
+
 ## [1.1.0-beta.5] - 2026-11-23
 
 ### Corrigé
