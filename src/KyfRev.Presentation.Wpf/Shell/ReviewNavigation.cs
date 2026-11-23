@@ -31,8 +31,11 @@ public interface IReviewOpener
     /// <summary>Ouvre une fiche et, dès qu'elle est lue, sa fenêtre « Imprimer ».</summary>
     void PrintSheet(string sheetId) => OpenSheet(sheetId);
 
-    /// <summary>Ouvre la charge des 30 prochains jours, réduite à ce que montre <paramref name="filter"/>.</summary>
-    void OpenWorkload(DashboardFilter filter);
+    /// <summary>
+    /// Ouvre la charge des 30 prochains jours, réduite à ce que montre <paramref name="filter"/> ; sur <paramref name="day"/>,
+    /// choisi et détaillé, s'il est donné.
+    /// </summary>
+    void OpenWorkload(DashboardFilter filter, DateOnly? day = null);
 
     /// <summary>Ouvre « Santé du coffre », où se lit ce qu'un avertissement annonce.</summary>
     void OpenHealth();
@@ -174,7 +177,7 @@ public sealed class ReviewNavigation : IReviewOpener
     }
 
     /// <inheritdoc/>
-    public void OpenWorkload(DashboardFilter filter)
+    public void OpenWorkload(DashboardFilter filter, DateOnly? day = null)
     {
         if (Workload is not { } page)
         {
@@ -182,7 +185,7 @@ public sealed class ReviewNavigation : IReviewOpener
         }
         var shell = Shell;
         var from = shell.Current;
-        page.Prepare(filter, () => shell.Navigate(from));
+        page.Prepare(filter, () => shell.Navigate(from), day);
         shell.Navigate(new NavigationItem("charge", WorkloadText.Title, Icons.Chart, int.MaxValue, page));
     }
 

@@ -68,6 +68,9 @@ public static class SessionText
     /// <summary>« Commencer (…) ».</summary>
     public static string StartOf(object count) => Format("Start", count);
 
+    /// <summary>« Commencer » : sans rien à réviser, le bouton reste, grisé.</summary>
+    public static string StartNothing => Text(nameof(StartNothing));
+
     /// <summary>« Séance terminée ».</summary>
     public static string SummaryTitle => Text(nameof(SummaryTitle));
 

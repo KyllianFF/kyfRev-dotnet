@@ -99,9 +99,13 @@
                     AutomationProperties.Name="{Binding Title}" AutomationProperties.HeadingLevel="Level2">
         <DockPanel>
           <kyf:Icon x:Name="Chevron" DockPanel.Dock="Right" Text="&#xE70D;" Margin="8,0,4,0" />
+          <!-- L'action de la section (rangée 26C) : là où elle sert, en lien ; son clic ne replie pas la section. -->
+          <Button x:Name="GroupAction" DockPanel.Dock="Right" Style="{DynamicResource Kyf.Button.Subtle}" Foreground="{DynamicResource Kyf.Brush.Primary}" FontWeight="SemiBold"
+                  Padding="8,0" MinHeight="32" Content="{Binding Action.Label}" Command="{Binding Action.Command}" ToolTip="{Binding Action.Name}"
+                  AutomationProperties.Name="{Binding Action.Name}" Visibility="{Binding HasAction, Converter={StaticResource Visible}}" />
           <kyf:Icon x:Name="Glyph" Text="{Binding Glyph}" Margin="0,0,8,0" />
           <TextBlock x:Name="Title" Text="{Binding Title}" Style="{DynamicResource Kyf.Text.BodyStrong}" VerticalAlignment="Center" />
-          <Border Margin="8,0,0,0" Padding="8,0" MinWidth="24" VerticalAlignment="Center" HorizontalAlignment="Left"
+          <Border x:Name="CountPill" Margin="8,0,0,0" Padding="8,0" MinWidth="24" VerticalAlignment="Center" HorizontalAlignment="Left"
                   CornerRadius="{DynamicResource Kyf.Radius.Control}" Background="{DynamicResource Kyf.Brush.SurfaceAlt}">
             <TextBlock Text="{Binding Count}" Style="{DynamicResource Kyf.Text.Caption}" HorizontalAlignment="Center" />
           </Border>
@@ -110,6 +114,10 @@
       <DataTemplate.Triggers>
         <DataTrigger Binding="{Binding IsExpanded}" Value="False">
           <Setter TargetName="Chevron" Property="Text" Value="&#xE76C;" />
+        </DataTrigger>
+        <DataTrigger Binding="{Binding Count}" Value="0">
+          <Setter TargetName="CountPill" Property="Visibility" Value="Collapsed" />
+          <Setter TargetName="Chevron" Property="Visibility" Value="Hidden" />
         </DataTrigger>
         <DataTrigger Binding="{Binding Tone}" Value="Overdue">
           <Setter TargetName="Glyph" Property="Foreground" Value="{DynamicResource Kyf.Brush.Warning}" />
@@ -195,11 +203,23 @@
     <!-- Les sept prochains jours : le nombre d'échéances est écrit, le remplissage le redit. -->
     <DataTemplate x:Key="ForecastSection">
       <StackPanel>
-        <TextBlock Text="{x:Static pages:DashboardText.Forecast}" Style="{DynamicResource Kyf.Text.BodyStrong}" AutomationProperties.HeadingLevel="Level2" />
-        <ItemsControl x:Name="Forecast" ItemsSource="{Binding Forecast}" ItemsPanel="{StaticResource SevenDays}" Focusable="False" Margin="0,8,0,0">
+        <!-- Le titre mène à la Charge (rangée 26C) : il remplace son bouton. -->
+        <Button x:Name="ForecastTitle" Style="{DynamicResource Kyf.Button.Subtle}" HorizontalAlignment="Left" HorizontalContentAlignment="Left" Padding="8,0" Margin="-8,0,0,0" MinHeight="32"
+                Command="{Binding OpenWorkloadCommand}" ToolTip="{x:Static pages:DashboardText.SeeWorkload}" AutomationProperties.Name="{x:Static pages:DashboardText.Forecast}"
+                AutomationProperties.HelpText="{x:Static pages:DashboardText.SeeWorkload}">
+          <StackPanel Orientation="Horizontal">
+            <TextBlock Text="{x:Static pages:DashboardText.Forecast}" Style="{DynamicResource Kyf.Text.BodyStrong}" VerticalAlignment="Center" AutomationProperties.HeadingLevel="Level2" />
+            <kyf:Icon Text="&#xE76C;" FontSize="12" Margin="8,0,0,0" Foreground="{DynamicResource Kyf.Brush.TextSecondary}" />
+          </StackPanel>
+        </Button>
+        <ItemsControl x:Name="Forecast" ItemsSource="{Binding Forecast}" ItemsPanel="{StaticResource SevenDays}" Focusable="False" Margin="0,4,0,0">
           <ItemsControl.ItemTemplate>
             <DataTemplate DataType="{x:Type pages:ForecastDay}">
-              <StackPanel ToolTip="{Binding Name}" AutomationProperties.Name="{Binding Name}" Background="Transparent">
+              <!-- Un jour ouvre la Charge sur lui, choisi et détaillé. -->
+              <Button x:Name="ForecastDay" Style="{DynamicResource Kyf.Button.Subtle}" Padding="0,4" MinWidth="0" HorizontalContentAlignment="Stretch"
+                      Command="{Binding DataContext.OpenWorkloadOnCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" CommandParameter="{Binding}"
+                      ToolTip="{Binding Name}" AutomationProperties.Name="{Binding Name}">
+              <StackPanel>
                 <Border x:Name="Dot" Width="32" Height="32" CornerRadius="16" HorizontalAlignment="Center"
                         BorderThickness="1" BorderBrush="{DynamicResource Kyf.Brush.Divider}">
                   <TextBlock x:Name="Count" kyf:Transitions.RollingText="{Binding Count}" FontFamily="{DynamicResource Kyf.Font.Code}" FontWeight="SemiBold"
@@ -207,6 +227,7 @@
                 </Border>
                 <TextBlock Text="{Binding Label}" Style="{DynamicResource Kyf.Text.Caption}" HorizontalAlignment="Center" Margin="0,4,0,0" />
               </StackPanel>
+              </Button>
               <DataTemplate.Triggers>
                 <DataTrigger Binding="{Binding Level}" Value="None">
                   <Setter TargetName="Count" Property="Visibility" Value="Collapsed" />
@@ -337,6 +358,86 @@
                         Visibility="{Binding HasWeek, Converter={StaticResource Visible}}" />
         <ItemsControl ItemsSource="{Binding Cards}" Focusable="False" Visibility="{Binding HasCards, Converter={StaticResource Visible}}" />
       </StackPanel>
+    </DataTemplate>
+
+    <!-- Une tuile du jour (rangée 26C) : son nom à sa couleur, son nombre ; choisie, au fond du choix actif. -->
+    <Style x:Key="DayTile" TargetType="ToggleButton">
+      <Setter Property="Template" Value="{DynamicResource Kyf.Template.Button}" />
+      <Setter Property="FontFamily" Value="{DynamicResource Kyf.Font.Ui}" />
+      <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.Text}" />
+      <Setter Property="Background" Value="{DynamicResource Kyf.Brush.SurfaceAlt}" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="VerticalContentAlignment" Value="Center" />
+      <Setter Property="Cursor" Value="Hand" />
+      <Setter Property="FocusVisualStyle" Value="{DynamicResource Kyf.FocusVisual}" />
+      <Setter Property="kyf:Transitions.PressScale" Value="0.97" />
+      <Setter Property="Padding" Value="12,6" />
+      <Setter Property="Margin" Value="3,0" />
+      <Setter Property="MinWidth" Value="0" />
+      <Setter Property="MinHeight" Value="40" />
+      <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+      <Setter Property="Command" Value="{Binding DataContext.ChooseTileCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}" />
+      <Setter Property="CommandParameter" Value="{Binding}" />
+      <Setter Property="IsChecked" Value="{Binding IsChosen, Mode=OneWay}" />
+      <Setter Property="AutomationProperties.Name" Value="{Binding Spoken}" />
+      <Style.Triggers>
+        <!-- Choisie : le fond du choix actif et son contour, comme les autres choix de kyfRev. -->
+        <Trigger Property="IsChecked" Value="True">
+          <Setter Property="Background" Value="{DynamicResource Kyf.Brush.NavigationActiveBackground}" />
+          <Setter Property="Foreground" Value="{DynamicResource Kyf.Brush.NavigationActiveText}" />
+          <Setter Property="BorderBrush" Value="{DynamicResource Kyf.Brush.Primary}" />
+        </Trigger>
+        <Trigger Property="IsPressed" Value="True">
+          <Setter Property="Background" Value="{DynamicResource Kyf.Brush.Divider}" />
+        </Trigger>
+        <MultiTrigger>
+          <MultiTrigger.Conditions>
+            <Condition Property="IsMouseOver" Value="True" />
+            <Condition Property="IsChecked" Value="False" />
+          </MultiTrigger.Conditions>
+          <Setter Property="BorderBrush" Value="{DynamicResource Kyf.Brush.ControlBorder}" />
+        </MultiTrigger>
+        <!-- Vide, elle ne se choisit pas. -->
+        <DataTrigger Binding="{Binding Count}" Value="0">
+          <Setter Property="IsEnabled" Value="False" />
+        </DataTrigger>
+      </Style.Triggers>
+    </Style>
+
+    <!-- À l'étroit, la tuile tient sur une ligne : la liste passe avant. -->
+    <DataTemplate x:Key="DayTileTemplate" DataType="{x:Type pages:DayTile}">
+      <ToggleButton x:Name="Tile" Style="{StaticResource DayTile}">
+        <Grid>
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
+          </Grid.ColumnDefinitions>
+          <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+          </Grid.RowDefinitions>
+          <TextBlock x:Name="TileTitle" Text="{Binding Title}" Style="{DynamicResource Kyf.Text.Caption}" FontWeight="SemiBold" Foreground="{DynamicResource Kyf.Brush.Primary}"
+                     TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+          <TextBlock x:Name="TileCount" Grid.Row="1" kyf:Transitions.RollingText="{Binding Count}" FontFamily="{DynamicResource Kyf.Font.Code}" FontWeight="SemiBold"
+                     FontSize="{DynamicResource Kyf.FontSize.Subtitle}" VerticalAlignment="Center" />
+        </Grid>
+      </ToggleButton>
+      <DataTemplate.Triggers>
+        <DataTrigger Binding="{Binding Kind}" Value="Overdue">
+          <Setter TargetName="TileTitle" Property="Foreground" Value="{DynamicResource Kyf.Brush.Warning}" />
+        </DataTrigger>
+        <DataTrigger Binding="{Binding Kind}" Value="Reminders">
+          <Setter TargetName="TileTitle" Property="Foreground" Value="{DynamicResource Kyf.Brush.MarkerReminder}" />
+        </DataTrigger>
+        <DataTrigger Binding="{Binding DataContext.HasRoom, RelativeSource={RelativeSource AncestorType=ItemsControl}}" Value="False">
+          <Setter TargetName="TileCount" Property="Grid.Row" Value="0" />
+          <Setter TargetName="TileCount" Property="Grid.Column" Value="1" />
+          <Setter TargetName="TileCount" Property="Margin" Value="8,0,0,0" />
+          <Setter TargetName="TileCount" Property="FontSize" Value="{DynamicResource Kyf.FontSize.Body}" />
+          <Setter TargetName="Tile" Property="Padding" Value="10,0" />
+        </DataTrigger>
+      </DataTemplate.Triggers>
     </DataTemplate>
 
     <!-- Le titre et le résumé du jour sur une ligne quand il y a la place, l'un sous l'autre sinon. -->
@@ -479,13 +580,24 @@
             <Button x:Name="ResumeButton" Content="{Binding ResumeLabel}" Command="{Binding ResumeCommand}"
                     Visibility="{Binding CanResume, Converter={StaticResource Visible}}" />
             <Border Width="8" Height="8" Visibility="{Binding CanResume, Converter={StaticResource Visible}}" />
-            <Button x:Name="StartButton" Command="{Binding StartCommand}" Style="{DynamicResource Kyf.Button.Primary}"
-                    Visibility="{Binding CanStart, Converter={StaticResource Visible}}" AutomationProperties.Name="{Binding StartLabel}">
-              <StackPanel Orientation="Horizontal">
-                <kyf:Icon Text="&#xE768;" Margin="0,0,8,0" />
-                <TextBlock Text="{Binding StartLabel}" VerticalAlignment="Center" />
-              </StackPanel>
-            </Button>
+            <!-- Toujours là (rangée 26C) : à l'étroit, la nouvelle fiche se réduit à son icône, « Commencer » prend le reste. -->
+            <DockPanel>
+              <!-- Une idée de fiche vient souvent ici : on la crée sans passer par la vue Fiches. -->
+              <Button x:Name="NewSheetButton" DockPanel.Dock="Left" Margin="0,0,8,0" Command="{Binding NewSheetCommand}"
+                      ToolTip="{x:Static pages:DashboardText.NewSheet}" AutomationProperties.Name="{x:Static pages:DashboardText.NewSheet}">
+                <StackPanel Orientation="Horizontal">
+                  <kyf:Icon Text="{x:Static kyf:Icons.Add}" />
+                  <TextBlock Text="{x:Static pages:DashboardText.NewSheet}" VerticalAlignment="Center" Margin="8,0,0,0" Visibility="{Binding HasRoom, Converter={StaticResource Visible}}" />
+                </StackPanel>
+              </Button>
+              <Button x:Name="StartButton" Command="{Binding StartCommand}" Style="{DynamicResource Kyf.Button.Primary}" AutomationProperties.Name="{Binding StartLabel}"
+                      ToolTip="{Binding StartHint}" ToolTipService.ShowOnDisabled="True" AutomationProperties.HelpText="{Binding StartHint}">
+                <StackPanel Orientation="Horizontal">
+                  <kyf:Icon Text="&#xE768;" Margin="0,0,8,0" />
+                  <TextBlock Text="{Binding StartLabel}" VerticalAlignment="Center" />
+                </StackPanel>
+              </Button>
+            </DockPanel>
           </StackPanel>
           <TextBlock x:Name="HeroCount" DockPanel.Dock="Left" kyf:Transitions.RollingText="{Binding ReviewCount}" FontFamily="{DynamicResource Kyf.Font.Code}" FontWeight="SemiBold"
                      FontSize="{DynamicResource Kyf.FontSize.Display}" VerticalAlignment="Center" Margin="0,0,16,0"
@@ -604,60 +716,43 @@
             <RowDefinition Height="Auto" />
           </Grid.RowDefinitions>
 
-          <WrapPanel Margin="4,0,4,4">
-            <ListBox x:Name="Filters" ItemsPanel="{StaticResource InLine}" ItemsSource="{Binding Filters}" SelectedItem="{Binding SelectedFilter}"
-                     AutomationProperties.Name="{x:Static pages:DashboardText.Show}" />
-            <!-- Un dossier ou une étiquette : la liste s'y restreint, et la séance avec elle. -->
-            <ComboBox x:Name="ScopeChoice" ItemsSource="{Binding Scopes}" SelectedItem="{Binding SelectedScope}" DisplayMemberPath="Label" VerticalAlignment="Center" Margin="4,0,0,0" MaxWidth="260"
-                      ToolTip="{x:Static pages:DashboardText.ScopeName}" AutomationProperties.Name="{x:Static pages:DashboardText.ScopeName}"
-                      Visibility="{Binding HasScopes, Converter={StaticResource Visible}}" />
-            <!-- Le tri : le choix en cours, les autres dans un menu. -->
-            <Button x:Name="SortButton" Style="{DynamicResource Kyf.Button.Subtle}" Click="OnSortClick" VerticalAlignment="Center" Margin="4,0,0,0"
-                    AutomationProperties.Name="{Binding SortName}">
-              <Button.ContextMenu>
-                <ContextMenu x:Name="SortMenu" ItemsSource="{Binding Sorts}" DisplayMemberPath="Label"
-                             AutomationProperties.Name="{x:Static pages:DashboardText.SortBy}" />
-              </Button.ContextMenu>
-              <StackPanel Orientation="Horizontal">
-                <kyf:Icon Text="&#xE8CB;" />
-                <StackPanel x:Name="SortChoice" Orientation="Horizontal" Margin="8,0,0,0" Visibility="{Binding HasRoom, Converter={StaticResource Visible}}">
-                  <TextBlock Text="{Binding SortName}" VerticalAlignment="Center" />
-                  <kyf:Icon Text="&#xE70D;" FontSize="12" Margin="8,0,0,0" />
+          <StackPanel Margin="4,0,4,4">
+            <DockPanel>
+              <!-- Le tri : le choix en cours, les autres dans un menu. -->
+              <Button x:Name="SortButton" Style="{DynamicResource Kyf.Button.Subtle}" Click="OnSortClick" DockPanel.Dock="Right" VerticalAlignment="Center" Margin="4,0,0,0" ToolTip="{Binding SortName}"
+                      AutomationProperties.Name="{Binding SortName}">
+                <Button.ContextMenu>
+                  <ContextMenu x:Name="SortMenu" ItemsSource="{Binding Sorts}" DisplayMemberPath="Label"
+                               AutomationProperties.Name="{x:Static pages:DashboardText.SortBy}" />
+                </Button.ContextMenu>
+                <StackPanel Orientation="Horizontal">
+                  <kyf:Icon Text="&#xE8CB;" />
+                  <StackPanel x:Name="SortChoice" Orientation="Horizontal" Margin="8,0,0,0" Visibility="{Binding HasRoom, Converter={StaticResource Visible}}">
+                    <TextBlock Text="{Binding SortName}" VerticalAlignment="Center" />
+                    <kyf:Icon Text="&#xE70D;" FontSize="12" Margin="8,0,0,0" />
+                  </StackPanel>
                 </StackPanel>
-              </StackPanel>
-            </Button>
-            <!-- Les examens et la charge à venir : le nom se réduit à son icône à l'étroit. -->
-            <Button x:Name="NewExamButton" Style="{DynamicResource Kyf.Button.Subtle}" Command="{Binding Exams.NewCommand}" VerticalAlignment="Center" Margin="4,0,0,0"
-                    ToolTip="{x:Static pages:ExamText.NewExamName}" AutomationProperties.Name="{x:Static pages:ExamText.NewExamName}" Visibility="{Binding CanPlanExams, Converter={StaticResource Visible}}">
-              <StackPanel Orientation="Horizontal">
-                <kyf:Icon Text="{x:Static kyf:Icons.Calendar}" />
-                <TextBlock Text="{x:Static pages:ExamText.NewExam}" VerticalAlignment="Center" Margin="8,0,0,0" Visibility="{Binding HasRoom, Converter={StaticResource Visible}}" />
-              </StackPanel>
-            </Button>
-            <Button x:Name="WorkloadButton" Style="{DynamicResource Kyf.Button.Subtle}" Command="{Binding OpenWorkloadCommand}" VerticalAlignment="Center" Margin="4,0,0,0"
-                    ToolTip="{x:Static pages:WorkloadText.Title}" AutomationProperties.Name="{x:Static pages:WorkloadText.Title}">
-              <StackPanel Orientation="Horizontal">
-                <kyf:Icon Text="{x:Static kyf:Icons.Chart}" />
-                <TextBlock Text="{x:Static pages:WorkloadText.ShortTitle}" VerticalAlignment="Center" Margin="8,0,0,0" Visibility="{Binding HasRoom, Converter={StaticResource Visible}}" />
-              </StackPanel>
-            </Button>
-            <!-- Une idée de fiche vient souvent ici : on la crée sans passer par la vue Fiches. -->
-            <Button x:Name="NewSheetButton" Style="{DynamicResource Kyf.Button.Subtle}" Command="{Binding NewSheetCommand}" VerticalAlignment="Center" Margin="4,0,0,0"
-                    ToolTip="{x:Static pages:DashboardText.NewSheet}" AutomationProperties.Name="{x:Static pages:DashboardText.NewSheet}">
-              <StackPanel Orientation="Horizontal">
-                <kyf:Icon Text="{x:Static kyf:Icons.Document}" />
-                <TextBlock Text="{x:Static pages:DashboardText.NewSheet}" VerticalAlignment="Center" Margin="8,0,0,0" Visibility="{Binding HasRoom, Converter={StaticResource Visible}}" />
-              </StackPanel>
-            </Button>
-            <!-- Un retard à rattraper, une pause à prévoir : des reports, montrés avant d'être faits. -->
-            <Button x:Name="SpreadButton" Style="{DynamicResource Kyf.Button.Subtle}" Command="{Binding Spread.OpenCommand}" VerticalAlignment="Center" Margin="4,0,0,0"
-                    ToolTip="{x:Static pages:SpreadText.ActionName}" AutomationProperties.Name="{x:Static pages:SpreadText.ActionName}" Visibility="{Binding CanSpread, Converter={StaticResource Visible}}">
-              <StackPanel Orientation="Horizontal">
-                <kyf:Icon Text="{x:Static kyf:Icons.Clock}" />
-                <TextBlock Text="{x:Static pages:SpreadText.Action}" VerticalAlignment="Center" Margin="8,0,0,0" Visibility="{Binding HasRoom, Converter={StaticResource Visible}}" />
-              </StackPanel>
-            </Button>
-          </WrapPanel>
+              </Button>
+              <!-- Le filtre écrit (rangée 26C) : le genre, un dossier, une étiquette ou un mot ; la séance suit la liste. -->
+              <TextBox x:Name="FilterBox" Text="{Binding Query, UpdateSourceTrigger=PropertyChanged, Delay=150}" VerticalContentAlignment="Center"
+                       kyf:Field.Placeholder="{x:Static pages:DashboardText.FilterPlaceholder}" AutomationProperties.Name="{x:Static pages:DashboardText.FilterName}"
+                       PreviewKeyDown="OnFilterKeyDown" />
+            </DockPanel>
+            <!-- Les tuiles du jour : un clic ne garde que les leurs, un second rend tout. -->
+            <ItemsControl x:Name="Tiles" ItemsSource="{Binding Tiles}" ItemTemplate="{StaticResource DayTileTemplate}" Focusable="False" Margin="-3,8,-3,0"
+                          AutomationProperties.Name="{x:Static pages:DashboardText.Tiles}" Visibility="{Binding HasTiles, Converter={StaticResource Visible}}">
+              <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                  <UniformGrid Rows="1" />
+                </ItemsPanelTemplate>
+              </ItemsControl.ItemsPanel>
+            </ItemsControl>
+            <!-- Où en est la journée : ce qui est fait sur le tout, et ce que la séance ouvrira d'abord. -->
+            <StackPanel x:Name="DayProgress" Margin="0,8,0,0" Visibility="{Binding HasProgress, Converter={StaticResource Visible}}">
+              <ProgressBar Maximum="1" Value="{Binding DoneShare, Mode=OneWay}" Height="4" AutomationProperties.Name="{Binding Progress}" />
+              <TextBlock x:Name="ProgressText" Text="{Binding Progress}" Style="{DynamicResource Kyf.Text.Caption}" TextTrimming="CharacterEllipsis" Margin="0,4,0,0" />
+            </StackPanel>
+          </StackPanel>
 
           <!-- Squelettes pendant la première lecture. -->
           <StackPanel x:Name="Loading" Grid.Row="1" Margin="12,8,12,0" kyf:Transitions.StandsIn="{Binding IsLoading}"

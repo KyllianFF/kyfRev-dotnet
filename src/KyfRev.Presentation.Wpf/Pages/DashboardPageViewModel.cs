@@ -120,6 +120,7 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
         _reminderGroup = new DashboardGroup(DashboardText.Reminders, Icons.Sync, DashboardTone.Reminder, expanded: true, BuildRows);
         _upcoming = new DashboardGroup(DashboardText.Upcoming, Icons.Calendar, DashboardTone.Normal, expanded: true, BuildRows);
         _suspended = new DashboardGroup(DashboardText.Suspended, Icons.Clock, DashboardTone.Normal, expanded: false, BuildRows);
+        Tiles = [new(DayTileKind.Overdue, DashboardText.Overdue), new(DayTileKind.Today, DashboardText.Today), new(DayTileKind.Reminders, DashboardText.RemindersShort)];
         Scopes = [AllScopes];
         SelectedScope = AllScopes;
         Filters = [new(DashboardFilter.All, DashboardText.All), new(DashboardFilter.Sheets, DashboardText.Sheets), new(DashboardFilter.Passages, DashboardText.Passages)];
@@ -145,8 +146,9 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
         Week = [];
         Cards = [];
         Footer = string.Empty;
-        StartLabel = string.Empty;
+        StartLabel = SessionText.StartNothing;
         ResumeLabel = string.Empty;
+        Progress = string.Empty;
     }
 
     /// <summary>« Aujourd'hui ».</summary>
@@ -238,18 +240,118 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
     public IReadOnlyList<Choice<DashboardFilter>> Filters { get; }
 
     /// <summary>
+    /// Le filtre écrit (rangée 26C) : « fiche » ou « passage » choisit le genre, un nom de dossier ou d'étiquette y restreint
+    /// la liste (la nouvelle fiche va alors dans ce dossier), le reste cherche dans les titres, les passages, les dossiers et
+    /// les étiquettes, sans tenir compte des accents ni des majuscules. La séance suit la liste.
+    /// </summary>
+    [ObservableProperty]
+    public partial string Query { get; set; } = string.Empty;
+
+    /// <summary>Les mots du filtre écrit qui ne sont ni un genre ni un dossier ou une étiquette, repliés.</summary>
+    private List<string> _words = [];
+
+    /// <summary>Les tuiles du jour : en retard, aujourd'hui, rappels.</summary>
+    public IReadOnlyList<DayTile> Tiles { get; }
+
+    /// <summary>Les tuiles se montrent : il y a quelque chose à réviser aujourd'hui, filtre ou non.</summary>
+    [ObservableProperty]
+    public partial bool HasTiles { get; private set; }
+
+    /// <summary>La part de la journée déjà faite, de 0 à 1.</summary>
+    [ObservableProperty]
+    public partial double DoneShare { get; private set; }
+
+    /// <summary>« 1 sur 5 fait · prochain : Zèbre ».</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasProgress))]
+    public partial string Progress { get; private set; }
+
+    /// <summary>La journée a quelque chose à faire ou de déjà fait.</summary>
+    public bool HasProgress => Progress.Length > 0;
+
+    /// <summary>La tuile choisie ; aucune : tout se montre.</summary>
+    private DayTileKind? Chosen => Tiles.FirstOrDefault(tile => tile.IsChosen)?.Kind;
+
+    /// <summary>Choisit une tuile, ou rend tout si elle l'était déjà ; une tuile vide ne se choisit pas.</summary>
+    [RelayCommand]
+    private void ChooseTile(DayTile? tile)
+    {
+        if (tile is null || (tile.Count == 0 && !tile.IsChosen))
+        {
+            return;
+        }
+        var chosen = !tile.IsChosen;
+        foreach (var each in Tiles)
+        {
+            each.IsChosen = chosen && ReferenceEquals(each, tile);
+        }
+        BuildRows();
+    }
+
+    partial void OnQueryChanged(string value)
+    {
+        ApplyQuery();
+        BuildRows();
+    }
+
+    /// <summary>Lit le filtre écrit : le genre, le dossier ou l'étiquette nommés, et les mots qui restent.</summary>
+    private void ApplyQuery()
+    {
+        var words = Query.Split([' ', ',', ';', '	'], StringSplitOptions.RemoveEmptyEntries).Select(ShellViewModel.Fold).ToList();
+        var sheets = words.RemoveAll(word => word is "fiche" or "fiches") > 0;
+        var passages = words.RemoveAll(word => word is "passage" or "passages") > 0;
+        var rest = string.Join(' ', words);
+        var scope = rest.Length == 0 ? null : Scopes.Skip(1).FirstOrDefault(choice => NamesOf(choice).Contains(rest, StringComparer.Ordinal));
+        _applyingQuery = true;
+        try
+        {
+            SelectedFilter = Filters.First(choice => choice.Value == (sheets == passages ? DashboardFilter.All : sheets ? DashboardFilter.Sheets : DashboardFilter.Passages));
+            SelectedScope = scope ?? AllScopes;
+        }
+        finally
+        {
+            _applyingQuery = false;
+        }
+        _words = scope is null ? words : [];
+    }
+
+    /// <summary>Comment s'écrit un dossier (son chemin, son nom) ou une étiquette (avec ou sans #), replié.</summary>
+    private static IEnumerable<string> NamesOf(Choice<string> scope)
+    {
+        if (scope.Value.StartsWith(FolderScope, StringComparison.Ordinal))
+        {
+            var folder = scope.Value[FolderScope.Length..];
+            yield return ShellViewModel.Fold(folder);
+            yield return ShellViewModel.Fold(folder[(folder.LastIndexOf('/') + 1)..]);
+            yield break;
+        }
+        var tag = ShellViewModel.Fold(scope.Value[TagScope.Length..]);
+        yield return tag;
+        yield return "#" + tag;
+    }
+
+    /// <summary>Chaque mot du filtre écrit se trouve dans le titre, le passage, le terme, le dossier ou les étiquettes.</summary>
+    private bool Matches(params IEnumerable<string?> parts)
+    {
+        if (_words.Count == 0)
+        {
+            return true;
+        }
+        var text = ShellViewModel.Fold(string.Join(' ', parts.Where(part => part is not null)));
+        return _words.All(word => text.Contains(word, StringComparison.Ordinal));
+    }
+
+    private bool _applyingQuery;
+
+    /// <summary>
     /// Dossiers et étiquettes de ce qui est à réviser, « Tout » d'abord : en choisir un y restreint la liste, donc la séance.
     /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasScopes))]
     public partial IReadOnlyList<Choice<string>> Scopes { get; private set; }
 
     /// <summary>Le dossier ou l'étiquette choisi ; « Tout » sinon.</summary>
     [ObservableProperty]
     public partial Choice<string>? SelectedScope { get; set; }
-
-    /// <summary>Il y a de quoi restreindre : au moins un dossier ou une étiquette.</summary>
-    public bool HasScopes => Scopes.Count > 1;
 
     /// <summary>Tris proposés.</summary>
     public IReadOnlyList<Choice<DashboardSort>> Sorts { get; }
@@ -430,7 +532,11 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
     /// <summary>Il y a de quoi faire une séance.</summary>
     [ObservableProperty]
     [NotifyCanExecuteChangedFor(nameof(StartCommand))]
+    [NotifyPropertyChangedFor(nameof(StartHint))]
     public partial bool CanStart { get; private set; }
+
+    /// <summary>Pourquoi « Commencer » est grisé ; rien quand il ne l'est pas.</summary>
+    public string? StartHint => CanStart ? null : DashboardText.NothingToStart;
 
     /// <summary>« Reprendre la séance (3 restants) ».</summary>
     [ObservableProperty]
@@ -482,6 +588,15 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
         _suspended.Count = 0;
         Scopes = [AllScopes];
         SelectedScope = AllScopes;
+        Query = string.Empty;
+        foreach (var tile in Tiles)
+        {
+            tile.IsChosen = false;
+            tile.Count = 0;
+        }
+        HasTiles = false;
+        DoneShare = 0;
+        Progress = string.Empty;
         Rows = [];
         SecondRows = [];
         Subtitle = string.Empty;
@@ -500,7 +615,7 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
         PriorityWarning = null;
         Error = null;
         IsLoading = false;
-        StartLabel = string.Empty;
+        StartLabel = SessionText.StartNothing;
         CanStart = false;
         ResumeLabel = string.Empty;
         CanResume = false;
@@ -572,6 +687,16 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
     /// <summary>Ouvre la charge des 30 prochains jours, avec le filtre de la liste.</summary>
     [RelayCommand]
     private void OpenWorkload() => _opener.OpenWorkload(SelectedFilter.Value);
+
+    /// <summary>Ouvre la charge sur un jour de « À venir », choisi et détaillé.</summary>
+    [RelayCommand]
+    private void OpenWorkloadOn(ForecastDay? day)
+    {
+        if (day is not null)
+        {
+            _opener.OpenWorkload(SelectedFilter.Value, day.Day);
+        }
+    }
 
     /// <summary>Les actions communes sur une fiche, pour son clic droit (rangée 23A) ; rien sans elles.</summary>
     public SheetActionsViewModel? SheetActions { get; set; }
@@ -668,12 +793,18 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
         OnPropertyChanged(nameof(Dashboard));
     }
 
-    partial void OnSelectedFilterChanged(Choice<DashboardFilter> value) => BuildRows();
+    partial void OnSelectedFilterChanged(Choice<DashboardFilter> value)
+    {
+        if (!_applyingQuery)
+        {
+            BuildRows();
+        }
+    }
 
     partial void OnSelectedScopeChanged(Choice<string>? value)
     {
         // Pendant que la liste des choix se refait, la sélection passe par rien : les lignes attendent.
-        if (!_buildingScopes && value is not null)
+        if (!_buildingScopes && !_applyingQuery && value is not null)
         {
             BuildRows();
         }
@@ -727,15 +858,16 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
         }
     }
 
-    private bool InScope(DueItem item)
+    /// <summary>Ce qui est dans ce dossier (ou un dossier qu'il contient), ou porte cette étiquette, est dans le choix ; tout l'est sans choix.</summary>
+    private bool InScope(string folder, IEnumerable<string> tags)
     {
         var scope = SelectedScope?.Value ?? string.Empty;
         if (scope.StartsWith(FolderScope, StringComparison.Ordinal))
         {
-            var folder = scope[FolderScope.Length..];
-            return item.Folder == folder || item.Folder.StartsWith(folder + "/", StringComparison.Ordinal);
+            var chosen = scope[FolderScope.Length..];
+            return folder == chosen || folder.StartsWith(chosen + "/", StringComparison.Ordinal);
         }
-        return !scope.StartsWith(TagScope, StringComparison.Ordinal) || item.Tags.Contains(scope[TagScope.Length..], StringComparer.Ordinal);
+        return !scope.StartsWith(TagScope, StringComparison.Ordinal) || tags.Contains(scope[TagScope.Length..], StringComparer.Ordinal);
     }
 
     partial void OnSelectedSortChanged(Choice<DashboardSort> value) => BuildRows();
@@ -798,10 +930,13 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
         SelectedRow = candidates.Find(row => KeyOf(row) == key) ?? candidates.FirstOrDefault();
     }
 
-    /// <summary>La ligne à qui rendre le focus après une action sur un examen : celle de son dossier ; retiré, l'en-tête du groupe s'il en reste d'autres.</summary>
+    /// <summary>
+    /// La ligne à qui rendre le focus après une action sur un examen : celle de son dossier ; retiré, l'en-tête du groupe
+    /// s'il en reste d'autres ; rien s'il n'en reste aucun (le focus va alors à « Examen… »).
+    /// </summary>
     internal object? ExamRowToFocus() =>
         (object?)Rows.OfType<ExamRow>().FirstOrDefault(row => row.Exam.Folder == Exams?.LastFolder)
-        ?? (Rows.Contains(_examGroup) ? _examGroup : null);
+        ?? (Rows.OfType<ExamRow>().Any() ? _examGroup : null);
 
     private List<DashboardCard> ReadCards() => [.. _widgets.OrderBy(widget => widget.Order).Select(widget => widget.Card()).OfType<DashboardCard>()];
 
@@ -827,24 +962,52 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
         var overdue = Prepare(dashboard.Overdue);
         var today = Prepare(dashboard.Today);
         var upcoming = Prepare(dashboard.Upcoming);
-        var reminders = SelectedFilter.Value == DashboardFilter.Passages ? [] : dashboard.Reminders;
-        var total = overdue.Count + today.Count + reminders.Length;
+        List<PendingReminder> reminders = SelectedFilter.Value == DashboardFilter.Passages ? [] : [.. dashboard.Reminders.Where(reminder => InScope(reminder.Folder, reminder.Tags)).Where(reminder => Matches(reminder.Title, reminder.Folder, string.Join(' ', reminder.Tags)))];
+        ShowTiles(dashboard, overdue, today, reminders);
+        // Une tuile choisie ne garde que les siens : dans la liste, dans la séance, dans le résumé.
+        var chosen = Chosen;
+        if (chosen is { } kind)
+        {
+            overdue = kind == DayTileKind.Overdue ? overdue : [];
+            today = kind == DayTileKind.Today ? today : [];
+            reminders = kind == DayTileKind.Reminders ? reminders : [];
+            upcoming = [];
+        }
+        var total = overdue.Count + today.Count + reminders.Count;
         _toStart = [.. overdue, .. today];
         CanStart = _toStart.Count > 0;
-        StartLabel = SessionText.StartOf(_toStart.Count);
+        StartLabel = CanStart ? SessionText.StartOf(_toStart.Count) : SessionText.StartNothing;
+        Progress = ProgressOf(dashboard);
+
+        // Les actions vont à leur section : « Étaler… » à la première de la journée (un retard à rattraper, sinon une pause
+        // à prévoir), « Examen… » aux examens, qui se montrent même sans examen pour en fixer un.
+        var spread = Spread is { } spreading ? new GroupAction(SpreadText.Action, SpreadText.ActionName, spreading.OpenCommand) : null;
+        var spreadHere = new[] { (Group: _overdue, overdue.Count), (Group: _today, today.Count), (Group: _upcoming, upcoming.Count) }.FirstOrDefault(group => group.Count > 0).Group;
+        foreach (var group in new[] { _overdue, _today, _upcoming })
+        {
+            group.Action = ReferenceEquals(group, spreadHere) ? spread : null;
+        }
+        _examGroup.Action = Exams is { } exams ? new GroupAction(ExamText.NewExam, ExamText.NewExamName, exams.NewCommand) : null;
 
         var rows = new List<object>();
-        Add(rows, _examGroup, dashboard.Exams.Select(exam => new ExamRow(exam)));
+        if (chosen is null)
+        {
+            Add(rows, _examGroup, dashboard.Exams.Select(exam => new ExamRow(exam)), always: Exams is not null);
+        }
         // Les premiers pas se cochent d'après ce tableau de bord, que la carte se montre ou non.
         var showsFirstSteps = FirstSteps is { } steps && FollowedBy(steps, dashboard);
+        // Une tuile choisie a toujours quelque chose : ni premiers pas ni état vide avec elle.
         if (total == 0 && showsFirstSteps)
         {
             rows.Add(FirstSteps!);
         }
         else if (total == 0)
         {
+            // Le filtre cache ce qui est dû : c'est lui qu'il faut dire, pas un coffre vide.
+            var hidden = HasTiles && (Query.Length > 0 || SelectedFilter.Value != DashboardFilter.All || SelectedScope != AllScopes);
             rows.Add(new EmptyDashboardRow(
-                dashboard.NextDueDate is { } next ? DashboardText.NextReviewOf(Dates.Long(next))
+                hidden ? DashboardText.NothingMatches
+                : dashboard.NextDueDate is { } next ? DashboardText.NextReviewOf(Dates.Long(next))
                 : dashboard.ActiveSheets + dashboard.ArchivedSheets == 0 ? DashboardText.FirstSheet
                 : DashboardText.AllArchived));
         }
@@ -853,11 +1016,13 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
         Add(rows, _overdue, overdue.Select(item => new DueItemRow(item, dashboard.ActiveRecall, showDueDate: false)));
         Add(second, _today, today.Select(item => new DueItemRow(item, dashboard.ActiveRecall, showDueDate: false)));
         var hasSide = Layout is TodayLayout.WithSide or TodayLayout.WithPreview;
-        Add(rows, _reminderGroup, (hasSide ? [] : reminders).Select(reminder => new ReminderRow(reminder)));
+        // Les rappels choisis par leur tuile viennent dans la liste, même quand la colonne latérale les montre d'habitude.
+        var remindersAside = hasSide && chosen != DayTileKind.Reminders;
+        Add(rows, _reminderGroup, (remindersAside ? [] : reminders).Select(reminder => new ReminderRow(reminder)));
         Add(second, _upcoming, upcoming.Select(item => new DueItemRow(item, dashboard.ActiveRecall, showDueDate: true)));
         // Les suspendus ne sont ni dus ni comptés : repliés, ils attendent qu'on les ouvre pour les reprendre.
-        Add(second, _suspended, Prepare(dashboard.Suspended).Select(item => new DueItemRow(item, dashboard.ActiveRecall, showDueDate: true)));
-        SideReminders = hasSide ? [.. reminders.Select(reminder => new ReminderRow(reminder))] : [];
+        Add(second, _suspended, (chosen is null ? Prepare(dashboard.Suspended) : []).Select(item => new DueItemRow(item, dashboard.ActiveRecall, showDueDate: true)));
+        SideReminders = remindersAside ? [.. reminders.Select(reminder => new ReminderRow(reminder))] : [];
         var comingDays = Layout == TodayLayout.WithSplit ? 2 * Application.Model.Dashboard.UpcomingDays : Application.Model.Dashboard.UpcomingDays;
         Forecast = [.. dashboard.Workload.Skip(1).Take(comingDays).Select(day => new ForecastDay(day.Day, day.Due.Length))];
         var most = dashboard.RecentReviews.Select(day => day.Reviews).DefaultIfEmpty().Max();
@@ -884,9 +1049,9 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
         {
             chips.Add(new(PillKind.Today, DashboardText.TodayChipOf(today.Count)));
         }
-        if (reminders.Length > 0)
+        if (reminders.Count > 0)
         {
-            chips.Add(new(PillKind.Reminder, Dates.Plural(reminders.Length, DashboardText.ReminderChipOneOf, DashboardText.ReminderChipManyOf)));
+            chips.Add(new(PillKind.Reminder, Dates.Plural(reminders.Count, DashboardText.ReminderChipOneOf, DashboardText.ReminderChipManyOf)));
         }
         Chips = chips;
         Subtitle = $"{Dates.Capitalized(Dates.Long(dashboard.Day))} · {(total == 0 ? DashboardText.NothingToReview : Dates.Plural(total, DashboardText.ItemsToReviewOneOf, DashboardText.ItemsToReviewManyOf))}";
@@ -896,12 +1061,50 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
         Footer = dashboard.NextDueDate is { } nextDue && total > 0 ? $"{footer} · {DashboardText.NextDueOf(Dates.Short(nextDue))}" : footer;
     }
 
-    /// <summary>L'en-tête d'un groupe non vide, et ses lignes s'il est déplié.</summary>
-    private static void Add(List<object> rows, DashboardGroup group, IEnumerable<object> items)
+    /// <summary>
+    /// Compte les tuiles d'après la liste filtrée ; une tuile choisie qui se vide se relâche. Elles se montrent dès que la
+    /// journée a quelque chose, même si le filtre n'en garde rien.
+    /// </summary>
+    private void ShowTiles(Dashboard dashboard, List<DueItem> overdue, List<DueItem> today, List<PendingReminder> reminders)
+    {
+        foreach (var tile in Tiles)
+        {
+            tile.Count = tile.Kind switch
+            {
+                DayTileKind.Overdue => overdue.Count,
+                DayTileKind.Today => today.Count,
+                _ => reminders.Count,
+            };
+            tile.IsChosen &= tile.Count > 0;
+        }
+        HasTiles = dashboard.Overdue.Length + dashboard.Today.Length + dashboard.Reminders.Length > 0;
+    }
+
+    /// <summary>
+    /// « 1 sur 5 fait · prochain : Zèbre » : les révisions validées aujourd'hui sur la journée entière (sans filtre), et
+    /// ce que la séance ouvrira d'abord ; rien si la journée n'a rien eu.
+    /// </summary>
+    private string ProgressOf(Dashboard dashboard)
+    {
+        var done = dashboard.RecentReviews.FirstOrDefault(day => day.Day == dashboard.Day)?.Reviews ?? 0;
+        var day = done + dashboard.Overdue.Length + dashboard.Today.Length + dashboard.Reminders.Length;
+        DoneShare = day == 0 ? 0 : (double)done / day;
+        if (day == 0)
+        {
+            return string.Empty;
+        }
+        var part = done > 1 ? DashboardText.ProgressManyOf(done, day) : DashboardText.ProgressOneOf(done, day);
+        return _toStart.Count > 0 ? $"{part} · {DashboardText.NextOf(_toStart[0].Title)}"
+            : done == day ? $"{part} · {DashboardText.DayDone}"
+            : part;
+    }
+
+    /// <summary>L'en-tête d'un groupe non vide (ou vide, s'il se montre <paramref name="always"/>), et ses lignes s'il est déplié.</summary>
+    private static void Add(List<object> rows, DashboardGroup group, IEnumerable<object> items, bool always = false)
     {
         var all = items.ToList();
         group.Count = all.Count;
-        if (all.Count == 0)
+        if (all.Count == 0 && !always)
         {
             return;
         }
@@ -920,7 +1123,7 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
             DashboardFilter.Sheets => items.Where(item => item.Kind == ItemKind.Sheet),
             DashboardFilter.Passages => items.Where(item => item.Kind == ItemKind.Passage),
             _ => items,
-        }).Where(InScope);
+        }).Where(item => InScope(item.Folder, item.Tags)).Where(item => Matches(item.Title, item.Excerpt, item.Term, item.Folder, string.Join(' ', item.Tags)));
         return SelectedSort.Value switch
         {
             DashboardSort.Step => [.. filtered.OrderBy(item => StepValue(item.Step))],

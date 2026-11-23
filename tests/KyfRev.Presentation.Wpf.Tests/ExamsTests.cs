@@ -211,7 +211,7 @@ public sealed class ExamsTests
             Assert.IsFalse(tighten.IsEnabled);
             Assert.IsFalse(more.IsEnabled);
             Assert.IsFalse(exams.NewCommand.CanExecute(null));
-            Assert.IsFalse(Named<Button>(window, "NewExamButton").IsEnabled);
+            Assert.IsFalse(ExamAction(window).IsEnabled);
             Assert.IsFalse(exams.EditCommand.CanExecute(row));
             Assert.IsEmpty(view.RowMenuItems(row), "le menu de la ligne n'a rien à proposer");
             exams.RequestTighten(row);
@@ -354,14 +354,14 @@ public sealed class ExamsTests
             TestShell.Flush();
             UiThread.Until(() => Keyboard.FocusedElement is ListBoxItem { DataContext: DashboardGroup });
 
-            // Le dernier retiré : plus de groupe, le focus va au bouton qui en crée un.
+            // Le dernier retiré : la section reste, vide, et le focus va à son action, qui en crée un.
             exams.RequestWithdraw(Exam(string.Empty));
             TestShell.Flush();
             UiThread.Until(() => confirmation.IsKeyboardFocusWithin);
             confirmation.Close(DialogChoice.Primary);
             UiThread.Until(() => !page.Rows.OfType<ExamRow>().Any());
             TestShell.Flush();
-            UiThread.Until(() => Named<Button>(window, "NewExamButton").IsKeyboardFocused);
+            UiThread.Until(() => ExamAction(window).IsKeyboardFocused);
         }
         finally
         {
@@ -699,8 +699,10 @@ public sealed class ExamsTests
             var layout = Descendants(container).OfType<AdaptiveRow>().Single();
             var text = (FrameworkElement)Descendants(layout).OfType<TextBlock>().First().Parent;
             Assert.IsTrue(layout.IsStacked || text.ActualWidth >= layout.MainMinWidth, "le nom garde sa place");
-            Assert.AreEqual(Visibility.Collapsed, Descendants(Named<Button>(window, "NewExamButton")).OfType<TextBlock>().First(label => label.Text == ExamText.NewExam).Visibility, "à l'étroit, l'icône suffit");
-            Assert.AreEqual(ExamText.NewExamName, AutomationProperties.GetName(Named<Button>(window, "NewExamButton")));
+            // L'action de la section tient dans sa ligne, à l'étroit aussi.
+            var action = ExamAction(window);
+            Assert.AreEqual(ExamText.NewExamName, AutomationProperties.GetName(action));
+            Assert.IsLessThanOrEqualTo(window.ActualWidth, action.TranslatePoint(new Point(action.ActualWidth, 0), window).X);
 
             // Dans la semaine, le compte à rebours passe en ambre, lisible sur son fond.
             var countdown = Descendants(container).OfType<Border>().First(border => border.Name == "Countdown");
@@ -780,9 +782,9 @@ public sealed class ExamsTests
             editor.Close(DialogChoice.None);
             UiThread.Until(() => !page.Exams.IsEditing);
 
-            // « Charge » ouvre la vue à venir, avec le filtre en cours.
-            page.SelectedFilter = page.Filters[2];
-            Named<Button>(window, "WorkloadButton").Command.Execute(null);
+            // « À venir » ouvre la charge, avec le filtre en cours.
+            page.Query = "passage";
+            page.OpenWorkloadCommand.Execute(null);
             CollectionAssert.Contains(vault.Opener.Opened, ("charge", DashboardFilter.Passages));
         }
         finally
@@ -811,7 +813,8 @@ public sealed class ExamsTests
             var container = (ListBoxItem)list.ItemContainerGenerator.ContainerFromItem(row);
 
             Assert.IsFalse(Descendants(container).OfType<AdaptiveRow>().Single().IsStacked);
-            Assert.AreEqual(Visibility.Visible, Descendants(Named<Button>(window, "NewExamButton")).OfType<TextBlock>().First(label => label.Text == ExamText.NewExam).Visibility);
+            Assert.AreEqual(ExamText.NewExam, ExamAction(window).Content);
+            Assert.IsTrue(ExamAction(window).IsVisible);
             var text = Descendants(container).OfType<TextBlock>().First(block => block.Name == "CountdownText");
             Assert.AreEqual(test.Design.Dictionary["Kyf.Brush.PillSheetText"], text.Foreground);
         }
@@ -843,6 +846,10 @@ public sealed class ExamsTests
         where T : FrameworkElement =>
         Descendants(root).OfType<T>().First(element => element.Name == name);
 
+    /// <summary>« Examen… », dans l'en-tête de la section des examens.</summary>
+    private static Button ExamAction(DependencyObject root) =>
+        Descendants(root).OfType<Button>().First(button => button.Name == "GroupAction" && button.DataContext is DashboardGroup { Title: var title } && title == ExamText.Exams);
+
     private static IEnumerable<DependencyObject> Descendants(DependencyObject root)
     {
         for (var i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)
@@ -857,6 +864,7 @@ public sealed class ExamsTests
     }
 
     /// <summary>Un coffre d'essai : la fiche « Mitose » créée le jeudi 1er octobre 2026, dans « Biologie » ; un dossier vide « Biologie/Cellule ».</summary>
+
     private sealed class ExamVault : IDisposable
     {
         private readonly TestVaults _vaults;

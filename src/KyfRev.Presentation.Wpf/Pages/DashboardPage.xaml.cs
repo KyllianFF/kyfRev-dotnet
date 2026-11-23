@@ -230,6 +230,46 @@ internal sealed partial class DashboardPage : UserControl
     /// <summary>La réponse à la fenêtre « Nouvelle fiche ».</summary>
     private void OnNewSheetClosed(object sender, DialogClosedEventArgs e) => _ = Live?.AnswerNewSheetCommand.ExecuteAsync(e.Choice == DialogChoice.Primary);
 
+    /// <summary>Échap vide le filtre écrit ; vide, il laisse passer la touche.</summary>
+    private void OnFilterKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Escape && Live is { Query.Length: > 0 } page)
+        {
+            page.Query = string.Empty;
+            e.Handled = true;
+        }
+    }
+
+    /// <summary>
+    /// Rend le focus à l'action d'une section (« Étaler… », « Examen… ») qui porte <paramref name="command"/> ; vrai si elle
+    /// est à l'écran.
+    /// </summary>
+    private bool FocusGroupAction(ICommand? command)
+    {
+        if (command is null || Items.ItemsSource is not IEnumerable<object> rows || rows.OfType<DashboardGroup>().FirstOrDefault(group => ReferenceEquals(group.Action?.Command, command)) is not { } group)
+        {
+            return false;
+        }
+        Items.ScrollIntoView(group);
+        Items.UpdateLayout();
+        return Items.ItemContainerGenerator.ContainerFromItem(group) is DependencyObject container
+            && Descendants(container).OfType<Button>().FirstOrDefault(button => button.Name == "GroupAction") is { } action
+            && action.Focus();
+    }
+
+    private static IEnumerable<DependencyObject> Descendants(DependencyObject root)
+    {
+        for (var i = 0; i < VisualTreeHelper.GetChildrenCount(root); i++)
+        {
+            var child = VisualTreeHelper.GetChild(root, i);
+            yield return child;
+            foreach (var below in Descendants(child))
+            {
+                yield return below;
+            }
+        }
+    }
+
     /// <summary>La réponse à la fenêtre d'étalement ; le focus revient au bouton qui l'a ouverte.</summary>
     private void OnSpreadClosed(object sender, DialogClosedEventArgs e)
     {
@@ -240,9 +280,9 @@ internal sealed partial class DashboardPage : UserControl
         _ = Page.Spread!.AnswerCommand.ExecuteAsync(e.Choice == DialogChoice.Primary);
         Dispatcher.BeginInvoke(DispatcherPriority.Input, () =>
         {
-            if (IsVisible && KeyboardFocus.IsLost())
+            if (IsVisible && KeyboardFocus.IsLost() && !FocusGroupAction(Page.Spread?.OpenCommand))
             {
-                SpreadButton.Focus();
+                FilterBox.Focus();
             }
         });
     }
@@ -285,7 +325,7 @@ internal sealed partial class DashboardPage : UserControl
         }
         if (page.ExamRowToFocus() is not { } row)
         {
-            NewExamButton.Focus();
+            FocusGroupAction(page.Exams.NewCommand);
             return;
         }
         Items.ScrollIntoView(row);

@@ -81,6 +81,17 @@ public sealed partial class DashboardGroup : ObservableObject
     [ObservableProperty]
     public partial bool IsExpanded { get; set; }
 
+    /// <summary>
+    /// L'action de la section, à droite de son titre (« Étaler… », « Examen… ») : elle se fait là où elle sert ; rien
+    /// sans action.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasAction))]
+    public partial GroupAction? Action { get; internal set; }
+
+    /// <summary>La section porte une action.</summary>
+    public bool HasAction => Action is not null;
+
     /// <summary>« En retard, 3 » : le nom lu par le lecteur d'écran.</summary>
     public override string ToString() => $"{Title}, {Count}";
 
@@ -89,6 +100,56 @@ public sealed partial class DashboardGroup : ObservableObject
     private void Toggle() => IsExpanded = !IsExpanded;
 
     partial void OnIsExpandedChanged(bool value) => _changed?.Invoke();
+}
+
+/// <summary>L'action d'une section : son libellé court, le nom lu par le lecteur d'écran, et ce qu'elle fait.</summary>
+/// <param name="Label">« Étaler… ».</param>
+/// <param name="Name">« Étaler les échéances ».</param>
+/// <param name="Command">Ce qu'elle fait.</param>
+public sealed record GroupAction(string Label, string Name, System.Windows.Input.ICommand Command);
+
+/// <summary>Ce qu'une tuile du jour garde de la liste.</summary>
+public enum DayTileKind
+{
+    /// <summary>Les retards.</summary>
+    Overdue,
+
+    /// <summary>Ce qui tombe aujourd'hui.</summary>
+    Today,
+
+    /// <summary>Les rappels de consolidation.</summary>
+    Reminders,
+}
+
+/// <summary>
+/// Une tuile au-dessus de la liste (rangée 26C) : combien il y a d'en retard, d'aujourd'hui ou de rappels ; la choisir ne
+/// garde que ceux-là, dans la liste comme dans la séance, la rechoisir rend tout.
+/// </summary>
+public sealed partial class DayTile : ObservableObject
+{
+    internal DayTile(DayTileKind kind, string title)
+    {
+        Kind = kind;
+        Title = title;
+    }
+
+    /// <summary>Ce que la tuile garde.</summary>
+    public DayTileKind Kind { get; }
+
+    /// <summary>« En retard ».</summary>
+    public string Title { get; }
+
+    /// <summary>Combien la liste en montre, filtre compris.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Spoken))]
+    public partial int Count { get; internal set; }
+
+    /// <summary>La liste ne garde que ceux de la tuile.</summary>
+    [ObservableProperty]
+    public partial bool IsChosen { get; internal set; }
+
+    /// <summary>« En retard : 2 » : le nom lu par le lecteur d'écran.</summary>
+    public string Spoken => $"{Title} : {Count}";
 }
 
 /// <summary>Comment s'affiche le titre d'une ligne.</summary>
@@ -260,12 +321,16 @@ public sealed class ForecastDay
 
     internal ForecastDay(DateOnly day, int count)
     {
+        Day = day;
         Label = Dates.DayName(day);
         Count = count;
         Level = count == 0 ? ForecastLevel.None : count < Many ? ForecastLevel.Some : ForecastLevel.Many;
         var name = Dates.Long(day);
         Name = Dates.Plural(count, number => DashboardText.ForecastDayOneOf(name, number), number => DashboardText.ForecastDayManyOf(name, number));
     }
+
+    /// <summary>Le jour : un clic ouvre la Charge sur lui.</summary>
+    public DateOnly Day { get; }
 
     /// <summary>« mar ».</summary>
     public string Label { get; }

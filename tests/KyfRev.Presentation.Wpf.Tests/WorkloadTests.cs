@@ -508,6 +508,20 @@ public sealed class WorkloadTests
 
         page.BackCommand.Execute(null);
         Assert.AreSame(from, test.Shell.Current);
+
+        // Un jour cliqué dans « À venir » : la vue s'ouvre dessus, choisi et détaillé, une fois lue.
+        var day = vault.Time.GetLocalNow().Date.AddDays(3);
+        navigation.OpenWorkload(DashboardFilter.All, DateOnly.FromDateTime(day));
+        // Le coquillage d'essai n'active pas ses vues : la lecture se fait à la main.
+        page.OnNavigatedTo();
+        UiThread.Until(() => page.SelectedDay is not null);
+        Assert.AreEqual(DateOnly.FromDateTime(day), page.SelectedDay!.Day);
+        Assert.IsTrue(page.SelectedDay.IsSelected);
+
+        // La fois suivante, sans jour, rien n'est choisi.
+        page.BackCommand.Execute(null);
+        navigation.OpenWorkload(DashboardFilter.All);
+        Assert.IsNull(page.SelectedDay);
     }
 
     [STATestMethod]

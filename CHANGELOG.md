@@ -10,6 +10,16 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 ### Modifié
 - Écrire : un clic dans le plan fait glisser la fiche jusqu'au titre, comme en lecture, au lieu d'y sauter ; dans la vue
   Markdown aussi. D'un coup avec les animations coupées.
+- Aujourd'hui : un champ « Filtrer » remplace les boutons Tout / Fiches / Passages et le choix du dossier. Il comprend
+  « fiche », « passage », un nom de dossier ou d'étiquette (la nouvelle fiche va alors dans ce dossier) et les mots d'un
+  titre, sans tenir compte des accents ; Échap l'efface. La séance suit la liste.
+- Aujourd'hui : trois tuiles (en retard, aujourd'hui, rappels) ne gardent d'un clic que les leurs, un second rend tout ;
+  une barre dit où en est la journée (« 1 sur 5 fait · prochain : … »).
+- Aujourd'hui : « Étaler… » passe dans l'en-tête de la première section de la journée, « Examen… » dans celui des
+  examens, qui se montrent même sans examen. « Nouvelle fiche » et « Commencer » restent toujours en haut ; sans rien à
+  réviser, « Commencer » est grisé et son infobulle dit pourquoi.
+- Aujourd'hui : le bouton « Charge » disparaît. Le titre « À venir » ouvre la Charge ; un jour l'ouvre sur ce jour,
+  choisi et détaillé.
 
 ## [1.1.0-beta.4] - 2026-11-22
 

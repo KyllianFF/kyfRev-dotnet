@@ -75,4 +75,7 @@
   <data name="SummaryTitle" xml:space="preserve">
     <value>Séance terminée</value>
   </data>
+  <data name="StartNothing" xml:space="preserve">
+    <value>Commencer</value>
+  </data>
 </root>
