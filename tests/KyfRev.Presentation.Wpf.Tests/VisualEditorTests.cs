@@ -238,10 +238,12 @@ public sealed class VisualEditorTests
             Assert.AreEqual("0", scene.Script("Math.round(document.body.scrollTop)"));
 
             // Le plan demande le titre : la fiche (c'est le corps de la page qui défile) part d'où elle est et glisse ; elle ne saute pas.
+            // Le titre d'abord mis en page par l'éditeur : sans lui, sa position se lirait « null ».
+            UiThread.Until(() => scene.Script("[...document.querySelectorAll('.ProseMirror h2')].some(title => title.textContent.trim() === 'Conclusion')") == "true");
             scene.Editor.GoToHeading("Conclusion", 0);
             var first = double.Parse(scene.Script("document.body.scrollTop"), CultureInfo.InvariantCulture);
             const string headingTop = "Math.round([...document.querySelectorAll('.ProseMirror h2')].find(title => title.textContent.trim() === 'Conclusion').getBoundingClientRect().top)";
-            UiThread.Until(() => Math.Abs(double.Parse(scene.Script(headingTop), CultureInfo.InvariantCulture)) <= 2);
+            UiThread.Until(() => double.TryParse(scene.Script(headingTop), NumberStyles.Float, CultureInfo.InvariantCulture, out var top) && Math.Abs(top) <= 2);
             var last = double.Parse(scene.Script("document.body.scrollTop"), CultureInfo.InvariantCulture);
             Assert.IsGreaterThan(first, last, "partie d'où elle était, elle est arrivée plus bas");
             Assert.IsLessThan(last, first + 1, "au premier instant, elle n'était pas encore arrivée");
