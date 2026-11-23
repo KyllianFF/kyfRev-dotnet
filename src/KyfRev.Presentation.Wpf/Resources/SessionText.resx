@@ -78,4 +78,13 @@
   <data name="StartNothing" xml:space="preserve">
     <value>Commencer</value>
   </data>
+  <data name="NextSheet" xml:space="preserve">
+    <value>Fiche suivante</value>
+  </data>
+  <data name="ToSummary" xml:space="preserve">
+    <value>Voir le bilan</value>
+  </data>
+  <data name="Stay" xml:space="preserve">
+    <value>Échap ou un clic dans la fiche : rester</value>
+  </data>
 </root>

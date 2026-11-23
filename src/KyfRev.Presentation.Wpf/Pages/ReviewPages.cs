@@ -556,8 +556,9 @@ public sealed partial class SheetPageViewModel : ObservableObject, IReviewPage, 
     /// <summary>« Passages · 3 ».</summary>
     public string PassagesLabel => ReadingText.PassagesOf(Passages.Count);
 
-    /// <summary>La barre de révision de la fiche.</summary>
+    /// <summary>La barre de révision de la fiche ; refaite à chaque relecture, Ctrl+Entrée suit la nouvelle.</summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ValidateShortcut))]
     public partial ReviewBarViewModel? Review { get; private set; }
 
     /// <summary>Largeur de la page.</summary>

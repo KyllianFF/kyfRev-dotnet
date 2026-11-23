@@ -612,7 +612,7 @@
       </StackPanel>
 
       <!-- Toujours visible, même la fiche défilée. -->
-      <ContentControl x:Name="ReviewHost" Grid.Row="3" Content="{Binding Review}" Focusable="False" IsTabStop="False" Margin="16,8,16,16"
+      <ContentControl x:Name="ReviewHost" Grid.Row="3" Content="{Binding Review}" Focusable="False" IsTabStop="False"
                       kyf:Transitions.Shown="{Binding IsReading}" kyf:Transitions.ShownFrom="Bottom" />
     </Grid>
 

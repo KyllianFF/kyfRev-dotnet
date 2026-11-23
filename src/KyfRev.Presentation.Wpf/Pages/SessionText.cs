@@ -68,6 +68,15 @@ public static class SessionText
     /// <summary>« Commencer (…) ».</summary>
     public static string StartOf(object count) => Format("Start", count);
 
+    /// <summary>« Fiche suivante » : après la validation, la séance y va seule.</summary>
+    public static string NextSheet => Text(nameof(NextSheet));
+
+    /// <summary>« Voir le bilan » : après le dernier élément de la séance.</summary>
+    public static string ToSummary => Text(nameof(ToSummary));
+
+    /// <summary>« Échap ou un clic dans la fiche : rester » : l'aide du bouton pendant que la séance avance.</summary>
+    public static string Stay => Text(nameof(Stay));
+
     /// <summary>« Commencer » : sans rien à réviser, le bouton reste, grisé.</summary>
     public static string StartNothing => Text(nameof(StartNothing));
 

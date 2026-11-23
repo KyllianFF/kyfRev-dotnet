@@ -7,7 +7,18 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ## [Non publié]
 
+### Corrigé
+- Fiche relue (après une écriture, par exemple) : Ctrl+Entrée validait encore l'ancienne barre de révision, et rien ne
+  se passait.
+
 ### Modifié
+- Révision : « Étape attendue » devient une bande sous la fiche, de hauteur fixe. Valider n'y fait plus rien bouger :
+  elle dit « J3 validée » et la prochaine étape, « Valider » laisse sa place à « Révisée aujourd'hui » (ou, en séance, à
+  « Fiche suivante »), « J'avais oublié » s'efface en gardant la sienne. Plus de bulle de confirmation ; à l'étroit,
+  « Reporter » passe dans « ⋯ ».
+- Séance : après une validation, la fiche suivante vient seule en 1,5 s ; un trait le montre en haut de la bande. Échap, un
+  clic ou la molette dans la fiche font rester. « Passer » et « Suivant » ont la même hauteur : la barre de séance ne
+  bouge plus.
 - Écrire : un clic dans le plan fait glisser la fiche jusqu'au titre, comme en lecture, au lieu d'y sauter ; dans la vue
   Markdown aussi. D'un coup avec les animations coupées.
 - Aujourd'hui : un champ « Filtrer » remplace les boutons Tout / Fiches / Passages et le choix du dossier. Il comprend

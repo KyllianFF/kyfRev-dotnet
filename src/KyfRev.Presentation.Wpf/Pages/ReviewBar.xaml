@@ -8,6 +8,7 @@
              xmlns:shell="clr-namespace:KyfRev.Presentation.Wpf.Shell">
   <UserControl.Resources>
     <BooleanToVisibilityConverter x:Key="Visible" />
+    <pages:ShownConverter x:Key="Shown" />
 
     <!-- La disposition vient de AdaptiveRow : ces styles ne gardent que l'alignement. -->
     <Style x:Key="StepsSlot" TargetType="ItemsControl">
@@ -16,6 +17,7 @@
     </Style>
     <Style x:Key="StatusSlot" TargetType="StackPanel">
       <Setter Property="VerticalAlignment" Value="Center" />
+      <Setter Property="Margin" Value="16,0,0,0" />
     </Style>
     <Style x:Key="ActionsSlot" TargetType="Grid">
       <Setter Property="VerticalAlignment" Value="Center" />
@@ -36,21 +38,31 @@
     </Style>
   </UserControl.Resources>
 
-  <StackPanel>
-  <pages:FirstTip x:Name="ReviewTip" Mark="{x:Static pages:FirstUse.ReviewTipRead}" Title="{x:Static pages:FirstTipText.ReviewTitle}" Text="{x:Static pages:FirstTipText.ReviewText}"
-                  IsOffered="{Binding CanValidate}" MaxWidth="420" HorizontalAlignment="Right" Margin="0,0,0,8" />
-  <kyf:Card x:Name="Bar" MaxWidth="980" Padding="16,12" AutomationProperties.Name="{x:Static pages:ReviewText.Review}">
+  <!-- Une bande sous la fiche (rangée 27A), pas une carte posée dessus : sa hauteur ne dépend que de la largeur. Valider
+       n'y fait rien bouger : l'état se dit à la place de l'étape, le bouton qui suit prend la place de « Valider ». -->
+  <Grid>
+  <!-- Le conseil de la première fois flotte au-dessus de la fiche : il ne pousse pas la bande, ni en paraissant ni en partant. -->
+  <Canvas x:Name="TipLayer" Height="0" VerticalAlignment="Top" Panel.ZIndex="1">
+    <pages:FirstTip x:Name="ReviewTip" Mark="{x:Static pages:FirstUse.ReviewTipRead}" Title="{x:Static pages:FirstTipText.ReviewTitle}" Text="{x:Static pages:FirstTipText.ReviewText}"
+                    IsOffered="{Binding CanValidate}" MaxWidth="420" Canvas.Right="16" Canvas.Bottom="8" />
+  </Canvas>
+  <Border x:Name="Bar" Background="{DynamicResource Kyf.Brush.Surface}" BorderBrush="{DynamicResource Kyf.Brush.Divider}" BorderThickness="0,1,0,0"
+          AutomationProperties.Name="{x:Static pages:ReviewText.Review}">
     <Grid>
+    <!-- En séance, après la validation : le trait qui avance jusqu'à l'élément suivant. -->
+    <Border x:Name="Countdown" Height="2" VerticalAlignment="Top" Background="{DynamicResource Kyf.Brush.Primary}" Visibility="Collapsed" />
+    <Grid x:Name="BandContent" MaxWidth="980" Margin="16,8" SizeChanged="OnContentSizeChanged">
       <Grid.RowDefinitions>
         <RowDefinition Height="Auto" />
         <RowDefinition Height="Auto" />
       </Grid.RowDefinitions>
 
       <!-- Sur une ligne (frise, état, actions) tant que l'état y garde sa place ; l'un sous l'autre sinon, l'état d'abord. -->
-      <kyf:AdaptiveRow x:Name="Layout" MainMinWidth="220">
+      <kyf:AdaptiveRow x:Name="Layout" MainMinWidth="400">
 
+      <DockPanel kyf:AdaptiveRow.Part="Main">
       <!-- Frise des étapes du cycle : J0 ✓ J1 ✓ J3 ● J7 J14 J30. -->
-      <ItemsControl x:Name="Steps" ItemsSource="{Binding Steps}" Style="{StaticResource StepsSlot}" kyf:AdaptiveRow.Part="Leading"
+      <ItemsControl x:Name="Steps" ItemsSource="{Binding Steps}" Style="{StaticResource StepsSlot}" DockPanel.Dock="Left"
                     Visibility="{Binding ShowsSteps, Converter={StaticResource Visible}}"
                     AutomationProperties.Name="{x:Static pages:ReviewText.Steps}">
         <ItemsControl.ItemsPanel>
@@ -60,10 +72,10 @@
         </ItemsControl.ItemsPanel>
         <ItemsControl.ItemTemplate>
           <DataTemplate DataType="{x:Type pages:StepMark}">
-            <StackPanel Width="46" ToolTip="{Binding Description}" AutomationProperties.Name="{Binding Description}" Background="Transparent">
+            <StackPanel Width="40" ToolTip="{Binding Description}" AutomationProperties.Name="{Binding Description}" Background="Transparent">
               <Grid Height="24">
                 <!-- Le trait qui relie à l'étape précédente, sauf pour la première. -->
-                <Border x:Name="Link" Width="22" Height="2" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="-11,0,0,0"
+                <Border x:Name="Link" Width="16" Height="2" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="-8,0,0,0"
                         Background="{DynamicResource Kyf.Brush.Divider}" />
                 <Border x:Name="Point" Width="24" Height="24" CornerRadius="12" HorizontalAlignment="Center" BorderThickness="2"
                         BorderBrush="{DynamicResource Kyf.Brush.ControlBorder}" Background="Transparent">
@@ -101,16 +113,14 @@
         </ItemsControl.ItemTemplate>
       </ItemsControl>
 
-      <!-- L'étape attendue et son échéance ; archivé, l'état des rappels. -->
-      <StackPanel Style="{StaticResource StatusSlot}" kyf:AdaptiveRow.Part="Main">
+      <!-- L'étape attendue et son échéance, ou ce qui vient d'être fait ; archivé, l'état des rappels. -->
+      <StackPanel Style="{StaticResource StatusSlot}">
         <!-- Une note : ni étape ni échéance. -->
         <TextBlock x:Name="NoteStatus" Text="{x:Static pages:ReviewText.NoteStatus}" TextWrapping="Wrap"
                    Visibility="{Binding IsNote, Converter={StaticResource Visible}}" />
         <StackPanel Visibility="{Binding ShowsCycle, Converter={StaticResource Visible}}">
-          <TextBlock x:Name="Status" TextWrapping="Wrap">
-            <Run Text="{Binding StepLabel, Mode=OneWay}" /><Run Text=" : " /><Run Text="{Binding State.Step, Mode=OneWay}" FontWeight="SemiBold" />
-          </TextBlock>
-          <TextBlock x:Name="Due" Text="{Binding DueText}" Style="{StaticResource DueStyle}" />
+          <TextBlock x:Name="Status" Text="{Binding StatusTitle}" FontWeight="SemiBold" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
+          <TextBlock x:Name="Due" Text="{Binding StatusDetail}" Style="{StaticResource DueStyle}" />
         </StackPanel>
         <TextBlock x:Name="ArchivedStatus" Text="{Binding ArchivedStatus}" TextWrapping="Wrap"
                    Visibility="{Binding ShowsArchivedActions, Converter={StaticResource Visible}}" />
@@ -123,6 +133,7 @@
                      Visibility="{Binding IsMarking, Converter={StaticResource Visible}}" />
         </StackPanel>
       </StackPanel>
+      </DockPanel>
 
       <Grid Style="{StaticResource ActionsSlot}" kyf:AdaptiveRow.Part="Trailing">
         <!-- Suspendu : il n'a qu'à être repris. -->
@@ -138,13 +149,7 @@
         </WrapPanel>
 
         <!-- En révision : reporter, les autres actions, valider. -->
-        <WrapPanel Visibility="{Binding ShowsActiveActions, Converter={StaticResource Visible}}">
-          <!-- Après une révision, « Révisé aujourd'hui » prend la place de « Valider » : il paraît en fondu. -->
-          <StackPanel x:Name="Done" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,8,0"
-                      kyf:Transitions.SwappedIn="{Binding ShowsReviewedToday}">
-            <kyf:Icon Text="{x:Static kyf:Icons.Success}" Foreground="{DynamicResource Kyf.Brush.Success}" Margin="0,0,8,0" />
-            <TextBlock Text="{x:Static pages:ReviewText.ReviewedToday}" VerticalAlignment="Center" />
-          </StackPanel>
+        <StackPanel x:Name="ActiveActions" Orientation="Horizontal" Visibility="{Binding ShowsActiveActions, Converter={StaticResource Visible}}">
           <Button x:Name="PostponeButton" Content="{x:Static pages:ReviewText.Postpone}" Click="OnMenuButton" Margin="0,0,8,0"
                   AutomationProperties.Name="{x:Static pages:ReviewText.Postpone}">
             <Button.ContextMenu>
@@ -159,6 +164,12 @@
                   ToolTip="{x:Static pages:ReviewText.MoreActions}" AutomationProperties.Name="{x:Static pages:ReviewText.MoreActions}">
             <Button.ContextMenu>
               <ContextMenu x:Name="MoreMenu" DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                <!-- À l'étroit, « Reporter » n'a plus son bouton : ses choix sont ici. -->
+                <MenuItem x:Name="PostponeInMore" Header="{x:Static pages:ReviewText.Postpone}" Visibility="Collapsed">
+                  <MenuItem Header="{x:Static pages:ReviewText.PostponeTomorrow}" Command="{Binding PostponeTomorrowCommand}" />
+                  <MenuItem Header="{x:Static pages:ReviewText.PostponeThreeDays}" Command="{Binding PostponeThreeDaysCommand}" />
+                  <MenuItem Header="{x:Static pages:ReviewText.ChoosePostponeDay}" Command="{Binding ChoosePostponeDayCommand}" />
+                </MenuItem>
                 <MenuItem x:Name="ValidateOnDay" Header="{x:Static pages:ReviewText.ChooseValidationDay}" Command="{Binding ChooseValidationDayCommand}"
                           Visibility="{Binding CanAntedate, Converter={StaticResource Visible}}" />
                 <MenuItem x:Name="Suspend" Header="{x:Static pages:ReviewText.SuspendAction}" Command="{Binding SuspendCommand}" ToolTip="{x:Static pages:ReviewText.SuspendHelp}" />
@@ -171,18 +182,37 @@
             </Button.ContextMenu>
           </Button>
           <!-- L'oubli se dit sans honte : un bouton ordinaire, à côté de la validation. -->
+          <!-- Juste après la validation, il s'efface en gardant sa place. -->
           <Button x:Name="ForgotButton" Content="{x:Static pages:ReviewText.Forgot}" Command="{Binding ForgotCommand}" Margin="0,0,8,0"
-                  Visibility="{Binding CanForget, Converter={StaticResource Visible}}" ToolTip="{x:Static pages:ReviewText.ForgotHelp}"
+                  Visibility="{Binding ForgotShown, Converter={StaticResource Shown}}" ToolTip="{x:Static pages:ReviewText.ForgotHelp}"
                   AutomationProperties.Name="{x:Static pages:ReviewText.Forgot}" AutomationProperties.HelpText="{x:Static pages:ReviewText.ForgotHelp}" />
-          <Button x:Name="ValidateButton" Command="{Binding ValidateCommand}" Style="{DynamicResource Kyf.Button.Primary}"
-                  Visibility="{Binding CanValidate, Converter={StaticResource Visible}}" ToolTip="{shell:Shortcut valider}"
-                  AutomationProperties.Name="{Binding ValidateLabel}" AutomationProperties.AcceleratorKey="{shell:Shortcut valider}">
-            <StackPanel Orientation="Horizontal">
-              <kyf:Icon Text="{x:Static kyf:Icons.Success}" Margin="0,0,8,0" />
-              <TextBlock Text="{Binding ValidateLabel}" VerticalAlignment="Center" />
+          <!-- « Valider », puis, à la même place et à la même largeur, ce qui le remplace. -->
+          <Grid x:Name="ValidateSlot">
+            <Button x:Name="ValidateButton" Command="{Binding ValidateCommand}" Style="{DynamicResource Kyf.Button.Primary}"
+                    Visibility="{Binding ValidateShown, Converter={StaticResource Shown}}" ToolTip="{shell:Shortcut valider}"
+                    AutomationProperties.Name="{Binding ValidateLabel}" AutomationProperties.AcceleratorKey="{shell:Shortcut valider}">
+              <StackPanel Orientation="Horizontal">
+                <kyf:Icon Text="{x:Static kyf:Icons.Success}" Margin="0,0,8,0" />
+                <TextBlock Text="{Binding ValidateLabel}" VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
+            <!-- En séance : la suite, que la séance prend seule après un instant. -->
+            <Button x:Name="NextButton" Command="{Binding GoNext}" Foreground="{DynamicResource Kyf.Brush.Primary}" BorderBrush="{DynamicResource Kyf.Brush.Primary}"
+                    FontWeight="SemiBold" MinHeight="44" HorizontalAlignment="Stretch" kyf:Transitions.SwappedIn="{Binding ShowsNextButton}"
+                    AutomationProperties.Name="{Binding DoneLabel}" AutomationProperties.HelpText="{x:Static pages:SessionText.Stay}">
+              <StackPanel Orientation="Horizontal">
+                <kyf:Icon Text="{x:Static kyf:Icons.Success}" Margin="0,0,8,0" />
+                <TextBlock Text="{Binding DoneLabel}" VerticalAlignment="Center" />
+              </StackPanel>
+            </Button>
+            <!-- Hors séance : la révision du jour est faite, rien de plus. -->
+            <StackPanel x:Name="Done" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center" MinHeight="44"
+                        kyf:Transitions.SwappedIn="{Binding ShowsDoneText}">
+              <kyf:Icon Text="{x:Static kyf:Icons.Success}" Foreground="{DynamicResource Kyf.Brush.Success}" Margin="0,0,8,0" VerticalAlignment="Center" />
+              <TextBlock Text="{x:Static pages:ReviewText.ReviewedTodayShort}" VerticalAlignment="Center" />
             </StackPanel>
-          </Button>
-        </WrapPanel>
+          </Grid>
+        </StackPanel>
 
         <!-- Le rappel : les trois réponses. -->
         <WrapPanel x:Name="ReminderChoices" Visibility="{Binding ShowsReminderChoices, Converter={StaticResource Visible}}">
@@ -245,12 +275,13 @@
             </ItemsControl>
           </ScrollViewer>
         </StackPanel>
-        <kyf:Notification x:Name="Message" Severity="Success" Message="{Binding Message}" IsOpen="{Binding HasMessage, Mode=OneWay}"
+        <kyf:Notification x:Name="Message" Severity="Success" Message="{Binding Message}" IsOpen="{Binding ShowsToast, Mode=OneWay}"
                           IsClosable="False" Margin="0,12,0,0" />
         <kyf:Notification x:Name="Error" Severity="Critical" Message="{Binding Error}" IsOpen="{Binding HasError, Mode=OneWay}"
                           IsClosable="False" Margin="0,12,0,0" IsVisibleChanged="OnErrorVisibleChanged" />
       </StackPanel>
     </Grid>
-  </kyf:Card>
-  </StackPanel>
+    </Grid>
+  </Border>
+  </Grid>
 </UserControl>

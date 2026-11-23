@@ -72,6 +72,196 @@ public sealed class SessionTests
         Assert.IsTrue(vault.Sessions.Forgotten, "quitter le bilan ne garde rien");
     }
 
+    /// <summary>
+    /// Rangée 27A : validée, la séance passe seule à l'élément suivant après un instant ; « Rester » (Échap, un clic dans la
+    /// fiche) l'arrête, et le bouton qui a pris la place de « Valider » y mène quand on veut.
+    /// </summary>
+    [TestMethod]
+    public async Task After_a_validation_the_session_moves_on_by_itself_unless_one_stays()
+    {
+        using var vault = new SessionVault();
+        var session = await vault.StartAsync();
+        var waits = new List<(TimeSpan Delay, TaskCompletionSource Done)>();
+        session.Wait = (delay, token) =>
+        {
+            var done = new TaskCompletionSource();
+            token.Register(() => done.TrySetCanceled(token));
+            waits.Add((delay, done));
+            return done.Task;
+        };
+
+        // 1 : la barre sait où mène la suite ; validée, la séance attend un instant puis y va.
+        var first = await SessionVault.LoadedAsync(session);
+        var bar = first.Review!;
+        Assert.AreSame(session.NextCommand, bar.GoNext);
+        Assert.AreEqual(SessionText.NextSheet, bar.NextName);
+        Assert.IsFalse(bar.ShowsNextButton, "avant la validation, « Valider »");
+        await bar.ValidateCommand.ExecuteAsync(null);
+        Assert.IsTrue(session.IsAdvancing);
+        Assert.IsTrue(bar.IsAdvancing);
+        Assert.IsTrue(bar.ShowsNextButton);
+        Assert.IsFalse(bar.ShowsDoneText);
+        Assert.AreEqual(SessionText.NextSheet + "…", bar.DoneLabel);
+        Assert.AreEqual(StudySessionViewModel.AdvanceDelay, waits.Single().Delay);
+        Assert.AreEqual(TimeSpan.FromSeconds(1.5), StudySessionViewModel.AdvanceDelay);
+        waits[0].Done.SetResult();
+        await Waiting.UntilAsync(() => !ReferenceEquals(session.Current, first));
+        Assert.AreEqual("Séance : 2 / 3", session.ProgressLabel);
+        Assert.IsFalse(session.IsAdvancing);
+        Assert.AreEqual(1, session.DoneCount);
+
+        // 2 : validée puis « Rester » : la séance ne bouge plus, même l'attente finie ; « Fiche suivante » y mène.
+        var second = await SessionVault.LoadedAsync(session);
+        await second.Review!.ValidateCommand.ExecuteAsync(null);
+        Assert.IsTrue(session.IsAdvancing);
+        session.StayCommand.Execute(null);
+        Assert.IsFalse(session.IsAdvancing);
+        Assert.IsFalse(second.Review.IsAdvancing);
+        Assert.AreEqual(SessionText.NextSheet, second.Review.DoneLabel, "sans les points : elle n'avance plus seule");
+        Assert.IsTrue(waits[1].Done.Task.IsCanceled, "l'attente est abandonnée");
+        Assert.AreSame(second, session.Current);
+        second.Review.GoNext!.Execute(null);
+        Assert.AreEqual("Séance : 3 / 3", session.ProgressLabel);
+
+        // 3 : le dernier mène au bilan ; une autre action que la validation n'avance pas seule.
+        var third = await SessionVault.LoadedAsync(session);
+        Assert.AreEqual(SessionText.ToSummary, third.Review!.NextName);
+        await third.Review.PostponeTomorrowCommand.ExecuteAsync(null);
+        Assert.IsFalse(session.IsAdvancing, "reporter laisse choisir");
+        Assert.HasCount(2, waits);
+        Assert.IsTrue(session.HasActed);
+        session.NextCommand.Execute(null);
+        Assert.IsTrue(session.IsFinished);
+    }
+
+    [TestMethod]
+    public async Task Leaving_or_ending_while_the_session_moves_on_stops_it()
+    {
+        using var vault = new SessionVault();
+        var session = await vault.StartAsync();
+        var waits = new List<(CancellationToken Token, TaskCompletionSource Done)>();
+        session.Wait = (_, token) =>
+        {
+            var done = new TaskCompletionSource();
+            waits.Add((token, done));
+            return done.Task;
+        };
+        var first = await SessionVault.LoadedAsync(session);
+        await first.Review!.ValidateCommand.ExecuteAsync(null);
+        Assert.IsTrue(session.IsAdvancing);
+
+        // Quitter la séance (Retour) l'interrompt : elle n'avancera pas dans le dos de la vue d'où l'on vient.
+        session.Interrupt();
+        Assert.IsFalse(session.IsAdvancing);
+        Assert.IsTrue(waits[0].Token.IsCancellationRequested);
+        waits[0].Done.SetResult();
+        await Task.Yield();
+        Assert.AreSame(first, session.Current, "l'attente finie après coup n'y change rien");
+
+        // « Terminer » pendant l'attente : le bilan, sans avancer d'abord.
+        session.NextCommand.Execute(null);
+        var second = await SessionVault.LoadedAsync(session);
+        await second.Review!.ValidateCommand.ExecuteAsync(null);
+        Assert.IsTrue(session.IsAdvancing);
+        session.EndCommand.Execute(null);
+        Assert.IsTrue(session.IsFinished);
+        Assert.IsFalse(session.IsAdvancing);
+        Assert.IsTrue(waits[1].Token.IsCancellationRequested);
+        Assert.AreEqual(2, session.DoneCount);
+    }
+
+    /// <summary>
+    /// Valider en séance ne bouscule rien : ni la barre de séance (« Passer » et « Suivant » ont la même hauteur), ni la
+    /// bande de révision ; Échap ou un clic dans la fiche font rester, le bouton de la bande mène à la suite.
+    /// </summary>
+    [STATestMethod]
+    [DataRow(false, 470)]
+    [DataRow(true, 470)]
+    [DataRow(false, 900)]
+    [DataRow(true, 1440)]
+    [DataRow(false, 1440)]
+    [DataRow(true, 2560)]
+    public void Validating_in_a_session_moves_nothing_and_escape_or_a_click_stays(bool dark, int width)
+    {
+        using var ui = new UiThread();
+        using var vault = new SessionVault();
+        var test = new TestShell(dark);
+        var window = new ShellWindow(vault.Shell) { ShowActivated = false, Left = -10000, Top = -10000, Width = width, Height = 800, WindowStartupLocation = WindowStartupLocation.Manual };
+        window.Resources.MergedDictionaries.Add(test.Design.Dictionary);
+        window.Show();
+        try
+        {
+            if (window.Content is Panel { Background: null } root)
+            {
+                root.SetResourceReference(Panel.BackgroundProperty, "Kyf.Brush.Background");
+            }
+            vault.Shell.ShowWorkspace();
+            UiThread.Until(() => vault.Dashboard.Dashboard is not null);
+            vault.Dashboard.StartCommand.Execute(null);
+            var session = (StudySessionViewModel)vault.Shell.Current.Page;
+            var never = new TaskCompletionSource();
+            session.Wait = (_, _) => never.Task;
+            var page = (IReviewPage)session.Current!;
+            UiThread.Until(() => page.Review is not null);
+            for (var pass = 0; pass < 6; pass++)
+            {
+                TestShell.Flush();
+                window.UpdateLayout();
+            }
+            var theme = dark ? "sombre" : "clair";
+            ((FrameworkElement)window.Content).Capture(FormattableString.Invariant($"seance-bande-{width}-{theme}-avant"));
+            var sessionBar = Named<Border>(window, "SessionBar");
+            var band = Named<Border>(window, "Bar");
+            var before = (Session: sessionBar.ActualHeight, Band: band.ActualHeight, Top: band.TranslatePoint(default, window).Y);
+
+            page.Review!.ValidateCommand.Execute(null);
+            UiThread.Until(() => session.IsAdvancing);
+            for (var pass = 0; pass < 6; pass++)
+            {
+                TestShell.Flush();
+                window.UpdateLayout();
+            }
+            ((FrameworkElement)window.Content).Capture(FormattableString.Invariant($"seance-bande-{width}-{theme}-apres"));
+            Assert.AreEqual(before.Session, sessionBar.ActualHeight, 0.5, "« Suivant » a la hauteur de « Passer »");
+            Assert.AreEqual(before.Band, band.ActualHeight, 0.5, "la bande garde sa hauteur");
+            Assert.AreEqual(before.Top, band.TranslatePoint(default, window).Y, 0.5, "et sa place");
+            var next = Named<Button>(window, "NextButton");
+            Assert.IsTrue(next.IsVisible, "« Fiche suivante… » à la place de « Valider »");
+            Assert.AreSame(session.NextCommand, next.Command);
+            Assert.IsTrue(Named<Border>(window, "Countdown").IsVisible, "le trait dit que la suite vient");
+            Assert.IsLessThanOrEqualTo(window.ActualWidth, next.TranslatePoint(new Point(next.ActualWidth, 0), window).X, "rien ne dépasse");
+
+            // Échap : on reste.
+            var view = Descendants(window).OfType<StudySessionPage>().Single();
+            var escape = new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(window)!, 0, Key.Escape) { RoutedEvent = Keyboard.PreviewKeyDownEvent };
+            view.RaiseEvent(escape);
+            Assert.IsTrue(escape.Handled);
+            Assert.IsFalse(session.IsAdvancing);
+            Assert.IsFalse(Named<Border>(window, "Countdown").IsVisible);
+
+            // Un clic dans la fiche aussi ; mais pas sur le bouton de la suite.
+            session.NextCommand.Execute(null);
+            page = (IReviewPage)session.Current!;
+            UiThread.Until(() => page.Review is not null);
+            TestShell.Flush();
+            page.Review!.ValidateCommand.Execute(null);
+            UiThread.Until(() => session.IsAdvancing);
+            TestShell.Flush();
+            next = Named<Button>(window, "NextButton");
+            var onNext = new MouseButtonEventArgs(Mouse.PrimaryDevice, 0, MouseButton.Left) { RoutedEvent = UIElement.PreviewMouseDownEvent, Source = next };
+            next.RaiseEvent(onNext);
+            Assert.IsTrue(session.IsAdvancing, "le bouton de la suite ne fait pas rester");
+            var onSheet = new MouseButtonEventArgs(Mouse.PrimaryDevice, 0, MouseButton.Left) { RoutedEvent = UIElement.PreviewMouseDownEvent };
+            Named<TextBlock>(window, "Status").RaiseEvent(onSheet);
+            Assert.IsFalse(session.IsAdvancing, "un clic dans la fiche fait rester");
+            Assert.AreSame(page, session.Current);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
     [TestMethod]
     public async Task An_interrupted_session_is_kept_and_resumed_the_same_day()
     {

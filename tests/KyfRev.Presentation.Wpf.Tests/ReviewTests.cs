@@ -1246,12 +1246,14 @@ public sealed class ReviewTests
             // l'état réduit à quelques lettres par ligne (vu à 870 pixels : la frise et les boutons ne lui laissaient rien).
             var layout = Named<AdaptiveRow>(window, "Layout");
             var status = Named<TextBlock>(window, "Status");
+            // La frise et l'état forment la part principale : sur la ligne, ils gardent ensemble leur place.
+            var main = (FrameworkElement)VisualTreeHelper.GetParent(Named<ItemsControl>(window, "Steps"));
             foreach (var width in new[] { 1400.0, 1100.0, 870.0, 760.0 })
             {
                 window.Width = width;
                 window.UpdateLayout();
                 TestShell.Flush();
-                Assert.IsTrue(layout.IsStacked || status.ActualWidth >= layout.MainMinWidth, $"à {width} pixels, l'état garde sa place");
+                Assert.IsTrue(layout.IsStacked || main.ActualWidth >= layout.MainMinWidth, $"à {width} pixels, la frise et l'état gardent leur place");
             }
             // Sur une ligne quand la place le permet : cela dépend de l'écran (1 024 pixels en CI), c'est AdaptiveRow qui le
             // vérifie. Étroite, en revanche, tout s'empile toujours.
@@ -1259,16 +1261,46 @@ public sealed class ReviewTests
             window.UpdateLayout();
             TestShell.Flush();
             Assert.IsTrue(layout.IsStacked);
-            Assert.IsLessThan(Named<ItemsControl>(window, "Steps").TranslatePoint(default, window).Y, status.TranslatePoint(default, window).Y, "empilé, l'état d'abord");
+            // Empilée, la bande a deux lignes : la frise et l'état côte à côte, puis les boutons.
+            Assert.AreEqual(Named<ItemsControl>(window, "Steps").TranslatePoint(default, window).Y, status.TranslatePoint(default, window).Y, 12, "la frise et l'état sur la même ligne");
+            Assert.IsGreaterThan(status.TranslatePoint(new Point(0, status.ActualHeight), window).Y, Named<Button>(window, "ValidateButton").TranslatePoint(default, window).Y, "les boutons dessous");
+            Assert.AreEqual(Visibility.Collapsed, Named<Button>(window, "PostponeButton").Visibility, "à l'étroit, « Reporter » passe dans « ⋯ »");
             Assert.IsLessThanOrEqualTo(window.ActualWidth, Named<Button>(window, "ValidateButton").TranslatePoint(new Point(Named<Button>(window, "ValidateButton").ActualWidth, 0), window).X);
 
-            // Ctrl+Entrée valide la révision.
+            // Ctrl+Entrée valide la révision : rien ne bouge dans la bande (rangée 27A), elle dit ce qui est fait.
             var shortcut = Descendants(window).OfType<SheetPage>().Single().InputBindings.OfType<KeyBinding>().Single(binding => binding.Key == Key.Enter && binding.Modifiers == ModifierKeys.Control);
-            vault.Time.AdvanceDays(1);
-            shortcut.Command.Execute(null);
-            UiThread.Until(() => page.Review.ShowsReviewedToday);
-            TestShell.Flush();
-            Assert.AreEqual(Visibility.Visible, Named<StackPanel>(window, "Done").Visibility);
+            foreach (var width in new[] { 420.0 })
+            {
+                // Le lendemain, la fiche relue : J1 est due, à valider pour de bon.
+                vault.Time.AdvanceDays(1);
+                page.LoadCommand.Execute(null);
+                UiThread.Until(() => !page.LoadCommand.IsRunning);
+                Assert.IsTrue(page.Review!.CanValidate, "J1 est due");
+                window.Width = width;
+                window.UpdateLayout();
+                TestShell.Flush();
+                Assert.AreEqual(Visibility.Visible, Named<Button>(window, "ForgotButton").Visibility);
+                var band = Named<Border>(window, "Bar");
+                var slot = Named<Grid>(window, "ValidateSlot");
+                var before = (Height: band.ActualHeight, Top: band.TranslatePoint(default, window).Y, Slot: slot.TranslatePoint(default, window), SlotWidth: slot.ActualWidth, Stacked: layout.IsStacked);
+                shortcut.Command.Execute(null);
+                UiThread.Until(() => page.Review.JustValidated);
+                TestShell.Flush();
+                Assert.AreEqual(before.Height, band.ActualHeight, 0.5, $"à {width} pixels, la bande garde sa hauteur");
+                Assert.AreEqual(before.Top, band.TranslatePoint(default, window).Y, 0.5, "et sa place");
+                Assert.AreEqual(before.Stacked, layout.IsStacked);
+                Assert.AreEqual(before.Slot.X, slot.TranslatePoint(default, window).X, 0.5, "ce qui remplace « Valider » est à sa place");
+                Assert.AreEqual(before.SlotWidth, slot.ActualWidth, 0.5, "et à sa largeur");
+                Assert.AreEqual("J1 validée", status.Text);
+                StringAssert.StartsWith(Named<TextBlock>(window, "Due").Text, "prochaine : J3, ", StringComparison.Ordinal);
+                Assert.AreEqual(Visibility.Hidden, Named<Button>(window, "ForgotButton").Visibility, "« J'avais oublié » s'efface en gardant sa place");
+                Assert.AreEqual(Visibility.Hidden, Named<Button>(window, "ValidateButton").Visibility);
+                Assert.AreEqual(Visibility.Visible, Named<StackPanel>(window, "Done").Visibility, "hors séance, « Révisée aujourd'hui »");
+                Assert.AreNotEqual(Visibility.Visible, Named<Button>(window, "NextButton").Visibility);
+                Assert.IsTrue(page.Review.HasMessage);
+                Assert.IsFalse(page.Review.ShowsToast, "plus de bulle : la bande le dit");
+                Assert.IsFalse(Named<Notification>(window, "Message").IsOpen);
+            }
         }
         finally
         {
