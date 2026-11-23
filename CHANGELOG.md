@@ -8,6 +8,8 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 ## [Non publié]
 
 ### Corrigé
+- Sauvegarde du jour sur un disque plein (ou un quota de synchronisation atteint) : kyfRev s'arrêtait à chaque ouverture.
+  L'échec est maintenant noté et le coffre s'ouvre ; une sauvegarde illisible se dit telle au lieu de tout arrêter.
 - Séance : une fiche y garde sa mise en page, son papier, son zoom et sa colonne, comme ouverte depuis le Carnet. Sur un
   papier réglé, son texte quittait les lignes (et la feuille) en passant de Lire à Réviser ou Écrire ; le zoom changé
   en séance est retenu.

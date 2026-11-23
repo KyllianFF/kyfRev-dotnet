@@ -34,23 +34,29 @@ public sealed partial class VaultSession
         var expected = new Dictionary<string, string>(StringComparer.Ordinal);
         try
         {
-            using (var stream = Io(temporary, () => new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None)))
+            // Disque plein, quota du service de synchronisation atteint : l'écriture de l'archive échoue comme une écriture
+            // du coffre, sans quoi l'erreur brute arrêterait kyfRev à chaque ouverture, la sauvegarde du jour restant à faire.
+            Io(temporary, () =>
             {
-                using (var archive = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true))
+                using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None))
                 {
-                    foreach (var file in files)
+                    using (var archive = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true))
                     {
-                        var bytes = ReadAllBytes(_storage.Raw, file.ToAbsolute(Root));
-                        var entry = archive.CreateEntry(file.Value, CompressionLevel.Optimal);
-                        using (var entryStream = entry.Open())
+                        foreach (var file in files)
                         {
-                            entryStream.Write(bytes);
+                            var bytes = ReadAllBytes(_storage.Raw, file.ToAbsolute(Root));
+                            var entry = archive.CreateEntry(file.Value, CompressionLevel.Optimal);
+                            using (var entryStream = entry.Open())
+                            {
+                                entryStream.Write(bytes);
+                            }
+                            expected[file.Value] = Fingerprint.Of(bytes);
                         }
-                        expected[file.Value] = Fingerprint.Of(bytes);
                     }
+                    stream.Flush(flushToDisk: true);
                 }
-                stream.Flush(flushToDisk: true);
-            }
+                return true;
+            });
 
             var name = VaultBackups.FileName(timestamp);
             var target = Path.Combine(folder, name);
@@ -70,7 +76,11 @@ public sealed partial class VaultSession
             // Un temporaire qui n'a pas été mis en place ne doit pas rester.
             if (File.Exists(temporary))
             {
-                File.Delete(temporary);
+                Io(temporary, () =>
+                {
+                    File.Delete(temporary);
+                    return true;
+                });
             }
         }
     }
