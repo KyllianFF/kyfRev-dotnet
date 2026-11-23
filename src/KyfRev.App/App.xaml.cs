@@ -266,10 +266,11 @@ internal sealed partial class App : System.Windows.Application
     protected override void OnExit(ExitEventArgs e)
     {
         _tray?.Dispose();
-        _instance?.Dispose();
         var update = _sessionEnding ? null : _updates?.ExitLaunch;
         // Les services rendus, kyfRev ne tient plus le verrou qui arrête l'installateur.
         _services?.Dispose();
+        // Après le coffre : relancé pendant qu'il se ferme, kyfRev attend d'être le seul, et ne trouve plus le coffre verrouillé.
+        _instance?.Dispose();
         update?.Invoke();
         base.OnExit(e);
     }
