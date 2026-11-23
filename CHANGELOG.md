@@ -8,6 +8,8 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 ## [Non publié]
 
 ### Corrigé
+- Imprimer : quand deux recherches d'imprimantes se suivaient, la première finie disait la recherche terminée alors que
+  la seconde cherchait encore ; « Imprimer » restait sans imprimante un instant.
 - Séance : une fiche y garde sa mise en page, son papier, son zoom et sa colonne, comme ouverte depuis le Carnet. Sur un
   papier réglé, son texte quittait les lignes (et la feuille) en passant de Lire à Réviser ou Écrire ; le zoom changé
   en séance est retenu.

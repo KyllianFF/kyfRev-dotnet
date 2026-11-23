@@ -614,11 +614,12 @@ public sealed partial class PrintViewModel : ObservableObject
         var request = ++_request;
         IsLookingForPrinters = true;
         var printers = await Task.Run(service.Printers).ConfigureAwait(true);
-        IsLookingForPrinters = false;
+        // Une recherche dépassée se tait : la dernière cherche peut-être encore, et c'est elle qui dira qu'elle a fini.
         if (request != _request)
         {
             return;
         }
+        IsLookingForPrinters = false;
         Printers = [.. printers.Select(printer => printer.Name)];
         // L'imprimante déjà choisie reste, tant qu'elle existe ; sinon celle de Windows, sinon la première.
         if (Printer is null || !Printers.Contains(Printer))
