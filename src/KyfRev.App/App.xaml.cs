@@ -23,6 +23,7 @@ internal sealed partial class App : System.Windows.Application
     private UpdateFlow? _updates;
     private bool _sessionEnding;
     private TrayIcon? _tray;
+    private SingleInstance? _instance;
 
     /// <summary>L'horloge de l'application ; les scénarios d'acceptation y mettent une date simulée.</summary>
     internal TimeProvider Time { get; init; } = TimeProvider.System;
@@ -48,6 +49,25 @@ internal sealed partial class App : System.Windows.Application
             Shutdown();
             return;
         }
+        var gallery = e.Args.Contains("--galerie", StringComparer.Ordinal);
+        if (!gallery && Locations is null && Environment.ProcessPath is { } executable)
+        {
+            // Déjà ouvert, même réduit dans la barre d'état : c'est lui qui se montre, et ce lancement s'arrête là. Lancé
+            // avec la session alors qu'il tourne, il n'a rien à montrer. La galerie et les scénarios d'acceptation, eux,
+            // s'ouvrent toujours.
+            _instance = SingleInstance.Claim(executable);
+            if (!_instance.IsFirst)
+            {
+                if (!e.Args.Contains(SessionStartup.InTrayArgument, StringComparer.Ordinal))
+                {
+                    _instance.WakeFirst();
+                }
+                _instance.Dispose();
+                _instance = null;
+                Shutdown();
+                return;
+            }
+        }
         _services = Composition.Build(Time, Locations);
         _services.GetRequiredService<OpenMarker>();
         WatchUnexpectedErrors(_services.GetRequiredService<ILoggerFactory>().CreateLogger("kyfRev"));
@@ -58,7 +78,6 @@ internal sealed partial class App : System.Windows.Application
         Resources[ExtensionBlocks.ResourceKey] = _services.GetRequiredService<ExtensionBlocks>();
         Resources[ExtensionPages.ResourceKey] = _services.GetRequiredService<ExtensionPages>();
         var shell = _services.GetRequiredService<ShellViewModel>();
-        var gallery = e.Args.Contains("--galerie", StringComparer.Ordinal);
         if (gallery)
         {
             // Revue visuelle : la galerie des composants d'emblée.
@@ -92,6 +111,8 @@ internal sealed partial class App : System.Windows.Application
             window.Show();
         }
         FollowCaptureKey(window, palette, machine);
+        // Relancé pendant qu'il tourne : la fenêtre revient, même cachée dans la barre d'état.
+        _instance?.Listen(() => Dispatcher.BeginInvoke(() => Bring(window)));
         FollowSessionStartup(machine);
         // Le coffre chiffré se verrouille de lui-même après un temps d'inactivité, ou quand Windows se verrouille.
         _services.GetRequiredService<AutoLock>().Start();
@@ -228,6 +249,8 @@ internal sealed partial class App : System.Windows.Application
             window.WindowState = WindowState.Normal;
         }
         window.Activate();
+        // Rappelé d'ailleurs (un second lancement, l'icône de la barre d'état), il passe devant les autres applications.
+        ForegroundWindow.Bring(new System.Windows.Interop.WindowInteropHelper(window).Handle);
     }
 
     /// <summary>Le lancement avec la session suit le réglage, maintenant et à chaque changement.</summary>
@@ -243,6 +266,7 @@ internal sealed partial class App : System.Windows.Application
     protected override void OnExit(ExitEventArgs e)
     {
         _tray?.Dispose();
+        _instance?.Dispose();
         var update = _sessionEnding ? null : _updates?.ExitLaunch;
         // Les services rendus, kyfRev ne tient plus le verrou qui arrête l'installateur.
         _services?.Dispose();

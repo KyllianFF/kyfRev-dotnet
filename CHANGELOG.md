@@ -8,6 +8,8 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 ## [Non publié]
 
 ### Corrigé
+- Relancé alors qu'il tourne déjà, même réduit dans la barre d'état, kyfRev ne s'ouvre plus une seconde fois : la fenêtre
+  déjà ouverte revient au premier plan. Lancé avec la session alors qu'il tourne, il ne fait rien.
 - Séance : une fiche y garde sa mise en page, son papier, son zoom et sa colonne, comme ouverte depuis le Carnet. Sur un
   papier réglé, son texte quittait les lignes (et la feuille) en passant de Lire à Réviser ou Écrire ; le zoom changé
   en séance est retenu.
