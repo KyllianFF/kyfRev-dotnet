@@ -366,4 +366,16 @@
   <data name="PutInReview" xml:space="preserve">
     <value>En révision à l'étape {0} : {1}.</value>
   </data>
+  <data name="ValidatedTitle" xml:space="preserve">
+    <value>{0} validée</value>
+  </data>
+  <data name="ForgottenTitle" xml:space="preserve">
+    <value>{0} : oubli noté</value>
+  </data>
+  <data name="NextOn" xml:space="preserve">
+    <value>prochaine : {0}, {1}</value>
+  </data>
+  <data name="ReviewedTodayShort" xml:space="preserve">
+    <value>Révisée aujourd'hui</value>
+  </data>
 </root>

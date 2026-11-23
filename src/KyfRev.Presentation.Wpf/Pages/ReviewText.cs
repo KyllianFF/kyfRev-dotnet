@@ -194,6 +194,18 @@ public static class ReviewText
     /// <summary>« Révision du jour enregistrée ».</summary>
     public static string ReviewedToday => Text(nameof(ReviewedToday));
 
+    /// <summary>« Révisée aujourd'hui » : à la place de « Valider », une fois la révision faite, hors séance.</summary>
+    public static string ReviewedTodayShort => Text(nameof(ReviewedTodayShort));
+
+    /// <summary>« J3 validée » : la bande, juste après la validation.</summary>
+    public static string ValidatedTitleOf(object step) => Format("ValidatedTitle", step);
+
+    /// <summary>« J3 : oubli noté » : la bande, juste après « J'avais oublié ».</summary>
+    public static string ForgottenTitleOf(object step) => Format("ForgottenTitle", step);
+
+    /// <summary>« prochaine : J7, lundi 30 novembre ».</summary>
+    public static string NextOnOf(object step, object day) => Format("NextOn", step, day);
+
     /// <summary>« Voir dans la fiche ».</summary>
     public static string SeeInSheet => Text(nameof(SeeInSheet));
 

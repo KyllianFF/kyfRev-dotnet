@@ -35,7 +35,28 @@ internal sealed partial class ReviewBar : UserControl
 
     private void OnBarChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        if (e.PropertyName != nameof(ReviewBarViewModel.Steps) || sender is not ReviewBarViewModel bar)
+        if (sender is not ReviewBarViewModel bar)
+        {
+            return;
+        }
+        if (e.PropertyName == nameof(ReviewBarViewModel.IsAdvancing))
+        {
+            ShowCountdown(bar.IsAdvancing);
+            return;
+        }
+        if (e.PropertyName == nameof(ReviewBarViewModel.JustValidated) && bar.JustValidated)
+        {
+            // « Valider » s'efface sous ce qui le remplace : le focus qu'il avait passe à la suite, ou aux autres actions.
+            Dispatcher.BeginInvoke(DispatcherPriority.Input, () =>
+            {
+                if (IsVisible && (KeyboardFocus.IsLost() || ValidateButton.IsKeyboardFocused))
+                {
+                    (NextButton.IsVisible ? (Control)NextButton : MoreButton).Focus();
+                }
+            });
+            return;
+        }
+        if (e.PropertyName != nameof(ReviewBarViewModel.Steps))
         {
             return;
         }
@@ -90,6 +111,32 @@ internal sealed partial class ReviewBar : UserControl
         presenter.ApplyTemplate();
         return presenter.ContentTemplate?.FindName(name, presenter) as T;
     }
+
+    /// <summary>
+    /// Le trait du haut de la bande : il avance, le temps que la séance passe seule à l'élément suivant ; il disparaît si l'on
+    /// reste. Les essais, qui coupent les transitions, le voient entier.
+    /// </summary>
+    private void ShowCountdown(bool advancing)
+    {
+        var scale = new System.Windows.Media.ScaleTransform(advancing && !Transitions.Skip ? 0 : 1, 1);
+        Countdown.RenderTransform = scale;
+        Countdown.Visibility = advancing ? Visibility.Visible : Visibility.Collapsed;
+        if (advancing && !Transitions.Skip)
+        {
+            scale.BeginAnimation(System.Windows.Media.ScaleTransform.ScaleXProperty, new System.Windows.Media.Animation.DoubleAnimation(0, 1, StudySessionViewModel.AdvanceDelay));
+        }
+    }
+
+    /// <summary>À l'étroit, « Reporter » quitte la bande pour le menu « ⋯ » : les boutons tiennent sur une ligne.</summary>
+    private void OnContentSizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        var narrow = e.NewSize.Width < NarrowBand;
+        PostponeButton.Visibility = narrow ? Visibility.Collapsed : Visibility.Visible;
+        PostponeInMore.Visibility = narrow ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    /// <summary>En deçà de cette largeur, « Reporter » passe dans « ⋯ ».</summary>
+    internal const double NarrowBand = 560;
 
     /// <summary>« Reporter » et « ⋯ » ouvrent leur menu au-dessus du bouton, la barre étant en bas ; le clavier y entre.</summary>
     private void OnMenuButton(object sender, RoutedEventArgs e)

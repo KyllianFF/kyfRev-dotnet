@@ -124,7 +124,7 @@
     </ScrollViewer>
 
     <!-- Toujours visible, même la carte défilée. -->
-    <ContentControl Grid.Row="2" Content="{Binding Review}" Focusable="False" IsTabStop="False" Margin="16,8,16,16" />
+    <ContentControl Grid.Row="2" Content="{Binding Review}" Focusable="False" IsTabStop="False" />
 
     <kyf:Dialog x:Name="Confirmation" Grid.RowSpan="3" Title="{Binding Review.ConfirmTitle}" IsOpen="{Binding Review.IsConfirming, Mode=OneWay}"
                 PrimaryButtonText="{Binding Review.ConfirmLabel}" Closed="OnConfirmationClosed">

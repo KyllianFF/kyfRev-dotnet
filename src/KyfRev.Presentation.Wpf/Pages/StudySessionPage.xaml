@@ -48,7 +48,8 @@
                     AutomationProperties.AcceleratorKey="{shell:Shortcut plein-ecran}" />
             <Button x:Name="EndButton" Content="{x:Static pages:SessionText.Finish}" Command="{Binding EndCommand}" Margin="0,0,8,0" />
             <!-- Rien n'a été fait : « Passer » ; une fois l'élément traité : « Suivant », en bouton principal. -->
-            <Button x:Name="SkipButton" kyf:Transitions.SwappedIn="{Binding IsWaiting}" Command="{Binding NextCommand}" ToolTip="Ctrl+→" AutomationProperties.Name="{x:Static pages:SessionText.Skip}"
+            <!-- La hauteur de « Suivant », bouton principal : la barre ne change pas de hauteur quand l'un remplace l'autre. -->
+            <Button x:Name="SkipButton" MinHeight="44" kyf:Transitions.SwappedIn="{Binding IsWaiting}" Command="{Binding NextCommand}" ToolTip="Ctrl+→" AutomationProperties.Name="{x:Static pages:SessionText.Skip}"
                     AutomationProperties.AcceleratorKey="Ctrl+→">
               <StackPanel Orientation="Horizontal">
                 <TextBlock Text="{x:Static pages:SessionText.Skip}" VerticalAlignment="Center" />

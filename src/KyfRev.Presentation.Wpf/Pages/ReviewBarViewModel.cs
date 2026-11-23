@@ -180,7 +180,9 @@ public sealed partial class ReviewBarViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(IsActive), nameof(IsArchived), nameof(IsEarly), nameof(StepLabel), nameof(DueText), nameof(IsLate), nameof(CanValidate),
         nameof(ValidateLabel), nameof(ArchivedStatus), nameof(Steps), nameof(ReminderToggleLabel), nameof(ShowsReviewedToday),
         nameof(IsReminder), nameof(ShowsArchivedActions), nameof(ShowsSteps), nameof(ShowsReminderChoices), nameof(ReminderIntro), nameof(CanAntedate), nameof(EarliestDay), nameof(LatestDay),
-        nameof(CanForget), nameof(IsSuspended), nameof(ShowsActiveActions), nameof(SuspendedText), nameof(IsNote), nameof(ShowsResume), nameof(ShowsCycle))]
+        nameof(CanForget), nameof(IsSuspended), nameof(ShowsActiveActions), nameof(SuspendedText), nameof(IsNote), nameof(ShowsResume), nameof(ShowsCycle),
+        nameof(JustValidated), nameof(StatusTitle), nameof(StatusDetail), nameof(ShowsToast), nameof(KeepsForgotPlace), nameof(ForgotShown), nameof(ValidateShown),
+        nameof(ShowsNextButton), nameof(ShowsDoneText))]
     [NotifyCanExecuteChangedFor(nameof(ValidateCommand), nameof(ForgotCommand))]
     public partial ReviewState State { get; private set; }
 
@@ -273,8 +275,73 @@ public sealed partial class ReviewBarViewModel : ObservableObject
     /// <summary>« Révision du jour enregistrée » est affiché.</summary>
     public bool ShowsReviewedToday => ShowsActiveActions && State.ReviewedToday;
 
-    /// <summary>« Valider la révision J3 ».</summary>
-    public string ValidateLabel => ReviewText.ValidateOf(State.Step ?? string.Empty);
+    /// <summary>« Valider la révision J3 » ; juste après la validation, caché sous ce qui le remplace, il garde son libellé et sa largeur.</summary>
+    public string ValidateLabel => JustValidated && _labelBefore is { } before ? before : ReviewText.ValidateOf(State.Step ?? string.Empty);
+
+    /// <summary>Le libellé de « Valider » au moment de l'action.</summary>
+    private string? _labelBefore;
+
+    /// <summary>
+    /// Ce que la bande dit de la révision qui vient d'être faite (« J3 validée ») ; rien avant, ni après une autre action.
+    /// Elle le dit à la place de l'étape attendue : plus de bulle, et rien ne change de place (rangée 27A).
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(JustValidated), nameof(StatusTitle), nameof(StatusDetail), nameof(ShowsToast), nameof(KeepsForgotPlace), nameof(ForgotShown), nameof(ValidateShown))]
+    public partial string? DoneTitle { get; private set; }
+
+    /// <summary>La révision vient d'être faite, ici même.</summary>
+    public bool JustValidated => DoneTitle is not null && ShowsReviewedToday;
+
+    /// <summary>« Étape attendue : J3 », ou, juste après, « J3 validée ».</summary>
+    public string StatusTitle => JustValidated ? DoneTitle! : $"{StepLabel} : {State.Step}";
+
+    /// <summary>« prévue aujourd'hui », ou, juste après, « prochaine : J7, lundi 30 novembre ».</summary>
+    public string StatusDetail => JustValidated && State.DueDate is { } due ? ReviewText.NextOnOf(State.Step ?? string.Empty, Dates.Long(due)) : DueText;
+
+    /// <summary>Le message de la dernière action paraît en pastille ; celui d'une validation est déjà dans la bande.</summary>
+    public bool ShowsToast => HasMessage && !JustValidated;
+
+    /// <summary>« J'avais oublié » était proposé au moment de valider.</summary>
+    private bool _forgotOffered;
+
+    /// <summary>« J'avais oublié » s'efface en gardant sa place : rien ne glisse dans la bande.</summary>
+    public bool KeepsForgotPlace => JustValidated && _forgotOffered;
+
+    /// <summary>« J'avais oublié » : montré, caché en gardant sa place juste après la validation, ou absent.</summary>
+    public bool? ForgotShown => CanForget ? true : KeepsForgotPlace ? false : null;
+
+    /// <summary>« Valider » : montré, caché sous ce qui le remplace juste après la validation (sa largeur reste), ou absent.</summary>
+    public bool? ValidateShown => CanValidate ? true : JustValidated ? false : null;
+
+    /// <summary>La révision du jour faite, en séance : « Fiche suivante » prend la place de « Valider ».</summary>
+    public bool ShowsNextButton => ShowsReviewedToday && InSession;
+
+    /// <summary>La révision du jour faite, hors séance : « Révisée aujourd'hui » prend la place de « Valider ».</summary>
+    public bool ShowsDoneText => ShowsReviewedToday && !InSession;
+
+    /// <summary>
+    /// Ce qui mène à l'élément suivant, quand la barre est celle d'une séance ; rien ailleurs. La séance le donne : après la
+    /// validation, le bouton de « Valider » y mène, au même endroit.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(InSession), nameof(DoneLabel), nameof(ShowsNextButton), nameof(ShowsDoneText))]
+    public partial System.Windows.Input.ICommand? GoNext { get; set; }
+
+    /// <summary>« Fiche suivante » ou « Voir le bilan » : où mène <see cref="GoNext"/>.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(DoneLabel))]
+    public partial string NextName { get; set; } = string.Empty;
+
+    /// <summary>La séance va passer seule à l'élément suivant : la bande le montre par un trait qui avance.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(DoneLabel))]
+    public partial bool IsAdvancing { get; set; }
+
+    /// <summary>La barre est celle d'une séance.</summary>
+    public bool InSession => GoNext is not null;
+
+    /// <summary>À la place de « Valider », une fois la révision faite : « Fiche suivante… » en séance, « Révisée aujourd'hui » ailleurs.</summary>
+    public string DoneLabel => !InSession ? ReviewText.ReviewedTodayShort : IsAdvancing ? NextName + "…" : NextName;
 
     /// <summary>« Fiche archivée le vendredi 9 octobre · 1 cycle(s) terminé(s) · rappel en attente ».</summary>
     public string ArchivedStatus
@@ -362,6 +429,8 @@ public sealed partial class ReviewBarViewModel : ObservableObject
     /// <summary>Un message est affiché.</summary>
     public bool HasMessage => Message is not null;
 
+    partial void OnMessageChanged(string? value) => OnPropertyChanged(nameof(ShowsToast));
+
     /// <summary>Pourquoi la dernière action a été refusée.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasError))]
@@ -431,7 +500,8 @@ public sealed partial class ReviewBarViewModel : ObservableObject
         return ActAsync(
             ReviewAction.Validated,
             () => _reviews.Validate(Kind, Id, null, ReviewRecall.Forgotten),
-            next => ReviewText.ForgotDoneOf(step, next.Step ?? string.Empty, next.DueDate is { } due ? Dates.Long(due) : string.Empty));
+            next => ReviewText.ForgotDoneOf(step, next.Step ?? string.Empty, next.DueDate is { } due ? Dates.Long(due) : string.Empty),
+            ReviewText.ForgottenTitleOf(step));
     }
 
     /// <summary>Valide la révision attendue ; en avance, demande d'abord confirmation.</summary>
@@ -695,7 +765,8 @@ public sealed partial class ReviewBarViewModel : ObservableObject
                 ? IsSheet ? ReviewText.ValidatedLastSheetOf(step) : ReviewText.ValidatedLastPassageOf(step)
                 : antedated
                     ? ReviewText.ValidatedOnDayOf(step, Dates.Long(day!.Value), next.Step ?? string.Empty, next.DueDate is { } due ? Dates.Long(due) : string.Empty)
-                    : ReviewText.ValidatedOf(step, next.Step ?? string.Empty, next.DueDate is { } dueDate ? Dates.Long(dueDate) : string.Empty));
+                    : ReviewText.ValidatedOf(step, next.Step ?? string.Empty, next.DueDate is { } dueDate ? Dates.Long(dueDate) : string.Empty),
+            ReviewText.ValidatedTitleOf(step));
     }
 
     private Task PostponeAsync(DateOnly day)
@@ -707,15 +778,24 @@ public sealed partial class ReviewBarViewModel : ObservableObject
     private Task RestartAsync() =>
         ActAsync(ReviewAction.Restarted, () => _reviews.Restart(Kind, Id), next => ReviewText.RestartedOf(next.Step ?? string.Empty, next.DueDate is { } due ? Dates.Long(due) : string.Empty));
 
-    private async Task ActAsync(ReviewAction kind, Func<Outcome<ReviewState>> action, Func<ReviewState, string> message)
+    /// <summary>
+    /// Fait l'action ; réussie, l'état, le message et, pour une révision, ce que la bande en dit
+    /// (<paramref name="done"/>) changent ensemble.
+    /// </summary>
+    private async Task ActAsync(ReviewAction kind, Func<Outcome<ReviewState>> action, Func<ReviewState, string> message, string? done = null)
     {
         IsBusy = true;
         Error = null;
+        var forgotOffered = CanForget;
+        var labelBefore = ValidateLabel;
         try
         {
             var outcome = await Task.Run(action).ConfigureAwait(true);
             if (outcome.Succeeded)
             {
+                _forgotOffered = forgotOffered;
+                _labelBefore = labelBefore;
+                DoneTitle = done;
                 State = outcome.Value;
                 LastAction = kind;
                 Message = message(outcome.Value);

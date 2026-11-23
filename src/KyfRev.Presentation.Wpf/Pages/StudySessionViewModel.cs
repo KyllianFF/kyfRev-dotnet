@@ -59,6 +59,63 @@ public sealed partial class StudySessionViewModel : ObservableObject, ILeaving
     /// <summary>La séance telle qu'elle est gardée.</summary>
     public StudySession Session => _session;
 
+    /// <summary>Le temps laissé, après une validation, avant que la séance passe seule à l'élément suivant (rangée 27A).</summary>
+    public static readonly TimeSpan AdvanceDelay = TimeSpan.FromSeconds(1.5);
+
+    /// <summary>Ce qui fait patienter <see cref="AdvanceDelay"/> ; les essais le remplacent pour décider du moment.</summary>
+    public Func<TimeSpan, CancellationToken, Task> Wait { get; set; } = (delay, token) => Task.Delay(delay, token);
+
+    /// <summary>L'attente avant l'élément suivant, tant qu'elle court ; rien sinon.</summary>
+    private CancellationTokenSource? _advance;
+
+    /// <summary>
+    /// La révision vient d'être validée : la séance passera seule à l'élément suivant dans <see cref="AdvanceDelay"/>, à
+    /// moins qu'on ne reste (Échap, un clic ou la molette dans la fiche).
+    /// </summary>
+    [ObservableProperty]
+    public partial bool IsAdvancing { get; private set; }
+
+    /// <summary>Reste sur l'élément validé : la séance n'avance plus seule ; « Suivant » y mène quand on veut.</summary>
+    [RelayCommand]
+    private void Stay() => StopAdvance();
+
+    private void StartAdvance()
+    {
+        StopAdvance();
+        var advance = new CancellationTokenSource();
+        _advance = advance;
+        IsAdvancing = true;
+        _bar?.IsAdvancing = true;
+        _ = AdvanceAsync(advance);
+    }
+
+    private async Task AdvanceAsync(CancellationTokenSource advance)
+    {
+        // L'attente annulée ne lève rien ici : seul compte qu'elle ait été annulée ou non.
+        await Task.WhenAny(Wait(AdvanceDelay, advance.Token)).ConfigureAwait(true);
+        if (advance.IsCancellationRequested || !ReferenceEquals(_advance, advance))
+        {
+            return;
+        }
+        StopAdvance();
+        if (NextCommand.CanExecute(null))
+        {
+            NextCommand.Execute(null);
+        }
+    }
+
+    private void StopAdvance()
+    {
+        if (_advance is { } advance)
+        {
+            _advance = null;
+            advance.Cancel();
+            advance.Dispose();
+        }
+        IsAdvancing = false;
+        _bar?.IsAdvancing = false;
+    }
+
     /// <summary>La page de l'élément en cours ; rien une fois la séance terminée.</summary>
     [ObservableProperty]
     public partial object? Current { get; private set; }
@@ -116,6 +173,7 @@ public sealed partial class StudySessionViewModel : ObservableObject, ILeaving
     /// </summary>
     public void Interrupt()
     {
+        StopAdvance();
         if (!IsFinished)
         {
             Keep();
@@ -140,6 +198,7 @@ public sealed partial class StudySessionViewModel : ObservableObject, ILeaving
     [RelayCommand(CanExecute = nameof(IsRunning))]
     private void Next()
     {
+        StopAdvance();
         Record();
         _session = _session with { Position = _session.Position + 1 };
         if (_session.Position >= Total)
@@ -156,6 +215,7 @@ public sealed partial class StudySessionViewModel : ObservableObject, ILeaving
     [RelayCommand(CanExecute = nameof(IsRunning))]
     private void End()
     {
+        StopAdvance();
         if (HasActed)
         {
             Record();
@@ -216,6 +276,12 @@ public sealed partial class StudySessionViewModel : ObservableObject, ILeaving
         _bar?.PropertyChanged -= OnBarChanged;
         _bar = bar;
         _bar?.PropertyChanged += OnBarChanged;
+        if (bar is not null)
+        {
+            // Après la validation, le bouton de « Valider » mène à la suite, au même endroit.
+            bar.NextName = _session.Position + 1 < Total ? SessionText.NextSheet : SessionText.ToSummary;
+            bar.GoNext = NextCommand;
+        }
     }
 
     private void OnBarChanged(object? sender, PropertyChangedEventArgs e)
@@ -223,6 +289,15 @@ public sealed partial class StudySessionViewModel : ObservableObject, ILeaving
         if (e.PropertyName == nameof(ReviewBarViewModel.LastAction))
         {
             HasActed = _bar is { LastAction: not ReviewAction.None };
+            // Validée (ou oubliée) : la suite vient seule ; une autre action laisse choisir.
+            if (_bar is { LastAction: ReviewAction.Validated })
+            {
+                StartAdvance();
+            }
+            else
+            {
+                StopAdvance();
+            }
         }
     }
 
@@ -237,6 +312,7 @@ public sealed partial class StudySessionViewModel : ObservableObject, ILeaving
 
     private void Finish()
     {
+        StopAdvance();
         Keep();
         Watch(null);
         _store.Forget();
