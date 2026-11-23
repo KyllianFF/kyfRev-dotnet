@@ -146,7 +146,7 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
         Week = [];
         Cards = [];
         Footer = string.Empty;
-        StartLabel = string.Empty;
+        StartLabel = SessionText.StartNothing;
         ResumeLabel = string.Empty;
         Progress = string.Empty;
     }
@@ -615,7 +615,7 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
         PriorityWarning = null;
         Error = null;
         IsLoading = false;
-        StartLabel = string.Empty;
+        StartLabel = SessionText.StartNothing;
         CanStart = false;
         ResumeLabel = string.Empty;
         CanResume = false;

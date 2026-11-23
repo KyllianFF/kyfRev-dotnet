@@ -60,7 +60,7 @@ public sealed class DashboardForgetTests
         Assert.IsNull(page.PriorityWarning);
         Assert.IsNull(page.Error);
         Assert.IsFalse(page.IsLoading);
-        Assert.AreEqual(string.Empty, page.StartLabel);
+        Assert.AreEqual(SessionText.StartNothing, page.StartLabel, "« Commencer » reste, grisé");
         Assert.IsFalse(page.CanStart);
         Assert.IsFalse(page.StartCommand.CanExecute(null));
         Assert.AreEqual(string.Empty, page.ResumeLabel);
