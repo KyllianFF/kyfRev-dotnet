@@ -8,6 +8,9 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 ## [Non publié]
 
 ### Corrigé
+- Écrire en Markdown : l'éditeur de la fiche d'avant suivait encore le champ, partagé d'une fiche à l'autre. Une autre
+  fiche ouverte dans la même vue et écrite pouvait remplacer le texte de la première ; revenir écrire la même fiche
+  donnait un faux conflit. La dernière frappe du texte mis en forme s'enregistre avant que son moteur ne se ferme.
 - Séance : une fiche y garde sa mise en page, son papier, son zoom et sa colonne, comme ouverte depuis le Carnet. Sur un
   papier réglé, son texte quittait les lignes (et la feuille) en passant de Lire à Réviser ou Écrire ; le zoom changé
   en séance est retenu.

@@ -362,6 +362,16 @@ public sealed partial class SheetEditorViewModel : ObservableObject
     private string _saved;
     private Task? _running;
     private bool _again;
+
+    /// <summary>
+    /// Le dernier texte de cette fiche quand elle a quitté le champ du code, partagé d'une fiche à l'autre ; rien tant
+    /// qu'elle l'occupe, ou si elle écrivait ailleurs. Ses enregistrements restants partent de ce texte, jamais de celui
+    /// d'une autre fiche.
+    /// </summary>
+    private string? _left;
+
+    /// <summary>L'éditeur a quitté la vue : plus aucune frappe ne le concerne.</summary>
+    private bool _released;
     private int _previewVersion;
     private IReadOnlyList<VaultSheet>? _known;
     private bool _loadingKnown;
@@ -768,6 +778,27 @@ public sealed partial class SheetEditorViewModel : ObservableObject
         OnPropertyChanged(nameof(IsMarkdownOn));
     }
 
+    /// <summary>
+    /// L'éditeur quitte la vue (une autre fiche, ou la lecture) : il ne suit plus le champ du code, que la fiche suivante
+    /// va occuper, et ses minuteries s'arrêtent. À appeler après <see cref="SaveAsync"/>, qui finit avec le texte de cette
+    /// fiche. Sans cela, son enregistrement pouvait écrire le texte de l'autre fiche dans la sienne.
+    /// </summary>
+    internal void Release()
+    {
+        if (_released)
+        {
+            return;
+        }
+        _released = true;
+        _saveTimer.Stop();
+        _previewTimer.Stop();
+        Hook(_surface, false);
+        if (_surface is { } surface && ReferenceEquals(surface, _source))
+        {
+            _left = surface.Text;
+        }
+    }
+
     /// <summary>Enregistre le texte s'il a changé ; un seul enregistrement à la fois, le suivant repart du texte du moment.</summary>
     public Task SaveAsync()
     {
@@ -950,8 +981,23 @@ public sealed partial class SheetEditorViewModel : ObservableObject
             do
             {
                 _again = false;
-                await _surface!.SyncAsync().ConfigureAwait(true);
-                var current = _surface.Text;
+                string current;
+                if (_left is { } left)
+                {
+                    // Parti du champ partagé : le texte qu'il y avait laissé, pas celui de la fiche qui l'occupe.
+                    current = left;
+                }
+                else if (await _surface!.SyncAsync().ConfigureAwait(true) || !_released)
+                {
+                    current = _surface.Text;
+                }
+                else
+                {
+                    // Le texte mis en forme s'est arrêté avant de donner sa dernière frappe : rien n'est marqué enregistré.
+                    Problem = EditingText.VisualUnavailable;
+                    State = SaveState.Modified;
+                    return;
+                }
                 if (HasConflict)
                 {
                     return;

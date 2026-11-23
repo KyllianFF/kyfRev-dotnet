@@ -91,6 +91,66 @@ public sealed class WritingTests
         }
     }
 
+    /// <summary>
+    /// Le champ du code est partagé d'une fiche à l'autre : l'éditeur de la fiche d'avant ne doit plus rien en écrire. Il
+    /// enregistrait le texte de la fiche suivante dans la sienne.
+    /// </summary>
+    [STATestMethod]
+    public void Writing_another_sheet_in_the_same_view_never_writes_it_into_the_first()
+    {
+        using var scene = new Scene();
+        scene.Type("A seulement. ");
+        scene.WaitSaved();
+        var first = scene.Editor;
+        var firstBody = scene.OnDisk;
+
+        // Une autre fiche s'ouvre dans la même vue (un lien, Ctrl+K…) et s'écrit, en Markdown elle aussi.
+        var other = scene.Vault.App.Sheets.Create(string.Empty, "Méiose", null).Value;
+        var otherPage = scene.Vault.Page(sheet: other);
+        otherPage.LoadCommand.Execute(null);
+        UiThread.Until(() => !otherPage.IsLoading);
+        scene.SheetPage.DataContext = otherPage;
+        TestShell.Flush();
+        otherPage.ToggleWritingCommand.Execute(null);
+        UiThread.Until(() => otherPage.Editor is not null);
+        TestShell.Flush();
+        otherPage.Editor!.SaveDelay = TimeSpan.FromMilliseconds(10);
+        scene.Type("B seulement. ");
+        UiThread.Until(() => otherPage.Editor.State == SaveState.Saved);
+        var later = DateTime.UtcNow.AddMilliseconds(400);
+        UiThread.Until(() => DateTime.UtcNow > later);
+
+        Assert.AreEqual(firstBody, scene.OnDisk, "la première fiche garde son texte");
+        StringAssert.Contains(scene.Vault.App.Sheets.Open(other).Value.Body, "B seulement.", StringComparison.Ordinal);
+        Assert.IsFalse(first.HasConflict);
+        Assert.IsFalse(otherPage.Editor.HasConflict);
+    }
+
+    /// <summary>Lire puis écrire de nouveau la même fiche : l'éditeur d'avant n'enregistre plus, aucun faux conflit.</summary>
+    [STATestMethod]
+    public void Writing_again_the_same_sheet_raises_no_false_conflict()
+    {
+        using var scene = new Scene();
+        scene.Type("Avant. ");
+        scene.WaitSaved();
+        var first = scene.Editor;
+        scene.Page.ToggleWritingCommand.Execute(null);
+        UiThread.Until(() => scene.Page.Editor is null);
+        TestShell.Flush();
+        scene.Page.ToggleWritingCommand.Execute(null);
+        UiThread.Until(() => scene.Page.Editor is not null && !ReferenceEquals(scene.Page.Editor, first));
+        TestShell.Flush();
+        scene.Editor.SaveDelay = TimeSpan.FromMilliseconds(10);
+        scene.Type("Après. ");
+        scene.WaitSaved();
+        var later = DateTime.UtcNow.AddMilliseconds(400);
+        UiThread.Until(() => DateTime.UtcNow > later);
+
+        Assert.IsFalse(scene.Editor.HasConflict, "pas de conflit avec son propre texte");
+        Assert.IsFalse(first.HasConflict);
+        StringAssert.Contains(scene.OnDisk, "Après.", StringComparison.Ordinal);
+    }
+
     private static void Click(ButtonBase button)
     {
         Assert.IsTrue(button.IsEnabled, button.Name);
