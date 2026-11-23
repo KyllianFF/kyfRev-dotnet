@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO;
 using System.Text.Json;
 using System.Windows;
@@ -5,6 +6,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using KyfRev.Application;
 using KyfRev.Application.Model;
+using KyfRev.DesignSystem.Controls;
 using KyfRev.DesignSystem.Tokens;
 using KyfRev.Extensions.Host;
 using KyfRev.Presentation.Wpf.Editing;
@@ -217,6 +219,36 @@ public sealed class VisualEditorTests
             Window.Close();
             Vault.Dispose();
             _ui.Dispose();
+        }
+    }
+
+    [EngineTest]
+    public void A_click_in_the_outline_glides_to_the_heading_while_writing()
+    {
+        // Les essais coupent les transitions ; celui-ci les rend, le temps de voir la fiche glisser.
+        Transitions.Skip = false;
+        try
+        {
+            var body = "# Mitose\n\n" + string.Concat(Enumerable.Range(1, 60).Select(index => $"Paragraphe {index}, assez long pour occuper sa ligne.\n\n")) + "## Conclusion\n\n" + string.Concat(Enumerable.Range(1, 30).Select(index => $"Suite {index}, après le titre.\n\n"));
+            using var scene = new Scene(body);
+            UiThread.Until(() => scene.Visual!.HasShownText, TimeSpan.FromMinutes(2));
+
+            // La page connaît la durée du défilement de l'application.
+            Assert.AreNotEqual("\"0ms\"", scene.Script("getComputedStyle(document.documentElement).getPropertyValue('--duree-defilement').trim()"));
+            Assert.AreEqual("0", scene.Script("Math.round(document.body.scrollTop)"));
+
+            // Le plan demande le titre : la fiche (c'est le corps de la page qui défile) part d'où elle est et glisse ; elle ne saute pas.
+            scene.Editor.GoToHeading("Conclusion", 0);
+            var first = double.Parse(scene.Script("document.body.scrollTop"), CultureInfo.InvariantCulture);
+            const string headingTop = "Math.round([...document.querySelectorAll('.ProseMirror h2')].find(title => title.textContent.trim() === 'Conclusion').getBoundingClientRect().top)";
+            UiThread.Until(() => Math.Abs(double.Parse(scene.Script(headingTop), CultureInfo.InvariantCulture)) <= 2);
+            var last = double.Parse(scene.Script("document.body.scrollTop"), CultureInfo.InvariantCulture);
+            Assert.IsGreaterThan(first, last, "partie d'où elle était, elle est arrivée plus bas");
+            Assert.IsLessThan(last, first + 1, "au premier instant, elle n'était pas encore arrivée");
+        }
+        finally
+        {
+            Transitions.Skip = true;
         }
     }
 

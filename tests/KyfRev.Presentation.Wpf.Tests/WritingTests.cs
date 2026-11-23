@@ -1660,6 +1660,28 @@ public sealed class WritingTests
     }
 
     [STATestMethod]
+    public void In_markdown_a_click_in_the_outline_brings_the_heading_to_the_top()
+    {
+        var text = "# Mitose\n\n" + string.Concat(Enumerable.Range(1, 80).Select(index => $"Ligne {index}\n")) + "## Conclusion\n\n" + string.Concat(Enumerable.Range(1, 80).Select(index => $"Suite {index}\n"));
+        var surface = new MarkdownEditor { Text = text, Width = 600, Height = 300 };
+        var window = new Window { Content = surface, Left = -10000, Top = -10000, SizeToContent = SizeToContent.WidthAndHeight, ShowActivated = false, ShowInTaskbar = false };
+        window.Show();
+        try
+        {
+            TestShell.Flush();
+            ((IEditorSurface)surface).GoToHeading("Conclusion", 0);
+            TestShell.Flush();
+            var line = surface.Document.GetLineByOffset(surface.CaretOffset);
+            Assert.AreEqual("## Conclusion", surface.Document.GetText(line), "le curseur est sur le titre");
+            Assert.AreEqual(surface.TextArea.TextView.GetVisualTopByDocumentLine(line.LineNumber), surface.VerticalOffset, 1, "le titre est en haut de la vue");
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
     public void An_editor_comes_back_on_its_text_when_attached_again()
     {
         using var scene = new Scene();
