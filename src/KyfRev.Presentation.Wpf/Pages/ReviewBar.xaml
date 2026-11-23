@@ -119,8 +119,9 @@
         <TextBlock x:Name="NoteStatus" Text="{x:Static pages:ReviewText.NoteStatus}" TextWrapping="Wrap"
                    Visibility="{Binding IsNote, Converter={StaticResource Visible}}" />
         <StackPanel Visibility="{Binding ShowsCycle, Converter={StaticResource Visible}}">
-          <TextBlock x:Name="Status" Text="{Binding StatusTitle}" FontWeight="SemiBold" TextWrapping="Wrap" AutomationProperties.LiveSetting="Polite" />
-          <TextBlock x:Name="Due" Text="{Binding StatusDetail}" Style="{StaticResource DueStyle}" />
+          <!-- Toujours deux lignes, l'étape puis l'échéance : la bande garde sa hauteur quel que soit le texte, coupé au besoin. -->
+          <TextBlock x:Name="Status" Text="{Binding StatusTitle}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" ToolTip="{Binding StatusTitle}" AutomationProperties.LiveSetting="Polite" />
+          <TextBlock x:Name="Due" Text="{Binding StatusDetail}" Style="{StaticResource DueStyle}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" ToolTip="{Binding StatusDetail}" />
         </StackPanel>
         <TextBlock x:Name="ArchivedStatus" Text="{Binding ArchivedStatus}" TextWrapping="Wrap"
                    Visibility="{Binding ShowsArchivedActions, Converter={StaticResource Visible}}" />

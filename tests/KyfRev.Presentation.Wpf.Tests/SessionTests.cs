@@ -185,6 +185,9 @@ public sealed class SessionTests
     {
         using var ui = new UiThread();
         using var vault = new SessionVault();
+        // Des titres : le plan s'ouvre à côté de la fiche, et s'arrête avant la bande.
+        var atom = vault.App.Sheets.List().Value.Single(sheet => sheet.Title == "Atome").Id;
+        Assert.IsTrue(vault.App.Editing.Save(atom, "# Atome\n\n## Noyau\n\nProtons et neutrons.\n\n## Électrons\n\nLeur nuage.\n", vault.App.Sheets.Open(atom).Value.Fingerprint, 1).Succeeded);
         var test = new TestShell(dark);
         var window = new ShellWindow(vault.Shell) { ShowActivated = false, Left = -10000, Top = -10000, Width = width, Height = 800, WindowStartupLocation = WindowStartupLocation.Manual };
         window.Resources.MergedDictionaries.Add(test.Design.Dictionary);
@@ -211,7 +214,7 @@ public sealed class SessionTests
             var theme = dark ? "sombre" : "clair";
             ((FrameworkElement)window.Content).Capture(FormattableString.Invariant($"seance-bande-{width}-{theme}-avant"));
             var sessionBar = Named<Border>(window, "SessionBar");
-            var band = Named<Border>(window, "Bar");
+            var band = Named<Border>(Descendants(window).OfType<ReviewBar>().Single(view => view.IsVisible), "Bar");
             var before = (Session: sessionBar.ActualHeight, Band: band.ActualHeight, Top: band.TranslatePoint(default, window).Y);
 
             page.Review!.ValidateCommand.Execute(null);
@@ -230,6 +233,15 @@ public sealed class SessionTests
             Assert.AreSame(session.NextCommand, next.Command);
             Assert.IsTrue(Named<Border>(window, "Countdown").IsVisible, "le trait dit que la suite vient");
             Assert.IsLessThanOrEqualTo(window.ActualWidth, next.TranslatePoint(new Point(next.ActualWidth, 0), window).X, "rien ne dépasse");
+            // Le plan, quand il a la place, s'arrête avant la bande ; le bas de la page a la couleur du menu.
+            if (Named<ContentControl>(window, "OutlinePane") is { IsVisible: true } outline)
+            {
+                // L'emplacement donné au plan, et non la hauteur que son contenu réclame (rognée à l'écran).
+                var slot = System.Windows.Controls.Primitives.LayoutInformation.GetLayoutSlot(outline);
+                var gap = -((UIElement)VisualTreeHelper.GetParent(outline)).TranslatePoint(new Point(0, slot.Bottom - outline.Margin.Bottom), band).Y;
+                Assert.IsGreaterThanOrEqualTo(12, gap, "un écart entre le plan et la bande");
+            }
+            Assert.AreSame(test.Design.Dictionary["Kyf.Brush.Surface"], Named<Border>(window, "SheetFooter").Background);
 
             // Échap : on reste.
             var view = Descendants(window).OfType<StudySessionPage>().Single();

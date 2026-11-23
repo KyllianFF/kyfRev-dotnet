@@ -1280,7 +1280,7 @@ public sealed class ReviewTests
                 window.UpdateLayout();
                 TestShell.Flush();
                 Assert.AreEqual(Visibility.Visible, Named<Button>(window, "ForgotButton").Visibility);
-                var band = Named<Border>(window, "Bar");
+                var band = Named<Border>(Descendants(window).OfType<ReviewBar>().Single(), "Bar");
                 var slot = Named<Grid>(window, "ValidateSlot");
                 var before = (Height: band.ActualHeight, Top: band.TranslatePoint(default, window).Y, Slot: slot.TranslatePoint(default, window), SlotWidth: slot.ActualWidth, Stacked: layout.IsStacked);
                 shortcut.Command.Execute(null);

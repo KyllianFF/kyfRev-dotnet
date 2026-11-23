@@ -16,6 +16,8 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   elle dit « J3 validée » et la prochaine étape, « Valider » laisse sa place à « Révisée aujourd'hui » (ou, en séance, à
   « Fiche suivante »), « J'avais oublié » s'efface en gardant la sienne. Plus de bulle de confirmation ; à l'étroit,
   « Reporter » passe dans « ⋯ ».
+- Fiche ouverte : la barre du zoom a la couleur du menu, d'un bloc avec la bande de révision ; le plan, les passages et
+  les rétroliens s'arrêtent un peu avant elle.
 - Séance : après une validation, la fiche suivante vient seule en 1,5 s ; un trait le montre en haut de la bande. Échap, un
   clic ou la molette dans la fiche font rester. « Passer » et « Suivant » ont la même hauteur : la barre de séance ne
   bouge plus.

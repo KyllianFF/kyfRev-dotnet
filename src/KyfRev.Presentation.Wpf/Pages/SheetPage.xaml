@@ -523,22 +523,18 @@
       <Grid x:Name="Body" Grid.Row="2" Background="{DynamicResource Kyf.Brush.Background}">
       <Grid Margin="16,0,6,0" ClipToBounds="True">
         <DockPanel>
-          <ContentControl x:Name="OutlinePane" DockPanel.Dock="Left" Width="{x:Static pages:SheetPageViewModel.OutlineWidth}" Margin="0,0,16,0" Focusable="False" IsTabStop="False"
+          <ContentControl x:Name="OutlinePane" DockPanel.Dock="Left" Width="{x:Static pages:SheetPageViewModel.OutlineWidth}" Margin="0,0,16,12" Focusable="False" IsTabStop="False"
                           Content="{Binding}" ContentTemplate="{StaticResource OutlinePanel}" kyf:Transitions.Shown="{Binding ShowsOutline}" kyf:Transitions.ShownFrom="Left" />
           <!-- Les passages et les rétroliens se partagent la colonne de droite ; seul, l'un des deux la prend toute. -->
           <UniformGrid x:Name="SidePanes" DockPanel.Dock="Right" Columns="1">
-            <ContentControl x:Name="PassagesPane" Width="{x:Static pages:SheetPageViewModel.PassagesWidth}" Margin="16,0,10,0" Focusable="False" IsTabStop="False"
+            <ContentControl x:Name="PassagesPane" Width="{x:Static pages:SheetPageViewModel.PassagesWidth}" Margin="16,0,10,12" Focusable="False" IsTabStop="False"
                             Content="{Binding}" ContentTemplate="{StaticResource PassagesPanel}" kyf:Transitions.Shown="{Binding ShowsPassages}" kyf:Transitions.ShownFrom="Right" />
             <ContentControl x:Name="BacklinksPane" Width="{x:Static pages:SheetPageViewModel.PassagesWidth}" Focusable="False" IsTabStop="False"
                             Content="{Binding}" ContentTemplate="{StaticResource BacklinksPanel}" kyf:Transitions.Shown="{Binding ShowsBacklinks}" kyf:Transitions.ShownFrom="Right">
               <ContentControl.Style>
                 <Style TargetType="ContentControl">
-                  <Setter Property="Margin" Value="16,0,10,0" />
-                  <Style.Triggers>
-                    <DataTrigger Binding="{Binding ShowsPassages}" Value="True">
-                      <Setter Property="Margin" Value="16,12,10,0" />
-                    </DataTrigger>
-                  </Style.Triggers>
+                  <!-- Sous les passages, l'écart vient de leur marge du bas : le même que celui qui les sépare de la bande. -->
+                  <Setter Property="Margin" Value="16,0,10,12" />
                 </Style>
               </ContentControl.Style>
             </ContentControl>
@@ -589,6 +585,8 @@
       <Border Grid.Row="3" Height="4" Visibility="{Binding IsWriting, Converter={StaticResource Visible}}" />
 
       <!-- Le zoom de la fiche, en bas à droite : il ne touche pas au reste de l'interface, dont la taille se règle dans les Paramètres. -->
+      <!-- La couleur du menu, comme la bande de révision au-dessus : le bas de la page est un seul bloc, distinct de la fiche. -->
+      <Border x:Name="SheetFooter" Grid.Row="4" Background="{DynamicResource Kyf.Brush.Surface}" />
       <StackPanel x:Name="SheetZoomBar" Grid.Row="4" Orientation="Horizontal" HorizontalAlignment="Right" Margin="16,0,16,8">
         <!-- La feuille et son nombre de pages, puis le zoom qui la fait tenir dans la largeur. -->
         <TextBlock x:Name="PageStatus" Text="{Binding PageSetup.Status}" Style="{DynamicResource Kyf.Text.Secondary}" VerticalAlignment="Center" Margin="0,0,12,0"
