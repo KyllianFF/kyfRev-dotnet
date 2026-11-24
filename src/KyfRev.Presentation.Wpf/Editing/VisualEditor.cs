@@ -622,7 +622,7 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
                 ListKeyPressed?.Invoke(this, KeyOf(key.Key));
                 break;
             case MenuEvent menu:
-                OpenMenu(menu);
+                _ = OpenMenuAsync(menu);
                 break;
             case PagesEvent pages:
                 PagesChanged?.Invoke(this, Math.Max(0, pages.Count));
@@ -862,10 +862,14 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
         return item;
     }
 
-    private void OpenMenu(MenuEvent menu)
+    private async Task OpenMenuAsync(MenuEvent menu)
     {
-        // Le menu attend sa réponse, le temps d'une frappe : le correcteur vit sur les fils de travail.
-        var correction = menu.Word is { } word && _spelling is { } checker ? Task.Run(() => checker.Correct(word)).GetAwaiter().GetResult() : null;
+        // Le menu attend la réponse du correcteur, qui vit sur les fils de travail ; l'interface, elle, ne l'attend pas.
+        var correction = menu.Word is { } word && _spelling is { } checker ? await Task.Run(() => checker.Correct(word)).ConfigureAwait(true) : null;
+        if (_disposed)
+        {
+            return;
+        }
         LastMenuItems = MenuItems(menu, correction);
         var context = new ContextMenu { Placement = PlacementMode.MousePoint, PlacementTarget = this };
         foreach (var item in LastMenuItems)

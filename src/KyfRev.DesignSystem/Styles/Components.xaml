@@ -630,19 +630,24 @@
           <Border x:Name="Block" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
                   BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{DynamicResource Kyf.Radius.Control}" />
           <ControlTemplate.Triggers>
-            <Trigger Property="IsAnimated" Value="True">
-              <Trigger.EnterActions>
+            <!-- Seulement à l'écran : caché, un squelette qui pulserait garderait le rendu à 60 images par seconde pour rien. -->
+            <MultiTrigger>
+              <MultiTrigger.Conditions>
+                <Condition Property="IsAnimated" Value="True" />
+                <Condition Property="IsVisible" Value="True" />
+              </MultiTrigger.Conditions>
+              <MultiTrigger.EnterActions>
                 <BeginStoryboard x:Name="Pulse">
                   <Storyboard RepeatBehavior="Forever" AutoReverse="True">
                     <DoubleAnimation Storyboard.TargetName="Block" Storyboard.TargetProperty="Opacity"
                                      From="1" To="0.5" Duration="0:0:0.9" />
                   </Storyboard>
                 </BeginStoryboard>
-              </Trigger.EnterActions>
-              <Trigger.ExitActions>
-                <StopStoryboard BeginStoryboardName="Pulse" />
-              </Trigger.ExitActions>
-            </Trigger>
+              </MultiTrigger.EnterActions>
+              <MultiTrigger.ExitActions>
+                <RemoveStoryboard BeginStoryboardName="Pulse" />
+              </MultiTrigger.ExitActions>
+            </MultiTrigger>
           </ControlTemplate.Triggers>
         </ControlTemplate>
       </Setter.Value>

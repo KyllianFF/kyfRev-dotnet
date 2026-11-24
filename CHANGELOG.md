@@ -7,6 +7,11 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ## [Non publié]
 
+### Modifié
+- Plus fluide, sans rien changer à l'écran : les squelettes de chargement cessent d'animer une fois cachés (Aujourd'hui et le
+  Carnet ne redessinaient plus 60 fois par seconde pour rien) ; le clic sur un lien vers une fiche, « Déplacer… » et le
+  clic droit dans le texte mis en forme n'attendent plus le coffre ou le correcteur en figeant l'interface.
+
 ### Corrigé
 - Écrire en Markdown : l'éditeur de la fiche d'avant suivait encore le champ, partagé d'une fiche à l'autre. Une autre
   fiche ouverte dans la même vue et écrite pouvait remplacer le texte de la première ; revenir écrire la même fiche

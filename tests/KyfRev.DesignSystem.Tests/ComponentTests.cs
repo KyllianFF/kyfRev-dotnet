@@ -453,6 +453,33 @@ public sealed class ComponentTests
     }
 
     [STATestMethod]
+    public void A_hidden_skeleton_stops_pulsing()
+    {
+        var skeleton = new Skeleton { Height = 16 };
+        var window = new Window { Content = Host.Of(new DesignResources(ThemeKind.Light, reducedMotion: false), skeleton), Left = -10000, Top = -10000, Width = 500, Height = 400, ShowActivated = false, ShowInTaskbar = false };
+        window.Show();
+        try
+        {
+            Host.Flush();
+            var block = (Border)skeleton.Template.FindName("Block", skeleton);
+            Assert.IsTrue(block.HasAnimatedProperties, "à l'écran, il pulse");
+
+            // Caché une fois la lecture finie : son horloge s'arrête, et le rendu avec elle.
+            skeleton.Visibility = Visibility.Collapsed;
+            Host.Flush();
+            Assert.IsFalse(block.HasAnimatedProperties);
+
+            skeleton.Visibility = Visibility.Visible;
+            Host.Flush();
+            Assert.IsTrue(block.HasAnimatedProperties, "montré de nouveau, il reprend");
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
     public void A_long_check_box_label_wraps_instead_of_being_cut()
     {
         var label = new TextBlock { Text = "Un libellé assez long pour ne pas tenir sur une seule ligne de cette largeur", TextWrapping = TextWrapping.Wrap };

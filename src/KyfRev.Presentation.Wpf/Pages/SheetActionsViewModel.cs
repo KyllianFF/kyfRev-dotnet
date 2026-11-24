@@ -207,11 +207,10 @@ public sealed partial class SheetActionsViewModel : ObservableObject, ISheetMenu
     /// <inheritdoc/>
     public void Move(SheetTarget sheet) => _ = AskAsync(sheet, SheetAction.Move, SheetActionsText.MoveTitleOf(sheet.Title), null, SheetActionsText.MoveConfirm, found =>
     {
-        var folders = _folders.Folders();
         ActionDestinations =
         [
             new(string.Empty, SheetsText.AtRoot),
-            .. (folders.Succeeded ? folders.Value : []).Order(StringComparer.CurrentCulture).Select(path => new SettingChoice<string>(path, SheetRow.DisplayFolder(path))),
+            .. _readFolders.Order(StringComparer.CurrentCulture).Select(path => new SettingChoice<string>(path, SheetRow.DisplayFolder(path))),
         ];
         ActionDestination = ActionDestinations.FirstOrDefault(choice => choice.Value == found.Folder) ?? ActionDestinations[0];
     });
@@ -293,10 +292,15 @@ public sealed partial class SheetActionsViewModel : ObservableObject, ISheetMenu
         }
     }
 
+    /// <summary>Les dossiers du coffre, lus pour « Déplacer… ».</summary>
+    private IReadOnlyList<string> _readFolders = [];
+
     /// <summary>Lit la fiche dans le coffre, puis ouvre la fenêtre ; une fiche introuvable se dit en bas de la fenêtre.</summary>
     private async Task AskAsync(SheetTarget target, SheetAction action, string title, string? message, string confirm, Action<VaultSheet> prepare)
     {
-        var listed = await Task.Run(_sheets.List).ConfigureAwait(true);
+        // Les dossiers se lisent avec les fiches, hors du fil de l'interface : ils se cherchent aussi sur le disque.
+        var (listed, folders) = await Task.Run(() => (_sheets.List(), action == SheetAction.Move ? _folders.Folders() : null)).ConfigureAwait(true);
+        _readFolders = folders is { Succeeded: true } read ? read.Value : [];
         if (!listed.Succeeded || listed.Value.FirstOrDefault(sheet => sheet.Id == target.Id) is not { } found)
         {
             Done = listed.Error ?? SheetActionsText.SheetMissing;
