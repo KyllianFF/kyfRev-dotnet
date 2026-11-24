@@ -182,6 +182,7 @@ public sealed partial class VaultSession : IDisposable
         // 1. Les fiches sur le disque, regroupées par identifiant.
         var found = new SortedDictionary<string, List<FoundSheet>>(StringComparer.Ordinal);
         _links.Clear();
+        ForgetSearchTexts();
         foreach (var path in ListMarkdown(SheetsFolder, report.UnreadableList))
         {
             var absolute = path.ToAbsolute(Root);
@@ -481,6 +482,7 @@ public sealed partial class VaultSession : IDisposable
 
     internal void ReplaceFile(string absolute, ReadOnlySpan<byte> content)
     {
+        ForgetSearchText(absolute);
         try
         {
             _storage.Replace(absolute, content);

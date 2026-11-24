@@ -8,6 +8,8 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 ## [Non publié]
 
 ### Modifié
+- Recherche : une fiche qui n'a pas changé ne se relit plus à chaque recherche ; son texte reste en mémoire le temps
+  de la session (jamais sur le disque). Mesuré sur 2 000 fiches : 170 ms au lieu de 750 ms par recherche.
 - Plus fluide, sans rien changer à l'écran : les squelettes de chargement cessent d'animer une fois cachés (Aujourd'hui et le
   Carnet ne redessinaient plus 60 fois par seconde pour rien) ; le clic sur un lien vers une fiche, « Déplacer… » et le
   clic droit dans le texte mis en forme n'attendent plus le coffre ou le correcteur en figeant l'interface.

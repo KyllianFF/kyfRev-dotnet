@@ -258,6 +258,46 @@ public abstract class VaultSearchTests(StorageKind storage)
         CollectionAssert.AreEqual(before, OnDisk(sample.Folder), "ni index, ni cache, ni journal");
     }
 
+    /// <summary>
+    /// Une fiche qui n'a pas changé ne se relit pas d'une recherche à l'autre : un fichier qu'un autre programme garde
+    /// fermé à tous est encore trouvé par le texte gardé. Celle qui change, sur le disque ou par le coffre, même sans
+    /// changer de taille, se relit.
+    /// </summary>
+    [TestMethod]
+    public void A_sheet_is_read_again_only_once_changed()
+    {
+        using var sample = new Sample(storage);
+        Assert.AreEqual(sample.Mitosis, sample.Sheets("replication").Single().Id);
+
+        using (sample.Folder.Hold("fiches/Bio/Mitose.md"))
+        {
+            Assert.AreEqual(sample.Mitosis, sample.Sheets("cellules filles").Single().Id, "trouvée sans relire le fichier");
+        }
+
+        sample.Folder.Append("fiches/Bio/Mitose.md", "Puis la cytokinèse.\n");
+        Assert.AreEqual(sample.Mitosis, sample.Sheets("cytokinese").Single().Id, "changée sur le disque");
+
+        // Même taille : seul le coffre sait qu'il l'a réécrite.
+        var read = sample.Vault.ReadSheet(sample.Mitosis);
+        sample.Vault.SaveSheet(sample.Mitosis, read.Text.Replace("cytokinèse", "télophase.", StringComparison.Ordinal), read.Fingerprint, 1, Now);
+        Assert.AreEqual(sample.Mitosis, sample.Sheets("telophase").Single().Id, "réécrite par le coffre");
+        Assert.IsEmpty(sample.Sheets("cytokinese"));
+    }
+
+    /// <summary>Au-delà de ce que la recherche peut garder, les fiches se relisent : un fichier fermé à tous n'est plus trouvé.</summary>
+    [TestMethod]
+    public void Beyond_its_budget_the_search_keeps_no_text()
+    {
+        using var sample = new Sample(storage);
+        sample.Vault.MaxSearchCharacters = 10;
+        Assert.AreEqual(sample.Mitosis, sample.Sheets("replication").Single().Id);
+
+        using (sample.Folder.Hold("fiches/Bio/Mitose.md"))
+        {
+            Assert.IsEmpty(sample.Sheets("cellules filles"));
+        }
+    }
+
     [TestMethod]
     public void The_port_reaches_the_session()
     {

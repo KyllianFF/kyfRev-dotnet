@@ -9,10 +9,18 @@ namespace KyfRev.Infrastructure.Vault;
 /// titre ou dans son texte : pour une fiche, titre et étiquettes, puis texte (l'en-tête n'en fait pas partie) ; pour une
 /// définition, le terme, puis l'explication, le passage et le commentaire ; pour un passage, le passage et le commentaire ;
 /// pour une citation, l'auteur, l'œuvre et les étiquettes, puis le texte et le contexte. Tout se lit de bout en bout par
-/// le stockage du coffre : aucun index, et rien de ce qui est cherché ou trouvé n'est écrit.
+/// le stockage du coffre : aucun index, et rien de ce qui est cherché ou trouvé n'est écrit. Le texte d'une fiche lue reste
+/// en mémoire, avec la date et la taille de son fichier, le temps de la session : une recherche suivante ne relit que les
+/// fiches qui ont changé.
 /// </remarks>
 public sealed partial class VaultSession
 {
+    /// <summary>Le texte gardé pour la recherche, en caractères, au plus : au-delà, les fiches se relisent à chaque fois.</summary>
+    internal long MaxSearchCharacters { get; set; } = 32L * 1024 * 1024;
+
+    private readonly Dictionary<string, SearchText> _searchTexts = new(StringComparer.OrdinalIgnoreCase);
+    private long _searchCharacters;
+
     /// <summary>
     /// Les fiches qui contiennent tous les mots de <paramref name="query"/>, chacune avec un extrait de son texte, par
     /// identifiant. Une fiche dont le fichier est introuvable n'est cherchée que dans son titre et ses étiquettes.
@@ -23,11 +31,12 @@ public sealed partial class VaultSession
     {
         var words = new SearchWords(query);
         var found = new List<SheetHit>();
+        var files = SheetFiles();
         foreach (var entry in _sheets.Values.TakeWhile(_ => !cancellationToken.IsCancellationRequested))
         {
             var sheet = entry.Sheet;
-            var text = entry.Presence == FilePresence.Missing ? string.Empty : TextToSearch(sheet.Path);
-            if (words.Match($"{sheet.Title} {string.Join(' ', sheet.Tags)}", text[FrontMatter.Split(text).BodyStart..]) is { } excerpt)
+            var body = entry.Presence == FilePresence.Missing ? string.Empty : BodyToSearch(sheet.Path, files);
+            if (words.Match($"{sheet.Title} {string.Join(' ', sheet.Tags)}", body) is { } excerpt)
             {
                 found.Add(new SheetHit(sheet.Id, sheet.Title, DisplayFolder(sheet.Path), sheet.Tracking.Archive is not null, excerpt));
             }
@@ -96,6 +105,77 @@ public sealed partial class VaultSession
                 .ThenBy(hit => RustText.ToLowercase(hit.Text), Utf8Order.Instance),
         ];
     }
+
+    /// <summary>La date et la taille de chaque fichier du dossier des fiches, relevées en un parcours ; rien s'il ne se parcourt pas.</summary>
+    private Dictionary<string, (DateTime Modified, long Length)> SheetFiles()
+    {
+        var files = new Dictionary<string, (DateTime Modified, long Length)>(StringComparer.OrdinalIgnoreCase);
+        try
+        {
+            foreach (var entry in _storage.AllEntries(SheetsFolder.ToAbsolute(Root)).Where(entry => !entry.IsDirectory))
+            {
+                files[entry.FullName] = (entry.LastWriteTimeUtc, entry.Length);
+            }
+        }
+        catch (Exception exception) when (IsIo(exception))
+        {
+            // Sans relevé, chaque fiche se relit : la recherche reste juste, seulement plus lente.
+            files.Clear();
+        }
+        return files;
+    }
+
+    /// <summary>Le texte d'une fiche, sans son en-tête : celui gardé si son fichier n'a changé ni de date ni de taille, sinon relu.</summary>
+    private string BodyToSearch(VaultPath path, Dictionary<string, (DateTime Modified, long Length)> files)
+    {
+        var absolute = path.ToAbsolute(Root);
+        (DateTime Modified, long Length)? file = files.TryGetValue(absolute, out var facts) ? facts : null;
+        if (file is { } known && _searchTexts.TryGetValue(absolute, out var kept) && kept.Modified == known.Modified && kept.Length == known.Length)
+        {
+            return kept.Body;
+        }
+        var text = TextToSearch(path);
+        var body = text[FrontMatter.Split(text).BodyStart..];
+        if (file is { } read)
+        {
+            // Date et taille relevées avant la lecture : un changement entre-temps fera relire la fiche.
+            KeepForSearch(absolute, new SearchText(read.Modified, read.Length, body));
+        }
+        return body;
+    }
+
+    private void KeepForSearch(string path, SearchText text)
+    {
+        var before = _searchTexts.TryGetValue(path, out var old) ? old.Body.Length : 0;
+        if (_searchCharacters - before + text.Body.Length > MaxSearchCharacters)
+        {
+            return;
+        }
+        _searchCharacters += text.Body.Length - before;
+        _searchTexts[path] = text;
+    }
+
+    /// <summary>
+    /// Oublie le texte gardé d'un fichier que le coffre réécrit : deux écritures de même taille dans le même instant de
+    /// l'horloge du disque auraient la même date.
+    /// </summary>
+    private void ForgetSearchText(string absolute)
+    {
+        if (_searchTexts.Remove(absolute, out var old))
+        {
+            _searchCharacters -= old.Body.Length;
+        }
+    }
+
+    /// <summary>Oublie les textes gardés pour la recherche : l'analyse a pu déplacer ou retirer des fiches.</summary>
+    private void ForgetSearchTexts()
+    {
+        _searchTexts.Clear();
+        _searchCharacters = 0;
+    }
+
+    /// <summary>Le texte d'une fiche gardé pour la recherche, lu sur le fichier de cette date et de cette taille.</summary>
+    private sealed record SearchText(DateTime Modified, long Length, string Body);
 
     /// <summary>
     /// Le texte d'un fichier du coffre ; vide s'il est hors du coffre, illisible ou mal encodé : il n'est alors pas cherché.
