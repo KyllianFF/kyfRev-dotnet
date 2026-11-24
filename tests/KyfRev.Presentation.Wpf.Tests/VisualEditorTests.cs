@@ -242,14 +242,19 @@ public sealed class VisualEditorTests
             UiThread.Until(() => scene.Script("[...document.querySelectorAll('.ProseMirror h2')].some(title => title.textContent.trim() === 'Conclusion')") == "true");
             scene.Editor.GoToHeading("Conclusion", 0);
             var first = double.Parse(scene.Script("document.body.scrollTop"), CultureInfo.InvariantCulture);
-            // Arrivée quand elle ne bouge plus.
+            // Arrivée quand elle ne bouge plus : la position relevée toutes les 100 ms, l'interface tournant entre deux relevés.
             var settled = double.NaN;
+            var sampled = System.Diagnostics.Stopwatch.StartNew();
             UiThread.Until(() =>
             {
+                if (!double.IsNaN(settled) && sampled.ElapsedMilliseconds < 100)
+                {
+                    return false;
+                }
+                sampled.Restart();
                 var now = double.Parse(scene.Script("document.body.scrollTop"), CultureInfo.InvariantCulture);
                 var still = now > first && now == settled;
                 settled = now;
-                System.Threading.Thread.Sleep(100);
                 return still;
             });
             var last = settled;
