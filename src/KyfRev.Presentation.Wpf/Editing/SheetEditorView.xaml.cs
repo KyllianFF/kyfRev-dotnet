@@ -99,18 +99,22 @@ internal sealed partial class SheetEditorView : UserControl
 
     private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
     {
+        var saving = Task.CompletedTask;
         if (_page is { } previous)
         {
             previous.PropertyChanged -= OnPageChanged;
             previous.ImageDialogAsked -= OnImageDialogAsked;
-            _ = previous.SaveAsync();
+            // Sa dernière frappe s'enregistre ; il quitte le champ du code avant que la fiche suivante ne l'occupe.
+            saving = previous.SaveAsync();
+            previous.Release();
         }
         _page = e.NewValue as SheetEditorViewModel;
-        // L'éditeur de la fiche d'avant s'en va ; une réserve préparée d'avance attend la sienne.
-        if (!_spareWaits)
+        // L'éditeur de la fiche d'avant s'en va, une fois sa dernière frappe enregistrée ; une réserve préparée d'avance
+        // attend la sienne.
+        if (!_spareWaits && Visual is { } leaving)
         {
-            Visual?.Dispose();
             VisualHost.Content = null;
+            _ = DisposeAfterAsync(saving, leaving);
         }
         if (_page is { } page)
         {
@@ -122,6 +126,19 @@ internal sealed partial class SheetEditorView : UserControl
             TellTextShownWithoutEngine(page);
             _ = page.RefreshPreviewAsync();
             Dispatcher.BeginInvoke(DispatcherPriority.Input, () => page.Surface?.Focus());
+        }
+    }
+
+    /// <summary>Le moteur d'une fiche quittée se ferme une fois son dernier texte demandé et enregistré.</summary>
+    private static async Task DisposeAfterAsync(Task saving, VisualEditor leaving)
+    {
+        try
+        {
+            await saving.ConfigureAwait(true);
+        }
+        finally
+        {
+            leaving.Dispose();
         }
     }
 
