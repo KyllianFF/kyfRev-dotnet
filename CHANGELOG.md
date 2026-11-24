@@ -13,6 +13,8 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   donnait un faux conflit. La dernière frappe du texte mis en forme s'enregistre avant que son moteur ne se ferme.
 - Sauvegarde du jour sur un disque plein (ou un quota de synchronisation atteint) : kyfRev s'arrêtait à chaque ouverture.
   L'échec est maintenant noté et le coffre s'ouvre ; une sauvegarde illisible se dit telle au lieu de tout arrêter.
+- Imprimer : quand deux recherches d'imprimantes se suivaient, la première finie disait la recherche terminée alors que
+  la seconde cherchait encore ; « Imprimer » restait sans imprimante un instant.
 
 ## [1.1.0-beta.5] - 2026-11-23
 
