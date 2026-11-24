@@ -147,8 +147,23 @@ public sealed class ExtensionEngine : IDisposable, IExtensionFaults
     /// <summary>Le temps que le moteur a pour démarrer : le tout premier démarrage sur une machine neuve est long.</summary>
     public TimeSpan StartPatience { get; set; } = TimeSpan.FromMinutes(2);
 
-    /// <summary>Ce qui a été refusé : aucune adresse hors de l'application n'est jamais servie.</summary>
+    /// <summary>
+    /// Ce qui a été refusé, les dernières adresses seulement : aucune adresse hors de l'application n'est jamais servie, et une
+    /// extension qui en demanderait sans fin ne fait pas grossir la mémoire.
+    /// </summary>
     internal List<string> Refused { get; } = [];
+
+    /// <summary>Le nombre d'adresses refusées gardées.</summary>
+    internal const int MaxRefused = 50;
+
+    internal void Refuse(string address)
+    {
+        if (Refused.Count >= MaxRefused)
+        {
+            Refused.RemoveAt(0);
+        }
+        Refused.Add(address);
+    }
 
     /// <summary>Demande l'écran de la vue d'une extension.</summary>
     /// <param name="id">L'extension.</param>
@@ -430,7 +445,7 @@ public sealed class ExtensionEngine : IDisposable, IExtensionFaults
         var allowed = address == page || (page is null && address.StartsWith(FramePrefix, StringComparison.Ordinal) && _frames.ContainsKey(address[FramePrefix.Length..]));
         if (!allowed)
         {
-            Refused.Add(address);
+            Refuse(address);
         }
         return allowed;
     }
@@ -457,7 +472,7 @@ public sealed class ExtensionEngine : IDisposable, IExtensionFaults
             }
             if (served is null)
             {
-                Refused.Add(e.Request.Uri);
+                Refuse(e.Request.Uri);
             }
             e.Response = served is { } content
                 ? web.Environment.CreateWebResourceResponse(new MemoryStream(content.Bytes), 200, "OK", Headers(content.Type, content.Policy))
@@ -503,7 +518,7 @@ public sealed class ExtensionEngine : IDisposable, IExtensionFaults
         // Seule la page parle à l'application ; un cadre qui trouverait le canal ne serait pas écouté.
         if (e.Source != StartAddress)
         {
-            Refused.Add(e.Source);
+            Refuse(e.Source);
             return;
         }
         using var message = JsonDocument.Parse(e.WebMessageAsJson, MessageOptions);
