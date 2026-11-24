@@ -624,7 +624,17 @@
     <StackPanel Grid.Row="2" Grid.ColumnSpan="2">
       <kyf:Notification x:Name="ErrorMessage" Severity="Critical" Message="{Binding Error}" IsOpen="{Binding HasError, Mode=OneWay}"
                         IsClosable="False" Margin="0,12,0,0" />
-      <Grid x:Name="HealthWarning" Style="{StaticResource WarningLine}" Visibility="{Binding HasHealthWarning, Converter={StaticResource Visible}}">
+      <!-- Le compte de la visite d'avant, en plus pâle, le temps de lire le disque : la ligne ne saute pas (rangée 28B). -->
+      <Grid x:Name="HealthWarning" Visibility="{Binding HasHealthWarning, Converter={StaticResource Visible}}">
+        <Grid.Style>
+          <Style TargetType="Grid" BasedOn="{StaticResource WarningLine}">
+            <Style.Triggers>
+              <DataTrigger Binding="{Binding IsHealthStale}" Value="True">
+                <Setter Property="Opacity" Value="0.55" />
+              </DataTrigger>
+            </Style.Triggers>
+          </Style>
+        </Grid.Style>
         <Grid.ColumnDefinitions>
           <ColumnDefinition Width="Auto" />
           <ColumnDefinition Width="Auto" />

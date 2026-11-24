@@ -41,6 +41,40 @@ public sealed class DashboardTests
         Assert.AreEqual(0, DashboardPageViewModel.StepValue("J"));
     }
 
+    /// <summary>
+    /// Rangée 28B : la liste n'attend pas le parcours du disque ; le compte des points à vérifier le suit. Le compte de la
+    /// visite d'avant tient la ligne, en plus pâle, le temps de le lire : elle ne saute pas.
+    /// </summary>
+    [TestMethod]
+    public async Task The_list_comes_before_the_disk_and_the_vault_warning_keeps_its_place()
+    {
+        var time = new FakeTime(new DateTimeOffset(2026, 10, 1, 8, 0, 0, TimeSpan.Zero));
+        using var test = new TestVaults(AppMode.Development, time);
+        var app = test.App;
+        Assert.IsNotNull(app.Vaults.Create(test.PathOf("Coffre")).Vault);
+        var mitosis = app.Sheets.Create("Biologie", "Mitose", null).Value;
+        Assert.IsTrue(app.Editing.Save(mitosis, "Voir [la méiose](Méiose.md).\n", app.Sheets.Open(mitosis).Value.Fingerprint, 1).Succeeded);
+        var page = new DashboardPageViewModel(app.Reminders, app.Sheets, new FakeOpener());
+
+        await page.RefreshCommand.ExecuteAsync(null);
+        Assert.AreEqual("1 point à vérifier dans le coffre (fichier manquant, lien à revoir…).", page.HealthWarning, "le lien cassé, trouvé sur le disque");
+        Assert.IsFalse(page.IsHealthStale);
+        Assert.AreEqual(0, app.Reminders.DashboardFirst().Value.HealthProblems, "la liste ne l'attend pas");
+        Assert.AreEqual(1, app.Reminders.DiskProblems().Value);
+
+        // La visite suivante : tant que le disque n'est pas relu, la ligne garde le compte d'avant, en plus pâle.
+        page.Show(app.Reminders.DashboardFirst().Value);
+        Assert.AreEqual("1 point à vérifier dans le coffre (fichier manquant, lien à revoir…).", page.HealthWarning);
+        Assert.IsTrue(page.IsHealthStale);
+        await page.RefreshCommand.ExecuteAsync(null);
+        Assert.IsFalse(page.IsHealthStale);
+
+        // Oublier le coffre oublie le compte : celui d'un autre coffre n'y paraîtrait pas.
+        page.Forget();
+        Assert.IsFalse(page.IsHealthStale);
+        Assert.IsNull(page.HealthWarning);
+    }
+
     [TestMethod]
     public async Task The_list_to_review_comes_first_and_upcoming_follows()
     {

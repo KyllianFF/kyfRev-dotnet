@@ -406,6 +406,13 @@ internal sealed class RunningApplication : IDisposable
     /// <summary>La ligne d'une fiche dans la vue « Fiches », une fois lue.</summary>
     public string WaitSheetRow(string title) => WaitListRow(title).Name;
 
+    /// <summary>
+    /// Attend qu'une fiche de la vue « Fiches » montre ce texte, et donne sa ligne : la liste se refait 150 ms après la
+    /// dernière lettre de la recherche, jusque-là elle reste celle d'avant.
+    /// </summary>
+    public string WaitSheetRow(string title, string showing) =>
+        Retry.WhileNull(() => FindListRow(title) is { } row && row.Name.Contains(showing, StringComparison.Ordinal) ? row : null, Patience, Interval, throwOnTimeout: true, timeoutMessage: $"« {title} » ne montre pas « {showing} ».").Result!.Name;
+
     /// <summary>Attend qu'une fiche quitte la liste de la vue « Fiches ».</summary>
     public void WaitWithoutSheetRow(string title) =>
         Retry.WhileTrue(() => FindListRow(title) is not null, Patience, Interval, throwOnTimeout: true, timeoutMessage: $"« {title} » est restée dans la liste.");

@@ -68,6 +68,22 @@ public abstract class DashboardTests(StorageKind storage)
         Assert.AreEqual("Cytokinèse.md", vault.BrokenLinks().Single().Target);
     }
 
+    [TestMethod]
+    public void The_dashboard_can_leave_the_disk_problems_for_later()
+    {
+        using var folder = TemporaryVault.Empty(storage);
+        var now = new Moment(new DateOnly(2026, 9, 1), new DateTimeOffset(2026, 9, 1, 8, 0, 0, TimeSpan.Zero));
+        using var vault = folder.Initialize(now);
+        vault.CreateSheet("Biologie", "Mitose", "Voir [la méiose](Méiose.md).\n", now);
+
+        // Le lien cassé se cherche sur le disque : la liste d'Aujourd'hui ne l'attend pas, il se compte ensuite.
+        var full = vault.Dashboard(now.Day);
+        var first = vault.Dashboard(now.Day, countsDisk: false);
+        Assert.AreEqual(1, vault.DiskProblems());
+        Assert.AreEqual(full.HealthProblems, first.HealthProblems + vault.DiskProblems(), "ensemble, le même compte");
+        Assert.AreEqual(full.Overdue.Length + full.Today.Length, first.Overdue.Length + first.Today.Length);
+    }
+
 }
 
 /// <summary>Sur le disque tel quel ; la mesure sur 2 000 fiches et les liens de dossier n'y sont faits qu'une fois.</summary>

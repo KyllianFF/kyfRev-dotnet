@@ -17,7 +17,14 @@ public sealed partial class VaultSession
 
     /// <summary>Tableau de bord du jour <paramref name="day"/>.</summary>
     /// <exception cref="VaultException">Le journal des tirages est illisible.</exception>
-    public Dashboard Dashboard(DateOnly day)
+    public Dashboard Dashboard(DateOnly day) => Dashboard(day, countsDisk: true);
+
+    /// <summary>
+    /// Tableau de bord du jour <paramref name="day"/> ; sans <paramref name="countsDisk"/>, les problèmes de santé ne
+    /// comptent pas ceux qu'il faut chercher sur le disque (<see cref="DiskProblems"/>), le plus long à lire.
+    /// </summary>
+    /// <exception cref="VaultException">Le journal des tirages est illisible.</exception>
+    public Dashboard Dashboard(DateOnly day, bool countsDisk)
     {
         var horizon = day.AddDays(Application.Model.Dashboard.UpcomingDays);
         var workloadEnd = day.AddDays(Application.Model.Dashboard.WorkloadDays);
@@ -153,7 +160,7 @@ public sealed partial class VaultSession
             next,
             active,
             archived,
-            Health.Problems + AnnotationsToCheck + BrokenLinks().Count + ConflictCopyPaths().Count,
+            Health.Problems + AnnotationsToCheck + (countsDisk ? DiskProblems() : 0),
             ReadDraws().Draws is { Length: > 0 } draws ? (int)draws[^1].UnservedPriority : 0,
             Settings.Quotes.Active,
             SchemasActive)
@@ -161,6 +168,12 @@ public sealed partial class VaultSession
             Suspended = [.. suspended.OrderBy(item => item.Kind == ItemKind.Passage).ThenBy(item => item, TitleOrder.Instance)],
         };
     }
+
+    /// <summary>
+    /// Les problèmes de santé qu'il faut chercher en parcourant tout le dossier du coffre : liens cassés et copies en
+    /// conflit laissées par un service de synchronisation.
+    /// </summary>
+    public int DiskProblems() => BrokenLinks().Count + ConflictCopyPaths().Count;
 
     /// <summary>
     /// Révisions validées chacun des sept derniers jours, sur les fiches (archivées comprises) et

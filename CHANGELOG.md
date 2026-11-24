@@ -11,6 +11,12 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 - Plus fluide, sans rien changer à l'écran : les squelettes de chargement cessent d'animer une fois cachés (Aujourd'hui et le
   Carnet ne redessinaient plus 60 fois par seconde pour rien) ; le clic sur un lien vers une fiche, « Déplacer… » et le
   clic droit dans le texte mis en forme n'attendent plus le coffre ou le correcteur en figeant l'interface.
+- Carnet et Archives : la liste se refait une fois, 150 ms après la dernière lettre tapée dans la recherche, au lieu de
+  se refaire à chaque lettre ; la frappe n'accroche plus sur un grand coffre.
+- Aujourd'hui : la liste paraît sans attendre le parcours du dossier du coffre ; le compte des points à vérifier suit.
+  La ligne d'avertissement garde sa place, en plus pâle avec le compte de la visite d'avant, le temps de le lire.
+- Réviser : une longue fiche s'affiche par morceaux, comme en lecture, chacun déjà masqué ; l'écran ne se fige plus
+  à l'ouverture (mesuré : 335 ms au pire au lieu de 953 ms sur 120 parties).
 
 ### Corrigé
 - Écrire en Markdown : l'éditeur de la fiche d'avant suivait encore le champ, partagé d'une fiche à l'autre. Une autre

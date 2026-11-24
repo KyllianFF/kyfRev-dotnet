@@ -726,11 +726,11 @@ public sealed class Scenarios
             Assert.Contains("1 j de retard", running.WaitSheetRow(Title));
             running.WaitSheetRow("Mitose");
 
-            // « 1789 » n'est que dans le texte de la Révolution. Pendant la pause de la frappe, seuls les titres filtrent la
+            // « 1789 » n'est que dans le texte de la Révolution. La liste se refait 150 ms après la frappe ; seuls les titres filtrent d'abord la
             // liste ; sa ligne ne revient qu'avec la réponse de la recherche, et son extrait. La liste ne bouge plus ensuite :
             // la ligne s'ouvre sans être refaite sous le clic.
             running.Search("1789");
-            Assert.Contains("1789", running.WaitSheetRow(Title), "La fiche est trouvée par son texte, avec l'extrait.");
+            Assert.Contains("1789", running.WaitSheetRow(Title, "1789"), "La fiche est trouvée par son texte, avec l'extrait.");
             running.WaitWithoutSheetRow("Mitose");
             running.OpenSheetRow(Title);
             running.Back();
