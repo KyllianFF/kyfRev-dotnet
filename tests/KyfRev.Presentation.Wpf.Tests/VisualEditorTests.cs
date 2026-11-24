@@ -222,6 +222,23 @@ public sealed class VisualEditorTests
         }
     }
 
+    /// <summary>
+    /// Un script posé dans le dossier des fiches (venu d'une synchronisation, d'une archive importée) ne s'exécute jamais
+    /// dans l'éditeur, même demandé par la page : les fichiers du coffre ne sont servis que comme images ou comme données.
+    /// </summary>
+    [EngineTest]
+    public void A_script_left_in_the_vault_never_runs_in_the_editor()
+    {
+        using var scene = new Scene();
+        File.WriteAllText(Path.Combine(scene.Vault.Root, "fiches", "Biologie", "piege.js"), "window.fuite = 'oui';");
+
+        scene.Script("(() => { const s = document.createElement('script'); s.onload = () => window.charge = 'chargé'; s.onerror = () => window.charge = 'refusé'; s.src = '/coffre/fiches/Biologie/piege.js'; document.head.append(s); })()");
+        UiThread.Until(() => scene.Script("window.charge ?? null") != "null");
+
+        Assert.AreEqual("\"refusé\"", scene.Script("window.charge"));
+        Assert.AreEqual("null", scene.Script("window.fuite ?? null"));
+    }
+
     [EngineTest]
     public void A_click_in_the_outline_glides_to_the_heading_while_writing()
     {

@@ -1329,6 +1329,9 @@ internal sealed class ReadingVault : IDisposable
 
     public KyfRevApplication App => _vaults.App;
 
+    /// <summary>Le dossier du coffre.</summary>
+    public string Root => _vaults.PathOf("Coffre");
+
     public string SheetId { get; }
 
     public RecordingLinks Links { get; } = new();
