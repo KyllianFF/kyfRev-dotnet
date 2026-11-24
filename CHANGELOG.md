@@ -11,6 +11,8 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 - Écrire en Markdown : l'éditeur de la fiche d'avant suivait encore le champ, partagé d'une fiche à l'autre. Une autre
   fiche ouverte dans la même vue et écrite pouvait remplacer le texte de la première ; revenir écrire la même fiche
   donnait un faux conflit. La dernière frappe du texte mis en forme s'enregistre avant que son moteur ne se ferme.
+- Sauvegarde du jour sur un disque plein (ou un quota de synchronisation atteint) : kyfRev s'arrêtait à chaque ouverture.
+  L'échec est maintenant noté et le coffre s'ouvre ; une sauvegarde illisible se dit telle au lieu de tout arrêter.
 
 ## [1.1.0-beta.5] - 2026-11-23
 

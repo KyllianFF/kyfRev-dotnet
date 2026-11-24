@@ -275,7 +275,8 @@ public static class VaultBackups
             }
             return buffer.Length == entry.Length ? buffer.ToArray() : throw VaultException.InvalidBackup(backup, $"taille incohérente pour « {name} »");
         }
-        catch (InvalidDataException exception)
+        // Une archive abîmée, ou illisible (un fichier « en ligne seulement » que le service n'a pas pu rapatrier).
+        catch (Exception exception) when (exception is InvalidDataException || VaultSession.IsIo(exception))
         {
             throw VaultException.InvalidBackup(backup, exception.Message);
         }
