@@ -163,7 +163,7 @@ public sealed class MachinePreferencesFile : IMachinePreferencesStore
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(_file)!);
-            File.WriteAllBytes(_file, buffer.WrittenSpan.ToArray());
+            LocalFile.Replace(_file, buffer.WrittenSpan);
             return true;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)

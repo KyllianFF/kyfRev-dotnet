@@ -176,7 +176,7 @@ public sealed partial class UpdatePackages(IFileDownloader downloader, IUpdateIn
         };
         try
         {
-            File.WriteAllText(Path.Combine(folder, PendingFile), root.ToJsonString() + "\n");
+            LocalFile.Replace(Path.Combine(folder, PendingFile), System.Text.Encoding.UTF8.GetBytes(root.ToJsonString() + "\n"));
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
         {

@@ -486,7 +486,7 @@ public sealed class ExtensionLibrary
     private static void WriteState(string folder, ExtensionState state)
     {
         Directory.CreateDirectory(folder);
-        File.WriteAllBytes(Path.Combine(folder, StateFile), JsonSerializer.SerializeToUtf8Bytes(state, StateOptions));
+        LocalFile.Replace(Path.Combine(folder, StateFile), JsonSerializer.SerializeToUtf8Bytes(state, StateOptions));
     }
 
     private static Dictionary<string, string>? SourcesWith(Dictionary<string, string>? sources, string id, string? source)
