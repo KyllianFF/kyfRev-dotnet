@@ -224,6 +224,21 @@ internal sealed class DocumentBuilder
     /// <summary>Ajoute tout de suite ce qui reste du contenu : il faut aller quelque part dans la suite.</summary>
     public void Complete() => AppendContent(int.MaxValue);
 
+    /// <summary>Tout le texte est construit.</summary>
+    public bool IsComplete => !HasPendingContent;
+
+    /// <summary>Le texte a du gras, construit ou non : en révision, ses trous peuvent se poser au fil du texte.</summary>
+    public bool HasBold => _hasBold ??= Has(_reading.Root, "strong");
+
+    /// <summary>Le texte a des tableaux, construits ou non : leurs cases cachées en révision ne se savent qu'une fois construits.</summary>
+    public bool HasTables => _hasTables ??= Has(_reading.Root, "table");
+
+    private bool? _hasBold;
+    private bool? _hasTables;
+
+    private static bool Has(RenderElement element, string tag) =>
+        element.Tag == tag || element.Children.OfType<RenderElement>().Any(child => Has(child, tag));
+
     /// <summary>Ce document n'est plus montré : plus rien ne s'y ajoute.</summary>
     public void Cancel() => _isCancelled = true;
 

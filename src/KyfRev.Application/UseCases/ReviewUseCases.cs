@@ -144,6 +144,23 @@ public sealed class ReminderUseCases(VaultHost host, TimeProvider time)
         });
     }
 
+    /// <summary>
+    /// Le tableau de bord du jour, vite : sans les problèmes de santé qu'il faut chercher sur le disque, que
+    /// <see cref="DiskProblems"/> compte ensuite. Aujourd'hui montre sa liste sans les attendre (rangée 28B).
+    /// </summary>
+    public Outcome<Dashboard> DashboardFirst()
+    {
+        var now = Present.Of(time).Now;
+        return host.Use(vault =>
+        {
+            vault.PrepareDay(now);
+            return vault.Dashboard(now.Day, countsDisk: false);
+        });
+    }
+
+    /// <summary>Les problèmes de santé qu'il faut chercher sur le disque : liens cassés, copies en conflit.</summary>
+    public Outcome<int> DiskProblems() => host.Use(vault => vault.DiskProblems());
+
     /// <summary>Statistiques de régularité : rien n'est écrit, tout vient de l'historique du suivi.</summary>
     [ZeroXCommand("statistiques")]
     public Outcome<Statistics> Statistics()

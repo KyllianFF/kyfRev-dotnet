@@ -251,6 +251,12 @@ public sealed class VaultAdapter(VaultSession inner, IDisposable? owned = null) 
     public Dashboard Dashboard(DateOnly day) => inner.Dashboard(day);
 
     /// <inheritdoc/>
+    public Dashboard Dashboard(DateOnly day, bool countsDisk) => inner.Dashboard(day, countsDisk);
+
+    /// <inheritdoc/>
+    public int DiskProblems() => inner.DiskProblems();
+
+    /// <inheritdoc/>
     public Statistics Statistics(DateOnly day) => inner.Statistics(day);
 
     /// <inheritdoc/>

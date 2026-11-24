@@ -7,6 +7,14 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ## [Non publié]
 
+### Modifié
+- Carnet et Archives : la liste se refait une fois, 150 ms après la dernière lettre tapée dans la recherche, au lieu de
+  se refaire à chaque lettre ; la frappe n'accroche plus sur un grand coffre.
+- Aujourd'hui : la liste paraît sans attendre le parcours du dossier du coffre ; le compte des points à vérifier suit.
+  La ligne d'avertissement garde sa place, en plus pâle avec le compte de la visite d'avant, le temps de le lire.
+- Réviser : une longue fiche s'affiche par morceaux, comme en lecture, chacun déjà masqué ; l'écran ne se fige plus
+  à l'ouverture (mesuré : 335 ms au pire au lieu de 953 ms sur 120 parties).
+
 ## [1.1.0-beta.5] - 2026-11-23
 
 ### Corrigé

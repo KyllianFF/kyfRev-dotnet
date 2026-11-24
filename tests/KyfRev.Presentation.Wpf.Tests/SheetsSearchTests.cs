@@ -275,7 +275,10 @@ public sealed class SheetsSearchTests
             var excerpt = Descendants(window).OfType<ExcerptText>().Single(text => text.IsVisible);
             var view = Descendants(window).OfType<SheetsPage>().Single();
             Assert.IsLessThanOrEqualTo(view.ActualWidth, excerpt.ActualWidth, "l'extrait va à la ligne plutôt que de déborder");
-            Assert.AreEqual(SheetsText.SearchName, AutomationProperties.GetName(Descendants(window).OfType<TextBox>().First(box => box.Name == "SearchBox")));
+            var search = Descendants(window).OfType<TextBox>().First(box => box.Name == "SearchBox");
+            Assert.AreEqual(SheetsText.SearchName, AutomationProperties.GetName(search));
+            // Rangée 28A : la liste se refait une fois, 150 ms après la dernière lettre, et non à chaque lettre.
+            Assert.AreEqual(150, System.Windows.Data.BindingOperations.GetBinding(search, TextBox.TextProperty)!.Delay);
         }
         finally
         {

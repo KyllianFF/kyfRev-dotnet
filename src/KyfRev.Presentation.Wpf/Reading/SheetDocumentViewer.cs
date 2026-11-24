@@ -645,7 +645,14 @@ internal sealed partial class SheetDocumentViewer : FlowDocumentScrollViewer
         }
     }
 
-    /// <summary>Les trous dépendent de tout le texte : il se termine d'abord.</summary>
+    /// <summary>
+    /// Les trous de la révision, posés au fil du texte comme la lecture l'affiche (rangée 28C) : chaque morceau arrive
+    /// déjà masqué, car il est ajouté et masqué dans le même passage. Ce que les morceaux ne disent pas d'avance, c'est
+    /// s'il y aura des trous ou s'il faudra se rappeler la fiche partie par partie : du gras ou un passage, et ce sont des
+    /// trous ; ni l'un ni l'autre ni tableau, et ce sont des parties, la dernière couvrant tout ce qui n'est pas encore
+    /// là. Des tableaux sans gras ni passage : leurs cases cachées ne se savent qu'une fois construits, le texte se
+    /// termine d'abord, comme avant.
+    /// </summary>
     private void ComputeHoles()
     {
         if (_built is not { } built)
@@ -658,13 +665,34 @@ internal sealed partial class SheetDocumentViewer : FlowDocumentScrollViewer
             ShowMasks();
             return;
         }
-        built.Complete();
+        _computingHoles = true;
+        try
+        {
+            ComputeHoles(built, holes);
+        }
+        finally
+        {
+            _computingHoles = false;
+        }
+    }
+
+    /// <summary>Les trous se calculent : la suite du texte qui arrive pendant ce temps ne les recalcule pas une seconde fois.</summary>
+    private bool _computingHoles;
+
+    private void ComputeHoles(DocumentBuilder built, TextHoles holes)
+    {
+        var marked = (Highlights ?? []).Any(highlight => !highlight.IsCandidate) || built.HasBold;
+        if (!built.IsComplete && !marked && built.HasTables)
+        {
+            built.Complete();
+        }
         // Les masques des images sont des trous comme les autres, à la place de leur image dans le texte.
         var masks = built.MaskedImages.SelectMany(image => Enumerable.Range(0, image.Overlay.Masks.Length)
             .Select(mask => new TextHole(ImageMaskOverlay.KeyOf(image.Overlay.ImageIndex, mask), image.Position, image.Position, null)));
-        var marked = TextHoles.Compute(Highlights ?? [], built.BoldRanges, built.ReviewCells).Concat(masks).OrderBy(hole => hole.Start);
+        var found = TextHoles.Compute(Highlights ?? [], built.BoldRanges, built.ReviewCells).Concat(masks).OrderBy(hole => hole.Start).ToList();
         // Sans gras ni passage, la fiche se relirait simplement : ses parties se rappellent alors une à une, sous leur titre.
-        holes.Set(marked.Any() ? [.. marked] : TextHoles.Sections(built.HeadingRanges, built.TextLength));
+        // Encore incomplète mais promise à des trous, elle n'a que ceux de ses morceaux arrivés.
+        holes.Set(found.Count > 0 || (marked && !built.IsComplete) ? [.. found] : TextHoles.Sections(built.HeadingRanges, built.TextLength));
     }
 
     /// <summary>Pose sur chaque image les masques encore cachés ; hors révision, aucun.</summary>
@@ -867,6 +895,11 @@ internal sealed partial class SheetDocumentViewer : FlowDocumentScrollViewer
     /// </summary>
     private void OnDocumentGrew()
     {
+        // En révision, le morceau arrivé se masque avant de se montrer : même passage, aucune image entre les deux.
+        if (!_computingHoles && Holes is { IsActive: true })
+        {
+            ComputeHoles();
+        }
         var blocks = FitBlocks();
         if (FitTables() || blocks)
         {

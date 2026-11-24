@@ -210,6 +210,15 @@ public interface IReviewStore
     /// <summary>Tableau de bord du jour donné.</summary>
     Dashboard Dashboard(DateOnly day);
 
+    /// <summary>
+    /// Tableau de bord du jour donné ; sans <paramref name="countsDisk"/>, ses problèmes de santé laissent de côté ceux
+    /// qu'il faut chercher sur le disque (<see cref="DiskProblems"/>).
+    /// </summary>
+    Dashboard Dashboard(DateOnly day, bool countsDisk);
+
+    /// <summary>Les problèmes de santé qu'il faut chercher sur le disque : liens cassés, copies en conflit.</summary>
+    int DiskProblems();
+
     /// <summary>Statistiques de régularité au jour donné.</summary>
     Statistics Statistics(DateOnly day);
 }

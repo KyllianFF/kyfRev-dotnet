@@ -505,6 +505,22 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
     /// <summary>Un avertissement de santé est affiché.</summary>
     public bool HasHealthWarning => HealthWarning is not null;
 
+    /// <summary>
+    /// L'avertissement de santé dit encore le compte de la visite d'avant : celui du disque se lit après la liste (rangée
+    /// 28B). La ligne garde ainsi sa place, en plus pâle, le temps de le connaître.
+    /// </summary>
+    [ObservableProperty]
+    public partial bool IsHealthStale { get; private set; }
+
+    /// <summary>Le compte complet des problèmes de santé à la dernière lecture ; rien avant la première.</summary>
+    private int? _lastHealth;
+
+    /// <summary>Le compte complet du tableau de bord montré ; rien tant que le disque n'a pas été lu.</summary>
+    private int? _freshHealth;
+
+    /// <summary>Le tableau de bord montré attend le compte du disque.</summary>
+    private bool _countsDiskLater;
+
     /// <summary>Fiches qui attendent un rappel depuis trop longtemps ; rien s'il n'y en a pas.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasPriorityWarning))]
@@ -612,6 +628,10 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
         Cards = [];
         Footer = string.Empty;
         HealthWarning = null;
+        IsHealthStale = false;
+        _lastHealth = null;
+        _freshHealth = null;
+        _countsDiskLater = false;
         PriorityWarning = null;
         Error = null;
         IsLoading = false;
@@ -630,14 +650,17 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
         IsLoading = _dashboard is null;
         try
         {
-            // Le calcul lit tout le coffre : hors du fil de l'interface.
-            var (outcome, cards) = await Task.Run(() => (_reminders.Dashboard(), ReadCards())).ConfigureAwait(true);
+            // Le calcul lit tout le coffre : hors du fil de l'interface. La liste d'abord : les problèmes qu'il faut chercher
+            // sur le disque, les plus longs à lire, suivent.
+            var (outcome, cards) = await Task.Run(() => (_reminders.DashboardFirst(), ReadCards())).ConfigureAwait(true);
             if (generation != _generation)
             {
                 return;
             }
             if (outcome.Succeeded)
             {
+                _countsDiskLater = true;
+                _freshHealth = null;
                 Show(outcome.Value, cards);
             }
             else
@@ -650,6 +673,21 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
             if (generation == _generation)
             {
                 IsLoading = false;
+            }
+        }
+        if (generation == _generation && _countsDiskLater && _dashboard is { } shown)
+        {
+            var disk = await Task.Run(_reminders.DiskProblems).ConfigureAwait(true);
+            if (generation != _generation)
+            {
+                return;
+            }
+            if (ReferenceEquals(_dashboard, shown))
+            {
+                // Illisible, le disque ne compte pour rien : la ligne dit au moins ce qui est connu.
+                _freshHealth = shown.HealthProblems + (disk.Succeeded ? disk.Value : 0);
+                _lastHealth = _freshHealth;
+                ShowHealth(shown);
             }
         }
         if (LookForNews is { } lookForNews && await lookForNews().ConfigureAwait(true))
@@ -787,6 +825,11 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
         var resumable = _opener.ResumableItems();
         CanResume = resumable is > 0;
         ResumeLabel = resumable is { } remaining ? Dates.Plural(remaining, SessionText.ResumeOneOf, SessionText.ResumeManyOf) : string.Empty;
+        // Un autre tableau de bord : le compte du disque de l'ancien ne vaut plus pour lui.
+        if (!ReferenceEquals(dashboard, _dashboard))
+        {
+            _freshHealth = null;
+        }
         BuildRows(dashboard);
         // Retenu, et annoncé, une fois les lignes prêtes.
         _dashboard = dashboard;
@@ -1055,7 +1098,7 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
         }
         Chips = chips;
         Subtitle = $"{Dates.Capitalized(Dates.Long(dashboard.Day))} · {(total == 0 ? DashboardText.NothingToReview : Dates.Plural(total, DashboardText.ItemsToReviewOneOf, DashboardText.ItemsToReviewManyOf))}";
-        HealthWarning = dashboard.HealthProblems > 0 ? Dates.Plural(dashboard.HealthProblems, DashboardText.HealthWarningOneOf, DashboardText.HealthWarningManyOf) : null;
+        ShowHealth(dashboard);
         PriorityWarning = dashboard.UnservedPriorities > 0 ? Dates.Plural(dashboard.UnservedPriorities, DashboardText.PriorityWarningOneOf, DashboardText.PriorityWarningManyOf) : null;
         var footer = $"{Dates.Plural(dashboard.ActiveSheets, DashboardText.SheetsActiveOneOf, DashboardText.SheetsActiveManyOf)} · {Dates.Plural(dashboard.ArchivedSheets, DashboardText.SheetsArchivedOneOf, DashboardText.SheetsArchivedManyOf)}";
         Footer = dashboard.NextDueDate is { } nextDue && total > 0 ? $"{footer} · {DashboardText.NextDueOf(Dates.Short(nextDue))}" : footer;
@@ -1097,6 +1140,18 @@ public sealed partial class DashboardPageViewModel : ObservableObject, INavigati
         return _toStart.Count > 0 ? $"{part} · {DashboardText.NextOf(_toStart[0].Title)}"
             : done == day ? $"{part} · {DashboardText.DayDone}"
             : part;
+    }
+
+    /// <summary>
+    /// L'avertissement de santé : le compte complet quand il est connu ; en attendant celui du disque, le plus grand du
+    /// compte rapide et de celui de la visite d'avant, en plus pâle. Aucun point connu : pas de ligne.
+    /// </summary>
+    private void ShowHealth(Dashboard dashboard)
+    {
+        var waiting = _countsDiskLater && _freshHealth is null;
+        var count = _freshHealth ?? (waiting ? Math.Max(dashboard.HealthProblems, _lastHealth ?? 0) : dashboard.HealthProblems);
+        HealthWarning = count > 0 ? Dates.Plural(count, DashboardText.HealthWarningOneOf, DashboardText.HealthWarningManyOf) : null;
+        IsHealthStale = waiting && count > 0;
     }
 
     /// <summary>L'en-tête d'un groupe non vide (ou vide, s'il se montre <paramref name="always"/>), et ses lignes s'il est déplié.</summary>
