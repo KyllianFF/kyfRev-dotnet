@@ -242,9 +242,24 @@ public sealed class VisualEditorTests
             UiThread.Until(() => scene.Script("[...document.querySelectorAll('.ProseMirror h2')].some(title => title.textContent.trim() === 'Conclusion')") == "true");
             scene.Editor.GoToHeading("Conclusion", 0);
             var first = double.Parse(scene.Script("document.body.scrollTop"), CultureInfo.InvariantCulture);
-            const string headingTop = "Math.round([...document.querySelectorAll('.ProseMirror h2')].find(title => title.textContent.trim() === 'Conclusion').getBoundingClientRect().top)";
-            UiThread.Until(() => double.TryParse(scene.Script(headingTop), NumberStyles.Float, CultureInfo.InvariantCulture, out var top) && Math.Abs(top) <= 2);
-            var last = double.Parse(scene.Script("document.body.scrollTop"), CultureInfo.InvariantCulture);
+            // Arrivée quand elle ne bouge plus : la position relevée toutes les 100 ms, l'interface tournant entre deux relevés.
+            var settled = double.NaN;
+            var sampled = System.Diagnostics.Stopwatch.StartNew();
+            UiThread.Until(() =>
+            {
+                if (!double.IsNaN(settled) && sampled.ElapsedMilliseconds < 100)
+                {
+                    return false;
+                }
+                sampled.Restart();
+                var now = double.Parse(scene.Script("document.body.scrollTop"), CultureInfo.InvariantCulture);
+                var still = now > first && now == settled;
+                settled = now;
+                return still;
+            });
+            var last = settled;
+            // Ni la position exacte du titre (elle dépend de la fenêtre et de la mise en page de l'éditeur), ni l'arrivée
+            // instantanée : la fiche a glissé sur plusieurs images.
             Assert.IsGreaterThan(first, last, "partie d'où elle était, elle est arrivée plus bas");
             Assert.IsLessThan(last, first + 1, "au premier instant, elle n'était pas encore arrivée");
         }

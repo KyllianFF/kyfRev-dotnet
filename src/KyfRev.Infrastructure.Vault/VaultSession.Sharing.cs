@@ -87,8 +87,15 @@ public sealed partial class VaultSession
         var markdown = MarkdownToShare(id);
         var targets = new SortedDictionary<string, string>(Utf8Order.Instance);
         var prefix = folder + "/";
+        var sheets = VaultPath.Create(VaultLayout.Sheets);
         var rewritten = MarkdownLinks.Rewrite(markdown, folder, folder, target =>
         {
+            // Seuls les fichiers des fiches partent avec elle : un lien vers le suivi, les réglages ou les données d'une
+            // extension (une définition de lien invisible à la lecture suffit) n'emporte rien, et reste tel quel.
+            if (!VaultPath.TryParse(target, out var path, out _) || !path.IsWithin(sheets))
+            {
+                return null;
+            }
             if (target.StartsWith(prefix, StringComparison.Ordinal))
             {
                 targets[target] = target[prefix.Length..];
