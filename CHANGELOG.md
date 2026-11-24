@@ -28,6 +28,8 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   la seconde cherchait encore ; « Imprimer » restait sans imprimante un instant.
 
 ### Sécurité
+- Importer un dossier de notes : une pièce jointe atteinte par une jonction ou un lien symbolique du dossier n'est plus
+  copiée dans le coffre ; elle pouvait venir de n'importe où sur le poste.
 - Partager « Markdown avec images » n'emporte plus que des fichiers des fiches. Un lien, même invisible à la lecture, vers
   le suivi, les réglages du coffre ou les données d'une extension mettait ce fichier dans l'archive, déchiffré.
 

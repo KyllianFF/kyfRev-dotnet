@@ -40,6 +40,32 @@ public abstract class VaultImportTests(StorageKind storage)
         Assert.Contains("plus de 5 000 notes", Error(() => vault.ImportFolder(source.Root, "X", track: false, Now)).Message);
     }
 
+    /// <summary>Une pièce jointe atteinte par une jonction de la source n'est pas importée : elle pourrait venir de n'importe où.</summary>
+    [TestMethod]
+    public void An_attachment_behind_a_folder_link_is_not_taken()
+    {
+        using var folder = TemporaryVault.Empty(storage);
+        using var source = TemporaryVault.Empty();
+        using var outside = TemporaryVault.Empty();
+        outside.Write("Dehors.png", "secret");
+        source.Write("Ici.png", "image");
+        source.Write("Note.md", "![](Raccourci/Dehors.png) ![[Raccourci/Dehors.png]] ![](Ici.png)" + Environment.NewLine);
+        using var vault = folder.Initialize(Now);
+        var link = source.PathOf("Raccourci");
+        FileLinks.CreateDirectoryLink(link, outside.Root);
+        try
+        {
+            var report = vault.ImportFolder(source.Root, "Lot", track: false, Now);
+
+            Assert.AreEqual(1, report.Resources, "seule la pièce de la source");
+            StringAssert.Contains(folder.ReadText("fiches/Lot/Note.md"), "![](Raccourci/Dehors.png) ![[Raccourci/Dehors.png]]", StringComparison.Ordinal);
+        }
+        finally
+        {
+            Directory.Delete(link);
+        }
+    }
+
     [TestMethod]
     public void Names_are_made_valid_and_never_collide()
     {
