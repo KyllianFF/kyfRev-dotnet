@@ -282,6 +282,67 @@ public abstract class VaultSessionTests(StorageKind storage)
 [TestClass]
 public sealed class VaultSessionOnDiskTests() : VaultSessionTests(StorageKind.Disk)
 {
+    /// <summary>
+    /// Un suivi gardé ouvert par un autre programme (un antivirus, un client de synchronisation), lisible mais pas remplaçable : le coffre s'ouvre quand
+    /// même, la fiche modifiée ailleurs est à jour en mémoire, et le suivi s'écrit à l'enregistrement suivant.
+    /// </summary>
+    [TestMethod]
+    public void A_held_tracking_file_does_not_prevent_opening_the_vault()
+    {
+        using var folder = TemporaryVault.Empty();
+        string id;
+        using (var vault = folder.Initialize(Now))
+        {
+            id = vault.CreateSheet(null, "Fiche", "Corps", Now);
+        }
+        folder.Append("fiches/Fiche.md", "Ajouté ailleurs.\n");
+
+        string fingerprint;
+        using (folder.Hold($"{VaultLayout.SheetTracking}/{id}.json", FileShare.Read))
+        {
+            using var reopened = folder.Open(Now);
+            var read = reopened.ReadSheet(id);
+            Assert.AreEqual(read.Fingerprint, reopened.Sheet(id).Sheet.Fingerprint, "le suivi en mémoire suit la fiche");
+            Assert.Contains(id, reopened.Health.ModifiedOutside);
+            fingerprint = reopened.SaveSheet(id, read.Text + "Puis ici.\n", read.Fingerprint, 1, Now);
+        }
+
+        // Libéré, le suivi se rattrape à l'ouverture suivante, puis n'est plus en retard.
+        using (var again = folder.Open(Now))
+        {
+            Assert.AreEqual(fingerprint, again.Sheet(id).Sheet.Fingerprint);
+        }
+        using var caughtUp = folder.Open(Now);
+        Assert.IsEmpty(caughtUp.Health.ModifiedOutside, "le suivi s'est écrit");
+    }
+
+    /// <summary>
+    /// La fiche est écrite mais son suivi ne l'est pas : l'enregistrement réussit, et le suivant ne se croit pas en conflit
+    /// avec son propre texte.
+    /// </summary>
+    [TestMethod]
+    public void A_sheet_saved_while_its_tracking_is_held_raises_no_false_conflict()
+    {
+        using var folder = TemporaryVault.Empty();
+        using (var vault = folder.Initialize(Now))
+        {
+            var id = vault.CreateSheet(null, "Fiche", "Corps", Now);
+            var read = vault.ReadSheet(id);
+            string saved;
+            using (folder.Hold($"{VaultLayout.SheetTracking}/{id}.json", FileShare.Read))
+            {
+                saved = vault.SaveSheet(id, read.Text + "Suite.\n", read.Fingerprint, 1, Now);
+                Assert.AreEqual(saved, vault.ReadSheet(id).Fingerprint);
+            }
+            var next = vault.SaveSheet(id, read.Text + "Suite.\nEncore.\n", saved, 1, Now);
+            Assert.AreEqual(next, vault.ReadSheet(id).Fingerprint);
+            vault.SetTags(id, ["bio"], Now);
+        }
+
+        using var reopened = folder.Open(Now);
+        Assert.IsEmpty(reopened.Health.ModifiedOutside, "le suivi a rattrapé la fiche");
+    }
+
     [TestMethod]
     public void A_link_leading_outside_the_vault_is_never_followed()
     {

@@ -203,9 +203,10 @@ public sealed partial class VaultSession
         var updated = Encoding.UTF8.GetBytes(FrontMatter.ReplaceField(text, header.TagsKey, FrontMatter.ListValue(normalized)));
         ReplaceFile(absolute, updated);
 
+        // La fiche est écrite : le suivi en mémoire la suit, même si son fichier ne s'écrit pas tout de suite.
         sheet = sheet with { Tags = normalized, Fingerprint = Fingerprint.Of(updated), ModifiedAt = now.Instant };
-        WriteTracking(sheet, create: false);
         _sheets[id] = _sheets[id] with { Sheet = sheet };
+        _ = TryRewriteTracking(sheet);
         return normalized;
     }
 
@@ -305,8 +306,10 @@ public sealed partial class VaultSession
         {
             sheet = sheet with { Title = title };
         }
-        WriteTracking(sheet, create: false);
+        // La fiche est écrite : le suivi en mémoire la suit, même si son fichier ne s'écrit pas tout de suite. Sans cela,
+        // l'enregistrement suivant se croirait en conflit avec son propre texte.
         _sheets[id] = _sheets[id] with { Sheet = sheet };
+        _ = TryRewriteTracking(sheet);
         return fingerprint;
     }
 

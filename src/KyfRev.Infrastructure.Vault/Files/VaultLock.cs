@@ -23,6 +23,10 @@ public sealed class VaultLock : IDisposable
     /// <param name="now">Instant présent, inscrit dans <c>verrou-info.json</c>.</param>
     /// <param name="holder">Qui tient déjà le coffre ouvert, si le verrou est pris et que c'est connu.</param>
     /// <returns>Le verrou, à libérer à la fermeture du coffre ; <see langword="null"/> s'il est déjà pris.</returns>
+    /// <remarks>
+    /// Si <c>verrou-info.json</c> ne s'écrit pas, le verrou est rendu aussitôt : sinon le coffre se dirait encore ouvert,
+    /// par cette fenêtre même, à l'essai suivant.
+    /// </remarks>
     public static VaultLock? TryAcquire(string root, DateTimeOffset now, out LockInfoFile? holder)
     {
         var stream = new FileStream(
@@ -42,9 +46,18 @@ public sealed class VaultLock : IDisposable
             Environment.ProcessId,
             now,
             UnknownProperties.None);
-        AtomicFile.Replace(VaultLayout.Absolute(root, VaultLayout.LockInfoFile), info.Write());
+        var vaultLock = new VaultLock(stream);
+        try
+        {
+            AtomicFile.Replace(VaultLayout.Absolute(root, VaultLayout.LockInfoFile), info.Write());
+        }
+        catch
+        {
+            vaultLock.Dispose();
+            throw;
+        }
         holder = null;
-        return new VaultLock(stream);
+        return vaultLock;
     }
 
     /// <inheritdoc/>
