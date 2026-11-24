@@ -14,7 +14,8 @@ namespace KyfRev.Infrastructure.Windows;
 /// prévoit le plan, la rotation se fait aussi en cours d'exécution, et le dossier du profil de
 /// l'utilisateur est masqué (<c>%USERPROFILE%</c>), comme tout ce qui suit un dossier du coffre :
 /// le titre d'une fiche ne sort pas d'un coffre chiffré par une erreur écrite ici. Le journal ne
-/// bloque jamais l'application : s'il ne peut plus être écrit, il se tait.
+/// bloque jamais l'application : s'il ne peut plus être écrit, il se tait une minute, puis réessaie (un antivirus ou une
+/// sauvegarde qui le tenait ouvert l'a rendu).
 /// </summary>
 public sealed partial class DiagnosticLog : ILoggerFactory
 {
@@ -28,7 +29,10 @@ public sealed partial class DiagnosticLog : ILoggerFactory
     private readonly string _previous;
     private readonly string _profile;
     private readonly TimeProvider _time;
-    private bool _silent;
+    private DateTimeOffset _silentUntil = DateTimeOffset.MinValue;
+
+    /// <summary>Le temps pendant lequel le journal se tait après un échec.</summary>
+    internal static readonly TimeSpan Silence = TimeSpan.FromMinutes(1);
 
     /// <summary>Le journal du dossier <paramref name="folder"/> ; le dossier du profil <paramref name="profile"/> y est masqué.</summary>
     public DiagnosticLog(string folder, string profile, TimeProvider time)
@@ -121,12 +125,12 @@ public sealed partial class DiagnosticLog : ILoggerFactory
         });
     }
 
-    /// <summary>Écrit sous verrou ; un échec rend le journal muet plutôt que d'arrêter l'application.</summary>
+    /// <summary>Écrit sous verrou ; un échec rend le journal muet un moment plutôt que d'arrêter l'application.</summary>
     private void Write(Action write)
     {
         lock (_gate)
         {
-            if (_silent)
+            if (_time.GetUtcNow() < _silentUntil)
             {
                 return;
             }
@@ -136,7 +140,7 @@ public sealed partial class DiagnosticLog : ILoggerFactory
             }
             catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
             {
-                _silent = true;
+                _silentUntil = _time.GetUtcNow() + Silence;
             }
         }
     }
