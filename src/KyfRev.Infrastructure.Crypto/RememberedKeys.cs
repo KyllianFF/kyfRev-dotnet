@@ -9,7 +9,9 @@ namespace KyfRev.Infrastructure.Crypto;
 /// Windows pour la session de l'utilisateur (<see cref="RememberedKey"/>) : le fichier ne se lit nulle part ailleurs. Une
 /// clé est retenue pour un coffre (son identifiant) dans un dossier : deux copies du même coffre ont chacune la leur.
 /// Une clé dont le coffre a été verrouillé le reste (<c>"verrouille": true</c>) : elle ne le rouvre plus, même après une
-/// relance, jusqu'à ce que son mot de passe le déverrouille et la retienne de nouveau.
+/// relance, jusqu'à ce que son mot de passe le déverrouille et la retienne de nouveau. Une clé scellée par Windows Hello
+/// (<c>"hello": true</c>) ne rouvre jamais rien seule : elle attend le geste de l'utilisateur, au démarrage comme après un
+/// verrouillage.
 /// </summary>
 /// <param name="folder">Le dossier des données de ce poste.</param>
 /// <param name="disk">Le disque, qui écrit le fichier de façon atomique.</param>
@@ -32,7 +34,10 @@ public sealed class RememberedKeys(string folder, VaultStorage disk)
     /// La clé protégée qui peut rouvrir le coffre <paramref name="vaultId"/> de <paramref name="root"/> : rien si aucune
     /// n'est retenue, ou si le coffre a été verrouillé depuis.
     /// </summary>
-    public byte[]? FindUnlocked(string vaultId, string root) => EntryOf(vaultId, root) is { Locked: false } entry ? entry.Key : null;
+    public byte[]? FindUnlocked(string vaultId, string root) => EntryOf(vaultId, root) is { Locked: false, Hello: false } entry ? entry.Key : null;
+
+    /// <summary>La clé scellée par Windows Hello retenue pour ce coffre et ce dossier, verrouillé ou non ; rien sinon.</summary>
+    public byte[]? FindSealed(string vaultId, string root) => EntryOf(vaultId, root) is { Hello: true } entry ? entry.Key : null;
 
     /// <summary>
     /// Le coffre de <paramref name="root"/> est verrouillé : sa clé retenue, s'il y en a une, ne le rouvre plus jusqu'à ce
@@ -64,7 +69,11 @@ public sealed class RememberedKeys(string folder, VaultStorage disk)
     /// Retient la clé protégée <paramref name="protectedKey"/> pour ce coffre et ce dossier ; faux si elle n'a pas pu
     /// l'être, et rien n'est écrit sur un fichier qui ne se lit pas : les autres clés qu'il retient restent.
     /// </summary>
-    public bool Keep(string vaultId, string root, byte[] protectedKey)
+    /// <param name="vaultId">L'identifiant du coffre.</param>
+    /// <param name="root">Son dossier.</param>
+    /// <param name="protectedKey">La clé protégée.</param>
+    /// <param name="hello">Vrai si elle est scellée par Windows Hello.</param>
+    public bool Keep(string vaultId, string root, byte[] protectedKey, bool hello = false)
     {
         ArgumentNullException.ThrowIfNull(vaultId);
         ArgumentNullException.ThrowIfNull(protectedKey);
@@ -74,7 +83,7 @@ public sealed class RememberedKeys(string folder, VaultStorage disk)
             return false;
         }
         var kept = entries.Where(entry => !SamePlace(entry.Root, place)).ToList();
-        kept.Add(new Entry(vaultId, place, protectedKey));
+        kept.Add(new Entry(vaultId, place, protectedKey, Hello: hello));
         return Write(kept);
     }
 
@@ -145,7 +154,7 @@ public sealed class RememberedKeys(string folder, VaultStorage disk)
                     && entry["dossier"]?.GetValue<string>() is { Length: > 0 } root
                     && entry["cle"]?.GetValue<string>() is { Length: > 0 } key)
                 {
-                    entries.Add(new Entry(vaultId, root, Convert.FromBase64String(key), entry["verrouille"] is JsonValue locked && locked.TryGetValue<bool>(out var isLocked) && isLocked));
+                    entries.Add(new Entry(vaultId, root, Convert.FromBase64String(key), IsTrue(entry["verrouille"]), IsTrue(entry["hello"])));
                 }
             }
             return entries;
@@ -171,6 +180,10 @@ public sealed class RememberedKeys(string folder, VaultStorage disk)
             {
                 written["verrouille"] = true;
             }
+            if (entry.Hello)
+            {
+                written["hello"] = true;
+            }
             keys.Add(written);
         }
         var document = new JsonObject { ["format"] = Format, ["cles"] = keys };
@@ -186,5 +199,7 @@ public sealed class RememberedKeys(string folder, VaultStorage disk)
         }
     }
 
-    private sealed record Entry(string VaultId, string Root, byte[] Key, bool Locked = false);
+    private static bool IsTrue(JsonNode? node) => node is JsonValue value && value.TryGetValue<bool>(out var flag) && flag;
+
+    private sealed record Entry(string VaultId, string Root, byte[] Key, bool Locked = false, bool Hello = false);
 }

@@ -85,11 +85,11 @@
             <kyf:Notification x:Name="EncryptionDone" Severity="Success" Message="{Binding Message}" IsOpen="{Binding HasMessage, Mode=OneWay}" IsClosable="False" Margin="0,0,0,8" />
             <StackPanel x:Name="EncryptionSettings" IsEnabled="{Binding IsIdle}">
               <CheckBox x:Name="RememberKeyBox" IsChecked="{Binding IsRemembered}"
-                        AutomationProperties.Name="{x:Static pages:EncryptionText.Remember}"
-                        AutomationProperties.HelpText="{x:Static pages:EncryptionText.RememberHelp}">
-                <TextBlock Text="{x:Static pages:EncryptionText.Remember}" TextWrapping="Wrap" />
+                        AutomationProperties.Name="{Binding RememberLabel}"
+                        AutomationProperties.HelpText="{Binding RememberHelp}">
+                <TextBlock Text="{Binding RememberLabel}" TextWrapping="Wrap" />
               </CheckBox>
-              <TextBlock x:Name="RememberKeyHelp" Text="{x:Static pages:EncryptionText.RememberHelp}" Style="{DynamicResource Kyf.Text.Caption}" Margin="26,2,0,12" TextWrapping="Wrap" />
+              <TextBlock x:Name="RememberKeyHelp" Text="{Binding RememberHelp}" Style="{DynamicResource Kyf.Text.Caption}" Margin="26,2,0,12" TextWrapping="Wrap" />
 
               <TextBlock x:Name="LockAfterLabel" Text="{x:Static pages:EncryptionText.LockAfter}" Style="{DynamicResource Kyf.Text.BodyStrong}" Margin="0,0,0,8" />
               <ComboBox x:Name="LockAfterChoice" ItemsSource="{Binding LockAfterChoices}" SelectedItem="{Binding LockAfter}" DisplayMemberPath="Label" HorizontalAlignment="Left" MinWidth="180"

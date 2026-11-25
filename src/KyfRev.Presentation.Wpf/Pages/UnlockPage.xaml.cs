@@ -54,5 +54,6 @@ internal sealed partial class UnlockPage : UserControl
 
     /// <summary>Le focus va au champ affiché, une fois la vue à jour.</summary>
     private void FocusSecret() =>
-        Dispatcher.BeginInvoke(DispatcherPriority.Input, () => (RecoveryPart.IsVisible ? (Control)RecoveryBox : PasswordBox).Focus());
+        Dispatcher.BeginInvoke(DispatcherPriority.Input, () =>
+            (HelloPart.IsVisible ? HelloButton : RecoveryPart.IsVisible ? RecoveryBox : (Control)PasswordBox).Focus());
 }

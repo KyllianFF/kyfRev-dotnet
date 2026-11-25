@@ -213,16 +213,18 @@ internal sealed class TestVaults : IDisposable
         new(() => VaultHeader.Create("v_01M6A2PRES3NTAT10NWPF0TE5T", Password, PasswordKeys.NewPbkdf2()));
 
     private readonly IVaultConversion _conversion;
+    private readonly IWindowsHello? _hello;
 
-    public TestVaults(AppMode mode, TimeProvider? time = null, IVaultConversion? conversion = null)
+    public TestVaults(AppMode mode, TimeProvider? time = null, IVaultConversion? conversion = null, IWindowsHello? hello = null)
     {
+        _hello = hello;
         _conversion = conversion ?? new VaultConversions(PasswordKeys.NewPbkdf2());
         Time = time ?? TimeProvider.System;
         Root = Path.Combine(Path.GetTempPath(), "kyfrev-presentation", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(Root);
         Planned = Path.Combine(Root, "Prévu", "Coffre");
         Locations = new FakeLocations(mode, mode == AppMode.Development ? null : Planned);
-        App = NewApplication(Locations, Time, LocalData, _conversion);
+        App = NewApplication(Locations, Time, LocalData, _conversion, _hello);
     }
 
     /// <summary>La clé de récupération des coffres chiffrés des essais.</summary>
@@ -253,7 +255,7 @@ internal sealed class TestVaults : IDisposable
     public string CreateVault(string name)
     {
         var root = PathOf(name);
-        using (var other = NewApplication(new FakeLocations(AppMode.Development, null), Time, LocalData, _conversion))
+        using (var other = NewApplication(new FakeLocations(AppMode.Development, null), Time, LocalData, _conversion, _hello))
         {
             Assert.AreEqual(root, other.Vaults.Create(root).Vault);
         }
@@ -274,7 +276,7 @@ internal sealed class TestVaults : IDisposable
     public KyfRevApplication Restart()
     {
         App.Dispose();
-        App = NewApplication(Locations, Time, LocalData, _conversion);
+        App = NewApplication(Locations, Time, LocalData, _conversion, _hello);
         return App;
     }
 
@@ -285,13 +287,14 @@ internal sealed class TestVaults : IDisposable
     }
 
     /// <summary>L'application assemblée comme sur le poste : les coffres en clair et chiffrés, et leurs clés.</summary>
-    private static KyfRevApplication NewApplication(IVaultLocations locations, TimeProvider time, string localData, IVaultConversion conversion)
+    private static KyfRevApplication NewApplication(IVaultLocations locations, TimeProvider time, string localData, IVaultConversion conversion, IWindowsHello? hello)
     {
         var vaults = new EncryptedVaults(
             new VaultStore(),
             storage => new VaultStore(storage: storage, ownsStorage: true),
             new RememberedKeys(localData, DiskStorage.Instance),
-            DiskStorage.Instance);
+            DiskStorage.Instance,
+            hello);
         return new(vaults, new BackupFiles(), locations, time, NullLoggerFactory.Instance, "1.0.0-essai", vaults, conversion);
     }
 }

@@ -28,6 +28,21 @@
       <TextBlock x:Name="Intro" Text="{Binding Intro}" Style="{DynamicResource Kyf.Text.Secondary}" Margin="0,16,0,0"
                  TextAlignment="Center" TextWrapping="Wrap" />
 
+      <!-- Windows Hello (rangée 29C) : un bouton, et le mot de passe à un clic. -->
+      <StackPanel x:Name="HelloPart" Margin="0,24,0,0" Visibility="{Binding OffersHello, Converter={StaticResource Visible}}">
+        <Button x:Name="HelloButton" Style="{DynamicResource Kyf.Button.Primary}" Command="{Binding UnlockWithHelloCommand}" IsDefault="{Binding OffersHello}"
+                HorizontalAlignment="Stretch" MinHeight="38" AutomationProperties.Name="{x:Static pages:EncryptionText.OpenWithHello}">
+          <StackPanel Orientation="Horizontal">
+            <kyf:Icon Text="{x:Static kyf:Icons.Lock}" Margin="0,0,8,0" />
+            <TextBlock Text="{x:Static pages:EncryptionText.OpenWithHello}" VerticalAlignment="Center" TextWrapping="Wrap" />
+          </StackPanel>
+        </Button>
+        <Button x:Name="TypePasswordButton" Style="{DynamicResource Kyf.Button.Subtle}" Command="{Binding TypePasswordCommand}" Margin="0,8,0,0"
+                HorizontalAlignment="Center" Content="{x:Static pages:EncryptionText.TypePassword}"
+                AutomationProperties.Name="{x:Static pages:EncryptionText.TypePassword}" />
+      </StackPanel>
+
+      <StackPanel x:Name="SecretPart" Visibility="{Binding ShowsSecret, Converter={StaticResource Visible}}">
       <!-- Le mot de passe, ou, perdu, la clé de récupération. -->
       <StackPanel x:Name="PasswordPart" Margin="0,24,0,0" Visibility="{Binding UsesPassword, Converter={StaticResource Visible}}"
                   IsVisibleChanged="OnSecretShown">
@@ -50,15 +65,15 @@
       </StackPanel>
 
       <CheckBox x:Name="RememberBox" IsChecked="{Binding Remember}" IsEnabled="{Binding IsIdle}" Margin="0,16,0,0"
-                AutomationProperties.Name="{x:Static pages:EncryptionText.Remember}"
-                AutomationProperties.HelpText="{x:Static pages:EncryptionText.RememberHelp}">
-        <TextBlock Text="{x:Static pages:EncryptionText.Remember}" TextWrapping="Wrap" />
+                AutomationProperties.Name="{Binding RememberLabel}"
+                AutomationProperties.HelpText="{Binding RememberHelp}">
+        <TextBlock Text="{Binding RememberLabel}" TextWrapping="Wrap" />
       </CheckBox>
-      <TextBlock x:Name="RememberHelp" Text="{x:Static pages:EncryptionText.RememberHelp}" Style="{DynamicResource Kyf.Text.Caption}"
+      <TextBlock x:Name="RememberHelp" Text="{Binding RememberHelp}" Style="{DynamicResource Kyf.Text.Caption}"
                  Margin="26,2,0,0" TextWrapping="Wrap" />
 
       <WrapPanel Margin="0,24,0,0">
-        <Button x:Name="UnlockButton" Style="{DynamicResource Kyf.Button.Primary}" IsDefault="True" Click="OnUnlock"
+        <Button x:Name="UnlockButton" Style="{DynamicResource Kyf.Button.Primary}" IsDefault="{Binding ShowsSecret}" Click="OnUnlock"
                 IsEnabled="{Binding IsIdle}" Margin="0,0,8,8" AutomationProperties.Name="{x:Static pages:EncryptionText.Unlock}">
           <StackPanel Orientation="Horizontal">
             <kyf:Icon Text="{x:Static kyf:Icons.Lock}" Margin="0,0,8,0" />
@@ -72,6 +87,7 @@
                 Margin="0,0,8,8" Visibility="{Binding UsesRecoveryKey, Converter={StaticResource Visible}}"
                 Content="{x:Static pages:EncryptionText.UsePassword}" AutomationProperties.Name="{x:Static pages:EncryptionText.UsePassword}" />
       </WrapPanel>
+      </StackPanel>
       <TextBlock x:Name="BusyText" Text="{x:Static pages:EncryptionText.Unlocking}" Style="{DynamicResource Kyf.Text.Secondary}"
                  Visibility="{Binding IsBusy, Converter={StaticResource Visible}}" AutomationProperties.LiveSetting="Polite" />
       <kyf:Notification x:Name="ErrorMessage" Severity="Critical" Message="{Binding Error}" IsOpen="{Binding HasError, Mode=OneWay}"

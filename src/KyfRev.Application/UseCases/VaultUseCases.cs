@@ -133,6 +133,48 @@ public sealed partial class VaultUseCases(
         }
     }
 
+    /// <summary>
+    /// Vrai si le coffre chiffré de <paramref name="root"/> peut s'ouvrir avec Windows Hello sur ce poste, au démarrage
+    /// comme après un verrouillage : sa clé y est retenue, scellée par lui.
+    /// </summary>
+    public bool OffersHello(string root) => keys.CanUseHello && keys.IsRememberedWithHello(root);
+
+    /// <summary>Vrai si Windows Hello est configuré sur ce poste : retenir une clé la scelle par lui.</summary>
+    public bool UsesHello => keys.CanUseHello;
+
+    /// <summary>
+    /// Ouvre le coffre chiffré de <paramref name="root"/> avec sa clé scellée par Windows Hello : Windows demande le code
+    /// PIN, le visage ou l'empreinte. Il remplace celui qui était ouvert, comme <see cref="Open"/>, et n'est plus
+    /// verrouillé. Si l'utilisateur renonce, l'état l'attend toujours, sans message ; un refus de Windows le dit.
+    /// </summary>
+    public AppState UnlockWithHello(string root)
+    {
+        ArgumentNullException.ThrowIfNull(root);
+        using var opening = Opening();
+        if (host.IsOpen(root, store.SameLocation))
+        {
+            return State();
+        }
+        var present = Present.Of(time);
+        VaultKey? key;
+        try
+        {
+            key = keys.RememberedWithHello(root);
+        }
+        catch (OperationException exception)
+        {
+            return LockedState(root, exception.Message);
+        }
+        if (key is null)
+        {
+            return LockedState(root, null);
+        }
+        using (key)
+        {
+            return Adopt(() => store.Open(root, key, present.Now), present, lockedOnFailure: root, encrypted: true, unlocked: root);
+        }
+    }
+
     private AppState OpenOrCreate(string root, bool create)
     {
         ArgumentNullException.ThrowIfNull(root);

@@ -345,4 +345,22 @@
   <data name="WithRecoveryKey" xml:space="preserve">
     <value>J'utilise la clé de récupération</value>
   </data>
+  <data name="OpenWithHello" xml:space="preserve">
+    <value>Ouvrir avec Windows Hello</value>
+  </data>
+  <data name="HelloIntro" xml:space="preserve">
+    <value>Ses fiches ne se lisent qu'avec vous.</value>
+  </data>
+  <data name="TypePassword" xml:space="preserve">
+    <value>Utiliser le mot de passe</value>
+  </data>
+  <data name="HelloOpening" xml:space="preserve">
+    <value>Windows Hello vérifie qu'il s'agit bien de vous…</value>
+  </data>
+  <data name="RememberHello" xml:space="preserve">
+    <value>Ouvrir avec Windows Hello sur cet ordinateur</value>
+  </data>
+  <data name="RememberHelloHelp" xml:space="preserve">
+    <value>Votre code PIN, votre visage ou votre empreinte ouvre le coffre, au démarrage et après un verrouillage. Le mot de passe reste possible.</value>
+  </data>
 </root>

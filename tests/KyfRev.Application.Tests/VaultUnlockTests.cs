@@ -15,7 +15,7 @@ namespace KyfRev.Application.Tests;
 /// </summary>
 [TestClass]
 [SupportedOSPlatform("windows")]
-public sealed class VaultUnlockTests
+public sealed partial class VaultUnlockTests
 {
     private const string Password = "un mot de passe d'essai";
 
@@ -315,14 +315,16 @@ public sealed class VaultUnlockTests
     {
         private readonly FakeTime _time = FakeTime.AtLocal(2026, 11, 7, 10, 0);
         private readonly bool _ownsFolder;
+        private readonly IWindowsHello? _hello;
 
-        public Scene()
-            : this(new TestFolder(), new VaultLocations(), ownsFolder: true)
+        public Scene(IWindowsHello? hello = null)
+            : this(new TestFolder(), new VaultLocations(), ownsFolder: true, hello)
         {
         }
 
-        private Scene(TestFolder folder, VaultLocations locations, bool ownsFolder)
+        private Scene(TestFolder folder, VaultLocations locations, bool ownsFolder, IWindowsHello? hello)
         {
+            _hello = hello;
             Folder = folder;
             Locations = locations;
             _ownsFolder = ownsFolder;
@@ -330,7 +332,8 @@ public sealed class VaultUnlockTests
                 new VaultStore(),
                 storage => new VaultStore(storage: storage, ownsStorage: true),
                 new RememberedKeys(LocalData, DiskStorage.Instance),
-                DiskStorage.Instance);
+                DiskStorage.Instance,
+                hello);
             App = new KyfRevApplication(vaults, new BackupFiles(), locations, _time, Logs, "1.0.0-essai", vaults);
         }
 
@@ -345,7 +348,7 @@ public sealed class VaultUnlockTests
         public string LocalData => Folder.PathOf("Poste");
 
         /// <summary>Le même poste, rouvert : les mêmes dossiers, la même mémoire du dernier coffre.</summary>
-        public Scene Restart() => new(Folder, Locations, ownsFolder: false);
+        public Scene Restart() => new(Folder, Locations, ownsFolder: false, _hello);
 
         /// <summary>Un coffre chiffré vide, à l'emplacement du coffre ou à <paramref name="root"/>.</summary>
         public void CreateEncrypted(string? root = null)

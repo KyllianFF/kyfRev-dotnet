@@ -28,6 +28,10 @@ contre quoi il protège, et ce contre quoi il ne protège pas, se lit dans [Le m
 - **La clé retenue par Windows** (« se souvenir sur cet ordinateur ») : la clé de données protégée par DPAPI pour la
   session de l'utilisateur, avec une entropie propre à kyfRev et au coffre. Elle reste sur ce poste, jamais dans le
   coffre.
+- **La clé Windows Hello de kyfRev**, si Windows Hello est configuré sur le poste : une clé RSA de 2 048 bits créée chez
+  Windows (« Microsoft Passport Key Storage Provider », par NCrypt), propre à l'utilisateur, qui ne sort jamais de Windows
+  et exige le code PIN, le visage ou l'empreinte à chaque usage. La clé retenue est alors d'abord scellée par elle, puis
+  protégée par DPAPI comme plus haut, avec une autre entropie.
 
 Chaque clé est effacée de la mémoire après usage (`CryptographicOperations.ZeroMemory`).
 
@@ -247,6 +251,15 @@ kyfrev-coffre cle-de-recuperation <coffre chiffré>
   plus est oubliée. Déverrouiller sans cocher oublie celle qui était retenue. Oublier réécrit le fichier, sans l'effacer.
   Coché, le coffre ne protège plus contre quelqu'un qui utilise la session de l'utilisateur, seulement contre un vol du
   disque.
+- **Avec Windows Hello** (rangée 29C), la case devient « Ouvrir avec Windows Hello sur cet ordinateur ». La clé retenue
+  est scellée par la clé Windows Hello de kyfRev (créée la première fois : Windows demande alors de confirmer que c'est
+  bien l'utilisateur), puis protégée par DPAPI ; l'entrée porte `"hello": true`. Elle ne rouvre jamais le coffre seule,
+  ni au démarrage, ni après une relance : l'écran de déverrouillage propose « Ouvrir avec Windows Hello », et Windows
+  demande le code PIN, le visage ou l'empreinte dans sa fenêtre, posée sur celle de kyfRev. Elle sert aussi après un
+  verrouillage : c'est le geste qui prouve la présence. « Utiliser le mot de passe » reste à un clic, sa case déjà cochée
+  pour ne pas oublier la clé. Si l'utilisateur renonce, rien ne se dit ; si Windows refuse, la raison se dit et le mot de
+  passe est demandé. Une création annulée ou refusée ne retient rien : jamais de repli silencieux vers la clé de session.
+  Un programme lancé dans la session ne peut plus rouvrir le coffre sans ce geste.
 
 ## Le verrouillage
 
@@ -422,7 +435,7 @@ noms des dossiers et des fiches.
 | Le profil du moteur web, `WebView2` | Ses réglages, ses caches de scripts | Le texte d'une fiche lui parvient par la mémoire, en `no-store`, jamais par un fichier ni par le stockage d'une page. Aucun rapport de plantage ne part chez Microsoft ; un plantage du moteur peut en laisser un dans ce dossier, avec un morceau de sa mémoire. |
 | Le profil du moteur des extensions, `WebView2-extensions` | Ses réglages, un éventuel rapport de plantage | Comme `WebView2` : un plantage peut y laisser un morceau de sa mémoire, donc du texte donné à une extension. |
 | Le dictionnaire de Windows, `%APPDATA%\Microsoft\Spelling` | Les mots ajoutés par l'utilisateur | Sur un coffre chiffré, le menu d'un mot, dans le code Markdown, propose « Accepter jusqu'à la fermeture de kyfRev », qui n'écrit rien et vaut, dans ce code, pour tous les coffres jusqu'à ce que l'application se ferme. Le texte mis en forme, souligné par le moteur web, ne le propose pas, continue de souligner un mot ainsi accepté et n'a plus de remplacement à proposer pour lui. Ce qui a été ajouté depuis un coffre en clair y reste. |
-| `cles-retenues.json` | La clé retenue, si l'utilisateur l'a demandé | Protégée par Windows (DPAPI) : elle s'ouvre dans sa session, sur ce poste ; quiconque ouvre cette session ouvre donc le coffre. |
+| `cles-retenues.json` | La clé retenue, si l'utilisateur l'a demandé | Protégée par Windows (DPAPI) : elle s'ouvre dans sa session, sur ce poste ; quiconque ouvre cette session ouvre donc le coffre. Avec Windows Hello, elle est en plus scellée par lui : il faut aussi le code PIN, le visage ou l'empreinte. |
 | `seance.json` | Le chemin du coffre et des identifiants, pendant une séance | Aucun texte de fiche. |
 | `preferences.json` | L'apparence | Aucun texte de fiche. |
 | `config-locale.json` | Le chemin du dernier coffre ouvert | Aucun texte de fiche. |

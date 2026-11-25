@@ -14,7 +14,7 @@ namespace KyfRev.Infrastructure.Crypto.Tests;
 /// </summary>
 [TestClass]
 [SupportedOSPlatform("windows")]
-public sealed class EncryptedVaultsTests
+public sealed partial class EncryptedVaultsTests
 {
     private const string Password = "un mot de passe d'essai";
 
@@ -598,11 +598,12 @@ public sealed class EncryptedVaultsTests
 
         public string LocalData => Path.Combine(Root, "Poste");
 
-        public EncryptedVaults Vaults(Func<VaultStorage, IVaultStore>? onStorage = null) => new(
+        public EncryptedVaults Vaults(Func<VaultStorage, IVaultStore>? onStorage = null, IWindowsHello? hello = null) => new(
             new VaultStore(),
             onStorage ?? (storage => new VaultStore(storage: storage, ownsStorage: true)),
             new RememberedKeys(LocalData, DiskStorage.Instance),
-            DiskStorage.Instance);
+            DiskStorage.Instance,
+            hello);
 
         /// <summary>Un coffre chiffré vide, que sa session a créé (son en-tête, son index, ses premiers objets).</summary>
         public void CreateEncrypted()

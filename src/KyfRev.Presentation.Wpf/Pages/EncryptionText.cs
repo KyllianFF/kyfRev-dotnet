@@ -348,4 +348,22 @@ public static class EncryptionText
         Resources.GetString(name, CultureInfo.CurrentUICulture) ?? throw new MissingManifestResourceException($"Texte « {name} » absent des ressources.");
 
     private static string Format(string name, params object[] values) => string.Format(CultureInfo.CurrentCulture, Text(name), values);
+
+    /// <summary>« Ouvrir avec Windows Hello » : le bouton de l'écran de déverrouillage.</summary>
+    public static string OpenWithHello => Text(nameof(OpenWithHello));
+
+    /// <summary>Ce que dit l'écran de déverrouillage quand Windows Hello ouvre le coffre.</summary>
+    public static string HelloIntro => Text(nameof(HelloIntro));
+
+    /// <summary>« Utiliser le mot de passe » : au lieu de Windows Hello.</summary>
+    public static string TypePassword => Text(nameof(TypePassword));
+
+    /// <summary>Pendant que Windows Hello vérifie.</summary>
+    public static string HelloOpening => Text(nameof(HelloOpening));
+
+    /// <summary>« Ouvrir avec Windows Hello sur cet ordinateur » : la case qui retient la clé, avec Windows Hello.</summary>
+    public static string RememberHello => Text(nameof(RememberHello));
+
+    /// <summary>Ce que fait la case, avec Windows Hello.</summary>
+    public static string RememberHelloHelp => Text(nameof(RememberHelloHelp));
 }

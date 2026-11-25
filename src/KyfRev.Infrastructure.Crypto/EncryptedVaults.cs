@@ -19,8 +19,9 @@ namespace KyfRev.Infrastructure.Crypto;
 /// </param>
 /// <param name="remembered">Les clés retenues sur ce poste.</param>
 /// <param name="disk">Le disque où sont posés les coffres chiffrés.</param>
+/// <param name="hello">Windows Hello sur ce poste ; rien : la clé retenue reste celle de la session.</param>
 [SupportedOSPlatform("windows")]
-public sealed class EncryptedVaults(IVaultStore plain, Func<VaultStorage, IVaultStore> onStorage, RememberedKeys remembered, VaultStorage disk)
+public sealed class EncryptedVaults(IVaultStore plain, Func<VaultStorage, IVaultStore> onStorage, RememberedKeys remembered, VaultStorage disk, IWindowsHello? hello = null)
     : IVaultStore, IVaultKeys
 {
     /// <summary>Ouvre un coffre en clair.</summary>
@@ -68,7 +69,54 @@ public sealed class EncryptedVaults(IVaultStore plain, Func<VaultStorage, IVault
     /// <exception cref="VaultCryptoException">
     /// L'index ne se lit pas (absent, illisible un moment, d'une version plus récente) : la clé reste retenue.
     /// </exception>
-    public VaultKey? Remembered(string root)
+    public VaultKey? Remembered(string root) => RememberedBy(root, (header, entries) =>
+        entries.FindUnlocked(header.VaultId, root) is { } kept ? RememberedKey.Unprotect(kept, header.VaultId) : null);
+
+    /// <inheritdoc/>
+    public bool CanUseHello => Hello.IsAvailable;
+
+    /// <summary>
+    /// Vrai si la clé retenue pour ce coffre et ce dossier est scellée par Windows Hello, sans rien demander ; faux si
+    /// l'en-tête ne se lit pas.
+    /// </summary>
+    public bool IsRememberedWithHello(string root)
+    {
+        ArgumentNullException.ThrowIfNull(root);
+        try
+        {
+            return remembered.FindSealed(EncryptedVault.ReadHeader(root, disk).VaultId, root) is not null;
+        }
+        catch (VaultCryptoException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// La clé scellée par Windows Hello pour ce coffre, rouverte par le geste de l'utilisateur, puis vérifiée sur l'index
+    /// comme <see cref="Remembered"/> ; rien s'il n'y en a pas, ou s'il renonce.
+    /// </summary>
+    /// <exception cref="OperationException">Windows Hello refuse, ou l'index ne se lit pas : la raison se dit.</exception>
+    public VaultKey? RememberedWithHello(string root) => RememberedBy(root, (header, entries) =>
+    {
+        if (entries.FindSealed(header.VaultId, root) is not { } kept || RememberedKey.UnprotectSealed(kept, header.VaultId) is not { } sealedKey)
+        {
+            return null;
+        }
+        var name = Path.GetFileName(Path.TrimEndingDirectorySeparator(Path.GetFullPath(root)));
+        var bytes = Hello.Open(sealedKey, $"Ouvrir le coffre « {name} » dans kyfRev.");
+        if (bytes is { Length: not PasswordKeys.KeyBytes })
+        {
+            PasswordKeys.Clear(bytes);
+            return null;
+        }
+        return bytes;
+    });
+
+    private IWindowsHello Hello => hello ?? NoWindowsHello.Instance;
+
+    /// <summary>La clé que <paramref name="unwrap"/> rend du fichier des clés retenues, vérifiée sur l'index.</summary>
+    private VaultKey? RememberedBy(string root, Func<VaultHeader, RememberedKeys, byte[]?> unwrap)
     {
         VaultHeader header;
         try
@@ -79,7 +127,7 @@ public sealed class EncryptedVaults(IVaultStore plain, Func<VaultStorage, IVault
         {
             return null;
         }
-        if (remembered.FindUnlocked(header.VaultId, root) is not { } kept || RememberedKey.Unprotect(kept, header.VaultId) is not { } bytes)
+        if (unwrap(header, remembered) is not { } bytes)
         {
             return null;
         }
@@ -124,9 +172,14 @@ public sealed class EncryptedVaults(IVaultStore plain, Func<VaultStorage, IVault
         try
         {
             var vaultId = EncryptedVault.ReadHeader(root, disk).VaultId;
+            if (Hello.IsAvailable)
+            {
+                // Avec Windows Hello, la clé est scellée par lui : elle n'ouvre plus rien sans le geste de l'utilisateur.
+                return Hello.Seal(key.Bytes) is { } sealedKey && remembered.Keep(vaultId, root, RememberedKey.ProtectSealed(sealedKey, vaultId), hello: true);
+            }
             return remembered.Keep(vaultId, root, RememberedKey.Protect(key.Bytes, vaultId));
         }
-        catch (Exception exception) when (exception is VaultCryptoException or CryptographicException)
+        catch (Exception exception) when (exception is OperationException or CryptographicException)
         {
             return false;
         }

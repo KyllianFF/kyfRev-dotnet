@@ -20,7 +20,7 @@ namespace KyfRev.Presentation.Wpf.Tests;
 /// peut être ouvert à la place, ou celui qui restait ouvert retrouvé.
 /// </summary>
 [TestClass]
-public sealed class UnlockTests
+public sealed partial class UnlockTests
 {
     [TestMethod]
     public void The_unlock_screen_checks_what_it_is_given()

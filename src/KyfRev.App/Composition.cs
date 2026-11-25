@@ -85,11 +85,14 @@ internal static class Composition
         }));
         // Les coffres en clair et chiffrés : un coffre chiffré s'ouvre sur son stockage, que sa session prend et libère
         // avec elle (sa clé est alors effacée) ; sa clé peut être retenue sur ce poste, hors de tout coffre.
+        // Avec Windows Hello configuré, la clé retenue est scellée par lui (rangée 29C) ; sa fenêtre se pose sur celle de kyfRev.
+        services.AddSingleton<WindowsHello>();
         services.AddSingleton(provider => new EncryptedVaults(
             new VaultStore(),
             storage => new VaultStore(storage: storage, ownsStorage: true),
             new RememberedKeys(provider.GetRequiredService<VaultLocations>().LocalData, DiskStorage.Instance),
-            DiskStorage.Instance));
+            DiskStorage.Instance,
+            provider.GetRequiredService<WindowsHello>()));
         // Le coffre ouvert est fermé, et son verrou libéré, quand les services le sont.
         services.AddSingleton(provider => new KyfRevApplication(
             provider.GetRequiredService<EncryptedVaults>(),

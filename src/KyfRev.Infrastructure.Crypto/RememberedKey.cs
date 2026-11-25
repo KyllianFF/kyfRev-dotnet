@@ -47,9 +47,36 @@ public static class RememberedKey
         }
     }
 
-    private static byte[] Entropy(string vaultId)
+    /// <summary>
+    /// La clé déjà scellée par Windows Hello, protégée en plus pour cette session Windows : le fichier des clés retenues ne
+    /// sert ni à un autre compte, ni sur un autre poste, et Windows Hello demande encore le geste de l'utilisateur.
+    /// </summary>
+    public static byte[] ProtectSealed(byte[] sealedKey, string vaultId)
+    {
+        ArgumentNullException.ThrowIfNull(sealedKey);
+        return ProtectedData.Protect(sealedKey, Entropy(vaultId, Sealed), DataProtectionScope.CurrentUser);
+    }
+
+    /// <summary>La clé scellée par Windows Hello ; rien si elle vient d'une autre session, d'un autre coffre, ou si elle est abîmée.</summary>
+    public static byte[]? UnprotectSealed(byte[] remembered, string vaultId)
+    {
+        ArgumentNullException.ThrowIfNull(remembered);
+        try
+        {
+            return ProtectedData.Unprotect(remembered, Entropy(vaultId, Sealed), DataProtectionScope.CurrentUser);
+        }
+        catch (CryptographicException)
+        {
+            // Illisible : le mot de passe ouvre toujours le coffre.
+            return null;
+        }
+    }
+
+    private const string Sealed = "kyfRev coffre retenu hello v1";
+
+    private static byte[] Entropy(string vaultId, string purpose = "kyfRev coffre retenu v1")
     {
         ArgumentException.ThrowIfNullOrEmpty(vaultId);
-        return SHA256.HashData(Encoding.UTF8.GetBytes($"kyfRev coffre retenu v1|{vaultId}"));
+        return SHA256.HashData(Encoding.UTF8.GetBytes($"{purpose}|{vaultId}"));
     }
 }
