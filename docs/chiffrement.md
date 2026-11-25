@@ -289,16 +289,18 @@ déverrouillage. Ce qui a été tapé est vidé dès que la fenêtre se ferme ou
 - **Changer le mot de passe** : le mot de passe actuel (ou la clé de récupération, s'il est perdu), puis le nouveau deux
   fois, de 12 caractères au moins. Seule l'enveloppe de la clé de données change, dans l'en-tête écrit de façon
   atomique : aucune fiche n'est réécrite, la clé de récupération et la clé retenue sur ce poste restent valables, et
-  l'ancien mot de passe n'ouvre plus le coffre tel qu'il est ; les sauvegardes et les copies faites avant s'ouvrent encore
-  avec lui (voir « Les clés »). La dérivation est réglée sur le poste (Argon2id), hors du fil de l'interface.
+  l'ancien mot de passe ne déverrouille plus le coffre tel qu'il est ; une copie plus ancienne (une sauvegarde, l'historique
+  d'un dossier synchronisé) s'ouvre encore avec lui et donne la clé qui lit aussi le coffre d'aujourd'hui (voir « Les clés »).
+  L'application le dit en ces termes. La dérivation est réglée sur le poste (Argon2id), hors du fil de l'interface.
 - **Créer une nouvelle clé de récupération** : demande le mot de passe (ou la clé de récupération actuelle), puis prépare
   la nouvelle clé sans rien écrire et la montre une seule fois, à copier et à ranger. Elle ne remplace l'ancienne qu'une
   fois « J'ai rangé ma clé de récupération » coché et « Enregistrer cette clé » choisi : l'en-tête est alors réécrit,
   s'il est toujours celui qu'elle a lu, et la clé est oubliée de l'écran. « Annuler », Échap, un verrouillage ou
   l'application fermée la laissent de côté : rien n'a changé, l'ancienne reste la seule qui ouvre le coffre. Ainsi, une
   clé que personne n'a notée ne remplace jamais celle qui l'est, même quand le mot de passe est perdu. Enregistrée,
-  l'ancienne n'ouvre plus le coffre tel qu'il est ; les sauvegardes et les copies faites avant, qui gardent l'ancien
-  en-tête, s'ouvrent encore avec elle.
+  l'ancienne ne déverrouille plus le coffre tel qu'il est ; les sauvegardes et les copies faites avant, dont l'historique
+  d'un dossier synchronisé, gardent l'ancien en-tête : elles s'ouvrent encore avec elle et donnent la clé qui lit aussi le
+  coffre d'aujourd'hui. L'application le dit en ces termes.
 - **Se souvenir sur cet ordinateur** : coché, le mot de passe (ou la clé de récupération) est demandé et la clé retenue
   (voir plus haut) ; décoché, elle est oubliée tout de suite.
 - **Verrouillage automatique** : après 5, 15, 30 minutes, une heure, ou jamais (l'inactivité ne verrouille plus, le départ de

@@ -576,7 +576,8 @@ public sealed class EncryptionSettingsTests
                 Assert.IsTrue(copied.GetDataPresent(SecretClipboard.CanIncludeInHistory), box.Name);
                 Assert.IsTrue(copied.GetDataPresent(SecretClipboard.CanUploadToCloud), box.Name);
             }
-            Assert.IsTrue(page.OldRecoveryKeyWarning.IsVisible, "l'ancienne clé n'ouvre plus le coffre, mais les anciennes sauvegardes");
+            ((FrameworkElement)((ScrollViewer)page.RecoveryKeyDialog.Template.FindName("PART_Content", page.RecoveryKeyDialog)).Content).Capture(dark ? "cle-recuperation-fenetre-sombre" : "cle-recuperation-fenetre-clair");
+            Assert.IsTrue(page.OldRecoveryKeyWarning.IsVisible, "l'ancienne clé ne déverrouille plus le coffre, mais une copie plus ancienne, oui");
             var cancel = (Button)page.RecoveryKeyDialog.Template.FindName(Dialog.SecondaryButtonPart, page.RecoveryKeyDialog);
             Assert.AreEqual(Visibility.Visible, cancel.Visibility, "« Annuler » garde l'ancienne clé");
             Assert.AreEqual(EncryptionText.SaveRecoveryKey, ((Button)page.RecoveryKeyDialog.Template.FindName(Dialog.PrimaryButtonPart, page.RecoveryKeyDialog)).Content);

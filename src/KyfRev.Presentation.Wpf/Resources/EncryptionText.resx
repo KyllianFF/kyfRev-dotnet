@@ -43,7 +43,7 @@
     <value>Changer le mot de passe…</value>
   </data>
   <data name="ChangePasswordHelp" xml:space="preserve">
-    <value>Aucune fiche n'est réécrite : la clé qui les chiffre reste la même. La clé de récupération et la clé retenue sur cet ordinateur restent valables. Les sauvegardes et les copies de ce coffre déjà faites s'ouvrent encore avec l'ancien mot de passe : s'il a été découvert, en changer ne suffit pas, il faut déchiffrer le coffre puis le chiffrer de nouveau.</value>
+    <value>Aucune fiche n'est réécrite : la clé qui les chiffre reste la même. La clé de récupération et la clé retenue sur cet ordinateur restent valables. Mais une copie plus ancienne de ce coffre (une sauvegarde, l'historique d'un dossier synchronisé) s'ouvre encore avec l'ancien mot de passe, et donne la clé qui lit aussi le coffre d'aujourd'hui : s'il a été découvert, en changer ne suffit pas, il faut déchiffrer le coffre puis le chiffrer de nouveau.</value>
   </data>
   <data name="ChangePasswordTitle" xml:space="preserve">
     <value>Changer le mot de passe</value>
@@ -217,7 +217,7 @@
     <value>Créer une nouvelle clé de récupération…</value>
   </data>
   <data name="NewRecoveryKeyHelp" xml:space="preserve">
-    <value>Saisissez le mot de passe du coffre, ou sa clé de récupération actuelle. La nouvelle clé ne remplacera l'ancienne qu'une fois notée et enregistrée ; les sauvegardes et les copies faites avant s'ouvriront encore avec l'ancienne. Si celle-ci a été découverte, cela ne suffit pas : il faut déchiffrer le coffre puis le chiffrer de nouveau.</value>
+    <value>Saisissez le mot de passe du coffre, ou sa clé de récupération actuelle. La nouvelle clé ne remplacera l'ancienne qu'une fois notée et enregistrée. Mais une copie plus ancienne de ce coffre (une sauvegarde, l'historique d'un dossier synchronisé) s'ouvrira encore avec l'ancienne, et donnera la clé qui lit aussi le coffre d'aujourd'hui : si elle a été découverte, cela ne suffit pas, il faut déchiffrer le coffre puis le chiffrer de nouveau.</value>
   </data>
   <data name="NewRecoveryKeyTitle" xml:space="preserve">
     <value>Nouvelle clé de récupération</value>
@@ -229,7 +229,7 @@
     <value>Ce coffre n'a pas pu être ouvert.</value>
   </data>
   <data name="OldRecoveryKey" xml:space="preserve">
-    <value>Rien n'a changé tant que cette clé n'est pas enregistrée. Ensuite, l'ancienne n'ouvrira plus ce coffre ; les sauvegardes et les copies faites avant s'ouvriront encore avec elle : gardez-la tant que vous les gardez.</value>
+    <value>Rien n'a changé tant que cette clé n'est pas enregistrée. Ensuite, l'ancienne ne déverrouillera plus ce coffre. Mais une copie plus ancienne de ce coffre (une sauvegarde, l'historique d'un dossier synchronisé) s'ouvrira encore avec elle, et donnera accès au coffre d'aujourd'hui : rangez-la aussi soigneusement que la nouvelle, tant que ces copies existent.</value>
   </data>
   <data name="OpenDecrypted" xml:space="preserve">
     <value>Ouvrir le coffre en clair</value>
@@ -247,10 +247,10 @@
     <value>Mot de passe</value>
   </data>
   <data name="PasswordChanged" xml:space="preserve">
-    <value>Le mot de passe est changé. L'ancien n'ouvre plus ce coffre, mais il ouvre encore les sauvegardes et les copies faites avant.</value>
+    <value>Le mot de passe est changé. L'ancien ne déverrouille plus ce coffre, mais une copie plus ancienne de ce coffre (une sauvegarde, l'historique d'un dossier synchronisé) s'ouvre encore avec lui, et donne accès au coffre d'aujourd'hui.</value>
   </data>
   <data name="PasswordChangedWhileLocking" xml:space="preserve">
-    <value>Le mot de passe a été changé juste avant le verrouillage : c'est le nouveau qui ouvre ce coffre. L'ancien ouvre encore les sauvegardes et les copies faites avant.</value>
+    <value>Le mot de passe a été changé juste avant le verrouillage : c'est le nouveau qui ouvre ce coffre. Mais une copie plus ancienne de ce coffre (une sauvegarde, l'historique d'un dossier synchronisé) s'ouvre encore avec l'ancien, et donne accès au coffre d'aujourd'hui.</value>
   </data>
   <data name="PasswordLength" xml:space="preserve">
     <value>Au moins {0} caractères.</value>
@@ -283,7 +283,7 @@
     <value>Clé de récupération</value>
   </data>
   <data name="RecoveryKeyCreated" xml:space="preserve">
-    <value>La nouvelle clé de récupération est enregistrée. L'ancienne n'ouvre plus ce coffre, mais elle ouvre encore les sauvegardes et les copies faites avant.</value>
+    <value>La nouvelle clé de récupération est enregistrée. L'ancienne ne déverrouille plus ce coffre, mais une copie plus ancienne de ce coffre (une sauvegarde, l'historique d'un dossier synchronisé) s'ouvre encore avec elle, et donne accès au coffre d'aujourd'hui.</value>
   </data>
   <data name="RecoveryKeyKept" xml:space="preserve">
     <value>Rien n'a changé : l'ancienne clé de récupération ouvre toujours ce coffre.</value>
@@ -292,7 +292,7 @@
     <value>La nouvelle clé de récupération n'a pas été enregistrée avant le verrouillage : l'ancienne ouvre toujours ce coffre. Créez-en une autre pour la remplacer.</value>
   </data>
   <data name="RecoveryKeySavedWhileLocking" xml:space="preserve">
-    <value>La nouvelle clé de récupération a été enregistrée juste avant le verrouillage. L'ancienne n'ouvre plus ce coffre, mais elle ouvre encore les sauvegardes et les copies faites avant.</value>
+    <value>La nouvelle clé de récupération a été enregistrée juste avant le verrouillage. L'ancienne ne déverrouille plus ce coffre, mais une copie plus ancienne de ce coffre (une sauvegarde, l'historique d'un dossier synchronisé) s'ouvre encore avec elle, et donne accès au coffre d'aujourd'hui.</value>
   </data>
   <data name="RecoveryKeyShown" xml:space="preserve">
     <value>Notez-la ou imprimez-la, et rangez-la loin de cet ordinateur : elle ne sera plus jamais affichée. Sans le mot de passe, elle seule ouvre le coffre.</value>
