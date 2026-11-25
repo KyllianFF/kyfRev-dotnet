@@ -21,6 +21,9 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   à l'ouverture (mesuré : 335 ms au pire au lieu de 953 ms sur 120 parties).
 
 ### Corrigé
+- Un coffre ouvert sur deux postes (dossier synchronisé) : avant d'écrire le suivi d'une fiche, ses passages ou les
+  réglages, kyfRev relit le fichier si l'autre poste l'a changé. Une révision, un passage ou un examen ajouté là-bas
+  n'est plus effacé par ce que ce poste écrit ensuite.
 - Extensions : une extension qui demanderait sans fin des adresses refusées ne fait plus grossir la mémoire ; seules les
   50 dernières sont gardées. Le réseau coupé est aussi vérifié pour WebTransport (HTTP/3).
 - Le coffre retenu, les préférences du poste, la séance en cours, l'état des extensions et la mise à jour lancée

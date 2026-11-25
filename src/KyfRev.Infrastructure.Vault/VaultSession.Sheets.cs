@@ -188,6 +188,7 @@ public sealed partial class VaultSession
     /// <returns>Les étiquettes normalisées réellement enregistrées.</returns>
     public ImmutableArray<string> SetTags(string id, IEnumerable<string> tags, Moment now)
     {
+        RefreshTracking(id);
         var sheet = AvailableSheet(id).Sheet;
         var absolute = Confine(sheet.Path);
         var bytes = ReadAllBytes(absolute);
@@ -238,6 +239,7 @@ public sealed partial class VaultSession
     public Tracking ApplyToTracking(string id, Func<Tracking, TrackingResult> operation)
     {
         ArgumentNullException.ThrowIfNull(operation);
+        RefreshTracking(id);
         var result = operation(Sheet(id).Sheet.Tracking);
         var tracking = result.IsSuccess ? result.Tracking : throw VaultException.Refused(result.Error);
         StoreTracking(id, tracking);
@@ -249,6 +251,7 @@ public sealed partial class VaultSession
     public ReviewOutcome ApplyReview(string id, Func<Tracking, ReviewResult> review)
     {
         ArgumentNullException.ThrowIfNull(review);
+        RefreshTracking(id);
         var result = review(Sheet(id).Sheet.Tracking);
         if (!result.IsSuccess)
         {
@@ -269,6 +272,7 @@ public sealed partial class VaultSession
     private string WriteText(string id, string text, string expectedFingerprint, ulong? session, Moment now)
     {
         ArgumentNullException.ThrowIfNull(text);
+        RefreshTracking(id);
         var sheet = AvailableSheet(id).Sheet;
         var absolute = Confine(sheet.Path);
         var current = ReadAllBytes(absolute);

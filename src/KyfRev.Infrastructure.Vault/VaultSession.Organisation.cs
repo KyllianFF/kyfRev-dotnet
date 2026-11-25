@@ -253,6 +253,7 @@ public sealed partial class VaultSession
         }
         foreach (var id in concerned)
         {
+            RefreshTracking(id);
             var sheet = _sheets[id].Sheet;
             // Un fichier manquant garde son empreinte, mais son suivi enregistre le nouveau chemin.
             var absolute = Confine(sheet.Path);
