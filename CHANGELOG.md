@@ -21,6 +21,9 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 ### Corrigé
 - Extensions : une extension qui demanderait sans fin des adresses refusées ne fait plus grossir la mémoire ; seules les
   50 dernières sont gardées. Le réseau coupé est aussi vérifié pour WebTransport (HTTP/3).
+- Le coffre retenu, les préférences du poste, la séance en cours, l'état des extensions et la mise à jour lancée
+  s'écrivent d'un coup : une coupure ou un disque plein pendant l'écriture laisse l'ancien fichier entier, et non un
+  fichier tronqué qui faisait oublier le coffre ou les réglages au démarrage suivant.
 - Écrire en Markdown : l'éditeur de la fiche d'avant suivait encore le champ, partagé d'une fiche à l'autre. Une autre
   fiche ouverte dans la même vue et écrite pouvait remplacer le texte de la première ; revenir écrire la même fiche
   donnait un faux conflit. La dernière frappe du texte mis en forme s'enregistre avant que son moteur ne se ferme.

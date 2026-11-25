@@ -87,7 +87,7 @@ public sealed class StudySessionFile : IStudySessionStore
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(_file)!);
-            File.WriteAllBytes(_file, bytes);
+            LocalFile.Replace(_file, bytes);
             return true;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)

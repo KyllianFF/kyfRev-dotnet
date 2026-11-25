@@ -138,7 +138,7 @@ public sealed class VaultLocations : IVaultLocations
         try
         {
             Directory.CreateDirectory(_localData);
-            File.WriteAllBytes(Path.Combine(_localData, LocalConfig), buffer.WrittenSpan.ToArray());
+            LocalFile.Replace(Path.Combine(_localData, LocalConfig), buffer.WrittenSpan);
             return true;
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
