@@ -220,6 +220,24 @@ public sealed class FileSafetyTests
     }
 
     [TestMethod]
+    public void A_lock_whose_info_cannot_be_written_is_given_back()
+    {
+        using var vault = TemporaryVault.Empty();
+        Directory.CreateDirectory(vault.PathOf(".suivi"));
+        var since = new DateTimeOffset(2026, 10, 9, 12, 0, 0, TimeSpan.Zero);
+        // Un dossier à la place de verrou-info.json : il ne peut pas être remplacé.
+        Directory.CreateDirectory(vault.PathOf(".suivi/verrou-info.json"));
+
+        // L'écriture est refusée : le coffre ne s'ouvre pas.
+        Assert.Throws<SystemException>(() => VaultLock.TryAcquire(vault.Root, since, out _));
+
+        Directory.Delete(vault.PathOf(".suivi/verrou-info.json"));
+        using var again = VaultLock.TryAcquire(vault.Root, since, out var holder);
+        Assert.IsNotNull(again, "le verrou de l'essai manqué a été rendu : le coffre ne se dit pas ouvert par cette fenêtre");
+        Assert.IsNull(holder);
+    }
+
+    [TestMethod]
     public void An_unreadable_lock_info_does_not_hide_that_the_vault_is_held()
     {
         using var vault = TemporaryVault.Empty();

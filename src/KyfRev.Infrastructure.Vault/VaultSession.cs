@@ -294,9 +294,11 @@ public sealed partial class VaultSession : IDisposable
                     sheet = sheet with { Tags = [.. copy.Tags] };
                     changed = true;
                 }
+                // Un suivi qui ne s'écrit pas (gardé ouvert par un autre programme) n'empêche pas d'ouvrir le coffre : il est
+                // à jour en mémoire, et la prochaine écriture ou la prochaine analyse le rattrape.
                 if (changed)
                 {
-                    WriteTracking(sheet, create: false);
+                    _ = TryRewriteTracking(sheet);
                 }
                 presence = FilePresence.Present;
             }
@@ -340,6 +342,24 @@ public sealed partial class VaultSession : IDisposable
         // La racine réelle est résolue à l'ouverture : seuls les composants du chemin dans le coffre sont examinés.
         var real = Io(absolute, () => _storage.RealPathBelow(_realRoot, path.Value.Replace('/', Path.DirectorySeparatorChar)));
         return RealPaths.IsWithin(real, _realRoot) ? absolute : throw VaultException.OutsideVault(absolute);
+    }
+
+    /// <summary>
+    /// Réécrit le suivi d'une fiche déjà suivie ; <see langword="false"/> s'il ne s'écrit pas. Pour ce qui suit une écriture
+    /// déjà faite (le texte de la fiche) ou ce qui se rattrape (l'analyse) : le suivi en mémoire fait foi, le fichier
+    /// suit à la prochaine écriture.
+    /// </summary>
+    internal bool TryRewriteTracking(TrackedSheetFile sheet)
+    {
+        try
+        {
+            WriteTracking(sheet, create: false);
+            return true;
+        }
+        catch (VaultException exception) when (exception.Kind == VaultErrorKind.Io)
+        {
+            return false;
+        }
     }
 
     internal void WriteTracking(TrackedSheetFile sheet, bool create)
