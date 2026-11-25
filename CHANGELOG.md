@@ -42,6 +42,9 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   la seconde cherchait encore ; « Imprimer » restait sans imprimante un instant.
 
 ### Sécurité
+- Chiffrement : les messages sur l'ancien mot de passe et l'ancienne clé de récupération sont exacts. Une copie plus
+  ancienne du coffre (une sauvegarde, l'historique d'un dossier synchronisé) s'ouvre encore avec l'ancien secret, et donne
+  accès au coffre d'aujourd'hui ; les messages laissaient croire que seules ces copies restaient ouvertes.
 - Écrire : un fichier posé dans le dossier des fiches (par une synchronisation, une archive importée) n'est plus servi à
   l'éditeur que comme image ou comme données ; un script ne peut plus s'y exécuter.
 - Importer un dossier de notes : une pièce jointe atteinte par une jonction ou un lien symbolique du dossier n'est plus
