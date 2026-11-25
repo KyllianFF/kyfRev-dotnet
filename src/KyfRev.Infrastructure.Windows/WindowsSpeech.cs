@@ -25,6 +25,11 @@ public sealed class WindowsSpeech : ISpeech, IDisposable
     {
     }
 
+    /// <remarks>
+    /// La synthèse se prépare au premier usage. Si elle échoue (aucune sortie audio, synthèse absente du système), rien ne
+    /// s'arrête : la lecture est refusée avec la raison, aucune voix n'est proposée, et l'usage suivant réessaie, une sortie
+    /// audio ayant pu être branchée entre-temps.
+    /// </remarks>
     internal WindowsSpeech(Action<SpeechSynthesizer> output)
     {
         _synthesizer = new Lazy<SpeechSynthesizer>(() =>
@@ -33,24 +38,36 @@ public sealed class WindowsSpeech : ISpeech, IDisposable
             output(synthesizer);
             synthesizer.SpeakCompleted += OnCompleted;
             return synthesizer;
-        });
+        }, LazyThreadSafetyMode.PublicationOnly);
     }
 
     /// <inheritdoc/>
-    public IReadOnlyList<string> FrenchVoices() =>
-        [.. FrenchCultures
-            .SelectMany(culture => _synthesizer.Value.GetInstalledVoices(CultureInfo.GetCultureInfo(culture)))
-            .Where(voice => voice.Enabled)
-            .Select(voice => voice.VoiceInfo.Name)
-            .Order(StringComparer.Ordinal)];
+    public IReadOnlyList<string> FrenchVoices()
+    {
+        try
+        {
+            return
+            [
+                .. FrenchCultures
+                    .SelectMany(culture => _synthesizer.Value.GetInstalledVoices(CultureInfo.GetCultureInfo(culture)))
+                    .Where(voice => voice.Enabled)
+                    .Select(voice => voice.VoiceInfo.Name)
+                    .Order(StringComparer.Ordinal),
+            ];
+        }
+        catch (Exception problem) when (IsSpeechProblem(problem))
+        {
+            return [];
+        }
+    }
 
     /// <inheritdoc/>
     public Task<Outcome<Done>> SpeakAsync(string text, string? voice, double rate, CancellationToken cancellation)
     {
-        var synthesizer = _synthesizer.Value;
-        Interrupt();
         try
         {
+            var synthesizer = _synthesizer.Value;
+            Interrupt();
             if (voice is not null)
             {
                 synthesizer.SelectVoice(voice);
@@ -62,17 +79,33 @@ public sealed class WindowsSpeech : ISpeech, IDisposable
             cancellation.Register(Interrupt);
             return speaking.Task;
         }
-        catch (Exception problem) when (problem is ArgumentException or InvalidOperationException or PlatformNotSupportedException)
+        catch (Exception problem) when (IsSpeechProblem(problem))
         {
             return Task.FromResult(Outcome.Refused<Done>(problem.Message));
         }
     }
 
-    /// <inheritdoc/>
-    public void PauseSpeaking() => _synthesizer.Value.Pause();
+    /// <summary>Ce qui peut empêcher la synthèse de parler : une voix inconnue, aucune sortie audio, la synthèse absente.</summary>
+    private static bool IsSpeechProblem(Exception problem) =>
+        problem is ArgumentException or InvalidOperationException or PlatformNotSupportedException or System.Runtime.InteropServices.COMException or UnauthorizedAccessException or IOException;
 
     /// <inheritdoc/>
-    public void ResumeSpeaking() => _synthesizer.Value.Resume();
+    public void PauseSpeaking()
+    {
+        if (_synthesizer.IsValueCreated)
+        {
+            _synthesizer.Value.Pause();
+        }
+    }
+
+    /// <inheritdoc/>
+    public void ResumeSpeaking()
+    {
+        if (_synthesizer.IsValueCreated)
+        {
+            _synthesizer.Value.Resume();
+        }
+    }
 
     /// <inheritdoc/>
     public void Dispose()
@@ -91,10 +124,15 @@ public sealed class WindowsSpeech : ISpeech, IDisposable
     /// <summary>Arrête ce qui se dit. Une voix en pause doit reprendre pour que la suivante parle.</summary>
     private void Interrupt()
     {
-        var synthesizer = _synthesizer.Value;
         var (speaking, prompt) = (_speaking, _prompt);
         _speaking = null;
         _prompt = null;
+        if (!_synthesizer.IsValueCreated)
+        {
+            speaking?.TrySetResult(Outcome.Done());
+            return;
+        }
+        var synthesizer = _synthesizer.Value;
         if (prompt is not null)
         {
             synthesizer.SpeakAsyncCancel(prompt);

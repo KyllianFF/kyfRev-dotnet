@@ -31,6 +31,8 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   dont le verrou n'avait pu être noté ne se dit plus « déjà ouvert » par la même fenêtre.
 - Journal de diagnostic : après un échec d'écriture (fichier tenu par un antivirus ou une sauvegarde), il se taisait
   jusqu'à la fin de la session ; il se tait maintenant une minute, puis reprend.
+- Lecture à voix haute : sans sortie audio (ou sans synthèse vocale dans Windows), lancer la lecture pouvait fermer
+  kyfRev ; elle est maintenant refusée avec la raison, et réessayée une fois une sortie branchée.
 - Écrire en Markdown : l'éditeur de la fiche d'avant suivait encore le champ, partagé d'une fiche à l'autre. Une autre
   fiche ouverte dans la même vue et écrite pouvait remplacer le texte de la première ; revenir écrire la même fiche
   donnait un faux conflit. La dernière frappe du texte mis en forme s'enregistre avant que son moteur ne se ferme.

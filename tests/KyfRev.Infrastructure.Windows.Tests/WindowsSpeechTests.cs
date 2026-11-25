@@ -81,6 +81,31 @@ public sealed class WindowsSpeechTests
         speech.ResumeSpeaking();
     }
 
+    /// <summary>Aucune sortie audio : la lecture est refusée avec sa raison, rien ne s'arrête, et l'usage suivant réessaie.</summary>
+    [TestMethod]
+    public async Task Without_an_audio_output_reading_is_refused_and_tried_again_later()
+    {
+        var tries = 0;
+        using var speech = new WindowsSpeech(synthesizer =>
+        {
+            tries++;
+            if (tries == 1)
+            {
+                throw new InvalidOperationException("Aucune sortie audio.");
+            }
+            synthesizer.SetOutputToNull();
+        });
+
+        speech.PauseSpeaking();
+        speech.ResumeSpeaking();
+        var said = await speech.SpeakAsync("Un.", null, 1, CancellationToken.None).WaitAsync(EnginePatience);
+
+        Assert.IsFalse(said.Succeeded);
+        Assert.AreEqual("Aucune sortie audio.", said.Error);
+        speech.FrenchVoices();
+        Assert.AreEqual(2, tries, "branchée entre-temps, la sortie est reprise");
+    }
+
     [TestMethod]
     public void Disposing_without_having_spoken_does_nothing()
     {
