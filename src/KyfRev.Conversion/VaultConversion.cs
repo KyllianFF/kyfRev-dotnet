@@ -48,7 +48,7 @@ public sealed record ConversionResult(bool Succeeded, string Message, int Files 
 /// écrit le coffre chiffré. Chaque conversion dit où elle en est : les fichiers écrits, puis les fichiers relus.
 /// </para>
 /// </remarks>
-public static class VaultConversion
+public static partial class VaultConversion
 {
     /// <summary>La longueur minimale d'un mot de passe de coffre.</summary>
     public const int MinimumPasswordLength = VaultSecret.MinimumPasswordLength;
