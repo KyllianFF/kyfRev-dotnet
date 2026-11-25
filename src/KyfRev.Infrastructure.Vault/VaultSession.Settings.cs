@@ -53,6 +53,7 @@ public sealed partial class VaultSession
     public void ChangePreferences(VaultPreferences preferences)
     {
         ArgumentNullException.ThrowIfNull(preferences);
+        RefreshSettings();
         var creation = ReviewSequence.Create([0, .. preferences.Steps]);
         if (!creation.IsSuccess)
         {
@@ -136,8 +137,10 @@ public sealed partial class VaultSession
 
     private void SaveSettings(VaultSettingsFile settings)
     {
-        ReplaceFile(Confine(SettingsPath), settings.Write());
+        var bytes = settings.Write();
+        ReplaceFile(Confine(SettingsPath), bytes);
         Settings = settings;
+        KnowSettings(bytes);
     }
 
     private bool HasSchemas()

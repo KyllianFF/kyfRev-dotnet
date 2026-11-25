@@ -103,6 +103,7 @@ public sealed partial class VaultSession
             throw VaultException.InvalidSettings("donnez un nom à l'examen.");
         }
         var cleanFolder = folder.Trim().Trim('/');
+        RefreshSettings();
         var exams = Settings.Exams
             .Where(exam => exam.Folder != cleanFolder)
             .Append(new ExamSetting(cleanFolder, cleanName, day, UnknownProperties.None))
@@ -116,6 +117,7 @@ public sealed partial class VaultSession
     {
         ArgumentNullException.ThrowIfNull(folder);
         var cleanFolder = folder.Trim().Trim('/');
+        RefreshSettings();
         SaveSettings(Settings with { Exams = [.. Settings.Exams.Where(exam => exam.Folder != cleanFolder)] });
     }
 

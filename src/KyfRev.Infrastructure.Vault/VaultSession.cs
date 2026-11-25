@@ -135,9 +135,11 @@ public sealed partial class VaultSession : IDisposable
             // Les fichiers écrits par une version d'avant portent un attribut qui empêche leur synchronisation.
             _ = Io(absolute, () => SyncedFiles.Release(absolute));
             VaultSettingsFile settings;
+            byte[] settingsBytes;
             try
             {
-                settings = VaultSettingsFile.Read(ReadAllBytes(storage, settingsPath));
+                settingsBytes = ReadAllBytes(storage, settingsPath);
+                settings = VaultSettingsFile.Read(settingsBytes);
             }
             catch (VaultFormatException exception)
             {
@@ -148,6 +150,7 @@ public sealed partial class VaultSession : IDisposable
                 CreateDirectory(storage, VaultLayout.Absolute(absolute, folder));
             }
             var vault = new VaultSession(absolute, storage, vaultLock, settings, ids ?? UlidGenerator.System);
+            vault.KnowSettings(settingsBytes);
             // Une opération interrompue (arrêt brutal pendant un renommage) est terminée avant tout.
             var toCheck = vault.ResumeInterruptedOperation();
             vault.Analyze(now);
@@ -230,6 +233,7 @@ public sealed partial class VaultSession : IDisposable
 
         // 2. Les fichiers de suivi.
         var trackings = new List<TrackedSheetFile>();
+        _trackingPrints.Clear();
         var trackingFolder = VaultLayout.Absolute(Root, VaultLayout.SheetTracking);
         foreach (var file in Io(trackingFolder, () => _storage.Entries(trackingFolder).Select(entry => entry.FullName).Order(StringComparer.Ordinal).ToList()))
         {
@@ -242,10 +246,12 @@ public sealed partial class VaultSession : IDisposable
             var shown = $"{VaultLayout.SheetTracking}/{stem}.json";
             try
             {
-                var tracking = TrackedSheetFile.Read(_storage.ReadAllBytes(file));
+                var bytes = _storage.ReadAllBytes(file);
+                var tracking = TrackedSheetFile.Read(bytes);
                 if (tracking.Id == stem && VaultIds.IsSheetId(stem))
                 {
                     trackings.Add(tracking);
+                    KnowTracking(stem, bytes);
                 }
                 else
                 {
@@ -366,14 +372,16 @@ public sealed partial class VaultSession : IDisposable
     internal void WriteTracking(TrackedSheetFile sheet, bool create)
     {
         var absolute = Confine(VaultPath.Create($"{VaultLayout.SheetTracking}/{sheet.Id}.json"));
+        var bytes = sheet.Write();
         if (create)
         {
-            CreateFile(absolute, sheet.Write());
+            CreateFile(absolute, bytes);
         }
         else
         {
-            ReplaceFile(absolute, sheet.Write());
+            ReplaceFile(absolute, bytes);
         }
+        KnowTracking(sheet.Id, bytes);
     }
 
     /// <summary>Copie un contenu de fiche dans <c>.suivi/versions/&lt;id&gt;/&lt;horodatage&gt;.md</c>.</summary>

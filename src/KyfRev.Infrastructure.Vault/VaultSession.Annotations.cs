@@ -218,6 +218,7 @@ public sealed partial class VaultSession
     {
         var annotations = new SortedDictionary<string, AnnotationsFile>(StringComparer.Ordinal);
         var unreadable = new HashSet<string>(StringComparer.Ordinal);
+        _annotationPrints.Clear();
         var folder = VaultLayout.Absolute(Root, VaultLayout.Annotations);
         foreach (var file in Io(folder, () => _storage.Entries(folder).Select(entry => entry.FullName).Order(StringComparer.Ordinal).ToList()))
         {
@@ -230,12 +231,14 @@ public sealed partial class VaultSession
             var shown = $"{VaultLayout.Annotations}/{sheetId}.json";
             try
             {
-                var read = AnnotationsFile.Read(_storage.ReadAllBytes(file));
+                var bytes = _storage.ReadAllBytes(file);
+                var read = AnnotationsFile.Read(bytes);
                 if (read.SheetId != sheetId)
                 {
                     throw new VaultFormatException("le nom du fichier ne correspond pas à la fiche");
                 }
                 annotations[sheetId] = read;
+                KnowAnnotations(sheetId, bytes);
             }
             catch (Exception exception) when (exception is VaultFormatException || IsIo(exception))
             {
@@ -287,9 +290,15 @@ public sealed partial class VaultSession
         SaveAnnotations(sheetId, list.SetItem(index, change(list[index])));
     }
 
-    /// <summary>Annotations d'une fiche, à modifier puis enregistrer ; refusé si le fichier est illisible.</summary>
-    private ImmutableArray<StoredAnnotation> ModifiableAnnotations(string sheetId) =>
-        _unreadableAnnotations.Contains(sheetId) ? throw VaultException.UnreadableAnnotations(sheetId) : Annotations(sheetId);
+    /// <summary>
+    /// Annotations d'une fiche, à modifier puis enregistrer, telles qu'elles sont sur le disque si un autre poste les a
+    /// changées ; refusé si le fichier est illisible.
+    /// </summary>
+    private ImmutableArray<StoredAnnotation> ModifiableAnnotations(string sheetId)
+    {
+        RefreshAnnotations(sheetId);
+        return _unreadableAnnotations.Contains(sheetId) ? throw VaultException.UnreadableAnnotations(sheetId) : Annotations(sheetId);
+    }
 
     private void SaveAnnotations(string sheetId, ImmutableArray<StoredAnnotation> annotations)
     {
@@ -300,8 +309,10 @@ public sealed partial class VaultSession
         var file = _annotations.TryGetValue(sheetId, out var existing)
             ? existing with { Format = 1, Annotations = annotations }
             : new AnnotationsFile(1, sheetId, annotations, UnknownProperties.None);
-        ReplaceFile(Confine(VaultPath.Create($"{VaultLayout.Annotations}/{sheetId}.json")), file.Write());
+        var bytes = file.Write();
+        ReplaceFile(Confine(VaultPath.Create($"{VaultLayout.Annotations}/{sheetId}.json")), bytes);
         _annotations[sheetId] = file;
+        KnowAnnotations(sheetId, bytes);
     }
 
     private static void VerifyAnchor(StoredAnchor anchor)
