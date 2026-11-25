@@ -249,7 +249,8 @@ public sealed partial class VaultUseCases(
     /// <summary>
     /// Verrouille le coffre chiffré ouvert : il est fermé, une fois finie l'opération en cours, et sa clé effacée ; l'état
     /// l'attend de nouveau (<see cref="AppState.Locked"/>). Il ne s'ouvre ensuite qu'avec son mot de passe ou sa clé de
-    /// récupération : la clé retenue sur ce poste ne sert qu'au démarrage. Un coffre en clair ne se verrouille pas.
+    /// récupération : la clé retenue sur ce poste ne sert qu'au démarrage, et plus du tout une fois le coffre verrouillé,
+    /// même après une relance (<see cref="IVaultKeys.StayLocked"/>). Un coffre en clair ne se verrouille pas.
     /// </summary>
     public AppState Lock()
     {
@@ -266,6 +267,10 @@ public sealed partial class VaultUseCases(
             host.Close();
         }
         LogVaultLocked(logger, root);
+        if (!keys.StayLocked(root))
+        {
+            LogLockNotKept(logger, root);
+        }
         return LockedState(root, null);
     }
 
@@ -347,6 +352,9 @@ public sealed partial class VaultUseCases(
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Coffre chiffré {Root} verrouillé.")]
     private static partial void LogVaultLocked(ILogger logger, string root);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Coffre {Root} verrouillé, mais ce poste n'a pas pu le noter : sa clé retenue le rouvrirait au prochain démarrage.")]
+    private static partial void LogLockNotKept(ILogger logger, string root);
 
     [LoggerMessage(Level = LogLevel.Warning, Message = "Coffre chiffré {Root} ouvert, mais sa clé n'a pas pu être retenue ou oubliée sur ce poste (retenir : {Remember}).")]
     private static partial void LogKeyNotRemembered(ILogger logger, string root, bool remember);

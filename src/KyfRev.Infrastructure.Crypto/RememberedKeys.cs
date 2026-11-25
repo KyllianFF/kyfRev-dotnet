@@ -8,6 +8,8 @@ namespace KyfRev.Infrastructure.Crypto;
 /// Les clés retenues sur ce poste, hors de tout coffre, dans <c>cles-retenues.json</c>. Chacune est déjà protégée par
 /// Windows pour la session de l'utilisateur (<see cref="RememberedKey"/>) : le fichier ne se lit nulle part ailleurs. Une
 /// clé est retenue pour un coffre (son identifiant) dans un dossier : deux copies du même coffre ont chacune la leur.
+/// Une clé dont le coffre a été verrouillé le reste (<c>"verrouille": true</c>) : elle ne le rouvre plus, même après une
+/// relance, jusqu'à ce que son mot de passe le déverrouille et la retienne de nouveau.
 /// </summary>
 /// <param name="folder">Le dossier des données de ce poste.</param>
 /// <param name="disk">Le disque, qui écrit le fichier de façon atomique.</param>
@@ -23,12 +25,39 @@ public sealed class RememberedKeys(string folder, VaultStorage disk)
     /// <summary>Le chemin du fichier.</summary>
     public string Path => System.IO.Path.Combine(folder, FileName);
 
-    /// <summary>La clé protégée retenue pour le coffre <paramref name="vaultId"/> de <paramref name="root"/> ; rien sinon.</summary>
-    public byte[]? Find(string vaultId, string root)
+    /// <summary>La clé protégée retenue pour le coffre <paramref name="vaultId"/> de <paramref name="root"/>, verrouillé ou non ; rien sinon.</summary>
+    public byte[]? Find(string vaultId, string root) => EntryOf(vaultId, root)?.Key;
+
+    /// <summary>
+    /// La clé protégée qui peut rouvrir le coffre <paramref name="vaultId"/> de <paramref name="root"/> : rien si aucune
+    /// n'est retenue, ou si le coffre a été verrouillé depuis.
+    /// </summary>
+    public byte[]? FindUnlocked(string vaultId, string root) => EntryOf(vaultId, root) is { Locked: false } entry ? entry.Key : null;
+
+    /// <summary>
+    /// Le coffre de <paramref name="root"/> est verrouillé : sa clé retenue, s'il y en a une, ne le rouvre plus jusqu'à ce
+    /// qu'elle soit retenue de nouveau (<see cref="Keep"/>) ou oubliée. Vrai s'il n'y avait rien à marquer ; faux si le
+    /// fichier ne se lit pas, ou n'a pas pu être réécrit.
+    /// </summary>
+    public bool Lock(string root)
+    {
+        var place = Place(root);
+        if (Read() is not { } entries)
+        {
+            return false;
+        }
+        if (!entries.Any(entry => SamePlace(entry.Root, place) && !entry.Locked))
+        {
+            return true;
+        }
+        return Write([.. entries.Select(entry => SamePlace(entry.Root, place) ? entry with { Locked = true } : entry)]);
+    }
+
+    private Entry? EntryOf(string vaultId, string root)
     {
         ArgumentNullException.ThrowIfNull(vaultId);
         var place = Place(root);
-        return Read()?.FirstOrDefault(entry => entry.VaultId == vaultId && SamePlace(entry.Root, place))?.Key;
+        return Read()?.FirstOrDefault(entry => entry.VaultId == vaultId && SamePlace(entry.Root, place));
     }
 
     /// <summary>
@@ -116,7 +145,7 @@ public sealed class RememberedKeys(string folder, VaultStorage disk)
                     && entry["dossier"]?.GetValue<string>() is { Length: > 0 } root
                     && entry["cle"]?.GetValue<string>() is { Length: > 0 } key)
                 {
-                    entries.Add(new Entry(vaultId, root, Convert.FromBase64String(key)));
+                    entries.Add(new Entry(vaultId, root, Convert.FromBase64String(key), entry["verrouille"] is JsonValue locked && locked.TryGetValue<bool>(out var isLocked) && isLocked));
                 }
             }
             return entries;
@@ -132,12 +161,17 @@ public sealed class RememberedKeys(string folder, VaultStorage disk)
         var keys = new JsonArray();
         foreach (var entry in entries)
         {
-            keys.Add(new JsonObject
+            var written = new JsonObject
             {
                 ["coffre"] = entry.VaultId,
                 ["dossier"] = entry.Root,
                 ["cle"] = Convert.ToBase64String(entry.Key),
-            });
+            };
+            if (entry.Locked)
+            {
+                written["verrouille"] = true;
+            }
+            keys.Add(written);
         }
         var document = new JsonObject { ["format"] = Format, ["cles"] = keys };
         try
@@ -152,5 +186,5 @@ public sealed class RememberedKeys(string folder, VaultStorage disk)
         }
     }
 
-    private sealed record Entry(string VaultId, string Root, byte[] Key);
+    private sealed record Entry(string VaultId, string Root, byte[] Key, bool Locked = false);
 }

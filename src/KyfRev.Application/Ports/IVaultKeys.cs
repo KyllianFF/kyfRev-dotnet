@@ -33,6 +33,13 @@ public interface IVaultKeys
     bool Forget(string root);
 
     /// <summary>
+    /// Le coffre de <paramref name="root"/> vient d'être verrouillé : la clé retenue sur ce poste, s'il y en a une, ne le
+    /// rouvre plus, même après une relance de l'application ou un redémarrage, jusqu'à ce que son mot de passe ou sa clé de
+    /// récupération le déverrouille (<see cref="Remember"/> ou <see cref="Forget"/>). Faux si cela n'a pas pu être écrit.
+    /// </summary>
+    bool StayLocked(string root);
+
+    /// <summary>
     /// Vrai si ce poste a retenu une clé pour le coffre de <paramref name="root"/>, dans ce dossier. Elle n'est pas
     /// essayée sur son index : seul <see cref="Remembered"/> dit si elle l'ouvre encore.
     /// </summary>
@@ -93,6 +100,9 @@ public sealed class NoVaultKeys : IVaultKeys
 
     /// <summary>Vrai : il n'y a rien à oublier.</summary>
     public bool Forget(string root) => true;
+
+    /// <summary>Vrai : rien n'est retenu, rien ne rouvre un coffre.</summary>
+    public bool StayLocked(string root) => true;
 
     /// <summary>Faux : aucune clé n'est retenue.</summary>
     public bool IsRemembered(string root) => false;

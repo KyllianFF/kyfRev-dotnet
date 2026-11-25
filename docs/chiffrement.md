@@ -272,7 +272,11 @@ kyfrev-coffre cle-de-recuperation <coffre chiffré>
      déchargent. Une lecture partie avant n'y remet rien.
 - **Seul son mot de passe ou sa clé de récupération le rouvre** : la clé retenue sur ce poste ne sert qu'au démarrage,
   sinon verrouiller ne protégerait de rien. Une fois verrouillé, il n'est plus ouvert par elle, ni par « Ouvrir un autre
-  coffre… » ni par l'accueil, jusqu'à ce qu'on le déverrouille.
+  coffre… » ni par l'accueil, jusqu'à ce qu'on le déverrouille. Le verrouillage est noté à côté de la clé retenue
+  (`"verrouille": true` dans `cles-retenues.json`) : relancer l'application ou redémarrer le poste ne le lève pas. La
+  clé reste retenue, et sert de nouveau dès que le mot de passe a déverrouillé le coffre avec « Se souvenir » coché.
+  Quelqu'un qui sait programmer dans la session de l'utilisateur peut toujours demander la clé à Windows : la marque
+  empêche seulement qu'une simple relance contourne le verrou.
 - **Ce que le verrouillage ne peut pas effacer** : les chaînes de .NET ne s'effacent pas (le mot de passe tapé, le texte
   lu), seulement leurs références ; la mémoire libérée, le fichier d'échange et la mise en veille prolongée peuvent en
   garder des traces, et ce qui a été copié reste dans le presse-papiers, et dans son historique s'il est activé. La clé de

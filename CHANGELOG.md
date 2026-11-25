@@ -42,6 +42,8 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   la seconde cherchait encore ; « Imprimer » restait sans imprimante un instant.
 
 ### Sécurité
+- Coffre chiffré : verrouillé, il le reste après une relance de kyfRev ou un redémarrage du poste. La clé retenue sur
+  cet ordinateur le rouvrait sans mot de passe dès que l'application était relancée.
 - Écrire : un fichier posé dans le dossier des fiches (par une synchronisation, une archive importée) n'est plus servi à
   l'éditeur que comme image ou comme données ; un script ne peut plus s'y exécuter.
 - Importer un dossier de notes : une pièce jointe atteinte par une jonction ou un lien symbolique du dossier n'est plus
