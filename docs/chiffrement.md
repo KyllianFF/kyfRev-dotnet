@@ -15,11 +15,11 @@ contre quoi il protège, et ce contre quoi il ne protège pas, se lit dans [Le m
 
 ## Les clés
 
-- **La clé de données** : 256 bits aléatoires, une par coffre. Elle chiffre tous les fichiers et ne change jamais. Changer
+- **La clé de données** : 256 bits aléatoires, une par coffre. Elle chiffre tous les fichiers et ne change qu'au renouvellement. Changer
   le mot de passe ou la clé de récupération ne réécrit donc aucun fichier. Il s'ensuit qu'une copie plus ancienne de
   l'en-tête (une sauvegarde, l'historique d'un dossier synchronisé) s'ouvre encore avec l'ancien secret, et en tire la
-  clé qui lit aussi le coffre d'aujourd'hui : après la fuite d'un secret, en changer ne suffit pas, il faut déchiffrer le
-  coffre puis le chiffrer de nouveau, ce qui tire une nouvelle clé de données.
+  clé qui lit aussi le coffre d'aujourd'hui : après la fuite d'un secret, en changer ne suffit pas. « Renouveler toutes
+  les clés… » (voir plus bas) tire une nouvelle clé de données et chiffre de nouveau tout le coffre avec elle.
 - **La clé du mot de passe** : tirée du mot de passe et d'un sel de 16 octets propre au coffre. Elle enveloppe la clé de
   données.
 - **La clé de récupération** : 256 bits aléatoires, montrés une seule fois et écrits en base32 de Crockford (sans I, L,
@@ -364,6 +364,22 @@ en clair et le chiffrement ; la présentation n'y accède que par le port `IVaul
   avant que le coffre ne se ferme ; la copie s'écrit dans « Coffre (en clair) » (« (2) » si le nom est pris). Ensuite,
   « Ouvrir le coffre en clair » l'ouvre, et « Revenir au coffre chiffré » montre l'écran de déverrouillage, sauf si ce
   poste a retenu sa clé. Le coffre en clair se lit sans mot de passe, ses sauvegardes aussi : la page le dit.
+- **« Renouveler toutes les clés… »**, dans la carte Chiffrement, quand un mot de passe ou une clé a pu être vu. La page
+  suit les trois étapes du chiffrement :
+  1. **le secret actuel** (le mot de passe, ou la clé de récupération), puis « Garder ce mot de passe » (par défaut, et
+     seulement si personne d'autre ne le connaît) ou « En choisir un nouveau », tapé deux fois. Avec la clé de
+     récupération, il faut un nouveau mot de passe : elle ne peut pas en tenir lieu. Le secret est vérifié, et une
+     nouvelle clé de données tirée, enveloppée par le mot de passe et par une nouvelle clé de récupération, sans rien
+     écrire. L'identifiant du coffre ne change pas : c'est le même coffre ;
+  2. **la nouvelle clé de récupération**, montrée une seule fois, comme au chiffrement ;
+  3. **le renouvellement** : le coffre se ferme, puis tout le coffre est lu avec l'ancienne clé et écrit avec la nouvelle
+     dans « Coffre (nouvelles clés) », à côté, relu et comparé. Les dossiers s'échangent ensuite : le coffre renouvelé
+     prend le nom du coffre, et l'ancien devient « Coffre (ancien, à supprimer) ». Si le second déplacement échoue, le
+     premier est défait, et la page dit où est le coffre renouvelé.
+
+  « Rouvrir le coffre » l'ouvre avec le mot de passe donné ; sa clé est retenue sur ce poste si l'ancienne l'était. Les
+  sauvegardes faites avant, l'historique du dossier synchronisé et l'ancien coffre s'ouvrent encore avec l'ancien secret,
+  mais ne donnent plus la clé du coffre d'aujourd'hui : la page dit de les supprimer.
 - **Le verrou du coffre source** est tenu pendant toute la conversion, sans y rien écrire : une autre fenêtre de kyfRev le
   trouve pris, comme s'il était ouvert.
 - **Ce qui reste comme à l'outil** : un dossier temporaire laissé par une conversion coupée (l'application fermée pendant

@@ -7,6 +7,12 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ## [Non publié]
 
+### Ajouté
+- Chiffrement : « Renouveler toutes les clés… », dans la carte Chiffrement, si un mot de passe ou une clé a pu être vu.
+  Une nouvelle clé de données, le mot de passe actuel ou un nouveau, une nouvelle clé de récupération : tout le coffre
+  est chiffré de nouveau à côté, relu et comparé, puis reprend sa place ; l'ancien devient « … (ancien, à supprimer) ».
+  Une ancienne sauvegarde ou l'historique du dossier synchronisé ne donne plus la clé du coffre d'aujourd'hui.
+
 ### Modifié
 - Recherche : une fiche qui n'a pas changé ne se relit plus à chaque recherche ; son texte reste en mémoire le temps
   de la session (jamais sur le disque). Mesuré sur 2 000 fiches : 170 ms au lieu de 750 ms par recherche.

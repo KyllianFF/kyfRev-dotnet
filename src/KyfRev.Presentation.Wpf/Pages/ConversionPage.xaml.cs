@@ -17,7 +17,7 @@ internal sealed partial class ConversionPage : UserControl
         InitializeComponent();
         // La vue peut servir à une autre conversion : rien de ce qui a été tapé ne reste.
         DataContextChanged += (_, _) => ClearSecrets();
-        foreach (var box in new[] { RecoveryKeyText, DecryptRecoveryBox })
+        foreach (var box in new[] { RecoveryKeyText, DecryptRecoveryBox, CurrentRecoveryBox })
         {
             DataObject.AddCopyingHandler(box, OnSecretCopying);
         }
@@ -26,6 +26,18 @@ internal sealed partial class ConversionPage : UserControl
     /// <summary>« Continuer » : le mot de passe, deux fois, part vers la page ; les champs se vident.</summary>
     private void OnPrepare(object sender, RoutedEventArgs e)
     {
+        if (DataContext is ConversionPageViewModel { IsRenewal: true } renewal)
+        {
+            // Le renouvellement : le secret actuel, et le nouveau mot de passe seulement s'il en prend un.
+            var secrets = new RenewalSecrets(
+                renewal.UsesRecoveryKey ? CurrentRecoveryBox.Text : CurrentPasswordBox.Password,
+                renewal.UsesRecoveryKey,
+                renewal.ShowsNewPassword ? NewPasswordBox.Password : null,
+                renewal.ShowsNewPassword ? ConfirmPasswordBox.Password : null);
+            ClearSecrets();
+            renewal.PrepareRenewalCommand.Execute(secrets);
+            return;
+        }
         var password = new NewPassword(NewPasswordBox.Password, ConfirmPasswordBox.Password);
         ClearSecrets();
         if (DataContext is ConversionPageViewModel page)
@@ -59,7 +71,8 @@ internal sealed partial class ConversionPage : UserControl
     /// <summary>Un champ de secret paraît, à son étape ou quand la case le fait paraître : il prend le focus.</summary>
     private void OnSecretShown(object sender, DependencyPropertyChangedEventArgs e)
     {
-        if (e.NewValue is true)
+        // Au renouvellement, le focus reste au secret actuel : le premier champ de l'étape.
+        if (e.NewValue is true && !(sender == NewPasswordBox && DataContext is ConversionPageViewModel { IsRenewal: true }))
         {
             var field = (Control)sender;
             Dispatcher.BeginInvoke(DispatcherPriority.Input, () =>
@@ -122,5 +135,7 @@ internal sealed partial class ConversionPage : UserControl
         ConfirmPasswordBox.Clear();
         DecryptPasswordBox.Clear();
         DecryptRecoveryBox.Clear();
+        CurrentPasswordBox.Clear();
+        CurrentRecoveryBox.Clear();
     }
 }

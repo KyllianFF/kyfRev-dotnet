@@ -56,6 +56,34 @@ public sealed class VaultConversions(PasswordParameters? parameters = null) : IV
         return Report(VaultConversion.Decrypt(source, destination, secret.Text, progress: progress, isRecoveryKey: secret.IsRecoveryKey), destination);
     }
 
+    /// <inheritdoc/>
+    public EncryptionDraft PrepareRenewal(string source, VaultSecret current, string password)
+    {
+        ArgumentNullException.ThrowIfNull(current);
+        var prepared = VaultConversion.PrepareRenewal(source, current.Text, current.IsRecoveryKey, password, Parameters());
+        return prepared.Plan ?? throw new VaultCryptoException(prepared.Refusal);
+    }
+
+    /// <inheritdoc/>
+    public ConversionReport Renew(EncryptionDraft draft, VaultSecret current, string destination, IProgress<ConversionProgress>? progress = null)
+    {
+        ArgumentNullException.ThrowIfNull(current);
+        if (draft is not EncryptionPlan plan)
+        {
+            throw new ArgumentException("Ce renouvellement n'a pas été préparé par cette conversion.", nameof(draft));
+        }
+        return Report(VaultConversion.Renew(plan, current.Text, current.IsRecoveryKey, destination, progress), destination);
+    }
+
+    /// <inheritdoc/>
+    public ConversionReport Swap(string source, string renewed)
+    {
+        var (retired, refusal) = VaultConversion.Swap(source, renewed);
+        return retired is null
+            ? ConversionReport.Refused(refusal ?? string.Empty, renewed)
+            : new ConversionReport(true, $"L'ancien coffre est maintenant « {retired} ».", retired);
+    }
+
     private static ConversionReport Report(ConversionResult result, string destination) =>
         new(result.Succeeded, result.Message, destination, result.Files);
 

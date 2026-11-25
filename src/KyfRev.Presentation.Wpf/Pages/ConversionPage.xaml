@@ -47,7 +47,7 @@
           <TextBlock x:Name="StepTwo" Text="{x:Static pages:EncryptionText.StepRecoveryKey}" Style="{StaticResource StepText}" Tag="{Binding IsStepTwo}" />
         </Border>
         <Border Style="{StaticResource StepPill}">
-          <TextBlock x:Name="StepThree" Text="{x:Static pages:EncryptionText.StepConversion}" Style="{StaticResource StepText}" Tag="{Binding IsStepThree}" />
+          <TextBlock x:Name="StepThree" Text="{Binding StepThreeLabel}" Style="{StaticResource StepText}" Tag="{Binding IsStepThree}" />
         </Border>
       </WrapPanel>
 
@@ -55,8 +55,34 @@
       <StackPanel x:Name="PasswordPart" Margin="0,16,0,0" Visibility="{Binding IsPassword, Converter={StaticResource Visible}}" IsVisibleChanged="OnPartVisibleChanged">
         <TextBlock x:Name="PasswordTitle" Text="{x:Static pages:EncryptionText.PasswordStepTitle}" Style="{DynamicResource Kyf.Text.Subtitle}"
                    TextWrapping="Wrap" AutomationProperties.HeadingLevel="Level2" />
-        <TextBlock x:Name="PasswordStepHelp" Text="{x:Static pages:EncryptionText.PasswordStepHelp}" Style="{DynamicResource Kyf.Text.Secondary}"
+        <TextBlock x:Name="PasswordStepHelp" Text="{Binding PasswordHelp}" Style="{DynamicResource Kyf.Text.Secondary}"
                    Margin="0,4,0,0" TextWrapping="Wrap" />
+        <!-- Le renouvellement (rangée 29B) : le secret actuel, puis garder ce mot de passe ou en choisir un nouveau. -->
+        <StackPanel x:Name="RenewalPart" Visibility="{Binding IsRenewal, Converter={StaticResource Visible}}">
+          <TextBlock x:Name="CurrentSecretLabel" Text="{Binding CurrentSecretLabel}" Style="{DynamicResource Kyf.Text.BodyStrong}" Margin="0,12,0,8" />
+          <PasswordBox x:Name="CurrentPasswordBox" IsEnabled="{Binding IsIdle}" IsVisibleChanged="OnSecretShown" IsEnabledChanged="OnSecretEnabled" Visibility="{Binding UsesPassword, Converter={StaticResource Visible}}"
+                       AutomationProperties.Name="{x:Static pages:EncryptionText.CurrentPassword}" AutomationProperties.LabeledBy="{Binding ElementName=CurrentSecretLabel}" />
+          <TextBox x:Name="CurrentRecoveryBox" IsEnabled="{Binding IsIdle}" IsVisibleChanged="OnSecretShown" IsEnabledChanged="OnSecretEnabled" IsUndoEnabled="False" FontFamily="{DynamicResource Kyf.Font.Code}" TextWrapping="Wrap"
+                   Visibility="{Binding UsesRecoveryKey, Converter={StaticResource Visible}}"
+                   AutomationProperties.Name="{x:Static pages:EncryptionText.RecoveryKey}" AutomationProperties.HelpText="{x:Static pages:EncryptionText.RecoveryHelp}"
+                   AutomationProperties.LabeledBy="{Binding ElementName=CurrentSecretLabel}" />
+          <CheckBox x:Name="CurrentWithRecoveryBox" IsChecked="{Binding UsesRecoveryKey}" IsEnabled="{Binding IsIdle}" Margin="0,8,0,0"
+                    AutomationProperties.Name="{x:Static pages:EncryptionText.WithRecoveryKey}">
+            <TextBlock Text="{x:Static pages:EncryptionText.WithRecoveryKey}" TextWrapping="Wrap" />
+          </CheckBox>
+          <RadioButton x:Name="KeepPasswordChoice" GroupName="RenewPassword" IsChecked="{Binding KeepsPassword}" IsEnabled="{Binding UsesPassword}" Margin="0,16,0,0"
+                       AutomationProperties.Name="{x:Static pages:EncryptionText.RenewKeep}" AutomationProperties.HelpText="{x:Static pages:EncryptionText.RenewKeepHelp}">
+            <StackPanel>
+              <TextBlock Text="{x:Static pages:EncryptionText.RenewKeep}" TextWrapping="Wrap" />
+              <TextBlock Text="{x:Static pages:EncryptionText.RenewKeepHelp}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" />
+            </StackPanel>
+          </RadioButton>
+          <RadioButton x:Name="NewPasswordChoice" GroupName="RenewPassword" IsChecked="{Binding ChoosesNewPassword}" Margin="0,8,0,0"
+                       AutomationProperties.Name="{x:Static pages:EncryptionText.RenewNew}">
+            <TextBlock Text="{x:Static pages:EncryptionText.RenewNew}" TextWrapping="Wrap" />
+          </RadioButton>
+        </StackPanel>
+        <StackPanel x:Name="NewPasswordFields" Visibility="{Binding ShowsNewPassword, Converter={StaticResource Visible}}">
         <TextBlock x:Name="NewPasswordLabel" Text="{x:Static pages:EncryptionText.NewPassword}" Style="{DynamicResource Kyf.Text.BodyStrong}" Margin="0,12,0,8" />
         <PasswordBox x:Name="NewPasswordBox" IsEnabled="{Binding IsIdle}" IsVisibleChanged="OnSecretShown" IsEnabledChanged="OnSecretEnabled"
                      AutomationProperties.Name="{x:Static pages:EncryptionText.NewPassword}"
@@ -68,6 +94,7 @@
         <PasswordBox x:Name="ConfirmPasswordBox" IsEnabled="{Binding IsIdle}"
                      AutomationProperties.Name="{x:Static pages:EncryptionText.ConfirmPassword}"
                      AutomationProperties.LabeledBy="{Binding ElementName=ConfirmPasswordLabel}" />
+        </StackPanel>
         <WrapPanel Margin="0,16,0,0">
           <Button x:Name="ContinueButton" Style="{DynamicResource Kyf.Button.Primary}" IsDefault="True" Click="OnPrepare" IsEnabled="{Binding IsIdle}"
                   Content="{x:Static pages:EncryptionText.Continue}" Margin="0,0,8,8" AutomationProperties.Name="{x:Static pages:EncryptionText.Continue}" />
@@ -91,10 +118,10 @@
         </CheckBox>
         <WrapPanel Margin="0,16,0,0">
           <Button x:Name="EncryptButton" Style="{DynamicResource Kyf.Button.Primary}" IsDefault="True" Command="{Binding EncryptCommand}" IsEnabled="{Binding IsIdle}"
-                  Margin="0,0,8,8" AutomationProperties.Name="{x:Static pages:EncryptionText.EncryptNow}">
+                  Margin="0,0,8,8" AutomationProperties.Name="{Binding EncryptNowLabel}">
             <StackPanel Orientation="Horizontal">
               <kyf:Icon Text="{x:Static kyf:Icons.Lock}" Margin="0,0,8,0" />
-              <TextBlock Text="{x:Static pages:EncryptionText.EncryptNow}" VerticalAlignment="Center" />
+              <TextBlock Text="{Binding EncryptNowLabel}" VerticalAlignment="Center" />
             </StackPanel>
           </Button>
           <Button x:Name="BackToPasswordButton" Command="{Binding BackToPasswordCommand}" IsEnabled="{Binding IsIdle}"

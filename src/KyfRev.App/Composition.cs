@@ -211,6 +211,7 @@ internal static class Composition
                 {
                     LockDelay = provider.GetRequiredService<LockDelay>(),
                     DecryptionAsked = () => ShowConversion(provider, ConversionDirection.Decrypt, VaultChanged),
+                    RenewalAsked = () => ShowConversion(provider, ConversionDirection.Renew, VaultChanged),
                 },
                 // « Chiffrer ce coffre… », pour un coffre en clair.
                 EncryptionAsked = () => ShowConversion(provider, ConversionDirection.Encrypt, VaultChanged),
