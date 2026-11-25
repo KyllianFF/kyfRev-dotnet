@@ -42,6 +42,8 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   la seconde cherchait encore ; « Imprimer » restait sans imprimante un instant.
 
 ### Sécurité
+- Écrire : un fichier posé dans le dossier des fiches (par une synchronisation, une archive importée) n'est plus servi à
+  l'éditeur que comme image ou comme données ; un script ne peut plus s'y exécuter.
 - Partager « Markdown avec images » n'emporte plus que des fichiers des fiches. Un lien, même invisible à la lecture, vers
   le suivi, les réglages du coffre ou les données d'une extension mettait ce fichier dans l'archive, déchiffré.
 

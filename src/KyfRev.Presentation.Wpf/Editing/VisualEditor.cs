@@ -104,6 +104,9 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
 
     private const string VaultResources = "/coffre/";
 
+    /// <summary>Un fichier du coffre ouvert seul ne peut rien : ni script, ni requête, ni formulaire.</summary>
+    private const string VaultPolicy = "default-src 'none'; img-src data:; style-src 'unsafe-inline'; sandbox";
+
     private static readonly DependencyProperty ThemeProbeProperty = DependencyProperty.Register(
         "ThemeProbe", typeof(Brush), typeof(VisualEditor), new PropertyMetadata(null, (sender, _) => ((VisualEditor)sender).QueueTheme()));
 
@@ -772,7 +775,20 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
         _ => Key.Enter,
     };
 
-    private static string ContentTypeOf(string path) => Path.GetExtension(path).ToUpperInvariant() switch
+    /// <summary>
+    /// Le type d'un fichier servi. Un fichier du coffre n'est servi que comme image, ou comme données : un script, une page ou
+    /// une feuille de style posés dans le dossier des fiches (par une synchronisation, une archive importée) ne s'exécutent
+    /// jamais dans l'éditeur, que la page sert avec l'interdiction de deviner un type.
+    /// </summary>
+    private static string ContentTypeOf(string path) =>
+        path.StartsWith(VaultResources, StringComparison.Ordinal) && !IsImage(path) ? "application/octet-stream" : KnownTypeOf(path);
+
+    private static bool IsImage(string path) => KnownTypeOf(path).StartsWith("image/", StringComparison.Ordinal);
+
+    /// <summary>La politique d'un fichier servi : celle de la page, ou, pour un fichier du coffre, aucun droit.</summary>
+    private static string PolicyOf(string path) => path.StartsWith(VaultResources, StringComparison.Ordinal) ? VaultPolicy : SecurityPolicy;
+
+    private static string KnownTypeOf(string path) => Path.GetExtension(path).ToUpperInvariant() switch
     {
         ".HTML" => "text/html; charset=utf-8",
         ".JS" => "text/javascript; charset=utf-8",
@@ -1046,7 +1062,7 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
                 new MemoryStream(content),
                 200,
                 "OK",
-                string.Create(CultureInfo.InvariantCulture, $"Content-Type: {ContentTypeOf(address.AbsolutePath)}\r\nCache-Control: no-store\r\nContent-Security-Policy: {SecurityPolicy}\r\nX-Content-Type-Options: nosniff"));
+                string.Create(CultureInfo.InvariantCulture, $"Content-Type: {ContentTypeOf(address.AbsolutePath)}\r\nCache-Control: no-store\r\nContent-Security-Policy: {PolicyOf(address.AbsolutePath)}\r\nX-Content-Type-Options: nosniff"));
     }
 
     /// <summary>Un fichier de la page, venu de l'application.</summary>
