@@ -671,10 +671,10 @@ public sealed class SchemasPageTests
         var fits = "(() => { const d = document.querySelector('dialog[open]'); const r = d.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth && r.bottom <= innerHeight && d.scrollWidth <= d.clientWidth; })()";
 
         // Une fenêtre étroite : les fenêtres tiennent dans 470 pixels.
-        var before = scene.Script("document.documentElement.clientWidth");
         scene.Page.Width = 470;
         TestShell.Flush();
-        UiThread.Until(() => scene.Script("document.documentElement.clientWidth") != before, TimeSpan.FromSeconds(20));
+        // La page peut être déjà étroite, ou pas encore mesurée : on attend sa largeur, pas un changement.
+        UiThread.Until(() => int.TryParse(scene.Script("document.documentElement.clientWidth"), out var width) && width is > 0 and <= 470, TimeSpan.FromSeconds(20));
 
         // « Exporter… », format draw.io : deux puces pour les icônes, celles de kyfRev d'abord, et le fichier .drawio écrit.
         scene.Script("document.querySelector('li.carte').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 60, clientY: 60 }))");
@@ -751,10 +751,10 @@ public sealed class SchemasPageTests
         Import();
         Assert.AreEqual("Dans un nouveau schéma|À la place de « Réseau »", JsonSerializer.Deserialize<string>(scene.Script("[...document.querySelectorAll('dialog.dialogue-import .choix .nom')].map((n) => n.textContent.trim()).join('|')")));
         Assert.AreEqual("nouveau", JsonSerializer.Deserialize<string>(scene.Script("document.querySelector('dialog.dialogue-import input:checked').value")));
-        var before = scene.Script("document.documentElement.clientWidth");
         scene.Page.Width = 470;
         TestShell.Flush();
-        UiThread.Until(() => scene.Script("document.documentElement.clientWidth") != before, TimeSpan.FromSeconds(20));
+        // La page peut être déjà étroite, ou pas encore mesurée : on attend sa largeur, pas un changement.
+        UiThread.Until(() => int.TryParse(scene.Script("document.documentElement.clientWidth"), out var width) && width is > 0 and <= 470, TimeSpan.FromSeconds(20));
         Assert.AreEqual("true", scene.Script("(() => { const d = document.querySelector('dialog.dialogue-import'); const r = d.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth && r.bottom <= innerHeight && d.scrollWidth <= d.clientWidth; })()"));
         scene.WaitFor("document.getAnimations().length === 0");
         scene.Picture($"schemas-import-choix-{suffix}");
