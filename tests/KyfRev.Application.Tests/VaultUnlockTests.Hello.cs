@@ -54,6 +54,26 @@ public sealed partial class VaultUnlockTests
     }
 
     [TestMethod]
+    public void A_vault_open_elsewhere_is_asked_about_before_the_gesture()
+    {
+        var hello = new FakeHello();
+        using var scene = new Scene(hello);
+        scene.CreateEncrypted();
+        var root = scene.Folder.Vault;
+        Assert.AreEqual(root, scene.App.Vaults.Unlock(root, VaultSecret.Password(Password), remember: true).Vault);
+        Assert.IsNotNull(scene.App.Vaults.Close().Version);
+        scene.OpenedElsewhere(root);
+
+        Assert.AreEqual(root, scene.App.Vaults.UnlockWithHello(root).Occupied);
+        Assert.AreEqual(0, hello.Asked, "la question vient avant le geste");
+        scene.App.Vaults.Answer(root, forReading: true);
+        var opened = scene.App.Vaults.UnlockWithHello(root);
+        Assert.AreEqual(root, opened.Vault);
+        Assert.IsTrue(opened.ReadOnly);
+        Assert.AreEqual(1, hello.Asked);
+    }
+
+    [TestMethod]
     public void Without_windows_hello_nothing_changes()
     {
         using var scene = new Scene(new FakeHello { Available = false });
