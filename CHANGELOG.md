@@ -7,6 +7,17 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ## [Non publié]
 
+### Ajouté
+- Schémas réseau : l'export propose « draw.io », à retoucher dans draw.io, ou dans Visio en passant par draw.io. Les
+  équipements y gardent les icônes de kyfRev ou prennent les formes réseau de draw.io ; leurs données (nom, type,
+  adresse, VLAN, modèle, site, salle) se lisent dans « Modifier les données », les câbles gardent leurs ports, et le
+  fichier porte le modèle complet, pour revenir dans kyfRev sans rien perdre.
+- Schémas réseau : « Importer… » lit aussi les fichiers draw.io (.drawio, .xml), compressés ou non, dans un nouveau
+  schéma ou à la place du schéma ouvert. Un fichier sorti de kyfRev reprend ce qui a changé dans draw.io ; un autre
+  est traduit (formes réseau en équipements, connecteurs en câbles avec leurs ports, conteneurs en zones). Un compte
+  rendu dit ce qui est entré et ce qu'il faut regarder, avant de garder l'import ou de l'annuler. Un fichier Visio
+  (.vsdx) passe par draw.io.
+
 ### Modifié
 - Recherche : une fiche qui n'a pas changé ne se relit plus à chaque recherche ; son texte reste en mémoire le temps
   de la session (jamais sur le disque). Mesuré sur 2 000 fiches : 170 ms au lieu de 750 ms par recherche.

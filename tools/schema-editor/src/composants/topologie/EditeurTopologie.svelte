@@ -34,6 +34,7 @@
     type IdVue,
     nouvelId,
     type Point,
+    type Schema,
     SUPPORTS,
     type Support,
   } from "../../lib/topologie/modele";
@@ -53,13 +54,18 @@
     type Outil,
     retenirMode,
   } from "../../lib/topologie/simplifie";
-  import { avisEnClair, coffreChiffre, estVide, exporterSchema, type FormatExport, imprimerSchema } from "../../lib/topologie/sorties";
+  import type { IconesDrawio } from "../../lib/topologie/drawio";
+  import { ecrireSchema } from "../../lib/topologie/format";
+  import { type CompteRendu, lireImport } from "../../lib/topologie/importation";
+  import { avisEnClair, coffreChiffre, estImage, estVide, exporterSchema, type FormatExport, imprimerSchema } from "../../lib/topologie/sorties";
   import { VUES, vue as vueDe } from "../../lib/topologie/vues";
   import Canevas from "./Canevas.svelte";
   import { GABARITS } from "../../lib/topologie/gabarits";
   import { chercherDansSchema } from "../../lib/topologie/recherche";
   import DialogueConnexion from "./DialogueConnexion.svelte";
+  import CompteRenduImport from "./CompteRenduImport.svelte";
   import DialogueExport from "./DialogueExport.svelte";
+  import DialogueImport from "./DialogueImport.svelte";
   import PlanIp from "./PlanIp.svelte";
   import Plateau from "./Plateau.svelte";
   import RechercheSchema from "./RechercheSchema.svelte";
@@ -76,6 +82,8 @@
     ancien = null,
     retour = "Fermer",
     onconverti,
+    choisis = [],
+    onouvrir,
     onfermer,
   }: {
     /** Schéma du coffre à ouvrir. */
@@ -86,6 +94,10 @@
     retour?: string;
     /** Le schéma ancien format vient d'être créé dans le coffre : la fiche doit le citer. */
     onconverti?: (id: string) => void;
+    /** Éléments à choisir dès l'ouverture (les formes inconnues d'un import draw.io). */
+    choisis?: string[];
+    /** Ouvrir un autre schéma à la place de celui-ci (un import « dans un nouveau schéma »), ces éléments choisis. */
+    onouvrir?: (id: string, choisis: string[]) => void;
     onfermer: () => void;
   } = $props();
 
@@ -265,7 +277,9 @@
     const decalage = { x: Math.round(centre.x - milieu.x + pas), y: Math.round(centre.y - milieu.y + pas) };
     editeur.agir((s) => (editeur.selection = collerEquipements(s, contenu, decalage)), "Collé.");
   }
-  let confirmationImport = $state<string | null>(null);
+  let importOuvert = $state(false);
+  /** Le compte rendu d'un import draw.io : remplacé (déjà appliqué, annulable) ou à créer (rien encore dans le coffre). */
+  let compteRendu = $state<{ schema: Schema; resultat: CompteRendu; remplace: boolean } | null>(null);
 
   const schema = $derived(editeur.schema);
   const nombreAvertissements = $derived(editeur.constats.filter((c) => c.niveau !== "manque").length);
@@ -277,6 +291,9 @@
         if (id) await editeur.ouvrir(id);
         else if (ancien !== null) editeur.ouvrirAncien(ancien, (nouveau) => onconverti?.(nouveau));
         pret = true;
+        // Ce qui est à regarder d'un import est choisi d'emblée.
+        const presents = choisis.filter((x) => editeur.schema.equipements.some((e) => e.id === x));
+        if (presents.length > 0) editeur.selection = presents;
         // Le plan prend la main : les raccourcis du clavier valent tout de suite.
         requestAnimationFrame(() => canevas?.focus());
       } catch (e) {
@@ -486,10 +503,11 @@
   }
 
   /** Exporte le schéma tel qu'il est à l'écran (SVG et PNG : couleurs claires, légende). */
-  async function exporter(format: FormatExport) {
+  async function exporter(format: FormatExport, icones: IconesDrawio) {
     try {
-      const { schema: aExporter, vue } = sortie(format !== "json");
-      const chemin = await exporterSchema(aExporter, format, vue);
+      // Le fichier draw.io porte le modèle entier, comme le JSON : il ne sort pas épuré.
+      const { schema: aExporter, vue } = sortie(estImage(format));
+      const chemin = await exporterSchema(aExporter, format, vue, icones);
       if (chemin) editeur.annonce = `Exporté : ${chemin}`;
     } catch (e) {
       editeur.annonce = `Export impossible : ${messageErreur(e)}`;
@@ -511,23 +529,78 @@
     }
   }
 
-  async function importer() {
+  function importer() {
     menu = null;
+    importOuvert = true;
+  }
+
+  /**
+   * Le fichier choisi, dans un nouveau schéma ou à la place de celui-ci. Un modèle de kyfRev entre tout de suite ;
+   * un fichier draw.io passe par son compte rendu : à la place de celui-ci, il est déjà appliqué (Ctrl+Z le défait) ;
+   * dans un nouveau schéma, rien n'est créé avant « Garder ».
+   */
+  async function choisirImport(remplacer: boolean) {
     const chemin = await api.choisirFichierSchema();
     if (!chemin) return;
+    let importe: Awaited<ReturnType<typeof lireImport>>;
     try {
-      confirmationImport = await api.lireImportSchema(chemin);
+      importe = await lireImport(await api.lireImportSchema(chemin), chemin);
+    } catch (e) {
+      editeur.annonce = `Import impossible : ${messageErreur(e)}`;
+      return;
+    }
+    if (importe.erreurs.length > 0) {
+      editeur.annonce = `Import refusé : ${importe.erreurs.length} erreur(s) de structure, dont « ${importe.erreurs[0]} ». Rien n'a été modifié.`;
+      return;
+    }
+    if (!remplacer) {
+      if (importe.compteRendu) compteRendu = { schema: importe.schema, resultat: importe.compteRendu, remplace: false };
+      else await ouvrirImporte(importe.schema, []);
+      return;
+    }
+    const refus = editeur.importer(ecrireSchema(importe.schema));
+    if (refus) {
+      editeur.annonce = refus;
+      return;
+    }
+    requestAnimationFrame(() => canevas?.toutVoir());
+    if (importe.compteRendu) compteRendu = { schema: importe.schema, resultat: importe.compteRendu, remplace: true };
+    else editeur.annonce = "Schéma importé : le contenu a été remplacé (Ctrl+Z pour annuler).";
+  }
+
+  /** Crée le schéma importé dans le coffre, puis l'ouvre à la place de celui-ci (enregistré d'abord). */
+  async function ouvrirImporte(importe: Schema, aChoisir: string[]) {
+    try {
+      const cree = await api.creerSchema(ecrireSchema({ ...importe, id: "" }));
+      await editeur.enregistrer();
+      if (onouvrir) onouvrir(cree.id, aChoisir);
+      else editeur.annonce = `Schéma « ${importe.titre} » importé : il est dans la liste des schémas.`;
     } catch (e) {
       editeur.annonce = `Import impossible : ${messageErreur(e)}`;
     }
   }
 
-  function confirmerImport() {
-    if (confirmationImport === null) return;
-    const refus = editeur.importer(confirmationImport);
-    confirmationImport = null;
-    editeur.annonce = refus ?? "Schéma importé : le contenu a été remplacé (Ctrl+Z pour annuler).";
-    if (!refus) requestAnimationFrame(() => canevas?.toutVoir());
+  /** La réponse au compte rendu : annuler ne garde rien, garder garde, montrer garde et choisit les formes inconnues. */
+  function conclureImport(issue: "annuler" | "garder" | "montrer") {
+    if (!compteRendu) return;
+    const { schema: importe, resultat, remplace } = compteRendu;
+    compteRendu = null;
+    if (issue === "annuler") {
+      if (remplace) editeur.annuler();
+      editeur.annonce = remplace ? "Import annulé : le contenu d'avant est revenu." : "Import annulé : rien n'a été créé.";
+      return;
+    }
+    const aChoisir = issue === "montrer" ? resultat.inconnus : [];
+    if (!remplace) {
+      void ouvrirImporte(importe, aChoisir);
+      return;
+    }
+    editeur.annonce = "Schéma importé : le contenu a été remplacé (Ctrl+Z pour annuler).";
+    if (aChoisir.length > 0) {
+      editeur.selection = aChoisir;
+      const premier = aChoisir[0];
+      if (premier) canevas?.montrer(premier);
+    }
   }
 
   const libelleSauvegarde = $derived(
@@ -560,7 +633,7 @@
       else reposer();
       return;
     }
-    if (connexion || confirmationImport || exportOuvert) return;
+    if (connexion || importOuvert || compteRendu || exportOuvert) return;
     void fermer();
   }}
   onclose={onfermer}
@@ -605,7 +678,7 @@
       <span class="icone-etroite"><Redo2 size={16} aria-hidden="true" /></span><span class="nom-large">Rétablir</span>
     </button>
     {#if !simplifie}
-      <button type="button" class="outil cadre large tres-large" title="Importer : remplacer le contenu par un fichier JSON exporté" onclick={importer}>
+      <button type="button" class="outil cadre large tres-large" title="Importer : un modèle de kyfRev ou un fichier draw.io" onclick={importer}>
         Importer…
       </button>
     {/if}
@@ -870,16 +943,6 @@
     <p class="annonce" role="status">{editeur.annonce}</p>
   {/if}
 
-  {#if confirmationImport !== null}
-    <div class="confirmation" role="alertdialog" aria-modal="true" aria-labelledby="titre-import">
-      <h2 id="titre-import">Remplacer le contenu du schéma ?</h2>
-      <p>Le fichier choisi remplacera tout le contenu de ce schéma (Ctrl+Z annule). Un fichier invalide est refusé sans rien modifier.</p>
-      <div class="actions">
-        <button type="button" class="bouton" onclick={() => (confirmationImport = null)}>Annuler</button>
-        <button type="button" class="bouton principal" onclick={confirmerImport}>Remplacer</button>
-      </div>
-    </div>
-  {/if}
 </dialog>
 
 {#if planIpOuvert}
@@ -910,8 +973,26 @@
   <DialogueExport
     titre={schema.titre}
     vide={estVide(schema)}
-    onvalider={(format) => void exporter(format)}
+    onvalider={(format, icones) => void exporter(format, icones)}
     onfermer={() => (exportOuvert = false)}
+  />
+{/if}
+
+{#if importOuvert}
+  <DialogueImport
+    titre={schema.titre}
+    onvalider={(remplacer) => void choisirImport(remplacer)}
+    onfermer={() => (importOuvert = false)}
+  />
+{/if}
+
+{#if compteRendu}
+  <CompteRenduImport
+    titre={compteRendu.schema.titre}
+    compteRendu={compteRendu.resultat}
+    onannuler={() => conclureImport("annuler")}
+    ongarder={() => conclureImport("garder")}
+    onmontrer={() => conclureImport("montrer")}
   />
 {/if}
 
@@ -1363,31 +1444,6 @@
     color: var(--surface);
     font-size: 13px;
     box-shadow: 0 8px 24px rgb(0 0 0 / 0.2);
-  }
-
-  .confirmation {
-    position: fixed;
-    inset: 0;
-    z-index: 20;
-    width: min(460px, calc(100vw - 32px));
-    height: fit-content;
-    margin: auto;
-    padding: 20px;
-    border: 1px solid var(--bordure);
-    border-radius: var(--rayon-carte);
-    background: var(--surface);
-    color: var(--texte);
-    box-shadow: 0 16px 48px rgb(0 0 0 / 0.3);
-  }
-
-  .confirmation h2 {
-    margin-bottom: 8px;
-  }
-
-  .actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
   }
 
   /* Les cinq vues tiennent côte à côte dans une fenêtre large ; sinon, une liste. */

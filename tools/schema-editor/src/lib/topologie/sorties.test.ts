@@ -140,8 +140,8 @@ describe("sorties d'un schéma : impression, gardes et messages", () => {
     expect(estVide(schema)).toBe(false);
   });
 
-  it("trois formats : deux images, et le modèle qui s'exporte toujours", () => {
-    expect(FORMATS_EXPORT.map((f) => f.valeur)).toEqual(["png", "svg", "json"]);
+  it("quatre formats : deux images, le fichier draw.io et le modèle, qui s'exportent toujours", () => {
+    expect(FORMATS_EXPORT.map((f) => f.valeur)).toEqual(["png", "svg", "drawio", "json"]);
     expect(FORMATS_EXPORT.filter((f) => f.image).map((f) => f.valeur)).toEqual(["png", "svg"]);
   });
 

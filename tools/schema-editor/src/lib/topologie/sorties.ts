@@ -1,20 +1,25 @@
-// Sorties d'un schéma réseau (D40, D39) : export (PNG, SVG, JSON), partage (l'image va dans le
+// Sorties d'un schéma réseau (D40, D39) : export (PNG, SVG, draw.io, JSON), partage (l'image va dans le
 // presse-papiers) et impression. L'éditeur, la liste des schémas et le détail d'un schéma s'en servent.
 // Ce qui sort est toujours clair, avec sa légende, quel que soit le thème de l'écran.
 
 import { api } from "../api";
 import { dessinerSchema } from "./dessin";
+import { ecrireDrawio, type IconesDrawio } from "./drawio";
 import { ecrireSchema } from "./format";
 import type { Schema, Vue } from "./modele";
 
-export type FormatExport = "png" | "svg" | "json";
+export type FormatExport = "png" | "svg" | "drawio" | "json";
 
 /** Les formats proposés à l'export ; une image demande un schéma qui a au moins un équipement. */
 export const FORMATS_EXPORT: { valeur: FormatExport; nom: string; aide: string; image: boolean }[] = [
   { valeur: "png", nom: "Image PNG", aide: "Pour un message, un document ou une fiche.", image: true },
   { valeur: "svg", nom: "Image SVG", aide: "Vectorielle : nette à toute taille.", image: true },
+  { valeur: "drawio", nom: "draw.io", aide: "À retoucher dans draw.io, ou dans Visio en passant par draw.io.", image: false },
   { valeur: "json", nom: "Modèle complet", aide: "JSON, à réimporter dans kyfRev.", image: false },
 ];
+
+/** Un format d'image : il demande un schéma qui a au moins un équipement, et sort tel qu'on le voit. */
+export const estImage = (format: FormatExport): boolean => FORMATS_EXPORT.some((f) => f.valeur === format && f.image);
 
 const NOM_PAR_DEFAUT = "Schéma réseau";
 const NOMS_RESERVES = /^(con|prn|aux|nul|com\d|lpt\d)$/i;
@@ -127,8 +132,9 @@ export async function enPng(svg: string, echelleDe = echellePng): Promise<Uint8A
 }
 
 /** Les octets d'un export, dans le format voulu. */
-async function octetsDe(schema: Schema, format: FormatExport, vue?: Vue): Promise<Uint8Array> {
+async function octetsDe(schema: Schema, format: FormatExport, vue?: Vue, icones?: IconesDrawio): Promise<Uint8Array> {
   if (format === "json") return new TextEncoder().encode(ecrireSchema(schema));
+  if (format === "drawio") return new TextEncoder().encode(ecrireDrawio(schema, icones));
   if (format === "svg") return new TextEncoder().encode(svgAutonome(schema, vue));
   return enPng(svgAutonome(schema, vue));
 }
@@ -137,10 +143,15 @@ async function octetsDe(schema: Schema, format: FormatExport, vue?: Vue): Promis
  * Demande un dossier, y écrit l'export, et rend le chemin du fichier écrit (l'application n'écrase rien).
  * Rend `null` si le choix du dossier a été annulé : rien n'est écrit.
  */
-export async function exporterSchema(schema: Schema, format: FormatExport, vue?: Vue): Promise<string | null> {
+export async function exporterSchema(
+  schema: Schema,
+  format: FormatExport,
+  vue?: Vue,
+  icones?: IconesDrawio,
+): Promise<string | null> {
   const dossier = await api.choisirDossier("Dossier où enregistrer l'export du schéma");
   if (!dossier) return null;
-  return api.exporterSchema(dossier, nomDeFichier(schema.titre, format), await octetsDe(schema, format, vue));
+  return api.exporterSchema(dossier, nomDeFichier(schema.titre, format), await octetsDe(schema, format, vue, icones));
 }
 
 /** Copie l'image PNG du schéma dans le presse-papiers, prête à être collée ailleurs. */

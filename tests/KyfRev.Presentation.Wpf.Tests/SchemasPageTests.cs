@@ -606,7 +606,7 @@ public sealed class SchemasPageTests
         scene.WaitFor("document.querySelector('.menu[role=menu]') !== null");
         scene.Script("[...document.querySelectorAll('.menu [role=menuitem]')].find((entree) => entree.textContent.includes('Exporter')).click()");
         scene.WaitFor("document.querySelector('dialog[open] input[type=radio]') !== null");
-        Assert.AreEqual("3", scene.Script("document.querySelectorAll('dialog[open] input[type=radio]').length"));
+        Assert.AreEqual("4", scene.Script("document.querySelectorAll('dialog[open] input[type=radio]').length"));
         Assert.AreEqual("true", scene.Script("document.querySelector('dialog[open] .en-clair') === null"), "un coffre en clair : rien à dire de l'export");
         scene.Script("(() => { const svg = [...document.querySelectorAll('dialog[open] input[type=radio]')].find((choix) => choix.value === 'svg'); svg.click(); document.querySelector('dialog[open] form').requestSubmit(); })()");
         UiThread.Until(() => Directory.Exists(folder) && Directory.GetFiles(folder, "*.svg").Length == 1, TimeSpan.FromSeconds(30));
@@ -659,6 +659,134 @@ public sealed class SchemasPageTests
         UiThread.Until(() => scene.Copied.Count == 1, TimeSpan.FromSeconds(30));
         scene.WaitFor("document.querySelector('.annonces [role=status]').textContent.includes('Ce coffre est chiffré, pas cette image')");
     }
+
+    [EngineTest]
+    [DataRow(ThemeKind.Light)]
+    [DataRow(ThemeKind.Dark)]
+    public void A_schema_goes_to_draw_io_and_a_draw_io_file_comes_back_with_its_report(ThemeKind theme)
+    {
+        using var scene = new IslandScene(Text, theme: theme);
+        scene.WaitFor("document.querySelector('li.carte') !== null");
+        var suffix = theme == ThemeKind.Dark ? "sombre" : "clair";
+        var fits = "(() => { const d = document.querySelector('dialog[open]'); const r = d.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth && r.bottom <= innerHeight && d.scrollWidth <= d.clientWidth; })()";
+
+        // Une fenêtre étroite : les fenêtres tiennent dans 470 pixels.
+        var before = scene.Script("document.documentElement.clientWidth");
+        scene.Page.Width = 470;
+        TestShell.Flush();
+        UiThread.Until(() => scene.Script("document.documentElement.clientWidth") != before, TimeSpan.FromSeconds(20));
+
+        // « Exporter… », format draw.io : deux puces pour les icônes, celles de kyfRev d'abord, et le fichier .drawio écrit.
+        scene.Script("document.querySelector('li.carte').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 60, clientY: 60 }))");
+        scene.WaitFor("document.querySelector('.menu[role=menu]') !== null");
+        scene.Script("[...document.querySelectorAll('.menu [role=menuitem]')].find((entree) => entree.textContent.includes('Exporter')).click()");
+        scene.WaitFor("document.querySelector('dialog[open] input[value=drawio]') !== null");
+        scene.Script("document.querySelector('dialog[open] input[value=drawio]').click()");
+        scene.WaitFor("document.querySelectorAll('dialog[open] .icones .puce').length === 2");
+        Assert.AreEqual("Icônes de kyfRev|Formes réseau de draw.io", JsonSerializer.Deserialize<string>(scene.Script("[...document.querySelectorAll('dialog[open] .puce')].map((p) => p.textContent.trim()).join('|')")));
+        Assert.AreEqual("kyfrev", JsonSerializer.Deserialize<string>(scene.Script("document.querySelector('dialog[open] .puce input:checked').value")));
+        StringAssert.Contains(scene.Script("document.querySelector('dialog[open]').textContent"), "Visio en passant par draw.io", StringComparison.Ordinal);
+        Assert.AreEqual("true", scene.Script(fits), "la fenêtre d'export tient à 470 pixels");
+        scene.WaitFor("document.getAnimations().length === 0");
+        scene.Picture($"schemas-export-drawio-{suffix}");
+        var folder = scene.Outside("Exports");
+        Directory.CreateDirectory(folder);
+        scene.Picker.Answers.Enqueue(folder);
+        scene.Script("document.querySelector('dialog[open] form').requestSubmit()");
+        UiThread.Until(() => Directory.GetFiles(folder, "*.drawio").Length == 1, TimeSpan.FromSeconds(30));
+        StringAssert.StartsWith(File.ReadAllText(Directory.GetFiles(folder, "*.drawio").Single()), "<mxfile", StringComparison.Ordinal);
+
+        // « Importer… » un fichier d'un autre outil : la fenêtre dit quoi faire d'un fichier Visio, puis le compte rendu.
+        var file = Path.Combine(folder, "labo.drawio");
+        File.WriteAllText(file, ForeignDrawIo);
+        ((SchemasPageViewModel)scene.Page.DataContext).PickSchemaFile = () => file;
+        scene.WaitFor("[...document.querySelectorAll('button')].some((bouton) => bouton.textContent.trim() === 'Importer…' && !bouton.disabled)");
+        scene.Script("[...document.querySelectorAll('button')].find((bouton) => bouton.textContent.trim() === 'Importer…').click()");
+        scene.WaitFor("document.querySelector('dialog.dialogue-import[open]') !== null");
+        StringAssert.Contains(scene.Script("document.querySelector('dialog[open]').textContent"), "Un fichier Visio (.vsdx) : ouvrez-le dans draw.io, puis enregistrez-le en .drawio.", StringComparison.Ordinal);
+        scene.Script("document.querySelector('dialog[open] form').requestSubmit()");
+        scene.WaitFor("document.querySelector('dialog.compte-rendu-import[open]') !== null");
+        var report = JsonSerializer.Deserialize<string>(scene.Script("document.querySelector('dialog[open]').innerText"))!;
+        foreach (var line in new[] { "Le schéma est importé", "2 équipements", "1 câble, avec ses ports", "À regarder", "1 forme de type inconnu, posée en « Générique »", "Les montrer", "1 connecteur courbe, redressé en coudé", "page « Étage 2 » non importée : un schéma, une page", "Annuler l'import", "Garder" })
+        {
+            StringAssert.Contains(report, line, StringComparison.Ordinal);
+        }
+        Assert.AreEqual("true", scene.Script(fits), "le compte rendu tient à 470 pixels");
+        scene.WaitFor("document.getAnimations().length === 0");
+        scene.Picture($"schemas-import-compte-rendu-{suffix}");
+        Assert.HasCount(1, scene.Schemas.Schemas().Value, "Rien n'entre avant « Garder ».");
+        scene.Script("[...document.querySelectorAll('dialog[open] button')].find((bouton) => bouton.textContent.trim() === 'Garder').click()");
+        scene.WaitFor("document.querySelector('.annonce.succes, [role=alert]') !== null");
+        Assert.AreEqual("Schéma « Réseau du labo » importé.", JsonSerializer.Deserialize<string>(scene.Script("document.querySelector('.annonce.succes, [role=alert]').textContent.trim()")));
+        Assert.IsTrue(scene.Schemas.Schemas().Value.Any(schema => schema.Title == "Réseau du labo"));
+    }
+
+    [EngineTest]
+    [DataRow(ThemeKind.Light)]
+    [DataRow(ThemeKind.Dark)]
+    public void From_the_editor_a_draw_io_file_replaces_the_schema_or_opens_as_a_new_one(ThemeKind theme)
+    {
+        using var scene = new IslandScene(Text, theme: theme);
+        var suffix = theme == ThemeKind.Dark ? "sombre" : "clair";
+        var file = scene.Outside("labo.drawio");
+        File.WriteAllText(file, ForeignDrawIo);
+        ((SchemasPageViewModel)scene.Page.DataContext).PickSchemaFile = () => file;
+        int Devices() => int.Parse(scene.Script("document.querySelectorAll('svg.canevas g.equipement').length"), CultureInfo.InvariantCulture);
+        void Import()
+        {
+            scene.Script("[...document.querySelectorAll('dialog.editeur-topologie button')].find((bouton) => bouton.textContent.trim() === 'Importer…').click()");
+            scene.WaitFor("document.querySelector('dialog.dialogue-import[open]') !== null");
+        }
+        void Answer(string button) =>
+            scene.Script($"[...document.querySelectorAll('dialog.compte-rendu-import[open] button')].find((bouton) => bouton.textContent.trim() === '{button.Replace("'", "\\'", StringComparison.Ordinal)}').click()");
+
+        scene.WaitFor("[...document.querySelectorAll('li.carte button')].some((b) => b.textContent.includes('Modifier'))");
+        scene.Script("[...document.querySelectorAll('li.carte button')].find((b) => b.textContent.includes('Modifier')).click()");
+        scene.WaitFor("document.querySelector('dialog[open] svg.canevas') !== null");
+        scene.Script("document.querySelector('.segments.mode button[data-mode=\"avance\"]').click()");
+        scene.WaitFor("document.querySelector('.segments.mode button[data-mode=\"avance\"]').getAttribute('aria-pressed') === 'true'");
+        Assert.AreEqual(1, Devices());
+
+        // Le choix : dans un nouveau schéma (d'abord), ou à la place de celui-ci ; la fenêtre tient à 470 pixels.
+        Import();
+        Assert.AreEqual("Dans un nouveau schéma|À la place de « Réseau »", JsonSerializer.Deserialize<string>(scene.Script("[...document.querySelectorAll('dialog.dialogue-import .choix .nom')].map((n) => n.textContent.trim()).join('|')")));
+        Assert.AreEqual("nouveau", JsonSerializer.Deserialize<string>(scene.Script("document.querySelector('dialog.dialogue-import input:checked').value")));
+        var before = scene.Script("document.documentElement.clientWidth");
+        scene.Page.Width = 470;
+        TestShell.Flush();
+        UiThread.Until(() => scene.Script("document.documentElement.clientWidth") != before, TimeSpan.FromSeconds(20));
+        Assert.AreEqual("true", scene.Script("(() => { const d = document.querySelector('dialog.dialogue-import'); const r = d.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth && r.bottom <= innerHeight && d.scrollWidth <= d.clientWidth; })()"));
+        scene.WaitFor("document.getAnimations().length === 0");
+        scene.Picture($"schemas-import-choix-{suffix}");
+
+        // À la place : le contenu est remplacé tout de suite, et « Annuler l'import » le rend.
+        scene.Script("document.querySelector('dialog.dialogue-import input[value=remplacer]').click(); document.querySelector('dialog.dialogue-import form').requestSubmit()");
+        scene.WaitFor("document.querySelector('dialog.compte-rendu-import[open]') !== null");
+        UiThread.Until(() => Devices() == 2, TimeSpan.FromSeconds(20));
+        Answer("Annuler l'import");
+        UiThread.Until(() => Devices() == 1, TimeSpan.FromSeconds(20));
+        scene.WaitFor("document.querySelector('.editeur-topologie .annonce').textContent.includes('le contenu d\\'avant est revenu')");
+
+        // Dans un nouveau schéma : rien n'entre avant le compte rendu ; « Les montrer » l'ouvre, sa forme inconnue choisie.
+        Import();
+        scene.Script("document.querySelector('dialog.dialogue-import form').requestSubmit()");
+        scene.WaitFor("document.querySelector('dialog.compte-rendu-import[open]') !== null");
+        Assert.HasCount(1, scene.Schemas.Schemas().Value);
+        Answer("Les montrer");
+        UiThread.Until(() => scene.Schemas.Schemas().Value.Count == 2, TimeSpan.FromSeconds(20));
+        UiThread.Until(() => Devices() == 2, TimeSpan.FromSeconds(20));
+        scene.WaitFor("document.querySelectorAll('svg.canevas g.equipement.choisi').length === 1");
+    }
+
+    /// <summary>Un fichier draw.io d'un autre outil : un routeur, une forme inconnue, un connecteur courbe, une seconde page.</summary>
+    private const string ForeignDrawIo = """
+        <mxfile host="app.diagrams.net"><diagram name="Réseau du labo" id="p1"><mxGraphModel><root>
+        <mxCell id="0"/><mxCell id="1" parent="0"/>
+        <mxCell id="r" value="Routeur" style="shape=mxgraph.cisco.routers.router;" vertex="1" parent="1"><mxGeometry x="40" y="40" width="60" height="40" as="geometry"/></mxCell>
+        <mxCell id="f" value="Fonction" style="shape=mxgraph.aws4.lambda_function;" vertex="1" parent="1"><mxGeometry x="300" y="40" width="40" height="40" as="geometry"/></mxCell>
+        <mxCell id="c" style="curved=1;" edge="1" parent="1" source="r" target="f"><mxGeometry relative="1" as="geometry"/></mxCell>
+        </root></mxGraphModel></diagram><diagram name="Étage 2" id="p2"><mxGraphModel><root><mxCell id="0"/></root></mxGraphModel></diagram></mxfile>
+        """;
 
     [EngineTest]
     public void A_schema_is_read_in_a_centred_column_at_every_width()

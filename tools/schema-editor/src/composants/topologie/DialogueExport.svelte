@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount, untrack } from "svelte";
+  import { ICONES_DRAWIO, type IconesDrawio } from "../../lib/topologie/drawio";
   import { AVIS_EXPORT_EN_CLAIR, coffreChiffre, FORMATS_EXPORT, type FormatExport } from "../../lib/topologie/sorties";
 
   // « Exporter le schéma » : le format d'abord ; le dossier se choisit ensuite, dans la fenêtre de l'application.
@@ -13,12 +14,14 @@
     titre: string;
     /** Schéma sans équipement : pas d'image, seul le modèle s'exporte. */
     vide?: boolean;
-    onvalider: (format: FormatExport) => void;
+    /** Le format choisi ; pour draw.io, les icônes aussi. */
+    onvalider: (format: FormatExport, icones: IconesDrawio) => void;
     onfermer: () => void;
   } = $props();
 
   let dialogue: HTMLDialogElement;
   let format = $state<FormatExport>(untrack(() => (vide ? "json" : "png")));
+  let icones = $state<IconesDrawio>("kyfrev");
   let valide = false;
   /** Le coffre ouvert est chiffré : l'export, lui, sort en clair, et la fenêtre le dit avant le choix du dossier. */
   let chiffre = $state(false);
@@ -40,7 +43,7 @@
   aria-labelledby="titre-export"
   aria-describedby="schema-export"
   onclose={() => {
-    if (valide) onvalider(format);
+    if (valide) onvalider(format, icones);
     onfermer();
   }}
 >
@@ -63,6 +66,16 @@
           <span class="nom">{f.nom}</span>
           <span class="aide">{f.aide}</span>
         </label>
+        {#if f.valeur === "drawio" && format === "drawio"}
+          <div class="icones" role="radiogroup" aria-label="Icônes du fichier draw.io">
+            {#each ICONES_DRAWIO as i (i.valeur)}
+              <label class="puce">
+                <input type="radio" name="icones-drawio" value={i.valeur} bind:group={icones} />
+                {i.nom}
+              </label>
+            {/each}
+          </div>
+        {/if}
       {/each}
     </fieldset>
     {#if vide}<p class="note">Ce schéma est vide : il n'a pas d'image, seul son modèle s'exporte.</p>{/if}
@@ -156,6 +169,48 @@
     grid-column: 2;
     color: var(--texte-secondaire);
     font-size: 13px;
+  }
+
+  /* Les icônes d'un export draw.io : deux puces sous le format, en retrait comme son aide. */
+  .icones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 0 0 4px 38px;
+  }
+
+  .puce {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
+    padding: 0 12px;
+    border: 1px solid var(--bordure);
+    border-radius: 999px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+
+  .puce:hover {
+    background: var(--surface-2);
+  }
+
+  .puce:has(input:checked) {
+    border-color: var(--principale);
+    background: var(--surface-2);
+    font-weight: 600;
+  }
+
+  .puce:has(input:focus-visible) {
+    outline: 2px solid var(--principale);
+    outline-offset: 2px;
+  }
+
+  /* Le rond du bouton est caché : la puce entière se choisit, et le clavier passe de l'une à l'autre. */
+  .puce input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
   }
 
   .note {

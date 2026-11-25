@@ -56,6 +56,40 @@ const coord = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? Mat
 const liste = (v: unknown): Brut[] =>
   Array.isArray(v) ? v.filter((x): x is Brut => typeof x === "object" && x !== null) : [];
 
+/**
+ * Interface pour un bout de lien : celle du profil qui porte ce nom si elle est libre, sinon (sans nom) la
+ * première libre du bon genre, sinon une interface ajoutée à ce nom (« port N » sans nom). L'import d'un
+ * fichier draw.io s'en sert aussi : ses connecteurs n'ont pas de ports.
+ */
+export function boutDeLien(
+  schema: Schema,
+  equipement: Equipement,
+  note: string,
+  numero: number,
+  genre: Interface["genre"],
+): Extremite {
+  const nom = note.trim();
+  const libre = (i: Interface) => !interfaceIndisponible(schema, { equipement: equipement.id, interface: i.id });
+  const trouvee = nom ? equipement.interfaces.find((i) => i.nom === nom && libre(i)) : undefined;
+  if (trouvee) return { equipement: equipement.id, interface: trouvee.id };
+  if (!nom && genre !== "radio") {
+    const premiere = equipement.interfaces.find((i) => i.genre === genre && i.nature === "physique" && libre(i));
+    if (premiere) return { equipement: equipement.id, interface: premiere.id };
+  }
+  const iface: Interface = {
+    id: nouvelId("i"),
+    nom: nom || `port ${numero}`,
+    genre,
+    nature: genre === "virtuel" ? "virtuelle" : "physique",
+    admin: "actif",
+    macs: [],
+    adresses: [],
+    ...(equipement.interfaces.some((i) => i.multiConnexion) ? { multiConnexion: true } : {}),
+  };
+  equipement.interfaces.push(iface);
+  return { equipement: equipement.id, interface: iface.id };
+}
+
 export function migrerFormat1(brut: Brut): Schema {
   const schema = schemaVide(texte(brut.titre) || "Schéma réseau");
   schema.format = FORMAT;
@@ -72,37 +106,8 @@ export function migrerFormat1(brut: Brut): Schema {
     if (typeof e.id === "string") parAncienId.set(e.id, equipement);
   }
 
-  /** Interface pour un bout de lien : celle du profil qui porte ce nom si elle est libre, sinon une nouvelle. */
-  const bout = (
-    equipement: Equipement,
-    note: string,
-    numero: number,
-    genre: Interface["genre"],
-  ): Extremite => {
-    const nom = note.trim();
-    const libre = (i: Interface) =>
-      !interfaceIndisponible(schema, { equipement: equipement.id, interface: i.id });
-    const trouvee = nom ? equipement.interfaces.find((i) => i.nom === nom && libre(i)) : undefined;
-    if (trouvee) return { equipement: equipement.id, interface: trouvee.id };
-    if (!nom && genre !== "radio") {
-      const premiere = equipement.interfaces.find(
-        (i) => i.genre === genre && i.nature === "physique" && libre(i),
-      );
-      if (premiere) return { equipement: equipement.id, interface: premiere.id };
-    }
-    const iface: Interface = {
-      id: nouvelId("i"),
-      nom: nom || `port ${numero}`,
-      genre,
-      nature: genre === "virtuel" ? "virtuelle" : "physique",
-      admin: "actif",
-      macs: [],
-      adresses: [],
-      ...(equipement.interfaces.some((i) => i.multiConnexion) ? { multiConnexion: true } : {}),
-    };
-    equipement.interfaces.push(iface);
-    return { equipement: equipement.id, interface: iface.id };
-  };
+  const bout = (equipement: Equipement, note: string, numero: number, genre: Interface["genre"]) =>
+    boutDeLien(schema, equipement, note, numero, genre);
 
   let numero = 0;
   for (const l of liste(brut.liens)) {
