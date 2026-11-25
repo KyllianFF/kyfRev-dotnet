@@ -102,6 +102,14 @@ Si l'index ne s'écrit pas, l'index en mémoire redevient celui du disque. Un ob
 écriture coupée net, un effacement empêché) est ignoré, et aucune sauvegarde ne le recopie. La taille et la date d'un fichier sont celles de son objet : un déplacement ne les change
 pas, comme sur un disque.
 
+**Sur deux postes**, dans un dossier synchronisé, chacun a lu l'index à l'ouverture et l'écrit en entier : celui d'un
+poste effacerait ce que l'autre y a ajouté (une fiche créée là-bas perdrait son nom). Avant d'écrire l'index, le coffre
+regarde donc s'il a changé sur le disque depuis qu'il l'a lu ou écrit (son empreinte). S'il a changé, il le fusionne
+avec le sien : chaque chemin que ce poste a changé (ajouté, déplacé, renommé, effacé) garde ce que ce poste en a fait,
+chaque autre chemin prend ce que dit l'index du disque ; de même pour les dossiers, et un fichier garde toujours ses
+dossiers. Un même chemin changé des deux côtés garde la dernière écriture ; l'objet de l'autre reste sans nom. Un index du
+disque qui ne se lit pas (abîmé, en cours de synchronisation) est écrasé, comme avant.
+
 ## La session sur un coffre chiffré
 
 La session du coffre ne lit et n'écrit ses fichiers que par une couche de stockage : le port `VaultStorage`, dans

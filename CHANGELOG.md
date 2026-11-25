@@ -24,6 +24,8 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 - Un coffre ouvert sur deux postes (dossier synchronisé) : avant d'écrire le suivi d'une fiche, ses passages ou les
   réglages, kyfRev relit le fichier si l'autre poste l'a changé. Une révision, un passage ou un examen ajouté là-bas
   n'est plus effacé par ce que ce poste écrit ensuite.
+- Coffre chiffré ouvert sur deux postes : une fiche créée, déplacée ou effacée sur l'un ne perd plus son nom quand
+  l'autre écrit son index. Avant de l'écrire, kyfRev le fusionne avec celui que la synchronisation a apporté.
 - Extensions : une extension qui demanderait sans fin des adresses refusées ne fait plus grossir la mémoire ; seules les
   50 dernières sont gardées. Le réseau coupé est aussi vérifié pour WebTransport (HTTP/3).
 - Le coffre retenu, les préférences du poste, la séance en cours, l'état des extensions et la mise à jour lancée

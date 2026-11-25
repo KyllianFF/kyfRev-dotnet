@@ -23,6 +23,12 @@ namespace KyfRev.Infrastructure.Crypto;
 /// <see cref="MoveFile"/>…) écrivent l'index aussitôt, ou ne changent rien si son écriture échoue : celles de la session
 /// du coffre.
 /// </para>
+/// <para>
+/// Un même coffre peut être ouvert sur deux postes, dans un dossier synchronisé. L'index étant écrit en entier, celui d'un
+/// poste effacerait ce que l'autre y a ajouté. Avant de l'écrire, le coffre regarde donc s'il a changé sur le disque depuis
+/// qu'il l'a lu ou écrit ; s'il a changé, il le fusionne : chaque chemin que ce poste a changé (ajouté, déplacé, effacé)
+/// garde ce que ce poste en a fait, chaque autre chemin prend ce que l'index du disque en dit. Les dossiers aussi.
+/// </para>
 /// </remarks>
 public sealed class EncryptedVault : IDisposable
 {
@@ -52,6 +58,13 @@ public sealed class EncryptedVault : IDisposable
     private readonly byte[] _key;
     private Dictionary<string, Entry> _files = new(StringComparer.OrdinalIgnoreCase);
     private SortedSet<string> _folders = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>L'index tel que ce coffre l'a lu ou écrit en dernier : le point de départ d'une fusion.</summary>
+    private Dictionary<string, Entry> _baseFiles = new(StringComparer.OrdinalIgnoreCase);
+    private SortedSet<string> _baseFolders = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>L'empreinte de l'index chiffré lu ou écrit en dernier ; rien tant qu'il n'y en a pas.</summary>
+    private byte[]? _basePrint;
     private bool _disposed;
 
     private EncryptedVault(string root, VaultStorage disk, string vaultId, ReadOnlySpan<byte> dataKey)
@@ -181,6 +194,7 @@ public sealed class EncryptedVault : IDisposable
         }
         _files = files;
         _folders = new SortedSet<string>(folders, StringComparer.OrdinalIgnoreCase);
+        KeepAsBase(sealedIndex);
     }
 
     /// <summary>Vrai si le fichier <paramref name="path"/> est dans le coffre.</summary>
@@ -244,12 +258,16 @@ public sealed class EncryptedVault : IDisposable
         AddParents(key);
     }
 
-    /// <summary>Écrit l'index, chiffré, de façon atomique.</summary>
+    /// <summary>
+    /// Écrit l'index, chiffré, de façon atomique. S'il a changé sur le disque depuis que ce coffre l'a lu ou écrit (un autre
+    /// poste, par la synchronisation), il est d'abord fusionné avec celui-là.
+    /// </summary>
     public void Flush()
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
+        var (mergedFiles, mergedFolders) = MergedWithDisk();
         var files = new JsonObject();
-        foreach (var entry in _files.Values.OrderBy(entry => entry.Path, StringComparer.Ordinal))
+        foreach (var entry in mergedFiles.Values.OrderBy(entry => entry.Path, StringComparer.Ordinal))
         {
             files[entry.Path] = new JsonObject { ["objet"] = entry.Object };
         }
@@ -257,18 +275,98 @@ public sealed class EncryptedVault : IDisposable
         {
             ["format"] = IndexFormat,
             ["fichiers"] = files,
-            ["dossiers"] = new JsonArray([.. _folders.Select(folder => (JsonNode?)JsonValue.Create(folder))]),
+            ["dossiers"] = new JsonArray([.. mergedFolders.Select(folder => (JsonNode?)JsonValue.Create(folder))]),
         };
         var plain = JsonSerializer.SerializeToUtf8Bytes(index);
+        byte[] sealedIndex;
         try
         {
-            Disk.Replace(Path.Combine(Root, IndexFile), SealedFile.Seal(_key, VaultId, IndexId, plain));
+            sealedIndex = SealedFile.Seal(_key, VaultId, IndexId, plain);
+            Disk.Replace(Path.Combine(Root, IndexFile), sealedIndex);
         }
         finally
         {
             CryptographicOperations.ZeroMemory(plain);
         }
+        _files = mergedFiles;
+        _folders = mergedFolders;
+        KeepAsBase(sealedIndex);
     }
+
+    /// <summary>L'index de ce coffre vient d'être lu ou écrit tel quel : il devient le point de départ d'une fusion.</summary>
+    private void KeepAsBase(byte[] sealedIndex)
+    {
+        _baseFiles = new Dictionary<string, Entry>(_files, _files.Comparer);
+        _baseFolders = new SortedSet<string>(_folders, _folders.Comparer);
+        _basePrint = SHA256.HashData(sealedIndex);
+    }
+
+    /// <summary>
+    /// L'index à écrire : celui de ce coffre, ou, si l'index du disque a changé depuis qu'il l'a lu ou écrit, la fusion des
+    /// deux. Un index du disque qui ne se lit pas (absent, en cours de synchronisation, abîmé) n'est pas fusionné : celui
+    /// de ce coffre l'emporte, comme avant.
+    /// </summary>
+    private (Dictionary<string, Entry> Files, SortedSet<string> Folders) MergedWithDisk()
+    {
+        var mine = (new Dictionary<string, Entry>(_files, _files.Comparer), new SortedSet<string>(_folders, _folders.Comparer));
+        if (_basePrint is null || Disk.TryReadAllBytes(Path.Combine(Root, IndexFile)) is not { } sealedIndex
+            || CryptographicOperations.FixedTimeEquals(SHA256.HashData(sealedIndex), _basePrint))
+        {
+            return mine;
+        }
+        IReadOnlyList<(string Path, string Object)> named;
+        IReadOnlyList<string> theirFolders;
+        try
+        {
+            named = OpenIndex(sealedIndex, out theirFolders);
+        }
+        catch (VaultCryptoException)
+        {
+            return mine;
+        }
+        var theirs = new Dictionary<string, Entry>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (path, objectId) in named)
+        {
+            theirs.TryAdd(path, new Entry(path, objectId));
+        }
+        var files = new Dictionary<string, Entry>(StringComparer.OrdinalIgnoreCase);
+        foreach (var path in _baseFiles.Keys.Concat(_files.Keys).Concat(theirs.Keys).Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            _baseFiles.TryGetValue(path, out var before);
+            _files.TryGetValue(path, out var now);
+            theirs.TryGetValue(path, out var other);
+            var kept = SameEntry(before, now) ? other : now;
+            if (kept is not null)
+            {
+                files[kept.Path] = kept;
+            }
+        }
+        var folders = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+        var otherFolders = new SortedSet<string>(theirFolders, StringComparer.OrdinalIgnoreCase);
+        foreach (var folder in _baseFolders.Concat(_folders).Concat(otherFolders).Distinct(StringComparer.OrdinalIgnoreCase))
+        {
+            var changedHere = _baseFolders.Contains(folder) != _folders.Contains(folder);
+            if (changedHere ? _folders.Contains(folder) : otherFolders.Contains(folder))
+            {
+                folders.Add(_folders.TryGetValue(folder, out var actual) || otherFolders.TryGetValue(folder, out actual) ? actual : folder);
+            }
+        }
+        // Un fichier garde ses dossiers, même si l'un des deux postes avait retiré l'un d'eux.
+        foreach (var path in files.Keys)
+        {
+            for (var slash = path.LastIndexOf('/'); slash > 0; slash = path.LastIndexOf('/', slash - 1))
+            {
+                folders.Add(path[..slash]);
+            }
+        }
+        return (files, folders);
+    }
+
+    /// <summary>Le même fichier dans les deux index : présent ou absent des deux, avec le même objet et la même casse.</summary>
+    private static bool SameEntry(Entry? first, Entry? second) =>
+        first is null
+            ? second is null
+            : second is not null && string.Equals(first.Object, second.Object, StringComparison.OrdinalIgnoreCase) && first.Path == second.Path;
 
     /// <summary>
     /// Écrit un fichier et, s'il est nouveau, l'index aussitôt. Un fichier existant garde son objet, remplacé d'un coup : il
