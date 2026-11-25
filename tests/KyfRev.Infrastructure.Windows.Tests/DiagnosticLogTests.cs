@@ -114,6 +114,28 @@ public sealed class DiagnosticLogTests
     }
 
     [TestMethod]
+    public void A_log_held_by_another_program_speaks_again_a_minute_later()
+    {
+        using var folder = new Folder();
+        var clock = new MovingClock(Morning);
+        using var log = new DiagnosticLog(folder.Path, string.Empty, clock);
+        var logger = log.CreateLogger("essai");
+        using (new FileStream(log.LogFile, FileMode.Open, FileAccess.Read, FileShare.None))
+        {
+            Write(logger, LogLevel.Error, "Pendant qu'il est tenu.");
+        }
+
+        Write(logger, LogLevel.Error, "Aussitôt après.");
+        clock.Now += DiagnosticLog.Silence;
+        Write(logger, LogLevel.Error, "Une minute après.");
+
+        var text = File.ReadAllText(log.LogFile, Encoding.UTF8);
+        Assert.DoesNotContain("Pendant qu'il est tenu.", text);
+        Assert.DoesNotContain("Aussitôt après.", text, "il se tait encore");
+        Assert.Contains("Une minute après.", text, "puis il reprend");
+    }
+
+    [TestMethod]
     public void Lines_from_several_threads_are_never_mixed()
     {
         using var folder = new Folder();
@@ -181,6 +203,15 @@ public sealed class DiagnosticLogTests
 
     /// <summary>Écrit un message tel quel, comme le ferait un message journalisé.</summary>
     private static void Write(ILogger logger, LogLevel level, string message) => logger.Log(level, default, message, null, (text, _) => text);
+
+    private sealed class MovingClock(DateTimeOffset now) : TimeProvider
+    {
+        public DateTimeOffset Now { get; set; } = now;
+
+        public override TimeZoneInfo LocalTimeZone => TimeZoneInfo.Utc;
+
+        public override DateTimeOffset GetUtcNow() => Now;
+    }
 
     private sealed class Clock(DateTimeOffset now) : TimeProvider
     {

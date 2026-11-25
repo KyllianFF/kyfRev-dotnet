@@ -29,6 +29,8 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 - Coffre : un fichier de suivi gardé ouvert par un autre programme (antivirus, synchronisation) n'empêche plus d'ouvrir
   le coffre ; une fiche enregistrée alors que son suivi ne s'écrivait pas ne donne plus de faux conflit ensuite. Un coffre
   dont le verrou n'avait pu être noté ne se dit plus « déjà ouvert » par la même fenêtre.
+- Journal de diagnostic : après un échec d'écriture (fichier tenu par un antivirus ou une sauvegarde), il se taisait
+  jusqu'à la fin de la session ; il se tait maintenant une minute, puis reprend.
 - Écrire en Markdown : l'éditeur de la fiche d'avant suivait encore le champ, partagé d'une fiche à l'autre. Une autre
   fiche ouverte dans la même vue et écrite pouvait remplacer le texte de la première ; revenir écrire la même fiche
   donnait un faux conflit. La dernière frappe du texte mis en forme s'enregistre avant que son moteur ne se ferme.
