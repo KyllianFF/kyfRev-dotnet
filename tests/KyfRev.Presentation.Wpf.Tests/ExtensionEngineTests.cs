@@ -508,6 +508,8 @@ public sealed class ExtensionEngineTests
               essai("liens", () => { lien("preconnect"); lien("dns-prefetch"); lien("prefetch"); }),
               essai("liaison", () => liaison(RTCPeerConnection)),
               essai("liaison-interne", () => liaison(interne())),
+              // HTTP/3 sur UDP : la politique du cadre le couvre (connect-src), une adresse IP n'a rien à résoudre.
+              essai("transport", () => new WebTransport("https://{{stun}}/transport").ready),
             ])).join(" | "));
             """);
         using var ui = new UiThread();
@@ -516,7 +518,7 @@ public sealed class ExtensionEngineTests
         Pump(TimeSpan.FromMilliseconds(500));
 
         Assert.IsTrue(answer.Succeeded, answer.Error);
-        foreach (var tried in new[] { "fetch", "xhr", "image", "prise", "script", "eval", "worker", "liaison", "liaison-interne" })
+        foreach (var tried in new[] { "fetch", "xhr", "image", "prise", "script", "eval", "worker", "liaison", "liaison-interne", "transport" })
         {
             StringAssert.Contains(answer.Content!.Text, $"{tried}: bloque", StringComparison.Ordinal);
         }
@@ -933,6 +935,21 @@ public sealed class ExtensionEngineTests
         Assert.ThrowsExactly<ArgumentException>(() => new ExtensionEngine(string.Empty, library, requests));
         Assert.ThrowsExactly<ArgumentNullException>(() => new ExtensionEngine("x", null!, requests));
         Assert.ThrowsExactly<ArgumentNullException>(() => new ExtensionEngine("x", library, null!));
+    }
+
+    [TestMethod]
+    public void Only_the_last_refused_addresses_are_kept()
+    {
+        var library = new ExtensionLibrary("x", TimeProvider.System);
+        using var engine = new ExtensionEngine("x", library, new ExtensionRequests(library, new FakeData()));
+        for (var index = 0; index < ExtensionEngine.MaxRefused + 10; index++)
+        {
+            engine.Refuse($"https://fuite.invalid/{index}");
+        }
+
+        Assert.HasCount(ExtensionEngine.MaxRefused, engine.Refused);
+        Assert.AreEqual("https://fuite.invalid/10", engine.Refused[0]);
+        Assert.AreEqual($"https://fuite.invalid/{ExtensionEngine.MaxRefused + 9}", engine.Refused[^1]);
     }
 
     private static string TextOf(Scene scene, string id)
