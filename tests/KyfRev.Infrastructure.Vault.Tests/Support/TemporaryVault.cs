@@ -224,7 +224,7 @@ internal sealed class TemporaryVault : IDisposable
     }
 
     /// <summary>
-    /// Les chemins des fichiers du coffre tels que la session les voit, verrou exclu, dans l'ordre. Rien n'est lu : le coffre
+    /// Les chemins des fichiers du coffre tels que la session les voit, verrou et présence des postes exclus, dans l'ordre. Rien n'est lu : le coffre
     /// peut être ouvert.
     /// </summary>
     public List<string> VaultFiles() =>
@@ -232,7 +232,7 @@ internal sealed class TemporaryVault : IDisposable
         .. Storage.AllEntries(Root)
             .Where(entry => !entry.IsDirectory)
             .Select(entry => Relative(entry.FullName))
-            .Where(path => path is not VaultLayout.LockFile and not VaultLayout.LockInfoFile)
+            .Where(path => path is not VaultLayout.LockFile and not VaultLayout.LockInfoFile && !path.StartsWith(VaultLayout.Presence + "/", StringComparison.Ordinal))
             .Order(StringComparer.Ordinal),
     ];
 

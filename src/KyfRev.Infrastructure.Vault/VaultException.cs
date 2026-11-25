@@ -166,7 +166,9 @@ public sealed class VaultException : OperationException
     public TrackingError? TrackingError { get; private init; }
 
     internal static VaultException Io(string path, Exception cause) =>
-        new(VaultErrorKind.Io, $"Impossible d'accéder à « {path} » : {cause.Message}", cause);
+        cause is Files.ReadOnlyVaultException
+            ? new(VaultErrorKind.Io, cause.Message, cause)
+            : new(VaultErrorKind.Io, $"Impossible d'accéder à « {path} » : {cause.Message}", cause);
 
     internal static VaultException LeftOnDisk(IReadOnlyList<string> left) =>
         new(VaultErrorKind.Io, $"L'effacement a eu lieu, mais une part est restée sur le disque. {string.Join(" ", left)}");

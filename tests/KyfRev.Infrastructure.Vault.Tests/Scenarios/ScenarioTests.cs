@@ -42,6 +42,8 @@ public sealed class ScenarioTests
             }
         }
         File.Delete(vault.PathOf(LockInfo));
+        // La présence de ce poste, propre à la version .NET (plusieurs postes), n'est pas dans les coffres de la 0.x.
+        Directory.Delete(vault.PathOf(VaultLayout.Presence), recursive: true);
 
         var expected = File.ReadAllLines(Path.Combine(folder, "resultats.txt"));
         var differences = expected.Zip(results).Where(pair => pair.First != pair.Second).Select(pair => $"0.x : {pair.First}\nC#  : {pair.Second}").ToList();

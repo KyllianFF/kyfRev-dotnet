@@ -20,6 +20,16 @@ public sealed class VaultStore(UlidGenerator? ids = null, VaultStorage? storage 
     public IVault Open(string root, Moment now) => Adapt(() => VaultSession.Open(root, now, ids, storage));
 
     /// <inheritdoc/>
+    public IVault Open(string root, Moment now, bool forReading) => Adapt(() => VaultSession.Open(root, now, ids, storage, forReading));
+
+    /// <summary>La présence des autres postes se lit sur le disque, en clair, même pour un coffre chiffré.</summary>
+    public IReadOnlyList<OtherComputer> OthersHaving(string root, DateTimeOffset now)
+    {
+        ArgumentNullException.ThrowIfNull(root);
+        return ComputerPresence.Others(root, DiskStorage.Instance, ComputerPresence.ThisComputer, now);
+    }
+
+    /// <inheritdoc/>
     public IVault Initialize(string root, Moment now) => Adapt(() => VaultSession.Initialize(root, now, ids, storage));
 
     /// <summary>Même dossier une fois les liens résolus ; à défaut (dossier absent), même texte.</summary>

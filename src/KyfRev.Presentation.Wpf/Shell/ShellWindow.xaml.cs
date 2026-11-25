@@ -804,6 +804,10 @@ public sealed partial class ShellWindow : Window
 
     private void OnUpdateClosed(object sender, DialogClosedEventArgs e) => _ = _shell.Updates?.AnswerAsync(e.Choice == DialogChoice.Primary);
 
+    private void OnOccupiedClosed(object sender, DialogClosedEventArgs e) => _shell.Computers?.Answer(e.Choice);
+
+    private void OnArrivalClosed(object sender, RoutedEventArgs e) => _shell.Computers?.CloseArrivalCommand.Execute(null);
+
     /// <summary>La note se tape dès que la fenêtre de capture paraît.</summary>
     private void OnCaptureBoxShown(object sender, DependencyPropertyChangedEventArgs e)
     {

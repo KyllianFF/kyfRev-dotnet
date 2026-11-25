@@ -7,6 +7,12 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ## [Non publié]
 
+### Ajouté
+- Un coffre ouvert sur un autre poste (dossier synchronisé) : à l'ouverture, kyfRev le dit et propose « Ouvrir », « Lecture
+  seule » ou « Annuler », sans rien écrire avant la réponse. En lecture seule, rien ne s'écrit, et une bande propose
+  « Passer en écriture ». Pendant qu'il est ouvert, un avis paraît si un autre poste l'ouvre à son tour. Chaque poste
+  note sa présence dans `.suivi/postes/`, chaque minute.
+
 ### Modifié
 - Recherche : une fiche qui n'a pas changé ne se relit plus à chaque recherche ; son texte reste en mémoire le temps
   de la session (jamais sur le disque). Mesuré sur 2 000 fiches : 170 ms au lieu de 750 ms par recherche.

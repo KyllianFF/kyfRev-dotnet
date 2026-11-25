@@ -272,6 +272,9 @@ public sealed partial class ShellViewModel : ObservableObject, IForgetsVault, IS
     /// <summary>La mise à jour (la racine de composition la donne) : son dialogue se pose sur toutes les vues ; rien, il n'y en a pas.</summary>
     public UpdateFlow? Updates { get; set; }
 
+    /// <summary>Un coffre ouvert sur plusieurs postes : la question, la lecture seule, l'avis d'un autre poste.</summary>
+    public ComputersViewModel? Computers { get; set; }
+
     /// <summary>Ce que dit le champ de recherche : « Rechercher partout », ou seulement les commandes quand aucun coffre n'est cherché.</summary>
     public string PaletteLabel => CanSearch ? ShellText.SearchPlaceholder : ShellText.SearchCommandsPlaceholder;
 

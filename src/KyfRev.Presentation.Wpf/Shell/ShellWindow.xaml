@@ -449,9 +449,23 @@
         </DockPanel>
       </Border>
 
-      <!-- Les confirmations s'y posent en pastille, au bas de la page (rangée 24A). -->
-      <ContentControl x:Name="Page" Grid.Column="1" Content="{Binding Current.Page}" Focusable="False" IsTabStop="False"
-                      kyf:Notification.ToastArea="{Binding RelativeSource={RelativeSource Self}}" />
+      <!-- Les confirmations s'y posent en pastille, au bas de la page (rangée 24A). Au-dessus de la page, la bande d'un coffre
+           ouvert en lecture seule ; par-dessus, l'avis qu'un autre poste vient de l'ouvrir (rangée 29A). -->
+      <DockPanel Grid.Column="1" kyf:Notification.ToastArea="{Binding ElementName=Page}">
+        <Border x:Name="ReadOnlyBanner" DockPanel.Dock="Top" Margin="16,12,16,0" Padding="12,4,6,4" CornerRadius="9"
+                Background="{DynamicResource Kyf.Brush.WarningBackground}"
+                Visibility="{Binding Computers.IsReadOnly, Converter={StaticResource Visible}, FallbackValue=Collapsed}">
+          <DockPanel>
+            <Button x:Name="WritableButton" DockPanel.Dock="Right" Style="{DynamicResource Kyf.Button.Subtle}" Content="{x:Static shell:ComputersText.Writable}"
+                    Command="{Binding Computers.WritableCommand}" VerticalAlignment="Center" />
+            <TextBlock x:Name="ReadOnlyText" Text="{Binding Computers.ReadOnlyText}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap"
+                       VerticalAlignment="Center" Margin="0,0,8,0" />
+          </DockPanel>
+        </Border>
+        <kyf:Notification x:Name="ArrivalMessage" DockPanel.Dock="Top" Severity="Warning" Placement="Toast" Message="{Binding Computers.Arrival}"
+                          IsOpen="{Binding Computers.HasArrival, Mode=OneWay, FallbackValue=False}" Closed="OnArrivalClosed" />
+        <ContentControl x:Name="Page" Content="{Binding Current.Page}" Focusable="False" IsTabStop="False" />
+      </DockPanel>
 
       <!-- Le rideau du menu : quand le menu se réduit ou se masque, il tient un instant la place quittée et se retire vers le
            nouveau bord (voir FollowSidebar). Dans un canevas : il ne compte pas dans la mise en page. -->
@@ -533,6 +547,27 @@
         <TextBox x:Name="CaptureBox" Text="{Binding CaptureText, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="False" TextWrapping="Wrap" MinHeight="64" MaxHeight="160"
                  VerticalScrollBarVisibility="Auto" IsVisibleChanged="OnCaptureBoxShown" AutomationProperties.Name="{x:Static p:ShellText.CaptureLabel}" AutomationProperties.HelpText="{x:Static p:ShellText.CaptureHelp}" />
         <TextBlock Text="{x:Static p:ShellText.CaptureHelp}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" Margin="0,8,0,0" />
+      </StackPanel>
+    </kyf:Dialog>
+
+    <!-- Un autre poste a le coffre ouvert : le dire avant de l'ouvrir (rangée 29A). -->
+    <kyf:Dialog x:Name="OccupiedDialog" Title="{x:Static shell:ComputersText.OccupiedTitle}" IsOpen="{Binding Computers.IsAsking, Mode=OneWay, FallbackValue=False}"
+                PrimaryButtonText="{x:Static shell:ComputersText.OccupiedOpen}" ExtraButtonText="{x:Static shell:ComputersText.OccupiedReadOnly}"
+                Closed="OnOccupiedClosed">
+      <StackPanel>
+        <Border x:Name="OccupiedComputer" Padding="10,8" CornerRadius="10" BorderThickness="1" BorderBrush="{DynamicResource Kyf.Brush.Divider}"
+                Background="{DynamicResource Kyf.Brush.Background}">
+          <DockPanel>
+            <Border Width="30" Height="30" CornerRadius="8" Background="{DynamicResource Kyf.Brush.NavigationActiveBackground}" Margin="0,0,10,0" VerticalAlignment="Center">
+              <kyf:Icon Text="{x:Static kyf:Icons.Computer}" Foreground="{DynamicResource Kyf.Brush.Primary}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+            </Border>
+            <StackPanel VerticalAlignment="Center">
+              <TextBlock x:Name="OccupiedName" Text="{Binding Computers.Question.ComputerName}" Style="{DynamicResource Kyf.Text.Body}" FontWeight="SemiBold" TextWrapping="Wrap" />
+              <TextBlock x:Name="OccupiedSeen" Text="{Binding Computers.Question.Seen}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap" />
+            </StackPanel>
+          </DockPanel>
+        </Border>
+        <TextBlock x:Name="OccupiedHelp" Text="{x:Static shell:ComputersText.OccupiedHelp}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" Margin="0,12,0,0" />
       </StackPanel>
     </kyf:Dialog>
 

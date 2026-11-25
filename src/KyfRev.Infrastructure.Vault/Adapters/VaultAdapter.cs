@@ -26,6 +26,12 @@ public sealed class VaultAdapter(VaultSession inner, IDisposable? owned = null) 
     /// <inheritdoc/>
     public string Id => inner.Settings.Id;
 
+    /// <inheritdoc/>
+    public bool IsReadOnly => inner.IsReadOnly;
+
+    /// <inheritdoc/>
+    public IReadOnlyList<OtherComputer> Heartbeat(DateTimeOffset now) => inner.Heartbeat(now);
+
     /// <summary>Ferme la session (son verrou est libéré), puis libère ce qu'elle avait pris : le stockage chiffré et sa clé.</summary>
     public void Dispose()
     {

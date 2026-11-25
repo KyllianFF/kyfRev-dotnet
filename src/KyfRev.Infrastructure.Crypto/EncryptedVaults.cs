@@ -37,14 +37,23 @@ public sealed class EncryptedVaults(IVaultStore plain, Func<VaultStorage, IVault
     /// stockage, qu'elle libère en se fermant. Si elle ne s'ouvre pas, le stockage est libéré tout de suite.
     /// </summary>
     /// <exception cref="VaultCryptoException">La clé n'ouvre pas l'index, ou il est absent ou altéré.</exception>
-    public IVault Open(string root, VaultKey key, Moment now)
+    public IVault Open(string root, VaultKey key, Moment now) => Open(root, key, now, forReading: false);
+
+    /// <inheritdoc/>
+    public IVault Open(string root, Moment now, bool forReading) => plain.Open(root, now, forReading);
+
+    /// <inheritdoc/>
+    public IReadOnlyList<KyfRev.Application.Model.OtherComputer> OthersHaving(string root, DateTimeOffset now) => plain.OthersHaving(root, now);
+
+    /// <summary>Ouvre le coffre chiffré de <paramref name="root"/>, en lecture seule si <paramref name="forReading"/>.</summary>
+    public IVault Open(string root, VaultKey key, Moment now, bool forReading)
     {
         ArgumentNullException.ThrowIfNull(key);
         EncryptedStorage? storage = null;
         try
         {
             storage = EncryptedStorage.Open(root, key.Bytes, disk);
-            var vault = onStorage(storage).Open(root, now);
+            var vault = onStorage(storage).Open(root, now, forReading);
             storage = null;
             return vault;
         }

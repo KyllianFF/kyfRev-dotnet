@@ -34,6 +34,15 @@ public interface IVault :
 
     /// <summary>Identifiant du coffre (<c>coffre.json</c>) : graine des tirages du jour.</summary>
     string Id { get; }
+
+    /// <summary>Ouvert en lecture seule, parce qu'un autre poste l'a ouvert : rien ne s'y écrit.</summary>
+    bool IsReadOnly { get; }
+
+    /// <summary>
+    /// Ce poste a toujours le coffre ouvert : il le redit (rien en lecture seule), et rend les autres postes qui l'ont
+    /// ouvert, dans un dossier synchronisé.
+    /// </summary>
+    IReadOnlyList<OtherComputer> Heartbeat(DateTimeOffset now);
 }
 
 /// <summary>Fiches : création, lecture, titre, étiquettes, rangement, adoption, import et partage.</summary>

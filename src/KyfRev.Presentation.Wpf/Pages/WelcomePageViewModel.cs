@@ -50,6 +50,22 @@ public sealed partial class WelcomePageViewModel : ObservableObject
     /// <summary>Le coffre prévu, à créer ; rien sans mode portable ni installé.</summary>
     public string? VaultToCreate { get; }
 
+    /// <summary>
+    /// La question quand un autre poste a le coffre ouvert : elle rejoue l'ouverture comme l'utilisateur l'a choisi, ou ne
+    /// rend rien ; sans elle, un tel coffre est refusé.
+    /// </summary>
+    public Func<AppState, Func<AppState>, Task<AppState?>>? Settle { get; init; }
+
+    /// <summary>Reprend l'ouverture de <paramref name="state"/>, faite avant l'accueil (au démarrage) : la question y est posée.</summary>
+    public void Continue(AppState state, Func<AppState> retry)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        _retry = retry;
+        Show(state);
+    }
+
+    private Func<AppState>? _retry;
+
     /// <summary>Un coffre est prévu : l'accueil propose de le créer là.</summary>
     public bool HasVaultToCreate => VaultToCreate is not null;
 
@@ -152,7 +168,25 @@ public sealed partial class WelcomePageViewModel : ObservableObject
         try
         {
             // L'ouverture lit tout le coffre : hors du fil de l'interface.
+            _retry = () => _vaults.Open(folder);
             Show(await Task.Run(() => create ? _vaults.Create(folder) : _vaults.Open(folder)).ConfigureAwait(true));
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    /// <summary>La question posée, l'ouverture rejouée ; rien n'arrive si l'utilisateur a choisi de ne pas l'ouvrir.</summary>
+    private async Task SettleAsync(Func<AppState, Func<AppState>, Task<AppState?>> settle, AppState state, Func<AppState> retry)
+    {
+        IsBusy = true;
+        try
+        {
+            if (await settle(state, retry).ConfigureAwait(true) is { } settled)
+            {
+                Show(settled);
+            }
         }
         finally
         {
@@ -163,6 +197,18 @@ public sealed partial class WelcomePageViewModel : ObservableObject
     /// <summary>Ce qu'il advient du coffre demandé : ouvert, en attente de sa clé, ou refusé avec sa raison.</summary>
     private void Show(AppState state)
     {
+        if (state.Occupied is not null)
+        {
+            if (Settle is { } settle && _retry is { } retry)
+            {
+                _ = SettleAsync(settle, state, retry);
+            }
+            else
+            {
+                Error = ComputersText.Occupied;
+            }
+            return;
+        }
         if (state.Locked is not null && _locked is not null)
         {
             _locked(state);

@@ -273,6 +273,9 @@ public static class Icons
     /// <summary>Un réseau.</summary>
     public static string Network { get; } = Glyph(0xE968);
 
+    /// <summary>Un poste de travail : un autre ordinateur qui a le coffre ouvert.</summary>
+    public static string Computer { get; } = Glyph(0xE7F4);
+
     /// <summary>Ajouter.</summary>
     public static string Add { get; } = Glyph(0xE710);
 

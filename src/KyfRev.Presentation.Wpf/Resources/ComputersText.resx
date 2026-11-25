@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="Arrived" xml:space="preserve">
+    <value>{0} vient d'ouvrir ce coffre. Vos changements et les siens se rejoignent ; évitez d'écrire la même fiche des deux côtés.</value>
+  </data>
+  <data name="Occupied" xml:space="preserve">
+    <value>Ce coffre est ouvert sur un autre poste.</value>
+  </data>
+  <data name="OccupiedHelp" xml:space="preserve">
+    <value>Vos changements et les siens se rejoignent, mais une même fiche écrite des deux côtés au même moment garderait la dernière version.</value>
+  </data>
+  <data name="OccupiedOpen" xml:space="preserve">
+    <value>Ouvrir</value>
+  </data>
+  <data name="OccupiedReadOnly" xml:space="preserve">
+    <value>Lecture seule</value>
+  </data>
+  <data name="OccupiedTitle" xml:space="preserve">
+    <value>Ce coffre est ouvert sur un autre poste</value>
+  </data>
+  <data name="ReadOnlyBanner" xml:space="preserve">
+    <value>Lecture seule · ouvert aussi sur {0}</value>
+  </data>
+  <data name="ReadOnlyAlone" xml:space="preserve">
+    <value>Lecture seule</value>
+  </data>
+  <data name="SeenJustNow" xml:space="preserve">
+    <value>depuis {0} · vu à l'instant</value>
+  </data>
+  <data name="SeenMinutesAgo" xml:space="preserve">
+    <value>depuis {0} · vu il y a {1} minutes</value>
+  </data>
+  <data name="SeenOneMinuteAgo" xml:space="preserve">
+    <value>depuis {0} · vu il y a 1 minute</value>
+  </data>
+  <data name="Writable" xml:space="preserve">
+    <value>Passer en écriture</value>
+  </data>
+</root>

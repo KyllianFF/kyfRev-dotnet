@@ -195,6 +195,7 @@ internal static class Composition
                 () => provider.GetRequiredService<ActiveModules>().Find<QuoteUseCases>())
             {
                 // Un coffre chiffré choisi d'ici attend sa clé : son écran la demande, l'actuel restant ouvert derrière.
+                Settle = (state, retry) => provider.GetRequiredService<ShellViewModel>().Computers?.SettleAsync(state, retry) ?? Task.FromResult<AppState?>(null),
                 VaultLocked = state => VaultStartup.ShowUnlock(
                     provider.GetRequiredService<ShellViewModel>(),
                     provider.GetRequiredService<VaultUseCases>(),
@@ -313,6 +314,22 @@ internal static class Composition
             shell.Capture = text => provider.GetRequiredService<EditingUseCases>().Capture(text);
             // Le dialogue de la mise à jour se pose sur toutes les vues.
             shell.Updates = provider.GetRequiredService<UpdateFlow>();
+            // Un coffre ouvert sur plusieurs postes : la question avant de l'ouvrir, la lecture seule, l'avis d'un autre poste.
+            var vaults = provider.GetRequiredService<VaultUseCases>();
+            var computers = new ComputersViewModel(vaults, clock);
+            computers.Reopened = state =>
+            {
+                if (state.Locked is not null)
+                {
+                    VaultStartup.ShowUnlock(shell, vaults, provider.GetRequiredService<IFolderPicker>(), state, () => VaultChanged(provider));
+                }
+                else
+                {
+                    VaultChanged(provider);
+                }
+            };
+            shell.Computers = computers;
+            shell.WorkspaceOpening += (_, _) => computers.Show(vaults.State());
             // Les actions sur une fiche, depuis toutes les vues : la vue affichée se relit après une action, et une fiche ouverte
             // qu'on met à la corbeille se quitte.
             var sheetActions = provider.GetRequiredService<SheetActionsViewModel>();
@@ -476,6 +493,7 @@ internal static class Composition
         provider.GetRequiredService<MermaidEngine>().Reset();
         provider.GetRequiredService<ActiveModules>().Load(null);
         provider.GetRequiredService<LockDelay>().Clear();
+        provider.GetRequiredService<ShellViewModel>().Computers?.Show(provider.GetRequiredService<VaultUseCases>().State());
     }
 
     /// <summary>
