@@ -145,8 +145,9 @@ public sealed class EncryptionUseCasesTests
         Assert.IsTrue(encryption.Remember(VaultSecret.RecoveryKey(Shared.Value.Recovery)).Succeeded);
         Assert.IsTrue(encryption.IsRemembered);
 
-        // Verrouillé, aucun coffre n'est ouvert ; au démarrage suivant, la clé retenue l'ouvre sans rien demander.
-        Assert.AreEqual(scene.Folder.Vault, scene.App.Vaults.Lock().Locked);
+        // Fermé sans être verrouillé (l'application quittée), aucun coffre n'est ouvert ; au démarrage suivant, la clé
+        // retenue l'ouvre sans rien demander.
+        scene.App.Vaults.Close();
         Assert.IsFalse(encryption.IsRemembered);
         using (var next = scene.Restart())
         {
