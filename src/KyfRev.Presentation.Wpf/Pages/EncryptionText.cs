@@ -358,9 +358,6 @@ public static class EncryptionText
     /// <summary>« Utiliser le mot de passe » : au lieu de Windows Hello.</summary>
     public static string TypePassword => Text(nameof(TypePassword));
 
-    /// <summary>Pendant que Windows Hello vérifie.</summary>
-    public static string HelloOpening => Text(nameof(HelloOpening));
-
     /// <summary>« Ouvrir avec Windows Hello sur cet ordinateur » : la case qui retient la clé, avec Windows Hello.</summary>
     public static string RememberHello => Text(nameof(RememberHello));
 
