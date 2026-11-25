@@ -79,7 +79,7 @@ public sealed class EncryptedVaults(IVaultStore plain, Func<VaultStorage, IVault
         {
             return null;
         }
-        if (remembered.Find(header.VaultId, root) is not { } kept || RememberedKey.Unprotect(kept, header.VaultId) is not { } bytes)
+        if (remembered.FindUnlocked(header.VaultId, root) is not { } kept || RememberedKey.Unprotect(kept, header.VaultId) is not { } bytes)
         {
             return null;
         }
@@ -134,6 +134,9 @@ public sealed class EncryptedVaults(IVaultStore plain, Func<VaultStorage, IVault
 
     /// <inheritdoc/>
     public bool Forget(string root) => remembered.Forget(root);
+
+    /// <inheritdoc/>
+    public bool StayLocked(string root) => remembered.Lock(root);
 
     /// <summary>
     /// Vrai si ce poste a retenu une clé pour ce coffre (l'identifiant de son en-tête) et ce dossier, sans la demander à

@@ -242,6 +242,42 @@ public sealed class EncryptedVaultsTests
         Assert.IsTrue(File.Exists(keys.Path), "oublier réécrit le fichier, sans l'effacer");
     }
 
+    /// <summary>
+    /// Verrouillé, un coffre garde sa clé retenue, mais elle ne le rouvre plus, même après une relance : seule une clé
+    /// retenue de nouveau, après son mot de passe, ou oubliée, lève la marque. Les autres dossiers gardent la leur.
+    /// </summary>
+    [TestMethod]
+    public void A_locked_vault_keeps_its_remembered_key_but_is_not_reopened_by_it()
+    {
+        using var place = new Place();
+        var keys = new RememberedKeys(place.LocalData, DiskStorage.Instance);
+        var first = Path.Combine(place.Root, "Premier");
+        var second = Path.Combine(place.Root, "Second");
+        Assert.IsTrue(keys.Lock(first), "rien à marquer, et rien n'est écrit pour cela");
+        Assert.IsFalse(File.Exists(keys.Path));
+        Assert.IsTrue(keys.Keep("v_1", first, [1, 2]));
+        Assert.IsTrue(keys.Keep("v_2", second, [3]));
+
+        Assert.IsTrue(keys.Lock(first.ToUpperInvariant()));
+        Assert.IsTrue(keys.Lock(first), "déjà marqué");
+
+        Assert.IsNull(keys.FindUnlocked("v_1", first), "elle ne rouvre plus le coffre");
+        CollectionAssert.AreEqual(new byte[] { 1, 2 }, keys.Find("v_1", first), "mais elle reste retenue");
+        CollectionAssert.AreEqual(new byte[] { 3 }, keys.FindUnlocked("v_2", second), "l'autre dossier n'est pas verrouillé");
+        Assert.Contains("\"verrouille\": true", File.ReadAllText(keys.Path));
+        Assert.IsNull(new RememberedKeys(place.LocalData, DiskStorage.Instance).FindUnlocked("v_1", first), "relu après une relance");
+
+        // Déverrouillé par son mot de passe, la clé est retenue de nouveau, sans la marque.
+        Assert.IsTrue(keys.Keep("v_1", first, [1, 2]));
+        CollectionAssert.AreEqual(new byte[] { 1, 2 }, keys.FindUnlocked("v_1", first));
+
+        // Un fichier qui ne se lit pas ne se marque pas : on le dit.
+        using (new FileStream(keys.Path, FileMode.Open, FileAccess.Read, FileShare.None))
+        {
+            Assert.IsFalse(keys.Lock(first));
+        }
+    }
+
     [TestMethod]
     public void An_unreadable_file_of_remembered_keys_remembers_nothing()
     {

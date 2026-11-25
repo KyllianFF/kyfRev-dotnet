@@ -222,6 +222,36 @@ public sealed class VaultUnlockTests
         Assert.IsFalse(state.Encrypted);
     }
 
+    /// <summary>
+    /// Verrouillé, il le reste après une relance de l'application ou un redémarrage : la clé retenue ne le rouvre plus
+    /// jusqu'à son mot de passe. Simplement fermé, il se rouvre par elle, comme avant.
+    /// </summary>
+    [TestMethod]
+    public void A_locked_vault_stays_locked_after_a_restart_until_its_password_is_given()
+    {
+        using var scene = new Scene();
+        scene.CreateEncrypted();
+        Assert.AreEqual(scene.Folder.Vault, scene.App.Vaults.Unlock(scene.Folder.Vault, VaultSecret.Password(Password), remember: true).Vault);
+        scene.App.Vaults.Close();
+        using (var closed = scene.Restart())
+        {
+            Assert.AreEqual(scene.Folder.Vault, closed.App.Vaults.Open(scene.Folder.Vault).Vault, "fermé sans être verrouillé, la clé retenue le rouvre");
+            Assert.AreEqual(scene.Folder.Vault, closed.App.Vaults.Lock().Locked);
+        }
+
+        using (var restarted = scene.Restart())
+        {
+            var state = restarted.App.Vaults.Open(scene.Folder.Vault);
+            Assert.AreEqual(scene.Folder.Vault, state.Locked, "verrouillé, il attend son mot de passe après la relance");
+            Assert.IsNull(state.Vault);
+            Assert.AreEqual(scene.Folder.Vault, restarted.App.Vaults.Unlock(scene.Folder.Vault, VaultSecret.Password(Password), remember: true).Vault);
+            restarted.App.Vaults.Close();
+        }
+
+        using var unlocked = scene.Restart();
+        Assert.AreEqual(scene.Folder.Vault, unlocked.App.Vaults.Open(scene.Folder.Vault).Vault, "déverrouillé par son mot de passe, la clé retenue le rouvre de nouveau");
+    }
+
     [TestMethod]
     public void Each_locked_vault_stays_locked_until_its_own_key_is_given()
     {
@@ -251,6 +281,7 @@ public sealed class VaultUnlockTests
         using var key = new VaultKey([1, 2]);
         Assert.IsFalse(keys.Remember("C:\\Coffre", key));
         Assert.IsTrue(keys.Forget("C:\\Coffre"));
+        Assert.IsTrue(keys.StayLocked("C:\\Coffre"));
 
         // Des coffres seulement en clair n'ouvrent pas de coffre chiffré.
         IVaultStore plain = new VaultStore();
