@@ -306,7 +306,7 @@ public sealed partial class VaultSession
                 continue;
             }
             var file = Normalize(noteFolder, decoded);
-            if (!RealPaths.IsWithin(file, source) || !File.Exists(file))
+            if (!IsPlainlyWithin(file, source))
             {
                 continue;
             }
@@ -453,13 +453,34 @@ public sealed partial class VaultSession
         foreach (var basePath in new[] { noteFolder, source })
         {
             var path = Normalize(basePath, target);
-            if (RealPaths.IsWithin(path, source) && File.Exists(path))
+            if (IsPlainlyWithin(path, source))
             {
                 return path;
             }
         }
         var name = target[(target.LastIndexOfAny(['/', '\\']) + 1)..];
         return attachments.TryGetValue(Key(name), out var list) ? list.MinBy(Depth) : null;
+    }
+
+    /// <summary>
+    /// Le fichier existe dans la source, sans passer par un lien symbolique ni une jonction : ce qui est derrière peut être
+    /// n'importe où sur le poste, et n'est pas importé, comme les notes et les pièces trouvées par leur nom.
+    /// </summary>
+    private static bool IsPlainlyWithin(string file, string source)
+    {
+        if (!RealPaths.IsWithin(file, source) || !File.Exists(file))
+        {
+            return false;
+        }
+        for (var current = file; current is not null && !RealPaths.IsWithin(source, current); current = Path.GetDirectoryName(current))
+        {
+            FileSystemInfo entry = current == file ? new FileInfo(current) : new DirectoryInfo(current);
+            if (entry.LinkTarget is not null)
+            {
+                return false;
+            }
+        }
+        return true;
     }
 
     /// <summary>Base suivie d'un chemin relatif (« / » ou « \ »), « . » et « .. » résolus sur le texte.</summary>
