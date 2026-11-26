@@ -16,7 +16,7 @@ namespace KyfRev.Application.Tests;
 /// </summary>
 [TestClass]
 [SupportedOSPlatform("windows")]
-public sealed class VaultConversionUseCasesTests
+public sealed partial class VaultConversionUseCasesTests
 {
     private const string Password = "un mot de passe d'essai";
 
