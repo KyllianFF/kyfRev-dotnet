@@ -348,6 +348,13 @@ public sealed partial class VaultUnlockTests
         Assert.IsFalse(keys.Remember("C:\\Coffre", key));
         Assert.IsTrue(keys.Forget("C:\\Coffre"));
         Assert.IsTrue(keys.StayLocked("C:\\Coffre"));
+        IVaultKeys port = keys;
+        Assert.IsFalse(port.CanUseHello, "ni Windows Hello");
+        Assert.IsFalse(port.IsRememberedWithHello("C:\\Coffre"));
+        Assert.IsNull(port.RememberedWithHello("C:\\Coffre"));
+        Assert.IsFalse(NoWindowsHello.Instance.IsAvailable);
+        Assert.IsNull(NoWindowsHello.Instance.Seal([1]));
+        Assert.IsNull(NoWindowsHello.Instance.Open([1], "m"));
 
         // Des coffres seulement en clair n'ouvrent pas de coffre chiffré.
         IVaultStore plain = new VaultStore();
