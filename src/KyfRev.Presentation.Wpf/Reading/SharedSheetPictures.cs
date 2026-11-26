@@ -163,7 +163,9 @@ public sealed class SharedSheetPictures
         {
             titles[code] = title;
         }
-        if (drawing && _engine is { } engine && await engine.DrawNetworkAsync(schema, SchemaIsland.ThemeOf(Light)).ConfigureAwait(true) is { } picture)
+        // Un schéma à plusieurs pages : la page choisie dans la fiche, sinon la première.
+        var page = NetworkBlock.ReferenceOf(CodeOf(code)) is { } id ? schemas.ChosenPage(id) : null;
+        if (drawing && _engine is { } engine && await engine.DrawNetworkAsync(NetworkPages.Showing(schema, page), SchemaIsland.ThemeOf(Light)).ConfigureAwait(true) is { } picture)
         {
             pictures[code] = Picture(picture);
         }

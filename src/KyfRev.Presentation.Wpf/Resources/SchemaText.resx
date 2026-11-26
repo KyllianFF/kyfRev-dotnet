@@ -51,4 +51,13 @@
   <data name="IslandName" xml:space="preserve">
     <value>Schémas réseau</value>
   </data>
+  <data name="PagesName" xml:space="preserve">
+    <value>Pages du schéma</value>
+  </data>
+  <data name="PageNamed" xml:space="preserve">
+    <value>Page « {0} »</value>
+  </data>
+  <data name="OtherPages" xml:space="preserve">
+    <value>Les autres pages</value>
+  </data>
 </root>

@@ -365,6 +365,14 @@ public sealed class SharedSheetTests
         public void Open(string id)
         {
         }
+
+        public string? Page { get; init; }
+
+        public string? ChosenPage(string id) => Page;
+
+        public void ChoosePage(string id, string page)
+        {
+        }
     }
 
     private sealed class DrawingEngine : IMermaidEngine
