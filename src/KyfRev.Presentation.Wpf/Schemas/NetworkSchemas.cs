@@ -26,6 +26,79 @@ public interface INetworkSchemas
 
     /// <summary>Ouvre l'éditeur sur ce schéma ; le fermer revient à la vue d'où il a été ouvert.</summary>
     void Open(string id);
+
+    /// <summary>La page choisie dans les fiches pour un schéma à plusieurs pages (elle s'imprime) ; rien : la première.</summary>
+    string? ChosenPage(string id);
+
+    /// <summary>Retient la page à montrer d'un schéma, dans les fiches et à l'impression, le temps de la session.</summary>
+    void ChoosePage(string id, string page);
+}
+
+/// <summary>Une page d'un schéma à plusieurs pages (30A).</summary>
+public sealed record SchemaPage(string Id, string Name);
+
+/// <summary>
+/// Les pages d'un schéma, pour l'aperçu des fiches (30A). Le dessin montre la première page du schéma : pour en montrer une autre,
+/// elle passe en tête du texte dessiné, le schéma lui-même ne change pas.
+/// </summary>
+public static class NetworkPages
+{
+    /// <summary>Les pages d'un schéma qui en a plusieurs, dans leur ordre ; aucune s'il n'en a qu'une ou s'il ne se lit pas.</summary>
+    public static IReadOnlyList<SchemaPage> Of(string? text)
+    {
+        if (Pages(text) is not { } pages)
+        {
+            return [];
+        }
+        var found = new List<SchemaPage>();
+        foreach (var node in pages)
+        {
+            if (node is System.Text.Json.Nodes.JsonObject page
+                && Text(page["id"]) is { Length: > 0 } id
+                && found.TrueForAll(known => known.Id != id))
+            {
+                found.Add(new SchemaPage(id, Text(page["nom"])?.Trim() is { Length: > 0 } name ? name : $"Page {found.Count + 1}"));
+            }
+        }
+        return found.Count >= 2 ? found : [];
+    }
+
+    /// <summary>Le texte à dessiner pour montrer <paramref name="page"/> : elle passe en tête des pages. Une page inconnue : le texte tel quel.</summary>
+    public static string Showing(string text, string? page)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+        if (page is null || Pages(text) is not { } pages || pages.Root is not System.Text.Json.Nodes.JsonObject schema)
+        {
+            return text;
+        }
+        var chosen = pages.FirstOrDefault(node => node is System.Text.Json.Nodes.JsonObject candidate && Text(candidate["id"]) == page);
+        if (chosen is null || pages.IndexOf(chosen) == 0)
+        {
+            return text;
+        }
+        pages.Remove(chosen);
+        pages.Insert(0, chosen);
+        return schema.ToJsonString();
+    }
+
+    private static System.Text.Json.Nodes.JsonArray? Pages(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text) || !text.TrimStart().StartsWith('{'))
+        {
+            return null;
+        }
+        try
+        {
+            return System.Text.Json.Nodes.JsonNode.Parse(text) is System.Text.Json.Nodes.JsonObject schema ? schema["pages"] as System.Text.Json.Nodes.JsonArray : null;
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return null;
+        }
+    }
+
+    private static string? Text(System.Text.Json.Nodes.JsonNode? node) =>
+        node is System.Text.Json.Nodes.JsonValue value && value.GetValueKind() == System.Text.Json.JsonValueKind.String ? value.GetValue<string>() : null;
 }
 
 /// <summary>Le bloc qu'une fiche écrit pour citer un schéma, tel que la 0.x l'écrit.</summary>
@@ -69,6 +142,8 @@ public static partial class NetworkBlock
 public sealed class NetworkSchemas(Func<SchemaUseCases?> current, Func<ShellViewModel?> shell) : INetworkSchemas
 {
     private const string EmptySchema = """{"format":2,"id":"","titre":""}""";
+
+    private readonly Dictionary<string, string> _pages = new(StringComparer.Ordinal);
 
     /// <inheritdoc/>
     public bool IsActive => current() is not null;
@@ -119,6 +194,12 @@ public sealed class NetworkSchemas(Func<SchemaUseCases?> current, Func<ShellView
         var copy = await Task.Run(() => schemas.Duplicate(id)).ConfigureAwait(true);
         return copy.Succeeded ? copy.Value.Id : null;
     }
+
+    /// <inheritdoc/>
+    public string? ChosenPage(string id) => _pages.GetValueOrDefault(id);
+
+    /// <inheritdoc/>
+    public void ChoosePage(string id, string page) => _pages[id] = page;
 
     /// <inheritdoc/>
     public void Open(string id)

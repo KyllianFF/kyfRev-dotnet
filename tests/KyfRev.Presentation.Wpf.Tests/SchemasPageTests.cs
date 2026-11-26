@@ -704,7 +704,7 @@ public sealed partial class SchemasPageTests
         scene.Script("document.querySelector('dialog[open] form').requestSubmit()");
         scene.WaitFor("document.querySelector('dialog.compte-rendu-import[open]') !== null");
         var report = JsonSerializer.Deserialize<string>(scene.Script("document.querySelector('dialog[open]').innerText"))!;
-        foreach (var line in new[] { "Le schéma est importé", "2 équipements", "1 câble, avec ses ports", "À regarder", "1 forme de type inconnu, posée en « Générique »", "Les montrer", "1 connecteur courbe, redressé en coudé", "page « Étage 2 » non importée : un schéma, une page", "Annuler l'import", "Garder" })
+        foreach (var line in new[] { "Le schéma est importé", "2 équipements", "1 câble, avec ses ports", "À regarder", "1 forme de type inconnu, posée en « Générique »", "Les montrer", "1 connecteur courbe, redressé en coudé", "2 pages", "Annuler l'import", "Garder" })
         {
             StringAssert.Contains(report, line, StringComparison.Ordinal);
         }
@@ -714,8 +714,8 @@ public sealed partial class SchemasPageTests
         Assert.HasCount(1, scene.Schemas.Schemas().Value, "Rien n'entre avant « Garder ».");
         scene.Script("[...document.querySelectorAll('dialog[open] button')].find((bouton) => bouton.textContent.trim() === 'Garder').click()");
         scene.WaitFor("document.querySelector('.annonce.succes, [role=alert]') !== null");
-        Assert.AreEqual("Schéma « Réseau du labo » importé.", JsonSerializer.Deserialize<string>(scene.Script("document.querySelector('.annonce.succes, [role=alert]').textContent.trim()")));
-        Assert.IsTrue(scene.Schemas.Schemas().Value.Any(schema => schema.Title == "Réseau du labo"));
+        Assert.AreEqual("Schéma « labo » importé.", JsonSerializer.Deserialize<string>(scene.Script("document.querySelector('.annonce.succes, [role=alert]').textContent.trim()")));
+        Assert.IsTrue(scene.Schemas.Schemas().Value.Any(schema => schema.Title == "labo"));
     }
 
     [EngineTest]
@@ -772,7 +772,7 @@ public sealed partial class SchemasPageTests
         scene.WaitFor("document.querySelectorAll('svg.canevas g.equipement.choisi').length === 1");
     }
 
-    /// <summary>Un fichier draw.io d'un autre outil : un routeur, une forme inconnue, un connecteur courbe, une seconde page.</summary>
+    /// <summary>Un fichier draw.io d'un autre outil : un routeur, une forme inconnue, un connecteur courbe, une seconde page (vide) ; deux pages : le schéma prend le nom du fichier.</summary>
     private const string ForeignDrawIo = """
         <mxfile host="app.diagrams.net"><diagram name="Réseau du labo" id="p1"><mxGraphModel><root>
         <mxCell id="0"/><mxCell id="1" parent="0"/>
@@ -781,6 +781,234 @@ public sealed partial class SchemasPageTests
         <mxCell id="c" style="curved=1;" edge="1" parent="1" source="r" target="f"><mxGeometry relative="1" as="geometry"/></mxCell>
         </root></mxGraphModel></diagram><diagram name="Étage 2" id="p2"><mxGraphModel><root><mxCell id="0"/></root></mxGraphModel></diagram></mxfile>
         """;
+
+    /// <summary>Le lycée en quatre pages (30A) : l'étage 1, l'étage 2, la salle serveurs, le site distant ; un câble de l'étage 1 à l'étage 2.</summary>
+    private const string Lycee = """
+        {"format": 3, "titre": "Réseau du lycée", "vue": "physique",
+         "pages": [{"id": "p_e1", "nom": "Étage 1"}, {"id": "p_e2", "nom": "Étage 2"}, {"id": "p_srv", "nom": "Salle serveurs"}, {"id": "p_site", "nom": "Site distant"}],
+         "equipements": [
+          {"id": "d_coeur", "page": "p_e1", "type": "switch-coeur", "nom": "Cœur", "position": {"x": 0, "y": 0}, "gestion": {"adresse": "10.0.0.1/24"},
+           "interfaces": [{"id": "i_c1", "nom": "1/1"}, {"id": "i_c2", "nom": "1/2"}]},
+          {"id": "d_sw1", "page": "p_e1", "type": "switch", "nom": "SW-Étage1", "position": {"x": 260, "y": 0}, "gestion": {"adresse": "10.0.0.11/24"},
+           "interfaces": [{"id": "i_s25", "nom": "1/25"}, {"id": "i_s26", "nom": "1/26"}, {"id": "i_s1", "nom": "1/1"}, {"id": "i_s2", "nom": "1/2"}]},
+          {"id": "d_wifi", "page": "p_e1", "type": "point-acces", "nom": "Wi-Fi Hall", "position": {"x": 0, "y": 160}, "interfaces": [{"id": "i_w", "nom": "eth0"}]},
+          {"id": "d_pc", "page": "p_e1", "type": "pc", "nom": "PC-Accueil", "position": {"x": 260, "y": 160}, "interfaces": [{"id": "i_p", "nom": "eth0"}]},
+          {"id": "d_imp", "page": "p_e1", "type": "imprimante", "nom": "Imprimante", "position": {"x": 460, "y": 160}, "interfaces": [{"id": "i_i", "nom": "eth0"}]},
+          {"id": "d_sw2", "page": "p_e2", "type": "switch", "nom": "SW-Étage2", "position": {"x": 0, "y": 0}, "interfaces": [{"id": "i_t48", "nom": "1/48"}, {"id": "i_t1", "nom": "1/1"}]},
+          {"id": "d_pc2", "page": "p_e2", "type": "pc", "nom": "PC-Salle 201", "position": {"x": 0, "y": 160}, "interfaces": [{"id": "i_q", "nom": "eth0"}]},
+          {"id": "d_srv", "page": "p_srv", "type": "serveur", "nom": "Serveur", "position": {"x": 0, "y": 0}},
+          {"id": "d_nas", "page": "p_srv", "type": "nas", "nom": "NAS", "position": {"x": 200, "y": 0}},
+          {"id": "d_rt", "page": "p_site", "type": "routeur", "nom": "Routeur du site", "position": {"x": 0, "y": 0}}],
+         "liens": [
+          {"id": "l_1", "a": {"equipement": "d_coeur", "interface": "i_c1"}, "b": {"equipement": "d_sw1", "interface": "i_s25"}, "support": "cuivre", "points": []},
+          {"id": "l_2", "a": {"equipement": "d_coeur", "interface": "i_c2"}, "b": {"equipement": "d_wifi", "interface": "i_w"}, "support": "cuivre", "points": []},
+          {"id": "l_3", "a": {"equipement": "d_sw1", "interface": "i_s1"}, "b": {"equipement": "d_pc", "interface": "i_p"}, "support": "cuivre", "points": []},
+          {"id": "l_4", "a": {"equipement": "d_sw1", "interface": "i_s2"}, "b": {"equipement": "d_imp", "interface": "i_i"}, "support": "cuivre", "points": []},
+          {"id": "l_montee", "a": {"equipement": "d_sw1", "interface": "i_s26"}, "b": {"equipement": "d_sw2", "interface": "i_t48"}, "support": "cuivre", "points": []},
+          {"id": "l_5", "a": {"equipement": "d_sw2", "interface": "i_t1"}, "b": {"equipement": "d_pc2", "interface": "i_q"}, "support": "cuivre", "points": []}]}
+        """;
+
+    /// <summary>Ouvre l'éditeur du seul schéma de la scène, en mode avancé.</summary>
+    private static void OpenEditor(IslandScene scene)
+    {
+        scene.WaitFor("[...document.querySelectorAll('li.carte button')].some((b) => b.textContent.includes('Modifier'))");
+        scene.Script("[...document.querySelectorAll('li.carte button')].find((b) => b.textContent.includes('Modifier')).click()");
+        scene.WaitFor("document.querySelector('dialog[open] svg.canevas') !== null");
+        scene.Script("document.querySelector('.segments.mode button[data-mode=\"avance\"]').click()");
+        scene.WaitFor("document.querySelector('.segments.mode button[data-mode=\"avance\"]').getAttribute('aria-pressed') === 'true'");
+    }
+
+    private static string Tabs(IslandScene scene) =>
+        JsonSerializer.Deserialize<string>(scene.Script("[...document.querySelectorAll('.pages .onglet')].map((o) => o.querySelector('.nom').textContent + (o.getAttribute('aria-selected') === 'true' ? '*' : '')).join('|')"))!;
+
+    private static void TabMenu(IslandScene scene, int rank)
+    {
+        scene.Script($"document.querySelectorAll('.pages .onglet')[{rank}].dispatchEvent(new MouseEvent('contextmenu', {{ bubbles: true, cancelable: true, clientX: 0, clientY: 0 }}))");
+        scene.WaitFor("document.querySelector('.menu[role=menu]') !== null");
+    }
+
+    private static void MenuEntry(IslandScene scene, string entry) =>
+        scene.Script($"[...document.querySelectorAll('.menu[role=menu] button')].find((b) => b.textContent.trim() === '{entry.Replace("'", "\\'", StringComparison.Ordinal)}').click()");
+
+    [EngineTest]
+    [DataRow(ThemeKind.Light)]
+    [DataRow(ThemeKind.Dark)]
+    public void Pages_are_tabs_under_the_plan_and_a_cable_to_another_page_leads_there(ThemeKind theme)
+    {
+        using var scene = new IslandScene(Lycee, theme: theme);
+        var suffix = theme == ThemeKind.Dark ? "sombre" : "clair";
+        var id = scene.Schemas.Schemas().Value.Single().Id;
+        JsonNode Saved() => JsonNode.Parse(scene.Schemas.Read(id).Value.Text)!;
+        string Pages() => string.Join('|', Saved()["pages"]!.AsArray().Select(page => page!["nom"]!.GetValue<string>()));
+        int Count(string selector) => int.Parse(scene.Script($"document.querySelectorAll('{selector}').length"), CultureInfo.InvariantCulture);
+        OpenEditor(scene);
+
+        // Les onglets, sous le plan et au-dessus du plateau : le nombre d'équipements de chacun, « + », le résumé à droite.
+        Assert.AreEqual("Étage 1*|Étage 2|Salle serveurs|Site distant", Tabs(scene));
+        Assert.AreEqual("5|2|2|1", JsonSerializer.Deserialize<string>(scene.Script("[...document.querySelectorAll('.pages .onglet .nombre')].map((n) => n.textContent).join('|')")));
+        Assert.AreEqual("4 pages · 10 équipements", JsonSerializer.Deserialize<string>(scene.Script("document.querySelector('.pages .resume').textContent")));
+        Assert.AreEqual("true", scene.Script("(() => { const p = document.querySelector('.pages').getBoundingClientRect(), c = document.querySelector('.corps').getBoundingClientRect(), t = document.querySelector('footer.plateau').getBoundingClientRect(); return p.top >= c.bottom - 1 && p.bottom <= t.top + 1; })()"));
+        Assert.AreEqual(5, Count("svg.canevas g.equipement"));
+        // Le câble vers l'étage 2 : un renvoi en pointillé, qui dit la page, l'équipement et le port d'en face.
+        Assert.AreEqual(1, Count("svg.canevas g.renvoi"));
+        Assert.AreEqual("→ Étage 2 · SW-Étage2 · 1/48", JsonSerializer.Deserialize<string>(scene.Script("document.querySelector('svg.canevas g.renvoi text').textContent")));
+        scene.WaitFor("document.getAnimations().length === 0");
+        scene.Picture($"schemas-pages-{suffix}");
+
+        // Un clic sur le renvoi mène à l'autre page, l'équipement d'en face choisi.
+        scene.Script("document.querySelector('svg.canevas g.renvoi').dispatchEvent(new MouseEvent('click', { bubbles: true }))");
+        scene.WaitFor("document.querySelector('.pages .onglet[aria-selected=true] .nom').textContent === 'Étage 2'");
+        scene.WaitFor("document.querySelector('svg.canevas g.equipement.choisi')?.dataset.id === 'd_sw2'");
+        Assert.AreEqual(2, Count("svg.canevas g.equipement"));
+        Assert.AreEqual("→ Étage 1 · SW-Étage1 · 1/26", JsonSerializer.Deserialize<string>(scene.Script("document.querySelector('svg.canevas g.renvoi text').textContent")));
+        scene.WaitFor("document.getAnimations().length === 0");
+        scene.Picture($"schemas-pages-renvoi-suivi-{suffix}");
+
+        // Clic droit sur un onglet : renommer, dupliquer, déplacer, puis supprimer, à part et en couleur d'alerte.
+        TabMenu(scene, 0);
+        Assert.AreEqual("Renommer|Dupliquer la page|Déplacer à gauche|Déplacer à droite|Supprimer la page…", JsonSerializer.Deserialize<string>(scene.Script("[...document.querySelectorAll('.menu[role=menu] button')].map((b) => b.textContent.trim()).join('|')")));
+        Assert.AreEqual("true", scene.Script("document.querySelector('.menu[role=menu] button:nth-of-type(3)').disabled"), "la première page ne va pas plus à gauche");
+        Assert.AreEqual("true", scene.Script("getComputedStyle(document.querySelector('.menu[role=menu] .danger')).color !== getComputedStyle(document.querySelector('.menu[role=menu] button')).color"));
+        scene.WaitFor("document.getAnimations().length === 0");
+        scene.Picture($"schemas-pages-menu-{suffix}");
+
+        // Renommer, depuis le menu : le nom se saisit dans l'onglet.
+        MenuEntry(scene, "Renommer");
+        scene.WaitFor("document.querySelector('.pages .onglets input.nom-page') === document.activeElement");
+        scene.Script("(() => { const c = document.querySelector('.pages .onglets input.nom-page'); c.value = 'Rez-de-chaussée'; c.dispatchEvent(new Event('input', { bubbles: true })); c.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); })()");
+        scene.WaitFor("document.querySelector('.pages .onglet .nom').textContent === 'Rez-de-chaussée'");
+        UiThread.Until(() => Pages() == "Rez-de-chaussée|Étage 2|Salle serveurs|Site distant", TimeSpan.FromSeconds(20));
+
+        // Double clic : renommer aussi ; Échap rend le nom d'avant.
+        scene.Script("document.querySelectorAll('.pages .onglet')[2].dispatchEvent(new MouseEvent('dblclick', { bubbles: true }))");
+        scene.WaitFor("document.querySelector('.pages .onglets input.nom-page') !== null");
+        scene.Script("(() => { const c = document.querySelector('.pages .onglets input.nom-page'); c.value = 'Autre'; c.dispatchEvent(new Event('input', { bubbles: true })); c.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); })()");
+        scene.WaitFor("document.querySelector('.pages .onglets input.nom-page') === null");
+        Assert.AreEqual("Rez-de-chaussée|Étage 2|Salle serveurs*|Site distant", Tabs(scene));
+
+        // Dupliquer : la copie suit sa page et se montre ; le câble vers une autre page ne se copie pas.
+        TabMenu(scene, 1);
+        MenuEntry(scene, "Dupliquer la page");
+        scene.WaitFor("document.querySelectorAll('.pages .onglet').length === 5");
+        Assert.AreEqual("Rez-de-chaussée|Étage 2|Étage 2 (copie)*|Salle serveurs|Site distant", Tabs(scene));
+        Assert.AreEqual(2, Count("svg.canevas g.equipement"));
+        Assert.AreEqual(0, Count("svg.canevas g.renvoi"));
+
+        // Déplacer à droite, puis glisser un onglet : l'ordre suit.
+        TabMenu(scene, 2);
+        MenuEntry(scene, "Déplacer à droite");
+        scene.WaitFor("document.querySelectorAll('.pages .onglet')[3].textContent.includes('Étage 2 (copie)')");
+        double[] Centre(string script) => JsonSerializer.Deserialize<double[]>(JsonSerializer.Deserialize<string>(scene.Script(
+            "(() => { const r = " + script + ".getBoundingClientRect(); return JSON.stringify([r.x + r.width / 2, r.y + r.height / 2]); })()"))!)!;
+        var from = Centre("document.querySelectorAll('.pages .onglet')[4]");
+        var to = Centre("document.querySelectorAll('.pages .onglet')[0]");
+        scene.Drag(from[0], from[1], to[0] - 30, to[1]);
+        scene.WaitFor("document.querySelectorAll('.pages .onglet')[0].textContent.includes('Site distant')");
+        Assert.AreEqual("Site distant|Rez-de-chaussée|Étage 2|Salle serveurs|Étage 2 (copie)", string.Join('|', Tabs(scene).Replace("*", string.Empty, StringComparison.Ordinal).Split('|')));
+        UiThread.Until(() => Pages() == "Site distant|Rez-de-chaussée|Étage 2|Salle serveurs|Étage 2 (copie)", TimeSpan.FromSeconds(20));
+
+        // Supprimer : une question d'abord ; la page part avec ses équipements, Ctrl+Z la rend.
+        TabMenu(scene, 4);
+        MenuEntry(scene, "Supprimer la page…");
+        scene.WaitFor("document.querySelector('dialog.confirmation[open]') !== null");
+        StringAssert.Contains(scene.Script("document.querySelector('dialog.confirmation[open]').textContent"), "Supprimer la page « Étage 2 (copie) » ?", StringComparison.Ordinal);
+        StringAssert.Contains(scene.Script("document.querySelector('dialog.confirmation[open]').textContent"), "Ses 2 équipements partent avec elle", StringComparison.Ordinal);
+        scene.WaitFor("document.getAnimations().length === 0");
+        scene.Picture($"schemas-pages-suppression-{suffix}");
+        scene.Script("[...document.querySelectorAll('dialog.confirmation[open] button')].find((b) => b.textContent.trim() === 'Supprimer la page').click()");
+        scene.WaitFor("document.querySelectorAll('.pages .onglet').length === 4");
+        UiThread.Until(() => Saved()["equipements"]!.AsArray().Count == 10, TimeSpan.FromSeconds(20));
+
+        // « + » ajoute une page vide, montrée : l'invite à poser un équipement y revient.
+        scene.Script("document.querySelector('.pages .plus').click()");
+        scene.WaitFor("document.querySelectorAll('.pages .onglet').length === 5");
+        Assert.AreEqual("Page 5*", Tabs(scene).Split('|')[^1]);
+        scene.WaitFor("document.querySelector('.plan .invite') !== null");
+        Assert.AreEqual(0, Count("svg.canevas g.equipement"));
+        UiThread.Until(() => Saved()["format"]!.GetValue<int>() == 3 && Saved()["pages"]!.AsArray().Count == 5, TimeSpan.FromSeconds(20));
+        Assert.AreEqual("0", scene.Script("document.documentElement.scrollWidth - document.documentElement.clientWidth"), "Pas de défilement horizontal.");
+
+        // En mode simplifié, les mêmes onglets ; très large, ils restent à gauche et le résumé à droite.
+        scene.Script("document.querySelectorAll('.pages .onglet')[1].click()");
+        scene.Script("document.querySelector('.segments.mode button[data-mode=\"simplifie\"]').click()");
+        scene.WaitFor("document.querySelector('.segments.mode button[data-mode=\"simplifie\"]').getAttribute('aria-pressed') === 'true'");
+        Assert.AreEqual(5, Count(".pages .onglet"));
+        var before = scene.Script("document.documentElement.clientWidth");
+        scene.Page.Width = 2400;
+        TestShell.Flush();
+        UiThread.Until(() => scene.Script("document.documentElement.clientWidth") != before, TimeSpan.FromSeconds(20));
+        Assert.AreEqual("true", scene.Script("(() => { const r = document.querySelector('.pages .resume').getBoundingClientRect(); return innerWidth - r.right < 16; })()"));
+        scene.WaitFor("document.getAnimations().length === 0");
+        scene.Picture($"schemas-pages-simplifie-tres-large-{suffix}");
+        scene.Script("document.querySelector('.segments.mode button[data-mode=\"avance\"]').click()");
+        scene.WaitFor("document.querySelector('.segments.mode button[data-mode=\"avance\"]').getAttribute('aria-pressed') === 'true'");
+
+        // Fenêtre étroite : un menu « Étage 1 ▾ », « 1 / 5 » et « + » ; il liste les pages et les actions de la page montrée.
+        Narrow(scene);
+        scene.WaitFor("getComputedStyle(document.querySelector('.pages .replie')).display === 'flex' && getComputedStyle(document.querySelector('.pages .onglets')).display === 'none'");
+        Assert.AreEqual("Rez-de-chaussée", JsonSerializer.Deserialize<string>(scene.Script("document.querySelector('.pages .choix .nom').textContent")));
+        Assert.AreEqual("2 / 5", JsonSerializer.Deserialize<string>(scene.Script("document.querySelector('.pages .position').textContent")));
+        Assert.AreEqual("0", scene.Script("document.documentElement.scrollWidth - document.documentElement.clientWidth"), "Pas de défilement horizontal à 470 pixels.");
+        scene.WaitFor("document.getAnimations().length === 0");
+        scene.Picture($"schemas-pages-etroit-{suffix}");
+        scene.Script("document.querySelector('.pages .choix').click()");
+        scene.WaitFor("document.querySelector('.menu[role=menu]') !== null");
+        Assert.AreEqual(5, Count(".menu[role=menu] [role=menuitemradio]"));
+        Assert.AreEqual("true", scene.Script("(() => { const r = document.querySelector('.menu[role=menu]').getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth && r.top >= 0; })()"), "le menu tient dans la fenêtre");
+        scene.WaitFor("document.getAnimations().length === 0");
+        scene.Picture($"schemas-pages-etroit-menu-{suffix}");
+        scene.Script("[...document.querySelectorAll('.menu[role=menu] [role=menuitemradio]')].find((b) => b.textContent.includes('Étage 2')).click()");
+        scene.WaitFor("document.querySelector('.pages .choix .nom').textContent === 'Étage 2'");
+    }
+
+    [EngineTest]
+    [DataRow(ThemeKind.Light)]
+    [DataRow(ThemeKind.Dark)]
+    public void Each_page_is_a_draw_io_page_and_comes_back_with_its_cable_to_another_page(ThemeKind theme)
+    {
+        using var scene = new IslandScene(Lycee, theme: theme);
+        var suffix = theme == ThemeKind.Dark ? "sombre" : "clair";
+        scene.WaitFor("document.querySelector('li.carte') !== null");
+
+        // L'export draw.io : une page draw.io par page, le renvoi en pastille qui mène à l'autre page.
+        scene.Script("document.querySelector('li.carte').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 60, clientY: 60 }))");
+        scene.WaitFor("document.querySelector('.menu[role=menu]') !== null");
+        scene.Script("[...document.querySelectorAll('.menu [role=menuitem]')].find((entree) => entree.textContent.includes('Exporter')).click()");
+        scene.WaitFor("document.querySelector('dialog[open] input[value=drawio]') !== null");
+        scene.Script("document.querySelector('dialog[open] input[value=drawio]').click()");
+        var folder = scene.Outside("Exports");
+        Directory.CreateDirectory(folder);
+        scene.Picker.Answers.Enqueue(folder);
+        scene.Script("document.querySelector('dialog[open] form').requestSubmit()");
+        UiThread.Until(() => Directory.GetFiles(folder, "*.drawio").Length == 1, TimeSpan.FromSeconds(30));
+        var file = Directory.GetFiles(folder, "*.drawio").Single();
+        var xml = File.ReadAllText(file);
+        Assert.AreEqual(4, xml.Split("<diagram ").Length - 1);
+        StringAssert.Contains(xml, "<diagram name=\"Salle serveurs\" id=\"kyfrev-p_srv\">", StringComparison.Ordinal);
+        StringAssert.Contains(xml, "link=\"data:page/id,kyfrev-p_e2\"", StringComparison.Ordinal);
+        StringAssert.Contains(xml, "→ Étage 2 · SW-Étage2 · 1/48", StringComparison.Ordinal);
+
+        // Retouché dans draw.io (une page renommée), puis importé : quatre pages, le câble entre deux pages gardé.
+        File.WriteAllText(file, xml.Replace("<diagram name=\"Site distant\"", "<diagram name=\"Annexe\"", StringComparison.Ordinal));
+        ((SchemasPageViewModel)scene.Page.DataContext).PickSchemaFile = () => file;
+        scene.WaitFor("[...document.querySelectorAll('button')].some((bouton) => bouton.textContent.trim() === 'Importer…' && !bouton.disabled)");
+        scene.Script("[...document.querySelectorAll('button')].find((bouton) => bouton.textContent.trim() === 'Importer…').click()");
+        scene.WaitFor("document.querySelector('dialog.dialogue-import[open]') !== null");
+        scene.Script("document.querySelector('dialog[open] form').requestSubmit()");
+        scene.WaitFor("document.querySelector('dialog.compte-rendu-import[open]') !== null");
+        var report = JsonSerializer.Deserialize<string>(scene.Script("document.querySelector('dialog[open]').innerText"))!;
+        StringAssert.Contains(report, "4 pages", StringComparison.Ordinal);
+        StringAssert.Contains(report, "10 équipements", StringComparison.Ordinal);
+        Assert.IsFalse(report.Contains("non importée", StringComparison.Ordinal));
+        scene.WaitFor("document.getAnimations().length === 0");
+        scene.Picture($"schemas-pages-import-{suffix}");
+        scene.Script("[...document.querySelectorAll('dialog[open] button')].find((bouton) => bouton.textContent.trim() === 'Garder').click()");
+        UiThread.Until(() => scene.Schemas.Schemas().Value.Count == 2, TimeSpan.FromSeconds(20));
+        var copy = scene.Schemas.Schemas().Value.Select(schema => JsonNode.Parse(scene.Schemas.Read(schema.Id).Value.Text)!).Single(schema => schema["pages"]![3]!["nom"]!.GetValue<string>() == "Annexe");
+        Assert.AreEqual(3, copy["format"]!.GetValue<int>());
+        Assert.AreEqual("Étage 1|Étage 2|Salle serveurs|Annexe", string.Join('|', copy["pages"]!.AsArray().Select(page => page!["nom"]!.GetValue<string>())));
+        Assert.IsTrue(copy["liens"]!.AsArray().Any(link => link!["id"]!.GetValue<string>() == "l_montee"), "le câble entre deux pages revient");
+    }
 
     [EngineTest]
     public void A_schema_is_read_in_a_centred_column_at_every_width()

@@ -345,7 +345,8 @@ public static partial class VaultInspector
             try
             {
                 var schema = Fields.ParseObject(bytes);
-                var format = Fields.Integer(schema, "format", 1, 2);
+                // Le format 3 est celui d'un schéma à plusieurs pages.
+                var format = Fields.Integer(schema, "format", 1, VaultSession.SchemaFormat);
                 if (Fields.OptionalString(schema, "id") is { } schemaId && schemaId != id)
                 {
                     context.Add(FindingSeverity.Error, "schema-illisible", relative, $"Schéma illisible : l'identifiant {schemaId} ne correspond pas au nom du fichier.");

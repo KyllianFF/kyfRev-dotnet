@@ -205,7 +205,32 @@ adresse IP à un équipement, un type et un nombre de câbles à une liaison, et
 règle le reste : interfaces, VLAN, vues, diagnostic. C'est le même schéma dans les deux. Sur une liaison, « Agrégat de
 liens » regroupe plusieurs câbles (ils se voient tous, sous un cercle) et « Trunk » demande ses VLAN, non tagué et tagués,
 écrits sur le câble (« Trunk · U 1 · T 10,20,30 ») ; les deux se cumulent. Au clic droit sur la carte d'un schéma, ou dans son Détail : « Exporter… », « Partager » (son image
-va dans le presse-papiers) et « Imprimer… ».
+va dans le presse-papiers) et « Imprimer… ». Un export draw.io montre le schéma comme kyfRev, dans la vue montrée et
+avec l'affichage choisi : noms et adresses, étiquettes des ports et des câbles, câbles parallèles côte à côte, agrégats
+sous leur cercle ; avec les icônes de kyfRev ou les formes réseau de draw.io. Il porte aussi le modèle complet : c'est lui
+qui revient à l'import, avec ce qui a changé dans draw.io.
+
+Un schéma peut avoir plusieurs pages, comme dans draw.io : Étage 1, Étage 2, Salle serveurs… Les onglets sont sous le plan,
+avec le nombre d'équipements de chaque page ; « + » en ajoute une. Au clic droit sur un onglet : renommer, dupliquer,
+déplacer, supprimer (après une question ; Ctrl+Z la rend, et elle reste dans les versions du schéma). Un double clic
+renomme, glisser un onglet le déplace. Dans une fenêtre étroite, les onglets se replient en un menu. Un câble entre deux
+pages se crée par la boîte de connexion détaillée (les équipements y sont rangés par page), ou à la main : prenez le câble
+(« Brancher un câble » dans la petite barre d'un équipement, ou l'outil Câble), choisissez son premier port, puis cliquez
+l'onglet d'une autre page (ou choisissez-la dans le menu des pages) : le câble reste en main, et la consigne le rappelle
+(« Câble en main depuis Cœur (Étage 1) : choisissez un équipement, sur cette page ou une autre »). Choisissez l'équipement
+et son port, comme d'habitude ; Échap repose le câble. Un câble entre deux pages se dessine sur chacune en renvoi, en
+pointillé : « → Étage 2 · SW-Étage2 · 1/48 », la page, l'équipement et le port d'en face. Un clic sur le renvoi mène à
+l'autre page ; tirée, la pastille se déplace (au clavier : les flèches, Maj pour aller plus vite), et sa place est gardée
+pour chaque bout du câble ; « Remettre à sa place », sous la pastille choisie, la remet à côté de son équipement. Les vues
+valent pour la page montrée ; le plan IP et le diagnostic regardent tout le schéma. Une image exportée ou imprimée montre la
+page à l'écran ; un fichier draw.io garde toutes les pages, une page draw.io par page, et revient avec elles.
+
+Les pages se parcourent aussi sans ouvrir l'éditeur. Dans le Détail d'un schéma, de petits onglets, au-dessus de
+l'aperçu, montrent chaque page (au clavier : les flèches, Début et Fin) ; un renvoi cliqué dans l'aperçu mène à sa page,
+et ce qui s'exporte, se partage ou s'imprime depuis le Détail est la page montrée. Dans une fiche, l'aperçu montre la
+première page, et un petit sélecteur, juste au-dessus, à droite, en choisit une autre (au clavier aussi, avec les
+flèches) : elle reste choisie, et s'imprime, jusqu'à la fermeture de kyfRev. Un schéma à plusieurs pages s'écrit au
+format 3 : une version de kyfRev qui ne connaît pas les pages refuse de l'ouvrir plutôt que de le relire en une seule.
 
 En mode avancé, un équipement choisi ouvre son volet : en tête, son icône, son nom, son type (un clic ouvre la grille
 des types, avec une recherche et les types récents d'abord ; changer de type garde le nom, les ports et les connexions),

@@ -7,6 +7,13 @@
 // équipement ou une interface ne casse aucun lien.
 
 export const FORMAT = 2;
+/**
+ * Format d'un schéma à plusieurs pages (30A). Seul un schéma qui a au moins deux pages s'écrit ainsi : une
+ * version qui ne connaît pas les pages le refuse, au lieu de le relire en une seule page et d'en perdre le
+ * rangement. Un schéma d'une page reste au format 2, octet pour octet.
+ */
+export const FORMAT_PAGES = 3;
+export type NumeroFormat = typeof FORMAT | typeof FORMAT_PAGES;
 
 export type Point = { x: number; y: number };
 
@@ -177,6 +184,8 @@ export type Valeur = string | number | boolean;
 
 export type Equipement = {
   id: string;
+  /** La page où il est dessiné, dans un schéma à plusieurs pages. */
+  page?: string;
   /** Type du catalogue (catalogue.ts) ; un type inconnu reste lisible (« générique »). */
   type: string;
   nom: string;
@@ -311,7 +320,14 @@ export type PoseEtiquette = { place?: { t?: number; x: number; y: number }; angl
 /** Les étiquettes d'un câble : ses deux ports, son nom, son VLAN. */
 export type CleEtiquette = "port-a" | "port-b" | "nom" | "vlan";
 export const CLES_ETIQUETTE: CleEtiquette[] = ["port-a", "port-b", "nom", "vlan"];
-export type PosesDuLien = Partial<Record<CleEtiquette, PoseEtiquette>>;
+/**
+ * Les renvois d'un câble entre deux pages (30A), un à chaque bout : celui de la page de son bout A, celui de la
+ * page de son bout B. Leur `place` n'a pas de fraction : `x` et `y` décalent la pastille de sa place calculée,
+ * à côté de son équipement, qu'elle suit quand il bouge. Seul un schéma à plusieurs pages les écrit.
+ */
+export type CleRenvoi = "renvoi-a" | "renvoi-b";
+export const CLES_RENVOI: CleRenvoi[] = ["renvoi-a", "renvoi-b"];
+export type PosesDuLien = Partial<Record<CleEtiquette | CleRenvoi, PoseEtiquette>>;
 
 /** Un angle ramené entre −90 (compris) et 90 (exclu) : au-delà, le texte se retourne pour se lire à l'endroit. */
 export function angleLisible(angle: number): number {
@@ -399,6 +415,8 @@ export const GENRES_GROUPE: { valeur: GenreGroupe; nom: string }[] = [
 
 export type Groupe = {
   id: string;
+  /** La page où il est dessiné, dans un schéma à plusieurs pages. */
+  page?: string;
   nom: string;
   genre: GenreGroupe;
   /** Groupe englobant (groupes imbriqués). */
@@ -446,6 +464,8 @@ export const COULEURS_ANNOTATION: { valeur: string; nom: string }[] = [
 ];
 export type Annotation = {
   id: string;
+  /** La page où elle est dessinée, dans un schéma à plusieurs pages. */
+  page?: string;
   texte: string;
   position: Point;
   largeur?: number;
@@ -473,11 +493,20 @@ export type Vue = {
   vlans: boolean;
 };
 
+/**
+ * Une page du schéma (30A) : comme dans draw.io, un schéma peut avoir plusieurs plans (Étage 1, Étage 2, Salle
+ * serveurs…). Chaque équipement, cadre et annotation est sur une page ; un câble dont les deux bouts sont sur
+ * deux pages se dessine sur chacune en renvoi vers l'autre.
+ */
+export type Page = { id: string; nom: string };
+
 export type Schema = {
-  format: typeof FORMAT;
+  format: NumeroFormat;
   id: string;
   titre: string;
   description?: string;
+  /** Les pages, dans l'ordre des onglets ; absent : une seule page, implicite. */
+  pages?: Page[];
   modeles: ModeleMateriel[];
   equipements: Equipement[];
   liens: Lien[];
@@ -534,7 +563,7 @@ export const schemaVide = (titre = "Schéma réseau"): Schema => ({
 const ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyz";
 
 /** Identifiant interne neuf (« d_k3x9… ») ; jamais réutilisé ni recalculé. */
-export function nouvelId(prefixe: "d" | "i" | "l" | "r" | "v" | "a" | "g" | "n" | "m" | "e"): string {
+export function nouvelId(prefixe: "d" | "i" | "l" | "r" | "v" | "a" | "g" | "n" | "m" | "e" | "p"): string {
   const octets = new Uint8Array(10);
   crypto.getRandomValues(octets);
   let suite = "";

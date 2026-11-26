@@ -66,6 +66,7 @@
   import CompteRenduImport from "./CompteRenduImport.svelte";
   import DialogueExport from "./DialogueExport.svelte";
   import DialogueImport from "./DialogueImport.svelte";
+  import OngletsPages from "./OngletsPages.svelte";
   import PlanIp from "./PlanIp.svelte";
   import Plateau from "./Plateau.svelte";
   import RechercheSchema from "./RechercheSchema.svelte";
@@ -339,7 +340,10 @@
         pret = true;
         // Ce qui est à regarder d'un import est choisi d'emblée.
         const presents = choisis.filter((x) => editeur.schema.equipements.some((e) => e.id === x));
-        if (presents.length > 0) editeur.selection = presents;
+        if (presents.length > 0) {
+          editeur.page = editeur.pageDe(presents[0] ?? "") ?? "";
+          editeur.selection = presents;
+        }
         // Le plan prend la main : les raccourcis du clavier valent tout de suite.
         requestAnimationFrame(() => canevas?.focus());
       } catch (e) {
@@ -371,7 +375,7 @@
   /** Une place libre près de `centre` (en spirale, de 120 en 120), pour ne recouvrir aucun équipement. */
   function placeLibre(centre: Point): Point {
     const occupee = (p: Point) =>
-      schema.equipements.some((e) => Math.abs(e.position.x - p.x) < 100 && Math.abs(e.position.y - p.y) < 90);
+      editeur.vuePage.equipements.some((e) => Math.abs(e.position.x - p.x) < 100 && Math.abs(e.position.y - p.y) < 90);
     for (let rayon = 0; rayon <= 6; rayon++) {
       for (let dx = -rayon; dx <= rayon; dx++) {
         for (let dy = -rayon; dy <= rayon; dy++) {
@@ -540,20 +544,24 @@
     }
   }
 
-  /** Ce qui sort (image, impression) est ce qu'on voit : en mode simplifié, la vue simplifiée, sans ports ni VLAN. */
+  /**
+   * Ce qui sort (image, impression) est ce qu'on voit : la page montrée, et en mode simplifié la vue simplifiée,
+   * sans ports ni VLAN.
+   */
   function sortie(image: boolean) {
     const instantane = $state.snapshot(schema);
+    const page = editeur.pageMontree;
     return simplifie && image
-      ? { schema: epurer(instantane), vue: vueDe("simplifiee") }
-      : { schema: instantane, vue: undefined };
+      ? { schema: epurer(instantane), vue: vueDe("simplifiee"), page }
+      : { schema: instantane, vue: undefined, page };
   }
 
   /** Exporte le schéma tel qu'il est à l'écran (SVG et PNG : couleurs claires, légende). */
   async function exporter(format: FormatExport, icones: IconesDrawio) {
     try {
-      // Le fichier draw.io porte le modèle entier, comme le JSON : il ne sort pas épuré.
-      const { schema: aExporter, vue } = sortie(estImage(format));
-      const chemin = await exporterSchema(aExporter, format, vue, icones);
+      // Le fichier draw.io porte le modèle entier, toutes ses pages, comme le JSON : il ne sort pas épuré.
+      const { schema: aExporter, vue, page } = sortie(estImage(format));
+      const chemin = await exporterSchema(aExporter, format, vue, icones, page);
       if (chemin) editeur.annonce = `Exporté : ${chemin}`;
     } catch (e) {
       editeur.annonce = `Export impossible : ${messageErreur(e)}`;
@@ -562,13 +570,13 @@
 
   async function imprimer() {
     menu = null;
-    if (estVide(schema)) {
-      editeur.annonce = "Ce schéma est vide : rien à imprimer.";
+    if (estVide(editeur.vuePage)) {
+      editeur.annonce = editeur.pages.length > 1 ? "Cette page est vide : rien à imprimer." : "Ce schéma est vide : rien à imprimer.";
       return;
     }
     try {
-      const { schema: aImprimer, vue } = sortie(true);
-      const parti = await imprimerSchema(aImprimer, vue);
+      const { schema: aImprimer, vue, page } = sortie(true);
+      const parti = await imprimerSchema(aImprimer, vue, page);
       if (parti) editeur.annonce = parti;
     } catch (e) {
       editeur.annonce = `Impression impossible : ${messageErreur(e)}`;
@@ -972,7 +980,7 @@
             }}
           />
         {/if}
-        {#if schema.equipements.length === 0 && !pose}
+        {#if editeur.vuePage.equipements.length === 0 && !pose}
           <p class="invite">Commencez par un équipement du plateau, en bas : glissez-le ici, ou cliquez-le puis cliquez sur le plan.</p>
         {/if}
       </div>
@@ -1000,6 +1008,7 @@
       {/if}
     </div>
 
+    <OngletsPages {editeur} />
     <Plateau avance={!simplifie} bind:pose onposer={(genre) => ajouter(genre)} />
   {/if}
 
@@ -1066,7 +1075,7 @@
 {#if exportOuvert}
   <DialogueExport
     titre={schema.titre}
-    vide={estVide(schema)}
+    vide={estVide(editeur.vuePage)}
     onvalider={(format, icones) => void exporter(format, icones)}
     onfermer={() => (exportOuvert = false)}
   />
@@ -1533,10 +1542,10 @@
     color: var(--texte-secondaire);
   }
 
-  /* Au-dessus du plateau, sur le bas du plan. */
+  /* Au-dessus du plateau et des onglets des pages, sur le bas du plan. */
   .annonce {
     position: absolute;
-    bottom: 158px;
+    bottom: 192px;
     left: 50%;
     z-index: 9;
     width: max-content;

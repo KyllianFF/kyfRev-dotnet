@@ -8,6 +8,18 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 ## [Non publié]
 
 ### Ajouté
+- Schémas réseau : un schéma peut avoir plusieurs pages (Étage 1, Étage 2, Salle serveurs…), en onglets sous le plan,
+  avec le nombre d'équipements de chacune ; « + » en ajoute une, le clic droit renomme, duplique, déplace ou supprime
+  (après une question, Ctrl+Z la rend), glisser un onglet le déplace. Un câble entre deux pages se dessine sur chacune en
+  renvoi (« → Étage 2 · SW-Étage2 · 1/48 ») : un clic mène à l'autre page, un glissement déplace la pastille, dont la
+  place est gardée pour chaque bout (« Remettre à sa place » l'oublie). La boîte de connexion range les équipements par
+  page, et un câble pris en main (« Brancher un câble » sur un équipement, outil Câble) reste en main quand on change de
+  page : il se branche sur un équipement de l'autre page. draw.io : une page de kyfRev est une page draw.io, à l'export
+  comme à l'import, renvois compris ; l'import ne laisse plus de page de côté. Les pages se parcourent aussi sans
+  l'éditeur : dans le détail d'un schéma (onglets au-dessus de l'aperçu, flèches au clavier ; un renvoi cliqué y mène,
+  et l'image exportée, partagée ou imprimée est celle de la page montrée) et dans une fiche, où un petit sélecteur,
+  au-dessus de l'aperçu, choisit la page montrée et imprimée. Un schéma à plusieurs pages s'écrit au format 3, que les
+  versions précédentes refusent au lieu de le relire en une seule page ; un schéma d'une page ne change pas.
 - Un coffre ouvert sur un autre poste (dossier synchronisé) : à l'ouverture, kyfRev le dit et propose « Ouvrir », « Lecture
   seule » ou « Annuler », sans rien écrire avant la réponse. En lecture seule, rien ne s'écrit, et une bande propose
   « Passer en écriture ». Pendant qu'il est ouvert, un avis paraît si un autre poste l'ouvre à son tour. Chaque poste
@@ -74,6 +86,14 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   semblait rien faire : l'annonce disait « collée » avec « 0 port réglé », et le VLAN de gestion changeait quand
   même. Désormais, sans port en commun, rien ne change et l'annonce le dit (« Aucun port de même nom
   sur … : rien n'a changé ») ; sinon elle dit combien de ports ont été repris et le VLAN de gestion.
+- Schémas réseau, export draw.io : le fichier montre ce que montre kyfRev, dans la vue exportée et avec l'affichage du
+  schéma. Le nom en gras et l'adresse dessous, sur une ligne juste sous l'icône (un nom long ne se coupe plus en trois) ;
+  les étiquettes des ports et des câbles (« Access · U 2131 », « Trk1 · 1/9,3/9 », « Trunk · U 1 · T 10,20,30 »), là où
+  kyfRev les pose, sans couvrir un nom ; la pastille « ×2 » d'un stack ; les zones en pointillé vert. Plusieurs câbles
+  entre deux mêmes équipements ne se superposent plus : chacun garde son tracé, droit ou coudé, et un agrégat a un trait
+  par port sous son cercle. Avec les icônes de kyfRev comme avec les formes réseau de draw.io. Ce qui n'est là que pour
+  l'œil ne revient pas à l'import, où le modèle gardé dans le fichier prime : rien n'est créé en double. Dans draw.io, un
+  équipement n'est plus rangé dans sa zone : les câbles passeraient sur son nom.
 - Un coffre ouvert sur deux postes (dossier synchronisé) : avant d'écrire le suivi d'une fiche, ses passages ou les
   réglages, kyfRev relit le fichier si l'autre poste l'a changé. Une révision, un passage ou un examen ajouté là-bas
   n'est plus effacé par ce que ce poste écrit ensuite.

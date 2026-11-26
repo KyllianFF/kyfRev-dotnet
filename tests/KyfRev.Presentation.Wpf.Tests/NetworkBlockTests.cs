@@ -26,6 +26,14 @@ public sealed class NetworkBlockTests
 
     private static readonly string[] TheSchema = [SchemaId];
 
+    private static readonly string[] FourPageNames = ["Étage 1", "Étage 2", "Page 3", "Site distant"];
+
+    private static readonly object[] AllPageNames = ["Étage 1", "Étage 2", "Page 3", "Site distant"];
+
+    private static readonly object[] FirstButtons = ["Étage 1", "Étage 2", "Page 3", "…"];
+
+    private static readonly object[] ButtonsWithTheFourth = ["Étage 1", "Étage 2", "Site distant", "…"];
+
     [TestMethod]
     public void A_block_cites_a_schema_or_holds_an_old_one()
     {
@@ -69,6 +77,280 @@ public sealed class NetworkBlockTests
 
         view.OpenEditor();
         CollectionAssert.AreEqual(TheSchema, scene.Schemas.Opened);
+    }
+
+    private const string FourPages = """
+        {"format": 3, "titre": "Lycée", "pages": [{"id": "p_1", "nom": "Étage 1"}, {"id": "p_2", "nom": "Étage 2"}, {"id": "p_3", "nom": " "}, {"id": "p_4", "nom": "Site distant"}, {"id": "p_1", "nom": "Doublon"}, 3]}
+        """;
+
+    [TestMethod]
+    public void The_pages_of_a_schema_are_read_and_the_chosen_one_goes_first()
+    {
+        var pages = NetworkPages.Of(FourPages);
+        CollectionAssert.AreEqual(FourPageNames, pages.Select(page => page.Name).ToArray());
+        Assert.IsEmpty(NetworkPages.Of(Text), "une seule page : pas de sélecteur");
+        Assert.IsEmpty(NetworkPages.Of("""{"pages": [{"id": "p_1", "nom": "Seule"}]}"""));
+        Assert.IsEmpty(NetworkPages.Of("{ cassé"));
+        Assert.IsEmpty(NetworkPages.Of("schema: s_x"));
+        Assert.IsEmpty(NetworkPages.Of(null));
+
+        var showing = NetworkPages.Showing(FourPages, "p_4");
+        Assert.AreEqual("p_4", NetworkPages.Of(showing)[0].Id);
+        Assert.AreEqual(FourPages, NetworkPages.Showing(FourPages, "p_1"), "la première : le texte tel quel");
+        Assert.AreEqual(FourPages, NetworkPages.Showing(FourPages, "p_inconnue"));
+        Assert.AreEqual(FourPages, NetworkPages.Showing(FourPages, null));
+        Assert.AreEqual("{ cassé", NetworkPages.Showing("{ cassé", "p_2"));
+        Assert.ThrowsExactly<ArgumentNullException>(() => NetworkPages.Showing(null!, "p_2"));
+    }
+
+    [STATestMethod]
+    public void A_schema_with_several_pages_shows_a_page_choice_and_remembers_it()
+    {
+        using var scene = new ViewScene();
+        scene.Schemas.Texts[SchemaId] = FourPages;
+
+        var view = scene.Show(Reference);
+
+        Assert.IsTrue(view.ShowsPageChoice);
+        Assert.AreEqual("p_1", view.ShownPage);
+        Assert.AreEqual(FourPages, scene.Engine.Drawn.Single(), "la première page, le texte tel quel");
+        var buttons = PageButtons(view);
+        CollectionAssert.AreEqual(FirstButtons, buttons.Select(button => button.Content).ToArray());
+
+        buttons[1].RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+        UiThread.Until(() => view.Drawing.IsCompleted && scene.Engine.Drawn.Count == 2);
+        TestShell.Flush();
+        Assert.AreEqual("p_2", view.ShownPage);
+        Assert.AreEqual("p_2", scene.Schemas.Pages[SchemaId], "retenue pour l'impression");
+        Assert.AreEqual("p_2", NetworkPages.Of(scene.Engine.Drawn[1])[0].Id);
+
+        // Une page au-delà des trois boutons prend la place du troisième ; le même choix ne redessine rien.
+        view.ChoosePage("p_4");
+        UiThread.Until(() => view.Drawing.IsCompleted && scene.Engine.Drawn.Count == 3);
+        TestShell.Flush();
+        CollectionAssert.AreEqual(ButtonsWithTheFourth, PageButtons(view).Select(button => button.Content).ToArray());
+        view.ChoosePage("p_4");
+        view.ChoosePage("p_inconnue");
+        Assert.HasCount(3, scene.Engine.Drawn);
+
+        // « … » ouvre la liste de toutes les pages, la montrée cochée ; en choisir une la montre.
+        var others = PageButtons(view)[^1];
+        others.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+        TestShell.Flush();
+        var items = others.ContextMenu!.Items.OfType<MenuItem>().ToList();
+        CollectionAssert.AreEqual(AllPageNames, items.Select(item => item.Header).ToArray());
+        Assert.IsTrue(items[3].IsChecked);
+        others.ContextMenu.IsOpen = false;
+        items[2].RaiseEvent(new RoutedEventArgs(MenuItem.ClickEvent));
+        UiThread.Until(() => view.Drawing.IsCompleted && scene.Engine.Drawn.Count == 4);
+        Assert.AreEqual("p_3", view.ShownPage);
+
+        // Un aperçu qu'on ne touche pas (l'impression) n'a pas de sélecteur.
+        view.IsHitTestVisible = false;
+        Assert.IsFalse(view.ShowsPageChoice);
+    }
+
+    [STATestMethod]
+    [DataRow(KyfRev.DesignSystem.Tokens.ThemeKind.Light)]
+    [DataRow(KyfRev.DesignSystem.Tokens.ThemeKind.Dark)]
+    public void The_page_choice_sits_discreetly_at_the_top_right_of_the_preview(KyfRev.DesignSystem.Tokens.ThemeKind theme)
+    {
+        using var scene = new ViewScene(theme);
+        scene.Schemas.Texts[SchemaId] = FourPages;
+        var ground = ((System.Windows.Media.SolidColorBrush)scene.Theme["Kyf.Brush.Background"]).Color;
+        var ink = ((System.Windows.Media.SolidColorBrush)scene.Theme["Kyf.Brush.TextSecondary"]).Color;
+        scene.Engine.Picture = Preview(ground, ink);
+
+        var view = scene.Show(Reference);
+        view.Width = 640;
+        view.HorizontalAlignment = HorizontalAlignment.Left;
+        view.VerticalAlignment = VerticalAlignment.Top;
+        TestShell.Flush();
+
+        var choice = (FrameworkElement)PageButtons(view)[0].Parent;
+        var corner = choice.TranslatePoint(new Point(choice.ActualWidth, 0), view);
+        Assert.IsTrue(view.ActualWidth - corner.X is >= 0 and < 12 && corner.Y is >= 0 and < 12, $"en haut à droite : {corner}");
+        Assert.IsTrue(choice.ActualHeight < 40, "discret");
+        view.Capture($"schemas-fiche-pages-{(theme == KyfRev.DesignSystem.Tokens.ThemeKind.Dark ? "sombre" : "clair")}");
+    }
+
+    /// <summary>Deux pages bien différentes, un câble de l'une à l'autre : le vrai dessin de chacune n'est pas le même.</summary>
+    private const string TwoFloors = """
+        {"format": 3, "id": "s_01JQZ8S7ZK4V3H2N8M6X5W9PQR", "titre": "Lycée", "vue": "physique",
+         "pages": [{"id": "p_e1", "nom": "Étage 1"}, {"id": "p_e2", "nom": "Étage 2"}],
+         "equipements": [
+          {"id": "d_coeur", "page": "p_e1", "type": "switch-coeur", "nom": "Cœur", "position": {"x": 0, "y": 0}, "interfaces": [{"id": "i_c1", "nom": "1/1"}, {"id": "i_c2", "nom": "1/2"}]},
+          {"id": "d_pc", "page": "p_e1", "type": "pc", "nom": "PC-Accueil", "position": {"x": 0, "y": 200}, "interfaces": [{"id": "i_p", "nom": "eth0"}]},
+          {"id": "d_sw2", "page": "p_e2", "type": "switch", "nom": "SW-Étage2", "position": {"x": 0, "y": 0}, "interfaces": [{"id": "i_t48", "nom": "1/48"}, {"id": "i_t1", "nom": "1/1"}]},
+          {"id": "d_pc2", "page": "p_e2", "type": "pc", "nom": "PC-Salle 201", "position": {"x": 300, "y": 0}, "interfaces": [{"id": "i_q", "nom": "eth0"}]},
+          {"id": "d_pc3", "page": "p_e2", "type": "pc", "nom": "PC-Salle 202", "position": {"x": 600, "y": 0}, "interfaces": [{"id": "i_r", "nom": "eth0"}]}],
+         "liens": [
+          {"id": "l_1", "a": {"equipement": "d_coeur", "interface": "i_c1"}, "b": {"equipement": "d_pc", "interface": "i_p"}, "support": "cuivre", "statut": "actif", "points": []},
+          {"id": "l_montee", "a": {"equipement": "d_coeur", "interface": "i_c2"}, "b": {"equipement": "d_sw2", "interface": "i_t48"}, "support": "cuivre", "statut": "actif", "points": []},
+          {"id": "l_2", "a": {"equipement": "d_sw2", "interface": "i_t1"}, "b": {"equipement": "d_pc2", "interface": "i_q"}, "support": "cuivre", "statut": "actif", "points": []}]}
+        """;
+
+    [EngineTest]
+    [DataRow(KyfRev.DesignSystem.Tokens.ThemeKind.Light)]
+    [DataRow(KyfRev.DesignSystem.Tokens.ThemeKind.Dark)]
+    public void In_reading_the_real_drawing_goes_from_page_to_page_with_the_mouse_and_the_keyboard(KyfRev.DesignSystem.Tokens.ThemeKind theme)
+    {
+        using var ui = new UiThread();
+        using var vault = new ReadingVault($"Le réseau du lycée.\n\n```reseau\n{Reference}\n```\n\nFin.\n", passage: false);
+        using var engine = new MermaidEngine(FakeEnvironment.WebData);
+        var schemas = new FakeSchemas();
+        schemas.Texts[SchemaId] = TwoFloors;
+        var test = new TestShell();
+        test.Design.Theme = theme;
+        var page = vault.Page(markdown: false, schemas: schemas);
+        page.LoadCommand.Execute(null);
+        UiThread.Until(() => !page.IsLoading);
+        var sheet = new SheetPage { DataContext = page, Width = 1100, Height = 900 };
+        var window = new Window { Content = new Canvas { Children = { sheet } }, Left = -10000, Top = -10000, Width = 1100, Height = 900, ShowActivated = false, ShowInTaskbar = false };
+        window.Resources.MergedDictionaries.Add(test.Design.Dictionary);
+        window.Resources[MermaidEngine.ResourceKey] = engine;
+        window.Resources[NetworkBlock.ResourceKey] = schemas;
+        window.Show();
+        TestShell.Flush();
+        try
+        {
+            // En lecture, le bloc est dans le vrai texte de la fiche, dessiné par la vraie page cachée.
+            Assert.IsTrue(page.IsReading);
+            NetworkView? Found() => sheet.SheetText.Document?.Blocks.OfType<BlockUIContainer>().Select(block => block.Child).OfType<NetworkView>().FirstOrDefault();
+            UiThread.Until(() => Found() is { ShowsPicture: true }, TimeSpan.FromMinutes(2));
+            var view = Found()!;
+            UiThread.Until(() => view.Drawing.IsCompleted, TimeSpan.FromMinutes(1));
+            TestShell.Flush();
+            Assert.IsTrue(view.ShowsPageChoice);
+            Assert.AreEqual("p_e1", view.ShownPage);
+            var first = Picture(view);
+
+            // Le bouton de l'étage 2 est bien sous la souris : rien du texte (sélection, surlignages, feuille) ne le couvre.
+            var buttons = PageButtons(view);
+            var second = buttons[1];
+            Assert.IsTrue(second.IsEnabled && second.Focusable && second.IsVisible);
+            var centre = second.TranslatePoint(new Point(second.ActualWidth / 2, second.ActualHeight / 2), sheet);
+            var hit = System.Windows.Media.VisualTreeHelper.HitTest(sheet, centre)?.VisualHit;
+            Assert.IsTrue(hit is not null && IsWithin(hit, second), $"sous la souris : {hit}");
+            sheet.Capture($"schemas-fiche-lecture-etage1-{(theme == KyfRev.DesignSystem.Tokens.ThemeKind.Dark ? "sombre" : "clair")}");
+
+            // Un clic : le vrai dessin de l'étage 2, une autre image ; la page est retenue pour l'impression.
+            second.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+            UiThread.Until(() => view.ShownPage == "p_e2" && view.Drawing.IsCompleted, TimeSpan.FromMinutes(1));
+            TestShell.Flush();
+            var other = Picture(view);
+            Assert.IsFalse(first.SequenceEqual(other), "l'étage 2 n'est pas dessiné comme l'étage 1");
+            Assert.AreEqual("p_e2", schemas.Pages[SchemaId]);
+            sheet.Capture($"schemas-fiche-lecture-etage2-{(theme == KyfRev.DesignSystem.Tokens.ThemeKind.Dark ? "sombre" : "clair")}");
+
+            // Au clavier : la flèche revient à l'étage 1, et le bouton de la page montrée garde la main.
+            Assert.IsTrue(view.StepPage(Key.Right));
+            UiThread.Until(() => view.ShownPage == "p_e1" && view.Drawing.IsCompleted, TimeSpan.FromMinutes(1));
+            TestShell.Flush();
+            Assert.IsTrue(first.SequenceEqual(Picture(view)), "de retour sur l'étage 1, le même dessin");
+            Assert.IsTrue(view.StepPage(Key.End));
+            UiThread.Until(() => view.ShownPage == "p_e2" && view.Drawing.IsCompleted, TimeSpan.FromMinutes(1));
+            Assert.IsTrue(view.StepPage(Key.Home));
+            UiThread.Until(() => view.ShownPage == "p_e1" && view.Drawing.IsCompleted, TimeSpan.FromMinutes(1));
+            Assert.IsTrue(view.StepPage(Key.Left));
+            UiThread.Until(() => view.ShownPage == "p_e2" && view.Drawing.IsCompleted, TimeSpan.FromMinutes(1));
+            Assert.IsFalse(view.StepPage(Key.A));
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    /// <summary>Les octets de l'image montrée par la vue.</summary>
+    private static byte[] Picture(NetworkView view)
+    {
+        var image = Descendants(view).OfType<Image>().Single();
+        var encoder = new System.Windows.Media.Imaging.PngBitmapEncoder();
+        encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create((System.Windows.Media.Imaging.BitmapSource)image.Source));
+        using var stream = new System.IO.MemoryStream();
+        encoder.Save(stream);
+        return stream.ToArray();
+    }
+
+    private static bool IsWithin(DependencyObject element, DependencyObject ancestor)
+    {
+        for (var current = element; current is not null; current = System.Windows.Media.VisualTreeHelper.GetParent(current))
+        {
+            if (ReferenceEquals(current, ancestor))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    [STATestMethod]
+    public void The_page_choice_steps_with_the_arrow_keys()
+    {
+        using var scene = new ViewScene();
+        scene.Schemas.Texts[SchemaId] = FourPages;
+        var view = scene.Show(Reference);
+
+        var buttons = PageButtons(view);
+        buttons[0].Focus();
+        buttons[0].RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(view)!, 0, Key.Right) { RoutedEvent = Keyboard.PreviewKeyDownEvent });
+        UiThread.Until(() => view.ShownPage == "p_2" && view.Drawing.IsCompleted);
+        TestShell.Flush();
+        Assert.AreEqual("p_2", view.ShownPage);
+        Assert.IsTrue(PageButtons(view).OfType<System.Windows.Controls.Primitives.ToggleButton>().Single(button => button.IsChecked == true).IsFocused, "la page montrée garde la main");
+        Assert.IsTrue(view.StepPage(Key.Left));
+        UiThread.Until(() => view.ShownPage == "p_1" && view.Drawing.IsCompleted);
+        Assert.IsTrue(view.StepPage(Key.Left), "avant la première, la dernière");
+        UiThread.Until(() => view.ShownPage == "p_4" && view.Drawing.IsCompleted);
+        Assert.IsFalse(view.StepPage(Key.Tab));
+    }
+
+    [STATestMethod]
+    public void A_schema_of_one_page_takes_no_page_key()
+    {
+        using var scene = new ViewScene();
+        scene.Schemas.Texts[SchemaId] = Text;
+        var view = scene.Show(Reference);
+        Assert.IsFalse(view.StepPage(Key.Right));
+        Assert.IsNull(view.ShownPage);
+    }
+
+    [STATestMethod]
+    public void A_page_chosen_before_is_the_one_drawn()
+    {
+        using var scene = new ViewScene();
+        scene.Schemas.Texts[SchemaId] = FourPages;
+        scene.Schemas.Pages[SchemaId] = "p_2";
+
+        var view = scene.Show(Reference);
+
+        Assert.AreEqual("p_2", view.ShownPage);
+        Assert.AreEqual("p_2", NetworkPages.Of(scene.Engine.Drawn.Single())[0].Id);
+    }
+
+    [TestMethod]
+    public void The_module_remembers_the_chosen_page_for_the_session()
+    {
+        var schemas = new NetworkSchemas(() => null, () => null);
+        Assert.IsNull(schemas.ChosenPage(SchemaId));
+        schemas.ChoosePage(SchemaId, "p_2");
+        Assert.AreEqual("p_2", schemas.ChosenPage(SchemaId));
+    }
+
+    private static List<System.Windows.Controls.Primitives.ButtonBase> PageButtons(NetworkView view) =>
+        [.. Descendants(view).OfType<System.Windows.Controls.Primitives.ButtonBase>()];
+
+    private static IEnumerable<DependencyObject> Descendants(DependencyObject root)
+    {
+        foreach (var child in LogicalTreeHelper.GetChildren(root).OfType<DependencyObject>())
+        {
+            yield return child;
+            foreach (var below in Descendants(child))
+            {
+                yield return below;
+            }
+        }
     }
 
     [STATestMethod]
@@ -497,6 +779,12 @@ public sealed class NetworkBlockTests
         public Task<string?> DuplicateAsync(string id) => Task.FromResult<string?>("s_copie");
 
         public void Open(string id) => Opened.Add(id);
+
+        public Dictionary<string, string> Pages { get; } = new(StringComparer.Ordinal);
+
+        public string? ChosenPage(string id) => Pages.GetValueOrDefault(id);
+
+        public void ChoosePage(string id, string page) => Pages[id] = page;
     }
 
     /// <summary>La page cachée simulée.</summary>
@@ -508,6 +796,9 @@ public sealed class NetworkBlockTests
 
         public bool Refuses { get; set; }
 
+        /// <summary>L'image rendue ; à défaut, un point.</summary>
+        public MermaidPicture? Picture { get; set; }
+
         public Task<MermaidPicture?> DrawAsync(string code, IReadOnlyDictionary<string, string> theme) => Task.FromResult<MermaidPicture?>(null);
 
         public Task<MermaidPicture?> DrawSvgAsync(ReadOnlyMemory<byte> svg) => Task.FromResult<MermaidPicture?>(null);
@@ -516,8 +807,32 @@ public sealed class NetworkBlockTests
         {
             Drawn.Add(schema);
             Colors = colors;
-            return Task.FromResult(Refuses ? null : new MermaidPicture(Png, "data:image/png;base64,", 12, 6));
+            return Task.FromResult(Refuses ? null : Picture ?? new MermaidPicture(Png, "data:image/png;base64,", 12, 6));
         }
+    }
+
+    /// <summary>Une image de la taille d'un aperçu, d'un ton du thème : pour voir le sélecteur posé dessus.</summary>
+    private static MermaidPicture Preview(System.Windows.Media.Color ground, System.Windows.Media.Color ink)
+    {
+        const int width = 640;
+        const int height = 260;
+        var visual = new System.Windows.Media.DrawingVisual();
+        using (var drawing = visual.RenderOpen())
+        {
+            drawing.DrawRectangle(new System.Windows.Media.SolidColorBrush(ground), null, new Rect(0, 0, width, height));
+            var pen = new System.Windows.Media.Pen(new System.Windows.Media.SolidColorBrush(ink), 2);
+            drawing.DrawLine(pen, new Point(110, 110), new Point(330, 110));
+            drawing.DrawLine(pen, new Point(330, 110), new Point(520, 200));
+            drawing.DrawRectangle(new System.Windows.Media.SolidColorBrush(ink), null, new Rect(90, 92, 36, 36));
+            drawing.DrawRectangle(new System.Windows.Media.SolidColorBrush(ink), null, new Rect(312, 92, 36, 36));
+        }
+        var bitmap = new System.Windows.Media.Imaging.RenderTargetBitmap(width, height, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+        bitmap.Render(visual);
+        var encoder = new System.Windows.Media.Imaging.PngBitmapEncoder();
+        encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create(bitmap));
+        using var stream = new System.IO.MemoryStream();
+        encoder.Save(stream);
+        return new MermaidPicture(stream.ToArray(), "data:image/png;base64,", width, height);
     }
 
     /// <summary>La vue d'un bloc, dans une fenêtre.</summary>
@@ -526,9 +841,11 @@ public sealed class NetworkBlockTests
         private readonly UiThread _ui = new();
         private readonly Window _window;
 
-        public ViewScene()
+        public ViewScene(KyfRev.DesignSystem.Tokens.ThemeKind theme = KyfRev.DesignSystem.Tokens.ThemeKind.Light)
         {
             var test = new TestShell();
+            test.Design.Theme = theme;
+            Theme = test.Design.Dictionary;
             _window = new Window { Left = -10000, Top = -10000, Width = 800, Height = 600, ShowActivated = false, ShowInTaskbar = false };
             _window.Resources.MergedDictionaries.Add(test.Design.Dictionary);
             _window.Resources[MermaidEngine.ResourceKey] = Engine;
@@ -538,6 +855,9 @@ public sealed class NetworkBlockTests
         public FakeSchemas Schemas { get; } = new();
 
         public FakeEngine Engine { get; } = new();
+
+        /// <summary>Les couleurs du thème de la scène.</summary>
+        public ResourceDictionary Theme { get; }
 
         public NetworkView Show(string? source)
         {

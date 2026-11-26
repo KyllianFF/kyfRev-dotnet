@@ -37,6 +37,7 @@ import {
   vlanDAcces,
 } from "./vlans";
 import { liensVisibles, relationVisible, vue as vueDe } from "./vues";
+import { type Renvoi, renvoisDeLaPage, surLaPage } from "./pages";
 
 export { icone } from "./pictogrammes";
 
@@ -84,6 +85,7 @@ const SECONDAIRE = "var(--texte-secondaire, #5d566d)";
 const SURFACE = "var(--surface, #ffffff)";
 const BORDURE = "var(--bordure, #dedae8)";
 const FOND = "var(--fond, #ffffff)";
+const PRINCIPALE = "var(--principale, #2e6a4e)";
 
 /** Échappe un texte pour du SVG (contenu ou attribut). */
 export const echapper = (texte: string): string =>
@@ -1192,7 +1194,8 @@ const chevauche = (a: Boite, b: Boite) => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b
 const recouvrement = (a: Boite, b: Boite) =>
   Math.max(0, Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0)) *
   Math.max(0, Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0));
-const abreger = (texte: string, maximum = 28) =>
+/** Un texte d'étiquette trop long, coupé d'un « … » (l'export draw.io le compare au nom qui revient). */
+export const abreger = (texte: string, maximum = 28) =>
   texte.length > maximum ? `${texte.slice(0, maximum - 1)}…` : texte;
 
 /** Largeur d'une étiquette de VLAN, en caractères : au-delà, la liste est coupée. */
@@ -1731,15 +1734,51 @@ function elargir(cadre: Cadre, boites: Boite[]): Cadre {
   return { x: x0, y: y0, largeur: x1 - x0, hauteur: y1 - y0 };
 }
 
-/** Le SVG complet d'un schéma, cadré sur son contenu. */
-export function dessinerSchema(schema: Schema, options: { vue?: Vue; legende?: boolean } = {}): string {
+/** Ce qu'occupe la pastille d'un renvoi. */
+export const boiteDuRenvoi = (r: Renvoi, marge = 0): Boite => ({
+  x0: r.centre.x - r.largeur / 2 - marge,
+  y0: r.centre.y - r.hauteur / 2 - marge,
+  x1: r.centre.x + r.largeur / 2 + marge,
+  y1: r.centre.y + r.hauteur / 2 + marge,
+});
+
+/** Le trait d'un renvoi : du bord de l'équipement au côté de la pastille qui lui fait face. */
+export function traitDuRenvoi(r: Renvoi): [Point, Point] {
+  const b = boiteDuRenvoi(r);
+  const bout = { x: r.centre.x >= r.depart.x ? b.x0 : b.x1, y: r.centre.y };
+  return [bordVers(r.depart, bout), bout];
+}
+
+/**
+ * Un câble vers une autre page (30A) : un trait en pointillé de l'équipement à une pastille, elle aussi en
+ * pointillé, qui dit la page, l'équipement et le port d'en face.
+ */
+export function dessinerRenvoi(r: Renvoi): string {
+  const b = boiteDuRenvoi(r);
+  const [debut, fin] = traitDuRenvoi(r);
+  return [
+    `<g data-renvoi="${echapper(r.lien.id)}">`,
+    `<line x1="${debut.x.toFixed(1)}" y1="${debut.y.toFixed(1)}" x2="${fin.x.toFixed(1)}" y2="${fin.y.toFixed(1)}" stroke="${PRINCIPALE}" stroke-width="1.6" stroke-dasharray="5 4" stroke-linecap="round"/>`,
+    `<rect x="${b.x0.toFixed(1)}" y="${b.y0.toFixed(1)}" width="${r.largeur.toFixed(1)}" height="${r.hauteur.toFixed(1)}" rx="${(r.hauteur / 2).toFixed(1)}" fill="${SURFACE}" stroke="${PRINCIPALE}" stroke-width="1.4" stroke-dasharray="4 3"/>`,
+    texteSvg(r.centre.x, r.centre.y + 3.8, r.texte, `text-anchor="middle" fill="${PRINCIPALE}" font-size="10.5" font-weight="600"`),
+    "</g>",
+  ].join("");
+}
+
+/**
+ * Le SVG complet d'un schéma, cadré sur son contenu. Un schéma à plusieurs pages se dessine page par page :
+ * `page` (sinon la première), avec ses renvois vers les autres.
+ */
+export function dessinerSchema(complet: Schema, options: { vue?: Vue; legende?: boolean; page?: string } = {}): string {
+  const schema = surLaPage(complet, options.page);
   const v = options.vue ?? vueDe(schema.vue);
   const caches = masques(schema);
   const page = mettreEnPage(schema, v, caches);
-  const cadre = elargir(
-    cadreDuSchema(schema),
-    [...page.etiquettes.values()].flat().filter((e) => e.ancre).map((e) => boiteEtiquette(e, 8)),
-  );
+  const renvois = renvoisDeLaPage(complet, options.page, caches);
+  const cadre = elargir(cadreDuSchema(schema), [
+    ...[...page.etiquettes.values()].flat().filter((e) => e.ancre).map((e) => boiteEtiquette(e, 8)),
+    ...renvois.map((r) => boiteDuRenvoi(r, 12)),
+  ]);
   const parties: string[] = [];
   for (const g of schema.groupes) parties.push(dessinerGroupe(g));
   if (affichageDe(schema, v).zones)
@@ -1758,6 +1797,7 @@ export function dessinerSchema(schema: Schema, options: { vue?: Vue; legende?: b
   }
   for (const etiquettes of page.etiquettes.values())
     for (const e of etiquettes) parties.push(dessinerEtiquette(e));
+  for (const r of renvois) parties.push(dessinerRenvoi(r));
 
   for (const e of schema.equipements)
     if (!caches.has(e.id)) parties.push(dessinerEquipement(e, page.affichage.adresses));

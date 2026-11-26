@@ -4,14 +4,15 @@
 // lui et on n'applique que ce qui a changé dans draw.io (places, noms, formes et connecteurs ajoutés ou
 // retirés). Sinon, on traduit : une forme réseau devient un équipement (type deviné à sa forme, sinon
 // « Générique »), un connecteur entre deux équipements un câble (avec ses ports, créés au besoin, comme la
-// migration du format 1), un conteneur une zone, un texte ou un cadre une annotation. Seule la première page
-// est lue. Le résultat passe par la même lecture que tout schéma (format.ts) : ce qui n'est pas valide est
+// migration du format 1), un conteneur une zone, un texte ou un cadre une annotation. Chaque page du fichier
+// devient une page du schéma (30A) ; un câble entre deux pages, que draw.io montre en renvoi, se garde par le
+// modèle. Le résultat passe par la même lecture que tout schéma (format.ts) : ce qui n'est pas valide est
 // refusé, rien n'est enregistré.
 
 import { typeConnu } from "./catalogue";
-import { cadreAnnotation, estCoude } from "./dessin";
-import { typeDevine } from "./drawio";
-import { ecrireSchema, lireSchema } from "./format";
+import { abreger, cadreAnnotation, estCoude } from "./dessin";
+import { positionDeLaForme, texteDuTrace, typeDevine } from "./drawio";
+import { ecrireSchema, lireSchema, PAGES_MAX } from "./format";
 import { boutDeLien } from "./migration";
 import {
   type Annotation,
@@ -26,11 +27,12 @@ import {
   schemaVide,
 } from "./modele";
 import { creerEquipement, retirerEquipements } from "./operations";
+import { aPlusieursPages, elementsDuSchema, NOM_PAGE_MAX, pageDeLElement, pagesDe } from "./pages";
 import { type ElementXml, enfantsNommes, lireXml } from "./xml";
 
 /** Un schéma importé tient en 8 Mo, comme tout schéma du coffre. */
 export const TAILLE_MAX_IMPORT = 8 * 1024 * 1024;
-/** Une page compressée ne se décompresse pas au-delà : un fichier piégé ne remplit pas la mémoire. */
+/** Les pages compressées ne se décompressent pas au-delà, toutes ensemble : un fichier piégé ne remplit pas la mémoire. */
 const DECOMPRESSE_MAX = 64 * 1024 * 1024;
 const TITRE_PAR_DEFAUT = "Schéma importé";
 
@@ -46,8 +48,8 @@ export type CompteRendu = {
   courbes: number;
   /** Connecteurs sans extrémité, laissés de côté. */
   sansExtremite: number;
-  /** Les pages après la première, non importées. */
-  pagesIgnorees: string[];
+  /** Les pages du fichier, chacune devenue une page du schéma. */
+  pages: number;
 };
 
 export type Importe = {
@@ -97,6 +99,7 @@ const accorde = (n: number, singulier: string, pluriel: string) => `${n} ${n > 1
 /** Ce qui est entré : équipements, câbles, zones et textes. */
 export function bilanImport(c: CompteRendu): string[] {
   return [
+    ...(c.pages > 1 ? [`${c.pages} pages`] : []),
     accorde(c.equipements, "équipement", "équipements"),
     c.cables > 1 ? `${c.cables} câbles, avec leurs ports` : c.cables === 1 ? "1 câble, avec ses ports" : "0 câble",
     `${accorde(c.zones, "zone", "zones")} et ${accorde(c.textes, "texte", "textes")}`,
@@ -118,7 +121,6 @@ export function remarquesImport(c: CompteRendu): Remarque[] {
     ...(c.sansExtremite > 0
       ? [{ texte: accorde(c.sansExtremite, "connecteur sans extrémité, laissé de côté", "connecteurs sans extrémité, laissés de côté") }]
       : []),
-    ...c.pagesIgnorees.map((page) => ({ texte: `page « ${page} » non importée : un schéma, une page` })),
   ];
 }
 
@@ -147,7 +149,7 @@ type Cellule = {
   arrivee?: Point;
 };
 
-type Remarques = Pick<CompteRendu, "inconnus" | "courbes" | "sansExtremite" | "pagesIgnorees">;
+type Remarques = Pick<CompteRendu, "inconnus" | "courbes" | "sansExtremite" | "pages">;
 
 const nombreXml = (valeur: string | undefined): number => {
   const n = Number(valeur);
@@ -233,23 +235,27 @@ const libelle = (c: Cellule) => texteDuLibelle(c.valeur, c.style.html === "1");
 const premiereLigne = (c: Cellule) => libelle(c).split("\n")[0] ?? "";
 const arrondi = (p: Point): Point => ({ x: Math.round(p.x), y: Math.round(p.y) });
 
-/** Décompresse une page : base 64, puis deflate brut, puis texte encodé comme une adresse (ainsi l'écrit draw.io). */
-async function pageCompressee(texte: string): Promise<ElementXml> {
+/**
+ * Décompresse une page : base 64, puis deflate brut, puis texte encodé comme une adresse (ainsi l'écrit draw.io).
+ * `budget` est ce qui reste à décompresser pour tout le fichier : beaucoup de pages ne remplissent pas la mémoire.
+ */
+async function pageCompressee(texte: string, nom: string, budget: { reste: number }): Promise<ElementXml> {
   const brut = texte.replace(/\s+/g, "");
-  if (!brut) throw new Error("la première page du fichier draw.io est vide");
+  if (!brut) throw new Error(`la page « ${nom} » du fichier draw.io est vide`);
   let octets: Uint8Array;
   try {
     octets = Uint8Array.from(atob(brut), (c) => c.charCodeAt(0));
   } catch {
-    throw new Error("la première page du fichier draw.io est illisible");
+    throw new Error(`la page « ${nom} » du fichier draw.io est illisible`);
   }
-  const infle = await inflerBrut(octets);
+  const infle = await inflerBrut(octets, budget.reste);
+  budget.reste -= infle.length;
   let xml = "";
   for (let debut = 0; debut < infle.length; debut += 0x8000) {
     xml += String.fromCharCode(...infle.subarray(debut, debut + 0x8000));
   }
   const page = lireXml(decoderAdresse(xml));
-  if (page.nom !== "mxGraphModel") throw new Error("la première page du fichier draw.io n'est pas un dessin");
+  if (page.nom !== "mxGraphModel") throw new Error(`la page « ${nom} » du fichier draw.io n'est pas un dessin`);
   return page;
 }
 
@@ -262,7 +268,7 @@ function decoderAdresse(texte: string): string {
   }
 }
 
-async function inflerBrut(octets: Uint8Array): Promise<Uint8Array> {
+async function inflerBrut(octets: Uint8Array, maximum = DECOMPRESSE_MAX): Promise<Uint8Array> {
   if (typeof DecompressionStream === "undefined") {
     throw new Error("cette page draw.io est compressée, et ce moteur ne sait pas la décompresser");
   }
@@ -274,7 +280,7 @@ async function inflerBrut(octets: Uint8Array): Promise<Uint8Array> {
       const { done, value } = await lecteur.read();
       if (done) break;
       total += value.length;
-      if (total > DECOMPRESSE_MAX) {
+      if (total > maximum) {
         await lecteur.cancel();
         throw new Error("la page compressée du fichier draw.io est trop grande");
       }
@@ -411,44 +417,132 @@ class Page {
   }
 }
 
+/** Une page du fichier draw.io : son nom, ses cellules, et la page de kyfRev qu'elle porte (export de kyfRev). */
+type Feuille = { nom: string; page: Page; pageKyfrev?: string };
+
+/** Un nom de page que draw.io donne de lui-même (« Page-1 ») ne dit rien du schéma. */
+const nomParDefaut = (nom: string) => /^(page|seite|página)[-\s]?\d+$/i.test(nom);
+
 async function lireDrawio(texte: string, nomFichier: string): Promise<{ schema: Schema; remarques: Remarques }> {
   const racine = lireXml(texte);
-  let dessin: ElementXml;
-  let nomPage = "";
-  const remarques: Remarques = { inconnus: [], courbes: 0, sansExtremite: 0, pagesIgnorees: [] };
+  const dessins: { nom: string; dessin: ElementXml }[] = [];
   if (racine.nom === "mxGraphModel") {
-    dessin = racine;
+    dessins.push({ nom: "", dessin: racine });
   } else if (racine.nom === "mxfile") {
-    const [premiere, ...autres] = enfantsNommes(racine, "diagram");
-    if (!premiere) throw new Error("ce fichier draw.io n'a aucune page");
-    remarques.pagesIgnorees = autres.map((p, i) => p.attributs.name?.trim() || `Page ${i + 2}`);
-    nomPage = premiere.attributs.name?.trim() ?? "";
-    dessin = enfantsNommes(premiere, "mxGraphModel")[0] ?? (await pageCompressee(premiere.texte));
+    const diagrammes = enfantsNommes(racine, "diagram");
+    if (diagrammes.length === 0) throw new Error("ce fichier draw.io n'a aucune page");
+    if (diagrammes.length > PAGES_MAX) throw new Error(`ce fichier draw.io a plus de ${PAGES_MAX} pages`);
+    const budget = { reste: DECOMPRESSE_MAX };
+    for (const [rang, d] of diagrammes.entries()) {
+      const nom = d.attributs.name?.trim() ?? "";
+      const dessin = enfantsNommes(d, "mxGraphModel")[0] ?? (await pageCompressee(d.texte, nom || `Page ${rang + 1}`, budget));
+      dessins.push({ nom, dessin });
+    }
   } else {
     throw new Error("ce n'est pas un fichier draw.io (élément « mxfile » attendu)");
   }
-  const contenu = enfantsNommes(dessin, "root")[0];
-  if (!contenu) throw new Error("la page du fichier draw.io n'a pas de contenu");
-  const page = new Page(lireCellules(contenu));
-  const nomVoulu = /^(page|seite|página)[-\s]?\d+$/i.test(nomPage) ? "" : nomPage.slice(0, 200);
+  const feuilles: Feuille[] = dessins.map(({ nom, dessin }) => {
+    const contenu = enfantsNommes(dessin, "root")[0];
+    if (!contenu) throw new Error(nom ? `la page « ${nom} » du fichier draw.io n'a pas de contenu` : "la page du fichier draw.io n'a pas de contenu");
+    const page = new Page(lireCellules(contenu));
+    const pageKyfrev = page.cellules.find((c) => page.estCouche(c) && c.donnees.kyfrevPage)?.donnees.kyfrevPage;
+    return { nom, page, ...(pageKyfrev ? { pageKyfrev } : {}) };
+  });
+  const remarques: Remarques = { inconnus: [], courbes: 0, sansExtremite: 0, pages: feuilles.length };
+  // Une seule page, qui n'est pas une page d'un schéma de kyfRev : son nom est celui du schéma (comme à l'export).
+  const seule = feuilles.length === 1 && feuilles[0]?.pageKyfrev === undefined ? feuilles[0] : undefined;
+  const nomVoulu = seule && !nomParDefaut(seule.nom) ? seule.nom.slice(0, 200) : "";
 
-  const modele = page.cellules.find((c) => c.donnees.kyfrev)?.donnees.kyfrev;
-  const repris = modele ? reprendreLeModele(modele, page, remarques) : null;
+  const modele = feuilles.flatMap((f) => f.page.cellules).find((c) => c.donnees.kyfrev)?.donnees.kyfrev;
+  const repris = modele ? reprendreLeModele(modele, feuilles, remarques) : null;
   if (repris) {
     if (nomVoulu) repris.schema.titre = nomVoulu;
-    traduire(repris.schema, page, repris.vues, remarques);
+    traduireLesFeuilles(repris.schema, feuilles, repris.pages, repris.vues, remarques);
     return { schema: repris.schema, remarques };
   }
   const schema = schemaVide(nomVoulu || nomFichier.slice(0, 200) || TITRE_PAR_DEFAUT);
-  traduire(schema, page, new Set(), remarques);
+  traduireLesFeuilles(
+    schema,
+    feuilles,
+    feuilles.map(() => ({ id: nouvelId("p") })),
+    feuilles.map(() => new Set<string>()),
+    remarques,
+  );
   return { schema, remarques };
 }
 
 /**
- * Le modèle gardé dans le fichier, avec ce qui a changé dans draw.io : places et noms, formes et connecteurs
- * retirés. Rend les cellules ainsi reprises (le reste est neuf), ou rien si le modèle est illisible.
+ * Chaque page du fichier devient une page du schéma (une seule : le schéma n'en déclare pas plus que le modèle) :
+ * ses cellules neuves sont traduites et posées sur elle.
  */
-function reprendreLeModele(json: string, page: Page, remarques: Remarques): { schema: Schema; vues: Set<string> } | null {
+function traduireLesFeuilles(
+  schema: Schema,
+  feuilles: Feuille[],
+  pages: { id: string; nom?: string }[],
+  vues: Set<string>[],
+  remarques: Remarques,
+): void {
+  const plusieurs = feuilles.length > 1;
+  if (plusieurs) {
+    schema.pages = feuilles.map((f, rang) => ({
+      id: pages[rang]?.id ?? nouvelId("p"),
+      nom: (f.nom.trim() || pages[rang]?.nom || `Page ${rang + 1}`).slice(0, NOM_PAGE_MAX),
+    }));
+  } else if (feuilles[0]?.pageKyfrev !== undefined && schema.pages && pages[0]) {
+    // Une page d'un schéma qui en avait plusieurs, seule restée dans draw.io : elle garde son nom.
+    schema.pages = [{ id: pages[0].id, nom: (feuilles[0].nom.trim() || pages[0].nom || "Page 1").slice(0, NOM_PAGE_MAX) }];
+  }
+  feuilles.forEach((f, rang) => {
+    const avant = elementsDuSchema(schema);
+    traduire(schema, f.page, vues[rang] ?? new Set(), remarques);
+    if (!plusieurs) return;
+    const page = schema.pages?.[rang]?.id;
+    for (const element of [...schema.equipements, ...schema.groupes, ...schema.annotations]) {
+      if (!avant.has(element.id)) element.page = page;
+    }
+  });
+}
+
+/**
+ * Les points de passage d'un câble ou d'une relation du modèle. Un connecteur écrit sur le tracé de kyfRev (donnée
+ * `trace`) n'a pas bougé si ses points sont ceux de l'export : il garde les siens (souvent aucun) et sa forme, et
+ * kyfRev refait son tracé. Bougés dans draw.io, ils deviennent ses points de passage. Un connecteur sans trace
+ * (caché, ou d'un export plus ancien) donne ses points, et `sinon` lit le reste (forme coudée ou droite).
+ */
+function reprendreLeTrace(page: Page, c: Cellule, objet: { points: Point[] }, sinon: () => void): void {
+  const points = page.points(c);
+  const exporte = c.donnees.trace;
+  if (exporte === undefined) {
+    objet.points = points;
+    sinon();
+  } else if (exporte !== texteDuTrace(points)) objet.points = points;
+}
+
+/**
+ * Le nom d'un câble ou d'une relation : sa pastille de nom si elle a été récrite dans draw.io (elle porte le nom
+ * abrégé, comme kyfRev le montre), sinon le libellé du connecteur (caché derrière la pastille).
+ */
+function nomRepris(page: Page, c: Cellule, avant: string | undefined): string {
+  const pastille = page.parId.get(`${c.id}-nom`);
+  if (pastille?.donnees.decor === "nom" && pastille.donnees.pour === c.id) {
+    const texte = premiereLigne(pastille);
+    if (texte !== abreger(avant ?? "")) return texte;
+  }
+  return premiereLigne(c);
+}
+
+/**
+ * Le modèle gardé dans le fichier, avec ce qui a changé dans draw.io : places et noms, formes, connecteurs et
+ * pages retirés. Chaque page du modèle se retrouve dans la page du fichier qui la porte (la première, pour un
+ * schéma d'une page) ; un câble entre deux pages se garde tant que ses deux équipements restent. Rend les
+ * cellules ainsi reprises, page par page (le reste est neuf), et la page de chaque feuille ; rien si le modèle
+ * est illisible.
+ */
+function reprendreLeModele(
+  json: string,
+  feuilles: Feuille[],
+  remarques: Remarques,
+): { schema: Schema; vues: Set<string>[]; pages: { id: string; nom?: string }[] } | null {
   let schema: Schema;
   try {
     const lecture = lireSchema(json);
@@ -457,22 +551,41 @@ function reprendreLeModele(json: string, page: Page, remarques: Remarques): { sc
   } catch {
     return null;
   }
-  const vues = new Set<string>();
-  const prise = (id: string, quoi: "sommet" | "arete") => {
-    const c = page.parId.get(id);
+  const pagesDuModele = pagesDe(schema);
+  // La feuille qui porte chaque page du modèle : la première qui la nomme (une page dupliquée dans draw.io garde
+  // ce nom, mais ses cellules sont neuves) ; sans nom, la première feuille porte la première page.
+  const rangDeLaPage = new Map<string, number>();
+  feuilles.forEach((f, rang) => {
+    const voulue = f.pageKyfrev ?? (rang === 0 && !aPlusieursPages(schema) ? pagesDuModele[0]?.id : undefined);
+    if (voulue !== undefined && pagesDuModele.some((p) => p.id === voulue) && !rangDeLaPage.has(voulue)) rangDeLaPage.set(voulue, rang);
+  });
+  const pages = feuilles.map((_, rang) => {
+    const portee = pagesDuModele.find((p) => rangDeLaPage.get(p.id) === rang);
+    return portee && portee.id !== "" ? { id: portee.id, nom: portee.nom } : { id: nouvelId("p"), ...(portee ? { nom: portee.nom } : {}) };
+  });
+  const vues = feuilles.map(() => new Set<string>());
+  /** La feuille d'un élément du modèle ; rien si sa page a été retirée dans draw.io. */
+  const rangDe = (element: { page?: string }) => rangDeLaPage.get(pageDeLElement(schema, element));
+  const prise = (rang: number | undefined, id: string, quoi: "sommet" | "arete") => {
+    if (rang === undefined) return undefined;
+    const c = feuilles[rang]?.page.parId.get(id);
     if (!c?.[quoi]) return undefined;
-    vues.add(id);
+    vues[rang]?.add(id);
     return c;
   };
 
   const retires = new Set<string>();
+  const rangDeLEquipement = new Map<string, number>();
   for (const e of schema.equipements) {
-    const c = prise(e.id, "sommet");
-    if (!c) {
+    const rang = rangDe(e);
+    const c = prise(rang, e.id, "sommet");
+    const page = rang === undefined ? undefined : feuilles[rang]?.page;
+    if (!c || !page || rang === undefined) {
       retires.add(e.id);
       continue;
     }
-    e.position = arrondi(page.centre(c));
+    rangDeLEquipement.set(e.id, rang);
+    e.position = arrondi(positionDeLaForme(e.type, { ...page.coin(c), largeur: c.largeur, hauteur: c.hauteur }));
     const nom = premiereLigne(c);
     if (nom) e.nom = nom.slice(0, 120);
   }
@@ -480,34 +593,49 @@ function reprendreLeModele(json: string, page: Page, remarques: Remarques): { sc
 
   const memesBouts = (c: Cellule, de: string, vers: string) =>
     (c.source === de && c.cible === vers) || (c.source === vers && c.cible === de);
+  /** La feuille commune à deux équipements ; `null` s'ils sont sur deux pages (un renvoi). */
+  const feuilleCommune = (de: string, vers: string) => {
+    const a = rangDeLEquipement.get(de);
+    return a !== undefined && a === rangDeLEquipement.get(vers) ? a : null;
+  };
   schema.liens = schema.liens.filter((l) => {
-    const c = page.parId.get(l.id);
+    const rang = feuilleCommune(l.a.equipement, l.b.equipement);
+    // Un câble entre deux pages : draw.io n'en montre que les renvois ; il reste tant que ses deux bouts restent.
+    if (rang === null) return true;
+    const page = feuilles[rang]?.page;
+    const c = page?.parId.get(l.id);
     // Rebranché ailleurs dans draw.io : l'ancien câble part, le connecteur revient comme un câble neuf.
-    if (!c?.arete || !memesBouts(c, l.a.equipement, l.b.equipement)) return false;
-    vues.add(c.id);
-    l.points = page.points(c);
-    if (c.style.curved === "1") remarques.courbes++;
-    const coude = estCoudeDrawio(c);
-    if (coude !== estCoude(schema, l)) l.forme = coude ? "coudee" : "droite";
-    const nom = premiereLigne(c);
+    if (!page || !c?.arete || !memesBouts(c, l.a.equipement, l.b.equipement)) return false;
+    vues[rang]?.add(c.id);
+    reprendreLeTrace(page, c, l, () => {
+      if (c.style.curved === "1") remarques.courbes++;
+      const coude = estCoudeDrawio(c);
+      if (coude !== estCoude(schema, l)) l.forme = coude ? "coudee" : "droite";
+    });
+    const nom = nomRepris(page, c, l.nom);
     if (nom) l.nom = nom;
     else delete l.nom;
     return true;
   });
   schema.relations = schema.relations.filter((r) => {
-    const c = page.parId.get(r.id);
-    if (!c?.arete || !memesBouts(c, r.de, r.vers)) return false;
-    vues.add(c.id);
-    r.points = page.points(c);
-    const nom = premiereLigne(c);
+    const rang = feuilleCommune(r.de, r.vers);
+    if (rang === null) return true;
+    const page = feuilles[rang]?.page;
+    const c = page?.parId.get(r.id);
+    if (!page || !c?.arete || !memesBouts(c, r.de, r.vers)) return false;
+    vues[rang]?.add(c.id);
+    reprendreLeTrace(page, c, r, () => {});
+    const nom = nomRepris(page, c, r.nom);
     if (nom) r.nom = nom;
     else delete r.nom;
     return true;
   });
 
   schema.groupes = schema.groupes.filter((g) => {
-    const c = prise(g.id, "sommet");
-    if (!c) return false;
+    const rang = rangDe(g);
+    const c = prise(rang, g.id, "sommet");
+    const page = rang === undefined ? undefined : feuilles[rang]?.page;
+    if (!c || !page) return false;
     g.position = arrondi(page.coin(c));
     g.taille = { largeur: Math.max(40, Math.round(c.largeur)), hauteur: Math.max(40, Math.round(c.hauteur)) };
     g.nom = premiereLigne(c).slice(0, 120);
@@ -517,8 +645,10 @@ function reprendreLeModele(json: string, page: Page, remarques: Remarques): { sc
   for (const g of schema.groupes) if (g.parent && !groupes.has(g.parent)) delete g.parent;
 
   schema.annotations = schema.annotations.filter((n) => {
-    const c = page.parId.get(n.id);
-    if (!c) return false;
+    const rang = rangDe(n);
+    const page = rang === undefined ? undefined : feuilles[rang]?.page;
+    const c = page?.parId.get(n.id);
+    if (!c || !page || rang === undefined) return false;
     if (n.forme === "fleche") {
       if (!c.arete || !c.depart || !c.arrivee) return false;
       const o = page.origine(c.parent);
@@ -535,17 +665,38 @@ function reprendreLeModele(json: string, page: Page, remarques: Remarques): { sc
       if (n.forme !== "texte" && largeur !== Math.round(cadre.largeur)) n.largeur = largeur;
       if ((n.forme === "rectangle" || n.forme === "ellipse") && hauteur !== Math.round(cadre.hauteur)) n.hauteur = hauteur;
     }
-    vues.add(c.id);
+    vues[rang]?.add(c.id);
     n.texte = libelle(c);
     return true;
   });
-  return { schema, vues };
+
+  // Chaque élément repris est sur la page de sa feuille (une page neuve, si la sienne n'avait pas d'identifiant).
+  if (feuilles.length > 1) {
+    for (const element of [...schema.equipements, ...schema.groupes, ...schema.annotations]) {
+      const rang = rangDe(element);
+      if (rang !== undefined) element.page = pages[rang]?.id;
+    }
+  }
+  return { schema, vues, pages };
 }
 
 /** Traduit les cellules qui ne sont pas encore reprises : formes, conteneurs, puis connecteurs. */
 function traduire(schema: Schema, page: Page, vues: Set<string>, remarques: Remarques): void {
-  const neuves = page.cellules.filter((c) => !vues.has(c.id) && !page.estCouche(c) && !page.estEtiquette(c));
-  const parents = new Set(page.cellules.filter((c) => c.sommet).map((c) => c.parent));
+  // Les renvois vers une autre page (pastille et trait), écrits par kyfRev : le câble qu'ils montrent vient du modèle.
+  const renvois = new Set(page.cellules.filter((c) => c.donnees.renvoi).map((c) => c.id));
+  // Ce qui n'est là que pour l'œil (pastilles, traits d'un agrégat, cercle, pastille d'un stack), écrit par kyfRev.
+  const decor = new Set(page.cellules.filter((c) => c.donnees.decor !== undefined).map((c) => c.id));
+  const neuves = page.cellules.filter(
+    (c) =>
+      !vues.has(c.id) &&
+      !decor.has(c.id) &&
+      !page.estCouche(c) &&
+      !page.estEtiquette(c) &&
+      !renvois.has(c.id) &&
+      !renvois.has(c.source) &&
+      !renvois.has(c.cible),
+  );
+  const parents = new Set(page.cellules.filter((c) => c.sommet && !decor.has(c.id)).map((c) => c.parent));
   const estConteneur = (c: Cellule) =>
     c.sommet &&
     !typeConnu(c.donnees.type ?? "") &&
@@ -664,7 +815,7 @@ function relier(schema: Schema, page: Page, c: Cellule, de: string, vers: string
     return;
   }
   // Les ports : les étiquettes du connecteur, celle du départ avant le milieu, celle de l'arrivée après.
-  const etiquettes = page.cellules.filter((e) => e.parent === c.id && e.sommet);
+  const etiquettes = page.cellules.filter((e) => e.parent === c.id && e.sommet && e.donnees.decor === undefined);
   const port = (cote: number) => {
     const etiquette = etiquettes.find((e) => Math.sign(e.x) === cote);
     return etiquette ? premiereLigne(etiquette).slice(0, 80) : "";

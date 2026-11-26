@@ -1,13 +1,25 @@
 import { describe, expect, it } from "vitest";
 import { typeConnu } from "./catalogue";
-import { COTE } from "./dessin";
-import { ecrireDrawio, FORMES_DRAWIO, typeDeLaForme, typeDevine } from "./drawio";
+import { boiteDe, COTE, cadreEtiquette, masques, mettreEnPage } from "./dessin";
+import {
+  cadreDeLaForme,
+  ecrireDrawio,
+  FORMES_DRAWIO,
+  type IconesDrawio,
+  positionDeLaForme,
+  texteDuTrace,
+  typeDeLaForme,
+  typeDevine,
+} from "./drawio";
+import { commeUnVrai } from "./drawio.exemple";
 import { ecrireSchema, erreursStructurelles, lireSchema } from "./format";
 import { GABARITS } from "./gabarits";
 import { bilanImport, type CompteRendu, estFichierDrawio, lireImport, nomDuFichier, remarquesImport, texteDuLibelle } from "./importation";
-import { type Schema, schemaVide } from "./modele";
+import { type Point, type Schema, schemaVide } from "./modele";
 import { collerEquipements, connecter, creerEquipement } from "./operations";
+import { surLaPage } from "./pages";
 import { estImage, FORMATS_EXPORT } from "./sorties";
+import { vue } from "./vues";
 import { type ElementXml, echapperXml, lireXml } from "./xml";
 
 /** Un schéma de démonstration : le premier modèle de topologie, une zone, des annotations, une relation. */
@@ -56,6 +68,49 @@ const cellules = (xml: string): ElementXml[] => {
 const cellule = (xml: string, id: string) => cellules(xml).find((c) => c.attributs.id === id);
 const mxCell = (c: ElementXml | undefined) => (c?.nom === "mxCell" ? c : c?.enfants.find((e) => e.nom === "mxCell"));
 const geometrie = (c: ElementXml | undefined) => mxCell(c)?.enfants.find((e) => e.nom === "mxGeometry");
+/** Les cellules de toutes les pages du fichier. */
+const toutes = (xml: string): ElementXml[] => lireXml(xml).enfants.flatMap((d) => d.enfants[0]?.enfants[0]?.enfants ?? []);
+const dans = (xml: string, id: string) => toutes(xml).find((c) => c.attributs.id === id);
+const pointsDe = (xml: string, id: string): Point[] =>
+  geometrie(dans(xml, id))
+    ?.enfants.find((e) => e.nom === "Array")
+    ?.enfants.map((p) => ({ x: Number(p.attributs.x), y: Number(p.attributs.y) })) ?? [];
+/** Un nombre tel que l'export l'écrit (au centième). */
+const ecrit = (n: number) => String(Math.round(n * 100) / 100);
+const styleDe = (c: ElementXml | undefined): Record<string, string> =>
+  Object.fromEntries(
+    (mxCell(c)?.attributs.style ?? "")
+      .split(";")
+      .filter(Boolean)
+      .map((p) => (p.includes("=") ? [p.slice(0, p.indexOf("=")), p.slice(p.indexOf("=") + 1)] : [p, ""])),
+  );
+type Rect = { x0: number; y0: number; x1: number; y1: number };
+const rectDe = (c: ElementXml | undefined): Rect => {
+  const g = geometrie(c)?.attributs ?? {};
+  const [x, y] = [Number(g.x), Number(g.y)];
+  return { x0: x, y0: y, x1: x + Number(g.width), y1: y + Number(g.height) };
+};
+const proche = (a: number, b: number) => Math.abs(a - b) < 0.02;
+const seChevauchent = (a: Rect, b: Rect) => a.x0 < b.x1 - 0.5 && b.x0 < a.x1 - 0.5 && a.y0 < b.y1 - 0.5 && b.y0 < a.y1 - 0.5;
+/** Le point où draw.io fixe le bout d'un connecteur (`exit` : départ, `entry` : arrivée) d'après sa contrainte. */
+function boutFixe(xml: string, id: string, role: "exit" | "entry"): Point {
+  const c = dans(xml, id);
+  const s = styleDe(c);
+  const forme = dans(xml, mxCell(c)?.attributs[role === "exit" ? "source" : "target"] ?? "");
+  const r = rectDe(forme);
+  expect(s[`${role}Perimeter`]).toBe("0");
+  return { x: r.x0 + Number(s[`${role}X`]) * (r.x1 - r.x0), y: r.y0 + Number(s[`${role}Y`]) * (r.y1 - r.y0) };
+}
+/** La mise en page de kyfRev de la page Siège du schéma d'essai. */
+const miseDuSiege = (schema: Schema) => {
+  const page = surLaPage(schema, "p_siege");
+  return mettreEnPage(page, vue(schema.vue), masques(page));
+};
+const equipementNomme = (schema: Schema, nom: string) => {
+  const e = schema.equipements.find((x) => x.nom === nom);
+  if (!e) throw new Error(`${nom} absent`);
+  return e;
+};
 
 describe("draw.io : la table des formes", () => {
   it("ne cite que des types du catalogue et des formes réseau de draw.io", () => {
@@ -115,11 +170,17 @@ describe("draw.io : l'export", () => {
     const premier = schema.equipements[0];
     if (!premier) throw new Error("vide");
     const c = cellule(xml, premier.id);
-    expect(c?.attributs).toMatchObject({ label: premier.nom, nom: premier.nom, type: premier.type, ip: "10.0.0.1", vlan: "10", site: "Lyon" });
+    expect(c?.attributs).toMatchObject({ nom: premier.nom, type: premier.type, ip: "10.0.0.1", vlan: "10", site: "Lyon" });
+    expect(texteDuLibelle(c?.attributs.label ?? "", true)).toBe(`${premier.nom}\n10.0.0.1`);
     expect(c?.attributs).not.toHaveProperty("salle");
-    // Dans la zone : ses coordonnées comptent depuis le coin de la zone.
-    expect(mxCell(c)?.attributs.parent).toBe("g_zone");
-    expect(geometrie(c)?.attributs).toMatchObject({ x: "72", y: "72", width: String(COTE), height: String(COTE) });
+    // Pas enfant de sa zone : un enfant se dessine avec son conteneur, sous les câbles qui couvriraient son nom.
+    expect(mxCell(c)?.attributs.parent).toBe("1");
+    expect(geometrie(c)?.attributs).toMatchObject({
+      x: String(premier.position.x - COTE / 2),
+      y: String(premier.position.y - COTE / 2),
+      width: String(COTE),
+      height: String(COTE),
+    });
     expect(mxCell(c)?.attributs.style).toMatch(/^shape=image;image=data:image\/svg\+xml,[A-Za-z0-9+/=]+;/);
     const svg = atob((mxCell(c)?.attributs.style ?? "").split("image=data:image/svg+xml,")[1]?.split(";")[0] ?? "");
     expect(lireXml(svg).nom).toBe("svg");
@@ -137,19 +198,24 @@ describe("draw.io : l'export", () => {
     expect(mxCell(cellule(xml, iot.id))?.attributs.style).toMatch(/^rounded=1;/);
   });
 
-  it("écrit un câble en connecteur : extrémités, coudé, pointillé, couleur, points, ports aux deux bouts", () => {
+  it("écrit un câble en connecteur sur le tracé de kyfRev : bouts fixés, coudes en points, pointillé, couleur, ports", () => {
     const schema = demonstration();
     const lien = schema.liens[0];
     if (!lien) throw new Error("pas de câble");
     const xml = ecrireDrawio(schema);
     const c = mxCell(cellule(xml, lien.id));
     expect(c?.attributs).toMatchObject({ edge: "1", source: lien.a.equipement, target: lien.b.equipement });
-    expect(c?.attributs.style).toContain("edgeStyle=orthogonalEdgeStyle;");
-    expect(c?.attributs.style).toContain("dashed=1;dashPattern=1 5;");
+    // Les coudes sont ceux de kyfRev, en points de passage : draw.io ne refait pas la route.
+    expect(c?.attributs.style).not.toContain("edgeStyle");
+    expect(c?.attributs.style).toContain("dashed=1;dashPattern=1 5;fixDash=1;");
     expect(c?.attributs.style).toContain("strokeColor=#c0392b;");
-    expect(geometrie(cellule(xml, lien.id))?.enfants[0]?.enfants[0]?.attributs).toMatchObject({ x: "120", y: "80" });
-    expect(cellule(xml, `${lien.id}-a`)?.attributs.parent).toBe(lien.id);
-    expect(cellule(xml, `${lien.id}-b`)?.attributs.value).toBeTruthy();
+    expect(c?.attributs.style).toMatch(/exitX=[-\d.]+;exitY=[-\d.]+;exitPerimeter=0;entryX=[-\d.]+;entryY=[-\d.]+;entryPerimeter=0;/);
+    const trace = mettreEnPage(schema, vue("physique"), new Set()).liens.find((m) => m.lien.id === lien.id)?.trace ?? [];
+    expect(trace.length).toBeGreaterThan(2);
+    expect(pointsDe(xml, lien.id)).toEqual(trace.slice(1, -1).map((p) => ({ x: Math.round(p.x * 100) / 100, y: Math.round(p.y * 100) / 100 })));
+    expect(cellule(xml, lien.id)?.attributs.trace).toBe(texteDuTrace(trace.slice(1, -1)));
+    expect(cellule(xml, `${lien.id}-port-a`)?.attributs).toMatchObject({ decor: "port-a", pour: lien.id });
+    expect(cellule(xml, `${lien.id}-port-b`)?.attributs.label).toBeTruthy();
   });
 
   it("écrit relations, zones et annotations ; une flèche n'a que ses deux points", () => {
@@ -215,7 +281,11 @@ describe("draw.io : l'import d'un fichier d'un autre outil", () => {
     const { schema } = importe;
     expect(importe.erreurs).toEqual([]);
     expect(erreursStructurelles(schema)).toEqual([]);
-    expect(schema.titre).toBe("Réseau du labo");
+    // Deux pages : le schéma prend le nom du fichier, chaque page du fichier devient une page du schéma (30A).
+    expect(schema.titre).toBe("labo");
+    expect(schema.format).toBe(3);
+    expect(schema.pages?.map((p) => p.nom)).toEqual(["Réseau du labo", "Étage 2"]);
+    expect(new Set(schema.equipements.map((e) => e.page))).toEqual(new Set([schema.pages?.[0]?.id]));
     const parNom = (nom: string) => schema.equipements.find((e) => e.nom === nom);
     expect(parNom("Routeur")?.type).toBe("routeur");
     // Le centre, depuis le coin de la zone qui le contient.
@@ -234,16 +304,15 @@ describe("draw.io : l'import d'un fichier d'un autre outil", () => {
     expect(schema.liens.find((l) => l.nom !== "uplink")).toMatchObject({ forme: "coudee", trait: "tirets" });
 
     const c = compteRendu(importe);
-    expect(c).toMatchObject({ equipements: 3, cables: 2, zones: 2, textes: 2, courbes: 1, sansExtremite: 1, pagesIgnorees: ["Étage 2"] });
+    expect(c).toMatchObject({ equipements: 3, cables: 2, zones: 2, textes: 2, courbes: 1, sansExtremite: 1, pages: 2 });
     expect(c.inconnus).toEqual([parNom("Fonction")?.id]);
     expect(remarquesImport(c).map((r) => r.texte)).toEqual([
       "1 forme de type inconnu, posée en « Générique »",
       "1 connecteur courbe, redressé en coudé",
       "1 connecteur sans extrémité, laissé de côté",
-      "page « Étage 2 » non importée : un schéma, une page",
     ]);
     expect(remarquesImport(c)[0]?.montrer).toBe(true);
-    expect(bilanImport(c)).toEqual(["3 équipements", "2 câbles, avec leurs ports", "2 zones et 2 textes"]);
+    expect(bilanImport(c)).toEqual(["2 pages", "3 équipements", "2 câbles, avec leurs ports", "2 zones et 2 textes"]);
   });
 
   it("prend le nom du fichier quand la page porte le nom par défaut", async () => {
@@ -262,7 +331,9 @@ describe("draw.io : l'import d'un fichier d'un autre outil", () => {
     const lu = await lireImport(compresse);
     const clair = await lireImport(ETRANGER);
     expect(lu.schema.equipements.map((e) => [e.nom, e.type, e.position])).toEqual(clair.schema.equipements.map((e) => [e.nom, e.type, e.position]));
-    expect(lu.compteRendu?.pagesIgnorees).toEqual([]);
+    expect(lu.compteRendu?.pages).toBe(1);
+    expect(lu.schema.titre).toBe("Réseau du labo");
+    expect(lu.schema.pages).toBeUndefined();
   });
 
   it("refuse ce qui n'est pas un fichier draw.io, et une page compressée illisible", async () => {
@@ -301,11 +372,13 @@ describe("draw.io : l'aller et retour d'un schéma de kyfRev", () => {
     const [premier, second] = schema.equipements;
     if (!premier || !second) throw new Error("vide");
     let xml = ecrireDrawio(schema, "drawio");
-    // Le second équipement : déplacé de 100 vers la droite et renommé.
-    const ancien = `<mxGeometry x="${second.position.x - COTE / 2}" y="${second.position.y - COTE / 2}" width="56" height="56" as="geometry"/>`;
+    // Le second équipement : déplacé de 100 vers la droite et renommé. Avec les formes de draw.io, son cadre est
+    // l'emprise de son illustration.
+    const cadre = cadreDeLaForme(second, "drawio");
+    const ancien = `<mxGeometry x="${ecrit(cadre.x)}" y="${ecrit(cadre.y)}" width="${ecrit(cadre.largeur)}"`;
     expect(xml).toContain(ancien);
-    xml = xml.replace(ancien, `<mxGeometry x="${second.position.x - COTE / 2 + 100}" y="${second.position.y - COTE / 2}" width="56" height="56" as="geometry"/>`);
-    xml = xml.replace(`label="${echapperXml(second.nom)}"`, 'label="Cœur B"');
+    xml = xml.replace(ancien, `<mxGeometry x="${ecrit(cadre.x + 100)}" y="${ecrit(cadre.y)}" width="${ecrit(cadre.largeur)}"`);
+    xml = xml.replace(new RegExp(`<object id="${second.id}" label="[^"]*"`), `<object id="${second.id}" label="Cœur B"`);
     // La note retirée ; un routeur ajouté, relié au premier équipement.
     xml = xml.replace(/<mxCell id="n_note"[^]*?<\/mxCell>/, "");
     xml = xml.replace(
@@ -337,5 +410,217 @@ describe("draw.io : l'aller et retour d'un schéma de kyfRev", () => {
     const { schema: lu } = await lireImport(xml);
     expect(lu.equipements.map((e) => e.id)).toEqual([a.id]);
     expect(lu.liens).toEqual([]);
+  });
+});
+
+const ICONES: IconesDrawio[] = ["kyfrev", "drawio"];
+
+describe("draw.io : ce que montre kyfRev (schéma d'essai : cœur ×2, pare-feux en HA, LASOTEL, agrégats, trois pages)", () => {
+  for (const icones of ICONES) {
+    it(`${icones} : le nom en gras, l'adresse dessous en chasse fixe, sur une ligne, juste sous l'illustration`, () => {
+      const schema = commeUnVrai();
+      const xml = ecrireDrawio(schema, icones);
+      const coeur = equipementNomme(schema, "SKFRMEY-CA06A-CORE");
+      const c = dans(xml, coeur.id);
+      const label = c?.attributs.label ?? "";
+      expect(label).toContain('<span style="font-weight:600">SKFRMEY-CA06A-CORE</span><br>');
+      expect(label).toContain("font-family:Cascadia Mono,Consolas,monospace");
+      expect(texteDuLibelle(label, true)).toBe("SKFRMEY-CA06A-CORE\n10.21.31.1/24");
+      expect(styleDe(c)).toMatchObject({ html: "1", whiteSpace: "nowrap", verticalLabelPosition: "bottom", verticalAlign: "top" });
+      // Le haut du nom est au bas de l'illustration, comme dans kyfRev (le carré de 56 laisse du blanc dessous).
+      const cadre = cadreDeLaForme(coeur, icones);
+      const decalage = geometrie(c)?.enfants.find((e) => e.attributs.as === "offset");
+      expect(cadre.y + cadre.hauteur + Number(decalage?.attributs.y ?? 0)).toBeCloseTo(boiteDe(coeur, 0).y1, 1);
+      expect(geometrie(c)?.attributs).toMatchObject({ x: ecrit(cadre.x), y: ecrit(cadre.y), width: ecrit(cadre.largeur), height: ecrit(cadre.hauteur) });
+    });
+
+    it(`${icones} : la pastille « ×N » d'un stack, posée sur l'équipement comme dans kyfRev`, () => {
+      const schema = commeUnVrai();
+      const xml = ecrireDrawio(schema, icones);
+      for (const [nom, membres] of [
+        ["SKFRMEY-CA06A-CORE", "×2"],
+        ["SKFRMEY-CA06A-SW", "×3"],
+      ] as const) {
+        const e = equipementNomme(schema, nom);
+        const pastille = dans(xml, `${e.id}-membres`);
+        expect(pastille?.attributs).toMatchObject({ label: membres, decor: "membres" });
+        expect(mxCell(pastille)?.attributs.parent).toBe(e.id);
+        const g = geometrie(pastille);
+        expect(g?.attributs).toMatchObject({ relative: "1", width: "24", height: "15" });
+        const decalage = g?.enfants.find((x) => x.attributs.as === "offset")?.attributs;
+        const [cadre, b] = [cadreDeLaForme(e, icones), boiteDe(e, 0)];
+        expect(cadre.x + Number(decalage?.x)).toBeCloseTo(b.x1 - 16, 1);
+        expect(cadre.y + Number(decalage?.y)).toBeCloseTo(b.y0 - 10, 1);
+      }
+      expect(dans(xml, `${equipementNomme(schema, "FW_Master").id}-membres`)).toBeUndefined();
+    });
+
+    for (const coudes of [false, true]) {
+      it(`${icones}, câbles ${coudes ? "coudés" : "droits"} : chaque câble a son connecteur, au tracé de kyfRev, les parallèles décalés`, () => {
+        const schema = commeUnVrai({ coudes });
+        const xml = ecrireDrawio(schema, icones);
+        const mise = miseDuSiege(schema);
+        const [coeur, secours] = [equipementNomme(schema, "SKFRMEY-CA06A-CORE"), equipementNomme(schema, "FW_Backup")];
+        const paire = [coeur.id, secours.id].sort().join();
+        const paralleles = mise.liens.filter((m) => [m.lien.a.equipement, m.lien.b.equipement].sort().join() === paire);
+        expect(paralleles).toHaveLength(2);
+        for (const { lien, trace, brins } of mise.liens) {
+          const premier = (brins ?? [trace])[0] ?? [];
+          const [debut, fin] = [boutFixe(xml, lien.id, "exit"), boutFixe(xml, lien.id, "entry")];
+          expect(proche(debut.x, premier[0]?.x ?? Number.NaN) && proche(debut.y, premier[0]?.y ?? Number.NaN), `${lien.id} départ`).toBe(true);
+          expect(proche(fin.x, premier.at(-1)?.x ?? Number.NaN) && proche(fin.y, premier.at(-1)?.y ?? Number.NaN), `${lien.id} arrivée`).toBe(true);
+          expect(pointsDe(xml, lien.id)).toEqual(premier.slice(1, -1).map((p) => ({ x: Number(ecrit(p.x)), y: Number(ecrit(p.y)) })));
+        }
+        // Les deux câbles parallèles ne se superposent pas : décalés comme dans kyfRev.
+        const [a, b] = paralleles.map((m) => boutFixe(xml, m.lien.id, "exit"));
+        expect(Math.hypot((a?.x ?? 0) - (b?.x ?? 0), (a?.y ?? 0) - (b?.y ?? 0))).toBeGreaterThan(10);
+      });
+    }
+
+    it(`${icones} : un agrégat a un connecteur par trait et son cercle, là où kyfRev le pose`, () => {
+      const schema = commeUnVrai();
+      const xml = ecrireDrawio(schema, icones);
+      const agregats = miseDuSiege(schema).liens.filter((m) => m.brins && m.cercle);
+      expect(agregats).toHaveLength(2);
+      for (const { lien, brins, cercle } of agregats) {
+        if (!brins || !cercle) throw new Error("agrégat incomplet");
+        expect(brins).toHaveLength(2);
+        const second = dans(xml, `${lien.id}-brin-2`);
+        expect(second?.attributs).toMatchObject({ decor: "brin", pour: lien.id });
+        expect(mxCell(second)?.attributs).toMatchObject({ edge: "1", source: lien.a.equipement, target: lien.b.equipement });
+        expect(boutFixe(xml, `${lien.id}-brin-2`, "exit").y).toBeCloseTo(brins[1]?.[0]?.y ?? Number.NaN, 1);
+        expect(boutFixe(xml, lien.id, "exit").y).toBeCloseTo(brins[0]?.[0]?.y ?? Number.NaN, 1);
+        const rond = dans(xml, `${lien.id}-cercle`);
+        expect(rond?.attributs.decor).toBe("cercle");
+        expect(styleDe(rond)).toMatchObject({ ellipse: "", rotation: ecrit(cercle.angle), fillColor: "none" });
+        const r = rectDe(rond);
+        expect((r.x0 + r.x1) / 2).toBeCloseTo(cercle.x, 1);
+        expect((r.y0 + r.y1) / 2).toBeCloseTo(cercle.y, 1);
+        expect(r.x1 - r.x0).toBeCloseTo(cercle.rx * 2, 1);
+      }
+    });
+
+    it(`${icones} : les étiquettes de kyfRev (ports, agrégats, accès, trunk), à leur place, sans rien chevaucher`, () => {
+      const schema = commeUnVrai();
+      const xml = ecrireDrawio(schema, icones);
+      const mise = miseDuSiege(schema);
+      const attendues = [...mise.etiquettes.entries()].flatMap(([pour, liste]) => liste.map((e) => ({ pour, e })));
+      const pastilles = toutes(xml).filter(
+        (c) => ["port-a", "port-b", "nom", "vlan"].includes(c.attributs.decor ?? "") && attendues.some((a) => a.pour === c.attributs.pour),
+      );
+      expect(pastilles.map((c) => c.attributs.label).sort()).toEqual(attendues.map((a) => a.e.texte).sort());
+      for (const texte of ["Access · U 2131", "Trk1 · 1/9,3/9", "Trk9 · 1/10,2/10", "Trunk · U 1 · T 10,20,30", "LAN1", "port3"]) {
+        expect(pastilles.map((c) => c.attributs.label)).toContain(texte);
+      }
+      for (const { pour, e } of attendues) {
+        const r = rectDe(dans(xml, `${pour}-${e.cle}`));
+        const b = cadreEtiquette(e, 0);
+        expect(r.x0).toBeCloseTo(b.x0, 1);
+        expect(r.y0).toBeCloseTo(b.y0, 1);
+      }
+      // La couleur du VLAN d'accès, comme kyfRev.
+      const acces = pastilles.find((c) => c.attributs.label === "Access · U 2131");
+      expect(styleDe(acces)).toMatchObject({ strokeColor: "#c2185b", fontColor: "#c2185b" });
+      // Rien ne se superpose : ni deux pastilles, ni une pastille et une illustration.
+      const rects = pastilles.map(rectDe);
+      for (const [i, a] of rects.entries()) for (const b of rects.slice(i + 1)) expect(seChevauchent(a, b)).toBe(false);
+      for (const e of surLaPage(schema, "p_siege").equipements) {
+        const cadre = cadreDeLaForme(e, "drawio");
+        const icone = { x0: cadre.x, y0: cadre.y, x1: cadre.x + cadre.largeur, y1: cadre.y + cadre.hauteur };
+        for (const r of rects) expect(seChevauchent(r, icone), e.nom).toBe(false);
+      }
+    });
+  }
+
+  it("suit l'affichage du schéma : sans ports, VLAN, adresses, zones ni notes, rien de cela ne se voit", () => {
+    const schema = commeUnVrai();
+    schema.annotations.push(
+      { id: "n_zone", texte: "DMZ", forme: "rectangle", position: { x: 0, y: 700 }, largeur: 200, hauteur: 100, page: "p_siege" },
+      { id: "n_note", texte: "À voir", position: { x: 300, y: 900 }, page: "p_siege" },
+    );
+    const avant = ecrireDrawio(schema);
+    expect(toutes(avant).some((c) => c.attributs.decor === "port-a")).toBe(true);
+    expect(toutes(avant).some((c) => c.attributs.decor === "vlan")).toBe(true);
+    expect(mxCell(dans(avant, "n_zone"))?.attributs.visible).toBeUndefined();
+    schema.affichage = { ports: false, vlans: false, adresses: false, zones: false, annotations: false };
+    const apres = ecrireDrawio(schema);
+    expect(toutes(apres).some((c) => c.attributs.decor === "port-a" || c.attributs.decor === "port-b")).toBe(false);
+    expect(toutes(apres).some((c) => c.attributs.decor === "vlan")).toBe(false);
+    expect(texteDuLibelle(dans(apres, equipementNomme(schema, "FW_Master").id)?.attributs.label ?? "", true)).toBe("FW_Master");
+    expect(mxCell(dans(apres, "n_zone"))?.attributs.visible).toBe("0");
+    expect(dans(apres, "n_note")?.attributs.visible).toBe("0");
+  });
+
+  it("montre le nom d'un câble au milieu, et ce que la vue cache reste dans le fichier, caché", () => {
+    const schema = commeUnVrai();
+    const [coeur, maitre] = [equipementNomme(schema, "SKFRMEY-CA06A-CORE"), equipementNomme(schema, "FW_Master")];
+    const lien = schema.liens.find((l) => l.a.equipement === coeur.id && l.b.equipement === maitre.id);
+    if (!lien) throw new Error("câble absent");
+    lien.nom = "Uplink FW";
+    const xml = ecrireDrawio(schema);
+    expect(dans(xml, `${lien.id}-nom`)?.attributs).toMatchObject({ label: "Uplink FW", decor: "nom", pour: lien.id });
+    // Le libellé du connecteur garde le nom (l'import le lit), caché derrière la pastille.
+    expect(dans(xml, lien.id)?.attributs.label).toBe("Uplink FW");
+    expect(styleDe(dans(xml, lien.id)).noLabel).toBe("1");
+    // En vue Virtualisation, la relation de haute disponibilité ne se voit pas : elle est là, cachée.
+    const virtualisation = ecrireDrawio(schema, "kyfrev", vue("virtualisation"));
+    expect(mxCell(dans(virtualisation, "r_ha"))?.attributs.visible).toBe("0");
+    expect(mxCell(dans(xml, "r_ha"))?.attributs.visible).toBeUndefined();
+    expect(styleDe(dans(xml, "r_ha"))).toMatchObject({ dashed: "1", fixDash: "1", endArrow: "none" });
+  });
+
+  it("dessine les zones en pointillé de la couleur principale (vert), teintées, comme à l'écran", () => {
+    const xml = ecrireDrawio(commeUnVrai());
+    expect(styleDe(dans(xml, "g_ca03"))).toMatchObject({ strokeColor: "#2e6a4e", fillColor: "#2e6a4e", fillOpacity: "6", dashed: "1", dashPattern: "6 4", fixDash: "1" });
+  });
+});
+
+describe("draw.io : l'aller-retour du schéma d'essai", () => {
+  for (const icones of ICONES) {
+    for (const coudes of [false, true]) {
+      it(`${icones}, câbles ${coudes ? "coudés" : "droits"} : rien de neuf, rien de perdu, aucun décor pris pour un objet`, async () => {
+        const schema = commeUnVrai({ coudes });
+        const importe = await lireImport(ecrireDrawio(schema, icones), "C:/x/SKFRMEY.drawio");
+        expect(importe.erreurs).toEqual([]);
+        expect(ecrireSchema({ ...importe.schema, id: schema.id })).toBe(ecrireSchema(lireSchema(ecrireSchema(schema)).schema));
+        expect(compteRendu(importe)).toMatchObject({ equipements: 10, cables: schema.liens.length, zones: 2, textes: 0, inconnus: [], courbes: 0, sansExtremite: 0, pages: 3 });
+      });
+    }
+  }
+
+  it("sans le modèle, les décors ne deviennent ni équipements, ni câbles, ni zones, ni textes", async () => {
+    const schema = commeUnVrai();
+    const xml = ecrireDrawio(schema).replace(/ kyfrev="[^"]*"/, "");
+    const { schema: lu } = await lireImport(xml);
+    expect(lu.equipements).toHaveLength(10);
+    // Les câbles d'une page ; les deux câbles entre deux pages ne se voient qu'en renvois.
+    expect(lu.liens).toHaveLength(schema.liens.length - 2);
+    expect(lu.groupes).toHaveLength(2);
+    expect(lu.annotations).toEqual([]);
+    expect(lu.relations).toHaveLength(1);
+  });
+
+  it("un point de passage ajouté dans draw.io devient celui du câble ; une pastille de nom récrite le renomme", async () => {
+    const schema = commeUnVrai();
+    const [coeur, maitre] = [equipementNomme(schema, "SKFRMEY-CA06A-CORE"), equipementNomme(schema, "FW_Master")];
+    const lien = schema.liens.find((l) => l.a.equipement === coeur.id && l.b.equipement === maitre.id);
+    if (!lien) throw new Error("câble absent");
+    lien.nom = "Uplink FW";
+    let xml = ecrireDrawio(schema);
+    xml = xml.replace(
+      new RegExp(`(<object id="${lien.id}"[^]*?)<mxGeometry relative="1" as="geometry"></mxGeometry>`),
+      '$1<mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="300" y="200"/></Array></mxGeometry>',
+    );
+    xml = xml.replace(`id="${lien.id}-nom" label="Uplink FW"`, `id="${lien.id}-nom" label="Lien du pare-feu"`);
+    const { schema: lu } = await lireImport(xml);
+    expect(lu.liens.find((l) => l.id === lien.id)).toMatchObject({ nom: "Lien du pare-feu", points: [{ x: 300, y: 200 }] });
+    expect(lu.liens.filter((l) => l.id !== lien.id).every((l) => l.points.length === 0)).toBe(true);
+    expect(lu.liens).toHaveLength(schema.liens.length);
+  });
+
+  it("retrouve le centre de kyfRev d'après le cadre d'une forme : emprise de l'illustration, ou carré de 56", () => {
+    const e = { type: "switch", position: { x: 101, y: 57 } };
+    for (const icones of ICONES) expect(positionDeLaForme(e.type, cadreDeLaForme(e, icones))).toEqual(e.position);
+    expect(positionDeLaForme("switch", { x: 0, y: 0, largeur: 80, hauteur: 40 })).toEqual({ x: 40, y: 20 });
   });
 });

@@ -46,6 +46,8 @@
   import DialogueExport from "./DialogueExport.svelte";
   import DialogueImport from "./DialogueImport.svelte";
   import EditeurTopologie from "./EditeurTopologie.svelte";
+  import SelecteurPages from "./SelecteurPages.svelte";
+  import { aPlusieursPages, nomDeLaPage, pageDeLObjet, pagesDe, pageValide } from "../../lib/topologie/pages";
 
   // Vue « Schémas réseau » (D40) : tous les schémas du coffre (schemas/*.json),
   // chacun avec son aperçu ; un clic montre le détail (grand aperçu dans la
@@ -69,6 +71,8 @@
   let recherche = $state("");
   let lu = $state<string | null>(null);
   let vueLue = $state<IdVue>("physique");
+  /** La page montrée dans le détail d'un schéma à plusieurs pages (30A) ; vide : la première. */
+  let pageLue = $state("");
   let edite = $state<string | null>(null);
   /** L'éditeur a été ouvert par l'application, depuis une fiche : le fermer y ramène, pas à cette liste. */
   let depuisFiche = $state(false);
@@ -162,6 +166,24 @@
   function lire(id: string) {
     lu = id;
     vueLue = details[id]?.schema?.vue ?? "physique";
+    pageLue = "";
+  }
+
+  // --- Les pages du schéma lu (30A) : on les parcourt sans ouvrir l'éditeur ---
+
+  const pagesLues = $derived(schemaLu && aPlusieursPages(schemaLu) ? pagesDe(schemaLu) : []);
+  /** La page montrée : celle choisie si le schéma l'a toujours, sinon la première. */
+  const pageMontree = $derived(schemaLu ? pageValide(schemaLu, pageLue) : "");
+
+  /** Un clic sur la pastille d'un renvoi, dans l'aperçu : la page d'en face. */
+  function suivreRenvoi(evenement: MouseEvent) {
+    const id = (evenement.target as Element | null)?.closest("[data-renvoi]")?.getAttribute("data-renvoi");
+    const schema = schemaLu;
+    const lien = id && schema ? schema.liens.find((l) => l.id === id) : undefined;
+    if (!lien || !schema) return;
+    const bouts = [lien.a.equipement, lien.b.equipement].map((e) => pageDeLObjet(schema, e));
+    const enFace = bouts.find((p) => p !== undefined && p !== pageMontree);
+    if (enFace !== undefined) pageLue = enFace;
   }
 
   async function agir(action: () => Promise<string>) {
@@ -224,12 +246,14 @@
   const schemaDuCoffre = async (id: string) => lireSchema((await api.lireSchema(id)).texte).schema;
   /** Depuis le détail, ce qui sort est la vue montrée ; depuis la liste, celle du schéma. */
   const vueDeSortie = (s: SchemaResume) => (lu === s.id ? vueDe(vueLue) : undefined);
+  /** Depuis le détail, une image sort de la page montrée ; depuis la liste, de la première. */
+  const pageDeSortie = (s: SchemaResume) => (lu === s.id && pageMontree ? pageMontree : undefined);
 
   const exporter = (s: SchemaResume, format: FormatExport, icones: IconesDrawio) =>
     sortir(async () => {
       const schema = await schemaDuCoffre(s.id);
       if (estImage(format) && estVide(schema)) return "Ce schéma est vide : rien à exporter en image.";
-      const chemin = await exporterSchema(schema, format, vueDeSortie(s), icones);
+      const chemin = await exporterSchema(schema, format, vueDeSortie(s), icones, pageDeSortie(s));
       return chemin ? `Schéma exporté vers ${chemin}` : null;
     }, "Export impossible : ");
 
@@ -237,7 +261,7 @@
     sortir(async () => {
       const schema = await schemaDuCoffre(s.id);
       if (estVide(schema)) return "Ce schéma est vide : rien à partager.";
-      await partagerSchema(schema, vueDeSortie(s));
+      await partagerSchema(schema, vueDeSortie(s), pageDeSortie(s));
       return `Image du schéma copiée : collez-la dans un message, un document ou une fiche.${avisEnClair(await coffreChiffre(), "image")}`;
     });
 
@@ -245,7 +269,7 @@
     sortir(async () => {
       const schema = await schemaDuCoffre(s.id);
       if (estVide(schema)) return "Ce schéma est vide : rien à imprimer.";
-      return imprimerSchema(schema, vueDeSortie(s));
+      return imprimerSchema(schema, vueDeSortie(s), pageDeSortie(s));
     }, "Impression impossible : ");
 
   function ouvrirMenu(evenement: MouseEvent, schema: SchemaResume) {
@@ -450,8 +474,22 @@
     </header>
     {#if schemaLu}
       {#if schemaLu.description}<p class="description">{schemaLu.description}</p>{/if}
-      <figure class="grand-apercu" aria-label={`Aperçu du schéma « ${resumeLu.titre} »`}>
-        {@html apercuSchema(schemaLu, vueDe(vueLue), true)}
+      {#if pagesLues.length > 1}
+        <!-- Un schéma à plusieurs pages (30A) : on les parcourt ici ; un renvoi cliqué dans l'aperçu mène aussi à la sienne. -->
+        <div class="pages-lues">
+          <SelecteurPages pages={pagesLues} montree={pageMontree} onchoisir={(id) => (pageLue = id)} />
+        </div>
+      {/if}
+      <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions -->
+      <figure
+        class="grand-apercu"
+        class:plusieurs-pages={pagesLues.length > 1}
+        aria-label={pagesLues.length > 1
+          ? `Aperçu du schéma « ${resumeLu.titre} », page « ${nomDeLaPage(schemaLu, pageMontree)} »`
+          : `Aperçu du schéma « ${resumeLu.titre} »`}
+        onclick={suivreRenvoi}
+      >
+        {@html apercuSchema(schemaLu, vueDe(vueLue), true, pagesLues.length > 1 ? pageMontree : undefined)}
       </figure>
       <div class="colonnes">
         <section class="inventaire" aria-labelledby="titre-inventaire">
@@ -558,6 +596,7 @@
               <h2 class="titre">{s.titre}</h2>
               <p class="meta">
                 {pluriel(nombre(schema, "equipements"), "équipement")} · {pluriel(nombre(schema, "liens"), "lien")}
+                {#if schema && aPlusieursPages(schema)}· {pluriel(pagesDe(schema).length, "page")}{/if}
                 {#if s.modifieLe}· modifié {momentCourt(s.modifieLe)}{/if}
               </p>
               <p class="meta">
@@ -1120,6 +1159,17 @@
   .grand-apercu :global(svg) {
     max-width: 100%;
     height: auto;
+  }
+
+  /* Les pages, juste au-dessus de l'aperçu, à droite : le sélecteur colle au dessin qu'il change. */
+  .pages-lues {
+    display: flex;
+    justify-content: flex-end;
+    margin: 16px 0 -8px;
+  }
+
+  .grand-apercu.plusieurs-pages :global([data-renvoi]) {
+    cursor: pointer;
   }
 
   .colonnes {

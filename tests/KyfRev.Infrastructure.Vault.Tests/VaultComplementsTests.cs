@@ -159,6 +159,23 @@ public abstract class VaultComplementsTests(StorageKind storage)
     }
 
     [TestMethod]
+    public void A_schema_with_several_pages_is_format_3_and_a_later_format_is_refused()
+    {
+        using var folder = TemporaryVault.Empty(storage);
+        using var vault = folder.Initialize(Now);
+        const string pages = """
+            {"format": 3, "titre": "Lycée", "pages": [{"id": "p_1", "nom": "Étage 1"}, {"id": "p_2", "nom": "Étage 2"}],
+             "equipements": [{"id": "d_1", "page": "p_1"}, {"id": "d_2", "page": "p_2"}, {"id": "d_3", "page": "p_2"}]}
+            """;
+        var created = vault.CreateSchema(pages);
+        Assert.Contains("\"pages\"", vault.ReadSchema(created.Id).Text, "les pages sont gardées telles quelles");
+        var summary = vault.Schemas().Single();
+        Assert.AreEqual(3, summary.Devices, "le compte des équipements vaut pour toutes les pages");
+        Assert.Contains("lit jusqu'au format 3", Refused(() => vault.CreateSchema("{\"format\": 4}")));
+        Assert.IsEmpty(VaultInspector.Inspect(folder.Root, folder.Storage).Findings.Where(finding => finding.Code == "schema-illisible"), "la vue Santé lit le format 3");
+    }
+
+    [TestMethod]
     public void Quote_fields_are_limited()
     {
         using var folder = TemporaryVault.Empty(storage);

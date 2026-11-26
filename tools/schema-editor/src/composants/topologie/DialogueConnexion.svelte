@@ -11,6 +11,7 @@
     type Support,
   } from "../../lib/topologie/modele";
   import { connecter, interfaceIndisponible, Refus, supportPropose } from "../../lib/topologie/operations";
+  import { pageDeLElement } from "../../lib/topologie/pages";
   import SelecteurInterface from "./SelecteurInterface.svelte";
 
   // Connexion de deux interfaces par un câble (D39) : source, destination,
@@ -47,6 +48,18 @@
   const eqA = $derived(schema.equipements.find((e) => e.id === equipementA));
   const eqB = $derived(schema.equipements.find((e) => e.id === equipementB));
   const tries = $derived([...schema.equipements].sort((a, b) => a.nom.localeCompare(b.nom, "fr")));
+  /**
+   * Un schéma à plusieurs pages (30A) : les équipements par page, la page montrée d'abord. Un câble entre deux
+   * pages se dessine en renvoi sur chacune.
+   */
+  const parPage = $derived(
+    editeur.pages.length < 2
+      ? []
+      : [...editeur.pages]
+          .sort((a, b) => Number(b.id === editeur.pageMontree) - Number(a.id === editeur.pageMontree))
+          .map((p) => ({ page: p, equipements: tries.filter((e) => pageDeLElement(schema, e) === p.id) }))
+          .filter((g) => g.equipements.length > 0),
+  );
 
   /** Première interface libre (câblable) d'un équipement. */
   function premiereLibre(equipement: string): string | null {
@@ -131,6 +144,18 @@
   }
 </script>
 
+{#snippet choixEquipements()}
+  {#if parPage.length > 0}
+    {#each parPage as groupe (groupe.page.id)}
+      <optgroup label={groupe.page.nom}>
+        {#each groupe.equipements as e (e.id)}<option value={e.id}>{e.nom}</option>{/each}
+      </optgroup>
+    {/each}
+  {:else}
+    {#each tries as e (e.id)}<option value={e.id}>{e.nom}</option>{/each}
+  {/if}
+{/snippet}
+
 <dialog bind:this={dialogue} class="connexion" aria-labelledby="titre-connexion" onclose={() => onfermer()}>
   <form onsubmit={valider}>
     <h2 id="titre-connexion">Connecter deux interfaces</h2>
@@ -140,7 +165,7 @@
           <span>1. Équipement source</span>
           <select class="champ" bind:value={equipementA} onchange={() => (interfaceA = premiereLibre(equipementA))}>
             <option value="" disabled>Choisir…</option>
-            {#each tries as e (e.id)}<option value={e.id}>{e.nom}</option>{/each}
+            {@render choixEquipements()}
           </select>
         </label>
         {#if eqA}
@@ -152,7 +177,7 @@
           <span>3. Équipement destination</span>
           <select class="champ" bind:value={equipementB} onchange={() => (interfaceB = premiereLibre(equipementB))}>
             <option value="" disabled>Choisir…</option>
-            {#each tries as e (e.id)}<option value={e.id}>{e.nom}</option>{/each}
+            {@render choixEquipements()}
           </select>
         </label>
         {#if eqB}

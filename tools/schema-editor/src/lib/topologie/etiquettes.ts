@@ -3,11 +3,15 @@
 // choisi à la main s'enregistre avec le schéma ; « Remettre à sa place » l'oublie, et l'étiquette retrouve
 // la place que le dessin lui calcule.
 
-import { angleLisible, type CleEtiquette, type Point, type PoseEtiquette, type Schema } from "./modele";
+import { angleLisible, type CleEtiquette, type CleRenvoi, type Point, type PoseEtiquette, type Schema } from "./modele";
 
-/** Une étiquette du schéma : l'une de celles d'un câble, le nom d'une relation, le bloc du nom d'un équipement. */
+/**
+ * Une étiquette du schéma : l'une de celles d'un câble, le nom d'une relation, le bloc du nom d'un équipement, ou
+ * la pastille d'un câble vers une autre page (30A), à l'un de ses bouts : celle-ci se déplace, elle ne pivote pas.
+ */
 export type CibleEtiquette =
   | { genre: "lien"; id: string; cle: CleEtiquette }
+  | { genre: "renvoi"; id: string; cle: CleRenvoi }
   | { genre: "relation"; id: string; cle: "nom" }
   | { genre: "equipement"; id: string };
 
@@ -19,7 +23,7 @@ export const memeCible = (a: CibleEtiquette | null, b: CibleEtiquette | null): b
   b !== null &&
   a.genre === b.genre &&
   a.id === b.id &&
-  (a.genre === "equipement" || a.cle === (b as { cle?: CleEtiquette }).cle);
+  (a.genre === "equipement" || a.cle === (b as { cle?: CleEtiquette | CleRenvoi }).cle);
 
 /** La pose d'une étiquette, si elle a été placée ou tournée à la main. */
 export function poseDe(schema: Schema, cible: CibleEtiquette): PoseEtiquette | undefined {

@@ -118,7 +118,8 @@ public abstract class InspectorTests(StorageKind storage)
     public void Schemas_and_extension_data_are_checked()
     {
         using var vault = TemporaryVault.CopyOfReference(storage);
-        vault.Write("schemas/s_00000000000000000000000000.json", "{ \"format\": 3 }");
+        // Le format 3 est celui d'un schéma à plusieurs pages ; le 4 n'existe pas encore.
+        vault.Write("schemas/s_00000000000000000000000000.json", "{ \"format\": 4 }");
         vault.Write("schemas/s_11111111111111111111111111.json", "{ \"format\": 2, \"id\": \"s_22222222222222222222222222\" }");
         vault.Write(".suivi/extensions/vocabulaire.json", "pas du JSON");
         vault.Write(".suivi/extensions/Majuscule.json", "{}");

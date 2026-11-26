@@ -13,12 +13,15 @@ import {
   type Agregat,
   angleLisible,
   CLES_ETIQUETTE,
+  CLES_RENVOI,
   type CleEtiquette,
+  type CleRenvoi,
   type Annotation,
   type ConfigVlan,
   type Equipement,
   type Extremite,
   FORMAT,
+  FORMAT_PAGES,
   FORMES_ANNOTATION,
   GENRES_GROUPE,
   GENRES_INTERFACE,
@@ -32,6 +35,7 @@ import {
   type Membre,
   type ModeleMateriel,
   NATURES_INTERFACE,
+  type Page,
   type Point,
   type PoseEtiquette,
   type Relation,
@@ -196,6 +200,7 @@ function lireEquipement(e: Brut): Equipement {
     );
   return propre({
     id: identifiant(e.id),
+    page: identifiant(e.page) || undefined,
     type: identifiant(e.type) || "generique",
     nom: texte(e.nom, 120) || "Équipement",
     nomHote: facultatif(e.nomHote, 120),
@@ -272,15 +277,21 @@ function lirePose(valeur: unknown, surTrace: boolean): PoseEtiquette | undefined
   return propre({ place, angle: angle === 0 ? undefined : angle });
 }
 
-function lirePoses<T extends CleEtiquette>(
+/** Les poses lues, dans l'ordre des clés ; celles de `libres` (les renvois) n'ont pas de tracé, donc pas de fraction. */
+function lirePoses<T extends CleEtiquette | CleRenvoi>(
   valeur: unknown,
   cles: readonly T[],
+  libres: readonly T[] = [],
 ): Partial<Record<T, PoseEtiquette>> | undefined {
   if (typeof valeur !== "object" || valeur === null) return undefined;
   const brut = valeur as Brut;
   const poses: Partial<Record<T, PoseEtiquette>> = {};
   for (const cle of cles) {
     const pose = lirePose(brut[cle], true);
+    if (pose) poses[cle] = pose;
+  }
+  for (const cle of libres) {
+    const pose = lirePose(brut[cle], false);
     if (pose) poses[cle] = pose;
   }
   return Object.keys(poses).length > 0 ? poses : undefined;
@@ -327,7 +338,7 @@ function lireLien(l: Brut): Lien {
     forme: l.forme === "droite" || l.forme === "coudee" ? l.forme : undefined,
     points: points(l.points),
     palier: lirePalier(l.palier),
-    poses: lirePoses(l.poses, CLES_ETIQUETTE),
+    poses: lirePoses<CleEtiquette | CleRenvoi>(l.poses, CLES_ETIQUETTE, CLES_RENVOI),
     notes: facultatif(l.notes, LONG_MAX),
   });
 }
@@ -375,6 +386,7 @@ const lireGroupe = (g: Brut): Groupe => {
   const taille = (typeof g.taille === "object" && g.taille !== null ? g.taille : {}) as Brut;
   return propre({
     id: identifiant(g.id),
+    page: identifiant(g.page) || undefined,
     nom: texte(g.nom, 120),
     genre: parmi(g.genre, GENRES_GROUPE) ?? "groupe",
     parent: identifiant(g.parent) || undefined,
@@ -411,6 +423,7 @@ const lireAnnotation = (n: Brut): Annotation => {
   const forme = parmi(n.forme, FORMES_ANNOTATION);
   return propre({
     id: identifiant(n.id),
+    page: identifiant(n.page) || undefined,
     texte: texte(n.texte, LONG_MAX),
     position: point(n.position),
     largeur: entier(n.largeur, forme === "texte" ? 20 : 40, COORDONNEE_MAX),
@@ -552,10 +565,10 @@ export function lireSchema(source: string | unknown): Lecture {
     const schema = migrerFormat1(brut);
     return { schema, erreurs: erreursStructurelles(schema), migre: true };
   }
-  if (brut.format !== FORMAT) {
+  if (brut.format !== FORMAT && brut.format !== FORMAT_PAGES) {
     throw new Error(
-      typeof brut.format === "number" && brut.format > FORMAT
-        ? `format ${brut.format} plus récent que cette version de kyfRev (format ${FORMAT})`
+      typeof brut.format === "number" && brut.format > FORMAT_PAGES
+        ? `format ${brut.format} plus récent que cette version de kyfRev (format ${FORMAT_PAGES})`
         : "ce n'est pas un schéma réseau de kyfRev (numéro de format absent)",
     );
   }
@@ -564,6 +577,7 @@ export function lireSchema(source: string | unknown): Lecture {
     id: identifiant(brut.id),
     titre: texte(brut.titre, 200) || "Schéma réseau",
     description: facultatif(brut.description, LONG_MAX),
+    pages: lirePages(brut.pages),
     modeles: objets(brut.modeles).map(lireModele),
     equipements: objets(brut.equipements).map(lireEquipement),
     liens: objets(brut.liens).map(lireLien),
@@ -577,8 +591,61 @@ export function lireSchema(source: string | unknown): Lecture {
     cablesCoudes: booleen(brut.cablesCoudes),
     affichage: lireAffichage(brut.affichage),
   });
+  rangerPages(schema);
   ranger(schema);
   return { schema, erreurs: erreursStructurelles(schema), migre: false };
+}
+
+/** Pages d'un schéma, au plus : bien plus qu'il n'en faut pour les étages d'un bâtiment. */
+export const PAGES_MAX = 200;
+
+/** Les pages lues : identifiants uniques, noms bornés (« Page 2 » à défaut). Aucune : rien. */
+function lirePages(valeur: unknown): Page[] | undefined {
+  if (!Array.isArray(valeur)) return undefined;
+  const vues = new Set<string>();
+  const pages = objets(valeur)
+    .slice(0, PAGES_MAX)
+    .map((p, rang): Page => ({ id: identifiant(p.id), nom: texte(p.nom, 80).trim() || `Page ${rang + 1}` }))
+    .filter((p) => p.id && !vues.has(p.id) && vues.add(p.id));
+  return pages.length > 0 ? pages : undefined;
+}
+
+/**
+ * Le rangement par pages (30A). Avec au moins deux pages, chaque équipement, cadre et annotation en a une
+ * (la première, si la sienne n'existe pas), un cadre ne garde que les membres de sa page et un ensemble
+ * groupé que ceux de la page de son premier membre ; le schéma s'écrit au format 3. Avec une page ou aucune,
+ * rien ne porte de page et le schéma reste au format 2 : une page seule ne garde que son nom.
+ */
+function rangerPages(schema: Schema): void {
+  const pages = schema.pages ?? [];
+  const elements = [...schema.equipements, ...schema.groupes, ...schema.annotations];
+  if (pages.length < 2) {
+    for (const element of elements) delete element.page;
+    for (const lien of schema.liens) oublierRenvois(lien);
+    schema.format = FORMAT;
+    return;
+  }
+  schema.format = FORMAT_PAGES;
+  const connues = new Set(pages.map((p) => p.id));
+  const premiere = pages[0]?.id ?? "";
+  for (const element of elements) if (!element.page || !connues.has(element.page)) element.page = premiere;
+  const pageDe = new Map<string, string>(elements.map((e) => [e.id, e.page ?? premiere]));
+  for (const g of schema.groupes) g.membres = g.membres.filter((m) => pageDe.get(m) === g.page);
+  for (const e of schema.ensembles ?? []) {
+    const page = pageDe.get(e.membres[0] ?? "");
+    e.membres = e.membres.filter((m) => pageDe.get(m) === page);
+  }
+  // Un câble dont les deux bouts sont sur la même page n'a pas de renvoi : la place de ses pastilles ne sert plus.
+  for (const lien of schema.liens) {
+    if (pageDe.get(lien.a.equipement) === pageDe.get(lien.b.equipement)) oublierRenvois(lien);
+  }
+}
+
+/** Oublie la place des renvois d'un câble ; un câble à qui il ne reste aucune pose n'en garde pas la trace. */
+function oublierRenvois(lien: Lien): void {
+  if (!lien.poses) return;
+  for (const cle of CLES_RENVOI) delete lien.poses[cle];
+  if (Object.keys(lien.poses).length === 0) delete lien.poses;
 }
 
 /** JSON du schéma : stable (champs dans l'ordre du modèle), indenté, relu par `lireSchema`. */

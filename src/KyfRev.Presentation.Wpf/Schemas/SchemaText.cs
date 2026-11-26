@@ -47,6 +47,15 @@ public static class SchemaText
     /// <summary>« Schémas réseau ».</summary>
     public static string IslandName => Text(nameof(IslandName));
 
+    /// <summary>« Pages du schéma » : le sélecteur des pages, dans une fiche.</summary>
+    public static string PagesName => Text(nameof(PagesName));
+
+    /// <summary>« Page « {0} » ».</summary>
+    public static string PageNamed(string name) => Format(nameof(PageNamed), name);
+
+    /// <summary>« Les autres pages » : le bouton « … » du sélecteur.</summary>
+    public static string OtherPages => Text(nameof(OtherPages));
+
     private static string Text(string name) => Resources.GetString(name, CultureInfo.InvariantCulture)!;
 
     private static string Format(string name, params object[] arguments) => string.Format(CultureInfo.InvariantCulture, Text(name), arguments);
