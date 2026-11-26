@@ -21,6 +21,18 @@ public interface IVaultStore
     /// </summary>
     /// <exception cref="NotSupportedException">Ces coffres ne sont qu'en clair.</exception>
     IVault Open(string root, VaultKey key, Moment now) => throw new NotSupportedException("Ces coffres ne sont qu'en clair.");
+
+    /// <summary>Ouvre un coffre, en lecture seule si <paramref name="forReading"/> : rien ne s'y écrit.</summary>
+    IVault Open(string root, Moment now, bool forReading) => forReading ? throw new NotSupportedException("Ces coffres ne s'ouvrent pas en lecture seule.") : Open(root, now);
+
+    /// <summary>Ouvre un coffre chiffré, en lecture seule si <paramref name="forReading"/>.</summary>
+    IVault Open(string root, VaultKey key, Moment now, bool forReading) => forReading ? throw new NotSupportedException("Ces coffres ne s'ouvrent pas en lecture seule.") : Open(root, key, now);
+
+    /// <summary>
+    /// Les autres postes qui ont le coffre de <paramref name="root"/> ouvert, d'après leur présence, sans l'ouvrir ni rien y
+    /// écrire : de quoi le dire avant de l'ouvrir.
+    /// </summary>
+    IReadOnlyList<OtherComputer> OthersHaving(string root, DateTimeOffset now) => [];
 }
 
 /// <summary>Fichiers de sauvegarde, hors de tout coffre.</summary>

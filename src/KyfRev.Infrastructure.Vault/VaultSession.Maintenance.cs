@@ -99,7 +99,7 @@ public sealed partial class VaultSession
     }
 
     /// <summary>Dans le suivi, ce que kyfRev ne nomme pas lui-même ou garde exprès : on n'y cherche pas de copie de conflit.</summary>
-    private static readonly string[] Skipped = [VaultLayout.Versions, VaultLayout.TrashTracking, VaultLayout.ExtensionData];
+    private static readonly string[] Skipped = [VaultLayout.Versions, VaultLayout.TrashTracking, VaultLayout.ExtensionData, VaultLayout.Presence];
 
     /// <summary>
     /// Doublon d'identifiant : <paramref name="original"/> garde l'identifiant et son suivi ;

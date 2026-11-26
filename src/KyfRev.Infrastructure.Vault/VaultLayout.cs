@@ -60,6 +60,9 @@ public static class VaultLayout
     /// <summary>Qui tient le coffre ouvert.</summary>
     public const string LockInfoFile = ".suivi/verrou-info.json";
 
+    /// <summary>La présence des postes qui ont le coffre ouvert, un fichier par poste (<see cref="Files.ComputerPresence"/>).</summary>
+    public const string Presence = ".suivi/postes";
+
     /// <summary>
     /// En-tête d'un coffre chiffré, en clair et sans rien de secret : sa présence fait d'un dossier, ou d'une sauvegarde, un
     /// coffre chiffré. Le même nom que dans <c>KyfRev.Infrastructure.Crypto</c>, ce que les essais vérifient.

@@ -523,6 +523,7 @@
                   <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,24,0,0">
                     <Button x:Name="PART_SecondaryButton" Content="{TemplateBinding SecondaryButtonText}" MinWidth="96"
                             Margin="0,0,8,0" IsCancel="True" />
+                    <Button x:Name="PART_ExtraButton" Content="{TemplateBinding ExtraButtonText}" MinWidth="96" Margin="0,0,8,0" />
                     <Button x:Name="PART_PrimaryButton" Content="{TemplateBinding PrimaryButtonText}" MinWidth="96"
                             Style="{DynamicResource Kyf.Button.Primary}" IsDefault="True" IsEnabled="{TemplateBinding IsPrimaryEnabled}" />
                   </StackPanel>
@@ -531,6 +532,12 @@
             </Grid>
           </Grid>
           <ControlTemplate.Triggers>
+            <Trigger Property="ExtraButtonText" Value="{x:Null}">
+              <Setter TargetName="PART_ExtraButton" Property="Visibility" Value="Collapsed" />
+            </Trigger>
+            <Trigger Property="ExtraButtonText" Value="">
+              <Setter TargetName="PART_ExtraButton" Property="Visibility" Value="Collapsed" />
+            </Trigger>
             <Trigger Property="IsWide" Value="True">
               <Setter TargetName="Card" Property="HorizontalAlignment" Value="Stretch" />
             </Trigger>

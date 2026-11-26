@@ -187,7 +187,11 @@ public sealed partial class VaultSession
                 }
                 if (entry.IsDirectory)
                 {
-                    toVisit.Push(entry.FullName);
+                    // La présence des postes ne vaut que pour le coffre ouvert : une sauvegarde ne la garde pas.
+                    if (Path.GetRelativePath(Root, entry.FullName).Replace('\\', '/') != VaultLayout.Presence)
+                    {
+                        toVisit.Push(entry.FullName);
+                    }
                 }
                 else if (!entry.Name.StartsWith(AtomicFile.TemporaryPrefix, StringComparison.Ordinal))
                 {

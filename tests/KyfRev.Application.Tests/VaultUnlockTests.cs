@@ -252,6 +252,72 @@ public sealed class VaultUnlockTests
         Assert.AreEqual(scene.Folder.Vault, unlocked.App.Vaults.Open(scene.Folder.Vault).Vault, "déverrouillé par son mot de passe, la clé retenue le rouvre de nouveau");
     }
 
+    /// <summary>
+    /// Rangée 29A : un autre poste a le coffre ouvert. Rien ne s'ouvre ni ne s'écrit avant la réponse ; en lecture seule,
+    /// rien ne s'écrit du tout ; « Passer en écriture » le rouvre comme d'habitude.
+    /// </summary>
+    [TestMethod]
+    public void A_vault_open_on_another_computer_is_asked_about_before_anything_is_written()
+    {
+        using var scene = new Scene();
+        var root = scene.Folder.Vault;
+        Assert.AreEqual(root, scene.App.Vaults.Create(root).Vault);
+        scene.App.Vaults.Close();
+        Directory.Delete(scene.Folder.Backups, recursive: true);
+        scene.OpenedElsewhere(root);
+        var before = Scene.Files(root);
+
+        var held = scene.App.Vaults.Open(root);
+        Assert.AreEqual(root, held.Occupied);
+        Assert.IsNull(held.Vault);
+        Assert.AreEqual("PC-BUREAU", held.Others!.Single().Name);
+        CollectionAssert.AreEquivalent(before.ToList(), Scene.Files(root).ToList(), "rien n'est écrit avant la réponse");
+
+        var reading = scene.App.Vaults.OpenAnyway(root, forReading: true);
+        Assert.AreEqual(root, reading.Vault);
+        Assert.IsTrue(reading.ReadOnly);
+        Assert.AreEqual("PC-BUREAU", reading.Others!.Single().Name);
+        Assert.IsTrue(scene.App.Vaults.State().ReadOnly);
+        Assert.Contains("lecture seule", scene.App.Sheets.Create(null, "Mitose", string.Empty).Error ?? string.Empty);
+        Assert.IsFalse(scene.Backed(), "ni la sauvegarde du jour");
+        CollectionAssert.AreEquivalent(before.ToList(), Scene.Files(root).ToList(), "ni rien d'autre");
+        Assert.HasCount(1, scene.App.Vaults.Heartbeat());
+
+        var writing = scene.App.Vaults.Writable();
+        Assert.AreEqual(root, writing.Vault);
+        Assert.IsFalse(writing.ReadOnly);
+        Assert.IsNull(writing.Others);
+        Assert.IsTrue(scene.App.Sheets.Create(null, "Mitose", string.Empty).Succeeded);
+        Assert.IsTrue(scene.Backed());
+        Assert.AreEqual(root, scene.App.Vaults.Writable().Vault, "déjà en écriture : rien ne change");
+
+        // Une fois ouvert, la réponse ne vaut plus : la fois suivante, la question revient.
+        scene.App.Vaults.Close();
+        Assert.AreEqual(root, scene.App.Vaults.Open(root).Occupied);
+        Assert.IsEmpty(scene.App.Vaults.Heartbeat(), "aucun coffre ouvert");
+    }
+
+    /// <summary>Un coffre chiffré ouvert ailleurs : la question vient avant sa clé, puis le déverrouillage suit la réponse.</summary>
+    [TestMethod]
+    public void An_encrypted_vault_open_elsewhere_is_asked_about_before_its_key()
+    {
+        using var scene = new Scene();
+        scene.CreateEncrypted();
+        var root = scene.Folder.Vault;
+        scene.OpenedElsewhere(root);
+
+        Assert.AreEqual(root, scene.App.Vaults.Unlock(root, VaultSecret.Password(Password), remember: false).Occupied);
+        scene.App.Vaults.Answer(root, forReading: true);
+        var opened = scene.App.Vaults.Unlock(root, VaultSecret.Password(Password), remember: false);
+
+        Assert.AreEqual(root, opened.Vault);
+        Assert.IsTrue(opened.ReadOnly);
+        Assert.IsTrue(opened.Encrypted);
+        var locked = scene.App.Vaults.Lock();
+        Assert.AreEqual(root, locked.Locked);
+        Assert.IsFalse(locked.ReadOnly);
+    }
+
     [TestMethod]
     public void Each_locked_vault_stays_locked_until_its_own_key_is_given()
     {
@@ -343,6 +409,20 @@ public sealed class VaultUnlockTests
         public KyfRevApplication App { get; }
 
         public string LocalData => Folder.PathOf("Poste");
+
+        /// <summary>L'heure de l'application.</summary>
+        public DateTimeOffset Now => _time.GetUtcNow();
+
+        /// <summary>Un autre poste dit avoir le coffre de <paramref name="root"/> ouvert, à l'instant.</summary>
+        public void OpenedElsewhere(string root) =>
+            Assert.IsTrue(ComputerPresence.Announce(root, DiskStorage.Instance, "PC-BUREAU", Now.AddMinutes(-20), Now, open: true));
+
+        /// <summary>Chaque fichier du coffre et son contenu, sauf le verrou que le système tient.</summary>
+        public static SortedDictionary<string, string> Files(string root) => new(
+            Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories)
+                .Where(file => Path.GetFileName(file) != "verrou")
+                .ToDictionary(file => Path.GetRelativePath(root, file), file => Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(File.ReadAllBytes(file)))),
+            StringComparer.Ordinal);
 
         /// <summary>Le même poste, rouvert : les mêmes dossiers, la même mémoire du dernier coffre.</summary>
         public Scene Restart() => new(Folder, Locations, ownsFolder: false);

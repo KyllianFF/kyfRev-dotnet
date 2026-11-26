@@ -786,11 +786,12 @@ public sealed class ConversionTests
             };
         }
 
-        /// <summary>Le contenu du coffre en clair, fichier par fichier, hors de son verrou (l'état de l'application).</summary>
+        /// <summary>Le contenu du coffre en clair, fichier par fichier, hors de son verrou et de la présence des postes (l'état de l'application).</summary>
         public SortedDictionary<string, string> SourceFiles()
         {
             var files = new SortedDictionary<string, string>(StringComparer.Ordinal);
-            foreach (var file in Directory.EnumerateFiles(Source, "*", SearchOption.AllDirectories).Where(file => !Path.GetFileName(file).StartsWith("verrou", StringComparison.Ordinal)))
+            var presence = Path.Combine(Source, ".suivi", "postes") + Path.DirectorySeparatorChar;
+            foreach (var file in Directory.EnumerateFiles(Source, "*", SearchOption.AllDirectories).Where(file => !Path.GetFileName(file).StartsWith("verrou", StringComparison.Ordinal) && !file.StartsWith(presence, StringComparison.OrdinalIgnoreCase)))
             {
                 files[Path.GetRelativePath(Source, file)] = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(file)));
             }

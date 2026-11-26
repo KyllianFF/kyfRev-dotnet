@@ -93,6 +93,15 @@ public sealed partial class UnlockPageViewModel : ObservableObject
     /// <summary>Un message d'erreur est affiché.</summary>
     public bool HasError => Error is not null;
 
+    /// <summary>La question quand un autre poste a le coffre ouvert ; sans elle, un tel coffre est refusé.</summary>
+    public Func<AppState, Func<AppState>, Task<AppState?>>? Settle { get; init; }
+
+    /// <summary>L'état, une fois la question posée si un autre poste a le coffre ouvert ; rien si l'utilisateur renonce.</summary>
+    private async Task<AppState?> SettledAsync(AppState state, Func<AppState> retry) =>
+        state.Occupied is null ? state
+        : Settle is { } settle ? await settle(state, retry).ConfigureAwait(true)
+        : state with { Occupied = null, OpenError = ComputersText.Occupied };
+
     /// <summary>
     /// Ouvre le coffre avec <paramref name="secret"/> : son mot de passe, ou sa clé de récupération telle qu'elle a été
     /// recopiée. La vue le passe sans le garder, et vide le champ du mot de passe.
@@ -111,7 +120,11 @@ public sealed partial class UnlockPageViewModel : ObservableObject
         IsBusy = true;
         try
         {
-            var state = await Task.Run(() => _vaults.Unlock(Vault, given, remember)).ConfigureAwait(true);
+            AppState Unlock() => _vaults.Unlock(Vault, given, remember);
+            if (await SettledAsync(await Task.Run(Unlock).ConfigureAwait(true), Unlock).ConfigureAwait(true) is not { } state)
+            {
+                return;
+            }
             if (state.Locked is null && state.OpenError is null && state.Vault is not null)
             {
                 _opened(state);
@@ -156,7 +169,11 @@ public sealed partial class UnlockPageViewModel : ObservableObject
         try
         {
             // L'ouverture lit tout le coffre : hors du fil de l'interface.
-            var state = await Task.Run(() => _vaults.Open(folder)).ConfigureAwait(true);
+            AppState Open() => _vaults.Open(folder);
+            if (await SettledAsync(await Task.Run(Open).ConfigureAwait(true), Open).ConfigureAwait(true) is not { } state)
+            {
+                return;
+            }
             if (state.Locked is not null)
             {
                 _locked(state);

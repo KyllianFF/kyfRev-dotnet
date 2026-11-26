@@ -447,6 +447,9 @@ public sealed partial class DataSettingsViewModel : ObservableObject, INavigatio
     /// </summary>
     public Action<AppState>? VaultLocked { get; init; }
 
+    /// <summary>La question quand un autre poste a le coffre choisi ouvert ; sans elle, un tel coffre est refusé.</summary>
+    public Func<AppState, Func<AppState>, Task<AppState?>>? Settle { get; init; }
+
     /// <summary>Ouvrir un coffre peut prendre du temps (la journée à préparer, sa sauvegarde) ; un refus laisse l'actuel ouvert.</summary>
     private async Task ChangeVaultAsync(Func<AppState> opening)
     {
@@ -457,7 +460,14 @@ public sealed partial class DataSettingsViewModel : ObservableObject, INavigatio
         Message = null;
         try
         {
-            var state = await Task.Run(opening).ConfigureAwait(true);
+            var opened = await Task.Run(opening).ConfigureAwait(true);
+            var settled = opened.Occupied is null ? opened
+                : Settle is { } settle ? await settle(opened, opening).ConfigureAwait(true)
+                : opened with { Occupied = null, OpenError = Shell.ComputersText.Occupied };
+            if (settled is not { } state)
+            {
+                return;
+            }
             if (generation != _generation)
             {
                 // Le coffre s'est verrouillé pendant l'ouverture : son écran de déverrouillage reste, rien ne le remplace.

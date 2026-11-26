@@ -18,6 +18,9 @@ public enum DialogChoice
 
     /// <summary>Bouton secondaire (« Annuler »).</summary>
     Secondary,
+
+    /// <summary>Le troisième bouton, entre les deux, quand il y en a un (<see cref="Dialog.ExtraButtonText"/>).</summary>
+    Extra,
 }
 
 /// <summary>Données de l'événement <see cref="Dialog.Closed"/>.</summary>
@@ -45,6 +48,9 @@ public class Dialog : ContentControl
 
     /// <summary>Bouton secondaire dans le modèle.</summary>
     public const string SecondaryButtonPart = "PART_SecondaryButton";
+
+    /// <summary>Le troisième bouton, entre le secondaire et le principal.</summary>
+    public const string ExtraButtonPart = "PART_ExtraButton";
 
     /// <summary>La croix d'un volet, dans le modèle.</summary>
     public const string CloseButtonPart = "PART_CloseButton";
@@ -93,6 +99,10 @@ public class Dialog : ContentControl
     public static readonly DependencyProperty SecondaryButtonTextProperty =
         DependencyProperty.Register(nameof(SecondaryButtonText), typeof(string), typeof(Dialog), new PropertyMetadata(DesignText.Cancel));
 
+    /// <summary>Propriété <see cref="ExtraButtonText"/>.</summary>
+    public static readonly DependencyProperty ExtraButtonTextProperty =
+        DependencyProperty.Register(nameof(ExtraButtonText), typeof(string), typeof(Dialog), new PropertyMetadata(null));
+
     /// <summary>Le bouton principal répond : faux, par exemple, tant qu'il manque un choix ou qu'une action est en cours.</summary>
     public static readonly DependencyProperty IsPrimaryEnabledProperty =
         DependencyProperty.Register(nameof(IsPrimaryEnabled), typeof(bool), typeof(Dialog), new PropertyMetadata(true));
@@ -110,6 +120,7 @@ public class Dialog : ContentControl
 
     private ButtonBase? _primaryButton;
     private ButtonBase? _secondaryButton;
+    private ButtonBase? _extraButton;
     private ButtonBase? _closeButton;
     private UIElement? _scrim;
 
@@ -201,20 +212,33 @@ public class Dialog : ContentControl
         set => SetValue(SecondaryButtonTextProperty, value);
     }
 
+    /// <summary>
+    /// Le texte d'un troisième bouton, entre le secondaire et le principal, qui ferme avec <see cref="DialogChoice.Extra"/> ;
+    /// rien : pas de troisième bouton.
+    /// </summary>
+    public string? ExtraButtonText
+    {
+        get => (string?)GetValue(ExtraButtonTextProperty);
+        set => SetValue(ExtraButtonTextProperty, value);
+    }
+
     /// <inheritdoc/>
     public override void OnApplyTemplate()
     {
         _primaryButton?.Click -= OnPrimary;
         _secondaryButton?.Click -= OnSecondary;
+        _extraButton?.Click -= OnExtra;
         _closeButton?.Click -= OnCloseButton;
         _scrim?.MouseLeftButtonDown -= OnScrimPressed;
         base.OnApplyTemplate();
         _primaryButton = GetTemplateChild(PrimaryButtonPart) as ButtonBase;
         _secondaryButton = GetTemplateChild(SecondaryButtonPart) as ButtonBase;
+        _extraButton = GetTemplateChild(ExtraButtonPart) as ButtonBase;
         _closeButton = GetTemplateChild(CloseButtonPart) as ButtonBase;
         _scrim = GetTemplateChild(ScrimPart) as UIElement;
         _primaryButton?.Click += OnPrimary;
         _secondaryButton?.Click += OnSecondary;
+        _extraButton?.Click += OnExtra;
         _closeButton?.Click += OnCloseButton;
         _scrim?.MouseLeftButtonDown += OnScrimPressed;
     }
@@ -360,6 +384,8 @@ public class Dialog : ContentControl
     private void OnPrimary(object sender, RoutedEventArgs e) => Close(DialogChoice.Primary);
 
     private void OnSecondary(object sender, RoutedEventArgs e) => Close(DialogChoice.Secondary);
+
+    private void OnExtra(object sender, RoutedEventArgs e) => Close(DialogChoice.Extra);
 
     /// <inheritdoc/>
     protected override AutomationPeer OnCreateAutomationPeer() => new AutomationPeers.DialogPeer(this);

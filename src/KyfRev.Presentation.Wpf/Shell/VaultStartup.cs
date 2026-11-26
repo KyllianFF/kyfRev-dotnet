@@ -18,13 +18,23 @@ public static class VaultStartup
         ArgumentNullException.ThrowIfNull(shell);
         ArgumentNullException.ThrowIfNull(vaults);
         var state = vaults.OpenAtStartup();
-        if (state.Locked is not null)
+        if (state.Occupied is { } occupied)
+        {
+            // Un autre poste l'a ouvert : rien n'est encore ouvert ni écrit ; l'accueil paraît, et la question par-dessus.
+            var welcome = new WelcomePageViewModel(vaults, picker, state, _ => shell.ShowWorkspace(), locked => ShowUnlock(shell, vaults, picker, locked))
+            {
+                Settle = SettleOf(shell),
+            };
+            shell.ShowWelcome(welcome);
+            welcome.Continue(state, () => vaults.Open(occupied));
+        }
+        else if (state.Locked is not null)
         {
             ShowUnlock(shell, vaults, picker, state);
         }
         else if (state.Vault is null)
         {
-            shell.ShowWelcome(new WelcomePageViewModel(vaults, picker, state, _ => shell.ShowWorkspace(), locked => ShowUnlock(shell, vaults, picker, locked)));
+            shell.ShowWelcome(new WelcomePageViewModel(vaults, picker, state, _ => shell.ShowWorkspace(), locked => ShowUnlock(shell, vaults, picker, locked)) { Settle = SettleOf(shell) });
         }
         else
         {
@@ -50,8 +60,15 @@ public static class VaultStartup
         var opened = changed ?? shell.ShowWorkspace;
         void Locked(AppState other) => ShowUnlock(shell, vaults, picker, other, changed);
         Action back = state.Vault is null
-            ? () => shell.ShowWelcome(new WelcomePageViewModel(vaults, picker, vaults.State(), _ => opened(), Locked))
+            ? () => shell.ShowWelcome(new WelcomePageViewModel(vaults, picker, vaults.State(), _ => opened(), Locked) { Settle = SettleOf(shell) })
             : shell.ShowWorkspace;
-        shell.ShowUnlock(new UnlockPageViewModel(vaults, picker, state, _ => opened(), Locked, back));
+        shell.ShowUnlock(new UnlockPageViewModel(vaults, picker, state, _ => opened(), Locked, back) { Settle = SettleOf(shell) });
+    }
+
+    /// <summary>La question de la coquille quand un autre poste a le coffre ouvert ; rien sans elle (galerie, essais).</summary>
+    public static Func<AppState, Func<AppState>, Task<AppState?>>? SettleOf(ShellViewModel shell)
+    {
+        ArgumentNullException.ThrowIfNull(shell);
+        return shell.Computers is { } computers ? computers.SettleAsync : null;
     }
 }

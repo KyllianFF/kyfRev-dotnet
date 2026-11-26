@@ -85,6 +85,7 @@ public sealed partial class VaultUseCases
             }
             root = open;
             _encrypted = null;
+            _readOnly = false;
             host.Close();
         }
         LogVaultClosed(logger, root);

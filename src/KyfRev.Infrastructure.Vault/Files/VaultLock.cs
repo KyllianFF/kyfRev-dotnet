@@ -27,7 +27,10 @@ public sealed class VaultLock : IDisposable
     /// Si <c>verrou-info.json</c> ne s'écrit pas, le verrou est rendu aussitôt : sinon le coffre se dirait encore ouvert,
     /// par cette fenêtre même, à l'essai suivant.
     /// </remarks>
-    public static VaultLock? TryAcquire(string root, DateTimeOffset now, out LockInfoFile? holder)
+    public static VaultLock? TryAcquire(string root, DateTimeOffset now, out LockInfoFile? holder) => TryAcquire(root, now, writeInfo: true, out holder);
+
+    /// <summary>Prend le verrou ; n'écrit <c>verrou-info.json</c> que si <paramref name="writeInfo"/> (pas en lecture seule).</summary>
+    public static VaultLock? TryAcquire(string root, DateTimeOffset now, bool writeInfo, out LockInfoFile? holder)
     {
         var stream = new FileStream(
             VaultLayout.Absolute(root, VaultLayout.LockFile),
@@ -47,6 +50,11 @@ public sealed class VaultLock : IDisposable
             now,
             UnknownProperties.None);
         var vaultLock = new VaultLock(stream);
+        if (!writeInfo)
+        {
+            holder = null;
+            return vaultLock;
+        }
         try
         {
             AtomicFile.Replace(VaultLayout.Absolute(root, VaultLayout.LockInfoFile), info.Write());

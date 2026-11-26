@@ -83,6 +83,7 @@ effacé, un dossier créé), qu'une simple réécriture ne change pas.
 | `index.kyf` | L'index, chiffré comme un fichier sous l'identifiant `index` : chaque chemin du coffre et son objet, puis les dossiers (vides compris). |
 | `objets/<identifiant>.kyf` | Un fichier du coffre, chiffré sous son identifiant : 26 caractères de base32 de Crockford, tirés au hasard. |
 | `.suivi/verrou`, `.suivi/verrou-info.json` | Le verrou de l'application, en clair comme pour un coffre en clair : le poste, le processus et l'heure d'ouverture, rien du contenu. |
+| `.suivi/postes/<poste>.json` | La présence de chaque poste qui a le coffre ouvert, en clair comme le verrou : le nom du poste, l'heure d'ouverture et celle de la dernière minute où il l'a redit. Rien du contenu. |
 
 Un objet recopié sous un autre identifiant, ou un index venu d'un autre coffre, ne s'ouvre pas : leurs données associées
 les lient à leur place. Comme sous Windows, la casse ne distingue pas deux chemins, mais elle est gardée : un coffre

@@ -48,8 +48,11 @@ public sealed partial class VaultSession : IDisposable
     private readonly HashSet<(string Id, ulong Session)> _savedSessions = [];
     private SortedDictionary<string, SheetEntry> _sheets = new(StringComparer.Ordinal);
 
-    private VaultSession(string root, VaultStorage storage, VaultLock vaultLock, VaultSettingsFile settings, UlidGenerator ids)
+    private VaultSession(string root, VaultStorage storage, VaultLock vaultLock, VaultSettingsFile settings, UlidGenerator ids, bool readOnly, DateTimeOffset openedAt)
     {
+        IsReadOnly = readOnly;
+        _openedAt = openedAt;
+        _lastSeen = openedAt;
         Root = root;
         _storage = storage;
         _lock = vaultLock;
@@ -60,6 +63,12 @@ public sealed partial class VaultSession : IDisposable
 
     /// <summary>Racine du coffre (chemin absolu).</summary>
     public string Root { get; }
+
+    /// <summary>Ouvert en lecture seule : rien ne s'y écrit, pas même la présence de ce poste.</summary>
+    public bool IsReadOnly { get; }
+
+    private readonly DateTimeOffset _openedAt;
+    private DateTimeOffset _lastSeen;
 
     /// <summary>Réglages du coffre (<c>.suivi/coffre.json</c>).</summary>
     public VaultSettingsFile Settings { get; private set; }
@@ -103,11 +112,19 @@ public sealed partial class VaultSession : IDisposable
     /// <param name="now">Instant présent.</param>
     /// <param name="ids">Générateur d'identifiants (celui du système par défaut).</param>
     /// <param name="storage">Là où vivent les fichiers du coffre : le disque par défaut. Il reste à l'appelant, qui le libère après la session.</param>
+    /// <param name="readOnly">
+    /// En lecture seule (un autre poste l'a ouvert) : rien ne s'écrit, ni les informations du verrou, ni la présence, ni la
+    /// reprise d'une opération interrompue, ni les dossiers qui manqueraient ; toute écriture est refusée.
+    /// </param>
     /// <exception cref="VaultException">Pas un coffre, déjà ouvert, réglages illisibles, ou lecture impossible.</exception>
-    public static VaultSession Open(string root, Moment now, UlidGenerator? ids = null, VaultStorage? storage = null)
+    public static VaultSession Open(string root, Moment now, UlidGenerator? ids = null, VaultStorage? storage = null, bool readOnly = false)
     {
         ArgumentNullException.ThrowIfNull(root);
         storage ??= DiskStorage.Instance;
+        if (readOnly)
+        {
+            storage = new ReadOnlyStorage(storage);
+        }
         var absolute = Io(root, () => Path.GetFullPath(root));
         CheckServes(storage, absolute);
         var settingsPath = VaultLayout.Absolute(absolute, VaultLayout.SettingsFile);
@@ -117,12 +134,12 @@ public sealed partial class VaultSession : IDisposable
                 ? VaultException.IncompleteVault(absolute)
                 : VaultException.NotAVault(absolute);
         }
-        if (storage.Raw != storage)
+        if (storage.Raw != storage && !readOnly)
         {
             // Le verrou reste sur le disque, dans un dossier .suivi que le coffre chiffré n'a pas encore.
             CreateDirectory(storage.Raw, VaultLayout.Absolute(absolute, VaultLayout.Tracking));
         }
-        var vaultLock = Io(absolute, () => VaultLock.TryAcquire(absolute, now.Instant, out var holder)
+        var vaultLock = Io(absolute, () => VaultLock.TryAcquire(absolute, now.Instant, writeInfo: !readOnly, out var holder)
             ?? throw VaultException.AlreadyOpen(holder is null ? "par une autre fenêtre" : $"sur {holder.Machine} depuis {InstantText.Format(holder.Since)}"));
         try
         {
@@ -133,7 +150,10 @@ public sealed partial class VaultSession : IDisposable
                 return true;
             });
             // Les fichiers écrits par une version d'avant portent un attribut qui empêche leur synchronisation.
-            _ = Io(absolute, () => SyncedFiles.Release(absolute));
+            if (!readOnly)
+            {
+                _ = Io(absolute, () => SyncedFiles.Release(absolute));
+            }
             VaultSettingsFile settings;
             byte[] settingsBytes;
             try
@@ -145,16 +165,20 @@ public sealed partial class VaultSession : IDisposable
             {
                 throw VaultException.UnreadableSettings(exception.Message);
             }
-            foreach (var folder in new[] { VaultLayout.Sheets, VaultLayout.Quotes, VaultLayout.SheetTracking, VaultLayout.Annotations, VaultLayout.Versions })
+            foreach (var folder in new[] { VaultLayout.Sheets, VaultLayout.Quotes, VaultLayout.SheetTracking, VaultLayout.Annotations, VaultLayout.Versions }.Where(_ => !readOnly))
             {
                 CreateDirectory(storage, VaultLayout.Absolute(absolute, folder));
             }
-            var vault = new VaultSession(absolute, storage, vaultLock, settings, ids ?? UlidGenerator.System);
+            var vault = new VaultSession(absolute, storage, vaultLock, settings, ids ?? UlidGenerator.System, readOnly, now.Instant);
             vault.KnowSettings(settingsBytes);
-            // Une opération interrompue (arrêt brutal pendant un renommage) est terminée avant tout.
-            var toCheck = vault.ResumeInterruptedOperation();
+            // Une opération interrompue (arrêt brutal pendant un renommage) est terminée avant tout ; pas en lecture seule.
+            var toCheck = readOnly ? [] : vault.ResumeInterruptedOperation();
             vault.Analyze(now);
             vault.Health.LinksToCheckList.AddRange(toCheck);
+            if (!readOnly)
+            {
+                _ = ComputerPresence.Announce(absolute, storage.Raw, ComputerPresence.ThisComputer, now.Instant, now.Instant, open: true);
+            }
             return vault;
         }
         catch
@@ -164,8 +188,29 @@ public sealed partial class VaultSession : IDisposable
         }
     }
 
-    /// <summary>Libère le verrou du coffre.</summary>
-    public void Dispose() => _lock.Dispose();
+    /// <summary>Libère le verrou du coffre ; ce poste dit l'avoir fermé.</summary>
+    public void Dispose()
+    {
+        if (!IsReadOnly)
+        {
+            _ = ComputerPresence.Announce(Root, _storage.Raw, ComputerPresence.ThisComputer, _openedAt, _lastSeen, open: false);
+        }
+        _lock.Dispose();
+    }
+
+    /// <summary>
+    /// Ce poste a toujours le coffre ouvert : il le redit (rien en lecture seule), et rend les autres postes qui l'ont
+    /// ouvert, d'après leur présence.
+    /// </summary>
+    public IReadOnlyList<KyfRev.Application.Model.OtherComputer> Heartbeat(DateTimeOffset now)
+    {
+        if (!IsReadOnly)
+        {
+            _lastSeen = now;
+            _ = ComputerPresence.Announce(Root, _storage.Raw, ComputerPresence.ThisComputer, _openedAt, now, open: true);
+        }
+        return ComputerPresence.Others(Root, _storage.Raw, ComputerPresence.ThisComputer, now);
+    }
 
     /// <summary>Fiche suivie, présente ou non.</summary>
     /// <exception cref="VaultException">Aucune fiche ne porte cet identifiant.</exception>

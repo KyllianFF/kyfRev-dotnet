@@ -15,7 +15,12 @@ namespace KyfRev.Application.UseCases;
 /// déverrouillage la demande. Le coffre ouvert, s'il y en a un, le reste.
 /// </param>
 /// <param name="Encrypted">Le coffre ouvert est chiffré : il se verrouille.</param>
-public sealed record AppState(string Version, AppMode Mode, string? Vault, string? VaultToCreate, string? OpenError, string? Locked = null, bool Encrypted = false);
+/// <param name="Occupied">
+/// Un coffre qu'un autre poste a ouvert, pas encore ouvert ici : la question est posée d'abord (<see cref="VaultUseCases.OpenAnyway"/>).
+/// </param>
+/// <param name="Others">Les autres postes qui l'ont ouvert : celui qui attend la réponse, ou celui ouvert en lecture seule.</param>
+/// <param name="ReadOnly">Le coffre ouvert l'est en lecture seule : rien ne s'y écrit.</param>
+public sealed record AppState(string Version, AppMode Mode, string? Vault, string? VaultToCreate, string? OpenError, string? Locked = null, bool Encrypted = false, string? Occupied = null, IReadOnlyList<OtherComputer>? Others = null, bool ReadOnly = false);
 
 /// <summary>
 /// Ouverture et création du coffre. À chaque ouverture : la journée est préparée (tirage des
@@ -45,6 +50,17 @@ public sealed partial class VaultUseCases(
 
     /// <summary>Les coffres chiffrés verrouillés dans cette session de l'application : seule leur clé, donnée de nouveau, les rouvre.</summary>
     private readonly List<string> _locked = [];
+
+    /// <summary>
+    /// Les réponses données pour un coffre qu'un autre poste a ouvert : l'ouvrir quand même (faux) ou en lecture seule
+    /// (vrai). Gardées jusqu'à ce qu'il s'ouvre, déverrouillage compris.
+    /// </summary>
+    private readonly Dictionary<string, bool> _answers = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Le coffre ouvert l'est en lecture seule, à cause de ces autres postes.</summary>
+    private bool _readOnly;
+
+    private IReadOnlyList<OtherComputer> _others = [];
 
     /// <summary>Les ouvertures en cours : un verrouillage attend qu'elles aient fini, sinon l'une ouvrirait un coffre juste après.</summary>
     private int _opening;
@@ -87,6 +103,86 @@ public sealed partial class VaultUseCases(
     [ZeroXCommand("ouvrir_coffre")]
     public AppState Open(string root) => OpenOrCreate(root, create: false);
 
+    /// <summary>
+    /// Ouvre le coffre de <paramref name="root"/>, qu'un autre poste a ouvert (<see cref="AppState.Occupied"/>), comme
+    /// l'utilisateur l'a choisi : quand même, ou en lecture seule. Un coffre chiffré attend ensuite sa clé, comme
+    /// <see cref="Open"/> ; la réponse vaut jusqu'à son ouverture.
+    /// </summary>
+    public AppState OpenAnyway(string root, bool forReading)
+    {
+        Answer(root, forReading);
+        return Open(root);
+    }
+
+    /// <summary>
+    /// Note la réponse pour le coffre de <paramref name="root"/>, qu'un autre poste a ouvert : l'ouvrir quand même, ou en
+    /// lecture seule. L'ouverture ou le déverrouillage suivant ne redemande rien.
+    /// </summary>
+    public void Answer(string root, bool forReading)
+    {
+        ArgumentNullException.ThrowIfNull(root);
+        lock (_gate)
+        {
+            _answers[root] = forReading;
+        }
+    }
+
+    /// <summary>
+    /// Le coffre ouvert en lecture seule passe en écriture : il est fermé, puis rouvert sans rien demander de plus ; un
+    /// coffre chiffré dont ce poste n'a pas retenu la clé attend alors son mot de passe.
+    /// </summary>
+    public AppState Writable()
+    {
+        string root;
+        lock (_gate)
+        {
+            if (!_readOnly || host.Root is not { } open)
+            {
+                return State();
+            }
+            root = open;
+            _answers[root] = false;
+        }
+        Close();
+        return Open(root);
+    }
+
+    /// <summary>
+    /// Ce poste a toujours le coffre ouvert : il le redit, et rend les autres postes qui l'ont ouvert (rien sans coffre).
+    /// La coquille l'appelle chaque minute.
+    /// </summary>
+    public IReadOnlyList<OtherComputer> Heartbeat()
+    {
+        var others = host.Use(vault => vault.Heartbeat(time.GetUtcNow()));
+        return others.Succeeded ? others.Value : [];
+    }
+
+    /// <summary>
+    /// Un autre poste a le coffre de <paramref name="root"/> ouvert, et l'utilisateur n'a pas encore répondu : l'état
+    /// l'attend, sans rien ouvrir ni écrire. Rien sinon.
+    /// </summary>
+    private AppState? HeldBy(string root, Present present)
+    {
+        lock (_gate)
+        {
+            if (_answers.ContainsKey(root))
+            {
+                return null;
+            }
+        }
+        var others = store.OthersHaving(root, present.Now.Instant);
+        return others.Count == 0 ? null : StateWith(null) with { Occupied = root, Others = others };
+    }
+
+    /// <summary>L'utilisateur a choisi la lecture seule pour ce coffre.</summary>
+    private bool ForReading(string root)
+    {
+        lock (_gate)
+        {
+            return _answers.TryGetValue(root, out var forReading) && forReading;
+        }
+    }
+
     /// <summary>Crée un coffre dans un dossier vide, puis l'ouvre.</summary>
     [ZeroXCommand("creer_coffre")]
     public AppState Create(string root) => OpenOrCreate(root, create: true);
@@ -109,6 +205,10 @@ public sealed partial class VaultUseCases(
             return State();
         }
         var present = Present.Of(time);
+        if (HeldBy(root, present) is { } held)
+        {
+            return held;
+        }
         VaultKey key;
         try
         {
@@ -121,7 +221,8 @@ public sealed partial class VaultUseCases(
         }
         using (key)
         {
-            var state = Adopt(() => store.Open(root, key, present.Now), present, lockedOnFailure: root, encrypted: true, unlocked: root);
+            var forReading = ForReading(root);
+            var state = Adopt(() => store.Open(root, key, present.Now, forReading), present, lockedOnFailure: root, encrypted: true, unlocked: root, forReading: forReading);
             if (state.OpenError is null)
             {
                 if (!(remember ? keys.Remember(root, key) : keys.Forget(root)))
@@ -142,6 +243,10 @@ public sealed partial class VaultUseCases(
             return State();
         }
         var present = Present.Of(time);
+        if (!create && HeldBy(root, present) is { } held)
+        {
+            return held;
+        }
         if (!create && keys.IsEncrypted(root))
         {
             if (WasLocked(root))
@@ -164,10 +269,12 @@ public sealed partial class VaultUseCases(
             }
             using (remembered)
             {
-                return Adopt(() => store.Open(root, remembered, present.Now), present, lockedOnFailure: null, encrypted: true);
+                var readOnly = ForReading(root);
+                return Adopt(() => store.Open(root, remembered, present.Now, readOnly), present, lockedOnFailure: null, encrypted: true, forReading: readOnly);
             }
         }
-        return Adopt(() => create ? store.Initialize(root, present.Now) : store.Open(root, present.Now), present, lockedOnFailure: null, encrypted: false);
+        var reading = !create && ForReading(root);
+        return Adopt(() => create ? store.Initialize(root, present.Now) : store.Open(root, present.Now, reading), present, lockedOnFailure: null, encrypted: false, forReading: reading);
     }
 
     private bool WasLocked(string root)
@@ -207,7 +314,7 @@ public sealed partial class VaultUseCases(
     /// sauvegarde du jour faite, et il est retenu pour le prochain démarrage. Refusé, l'état le dit, en attente de sa clé
     /// si c'était un coffre chiffré (<paramref name="lockedOnFailure"/>).
     /// </summary>
-    private AppState Adopt(Func<IVault> open, Present present, string? lockedOnFailure, bool encrypted, string? unlocked = null)
+    private AppState Adopt(Func<IVault> open, Present present, string? lockedOnFailure, bool encrypted, string? unlocked = null, bool forReading = false)
     {
         IVault vault;
         try
@@ -220,8 +327,12 @@ public sealed partial class VaultUseCases(
         }
         try
         {
-            PrepareDay(vault, present);
-            BackupOfTheDay(vault, present);
+            // En lecture seule, rien ne s'écrit : ni la journée, ni la sauvegarde du jour.
+            if (!forReading)
+            {
+                PrepareDay(vault, present);
+                BackupOfTheDay(vault, present);
+            }
             if (!locations.Remember(vault.Root))
             {
                 LogVaultNotRemembered(logger, vault.Root);
@@ -237,6 +348,9 @@ public sealed partial class VaultUseCases(
         {
             host.Replace(vault);
             _encrypted = encrypted ? vault.Root : null;
+            _readOnly = forReading;
+            _others = forReading ? store.OthersHaving(vault.Root, present.Now.Instant) : [];
+            _answers.Remove(vault.Root);
             if (unlocked is not null)
             {
                 // Déverrouillé par sa clé : il n'est plus verrouillé ; les autres coffres verrouillés le restent.
@@ -264,6 +378,7 @@ public sealed partial class VaultUseCases(
             root = open;
             _locked.Add(root);
             _encrypted = null;
+            _readOnly = false;
             host.Close();
         }
         LogVaultLocked(logger, root);
@@ -280,12 +395,16 @@ public sealed partial class VaultUseCases(
     {
         string? open;
         bool encrypted;
+        bool readOnly;
+        IReadOnlyList<OtherComputer> others;
         lock (_gate)
         {
             open = host.Root;
             encrypted = open is not null && open == _encrypted;
+            readOnly = open is not null && _readOnly;
+            others = _others;
         }
-        return new AppState(version, locations.Mode, open, open is null ? locations.VaultToCreate() : null, openError, Encrypted: encrypted);
+        return new AppState(version, locations.Mode, open, open is null ? locations.VaultToCreate() : null, openError, Encrypted: encrypted, Others: readOnly ? others : null, ReadOnly: readOnly);
     }
 
     private void PrepareDay(IVault vault, Present present)
