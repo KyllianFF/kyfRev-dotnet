@@ -36,6 +36,7 @@ import {
   RELATIONS_SYMETRIQUES,
   type Schema,
 } from "./modele";
+import { aPlusieursPages, pagesDe, type Renvoi, renvoisDeLaPage, surLaPage } from "./pages";
 import { echapperXml } from "./xml";
 
 /** Les icônes d'un export draw.io : les illustrations de kyfRev, ou les formes réseau de draw.io. */
@@ -398,33 +399,93 @@ function celluleAnnotation(n: Annotation): string {
   )}</mxCell>`;
 }
 
-/** Le fichier .drawio d'un schéma : XML mxGraph non compressé, avec le modèle de kyfRev dans le calque. */
-export function ecrireDrawio(schema: Schema, icones: IconesDrawio = "kyfrev"): string {
-  const modele = JSON.stringify(JSON.parse(ecrireSchema(schema)));
+/** L'identifiant draw.io de la page qui porte une page de kyfRev : un renvoi y mène par un lien de page. */
+const idDuDiagramme = (page: string) => `kyfrev-${page}`;
+
+/**
+ * Un câble vers une autre page (30A) : une pastille en pointillé (« → Étage 2 · SW-Étage2 · 1/48 ») qui mène à
+ * l'autre page dans draw.io (lien de page), et un trait en pointillé de l'équipement à elle. L'import les
+ * reconnaît à leur donnée `renvoi` : le câble lui-même vient du modèle.
+ */
+function cellulesRenvoi(r: Renvoi): string {
+  const id = `${r.lien.id}-renvoi-${r.equipement}`;
+  const teinte = "#2e6a4e";
+  const pastille = style({
+    rounded: 1,
+    arcSize: 50,
+    dashed: 1,
+    dashPattern: "4 3",
+    html: 0,
+    whiteSpace: "nowrap",
+    fontSize: 10,
+    fontStyle: 1,
+    fontColor: teinte,
+    strokeColor: teinte,
+    fillColor: "#ffffff",
+  });
+  const trait = style({ endArrow: "none", html: 0, rounded: 0, dashed: 1, dashPattern: "5 4", strokeColor: teinte, strokeWidth: 1.5 });
+  return [
+    `<object id="${echapperXml(id)}" label="${echapperXml(r.texte)}"${attributs({ renvoi: r.lien.id, page: r.page.nom, equipement: r.nomEquipement, port: r.port, link: `data:page/id,${idDuDiagramme(r.page.id)}` })}>`,
+    `<mxCell style="${echapperXml(pastille)}" vertex="1" parent="1">${geometrie(r.centre.x - r.largeur / 2, r.centre.y - r.hauteur / 2, r.largeur, r.hauteur)}</mxCell></object>`,
+    `<mxCell id="${echapperXml(`${id}-trait`)}" style="${echapperXml(trait)}" edge="1" parent="1" source="${echapperXml(r.equipement)}" target="${echapperXml(id)}"><mxGeometry relative="1" as="geometry"/></mxCell>`,
+  ].join("");
+}
+
+/** Une page draw.io : les cellules d'une page de kyfRev (le schéma entier s'il n'en a qu'une). */
+function diagramme(
+  schema: Schema,
+  page: { nom: string; id: string; kyfrevPage?: string },
+  modele: string | undefined,
+  renvois: Renvoi[],
+  icones: IconesDrawio,
+  images: Map<string, string>,
+): string {
   const profondeur = profondeurs(schema);
   const parId = new Map(schema.groupes.map((g) => [g.id, g]));
-  const images = new Map<string, string>();
   const groupes = [...schema.groupes].sort((a, b) => (profondeur.get(a.id) ?? 0) - (profondeur.get(b.id) ?? 0));
   const equipements = new Set(schema.equipements.map((e) => e.id));
   const zones = schema.annotations.filter((n) => n.forme === "rectangle" || n.forme === "ellipse");
   const autres = schema.annotations.filter((n) => n.forme !== "rectangle" && n.forme !== "ellipse");
+  const calque = attributs({ kyfrev: modele, kyfrevPage: page.kyfrevPage });
   const cellules = [
     '<mxCell id="0"/>',
-    `<object id="1" label="kyfRev" kyfrev="${echapperXml(modele)}"><mxCell parent="0"/></object>`,
+    `<object id="1" label="kyfRev"${calque}><mxCell parent="0"/></object>`,
     ...groupes.map((g) => celluleGroupe(g, g.parent ? parId.get(g.parent) : undefined)),
     ...zones.map(celluleAnnotation),
     ...schema.liens.filter((l) => equipements.has(l.a.equipement) && equipements.has(l.b.equipement)).map((l) => celluleLien(schema, l)),
     ...schema.relations.filter((r) => equipements.has(r.de) && equipements.has(r.vers)).map(celluleRelation),
+    ...renvois.map(cellulesRenvoi),
     ...schema.equipements.map((e) => celluleEquipement(schema, e, groupeDe(schema, e.id, profondeur), icones, images)),
     ...autres.map(celluleAnnotation),
   ];
-  const titre = schema.titre || "Schéma réseau";
   return [
-    '<mxfile host="kyfRev" type="device">',
-    `<diagram name="${echapperXml(titre)}" id="${echapperXml(`kyfrev-${schema.id || "schema"}`)}">`,
+    `<diagram name="${echapperXml(page.nom)}" id="${echapperXml(page.id)}">`,
     '<mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" math="0" shadow="0">',
     `<root>${cellules.join("\n")}</root>`,
-    "</mxGraphModel></diagram></mxfile>",
-    "",
+    "</mxGraphModel></diagram>",
   ].join("\n");
+}
+
+/**
+ * Le fichier .drawio d'un schéma : XML mxGraph non compressé, avec le modèle de kyfRev dans le calque. Une page
+ * de kyfRev est une page de draw.io, du même nom (30A) ; le modèle est dans le calque de la première, et le
+ * calque de chacune dit la page qu'elle porte. Un schéma d'une page sort comme avant : une page au nom du schéma.
+ */
+export function ecrireDrawio(schema: Schema, icones: IconesDrawio = "kyfrev"): string {
+  const modele = JSON.stringify(JSON.parse(ecrireSchema(schema)));
+  const images = new Map<string, string>();
+  const titre = schema.titre || "Schéma réseau";
+  const diagrammes = aPlusieursPages(schema)
+    ? pagesDe(schema).map((p, rang) =>
+        diagramme(
+          surLaPage(schema, p.id),
+          { nom: p.nom, id: idDuDiagramme(p.id), kyfrevPage: p.id },
+          rang === 0 ? modele : undefined,
+          renvoisDeLaPage(schema, p.id),
+          icones,
+          images,
+        ),
+      )
+    : [diagramme(schema, { nom: titre, id: idDuDiagramme(schema.id || "schema") }, modele, [], icones, images)];
+  return ['<mxfile host="kyfRev" type="device">', ...diagrammes, "</mxfile>", ""].join("\n");
 }

@@ -13,6 +13,21 @@ import { ecrireSchema, erreursStructurelles, lireSchema } from "./format";
 import type { Extremite, IdVue, Schema, Support } from "./modele";
 import { schemaVide } from "./modele";
 import { avecEnsembles, degrouper, ensemblesDe, groupables, grouper, Refus } from "./operations";
+import {
+  ajouterPage,
+  deplacerPage,
+  dupliquerPage,
+  elementsDuSchema,
+  equipementsParPage,
+  pageDeLObjet,
+  pagesDe,
+  pageValide,
+  rattacherALaPage,
+  renommerPage,
+  renvoisDeLaPage,
+  supprimerPage,
+  surLaPage,
+} from "./pages";
 
 /** Support choisi (« auto » : d'après les ports) et bout déjà branché. */
 export type CableEnMain = {
@@ -60,6 +75,74 @@ export class EditeurSchema {
 
   readonly constats = $derived(diagnostiquer(this.schema));
 
+  // --- Pages (30A) : le plan montre une page ; le diagnostic et le plan IP, tout le schéma. ---
+
+  /** La page voulue ; une page disparue (annulée, supprimée) laisse place à la première. */
+  page = $state("");
+  readonly pages = $derived(pagesDe(this.schema));
+  readonly pageMontree = $derived(pageValide(this.schema, this.page));
+  /** Le schéma vu de la page montrée : ce que le plan dessine et ce que ses gestes touchent. */
+  readonly vuePage = $derived(surLaPage(this.schema, this.pageMontree));
+  /** Les câbles de la page montrée qui mènent à une autre page. */
+  readonly renvois = $derived(renvoisDeLaPage(this.schema, this.pageMontree));
+  readonly equipementsParPage = $derived(equipementsParPage(this.schema));
+
+  /** Montre une page : la sélection et le câble en main restent sur l'autre. */
+  montrerPage(id: string): void {
+    const voulue = pageValide(this.schema, id);
+    if (voulue === this.pageMontree) return;
+    this.page = voulue;
+    this.selection = [];
+    this.cable = null;
+  }
+
+  /** La page d'un objet du schéma ; rien s'il n'existe pas. */
+  pageDe(id: string): string | undefined {
+    return pageDeLObjet(this.schema, id);
+  }
+
+  /** Ajoute une page après les autres, et la montre. */
+  ajouterPage(): void {
+    let cree = "";
+    if (this.agir((s) => (cree = ajouterPage(s).id), "Page ajoutée : Ctrl+Z pour la retirer.")) this.montrerPage(cree);
+  }
+
+  renommerPage(id: string, nom: string): boolean {
+    let declaree = "";
+    const fait = this.agir((s) => {
+      renommerPage(s, id, nom);
+      declaree = pagesDe(s)[0]?.id ?? "";
+    });
+    // La page implicite d'un schéma qui n'en déclarait pas vient de recevoir un identifiant.
+    if (fait && id === "") this.page = declaree;
+    return fait;
+  }
+
+  /** Duplique une page juste après elle, et montre la copie. */
+  dupliquerPage(id: string): void {
+    let copie = "";
+    if (this.agir((s) => (copie = dupliquerPage(s, id).id), "Page dupliquée : Ctrl+Z pour la retirer.")) {
+      this.montrerPage(copie);
+    }
+  }
+
+  /** Supprime une page ; la page voisine prend sa place. Elle reste dans les versions du schéma et Ctrl+Z la rend. */
+  supprimerPage(id: string): void {
+    const rang = this.pages.findIndex((p) => p.id === id);
+    const nom = this.pages[rang]?.nom ?? "";
+    const montree = this.pageMontree === id;
+    if (!this.agir((s) => supprimerPage(s, id), `Page « ${nom} » supprimée : Ctrl+Z pour l'annuler.`)) return;
+    if (montree) {
+      this.page = this.pages[Math.max(0, rang - 1)]?.id ?? "";
+      this.selection = [];
+      this.cable = null;
+    }
+  }
+
+  deplacerPage(id: string, rang: number): void {
+    this.agir((s) => deplacerPage(s, id, rang));
+  }
+
   /** Ouvre le schéma `id` du coffre. */
   async ouvrir(id: string): Promise<void> {
     const lu = await api.lireSchema(id);
@@ -95,8 +178,11 @@ export class EditeurSchema {
    */
   agir(operation: (schema: Schema) => void, annonce?: string): boolean {
     const avant = this.#instantane();
+    const connus = elementsDuSchema(this.schema);
     try {
       operation(this.schema);
+      // Ce qui vient d'apparaître (posé, collé, inséré d'un modèle) va sur la page montrée.
+      rattacherALaPage(this.schema, this.pageMontree, connus);
     } catch (erreur) {
       this.schema = JSON.parse(avant);
       if (erreur instanceof Refus) {
@@ -271,9 +357,12 @@ export class EditeurSchema {
     }
     const id = this.id;
     this.agir((schema) => {
+      // Un schéma d'une page importé à la place d'un schéma qui en avait plusieurs ne garde pas les anciennes.
+      if (!lecture.schema.pages) delete schema.pages;
       Object.assign(schema, { ...lecture.schema, id });
     });
     this.selection = [];
+    this.page = "";
     return null;
   }
 
@@ -328,7 +417,8 @@ export class EditeurSchema {
     }, "Dégroupés : chaque élément se choisit de nouveau seul.");
   }
 
+  /** Ctrl+A : les équipements de la page montrée. */
   toutChoisir(): void {
-    this.selection = this.schema.equipements.map((e) => e.id);
+    this.selection = this.vuePage.equipements.map((e) => e.id);
   }
 }

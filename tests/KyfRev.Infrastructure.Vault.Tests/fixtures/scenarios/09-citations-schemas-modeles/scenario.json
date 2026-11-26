@@ -39,7 +39,7 @@
     { "op": "retenir_citation_en_ligne", "page": "Science", "trouvees": [ { "texte": "Que sais-je ?" } ], "le": "2026-09-08" },
     { "op": "citations" },
     { "op": "creer_schema", "nom": "s1", "texte": "{\"titre\":\"Réseau\",\"format\":2,\"equipements\":[{\"x\":120.50,\"nom\":\"R1\",\"poids\":1e3,\"zeta\":{\"b\":1,\"a\":2}}],\"liens\":[],\"id\":\"ignoré\"}" },
-    { "op": "creer_schema", "nom": "s_futur", "texte": "{\"format\": 3}" },
+    { "op": "creer_schema", "nom": "s_futur", "texte": "{\"format\": 4}" },
     { "op": "creer_schema", "nom": "s_sans_format", "texte": "{\"titre\": \"x\"}" },
     { "op": "creer_schema", "nom": "s_reel", "texte": "{\"format\": 2.0}" },
     { "op": "creer_schema", "nom": "s_liste", "texte": "[1, 2]" },

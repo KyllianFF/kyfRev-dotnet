@@ -7,6 +7,7 @@ import { dessinerSchema } from "./dessin";
 import { ecrireDrawio, type IconesDrawio } from "./drawio";
 import { ecrireSchema } from "./format";
 import type { Schema, Vue } from "./modele";
+import { aPlusieursPages, nomDeLaPage, pageValide } from "./pages";
 
 export type FormatExport = "png" | "svg" | "drawio" | "json";
 
@@ -86,9 +87,15 @@ export function echellePng(largeur: number, hauteur: number): number {
 /** Les couleurs du thème remplacées par leur valeur claire par défaut : le SVG ne dépend plus de la page. */
 export const couleursClaires = (svg: string): string => svg.replace(/var\(--[\w-]+,\s*([^)]+)\)/g, "$1");
 
-/** SVG autonome d'un schéma : couleurs claires, légende. Sans `vue`, celle du schéma. */
-export function svgAutonome(schema: Schema, vue?: Vue): string {
-  return couleursClaires(dessinerSchema(schema, { ...(vue ? { vue } : {}), legende: true }));
+/** SVG autonome d'un schéma : couleurs claires, légende. Sans `vue`, celle du schéma ; sans `page`, sa première page. */
+export function svgAutonome(schema: Schema, vue?: Vue, page?: string): string {
+  return couleursClaires(dessinerSchema(schema, { ...(vue ? { vue } : {}), legende: true, ...(page !== undefined ? { page } : {}) }));
+}
+
+/** Le titre d'une image sortie d'un schéma à plusieurs pages porte le nom de sa page (« Réseau - Étage 2 »). */
+export function titreDeLaSortie(schema: Schema, page?: string): string {
+  const titre = schema.titre || NOM_PAR_DEFAUT;
+  return aPlusieursPages(schema) ? `${titre} - ${nomDeLaPage(schema, pageValide(schema, page))}` : titre;
 }
 
 /** Taille déclarée par un SVG (attributs `width` et `height` de sa racine). */
@@ -131,39 +138,43 @@ export async function enPng(svg: string, echelleDe = echellePng): Promise<Uint8A
   return new Uint8Array(await blob.arrayBuffer());
 }
 
-/** Les octets d'un export, dans le format voulu. */
-async function octetsDe(schema: Schema, format: FormatExport, vue?: Vue, icones?: IconesDrawio): Promise<Uint8Array> {
+/** Les octets d'un export, dans le format voulu : une image montre une page, draw.io et le modèle les gardent toutes. */
+async function octetsDe(schema: Schema, format: FormatExport, vue?: Vue, icones?: IconesDrawio, page?: string): Promise<Uint8Array> {
   if (format === "json") return new TextEncoder().encode(ecrireSchema(schema));
   if (format === "drawio") return new TextEncoder().encode(ecrireDrawio(schema, icones));
-  if (format === "svg") return new TextEncoder().encode(svgAutonome(schema, vue));
-  return enPng(svgAutonome(schema, vue));
+  if (format === "svg") return new TextEncoder().encode(svgAutonome(schema, vue, page));
+  return enPng(svgAutonome(schema, vue, page));
 }
 
 /**
  * Demande un dossier, y écrit l'export, et rend le chemin du fichier écrit (l'application n'écrase rien).
- * Rend `null` si le choix du dossier a été annulé : rien n'est écrit.
+ * Rend `null` si le choix du dossier a été annulé : rien n'est écrit. Une image d'un schéma à plusieurs pages
+ * montre `page` (sinon la première) et porte son nom.
  */
 export async function exporterSchema(
   schema: Schema,
   format: FormatExport,
   vue?: Vue,
   icones?: IconesDrawio,
+  page?: string,
 ): Promise<string | null> {
   const dossier = await api.choisirDossier("Dossier où enregistrer l'export du schéma");
   if (!dossier) return null;
-  return api.exporterSchema(dossier, nomDeFichier(schema.titre, format), await octetsDe(schema, format, vue, icones));
+  const titre = estImage(format) ? titreDeLaSortie(schema, page) : schema.titre;
+  return api.exporterSchema(dossier, nomDeFichier(titre, format), await octetsDe(schema, format, vue, icones, page));
 }
 
-/** Copie l'image PNG du schéma dans le presse-papiers, prête à être collée ailleurs. */
-export async function partagerSchema(schema: Schema, vue?: Vue): Promise<void> {
-  await api.copierImageSchema(await enPng(svgAutonome(schema, vue)));
+/** Copie l'image PNG du schéma (sa première page, ou `page`) dans le presse-papiers, prête à être collée ailleurs. */
+export async function partagerSchema(schema: Schema, vue?: Vue, page?: string): Promise<void> {
+  await api.copierImageSchema(await enPng(svgAutonome(schema, vue, page)));
 }
 
 /**
  * Imprime le schéma seul par la fenêtre « Imprimer » de l'application, comme une fiche : son titre et son
  * dessin, en image assez fine pour le papier, ajustés à la feuille. L'imprimante, le papier, les marges et
  * la couleur (ou le noir et blanc) s'y choisissent, avec l'aperçu. Rend ce qu'il faut dire du travail parti, ou rien.
+ * Un schéma à plusieurs pages imprime `page` (sinon la première), son nom dans le titre.
  */
-export async function imprimerSchema(schema: Schema, vue?: Vue): Promise<string | null> {
-  return api.imprimerSchema(schema.titre || NOM_PAR_DEFAUT, await enPng(svgAutonome(schema, vue), echelleImpression));
+export async function imprimerSchema(schema: Schema, vue?: Vue, page?: string): Promise<string | null> {
+  return api.imprimerSchema(titreDeLaSortie(schema, page), await enPng(svgAutonome(schema, vue, page), echelleImpression));
 }

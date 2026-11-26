@@ -28,8 +28,11 @@ public sealed partial class VaultSession
     /// <summary>Taille maximale d'un schéma : 8 Mo.</summary>
     public const int MaxSchemaBytes = 8 * 1024 * 1024;
 
-    /// <summary>Dernier format de schéma connu de cette version.</summary>
-    public const int SchemaFormat = 2;
+    /// <summary>
+    /// Dernier format de schéma connu de cette version : le 3 est celui d'un schéma à plusieurs pages (un schéma d'une page reste
+    /// au format 2), qu'une version qui ne connaît pas les pages refuse au lieu de le relire en une seule.
+    /// </summary>
+    public const int SchemaFormat = 3;
 
     private const int MaxSchemaExportBytes = 4 * MaxSchemaBytes;
     private const string DefaultSchemaFileName = "Schéma réseau";

@@ -8,6 +8,14 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 ## [Non publié]
 
 ### Ajouté
+- Schémas réseau : un schéma peut avoir plusieurs pages (Étage 1, Étage 2, Salle serveurs…), en onglets sous le plan,
+  avec le nombre d'équipements de chacune ; « + » en ajoute une, le clic droit renomme, duplique, déplace ou supprime
+  (après une question, Ctrl+Z la rend), glisser un onglet le déplace. Un câble entre deux pages se dessine sur chacune en
+  renvoi (« → Étage 2 · SW-Étage2 · 1/48 ») qui mène à l'autre page ; la boîte de connexion range les équipements par
+  page. draw.io : une page de kyfRev est une page draw.io, à l'export comme à l'import, renvois compris ; l'import ne
+  laisse plus de page de côté. Dans une fiche, un petit sélecteur choisit la page montrée et imprimée. Un schéma à
+  plusieurs pages s'écrit au format 3, que les versions précédentes refusent au lieu de le relire en une seule page ; un
+  schéma d'une page ne change pas.
 - Un coffre ouvert sur un autre poste (dossier synchronisé) : à l'ouverture, kyfRev le dit et propose « Ouvrir », « Lecture
   seule » ou « Annuler », sans rien écrire avant la réponse. En lecture seule, rien ne s'écrit, et une bande propose
   « Passer en écriture ». Pendant qu'il est ouvert, un avis paraît si un autre poste l'ouvre à son tour. Chaque poste

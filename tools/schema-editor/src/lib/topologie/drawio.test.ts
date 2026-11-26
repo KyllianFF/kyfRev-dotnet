@@ -215,7 +215,11 @@ describe("draw.io : l'import d'un fichier d'un autre outil", () => {
     const { schema } = importe;
     expect(importe.erreurs).toEqual([]);
     expect(erreursStructurelles(schema)).toEqual([]);
-    expect(schema.titre).toBe("Réseau du labo");
+    // Deux pages : le schéma prend le nom du fichier, chaque page du fichier devient une page du schéma (30A).
+    expect(schema.titre).toBe("labo");
+    expect(schema.format).toBe(3);
+    expect(schema.pages?.map((p) => p.nom)).toEqual(["Réseau du labo", "Étage 2"]);
+    expect(new Set(schema.equipements.map((e) => e.page))).toEqual(new Set([schema.pages?.[0]?.id]));
     const parNom = (nom: string) => schema.equipements.find((e) => e.nom === nom);
     expect(parNom("Routeur")?.type).toBe("routeur");
     // Le centre, depuis le coin de la zone qui le contient.
@@ -234,16 +238,15 @@ describe("draw.io : l'import d'un fichier d'un autre outil", () => {
     expect(schema.liens.find((l) => l.nom !== "uplink")).toMatchObject({ forme: "coudee", trait: "tirets" });
 
     const c = compteRendu(importe);
-    expect(c).toMatchObject({ equipements: 3, cables: 2, zones: 2, textes: 2, courbes: 1, sansExtremite: 1, pagesIgnorees: ["Étage 2"] });
+    expect(c).toMatchObject({ equipements: 3, cables: 2, zones: 2, textes: 2, courbes: 1, sansExtremite: 1, pages: 2 });
     expect(c.inconnus).toEqual([parNom("Fonction")?.id]);
     expect(remarquesImport(c).map((r) => r.texte)).toEqual([
       "1 forme de type inconnu, posée en « Générique »",
       "1 connecteur courbe, redressé en coudé",
       "1 connecteur sans extrémité, laissé de côté",
-      "page « Étage 2 » non importée : un schéma, une page",
     ]);
     expect(remarquesImport(c)[0]?.montrer).toBe(true);
-    expect(bilanImport(c)).toEqual(["3 équipements", "2 câbles, avec leurs ports", "2 zones et 2 textes"]);
+    expect(bilanImport(c)).toEqual(["2 pages", "3 équipements", "2 câbles, avec leurs ports", "2 zones et 2 textes"]);
   });
 
   it("prend le nom du fichier quand la page porte le nom par défaut", async () => {
@@ -262,7 +265,9 @@ describe("draw.io : l'import d'un fichier d'un autre outil", () => {
     const lu = await lireImport(compresse);
     const clair = await lireImport(ETRANGER);
     expect(lu.schema.equipements.map((e) => [e.nom, e.type, e.position])).toEqual(clair.schema.equipements.map((e) => [e.nom, e.type, e.position]));
-    expect(lu.compteRendu?.pagesIgnorees).toEqual([]);
+    expect(lu.compteRendu?.pages).toBe(1);
+    expect(lu.schema.titre).toBe("Réseau du labo");
+    expect(lu.schema.pages).toBeUndefined();
   });
 
   it("refuse ce qui n'est pas un fichier draw.io, et une page compressée illisible", async () => {

@@ -10,7 +10,8 @@
   import Spline from "@lucide/svelte/icons/spline";
   import Trash2 from "@lucide/svelte/icons/trash-2";
   import Undo2 from "@lucide/svelte/icons/undo-2";
-  import { onMount, tick } from "svelte";
+  import { onMount, tick, untrack } from "svelte";
+  import type { Renvoi } from "../../lib/topologie/pages";
   import type { Zone } from "../../lib/placement";
   import { definition } from "../../lib/topologie/catalogue";
   import {
@@ -26,6 +27,7 @@
     couleurDe,
     dessinerAnnotation,
     dessinerEtiquette,
+    dessinerRenvoi,
     dessinerMarque,
     type Etiquette,
     estZone,
@@ -140,7 +142,8 @@
   } = $props();
 
   const PAS = 20;
-  const schema = $derived(editeur.schema);
+  // La page montrée (30A) : le plan ne dessine et ne touche qu'elle ; ses câbles vers les autres pages sont des renvois.
+  const schema = $derived(editeur.vuePage);
   // Le mode simplifié dessine la vue simplifiée, sans changer la vue du schéma.
   const v = $derived(vueDe(simplifie ? "simplifiee" : schema.vue));
   const dessine = $derived(simplifie ? epurer(schema) : schema);
@@ -157,6 +160,38 @@
   $effect(() => {
     zoom = camera.zoom;
   });
+
+  // Chaque page garde son cadrage : on la retrouve comme on l'a laissée ; une page jamais vue est cadrée entière.
+  const cameras = new Map<string, { x: number; y: number; zoom: number }>();
+  let pageAffichee = untrack(() => editeur.pageMontree);
+  /** L'objet à amener au centre une fois la page changée (un renvoi suivi, une recherche). */
+  let aMontrer: string | null = null;
+  $effect(() => {
+    const ici = editeur.pageMontree;
+    if (ici === pageAffichee) return;
+    untrack(() => {
+      cameras.set(pageAffichee, { ...camera });
+      pageAffichee = ici;
+      const cible = aMontrer;
+      aMontrer = null;
+      geste = null;
+      const connue = cameras.get(ici);
+      // Une page jamais vue est cadrée entière : ce qu'on y cherche y est déjà ; une page revue, son cadrage d'avant, l'objet ramené au centre.
+      if (!connue) toutVoir();
+      else {
+        camera = connue;
+        if (cible) amenerAuCentre(cible);
+      }
+    });
+  });
+
+  /** Suit un renvoi : la page d'en face, son équipement choisi et amené au centre. */
+  function suivreRenvoi(r: Renvoi): void {
+    aMontrer = r.versEquipement;
+    editeur.montrerPage(r.page.id);
+    editeur.selection = [r.versEquipement];
+    editeur.annonce = `${r.page.nom} : ${r.nomEquipement}${r.port ? `, port ${r.port}` : ""}.`;
+  }
 
   type Geste =
     | { genre: "plan"; depart: Point; camera: { x: number; y: number } }
@@ -497,8 +532,20 @@
     svg?.focus();
   }
 
-  /** Amène un objet (équipement, câble, annotation) au centre du champ. */
+  /** Amène un objet (équipement, câble, annotation) au centre du champ ; sur une autre page, montre d'abord sa page. */
   export function montrer(id: string): void {
+    const sienne = editeur.pageDe(id);
+    if (sienne !== undefined && sienne !== editeur.pageMontree) {
+      const choisis = editeur.selection;
+      aMontrer = id;
+      editeur.montrerPage(sienne);
+      editeur.selection = choisis;
+      return;
+    }
+    amenerAuCentre(id);
+  }
+
+  function amenerAuCentre(id: string): void {
     const trace = traces.find((t) => t.lien.id === id)?.trace;
     const note = schema.annotations.find((n) => n.id === id);
     const cadre = note ? cadreAnnotation(note) : null;
@@ -2138,6 +2185,31 @@
     {/each}
   </g>
 
+  <!-- Les câbles vers une autre page (30A) : un clic mène à l'équipement d'en face. -->
+  {#each editeur.renvois.filter((r) => !caches.has(r.equipement)) as r (r.lien.id)}
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <g
+      class="renvoi"
+      class:choisi={choisis.has(r.lien.id)}
+      data-renvoi={r.lien.id}
+      role="link"
+      tabindex="0"
+      aria-label="Câble vers la page « {r.page.nom} » : {r.nomEquipement}{r.port ? `, port ${r.port}` : ''}. Entrée : y aller"
+      onpointerdown={(ev) => ev.stopPropagation()}
+      onclick={() => suivreRenvoi(r)}
+      onkeydown={(ev) => {
+        if (ev.key === "Enter" || ev.key === " ") {
+          ev.preventDefault();
+          ev.stopPropagation();
+          suivreRenvoi(r);
+        }
+      }}
+    >
+      <title>Aller à la page « {r.page.nom} », sur {r.nomEquipement}</title>
+      {@html dessinerRenvoi(r)}
+    </g>
+  {/each}
+
   {#each visibles as e (e.id)}
     {@const def = definition(e.type)}
     {@const couleur = couleurDe(e)}
@@ -2951,6 +3023,26 @@
 
   .pointe {
     fill: var(--texte-secondaire);
+  }
+
+  /* Renvoi vers une autre page : la pastille se clique ; survolée ou au clavier, elle se marque. */
+  .renvoi {
+    outline: none;
+    cursor: pointer;
+  }
+
+  .renvoi :global(rect) {
+    transition: fill var(--duree);
+  }
+
+  .renvoi:hover :global(rect),
+  .renvoi:focus-visible :global(rect) {
+    fill: var(--navigation-active-fond);
+  }
+
+  .renvoi:focus-visible :global(rect) {
+    stroke: var(--focus);
+    stroke-width: 2.5;
   }
 
   /* Cadre de l'équipement : invisible (il reçoit le pointeur), visible choisi ou prévu. */

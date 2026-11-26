@@ -279,6 +279,8 @@ export function collerEquipements(
     );
     copie.position = { x: source.position.x + decalage.x, y: source.position.y + decalage.y };
     delete copie.verrou;
+    // La copie arrive sur la page montrée, pas sur celle d'où elle vient (l'éditeur la range).
+    delete copie.page;
     correspondance.set(source.id, copie.id);
     copie.interfaces = copie.interfaces.map((i) => {
       const nouvelle = nouvelId("i");
@@ -346,8 +348,9 @@ export function collerEquipements(
     if (membres.length > 0) schema.agregats.push({ ...cloner(a), id: nouvelId("a"), equipement, membres });
   }
   for (const n of contenu.annotations ?? []) {
+    const { page: _page, ...sansPage } = cloner(n);
     schema.annotations.push({
-      ...cloner(n),
+      ...sansPage,
       id: nouvelId("n"),
       position: decale(n.position),
       ...(n.vers ? { vers: decale(n.vers) } : {}),

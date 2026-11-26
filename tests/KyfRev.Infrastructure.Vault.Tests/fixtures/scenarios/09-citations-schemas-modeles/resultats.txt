@@ -31,7 +31,7 @@
 30 retenir_citation_en_ligne ok aucune
 31 citations ok citations=[citations/Aristote - Le doute est le commencement de.md;citations/Manuelle.md;citations/Auteur inconnu - Sous les pavés, la plage.md;citations/Auteur inconnu - Paris vaut bien une messe.md;citations/Socrate - Connais-toi toi-même.md;citations/Auteur inconnu - Rien ne se perd, rien ne (2).md;citations/Auteur inconnu - Rien ne se perd, rien ne.md;citations/Blaise Pascal - Le cœur a ses raisons que.md;citations/Nombres.md] corbeille=[citations/.supprimees/Auteur inconnu - Rien ne se perd, rien ne (2).md] illisibles=[citations/Sans texte.md]
 32 creer_schema ok sha256:d644ae839af140f2597f337571402ec5c4920269522a48099b20a8dd221b36b9
-33 creer_schema erreur SchemaInvalide : Schéma réseau refusé : format 3 inconnu (cette version de kyfRev lit jusqu'au format 2).
+33 creer_schema erreur SchemaInvalide : Schéma réseau refusé : format 4 inconnu (cette version de kyfRev lit jusqu'au format 3).
 34 creer_schema erreur SchemaInvalide : Schéma réseau refusé : numéro de format absent.
 35 creer_schema erreur SchemaInvalide : Schéma réseau refusé : numéro de format absent.
 36 creer_schema erreur SchemaInvalide : Schéma réseau refusé : un objet JSON est attendu.
