@@ -1,7 +1,10 @@
+using KyfRev.Application;
+using KyfRev.Application.Ports;
 using KyfRev.Conversion;
 using KyfRev.Infrastructure.Crypto;
 using KyfRev.Infrastructure.Vault.Files;
 using KyfRev.Infrastructure.Vault.Tests.Support;
+using KyfRev.Tests.Support;
 
 namespace KyfRev.Infrastructure.Vault.Tests;
 
@@ -96,5 +99,87 @@ public sealed partial class ConversionTests
         plan.Dispose();
         Assert.AreEqual(VaultConversion.Abandoned, VaultConversion.Renew(plan, Password, false, target).Message, "un renouvellement abandonné n'écrit rien");
         Assert.IsFalse(Directory.Exists(target));
+    }
+
+    [TestMethod]
+    public void A_renewal_that_goes_wrong_writes_nothing_and_says_why()
+    {
+        using var vault = TemporaryVault.CopyOfReference();
+        using var place = new Place();
+        Assert.IsTrue(VaultConversion.Encrypt(vault.Root, place.Encrypted, Password, PasswordKeys.NewPbkdf2()).Succeeded);
+        using var plan = VaultConversion.PrepareRenewal(place.Encrypted, Password, false, RenewedPassword, PasswordKeys.NewPbkdf2()).Plan!;
+        var target = Path.Combine(place.Root, "renouvele");
+
+        // Une destination déjà prise est refusée, comme pour toute conversion.
+        Directory.CreateDirectory(target);
+        File.WriteAllText(Path.Combine(target, "occupe.txt"), "là");
+        Assert.IsFalse(VaultConversion.Renew(plan, Password, false, target).Succeeded);
+        Directory.Delete(target, recursive: true);
+
+        // Le coffre relu ne contient pas ce qui a été écrit : rien ne prend la place de la destination.
+        var intrus = VaultConversion.Renew(plan, Password, false, target, beforeVerifying: temporary =>
+        {
+            using var written = EncryptedVault.Open(temporary, EncryptedVault.ReadHeader(temporary).Open(RenewedPassword), DiskStorage.Instance);
+            written.AddFolder("intrus");
+            written.Flush();
+        });
+        Assert.IsFalse(intrus.Succeeded);
+        Assert.Contains("ne contient pas exactement", intrus.Message);
+        Assert.IsFalse(Directory.Exists(target));
+
+        // Le disque lâche en cours d'écriture : le renouvellement échoue, et le dit.
+        var cut = VaultConversion.Renew(plan, Password, false, target, disk: new FailingDisk { FailAt = 2 });
+        Assert.IsFalse(cut.Succeeded);
+        Assert.Contains("Le renouvellement a échoué", cut.Message);
+        Assert.IsFalse(Directory.Exists(target));
+
+        // La source n'est plus un coffre chiffré : rien ne commence.
+        var header = Path.Combine(place.Encrypted, EncryptedVault.HeaderFile);
+        File.Move(header, header + ".mis-de-cote");
+        Assert.Contains("n'est pas un coffre chiffré", VaultConversion.Renew(plan, Password, false, target).Message);
+        File.Move(header + ".mis-de-cote", header);
+
+        // L'ancien coffre ne peut pas être renommé (il n'est plus là) : rien ne change, et le message le dit.
+        var (retired, refusal) = VaultConversion.Swap(Path.Combine(place.Root, "absent"), target);
+        Assert.IsNull(retired);
+        Assert.Contains("n'a pas pu être renommé", refusal ?? string.Empty);
+    }
+
+    [TestMethod]
+    public void The_application_adapter_renews_and_swaps_or_says_why_not()
+    {
+        using var vault = TemporaryVault.CopyOfReference();
+        using var place = new Place();
+        Assert.IsTrue(VaultConversion.Encrypt(vault.Root, place.Encrypted, Password, PasswordKeys.NewPbkdf2()).Succeeded);
+        var conversions = new VaultConversions(PasswordKeys.NewPbkdf2());
+
+        // Un mauvais secret est une opération refusée ; un renouvellement préparé ailleurs, une erreur de programmation.
+        Assert.AreEqual(VaultConversion.WrongSecret, Assert.Throws<OperationException>(() => conversions.PrepareRenewal(place.Encrypted, VaultSecret.Password("pas le bon"), RenewedPassword).Dispose()).Message);
+        using (var foreign = new ForeignDraft(place.Encrypted))
+        {
+            Assert.ThrowsExactly<ArgumentException>(() => conversions.Renew(foreign, VaultSecret.Password(Password), Path.Combine(place.Root, "x")));
+        }
+
+        var renewed = Path.Combine(place.Root, "chiffre" + VaultConversion.RenewedSuffix);
+        using (var draft = conversions.PrepareRenewal(place.Encrypted, VaultSecret.Password(Password), RenewedPassword))
+        {
+            var progress = new Reports();
+            var report = conversions.Renew(draft, VaultSecret.Password(Password), renewed, progress);
+            Assert.IsTrue(report.Succeeded, report.Message);
+            Assert.AreEqual(renewed, report.Destination);
+            Assert.IsGreaterThan(0, report.Files);
+            Assert.IsNotEmpty(progress.All);
+        }
+
+        var swapped = conversions.Swap(place.Encrypted, renewed);
+        Assert.IsTrue(swapped.Succeeded, swapped.Message);
+        Assert.AreEqual(Path.Combine(place.Root, "chiffre" + VaultConversion.RetiredSuffix), swapped.Destination);
+        Assert.Contains("L'ancien coffre est maintenant", swapped.Message);
+        Assert.IsNotNull(EncryptedVault.ReadHeader(place.Encrypted).Open(RenewedPassword));
+
+        var refused = conversions.Swap(place.Encrypted, Path.Combine(place.Root, "absent"));
+        Assert.IsFalse(refused.Succeeded);
+        Assert.Contains("n'a pas pu prendre son nom", refused.Message);
+        Assert.IsNotNull(EncryptedVault.ReadHeader(place.Encrypted).Open(RenewedPassword), "le coffre renouvelé est rendu à son nom");
     }
 }
