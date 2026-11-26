@@ -70,6 +70,10 @@
   import Plateau from "./Plateau.svelte";
   import RechercheSchema from "./RechercheSchema.svelte";
   import PanneauProprietes from "./PanneauProprietes.svelte";
+  import ActionsEquipement from "./ActionsEquipement.svelte";
+  import MenuEquipement from "./MenuEquipement.svelte";
+  import { type ActionEquipement, entreesEquipement } from "../../lib/topologie/menuEquipement";
+  import { configurationCopiee } from "../../lib/topologie/volet.svelte";
 
   // Éditeur de schémas réseau (D39), en plein écran au-dessus de la fiche.
   // Le schéma vit dans schemas/<id>.json : il s'enregistre seul, et la fiche
@@ -114,6 +118,14 @@
   let exportOuvert = $state(false);
   /** Le menu ouvert de la barre d'outils, un seul à la fois. */
   let menu = $state<"cables" | "relations" | "affichage" | "plus" | null>(null);
+  /** Les actions sur les équipements, pour « ⋯ » du volet et le clic droit sur le plan. */
+  let actions = $state<ActionsEquipement>();
+  /** Le menu d'un clic droit sur un équipement : ses actions, au pointeur. */
+  let menuEquipement = $state<{ ids: string[]; ancre: Point; origine: SVGElement } | null>(null);
+
+  function agirSurEquipements(action: ActionEquipement, ids: string[], origine: HTMLElement | SVGElement | null) {
+    actions?.agir(action, ids, origine);
+  }
 
   // --- Mode de création, outil en cours, tuile en attente ---
 
@@ -125,6 +137,40 @@
   let genreRelation = $state<GenreRelation>("dependance");
   /** Fenêtre étroite, mode avancé : le volet des propriétés s'ouvre par-dessus le plan. */
   let voletOuvert = $state(false);
+  /** L'onglet Ports d'un équipement : le volet s'élargit quand la place le permet (30D). */
+  let voletLarge = $state(false);
+  /** Fenêtre étroite (30F) : la hauteur du tiroir des propriétés, tiré par sa poignée ; sinon, les deux tiers du plan. */
+  let hauteurTiroir = $state<number | null>(null);
+  let tiroirTire: { depart: number; hauteur: number; bouge: boolean } | null = null;
+
+  /** La poignée du tiroir : tirée, elle le règle ; touchée sans bouger (ou Entrée), il passe des deux tiers à presque tout. */
+  function tirerTiroir(evenement: PointerEvent) {
+    const volet = (evenement.currentTarget as HTMLElement).parentElement;
+    if (!volet) return;
+    (evenement.currentTarget as HTMLElement).setPointerCapture(evenement.pointerId);
+    tiroirTire = { depart: evenement.clientY, hauteur: volet.getBoundingClientRect().height, bouge: false };
+  }
+
+  function bougerTiroir(evenement: PointerEvent) {
+    const corps = (evenement.currentTarget as HTMLElement).closest(".corps");
+    if (!tiroirTire || !corps) return;
+    const ecart = tiroirTire.depart - evenement.clientY;
+    if (Math.abs(ecart) > 4) tiroirTire.bouge = true;
+    if (tiroirTire.bouge) hauteurTiroir = Math.round(Math.max(140, Math.min(corps.clientHeight - 24, tiroirTire.hauteur + ecart)));
+  }
+
+  function lacherTiroir(evenement: PointerEvent) {
+    const bouge = tiroirTire?.bouge ?? false;
+    tiroirTire = null;
+    if (!bouge) basculerTiroir(evenement.currentTarget as HTMLElement);
+  }
+
+  function basculerTiroir(poignee: HTMLElement) {
+    const corps = poignee.closest(".corps");
+    if (!corps) return;
+    const grand = hauteurTiroir !== null && hauteurTiroir > corps.clientHeight * 0.7;
+    hauteurTiroir = grand ? null : Math.round(corps.clientHeight - 24);
+  }
 
   /** Change de mode : le schéma et la sélection restent, l'outil en cours se repose. */
   function changerMode(nouveau: ModeEdition) {
@@ -874,6 +920,7 @@
           onconnecter={(source, destination) => (connexion = { source, destination: destination ?? null })}
           ondeposer={(genre, point) => ajouter(genre, point)}
           onavance={() => changerMode("avance")}
+          onmenu={(ids, ancre, origine) => (menuEquipement = { ids, ancre, origine })}
         />
         {#if !simplifie}
           <!-- Mode avancé : l'affichage du plan, sur le plan (la barre d'outils garde les outils et les vues). -->
@@ -930,14 +977,61 @@
         {/if}
       </div>
       {#if !simplifie}
-        <div class="volet" class:ouvert={voletOuvert}>
-          <PanneauProprietes {editeur} onconnecter={(source) => (connexion = { source, destination: null })} onmontrer={(x) => canevas?.montrer(x)} />
+        <div class="volet" class:ouvert={voletOuvert} class:large={voletLarge} style:--hauteur-tiroir={hauteurTiroir === null ? null : `${hauteurTiroir}px`}>
+          <!-- Fenêtre étroite (30F) : le volet est un tiroir, tiré par sa poignée. -->
+          <button
+            type="button"
+            class="poignee-tiroir"
+            aria-label="Agrandir ou réduire le tiroir des propriétés"
+            aria-expanded={hauteurTiroir !== null}
+            title="Tirer pour régler la hauteur"
+            onpointerdown={tirerTiroir}
+            onpointermove={bougerTiroir}
+            onpointerup={lacherTiroir}
+            onpointercancel={() => (tiroirTire = null)}
+            onkeydown={(e) => {
+              if (e.key !== "Enter" && e.key !== " ") return;
+              e.preventDefault();
+              basculerTiroir(e.currentTarget);
+            }}
+          ><span aria-hidden="true"></span></button>
+          <PanneauProprietes {editeur} bind:large={voletLarge} onaction={agirSurEquipements} onmontrer={(x) => canevas?.montrer(x)} />
         </div>
       {/if}
     </div>
 
     <Plateau avance={!simplifie} bind:pose onposer={(genre) => ajouter(genre)} />
   {/if}
+
+  {#if menuEquipement}
+    {@const m = menuEquipement}
+    <MenuEquipement
+      entrees={entreesEquipement(schema, m.ids, { simplifie, copiee: configurationCopiee.valeur })}
+      libelle={m.ids.length === 1
+        ? `Actions sur ${schema.equipements.find((e) => e.id === m.ids[0])?.nom ?? ""}`
+        : `Actions sur ${m.ids.length} équipements`}
+      ancre={m.ancre}
+      onchoisir={(action) => {
+        // Lu avant de fermer le menu : `m` le suit, et ne vaut plus rien une fois le menu fermé.
+        const { ids, origine } = m;
+        menuEquipement = null;
+        agirSurEquipements(action, ids, origine);
+      }}
+      onfermer={(rendreLaMain) => {
+        const { origine } = m;
+        menuEquipement = null;
+        if (rendreLaMain && origine.isConnected) origine.focus();
+      }}
+    />
+  {/if}
+  <ActionsEquipement
+    bind:this={actions}
+    {editeur}
+    {simplifie}
+    oncopier={copierSelection}
+    onconnecter={(source) => (connexion = { source, destination: null })}
+    onrendre={() => canevas?.focus()}
+  />
 
   {#if editeur.annonce}
     <p class="annonce" role="status">{editeur.annonce}</p>
@@ -1323,6 +1417,17 @@
     overflow: hidden;
   }
 
+  .poignee-tiroir {
+    display: none;
+  }
+
+  /* L'onglet Ports d'un équipement (30D) : le volet passe à 460 pixels quand le plan garde sa place. */
+  @media (min-width: 1024px) {
+    .corps.avance:has(.volet.large) {
+      grid-template-columns: minmax(0, 1fr) 460px;
+    }
+  }
+
   /* Mode avancé : l'affichage du plan et l'état du schéma, en bas à gauche du plan. */
   .pied {
     position: absolute;
@@ -1500,6 +1605,50 @@
 
     .volet.ouvert {
       display: grid;
+    }
+
+    .volet.large {
+      width: min(460px, 100%);
+    }
+  }
+
+  /* Fenêtre étroite (30F) : le volet devient un tiroir par le bas ; le plan reste visible au-dessus. */
+  @media (max-width: 620px) {
+    .volet,
+    .volet.large {
+      top: auto;
+      left: 0;
+      width: auto;
+      height: var(--hauteur-tiroir, 65%);
+      max-height: calc(100% - 24px);
+      grid-template-rows: auto minmax(0, 1fr);
+      border-top: 1px solid var(--bordure);
+      border-radius: 14px 14px 0 0;
+      background: var(--surface);
+      box-shadow: 0 -10px 28px rgb(0 0 0 / 0.18);
+    }
+
+    .volet :global(.panneau) {
+      border-left: none;
+    }
+
+    .poignee-tiroir {
+      display: grid;
+      width: 100%;
+      height: 18px;
+      padding: 0;
+      border: none;
+      background: var(--surface);
+      cursor: ns-resize;
+      touch-action: none;
+      place-items: center;
+    }
+
+    .poignee-tiroir span {
+      width: 36px;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--bordure);
     }
   }
 

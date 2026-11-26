@@ -14,9 +14,11 @@
     STATUTS_LIEN,
     type Vlan,
   } from "../../lib/topologie/modele";
+  import type { ActionEquipement } from "../../lib/topologie/menuEquipement";
   import { dupliquerEquipements, relier, retirerEquipements } from "../../lib/topologie/operations";
+  import { configurationCopiee } from "../../lib/topologie/volet.svelte";
   import { VUES } from "../../lib/topologie/vues";
-  import ProprietesEquipement from "./ProprietesEquipement.svelte";
+  import ProprietesEquipement, { type OngletEquipement } from "./ProprietesEquipement.svelte";
   import ProprietesLien from "./ProprietesLien.svelte";
 
   // Panneau de propriétés contextuel (D39) : selon la sélection, l'équipement,
@@ -24,13 +26,20 @@
   // les actions communes ; rien : le schéma et son diagnostic.
   let {
     editeur,
-    onconnecter,
+    onaction,
     onmontrer,
+    large = $bindable(false),
   }: {
     editeur: EditeurSchema;
-    onconnecter: (source: string) => void;
+    /** Une action du menu d'un équipement (« ⋯ », ou « Coller la configuration » sur plusieurs). */
+    onaction: (action: ActionEquipement, ids: string[], origine: HTMLElement | null) => void;
     onmontrer: (id: string) => void;
+    /** Le volet demande plus de place : l'onglet Ports d'un équipement (30D). */
+    large?: boolean;
   } = $props();
+
+  /** L'onglet du volet d'un équipement : il reste choisi d'un équipement à l'autre (30C). */
+  let onglet = $state<OngletEquipement>("general");
 
   const schema = $derived(editeur.schema);
   const seul = $derived(editeur.selection.length === 1 ? editeur.selection[0] : undefined);
@@ -40,6 +49,10 @@
   const groupe = $derived(seul ? schema.groupes.find((g) => g.id === seul) : undefined);
   const annotation = $derived(seul ? schema.annotations.find((n) => n.id === seul) : undefined);
   const equipementsChoisis = $derived(schema.equipements.filter((e) => editeur.selection.includes(e.id)));
+  $effect(() => {
+    large = equipement !== undefined && onglet === "ports";
+  });
+  const copiee = $derived(configurationCopiee.valeur);
 
   const erreurs = $derived(editeur.constats.filter((c) => c.niveau === "erreur"));
   const avertissements = $derived(editeur.constats.filter((c) => c.niveau === "avertissement"));
@@ -170,10 +183,10 @@
   }
 </script>
 
-<aside class="panneau" aria-label="Propriétés">
+<aside class="panneau" class:equipement={equipement !== undefined} aria-label="Propriétés">
   {#if equipement}
     {#key equipement.id}
-      <ProprietesEquipement {editeur} {equipement} {onconnecter} />
+      <ProprietesEquipement {editeur} {equipement} {onaction} bind:onglet />
     {/key}
   {:else if lien}
     {#key lien.id}
@@ -301,6 +314,13 @@
       <button type="button" class="bouton petit" onclick={() => editeur.agir((s) => { const tous = equipementsChoisis.every((e) => e.verrou); for (const x of s.equipements) if (editeur.selection.includes(x.id)) { if (tous) delete x.verrou; else x.verrou = true; } })}>Verrouiller / déverrouiller</button>
       <button type="button" class="bouton petit attention" onclick={() => { editeur.agir((s) => retirerEquipements(s, new Set(editeur.selection)), "Équipements retirés, avec leurs liens : Ctrl+Z pour annuler."); editeur.selection = []; }}>Retirer</button>
     </div>
+    {#if copiee && equipementsChoisis.some((e) => e.id !== copiee.source)}
+      <div class="actions">
+        <button type="button" class="bouton petit" data-action="coller-configuration" title="Chaque port de même nom, ou à la même place, reprend le mode, les VLAN, l'activation et le PoE ; le VLAN de gestion suit. Ctrl+Z annule." onclick={(e) => onaction("coller-sur-la-selection", equipementsChoisis.map((x) => x.id), e.currentTarget)}>
+          Coller la configuration de « {copiee.nom} »
+        </button>
+      </div>
+    {/if}
   {:else}
     <h3 class="titre">Schéma</h3>
     <div class="champs">
@@ -423,6 +443,12 @@
     padding: 12px;
     border-left: 1px solid var(--bordure);
     background: var(--surface);
+  }
+
+  /* Un équipement : l'en-tête et les onglets restent en place, seul leur contenu défile. */
+  .panneau.equipement {
+    padding: 0;
+    overflow: hidden;
   }
 
   .titre {

@@ -125,7 +125,7 @@ export type Tuile = { genre: string; nom: string; titre: string; type?: Definiti
 const sansAccents = (s: string) => s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
 
 /** Les types d'équipements trouvés : par leur nom, leur type (`chercherTypes`) ou leur nom court. */
-function typesTrouves(recherche: string): DefinitionType[] {
+export function typesTrouves(recherche: string): DefinitionType[] {
   const mots = sansAccents(recherche).split(/\s+/).filter(Boolean);
   if (mots.length === 0) return TYPES;
   const trouves = new Set(chercherTypes(recherche));

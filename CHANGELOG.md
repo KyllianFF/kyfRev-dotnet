@@ -28,8 +28,30 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 - Chiffrement : avec Windows Hello configuré, « Ouvrir avec Windows Hello sur cet ordinateur » remplace « Se souvenir ».
   La clé retenue est scellée par Windows Hello : le coffre ne s'ouvre plus seul au démarrage, mais d'un geste (code PIN,
   visage ou empreinte), aussi après un verrouillage. Le mot de passe reste à un clic. Sans Windows Hello, rien ne change.
+- Schémas réseau : plusieurs ports d'un coup. Choisis sur la façade (clic, Maj+clic, Ctrl+clic) ou dans le tableau,
+  ils passent ensemble en accès sur un VLAN, en trunk, en PoE, ou sont désactivés.
+- Schémas réseau : « Ajouter des ports » ajoute une plage (« 1/0/25 à 1/0/48 ») d'un coup, au nommage des autres ports.
+- Schémas réseau : « Copier la configuration » d'un équipement, puis « Coller sur… » : chaque port de même nom reprend
+  le mode, les VLAN, l'activation et le PoE, et le VLAN de gestion suit ; les noms, les adresses et les câbles ne
+  changent pas. Pratique pour plusieurs switchs d'étage pareils.
+- Schémas réseau : le clic droit sur un équipement du plan ouvre les actions de « ⋯ », dans le même ordre (Connecter…,
+  Dupliquer, Copier, Verrouiller la place, Copier la configuration, Coller sur…, puis Retirer… à part). Il choisit
+  d'abord l'équipement ; avec plusieurs équipements choisis, il garde ce qui agit sur eux tous (Dupliquer, Copier,
+  « Coller la configuration de … », Retirer…). Au clavier : touche Menu ou Maj+F10. En mode simplifié : Dupliquer,
+  Copier, Verrouiller la place et Retirer….
+- Schémas réseau : « Coller sur… » dit avant, pour chaque équipement, combien de ports seront repris. Quand les noms
+  des ports diffèrent (« 1/0/1 » et « Gi1/0/1 »), il propose de les reprendre par leur place : même membre, même numéro.
 
 ### Modifié
+- Schémas réseau, mode avancé : le volet d'un équipement passe en quatre onglets, Général, Ports, Réseau et Inventaire,
+  sous un en-tête qui montre son icône, son nom, son type et son statut ; le dernier onglet choisi le reste d'un
+  équipement à l'autre. Le type se choisit dans une grille d'icônes, par famille, avec une recherche et les types
+  récents d'abord. « ⋯ » regroupe Connecter, Dupliquer, Copier, Verrouiller la place et Retirer… ; la petite barre
+  posée sur le plan ne garde que le nom et Connecter. En fenêtre étroite, le volet devient un tiroir par le bas.
+- Schémas réseau : l'onglet Ports montre la façade de l'équipement, membre par membre, et un tableau des ports (mode,
+  VLAN, vitesse, ce à quoi chacun est relié) ; le volet s'élargit à 460 pixels sur cet onglet quand la place le permet.
+  L'onglet Réseau met la gestion à part, liste les interfaces de routage par VLAN et donne des conseils de bonne
+  pratique, jamais bloquants (VLAN natif 1 sur un trunk, gestion sur le VLAN 1).
 - Recherche : une fiche qui n'a pas changé ne se relit plus à chaque recherche ; son texte reste en mémoire le temps
   de la session (jamais sur le disque). Mesuré sur 2 000 fiches : 170 ms au lieu de 750 ms par recherche.
 - Plus fluide, sans rien changer à l'écran : les squelettes de chargement cessent d'animer une fois cachés (Aujourd'hui et le
@@ -48,6 +70,10 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 - Séance de révision : la fiche suivante s'ouvre en haut, et non plus à l'endroit où l'on avait laissé la précédente.
 - Lecture d'une fiche : la molette avance de trois lignes de texte par cran (le réglage de Windows), en glissant, au
   lieu de sauter de 48 pixels ; un cran donné pendant le glissement le prolonge. Animations coupées : elle saute.
+- Schémas réseau : coller une configuration sur un équipement dont les ports ne portent pas les mêmes noms ne
+  semblait rien faire : l'annonce disait « collée » avec « 0 port réglé », et le VLAN de gestion changeait quand
+  même. Désormais, sans port en commun, rien ne change et l'annonce le dit (« Aucun port de même nom
+  sur … : rien n'a changé ») ; sinon elle dit combien de ports ont été repris et le VLAN de gestion.
 - Un coffre ouvert sur deux postes (dossier synchronisé) : avant d'écrire le suivi d'une fiche, ses passages ou les
   réglages, kyfRev relit le fichier si l'autre poste l'a changé. Une révision, un passage ou un examen ajouté là-bas
   n'est plus effacé par ce que ce poste écrit ensuite.

@@ -17,7 +17,7 @@ namespace KyfRev.Presentation.Wpf.Tests;
 /// <summary>La vue « Schémas réseau » : le pont vers le coffre, puis le vrai îlot dans WebView2.</summary>
 [TestClass]
 [DoNotParallelize]
-public sealed class SchemasPageTests
+public sealed partial class SchemasPageTests
 {
     private const string Text = "{\"format\": 2, \"titre\": \"Réseau\", \"equipements\": [{\"id\": \"e1\"}]}";
 
