@@ -87,13 +87,15 @@ export class EditeurSchema {
   readonly renvois = $derived(renvoisDeLaPage(this.schema, this.pageMontree));
   readonly equipementsParPage = $derived(equipementsParPage(this.schema));
 
-  /** Montre une page : la sélection et le câble en main restent sur l'autre. */
+  /**
+   * Montre une page : la sélection reste sur l'autre. Le câble en main, lui, suit : choisir un équipement de cette
+   * page termine la connexion, et le câble passe d'une page à l'autre avec un renvoi sur chacune.
+   */
   montrerPage(id: string): void {
     const voulue = pageValide(this.schema, id);
     if (voulue === this.pageMontree) return;
     this.page = voulue;
     this.selection = [];
-    this.cable = null;
   }
 
   /** La page d'un objet du schéma ; rien s'il n'existe pas. */
@@ -132,10 +134,11 @@ export class EditeurSchema {
     const nom = this.pages[rang]?.nom ?? "";
     const montree = this.pageMontree === id;
     if (!this.agir((s) => supprimerPage(s, id), `Page « ${nom} » supprimée : Ctrl+Z pour l'annuler.`)) return;
+    // Le câble en main a pu partir d'un équipement de cette page : il est reposé.
+    this.cable = null;
     if (montree) {
       this.page = this.pages[Math.max(0, rang - 1)]?.id ?? "";
       this.selection = [];
-      this.cable = null;
     }
   }
 

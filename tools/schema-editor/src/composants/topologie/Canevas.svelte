@@ -11,7 +11,7 @@
   import Trash2 from "@lucide/svelte/icons/trash-2";
   import Undo2 from "@lucide/svelte/icons/undo-2";
   import { onMount, tick, untrack } from "svelte";
-  import type { Renvoi } from "../../lib/topologie/pages";
+  import { nomDeLaPage, type Renvoi } from "../../lib/topologie/pages";
   import type { Zone } from "../../lib/placement";
   import { definition } from "../../lib/topologie/catalogue";
   import {
@@ -57,6 +57,7 @@
     type Annotation,
     COULEURS_ANNOTATION,
     type Equipement,
+    equipementDe,
     GENRES_RELATION,
     type GenreRelation,
     type Lien,
@@ -175,6 +176,11 @@
       const cible = aMontrer;
       aMontrer = null;
       geste = null;
+      // Le câble en main reste (il se branche sur cette page) ; le menu des ports et l'étiquette choisie étaient sur l'autre.
+      menuPorts = null;
+      etiquette = null;
+      // Une relation ne va pas d'une page à l'autre (elle ne s'y dessinerait pas) : celle commencée est lâchée.
+      if (outil === "relation") tirage = null;
       const connue = cameras.get(ici);
       // Une page jamais vue est cadrée entière : ce qu'on y cherche y est déjà ; une page revue, son cadrage d'avant, l'objet ramené au centre.
       if (!connue) toutVoir();
@@ -185,8 +191,9 @@
     });
   });
 
-  /** Suit un renvoi : la page d'en face, son équipement choisi et amené au centre. */
+  /** Suit un renvoi : la page d'en face, son équipement choisi et amené au centre. Juste après l'avoir tiré, non. */
   function suivreRenvoi(r: Renvoi): void {
+    if (renvoiTire) return;
     aMontrer = r.versEquipement;
     editeur.montrerPage(r.page.id);
     editeur.selection = [r.versEquipement];
@@ -229,6 +236,8 @@
     | { genre: "etiquette"; cible: CibleEtiquette; depart: Point; centre: Point; avant: string; bouge: boolean }
     /** La poignée de rotation d'une étiquette : par crans de 15°, Alt maintenu au degré près. */
     | { genre: "rotation"; cible: CibleEtiquette; centre: Point; avant: string }
+    /** La pastille d'un renvoi saisie : un clic mène à l'autre page, un glissement la déplace. */
+    | { genre: "renvoi"; cible: Extract<CibleEtiquette, { genre: "renvoi" }>; depart: Point; centre: Point; avant: string; bouge: boolean }
     | {
         genre: "taille";
         groupe: string;
@@ -317,6 +326,11 @@
     texte: string;
   };
   function geometrieDe(cible: CibleEtiquette): Geometrie | null {
+    if (cible.genre === "renvoi") {
+      const r = renvoiDe(cible);
+      if (!r) return null;
+      return { cx: r.centre.x, cy: r.centre.y, l: r.largeur, h: r.hauteur, angle: 0, ancre: null, trace: null, texte: r.texte };
+    }
     if (cible.genre === "equipement") {
       const e = parId.get(cible.id);
       if (!e || caches.has(e.id)) return null;
@@ -363,6 +377,10 @@
 
   /** La place d'une étiquette dont le centre irait en `centre` : sur son tracé, ou par rapport à son équipement. */
   function placeVers(cible: CibleEtiquette, centre: Point): { t?: number; x: number; y: number } | null {
+    if (cible.genre === "renvoi") {
+      const r = renvoiDe(cible);
+      return r ? { x: Math.round(centre.x - r.base.x), y: Math.round(centre.y - r.base.y) } : null;
+    }
     if (cible.genre === "equipement") {
       const e = parId.get(cible.id);
       if (!e) return null;
@@ -399,6 +417,55 @@
     const cible: CibleEtiquette = { genre: "equipement", id: e.id };
     const seul = editeur.selection.length === 1 && editeur.selection[0] === e.id;
     if (seul || memeCible(etiquette, cible)) appuiSurEtiquette(evenement, cible);
+  }
+
+  // --- Renvois vers une autre page (30A) : la pastille se déplace comme une étiquette ---
+
+  /**
+   * Le nom d'un équipement, pris dans le schéma entier : un câble commencé sur une page peut finir sur une autre.
+   * `page` : suivi du nom de sa page, quand ce n'est pas celle montrée.
+   */
+  function nomDeLEquipement(id: string, page = false): string {
+    const e = equipementDe(editeur.schema, id);
+    if (!e) return "?";
+    const sienne = editeur.pageDe(id);
+    return page && sienne !== undefined && sienne !== editeur.pageMontree ? `${e.nom} (${nomDeLaPage(editeur.schema, sienne)})` : e.nom;
+  }
+
+  /** Le renvoi de la page montrée qui porte cette pastille. */
+  const renvoiDe = (cible: { id: string; cle: string }): Renvoi | undefined =>
+    editeur.renvois.find((r) => r.lien.id === cible.id && r.cle === cible.cle);
+  const cibleDuRenvoi = (r: Renvoi): Extract<CibleEtiquette, { genre: "renvoi" }> => ({ genre: "renvoi", id: r.lien.id, cle: r.cle });
+  /** Un glissement de la pastille vient de finir : le clic qui le suit ne mène pas à l'autre page. */
+  let renvoiTire = false;
+
+  /** L'appui sur une pastille : relâchée sans bouger, elle mène à l'autre page (au clic) ; tirée, elle se déplace. */
+  function appuiSurRenvoi(evenement: PointerEvent, r: Renvoi) {
+    evenement.stopPropagation();
+    if (evenement.button !== 0 || !etiquettesPrenables) return;
+    capturer(evenement);
+    geste = {
+      genre: "renvoi",
+      cible: cibleDuRenvoi(r),
+      depart: dansLePlan(evenement),
+      centre: { ...r.centre },
+      avant: editeur.commencerGeste(),
+      bouge: false,
+    };
+  }
+
+  /** Au clavier : Entrée y mène ; une flèche choisit la pastille, puis les flèches la déplacent comme une étiquette. */
+  function toucheSurRenvoi(evenement: KeyboardEvent, r: Renvoi) {
+    if (evenement.target !== evenement.currentTarget) return;
+    if (evenement.key === "Enter" || evenement.key === " ") {
+      evenement.preventDefault();
+      evenement.stopPropagation();
+      suivreRenvoi(r);
+    } else if (evenement.key.startsWith("Arrow") && etiquettesPrenables && !evenement.ctrlKey && !evenement.metaKey && !evenement.altKey) {
+      // La pastille est choisie ; la flèche elle-même la déplace aussitôt (le clavier du plan la reçoit ensuite).
+      const cible = cibleDuRenvoi(r);
+      if (!memeCible(etiquette, cible)) choisirEtiquette(cible);
+    }
   }
 
   function appuiSurRotation(evenement: PointerEvent) {
@@ -457,7 +524,8 @@
       if (place) editeur.agir((s) => placer(s, cible, place));
       return true;
     }
-    if (evenement.key.toLowerCase() === "r") {
+    // Un renvoi se déplace, il ne pivote pas.
+    if (evenement.key.toLowerCase() === "r" && cible.genre !== "renvoi") {
       evenement.preventDefault();
       editeur.agir((s) => tourner(s, cible, cranSuivant(vue.angle, evenement.shiftKey ? -1 : 1)));
       return true;
@@ -1163,6 +1231,17 @@
       // Au pixel près, sans la grille : une étiquette se pose là où on la lâche.
       const place = placeVers(g.cible, { x: g.centre.x + dx, y: g.centre.y + dy });
       if (place) placer(schema, g.cible, place);
+    } else if (geste.genre === "renvoi") {
+      const g = geste;
+      const dx = point.x - g.depart.x;
+      const dy = point.y - g.depart.y;
+      // Un clic qui tremble reste un clic : la pastille ne part qu'au-delà de quelques pixels.
+      if (!g.bouge && Math.hypot(dx, dy) < 5 / camera.zoom) return;
+      if (!g.bouge) choisirEtiquette(g.cible);
+      g.bouge = true;
+      // Le câble va d'une page à l'autre : il n'est que dans le schéma entier, pas dans la vue de la page.
+      const place = placeVers(g.cible, { x: g.centre.x + dx, y: g.centre.y + dy });
+      if (place) placer(editeur.schema, g.cible, place);
     } else if (geste.genre === "rotation") {
       tourner(schema, geste.cible, angleDeLaPoignee(geste.centre, point, sansAimant));
     } else if (geste.genre === "passage") {
@@ -1239,6 +1318,15 @@
       editeur.finirGeste(fini.avant);
       // Comme dans un logiciel de dessin : un second clic sur un élément d'un groupe le choisit seul.
       if (fini.genre === "deplacement" && !fini.bouge && fini.affiner) editeur.selection = [fini.affiner];
+    } else if (fini.genre === "renvoi") {
+      // Tirée : elle reste là, choisie (« Remettre à sa place » est sous elle) ; le clic qui suit ne change pas de page.
+      // Relâchée sans bouger : le clic mène à l'autre page.
+      if (fini.bouge) {
+        editeur.finirGeste(fini.avant);
+        renvoiTire = true;
+        setTimeout(() => (renvoiTire = false));
+        svg?.querySelector<SVGGElement>(`g.renvoi[data-renvoi="${CSS.escape(fini.cible.id)}"]`)?.focus();
+      }
     } else if (fini.genre === "connexion") {
       onconnecter(fini.source, equipementSous(dansLePlan(evenement), fini.source)?.id);
     } else if (fini.genre === "tirage") {
@@ -1293,7 +1381,8 @@
   }
 
   function relierDepuis(de: string, vers: string) {
-    const [a, b] = [parId.get(de)?.nom ?? "?", parId.get(vers)?.nom ?? "?"];
+    // Le câble a pu partir d'une autre page (30A) : les noms viennent du schéma entier.
+    const [a, b] = [nomDeLEquipement(de), nomDeLEquipement(vers)];
     if (outil === "relation") {
       const genre = genreRelation;
       let creee = "";
@@ -1578,10 +1667,12 @@
       const nom = pose.startsWith("type:") ? definition(pose.slice(5)).nom : "Élément";
       return `${nom} : cliquez sur le plan à l'endroit voulu. Échap pour renoncer.`;
     }
-    const depart = tirage ? (parId.get(tirage.depart)?.nom ?? "") : "";
+    const depart = tirage ? nomDeLEquipement(tirage.depart, true) : "";
     if (outil === "cable") {
       return depart
-        ? `Câble depuis ${depart} : cliquez l'autre équipement.`
+        ? editeur.pages.length > 1
+          ? `Câble depuis ${depart} : choisissez l'autre équipement, sur cette page ou une autre.`
+          : `Câble depuis ${depart} : cliquez l'autre équipement.`
         : "Câble : cliquez un équipement, puis un autre (ou glissez de l'un à l'autre). Échap pour arrêter.";
     }
     if (outil === "relation") {
@@ -1716,9 +1807,15 @@
       return;
     }
     const depart = cable.depart;
+    // Le bout branché est sur une autre page : le câble passe d'une page à l'autre, un renvoi sur chacune.
+    const autrePage = editeur.pageDe(depart.equipement);
+    const entrePages =
+      autrePage !== undefined && autrePage !== editeur.pageMontree
+        ? ` vers « ${nomDeLaPage(editeur.schema, autrePage)} » : un renvoi le montre sur chaque page`
+        : "";
     if (cable.lien && cable.bout) {
       const { lien, bout } = cable;
-      if (editeur.agir((s) => rebrancher(s, lien, bout, vers), "Câble rebranché.")) {
+      if (editeur.agir((s) => rebrancher(s, lien, bout, vers), `Câble rebranché${entrePages}.`)) {
         editeur.cable = null;
         editeur.selection = [lien];
       }
@@ -1727,7 +1824,7 @@
     let cree = "";
     const ok = editeur.agir((s) => {
       cree = connecter(s, depart, vers, cable.support === "auto" ? {} : { support: cable.support }).id;
-    }, "Câble branché.");
+    }, `Câble branché${entrePages}.`);
     if (ok) {
       editeur.cable = null;
       editeur.selection = [cree];
@@ -1751,16 +1848,28 @@
       ? "automatique"
       : (SUPPORTS.find((x) => x.valeur === support)?.nom ?? support).toLowerCase();
 
+  /**
+   * Ce que dit la consigne du câble en main. Son bout branché peut être sur une autre page (30A) : son nom vient du
+   * schéma entier, suivi de sa page quand ce n'est pas celle-ci ; et, le schéma ayant plusieurs pages, la consigne
+   * dit que l'on peut le brancher sur l'une ou l'autre.
+   */
   const consigneCable = $derived.by(() => {
     const cable = editeur.cable;
     if (!cable) return null;
+    const depart = cable.depart ? equipementDe(editeur.schema, cable.depart.equipement) : undefined;
+    const sienne = depart ? editeur.pageDe(depart.id) : undefined;
+    const ailleurs = sienne !== undefined && sienne !== editeur.pageMontree;
+    const nom = depart ? `${depart.nom}${ailleurs ? ` (${nomDeLaPage(editeur.schema, sienne)})` : ""}` : "?";
+    const pages = editeur.pages.length > 1;
     if (cable.lien) {
-      const fixe = cable.depart ? parId.get(cable.depart.equipement)?.nom : "";
-      return `Bout de câble en main (l'autre reste sur ${fixe}) : cliquez l'équipement où le brancher.`;
+      return pages
+        ? `Bout de câble en main (l'autre reste sur ${nom}) : choisissez un équipement, sur cette page ou une autre.`
+        : `Bout de câble en main (l'autre reste sur ${nom}) : cliquez l'équipement où le brancher.`;
     }
-    return cable.depart
-      ? `Câble ${nomDuSupport(cable.support)} branché sur ${parId.get(cable.depart.equipement)?.nom ?? "?"} : cliquez le second équipement.`
-      : `Câble ${nomDuSupport(cable.support)} en main : cliquez le premier équipement.`;
+    if (!cable.depart) return `Câble ${nomDuSupport(cable.support)} en main : cliquez le premier équipement.`;
+    return pages
+      ? `Câble en main depuis ${nom} : choisissez un équipement, sur cette page ou une autre.`
+      : `Câble ${nomDuSupport(cable.support)} branché sur ${nom} : cliquez le second équipement.`;
   });
 
   /** Le câble en main : de son bout branché jusqu'au pointeur. */
@@ -2186,26 +2295,21 @@
   </g>
 
   <!-- Les câbles vers une autre page (30A) : un clic mène à l'équipement d'en face. -->
-  {#each editeur.renvois.filter((r) => !caches.has(r.equipement)) as r (r.lien.id)}
+  {#each editeur.renvois.filter((r) => !caches.has(r.equipement)) as r (`${r.lien.id}|${r.cle}`)}
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <g
       class="renvoi"
       class:choisi={choisis.has(r.lien.id)}
+      class:tire={geste?.genre === "renvoi" && geste.bouge && geste.cible.id === r.lien.id}
       data-renvoi={r.lien.id}
       role="link"
       tabindex="0"
-      aria-label="Câble vers la page « {r.page.nom} » : {r.nomEquipement}{r.port ? `, port ${r.port}` : ''}. Entrée : y aller"
-      onpointerdown={(ev) => ev.stopPropagation()}
+      aria-label="Câble vers la page « {r.page.nom} » : {r.nomEquipement}{r.port ? `, port ${r.port}` : ''}. Entrée : y aller ; flèches : déplacer la pastille"
+      onpointerdown={(ev) => appuiSurRenvoi(ev, r)}
       onclick={() => suivreRenvoi(r)}
-      onkeydown={(ev) => {
-        if (ev.key === "Enter" || ev.key === " ") {
-          ev.preventDefault();
-          ev.stopPropagation();
-          suivreRenvoi(r);
-        }
-      }}
+      onkeydown={(ev) => toucheSurRenvoi(ev, r)}
     >
-      <title>Aller à la page « {r.page.nom} », sur {r.nomEquipement}</title>
+      <title>Aller à la page « {r.page.nom} », sur {r.nomEquipement} ; glisser pour déplacer la pastille</title>
       {@html dessinerRenvoi(r)}
     </g>
   {/each}
@@ -2395,16 +2499,19 @@
         rx={etiquette?.genre === "equipement" ? 6 : (v.h + 8) / 2}
         class="cadre-choisi"
       />
-      <line x1={v.cx} y1={haut} x2={v.cx} y2={p + 9 * z} class="tige" />
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <g class="poignee-rotation" onpointerdown={appuiSurRotation} ondblclick={aPlat}>
-        <title>Faire pivoter par crans de 15° (Alt : au degré près ; R au clavier) ; double-clic : à plat</title>
-        <circle cx={v.cx} cy={p} r={9 * z} />
-        <path
-          transform="translate({v.cx} {p}) scale({z})"
-          d="M3.6 -2.6A4.4 4.4 0 1 0 4.4 1.2M4.2 -5.6v3.2h-3.2"
-        />
-      </g>
+      <!-- Un renvoi se déplace sans pivoter : pas de poignée. -->
+      {#if etiquette?.genre !== "renvoi"}
+        <line x1={v.cx} y1={haut} x2={v.cx} y2={p + 9 * z} class="tige" />
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <g class="poignee-rotation" onpointerdown={appuiSurRotation} ondblclick={aPlat}>
+          <title>Faire pivoter par crans de 15° (Alt : au degré près ; R au clavier) ; double-clic : à plat</title>
+          <circle cx={v.cx} cy={p} r={9 * z} />
+          <path
+            transform="translate({v.cx} {p}) scale({z})"
+            d="M3.6 -2.6A4.4 4.4 0 1 0 4.4 1.2M4.2 -5.6v3.2h-3.2"
+          />
+        </g>
+      {/if}
     </g>
   {/if}
 
@@ -2518,8 +2625,9 @@
 {#if menuPorts && editeur.cable}
   {@const cible = parId.get(menuPorts.equipement)}
   {#if cible}
+    <!-- Le schéma entier : un port déjà pris par un câble vers une autre page n'est pas libre. -->
     <MenuPorts
-      {schema}
+      schema={editeur.schema}
       equipement={cible}
       x={menuPorts.x}
       y={menuPorts.y}
@@ -2549,7 +2657,7 @@
       type="button"
       class="bouton discret"
       data-action="remettre"
-      disabled={!poseDe(schema, choisie)}
+      disabled={!poseDe(editeur.schema, choisie)}
       title="Oublie sa position et son angle : elle retrouve sa place calculée"
       onclick={remettreEtiquette}
     >
@@ -2826,7 +2934,7 @@
   }
 
   .consigne-outil {
-    margin: 0;
+    margin: 0 auto;
     padding: 6px 12px;
     border-color: var(--bordure);
     color: var(--texte);
@@ -2936,19 +3044,29 @@
   .consigne-cable {
     position: absolute;
     top: 10px;
-    left: 50%;
+    /* Centrée sans « left: 50% », qui ne lui laissait que la moitié de la largeur : en fenêtre étroite, elle s'étirait en hauteur. */
+    right: 12px;
+    left: 12px;
     z-index: 3;
     display: flex;
     align-items: center;
     gap: 8px;
+    width: fit-content;
     max-width: calc(100% - 24px);
+    margin: 0 auto;
     padding: 6px 8px 6px 12px;
-    transform: translateX(-50%);
     border: 1px solid var(--focus);
     border-radius: var(--rayon);
     background: var(--surface);
     box-shadow: 0 4px 12px rgb(0 0 0 / 0.15);
     font-size: 13px;
+  }
+
+  /* Une consigne longue passe à la ligne ; l'icône et le bouton, eux, restent d'un seul tenant. */
+  .consigne-cable .bouton,
+  .consigne-cable > :global(svg) {
+    flex: none;
+    white-space: nowrap;
   }
 
   .barre-rapide {
@@ -3029,6 +3147,11 @@
   .renvoi {
     outline: none;
     cursor: pointer;
+  }
+
+  /* Tirée, elle se déplace : la main qui tient. */
+  .renvoi.tire {
+    cursor: grabbing;
   }
 
   .renvoi :global(rect) {

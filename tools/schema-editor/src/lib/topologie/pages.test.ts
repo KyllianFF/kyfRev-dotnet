@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { dessinerSchema } from "./dessin";
 import { ecrireDrawio } from "./drawio";
 import { EditeurSchema } from "./etat.svelte";
+import { placer, remettre } from "./etiquettes";
 import { ecrireSchema, erreursStructurelles, lireSchema } from "./format";
 import { lireImport, remarquesImport } from "./importation";
 import { type Equipement, interfaceDe, type Schema, schemaVide } from "./modele";
@@ -410,5 +411,80 @@ describe("pages : les sorties", () => {
     expect(titreDeLaSortie(schema, etage2)).toBe("Réseau du lycée - Étage 2");
     expect(titreDeLaSortie(schema)).toBe("Réseau du lycée - Étage 1");
     expect(titreDeLaSortie(unePage().schema)).toBe("Réseau du lycée");
+  });
+});
+
+describe("pages : retours sur la 30A", () => {
+  it("un câble en main survit au changement de page ; la suppression d'une page le repose", () => {
+    const e = new EditeurSchema();
+    const { schema, coeur, etage1, etage2 } = deuxPages();
+    e.schema = schema;
+    e.id = "s_1";
+    e.cable = { support: "auto", depart: port(coeur, 0) };
+    e.montrerPage(etage2);
+    expect(e.pageMontree).toBe(etage2);
+    expect(e.cable?.depart?.equipement).toBe(coeur.id);
+    e.montrerPage(etage1);
+    expect(e.cable?.depart?.equipement).toBe(coeur.id);
+    let troisieme = "";
+    e.agir((s) => (troisieme = ajouterPage(s, "Annexe").id));
+    e.supprimerPage(troisieme);
+    expect(e.cable).toBeNull();
+  });
+
+  it("un câble branché d'une page à l'autre se dessine en renvoi sur chacune, chaque bout sous sa clé", () => {
+    const { schema, coeur, sw, montee, etage1, etage2 } = deuxPages();
+    const ici = renvoisDeLaPage(schema, etage1);
+    const la = renvoisDeLaPage(schema, etage2);
+    expect(ici.map((r) => [r.lien.id, r.cle, r.equipement])).toEqual([[montee.id, "renvoi-a", coeur.id]]);
+    expect(la.map((r) => [r.lien.id, r.cle, r.equipement])).toEqual([[montee.id, "renvoi-b", sw.id]]);
+    expect(ici[0]?.centre).toEqual(ici[0]?.base);
+  });
+
+  it("une pastille déplacée garde son écart à sa place calculée, par bout de câble, et suit son équipement", () => {
+    const { schema, coeur, montee, etage1, etage2 } = deuxPages();
+    const avant = renvoisDeLaPage(schema, etage1)[0];
+    if (!avant) throw new Error("un renvoi attendu");
+    placer(schema, { genre: "renvoi", id: montee.id, cle: "renvoi-a" }, { x: 40, y: -60 });
+    const apres = renvoisDeLaPage(schema, etage1)[0];
+    expect(apres?.base).toEqual(avant.base);
+    expect(apres?.centre).toEqual({ x: avant.base.x + 40, y: avant.base.y - 60 });
+    // L'autre bout, sur l'autre page, n'a pas bougé.
+    const enFace = renvoisDeLaPage(schema, etage2)[0];
+    expect(enFace?.centre).toEqual(enFace?.base);
+    // L'équipement bouge : la pastille le suit, au même écart.
+    coeur.position = { x: coeur.position.x + 100, y: coeur.position.y + 20 };
+    const suivie = renvoisDeLaPage(schema, etage1)[0];
+    if (!suivie) throw new Error("un renvoi attendu");
+    expect(suivie.centre).toEqual({ x: suivie.base.x + 40, y: suivie.base.y - 60 });
+    // Le dessin (aperçu, fiche, impression) la pose là aussi.
+    expect(dessinerSchema(schema, { page: etage1 })).toContain(`x="${(suivie.centre.x - suivie.largeur / 2).toFixed(1)}"`);
+    // « Remettre à sa place » l'oublie.
+    remettre(schema, { genre: "renvoi", id: montee.id, cle: "renvoi-a" });
+    expect(schema.liens.find((l) => l.id === montee.id)?.poses).toBeUndefined();
+    expect(renvoisDeLaPage(schema, etage1)[0]?.centre).toEqual(suivie.base);
+  });
+
+  it("la place d'une pastille voyage dans le fichier au format 3 ; un schéma d'une page n'en garde rien", () => {
+    const { schema, montee, etage2, lien } = deuxPages();
+    placer(schema, { genre: "renvoi", id: montee.id, cle: "renvoi-b" }, { x: 12, y: 30 });
+    placer(schema, { genre: "lien", id: montee.id, cle: "nom" }, { t: 0.5, x: 0, y: 8 });
+    const texte = ecrireSchema(schema);
+    const relu = lireSchema(texte).schema;
+    expect(relu.format).toBe(3);
+    expect(relu.liens.find((l) => l.id === montee.id)?.poses).toEqual({
+      nom: { place: { t: 0.5, x: 0, y: 8 } },
+      "renvoi-b": { place: { x: 12, y: 30 } },
+    });
+    expect(ecrireSchema(relu)).toBe(texte);
+    // Un câble dont les deux bouts sont sur la même page n'a pas de renvoi : une place lue pour lui est oubliée.
+    const brut = JSON.parse(texte);
+    brut.liens.find((l: { id: string }) => l.id === lien.id).poses = { "renvoi-a": { place: { x: 5, y: 5 } } };
+    expect(lireSchema(brut).schema.liens.find((l) => l.id === lien.id)?.poses).toBeUndefined();
+    // La page supprimée, le schéma revient au format 2 sans trace des renvois.
+    supprimerPage(schema, etage2);
+    const seul = ecrireSchema(schema);
+    expect(JSON.parse(seul).format).toBe(2);
+    expect(seul).not.toContain("renvoi");
   });
 });

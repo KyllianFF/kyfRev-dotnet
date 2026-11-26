@@ -174,6 +174,148 @@ public sealed class NetworkBlockTests
         view.Capture($"schemas-fiche-pages-{(theme == KyfRev.DesignSystem.Tokens.ThemeKind.Dark ? "sombre" : "clair")}");
     }
 
+    /// <summary>Deux pages bien différentes, un câble de l'une à l'autre : le vrai dessin de chacune n'est pas le même.</summary>
+    private const string TwoFloors = """
+        {"format": 3, "id": "s_01JQZ8S7ZK4V3H2N8M6X5W9PQR", "titre": "Lycée", "vue": "physique",
+         "pages": [{"id": "p_e1", "nom": "Étage 1"}, {"id": "p_e2", "nom": "Étage 2"}],
+         "equipements": [
+          {"id": "d_coeur", "page": "p_e1", "type": "switch-coeur", "nom": "Cœur", "position": {"x": 0, "y": 0}, "interfaces": [{"id": "i_c1", "nom": "1/1"}, {"id": "i_c2", "nom": "1/2"}]},
+          {"id": "d_pc", "page": "p_e1", "type": "pc", "nom": "PC-Accueil", "position": {"x": 0, "y": 200}, "interfaces": [{"id": "i_p", "nom": "eth0"}]},
+          {"id": "d_sw2", "page": "p_e2", "type": "switch", "nom": "SW-Étage2", "position": {"x": 0, "y": 0}, "interfaces": [{"id": "i_t48", "nom": "1/48"}, {"id": "i_t1", "nom": "1/1"}]},
+          {"id": "d_pc2", "page": "p_e2", "type": "pc", "nom": "PC-Salle 201", "position": {"x": 300, "y": 0}, "interfaces": [{"id": "i_q", "nom": "eth0"}]},
+          {"id": "d_pc3", "page": "p_e2", "type": "pc", "nom": "PC-Salle 202", "position": {"x": 600, "y": 0}, "interfaces": [{"id": "i_r", "nom": "eth0"}]}],
+         "liens": [
+          {"id": "l_1", "a": {"equipement": "d_coeur", "interface": "i_c1"}, "b": {"equipement": "d_pc", "interface": "i_p"}, "support": "cuivre", "statut": "actif", "points": []},
+          {"id": "l_montee", "a": {"equipement": "d_coeur", "interface": "i_c2"}, "b": {"equipement": "d_sw2", "interface": "i_t48"}, "support": "cuivre", "statut": "actif", "points": []},
+          {"id": "l_2", "a": {"equipement": "d_sw2", "interface": "i_t1"}, "b": {"equipement": "d_pc2", "interface": "i_q"}, "support": "cuivre", "statut": "actif", "points": []}]}
+        """;
+
+    [EngineTest]
+    [DataRow(KyfRev.DesignSystem.Tokens.ThemeKind.Light)]
+    [DataRow(KyfRev.DesignSystem.Tokens.ThemeKind.Dark)]
+    public void In_reading_the_real_drawing_goes_from_page_to_page_with_the_mouse_and_the_keyboard(KyfRev.DesignSystem.Tokens.ThemeKind theme)
+    {
+        using var ui = new UiThread();
+        using var vault = new ReadingVault($"Le réseau du lycée.\n\n```reseau\n{Reference}\n```\n\nFin.\n", passage: false);
+        using var engine = new MermaidEngine(FakeEnvironment.WebData);
+        var schemas = new FakeSchemas();
+        schemas.Texts[SchemaId] = TwoFloors;
+        var test = new TestShell();
+        test.Design.Theme = theme;
+        var page = vault.Page(markdown: false, schemas: schemas);
+        page.LoadCommand.Execute(null);
+        UiThread.Until(() => !page.IsLoading);
+        var sheet = new SheetPage { DataContext = page, Width = 1100, Height = 900 };
+        var window = new Window { Content = new Canvas { Children = { sheet } }, Left = -10000, Top = -10000, Width = 1100, Height = 900, ShowActivated = false, ShowInTaskbar = false };
+        window.Resources.MergedDictionaries.Add(test.Design.Dictionary);
+        window.Resources[MermaidEngine.ResourceKey] = engine;
+        window.Resources[NetworkBlock.ResourceKey] = schemas;
+        window.Show();
+        TestShell.Flush();
+        try
+        {
+            // En lecture, le bloc est dans le vrai texte de la fiche, dessiné par la vraie page cachée.
+            Assert.IsTrue(page.IsReading);
+            NetworkView? Found() => sheet.SheetText.Document?.Blocks.OfType<BlockUIContainer>().Select(block => block.Child).OfType<NetworkView>().FirstOrDefault();
+            UiThread.Until(() => Found() is { ShowsPicture: true }, TimeSpan.FromMinutes(2));
+            var view = Found()!;
+            UiThread.Until(() => view.Drawing.IsCompleted, TimeSpan.FromMinutes(1));
+            TestShell.Flush();
+            Assert.IsTrue(view.ShowsPageChoice);
+            Assert.AreEqual("p_e1", view.ShownPage);
+            var first = Picture(view);
+
+            // Le bouton de l'étage 2 est bien sous la souris : rien du texte (sélection, surlignages, feuille) ne le couvre.
+            var buttons = PageButtons(view);
+            var second = buttons[1];
+            Assert.IsTrue(second.IsEnabled && second.Focusable && second.IsVisible);
+            var centre = second.TranslatePoint(new Point(second.ActualWidth / 2, second.ActualHeight / 2), sheet);
+            var hit = System.Windows.Media.VisualTreeHelper.HitTest(sheet, centre)?.VisualHit;
+            Assert.IsTrue(hit is not null && IsWithin(hit, second), $"sous la souris : {hit}");
+            sheet.Capture($"schemas-fiche-lecture-etage1-{(theme == KyfRev.DesignSystem.Tokens.ThemeKind.Dark ? "sombre" : "clair")}");
+
+            // Un clic : le vrai dessin de l'étage 2, une autre image ; la page est retenue pour l'impression.
+            second.RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+            UiThread.Until(() => view.ShownPage == "p_e2" && view.Drawing.IsCompleted, TimeSpan.FromMinutes(1));
+            TestShell.Flush();
+            var other = Picture(view);
+            Assert.IsFalse(first.SequenceEqual(other), "l'étage 2 n'est pas dessiné comme l'étage 1");
+            Assert.AreEqual("p_e2", schemas.Pages[SchemaId]);
+            sheet.Capture($"schemas-fiche-lecture-etage2-{(theme == KyfRev.DesignSystem.Tokens.ThemeKind.Dark ? "sombre" : "clair")}");
+
+            // Au clavier : la flèche revient à l'étage 1, et le bouton de la page montrée garde la main.
+            Assert.IsTrue(view.StepPage(Key.Right));
+            UiThread.Until(() => view.ShownPage == "p_e1" && view.Drawing.IsCompleted, TimeSpan.FromMinutes(1));
+            TestShell.Flush();
+            Assert.IsTrue(first.SequenceEqual(Picture(view)), "de retour sur l'étage 1, le même dessin");
+            Assert.IsTrue(view.StepPage(Key.End));
+            UiThread.Until(() => view.ShownPage == "p_e2" && view.Drawing.IsCompleted, TimeSpan.FromMinutes(1));
+            Assert.IsTrue(view.StepPage(Key.Home));
+            UiThread.Until(() => view.ShownPage == "p_e1" && view.Drawing.IsCompleted, TimeSpan.FromMinutes(1));
+            Assert.IsTrue(view.StepPage(Key.Left));
+            UiThread.Until(() => view.ShownPage == "p_e2" && view.Drawing.IsCompleted, TimeSpan.FromMinutes(1));
+            Assert.IsFalse(view.StepPage(Key.A));
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    /// <summary>Les octets de l'image montrée par la vue.</summary>
+    private static byte[] Picture(NetworkView view)
+    {
+        var image = Descendants(view).OfType<Image>().Single();
+        var encoder = new System.Windows.Media.Imaging.PngBitmapEncoder();
+        encoder.Frames.Add(System.Windows.Media.Imaging.BitmapFrame.Create((System.Windows.Media.Imaging.BitmapSource)image.Source));
+        using var stream = new System.IO.MemoryStream();
+        encoder.Save(stream);
+        return stream.ToArray();
+    }
+
+    private static bool IsWithin(DependencyObject element, DependencyObject ancestor)
+    {
+        for (var current = element; current is not null; current = System.Windows.Media.VisualTreeHelper.GetParent(current))
+        {
+            if (ReferenceEquals(current, ancestor))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    [STATestMethod]
+    public void The_page_choice_steps_with_the_arrow_keys()
+    {
+        using var scene = new ViewScene();
+        scene.Schemas.Texts[SchemaId] = FourPages;
+        var view = scene.Show(Reference);
+
+        var buttons = PageButtons(view);
+        buttons[0].Focus();
+        buttons[0].RaiseEvent(new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(view)!, 0, Key.Right) { RoutedEvent = Keyboard.PreviewKeyDownEvent });
+        UiThread.Until(() => view.ShownPage == "p_2" && view.Drawing.IsCompleted);
+        TestShell.Flush();
+        Assert.AreEqual("p_2", view.ShownPage);
+        Assert.IsTrue(PageButtons(view).OfType<System.Windows.Controls.Primitives.ToggleButton>().Single(button => button.IsChecked == true).IsFocused, "la page montrée garde la main");
+        Assert.IsTrue(view.StepPage(Key.Left));
+        UiThread.Until(() => view.ShownPage == "p_1" && view.Drawing.IsCompleted);
+        Assert.IsTrue(view.StepPage(Key.Left), "avant la première, la dernière");
+        UiThread.Until(() => view.ShownPage == "p_4" && view.Drawing.IsCompleted);
+        Assert.IsFalse(view.StepPage(Key.Tab));
+    }
+
+    [STATestMethod]
+    public void A_schema_of_one_page_takes_no_page_key()
+    {
+        using var scene = new ViewScene();
+        scene.Schemas.Texts[SchemaId] = Text;
+        var view = scene.Show(Reference);
+        Assert.IsFalse(view.StepPage(Key.Right));
+        Assert.IsNull(view.ShownPage);
+    }
+
     [STATestMethod]
     public void A_page_chosen_before_is_the_one_drawn()
     {

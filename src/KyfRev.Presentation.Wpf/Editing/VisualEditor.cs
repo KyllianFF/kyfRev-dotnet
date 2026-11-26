@@ -1009,7 +1009,9 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
                 && TryFindResource(NetworkBlock.ResourceKey) is INetworkSchemas { IsActive: true } schemas
                 && await NetworkBlock.TextOfAsync(schemas, diagram.Code).ConfigureAwait(true) is { } network)
             {
-                image = (await engine.DrawNetworkAsync(network, SchemaIsland.ThemeOf(this)).ConfigureAwait(true))?.Image;
+                // Un schéma à plusieurs pages : la page choisie en lecture (celle qui s'imprime), sinon la première.
+                var page = NetworkBlock.ReferenceOf(diagram.Code) is { } id ? schemas.ChosenPage(id) : null;
+                image = (await engine.DrawNetworkAsync(NetworkPages.Showing(network, page), SchemaIsland.ThemeOf(this)).ConfigureAwait(true))?.Image;
             }
         }
         Send(new DiagramRequest(diagram.Language, diagram.Code, svg, image, OpensInAnEditor(diagram.Language, diagram.Code)));
