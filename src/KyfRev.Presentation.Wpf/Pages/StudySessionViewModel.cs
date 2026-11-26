@@ -261,9 +261,13 @@ public sealed partial class StudySessionViewModel : ObservableObject, ILeaving
                     Watch(reviewPage.Review);
                 }
             };
-            Watch(reviewPage.Review);
         }
         Current = page;
+        if (page is IReviewPage shown)
+        {
+            // Après Current : une barre arrivée entre l'abonnement et ici serait sinon ignorée par l'abonnement.
+            Watch(shown.Review);
+        }
         OnPropertyChanged(nameof(ProgressLabel));
         OnPropertyChanged(nameof(ProgressName));
         OnPropertyChanged(nameof(Progress));

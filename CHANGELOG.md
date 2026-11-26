@@ -43,6 +43,11 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   à l'ouverture (mesuré : 335 ms au pire au lieu de 953 ms sur 120 parties).
 
 ### Corrigé
+- Recherche (Ctrl+K) : la liste défile, avec sa barre, dans une petite fenêtre comme dans une grande. Les commandes
+  formaient un seul groupe plus haut que la place, qui ne défilait pas : la fin de la liste (Paramètres…) restait cachée.
+- Séance de révision : la fiche suivante s'ouvre en haut, et non plus à l'endroit où l'on avait laissé la précédente.
+- Lecture d'une fiche : la molette avance de trois lignes de texte par cran (le réglage de Windows), en glissant, au
+  lieu de sauter de 48 pixels ; un cran donné pendant le glissement le prolonge. Animations coupées : elle saute.
 - Un coffre ouvert sur deux postes (dossier synchronisé) : avant d'écrire le suivi d'une fiche, ses passages ou les
   réglages, kyfRev relit le fichier si l'autre poste l'a changé. Une révision, un passage ou un examen ajouté là-bas
   n'est plus effacé par ce que ce poste écrit ensuite.

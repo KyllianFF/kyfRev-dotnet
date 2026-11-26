@@ -725,7 +725,8 @@ public sealed class SessionTests
         public static async Task<IReviewPage> LoadedAsync(StudySessionViewModel session)
         {
             var page = (IReviewPage)session.Current!;
-            await Waiting.UntilAsync(() => page.Review is not null);
+            // La barre paraît, puis la séance la branche (GoNext) : l'essai, hors du fil de l'interface, attend les deux.
+            await Waiting.UntilAsync(() => page.Review is { InSession: true });
             return page;
         }
 

@@ -294,15 +294,76 @@ internal sealed partial class SheetDocumentViewer : FlowDocumentScrollViewer
         base.OnPreviewMouseDown(e);
     }
 
-    /// <summary>La molette reprend la main sur un défilement accompagné.</summary>
+    /// <summary>
+    /// La molette, sans touche tenue : la vue glisse de trois lignes de texte par cran (le réglage de Windows), plutôt que de
+    /// sauter de 48 pixels ; un cran qui arrive pendant le trajet le prolonge. Avec Ctrl (le zoom) ou au-dessus d'une partie
+    /// qui défile elle-même, rien ne change.
+    /// </summary>
     protected override void OnPreviewMouseWheel(MouseWheelEventArgs e)
     {
+        ArgumentNullException.ThrowIfNull(e);
+        if (Keyboard.Modifiers == ModifierKeys.None && _scroller is { } scroller && !InsideAnotherScroller(e.OriginalSource as DependencyObject))
+        {
+            // Un autre trajet a pu prendre la place de celui de la molette : on repart alors d'où est la vue.
+            var step = WheelStep(scroller);
+            var from = _wheelTarget is { } wanted && Math.Abs(wanted - scroller.VerticalOffset) <= 3 * step ? wanted : scroller.VerticalOffset;
+            var target = Math.Clamp(from - (e.Delta / (double)Mouse.MouseWheelDeltaForOneLine * step), 0, scroller.ScrollableHeight);
+            _wheelTarget = target;
+            if (!KyfRev.DesignSystem.Controls.Transitions.WheelTo(scroller, target, () => _wheelTarget = null))
+            {
+                _wheelTarget = null;
+            }
+            e.Handled = true;
+            return;
+        }
         StopGliding();
         base.OnPreviewMouseWheel(e);
     }
 
+    /// <summary>Où va la vue sous la molette, tant qu'elle y glisse ; rien sinon.</summary>
+    private double? _wheelTarget;
+
+    /// <summary>
+    /// Le pas d'un cran : les lignes que Windows fait défiler par cran, à la hauteur d'une ligne du texte (au moins
+    /// 32 pixels) ; une page entière si Windows défile par page.
+    /// </summary>
+    private double WheelStep(ScrollViewer scroller)
+    {
+        var lines = SystemParameters.WheelScrollLines;
+        if (lines < 0)
+        {
+            return Math.Max(1, scroller.ViewportHeight - WheelPageOverlap);
+        }
+        var comfort = _builtComfort ?? ReadingComfort.Default;
+        var line = Math.Max(WheelLineHeight, comfort.Step > 0 ? comfort.Step : ReadingComfort.Pixels(comfort.Size) * comfort.LineSpacing);
+        return Math.Max(1, lines) * line;
+    }
+
+    /// <summary>La hauteur de ligne la plus petite que compte la molette : un texte serré défile quand même à bonne allure.</summary>
+    private const double WheelLineHeight = 32;
+
+    /// <summary>Ce qui reste à l'écran d'une page à l'autre quand Windows défile par page.</summary>
+    private const double WheelPageOverlap = 48;
+
+    /// <summary>
+    /// Vrai si <paramref name="source"/> est dans une partie du texte qui défile elle-même en hauteur (un bloc de code, un
+    /// tableau trop haut) : la molette est d'abord à elle.
+    /// </summary>
+    private bool InsideAnotherScroller(DependencyObject? source)
+    {
+        for (var element = source; element is not null && !ReferenceEquals(element, this); element = element is System.Windows.Media.Visual or System.Windows.Media.Media3D.Visual3D ? System.Windows.Media.VisualTreeHelper.GetParent(element) : LogicalTreeHelper.GetParent(element))
+        {
+            if (element is ScrollViewer { ScrollableHeight: > 0 } inner && !ReferenceEquals(inner, _scroller))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private void StopGliding()
     {
+        _wheelTarget = null;
         if (_scroller is { } scroller)
         {
             KyfRev.DesignSystem.Controls.Transitions.StopScroll(scroller);
@@ -597,7 +658,42 @@ internal sealed partial class SheetDocumentViewer : FlowDocumentScrollViewer
         viewer._built?.Layer.SetWords(viewer.Words ?? []);
     }
 
-    private static void OnContentChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e) => ((SheetDocumentViewer)sender).Rebuild();
+    private static void OnContentChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e)
+    {
+        var viewer = (SheetDocumentViewer)sender;
+        var another = e.Property == ReadingProperty && viewer.IsAnotherSheet(e.NewValue as SheetReading);
+        viewer.Rebuild();
+        if (another)
+        {
+            viewer.StartAtTop();
+        }
+    }
+
+    /// <summary>La fiche que la vue montre ; rien avant la première.</summary>
+    private string? _shownSheet;
+
+    /// <summary>
+    /// Vrai si <paramref name="reading"/> est une autre fiche que celle montrée jusqu'ici : la vue sert à la suivante (une
+    /// séance réutilise la page d'une fiche à l'autre). Une relecture de la même fiche, après l'avoir écrite, n'en est pas une.
+    /// </summary>
+    private bool IsAnotherSheet(SheetReading? reading)
+    {
+        if (reading is null)
+        {
+            return false;
+        }
+        var another = _shownSheet is not null && !string.Equals(_shownSheet, reading.SheetId, StringComparison.Ordinal);
+        _shownSheet = reading.SheetId;
+        return another;
+    }
+
+    /// <summary>Une autre fiche commence en haut, comme si on venait de l'ouvrir.</summary>
+    private void StartAtTop()
+    {
+        StopGliding();
+        _restoreOffset = null;
+        _scroller?.ScrollToHome();
+    }
 
     private static void OnHighlightsChanged(DependencyObject sender, DependencyPropertyChangedEventArgs e) => ((SheetDocumentViewer)sender).ApplyHighlights();
 
