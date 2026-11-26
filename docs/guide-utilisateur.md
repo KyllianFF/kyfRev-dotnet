@@ -207,6 +207,17 @@ liens » regroupe plusieurs câbles (ils se voient tous, sous un cercle) et « T
 écrits sur le câble (« Trunk · U 1 · T 10,20,30 ») ; les deux se cumulent. Au clic droit sur la carte d'un schéma, ou dans son Détail : « Exporter… », « Partager » (son image
 va dans le presse-papiers) et « Imprimer… ».
 
+En mode avancé, un équipement choisi ouvre son volet : en tête, son icône, son nom, son type (un clic ouvre la grille
+des types, avec une recherche et les types récents d'abord ; changer de type garde le nom, les ports et les connexions),
+son statut et « ⋯ » (Connecter, Dupliquer, Copier, Verrouiller la place, Copier la configuration, Coller sur…, Retirer…).
+Quatre onglets suivent, le dernier choisi restant choisi d'un équipement à l'autre : Général (nom, rôle, propriétés
+propres au type), Ports, Réseau (gestion, adressage, interfaces de routage par VLAN, conseils) et Inventaire. L'onglet
+Ports montre la façade, un carré par port, plein s'il est relié : un clic choisit un port, Maj+clic une suite, Ctrl+clic
+en ajoute un ; les ports choisis passent ensemble en accès, en trunk, en PoE ou sont désactivés. « Ajouter des ports »
+ajoute une plage d'un coup, au nommage des autres ports. « Copier la configuration » puis « Coller sur… » reprend le
+réglage des ports de même nom (mode, VLAN, activation, PoE) et le VLAN de gestion sur d'autres équipements, pratique
+pour plusieurs switchs d'étage pareils. En fenêtre étroite, le volet devient un tiroir par le bas.
+
 ## Noter une idée
 
 Ctrl+Maj+N ouvre la capture rapide depuis n'importe quelle vue. Votre note s'ajoute, datée, à la fiche « Boîte de

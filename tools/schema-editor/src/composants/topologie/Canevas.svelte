@@ -2513,8 +2513,9 @@
           }}
         />
       {/key}
-      <button type="button" class="bouton discret" title="Brancher un câble (puis choisir le port)" aria-label="Brancher un câble" onclick={() => cableDepuis(choisi.id)}>
-        <Cable size={16} aria-hidden="true" />
+      <!-- Le nom et Connecter (30C) : le reste est dans le volet, sous « ⋯ ». -->
+      <button type="button" class="bouton discret connecter" data-action="connecter" title="Brancher un câble (puis choisir le port)" onclick={() => cableDepuis(choisi.id)}>
+        <Cable size={16} aria-hidden="true" /> Connecter
       </button>
     {:else if barre.genre === "lien"}
       {@const lien = barre.lien}
@@ -2607,7 +2608,7 @@
         </span>
       {/if}
     {/if}
-    {#if barre.genre === "equipement" || (barre.genre === "plusieurs" && barre.equipements > 0)}
+    {#if barre.genre === "plusieurs" && barre.equipements > 0}
       <button type="button" class="bouton discret" title="Copier (Ctrl+C), puis Ctrl+V pour coller, ici ou dans un autre schéma" aria-label="Copier" onclick={oncopier}>
         <Copy size={16} aria-hidden="true" />
       </button>
@@ -2615,9 +2616,11 @@
         <CopyPlus size={16} aria-hidden="true" />
       </button>
     {/if}
-    <button type="button" class="bouton discret danger" title="Supprimer (Suppr) ; Ctrl+Z annule" aria-label="Supprimer" onclick={onretirer}>
-      <Trash2 size={16} aria-hidden="true" />
-    </button>
+    {#if barre.genre !== "equipement"}
+      <button type="button" class="bouton discret danger" title="Supprimer (Suppr) ; Ctrl+Z annule" aria-label="Supprimer" onclick={onretirer}>
+        <Trash2 size={16} aria-hidden="true" />
+      </button>
+    {/if}
   </div>
 {/if}
 
@@ -2906,6 +2909,12 @@
 
   .nom-rapide {
     width: 140px;
+  }
+
+  .barre-rapide .connecter {
+    height: 30px;
+    padding: 0 10px;
+    font-size: 13px;
   }
 
   .nombre-rapide {
