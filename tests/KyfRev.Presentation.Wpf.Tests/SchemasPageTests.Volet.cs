@@ -16,7 +16,7 @@ public sealed partial class SchemasPageTests
     /// Le réseau d'un lycée : un cœur en stack de deux membres (ports « 1/0/1 »), trois interfaces de routage, une gestion à
     /// part ; deux switchs d'étage, reliés au cœur par des trunks au VLAN natif 1 ; une borne Wi-Fi en accès.
     /// </summary>
-    private static string Lycee()
+    private static string LyceeEnVolet()
     {
         static JsonObject Trunk() => new() { ["mode"] = "trunk", ["natif"] = 1, ["tagues"] = "10,20,30" };
         static JsonObject Access(int vlan) => new() { ["mode"] = "acces", ["acces"] = vlan };
@@ -185,7 +185,7 @@ public sealed partial class SchemasPageTests
     [DataRow(ThemeKind.Dark)]
     public void The_device_pane_has_four_tabs_a_grid_of_types_and_its_actions_under_the_dots(ThemeKind theme)
     {
-        using var scene = new IslandScene(Lycee(), theme: theme);
+        using var scene = new IslandScene(LyceeEnVolet(), theme: theme);
         var suffix = theme == ThemeKind.Dark ? "sombre" : "clair";
         var id = OpenInAdvancedMode(scene);
         JsonNode Saved() => JsonNode.Parse(scene.Schemas.Read(id).Value.Text)!;
@@ -301,7 +301,7 @@ public sealed partial class SchemasPageTests
     [DataRow(ThemeKind.Dark)]
     public void The_ports_tab_sets_several_ports_at_once_adds_a_range_and_the_network_tab_advises(ThemeKind theme)
     {
-        using var scene = new IslandScene(Lycee(), theme: theme);
+        using var scene = new IslandScene(LyceeEnVolet(), theme: theme);
         var suffix = theme == ThemeKind.Dark ? "sombre" : "clair";
         var id = OpenInAdvancedMode(scene);
         JsonNode Coeur() => JsonNode.Parse(scene.Schemas.Read(id).Value.Text)!["equipements"]!.AsArray().Single(e => e!["id"]!.GetValue<string>() == "d_coeur")!;
@@ -403,7 +403,7 @@ public sealed partial class SchemasPageTests
     [DataRow(ThemeKind.Dark)]
     public void At_470_pixels_the_device_pane_is_a_drawer_with_its_four_tabs_and_a_shorter_table(ThemeKind theme)
     {
-        using var scene = new IslandScene(Lycee(), theme: theme);
+        using var scene = new IslandScene(LyceeEnVolet(), theme: theme);
         var suffix = theme == ThemeKind.Dark ? "sombre" : "clair";
         OpenInAdvancedMode(scene);
         Narrow(scene);
@@ -465,7 +465,7 @@ public sealed partial class SchemasPageTests
     [EngineTest]
     public void The_ports_tab_widens_the_pane_only_where_the_plan_keeps_its_room()
     {
-        using var scene = new IslandScene(Lycee());
+        using var scene = new IslandScene(LyceeEnVolet());
         OpenInAdvancedMode(scene);
         SelectDevice(scene, "d_coeur", "Cœur");
         scene.Script("document.querySelector('.proprietes [data-onglet=ports][role=tab]').click()");
