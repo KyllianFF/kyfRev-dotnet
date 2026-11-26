@@ -176,7 +176,11 @@ public sealed partial class UnlockPageViewModel : ObservableObject
         IsBusy = true;
         try
         {
-            var state = await Task.Run(() => _vaults.UnlockWithHello(Vault)).ConfigureAwait(true);
+            AppState Unlock() => _vaults.UnlockWithHello(Vault);
+            if (await SettledAsync(await Task.Run(Unlock).ConfigureAwait(true), Unlock).ConfigureAwait(true) is not { } state)
+            {
+                return;
+            }
             if (state.Locked is null && state.OpenError is null && state.Vault is not null)
             {
                 _opened(state);

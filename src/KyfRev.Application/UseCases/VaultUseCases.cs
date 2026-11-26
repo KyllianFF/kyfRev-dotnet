@@ -257,6 +257,11 @@ public sealed partial class VaultUseCases(
             return State();
         }
         var present = Present.Of(time);
+        // Un autre poste l'a ouvert : la question vient avant le geste, qui ne se demande qu'une fois.
+        if (HeldBy(root, present) is { } held)
+        {
+            return held;
+        }
         VaultKey? key;
         try
         {
@@ -272,7 +277,8 @@ public sealed partial class VaultUseCases(
         }
         using (key)
         {
-            return Adopt(() => store.Open(root, key, present.Now), present, lockedOnFailure: root, encrypted: true, unlocked: root);
+            var forReading = ForReading(root);
+            return Adopt(() => store.Open(root, key, present.Now, forReading), present, lockedOnFailure: root, encrypted: true, unlocked: root, forReading: forReading);
         }
     }
 

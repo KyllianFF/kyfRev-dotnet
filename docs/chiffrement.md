@@ -260,7 +260,8 @@ kyfrev-coffre cle-de-recuperation <coffre chiffré>
   verrouillage : c'est le geste qui prouve la présence. « Utiliser le mot de passe » reste à un clic, sa case déjà cochée
   pour ne pas oublier la clé. Si l'utilisateur renonce, rien ne se dit ; si Windows refuse, la raison se dit et le mot de
   passe est demandé. Une création annulée ou refusée ne retient rien : jamais de repli silencieux vers la clé de session.
-  Un programme lancé dans la session ne peut plus rouvrir le coffre sans ce geste.
+  Un programme lancé dans la session ne peut plus rouvrir le coffre sans ce geste. Un coffre ouvert sur un autre poste pose d'abord sa question (Ouvrir, Lecture
+  seule, Annuler), avant le geste, qui ne se demande ainsi qu'une fois.
 
 ## Le verrouillage
 
