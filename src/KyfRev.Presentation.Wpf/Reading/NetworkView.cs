@@ -41,14 +41,15 @@ internal sealed class NetworkView : Border
     public NetworkView()
     {
         _notice.SetResourceReference(TextBlock.ForegroundProperty, "Kyf.Brush.TextSecondary");
-        // Un schéma à plusieurs pages (30A) : un sélecteur discret, en haut à droite de l'aperçu.
+        // Un schéma à plusieurs pages (30A) : un sélecteur discret, en haut à droite, juste au-dessus du dessin : posé
+        // dessus, il en cachait le coin (un équipement tout à droite y disparaissait).
         _pages = new Border
         {
             Child = _pageButtons,
             CornerRadius = new CornerRadius(8),
             BorderThickness = new Thickness(1),
             Padding = new Thickness(2),
-            Margin = new Thickness(6),
+            Margin = new Thickness(0, 0, 0, 6),
             HorizontalAlignment = HorizontalAlignment.Right,
             VerticalAlignment = VerticalAlignment.Top,
             Visibility = Visibility.Collapsed,
@@ -56,12 +57,52 @@ internal sealed class NetworkView : Border
         _pages.SetResourceReference(Border.BackgroundProperty, "Kyf.Brush.Surface");
         _pages.SetResourceReference(Border.BorderBrushProperty, "Kyf.Brush.Divider");
         AutomationProperties.SetName(_pages, SchemaText.PagesName);
+        _picture.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+        _picture.RowDefinitions.Add(new RowDefinition());
+        Grid.SetRow(_image, 1);
         _picture.Children.Add(_image);
         _picture.Children.Add(_pages);
         Child = _notice;
         Loaded += (_, _) => Redraw();
         // Un aperçu qu'on ne touche pas (l'impression) n'a pas de sélecteur : il montre la page choisie.
         IsHitTestVisibleChanged += (_, _) => ShowPages();
+        // Au clavier, comme les onglets de l'éditeur : les flèches, Début et Fin passent d'une page à l'autre.
+        _pages.PreviewKeyDown += (_, e) => e.Handled = StepPage(e.Key);
+    }
+
+    /// <summary>
+    /// Une touche du sélecteur : flèche à droite ou à gauche, la page voisine (après la dernière, la première) ; Début, Fin :
+    /// la première, la dernière. La page montrée garde la main. Rend vrai si la touche a servi.
+    /// </summary>
+    internal bool StepPage(Key key)
+    {
+        if (_schemaPages.Count < 2)
+        {
+            return false;
+        }
+        var rank = Math.Max(0, _schemaPages.ToList().FindIndex(page => page.Id == _shownPage));
+        int? wanted = key switch
+        {
+            Key.Right => (rank + 1) % _schemaPages.Count,
+            Key.Left => (rank + _schemaPages.Count - 1) % _schemaPages.Count,
+            Key.Home => 0,
+            Key.End => _schemaPages.Count - 1,
+            _ => null,
+        };
+        if (wanted is not { } next)
+        {
+            return false;
+        }
+        ChoosePage(_schemaPages[next].Id);
+        _ = FocusShownPageAsync();
+        return true;
+    }
+
+    /// <summary>Le dessin refait, le bouton de la page montrée prend la main.</summary>
+    private async Task FocusShownPageAsync()
+    {
+        await Drawing.ConfigureAwait(true);
+        _pageButtons.Children.OfType<ToggleButton>().FirstOrDefault(button => button.IsChecked == true)?.Focus();
     }
 
     /// <summary>Les pages du schéma, s'il en a plusieurs.</summary>
