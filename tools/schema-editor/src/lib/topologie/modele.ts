@@ -320,7 +320,14 @@ export type PoseEtiquette = { place?: { t?: number; x: number; y: number }; angl
 /** Les étiquettes d'un câble : ses deux ports, son nom, son VLAN. */
 export type CleEtiquette = "port-a" | "port-b" | "nom" | "vlan";
 export const CLES_ETIQUETTE: CleEtiquette[] = ["port-a", "port-b", "nom", "vlan"];
-export type PosesDuLien = Partial<Record<CleEtiquette, PoseEtiquette>>;
+/**
+ * Les renvois d'un câble entre deux pages (30A), un à chaque bout : celui de la page de son bout A, celui de la
+ * page de son bout B. Leur `place` n'a pas de fraction : `x` et `y` décalent la pastille de sa place calculée,
+ * à côté de son équipement, qu'elle suit quand il bouge. Seul un schéma à plusieurs pages les écrit.
+ */
+export type CleRenvoi = "renvoi-a" | "renvoi-b";
+export const CLES_RENVOI: CleRenvoi[] = ["renvoi-a", "renvoi-b"];
+export type PosesDuLien = Partial<Record<CleEtiquette | CleRenvoi, PoseEtiquette>>;
 
 /** Un angle ramené entre −90 (compris) et 90 (exclu) : au-delà, le texte se retourne pour se lire à l'endroit. */
 export function angleLisible(angle: number): number {

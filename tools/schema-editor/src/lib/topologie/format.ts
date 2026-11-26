@@ -13,7 +13,9 @@ import {
   type Agregat,
   angleLisible,
   CLES_ETIQUETTE,
+  CLES_RENVOI,
   type CleEtiquette,
+  type CleRenvoi,
   type Annotation,
   type ConfigVlan,
   type Equipement,
@@ -275,15 +277,21 @@ function lirePose(valeur: unknown, surTrace: boolean): PoseEtiquette | undefined
   return propre({ place, angle: angle === 0 ? undefined : angle });
 }
 
-function lirePoses<T extends CleEtiquette>(
+/** Les poses lues, dans l'ordre des clés ; celles de `libres` (les renvois) n'ont pas de tracé, donc pas de fraction. */
+function lirePoses<T extends CleEtiquette | CleRenvoi>(
   valeur: unknown,
   cles: readonly T[],
+  libres: readonly T[] = [],
 ): Partial<Record<T, PoseEtiquette>> | undefined {
   if (typeof valeur !== "object" || valeur === null) return undefined;
   const brut = valeur as Brut;
   const poses: Partial<Record<T, PoseEtiquette>> = {};
   for (const cle of cles) {
     const pose = lirePose(brut[cle], true);
+    if (pose) poses[cle] = pose;
+  }
+  for (const cle of libres) {
+    const pose = lirePose(brut[cle], false);
     if (pose) poses[cle] = pose;
   }
   return Object.keys(poses).length > 0 ? poses : undefined;
@@ -330,7 +338,7 @@ function lireLien(l: Brut): Lien {
     forme: l.forme === "droite" || l.forme === "coudee" ? l.forme : undefined,
     points: points(l.points),
     palier: lirePalier(l.palier),
-    poses: lirePoses(l.poses, CLES_ETIQUETTE),
+    poses: lirePoses<CleEtiquette | CleRenvoi>(l.poses, CLES_ETIQUETTE, CLES_RENVOI),
     notes: facultatif(l.notes, LONG_MAX),
   });
 }
@@ -613,6 +621,7 @@ function rangerPages(schema: Schema): void {
   const elements = [...schema.equipements, ...schema.groupes, ...schema.annotations];
   if (pages.length < 2) {
     for (const element of elements) delete element.page;
+    for (const lien of schema.liens) oublierRenvois(lien);
     schema.format = FORMAT;
     return;
   }
@@ -626,6 +635,17 @@ function rangerPages(schema: Schema): void {
     const page = pageDe.get(e.membres[0] ?? "");
     e.membres = e.membres.filter((m) => pageDe.get(m) === page);
   }
+  // Un câble dont les deux bouts sont sur la même page n'a pas de renvoi : la place de ses pastilles ne sert plus.
+  for (const lien of schema.liens) {
+    if (pageDe.get(lien.a.equipement) === pageDe.get(lien.b.equipement)) oublierRenvois(lien);
+  }
+}
+
+/** Oublie la place des renvois d'un câble ; un câble à qui il ne reste aucune pose n'en garde pas la trace. */
+function oublierRenvois(lien: Lien): void {
+  if (!lien.poses) return;
+  for (const cle of CLES_RENVOI) delete lien.poses[cle];
+  if (Object.keys(lien.poses).length === 0) delete lien.poses;
 }
 
 /** JSON du schéma : stable (champs dans l'ordre du modèle), indenté, relu par `lireSchema`. */

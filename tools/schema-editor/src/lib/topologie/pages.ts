@@ -9,6 +9,7 @@
 // diagnostic regardent tout le schéma.
 
 import {
+  type CleRenvoi,
   equipementDe,
   FORMAT,
   FORMAT_PAGES,
@@ -109,6 +110,8 @@ export function surLaPage(schema: Schema, page?: string): Schema {
 /** Un câble dont l'autre bout est sur une autre page, tel qu'il se dessine sur celle-ci. */
 export type Renvoi = {
   lien: Lien;
+  /** Le bout du câble qui est sur cette page : la place de sa pastille, déplacée à la main, est gardée sous cette clé. */
+  cle: CleRenvoi;
   /** L'équipement de cette page. */
   equipement: string;
   /** La page, l'équipement et le port d'en face. */
@@ -121,6 +124,8 @@ export type Renvoi = {
   /** D'où part le trait (le centre de l'équipement) et où est la pastille (son centre, sa taille). */
   depart: Point;
   centre: Point;
+  /** La place calculée de la pastille, avant l'écart choisi à la main. */
+  base: Point;
   largeur: number;
   hauteur: number;
 };
@@ -137,6 +142,7 @@ export const largeurDuRenvoi = (texte: string): number => Math.round(texte.lengt
  * Les renvois d'une page : un par câble qui la quitte. La pastille se pose à côté de l'équipement, du côté où il
  * est sur la page (vers le bord le plus proche), un peu au-dessus de son centre : assez bas pour ne pas passer
  * sous la barre d'actions d'un équipement choisi. Plusieurs renvois d'un même équipement s'empilent vers le bas.
+ * Une pastille déplacée à la main garde son écart à cette place : elle suit son équipement.
  */
 export function renvoisDeLaPage(schema: Schema, page?: string, caches: Set<string> = new Set()): Renvoi[] {
   if (!aPlusieursPages(schema)) return [];
@@ -149,9 +155,9 @@ export function renvoisDeLaPage(schema: Schema, page?: string, caches: Set<strin
   const rangs = new Map<string, number>();
   const renvois: Renvoi[] = [];
   for (const lien of schema.liens) {
-    for (const [bout, autre] of [
-      [lien.a, lien.b],
-      [lien.b, lien.a],
+    for (const [bout, autre, cle] of [
+      [lien.a, lien.b, "renvoi-a"],
+      [lien.b, lien.a, "renvoi-b"],
     ] as const) {
       const local = parId.get(bout.equipement);
       const distant = parId.get(autre.equipement);
@@ -166,8 +172,14 @@ export function renvoisDeLaPage(schema: Schema, page?: string, caches: Set<strin
       const rang = rangs.get(local.id) ?? 0;
       rangs.set(local.id, rang + 1);
       const cote = surCettePage.length > 1 && local.position.x < milieuX ? -1 : 1;
+      const base = {
+        x: local.position.x + cote * (DEMI_COTE + 44 + largeur / 2),
+        y: local.position.y - 20 + rang * ECART_RENVOIS,
+      };
+      const place = lien.poses?.[cle]?.place;
       renvois.push({
         lien,
+        cle,
         equipement: local.id,
         page: { id: pageDistante, nom: nomPage },
         versEquipement: distant.id,
@@ -175,10 +187,8 @@ export function renvoisDeLaPage(schema: Schema, page?: string, caches: Set<strin
         port,
         texte,
         depart: { ...local.position },
-        centre: {
-          x: local.position.x + cote * (DEMI_COTE + 44 + largeur / 2),
-          y: local.position.y - 20 + rang * ECART_RENVOIS,
-        },
+        centre: place ? { x: base.x + place.x, y: base.y + place.y } : base,
+        base,
         largeur,
         hauteur: HAUTEUR_RENVOI,
       });
