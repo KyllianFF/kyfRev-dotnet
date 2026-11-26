@@ -114,8 +114,8 @@ public sealed partial class SchemasPageTests
 
         // Le cœur choisi au clavier, « Brancher un câble » dans sa petite barre : ses ports sont pris, un port de plus.
         scene.Script("(() => { const e = document.querySelector('svg.canevas g.equipement[data-id=\"d_coeur\"]'); e.focus(); e.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })); })()");
-        scene.WaitFor("document.querySelector('.barre-rapide button[aria-label=\"Brancher un câble\"]') !== null");
-        scene.Script("document.querySelector('.barre-rapide button[aria-label=\"Brancher un câble\"]').click()");
+        scene.WaitFor("document.querySelector('.barre-rapide button[data-action=\"connecter\"], .barre-rapide button[aria-label=\"Brancher un câble\"]') !== null");
+        scene.Script("document.querySelector('.barre-rapide button[data-action=\"connecter\"], .barre-rapide button[aria-label=\"Brancher un câble\"]').click()");
         scene.WaitFor("document.querySelector('.menu-ports .ajout') !== null");
         scene.Script("document.querySelector('.menu-ports .ajout').click()");
         scene.WaitFor("document.querySelector('.consigne-cable') !== null && document.querySelector('.menu-ports') === null");
@@ -143,8 +143,8 @@ public sealed partial class SchemasPageTests
 
         // Échap repose le câble en main, même après un changement de page.
         scene.Script("(() => { const e = document.querySelector('svg.canevas g.equipement[data-id=\"d_sw1\"]'); e.focus(); e.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })); })()");
-        scene.WaitFor("document.querySelector('.barre-rapide button[aria-label=\"Brancher un câble\"]') !== null");
-        scene.Script("document.querySelector('.barre-rapide button[aria-label=\"Brancher un câble\"]').click()");
+        scene.WaitFor("document.querySelector('.barre-rapide button[data-action=\"connecter\"], .barre-rapide button[aria-label=\"Brancher un câble\"]') !== null");
+        scene.Script("document.querySelector('.barre-rapide button[data-action=\"connecter\"], .barre-rapide button[aria-label=\"Brancher un câble\"]').click()");
         scene.WaitFor("document.querySelector('.menu-ports .ajout') !== null");
         scene.Script("document.querySelector('.menu-ports .ajout').click()");
         scene.WaitFor("document.querySelector('.consigne-cable') !== null");
@@ -174,8 +174,8 @@ public sealed partial class SchemasPageTests
         Narrow(scene);
         scene.WaitFor("getComputedStyle(document.querySelector('.pages .replie')).display === 'flex'");
         scene.Script("(() => { const e = document.querySelector('svg.canevas g.equipement[data-id=\"d_sw2\"]'); e.focus(); e.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })); })()");
-        scene.WaitFor("document.querySelector('.barre-rapide button[aria-label=\"Brancher un câble\"]') !== null");
-        scene.Script("document.querySelector('.barre-rapide button[aria-label=\"Brancher un câble\"]').click()");
+        scene.WaitFor("document.querySelector('.barre-rapide button[data-action=\"connecter\"], .barre-rapide button[aria-label=\"Brancher un câble\"]') !== null");
+        scene.Script("document.querySelector('.barre-rapide button[data-action=\"connecter\"], .barre-rapide button[aria-label=\"Brancher un câble\"]').click()");
         scene.WaitFor("document.querySelector('.menu-ports .ajout') !== null");
         scene.Script("document.querySelector('.menu-ports .ajout').click()");
         scene.WaitFor("document.querySelector('.consigne-cable') !== null");
