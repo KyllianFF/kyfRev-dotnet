@@ -89,6 +89,8 @@ internal sealed partial class App : System.Windows.Application
         }
         var window = _services.GetRequiredService<ShellWindow>();
         MainWindow = window;
+        var hello = _services.GetRequiredService<WindowsHello>();
+        window.SourceInitialized += (_, _) => hello.Owner = new System.Windows.Interop.WindowInteropHelper(window).Handle;
         var machine = _services.GetRequiredService<MachineSettings>();
         // Lancé par Windows avec la session, réglé pour rester discret : kyfRev reste dans la barre d'état.
         var inTray = !gallery && e.Args.Contains(SessionStartup.InTrayArgument, StringComparer.Ordinal);

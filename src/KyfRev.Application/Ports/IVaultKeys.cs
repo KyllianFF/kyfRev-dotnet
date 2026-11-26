@@ -46,6 +46,22 @@ public interface IVaultKeys
     bool IsRemembered(string root);
 
     /// <summary>
+    /// Vrai si Windows Hello est configuré sur ce poste : la clé retenue (<see cref="Remember"/>) est alors scellée par
+    /// lui, et ne rouvre le coffre qu'avec le geste de l'utilisateur.
+    /// </summary>
+    bool CanUseHello => false;
+
+    /// <summary>Vrai si la clé retenue pour le coffre de <paramref name="root"/> est scellée par Windows Hello.</summary>
+    bool IsRememberedWithHello(string root) => false;
+
+    /// <summary>
+    /// La clé scellée par Windows Hello pour le coffre de <paramref name="root"/> : Windows demande le code PIN, le
+    /// visage ou l'empreinte. Rien s'il n'y en a pas, ou si l'utilisateur renonce. Elle sert aussi après un verrouillage.
+    /// </summary>
+    /// <exception cref="OperationException">Windows Hello refuse, ou l'index ne se lit pas : la raison se dit.</exception>
+    VaultKey? RememberedWithHello(string root) => null;
+
+    /// <summary>
     /// Change le mot de passe du coffre chiffré de <paramref name="root"/> : sa clé de données, la même, est enveloppée
     /// par le nouveau mot de passe, et seul son en-tête est réécrit, d'un coup. Aucune fiche n'est réécrite ; la clé de
     /// récupération et la clé retenue sur ce poste l'ouvrent toujours, l'ancien mot de passe plus.

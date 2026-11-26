@@ -24,6 +24,9 @@ public sealed class EncryptionUseCases(VaultHost host, IVaultKeys keys)
     /// <summary>Vrai si ce poste a retenu une clé pour le coffre ouvert ; faux sans coffre ouvert.</summary>
     public bool IsRemembered => host.Root is { } root && keys.IsRemembered(root);
 
+    /// <summary>Vrai si Windows Hello est configuré sur ce poste : retenir la clé la scelle par lui.</summary>
+    public bool UsesHello => keys.CanUseHello;
+
     /// <summary>
     /// Change le mot de passe du coffre ouvert : la même clé de données est enveloppée par le nouveau mot de passe, et seul
     /// l'en-tête est réécrit. La clé de récupération et la clé retenue sur ce poste l'ouvrent toujours, l'ancien mot de passe

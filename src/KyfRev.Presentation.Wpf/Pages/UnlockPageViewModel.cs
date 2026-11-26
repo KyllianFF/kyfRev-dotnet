@@ -47,7 +47,28 @@ public sealed partial class UnlockPageViewModel : ObservableObject
         Vault = vault;
         Error = state.OpenError;
         BackLabel = state.Vault is null ? EncryptionText.BackToWelcome : EncryptionText.BackToVault;
+        UsesHello = vaults.UsesHello;
+        OffersHello = vaults.OffersHello(vault);
+        // Sa clé est retenue avec Windows Hello : l'ouvrir par le mot de passe, une fois, ne l'oublie pas.
+        Remember = OffersHello;
     }
+
+    /// <summary>Windows Hello est configuré sur ce poste : la case de la clé retenue le dit.</summary>
+    public bool UsesHello { get; }
+
+    /// <summary>« Se souvenir sur cet ordinateur », ou, avec Windows Hello, « Ouvrir avec Windows Hello sur cet ordinateur ».</summary>
+    public string RememberLabel => UsesHello ? EncryptionText.RememberHello : EncryptionText.Remember;
+
+    /// <summary>Ce que fait la case.</summary>
+    public string RememberHelp => UsesHello ? EncryptionText.RememberHelloHelp : EncryptionText.RememberHelp;
+
+    /// <summary>Le coffre s'ouvre avec Windows Hello : son bouton remplace le mot de passe, qui reste à un clic.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsSecret), nameof(Intro))]
+    public partial bool OffersHello { get; private set; }
+
+    /// <summary>Le mot de passe, ou la clé de récupération, est demandé.</summary>
+    public bool ShowsSecret => !OffersHello;
 
     /// <summary>Le dossier du coffre chiffré.</summary>
     public string Vault { get; }
@@ -70,7 +91,7 @@ public sealed partial class UnlockPageViewModel : ObservableObject
     public bool UsesPassword => !UsesRecoveryKey;
 
     /// <summary>Ce qui ouvre le coffre, dit en une phrase.</summary>
-    public string Intro => UsesRecoveryKey ? EncryptionText.RecoveryIntro : EncryptionText.LockedIntro;
+    public string Intro => OffersHello ? EncryptionText.HelloIntro : UsesRecoveryKey ? EncryptionText.RecoveryIntro : EncryptionText.LockedIntro;
 
     /// <summary>Retenir la clé sur ce poste ; décoché par défaut.</summary>
     [ObservableProperty]
@@ -79,7 +100,7 @@ public sealed partial class UnlockPageViewModel : ObservableObject
     /// <summary>Une ouverture est en cours : la dérivation du mot de passe prend de l'ordre d'une seconde.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsIdle))]
-    [NotifyCanExecuteChangedFor(nameof(UnlockCommand), nameof(OtherVaultCommand), nameof(BackCommand), nameof(UseRecoveryKeyCommand), nameof(UsePasswordCommand))]
+    [NotifyCanExecuteChangedFor(nameof(UnlockCommand), nameof(OtherVaultCommand), nameof(BackCommand), nameof(UseRecoveryKeyCommand), nameof(UsePasswordCommand), nameof(UnlockWithHelloCommand), nameof(TypePasswordCommand))]
     public partial bool IsBusy { get; private set; }
 
     /// <summary>Rien n'est en cours.</summary>
@@ -138,6 +159,45 @@ public sealed partial class UnlockPageViewModel : ObservableObject
         {
             IsBusy = false;
         }
+    }
+
+    /// <summary>
+    /// « Ouvrir avec Windows Hello » : Windows demande le code PIN, le visage ou l'empreinte, puis le coffre s'ouvre. Si
+    /// l'utilisateur renonce, l'écran reste, sans message ; un refus de Windows se dit.
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(IsIdle))]
+    private async Task UnlockWithHelloAsync()
+    {
+        if (!OffersHello)
+        {
+            return;
+        }
+        Error = null;
+        IsBusy = true;
+        try
+        {
+            var state = await Task.Run(() => _vaults.UnlockWithHello(Vault)).ConfigureAwait(true);
+            if (state.Locked is null && state.OpenError is null && state.Vault is not null)
+            {
+                _opened(state);
+            }
+            else
+            {
+                Error = state.OpenError;
+            }
+        }
+        finally
+        {
+            IsBusy = false;
+        }
+    }
+
+    /// <summary>« Utiliser le mot de passe » : au lieu de Windows Hello, cette fois.</summary>
+    [RelayCommand(CanExecute = nameof(IsIdle))]
+    private void TypePassword()
+    {
+        Error = null;
+        OffersHello = false;
     }
 
     /// <summary>Le mot de passe est perdu : la clé de récupération est demandée.</summary>

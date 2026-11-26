@@ -25,6 +25,9 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   Une nouvelle clé de données, le mot de passe actuel ou un nouveau, une nouvelle clé de récupération : tout le coffre
   est chiffré de nouveau à côté, relu et comparé, puis reprend sa place ; l'ancien devient « … (ancien, à supprimer) ».
   Une ancienne sauvegarde ou l'historique du dossier synchronisé ne donne plus la clé du coffre d'aujourd'hui.
+- Chiffrement : avec Windows Hello configuré, « Ouvrir avec Windows Hello sur cet ordinateur » remplace « Se souvenir ».
+  La clé retenue est scellée par Windows Hello : le coffre ne s'ouvre plus seul au démarrage, mais d'un geste (code PIN,
+  visage ou empreinte), aussi après un verrouillage. Le mot de passe reste à un clic. Sans Windows Hello, rien ne change.
 
 ### Modifié
 - Recherche : une fiche qui n'a pas changé ne se relit plus à chaque recherche ; son texte reste en mémoire le temps

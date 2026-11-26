@@ -390,4 +390,19 @@ public static class EncryptionText
 
     /// <summary>« Rouvrir le coffre » : après le renouvellement.</summary>
     public static string ReopenRenewed => Text(nameof(ReopenRenewed));
+
+    /// <summary>« Ouvrir avec Windows Hello » : le bouton de l'écran de déverrouillage.</summary>
+    public static string OpenWithHello => Text(nameof(OpenWithHello));
+
+    /// <summary>Ce que dit l'écran de déverrouillage quand Windows Hello ouvre le coffre.</summary>
+    public static string HelloIntro => Text(nameof(HelloIntro));
+
+    /// <summary>« Utiliser le mot de passe » : au lieu de Windows Hello.</summary>
+    public static string TypePassword => Text(nameof(TypePassword));
+
+    /// <summary>« Ouvrir avec Windows Hello sur cet ordinateur » : la case qui retient la clé, avec Windows Hello.</summary>
+    public static string RememberHello => Text(nameof(RememberHello));
+
+    /// <summary>Ce que fait la case, avec Windows Hello.</summary>
+    public static string RememberHelloHelp => Text(nameof(RememberHelloHelp));
 }

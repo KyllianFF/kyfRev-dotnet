@@ -100,6 +100,12 @@ public sealed partial class EncryptionSettingsViewModel : ObservableObject, IFor
     [ObservableProperty]
     public partial bool IsRemembered { get; set; }
 
+    /// <summary>« Se souvenir sur cet ordinateur », ou, avec Windows Hello, « Ouvrir avec Windows Hello sur cet ordinateur ».</summary>
+    public string RememberLabel => _encryption.UsesHello ? EncryptionText.RememberHello : EncryptionText.Remember;
+
+    /// <summary>Ce que fait la case.</summary>
+    public string RememberHelp => _encryption.UsesHello ? EncryptionText.RememberHelloHelp : EncryptionText.RememberHelp;
+
     /// <summary>Les délais du verrouillage automatique, dont celui en vigueur s'il n'est pas l'un d'eux.</summary>
     [ObservableProperty]
     public partial IReadOnlyList<SettingChoice<int>> LockAfterChoices { get; private set; } = [];
