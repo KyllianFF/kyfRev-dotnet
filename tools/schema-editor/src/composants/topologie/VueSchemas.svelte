@@ -25,12 +25,15 @@
   import { definition } from "../../lib/topologie/catalogue";
   import { adresseAffichee, couleurDe, FAMILLES, familleDe } from "../../lib/topologie/dessin";
   import { diagnostiquer } from "../../lib/topologie/diagnostic";
+  import type { IconesDrawio } from "../../lib/topologie/drawio";
   import { ecrireSchema, lireSchema } from "../../lib/topologie/format";
+  import { type CompteRendu, lireImport } from "../../lib/topologie/importation";
   import { type IdVue, type Schema, STATUTS, schemaVide } from "../../lib/topologie/modele";
   import {
     avisEnClair,
     coffreChiffre,
     dureeAnnonce,
+    estImage,
     estVide,
     exporterSchema,
     type FormatExport,
@@ -39,7 +42,9 @@
   } from "../../lib/topologie/sorties";
   import { VUES, vue as vueDe } from "../../lib/topologie/vues";
   import DialogueSaisie from "../DialogueSaisie.svelte";
+  import CompteRenduImport from "./CompteRenduImport.svelte";
   import DialogueExport from "./DialogueExport.svelte";
+  import DialogueImport from "./DialogueImport.svelte";
   import EditeurTopologie from "./EditeurTopologie.svelte";
 
   // Vue « Schémas réseau » (D40) : tous les schémas du coffre (schemas/*.json),
@@ -72,6 +77,11 @@
   let ranges = $state<SchemaRange[]>([]);
   let aSupprimer = $state<SchemaResume | null>(null);
   let aExporter = $state<SchemaResume | null>(null);
+  let importOuvert = $state(false);
+  /** Un fichier draw.io lu, en attente de son compte rendu : rien n'est encore dans le coffre. */
+  let aGarder = $state<{ schema: Schema; compteRendu: CompteRendu } | null>(null);
+  /** Les éléments à choisir à l'ouverture de l'éditeur (les formes inconnues d'un import). */
+  let choisisAOuvrir = $state<string[]>([]);
   let menu = $state<Menu | null>(null);
   let largeur = $state(window.innerWidth);
   const etroit = $derived(largeur < LARGEUR_ETROITE);
@@ -215,11 +225,11 @@
   /** Depuis le détail, ce qui sort est la vue montrée ; depuis la liste, celle du schéma. */
   const vueDeSortie = (s: SchemaResume) => (lu === s.id ? vueDe(vueLue) : undefined);
 
-  const exporter = (s: SchemaResume, format: FormatExport) =>
+  const exporter = (s: SchemaResume, format: FormatExport, icones: IconesDrawio) =>
     sortir(async () => {
       const schema = await schemaDuCoffre(s.id);
-      if (format !== "json" && estVide(schema)) return "Ce schéma est vide : rien à exporter en image.";
-      const chemin = await exporterSchema(schema, format, vueDeSortie(s));
+      if (estImage(format) && estVide(schema)) return "Ce schéma est vide : rien à exporter en image.";
+      const chemin = await exporterSchema(schema, format, vueDeSortie(s), icones);
       return chemin ? `Schéma exporté vers ${chemin}` : null;
     }, "Export impossible : ");
 
@@ -322,20 +332,47 @@
 
   const ouvrirDialogue = (dialogue: HTMLDialogElement) => dialogue.showModal();
 
+  /**
+   * Le fichier choisi : un modèle de kyfRev entre tout de suite ; un fichier draw.io passe d'abord par son compte
+   * rendu, et n'entre que s'il est gardé.
+   */
   async function importer() {
     const chemin = await api.choisirFichierSchema();
     if (!chemin) return;
     await agir(async () => {
-      const lecture = lireSchema(await api.lireImportSchema(chemin));
-      if (lecture.erreurs.length > 0) {
+      const importe = await lireImport(await api.lireImportSchema(chemin), chemin);
+      if (importe.erreurs.length > 0) {
         throw new Error(
-          `Import refusé : ${lecture.erreurs.length} erreur(s) de structure, dont « ${lecture.erreurs[0]} ». Rien n'a été créé.`,
+          `Import refusé : ${importe.erreurs.length} erreur(s) de structure, dont « ${importe.erreurs[0]} ». Rien n'a été créé.`,
         );
       }
-      await api.creerSchema(ecrireSchema({ ...lecture.schema, id: "" }));
-      return `Schéma « ${lecture.schema.titre} » importé.`;
+      if (importe.compteRendu) {
+        aGarder = { schema: importe.schema, compteRendu: importe.compteRendu };
+        return "";
+      }
+      await api.creerSchema(ecrireSchema({ ...importe.schema, id: "" }));
+      return `Schéma « ${importe.schema.titre} » importé.`;
     });
   }
+
+  /** Le compte rendu d'un import draw.io : annulé, rien n'entre ; gardé, le schéma entre ; montré, il s'ouvre, ses formes inconnues choisies. */
+  function conclureImport(issue: "annuler" | "garder" | "montrer") {
+    const importe = aGarder;
+    aGarder = null;
+    if (!importe) return;
+    if (issue === "annuler") message = "Import annulé : rien n'a été créé.";
+    else void garder(importe, issue === "montrer");
+  }
+
+  const garder = (importe: { schema: Schema; compteRendu: CompteRendu }, montrer: boolean) =>
+    agir(async () => {
+      const cree = await api.creerSchema(ecrireSchema({ ...importe.schema, id: "" }));
+      if (montrer) {
+        choisisAOuvrir = importe.compteRendu.inconnus;
+        edite = cree.id;
+      }
+      return `Schéma « ${importe.schema.titre} » importé.`;
+    });
 
   const nombre = (schema: Schema | undefined, quoi: "equipements" | "liens" | "relations") =>
     schema?.[quoi].length ?? 0;
@@ -475,7 +512,7 @@
         {/if}
       </div>
       <div class="actions">
-        <button type="button" class="bouton" disabled={occupe} onclick={importer}><Upload size={16} aria-hidden="true" /> Importer…</button>
+        <button type="button" class="bouton" disabled={occupe} onclick={() => (importOuvert = true)}><Upload size={16} aria-hidden="true" /> Importer…</button>
         <button type="button" class="bouton principal" disabled={occupe} onclick={() => (creation = true)}>
           <Plus size={16} aria-hidden="true" /> Nouveau schéma
         </button>
@@ -638,8 +675,22 @@
   <DialogueExport
     titre={s.titre}
     vide={connu !== undefined && estVide(connu)}
-    onvalider={(format) => exporter(s, format)}
+    onvalider={(format, icones) => exporter(s, format, icones)}
     onfermer={() => (aExporter = null)}
+  />
+{/if}
+
+{#if importOuvert}
+  <DialogueImport onvalider={() => void importer()} onfermer={() => (importOuvert = false)} />
+{/if}
+
+{#if aGarder}
+  <CompteRenduImport
+    titre={aGarder.schema.titre}
+    compteRendu={aGarder.compteRendu}
+    onannuler={() => conclureImport("annuler")}
+    ongarder={() => conclureImport("garder")}
+    onmontrer={() => conclureImport("montrer")}
   />
 {/if}
 
@@ -688,7 +739,13 @@
     <EditeurTopologie
       id={edite}
       retour={depuisFiche ? "Fermer" : "Schémas"}
+      choisis={choisisAOuvrir}
+      onouvrir={(id, choisis) => {
+        choisisAOuvrir = choisis;
+        edite = id;
+      }}
       onfermer={() => {
+        choisisAOuvrir = [];
         edite = null;
         depuisFiche = false;
         void charger();

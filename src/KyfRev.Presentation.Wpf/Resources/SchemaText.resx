@@ -46,7 +46,7 @@
     <value>Le moteur web n'a pas pu démarrer : {0}</value>
   </data>
   <data name="FileFilter" xml:space="preserve">
-    <value>Schémas (*.json)|*.json</value>
+    <value>Schémas (*.json, *.drawio, *.xml)|*.json;*.drawio;*.xml</value>
   </data>
   <data name="IslandName" xml:space="preserve">
     <value>Schémas réseau</value>

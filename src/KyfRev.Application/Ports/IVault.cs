@@ -400,7 +400,7 @@ public interface ISchemaStore
     /// <summary>Copie indépendante d'un schéma, titrée « … (copie) ».</summary>
     SchemaDocument DuplicateSchema(string id);
 
-    /// <summary>Écrit un export (JSON, SVG, PNG ou CSV) hors du coffre, sans rien écraser ; rend le fichier créé.</summary>
+    /// <summary>Écrit un export (JSON, SVG, PNG, CSV ou draw.io) hors du coffre, sans rien écraser ; rend le fichier créé.</summary>
     string ExportSchema(string folder, string name, string extension, ReadOnlySpan<byte> content);
 
     /// <summary>Lit un fichier choisi pour l'import : rien n'est écrit dans le coffre.</summary>

@@ -34,6 +34,9 @@ public sealed partial class VaultSession
     private const int MaxSchemaExportBytes = 4 * MaxSchemaBytes;
     private const string DefaultSchemaFileName = "Schéma réseau";
 
+    /// <summary>Ce qui s'importe : un modèle de kyfRev, ou un fichier draw.io (enregistré en .drawio ou en .xml).</summary>
+    private static readonly string[] SchemaImportExtensions = [".json", ".drawio", ".xml"];
+
     /// <summary>Les schémas lisibles du coffre, par titre, avec les fiches qui les insèrent.</summary>
     public IReadOnlyList<SchemaSummary> Schemas() => SchemasIn(SchemaPlace.Active);
 
@@ -120,9 +123,9 @@ public sealed partial class VaultSession
     public string ExportSchema(string folder, string name, string extension, ReadOnlySpan<byte> content)
     {
         ArgumentNullException.ThrowIfNull(name);
-        if (extension is not ("json" or "svg" or "png" or "csv"))
+        if (extension is not ("json" or "svg" or "png" or "csv" or "drawio"))
         {
-            throw VaultException.InvalidPath(extension, "export d'un schéma : JSON, SVG, PNG ou CSV seulement");
+            throw VaultException.InvalidPath(extension, "export d'un schéma : JSON, SVG, PNG, CSV ou draw.io seulement");
         }
         if (content.Length > MaxSchemaExportBytes)
         {
@@ -133,13 +136,17 @@ public sealed partial class VaultSession
         return CreateWithoutOverwriting(folder, stem.Length == 0 ? DefaultSchemaFileName : stem, extension, content);
     }
 
-    /// <summary>Lit un fichier choisi pour l'import d'un schéma : <c>.json</c>, au plus 8 Mo, en UTF-8. Rien n'est écrit ici.</summary>
+    /// <summary>
+    /// Lit un fichier choisi pour l'import d'un schéma : un modèle de kyfRev (<c>.json</c>) ou un fichier draw.io
+    /// (<c>.drawio</c>, <c>.xml</c>), au plus 8 Mo, en UTF-8. Rien n'est écrit ici : l'îlot le traduit et le vérifie.
+    /// </summary>
     public static string ReadSchemaToImport(string path)
     {
         ArgumentNullException.ThrowIfNull(path);
-        if (!string.Equals(Path.GetExtension(path), ".json", StringComparison.OrdinalIgnoreCase))
+        var extension = Path.GetExtension(path);
+        if (!SchemaImportExtensions.Any(allowed => string.Equals(allowed, extension, StringComparison.OrdinalIgnoreCase)))
         {
-            throw VaultException.InvalidPath(path, "un fichier .json est attendu");
+            throw VaultException.InvalidPath(path, "un fichier .json, .drawio ou .xml est attendu");
         }
         byte[] bytes;
         try

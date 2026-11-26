@@ -18,7 +18,7 @@ public sealed class SchemaModuleTests
 
     private static readonly string[] CitingSheets = ["Abeille", "Zèbre"];
 
-    private static readonly string[] Extensions = ["json", "svg", "csv"];
+    private static readonly string[] Extensions = ["json", "svg", "csv", "drawio"];
 
     private static readonly ModuleCatalog Catalog = new([new SchemasModule()]);
 
@@ -154,7 +154,14 @@ public sealed class SchemaModuleTests
         {
             Assert.IsTrue(schemas.Export(outside, $"Réseau.{extension}", Png).Succeeded);
         }
-        StringAssert.Contains(schemas.Export(outside, "Réseau.exe", Png).Error, "JSON, SVG, PNG ou CSV", StringComparison.Ordinal);
+        StringAssert.Contains(schemas.Export(outside, "Réseau.exe", Png).Error, "JSON, SVG, PNG, CSV ou draw.io", StringComparison.Ordinal);
+        Assert.IsFalse(schemas.Export(outside, "Réseau.vsdx", Png).Succeeded, "Visio passe par draw.io.");
+
+        // Un fichier draw.io ne remplace pas plus qu'un autre celui qui porte déjà son nom.
+        var drawio = schemas.Export(outside, "Labo.drawio", Png).Value;
+        var again = schemas.Export(outside, "Labo.drawio", [1, 2]).Value;
+        Assert.AreEqual("Labo (2).drawio", Path.GetFileName(again));
+        CollectionAssert.AreEqual(Png, File.ReadAllBytes(drawio));
         Assert.IsFalse(schemas.Export(outside, "sans extension", Png).Succeeded);
         StringAssert.Contains(schemas.Export(outside, "Réseau.png", new byte[(32 * 1024 * 1024) + 1]).Error, "32 Mo", StringComparison.Ordinal);
         Assert.IsFalse(schemas.Export(test.PathOf("schemas"), "Réseau.png", Png).Succeeded, "Pas dans le coffre.");
@@ -176,7 +183,22 @@ public sealed class SchemaModuleTests
 
         var other = Path.Combine(outside, "reseau.txt");
         File.WriteAllText(other, Text);
-        StringAssert.Contains(schemas.ReadImport(other).Error, ".json", StringComparison.Ordinal);
+        StringAssert.Contains(schemas.ReadImport(other).Error, ".json, .drawio ou .xml", StringComparison.Ordinal);
+        var visio = Path.Combine(outside, "reseau.vsdx");
+        File.WriteAllText(visio, Text);
+        Assert.IsFalse(schemas.ReadImport(visio).Succeeded, "Un fichier Visio s'ouvre d'abord dans draw.io.");
+
+        // Un fichier draw.io, enregistré en .drawio ou en .xml : lu tel quel, l'îlot le traduit.
+        var drawIo = "<mxfile><diagram name=\"Labo\"><mxGraphModel><root><mxCell id=\"0\"/></root></mxGraphModel></diagram></mxfile>";
+        foreach (var name in new[] { "labo.drawio", "labo.XML" })
+        {
+            var file = Path.Combine(outside, name);
+            File.WriteAllText(file, drawIo);
+            Assert.AreEqual(drawIo, schemas.ReadImport(file).Value);
+        }
+        var heavy = Path.Combine(outside, "gros.drawio");
+        File.WriteAllText(heavy, new string('x', VaultSession.MaxSchemaBytes + 1), Encoding.UTF8);
+        StringAssert.Contains(schemas.ReadImport(heavy).Error, "8 Mo", StringComparison.Ordinal);
 
         var binary = Path.Combine(outside, "binaire.json");
         File.WriteAllBytes(binary, [0x7B, 0xE9, 0x7D]);

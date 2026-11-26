@@ -41,7 +41,7 @@ public static class SchemaText
     /// <summary>« Le moteur web n'a pas pu démarrer : {0} ».</summary>
     public static string EngineFailedOf(object reason) => Format("EngineFailed", reason);
 
-    /// <summary>« Schémas (*.json)|*.json ».</summary>
+    /// <summary>« Schémas (*.json, *.drawio, *.xml)|*.json;*.drawio;*.xml ».</summary>
     public static string FileFilter => Text(nameof(FileFilter));
 
     /// <summary>« Schémas réseau ».</summary>
