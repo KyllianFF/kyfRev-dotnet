@@ -10,8 +10,8 @@
 // refusé, rien n'est enregistré.
 
 import { typeConnu } from "./catalogue";
-import { cadreAnnotation, estCoude } from "./dessin";
-import { typeDevine } from "./drawio";
+import { abreger, cadreAnnotation, estCoude } from "./dessin";
+import { positionDeLaForme, texteDuTrace, typeDevine } from "./drawio";
 import { ecrireSchema, lireSchema, PAGES_MAX } from "./format";
 import { boutDeLien } from "./migration";
 import {
@@ -504,6 +504,34 @@ function traduireLesFeuilles(
 }
 
 /**
+ * Les points de passage d'un câble ou d'une relation du modèle. Un connecteur écrit sur le tracé de kyfRev (donnée
+ * `trace`) n'a pas bougé si ses points sont ceux de l'export : il garde les siens (souvent aucun) et sa forme, et
+ * kyfRev refait son tracé. Bougés dans draw.io, ils deviennent ses points de passage. Un connecteur sans trace
+ * (caché, ou d'un export plus ancien) donne ses points, et `sinon` lit le reste (forme coudée ou droite).
+ */
+function reprendreLeTrace(page: Page, c: Cellule, objet: { points: Point[] }, sinon: () => void): void {
+  const points = page.points(c);
+  const exporte = c.donnees.trace;
+  if (exporte === undefined) {
+    objet.points = points;
+    sinon();
+  } else if (exporte !== texteDuTrace(points)) objet.points = points;
+}
+
+/**
+ * Le nom d'un câble ou d'une relation : sa pastille de nom si elle a été récrite dans draw.io (elle porte le nom
+ * abrégé, comme kyfRev le montre), sinon le libellé du connecteur (caché derrière la pastille).
+ */
+function nomRepris(page: Page, c: Cellule, avant: string | undefined): string {
+  const pastille = page.parId.get(`${c.id}-nom`);
+  if (pastille?.donnees.decor === "nom" && pastille.donnees.pour === c.id) {
+    const texte = premiereLigne(pastille);
+    if (texte !== abreger(avant ?? "")) return texte;
+  }
+  return premiereLigne(c);
+}
+
+/**
  * Le modèle gardé dans le fichier, avec ce qui a changé dans draw.io : places et noms, formes, connecteurs et
  * pages retirés. Chaque page du modèle se retrouve dans la page du fichier qui la porte (la première, pour un
  * schéma d'une page) ; un câble entre deux pages se garde tant que ses deux équipements restent. Rend les
@@ -557,7 +585,7 @@ function reprendreLeModele(
       continue;
     }
     rangDeLEquipement.set(e.id, rang);
-    e.position = arrondi(page.centre(c));
+    e.position = arrondi(positionDeLaForme(e.type, { ...page.coin(c), largeur: c.largeur, hauteur: c.hauteur }));
     const nom = premiereLigne(c);
     if (nom) e.nom = nom.slice(0, 120);
   }
@@ -579,11 +607,12 @@ function reprendreLeModele(
     // Rebranché ailleurs dans draw.io : l'ancien câble part, le connecteur revient comme un câble neuf.
     if (!page || !c?.arete || !memesBouts(c, l.a.equipement, l.b.equipement)) return false;
     vues[rang]?.add(c.id);
-    l.points = page.points(c);
-    if (c.style.curved === "1") remarques.courbes++;
-    const coude = estCoudeDrawio(c);
-    if (coude !== estCoude(schema, l)) l.forme = coude ? "coudee" : "droite";
-    const nom = premiereLigne(c);
+    reprendreLeTrace(page, c, l, () => {
+      if (c.style.curved === "1") remarques.courbes++;
+      const coude = estCoudeDrawio(c);
+      if (coude !== estCoude(schema, l)) l.forme = coude ? "coudee" : "droite";
+    });
+    const nom = nomRepris(page, c, l.nom);
     if (nom) l.nom = nom;
     else delete l.nom;
     return true;
@@ -595,8 +624,8 @@ function reprendreLeModele(
     const c = page?.parId.get(r.id);
     if (!page || !c?.arete || !memesBouts(c, r.de, r.vers)) return false;
     vues[rang]?.add(c.id);
-    r.points = page.points(c);
-    const nom = premiereLigne(c);
+    reprendreLeTrace(page, c, r, () => {});
+    const nom = nomRepris(page, c, r.nom);
     if (nom) r.nom = nom;
     else delete r.nom;
     return true;
@@ -655,16 +684,19 @@ function reprendreLeModele(
 function traduire(schema: Schema, page: Page, vues: Set<string>, remarques: Remarques): void {
   // Les renvois vers une autre page (pastille et trait), écrits par kyfRev : le câble qu'ils montrent vient du modèle.
   const renvois = new Set(page.cellules.filter((c) => c.donnees.renvoi).map((c) => c.id));
+  // Ce qui n'est là que pour l'œil (pastilles, traits d'un agrégat, cercle, pastille d'un stack), écrit par kyfRev.
+  const decor = new Set(page.cellules.filter((c) => c.donnees.decor !== undefined).map((c) => c.id));
   const neuves = page.cellules.filter(
     (c) =>
       !vues.has(c.id) &&
+      !decor.has(c.id) &&
       !page.estCouche(c) &&
       !page.estEtiquette(c) &&
       !renvois.has(c.id) &&
       !renvois.has(c.source) &&
       !renvois.has(c.cible),
   );
-  const parents = new Set(page.cellules.filter((c) => c.sommet).map((c) => c.parent));
+  const parents = new Set(page.cellules.filter((c) => c.sommet && !decor.has(c.id)).map((c) => c.parent));
   const estConteneur = (c: Cellule) =>
     c.sommet &&
     !typeConnu(c.donnees.type ?? "") &&
@@ -783,7 +815,7 @@ function relier(schema: Schema, page: Page, c: Cellule, de: string, vers: string
     return;
   }
   // Les ports : les étiquettes du connecteur, celle du départ avant le milieu, celle de l'arrivée après.
-  const etiquettes = page.cellules.filter((e) => e.parent === c.id && e.sommet);
+  const etiquettes = page.cellules.filter((e) => e.parent === c.id && e.sommet && e.donnees.decor === undefined);
   const port = (cote: number) => {
     const etiquette = etiquettes.find((e) => Math.sign(e.x) === cote);
     return etiquette ? premiereLigne(etiquette).slice(0, 80) : "";

@@ -205,7 +205,10 @@ adresse IP à un équipement, un type et un nombre de câbles à une liaison, et
 règle le reste : interfaces, VLAN, vues, diagnostic. C'est le même schéma dans les deux. Sur une liaison, « Agrégat de
 liens » regroupe plusieurs câbles (ils se voient tous, sous un cercle) et « Trunk » demande ses VLAN, non tagué et tagués,
 écrits sur le câble (« Trunk · U 1 · T 10,20,30 ») ; les deux se cumulent. Au clic droit sur la carte d'un schéma, ou dans son Détail : « Exporter… », « Partager » (son image
-va dans le presse-papiers) et « Imprimer… ».
+va dans le presse-papiers) et « Imprimer… ». Un export draw.io montre le schéma comme kyfRev, dans la vue montrée et
+avec l'affichage choisi : noms et adresses, étiquettes des ports et des câbles, câbles parallèles côte à côte, agrégats
+sous leur cercle ; avec les icônes de kyfRev ou les formes réseau de draw.io. Il porte aussi le modèle complet : c'est lui
+qui revient à l'import, avec ce qui a changé dans draw.io.
 
 Un schéma peut avoir plusieurs pages, comme dans draw.io : Étage 1, Étage 2, Salle serveurs… Les onglets sont sous le plan,
 avec le nombre d'équipements de chaque page ; « + » en ajoute une. Au clic droit sur un onglet : renommer, dupliquer,
