@@ -1194,7 +1194,8 @@ const chevauche = (a: Boite, b: Boite) => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b
 const recouvrement = (a: Boite, b: Boite) =>
   Math.max(0, Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0)) *
   Math.max(0, Math.min(a.y1, b.y1) - Math.max(a.y0, b.y0));
-const abreger = (texte: string, maximum = 28) =>
+/** Un texte d'étiquette trop long, coupé d'un « … » (l'export draw.io le compare au nom qui revient). */
+export const abreger = (texte: string, maximum = 28) =>
   texte.length > maximum ? `${texte.slice(0, maximum - 1)}…` : texte;
 
 /** Largeur d'une étiquette de VLAN, en caractères : au-delà, la liste est coupée. */

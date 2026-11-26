@@ -55,6 +55,14 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   à l'ouverture (mesuré : 335 ms au pire au lieu de 953 ms sur 120 parties).
 
 ### Corrigé
+- Schémas réseau, export draw.io : le fichier montre ce que montre kyfRev, dans la vue exportée et avec l'affichage du
+  schéma. Le nom en gras et l'adresse dessous, sur une ligne juste sous l'icône (un nom long ne se coupe plus en trois) ;
+  les étiquettes des ports et des câbles (« Access · U 2131 », « Trk1 · 1/9,3/9 », « Trunk · U 1 · T 10,20,30 »), là où
+  kyfRev les pose, sans couvrir un nom ; la pastille « ×2 » d'un stack ; les zones en pointillé vert. Plusieurs câbles
+  entre deux mêmes équipements ne se superposent plus : chacun garde son tracé, droit ou coudé, et un agrégat a un trait
+  par port sous son cercle. Avec les icônes de kyfRev comme avec les formes réseau de draw.io. Ce qui n'est là que pour
+  l'œil ne revient pas à l'import, où le modèle gardé dans le fichier prime : rien n'est créé en double. Dans draw.io, un
+  équipement n'est plus rangé dans sa zone : les câbles passeraient sur son nom.
 - Un coffre ouvert sur deux postes (dossier synchronisé) : avant d'écrire le suivi d'une fiche, ses passages ou les
   réglages, kyfRev relit le fichier si l'autre poste l'a changé. Une révision, un passage ou un examen ajouté là-bas
   n'est plus effacé par ce que ce poste écrit ensuite.

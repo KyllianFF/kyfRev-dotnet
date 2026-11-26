@@ -141,7 +141,7 @@ export async function enPng(svg: string, echelleDe = echellePng): Promise<Uint8A
 /** Les octets d'un export, dans le format voulu : une image montre une page, draw.io et le modèle les gardent toutes. */
 async function octetsDe(schema: Schema, format: FormatExport, vue?: Vue, icones?: IconesDrawio, page?: string): Promise<Uint8Array> {
   if (format === "json") return new TextEncoder().encode(ecrireSchema(schema));
-  if (format === "drawio") return new TextEncoder().encode(ecrireDrawio(schema, icones));
+  if (format === "drawio") return new TextEncoder().encode(ecrireDrawio(schema, icones, vue));
   if (format === "svg") return new TextEncoder().encode(svgAutonome(schema, vue, page));
   return enPng(svgAutonome(schema, vue, page));
 }
