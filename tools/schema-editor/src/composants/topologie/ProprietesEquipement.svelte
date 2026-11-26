@@ -6,21 +6,17 @@
 <script lang="ts">
   import { tick } from "svelte";
   import { definition } from "../../lib/topologie/catalogue";
-  import { collerConfiguration, copierConfiguration } from "../../lib/topologie/configuration";
   import { couleurDuType } from "../../lib/topologie/dessin";
   import type { EditeurSchema } from "../../lib/topologie/etat.svelte";
   import { illustration } from "../../lib/topologie/illustrations";
+  import { type ActionEquipement, entreesEquipement } from "../../lib/topologie/menuEquipement";
   import { type Equipement, type Interface, STATUTS } from "../../lib/topologie/modele";
-  import {
-    auNombreDeMembres,
-    changerProfil,
-    dupliquerEquipements,
-    retirerEquipements,
-  } from "../../lib/topologie/operations";
+  import { auNombreDeMembres, changerProfil } from "../../lib/topologie/operations";
   import { MEMBRES_MAX } from "../../lib/topologie/ports";
   import { configurationCopiee, retenirType } from "../../lib/topologie/volet.svelte";
   import ChoixType from "./ChoixType.svelte";
   import DialogueProfil from "./DialogueProfil.svelte";
+  import MenuEquipement from "./MenuEquipement.svelte";
   import PortsEquipement from "./PortsEquipement.svelte";
   import ReseauEquipement from "./ReseauEquipement.svelte";
 
@@ -29,15 +25,13 @@
   let {
     editeur,
     equipement,
-    onconnecter,
-    oncopier,
+    onaction,
     onglet = $bindable("general"),
   }: {
     editeur: EditeurSchema;
     equipement: Equipement;
-    onconnecter: (source: string) => void;
-    /** Copier l'équipement (Ctrl+C), pour le coller ici ou dans un autre schéma. */
-    oncopier: () => void;
+    /** Une entrée de « ⋯ » : les mêmes que le clic droit sur l'équipement, faites au même endroit. */
+    onaction: (action: ActionEquipement, ids: string[], origine: HTMLElement | null) => void;
     onglet?: OngletEquipement;
   } = $props();
 
@@ -60,11 +54,8 @@
 
   let choixType = $state(false);
   let menu = $state(false);
-  let aRetirer = $state(false);
-  let aColler = $state(false);
   let boutonType = $state<HTMLButtonElement>();
   let boutonMenu = $state<HTMLButtonElement>();
-  let menuElement = $state<HTMLDivElement>();
   let profil = $state<{ modifier: (e: Equipement) => void; retirees: Interface[] } | null>(null);
 
   /** Modifie l'équipement (annulable). */
@@ -120,66 +111,22 @@
   /** Les types posés sur le schéma, du dernier posé au premier. */
   const presents = $derived([...schema.equipements].reverse().map((e) => e.type));
 
-  // --- « ⋯ » -------------------------------------------------------------------------------------------------------
+  // --- « ⋯ » : les entrées du clic droit sur l'équipement, dans le même ordre -------------------------------------
 
-  function ouvrirMenu() {
-    menu = !menu;
-    if (menu) void tick().then(() => menuElement?.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus());
-  }
+  const entrees = $derived(
+    entreesEquipement(schema, [equipement.id], { simplifie: false, copiee: configurationCopiee.valeur }),
+  );
 
-  function fermerMenu(rendreLaMain = true) {
+  function fermerMenu(rendreLaMain: boolean) {
     menu = false;
     if (rendreLaMain) void tick().then(() => boutonMenu?.focus());
   }
 
-  function clavierDuMenu(evenement: KeyboardEvent) {
-    const items = [...(menuElement?.querySelectorAll<HTMLButtonElement>("button:not(:disabled)") ?? [])];
-    const rang = items.indexOf(document.activeElement as HTMLButtonElement);
-    let vers: HTMLButtonElement | undefined;
-    if (evenement.key === "ArrowDown") vers = items[(rang + 1) % items.length];
-    else if (evenement.key === "ArrowUp") vers = items[(rang - 1 + items.length) % items.length];
-    else if (evenement.key === "Home") vers = items[0];
-    else if (evenement.key === "End") vers = items.at(-1);
-    else if (evenement.key === "Escape") {
-      evenement.preventDefault();
-      evenement.stopPropagation();
-      fermerMenu();
-      return;
-    } else if (evenement.key === "Tab") {
-      fermerMenu(false);
-      return;
-    } else return;
-    // Les flèches sont pour le menu : l'équipement ne bouge pas sur le plan.
-    evenement.preventDefault();
-    evenement.stopPropagation();
-    vers?.focus();
+  /** Une entrée du menu : le menu se ferme, puis l'action, qui rend la main à « ⋯ ». */
+  function choisirAction(action: ActionEquipement) {
+    menu = false;
+    onaction(action, [equipement.id], boutonMenu ?? null);
   }
-
-  $effect(() => {
-    if (!menu) return;
-    const dehors = (evenement: PointerEvent) => {
-      const cible = evenement.target as Node | null;
-      if (cible && !menuElement?.contains(cible) && !boutonMenu?.contains(cible)) fermerMenu(false);
-    };
-    window.addEventListener("pointerdown", dehors, true);
-    return () => window.removeEventListener("pointerdown", dehors, true);
-  });
-
-  /** Une action du menu : le menu se ferme, puis l'action. */
-  function action(faire: () => void) {
-    fermerMenu(false);
-    faire();
-  }
-
-  function copierLaConfiguration() {
-    configurationCopiee.valeur = copierConfiguration($state.snapshot(editeur.schema), equipement.id);
-    editeur.annonce = `Configuration de « ${equipement.nom} » copiée : « Coller sur… » la reprend sur d'autres équipements.`;
-  }
-
-  const copiee = $derived(configurationCopiee.valeur);
-  const cablesDeLEquipement = $derived(
-    schema.liens.filter((l) => l.a.equipement === equipement.id || l.b.equipement === equipement.id).length,
-  );
 
   // --- Les onglets ----------------------------------------------------------------------------------------------------
 
@@ -262,44 +209,16 @@
       aria-haspopup="menu"
       aria-expanded={menu}
       title="Connecter, dupliquer, copier la configuration, retirer…"
-      onclick={ouvrirMenu}
+      onclick={() => (menu = !menu)}
     >⋯</button>
     {#if menu}
-      <!-- svelte-ignore a11y_interactive_supports_focus -->
-      <div bind:this={menuElement} class="menu" role="menu" aria-label="Actions sur {equipement.nom}" onkeydown={clavierDuMenu}>
-        <button type="button" role="menuitem" onclick={() => action(() => onconnecter(equipement.id))}>Connecter…</button>
-        <button type="button" role="menuitem" onclick={() => action(() => editeur.agir((s) => { editeur.selection = dupliquerEquipements(s, new Set([equipement.id])); }, "Équipement dupliqué."))}>
-          Dupliquer <span class="touche">Ctrl+D</span>
-        </button>
-        <button type="button" role="menuitem" onclick={() => action(oncopier)}>Copier <span class="touche">Ctrl+C</span></button>
-        <button type="button" role="menuitem" onclick={() => action(() => modifier((x) => { if (x.verrou) delete x.verrou; else x.verrou = true; }, equipement.verrou ? "Place déverrouillée." : "Place verrouillée : l'équipement ne bouge plus sur le plan."))}>
-          {equipement.verrou ? "Déverrouiller la place" : "Verrouiller la place"}
-        </button>
-        {#if def.hebergeur}
-          <button type="button" role="menuitem" onclick={() => action(() => modifier((x) => { if (x.replie) delete x.replie; else x.replie = true; }))}>
-            {equipement.replie ? "Déplier ce qu'il héberge" : "Replier ce qu'il héberge"}
-          </button>
-        {/if}
-        {#if equipement.pose}
-          <button type="button" role="menuitem" data-action="remettre-nom" title="Oublie la position et l'angle de son nom : il retrouve sa place sous l'équipement" onclick={() => action(() => modifier((x) => delete x.pose, "Nom remis à sa place."))}>
-            Remettre le nom à sa place
-          </button>
-        {/if}
-        <hr />
-        <button type="button" role="menuitem" data-action="copier-configuration" onclick={() => action(copierLaConfiguration)}>Copier la configuration</button>
-        <button
-          type="button"
-          role="menuitem"
-          data-action="coller-configuration"
-          disabled={!copiee}
-          title={copiee ? `Reprendre la configuration de « ${copiee.nom} » sur d'autres équipements` : "Copiez d'abord la configuration d'un équipement"}
-          onclick={() => action(() => (aColler = true))}
-        >
-          Coller sur…
-        </button>
-        <hr />
-        <button type="button" role="menuitem" class="danger" data-action="retirer" onclick={() => action(() => (aRetirer = true))}>Retirer…</button>
-      </div>
+      <MenuEquipement
+        {entrees}
+        libelle="Actions sur {equipement.nom}"
+        exclu={boutonMenu}
+        onchoisir={choisirAction}
+        onfermer={fermerMenu}
+      />
     {/if}
     {#if choixType}
       <ChoixType
@@ -431,109 +350,6 @@
     retirees={profil.retirees}
     onfermer={() => (profil = null)}
   />
-{/if}
-
-{#if aRetirer}
-  <dialog
-    class="confirmer"
-    aria-labelledby="titre-retirer"
-    {@attach (d: HTMLDialogElement) => d.showModal()}
-    onclose={() => {
-      aRetirer = false;
-      void tick().then(() => boutonMenu?.focus());
-    }}
-  >
-    <form
-      method="dialog"
-      onsubmit={(e) => {
-        e.preventDefault();
-        const id = equipement.id;
-        const dialogue = e.currentTarget.closest("dialog");
-        editeur.agir((s) => retirerEquipements(s, new Set([id])), "Équipement retiré, avec ses liens : Ctrl+Z pour annuler.");
-        editeur.selection = [];
-        dialogue?.close();
-      }}
-    >
-      <h2 id="titre-retirer">Retirer « {equipement.nom} » ?</h2>
-      <p class="aide">
-        {cablesDeLEquipement === 0
-          ? "L'équipement quitte le schéma."
-          : `L'équipement quitte le schéma avec ${cablesDeLEquipement === 1 ? "son câble" : `ses ${cablesDeLEquipement} câbles`}.`}
-        Ctrl+Z annule.
-      </p>
-      <div class="boutons-dialogue">
-        <button type="button" class="bouton" onclick={(e) => e.currentTarget.closest("dialog")?.close()}>Annuler</button>
-        <button type="submit" class="bouton principal danger">Retirer</button>
-      </div>
-    </form>
-  </dialog>
-{/if}
-
-{#if aColler && copiee}
-  {@const autres = schema.equipements
-    .filter((e) => e.id !== copiee.source)
-    .sort((a, b) => Number(b.type === copiee.type) - Number(a.type === copiee.type) || a.nom.localeCompare(b.nom, "fr"))}
-  <dialog
-    class="confirmer"
-    aria-labelledby="titre-coller"
-    {@attach (d: HTMLDialogElement) => d.showModal()}
-    onclose={() => {
-      aColler = false;
-      void tick().then(() => boutonMenu?.focus());
-    }}
-  >
-    <form
-      method="dialog"
-      onsubmit={(e) => {
-        e.preventDefault();
-        const dialogue = e.currentTarget.closest("dialog");
-        const cibles = [...new FormData(e.currentTarget).getAll("cible")].map(String);
-        if (cibles.length === 0) {
-          editeur.annonce = "Choisissez au moins un équipement.";
-          return;
-        }
-        let regles = 0;
-        const manques: string[] = [];
-        const fait = editeur.agir((s) => {
-          for (const id of cibles) {
-            const r = collerConfiguration(s, id, copiee);
-            regles += r.regles;
-            if (r.absents.length > 0) manques.push(`${s.equipements.find((x) => x.id === id)?.nom ?? "?"} (${r.absents.length})`);
-          }
-        });
-        if (fait) {
-          editeur.annonce =
-            `Configuration de « ${copiee.nom} » collée sur ${cibles.length} ${cibles.length > 1 ? "équipements" : "équipement"} : ${regles} ${regles > 1 ? "ports réglés" : "port réglé"}.` +
-            (manques.length > 0 ? ` Ports absents, laissés de côté : ${manques.join(", ")}.` : "");
-          dialogue?.close();
-        }
-      }}
-    >
-      <h2 id="titre-coller">Coller la configuration de « {copiee.nom} »</h2>
-      <p class="aide">
-        Chaque port de même nom reprend le mode, les VLAN, l'activation et le PoE ; le VLAN de gestion suit. Les noms,
-        les adresses et les câbles ne changent pas. Ctrl+Z annule.
-      </p>
-      {#if autres.length === 0}
-        <p class="aide">Aucun autre équipement dans ce schéma.</p>
-      {:else}
-        <fieldset class="cibles">
-          <legend class="visuellement-cache">Équipements qui reçoivent la configuration</legend>
-          {#each autres as e (e.id)}
-            <label class="case">
-              <input type="checkbox" name="cible" value={e.id} checked={e.id === equipement.id} />
-              <span>{e.nom}</span>
-              <span class="type-cible">{definition(e.type).nom}</span>
-            </label>
-          {/each}
-        </fieldset>
-      {/if}
-      <div class="boutons-dialogue">
-        <button type="button" class="bouton" onclick={(e) => e.currentTarget.closest("dialog")?.close()}>Annuler</button>
-        <button type="submit" class="bouton principal" disabled={autres.length === 0}>Coller</button>
-      </div>
-    </form>
-  </dialog>
 {/if}
 
 <style>
@@ -692,64 +508,6 @@
     color: var(--texte);
   }
 
-  .menu {
-    position: absolute;
-    top: calc(100% - 6px);
-    right: 10px;
-    z-index: 20;
-    display: flex;
-    flex-direction: column;
-    min-width: 220px;
-    padding: 5px;
-    border: 1px solid var(--bordure);
-    border-radius: var(--rayon-carte);
-    background: var(--surface);
-    box-shadow: 0 10px 28px rgb(0 0 0 / 0.18);
-  }
-
-  .menu button {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    min-height: 32px;
-    padding: 0 10px;
-    border: none;
-    border-radius: var(--rayon);
-    background: transparent;
-    color: var(--texte);
-    font-size: 13px;
-    text-align: left;
-    white-space: nowrap;
-  }
-
-  .menu button:hover:not(:disabled),
-  .menu button:focus-visible {
-    background: var(--surface-2);
-  }
-
-  .menu button:disabled {
-    color: var(--texte-secondaire);
-    opacity: 0.6;
-  }
-
-  .menu .danger {
-    color: var(--retard);
-  }
-
-  .menu hr {
-    width: calc(100% - 12px);
-    margin: 4px 6px;
-    border: none;
-    border-top: 1px solid var(--bordure);
-  }
-
-  .touche {
-    margin-left: auto;
-    padding-left: 16px;
-    color: var(--texte-secondaire);
-    font-size: 11px;
-  }
-
   .onglets {
     display: flex;
     flex: none;
@@ -855,73 +613,5 @@
     margin: 2px 0 6px;
     color: var(--texte-secondaire);
     font-size: 12px;
-  }
-
-  dialog.confirmer {
-    width: min(460px, calc(100vw - 32px));
-    padding: 18px 20px;
-  }
-
-  dialog.confirmer h2 {
-    margin-bottom: 8px;
-    font-size: 17px;
-  }
-
-  dialog.confirmer .aide {
-    font-size: 13px;
-  }
-
-  .cibles {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    max-height: 260px;
-    margin: 8px 0 0;
-    padding: 4px;
-    overflow-y: auto;
-    border: 1px solid var(--bordure);
-    border-radius: var(--rayon);
-  }
-
-  .cibles .case {
-    min-height: 30px;
-    padding: 0 6px;
-    border-radius: 6px;
-    font-size: 13px;
-  }
-
-  .cibles .case:hover {
-    background: var(--surface-2);
-  }
-
-  .cibles .case > span:first-of-type {
-    color: var(--texte);
-  }
-
-  .type-cible {
-    margin-left: auto;
-    overflow: hidden;
-    color: var(--texte-secondaire);
-    font-size: 12px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .boutons-dialogue {
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-    margin-top: 14px;
-  }
-
-  .bouton.danger {
-    border-color: var(--retard);
-    background: var(--retard);
-  }
-
-  .bouton.danger:hover {
-    border-color: var(--retard);
-    background: var(--retard);
-    filter: brightness(0.92);
   }
 </style>

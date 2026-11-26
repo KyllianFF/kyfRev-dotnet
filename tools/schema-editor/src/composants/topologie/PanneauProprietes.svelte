@@ -14,7 +14,7 @@
     STATUTS_LIEN,
     type Vlan,
   } from "../../lib/topologie/modele";
-  import { collerConfiguration } from "../../lib/topologie/configuration";
+  import type { ActionEquipement } from "../../lib/topologie/menuEquipement";
   import { dupliquerEquipements, relier, retirerEquipements } from "../../lib/topologie/operations";
   import { configurationCopiee } from "../../lib/topologie/volet.svelte";
   import { VUES } from "../../lib/topologie/vues";
@@ -26,16 +26,14 @@
   // les actions communes ; rien : le schéma et son diagnostic.
   let {
     editeur,
-    onconnecter,
+    onaction,
     onmontrer,
-    oncopier,
     large = $bindable(false),
   }: {
     editeur: EditeurSchema;
-    onconnecter: (source: string) => void;
+    /** Une action du menu d'un équipement (« ⋯ », ou « Coller la configuration » sur plusieurs). */
+    onaction: (action: ActionEquipement, ids: string[], origine: HTMLElement | null) => void;
     onmontrer: (id: string) => void;
-    /** Copier la sélection (Ctrl+C). */
-    oncopier: () => void;
     /** Le volet demande plus de place : l'onglet Ports d'un équipement (30D). */
     large?: boolean;
   } = $props();
@@ -55,26 +53,6 @@
     large = equipement !== undefined && onglet === "ports";
   });
   const copiee = $derived(configurationCopiee.valeur);
-
-  /** La configuration copiée, collée sur les équipements choisis (30C). */
-  function collerSurLaSelection() {
-    const source = copiee;
-    if (!source) return;
-    const cibles = equipementsChoisis.filter((e) => e.id !== source.source).map((e) => e.id);
-    let regles = 0;
-    const manques: string[] = [];
-    const fait = editeur.agir((s) => {
-      for (const id of cibles) {
-        const r = collerConfiguration(s, id, source);
-        regles += r.regles;
-        if (r.absents.length > 0) manques.push(`${s.equipements.find((x) => x.id === id)?.nom ?? "?"} (${r.absents.length})`);
-      }
-    });
-    if (fait)
-      editeur.annonce =
-        `Configuration de « ${source.nom} » collée sur ${cibles.length} ${cibles.length > 1 ? "équipements" : "équipement"} : ${regles} ${regles > 1 ? "ports réglés" : "port réglé"}.` +
-        (manques.length > 0 ? ` Ports absents, laissés de côté : ${manques.join(", ")}.` : "");
-  }
 
   const erreurs = $derived(editeur.constats.filter((c) => c.niveau === "erreur"));
   const avertissements = $derived(editeur.constats.filter((c) => c.niveau === "avertissement"));
@@ -208,7 +186,7 @@
 <aside class="panneau" class:equipement={equipement !== undefined} aria-label="Propriétés">
   {#if equipement}
     {#key equipement.id}
-      <ProprietesEquipement {editeur} {equipement} {onconnecter} {oncopier} bind:onglet />
+      <ProprietesEquipement {editeur} {equipement} {onaction} bind:onglet />
     {/key}
   {:else if lien}
     {#key lien.id}
@@ -338,7 +316,7 @@
     </div>
     {#if copiee && equipementsChoisis.some((e) => e.id !== copiee.source)}
       <div class="actions">
-        <button type="button" class="bouton petit" data-action="coller-configuration" title="Chaque port de même nom reprend le mode, les VLAN, l'activation et le PoE ; le VLAN de gestion suit. Ctrl+Z annule." onclick={collerSurLaSelection}>
+        <button type="button" class="bouton petit" data-action="coller-configuration" title="Chaque port de même nom, ou à la même place, reprend le mode, les VLAN, l'activation et le PoE ; le VLAN de gestion suit. Ctrl+Z annule." onclick={(e) => onaction("coller-sur-la-selection", equipementsChoisis.map((x) => x.id), e.currentTarget)}>
           Coller la configuration de « {copiee.nom} »
         </button>
       </div>

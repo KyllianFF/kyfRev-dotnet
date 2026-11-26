@@ -107,6 +107,7 @@
     oncopier,
     ondupliquer,
     onavance,
+    onmenu,
   }: {
     editeur: EditeurSchema;
     /** Mode simplifié (11A) : vue simplifiée, câbles sans choix de port, bulles près de l'objet choisi. */
@@ -137,6 +138,11 @@
     onretirer: () => void;
     oncopier: () => void;
     ondupliquer: () => void;
+    /**
+     * Clic droit sur un équipement (ou touche Menu, Maj+F10) : le menu de ses actions, au point `ancre` de la fenêtre,
+     * sur les équipements choisis `ids` ; `origine` reprend la main quand il se ferme.
+     */
+    onmenu?: (ids: string[], ancre: Point, origine: SVGElement) => void;
   } = $props();
 
   const PAS = 20;
@@ -1323,7 +1329,57 @@
   let bulleAuClavier = $state(false);
 
   /** Entrée ou Espace sur un objet du plan : ce que ferait un clic avec l'outil en cours. */
+  // --- Le menu d'un équipement : clic droit, touche Menu, Maj+F10 ------------------------------------------------------
+
+  /** La touche Menu (ou Maj+F10) ouvre le menu ; Windows envoie ensuite son propre clic droit, qui ne le rouvre pas. */
+  let menuAuClavier = Number.NEGATIVE_INFINITY;
+  const estToucheMenu = (e: KeyboardEvent) => e.key === "ContextMenu" || (e.key === "F10" && e.shiftKey);
+
+  /**
+   * Ouvre le menu sur l'équipement `id` : il est choisi d'abord s'il ne l'était pas ; choisi avec d'autres, le menu
+   * agit sur eux tous. Rien pendant un geste qui vise un objet (câble en main, outil, tuile à poser).
+   */
+  function ouvrirMenu(id: string, element: SVGElement, pointeur: Point | null) {
+    if (!onmenu || !parId.has(id) || pose || editeur.cable || outil !== "choisir" || tirage) return;
+    if (!editeur.estChoisi(id)) editeur.choisir(id);
+    bulleAuClavier = false;
+    const ids = editeur.selection.filter((x) => parId.has(x));
+    const cadre = (element.querySelector(".pave") ?? element).getBoundingClientRect();
+    onmenu(ids, pointeur ?? { x: cadre.left + cadre.width / 2, y: cadre.bottom }, element);
+  }
+
+  function clicDroitSurEquipement(evenement: MouseEvent, id: string) {
+    evenement.preventDefault();
+    evenement.stopPropagation();
+    if (performance.now() - menuAuClavier < 600) return;
+    // Sans position (le clic droit que Windows tire d'une touche) : le menu s'ouvre sous l'équipement.
+    const sansPosition = evenement.clientX === 0 && evenement.clientY === 0;
+    ouvrirMenu(id, evenement.currentTarget as SVGElement, sansPosition ? null : { x: evenement.clientX, y: evenement.clientY });
+  }
+
+  function toucheMenuSurEquipement(evenement: KeyboardEvent, id: string): boolean {
+    if (!estToucheMenu(evenement) || evenement.target !== evenement.currentTarget || !parId.has(id)) return false;
+    evenement.preventDefault();
+    evenement.stopPropagation();
+    menuAuClavier = performance.now();
+    ouvrirMenu(id, evenement.currentTarget as SVGElement, null);
+    return true;
+  }
+
+  /** Le plan a la main, des équipements sont choisis : la touche Menu ouvre leur menu, sous le premier. */
+  function toucheMenuSurLePlan(evenement: KeyboardEvent): boolean {
+    if (!estToucheMenu(evenement)) return false;
+    const premier = editeur.selection.find((x) => parId.has(x));
+    const element = premier ? svg?.querySelector<SVGElement>(`g.equipement[data-id="${CSS.escape(premier)}"]`) : null;
+    if (!premier || !element) return false;
+    evenement.preventDefault();
+    menuAuClavier = performance.now();
+    ouvrirMenu(premier, element, null);
+    return true;
+  }
+
   function toucheSurObjet(evenement: KeyboardEvent, id: string) {
+    if (toucheMenuSurEquipement(evenement, id)) return;
     if ((evenement.key !== "Enter" && evenement.key !== " ") || evenement.target !== evenement.currentTarget) return;
     evenement.preventDefault();
     evenement.stopPropagation();
@@ -1869,6 +1925,7 @@
     // Une étiquette choisie, le plan ou l'une de ses étiquettes ayant la main : les touches sont pour elle.
     if (etiquette && !e.defaultPrevented && svg?.contains(document.activeElement) && clavierDeLEtiquette(e)) return;
     if (document.activeElement !== svg) return;
+    if (toucheMenuSurLePlan(e)) return;
     if (e.key === " ") {
       espace = true;
       e.preventDefault();
@@ -2156,6 +2213,7 @@
       tabindex="0"
       aria-label="{e.nom}, {def.nom}{adresse ? `, ${adresse}` : ''}{e.verrou ? ', verrouillé' : ''}"
       onpointerdown={(ev) => appuiSurObjet(ev, e.id)}
+      oncontextmenu={(ev) => clicDroitSurEquipement(ev, e.id)}
       onpointerenter={() => (survole = e.id)}
       onpointerleave={() => (survole = null)}
       onkeydown={(ev) => toucheSurObjet(ev, e.id)}

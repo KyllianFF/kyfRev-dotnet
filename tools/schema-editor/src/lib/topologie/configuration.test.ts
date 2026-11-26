@@ -2,10 +2,13 @@ import { describe, expect, it } from "vitest";
 import {
   ajouterInterfaceVlan,
   ajouterPlage,
+  apercuDuCollage,
+  apparier,
   basculerActivation,
   basculerPoe,
   bornesDeLaPlage,
   collerConfiguration,
+  collerSurLesCibles,
   conseilsReseau,
   copierConfiguration,
   interfacesDeRoutage,
@@ -20,7 +23,7 @@ import {
 } from "./configuration";
 import { lireSchema } from "./format";
 import { type Equipement, schemaVide } from "./modele";
-import { auNombreDeMembres, changerProfil, connecter, creerEquipement, Refus } from "./operations";
+import { auNombreDeMembres, changerProfil, connecter, creerEquipement, Refus, renommerInterface } from "./operations";
 import { configDuBout, creerAgregat } from "./vlans";
 
 const ids = (e: Equipement, ...noms: string[]) =>
@@ -201,7 +204,7 @@ describe("Copier la configuration", () => {
     const copie = copierConfiguration(schema, sw1.id);
     expect(copie).toMatchObject({ source: sw1.id, nom: sw1.nom, gestionVlan: 99 });
 
-    expect(collerConfiguration(schema, sw2.id, copie)).toEqual({ regles: 28, absents: [] });
+    expect(collerConfiguration(schema, sw2.id, copie)).toEqual({ regles: 28, parPlace: 0, absents: [], gestion: true });
     expect(configDuBout(schema, bout(sw2, "1/2"))).toEqual({ mode: "acces", acces: 10 });
     expect(configDuBout(schema, bout(sw2, "1/25"))).toEqual({ mode: "trunk", natif: 999, tagues: "10,20" });
     expect(sw2.interfaces.find((i) => i.nom === "1/1")?.poe?.fournit).toBe(true);
@@ -211,16 +214,104 @@ describe("Copier la configuration", () => {
     expect(sw2.gestion).toEqual({ vlan: 99 });
     expect(sw2.nom).not.toBe(sw1.nom);
 
-    // Un cœur porte les mêmes noms de ports : il suit. Un petit switch ne les a pas : ils sont nommés, rien n'est créé.
+    // Un cœur porte les mêmes noms de ports : il suit. Un petit switch ne les a pas : ils sont nommés, rien n'est créé,
+    // et sans port en commun la gestion ne suit pas non plus.
     const { regles, absents } = collerConfiguration(schema, coeur.id, copie);
     expect(regles).toBe(28);
     expect(absents).toEqual([]);
     const petit = creerEquipement(schema, "switch-non-administrable", { x: 0, y: 300 });
     const resultat = collerConfiguration(schema, petit.id, copie);
     expect(resultat.regles).toBe(0);
+    expect(resultat.gestion).toBe(false);
     expect(resultat.absents).toHaveLength(28);
     expect(petit.interfaces).toHaveLength(8);
+    expect(petit.gestion).toBeUndefined();
     expect(() => collerConfiguration(schema, sw1.id, copie)).toThrow(Refus);
+  });
+
+  /** Un troisième switch du même modèle, dont les ports s'appellent « Gi1/0/1 » : même membre, même numéro. */
+  function autreNommage(schema: ReturnType<typeof etage>["schema"]) {
+    const sw3 = creerEquipement(schema, "switch", { x: 900, y: 0 });
+    for (const i of sw3.interfaces) renommerInterface(schema, { equipement: sw3.id, interface: i.id }, `Gi1/0/${i.numero}`);
+    return sw3;
+  }
+
+  it("propose la place des ports quand leurs noms diffèrent, et la reprend : même membre, même numéro", () => {
+    const { schema, sw1 } = etage();
+    const sw3 = autreNommage(schema);
+    mettreEnAcces(schema, sw1.id, ids(sw1, "1/1", "1/2"), 10);
+    mettreEnTrunk(schema, sw1.id, ids(sw1, "1/25"), { natif: 999, tagues: "10,20" });
+    sw1.gestion = { vlan: 99 };
+    const copie = copierConfiguration(schema, sw1.id);
+
+    expect(apercuDuCollage(sw3, copie)).toEqual({ parNom: 0, parPlace: 28, exemple: { de: "1/1", vers: "Gi1/0/1" } });
+    // Par le nom seulement : rien en commun, rien ne change.
+    expect(apparier(sw3, copie, "nom")).toEqual([]);
+    expect(collerConfiguration(schema, sw3.id, copie, "nom")).toMatchObject({ regles: 0, gestion: false });
+    expect(sw3.gestion).toBeUndefined();
+    // Par la place : les 28 ports.
+    expect(collerConfiguration(schema, sw3.id, copie, "place")).toMatchObject({ regles: 28, parPlace: 28, absents: [] });
+    expect(configDuBout(schema, bout(sw3, "Gi1/0/2"))).toEqual({ mode: "acces", acces: 10 });
+    expect(configDuBout(schema, bout(sw3, "Gi1/0/25"))).toEqual({ mode: "trunk", natif: 999, tagues: "10,20" });
+    expect(sw3.gestion).toEqual({ vlan: 99 });
+  });
+
+  it("garde le nom d'abord : la place ne sert qu'aux ports qui n'ont pas trouvé le leur", () => {
+    const { schema, sw1, sw2 } = etage();
+    // Deux ports de la cible renommés : les autres gardent leur nom, eux sont trouvés par leur place.
+    renommerInterface(schema, bout(sw2, "1/3"), "Bureau 3");
+    renommerInterface(schema, bout(sw2, "1/4"), "Bureau 4");
+    mettreEnAcces(schema, sw1.id, ids(sw1, "1/3", "1/4", "1/5"), 30);
+    const copie = copierConfiguration(schema, sw1.id);
+    expect(apercuDuCollage(sw2, copie)).toMatchObject({ parNom: 26, parPlace: 2, exemple: { de: "1/3", vers: "Bureau 3" } });
+    expect(collerConfiguration(schema, sw2.id, copie, "place")).toMatchObject({ regles: 28, parPlace: 2 });
+    expect(configDuBout(schema, bout(sw2, "Bureau 4"))).toEqual({ mode: "acces", acces: 30 });
+    expect(configDuBout(schema, bout(sw2, "1/5"))).toEqual({ mode: "acces", acces: 30 });
+  });
+
+  it("d'un switch vers un autre type ou un autre nombre de ports : ce qui se correspond, le reste laissé de côté", () => {
+    const { schema, sw1 } = etage();
+    mettreEnAcces(schema, sw1.id, ids(sw1, "1/1"), 10);
+    const petit = creerEquipement(schema, "switch-non-administrable", { x: 0, y: 300 });
+    // « 1 » à « 8 » : membre 1, numéros 1 à 8, comme « 1/1 » à « 1/8 ».
+    expect(apercuDuCollage(petit, copierConfiguration(schema, sw1.id))).toMatchObject({ parNom: 0, parPlace: 8 });
+    const r = collerConfiguration(schema, petit.id, copierConfiguration(schema, sw1.id), "place");
+    expect(r).toMatchObject({ regles: 8, parPlace: 8 });
+    expect(r.absents).toHaveLength(20);
+    expect(configDuBout(schema, bout(petit, "1"))).toEqual({ mode: "acces", acces: 10 });
+    // Une borne Wi-Fi n'a aucun port numéroté comme eux : rien en commun.
+    const borne = creerEquipement(schema, "point-acces", { x: 300, y: 300 });
+    expect(apercuDuCollage(borne, copierConfiguration(schema, sw1.id))).toEqual({ parNom: 0, parPlace: 0 });
+  });
+
+  it("dit toujours ce qui s'est passé, et refuse quand rien n'aurait changé", () => {
+    const { schema, sw1, sw2, coeur } = etage();
+    const sw3 = autreNommage(schema);
+    sw1.gestion = { vlan: 99 };
+    const copie = copierConfiguration(schema, sw1.id);
+    expect(collerSurLesCibles(schema, [sw2.id], copie)).toBe(
+      `Configuration de « ${sw1.nom} » collée sur « ${sw2.nom} » : 28 ports repris, VLAN de gestion 99. Ctrl+Z annule.`,
+    );
+    expect(collerSurLesCibles(schema, [sw3.id], copie)).toBe(
+      `Configuration de « ${sw1.nom} » collée sur « ${sw3.nom} » : 28 ports repris, par leur place, VLAN de gestion 99. Ctrl+Z annule.`,
+    );
+    expect(collerSurLesCibles(schema, [sw2.id, coeur.id], copie)).toBe(
+      `Configuration de « ${sw1.nom} » collée sur 2 équipements : 56 ports repris, VLAN de gestion 99. Ctrl+Z annule.`,
+    );
+    expect(() => collerSurLesCibles(schema, [sw3.id], copie, "nom")).toThrow(
+      `Aucun port de même nom sur « ${sw3.nom} » : rien n'a changé.`,
+    );
+    const borne = creerEquipement(schema, "routeur", { x: 0, y: 600 });
+    const r = (() => {
+      try {
+        return collerSurLesCibles(schema, [sw2.id, borne.id], copie, "nom");
+      } catch (e) {
+        return (e as Error).message;
+      }
+    })();
+    expect(r).toContain(`collée sur « ${sw2.nom} »`);
+    expect(r).toContain(`Aucun port de même nom sur « ${borne.nom} » : laissé tel quel.`);
+    expect(() => collerSurLesCibles(schema, [sw1.id], copie)).toThrow(Refus);
   });
 
   it("garde sa copie intacte quand la source change ensuite", () => {

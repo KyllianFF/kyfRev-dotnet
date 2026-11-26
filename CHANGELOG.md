@@ -34,6 +34,13 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 - Schémas réseau : « Copier la configuration » d'un équipement, puis « Coller sur… » : chaque port de même nom reprend
   le mode, les VLAN, l'activation et le PoE, et le VLAN de gestion suit ; les noms, les adresses et les câbles ne
   changent pas. Pratique pour plusieurs switchs d'étage pareils.
+- Schémas réseau : le clic droit sur un équipement du plan ouvre les actions de « ⋯ », dans le même ordre (Connecter…,
+  Dupliquer, Copier, Verrouiller la place, Copier la configuration, Coller sur…, puis Retirer… à part). Il choisit
+  d'abord l'équipement ; avec plusieurs équipements choisis, il garde ce qui agit sur eux tous (Dupliquer, Copier,
+  « Coller la configuration de … », Retirer…). Au clavier : touche Menu ou Maj+F10. En mode simplifié : Dupliquer,
+  Copier, Verrouiller la place et Retirer….
+- Schémas réseau : « Coller sur… » dit avant, pour chaque équipement, combien de ports seront repris. Quand les noms
+  des ports diffèrent (« 1/0/1 » et « Gi1/0/1 »), il propose de les reprendre par leur place : même membre, même numéro.
 
 ### Modifié
 - Schémas réseau, mode avancé : le volet d'un équipement passe en quatre onglets, Général, Ports, Réseau et Inventaire,
@@ -58,6 +65,10 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   à l'ouverture (mesuré : 335 ms au pire au lieu de 953 ms sur 120 parties).
 
 ### Corrigé
+- Schémas réseau : coller une configuration sur un équipement dont les ports ne portent pas les mêmes noms ne
+  semblait rien faire : l'annonce disait « collée » avec « 0 port réglé », et le VLAN de gestion changeait quand
+  même. Désormais, sans port en commun, rien ne change et l'annonce le dit (« Aucun port de même nom
+  sur … : rien n'a changé ») ; sinon elle dit combien de ports ont été repris et le VLAN de gestion.
 - Un coffre ouvert sur deux postes (dossier synchronisé) : avant d'écrire le suivi d'une fiche, ses passages ou les
   réglages, kyfRev relit le fichier si l'autre poste l'a changé. Une révision, un passage ou un examen ajouté là-bas
   n'est plus effacé par ce que ce poste écrit ensuite.

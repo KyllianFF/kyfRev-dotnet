@@ -277,7 +277,7 @@ public sealed partial class SchemasPageTests
         Assert.AreEqual(20, Port("1/15")["vlan"]!["acces"]!.GetValue<int>());
         Assert.IsTrue(Port("1/3")["poe"]!["fournit"]!.GetValue<bool>());
         Assert.AreEqual("SW-Étage2", Device("d_sw2")["nom"]!.GetValue<string>(), "le nom ne suit pas");
-        scene.WaitFor("document.querySelector('.annonce')?.textContent.includes('28 ports réglés') === true");
+        scene.WaitFor("document.querySelector('.annonce')?.textContent.includes('28 ports repris') === true");
 
         // L'onglet Réseau reprend ce que le diagnostic dit de l'équipement ; ce qu'il dit des câbles reste au schéma.
         scene.Script("document.querySelector('.proprietes [data-onglet=reseau][role=tab]').click()");

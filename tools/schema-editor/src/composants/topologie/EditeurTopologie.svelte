@@ -70,6 +70,10 @@
   import Plateau from "./Plateau.svelte";
   import RechercheSchema from "./RechercheSchema.svelte";
   import PanneauProprietes from "./PanneauProprietes.svelte";
+  import ActionsEquipement from "./ActionsEquipement.svelte";
+  import MenuEquipement from "./MenuEquipement.svelte";
+  import { type ActionEquipement, entreesEquipement } from "../../lib/topologie/menuEquipement";
+  import { configurationCopiee } from "../../lib/topologie/volet.svelte";
 
   // Éditeur de schémas réseau (D39), en plein écran au-dessus de la fiche.
   // Le schéma vit dans schemas/<id>.json : il s'enregistre seul, et la fiche
@@ -114,6 +118,14 @@
   let exportOuvert = $state(false);
   /** Le menu ouvert de la barre d'outils, un seul à la fois. */
   let menu = $state<"cables" | "relations" | "affichage" | "plus" | null>(null);
+  /** Les actions sur les équipements, pour « ⋯ » du volet et le clic droit sur le plan. */
+  let actions = $state<ActionsEquipement>();
+  /** Le menu d'un clic droit sur un équipement : ses actions, au pointeur. */
+  let menuEquipement = $state<{ ids: string[]; ancre: Point; origine: SVGElement } | null>(null);
+
+  function agirSurEquipements(action: ActionEquipement, ids: string[], origine: HTMLElement | SVGElement | null) {
+    actions?.agir(action, ids, origine);
+  }
 
   // --- Mode de création, outil en cours, tuile en attente ---
 
@@ -908,6 +920,7 @@
           onconnecter={(source, destination) => (connexion = { source, destination: destination ?? null })}
           ondeposer={(genre, point) => ajouter(genre, point)}
           onavance={() => changerMode("avance")}
+          onmenu={(ids, ancre, origine) => (menuEquipement = { ids, ancre, origine })}
         />
         {#if !simplifie}
           <!-- Mode avancé : l'affichage du plan, sur le plan (la barre d'outils garde les outils et les vues). -->
@@ -982,13 +995,43 @@
               basculerTiroir(e.currentTarget);
             }}
           ><span aria-hidden="true"></span></button>
-          <PanneauProprietes {editeur} bind:large={voletLarge} oncopier={copierSelection} onconnecter={(source) => (connexion = { source, destination: null })} onmontrer={(x) => canevas?.montrer(x)} />
+          <PanneauProprietes {editeur} bind:large={voletLarge} onaction={agirSurEquipements} onmontrer={(x) => canevas?.montrer(x)} />
         </div>
       {/if}
     </div>
 
     <Plateau avance={!simplifie} bind:pose onposer={(genre) => ajouter(genre)} />
   {/if}
+
+  {#if menuEquipement}
+    {@const m = menuEquipement}
+    <MenuEquipement
+      entrees={entreesEquipement(schema, m.ids, { simplifie, copiee: configurationCopiee.valeur })}
+      libelle={m.ids.length === 1
+        ? `Actions sur ${schema.equipements.find((e) => e.id === m.ids[0])?.nom ?? ""}`
+        : `Actions sur ${m.ids.length} équipements`}
+      ancre={m.ancre}
+      onchoisir={(action) => {
+        // Lu avant de fermer le menu : `m` le suit, et ne vaut plus rien une fois le menu fermé.
+        const { ids, origine } = m;
+        menuEquipement = null;
+        agirSurEquipements(action, ids, origine);
+      }}
+      onfermer={(rendreLaMain) => {
+        const { origine } = m;
+        menuEquipement = null;
+        if (rendreLaMain && origine.isConnected) origine.focus();
+      }}
+    />
+  {/if}
+  <ActionsEquipement
+    bind:this={actions}
+    {editeur}
+    {simplifie}
+    oncopier={copierSelection}
+    onconnecter={(source) => (connexion = { source, destination: null })}
+    onrendre={() => canevas?.focus()}
+  />
 
   {#if editeur.annonce}
     <p class="annonce" role="status">{editeur.annonce}</p>

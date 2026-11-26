@@ -240,14 +240,34 @@ export function ajouterPlage(schema: Schema, equipementId: string, plage: Plage)
 
 // --- Copier la configuration -------------------------------------------------------------------------------------------
 
-/** La configuration copiée d'un équipement : le réglage de chaque port (par son nom) et le VLAN de gestion. */
+/** Un port copié : son nom, sa place sur la façade (membre et numéro) s'il en a une, et ce qui se reprend. */
+export type PortCopie = {
+  nom: string;
+  membre?: number;
+  numero?: number;
+  vlan?: ConfigVlan;
+  admin: Interface["admin"];
+  poe: boolean;
+};
+
+/** La configuration copiée d'un équipement : le réglage de chaque port et le VLAN de gestion. */
 export type ConfigurationCopiee = {
   source: string;
   nom: string;
   type: string;
-  ports: { nom: string; vlan?: ConfigVlan; admin: Interface["admin"]; poe: boolean }[];
+  ports: PortCopie[];
   gestionVlan?: number;
 };
+
+/**
+ * La place d'un port sur la façade : son membre et son numéro (« 1:7 »). « 1/7 » d'un switch et « Gi1/0/7 » d'un
+ * autre switch du même modèle ont la même place. Seuls les ports physiques numérotés en ont une, hors radio.
+ */
+function placeDuPort(port: { membre?: number; numero?: number }): string | undefined {
+  return port.numero === undefined ? undefined : `${port.membre ?? 1}:${port.numero}`;
+}
+
+const aUnePlace = (i: Interface) => i.nature === "physique" && i.genre !== "radio";
 
 export function copierConfiguration(schema: Schema, equipementId: string): ConfigurationCopiee {
   const equipement = equipementDe(schema, equipementId);
@@ -260,6 +280,7 @@ export function copierConfiguration(schema: Schema, equipementId: string): Confi
       const vlan = configDuBout(schema, { equipement: equipement.id, interface: i.id });
       return {
         nom: i.nom,
+        ...(aUnePlace(i) && i.numero !== undefined ? { membre: i.membre ?? 1, numero: i.numero } : {}),
         ...(vlan ? { vlan: JSON.parse(JSON.stringify(vlan)) as ConfigVlan } : {}),
         admin: i.admin,
         poe: i.poe?.fournit === true,
@@ -270,27 +291,78 @@ export function copierConfiguration(schema: Schema, equipementId: string): Confi
 }
 
 /**
- * Colle une configuration sur un équipement : chaque port de même nom reprend le mode, les VLAN, l'activation et
- * le PoE ; le VLAN de gestion suit. Les noms, les adresses et les câbles ne changent pas. Rend le nombre de ports
- * réglés et les noms des ports absents de la cible (rien n'est créé pour eux).
+ * Comment les ports copiés trouvent ceux de la cible : par leur nom seulement (« nom »), ou par leur nom puis, pour
+ * ceux qui n'en trouvent pas, par leur place, même membre et même numéro (« place »).
+ */
+export type Correspondance = "nom" | "place";
+
+/** Le port de la cible que reprend chaque port copié, et comment il l'a trouvé. */
+export type Appariement = { source: PortCopie; cible: Interface; par: "nom" | "place" }[];
+
+export function apparier(cible: Equipement, configuration: ConfigurationCopiee, par: Correspondance): Appariement {
+  const parNom = new Map(cible.interfaces.map((i) => [i.nom, i]));
+  const pris = new Set<string>();
+  const paires: Appariement = [];
+  const restants: PortCopie[] = [];
+  for (const p of configuration.ports) {
+    const iface = parNom.get(p.nom);
+    if (iface && !pris.has(iface.id)) {
+      pris.add(iface.id);
+      paires.push({ source: p, cible: iface, par: "nom" });
+    } else restants.push(p);
+  }
+  if (par === "nom") return paires;
+  const parPlace = new Map<string, Interface>();
+  for (const i of cible.interfaces) {
+    const place = aUnePlace(i) ? placeDuPort(i) : undefined;
+    if (place !== undefined && !pris.has(i.id) && !parPlace.has(place)) parPlace.set(place, i);
+  }
+  for (const p of restants) {
+    const place = placeDuPort(p);
+    const iface = place === undefined ? undefined : parPlace.get(place);
+    if (!iface || place === undefined) continue;
+    parPlace.delete(place);
+    paires.push({ source: p, cible: iface, par: "place" });
+  }
+  return paires;
+}
+
+/** Ce qu'un collage reprendrait sur une cible, pour le dire avant : par le nom, puis par la place, et un exemple. */
+export function apercuDuCollage(
+  cible: Equipement,
+  configuration: ConfigurationCopiee,
+): { parNom: number; parPlace: number; exemple?: { de: string; vers: string } } {
+  const paires = apparier(cible, configuration, "place");
+  const parNom = paires.filter((p) => p.par === "nom").length;
+  const premiere = paires.find((p) => p.par === "place");
+  return {
+    parNom,
+    parPlace: paires.length - parNom,
+    ...(premiere ? { exemple: { de: premiere.source.nom, vers: premiere.cible.nom } } : {}),
+  };
+}
+
+/**
+ * Colle une configuration sur un équipement : chaque port apparié (par son nom, ou par sa place si `par` le permet)
+ * reprend le mode, les VLAN, l'activation et le PoE ; le VLAN de gestion suit. Les noms, les adresses et les câbles
+ * ne changent pas. Sans aucun port apparié, rien ne change, pas même la gestion. Rend le nombre de ports repris (et
+ * ceux trouvés par leur place), les noms des ports copiés restés sans port sur la cible, et si la gestion a suivi.
  */
 export function collerConfiguration(
   schema: Schema,
   cibleId: string,
   configuration: ConfigurationCopiee,
-): { regles: number; absents: string[] } {
+  par: Correspondance = "nom",
+): { regles: number; parPlace: number; absents: string[]; gestion: boolean } {
   const cible = equipementDe(schema, cibleId);
   if (!cible) throw new Refus("Équipement introuvable.");
   if (cible.id === configuration.source) throw new Refus("Un équipement a déjà sa propre configuration.");
-  const parNom = new Map(cible.interfaces.map((i) => [i.nom, i]));
-  const absents: string[] = [];
-  let regles = 0;
-  for (const p of configuration.ports) {
-    const iface = parNom.get(p.nom);
-    if (!iface) {
-      absents.push(p.nom);
-      continue;
-    }
+  const paires = apparier(cible, configuration, par);
+  const repris = new Set(paires.map((p) => p.source));
+  const absents = configuration.ports.filter((p) => !repris.has(p)).map((p) => p.nom);
+  // Sans port en commun, la configuration ne touche à rien : la gestion seule ne suit pas.
+  if (paires.length === 0 && configuration.ports.length > 0) return { regles: 0, parPlace: 0, absents, gestion: false };
+  for (const { source: p, cible: iface } of paires) {
     ecrireConfigDuBout(
       schema,
       { equipement: cible.id, interface: iface.id },
@@ -302,11 +374,64 @@ export function collerConfiguration(
       delete iface.poe.fournit;
       if (Object.keys(iface.poe).length === 0) delete iface.poe;
     }
-    regles++;
   }
-  if (configuration.gestionVlan !== undefined) cible.gestion = { ...(cible.gestion ?? {}), vlan: configuration.gestionVlan };
-  return { regles, absents };
+  const gestion = configuration.gestionVlan;
+  if (gestion !== undefined) cible.gestion = { ...(cible.gestion ?? {}), vlan: gestion };
+  return {
+    regles: paires.length,
+    parPlace: paires.filter((p) => p.par === "place").length,
+    absents,
+    gestion: gestion !== undefined,
+  };
 }
+
+const nomsCites = (noms: string[]) =>
+  noms.length === 1 ? `« ${noms[0]} »` : `${noms.slice(0, -1).map((n) => `« ${n} »`).join(", ")} ni « ${noms.at(-1)} »`;
+
+/**
+ * Colle une configuration sur plusieurs équipements d'un coup et rend ce qu'il faut en dire : « Configuration de
+ * « SW-Étage1 » collée sur « SW-Étage2 » : 28 ports repris, VLAN de gestion 99. » Si aucune cible n'a de port en
+ * commun, rien ne change et le refus le dit : « Aucun port de même nom sur « Cœur » : rien n'a changé. » Appelé
+ * dans `editeur.agir`, le collage s'annule en une fois.
+ */
+export function collerSurLesCibles(
+  schema: Schema,
+  cibles: Iterable<string>,
+  configuration: ConfigurationCopiee,
+  par: Correspondance = "place",
+): string {
+  const voulues = [...cibles].filter((id) => id !== configuration.source && equipementDe(schema, id));
+  if (voulues.length === 0) throw new Refus("Choisissez au moins un autre équipement que celui copié.");
+  const nomDe = (id: string) => equipementDe(schema, id)?.nom ?? "?";
+  const laisses: string[] = [];
+  const touches: string[] = [];
+  let regles = 0;
+  let parPlace = 0;
+  let gestion = false;
+  for (const id of voulues) {
+    const r = collerConfiguration(schema, id, configuration, par);
+    if (r.regles === 0 && !r.gestion) {
+      laisses.push(nomDe(id));
+      continue;
+    }
+    touches.push(nomDe(id));
+    regles += r.regles;
+    parPlace += r.parPlace;
+    gestion ||= r.gestion;
+  }
+  const commun = par === "place" ? "de même nom ni à la même place" : "de même nom";
+  if (touches.length === 0) throw new Refus(`Aucun port ${commun} sur ${nomsCites(laisses)} : rien n'a changé.`);
+  const sur = touches.length === 1 ? `« ${touches[0]} »` : `${touches.length} équipements`;
+  const place = parPlace === 0 ? "" : parPlace === regles ? ", par leur place" : ` (dont ${parPlace} par leur place)`;
+  const repris = `${regles} ${regles > 1 ? "ports repris" : "port repris"}${place}`;
+  const detail = gestion ? `${repris}, VLAN de gestion ${configuration.gestionVlan}` : repris;
+  const reste =
+    laisses.length === 0
+      ? ""
+      : ` Aucun port ${commun} sur ${nomsCites(laisses)} : ${laisses.length > 1 ? "laissés tels quels" : "laissé tel quel"}.`;
+  return `Configuration de « ${configuration.nom} » collée sur ${sur} : ${detail}.${reste} Ctrl+Z annule.`;
+}
+
 
 // --- L'onglet Réseau -----------------------------------------------------------------------------------------------------
 
