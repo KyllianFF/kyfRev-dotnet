@@ -41,6 +41,23 @@ public interface IVaultConversion
     /// <param name="secret">Son mot de passe, ou sa clé de récupération.</param>
     /// <param name="progress">Les fichiers écrits, puis relus ; rien : rien n'est dit.</param>
     ConversionReport Decrypt(string source, string destination, VaultSecret secret, IProgress<ConversionProgress>? progress = null);
+
+    /// <summary>
+    /// Prépare le renouvellement de toutes les clés du coffre chiffré <paramref name="source"/> : son secret actuel est
+    /// vérifié, puis une nouvelle clé de données, enveloppée par <paramref name="password"/> et une nouvelle clé de
+    /// récupération. Rien n'est écrit.
+    /// </summary>
+    EncryptionDraft PrepareRenewal(string source, VaultSecret current, string password) => throw new NotSupportedException(NoVaultConversion.Unavailable);
+
+    /// <summary>Écrit le coffre préparé avec ses nouvelles clés dans le nouveau dossier <paramref name="destination"/>.</summary>
+    ConversionReport Renew(EncryptionDraft draft, VaultSecret current, string destination, IProgress<ConversionProgress>? progress = null) =>
+        ConversionReport.Refused(NoVaultConversion.Unavailable, destination);
+
+    /// <summary>
+    /// Échange les dossiers après un renouvellement : le coffre garde son nom, l'ancien devient « … (ancien, à
+    /// supprimer) », que le rapport donne pour destination.
+    /// </summary>
+    ConversionReport Swap(string source, string renewed) => ConversionReport.Refused(NoVaultConversion.Unavailable, source);
 }
 
 /// <summary>Sans conversion : l'application assemblée sans elle, les essais. Rien ne se prépare, rien ne se convertit.</summary>

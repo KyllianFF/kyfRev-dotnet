@@ -18,6 +18,9 @@ public enum ConversionDirection
 
     /// <summary>« Déchiffrer vers un dossier… » : un coffre chiffré redevient un coffre en clair, dans un nouveau dossier.</summary>
     Decrypt,
+
+    /// <summary>« Renouveler toutes les clés… » : un coffre chiffré l'est de nouveau, avec une nouvelle clé de données.</summary>
+    Renew,
 }
 
 /// <summary>L'étape d'une conversion, telle que la page la montre.</summary>
@@ -54,6 +57,26 @@ public sealed class NewPassword(string password, string confirmation)
     public string Confirmation { get; } = confirmation;
 }
 
+/// <summary>Les secrets d'un renouvellement, tels que la page les passe : rien d'eux ne s'affiche ni ne se garde.</summary>
+/// <param name="current">Le mot de passe actuel, ou la clé de récupération.</param>
+/// <param name="usesRecoveryKey">Vrai si <paramref name="current"/> est la clé de récupération.</param>
+/// <param name="password">Le nouveau mot de passe ; rien : l'actuel est gardé.</param>
+/// <param name="confirmation">Le nouveau mot de passe, tapé une seconde fois.</param>
+public sealed class RenewalSecrets(string current, bool usesRecoveryKey, string? password, string? confirmation)
+{
+    /// <summary>Le secret actuel, tel qu'il a été tapé ; vide si rien ne l'a été.</summary>
+    public string Current { get; } = current ?? string.Empty;
+
+    /// <summary>Vrai si <see cref="Current"/> est la clé de récupération.</summary>
+    public bool UsesRecoveryKey { get; } = usesRecoveryKey;
+
+    /// <summary>Le nouveau mot de passe ; rien : l'actuel est gardé.</summary>
+    public string? Password { get; } = password;
+
+    /// <summary>Le nouveau mot de passe, tapé une seconde fois.</summary>
+    public string? Confirmation { get; } = confirmation;
+}
+
 /// <summary>
 /// La conversion du coffre ouvert, sur une page à elle, hors de l'espace de travail : « Chiffrer ce coffre », en trois
 /// étapes (le mot de passe, la clé de récupération, la conversion), ou « Déchiffrer vers un dossier… ». Le coffre reste
@@ -78,6 +101,15 @@ public sealed partial class ConversionPageViewModel : ObservableObject
 
     /// <summary>« Retour » a oublié une clé déjà montrée : la suivante dit qu'elle est nouvelle.</summary>
     private bool _keyReplaced;
+
+    /// <summary>Le secret actuel d'un renouvellement, qui lit le coffre ; rien sinon.</summary>
+    private VaultSecret? _current;
+
+    /// <summary>Le mot de passe qui rouvrira le coffre renouvelé ; rien sinon.</summary>
+    private string? _reopenWith;
+
+    /// <summary>La clé du coffre était retenue sur ce poste : la nouvelle l'est aussi.</summary>
+    private bool _wasRemembered;
 
     /// <summary>La page d'une conversion du coffre ouvert, <paramref name="source"/>.</summary>
     /// <param name="vaults">Ouverture, fermeture et conversion des coffres.</param>
@@ -118,7 +150,7 @@ public sealed partial class ConversionPageViewModel : ObservableObject
         Direction = direction;
         Source = source;
         Parent = Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(source)) ?? source;
-        Stage = direction == ConversionDirection.Encrypt ? ConversionStage.Password : ConversionStage.Secret;
+        Stage = direction == ConversionDirection.Decrypt ? ConversionStage.Secret : ConversionStage.Password;
     }
 
     /// <summary>« Au moins 12 caractères. » : ce que demande le mot de passe d'un coffre chiffré.</summary>
@@ -131,16 +163,58 @@ public sealed partial class ConversionPageViewModel : ObservableObject
     public string Source { get; }
 
     /// <summary>« Chiffrer ce coffre », ou « Déchiffrer ce coffre ».</summary>
-    public string Heading => Direction == ConversionDirection.Encrypt ? EncryptionText.EncryptHeading : EncryptionText.DecryptHeading;
+    public string Heading => Direction switch
+    {
+        ConversionDirection.Encrypt => EncryptionText.EncryptHeading,
+        ConversionDirection.Renew => EncryptionText.RenewHeading,
+        _ => EncryptionText.DecryptHeading,
+    };
+
+    /// <summary>Renouveler toutes les clés.</summary>
+    public bool IsRenewal => Direction == ConversionDirection.Renew;
+
+    /// <summary>Le renouvellement garde le mot de passe actuel (pas avec la clé de récupération).</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowsNewPassword), nameof(ChoosesNewPassword))]
+    public partial bool KeepsPassword { get; set; } = true;
+
+    /// <summary>Le renouvellement prend un nouveau mot de passe.</summary>
+    public bool ChoosesNewPassword
+    {
+        get => !KeepsPassword;
+        set => KeepsPassword = !value;
+    }
+
+    /// <summary>Les champs du nouveau mot de passe se montrent : au chiffrement, ou quand le renouvellement en prend un.</summary>
+    public bool ShowsNewPassword => !IsRenewal || !KeepsPassword || UsesRecoveryKey;
+
+    /// <summary>L'aide de la première étape.</summary>
+    public string PasswordHelp => IsRenewal ? EncryptionText.RenewStepHelp : EncryptionText.PasswordStepHelp;
+
+    /// <summary>« 3 · Conversion », ou « 3 · Renouvellement ».</summary>
+    public string StepThreeLabel => IsRenewal ? EncryptionText.StepRenewal : EncryptionText.StepConversion;
+
+    /// <summary>« Chiffrer le coffre », ou « Renouveler les clés ».</summary>
+    public string EncryptNowLabel => IsRenewal ? EncryptionText.RenewNow : EncryptionText.EncryptNow;
 
     /// <summary>Ce que fait la conversion, et ce qu'elle ne fait pas.</summary>
-    public string Intro => Direction == ConversionDirection.Encrypt ? EncryptionText.EncryptIntro : EncryptionText.DecryptIntro;
+    public string Intro => Direction switch
+    {
+        ConversionDirection.Encrypt => EncryptionText.EncryptIntro,
+        ConversionDirection.Renew => EncryptionText.RenewIntro,
+        _ => EncryptionText.DecryptIntro,
+    };
 
     /// <summary>« Étape 3 sur 3 : la conversion », ou, pour un déchiffrement, « La conversion ».</summary>
-    public string ConversionTitle => Direction == ConversionDirection.Encrypt ? EncryptionText.ConversionStepTitle : EncryptionText.DecryptionTitle;
+    public string ConversionTitle => Direction switch
+    {
+        ConversionDirection.Encrypt => EncryptionText.ConversionStepTitle,
+        ConversionDirection.Renew => EncryptionText.RenewalTitle,
+        _ => EncryptionText.DecryptionTitle,
+    };
 
     /// <summary>Le chiffrement a des étapes numérotées : le mot de passe, la clé de récupération, la conversion.</summary>
-    public bool ShowsSteps => Direction == ConversionDirection.Encrypt;
+    public bool ShowsSteps => Direction != ConversionDirection.Decrypt;
 
     /// <summary>L'étape montrée.</summary>
     [ObservableProperty]
@@ -189,6 +263,15 @@ public sealed partial class ConversionPageViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(UsesPassword), nameof(SecretLabel))]
     public partial bool UsesRecoveryKey { get; set; }
+
+    partial void OnUsesRecoveryKeyChanged(bool value)
+    {
+        OnPropertyChanged(nameof(ShowsNewPassword));
+        OnPropertyChanged(nameof(CurrentSecretLabel));
+    }
+
+    /// <summary>« Mot de passe actuel », ou « Clé de récupération » : le secret qui ouvre le coffre à renouveler.</summary>
+    public string CurrentSecretLabel => UsesRecoveryKey ? EncryptionText.RecoveryKey : EncryptionText.CurrentPassword;
 
     /// <summary>Le déchiffrement demande le mot de passe.</summary>
     public bool UsesPassword => !UsesRecoveryKey;
@@ -241,7 +324,12 @@ public sealed partial class ConversionPageViewModel : ObservableObject
     public partial string? Destination { get; private set; }
 
     /// <summary>« Fiches chiffrées » ou « Fichiers déchiffrés » : les fichiers écrits.</summary>
-    public string WritingLabel => Direction == ConversionDirection.Encrypt ? EncryptionText.FilesEncrypted : EncryptionText.FilesDecrypted;
+    public string WritingLabel => Direction switch
+    {
+        ConversionDirection.Encrypt => EncryptionText.FilesEncrypted,
+        ConversionDirection.Renew => EncryptionText.FilesRenewed,
+        _ => EncryptionText.FilesDecrypted,
+    };
 
     /// <summary>Les fichiers écrits.</summary>
     [ObservableProperty]
@@ -268,7 +356,12 @@ public sealed partial class ConversionPageViewModel : ObservableObject
     public string VerifyingCount => EncryptionText.CountOf(Verified, Total);
 
     /// <summary>« Ouvrir le coffre chiffré », ou « Ouvrir le coffre en clair ».</summary>
-    public string OpenNewLabel => Direction == ConversionDirection.Encrypt ? EncryptionText.OpenEncrypted : EncryptionText.OpenDecrypted;
+    public string OpenNewLabel => Direction switch
+    {
+        ConversionDirection.Encrypt => EncryptionText.OpenEncrypted,
+        ConversionDirection.Renew => EncryptionText.ReopenRenewed,
+        _ => EncryptionText.OpenDecrypted,
+    };
 
     /// <summary>« Revenir au coffre en clair », ou « Revenir au coffre chiffré ».</summary>
     public string ReturnLabel => Direction == ConversionDirection.Encrypt ? EncryptionText.BackToPlain : EncryptionText.BackToEncrypted;
@@ -300,6 +393,51 @@ public sealed partial class ConversionPageViewModel : ObservableObject
             Error = outcome.Error;
             return;
         }
+        _draft = outcome.Value;
+        RecoveryKey = outcome.Value.RecoveryKey;
+        IsKeyStored = false;
+        KeyMessage = _keyReplaced ? EncryptionText.KeyReplaced : null;
+        _keyReplaced = false;
+        Stage = ConversionStage.RecoveryKey;
+    }
+
+    /// <summary>
+    /// Étape 1 du renouvellement : le secret actuel est vérifié, sans rien écrire, et la nouvelle clé de données préparée
+    /// avec le mot de passe gardé ou choisi ; la nouvelle clé de récupération se montre ensuite. Un refus le dit, et
+    /// l'étape reste.
+    /// </summary>
+    [RelayCommand]
+    private async Task PrepareRenewalAsync(RenewalSecrets? secrets)
+    {
+        if (!IsPassword || IsBusy || secrets is null)
+        {
+            return;
+        }
+        Error = null;
+        if (secrets.Current.Length == 0)
+        {
+            Error = secrets.UsesRecoveryKey ? EncryptionText.EnterRecoveryKey : EncryptionText.EnterCurrentPassword;
+            return;
+        }
+        var current = secrets.UsesRecoveryKey ? VaultSecret.RecoveryKey(secrets.Current) : VaultSecret.Password(secrets.Current);
+        var remembered = _encryption.IsRemembered;
+        var outcome = await RunAsync(EncryptionText.Deriving, () => _vaults.PrepareRenewal(current, secrets.Password, secrets.Confirmation)).ConfigureAwait(true);
+        if (!IsPassword)
+        {
+            if (outcome.Succeeded)
+            {
+                outcome.Value.Dispose();
+            }
+            return;
+        }
+        if (!outcome.Succeeded)
+        {
+            Error = outcome.Error;
+            return;
+        }
+        _current = current;
+        _reopenWith = secrets.Password ?? secrets.Current;
+        _wasRemembered = remembered;
         _draft = outcome.Value;
         RecoveryKey = outcome.Value.RecoveryKey;
         IsKeyStored = false;
@@ -368,7 +506,14 @@ public sealed partial class ConversionPageViewModel : ObservableObject
         RecoveryKey = string.Empty;
         try
         {
-            await ConvertAsync(progress => _vaults.Encrypt(draft, progress)).ConfigureAwait(true);
+            if (IsRenewal && _current is { } current)
+            {
+                await ConvertAsync(progress => _vaults.Renew(draft, current, progress)).ConfigureAwait(true);
+            }
+            else
+            {
+                await ConvertAsync(progress => _vaults.Encrypt(draft, progress)).ConfigureAwait(true);
+            }
         }
         finally
         {
@@ -443,7 +588,24 @@ public sealed partial class ConversionPageViewModel : ObservableObject
     /// son mot de passe.
     /// </summary>
     [RelayCommand]
-    private Task OpenNewAsync() => IsDone && Destination is { } destination ? OpenAsync(destination) : Task.CompletedTask;
+    private Task OpenNewAsync() =>
+        !IsDone ? Task.CompletedTask
+        : IsRenewal ? ReopenRenewedAsync()
+        : Destination is { } destination ? OpenAsync(destination) : Task.CompletedTask;
+
+    /// <summary>Le coffre renouvelé se rouvre à son nom, avec le mot de passe gardé ou choisi ; sa clé est retenue si l'ancienne l'était.</summary>
+    private async Task ReopenRenewedAsync()
+    {
+        if (IsBusy || _reopenWith is not { } password)
+        {
+            return;
+        }
+        Error = null;
+        var remember = _wasRemembered;
+        var outcome = await RunAsync(EncryptionText.Opening, () => Outcome.Of(_vaults.Unlock(Source, VaultSecret.Password(password), remember))).ConfigureAwait(true);
+        _reopenWith = null;
+        _opened(outcome.Value);
+    }
 
     /// <summary>« Revenir au coffre en clair » (ou chiffré) : l'ancien coffre, intact, se rouvre.</summary>
     [RelayCommand]
@@ -502,7 +664,16 @@ public sealed partial class ConversionPageViewModel : ObservableObject
     /// </summary>
     private string WhatComesNext(string message)
     {
-        var next = new List<string> { message, Direction == ConversionDirection.Encrypt ? EncryptionText.EncryptedNext : EncryptionText.DecryptedNext };
+        var next = new List<string>
+        {
+            message,
+            Direction switch
+            {
+                ConversionDirection.Encrypt => EncryptionText.EncryptedNext,
+                ConversionDirection.Renew => EncryptionText.RenewedNext,
+                _ => EncryptionText.DecryptedNext,
+            },
+        };
         if (Direction == ConversionDirection.Encrypt && Directory.Exists(VaultUseCases.BackupsFolderOf(Source)))
         {
             next.Add(EncryptionText.PlainBackupsOf(VaultUseCases.BackupsFolderOf(Source)));
@@ -561,6 +732,8 @@ public sealed partial class ConversionPageViewModel : ObservableObject
     {
         _draft?.Dispose();
         _draft = null;
+        _current = null;
+        _reopenWith = null;
         RecoveryKey = string.Empty;
         IsKeyStored = false;
         KeyMessage = null;

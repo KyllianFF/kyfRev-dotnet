@@ -348,4 +348,46 @@ public static class EncryptionText
         Resources.GetString(name, CultureInfo.CurrentUICulture) ?? throw new MissingManifestResourceException($"Texte « {name} » absent des ressources.");
 
     private static string Format(string name, params object[] values) => string.Format(CultureInfo.CurrentCulture, Text(name), values);
+
+    /// <summary>« Renouveler toutes les clés… » : le bouton de la carte Chiffrement.</summary>
+    public static string RenewKeys => Text(nameof(RenewKeys));
+
+    /// <summary>Ce que fait « Renouveler toutes les clés… ».</summary>
+    public static string RenewKeysHelp => Text(nameof(RenewKeysHelp));
+
+    /// <summary>« Renouveler toutes les clés » : le titre de la page.</summary>
+    public static string RenewHeading => Text(nameof(RenewHeading));
+
+    /// <summary>Ce que fait le renouvellement.</summary>
+    public static string RenewIntro => Text(nameof(RenewIntro));
+
+    /// <summary>L'aide de la première étape du renouvellement.</summary>
+    public static string RenewStepHelp => Text(nameof(RenewStepHelp));
+
+    /// <summary>« Garder ce mot de passe ».</summary>
+    public static string RenewKeep => Text(nameof(RenewKeep));
+
+    /// <summary>Quand garder le mot de passe.</summary>
+    public static string RenewKeepHelp => Text(nameof(RenewKeepHelp));
+
+    /// <summary>« En choisir un nouveau ».</summary>
+    public static string RenewNew => Text(nameof(RenewNew));
+
+    /// <summary>« Renouveler les clés » : le bouton qui commence le renouvellement.</summary>
+    public static string RenewNow => Text(nameof(RenewNow));
+
+    /// <summary>« Étape 3 sur 3 : le renouvellement ».</summary>
+    public static string RenewalTitle => Text(nameof(RenewalTitle));
+
+    /// <summary>« 3 · Renouvellement ».</summary>
+    public static string StepRenewal => Text(nameof(StepRenewal));
+
+    /// <summary>« Fichiers chiffrés de nouveau » : la première barre du renouvellement.</summary>
+    public static string FilesRenewed => Text(nameof(FilesRenewed));
+
+    /// <summary>Ce qui reste à faire après le renouvellement.</summary>
+    public static string RenewedNext => Text(nameof(RenewedNext));
+
+    /// <summary>« Rouvrir le coffre » : après le renouvellement.</summary>
+    public static string ReopenRenewed => Text(nameof(ReopenRenewed));
 }

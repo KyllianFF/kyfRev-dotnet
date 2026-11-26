@@ -345,4 +345,46 @@
   <data name="WithRecoveryKey" xml:space="preserve">
     <value>J'utilise la clé de récupération</value>
   </data>
+  <data name="RenewKeys" xml:space="preserve">
+    <value>Renouveler toutes les clés…</value>
+  </data>
+  <data name="RenewKeysHelp" xml:space="preserve">
+    <value>Si un mot de passe ou une clé a pu être vu : tout le coffre est chiffré de nouveau, avec de nouvelles clés.</value>
+  </data>
+  <data name="RenewHeading" xml:space="preserve">
+    <value>Renouveler toutes les clés</value>
+  </data>
+  <data name="RenewIntro" xml:space="preserve">
+    <value>Une nouvelle clé de données, un mot de passe (l'actuel ou un nouveau) et une nouvelle clé de récupération : tout le coffre est chiffré de nouveau dans un dossier voisin, relu et comparé, puis il reprend la place de l'ancien. Le coffre se ferme pendant ce temps.</value>
+  </data>
+  <data name="RenewStepHelp" xml:space="preserve">
+    <value>Saisissez le mot de passe actuel, ou la clé de récupération, puis gardez ce mot de passe ou choisissez-en un nouveau.</value>
+  </data>
+  <data name="RenewKeep" xml:space="preserve">
+    <value>Garder ce mot de passe</value>
+  </data>
+  <data name="RenewKeepHelp" xml:space="preserve">
+    <value>Seulement si personne d'autre ne le connaît.</value>
+  </data>
+  <data name="RenewNew" xml:space="preserve">
+    <value>En choisir un nouveau</value>
+  </data>
+  <data name="RenewNow" xml:space="preserve">
+    <value>Renouveler les clés</value>
+  </data>
+  <data name="RenewalTitle" xml:space="preserve">
+    <value>Étape 3 sur 3 : le renouvellement</value>
+  </data>
+  <data name="StepRenewal" xml:space="preserve">
+    <value>3 · Renouvellement</value>
+  </data>
+  <data name="FilesRenewed" xml:space="preserve">
+    <value>Fichiers chiffrés de nouveau</value>
+  </data>
+  <data name="RenewedNext" xml:space="preserve">
+    <value>Les sauvegardes faites avant, l'historique de votre dossier synchronisé et l'ancien coffre s'ouvrent encore avec l'ancien secret : supprimez-les.</value>
+  </data>
+  <data name="ReopenRenewed" xml:space="preserve">
+    <value>Rouvrir le coffre</value>
+  </data>
 </root>

@@ -22,7 +22,7 @@ namespace KyfRev.Presentation.Wpf.Tests;
 /// copie : la page ouvre ensuite le nouveau, ou rouvre l'ancien.
 /// </summary>
 [TestClass]
-public sealed class ConversionTests
+public sealed partial class ConversionTests
 {
     private const string NewPassword = "le mot de passe du coffre chiffré";
 
@@ -714,14 +714,14 @@ public sealed class ConversionTests
     {
         public const string Title = "La Révolution française";
 
-        public Scene(bool encrypted, bool dark = false, AppMode mode = AppMode.Development, IVaultConversion? conversion = null)
+        public Scene(bool encrypted, bool dark = false, AppMode mode = AppMode.Development, IVaultConversion? conversion = null, bool remember = false)
         {
             Vaults = new TestVaults(mode, conversion: conversion);
             Root = Vaults.Root;
             if (encrypted)
             {
                 Source = Vaults.CreateEncryptedVault(Vaults.PathOf("Coffre"));
-                Assert.AreEqual(Source, App.Vaults.Unlock(Source, VaultSecret.Password(TestVaults.Password), remember: false).Vault);
+                Assert.AreEqual(Source, App.Vaults.Unlock(Source, VaultSecret.Password(TestVaults.Password), remember).Vault);
             }
             else
             {

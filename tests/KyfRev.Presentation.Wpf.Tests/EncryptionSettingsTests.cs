@@ -538,6 +538,11 @@ public sealed class EncryptionSettingsTests
             Assert.AreEqual(Visibility.Visible, page.LockNowButton.Visibility);
             AssertFits(page.Scroller);
             AssertNamed(page.EncryptionCard);
+            Assert.IsTrue(page.RenewKeysButton.IsVisible);
+            Assert.IsTrue(page.DecryptVaultButton.IsVisible);
+            page.DecryptVaultButton.BringIntoView();
+            TestShell.Flush();
+            page.Capture(dark ? "carte-chiffrement-sombre" : "carte-chiffrement-clair");
             Assert.AreEqual(EncryptionText.LockAfter, AutomationProperties.GetName(page.LockAfterChoice));
             Assert.AreEqual(EncryptionText.Remember, AutomationProperties.GetName(page.RememberKeyBox));
 
@@ -1059,7 +1064,7 @@ public sealed class EncryptionSettingsTests
         public EncryptionSettingsViewModel NewCard(LockDelay? delay = null)
         {
             var app = App;
-            return new(app.Encryption, app.Settings, () => app.Vaults.State().Encrypted, LockAsync, Copy) { LockDelay = delay };
+            return new(app.Encryption, app.Settings, () => app.Vaults.State().Encrypted, LockAsync, Copy) { LockDelay = delay, DecryptionAsked = () => { }, RenewalAsked = () => { } };
         }
 
         /// <summary>L'onglet « Données » avec sa carte.</summary>

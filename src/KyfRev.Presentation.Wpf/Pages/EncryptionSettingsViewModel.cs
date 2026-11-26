@@ -117,6 +117,12 @@ public sealed partial class EncryptionSettingsViewModel : ObservableObject, IFor
     /// <summary>Le coffre peut être déchiffré d'ici.</summary>
     public bool CanDecrypt => DecryptionAsked is not null;
 
+    /// <summary>« Renouveler toutes les clés… » : la page du renouvellement s'ouvre ; rien : la carte ne le propose pas.</summary>
+    public Action? RenewalAsked { get; init; }
+
+    /// <summary>Les clés du coffre peuvent être renouvelées d'ici.</summary>
+    public bool CanRenew => RenewalAsked is not null;
+
     /// <summary>Une dérivation ou une écriture est en cours : elle prend de l'ordre d'une seconde.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsIdle))]
@@ -593,6 +599,16 @@ public sealed partial class EncryptionSettingsViewModel : ObservableObject, IFor
         if (IsEncrypted && IsIdle)
         {
             DecryptionAsked?.Invoke();
+        }
+    }
+
+    /// <summary>« Renouveler toutes les clés… » : la page du renouvellement remplace les vues, le coffre restant ouvert derrière.</summary>
+    [RelayCommand(CanExecute = nameof(CanRenew))]
+    private void RequestRenewal()
+    {
+        if (IsEncrypted && IsIdle)
+        {
+            RenewalAsked?.Invoke();
         }
     }
 

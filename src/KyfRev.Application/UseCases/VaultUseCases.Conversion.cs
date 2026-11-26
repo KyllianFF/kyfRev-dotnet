@@ -22,6 +22,88 @@ public sealed partial class VaultUseCases
     /// <summary>Message de refus quand un coffre est encore ouvert au moment de le convertir.</summary>
     public const string StillOpen = "Le coffre est encore ouvert : il se ferme avant d'être converti.";
 
+    /// <summary>Le suffixe du coffre écrit avec ses nouvelles clés, avant l'échange des dossiers.</summary>
+    public const string RenewedSuffix = " (nouvelles clés)";
+
+    /// <summary>Le renouvellement des clés ne vaut que pour un coffre chiffré.</summary>
+    public const string NotEncrypted = "Ce coffre n'est pas chiffré.";
+
+    /// <summary>La clé de récupération ne peut pas tenir lieu de mot de passe.</summary>
+    public const string RenewalNeedsPassword = "Avec la clé de récupération, choisissez un nouveau mot de passe : elle ne peut pas en tenir lieu.";
+
+    /// <summary>
+    /// Prépare le renouvellement de toutes les clés du coffre chiffré ouvert, sans rien écrire : son secret actuel est
+    /// vérifié, et la nouvelle clé de récupération rendue pour être notée. Le mot de passe est l'actuel
+    /// (<paramref name="password"/> rien) ou un nouveau, tapé deux fois.
+    /// </summary>
+    public Outcome<EncryptionDraft> PrepareRenewal(VaultSecret current, string? password, string? confirmation)
+    {
+        ArgumentNullException.ThrowIfNull(current);
+        string root;
+        lock (_gate)
+        {
+            if (host.Root is not { } open)
+            {
+                return Outcome.Refused<EncryptionDraft>(VaultHost.NoVaultOpen);
+            }
+            if (open != _encrypted)
+            {
+                return Outcome.Refused<EncryptionDraft>(NotEncrypted);
+            }
+            root = open;
+        }
+        string chosen;
+        if (password is null)
+        {
+            if (current.IsRecoveryKey)
+            {
+                return Outcome.Refused<EncryptionDraft>(RenewalNeedsPassword);
+            }
+            chosen = current.Text;
+        }
+        else
+        {
+            if (!string.Equals(password, confirmation, StringComparison.Ordinal))
+            {
+                return Outcome.Refused<EncryptionDraft>("Les deux mots de passe ne sont pas les mêmes.");
+            }
+            chosen = password;
+        }
+        if (chosen.Length < VaultSecret.MinimumPasswordLength)
+        {
+            return Outcome.Refused<EncryptionDraft>($"Le mot de passe doit faire au moins {VaultSecret.MinimumPasswordLength} caractères.");
+        }
+        try
+        {
+            return Outcome.Of(_conversion.PrepareRenewal(root, current, chosen));
+        }
+        catch (Exception exception) when (exception is OperationException or NotSupportedException)
+        {
+            return Outcome.Refused<EncryptionDraft>(exception.Message);
+        }
+    }
+
+    /// <summary>
+    /// Renouvelle les clés du coffre préparé, fermé : il est chiffré de nouveau dans « … (nouvelles clés) », relu et
+    /// comparé, puis les dossiers s'échangent ; le rapport donne pour destination l'ancien coffre, « … (ancien, à
+    /// supprimer) ». Refusé si un coffre est encore ouvert.
+    /// </summary>
+    public ConversionReport Renew(EncryptionDraft draft, VaultSecret current, IProgress<ConversionProgress>? progress = null)
+    {
+        ArgumentNullException.ThrowIfNull(draft);
+        ArgumentNullException.ThrowIfNull(current);
+        return Convert(draft.Source, Path.GetDirectoryName(draft.Source), RenewedSuffix, destination =>
+        {
+            var renewed = _conversion.Renew(draft, current, destination, progress);
+            if (!renewed.Succeeded)
+            {
+                return renewed;
+            }
+            var swapped = _conversion.Swap(draft.Source, destination);
+            return swapped.Succeeded ? new ConversionReport(true, $"Coffre chiffré avec ses nouvelles clés, à son nom : {renewed.Files} fichiers, chacun relu et vérifié. {swapped.Message}", swapped.Destination, renewed.Files) : swapped;
+        });
+    }
+
     /// <summary>Le dossier des sauvegardes du coffre <paramref name="root"/> : à côté de lui, et en clair pour un coffre en clair.</summary>
     /// <param name="root">Le dossier du coffre.</param>
     public static string BackupsFolderOf(string root) => BackupFolders.For(root);

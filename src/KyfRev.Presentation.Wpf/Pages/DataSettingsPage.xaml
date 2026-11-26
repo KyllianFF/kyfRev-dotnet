@@ -110,6 +110,9 @@
                         AutomationProperties.Name="{x:Static pages:EncryptionText.ChangePassword}" />
                 <Button x:Name="NewRecoveryKeyButton" Content="{x:Static pages:EncryptionText.NewRecoveryKey}" Command="{Binding RequestNewRecoveryKeyCommand}" Margin="0,0,8,8"
                         AutomationProperties.Name="{x:Static pages:EncryptionText.NewRecoveryKey}" />
+                <Button x:Name="RenewKeysButton" Content="{x:Static pages:EncryptionText.RenewKeys}" Command="{Binding RequestRenewalCommand}" Margin="0,0,8,8"
+                        Visibility="{Binding CanRenew, Converter={StaticResource Visible}}"
+                        AutomationProperties.Name="{x:Static pages:EncryptionText.RenewKeys}" AutomationProperties.HelpText="{x:Static pages:EncryptionText.RenewKeysHelp}" />
                 <Button x:Name="DecryptVaultButton" Content="{x:Static pages:EncryptionText.DecryptVault}" Command="{Binding RequestDecryptionCommand}" Margin="0,0,8,8"
                         Visibility="{Binding CanDecrypt, Converter={StaticResource Visible}}"
                         AutomationProperties.Name="{x:Static pages:EncryptionText.DecryptVault}" AutomationProperties.HelpText="{x:Static pages:EncryptionText.DecryptVaultHelp}" />
