@@ -149,6 +149,8 @@
 
   let svg = $state<SVGSVGElement>();
   let largeur = $state(800);
+  /** La largeur de la barre posée sur le plan : elle reste dans le cadre, même près d'un bord (petite fenêtre). */
+  let largeurBarre = $state(0);
   let hauteur = $state(600);
   let camera = $state({ x: -400, y: -300, zoom: 1 });
   let espace = $state(false);
@@ -2490,7 +2492,8 @@
   <div
     class="barre-rapide"
     class:a-cote={barre.genre === "lien"}
-    style="left: {barre.x}px; top: {barre.y}px"
+    bind:offsetWidth={largeurBarre}
+    style="left: {Math.max(largeurBarre / 2 + 8, Math.min(largeur - largeurBarre / 2 - 8, barre.x))}px; top: {barre.y}px"
     role="toolbar"
     aria-label="Actions rapides"
   >
