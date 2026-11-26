@@ -671,10 +671,7 @@ public sealed class SchemasPageTests
         var fits = "(() => { const d = document.querySelector('dialog[open]'); const r = d.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth && r.bottom <= innerHeight && d.scrollWidth <= d.clientWidth; })()";
 
         // Une fenêtre étroite : les fenêtres tiennent dans 470 pixels.
-        scene.Page.Width = 470;
-        TestShell.Flush();
-        // La page peut être déjà étroite, ou pas encore mesurée : on attend sa largeur, pas un changement.
-        UiThread.Until(() => int.TryParse(scene.Script("document.documentElement.clientWidth"), out var width) && width is > 0 and <= 470, TimeSpan.FromSeconds(20));
+        Narrow(scene);
 
         // « Exporter… », format draw.io : deux puces pour les icônes, celles de kyfRev d'abord, et le fichier .drawio écrit.
         scene.Script("document.querySelector('li.carte').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 60, clientY: 60 }))");
@@ -751,10 +748,7 @@ public sealed class SchemasPageTests
         Import();
         Assert.AreEqual("Dans un nouveau schéma|À la place de « Réseau »", JsonSerializer.Deserialize<string>(scene.Script("[...document.querySelectorAll('dialog.dialogue-import .choix .nom')].map((n) => n.textContent.trim()).join('|')")));
         Assert.AreEqual("nouveau", JsonSerializer.Deserialize<string>(scene.Script("document.querySelector('dialog.dialogue-import input:checked').value")));
-        scene.Page.Width = 470;
-        TestShell.Flush();
-        // La page peut être déjà étroite, ou pas encore mesurée : on attend sa largeur, pas un changement.
-        UiThread.Until(() => int.TryParse(scene.Script("document.documentElement.clientWidth"), out var width) && width is > 0 and <= 470, TimeSpan.FromSeconds(20));
+        Narrow(scene);
         Assert.AreEqual("true", scene.Script("(() => { const d = document.querySelector('dialog.dialogue-import'); const r = d.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth && r.bottom <= innerHeight && d.scrollWidth <= d.clientWidth; })()"));
         scene.WaitFor("document.getAnimations().length === 0");
         scene.Picture($"schemas-import-choix-{suffix}");
@@ -1150,6 +1144,22 @@ public sealed class SchemasPageTests
     }
 
     /// <summary>La vue et son îlot, dans le vrai moteur web.</summary>
+    /// <summary>
+    /// La page à 470 pixels, et l'îlot avec elle. Le premier îlot d'un processus ne suit pas toujours le premier changement de
+    /// largeur : tant qu'il n'est pas étroit, la largeur se redonne (470, puis 469), ce qui le redimensionne de nouveau.
+    /// </summary>
+    private static void Narrow(IslandScene scene) =>
+        UiThread.Until(() =>
+        {
+            if (int.TryParse(scene.Script("document.documentElement.clientWidth"), out var width) && width is > 0 and <= 470)
+            {
+                return true;
+            }
+            scene.Page.Width = scene.Page.Width == 470 ? 469 : 470;
+            TestShell.Flush();
+            return false;
+        }, TimeSpan.FromSeconds(60));
+
     private sealed class IslandScene : IDisposable
     {
         private readonly UiThread _ui = new();
