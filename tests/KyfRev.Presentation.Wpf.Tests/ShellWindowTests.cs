@@ -672,6 +672,45 @@ public sealed class ShellWindowTests
     }
 
     [STATestMethod]
+    [DataRow(470d, 540d, false)]
+    [DataRow(1300d, 700d, false)]
+    [DataRow(1920d, 1040d, true)]
+    public void The_list_scrolls_inside_the_window_whatever_its_size(double width, double height, bool dark)
+    {
+        var test = new TestShell(dark);
+        var window = Open(test);
+        try
+        {
+            window.Width = width;
+            window.Height = height;
+            TestShell.Flush();
+            test.Shell.OpenPalette();
+            TestShell.Flush();
+            var card = (FrameworkElement)window.FindName("PaletteCard");
+            var results = (ListBox)window.FindName("PaletteResults");
+            var scroller = Descendants<ScrollViewer>(results).First();
+            var bottom = card.TranslatePoint(new Point(0, card.ActualHeight), window).Y;
+            Assert.IsLessThanOrEqualTo(window.ActualHeight, bottom, $"la carte tient dans la fenêtre ({bottom:0} sur {window.ActualHeight:0})");
+            Assert.IsGreaterThan(0, scroller.ScrollableHeight, $"la liste est plus haute que sa place ({scroller.ExtentHeight:0} pour {scroller.ViewportHeight:0})");
+            Assert.AreEqual(Visibility.Visible, scroller.ComputedVerticalScrollBarVisibility, "sa barre de défilement se voit");
+            var bar = Descendants<ScrollBar>(scroller).Single(found => found.Orientation == Orientation.Vertical);
+            Assert.IsTrue(bar.IsVisible && bar.ActualHeight > 40, $"la barre se voit ({bar.ActualHeight:0} px)");
+            ((FrameworkElement)window.Content).Capture(FormattableString.Invariant($"recherche-{width:0}x{height:0}-{(dark ? "sombre" : "clair")}"));
+
+            // Le dernier élément s'atteint : en bas de la liste, « Aller à : Paramètres » se voit en entier.
+            scroller.ScrollToEnd();
+            TestShell.Flush();
+            var last = (FrameworkElement)results.ItemContainerGenerator.ContainerFromIndex(results.Items.Count - 1);
+            var lastBottom = last.TranslatePoint(new Point(0, last.ActualHeight), scroller).Y;
+            Assert.IsLessThanOrEqualTo(scroller.ViewportHeight + 1, lastBottom, "le dernier élément se voit en entier");
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
     public void The_list_follows_the_field_and_any_click_elsewhere_closes_it()
     {
         var test = new TestShell();

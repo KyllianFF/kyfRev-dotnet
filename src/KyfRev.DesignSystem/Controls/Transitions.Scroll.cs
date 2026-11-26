@@ -16,6 +16,9 @@ public static partial class Transitions
     /// <summary>Accélère puis ralentit : la vue part et arrive en douceur.</summary>
     internal static IEasingFunction ScrollEase { get; } = Frozen(new CubicEase { EasingMode = EasingMode.EaseInOut });
 
+    /// <summary>Part tout de suite et ralentit : la molette répond sans attendre, et la vue se pose en douceur.</summary>
+    internal static IEasingFunction WheelEase { get; } = Frozen(new CubicEase { EasingMode = EasingMode.EaseOut });
+
     // Le défilement qu'une animation fait avancer. Sans valeur (pas d'animation) : rien ne défile.
     private static readonly DependencyProperty GlidingOffsetProperty =
         DependencyProperty.RegisterAttached("GlidingOffset", typeof(double), typeof(Transitions), new PropertyMetadata(double.NaN, (scroller, e) =>
@@ -48,7 +51,21 @@ public static partial class Transitions
     /// <param name="durationKey">La durée, par sa clé du design system.</param>
     /// <param name="kind">La famille de l'animation.</param>
     /// <returns>Vrai si la vue glisse.</returns>
-    public static bool ScrollTo(ScrollViewer scroller, double offset, Action? done = null, string durationKey = DesignKeys.NormalDuration, MotionKinds kind = MotionKinds.Views)
+    public static bool ScrollTo(ScrollViewer scroller, double offset, Action? done = null, string durationKey = DesignKeys.NormalDuration, MotionKinds kind = MotionKinds.Views) =>
+        Glide(scroller, offset, done, durationKey, kind, ScrollEase, jumpsNear: true);
+
+    /// <summary>
+    /// Un cran de molette : <paramref name="scroller"/> glisse jusqu'à <paramref name="offset"/>, vite, en ralentissant à
+    /// l'arrivée ; d'un coup si les animations des vues sont coupées. Un cran qui arrive pendant le trajet le prolonge.
+    /// </summary>
+    /// <param name="scroller">La vue qui défile.</param>
+    /// <param name="offset">Où arriver.</param>
+    /// <param name="done">Appelé une fois arrivé ; tout de suite s'il n'y a pas de trajet.</param>
+    /// <returns>Vrai si la vue glisse.</returns>
+    public static bool WheelTo(ScrollViewer scroller, double offset, Action? done = null) =>
+        Glide(scroller, offset, done, DesignKeys.FastDuration, MotionKinds.Views, WheelEase, jumpsNear: false);
+
+    private static bool Glide(ScrollViewer scroller, double offset, Action? done, string durationKey, MotionKinds kind, IEasingFunction ease, bool jumpsNear)
     {
         ArgumentNullException.ThrowIfNull(scroller);
         // Un trajet en cours s'arrête là où il en est.
@@ -62,11 +79,11 @@ public static partial class Transitions
             return false;
         }
         var most = Math.Max(1, scroller.ViewportHeight) * MostScrolledViews;
-        if (Math.Abs(target - from) > most)
+        if (jumpsNear && Math.Abs(target - from) > most)
         {
             from = target - (Math.Sign(target - from) * most);
         }
-        var glide = new DoubleAnimation(from, target, duration) { EasingFunction = ScrollEase, FillBehavior = FillBehavior.Stop };
+        var glide = new DoubleAnimation(from, target, duration) { EasingFunction = ease, FillBehavior = FillBehavior.Stop };
         glide.Completed += (_, _) =>
         {
             if ((int)scroller.GetValue(ScrollRunProperty) != run)

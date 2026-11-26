@@ -25,7 +25,7 @@ namespace KyfRev.Presentation.Wpf.Tests;
 
 /// <summary>La lecture d'une fiche : son document natif, ses trois volets, ses liens et ses images.</summary>
 [TestClass]
-public sealed class ReadingTests
+public sealed partial class ReadingTests
 {
     private const string Rich = """
         # Mitose

@@ -638,8 +638,10 @@
                        Margin="12,8,12,4" Visibility="{Binding ShowsSearchHint, Converter={StaticResource Visible}}" />
             <TextBlock x:Name="SearchKeys" DockPanel.Dock="Bottom" Text="{x:Static p:ShellText.SearchKeys}" Style="{DynamicResource Kyf.Text.Caption}" TextWrapping="Wrap"
                        Margin="12,8,12,4" Visibility="{Binding ShowsKeyHelp, Converter={StaticResource Visible}}" />
+            <!-- Au pixel, sans défilement par élément : la liste compterait chaque groupe pour un seul élément, et un groupe plus haut que la
+                 place (les commandes, dans une petite fenêtre) ne défilerait pas, sans barre pour le dire. -->
             <ListBox x:Name="PaletteResults" ItemsSource="{Binding Source={StaticResource PaletteGroups}}" SelectedItem="{Binding SelectedResult}" Focusable="False"
-                     MaxHeight="360" AutomationProperties.Name="{Binding PaletteLabel}">
+                     MaxHeight="360" ScrollViewer.CanContentScroll="False" AutomationProperties.Name="{Binding PaletteLabel}">
               <ListBox.InputBindings>
                 <KeyBinding Key="Enter" Command="{Binding RunSelectedCommand}" />
                 <KeyBinding Key="Escape" Command="{Binding ClosePaletteCommand}" />
