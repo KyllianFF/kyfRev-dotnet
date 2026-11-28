@@ -874,9 +874,9 @@ public sealed partial class SchemasPageTests
         scene.WaitFor("document.getAnimations().length === 0");
         scene.Picture($"schemas-pages-renvoi-suivi-{suffix}");
 
-        // Clic droit sur un onglet : renommer, dupliquer, déplacer, puis supprimer, à part et en couleur d'alerte.
+        // Clic droit sur un onglet : renommer, dupliquer, déplacer, copier ou déplacer vers un autre schéma, en faire un nouveau, puis supprimer, à part et en couleur d'alerte.
         TabMenu(scene, 0);
-        Assert.AreEqual("Renommer|Dupliquer la page|Déplacer à gauche|Déplacer à droite|Supprimer la page…", JsonSerializer.Deserialize<string>(scene.Script("[...document.querySelectorAll('.menu[role=menu] button')].map((b) => b.textContent.trim()).join('|')")));
+        Assert.AreEqual("Renommer|Dupliquer la page|Déplacer à gauche|Déplacer à droite|Copier vers un autre schéma…|Déplacer vers un autre schéma…|Faire un nouveau schéma de cette page|Supprimer la page…", JsonSerializer.Deserialize<string>(scene.Script("[...document.querySelectorAll('.menu[role=menu] button')].map((b) => b.textContent.trim()).join('|')")));
         Assert.AreEqual("true", scene.Script("document.querySelector('.menu[role=menu] button:nth-of-type(3)').disabled"), "la première page ne va pas plus à gauche");
         Assert.AreEqual("true", scene.Script("getComputedStyle(document.querySelector('.menu[role=menu] .danger')).color !== getComputedStyle(document.querySelector('.menu[role=menu] button')).color"));
         scene.WaitFor("document.getAnimations().length === 0");
@@ -929,8 +929,10 @@ public sealed partial class SchemasPageTests
         scene.WaitFor("document.querySelectorAll('.pages .onglet').length === 4");
         UiThread.Until(() => Saved()["equipements"]!.AsArray().Count == 10, TimeSpan.FromSeconds(20));
 
-        // « + » ajoute une page vide, montrée : l'invite à poser un équipement y revient.
+        // « + », « Nouvelle page » : une page vide, montrée ; l'invite à poser un équipement y revient.
         scene.Script("document.querySelector('.pages .plus').click()");
+        scene.WaitFor("document.querySelector('.menu[role=menu]') !== null");
+        MenuEntry(scene, "Nouvelle page");
         scene.WaitFor("document.querySelectorAll('.pages .onglet').length === 5");
         Assert.AreEqual("Page 5*", Tabs(scene).Split('|')[^1]);
         scene.WaitFor("document.querySelector('.plan .invite') !== null");
