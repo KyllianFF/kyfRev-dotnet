@@ -368,6 +368,16 @@
   let autresPagesOuvert = $state(false);
   let envoi = $state<{ page: string; deplacer: boolean } | null>(null);
 
+  /**
+   * Une fenêtre d'échange fermée : ce qui avait la main (un menu, un onglet) a pu disparaître ; le plan la reprend, et
+   * Ctrl+Z y annule tout de suite ce qui vient d'être fait.
+   */
+  function rendreLaMain() {
+    requestAnimationFrame(() => {
+      if (!dialogue?.contains(document.activeElement)) canevas?.focus();
+    });
+  }
+
   /** « Faire un nouveau schéma de cette page » : il est créé dans le coffre ; celui-ci ne change pas. */
   async function nouveauSchemaDeLaPage(page: string) {
     try {
@@ -1118,7 +1128,10 @@
 <DialogueReunir
   ids={editeur.id ? [editeur.id] : []}
   ouvert={reunirOuvert}
-  onFermer={() => (reunirOuvert = false)}
+  onFermer={() => {
+    reunirOuvert = false;
+    rendreLaMain();
+  }}
   onFait={(nouveau) => {
     reunirOuvert = false;
     // Le schéma réuni s'ouvre à la place de celui-ci, s'il y a où l'ouvrir.
@@ -1131,12 +1144,26 @@
   cible={editeur.id || null}
   sources={[]}
   ouvert={autresPagesOuvert}
-  onFermer={() => (autresPagesOuvert = false)}
-  onFait={() => (autresPagesOuvert = false)}
+  onFermer={() => {
+    autresPagesOuvert = false;
+    rendreLaMain();
+  }}
+  onFait={() => {
+    autresPagesOuvert = false;
+    rendreLaMain();
+  }}
 />
 
 {#if envoi}
-  <DialogueEnvoyerPage {editeur} page={envoi.page} deplacer={envoi.deplacer} onfermer={() => (envoi = null)} />
+  <DialogueEnvoyerPage
+    {editeur}
+    page={envoi.page}
+    deplacer={envoi.deplacer}
+    onfermer={() => {
+      envoi = null;
+      rendreLaMain();
+    }}
+  />
 {/if}
 
 {#if importOuvert}

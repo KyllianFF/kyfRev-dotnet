@@ -211,7 +211,7 @@ sous leur cercle ; avec les icônes de kyfRev ou les formes réseau de draw.io. 
 qui revient à l'import, avec ce qui a changé dans draw.io.
 
 Un schéma peut avoir plusieurs pages, comme dans draw.io : Étage 1, Étage 2, Salle serveurs… Les onglets sont sous le plan,
-avec le nombre d'équipements de chaque page ; « + » en ajoute une. Au clic droit sur un onglet : renommer, dupliquer,
+avec le nombre d'équipements de chaque page ; « + », « Nouvelle page » en ajoute une. Au clic droit sur un onglet : renommer, dupliquer,
 déplacer, supprimer (après une question ; Ctrl+Z la rend, et elle reste dans les versions du schéma). Un double clic
 renomme, glisser un onglet le déplace. Dans une fenêtre étroite, les onglets se replient en un menu. Un câble entre deux
 pages se crée par la boîte de connexion détaillée (les équipements y sont rangés par page), ou à la main : prenez le câble
@@ -231,6 +231,26 @@ et ce qui s'exporte, se partage ou s'imprime depuis le Détail est la page montr
 première page, et un petit sélecteur, juste au-dessus, à droite, en choisit une autre (au clavier aussi, avec les
 flèches) : elle reste choisie, et s'imprime, jusqu'à la fermeture de kyfRev. Un schéma à plusieurs pages s'écrit au
 format 3 : une version de kyfRev qui ne connaît pas les pages refuse de l'ouvrir plutôt que de le relire en une seule.
+
+Des pages passent d'un schéma à l'autre. Dans l'éditeur, « + » sous le plan propose « Nouvelle page » ou « Pages d'un autre
+schéma… » : choisissez le schéma, puis ses pages sur leurs vignettes, et « Les copier » (le schéma d'origine ne change pas)
+ou « Les déplacer » (elles le quittent). Elles arrivent après les vôtres, la première montrée, et Ctrl+Z les retire toutes
+en une fois ; le schéma d'origine, lui, garde ses versions. Le chemin inverse est au clic droit sur un onglet : « Copier
+vers un autre schéma… », « Déplacer vers un autre schéma… » (Ctrl+Z la rend ici), « Faire un nouveau schéma de cette
+page » (il prend le nom de la page). Un câble ne va pas d'un schéma à l'autre : entre une page qui part et une page qui
+reste, il ne suit pas, et le compte rendu le dit ; entre deux pages qui partent ensemble, il suit. Un nom de page déjà
+pris est précédé du titre du schéma d'où elle vient (« SAMES Meylan · Stains »). Les VLAN se retrouvent par numéro (en cas
+de noms différents, celui du schéma qui reçoit est gardé, et le compte rendu le dit) et les modèles de matériel par
+référence.
+
+« Réunir des schémas » en fait un seul, nouveau, à plusieurs pages (dans l'éditeur : « Plus », « Réunir avec d'autres
+schémas… »). Chaque schéma d'une page y devient une page à son titre ; un schéma à plusieurs pages garde les siennes.
+L'ordre des pages se glisse (au clavier : Alt+flèche haut ou bas). Un équipement qu'on retrouve dans deux schémas, de
+même nom et de même adresse, reste en double par défaut, un sur chaque page ; sur demande, il n'en fait qu'un, et ses
+câbles vers l'autre page deviennent des renvois. Les VLAN se réunissent par numéro (en cas de noms différents, le premier
+schéma l'emporte, et la fenêtre le dit), les modèles de matériel par référence. Les originaux ne sont jamais modifiés ;
+« Archiver les schémas d'origine », coché par défaut, les range aux archives, et les fiches qui les insèrent les montrent
+toujours. Pour revenir en arrière : supprimer le nouveau et désarchiver les autres.
 
 En mode avancé, un équipement choisi ouvre son volet : en tête, son icône, son nom, son type (un clic ouvre la grille
 des types, avec une recherche et les types récents d'abord ; changer de type garde le nom, les ports et les connexions),

@@ -234,7 +234,12 @@
             {#each visibles as s (s.id)}
               <li>
                 <label class="case-schema">
-                  <input type="checkbox" value={s.id} bind:group={coches} />
+                  <!-- Les schémas viennent dans l'ordre où on les coche (ceux qui sont donnés d'abord) : il se change ensuite. -->
+                  <input
+                    type="checkbox"
+                    checked={coches.includes(s.id)}
+                    onchange={(e) => (coches = e.currentTarget.checked ? [...coches, s.id] : coches.filter((id) => id !== s.id))}
+                  />
                   <span class="nom">{s.titre}</span>
                   <span class="compte">{pluriel(s.equipements, "équipement", "équipements")}</span>
                 </label>

@@ -159,6 +159,8 @@
       return;
     }
     const restes: string[] = [];
+    /** Les schémas d'où toutes les pages sont parties : ils restent, vides. */
+    const vides: string[] = [];
     if (deplacer) {
       for (const { g } of transferts) {
         try {
@@ -169,12 +171,16 @@
             retirerPages(schema, g.cochees);
             await ecrireEchange(g.lu, schema);
           }
+          if (g.cochees.length === pagesDe(g.lu.schema).length) vides.push(g.lu.schema.titre);
         } catch (e) {
           restes.push(`${g.lu.schema.titre} (${messageErreur(e)})`);
         }
       }
     }
-    phrases = transferts.flatMap(({ g, t }) => compteRendu(t, { source: g.lu.schema.titre, cible: titreCible, deplacer }));
+    phrases = transferts.flatMap(({ g, t }) => [
+      ...compteRendu(t, { source: g.lu.schema.titre, cible: titreCible, deplacer }),
+      ...(vides.includes(g.lu.schema.titre) ? [`« ${g.lu.schema.titre} » est vide : il reste dans la liste des schémas.`] : []),
+    ]);
     if (restes.length > 0) {
       phrases.push(`Les pages n'ont pas pu être retirées de ${restes.map((r) => `« ${r} »`).join(", ")} : elles y sont toujours.`);
     }

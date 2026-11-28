@@ -8,6 +8,18 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 ## [Non publié]
 
 ### Ajouté
+- Schémas réseau : réunir des schémas en un seul, nouveau, à plusieurs pages (31C). Un schéma d'une page y devient une
+  page à son titre, un schéma à plusieurs pages garde les siennes ; leur ordre se glisse (Alt+flèches au clavier). Tous
+  les identifiants sont refaits ; les VLAN se réunissent par numéro (un nom différent : le premier est gardé, et la
+  fenêtre le dit), les modèles de matériel par référence ; sur demande, deux équipements de même nom et de même adresse
+  n'en font qu'un, ses câbles vers l'autre page devenant des renvois. Les originaux ne sont pas modifiés et, par défaut,
+  sont archivés (les fiches qui les insèrent les montrent toujours). Dans l'éditeur : « Plus », « Réunir avec d'autres
+  schémas… ».
+- Schémas réseau : des pages d'un schéma à l'autre (31D). « + » sous le plan propose « Nouvelle page » ou « Pages d'un
+  autre schéma… » : ses pages se choisissent sur leurs vignettes, se copient ou se déplacent ; Ctrl+Z retire l'ajout en
+  une fois. Au clic droit sur un onglet : « Copier vers un autre schéma… », « Déplacer vers un autre schéma… » (Ctrl+Z
+  la rend), « Faire un nouveau schéma de cette page ». Un câble entre une page qui part et une page qui reste ne suit
+  pas, et le compte rendu le dit ; entre deux pages qui partent ensemble, il suit.
 - Schémas réseau : un schéma peut avoir plusieurs pages (Étage 1, Étage 2, Salle serveurs…), en onglets sous le plan,
   avec le nombre d'équipements de chacune ; « + » en ajoute une, le clic droit renomme, duplique, déplace ou supprime
   (après une question, Ctrl+Z la rend), glisser un onglet le déplace. Un câble entre deux pages se dessine sur chacune en
