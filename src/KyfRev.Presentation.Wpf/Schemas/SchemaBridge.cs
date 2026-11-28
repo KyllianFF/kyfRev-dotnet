@@ -12,15 +12,18 @@ namespace KyfRev.Presentation.Wpf.Schemas;
 /// un appel inconnu ou mal formé est refusé. Les noms sont ceux de la 0.x, que l'éditeur repris attend tels quels.
 /// </summary>
 /// <remarks>
-/// « imprimerSchema » ouvre la fenêtre « Imprimer » de l'application sur l'image du schéma, et ne répond qu'une fois la fenêtre
+/// « imprimerSchema » ouvre la fenêtre « Imprimer » de l'application sur les pages du schéma, une image par feuille, et ne répond qu'une fois la fenêtre
 /// fermée : ce qu'il faut en dire (le travail est parti), ou rien (elle a été fermée sans imprimer).
 /// « coffreChiffre » dit si le coffre ouvert est chiffré : ce qui sort d'un schéma (export, image copiée) est en clair, et
 /// l'îlot en prévient alors. Sans rien pour le dire, le coffre est tenu pour en clair.
 /// </remarks>
-internal sealed class SchemaBridge(SchemaUseCases schemas, IFolderPicker folders, Func<string?> pickFile, Action<string> openSheet, Action? editorClosed = null, Action<byte[]>? copyImage = null, Func<string, byte[], Task<string?>>? print = null, Func<bool>? isEncrypted = null)
+internal sealed class SchemaBridge(SchemaUseCases schemas, IFolderPicker folders, Func<string?> pickFile, Action<string> openSheet, Action? editorClosed = null, Action<byte[]>? copyImage = null, Func<string, IReadOnlyList<PrintedSheet>, int, Task<string?>>? print = null, Func<bool>? isEncrypted = null)
 {
     /// <summary>Une image de schéma copiée ou imprimée ne dépasse pas ce poids : au-delà, l'appel est refusé.</summary>
     internal const int ImageLimit = 32 * 1024 * 1024;
+
+    /// <summary>Une impression a au plus ce nombre de feuilles (une par page du schéma) : au-delà, l'appel est refusé.</summary>
+    internal const int PrintedPagesLimit = 200;
 
     private static ReadOnlySpan<byte> PngSignature => [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
 
@@ -76,6 +79,21 @@ internal sealed class SchemaBridge(SchemaUseCases schemas, IFolderPicker folders
 
     private static string Argument(JsonArray args, int index) =>
         index < args.Count && Text(args[index]) is { } text ? text : throw new ArgumentException(SchemaText.BadCall);
+
+    /// <summary>
+    /// Les feuilles d'une impression : la liste des pages (<c>[titre, image]</c> chacune), ou une image seule, sous le titre du
+    /// schéma. Une entrée mal formée refuse l'appel.
+    /// </summary>
+    private static List<PrintedSheet> Sheets(string title, JsonArray args)
+    {
+        if (args.Count > 1 && args[1] is JsonArray pages)
+        {
+            return [.. pages.Select(page => page is JsonArray pair && pair.Count == 2
+                ? new PrintedSheet(Argument(pair, 0), Convert.FromBase64String(Argument(pair, 1)))
+                : throw new ArgumentException(SchemaText.BadCall))];
+        }
+        return [new PrintedSheet(title, Convert.FromBase64String(Argument(args, 1)))];
+    }
 
     private static int Number(JsonArray args, int index) =>
         index < args.Count && args[index] is JsonValue value && value.TryGetValue<int>(out var number)
@@ -194,13 +212,16 @@ internal sealed class SchemaBridge(SchemaUseCases schemas, IFolderPicker folders
                 copyImage(picture);
                 return (null, null);
             case "imprimerSchema":
-                // « Imprimer » : la fenêtre de l'application, sur l'image du schéma, sous son titre. Une image PNG seulement.
-                var (printed, image) = (Argument(args, 0), Convert.FromBase64String(Argument(args, 1)));
-                if (print is null || !IsPicture(image))
+                // « Imprimer » : la fenêtre de l'application, sur les pages du schéma, une image PNG par feuille sous son titre,
+                // l'aperçu ouvert sur la page montrée. Une seule image, sans liste, se tient sous le titre du schéma.
+                var printed = Argument(args, 0);
+                var sheets = Sheets(printed, args);
+                var shown = args.Count > 2 ? Number(args, 2) : 1;
+                if (print is null || sheets.Count == 0 || sheets.Count > PrintedPagesLimit || sheets.Any(sheet => !IsPicture(sheet.Png)))
                 {
                     throw new ArgumentException(SchemaText.BadCall);
                 }
-                return (await print(printed, image).ConfigureAwait(true) is { } said ? JsonValue.Create(said) : null, null);
+                return (await print(printed, sheets, shown).ConfigureAwait(true) is { } said ? JsonValue.Create(said) : null, null);
             case "choisirDossier":
                 return (folders.Pick(Argument(args, 0)), null);
             case "choisirFichierSchema":
@@ -228,3 +249,8 @@ internal sealed class SchemaBridge(SchemaUseCases schemas, IFolderPicker folders
 /// <param name="Request">Le numéro de la demande.</param>
 /// <param name="Done">Rien ne reste à enregistrer : le schéma l'est, ou aucun n'était ouvert.</param>
 internal readonly record struct FinishReport(int Request, bool Done);
+
+/// <summary>Une feuille d'une impression de schéma : une page, son titre et son image PNG.</summary>
+/// <param name="Title">Le titre imprimé au-dessus de l'image (« Réseau - Étage 2 »).</param>
+/// <param name="Png">L'image.</param>
+internal sealed record PrintedSheet(string Title, byte[] Png);

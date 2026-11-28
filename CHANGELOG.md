@@ -104,6 +104,11 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   curseur, la sélection et le défilement ne bougent pas. Sur un papier, sur une feuille A4, A5 ou A6 et dans une fenêtre
   qui n'a que la place du texte, rien ne déborde. Jusqu'ici, ces blocs suivaient la colonne en écriture : un tableau
   large y paraissait plus serré qu'en lecture.
+- Schémas réseau, impression : « Imprimer… » sort toutes les pages d'un schéma, une par feuille, dans l'ordre des
+  onglets, chacune sous le titre du schéma et le nom de sa page (une page sans équipement est sautée) ; le PDF aussi,
+  par « Microsoft Print to PDF ». L'aperçu s'ouvre sur la page montrée, et « Certaines », sous « Feuilles », propose
+  déjà son numéro, pour n'imprimer qu'elle. Jusqu'ici, seule la page montrée s'imprimait. L'export en image (PNG, SVG)
+  reste par page.
 - Schémas réseau, mode avancé : le volet d'un équipement passe en quatre onglets, Général, Ports, Réseau et Inventaire,
   sous un en-tête qui montre son icône, son nom, son type et son statut ; le dernier onglet choisi le reste d'un
   équipement à l'autre. Le type se choisit dans une grille d'icônes, par famille, avec une recherche et les types

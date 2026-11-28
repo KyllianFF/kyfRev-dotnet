@@ -107,26 +107,41 @@ public sealed partial class SchemasPageViewModel : ObservableObject, ILeaving, I
     /// </summary>
     /// <param name="title">Le titre du schéma.</param>
     /// <param name="png">Son image PNG.</param>
-    internal Task<string?> PrintPictureAsync(string title, byte[] png)
+    internal Task<string?> PrintPictureAsync(string title, byte[] png) => PrintPagesAsync(title, [new PrintedSheet(title, png)], 1);
+
+    /// <summary>
+    /// Ouvre la fenêtre « Imprimer » sur les pages d'un schéma, une image par feuille, chacune sous son titre, l'aperçu sur la
+    /// feuille <paramref name="shown"/>. Rend, une fois la fenêtre fermée, ce qu'il faut dire du travail parti, ou rien s'il
+    /// n'est pas parti. Une image illisible est refusée comme un appel mal formé : rien ne s'ouvre.
+    /// </summary>
+    /// <param name="title">Le titre du schéma, donné au travail d'impression.</param>
+    /// <param name="sheets">Les pages, dans l'ordre des onglets.</param>
+    /// <param name="shown">La feuille de la page montrée, à partir de 1.</param>
+    internal Task<string?> PrintPagesAsync(string title, IReadOnlyList<PrintedSheet> sheets, int shown)
     {
-        BitmapSource picture;
-        try
-        {
-            using var stream = new MemoryStream(png);
-            picture = BitmapFrame.Create(stream, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
-            picture.Freeze();
-        }
-        catch (Exception exception) when (exception is NotSupportedException or FileFormatException)
-        {
-            throw new ArgumentException(SchemaText.BadCall, exception);
-        }
+        var pictures = sheets.Select(sheet => new PrintPicture(sheet.Title, Decode(sheet.Png))).ToList();
         // Une fenêtre déjà ouverte pour une autre image : celle-là n'imprimera pas.
         _printing?.TrySetResult(null);
         var done = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
         _printing = done;
         Print.Printed = said => done.TrySetResult(said);
-        Print.OpenPicture(title, picture);
+        Print.OpenPictures(title, pictures, shown);
         return done.Task;
+    }
+
+    private static BitmapFrame Decode(byte[] png)
+    {
+        try
+        {
+            using var stream = new MemoryStream(png);
+            var picture = BitmapFrame.Create(stream, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+            picture.Freeze();
+            return picture;
+        }
+        catch (Exception exception) when (exception is NotSupportedException or FileFormatException)
+        {
+            throw new ArgumentException(SchemaText.BadCall, exception);
+        }
     }
 
     /// <summary>
@@ -136,7 +151,7 @@ public sealed partial class SchemasPageViewModel : ObservableObject, ILeaving, I
     public async Task<bool> LeaveAsync() => await FinishIsland().ConfigureAwait(true);
 
     /// <summary>Le pont vers le coffre, pour un îlot.</summary>
-    internal SchemaBridge Bridge() => new(_schemas, _folders, () => PickSchemaFile(), _opener.OpenSheet, EditorClosed, CopyImage, PrintPictureAsync, IsEncrypted);
+    internal SchemaBridge Bridge() => new(_schemas, _folders, () => PickSchemaFile(), _opener.OpenSheet, EditorClosed, CopyImage, PrintPagesAsync, IsEncrypted);
 
     /// <summary>Ce qui copie l'image d'un schéma : le presse-papiers de Windows, sauf dans les essais.</summary>
     internal Action<byte[]> CopyImage { get; init; } = ToClipboard;

@@ -76,10 +76,16 @@ public sealed partial class SchemasPageTests
         scene.Script("document.querySelectorAll('.selecteur-pages [role=tab]')[2].click()");
         scene.WaitFor("document.querySelector('figure.grand-apercu').textContent.includes('NAS')");
 
-        // L'impression part de la page montrée, son nom dans le titre.
+        // L'impression sort toutes les pages, une par feuille dans l'ordre des onglets, le nom de chacune en tête ; l'aperçu
+        // s'ouvre sur la page montrée, et « Certaines » propose son numéro.
         scene.Script("[...document.querySelectorAll('.entete-lecture button')].find((b) => b.textContent.includes('Imprimer')).click()");
         UiThread.Until(() => model.Print.IsOpen, TimeSpan.FromSeconds(30));
-        Assert.AreEqual("Imprimer « Réseau du lycée - Salle serveurs »", model.Print.Title);
+        Assert.AreEqual("Imprimer « Réseau du lycée »", model.Print.Title);
+        Assert.AreEqual("Réseau du lycée - Étage 1|Réseau du lycée - Étage 2|Réseau du lycée - Salle serveurs|Réseau du lycée - Site distant", string.Join("|", model.Print.Pictures.Select(picture => picture.Title)));
+        Assert.AreEqual(3, model.Print.CurrentPage);
+        Assert.AreEqual("Réseau du lycée - Salle serveurs", model.Print.PictureTitle);
+        Assert.IsTrue(model.Print.AllPages);
+        Assert.AreEqual("3", model.Print.PagesText);
         model.Print.Close();
 
         // Fenêtre étroite : le sélecteur tient, rien ne défile de côté.
