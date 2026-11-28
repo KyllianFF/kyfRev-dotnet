@@ -93,6 +93,7 @@ public sealed class MachinePreferencesFileTests
         {
             Paper = new PaperChoices(IsOn: true, Endless: PaperStyle.Lines, A4: PaperStyle.LargeSquares, A6: PaperStyle.Graph),
             MenuOrder = "fiches,aujourd-hui",
+            HiddenMenu = "archives,statistiques",
             Shortcuts = "imprimer=Ctrl+Shift+I",
             FirstUse = "aide-revision;pas-masques",
         };
@@ -105,11 +106,13 @@ public sealed class MachinePreferencesFileTests
         StringAssert.Contains(written, "\"a4\": \"grands-carreaux\"", StringComparison.Ordinal);
         StringAssert.Contains(written, "\"a6\": \"millimetre\"", StringComparison.Ordinal);
         StringAssert.Contains(written, "\"menu\": \"fiches,aujourd-hui\"", StringComparison.Ordinal);
+        StringAssert.Contains(written, "\"menuMasque\": \"archives,statistiques\"", StringComparison.Ordinal);
         StringAssert.Contains(written, "\"premiereUtilisation\": \"aide-revision;pas-masques\"", StringComparison.Ordinal);
 
         // Rien de choisi : rien d'écrit. Un papier inconnu est une feuille unie.
         Assert.IsTrue(store.Save(new MachinePreferences()));
         Assert.DoesNotContain("papier", File.ReadAllText(Path.Combine(folder.Path, "preferences.json")));
+        Assert.DoesNotContain("menuMasque", File.ReadAllText(Path.Combine(folder.Path, "preferences.json")));
         Assert.DoesNotContain("raccourcis", File.ReadAllText(Path.Combine(folder.Path, "preferences.json")));
         Assert.DoesNotContain("premiereUtilisation", File.ReadAllText(Path.Combine(folder.Path, "preferences.json")));
         File.WriteAllText(Path.Combine(folder.Path, "preferences.json"), "{\"format\": 1, \"papier\": true, \"papiers\": {\"a5\": \"velin\", \"a4\": 3}, \"menu\": 7}");

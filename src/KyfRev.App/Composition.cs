@@ -286,7 +286,7 @@ internal static class Composition
             ReleasedOn));
         services.AddSingleton<SheetsSettingsViewModel>();
         // Le menu se lit dans la coquille, qui n'existe qu'après les vues : on la demande au moment de montrer l'onglet.
-        services.AddSingleton(provider => new ShortcutsSettingsViewModel(provider.GetRequiredService<MachineSettings>(), () => provider.GetRequiredService<ShellViewModel>().MainNavigation));
+        services.AddSingleton(provider => new ShortcutsSettingsViewModel(provider.GetRequiredService<MachineSettings>(), () => provider.GetRequiredService<ShellViewModel>().OrderedNavigation));
         services.AddSingleton<SettingsHubViewModel>();
         services.AddSingleton(provider => new HealthPageViewModel(
             provider.GetRequiredService<MaintenanceUseCases>(),
@@ -385,7 +385,7 @@ internal static class Composition
             };
             extensionPages.ViewAsked += (_, e) =>
             {
-                if (shell.MainNavigation.Concat(shell.SecondaryNavigation).FirstOrDefault(item => item.Id == ExtensionPages.EntryId(e.Extension)) is { } entry)
+                if (shell.AllNavigation.FirstOrDefault(item => item.Id == ExtensionPages.EntryId(e.Extension)) is { } entry)
                 {
                     shell.Navigate(entry);
                 }
@@ -510,7 +510,7 @@ internal static class Composition
         return
         [
             provider.GetRequiredService<DefinitionsPageViewModel>(),
-            .. shell.MainNavigation.Concat(shell.SecondaryNavigation).Select(entry => entry.Page).OfType<SchemasPageViewModel>(),
+            .. shell.AllNavigation.Select(entry => entry.Page).OfType<SchemasPageViewModel>(),
         ];
     }
 

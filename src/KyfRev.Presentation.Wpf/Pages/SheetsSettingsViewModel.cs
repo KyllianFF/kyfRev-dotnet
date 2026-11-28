@@ -130,6 +130,9 @@ public static class MoreSettingsText
     /// <summary>Le bouton qui rend les réglages d'avant.</summary>
     public const string UndoRestore = "Annuler";
 
+    /// <summary>Des mots qui mènent aux vues du menu.</summary>
+    public const string WordsMenu = "masquer cacher montrer retirer vues ordre";
+
     /// <summary>Des mots qui mènent à la taille de l'interface.</summary>
     public const string WordsZoom = "zoom agrandir rétrécir";
 
@@ -182,7 +185,7 @@ public static class MoreSettingsText
     public const string Menu = "Menu";
 
     /// <summary>Ce qu'on y règle.</summary>
-    public const string MenuAbout = "L'ordre des vues du menu de gauche. Retenu sur cet ordinateur, appliqué aussitôt.";
+    public const string MenuAbout = "L'ordre des vues du menu de gauche, et celles qu'il montre. Retenu sur cet ordinateur, appliqué aussitôt.";
 
     /// <summary>La section des raccourcis clavier.</summary>
     public const string Shortcuts = "Raccourcis";
@@ -407,13 +410,25 @@ public static class MoreSettingsText
     public const string FixedTitle = "Raccourcis fixes";
 
     /// <summary>La carte du menu.</summary>
-    public const string MenuTitle = "Ordre du menu";
+    public const string MenuTitle = "Vues du menu";
 
-    /// <summary>Ce que change l'ordre.</summary>
-    public const string MenuHelp = "L'ordre des vues du menu de gauche, et donc de Ctrl+1 à Ctrl+9. Santé du coffre et Paramètres restent en bas.";
+    /// <summary>Ce que change l'ordre, et ce que devient une vue masquée.</summary>
+    public const string MenuHelp = "L'ordre des vues du menu de gauche, et donc de Ctrl+1 à Ctrl+9. Une vue décochée quitte le menu, mais s'ouvre toujours par la recherche (Ctrl+K) et son raccourci, après ceux des vues montrées. Aujourd'hui, Santé du coffre et Paramètres restent.";
 
     /// <summary>Comment changer l'ordre.</summary>
     public const string MenuHowTo = "Faites glisser une vue à sa place. Au clavier : cliquez-la, puis ↑ et ↓ la déplacent, Début et Fin l'envoient en tête ou en queue.";
+
+    /// <summary>La case d'une vue, pour un lecteur d'écran et au survol : « Montrer Carnet dans le menu ».</summary>
+    public static string ShowInMenu(string view) => $"Montrer {view} dans le menu";
+
+    /// <summary>La case d'Aujourd'hui, qui ne se décoche pas.</summary>
+    public static string AlwaysInMenu(string view) => $"{view} reste toujours dans le menu";
+
+    /// <summary>Ce qui est dit d'une vue masquée, à la suite de son nom.</summary>
+    public const string HiddenSuffix = " · masquée";
+
+    /// <summary>Une vue masquée ou remontrée, dit aux lecteurs d'écran.</summary>
+    public static string ShownOrHidden(string view, bool shown) => shown ? $"{view} : dans le menu" : $"{view} : masquée du menu";
 
     /// <summary>Le nom de la liste, et ce que font ses touches, pour un lecteur d'écran.</summary>
     public const string MenuListName = "Vues du menu, dans l'ordre";
@@ -431,7 +446,7 @@ public static class MoreSettingsText
     public static string MoveDown(string view) => $"Descendre {view}";
 
     /// <summary>Le bouton qui rend l'ordre d'origine.</summary>
-    public const string RestoreOrder = "Ordre d'origine";
+    public const string RestoreOrder = "Menu d'origine";
 }
 
 /// <summary>
@@ -780,11 +795,52 @@ public sealed partial class ShortcutRow : ObservableObject
     public string ChangeLabel => IsWaiting ? MoreSettingsText.Waiting : MoreSettingsText.Change;
 }
 
-/// <summary>Une vue du menu, dans la liste qui en règle l'ordre.</summary>
-/// <param name="Id">Son identifiant.</param>
-/// <param name="Label">Son nom.</param>
-public sealed record MenuRow(string Id, string Label)
+/// <summary>Une vue du menu, dans la liste qui en règle l'ordre et ce qu'il montre.</summary>
+public sealed partial class MenuRow : ObservableObject
 {
+    private readonly Action<MenuRow>? _shownChanged;
+
+    /// <summary>La vue <paramref name="id"/>, nommée <paramref name="label"/> ; <paramref name="shownChanged"/> apprend qu'on l'a cochée ou décochée.</summary>
+    public MenuRow(string id, string label, bool isShown = true, Action<MenuRow>? shownChanged = null)
+    {
+        Id = id;
+        Label = label;
+        // « Aujourd'hui » est la vue d'arrivée : elle ne quitte pas le menu, qui n'est ainsi jamais vide.
+        CanHide = id != CorePages.Today;
+        IsShown = isShown || !CanHide;
+        _shownChanged = shownChanged;
+    }
+
+    /// <summary>Son identifiant.</summary>
+    public string Id { get; }
+
+    /// <summary>Son nom.</summary>
+    public string Label { get; }
+
+    /// <summary>Elle peut quitter le menu.</summary>
+    public bool CanHide { get; }
+
+    /// <summary>Elle est dans le menu de gauche ; sinon, seules la recherche et son raccourci l'ouvrent.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ListLabel))]
+    public partial bool IsShown { get; set; }
+
+    /// <summary>Son nom dans la liste : « Archives · masquée » quand le menu ne la montre pas.</summary>
+    public string ListLabel => IsShown ? Label : Label + MoreSettingsText.HiddenSuffix;
+
+    /// <summary>« Montrer Carnet dans le menu », ou, pour Aujourd'hui, qu'elle y reste.</summary>
+    public string ShowLabel => CanHide ? MoreSettingsText.ShowInMenu(Label) : MoreSettingsText.AlwaysInMenu(Label);
+
+    partial void OnIsShownChanging(bool oldValue, bool newValue)
+    {
+        if (!newValue && !CanHide)
+        {
+            throw new InvalidOperationException(MoreSettingsText.AlwaysInMenu(Label));
+        }
+    }
+
+    partial void OnIsShownChanged(bool value) => _shownChanged?.Invoke(this);
+
     /// <summary>« Monter Carnet ».</summary>
     public string UpLabel => MoreSettingsText.MoveUp(Label);
 
@@ -1029,13 +1085,30 @@ public sealed partial class ShortcutsSettingsViewModel : ObservableObject, INavi
     [RelayCommand]
     private void MoveDown(MenuRow? row) => Move(row, 1);
 
-    /// <summary>Rend au menu son ordre d'origine.</summary>
+    /// <summary>Rend au menu son ordre d'origine, toutes ses vues montrées.</summary>
     [RelayCommand]
     private void RestoreOrder()
     {
-        _machine.Update(preferences => preferences with { MenuOrder = string.Empty });
+        _machine.Update(preferences => preferences with { MenuOrder = string.Empty, HiddenMenu = string.Empty });
         Show();
     }
+
+    private bool _showing;
+
+    /// <summary>Une vue cochée ou décochée : ce que le menu masque s'écrit aussitôt, dans l'ordre de la liste.</summary>
+    private void OnShownChanged(MenuRow row)
+    {
+        if (_showing)
+        {
+            return;
+        }
+        var hidden = string.Join(',', Menu.Where(entry => !entry.IsShown).Select(entry => entry.Id));
+        _machine.Update(preferences => preferences with { HiddenMenu = hidden });
+        MenuMoved = MoreSettingsText.ShownOrHidden(row.Label, row.IsShown);
+    }
+
+    private HashSet<string> HiddenIds() =>
+        [.. _machine.Current.HiddenMenu.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)];
 
     private void Move(MenuRow? row, int step)
     {
@@ -1076,13 +1149,20 @@ public sealed partial class ShortcutsSettingsViewModel : ObservableObject, INavi
     {
         ShowShortcuts();
         var entries = _menu?.Invoke() ?? [];
+        var hidden = HiddenIds();
         if (!Menu.Select(entry => entry.Id).SequenceEqual(entries.Select(entry => entry.Id)))
         {
             Menu.Clear();
             foreach (var entry in entries)
             {
-                Menu.Add(new MenuRow(entry.Id, entry.Label));
+                Menu.Add(new MenuRow(entry.Id, entry.Label, !hidden.Contains(entry.Id), OnShownChanged));
             }
         }
+        _showing = true;
+        foreach (var row in Menu)
+        {
+            row.IsShown = !row.CanHide || !hidden.Contains(row.Id);
+        }
+        _showing = false;
     }
 }

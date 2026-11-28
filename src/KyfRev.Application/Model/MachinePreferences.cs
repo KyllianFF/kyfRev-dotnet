@@ -108,6 +108,12 @@ public sealed record MachinePreferences
     /// <summary>L'ordre choisi des vues du menu : leurs identifiants séparés par des virgules ; vide pour l'ordre d'origine.</summary>
     public string MenuOrder { get; init; } = string.Empty;
 
+    /// <summary>
+    /// Les vues masquées du menu : leurs identifiants séparés par des virgules ; vide si toutes s'y montrent. Une vue masquée
+    /// s'ouvre encore par la recherche (Ctrl+K) et par son raccourci.
+    /// </summary>
+    public string HiddenMenu { get; init; } = string.Empty;
+
     /// <summary>Les raccourcis changés : « imprimer=Ctrl+Shift+I;partager=Ctrl+J » ; vide si aucun.</summary>
     public string Shortcuts { get; init; } = string.Empty;
 

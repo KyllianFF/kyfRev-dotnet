@@ -407,7 +407,7 @@ public sealed class PaperAndShortcutsTests
 
             // Glissée : la vue prise par sa ligne suit le pointeur, à mesure ; l'ordre s'écrit au dépôt.
             var written = store.Stored.MenuOrder;
-            var label = Descendants<TextBlock>(Row(0)).First(text => text.Text == carnet.Label);
+            var label = Descendants<TextBlock>(Row(0)).First(text => text.Text == carnet.ListLabel);
             var start = label.TranslatePoint(new Point(4, 4), list);
             label.RaiseEvent(new MouseButtonEventArgs(Mouse.PrimaryDevice, 0, MouseButton.Left) { RoutedEvent = UIElement.PreviewMouseLeftButtonDownEvent });
             view.Pressed(label, start);

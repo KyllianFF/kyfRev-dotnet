@@ -127,6 +127,10 @@ public sealed class MachinePreferencesFile : IMachinePreferencesStore
             {
                 writer.WriteString("menu", preferences.MenuOrder);
             }
+            if (preferences.HiddenMenu.Length > 0)
+            {
+                writer.WriteString("menuMasque", preferences.HiddenMenu);
+            }
             if (preferences.Shortcuts.Length > 0)
             {
                 writer.WriteString("raccourcis", preferences.Shortcuts);
@@ -184,6 +188,7 @@ public sealed class MachinePreferencesFile : IMachinePreferencesStore
             SheetPages = SheetPages(root),
             Paper = Paper(root),
             MenuOrder = Text(root, "menu"),
+            HiddenMenu = Text(root, "menuMasque"),
             Shortcuts = Text(root, "raccourcis"),
             FirstUse = Text(root, "premiereUtilisation"),
             Width = Choice(root, "largeur", Widths, defaults.Width),

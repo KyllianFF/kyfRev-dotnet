@@ -170,7 +170,7 @@ public sealed class ReviewNavigation : IReviewOpener
     public void OpenHealth()
     {
         var shell = Shell;
-        if (shell.MainNavigation.Concat(shell.SecondaryNavigation).FirstOrDefault(item => item.Id == CorePages.Health) is { } health)
+        if (shell.AllNavigation.FirstOrDefault(item => item.Id == CorePages.Health) is { } health)
         {
             shell.Navigate(health);
         }
