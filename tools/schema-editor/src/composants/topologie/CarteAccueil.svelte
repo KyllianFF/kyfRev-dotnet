@@ -222,6 +222,8 @@
   }
 
   .apercu :global(svg) {
+    /* Le dessin est refait quand les pages défilent : un clic commencé sur l'ancien se perdrait. Le bouton, lui, reste. */
+    pointer-events: none;
     max-width: 100%;
     max-height: 100%;
     width: auto;

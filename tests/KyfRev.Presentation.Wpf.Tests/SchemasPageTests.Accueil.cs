@@ -41,6 +41,9 @@ public sealed partial class SchemasPageTests
         scene.Script("document.querySelector('.bascule button').click()");
         Expect(scene, "document.querySelectorAll('li.carte').length === 5 && [...document.querySelectorAll('li.carte .meta')].every((m) => m.textContent.includes('équipement'))");
         Expect(scene, "document.querySelector('li.carte .meta')?.textContent.includes('4 pages') === true");
+        // Chaque schéma lu (sa vignette dessinée, ses étiquettes avec elle) : sans quoi les rangées bougent encore, et un clic
+        // visé avant tombe à côté.
+        Expect(scene, "document.querySelectorAll('li.carte .apercu > svg').length === 5 && document.getAnimations().length === 0");
         return scene;
     }
 
@@ -314,6 +317,8 @@ public sealed partial class SchemasPageTests
         var folder = scene.Outside("Plusieurs");
         Directory.CreateDirectory(folder);
         scene.Picker.Answers.Enqueue(folder);
+        // L'étiquetage fini d'écrire : la barre n'est plus occupée.
+        Expect(scene, "[...document.querySelectorAll('.barre-selection button')].find((b) => b.textContent.includes('Exporter'))?.disabled === false");
         scene.Script("[...document.querySelectorAll('.barre-selection button')].find((b) => b.textContent.includes('Exporter')).click()");
         Expect(scene, "document.querySelector('dialog[open] h2')?.textContent === 'Exporter 2 schémas'");
         scene.Script("(() => { [...document.querySelectorAll('dialog[open] input[type=radio]')].find((c) => c.value === 'json').click(); document.querySelector('dialog[open] form').requestSubmit(); })()");

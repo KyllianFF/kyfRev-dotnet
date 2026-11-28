@@ -296,20 +296,36 @@
     return () => clearTimeout(minuterie);
   });
 
+  /** Le dernier chargement demandé : un chargement plus ancien qui finit après lui n'écrit plus rien. */
+  let chargement = 0;
+
+  /**
+   * Relit la liste et chaque schéma. Deux chargements peuvent se croiser (l'ouverture de la vue, puis le retour sur
+   * elle) : seul le dernier compte, sans quoi une liste plus ancienne reviendrait, et la sélection perdrait ce qu'elle
+   * n'y trouve pas.
+   */
   async function charger() {
+    const numero = ++chargement;
+    const dernier = () => numero === chargement;
     try {
-      liste = await api.schemas();
-      ranges = await api.schemasRanges();
+      const lue = await api.schemas();
+      const rangesLus = await api.schemasRanges();
+      if (!dernier()) return;
+      liste = lue;
+      ranges = rangesLus;
       erreur = null;
-      for (const s of liste) {
+      for (const s of lue) {
+        let detail: (typeof details)[string];
         try {
-          details[s.id] = { schema: lireSchema((await api.lireSchema(s.id)).texte).schema };
+          detail = { schema: lireSchema((await api.lireSchema(s.id)).texte).schema };
         } catch (e) {
-          details[s.id] = { erreur: messageErreur(e) };
+          detail = { erreur: messageErreur(e) };
         }
+        if (!dernier()) return;
+        details[s.id] = detail;
       }
     } catch (e) {
-      erreur = messageErreur(e);
+      if (dernier()) erreur = messageErreur(e);
     }
   }
 
