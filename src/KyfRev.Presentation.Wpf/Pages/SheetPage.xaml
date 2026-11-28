@@ -557,6 +557,7 @@
               <kyf:Notification x:Name="DoneMessage" Severity="Success" Message="{Binding Done}" IsOpen="{Binding HasDone, Mode=OneWay}" Margin="0,0,0,12" />
             </StackPanel>
             <editing:SheetEditorView x:Name="EditorView" Grid.Row="1" DataContext="{Binding Editor}" TextMaxWidth="{Binding DataContext.TextWidth, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                     WideMaxWidth="{x:Static pages:SheetPageViewModel.TextMaxWidth}"
                                      SheetZoom="{Binding DataContext.SheetZoom, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                      PageSetup="{Binding DataContext.PageSetup, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                      Visibility="{Binding DataContext.IsWriting, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource Visible}}" />

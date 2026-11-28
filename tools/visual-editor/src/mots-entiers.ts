@@ -4,6 +4,7 @@
 
 import { Plugin, PluginKey } from "prosemirror-state";
 import { Decoration, DecorationSet, type EditorView } from "prosemirror-view";
+import { permisDe, placeDeChaqueCote } from "./blocs-larges";
 
 /**
  * Les largeurs minimales des colonnes, d'après celles des cases (leur plus long mot, marges comprises) : pour chaque colonne,
@@ -51,7 +52,9 @@ function mesurer(vue: EditorView): Mesure {
     const tableau = vue.nodeDOM(position);
     if (!contexte || !(tableau instanceof HTMLTableElement)) return false;
     const cases = Array.from(tableau.rows, (ligne) => Array.from(ligne.cells, (cellule) => largeurDuPlusLongMot(cellule, contexte)));
-    const largeurs = largeursMinimales(cases, (tableau.parentElement ?? vue.dom).clientWidth);
+    // Un tableau de la fiche peut déborder de la colonne de texte (blocs-larges.ts) : il a cette place en plus.
+    const parent = tableau.parentElement ?? vue.dom;
+    const largeurs = largeursMinimales(cases, parent.clientWidth + (parent === vue.dom ? 2 * placeDeChaqueCote() : 0));
     if (largeurs) {
       // La première ligne porte les largeurs : la colonne entière les suit.
       const debut = position + 2;
@@ -92,7 +95,8 @@ export function motsEntiers(): Plugin<Mesure> {
       planifier();
       return {
         update: (apres, avant) => {
-          if (!apres.state.doc.eq(avant.doc)) planifier();
+          // La place des blocs larges a changé (un papier, des pages, une autre largeur du texte) : les tableaux aussi.
+          if (!apres.state.doc.eq(avant.doc) || permisDe(apres.state) !== permisDe(avant)) planifier();
         },
         destroy: () => {
           cancelAnimationFrame(attente);

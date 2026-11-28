@@ -70,6 +70,7 @@ import {
 import type { Casse } from "./casse";
 import { changementDeCasse } from "./casse-visuelle";
 import { colorer, langages, type Morceau } from "./coloration";
+import { blocsLarges, largeurAutour } from "./blocs-larges";
 import { motAutour } from "./correcteur";
 import { depuisMarkdown, type Origine, trancheBrute, trancheCollee, versMarkdown } from "./markdown";
 import { type ApparenceImage, changerTitre, lireTitre } from "./image";
@@ -613,7 +614,8 @@ function poserPoignees(boite: HTMLElement, image: HTMLImageElement, vue: EditorV
       poignee.setPointerCapture(appui.pointerId);
       const depart = appui.clientX;
       const largeur = boite.getBoundingClientRect().width;
-      const texte = boite.parentElement?.getBoundingClientRect().width ?? largeur;
+      // Le texte autour d'elle, sans le débord de son paragraphe quand elle y est seule et plus large que lui.
+      const texte = boite.parentElement ? largeurAutour(boite.parentElement) : largeur;
       const sens = place.includes("o") ? -1 : 1;
       let pourcent: number | null = null;
       const tirer = (geste: PointerEvent) => {
@@ -823,6 +825,8 @@ class VueCode implements NodeView {
       dessin.alt = this.noeud.textContent;
       this.apercu.replaceChildren(dessin);
     } else this.apercu.innerHTML = svg ? svgNettoye(svg) : "";
+    // Le dessin a pris sa place : la mesure des blocs plus larges que le texte le sait.
+    this.dom.dispatchEvent(new Event("dessin", { bubbles: true }));
   }
 
   private readonly suivreTheme = () => this.demanderDessin();
@@ -1058,6 +1062,7 @@ export class EditeurVisuel {
         gapCursor(),
         tableEditing(),
         decorations(),
+        blocsLarges(),
         motsEntiers(),
         colorationDuCode(),
         paragrapheFinal(),
@@ -1202,7 +1207,7 @@ export class EditeurVisuel {
       masks: apparence?.masques ? apparence.masques.split(";").filter((zone) => zone !== "").length : 0,
       shownWidth: Math.round(boite?.width ?? 0),
       shownHeight: Math.round(boite?.height ?? 0),
-      room: Math.round(element instanceof HTMLElement ? (element.parentElement?.getBoundingClientRect().width ?? 0) : 0),
+      room: Math.round(element instanceof HTMLElement ? largeurAutour(element.parentElement) : 0),
     };
   }
 

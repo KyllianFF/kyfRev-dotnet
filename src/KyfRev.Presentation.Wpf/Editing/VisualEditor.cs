@@ -1190,6 +1190,28 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
         }
     } = double.PositiveInfinity;
 
+    /// <summary>
+    /// La largeur, bords compris, jusqu'où peut aller sur une feuille sans fin et sans papier ce qui est plus large que la
+    /// colonne de texte (un tableau, une image seule sur sa ligne, un dessin), comme en lecture ; infinie ou nulle : rien
+    /// ne déborde. La page la reçoit en <c>--largeur-large</c>.
+    /// </summary>
+    public double WideWidth
+    {
+        get;
+        set
+        {
+            if (field != value)
+            {
+                field = value;
+                QueueTheme();
+            }
+        }
+    } = double.PositiveInfinity;
+
+    /// <summary>Une largeur pour la page, en pixels ; « none » quand elle n'en est pas une.</summary>
+    private static string CssWidth(double width) =>
+        double.IsFinite(width) && width > 0 ? string.Create(CultureInfo.InvariantCulture, $"{Math.Round(width)}px") : "none";
+
     private void SendTheme()
     {
         var comfort = TryFindResource(ReadingComfort.ResourceKey) as ReadingComfort ?? ReadingComfort.Default;
@@ -1201,7 +1223,9 @@ internal sealed class VisualEditor : UserControl, IEditorSurface, IDisposable
             ["--police-lecture"] = comfort.CssFamily,
             ["--police-titre"] = comfort.HeadingsFollow ? comfort.CssFamily : "var(--police)",
             // La colonne du texte d'une feuille sans fin : la vue est plus large qu'elle, sa barre au bord de la fenêtre.
-            ["--largeur-fiche"] = double.IsFinite(TextWidth) && TextWidth > 0 ? string.Create(CultureInfo.InvariantCulture, $"{Math.Round(TextWidth)}px") : "none",
+            ["--largeur-fiche"] = CssWidth(TextWidth),
+            // Ce qui est plus large que la colonne (un tableau, une image, un dessin) peut aller jusque-là, comme en lecture.
+            ["--largeur-large"] = CssWidth(WideWidth),
             // La feuille paraît en fondu à chaque texte chargé : la page a sa propre fenêtre, c'est elle qui l'anime. Durée
             // nulle quand les animations sont coupées.
             ["--duree-entree"] = string.Create(CultureInfo.InvariantCulture, $"{Math.Round(Transitions.DurationOf(this, DesignKeys.NormalDuration).TotalMilliseconds)}ms"),

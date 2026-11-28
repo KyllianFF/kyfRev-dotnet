@@ -120,6 +120,10 @@ automatique, et l'historique garde les versions précédentes. Le ruban insère 
   le titre 4 a la taille du texte, en italique. « Taille du texte des fiches », dans les Paramètres, grandit le tout.
 - Une flèche dans la marge, à côté d'un titre, replie ou déplie tout ce qui est sous lui, sous-titres compris
   (Alt+Maj+« - » et Alt+Maj+« + »). Le repli n'est pas enregistré dans la fiche.
+- Sur une feuille sans fin, le texte garde la colonne choisie (Paramètres › Apparence, « Largeur du texte ») ; un tableau,
+  une image seule sur sa ligne ou un dessin plus large qu'elle garde sa largeur, jusqu'à celle de la colonne « Large », et
+  dépasse autant de chaque côté, en lecture comme en écriture, où la feuille s'élargit d'autant. Sur un papier, sur une
+  feuille A4, A5 ou A6, ou dans une fenêtre qui n'a que la place du texte, il reste dans la colonne.
 
 L'onglet « Mise en page » du ruban donne une feuille à la fiche : sans fin (par défaut), A4, A5 ou A6, en portrait ou en
 paysage, avec des marges étroites, normales, larges ou sur mesure. Le choix vaut pour toutes les fiches ou pour la fiche

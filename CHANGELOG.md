@@ -98,6 +98,12 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   des ports diffèrent (« 1/0/1 » et « Gi1/0/1 »), il propose de les reprendre par leur place : même membre, même numéro.
 
 ### Modifié
+- Écrire, ce qui est plus large que la colonne de texte (15A) : comme en lecture, un tableau, une image seule sur sa
+  ligne ou un dessin (SmartArt, Mermaid, schéma réseau) garde sa largeur, jusqu'à celle de la colonne « Large », et
+  déborde autant de chaque côté du texte ; la feuille s'élargit d'autant, le texte garde sa colonne et sa place, et le
+  curseur, la sélection et le défilement ne bougent pas. Sur un papier, sur une feuille A4, A5 ou A6 et dans une fenêtre
+  qui n'a que la place du texte, rien ne déborde. Jusqu'ici, ces blocs suivaient la colonne en écriture : un tableau
+  large y paraissait plus serré qu'en lecture.
 - Schémas réseau, mode avancé : le volet d'un équipement passe en quatre onglets, Général, Ports, Réseau et Inventaire,
   sous un en-tête qui montre son icône, son nom, son type et son statut ; le dernier onglet choisi le reste d'un
   équipement à l'autre. Le type se choisit dans une grille d'icônes, par famille, avec une recherche et les types
