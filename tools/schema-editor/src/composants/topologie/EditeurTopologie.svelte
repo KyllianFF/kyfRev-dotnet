@@ -66,6 +66,8 @@
   import CompteRenduImport from "./CompteRenduImport.svelte";
   import DialogueExport from "./DialogueExport.svelte";
   import DialogueImport from "./DialogueImport.svelte";
+  import DialogueEnregistrerModele from "./DialogueEnregistrerModele.svelte";
+  import DialogueModeles from "./DialogueModeles.svelte";
   import OngletsPages from "./OngletsPages.svelte";
   import DialogueAjouterPages from "./DialogueAjouterPages.svelte";
   import DialogueEnvoyerPage from "./DialogueEnvoyerPage.svelte";
@@ -233,6 +235,43 @@
     });
   }
   let planIpOuvert = $state(false);
+
+  // --- Modèles de schéma (31E) ---
+
+  /** « Nouveau schéma depuis un modèle… » : le dialogue des modèles. */
+  let modelesOuverts = $state(false);
+  /** « Enregistrer comme modèle… » : le schéma entier, ou une de ses pages. */
+  let aEnregistrerCommeModele = $state<{ page?: string } | null>(null);
+
+  /** Le modèle se tire de ce qui est dans le coffre : ce qui attendait de s'enregistrer part d'abord. */
+  async function enregistrerCommeModele(page?: string) {
+    menu = null;
+    await editeur.enregistrer();
+    if (!editeur.id) {
+      editeur.annonce = "Ce schéma n'est pas encore dans le coffre : il ne peut pas servir de modèle.";
+      return;
+    }
+    aEnregistrerCommeModele = page === undefined ? {} : { page };
+  }
+
+  /** Ouvre un autre schéma à la place de celui-ci (enregistré d'abord), ces éléments choisis. */
+  async function ouvrirAutre(autre: string, choisis: string[] = []) {
+    await editeur.enregistrer();
+    if (onouvrir) onouvrir(autre, choisis);
+    else editeur.annonce = "Le schéma est créé : il est dans la liste des schémas.";
+  }
+
+  /** Un résultat de la recherche dans tous les schémas : ici, il est montré ; ailleurs, son schéma s'ouvre. */
+  function ouvrirTrouve(schemaId: string, page?: string, objet?: string) {
+    if (schemaId !== editeur.id) {
+      void ouvrirAutre(schemaId, objet ? [objet] : []);
+      return;
+    }
+    rechercheOuverte = false;
+    if (page !== undefined) editeur.montrerPage(page);
+    if (objet) requestAnimationFrame(() => montrer(objet));
+  }
+
   let rechercheOuverte = $state(false);
   let texteRecherche = $state("");
   const trouves = $derived(
@@ -942,6 +981,9 @@
             {/if}
             <button type="button" role="menuitem" onclick={() => { menu = null; exportOuvert = true; }}>Exporter…</button>
             <button type="button" role="menuitem" onclick={imprimer}>Imprimer…</button>
+            <hr />
+            <button type="button" role="menuitem" onclick={() => void enregistrerCommeModele()}>Enregistrer comme modèle…</button>
+            <button type="button" role="menuitem" onclick={() => { menu = null; modelesOuverts = true; }}>Nouveau schéma depuis un modèle…</button>
           </div>
         {/if}
       </span>
@@ -1013,6 +1055,7 @@
             {schema}
             bind:texte={texteRecherche}
             onchoisir={(t) => montrer(t.id)}
+            onouvrir={ouvrirTrouve}
             onfermer={() => {
               rechercheOuverte = false;
               canevas?.focus();
@@ -1052,6 +1095,7 @@
       onautresPages={() => (autresPagesOuvert = true)}
       onenvoyer={(page, deplacer) => (envoi = { page, deplacer })}
       onnouveauSchema={(page) => void nouveauSchemaDeLaPage(page)}
+      onmodele={(page) => void enregistrerCommeModele(page)}
     />
     <Plateau avance={!simplifie} bind:pose onposer={(genre) => ajouter(genre)} />
   {/if}
@@ -1163,6 +1207,17 @@
       envoi = null;
       rendreLaMain();
     }}
+  />
+{/if}
+
+<DialogueModeles ouvert={modelesOuverts} onFermer={() => (modelesOuverts = false)} onCree={(cree) => void ouvrirAutre(cree)} />
+
+{#if aEnregistrerCommeModele && editeur.id}
+  <DialogueEnregistrerModele
+    schemaId={editeur.id}
+    pageId={aEnregistrerCommeModele.page}
+    ouvert={true}
+    onFermer={() => (aEnregistrerCommeModele = null)}
   />
 {/if}
 

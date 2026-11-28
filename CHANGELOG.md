@@ -20,6 +20,16 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   une fois. Au clic droit sur un onglet : « Copier vers un autre schéma… », « Déplacer vers un autre schéma… » (Ctrl+Z
   la rend), « Faire un nouveau schéma de cette page ». Un câble entre une page qui part et une page qui reste ne suit
   pas, et le compte rendu le dit ; entre deux pages qui partent ensemble, il suit.
+- Schémas réseau : la recherche dans tous les schémas du coffre (archivés compris, marqués) trouve un équipement (nom,
+  nom d'hôte), une adresse IP (entière, son début ou un réseau) ou un VLAN (numéro, nom) ; les résultats sont groupés,
+  six par groupe avec « N de plus », disent « Schéma › Page » et y mènent, au clic comme au clavier. Une même adresse
+  portée par deux équipements est marquée « même adresse », avec un conseil qui ne bloque rien. Dans l'éditeur, Ctrl+F
+  propose « Ce schéma » ou « Tous les schémas ».
+- Schémas réseau : nouveau schéma depuis un modèle. Cinq modèles câblés port à port, adressés et en VLAN (Petit bureau,
+  Étage type, Site distant, Lab TP, Datacenter), et « Mes modèles » : un schéma, ou une page (clic droit sur son onglet),
+  s'enregistre comme modèle, avec un nom et une description. Les modèles sont rangés à part (`schemas/modeles/`), hors de
+  la liste des schémas et des fiches ; un modèle se supprime au clic droit sur sa vignette, après une question, et son
+  fichier est mis de côté, pas effacé.
 - Schémas réseau : un schéma peut avoir plusieurs pages (Étage 1, Étage 2, Salle serveurs…), en onglets sous le plan,
   avec le nombre d'équipements de chacune ; « + » en ajoute une, le clic droit renomme, duplique, déplace ou supprime
   (après une question, Ctrl+Z la rend), glisser un onglet le déplace. Un câble entre deux pages se dessine sur chacune en

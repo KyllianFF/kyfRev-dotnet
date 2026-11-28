@@ -113,6 +113,31 @@ public sealed partial class SchemasPageTests
     }
 
     [TestMethod]
+    public async Task The_bridge_saves_lists_and_removes_schema_templates()
+    {
+        using var scene = new BridgeScene();
+        Assert.IsEmpty((await scene.CallAsync("modelesSchema")).AsArray());
+
+        var template = await scene.CallAsync("creerModeleSchema", "{\"format\": 2, \"titre\": \"Étage type\"}");
+        var id = template["id"]!.GetValue<string>();
+        StringAssert.Contains(template["texte"]!.GetValue<string>(), "Étage type", StringComparison.Ordinal);
+        Assert.IsNotNull(template["empreinte"]);
+        var listed = (await scene.CallAsync("modelesSchema")).AsArray().Single()!;
+        Assert.AreEqual(id, listed["id"]!.GetValue<string>());
+        Assert.IsEmpty((await scene.CallAsync("schemas")).AsArray(), "Un modèle n'est pas un schéma.");
+
+        Assert.IsNull(await scene.RawValueAsync("retirerModeleSchema", id));
+        Assert.IsEmpty((await scene.CallAsync("modelesSchema")).AsArray());
+
+        // Un modèle absent, un texte qui n'est pas un schéma ou un appel sans argument : refusés.
+        foreach (var (method, args) in new[] { ("retirerModeleSchema", $"[\"{id}\"]"), ("creerModeleSchema", "[\"[]\"]"), ("creerModeleSchema", "[]") })
+        {
+            var answer = await scene.AnswerAsync($"{{\"kind\":\"call\",\"id\":4,\"method\":\"{method}\",\"args\":{args}}}");
+            Assert.IsFalse(answer["ok"]!.GetValue<bool>(), method + args);
+        }
+    }
+
+    [TestMethod]
     public async Task The_bridge_copies_the_picture_of_a_schema_and_only_a_picture()
     {
         using var scene = new BridgeScene();
@@ -876,7 +901,7 @@ public sealed partial class SchemasPageTests
 
         // Clic droit sur un onglet : renommer, dupliquer, déplacer, copier ou déplacer vers un autre schéma, en faire un nouveau, puis supprimer, à part et en couleur d'alerte.
         TabMenu(scene, 0);
-        Assert.AreEqual("Renommer|Dupliquer la page|Déplacer à gauche|Déplacer à droite|Copier vers un autre schéma…|Déplacer vers un autre schéma…|Faire un nouveau schéma de cette page|Supprimer la page…", JsonSerializer.Deserialize<string>(scene.Script("[...document.querySelectorAll('.menu[role=menu] button')].map((b) => b.textContent.trim()).join('|')")));
+        Assert.AreEqual("Renommer|Dupliquer la page|Déplacer à gauche|Déplacer à droite|Copier vers un autre schéma…|Déplacer vers un autre schéma…|Faire un nouveau schéma de cette page|Enregistrer cette page comme modèle…|Supprimer la page…", JsonSerializer.Deserialize<string>(scene.Script("[...document.querySelectorAll('.menu[role=menu] button')].map((b) => b.textContent.trim()).join('|')")));
         Assert.AreEqual("true", scene.Script("document.querySelector('.menu[role=menu] button:nth-of-type(3)').disabled"), "la première page ne va pas plus à gauche");
         Assert.AreEqual("true", scene.Script("getComputedStyle(document.querySelector('.menu[role=menu] .danger')).color !== getComputedStyle(document.querySelector('.menu[role=menu] button')).color"));
         scene.WaitFor("document.getAnimations().length === 0");

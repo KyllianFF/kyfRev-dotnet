@@ -18,6 +18,7 @@
     onautresPages,
     onenvoyer,
     onnouveauSchema,
+    onmodele,
   }: {
     editeur: EditeurSchema;
     onchanger?: () => void;
@@ -27,6 +28,8 @@
     onenvoyer?: (page: string, deplacer: boolean) => void;
     /** « Faire un nouveau schéma de cette page ». */
     onnouveauSchema?: (page: string) => void;
+    /** « Enregistrer cette page comme modèle… » (31E). */
+    onmodele?: (page: string) => void;
   } = $props();
 
   const pages = $derived(editeur.pages);
@@ -356,7 +359,7 @@
       <!-- Le rang se lit avant de fermer le menu : fermé, il n'a plus de page. -->
       <button type="button" role="menuitem" disabled={rang <= 0} onclick={() => deplacer(rang - 1)}>Déplacer à gauche</button>
       <button type="button" role="menuitem" disabled={rang < 0 || rang >= pages.length - 1} onclick={() => deplacer(rang + 1)}>Déplacer à droite</button>
-      {#if onenvoyer || onnouveauSchema}
+      {#if onenvoyer || onnouveauSchema || onmodele}
         <hr />
         {#if onenvoyer}
           <button type="button" role="menuitem" onclick={() => choisir((id) => onenvoyer?.(id, false))}>Copier vers un autre schéma…</button>
@@ -364,6 +367,9 @@
         {/if}
         {#if onnouveauSchema}
           <button type="button" role="menuitem" onclick={() => choisir((id) => onnouveauSchema?.(id))}>Faire un nouveau schéma de cette page</button>
+        {/if}
+        {#if onmodele}
+          <button type="button" role="menuitem" onclick={() => choisir((id) => onmodele?.(id))}>Enregistrer cette page comme modèle…</button>
         {/if}
       {/if}
       <hr />

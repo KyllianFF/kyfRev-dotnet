@@ -252,6 +252,29 @@ schéma l'emporte, et la fenêtre le dit), les modèles de matériel par référ
 « Archiver les schémas d'origine », coché par défaut, les range aux archives, et les fiches qui les insèrent les montrent
 toujours. Pour revenir en arrière : supprimer le nouveau et désarchiver les autres.
 
+La recherche cherche aussi dans tous les schémas du coffre (les archivés compris, marqués « archivé » ; pas la corbeille),
+à partir de deux caractères : un équipement par son nom ou son nom d'hôte, une adresse IP entière, son début
+(« 10.0.30. ») ou un réseau (« 10.0.30.0/24 »), un VLAN par son numéro (« 30 », « vlan 30 ») ou son nom. Les résultats
+sont rangés en équipements, adresses et VLAN, six par groupe (« N de plus » montre le reste) ; chacun a son icône, son
+adresse et « Schéma › Page ». Un clic, ou Entrée, l'ouvre, l'équipement choisi. Au clavier, flèche bas depuis le champ
+entre dans les résultats, les flèches s'y déplacent, flèche haut sur le premier revient au champ. Une même adresse portée
+par deux équipements, dans deux schémas ou dans un seul, est marquée « même adresse », avec un conseil (« 10.0.30.5 sert
+dans deux schémas : à vérifier s'ils sont sur le même réseau. ») : rien n'est bloqué, ce peut être deux réseaux distincts.
+Dans l'éditeur, la recherche (Ctrl+F) a deux portées : « Ce schéma » et « Tous les schémas » ; un résultat d'un autre
+schéma ouvre celui-ci à la place, enregistré d'abord.
+
+Un nouveau schéma peut partir d'un modèle : « Petit bureau » (box, switch, Wi-Fi, quatre postes), « Étage type » (switch
+d'étage, bornes, prises), « Site distant » (routeur VPN, switch, NAS), « Lab TP » (deux routeurs, deux switchs, VLAN 10 et
+20) et « Datacenter » (cœur, pare-feux en haute disponibilité, serveurs) sont déjà câblés port à port, adressés et
+rangés en VLAN. Chaque vignette est dessinée comme les aperçus ; le nom du modèle est proposé, à changer, et « Créer » fait
+un schéma neuf, sans lien avec le modèle. Ses propres modèles s'ajoutent sous « Mes modèles » : « Enregistrer comme
+modèle… » garde un schéma entier, et, dans l'éditeur, le clic droit sur l'onglet d'une page propose « Enregistrer cette
+page comme modèle… » (la page seule, ses câbles et les VLAN du schéma), avec un nom et une description. Les modèles sont
+rangés à part dans le coffre (`schemas/modeles/`) : ils ne sont ni dans la liste des schémas ni dans les fiches. Au clic
+droit sur la vignette d'un de ses modèles, ou par « ⋯ », « Supprimer le modèle… » le retire après une question ; son
+fichier est rangé dans `schemas/modeles/.supprimes/`, pas effacé. Dans l'éditeur, une fenêtre de taille moyenne ou
+étroite propose aussi « Enregistrer comme modèle… » et « Nouveau schéma depuis un modèle… » dans « Plus ».
+
 En mode avancé, un équipement choisi ouvre son volet : en tête, son icône, son nom, son type (un clic ouvre la grille
 des types, avec une recherche et les types récents d'abord ; changer de type garde le nom, les ports et les connexions),
 son statut et « ⋯ » (Connecter, Dupliquer, Copier, Verrouiller la place, Copier la configuration, Coller sur…, Retirer…).
