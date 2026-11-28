@@ -7,7 +7,7 @@ import { dessinerSchema } from "./dessin";
 import { ecrireDrawio, type IconesDrawio } from "./drawio";
 import { ecrireSchema } from "./format";
 import type { Schema, Vue } from "./modele";
-import { aPlusieursPages, nomDeLaPage, pageValide } from "./pages";
+import { aPlusieursPages, equipementsParPage, nomDeLaPage, pagesDe, pageValide } from "./pages";
 
 export type FormatExport = "png" | "svg" | "drawio" | "json";
 
@@ -196,12 +196,39 @@ export async function partagerSchema(schema: Schema, vue?: Vue, page?: string): 
   await api.copierImageSchema(await enPng(svgAutonome(schema, vue, page)));
 }
 
+/** Une feuille imprimée : une page du schéma, sous son titre. */
+export type FeuilleImprimee = { page: string; titre: string };
+
 /**
- * Imprime le schéma seul par la fenêtre « Imprimer » de l'application, comme une fiche : son titre et son
- * dessin, en image assez fine pour le papier, ajustés à la feuille. L'imprimante, le papier, les marges et
- * la couleur (ou le noir et blanc) s'y choisissent, avec l'aperçu. Rend ce qu'il faut dire du travail parti, ou rien.
- * Un schéma à plusieurs pages imprime `page` (sinon la première), son nom dans le titre.
+ * Les feuilles à imprimer : une par page, dans l'ordre des onglets, chacune sous le titre du schéma et le nom de sa
+ * page (« Réseau - Étage 2 »). Une page sans équipement n'a rien à montrer : elle ne s'imprime pas. Un schéma d'une
+ * page en a une, sous son titre seul.
+ */
+export function feuillesAImprimer(schema: Schema): FeuilleImprimee[] {
+  if (!aPlusieursPages(schema)) return [{ page: pageValide(schema, undefined), titre: titreDeLaSortie(schema) }];
+  const equipements = equipementsParPage(schema);
+  return pagesDe(schema)
+    .filter((p) => (equipements.get(p.id) ?? 0) > 0)
+    .map((p) => ({ page: p.id, titre: titreDeLaSortie(schema, p.id) }));
+}
+
+/** La feuille où l'aperçu s'ouvre, à partir de 1 : celle de la page montrée, sinon la première. */
+export function feuilleMontree(feuilles: readonly FeuilleImprimee[], page?: string): number {
+  return Math.max(0, feuilles.findIndex((f) => f.page === page)) + 1;
+}
+
+/**
+ * Imprime le schéma seul par la fenêtre « Imprimer » de l'application, comme une fiche : toutes ses pages, une par
+ * feuille, dans l'ordre des onglets, chacune sous son titre, en image assez fine pour le papier, ajustée à la feuille.
+ * L'imprimante, le papier, les marges, la couleur (ou le noir et blanc) et les feuilles à imprimer s'y choisissent,
+ * avec l'aperçu, ouvert sur `page` (la page montrée) : « Certaines » y propose déjà son numéro. Rend ce qu'il faut dire
+ * du travail parti, ou rien.
  */
 export async function imprimerSchema(schema: Schema, vue?: Vue, page?: string): Promise<string | null> {
-  return api.imprimerSchema(titreDeLaSortie(schema, page), await enPng(svgAutonome(schema, vue, page), echelleImpression));
+  const feuilles = feuillesAImprimer(schema);
+  const images: [string, Uint8Array][] = [];
+  for (const feuille of feuilles) {
+    images.push([feuille.titre, await enPng(svgAutonome(schema, vue, feuille.page), echelleImpression)]);
+  }
+  return api.imprimerSchema(schema.titre || NOM_PAR_DEFAUT, images, feuilleMontree(feuilles, page));
 }

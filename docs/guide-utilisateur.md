@@ -61,7 +61,9 @@ elle ne joue pas quand les animations sont réduites (Paramètres › Apparence)
 
 Pour voir kyfRev en marche avant d'écrire, l'accueil propose « Essayer avec un coffre d'exemple » : dix fiches inventées
 sur six matières, déjà en cours de révision. Il se crée dans son propre dossier « Exemple », à côté du coffre prévu, et
-ne touche jamais à vos fiches. Pour créer ou rouvrir votre coffre ensuite : Paramètres › Coffre et chiffrement.
+ne touche jamais à vos fiches. Pour créer ou rouvrir votre coffre ensuite : Paramètres › Coffre et chiffrement. Dans un
+coffre neuf, la carte « Premiers pas » d'Aujourd'hui propose aussi « Ouvrir un coffre d'exemple » : le même, au même
+endroit ; votre coffre est seulement fermé, et se rouvre par Paramètres › Coffre et chiffrement › « Ouvrir un autre coffre… ».
 
 Un coffre est un dossier : des fichiers Markdown et, dans `.suivi`, le calendrier de vos révisions. Ne modifiez pas `.suivi` à la
 main. Paramètres › Coffre et chiffrement permet d'en ouvrir ou d'en créer un autre.
@@ -83,6 +85,8 @@ main. Paramètres › Coffre et chiffrement permet d'en ouvrir ou d'en créer un
 - **Réglez une image** : en écriture, cliquez sur l'image ; tirez ses poignées pour la redimensionner, ou passez par
   l'onglet « Image » : « Rogner », hauteur et largeur en centimètres, place, zones masquées et description. Le fichier de l'image n'est pas modifié : « Rétablir » retire ces réglages.
 - La barre de révision permet aussi de valider à une date passée, ou de reporter à une date choisie.
+- La première fois qu'une fiche s'ouvre en révision, une bulle au-dessus de « Valider » dit ce qu'il fait. « Compris » la
+  ferme pour de bon ; « Ne plus montrer d'aide » coupe toutes les aides de la première fois.
 - **Examens** : sur Aujourd'hui, « Examen… » fixe une date pour un dossier. « Resserrer… » ramène les échéances avant la veille,
   et peut remettre en révision les fiches archivées du dossier. Tant que l'examen n'est pas passé, une révision ne place
   jamais l'étape suivante après sa veille.
@@ -120,6 +124,10 @@ automatique, et l'historique garde les versions précédentes. Le ruban insère 
   le titre 4 a la taille du texte, en italique. « Taille du texte des fiches », dans les Paramètres, grandit le tout.
 - Une flèche dans la marge, à côté d'un titre, replie ou déplie tout ce qui est sous lui, sous-titres compris
   (Alt+Maj+« - » et Alt+Maj+« + »). Le repli n'est pas enregistré dans la fiche.
+- Sur une feuille sans fin, le texte garde la colonne choisie (Paramètres › Apparence, « Largeur du texte ») ; un tableau,
+  une image seule sur sa ligne ou un dessin plus large qu'elle garde sa largeur, jusqu'à celle de la colonne « Large », et
+  dépasse autant de chaque côté, en lecture comme en écriture, où la feuille s'élargit d'autant. Sur un papier, sur une
+  feuille A4, A5 ou A6, ou dans une fenêtre qui n'a que la place du texte, il reste dans la colonne.
 
 L'onglet « Mise en page » du ruban donne une feuille à la fiche : sans fin (par défaut), A4, A5 ou A6, en portrait ou en
 paysage, avec des marges étroites, normales, larges ou sur mesure. Le choix vaut pour toutes les fiches ou pour la fiche
@@ -153,7 +161,9 @@ Dans Paramètres, les sections sont à gauche, rangées par portée : ce qui est
 Lecture, Feuilles, Menu, Raccourcis), ce qui appartient au coffre ouvert (Révisions, Modules et extensions, Coffre et
 chiffrement, Sauvegardes et exports), et À propos. Apparence règle le thème, la taille de l'interface, le texte des fiches
 (taille, interligne, police, largeur de la colonne) et l'accessibilité ; Lecture, les mots définis et la voix. Raccourcis change dix raccourcis
-clavier ; Menu change l'ordre des vues du menu. « Chercher un réglage », en haut de la liste, trouve un réglage par quelques lettres, ouvre sa section et l'y entoure. Dans une
+clavier ; Menu change l'ordre des vues du menu, et celles qu'il montre : décochez une vue pour la retirer du menu, elle
+s'ouvre toujours par la recherche (Ctrl+K) et par son raccourci Ctrl+chiffre, qui suit ceux des vues montrées ; Aujourd'hui
+reste toujours. « Chercher un réglage », en haut de la liste, trouve un réglage par quelques lettres, ouvre sa section et l'y entoure. Dans une
 section retenue sur l'ordinateur, « Rétablir les réglages d'origine » remet ceux de cette section ; « Annuler » les rend tant
 que vous y restez.
 
@@ -187,6 +197,14 @@ Ce qui sort est en clair, même depuis un coffre chiffré, sauf le coffre comple
   récupération** : sans elle et sans le mot de passe, le coffre est perdu. Le coffre en clair reste en place tant que vous ne le
   retirez pas. Ctrl+Maj+L verrouille à tout moment. Ce que le chiffrement protège, et ce qu'il ne protège pas, est écrit dans
   [le modèle de menace](chiffrement.md#le-modèle-de-menace).
+- **Windows Hello** : si Windows Hello est configuré sur l'ordinateur, la case « Ouvrir avec Windows Hello sur cet
+  ordinateur » de l'écran de déverrouillage retient la clé du coffre, scellée par Windows Hello. Le coffre ne s'ouvre
+  jamais seul : au démarrage comme après un verrouillage, « Ouvrir avec Windows Hello » demande votre code PIN, votre
+  visage ou votre empreinte. « Utiliser le mot de passe » reste à un clic.
+- **Renouveler toutes les clés** : si votre mot de passe ou votre clé de récupération a pu être vu, Paramètres › Coffre et
+  chiffrement › « Renouveler toutes les clés… » tire une nouvelle clé pour tout le coffre, avec le même mot de passe ou un
+  nouveau, et une nouvelle clé de récupération à noter. Changer seulement le mot de passe ne suffit pas : l'ancienne clé
+  de récupération ouvrirait encore le coffre.
 
 ## Ajouter
 
@@ -245,12 +263,16 @@ et son port, comme d'habitude ; Échap repose le câble. Un câble entre deux pa
 pointillé : « → Étage 2 · SW-Étage2 · 1/48 », la page, l'équipement et le port d'en face. Un clic sur le renvoi mène à
 l'autre page ; tirée, la pastille se déplace (au clavier : les flèches, Maj pour aller plus vite), et sa place est gardée
 pour chaque bout du câble ; « Remettre à sa place », sous la pastille choisie, la remet à côté de son équipement. Les vues
-valent pour la page montrée ; le plan IP et le diagnostic regardent tout le schéma. Une image exportée ou imprimée montre la
+valent pour la page montrée ; le plan IP et le diagnostic regardent tout le schéma. Une image exportée (PNG, SVG) montre la
 page à l'écran ; un fichier draw.io garde toutes les pages, une page draw.io par page, et revient avec elles.
+« Imprimer… » sort toutes les pages, une par feuille, dans l'ordre des onglets, le nom de la page en tête de sa feuille
+(une page sans équipement est sautée). L'aperçu s'ouvre sur la page montrée, et « Certaines », sous « Feuilles », propose
+déjà son numéro : de quoi n'imprimer qu'elle. Pour un PDF, choisissez l'imprimante « Microsoft Print to PDF ».
 
 Les pages se parcourent aussi sans ouvrir l'éditeur. Dans le Détail d'un schéma, de petits onglets, au-dessus de
 l'aperçu, montrent chaque page (au clavier : les flèches, Début et Fin) ; un renvoi cliqué dans l'aperçu mène à sa page,
-et ce qui s'exporte, se partage ou s'imprime depuis le Détail est la page montrée. Dans une fiche, l'aperçu montre la
+ce qui s'exporte ou se partage depuis le Détail est la page montrée, et l'aperçu de l'impression s'ouvre sur elle.
+Dans une fiche, l'aperçu montre la
 première page, et un petit sélecteur, juste au-dessus, à droite, en choisit une autre (au clavier aussi, avec les
 flèches) : elle reste choisie, et s'imprime, jusqu'à la fermeture de kyfRev. Un schéma à plusieurs pages s'écrit au
 format 3 : une version de kyfRev qui ne connaît pas les pages refuse de l'ouvrir plutôt que de le relire en une seule.
@@ -341,9 +363,13 @@ Ctrl+Alt+N, qui fait la même chose depuis une autre application tant que kyfRev
 
 ## En cas de problème
 
-**Coffre dans un dossier synchronisé** (Dropbox, OneDrive, Syncthing, Nextcloud) : si deux postes modifient la même fiche
-sans se voir, l'outil garde deux fichiers. « Santé du coffre » les liste sous « Copies de conflit » : comparez-les dans
-l'Explorateur, reportez ce qui manque, puis supprimez la copie. N'ouvrez pas le même coffre sur deux postes à la fois.
+**Coffre dans un dossier synchronisé** (Proton Drive, Dropbox, OneDrive, Syncthing, Nextcloud) : chaque poste note sa
+présence dans le coffre. Si le coffre est déjà ouvert sur un autre poste, kyfRev le dit à l'ouverture et propose « Ouvrir »,
+« Lecture seule » ou « Annuler », sans rien écrire avant votre réponse ; en lecture seule, rien ne s'écrit, et une bande
+propose « Passer en écriture ». Pendant que vous travaillez, un avis paraît si un autre poste l'ouvre à son tour. Écrire
+des deux côtés à la fois reste à éviter : si deux postes modifient la même fiche sans se voir, l'outil de synchronisation
+garde deux fichiers. « Santé du coffre » les liste sous « Copies de conflit » : comparez-les dans l'Explorateur,
+reportez ce qui manque, puis supprimez la copie.
 
 Le journal `kyfRev.log` garde la trace des derniers démarrages : dans `%LOCALAPPDATA%\kyfRev\v1` pour une version installée, à côté
 de `kyfRev.exe` pour la version portable. Il ne contient pas le texte de vos fiches.

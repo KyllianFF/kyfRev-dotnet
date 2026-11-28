@@ -76,6 +76,38 @@ public sealed class CompositionTests
     }
 
     [TestMethod]
+    public async Task The_first_steps_open_the_sample_vault_apart_and_leave_the_open_vault_untouched()
+    {
+        using var test = new TestVaults(AppMode.Installed);
+        var own = test.App.Vaults.Create(test.Planned);
+        Assert.AreEqual(test.Planned, own.Vault);
+        // Fiches, suivi et réglages ; pas la présence du poste, qui note sa sortie comme à tout changement de coffre.
+        var presence = System.IO.Path.Combine(test.Planned, ".suivi", "postes");
+        string Snapshot() => string.Join('|', System.IO.Directory.GetFiles(test.Planned, "*", System.IO.SearchOption.AllDirectories)
+            .Where(file => !file.StartsWith(presence, StringComparison.OrdinalIgnoreCase)).Order(StringComparer.Ordinal).Select(file => file + "@" + System.IO.File.GetLastWriteTimeUtc(file).Ticks + "#" + new System.IO.FileInfo(file).Length));
+        var before = Snapshot();
+        var changed = 0;
+        var data = new DataSettingsViewModel(test.App.Vaults, test.App.Backups, test.App.Trash, test.App.Annotations, test.App.Exports, test.App.Settings, test.Picker, new FakeOpener(), () => changed++);
+        var offers = KyfRev.App.Composition.Welcome(test.App.Vaults, TimeProvider.System, test.Planned, () => { });
+
+        Assert.IsNull(KyfRev.App.Composition.SampleOpener(offers with { SampleFolder = null }, () => data), "sans dossier prévu, le lien ne se propose pas");
+        var open = KyfRev.App.Composition.SampleOpener(offers, () => data)!;
+        Assert.IsNull(await open(), "ouvert sans rien à dire");
+        Assert.AreEqual(offers.SampleFolder, test.App.Vaults.State().Vault);
+        Assert.AreEqual(1, changed, "les vues relisent le coffre ouvert");
+        Assert.HasCount(10, System.IO.Directory.GetFiles(System.IO.Path.Combine(offers.SampleFolder!, "fiches"), "*.md", System.IO.SearchOption.AllDirectories));
+        Assert.AreEqual(before, Snapshot(), "le coffre qu'on quitte n'est pas touché");
+
+        Assert.AreEqual(SettingsHubText.VaultAlreadyOpen, await open(), "déjà ouvert : il le dit, rien ne change");
+        Assert.AreEqual(1, changed);
+
+        // Refusé : la raison remonte, le coffre ouvert reste.
+        Assert.AreEqual("refusé", await data.OpenSampleAsync(() => KyfRev.Application.Outcome.Refused<AppState>("refusé")));
+        Assert.AreEqual(offers.SampleFolder, test.App.Vaults.State().Vault);
+        await Assert.ThrowsExactlyAsync<ArgumentNullException>(() => data.OpenSampleAsync(null!));
+    }
+
+    [TestMethod]
     public void The_application_uses_the_vault_locations_of_the_running_program()
     {
         using var services = KyfRev.App.Composition.Build();

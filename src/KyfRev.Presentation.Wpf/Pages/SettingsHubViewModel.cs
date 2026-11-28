@@ -219,8 +219,8 @@ public sealed partial class SettingsHubViewModel : ObservableObject, INavigation
                 {
                     new SettingsTab(MoreSettingsText.Menu, shortcuts, onMachine, Icons.ListLines, MenuPart, MoreSettingsText.MenuAbout)
                     {
-                        Settings = [MoreSettingsText.MenuTitle],
-                        Take = (from, to) => to with { MenuOrder = from.MenuOrder },
+                        Settings = [new(MoreSettingsText.MenuTitle, MoreSettingsText.WordsMenu)],
+                        Take = (from, to) => to with { MenuOrder = from.MenuOrder, HiddenMenu = from.HiddenMenu },
                     },
                     new SettingsTab(MoreSettingsText.Shortcuts, shortcuts, onMachine, Icons.Keyboard, ShortcutsPart, MoreSettingsText.ShortcutsAbout)
                     {

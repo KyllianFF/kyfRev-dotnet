@@ -78,13 +78,7 @@ public sealed partial class SchemasPageTests
     /// <summary>Le clic droit sur une carte, et une entrée de son menu ; le clic droit se redonne s'il s'est perdu (CI).</summary>
     private static void CardMenu(IslandScene scene, string title, string entry)
     {
-        var card = CardOf(scene, title);
-        UiThread.Until(() =>
-        {
-            scene.Script("document.querySelector('" + card + "').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 80, clientY: 80 }))");
-            TestShell.Flush();
-            return scene.Script("document.querySelector('.menu[role=menu]') !== null") == "true";
-        }, TimeSpan.FromSeconds(20));
+        RightClickUntilMenu(scene, CardOf(scene, title), 80, 80);
         var find = "[...document.querySelectorAll('.menu[role=menu] [role=menuitem]')].find((b) => b.textContent.trim().startsWith(" + JsonSerializer.Serialize(entry) + "))";
         Expect(scene, find + "?.disabled === false");
         scene.Script(find + ".click()");

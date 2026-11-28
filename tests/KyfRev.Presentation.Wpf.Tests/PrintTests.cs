@@ -503,6 +503,101 @@ public sealed class PrintTests
     }
 
     [STATestMethod]
+    [DataRow(false, 860)]
+    [DataRow(true, 470)]
+    public void The_pages_of_a_schema_print_one_per_sheet_in_the_order_of_the_tabs_under_their_names(bool dark, int width)
+    {
+        using var ui = new UiThread();
+        var test = new TestShell(dark);
+        var service = new FakePrinting();
+        var print = new PrintViewModel(service);
+        var view = new PrintView { DataContext = print, Width = width, Height = 700 };
+        var host = new Border { Child = view, Width = width, Height = 700 };
+        host.Resources.MergedDictionaries.Add(test.Design.Dictionary);
+        host.SetResourceReference(Border.BackgroundProperty, "Kyf.Brush.Surface");
+        var window = new Window { Content = new Canvas { Children = { host } }, Left = -10000, Top = -10000, Width = 400, Height = 300, ShowActivated = false, ShowInTaskbar = false };
+        window.Show();
+        try
+        {
+            // Trois pages : l'étage 1 en couleurs, l'étage 2 en gris, la salle serveurs en couleurs et en hauteur ; on regardait l'étage 2.
+            print.OpenPictures("Réseau du lycée",
+                [new("Réseau du lycée - Étage 1", Colored(1200, 600)), new("Réseau du lycée - Étage 2", Plain(1200, 600)), new("Réseau du lycée - Salle serveurs", Colored(600, 900))],
+                shown: 2);
+            UiThread.Until(() => !print.IsLookingForPrinters);
+            TestShell.Flush();
+
+            Assert.IsFalse(print.IsSheet);
+            Assert.AreEqual("Imprimer « Réseau du lycée »", print.Title);
+            Assert.AreEqual(3, print.TotalPages);
+            Assert.AreEqual(2, print.CurrentPage, "l'aperçu s'ouvre sur la page montrée");
+            Assert.AreEqual("2 sur 3", print.PageLabel);
+            Assert.AreEqual("Réseau du lycée - Étage 2", print.PictureTitle);
+            Assert.IsTrue(print.IsLandscape, "deux images sur trois sont plus larges que hautes");
+            Assert.IsTrue(print.AllPages, "toutes les pages, par défaut");
+            Assert.AreEqual("3 feuille(s) à imprimer · 3 feuille(s) de papier", print.Summary);
+            // Les feuilles se choisissent ; les numéros de page en bas, non : chaque feuille porte le nom de sa page.
+            Assert.IsTrue(((FrameworkElement)view.FindName("AllSheetsChoice")).IsVisible);
+            Assert.IsFalse(((FrameworkElement)view.FindName("NumbersBox")).IsVisible);
+            var layout = print.Layout;
+            var size = new Size(layout.WidthPixels, layout.HeightPixels);
+            Assert.AreEqual(0, Colorful(Pixels(Drawn(((DrawingImage)view.PageImage.Source).Drawing), size)), "l'aperçu montre l'étage 2");
+            host.Capture($"impression-schema-pages-{width}-{(dark ? "sombre" : "clair")}");
+
+            // Toutes : trois feuilles, dans l'ordre des onglets, chacune sous son titre.
+            var all = view.Paginate(print.PagesToPrint, numbers: true)!;
+            Assert.AreEqual(3, all.PageCount);
+            var sheets = Enumerable.Range(0, 3).Select(index => Pixels(all.GetPage(index).Visual, size)).ToList();
+            Assert.IsGreaterThan(1000, Colorful(sheets[0]));
+            Assert.AreEqual(0, Colorful(sheets[1]));
+            Assert.IsGreaterThan(1000, Colorful(sheets[2]));
+            Assert.IsTrue(sheets.All(sheet => Dark(sheet, (int)layout.MarginPixels, (int)layout.MarginPixels + 30) > 20), "chaque feuille a son titre, en haut");
+
+            // « Certaines » propose la page montrée : elle seule part.
+            print.SetPagesCommand.Execute("some");
+            TestShell.Flush();
+            Assert.AreEqual("2", print.PagesText);
+            Assert.AreEqual(2, print.PagesToPrint.Single());
+            StringAssert.StartsWith(print.PagesMessage, "Une feuille par page, dans l'ordre des onglets, 3 en tout", StringComparison.Ordinal);
+            host.Capture($"impression-schema-certaines-{width}-{(dark ? "sombre" : "clair")}");
+            var one = view.Paginate(print.PagesToPrint, numbers: true)!;
+            Assert.AreEqual(1, one.PageCount);
+            Assert.AreEqual(0, Colorful(Pixels(one.GetPage(0).Visual, size)), "c'est l'étage 2 qui part");
+            Assert.IsNull(view.Paginate([7], numbers: true), "une feuille qui n'existe pas : rien à imprimer");
+
+            // L'aperçu passe à la feuille suivante, qui ne sortira pas : il le dit.
+            print.TurnCommand.Execute("+");
+            TestShell.Flush();
+            Assert.AreEqual("Réseau du lycée - Salle serveurs", print.PictureTitle);
+            Assert.IsFalse(print.IsCurrentPrinted);
+            Assert.IsTrue(((FrameworkElement)view.FindName("NotPrintedText")).IsVisible);
+
+            print.Printer = "Atelier";
+            Assert.IsTrue(print.Print());
+            Assert.AreEqual("Réseau du lycée", service.Jobs.Single().Title, "le travail porte le titre du schéma");
+            Assert.IsTrue(print.IsSheet);
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    /// <summary>Une image en gris seulement : un rectangle gris foncé sur du blanc.</summary>
+    private static RenderTargetBitmap Plain(int width, int height)
+    {
+        var visual = new DrawingVisual();
+        using (var drawing = visual.RenderOpen())
+        {
+            drawing.DrawRectangle(Brushes.White, null, new Rect(0, 0, width, height));
+            drawing.DrawRectangle(Brushes.DimGray, null, new Rect(width * 0.2, height * 0.2, width * 0.6, height * 0.6));
+        }
+        var bitmap = new RenderTargetBitmap(width, height, 96, 96, PixelFormats.Pbgra32);
+        bitmap.Render(visual);
+        bitmap.Freeze();
+        return bitmap;
+    }
+
+    [STATestMethod]
     public void In_black_and_white_a_sheet_is_shown_and_printed_in_grays()
     {
         using var ui = new UiThread();

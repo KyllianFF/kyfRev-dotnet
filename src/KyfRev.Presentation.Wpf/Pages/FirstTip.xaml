@@ -5,17 +5,33 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:pages="clr-namespace:KyfRev.Presentation.Wpf.Pages"
              Visibility="Collapsed" Focusable="False">
-  <!-- Une aide de la première fois : elle informe, ne bloque rien, et se ferme pour de bon. -->
-  <Border x:Name="Bubble" Background="{DynamicResource Kyf.Brush.InfoBackground}" BorderBrush="{DynamicResource Kyf.Brush.Info}" BorderThickness="1"
-          CornerRadius="{DynamicResource Kyf.Radius.Card}" Padding="16,12,16,6" AutomationProperties.Name="{Binding Title, ElementName=Self}"
-          AutomationProperties.LiveSetting="Polite">
-    <StackPanel>
-      <TextBlock x:Name="TitleText" Text="{Binding Title, ElementName=Self}" Style="{DynamicResource Kyf.Text.BodyStrong}" TextWrapping="Wrap" AutomationProperties.HeadingLevel="Level3" />
-      <TextBlock x:Name="BodyText" Text="{Binding Text, ElementName=Self}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" Margin="0,4,0,0" />
-      <WrapPanel HorizontalAlignment="Right" Margin="0,4,-10,0">
-        <Button x:Name="NoMoreButton" Content="{x:Static pages:FirstTipText.NoMore}" Style="{DynamicResource Kyf.Button.Subtle}" MinHeight="44" Click="OnNoMore" />
-        <Button x:Name="UnderstoodButton" Content="{x:Static pages:FirstTipText.Understood}" Style="{DynamicResource Kyf.Button.Subtle}" MinHeight="44" FontWeight="SemiBold" Click="OnUnderstood" />
-      </WrapPanel>
-    </StackPanel>
-  </Border>
+  <!-- Une aide de la première fois, en bulle (maquette 14D) : elle informe, ne bloque rien, et se ferme pour de bon. Posée
+       au-dessus de ce qu'elle explique, sa pointe le désigne (PointerOffset) ; sans pointe, c'est la même bulle, posée. -->
+  <Grid>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto" />
+      <RowDefinition Height="Auto" />
+    </Grid.RowDefinitions>
+    <!-- L'ombre a sa propre forme : posée sur la bulle, elle brouillerait son texte. -->
+    <Border x:Name="BubbleShadow" Background="{DynamicResource Kyf.Brush.InfoBackground}" CornerRadius="{DynamicResource Kyf.Radius.Card}"
+            Effect="{DynamicResource Kyf.Elevation.Flyout}" IsHitTestVisible="False" />
+    <Border x:Name="Bubble" Background="{DynamicResource Kyf.Brush.InfoBackground}" BorderBrush="{DynamicResource Kyf.Brush.Info}" BorderThickness="1"
+            CornerRadius="{DynamicResource Kyf.Radius.Card}" Padding="16,12,16,10" AutomationProperties.Name="{Binding Title, ElementName=Self}"
+            AutomationProperties.LiveSetting="Polite">
+      <StackPanel>
+        <TextBlock x:Name="TitleText" Text="{Binding Title, ElementName=Self}" Style="{DynamicResource Kyf.Text.BodyStrong}" TextWrapping="Wrap" AutomationProperties.HeadingLevel="Level3" />
+        <TextBlock x:Name="BodyText" Text="{Binding Text, ElementName=Self}" Style="{DynamicResource Kyf.Text.Body}" TextWrapping="Wrap" Margin="0,4,0,0" />
+        <!-- « Ne plus montrer d'aide » discret à gauche, « Compris » à droite, en bouton principal : c'est la réponse attendue. -->
+        <DockPanel Margin="-10,8,0,0" LastChildFill="False">
+          <Button x:Name="NoMoreButton" DockPanel.Dock="Left" Content="{x:Static pages:FirstTipText.NoMore}" Style="{DynamicResource Kyf.Button.Subtle}" MinHeight="44"
+                  Margin="0,0,8,0" Click="OnNoMore" />
+          <Button x:Name="UnderstoodButton" DockPanel.Dock="Right" Content="{x:Static pages:FirstTipText.Understood}" Style="{DynamicResource Kyf.Button.Primary}" MinHeight="44"
+                  Click="OnUnderstood" />
+        </DockPanel>
+      </StackPanel>
+    </Border>
+    <!-- La pointe, sous la bulle : son trait prolonge le bord, son fond recouvre celui du bas pour ne faire qu'une forme. -->
+    <Path x:Name="Pointer" Grid.Row="1" Data="M0,0 L9,9 L18,0" Fill="{DynamicResource Kyf.Brush.InfoBackground}" Stroke="{DynamicResource Kyf.Brush.Info}"
+          StrokeThickness="1" HorizontalAlignment="Right" Margin="0,-1,24,0" Visibility="Collapsed" IsHitTestVisible="False" SnapsToDevicePixels="True" />
+  </Grid>
 </UserControl>

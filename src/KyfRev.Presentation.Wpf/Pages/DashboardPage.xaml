@@ -86,8 +86,27 @@
           <WrapPanel Margin="-10,0,0,0">
             <Button x:Name="FirstStepsGuide" Content="{x:Static pages:FirstStepsText.ReadGuide}" Command="{Binding OpenGuideCommand}" Style="{DynamicResource Kyf.Button.Subtle}"
                     MinHeight="44" Visibility="{Binding CanOpenGuide, Converter={StaticResource Visible}}" />
+            <Button x:Name="FirstStepsSample" Content="{x:Static pages:FirstStepsText.OpenSample}" Command="{Binding OpenSampleVaultCommand}" Style="{DynamicResource Kyf.Button.Subtle}"
+                    MinHeight="44" Visibility="{Binding CanOpenSample, Converter={StaticResource Visible}}" ToolTip="{x:Static pages:FirstStepsText.OpenSampleHelp}"
+                    AutomationProperties.HelpText="{x:Static pages:FirstStepsText.OpenSampleHelp}" />
             <Button x:Name="FirstStepsHide" Content="{x:Static pages:FirstStepsText.Hide}" Command="{Binding HideCommand}" Style="{DynamicResource Kyf.Button.Subtle}" MinHeight="44" />
           </WrapPanel>
+          <!-- Le coffre d'exemple n'a pas pu s'ouvrir : on dit pourquoi, celui-ci reste ouvert. -->
+          <TextBlock x:Name="FirstStepsSampleProblem" Text="{Binding SampleProblem}" Foreground="{DynamicResource Kyf.Brush.Critical}" TextWrapping="Wrap" Margin="0,0,0,8"
+                     AutomationProperties.LiveSetting="Assertive">
+            <TextBlock.Style>
+              <Style TargetType="TextBlock" BasedOn="{StaticResource {x:Type TextBlock}}">
+                <Style.Triggers>
+                  <Trigger Property="Text" Value="">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                  </Trigger>
+                  <Trigger Property="Text" Value="{x:Null}">
+                    <Setter Property="Visibility" Value="Collapsed" />
+                  </Trigger>
+                </Style.Triggers>
+              </Style>
+            </TextBlock.Style>
+          </TextBlock>
         </StackPanel>
       </Border>
     </DataTemplate>
@@ -98,7 +117,9 @@
                     Style="{DynamicResource Kyf.Button.Subtle}" HorizontalContentAlignment="Stretch" Padding="0" Margin="0,8,0,0"
                     AutomationProperties.Name="{Binding Title}" AutomationProperties.HeadingLevel="Level2">
         <DockPanel>
-          <kyf:Icon x:Name="Chevron" DockPanel.Dock="Right" Text="&#xE70D;" Margin="8,0,4,0" />
+          <!-- Il tourne d'un quart de tour quand le groupe se replie ; la clé le retrouve dans la liste refaite. -->
+          <kyf:Icon x:Name="Chevron" DockPanel.Dock="Right" Text="{x:Static kyf:Icons.ChevronDown}" Margin="8,0,4,0" kyf:Transitions.TurnKey="{Binding}"
+                    kyf:Transitions.Opens="{Binding IsExpanded}" />
           <!-- L'action de la section (rangée 26C) : là où elle sert, en lien ; son clic ne replie pas la section. -->
           <Button x:Name="GroupAction" DockPanel.Dock="Right" Style="{DynamicResource Kyf.Button.Subtle}" Foreground="{DynamicResource Kyf.Brush.Primary}" FontWeight="SemiBold"
                   Padding="8,0" MinHeight="32" Content="{Binding Action.Label}" Command="{Binding Action.Command}" ToolTip="{Binding Action.Name}"
@@ -112,9 +133,6 @@
         </DockPanel>
       </ToggleButton>
       <DataTemplate.Triggers>
-        <DataTrigger Binding="{Binding IsExpanded}" Value="False">
-          <Setter TargetName="Chevron" Property="Text" Value="&#xE76C;" />
-        </DataTrigger>
         <DataTrigger Binding="{Binding Count}" Value="0">
           <Setter TargetName="CountPill" Property="Visibility" Value="Collapsed" />
           <Setter TargetName="Chevron" Property="Visibility" Value="Hidden" />

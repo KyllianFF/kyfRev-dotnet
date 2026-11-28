@@ -215,7 +215,7 @@ internal sealed partial class App : System.Windows.Application
             Settings: () =>
             {
                 Bring(window);
-                if (shell.MainNavigation.Concat(shell.SecondaryNavigation).FirstOrDefault(item => item.Id == CorePages.Settings) is { } settings)
+                if (shell.AllNavigation.FirstOrDefault(item => item.Id == CorePages.Settings) is { } settings)
                 {
                     shell.Navigate(settings);
                 }

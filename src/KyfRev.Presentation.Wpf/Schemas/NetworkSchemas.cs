@@ -204,7 +204,7 @@ public sealed class NetworkSchemas(Func<SchemaUseCases?> current, Func<ShellView
     /// <inheritdoc/>
     public void Open(string id)
     {
-        if (shell() is { } view && view.MainNavigation.FirstOrDefault(item => item.Id == SchemasModule.ModuleId) is { Page: SchemasPageViewModel page } entry)
+        if (shell() is { } view && view.AllNavigation.FirstOrDefault(item => item.Id == SchemasModule.ModuleId) is { Page: SchemasPageViewModel page } entry)
         {
             var from = view.Current;
             page.OpenFrom(id, () => view.Navigate(from));

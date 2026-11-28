@@ -678,8 +678,9 @@
 
   async function imprimer() {
     menu = null;
-    if (estVide(editeur.vuePage)) {
-      editeur.annonce = editeur.pages.length > 1 ? "Cette page est vide : rien à imprimer." : "Ce schéma est vide : rien à imprimer.";
+    // Toutes les pages s'impriment, une par feuille : seul un schéma sans aucun équipement n'a rien à imprimer.
+    if (estVide(schema)) {
+      editeur.annonce = "Ce schéma est vide : rien à imprimer.";
       return;
     }
     try {
@@ -847,7 +848,7 @@
     <button type="button" class="outil cadre large" title="Exporter : image PNG ou SVG, ou modèle complet" onclick={() => (exportOuvert = true)}>
       Exporter…
     </button>
-    <button type="button" class="outil cadre large" title="Imprimer le schéma seul, ajusté à la page" onclick={imprimer}>
+    <button type="button" class="outil cadre large" title="Imprimer le schéma seul : chaque page sur sa feuille, ajustée à elle" onclick={imprimer}>
       Imprimer…
     </button>
   </header>

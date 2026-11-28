@@ -45,7 +45,8 @@ public sealed class WideBlocksTests
 
     private const string Diagram = "```smartart cycle\nG1\nS\nG2\nM\n```";
 
-    private static string Body() => string.Join("\n\n", Text, WideTable, Text, FittedTable, $"![Une frise large](data:image/png;base64,{Convert.ToBase64String(Picture(800, 90))})", Text, Diagram, Text) + "\n";
+    /// <summary>Du texte, un tableau large, un tableau ajusté, une image de 800 pixels et un schéma : en lecture comme en écriture.</summary>
+    internal static string Body() => string.Join("\n\n", Text, WideTable, Text, FittedTable, $"![Une frise large](data:image/png;base64,{Convert.ToBase64String(Picture(800, 90))})", Text, Diagram, Text) + "\n";
 
     [STATestMethod]
     [DataRow(570, false)]
@@ -210,7 +211,7 @@ public sealed class WideBlocksTests
 
     private static string Start(Paragraph paragraph) => new TextRange(paragraph.ContentStart, paragraph.ContentEnd).Text;
 
-    private static byte[] Picture(int width, int height)
+    internal static byte[] Picture(int width, int height)
     {
         var pixels = new byte[width * height];
         for (var index = 0; index < pixels.Length; index++)

@@ -104,10 +104,17 @@ export const api = {
   /** L'image PNG d'un schéma va dans le presse-papiers ; une erreur dit pourquoi ce n'est pas fait. */
   copierImageSchema: (octets: Uint8Array) => appeler<null>("copierImageSchema", base64(octets)),
   /**
-   * Ouvre la fenêtre « Imprimer » de l'application sur l'image PNG d'un schéma, sous son titre. Répond quand elle se ferme :
-   * ce qu'il faut dire du travail parti, ou rien s'il n'est pas parti.
+   * Ouvre la fenêtre « Imprimer » de l'application sur les pages d'un schéma, une par feuille, chacune en image PNG sous son
+   * titre ; l'aperçu s'ouvre sur la feuille `montree` (à partir de 1). Le travail porte le titre du schéma. Répond quand la
+   * fenêtre se ferme : ce qu'il faut dire du travail parti, ou rien s'il n'est pas parti.
    */
-  imprimerSchema: (titre: string, octets: Uint8Array) => appeler<string | null>("imprimerSchema", titre, base64(octets)),
+  imprimerSchema: (titre: string, feuilles: readonly (readonly [string, Uint8Array])[], montree = 1) =>
+    appeler<string | null>(
+      "imprimerSchema",
+      titre,
+      feuilles.map(([titreFeuille, octets]) => [titreFeuille, base64(octets)]),
+      montree,
+    ),
   /** Le coffre ouvert est chiffré : ce qui sort d'un schéma, lui, est en clair. */
   coffreChiffre: () => appeler<boolean>("coffreChiffre"),
   choisirDossier: (titre: string) => appeler<string | null>("choisirDossier", titre),

@@ -126,7 +126,7 @@ public sealed class SearchHitOpener(IReviewOpener opener, ShellViewModel shell)
 
     private void OpenQuote(string path)
     {
-        if (shell.MainNavigation.Concat(shell.SecondaryNavigation).FirstOrDefault(item => item.Page is QuotesPageViewModel) is { Page: QuotesPageViewModel page } entry)
+        if (shell.AllNavigation.FirstOrDefault(item => item.Page is QuotesPageViewModel) is { Page: QuotesPageViewModel page } entry)
         {
             shell.Navigate(entry);
             page.ShowOnly(path);

@@ -20,7 +20,7 @@ namespace KyfRev.Presentation.Wpf.Tests;
 /// <summary>Le texte mis en forme, dans le vrai WebView2 : ce qu'on y écrit, le ruban, la sécurité et les couleurs.</summary>
 [TestClass]
 [DoNotParallelize]
-public sealed class VisualEditorTests
+public sealed partial class VisualEditorTests
 {
     private const string Body = "# Mitose\n\nUn premier paragraphe.\n";
 

@@ -82,7 +82,7 @@ public sealed class MachineSettings
         {
             appearance.Resources[SheetPaper.ResourceKey] = SheetPaper.Of(preferences);
         }
-        shell.SetMenuOrder(preferences.MenuOrder);
+        shell.SetMenuOrder(preferences.MenuOrder, preferences.HiddenMenu);
         ShortcutMap.Use(preferences.Shortcuts);
         shell.RefreshShortcuts();
         shell.SetZoom(preferences.Zoom);

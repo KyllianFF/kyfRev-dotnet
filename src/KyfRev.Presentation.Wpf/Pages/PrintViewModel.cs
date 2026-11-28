@@ -54,6 +54,12 @@ public static class PrintText
     /// <summary>Comment écrire les numéros : {0} est le nombre de feuilles.</summary>
     public const string SheetNumbersHelp = "Des numéros et des plages, séparés par des virgules : 1-2, 4. La fiche fait {0} feuille(s).";
 
+    /// <summary>
+    /// Comment écrire les numéros quand chaque feuille est une page d'un schéma : {0} est le nombre de feuilles. Le champ
+    /// propose déjà celle de la page montrée.
+    /// </summary>
+    public const string PictureNumbersHelp = "Une feuille par page, dans l'ordre des onglets, {0} en tout : le numéro proposé est celui de la page montrée. Des plages aussi : 1-2, 4.";
+
     /// <summary>La saisie ne se lit pas : {0} est le nombre de feuilles.</summary>
     public const string SheetNumbersWrong = "Écrivez des numéros de 1 à {0}, séparés par des virgules, ou des plages comme 1-2.";
 
@@ -206,11 +212,16 @@ public sealed record PrintMarginOption(PrintMargin Kind, string Label)
     public override string ToString() => Label;
 }
 
+/// <summary>Une image à imprimer seule sur sa feuille, sous son titre : une page d'un schéma réseau.</summary>
+/// <param name="Title">Le titre, imprimé au-dessus de l'image.</param>
+/// <param name="Image">L'image.</param>
+public sealed record PrintPicture(string Title, BitmapSource Image);
+
 /// <summary>
 /// La fenêtre « Imprimer » d'une fiche (Ctrl+P) : l'imprimante, les copies, les feuilles (toutes ou certaines), le recto
 /// verso, la couleur ou le noir et blanc, l'orientation, les marges (par défaut celles de la fiche), les numéros de page, et
 /// l'aperçu feuille par feuille. Les pages sont celles de la mise en page de la fiche ; une fiche restée en feuille sans fin
-/// s'imprime en A4. La même fenêtre imprime une image seule, sous son titre, sur une feuille (un schéma réseau).
+/// s'imprime en A4. La même fenêtre imprime des images, chacune sous son titre sur sa feuille (les pages d'un schéma réseau).
 /// </summary>
 public sealed partial class PrintViewModel : ObservableObject
 {
@@ -222,6 +233,7 @@ public sealed partial class PrintViewModel : ObservableObject
     private static readonly CompositeFormat SheetOfFormat = CompositeFormat.Parse(PrintText.SheetOf);
     private static readonly CompositeFormat SummaryFormat = CompositeFormat.Parse(PrintText.Summary);
     private static readonly CompositeFormat HelpFormat = CompositeFormat.Parse(PrintText.SheetNumbersHelp);
+    private static readonly CompositeFormat PicturesHelpFormat = CompositeFormat.Parse(PrintText.PictureNumbersHelp);
     private static readonly CompositeFormat WrongFormat = CompositeFormat.Parse(PrintText.SheetNumbersWrong);
     private static readonly CompositeFormat OfSheetFormat = CompositeFormat.Parse(PrintText.MarginsOfSheet);
     private static readonly CompositeFormat SentFormat = CompositeFormat.Parse(PrintText.Sent);
@@ -250,17 +262,27 @@ public sealed partial class PrintViewModel : ObservableObject
     [ObservableProperty]
     public partial SheetReading? Reading { get; private set; }
 
-    /// <summary>L'image à imprimer seule, sous son titre (un schéma réseau) ; rien quand on imprime une fiche.</summary>
+    /// <summary>
+    /// Les images à imprimer, une par feuille, chacune sous son titre (les pages d'un schéma réseau, dans l'ordre de ses
+    /// onglets) ; aucune quand on imprime une fiche.
+    /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsSheet))]
-    public partial BitmapSource? Picture { get; private set; }
+    [NotifyPropertyChangedFor(nameof(IsSheet), nameof(Picture), nameof(PictureTitle), nameof(ChoosesSheets), nameof(PagesMessage))]
+    public partial IReadOnlyList<PrintPicture> Pictures { get; private set; } = [];
 
-    /// <summary>Le titre imprimé au-dessus de l'image seule.</summary>
-    [ObservableProperty]
-    public partial string PictureTitle { get; private set; } = string.Empty;
+    /// <summary>L'image de la feuille montrée dans l'aperçu ; rien quand on imprime une fiche.</summary>
+    public BitmapSource? Picture => CurrentPicture?.Image;
 
-    /// <summary>On imprime une fiche, avec ses feuilles et leurs numéros ; pas une image seule.</summary>
-    public bool IsSheet => Picture is null;
+    /// <summary>Le titre imprimé au-dessus de l'image de la feuille montrée.</summary>
+    public string PictureTitle => CurrentPicture?.Title ?? string.Empty;
+
+    private PrintPicture? CurrentPicture => Pictures.Count == 0 ? null : Pictures[Math.Clamp(CurrentPage, 1, Pictures.Count) - 1];
+
+    /// <summary>On imprime une fiche, avec ses feuilles et leurs numéros ; pas des images.</summary>
+    public bool IsSheet => Pictures.Count == 0;
+
+    /// <summary>Les feuilles se choisissent (toutes ou certaines) : celles d'une fiche, ou plusieurs images.</summary>
+    public bool ChoosesSheets => IsSheet || Pictures.Count > 1;
 
     /// <summary>En couleur ; sinon en noir et blanc, l'aperçu compris. Le choix reste d'une impression à l'autre.</summary>
     [ObservableProperty]
@@ -351,7 +373,7 @@ public sealed partial class PrintViewModel : ObservableObject
 
     /// <summary>La feuille montrée par l'aperçu, à partir de 1.</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(PageLabel), nameof(IsCurrentPrinted))]
+    [NotifyPropertyChangedFor(nameof(PageLabel), nameof(IsCurrentPrinted), nameof(Picture), nameof(PictureTitle))]
     public partial int CurrentPage { get; private set; } = 1;
 
     /// <summary>L'aperçu se prépare : rien ne s'imprime avant qu'il soit prêt.</summary>
@@ -417,7 +439,7 @@ public sealed partial class PrintViewModel : ObservableObject
     public bool ShowsPagesHelp => !HasPagesError;
 
     /// <summary>Sous le champ des numéros : comment les écrire, ou ce qui ne va pas.</summary>
-    public string PagesMessage => string.Format(French, HasPagesError ? WrongFormat : HelpFormat, Math.Max(1, TotalPages));
+    public string PagesMessage => string.Format(French, HasPagesError ? WrongFormat : IsSheet ? HelpFormat : PicturesHelpFormat, Math.Max(1, TotalPages));
 
     /// <summary>« 2 sur 4 ».</summary>
     public string PageLabel => TotalPages > 0 ? string.Format(French, SheetOfFormat, CurrentPage, TotalPages) : string.Empty;
@@ -467,22 +489,38 @@ public sealed partial class PrintViewModel : ObservableObject
         CurrentPage = 1;
         IsPreparing = true;
         OnPropertyChanged(nameof(Layout));
-        Picture = null;
+        Pictures = [];
         Reading = reading;
         IsOpen = true;
         _ = ReadPrintersAsync();
     }
 
     /// <summary>
-    /// Ouvre la fenêtre sur une image seule (un schéma réseau) : une feuille A4, en paysage si l'image est plus large que haute,
-    /// avec des marges étroites ; son titre en haut, l'image entière dans la place qui reste.
+    /// Ouvre la fenêtre sur une image seule (un schéma réseau d'une page) : une feuille A4, en paysage si l'image est plus
+    /// large que haute, avec des marges étroites ; son titre en haut, l'image entière dans la place qui reste.
     /// </summary>
     /// <param name="title">Le titre, imprimé au-dessus de l'image et donné au travail d'impression.</param>
     /// <param name="picture">L'image.</param>
     public void OpenPicture(string title, BitmapSource picture)
     {
-        ArgumentNullException.ThrowIfNull(title);
         ArgumentNullException.ThrowIfNull(picture);
+        OpenPictures(title, [new PrintPicture(title, picture)]);
+    }
+
+    /// <summary>
+    /// Ouvre la fenêtre sur des images, une par feuille, chacune sous son titre (les pages d'un schéma réseau, dans l'ordre
+    /// de ses onglets) : des feuilles A4, en paysage si la plupart des images sont plus larges que hautes, avec des marges
+    /// étroites. Toutes s'impriment ; « Certaines » propose déjà la feuille <paramref name="shown"/>, où l'aperçu s'ouvre.
+    /// </summary>
+    /// <param name="title">Le titre donné au travail d'impression.</param>
+    /// <param name="pictures">Les images, dans l'ordre des feuilles ; au moins une.</param>
+    /// <param name="shown">La feuille montrée d'abord, à partir de 1 (la page que l'on regardait).</param>
+    public void OpenPictures(string title, IReadOnlyList<PrintPicture> pictures, int shown = 1)
+    {
+        ArgumentNullException.ThrowIfNull(title);
+        ArgumentNullException.ThrowIfNull(pictures);
+        ArgumentOutOfRangeException.ThrowIfZero(pictures.Count);
+        var first = Math.Clamp(shown, 1, pictures.Count);
         FormatOptions = Formats(PageFormat.A4, isPaged: false);
         Format = FormatOptions[0];
         _sheetMargin = PageLayout.NarrowMargin;
@@ -492,16 +530,15 @@ public sealed partial class PrintViewModel : ObservableObject
         MarginOptions = [.. Options(_sheetMargin).Where(option => option.Kind != PrintMargin.Sheet)];
         Margin = MarginOptions[0];
         CustomMargin = _sheetMargin.ToString("0.##", French);
-        IsLandscape = picture.PixelWidth > picture.PixelHeight;
+        IsLandscape = 2 * pictures.Count(picture => picture.Image.PixelWidth > picture.Image.PixelHeight) > pictures.Count;
         Copies = 1;
         AllPages = true;
-        PagesText = string.Empty;
+        PagesText = pictures.Count > 1 ? first.ToString(CultureInfo.InvariantCulture) : string.Empty;
         Sides = PrintSides.OneSided;
         Reading = null;
-        PictureTitle = title;
-        Picture = picture;
-        TotalPages = 1;
-        CurrentPage = 1;
+        Pictures = pictures;
+        TotalPages = pictures.Count;
+        CurrentPage = first;
         IsPreparing = false;
         OnPropertyChanged(nameof(Layout));
         IsOpen = true;
@@ -514,7 +551,7 @@ public sealed partial class PrintViewModel : ObservableObject
         _request++;
         IsOpen = false;
         Reading = null;
-        Picture = null;
+        Pictures = [];
     }
 
     /// <summary>Envoie le travail à l'imprimante. La fenêtre se ferme s'il est parti ; sinon elle dit pourquoi.</summary>
