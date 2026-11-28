@@ -41,10 +41,11 @@
   <!-- Une bande sous la fiche (rangée 27A), pas une carte posée dessus : sa hauteur ne dépend que de la largeur. Valider
        n'y fait rien bouger : l'état se dit à la place de l'étape, le bouton qui suit prend la place de « Valider ». -->
   <Grid>
-  <!-- Le conseil de la première fois flotte au-dessus de la fiche : il ne pousse pas la bande, ni en paraissant ni en partant. -->
+  <!-- La bulle de la première fois flotte au-dessus de la fiche, sa pointe sur « Valider » (maquette 14D) : elle ne pousse pas
+       la bande, ni en paraissant ni en partant. Sa place suit le bouton (PlaceTip). -->
   <Canvas x:Name="TipLayer" Height="0" VerticalAlignment="Top" Panel.ZIndex="1">
     <pages:FirstTip x:Name="ReviewTip" Mark="{x:Static pages:FirstUse.ReviewTipRead}" Title="{x:Static pages:FirstTipText.ReviewTitle}" Text="{x:Static pages:FirstTipText.ReviewText}"
-                    IsOffered="{Binding CanValidate}" MaxWidth="420" Canvas.Right="16" Canvas.Bottom="8" />
+                    IsOffered="{Binding CanValidate}" MaxWidth="420" Canvas.Right="16" Canvas.Bottom="4" />
   </Canvas>
   <Border x:Name="Bar" Background="{DynamicResource Kyf.Brush.Surface}" BorderBrush="{DynamicResource Kyf.Brush.Divider}" BorderThickness="0,1,0,0"
           AutomationProperties.Name="{x:Static pages:ReviewText.Review}">

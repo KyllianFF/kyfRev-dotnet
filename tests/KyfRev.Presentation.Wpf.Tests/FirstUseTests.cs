@@ -144,6 +144,8 @@ public sealed class FirstUseTests
         Assert.IsFalse(new FirstUse().Has(FirstUse.WritingTipRead));
     }
 
+    private static readonly string[] LinkNames = ["FirstStepsGuide", "FirstStepsSample", "FirstStepsHide"];
+
     [STATestMethod]
     [DataRow(470, true)]
     [DataRow(900, false)]
@@ -157,10 +159,11 @@ public sealed class FirstUseTests
         vaults.App.Sheets.Create("Biologie", "Mitose", null).Value.ToString();
         var test = new TestShell();
         test.Design.Theme = dark ? DesignSystem.Tokens.ThemeKind.Dark : DesignSystem.Tokens.ThemeKind.Light;
-        var steps = new FirstSteps(new FirstUse(), () => { });
+        var asked = 0;
+        var steps = new FirstSteps(new FirstUse(), () => { }) { OpenSample = () => Task.FromResult<string?>(++asked == 1 ? "Ce dossier n'est pas vide." : null) };
         var model = new DashboardPageViewModel(vaults.App.Reminders, vaults.App.Sheets, new FakeOpener()) { FirstSteps = steps };
         var page = new DashboardPage { DataContext = model };
-        var host = new Border { Width = width, Height = 820, Child = page, Background = (Brush)test.Design.Dictionary["Kyf.Brush.Background"] };
+        var host = new Border { Width = width, Height = 900, Child = page, Background = (Brush)test.Design.Dictionary["Kyf.Brush.Background"] };
         host.Resources.MergedDictionaries.Add(test.Design.Dictionary);
         var window = new Window { Content = new Canvas { Children = { host } }, Left = -10000, Top = -10000, Width = 800, Height = 600, ShowActivated = false, ShowInTaskbar = false };
         window.Show();
@@ -177,8 +180,18 @@ public sealed class FirstUseTests
             Assert.IsTrue(texts.All(text => text.TranslatePoint(new Point(text.ActualWidth, 0), page).X <= width + 0.5), "aucun texte ne dépasse");
             Assert.IsTrue(texts.Any(text => text.Text == "1 sur 3"));
             var links = Descendants(card).OfType<Button>().Where(button => button.IsVisible).ToList();
-            Assert.HasCount(2, links, "le premier pas est fait : « Nouvelle fiche » n'y est plus, restent le guide et « Masquer »");
+            Assert.HasCount(3, links, "le premier pas est fait : « Nouvelle fiche » n'y est plus, restent le guide, le coffre d'exemple et « Masquer »");
             Assert.IsTrue(links.All(link => link.ActualHeight >= 44));
+            CollectionAssert.AreEqual(LinkNames, links.Select(link => link.Name).ToList(), "dans l'ordre de la maquette 14C");
+
+            // Le coffre d'exemple refusé : la raison se lit dans la carte ; ouvert, elle s'efface.
+            var problem = Descendants(card).OfType<TextBlock>().Single(text => text.Name == "FirstStepsSampleProblem");
+            Assert.IsFalse(problem.IsVisible);
+            links[1].Command.Execute(null);
+            UiThread.Until(() => steps.SampleProblem is not null);
+            TestShell.Flush();
+            Assert.IsTrue(problem.IsVisible);
+            Assert.AreEqual("Ce dossier n'est pas vide.", problem.Text);
             // Le pas fait est coché, le suivant est désigné.
             var dots = Descendants(card).OfType<Border>().Where(border => border.Name == "Dot").ToList();
             Assert.HasCount(3, dots);
@@ -186,6 +199,15 @@ public sealed class FirstUseTests
             Assert.AreSame(page.FindResource("Kyf.Brush.NavigationActiveBackground"), dots[1].Background);
             Assert.IsNull(dots[2].Background);
             host.Capture($"premiers-pas-{width}-{(dark ? "sombre" : "clair")}");
+            steps.OpenSampleVaultCommand.Execute(null);
+            UiThread.Until(() => steps.SampleProblem is null);
+            TestShell.Flush();
+            Assert.IsFalse(problem.IsVisible);
+            Assert.AreEqual(2, asked);
+            var without = new FirstSteps(new FirstUse());
+            Assert.IsFalse(without.CanOpenSample, "sans emplacement prévu, pas de lien");
+            without.OpenSampleVaultCommand.Execute(null);
+            Assert.IsNull(without.SampleProblem);
         }
         finally
         {
@@ -380,6 +402,70 @@ public sealed class FirstUseTests
     }
 
     [STATestMethod]
+    [DataRow(470, "Light")]
+    [DataRow(1280, "Dark")]
+    [DataRow(2560, "HighContrast")]
+    public void The_first_review_tip_is_a_bubble_pointing_at_validate_at_every_width(int width, string theme)
+    {
+        using var ui = new UiThread();
+        var test = new TestShell();
+        test.Design.Theme = Enum.Parse<DesignSystem.Tokens.ThemeKind>(theme);
+        var bar = new ReviewBar { DataContext = new ValidatingBar(), VerticalAlignment = VerticalAlignment.Bottom };
+        var host = new Grid { Width = width, Height = 360, Children = { bar } };
+        host.SetResourceReference(Panel.BackgroundProperty, "Kyf.Brush.Background");
+        host.Resources.MergedDictionaries.Add(test.Design.Dictionary);
+        var window = new Window { Content = new Canvas { Children = { host } }, Left = -10000, Top = -10000, Width = 800, Height = 600, ShowActivated = false, ShowInTaskbar = false };
+        window.Show();
+        try
+        {
+            TestShell.Flush();
+            var tip = (FirstTip)bar.FindName("ReviewTip");
+            Assert.IsFalse(tip.IsVisible, "sans mémoire, aucune aide");
+            FirstTip.SetMemory(host, new FirstUse());
+            TestShell.Flush();
+            Assert.IsTrue(tip.IsVisible);
+
+            var validate = (Button)bar.FindName("ValidateButton");
+            var pointer = (FrameworkElement)tip.FindName("Pointer");
+            var bubble = (FrameworkElement)tip.FindName("Bubble");
+            var band = (FrameworkElement)bar.FindName("Bar");
+            Assert.AreEqual(Visibility.Visible, pointer.Visibility, "la bulle a sa pointe");
+            var aim = validate.TranslatePoint(new Point(validate.ActualWidth / 2, 0), host).X;
+            var tipOf = pointer.TranslatePoint(new Point(pointer.ActualWidth / 2, pointer.ActualHeight), host);
+            Assert.AreEqual(aim, tipOf.X, 1.5, $"à {width} pixels, la pointe désigne « Valider »");
+            var bandTop = band.TranslatePoint(default, host).Y;
+            Assert.IsLessThanOrEqualTo(bandTop, tipOf.Y, "la pointe s'arrête au-dessus de la bande");
+            Assert.IsGreaterThan(bandTop - 12, tipOf.Y, "tout près d'elle");
+            var place = new Rect(bubble.TranslatePoint(default, host), bubble.RenderSize);
+            Assert.IsTrue(place.Left >= ReviewBar.TipMargin - 0.5 && place.Right <= width - ReviewBar.TipMargin + 0.5 && place.Width <= ReviewBar.TipWidest + 0.5,
+                $"la bulle tient dans la bande : de {place.Left:0} à {place.Right:0} sur {width}");
+            // Une ombre de menu, comme ce qui flotte ; en contraste élevé, aucune ombre : le trait de la bulle suffit.
+            Assert.AreSame(bubble.TryFindResource("Kyf.Elevation.Flyout"), ((Border)tip.FindName("BubbleShadow")).Effect);
+            Assert.IsTrue(((Button)tip.FindName("UnderstoodButton")).ActualHeight >= 44);
+            host.Capture($"bulle-revision-{width}-{theme}");
+
+            // Sans place donnée, pas de pointe ; une place hors de la bulle reste sur la bulle.
+            tip.PointerOffset = double.NaN;
+            Assert.AreEqual(Visibility.Collapsed, pointer.Visibility);
+            tip.PointerOffset = -50;
+            Assert.AreEqual(12, ((FrameworkElement)pointer).Margin.Right);
+            tip.PointerOffset = 5000;
+            Assert.IsLessThan(tip.ActualWidth, ((FrameworkElement)pointer).Margin.Right);
+            bar.PlaceTip();
+
+            // « Compris » : elle part, et ne suit plus la bande.
+            ((Button)tip.FindName("UnderstoodButton")).RaiseEvent(new RoutedEventArgs(System.Windows.Controls.Primitives.ButtonBase.ClickEvent));
+            TestShell.Flush();
+            Assert.IsFalse(tip.IsVisible);
+            bar.PlaceTip();
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    [STATestMethod]
     public void The_review_bar_carries_the_tip_of_the_first_review_and_the_window_hands_it_the_memory()
     {
         var bar = new ReviewBar();
@@ -468,3 +554,29 @@ public sealed class FirstUseTests
         }
     }
 }
+
+/// <summary>Ce que la bande de révision lit, sans cas d'usage : « Valider » est proposé, rien d'autre ne se montre.</summary>
+public sealed record ValidatingBar(
+    bool CanValidate = true,
+    bool ShowsActiveActions = true,
+    bool? ValidateShown = true,
+    bool? ForgotShown = true,
+    bool ShowsCycle = true,
+    bool ShowsSteps = false,
+    string ValidateLabel = "Valider J1",
+    string StatusTitle = "J1 à valider",
+    string StatusDetail = "due aujourd'hui",
+    bool IsNote = false,
+    bool IsReminder = false,
+    bool IsMarking = false,
+    bool IsChoosingDay = false,
+    bool HasPassages = false,
+    bool HasNoPassage = false,
+    bool HasError = false,
+    bool ShowsResume = false,
+    bool ShowsArchivedActions = false,
+    bool ShowsReminderChoices = false,
+    bool? ShowsNextButton = false,
+    bool? ShowsDoneText = false,
+    bool ShowsToast = false,
+    bool IsSheet = true);

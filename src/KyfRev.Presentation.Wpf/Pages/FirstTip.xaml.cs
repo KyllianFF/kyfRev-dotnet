@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using KyfRev.DesignSystem.Controls;
 
 namespace KyfRev.Presentation.Wpf.Pages;
 
@@ -29,12 +30,26 @@ internal sealed partial class FirstTip : UserControl
     public static readonly DependencyProperty IsOfferedProperty = DependencyProperty.Register(
         nameof(IsOffered), typeof(bool), typeof(FirstTip), new PropertyMetadata(true, (element, _) => ((FirstTip)element).Show()));
 
+    /// <summary>
+    /// Où la pointe de la bulle désigne ce qu'elle explique : la distance de son milieu au bord droit de la bulle. Rien (NaN,
+    /// par défaut) : pas de pointe.
+    /// </summary>
+    public static readonly DependencyProperty PointerOffsetProperty = DependencyProperty.Register(
+        nameof(PointerOffset), typeof(double), typeof(FirstTip), new PropertyMetadata(double.NaN, (element, _) => ((FirstTip)element).PlacePointer()));
+
+    /// <summary>La moitié de la largeur de la pointe.</summary>
+    internal const double PointerHalf = 9;
+
+    /// <summary>La pointe reste au moins à cette distance du bord, pour ne pas mordre sur l'arrondi de la bulle.</summary>
+    private const double PointerInset = 12;
+
     private FirstUse? _followed;
 
     public FirstTip()
     {
         InitializeComponent();
         Loaded += (_, _) => Follow();
+        SizeChanged += (_, _) => PlacePointer();
         Unloaded += (_, _) => Unfollow();
     }
 
@@ -57,6 +72,13 @@ internal sealed partial class FirstTip : UserControl
     {
         get => (string)GetValue(TextProperty);
         set => SetValue(TextProperty, value);
+    }
+
+    /// <inheritdoc cref="PointerOffsetProperty"/>
+    public double PointerOffset
+    {
+        get => (double)GetValue(PointerOffsetProperty);
+        set => SetValue(PointerOffsetProperty, value);
     }
 
     /// <inheritdoc cref="IsOfferedProperty"/>
@@ -101,10 +123,24 @@ internal sealed partial class FirstTip : UserControl
 
     private void OnMemoryChanged(object? sender, EventArgs e) => Show();
 
+    // Elle paraît en fondu une fois la vue à l'écran, et part d'un coup : un départ ne s'anime pas.
     private void Show() =>
-        Visibility = IsOffered && Mark.Length > 0 && GetMemory(this) is { } memory && !memory.Has(Mark) && !memory.Has(FirstUse.NoTips)
-            ? Visibility.Visible
-            : Visibility.Collapsed;
+        Transitions.SetSwappedIn(this, IsOffered && Mark.Length > 0 && GetMemory(this) is { } memory && !memory.Has(Mark) && !memory.Has(FirstUse.NoTips));
+
+    /// <summary>Pose la pointe à sa place, bornée à la bulle ; sans place, elle n'est pas montrée.</summary>
+    private void PlacePointer()
+    {
+        var offset = PointerOffset;
+        if (double.IsNaN(offset))
+        {
+            Pointer.Visibility = Visibility.Collapsed;
+            return;
+        }
+        // Avant sa première mise en page, la bulle n'a pas de largeur : la borne de gauche attend la suivante.
+        var widest = ActualWidth > 0 ? Math.Max(PointerInset, ActualWidth - PointerInset - (2 * PointerHalf)) : double.MaxValue;
+        Pointer.Margin = new Thickness(0, -1, Math.Clamp(offset - PointerHalf, PointerInset, widest), 0);
+        Pointer.Visibility = Visibility.Visible;
+    }
 
     private void OnUnderstood(object sender, RoutedEventArgs e) => GetMemory(this)?.Remember(Mark);
 

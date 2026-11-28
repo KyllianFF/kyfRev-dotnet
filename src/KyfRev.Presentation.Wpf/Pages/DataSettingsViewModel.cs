@@ -1,6 +1,7 @@
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using KyfRev.Application;
 using KyfRev.Application.Model;
 using KyfRev.Application.UseCases;
 using KyfRev.Modules.Citations;
@@ -449,6 +450,21 @@ public sealed partial class DataSettingsViewModel : ObservableObject, INavigatio
 
     /// <summary>La question quand un autre poste a le coffre choisi ouvert ; sans elle, un tel coffre est refusé.</summary>
     public Func<AppState, Func<AppState>, Task<AppState?>>? Settle { get; init; }
+
+    /// <summary>
+    /// Ouvre le coffre d'exemple, créé au besoin dans son propre dossier par <paramref name="sample"/> (jamais dans le coffre
+    /// ouvert, qui reste tel quel et se rouvre par « Ouvrir un autre coffre… ») ; rend ce qui l'a empêché, ou rien.
+    /// </summary>
+    public async Task<string?> OpenSampleAsync(Func<Outcome<AppState>> sample)
+    {
+        ArgumentNullException.ThrowIfNull(sample);
+        await ChangeVaultAsync(() =>
+        {
+            var created = sample();
+            return created.Succeeded ? created.Value : _vaults.State() with { OpenError = created.Error ?? string.Empty };
+        }).ConfigureAwait(true);
+        return Error ?? Message;
+    }
 
     /// <summary>Ouvrir un coffre peut prendre du temps (la journée à préparer, sa sauvegarde) ; un refus laisse l'actuel ouvert.</summary>
     private async Task ChangeVaultAsync(Func<AppState> opening)

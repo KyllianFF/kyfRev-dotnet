@@ -156,6 +156,19 @@ public sealed partial class FirstSteps : ObservableObject
     /// <summary>Le guide peut s'ouvrir d'ici.</summary>
     public bool CanOpenGuide => _openGuide is not null;
 
+    /// <summary>
+    /// « Ouvrir un coffre d'exemple » (maquette 14C) : ouvre le coffre d'exemple, à part de celui-ci, et rend ce qui l'en a
+    /// empêché ; rien : le lien ne se propose pas (pas d'emplacement prévu pour l'exemple).
+    /// </summary>
+    public Func<Task<string?>>? OpenSample { get; init; }
+
+    /// <summary>Le coffre d'exemple peut s'ouvrir d'ici.</summary>
+    public bool CanOpenSample => OpenSample is not null;
+
+    /// <summary>Ce qui a empêché d'ouvrir le coffre d'exemple ; rien s'il s'est ouvert, ou tant qu'on ne l'a pas demandé.</summary>
+    [ObservableProperty]
+    public partial string? SampleProblem { get; private set; }
+
     /// <summary>« Nouvelle fiche », depuis le premier pas : la vue « Aujourd'hui » le branche sur sa propre commande.</summary>
     public Action? NewSheet { get; set; }
 
@@ -197,6 +210,18 @@ public sealed partial class FirstSteps : ObservableObject
     /// <summary>« Lire le guide ».</summary>
     [RelayCommand]
     private void OpenGuide() => _openGuide?.Invoke();
+
+    /// <summary>« Ouvrir un coffre d'exemple » : une seule ouverture à la fois.</summary>
+    [RelayCommand]
+    private async Task OpenSampleVaultAsync()
+    {
+        if (OpenSample is not { } open)
+        {
+            return;
+        }
+        SampleProblem = null;
+        SampleProblem = await open().ConfigureAwait(true);
+    }
 
     /// <summary>« Masquer les premiers pas » : la carte ne revient plus sur cet ordinateur.</summary>
     [RelayCommand]
@@ -251,6 +276,12 @@ public static class FirstStepsText
 
     /// <summary>Le lien vers le guide.</summary>
     public const string ReadGuide = "Lire le guide";
+
+    /// <summary>Le lien vers le coffre d'exemple.</summary>
+    public const string OpenSample = "Ouvrir un coffre d'exemple";
+
+    /// <summary>Ce que fait ce lien, pour un lecteur d'écran et au survol.</summary>
+    public const string OpenSampleHelp = "Dix fiches inventées, déjà en cours de révision, dans un coffre à part : le vôtre n'est pas touché et se rouvre par Paramètres › Coffre et chiffrement › Ouvrir un autre coffre.";
 
     /// <summary>Le lien qui masque la carte pour de bon.</summary>
     public const string Hide = "Masquer les premiers pas";
