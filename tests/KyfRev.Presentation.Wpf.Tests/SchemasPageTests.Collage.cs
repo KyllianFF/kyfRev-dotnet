@@ -100,6 +100,13 @@ public sealed partial class SchemasPageTests
     /// <summary>Un équipement choisi d'un clic sur le plan : son volet s'ouvre.</summary>
     private static void PressDevice(IslandScene scene, string id, string name)
     {
+        // Le plan ne se recadre qu'à sa première mesure : le volet, ouvert ensuite à côté, peut cacher la droite du
+        // schéma (vu sur la CI). « 0 » (« Tout voir ») le recadre dans la place qui reste.
+        if (TryGripOf(scene, Device(id) + " rect.pave") is null)
+        {
+            scene.Script("(() => { const plan = document.querySelector('svg.canevas'); plan.focus(); plan.dispatchEvent(new KeyboardEvent('keydown', { key: '0', bubbles: true, cancelable: true })); })()");
+            TestShell.Flush();
+        }
         Press(scene, Device(id) + " rect.pave");
         scene.WaitFor("document.querySelector('.proprietes .tete .nom')?.textContent === " + JsonSerializer.Serialize(name));
     }

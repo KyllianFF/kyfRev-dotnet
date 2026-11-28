@@ -602,8 +602,13 @@ public sealed partial class SchemasPageTests
         var folder = scene.Outside("Exports");
         Directory.CreateDirectory(folder);
         scene.Picker.Answers.Enqueue(folder);
-        scene.Script("document.querySelector('li.carte').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 60, clientY: 60 }))");
-        scene.WaitFor("document.querySelector('.menu[role=menu]') !== null");
+        // Au premier lancement (la CI), le premier clic droit peut se perdre pendant que la vue s'installe : on le redonne.
+        UiThread.Until(() =>
+        {
+            scene.Script("document.querySelector('li.carte').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 60, clientY: 60 }))");
+            TestShell.Flush();
+            return scene.Script("document.querySelector('.menu[role=menu]') !== null") == "true";
+        }, TimeSpan.FromSeconds(20));
         scene.Script("[...document.querySelectorAll('.menu [role=menuitem]')].find((entree) => entree.textContent.includes('Exporter')).click()");
         scene.WaitFor("document.querySelector('dialog[open] input[type=radio]') !== null");
         Assert.AreEqual("4", scene.Script("document.querySelectorAll('dialog[open] input[type=radio]').length"));
@@ -674,8 +679,13 @@ public sealed partial class SchemasPageTests
         Narrow(scene);
 
         // « Exporter… », format draw.io : deux puces pour les icônes, celles de kyfRev d'abord, et le fichier .drawio écrit.
-        scene.Script("document.querySelector('li.carte').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 60, clientY: 60 }))");
-        scene.WaitFor("document.querySelector('.menu[role=menu]') !== null");
+        // Au premier lancement (la CI), le premier clic droit peut se perdre pendant que la vue s'installe : on le redonne.
+        UiThread.Until(() =>
+        {
+            scene.Script("document.querySelector('li.carte').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 60, clientY: 60 }))");
+            TestShell.Flush();
+            return scene.Script("document.querySelector('.menu[role=menu]') !== null") == "true";
+        }, TimeSpan.FromSeconds(20));
         scene.Script("[...document.querySelectorAll('.menu [role=menuitem]')].find((entree) => entree.textContent.includes('Exporter')).click()");
         scene.WaitFor("document.querySelector('dialog[open] input[value=drawio]') !== null");
         scene.Script("document.querySelector('dialog[open] input[value=drawio]').click()");
@@ -971,8 +981,13 @@ public sealed partial class SchemasPageTests
         scene.WaitFor("document.querySelector('li.carte') !== null");
 
         // L'export draw.io : une page draw.io par page, le renvoi en pastille qui mène à l'autre page.
-        scene.Script("document.querySelector('li.carte').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 60, clientY: 60 }))");
-        scene.WaitFor("document.querySelector('.menu[role=menu]') !== null");
+        // Au premier lancement (la CI), le premier clic droit peut se perdre pendant que la vue s'installe : on le redonne.
+        UiThread.Until(() =>
+        {
+            scene.Script("document.querySelector('li.carte').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 60, clientY: 60 }))");
+            TestShell.Flush();
+            return scene.Script("document.querySelector('.menu[role=menu]') !== null") == "true";
+        }, TimeSpan.FromSeconds(20));
         scene.Script("[...document.querySelectorAll('.menu [role=menuitem]')].find((entree) => entree.textContent.includes('Exporter')).click()");
         scene.WaitFor("document.querySelector('dialog[open] input[value=drawio]') !== null");
         scene.Script("document.querySelector('dialog[open] input[value=drawio]').click()");
