@@ -193,9 +193,32 @@ Ce qui sort est en clair, même depuis un coffre chiffré, sauf le coffre comple
 Paramètres › Modules et extensions active les citations du jour et les schémas réseau, et installe des extensions, depuis un dossier
 ou depuis le catalogue signé. Une extension n'a jamais le réseau, et demande chaque permission.
 
-Dans la vue Schémas réseau, chaque schéma s'archive ou se supprime par ses boutons ou au clic droit sur sa carte. Archivé,
-il quitte la liste mais reste montré par les fiches qui l'insèrent ; supprimé, il va à la corbeille des schémas. Les deux
-se retrouvent sous la liste et se restaurent : rien n'est effacé. Dans l'éditeur d'un schéma, plusieurs éléments choisis
+La vue Schémas réseau montre chaque schéma en carte : son aperçu, son nom, une ligne (« 10 équipements · 4 pages ·
+modifié hier ») et ses étiquettes ; « Cité dans 3 fiches » et « 1 point à vérifier » ne paraissent que s'il y a lieu. Un
+clic sur la carte ouvre son détail. Au survol, ou quand la carte a le clavier, « Modifier » ouvre l'éditeur et « ⋯ » le
+reste des actions, les mêmes qu'au clic droit (ou touche Menu) : Renommer, Épingler, Étiqueter…, Dupliquer, Ajouter à un
+schéma…, Enregistrer comme modèle…, Copier l'image, Exporter…, Imprimer…, Archiver, Supprimer…. Les petits traits au bas
+de la vignette sont les pages du schéma : au survol, la vignette les montre l'une après l'autre. Un double clic sur le
+nom (ou F2) le renomme sur place : Entrée garde, Échap annule. Un schéma épinglé reste en tête, sous « Épinglés ».
+
+Au-dessus des cartes, la recherche trouve un schéma par son nom, ses équipements, leurs adresses, ses étiquettes et les
+fiches qui le citent. Les puces filtrent par étiquette (un schéma qui porte l'une des étiquettes choisies) et par « À
+vérifier » (le diagnostic y trouve un point) ; « Trier » range par date de modification, par nom ou par taille ;
+« Grille » et « Liste » changent d'affichage, et le choix est retenu. La liste est un tableau (pages, équipements,
+étiquettes, diagnostic, fiches, date) : un clic sur un en-tête trie par cette colonne, un second dans l'autre sens.
+« Étiqueter… » pose et retire des étiquettes ; celles déjà en usage se proposent en tapant. Elles sont écrites dans le
+schéma lui-même, comme l'épingle : une version précédente de kyfRev les perd si elle réécrit le schéma.
+
+Plusieurs schémas se choisissent : la case au coin de la vignette (au survol), Ctrl+clic pour en ajouter un, Maj+clic pour
+prendre toute une suite, Ctrl+A pour tout ce qui est affiché, Échap pour lâcher. Une barre paraît en bas : réunir en un
+schéma, ajouter à un schéma, étiqueter, exporter (un fichier par schéma, dans le dossier choisi une fois), archiver,
+supprimer (après une question). « Nouveau schéma ▾ » crée un schéma vide, depuis un modèle, depuis un fichier draw.io, ou
+en réunissant des schémas. Dans une fenêtre étroite, les cartes vont par deux, « Importer » est sous « ⋯ » et le reste
+des filtres, le tri et l'affichage sous « Filtres ».
+
+Un schéma s'archive ou se supprime au clic droit sur sa carte, sous « ⋯ », ou depuis la barre des schémas choisis.
+Archivé, il quitte la liste mais reste montré par les fiches qui l'insèrent ; supprimé, il va à la corbeille des schémas.
+Les deux se retrouvent sous la liste et se restaurent : rien n'est effacé. Dans l'éditeur d'un schéma, plusieurs éléments choisis
 (Maj ou Ctrl + clic, ou un cadre tracé à la souris) se groupent avec Ctrl+G et se manipulent alors ensemble ; un second clic
 sur l'un d'eux le choisit seul, et Ctrl+Maj+G les dégroupe.
 
@@ -273,7 +296,8 @@ page comme modèle… » (la page seule, ses câbles et les VLAN du schéma), av
 rangés à part dans le coffre (`schemas/modeles/`) : ils ne sont ni dans la liste des schémas ni dans les fiches. Au clic
 droit sur la vignette d'un de ses modèles, ou par « ⋯ », « Supprimer le modèle… » le retire après une question ; son
 fichier est rangé dans `schemas/modeles/.supprimes/`, pas effacé. Dans l'éditeur, une fenêtre de taille moyenne ou
-étroite propose aussi « Enregistrer comme modèle… » et « Nouveau schéma depuis un modèle… » dans « Plus ».
+étroite propose aussi « Enregistrer comme modèle… » et « Nouveau schéma depuis un modèle… » dans « Plus ». Un modèle sert aussi dans un schéma déjà commencé : « + » sous le
+plan, « Pages depuis un modèle… », ajoute ses pages après les vôtres, sous leur nom, et Ctrl+Z les retire en une fois.
 
 En mode avancé, un équipement choisi ouvre son volet : en tête, son icône, son nom, son type (un clic ouvre la grille
 des types, avec une recherche et les types récents d'abord ; changer de type garde le nom, les ports et les connexions),

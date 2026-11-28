@@ -166,7 +166,7 @@ public sealed partial class SchemasPageTests
         // « + » sous le plan : un petit menu, une nouvelle page ou des pages d'un autre schéma.
         scene.Script("document.querySelector('.pages .plus').click()");
         scene.WaitFor("document.querySelector('.menu[role=menu]') !== null");
-        Assert.AreEqual("Nouvelle page|Pages d'un autre schéma…", Texts(scene, ".menu[role=menu] button"));
+        Assert.AreEqual("Nouvelle page|Pages d'un autre schéma…|Pages depuis un modèle…", Texts(scene, ".menu[role=menu] button"));
         WaitForFocus(scene, ".menu[role=menu] button.premier");
         scene.WaitFor("document.getAnimations().length === 0");
         scene.Picture($"schemas-pages-plus-{suffix}");
@@ -220,6 +220,27 @@ public sealed partial class SchemasPageTests
         MenuEntry(scene, "Nouvelle page");
         scene.WaitFor("document.querySelectorAll('.pages .onglet').length === 5");
         Assert.AreEqual("Page 5*", Tabs(scene).Split('|')[^1]);
+
+        // « + », « Pages depuis un modèle… » : la fenêtre des modèles, sans nom à donner ; « Ajouter » pose la page du
+        // modèle après les autres, et Ctrl+Z la retire.
+        scene.Script("document.querySelector('.pages .plus').click()");
+        scene.WaitFor("document.querySelector('.menu[role=menu]') !== null");
+        MenuEntry(scene, "Pages depuis un modèle…");
+        const string modeles = "dialog.dialogue-modeles[open]";
+        scene.WaitFor($"document.querySelectorAll('{modeles} .carte').length >= 5");
+        Assert.AreEqual("Ajouter les pages d'un modèle", TextOf(scene, $"document.querySelector('{modeles} h2').textContent").Trim());
+        Assert.AreEqual(0, Count(scene, $"{modeles} input.champ"), "les pages gardent leur nom : rien à nommer");
+        scene.WaitFor("document.getAnimations().length === 0");
+        scene.Picture($"schemas-pages-modele-{suffix}");
+        DialogButton(scene, modeles, "Ajouter");
+        scene.WaitFor("document.querySelector('dialog.dialogue-modeles') === null");
+        scene.WaitFor("document.querySelectorAll('.pages .onglet').length === 6");
+        Assert.AreEqual("Petit bureau*", Tabs(scene).Split('|')[^1]);
+        UiThread.Until(() => Saved(lycee)["pages"]!.AsArray().Count == 6 && Saved(lycee)["equipements"]!.AsArray().Count > 10, TimeSpan.FromSeconds(20));
+        WaitForFocus(scene, "svg.canevas");
+        Key(scene, "z", "KeyZ", 0x5A, modifiers: 2);
+        scene.WaitFor("document.querySelectorAll('.pages .onglet').length === 5");
+        UiThread.Until(() => Saved(lycee)["equipements"]!.AsArray().Count == 10, TimeSpan.FromSeconds(20));
     }
 
     [EngineTest]
@@ -237,7 +258,7 @@ public sealed partial class SchemasPageTests
 
         // Clic droit sur « Étage 2 » : copier, déplacer vers un autre schéma, en faire un nouveau.
         TabMenu(scene, 1);
-        StringAssert.Contains(Texts(scene, ".menu[role=menu] button"), "Déplacer à droite|Copier vers un autre schéma…|Déplacer vers un autre schéma…|Faire un nouveau schéma de cette page|Supprimer la page…", StringComparison.Ordinal);
+        StringAssert.Contains(Texts(scene, ".menu[role=menu] button"), "Déplacer à droite|Copier vers un autre schéma…|Déplacer vers un autre schéma…|Faire un nouveau schéma de cette page|Enregistrer cette page comme modèle…|Supprimer la page…", StringComparison.Ordinal);
         scene.WaitFor("document.getAnimations().length === 0");
         scene.Picture($"schemas-onglet-echanges-{suffix}");
         MenuEntry(scene, "Déplacer vers un autre schéma…");

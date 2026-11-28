@@ -523,6 +523,13 @@ export type Schema = {
   cablesCoudes?: boolean;
   /** Ce qui est affiché (D50) ; sinon, ce que prévoit la vue. */
   affichage?: Partial<Affichage>;
+  /**
+   * Étiquettes de classement posées à la main sur l'accueil (31E : « Lycée », « Client »…), pas celles des câbles ;
+   * la clé n'est écrite que s'il y en a. Une version qui ne les connaît pas les perd en réécrivant le schéma.
+   */
+  etiquettes?: string[];
+  /** Épinglé en tête de l'accueil (31A) ; la clé n'est écrite que s'il l'est. */
+  epingle?: true;
 };
 
 /** Informations affichées sur le schéma (D50), à l'écran comme à l'export. */

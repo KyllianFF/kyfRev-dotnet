@@ -19,6 +19,7 @@
     onenvoyer,
     onnouveauSchema,
     onmodele,
+    onpagesModele,
   }: {
     editeur: EditeurSchema;
     onchanger?: () => void;
@@ -30,6 +31,8 @@
     onnouveauSchema?: (page: string) => void;
     /** « Enregistrer cette page comme modèle… » (31E). */
     onmodele?: (page: string) => void;
+    /** « Pages depuis un modèle… » : ajouter ici les pages d'un modèle. */
+    onpagesModele?: () => void;
   } = $props();
 
   const pages = $derived(editeur.pages);
@@ -344,6 +347,9 @@
       {#if voulu.ajout}
         <button type="button" role="menuitem" class="premier" onclick={ajouter}>Nouvelle page</button>
         <button type="button" role="menuitem" onclick={() => choisir(() => onautresPages?.())}>Pages d'un autre schéma…</button>
+        {#if onpagesModele}
+          <button type="button" role="menuitem" onclick={() => choisir(() => onpagesModele?.())}>Pages depuis un modèle…</button>
+        {/if}
       {:else}
       {#if voulu.liste}
         {#each pages as p (p.id)}

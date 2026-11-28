@@ -73,7 +73,9 @@
   import DialogueEnvoyerPage from "./DialogueEnvoyerPage.svelte";
   import DialogueReunir from "./DialogueReunir.svelte";
   import { creerEchange, inscrireSchemaOuvert } from "../../lib/topologie/echanges";
-  import { schemaDeLaPage } from "../../lib/topologie/transfert";
+  import { compte, schemaDeLaPage } from "../../lib/topologie/transfert";
+  import { pagesDe } from "../../lib/topologie/pages";
+  import type { ModeleDeSchema } from "../../lib/topologie/modelesDeSchema";
   import PlanIp from "./PlanIp.svelte";
   import Plateau from "./Plateau.svelte";
   import RechercheSchema from "./RechercheSchema.svelte";
@@ -95,6 +97,7 @@
     retour = "Fermer",
     onconverti,
     choisis = [],
+    page = null,
     onouvrir,
     onfermer,
   }: {
@@ -108,8 +111,10 @@
     onconverti?: (id: string) => void;
     /** Éléments à choisir dès l'ouverture (les formes inconnues d'un import draw.io). */
     choisis?: string[];
-    /** Ouvrir un autre schéma à la place de celui-ci (un import « dans un nouveau schéma »), ces éléments choisis. */
-    onouvrir?: (id: string, choisis: string[]) => void;
+    /** Page à montrer dès l'ouverture, quand rien n'est choisi (un VLAN trouvé par la recherche dans tous les schémas). */
+    page?: string | null;
+    /** Ouvrir un autre schéma à la place de celui-ci (un import « dans un nouveau schéma »), ces éléments choisis, cette page. */
+    onouvrir?: (id: string, choisis: string[], page?: string) => void;
     onfermer: () => void;
   } = $props();
 
@@ -240,6 +245,18 @@
 
   /** « Nouveau schéma depuis un modèle… » : le dialogue des modèles. */
   let modelesOuverts = $state(false);
+  /** « + », « Pages depuis un modèle… » : la fenêtre des modèles, qui ajoute ici au lieu de créer. */
+  let pagesModeleOuvert = $state(false);
+
+  /** Les pages d'un modèle rejoignent celles du schéma, en une opération que Ctrl+Z annule. */
+  function ajouterPagesModele(modele: ModeleDeSchema) {
+    const ids = pagesDe(modele.schema).map((p) => p.id);
+    const fait = editeur.recevoirPages(modele.schema, ids);
+    if (fait) {
+      const n = fait.pages.length;
+      editeur.annonce = `${compte(n, "page ajoutée", "pages ajoutées")} depuis le modèle « ${modele.nom} » : Ctrl+Z pour ${n > 1 ? "les retirer" : "la retirer"}.`;
+    }
+  }
   /** « Enregistrer comme modèle… » : le schéma entier, ou une de ses pages. */
   let aEnregistrerCommeModele = $state<{ page?: string } | null>(null);
 
@@ -255,16 +272,16 @@
   }
 
   /** Ouvre un autre schéma à la place de celui-ci (enregistré d'abord), ces éléments choisis. */
-  async function ouvrirAutre(autre: string, choisis: string[] = []) {
+  async function ouvrirAutre(autre: string, choisis: string[] = [], page?: string) {
     await editeur.enregistrer();
-    if (onouvrir) onouvrir(autre, choisis);
+    if (onouvrir) onouvrir(autre, choisis, page);
     else editeur.annonce = "Le schéma est créé : il est dans la liste des schémas.";
   }
 
   /** Un résultat de la recherche dans tous les schémas : ici, il est montré ; ailleurs, son schéma s'ouvre. */
   function ouvrirTrouve(schemaId: string, page?: string, objet?: string) {
     if (schemaId !== editeur.id) {
-      void ouvrirAutre(schemaId, objet ? [objet] : []);
+      void ouvrirAutre(schemaId, objet ? [objet] : [], page);
       return;
     }
     rechercheOuverte = false;
@@ -387,6 +404,8 @@
         if (presents.length > 0) {
           editeur.page = editeur.pageDe(presents[0] ?? "") ?? "";
           editeur.selection = presents;
+        } else if (page && pagesDe(editeur.schema).some((p) => p.id === page)) {
+          editeur.montrerPage(page);
         }
         // Le plan prend la main : les raccourcis du clavier valent tout de suite.
         requestAnimationFrame(() => canevas?.focus());
@@ -1096,6 +1115,7 @@
       onenvoyer={(page, deplacer) => (envoi = { page, deplacer })}
       onnouveauSchema={(page) => void nouveauSchemaDeLaPage(page)}
       onmodele={(page) => void enregistrerCommeModele(page)}
+      onpagesModele={() => (pagesModeleOuvert = true)}
     />
     <Plateau avance={!simplifie} bind:pose onposer={(genre) => ajouter(genre)} />
   {/if}
@@ -1211,6 +1231,14 @@
 {/if}
 
 <DialogueModeles ouvert={modelesOuverts} onFermer={() => (modelesOuverts = false)} onCree={(cree) => void ouvrirAutre(cree)} />
+<DialogueModeles
+  ouvert={pagesModeleOuvert}
+  onFermer={() => {
+    pagesModeleOuvert = false;
+    rendreLaMain();
+  }}
+  onPages={ajouterPagesModele}
+/>
 
 {#if aEnregistrerCommeModele && editeur.id}
   <DialogueEnregistrerModele

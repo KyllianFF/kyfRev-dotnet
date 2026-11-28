@@ -11,7 +11,14 @@
   // dessinée comme les aperçus de la vue Schémas. Le nom proposé est celui du modèle ; « Créer » fait un nouveau schéma,
   // copie du modèle aux identifiants refaits. Un modèle de l'utilisateur se retire au clic droit sur sa vignette, ou
   // par « ⋯ », après une question.
-  let { ouvert, onFermer, onCree }: { ouvert: boolean; onFermer: () => void; onCree: (id: string) => void } = $props();
+  // Avec `onPages`, la même fenêtre ajoute les pages du modèle choisi au schéma ouvert (« + », « Pages depuis un
+  // modèle… ») : pas de nom à donner, les pages gardent les leurs.
+  let {
+    ouvert,
+    onFermer,
+    onCree,
+    onPages,
+  }: { ouvert: boolean; onFermer: () => void; onCree?: (id: string) => void; onPages?: (modele: ModeleDeSchema) => void } = $props();
 
   let integres = $state.raw<ModeleDeSchema[]>([]);
   let miens = $state.raw<ModeleDeSchema[] | null>(null);
@@ -79,13 +86,19 @@
   async function creer(e: SubmitEvent) {
     e.preventDefault();
     const m = modeleChoisi;
+    if (onPages) {
+      if (!m) return;
+      dialogue?.close();
+      onPages(m);
+      return;
+    }
     if (!m || occupe || !nom.trim()) return;
     occupe = true;
     erreur = null;
     try {
       const cree = await api.creerSchema(ecrireSchema(schemaDepuisModele(m.schema, nom)));
       dialogue?.close();
-      onCree(cree.id);
+      onCree?.(cree.id);
     } catch (err) {
       erreur = `Création impossible : ${messageErreur(err)}`;
     } finally {
@@ -173,7 +186,7 @@
 {#if ouvert}
   <dialog class="dialogue-modeles" aria-labelledby="titre-modeles" bind:this={dialogue} use:preparer onclose={onFermer}>
     <form onsubmit={creer}>
-      <h2 id="titre-modeles">Nouveau schéma depuis un modèle</h2>
+      <h2 id="titre-modeles">{onPages ? "Ajouter les pages d'un modèle" : "Nouveau schéma depuis un modèle"}</h2>
       <div class="defile">
         <div class="grille" role="radiogroup" aria-label="Modèles">
           {#each integres as m, rang (m.id)}{@render vignette(m, rang)}{/each}
@@ -192,14 +205,16 @@
           </div>
         {/if}
       </div>
-      <label class="champ-nom">
-        Nom du nouveau schéma
-        <input class="champ" bind:value={nom} oninput={() => (nomTape = true)} maxlength="200" required />
-      </label>
+      {#if !onPages}
+        <label class="champ-nom">
+          Nom du nouveau schéma
+          <input class="champ" bind:value={nom} oninput={() => (nomTape = true)} maxlength="200" required />
+        </label>
+      {/if}
       {#if erreur}<p class="erreur" role="alert">{erreur}</p>{/if}
       <div class="actions">
         <button type="button" class="bouton" onclick={() => dialogue?.close()}>Annuler</button>
-        <button type="submit" class="bouton principal" disabled={occupe || !modeleChoisi || !nom.trim()}>Créer</button>
+        <button type="submit" class="bouton principal" disabled={occupe || !modeleChoisi || (!onPages && !nom.trim())}>{onPages ? "Ajouter" : "Créer"}</button>
       </div>
     </form>
 
