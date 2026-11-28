@@ -441,7 +441,8 @@ public sealed partial class SchemasPageTests
         Narrow(scene);
         Expect(scene, "document.querySelector('.entete-accueil button[aria-label^=\"Plus d\\'actions\"]') !== null");
         Assert.AreEqual(2, Columns());
-        Assert.AreEqual("false", scene.Script("[...document.querySelectorAll('.entete-accueil button')].some((b) => b.textContent.trim() === 'Importer…')"));
+        // L'en-tête suit la largeur qu'il mesure, un peu après la grille : on l'attend.
+        Expect(scene, "![...document.querySelectorAll('.entete-accueil button')].some((b) => b.textContent.trim() === 'Importer…')");
         Assert.AreEqual("Client 2|Lycée 2|TP 2|Filtres", Chips(scene));
         Assert.AreEqual("true", scene.Script("[...document.querySelectorAll('li.carte .meta')].every((m) => m.scrollHeight <= 20)"), "une seule ligne d'infos");
         NoSideScroll(scene, "à 470");
@@ -489,7 +490,7 @@ public sealed partial class SchemasPageTests
         // Très large : six cartes par ligne, au plus.
         Resize(scene, 2560);
         Expect(scene, "getComputedStyle(document.querySelector('ul.grille')).gridTemplateColumns.split(' ').length > 2");
-        Assert.AreEqual("true", scene.Script("[...document.querySelectorAll('.entete-accueil button')].some((b) => b.textContent.trim() === 'Importer…')"));
+        Expect(scene, "[...document.querySelectorAll('.entete-accueil button')].some((b) => b.textContent.trim() === 'Importer…')");
         Assert.IsLessThanOrEqualTo(6, Columns());
         Assert.IsGreaterThanOrEqualTo(5, Columns(), "la place est prise");
         NoSideScroll(scene, "à 2560");
