@@ -56,4 +56,17 @@ public sealed class SchemaUseCases(VaultHost host)
     /// <summary>Lit un fichier choisi pour l'import : rien n'est écrit dans le coffre.</summary>
     [ZeroXCommand("lire_import_schema")]
     public Outcome<string> ReadImport(string path) => host.Use(vault => vault.ReadSchemaToImport(path));
+
+    /// <summary>Les modèles de schéma de l'utilisateur (« Mes modèles »), par nom.</summary>
+    public Outcome<IReadOnlyList<SchemaDocument>> Templates() => host.Use(vault => vault.SchemaTemplates());
+
+    /// <summary>Enregistre un modèle de schéma : vérifié, il reçoit un identifiant neuf.</summary>
+    public Outcome<SchemaDocument> CreateTemplate(string text) => host.Use(vault => vault.CreateSchemaTemplate(text));
+
+    /// <summary>Retire un modèle de schéma : son fichier est rangé à part, rien n'est effacé.</summary>
+    public Outcome<bool> RemoveTemplate(string id) => host.Use(vault =>
+    {
+        vault.RemoveSchemaTemplate(id);
+        return true;
+    });
 }

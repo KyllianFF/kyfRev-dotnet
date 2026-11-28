@@ -405,6 +405,15 @@ public interface ISchemaStore
 
     /// <summary>Lit un fichier choisi pour l'import : rien n'est écrit dans le coffre.</summary>
     string ReadSchemaToImport(string path);
+
+    /// <summary>Les modèles de schéma de l'utilisateur, par nom : rangés à part, ils ne sont pas des schémas du coffre.</summary>
+    IReadOnlyList<SchemaDocument> SchemaTemplates();
+
+    /// <summary>Enregistre un modèle de schéma : vérifié comme un schéma, il reçoit un identifiant neuf.</summary>
+    SchemaDocument CreateSchemaTemplate(string text);
+
+    /// <summary>Retire un modèle de schéma : il n'est plus proposé ; son fichier est rangé à part, pas effacé.</summary>
+    void RemoveSchemaTemplate(string id);
 }
 
 /// <summary>Citations du coffre (module Citations).</summary>

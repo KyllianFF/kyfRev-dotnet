@@ -101,6 +101,50 @@ public abstract class VaultAdapterTests(StorageKind storage)
     }
 
     [TestMethod]
+    public void Schema_templates_are_kept_apart_from_the_schemas_and_put_aside_without_being_erased()
+    {
+        using var folder = TemporaryVault.Empty(storage);
+        using var vault = new VaultStore(storage: folder.Storage).Initialize(folder.Root, Now);
+        Assert.IsEmpty(vault.SchemaTemplates(), "Pas même le dossier.");
+        var schema = vault.CreateSchema("{\"format\": 2, \"titre\": \"Lycée\"}");
+
+        // Un modèle reçoit son identifiant ; les modèles se lisent par nom.
+        var etage = vault.CreateSchemaTemplate("{\"format\": 2, \"titre\": \"étage type\", \"id\": \"s_ignore\"}");
+        var bureau = vault.CreateSchemaTemplate("{\"format\": 3, \"titre\": \"Bureau\", \"description\": \"Box et postes\"}");
+        StringAssert.StartsWith(etage.Id, "s_", StringComparison.Ordinal);
+        StringAssert.Contains(etage.Text, $"\"id\": \"{etage.Id}\"", StringComparison.Ordinal);
+        CollectionAssert.AreEqual(new[] { bureau.Id, etage.Id }, vault.SchemaTemplates().Select(template => template.Id).ToList());
+        Assert.AreEqual(bureau, vault.SchemaTemplates()[0]);
+
+        // Ce ne sont pas des schémas : ni dans la liste, ni à part, ni lisibles par une fiche.
+        Assert.AreEqual(schema.Id, vault.Schemas().Single().Id);
+        Assert.IsEmpty(vault.SchemasAside());
+        Assert.AreEqual(VaultErrorKind.UnknownSchema, Assert.ThrowsExactly<VaultException>(() => vault.ReadSchema(etage.Id)).Kind);
+        Assert.IsTrue(folder.Storage.FileExists(folder.PathOf($"schemas/modeles/{etage.Id}.json")));
+
+        // Un fichier qui ne se lit pas comme un modèle n'est pas proposé.
+        folder.Write("schemas/modeles/XXX.json", "{\"format\": 2}");
+        folder.Write($"schemas/modeles/s_{new string('1', 26)}.json", "{ cassé");
+        folder.Write($"schemas/modeles/s_{new string('2', 26)}.json", $"{{\"format\": 2, \"id\": \"s_{new string('3', 26)}\"}}");
+        folder.WriteBytes($"schemas/modeles/s_{new string('4', 26)}.json", [0x7B, 0xE9, 0x7D]);
+        Assert.HasCount(2, vault.SchemaTemplates());
+
+        // Retiré : il n'est plus proposé, et son fichier est rangé à part.
+        vault.RemoveSchemaTemplate(etage.Id);
+        Assert.AreEqual(bureau.Id, vault.SchemaTemplates().Single().Id);
+        Assert.IsTrue(folder.Storage.FileExists(folder.PathOf($"schemas/modeles/.supprimes/{etage.Id}.json")));
+        Assert.AreEqual(VaultErrorKind.UnknownSchema, Assert.ThrowsExactly<VaultException>(() => vault.RemoveSchemaTemplate(etage.Id)).Kind);
+        Assert.AreEqual(VaultErrorKind.UnknownSchema, Assert.ThrowsExactly<VaultException>(() => vault.RemoveSchemaTemplate("../fiches")).Kind);
+        Assert.AreEqual(VaultErrorKind.UnknownSchema, Assert.ThrowsExactly<VaultException>(() => vault.RemoveSchemaTemplate(schema.Id)).Kind, "Un schéma n'est pas un modèle.");
+        Assert.ThrowsExactly<ArgumentNullException>(() => vault.RemoveSchemaTemplate(null!));
+
+        // Un texte qui n'est pas un schéma est refusé, sans rien écrire.
+        Assert.AreEqual(VaultErrorKind.InvalidSchema, Assert.ThrowsExactly<VaultException>(() => vault.CreateSchemaTemplate("[]")).Kind);
+        Assert.AreEqual(VaultErrorKind.InvalidSchema, Assert.ThrowsExactly<VaultException>(() => vault.CreateSchemaTemplate("{\"format\": 9}")).Kind);
+        Assert.AreEqual(bureau.Id, vault.SchemaTemplates().Single().Id);
+    }
+
+    [TestMethod]
     public void Schemas_reach_the_session_and_a_conflict_says_what_the_disk_holds()
     {
         using var folder = TemporaryVault.Empty(storage);

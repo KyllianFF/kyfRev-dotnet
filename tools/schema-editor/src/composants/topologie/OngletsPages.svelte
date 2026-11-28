@@ -10,7 +10,16 @@
   // ajoute une ; clic droit (ou la touche Menu) : renommer, dupliquer, déplacer, supprimer ; double clic : renommer ;
   // glisser un onglet le déplace. Quand les onglets ne tiennent plus (fenêtre étroite), ils se replient en un menu
   // « Étage 1 ▾ » suivi de « 1 / 4 » et de « + ».
-  let { editeur, onchanger }: { editeur: EditeurSchema; onchanger?: () => void } = $props();
+  let {
+    editeur,
+    onchanger,
+    onmodele,
+  }: {
+    editeur: EditeurSchema;
+    onchanger?: () => void;
+    /** « Enregistrer cette page comme modèle… » (31E), au clic droit sur un onglet. */
+    onmodele?: (page: string) => void;
+  } = $props();
 
   const pages = $derived(editeur.pages);
   const montree = $derived(editeur.pageMontree);
@@ -315,6 +324,10 @@
       <!-- Le rang se lit avant de fermer le menu : fermé, il n'a plus de page. -->
       <button type="button" role="menuitem" disabled={rang <= 0} onclick={() => deplacer(rang - 1)}>Déplacer à gauche</button>
       <button type="button" role="menuitem" disabled={rang < 0 || rang >= pages.length - 1} onclick={() => deplacer(rang + 1)}>Déplacer à droite</button>
+      {#if onmodele}
+        <hr />
+        <button type="button" role="menuitem" onclick={() => choisir((id) => onmodele?.(id))}>Enregistrer cette page comme modèle…</button>
+      {/if}
       <hr />
       <button type="button" role="menuitem" class="danger" disabled={!plusieurs} title={plusieurs ? undefined : "Un schéma garde au moins une page."} onclick={() => choisir((id) => (aSupprimer = id))}>Supprimer la page…</button>
     </div>

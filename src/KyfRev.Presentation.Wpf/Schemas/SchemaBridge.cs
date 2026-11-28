@@ -96,6 +96,8 @@ internal sealed class SchemaBridge(SchemaUseCases schemas, IFolderPicker folders
     private static JsonObject Document(SchemaDocument document) =>
         new() { ["id"] = document.Id, ["texte"] = document.Text, ["empreinte"] = document.Fingerprint };
 
+    private static JsonArray Documents(IReadOnlyList<SchemaDocument> list) => [.. list.Select(document => (JsonNode)Document(document))];
+
     private static JsonArray Summaries(IReadOnlyList<SchemaSummary> list)
     {
         var rows = new JsonArray();
@@ -168,6 +170,14 @@ internal sealed class SchemaBridge(SchemaUseCases schemas, IFolderPicker folders
             case "dupliquerSchema":
                 var duplicated = Argument(args, 0);
                 return Answer(await Task.Run(() => schemas.Duplicate(duplicated)).ConfigureAwait(true), Document);
+            case "modelesSchema":
+                return Answer(await Task.Run(schemas.Templates).ConfigureAwait(true), Documents);
+            case "creerModeleSchema":
+                var template = Argument(args, 0);
+                return Answer(await Task.Run(() => schemas.CreateTemplate(template)).ConfigureAwait(true), Document);
+            case "retirerModeleSchema":
+                var removed = Argument(args, 0);
+                return Answer(await Task.Run(() => schemas.RemoveTemplate(removed)).ConfigureAwait(true), _ => null);
             case "exporterSchema":
                 var (folder, name, content) = (Argument(args, 0), Argument(args, 1), Convert.FromBase64String(Argument(args, 2)));
                 return Answer(await Task.Run(() => schemas.Export(folder, name, content)).ConfigureAwait(true), path => path);
