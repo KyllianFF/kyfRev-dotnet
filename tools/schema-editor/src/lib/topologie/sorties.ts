@@ -164,6 +164,33 @@ export async function exporterSchema(
   return api.exporterSchema(dossier, nomDeFichier(titre, format), await octetsDe(schema, format, vue, icones, page));
 }
 
+/**
+ * Plusieurs schémas d'un coup (31B) : le dossier se demande une fois, puis chaque schéma y devient son propre fichier,
+ * sous son titre (l'application n'écrase rien : deux titres pareils donnent deux fichiers). Une image montre la première
+ * page, et ne sort pas d'un schéma vide, qui est sauté. Rend le dossier, les fichiers écrits et les schémas sautés, ou
+ * `null` si le choix du dossier a été annulé : rien n'est écrit.
+ */
+export async function exporterSchemas(
+  schemas: readonly Schema[],
+  format: FormatExport,
+  icones?: IconesDrawio,
+): Promise<{ dossier: string; ecrits: number; sautes: number } | null> {
+  const dossier = await api.choisirDossier("Dossier où enregistrer l'export des schémas");
+  if (!dossier) return null;
+  let ecrits = 0;
+  let sautes = 0;
+  for (const schema of schemas) {
+    if (estImage(format) && estVide(schema)) {
+      sautes++;
+      continue;
+    }
+    const titre = estImage(format) ? titreDeLaSortie(schema) : schema.titre;
+    await api.exporterSchema(dossier, nomDeFichier(titre, format), await octetsDe(schema, format, undefined, icones));
+    ecrits++;
+  }
+  return { dossier, ecrits, sautes };
+}
+
 /** Copie l'image PNG du schéma (sa première page, ou `page`) dans le presse-papiers, prête à être collée ailleurs. */
 export async function partagerSchema(schema: Schema, vue?: Vue, page?: string): Promise<void> {
   await api.copierImageSchema(await enPng(svgAutonome(schema, vue, page)));

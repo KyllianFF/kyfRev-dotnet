@@ -224,8 +224,8 @@ public sealed partial class SchemasPageTests
         scene.WaitFor("document.querySelector('.bouton.principal') !== null");
         StringAssert.Contains(scene.Script("document.body.innerText"), "Aucun schéma réseau", StringComparison.Ordinal);
 
-        // Nouveau schéma : un nom, puis l'éditeur, et le fichier est écrit dans le coffre.
-        scene.Script("document.querySelector('.bouton.principal').click()");
+        // Nouveau schéma ▾ › Schéma vide : un nom, puis l'éditeur, et le fichier est écrit dans le coffre.
+        NewEmptySchema(scene);
         scene.WaitFor("document.querySelector('dialog[open] input') !== null");
         scene.Script("const champ = document.querySelector('dialog[open] input'); champ.value = 'Réseau du lycée'; champ.dispatchEvent(new Event('input', { bubbles: true })); document.querySelector('dialog[open] form').requestSubmit()");
         scene.WaitFor("document.querySelector('dialog[open] svg') !== null");
@@ -243,8 +243,7 @@ public sealed partial class SchemasPageTests
     public void The_simple_mode_places_devices_and_cables_without_ports_circles_aggregates_and_labels_trunks(ThemeKind theme)
     {
         using var scene = new IslandScene(theme: theme);
-        scene.WaitFor("document.querySelector('.bouton.principal') !== null");
-        scene.Script("document.querySelector('.bouton.principal').click()");
+        NewEmptySchema(scene);
         scene.WaitFor("document.querySelector('dialog[open] input') !== null");
         scene.Script("const champ = document.querySelector('dialog[open] input'); champ.value = 'Site de Meylan'; champ.dispatchEvent(new Event('input', { bubbles: true })); document.querySelector('dialog[open] form').requestSubmit()");
         scene.WaitFor("document.querySelector('dialog[open] svg.canevas') !== null");
@@ -578,12 +577,14 @@ public sealed partial class SchemasPageTests
         using var scene = new IslandScene(Text);
         scene.WaitFor("document.querySelector('li.carte') !== null");
 
-        // Le vrai clic droit, dans l'îlot, sur la carte : Détail et Modifier en tête, puis les trois sorties, entre « Dupliquer » et « Archiver ».
+        // Le vrai clic droit, dans l'îlot, sur la carte : Détail et Modifier en tête, puis ce qui retouche le schéma, ce qui
+        // l'ajoute ailleurs, les trois sorties, et enfin « Archiver » et « Supprimer… ».
         scene.Script("document.querySelector('li.carte').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 60, clientY: 60 }))");
         scene.WaitFor("document.querySelector('.menu[role=menu]') !== null");
-        var order = JsonSerializer.Deserialize<string>(scene.Script("[...document.querySelectorAll('.menu [role=menuitem]')].map((entree) => entree.textContent.trim()).join(' | ')"))!;
-        StringAssert.StartsWith(order, "Détail | Modifier | Dupliquer", StringComparison.Ordinal);
-        StringAssert.Contains(order, "Dupliquer | Copier l'image | Exporter… | Imprimer… | Archiver | Supprimer…", StringComparison.Ordinal);
+        var order = JsonSerializer.Deserialize<string>(scene.Script("[...document.querySelectorAll('.menu [role=menuitem]')].map((entree) => entree.textContent.trim().replace(/\\s+/g, ' ')).join(' | ')"))!;
+        Assert.AreEqual(
+            "Détail | Modifier | Renommer F2 | Épingler | Étiqueter… | Dupliquer | Ajouter à un schéma… | Enregistrer comme modèle… | Copier l'image | Exporter… | Imprimer… | Archiver | Supprimer…",
+            order);
         Assert.AreEqual("true", scene.Script("(() => { const m = document.querySelector('.menu[role=menu]').getBoundingClientRect(); return m.left >= 0 && m.top >= 0 && m.right <= innerWidth && m.bottom <= innerHeight; })()"), "le menu tient dans la fenêtre");
 
         // « Copier l'image » : l'îlot dessine le schéma, le pont reçoit une vraie image PNG, et l'îlot le dit.
@@ -707,8 +708,11 @@ public sealed partial class SchemasPageTests
         var file = Path.Combine(folder, "labo.drawio");
         File.WriteAllText(file, ForeignDrawIo);
         ((SchemasPageViewModel)scene.Page.DataContext).PickSchemaFile = () => file;
-        scene.WaitFor("[...document.querySelectorAll('button')].some((bouton) => bouton.textContent.trim() === 'Importer…' && !bouton.disabled)");
-        scene.Script("[...document.querySelectorAll('button')].find((bouton) => bouton.textContent.trim() === 'Importer…').click()");
+        // À 470 pixels, « Importer… » est sous « ⋯ », dans l'en-tête (31F).
+        scene.WaitFor("document.querySelector('.entete-accueil button[aria-haspopup=menu]:not(.principal):not(:disabled)') !== null");
+        scene.Script("document.querySelector('.entete-accueil button[aria-haspopup=menu]:not(.principal)').click()");
+        scene.WaitFor("[...document.querySelectorAll('.menu [role=menuitem]')].some((entree) => entree.textContent.trim() === 'Importer…')");
+        scene.Script("[...document.querySelectorAll('.menu [role=menuitem]')].find((entree) => entree.textContent.trim() === 'Importer…').click()");
         scene.WaitFor("document.querySelector('dialog.dialogue-import[open]') !== null");
         StringAssert.Contains(scene.Script("document.querySelector('dialog[open]').textContent"), "Un fichier Visio (.vsdx) : ouvrez-le dans draw.io, puis enregistrez-le en .drawio.", StringComparison.Ordinal);
         scene.Script("document.querySelector('dialog[open] form').requestSubmit()");

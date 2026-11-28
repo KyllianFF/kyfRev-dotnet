@@ -590,10 +590,39 @@ export function lireSchema(source: string | unknown): Lecture {
     vue: VUES.find((v) => v === brut.vue) ?? "physique",
     cablesCoudes: booleen(brut.cablesCoudes),
     affichage: lireAffichage(brut.affichage),
+    etiquettes: lireEtiquettes(brut.etiquettes),
+    epingle: booleen(brut.epingle),
   });
   rangerPages(schema);
   ranger(schema);
   return { schema, erreurs: erreursStructurelles(schema), migre: false };
+}
+
+/** Étiquettes de classement d'un schéma, au plus, et leur longueur. */
+export const ETIQUETTES_MAX = 20;
+export const ETIQUETTE_MAX = 40;
+
+/**
+ * Les étiquettes de classement (31E) : textes d'une ligne, sans espaces en trop, bornés, sans doublon (à la casse
+ * près : la première écriture gagne). Aucune : rien, et la clé ne s'écrit pas.
+ */
+export function lireEtiquettes(valeur: unknown): string[] | undefined {
+  if (!Array.isArray(valeur)) return undefined;
+  const vues = new Set<string>();
+  const etiquettes: string[] = [];
+  for (const brute of valeur.slice(0, ELEMENTS_MAX)) {
+    const nette = texte(brute, ETIQUETTE_MAX * 4)
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, ETIQUETTE_MAX)
+      .trim();
+    const cle = nette.toLocaleLowerCase("fr-FR");
+    if (!nette || vues.has(cle)) continue;
+    vues.add(cle);
+    etiquettes.push(nette);
+    if (etiquettes.length === ETIQUETTES_MAX) break;
+  }
+  return etiquettes.length > 0 ? etiquettes : undefined;
 }
 
 /** Pages d'un schéma, au plus : bien plus qu'il n'en faut pour les étages d'un bâtiment. */

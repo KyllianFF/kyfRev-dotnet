@@ -7,6 +7,7 @@
   let {
     titre,
     vide = false,
+    nombre = 1,
     onvalider,
     onfermer,
   }: {
@@ -14,6 +15,8 @@
     titre: string;
     /** Schéma sans équipement : pas d'image, seul le modèle s'exporte. */
     vide?: boolean;
+    /** Plusieurs schémas choisis sur l'accueil (31B) : un fichier par schéma, dans le même dossier. */
+    nombre?: number;
     /** Le format choisi ; pour draw.io, les icônes aussi. */
     onvalider: (format: FormatExport, icones: IconesDrawio) => void;
     onfermer: () => void;
@@ -48,8 +51,16 @@
   }}
 >
   <form onsubmit={valider}>
-    <h2 id="titre-export">Exporter le schéma</h2>
-    <p id="schema-export" class="schema">« {titre} »</p>
+    {#if nombre > 1}
+      <h2 id="titre-export">Exporter {nombre} schémas</h2>
+      <p id="schema-export" class="schema">
+        Un fichier par schéma, sous son titre, dans le dossier choisi ensuite. Une image montre la première page, et ne sort pas
+        d'un schéma vide.
+      </p>
+    {:else}
+      <h2 id="titre-export">Exporter le schéma</h2>
+      <p id="schema-export" class="schema">« {titre} »</p>
+    {/if}
     <fieldset>
       <legend class="visuellement-cache">Format de l'export</legend>
       {#each FORMATS_EXPORT as f (f.valeur)}
