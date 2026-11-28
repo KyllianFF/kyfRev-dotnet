@@ -230,6 +230,7 @@ public sealed partial class SchemasPageTests
         scene.WaitFor($"document.querySelectorAll('{modeles} .carte').length >= 5");
         Assert.AreEqual("Ajouter les pages d'un modèle", TextOf(scene, $"document.querySelector('{modeles} h2').textContent").Trim());
         Assert.AreEqual(0, Count(scene, $"{modeles} input.champ"), "les pages gardent leur nom : rien à nommer");
+        scene.WaitFor("document.activeElement?.dataset.modele === 'petit-bureau'");
         scene.WaitFor("document.getAnimations().length === 0");
         scene.Picture($"schemas-pages-modele-{suffix}");
         DialogButton(scene, modeles, "Ajouter");

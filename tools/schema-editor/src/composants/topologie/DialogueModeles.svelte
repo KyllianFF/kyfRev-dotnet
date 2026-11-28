@@ -61,6 +61,8 @@
     nomTape = false;
     choisir(integres[0]?.id ?? "");
     dialog.showModal();
+    // Les vignettes ne sont dessinées qu'au tour suivant : la main va alors à celle qui est choisie, pas à « Annuler ».
+    void tick().then(() => dialog.querySelector<HTMLElement>(`[data-modele="${choisi}"]`)?.focus());
     void chargerMiens();
   }
 
