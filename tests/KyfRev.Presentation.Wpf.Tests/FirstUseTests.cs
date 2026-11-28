@@ -3,6 +3,7 @@ using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Media;
 using KyfRev.Application.Model;
+using KyfRev.DesignSystem.Controls;
 using KyfRev.Presentation.Wpf.Pages;
 using KyfRev.Presentation.Wpf.Shell;
 
@@ -204,6 +205,16 @@ public sealed class FirstUseTests
             TestShell.Flush();
             Assert.IsFalse(problem.IsVisible);
             Assert.AreEqual(2, asked);
+
+            // Un groupe replié : son chevron tourne d'un quart au lieu de changer de glyphe (rangée 19).
+            var group = model.Rows.OfType<DashboardGroup>().First(candidate => candidate.Count > 0);
+            Icon Chevron() => Descendants(page).OfType<Icon>().Single(icon => icon.Name == "Chevron" && ReferenceEquals(icon.DataContext, group));
+            Assert.AreEqual(0, ((RotateTransform)Chevron().RenderTransform).Angle);
+            group.ToggleCommand.Execute(null);
+            TestShell.Flush();
+            Assert.AreEqual(Icons.ChevronDown, Chevron().Text);
+            Assert.AreEqual(Transitions.FoldedAngle, ((RotateTransform)Chevron().RenderTransform).Angle);
+            host.Capture($"aujourdhui-groupe-replie-{width}-{(dark ? "sombre" : "clair")}");
             var without = new FirstSteps(new FirstUse());
             Assert.IsFalse(without.CanOpenSample, "sans emplacement prévu, pas de lien");
             without.OpenSampleVaultCommand.Execute(null);

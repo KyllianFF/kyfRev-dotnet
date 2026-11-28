@@ -211,6 +211,7 @@ public static partial class Transitions
                 StopSlide(element);
             }
         };
+        CacheWhileMoving(element, reveal);
         move.BeginAnimation(TranslateTransform.XProperty, Along(dx));
         move.BeginAnimation(TranslateTransform.YProperty, Along(dy));
         clip.BeginAnimation(RectangleGeometry.RectProperty, reveal);
@@ -220,6 +221,7 @@ public static partial class Transitions
     /// <summary>L'élément redevient entier, à sa place : plus de découpe, plus de décalage, son opacité d'origine.</summary>
     private static void StopSlide(FrameworkElement element)
     {
+        EndTrips(element);
         element.BeginAnimation(UIElement.OpacityProperty, null);
         if (element.Clip is RectangleGeometry { IsFrozen: false })
         {
