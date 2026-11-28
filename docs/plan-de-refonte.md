@@ -903,12 +903,12 @@ le job « Installateur » de `.github/workflows/verification.yml`, qui tourne à
 | Nom, éditeur, version, date et icône dans l'assistant et dans Paramètres › Applications | En partie | CI : le nom, la version et l'éditeur inscrits dans Paramètres › Applications, pas la date ni l'icône ; l'assistant a servi à la main sur le poste, sans relevé de ces cinq points |
 | Coffre intact après désinstallation | Vérifié | CI : les données du profil restent après la désinstallation |
 | Version portable : rien d'écrit hors du dossier | En partie | CI : `tools/portable-tests.ps1` (journal dans le dossier, rien dans les dossiers kyfRev du profil) ; la comparaison du registre et d'AppData avant et après n'est pas faite |
-| Mise à jour depuis l'application, d'une version publiée à la suivante | Non vérifiée | La 1.1.0-beta.2 est la première à la porter : l'essai se fera à la version suivante |
+| Mise à jour depuis l'application, d'une version publiée à la suivante | Vérifiée à la main, une fois | Le 19 novembre 2026, l'auteur a mis à jour son kyfRev installé vers la 1.1.0-beta.3 depuis Paramètres › À propos, et la mise à jour a fonctionné |
 | Parité fonctionnelle avec la 0.8.0 (§1.1) | Relevée par lecture du code et des essais, pas par un essai à la main : sur 92 fonctions, 87 présentes avec un essai, 1 sans essai trouvé (la signature, facultative), 1 partielle (les formules), 3 abandonnées par décision | `docs/parite-0.8.0.md` ; partielle : une formule que le moteur natif ne connaît pas reste en source TeX, le repli sur le moteur web prévu au §2.6 n'existe pas |
 
 Restent donc, avant une version stable : un essai sur Windows 10 22H2, l'installation pour tous de bout en bout
 (désinstallation comprise), la comparaison du registre et d'AppData pour la version portable, le relevé de ce que montre
-l'assistant, la première mise à jour depuis l'application, un essai à la main avec le Narrateur, les voix et la souris
+l'assistant, un essai à la main avec le Narrateur, les voix et la souris
 (resté ouvert depuis J7), et le repli des formules que le moteur natif ne connaît pas, ou la décision d'y renoncer.
 
 ### Après la 1.0
