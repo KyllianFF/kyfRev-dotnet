@@ -67,6 +67,11 @@
   import DialogueExport from "./DialogueExport.svelte";
   import DialogueImport from "./DialogueImport.svelte";
   import OngletsPages from "./OngletsPages.svelte";
+  import DialogueAjouterPages from "./DialogueAjouterPages.svelte";
+  import DialogueEnvoyerPage from "./DialogueEnvoyerPage.svelte";
+  import DialogueReunir from "./DialogueReunir.svelte";
+  import { creerEchange, inscrireSchemaOuvert } from "../../lib/topologie/echanges";
+  import { schemaDeLaPage } from "../../lib/topologie/transfert";
   import PlanIp from "./PlanIp.svelte";
   import Plateau from "./Plateau.svelte";
   import RechercheSchema from "./RechercheSchema.svelte";
@@ -354,6 +359,29 @@
 
   // Avant le verrouillage du coffre, l'application demande de finir : le schéma ouvert s'enregistre, et dit ce qu'il en reste.
   onMount(() => inscrireEditeur(() => editeur.finir()));
+  // Les échanges de pages entre schémas (31D) lisent et modifient le schéma ouvert par l'éditeur, jamais par son fichier.
+  onMount(() => inscrireSchemaOuvert(editeur));
+
+  // --- Échanges entre schémas : réunir (31C), ajouter des pages d'un autre, envoyer une page ailleurs (31D) ---
+
+  let reunirOuvert = $state(false);
+  let autresPagesOuvert = $state(false);
+  let envoi = $state<{ page: string; deplacer: boolean } | null>(null);
+
+  /** « Faire un nouveau schéma de cette page » : il est créé dans le coffre ; celui-ci ne change pas. */
+  async function nouveauSchemaDeLaPage(page: string) {
+    try {
+      const { schema: nouveau, transfert } = schemaDeLaPage($state.snapshot(editeur.schema) as Schema, page);
+      await creerEchange(nouveau);
+      const reste =
+        transfert.cablesRetires > 0
+          ? ` ${transfert.cablesRetires > 1 ? `${transfert.cablesRetires} câbles vers d'autres pages n'y sont pas` : "1 câble vers une autre page n'y est pas"}.`
+          : "";
+      editeur.annonce = `Nouveau schéma « ${nouveau.titre} » créé : il est dans la liste des schémas.${reste}`;
+    } catch (e) {
+      editeur.annonce = `Nouveau schéma impossible : ${messageErreur(e)}`;
+    }
+  }
 
   // L'annonce disparaît d'elle-même.
   $effect(() => {
@@ -900,6 +928,7 @@
             {#if !simplifie}
               <button type="button" role="menuitem" onclick={() => { menu = null; planIpOuvert = true; }}>Plan IP</button>
               <button type="button" role="menuitem" onclick={importer}>Importer…</button>
+              <button type="button" role="menuitem" onclick={() => { menu = null; reunirOuvert = true; }}>Réunir avec d'autres schémas…</button>
             {/if}
             <button type="button" role="menuitem" onclick={() => { menu = null; exportOuvert = true; }}>Exporter…</button>
             <button type="button" role="menuitem" onclick={imprimer}>Imprimer…</button>
@@ -1008,7 +1037,12 @@
       {/if}
     </div>
 
-    <OngletsPages {editeur} />
+    <OngletsPages
+      {editeur}
+      onautresPages={() => (autresPagesOuvert = true)}
+      onenvoyer={(page, deplacer) => (envoi = { page, deplacer })}
+      onnouveauSchema={(page) => void nouveauSchemaDeLaPage(page)}
+    />
     <Plateau avance={!simplifie} bind:pose onposer={(genre) => ajouter(genre)} />
   {/if}
 
@@ -1079,6 +1113,30 @@
     onvalider={(format, icones) => void exporter(format, icones)}
     onfermer={() => (exportOuvert = false)}
   />
+{/if}
+
+<DialogueReunir
+  ids={editeur.id ? [editeur.id] : []}
+  ouvert={reunirOuvert}
+  onFermer={() => (reunirOuvert = false)}
+  onFait={(nouveau) => {
+    reunirOuvert = false;
+    // Le schéma réuni s'ouvre à la place de celui-ci, s'il y a où l'ouvrir.
+    if (onouvrir) onouvrir(nouveau, []);
+    else editeur.annonce = "Schéma réuni créé : il est dans la liste des schémas.";
+  }}
+/>
+
+<DialogueAjouterPages
+  cible={editeur.id || null}
+  sources={[]}
+  ouvert={autresPagesOuvert}
+  onFermer={() => (autresPagesOuvert = false)}
+  onFait={() => (autresPagesOuvert = false)}
+/>
+
+{#if envoi}
+  <DialogueEnvoyerPage {editeur} page={envoi.page} deplacer={envoi.deplacer} onfermer={() => (envoi = null)} />
 {/if}
 
 {#if importOuvert}
