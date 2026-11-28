@@ -8,6 +8,13 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 ## [Non publié]
 
 ### Ajouté
+- Paramètres › Menu : chaque vue du menu a sa case (maquette 8A). Décochée, elle quitte le menu de gauche et ses onglets
+  en fenêtre étroite, mais s'ouvre toujours par la recherche (Ctrl+K) et par Ctrl+chiffre, après les vues montrées.
+  Aujourd'hui reste toujours. Le choix est retenu sur cet ordinateur, avec l'ordre du menu ; « Menu d'origine » remet
+  l'ordre et remontre tout.
+- Aujourd'hui, carte « Premiers pas » : « Ouvrir un coffre d'exemple » (maquette 14C), le même que celui de l'accueil,
+  dans son dossier à part. Votre coffre est seulement fermé, sans rien y changer ; il se rouvre par Paramètres › Coffre et
+  chiffrement › « Ouvrir un autre coffre… ».
 - Schémas réseau : réunir des schémas en un seul, nouveau, à plusieurs pages (31C). Un schéma d'une page y devient une
   page à son titre, un schéma à plusieurs pages garde les siennes ; leur ordre se glisse (Alt+flèches au clavier). Tous
   les identifiants sont refaits ; les VLAN se réunissent par numéro (un nom différent : le premier est gardé, et la
@@ -98,6 +105,14 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
   des ports diffèrent (« 1/0/1 » et « Gi1/0/1 »), il propose de les reprendre par leur place : même membre, même numéro.
 
 ### Modifié
+- L'aide de la première révision devient une bulle posée au-dessus de « Valider », sa pointe sur le bouton, à toutes les
+  largeurs (maquette 14D) ; « Compris » est le bouton principal. Elle paraît en fondu. L'aide de la première fiche écrite
+  prend la même forme.
+- Le chevron d'un groupe d'Aujourd'hui et d'un dossier du Carnet tourne d'un quart de tour quand on le replie, au lieu de
+  changer d'un coup (rangée 19). Il ne tourne pas quand les animations sont réduites ou que la famille « Menu et volets »
+  est coupée.
+- Un volet ou une barre qui glisse, et le texte qui suit un volet, sont mis en image le temps du trajet au lieu d'être
+  redessinés à chaque image, puis redessinés tels quels à l'arrivée.
 - Schémas réseau, mode avancé : le volet d'un équipement passe en quatre onglets, Général, Ports, Réseau et Inventaire,
   sous un en-tête qui montre son icône, son nom, son type et son statut ; le dernier onglet choisi le reste d'un
   équipement à l'autre. Le type se choisit dans une grille d'icônes, par famille, avec une recherche et les types
