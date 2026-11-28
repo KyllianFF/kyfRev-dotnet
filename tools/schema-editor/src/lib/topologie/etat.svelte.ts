@@ -28,6 +28,7 @@ import {
   supprimerPage,
   surLaPage,
 } from "./pages";
+import { copierPages, retirerPages, type Transfert } from "./transfert";
 
 /** Support choisi (« auto » : d'après les ports) et bout déjà branché. */
 export type CableEnMain = {
@@ -144,6 +145,29 @@ export class EditeurSchema {
 
   deplacerPage(id: string, rang: number): void {
     this.agir((s) => deplacerPage(s, id, rang));
+  }
+
+  /**
+   * Des pages d'un autre schéma (31D) : copiées après les autres, en une seule opération (Ctrl+Z les retire toutes), et
+   * la première est montrée. Rend ce qui a été fait, ou rien si c'est refusé.
+   */
+  recevoirPages(source: Schema, ids: string[]): Transfert | null {
+    const fait: { transfert?: Transfert } = {};
+    if (!this.agir((s) => (fait.transfert = copierPages(source, ids, s)))) return null;
+    const premiere = fait.transfert?.pages[0];
+    if (premiere) this.montrerPage(premiere.id);
+    return fait.transfert ?? null;
+  }
+
+  /** Des pages parties vers un autre schéma (31D) : retirées, en une seule opération que Ctrl+Z annule. */
+  retirerPages(ids: string[], annonce: string): boolean {
+    if (!this.agir((s) => retirerPages(s, ids), annonce)) return false;
+    // Le câble en main a pu partir d'un équipement de ces pages : il est reposé ; la page montrée a pu partir.
+    this.cable = null;
+    const presents = elementsDuSchema(this.schema);
+    this.selection = this.selection.filter((id) => presents.has(id));
+    this.page = this.pageMontree;
+    return true;
   }
 
   /** Ouvre le schéma `id` du coffre. */

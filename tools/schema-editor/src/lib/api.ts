@@ -94,6 +94,12 @@ export const api = {
   enregistrerSchema: (id: string, texte: string, empreinte: string) =>
     appeler<ResultatEnregistrement>("enregistrerSchema", id, texte, empreinte),
   dupliquerSchema: (id: string) => appeler<SchemaLu>("dupliquerSchema", id),
+  /** Les modèles de schéma de l'utilisateur (« Mes modèles »), rangés à part dans le coffre : ce ne sont pas des schémas. */
+  modelesSchema: () => appeler<SchemaLu[]>("modelesSchema"),
+  /** Enregistre un modèle de schéma ; le coffre lui donne son identifiant. */
+  creerModeleSchema: (texte: string) => appeler<SchemaLu>("creerModeleSchema", texte),
+  /** Retire un modèle : il n'est plus proposé (son fichier est rangé à part, pas effacé). */
+  retirerModeleSchema: (id: string) => appeler<null>("retirerModeleSchema", id),
   exporterSchema: (dossier: string, nom: string, octets: Uint8Array) => appeler<string>("exporterSchema", dossier, nom, base64(octets)),
   /** L'image PNG d'un schéma va dans le presse-papiers ; une erreur dit pourquoi ce n'est pas fait. */
   copierImageSchema: (octets: Uint8Array) => appeler<null>("copierImageSchema", base64(octets)),

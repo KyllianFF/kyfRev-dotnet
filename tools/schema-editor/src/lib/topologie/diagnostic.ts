@@ -25,7 +25,7 @@ export type Constat = {
  * « haute disponibilité », de proche en proche, forment une grappe ; ses
  * membres partagent légitimement une adresse (VIP) ou une MAC.
  */
-function grappesHauteDispo(schema: Schema): Map<string, string> {
+export function grappesHauteDispo(schema: Schema): Map<string, string> {
   const parent = new Map<string, string>();
   const racine = (id: string): string => {
     let r = id;

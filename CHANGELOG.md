@@ -8,6 +8,49 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 ## [Non publié]
 
 ### Ajouté
+- Schémas réseau : réunir des schémas en un seul, nouveau, à plusieurs pages (31C). Un schéma d'une page y devient une
+  page à son titre, un schéma à plusieurs pages garde les siennes ; leur ordre se glisse (Alt+flèches au clavier). Tous
+  les identifiants sont refaits ; les VLAN se réunissent par numéro (un nom différent : le premier est gardé, et la
+  fenêtre le dit), les modèles de matériel par référence ; sur demande, deux équipements de même nom et de même adresse
+  n'en font qu'un, ses câbles vers l'autre page devenant des renvois. Les originaux ne sont pas modifiés et, par défaut,
+  sont archivés (les fiches qui les insèrent les montrent toujours). Dans l'éditeur : « Plus », « Réunir avec d'autres
+  schémas… ».
+- Schémas réseau : des pages d'un schéma à l'autre (31D). « + » sous le plan propose « Nouvelle page » ou « Pages d'un
+  autre schéma… » : ses pages se choisissent sur leurs vignettes, se copient ou se déplacent ; Ctrl+Z retire l'ajout en
+  une fois. Au clic droit sur un onglet : « Copier vers un autre schéma… », « Déplacer vers un autre schéma… » (Ctrl+Z
+  la rend), « Copier dans un nouveau schéma » et « Détacher en un nouveau schéma » (la page quitte celui-ci pour un schéma à
+  part, à son nom ; Ctrl+Z la rend). Un câble entre une page qui part et une page qui reste ne suit
+  pas, et le compte rendu le dit ; entre deux pages qui partent ensemble, il suit.
+- Schémas réseau : la recherche dans tous les schémas du coffre (archivés compris, marqués) trouve un équipement (nom,
+  nom d'hôte), une adresse IP (entière, son début ou un réseau) ou un VLAN (numéro, nom) ; les résultats sont groupés,
+  six par groupe avec « N de plus », disent « Schéma › Page » et y mènent, au clic comme au clavier. Une même adresse
+  portée par deux équipements est marquée « même adresse », avec un conseil qui ne bloque rien. Dans l'éditeur, Ctrl+F
+  propose « Ce schéma » ou « Tous les schémas ».
+- Schémas réseau : nouveau schéma depuis un modèle. Cinq modèles câblés port à port, adressés et en VLAN (Petit bureau,
+  Étage type, Site distant, Lab TP, Datacenter), et « Mes modèles » : un schéma, ou une page (clic droit sur son onglet),
+  s'enregistre comme modèle, avec un nom et une description. Les modèles sont rangés à part (`schemas/modeles/`), hors de
+  la liste des schémas et des fiches ; un modèle se supprime au clic droit sur sa vignette, après une question, et son
+  fichier est mis de côté, pas effacé. Dans l'éditeur, « + », « Pages depuis un modèle… » ajoute les pages d'un modèle au
+  schéma ouvert (Ctrl+Z les retire). Un VLAN trouvé par la recherche ouvre son schéma sur sa page.
+- Schémas réseau : un accueil plus calme. Chaque carte montre l'aperçu, le nom, une ligne (« 10 équipements · 4 pages ·
+  modifié hier ») et de petites étiquettes ; « Cité dans 3 fiches » et « 1 point à vérifier » ne paraissent que s'il y a
+  lieu. Un clic ouvre le détail ; « Modifier » et « ⋯ » paraissent au survol et au clavier, le reste est au clic droit :
+  Renommer, Épingler, Étiqueter…, Dupliquer, Ajouter à un schéma…, Enregistrer comme modèle…, Copier l'image, Exporter…,
+  Imprimer…, Archiver, Supprimer…. Les pages se voient en petits traits sur la vignette, qui les fait défiler au survol.
+  Une barre d'outils cherche (aussi dans les équipements et les adresses), filtre par étiquette et par « À vérifier »,
+  trie (modifiés récemment, nom, taille) et passe de la grille à la liste, un choix retenu. Les schémas épinglés sont
+  en tête. « Nouveau schéma ▾ » : vide, depuis un modèle, depuis un fichier draw.io, ou en réunissant des schémas.
+- Schémas réseau : plusieurs schémas se choisissent (une case au coin de la vignette, Ctrl+clic, Maj+clic pour une
+  suite, Ctrl+A pour tout ce qui est affiché, Échap pour lâcher) et se traitent ensemble depuis une barre en bas :
+  réunir, ajouter à un schéma, étiqueter, exporter (un fichier par schéma, dans le dossier choisi), archiver, supprimer
+  (après une question). La liste montre les mêmes schémas en tableau (pages, équipements, étiquettes, diagnostic, fiches,
+  date), trié d'un clic sur un en-tête.
+- Schémas réseau : les étiquettes (Lycée, Client, TP…) se posent à la main, avec celles déjà en usage proposées en tapant ;
+  un schéma s'épingle en tête de l'accueil, et se renomme d'un double clic sur son nom (ou F2), Entrée pour garder, Échap
+  pour annuler. Étiquettes et épingle sont écrites dans le schéma lui-même ; un schéma qui n'en a pas ne change pas. Une
+  version précédente de kyfRev les lit sans erreur, mais les perd si elle réécrit le schéma.
+- Schémas réseau : à 470 pixels, deux cartes par ligne, « Importer » sous « ⋯ », les étiquettes les plus utiles en puces
+  et le reste sous « Filtres » ; sur un très grand écran, jusqu'à six cartes par ligne.
 - Schémas réseau : un schéma peut avoir plusieurs pages (Étage 1, Étage 2, Salle serveurs…), en onglets sous le plan,
   avec le nombre d'équipements de chacune ; « + » en ajoute une, le clic droit renomme, duplique, déplace ou supprime
   (après une question, Ctrl+Z la rend), glisser un onglet le déplace. Un câble entre deux pages se dessine sur chacune en

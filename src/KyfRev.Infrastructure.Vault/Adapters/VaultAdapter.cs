@@ -396,6 +396,15 @@ public sealed class VaultAdapter(VaultSession inner, IDisposable? owned = null) 
     public string ReadSchemaToImport(string path) => VaultSession.ReadSchemaToImport(path);
 
     /// <inheritdoc/>
+    public IReadOnlyList<SchemaDocument> SchemaTemplates() => [.. inner.SchemaTemplates().Select(Document)];
+
+    /// <inheritdoc/>
+    public SchemaDocument CreateSchemaTemplate(string text) => Document(inner.CreateSchemaTemplate(text));
+
+    /// <inheritdoc/>
+    public void SetSchemaTemplateAside(string id) => inner.SetSchemaTemplateAside(id);
+
+    /// <inheritdoc/>
     public string? ExtensionData(string id) => inner.ExtensionData(id);
 
     /// <inheritdoc/>

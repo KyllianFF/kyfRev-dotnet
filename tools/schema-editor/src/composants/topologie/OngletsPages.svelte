@@ -9,8 +9,31 @@
   // Les pages d'un schéma (30A), en onglets sous le plan, comme dans draw.io : un clic montre une page, « + » en
   // ajoute une ; clic droit (ou la touche Menu) : renommer, dupliquer, déplacer, supprimer ; double clic : renommer ;
   // glisser un onglet le déplace. Quand les onglets ne tiennent plus (fenêtre étroite), ils se replient en un menu
-  // « Étage 1 ▾ » suivi de « 1 / 4 » et de « + ».
-  let { editeur, onchanger }: { editeur: EditeurSchema; onchanger?: () => void } = $props();
+  // « Étage 1 ▾ » suivi de « 1 / 4 » et de « + ». Avec les échanges entre schémas (31D), « + » ouvre un petit menu
+  // (une nouvelle page, ou des pages d'un autre schéma), et le clic droit copie ou déplace la page vers un autre schéma,
+  // ou en fait un nouveau.
+  let {
+    editeur,
+    onchanger,
+    onautresPages,
+    onenvoyer,
+    onnouveauSchema,
+    onmodele,
+    onpagesModele,
+  }: {
+    editeur: EditeurSchema;
+    onchanger?: () => void;
+    /** « Pages d'un autre schéma… » : ajouter ici des pages venues d'ailleurs. */
+    onautresPages?: () => void;
+    /** « Copier vers un autre schéma… », « Déplacer vers un autre schéma… ». */
+    onenvoyer?: (page: string, deplacer: boolean) => void;
+    /** « Copier dans un nouveau schéma » (la page reste ici) ou « Détacher en un nouveau schéma » (elle quitte celui-ci). */
+    onnouveauSchema?: (page: string, detacher: boolean) => void;
+    /** « Enregistrer cette page comme modèle… » (31E). */
+    onmodele?: (page: string) => void;
+    /** « Pages depuis un modèle… » : ajouter ici les pages d'un modèle. */
+    onpagesModele?: () => void;
+  } = $props();
 
   const pages = $derived(editeur.pages);
   const montree = $derived(editeur.pageMontree);
@@ -18,7 +41,8 @@
   const plusieurs = $derived(pages.length > 1);
   const total = $derived(editeur.schema.equipements.length);
 
-  type Menu = { page: string; x: number; y: number; origine: HTMLElement | null; liste?: boolean };
+  /** Le menu d'une page (au clic droit, ou replié en fenêtre étroite), ou celui de « + » (`ajout`). */
+  type Menu = { page: string; x: number; y: number; origine: HTMLElement | null; liste?: boolean; ajout?: boolean };
   let menu = $state<Menu | null>(null);
   /** La page dont le nom est en cours de saisie. */
   let renommage = $state<string | null>(null);
@@ -39,6 +63,17 @@
     menu = null;
     editeur.ajouterPage();
     onchanger?.();
+  }
+
+  /** « + » : une page vide tout de suite ; s'il y a d'autres façons d'en ajouter, un petit menu les propose. */
+  function plus(evenement: MouseEvent) {
+    if (!onautresPages) {
+      ajouter();
+      return;
+    }
+    const origine = evenement.currentTarget as HTMLElement;
+    const cadre = origine.getBoundingClientRect();
+    menu = { page: montree, x: cadre.left, y: cadre.top, origine, ajout: true };
   }
 
   // --- Menu d'un onglet ---
@@ -286,7 +321,15 @@
     <span class="position" aria-label="Page {rangMontre + 1} sur {pages.length}">{rangMontre + 1} / {pages.length}</span>
   </div>
 
-  <button type="button" class="plus" title="Nouvelle page" aria-label="Nouvelle page" onclick={ajouter}>
+  <button
+    type="button"
+    class="plus"
+    title={onautresPages ? "Ajouter une page" : "Nouvelle page"}
+    aria-label={onautresPages ? "Ajouter une page" : "Nouvelle page"}
+    aria-haspopup={onautresPages ? "menu" : undefined}
+    aria-expanded={onautresPages ? menu?.ajout === true : undefined}
+    onclick={plus}
+  >
     <Plus size={16} aria-hidden="true" />
   </button>
   {#if plusieurs}
@@ -300,7 +343,14 @@
   <!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
   <div class="voile-menu" onpointerdown={() => fermerMenu()} oncontextmenu={(e) => { e.preventDefault(); fermerMenu(); }}></div>
   {#key voulu}
-    <div class="menu" role="menu" aria-label="Page « {pages[rang]?.nom ?? ''} »" use:placer={voulu}>
+    <div class="menu" role="menu" aria-label={voulu.ajout ? "Ajouter une page" : `Page « ${pages[rang]?.nom ?? ""} »`} use:placer={voulu}>
+      {#if voulu.ajout}
+        <button type="button" role="menuitem" class="premier" onclick={ajouter}>Nouvelle page</button>
+        <button type="button" role="menuitem" onclick={() => choisir(() => onautresPages?.())}>Pages d'un autre schéma…</button>
+        {#if onpagesModele}
+          <button type="button" role="menuitem" onclick={() => choisir(() => onpagesModele?.())}>Pages depuis un modèle…</button>
+        {/if}
+      {:else}
       {#if voulu.liste}
         {#each pages as p (p.id)}
           <button type="button" role="menuitemradio" aria-checked={p.id === montree} onclick={() => choisir(() => montrer(p.id))}>
@@ -315,8 +365,23 @@
       <!-- Le rang se lit avant de fermer le menu : fermé, il n'a plus de page. -->
       <button type="button" role="menuitem" disabled={rang <= 0} onclick={() => deplacer(rang - 1)}>Déplacer à gauche</button>
       <button type="button" role="menuitem" disabled={rang < 0 || rang >= pages.length - 1} onclick={() => deplacer(rang + 1)}>Déplacer à droite</button>
+      {#if onenvoyer || onnouveauSchema || onmodele}
+        <hr />
+        {#if onenvoyer}
+          <button type="button" role="menuitem" onclick={() => choisir((id) => onenvoyer?.(id, false))}>Copier vers un autre schéma…</button>
+          <button type="button" role="menuitem" onclick={() => choisir((id) => onenvoyer?.(id, true))}>Déplacer vers un autre schéma…</button>
+        {/if}
+        {#if onnouveauSchema}
+          <button type="button" role="menuitem" onclick={() => choisir((id) => onnouveauSchema?.(id, false))}>Copier dans un nouveau schéma</button>
+          <button type="button" role="menuitem" disabled={!plusieurs} title={plusieurs ? undefined : "Un schéma garde au moins une page."} onclick={() => choisir((id) => onnouveauSchema?.(id, true))}>Détacher en un nouveau schéma</button>
+        {/if}
+        {#if onmodele}
+          <button type="button" role="menuitem" onclick={() => choisir((id) => onmodele?.(id))}>Enregistrer cette page comme modèle…</button>
+        {/if}
+      {/if}
       <hr />
       <button type="button" role="menuitem" class="danger" disabled={!plusieurs} title={plusieurs ? undefined : "Un schéma garde au moins une page."} onclick={() => choisir((id) => (aSupprimer = id))}>Supprimer la page…</button>
+      {/if}
     </div>
   {/key}
 {/if}
@@ -552,6 +617,10 @@
   .menu button[aria-checked="true"] {
     background: var(--navigation-active-fond);
     color: var(--navigation-active-texte);
+    font-weight: 600;
+  }
+
+  .menu button.premier {
     font-weight: 600;
   }
 

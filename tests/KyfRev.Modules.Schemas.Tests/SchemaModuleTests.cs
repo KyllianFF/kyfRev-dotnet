@@ -225,6 +225,28 @@ public sealed class SchemaModuleTests
         Assert.AreEqual(VaultHost.NoVaultOpen, schemas.Duplicate("s_x").Error);
         Assert.AreEqual(VaultHost.NoVaultOpen, schemas.Export("d", "n.png", Png).Error);
         Assert.AreEqual(VaultHost.NoVaultOpen, schemas.ReadImport("c.json").Error);
+        Assert.AreEqual(VaultHost.NoVaultOpen, schemas.Templates().Error);
+        Assert.AreEqual(VaultHost.NoVaultOpen, schemas.CreateTemplate(Text).Error);
+        Assert.AreEqual(VaultHost.NoVaultOpen, schemas.SetTemplateAside("s_x").Error);
+    }
+
+    [TestMethod]
+    public void A_template_is_saved_listed_and_removed_apart_from_the_schemas()
+    {
+        using var test = new SchemasTest();
+        var schemas = test.UseCases();
+        Assert.IsEmpty(schemas.Templates().Value);
+
+        var template = schemas.CreateTemplate("{\"format\": 2, \"titre\": \"Étage type\", \"description\": \"Switch et bornes\"}").Value;
+        StringAssert.StartsWith(template.Id, "s_", StringComparison.Ordinal);
+        Assert.AreEqual(template, schemas.Templates().Value.Single());
+        Assert.IsEmpty(schemas.Schemas().Value, "Un modèle n'est pas un schéma.");
+        Assert.IsFalse(schemas.Read(template.Id).Succeeded);
+
+        Assert.IsTrue(schemas.SetTemplateAside(template.Id).Value);
+        Assert.IsEmpty(schemas.Templates().Value);
+        Assert.IsFalse(schemas.SetTemplateAside(template.Id).Succeeded, "Déjà retiré : un refus, pas une erreur.");
+        Assert.IsFalse(schemas.CreateTemplate("pas du JSON").Succeeded);
     }
 
     /// <summary>Un vrai coffre, et le module assemblé comme dans l'application.</summary>

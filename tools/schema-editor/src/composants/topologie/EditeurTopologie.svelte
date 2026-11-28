@@ -66,7 +66,16 @@
   import CompteRenduImport from "./CompteRenduImport.svelte";
   import DialogueExport from "./DialogueExport.svelte";
   import DialogueImport from "./DialogueImport.svelte";
+  import DialogueEnregistrerModele from "./DialogueEnregistrerModele.svelte";
+  import DialogueModeles from "./DialogueModeles.svelte";
   import OngletsPages from "./OngletsPages.svelte";
+  import DialogueAjouterPages from "./DialogueAjouterPages.svelte";
+  import DialogueEnvoyerPage from "./DialogueEnvoyerPage.svelte";
+  import DialogueReunir from "./DialogueReunir.svelte";
+  import { creerEchange, inscrireSchemaOuvert } from "../../lib/topologie/echanges";
+  import { compte, schemaDeLaPage } from "../../lib/topologie/transfert";
+  import { pagesDe } from "../../lib/topologie/pages";
+  import type { ModeleDeSchema } from "../../lib/topologie/modelesDeSchema";
   import PlanIp from "./PlanIp.svelte";
   import Plateau from "./Plateau.svelte";
   import RechercheSchema from "./RechercheSchema.svelte";
@@ -88,6 +97,7 @@
     retour = "Fermer",
     onconverti,
     choisis = [],
+    page = null,
     onouvrir,
     onfermer,
   }: {
@@ -101,8 +111,10 @@
     onconverti?: (id: string) => void;
     /** Éléments à choisir dès l'ouverture (les formes inconnues d'un import draw.io). */
     choisis?: string[];
-    /** Ouvrir un autre schéma à la place de celui-ci (un import « dans un nouveau schéma »), ces éléments choisis. */
-    onouvrir?: (id: string, choisis: string[]) => void;
+    /** Page à montrer dès l'ouverture, quand rien n'est choisi (un VLAN trouvé par la recherche dans tous les schémas). */
+    page?: string | null;
+    /** Ouvrir un autre schéma à la place de celui-ci (un import « dans un nouveau schéma »), ces éléments choisis, cette page. */
+    onouvrir?: (id: string, choisis: string[], page?: string) => void;
     onfermer: () => void;
   } = $props();
 
@@ -228,6 +240,55 @@
     });
   }
   let planIpOuvert = $state(false);
+
+  // --- Modèles de schéma (31E) ---
+
+  /** « Nouveau schéma depuis un modèle… » : le dialogue des modèles. */
+  let modelesOuverts = $state(false);
+  /** « + », « Pages depuis un modèle… » : la fenêtre des modèles, qui ajoute ici au lieu de créer. */
+  let pagesModeleOuvert = $state(false);
+
+  /** Les pages d'un modèle rejoignent celles du schéma, en une opération que Ctrl+Z annule. */
+  function ajouterPagesModele(modele: ModeleDeSchema) {
+    const ids = pagesDe(modele.schema).map((p) => p.id);
+    const fait = editeur.recevoirPages(modele.schema, ids);
+    if (fait) {
+      const n = fait.pages.length;
+      editeur.annonce = `${compte(n, "page ajoutée", "pages ajoutées")} depuis le modèle « ${modele.nom} » : Ctrl+Z pour ${n > 1 ? "les retirer" : "la retirer"}.`;
+    }
+  }
+  /** « Enregistrer comme modèle… » : le schéma entier, ou une de ses pages. */
+  let aEnregistrerCommeModele = $state<{ page?: string } | null>(null);
+
+  /** Le modèle se tire de ce qui est dans le coffre : ce qui attendait de s'enregistrer part d'abord. */
+  async function enregistrerCommeModele(page?: string) {
+    menu = null;
+    await editeur.enregistrer();
+    if (!editeur.id) {
+      editeur.annonce = "Ce schéma n'est pas encore dans le coffre : il ne peut pas servir de modèle.";
+      return;
+    }
+    aEnregistrerCommeModele = page === undefined ? {} : { page };
+  }
+
+  /** Ouvre un autre schéma à la place de celui-ci (enregistré d'abord), ces éléments choisis. */
+  async function ouvrirAutre(autre: string, choisis: string[] = [], page?: string) {
+    await editeur.enregistrer();
+    if (onouvrir) onouvrir(autre, choisis, page);
+    else editeur.annonce = "Le schéma est créé : il est dans la liste des schémas.";
+  }
+
+  /** Un résultat de la recherche dans tous les schémas : ici, il est montré ; ailleurs, son schéma s'ouvre. */
+  function ouvrirTrouve(schemaId: string, page?: string, objet?: string) {
+    if (schemaId !== editeur.id) {
+      void ouvrirAutre(schemaId, objet ? [objet] : [], page);
+      return;
+    }
+    rechercheOuverte = false;
+    if (page !== undefined) editeur.montrerPage(page);
+    if (objet) requestAnimationFrame(() => montrer(objet));
+  }
+
   let rechercheOuverte = $state(false);
   let texteRecherche = $state("");
   const trouves = $derived(
@@ -343,6 +404,8 @@
         if (presents.length > 0) {
           editeur.page = editeur.pageDe(presents[0] ?? "") ?? "";
           editeur.selection = presents;
+        } else if (page && pagesDe(editeur.schema).some((p) => p.id === page)) {
+          editeur.montrerPage(page);
         }
         // Le plan prend la main : les raccourcis du clavier valent tout de suite.
         requestAnimationFrame(() => canevas?.focus());
@@ -354,6 +417,51 @@
 
   // Avant le verrouillage du coffre, l'application demande de finir : le schéma ouvert s'enregistre, et dit ce qu'il en reste.
   onMount(() => inscrireEditeur(() => editeur.finir()));
+  // Les échanges de pages entre schémas (31D) lisent et modifient le schéma ouvert par l'éditeur, jamais par son fichier.
+  onMount(() => inscrireSchemaOuvert(editeur));
+
+  // --- Échanges entre schémas : réunir (31C), ajouter des pages d'un autre, envoyer une page ailleurs (31D) ---
+
+  let reunirOuvert = $state(false);
+  let autresPagesOuvert = $state(false);
+  let envoi = $state<{ page: string; deplacer: boolean } | null>(null);
+
+  /**
+   * Une fenêtre d'échange fermée : ce qui avait la main (un menu, un onglet) a pu disparaître ; le plan la reprend, et
+   * Ctrl+Z y annule tout de suite ce qui vient d'être fait.
+   */
+  function rendreLaMain() {
+    requestAnimationFrame(() => {
+      if (!dialogue?.contains(document.activeElement)) canevas?.focus();
+    });
+  }
+
+  /**
+   * « Copier dans un nouveau schéma » : il est créé dans le coffre, celui-ci ne change pas. « Détacher en un nouveau
+   * schéma » : la page quitte ensuite celui-ci, avec ses câbles vers les autres pages ; Ctrl+Z l'y rend (le nouveau
+   * schéma, lui, reste). Rien n'est retiré si la création échoue.
+   */
+  async function nouveauSchemaDeLaPage(page: string, detacher = false) {
+    try {
+      const { schema: nouveau, transfert } = schemaDeLaPage($state.snapshot(editeur.schema) as Schema, page);
+      await creerEchange(nouveau);
+      const n = transfert.cablesRetires;
+      if (detacher) {
+        const coupes = n > 0 ? ` ${n > 1 ? `${n} câbles vers d'autres pages sont retirés` : "1 câble vers une autre page est retiré"}.` : "";
+        editeur.retirerPages(
+          [page],
+          `Page détachée : « ${nouveau.titre} » est un schéma à part, dans la liste des schémas.${coupes} Ctrl+Z la rend ici.`,
+        );
+        // Son onglet est parti avec elle : le plan reprend la main, et Ctrl+Z vaut tout de suite.
+        rendreLaMain();
+        return;
+      }
+      const reste = n > 0 ? ` ${n > 1 ? `${n} câbles vers d'autres pages n'y sont pas` : "1 câble vers une autre page n'y est pas"}.` : "";
+      editeur.annonce = `Nouveau schéma « ${nouveau.titre} » créé : il est dans la liste des schémas.${reste}`;
+    } catch (e) {
+      editeur.annonce = `Nouveau schéma impossible : ${messageErreur(e)}`;
+    }
+  }
 
   // L'annonce disparaît d'elle-même.
   $effect(() => {
@@ -900,9 +1008,13 @@
             {#if !simplifie}
               <button type="button" role="menuitem" onclick={() => { menu = null; planIpOuvert = true; }}>Plan IP</button>
               <button type="button" role="menuitem" onclick={importer}>Importer…</button>
+              <button type="button" role="menuitem" onclick={() => { menu = null; reunirOuvert = true; }}>Réunir avec d'autres schémas…</button>
             {/if}
             <button type="button" role="menuitem" onclick={() => { menu = null; exportOuvert = true; }}>Exporter…</button>
             <button type="button" role="menuitem" onclick={imprimer}>Imprimer…</button>
+            <hr />
+            <button type="button" role="menuitem" onclick={() => void enregistrerCommeModele()}>Enregistrer comme modèle…</button>
+            <button type="button" role="menuitem" onclick={() => { menu = null; modelesOuverts = true; }}>Nouveau schéma depuis un modèle…</button>
           </div>
         {/if}
       </span>
@@ -974,6 +1086,7 @@
             {schema}
             bind:texte={texteRecherche}
             onchoisir={(t) => montrer(t.id)}
+            onouvrir={ouvrirTrouve}
             onfermer={() => {
               rechercheOuverte = false;
               canevas?.focus();
@@ -1008,7 +1121,14 @@
       {/if}
     </div>
 
-    <OngletsPages {editeur} />
+    <OngletsPages
+      {editeur}
+      onautresPages={() => (autresPagesOuvert = true)}
+      onenvoyer={(page, deplacer) => (envoi = { page, deplacer })}
+      onnouveauSchema={(page, detacher) => void nouveauSchemaDeLaPage(page, detacher)}
+      onmodele={(page) => void enregistrerCommeModele(page)}
+      onpagesModele={() => (pagesModeleOuvert = true)}
+    />
     <Plateau avance={!simplifie} bind:pose onposer={(genre) => ajouter(genre)} />
   {/if}
 
@@ -1078,6 +1198,66 @@
     vide={estVide(editeur.vuePage)}
     onvalider={(format, icones) => void exporter(format, icones)}
     onfermer={() => (exportOuvert = false)}
+  />
+{/if}
+
+<DialogueReunir
+  ids={editeur.id ? [editeur.id] : []}
+  ouvert={reunirOuvert}
+  onFermer={() => {
+    reunirOuvert = false;
+    rendreLaMain();
+  }}
+  onFait={(nouveau) => {
+    reunirOuvert = false;
+    // Le schéma réuni s'ouvre à la place de celui-ci, s'il y a où l'ouvrir.
+    if (onouvrir) onouvrir(nouveau, []);
+    else editeur.annonce = "Schéma réuni créé : il est dans la liste des schémas.";
+  }}
+/>
+
+<DialogueAjouterPages
+  cible={editeur.id || null}
+  sources={[]}
+  ouvert={autresPagesOuvert}
+  onFermer={() => {
+    autresPagesOuvert = false;
+    rendreLaMain();
+  }}
+  onFait={() => {
+    autresPagesOuvert = false;
+    rendreLaMain();
+  }}
+/>
+
+{#if envoi}
+  <DialogueEnvoyerPage
+    {editeur}
+    page={envoi.page}
+    deplacer={envoi.deplacer}
+    onfermer={() => {
+      envoi = null;
+      rendreLaMain();
+    }}
+  />
+{/if}
+
+<DialogueModeles ouvert={modelesOuverts} onFermer={() => (modelesOuverts = false)} onCree={(cree) => void ouvrirAutre(cree)} />
+<DialogueModeles
+  ouvert={pagesModeleOuvert}
+  onFermer={() => {
+    pagesModeleOuvert = false;
+    rendreLaMain();
+  }}
+  onPages={ajouterPagesModele}
+/>
+
+{#if aEnregistrerCommeModele && editeur.id}
+  <DialogueEnregistrerModele
+    schemaId={editeur.id}
+    pageId={aEnregistrerCommeModele.page}
+    ouvert={true}
+    onFermer={() => (aEnregistrerCommeModele = null)}
   />
 {/if}
 

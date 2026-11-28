@@ -113,6 +113,31 @@ public sealed partial class SchemasPageTests
     }
 
     [TestMethod]
+    public async Task The_bridge_saves_lists_and_removes_schema_templates()
+    {
+        using var scene = new BridgeScene();
+        Assert.IsEmpty((await scene.CallAsync("modelesSchema")).AsArray());
+
+        var template = await scene.CallAsync("creerModeleSchema", "{\"format\": 2, \"titre\": \"Étage type\"}");
+        var id = template["id"]!.GetValue<string>();
+        StringAssert.Contains(template["texte"]!.GetValue<string>(), "Étage type", StringComparison.Ordinal);
+        Assert.IsNotNull(template["empreinte"]);
+        var listed = (await scene.CallAsync("modelesSchema")).AsArray().Single()!;
+        Assert.AreEqual(id, listed["id"]!.GetValue<string>());
+        Assert.IsEmpty((await scene.CallAsync("schemas")).AsArray(), "Un modèle n'est pas un schéma.");
+
+        Assert.IsNull(await scene.RawValueAsync("retirerModeleSchema", id));
+        Assert.IsEmpty((await scene.CallAsync("modelesSchema")).AsArray());
+
+        // Un modèle absent, un texte qui n'est pas un schéma ou un appel sans argument : refusés.
+        foreach (var (method, args) in new[] { ("retirerModeleSchema", $"[\"{id}\"]"), ("creerModeleSchema", "[\"[]\"]"), ("creerModeleSchema", "[]") })
+        {
+            var answer = await scene.AnswerAsync($"{{\"kind\":\"call\",\"id\":4,\"method\":\"{method}\",\"args\":{args}}}");
+            Assert.IsFalse(answer["ok"]!.GetValue<bool>(), method + args);
+        }
+    }
+
+    [TestMethod]
     public async Task The_bridge_copies_the_picture_of_a_schema_and_only_a_picture()
     {
         using var scene = new BridgeScene();
@@ -224,8 +249,8 @@ public sealed partial class SchemasPageTests
         scene.WaitFor("document.querySelector('.bouton.principal') !== null");
         StringAssert.Contains(scene.Script("document.body.innerText"), "Aucun schéma réseau", StringComparison.Ordinal);
 
-        // Nouveau schéma : un nom, puis l'éditeur, et le fichier est écrit dans le coffre.
-        scene.Script("document.querySelector('.bouton.principal').click()");
+        // Nouveau schéma ▾ › Schéma vide : un nom, puis l'éditeur, et le fichier est écrit dans le coffre.
+        NewEmptySchema(scene);
         scene.WaitFor("document.querySelector('dialog[open] input') !== null");
         scene.Script("const champ = document.querySelector('dialog[open] input'); champ.value = 'Réseau du lycée'; champ.dispatchEvent(new Event('input', { bubbles: true })); document.querySelector('dialog[open] form').requestSubmit()");
         scene.WaitFor("document.querySelector('dialog[open] svg') !== null");
@@ -243,8 +268,7 @@ public sealed partial class SchemasPageTests
     public void The_simple_mode_places_devices_and_cables_without_ports_circles_aggregates_and_labels_trunks(ThemeKind theme)
     {
         using var scene = new IslandScene(theme: theme);
-        scene.WaitFor("document.querySelector('.bouton.principal') !== null");
-        scene.Script("document.querySelector('.bouton.principal').click()");
+        NewEmptySchema(scene);
         scene.WaitFor("document.querySelector('dialog[open] input') !== null");
         scene.Script("const champ = document.querySelector('dialog[open] input'); champ.value = 'Site de Meylan'; champ.dispatchEvent(new Event('input', { bubbles: true })); document.querySelector('dialog[open] form').requestSubmit()");
         scene.WaitFor("document.querySelector('dialog[open] svg.canevas') !== null");
@@ -578,12 +602,14 @@ public sealed partial class SchemasPageTests
         using var scene = new IslandScene(Text);
         scene.WaitFor("document.querySelector('li.carte') !== null");
 
-        // Le vrai clic droit, dans l'îlot, sur la carte : Détail et Modifier en tête, puis les trois sorties, entre « Dupliquer » et « Archiver ».
+        // Le vrai clic droit, dans l'îlot, sur la carte : Détail et Modifier en tête, puis ce qui retouche le schéma, ce qui
+        // l'ajoute ailleurs, les trois sorties, et enfin « Archiver » et « Supprimer… ».
         scene.Script("document.querySelector('li.carte').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 60, clientY: 60 }))");
         scene.WaitFor("document.querySelector('.menu[role=menu]') !== null");
-        var order = JsonSerializer.Deserialize<string>(scene.Script("[...document.querySelectorAll('.menu [role=menuitem]')].map((entree) => entree.textContent.trim()).join(' | ')"))!;
-        StringAssert.StartsWith(order, "Détail | Modifier | Dupliquer", StringComparison.Ordinal);
-        StringAssert.Contains(order, "Dupliquer | Copier l'image | Exporter… | Imprimer… | Archiver | Supprimer…", StringComparison.Ordinal);
+        var order = JsonSerializer.Deserialize<string>(scene.Script("[...document.querySelectorAll('.menu [role=menuitem]')].map((entree) => entree.textContent.trim().replace(/\\s+/g, ' ')).join(' | ')"))!;
+        Assert.AreEqual(
+            "Détail | Modifier | Renommer F2 | Épingler | Étiqueter… | Dupliquer | Ajouter à un schéma… | Enregistrer comme modèle… | Copier l'image | Exporter… | Imprimer… | Archiver | Supprimer…",
+            order);
         Assert.AreEqual("true", scene.Script("(() => { const m = document.querySelector('.menu[role=menu]').getBoundingClientRect(); return m.left >= 0 && m.top >= 0 && m.right <= innerWidth && m.bottom <= innerHeight; })()"), "le menu tient dans la fenêtre");
 
         // « Copier l'image » : l'îlot dessine le schéma, le pont reçoit une vraie image PNG, et l'îlot le dit.
@@ -707,8 +733,11 @@ public sealed partial class SchemasPageTests
         var file = Path.Combine(folder, "labo.drawio");
         File.WriteAllText(file, ForeignDrawIo);
         ((SchemasPageViewModel)scene.Page.DataContext).PickSchemaFile = () => file;
-        scene.WaitFor("[...document.querySelectorAll('button')].some((bouton) => bouton.textContent.trim() === 'Importer…' && !bouton.disabled)");
-        scene.Script("[...document.querySelectorAll('button')].find((bouton) => bouton.textContent.trim() === 'Importer…').click()");
+        // À 470 pixels, « Importer… » est sous « ⋯ », dans l'en-tête (31F).
+        scene.WaitFor("document.querySelector('.entete-accueil button[aria-haspopup=menu]:not(.principal):not(:disabled)') !== null");
+        scene.Script("document.querySelector('.entete-accueil button[aria-haspopup=menu]:not(.principal)').click()");
+        scene.WaitFor("[...document.querySelectorAll('.menu [role=menuitem]')].some((entree) => entree.textContent.trim() === 'Importer…')");
+        scene.Script("[...document.querySelectorAll('.menu [role=menuitem]')].find((entree) => entree.textContent.trim() === 'Importer…').click()");
         scene.WaitFor("document.querySelector('dialog.dialogue-import[open]') !== null");
         StringAssert.Contains(scene.Script("document.querySelector('dialog[open]').textContent"), "Un fichier Visio (.vsdx) : ouvrez-le dans draw.io, puis enregistrez-le en .drawio.", StringComparison.Ordinal);
         scene.Script("document.querySelector('dialog[open] form').requestSubmit()");
@@ -874,9 +903,9 @@ public sealed partial class SchemasPageTests
         scene.WaitFor("document.getAnimations().length === 0");
         scene.Picture($"schemas-pages-renvoi-suivi-{suffix}");
 
-        // Clic droit sur un onglet : renommer, dupliquer, déplacer, puis supprimer, à part et en couleur d'alerte.
+        // Clic droit sur un onglet : renommer, dupliquer, déplacer, copier ou déplacer vers un autre schéma, en faire un nouveau, puis supprimer, à part et en couleur d'alerte.
         TabMenu(scene, 0);
-        Assert.AreEqual("Renommer|Dupliquer la page|Déplacer à gauche|Déplacer à droite|Supprimer la page…", JsonSerializer.Deserialize<string>(scene.Script("[...document.querySelectorAll('.menu[role=menu] button')].map((b) => b.textContent.trim()).join('|')")));
+        Assert.AreEqual("Renommer|Dupliquer la page|Déplacer à gauche|Déplacer à droite|Copier vers un autre schéma…|Déplacer vers un autre schéma…|Copier dans un nouveau schéma|Détacher en un nouveau schéma|Enregistrer cette page comme modèle…|Supprimer la page…", JsonSerializer.Deserialize<string>(scene.Script("[...document.querySelectorAll('.menu[role=menu] button')].map((b) => b.textContent.trim()).join('|')")));
         Assert.AreEqual("true", scene.Script("document.querySelector('.menu[role=menu] button:nth-of-type(3)').disabled"), "la première page ne va pas plus à gauche");
         Assert.AreEqual("true", scene.Script("getComputedStyle(document.querySelector('.menu[role=menu] .danger')).color !== getComputedStyle(document.querySelector('.menu[role=menu] button')).color"));
         scene.WaitFor("document.getAnimations().length === 0");
@@ -929,8 +958,10 @@ public sealed partial class SchemasPageTests
         scene.WaitFor("document.querySelectorAll('.pages .onglet').length === 4");
         UiThread.Until(() => Saved()["equipements"]!.AsArray().Count == 10, TimeSpan.FromSeconds(20));
 
-        // « + » ajoute une page vide, montrée : l'invite à poser un équipement y revient.
+        // « + », « Nouvelle page » : une page vide, montrée ; l'invite à poser un équipement y revient.
         scene.Script("document.querySelector('.pages .plus').click()");
+        scene.WaitFor("document.querySelector('.menu[role=menu]') !== null");
+        MenuEntry(scene, "Nouvelle page");
         scene.WaitFor("document.querySelectorAll('.pages .onglet').length === 5");
         Assert.AreEqual("Page 5*", Tabs(scene).Split('|')[^1]);
         scene.WaitFor("document.querySelector('.plan .invite') !== null");
