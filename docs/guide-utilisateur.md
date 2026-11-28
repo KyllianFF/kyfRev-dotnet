@@ -187,6 +187,14 @@ Ce qui sort est en clair, même depuis un coffre chiffré, sauf le coffre comple
   récupération** : sans elle et sans le mot de passe, le coffre est perdu. Le coffre en clair reste en place tant que vous ne le
   retirez pas. Ctrl+Maj+L verrouille à tout moment. Ce que le chiffrement protège, et ce qu'il ne protège pas, est écrit dans
   [le modèle de menace](chiffrement.md#le-modèle-de-menace).
+- **Windows Hello** : si Windows Hello est configuré sur l'ordinateur, la case « Ouvrir avec Windows Hello sur cet
+  ordinateur » de l'écran de déverrouillage retient la clé du coffre, scellée par Windows Hello. Le coffre ne s'ouvre
+  jamais seul : au démarrage comme après un verrouillage, « Ouvrir avec Windows Hello » demande votre code PIN, votre
+  visage ou votre empreinte. « Utiliser le mot de passe » reste à un clic.
+- **Renouveler toutes les clés** : si votre mot de passe ou votre clé de récupération a pu être vu, Paramètres › Coffre et
+  chiffrement › « Renouveler toutes les clés… » tire une nouvelle clé pour tout le coffre, avec le même mot de passe ou un
+  nouveau, et une nouvelle clé de récupération à noter. Changer seulement le mot de passe ne suffit pas : l'ancienne clé
+  de récupération ouvrirait encore le coffre.
 
 ## Ajouter
 
@@ -341,9 +349,13 @@ Ctrl+Alt+N, qui fait la même chose depuis une autre application tant que kyfRev
 
 ## En cas de problème
 
-**Coffre dans un dossier synchronisé** (Dropbox, OneDrive, Syncthing, Nextcloud) : si deux postes modifient la même fiche
-sans se voir, l'outil garde deux fichiers. « Santé du coffre » les liste sous « Copies de conflit » : comparez-les dans
-l'Explorateur, reportez ce qui manque, puis supprimez la copie. N'ouvrez pas le même coffre sur deux postes à la fois.
+**Coffre dans un dossier synchronisé** (Proton Drive, Dropbox, OneDrive, Syncthing, Nextcloud) : chaque poste note sa
+présence dans le coffre. Si le coffre est déjà ouvert sur un autre poste, kyfRev le dit à l'ouverture et propose « Ouvrir »,
+« Lecture seule » ou « Annuler », sans rien écrire avant votre réponse ; en lecture seule, rien ne s'écrit, et une bande
+propose « Passer en écriture ». Pendant que vous travaillez, un avis paraît si un autre poste l'ouvre à son tour. Écrire
+des deux côtés à la fois reste à éviter : si deux postes modifient la même fiche sans se voir, l'outil de synchronisation
+garde deux fichiers. « Santé du coffre » les liste sous « Copies de conflit » : comparez-les dans l'Explorateur,
+reportez ce qui manque, puis supprimez la copie.
 
 Le journal `kyfRev.log` garde la trace des derniers démarrages : dans `%LOCALAPPDATA%\kyfRev\v1` pour une version installée, à côté
 de `kyfRev.exe` pour la version portable. Il ne contient pas le texte de vos fiches.
