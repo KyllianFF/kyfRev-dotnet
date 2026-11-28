@@ -27,8 +27,8 @@
     onautresPages?: () => void;
     /** « Copier vers un autre schéma… », « Déplacer vers un autre schéma… ». */
     onenvoyer?: (page: string, deplacer: boolean) => void;
-    /** « Faire un nouveau schéma de cette page ». */
-    onnouveauSchema?: (page: string) => void;
+    /** « Copier dans un nouveau schéma » (la page reste ici) ou « Détacher en un nouveau schéma » (elle quitte celui-ci). */
+    onnouveauSchema?: (page: string, detacher: boolean) => void;
     /** « Enregistrer cette page comme modèle… » (31E). */
     onmodele?: (page: string) => void;
     /** « Pages depuis un modèle… » : ajouter ici les pages d'un modèle. */
@@ -372,7 +372,8 @@
           <button type="button" role="menuitem" onclick={() => choisir((id) => onenvoyer?.(id, true))}>Déplacer vers un autre schéma…</button>
         {/if}
         {#if onnouveauSchema}
-          <button type="button" role="menuitem" onclick={() => choisir((id) => onnouveauSchema?.(id))}>Faire un nouveau schéma de cette page</button>
+          <button type="button" role="menuitem" onclick={() => choisir((id) => onnouveauSchema?.(id, false))}>Copier dans un nouveau schéma</button>
+          <button type="button" role="menuitem" disabled={!plusieurs} title={plusieurs ? undefined : "Un schéma garde au moins une page."} onclick={() => choisir((id) => onnouveauSchema?.(id, true))}>Détacher en un nouveau schéma</button>
         {/if}
         {#if onmodele}
           <button type="button" role="menuitem" onclick={() => choisir((id) => onmodele?.(id))}>Enregistrer cette page comme modèle…</button>

@@ -436,15 +436,27 @@
     });
   }
 
-  /** « Faire un nouveau schéma de cette page » : il est créé dans le coffre ; celui-ci ne change pas. */
-  async function nouveauSchemaDeLaPage(page: string) {
+  /**
+   * « Copier dans un nouveau schéma » : il est créé dans le coffre, celui-ci ne change pas. « Détacher en un nouveau
+   * schéma » : la page quitte ensuite celui-ci, avec ses câbles vers les autres pages ; Ctrl+Z l'y rend (le nouveau
+   * schéma, lui, reste). Rien n'est retiré si la création échoue.
+   */
+  async function nouveauSchemaDeLaPage(page: string, detacher = false) {
     try {
       const { schema: nouveau, transfert } = schemaDeLaPage($state.snapshot(editeur.schema) as Schema, page);
       await creerEchange(nouveau);
-      const reste =
-        transfert.cablesRetires > 0
-          ? ` ${transfert.cablesRetires > 1 ? `${transfert.cablesRetires} câbles vers d'autres pages n'y sont pas` : "1 câble vers une autre page n'y est pas"}.`
-          : "";
+      const n = transfert.cablesRetires;
+      if (detacher) {
+        const coupes = n > 0 ? ` ${n > 1 ? `${n} câbles vers d'autres pages sont retirés` : "1 câble vers une autre page est retiré"}.` : "";
+        editeur.retirerPages(
+          [page],
+          `Page détachée : « ${nouveau.titre} » est un schéma à part, dans la liste des schémas.${coupes} Ctrl+Z la rend ici.`,
+        );
+        // Son onglet est parti avec elle : le plan reprend la main, et Ctrl+Z vaut tout de suite.
+        rendreLaMain();
+        return;
+      }
+      const reste = n > 0 ? ` ${n > 1 ? `${n} câbles vers d'autres pages n'y sont pas` : "1 câble vers une autre page n'y est pas"}.` : "";
       editeur.annonce = `Nouveau schéma « ${nouveau.titre} » créé : il est dans la liste des schémas.${reste}`;
     } catch (e) {
       editeur.annonce = `Nouveau schéma impossible : ${messageErreur(e)}`;
@@ -1113,7 +1125,7 @@
       {editeur}
       onautresPages={() => (autresPagesOuvert = true)}
       onenvoyer={(page, deplacer) => (envoi = { page, deplacer })}
-      onnouveauSchema={(page) => void nouveauSchemaDeLaPage(page)}
+      onnouveauSchema={(page, detacher) => void nouveauSchemaDeLaPage(page, detacher)}
       onmodele={(page) => void enregistrerCommeModele(page)}
       onpagesModele={() => (pagesModeleOuvert = true)}
     />

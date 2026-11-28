@@ -259,8 +259,10 @@ Des pages passent d'un schéma à l'autre. Dans l'éditeur, « + » sous le plan
 schéma… » : choisissez le schéma, puis ses pages sur leurs vignettes, et « Les copier » (le schéma d'origine ne change pas)
 ou « Les déplacer » (elles le quittent). Elles arrivent après les vôtres, la première montrée, et Ctrl+Z les retire toutes
 en une fois ; le schéma d'origine, lui, garde ses versions. Le chemin inverse est au clic droit sur un onglet : « Copier
-vers un autre schéma… », « Déplacer vers un autre schéma… » (Ctrl+Z la rend ici), « Faire un nouveau schéma de cette
-page » (il prend le nom de la page). Un câble ne va pas d'un schéma à l'autre : entre une page qui part et une page qui
+vers un autre schéma… », « Déplacer vers un autre schéma… » (Ctrl+Z la rend ici), « Copier dans un nouveau schéma »
+(il prend le nom de la page ; celle-ci reste ici) et « Détacher en un nouveau schéma » (la page devient un schéma à part
+entière et quitte celui-ci ; Ctrl+Z l'y rend, le nouveau schéma restant dans la liste ; un schéma d'une seule page ne se
+détache pas). Un câble ne va pas d'un schéma à l'autre : entre une page qui part et une page qui
 reste, il ne suit pas, et le compte rendu le dit ; entre deux pages qui partent ensemble, il suit. Un nom de page déjà
 pris est précédé du titre du schéma d'où elle vient (« SAMES Meylan · Stains »). Les VLAN se retrouvent par numéro (en cas
 de noms différents, celui du schéma qui reçoit est gardé, et le compte rendu le dit) et les modèles de matériel par

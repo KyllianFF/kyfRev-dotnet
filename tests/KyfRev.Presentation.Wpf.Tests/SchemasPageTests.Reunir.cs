@@ -259,7 +259,7 @@ public sealed partial class SchemasPageTests
 
         // Clic droit sur « Étage 2 » : copier, déplacer vers un autre schéma, en faire un nouveau.
         TabMenu(scene, 1);
-        StringAssert.Contains(Texts(scene, ".menu[role=menu] button"), "Déplacer à droite|Copier vers un autre schéma…|Déplacer vers un autre schéma…|Faire un nouveau schéma de cette page|Enregistrer cette page comme modèle…|Supprimer la page…", StringComparison.Ordinal);
+        StringAssert.Contains(Texts(scene, ".menu[role=menu] button"), "Déplacer à droite|Copier vers un autre schéma…|Déplacer vers un autre schéma…|Copier dans un nouveau schéma|Détacher en un nouveau schéma|Enregistrer cette page comme modèle…|Supprimer la page…", StringComparison.Ordinal);
         scene.WaitFor("document.getAnimations().length === 0");
         scene.Picture($"schemas-onglet-echanges-{suffix}");
         MenuEntry(scene, "Déplacer vers un autre schéma…");
@@ -291,9 +291,9 @@ public sealed partial class SchemasPageTests
         scene.WaitFor("document.querySelectorAll('.pages .onglet').length === 4");
         UiThread.Until(() => Saved(lycee)["liens"]!.AsArray().Any(l => l!["id"]!.GetValue<string>() == "l_montee"), TimeSpan.FromSeconds(20));
 
-        // « Faire un nouveau schéma de cette page » sur la salle serveurs : un schéma de plus, à son nom ; le lycée ne change pas.
+        // « Copier dans un nouveau schéma » sur la salle serveurs : un schéma de plus, à son nom ; le lycée ne change pas.
         TabMenu(scene, 2);
-        MenuEntry(scene, "Faire un nouveau schéma de cette page");
+        MenuEntry(scene, "Copier dans un nouveau schéma");
         UiThread.Until(() => scene.Schemas.Schemas().Value.Count == 3, TimeSpan.FromSeconds(20));
         var page = scene.Schemas.Schemas().Value.Single(s => s.Title == "Salle serveurs");
         var nouveau = Saved(page.Id);
@@ -302,12 +302,32 @@ public sealed partial class SchemasPageTests
         scene.WaitFor("(document.querySelector('.annonce')?.textContent ?? '').includes('Nouveau schéma « Salle serveurs » créé')");
         Assert.AreEqual(4, Saved(lycee)["pages"]!.AsArray().Count);
 
+        // « Détacher en un nouveau schéma » sur l'étage 2 : un schéma à part, à son nom, et la page quitte le lycée avec
+        // le câble qui monte de l'étage 1 ; Ctrl+Z l'y rend, câble compris, et le nouveau schéma reste.
+        TabMenu(scene, 1);
+        MenuEntry(scene, "Détacher en un nouveau schéma");
+        UiThread.Until(() => scene.Schemas.Schemas().Value.Count == 4, TimeSpan.FromSeconds(20));
+        var detache = Saved(scene.Schemas.Schemas().Value.Single(s => s.Title == "Étage 2").Id);
+        Assert.AreEqual("SW-Étage2|PC-Salle 201", string.Join('|', detache["equipements"]!.AsArray().Select(e => e!["nom"]!.GetValue<string>())));
+        scene.WaitFor("document.querySelectorAll('.pages .onglet').length === 3");
+        scene.WaitFor("(document.querySelector('.annonce')?.textContent ?? '').includes('Page détachée : « Étage 2 » est un schéma à part')");
+        StringAssert.Contains(TextOf(scene, "document.querySelector('.annonce').textContent"), "1 câble vers une autre page est retiré.", StringComparison.Ordinal);
+        UiThread.Until(() => Saved(lycee)["pages"]!.AsArray().Count == 3, TimeSpan.FromSeconds(20));
+        Assert.IsFalse(Saved(lycee)["liens"]!.AsArray().Any(l => l!["id"]!.GetValue<string>() == "l_montee"));
+        WaitForFocus(scene, "svg.canevas");
+        Key(scene, "z", "KeyZ", 0x5A, modifiers: 2);
+        scene.WaitFor("document.querySelectorAll('.pages .onglet').length === 4");
+        UiThread.Until(() => Saved(lycee)["liens"]!.AsArray().Any(l => l!["id"]!.GetValue<string>() == "l_montee"), TimeSpan.FromSeconds(20));
+        Assert.AreEqual(4, scene.Schemas.Schemas().Value.Count, "le nouveau schéma reste");
+        scene.Script("document.querySelectorAll('.pages .onglet')[0].click()");
+        scene.WaitFor("document.querySelector('.pages .onglet[aria-selected=true] .nom')?.textContent === 'Étage 1'");
+
         // Fenêtre étroite : la fenêtre « Copier vers… » tient.
         Narrow(scene);
         scene.Script("document.querySelector('.pages .choix').click()");
         scene.WaitFor("document.querySelector('.menu[role=menu]') !== null");
         MenuEntry(scene, "Copier vers un autre schéma…");
-        scene.WaitFor($"document.querySelectorAll('{dialog} .case-schema').length === 2");
+        scene.WaitFor($"document.querySelectorAll('{dialog} .case-schema').length === 3");
         Assert.AreEqual("Copier « Étage 1 » vers un autre schéma", TextOf(scene, $"document.querySelector('{dialog} h2').textContent"));
         FitsTheWindow(scene, dialog);
         scene.WaitFor("document.getAnimations().length === 0");

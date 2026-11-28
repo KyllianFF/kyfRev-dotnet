@@ -905,7 +905,7 @@ public sealed partial class SchemasPageTests
 
         // Clic droit sur un onglet : renommer, dupliquer, déplacer, copier ou déplacer vers un autre schéma, en faire un nouveau, puis supprimer, à part et en couleur d'alerte.
         TabMenu(scene, 0);
-        Assert.AreEqual("Renommer|Dupliquer la page|Déplacer à gauche|Déplacer à droite|Copier vers un autre schéma…|Déplacer vers un autre schéma…|Faire un nouveau schéma de cette page|Enregistrer cette page comme modèle…|Supprimer la page…", JsonSerializer.Deserialize<string>(scene.Script("[...document.querySelectorAll('.menu[role=menu] button')].map((b) => b.textContent.trim()).join('|')")));
+        Assert.AreEqual("Renommer|Dupliquer la page|Déplacer à gauche|Déplacer à droite|Copier vers un autre schéma…|Déplacer vers un autre schéma…|Copier dans un nouveau schéma|Détacher en un nouveau schéma|Enregistrer cette page comme modèle…|Supprimer la page…", JsonSerializer.Deserialize<string>(scene.Script("[...document.querySelectorAll('.menu[role=menu] button')].map((b) => b.textContent.trim()).join('|')")));
         Assert.AreEqual("true", scene.Script("document.querySelector('.menu[role=menu] button:nth-of-type(3)').disabled"), "la première page ne va pas plus à gauche");
         Assert.AreEqual("true", scene.Script("getComputedStyle(document.querySelector('.menu[role=menu] .danger')).color !== getComputedStyle(document.querySelector('.menu[role=menu] button')).color"));
         scene.WaitFor("document.getAnimations().length === 0");

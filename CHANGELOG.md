@@ -18,7 +18,8 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 - Schémas réseau : des pages d'un schéma à l'autre (31D). « + » sous le plan propose « Nouvelle page » ou « Pages d'un
   autre schéma… » : ses pages se choisissent sur leurs vignettes, se copient ou se déplacent ; Ctrl+Z retire l'ajout en
   une fois. Au clic droit sur un onglet : « Copier vers un autre schéma… », « Déplacer vers un autre schéma… » (Ctrl+Z
-  la rend), « Faire un nouveau schéma de cette page ». Un câble entre une page qui part et une page qui reste ne suit
+  la rend), « Copier dans un nouveau schéma » et « Détacher en un nouveau schéma » (la page quitte celui-ci pour un schéma à
+  part, à son nom ; Ctrl+Z la rend). Un câble entre une page qui part et une page qui reste ne suit
   pas, et le compte rendu le dit ; entre deux pages qui partent ensemble, il suit.
 - Schémas réseau : la recherche dans tous les schémas du coffre (archivés compris, marqués) trouve un équipement (nom,
   nom d'hôte), une adresse IP (entière, son début ou un réseau) ou un VLAN (numéro, nom) ; les résultats sont groupés,
