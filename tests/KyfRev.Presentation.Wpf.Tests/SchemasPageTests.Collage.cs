@@ -43,8 +43,13 @@ public sealed partial class SchemasPageTests
     private static double[] GripOf(IslandScene scene, string selector)
     {
         double[]? point = null;
-        UiThread.Until(() => (point = TryGripOf(scene, selector)) is not null, TimeSpan.FromSeconds(10));
-        return point ?? throw new AssertFailedException($"aucun point de « {selector} » sous le pointeur");
+        var deadline = DateTime.UtcNow.AddSeconds(10);
+        while ((point = TryGripOf(scene, selector)) is null && DateTime.UtcNow < deadline)
+        {
+            TestShell.Flush();
+        }
+        // Couvert jusqu'au bout : l'échec dit ce qui le couvre, pour qu'on le voie sur la CI.
+        return point ?? throw new AssertFailedException($"aucun point de « {selector} » sous le pointeur ; au centre : {TextOf(scene, "(() => { const e = document.querySelector('" + selector + "'); if (!e) return 'absent'; const r = e.getBoundingClientRect(); const s = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2); const nom = (n) => n ? n.tagName.toLowerCase() + (n.id ? '#' + n.id : '') + (typeof n.className === 'string' && n.className ? '.' + n.className.trim().replaceAll(' ', '.') : '') : 'rien'; return 'rect ' + [r.x, r.y, r.width, r.height].map(Math.round).join(',') + ' ; ' + nom(s) + ' < ' + nom(s?.parentElement) + ' < ' + nom(s?.parentElement?.parentElement) + ' ; fenêtre ' + innerWidth + 'x' + innerHeight + ' ; dialogue ' + (document.querySelector('dialog[open]')?.className ?? 'aucun') + ' ; volet ' + Math.round(document.querySelector('.volet, .proprietes')?.getBoundingClientRect().width ?? 0); })()")}");
     }
 
     private static double[]? TryGripOf(IslandScene scene, string selector) =>
