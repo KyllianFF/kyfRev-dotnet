@@ -1256,32 +1256,53 @@ public sealed partial class SchemasPageTests
     {
         using var scene = new BridgeScene();
         var png = Convert.FromBase64String(OnePixel);
-        var asked = new List<(string Title, byte[] Picture)>();
-        var outcomes = new Queue<string?>(["Envoyé à l'imprimante « Bureau ».", null]);
-        var bridge = new SchemaBridge(new SchemaUseCases(scene.Vaults.App.Host), scene.Picker, () => null, _ => { }, print: (title, picture) =>
+        var asked = new List<(string Title, IReadOnlyList<PrintedSheet> Sheets, int Shown)>();
+        var outcomes = new Queue<string?>(["Envoyé à l'imprimante « Bureau ».", null, "Envoyé à l'imprimante « Bureau ».", null]);
+        var bridge = new SchemaBridge(new SchemaUseCases(scene.Vaults.App.Host), scene.Picker, () => null, _ => { }, print: (title, sheets, shown) =>
         {
-            asked.Add((title, picture));
+            asked.Add((title, sheets, shown));
             return Task.FromResult(outcomes.Dequeue());
         });
-        async Task<JsonObject> Print(params string[] args) =>
+        async Task<JsonObject> Print(params object[] args) =>
             JsonNode.Parse((await bridge.ReceiveAsync(JsonSerializer.Serialize(new { kind = "call", id = 4, method = "imprimerSchema", args })))!)!.AsObject();
+        var image = Convert.ToBase64String(png);
 
         // La fenêtre s'ouvre sur l'image, sous son titre ; la réponse vient quand elle se ferme : le travail parti, ou rien.
-        var sent = await Print("Réseau du lycée", Convert.ToBase64String(png));
+        var sent = await Print("Réseau du lycée", image);
         Assert.IsTrue(sent["ok"]!.GetValue<bool>());
         Assert.AreEqual("Envoyé à l'imprimante « Bureau ».", sent["value"]!.GetValue<string>());
         Assert.AreEqual("Réseau du lycée", asked.Single().Title);
-        CollectionAssert.AreEqual(png, asked.Single().Picture);
-        var closed = await Print("Réseau du lycée", Convert.ToBase64String(png));
+        Assert.AreEqual("Réseau du lycée", asked.Single().Sheets.Single().Title);
+        CollectionAssert.AreEqual(png, asked.Single().Sheets.Single().Png);
+        Assert.AreEqual(1, asked.Single().Shown);
+        var closed = await Print("Réseau du lycée", image);
         Assert.IsTrue(closed["ok"]!.GetValue<bool>());
         Assert.IsNull(closed["value"]);
 
-        // Autre chose qu'une image PNG, pas de titre, ou du texte qui n'est pas du base64 : refusé, rien ne s'ouvre.
-        foreach (var bad in new[] { new[] { "Réseau", Convert.ToBase64String("<svg/>"u8.ToArray()) }, ["Réseau", string.Empty], ["Réseau", "pas du base64 !"], [Convert.ToBase64String(png)] })
+        // Toutes les pages d'un schéma : une image par feuille, chacune sous son titre, dans l'ordre ; l'aperçu sur la page montrée.
+        var pages = await Print("Réseau du lycée", new[] { new[] { "Réseau du lycée - Étage 1", image }, ["Réseau du lycée - Étage 2", image] }, 2);
+        Assert.IsTrue(pages["ok"]!.GetValue<bool>());
+        Assert.AreEqual("Réseau du lycée", asked[2].Title);
+        Assert.AreEqual("Réseau du lycée - Étage 1 | Réseau du lycée - Étage 2", string.Join(" | ", asked[2].Sheets.Select(sheet => sheet.Title)));
+        Assert.AreEqual(2, asked[2].Shown);
+        Assert.IsTrue((await Print("Réseau", new[] { new[] { "Étage 1", image } }))["ok"]!.GetValue<bool>());
+        Assert.AreEqual(1, asked[3].Shown, "sans page montrée, la première");
+
+        // Autre chose qu'une image PNG, pas de titre, du texte qui n'est pas du base64, une page mal écrite, aucune page, ou
+        // une page montrée qui n'est pas un nombre : refusé, rien ne s'ouvre.
+        object[][] wrong =
+        [
+            ["Réseau", Convert.ToBase64String("<svg/>"u8.ToArray())], ["Réseau", string.Empty], ["Réseau", "pas du base64 !"], [image],
+            ["Réseau", new[] { new[] { "Étage 1" } }], ["Réseau", new[] { new[] { "Étage 1", "pas du base64 !" } }], ["Réseau", Array.Empty<string[]>()],
+            ["Réseau", new[] { new[] { "Étage 1", Convert.ToBase64String("<svg/>"u8.ToArray()) } }], ["Réseau", new[] { "Étage 1" }],
+            ["Réseau", new[] { new[] { "Étage 1", image } }, "deux"],
+            ["Réseau", Enumerable.Repeat(new[] { "Page", image }, SchemaBridge.PrintedPagesLimit + 1).ToArray()],
+        ];
+        foreach (var bad in wrong)
         {
-            Assert.IsFalse((await Print(bad))["ok"]!.GetValue<bool>(), string.Join(" ", bad));
+            Assert.IsFalse((await Print(bad))["ok"]!.GetValue<bool>(), JsonSerializer.Serialize(bad));
         }
-        Assert.HasCount(2, asked);
+        Assert.HasCount(4, asked);
 
         // Sans fenêtre pour imprimer, l'appel est refusé comme un appel inconnu.
         var refused = await scene.AnswerAsync(JsonSerializer.Serialize(new { kind = "call", id = 5, method = "imprimerSchema", args = new[] { "Réseau", Convert.ToBase64String(png) } }));
@@ -1316,6 +1337,17 @@ public sealed partial class SchemasPageTests
         Assert.IsTrue(page.Print.Print());
         Assert.AreEqual("Envoyé à l'imprimante « Bureau ».", printed.Result);
         Assert.IsFalse(page.Print.IsOpen);
+
+        // Les pages d'un schéma : une feuille chacune, sous son titre, l'aperçu sur la page montrée.
+        var pages = page.PrintPagesAsync("Réseau du lycée", [new("Réseau du lycée - Étage 1", png), new("Réseau du lycée - Étage 2", png)], 2);
+        Assert.IsTrue(page.Print.IsOpen);
+        Assert.HasCount(2, page.Print.Pictures);
+        Assert.AreEqual(2, page.Print.CurrentPage);
+        Assert.AreEqual("Réseau du lycée - Étage 2", page.Print.PictureTitle);
+        Assert.AreEqual("Imprimer « Réseau du lycée »", page.Print.Title);
+        page.Print.Close();
+        Assert.IsNull(pages.Result);
+        Assert.IsTrue(page.Print.IsSheet, "fermée, elle n'a plus d'images");
 
         // Une image illisible : refusée comme un appel mal formé, et la fenêtre ne s'ouvre pas.
         var refusal = Assert.ThrowsExactly<ArgumentException>(() => page.PrintPictureAsync("Réseau", [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 1, 2, 3]));

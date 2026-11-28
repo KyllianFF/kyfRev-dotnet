@@ -239,15 +239,15 @@ internal sealed partial class PrintView : UserControl
     /// <summary>L'image seule : une feuille, celle qui sortira, sans numéro.</summary>
     private void ShowPicture(PrintViewModel model, BitmapSource picture)
     {
-        if (model.TotalPages != 1)
+        if (model.TotalPages != model.Pictures.Count)
         {
-            model.TotalPages = 1;
+            model.TotalPages = model.Pictures.Count;
         }
         PageCanvas.Visibility = Visibility.Hidden;
-        NotPrintedText.Visibility = Visibility.Hidden;
-        Paper.Opacity = 1;
+        NotPrintedText.Visibility = model.IsCurrentPrinted ? Visibility.Hidden : Visibility.Visible;
+        Paper.Opacity = model.IsCurrentPrinted ? 1 : 0.45;
         PageNumber.Text = string.Empty;
-        var page = new DrawingImage(PicturePage(model, picture));
+        var page = new DrawingImage(PicturePage(model, model.PictureTitle, picture));
         page.Freeze();
         PageImage.Source = page;
         PageImage.Visibility = Visibility.Visible;
@@ -257,7 +257,7 @@ internal sealed partial class PrintView : UserControl
     /// La feuille d'une image seule : son titre en haut, dans les marges, puis l'image entière, centrée dans la place qui reste.
     /// Le titre reste du texte ; en noir et blanc, il est noir et l'image en nuances de gris.
     /// </summary>
-    private DrawingGroup PicturePage(PrintViewModel model, BitmapSource picture)
+    private DrawingGroup PicturePage(PrintViewModel model, string heading, BitmapSource picture)
     {
         var layout = model.Layout;
         var size = new Size(layout.WidthPixels, layout.HeightPixels);
@@ -265,7 +265,7 @@ internal sealed partial class PrintView : UserControl
         var width = Math.Max(1, size.Width - (2 * margin));
         var ink = model.IsColor && _stage.TryFindResource("Kyf.Brush.Text") is Brush text ? text : _ink;
         var typeface = new Typeface(TextElement.GetFontFamily(_viewer), FontStyles.Normal, FontWeights.SemiBold, FontStretches.Normal);
-        var title = new FormattedText(model.PictureTitle, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, typeface, PictureTitleSize, ink, 1)
+        var title = new FormattedText(heading, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, typeface, PictureTitleSize, ink, 1)
         {
             MaxTextWidth = width,
             MaxLineCount = 2,
@@ -344,15 +344,22 @@ internal sealed partial class PrintView : UserControl
         }
         var layout = model.Layout;
         var size = new Size(layout.WidthPixels, layout.HeightPixels);
-        if (model.Picture is { } picture)
+        if (!model.IsSheet)
         {
-            var drawing = PicturePage(model, picture);
-            return new SheetPaginator(1, size, _ =>
+            // Une image par feuille, sous son titre : celles des feuilles demandées, dans l'ordre, dessinées quand on les demande.
+            var pictures = model.Pictures;
+            var wanted = pages.Where(page => page >= 1 && page <= pictures.Count).ToList();
+            if (wanted.Count == 0)
             {
+                return null;
+            }
+            return new SheetPaginator(wanted.Count, size, index =>
+            {
+                var picture = pictures[wanted[index] - 1];
                 var visual = new DrawingVisual();
                 using (var context = visual.RenderOpen())
                 {
-                    context.DrawDrawing(drawing);
+                    context.DrawDrawing(PicturePage(model, picture.Title, picture.Image));
                 }
                 return visual;
             });

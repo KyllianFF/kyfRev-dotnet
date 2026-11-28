@@ -113,6 +113,49 @@ html:not(.en-pages) #fiche {
   margin-left: max(8px, (100% - var(--largeur-fiche, 100%)) / 2);
 }
 
+/*
+ * Ce qui est plus large que la colonne de texte (blocs-larges.ts, 15A) : un tableau, une image seule sur sa ligne ou un
+ * dessin garde sa largeur et déborde autant de chaque côté (« --debord-bloc »), jusqu'à la colonne « Large ». La feuille
+ * s'élargit du plus grand débord (« --debord ») et le texte garde sa colonne, au même endroit. Jamais en pages ni sur un
+ * papier : la décoration n'y est pas posée.
+ */
+html:not(.en-pages) #fiche.avec-debord {
+  max-width: calc(var(--largeur-fiche) + 2 * var(--debord));
+  margin-right: max(12px, (100% - var(--largeur-fiche) - 2 * var(--debord)) / 2);
+  margin-left: max(8px, (100% - var(--largeur-fiche) - 2 * var(--debord)) / 2);
+}
+
+html:not(.en-pages) #fiche.avec-debord > .editeur-visuel {
+  margin-right: var(--debord);
+  margin-left: var(--debord);
+}
+
+#fiche .editeur-visuel > .bloc-large {
+  margin-right: calc(-1 * var(--debord-bloc));
+  margin-left: calc(-1 * var(--debord-bloc));
+}
+
+#fiche .editeur-visuel > table.bloc-large {
+  width: calc(100% + 2 * var(--debord-bloc));
+  max-width: none;
+}
+
+/* La sonde où un tableau se mesure sur une ligne : hors du flux, jamais vue, avec les styles du texte de la fiche. */
+.contenu-fiche.sonde-des-blocs {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+  white-space: pre-wrap;
+  font-variant-ligatures: none;
+}
+
 .contenu-fiche pre,
 .contenu-fiche code,
 .editeur-visuel .bloc-code {

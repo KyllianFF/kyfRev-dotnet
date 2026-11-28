@@ -27,7 +27,7 @@ import {
   supprimerPage,
   surLaPage,
 } from "./pages";
-import { titreDeLaSortie } from "./sorties";
+import { feuilleMontree, feuillesAImprimer, titreDeLaSortie } from "./sorties";
 
 vi.mock("../api", () => ({
   api: { enregistrerSchema: vi.fn() },
@@ -411,6 +411,33 @@ describe("pages : les sorties", () => {
     expect(titreDeLaSortie(schema, etage2)).toBe("Réseau du lycée - Étage 2");
     expect(titreDeLaSortie(schema)).toBe("Réseau du lycée - Étage 1");
     expect(titreDeLaSortie(unePage().schema)).toBe("Réseau du lycée");
+  });
+
+  it("l'impression sort toutes les pages, une par feuille, dans l'ordre des onglets, le nom de chacune en tête", () => {
+    const { schema, etage1, etage2 } = deuxPages();
+    expect(feuillesAImprimer(schema)).toEqual([
+      { page: etage1, titre: "Réseau du lycée - Étage 1" },
+      { page: etage2, titre: "Réseau du lycée - Étage 2" },
+    ]);
+    // L'ordre des onglets change : celui des feuilles aussi.
+    deplacerPage(schema, etage2, 0);
+    expect(feuillesAImprimer(schema).map((f) => f.page)).toEqual([etage2, etage1]);
+  });
+
+  it("une page sans équipement ne s'imprime pas ; un schéma d'une page sort sous son titre seul", () => {
+    const { schema, etage1, etage2 } = deuxPages();
+    ajouterPage(schema, "Annexe");
+    expect(feuillesAImprimer(schema).map((f) => f.page)).toEqual([etage1, etage2]);
+    expect(feuillesAImprimer(unePage().schema)).toEqual([{ page: "", titre: "Réseau du lycée" }]);
+  });
+
+  it("l'aperçu s'ouvre sur la feuille de la page montrée, sinon sur la première", () => {
+    const { schema, etage2 } = deuxPages();
+    const vide = ajouterPage(schema, "Annexe").id;
+    const feuilles = feuillesAImprimer(schema);
+    expect(feuilleMontree(feuilles, etage2)).toBe(2);
+    expect(feuilleMontree(feuilles)).toBe(1);
+    expect(feuilleMontree(feuilles, vide)).toBe(1);
   });
 });
 

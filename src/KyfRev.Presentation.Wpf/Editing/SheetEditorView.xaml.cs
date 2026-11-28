@@ -181,6 +181,21 @@ internal sealed partial class SheetEditorView : UserControl
         set => SetValue(TextMaxWidthProperty, value);
     }
 
+    /// <summary>
+    /// La largeur que peut prendre, sur une feuille sans fin et sans papier, ce qui est plus large que la colonne de texte :
+    /// un tableau, une image seule sur sa ligne, un dessin. Il déborde de chaque côté, centré sur le texte, comme en lecture.
+    /// Infinie par défaut : rien ne déborde.
+    /// </summary>
+    public static readonly DependencyProperty WideMaxWidthProperty = DependencyProperty.Register(
+        nameof(WideMaxWidth), typeof(double), typeof(SheetEditorView), new PropertyMetadata(double.PositiveInfinity, (view, _) => ((SheetEditorView)view).UpdateZoom()));
+
+    /// <inheritdoc cref="WideMaxWidthProperty"/>
+    public double WideMaxWidth
+    {
+        get => (double)GetValue(WideMaxWidthProperty);
+        set => SetValue(WideMaxWidthProperty, value);
+    }
+
     /// <summary>Le zoom de la fiche (1 : taille normale) : le texte mis en forme et le code Markdown le suivent, en plus de la taille de l'interface.</summary>
     public static readonly DependencyProperty SheetZoomProperty = DependencyProperty.Register(
         nameof(SheetZoom), typeof(double), typeof(SheetEditorView), new PropertyMetadata(1d, (view, _) => ((SheetEditorView)view).UpdateZoom()));
@@ -465,6 +480,7 @@ internal sealed partial class SheetEditorView : UserControl
         // Le moteur web n'hérite pas de la taille de l'interface : il reçoit les deux zooms, multipliés.
         Visual?.SetZoom((_shell?.Zoom ?? 1) * SheetZoom);
         Visual?.TextWidth = TextMaxWidth;
+        Visual?.WideWidth = WideMaxWidth;
         // Le code Markdown, lui, est déjà à la taille de l'interface : seul le zoom de la fiche s'y ajoute.
         Source.LayoutTransform = SheetZoom == 1 ? System.Windows.Media.Transform.Identity : new System.Windows.Media.ScaleTransform(SheetZoom, SheetZoom);
     }

@@ -120,6 +120,10 @@ automatique, et l'historique garde les versions précédentes. Le ruban insère 
   le titre 4 a la taille du texte, en italique. « Taille du texte des fiches », dans les Paramètres, grandit le tout.
 - Une flèche dans la marge, à côté d'un titre, replie ou déplie tout ce qui est sous lui, sous-titres compris
   (Alt+Maj+« - » et Alt+Maj+« + »). Le repli n'est pas enregistré dans la fiche.
+- Sur une feuille sans fin, le texte garde la colonne choisie (Paramètres › Apparence, « Largeur du texte ») ; un tableau,
+  une image seule sur sa ligne ou un dessin plus large qu'elle garde sa largeur, jusqu'à celle de la colonne « Large », et
+  dépasse autant de chaque côté, en lecture comme en écriture, où la feuille s'élargit d'autant. Sur un papier, sur une
+  feuille A4, A5 ou A6, ou dans une fenêtre qui n'a que la place du texte, il reste dans la colonne.
 
 L'onglet « Mise en page » du ruban donne une feuille à la fiche : sans fin (par défaut), A4, A5 ou A6, en portrait ou en
 paysage, avec des marges étroites, normales, larges ou sur mesure. Le choix vaut pour toutes les fiches ou pour la fiche
@@ -253,12 +257,16 @@ et son port, comme d'habitude ; Échap repose le câble. Un câble entre deux pa
 pointillé : « → Étage 2 · SW-Étage2 · 1/48 », la page, l'équipement et le port d'en face. Un clic sur le renvoi mène à
 l'autre page ; tirée, la pastille se déplace (au clavier : les flèches, Maj pour aller plus vite), et sa place est gardée
 pour chaque bout du câble ; « Remettre à sa place », sous la pastille choisie, la remet à côté de son équipement. Les vues
-valent pour la page montrée ; le plan IP et le diagnostic regardent tout le schéma. Une image exportée ou imprimée montre la
+valent pour la page montrée ; le plan IP et le diagnostic regardent tout le schéma. Une image exportée (PNG, SVG) montre la
 page à l'écran ; un fichier draw.io garde toutes les pages, une page draw.io par page, et revient avec elles.
+« Imprimer… » sort toutes les pages, une par feuille, dans l'ordre des onglets, le nom de la page en tête de sa feuille
+(une page sans équipement est sautée). L'aperçu s'ouvre sur la page montrée, et « Certaines », sous « Feuilles », propose
+déjà son numéro : de quoi n'imprimer qu'elle. Pour un PDF, choisissez l'imprimante « Microsoft Print to PDF ».
 
 Les pages se parcourent aussi sans ouvrir l'éditeur. Dans le Détail d'un schéma, de petits onglets, au-dessus de
 l'aperçu, montrent chaque page (au clavier : les flèches, Début et Fin) ; un renvoi cliqué dans l'aperçu mène à sa page,
-et ce qui s'exporte, se partage ou s'imprime depuis le Détail est la page montrée. Dans une fiche, l'aperçu montre la
+ce qui s'exporte ou se partage depuis le Détail est la page montrée, et l'aperçu de l'impression s'ouvre sur elle.
+Dans une fiche, l'aperçu montre la
 première page, et un petit sélecteur, juste au-dessus, à droite, en choisit une autre (au clavier aussi, avec les
 flèches) : elle reste choisie, et s'imprime, jusqu'à la fermeture de kyfRev. Un schéma à plusieurs pages s'écrit au
 format 3 : une version de kyfRev qui ne connaît pas les pages refuse de l'ouvrir plutôt que de le relire en une seule.
