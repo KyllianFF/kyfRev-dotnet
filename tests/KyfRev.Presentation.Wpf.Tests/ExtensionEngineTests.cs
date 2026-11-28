@@ -878,7 +878,7 @@ public sealed class ExtensionEngineTests
             kyfrev.commande("demander", async () => {
               const r = await kyfrev.selection.demander("Sélectionnez la question", { fiche: "f_1", saisie: false });
               // Après la réponse, encore un peu de travail : il tient dans une patience entière, pas dans la fin de l'autre.
-              await new Promise((fini) => setTimeout(fini, 1200));
+              await new Promise((fini) => setTimeout(fini, 500));
               recu = `${r.choix}|${r.texte}|${r.fiche}|${r.titre}|${r.debut}|${r.fin}`;
             });
             kyfrev.commande("ouvrir", () => kyfrev.fiches.ouvrir("f_1", { debut: 3, fin: 9 }));

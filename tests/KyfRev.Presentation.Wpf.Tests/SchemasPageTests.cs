@@ -246,8 +246,8 @@ public sealed partial class SchemasPageTests
     public void The_real_island_lists_creates_and_edits_a_schema()
     {
         using var scene = new IslandScene();
-        scene.WaitFor("document.querySelector('.bouton.principal') !== null");
-        StringAssert.Contains(scene.Script("document.body.innerText"), "Aucun schéma réseau", StringComparison.Ordinal);
+        // L'accueil montre ses boutons avant d'avoir lu la liste : on attend ce qu'il dit une fois lue.
+        scene.WaitFor("document.querySelector('.bouton.principal') !== null && document.body.innerText.includes('Aucun schéma réseau')");
 
         // Nouveau schéma ▾ › Schéma vide : un nom, puis l'éditeur, et le fichier est écrit dans le coffre.
         NewEmptySchema(scene);
