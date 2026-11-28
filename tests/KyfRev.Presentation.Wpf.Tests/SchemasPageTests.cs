@@ -628,13 +628,8 @@ public sealed partial class SchemasPageTests
         var folder = scene.Outside("Exports");
         Directory.CreateDirectory(folder);
         scene.Picker.Answers.Enqueue(folder);
-        // Au premier lancement (la CI), le premier clic droit peut se perdre pendant que la vue s'installe : on le redonne.
-        UiThread.Until(() =>
-        {
-            scene.Script("document.querySelector('li.carte').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 60, clientY: 60 }))");
-            TestShell.Flush();
-            return scene.Script("document.querySelector('.menu[role=menu]') !== null") == "true";
-        }, TimeSpan.FromSeconds(20));
+        // Au premier lancement (la CI), le premier clic droit peut se perdre pendant que la vue s'installe : il se redonne.
+        RightClickUntilMenu(scene, "li.carte", 60, 60);
         scene.Script("[...document.querySelectorAll('.menu [role=menuitem]')].find((entree) => entree.textContent.includes('Exporter')).click()");
         scene.WaitFor("document.querySelector('dialog[open] input[type=radio]') !== null");
         Assert.AreEqual("4", scene.Script("document.querySelectorAll('dialog[open] input[type=radio]').length"));
@@ -705,13 +700,8 @@ public sealed partial class SchemasPageTests
         Narrow(scene);
 
         // « Exporter… », format draw.io : deux puces pour les icônes, celles de kyfRev d'abord, et le fichier .drawio écrit.
-        // Au premier lancement (la CI), le premier clic droit peut se perdre pendant que la vue s'installe : on le redonne.
-        UiThread.Until(() =>
-        {
-            scene.Script("document.querySelector('li.carte').dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 60, clientY: 60 }))");
-            TestShell.Flush();
-            return scene.Script("document.querySelector('.menu[role=menu]') !== null") == "true";
-        }, TimeSpan.FromSeconds(20));
+        // Au premier lancement (la CI), le premier clic droit peut se perdre pendant que la vue s'installe : il se redonne.
+        RightClickUntilMenu(scene, "li.carte", 60, 60);
         scene.Script("[...document.querySelectorAll('.menu [role=menuitem]')].find((entree) => entree.textContent.includes('Exporter')).click()");
         scene.WaitFor("document.querySelector('dialog[open] input[value=drawio]') !== null");
         scene.Script("document.querySelector('dialog[open] input[value=drawio]').click()");
@@ -859,6 +849,30 @@ public sealed partial class SchemasPageTests
 
     private static string Tabs(IslandScene scene) =>
         JsonSerializer.Deserialize<string>(scene.Script("[...document.querySelectorAll('.pages .onglet')].map((o) => o.querySelector('.nom').textContent + (o.getAttribute('aria-selected') === 'true' ? '*' : '')).join('|')"))!;
+
+    /// <summary>
+    /// Un clic droit sur <paramref name="selector"/> jusqu'à ce que le menu paraisse. Il ne se redonne qu'après avoir laissé
+    /// deux secondes au menu : un second clic droit sur la même carte refermerait celui qui s'ouvre (la CI est plus lente).
+    /// </summary>
+    private static void RightClickUntilMenu(IslandScene scene, string selector, int x, int y)
+    {
+        const string open = "document.querySelector('.menu[role=menu]') !== null";
+        var click = "document.querySelector(" + JsonSerializer.Serialize(selector) + ").dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: " + x.ToString(System.Globalization.CultureInfo.InvariantCulture) + ", clientY: " + y.ToString(System.Globalization.CultureInfo.InvariantCulture) + " }))";
+        UiThread.Until(() =>
+        {
+            if (scene.Script(open) == "true")
+            {
+                return true;
+            }
+            scene.Script(click);
+            var patience = DateTime.UtcNow.AddSeconds(2);
+            while (DateTime.UtcNow < patience && scene.Script(open) != "true")
+            {
+                TestShell.Flush();
+            }
+            return scene.Script(open) == "true";
+        }, TimeSpan.FromSeconds(30));
+    }
 
     private static void TabMenu(IslandScene scene, int rank)
     {
