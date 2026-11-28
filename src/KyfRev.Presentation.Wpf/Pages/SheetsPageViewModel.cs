@@ -152,9 +152,6 @@ public sealed record SheetFolderRow(string Folder, int Count)
     /// <summary>Son retrait dans le volet.</summary>
     public Thickness Indent => new(Depth * IndentStep, 0, 0, 0);
 
-    /// <summary>Le chevron qui dit s'il est plié.</summary>
-    public string Chevron => IsExpanded ? Icons.ChevronDown : Icons.ChevronRight;
-
     /// <summary>Son icône : la liste, l'horloge, le dossier, ou la fiche seule.</summary>
     public string Glyph => Place switch
     {

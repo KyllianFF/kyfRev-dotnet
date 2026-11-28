@@ -134,17 +134,27 @@
                   <Grid>
                     <Grid.ColumnDefinitions>
                       <ColumnDefinition Width="Auto" />
+                      <ColumnDefinition Width="Auto" />
                       <ColumnDefinition Width="*" />
                       <ColumnDefinition Width="Auto" />
                       <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <kyf:Icon Text="{x:Static kyf:Icons.Grip}" FontSize="14" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="{DynamicResource Kyf.Brush.TextSecondary}" />
-                    <TextBlock Grid.Column="1" Text="{Binding Label}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
-                    <Button Grid.Column="2" Style="{DynamicResource Kyf.Button.Tool}" Content="↑" Cursor="Hand" ToolTip="{Binding UpLabel}" AutomationProperties.Name="{Binding UpLabel}"
+                    <!-- Cochée, la vue est dans le menu ; décochée, elle n'y est plus mais s'ouvre encore par Ctrl+K. Aujourd'hui reste. -->
+                    <CheckBox x:Name="ShownBox" Grid.Column="1" IsChecked="{Binding IsShown}" IsEnabled="{Binding CanHide}" VerticalAlignment="Center" Margin="0,0,2,0"
+                              ToolTip="{Binding ShowLabel}" ToolTipService.ShowOnDisabled="True" AutomationProperties.Name="{Binding ShowLabel}" />
+                    <TextBlock x:Name="RowLabel" Grid.Column="2" Text="{Binding ListLabel}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                    <Button Grid.Column="3" Style="{DynamicResource Kyf.Button.Tool}" Content="↑" Cursor="Hand" ToolTip="{Binding UpLabel}" AutomationProperties.Name="{Binding UpLabel}"
                             Command="{Binding DataContext.MoveUpCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
-                    <Button Grid.Column="3" Style="{DynamicResource Kyf.Button.Tool}" Content="↓" Cursor="Hand" Margin="2,0,0,0" ToolTip="{Binding DownLabel}" AutomationProperties.Name="{Binding DownLabel}"
+                    <Button Grid.Column="4" Style="{DynamicResource Kyf.Button.Tool}" Content="↓" Cursor="Hand" Margin="2,0,0,0" ToolTip="{Binding DownLabel}" AutomationProperties.Name="{Binding DownLabel}"
                             Command="{Binding DataContext.MoveDownCommand, RelativeSource={RelativeSource AncestorType=UserControl}}" CommandParameter="{Binding}" />
                   </Grid>
+                  <DataTemplate.Triggers>
+                    <!-- Masquée : son nom pâlit et le dit, pour qui ne voit pas la case. -->
+                    <DataTrigger Binding="{Binding IsShown}" Value="False">
+                      <Setter TargetName="RowLabel" Property="Foreground" Value="{DynamicResource Kyf.Brush.TextSecondary}" />
+                    </DataTrigger>
+                  </DataTemplate.Triggers>
                 </DataTemplate>
               </ListBox.ItemTemplate>
             </ListBox>

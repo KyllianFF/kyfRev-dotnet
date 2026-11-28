@@ -72,6 +72,7 @@ public static partial class Transitions
                 done?.Invoke();
             };
             move.Y = 0;
+            CacheWhileMoving(element, glide);
             move.BeginAnimation(TranslateTransform.YProperty, glide);
         });
         return true;
@@ -134,6 +135,7 @@ public static partial class Transitions
                 }
             };
             move.X = 0;
+            CacheWhileMoving(element, glide);
             move.BeginAnimation(TranslateTransform.XProperty, glide);
         });
         return true;
@@ -168,6 +170,7 @@ public static partial class Transitions
     public static void Rest(FrameworkElement element)
     {
         ArgumentNullException.ThrowIfNull(element);
+        EndTrips(element);
         if (element.RenderTransform is TranslateTransform { IsFrozen: false } move)
         {
             move.BeginAnimation(TranslateTransform.XProperty, null);

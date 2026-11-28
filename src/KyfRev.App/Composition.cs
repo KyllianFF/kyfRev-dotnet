@@ -139,7 +139,10 @@ internal static class Composition
             return new DashboardPageViewModel(provider.GetRequiredService<ReminderUseCases>(), provider.GetRequiredService<SheetUseCases>(), provider.GetRequiredService<IReviewOpener>(), modules.Widgets, provider.GetRequiredService<ReviewUseCases>(), provider.GetRequiredService<KyfRevApplication>().Exams, provider.GetRequiredService<FolderUseCases>(), provider.GetRequiredService<TimeProvider>())
             {
                 LookForNews = () => LookForQuoteAsync(modules),
-                FirstSteps = new FirstSteps(provider.GetRequiredService<FirstUse>(), () => provider.GetRequiredService<ShellViewModel>().ShowGuide()),
+                FirstSteps = new FirstSteps(provider.GetRequiredService<FirstUse>(), () => provider.GetRequiredService<ShellViewModel>().ShowGuide())
+                {
+                    OpenSample = SampleOpener(provider),
+                },
             };
         });
         // Partager une fiche et enregistrer un modèle, depuis la vue « Fiches » comme depuis la lecture : une seule demande à la fois.
@@ -286,7 +289,7 @@ internal static class Composition
             ReleasedOn));
         services.AddSingleton<SheetsSettingsViewModel>();
         // Le menu se lit dans la coquille, qui n'existe qu'après les vues : on la demande au moment de montrer l'onglet.
-        services.AddSingleton(provider => new ShortcutsSettingsViewModel(provider.GetRequiredService<MachineSettings>(), () => provider.GetRequiredService<ShellViewModel>().MainNavigation));
+        services.AddSingleton(provider => new ShortcutsSettingsViewModel(provider.GetRequiredService<MachineSettings>(), () => provider.GetRequiredService<ShellViewModel>().OrderedNavigation));
         services.AddSingleton<SettingsHubViewModel>();
         services.AddSingleton(provider => new HealthPageViewModel(
             provider.GetRequiredService<MaintenanceUseCases>(),
@@ -385,7 +388,7 @@ internal static class Composition
             };
             extensionPages.ViewAsked += (_, e) =>
             {
-                if (shell.MainNavigation.Concat(shell.SecondaryNavigation).FirstOrDefault(item => item.Id == ExtensionPages.EntryId(e.Extension)) is { } entry)
+                if (shell.AllNavigation.FirstOrDefault(item => item.Id == ExtensionPages.EntryId(e.Extension)) is { } entry)
                 {
                     shell.Navigate(entry);
                 }
@@ -510,7 +513,7 @@ internal static class Composition
         return
         [
             provider.GetRequiredService<DefinitionsPageViewModel>(),
-            .. shell.MainNavigation.Concat(shell.SecondaryNavigation).Select(entry => entry.Page).OfType<SchemasPageViewModel>(),
+            .. shell.AllNavigation.Select(entry => entry.Page).OfType<SchemasPageViewModel>(),
         ];
     }
 
@@ -607,6 +610,18 @@ internal static class Composition
                 return Outcome.Of(vaults.Open(root));
             },
             openGuide);
+
+    /// <summary>
+    /// « Ouvrir un coffre d'exemple », depuis les premiers pas : le même coffre que celui de l'accueil, dans son dossier à part,
+    /// ouvert comme « Ouvrir un autre coffre… » (le coffre ouvert est seulement fermé) ; rien sans emplacement prévu.
+    /// </summary>
+    internal static Func<Task<string?>>? SampleOpener(IServiceProvider provider) => SampleOpener(
+        Welcome(provider.GetRequiredService<VaultUseCases>(), provider.GetRequiredService<TimeProvider>(), provider.GetRequiredService<VaultLocations>().VaultToCreate(), () => { }),
+        provider.GetRequiredService<DataSettingsViewModel>);
+
+    /// <summary>Le coffre d'exemple de <paramref name="offers"/>, ouvert par la section des données ; rien sans son dossier.</summary>
+    internal static Func<Task<string?>>? SampleOpener(WelcomeOffers offers, Func<DataSettingsViewModel> data) =>
+        offers.SampleFolder is { } folder ? () => data().OpenSampleAsync(() => offers.CreateSample(folder)) : null;
 
     /// <summary>Le dossier du coffre d'exemple : « ExempleCoffre », à côté du coffre prévu ; rien sans coffre prévu.</summary>
     internal static string? SampleFolderOf(string? planned) =>

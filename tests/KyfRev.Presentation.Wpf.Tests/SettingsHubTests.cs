@@ -655,7 +655,7 @@ public sealed class SettingsHubTests
         using var vault = new DataVault();
         var store = new MemoryMachinePreferences
         {
-            Stored = new MachinePreferences { Theme = ThemePreference.Dark, ReducedMotion = true, TextSize = ReadingTextSize.Large, MarkDefinedWords = false, Shortcuts = "aide=F2", GlobalCapture = true, MenuOrder = "carnet,aujourdhui" },
+            Stored = new MachinePreferences { Theme = ThemePreference.Dark, ReducedMotion = true, TextSize = ReadingTextSize.Large, MarkDefinedWords = false, Shortcuts = "aide=F2", GlobalCapture = true, MenuOrder = "carnet,aujourdhui", HiddenMenu = "archives" },
         };
         var machine = new MachineSettings(store);
         var hub = vault.Hub(machine);
@@ -701,7 +701,7 @@ public sealed class SettingsHubTests
         var menu = hub.Tabs.Single(tab => tab.Label == "Menu");
         menu.IsSelected = true;
         hub.RestoreCommand.Execute(null);
-        Assert.AreEqual((string.Empty, "aide=F2"), (machine.Current.MenuOrder, machine.Current.Shortcuts), "Menu et Raccourcis partagent une page, pas leurs réglages");
+        Assert.AreEqual((string.Empty, string.Empty, "aide=F2"), (machine.Current.MenuOrder, machine.Current.HiddenMenu, machine.Current.Shortcuts), "Menu et Raccourcis partagent une page, pas leurs réglages");
 
         hub.Tabs.Single(tab => tab.Label == "Raccourcis").IsSelected = true;
         store.Refuses = true;

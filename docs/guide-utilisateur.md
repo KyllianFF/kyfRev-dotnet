@@ -61,7 +61,9 @@ elle ne joue pas quand les animations sont réduites (Paramètres › Apparence)
 
 Pour voir kyfRev en marche avant d'écrire, l'accueil propose « Essayer avec un coffre d'exemple » : dix fiches inventées
 sur six matières, déjà en cours de révision. Il se crée dans son propre dossier « Exemple », à côté du coffre prévu, et
-ne touche jamais à vos fiches. Pour créer ou rouvrir votre coffre ensuite : Paramètres › Coffre et chiffrement.
+ne touche jamais à vos fiches. Pour créer ou rouvrir votre coffre ensuite : Paramètres › Coffre et chiffrement. Dans un
+coffre neuf, la carte « Premiers pas » d'Aujourd'hui propose aussi « Ouvrir un coffre d'exemple » : le même, au même
+endroit ; votre coffre est seulement fermé, et se rouvre par Paramètres › Coffre et chiffrement › « Ouvrir un autre coffre… ».
 
 Un coffre est un dossier : des fichiers Markdown et, dans `.suivi`, le calendrier de vos révisions. Ne modifiez pas `.suivi` à la
 main. Paramètres › Coffre et chiffrement permet d'en ouvrir ou d'en créer un autre.
@@ -83,6 +85,8 @@ main. Paramètres › Coffre et chiffrement permet d'en ouvrir ou d'en créer un
 - **Réglez une image** : en écriture, cliquez sur l'image ; tirez ses poignées pour la redimensionner, ou passez par
   l'onglet « Image » : « Rogner », hauteur et largeur en centimètres, place, zones masquées et description. Le fichier de l'image n'est pas modifié : « Rétablir » retire ces réglages.
 - La barre de révision permet aussi de valider à une date passée, ou de reporter à une date choisie.
+- La première fois qu'une fiche s'ouvre en révision, une bulle au-dessus de « Valider » dit ce qu'il fait. « Compris » la
+  ferme pour de bon ; « Ne plus montrer d'aide » coupe toutes les aides de la première fois.
 - **Examens** : sur Aujourd'hui, « Examen… » fixe une date pour un dossier. « Resserrer… » ramène les échéances avant la veille,
   et peut remettre en révision les fiches archivées du dossier. Tant que l'examen n'est pas passé, une révision ne place
   jamais l'étape suivante après sa veille.
@@ -157,7 +161,9 @@ Dans Paramètres, les sections sont à gauche, rangées par portée : ce qui est
 Lecture, Feuilles, Menu, Raccourcis), ce qui appartient au coffre ouvert (Révisions, Modules et extensions, Coffre et
 chiffrement, Sauvegardes et exports), et À propos. Apparence règle le thème, la taille de l'interface, le texte des fiches
 (taille, interligne, police, largeur de la colonne) et l'accessibilité ; Lecture, les mots définis et la voix. Raccourcis change dix raccourcis
-clavier ; Menu change l'ordre des vues du menu. « Chercher un réglage », en haut de la liste, trouve un réglage par quelques lettres, ouvre sa section et l'y entoure. Dans une
+clavier ; Menu change l'ordre des vues du menu, et celles qu'il montre : décochez une vue pour la retirer du menu, elle
+s'ouvre toujours par la recherche (Ctrl+K) et par son raccourci Ctrl+chiffre, qui suit ceux des vues montrées ; Aujourd'hui
+reste toujours. « Chercher un réglage », en haut de la liste, trouve un réglage par quelques lettres, ouvre sa section et l'y entoure. Dans une
 section retenue sur l'ordinateur, « Rétablir les réglages d'origine » remet ceux de cette section ; « Annuler » les rend tant
 que vous y restez.
 

@@ -102,7 +102,7 @@ public sealed partial class ShellWindow : Window
         Loaded += (_, _) => FocusNavigation();
         ContentRendered += (_, _) => IsRendered = true;
         // Le coffre ouvert, l'îlot de ses schémas démarre en arrière-plan : la vue s'affichera dès le premier clic.
-        WarmUp = new Schemas.SchemaWarmUp(WarmHost, () => shell.MainNavigation.Concat(shell.SecondaryNavigation)
+        WarmUp = new Schemas.SchemaWarmUp(WarmHost, () => shell.AllNavigation
             .Select(entry => entry.Page).OfType<Pages.SchemasPageViewModel>().FirstOrDefault());
         shell.WorkspaceOpening += (_, _) => WarmUp.Schedule();
     }

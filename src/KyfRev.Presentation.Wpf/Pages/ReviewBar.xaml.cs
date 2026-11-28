@@ -18,6 +18,16 @@ internal sealed partial class ReviewBar : UserControl
     public ReviewBar()
     {
         InitializeComponent();
+        // La bulle de la première révision suit « Valider » tant qu'elle est à l'écran : la bande change avec la largeur.
+        ReviewTip.IsVisibleChanged += (_, e) =>
+        {
+            LayoutUpdated -= OnLayoutForTip;
+            if (e.NewValue is true)
+            {
+                LayoutUpdated += OnLayoutForTip;
+                PlaceTip();
+            }
+        };
         DataContextChanged += (_, e) =>
         {
             if (e.OldValue is ReviewBarViewModel previous)
@@ -133,6 +143,45 @@ internal sealed partial class ReviewBar : UserControl
         var narrow = e.NewSize.Width < NarrowBand;
         PostponeButton.Visibility = narrow ? Visibility.Collapsed : Visibility.Visible;
         PostponeInMore.Visibility = narrow ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    /// <summary>La bulle garde au moins cette marge avec les bords de la bande.</summary>
+    internal const double TipMargin = 8;
+
+    /// <summary>La bulle ne s'élargit pas au-delà : deux phrases, sur quelques lignes.</summary>
+    internal const double TipWidest = 420;
+
+    private void OnLayoutForTip(object? sender, EventArgs e) => PlaceTip();
+
+    /// <summary>
+    /// Pose la bulle au-dessus de « Valider » : son bord droit sur celui du bouton (dans la bande), sa pointe sur son milieu ;
+    /// à l'étroit, elle se resserre pour tenir entre les bords.
+    /// </summary>
+    internal void PlaceTip()
+    {
+        var layer = TipLayer.ActualWidth;
+        if (layer <= 0 || !ValidateSlot.IsVisible)
+        {
+            return;
+        }
+        var slotRight = ValidateSlot.TranslatePoint(new Point(ValidateSlot.ActualWidth, 0), TipLayer).X;
+        var right = Math.Clamp(layer - slotRight, TipMargin, Math.Max(TipMargin, layer - TipMargin));
+        var widest = Math.Clamp(layer - right - TipMargin, 0, TipWidest);
+        var center = slotRight - (ValidateSlot.ActualWidth / 2);
+        // Les valeurs ne changent qu'au changement : la mise en page suivante ne repart pas pour rien.
+        if (Canvas.GetRight(ReviewTip) is var was && !was.Equals(right))
+        {
+            Canvas.SetRight(ReviewTip, right);
+        }
+        if (!ReviewTip.MaxWidth.Equals(widest))
+        {
+            ReviewTip.MaxWidth = widest;
+        }
+        var offset = layer - right - center;
+        if (!ReviewTip.PointerOffset.Equals(offset))
+        {
+            ReviewTip.PointerOffset = offset;
+        }
     }
 
     /// <summary>En deçà de cette largeur, « Reporter » passe dans « ⋯ ».</summary>

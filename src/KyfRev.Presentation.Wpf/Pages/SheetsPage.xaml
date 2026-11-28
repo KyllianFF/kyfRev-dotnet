@@ -32,7 +32,9 @@
           <Setter.Value>
             <ControlTemplate TargetType="Button">
               <Border Background="Transparent" Width="22" Height="28">
-                <kyf:Icon Text="{Binding Chevron}" FontSize="10" Foreground="{TemplateBinding Foreground}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <!-- Il tourne d'un quart de tour quand le dossier se replie ; le chemin le retrouve dans le volet refait. -->
+                <kyf:Icon x:Name="FolderTurn" Text="{x:Static kyf:Icons.ChevronDown}" FontSize="10" Foreground="{TemplateBinding Foreground}" HorizontalAlignment="Center"
+                          VerticalAlignment="Center" kyf:Transitions.TurnKey="{Binding Path}" kyf:Transitions.Opens="{Binding IsExpanded}" />
               </Border>
               <ControlTemplate.Triggers>
                 <Trigger Property="IsMouseOver" Value="True">

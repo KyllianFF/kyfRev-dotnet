@@ -94,6 +94,23 @@ public sealed partial class ShellViewModel : ObservableObject, IForgetsVault, IS
     [ObservableProperty]
     public partial IReadOnlyList<NavigationItem> MainNavigation { get; private set; }
 
+    /// <summary>
+    /// Toutes les vues du haut du menu, dans l'ordre choisi, masquées comprises : ce que règle la section « Menu » des
+    /// paramètres.
+    /// </summary>
+    [ObservableProperty]
+    public partial IReadOnlyList<NavigationItem> OrderedNavigation { get; private set; }
+
+    /// <summary>
+    /// Les vues masquées du menu, dans l'ordre choisi : absentes du menu et des onglets, elles s'ouvrent encore par la recherche
+    /// (Ctrl+K) et par leur raccourci, qui suit ceux des vues montrées.
+    /// </summary>
+    [ObservableProperty]
+    public partial IReadOnlyList<NavigationItem> HiddenNavigation { get; private set; }
+
+    /// <summary>Toutes les vues : celles du haut du menu, masquées comprises, puis celles du bas.</summary>
+    public IEnumerable<NavigationItem> AllNavigation => OrderedNavigation.Concat(SecondaryNavigation);
+
     /// <summary>Entrées du bas du menu.</summary>
     [ObservableProperty]
     public partial IReadOnlyList<NavigationItem> SecondaryNavigation { get; private set; }
@@ -442,13 +459,17 @@ public sealed partial class ShellViewModel : ObservableObject, IForgetsVault, IS
         }
     }
 
-    /// <summary>Ouvre la vue <paramref name="position"/> (1 à 9) du haut du menu.</summary>
+    /// <summary>
+    /// Ouvre la vue <paramref name="position"/> (1 à 9) du haut du menu ; après les vues montrées viennent les vues masquées,
+    /// qui gardent ainsi un raccourci.
+    /// </summary>
     [RelayCommand]
     public void NavigateToPosition(string position)
     {
-        if (int.TryParse(position, NumberStyles.None, CultureInfo.InvariantCulture, out var rank) && rank >= 1 && rank <= MainNavigation.Count)
+        var reachable = MainNavigation.Concat(HiddenNavigation).ToList();
+        if (int.TryParse(position, NumberStyles.None, CultureInfo.InvariantCulture, out var rank) && rank >= 1 && rank <= reachable.Count)
         {
-            Navigate(MainNavigation[rank - 1]);
+            Navigate(reachable[rank - 1]);
         }
     }
 
@@ -656,27 +677,43 @@ public sealed partial class ShellViewModel : ObservableObject, IForgetsVault, IS
     private static void Activate(NavigationItem item) => (item.Page as INavigationAware)?.OnNavigatedTo();
 
     private List<string> _menuOrder = [];
+    private List<string> _hiddenMenu = [];
 
-    /// <summary>L'ordre choisi des vues du haut du menu : leurs identifiants séparés par des virgules ; vide pour l'ordre d'origine.</summary>
-    public void SetMenuOrder(string? written)
+    /// <summary>
+    /// L'ordre choisi des vues du haut du menu, et celles qu'il ne montre pas : leurs identifiants séparés par des virgules ;
+    /// vide pour l'ordre d'origine, et pour tout montrer. « Aujourd'hui » se montre toujours : le menu n'est jamais vide.
+    /// </summary>
+    public void SetMenuOrder(string? written, string? hidden = null)
     {
-        var order = (written ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
-        if (order.SequenceEqual(_menuOrder))
+        var order = Ids(written);
+        var masked = Ids(hidden).Where(id => id != CorePages.Today).ToList();
+        if (order.SequenceEqual(_menuOrder) && masked.SequenceEqual(_hiddenMenu))
         {
             return;
         }
         _menuOrder = order;
+        _hiddenMenu = masked;
         var current = Current;
         ArrangeMenu();
         SelectedMain = MainNavigation.Contains(current) ? current : null;
+        // La vue ouverte peut avoir quitté les onglets (masquée) ou y être entrée (déplacée) : l'onglet choisi la suit.
+        SelectedTab = TabNavigation.Contains(current) ? current : null;
+        OnPropertyChanged(nameof(IsOverflowActive));
     }
 
-    [MemberNotNull(nameof(MainNavigation), nameof(SecondaryNavigation), nameof(TabNavigation), nameof(OverflowNavigation), nameof(_commands))]
+    private static List<string> Ids(string? written) =>
+        [.. (written ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)];
+
+    [MemberNotNull(nameof(OrderedNavigation), nameof(HiddenNavigation), nameof(MainNavigation), nameof(SecondaryNavigation), nameof(TabNavigation),
+        nameof(OverflowNavigation), nameof(_commands))]
     private void ArrangeMenu()
     {
         var items = _core.Concat(_moduleEntries).OrderBy(item => item.Order).ThenBy(item => item.Label, StringComparer.CurrentCulture).ToList();
         // L'ordre choisi dans les paramètres passe avant celui d'origine ; une vue qu'il ne nomme pas garde sa place, après.
-        MainNavigation = [.. items.Where(item => !item.IsSecondary).OrderBy(item => _menuOrder.IndexOf(item.Id) is var rank and >= 0 ? rank : int.MaxValue)];
+        OrderedNavigation = [.. items.Where(item => !item.IsSecondary).OrderBy(item => _menuOrder.IndexOf(item.Id) is var rank and >= 0 ? rank : int.MaxValue)];
+        // Une vue masquée quitte le menu et ses onglets, pas la recherche ni les raccourcis (NavigationCommands).
+        HiddenNavigation = [.. OrderedNavigation.Where(item => _hiddenMenu.Contains(item.Id))];
+        MainNavigation = [.. OrderedNavigation.Except(HiddenNavigation)];
         SecondaryNavigation = [.. items.Where(item => item.IsSecondary)];
         TabNavigation = [.. MainNavigation.Take(ShellLayout.TabCount)];
         OverflowNavigation = [.. MainNavigation.Skip(ShellLayout.TabCount), .. SecondaryNavigation];
@@ -796,7 +833,7 @@ public sealed partial class ShellViewModel : ObservableObject, IForgetsVault, IS
     private List<PaletteEntry> NavigationCommands()
     {
         var position = 0;
-        var commands = MainNavigation
+        var commands = MainNavigation.Concat(HiddenNavigation)
             .Select(item => new PaletteEntry(ShellText.GoTo(item.Label), ++position <= 9 ? $"Ctrl+{position}" : null, item.Glyph, () => Navigate(item)))
             .Concat(SecondaryNavigation.Select(item => new PaletteEntry(ShellText.GoTo(item.Label), null, item.Glyph, () => Navigate(item))))
             .ToList();

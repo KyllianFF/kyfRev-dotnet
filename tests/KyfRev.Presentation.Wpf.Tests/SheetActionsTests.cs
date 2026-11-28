@@ -110,13 +110,13 @@ public sealed class SheetActionsTests
         using var vault = new SheetsVault();
         var page = await vault.LoadedAsync();
         var science = page.Folder("Sciences");
-        Assert.AreEqual(Icons.ChevronDown, science.Chevron);
+        Assert.IsTrue(science.IsExpanded, "son chevron pointe vers le bas");
 
         page.ToggleFolderCommand.Execute(science);
 
         Assert.IsFalse(PaneLabels(page).Contains("Biologie · 1"));
         var folded = page.Folder("Sciences");
-        Assert.AreEqual(Icons.ChevronRight, folded.Chevron);
+        Assert.IsFalse(folded.IsExpanded, "son chevron tourne vers la droite");
         Assert.AreEqual("Sciences · 3", folded.ToString(), "il dit encore ce qu'il contient");
         CollectionAssert.AreEqual(Everything, Labels(page), "plier le volet ne change pas la liste");
 
@@ -542,6 +542,44 @@ public sealed class SheetActionsTests
         await page.RequestCreateCommand.ExecuteAsync(null);
         Assert.AreEqual(string.Empty, page.NewFolder.Value, "la fois d'après, le dossier habituel");
         await page.AnswerCreateCommand.ExecuteAsync(false);
+    }
+
+    [STATestMethod]
+    [DataRow(false, 1280)]
+    [DataRow(true, 900)]
+    public void The_chevron_of_a_folder_turns_instead_of_changing_its_glyph(bool dark, int width)
+    {
+        using var ui = new UiThread();
+        using var vault = new SheetsVault();
+        var test = new TestShell(dark);
+        var model = vault.Loaded();
+        var page = new SheetsPage { DataContext = model };
+        var host = new Border { Width = width, Height = 700, Child = page };
+        host.Resources.MergedDictionaries.Add(test.Design.Dictionary);
+        host.SetResourceReference(Border.BackgroundProperty, "Kyf.Brush.Background");
+        var window = new Window { Content = new Canvas { Children = { host } }, Left = -10000, Top = -10000, Width = 800, Height = 600, ShowActivated = false, ShowInTaskbar = false };
+        window.Show();
+        try
+        {
+            TestShell.Flush();
+            Icon Turn(string path) => Descendants((DependencyObject)page.FindName("PlacesList")).OfType<Icon>()
+                .Single(icon => icon.Name == "FolderTurn" && icon.DataContext is SheetFolderRow { IsFolder: true } row && row.Path == path);
+            var sciences = Turn("Sciences");
+            Assert.AreEqual(Icons.ChevronDown, sciences.Text, "un seul glyphe : c'est l'angle qui change");
+            Assert.AreEqual(0, ((RotateTransform)sciences.RenderTransform).Angle);
+            Assert.AreEqual("Sciences", Transitions.GetTurnKey(sciences));
+
+            model.ToggleFolderCommand.Execute(model.Folder("Sciences"));
+            TestShell.Flush();
+            var folded = Turn("Sciences");
+            Assert.AreEqual(Icons.ChevronDown, folded.Text);
+            Assert.AreEqual(Transitions.FoldedAngle, ((RotateTransform)folded.RenderTransform).Angle, "replié : il pointe vers la droite");
+            ((FrameworkElement)page.FindName("PlacesList")).Capture($"carnet-dossier-replie-{width}-{(dark ? "sombre" : "clair")}");
+        }
+        finally
+        {
+            window.Close();
+        }
     }
 
     [STATestMethod]
