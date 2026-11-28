@@ -36,11 +36,20 @@ public sealed partial class SchemasPageTests
         return schema.ToJsonString();
     }
 
-    /// <summary>Un point de l'élément où lui seul est sous le pointeur.</summary>
-    private static double[] GripOf(IslandScene scene, string selector) =>
+    /// <summary>
+    /// Un point de l'élément où lui seul est sous le pointeur. Une animation ou un avis qui s'en va peut le couvrir un
+    /// instant (la CI est plus lente que le poste) : on attend qu'il soit libre, dix secondes au plus.
+    /// </summary>
+    private static double[] GripOf(IslandScene scene, string selector)
+    {
+        double[]? point = null;
+        UiThread.Until(() => (point = TryGripOf(scene, selector)) is not null, TimeSpan.FromSeconds(10));
+        return point ?? throw new AssertFailedException($"aucun point de « {selector} » sous le pointeur");
+    }
+
+    private static double[]? TryGripOf(IslandScene scene, string selector) =>
         JsonSerializer.Deserialize<double[]?>(TextOf(scene,
-            "(() => { const e = document.querySelector('" + selector + "'); if (!e) return JSON.stringify(null); const r = e.getBoundingClientRect(); for (const fy of [0.5, 0.35, 0.65]) for (const fx of [0.5, 0.35, 0.65, 0.2, 0.8]) { const x = r.x + r.width * fx, y = r.y + r.height * fy; const s = document.elementFromPoint(x, y); if (s && (s === e || e.contains(s))) return JSON.stringify([x, y]); } return JSON.stringify(null); })()"))
-        ?? throw new AssertFailedException($"aucun point de « {selector} » sous le pointeur");
+            "(() => { const e = document.querySelector('" + selector + "'); if (!e) return JSON.stringify(null); const r = e.getBoundingClientRect(); for (const fy of [0.5, 0.35, 0.65]) for (const fx of [0.5, 0.35, 0.65, 0.2, 0.8]) { const x = r.x + r.width * fx, y = r.y + r.height * fy; const s = document.elementFromPoint(x, y); if (s && (s === e || e.contains(s))) return JSON.stringify([x, y]); } return JSON.stringify(null); })()"));
 
     /// <summary>Un geste de la souris donné au moteur comme s'il venait de Windows (modificateurs : 2 Ctrl, 8 Maj).</summary>
     private static void MouseEvent(IslandScene scene, string type, double x, double y, string button, int modifiers = 0)
