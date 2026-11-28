@@ -593,12 +593,14 @@
       return;
     }
     const cadre = bouton.getBoundingClientRect();
+    // Au-dessus : du haut de la barre qui porte le bouton, s'il y en a une, pour que le menu ne la couvre pas.
+    const dessus = options.dessus ? (bouton.closest<HTMLElement>(".barre-selection")?.getBoundingClientRect().top ?? cadre.top) : cadre.top;
     menu = {
       genre,
       ...(options.schema ? { schema: options.schema } : {}),
       ancre: {
         x: options.gauche ? cadre.left : cadre.right,
-        y: options.dessus ? cadre.top - 4 : cadre.bottom + 4,
+        y: options.dessus ? dessus - 4 : cadre.bottom + 4,
         fin: !options.gauche,
         dessus: options.dessus === true,
       },

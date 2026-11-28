@@ -130,13 +130,13 @@ public abstract class VaultAdapterTests(StorageKind storage)
         Assert.HasCount(2, vault.SchemaTemplates());
 
         // Retiré : il n'est plus proposé, et son fichier est rangé à part.
-        vault.RemoveSchemaTemplate(etage.Id);
+        vault.SetSchemaTemplateAside(etage.Id);
         Assert.AreEqual(bureau.Id, vault.SchemaTemplates().Single().Id);
         Assert.IsTrue(folder.Storage.FileExists(folder.PathOf($"schemas/modeles/.supprimes/{etage.Id}.json")));
-        Assert.AreEqual(VaultErrorKind.UnknownSchema, Assert.ThrowsExactly<VaultException>(() => vault.RemoveSchemaTemplate(etage.Id)).Kind);
-        Assert.AreEqual(VaultErrorKind.UnknownSchema, Assert.ThrowsExactly<VaultException>(() => vault.RemoveSchemaTemplate("../fiches")).Kind);
-        Assert.AreEqual(VaultErrorKind.UnknownSchema, Assert.ThrowsExactly<VaultException>(() => vault.RemoveSchemaTemplate(schema.Id)).Kind, "Un schéma n'est pas un modèle.");
-        Assert.ThrowsExactly<ArgumentNullException>(() => vault.RemoveSchemaTemplate(null!));
+        Assert.AreEqual(VaultErrorKind.UnknownSchema, Assert.ThrowsExactly<VaultException>(() => vault.SetSchemaTemplateAside(etage.Id)).Kind);
+        Assert.AreEqual(VaultErrorKind.UnknownSchema, Assert.ThrowsExactly<VaultException>(() => vault.SetSchemaTemplateAside("../fiches")).Kind);
+        Assert.AreEqual(VaultErrorKind.UnknownSchema, Assert.ThrowsExactly<VaultException>(() => vault.SetSchemaTemplateAside(schema.Id)).Kind, "Un schéma n'est pas un modèle.");
+        Assert.ThrowsExactly<ArgumentNullException>(() => vault.SetSchemaTemplateAside(null!));
 
         // Un texte qui n'est pas un schéma est refusé, sans rien écrire.
         Assert.AreEqual(VaultErrorKind.InvalidSchema, Assert.ThrowsExactly<VaultException>(() => vault.CreateSchemaTemplate("[]")).Kind);

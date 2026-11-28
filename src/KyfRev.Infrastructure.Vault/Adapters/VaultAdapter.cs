@@ -402,7 +402,7 @@ public sealed class VaultAdapter(VaultSession inner, IDisposable? owned = null) 
     public SchemaDocument CreateSchemaTemplate(string text) => Document(inner.CreateSchemaTemplate(text));
 
     /// <inheritdoc/>
-    public void RemoveSchemaTemplate(string id) => inner.RemoveSchemaTemplate(id);
+    public void SetSchemaTemplateAside(string id) => inner.SetSchemaTemplateAside(id);
 
     /// <inheritdoc/>
     public string? ExtensionData(string id) => inner.ExtensionData(id);

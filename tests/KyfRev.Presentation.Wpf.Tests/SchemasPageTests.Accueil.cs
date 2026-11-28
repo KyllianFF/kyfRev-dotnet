@@ -479,6 +479,8 @@ public sealed partial class SchemasPageTests
         scene.Script("document.querySelector('.barre-selection button[aria-haspopup=menu]').click()");
         Expect(scene, "document.querySelector('.menu[role=menu]') !== null");
         Assert.AreEqual("Étiqueter…|Exporter…|Archiver|Supprimer…", TextOf(scene, "[...document.querySelectorAll('.menu [role=menuitem]')].map((b) => b.textContent.trim()).join('|')"));
+        // Mesuré une fois ouvert : pendant son animation, le menu glisse encore vers sa place.
+        Expect(scene, "document.getAnimations().length === 0");
         Assert.AreEqual("true", scene.Script("(() => { const m = document.querySelector('.menu[role=menu]').getBoundingClientRect(), b = document.querySelector('.barre-selection').getBoundingClientRect(); return m.bottom <= b.top + 1 && m.top >= 0; })()"), "le menu s'ouvre au-dessus de la barre");
         Key(scene, "Escape", "Escape", 0x1B);
         Key(scene, "Escape", "Escape", 0x1B);

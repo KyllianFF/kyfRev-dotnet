@@ -413,7 +413,7 @@ public interface ISchemaStore
     SchemaDocument CreateSchemaTemplate(string text);
 
     /// <summary>Retire un modèle de schéma : il n'est plus proposé ; son fichier est rangé à part, pas effacé.</summary>
-    void RemoveSchemaTemplate(string id);
+    void SetSchemaTemplateAside(string id);
 }
 
 /// <summary>Citations du coffre (module Citations).</summary>

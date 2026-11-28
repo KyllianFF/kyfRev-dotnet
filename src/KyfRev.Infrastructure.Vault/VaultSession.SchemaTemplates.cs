@@ -56,7 +56,7 @@ public sealed partial class VaultSession
     }
 
     /// <summary>Retire un modèle de schéma : il n'est plus proposé, et son fichier est rangé à part, pas effacé.</summary>
-    public void RemoveSchemaTemplate(string id)
+    public void SetSchemaTemplateAside(string id)
     {
         var from = TemplateFile(id, removed: false);
         if (!_storage.FileExists(Confine(from)))

@@ -177,7 +177,7 @@ internal sealed class SchemaBridge(SchemaUseCases schemas, IFolderPicker folders
                 return Answer(await Task.Run(() => schemas.CreateTemplate(template)).ConfigureAwait(true), Document);
             case "retirerModeleSchema":
                 var removed = Argument(args, 0);
-                return Answer(await Task.Run(() => schemas.RemoveTemplate(removed)).ConfigureAwait(true), _ => null);
+                return Answer(await Task.Run(() => schemas.SetTemplateAside(removed)).ConfigureAwait(true), _ => null);
             case "exporterSchema":
                 var (folder, name, content) = (Argument(args, 0), Argument(args, 1), Convert.FromBase64String(Argument(args, 2)));
                 return Answer(await Task.Run(() => schemas.Export(folder, name, content)).ConfigureAwait(true), path => path);

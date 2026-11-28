@@ -64,9 +64,9 @@ public sealed class SchemaUseCases(VaultHost host)
     public Outcome<SchemaDocument> CreateTemplate(string text) => host.Use(vault => vault.CreateSchemaTemplate(text));
 
     /// <summary>Retire un modèle de schéma : son fichier est rangé à part, rien n'est effacé.</summary>
-    public Outcome<bool> RemoveTemplate(string id) => host.Use(vault =>
+    public Outcome<bool> SetTemplateAside(string id) => host.Use(vault =>
     {
-        vault.RemoveSchemaTemplate(id);
+        vault.SetSchemaTemplateAside(id);
         return true;
     });
 }

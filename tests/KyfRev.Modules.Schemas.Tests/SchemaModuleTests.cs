@@ -227,7 +227,7 @@ public sealed class SchemaModuleTests
         Assert.AreEqual(VaultHost.NoVaultOpen, schemas.ReadImport("c.json").Error);
         Assert.AreEqual(VaultHost.NoVaultOpen, schemas.Templates().Error);
         Assert.AreEqual(VaultHost.NoVaultOpen, schemas.CreateTemplate(Text).Error);
-        Assert.AreEqual(VaultHost.NoVaultOpen, schemas.RemoveTemplate("s_x").Error);
+        Assert.AreEqual(VaultHost.NoVaultOpen, schemas.SetTemplateAside("s_x").Error);
     }
 
     [TestMethod]
@@ -243,9 +243,9 @@ public sealed class SchemaModuleTests
         Assert.IsEmpty(schemas.Schemas().Value, "Un modèle n'est pas un schéma.");
         Assert.IsFalse(schemas.Read(template.Id).Succeeded);
 
-        Assert.IsTrue(schemas.RemoveTemplate(template.Id).Value);
+        Assert.IsTrue(schemas.SetTemplateAside(template.Id).Value);
         Assert.IsEmpty(schemas.Templates().Value);
-        Assert.IsFalse(schemas.RemoveTemplate(template.Id).Succeeded, "Déjà retiré : un refus, pas une erreur.");
+        Assert.IsFalse(schemas.SetTemplateAside(template.Id).Succeeded, "Déjà retiré : un refus, pas une erreur.");
         Assert.IsFalse(schemas.CreateTemplate("pas du JSON").Succeeded);
     }
 
