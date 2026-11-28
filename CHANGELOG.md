@@ -7,6 +7,8 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 
 ## [Non publié]
 
+## [1.1.0-beta.6] - 2026-11-28
+
 ### Ajouté
 - Schémas réseau : un schéma peut avoir plusieurs pages (Étage 1, Étage 2, Salle serveurs…), en onglets sous le plan,
   avec le nombre d'équipements de chacune ; « + » en ajoute une, le clic droit renomme, duplique, déplace ou supprime
@@ -1352,7 +1354,8 @@ respecte le [versionnement sémantique](https://semver.org/lang/fr/spec/v2.0.0.h
 - Le texte d'un champ de plusieurs lignes ne colle plus au bord haut.
 - Le libellé long d'une case à cocher était coupé : il passe maintenant à la ligne, en face de sa case.
 
-[Non publié]: https://github.com/KyllianFF/kyfRev-dotnet/compare/v1.1.0-beta.5...HEAD
+[Non publié]: https://github.com/KyllianFF/kyfRev-dotnet/compare/v1.1.0-beta.6...HEAD
+[1.1.0-beta.6]: https://github.com/KyllianFF/kyfRev-dotnet/compare/v1.1.0-beta.5...v1.1.0-beta.6
 [1.1.0-beta.5]: https://github.com/KyllianFF/kyfRev-dotnet/compare/v1.1.0-beta.4...v1.1.0-beta.5
 [1.1.0-beta.4]: https://github.com/KyllianFF/kyfRev-dotnet/compare/v1.1.0-beta.3...v1.1.0-beta.4
 [1.1.0-beta.3]: https://github.com/KyllianFF/kyfRev-dotnet/compare/v1.1.0-beta.2...v1.1.0-beta.3
